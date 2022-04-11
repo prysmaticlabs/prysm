@@ -1274,6 +1274,12 @@ def prysm_deps():
         sum = "h1:utua3L2IbQJmauC5IXdEA547bcoU5dozgQAfc8Onsg4=",
         version = "v0.0.0-20181222135242-d2cdd8c08219",
     )
+    go_repository(
+        name = "com_github_gomarkdown_markdown",
+        importpath = "github.com/gomarkdown/markdown",
+        sum = "h1:YVvt637ygnOO9qjLBVmPOvrUmCz/i8YECSu/8UlOQW0=",
+        version = "v0.0.0-20220310201231-552c6011c0b8",
+    )
 
     go_repository(
         name = "com_github_google_btree",

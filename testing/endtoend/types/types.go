@@ -43,11 +43,3 @@ type ComponentRunner interface {
 	// Started checks whether an underlying component is started and ready to be queried.
 	Started() <-chan struct{}
 }
-
-// BeaconNodeSet defines an interface for an object that fulfills the duties
-// of a group of beacon nodes.
-type BeaconNodeSet interface {
-	ComponentRunner
-	// SetENR provides the relevant bootnode's enr to the beacon nodes.
-	SetENR(enr string)
-}

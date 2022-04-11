@@ -7,6 +7,7 @@ package endtoend
 import (
 	"context"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/testing/endtoend/e2ez"
 	"os"
 	"path"
 	"strings"
@@ -50,6 +51,7 @@ func init() {
 type testRunner struct {
 	t      *testing.T
 	config *e2etypes.E2EConfig
+	z      *e2ez.Server
 }
 
 // newTestRunner creates E2E test runner.
@@ -57,7 +59,28 @@ func newTestRunner(t *testing.T, config *e2etypes.E2EConfig) *testRunner {
 	return &testRunner{
 		t:      t,
 		config: config,
+		z:      e2ez.NewServer(),
 	}
+}
+
+type zPageMenu struct {}
+
+func (z *zPageMenu) ZPath() string {
+	return "/"
+}
+
+func (z *zPageMenu) ZMarkdown() (string, error) {
+	return `
+e2e admin
+===========
+
+- [prysm beacon nodes](/beacon-nodes)
+- [lh beacon nodes](/lh-beacon-nodes)
+`, nil
+}
+
+func (z *zPageMenu) ZChildren() []e2ez.ZPage {
+	return []e2ez.ZPage{}
 }
 
 // run executes configured E2E test.
@@ -67,18 +90,26 @@ func (r *testRunner) run() {
 	t.Logf("Starting time: %s\n", time.Now().String())
 	t.Logf("Log Path: %s\n", e2e.TestParams.LogPath)
 
+	if e2e.TestParams.ZPageAddr == "" {
+		e2e.TestParams.ZPageAddr = ":8080"
+	}
+
 	minGenesisActiveCount := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
 	multiClientActive := e2e.TestParams.LighthouseBeaconNodeCount > 0
 	var keyGen, lighthouseValidatorNodes e2etypes.ComponentRunner
 	var lighthouseNodes *components.LighthouseBeaconNodeSet
 
 	ctx, done := context.WithCancel(context.Background())
+	defer done()
 	g, ctx := errgroup.WithContext(ctx)
 
 	tracingSink := components.NewTracingSink(config.TracingSinkEndpoint)
 	g.Go(func() error {
 		return tracingSink.Start(ctx)
 	})
+	zp := e2ez.NewServer()
+	zp.HandleZPages(&zPageMenu{})
+	go zp.ListenAndServe(ctx, e2e.TestParams.ZPageAddr)
 
 	if multiClientActive {
 		keyGen = components.NewKeystoreGenerator()
@@ -133,19 +164,6 @@ func (r *testRunner) run() {
 		return nil
 	})
 
-	// Beacon nodes.
-	beaconNodes := components.NewBeaconNodes(config)
-	g.Go(func() error {
-		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Nodes, bootNode}); err != nil {
-			return errors.Wrap(err, "beacon nodes require ETH1 and boot node to run")
-		}
-		beaconNodes.SetENR(bootNode.ENR())
-		if err := beaconNodes.Start(ctx); err != nil {
-			return errors.Wrap(err, "failed to start beacon nodes")
-		}
-		return nil
-	})
-
 	// Web3 remote signer.
 	var web3RemoteSigner *components.Web3RemoteSigner
 	if config.UseWeb3RemoteSigner {
@@ -158,13 +176,29 @@ func (r *testRunner) run() {
 		})
 	}
 
+	// Beacon nodes.
+	if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{bootNode}); err != nil {
+		t.Fatal(err, errors.Wrap(err, "beacon nodes require ETH1 and boot node to run"))
+	}
+	beaconNodes := components.NewBeaconNodes(config, bootNode.ENR())
+	zp.HandleZPages(beaconNodes)
+	g.Go(func() error {
+		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Nodes, bootNode}); err != nil {
+			t.Fatal(err, errors.Wrap(err, "beacon nodes require ETH1 and boot node to run"))
+		}
+		if err := beaconNodes.Start(ctx); err != nil {
+			return errors.Wrap(err, "failed to start beacon nodes")
+		}
+		return nil
+	})
+
 	if multiClientActive {
-		lighthouseNodes = components.NewLighthouseBeaconNodes(config)
+		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Nodes, bootNode, beaconNodes}); err != nil {
+			t.Fatal(errors.Wrap(err, "lighthouse beacon nodes require ETH1 and boot node to run"))
+		}
+		lighthouseNodes = components.NewLighthouseBeaconNodes(config, bootNode.ENR())
+		zp.HandleZPages(lighthouseNodes)
 		g.Go(func() error {
-			if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Nodes, bootNode, beaconNodes}); err != nil {
-				return errors.Wrap(err, "lighthouse beacon nodes require ETH1 and boot node to run")
-			}
-			lighthouseNodes.SetENR(bootNode.ENR())
 			if err := lighthouseNodes.Start(ctx); err != nil {
 				return errors.Wrap(err, "failed to start lighthouse beacon nodes")
 			}

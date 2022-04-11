@@ -22,6 +22,7 @@ type params struct {
 	LighthouseBeaconNodeCount int
 	ContractAddress           common.Address
 	Ports                     *ports
+	ZPageAddr                 string
 }
 
 type ports struct {

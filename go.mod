@@ -255,6 +255,7 @@ require (
 	github.com/go-logr/logr v0.2.1 // indirect
 	github.com/go-ole/go-ole v1.2.5 // indirect
 	github.com/go-playground/validator/v10 v10.10.0
+	github.com/gomarkdown/markdown v0.0.0-20220310201231-552c6011c0b8
 	github.com/peterh/liner v1.2.0 // indirect
 	github.com/prometheus/tsdb v0.10.0 // indirect
 	github.com/prysmaticlabs/gohashtree v0.0.1-alpha.0.20220303211031-f753e083138c
