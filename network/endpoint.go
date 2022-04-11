@@ -2,6 +2,7 @@ package network
 
 import (
 	"errors"
+	"net/http"
 	"strings"
 
 	"github.com/prysmaticlabs/prysm/network/authorization"
@@ -22,6 +23,22 @@ type AuthorizationData struct {
 // Equals compares two endpoints for equality.
 func (e Endpoint) Equals(other Endpoint) bool {
 	return e.Url == other.Url && e.Auth.Equals(other.Auth)
+}
+
+// HttpClient creates a http client object dependant
+// on the properties of the network endpoint.
+func (e Endpoint) HttpClient() *http.Client {
+	if e.Auth.Method != authorization.Bearer {
+		return http.DefaultClient
+	}
+	authTransport := &jwtTransport{
+		underlyingTransport: http.DefaultTransport,
+		jwtSecret:           []byte(e.Auth.Value),
+	}
+	return &http.Client{
+		Timeout:   DefaultRPCHTTPTimeout,
+		Transport: authTransport,
+	}
 }
 
 // Equals compares two authorization data objects for equality.

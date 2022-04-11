@@ -3,7 +3,6 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
-        "auth.go",
         "block_cache.go",
         "block_reader.go",
         "check_transition_config.go",
@@ -60,7 +59,6 @@ go_library(
         "@com_github_ethereum_go_ethereum//core/types:go_default_library",
         "@com_github_ethereum_go_ethereum//ethclient:go_default_library",
         "@com_github_ethereum_go_ethereum//rpc:go_default_library",
-        "@com_github_golang_jwt_jwt_v4//:go_default_library",
         "@com_github_holiman_uint256//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_prometheus_client_golang//prometheus:go_default_library",
@@ -75,7 +73,6 @@ go_test(
     name = "go_default_test",
     size = "medium",
     srcs = [
-        "auth_test.go",
         "block_cache_test.go",
         "block_reader_test.go",
         "check_transition_config_test.go",
@@ -126,7 +123,6 @@ go_test(
         "@com_github_ethereum_go_ethereum//core/types:go_default_library",
         "@com_github_ethereum_go_ethereum//rpc:go_default_library",
         "@com_github_ethereum_go_ethereum//trie:go_default_library",
-        "@com_github_golang_jwt_jwt_v4//:go_default_library",
         "@com_github_holiman_uint256//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_prometheus_client_golang//prometheus:go_default_library",
