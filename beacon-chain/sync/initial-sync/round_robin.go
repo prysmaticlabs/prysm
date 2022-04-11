@@ -234,7 +234,7 @@ func (s *Service) processBlock(
 	s.logSyncStatus(genesis, blk.Block(), blkRoot)
 	parentRoot := bytesutil.ToBytes32(blk.Block().ParentRoot())
 	if !s.cfg.DB.HasBlock(ctx, parentRoot) && !s.cfg.Chain.HasInitSyncBlock(parentRoot) {
-		return fmt.Errorf("%w: %#x", errParentDoesNotExist, blk.Block().ParentRoot())
+		return fmt.Errorf("%w: (in processBlock, slot=%d) %#x", errParentDoesNotExist, blk.Block().Slot(), blk.Block().ParentRoot())
 	}
 	return blockReceiver(ctx, blk, blkRoot)
 }
@@ -264,7 +264,7 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 	s.logBatchSyncStatus(genesis, blks, blkRoot)
 	parentRoot := bytesutil.ToBytes32(firstBlock.Block().ParentRoot())
 	if !s.cfg.DB.HasBlock(ctx, parentRoot) && !s.cfg.Chain.HasInitSyncBlock(parentRoot) {
-		return fmt.Errorf("%w: %#x", errParentDoesNotExist, firstBlock.Block().ParentRoot())
+		return fmt.Errorf("%w: %#x (in processBatchedBlocks, slot=%d)", errParentDoesNotExist, firstBlock.Block().ParentRoot(), firstBlock.Block().Slot())
 	}
 	blockRoots := make([][32]byte, len(blks))
 	blockRoots[0] = blkRoot

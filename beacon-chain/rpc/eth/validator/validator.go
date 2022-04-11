@@ -58,6 +58,11 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *ethpbv1.AttesterDu
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
 
+	isOptimistic, err := rpchelpers.IsOptimistic(ctx, s, vs.HeadFetcher)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
+	}
+
 	s, err = advanceState(ctx, s, req.Epoch, currentEpoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not advance state to requested epoch start slot: %v", err)
@@ -110,8 +115,9 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *ethpbv1.AttesterDu
 	}
 
 	return &ethpbv1.AttesterDutiesResponse{
-		DependentRoot: root,
-		Data:          duties,
+		DependentRoot:       root,
+		Data:                duties,
+		ExecutionOptimistic: isOptimistic,
 	}, nil
 }
 
@@ -134,6 +140,11 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDu
 	s, err := vs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
+	}
+
+	isOptimistic, err := rpchelpers.IsOptimistic(ctx, s, vs.HeadFetcher)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
 	}
 
 	s, err = advanceState(ctx, s, req.Epoch, currentEpoch)
@@ -172,8 +183,9 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDu
 	}
 
 	return &ethpbv1.ProposerDutiesResponse{
-		DependentRoot: root,
-		Data:          duties,
+		DependentRoot:       root,
+		Data:                duties,
+		ExecutionOptimistic: isOptimistic,
 	}, nil
 }
 
@@ -245,8 +257,15 @@ func (vs *Server) GetSyncCommitteeDuties(ctx context.Context, req *ethpbv2.SyncC
 	} else if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get duties: %v", err)
 	}
+
+	isOptimistic, err := rpchelpers.IsOptimistic(ctx, st, vs.HeadFetcher)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
+	}
+
 	return &ethpbv2.SyncCommitteeDutiesResponse{
-		Data: duties,
+		Data:                duties,
+		ExecutionOptimistic: isOptimistic,
 	}, nil
 }
 
@@ -395,7 +414,7 @@ func (vs *Server) GetAggregateAttestation(ctx context.Context, req *ethpbv1.Aggr
 	}
 
 	if bestMatchingAtt == nil {
-		return nil, status.Error(codes.InvalidArgument, "No matching attestation found")
+		return nil, status.Error(codes.NotFound, "No matching attestation found")
 	}
 	return &ethpbv1.AggregateAttestationResponse{
 		Data: migration.V1Alpha1AttestationToV1(bestMatchingAtt),
@@ -611,6 +630,9 @@ func (vs *Server) ProduceSyncCommitteeContribution(
 	msgs, err := vs.SyncCommitteePool.SyncCommitteeMessages(req.Slot)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get sync subcommittee messages: %v", err)
+	}
+	if msgs == nil {
+		return nil, status.Errorf(codes.NotFound, "No subcommittee messages found")
 	}
 	aggregatedSig, bits, err := vs.V1Alpha1Server.AggregatedSigAndAggregationBits(ctx, msgs, req.Slot, req.SubcommitteeIndex, req.BeaconBlockRoot)
 	if err != nil {

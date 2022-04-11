@@ -410,25 +410,25 @@ func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
 	}
 
 	v, err := client.NewValidatorService(c.cliCtx.Context, &client.Config{
-		Endpoint:                    endpoint,
-		DataDir:                     dataDir,
-		LogValidatorBalances:        logValidatorBalances,
-		EmitAccountMetrics:          emitAccountMetrics,
-		CertFlag:                    cert,
-		GraffitiFlag:                g.ParseHexGraffiti(graffiti),
-		GrpcMaxCallRecvMsgSizeFlag:  maxCallRecvMsgSize,
-		GrpcRetriesFlag:             grpcRetries,
-		GrpcRetryDelay:              grpcRetryDelay,
-		GrpcHeadersFlag:             c.cliCtx.String(flags.GrpcHeadersFlag.Name),
-		ValDB:                       c.db,
-		UseWeb:                      c.cliCtx.Bool(flags.EnableWebFlag.Name),
-		InteropKeysConfig:           interopKeysConfig,
-		Wallet:                      c.wallet,
-		WalletInitializedFeed:       c.walletInitialized,
-		GraffitiStruct:              gStruct,
-		LogDutyCountDown:            c.cliCtx.Bool(flags.EnableDutyCountDown.Name),
-		Web3SignerConfig:            wsc,
-		PrepareBeaconProposalConfig: bpc,
+		Endpoint:                   endpoint,
+		DataDir:                    dataDir,
+		LogValidatorBalances:       logValidatorBalances,
+		EmitAccountMetrics:         emitAccountMetrics,
+		CertFlag:                   cert,
+		GraffitiFlag:               g.ParseHexGraffiti(graffiti),
+		GrpcMaxCallRecvMsgSizeFlag: maxCallRecvMsgSize,
+		GrpcRetriesFlag:            grpcRetries,
+		GrpcRetryDelay:             grpcRetryDelay,
+		GrpcHeadersFlag:            c.cliCtx.String(flags.GrpcHeadersFlag.Name),
+		ValDB:                      c.db,
+		UseWeb:                     c.cliCtx.Bool(flags.EnableWebFlag.Name),
+		InteropKeysConfig:          interopKeysConfig,
+		Wallet:                     c.wallet,
+		WalletInitializedFeed:      c.walletInitialized,
+		GraffitiStruct:             gStruct,
+		LogDutyCountDown:           c.cliCtx.Bool(flags.EnableDutyCountDown.Name),
+		Web3SignerConfig:           wsc,
+		FeeRecipientConfig:         bpc,
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not initialize validator service")
@@ -496,16 +496,9 @@ func feeRecipientConfig(cliCtx *cli.Context) (*validatorServiceConfig.FeeRecipie
 			},
 		}
 	}
-
+	// nothing is set, so just return nil
 	if fileConfig == nil {
-		// if no flags were set, use the burn address
-		log.Warnf("No validator proposer fileConfig or default fee specified!! validators will continue to propose with burn address")
-		fileConfig = &validatorServiceConfig.FeeRecipientFileConfig{
-			ProposeConfig: nil,
-			DefaultConfig: &validatorServiceConfig.FeeRecipientFileOptions{
-				FeeRecipient: fieldparams.EthBurnAddressHex,
-			},
-		}
+		return nil, nil
 	}
 	//convert file config to proposer config for internal use
 	frConfig := &validatorServiceConfig.FeeRecipientConfig{}

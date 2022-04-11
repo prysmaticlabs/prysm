@@ -60,7 +60,7 @@ func altairForkOccurs(conns ...*grpc.ClientConn) error {
 	if res.GetPhase0Block() != nil {
 		return errors.New("phase 0 block returned after altair fork has occurred")
 	}
-	blk, err := wrapperv2.WrappedAltairSignedBeaconBlock(res.GetAltairBlock())
+	blk, err := wrapperv2.WrappedSignedBeaconBlock(res.GetAltairBlock())
 	if err != nil {
 		return err
 	}
@@ -105,7 +105,7 @@ func bellatrixForkOccurs(conns ...*grpc.ClientConn) error {
 	if res.GetAltairBlock() != nil {
 		return errors.New("altair block returned after bellatrix fork has occurred")
 	}
-	blk, err := wrapperv2.WrappedBellatrixSignedBeaconBlock(res.GetBellatrixBlock())
+	blk, err := wrapperv2.WrappedSignedBeaconBlock(res.GetBellatrixBlock())
 	if err != nil {
 		return err
 	}

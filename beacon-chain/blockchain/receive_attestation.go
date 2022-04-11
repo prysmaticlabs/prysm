@@ -161,19 +161,19 @@ func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
 					log.WithError(err).Errorf("Unable to get justified balances for root %v", justified.Root)
 					continue
 				}
-				prevHead := s.headRoot()
-				if err := s.updateHead(s.ctx, balances); err != nil {
+				newHeadRoot, err := s.updateHead(s.ctx, balances)
+				if err != nil {
 					log.WithError(err).Warn("Resolving fork due to new attestation")
 				}
-				s.notifyEngineIfChangedHead(prevHead)
+				s.notifyEngineIfChangedHead(s.ctx, newHeadRoot)
 			}
 		}
 	}()
 }
 
 // This calls notify Forkchoice Update in the event that the head has changed
-func (s *Service) notifyEngineIfChangedHead(prevHead [32]byte) {
-	if s.headRoot() == prevHead {
+func (s *Service) notifyEngineIfChangedHead(ctx context.Context, newHeadRoot [32]byte) {
+	if s.headRoot() == newHeadRoot {
 		return
 	}
 	finalized := s.store.FinalizedCheckpt()
@@ -181,13 +181,27 @@ func (s *Service) notifyEngineIfChangedHead(prevHead [32]byte) {
 		log.WithError(errNilFinalizedInStore).Error("could not get finalized checkpoint")
 		return
 	}
-	_, err := s.notifyForkchoiceUpdate(s.ctx,
-		s.headBlock().Block(),
-		s.headRoot(),
+	newHeadBlock, err := s.cfg.BeaconDB.Block(ctx, newHeadRoot)
+	if err != nil {
+		log.WithError(err).Error("Could not get block from db")
+		return
+	}
+	headState, err := s.cfg.StateGen.StateByRoot(ctx, newHeadRoot)
+	if err != nil {
+		log.WithError(err).Error("Could not get state from db")
+		return
+	}
+	_, err = s.notifyForkchoiceUpdate(s.ctx,
+		headState,
+		newHeadBlock.Block(),
+		newHeadRoot,
 		bytesutil.ToBytes32(finalized.Root),
 	)
 	if err != nil {
 		log.WithError(err).Error("could not notify forkchoice update")
+	}
+	if err := s.saveHead(ctx, newHeadRoot, newHeadBlock, headState); err != nil {
+		log.WithError(err).Error("could not save head")
 	}
 }
 

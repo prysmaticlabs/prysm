@@ -155,7 +155,7 @@ func (_ *Service) FinalizedDeposits(_ context.Context) *depositcache.FinalizedDe
 }
 
 // NonFinalizedDeposits mocks out the deposit cache functionality for interop.
-func (_ *Service) NonFinalizedDeposits(_ context.Context, _ *big.Int) []*ethpb.Deposit {
+func (_ *Service) NonFinalizedDeposits(_ context.Context, _ int64, _ *big.Int) []*ethpb.Deposit {
 	return []*ethpb.Deposit{}
 }
 

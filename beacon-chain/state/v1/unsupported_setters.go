@@ -40,6 +40,16 @@ func (*BeaconState) SetCurrentParticipationBits(_ []byte) error {
 	return errors.New("SetCurrentParticipationBits is not supported for phase 0 beacon state")
 }
 
+// ModifyPreviousParticipationBits is not supported for phase 0 beacon state.
+func (b *BeaconState) ModifyPreviousParticipationBits(mutator func(val []byte) ([]byte, error)) error {
+	return errors.New("ModifyPreviousParticipationBits is not supported for phase 0 beacon state")
+}
+
+// ModifyCurrentParticipationBits is not supported for phase 0 beacon state.
+func (b *BeaconState) ModifyCurrentParticipationBits(mutator func(val []byte) ([]byte, error)) error {
+	return errors.New("ModifyCurrentParticipationBits is not supported for phase 0 beacon state")
+}
+
 // SetInactivityScores is not supported for phase 0 beacon state.
 func (*BeaconState) SetInactivityScores(_ []uint64) error {
 	return errors.New("SetInactivityScores is not supported for phase 0 beacon state")

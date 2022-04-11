@@ -80,7 +80,7 @@ func TestWaitActivation_StreamSetupFails_AttemptsToReconnect(t *testing.T) {
 		validatorClient:        client,
 		keyManager:             km,
 		pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
-		prepareBeaconProposalConfig: &validator_service_config.FeeRecipientConfig{
+		feeRecipientConfig: &validator_service_config.FeeRecipientConfig{
 			ProposeConfig: nil,
 			DefaultConfig: &validator_service_config.FeeRecipientOptions{
 				FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
@@ -119,7 +119,7 @@ func TestWaitForActivation_ReceiveErrorFromStream_AttemptsReconnection(t *testin
 		validatorClient:        client,
 		keyManager:             km,
 		pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
-		prepareBeaconProposalConfig: &validator_service_config.FeeRecipientConfig{
+		feeRecipientConfig: &validator_service_config.FeeRecipientConfig{
 			ProposeConfig: nil,
 			DefaultConfig: &validator_service_config.FeeRecipientOptions{
 				FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
@@ -163,7 +163,7 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 		keyManager:             km,
 		genesisTime:            1,
 		pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
-		prepareBeaconProposalConfig: &validator_service_config.FeeRecipientConfig{
+		feeRecipientConfig: &validator_service_config.FeeRecipientConfig{
 			ProposeConfig: nil,
 			DefaultConfig: &validator_service_config.FeeRecipientOptions{
 				FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
@@ -206,7 +206,7 @@ func TestWaitForActivation_Exiting(t *testing.T) {
 		keyManager:             km,
 		genesisTime:            1,
 		pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
-		prepareBeaconProposalConfig: &validator_service_config.FeeRecipientConfig{
+		feeRecipientConfig: &validator_service_config.FeeRecipientConfig{
 			ProposeConfig: nil,
 			DefaultConfig: &validator_service_config.FeeRecipientOptions{
 				FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
@@ -256,7 +256,7 @@ func TestWaitForActivation_RefetchKeys(t *testing.T) {
 		keyManager:             km,
 		genesisTime:            1,
 		pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
-		prepareBeaconProposalConfig: &validator_service_config.FeeRecipientConfig{
+		feeRecipientConfig: &validator_service_config.FeeRecipientConfig{
 			ProposeConfig: nil,
 			DefaultConfig: &validator_service_config.FeeRecipientOptions{
 				FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
@@ -308,7 +308,7 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 			keyManager:             km,
 			genesisTime:            1,
 			pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
-			prepareBeaconProposalConfig: &validator_service_config.FeeRecipientConfig{
+			feeRecipientConfig: &validator_service_config.FeeRecipientConfig{
 				ProposeConfig: nil,
 				DefaultConfig: &validator_service_config.FeeRecipientOptions{
 					FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
@@ -389,7 +389,7 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 			keyManager:             km,
 			genesisTime:            1,
 			pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
-			prepareBeaconProposalConfig: &validator_service_config.FeeRecipientConfig{
+			feeRecipientConfig: &validator_service_config.FeeRecipientConfig{
 				ProposeConfig: nil,
 				DefaultConfig: &validator_service_config.FeeRecipientOptions{
 					FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
@@ -477,7 +477,7 @@ func TestWaitForActivation_RemoteKeymanager(t *testing.T) {
 			keyManager:             &km,
 			ticker:                 ticker,
 			pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
-			prepareBeaconProposalConfig: &validator_service_config.FeeRecipientConfig{
+			feeRecipientConfig: &validator_service_config.FeeRecipientConfig{
 				ProposeConfig: nil,
 				DefaultConfig: &validator_service_config.FeeRecipientOptions{
 					FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
@@ -544,7 +544,7 @@ func TestWaitForActivation_RemoteKeymanager(t *testing.T) {
 			keyManager:             &remoteKm,
 			ticker:                 ticker,
 			pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
-			prepareBeaconProposalConfig: &validator_service_config.FeeRecipientConfig{
+			feeRecipientConfig: &validator_service_config.FeeRecipientConfig{
 				ProposeConfig: nil,
 				DefaultConfig: &validator_service_config.FeeRecipientOptions{
 					FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"),

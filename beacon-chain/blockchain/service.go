@@ -3,6 +3,7 @@
 package blockchain
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"runtime"
@@ -28,7 +29,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
-	enginev1 "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
@@ -74,6 +74,7 @@ type config struct {
 	ChainStartFetcher       powchain.ChainStartFetcher
 	BeaconDB                db.HeadAccessDatabase
 	DepositCache            *depositcache.DepositCache
+	ProposerSlotIndexCache  *cache.ProposerPayloadIDsCache
 	AttPool                 attestations.Pool
 	ExitPool                voluntaryexits.PoolManager
 	SlashingPool            slashings.PoolManager
@@ -87,7 +88,7 @@ type config struct {
 	WeakSubjectivityCheckpt *ethpb.Checkpoint
 	BlockFetcher            powchain.POWBlockFetcher
 	FinalizedStateAtStartUp state.BeaconState
-	ExecutionEngineCaller   enginev1.Caller
+	ExecutionEngineCaller   powchain.EngineCaller
 }
 
 // NewService instantiates a new block service instance that will
@@ -190,22 +191,45 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 	}
 	s.store = store.New(justified, finalized)
 
-	var store f.ForkChoicer
+	var f f.ForkChoicer
+	fRoot := bytesutil.ToBytes32(finalized.Root)
 	if features.Get().EnableForkChoiceDoublyLinkedTree {
-		store = doublylinkedtree.New(justified.Epoch, finalized.Epoch)
+		f = doublylinkedtree.New(justified.Epoch, finalized.Epoch)
 	} else {
-		store = protoarray.New(justified.Epoch, finalized.Epoch, bytesutil.ToBytes32(finalized.Root))
+		f = protoarray.New(justified.Epoch, finalized.Epoch, fRoot)
 	}
-	s.cfg.ForkChoiceStore = store
-
-	ss, err := slots.EpochStart(finalized.Epoch)
+	s.cfg.ForkChoiceStore = f
+	fb, err := s.cfg.BeaconDB.Block(s.ctx, s.ensureRootNotZeros(fRoot))
 	if err != nil {
-		return errors.Wrap(err, "could not get start slot of finalized epoch")
+		return errors.Wrap(err, "could not get finalized checkpoint block")
 	}
+	if fb == nil {
+		return errNilFinalizedInStore
+	}
+	payloadHash, err := getBlockPayloadHash(fb.Block())
+	if err != nil {
+		return errors.Wrap(err, "could not get execution payload hash")
+	}
+	fSlot := fb.Block().Slot()
+	if err := f.InsertOptimisticBlock(s.ctx, fSlot, fRoot, params.BeaconConfig().ZeroHash,
+		payloadHash, justified.Epoch, finalized.Epoch); err != nil {
+		return errors.Wrap(err, "could not insert finalized block to forkchoice")
+	}
+
+	lastValidatedCheckpoint, err := s.cfg.BeaconDB.LastValidatedCheckpoint(s.ctx)
+	if err != nil {
+		return errors.Wrap(err, "could not get last validated checkpoint")
+	}
+	if bytes.Equal(finalized.Root, lastValidatedCheckpoint.Root) {
+		if err := f.SetOptimisticToValid(s.ctx, fRoot); err != nil {
+			return errors.Wrap(err, "could not set finalized block as validated")
+		}
+	}
+
 	h := s.headBlock().Block()
-	if h.Slot() > ss {
+	if h.Slot() > fSlot {
 		log.WithFields(logrus.Fields{
-			"startSlot": ss,
+			"startSlot": fSlot,
 			"endSlot":   h.Slot(),
 		}).Info("Loading blocks to fork choice store, this may take a while.")
 		if err := s.fillInForkChoiceMissingBlocks(s.ctx, h, finalized, justified); err != nil {
@@ -233,7 +257,7 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 
 func (s *Service) originRootFromSavedState(ctx context.Context) ([32]byte, error) {
 	// first check if we have started from checkpoint sync and have a root
-	originRoot, err := s.cfg.BeaconDB.OriginBlockRoot(ctx)
+	originRoot, err := s.cfg.BeaconDB.OriginCheckpointBlockRoot(ctx)
 	if err == nil {
 		return originRoot, nil
 	}
@@ -241,7 +265,7 @@ func (s *Service) originRootFromSavedState(ctx context.Context) ([32]byte, error
 		return originRoot, errors.Wrap(err, "could not retrieve checkpoint sync chain origin data from db")
 	}
 
-	// we got here because OriginBlockRoot gave us an ErrNotFound. this means the node was started from a genesis state,
+	// we got here because OriginCheckpointBlockRoot gave us an ErrNotFound. this means the node was started from a genesis state,
 	// so we should have a value for GenesisBlock
 	genesisBlock, err := s.cfg.BeaconDB.GenesisBlock(ctx)
 	if err != nil {
@@ -338,9 +362,9 @@ func (s *Service) startFromPOWChain() error {
 		defer stateSub.Unsubscribe()
 		for {
 			select {
-			case event := <-stateChannel:
-				if event.Type == statefeed.ChainStarted {
-					data, ok := event.Data.(*statefeed.ChainStartedData)
+			case e := <-stateChannel:
+				if e.Type == statefeed.ChainStarted {
+					data, ok := e.Data.(*statefeed.ChainStartedData)
 					if !ok {
 						log.Error("event data is not type *statefeed.ChainStartedData")
 						return

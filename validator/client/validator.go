@@ -94,7 +94,7 @@ type validator struct {
 	graffiti                           []byte
 	voteStats                          voteStats
 	Web3SignerConfig                   *remote_web3signer.SetupConfig
-	prepareBeaconProposalConfig        *validator_service_config.FeeRecipientConfig
+	feeRecipientConfig                 *validator_service_config.FeeRecipientConfig
 	walletIntializedChannel            chan *wallet.Wallet
 }
 
@@ -338,21 +338,19 @@ func (v *validator) ReceiveBlocks(ctx context.Context, connectionErrorChannel ch
 		if res == nil || res.Block == nil {
 			continue
 		}
-		if res.GetPhase0Block() == nil && res.GetAltairBlock() == nil {
+		var blk block.SignedBeaconBlock
+		switch b := res.Block.(type) {
+		case *ethpb.StreamBlocksResponse_Phase0Block:
+			blk, err = wrapper.WrappedSignedBeaconBlock(b.Phase0Block)
+		case *ethpb.StreamBlocksResponse_AltairBlock:
+			blk, err = wrapper.WrappedSignedBeaconBlock(b.AltairBlock)
+		}
+		if err != nil {
+			log.WithError(err).Error("Failed to wrap signed block")
 			continue
 		}
-		var blk block.SignedBeaconBlock
-		switch {
-		case res.GetPhase0Block() != nil:
-			blk = wrapper.WrappedPhase0SignedBeaconBlock(res.GetPhase0Block())
-		case res.GetAltairBlock() != nil:
-			blk, err = wrapper.WrappedAltairSignedBeaconBlock(res.GetAltairBlock())
-			if err != nil {
-				log.WithError(err).Error("Failed to wrap altair signed block")
-				continue
-			}
-		}
 		if blk == nil || blk.IsNil() {
+			log.Error("Received nil block")
 			continue
 		}
 		if blk.Block().Slot() > v.highestValidSlot {
@@ -938,6 +936,10 @@ func (v *validator) logDuties(slot types.Slot, duties []*ethpb.DutiesResponse_Du
 
 // UpdateFeeRecipient calls the prepareBeaconProposer RPC to set the fee recipient.
 func (v *validator) UpdateFeeRecipient(ctx context.Context, km keymanager.IKeymanager) error {
+	if v.feeRecipientConfig == nil {
+		log.Warnln("Fee recipient config not set, skipping fee recipient update. Validator will continue proposing using beacon node specified fee recipient.")
+		return nil
+	}
 	if km == nil {
 		return errors.New("keymanager is nil when calling PrepareBeaconProposer")
 	}
@@ -981,12 +983,12 @@ func (v *validator) feeRecipients(ctx context.Context, pubkeys [][fieldparams.BL
 			validatorIndex = ind
 			v.pubkeyToValidatorIndex[key] = validatorIndex
 		}
-		if v.prepareBeaconProposalConfig.ProposeConfig != nil {
-			option, ok := v.prepareBeaconProposalConfig.ProposeConfig[key]
+		if v.feeRecipientConfig.ProposeConfig != nil {
+			option, ok := v.feeRecipientConfig.ProposeConfig[key]
 			if option != nil && ok {
 				feeRecipient = option.FeeRecipient
 			} else {
-				feeRecipient = v.prepareBeaconProposalConfig.DefaultConfig.FeeRecipient
+				feeRecipient = v.feeRecipientConfig.DefaultConfig.FeeRecipient
 			}
 		}
 		validatorToFeeRecipientArray = append(validatorToFeeRecipientArray, &ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{

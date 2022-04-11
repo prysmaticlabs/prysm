@@ -74,7 +74,7 @@ func (bs *Server) retrieveCommitteesForEpoch(
 	if err != nil {
 		return nil, nil, err
 	}
-	requestedState, err := bs.ReplayerBuilder.ForSlot(startSlot).ReplayBlocks(ctx)
+	requestedState, err := bs.ReplayerBuilder.ReplayerForSlot(startSlot).ReplayBlocks(ctx)
 	if err != nil {
 		return nil, nil, status.Errorf(codes.Internal, "error replaying blocks for state at slot %d: %v", startSlot, err)
 	}

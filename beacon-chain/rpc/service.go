@@ -26,7 +26,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
-	enginev1 "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/beacon"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/debug"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/events"
@@ -109,7 +108,8 @@ type Config struct {
 	OperationNotifier       opfeed.Notifier
 	StateGen                *stategen.State
 	MaxMsgSize              int
-	ExecutionEngineCaller   enginev1.Caller
+	ExecutionEngineCaller   powchain.EngineCaller
+	ProposerIdsCache        *cache.ProposerPayloadIDsCache
 }
 
 // NewService instantiates a new RPC service instance that will
@@ -178,6 +178,7 @@ func (s *Service) Start() {
 		stateCache = s.cfg.StateGen.CombinedCache()
 	}
 	withCache := stategen.WithCache(stateCache)
+	ch := stategen.NewCanonicalHistory(s.cfg.BeaconDB, s.cfg.ChainInfoFetcher, s.cfg.ChainInfoFetcher, withCache)
 
 	validatorServer := &validatorv1alpha1.Server{
 		Ctx:                    s.ctx,
@@ -204,9 +205,10 @@ func (s *Service) Start() {
 		SlashingsPool:          s.cfg.SlashingsPool,
 		StateGen:               s.cfg.StateGen,
 		SyncCommitteePool:      s.cfg.SyncCommitteeObjectPool,
-		ReplayerBuilder:        stategen.NewCanonicalBuilder(s.cfg.BeaconDB, s.cfg.ChainInfoFetcher, s.cfg.ChainInfoFetcher, withCache),
+		ReplayerBuilder:        ch,
 		ExecutionEngineCaller:  s.cfg.ExecutionEngineCaller,
 		BeaconDB:               s.cfg.BeaconDB,
+		ProposerSlotIndexCache: s.cfg.ProposerIdsCache,
 	}
 	validatorServerV1 := &validator.Server{
 		HeadFetcher:      s.cfg.HeadFetcher,
@@ -221,7 +223,7 @@ func (s *Service) Start() {
 			ChainInfoFetcher:   s.cfg.ChainInfoFetcher,
 			GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
 			StateGenService:    s.cfg.StateGen,
-			ReplayerBuilder:    stategen.NewCanonicalBuilder(s.cfg.BeaconDB, s.cfg.ChainInfoFetcher, s.cfg.ChainInfoFetcher, withCache),
+			ReplayerBuilder:    ch,
 		},
 		SyncCommitteePool: s.cfg.SyncCommitteeObjectPool,
 	}
@@ -271,9 +273,10 @@ func (s *Service) Start() {
 		SyncChecker:                 s.cfg.SyncService,
 		ReceivedAttestationsBuffer:  make(chan *ethpbv1alpha1.Attestation, attestationBufferSize),
 		CollectedAttestationsBuffer: make(chan []*ethpbv1alpha1.Attestation, attestationBufferSize),
-		ReplayerBuilder:             stategen.NewCanonicalBuilder(s.cfg.BeaconDB, s.cfg.ChainInfoFetcher, s.cfg.ChainInfoFetcher, withCache),
+		ReplayerBuilder:             ch,
 	}
 	beaconChainServerV1 := &beacon.Server{
+		CanonicalHistory:   ch,
 		BeaconDB:           s.cfg.BeaconDB,
 		AttestationsPool:   s.cfg.AttestationsPool,
 		SlashingsPool:      s.cfg.SlashingsPool,
@@ -289,10 +292,12 @@ func (s *Service) Start() {
 			ChainInfoFetcher:   s.cfg.ChainInfoFetcher,
 			GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
 			StateGenService:    s.cfg.StateGen,
+			ReplayerBuilder:    ch,
 		},
 		HeadFetcher:             s.cfg.HeadFetcher,
 		VoluntaryExitsPool:      s.cfg.ExitPool,
 		V1Alpha1ValidatorServer: validatorServer,
+		SyncChecker:             s.cfg.SyncService,
 	}
 	ethpbv1alpha1.RegisterNodeServer(s.grpcServer, nodeServer)
 	ethpbservice.RegisterBeaconNodeServer(s.grpcServer, nodeServerV1)
@@ -314,7 +319,7 @@ func (s *Service) Start() {
 			HeadFetcher:        s.cfg.HeadFetcher,
 			PeerManager:        s.cfg.PeerManager,
 			PeersFetcher:       s.cfg.PeersFetcher,
-			ReplayerBuilder:    stategen.NewCanonicalBuilder(s.cfg.BeaconDB, s.cfg.ChainInfoFetcher, s.cfg.ChainInfoFetcher, withCache),
+			ReplayerBuilder:    ch,
 		}
 		debugServerV1 := &debug.Server{
 			BeaconDB:    s.cfg.BeaconDB,
@@ -324,7 +329,7 @@ func (s *Service) Start() {
 				ChainInfoFetcher:   s.cfg.ChainInfoFetcher,
 				GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
 				StateGenService:    s.cfg.StateGen,
-				ReplayerBuilder:    stategen.NewCanonicalBuilder(s.cfg.BeaconDB, s.cfg.ChainInfoFetcher, s.cfg.ChainInfoFetcher, withCache),
+				ReplayerBuilder:    ch,
 			},
 		}
 		ethpbv1alpha1.RegisterDebugServer(s.grpcServer, debugServer)

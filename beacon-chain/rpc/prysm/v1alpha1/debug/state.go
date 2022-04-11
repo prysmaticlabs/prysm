@@ -29,7 +29,7 @@ func (ds *Server) GetBeaconState(
 			)
 		}
 
-		st, err := ds.ReplayerBuilder.ForSlot(q.Slot).ReplayBlocks(ctx)
+		st, err := ds.ReplayerBuilder.ReplayerForSlot(q.Slot).ReplayBlocks(ctx)
 		if err != nil {
 			return nil, status.Error(codes.Internal, fmt.Sprintf("error replaying blocks for state at slot %d: %v", q.Slot, err))
 		}
