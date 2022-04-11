@@ -1,6 +1,7 @@
 package remote_web3signer
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -20,6 +21,7 @@ import (
 	remote_utils "github.com/prysmaticlabs/prysm/validator/keymanager/remote-utils"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/internal"
 	v1 "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/v1"
+	log "github.com/sirupsen/logrus"
 )
 
 // SetupConfig includes configuration values for initializing.
@@ -48,18 +50,13 @@ type Keymanager struct {
 	providedPublicKeys    [][48]byte
 	accountsChangedFeed   *event.Feed
 	validator             *validator.Validate
+	publicKeysUrlCalled   bool
 }
 
 // NewKeymanager instantiates a new web3signer key manager.
 func NewKeymanager(_ context.Context, cfg *SetupConfig) (*Keymanager, error) {
 	if cfg.BaseEndpoint == "" || !bytesutil.IsValidRoot(cfg.GenesisValidatorsRoot) {
 		return nil, fmt.Errorf("invalid setup config, one or more configs are empty: BaseEndpoint: %v, GenesisValidatorsRoot: %#x", cfg.BaseEndpoint, cfg.GenesisValidatorsRoot)
-	}
-	if cfg.PublicKeysURL != "" && len(cfg.ProvidedPublicKeys) != 0 {
-		return nil, errors.New("Either a provided list of public keys or a URL to a list of public keys must be provided, but not both")
-	}
-	if cfg.PublicKeysURL == "" && len(cfg.ProvidedPublicKeys) == 0 {
-		return nil, errors.New("no valid public key options provided")
 	}
 	client, err := internal.NewApiClient(cfg.BaseEndpoint)
 	if err != nil {
@@ -72,6 +69,7 @@ func NewKeymanager(_ context.Context, cfg *SetupConfig) (*Keymanager, error) {
 		publicKeysURL:         cfg.PublicKeysURL,
 		providedPublicKeys:    cfg.ProvidedPublicKeys,
 		validator:             validator.New(),
+		publicKeysUrlCalled:   false,
 	}, nil
 }
 
@@ -79,12 +77,14 @@ func NewKeymanager(_ context.Context, cfg *SetupConfig) (*Keymanager, error) {
 // from the remote server or from the provided keys if there are no existing public keys set
 // or provides the existing keys in the keymanager.
 func (km *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][fieldparams.BLSPubkeyLength]byte, error) {
-	if km.publicKeysURL != "" && len(km.providedPublicKeys) == 0 {
+	if km.publicKeysURL != "" && !km.publicKeysUrlCalled {
 		providedPublicKeys, err := km.client.GetPublicKeys(ctx, km.publicKeysURL)
 		if err != nil {
 			erroredResponsesTotal.Inc()
 			return nil, errors.Wrap(err, fmt.Sprintf("could not get public keys from remote server url: %v", km.publicKeysURL))
 		}
+		// makes sure that if the public keys are deleted the validator does not call URL again.
+		km.publicKeysUrlCalled = true
 		km.providedPublicKeys = providedPublicKeys
 	}
 	return km.providedPublicKeys, nil
@@ -231,13 +231,8 @@ func getSignRequestJson(ctx context.Context, validator *validator.Validate, requ
 }
 
 // SubscribeAccountChanges returns the event subscription for changes to public keys.
-func (*Keymanager) SubscribeAccountChanges(_ chan [][48]byte) event.Subscription {
-	// Not used right now.
-	// Returns a stub for the time being as there is a danger of being slashed if the apiClient reloads keys dynamically.
-	// Because there is no way to dynamically reload keys, add or remove remote keys we are returning a stub without any event updates for the time being.
-	return event.NewSubscription(func(i <-chan struct{}) error {
-		return nil
-	})
+func (km *Keymanager) SubscribeAccountChanges(pubKeysChan chan [][fieldparams.BLSPubkeyLength]byte) event.Subscription {
+	return km.accountsChangedFeed.Subscribe(pubKeysChan)
 }
 
 // ExtractKeystores is not supported for the remote-web3signer keymanager type.
@@ -277,4 +272,74 @@ func (km *Keymanager) ListKeymanagerAccounts(ctx context.Context, cfg keymanager
 	}
 	remote_utils.DisplayRemotePublicKeys(validatingPubKeys)
 	return nil
+}
+
+// AddPublicKeys imports a list of public keys into the keymanager for web3signer use. Returns status with message.
+func (km *Keymanager) AddPublicKeys(ctx context.Context, pubKeys [][fieldparams.BLSPubkeyLength]byte) ([]*ethpbservice.ImportedRemoteKeysStatus, error) {
+	if ctx == nil {
+		return nil, errors.New("context is nil")
+	}
+	importedRemoteKeysStatuses := make([]*ethpbservice.ImportedRemoteKeysStatus, len(pubKeys))
+	for i, pubKey := range pubKeys {
+		found := false
+		for _, key := range km.providedPublicKeys {
+			if bytes.Equal(key[:], pubKey[:]) {
+				found = true
+				break
+			}
+		}
+		if found {
+			importedRemoteKeysStatuses[i] = &ethpbservice.ImportedRemoteKeysStatus{
+				Status:  ethpbservice.ImportedRemoteKeysStatus_DUPLICATE,
+				Message: fmt.Sprintf("Duplicate pubkey: %v, already in use", hexutil.Encode(pubKey[:])),
+			}
+			continue
+		}
+		km.providedPublicKeys = append(km.providedPublicKeys, pubKey)
+		importedRemoteKeysStatuses[i] = &ethpbservice.ImportedRemoteKeysStatus{
+			Status:  ethpbservice.ImportedRemoteKeysStatus_IMPORTED,
+			Message: fmt.Sprintf("Successfully added pubkey: %v", hexutil.Encode(pubKey[:])),
+		}
+		log.Debug("Added pubkey to keymanager for web3signer", "pubkey", hexutil.Encode(pubKey[:]))
+	}
+	km.accountsChangedFeed.Send(km.providedPublicKeys)
+	return importedRemoteKeysStatuses, nil
+}
+
+// DeletePublicKeys removes a list of public keys from the keymanager for web3signer use. Returns status with message.
+func (km *Keymanager) DeletePublicKeys(ctx context.Context, pubKeys [][fieldparams.BLSPubkeyLength]byte) ([]*ethpbservice.DeletedRemoteKeysStatus, error) {
+	if ctx == nil {
+		return nil, errors.New("context is nil")
+	}
+	deletedRemoteKeysStatuses := make([]*ethpbservice.DeletedRemoteKeysStatus, len(pubKeys))
+	if len(km.providedPublicKeys) == 0 {
+		for i := range deletedRemoteKeysStatuses {
+			deletedRemoteKeysStatuses[i] = &ethpbservice.DeletedRemoteKeysStatus{
+				Status:  ethpbservice.DeletedRemoteKeysStatus_NOT_FOUND,
+				Message: "No pubkeys are set in validator",
+			}
+		}
+		return deletedRemoteKeysStatuses, nil
+	}
+	for i, pubkey := range pubKeys {
+		for in, key := range km.providedPublicKeys {
+			if bytes.Equal(key[:], pubkey[:]) {
+				km.providedPublicKeys = append(km.providedPublicKeys[:in], km.providedPublicKeys[in+1:]...)
+				deletedRemoteKeysStatuses[i] = &ethpbservice.DeletedRemoteKeysStatus{
+					Status:  ethpbservice.DeletedRemoteKeysStatus_DELETED,
+					Message: fmt.Sprintf("Successfully deleted pubkey: %v", hexutil.Encode(pubkey[:])),
+				}
+				log.Debug("Deleted pubkey from keymanager for web3signer", "pubkey", hexutil.Encode(pubkey[:]))
+				break
+			}
+		}
+		if deletedRemoteKeysStatuses[i] == nil {
+			deletedRemoteKeysStatuses[i] = &ethpbservice.DeletedRemoteKeysStatus{
+				Status:  ethpbservice.DeletedRemoteKeysStatus_NOT_FOUND,
+				Message: fmt.Sprintf("Pubkey: %v not found", hexutil.Encode(pubkey[:])),
+			}
+		}
+	}
+	km.accountsChangedFeed.Send(km.providedPublicKeys)
+	return deletedRemoteKeysStatuses, nil
 }
