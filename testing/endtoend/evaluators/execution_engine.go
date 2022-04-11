@@ -35,7 +35,7 @@ func transactionsPresent(conns ...*grpc.ClientConn) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to get blocks from beacon-chain")
 	}
-	expectedTxNum := int(math.Round(float64(params.E2ETestConfig().SlotsPerEpoch) * float64(e2e.NumOfExecEngineTxs) * 0.7))
+	expectedTxNum := int(math.Round(float64(params.E2ETestConfig().SlotsPerEpoch) * float64(e2e.NumOfExecEngineTxs) * e2e.ExpectedExecEngineTxsThreshold))
 	var numberOfTxs int
 	for _, ctr := range blks.BlockContainers {
 		switch ctr.Block.(type) {
