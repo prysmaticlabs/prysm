@@ -67,7 +67,7 @@ func (s *Server) ImportKeystores(
 	}
 	km, err := s.validatorService.Keymanager()
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get keymanager (possibly due beacon node unavailable): %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not get keymanager (possibly due to beacon node unavailable): %v", err)
 	}
 	importer, ok := km.(keymanager.Importer)
 	if !ok {
