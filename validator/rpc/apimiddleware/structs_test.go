@@ -118,6 +118,116 @@ func TestDeleteKeystores_JSONisEqual(t *testing.T) {
 
 }
 
+func TestListRemoteKeys_JSONisEqual(t *testing.T) {
+	middlewareResponse := &listRemoteKeysResponseJson{
+		Keystores: []*remoteKeysListJson{
+			&remoteKeysListJson{
+				Pubkey:   "0x0",
+				Url:      "http://localhost:8080",
+				Readonly: true,
+			},
+		},
+	}
+
+	protoResponse := &service.ListRemoteKeysResponse{
+		Data: []*service.ListRemoteKeysResponse_Keystore{
+			&service.ListRemoteKeysResponse_Keystore{
+				Pubkey:   make([]byte, fieldparams.BLSPubkeyLength),
+				Url:      "http://localhost:8080",
+				Readonly: true,
+			},
+		},
+	}
+
+	listResp, err := areJsonPropertyNamesEqual(middlewareResponse, protoResponse)
+	require.NoError(t, err)
+	require.Equal(t, listResp, true)
+
+	resp, err := areJsonPropertyNamesEqual(middlewareResponse.Keystores[0], protoResponse.Data[0])
+	require.NoError(t, err)
+	require.Equal(t, resp, true)
+}
+
+func TestImportRemoteKeys_JSONisEqual(t *testing.T) {
+	importKeystoresRequest := &importRemoteKeysRequestJson{}
+
+	protoImportRequest := &service.ImportRemoteKeysRequest{
+		RemoteKeys: []*service.ImportRemoteKeysRequest_Keystore{
+			&service.ImportRemoteKeysRequest_Keystore{
+				Pubkey: make([]byte, fieldparams.BLSPubkeyLength),
+				Url:    "http://localhost:8080",
+			},
+		},
+	}
+
+	requestResp, err := areJsonPropertyNamesEqual(importKeystoresRequest, protoImportRequest)
+	require.NoError(t, err)
+	require.Equal(t, requestResp, true)
+
+	importKeystoresResponse := &importRemoteKeysResponseJson{
+		Statuses: []*statusJson{
+			&statusJson{
+				Status:  "Error",
+				Message: "a",
+			},
+		},
+	}
+
+	protoImportKeystoresResponse := &service.ImportRemoteKeysResponse{
+		Data: []*service.ImportedRemoteKeysStatus{
+			&service.ImportedRemoteKeysStatus{
+				Status:  service.ImportedRemoteKeysStatus_ERROR,
+				Message: "a",
+			},
+		},
+	}
+
+	ImportResp, err := areJsonPropertyNamesEqual(importKeystoresResponse, protoImportKeystoresResponse)
+	require.NoError(t, err)
+	require.Equal(t, ImportResp, true)
+
+	resp, err := areJsonPropertyNamesEqual(importKeystoresResponse.Statuses[0], protoImportKeystoresResponse.Data[0])
+	require.NoError(t, err)
+	require.Equal(t, resp, true)
+}
+
+func TestDeleteRemoteKeys_JSONisEqual(t *testing.T) {
+	deleteKeystoresRequest := &deleteRemoteKeysRequestJson{}
+
+	protoDeleteRequest := &service.DeleteRemoteKeysRequest{
+		Pubkeys: [][]byte{[]byte{}},
+	}
+
+	requestResp, err := areJsonPropertyNamesEqual(deleteKeystoresRequest, protoDeleteRequest)
+	require.NoError(t, err)
+	require.Equal(t, requestResp, true)
+
+	deleteKeystoresResponse := &deleteRemoteKeysResponseJson{
+		Statuses: []*statusJson{
+			&statusJson{
+				Status:  "Error",
+				Message: "a",
+			},
+		},
+	}
+	protoDeleteResponse := &service.DeleteRemoteKeysResponse{
+		Data: []*service.DeletedRemoteKeysStatus{
+			&service.DeletedRemoteKeysStatus{
+				Status:  service.DeletedRemoteKeysStatus_ERROR,
+				Message: "a",
+			},
+		},
+	}
+
+	deleteResp, err := areJsonPropertyNamesEqual(deleteKeystoresResponse, protoDeleteResponse)
+	require.NoError(t, err)
+	require.Equal(t, deleteResp, true)
+
+	resp, err := areJsonPropertyNamesEqual(deleteKeystoresResponse.Statuses[0], protoDeleteResponse.Data[0])
+	require.NoError(t, err)
+	require.Equal(t, resp, true)
+}
+
 // note: this does not do a deep comparison of the structs
 func areJsonPropertyNamesEqual(internal, proto interface{}) (bool, error) {
 	internalJSON, err := json.Marshal(internal)

@@ -117,6 +117,7 @@ func (v *validator) WaitForKeymanagerInitialization(ctx context.Context) error {
 	}
 
 	if v.useWeb && v.wallet == nil {
+		log.Info("Waiting for keymanager to initialize validator client with web UI")
 		// if wallet is not set, wait for it to be set through the UI
 		km, err := waitForWebWalletInitialization(ctx, v.walletInitializedFeed, v.walletIntializedChannel)
 		if err != nil {
