@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"math/big"
-	"net/http"
 	"reflect"
 	"runtime/debug"
 	"sort"
@@ -135,7 +134,6 @@ type config struct {
 	eth1HeaderReqLimit      uint64
 	beaconNodeStatsUpdater  BeaconNodeStatsUpdater
 	httpEndpoints           []network.Endpoint
-	httpRPCClient           *http.Client
 	currHttpEndpoint        network.Endpoint
 	finalizedStateAtStartup state.BeaconState
 }

@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/network"
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	"github.com/sirupsen/logrus"
 )
@@ -81,7 +82,7 @@ func (s *Service) checkTransitionConfiguration(
 				return
 			}
 		case tm := <-ticker.C:
-			ctx, cancel := context.WithDeadline(ctx, tm.Add(DefaultRPCHTTPTimeout))
+			ctx, cancel := context.WithDeadline(ctx, tm.Add(network.DefaultRPCHTTPTimeout))
 			err = s.ExchangeTransitionConfiguration(ctx, cfg)
 			s.handleExchangeConfigurationError(err)
 			if !hasTtdReached {

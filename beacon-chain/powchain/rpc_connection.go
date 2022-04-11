@@ -3,7 +3,6 @@ package powchain
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"net/url"
 	"time"
 
@@ -140,11 +139,7 @@ func (s *Service) newRPCClientWithAuth(ctx context.Context, endpoint network.End
 	}
 	switch u.Scheme {
 	case "http", "https":
-		httpClient := s.cfg.httpRPCClient
-		if httpClient == nil {
-			httpClient = http.DefaultClient
-		}
-		client, err = gethRPC.DialHTTPWithClient(endpoint.Url, httpClient)
+		client, err = gethRPC.DialHTTPWithClient(endpoint.Url, endpoint.HttpClient())
 		if err != nil {
 			return nil, err
 		}
