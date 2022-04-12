@@ -54,11 +54,13 @@ func e2eMainnet(t *testing.T, usePrysmSh bool) {
 		ev.ProposeVoluntaryExit,
 		ev.ValidatorHasExited,
 		ev.ColdStateCheckpoint,
-		ev.ForkTransition,
+		ev.AltairForkTransition,
+		ev.BellatrixForkTransition,
 		ev.APIMiddlewareVerifyIntegrity,
 		ev.APIGatewayV1Alpha1VerifyIntegrity,
 		ev.FinishedSyncing,
 		ev.AllNodesHaveSameHead,
+		ev.TransactionsPresent,
 	}
 	testConfig := &types.E2EConfig{
 		BeaconFlags: []string{
