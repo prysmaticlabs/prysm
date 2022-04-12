@@ -97,10 +97,15 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 		return pubsub.ValidationIgnore, nil
 	}
 	// Check that the block being voted on isn't invalid.
-	if s.hasBadBlock(bytesutil.ToBytes32(m.Message.Aggregate.Data.BeaconBlockRoot)) ||
-		s.hasBadBlock(bytesutil.ToBytes32(m.Message.Aggregate.Data.Target.Root)) ||
-		s.hasBadBlock(bytesutil.ToBytes32(m.Message.Aggregate.Data.Source.Root)) {
-		return pubsub.ValidationReject, errors.New("bad block referenced in attestation data")
+	errBadBlockRef := errors.New("bad block referenced in attestation data")
+	if s.hasBadBlock(bytesutil.ToBytes32(m.Message.Aggregate.Data.BeaconBlockRoot)) {
+		return pubsub.ValidationReject, errors.Wrapf(errBadBlockRef, "block=BeaconBlockRoot, root=%#x", m.Message.Aggregate.Data.BeaconBlockRoot)
+	}
+	if s.hasBadBlock(bytesutil.ToBytes32(m.Message.Aggregate.Data.Target.Root)) {
+		return pubsub.ValidationReject, errors.Wrapf(errBadBlockRef, "block=Target, root=%#x", m.Message.Aggregate.Data.Target.Root)
+	}
+	if s.hasBadBlock(bytesutil.ToBytes32(m.Message.Aggregate.Data.Source.Root)) {
+		return pubsub.ValidationReject, errors.Wrapf(errBadBlockRef, "block=Source, root=%#x", m.Message.Aggregate.Data.Source.Root)
 	}
 
 	// Verify aggregate attestation has not already been seen via aggregate gossip, within a block, or through the creation locally.
