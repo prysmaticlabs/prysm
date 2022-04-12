@@ -10,9 +10,12 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -49,8 +52,8 @@ type EngineCaller interface {
 	ExchangeTransitionConfiguration(
 		ctx context.Context, cfg *pb.TransitionConfiguration,
 	) error
-	LatestExecutionBlock(ctx context.Context) (*pb.ExecutionBlock, error)
 	ExecutionBlockByHash(ctx context.Context, hash common.Hash) (*pb.ExecutionBlock, error)
+	GetTerminalBlockHash(ctx context.Context) ([]byte, bool, error)
 }
 
 // NewPayload calls the engine_newPayloadV1 method via JSON-RPC.
@@ -174,6 +177,78 @@ func (s *Service) ExchangeTransitionConfiguration(
 	return nil
 }
 
+// GetTerminalBlockHash returns the valid terminal block hash based on total difficulty.
+//
+// Spec code:
+// def get_pow_block_at_terminal_total_difficulty(pow_chain: Dict[Hash32, PowBlock]) -> Optional[PowBlock]:
+//    # `pow_chain` abstractly represents all blocks in the PoW chain
+//    for block in pow_chain:
+//        parent = pow_chain[block.parent_hash]
+//        block_reached_ttd = block.total_difficulty >= TERMINAL_TOTAL_DIFFICULTY
+//        parent_reached_ttd = parent.total_difficulty >= TERMINAL_TOTAL_DIFFICULTY
+//        if block_reached_ttd and not parent_reached_ttd:
+//            return block
+//
+//    return None
+func (s *Service) GetTerminalBlockHash(ctx context.Context) ([]byte, bool, error) {
+	ttd := new(big.Int)
+	ttd.SetString(params.BeaconConfig().TerminalTotalDifficulty, 10)
+	terminalTotalDifficulty, overflows := uint256.FromBig(ttd)
+	if overflows {
+		return nil, false, errors.New("could not convert terminal total difficulty to uint256")
+	}
+	blk, err := s.LatestExecutionBlock(ctx)
+	if err != nil {
+		return nil, false, errors.Wrap(err, "could not get latest execution block")
+	}
+	if blk == nil {
+		return nil, false, errors.New("latest execution block is nil")
+	}
+
+	for {
+		if ctx.Err() != nil {
+			return nil, false, ctx.Err()
+		}
+		currentTotalDifficulty, err := tDStringToUint256(blk.TotalDifficulty)
+		if err != nil {
+			return nil, false, errors.Wrap(err, "could not convert total difficulty to uint256")
+		}
+		blockReachedTTD := currentTotalDifficulty.Cmp(terminalTotalDifficulty) >= 0
+
+		parentHash := bytesutil.ToBytes32(blk.ParentHash)
+		if len(blk.ParentHash) == 0 || parentHash == params.BeaconConfig().ZeroHash {
+			return nil, false, nil
+		}
+		parentBlk, err := s.ExecutionBlockByHash(ctx, parentHash)
+		if err != nil {
+			return nil, false, errors.Wrap(err, "could not get parent execution block")
+		}
+		if parentBlk == nil {
+			return nil, false, errors.New("parent execution block is nil")
+		}
+		if blockReachedTTD {
+			parentTotalDifficulty, err := tDStringToUint256(parentBlk.TotalDifficulty)
+			if err != nil {
+				return nil, false, errors.Wrap(err, "could not convert total difficulty to uint256")
+			}
+			parentReachedTTD := parentTotalDifficulty.Cmp(terminalTotalDifficulty) >= 0
+			if !parentReachedTTD {
+				log.WithFields(logrus.Fields{
+					"number":   blk.Number,
+					"hash":     fmt.Sprintf("%#x", bytesutil.Trunc(blk.Hash)),
+					"td":       blk.TotalDifficulty,
+					"parentTd": parentBlk.TotalDifficulty,
+					"ttd":      terminalTotalDifficulty,
+				}).Info("Retrieved terminal block hash")
+				return blk.Hash, true, nil
+			}
+		} else {
+			return nil, false, nil
+		}
+		blk = parentBlk
+	}
+}
+
 // LatestExecutionBlock fetches the latest execution engine block by calling
 // eth_blockByNumber via JSON-RPC.
 func (s *Service) LatestExecutionBlock(ctx context.Context) (*pb.ExecutionBlock, error) {
@@ -250,4 +325,16 @@ type httpTimeoutError interface {
 func isTimeout(e error) bool {
 	t, ok := e.(httpTimeoutError)
 	return ok && t.Timeout()
+}
+
+func tDStringToUint256(td string) (*uint256.Int, error) {
+	b, err := hexutil.DecodeBig(td)
+	if err != nil {
+		return nil, err
+	}
+	i, overflows := uint256.FromBig(b)
+	if overflows {
+		return nil, errors.New("total difficulty overflowed")
+	}
+	return i, nil
 }
