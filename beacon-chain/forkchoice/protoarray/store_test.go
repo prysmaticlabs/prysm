@@ -555,13 +555,26 @@ func TestStore_PruneBranched(t *testing.T) {
 		require.NoError(t, f.InsertOptimisticBlock(ctx, 106, [32]byte{'l'}, [32]byte{'k'}, [32]byte{'L'}, 1, 1))
 		f.store.pruneThreshold = 0
 		require.NoError(t, f.store.updateCanonicalNodes(ctx, [32]byte{'f'}))
-		require.Equal(t, true, f.IsCanonical([32]byte{'a'}))
-		require.Equal(t, true, f.IsCanonical([32]byte{'f'}))
+		isCanonical, err := f.IsCanonical([32]byte{'a'})
+		require.NoError(t, err)
+		require.Equal(t, true, isCanonical)
+		isCanonical, err = f.IsCanonical([32]byte{'f'})
+		require.NoError(t, err)
+		require.Equal(t, true, isCanonical)
 
 		require.NoError(t, f.Prune(ctx, tc.finalizedRoot))
 		require.Equal(t, tc.canonicalCount, len(f.store.canonicalNodes))
-		require.Equal(t, true, f.IsCanonical(tc.wantedCanonical))
-		require.Equal(t, false, f.IsCanonical(tc.wantedNonCanonical))
+		isCanonical, err = f.IsCanonical(tc.wantedCanonical)
+		require.NoError(t, err)
+		require.Equal(t, true, isCanonical)
+		hasNode := f.HasNode(tc.wantedNonCanonical)
+		isCanonical, err = f.IsCanonical(tc.wantedNonCanonical)
+		if !hasNode {
+			require.ErrorIs(t, ErrUnknownNodeRoot, err)
+		} else {
+			require.NoError(t, err)
+			require.Equal(t, false, isCanonical)
+		}
 		require.Equal(t, tc.payloadIndex, f.store.payloadIndices[tc.payloadHash])
 		_, ok := f.store.payloadIndices[tc.nonExistentPayload]
 		require.Equal(t, false, ok)
@@ -697,12 +710,21 @@ func TestStore_UpdateCanonicalNodes_WholeList(t *testing.T) {
 		{slot: 2, root: [32]byte{'b'}, parent: 0},
 		{slot: 3, root: [32]byte{'c'}, parent: 1},
 	}
+	f.store.nodesIndices[[32]byte{'a'}] = 0
+	f.store.nodesIndices[[32]byte{'b'}] = 1
 	f.store.nodesIndices[[32]byte{'c'}] = 2
 	require.NoError(t, f.store.updateCanonicalNodes(ctx, [32]byte{'c'}))
 	require.Equal(t, len(f.store.nodes), len(f.store.canonicalNodes))
-	require.Equal(t, true, f.IsCanonical([32]byte{'a'}))
-	require.Equal(t, true, f.IsCanonical([32]byte{'b'}))
-	require.Equal(t, true, f.IsCanonical([32]byte{'c'}))
+	isCanonical, err := f.IsCanonical([32]byte{'a'})
+	require.NoError(t, err)
+	require.Equal(t, true, isCanonical)
+	isCanonical, err = f.IsCanonical([32]byte{'b'})
+	require.NoError(t, err)
+	require.Equal(t, true, isCanonical)
+	isCanonical, err = f.IsCanonical([32]byte{'c'})
+	require.NoError(t, err)
+	require.Equal(t, true, isCanonical)
+
 	idxc := f.store.nodesIndices[[32]byte{'c'}]
 	_, ok := f.store.nodesIndices[[32]byte{'d'}]
 	require.Equal(t, idxc, uint64(2))
@@ -719,13 +741,18 @@ func TestStore_UpdateCanonicalNodes_ParentAlreadyIn(t *testing.T) {
 		{slot: 2, root: [32]byte{'b'}, parent: 0},
 		{slot: 3, root: [32]byte{'c'}, parent: 1},
 	}
+	f.store.nodesIndices[[32]byte{'b'}] = 1
 	f.store.nodesIndices[[32]byte{'c'}] = 2
 	f.store.canonicalNodes[[32]byte{'b'}] = true
 	require.NoError(t, f.store.updateCanonicalNodes(ctx, [32]byte{'c'}))
 	require.Equal(t, len(f.store.nodes)-1, len(f.store.canonicalNodes))
 
-	require.Equal(t, true, f.IsCanonical([32]byte{'c'}))
-	require.Equal(t, true, f.IsCanonical([32]byte{'b'}))
+	isCanonical, err := f.IsCanonical([32]byte{'c'})
+	require.NoError(t, err)
+	require.Equal(t, true, isCanonical)
+	isCanonical, err = f.IsCanonical([32]byte{'b'})
+	require.NoError(t, err)
+	require.Equal(t, true, isCanonical)
 }
 
 func TestStore_UpdateCanonicalNodes_ContextCancelled(t *testing.T) {
@@ -766,10 +793,19 @@ func TestStore_UpdateCanonicalNodes_RemoveOldCanonical(t *testing.T) {
 	require.Equal(t, 3, len(f.store.canonicalNodes))
 	require.NoError(t, f.store.updateCanonicalNodes(ctx, [32]byte{'e'}))
 	require.Equal(t, 4, len(f.store.canonicalNodes))
-	require.Equal(t, true, f.IsCanonical([32]byte{'a'}))
-	require.Equal(t, true, f.IsCanonical([32]byte{'b'}))
-	require.Equal(t, true, f.IsCanonical([32]byte{'d'}))
-	require.Equal(t, true, f.IsCanonical([32]byte{'e'}))
+
+	isCanonical, err := f.IsCanonical([32]byte{'a'})
+	require.NoError(t, err)
+	require.Equal(t, true, isCanonical)
+	isCanonical, err = f.IsCanonical([32]byte{'b'})
+	require.NoError(t, err)
+	require.Equal(t, true, isCanonical)
+	isCanonical, err = f.IsCanonical([32]byte{'d'})
+	require.NoError(t, err)
+	require.Equal(t, true, isCanonical)
+	isCanonical, err = f.IsCanonical([32]byte{'e'})
+	require.NoError(t, err)
+	require.Equal(t, true, isCanonical)
 	_, ok := f.store.canonicalNodes[[32]byte{'c'}]
 	require.Equal(t, false, ok)
 }

@@ -150,25 +150,25 @@ func (f *ForkChoice) HasParent(root [32]byte) bool {
 }
 
 // IsCanonical returns true if the given root is part of the canonical chain.
-func (f *ForkChoice) IsCanonical(root [32]byte) bool {
+func (f *ForkChoice) IsCanonical(root [32]byte) (bool, error) {
 	f.store.nodesLock.RLock()
 	defer f.store.nodesLock.RUnlock()
 
 	node, ok := f.store.nodeByRoot[root]
 	if !ok || node == nil {
-		return false
+		return false, ErrNilNode
 	}
 
 	if node.bestDescendant == nil {
 		if f.store.headNode.bestDescendant == nil {
-			return node == f.store.headNode
+			return node == f.store.headNode, nil
 		}
-		return node == f.store.headNode.bestDescendant
+		return node == f.store.headNode.bestDescendant, nil
 	}
 	if f.store.headNode.bestDescendant == nil {
-		return node.bestDescendant == f.store.headNode
+		return node.bestDescendant == f.store.headNode, nil
 	}
-	return node.bestDescendant == f.store.headNode.bestDescendant
+	return node.bestDescendant == f.store.headNode.bestDescendant, nil
 }
 
 // IsOptimistic returns true if the given root has been optimistically synced.

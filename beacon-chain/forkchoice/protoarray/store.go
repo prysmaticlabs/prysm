@@ -160,11 +160,14 @@ func (f *ForkChoice) HasParent(root [32]byte) bool {
 }
 
 // IsCanonical returns true if the given root is part of the canonical chain.
-func (f *ForkChoice) IsCanonical(root [32]byte) bool {
+func (f *ForkChoice) IsCanonical(root [32]byte) (bool, error) {
 	f.store.nodesLock.RLock()
 	defer f.store.nodesLock.RUnlock()
 
-	return f.store.canonicalNodes[root]
+	if !f.HasNode(root) {
+		return false, ErrUnknownNodeRoot
+	}
+	return f.store.canonicalNodes[root], nil
 }
 
 // AncestorRoot returns the ancestor root of input block root at a given slot.

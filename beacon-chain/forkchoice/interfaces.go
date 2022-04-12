@@ -61,7 +61,7 @@ type Getter interface {
 	ProposerBoost() [fieldparams.RootLength]byte
 	HasParent(root [32]byte) bool
 	AncestorRoot(ctx context.Context, root [32]byte, slot types.Slot) ([]byte, error)
-	IsCanonical(root [32]byte) bool
+	IsCanonical(root [32]byte) (bool, error)
 	FinalizedEpoch() types.Epoch
 	JustifiedEpoch() types.Epoch
 	ForkChoiceNodes() []*pbrpc.ForkChoiceNode

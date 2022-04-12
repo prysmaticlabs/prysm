@@ -10,6 +10,8 @@ import (
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/doubly-linked-tree"
+	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -83,7 +85,11 @@ func (s *Service) VerifyLmdFfgConsistency(ctx context.Context, a *ethpb.Attestat
 func (s *Service) VerifyFinalizedConsistency(ctx context.Context, root []byte) error {
 	// A canonical root implies the root to has an ancestor that aligns with finalized check point.
 	// In this case, we could exit early to save on additional computation.
-	if s.cfg.ForkChoiceStore.IsCanonical(bytesutil.ToBytes32(root)) {
+	isCanonical, err := s.cfg.ForkChoiceStore.IsCanonical(bytesutil.ToBytes32(root))
+	if err != protoarray.ErrUnknownNodeRoot && err != doublylinkedtree.ErrNilNode {
+		return err
+	}
+	if isCanonical {
 		return nil
 	}
 

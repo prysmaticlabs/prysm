@@ -273,13 +273,11 @@ func (s *Service) CurrentFork() *ethpb.Fork {
 
 // IsCanonical returns true if the input block root is part of the canonical chain.
 func (s *Service) IsCanonical(ctx context.Context, blockRoot [32]byte) (bool, error) {
-	// If the block has been finalized, the block will always be part of the canonical chain.
-	if s.cfg.BeaconDB.IsFinalizedBlock(ctx, blockRoot) {
-		return true, nil
+	isCanonical, err := s.cfg.ForkChoiceStore.IsCanonical(blockRoot)
+	if err == protoarray.ErrUnknownNodeRoot || err == doublylinkedtree.ErrNilNode {
+		return s.cfg.BeaconDB.IsFinalizedBlock(ctx, blockRoot), nil
 	}
-
-	// If the block has not been finalized, check fork choice store to see if the block is canonical
-	return s.cfg.ForkChoiceStore.IsCanonical(blockRoot), nil
+	return isCanonical, err
 }
 
 // ChainHeads returns all possible chain heads (leaves of fork choice tree).
