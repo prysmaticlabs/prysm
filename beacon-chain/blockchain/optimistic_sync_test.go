@@ -792,3 +792,71 @@ func TestService_removeInvalidBlockAndState(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, false, has)
 }
+
+func TestService_getFinalizedPayloadHash(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithStateGen(stategen.New(beaconDB)),
+	}
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+
+	// Use the block in DB
+	b := util.NewBeaconBlockBellatrix()
+	b.Block.Body.ExecutionPayload.BlockHash = bytesutil.PadTo([]byte("hi"), 32)
+	blk, err := wrapper.WrappedSignedBeaconBlock(b)
+	r, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, blk))
+	h, err := service.getFinalizedPayloadHash(ctx, r)
+	require.NoError(t, err)
+	require.Equal(t, bytesutil.ToBytes32(b.Block.Body.ExecutionPayload.BlockHash), h)
+
+	// Use the block in init sync cache
+	b = util.NewBeaconBlockBellatrix()
+	b.Block.Body.ExecutionPayload.BlockHash = bytesutil.PadTo([]byte("hello"), 32)
+	blk, err = wrapper.WrappedSignedBeaconBlock(b)
+	r, err = b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	service.initSyncBlocks[r] = blk
+	h, err = service.getFinalizedPayloadHash(ctx, r)
+	require.NoError(t, err)
+	require.Equal(t, bytesutil.ToBytes32(b.Block.Body.ExecutionPayload.BlockHash), h)
+
+	// Use the weak subjectivity sync block
+	b = util.NewBeaconBlockBellatrix()
+	b.Block.Body.ExecutionPayload.BlockHash = bytesutil.PadTo([]byte("howdy"), 32)
+	blk, err = wrapper.WrappedSignedBeaconBlock(b)
+	r, err = b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, blk))
+	require.NoError(t, service.cfg.BeaconDB.SaveOriginCheckpointBlockRoot(ctx, r))
+	h, err = service.getFinalizedPayloadHash(ctx, r)
+	require.NoError(t, err)
+	require.Equal(t, bytesutil.ToBytes32(b.Block.Body.ExecutionPayload.BlockHash), h)
+
+	// None of the above should error
+	require.NoError(t, service.cfg.BeaconDB.SaveOriginCheckpointBlockRoot(ctx, [32]byte{'a'}))
+	r, err = service.getFinalizedPayloadHash(ctx, [32]byte{'a'})
+	require.ErrorContains(t, "does not exist in the db or our cache", err)
+}
+
+func TestService_getPayloadHash(t *testing.T) {
+	// Pre-bellatrix
+	blk, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+	require.NoError(t, err)
+	h, err := getPayloadHash(blk.Block())
+	require.NoError(t, err)
+	require.Equal(t, [32]byte{}, h)
+
+	// Post bellatrix
+	b := util.NewBeaconBlockBellatrix()
+	b.Block.Body.ExecutionPayload.BlockHash = bytesutil.PadTo([]byte("hi"), 32)
+	blk, err = wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	h, err = getPayloadHash(blk.Block())
+	require.NoError(t, err)
+	require.Equal(t, bytesutil.ToBytes32(bytesutil.PadTo([]byte("hi"), 32)), h)
+}
