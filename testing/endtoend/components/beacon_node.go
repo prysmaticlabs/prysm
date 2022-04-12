@@ -117,7 +117,7 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 		expectedNumOfPeers += 1
 	}
 	jwtPath := path.Join(e2e.TestParams.TestPath, "eth1data/"+strconv.Itoa(node.index)+"/")
-	eth1Port := e2e.TestParams.Ports.Eth1RPCPort
+	eth1Port := e2e.TestParams.Ports.Eth1AuthRPCPort
 	if index == 0 {
 		jwtPath = path.Join(e2e.TestParams.TestPath, "eth1data/miner/")
 		eth1Port = e2e.TestParams.Ports.Eth1ProxyPort

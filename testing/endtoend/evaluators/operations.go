@@ -419,5 +419,8 @@ func convertToBlockInterface(obj *ethpb.BeaconBlockContainer) (block.SignedBeaco
 	if obj.GetBellatrixBlock() != nil {
 		return wrapper.WrappedSignedBeaconBlock(obj.GetBellatrixBlock())
 	}
+	if obj.GetBellatrixBlock() != nil {
+		return wrapper.WrappedSignedBeaconBlock(obj.GetBellatrixBlock())
+	}
 	return nil, errors.New("container has no block")
 }

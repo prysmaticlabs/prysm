@@ -60,6 +60,16 @@ type KeyStoreExtractor interface {
 	ExtractKeystores(ctx context.Context, publicKeys []bls.PublicKey, password string) ([]*Keystore, error)
 }
 
+// PublicKeyAdder allows adding public keys to the keymanager.
+type PublicKeyAdder interface {
+	AddPublicKeys(ctx context.Context, publicKeys [][fieldparams.BLSPubkeyLength]byte) ([]*ethpbservice.ImportedRemoteKeysStatus, error)
+}
+
+// PublicKeyDeleter allows deleting public keys set in keymanager.
+type PublicKeyDeleter interface {
+	DeletePublicKeys(ctx context.Context, publicKeys [][fieldparams.BLSPubkeyLength]byte) ([]*ethpbservice.DeletedRemoteKeysStatus, error)
+}
+
 type ListKeymanagerAccountConfig struct {
 	ShowDepositData          bool
 	ShowPrivateKeys          bool
