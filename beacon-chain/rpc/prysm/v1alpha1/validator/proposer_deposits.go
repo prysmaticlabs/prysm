@@ -159,9 +159,12 @@ func (vs *Server) depositTrie(ctx context.Context, canonicalEth1Data *ethpb.Eth1
 
 	var depositTrie *trie.SparseMerkleTrie
 
+	log.Infof("eth1 data with hash %#x and count %d at height %d", canonicalEth1Data.BlockHash, canonicalEth1Data.DepositCount, canonicalEth1DataHeight.Uint64())
 	finalizedDeposits := vs.DepositFetcher.FinalizedDeposits(ctx)
 	depositTrie = finalizedDeposits.Deposits
+	log.Infof("deposit trie has number of items of %d at index current index %d", depositTrie.NumOfItems(), finalizedDeposits.MerkleTrieIndex)
 	upToEth1DataDeposits := vs.DepositFetcher.NonFinalizedDeposits(ctx, finalizedDeposits.MerkleTrieIndex, canonicalEth1DataHeight)
+	log.Infof("received %d non finalized deposits", len(upToEth1DataDeposits))
 	insertIndex := finalizedDeposits.MerkleTrieIndex + 1
 
 	for _, dep := range upToEth1DataDeposits {
@@ -178,7 +181,20 @@ func (vs *Server) depositTrie(ctx context.Context, canonicalEth1Data *ethpb.Eth1
 	// Log a warning here, as the cached trie is invalid.
 	if !valid {
 		log.Warnf("Cached deposit trie is invalid, rebuilding it now: %v", err)
-		return vs.rebuildDepositTrie(ctx, canonicalEth1Data, canonicalEth1DataHeight)
+		rebuiltTrie, err := vs.rebuildDepositTrie(ctx, canonicalEth1Data, canonicalEth1DataHeight)
+		if err != nil {
+			return nil, err
+		}
+		oldItems := depositTrie.Items()
+		newItems := rebuiltTrie.Items()
+		for i, item := range newItems {
+			if i >= len(oldItems) {
+				continue
+			}
+			if !bytes.Equal(item, oldItems[i]) {
+				log.Warnf("Index %d has a different result: wanted %#x but got %#x", i, item, oldItems[i])
+			}
+		}
 	}
 
 	return depositTrie, nil
