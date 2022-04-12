@@ -3,6 +3,7 @@ package sync
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -307,7 +308,7 @@ func (s *Service) validateStatusMessage(ctx context.Context, msg *pb.Status) err
 		return nil
 	}
 	if !s.cfg.beaconDB.IsFinalizedBlock(ctx, bytesutil.ToBytes32(msg.FinalizedRoot)) {
-		return p2ptypes.ErrInvalidFinalizedRoot
+		return errors.Wrap(p2ptypes.ErrInvalidFinalizedRoot, fmt.Sprintf("root=%#x", msg.FinalizedRoot))
 	}
 	blk, err := s.cfg.beaconDB.Block(ctx, bytesutil.ToBytes32(msg.FinalizedRoot))
 	if err != nil {

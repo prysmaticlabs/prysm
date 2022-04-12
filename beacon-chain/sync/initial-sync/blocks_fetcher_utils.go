@@ -45,7 +45,7 @@ func (f *blocksFetcher) nonSkippedSlotAfter(ctx context.Context, slot types.Slot
 
 	// Exit early if no peers with epoch higher than our known head are found.
 	if targetEpoch <= headEpoch {
-		return 0, errSlotIsTooHigh
+		return 0, errors.Wrapf(errSlotIsTooHigh, "no peers with epoch higher than our known head, peer epoch=%d, head=%d", targetEpoch, headEpoch)
 	}
 
 	// Transform peer list to avoid eclipsing (filter, shuffle, trim).

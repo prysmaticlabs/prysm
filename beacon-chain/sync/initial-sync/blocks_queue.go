@@ -2,7 +2,7 @@ package initialsync
 
 import (
 	"context"
-	"errors"
+	"github.com/pkg/errors"
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -285,7 +285,7 @@ func (q *blocksQueue) onScheduleEvent(ctx context.Context) eventHandlerFn {
 		}
 		if m.start > q.highestExpectedSlot {
 			m.setState(stateSkipped)
-			return m.state, errSlotIsTooHigh
+			return m.state, errors.Wrapf(errSlotIsTooHigh, "slot=%d", m.start)
 		}
 		blocksPerRequest := q.blocksFetcher.blocksPerSecond
 		if err := q.blocksFetcher.scheduleRequest(ctx, m.start, blocksPerRequest); err != nil {
