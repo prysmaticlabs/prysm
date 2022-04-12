@@ -11,7 +11,6 @@ import (
 	"os/exec"
 	"path"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
@@ -147,14 +146,8 @@ func (w *Web3RemoteSigner) monitorStart() {
 func (w *Web3RemoteSigner) wait(ctx context.Context) {
 	select {
 	case <-ctx.Done():
-		if err := w.cmd.Process.Signal(syscall.SIGTERM); err != nil {
-			panic(err)
-		}
 		return
 	case <-w.ctx.Done():
-		if err := w.cmd.Process.Signal(syscall.SIGTERM); err != nil {
-			panic(err)
-		}
 		return
 	case <-w.started:
 		return

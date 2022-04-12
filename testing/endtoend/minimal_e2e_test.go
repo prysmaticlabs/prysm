@@ -48,10 +48,6 @@ func e2eMinimal(t *testing.T, args *testArgs) {
 	// Run for 10 epochs if not in long-running to confirm long-running has no issues.
 	var err error
 	epochsToRun := 10
-	// TODO(#10053): Web3signer does not support bellatrix yet.
-	if args.useWeb3RemoteSigner {
-		epochsToRun = helpers.BellatrixE2EForkEpoch - 1
-	}
 	epochStr, longRunning := os.LookupEnv("E2E_EPOCHS")
 	if longRunning {
 		epochsToRun, err = strconv.Atoi(epochStr)
@@ -61,6 +57,10 @@ func e2eMinimal(t *testing.T, args *testArgs) {
 		// If using prysm.sh, run for only 6 epochs.
 		// TODO(#9166): remove this block once v2 changes are live.
 		epochsToRun = helpers.AltairE2EForkEpoch - 1
+	}
+	// TODO(#10053): Web3signer does not support bellatrix yet.
+	if args.useWeb3RemoteSigner {
+		epochsToRun = helpers.BellatrixE2EForkEpoch - 1
 	}
 	seed := 0
 	seedStr, isValid := os.LookupEnv("E2E_SEED")
