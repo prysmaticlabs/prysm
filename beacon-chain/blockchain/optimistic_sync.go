@@ -46,31 +46,15 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headState state.Be
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get execution payload")
 	}
-	finalizedBlock, err := s.cfg.BeaconDB.Block(ctx, s.ensureRootNotZeros(finalizedRoot))
+	finalizedHash, err := s.getFinalizedPayloadHash(ctx, finalizedRoot)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get finalized block")
-	}
-	if finalizedBlock == nil || finalizedBlock.IsNil() {
-		finalizedBlock = s.getInitSyncBlock(s.ensureRootNotZeros(finalizedRoot))
-		if finalizedBlock == nil || finalizedBlock.IsNil() {
-			return nil, errors.Errorf("finalized block with root %#x does not exist in the db or our cache", s.ensureRootNotZeros(finalizedRoot))
-		}
-	}
-	var finalizedHash []byte
-	if blocks.IsPreBellatrixVersion(finalizedBlock.Block().Version()) {
-		finalizedHash = params.BeaconConfig().ZeroHash[:]
-	} else {
-		payload, err := finalizedBlock.Block().Body().ExecutionPayload()
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get finalized block execution payload")
-		}
-		finalizedHash = payload.BlockHash
+		return nil, errors.Wrap(err, "could not get finalized payload hash")
 	}
 
 	fcs := &enginev1.ForkchoiceState{
 		HeadBlockHash:      headPayload.BlockHash,
 		SafeBlockHash:      headPayload.BlockHash,
-		FinalizedBlockHash: finalizedHash,
+		FinalizedBlockHash: finalizedHash[:],
 	}
 
 	nextSlot := s.CurrentSlot() + 1 // Cache payload ID for next slot proposer.
@@ -87,7 +71,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headState state.Be
 			log.WithFields(logrus.Fields{
 				"headSlot":                  headBlk.Slot(),
 				"headPayloadBlockHash":      fmt.Sprintf("%#x", bytesutil.Trunc(headPayload.BlockHash)),
-				"finalizedPayloadBlockHash": fmt.Sprintf("%#x", bytesutil.Trunc(finalizedHash)),
+				"finalizedPayloadBlockHash": fmt.Sprintf("%#x", bytesutil.Trunc(finalizedHash[:])),
 			}).Info("Called fork choice updated with optimistic block")
 			return payloadID, nil
 		default:
@@ -104,6 +88,55 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headState state.Be
 		s.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(nextSlot, proposerId, pId)
 	}
 	return payloadID, nil
+}
+
+// getFinalizedPayloadHash returns the finalized payload hash for the given finalized block root.
+// It checks the following in order:
+//   1. The finalized block exists in db
+//   2. The finalized block exists in initial sync block cache
+//   3. The finalized block is the weak subjectivity block and exists in db
+// Error is returned if the finalized block is not found from above.
+func (s *Service) getFinalizedPayloadHash(ctx context.Context, finalizedRoot [32]byte) ([32]byte, error) {
+	b, err := s.cfg.BeaconDB.Block(ctx, s.ensureRootNotZeros(finalizedRoot))
+	if err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not get finalized block")
+	}
+	if b != nil {
+		return getPayloadHash(b.Block())
+	}
+
+	b = s.getInitSyncBlock(finalizedRoot)
+	if b != nil {
+		return getPayloadHash(b.Block())
+	}
+
+	r, err := s.cfg.BeaconDB.OriginCheckpointBlockRoot(ctx)
+	if err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not get finalized block")
+	}
+	b, err = s.cfg.BeaconDB.Block(ctx, r)
+	if err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not get finalized block")
+	}
+	if b != nil {
+		return getPayloadHash(b.Block())
+	}
+
+	return [32]byte{}, errors.Errorf("finalized block with root %#x does not exist in the db or our cache", s.ensureRootNotZeros(finalizedRoot))
+}
+
+// getPayloadHash returns the payload hash for the input given block.
+// zeros are returned if the block is older than bellatrix.
+func getPayloadHash(b block.BeaconBlock) ([32]byte, error) {
+	if blocks.IsPreBellatrixVersion(b.Version()) {
+		return params.BeaconConfig().ZeroHash, nil
+	}
+
+	payload, err := b.Body().ExecutionPayload()
+	if err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not get finalized block execution payload")
+	}
+	return bytesutil.ToBytes32(payload.BlockHash), nil
 }
 
 // notifyForkchoiceUpdate signals execution engine on a new payload.
