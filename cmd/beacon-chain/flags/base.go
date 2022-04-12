@@ -15,7 +15,7 @@ var (
 	HTTPWeb3ProviderFlag = &cli.StringFlag{
 		Name:  "http-web3provider",
 		Usage: "A mainchain web3 provider string http endpoint. Can contain auth header as well in the format --http-web3provider=\"https://goerli.infura.io/v3/xxxx,Basic xxx\" for project secret (base64 encoded) and --http-web3provider=\"https://goerli.infura.io/v3/xxxx,Bearer xxx\" for jwt use",
-		Value: "",
+		Value: "http://localhost:8545",
 	}
 	// ExecutionJWTSecretFlag provides a path to a file containing a hex-encoded string representing a 32 byte secret
 	// used to authenticate with an execution node via HTTP. This is required if using an HTTP connection, otherwise all requests

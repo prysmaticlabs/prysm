@@ -69,7 +69,7 @@ type ValidatorService struct {
 	db                    db.Database
 	grpcHeaders           []string
 	graffiti              []byte
-	web3SignerConfig      *remote_web3signer.SetupConfig
+	Web3SignerConfig      *remote_web3signer.SetupConfig
 	feeRecipientConfig    *validator_service_config.FeeRecipientConfig
 }
 
@@ -122,7 +122,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		interopKeysConfig:     cfg.InteropKeysConfig,
 		graffitiStruct:        cfg.GraffitiStruct,
 		logDutyCountDown:      cfg.LogDutyCountDown,
-		web3SignerConfig:      cfg.Web3SignerConfig,
+		Web3SignerConfig:      cfg.Web3SignerConfig,
 		feeRecipientConfig:    cfg.FeeRecipientConfig,
 	}, nil
 }
@@ -204,7 +204,7 @@ func (v *ValidatorService) Start() {
 		graffitiOrderedIndex:           graffitiOrderedIndex,
 		eipImportBlacklistedPublicKeys: slashablePublicKeys,
 		logDutyCountDown:               v.logDutyCountDown,
-		Web3SignerConfig:               v.web3SignerConfig,
+		Web3SignerConfig:               v.Web3SignerConfig,
 		feeRecipientConfig:             v.feeRecipientConfig,
 		walletIntializedChannel:        make(chan *wallet.Wallet, 1),
 	}
