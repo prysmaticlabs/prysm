@@ -7,29 +7,29 @@ package endtoend
 import (
 	"context"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/io/file"
 	"os"
+	"os/signal"
 	"path"
 	"strings"
 	"sync"
+	"syscall"
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/testing/endtoend/e2ez"
-	"github.com/prysmaticlabs/prysm/api/client/beacon"
-	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/api/client/beacon"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/proto/eth/service"
 	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/components"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/components/eth1"
+	"github.com/prysmaticlabs/prysm/testing/endtoend/e2ez"
 	ev "github.com/prysmaticlabs/prysm/testing/endtoend/evaluators"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
@@ -58,9 +58,9 @@ func init() {
 
 // testRunner abstracts E2E test configuration and running.
 type testRunner struct {
-	t      *testing.T
-	config *e2etypes.E2EConfig
-	z      *e2ez.Server
+	t        *testing.T
+	config   *e2etypes.E2EConfig
+	z        *e2ez.Server
 	ctx      context.Context
 	doneChan context.CancelFunc
 	group    *errgroup.Group
@@ -71,16 +71,16 @@ func newTestRunner(t *testing.T, config *e2etypes.E2EConfig) *testRunner {
 	ctx, done := context.WithCancel(context.Background())
 	g, ctx := errgroup.WithContext(ctx)
 	return &testRunner{
-		t:      t,
-		config: config,
-		z:      e2ez.NewServer(),
+		t:        t,
+		config:   config,
+		z:        e2ez.NewServer(),
 		ctx:      ctx,
 		doneChan: done,
 		group:    g,
 	}
 }
 
-type zPageMenu struct {}
+type zPageMenu struct{}
 
 func (z *zPageMenu) ZPath() string {
 	return "/"
@@ -145,6 +145,30 @@ func (r *testRunner) run() {
 			return keyGen.Start(ctx)
 		})
 	}
+	// wait on this channel if LeaveRunning is specified
+	lrChan := make(chan struct{})
+	g.Go(func() error {
+		sigc := make(chan os.Signal, 1)
+		signal.Notify(sigc, syscall.SIGINT, syscall.SIGTERM)
+		defer signal.Stop(sigc)
+		if !r.config.LeaveRunning {
+			return nil
+		}
+		// if LeaveRunning flag has been set, cause this goroutine to block until
+		// the context is canceled or signint/sigterm is received.
+		for {
+			select {
+			case <-ctx.Done():
+				close(lrChan)
+				log.Info("got ctx.Done in LeaveRunning keepalive routine")
+				return ctx.Err()
+			case <-sigc:
+				close(lrChan)
+				log.Info("got sigint/term in LeaveRunning keepalive routine")
+				return nil
+			}
+		}
+	})
 
 	// Boot node.
 	bootNode := components.NewBootNode()
@@ -206,8 +230,7 @@ func (r *testRunner) run() {
 	if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{bootNode}); err != nil {
 		t.Fatal(err, errors.Wrap(err, "beacon nodes require ETH1 and boot node to run"))
 	}
-	beaconNodes := components.NewBeaconNodes(config, bootNode.ENR(), config.BeaconFlags)
-	zp.HandleZPages(beaconNodes)
+	beaconNodes := components.NewBeaconNodes(config, bootNode.ENR(), config.BeaconFlags, zp)
 	g.Go(func() error {
 		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Nodes, bootNode}); err != nil {
 			t.Fatal(err, errors.Wrap(err, "beacon nodes require ETH1 and boot node to run"))
@@ -222,8 +245,7 @@ func (r *testRunner) run() {
 		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Nodes, bootNode, beaconNodes}); err != nil {
 			t.Fatal(errors.Wrap(err, "lighthouse beacon nodes require ETH1 and boot node to run"))
 		}
-		lighthouseNodes = components.NewLighthouseBeaconNodes(config, bootNode.ENR())
-		zp.HandleZPages(lighthouseNodes)
+		lighthouseNodes = components.NewLighthouseBeaconNodes(config, bootNode.ENR(), zp)
 		g.Go(func() error {
 			if err := lighthouseNodes.Start(ctx); err != nil {
 				return errors.Wrap(err, "failed to start lighthouse beacon nodes")
@@ -265,7 +287,12 @@ func (r *testRunner) run() {
 	g.Go(func() error {
 		// When everything is done, cancel parent context (will stop all spawned nodes).
 		defer func() {
-			log.Info("All E2E evaluations are finished, cleaning up")
+			log.Info("All E2E evaluations are finished.")
+			if config.LeaveRunning {
+				log.Info("LeaveRunning flag set, services won't shut down until ctrl+c received.")
+				return
+			}
+			log.Info("Canceling context to clean up.")
 			done()
 		}()
 
@@ -314,13 +341,15 @@ func (r *testRunner) run() {
 		require.NoError(t, err)
 		tickingStartTime := helpers.EpochTickerStartTime(genesis)
 
+		index := e2e.TestParams.BeaconNodeCount + e2e.TestParams.LighthouseBeaconNodeCount
 		// Run assigned evaluators.
 		if err := r.runEvaluators(conns, tickingStartTime); err != nil {
 			return errors.Wrap(err, "one or more evaluators failed")
 		}
-		if err := r.testBeaconChainSync(ctx, g, conns, tickingStartTime, bootNode.ENR(), eth1Miner.ENR()); err != nil {
+		if err := r.testBeaconChainSync(ctx, g, index, conns, tickingStartTime, beaconNodes, eth1Miner.ENR()); err != nil {
 			return errors.Wrap(err, "beacon chain sync test failed")
 		}
+		index += 1
 		if err := r.testDoppelGangerProtection(ctx); err != nil {
 			return errors.Wrap(err, "doppel ganger protection check failed")
 		}
@@ -328,12 +357,11 @@ func (r *testRunner) run() {
 		// If requested, run sync test.
 		if config.TestSync {
 			httpEndpoints := helpers.BeaconAPIHostnames(e2e.TestParams.BeaconNodeCount)
-			index := e2e.TestParams.BeaconNodeCount
 			menr := eth1Miner.ENR()
-			benr := bootNode.ENR()
-			if err := r.testCheckpointSync(index+1, conns, httpEndpoints[0], benr, menr); err != nil {
+			if err := r.testCheckpointSync(index, conns, beaconNodes, httpEndpoints[0],  menr); err != nil {
 				return errors.Wrap(err, "checkpoint sync test failed")
 			}
+			index += 1
 		}
 
 		return nil
@@ -343,6 +371,9 @@ func (r *testRunner) run() {
 		// At the end of the main evaluator goroutine all nodes are killed, no need to fail the test.
 		if strings.Contains(err.Error(), "signal: killed") {
 			return
+		}
+		if config.LeaveRunning {
+			<-lrChan
 		}
 		t.Fatalf("E2E test ended in error: %v", err)
 	}
@@ -476,7 +507,7 @@ func (r *testRunner) waitForMatchingHead(ctx context.Context, check, ref *grpc.C
 	}
 }
 
-func (r *testRunner) testCheckpointSync(i int, conns []*grpc.ClientConn, bnAPI, enr, minerEnr string) error {
+func (r *testRunner) testCheckpointSync(i int, conns []*grpc.ClientConn, nodes *components.BeaconNodeSet, bnAPI, minerEnr string) error {
 	ethNode := eth1.NewNode(i, minerEnr)
 	r.group.Go(func() error {
 		return ethNode.Start(r.ctx)
@@ -522,7 +553,8 @@ func (r *testRunner) testCheckpointSync(i int, conns []*grpc.ClientConn, bnAPI, 
 	//flags = append(flags, fmt.Sprintf("--genesis-beacon-api-url=%s", bnAPI))
 
 	// zero-indexed, so next value would be len of list
-	cpsyncer := components.NewBeaconNode(i, enr, flags, r.config)
+	//cpsyncer := components.NewBeaconNode(i, enr, flags, r.config)
+	cpsyncer := nodes.AddBeaconNode(i, flags)
 	r.group.Go(func() error {
 		return cpsyncer.Start(r.ctx)
 	})
@@ -549,10 +581,9 @@ func (r *testRunner) testCheckpointSync(i int, conns []*grpc.ClientConn, bnAPI, 
 }
 
 // testBeaconChainSync creates another beacon node, and tests whether it can sync to head using previous nodes.
-func (r *testRunner) testBeaconChainSync(ctx context.Context, g *errgroup.Group,
-	conns []*grpc.ClientConn, tickingStartTime time.Time, bootnodeEnr, minerEnr string) error {
-	index := e2e.TestParams.BeaconNodeCount + e2e.TestParams.LighthouseBeaconNodeCount
-	t, config := r.t, r.config
+func (r *testRunner) testBeaconChainSync(ctx context.Context, g *errgroup.Group, index int,
+	conns []*grpc.ClientConn, tickingStartTime time.Time, beaconNodes *components.BeaconNodeSet, minerEnr string) error {
+	t := r.t
 	ethNode := eth1.NewNode(index, minerEnr)
 	g.Go(func() error {
 		return ethNode.Start(ctx)
@@ -560,7 +591,9 @@ func (r *testRunner) testBeaconChainSync(ctx context.Context, g *errgroup.Group,
 	if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{ethNode}); err != nil {
 		return fmt.Errorf("sync beacon node not ready: %w", err)
 	}
-	syncBeaconNode := components.NewBeaconNode(index, bootnodeEnr, r.config.BeaconFlags, config)
+
+	//syncBeaconNode := components.NewBeaconNode(index, bootnodeEnr, r.config.BeaconFlags, config)
+	syncBeaconNode := beaconNodes.AddBeaconNode(index, r.config.BeaconFlags)
 	g.Go(func() error {
 		return syncBeaconNode.Start(ctx)
 	})

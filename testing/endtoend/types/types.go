@@ -7,10 +7,10 @@ import (
 	"fmt"
 	"path"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/io/file"
 	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
-	types "github.com/prysmaticlabs/eth2-types"
 	"google.golang.org/grpc"
 )
 
@@ -32,6 +32,7 @@ type E2EConfig struct {
 	ValidatorFlags          []string
 	PeerIDs                 []string
 	BeaconChainConfig       *params.BeaconChainConfig
+	LeaveRunning bool
 }
 
 // BeaconChainConfigPath determines the canonical path to the yaml-encoded BeaconChainConfig

@@ -5,9 +5,7 @@ package components
 import (
 	"bytes"
 	"context"
-	"github.com/pkg/errors"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/testing/endtoend/e2ez"
 	"os"
 	"os/exec"
 	"path"
@@ -17,10 +15,12 @@ import (
 	"text/template"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
+	"github.com/pkg/errors"
 	cmdshared "github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/testing/endtoend/e2ez"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
 	e2etypes "github.com/prysmaticlabs/prysm/testing/endtoend/types"
@@ -36,25 +36,37 @@ type BeaconNodeSet struct {
 	enr     string
 	ids     []string
 	started chan struct{}
-	nodes []*BeaconNode
+	nodes   []*BeaconNode
 	flags   []string
+	zp *e2ez.Server
 }
 
 // NewBeaconNodes creates and returns a set of beacon nodes.
-func NewBeaconNodes(config *e2etypes.E2EConfig, enr string, flags []string) *BeaconNodeSet {
+func NewBeaconNodes(config *e2etypes.E2EConfig, enr string, flags []string, zp *e2ez.Server) *BeaconNodeSet {
 	// Create beacon nodes.
 	nodes := make([]*BeaconNode, e2e.TestParams.BeaconNodeCount)
 	for i := 0; i < e2e.TestParams.BeaconNodeCount; i++ {
 		nodes[i] = NewBeaconNode(i, enr, flags, config)
+		zp.HandleZPages(nodes[i])
 	}
 
-	return &BeaconNodeSet{
+	bns := &BeaconNodeSet{
 		config:  config,
 		started: make(chan struct{}, 1),
 		nodes:   nodes,
 		enr:     enr,
 		flags:   flags,
+		zp: zp,
 	}
+	zp.HandleZPages(bns)
+	return bns
+}
+
+func (s *BeaconNodeSet) AddBeaconNode(index int, flags []string) *BeaconNode {
+	bn := NewBeaconNode(index, s.enr, flags, s.config)
+	s.nodes = append(s.nodes, bn)
+	s.zp.HandleZPages(bn)
+	return bn
 }
 
 // Start starts all the beacon nodes in set.
@@ -97,14 +109,6 @@ func (s *BeaconNodeSet) ZMarkdown() (string, error) {
 		nodeList = nodeList + fmt.Sprintf("\n - [beacon node #%d](%s)", node.index, node.ZPath())
 	}
 	return fmt.Sprintf(tmpl, len(s.nodes), nodeList), nil
-}
-
-func (s *BeaconNodeSet) ZChildren() []e2ez.ZPage {
-	zps := make([]e2ez.ZPage, len(s.nodes))
-	for i := 0; i < len(s.nodes); i++ {
-		zps[i] = s.nodes[i]
-	}
-	return zps
 }
 
 // Started checks whether beacon node set is started and all nodes are ready to be queried.
@@ -151,30 +155,26 @@ func (node *BeaconNode) ZMarkdown() (string, error) {
 	}
 
 	buf := bytes.NewBuffer(nil)
-	err = bnzm.Execute(buf, struct{
-		Index int
-		StartCmd string
-		DBPath string
-		LogPath string
+	err = bnzm.Execute(buf, struct {
+		Index      int
+		StartCmd   string
+		DBPath     string
+		LogPath    string
 		StdoutPath string
 		StderrPath string
-		HTTPAddr string
-		GRPCAddr string
+		HTTPAddr   string
+		GRPCAddr   string
 	}{
-		Index: node.index,
-		StartCmd: cmd,
-		DBPath: node.dbPath(),
-		LogPath: node.logPath(),
+		Index:      node.index,
+		StartCmd:   cmd,
+		DBPath:     node.dbPath(),
+		LogPath:    node.logPath(),
 		StdoutPath: node.stdoutPath(),
 		StderrPath: node.stderrPath(),
-		HTTPAddr: node.httpAddr(),
-		GRPCAddr: node.grpcAddr(),
+		HTTPAddr:   node.httpAddr(),
+		GRPCAddr:   node.grpcAddr(),
 	})
 	return buf.String(), err
-}
-
-func (node *BeaconNode) ZChildren() []e2ez.ZPage {
-	return []e2ez.ZPage{}
 }
 
 var _ e2ez.ZPage = &BeaconNode{}
@@ -196,11 +196,12 @@ func (node *BeaconNode) startCommand() (string, []string, error) {
 		log.Info(binaryPath)
 		return "", []string{}, errors.New("beacon chain binary not found")
 	}
-	config, nodeFlags, index, enr := node.config, node.flags, node.index, node.enr
-	expectedNumOfPeers := e2e.TestParams.BeaconNodeCount + e2e.TestParams.LighthouseBeaconNodeCount - 1
+	config, index, enr := node.config, node.index, node.enr
+	expectedNumOfPeers := e2e.TestParams.BeaconNodeCount + e2e.TestParams.LighthouseBeaconNodeCount
 	if node.config.TestSync {
 		expectedNumOfPeers += 1
 	}
+	expectedNumOfPeers += 10
 	jwtPath := path.Join(e2e.TestParams.TestPath, "eth1data/"+strconv.Itoa(node.index)+"/")
 	if index == 0 {
 		jwtPath = path.Join(e2e.TestParams.TestPath, "eth1data/miner/")
@@ -238,7 +239,7 @@ func (node *BeaconNode) startCommand() (string, []string, error) {
 		args = append(args, features.E2EBeaconChainFlags...)
 	}
 	args = append(args, config.BeaconFlags...)
-	args = append(args, nodeFlags...)
+	args = append(args, node.flags...)
 
 	return binaryPath, args, nil
 }
@@ -260,12 +261,12 @@ func (node *BeaconNode) stderrPath() string {
 }
 
 func (node *BeaconNode) httpAddr() string {
-	port := e2e.TestParams.Ports.PrysmBeaconNodeGatewayPort+node.index
+	port := e2e.TestParams.Ports.PrysmBeaconNodeGatewayPort + node.index
 	return fmt.Sprintf("http://localhost:%d", port)
 }
 
 func (node *BeaconNode) grpcAddr() string {
-	port := e2e.TestParams.Ports.PrysmBeaconNodeRPCPort+node.index
+	port := e2e.TestParams.Ports.PrysmBeaconNodeRPCPort + node.index
 	return fmt.Sprintf("localhost:%d", port)
 }
 
@@ -326,4 +327,8 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 // Started checks whether beacon node is started and ready to be queried.
 func (node *BeaconNode) Started() <-chan struct{} {
 	return node.started
+}
+
+func (node *BeaconNode) Index() int {
+	return node.index
 }

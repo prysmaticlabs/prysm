@@ -60,7 +60,7 @@ func (s *Server) HandleMarkdown(pattern string, handler func(http.ResponseWriter
 
 // HandleZPage allows any type that implements the minimal ZPage interface to
 // handle requests for information about itself.
-func (s *Server) HandleZPages(zps ...ZPage)  {
+func (s *Server) HandleZPages(zps ...ZPage) {
 	for i := 0; i < len(zps); i++ {
 		z := zps[i]
 		f := func(rw http.ResponseWriter, req *http.Request) {
@@ -79,7 +79,6 @@ func (s *Server) HandleZPages(zps ...ZPage)  {
 			}
 		}
 		s.handler.HandleFunc(z.ZPath(), f)
-		s.HandleZPages(z.ZChildren()...)
 	}
 }
 
@@ -111,5 +110,4 @@ func handleMarkdown(wrapped http.HandlerFunc, ec chan error) http.HandlerFunc {
 type ZPage interface {
 	ZPath() string
 	ZMarkdown() (string, error)
-	ZChildren() []ZPage
 }

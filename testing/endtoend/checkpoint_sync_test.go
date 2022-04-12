@@ -6,12 +6,12 @@ import (
 	"strconv"
 	"testing"
 
+	e2types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ev "github.com/prysmaticlabs/prysm/testing/endtoend/evaluators"
 	e2eParams "github.com/prysmaticlabs/prysm/testing/endtoend/params"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/types"
 	"github.com/prysmaticlabs/prysm/testing/require"
-	e2types "github.com/prysmaticlabs/eth2-types"
 )
 
 // This test customizes the minimal config in order to artificially shorten the weak subjectivity period
@@ -29,9 +29,9 @@ func TestCheckpointSync_CustomConfig(t *testing.T) {
 	cfg := params.E2ETestConfig()
 	// setting this to 1 should change the weak subjectivity computation,
 	// so the computed weak subjectivity checkpoint will just be a few epochs before head
-	cfg.MinValidatorWithdrawabilityDelay = e2types.Epoch(epochsToRun/2)
-	cfg.SlotsPerEpoch = 6
-	cfg.SecondsPerSlot = 6
+	cfg.MinValidatorWithdrawabilityDelay = e2types.Epoch(epochsToRun / 2)
+	//cfg.SlotsPerEpoch = 6
+	//cfg.SecondsPerSlot = 6
 	params.OverrideBeaconConfig(cfg)
 	require.NoError(t, e2eParams.Init(e2eParams.StandardBeaconCount))
 
@@ -85,6 +85,7 @@ func TestCheckpointSync_CustomConfig(t *testing.T) {
 		Evaluators:          evals,
 		Seed:                int64(seed),
 		BeaconChainConfig:   cfg,
+		LeaveRunning: true,
 	}
 
 	newTestRunner(t, testConfig).run()

@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/testing/endtoend/e2ez"
 	"os"
 	"os/exec"
 	"path"
@@ -17,6 +16,7 @@ import (
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/io/file"
+	"github.com/prysmaticlabs/prysm/testing/endtoend/e2ez"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
 	e2etypes "github.com/prysmaticlabs/prysm/testing/endtoend/types"
@@ -31,21 +31,26 @@ type LighthouseBeaconNodeSet struct {
 	config  *e2etypes.E2EConfig
 	enr     string
 	started chan struct{}
-	nodes []*LighthouseBeaconNode
+	nodes   []*LighthouseBeaconNode
+	zp *e2ez.Server
 }
 
 // NewLighthouseBeaconNodes creates and returns a set of lighthouse beacon nodes.
-func NewLighthouseBeaconNodes(config *e2etypes.E2EConfig, enr string) *LighthouseBeaconNodeSet {
+func NewLighthouseBeaconNodes(config *e2etypes.E2EConfig, enr string, zp *e2ez.Server) *LighthouseBeaconNodeSet {
 	nodes := make([]*LighthouseBeaconNode, e2e.TestParams.LighthouseBeaconNodeCount)
 	for i := 0; i < e2e.TestParams.LighthouseBeaconNodeCount; i++ {
 		nodes[i] = NewLighthouseBeaconNode(config, i, enr)
+		zp.HandleZPages(nodes[i])
 	}
-	return &LighthouseBeaconNodeSet{
+	bns := &LighthouseBeaconNodeSet{
 		config:  config,
 		started: make(chan struct{}, 1),
-		enr: enr,
-		nodes: nodes,
+		enr:     enr,
+		nodes:   nodes,
+		zp: zp,
 	}
+	zp.HandleZPages(bns)
+	return bns
 }
 
 // Start starts all the beacon nodes in set.
@@ -90,15 +95,6 @@ func (s *LighthouseBeaconNodeSet) ZMarkdown() (string, error) {
 	return fmt.Sprintf(tmpl, len(s.nodes), nodeList), nil
 }
 
-func (s *LighthouseBeaconNodeSet) ZChildren() []e2ez.ZPage {
-	zps := make([]e2ez.ZPage, len(s.nodes))
-	for i := 0; i < len(s.nodes); i++ {
-		zps[i] = s.nodes[i]
-	}
-	return zps
-}
-
-
 // LighthouseBeaconNode represents a lighthouse beacon node.
 type LighthouseBeaconNode struct {
 	e2etypes.ComponentRunner
@@ -131,7 +127,7 @@ func (node *LighthouseBeaconNode) stderrPath() string {
 }
 
 func (node *LighthouseBeaconNode) httpPort() int {
-	return e2e.TestParams.Ports.LighthouseBeaconNodeHTTPPort+node.index
+	return e2e.TestParams.Ports.LighthouseBeaconNodeHTTPPort + node.index
 }
 
 func (node *LighthouseBeaconNode) startCommand() (string, []string, error) {
@@ -274,26 +270,22 @@ func (node *LighthouseBeaconNode) ZMarkdown() (string, error) {
 	}
 
 	buf := bytes.NewBuffer(nil)
-	err = lbnzm.Execute(buf, struct{
-		Index int
-		StartCmd string
-		DBPath string
+	err = lbnzm.Execute(buf, struct {
+		Index      int
+		StartCmd   string
+		DBPath     string
 		StdoutPath string
 		StderrPath string
-		HTTPAddr string
+		HTTPAddr   string
 	}{
-		Index: node.index,
-		StartCmd: cmd,
-		DBPath: node.dbPath(),
+		Index:      node.index,
+		StartCmd:   cmd,
+		DBPath:     node.dbPath(),
 		StdoutPath: node.stdoutPath(),
 		StderrPath: node.stderrPath(),
-		HTTPAddr: fmt.Sprintf("http://localhost:%d", node.httpPort()),
+		HTTPAddr:   fmt.Sprintf("http://localhost:%d", node.httpPort()),
 	})
 	return buf.String(), err
-}
-
-func (node *LighthouseBeaconNode) ZChildren() []e2ez.ZPage {
-	return []e2ez.ZPage{}
 }
 
 var _ e2ez.ZPage = &LighthouseBeaconNode{}
