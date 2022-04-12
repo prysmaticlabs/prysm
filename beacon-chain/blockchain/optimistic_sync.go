@@ -83,6 +83,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headState state.Be
 	if err != nil {
 		switch err {
 		case powchain.ErrAcceptedSyncingPayloadStatus:
+			forkchoiceUpdatedOptimisticNodeCount.Inc()
 			log.WithFields(logrus.Fields{
 				"headSlot":                  headBlk.Slot(),
 				"headPayloadBlockHash":      fmt.Sprintf("%#x", bytesutil.Trunc(headPayload.BlockHash)),
@@ -93,6 +94,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headState state.Be
 			return nil, errors.Wrap(err, "could not notify forkchoice update from execution engine")
 		}
 	}
+	forkchoiceUpdatedValidNodeCount.Inc()
 	if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, headRoot); err != nil {
 		return nil, errors.Wrap(err, "could not set block to valid")
 	}
@@ -135,12 +137,14 @@ func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion, postSta
 	if err != nil {
 		switch err {
 		case powchain.ErrAcceptedSyncingPayloadStatus:
+			newPayloadOptimisticNodeCount.Inc()
 			log.WithFields(logrus.Fields{
 				"slot":             blk.Block().Slot(),
 				"payloadBlockHash": fmt.Sprintf("%#x", bytesutil.Trunc(payload.BlockHash)),
 			}).Info("Called new payload with optimistic block")
 			return false, nil
 		case powchain.ErrInvalidPayloadStatus:
+			newPayloadInvalidNodeCount.Inc()
 			root, err := blk.Block().HashTreeRoot()
 			if err != nil {
 				return false, err
@@ -157,7 +161,7 @@ func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion, postSta
 			return false, errors.Wrap(err, "could not validate execution payload from execution engine")
 		}
 	}
-
+	newPayloadValidNodeCount.Inc()
 	// During the transition event, the transition block should be verified for sanity.
 	if blocks.IsPreBellatrixVersion(preStateVersion) {
 		// Handle case where pre-state is Altair but block contains payload.

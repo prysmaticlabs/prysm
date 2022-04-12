@@ -138,6 +138,26 @@ var (
 		Name: "state_balance_cache_miss",
 		Help: "Count the number of state balance cache hits.",
 	})
+	newPayloadValidNodeCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "new_payload_valid_node_count",
+		Help: "Count the number of valid nodes after newPayload EE call",
+	})
+	newPayloadOptimisticNodeCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "new_payload_optimistic_node_count",
+		Help: "Count the number of optimistic nodes after newPayload EE call",
+	})
+	newPayloadInvalidNodeCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "new_payload_invalid_node_count",
+		Help: "Count the number of invalid nodes after newPayload EE call",
+	})
+	forkchoiceUpdatedValidNodeCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "forkchoice_updated_valid_node_count",
+		Help: "Count the number of valid nodes after forkchoiceUpdated EE call",
+	})
+	forkchoiceUpdatedOptimisticNodeCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "forkchoice_updated_optimistic_node_count",
+		Help: "Count the number of optimistic nodes after forkchoiceUpdated EE call",
+	})
 )
 
 // reportSlotMetrics reports slot related metrics.
