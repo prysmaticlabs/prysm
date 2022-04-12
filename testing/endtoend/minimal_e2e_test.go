@@ -53,14 +53,14 @@ func e2eMinimal(t *testing.T, args *testArgs) {
 		epochsToRun, err = strconv.Atoi(epochStr)
 		require.NoError(t, err)
 	}
+	// TODO(#10053): Web3signer does not support bellatrix yet.
+	if args.useWeb3RemoteSigner {
+		epochsToRun = helpers.BellatrixE2EForkEpoch - 1
+	}
 	if args.usePrysmSh {
 		// If using prysm.sh, run for only 6 epochs.
 		// TODO(#9166): remove this block once v2 changes are live.
 		epochsToRun = helpers.AltairE2EForkEpoch - 1
-	}
-	// TODO(#10053): Web3signer does not support bellatrix yet.
-	if args.useWeb3RemoteSigner {
-		epochsToRun = helpers.BellatrixE2EForkEpoch - 1
 	}
 	seed := 0
 	seedStr, isValid := os.LookupEnv("E2E_SEED")
