@@ -104,3 +104,8 @@ func E2EMainnetTestConfig() *BeaconChainConfig {
 func E2EMainnetConfigYaml() []byte {
 	return ConfigToYaml(E2EMainnetTestConfig())
 }
+
+// E2ETestConfigYaml returns the e2e config in yaml format.
+func E2ETestConfigYaml() []byte {
+	return ConfigToYaml(E2ETestConfig())
+}
