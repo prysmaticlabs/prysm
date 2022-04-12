@@ -425,8 +425,6 @@ func TestIsCurrentEpochSyncCommittee_SameBlockRoot(t *testing.T) {
 		syncCommittee.Pubkeys[i], syncCommittee.Pubkeys[j] = syncCommittee.Pubkeys[j], syncCommittee.Pubkeys[i]
 	})
 	require.NoError(t, state.SetCurrentSyncCommittee(syncCommittee))
-	// Wait for cache to fill.
-	time.Sleep(100 * time.Millisecond)
 	newIdxs, err := CurrentPeriodSyncSubcommitteeIndices(state, 200)
 	require.NoError(t, err)
 	require.DeepNotEqual(t, comIdxs, newIdxs)
