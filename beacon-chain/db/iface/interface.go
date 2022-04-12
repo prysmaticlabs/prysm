@@ -105,6 +105,7 @@ type HeadAccessDatabase interface {
 
 	// initialization method needed for origin checkpoint sync
 	SaveOrigin(ctx context.Context, serState, serBlock []byte) error
+	SaveOriginCheckpointBlockRoot(ctx context.Context, blockRoot [32]byte) error
 	SaveBackfillBlockRoot(ctx context.Context, blockRoot [32]byte) error
 }
 
