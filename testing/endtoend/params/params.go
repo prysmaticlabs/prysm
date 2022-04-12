@@ -69,6 +69,12 @@ var StandardLighthouseNodeCount = 2
 // DepositCount is the amount of deposits E2E makes on a separate validator client.
 var DepositCount = uint64(64)
 
+// NumOfExecEngineTxs is the number of transaction sent to the execution engine.
+var NumOfExecEngineTxs = uint64(200)
+
+// ExpectedExecEngineTxsThreshold is the portion of execution engine transactions we expect to find in blocks.
+var ExpectedExecEngineTxsThreshold = 0.7
+
 // Base port values.
 const (
 	portSpan = 50

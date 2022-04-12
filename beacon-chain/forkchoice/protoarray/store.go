@@ -9,8 +9,10 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	pmath "github.com/prysmaticlabs/prysm/math"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -426,6 +428,16 @@ func (s *Store) applyWeightChanges(
 		if nodeDelta < 0 {
 			d := uint64(-nodeDelta)
 			if n.weight < d {
+				s.proposerBoostLock.RLock()
+				log.WithFields(logrus.Fields{
+					"nodeDelta":                  d,
+					"nodeRoot":                   fmt.Sprintf("%#x", bytesutil.Trunc(n.root[:])),
+					"nodeWeight":                 n.weight,
+					"proposerBoostRoot":          fmt.Sprintf("%#x", bytesutil.Trunc(s.proposerBoostRoot[:])),
+					"previousProposerBoostRoot":  fmt.Sprintf("%#x", bytesutil.Trunc(s.previousProposerBoostRoot[:])),
+					"previousProposerBoostScore": s.previousProposerBoostScore,
+				}).Warning("node with invalid weight, setting it to zero")
+				s.proposerBoostLock.RUnlock()
 				n.weight = 0
 			} else {
 				n.weight -= d
@@ -602,16 +614,22 @@ func (s *Store) prune(ctx context.Context, finalizedRoot [32]byte) error {
 		node := copyNode(s.nodes[idx])
 		parentIdx, ok := canonicalNodesMap[node.parent]
 		if ok {
-			s.nodesIndices[node.root] = uint64(len(canonicalNodes))
-			canonicalNodesMap[idx] = uint64(len(canonicalNodes))
+			currentIndex := uint64(len(canonicalNodes))
+			s.nodesIndices[node.root] = currentIndex
+			s.payloadIndices[node.payloadHash] = currentIndex
+			canonicalNodesMap[idx] = currentIndex
 			node.parent = parentIdx
 			canonicalNodes = append(canonicalNodes, node)
 		} else {
-			// Remove node and synced tip that is not part of finalized branch.
+			// Remove node that is not part of finalized branch.
 			delete(s.nodesIndices, node.root)
+			delete(s.canonicalNodes, node.root)
+			delete(s.payloadIndices, node.payloadHash)
 		}
 	}
 	s.nodesIndices[finalizedRoot] = uint64(0)
+	s.canonicalNodes[finalizedRoot] = true
+	s.payloadIndices[finalizedNode.payloadHash] = uint64(0)
 
 	// Recompute the best child and descendant for each canonical nodes.
 	for _, node := range canonicalNodes {
