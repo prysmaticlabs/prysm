@@ -1,4 +1,4 @@
-package eth1
+package execution_client
 
 import (
 	"context"
@@ -20,7 +20,7 @@ const KeystorePassword = "password"
 const minerPasswordFile = "password.txt"
 const minerFile = "UTC--2021-12-22T19-14-08.590377700Z--878705ba3f8bc32fcf7f4caa1a35e72af65cf766"
 const timeGapPerTX = 100 * time.Millisecond
-const staticFilesPath = "/testing/endtoend/static-files/eth1"
+const staticFilesPath = "/testing/endtoend/static-files/execution-client"
 const timeGapPerMiningTX = 250 * time.Millisecond
 
 var _ e2etypes.ComponentRunner = (*NodeSet)(nil)

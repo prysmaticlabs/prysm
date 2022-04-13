@@ -22,7 +22,7 @@ import (
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/components"
-	"github.com/prysmaticlabs/prysm/testing/endtoend/components/eth1"
+	execution_client "github.com/prysmaticlabs/prysm/testing/endtoend/components/execution-client"
 	ev "github.com/prysmaticlabs/prysm/testing/endtoend/evaluators"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
@@ -115,7 +115,7 @@ func (r *testRunner) run() {
 	})
 
 	// ETH1 miner.
-	eth1Miner := eth1.NewMiner()
+	eth1Miner := execution_client.NewMiner()
 	g.Go(func() error {
 		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{bootNode}); err != nil {
 			return errors.Wrap(err, "sending and mining deposits require ETH1 nodes to run")
@@ -128,7 +128,7 @@ func (r *testRunner) run() {
 	})
 
 	// ETH1 non-mining nodes.
-	eth1Nodes := eth1.NewNodeSet()
+	eth1Nodes := execution_client.NewNodeSet()
 	g.Go(func() error {
 		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Miner}); err != nil {
 			return errors.Wrap(err, "sending and mining deposits require ETH1 nodes to run")
@@ -359,10 +359,10 @@ func (r *testRunner) testDepositsAndTx(ctx context.Context, g *errgroup.Group,
 }
 
 func (r *testRunner) testTxGeneration(ctx context.Context, g *errgroup.Group, keystorePath string, requiredNodes []e2etypes.ComponentRunner) {
-	txGenerator := eth1.NewTransactionGenerator(keystorePath, r.config.Seed)
+	txGenerator := execution_client.NewTransactionGenerator(keystorePath, r.config.Seed)
 	g.Go(func() error {
 		if err := helpers.ComponentsStarted(ctx, requiredNodes); err != nil {
-			return fmt.Errorf("transaction generator requires eth1 nodes to be run: %w", err)
+			return fmt.Errorf("transaction generator requires execution-client nodes to be run: %w", err)
 		}
 		return txGenerator.Start(ctx)
 	})
@@ -373,7 +373,7 @@ func (r *testRunner) testBeaconChainSync(ctx context.Context, g *errgroup.Group,
 	conns []*grpc.ClientConn, tickingStartTime time.Time, bootnodeEnr, minerEnr string) error {
 	t, config := r.t, r.config
 	index := e2e.TestParams.BeaconNodeCount + e2e.TestParams.LighthouseBeaconNodeCount
-	ethNode := eth1.NewNode(index, minerEnr)
+	ethNode := execution_client.NewNode(index, minerEnr)
 	g.Go(func() error {
 		return ethNode.Start(ctx)
 	})

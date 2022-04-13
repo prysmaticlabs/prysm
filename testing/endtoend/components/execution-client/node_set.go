@@ -1,4 +1,4 @@
-package eth1
+package execution_client
 
 import (
 	"context"

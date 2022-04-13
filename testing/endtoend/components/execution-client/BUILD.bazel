@@ -10,7 +10,7 @@ go_library(
         "node_set.go",
         "transactions.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/testing/endtoend/components/eth1",
+    importpath = "github.com/prysmaticlabs/prysm/testing/endtoend/components/execution-client",
     visibility = ["//testing/endtoend:__subpackages__"],
     deps = [
         "//config/params:go_default_library",

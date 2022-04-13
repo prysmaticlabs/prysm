@@ -1,4 +1,4 @@
-package eth1
+package execution_client
 
 import (
 	"bytes"
@@ -93,7 +93,7 @@ func (m *Miner) Start(ctx context.Context) error {
 		"init",
 		genesisDstPath+"/genesis.json",
 		fmt.Sprintf("--datadir=%s", eth1Path)) // #nosec G204 -- Safe
-	initFile, err := helpers.DeleteAndCreateFile(e2e.TestParams.LogPath, "eth1-init_miner.log")
+	initFile, err := helpers.DeleteAndCreateFile(e2e.TestParams.LogPath, "execution-client-init_miner.log")
 	if err != nil {
 		return err
 	}
@@ -155,17 +155,17 @@ func (m *Miner) Start(ctx context.Context) error {
 	}
 	runCmd.Stdout = file
 	runCmd.Stderr = file
-	log.Infof("Starting eth1 miner with flags: %s", strings.Join(args[2:], " "))
+	log.Infof("Starting execution-client miner with flags: %s", strings.Join(args[2:], " "))
 
 	if err = runCmd.Start(); err != nil {
-		return fmt.Errorf("failed to start eth1 chain: %w", err)
+		return fmt.Errorf("failed to start execution-client chain: %w", err)
 	}
 
 	if err = helpers.WaitForTextInFile(file, "Commit new sealing work"); err != nil {
-		return fmt.Errorf("mining log not found, this means the eth1 chain had issues starting: %w", err)
+		return fmt.Errorf("mining log not found, this means the execution-client chain had issues starting: %w", err)
 	}
 	if err = helpers.WaitForTextInFile(file, "Started P2P networking"); err != nil {
-		return fmt.Errorf("P2P log not found, this means the eth1 chain had issues starting: %w", err)
+		return fmt.Errorf("P2P log not found, this means the execution-client chain had issues starting: %w", err)
 	}
 
 	enode, err := enodeFromLogFile(file.Name())
