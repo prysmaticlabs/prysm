@@ -31,8 +31,8 @@ func TestCheckpointSync_CustomConfig(t *testing.T) {
 	// setting this to 1 should change the weak subjectivity computation,
 	// so the computed weak subjectivity checkpoint will just be a few epochs before head
 	cfg.MinValidatorWithdrawabilityDelay = e2types.Epoch(epochsToRun / 2)
-	//cfg.SlotsPerEpoch = 6
-	//cfg.SecondsPerSlot = 6
+	cfg.SlotsPerEpoch = 6
+	cfg.SecondsPerSlot = 6
 	params.OverrideBeaconConfig(cfg)
 	require.NoError(t, e2eParams.Init(e2eParams.StandardBeaconCount))
 

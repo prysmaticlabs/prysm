@@ -228,7 +228,11 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk block.SignedBeaco
 	}
 	if blk.Block().ProposerIndex() != idx {
 		s.setBadBlock(ctx, blockRoot)
-		return errors.Wrapf(errIncorrectProposerIndex, "root=%#x", blockRoot)
+		stateRoot, err := parentState.HashTreeRoot(ctx)
+		if err != nil {
+			return errors.Wrapf(errIncorrectProposerIndex, "state_root=<failed to compute>, block_root=%#x", blockRoot)
+		}
+		return errors.Wrapf(errIncorrectProposerIndex, "state slot=%d, root=%#x, block_root=%#x", parentState.Slot(), stateRoot, blockRoot)
 	}
 
 	if err = s.validateBellatrixBeaconBlock(ctx, parentState, blk.Block()); err != nil {

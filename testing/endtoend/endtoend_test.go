@@ -152,21 +152,16 @@ func (r *testRunner) run() {
 		signal.Notify(sigc, syscall.SIGINT, syscall.SIGTERM)
 		defer signal.Stop(sigc)
 		if !r.config.LeaveRunning {
+			close(lrChan)
 			return nil
 		}
 		// if LeaveRunning flag has been set, cause this goroutine to block until
 		// the context is canceled or signint/sigterm is received.
-		for {
-			select {
-			case <-ctx.Done():
-				close(lrChan)
-				log.Info("got ctx.Done in LeaveRunning keepalive routine")
-				return ctx.Err()
-			case <-sigc:
-				close(lrChan)
-				log.Info("got sigint/term in LeaveRunning keepalive routine")
-				return nil
-			}
+		select {
+		case <-sigc:
+			close(lrChan)
+			log.Info("got sigint/term in LeaveRunning keepalive routine")
+			return nil
 		}
 	})
 
@@ -477,11 +472,11 @@ func (r *testRunner) waitForMatchingHead(ctx context.Context, check, ref *grpc.C
 	secondsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
 	extraSecondsToSync := (r.config.EpochsToRun)*secondsPerEpoch + uint64(params.BeaconConfig().SlotsPerEpoch.Div(4).Mul(r.config.EpochsToRun))
 	deadline := time.Now().Add(time.Second*time.Duration(extraSecondsToSync)).Add(1*time.Hour)
-	ctx, cancel := context.WithDeadline(r.ctx, deadline)
+	ctx, cancel := context.WithDeadline(ctx, deadline)
+	defer cancel()
 	pause := time.After(time.Second * 1)
 	checkClient := service.NewBeaconChainClient(check)
 	refClient := service.NewBeaconChainClient(ref)
-	defer cancel()
 	for {
 		select {
 		case <-ctx.Done():

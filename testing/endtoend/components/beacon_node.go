@@ -226,6 +226,7 @@ func (node *BeaconNode) startCommand() (string, []string, error) {
 		fmt.Sprintf("--%s=%s", cmdshared.BootstrapNode.Name, enr),
 		fmt.Sprintf("--%s=%s", cmdshared.VerbosityFlag.Name, "debug"),
 		fmt.Sprintf("--%s=%s", cmdshared.ChainConfigFileFlag.Name, node.config.BeaconChainConfigPath()),
+		"--slots-per-archive-point=1",
 		"--" + cmdshared.ForceClearDB.Name,
 		"--" + cmdshared.AcceptTosFlag.Name,
 		"--" + flags.EnableDebugRPCEndpoints.Name,

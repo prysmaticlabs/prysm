@@ -148,6 +148,11 @@ func ProcessSlotsUsingNextSlotCache(
 	// We replace next slot state with parent state.
 	if cachedStateExists {
 		parentState = nextSlotState
+		root, err := parentState.HashTreeRoot(ctx)
+		if err != nil {
+			log.Errorf("weird, got an error calling HTR for the state=%v where root should be=%#x", err, parentRoot)
+		}
+		log.Infof("found state in NextSlotCache at slot=%d with root=%#x (parentRoot=%#x)", parentState.Slot(), root, parentRoot)
 	}
 
 	// In the event our cached state has advanced our
@@ -155,6 +160,7 @@ func ProcessSlotsUsingNextSlotCache(
 	if cachedStateExists && parentState.Slot() == slot {
 		return parentState, nil
 	}
+	log.Infof("process_slots being called up to slot=%d where state.slot=%d", slot, parentState.Slot())
 	// Since next slot cache only advances state by 1 slot,
 	// we check if there's more slots that need to process.
 	parentState, err = ProcessSlots(ctx, parentState, slot)
