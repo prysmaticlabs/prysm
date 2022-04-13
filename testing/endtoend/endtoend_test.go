@@ -476,7 +476,8 @@ func (r *testRunner) waitForMatchingHead(ctx context.Context, check, ref *grpc.C
 	// Sleep a second for every 4 blocks that need to be synced for the newly started node.
 	secondsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
 	extraSecondsToSync := (r.config.EpochsToRun)*secondsPerEpoch + uint64(params.BeaconConfig().SlotsPerEpoch.Div(4).Mul(r.config.EpochsToRun))
-	ctx, cancel := context.WithDeadline(r.ctx, time.Now().Add(time.Second*time.Duration(extraSecondsToSync)))
+	deadline := time.Now().Add(time.Second*time.Duration(extraSecondsToSync)).Add(1*time.Hour)
+	ctx, cancel := context.WithDeadline(r.ctx, deadline)
 	pause := time.After(time.Second * 1)
 	checkClient := service.NewBeaconChainClient(check)
 	refClient := service.NewBeaconChainClient(ref)
@@ -549,11 +550,7 @@ func (r *testRunner) testCheckpointSync(i int, conns []*grpc.ClientConn, nodes *
 	flags = append(flags, fmt.Sprintf("--checkpoint-block=%s", blockPath))
 	flags = append(flags, fmt.Sprintf("--genesis-state=%s", genPath))
 
-	//flags = append(flags, fmt.Sprintf("--checkpoint-sync-url=%s", bnAPI))
-	//flags = append(flags, fmt.Sprintf("--genesis-beacon-api-url=%s", bnAPI))
-
 	// zero-indexed, so next value would be len of list
-	//cpsyncer := components.NewBeaconNode(i, enr, flags, r.config)
 	cpsyncer := nodes.AddBeaconNode(i, flags)
 	r.group.Go(func() error {
 		return cpsyncer.Start(r.ctx)

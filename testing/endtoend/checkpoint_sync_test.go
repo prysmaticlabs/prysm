@@ -27,6 +27,7 @@ func TestCheckpointSync_CustomConfig(t *testing.T) {
 	}
 
 	cfg := params.E2ETestConfig()
+	cfg.BellatrixForkEpoch = 10000
 	// setting this to 1 should change the weak subjectivity computation,
 	// so the computed weak subjectivity checkpoint will just be a few epochs before head
 	cfg.MinValidatorWithdrawabilityDelay = e2types.Epoch(epochsToRun / 2)
