@@ -1057,10 +1057,8 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 }
 
 func (b *BeaconState) populateFieldIndexes(fields []nativetypes.FieldIndex) {
-	b.fieldIndexes = make(map[int]nativetypes.FieldIndex, len(fields))
 	b.fieldIndexesRev = make(map[nativetypes.FieldIndex]int, len(fields))
 	for i, f := range fields {
-		b.fieldIndexes[i] = f
 		b.fieldIndexesRev[f] = i
 	}
 }
