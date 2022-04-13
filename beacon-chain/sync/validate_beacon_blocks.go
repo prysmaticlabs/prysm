@@ -189,6 +189,8 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	return pubsub.ValidationAccept, nil
 }
 
+var errIncorrectProposerIndex = errors.New("incorrect proposer index")
+
 func (s *Service) validateBeaconBlock(ctx context.Context, blk block.SignedBeaconBlock, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "sync.validateBeaconBlock")
 	defer span.End()
@@ -226,7 +228,7 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk block.SignedBeaco
 	}
 	if blk.Block().ProposerIndex() != idx {
 		s.setBadBlock(ctx, blockRoot)
-		return errors.New("incorrect proposer index")
+		return errors.Wrapf(errIncorrectProposerIndex, "root=%#x", blockRoot)
 	}
 
 	if err = s.validateBellatrixBeaconBlock(ctx, parentState, blk.Block()); err != nil {

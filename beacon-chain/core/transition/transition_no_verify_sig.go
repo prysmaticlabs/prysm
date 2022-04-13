@@ -282,7 +282,11 @@ func ProcessBlockForStateRoot(
 	state, err = b.ProcessBlockHeaderNoVerify(ctx, state, blk.Slot(), blk.ProposerIndex(), blk.ParentRoot(), bodyRoot[:])
 	if err != nil {
 		tracing.AnnotateError(span, err)
-		return nil, errors.Wrap(err, "could not process block header")
+		r, err := signed.Block().HashTreeRoot()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not process block header, also failed to compute its htr")
+		}
+		return nil, errors.Wrapf(err, "could not process block header, state slot=%d, root=%#x", state.Slot(), r)
 	}
 
 	enabled, err := b.IsExecutionEnabled(state, blk.Body())
