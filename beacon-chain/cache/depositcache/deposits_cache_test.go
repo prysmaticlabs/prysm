@@ -459,7 +459,7 @@ func TestFinalizedDeposits_UtilizesPreviouslyCachedDeposits(t *testing.T) {
 			Index: 1,
 		},
 	}
-	newFinalizedDeposit := ethpb.DepositContainer{
+	newFinalizedDeposit := &ethpb.DepositContainer{
 		Deposit: &ethpb.Deposit{
 			Data: &ethpb.Deposit_Data{
 				PublicKey:             bytesutil.PadTo([]byte{2}, 48),
@@ -471,17 +471,17 @@ func TestFinalizedDeposits_UtilizesPreviouslyCachedDeposits(t *testing.T) {
 	}
 	dc.deposits = oldFinalizedDeposits
 	dc.InsertFinalizedDeposits(context.Background(), 1)
-	// Artificially exclude old deposits so that they can only be retrieved from previously finalized deposits.
-	dc.deposits = []*ethpb.DepositContainer{&newFinalizedDeposit}
 
 	dc.InsertFinalizedDeposits(context.Background(), 2)
 
+	dc.deposits = append(dc.deposits, []*ethpb.DepositContainer{newFinalizedDeposit}...)
+
 	cachedDeposits := dc.FinalizedDeposits(context.Background())
 	require.NotNil(t, cachedDeposits, "Deposits not cached")
-	assert.Equal(t, int64(2), cachedDeposits.MerkleTrieIndex)
+	assert.Equal(t, int64(1), cachedDeposits.MerkleTrieIndex)
 
 	var deps [][]byte
-	for _, d := range append(oldFinalizedDeposits, &newFinalizedDeposit) {
+	for _, d := range oldFinalizedDeposits {
 		hash, err := d.Deposit.Data.HashTreeRoot()
 		require.NoError(t, err, "Could not hash deposit data")
 		deps = append(deps, hash[:])
@@ -489,6 +489,140 @@ func TestFinalizedDeposits_UtilizesPreviouslyCachedDeposits(t *testing.T) {
 	trie, err := trie.GenerateTrieFromItems(deps, params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not generate deposit trie")
 	assert.Equal(t, trie.HashTreeRoot(), cachedDeposits.Deposits.HashTreeRoot())
+}
+
+func TestFinalizedDeposits_HandleZeroDeposits(t *testing.T) {
+	dc, err := New()
+	require.NoError(t, err)
+
+	dc.InsertFinalizedDeposits(context.Background(), 2)
+
+	cachedDeposits := dc.FinalizedDeposits(context.Background())
+	require.NotNil(t, cachedDeposits, "Deposits not cached")
+	assert.Equal(t, int64(-1), cachedDeposits.MerkleTrieIndex)
+}
+
+func TestFinalizedDeposits_HandleSmallerThanExpectedDeposits(t *testing.T) {
+	dc, err := New()
+	require.NoError(t, err)
+
+	finalizedDeposits := []*ethpb.DepositContainer{
+		{
+			Deposit: &ethpb.Deposit{
+				Data: &ethpb.Deposit_Data{
+					PublicKey:             bytesutil.PadTo([]byte{0}, 48),
+					WithdrawalCredentials: make([]byte, 32),
+					Signature:             make([]byte, 96),
+				},
+			},
+			Index: 0,
+		},
+		{
+			Deposit: &ethpb.Deposit{
+				Data: &ethpb.Deposit_Data{
+					PublicKey:             bytesutil.PadTo([]byte{1}, 48),
+					WithdrawalCredentials: make([]byte, 32),
+					Signature:             make([]byte, 96),
+				},
+			},
+			Index: 1,
+		},
+		{
+			Deposit: &ethpb.Deposit{
+				Data: &ethpb.Deposit_Data{
+					PublicKey:             bytesutil.PadTo([]byte{2}, 48),
+					WithdrawalCredentials: make([]byte, 32),
+					Signature:             make([]byte, 96),
+				},
+			},
+			Index: 2,
+		},
+	}
+	dc.deposits = finalizedDeposits
+
+	dc.InsertFinalizedDeposits(context.Background(), 5)
+
+	cachedDeposits := dc.FinalizedDeposits(context.Background())
+	require.NotNil(t, cachedDeposits, "Deposits not cached")
+	assert.Equal(t, int64(2), cachedDeposits.MerkleTrieIndex)
+}
+
+func TestFinalizedDeposits_HandleLowerEth1DepositIndex(t *testing.T) {
+	dc, err := New()
+	require.NoError(t, err)
+
+	finalizedDeposits := []*ethpb.DepositContainer{
+		{
+			Deposit: &ethpb.Deposit{
+				Data: &ethpb.Deposit_Data{
+					PublicKey:             bytesutil.PadTo([]byte{0}, 48),
+					WithdrawalCredentials: make([]byte, 32),
+					Signature:             make([]byte, 96),
+				},
+			},
+			Index: 0,
+		},
+		{
+			Deposit: &ethpb.Deposit{
+				Data: &ethpb.Deposit_Data{
+					PublicKey:             bytesutil.PadTo([]byte{1}, 48),
+					WithdrawalCredentials: make([]byte, 32),
+					Signature:             make([]byte, 96),
+				},
+			},
+			Index: 1,
+		},
+		{
+			Deposit: &ethpb.Deposit{
+				Data: &ethpb.Deposit_Data{
+					PublicKey:             bytesutil.PadTo([]byte{2}, 48),
+					WithdrawalCredentials: make([]byte, 32),
+					Signature:             make([]byte, 96),
+				},
+			},
+			Index: 2,
+		},
+		{
+			Deposit: &ethpb.Deposit{
+				Data: &ethpb.Deposit_Data{
+					PublicKey:             bytesutil.PadTo([]byte{3}, 48),
+					WithdrawalCredentials: make([]byte, 32),
+					Signature:             make([]byte, 96),
+				},
+			},
+			Index: 3,
+		},
+		{
+			Deposit: &ethpb.Deposit{
+				Data: &ethpb.Deposit_Data{
+					PublicKey:             bytesutil.PadTo([]byte{4}, 48),
+					WithdrawalCredentials: make([]byte, 32),
+					Signature:             make([]byte, 96),
+				},
+			},
+			Index: 4,
+		},
+		{
+			Deposit: &ethpb.Deposit{
+				Data: &ethpb.Deposit_Data{
+					PublicKey:             bytesutil.PadTo([]byte{5}, 48),
+					WithdrawalCredentials: make([]byte, 32),
+					Signature:             make([]byte, 96),
+				},
+			},
+			Index: 5,
+		},
+	}
+	dc.deposits = finalizedDeposits
+
+	dc.InsertFinalizedDeposits(context.Background(), 5)
+
+	// Reinsert finalized deposits with a lower index.
+	dc.InsertFinalizedDeposits(context.Background(), 2)
+
+	cachedDeposits := dc.FinalizedDeposits(context.Background())
+	require.NotNil(t, cachedDeposits, "Deposits not cached")
+	assert.Equal(t, int64(5), cachedDeposits.MerkleTrieIndex)
 }
 
 func TestFinalizedDeposits_InitializedCorrectly(t *testing.T) {
