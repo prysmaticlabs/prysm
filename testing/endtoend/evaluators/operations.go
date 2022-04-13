@@ -388,6 +388,7 @@ func validatorsVoteWithTheMajority(conns ...*grpc.ClientConn) error {
 		if chainHead.HeadEpoch == 1 && slot%params.BeaconConfig().SlotsPerEpoch == 0 {
 			continue
 		}
+		epochToWatch := chainHead.HeadEpoch.Sub(1)
 		// We skipped the first slot so we treat the second slot as the starting slot of epoch 1.
 		if chainHead.HeadEpoch == 1 {
 			isFirstSlotInVotingPeriod = slot%params.BeaconConfig().SlotsPerEpoch == 1
@@ -396,6 +397,14 @@ func validatorsVoteWithTheMajority(conns ...*grpc.ClientConn) error {
 		}
 		if isFirstSlotInVotingPeriod {
 			expectedEth1DataVote = vote
+			return nil
+		}
+		// For the first voting period after the merge, we skip eth1data voting
+		// as the effective eth1 block time quadruples from 2 seconds to 8 seconds
+		// which can cause issues with eth1 data vote calculations.
+		afterBellatrix := epochToWatch >= helpers.BellatrixE2EForkEpoch
+		beforeNextPeriod := epochToWatch < helpers.BellatrixE2EForkEpoch+params.E2ETestConfig().EpochsPerEth1VotingPeriod
+		if afterBellatrix && beforeNextPeriod {
 			return nil
 		}
 

@@ -73,7 +73,7 @@ var DepositCount = uint64(64)
 var NumOfExecEngineTxs = uint64(200)
 
 // ExpectedExecEngineTxsThreshold is the portion of execution engine transactions we expect to find in blocks.
-var ExpectedExecEngineTxsThreshold = 0.7
+var ExpectedExecEngineTxsThreshold = 0.5
 
 // Base port values.
 const (
