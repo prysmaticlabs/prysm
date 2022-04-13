@@ -17,6 +17,7 @@ func (f *ValidatorEndpointFactory) IsNil() bool {
 func (*ValidatorEndpointFactory) Paths() []string {
 	return []string{
 		"/eth/v1/keystores",
+		"/eth/v1/remotekeys",
 	}
 }
 
@@ -30,6 +31,12 @@ func (*ValidatorEndpointFactory) Create(path string) (*apimiddleware.Endpoint, e
 		endpoint.PostResponse = &importKeystoresResponseJson{}
 		endpoint.DeleteRequest = &deleteKeystoresRequestJson{}
 		endpoint.DeleteResponse = &deleteKeystoresResponseJson{}
+	case "/eth/v1/remotekeys":
+		endpoint.GetResponse = &listRemoteKeysResponseJson{}
+		endpoint.PostRequest = &importRemoteKeysRequestJson{}
+		endpoint.PostResponse = &importRemoteKeysResponseJson{}
+		endpoint.DeleteRequest = &deleteRemoteKeysRequestJson{}
+		endpoint.DeleteResponse = &deleteRemoteKeysResponseJson{}
 	default:
 		return nil, errors.New("invalid path")
 	}

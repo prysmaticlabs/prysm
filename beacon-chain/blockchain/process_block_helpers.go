@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	mathutil "github.com/prysmaticlabs/prysm/math"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
@@ -402,10 +403,13 @@ func (s *Service) insertFinalizedDeposits(ctx context.Context, fRoot [32]byte) e
 	// We update the cache up to the last deposit index in the finalized block's state.
 	// We can be confident that these deposits will be included in some block
 	// because the Eth1 follow distance makes such long-range reorgs extremely unlikely.
-	eth1DepositIndex := int64(finalizedState.Eth1Data().DepositCount - 1)
-	s.cfg.DepositCache.InsertFinalizedDeposits(ctx, eth1DepositIndex)
+	eth1DepositIndex, err := mathutil.Int(finalizedState.Eth1DepositIndex())
+	if err != nil {
+		return errors.Wrap(err, "could not cast eth1 deposit index")
+	}
+	s.cfg.DepositCache.InsertFinalizedDeposits(ctx, int64(eth1DepositIndex))
 	// Deposit proofs are only used during state transition and can be safely removed to save space.
-	if err = s.cfg.DepositCache.PruneProofs(ctx, eth1DepositIndex); err != nil {
+	if err = s.cfg.DepositCache.PruneProofs(ctx, int64(eth1DepositIndex)); err != nil {
 		return errors.Wrap(err, "could not prune deposit proofs")
 	}
 	return nil
