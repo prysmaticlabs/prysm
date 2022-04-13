@@ -453,13 +453,13 @@ func (b *BeaconState) Copy() state.BeaconState {
 	switch b.version {
 	case version.Phase0:
 		dst.sharedFieldReferences = make(map[nativetypes.FieldIndex]*stateutil.Reference, 10)
-		b.populateFieldIndexes(phase0Fields)
+		dst.populateFieldIndexes(phase0Fields)
 	case version.Altair:
 		dst.sharedFieldReferences = make(map[nativetypes.FieldIndex]*stateutil.Reference, 11)
-		b.populateFieldIndexes(altairFields)
+		dst.populateFieldIndexes(altairFields)
 	case version.Bellatrix:
 		dst.sharedFieldReferences = make(map[nativetypes.FieldIndex]*stateutil.Reference, 11)
-		b.populateFieldIndexes(bellatrixFields)
+		dst.populateFieldIndexes(bellatrixFields)
 	}
 
 	for field, ref := range b.sharedFieldReferences {
@@ -583,8 +583,9 @@ func (b *BeaconState) recomputeDirtyFields(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		b.merkleLayers[0][b.fieldIndexesRev[field]] = root[:]
-		b.recomputeRoot(b.fieldIndexesRev[field])
+		idx := b.fieldIndexesRev[field]
+		b.merkleLayers[0][idx] = root[:]
+		b.recomputeRoot(idx)
 		delete(b.dirtyFields, field)
 	}
 	return nil
