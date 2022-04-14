@@ -192,7 +192,8 @@ func (m *Miner) Start(ctx context.Context) error {
 	if err = WaitForBlocks(web3, store, params.BeaconConfig().Eth1FollowDistance); err != nil {
 		return fmt.Errorf("unable to advance chain: %w", err)
 	}
-	txOpts, err := bind.NewTransactorWithChainID(bytes.NewReader(jsonBytes), KeystorePassword, big.NewInt(NetworkId))
+	txOpts, err := bind.NewTransactorWithChainID(bytes.NewReader(jsonBytes), KeystorePassword, big.NewInt(Ne
+	tworkId))
 	if err != nil {
 		return err
 	}

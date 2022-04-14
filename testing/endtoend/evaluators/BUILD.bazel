@@ -8,6 +8,7 @@ go_library(
         "api_middleware.go",
         "data.go",
         "execution_engine.go",
+        "fee_recipient.go",
         "finality.go",
         "fork.go",
         "metrics.go",
