@@ -748,19 +748,19 @@ func HydrateBeaconBlockBodyBellatrix(b *ethpb.BeaconBlockBodyBellatrix) *ethpb.B
 
 // HydrateSignedBlindedBeaconBlockBellatrix hydrates a signed blinded beacon block with correct field length sizes
 // to comply with fssz marshalling and unmarshalling rules.
-func HydrateSignedBlindedBeaconBlockBellatrix(b *v2.SignedBlindedBeaconBlockBellatrix) *v2.SignedBlindedBeaconBlockBellatrix {
+func HydrateSignedBlindedBeaconBlockBellatrix(b *ethpb.SignedBlindedBeaconBlockBellatrix) *ethpb.SignedBlindedBeaconBlockBellatrix {
 	if b.Signature == nil {
 		b.Signature = make([]byte, fieldparams.BLSSignatureLength)
 	}
-	b.Message = HydrateBlindedBeaconBlockBellatrix(b.Message)
+	b.Block = HydrateBlindedBeaconBlockBellatrix(b.Block)
 	return b
 }
 
 // HydrateBlindedBeaconBlockBellatrix hydrates a blinded beacon block with correct field length sizes
 // to comply with fssz marshalling and unmarshalling rules.
-func HydrateBlindedBeaconBlockBellatrix(b *v2.BlindedBeaconBlockBellatrix) *v2.BlindedBeaconBlockBellatrix {
+func HydrateBlindedBeaconBlockBellatrix(b *ethpb.BlindedBeaconBlockBellatrix) *ethpb.BlindedBeaconBlockBellatrix {
 	if b == nil {
-		b = &v2.BlindedBeaconBlockBellatrix{}
+		b = &ethpb.BlindedBeaconBlockBellatrix{}
 	}
 	if b.ParentRoot == nil {
 		b.ParentRoot = make([]byte, fieldparams.RootLength)
@@ -774,7 +774,73 @@ func HydrateBlindedBeaconBlockBellatrix(b *v2.BlindedBeaconBlockBellatrix) *v2.B
 
 // HydrateBlindedBeaconBlockBodyBellatrix hydrates a blinded beacon block body with correct field length sizes
 // to comply with fssz marshalling and unmarshalling rules.
-func HydrateBlindedBeaconBlockBodyBellatrix(b *v2.BlindedBeaconBlockBodyBellatrix) *v2.BlindedBeaconBlockBodyBellatrix {
+func HydrateBlindedBeaconBlockBodyBellatrix(b *ethpb.BlindedBeaconBlockBodyBellatrix) *ethpb.BlindedBeaconBlockBodyBellatrix {
+	if b == nil {
+		b = &ethpb.BlindedBeaconBlockBodyBellatrix{}
+	}
+	if b.RandaoReveal == nil {
+		b.RandaoReveal = make([]byte, fieldparams.BLSSignatureLength)
+	}
+	if b.Graffiti == nil {
+		b.Graffiti = make([]byte, 32)
+	}
+	if b.Eth1Data == nil {
+		b.Eth1Data = &ethpb.Eth1Data{
+			DepositRoot: make([]byte, fieldparams.RootLength),
+			BlockHash:   make([]byte, 32),
+		}
+	}
+	if b.SyncAggregate == nil {
+		b.SyncAggregate = &ethpb.SyncAggregate{
+			SyncCommitteeBits:      make([]byte, 64),
+			SyncCommitteeSignature: make([]byte, fieldparams.BLSSignatureLength),
+		}
+	}
+	if b.ExecutionPayloadHeader == nil {
+		b.ExecutionPayloadHeader = &ethpb.ExecutionPayloadHeader{
+			ParentHash:       make([]byte, 32),
+			FeeRecipient:     make([]byte, 20),
+			StateRoot:        make([]byte, fieldparams.RootLength),
+			ReceiptRoot:      make([]byte, fieldparams.RootLength),
+			LogsBloom:        make([]byte, 256),
+			PrevRandao:       make([]byte, 32),
+			BaseFeePerGas:    make([]byte, 32),
+			BlockHash:        make([]byte, 32),
+			TransactionsRoot: make([]byte, fieldparams.RootLength),
+		}
+	}
+	return b
+}
+
+// HydrateV2SignedBlindedBeaconBlockBellatrix hydrates a signed blinded beacon block with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateV2SignedBlindedBeaconBlockBellatrix(b *v2.SignedBlindedBeaconBlockBellatrix) *v2.SignedBlindedBeaconBlockBellatrix {
+	if b.Signature == nil {
+		b.Signature = make([]byte, fieldparams.BLSSignatureLength)
+	}
+	b.Message = HydrateV2BlindedBeaconBlockBellatrix(b.Message)
+	return b
+}
+
+// HydrateV2BlindedBeaconBlockBellatrix hydrates a blinded beacon block with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateV2BlindedBeaconBlockBellatrix(b *v2.BlindedBeaconBlockBellatrix) *v2.BlindedBeaconBlockBellatrix {
+	if b == nil {
+		b = &v2.BlindedBeaconBlockBellatrix{}
+	}
+	if b.ParentRoot == nil {
+		b.ParentRoot = make([]byte, fieldparams.RootLength)
+	}
+	if b.StateRoot == nil {
+		b.StateRoot = make([]byte, fieldparams.RootLength)
+	}
+	b.Body = HydrateV2BlindedBeaconBlockBodyBellatrix(b.Body)
+	return b
+}
+
+// HydrateV2BlindedBeaconBlockBodyBellatrix hydrates a blinded beacon block body with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateV2BlindedBeaconBlockBodyBellatrix(b *v2.BlindedBeaconBlockBodyBellatrix) *v2.BlindedBeaconBlockBodyBellatrix {
 	if b == nil {
 		b = &v2.BlindedBeaconBlockBodyBellatrix{}
 	}

@@ -148,7 +148,7 @@ func Test_BellatrixToV1Alpha1SignedBlock(t *testing.T) {
 }
 
 func Test_BlindedBellatrixToV1Alpha1SignedBlock(t *testing.T) {
-	v2Block := util.HydrateSignedBlindedBeaconBlockBellatrix(&ethpbv2.SignedBlindedBeaconBlockBellatrix{})
+	v2Block := util.HydrateV2SignedBlindedBeaconBlockBellatrix(&ethpbv2.SignedBlindedBeaconBlockBellatrix{})
 	v2Block.Message.Slot = slot
 	v2Block.Message.ProposerIndex = validatorIndex
 	v2Block.Message.ParentRoot = parentRoot
