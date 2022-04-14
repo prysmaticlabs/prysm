@@ -51,10 +51,4 @@ var (
 			Help: "The number of times pruning happened.",
 		},
 	)
-	validatedCount = promauto.NewGauge(
-		prometheus.GaugeOpts{
-			Name: "doublylinkedtree_validated_count",
-			Help: "The number of blocks that have been fully validated.",
-		},
-	)
 )
