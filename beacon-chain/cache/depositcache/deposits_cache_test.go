@@ -886,13 +886,13 @@ func TestFinalizedDeposits_ReturnsTrieCorrectly(t *testing.T) {
 	depositTrie, err := trie.GenerateTrieFromItems(trieItems, params.BeaconConfig().DepositContractTreeDepth)
 	assert.NoError(t, err)
 
-	//origDeps := dc.deposits
+	// Perform this in a non-sensical ordering
 	dc.InsertFinalizedDeposits(context.Background(), 10)
-
-	//dc.deposits = origDeps[:9]
 	dc.InsertFinalizedDeposits(context.Background(), 2)
 	dc.InsertFinalizedDeposits(context.Background(), 3)
 	dc.InsertFinalizedDeposits(context.Background(), 4)
+
+	// Mimick finalized deposit trie fetch.
 	fd := dc.FinalizedDeposits(context.Background())
 	deps := dc.NonFinalizedDeposits(context.Background(), fd.MerkleTrieIndex, big.NewInt(14))
 	insertIndex := fd.MerkleTrieIndex + 1
@@ -908,7 +908,7 @@ func TestFinalizedDeposits_ReturnsTrieCorrectly(t *testing.T) {
 	dc.InsertFinalizedDeposits(context.Background(), 15)
 	dc.InsertFinalizedDeposits(context.Background(), 15)
 	dc.InsertFinalizedDeposits(context.Background(), 14)
-	//dc.deposits = origDeps
+
 	fd = dc.FinalizedDeposits(context.Background())
 	deps = dc.NonFinalizedDeposits(context.Background(), fd.MerkleTrieIndex, big.NewInt(30))
 	insertIndex = fd.MerkleTrieIndex + 1
