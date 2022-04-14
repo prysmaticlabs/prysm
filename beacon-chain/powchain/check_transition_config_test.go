@@ -190,6 +190,38 @@ func TestService_logTtdStatus(t *testing.T) {
 	require.Equal(t, false, reached)
 }
 
+func TestService_logTtdStatus_NotSyncedClient(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		defer func() {
+			require.NoError(t, r.Body.Close())
+		}()
+
+		resp := (*pb.ExecutionBlock)(nil) // Nil response when a client is not synced
+		respJSON := map[string]interface{}{
+			"jsonrpc": "2.0",
+			"id":      1,
+			"result":  resp,
+		}
+		require.NoError(t, json.NewEncoder(w).Encode(respJSON))
+	}))
+	defer srv.Close()
+
+	rpcClient, err := rpc.DialHTTP(srv.URL)
+	require.NoError(t, err)
+	defer rpcClient.Close()
+
+	service := &Service{
+		cfg: &config{},
+	}
+	service.rpcClient = rpcClient
+
+	ttd := new(uint256.Int)
+	reached, err := service.logTtdStatus(context.Background(), ttd.SetUint64(24343))
+	require.NoError(t, err)
+	require.Equal(t, false, reached)
+}
+
 func emptyPayload() *pb.ExecutionPayload {
 	return &pb.ExecutionPayload{
 		ParentHash:    make([]byte, fieldparams.RootLength),
