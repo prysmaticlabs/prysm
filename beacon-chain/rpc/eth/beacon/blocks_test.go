@@ -689,53 +689,6 @@ func TestSubmitBlindedBlock(t *testing.T) {
 		_, err = beaconChainServer.SubmitBlindedBlock(context.Background(), blockReq)
 		assert.NoError(t, err)
 	})
-
-	t.Run("Bellatrix - not found", func(t *testing.T) {
-		beaconDB := dbTest.SetupDB(t)
-		ctx := context.Background()
-
-		genesis := util.NewBeaconBlockBellatrix()
-		wrapped, err := wrapper.WrappedSignedBeaconBlock(genesis)
-		require.NoError(t, err)
-		require.NoError(t, beaconDB.SaveBlock(context.Background(), wrapped), "Could not save genesis block")
-
-		numDeposits := uint64(64)
-		beaconState, _ := util.DeterministicGenesisState(t, numDeposits)
-		bsRoot, err := beaconState.HashTreeRoot(ctx)
-		require.NoError(t, err)
-		genesisRoot, err := genesis.Block.HashTreeRoot()
-		require.NoError(t, err)
-		require.NoError(t, beaconDB.SaveState(ctx, beaconState, genesisRoot), "Could not save genesis state")
-
-		c := &mock.ChainService{Root: bsRoot[:], State: beaconState}
-		beaconChainServer := &Server{
-			BeaconDB:         beaconDB,
-			BlockReceiver:    c,
-			ChainInfoFetcher: c,
-			BlockNotifier:    c.BlockNotifier(),
-			Broadcaster:      mockp2p.NewTestP2P(t),
-		}
-
-		blk := util.NewBeaconBlockBellatrix()
-		blk.Block.Slot = 5
-		blk.Block.ParentRoot = bsRoot[:]
-		blk.Block.Body.ExecutionPayload.Transactions = [][]byte{[]byte("transaction1"), []byte("transaction2")}
-		blindedBlk := util.NewBlindedBeaconBlockBellatrix()
-		blindedBlk.Message.Slot = 5
-		blindedBlk.Message.ParentRoot = bsRoot[:]
-		transactionsRoot := bytesutil.ToBytes32([]byte("someothertransactionsroot"))
-		blindedBlk.Message.Body.ExecutionPayloadHeader.TransactionsRoot = transactionsRoot[:]
-		wrapped, err = wrapper.WrappedSignedBeaconBlock(genesis)
-		require.NoError(t, err)
-		require.NoError(t, beaconDB.SaveBlock(ctx, wrapped))
-
-		blockReq := &ethpbv2.SignedBlindedBeaconBlockContainer{
-			Message:   &ethpbv2.SignedBlindedBeaconBlockContainer_BellatrixBlock{BellatrixBlock: blindedBlk.Message},
-			Signature: blindedBlk.Signature,
-		}
-		_, err = beaconChainServer.SubmitBlindedBlock(context.Background(), blockReq)
-		assert.ErrorContains(t, "Could not find corresponding non-blinded block", err)
-	})
 }
 
 func TestServer_GetBlock(t *testing.T) {

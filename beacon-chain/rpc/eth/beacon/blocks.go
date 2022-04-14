@@ -761,32 +761,21 @@ func (bs *Server) submitBellatrixBlock(ctx context.Context, bellatrixBlk *ethpbv
 }
 
 func (bs *Server) submitBlindedBellatrixBlock(ctx context.Context, blindedBellatrixBlk *ethpbv2.BlindedBeaconBlockBellatrix, sig []byte) error {
-	root, err := blindedBellatrixBlk.HashTreeRoot()
-	if err != nil {
-		return status.Errorf(codes.Internal, "Could not calculate block root: %v", err)
-	}
-	signedBlk, err := bs.BeaconDB.Block(ctx, root)
-	if err != nil {
-		return status.Errorf(codes.Internal, "Could not calculate get non-blinded block from DB: %v", err)
-	}
-	if signedBlk == nil {
-		return status.Error(codes.NotFound, "Could not find corresponding non-blinded block")
-	}
-	v1alpha1BellatrixSignedBlk, err := signedBlk.PbBellatrixBlock()
-	if err != nil {
-		return status.Errorf(codes.Internal, "Could not get non-blinded block: %v", err)
-	}
-	bellatrixBlk, err := migration.V1Alpha1BeaconBlockBellatrixToV2(v1alpha1BellatrixSignedBlk.Block)
-	if err != nil {
-		return status.Errorf(codes.Internal, "Could not get non-blinded block: %v", err)
-	}
-	v1alpha1SignedBlk, err := migration.BellatrixToV1Alpha1SignedBlock(&ethpbv2.SignedBeaconBlockBellatrix{Message: bellatrixBlk, Signature: sig})
+	v1alpha1SignedBlk, err := migration.BlindedBellatrixToV1Alpha1SignedBlock(&ethpbv2.SignedBlindedBeaconBlockBellatrix{
+		Message:   blindedBellatrixBlk,
+		Signature: sig,
+	})
 	if err != nil {
 		return status.Errorf(codes.Internal, "Could not get non-blinded block: %v", err)
 	}
 	wrappedBellatrixSignedBlk, err := wrapper.WrappedSignedBeaconBlock(v1alpha1SignedBlk)
 	if err != nil {
 		return status.Errorf(codes.Internal, "Could not get non-blinded block: %v", err)
+	}
+
+	root, err := blindedBellatrixBlk.HashTreeRoot()
+	if err != nil {
+		return status.Errorf(codes.InvalidArgument, "Could not tree hash block: %v", err)
 	}
 
 	return bs.submitBlock(ctx, root, wrappedBellatrixSignedBlk)
