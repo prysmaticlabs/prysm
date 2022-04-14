@@ -292,7 +292,8 @@ func TestService_waitForStateInitialization(t *testing.T) {
 		wg := &sync.WaitGroup{}
 		wg.Add(1)
 		go func() {
-			s.waitForStateInitialization()
+			_, err := s.waitForStateInitialization()
+			require.NoError(t, err)
 			wg.Done()
 		}()
 
