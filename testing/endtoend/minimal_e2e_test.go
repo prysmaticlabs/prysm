@@ -94,6 +94,7 @@ func e2eMinimal(t *testing.T, args *testArgs) {
 		ev.AllNodesHaveSameHead,
 		ev.ValidatorSyncParticipation,
 		ev.TransactionsPresent,
+
 	}
 	testConfig := &types.E2EConfig{
 		BeaconFlags: []string{
