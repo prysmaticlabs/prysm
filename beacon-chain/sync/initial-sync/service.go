@@ -56,7 +56,7 @@ type Service struct {
 // latest head of the blockchain.
 func NewService(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
-	s := &Service{
+	return &Service{
 		cfg:          cfg,
 		ctx:          ctx,
 		cancel:       cancel,
@@ -65,12 +65,11 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		counter:      ratecounter.NewRateCounter(counterSeconds * time.Second),
 		genesisChan:  make(chan time.Time),
 	}
-	go s.waitForStateInitialization()
-	return s
 }
 
 // Start the initial sync service.
 func (s *Service) Start() {
+	go s.waitForStateInitialization()
 	// Wait for state initialized event.
 	genesis := <-s.genesisChan
 	if genesis.IsZero() {
@@ -180,9 +179,10 @@ func (s *Service) waitForMinimumPeers() {
 	}
 }
 
+// TODO: Return error
 // waitForStateInitialization makes sure that beacon node is ready to be accessed: it is either
 // already properly configured or system waits up until state initialized event is triggered.
-func (s *Service) waitForStateInitialization() {
+func (s *Service) waitForStateInitialization() time.Time {
 	// Wait for state to be initialized.
 	stateChannel := make(chan *feed.Event, 1)
 	stateSub := s.cfg.StateNotifier.StateFeed().Subscribe(stateChannel)
@@ -198,19 +198,16 @@ func (s *Service) waitForStateInitialization() {
 					continue
 				}
 				log.WithField("starttime", data.StartTime).Debug("Received state initialized event")
-				s.genesisChan <- data.StartTime
-				return
+				return data.StartTime
 			}
 		case <-s.ctx.Done():
 			log.Debug("Context closed, exiting goroutine")
 			// Send a zero time in the event we are exiting.
-			s.genesisChan <- time.Time{}
-			return
+			return time.Time{}
 		case err := <-stateSub.Err():
 			log.WithError(err).Error("Subscription to state notifier failed")
 			// Send a zero time in the event we are exiting.
-			s.genesisChan <- time.Time{}
-			return
+			return time.Time{}
 		}
 	}
 }
