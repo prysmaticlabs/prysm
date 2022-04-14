@@ -35,9 +35,6 @@ const disabledFeatureFlag = "Disabled feature flag"
 
 // Flags is a struct to represent which features the client will perform on runtime.
 type Flags struct {
-	// Testnet Flags.
-	PyrmontTestnet bool // PyrmontTestnet defines the flag through which we can enable the node to run on the Pyrmont testnet.
-
 	// Feature related flags.
 	RemoteSlasherProtection             bool // RemoteSlasherProtection utilizes a beacon node with --slasher mode for validator slashing protection.
 	WriteSSZStateTransitions            bool // WriteSSZStateTransitions to tmp directory.
@@ -122,12 +119,7 @@ func InitWithReset(c *Flags) func() {
 
 // configureTestnet sets the config according to specified testnet flag
 func configureTestnet(ctx *cli.Context, cfg *Flags) {
-	if ctx.Bool(PyrmontTestnet.Name) {
-		log.Warn("Running on Pyrmont Testnet")
-		params.UsePyrmontConfig()
-		params.UsePyrmontNetworkConfig()
-		cfg.PyrmontTestnet = true
-	} else if ctx.Bool(PraterTestnet.Name) {
+	if ctx.Bool(PraterTestnet.Name) {
 		log.Warn("Running on the Prater Testnet")
 		params.UsePraterConfig()
 		params.UsePraterNetworkConfig()
