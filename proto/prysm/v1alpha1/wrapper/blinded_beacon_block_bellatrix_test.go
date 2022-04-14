@@ -19,7 +19,7 @@ func TestBellatrixSignedBlindedBeaconBlock_Header(t *testing.T) {
 	root := bytesutil.PadTo([]byte("root"), 32)
 	signature := bytesutil.PadTo([]byte("sig"), 96)
 	body := &ethpb.BlindedBeaconBlockBodyBellatrix{}
-	body = util.HydrateV2BlindedBeaconBlockBodyBellatrix(body)
+	body = util.HydrateBlindedBeaconBlockBodyBellatrix(body)
 	bodyRoot, err := body.HashTreeRoot()
 	require.NoError(t, err)
 	block := &ethpb.SignedBlindedBeaconBlockBellatrix{
@@ -123,7 +123,7 @@ func TestBellatrixSignedBlindedBeaconBlock_PbBlindedBellatrixBlock(t *testing.T)
 }
 
 func TestBellatrixSignedBlindedBeaconBlock_MarshalSSZTo(t *testing.T) {
-	wsb, err := wrapper.WrappedSignedBeaconBlock(util.HydrateV2SignedBlindedBeaconBlockBellatrix(&ethpb.SignedBlindedBeaconBlockBellatrix{}))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(util.HydrateSignedBlindedBeaconBlockBellatrix(&ethpb.SignedBlindedBeaconBlockBellatrix{}))
 	assert.NoError(t, err)
 
 	var b []byte
@@ -133,7 +133,7 @@ func TestBellatrixSignedBlindedBeaconBlock_MarshalSSZTo(t *testing.T) {
 }
 
 func TestBellatrixSignedBlindedBeaconBlock_SSZ(t *testing.T) {
-	wsb, err := wrapper.WrappedSignedBeaconBlock(util.HydrateV2SignedBlindedBeaconBlockBellatrix(&ethpb.SignedBlindedBeaconBlockBellatrix{}))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(util.HydrateSignedBlindedBeaconBlockBellatrix(&ethpb.SignedBlindedBeaconBlockBellatrix{}))
 	assert.NoError(t, err)
 
 	b, err := wsb.MarshalSSZ()
@@ -203,7 +203,7 @@ func TestBellatrixBlindedBeaconBlock_IsNil(t *testing.T) {
 }
 
 func TestBellatrixBlindedBeaconBlock_HashTreeRoot(t *testing.T) {
-	wb, err := wrapper.WrappedBeaconBlock(util.HydrateV2BlindedBeaconBlockBellatrix(&ethpb.BlindedBeaconBlockBellatrix{}))
+	wb, err := wrapper.WrappedBeaconBlock(util.HydrateBlindedBeaconBlockBellatrix(&ethpb.BlindedBeaconBlockBellatrix{}))
 	require.NoError(t, err)
 
 	rt, err := wb.HashTreeRoot()
@@ -220,7 +220,7 @@ func TestBellatrixBlindedBeaconBlock_Proto(t *testing.T) {
 }
 
 func TestBellatrixBlindedBeaconBlock_SSZ(t *testing.T) {
-	wb, err := wrapper.WrappedBeaconBlock(util.HydrateV2BlindedBeaconBlockBellatrix(&ethpb.BlindedBeaconBlockBellatrix{}))
+	wb, err := wrapper.WrappedBeaconBlock(util.HydrateBlindedBeaconBlockBellatrix(&ethpb.BlindedBeaconBlockBellatrix{}))
 	assert.NoError(t, err)
 
 	b, err := wb.MarshalSSZ()
@@ -333,7 +333,7 @@ func TestBellatrixBlindedBeaconBlockBody_IsNil(t *testing.T) {
 }
 
 func TestBellatrixBlindedBeaconBlockBody_HashTreeRoot(t *testing.T) {
-	wb, err := wrapper.WrappedBellatrixBlindedBeaconBlockBody(util.HydrateV2BlindedBeaconBlockBodyBellatrix(&ethpb.BlindedBeaconBlockBodyBellatrix{}))
+	wb, err := wrapper.WrappedBellatrixBlindedBeaconBlockBody(util.HydrateBlindedBeaconBlockBodyBellatrix(&ethpb.BlindedBeaconBlockBodyBellatrix{}))
 	assert.NoError(t, err)
 
 	rt, err := wb.HashTreeRoot()
@@ -363,7 +363,7 @@ func TestBellatrixBlindedBeaconBlockBody_ExecutionPayloadHeader(t *testing.T) {
 
 func TestBellatrixBlindedBeaconBlock_PbGenericBlock(t *testing.T) {
 	abb := &ethpb.SignedBlindedBeaconBlockBellatrix{
-		Block: util.HydrateV2BlindedBeaconBlockBellatrix(&ethpb.BlindedBeaconBlockBellatrix{}),
+		Block: util.HydrateBlindedBeaconBlockBellatrix(&ethpb.BlindedBeaconBlockBellatrix{}),
 	}
 	wsb, err := wrapper.WrappedSignedBeaconBlock(abb)
 	require.NoError(t, err)
@@ -374,7 +374,7 @@ func TestBellatrixBlindedBeaconBlock_PbGenericBlock(t *testing.T) {
 }
 
 func TestBellatrixBlindedBeaconBlock_AsSignRequestObject(t *testing.T) {
-	abb := util.HydrateV2BlindedBeaconBlockBellatrix(&ethpb.BlindedBeaconBlockBellatrix{})
+	abb := util.HydrateBlindedBeaconBlockBellatrix(&ethpb.BlindedBeaconBlockBellatrix{})
 	wsb, err := wrapper.WrappedBeaconBlock(abb)
 	require.NoError(t, err)
 
