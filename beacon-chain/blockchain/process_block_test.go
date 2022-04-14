@@ -1699,6 +1699,7 @@ func Test_getStateVersionAndPayload(t *testing.T) {
 func Test_validateMergeTransitionBlock(t *testing.T) {
 	cfg := params.BeaconConfig()
 	cfg.TerminalTotalDifficulty = "2"
+	cfg.TerminalBlockHash = params.BeaconConfig().ZeroHash
 	params.OverrideBeaconConfig(cfg)
 
 	ctx := context.Background()
