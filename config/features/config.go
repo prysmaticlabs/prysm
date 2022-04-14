@@ -118,7 +118,7 @@ func InitWithReset(c *Flags) func() {
 }
 
 // configureTestnet sets the config according to specified testnet flag
-func configureTestnet(ctx *cli.Context, cfg *Flags) {
+func configureTestnet(ctx *cli.Context) {
 	if ctx.Bool(PraterTestnet.Name) {
 		log.Warn("Running on the Prater Testnet")
 		params.UsePraterConfig()
@@ -137,7 +137,7 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(devModeFlag.Name) {
 		enableDevModeFlags(ctx)
 	}
-	configureTestnet(ctx, cfg)
+	configureTestnet(ctx)
 
 	if ctx.Bool(writeSSZStateTransitionsFlag.Name) {
 		logEnabled(writeSSZStateTransitionsFlag)
@@ -232,7 +232,7 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 func ConfigureValidator(ctx *cli.Context) {
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
-	configureTestnet(ctx, cfg)
+	configureTestnet(ctx)
 	if ctx.Bool(enableExternalSlasherProtectionFlag.Name) {
 		log.Fatal(
 			"Remote slashing protection has currently been disabled in Prysm due to safety concerns. " +
