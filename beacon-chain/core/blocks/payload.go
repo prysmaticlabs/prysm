@@ -18,6 +18,8 @@ import (
 	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
+var ErrInvalidBlockHash = errors.New("invalid block hash")
+
 // IsMergeTransitionComplete returns true if the transition to Bellatrix has completed.
 // Meaning the payload header in beacon state is not `ExecutionPayloadHeader()` (i.e. not empty).
 //
@@ -327,4 +329,60 @@ func isEmptyHeader(h *ethpb.ExecutionPayloadHeader) bool {
 		return false
 	}
 	return true
+}
+
+// ValidatePayloadHeaderWhenMergeCompletes validates the payload header when the merge completes.
+func ValidatePayloadHeaderWhenMergeCompletes(st state.BeaconState, header *ethpb.ExecutionPayloadHeader) error {
+	complete, err := IsMergeTransitionComplete(st)
+	if err != nil {
+		return err
+	}
+	if !complete {
+		return nil
+	}
+
+	h, err := st.LatestExecutionPayloadHeader()
+	if err != nil {
+		return err
+	}
+	if !bytes.Equal(header.ParentHash, h.BlockHash) {
+		return ErrInvalidBlockHash
+	}
+	return nil
+}
+
+// ValidatePayloadHeader validates the payload header.
+func ValidatePayloadHeader(st state.BeaconState, header *ethpb.ExecutionPayloadHeader) error {
+	random, err := helpers.RandaoMix(st, time.CurrentEpoch(st))
+	if err != nil {
+		return err
+	}
+
+	if !bytes.Equal(header.PrevRandao, random) {
+		return errors.New("incorrect prev randao")
+	}
+	t, err := slots.ToTime(st.GenesisTime(), st.Slot())
+	if err != nil {
+		return err
+	}
+	if header.Timestamp != uint64(t.Unix()) {
+		return errors.New("incorrect timestamp")
+	}
+	return nil
+}
+
+// ProcessPayloadHeader processes the payload header.
+func ProcessPayloadHeader(st state.BeaconState, header *ethpb.ExecutionPayloadHeader) (state.BeaconState, error) {
+	if err := ValidatePayloadHeaderWhenMergeCompletes(st, header); err != nil {
+		return nil, err
+	}
+
+	if err := ValidatePayloadHeader(st, header); err != nil {
+		return nil, err
+	}
+
+	if err := st.SetLatestExecutionPayloadHeader(header); err != nil {
+		return nil, err
+	}
+	return st, nil
 }
