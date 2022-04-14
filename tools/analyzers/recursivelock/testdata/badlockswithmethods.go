@@ -13,6 +13,31 @@ func (p *ProtectResource) NestedMethod2() {
 	p.RUnlock()
 }
 
+func (p *ProtectResource) NestedMethodMixedLock() {
+	p.Lock()
+	p.GetResource() // want `found recursive lock call`
+	p.Unlock()
+}
+
+func (p *ProtectResource) MixedLock() {
+	p.RLock()
+	p.Lock() // want `found recursive mixed lock call`
+	p.Unlock()
+	p.RUnlock()
+}
+
+func (p *ProtectResource) NestedMethodGoroutine() {
+	p.RLock()
+	defer p.RUnlock()
+	go p.GetResource()
+}
+
+func (p *ProtectResource) NestedResourceGoroutine() {
+	p.RLock()
+	defer p.RUnlock()
+	p.GetResourceNestedGoroutine()
+}
+
 func (p *NestedProtectResource) MultiLevelStruct() {
 	p.nestedPR.RLock()
 	p.nestedPR.GetResource() // want `found recursive read lock call`

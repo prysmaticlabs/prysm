@@ -5,6 +5,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -172,6 +173,13 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		require.DeepEqual(t, []byte("nonce"), payloadPb.Nonce)
 		require.DeepEqual(t, [][]byte{[]byte("hi")}, payloadPb.Transactions)
 		require.DeepEqual(t, [][]byte{[]byte("bye")}, payloadPb.Uncles)
+	})
+	t.Run("nil execution block", func(t *testing.T) {
+		jsonPayload := (*enginev1.ExecutionBlock)(nil)
+		enc, err := json.Marshal(jsonPayload)
+		require.NoError(t, err)
+		payloadPb := &enginev1.ExecutionBlock{}
+		require.ErrorIs(t, hexutil.ErrEmptyString, json.Unmarshal(enc, payloadPb))
 	})
 }
 

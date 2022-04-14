@@ -161,7 +161,7 @@ func (vs *Server) depositTrie(ctx context.Context, canonicalEth1Data *ethpb.Eth1
 
 	finalizedDeposits := vs.DepositFetcher.FinalizedDeposits(ctx)
 	depositTrie = finalizedDeposits.Deposits
-	upToEth1DataDeposits := vs.DepositFetcher.NonFinalizedDeposits(ctx, canonicalEth1DataHeight)
+	upToEth1DataDeposits := vs.DepositFetcher.NonFinalizedDeposits(ctx, finalizedDeposits.MerkleTrieIndex, canonicalEth1DataHeight)
 	insertIndex := finalizedDeposits.MerkleTrieIndex + 1
 
 	for _, dep := range upToEth1DataDeposits {

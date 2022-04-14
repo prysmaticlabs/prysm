@@ -127,8 +127,8 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		}
 	}
 
-	if err := s.savePostStateInfo(ctx, blockRoot, signed, postState, false /* reg sync */); err != nil {
-		return err
+	if err := s.insertBlockAndAttestationsToForkChoiceStore(ctx, signed.Block(), blockRoot, postState); err != nil {
+		return errors.Wrapf(err, "could not insert block %d to fork choice store", signed.Block().Slot())
 	}
 	if isValidPayload {
 		if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, blockRoot); err != nil {
@@ -148,6 +148,9 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		return err
 	}
 
+	if err := s.savePostStateInfo(ctx, blockRoot, signed, postState, false /* reg sync */); err != nil {
+		return err
+	}
 	// If slasher is configured, forward the attestations in the block via
 	// an event feed for processing.
 	if features.Get().EnableSlasher {
@@ -204,11 +207,23 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		msg := fmt.Sprintf("could not read balances for state w/ justified checkpoint %#x", justified.Root)
 		return errors.Wrap(err, msg)
 	}
-	if err := s.updateHead(ctx, balances); err != nil {
+	headRoot, err := s.updateHead(ctx, balances)
+	if err != nil {
 		log.WithError(err).Warn("Could not update head")
 	}
-	if _, err := s.notifyForkchoiceUpdate(ctx, s.headBlock().Block(), s.headRoot(), bytesutil.ToBytes32(finalized.Root)); err != nil {
+	headBlock, err := s.cfg.BeaconDB.Block(ctx, headRoot)
+	if err != nil {
 		return err
+	}
+	headState, err := s.cfg.StateGen.StateByRoot(ctx, headRoot)
+	if err != nil {
+		return err
+	}
+	if _, err := s.notifyForkchoiceUpdate(ctx, headState, headBlock.Block(), headRoot, bytesutil.ToBytes32(finalized.Root)); err != nil {
+		return err
+	}
+	if err := s.saveHead(ctx, headRoot, headBlock, headState); err != nil {
+		return errors.Wrap(err, "could not save head")
 	}
 
 	if err := s.pruneCanonicalAttsFromPool(ctx, blockRoot, signed); err != nil {
@@ -254,7 +269,7 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		if err := s.cfg.ForkChoiceStore.Prune(ctx, fRoot); err != nil {
 			return errors.Wrap(err, "could not prune proto array fork choice nodes")
 		}
-		isOptimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(ctx, fRoot)
+		isOptimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(fRoot)
 		if err != nil {
 			return errors.Wrap(err, "could not check if node is optimistically synced")
 		}
@@ -420,7 +435,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 			}
 		}
 
-		if _, err := s.notifyForkchoiceUpdate(ctx, b.Block(), blockRoots[i], bytesutil.ToBytes32(fCheckpoints[i].Root)); err != nil {
+		if _, err := s.notifyForkchoiceUpdate(ctx, preState, b.Block(), blockRoots[i], bytesutil.ToBytes32(fCheckpoints[i].Root)); err != nil {
 			return nil, nil, err
 		}
 	}
@@ -596,9 +611,6 @@ func (s *Service) savePostStateInfo(ctx context.Context, r [32]byte, b block.Sig
 	}
 	if err := s.cfg.StateGen.SaveState(ctx, r, st); err != nil {
 		return errors.Wrap(err, "could not save state")
-	}
-	if err := s.insertBlockAndAttestationsToForkChoiceStore(ctx, b.Block(), r, st); err != nil {
-		return errors.Wrapf(err, "could not insert block %d to fork choice store", b.Block().Slot())
 	}
 	return nil
 }

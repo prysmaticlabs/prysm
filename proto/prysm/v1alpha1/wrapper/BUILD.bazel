@@ -7,6 +7,7 @@ go_library(
         "beacon_block_altair.go",
         "beacon_block_bellatrix.go",
         "beacon_block_phase0.go",
+        "blinded_beacon_block_bellatrix.go",
         "metadata.go",
         "mutator.go",
     ],
@@ -34,6 +35,7 @@ go_test(
         "beacon_block_bellatrix_test.go",
         "beacon_block_phase0_test.go",
         "beacon_block_test.go",
+        "blinded_beacon_block_bellatrix_test.go",
     ],
     deps = [
         ":go_default_library",

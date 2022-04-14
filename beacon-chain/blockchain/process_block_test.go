@@ -1516,6 +1516,7 @@ func TestInsertFinalizedDeposits(t *testing.T) {
 	service.store.SetFinalizedCheckpt(&ethpb.Checkpoint{Root: gRoot[:]})
 	gs = gs.Copy()
 	assert.NoError(t, gs.SetEth1Data(&ethpb.Eth1Data{DepositCount: 10}))
+	assert.NoError(t, gs.SetEth1DepositIndex(7))
 	assert.NoError(t, service.cfg.StateGen.SaveState(ctx, [32]byte{'m', 'o', 'c', 'k'}, gs))
 	zeroSig := [96]byte{}
 	for i := uint64(0); i < uint64(4*params.BeaconConfig().SlotsPerEpoch); i++ {
@@ -1529,8 +1530,64 @@ func TestInsertFinalizedDeposits(t *testing.T) {
 	}
 	assert.NoError(t, service.insertFinalizedDeposits(ctx, [32]byte{'m', 'o', 'c', 'k'}))
 	fDeposits := depositCache.FinalizedDeposits(ctx)
-	assert.Equal(t, 9, int(fDeposits.MerkleTrieIndex), "Finalized deposits not inserted correctly")
-	deps := depositCache.AllDeposits(ctx, big.NewInt(109))
+	assert.Equal(t, 7, int(fDeposits.MerkleTrieIndex), "Finalized deposits not inserted correctly")
+	deps := depositCache.AllDeposits(ctx, big.NewInt(107))
+	for _, d := range deps {
+		assert.DeepEqual(t, [][]byte(nil), d.Proof, "Proofs are not empty")
+	}
+}
+
+func TestInsertFinalizedDeposits_MultipleFinalizedRoutines(t *testing.T) {
+	ctx := context.Background()
+	opts := testServiceOptsWithDB(t)
+	depositCache, err := depositcache.New()
+	require.NoError(t, err)
+	opts = append(opts, WithDepositCache(depositCache))
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+
+	gs, _ := util.DeterministicGenesisState(t, 32)
+	require.NoError(t, service.saveGenesisData(ctx, gs))
+	gBlk, err := service.cfg.BeaconDB.GenesisBlock(ctx)
+	require.NoError(t, err)
+	gRoot, err := gBlk.Block().HashTreeRoot()
+	require.NoError(t, err)
+	service.store.SetFinalizedCheckpt(&ethpb.Checkpoint{Root: gRoot[:]})
+	gs = gs.Copy()
+	assert.NoError(t, gs.SetEth1Data(&ethpb.Eth1Data{DepositCount: 7}))
+	assert.NoError(t, gs.SetEth1DepositIndex(5))
+	assert.NoError(t, service.cfg.StateGen.SaveState(ctx, [32]byte{'m', 'o', 'c', 'k'}, gs))
+	gs2 := gs.Copy()
+	assert.NoError(t, gs2.SetEth1Data(&ethpb.Eth1Data{DepositCount: 15}))
+	assert.NoError(t, gs2.SetEth1DepositIndex(12))
+	assert.NoError(t, service.cfg.StateGen.SaveState(ctx, [32]byte{'m', 'o', 'c', 'k', '2'}, gs2))
+	zeroSig := [96]byte{}
+	for i := uint64(0); i < uint64(4*params.BeaconConfig().SlotsPerEpoch); i++ {
+		root := []byte(strconv.Itoa(int(i)))
+		assert.NoError(t, depositCache.InsertDeposit(ctx, &ethpb.Deposit{Data: &ethpb.Deposit_Data{
+			PublicKey:             bytesutil.FromBytes48([fieldparams.BLSPubkeyLength]byte{}),
+			WithdrawalCredentials: params.BeaconConfig().ZeroHash[:],
+			Amount:                0,
+			Signature:             zeroSig[:],
+		}, Proof: [][]byte{root}}, 100+i, int64(i), bytesutil.ToBytes32(root)))
+	}
+	// Insert 3 deposits before hand.
+	depositCache.InsertFinalizedDeposits(ctx, 2)
+
+	assert.NoError(t, service.insertFinalizedDeposits(ctx, [32]byte{'m', 'o', 'c', 'k'}))
+	fDeposits := depositCache.FinalizedDeposits(ctx)
+	assert.Equal(t, 5, int(fDeposits.MerkleTrieIndex), "Finalized deposits not inserted correctly")
+
+	deps := depositCache.AllDeposits(ctx, big.NewInt(105))
+	for _, d := range deps {
+		assert.DeepEqual(t, [][]byte(nil), d.Proof, "Proofs are not empty")
+	}
+
+	// Insert New Finalized State with higher deposit count.
+	assert.NoError(t, service.insertFinalizedDeposits(ctx, [32]byte{'m', 'o', 'c', 'k', '2'}))
+	fDeposits = depositCache.FinalizedDeposits(ctx)
+	assert.Equal(t, 12, int(fDeposits.MerkleTrieIndex), "Finalized deposits not inserted correctly")
+	deps = depositCache.AllDeposits(ctx, big.NewInt(112))
 	for _, d := range deps {
 		assert.DeepEqual(t, [][]byte(nil), d.Proof, "Proofs are not empty")
 	}

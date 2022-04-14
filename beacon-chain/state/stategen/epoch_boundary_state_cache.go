@@ -151,6 +151,15 @@ func (e *epochBoundaryState) put(r [32]byte, s state.BeaconState) error {
 	return nil
 }
 
+// delete the state from the epoch boundary state cache.
+func (e *epochBoundaryState) delete(r [32]byte) error {
+	e.lock.Lock()
+	defer e.lock.Unlock()
+	return e.rootStateCache.Delete(&rootStateInfo{
+		root: r,
+	})
+}
+
 // trim the FIFO queue to the maxSize.
 func trim(queue *cache.FIFO, maxSize uint64) {
 	for s := uint64(len(queue.ListKeys())); s > maxSize; s-- {

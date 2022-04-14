@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/network"
+	"github.com/prysmaticlabs/prysm/network/authorization"
 )
 
 type Option func(s *Service) error
@@ -32,10 +33,29 @@ func WithHttpEndpoints(endpointStrings []string) Option {
 	}
 }
 
-// WithExecutionClientJWTSecret for authenticating the execution node JSON-RPC endpoint.
-func WithExecutionClientJWTSecret(jwtSecret []byte) Option {
+// WithHttpEndpointsAndJWTSecret for authenticating the execution node JSON-RPC endpoint.
+func WithHttpEndpointsAndJWTSecret(endpointStrings []string, secret []byte) Option {
 	return func(s *Service) error {
-		s.cfg.executionEndpointJWTSecret = jwtSecret
+		if len(secret) == 0 {
+			return nil
+		}
+		stringEndpoints := dedupEndpoints(endpointStrings)
+		endpoints := make([]network.Endpoint, len(stringEndpoints))
+		// Overwrite authorization type for all endpoints to be of a bearer
+		// type.
+		for i, e := range stringEndpoints {
+			hEndpoint := HttpEndpoint(e)
+			hEndpoint.Auth.Method = authorization.Bearer
+			hEndpoint.Auth.Value = string(secret)
+			endpoints[i] = hEndpoint
+		}
+		// Select first http endpoint in the provided list.
+		var currEndpoint network.Endpoint
+		if len(endpointStrings) > 0 {
+			currEndpoint = endpoints[0]
+		}
+		s.cfg.httpEndpoints = endpoints
+		s.cfg.currHttpEndpoint = currEndpoint
 		return nil
 	}
 }
