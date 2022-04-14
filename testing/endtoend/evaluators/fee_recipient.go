@@ -7,7 +7,6 @@ import (
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
-	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/policies"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/types"
 	"google.golang.org/grpc"
@@ -37,11 +36,8 @@ func feeRecipientIsPresent(conns ...*grpc.ClientConn) error {
 	for _, ctr := range blks.BlockContainers {
 		switch ctr.Block.(type) {
 		case *ethpb.BeaconBlockContainer_BellatrixBlock:
-			hex,err := hexutil.Decode("0x878705ba3f8bc32fcf7f4caa1a35e72af65cf766")
-			if err != nil {
-				return errors.Wrap(err, "failed to decode fee recipient")
-			}
-			if (ctr.GetBellatrixBlock().Block.Body.ExecutionPayload.FeeRecipient == hex){
+			fr := ctr.GetBellatrixBlock().Block.Body.ExecutionPayload.FeeRecipient
+			if len(fr)!= 0 && hexutil.Encode(fr) == "0x878705ba3f8bc32fcf7f4caa1a35e72af65cf766" {
 				isFeeRecipientPresent = true
 			}
 		}
