@@ -1,5 +1,5 @@
-// Copied from https://github.com/uudashr/gocognit/blob/5bf67146515e79acd2a8d5728deafa9d91ad48db/README.md
-// License: MIT
+> Copied from https://github.com/uudashr/gocognit/blob/5bf67146515e79acd2a8d5728deafa9d91ad48db/README.md
+> License: MIT
 
 [![GoDoc](https://godoc.org/github.com/uudashr/gocognit?status.svg)](https://godoc.org/github.com/uudashr/gocognit)
 # Gocognit
