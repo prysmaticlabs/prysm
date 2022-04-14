@@ -16,7 +16,7 @@ import (
 var FeeRecipientIsPresent = types.Evaluator{
 	Name:       "Fee_Recipient_Is_Present_%d",
 	Policy:     policies.AfterNthEpoch(helpers.BellatrixE2EForkEpoch),
-	Evaluation:  feeRecipientIsPresent,
+	Evaluation: feeRecipientIsPresent,
 }
 
 func feeRecipientIsPresent(conns ...*grpc.ClientConn) error {
@@ -37,7 +37,7 @@ func feeRecipientIsPresent(conns ...*grpc.ClientConn) error {
 		switch ctr.Block.(type) {
 		case *ethpb.BeaconBlockContainer_BellatrixBlock:
 			fr := ctr.GetBellatrixBlock().Block.Body.ExecutionPayload.FeeRecipient
-			if len(fr)!= 0 && hexutil.Encode(fr) == "0x878705ba3f8bc32fcf7f4caa1a35e72af65cf766" {
+			if len(fr) != 0 && hexutil.Encode(fr) == "0x878705ba3f8bc32fcf7f4caa1a35e72af65cf766" {
 				isFeeRecipientPresent = true
 			}
 		}
