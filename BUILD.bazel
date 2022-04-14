@@ -128,6 +128,7 @@ nogo(
         "//tools/analyzers/properpermissions:go_default_library",
         "//tools/analyzers/recursivelock:go_default_library",
         "//tools/analyzers/uintcast:go_default_library",
+        "//tools/analyzers/gocognit:go_default_library",
     ] + select({
         # nogo checks that fail with coverage enabled.
         ":coverage_enabled": [],
