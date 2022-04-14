@@ -126,7 +126,7 @@ func base64ToBigIntProcessor(tag string, v reflect.Value) error {
 		bigEndianBytes[i] = b[len(b)-1-i]
 	}
 	var n big.Int
-	n.SetBytes(bigEndianBytes[:])
+	n.SetBytes(bigEndianBytes)
 	v.SetString(n.String())
 	return nil
 }
@@ -144,7 +144,7 @@ func bigIntToBase64Processor(tag string, v reflect.Value) error {
 	for i := 0; i < len(b); i++ {
 		littleEndianBytes[i] = b[len(b)-1-i]
 	}
-	v.SetString(base64.StdEncoding.EncodeToString(littleEndianBytes[:]))
+	v.SetString(base64.StdEncoding.EncodeToString(littleEndianBytes))
 	return nil
 }
 
