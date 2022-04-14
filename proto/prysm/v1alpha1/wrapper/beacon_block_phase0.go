@@ -176,7 +176,7 @@ func (w Phase0BeaconBlock) IsNil() bool {
 }
 
 // IsBlinded checks if the beacon block is a blinded block.
-func (w Phase0BeaconBlock) IsBlinded() bool {
+func (Phase0BeaconBlock) IsBlinded() bool {
 	return false
 }
 

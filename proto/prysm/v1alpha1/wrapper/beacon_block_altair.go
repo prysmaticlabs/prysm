@@ -184,7 +184,7 @@ func (w altairBeaconBlock) IsNil() bool {
 }
 
 // IsBlinded checks if the beacon block is a blinded block.
-func (w altairBeaconBlock) IsBlinded() bool {
+func (altairBeaconBlock) IsBlinded() bool {
 	return false
 }
 

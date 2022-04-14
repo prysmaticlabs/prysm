@@ -179,7 +179,7 @@ func (w bellatrixBeaconBlock) IsNil() bool {
 }
 
 // IsBlinded checks if the beacon block is a blinded block.
-func (w bellatrixBeaconBlock) IsBlinded() bool {
+func (bellatrixBeaconBlock) IsBlinded() bool {
 	return false
 }
 
