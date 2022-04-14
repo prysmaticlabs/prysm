@@ -6,11 +6,19 @@ import (
 
 type config struct {
 	proxyPort       int
+	proxyHost       string
 	destinationAddr string
 	logger          *logrus.Logger
 }
 
 type Option func(p *Proxy) error
+
+func WithHost(host string) Option {
+	return func(p *Proxy) error {
+		p.cfg.proxyHost = host
+		return nil
+	}
+}
 
 func WithPort(port int) Option {
 	return func(p *Proxy) error {
