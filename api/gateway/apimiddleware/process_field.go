@@ -109,7 +109,7 @@ func base64ToHexProcessor(tag string, v reflect.Value) error {
 	return nil
 }
 
-func base64ToBigIntProcessor(tag string, v reflect.Value) error {
+func base64ToUint256Processor(tag string, v reflect.Value) error {
 	if v.String() == "" {
 		return nil
 	}
@@ -121,17 +121,17 @@ func base64ToBigIntProcessor(tag string, v reflect.Value) error {
 	// Integers are stored as little-endian, but
 	// big.Int expects big-endian. So we need to reverse
 	// the byte order.
-	bigEndianBytes := make([]byte, len(b))
+	var bigEndianBytes [32]byte
 	for i := 0; i < len(b); i++ {
 		bigEndianBytes[i] = b[len(b)-1-i]
 	}
 	var n big.Int
-	n.SetBytes(bigEndianBytes)
+	n.SetBytes(bigEndianBytes[:])
 	v.SetString(n.String())
 	return nil
 }
 
-func bigIntToBase64Processor(tag string, v reflect.Value) error {
+func uint256ToBase64Processor(tag string, v reflect.Value) error {
 	if v.String() == "" {
 		return nil
 	}
@@ -140,11 +140,11 @@ func bigIntToBase64Processor(tag string, v reflect.Value) error {
 		return fmt.Errorf("could not parse big int '%s'", v.String())
 	}
 	b := n.Bytes()
-	littleEndianBytes := make([]byte, len(b))
+	var littleEndianBytes [32]byte
 	for i := 0; i < len(b); i++ {
 		littleEndianBytes[i] = b[len(b)-1-i]
 	}
-	v.SetString(base64.StdEncoding.EncodeToString(littleEndianBytes))
+	v.SetString(base64.StdEncoding.EncodeToString(littleEndianBytes[:]))
 	return nil
 }
 

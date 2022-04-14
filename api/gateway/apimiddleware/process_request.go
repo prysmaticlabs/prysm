@@ -39,8 +39,8 @@ func ProcessRequestContainerFields(requestContainer interface{}) ErrorJson {
 			f:   hexToBase64Processor,
 		},
 		{
-			tag: "bigint",
-			f:   bigIntToBase64Processor,
+			tag: "uint256",
+			f:   uint256ToBase64Processor,
 		},
 	}); err != nil {
 		return InternalServerErrorWithMessage(err, "could not process request data")
@@ -159,8 +159,8 @@ func ProcessMiddlewareResponseFields(responseContainer interface{}) ErrorJson {
 			f:   timeToUnixProcessor,
 		},
 		{
-			tag: "bigint",
-			f:   base64ToBigIntProcessor,
+			tag: "uint256",
+			f:   base64ToUint256Processor,
 		},
 	}); err != nil {
 		return InternalServerErrorWithMessage(err, "could not process response data")
