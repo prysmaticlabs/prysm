@@ -753,130 +753,34 @@ func TestFinalizedDeposits_ReturnsTrieCorrectly(t *testing.T) {
 	dc, err := New()
 	require.NoError(t, err)
 
+	generateCtr := func(height uint64, index int64) *ethpb.DepositContainer {
+		return &ethpb.DepositContainer{
+			Eth1BlockHeight: height,
+			Deposit: &ethpb.Deposit{
+				Data: &ethpb.Deposit_Data{
+					PublicKey:             bytesutil.PadTo([]byte{uint8(index)}, 48),
+					WithdrawalCredentials: make([]byte, 32),
+					Signature:             make([]byte, 96),
+				},
+			},
+			Index: index,
+		}
+	}
+
 	finalizedDeposits := []*ethpb.DepositContainer{
-		{
-			Eth1BlockHeight: 10,
-			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
-					PublicKey:             bytesutil.PadTo([]byte{0}, 48),
-					WithdrawalCredentials: make([]byte, 32),
-					Signature:             make([]byte, 96),
-				},
-			},
-			Index: 0,
-		},
-		{
-			Eth1BlockHeight: 11,
-			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
-					PublicKey:             bytesutil.PadTo([]byte{1}, 48),
-					WithdrawalCredentials: make([]byte, 32),
-					Signature:             make([]byte, 96),
-				},
-			},
-			Index: 1,
-		},
-		{
-			Eth1BlockHeight: 12,
-			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
-					PublicKey:             bytesutil.PadTo([]byte{2}, 48),
-					WithdrawalCredentials: make([]byte, 32),
-					Signature:             make([]byte, 96),
-				},
-			},
-			Index: 2,
-		},
-		{
-			Eth1BlockHeight: 12,
-			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
-					PublicKey:             bytesutil.PadTo([]byte{3}, 48),
-					WithdrawalCredentials: make([]byte, 32),
-					Signature:             make([]byte, 96),
-				},
-			},
-			Index: 3,
-		},
-		{
-			Eth1BlockHeight: 13,
-			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
-					PublicKey:             bytesutil.PadTo([]byte{4}, 48),
-					WithdrawalCredentials: make([]byte, 32),
-					Signature:             make([]byte, 96),
-				},
-			},
-			Index: 4,
-		},
-		{
-			Eth1BlockHeight: 13,
-			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
-					PublicKey:             bytesutil.PadTo([]byte{5}, 48),
-					WithdrawalCredentials: make([]byte, 32),
-					Signature:             make([]byte, 96),
-				},
-			},
-			Index: 5,
-		},
-		{
-			Eth1BlockHeight: 13,
-			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
-					PublicKey:             bytesutil.PadTo([]byte{6}, 48),
-					WithdrawalCredentials: make([]byte, 32),
-					Signature:             make([]byte, 96),
-				},
-			},
-			Index: 6,
-		},
-		{
-			Eth1BlockHeight: 14,
-			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
-					PublicKey:             bytesutil.PadTo([]byte{7}, 48),
-					WithdrawalCredentials: make([]byte, 32),
-					Signature:             make([]byte, 96),
-				},
-			},
-			Index: 7,
-		},
+		generateCtr(10, 0),
+		generateCtr(11, 1),
+		generateCtr(12, 2),
+		generateCtr(12, 3),
+		generateCtr(13, 4),
+		generateCtr(13, 5),
+		generateCtr(13, 6),
+		generateCtr(14, 7),
 	}
 	dc.deposits = append(finalizedDeposits,
-		&ethpb.DepositContainer{
-			Eth1BlockHeight: 15,
-			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
-					PublicKey:             bytesutil.PadTo([]byte{8}, 48),
-					WithdrawalCredentials: make([]byte, 32),
-					Signature:             make([]byte, 96),
-				},
-			},
-			Index: 8,
-		},
-		&ethpb.DepositContainer{
-			Eth1BlockHeight: 15,
-			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
-					PublicKey:             bytesutil.PadTo([]byte{9}, 48),
-					WithdrawalCredentials: make([]byte, 32),
-					Signature:             make([]byte, 96),
-				},
-			},
-			Index: 9,
-		},
-		&ethpb.DepositContainer{
-			Eth1BlockHeight: 30,
-			Deposit: &ethpb.Deposit{
-				Data: &ethpb.Deposit_Data{
-					PublicKey:             bytesutil.PadTo([]byte{9}, 48),
-					WithdrawalCredentials: make([]byte, 32),
-					Signature:             make([]byte, 96),
-				},
-			},
-			Index: 10,
-		})
+		generateCtr(15, 8),
+		generateCtr(15, 9),
+		generateCtr(30, 10))
 	trieItems := make([][]byte, 0, len(dc.deposits))
 	for _, dep := range dc.allDeposits(big.NewInt(30)) {
 		depHash, err := dep.Data.HashTreeRoot()
