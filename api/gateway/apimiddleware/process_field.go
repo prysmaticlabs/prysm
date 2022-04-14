@@ -83,6 +83,7 @@ func hexToBase64Processor(v reflect.Value) error {
 
 func base64ToHexProcessor(v reflect.Value) error {
 	if v.String() == "" {
+		v.SetString("0x")
 		return nil
 	}
 	b, err := base64.StdEncoding.DecodeString(v.String())
