@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/endtoend/types"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
+	"gopkg.in/src-d/go-log.v1"
 )
 
 var FeeRecipientIsPresent = types.Evaluator{
@@ -40,6 +41,7 @@ func feeRecipientIsPresent(conns ...*grpc.ClientConn) error {
 			if len(fr) != 0 && hexutil.Encode(fr) == "0x878705ba3f8bc32fcf7f4caa1a35e72af65cf766" {
 				isFeeRecipientPresent = true
 			}
+			log.Infof("Fee recipient in bellatrix block: %s, want 0x878705ba3f8bc32fcf7f4caa1a35e72af65cf766", hexutil.Encode(fr))
 		}
 		if isFeeRecipientPresent {
 			break
