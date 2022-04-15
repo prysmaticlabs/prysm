@@ -77,6 +77,7 @@ require (
 	github.com/trailofbits/go-mutexasserts v0.0.0-20200708152505-19999e7d3cef
 	github.com/tyler-smith/go-bip39 v1.1.0
 	github.com/urfave/cli/v2 v2.3.0
+	github.com/uudashr/gocognit v1.0.5
 	github.com/wealdtech/go-bytesutil v1.1.1
 	github.com/wealdtech/go-eth2-util v1.6.3
 	github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4 v1.1.3
