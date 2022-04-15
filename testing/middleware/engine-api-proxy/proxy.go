@@ -13,8 +13,8 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"sync"
 
-	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	"github.com/sirupsen/logrus"
 )
 
@@ -31,9 +31,9 @@ type jsonRPCObject struct {
 	Result  interface{}   `json:"result"`
 }
 
-type forkchoiceUpdatedResponse struct {
-	Status    *pb.PayloadStatus  `json:"payloadStatus"`
-	PayloadId *pb.PayloadIDBytes `json:"payloadId"`
+type interceptorConfig struct {
+	response interface{}
+	trigger  func() bool
 }
 
 // Proxy server that sits as a middleware between an Ethereum consensus client and an execution client,
@@ -42,22 +42,20 @@ type Proxy struct {
 	cfg              *config
 	address          string
 	srv              *http.Server
-	interceptor      InterceptorFunc
+	lock             sync.RWMutex
+	interceptors     map[string]*interceptorConfig
 	backedUpRequests []*http.Request
 }
 
 // New creates a proxy server forwarding requests from a consensus client to an execution client.
 func New(opts ...Option) (*Proxy, error) {
-	defaultInterceptor := func(_ []byte, _ http.ResponseWriter, _ *http.Request) bool {
-		return false // No default intercepting of requests.
-	}
 	p := &Proxy{
 		cfg: &config{
 			proxyHost: defaultProxyHost,
 			proxyPort: defaultProxyPort,
 			logger:    logrus.New(),
 		},
-		interceptor: defaultInterceptor,
+		interceptors: make(map[string]*interceptorConfig),
 	}
 	for _, o := range opts {
 		if err := o(p); err != nil {
@@ -105,19 +103,60 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		p.cfg.logger.WithError(err).Error("Could not parse request")
 		return
 	}
-	if p.interceptor(requestBytes, w, r) {
+	// Check if we need to intercept the request with a custom response.
+	hasIntercepted, err := p.interceptIfNeeded(requestBytes, w)
+	if err != nil {
+		p.cfg.logger.WithError(err).Error("Could not intercept request")
 		return
 	}
-	for _, rq := range p.backedUpRequests {
-		requestB, err := parseRequestBytes(r)
-		if err != nil {
-			p.cfg.logger.WithError(err).Error("Could not parse request")
-			return
-		}
-		p.proxyRequest(requestB, rq)
+	if hasIntercepted {
+		return
 	}
-	p.backedUpRequests = []*http.Request{}
+	// If we are not intercepting the request, we proxy as normal.
 	p.proxyRequest(requestBytes, r)
+}
+
+// AddRequestInterceptor for a desired json-rpc method by specifying a custom response
+// and a function that checks if the interceptor should be triggered.
+func (p *Proxy) AddRequestInterceptor(rpcMethodName string, response interface{}, trigger func() bool) {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	p.interceptors[rpcMethodName] = &interceptorConfig{
+		response,
+		trigger,
+	}
+}
+
+// Checks if there is a custom interceptor hook on the request, check if it can be
+// triggered, and then write the custom response to the writer.
+func (p *Proxy) interceptIfNeeded(requestBytes []byte, w http.ResponseWriter) (hasIntercepted bool, err error) {
+	if !isEngineAPICall(requestBytes) {
+		return
+	}
+	var jreq *jsonRPCObject
+	jreq, err = unmarshalRPCObject(requestBytes)
+	if err != nil {
+		return
+	}
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+	interceptor, shouldIntercept := p.interceptors[jreq.Method]
+	if !shouldIntercept {
+		return
+	}
+	if !interceptor.trigger() {
+		return
+	}
+	jResp := &jsonRPCObject{
+		Method: jreq.Method,
+		ID:     jreq.ID,
+		Result: interceptor.response,
+	}
+	if err = json.NewEncoder(w).Encode(jResp); err != nil {
+		return
+	}
+	hasIntercepted = true
+	return
 }
 
 // Create a new proxy request to the execution client.
@@ -156,52 +195,7 @@ func (p *Proxy) proxyRequest(requestBytes []byte, r *http.Request) {
 	}
 }
 
-func (p *Proxy) returnSyncingResponse(reqBytes []byte, w http.ResponseWriter, r *http.Request) {
-	jsonRequest, err := unmarshalRPCObject(reqBytes)
-	if err != nil {
-		return
-	}
-	switch {
-	case strings.Contains(jsonRequest.Method, "engine_forkchoiceUpdatedV1"):
-		resp := &forkchoiceUpdatedResponse{
-			Status: &pb.PayloadStatus{
-				Status: pb.PayloadStatus_SYNCING,
-			},
-			PayloadId: nil,
-		}
-		jResp := &jsonRPCObject{
-			Method: jsonRequest.Method,
-			ID:     jsonRequest.ID,
-			Result: resp,
-		}
-		rawResp, err := json.Marshal(jResp)
-		if err != nil {
-			return
-		}
-		_, err = w.Write(rawResp)
-		_ = err
-		return
-	case strings.Contains(jsonRequest.Method, "engine_newPayloadV1"):
-		resp := &pb.PayloadStatus{
-			Status: pb.PayloadStatus_SYNCING,
-		}
-		jResp := &jsonRPCObject{
-			Method: jsonRequest.Method,
-			ID:     jsonRequest.ID,
-			Result: resp,
-		}
-		rawResp, err := json.Marshal(jResp)
-		if err != nil {
-			return
-		}
-		_, err = w.Write(rawResp)
-		_ = err
-		p.backedUpRequests = append(p.backedUpRequests, r)
-		return
-	}
-	return
-}
-
+// Peek into the bytes of an HTTP request's body.
 func parseRequestBytes(req *http.Request) ([]byte, error) {
 	requestBytes, err := ioutil.ReadAll(req.Body)
 	if err != nil {
@@ -214,7 +208,8 @@ func parseRequestBytes(req *http.Request) ([]byte, error) {
 	return requestBytes, nil
 }
 
-func checkIfValid(reqBytes []byte) bool {
+// Checks whether the JSON-RPC request is for the Ethereum engine API.
+func isEngineAPICall(reqBytes []byte) bool {
 	jsonRequest, err := unmarshalRPCObject(reqBytes)
 	if err != nil {
 		switch {
@@ -224,11 +219,7 @@ func checkIfValid(reqBytes []byte) bool {
 			return false
 		}
 	}
-	if strings.Contains(jsonRequest.Method, "engine_forkchoiceUpdatedV1") ||
-		strings.Contains(jsonRequest.Method, "engine_newPayloadV1") {
-		return true
-	}
-	return false
+	return strings.Contains(jsonRequest.Method, "engine_")
 }
 
 func unmarshalRPCObject(b []byte) (*jsonRPCObject, error) {
