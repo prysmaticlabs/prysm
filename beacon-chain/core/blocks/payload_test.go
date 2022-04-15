@@ -601,7 +601,7 @@ func Test_ValidatePayload(t *testing.T) {
 		{
 			name:    "incorrect prev randao",
 			payload: emptyPayload(),
-			err:     blocks.ErrInvalidPrevRandao,
+			err:     blocks.ErrInvalidPayloadPrevRandao,
 		},
 		{
 			name: "incorrect timestamp",
@@ -611,7 +611,7 @@ func Test_ValidatePayload(t *testing.T) {
 				h.Timestamp = 1
 				return h
 			}(),
-			err: blocks.ErrInvalidTimeStamp,
+			err: blocks.ErrInvalidPayloadTimeStamp,
 		},
 	}
 	for _, tt := range tests {
@@ -649,7 +649,7 @@ func Test_ProcessPayload(t *testing.T) {
 		{
 			name:    "incorrect prev randao",
 			payload: emptyPayload(),
-			err:     blocks.ErrInvalidPrevRandao,
+			err:     blocks.ErrInvalidPayloadPrevRandao,
 		},
 		{
 			name: "incorrect timestamp",
@@ -659,7 +659,7 @@ func Test_ProcessPayload(t *testing.T) {
 				h.Timestamp = 1
 				return h
 			}(),
-			err: blocks.ErrInvalidTimeStamp,
+			err: blocks.ErrInvalidPayloadTimeStamp,
 		},
 	}
 	for _, tt := range tests {
@@ -702,7 +702,7 @@ func Test_ProcessPayloadHeader(t *testing.T) {
 		{
 			name:   "incorrect prev randao",
 			header: emptyPayloadHeader(),
-			err:    blocks.ErrInvalidPrevRandao,
+			err:    blocks.ErrInvalidPayloadPrevRandao,
 		},
 		{
 			name: "incorrect timestamp",
@@ -712,7 +712,7 @@ func Test_ProcessPayloadHeader(t *testing.T) {
 				h.Timestamp = 1
 				return h
 			}(),
-			err: blocks.ErrInvalidTimeStamp,
+			err: blocks.ErrInvalidPayloadTimeStamp,
 		},
 	}
 	for _, tt := range tests {
@@ -753,7 +753,7 @@ func Test_ValidatePayloadHeader(t *testing.T) {
 		{
 			name:   "incorrect prev randao",
 			header: emptyPayloadHeader(),
-			err:    blocks.ErrInvalidPrevRandao,
+			err:    blocks.ErrInvalidPayloadPrevRandao,
 		},
 		{
 			name: "incorrect timestamp",
@@ -763,7 +763,7 @@ func Test_ValidatePayloadHeader(t *testing.T) {
 				h.Timestamp = 1
 				return h
 			}(),
-			err: blocks.ErrInvalidTimeStamp,
+			err: blocks.ErrInvalidPayloadTimeStamp,
 		},
 	}
 	for _, tt := range tests {
@@ -811,7 +811,7 @@ func Test_ValidatePayloadHeaderWhenMergeCompletes(t *testing.T) {
 				return h
 			}(),
 			state: st,
-			err:   blocks.ErrInvalidBlockHash,
+			err:   blocks.ErrInvalidPayloadBlockHash,
 		},
 	}
 	for _, tt := range tests {
