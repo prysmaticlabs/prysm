@@ -168,11 +168,7 @@ func TestService_InitStartStop(t *testing.T) {
 				Chain:         mc,
 				StateNotifier: notifier,
 			})
-			time.Sleep(500 * time.Millisecond)
 			assert.NotNil(t, s)
-			if tt.methodRuns != nil {
-				tt.methodRuns(notifier.StateFeed())
-			}
 
 			wg := &sync.WaitGroup{}
 			wg.Add(1)
@@ -180,6 +176,11 @@ func TestService_InitStartStop(t *testing.T) {
 				s.Start()
 				wg.Done()
 			}()
+
+			time.Sleep(500 * time.Millisecond)
+			if tt.methodRuns != nil {
+				tt.methodRuns(notifier.StateFeed())
+			}
 
 			go func() {
 				// Allow to exit from test (on no head loop waiting for head is started).
