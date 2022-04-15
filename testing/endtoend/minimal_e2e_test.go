@@ -27,7 +27,6 @@ func TestEndToEnd_MinimalConfig(t *testing.T) {
 }
 
 func TestEndToEnd_MinimalConfig_Web3Signer(t *testing.T) {
-	t.Skip("TODO(9994): Complete web3signer client implementation, currently blocked by https://github.com/ConsenSys/web3signer/issues/494")
 	e2eMinimal(t, &testArgs{
 		usePrysmSh:          false,
 		useWeb3RemoteSigner: true,
@@ -53,6 +52,10 @@ func e2eMinimal(t *testing.T, args *testArgs) {
 	if longRunning {
 		epochsToRun, err = strconv.Atoi(epochStr)
 		require.NoError(t, err)
+	}
+	// TODO(#10053): Web3signer does not support bellatrix yet.
+	if args.useWeb3RemoteSigner {
+		epochsToRun = helpers.BellatrixE2EForkEpoch - 1
 	}
 	if args.usePrysmSh {
 		// If using prysm.sh, run for only 6 epochs.
@@ -83,12 +86,14 @@ func e2eMinimal(t *testing.T, args *testArgs) {
 		ev.ValidatorHasExited,
 		ev.ValidatorsVoteWithTheMajority,
 		ev.ColdStateCheckpoint,
-		ev.ForkTransition,
+		ev.AltairForkTransition,
+		ev.BellatrixForkTransition,
 		ev.APIMiddlewareVerifyIntegrity,
 		ev.APIGatewayV1Alpha1VerifyIntegrity,
 		ev.FinishedSyncing,
 		ev.AllNodesHaveSameHead,
 		ev.ValidatorSyncParticipation,
+		ev.TransactionsPresent,
 	}
 	testConfig := &types.E2EConfig{
 		BeaconFlags: []string{

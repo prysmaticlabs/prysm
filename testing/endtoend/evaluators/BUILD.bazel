@@ -7,6 +7,7 @@ go_library(
         "api_gateway_v1alpha1.go",
         "api_middleware.go",
         "data.go",
+        "execution_engine.go",
         "finality.go",
         "fork.go",
         "metrics.go",
