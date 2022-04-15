@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rpc"
@@ -30,6 +31,7 @@ func TestProxy(t *testing.T) {
 				t.Log(err)
 			}
 		}()
+		time.Sleep(time.Millisecond * 100)
 
 		rpcClient, err := rpc.DialHTTP("http://" + proxy.Address())
 		require.NoError(t, err)
@@ -62,6 +64,7 @@ func TestProxy(t *testing.T) {
 				t.Log(err)
 			}
 		}()
+		time.Sleep(time.Millisecond * 100)
 
 		// Dials the proxy.
 		rpcClient, err := rpc.DialHTTP("http://" + proxy.Address())
@@ -99,6 +102,7 @@ func TestProxy_CustomInterceptors(t *testing.T) {
 				t.Log(err)
 			}
 		}()
+		time.Sleep(time.Millisecond * 100)
 
 		method := "eth_syncing"
 
@@ -146,6 +150,7 @@ func TestProxy_CustomInterceptors(t *testing.T) {
 				t.Log(err)
 			}
 		}()
+		time.Sleep(time.Millisecond * 100)
 
 		method := "engine_newPayloadV1"
 
@@ -209,6 +214,7 @@ func TestProxy_CustomInterceptors(t *testing.T) {
 				t.Log(err)
 			}
 		}()
+		time.Sleep(time.Millisecond * 100)
 
 		method := "engine_newPayloadV1"
 
