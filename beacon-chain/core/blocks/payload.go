@@ -19,6 +19,8 @@ import (
 )
 
 var ErrInvalidBlockHash = errors.New("invalid block hash")
+var ErrInvalidTimeStamp = errors.New("invalid timestamp")
+var ErrInvalidPrevRandao = errors.New("invalid previous randao")
 
 // IsMergeTransitionComplete returns true if the transition to Bellatrix has completed.
 // Meaning the payload header in beacon state is not `ExecutionPayloadHeader()` (i.e. not empty).
@@ -148,14 +150,14 @@ func ValidatePayload(st state.BeaconState, payload *enginev1.ExecutionPayload) e
 	}
 
 	if !bytes.Equal(payload.PrevRandao, random) {
-		return errors.New("incorrect prev randao")
+		return ErrInvalidPrevRandao
 	}
 	t, err := slots.ToTime(st.GenesisTime(), st.Slot())
 	if err != nil {
 		return err
 	}
 	if payload.Timestamp != uint64(t.Unix()) {
-		return errors.New("incorrect timestamp")
+		return ErrInvalidTimeStamp
 	}
 	return nil
 }
@@ -359,14 +361,14 @@ func ValidatePayloadHeader(st state.BeaconState, header *ethpb.ExecutionPayloadH
 	}
 
 	if !bytes.Equal(header.PrevRandao, random) {
-		return errors.New("incorrect prev randao")
+		return ErrInvalidPrevRandao
 	}
 	t, err := slots.ToTime(st.GenesisTime(), st.Slot())
 	if err != nil {
 		return err
 	}
 	if header.Timestamp != uint64(t.Unix()) {
-		return errors.New("incorrect timestamp")
+		return ErrInvalidTimeStamp
 	}
 	return nil
 }
