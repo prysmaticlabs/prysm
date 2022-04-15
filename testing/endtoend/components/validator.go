@@ -25,7 +25,7 @@ import (
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/runtime/interop"
-	execution_client "github.com/prysmaticlabs/prysm/testing/endtoend/components/execution-client"
+	"github.com/prysmaticlabs/prysm/testing/endtoend/components/eth1"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
 	e2etypes "github.com/prysmaticlabs/prysm/testing/endtoend/types"
@@ -230,11 +230,11 @@ func SendAndMineDeposits(keystorePath string, validatorNum, offset int, partial 
 	if err = sendDeposits(web3, keystoreBytes, validatorNum, offset, partial); err != nil {
 		return err
 	}
-	mineKey, err := keystore.DecryptKey(keystoreBytes, execution_client.KeystorePassword)
+	mineKey, err := keystore.DecryptKey(keystoreBytes, eth1.KeystorePassword)
 	if err != nil {
 		return err
 	}
-	if err = execution_client.WaitForBlocks(web3, mineKey, params.BeaconConfig().Eth1FollowDistance); err != nil {
+	if err = eth1.WaitForBlocks(web3, mineKey, params.BeaconConfig().Eth1FollowDistance); err != nil {
 		return fmt.Errorf("failed to mine blocks %w", err)
 	}
 	return nil
@@ -242,7 +242,7 @@ func SendAndMineDeposits(keystorePath string, validatorNum, offset int, partial 
 
 // sendDeposits uses the passed in web3 and keystore bytes to send the requested deposits.
 func sendDeposits(web3 *ethclient.Client, keystoreBytes []byte, num, offset int, partial bool) error {
-	txOps, err := bind.NewTransactorWithChainID(bytes.NewReader(keystoreBytes), execution_client.KeystorePassword, big.NewInt(execution_client.NetworkId))
+	txOps, err := bind.NewTransactorWithChainID(bytes.NewReader(keystoreBytes), eth1.KeystorePassword, big.NewInt(eth1.NetworkId))
 	if err != nil {
 		return err
 	}

@@ -36,7 +36,7 @@ var valExited bool
 var churnLimit = uint64(4)
 var depositValCount = e2e.DepositCount
 
-// Deposits should be processed in twice the length of the epochs per execution-client voting period.
+// Deposits should be processed in twice the length of the epochs per eth1 voting period.
 var depositsInBlockStart = types.Epoch(math.Floor(float64(params.E2ETestConfig().EpochsPerEth1VotingPeriod) * 2))
 
 // deposits included + finalization + MaxSeedLookahead for activation.
