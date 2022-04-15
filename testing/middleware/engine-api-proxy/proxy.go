@@ -74,6 +74,11 @@ func New(opts ...Option) (*Proxy, error) {
 	return p, nil
 }
 
+// Address for the proxy server.
+func (p *Proxy) Address() string {
+	return p.address
+}
+
 // Start a proxy server.
 func (p *Proxy) Start(ctx context.Context) error {
 	p.srv.BaseContext = func(listener net.Listener) context.Context {
@@ -113,7 +118,7 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// If we are not intercepting the request, we proxy as normal.
-	p.proxyRequest(requestBytes, r)
+	p.proxyRequest(requestBytes, w, r)
 }
 
 // AddRequestInterceptor for a desired json-rpc method by specifying a custom response
@@ -160,7 +165,7 @@ func (p *Proxy) interceptIfNeeded(requestBytes []byte, w http.ResponseWriter) (h
 }
 
 // Create a new proxy request to the execution client.
-func (p *Proxy) proxyRequest(requestBytes []byte, r *http.Request) {
+func (p *Proxy) proxyRequest(requestBytes []byte, w http.ResponseWriter, r *http.Request) {
 	proxyReq, err := http.NewRequest(r.Method, p.cfg.destinationUrl.String(), r.Body)
 	if err != nil {
 		p.cfg.logger.WithError(err).Error("Could create new request")
@@ -188,8 +193,7 @@ func (p *Proxy) proxyRequest(requestBytes []byte, r *http.Request) {
 	}()
 
 	// Pipe the proxy response to the original caller.
-	buf := bytes.NewBuffer(make([]byte, 0))
-	if _, err = io.Copy(buf, proxyRes.Body); err != nil {
+	if _, err = io.Copy(w, proxyRes.Body); err != nil {
 		p.cfg.logger.WithError(err).Error("Could not copy proxy request body")
 		return
 	}
