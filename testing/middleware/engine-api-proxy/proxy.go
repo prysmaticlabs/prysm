@@ -83,6 +83,29 @@ func (p *Proxy) Start(ctx context.Context) error {
 	}
 }
 
+// Proxies requests from a consensus client to an execution client, spoofing requests
+// and/or responses as desired. Acts as a middleware useful for testing different merge scenarios.
+func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	requestBytes, err := parseRequestBytes(r)
+	if err != nil {
+		p.cfg.logger.WithError(err).Error("Could not parse request")
+		return
+	}
+	if p.interceptor != nil && p.interceptor(requestBytes, w, r) {
+		return
+	}
+	for _, rq := range p.backedUpRequests {
+		requestB, err := parseRequestBytes(r)
+		if err != nil {
+			p.cfg.logger.WithError(err).Error("Could not parse request")
+			return
+		}
+		p.proxyRequest(requestB, rq)
+	}
+	p.backedUpRequests = []*http.Request{}
+	p.proxyRequest(requestBytes, r)
+}
+
 func (p *Proxy) proxyRequest(requestBytes []byte, r *http.Request) {
 	destAddr := "http://" + p.cfg.destinationAddr
 
@@ -119,58 +142,6 @@ func (p *Proxy) proxyRequest(requestBytes []byte, r *http.Request) {
 		p.cfg.logger.WithError(err).Error("Could not do client proxy")
 		return
 	}
-}
-
-// Proxies requests from a consensus client to an execution client, spoofing requests
-// and/or responses as desired. Acts as a middleware useful for testing different merge scenarios.
-func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	requestBytes, err := p.parseRequestBytes(r)
-	if err != nil {
-		p.cfg.logger.WithError(err).Error("Could not parse request")
-		return
-	}
-	if p.interceptor != nil && p.interceptor(requestBytes, w, r) {
-		return
-	}
-	for _, rq := range p.backedUpRequests {
-		requestB, err := p.parseRequestBytes(r)
-		if err != nil {
-			p.cfg.logger.WithError(err).Error("Could not parse request")
-			return
-		}
-		p.proxyRequest(requestB, rq)
-	}
-	p.backedUpRequests = []*http.Request{}
-	p.proxyRequest(requestBytes, r)
-}
-
-func (pn *Proxy) parseRequestBytes(req *http.Request) ([]byte, error) {
-	requestBytes, err := ioutil.ReadAll(req.Body)
-	if err != nil {
-		return nil, err
-	}
-	if err = req.Body.Close(); err != nil {
-		return nil, err
-	}
-	req.Body = ioutil.NopCloser(bytes.NewBuffer(requestBytes))
-	return requestBytes, nil
-}
-
-func (pn *Proxy) checkIfValid(reqBytes []byte) bool {
-	jsonRequest, err := unmarshalRPCObject(reqBytes)
-	if err != nil {
-		switch {
-		case strings.Contains(err.Error(), "cannot unmarshal array"):
-			return false
-		default:
-			return false
-		}
-	}
-	if strings.Contains(jsonRequest.Method, "engine_forkchoiceUpdatedV1") ||
-		strings.Contains(jsonRequest.Method, "engine_newPayloadV1") {
-		return true
-	}
-	return false
 }
 
 func (pn *Proxy) returnSyncingResponse(reqBytes []byte, w http.ResponseWriter, r *http.Request) {
@@ -217,4 +188,33 @@ func (pn *Proxy) returnSyncingResponse(reqBytes []byte, w http.ResponseWriter, r
 		return
 	}
 	return
+}
+
+func parseRequestBytes(req *http.Request) ([]byte, error) {
+	requestBytes, err := ioutil.ReadAll(req.Body)
+	if err != nil {
+		return nil, err
+	}
+	if err = req.Body.Close(); err != nil {
+		return nil, err
+	}
+	req.Body = ioutil.NopCloser(bytes.NewBuffer(requestBytes))
+	return requestBytes, nil
+}
+
+func checkIfValid(reqBytes []byte) bool {
+	jsonRequest, err := unmarshalRPCObject(reqBytes)
+	if err != nil {
+		switch {
+		case strings.Contains(err.Error(), "cannot unmarshal array"):
+			return false
+		default:
+			return false
+		}
+	}
+	if strings.Contains(jsonRequest.Method, "engine_forkchoiceUpdatedV1") ||
+		strings.Contains(jsonRequest.Method, "engine_newPayloadV1") {
+		return true
+	}
+	return false
 }
