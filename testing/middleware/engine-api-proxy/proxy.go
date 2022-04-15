@@ -18,6 +18,11 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+var (
+	defaultProxyHost = "127.0.0.1"
+	defaultProxyPort = 8545
+)
+
 type jsonRPCObject struct {
 	Jsonrpc string        `json:"jsonrpc"`
 	Method  string        `json:"method"`
@@ -31,6 +36,8 @@ type forkchoiceUpdatedResponse struct {
 	PayloadId *pb.PayloadIDBytes `json:"payloadId"`
 }
 
+// Proxy server that sits as a middleware between an Ethereum consensus client and an execution client,
+// allowing us to modify in-flight requests and responses for testing purposes.
 type Proxy struct {
 	cfg              *config
 	address          string
@@ -39,12 +46,18 @@ type Proxy struct {
 	backedUpRequests []*http.Request
 }
 
+// New creates a proxy server forwarding requests from a consensus client to an execution client.
 func New(opts ...Option) (*Proxy, error) {
+	defaultInterceptor := func(_ []byte, _ http.ResponseWriter, _ *http.Request) bool {
+		return false // No default intercepting of requests.
+	}
 	p := &Proxy{
 		cfg: &config{
-			proxyHost: "127.0.0.1",
+			proxyHost: defaultProxyHost,
+			proxyPort: defaultProxyPort,
 			logger:    logrus.New(),
 		},
+		interceptor: defaultInterceptor,
 	}
 	for _, o := range opts {
 		if err := o(p); err != nil {
@@ -63,12 +76,13 @@ func New(opts ...Option) (*Proxy, error) {
 	return p, nil
 }
 
+// Start a proxy server.
 func (p *Proxy) Start(ctx context.Context) error {
 	p.srv.BaseContext = func(listener net.Listener) context.Context {
 		return ctx
 	}
 	p.cfg.logger.WithFields(logrus.Fields{
-		"forwardingAddress": p.cfg.destinationAddr,
+		"forwardingAddress": p.cfg.destinationUrl.String(),
 	}).Infof("Engine proxy now listening on address %s", p.address)
 	go func() {
 		if err := p.srv.ListenAndServe(); err != nil {
@@ -83,15 +97,15 @@ func (p *Proxy) Start(ctx context.Context) error {
 	}
 }
 
-// Proxies requests from a consensus client to an execution client, spoofing requests
-// and/or responses as desired. Acts as a middleware useful for testing different merge scenarios.
+// ServeHTTP requests from a consensus client to an execution client, modifying in-flight requests
+// and/or responses as desired. It also processes any backed-up requests.
 func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	requestBytes, err := parseRequestBytes(r)
 	if err != nil {
 		p.cfg.logger.WithError(err).Error("Could not parse request")
 		return
 	}
-	if p.interceptor != nil && p.interceptor(requestBytes, w, r) {
+	if p.interceptor(requestBytes, w, r) {
 		return
 	}
 	for _, rq := range p.backedUpRequests {
@@ -106,13 +120,9 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	p.proxyRequest(requestBytes, r)
 }
 
+// Create a new proxy request to the execution client.
 func (p *Proxy) proxyRequest(requestBytes []byte, r *http.Request) {
-	destAddr := "http://" + p.cfg.destinationAddr
-
-	// Create a new proxy request to the execution client.
-	url := r.URL
-	url.Host = destAddr
-	proxyReq, err := http.NewRequest(r.Method, destAddr, r.Body)
+	proxyReq, err := http.NewRequest(r.Method, p.cfg.destinationUrl.String(), r.Body)
 	if err != nil {
 		p.cfg.logger.WithError(err).Error("Could create new request")
 		return
@@ -132,19 +142,21 @@ func (p *Proxy) proxyRequest(requestBytes []byte, r *http.Request) {
 		p.cfg.logger.WithError(err).Error("Could not do client proxy")
 		return
 	}
-	buf := bytes.NewBuffer([]byte{})
+	defer func() {
+		if err = proxyRes.Body.Close(); err != nil {
+			p.cfg.logger.WithError(err).Error("Could not do client proxy")
+		}
+	}()
+
 	// Pipe the proxy response to the original caller.
+	buf := bytes.NewBuffer(make([]byte, 0))
 	if _, err = io.Copy(buf, proxyRes.Body); err != nil {
 		p.cfg.logger.WithError(err).Error("Could not copy proxy request body")
 		return
 	}
-	if err = proxyRes.Body.Close(); err != nil {
-		p.cfg.logger.WithError(err).Error("Could not do client proxy")
-		return
-	}
 }
 
-func (pn *Proxy) returnSyncingResponse(reqBytes []byte, w http.ResponseWriter, r *http.Request) {
+func (p *Proxy) returnSyncingResponse(reqBytes []byte, w http.ResponseWriter, r *http.Request) {
 	jsonRequest, err := unmarshalRPCObject(reqBytes)
 	if err != nil {
 		return
@@ -184,7 +196,7 @@ func (pn *Proxy) returnSyncingResponse(reqBytes []byte, w http.ResponseWriter, r
 		}
 		_, err = w.Write(rawResp)
 		_ = err
-		pn.backedUpRequests = append(pn.backedUpRequests, r)
+		p.backedUpRequests = append(p.backedUpRequests, r)
 		return
 	}
 	return
@@ -217,4 +229,12 @@ func checkIfValid(reqBytes []byte) bool {
 		return true
 	}
 	return false
+}
+
+func unmarshalRPCObject(b []byte) (*jsonRPCObject, error) {
+	r := &jsonRPCObject{}
+	if err := json.Unmarshal(b, r); err != nil {
+		return nil, err
+	}
+	return r, nil
 }

@@ -4,6 +4,8 @@ import "net/http"
 
 type InterceptorFunc func(reqBytes []byte, w http.ResponseWriter, r *http.Request) bool
 
+func (p *Proxy) AddRequestInterceptor(-)
+
 func (p *Proxy) AddInterceptor(icptr InterceptorFunc) {
 	p.interceptor = icptr
 }
