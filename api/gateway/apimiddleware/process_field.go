@@ -87,18 +87,9 @@ func hexToBase64Processor(tag string, v reflect.Value) error {
 }
 
 func base64ToHexProcessor(tag string, v reflect.Value) error {
-	var alwaysPrefix bool
-	for _, option := range strings.Split(tag, ",") {
-		switch option {
-		case "alwaysprefix":
-			alwaysPrefix = true
-		}
-	}
-
 	if v.String() == "" {
-		if alwaysPrefix {
+		// Empty hex values are represented as "0x".
 			v.SetString("0x")
-		}
 		return nil
 	}
 	b, err := base64.StdEncoding.DecodeString(v.String())

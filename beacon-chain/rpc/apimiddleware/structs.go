@@ -433,7 +433,7 @@ type executionPayloadJson struct {
 	GasLimit      string   `json:"gas_limit"`
 	GasUsed       string   `json:"gas_used"`
 	TimeStamp     string   `json:"timestamp"`
-	ExtraData     string   `json:"extra_data" hex:"true,alwaysprefix"`
+	ExtraData     string   `json:"extra_data" hex:"true"`
 	BaseFeePerGas string   `json:"base_fee_per_gas" uint256:"true"`
 	BlockHash     string   `json:"block_hash" hex:"true"`
 	Transactions  []string `json:"transactions" hex:"true"`
@@ -450,7 +450,7 @@ type executionPayloadHeaderJson struct {
 	GasLimit         string `json:"gas_limit"`
 	GasUsed          string `json:"gas_used"`
 	TimeStamp        string `json:"timestamp"`
-	ExtraData        string `json:"extra_data" hex:"true,alwaysprefix"`
+	ExtraData        string `json:"extra_data" hex:"true"`
 	BaseFeePerGas    string `json:"base_fee_per_gas" hex:"true"`
 	BlockHash        string `json:"block_hash" hex:"true"`
 	TransactionsRoot string `json:"transactions_root" hex:"true"`
