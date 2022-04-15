@@ -86,7 +86,7 @@ func TestCheckpointSync_CustomConfig(t *testing.T) {
 		Evaluators:          evals,
 		Seed:                int64(seed),
 		BeaconChainConfig:   cfg,
-		LeaveRunning: true,
+		LeaveRunning: false,
 	}
 
 	newTestRunner(t, testConfig).run()

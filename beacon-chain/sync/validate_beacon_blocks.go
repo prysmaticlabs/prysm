@@ -222,17 +222,19 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk block.SignedBeaco
 	if err != nil {
 		return err
 	}
+	sRoot, err := parentState.HashTreeRoot(ctx)
+	if err != nil {
+		log.Errorf("that's weird, htr fail")
+	}
+	log.Infof("validating block with slot=%d, state.slot=%d, block_root=%#x, state_root=%#x", blk.Block().Slot(), parentState.Slot(), blockRoot, sRoot)
 	idx, err := helpers.BeaconProposerIndex(ctx, parentState)
 	if err != nil {
 		return err
 	}
+	log.Infof("got BeaconProposerIndex=%d, block proposer index=%d", idx, blk.Block().ProposerIndex())
 	if blk.Block().ProposerIndex() != idx {
 		s.setBadBlock(ctx, blockRoot)
-		stateRoot, err := parentState.HashTreeRoot(ctx)
-		if err != nil {
-			return errors.Wrapf(errIncorrectProposerIndex, "state_root=<failed to compute>, block_root=%#x", blockRoot)
-		}
-		return errors.Wrapf(errIncorrectProposerIndex, "state slot=%d, root=%#x, block_root=%#x", parentState.Slot(), stateRoot, blockRoot)
+		return errors.Wrapf(errIncorrectProposerIndex, "state slot=%d, root=%#x, block_root=%#x", parentState.Slot(), sRoot, blockRoot)
 	}
 
 	if err = s.validateBellatrixBeaconBlock(ctx, parentState, blk.Block()); err != nil {

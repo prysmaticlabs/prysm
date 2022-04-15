@@ -3,6 +3,8 @@ package helpers
 import (
 	"bytes"
 	"context"
+	"fmt"
+	"github.com/prysmaticlabs/prysm/time/slots"
 
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
@@ -15,7 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/time/slots"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -88,11 +89,27 @@ func ActiveValidatorIndices(ctx context.Context, s state.ReadOnlyBeaconState, ep
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get seed")
 	}
+	var ci []types.ValidatorIndex
+	if s.Slot() == 78 {
+		if err := s.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
+			if IsActiveValidatorUsingTrie(val, epoch) {
+				ci = append(ci, types.ValidatorIndex(idx))
+			}
+			return nil
+		}); err != nil {
+			log.Errorf("got error doing double-check validator index computation=%v", err)
+			return nil, err
+		}
+	}
 	activeIndices, err := committeeCache.ActiveIndices(ctx, seed)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not interface with committee cache")
 	}
 	if activeIndices != nil {
+		if s.Slot() == 78 {
+			log.Infof("double check indices for 78, len=%d, low=%d, high=%d", len(ci), ci[0], ci[len(ci)-1])
+		}
+		log.Infof("found indices in cache for slot=%d, len=%d, low=%d, high=%d", s.Slot(), len(activeIndices), activeIndices[0], activeIndices[len(activeIndices)-1])
 		return activeIndices, nil
 	}
 
@@ -106,6 +123,7 @@ func ActiveValidatorIndices(ctx context.Context, s state.ReadOnlyBeaconState, ep
 				return nil, errors.New("nil active indices")
 			}
 			CommitteeCacheInProgressHit.Inc()
+			log.Infof("found indices in in-progress cache for slot=%d, len=%d, low=%d, high=%d", s.Slot(), len(activeIndices), activeIndices[0], activeIndices[len(activeIndices)-1])
 			return activeIndices, nil
 		}
 		return nil, errors.Wrap(err, "could not mark committee cache as in progress")
@@ -126,9 +144,15 @@ func ActiveValidatorIndices(ctx context.Context, s state.ReadOnlyBeaconState, ep
 		return nil, err
 	}
 
+	log.Infof("computed indices slot=%d, len=%d, low=%d, high=%d", s.Slot(), len(indices), indices[0], indices[len(indices)-1])
 	if err := UpdateCommitteeCache(s, epoch); err != nil {
 		return nil, errors.Wrap(err, "could not update committee cache")
 	}
+	/*
+	if err := UpdateProposerIndicesInCache(ctx, s); err != nil {
+		return nil, errors.Wrap(err, "failed to update proposer indices cache in ActiveValidatorIndices")
+	}
+	 */
 
 	return indices, nil
 }
@@ -259,15 +283,19 @@ func BeaconProposerIndex(ctx context.Context, state state.ReadOnlyBeaconState) (
 	if err != nil {
 		return 0, errors.Wrap(err, "could not generate seed")
 	}
+	fmt.Printf("BeaconProposerIndex:seed=%#x", seed)
 
 	seedWithSlot := append(seed[:], bytesutil.Bytes8(uint64(state.Slot()))...)
+	fmt.Printf("BeaconProposerIndex:seedWithSlot=%#x", seed)
 	seedWithSlotHash := hash.Hash(seedWithSlot)
+	fmt.Printf("BeaconProposerIndex:seedWithSlotHash=%#x", seed)
 
 	indices, err := ActiveValidatorIndices(ctx, state, e)
 	if err != nil {
 		return 0, errors.Wrap(err, "could not get active indices")
 	}
 
+	log.Infof("validator index length=%d, low=%d, high=%d", len(indices), indices[0], indices[len(indices)-1])
 	return ComputeProposerIndex(state, indices, seedWithSlotHash)
 }
 

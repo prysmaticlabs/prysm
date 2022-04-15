@@ -138,6 +138,7 @@ func ProcessSlotsUsingNextSlotCache(
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessSlotsUsingNextSlotCache")
 	defer span.End()
 
+	/*
 	// Check whether the parent state has been advanced by 1 slot in next slot cache.
 	nextSlotState, err := NextSlotState(ctx, parentRoot)
 	if err != nil {
@@ -160,10 +161,12 @@ func ProcessSlotsUsingNextSlotCache(
 	if cachedStateExists && parentState.Slot() == slot {
 		return parentState, nil
 	}
+
+	 */
 	log.Infof("process_slots being called up to slot=%d where state.slot=%d", slot, parentState.Slot())
 	// Since next slot cache only advances state by 1 slot,
 	// we check if there's more slots that need to process.
-	parentState, err = ProcessSlots(ctx, parentState, slot)
+	parentState, err := ProcessSlots(ctx, parentState, slot)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process slots")
 	}
