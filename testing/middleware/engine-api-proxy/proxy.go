@@ -97,10 +97,8 @@ func (p *Proxy) Start(ctx context.Context) error {
 		}
 	}()
 	for {
-		select {
-		case <-ctx.Done():
-			return p.srv.Shutdown(context.Background())
-		}
+		<-ctx.Done()
+		return p.srv.Shutdown(context.Background())
 	}
 }
 
