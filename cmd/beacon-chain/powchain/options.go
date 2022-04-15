@@ -81,7 +81,3 @@ func parsePowchainEndpoints(c *cli.Context) []string {
 	endpoints = append(endpoints, c.StringSlice(flags.FallbackWeb3ProviderFlag.Name)...)
 	return endpoints
 }
-
-func parseExecutionEndpoint(c *cli.Context) string {
-	return c.String(flags.ExecutionProviderFlag.Name)
-}
