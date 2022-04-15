@@ -345,7 +345,7 @@ func ValidatePayloadHeaderWhenMergeCompletes(st state.BeaconState, header *ethpb
 	if !complete {
 		return nil
 	}
-	// Validate header's parent hash matches the one in state.
+	// Validate current header's parent hash matches state header's block hash.
 	h, err := st.LatestExecutionPayloadHeader()
 	if err != nil {
 		return err
