@@ -9,9 +9,9 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/policies"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/types"
+	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
-	"gopkg.in/src-d/go-log.v1"
 )
 
 var FeeRecipientIsPresent = types.Evaluator{
