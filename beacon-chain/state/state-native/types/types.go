@@ -2,34 +2,11 @@ package types
 
 import (
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/runtime/version"
 )
 
 // FieldIndex represents the relevant field position in the
 // state struct for a field.
 type FieldIndex int
-
-// DataType signifies the data type of the field.
-type DataType int
-
-// List of current data types the state supports.
-const (
-	// BasicArray represents a simple array type for a field.
-	BasicArray DataType = iota
-	// CompositeArray represents a variable length array with
-	// a non primitive type.
-	CompositeArray
-	// CompressedArray represents a variable length array which
-	// can pack multiple elements into a leaf of the underlying
-	// trie.
-	CompressedArray
-)
-
-type FieldIdx interface {
-	String(stateVersion int) string
-	ElemsInChunk() (uint64, error)
-	Native() bool
-}
 
 // String returns the name of the field index.
 func (f FieldIndex) String(stateVersion int) string {
@@ -65,15 +42,13 @@ func (f FieldIndex) String(stateVersion int) string {
 	case Slashings:
 		return "slashings"
 	case PreviousEpochAttestations:
-		if version.Altair == stateVersion || version.Bellatrix == stateVersion {
-			return "previousEpochParticipationBits"
-		}
 		return "previousEpochAttestations"
 	case CurrentEpochAttestations:
-		if version.Altair == stateVersion || version.Bellatrix == stateVersion {
-			return "currentEpochParticipationBits"
-		}
 		return "currentEpochAttestations"
+	case PreviousEpochParticipationBits:
+		return "previousEpochParticipationBits"
+	case CurrentEpochParticipationBits:
+		return "currentEpochParticipationBits"
 	case JustificationBits:
 		return "justificationBits"
 	case PreviousJustifiedCheckpoint:
@@ -107,7 +82,7 @@ func (f FieldIndex) ElemsInChunk() (uint64, error) {
 }
 
 func (f FieldIndex) Native() bool {
-	return false
+	return true
 }
 
 // Below we define a set of useful enum values for the field
@@ -134,6 +109,8 @@ const (
 	Slashings
 	PreviousEpochAttestations
 	CurrentEpochAttestations
+	PreviousEpochParticipationBits
+	CurrentEpochParticipationBits
 	JustificationBits
 	PreviousJustifiedCheckpoint
 	CurrentJustifiedCheckpoint
@@ -144,11 +121,4 @@ const (
 	NextSyncCommittee
 	// State fields added in Bellatrix.
 	LatestExecutionPayloadHeader
-)
-
-// Altair fields which replaced previous phase 0 fields.
-const (
-	// Epoch Attestations is switched with participation bits in Altair.
-	PreviousEpochParticipationBits = PreviousEpochAttestations
-	CurrentEpochParticipationBits  = CurrentEpochAttestations
 )

@@ -1,4 +1,4 @@
-package v1
+package state_native
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/fieldtrie"
+	nativetypes "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 )
 
@@ -39,7 +40,7 @@ func (b *BeaconState) FinalizedRootProof(ctx context.Context) ([][]byte, error) 
 	if err := b.recomputeDirtyFields(ctx); err != nil {
 		return nil, err
 	}
-	cpt := b.state.FinalizedCheckpoint
+	cpt := b.finalizedCheckpoint
 	// The epoch field of a finalized checkpoint is the neighbor
 	// index of the finalized root field in its Merkle tree representation
 	// of the checkpoint. This neighbor is the first element added to the proof.
@@ -48,7 +49,7 @@ func (b *BeaconState) FinalizedRootProof(ctx context.Context) ([][]byte, error) 
 	epochRoot := bytesutil.ToBytes32(epochBuf)
 	proof := make([][]byte, 0)
 	proof = append(proof, epochRoot[:])
-	branch := fieldtrie.ProofFromMerkleLayers(b.merkleLayers, int(finalizedCheckpoint))
+	branch := fieldtrie.ProofFromMerkleLayers(b.merkleLayers, b.fieldIndexesRev[nativetypes.FinalizedCheckpoint])
 	proof = append(proof, branch...)
 	return proof, nil
 }

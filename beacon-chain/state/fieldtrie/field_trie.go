@@ -16,7 +16,7 @@ type FieldTrie struct {
 	*sync.RWMutex
 	reference   *stateutil.Reference
 	fieldLayers [][]*[32]byte
-	field       types.FieldIndex
+	field       types.FieldIdx
 	dataType    types.DataType
 	length      uint64
 	numOfElems  int
@@ -25,7 +25,7 @@ type FieldTrie struct {
 // NewFieldTrie is the constructor for the field trie data structure. It creates the corresponding
 // trie according to the given parameters. Depending on whether the field is a basic/composite array
 // which is either fixed/variable length, it will appropriately determine the trie.
-func NewFieldTrie(field types.FieldIndex, dataType types.DataType, elements interface{}, length uint64) (*FieldTrie, error) {
+func NewFieldTrie(field types.FieldIdx, dataType types.DataType, elements interface{}, length uint64) (*FieldTrie, error) {
 	if elements == nil {
 		return &FieldTrie{
 			field:      field,
