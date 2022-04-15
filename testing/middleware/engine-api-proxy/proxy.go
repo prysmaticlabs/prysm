@@ -1,6 +1,6 @@
 // Package proxy provides a proxy middleware for engine API requests between Ethereum
-// consensus clients and execution clients accordingly. Allows for configuration of various
-// test cases using yaml files as detailed in the README.md of the document.
+// consensus clients and execution clients accordingly. Allows for customizing
+// in-flight requests or responses using custom triggers. Useful for end-to-end testing.
 package proxy
 
 import (
@@ -15,6 +15,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -61,6 +62,9 @@ func New(opts ...Option) (*Proxy, error) {
 		if err := o(p); err != nil {
 			return nil, err
 		}
+	}
+	if p.cfg.destinationUrl == nil {
+		return nil, errors.New("must provide a destination address for request proxying")
 	}
 	mux := http.NewServeMux()
 	mux.Handle("/", p)
@@ -183,12 +187,12 @@ func (p *Proxy) proxyRequest(requestBytes []byte, w http.ResponseWriter, r *http
 	client := &http.Client{}
 	proxyRes, err := client.Do(proxyReq)
 	if err != nil {
-		p.cfg.logger.WithError(err).Error("Could not do client proxy")
+		p.cfg.logger.WithError(err).Error("Could not forward request to destination server")
 		return
 	}
 	defer func() {
 		if err = proxyRes.Body.Close(); err != nil {
-			p.cfg.logger.WithError(err).Error("Could not do client proxy")
+			p.cfg.logger.WithError(err).Error("Could not do close proxy response body")
 		}
 	}()
 

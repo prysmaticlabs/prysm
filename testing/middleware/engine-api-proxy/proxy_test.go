@@ -10,11 +10,34 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/sirupsen/logrus"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestProxy(t *testing.T) {
 	t.Run("fails to proxy if destination is down", func(t *testing.T) {
+		logger := logrus.New()
+		hook := logTest.NewLocal(logger)
+		ctx := context.Background()
+		proxy, err := New(
+			WithDestinationAddress("http://localhost:43239"), // Nothing running at destination server.
+			WithLogger(logger),
+		)
+		require.NoError(t, err)
+		go func() {
+			if err := proxy.Start(ctx); err != nil {
+				t.Log(err)
+			}
+		}()
 
+		rpcClient, err := rpc.DialHTTP("http://" + proxy.Address())
+		require.NoError(t, err)
+
+		err = rpcClient.CallContext(ctx, nil, "someEngineMethod")
+		require.ErrorContains(t, "EOF", err)
+
+		// Expect issues when reaching destination server.
+		require.LogsContain(t, hook, "Could not forward request to destination server")
 	})
 	t.Run("properly proxies request/response", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
