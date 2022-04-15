@@ -69,7 +69,8 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 func (s *Service) Start() {
 	genesis, err := s.waitForStateInitialization()
 	if err != nil {
-		panic(err)
+		log.WithError(err).Fatal("Failed to wait for state initialization.")
+		return
 	}
 	if genesis.IsZero() {
 		log.Debug("Exiting Initial Sync Service")
