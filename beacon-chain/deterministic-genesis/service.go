@@ -47,14 +47,18 @@ type Config struct {
 // into the beacon chain database and running services at start up. This service should not be used in production
 // as it does not have any value other than ease of use for testing purposes.
 func NewService(ctx context.Context, cfg *Config) *Service {
-	log.Warn("Saving generated genesis state in database for interop testing")
 	ctx, cancel := context.WithCancel(ctx)
 
-	s := &Service{
+	return &Service{
 		cfg:    cfg,
 		ctx:    ctx,
 		cancel: cancel,
 	}
+}
+
+// Start initializes the genesis state from configured flags.
+func (s *Service) Start() {
+	log.Warn("Saving generated genesis state in database for interop testing")
 
 	if s.cfg.GenesisPath != "" {
 		data, err := ioutil.ReadFile(s.cfg.GenesisPath)
@@ -69,14 +73,14 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		if err != nil {
 			log.Fatalf("Could not get state trie: %v", err)
 		}
-		if err := s.saveGenesisState(ctx, genesisTrie); err != nil {
+		if err := s.saveGenesisState(s.ctx, genesisTrie); err != nil {
 			log.Fatalf("Could not save interop genesis state %v", err)
 		}
-		return s
+		return
 	}
 
 	// Save genesis state in db
-	genesisState, _, err := interop.GenerateGenesisState(ctx, s.cfg.GenesisTime, s.cfg.NumValidators)
+	genesisState, _, err := interop.GenerateGenesisState(s.ctx, s.cfg.GenesisTime, s.cfg.NumValidators)
 	if err != nil {
 		log.Fatalf("Could not generate interop genesis state: %v", err)
 	}
@@ -92,17 +96,11 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 	if err != nil {
 		log.Fatalf("Could not hash tree root genesis state: %v", err)
 	}
-	go slots.CountdownToGenesis(ctx, time.Unix(int64(s.cfg.GenesisTime), 0), s.cfg.NumValidators, gRoot)
+	go slots.CountdownToGenesis(s.ctx, time.Unix(int64(s.cfg.GenesisTime), 0), s.cfg.NumValidators, gRoot)
 
-	if err := s.saveGenesisState(ctx, genesisTrie); err != nil {
+	if err := s.saveGenesisState(s.ctx, genesisTrie); err != nil {
 		log.Fatalf("Could not save interop genesis state %v", err)
 	}
-
-	return s
-}
-
-// Start initializes the genesis state from configured flags.
-func (_ *Service) Start() {
 }
 
 // Stop does nothing.
