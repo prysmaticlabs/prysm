@@ -77,7 +77,7 @@ func TestDomain_MarshalSSZ(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
-	if !reflect.DeepEqual(b[:], []byte(d)) {
+	if !reflect.DeepEqual(b, []byte(d)) {
 		t.Errorf("Unequal: %v = %v", b, []byte(d))
 	}
 }
