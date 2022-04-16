@@ -72,21 +72,28 @@ func (node *Node) Start(ctx context.Context) error {
 		fmt.Sprintf("--datadir=%s", eth1Path),
 		fmt.Sprintf("--http.port=%d", e2e.TestParams.Ports.Eth1RPCPort+node.index),
 		fmt.Sprintf("--ws.port=%d", e2e.TestParams.Ports.Eth1WSPort+node.index),
+		fmt.Sprintf("--authrpc.port=%d", e2e.TestParams.Ports.Eth1AuthRPCPort+node.index),
 		fmt.Sprintf("--bootnodes=%s", node.enr),
 		fmt.Sprintf("--port=%d", e2e.TestParams.Ports.Eth1Port+node.index),
 		fmt.Sprintf("--networkid=%d", NetworkId),
 		"--http",
+		"--http.api=engine,net,eth",
 		"--http.addr=127.0.0.1",
 		"--http.corsdomain=\"*\"",
 		"--http.vhosts=\"*\"",
 		"--rpc.allow-unprotected-txs",
 		"--ws",
+		"--ws.api=net,eth,engine",
 		"--ws.addr=127.0.0.1",
 		"--ws.origins=\"*\"",
 		"--ipcdisable",
 		"--verbosity=4",
 	}
-
+	// If we are testing sync, geth needs to be run via full sync as snap sync does not
+	// work in our setup.
+	if node.index == e2e.TestParams.BeaconNodeCount+e2e.TestParams.LighthouseBeaconNodeCount {
+		args = append(args, []string{"--syncmode=full"}...)
+	}
 	runCmd := exec.CommandContext(ctx, binaryPath, args...) // #nosec G204 -- Safe
 	file, err := helpers.DeleteAndCreateFile(e2e.TestParams.LogPath, "eth1_"+strconv.Itoa(node.index)+".log")
 	if err != nil {
@@ -98,6 +105,9 @@ func (node *Node) Start(ctx context.Context) error {
 
 	if err = runCmd.Start(); err != nil {
 		return fmt.Errorf("failed to start eth1 chain: %w", err)
+	}
+	if err = helpers.WaitForTextInFile(file, "Started P2P networking"); err != nil {
+		return fmt.Errorf("P2P log not found, this means the eth1 chain had issues starting: %w", err)
 	}
 
 	// Mark node as ready.

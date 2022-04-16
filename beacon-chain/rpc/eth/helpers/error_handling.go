@@ -12,7 +12,7 @@ import (
 // PrepareStateFetchGRPCError returns an appropriate gRPC error based on the supplied argument.
 // The argument error should be a result of fetching state.
 func PrepareStateFetchGRPCError(err error) error {
-	if errors.Is(err, stategen.ErrSlotBeforeOrigin) {
+	if errors.Is(err, stategen.ErrNoDataForSlot) {
 		return status.Errorf(codes.NotFound, "lacking historical data needed to fulfill request")
 	}
 	if stateNotFoundErr, ok := err.(*statefetcher.StateNotFoundError); ok {

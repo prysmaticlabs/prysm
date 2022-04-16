@@ -26,7 +26,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
-	enginev1 "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/beacon"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/debug"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/events"
@@ -109,28 +108,22 @@ type Config struct {
 	OperationNotifier       opfeed.Notifier
 	StateGen                *stategen.State
 	MaxMsgSize              int
-	ExecutionEngineCaller   enginev1.Caller
+	ExecutionEngineCaller   powchain.EngineCaller
+	ProposerIdsCache        *cache.ProposerPayloadIDsCache
 }
 
 // NewService instantiates a new RPC service instance that will
 // be registered into a running beacon node.
 func NewService(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
-	return &Service{
+	s := &Service{
 		cfg:                 cfg,
 		ctx:                 ctx,
 		cancel:              cancel,
 		incomingAttestation: make(chan *ethpbv1alpha1.Attestation, params.BeaconConfig().DefaultBufferSize),
 		connectedRPCClients: make(map[net.Addr]bool),
 	}
-}
 
-// paranoid build time check to ensure ChainInfoFetcher implements required interfaces
-var _ stategen.CanonicalChecker = blockchain.ChainInfoFetcher(nil)
-var _ stategen.CurrentSlotter = blockchain.ChainInfoFetcher(nil)
-
-// Start the gRPC server.
-func (s *Service) Start() {
 	address := fmt.Sprintf("%s:%s", s.cfg.Host, s.cfg.Port)
 	lis, err := net.Listen("tcp", address)
 	if err != nil {
@@ -159,7 +152,6 @@ func (s *Service) Start() {
 		)),
 		grpc.MaxRecvMsgSize(s.cfg.MaxMsgSize),
 	}
-	grpc_prometheus.EnableHandlingTimeHistogram()
 	if s.cfg.CertFlag != "" && s.cfg.KeyFlag != "" {
 		creds, err := credentials.NewServerTLSFromFile(s.cfg.CertFlag, s.cfg.KeyFlag)
 		if err != nil {
@@ -172,6 +164,17 @@ func (s *Service) Start() {
 			"how to enable secure connections, see: https://docs.prylabs.network/docs/prysm-usage/secure-grpc")
 	}
 	s.grpcServer = grpc.NewServer(opts...)
+
+	return s
+}
+
+// paranoid build time check to ensure ChainInfoFetcher implements required interfaces
+var _ stategen.CanonicalChecker = blockchain.ChainInfoFetcher(nil)
+var _ stategen.CurrentSlotter = blockchain.ChainInfoFetcher(nil)
+
+// Start the gRPC server.
+func (s *Service) Start() {
+	grpc_prometheus.EnableHandlingTimeHistogram()
 
 	var stateCache stategen.CachedGetter
 	if s.cfg.StateGen != nil {
@@ -208,6 +211,7 @@ func (s *Service) Start() {
 		ReplayerBuilder:        ch,
 		ExecutionEngineCaller:  s.cfg.ExecutionEngineCaller,
 		BeaconDB:               s.cfg.BeaconDB,
+		ProposerSlotIndexCache: s.cfg.ProposerIdsCache,
 	}
 	validatorServerV1 := &validator.Server{
 		HeadFetcher:      s.cfg.HeadFetcher,
@@ -291,6 +295,7 @@ func (s *Service) Start() {
 			ChainInfoFetcher:   s.cfg.ChainInfoFetcher,
 			GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
 			StateGenService:    s.cfg.StateGen,
+			ReplayerBuilder:    ch,
 		},
 		HeadFetcher:             s.cfg.HeadFetcher,
 		VoluntaryExitsPool:      s.cfg.ExitPool,

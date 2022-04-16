@@ -107,7 +107,8 @@ func TestStore_Insert(t *testing.T) {
 	// The new node does not have a parent.
 	treeRootNode := &Node{slot: 0, root: indexToHash(0)}
 	nodeByRoot := map[[32]byte]*Node{indexToHash(0): treeRootNode}
-	s := &Store{nodeByRoot: nodeByRoot, treeRootNode: treeRootNode}
+	nodeByPayload := map[[32]byte]*Node{indexToHash(0): treeRootNode}
+	s := &Store{nodeByRoot: nodeByRoot, treeRootNode: treeRootNode, nodeByPayload: nodeByPayload}
 	payloadHash := [32]byte{'a'}
 	require.NoError(t, s.insert(context.Background(), 100, indexToHash(100), indexToHash(0), payloadHash, 1, 1))
 	assert.Equal(t, 2, len(s.nodeByRoot), "Did not insert block")

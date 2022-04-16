@@ -7,11 +7,6 @@ import (
 )
 
 var (
-	// PyrmontTestnet flag for the multiclient Ethereum consensus testnet.
-	PyrmontTestnet = &cli.BoolFlag{
-		Name:  "pyrmont",
-		Usage: "This defines the flag through which we can run on the Pyrmont Multiclient Testnet",
-	}
 	// PraterTestnet flag for the multiclient Ethereum consensus testnet.
 	PraterTestnet = &cli.BoolFlag{
 		Name:  "prater",
@@ -157,7 +152,6 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	writeWalletPasswordOnWebOnboarding,
 	enableExternalSlasherProtectionFlag,
 	disableAttestingHistoryDBCache,
-	PyrmontTestnet,
 	PraterTestnet,
 	Mainnet,
 	dynamicKeyReloadDebounceInterval,
@@ -176,7 +170,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	devModeFlag,
 	writeSSZStateTransitionsFlag,
 	disableGRPCConnectionLogging,
-	PyrmontTestnet,
 	PraterTestnet,
 	Mainnet,
 	enablePeerScorer,

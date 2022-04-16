@@ -16,7 +16,6 @@ func TestNode_Getters(t *testing.T) {
 	weight := uint64(10000)
 	bestChild := uint64(5)
 	bestDescendant := uint64(4)
-	graffiti := [32]byte{'b'}
 	n := &Node{
 		slot:           slot,
 		root:           root,
@@ -26,7 +25,6 @@ func TestNode_Getters(t *testing.T) {
 		weight:         weight,
 		bestChild:      bestChild,
 		bestDescendant: bestDescendant,
-		graffiti:       graffiti,
 	}
 
 	require.Equal(t, slot, n.Slot())
@@ -37,5 +35,4 @@ func TestNode_Getters(t *testing.T) {
 	require.Equal(t, weight, n.Weight())
 	require.Equal(t, bestChild, n.BestChild())
 	require.Equal(t, bestDescendant, n.BestDescendant())
-	require.Equal(t, graffiti, n.Graffiti())
 }

@@ -45,8 +45,12 @@ func E2ETestConfig() *BeaconChainConfig {
 	e2eConfig.DepositChainID = 1337   // Chain ID of eth1 dev net.
 	e2eConfig.DepositNetworkID = 1337 // Network ID of eth1 dev net.
 
-	// Altair Fork Parameters.
+	// Fork Parameters.
 	e2eConfig.AltairForkEpoch = altairE2EForkEpoch
+	e2eConfig.BellatrixForkEpoch = bellatrixE2EForkEpoch
+
+	// Terminal Total Difficulty.
+	e2eConfig.TerminalTotalDifficulty = "600"
 
 	// Prysm constants.
 	e2eConfig.ConfigName = ConfigNames[EndToEnd]
@@ -80,6 +84,10 @@ func E2EMainnetTestConfig() *BeaconChainConfig {
 
 	// Altair Fork Parameters.
 	e2eConfig.AltairForkEpoch = altairE2EForkEpoch
+	e2eConfig.BellatrixForkEpoch = bellatrixE2EForkEpoch
+
+	// Terminal Total Difficulty.
+	e2eConfig.TerminalTotalDifficulty = "600"
 
 	// Prysm constants.
 	e2eConfig.ConfigName = ConfigNames[EndToEnd]

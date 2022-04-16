@@ -69,7 +69,7 @@ type ValidatorService struct {
 	db                    db.Database
 	grpcHeaders           []string
 	graffiti              []byte
-	web3SignerConfig      *remote_web3signer.SetupConfig
+	Web3SignerConfig      *remote_web3signer.SetupConfig
 	feeRecipientConfig    *validator_service_config.FeeRecipientConfig
 }
 
@@ -101,7 +101,7 @@ type Config struct {
 // registry.
 func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, error) {
 	ctx, cancel := context.WithCancel(ctx)
-	return &ValidatorService{
+	s := &ValidatorService{
 		ctx:                   ctx,
 		cancel:                cancel,
 		endpoint:              cfg.Endpoint,
@@ -122,36 +122,37 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		interopKeysConfig:     cfg.InteropKeysConfig,
 		graffitiStruct:        cfg.GraffitiStruct,
 		logDutyCountDown:      cfg.LogDutyCountDown,
-		web3SignerConfig:      cfg.Web3SignerConfig,
+		Web3SignerConfig:      cfg.Web3SignerConfig,
 		feeRecipientConfig:    cfg.FeeRecipientConfig,
-	}, nil
+	}
+
+	dialOpts := ConstructDialOptions(
+		s.maxCallRecvMsgSize,
+		s.withCert,
+		s.grpcRetries,
+		s.grpcRetryDelay,
+	)
+	if dialOpts == nil {
+		return s, nil
+	}
+
+	s.ctx = grpcutil.AppendHeaders(ctx, s.grpcHeaders)
+
+	conn, err := grpc.DialContext(ctx, s.endpoint, dialOpts...)
+	if err != nil {
+		return s, err
+	}
+	if s.withCert != "" {
+		log.Info("Established secure gRPC connection")
+	}
+	s.conn = conn
+
+	return s, nil
 }
 
 // Start the validator service. Launches the main go routine for the validator
 // client.
 func (v *ValidatorService) Start() {
-	dialOpts := ConstructDialOptions(
-		v.maxCallRecvMsgSize,
-		v.withCert,
-		v.grpcRetries,
-		v.grpcRetryDelay,
-	)
-	if dialOpts == nil {
-		return
-	}
-
-	v.ctx = grpcutil.AppendHeaders(v.ctx, v.grpcHeaders)
-
-	conn, err := grpc.DialContext(v.ctx, v.endpoint, dialOpts...)
-	if err != nil {
-		log.Errorf("Could not dial endpoint: %s, %v", v.endpoint, err)
-		return
-	}
-	if v.withCert != "" {
-		log.Info("Established secure gRPC connection")
-	}
-
-	v.conn = conn
 	cache, err := ristretto.NewCache(&ristretto.Config{
 		NumCounters: 1920, // number of keys to track.
 		MaxCost:     192,  // maximum cost of cache, 1 item = 1 cost.
@@ -204,7 +205,7 @@ func (v *ValidatorService) Start() {
 		graffitiOrderedIndex:           graffitiOrderedIndex,
 		eipImportBlacklistedPublicKeys: slashablePublicKeys,
 		logDutyCountDown:               v.logDutyCountDown,
-		Web3SignerConfig:               v.web3SignerConfig,
+		Web3SignerConfig:               v.Web3SignerConfig,
 		feeRecipientConfig:             v.feeRecipientConfig,
 		walletIntializedChannel:        make(chan *wallet.Wallet, 1),
 	}

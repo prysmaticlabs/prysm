@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/async"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -151,20 +152,24 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 				continue
 			}
 
-			if err := s.validateBeaconBlock(ctx, b, blkRoot); err != nil {
+			err = s.validateBeaconBlock(ctx, b, blkRoot)
+			switch {
+			case errors.Is(ErrOptimisticParent, err): // Ok to continue process block with parent that is an optimistic candidate.
+			case err != nil:
 				log.Debugf("Could not validate block from slot %d: %v", b.Block().Slot(), err)
 				s.setBadBlock(ctx, blkRoot)
 				tracing.AnnotateError(span, err)
-				// In the next iteration of the queue, this block will be removed from
-				// the pending queue as it has been marked as a 'bad' block.
 				span.End()
 				continue
+			default:
 			}
 
 			if err := s.cfg.chain.ReceiveBlock(ctx, b, blkRoot); err != nil {
-				log.Debugf("Could not process block from slot %d: %v", b.Block().Slot(), err)
-				s.setBadBlock(ctx, blkRoot)
-				tracing.AnnotateError(span, err)
+				if !errors.Is(err, powchain.ErrHTTPTimeout) {
+					log.Debugf("Could not process block from slot %d: %v", b.Block().Slot(), err)
+					tracing.AnnotateError(span, err)
+					s.setBadBlock(ctx, blkRoot)
+				}
 				// In the next iteration of the queue, this block will be removed from
 				// the pending queue as it has been marked as a 'bad' block.
 				span.End()

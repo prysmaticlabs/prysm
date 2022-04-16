@@ -15,13 +15,7 @@ var (
 	HTTPWeb3ProviderFlag = &cli.StringFlag{
 		Name:  "http-web3provider",
 		Usage: "A mainchain web3 provider string http endpoint. Can contain auth header as well in the format --http-web3provider=\"https://goerli.infura.io/v3/xxxx,Basic xxx\" for project secret (base64 encoded) and --http-web3provider=\"https://goerli.infura.io/v3/xxxx,Bearer xxx\" for jwt use",
-		Value: "",
-	}
-	// ExecutionProvider provides an HTTP or IPC access endpoint to an ETH execution node.
-	ExecutionProviderFlag = &cli.StringFlag{
-		Name:  "execution-provider",
-		Usage: "An http endpoint for an Ethereum execution node",
-		Value: "",
+		Value: "http://localhost:8545",
 	}
 	// ExecutionJWTSecretFlag provides a path to a file containing a hex-encoded string representing a 32 byte secret
 	// used to authenticate with an execution node via HTTP. This is required if using an HTTP connection, otherwise all requests
@@ -191,24 +185,19 @@ var (
 		Name:  "network-id",
 		Usage: "Sets the network id of the beacon chain.",
 	}
-	// WeakSubjectivityCheckpt defines the weak subjectivity checkpoint the node must sync through to defend against long range attacks.
-	WeakSubjectivityCheckpt = &cli.StringFlag{
-		Name: "weak-subjectivity-checkpoint",
-		Usage: "Input in `block_root:epoch_number` format. This guarantees that syncing leads to the given Weak Subjectivity Checkpoint along the canonical chain. " +
-			"If such a sync is not possible, the node will treat it a critical and irrecoverable failure",
-		Value: "",
-	}
 	// Eth1HeaderReqLimit defines a flag to set the maximum number of headers that a deposit log query can fetch. If none is set, 1000 will be the limit.
 	Eth1HeaderReqLimit = &cli.Uint64Flag{
 		Name:  "eth1-header-req-limit",
 		Usage: "Sets the maximum number of headers that a deposit log query can fetch.",
 		Value: uint64(1000),
 	}
-	// GenesisStatePath defines a flag to start the beacon chain from a give genesis state file.
-	GenesisStatePath = &cli.StringFlag{
-		Name: "genesis-state",
-		Usage: "Load a genesis state from ssz file. Testnet genesis files can be found in the " +
-			"eth2-clients/eth2-testnets repository on github.",
+	// WeakSubjectivityCheckpoint defines the weak subjectivity checkpoint the node must sync through to defend against long range attacks.
+	WeakSubjectivityCheckpoint = &cli.StringFlag{
+		Name: "weak-subjectivity-checkpoint",
+		Usage: "Input in `block_root:epoch_number` format." +
+			" This guarantees that syncing leads to the given Weak Subjectivity Checkpoint along the canonical chain. " +
+			"If such a sync is not possible, the node will treat it as a critical and irrecoverable failure",
+		Value: "",
 	}
 	// MinPeersPerSubnet defines a flag to set the minimum number of peers that a node will attempt to peer with for a subnet.
 	MinPeersPerSubnet = &cli.Uint64Flag{

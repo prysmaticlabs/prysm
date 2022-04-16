@@ -53,21 +53,16 @@ func TestLoadGenesisFromFile(t *testing.T) {
 	if err == nil {
 		fp = rfp
 	}
-
-	r, err := os.Open(fp)
+	sb, err := os.ReadFile(fp)
 	assert.NoError(t, err)
-	defer func() {
-		assert.NoError(t, r.Close())
-	}()
 
 	db := setupDB(t)
-	assert.NoError(t, db.LoadGenesis(context.Background(), r))
+	assert.NoError(t, db.LoadGenesis(context.Background(), sb))
 	testGenesisDataSaved(t, db)
 
 	// Loading the same genesis again should not throw an error
-	_, err = r.Seek(0, 0)
 	assert.NoError(t, err)
-	assert.NoError(t, db.LoadGenesis(context.Background(), r))
+	assert.NoError(t, db.LoadGenesis(context.Background(), sb))
 }
 
 func TestLoadGenesisFromFile_mismatchedForkVersion(t *testing.T) {
@@ -76,15 +71,12 @@ func TestLoadGenesisFromFile_mismatchedForkVersion(t *testing.T) {
 	if err == nil {
 		fp = rfp
 	}
-	r, err := os.Open(fp)
+	sb, err := os.ReadFile(fp)
 	assert.NoError(t, err)
-	defer func() {
-		assert.NoError(t, r.Close())
-	}()
 
 	// Loading a genesis with the wrong fork version as beacon config should throw an error.
 	db := setupDB(t)
-	assert.ErrorContains(t, "does not match config genesis fork version", db.LoadGenesis(context.Background(), r))
+	assert.ErrorContains(t, "does not match config genesis fork version", db.LoadGenesis(context.Background(), sb))
 }
 
 func TestEnsureEmbeddedGenesis(t *testing.T) {
