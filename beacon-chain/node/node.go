@@ -906,6 +906,7 @@ func (b *BeaconNode) registerDeterminsticGenesisService() error {
 			DepositCache:  b.depositCache,
 			GenesisPath:   genesisStatePath,
 		})
+		svc.Start()
 
 		// Register genesis state as start-up state when interop mode.
 		// The start-up state gets reused across services.
