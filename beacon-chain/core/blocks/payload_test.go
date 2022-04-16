@@ -60,7 +60,7 @@ func Test_IsMergeComplete(t *testing.T) {
 			name: "has receipt root",
 			payload: func() *ethpb.ExecutionPayloadHeader {
 				h := emptyPayloadHeader()
-				h.ReceiptRoot = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
+				h.ReceiptsRoot = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				return h
 			}(),
 			want: true,
@@ -705,7 +705,7 @@ func Test_PayloadToHeader(t *testing.T) {
 	require.DeepSSZEqual(t, h.ParentHash, make([]byte, fieldparams.RootLength))
 	require.DeepSSZEqual(t, h.FeeRecipient, make([]byte, fieldparams.FeeRecipientLength))
 	require.DeepSSZEqual(t, h.StateRoot, make([]byte, fieldparams.RootLength))
-	require.DeepSSZEqual(t, h.ReceiptRoot, make([]byte, fieldparams.RootLength))
+	require.DeepSSZEqual(t, h.ReceiptsRoot, make([]byte, fieldparams.RootLength))
 	require.DeepSSZEqual(t, h.LogsBloom, make([]byte, fieldparams.LogsBloomLength))
 	require.DeepSSZEqual(t, h.PrevRandao, make([]byte, fieldparams.RootLength))
 	require.DeepSSZEqual(t, h.ExtraData, make([]byte, 0))
@@ -733,7 +733,7 @@ func emptyPayloadHeader() *ethpb.ExecutionPayloadHeader {
 		ParentHash:       make([]byte, fieldparams.RootLength),
 		FeeRecipient:     make([]byte, fieldparams.FeeRecipientLength),
 		StateRoot:        make([]byte, fieldparams.RootLength),
-		ReceiptRoot:      make([]byte, fieldparams.RootLength),
+		ReceiptsRoot:     make([]byte, fieldparams.RootLength),
 		LogsBloom:        make([]byte, fieldparams.LogsBloomLength),
 		PrevRandao:       make([]byte, fieldparams.RootLength),
 		BaseFeePerGas:    make([]byte, fieldparams.RootLength),
