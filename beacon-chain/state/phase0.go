@@ -16,10 +16,17 @@ import (
 type BeaconState interface {
 	ReadOnlyBeaconState
 	WriteOnlyBeaconState
+	SpecConstantsProvider
 	Copy() BeaconState
 	HashTreeRoot(ctx context.Context) ([32]byte, error)
 	FutureForkStub
 	StateProver
+}
+
+// SpecConstantsProvider defines a struct which can provide varying configuration
+// values depending on fork versions, such as the beacon state.
+type SpecConstantsProvider interface {
+	InactivityPenaltyQuotient() (uint64, error)
 }
 
 // StateProver defines the ability to create Merkle proofs for beacon state fields.

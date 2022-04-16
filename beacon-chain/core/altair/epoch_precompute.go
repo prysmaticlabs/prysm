@@ -270,6 +270,7 @@ func AttestationsDelta(beaconState state.BeaconState, bal *precompute.Balance, v
 	// Modified in Altair and Bellatrix.
 	var inactivityDenominator uint64
 	bias := cfg.InactivityScoreBias
+	inactivityDenominator := bias * beaconState.InactivityPenaltyQuotient()
 	switch beaconState.Version() {
 	case version.Altair:
 		inactivityDenominator = bias * cfg.InactivityPenaltyQuotientAltair
