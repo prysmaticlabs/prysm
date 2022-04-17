@@ -2,7 +2,6 @@ package client
 
 import (
 	"context"
-	"strings"
 	"testing"
 	"time"
 
@@ -33,36 +32,11 @@ func TestStop_CancelsContext(t *testing.T) {
 	}
 }
 
-func TestLifecycle(t *testing.T) {
+func TestNew_Insecure(t *testing.T) {
 	hook := logTest.NewGlobal()
-	// Use canceled context so that the run function exits immediately..
-	ctx, cancel := context.WithCancel(context.Background())
-	cancel()
-	validatorService := &ValidatorService{
-		ctx:      ctx,
-		cancel:   cancel,
-		endpoint: "merkle tries",
-		withCert: "alice.crt",
-	}
-	validatorService.Start()
-	require.NoError(t, validatorService.Stop(), "Could not stop service")
-	require.LogsContain(t, hook, "Stopping service")
-}
-
-func TestLifecycle_Insecure(t *testing.T) {
-	hook := logTest.NewGlobal()
-	// Use canceled context so that the run function exits immediately.
-	ctx, cancel := context.WithCancel(context.Background())
-	cancel()
-	validatorService := &ValidatorService{
-		ctx:      ctx,
-		cancel:   cancel,
-		endpoint: "merkle tries",
-	}
-	validatorService.Start()
+	_, err := NewValidatorService(context.Background(), &Config{})
+	require.NoError(t, err)
 	require.LogsContain(t, hook, "You are using an insecure gRPC connection")
-	require.NoError(t, validatorService.Stop(), "Could not stop service")
-	require.LogsContain(t, hook, "Stopping service")
 }
 
 func TestStatus_NoConnectionError(t *testing.T) {
@@ -72,9 +46,7 @@ func TestStatus_NoConnectionError(t *testing.T) {
 
 func TestStart_GrpcHeaders(t *testing.T) {
 	hook := logTest.NewGlobal()
-	// Use canceled context so that the run function exits immediately.
-	ctx, cancel := context.WithCancel(context.Background())
-	cancel()
+	ctx := context.Background()
 	for input, output := range map[string][]string{
 		"should-break": {},
 		"key=value":    {"key", "value"},
@@ -87,13 +59,9 @@ func TestStart_GrpcHeaders(t *testing.T) {
 			"Authorization", "this is a valid value",
 		},
 	} {
-		validatorService := &ValidatorService{
-			ctx:         ctx,
-			cancel:      cancel,
-			endpoint:    "merkle tries",
-			grpcHeaders: strings.Split(input, ","),
-		}
-		validatorService.Start()
+		cfg := &Config{GrpcHeadersFlag: input}
+		validatorService, err := NewValidatorService(ctx, cfg)
+		require.NoError(t, err)
 		md, _ := metadata.FromOutgoingContext(validatorService.ctx)
 		if input == "should-break" {
 			require.LogsContain(t, hook, "Incorrect gRPC header flag format. Skipping should-break")

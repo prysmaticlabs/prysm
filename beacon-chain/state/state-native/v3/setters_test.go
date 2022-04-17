@@ -61,7 +61,7 @@ func TestBeaconState_AppendBalanceWithTrie(t *testing.T) {
 		ParentHash:       make([]byte, fieldparams.RootLength),
 		FeeRecipient:     make([]byte, 20),
 		StateRoot:        make([]byte, fieldparams.RootLength),
-		ReceiptRoot:      make([]byte, fieldparams.RootLength),
+		ReceiptsRoot:     make([]byte, fieldparams.RootLength),
 		LogsBloom:        make([]byte, 256),
 		PrevRandao:       make([]byte, fieldparams.RootLength),
 		BaseFeePerGas:    bytesutil.PadTo([]byte{1, 2, 3, 4}, fieldparams.RootLength),
