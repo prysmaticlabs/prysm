@@ -191,6 +191,12 @@ func TestBellatrixBeaconBlock_IsNil(t *testing.T) {
 	assert.Equal(t, false, wb.IsNil())
 }
 
+func TesTBellatrixBeaconBlock_IsBlinded(t *testing.T) {
+	wsb, err := wrapper.WrappedBeaconBlock(&ethpb.BeaconBlockBellatrix{})
+	require.NoError(t, err)
+	require.Equal(t, false, wsb.IsNil())
+}
+
 func TestBellatrixBeaconBlock_HashTreeRoot(t *testing.T) {
 	wb, err := wrapper.WrappedBellatrixBeaconBlock(util.HydrateBeaconBlockBellatrix(&ethpb.BeaconBlockBellatrix{}))
 	require.NoError(t, err)
