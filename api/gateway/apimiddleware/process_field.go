@@ -131,9 +131,12 @@ func uint256ToBase64Processor(v reflect.Value) error {
 	}
 	uint256, ok := new(big.Int).SetString(v.String(), 10)
 	if !ok {
-		return fmt.Errorf("could not parse Uint256 '%s'", v.String())
+		return fmt.Errorf("could not parse Uint256")
 	}
 	bigEndian := uint256.Bytes()
+	if len(bigEndian) > 32 {
+		return fmt.Errorf("number too big for Uint256")
+	}
 
 	// Integers are stored as little-endian, but
 	// big.Int gives big-endian. So we need to reverse
