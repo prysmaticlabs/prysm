@@ -3,7 +3,7 @@ package params
 import (
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"strings"
 
 	types "github.com/prysmaticlabs/eth2-types"
@@ -27,7 +27,7 @@ func isMinimal(lines []string) bool {
 // LoadChainConfigFile load, convert hex values into valid param yaml format,
 // unmarshal , and apply beacon chain config file.
 func LoadChainConfigFile(chainConfigFileName string, conf *BeaconChainConfig) {
-	yamlFile, err := ioutil.ReadFile(chainConfigFileName) // #nosec G304
+	yamlFile, err := os.ReadFile(chainConfigFileName) // #nosec G304
 	if err != nil {
 		log.WithError(err).Fatal("Failed to read chain config file.")
 	}

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -77,7 +77,7 @@ func TestDecrypt(t *testing.T) {
 	encodedKeystore, err := json.MarshalIndent(keystore, "", "\t")
 	require.NoError(t, err)
 	keystoreFilePath := filepath.Join(keystoresDir, "keystore.json")
-	require.NoError(t, ioutil.WriteFile(
+	require.NoError(t, os.WriteFile(
 		keystoreFilePath, encodedKeystore, params.BeaconIoConfig().ReadWritePermissions),
 	)
 
@@ -95,7 +95,7 @@ func TestDecrypt(t *testing.T) {
 	require.NoError(t, decrypt(cliCtx))
 
 	require.NoError(t, w.Close())
-	out, err := ioutil.ReadAll(r)
+	out, err := io.ReadAll(r)
 	require.NoError(t, err)
 
 	// We capture output from stdout.
@@ -129,7 +129,7 @@ func TestEncrypt(t *testing.T) {
 	require.NoError(t, encrypt(cliCtx))
 
 	require.NoError(t, w.Close())
-	out, err := ioutil.ReadAll(r)
+	out, err := io.ReadAll(r)
 	require.NoError(t, err)
 
 	// We capture output from stdout.

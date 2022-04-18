@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/user"
 	"path"
@@ -102,7 +101,7 @@ func WriteFile(file string, data []byte) error {
 			return errors.New("file already exists without proper 0600 permissions")
 		}
 	}
-	return ioutil.WriteFile(expanded, data, params.BeaconIoConfig().ReadWritePermissions)
+	return os.WriteFile(expanded, data, params.BeaconIoConfig().ReadWritePermissions)
 }
 
 // HomeDir for a user.
@@ -197,7 +196,7 @@ func ReadFileAsBytes(filename string) ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not determine absolute path of password file")
 	}
-	return ioutil.ReadFile(filePath) // #nosec G304
+	return os.ReadFile(filePath) // #nosec G304
 }
 
 // CopyFile copy a file from source to destination path.
@@ -226,7 +225,7 @@ func CopyDir(src, dst string) error {
 	if dstExists {
 		return errors.New("destination directory already exists")
 	}
-	fds, err := ioutil.ReadDir(src)
+	fds, err := os.ReadDir(src)
 	if err != nil {
 		return err
 	}

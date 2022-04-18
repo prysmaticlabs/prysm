@@ -3,7 +3,7 @@ package local
 import (
 	"context"
 	"encoding/json"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 
 	"github.com/fsnotify/fsnotify"
@@ -56,7 +56,7 @@ func (km *Keymanager) listenForAccountChanges(ctx context.Context) {
 			log.Errorf("Type %T is not a valid file system event", event)
 			return
 		}
-		fileBytes, err := ioutil.ReadFile(ev.Name)
+		fileBytes, err := os.ReadFile(ev.Name)
 		if err != nil {
 			log.WithError(err).Errorf("Could not read file at path: %s", ev.Name)
 			return
