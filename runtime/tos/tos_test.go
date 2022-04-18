@@ -2,7 +2,6 @@ package tos
 
 import (
 	"flag"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -19,7 +18,7 @@ func TestVerifyTosAcceptedOrPrompt(t *testing.T) {
 	context := cli.NewContext(&app, set, nil)
 
 	// replacing stdin
-	tmpfile, err := ioutil.TempFile("", "tmp")
+	tmpfile, err := os.CreateTemp("", "tmp")
 	require.NoError(t, err)
 	origStdin := os.Stdin
 	os.Stdin = tmpfile
@@ -48,7 +47,7 @@ func TestVerifyTosAcceptedOrPrompt(t *testing.T) {
 	require.NoError(t, os.Remove(tmpfile.Name()))
 
 	// saved in file
-	require.NoError(t, ioutil.WriteFile(filepath.Join(context.String(cmd.DataDirFlag.Name), acceptTosFilename), []byte(""), 0666))
+	require.NoError(t, os.WriteFile(filepath.Join(context.String(cmd.DataDirFlag.Name), acceptTosFilename), []byte(""), 0666))
 	require.NoError(t, VerifyTosAcceptedOrPrompt(context))
 	require.NoError(t, os.RemoveAll(context.String(cmd.DataDirFlag.Name)))
 

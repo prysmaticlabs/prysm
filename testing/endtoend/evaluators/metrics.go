@@ -3,7 +3,7 @@ package evaluators
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -100,7 +100,7 @@ func metricsTest(conns ...*grpc.ClientConn) error {
 			// Continue if the connection fails, regular flake.
 			continue
 		}
-		dataInBytes, err := ioutil.ReadAll(response.Body)
+		dataInBytes, err := io.ReadAll(response.Body)
 		if err != nil {
 			return err
 		}

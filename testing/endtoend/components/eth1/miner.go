@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
 	"math/big"
 	"os"
 	"os/exec"
@@ -135,7 +134,7 @@ func (m *Miner) Start(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	jsonBytes, err := ioutil.ReadFile(keystorePath) // #nosec G304 -- ReadFile is safe
+	jsonBytes, err := os.ReadFile(keystorePath) // #nosec G304 -- ReadFile is safe
 	if err != nil {
 		return err
 	}
@@ -236,7 +235,7 @@ func (m *Miner) Started() <-chan struct{} {
 }
 
 func enodeFromLogFile(name string) (string, error) {
-	byteContent, err := ioutil.ReadFile(name) // #nosec G304
+	byteContent, err := os.ReadFile(name) // #nosec G304
 	if err != nil {
 		return "", err
 	}

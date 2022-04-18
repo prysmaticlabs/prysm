@@ -2,7 +2,7 @@ package operations
 
 import (
 	"context"
-	"io/ioutil"
+	"os"
 	"path"
 	"strings"
 	"testing"
@@ -56,7 +56,7 @@ func RunBlockHeaderTest(t *testing.T, config string) {
 			if postSSZExists {
 				require.NoError(t, err)
 
-				postBeaconStateFile, err := ioutil.ReadFile(postSSZFilepath) // #nosec G304
+				postBeaconStateFile, err := os.ReadFile(postSSZFilepath) // #nosec G304
 				require.NoError(t, err)
 				postBeaconStateSSZ, err := snappy.Decode(nil /* dst */, postBeaconStateFile)
 				require.NoError(t, err, "Failed to decompress")
