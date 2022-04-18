@@ -27,6 +27,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -75,17 +76,19 @@ func (_ Keystore) GetKeys(directory, filePrefix, password string, warnOnFail boo
 		n := f.Name()
 		filePath := filepath.Join(directory, n)
 		filePath = filepath.Clean(filePath)
-		if f.Mode()&os.ModeSymlink == os.ModeSymlink {
+		if f.Type()&os.ModeSymlink == os.ModeSymlink {
 			if targetFilePath, err := filepath.EvalSymlinks(filePath); err == nil {
 				filePath = targetFilePath
 				// Override link stats with target file's stats.
-				if f, err = os.Stat(filePath); err != nil {
+				dirEntry, err := os.Stat(filePath)
+				if err != nil {
 					return nil, err
 				}
+				f = fs.FileInfoToDirEntry(dirEntry)
 			}
 		}
 		cp := strings.Contains(n, strings.TrimPrefix(filePrefix, "/"))
-		if f.Mode().IsRegular() && cp {
+		if f.Type().IsRegular() && cp {
 			// #nosec G304
 			keyJSON, err := os.ReadFile(filePath)
 			if err != nil {

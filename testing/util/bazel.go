@@ -78,7 +78,7 @@ func BazelListDirectories(filepath string) ([]string, error) {
 	return ret, nil
 }
 
-func bazelReadDir(filepath string) ([]os.FileInfo, error) {
+func bazelReadDir(filepath string) ([]os.DirEntry, error) {
 	p, err := bazel.Runfile(filepath)
 	if err != nil {
 		return nil, err
