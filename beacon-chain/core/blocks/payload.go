@@ -18,6 +18,12 @@ import (
 	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
+var (
+	ErrInvalidPayloadBlockHash  = errors.New("invalid payload block hash")
+	ErrInvalidPayloadTimeStamp  = errors.New("invalid payload timestamp")
+	ErrInvalidPayloadPrevRandao = errors.New("invalid payload previous randao")
+)
+
 // IsMergeTransitionComplete returns true if the transition to Bellatrix has completed.
 // Meaning the payload header in beacon state is not `ExecutionPayloadHeader()` (i.e. not empty).
 //
@@ -146,14 +152,14 @@ func ValidatePayload(st state.BeaconState, payload *enginev1.ExecutionPayload) e
 	}
 
 	if !bytes.Equal(payload.PrevRandao, random) {
-		return errors.New("incorrect prev randao")
+		return ErrInvalidPayloadPrevRandao
 	}
 	t, err := slots.ToTime(st.GenesisTime(), st.Slot())
 	if err != nil {
 		return err
 	}
 	if payload.Timestamp != uint64(t.Unix()) {
-		return errors.New("incorrect timestamp")
+		return ErrInvalidPayloadTimeStamp
 	}
 	return nil
 }
@@ -327,4 +333,63 @@ func isEmptyHeader(h *ethpb.ExecutionPayloadHeader) bool {
 		return false
 	}
 	return true
+}
+
+// ValidatePayloadHeaderWhenMergeCompletes validates the payload header when the merge completes.
+func ValidatePayloadHeaderWhenMergeCompletes(st state.BeaconState, header *ethpb.ExecutionPayloadHeader) error {
+	// Skip validation if the state is not merge compatible.
+	complete, err := IsMergeTransitionComplete(st)
+	if err != nil {
+		return err
+	}
+	if !complete {
+		return nil
+	}
+	// Validate current header's parent hash matches state header's block hash.
+	h, err := st.LatestExecutionPayloadHeader()
+	if err != nil {
+		return err
+	}
+	if !bytes.Equal(header.ParentHash, h.BlockHash) {
+		return ErrInvalidPayloadBlockHash
+	}
+	return nil
+}
+
+// ValidatePayloadHeader validates the payload header.
+func ValidatePayloadHeader(st state.BeaconState, header *ethpb.ExecutionPayloadHeader) error {
+	// Validate header's random mix matches with state in current epoch
+	random, err := helpers.RandaoMix(st, time.CurrentEpoch(st))
+	if err != nil {
+		return err
+	}
+	if !bytes.Equal(header.PrevRandao, random) {
+		return ErrInvalidPayloadPrevRandao
+	}
+
+	// Validate header's timestamp matches with state in current slot.
+	t, err := slots.ToTime(st.GenesisTime(), st.Slot())
+	if err != nil {
+		return err
+	}
+	if header.Timestamp != uint64(t.Unix()) {
+		return ErrInvalidPayloadTimeStamp
+	}
+	return nil
+}
+
+// ProcessPayloadHeader processes the payload header.
+func ProcessPayloadHeader(st state.BeaconState, header *ethpb.ExecutionPayloadHeader) (state.BeaconState, error) {
+	if err := ValidatePayloadHeaderWhenMergeCompletes(st, header); err != nil {
+		return nil, err
+	}
+
+	if err := ValidatePayloadHeader(st, header); err != nil {
+		return nil, err
+	}
+
+	if err := st.SetLatestExecutionPayloadHeader(header); err != nil {
+		return nil, err
+	}
+	return st, nil
 }
