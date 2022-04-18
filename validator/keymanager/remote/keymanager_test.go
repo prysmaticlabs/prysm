@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"strconv"
 	"testing"
@@ -171,19 +171,19 @@ func TestNewRemoteKeymanager(t *testing.T) {
 				require.NoError(t, os.MkdirAll(dir, 0777))
 				if test.caCert != "" {
 					caCertPath := fmt.Sprintf("%s/ca.crt", dir)
-					err := ioutil.WriteFile(caCertPath, []byte(test.caCert), params.BeaconIoConfig().ReadWritePermissions)
+					err := os.WriteFile(caCertPath, []byte(test.caCert), params.BeaconIoConfig().ReadWritePermissions)
 					require.NoError(t, err, "Failed to write CA certificate")
 					test.opts.RemoteCertificate.CACertPath = caCertPath
 				}
 				if test.clientCert != "" {
 					clientCertPath := fmt.Sprintf("%s/client.crt", dir)
-					err := ioutil.WriteFile(clientCertPath, []byte(test.clientCert), params.BeaconIoConfig().ReadWritePermissions)
+					err := os.WriteFile(clientCertPath, []byte(test.clientCert), params.BeaconIoConfig().ReadWritePermissions)
 					require.NoError(t, err, "Failed to write client certificate")
 					test.opts.RemoteCertificate.ClientCertPath = clientCertPath
 				}
 				if test.clientKey != "" {
 					clientKeyPath := fmt.Sprintf("%s/client.key", dir)
-					err := ioutil.WriteFile(clientKeyPath, []byte(test.clientKey), params.BeaconIoConfig().ReadWritePermissions)
+					err := os.WriteFile(clientKeyPath, []byte(test.clientKey), params.BeaconIoConfig().ReadWritePermissions)
 					require.NoError(t, err, "Failed to write client key")
 					test.opts.RemoteCertificate.ClientKeyPath = clientKeyPath
 				}
@@ -330,7 +330,7 @@ func TestUnmarshalOptionsFile_DefaultRequireTls(t *testing.T) {
 	require.NoError(t, err)
 	_, err = buffer.Write(b)
 	require.NoError(t, err)
-	r := ioutil.NopCloser(&buffer)
+	r := io.NopCloser(&buffer)
 
 	opts, err := UnmarshalOptionsFile(r)
 	assert.NoError(t, err)

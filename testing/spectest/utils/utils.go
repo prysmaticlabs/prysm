@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"io/ioutil"
 	"os"
 	"path"
 	"testing"
@@ -35,7 +34,7 @@ func TestFolders(t testing.TB, config, forkOrPhase, folderPath string) ([]os.Fil
 	testsFolderPath := path.Join("tests", config, forkOrPhase, folderPath)
 	filepath, err := bazel.Runfile(testsFolderPath)
 	require.NoError(t, err)
-	testFolders, err := ioutil.ReadDir(filepath)
+	testFolders, err := os.ReadDir(filepath)
 	require.NoError(t, err)
 
 	if len(testFolders) == 0 {

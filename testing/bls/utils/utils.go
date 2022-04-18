@@ -1,7 +1,7 @@
 package utils
 
 import (
-	"io/ioutil"
+	"os"
 	"path"
 	"strings"
 	"testing"
@@ -14,7 +14,7 @@ import (
 func RetrieveFiles(name string, t *testing.T) ([]string, [][]byte) {
 	filepath, err := bazel.Runfile(name)
 	require.NoError(t, err)
-	testFiles, err := ioutil.ReadDir(filepath)
+	testFiles, err := os.ReadDir(filepath)
 	require.NoError(t, err)
 
 	var fileNames []string

@@ -1,7 +1,6 @@
 package util
 
 import (
-	"io/ioutil"
 	"os"
 	"path"
 
@@ -24,7 +23,7 @@ func BazelFileBytes(filePaths ...string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	fileBytes, err := ioutil.ReadFile(filepath) // #nosec G304
+	fileBytes, err := os.ReadFile(filepath) // #nosec G304
 	if err != nil {
 		return nil, err
 	}
@@ -84,5 +83,5 @@ func bazelReadDir(filepath string) ([]os.FileInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	return ioutil.ReadDir(p)
+	return os.ReadDir(p)
 }
