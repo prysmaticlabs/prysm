@@ -7,6 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
@@ -600,7 +601,7 @@ func Test_ValidatePayload(t *testing.T) {
 		{
 			name:    "incorrect prev randao",
 			payload: emptyPayload(),
-			err:     errors.New("incorrect prev randao"),
+			err:     blocks.ErrInvalidPayloadPrevRandao,
 		},
 		{
 			name: "incorrect timestamp",
@@ -610,7 +611,7 @@ func Test_ValidatePayload(t *testing.T) {
 				h.Timestamp = 1
 				return h
 			}(),
-			err: errors.New("incorrect timestamp"),
+			err: blocks.ErrInvalidPayloadTimeStamp,
 		},
 	}
 	for _, tt := range tests {
@@ -648,7 +649,7 @@ func Test_ProcessPayload(t *testing.T) {
 		{
 			name:    "incorrect prev randao",
 			payload: emptyPayload(),
-			err:     errors.New("incorrect prev randao"),
+			err:     blocks.ErrInvalidPayloadPrevRandao,
 		},
 		{
 			name: "incorrect timestamp",
@@ -658,7 +659,7 @@ func Test_ProcessPayload(t *testing.T) {
 				h.Timestamp = 1
 				return h
 			}(),
-			err: errors.New("incorrect timestamp"),
+			err: blocks.ErrInvalidPayloadTimeStamp,
 		},
 	}
 	for _, tt := range tests {
@@ -674,6 +675,149 @@ func Test_ProcessPayload(t *testing.T) {
 				require.NoError(t, err)
 				require.DeepSSZEqual(t, want, got)
 			}
+		})
+	}
+}
+
+func Test_ProcessPayloadHeader(t *testing.T) {
+	st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
+	random, err := helpers.RandaoMix(st, time.CurrentEpoch(st))
+	require.NoError(t, err)
+	ts, err := slots.ToTime(st.GenesisTime(), st.Slot())
+	require.NoError(t, err)
+	tests := []struct {
+		name   string
+		header *ethpb.ExecutionPayloadHeader
+		err    error
+	}{
+		{
+			name: "process passes",
+			header: func() *ethpb.ExecutionPayloadHeader {
+				h := emptyPayloadHeader()
+				h.PrevRandao = random
+				h.Timestamp = uint64(ts.Unix())
+				return h
+			}(), err: nil,
+		},
+		{
+			name:   "incorrect prev randao",
+			header: emptyPayloadHeader(),
+			err:    blocks.ErrInvalidPayloadPrevRandao,
+		},
+		{
+			name: "incorrect timestamp",
+			header: func() *ethpb.ExecutionPayloadHeader {
+				h := emptyPayloadHeader()
+				h.PrevRandao = random
+				h.Timestamp = 1
+				return h
+			}(),
+			err: blocks.ErrInvalidPayloadTimeStamp,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			st, err := blocks.ProcessPayloadHeader(st, tt.header)
+			if err != nil {
+				require.Equal(t, tt.err.Error(), err.Error())
+			} else {
+				require.Equal(t, tt.err, err)
+				got, err := st.LatestExecutionPayloadHeader()
+				require.NoError(t, err)
+				require.DeepSSZEqual(t, tt.header, got)
+			}
+		})
+	}
+}
+
+func Test_ValidatePayloadHeader(t *testing.T) {
+	st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
+	random, err := helpers.RandaoMix(st, time.CurrentEpoch(st))
+	require.NoError(t, err)
+	ts, err := slots.ToTime(st.GenesisTime(), st.Slot())
+	require.NoError(t, err)
+	tests := []struct {
+		name   string
+		header *ethpb.ExecutionPayloadHeader
+		err    error
+	}{
+		{
+			name: "process passes",
+			header: func() *ethpb.ExecutionPayloadHeader {
+				h := emptyPayloadHeader()
+				h.PrevRandao = random
+				h.Timestamp = uint64(ts.Unix())
+				return h
+			}(), err: nil,
+		},
+		{
+			name:   "incorrect prev randao",
+			header: emptyPayloadHeader(),
+			err:    blocks.ErrInvalidPayloadPrevRandao,
+		},
+		{
+			name: "incorrect timestamp",
+			header: func() *ethpb.ExecutionPayloadHeader {
+				h := emptyPayloadHeader()
+				h.PrevRandao = random
+				h.Timestamp = 1
+				return h
+			}(),
+			err: blocks.ErrInvalidPayloadTimeStamp,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := blocks.ValidatePayloadHeader(st, tt.header)
+			require.Equal(t, tt.err, err)
+		})
+	}
+}
+
+func Test_ValidatePayloadHeaderWhenMergeCompletes(t *testing.T) {
+	st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
+	emptySt := st.Copy()
+	require.NoError(t, st.SetLatestExecutionPayloadHeader(&ethpb.ExecutionPayloadHeader{BlockHash: []byte{'a'}}))
+	tests := []struct {
+		name   string
+		state  state.BeaconState
+		header *ethpb.ExecutionPayloadHeader
+		err    error
+	}{
+		{
+			name: "no merge",
+			header: func() *ethpb.ExecutionPayloadHeader {
+				h := emptyPayloadHeader()
+				return h
+			}(),
+			state: emptySt,
+			err:   nil,
+		},
+		{
+			name: "process passes",
+			header: func() *ethpb.ExecutionPayloadHeader {
+				h := emptyPayloadHeader()
+				h.ParentHash = []byte{'a'}
+				return h
+			}(),
+			state: st,
+			err:   nil,
+		},
+		{
+			name: "invalid block hash",
+			header: func() *ethpb.ExecutionPayloadHeader {
+				h := emptyPayloadHeader()
+				h.ParentHash = []byte{'b'}
+				return h
+			}(),
+			state: st,
+			err:   blocks.ErrInvalidPayloadBlockHash,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := blocks.ValidatePayloadHeaderWhenMergeCompletes(tt.state, tt.header)
+			require.Equal(t, tt.err, err)
 		})
 	}
 }

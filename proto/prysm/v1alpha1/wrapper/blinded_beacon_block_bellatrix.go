@@ -179,6 +179,11 @@ func (w blindedBeaconBlockBellatrix) IsNil() bool {
 	return w.b == nil
 }
 
+// IsBlinded checks if the beacon block is a blinded block.
+func (blindedBeaconBlockBellatrix) IsBlinded() bool {
+	return true
+}
+
 // HashTreeRoot returns the ssz root of the block.
 func (w blindedBeaconBlockBellatrix) HashTreeRoot() ([32]byte, error) {
 	return w.b.HashTreeRoot()
