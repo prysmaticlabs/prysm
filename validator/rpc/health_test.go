@@ -46,7 +46,7 @@ func TestServer_GetBeaconNodeConnection(t *testing.T) {
 	require.NoError(t, err)
 	want := &pb.NodeConnectionResponse{
 		BeaconNodeEndpoint: endpoint,
-		Connected:          false,
+		Connected:          true,
 		Syncing:            false,
 		GenesisTime:        uint64(time.Unix(0, 0).Unix()),
 	}
