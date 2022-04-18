@@ -12,7 +12,6 @@ const (
 	Mainnet ConfigName = iota
 	Minimal
 	EndToEnd
-	Pyrmont
 	Prater
 	EndToEndMainnet
 )
@@ -33,7 +32,6 @@ var ConfigNames = map[ConfigName]string{
 	Mainnet:         "mainnet",
 	Minimal:         "minimal",
 	EndToEnd:        "end-to-end",
-	Pyrmont:         "pyrmont",
 	Prater:          "prater",
 	EndToEndMainnet: "end-to-end-mainnet",
 }
@@ -42,7 +40,6 @@ var ConfigNames = map[ConfigName]string{
 var KnownConfigs = map[ConfigName]func() *BeaconChainConfig{
 	Mainnet:         MainnetConfig,
 	Prater:          PraterConfig,
-	Pyrmont:         PyrmontConfig,
 	Minimal:         MinimalSpecConfig,
 	EndToEnd:        E2ETestConfig,
 	EndToEndMainnet: E2EMainnetTestConfig,
