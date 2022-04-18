@@ -3,7 +3,7 @@ package rpc
 import (
 	"context"
 	"errors"
-	"io/ioutil"
+	"io"
 	"testing"
 	"time"
 
@@ -18,7 +18,7 @@ import (
 
 func init() {
 	logrus.SetLevel(logrus.DebugLevel)
-	logrus.SetOutput(ioutil.Discard)
+	logrus.SetOutput(io.Discard)
 }
 
 func TestLifecycle_OK(t *testing.T) {

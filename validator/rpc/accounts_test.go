@@ -6,7 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"path/filepath"
 	"testing"
 	"time"
@@ -168,7 +168,7 @@ func TestServer_BackupAccounts(t *testing.T) {
 	for i, f := range r.File {
 		keystoreFile, err := f.Open()
 		require.NoError(t, err)
-		encoded, err := ioutil.ReadAll(keystoreFile)
+		encoded, err := io.ReadAll(keystoreFile)
 		if err != nil {
 			require.NoError(t, keystoreFile.Close())
 			t.Fatal(err)

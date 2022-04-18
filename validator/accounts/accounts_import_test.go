@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -111,10 +110,10 @@ func TestImport_DuplicateKeys(t *testing.T) {
 	// Create a key and then copy it to create a duplicate
 	_, keystorePath := createKeystore(t, keysDir)
 	time.Sleep(time.Second)
-	input, err := ioutil.ReadFile(keystorePath)
+	input, err := os.ReadFile(keystorePath)
 	require.NoError(t, err)
 	keystorePath2 := filepath.Join(keysDir, "copyOfKeystore.json")
-	err = ioutil.WriteFile(keystorePath2, input, os.ModePerm)
+	err = os.WriteFile(keystorePath2, input, os.ModePerm)
 	require.NoError(t, err)
 
 	require.NoError(t, ImportAccountsCli(cliCtx))
@@ -352,7 +351,7 @@ func Test_importPrivateKeyAsAccount(t *testing.T) {
 	privKeyHex := fmt.Sprintf("%x", privKey.Marshal())
 	require.NoError(
 		t,
-		ioutil.WriteFile(privKeyFileName, []byte(privKeyHex), params.BeaconIoConfig().ReadWritePermissions),
+		os.WriteFile(privKeyFileName, []byte(privKeyHex), params.BeaconIoConfig().ReadWritePermissions),
 	)
 
 	// We instantiate a new wallet from a cli context.
@@ -417,7 +416,7 @@ func createKeystore(t *testing.T, path string) (*keymanager.Keystore, string) {
 	// Write the encoded keystore to disk with the timestamp appended
 	createdAt := prysmTime.Now().Unix()
 	fullPath := filepath.Join(path, fmt.Sprintf(local.KeystoreFileNameFormat, createdAt))
-	require.NoError(t, ioutil.WriteFile(fullPath, encoded, os.ModePerm))
+	require.NoError(t, os.WriteFile(fullPath, encoded, os.ModePerm))
 	return keystoreFile, fullPath
 }
 
@@ -443,6 +442,6 @@ func createRandomNameKeystore(t *testing.T, path string) (*keymanager.Keystore, 
 	random, err := rand.Int(rand.Reader, big.NewInt(1000000))
 	require.NoError(t, err)
 	fullPath := filepath.Join(path, fmt.Sprintf("test-%d-keystore", random.Int64()))
-	require.NoError(t, ioutil.WriteFile(fullPath, encoded, os.ModePerm))
+	require.NoError(t, os.WriteFile(fullPath, encoded, os.ModePerm))
 	return keystoreFile, fullPath
 }
