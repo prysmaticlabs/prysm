@@ -8,7 +8,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -110,7 +109,7 @@ func decrypt(cliCtx *cli.Context) error {
 		return errors.Wrapf(err, "could not check if path exists: %s", fullPath)
 	}
 	if isDir {
-		files, err := ioutil.ReadDir(fullPath)
+		files, err := os.ReadDir(fullPath)
 		if err != nil {
 			return errors.Wrapf(err, "could not read directory: %s", fullPath)
 		}
@@ -224,7 +223,7 @@ func encrypt(cliCtx *cli.Context) error {
 // Reads the keystore file at the provided path and attempts
 // to decrypt it with the specified passwords.
 func readAndDecryptKeystore(fullPath, password string) error {
-	file, err := ioutil.ReadFile(fullPath) // #nosec G304
+	file, err := os.ReadFile(fullPath) // #nosec G304
 	if err != nil {
 		return errors.Wrapf(err, "could not read file at path: %s", fullPath)
 	}

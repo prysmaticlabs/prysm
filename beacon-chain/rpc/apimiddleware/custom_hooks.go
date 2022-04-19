@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -36,7 +36,7 @@ func wrapFeeRecipientsArray(
 	if err != nil {
 		return false, apimiddleware.InternalServerErrorWithMessage(err, "could not marshal wrapped body")
 	}
-	req.Body = ioutil.NopCloser(bytes.NewReader(b))
+	req.Body = io.NopCloser(bytes.NewReader(b))
 	return true, nil
 }
 
@@ -57,7 +57,7 @@ func wrapAttestationsArray(
 		if err != nil {
 			return false, apimiddleware.InternalServerErrorWithMessage(err, "could not marshal wrapped body")
 		}
-		req.Body = ioutil.NopCloser(bytes.NewReader(b))
+		req.Body = io.NopCloser(bytes.NewReader(b))
 	}
 	return true, nil
 }
@@ -79,7 +79,7 @@ func wrapValidatorIndicesArray(
 		if err != nil {
 			return false, apimiddleware.InternalServerErrorWithMessage(err, "could not marshal wrapped body")
 		}
-		req.Body = ioutil.NopCloser(bytes.NewReader(b))
+		req.Body = io.NopCloser(bytes.NewReader(b))
 	}
 	return true, nil
 }
@@ -101,7 +101,7 @@ func wrapSignedAggregateAndProofArray(
 		if err != nil {
 			return false, apimiddleware.InternalServerErrorWithMessage(err, "could not marshal wrapped body")
 		}
-		req.Body = ioutil.NopCloser(bytes.NewReader(b))
+		req.Body = io.NopCloser(bytes.NewReader(b))
 	}
 	return true, nil
 }
@@ -123,7 +123,7 @@ func wrapBeaconCommitteeSubscriptionsArray(
 		if err != nil {
 			return false, apimiddleware.InternalServerErrorWithMessage(err, "could not marshal wrapped body")
 		}
-		req.Body = ioutil.NopCloser(bytes.NewReader(b))
+		req.Body = io.NopCloser(bytes.NewReader(b))
 	}
 	return true, nil
 }
@@ -145,7 +145,7 @@ func wrapSyncCommitteeSubscriptionsArray(
 		if err != nil {
 			return false, apimiddleware.InternalServerErrorWithMessage(err, "could not marshal wrapped body")
 		}
-		req.Body = ioutil.NopCloser(bytes.NewReader(b))
+		req.Body = io.NopCloser(bytes.NewReader(b))
 	}
 	return true, nil
 }
@@ -167,7 +167,7 @@ func wrapSyncCommitteeSignaturesArray(
 		if err != nil {
 			return false, apimiddleware.InternalServerErrorWithMessage(err, "could not marshal wrapped body")
 		}
-		req.Body = ioutil.NopCloser(bytes.NewReader(b))
+		req.Body = io.NopCloser(bytes.NewReader(b))
 	}
 	return true, nil
 }
@@ -189,7 +189,7 @@ func wrapSignedContributionAndProofsArray(
 		if err != nil {
 			return false, apimiddleware.InternalServerErrorWithMessage(err, "could not marshal wrapped body")
 		}
-		req.Body = ioutil.NopCloser(bytes.NewReader(b))
+		req.Body = io.NopCloser(bytes.NewReader(b))
 	}
 	return true, nil
 }
@@ -224,7 +224,7 @@ func setInitialPublishBlockPostRequest(endpoint *apimiddleware.Endpoint,
 		}
 	}{}
 
-	buf, err := ioutil.ReadAll(req.Body)
+	buf, err := io.ReadAll(req.Body)
 	if err != nil {
 		return false, apimiddleware.InternalServerErrorWithMessage(err, "could not read body")
 	}
@@ -243,7 +243,7 @@ func setInitialPublishBlockPostRequest(endpoint *apimiddleware.Endpoint,
 	} else {
 		endpoint.PostRequest = &signedBeaconBlockBellatrixContainerJson{}
 	}
-	req.Body = ioutil.NopCloser(bytes.NewBuffer(buf))
+	req.Body = io.NopCloser(bytes.NewBuffer(buf))
 	return true, nil
 }
 

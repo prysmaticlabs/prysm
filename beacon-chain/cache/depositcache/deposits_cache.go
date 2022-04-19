@@ -137,6 +137,22 @@ func (dc *DepositCache) InsertFinalizedDeposits(ctx context.Context, eth1Deposit
 
 	depositTrie := dc.finalizedDeposits.Deposits
 	insertIndex := int(dc.finalizedDeposits.MerkleTrieIndex + 1)
+
+	// Don't insert into finalized trie if there is no deposit to
+	// insert.
+	if len(dc.deposits) == 0 {
+		return
+	}
+	// In the event we have less deposits than we need to
+	// finalize we finalize till the index on which we do have it.
+	if len(dc.deposits) <= int(eth1DepositIndex) {
+		eth1DepositIndex = int64(len(dc.deposits)) - 1
+	}
+	// If we finalize to some lower deposit index, we
+	// ignore it.
+	if int(eth1DepositIndex) < insertIndex {
+		return
+	}
 	for _, d := range dc.deposits {
 		if d.Index <= dc.finalizedDeposits.MerkleTrieIndex {
 			continue

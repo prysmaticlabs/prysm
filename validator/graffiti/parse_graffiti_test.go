@@ -1,7 +1,6 @@
 package graffiti
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -19,7 +18,7 @@ func TestParseGraffitiFile_Default(t *testing.T) {
 	err := os.MkdirAll(dirName, os.ModePerm)
 	require.NoError(t, err)
 	someFileName := filepath.Join(dirName, "somefile.txt")
-	require.NoError(t, ioutil.WriteFile(someFileName, input, os.ModePerm))
+	require.NoError(t, os.WriteFile(someFileName, input, os.ModePerm))
 
 	got, err := ParseGraffitiFile(someFileName)
 	require.NoError(t, err)
@@ -41,7 +40,7 @@ func TestParseGraffitiFile_Random(t *testing.T) {
 	err := os.MkdirAll(dirName, os.ModePerm)
 	require.NoError(t, err)
 	someFileName := filepath.Join(dirName, "somefile.txt")
-	require.NoError(t, ioutil.WriteFile(someFileName, input, os.ModePerm))
+	require.NoError(t, os.WriteFile(someFileName, input, os.ModePerm))
 
 	got, err := ParseGraffitiFile(someFileName)
 	require.NoError(t, err)
@@ -67,7 +66,7 @@ func TestParseGraffitiFile_Ordered(t *testing.T) {
 	err := os.MkdirAll(dirName, os.ModePerm)
 	require.NoError(t, err)
 	someFileName := filepath.Join(dirName, "somefile.txt")
-	require.NoError(t, ioutil.WriteFile(someFileName, input, os.ModePerm))
+	require.NoError(t, os.WriteFile(someFileName, input, os.ModePerm))
 
 	got, err := ParseGraffitiFile(someFileName)
 	require.NoError(t, err)
@@ -94,7 +93,7 @@ specific:
 	err := os.MkdirAll(dirName, os.ModePerm)
 	require.NoError(t, err)
 	someFileName := filepath.Join(dirName, "somefile.txt")
-	require.NoError(t, ioutil.WriteFile(someFileName, input, os.ModePerm))
+	require.NoError(t, os.WriteFile(someFileName, input, os.ModePerm))
 
 	got, err := ParseGraffitiFile(someFileName)
 	require.NoError(t, err)
@@ -132,7 +131,7 @@ specific:
 	err := os.MkdirAll(dirName, os.ModePerm)
 	require.NoError(t, err)
 	someFileName := filepath.Join(dirName, "somefile.txt")
-	require.NoError(t, ioutil.WriteFile(someFileName, input, os.ModePerm))
+	require.NoError(t, os.WriteFile(someFileName, input, os.ModePerm))
 
 	got, err := ParseGraffitiFile(someFileName)
 	require.NoError(t, err)
