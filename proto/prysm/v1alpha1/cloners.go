@@ -455,7 +455,7 @@ func CopyExecutionPayloadHeader(payload *ExecutionPayloadHeader) *ExecutionPaylo
 		ParentHash:       bytesutil.SafeCopyBytes(payload.ParentHash),
 		FeeRecipient:     bytesutil.SafeCopyBytes(payload.FeeRecipient),
 		StateRoot:        bytesutil.SafeCopyBytes(payload.StateRoot),
-		ReceiptRoot:      bytesutil.SafeCopyBytes(payload.ReceiptRoot),
+		ReceiptsRoot:     bytesutil.SafeCopyBytes(payload.ReceiptsRoot),
 		LogsBloom:        bytesutil.SafeCopyBytes(payload.LogsBloom),
 		PrevRandao:       bytesutil.SafeCopyBytes(payload.PrevRandao),
 		BlockNumber:      payload.BlockNumber,

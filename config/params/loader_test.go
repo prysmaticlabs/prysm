@@ -1,7 +1,7 @@
 package params_test
 
 import (
-	"io/ioutil"
+	"os"
 	"path"
 	"path/filepath"
 	"reflect"
@@ -143,7 +143,7 @@ func TestLoadConfigFile(t *testing.T) {
 }
 
 func TestLoadConfigFile_OverwriteCorrectly(t *testing.T) {
-	file, err := ioutil.TempFile("", "")
+	file, err := os.CreateTemp("", "")
 	require.NoError(t, err)
 	// Set current config to minimal config
 	params.OverrideBeaconConfig(params.MinimalSpecConfig())
@@ -269,7 +269,7 @@ func presetsFilePath(t *testing.T, config string) []string {
 func fieldsFromYamls(t *testing.T, fps []string) []string {
 	var keys []string
 	for _, fp := range fps {
-		yamlFile, err := ioutil.ReadFile(fp)
+		yamlFile, err := os.ReadFile(fp)
 		require.NoError(t, err)
 		m := make(map[string]interface{})
 		require.NoError(t, yaml.Unmarshal(yamlFile, &m))

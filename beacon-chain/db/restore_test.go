@@ -3,7 +3,6 @@ package db
 import (
 	"context"
 	"flag"
-	"io/ioutil"
 	"os"
 	"path"
 	"testing"
@@ -55,7 +54,7 @@ func TestRestore(t *testing.T) {
 
 	assert.NoError(t, Restore(cliCtx))
 
-	files, err := ioutil.ReadDir(path.Join(restoreDir, kv.BeaconNodeDbDirName))
+	files, err := os.ReadDir(path.Join(restoreDir, kv.BeaconNodeDbDirName))
 	require.NoError(t, err)
 	assert.Equal(t, 1, len(files))
 	assert.Equal(t, kv.DatabaseFileName, files[0].Name())
