@@ -18,7 +18,7 @@ const batchSize = 10
 
 var migrationStateValidatorsKey = []byte("migration_state_validator")
 
-func migrateStateValidators(ctx context.Context, db *bolt.DB) error {
+func shouldMigrateValidators(db *bolt.DB) (bool, error) {
 	migrateDB := false
 	if updateErr := db.View(func(tx *bolt.Tx) error {
 		mb := tx.Bucket(migrationsBucket)
@@ -46,11 +46,17 @@ func migrateStateValidators(ctx context.Context, db *bolt.DB) error {
 		return nil
 	}); updateErr != nil {
 		log.WithError(updateErr).Errorf("could not migrate bucket: %s", stateBucket)
-		return updateErr
+		return false, updateErr
 	}
 
-	// do not migrate the DB
-	if !migrateDB {
+	return migrateDB, nil
+}
+
+func migrateStateValidators(ctx context.Context, db *bolt.DB) error {
+	if ok, err := shouldMigrateValidators(db); err != nil {
+		return err
+	} else if !ok {
+		// A migration is not required.
 		return nil
 	}
 
