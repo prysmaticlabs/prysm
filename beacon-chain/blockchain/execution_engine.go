@@ -24,6 +24,8 @@ import (
 	"go.opencensus.io/trace"
 )
 
+var ErrInvalidPayload = errors.New("recevied an INVALID payload from execution engine")
+
 // notifyForkchoiceUpdate signals execution engine the fork choice updates. Execution engine should:
 // 1. Re-organizes the execution payload chain and corresponding state to make head_block_hash the head.
 // 2. Applies finality to the execution state: it irreversibly persists the chain of all execution payloads and corresponding state, up to and including finalized_block_hash.
@@ -103,7 +105,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headState state.Be
 				"blockRoot":    fmt.Sprintf("%#x", headRoot),
 				"invalidCount": len(invalidRoots),
 			}).Warn("Pruned invalid blocks")
-			return nil, errors.New("could not call forkchoice update with an INVALID payload from execution engine")
+			return nil, ErrInvalidPayload
 		default:
 			return nil, errors.Wrap(err, "could not notify forkchoice update from execution engine")
 		}
@@ -175,7 +177,7 @@ func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion, postSta
 				"blockRoot":    fmt.Sprintf("%#x", root),
 				"invalidCount": len(invalidRoots),
 			}).Warn("Pruned invalid blocks")
-			return false, errors.New("could not validate an INVALID payload from execution engine")
+			return false, ErrInvalidPayload
 		default:
 			return false, errors.Wrap(err, "could not validate execution payload from execution engine")
 		}

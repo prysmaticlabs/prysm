@@ -162,7 +162,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 			newForkchoiceErr: powchain.ErrInvalidPayloadStatus,
 			finalizedRoot:    bellatrixBlkRoot,
 			headRoot:         [32]byte{'a'},
-			errString:        "could not call forkchoice update with an INVALID payload from execution engine",
+			errString:        ErrInvalidPayload.Error(),
 		},
 	}
 
@@ -272,7 +272,7 @@ func Test_NotifyNewPayload(t *testing.T) {
 			preState:       bellatrixState,
 			blk:            bellatrixBlk,
 			newPayloadErr:  powchain.ErrInvalidPayloadStatus,
-			errString:      "could not validate an INVALID payload from execution engine",
+			errString:      ErrInvalidPayload.Error(),
 			isValidPayload: false,
 		},
 		{
