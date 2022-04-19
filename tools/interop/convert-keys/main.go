@@ -7,7 +7,6 @@ package main
 import (
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 
@@ -31,7 +30,7 @@ func main() {
 	}
 	inFile := os.Args[1]
 
-	in, err := ioutil.ReadFile(inFile) // #nosec G304
+	in, err := os.ReadFile(inFile) // #nosec G304
 	if err != nil {
 		log.Fatalf("Failed to read file %s: %v", inFile, err)
 	}

@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"os/exec"
 	"strings"
 
@@ -84,7 +84,7 @@ func (node *BootNode) Started() <-chan struct{} {
 }
 
 func enrFromLogFile(name string) (string, error) {
-	byteContent, err := ioutil.ReadFile(name) // #nosec G304
+	byteContent, err := os.ReadFile(name) // #nosec G304
 	if err != nil {
 		return "", err
 	}

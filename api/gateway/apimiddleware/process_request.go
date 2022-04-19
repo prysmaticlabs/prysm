@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"strconv"
@@ -52,7 +51,7 @@ func SetRequestBodyToRequestContainer(requestContainer interface{}, req *http.Re
 		return InternalServerErrorWithMessage(err, "could not marshal request")
 	}
 	// Set the body to the new JSON.
-	req.Body = ioutil.NopCloser(bytes.NewReader(j))
+	req.Body = io.NopCloser(bytes.NewReader(j))
 	req.Header.Set("Content-Length", strconv.Itoa(len(j)))
 	req.ContentLength = int64(len(j))
 	return nil
@@ -93,7 +92,7 @@ func (m *ApiProxyMiddleware) ProxyRequest(req *http.Request) (*http.Response, Er
 
 // ReadGrpcResponseBody reads the body from the grpc-gateway's response.
 func ReadGrpcResponseBody(r io.Reader) ([]byte, ErrorJson) {
-	body, err := ioutil.ReadAll(r)
+	body, err := io.ReadAll(r)
 	if err != nil {
 		return nil, InternalServerErrorWithMessage(err, "could not read response body")
 	}
@@ -195,7 +194,7 @@ func WriteMiddlewareResponseHeadersAndBody(grpcResp *http.Response, responseJson
 		} else {
 			w.WriteHeader(grpcResp.StatusCode)
 		}
-		if _, err := io.Copy(w, ioutil.NopCloser(bytes.NewReader(responseJson))); err != nil {
+		if _, err := io.Copy(w, io.NopCloser(bytes.NewReader(responseJson))); err != nil {
 			return InternalServerErrorWithMessage(err, "could not write response message")
 		}
 	} else {
@@ -249,7 +248,7 @@ func WriteError(w http.ResponseWriter, errJson ErrorJson, responseHeader http.He
 	w.Header().Set("Content-Length", strconv.Itoa(len(j)))
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(errJson.StatusCode())
-	if _, err := io.Copy(w, ioutil.NopCloser(bytes.NewReader(j))); err != nil {
+	if _, err := io.Copy(w, io.NopCloser(bytes.NewReader(j))); err != nil {
 		log.WithError(err).Error("Could not write error message")
 	}
 }

@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"math/big"
 	"net/http"
 	"net/http/httptest"
@@ -100,7 +100,7 @@ func TestClient_HTTP(t *testing.T) {
 			defer func() {
 				require.NoError(t, r.Body.Close())
 			}()
-			enc, err := ioutil.ReadAll(r.Body)
+			enc, err := io.ReadAll(r.Body)
 			require.NoError(t, err)
 			jsonRequestString := string(enc)
 
@@ -350,7 +350,7 @@ func TestClient_HTTP(t *testing.T) {
 			defer func() {
 				require.NoError(t, r.Body.Close())
 			}()
-			enc, err := ioutil.ReadAll(r.Body)
+			enc, err := io.ReadAll(r.Body)
 			require.NoError(t, err)
 			jsonRequestString := string(enc)
 			// We expect the JSON string RPC request contains the right arguments.
@@ -387,7 +387,7 @@ func TestClient_HTTP(t *testing.T) {
 			defer func() {
 				require.NoError(t, r.Body.Close())
 			}()
-			enc, err := ioutil.ReadAll(r.Body)
+			enc, err := io.ReadAll(r.Body)
 			require.NoError(t, err)
 			jsonRequestString := string(enc)
 			// We expect the JSON string RPC request contains the right arguments.
@@ -972,7 +972,7 @@ func forkchoiceUpdateSetup(t *testing.T, fcs *pb.ForkchoiceState, att *pb.Payloa
 		defer func() {
 			require.NoError(t, r.Body.Close())
 		}()
-		enc, err := ioutil.ReadAll(r.Body)
+		enc, err := io.ReadAll(r.Body)
 		require.NoError(t, err)
 		jsonRequestString := string(enc)
 
@@ -1011,7 +1011,7 @@ func newPayloadSetup(t *testing.T, status *pb.PayloadStatus, payload *pb.Executi
 		defer func() {
 			require.NoError(t, r.Body.Close())
 		}()
-		enc, err := ioutil.ReadAll(r.Body)
+		enc, err := io.ReadAll(r.Body)
 		require.NoError(t, err)
 		jsonRequestString := string(enc)
 

@@ -2,7 +2,7 @@ package slasher
 
 import (
 	"context"
-	"io/ioutil"
+	"io"
 	"testing"
 	"time"
 
@@ -26,7 +26,7 @@ var _ = SlashingChecker(&mockslasher.MockSlashingChecker{})
 
 func TestMain(m *testing.M) {
 	logrus.SetLevel(logrus.DebugLevel)
-	logrus.SetOutput(ioutil.Discard)
+	logrus.SetOutput(io.Discard)
 
 	m.Run()
 }

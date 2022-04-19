@@ -43,7 +43,6 @@ type Flags struct {
 	EnableLargerGossipHistory           bool // EnableLargerGossipHistory increases the gossip history we store in our caches.
 	WriteWalletPasswordOnWebOnboarding  bool // WriteWalletPasswordOnWebOnboarding writes the password to disk after Prysm web signup.
 	DisableAttestingHistoryDBCache      bool // DisableAttestingHistoryDBCache for the validator client increases disk reads/writes.
-	ProposerAttsSelectionUsingMaxCover  bool // ProposerAttsSelectionUsingMaxCover enables max-cover algorithm when selecting attestations for proposing.
 	EnableOptimizedBalanceUpdate        bool // EnableOptimizedBalanceUpdate uses an updated method of performing balance updates.
 	EnableDoppelGanger                  bool // EnableDoppelGanger enables doppelganger protection on startup for the validator.
 	EnableHistoricalSpaceRepresentation bool // EnableHistoricalSpaceRepresentation enables the saving of registry validators in separate buckets to save space
@@ -166,11 +165,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(enableSlasherFlag.Name) {
 		log.WithField(enableSlasherFlag.Name, enableSlasherFlag.Usage).Warn(enabledFeatureFlag)
 		cfg.EnableSlasher = true
-	}
-	cfg.ProposerAttsSelectionUsingMaxCover = true
-	if ctx.Bool(disableProposerAttsSelectionUsingMaxCover.Name) {
-		logDisabled(disableProposerAttsSelectionUsingMaxCover)
-		cfg.ProposerAttsSelectionUsingMaxCover = false
 	}
 	cfg.EnableOptimizedBalanceUpdate = true
 	if ctx.Bool(disableOptimizedBalanceUpdate.Name) {

@@ -75,6 +75,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedDisableProposerAttsSelectionUsingMaxCover = &cli.BoolFlag{
+		Name:   "disable-proposer-atts-selection-using-max-cover",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -90,4 +95,5 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedAttestationAggregationStrategy,
 	deprecatedForceOptMaxCoverAggregationStategy,
 	deprecatedPyrmontTestnet,
+	deprecatedDisableProposerAttsSelectionUsingMaxCover,
 }
