@@ -109,10 +109,6 @@ var (
 		Usage: "Disable the fix for bug where any block attestations can get incorrectly pruned, which improves validator profitability and overall network health," +
 			"see issue #9443 for further detail",
 	}
-	disableActiveBalanceCache = &cli.BoolFlag{
-		Name:  "disable-active-balance-cache",
-		Usage: "This disables active balance cache, which improves node performance during block processing",
-	}
 	disableGetBlockOptimizations = &cli.BoolFlag{
 		Name:  "disable-get-block-optimizations",
 		Usage: "This disables some optimizations on the GetBlock() function.",
@@ -182,7 +178,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableCorrectlyInsertOrphanedAtts,
 	disableGetBlockOptimizations,
 	disableCorrectlyPruneCanonicalAtts,
-	disableActiveBalanceCache,
 	disableBatchGossipVerification,
 	disableBalanceTrieComputation,
 	enableNativeState,
