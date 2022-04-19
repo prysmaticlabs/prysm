@@ -938,7 +938,8 @@ func (v *validator) logDuties(slot types.Slot, duties []*ethpb.DutiesResponse_Du
 // UpdateFeeRecipient calls the prepareBeaconProposer RPC to set the fee recipient.
 func (v *validator) UpdateFeeRecipient(ctx context.Context, km keymanager.IKeymanager) error {
 	// only used after Bellatrix
-	if slots.ToEpoch(slots.CurrentSlot(v.genesisTime)) < params.BeaconConfig().BellatrixForkEpoch {
+	e := params.BeaconConfig().BellatrixForkEpoch 
+	if e != math.MaxUint64  && slots.ToEpoch(slots.CurrentSlot(v.genesisTime)) < e{
 		log.Info("Please plan for using the fee recipient flags post Bellatrix Hard Fork to receive transaction fee rewards on validator work.")
 		return nil
 	}
