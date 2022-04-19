@@ -2,7 +2,7 @@ package kv
 
 import (
 	"context"
-	"io/ioutil"
+	"io"
 	"testing"
 
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
@@ -12,7 +12,7 @@ import (
 
 func TestMain(m *testing.M) {
 	logrus.SetLevel(logrus.DebugLevel)
-	logrus.SetOutput(ioutil.Discard)
+	logrus.SetOutput(io.Discard)
 
 	m.Run()
 }

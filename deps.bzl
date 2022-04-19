@@ -3757,6 +3757,13 @@ def prysm_deps():
         version = "v2.3.0",
     )
     go_repository(
+        name = "com_github_uudashr_gocognit",
+        importpath = "github.com/uudashr/gocognit",
+        sum = "h1:rrSex7oHr3/pPLQ0xoWq108XMU8s678FJcQ+aSfOHa4=",
+        version = "v1.0.5",
+    )
+
+    go_repository(
         name = "com_github_valyala_bytebufferpool",
         importpath = "github.com/valyala/bytebufferpool",
         sum = "h1:GqA5TC/0021Y/b9FG4Oi9Mr3q7XYx6KllzawFIhcdPw=",

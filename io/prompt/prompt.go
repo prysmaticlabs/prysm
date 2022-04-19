@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"strings"
 
@@ -132,7 +131,7 @@ func InputPassword(
 		if err != nil {
 			return "", errors.Wrap(err, "could not determine absolute path of password file")
 		}
-		data, err := ioutil.ReadFile(passwordFilePath) // #nosec G304
+		data, err := os.ReadFile(passwordFilePath) // #nosec G304
 		if err != nil {
 			return "", errors.Wrap(err, "could not read password file")
 		}
