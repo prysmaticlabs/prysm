@@ -26,20 +26,20 @@ func TestEndToEnd_MinimalConfig(t *testing.T) {
 	})
 }
 
-func TestEndToEnd_MinimalConfig_Web3Signer(t *testing.T) {
-	e2eMinimal(t, &testArgs{
-		usePrysmSh:          false,
-		useWeb3RemoteSigner: true,
-	})
-}
-
-// Run minimal e2e config with the current release validator against latest beacon node.
-func TestEndToEnd_MinimalConfig_ValidatorAtCurrentRelease(t *testing.T) {
-	e2eMinimal(t, &testArgs{
-		usePrysmSh:          true,
-		useWeb3RemoteSigner: false,
-	})
-}
+//func TestEndToEnd_MinimalConfig_Web3Signer(t *testing.T) {
+//	e2eMinimal(t, &testArgs{
+//		usePrysmSh:          false,
+//		useWeb3RemoteSigner: true,
+//	})
+//}
+//
+//// Run minimal e2e config with the current release validator against latest beacon node.
+//func TestEndToEnd_MinimalConfig_ValidatorAtCurrentRelease(t *testing.T) {
+//	e2eMinimal(t, &testArgs{
+//		usePrysmSh:          true,
+//		useWeb3RemoteSigner: false,
+//	})
+//}
 
 func e2eMinimal(t *testing.T, args *testArgs) {
 	params.UseE2EConfig()
