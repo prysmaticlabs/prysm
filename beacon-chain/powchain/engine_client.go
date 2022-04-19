@@ -1,22 +1,21 @@
-// Package v1 defines an API client for the engine API defined in https://github.com/ethereum/execution-apis.
-// This client is used for the Prysm consensus node to connect to execution node as part of
-// the Ethereum proof-of-stake machinery.
-package v1
+package powchain
 
 import (
 	"bytes"
 	"context"
 	"fmt"
 	"math/big"
-	"net/url"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -33,8 +32,6 @@ const (
 	ExecutionBlockByHashMethod = "eth_getBlockByHash"
 	// ExecutionBlockByNumberMethod request string for JSON-RPC.
 	ExecutionBlockByNumberMethod = "eth_getBlockByNumber"
-	// DefaultTimeout for HTTP.
-	DefaultTimeout = time.Second * 5
 )
 
 // ForkchoiceUpdatedResponse is the response kind received by the
@@ -44,9 +41,9 @@ type ForkchoiceUpdatedResponse struct {
 	PayloadId *pb.PayloadIDBytes `json:"payloadId"`
 }
 
-// Caller defines a client that can interact with an Ethereum
+// EngineCaller defines a client that can interact with an Ethereum
 // execution node's engine service via JSON-RPC.
-type Caller interface {
+type EngineCaller interface {
 	NewPayload(ctx context.Context, payload *pb.ExecutionPayload) ([]byte, error)
 	ForkchoiceUpdated(
 		ctx context.Context, state *pb.ForkchoiceState, attrs *pb.PayloadAttributes,
@@ -55,48 +52,12 @@ type Caller interface {
 	ExchangeTransitionConfiguration(
 		ctx context.Context, cfg *pb.TransitionConfiguration,
 	) error
-	LatestExecutionBlock(ctx context.Context) (*pb.ExecutionBlock, error)
 	ExecutionBlockByHash(ctx context.Context, hash common.Hash) (*pb.ExecutionBlock, error)
-}
-
-// Client defines a new engine API client for the Prysm consensus node
-// to interact with an Ethereum execution node.
-type Client struct {
-	cfg *config
-	rpc *rpc.Client
-}
-
-// New returns a ready, engine API client from an endpoint and configuration options.
-// Only http(s) and ipc (inter-process communication) URL schemes are supported.
-func New(ctx context.Context, endpoint string, opts ...Option) (*Client, error) {
-	u, err := url.Parse(endpoint)
-	if err != nil {
-		return nil, err
-	}
-	c := &Client{
-		cfg: defaultConfig(),
-	}
-	for _, opt := range opts {
-		if err := opt(c); err != nil {
-			return nil, err
-		}
-	}
-	switch u.Scheme {
-	case "http", "https":
-		c.rpc, err = rpc.DialHTTPWithClient(endpoint, c.cfg.httpClient)
-	case "":
-		c.rpc, err = rpc.DialIPC(ctx, endpoint)
-	default:
-		return nil, errors.Wrapf(ErrUnsupportedScheme, "%q", u.Scheme)
-	}
-	if err != nil {
-		return nil, err
-	}
-	return c, nil
+	GetTerminalBlockHash(ctx context.Context) ([]byte, bool, error)
 }
 
 // NewPayload calls the engine_newPayloadV1 method via JSON-RPC.
-func (c *Client) NewPayload(ctx context.Context, payload *pb.ExecutionPayload) ([]byte, error) {
+func (s *Service) NewPayload(ctx context.Context, payload *pb.ExecutionPayload) ([]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.NewPayload")
 	defer span.End()
 	start := time.Now()
@@ -105,7 +66,7 @@ func (c *Client) NewPayload(ctx context.Context, payload *pb.ExecutionPayload) (
 	}()
 
 	result := &pb.PayloadStatus{}
-	err := c.rpc.CallContext(ctx, result, NewPayloadMethod, payload)
+	err := s.rpcClient.CallContext(ctx, result, NewPayloadMethod, payload)
 	if err != nil {
 		return nil, handleRPCError(err)
 	}
@@ -127,7 +88,7 @@ func (c *Client) NewPayload(ctx context.Context, payload *pb.ExecutionPayload) (
 }
 
 // ForkchoiceUpdated calls the engine_forkchoiceUpdatedV1 method via JSON-RPC.
-func (c *Client) ForkchoiceUpdated(
+func (s *Service) ForkchoiceUpdated(
 	ctx context.Context, state *pb.ForkchoiceState, attrs *pb.PayloadAttributes,
 ) (*pb.PayloadIDBytes, []byte, error) {
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.ForkchoiceUpdated")
@@ -138,7 +99,7 @@ func (c *Client) ForkchoiceUpdated(
 	}()
 
 	result := &ForkchoiceUpdatedResponse{}
-	err := c.rpc.CallContext(ctx, result, ForkchoiceUpdatedMethod, state, attrs)
+	err := s.rpcClient.CallContext(ctx, result, ForkchoiceUpdatedMethod, state, attrs)
 	if err != nil {
 		return nil, nil, handleRPCError(err)
 	}
@@ -162,7 +123,7 @@ func (c *Client) ForkchoiceUpdated(
 }
 
 // GetPayload calls the engine_getPayloadV1 method via JSON-RPC.
-func (c *Client) GetPayload(ctx context.Context, payloadId [8]byte) (*pb.ExecutionPayload, error) {
+func (s *Service) GetPayload(ctx context.Context, payloadId [8]byte) (*pb.ExecutionPayload, error) {
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.GetPayload")
 	defer span.End()
 	start := time.Now()
@@ -171,12 +132,12 @@ func (c *Client) GetPayload(ctx context.Context, payloadId [8]byte) (*pb.Executi
 	}()
 
 	result := &pb.ExecutionPayload{}
-	err := c.rpc.CallContext(ctx, result, GetPayloadMethod, pb.PayloadIDBytes(payloadId))
+	err := s.rpcClient.CallContext(ctx, result, GetPayloadMethod, pb.PayloadIDBytes(payloadId))
 	return result, handleRPCError(err)
 }
 
 // ExchangeTransitionConfiguration calls the engine_exchangeTransitionConfigurationV1 method via JSON-RPC.
-func (c *Client) ExchangeTransitionConfiguration(
+func (s *Service) ExchangeTransitionConfiguration(
 	ctx context.Context, cfg *pb.TransitionConfiguration,
 ) error {
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.ExchangeTransitionConfiguration")
@@ -186,7 +147,7 @@ func (c *Client) ExchangeTransitionConfiguration(
 	zeroBigNum := big.NewInt(0)
 	cfg.TerminalBlockNumber = zeroBigNum.Bytes()
 	result := &pb.TransitionConfiguration{}
-	if err := c.rpc.CallContext(ctx, result, ExchangeTransitionConfigurationMethod, cfg); err != nil {
+	if err := s.rpcClient.CallContext(ctx, result, ExchangeTransitionConfigurationMethod, cfg); err != nil {
 		return handleRPCError(err)
 	}
 	// We surface an error to the user if local configuration settings mismatch
@@ -216,14 +177,86 @@ func (c *Client) ExchangeTransitionConfiguration(
 	return nil
 }
 
+// GetTerminalBlockHash returns the valid terminal block hash based on total difficulty.
+//
+// Spec code:
+// def get_pow_block_at_terminal_total_difficulty(pow_chain: Dict[Hash32, PowBlock]) -> Optional[PowBlock]:
+//    # `pow_chain` abstractly represents all blocks in the PoW chain
+//    for block in pow_chain:
+//        parent = pow_chain[block.parent_hash]
+//        block_reached_ttd = block.total_difficulty >= TERMINAL_TOTAL_DIFFICULTY
+//        parent_reached_ttd = parent.total_difficulty >= TERMINAL_TOTAL_DIFFICULTY
+//        if block_reached_ttd and not parent_reached_ttd:
+//            return block
+//
+//    return None
+func (s *Service) GetTerminalBlockHash(ctx context.Context) ([]byte, bool, error) {
+	ttd := new(big.Int)
+	ttd.SetString(params.BeaconConfig().TerminalTotalDifficulty, 10)
+	terminalTotalDifficulty, overflows := uint256.FromBig(ttd)
+	if overflows {
+		return nil, false, errors.New("could not convert terminal total difficulty to uint256")
+	}
+	blk, err := s.LatestExecutionBlock(ctx)
+	if err != nil {
+		return nil, false, errors.Wrap(err, "could not get latest execution block")
+	}
+	if blk == nil {
+		return nil, false, errors.New("latest execution block is nil")
+	}
+
+	for {
+		if ctx.Err() != nil {
+			return nil, false, ctx.Err()
+		}
+		currentTotalDifficulty, err := tDStringToUint256(blk.TotalDifficulty)
+		if err != nil {
+			return nil, false, errors.Wrap(err, "could not convert total difficulty to uint256")
+		}
+		blockReachedTTD := currentTotalDifficulty.Cmp(terminalTotalDifficulty) >= 0
+
+		parentHash := bytesutil.ToBytes32(blk.ParentHash)
+		if len(blk.ParentHash) == 0 || parentHash == params.BeaconConfig().ZeroHash {
+			return nil, false, nil
+		}
+		parentBlk, err := s.ExecutionBlockByHash(ctx, parentHash)
+		if err != nil {
+			return nil, false, errors.Wrap(err, "could not get parent execution block")
+		}
+		if parentBlk == nil {
+			return nil, false, errors.New("parent execution block is nil")
+		}
+		if blockReachedTTD {
+			parentTotalDifficulty, err := tDStringToUint256(parentBlk.TotalDifficulty)
+			if err != nil {
+				return nil, false, errors.Wrap(err, "could not convert total difficulty to uint256")
+			}
+			parentReachedTTD := parentTotalDifficulty.Cmp(terminalTotalDifficulty) >= 0
+			if !parentReachedTTD {
+				log.WithFields(logrus.Fields{
+					"number":   blk.Number,
+					"hash":     fmt.Sprintf("%#x", bytesutil.Trunc(blk.Hash)),
+					"td":       blk.TotalDifficulty,
+					"parentTd": parentBlk.TotalDifficulty,
+					"ttd":      terminalTotalDifficulty,
+				}).Info("Retrieved terminal block hash")
+				return blk.Hash, true, nil
+			}
+		} else {
+			return nil, false, nil
+		}
+		blk = parentBlk
+	}
+}
+
 // LatestExecutionBlock fetches the latest execution engine block by calling
 // eth_blockByNumber via JSON-RPC.
-func (c *Client) LatestExecutionBlock(ctx context.Context) (*pb.ExecutionBlock, error) {
+func (s *Service) LatestExecutionBlock(ctx context.Context) (*pb.ExecutionBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.LatestExecutionBlock")
 	defer span.End()
 
 	result := &pb.ExecutionBlock{}
-	err := c.rpc.CallContext(
+	err := s.rpcClient.CallContext(
 		ctx,
 		result,
 		ExecutionBlockByNumberMethod,
@@ -235,12 +268,12 @@ func (c *Client) LatestExecutionBlock(ctx context.Context) (*pb.ExecutionBlock, 
 
 // ExecutionBlockByHash fetches an execution engine block by hash by calling
 // eth_blockByHash via JSON-RPC.
-func (c *Client) ExecutionBlockByHash(ctx context.Context, hash common.Hash) (*pb.ExecutionBlock, error) {
+func (s *Service) ExecutionBlockByHash(ctx context.Context, hash common.Hash) (*pb.ExecutionBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.ExecutionBlockByHash")
 	defer span.End()
 
 	result := &pb.ExecutionBlock{}
-	err := c.rpc.CallContext(ctx, result, ExecutionBlockByHashMethod, hash, false /* no full transaction objects */)
+	err := s.rpcClient.CallContext(ctx, result, ExecutionBlockByHashMethod, hash, false /* no full transaction objects */)
 	return result, handleRPCError(err)
 }
 
@@ -248,6 +281,9 @@ func (c *Client) ExecutionBlockByHash(ctx context.Context, hash common.Hash) (*p
 func handleRPCError(err error) error {
 	if err == nil {
 		return nil
+	}
+	if isTimeout(err) {
+		return errors.Wrapf(ErrHTTPTimeout, "%s", err)
 	}
 	e, ok := err.(rpc.Error)
 	if !ok {
@@ -276,4 +312,29 @@ func handleRPCError(err error) error {
 	default:
 		return err
 	}
+}
+
+// ErrHTTPTimeout returns true if the error is a http.Client timeout error.
+var ErrHTTPTimeout = errors.New("timeout from http.Client")
+
+type httpTimeoutError interface {
+	Error() string
+	Timeout() bool
+}
+
+func isTimeout(e error) bool {
+	t, ok := e.(httpTimeoutError)
+	return ok && t.Timeout()
+}
+
+func tDStringToUint256(td string) (*uint256.Int, error) {
+	b, err := hexutil.DecodeBig(td)
+	if err != nil {
+		return nil, err
+	}
+	i, overflows := uint256.FromBig(b)
+	if overflows {
+		return nil, errors.New("total difficulty overflowed")
+	}
+	return i, nil
 }

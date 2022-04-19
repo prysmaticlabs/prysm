@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	coreTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -57,6 +58,7 @@ func startChainService(t *testing.T, st state.BeaconState, block block.SignedBea
 		blockchain.WithStateNotifier(&mock.MockStateNotifier{}),
 		blockchain.WithAttestationPool(attestations.NewPool()),
 		blockchain.WithDepositCache(depositCache),
+		blockchain.WithProposerIdsCache(cache.NewProposerPayloadIDsCache()),
 	)
 	service, err := blockchain.NewService(context.Background(), opts...)
 	require.NoError(t, err)
@@ -99,4 +101,8 @@ func (m *engineMock) ExecutionBlockByHash(_ context.Context, hash common.Hash) (
 		TotalDifficulty: tdHex,
 		Hash:            b.BlockHash,
 	}, nil
+}
+
+func (m *engineMock) GetTerminalBlockHash(context.Context) ([]byte, bool, error) {
+	return nil, false, nil
 }

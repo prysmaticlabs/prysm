@@ -1,10 +1,10 @@
-package v1
+package powchain
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"math/big"
 	"net/http"
 	"net/http/httptest"
@@ -15,7 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1/mocks"
+	mocks "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -25,8 +25,8 @@ import (
 )
 
 var (
-	_ = Caller(&Client{})
-	_ = Caller(&mocks.EngineClient{})
+	_ = EngineCaller(&Service{})
+	_ = EngineCaller(&mocks.EngineClient{})
 )
 
 func TestClient_IPC(t *testing.T) {
@@ -34,8 +34,8 @@ func TestClient_IPC(t *testing.T) {
 	defer server.Stop()
 	rpcClient := rpc.DialInProc(server)
 	defer rpcClient.Close()
-	client := &Client{}
-	client.rpc = rpcClient
+	srv := &Service{}
+	srv.rpcClient = rpcClient
 	ctx := context.Background()
 	fix := fixtures()
 
@@ -43,14 +43,14 @@ func TestClient_IPC(t *testing.T) {
 		want, ok := fix["ExecutionPayload"].(*pb.ExecutionPayload)
 		require.Equal(t, true, ok)
 		payloadId := [8]byte{1}
-		resp, err := client.GetPayload(ctx, payloadId)
+		resp, err := srv.GetPayload(ctx, payloadId)
 		require.NoError(t, err)
 		require.DeepEqual(t, want, resp)
 	})
 	t.Run(ForkchoiceUpdatedMethod, func(t *testing.T) {
 		want, ok := fix["ForkchoiceUpdatedResponse"].(*ForkchoiceUpdatedResponse)
 		require.Equal(t, true, ok)
-		payloadID, validHash, err := client.ForkchoiceUpdated(ctx, &pb.ForkchoiceState{}, &pb.PayloadAttributes{})
+		payloadID, validHash, err := srv.ForkchoiceUpdated(ctx, &pb.ForkchoiceState{}, &pb.PayloadAttributes{})
 		require.NoError(t, err)
 		require.DeepEqual(t, want.Status.LatestValidHash, validHash)
 		require.DeepEqual(t, want.PayloadId, payloadID)
@@ -60,20 +60,20 @@ func TestClient_IPC(t *testing.T) {
 		require.Equal(t, true, ok)
 		req, ok := fix["ExecutionPayload"].(*pb.ExecutionPayload)
 		require.Equal(t, true, ok)
-		latestValidHash, err := client.NewPayload(ctx, req)
+		latestValidHash, err := srv.NewPayload(ctx, req)
 		require.NoError(t, err)
 		require.DeepEqual(t, bytesutil.ToBytes32(want.LatestValidHash), bytesutil.ToBytes32(latestValidHash))
 	})
 	t.Run(ExchangeTransitionConfigurationMethod, func(t *testing.T) {
 		want, ok := fix["TransitionConfiguration"].(*pb.TransitionConfiguration)
 		require.Equal(t, true, ok)
-		err := client.ExchangeTransitionConfiguration(ctx, want)
+		err := srv.ExchangeTransitionConfiguration(ctx, want)
 		require.NoError(t, err)
 	})
 	t.Run(ExecutionBlockByNumberMethod, func(t *testing.T) {
 		want, ok := fix["ExecutionBlock"].(*pb.ExecutionBlock)
 		require.Equal(t, true, ok)
-		resp, err := client.LatestExecutionBlock(ctx)
+		resp, err := srv.LatestExecutionBlock(ctx)
 		require.NoError(t, err)
 		require.DeepEqual(t, want, resp)
 	})
@@ -81,7 +81,7 @@ func TestClient_IPC(t *testing.T) {
 		want, ok := fix["ExecutionBlock"].(*pb.ExecutionBlock)
 		require.Equal(t, true, ok)
 		arg := common.BytesToHash([]byte("foo"))
-		resp, err := client.ExecutionBlockByHash(ctx, arg)
+		resp, err := srv.ExecutionBlockByHash(ctx, arg)
 		require.NoError(t, err)
 		require.DeepEqual(t, want, resp)
 	})
@@ -100,7 +100,7 @@ func TestClient_HTTP(t *testing.T) {
 			defer func() {
 				require.NoError(t, r.Body.Close())
 			}()
-			enc, err := ioutil.ReadAll(r.Body)
+			enc, err := io.ReadAll(r.Body)
 			require.NoError(t, err)
 			jsonRequestString := string(enc)
 
@@ -125,8 +125,8 @@ func TestClient_HTTP(t *testing.T) {
 		require.NoError(t, err)
 		defer rpcClient.Close()
 
-		client := &Client{}
-		client.rpc = rpcClient
+		client := &Service{}
+		client.rpcClient = rpcClient
 
 		// We call the RPC method via HTTP and expect a proper result.
 		resp, err := client.GetPayload(ctx, payloadId)
@@ -146,10 +146,10 @@ func TestClient_HTTP(t *testing.T) {
 		}
 		want, ok := fix["ForkchoiceUpdatedResponse"].(*ForkchoiceUpdatedResponse)
 		require.Equal(t, true, ok)
-		client := forkchoiceUpdateSetup(t, forkChoiceState, payloadAttributes, want)
+		srv := forkchoiceUpdateSetup(t, forkChoiceState, payloadAttributes, want)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		payloadID, validHash, err := client.ForkchoiceUpdated(ctx, forkChoiceState, payloadAttributes)
+		payloadID, validHash, err := srv.ForkchoiceUpdated(ctx, forkChoiceState, payloadAttributes)
 		require.NoError(t, err)
 		require.DeepEqual(t, want.Status.LatestValidHash, validHash)
 		require.DeepEqual(t, want.PayloadId, payloadID)
@@ -332,11 +332,11 @@ func TestClient_HTTP(t *testing.T) {
 		require.NoError(t, err)
 		defer rpcClient.Close()
 
-		client := &Client{}
-		client.rpc = rpcClient
+		service := &Service{}
+		service.rpcClient = rpcClient
 
 		// We call the RPC method via HTTP and expect a proper result.
-		resp, err := client.LatestExecutionBlock(ctx)
+		resp, err := service.LatestExecutionBlock(ctx)
 		require.NoError(t, err)
 		require.DeepEqual(t, want, resp)
 	})
@@ -350,7 +350,7 @@ func TestClient_HTTP(t *testing.T) {
 			defer func() {
 				require.NoError(t, r.Body.Close())
 			}()
-			enc, err := ioutil.ReadAll(r.Body)
+			enc, err := io.ReadAll(r.Body)
 			require.NoError(t, err)
 			jsonRequestString := string(enc)
 			// We expect the JSON string RPC request contains the right arguments.
@@ -371,8 +371,8 @@ func TestClient_HTTP(t *testing.T) {
 		require.NoError(t, err)
 		defer rpcClient.Close()
 
-		client := &Client{}
-		client.rpc = rpcClient
+		client := &Service{}
+		client.rpcClient = rpcClient
 
 		// We call the RPC method via HTTP and expect a proper result.
 		err = client.ExchangeTransitionConfiguration(ctx, want)
@@ -387,7 +387,7 @@ func TestClient_HTTP(t *testing.T) {
 			defer func() {
 				require.NoError(t, r.Body.Close())
 			}()
-			enc, err := ioutil.ReadAll(r.Body)
+			enc, err := io.ReadAll(r.Body)
 			require.NoError(t, err)
 			jsonRequestString := string(enc)
 			// We expect the JSON string RPC request contains the right arguments.
@@ -408,14 +408,163 @@ func TestClient_HTTP(t *testing.T) {
 		require.NoError(t, err)
 		defer rpcClient.Close()
 
-		client := &Client{}
-		client.rpc = rpcClient
+		service := &Service{}
+		service.rpcClient = rpcClient
 
 		// We call the RPC method via HTTP and expect a proper result.
-		resp, err := client.ExecutionBlockByHash(ctx, arg)
+		resp, err := service.ExecutionBlockByHash(ctx, arg)
 		require.NoError(t, err)
 		require.DeepEqual(t, want, resp)
 	})
+}
+
+func TestServer_getPowBlockHashAtTerminalTotalDifficulty(t *testing.T) {
+	tests := []struct {
+		name                  string
+		paramsTd              string
+		currentPowBlock       *pb.ExecutionBlock
+		parentPowBlock        *pb.ExecutionBlock
+		errLatestExecutionBlk error
+		wantTerminalBlockHash []byte
+		wantExists            bool
+		errString             string
+	}{
+		{
+			name:      "config td overflows",
+			paramsTd:  "1115792089237316195423570985008687907853269984665640564039457584007913129638912",
+			errString: "could not convert terminal total difficulty to uint256",
+		},
+		{
+			name:                  "could not get latest execution block",
+			paramsTd:              "1",
+			errLatestExecutionBlk: errors.New("blah"),
+			errString:             "could not get latest execution block",
+		},
+		{
+			name:      "nil latest execution block",
+			paramsTd:  "1",
+			errString: "latest execution block is nil",
+		},
+		{
+			name:     "current execution block invalid TD",
+			paramsTd: "1",
+			currentPowBlock: &pb.ExecutionBlock{
+				Hash:            []byte{'a'},
+				TotalDifficulty: "1115792089237316195423570985008687907853269984665640564039457584007913129638912",
+			},
+			errString: "could not convert total difficulty to uint256",
+		},
+		{
+			name:     "current execution block has zero hash parent",
+			paramsTd: "2",
+			currentPowBlock: &pb.ExecutionBlock{
+				Hash:            []byte{'a'},
+				ParentHash:      params.BeaconConfig().ZeroHash[:],
+				TotalDifficulty: "0x3",
+			},
+		},
+		{
+			name:     "could not get parent block",
+			paramsTd: "2",
+			currentPowBlock: &pb.ExecutionBlock{
+				Hash:            []byte{'a'},
+				ParentHash:      []byte{'b'},
+				TotalDifficulty: "0x3",
+			},
+			errString: "could not get parent execution block",
+		},
+		{
+			name:     "parent execution block invalid TD",
+			paramsTd: "2",
+			currentPowBlock: &pb.ExecutionBlock{
+				Hash:            []byte{'a'},
+				ParentHash:      []byte{'b'},
+				TotalDifficulty: "0x3",
+			},
+			parentPowBlock: &pb.ExecutionBlock{
+				Hash:            []byte{'b'},
+				ParentHash:      []byte{'c'},
+				TotalDifficulty: "1",
+			},
+			errString: "could not convert total difficulty to uint256",
+		},
+		{
+			name:     "happy case",
+			paramsTd: "2",
+			currentPowBlock: &pb.ExecutionBlock{
+				Hash:            []byte{'a'},
+				ParentHash:      []byte{'b'},
+				TotalDifficulty: "0x3",
+			},
+			parentPowBlock: &pb.ExecutionBlock{
+				Hash:            []byte{'b'},
+				ParentHash:      []byte{'c'},
+				TotalDifficulty: "0x1",
+			},
+			wantExists:            true,
+			wantTerminalBlockHash: []byte{'a'},
+		},
+		{
+			name:     "ttd not reached",
+			paramsTd: "3",
+			currentPowBlock: &pb.ExecutionBlock{
+				Hash:            []byte{'a'},
+				ParentHash:      []byte{'b'},
+				TotalDifficulty: "0x2",
+			},
+			parentPowBlock: &pb.ExecutionBlock{
+				Hash:            []byte{'b'},
+				ParentHash:      []byte{'c'},
+				TotalDifficulty: "0x1",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := params.BeaconConfig()
+			cfg.TerminalTotalDifficulty = tt.paramsTd
+			params.OverrideBeaconConfig(cfg)
+			var m map[[32]byte]*pb.ExecutionBlock
+			if tt.parentPowBlock != nil {
+				m = map[[32]byte]*pb.ExecutionBlock{
+					bytesutil.ToBytes32(tt.parentPowBlock.Hash): tt.parentPowBlock,
+				}
+			}
+			client := mocks.EngineClient{
+				ErrLatestExecBlock: tt.errLatestExecutionBlk,
+				ExecutionBlock:     tt.currentPowBlock,
+				BlockByHashMap:     m,
+			}
+			b, e, err := client.GetTerminalBlockHash(context.Background())
+			if tt.errString != "" {
+				require.ErrorContains(t, tt.errString, err)
+			} else {
+				require.NoError(t, err)
+				require.DeepEqual(t, tt.wantExists, e)
+				require.DeepEqual(t, tt.wantTerminalBlockHash, b)
+			}
+		})
+	}
+}
+
+func Test_tDStringToUint256(t *testing.T) {
+	i, err := tDStringToUint256("0x0")
+	require.NoError(t, err)
+	require.DeepEqual(t, uint256.NewInt(0), i)
+
+	i, err = tDStringToUint256("0x10000")
+	require.NoError(t, err)
+	require.DeepEqual(t, uint256.NewInt(65536), i)
+
+	_, err = tDStringToUint256("100")
+	require.ErrorContains(t, "hex string without 0x prefix", err)
+
+	_, err = tDStringToUint256("0xzzzzzz")
+	require.ErrorContains(t, "invalid hex string", err)
+
+	_, err = tDStringToUint256("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF" +
+		"FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")
+	require.ErrorContains(t, "hex number > 256 bits", err)
 }
 
 func TestExchangeTransitionConfiguration(t *testing.T) {
@@ -449,10 +598,10 @@ func TestExchangeTransitionConfiguration(t *testing.T) {
 		require.NoError(t, err)
 		defer rpcClient.Close()
 
-		client := &Client{}
-		client.rpc = rpcClient
+		service := &Service{}
+		service.rpcClient = rpcClient
 
-		err = client.ExchangeTransitionConfiguration(ctx, request)
+		err = service.ExchangeTransitionConfiguration(ctx, request)
 		require.Equal(t, true, errors.Is(err, ErrConfigMismatch))
 	})
 	t.Run("wrong terminal total difficulty", func(t *testing.T) {
@@ -482,16 +631,17 @@ func TestExchangeTransitionConfiguration(t *testing.T) {
 		require.NoError(t, err)
 		defer rpcClient.Close()
 
-		client := &Client{}
-		client.rpc = rpcClient
+		service := &Service{}
+		service.rpcClient = rpcClient
 
-		err = client.ExchangeTransitionConfiguration(ctx, request)
+		err = service.ExchangeTransitionConfiguration(ctx, request)
 		require.Equal(t, true, errors.Is(err, ErrConfigMismatch))
 	})
 }
 
 type customError struct {
-	code int
+	code    int
+	timeout bool
 }
 
 func (c *customError) ErrorCode() int {
@@ -500,6 +650,10 @@ func (c *customError) ErrorCode() int {
 
 func (*customError) Error() string {
 	return "something went wrong"
+}
+
+func (c *customError) Timeout() bool {
+	return c.timeout
 }
 
 type dataError struct {
@@ -533,6 +687,11 @@ func Test_handleRPCError(t *testing.T) {
 			name:             "not an rpc error",
 			expectedContains: "got an unexpected error",
 			given:            errors.New("foo"),
+		},
+		{
+			name:             "HTTP times out",
+			expectedContains: ErrHTTPTimeout.Error(),
+			given:            &customError{timeout: true},
 		},
 		{
 			name:             "ErrParse",
@@ -807,13 +966,13 @@ func (*testEngineService) NewPayloadV1(
 	return item
 }
 
-func forkchoiceUpdateSetup(t *testing.T, fcs *pb.ForkchoiceState, att *pb.PayloadAttributes, res *ForkchoiceUpdatedResponse) *Client {
+func forkchoiceUpdateSetup(t *testing.T, fcs *pb.ForkchoiceState, att *pb.PayloadAttributes, res *ForkchoiceUpdatedResponse) *Service {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		defer func() {
 			require.NoError(t, r.Body.Close())
 		}()
-		enc, err := ioutil.ReadAll(r.Body)
+		enc, err := io.ReadAll(r.Body)
 		require.NoError(t, err)
 		jsonRequestString := string(enc)
 
@@ -841,19 +1000,18 @@ func forkchoiceUpdateSetup(t *testing.T, fcs *pb.ForkchoiceState, att *pb.Payloa
 	rpcClient, err := rpc.DialHTTP(srv.URL)
 	require.NoError(t, err)
 
-	client := &Client{}
-	client.rpc = rpcClient
-
-	return client
+	service := &Service{}
+	service.rpcClient = rpcClient
+	return service
 }
 
-func newPayloadSetup(t *testing.T, status *pb.PayloadStatus, payload *pb.ExecutionPayload) *Client {
+func newPayloadSetup(t *testing.T, status *pb.PayloadStatus, payload *pb.ExecutionPayload) *Service {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		defer func() {
 			require.NoError(t, r.Body.Close())
 		}()
-		enc, err := ioutil.ReadAll(r.Body)
+		enc, err := io.ReadAll(r.Body)
 		require.NoError(t, err)
 		jsonRequestString := string(enc)
 
@@ -876,7 +1034,7 @@ func newPayloadSetup(t *testing.T, status *pb.PayloadStatus, payload *pb.Executi
 	rpcClient, err := rpc.DialHTTP(srv.URL)
 	require.NoError(t, err)
 
-	client := &Client{}
-	client.rpc = rpcClient
-	return client
+	service := &Service{}
+	service.rpcClient = rpcClient
+	return service
 }

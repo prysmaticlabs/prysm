@@ -24,8 +24,9 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// UpdateHeadWithBalances updates the beacon state head after getting justified balanced from cache.
-func (s *Service) UpdateHeadWithBalances(ctx context.Context) error {
+// UpdateAndSaveHeadWithBalances updates the beacon state head after getting justified balanced from cache.
+// This function is only used in spec-tests, it does save the head after updating it.
+func (s *Service) UpdateAndSaveHeadWithBalances(ctx context.Context) error {
 	cp := s.store.JustifiedCheckpt()
 	if cp == nil {
 		return errors.New("no justified checkpoint")
@@ -35,8 +36,19 @@ func (s *Service) UpdateHeadWithBalances(ctx context.Context) error {
 		msg := fmt.Sprintf("could not read balances for state w/ justified checkpoint %#x", cp.Root)
 		return errors.Wrap(err, msg)
 	}
-
-	return s.updateHead(ctx, balances)
+	headRoot, err := s.updateHead(ctx, balances)
+	if err != nil {
+		return errors.Wrap(err, "could not update head")
+	}
+	headBlock, err := s.cfg.BeaconDB.Block(ctx, headRoot)
+	if err != nil {
+		return err
+	}
+	headState, err := s.cfg.StateGen.StateByRoot(ctx, headRoot)
+	if err != nil {
+		return errors.Wrap(err, "could not retrieve head state in DB")
+	}
+	return s.saveHead(ctx, headRoot, headBlock, headState)
 }
 
 // This defines the current chain service's view of head.
@@ -49,18 +61,18 @@ type head struct {
 
 // Determined the head from the fork choice service and saves its new data
 // (head root, head block, and head state) to the local service cache.
-func (s *Service) updateHead(ctx context.Context, balances []uint64) error {
+func (s *Service) updateHead(ctx context.Context, balances []uint64) ([32]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "blockChain.updateHead")
 	defer span.End()
 
 	// Get head from the fork choice service.
 	f := s.store.FinalizedCheckpt()
 	if f == nil {
-		return errNilFinalizedInStore
+		return [32]byte{}, errNilFinalizedInStore
 	}
 	j := s.store.JustifiedCheckpt()
 	if j == nil {
-		return errNilJustifiedInStore
+		return [32]byte{}, errNilJustifiedInStore
 	}
 	// To get head before the first justified epoch, the fork choice will start with origin root
 	// instead of zero hashes.
@@ -76,7 +88,7 @@ func (s *Service) updateHead(ctx context.Context, balances []uint64) error {
 	if !s.cfg.ForkChoiceStore.HasNode(headStartRoot) {
 		jb, err := s.cfg.BeaconDB.Block(ctx, headStartRoot)
 		if err != nil {
-			return err
+			return [32]byte{}, err
 		}
 		if features.Get().EnableForkChoiceDoublyLinkedTree {
 			s.cfg.ForkChoiceStore = doublylinkedtree.New(j.Epoch, f.Epoch)
@@ -84,22 +96,16 @@ func (s *Service) updateHead(ctx context.Context, balances []uint64) error {
 			s.cfg.ForkChoiceStore = protoarray.New(j.Epoch, f.Epoch, bytesutil.ToBytes32(f.Root))
 		}
 		if err := s.insertBlockToForkChoiceStore(ctx, jb.Block(), headStartRoot, f, j); err != nil {
-			return err
+			return [32]byte{}, err
 		}
 	}
 
-	headRoot, err := s.cfg.ForkChoiceStore.Head(ctx, j.Epoch, headStartRoot, balances, f.Epoch)
-	if err != nil {
-		return err
-	}
-
-	// Save head to the local service cache.
-	return s.saveHead(ctx, headRoot)
+	return s.cfg.ForkChoiceStore.Head(ctx, j.Epoch, headStartRoot, balances, f.Epoch)
 }
 
 // This saves head info to the local service cache, it also saves the
 // new head root to the DB.
-func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
+func (s *Service) saveHead(ctx context.Context, headRoot [32]byte, headBlock block.SignedBeaconBlock, headState state.BeaconState) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.saveHead")
 	defer span.End()
 
@@ -111,6 +117,12 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 	if headRoot == bytesutil.ToBytes32(r) {
 		return nil
 	}
+	if err := helpers.BeaconBlockIsNil(headBlock); err != nil {
+		return err
+	}
+	if headState == nil || headState.IsNil() {
+		return errors.New("cannot save nil head state")
+	}
 
 	// If the head state is not available, just return nil.
 	// There's nothing to cache
@@ -118,31 +130,13 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 		return nil
 	}
 
-	// Get the new head block from DB.
-	newHeadBlock, err := s.cfg.BeaconDB.Block(ctx, headRoot)
-	if err != nil {
-		return err
-	}
-	if err := helpers.BeaconBlockIsNil(newHeadBlock); err != nil {
-		return err
-	}
-
-	// Get the new head state from cached state or DB.
-	newHeadState, err := s.cfg.StateGen.StateByRoot(ctx, headRoot)
-	if err != nil {
-		return errors.Wrap(err, "could not retrieve head state in DB")
-	}
-	if newHeadState == nil || newHeadState.IsNil() {
-		return errors.New("cannot save nil head state")
-	}
-
 	// A chain re-org occurred, so we fire an event notifying the rest of the services.
 	headSlot := s.HeadSlot()
-	newHeadSlot := newHeadBlock.Block().Slot()
+	newHeadSlot := headBlock.Block().Slot()
 	oldHeadRoot := s.headRoot()
 	oldStateRoot := s.headBlock().Block().StateRoot()
-	newStateRoot := newHeadBlock.Block().StateRoot()
-	if bytesutil.ToBytes32(newHeadBlock.Block().ParentRoot()) != bytesutil.ToBytes32(r) {
+	newStateRoot := headBlock.Block().StateRoot()
+	if bytesutil.ToBytes32(headBlock.Block().ParentRoot()) != bytesutil.ToBytes32(r) {
 		log.WithFields(logrus.Fields{
 			"newSlot": fmt.Sprintf("%d", newHeadSlot),
 			"oldSlot": fmt.Sprintf("%d", headSlot),
@@ -174,7 +168,7 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 	}
 
 	// Cache the new head info.
-	s.setHead(headRoot, newHeadBlock, newHeadState)
+	s.setHead(headRoot, headBlock, headState)
 
 	// Save the new head root to DB.
 	if err := s.cfg.BeaconDB.SaveHeadBlockRoot(ctx, headRoot); err != nil {
@@ -184,7 +178,7 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte) error {
 	// Forward an event capturing a new chain head over a common event feed
 	// done in a goroutine to avoid blocking the critical runtime main routine.
 	go func() {
-		if err := s.notifyNewHeadEvent(ctx, newHeadSlot, newHeadState, newStateRoot, headRoot[:]); err != nil {
+		if err := s.notifyNewHeadEvent(ctx, newHeadSlot, headState, newStateRoot, headRoot[:]); err != nil {
 			log.WithError(err).Error("Could not notify event feed of new chain head")
 		}
 	}()

@@ -37,17 +37,24 @@ func (vs *Server) StreamBlocksAltair(req *ethpb.StreamBlocksRequest, stream ethp
 					case version.Phase0:
 						phBlk, ok := data.SignedBlock.Proto().(*ethpb.SignedBeaconBlock)
 						if !ok {
-							log.Warn("Mismatch between version and block type, was expecting *ethpb.SignedBeaconBlock")
+							log.Warn("Mismatch between version and block type, was expecting SignedBeaconBlock")
 							continue
 						}
 						b.Block = &ethpb.StreamBlocksResponse_Phase0Block{Phase0Block: phBlk}
 					case version.Altair:
 						phBlk, ok := data.SignedBlock.Proto().(*ethpb.SignedBeaconBlockAltair)
 						if !ok {
-							log.Warn("Mismatch between version and block type, was expecting *v2.SignedBeaconBlockAltair")
+							log.Warn("Mismatch between version and block type, was expecting SignedBeaconBlockAltair")
 							continue
 						}
 						b.Block = &ethpb.StreamBlocksResponse_AltairBlock{AltairBlock: phBlk}
+					case version.Bellatrix:
+						phBlk, ok := data.SignedBlock.Proto().(*ethpb.SignedBeaconBlockBellatrix)
+						if !ok {
+							log.Warn("Mismatch between version and block type, was expecting SignedBeaconBlockBellatrix")
+							continue
+						}
+						b.Block = &ethpb.StreamBlocksResponse_BellatrixBlock{BellatrixBlock: phBlk}
 					}
 
 					if err := stream.Send(b); err != nil {

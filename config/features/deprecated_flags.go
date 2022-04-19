@@ -70,6 +70,16 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedPyrmontTestnet = &cli.BoolFlag{
+		Name:   "pyrmont",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedDisableProposerAttsSelectionUsingMaxCover = &cli.BoolFlag{
+		Name:   "disable-proposer-atts-selection-using-max-cover",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -84,4 +94,6 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedDisableNextSlotStateCache,
 	deprecatedAttestationAggregationStrategy,
 	deprecatedForceOptMaxCoverAggregationStategy,
+	deprecatedPyrmontTestnet,
+	deprecatedDisableProposerAttsSelectionUsingMaxCover,
 }

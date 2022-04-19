@@ -191,6 +191,12 @@ func TestBellatrixBeaconBlock_IsNil(t *testing.T) {
 	assert.Equal(t, false, wb.IsNil())
 }
 
+func TesTBellatrixBeaconBlock_IsBlinded(t *testing.T) {
+	wsb, err := wrapper.WrappedBeaconBlock(&ethpb.BeaconBlockBellatrix{})
+	require.NoError(t, err)
+	require.Equal(t, false, wsb.IsNil())
+}
+
 func TestBellatrixBeaconBlock_HashTreeRoot(t *testing.T) {
 	wb, err := wrapper.WrappedBellatrixBeaconBlock(util.HydrateBeaconBlockBellatrix(&ethpb.BeaconBlockBellatrix{}))
 	require.NoError(t, err)
@@ -372,4 +378,24 @@ func TestBellatrixBeaconBlock_AsSignRequestObject(t *testing.T) {
 	got, ok := sro.(*validatorpb.SignRequest_BlockV3)
 	require.Equal(t, true, ok, "Not a SignRequest_BlockV3")
 	assert.Equal(t, abb, got.BlockV3)
+}
+
+func TestBellatrixBeaconBlock_PbBlindedBellatrixBlock(t *testing.T) {
+	sb := &ethpb.SignedBeaconBlockBellatrix{
+		Block: &ethpb.BeaconBlockBellatrix{Slot: 66},
+	}
+	wsb, err := wrapper.WrappedSignedBeaconBlock(sb)
+	require.NoError(t, err)
+	_, err = wsb.PbBlindedBellatrixBlock()
+	require.ErrorContains(t, "unsupported blinded bellatrix block", err)
+}
+
+func TestBellatrixBeaconBlock_ExecutionPayloadHeader(t *testing.T) {
+	sb := &ethpb.SignedBeaconBlockBellatrix{
+		Block: &ethpb.BeaconBlockBellatrix{Slot: 66},
+	}
+	wsb, err := wrapper.WrappedSignedBeaconBlock(sb)
+	require.NoError(t, err)
+	_, err = wsb.Block().Body().ExecutionPayloadHeader()
+	require.ErrorContains(t, "unsupported field for block type", err)
 }

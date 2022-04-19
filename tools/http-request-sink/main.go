@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -64,13 +64,13 @@ func captureRequest(f *os.File, m map[string]interface{}) error {
 }
 
 func parseRequest(req *http.Request, unmarshalStruct interface{}) error {
-	body, err := ioutil.ReadAll(req.Body)
+	body, err := io.ReadAll(req.Body)
 	if err != nil {
 		return err
 	}
 	if err = req.Body.Close(); err != nil {
 		return err
 	}
-	req.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+	req.Body = io.NopCloser(bytes.NewBuffer(body))
 	return json.Unmarshal(body, unmarshalStruct)
 }

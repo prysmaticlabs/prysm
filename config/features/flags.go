@@ -7,11 +7,6 @@ import (
 )
 
 var (
-	// PyrmontTestnet flag for the multiclient Ethereum consensus testnet.
-	PyrmontTestnet = &cli.BoolFlag{
-		Name:  "pyrmont",
-		Usage: "This defines the flag through which we can run on the Pyrmont Multiclient Testnet",
-	}
 	// PraterTestnet flag for the multiclient Ethereum consensus testnet.
 	PraterTestnet = &cli.BoolFlag{
 		Name:  "prater",
@@ -79,10 +74,6 @@ var (
 	enableSlasherFlag = &cli.BoolFlag{
 		Name:  "slasher",
 		Usage: "Enables a slasher in the beacon node for detecting slashable offenses",
-	}
-	disableProposerAttsSelectionUsingMaxCover = &cli.BoolFlag{
-		Name:  "disable-proposer-atts-selection-using-max-cover",
-		Usage: "Disable max-cover algorithm when selecting attestations for proposer",
 	}
 	enableSlashingProtectionPruning = &cli.BoolFlag{
 		Name:  "enable-slashing-protection-history-pruning",
@@ -156,7 +147,6 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	writeWalletPasswordOnWebOnboarding,
 	enableExternalSlasherProtectionFlag,
 	disableAttestingHistoryDBCache,
-	PyrmontTestnet,
 	PraterTestnet,
 	Mainnet,
 	dynamicKeyReloadDebounceInterval,
@@ -175,7 +165,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	devModeFlag,
 	writeSSZStateTransitionsFlag,
 	disableGRPCConnectionLogging,
-	PyrmontTestnet,
 	PraterTestnet,
 	Mainnet,
 	enablePeerScorer,
@@ -183,7 +172,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	checkPtInfoCache,
 	disableBroadcastSlashingFlag,
 	enableSlasherFlag,
-	disableProposerAttsSelectionUsingMaxCover,
 	disableOptimizedBalanceUpdate,
 	enableHistoricalSpaceRepresentation,
 	disableCorrectlyInsertOrphanedAtts,

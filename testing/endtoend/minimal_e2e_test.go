@@ -27,7 +27,6 @@ func TestEndToEnd_MinimalConfig(t *testing.T) {
 }
 
 func TestEndToEnd_MinimalConfig_Web3Signer(t *testing.T) {
-	t.Skip("TODO(9994): Complete web3signer client implementation, currently blocked by https://github.com/ConsenSys/web3signer/issues/494")
 	e2eMinimal(t, &testArgs{
 		usePrysmSh:          false,
 		useWeb3RemoteSigner: true,
@@ -46,18 +45,28 @@ func e2eMinimal(t *testing.T, args *testArgs) {
 	params.UseE2EConfig()
 	require.NoError(t, e2eParams.Init(e2eParams.StandardBeaconCount))
 
-	// Run for 10 epochs if not in long-running to confirm long-running has no issues.
+	// Run for 12 epochs if not in long-running to confirm long-running has no issues.
 	var err error
-	epochsToRun := 10
+	epochsToRun := 12
 	epochStr, longRunning := os.LookupEnv("E2E_EPOCHS")
 	if longRunning {
 		epochsToRun, err = strconv.Atoi(epochStr)
 		require.NoError(t, err)
 	}
+	// TODO(#10053): Web3signer does not support bellatrix yet.
+	if args.useWeb3RemoteSigner {
+		epochsToRun = helpers.BellatrixE2EForkEpoch - 1
+	}
 	if args.usePrysmSh {
 		// If using prysm.sh, run for only 6 epochs.
 		// TODO(#9166): remove this block once v2 changes are live.
 		epochsToRun = helpers.AltairE2EForkEpoch - 1
+	}
+	seed := 0
+	seedStr, isValid := os.LookupEnv("E2E_SEED")
+	if isValid {
+		seed, err = strconv.Atoi(seedStr)
+		require.NoError(t, err)
 	}
 	tracingPort := e2eParams.TestParams.Ports.JaegerTracingPort
 	tracingEndpoint := fmt.Sprintf("127.0.0.1:%d", tracingPort)
@@ -77,12 +86,14 @@ func e2eMinimal(t *testing.T, args *testArgs) {
 		ev.ValidatorHasExited,
 		ev.ValidatorsVoteWithTheMajority,
 		ev.ColdStateCheckpoint,
-		ev.ForkTransition,
+		ev.AltairForkTransition,
+		ev.BellatrixForkTransition,
 		ev.APIMiddlewareVerifyIntegrity,
 		ev.APIGatewayV1Alpha1VerifyIntegrity,
 		ev.FinishedSyncing,
 		ev.AllNodesHaveSameHead,
 		ev.ValidatorSyncParticipation,
+		ev.TransactionsPresent,
 	}
 	testConfig := &types.E2EConfig{
 		BeaconFlags: []string{
@@ -101,6 +112,7 @@ func e2eMinimal(t *testing.T, args *testArgs) {
 		UseWeb3RemoteSigner: args.useWeb3RemoteSigner,
 		TracingSinkEndpoint: tracingEndpoint,
 		Evaluators:          evals,
+		Seed:                int64(seed),
 	}
 
 	newTestRunner(t, testConfig).run()

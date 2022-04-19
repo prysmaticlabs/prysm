@@ -9,11 +9,10 @@ import (
 
 // ForkChoice defines the overall fork choice store which includes all block nodes, validator's latest votes and balances.
 type ForkChoice struct {
-	store      *Store
-	votes      []Vote // tracks individual validator's last vote.
-	votesLock  sync.RWMutex
-	balances   []uint64 // tracks individual validator's last justified balances.
-	syncedTips *optimisticStore
+	store     *Store
+	votes     []Vote // tracks individual validator's last vote.
+	votesLock sync.RWMutex
+	balances  []uint64 // tracks individual validator's last justified balances.
 }
 
 // Store defines the fork choice store which includes block nodes and the last view of checkpoint information.
@@ -28,6 +27,7 @@ type Store struct {
 	nodes                      []*Node                                 // list of block nodes, each node is a representation of one block.
 	nodesIndices               map[[fieldparams.RootLength]byte]uint64 // the root of block node and the nodes index in the list.
 	canonicalNodes             map[[fieldparams.RootLength]byte]bool   // the canonical block nodes.
+	payloadIndices             map[[fieldparams.RootLength]byte]uint64 // the payload hash of block node and the index in the list
 	nodesLock                  sync.RWMutex
 	proposerBoostLock          sync.RWMutex
 }
@@ -44,15 +44,17 @@ type Node struct {
 	weight         uint64                       // weight of this node.
 	bestChild      uint64                       // bestChild index of this node.
 	bestDescendant uint64                       // bestDescendant of this node.
-	graffiti       [fieldparams.RootLength]byte // graffiti of the block node.
+	status         status                       // optimistic status of this node
 }
 
-// optimisticStore defines a structure that tracks the tips of the fully
-// validated blocks tree.
-type optimisticStore struct {
-	validatedTips map[[32]byte]types.Slot
-	sync.RWMutex
-}
+// enum used as optimistic status of a node
+type status uint8
+
+const (
+	syncing status = iota // the node is optimistic
+	valid                 //fully validated node
+	invalid               // invalid execution payload
+)
 
 // Vote defines an individual validator's vote.
 type Vote struct {

@@ -232,7 +232,7 @@ func TestCommitteeAssignments_CannotRetrieveFuture(t *testing.T) {
 
 	_, proposerIndxs, err = CommitteeAssignments(context.Background(), state, time.CurrentEpoch(state)+1)
 	require.NoError(t, err)
-	require.Equal(t, 0, len(proposerIndxs), "wanted empty proposer index set")
+	require.NotEqual(t, 0, len(proposerIndxs), "wanted non-zero proposer index set")
 }
 
 func TestCommitteeAssignments_EverySlotHasMin1Proposer(t *testing.T) {

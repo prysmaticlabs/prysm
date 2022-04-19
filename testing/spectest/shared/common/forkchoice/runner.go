@@ -141,7 +141,7 @@ func Run(t *testing.T, config string, fork int) {
 						tdBigint.SetBytes(tdInBigEndian)
 					}
 					if step.Check != nil {
-						require.NoError(t, service.UpdateHeadWithBalances(ctx))
+						require.NoError(t, service.UpdateAndSaveHeadWithBalances(ctx))
 						c := step.Check
 						if c.Head != nil {
 							r, err := service.HeadRoot(ctx)

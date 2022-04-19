@@ -104,6 +104,9 @@ ssz_gen_marshal(
         "SyncCommittee",
         "SyncAggregatorSelectionData",
         "PowBlock",
+        "SignedBlindedBeaconBlockBellatrix",
+        "BlindedBeaconBlockBellatrix",
+        "BlindedBeaconBlockBodyBellatrix",
     ],
 )
 
