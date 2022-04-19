@@ -113,10 +113,6 @@ var (
 		Name:  "disable-get-block-optimizations",
 		Usage: "This disables some optimizations on the GetBlock() function.",
 	}
-	disableBatchGossipVerification = &cli.BoolFlag{
-		Name:  "disable-batch-gossip-verification",
-		Usage: "This enables batch verification of signatures received over gossip.",
-	}
 	disableBalanceTrieComputation = &cli.BoolFlag{
 		Name:  "disable-balance-trie-computation",
 		Usage: "This disables optimized hash tree root operations for our balance field.",
@@ -178,7 +174,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableGetBlockOptimizations,
 	disableCorrectlyPruneCanonicalAtts,
 	disableActiveBalanceCache,
-	disableBatchGossipVerification,
 	disableBalanceTrieComputation,
 	enableNativeState,
 	enableVecHTR,
