@@ -134,35 +134,34 @@ func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
 		return false, errors.Wrap(err, "could not get execution payload")
 	}
 	lastValidHash, err := s.cfg.ExecutionEngineCaller.NewPayload(ctx, payload)
-	if err != nil {
-		switch err {
-		case powchain.ErrAcceptedSyncingPayloadStatus:
-			newPayloadOptimisticNodeCount.Inc()
-			log.WithFields(logrus.Fields{
-				"slot":             blk.Block().Slot(),
-				"payloadBlockHash": fmt.Sprintf("%#x", bytesutil.Trunc(payload.BlockHash)),
-			}).Info("Called new payload with optimistic block")
-			return false, nil
-		case powchain.ErrInvalidPayloadStatus:
-			newPayloadInvalidNodeCount.Inc()
-			root, err := blk.Block().HashTreeRoot()
-			if err != nil {
-				return false, err
-			}
-			invalidRoots, err := s.ForkChoicer().SetOptimisticToInvalid(ctx, root, bytesutil.ToBytes32(lastValidHash))
-			if err != nil {
-				return false, err
-			}
-			if err := s.removeInvalidBlockAndState(ctx, invalidRoots); err != nil {
-				return false, err
-			}
-			return false, errors.New("could not validate an INVALID payload from execution engine")
-		default:
-			return false, errors.Wrap(err, "could not validate execution payload from execution engine")
+	switch err {
+	case nil:
+		newPayloadValidNodeCount.Inc()
+		return true, nil
+	case powchain.ErrAcceptedSyncingPayloadStatus:
+		newPayloadOptimisticNodeCount.Inc()
+		log.WithFields(logrus.Fields{
+			"slot":             blk.Block().Slot(),
+			"payloadBlockHash": fmt.Sprintf("%#x", bytesutil.Trunc(payload.BlockHash)),
+		}).Info("Called new payload with optimistic block")
+		return false, nil
+	case powchain.ErrInvalidPayloadStatus:
+		newPayloadInvalidNodeCount.Inc()
+		root, err := blk.Block().HashTreeRoot()
+		if err != nil {
+			return false, err
 		}
+		invalidRoots, err := s.ForkChoicer().SetOptimisticToInvalid(ctx, root, bytesutil.ToBytes32(lastValidHash))
+		if err != nil {
+			return false, err
+		}
+		if err := s.removeInvalidBlockAndState(ctx, invalidRoots); err != nil {
+			return false, err
+		}
+		return false, errors.New("could not validate an INVALID payload from execution engine")
+	default:
+		return false, errors.Wrap(err, "could not validate execution payload from execution engine")
 	}
-	newPayloadValidNodeCount.Inc()
-	return true, nil
 }
 
 // optimisticCandidateBlock returns true if this block can be optimistically synced.
