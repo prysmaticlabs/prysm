@@ -75,6 +75,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedDisableGetBlockOptimizations = &cli.BoolFlag{
+		Name:   "disable-get-block-optimizations",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -90,4 +95,5 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedAttestationAggregationStrategy,
 	deprecatedForceOptMaxCoverAggregationStategy,
 	deprecatedPyrmontTestnet,
+	deprecatedDisableGetBlockOptimizations,
 }
