@@ -26,6 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
+	"gopkg.in/urfave/cli.v1"
 )
 
 var log = logrus.WithField("prefix", "flags")
@@ -44,7 +45,6 @@ type Flags struct {
 	WriteWalletPasswordOnWebOnboarding  bool // WriteWalletPasswordOnWebOnboarding writes the password to disk after Prysm web signup.
 	DisableAttestingHistoryDBCache      bool // DisableAttestingHistoryDBCache for the validator client increases disk reads/writes.
 	ProposerAttsSelectionUsingMaxCover  bool // ProposerAttsSelectionUsingMaxCover enables max-cover algorithm when selecting attestations for proposing.
-	EnableOptimizedBalanceUpdate        bool // EnableOptimizedBalanceUpdate uses an updated method of performing balance updates.
 	EnableDoppelGanger                  bool // EnableDoppelGanger enables doppelganger protection on startup for the validator.
 	EnableHistoricalSpaceRepresentation bool // EnableHistoricalSpaceRepresentation enables the saving of registry validators in separate buckets to save space
 	EnableGetBlockOptimizations         bool // EnableGetBlockOptimizations optimizes some elements of the GetBlock() function.
@@ -171,11 +171,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(disableProposerAttsSelectionUsingMaxCover.Name) {
 		logDisabled(disableProposerAttsSelectionUsingMaxCover)
 		cfg.ProposerAttsSelectionUsingMaxCover = false
-	}
-	cfg.EnableOptimizedBalanceUpdate = true
-	if ctx.Bool(disableOptimizedBalanceUpdate.Name) {
-		logDisabled(disableOptimizedBalanceUpdate)
-		cfg.EnableOptimizedBalanceUpdate = false
 	}
 	if ctx.Bool(enableHistoricalSpaceRepresentation.Name) {
 		log.WithField(enableHistoricalSpaceRepresentation.Name, enableHistoricalSpaceRepresentation.Usage).Warn(enabledFeatureFlag)
