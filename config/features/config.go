@@ -26,7 +26,6 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
-	"gopkg.in/urfave/cli.v1"
 )
 
 var log = logrus.WithField("prefix", "flags")
