@@ -7,7 +7,7 @@ PRESET_BASE: 'minimal'
 
 # Transition
 # ---------------------------------------------------------------
-# TBD, 2**256-2**10 is a placeholder, e2e is 600
+# TBD, 2**256-2**10 is a placeholder, e2e is 616
 TERMINAL_TOTAL_DIFFICULTY: 616
 # By default, don't use these params
 #TERMINAL_BLOCK_HASH: 0x0000000000000000000000000000000000000000000000000000000000000000
