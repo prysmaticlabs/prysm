@@ -1,7 +1,6 @@
 package prompt
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -114,7 +113,7 @@ func TestDefaultAndValidatePrompt(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			content := []byte(tt.input + "\n")
-			tmpfile, err := ioutil.TempFile("", "content")
+			tmpfile, err := os.CreateTemp("", "content")
 			require.NoError(t, err)
 			defer func() {
 				err := os.Remove(tmpfile.Name())

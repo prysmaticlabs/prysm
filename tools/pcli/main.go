@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"regexp"
 	"strings"
@@ -212,7 +211,7 @@ func main() {
 
 // dataFetcher fetches and unmarshals data from file to provided data structure.
 func dataFetcher(fPath string, data fssz.Unmarshaler) error {
-	rawFile, err := ioutil.ReadFile(fPath) // #nosec G304
+	rawFile, err := os.ReadFile(fPath) // #nosec G304
 	if err != nil {
 		return err
 	}

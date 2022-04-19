@@ -2,7 +2,7 @@ package blockchain
 
 import (
 	"context"
-	"io/ioutil"
+	"io"
 	"testing"
 
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -14,7 +14,7 @@ import (
 
 func init() {
 	logrus.SetLevel(logrus.DebugLevel)
-	logrus.SetOutput(ioutil.Discard)
+	logrus.SetOutput(io.Discard)
 }
 
 func TestChainService_SaveHead_DataRace(t *testing.T) {

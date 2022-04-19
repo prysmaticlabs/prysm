@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path"
@@ -70,7 +69,7 @@ func WaitForTextInFile(file *os.File, text string) error {
 	for {
 		select {
 		case <-ctx.Done():
-			contents, err := ioutil.ReadAll(file)
+			contents, err := io.ReadAll(file)
 			if err != nil {
 				return err
 			}
@@ -108,7 +107,7 @@ func FindFollowingTextInFile(file *os.File, text string) (string, error) {
 	for {
 		select {
 		case <-ctx.Done():
-			contents, err := ioutil.ReadAll(file)
+			contents, err := io.ReadAll(file)
 			if err != nil {
 				return "", err
 			}
@@ -146,13 +145,13 @@ func FindFollowingTextInFile(file *os.File, text string) (string, error) {
 // GraffitiYamlFile outputs graffiti YAML file into a testing directory.
 func GraffitiYamlFile(testDir string) (string, error) {
 	b := []byte(`default: "Rice"
-random: 
+random:
   - "Sushi"
   - "Ramen"
   - "Takoyaki"
 `)
 	f := filepath.Join(testDir, "graffiti.yaml")
-	if err := ioutil.WriteFile(f, b, os.ModePerm); err != nil {
+	if err := os.WriteFile(f, b, os.ModePerm); err != nil {
 		return "", err
 	}
 	return f, nil
@@ -222,7 +221,7 @@ func writeURLRespAtPath(url, fp string) error {
 		}
 	}()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}

@@ -3,8 +3,8 @@ package p2p
 import (
 	"crypto/rand"
 	"encoding/hex"
-	"io/ioutil"
 	"net"
+	"os"
 	"testing"
 
 	gethCrypto "github.com/ethereum/go-ethereum/crypto"
@@ -17,7 +17,7 @@ import (
 )
 
 func TestPrivateKeyLoading(t *testing.T) {
-	file, err := ioutil.TempFile(t.TempDir(), "key")
+	file, err := os.CreateTemp(t.TempDir(), "key")
 	require.NoError(t, err)
 	key, _, err := crypto.GenerateSecp256k1Key(rand.Reader)
 	require.NoError(t, err, "Could not generate key")
@@ -27,7 +27,7 @@ func TestPrivateKeyLoading(t *testing.T) {
 	}
 	out := hex.EncodeToString(raw)
 
-	err = ioutil.WriteFile(file.Name(), []byte(out), params.BeaconIoConfig().ReadWritePermissions)
+	err = os.WriteFile(file.Name(), []byte(out), params.BeaconIoConfig().ReadWritePermissions)
 	require.NoError(t, err, "Could not write key to file")
 	log.WithField("file", file.Name()).WithField("key", out).Info("Wrote key to file")
 	cfg := &Config{
