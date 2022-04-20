@@ -1,7 +1,17 @@
 package state_native
 
+import (
+	"fmt"
+
+	"github.com/prysmaticlabs/prysm/runtime/version"
+)
+
 // CurrentEpochParticipation corresponding to participation bits on the beacon chain.
 func (b *BeaconState) CurrentEpochParticipation() ([]byte, error) {
+	if b.version == version.Phase0 {
+		return nil, fmt.Errorf("CurrentEpochParticipation is not supported for %s", version.String(b.version))
+	}
+
 	if b.currentEpochParticipation == nil {
 		return nil, nil
 	}
@@ -14,6 +24,10 @@ func (b *BeaconState) CurrentEpochParticipation() ([]byte, error) {
 
 // PreviousEpochParticipation corresponding to participation bits on the beacon chain.
 func (b *BeaconState) PreviousEpochParticipation() ([]byte, error) {
+	if b.version == version.Phase0 {
+		return nil, fmt.Errorf("PreviousEpochParticipation is not supported for %s", version.String(b.version))
+	}
+
 	if b.previousEpochParticipation == nil {
 		return nil, nil
 	}

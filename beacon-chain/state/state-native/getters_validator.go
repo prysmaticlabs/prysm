@@ -9,6 +9,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 )
 
 // ValidatorIndexOutOfRangeError represents an error scenario where a validator does not exist
@@ -249,6 +250,22 @@ func (b *BeaconState) slashingsVal() []uint64 {
 	return res
 }
 
+// InactivityScores of validators participating in consensus on the beacon chain.
+func (b *BeaconState) InactivityScores() ([]uint64, error) {
+	if b.version == version.Phase0 {
+		return nil, fmt.Errorf("InactivityScores is not supported for %s", version.String(b.version))
+	}
+
+	if b.inactivityScores == nil {
+		return nil, nil
+	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	return b.inactivityScoresVal(), nil
+}
+
 // inactivityScoresVal of validators participating in consensus on the beacon chain.
 // This assumes that a lock is already held on BeaconState.
 func (b *BeaconState) inactivityScoresVal() []uint64 {
@@ -259,16 +276,4 @@ func (b *BeaconState) inactivityScoresVal() []uint64 {
 	res := make([]uint64, len(b.inactivityScores))
 	copy(res, b.inactivityScores)
 	return res
-}
-
-// InactivityScores of validators participating in consensus on the beacon chain.
-func (b *BeaconState) InactivityScores() ([]uint64, error) {
-	if b.inactivityScores == nil {
-		return nil, nil
-	}
-
-	b.lock.RLock()
-	defer b.lock.RUnlock()
-
-	return b.inactivityScoresVal(), nil
 }

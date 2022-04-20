@@ -7,6 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 )
 
 // RotateAttestations sets the previous epoch attestations to the current epoch attestations and
@@ -14,6 +15,10 @@ import (
 func (b *BeaconState) RotateAttestations() error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
+
+	if b.version != version.Phase0 {
+		return fmt.Errorf("RotateAttestations is not supported for %s", version.String(b.version))
+	}
 
 	b.setPreviousEpochAttestations(b.currentEpochAttestationsVal())
 	b.setCurrentEpochAttestations([]*ethpb.PendingAttestation{})
@@ -44,6 +49,10 @@ func (b *BeaconState) AppendCurrentEpochAttestations(val *ethpb.PendingAttestati
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
+	if b.version != version.Phase0 {
+		return fmt.Errorf("AppendCurrentEpochAttestations is not supported for %s", version.String(b.version))
+	}
+
 	atts := b.currentEpochAttestations
 	max := uint64(fieldparams.CurrentEpochAttestationsLength)
 	if uint64(len(atts)) >= max {
@@ -69,6 +78,10 @@ func (b *BeaconState) AppendCurrentEpochAttestations(val *ethpb.PendingAttestati
 func (b *BeaconState) AppendPreviousEpochAttestations(val *ethpb.PendingAttestation) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
+
+	if b.version != version.Phase0 {
+		return fmt.Errorf("AppendPreviousEpochAttestations is not supported for %s", version.String(b.version))
+	}
 
 	atts := b.previousEpochAttestations
 	max := uint64(fieldparams.PreviousEpochAttestationsLength)

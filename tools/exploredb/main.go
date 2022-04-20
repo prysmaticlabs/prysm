@@ -352,7 +352,13 @@ func printStates(stateC <-chan *modifiedState, doneC chan<- bool) {
 		log.Infof("previous_epoch_attestations   : sizeSSZ = %s, count = %d", humanize.Bytes(size), count)
 		size, count = sizeAndCountGeneric(st.CurrentEpochAttestations())
 		log.Infof("current_epoch_attestations    : sizeSSZ = %s, count = %d", humanize.Bytes(size), count)
-		log.Infof("justification_bits            : size =  %s, count = %d", humanize.Bytes(st.JustificationBits().Len()), st.JustificationBits().Count())
+		justificationBits, err := st.JustificationBits()
+		if err != nil {
+			log.Warn("Could not get justification bits from state")
+		} else {
+			log.Infof("justification_bits            : size =  %s, count = %d", humanize.Bytes(justificationBits.Len()), justificationBits.Count())
+		}
+
 		log.Infof("previous_justified_checkpoint : sizeSSZ = %s", humanize.Bytes(uint64(st.PreviousJustifiedCheckpoint().SizeSSZ())))
 		log.Infof("current_justified_checkpoint  : sizeSSZ = %s", humanize.Bytes(uint64(st.CurrentJustifiedCheckpoint().SizeSSZ())))
 		log.Infof("finalized_checkpoint          : sizeSSZ = %s", humanize.Bytes(uint64(st.FinalizedCheckpoint().SizeSSZ())))

@@ -88,7 +88,10 @@ func weighJustificationAndFinalization(state state.BeaconState,
 	if err := state.SetPreviousJustifiedCheckpoint(state.CurrentJustifiedCheckpoint()); err != nil {
 		return nil, err
 	}
-	newBits := state.JustificationBits()
+	newBits, err := state.JustificationBits()
+	if err != nil {
+		return nil, err
+	}
 	newBits.Shift(1)
 	if err := state.SetJustificationBits(newBits); err != nil {
 		return nil, err
@@ -106,7 +109,10 @@ func weighJustificationAndFinalization(state state.BeaconState,
 		if err := state.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{Epoch: prevEpoch, Root: blockRoot}); err != nil {
 			return nil, err
 		}
-		newBits := state.JustificationBits()
+		newBits, err := state.JustificationBits()
+		if err != nil {
+			return nil, err
+		}
 		newBits.SetBitAt(1, true)
 		if err := state.SetJustificationBits(newBits); err != nil {
 			return nil, err
@@ -122,7 +128,10 @@ func weighJustificationAndFinalization(state state.BeaconState,
 		if err := state.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{Epoch: currentEpoch, Root: blockRoot}); err != nil {
 			return nil, err
 		}
-		newBits := state.JustificationBits()
+		newBits, err := state.JustificationBits()
+		if err != nil {
+			return nil, err
+		}
 		newBits.SetBitAt(0, true)
 		if err := state.SetJustificationBits(newBits); err != nil {
 			return nil, err
@@ -130,7 +139,12 @@ func weighJustificationAndFinalization(state state.BeaconState,
 	}
 
 	// Process finalization according to Ethereum Beacon Chain specification.
-	justification := state.JustificationBits().Bytes()[0]
+	justificationBits, err := state.JustificationBits()
+	if err != nil {
+		return nil, err
+	}
+
+	justification := justificationBits.Bytes()[0]
 
 	// 2nd/3rd/4th (0b1110) most recent epochs are justified, the 2nd using the 4th as source.
 	if justification&0x0E == 0x0E && (oldPrevJustifiedCheckpoint.Epoch+3) == currentEpoch {

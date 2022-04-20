@@ -66,6 +66,11 @@ func UpgradeToAltair(ctx context.Context, state state.BeaconState) (state.Beacon
 	epoch := time.CurrentEpoch(state)
 
 	numValidators := state.NumValidators()
+	justificationBits, err := state.JustificationBits()
+	if err != nil {
+		return nil, err
+	}
+
 	s := &ethpb.BeaconStateAltair{
 		GenesisTime:           state.GenesisTime(),
 		GenesisValidatorsRoot: state.GenesisValidatorsRoot(),
@@ -88,7 +93,7 @@ func UpgradeToAltair(ctx context.Context, state state.BeaconState) (state.Beacon
 		Slashings:                   state.Slashings(),
 		PreviousEpochParticipation:  make([]byte, numValidators),
 		CurrentEpochParticipation:   make([]byte, numValidators),
-		JustificationBits:           state.JustificationBits(),
+		JustificationBits:           justificationBits,
 		PreviousJustifiedCheckpoint: state.PreviousJustifiedCheckpoint(),
 		CurrentJustifiedCheckpoint:  state.CurrentJustifiedCheckpoint(),
 		FinalizedCheckpoint:         state.FinalizedCheckpoint(),

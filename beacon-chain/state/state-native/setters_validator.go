@@ -1,12 +1,15 @@
 package state_native
 
 import (
+	"fmt"
+
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	nativetypes "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 )
 
 // SetValidators for the beacon state. Updates the entire
@@ -206,6 +209,10 @@ func (b *BeaconState) AppendInactivityScore(s uint64) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
+	if b.version == version.Phase0 {
+		return fmt.Errorf("AppendInactivityScore is not supported for %s", version.String(b.version))
+	}
+
 	scores := b.inactivityScores
 	if b.sharedFieldReferences[nativetypes.InactivityScores].Refs() > 1 {
 		scores = b.inactivityScoresVal()
@@ -223,6 +230,10 @@ func (b *BeaconState) AppendInactivityScore(s uint64) error {
 func (b *BeaconState) SetInactivityScores(val []uint64) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
+
+	if b.version == version.Phase0 {
+		return fmt.Errorf("SetInactivityScores is not supported for %s", version.String(b.version))
+	}
 
 	b.sharedFieldReferences[nativetypes.InactivityScores].MinusRef()
 	b.sharedFieldReferences[nativetypes.InactivityScores] = stateutil.NewRef(1)

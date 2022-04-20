@@ -2,22 +2,28 @@ package state_native
 
 import (
 	"bytes"
+	"fmt"
 
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 )
 
 // JustificationBits marking which epochs have been justified in the beacon chain.
-func (b *BeaconState) JustificationBits() bitfield.Bitvector4 {
+func (b *BeaconState) JustificationBits() (bitfield.Bitvector4, error) {
+	if b.version == version.Phase0 {
+		return nil, fmt.Errorf("JustificationBits is not supported for %s", version.String(b.version))
+	}
+
 	if b.justificationBits == nil {
-		return nil
+		return nil, nil
 	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.justificationBitsVal()
+	return b.justificationBitsVal(), nil
 }
 
 // justificationBitsVal marking which epochs have been justified in the beacon chain.

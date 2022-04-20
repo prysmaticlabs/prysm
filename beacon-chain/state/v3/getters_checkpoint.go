@@ -9,18 +9,18 @@ import (
 )
 
 // JustificationBits marking which epochs have been justified in the beacon chain.
-func (b *BeaconState) JustificationBits() bitfield.Bitvector4 {
+func (b *BeaconState) JustificationBits() (bitfield.Bitvector4, error) {
 	if !b.hasInnerState() {
-		return nil
+		return nil, nil
 	}
 	if b.state.JustificationBits == nil {
-		return nil
+		return nil, nil
 	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.justificationBits()
+	return b.justificationBits(), nil
 }
 
 // justificationBits marking which epochs have been justified in the beacon chain.

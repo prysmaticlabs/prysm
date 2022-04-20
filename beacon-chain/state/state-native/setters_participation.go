@@ -1,8 +1,11 @@
 package state_native
 
 import (
+	"fmt"
+
 	nativetypes "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 )
 
 // SetPreviousParticipationBits for the beacon state. Updates the entire
@@ -10,6 +13,10 @@ import (
 func (b *BeaconState) SetPreviousParticipationBits(val []byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
+
+	if b.version == version.Phase0 {
+		return fmt.Errorf("SetPreviousParticipationBits is not supported for %s", version.String(b.version))
+	}
 
 	b.sharedFieldReferences[nativetypes.PreviousEpochParticipationBits].MinusRef()
 	b.sharedFieldReferences[nativetypes.PreviousEpochParticipationBits] = stateutil.NewRef(1)
@@ -26,6 +33,10 @@ func (b *BeaconState) SetCurrentParticipationBits(val []byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
+	if b.version == version.Phase0 {
+		return fmt.Errorf("SetCurrentParticipationBits is not supported for %s", version.String(b.version))
+	}
+
 	b.sharedFieldReferences[nativetypes.CurrentEpochParticipationBits].MinusRef()
 	b.sharedFieldReferences[nativetypes.CurrentEpochParticipationBits] = stateutil.NewRef(1)
 
@@ -40,6 +51,10 @@ func (b *BeaconState) SetCurrentParticipationBits(val []byte) error {
 func (b *BeaconState) AppendCurrentParticipationBits(val byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
+
+	if b.version == version.Phase0 {
+		return fmt.Errorf("AppendCurrentParticipationBits is not supported for %s", version.String(b.version))
+	}
 
 	participation := b.currentEpochParticipation
 	if b.sharedFieldReferences[nativetypes.CurrentEpochParticipationBits].Refs() > 1 {
@@ -62,6 +77,10 @@ func (b *BeaconState) AppendPreviousParticipationBits(val byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
+	if b.version == version.Phase0 {
+		return fmt.Errorf("AppendPreviousParticipationBits is not supported for %s", version.String(b.version))
+	}
+
 	bits := b.previousEpochParticipation
 	if b.sharedFieldReferences[nativetypes.PreviousEpochParticipationBits].Refs() > 1 {
 		bits = make([]byte, len(b.previousEpochParticipation))
@@ -81,6 +100,11 @@ func (b *BeaconState) AppendPreviousParticipationBits(val byte) error {
 // the provided mutator function.
 func (b *BeaconState) ModifyPreviousParticipationBits(mutator func(val []byte) ([]byte, error)) error {
 	b.lock.Lock()
+
+	if b.version == version.Phase0 {
+		b.lock.Unlock()
+		return fmt.Errorf("ModifyPreviousParticipationBits is not supported for %s", version.String(b.version))
+	}
 
 	participation := b.previousEpochParticipation
 	if b.sharedFieldReferences[nativetypes.PreviousEpochParticipationBits].Refs() > 1 {
@@ -111,6 +135,11 @@ func (b *BeaconState) ModifyPreviousParticipationBits(mutator func(val []byte) (
 // the provided mutator function.
 func (b *BeaconState) ModifyCurrentParticipationBits(mutator func(val []byte) ([]byte, error)) error {
 	b.lock.Lock()
+
+	if b.version == version.Phase0 {
+		b.lock.Unlock()
+		return fmt.Errorf("ModifyCurrentParticipationBits is not supported for %s", version.String(b.version))
+	}
 
 	participation := b.currentEpochParticipation
 	if b.sharedFieldReferences[nativetypes.CurrentEpochParticipationBits].Refs() > 1 {
