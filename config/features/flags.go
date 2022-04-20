@@ -105,10 +105,6 @@ var (
 		Usage: "Disable the fix for bug where any block attestations can get incorrectly pruned, which improves validator profitability and overall network health," +
 			"see issue #9443 for further detail",
 	}
-	disableGetBlockOptimizations = &cli.BoolFlag{
-		Name:  "disable-get-block-optimizations",
-		Usage: "This disables some optimizations on the GetBlock() function.",
-	}
 	disableBatchGossipVerification = &cli.BoolFlag{
 		Name:  "disable-batch-gossip-verification",
 		Usage: "This enables batch verification of signatures received over gossip.",
@@ -171,7 +167,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableOptimizedBalanceUpdate,
 	enableHistoricalSpaceRepresentation,
 	disableCorrectlyInsertOrphanedAtts,
-	disableGetBlockOptimizations,
 	disableCorrectlyPruneCanonicalAtts,
 	disableBatchGossipVerification,
 	disableBalanceTrieComputation,
