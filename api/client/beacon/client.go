@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
@@ -369,7 +368,7 @@ type WeakSubjectivityData struct {
 }
 
 func non200Err(response *http.Response) error {
-	bodyBytes, err := ioutil.ReadAll(response.Body)
+	bodyBytes, err := io.ReadAll(response.Body)
 	var body string
 	if err != nil {
 		body = "(Unable to read response body.)"

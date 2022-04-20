@@ -2,7 +2,7 @@ package blocks_test
 
 import (
 	"context"
-	"io/ioutil"
+	"io"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -23,7 +23,7 @@ import (
 )
 
 func init() {
-	logrus.SetOutput(ioutil.Discard) // Ignore "validator activated" logs
+	logrus.SetOutput(io.Discard) // Ignore "validator activated" logs
 }
 
 func TestProcessBlockHeader_ImproperBlockSlot(t *testing.T) {

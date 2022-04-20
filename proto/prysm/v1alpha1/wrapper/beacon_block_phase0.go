@@ -175,6 +175,11 @@ func (w Phase0BeaconBlock) IsNil() bool {
 	return w.b == nil || w.Body().IsNil()
 }
 
+// IsBlinded checks if the beacon block is a blinded block.
+func (Phase0BeaconBlock) IsBlinded() bool {
+	return false
+}
+
 // HashTreeRoot returns the ssz root of the block.
 func (w Phase0BeaconBlock) HashTreeRoot() ([32]byte, error) {
 	return w.b.HashTreeRoot()

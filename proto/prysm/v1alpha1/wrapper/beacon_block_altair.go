@@ -183,6 +183,11 @@ func (w altairBeaconBlock) IsNil() bool {
 	return w.b == nil
 }
 
+// IsBlinded checks if the beacon block is a blinded block.
+func (altairBeaconBlock) IsBlinded() bool {
+	return false
+}
+
 // HashTreeRoot returns the ssz root of the block.
 func (w altairBeaconBlock) HashTreeRoot() ([32]byte, error) {
 	return w.b.HashTreeRoot()

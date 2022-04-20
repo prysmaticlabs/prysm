@@ -2,7 +2,7 @@ package registration
 
 import (
 	"flag"
-	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/cmd"
@@ -27,9 +27,9 @@ func TestP2PPreregistration(t *testing.T) {
 	sampleNode := "- enr:-TESTNODE"
 	testDataDir := "testDataDir"
 
-	file, err := ioutil.TempFile(t.TempDir(), "bootstrapFile*.yaml")
+	file, err := os.CreateTemp(t.TempDir(), "bootstrapFile*.yaml")
 	require.NoError(t, err)
-	err = ioutil.WriteFile(file.Name(), []byte(sampleNode), 0644)
+	err = os.WriteFile(file.Name(), []byte(sampleNode), 0644)
 	require.NoError(t, err, "Error in WriteFile call")
 	params.SetupTestConfigCleanup(t)
 	config := params.BeaconNetworkConfig()
@@ -49,7 +49,7 @@ func TestP2PPreregistration(t *testing.T) {
 }
 
 func TestBootStrapNodeFile(t *testing.T) {
-	file, err := ioutil.TempFile(t.TempDir(), "bootstrapFile")
+	file, err := os.CreateTemp(t.TempDir(), "bootstrapFile")
 	require.NoError(t, err)
 
 	sampleNode0 := "- enr:-Ku4QMKVC_MowDsmEa20d5uGjrChI0h8_KsKXDmgVQbIbngZV0i" +
@@ -58,7 +58,7 @@ func TestBootStrapNodeFile(t *testing.T) {
 		"E1rtwzvGy40mq9eD66XfHPBWgIIN1ZHCCD6A"
 	sampleNode1 := "- enr:-TESTNODE2"
 	sampleNode2 := "- enr:-TESTNODE3"
-	err = ioutil.WriteFile(file.Name(), []byte(sampleNode0+"\n"+sampleNode1+"\n"+sampleNode2), 0644)
+	err = os.WriteFile(file.Name(), []byte(sampleNode0+"\n"+sampleNode1+"\n"+sampleNode2), 0644)
 	require.NoError(t, err, "Error in WriteFile call")
 	nodeList, err := readbootNodes(file.Name())
 	require.NoError(t, err, "Error in readbootNodes call")
