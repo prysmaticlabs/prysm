@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"flag"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"strings"
@@ -131,7 +130,7 @@ func main() {
 }
 
 func genesisStateFromJSONValidators(r io.Reader, genesisTime uint64) (*ethpb.BeaconState, error) {
-	enc, err := ioutil.ReadAll(r)
+	enc, err := io.ReadAll(r)
 	if err != nil {
 		return nil, err
 	}

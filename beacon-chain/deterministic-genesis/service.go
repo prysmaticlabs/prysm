@@ -5,8 +5,8 @@ package interopcoldstart
 
 import (
 	"context"
-	"io/ioutil"
 	"math/big"
+	"os"
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
@@ -61,7 +61,7 @@ func (s *Service) Start() {
 	log.Warn("Saving generated genesis state in database for interop testing")
 
 	if s.cfg.GenesisPath != "" {
-		data, err := ioutil.ReadFile(s.cfg.GenesisPath)
+		data, err := os.ReadFile(s.cfg.GenesisPath)
 		if err != nil {
 			log.Fatalf("Could not read pre-loaded state: %v", err)
 		}
