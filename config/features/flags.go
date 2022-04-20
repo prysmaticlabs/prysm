@@ -79,10 +79,6 @@ var (
 		Name:  "enable-slashing-protection-history-pruning",
 		Usage: "Enables the pruning of the validator client's slashing protection database",
 	}
-	disableOptimizedBalanceUpdate = &cli.BoolFlag{
-		Name:  "disable-optimized-balance-update",
-		Usage: "Disable the optimized method of updating validator balances.",
-	}
 	enableDoppelGangerProtection = &cli.BoolFlag{
 		Name: "enable-doppelganger",
 		Usage: "Enables the validator to perform a doppelganger check. (Warning): This is not " +
@@ -108,10 +104,6 @@ var (
 	disableActiveBalanceCache = &cli.BoolFlag{
 		Name:  "disable-active-balance-cache",
 		Usage: "This disables active balance cache, which improves node performance during block processing",
-	}
-	disableGetBlockOptimizations = &cli.BoolFlag{
-		Name:  "disable-get-block-optimizations",
-		Usage: "This disables some optimizations on the GetBlock() function.",
 	}
 	disableBatchGossipVerification = &cli.BoolFlag{
 		Name:  "disable-batch-gossip-verification",
@@ -172,10 +164,8 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	checkPtInfoCache,
 	disableBroadcastSlashingFlag,
 	enableSlasherFlag,
-	disableOptimizedBalanceUpdate,
 	enableHistoricalSpaceRepresentation,
 	disableCorrectlyInsertOrphanedAtts,
-	disableGetBlockOptimizations,
 	disableCorrectlyPruneCanonicalAtts,
 	disableActiveBalanceCache,
 	disableBatchGossipVerification,
