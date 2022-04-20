@@ -46,7 +46,6 @@ type Flags struct {
 	EnableOptimizedBalanceUpdate        bool // EnableOptimizedBalanceUpdate uses an updated method of performing balance updates.
 	EnableDoppelGanger                  bool // EnableDoppelGanger enables doppelganger protection on startup for the validator.
 	EnableHistoricalSpaceRepresentation bool // EnableHistoricalSpaceRepresentation enables the saving of registry validators in separate buckets to save space
-	EnableGetBlockOptimizations         bool // EnableGetBlockOptimizations optimizes some elements of the GetBlock() function.
 	EnableBatchVerification             bool // EnableBatchVerification enables batch signature verification on gossip messages.
 	EnableBalanceTrieComputation        bool // EnableBalanceTrieComputation enables our beacon state to use balance tries for hash tree root operations.
 	// Logging related toggles.
@@ -189,11 +188,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(disableActiveBalanceCache.Name) {
 		logDisabled(disableActiveBalanceCache)
 		cfg.EnableActiveBalanceCache = false
-	}
-	cfg.EnableGetBlockOptimizations = true
-	if ctx.Bool(disableGetBlockOptimizations.Name) {
-		logDisabled(disableGetBlockOptimizations)
-		cfg.EnableGetBlockOptimizations = false
 	}
 	cfg.EnableBatchVerification = true
 	if ctx.Bool(disableBatchGossipVerification.Name) {
