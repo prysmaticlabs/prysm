@@ -100,6 +100,7 @@
     },
     "exclude_files": {
       ".*/.*_test\\.go": "Tests are OK to use weak crypto",
+      "external/.*": "Third party code",
       "crypto/rand/rand\\.go": "Abstracts CSPRNGs for common use",
       "shared/aggregation/testing/bitlistutils.go": "Test-only package"
     }
