@@ -415,11 +415,6 @@ func TestHasReadWritePermissions(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			fullPath := filepath.Join(t.TempDir(), tt.args.itemPath)
 			require.NoError(t, os.WriteFile(fullPath, []byte("foo"), tt.args.perms))
-			t.Cleanup(func() {
-				if err := os.RemoveAll(fullPath); err != nil {
-					t.Fatalf("Could not delete temp dir: %v", err)
-				}
-			})
 			got, err := file.HasReadWritePermissions(fullPath)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("HasReadWritePermissions() error = %v, wantErr %v", err, tt.wantErr)
