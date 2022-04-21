@@ -151,6 +151,10 @@ func (s *Store) SaveStates(ctx context.Context, states []state.ReadOnlyBeaconSta
 	})
 }
 
+type withValidators interface {
+	GetValidators() []*ethpb.Validator
+}
+
 // SaveStatesEfficient stores multiple states to the db (new schema) using the provided corresponding roots.
 func (s *Store) SaveStatesEfficient(ctx context.Context, states []state.ReadOnlyBeaconState, blockRoots [][32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveStatesEfficient")
@@ -161,29 +165,12 @@ func (s *Store) SaveStatesEfficient(ctx context.Context, states []state.ReadOnly
 	validatorsEntries := make(map[string]*ethpb.Validator) // It's a map to make sure that you store only new validator entries.
 	validatorKeys := make([][]byte, len(states))           // For every state, this stores a compressed list of validator keys.
 	for i, st := range states {
-		var validators []*ethpb.Validator
-		switch st.InnerStateUnsafe().(type) {
-		case *ethpb.BeaconState:
-			pbState, err := v1.ProtobufBeaconState(st.InnerStateUnsafe())
-			if err != nil {
-				return err
-			}
-			validators = pbState.Validators
-		case *ethpb.BeaconStateAltair:
-			pbState, err := v2.ProtobufBeaconState(st.InnerStateUnsafe())
-			if err != nil {
-				return err
-			}
-			validators = pbState.Validators
-		case *ethpb.BeaconStateBellatrix:
-			pbState, err := v3.ProtobufBeaconState(st.InnerStateUnsafe())
-			if err != nil {
-				return err
-			}
-			validators = pbState.Validators
-		default:
-			return errors.New("invalid state type")
+		pb, ok := st.InnerStateUnsafe().(withValidators)
+		if !ok {
+			return errors.New("could not cast state to interface with GetValidators()")
 		}
+		validators := pb.GetValidators()
+
 		// yank out the validators and store them in separate table to save space.
 		var hashes []byte
 		for _, val := range validators {

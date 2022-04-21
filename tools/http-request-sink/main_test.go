@@ -3,7 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -52,7 +52,7 @@ func Test_parseAndCaptureRequest(t *testing.T) {
 
 	f, err = os.Open(tmpFile)
 	require.NoError(t, err)
-	fileContents, err := ioutil.ReadAll(f)
+	fileContents, err := io.ReadAll(f)
 	require.NoError(t, err)
 
 	receivedContent := map[string]interface{}{}

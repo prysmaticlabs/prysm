@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"flag"
-	"io/ioutil"
 	"log"
 	"os"
 	"path"
@@ -224,7 +223,7 @@ func generate2FullEpochState() error {
 }
 
 func genesisBeaconState() (state.BeaconState, error) {
-	beaconBytes, err := ioutil.ReadFile(path.Join(*outputDir, benchmark.GenesisFileName))
+	beaconBytes, err := os.ReadFile(path.Join(*outputDir, benchmark.GenesisFileName))
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot read genesis state file")
 	}

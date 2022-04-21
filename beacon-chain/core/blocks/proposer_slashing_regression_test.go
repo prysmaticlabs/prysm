@@ -1,7 +1,7 @@
 package blocks_test
 
 import (
-	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -16,7 +16,7 @@ import (
 // when it was not in actuality.
 // See: https://github.com/sigp/beacon-fuzz/issues/91
 func TestVerifyProposerSlashing_BeaconFuzzIssue91(t *testing.T) {
-	file, err := ioutil.ReadFile("testdata/beaconfuzz_91_beacon.ssz")
+	file, err := os.ReadFile("testdata/beaconfuzz_91_beacon.ssz")
 	require.NoError(t, err)
 	rawState := &ethpb.BeaconState{}
 	err = rawState.UnmarshalSSZ(file)
@@ -25,7 +25,7 @@ func TestVerifyProposerSlashing_BeaconFuzzIssue91(t *testing.T) {
 	st, err := v1.InitializeFromProtoUnsafe(rawState)
 	require.NoError(t, err)
 
-	file, err = ioutil.ReadFile("testdata/beaconfuzz_91_proposer_slashing.ssz")
+	file, err = os.ReadFile("testdata/beaconfuzz_91_proposer_slashing.ssz")
 	require.NoError(t, err)
 	slashing := &ethpb.ProposerSlashing{}
 	err = slashing.UnmarshalSSZ(file)

@@ -21,7 +21,6 @@ package keystore
 import (
 	"encoding/hex"
 	"encoding/json"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -167,7 +166,7 @@ func writeKeyFile(fname string, content []byte) error {
 	}
 	// Atomic write: create a temporary hidden file first
 	// then move it into place. TempFile assigns mode 0600.
-	f, err := ioutil.TempFile(filepath.Dir(fname), "."+filepath.Base(fname)+".tmp")
+	f, err := os.CreateTemp(filepath.Dir(fname), "."+filepath.Base(fname)+".tmp")
 	if err != nil {
 		return err
 	}

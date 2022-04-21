@@ -27,7 +27,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
-	"github.com/prysmaticlabs/prysm/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/container/trie"
@@ -2515,19 +2514,6 @@ func majorityVoteBoundaryTime(slot types.Slot) (uint64, uint64) {
 }
 
 func BenchmarkGetBlock(b *testing.B) {
-	proposerServer, beaconState, privKeys := setupGetBlock(b)
-	ctx := context.Background()
-	for n := 1; n < b.N; n++ {
-		runGetBlock(ctx, b, proposerServer, beaconState, privKeys, n)
-	}
-}
-
-func BenchmarkOptimisedGetBlock(b *testing.B) {
-	// enable block optimisations flag
-	resetCfg := features.InitWithReset(&features.Flags{
-		EnableGetBlockOptimizations: true,
-	})
-	defer resetCfg()
 	proposerServer, beaconState, privKeys := setupGetBlock(b)
 	ctx := context.Background()
 	for n := 1; n < b.N; n++ {
