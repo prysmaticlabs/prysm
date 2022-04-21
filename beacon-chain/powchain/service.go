@@ -148,6 +148,7 @@ type Service struct {
 	connectedETH1           bool
 	isRunning               bool
 	processingLock          sync.RWMutex
+	latestEth1DataLock      sync.RWMutex
 	cfg                     *config
 	ctx                     context.Context
 	cancel                  context.CancelFunc
