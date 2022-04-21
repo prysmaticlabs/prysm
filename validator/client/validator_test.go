@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -1460,6 +1461,7 @@ func TestValidator_UdpateFeeRecipient(t *testing.T) {
 	tests := []struct {
 		name            string
 		validatorSetter func(t *testing.T) *validator
+		feeRecipientMap map[types.ValidatorIndex]string
 		err             string
 	}{
 		{
@@ -1497,6 +1499,9 @@ func TestValidator_UdpateFeeRecipient(t *testing.T) {
 				}, nil)
 
 				return &v
+			},
+			feeRecipientMap: map[types.ValidatorIndex]string{
+				1: "0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9",
 			},
 		},
 		{
@@ -1552,6 +1557,9 @@ func TestValidator_UdpateFeeRecipient(t *testing.T) {
 				}, nil)
 				return &v
 			},
+			feeRecipientMap: map[types.ValidatorIndex]string{
+				1: "0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9",
+			},
 		},
 		{
 			name: " Happy Path proposer config not nil",
@@ -1591,6 +1599,9 @@ func TestValidator_UdpateFeeRecipient(t *testing.T) {
 				}
 				return &v
 			},
+			feeRecipientMap: map[types.ValidatorIndex]string{
+				1: "0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9",
+			},
 		},
 		{
 			name: " proposer config not nil but fee recipient empty ",
@@ -1628,6 +1639,7 @@ func TestValidator_UdpateFeeRecipient(t *testing.T) {
 						FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
 					},
 				}
+
 				return &v
 			},
 		},
@@ -1674,9 +1686,20 @@ func TestValidator_UdpateFeeRecipient(t *testing.T) {
 			v := tt.validatorSetter(t)
 			km, err := v.Keymanager()
 			require.NoError(t, err)
+			pubkeys, err := km.FetchValidatingPublicKeys(ctx)
+			require.NoError(t, err)
+			if tt.feeRecipientMap != nil {
+				feeRecipients, err := v.feeRecipients(ctx, pubkeys)
+				require.NoError(t, err)
+				for _, recipient := range feeRecipients {
+					require.Equal(t, strings.ToLower(tt.feeRecipientMap[recipient.ValidatorIndex]), strings.ToLower(hexutil.Encode(recipient.FeeRecipient)))
+				}
+			}
+
 			if err := v.UpdateFeeRecipient(ctx, km); tt.err != "" {
 				assert.ErrorContains(t, tt.err, err)
 			}
+
 		})
 	}
 }
