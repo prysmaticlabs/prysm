@@ -54,9 +54,6 @@ type Flags struct {
 	DisableLookback           bool // DisableLookback updates slasher to not use the lookback and update validator histories until epoch 0.
 	DisableBroadcastSlashings bool // DisableBroadcastSlashings disables p2p broadcasting of proposer and attester slashings.
 
-	// Cache toggles.
-	EnableActiveBalanceCache bool // EnableActiveBalanceCache enables active balance cache.
-
 	// Bug fixes related flags.
 	AttestTimely bool // AttestTimely fixes #8185. It is gated behind a flag to ensure beacon node's fix can safely roll out first. We'll invert this in v1.1.0.
 
@@ -177,11 +174,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(disableCorrectlyPruneCanonicalAtts.Name) {
 		logDisabled(disableCorrectlyPruneCanonicalAtts)
 		cfg.CorrectlyPruneCanonicalAtts = false
-	}
-	cfg.EnableActiveBalanceCache = true
-	if ctx.Bool(disableActiveBalanceCache.Name) {
-		logDisabled(disableActiveBalanceCache)
-		cfg.EnableActiveBalanceCache = false
 	}
 	cfg.EnableBatchVerification = true
 	if ctx.Bool(disableBatchGossipVerification.Name) {
