@@ -5,11 +5,11 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
+	field_params "github.com/prysmaticlabs/prysm/config/fieldparams"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/policies"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/types"
-	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -38,10 +38,9 @@ func feeRecipientIsPresent(conns ...*grpc.ClientConn) error {
 		switch ctr.Block.(type) {
 		case *ethpb.BeaconBlockContainer_BellatrixBlock:
 			fr := ctr.GetBellatrixBlock().Block.Body.ExecutionPayload.FeeRecipient
-			if len(fr) != 0 && hexutil.Encode(fr) == "0x878705ba3f8bc32fcf7f4caa1a35e72af65cf766" {
+			if len(fr) != 0 && hexutil.Encode(fr) != field_params.EthBurnAddressHex {
 				isFeeRecipientPresent = true
 			}
-			log.Infof("Fee recipient in bellatrix block: %s, want 0x878705ba3f8bc32fcf7f4caa1a35e72af65cf766", hexutil.Encode(fr))
 		}
 		if isFeeRecipientPresent {
 			break

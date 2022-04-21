@@ -26,6 +26,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+const (
+	EthAddress = "0x878705ba3f8bc32fcf7f4caa1a35e72af65cf766"
+)
+
 // Miner represents an ETH1 node which mines blocks.
 type Miner struct {
 	e2etypes.ComponentRunner
@@ -125,7 +129,7 @@ func (m *Miner) Start(ctx context.Context) error {
 		"--ipcdisable",
 		"--verbosity=4",
 		"--mine",
-		"--unlock=0x878705ba3f8bc32fcf7f4caa1a35e72af65cf766",
+		fmt.Sprintf("--unlock=%s", EthAddress),
 		"--allow-insecure-unlock",
 		fmt.Sprintf("--password=%s", eth1Path+"/keystore/"+minerPasswordFile),
 	}

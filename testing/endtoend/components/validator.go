@@ -3,17 +3,19 @@ package components
 import (
 	"bytes"
 	"context"
-	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
@@ -21,8 +23,10 @@ import (
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
+	validator_service_config "github.com/prysmaticlabs/prysm/config/validator/service"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/runtime/interop"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/components/eth1"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
@@ -32,7 +36,10 @@ import (
 )
 
 const depositGasLimit = 4000000
+const FeeRecipientAddress = "0x055Fb65722E7b2455043BFEBf6177F1D2e9738D9"
+const DefaultFeeRecipientAddress = "0x099Fb65722E7b2455043BFEBf6177F1D2e9738D9"
 
+var ValidatorHexPubKeys []string = make([]string, 0)
 var _ e2etypes.ComponentRunner = (*ValidatorNode)(nil)
 var _ e2etypes.ComponentRunner = (*ValidatorNodeSet)(nil)
 
@@ -132,6 +139,15 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+
+	_, pubs, err := interop.DeterministicallyGenerateKeys(uint64(offset), uint64(validatorNum))
+	if err != nil {
+		return err
+	}
+	for _, pub := range pubs {
+		ValidatorHexPubKeys = append(ValidatorHexPubKeys, hexutil.Encode(pub.Marshal()))
+	}
+
 	args := []string{
 		fmt.Sprintf("--%s=%s/eth2-val-%d", cmdshared.DataDirFlag.Name, e2e.TestParams.TestPath, index),
 		fmt.Sprintf("--%s=%s", cmdshared.LogFileName.Name, file.Name()),
@@ -141,28 +157,27 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 		fmt.Sprintf("--%s=localhost:%d", flags.BeaconRPCProviderFlag.Name, beaconRPCPort),
 		fmt.Sprintf("--%s=%s", flags.GrpcHeadersFlag.Name, "dummy=value,foo=bar"), // Sending random headers shouldn't break anything.
 		fmt.Sprintf("--%s=%s", cmdshared.VerbosityFlag.Name, "debug"),
-		fmt.Sprintf("--%s=%s", flags.SuggestedFeeRecipientFlag.Name, "0x878705ba3f8bc32fcf7f4caa1a35e72af65cf766"),
 		"--" + cmdshared.ForceClearDB.Name,
 		"--" + cmdshared.E2EConfigFlag.Name,
 		"--" + cmdshared.AcceptTosFlag.Name,
 	}
+	feeConfigPath, err := createFeeRecipientConfigPath(ValidatorHexPubKeys)
+	if err != nil {
+		return err
+	}
+
+	args = append(args, fmt.Sprintf("--%s=%s", flags.FeeRecipientConfigFileFlag.Name, feeConfigPath))
+
 	// Only apply e2e flags to the current branch. New flags may not exist in previous release.
 	if !v.config.UsePrysmShValidator {
 		args = append(args, features.E2EValidatorFlags...)
 	}
+
 	if v.config.UseWeb3RemoteSigner {
 		args = append(args, fmt.Sprintf("--%s=http://localhost:%d", flags.Web3SignerURLFlag.Name, Web3RemoteSignerPort))
 		// Write the pubkeys as comma seperated hex strings with 0x prefix.
 		// See: https://docs.teku.consensys.net/en/latest/HowTo/External-Signer/Use-External-Signer/
-		_, pubs, err := interop.DeterministicallyGenerateKeys(uint64(offset), uint64(validatorNum))
-		if err != nil {
-			return err
-		}
-		var hexPubs []string
-		for _, pub := range pubs {
-			hexPubs = append(hexPubs, "0x"+hex.EncodeToString(pub.Marshal()))
-		}
-		args = append(args, fmt.Sprintf("--%s=%s", flags.Web3SignerPublicValidatorKeysFlag.Name, strings.Join(hexPubs, ",")))
+		args = append(args, fmt.Sprintf("--%s=%s", flags.Web3SignerPublicValidatorKeysFlag.Name, strings.Join(ValidatorHexPubKeys, ",")))
 	} else {
 		// When not using remote key signer, use interop keys.
 		args = append(args,
@@ -296,4 +311,42 @@ func sendDeposits(web3 *ethclient.Client, keystoreBytes []byte, num, offset int,
 		txOps.Nonce = txOps.Nonce.Add(txOps.Nonce, big.NewInt(1))
 	}
 	return nil
+}
+
+func createFeeRecipientConfigPath(pubkeys []string) (string, error) {
+	testNetDir := e2e.TestParams.TestPath + "/fee-recipient-config"
+	configPath := filepath.Join(testNetDir, "config.json")
+	if len(ValidatorHexPubKeys) == 0 {
+		return "", errors.New("number of validators must be greater than 0")
+	}
+	var feeRecipientConfig validator_service_config.FeeRecipientFileConfig
+	if len(ValidatorHexPubKeys) == 1 {
+		feeRecipientConfig = validator_service_config.FeeRecipientFileConfig{
+			DefaultConfig: &validator_service_config.FeeRecipientFileOptions{
+				FeeRecipient: DefaultFeeRecipientAddress,
+			},
+		}
+	} else {
+		config := make(map[string]*validator_service_config.FeeRecipientFileOptions)
+		config[ValidatorHexPubKeys[0]] = &validator_service_config.FeeRecipientFileOptions{
+			FeeRecipient: FeeRecipientAddress,
+		}
+		feeRecipientConfig = validator_service_config.FeeRecipientFileConfig{
+			ProposeConfig: config,
+			DefaultConfig: &validator_service_config.FeeRecipientFileOptions{
+				FeeRecipient: DefaultFeeRecipientAddress,
+			},
+		}
+	}
+	jsonBytes, err := json.Marshal(feeRecipientConfig)
+	if err != nil {
+		return "", err
+	}
+	if err := file.MkdirAll(testNetDir); err != nil {
+		return "", err
+	}
+	if err := file.WriteFile(configPath, jsonBytes); err != nil {
+		return "", err
+	}
+	return configPath, nil
 }
