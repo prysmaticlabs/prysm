@@ -991,7 +991,7 @@ func (v *validator) feeRecipients(ctx context.Context, pubkeys [][fieldparams.BL
 		}
 		if v.feeRecipientConfig.ProposeConfig != nil {
 			option, ok := v.feeRecipientConfig.ProposeConfig[key]
-			if option != nil && ok {
+			if ok && option != nil {
 				// override the default if a proposeconfig is set
 				feeRecipient = option.FeeRecipient
 			}
