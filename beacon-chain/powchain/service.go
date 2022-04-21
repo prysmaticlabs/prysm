@@ -570,9 +570,11 @@ func (s *Service) initPOWService() {
 				continue
 			}
 
+			s.latestEth1DataLock.Lock()
 			s.latestEth1Data.BlockHeight = header.Number.Uint64()
 			s.latestEth1Data.BlockHash = header.Hash().Bytes()
 			s.latestEth1Data.BlockTime = header.Time
+			s.latestEth1DataLock.Unlock()
 
 			if err := s.processPastLogs(ctx); err != nil {
 				s.retryExecutionClientConnection(ctx, err)
