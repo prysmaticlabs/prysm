@@ -93,62 +93,65 @@ func run(pass *analysis.Pass) (interface{}, error) {
 				reportUnhandledError(pass, stmt.Call.Lparen, stmt.Call)
 			}
 		case *ast.AssignStmt:
-			if len(stmt.Rhs) == 1 {
-				// single value on rhs; check against lhs identifiers
-				if call, ok := stmt.Rhs[0].(*ast.CallExpr); ok {
-					if ignoreCall(pass, call) {
-						break
-					}
-					isError := errorsByArg(pass, call)
-					for i := 0; i < len(stmt.Lhs); i++ {
-						if id, ok := stmt.Lhs[i].(*ast.Ident); ok {
-							// We shortcut calls to recover() because errorsByArg can't
-							// check its return types for errors since it returns interface{}.
-							if id.Name == "_" && (isRecover(pass, call) || isError[i]) {
-								reportUnhandledError(pass, id.NamePos, call)
-							}
-						}
-					}
-				} else if assert, ok := stmt.Rhs[0].(*ast.TypeAssertExpr); ok {
-					if assert.Type == nil {
-						// type switch
-						break
-					}
-					if len(stmt.Lhs) < 2 {
-						// assertion result not read
-						reportUnhandledTypeAssertion(pass, stmt.Rhs[0].Pos())
-					} else if id, ok := stmt.Lhs[1].(*ast.Ident); ok && id.Name == "_" {
-						// assertion result ignored
-						reportUnhandledTypeAssertion(pass, id.NamePos)
-					}
-				}
-			} else {
-				// multiple value on rhs; in this case a call can't return
-				// multiple values. Assume len(stmt.Lhs) == len(stmt.Rhs)
-				for i := 0; i < len(stmt.Lhs); i++ {
-					if id, ok := stmt.Lhs[i].(*ast.Ident); ok {
-						if call, ok := stmt.Rhs[i].(*ast.CallExpr); ok {
-							if ignoreCall(pass, call) {
-								continue
-							}
-							if id.Name == "_" && callReturnsError(pass, call) {
-								reportUnhandledError(pass, id.NamePos, call)
-							}
-						} else if assert, ok := stmt.Rhs[i].(*ast.TypeAssertExpr); ok {
-							if assert.Type == nil {
-								// Shouldn't happen anyway, no multi assignment in type switches
-								continue
-							}
-							reportUnhandledError(pass, id.NamePos, nil)
-						}
-					}
-				}
-			}
+			inspectAssignStatement(pass, stmt)
 		default:
 		}
 	})
 
 	return nil, nil
+}
+
+func inspectAssignStatement(pass *analysis.Pass, stmt *ast.AssignStmt) {
+	if len(stmt.Rhs) == 1 {
+		// single value on rhs; check against lhs identifiers
+		if call, ok := stmt.Rhs[0].(*ast.CallExpr); ok {
+			if ignoreCall(pass, call) {
+				return
+			}
+			isError := errorsByArg(pass, call)
+			for i := 0; i < len(stmt.Lhs); i++ {
+				if id, ok := stmt.Lhs[i].(*ast.Ident); ok {
+					// We shortcut calls to recover() because errorsByArg can't
+					// check its return types for errors since it returns interface{}.
+					if id.Name == "_" && (isRecover(pass, call) || isError[i]) {
+						reportUnhandledError(pass, id.NamePos, call)
+					}
+				}
+			}
+		} else if assert, ok := stmt.Rhs[0].(*ast.TypeAssertExpr); ok {
+			if assert.Type == nil {
+				return
+			}
+			if len(stmt.Lhs) < 2 {
+				// assertion result not read
+				reportUnhandledTypeAssertion(pass, stmt.Rhs[0].Pos())
+			} else if id, ok := stmt.Lhs[1].(*ast.Ident); ok && id.Name == "_" {
+				// assertion result ignored
+				reportUnhandledTypeAssertion(pass, id.NamePos)
+			}
+		}
+	} else {
+		// multiple value on rhs; in this case a call can't return
+		// multiple values. Assume len(stmt.Lhs) == len(stmt.Rhs)
+		for i := 0; i < len(stmt.Lhs); i++ {
+			if id, ok := stmt.Lhs[i].(*ast.Ident); ok {
+				if call, ok := stmt.Rhs[i].(*ast.CallExpr); ok {
+					if ignoreCall(pass, call) {
+						continue
+					}
+					if id.Name == "_" && callReturnsError(pass, call) {
+						reportUnhandledError(pass, id.NamePos, call)
+					}
+				} else if assert, ok := stmt.Rhs[i].(*ast.TypeAssertExpr); ok {
+					if assert.Type == nil {
+						// Shouldn't happen anyway, no multi assignment in type switches
+						continue
+					}
+					reportUnhandledError(pass, id.NamePos, nil)
+				}
+			}
+		}
+	}
 }
 
 func reportUnhandledError(pass *analysis.Pass, pos token.Pos, call *ast.CallExpr) {

@@ -36,36 +36,9 @@ func deepValueEqual(v1, v2 reflect.Value, visited map[visit]bool, depth int) boo
 	if v1.Type() != v2.Type() {
 		return false
 	}
-	// We want to avoid putting more in the visited map than we need to.
-	// For any possible reference cycle that might be encountered,
-	// hard(t) needs to return true for at least one of the types in the cycle.
-	hard := func(k reflect.Kind) bool {
-		switch k {
-		case reflect.Slice, reflect.Ptr, reflect.Interface:
-			return true
-		}
-		return false
-	}
 
-	if v1.CanAddr() && v2.CanAddr() && hard(v1.Kind()) {
-		addr1 := unsafe.Pointer(v1.UnsafeAddr()) // #nosec G103 -- Test compare only
-		addr2 := unsafe.Pointer(v2.UnsafeAddr()) // #nosec G103 -- Test compare only
-
-		if uintptr(addr1) > uintptr(addr2) {
-			// Canonicalize order to reduce number of entries in visited.
-			// Assumes non-moving garbage collector.
-			addr1, addr2 = addr2, addr1
-		}
-
-		// Short circuit if references are already seen.
-		typ := v1.Type()
-		v := visit{addr1, addr2, typ}
-		if visited[v] {
-			return true
-		}
-
-		// Remember for later.
-		visited[v] = true
+	if compareAddr(v1, v2, visited) {
+		return true
 	}
 
 	switch v1.Kind() {
@@ -77,27 +50,7 @@ func deepValueEqual(v1, v2 reflect.Value, visited map[visit]bool, depth int) boo
 		}
 		return true
 	case reflect.Slice:
-		if v1.IsNil() && v2.Len() == 0 {
-			return true
-		}
-		if v1.Len() == 0 && v2.IsNil() {
-			return true
-		}
-		if v1.IsNil() && v2.IsNil() {
-			return true
-		}
-		if v1.Len() != v2.Len() {
-			return false
-		}
-		if v1.Pointer() == v2.Pointer() {
-			return true
-		}
-		for i := 0; i < v1.Len(); i++ {
-			if !deepValueEqual(v1.Index(i), v2.Index(i), visited, depth+1) {
-				return false
-			}
-		}
-		return true
+		return compareSlice(v1, v2, visited, depth)
 	case reflect.Interface:
 		if v1.IsNil() || v2.IsNil() {
 			return v1.IsNil() == v2.IsNil()
@@ -120,13 +73,7 @@ func deepValueEqual(v1, v2 reflect.Value, visited map[visit]bool, depth int) boo
 	}
 }
 
-func deepValueEqualExportedOnly(v1, v2 reflect.Value, visited map[visit]bool, depth int) bool {
-	if !v1.IsValid() || !v2.IsValid() {
-		return v1.IsValid() == v2.IsValid()
-	}
-	if v1.Type() != v2.Type() {
-		return false
-	}
+func compareAddr(v1, v2 reflect.Value, visited map[visit]bool) bool {
 	// We want to avoid putting more in the visited map than we need to.
 	// For any possible reference cycle that might be encountered,
 	// hard(t) needs to return true for at least one of the types in the cycle.
@@ -141,6 +88,7 @@ func deepValueEqualExportedOnly(v1, v2 reflect.Value, visited map[visit]bool, de
 	if v1.CanAddr() && v2.CanAddr() && hard(v1.Kind()) {
 		addr1 := unsafe.Pointer(v1.UnsafeAddr()) // #nosec G103 -- Test compare only
 		addr2 := unsafe.Pointer(v2.UnsafeAddr()) // #nosec G103 -- Test compare only
+
 		if uintptr(addr1) > uintptr(addr2) {
 			// Canonicalize order to reduce number of entries in visited.
 			// Assumes non-moving garbage collector.
@@ -156,6 +104,20 @@ func deepValueEqualExportedOnly(v1, v2 reflect.Value, visited map[visit]bool, de
 
 		// Remember for later.
 		visited[v] = true
+	}
+	return false
+}
+
+func deepValueEqualExportedOnly(v1, v2 reflect.Value, visited map[visit]bool, depth int) bool {
+	if !v1.IsValid() || !v2.IsValid() {
+		return v1.IsValid() == v2.IsValid()
+	}
+	if v1.Type() != v2.Type() {
+		return false
+	}
+
+	if compareAddr(v1, v2, visited) {
+		return true
 	}
 
 	switch v1.Kind() {
@@ -214,6 +176,30 @@ func deepValueEqualExportedOnly(v1, v2 reflect.Value, visited map[visit]bool, de
 	default:
 		return deepValueBaseTypeEqual(v1, v2)
 	}
+}
+
+func compareSlice(v1, v2 reflect.Value, visited map[visit]bool, depth int) bool {
+	if v1.IsNil() && v2.Len() == 0 {
+		return true
+	}
+	if v1.Len() == 0 && v2.IsNil() {
+		return true
+	}
+	if v1.IsNil() && v2.IsNil() {
+		return true
+	}
+	if v1.Len() != v2.Len() {
+		return false
+	}
+	if v1.Pointer() == v2.Pointer() {
+		return true
+	}
+	for i := 0; i < v1.Len(); i++ {
+		if !deepValueEqual(v1.Index(i), v2.Index(i), visited, depth+1) {
+			return false
+		}
+	}
+	return true
 }
 
 func deepValueBaseTypeEqual(v1, v2 reflect.Value) bool {

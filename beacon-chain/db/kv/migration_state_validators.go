@@ -52,19 +52,8 @@ func shouldMigrateValidators(db *bolt.DB) (bool, error) {
 	return migrateDB, nil
 }
 
-func migrateStateValidators(ctx context.Context, db *bolt.DB) error {
-	if ok, err := shouldMigrateValidators(db); err != nil {
-		return err
-	} else if !ok {
-		// A migration is not required.
-		return nil
-	}
-
-	log.Infof("Performing a one-time migration to a more efficient database schema for %s. It will take few minutes", stateBucket)
-
-	// get all the keys to migrate
-	var keys [][]byte
-	if err := db.Update(func(tx *bolt.Tx) error {
+func stateValidatorKeysToMigrate(db *bolt.DB) (keys [][]byte, err error) {
+	err = db.Update(func(tx *bolt.Tx) error {
 		stateBkt := tx.Bucket(stateBucket)
 		if stateBkt == nil {
 			return nil
@@ -75,7 +64,85 @@ func migrateStateValidators(ctx context.Context, db *bolt.DB) error {
 		}
 		keys = k
 		return nil
-	}); err != nil {
+	})
+	return
+}
+
+func migrateAltairStateValidators(ctx context.Context, keys [][]byte, enc []byte, index int, valBkt, indexBkt, stateBkt *bolt.Bucket) error {
+	protoState := &v1alpha1.BeaconStateAltair{}
+	if err := protoState.UnmarshalSSZ(enc[len(altairKey):]); err != nil {
+		return errors.Wrap(err, "failed to unmarshal encoding for altair")
+	}
+	// no validators in state to migrate
+	if len(protoState.Validators) == 0 {
+		return fmt.Errorf("no validator entries in state key 0x%s", hexutil.Encode(keys[index]))
+	}
+	validatorKeys, insertErr := insertValidatorHashes(ctx, protoState.Validators, valBkt)
+	if insertErr != nil {
+		return insertErr
+	}
+	// add the validator entry keys for a given block root.
+	compValidatorKeys := snappy.Encode(nil, validatorKeys)
+	idxErr := indexBkt.Put(keys[index], compValidatorKeys)
+	if idxErr != nil {
+		return idxErr
+	}
+	// zero the validator entries in BeaconState object .
+	protoState.Validators = make([]*v1alpha1.Validator, 0)
+	rawObj, err := protoState.MarshalSSZ()
+	if err != nil {
+		return err
+	}
+	stateBytes := snappy.Encode(nil, append(altairKey, rawObj...))
+	if stateErr := stateBkt.Put(keys[index], stateBytes); stateErr != nil {
+		return stateErr
+	}
+	return nil
+}
+
+func migratePhase0StateValidators(ctx context.Context, keys [][]byte, enc []byte, index int, valBkt, indexBkt, stateBkt *bolt.Bucket) error {
+	protoState := &v1alpha1.BeaconState{}
+	if err := protoState.UnmarshalSSZ(enc); err != nil {
+		return errors.Wrap(err, "failed to unmarshal encoding for phase0")
+	}
+	// no validators in state to migrate
+	if len(protoState.Validators) == 0 {
+		return fmt.Errorf("no validator entries in state key 0x%s", hexutil.Encode(keys[index]))
+	}
+	validatorKeys, insertErr := insertValidatorHashes(ctx, protoState.Validators, valBkt)
+	if insertErr != nil {
+		return insertErr
+	}
+	// add the validator entry keys for a given block root.
+	compValidatorKeys := snappy.Encode(nil, validatorKeys)
+	idxErr := indexBkt.Put(keys[index], compValidatorKeys)
+	if idxErr != nil {
+		return idxErr
+	}
+	// zero the validator entries in BeaconState object .
+	protoState.Validators = make([]*v1alpha1.Validator, 0)
+	stateBytes, err := encode(ctx, protoState)
+	if err != nil {
+		return err
+	}
+	if stateErr := stateBkt.Put(keys[index], stateBytes); stateErr != nil {
+		return stateErr
+	}
+	return nil
+}
+
+func migrateStateValidators(ctx context.Context, db *bolt.DB) error {
+	if ok, err := shouldMigrateValidators(db); err != nil {
+		return err
+	} else if !ok {
+		// A migration is not required.
+		return nil
+	}
+
+	log.Infof("Performing a one-time migration to a more efficient database schema for %s. It will take few minutes", stateBucket)
+
+	keys, err := stateValidatorKeysToMigrate(db)
+	if err != nil {
 		return err
 	}
 	log.Infof("total keys = %d", len(keys))
@@ -111,61 +178,12 @@ func migrateStateValidators(ctx context.Context, db *bolt.DB) error {
 				}
 				switch {
 				case hasAltairKey(enc):
-					protoState := &v1alpha1.BeaconStateAltair{}
-					if err := protoState.UnmarshalSSZ(enc[len(altairKey):]); err != nil {
-						return errors.Wrap(err, "failed to unmarshal encoding for altair")
-					}
-					// no validators in state to migrate
-					if len(protoState.Validators) == 0 {
-						return fmt.Errorf("no validator entries in state key 0x%s", hexutil.Encode(keys[index]))
-					}
-					validatorKeys, insertErr := insertValidatorHashes(ctx, protoState.Validators, valBkt)
-					if insertErr != nil {
-						return insertErr
-					}
-					// add the validator entry keys for a given block root.
-					compValidatorKeys := snappy.Encode(nil, validatorKeys)
-					idxErr := indexBkt.Put(keys[index], compValidatorKeys)
-					if idxErr != nil {
-						return idxErr
-					}
-					// zero the validator entries in BeaconState object .
-					protoState.Validators = make([]*v1alpha1.Validator, 0)
-					rawObj, err := protoState.MarshalSSZ()
-					if err != nil {
+					if err := migrateAltairStateValidators(ctx, keys, enc, index, valBkt, indexBkt, stateBkt); err != nil {
 						return err
-					}
-					stateBytes := snappy.Encode(nil, append(altairKey, rawObj...))
-					if stateErr := stateBkt.Put(keys[index], stateBytes); stateErr != nil {
-						return stateErr
 					}
 				default:
-					protoState := &v1alpha1.BeaconState{}
-					if err := protoState.UnmarshalSSZ(enc); err != nil {
-						return errors.Wrap(err, "failed to unmarshal encoding for phase0")
-					}
-					// no validators in state to migrate
-					if len(protoState.Validators) == 0 {
-						return fmt.Errorf("no validator entries in state key 0x%s", hexutil.Encode(keys[index]))
-					}
-					validatorKeys, insertErr := insertValidatorHashes(ctx, protoState.Validators, valBkt)
-					if insertErr != nil {
-						return insertErr
-					}
-					// add the validator entry keys for a given block root.
-					compValidatorKeys := snappy.Encode(nil, validatorKeys)
-					idxErr := indexBkt.Put(keys[index], compValidatorKeys)
-					if idxErr != nil {
-						return idxErr
-					}
-					// zero the validator entries in BeaconState object .
-					protoState.Validators = make([]*v1alpha1.Validator, 0)
-					stateBytes, err := encode(ctx, protoState)
-					if err != nil {
+					if err := migratePhase0StateValidators(ctx, keys, enc, index, valBkt, indexBkt, stateBkt); err != nil {
 						return err
-					}
-					if stateErr := stateBkt.Put(keys[index], stateBytes); stateErr != nil {
-						return stateErr
 					}
 				}
 				count++

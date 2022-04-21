@@ -14,3 +14,7 @@ deps.bzl @prysmaticlabs/core-team
 /beacon-chain/state/v2/ @rkapka @nisdas
 /beacon-chain/state/v3/ @rkapka @nisdas
 /beacon-chain/state/state-native/ @rkapka @nisdas
+
+# Setting new static analysis exclusions generally should not occur. 
+# Any additions of exclusions should be approved by Preston and/or Nishant.
+nogo_config.json @prestonvanloon @nisdas
