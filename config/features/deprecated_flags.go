@@ -85,6 +85,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedDisableOptimizedBalanceUpdate = &cli.BoolFlag{
+		Name:   "disable-optimized-balance-update",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 	deprecatedDisableActiveBalanceCache = &cli.BoolFlag{
 		Name:   "disable-active-balance-cache",
 		Usage:  deprecatedUsage,
@@ -107,5 +112,6 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedPyrmontTestnet,
 	deprecatedDisableProposerAttsSelectionUsingMaxCover,
 	deprecatedDisableGetBlockOptimizations,
+	deprecatedDisableOptimizedBalanceUpdate,
 	deprecatedDisableActiveBalanceCache,
 }
