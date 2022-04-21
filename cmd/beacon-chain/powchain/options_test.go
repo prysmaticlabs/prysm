@@ -53,7 +53,7 @@ func Test_parseJWTSecretFromFile(t *testing.T) {
 	t.Run("empty string in file", func(t *testing.T) {
 		app := cli.App{}
 		set := flag.NewFlagSet("test", 0)
-		fullPath := filepath.Join(os.TempDir(), "foohex")
+		fullPath := filepath.Join(t.TempDir(), "foohex")
 		require.NoError(t, file.WriteFile(fullPath, []byte{}))
 		t.Cleanup(func() {
 			if err := os.RemoveAll(fullPath); err != nil {
@@ -68,7 +68,7 @@ func Test_parseJWTSecretFromFile(t *testing.T) {
 	t.Run("less than 32 bytes", func(t *testing.T) {
 		app := cli.App{}
 		set := flag.NewFlagSet("test", 0)
-		fullPath := filepath.Join(os.TempDir(), "foohex")
+		fullPath := filepath.Join(t.TempDir(), "foohex")
 		secret := bytesutil.PadTo([]byte("foo"), 31)
 		hexData := fmt.Sprintf("%#x", secret)
 		require.NoError(t, file.WriteFile(fullPath, []byte(hexData)))
@@ -85,7 +85,7 @@ func Test_parseJWTSecretFromFile(t *testing.T) {
 	t.Run("bad data", func(t *testing.T) {
 		app := cli.App{}
 		set := flag.NewFlagSet("test", 0)
-		fullPath := filepath.Join(os.TempDir(), "foohex")
+		fullPath := filepath.Join(t.TempDir(), "foohex")
 		secret := []byte("foo")
 		require.NoError(t, file.WriteFile(fullPath, secret))
 		t.Cleanup(func() {
@@ -101,7 +101,7 @@ func Test_parseJWTSecretFromFile(t *testing.T) {
 	t.Run("correct format", func(t *testing.T) {
 		app := cli.App{}
 		set := flag.NewFlagSet("test", 0)
-		fullPath := filepath.Join(os.TempDir(), "foohex")
+		fullPath := filepath.Join(t.TempDir(), "foohex")
 		secret := bytesutil.ToBytes32([]byte("foo"))
 		secretHex := fmt.Sprintf("%#x", secret)
 		require.NoError(t, file.WriteFile(fullPath, []byte(secretHex)))

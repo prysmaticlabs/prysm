@@ -20,7 +20,7 @@ type sampleRPCRequest struct {
 }
 
 func Test_parseAndCaptureRequest(t *testing.T) {
-	tmpFile := filepath.Join(os.TempDir(), "faketest.log")
+	tmpFile := filepath.Join(t.TempDir(), "faketest.log")
 	t.Cleanup(func() {
 		require.NoError(t, os.RemoveAll(tmpFile))
 	})

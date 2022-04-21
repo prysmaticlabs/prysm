@@ -413,7 +413,7 @@ func TestHasReadWritePermissions(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			fullPath := filepath.Join(os.TempDir(), tt.args.itemPath)
+			fullPath := filepath.Join(t.TempDir(), tt.args.itemPath)
 			require.NoError(t, os.WriteFile(fullPath, []byte("foo"), tt.args.perms))
 			t.Cleanup(func() {
 				if err := os.RemoveAll(fullPath); err != nil {

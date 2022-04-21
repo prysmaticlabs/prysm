@@ -55,7 +55,7 @@ func Test_generateKeysFromMnemonicList(t *testing.T) {
 
 func Test_spreadKeysAcrossImportedWallets(t *testing.T) {
 	walletPassword := "Sr0ngPass0q0z929301"
-	tmpDir := filepath.Join(os.TempDir(), "testwallets")
+	tmpDir := filepath.Join(t.TempDir(), "testwallets")
 	t.Cleanup(func() {
 		require.NoError(t, os.RemoveAll(tmpDir))
 	})
