@@ -328,7 +328,7 @@ func createFeeRecipientConfigPath(pubkeys []string) (string, error) {
 		}
 	} else {
 		config := make(map[string]*validator_service_config.FeeRecipientFileOptions)
-		config[ValidatorHexPubKeys[0]] = &validator_service_config.FeeRecipientFileOptions{
+		config[pubkeys[0]] = &validator_service_config.FeeRecipientFileOptions{
 			FeeRecipient: FeeRecipientAddress,
 		}
 		feeRecipientConfig = validator_service_config.FeeRecipientFileConfig{
