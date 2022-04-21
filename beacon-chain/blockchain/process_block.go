@@ -6,7 +6,9 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -109,6 +111,24 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	if err != nil {
 		return err
 	}
+
+	testState := postState.Copy()
+	t := time.Now()
+	vp, bp, err := altair.InitializePrecomputeValidators(ctx, testState)
+	if err != nil {
+		return err
+	}
+	// New in Altair.
+	vp, bp, err = altair.ProcessEpochParticipation(ctx, testState, bp, vp)
+	if err != nil {
+		return err
+	}
+	testState, err = precompute.ProcessJustificationAndFinalizationPreCompute(testState, bp)
+	if err != nil {
+		return err
+	}
+	log.WithField("elapsed", time.Since(t)).Info("Process justifications and finalizations")
+
 	postStateVersion, postStateHeader, err := getStateVersionAndPayload(postState)
 	if err != nil {
 		return err
