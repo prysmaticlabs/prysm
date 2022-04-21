@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
@@ -362,18 +363,61 @@ func UnrealizedJustificationCheckpoint(ctx context.Context, state state.BeaconSt
 
 	prevEpoch := time.PrevEpoch(state)
 	currentEpoch := time.CurrentEpoch(state)
-
-	vp, bp, err := InitializePrecomputeValidators(ctx, state)
+	activeBalance := uint64(0)
+	currentTarget := uint64(0)
+	prevTarget := uint64(0)
+	cp, err := state.CurrentEpochParticipation()
 	if err != nil {
 		return nil, err
 	}
 
-	// New in Altair.
-	_, bp, err = ProcessEpochParticipation(ctx, state, bp, vp)
+	pp, err := state.PreviousEpochParticipation()
 	if err != nil {
 		return nil, err
 	}
-	justification := precompute.ProcessJustificationBits(state, bp.ActiveCurrentEpoch, bp.PrevEpochTargetAttested, bp.CurrentEpochTargetAttested)
+
+	cfg := params.BeaconConfig()
+	targetIdx := cfg.TimelyTargetFlagIndex
+
+	for i := 0; i < state.NumValidators(); i++ {
+		val, err := state.ValidatorAtIndexReadOnly(types.ValidatorIndex(i))
+		if err != nil {
+			return nil, err
+		}
+		if helpers.IsActiveValidatorUsingTrie(val, currentEpoch) && !val.Slashed() {
+			activeBalance, err = math.Add64(activeBalance, val.EffectiveBalance())
+			if err != nil {
+				return nil, err
+			}
+			if i < len(cp) {
+				has, err := HasValidatorFlag(cp[i], targetIdx)
+				if err != nil {
+					return nil, err
+				}
+				if has {
+					currentTarget, err = math.Add64(currentTarget, val.EffectiveBalance())
+					if err != nil {
+						return nil, err
+					}
+				}
+			}
+
+			if i < len(pp) {
+				has, err := HasValidatorFlag(pp[i], targetIdx)
+				if err != nil {
+					return nil, err
+				}
+				if has {
+					prevTarget, err = math.Add64(prevTarget, val.EffectiveBalance())
+					if err != nil {
+						return nil, err
+					}
+				}
+			}
+		}
+	}
+
+	justification := precompute.ProcessJustificationBits(state, activeBalance, prevTarget, currentTarget)
 	if justification.BitAt(0) {
 		blockRoot, err := helpers.BlockRoot(state, currentEpoch)
 		if err != nil {
