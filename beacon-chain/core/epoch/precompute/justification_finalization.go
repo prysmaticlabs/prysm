@@ -2,6 +2,7 @@ package precompute
 
 import (
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -34,7 +35,26 @@ func ProcessJustificationAndFinalizationPreCompute(state state.BeaconState, pBal
 		return state, nil
 	}
 
-	return weighJustificationAndFinalization(state, pBal.ActiveCurrentEpoch, pBal.PrevEpochTargetAttested, pBal.CurrentEpochTargetAttested)
+	newBits := ProcessJustificationBits(state, pBal.ActiveCurrentEpoch, pBal.PrevEpochTargetAttested, pBal.CurrentEpochTargetAttested)
+
+	return weighJustificationAndFinalization(state, newBits)
+}
+
+// ProcessJustificationBits processes the justification bits during epoch
+// processing.
+func ProcessJustificationBits(state state.BeaconState, totalActiveBalance, prevEpochTargetBalance, currEpochTargetBalance uint64) bitfield.Bitvector4 {
+	newBits := state.JustificationBits()
+	newBits.Shift(1)
+	// If 2/3 or more of total balance attested in the previous epoch.
+	if 3*prevEpochTargetBalance >= 2*totalActiveBalance {
+		newBits.SetBitAt(1, true)
+	}
+
+	if 3*currEpochTargetBalance >= 2*totalActiveBalance {
+		newBits.SetBitAt(0, true)
+	}
+
+	return newBits
 }
 
 // weighJustificationAndFinalization processes justification and finalization during
@@ -77,8 +97,7 @@ func ProcessJustificationAndFinalizationPreCompute(state state.BeaconState, pBal
 //    # The 1st/2nd most recent epochs are justified, the 1st using the 2nd as source
 //    if all(bits[0:2]) and old_current_justified_checkpoint.epoch + 1 == current_epoch:
 //        state.finalized_checkpoint = old_current_justified_checkpoint
-func weighJustificationAndFinalization(state state.BeaconState,
-	totalActiveBalance, prevEpochTargetBalance, currEpochTargetBalance uint64) (state.BeaconState, error) {
+func weighJustificationAndFinalization(state state.BeaconState, newBits bitfield.Bitvector4) (state.BeaconState, error) {
 	prevEpoch := time.PrevEpoch(state)
 	currentEpoch := time.CurrentEpoch(state)
 	oldPrevJustifiedCheckpoint := state.PreviousJustifiedCheckpoint()
@@ -88,33 +107,9 @@ func weighJustificationAndFinalization(state state.BeaconState,
 	if err := state.SetPreviousJustifiedCheckpoint(state.CurrentJustifiedCheckpoint()); err != nil {
 		return nil, err
 	}
-	newBits := state.JustificationBits()
-	newBits.Shift(1)
-	if err := state.SetJustificationBits(newBits); err != nil {
-		return nil, err
-	}
-
-	// Note: the spec refers to the bit index position starting at 1 instead of starting at zero.
-	// We will use that paradigm here for consistency with the godoc spec definition.
-
-	// If 2/3 or more of total balance attested in the previous epoch.
-	if 3*prevEpochTargetBalance >= 2*totalActiveBalance {
-		blockRoot, err := helpers.BlockRoot(state, prevEpoch)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not get block root for previous epoch %d", prevEpoch)
-		}
-		if err := state.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{Epoch: prevEpoch, Root: blockRoot}); err != nil {
-			return nil, err
-		}
-		newBits := state.JustificationBits()
-		newBits.SetBitAt(1, true)
-		if err := state.SetJustificationBits(newBits); err != nil {
-			return nil, err
-		}
-	}
 
 	// If 2/3 or more of the total balance attested in the current epoch.
-	if 3*currEpochTargetBalance >= 2*totalActiveBalance {
+	if newBits.BitAt(0) {
 		blockRoot, err := helpers.BlockRoot(state, currentEpoch)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not get block root for current epoch %d", prevEpoch)
@@ -122,15 +117,23 @@ func weighJustificationAndFinalization(state state.BeaconState,
 		if err := state.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{Epoch: currentEpoch, Root: blockRoot}); err != nil {
 			return nil, err
 		}
-		newBits := state.JustificationBits()
-		newBits.SetBitAt(0, true)
-		if err := state.SetJustificationBits(newBits); err != nil {
+	} else if newBits.BitAt(1) {
+		// If 2/3 or more of total balance attested in the previous epoch.
+		blockRoot, err := helpers.BlockRoot(state, prevEpoch)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not get block root for previous epoch %d", prevEpoch)
+		}
+		if err := state.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{Epoch: prevEpoch, Root: blockRoot}); err != nil {
 			return nil, err
 		}
 	}
 
+	if err := state.SetJustificationBits(newBits); err != nil {
+		return nil, err
+	}
+
 	// Process finalization according to Ethereum Beacon Chain specification.
-	justification := state.JustificationBits().Bytes()[0]
+	justification := newBits.Bytes()[0]
 
 	// 2nd/3rd/4th (0b1110) most recent epochs are justified, the 2nd using the 4th as source.
 	if justification&0x0E == 0x0E && (oldPrevJustifiedCheckpoint.Epoch+3) == currentEpoch {

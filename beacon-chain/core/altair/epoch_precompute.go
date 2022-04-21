@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/math"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"go.opencensus.io/trace"
 )
@@ -48,7 +49,7 @@ func InitializePrecomputeValidators(ctx context.Context, beaconState state.Beaco
 				return err
 			}
 		}
-		// Set validator's active status for preivous epoch.
+		// Set validator's active status for previous epoch.
 		if helpers.IsActiveValidatorUsingTrie(val, prevEpoch) {
 			v.IsActivePrevEpoch = true
 			bal.ActivePrevEpoch, err = math.Add64(bal.ActivePrevEpoch, val.EffectiveBalance())
@@ -350,4 +351,42 @@ func attestationDelta(
 	}
 
 	return reward, penalty, nil
+}
+
+// UnrealizedJustificationCheckpoint returns the justification checkpoint of the
+// given state as if it was progressed with empty slots until the next epoch.
+func UnrealizedJustificationCheckpoint(ctx context.Context, state state.BeaconStateAltair) (*ethpb.Checkpoint, error) {
+	if state == nil || state.IsNil() {
+		return nil, errors.New("nil state")
+	}
+
+	prevEpoch := time.PrevEpoch(state)
+	currentEpoch := time.CurrentEpoch(state)
+
+	vp, bp, err := InitializePrecomputeValidators(ctx, state)
+	if err != nil {
+		return nil, err
+	}
+
+	// New in Altair.
+	_, bp, err = ProcessEpochParticipation(ctx, state, bp, vp)
+	if err != nil {
+		return nil, err
+	}
+	justification := precompute.ProcessJustificationBits(state, bp.ActiveCurrentEpoch, bp.PrevEpochTargetAttested, bp.CurrentEpochTargetAttested)
+	if justification.BitAt(0) {
+		blockRoot, err := helpers.BlockRoot(state, currentEpoch)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not get block root for current epoch %d", prevEpoch)
+		}
+		return &ethpb.Checkpoint{Epoch: currentEpoch, Root: blockRoot}, nil
+	}
+	if justification.BitAt(1) {
+		blockRoot, err := helpers.BlockRoot(state, prevEpoch)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not get block root for previous epoch %d", prevEpoch)
+		}
+		return &ethpb.Checkpoint{Epoch: prevEpoch, Root: blockRoot}, nil
+	}
+	return state.CurrentJustifiedCheckpoint(), nil
 }
