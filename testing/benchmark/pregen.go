@@ -4,7 +4,7 @@ package benchmark
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -45,7 +45,7 @@ func PreGenState1Epoch() (state.BeaconState, error) {
 	if err != nil {
 		return nil, err
 	}
-	beaconBytes, err := ioutil.ReadFile(path) // #nosec G304
+	beaconBytes, err := os.ReadFile(path) // #nosec G304
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +62,7 @@ func PreGenstateFullEpochs() (state.BeaconState, error) {
 	if err != nil {
 		return nil, err
 	}
-	beaconBytes, err := ioutil.ReadFile(path) // #nosec G304
+	beaconBytes, err := os.ReadFile(path) // #nosec G304
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +79,7 @@ func PreGenFullBlock() (*ethpb.SignedBeaconBlock, error) {
 	if err != nil {
 		return nil, err
 	}
-	blockBytes, err := ioutil.ReadFile(path) // #nosec G304
+	blockBytes, err := os.ReadFile(path) // #nosec G304
 	if err != nil {
 		return nil, err
 	}

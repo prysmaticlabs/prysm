@@ -1,7 +1,7 @@
 package interop_test
 
 import (
-	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
@@ -23,7 +23,7 @@ type KeyTest struct {
 func TestKeyGenerator(t *testing.T) {
 	path, err := bazel.Runfile("keygen_test_vector.yaml")
 	require.NoError(t, err)
-	file, err := ioutil.ReadFile(path)
+	file, err := os.ReadFile(path)
 	require.NoError(t, err)
 	testCases := &KeyTest{}
 	require.NoError(t, yaml.Unmarshal(file, testCases))

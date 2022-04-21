@@ -464,7 +464,7 @@ func TestBeaconStateBellatrixToProto(t *testing.T) {
 			ParentHash:       bytesutil.PadTo([]byte("parenthash"), 32),
 			FeeRecipient:     bytesutil.PadTo([]byte("feerecipient"), 20),
 			StateRoot:        bytesutil.PadTo([]byte("stateroot"), 32),
-			ReceiptRoot:      bytesutil.PadTo([]byte("receiptroot"), 32),
+			ReceiptsRoot:     bytesutil.PadTo([]byte("receiptroot"), 32),
 			LogsBloom:        bytesutil.PadTo([]byte("logsbloom"), 256),
 			PrevRandao:       bytesutil.PadTo([]byte("prevrandao"), 32),
 			BlockNumber:      123,

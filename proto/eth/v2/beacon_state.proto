@@ -121,7 +121,7 @@ message BeaconStateBellatrix {
   SyncCommittee next_sync_committee = 9003; // [New in Altair]
 
   // Bellatrix fields [10001-11000]
-  engine.v1.ExecutionPayloadHeader latest_execution_payload_header = 10001; // [New in Bellatrix]
+   engine.v1.ExecutionPayloadHeader latest_execution_payload_header = 10001; // [New in Bellatrix]
 }
 
 message StateRequestV2 {

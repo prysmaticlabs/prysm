@@ -7,8 +7,8 @@ PRESET_BASE: 'minimal'
 
 # Transition
 # ---------------------------------------------------------------
-# TBD, 2**256-2**10 is a placeholder, e2e is 600
-TERMINAL_TOTAL_DIFFICULTY: 600
+# TBD, 2**256-2**10 is a placeholder, e2e is 616
+TERMINAL_TOTAL_DIFFICULTY: 616
 # By default, don't use these params
 #TERMINAL_BLOCK_HASH: 0x0000000000000000000000000000000000000000000000000000000000000000
 #TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH: 18446744073709551615
@@ -54,7 +54,7 @@ MIN_VALIDATOR_WITHDRAWABILITY_DELAY: 256
 # [customized] higher frequency of committee turnover and faster time to acceptable voluntary exit
 SHARD_COMMITTEE_PERIOD: 4 # Override for e2e tests
 # [customized] process deposits more quickly, but insecure
-ETH1_FOLLOW_DISTANCE: 4 # Override for e2e tests
+ETH1_FOLLOW_DISTANCE: 8 # Override for e2e tests
 
 
 # Validator cycle

@@ -503,6 +503,27 @@
 			"response": []
 		},
 		{
+			"name": "/beacon/blinded_blocks",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "/beacon/blinded_blocks",
+					"path": [
+						"beacon",
+						"blinded_blocks"
+					]
+				}
+			},
+			"response": []
+		},
+		{
 			"name": "/beacon/blocks/{block_id}",
 			"request": {
 				"method": "GET",
@@ -1136,6 +1157,29 @@
 			"response": []
 		},
 		{
+			"name": "/v2/debug/beacon/heads",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:3500/eth/v2/debug/beacon/heads",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "3500",
+					"path": [
+						"eth",
+						"v2",
+						"debug",
+						"beacon",
+						"heads"
+					]
+				}
+			},
+			"response": []
+		},
+		{
 			"name": "/node/identity",
 			"request": {
 				"method": "GET",
@@ -1451,6 +1495,39 @@
 			"response": []
 		},
 		{
+			"name": "validator/blinded_blocks/{slot}",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:3500/eth/v1/validator/blinded_blocks/{slot}?graffiti=0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2=&randao_reveal=0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "3500",
+					"path": [
+						"eth",
+						"v1",
+						"validator",
+						"blinded_blocks",
+						"{slot}"
+					],
+					"query": [
+						{
+							"key": "graffiti",
+							"value": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2="
+						},
+						{
+							"key": "randao_reveal",
+							"value": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
 			"name": "/validator/attestation_data",
 			"request": {
 				"method": "GET",
@@ -1682,6 +1759,33 @@
 						"v1",
 						"validator",
 						"contribution_and_proofs"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "/validator/prepare_beacon_proposer",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "[\n  {\n    \"validator_index\": \"1\",\n    \"fee_recipient\": \"0xabcf8e0d4e9587369b2301d0790347320302cc09\"\n  }\n]"
+				},
+				"url": {
+					"raw": "/eth/v1/validator/prepare_beacon_proposer",
+					"path": [
+						"eth",
+						"v1",
+						"validator",
+						"prepare_beacon_proposer"
 					]
 				}
 			},
