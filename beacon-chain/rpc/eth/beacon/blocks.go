@@ -766,11 +766,11 @@ func (bs *Server) submitBlindedBellatrixBlock(ctx context.Context, blindedBellat
 		Signature: sig,
 	})
 	if err != nil {
-		return status.Errorf(codes.Internal, "Could not get non-blinded block: %v", err)
+		return status.Errorf(codes.Internal, "Could not get blinded block: %v", err)
 	}
 	wrappedBellatrixSignedBlk, err := wrapper.WrappedSignedBeaconBlock(v1alpha1SignedBlk)
 	if err != nil {
-		return status.Errorf(codes.Internal, "Could not get non-blinded block: %v", err)
+		return status.Errorf(codes.Internal, "Could not get blinded block: %v", err)
 	}
 
 	root, err := blindedBellatrixBlk.HashTreeRoot()
