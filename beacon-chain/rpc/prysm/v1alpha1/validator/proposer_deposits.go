@@ -7,7 +7,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/container/trie"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -18,30 +17,6 @@ import (
 )
 
 func (vs *Server) packDepositsAndAttestations(ctx context.Context, head state.BeaconState, eth1Data *ethpb.Eth1Data) ([]*ethpb.Deposit, []*ethpb.Attestation, error) {
-	if features.Get().EnableGetBlockOptimizations {
-		deposits, atts, err := vs.optimizedPackDepositsAndAttestations(ctx, head, eth1Data)
-		if err != nil {
-			return nil, nil, err
-		}
-		return deposits, atts, nil
-	}
-
-	// Pack ETH1 deposits which have not been included in the beacon chain.
-	deposits, err := vs.deposits(ctx, head, eth1Data)
-	if err != nil {
-		return nil, nil, status.Errorf(codes.Internal, "Could not get ETH1 deposits: %v", err)
-	}
-
-	// Pack aggregated attestations which have not been included in the beacon chain.
-	atts, err := vs.packAttestations(ctx, head)
-	if err != nil {
-		return nil, nil, status.Errorf(codes.Internal, "Could not get attestations to pack into block: %v", err)
-	}
-
-	return deposits, atts, nil
-}
-
-func (vs *Server) optimizedPackDepositsAndAttestations(ctx context.Context, head state.BeaconState, eth1Data *ethpb.Eth1Data) ([]*ethpb.Deposit, []*ethpb.Attestation, error) {
 	eg, egctx := errgroup.WithContext(ctx)
 	var deposits []*ethpb.Deposit
 	var atts []*ethpb.Attestation

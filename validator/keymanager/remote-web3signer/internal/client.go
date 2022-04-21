@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -181,7 +180,7 @@ func (client *ApiClient) doRequest(ctx context.Context, httpMethod, fullPath str
 func unmarshalResponse(responseBody io.ReadCloser, unmarshalledResponseObject interface{}) error {
 	defer closeBody(responseBody)
 	if err := json.NewDecoder(responseBody).Decode(&unmarshalledResponseObject); err != nil {
-		body, err := ioutil.ReadAll(responseBody)
+		body, err := io.ReadAll(responseBody)
 		if err != nil {
 			return errors.Wrap(err, "failed to read response body")
 		}
@@ -192,7 +191,7 @@ func unmarshalResponse(responseBody io.ReadCloser, unmarshalledResponseObject in
 
 func unmarshalSignatureResponse(responseBody io.ReadCloser) (bls.Signature, error) {
 	defer closeBody(responseBody)
-	body, err := ioutil.ReadAll(responseBody)
+	body, err := io.ReadAll(responseBody)
 	if err != nil {
 		return nil, err
 	}

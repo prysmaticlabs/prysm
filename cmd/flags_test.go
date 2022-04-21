@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"flag"
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -15,7 +14,7 @@ func TestLoadFlagsFromConfig(t *testing.T) {
 	set := flag.NewFlagSet("test", 0)
 	context := cli.NewContext(&app, set, nil)
 
-	require.NoError(t, ioutil.WriteFile("flags_test.yaml", []byte("testflag: 100"), 0666))
+	require.NoError(t, os.WriteFile("flags_test.yaml", []byte("testflag: 100"), 0666))
 
 	require.NoError(t, set.Parse([]string{"test-command", "--" + ConfigFileFlag.Name, "flags_test.yaml"}))
 	command := &cli.Command{

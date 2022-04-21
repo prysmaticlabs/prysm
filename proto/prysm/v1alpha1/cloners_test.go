@@ -732,7 +732,7 @@ func genPayloadHeader() *v1alpha1.ExecutionPayloadHeader {
 		ParentHash:       bytes(),
 		FeeRecipient:     bytes(),
 		StateRoot:        bytes(),
-		ReceiptRoot:      bytes(),
+		ReceiptsRoot:     bytes(),
 		LogsBloom:        bytes(),
 		PrevRandao:       bytes(),
 		BlockNumber:      1,

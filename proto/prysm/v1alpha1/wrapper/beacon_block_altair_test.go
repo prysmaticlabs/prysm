@@ -159,6 +159,12 @@ func TestAltairBeaconBlock_IsNil(t *testing.T) {
 	assert.Equal(t, false, wb.IsNil())
 }
 
+func TestAltairBeaconBlock_IsBlinded(t *testing.T) {
+	wsb, err := wrapper.WrappedBeaconBlock(&ethpb.BeaconBlockAltair{})
+	require.NoError(t, err)
+	require.Equal(t, false, wsb.IsNil())
+}
+
 func TestAltairBeaconBlock_HashTreeRoot(t *testing.T) {
 	wb, err := wrapper.WrappedAltairBeaconBlock(util.HydrateBeaconBlockAltair(&ethpb.BeaconBlockAltair{}))
 	require.NoError(t, err)
