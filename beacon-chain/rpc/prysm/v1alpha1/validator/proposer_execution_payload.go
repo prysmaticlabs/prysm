@@ -122,7 +122,6 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 	burnAddr := bytesutil.PadTo([]byte{}, fieldparams.FeeRecipientLength)
 	switch err == nil {
 	case true:
-		log.Infof("getExecutionPayload: validator %d has fee recipient %v", vIdx, recipient)
 		feeRecipient = recipient
 	case errors.As(err, kv.ErrNotFoundFeeRecipient):
 		// If fee recipient is not found in DB and not set from beacon node CLI,
@@ -148,12 +147,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 	if payloadID == nil {
 		return nil, errors.New("nil payload id")
 	}
-	payload, err := vs.ExecutionEngineCaller.GetPayload(ctx, *payloadID)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get payload")
-	}
-	log.Infof("getExecutionPayload: has payload %v", payload)
-	return payload, nil
+	return vs.ExecutionEngineCaller.GetPayload(ctx, *payloadID)
 }
 
 // This returns the valid terminal block hash with an existence bool value.
