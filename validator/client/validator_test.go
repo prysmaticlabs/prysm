@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -1457,9 +1458,11 @@ func TestValidator_UdpateFeeRecipient(t *testing.T) {
 	ctx := context.Background()
 	db := dbTest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
 	client := mock2.NewMockBeaconNodeValidatorClient(ctrl)
+	defaultFeeHex := "0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"
 	tests := []struct {
 		name            string
 		validatorSetter func(t *testing.T) *validator
+		feeRecipientMap map[types.ValidatorIndex]string
 		err             string
 	}{
 		{
@@ -1486,7 +1489,7 @@ func TestValidator_UdpateFeeRecipient(t *testing.T) {
 				v.feeRecipientConfig = &validator_service_config.FeeRecipientConfig{
 					ProposeConfig: nil,
 					DefaultConfig: &validator_service_config.FeeRecipientOptions{
-						FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
+						FeeRecipient: common.HexToAddress(defaultFeeHex),
 					},
 				}
 				client.EXPECT().ValidatorIndex(
@@ -1497,6 +1500,9 @@ func TestValidator_UdpateFeeRecipient(t *testing.T) {
 				}, nil)
 
 				return &v
+			},
+			feeRecipientMap: map[types.ValidatorIndex]string{
+				1: defaultFeeHex,
 			},
 		},
 		{
@@ -1537,7 +1543,7 @@ func TestValidator_UdpateFeeRecipient(t *testing.T) {
 				v.feeRecipientConfig = &validator_service_config.FeeRecipientConfig{
 					ProposeConfig: nil,
 					DefaultConfig: &validator_service_config.FeeRecipientOptions{
-						FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
+						FeeRecipient: common.HexToAddress(defaultFeeHex),
 					},
 				}
 				km, err := v.Keymanager()
@@ -1552,6 +1558,9 @@ func TestValidator_UdpateFeeRecipient(t *testing.T) {
 				}, nil)
 				return &v
 			},
+			feeRecipientMap: map[types.ValidatorIndex]string{
+				1: defaultFeeHex,
+			},
 		},
 		{
 			name: " Happy Path proposer config not nil",
@@ -1563,7 +1572,7 @@ func TestValidator_UdpateFeeRecipient(t *testing.T) {
 					pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
 					useWeb:                 false,
 					interopKeysConfig: &local.InteropKeymanagerConfig{
-						NumValidatorKeys: 1,
+						NumValidatorKeys: 2,
 						Offset:           1,
 					},
 				}
@@ -1580,16 +1589,26 @@ func TestValidator_UdpateFeeRecipient(t *testing.T) {
 				).Return(&ethpb.ValidatorIndexResponse{
 					Index: 1,
 				}, nil)
+				client.EXPECT().ValidatorIndex(
+					ctx, // ctx
+					&ethpb.ValidatorIndexRequest{PublicKey: keys[1][:]},
+				).Return(&ethpb.ValidatorIndexResponse{
+					Index: 2,
+				}, nil)
 				config[keys[0]] = &validator_service_config.FeeRecipientOptions{
-					FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
+					FeeRecipient: common.HexToAddress("0x055Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
 				}
 				v.feeRecipientConfig = &validator_service_config.FeeRecipientConfig{
 					ProposeConfig: config,
 					DefaultConfig: &validator_service_config.FeeRecipientOptions{
-						FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
+						FeeRecipient: common.HexToAddress(defaultFeeHex),
 					},
 				}
 				return &v
+			},
+			feeRecipientMap: map[types.ValidatorIndex]string{
+				1: "0x055Fb65722E7b2455043BFEBf6177F1D2e9738D9",
+				2: defaultFeeHex,
 			},
 		},
 		{
@@ -1625,9 +1644,10 @@ func TestValidator_UdpateFeeRecipient(t *testing.T) {
 				v.feeRecipientConfig = &validator_service_config.FeeRecipientConfig{
 					ProposeConfig: config,
 					DefaultConfig: &validator_service_config.FeeRecipientOptions{
-						FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
+						FeeRecipient: common.HexToAddress(defaultFeeHex),
 					},
 				}
+
 				return &v
 			},
 		},
@@ -1662,7 +1682,7 @@ func TestValidator_UdpateFeeRecipient(t *testing.T) {
 				v.feeRecipientConfig = &validator_service_config.FeeRecipientConfig{
 					ProposeConfig: config,
 					DefaultConfig: &validator_service_config.FeeRecipientOptions{
-						FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
+						FeeRecipient: common.HexToAddress(defaultFeeHex),
 					},
 				}
 				return &v
@@ -1674,9 +1694,21 @@ func TestValidator_UdpateFeeRecipient(t *testing.T) {
 			v := tt.validatorSetter(t)
 			km, err := v.Keymanager()
 			require.NoError(t, err)
+			pubkeys, err := km.FetchValidatingPublicKeys(ctx)
+			require.NoError(t, err)
+			if tt.feeRecipientMap != nil {
+				feeRecipients, err := v.feeRecipients(ctx, pubkeys)
+				require.NoError(t, err)
+				for _, recipient := range feeRecipients {
+					require.Equal(t, strings.ToLower(tt.feeRecipientMap[recipient.ValidatorIndex]), strings.ToLower(hexutil.Encode(recipient.FeeRecipient)))
+				}
+				require.Equal(t, len(tt.feeRecipientMap), len(feeRecipients))
+			}
+
 			if err := v.UpdateFeeRecipient(ctx, km); tt.err != "" {
 				assert.ErrorContains(t, tt.err, err)
 			}
+
 		})
 	}
 }
