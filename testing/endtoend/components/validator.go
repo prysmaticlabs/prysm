@@ -161,18 +161,15 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 		"--" + cmdshared.E2EConfigFlag.Name,
 		"--" + cmdshared.AcceptTosFlag.Name,
 	}
-	//TODO: Remove this once latest package supports this flag.
+	// Only apply e2e flags to the current branch. New flags may not exist in previous release.
 	if !v.config.UsePrysmShValidator {
+		args = append(args, features.E2EValidatorFlags...)
+		//TODO: Remove this once it is in current release.
 		feeConfigPath, err := createFeeRecipientConfigPath(ValidatorHexPubKeys)
 		if err != nil {
 			return err
 		}
-
 		args = append(args, fmt.Sprintf("--%s=%s", flags.FeeRecipientConfigFileFlag.Name, feeConfigPath))
-	}
-	// Only apply e2e flags to the current branch. New flags may not exist in previous release.
-	if !v.config.UsePrysmShValidator {
-		args = append(args, features.E2EValidatorFlags...)
 	}
 
 	if v.config.UseWeb3RemoteSigner {
