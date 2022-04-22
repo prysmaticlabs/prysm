@@ -342,7 +342,9 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 					return err
 				}
 				// set new block number after checking for chainstart for previous block.
+				s.latestEth1DataLock.Lock()
 				s.latestEth1Data.LastRequestedBlock = currentBlockNum
+				s.latestEth1DataLock.Unlock()
 				currentBlockNum = filterLog.BlockNumber
 			}
 			if err := s.ProcessLog(ctx, filterLog); err != nil {
@@ -363,7 +365,9 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 		}
 	}
 
+	s.latestEth1DataLock.Lock()
 	s.latestEth1Data.LastRequestedBlock = currentBlockNum
+	s.latestEth1DataLock.Unlock()
 
 	c, err := s.cfg.beaconDB.FinalizedCheckpoint(ctx)
 	if err != nil {
@@ -411,6 +415,7 @@ func (s *Service) requestBatchedHeadersAndLogs(ctx context.Context) error {
 		log.Infof("Falling back to historical headers and logs sync. Current difference is %d", requestedBlock-s.latestEth1Data.LastRequestedBlock)
 		return s.processPastLogs(ctx)
 	}
+	s.latestEth1DataLock.Lock()
 	for i := s.latestEth1Data.LastRequestedBlock + 1; i <= requestedBlock; i++ {
 		// Cache eth1 block header here.
 		_, err := s.BlockHashByHeight(ctx, big.NewInt(0).SetUint64(i))
@@ -423,6 +428,7 @@ func (s *Service) requestBatchedHeadersAndLogs(ctx context.Context) error {
 		}
 		s.latestEth1Data.LastRequestedBlock = i
 	}
+	s.latestEth1DataLock.Unlock()
 
 	return nil
 }
