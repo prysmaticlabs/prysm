@@ -127,9 +127,30 @@ service KeyManagement {
     };
   }
 
-  rpc GetFeeRecipientByPubkey(GetFeeRecipientByPubkeyRequest) returns (GetFeeRecipientByPubkeyResponse) {
+  // ListFeeRecipientByPubkey returns the hex encoded fee recipient address for the given pubkey.
+  //
+  // HTTP response status codes:
+  //  - 200: Successful response
+  //  - 401: Unauthorized
+  //  - 403: Forbidden from accessing the resource
+  //  - 500: Validator internal error
+  rpc ListFeeRecipientByPubkey(GetFeeRecipientByPubkeyRequest) returns (GetFeeRecipientByPubkeyResponse) {
     option (google.api.http) = {
-      get: "/internal/eth/v1/fee_recipient/{pubkey}"
+      get: "/internal/eth/v1/validator/{pubkey}/feerecipient"
+    };
+  }
+
+  // SetFeeRecipientByPubkey sets the fee recipient for the specific public key, overrides the existing one.
+  //
+  // HTTP response status codes:
+  //  - 200: Successful response
+  //  - 401: Unauthorized
+  //  - 403: Forbidden from accessing the resource
+  //  - 500: Validator internal error
+  rpc SetFeeRecipientByPubkey(SetFeeRecipientByPubkeyRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/internal/eth/v1/validator/{pubkey}/feerecipient",
+      body: "*"
     };
   }
 }
