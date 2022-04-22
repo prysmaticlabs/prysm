@@ -85,13 +85,26 @@ service KeyManagement {
     };
   }
 
-
+  // ListRemoteKeys for all web3signer public validator keys known to the keymanager.
+  //
+  // HTTP response status codes:
+  //  - 200: Successful response
+  //  - 401: Unauthorized
+  //  - 403: Forbidden from accessing the resource
+  //  - 500: Validator internal error
   rpc ListRemoteKeys(google.protobuf.Empty) returns (ListRemoteKeysResponse) {
     option (google.api.http) = {
       get: "/internal/eth/v1/remotekeys"
     };
   }
 
+  // ImportRemoteKeys imports and sets web3signer public validator keys in the keymanager.
+  //
+  // HTTP response status codes:
+  //  - 200: Successful response
+  //  - 401: Unauthorized
+  //  - 403: Forbidden from accessing the resource
+  //  - 500: Validator internal error
   rpc ImportRemoteKeys(ImportRemoteKeysRequest) returns (ImportRemoteKeysResponse) {
     option (google.api.http) = {
       post: "/internal/eth/v1/remotekeys",
@@ -99,10 +112,24 @@ service KeyManagement {
     };
   }
 
+
+  // DeleteRemoteKeys removes web3signer public validator keys in the keymanager.
+  //
+  // HTTP response status codes:
+  //  - 200: Successful response
+  //  - 401: Unauthorized
+  //  - 403: Forbidden from accessing the resource
+  //  - 500: Validator internal error
   rpc DeleteRemoteKeys(DeleteRemoteKeysRequest) returns (DeleteRemoteKeysResponse) {
     option (google.api.http) = {
       delete: "/internal/eth/v1/remotekeys",
       body: "*"
+    };
+  }
+
+  rpc GetFeeRecipientByPubkey(GetFeeRecipientByPubkeyRequest) returns (GetFeeRecipientByPubkeyResponse) {
+    option (google.api.http) = {
+      get: "/internal/eth/v1/fee_recipient/{pubkey}"
     };
   }
 }
