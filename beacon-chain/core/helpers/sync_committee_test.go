@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"math/rand"
 	"strconv"
 	"testing"
 	"time"
@@ -12,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
@@ -234,7 +236,7 @@ func TestCurrentEpochSyncSubcommitteeIndices_UsingCommittee(t *testing.T) {
 	require.NoError(t, err)
 
 	// Test that cache was empty.
-	_, err = syncCommitteeCache.CurrentPeriodIndexPosition(bytesutil.ToBytes32(root), 0)
+	_, err = syncCommitteeCache.CurrentPeriodIndexPosition(root, 0)
 	require.Equal(t, cache.ErrNonExistingSyncCommitteeKey, err)
 
 	// Test that helper can retrieve the index given empty cache.
@@ -244,7 +246,7 @@ func TestCurrentEpochSyncSubcommitteeIndices_UsingCommittee(t *testing.T) {
 
 	// Test that cache was able to fill on miss.
 	time.Sleep(100 * time.Millisecond)
-	index, err = syncCommitteeCache.CurrentPeriodIndexPosition(bytesutil.ToBytes32(root), 0)
+	index, err = syncCommitteeCache.CurrentPeriodIndexPosition(root, 0)
 	require.NoError(t, err)
 	require.DeepEqual(t, []types.CommitteeIndex{0}, index)
 }
@@ -383,4 +385,47 @@ func TestUpdateSyncCommitteeCache_BadRoot(t *testing.T) {
 	require.NoError(t, err)
 	err = UpdateSyncCommitteeCache(state)
 	require.ErrorContains(t, "zero hash state root can't be used to update cache", err)
+}
+
+func TestIsCurrentEpochSyncCommittee_SameBlockRoot(t *testing.T) {
+	validators := make([]*ethpb.Validator, params.BeaconConfig().SyncCommitteeSize)
+	syncCommittee := &ethpb.SyncCommittee{
+		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
+	}
+	for i := 0; i < len(validators); i++ {
+		k := make([]byte, 48)
+		copy(k, strconv.Itoa(i))
+		validators[i] = &ethpb.Validator{
+			PublicKey: k,
+		}
+		syncCommittee.Pubkeys = append(syncCommittee.Pubkeys, bytesutil.PadTo(k, 48))
+	}
+
+	blockRoots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
+	for i := range blockRoots {
+		blockRoots[i] = make([]byte, 32)
+	}
+	state, err := v2.InitializeFromProto(&ethpb.BeaconStateAltair{
+		Validators: validators,
+		BlockRoots: blockRoots,
+	})
+	require.NoError(t, err)
+	require.NoError(t, state.SetCurrentSyncCommittee(syncCommittee))
+	require.NoError(t, state.SetNextSyncCommittee(syncCommittee))
+
+	ClearCache()
+	comIdxs, err := CurrentPeriodSyncSubcommitteeIndices(state, 200)
+	require.NoError(t, err)
+
+	wantedSlot := params.BeaconConfig().EpochsPerSyncCommitteePeriod.Mul(uint64(params.BeaconConfig().SlotsPerEpoch))
+	assert.NoError(t, state.SetSlot(types.Slot(wantedSlot)))
+	syncCommittee, err = state.CurrentSyncCommittee()
+	assert.NoError(t, err)
+	rand.Shuffle(len(syncCommittee.Pubkeys), func(i, j int) {
+		syncCommittee.Pubkeys[i], syncCommittee.Pubkeys[j] = syncCommittee.Pubkeys[j], syncCommittee.Pubkeys[i]
+	})
+	require.NoError(t, state.SetCurrentSyncCommittee(syncCommittee))
+	newIdxs, err := CurrentPeriodSyncSubcommitteeIndices(state, 200)
+	require.NoError(t, err)
+	require.DeepNotEqual(t, comIdxs, newIdxs)
 }
