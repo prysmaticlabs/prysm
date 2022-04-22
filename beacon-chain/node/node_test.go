@@ -3,7 +3,6 @@ package node
 import (
 	"flag"
 	"fmt"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -41,7 +40,6 @@ func TestNodeClose_OK(t *testing.T) {
 	node.Close()
 
 	require.LogsContain(t, hook, "Stopping beacon node")
-	require.NoError(t, os.RemoveAll(tmp))
 }
 
 // TestClearDB tests clearing the database
@@ -67,5 +65,4 @@ func TestClearDB(t *testing.T) {
 	require.NoError(t, err)
 
 	require.LogsContain(t, hook, "Removing database")
-	require.NoError(t, os.RemoveAll(tmp))
 }

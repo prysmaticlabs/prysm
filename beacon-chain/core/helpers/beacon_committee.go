@@ -374,6 +374,7 @@ func ClearCache() {
 	committeeCache = cache.NewCommitteesCache()
 	proposerIndicesCache = cache.NewProposerIndicesCache()
 	syncCommitteeCache = cache.NewSyncCommittee()
+	balanceCache = cache.NewEffectiveBalanceCache()
 }
 
 // computeCommittee returns the requested shuffled committee out of the total committees using
