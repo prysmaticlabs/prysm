@@ -257,133 +257,140 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot types.S
 			v.voteStats.startEpoch = prevEpoch
 		}
 	}
-	gweiPerEth := float64(params.BeaconConfig().GweiPerEth)
+
 	v.prevBalanceLock.Lock()
 	for i, pubKey := range resp.PublicKeys {
-		truncatedKey := fmt.Sprintf("%#x", bytesutil.Trunc(pubKey))
-		pubKeyBytes := bytesutil.ToBytes48(pubKey)
-		if slot < params.BeaconConfig().SlotsPerEpoch {
-			v.prevBalance[pubKeyBytes] = params.BeaconConfig().MaxEffectiveBalance
-		}
-
-		// Safely load data from response with slice out of bounds checks. The server should return
-		// the response with all slices of equal length, but the validator could panic if the server
-		// did not do so for whatever reason.
-		var balBeforeEpoch uint64
-		var balAfterEpoch uint64
-		var correctlyVotedSource bool
-		var correctlyVotedTarget bool
-		var correctlyVotedHead bool
-		if i < len(resp.BalancesBeforeEpochTransition) {
-			balBeforeEpoch = resp.BalancesBeforeEpochTransition[i]
-		} else {
-			log.WithField("pubKey", truncatedKey).Warn("Missing balance before epoch transition")
-		}
-		if i < len(resp.BalancesAfterEpochTransition) {
-			balAfterEpoch = resp.BalancesAfterEpochTransition[i]
-		} else {
-		}
-		if i < len(resp.CorrectlyVotedSource) {
-			correctlyVotedSource = resp.CorrectlyVotedSource[i]
-		} else {
-			log.WithField("pubKey", truncatedKey).Warn("Missing correctly voted source")
-		}
-		if i < len(resp.CorrectlyVotedTarget) {
-			correctlyVotedTarget = resp.CorrectlyVotedTarget[i]
-		} else {
-			log.WithField("pubKey", truncatedKey).Warn("Missing correctly voted target")
-		}
-		if i < len(resp.CorrectlyVotedHead) {
-			correctlyVotedHead = resp.CorrectlyVotedHead[i]
-		} else {
-			log.WithField("pubKey", truncatedKey).Warn("Missing correctly voted head")
-		}
-
-		if _, ok := v.startBalances[pubKeyBytes]; !ok {
-			v.startBalances[pubKeyBytes] = balBeforeEpoch
-		}
-
-		fmtKey := fmt.Sprintf("%#x", pubKey)
-		if v.prevBalance[pubKeyBytes] > 0 {
-			newBalance := float64(balAfterEpoch) / gweiPerEth
-			prevBalance := float64(balBeforeEpoch) / gweiPerEth
-			startBalance := float64(v.startBalances[pubKeyBytes]) / gweiPerEth
-			percentNet := (newBalance - prevBalance) / prevBalance
-			percentSinceStart := (newBalance - startBalance) / startBalance
-
-			previousEpochSummaryFields := logrus.Fields{
-				"pubKey":                  truncatedKey,
-				"epoch":                   prevEpoch,
-				"correctlyVotedSource":    correctlyVotedSource,
-				"correctlyVotedTarget":    correctlyVotedTarget,
-				"correctlyVotedHead":      correctlyVotedHead,
-				"startBalance":            startBalance,
-				"oldBalance":              prevBalance,
-				"newBalance":              newBalance,
-				"percentChange":           fmt.Sprintf("%.5f%%", percentNet*100),
-				"percentChangeSinceStart": fmt.Sprintf("%.5f%%", percentSinceStart*100),
-			}
-
-			// These fields are deprecated after Altair.
-			if slots.ToEpoch(slot) < params.BeaconConfig().AltairForkEpoch {
-				if i < len(resp.InclusionSlots) {
-					previousEpochSummaryFields["inclusionSlot"] = resp.InclusionSlots[i]
-				} else {
-					log.WithField("pubKey", truncatedKey).Warn("Missing inclusion slot")
-				}
-				if i < len(resp.InclusionDistances) {
-					previousEpochSummaryFields["inclusionDistance"] = resp.InclusionDistances[i]
-				} else {
-					log.WithField("pubKey", truncatedKey).Warn("Missing inclusion distance")
-				}
-			}
-			if slots.ToEpoch(slot) >= params.BeaconConfig().AltairForkEpoch {
-				if i < len(resp.InactivityScores) {
-					previousEpochSummaryFields["inactivityScore"] = resp.InactivityScores[i]
-				} else {
-					log.WithField("pubKey", truncatedKey).Warn("Missing inactivity score")
-				}
-			}
-
-			log.WithFields(previousEpochSummaryFields).Info("Previous epoch voting summary")
-			if v.emitAccountMetrics {
-				ValidatorBalancesGaugeVec.WithLabelValues(fmtKey).Set(newBalance)
-				if correctlyVotedSource {
-					ValidatorCorrectlyVotedSourceGaugeVec.WithLabelValues(fmtKey).Set(1)
-				} else {
-					ValidatorCorrectlyVotedSourceGaugeVec.WithLabelValues(fmtKey).Set(0)
-				}
-				if correctlyVotedTarget {
-					ValidatorCorrectlyVotedTargetGaugeVec.WithLabelValues(fmtKey).Set(1)
-				} else {
-					ValidatorCorrectlyVotedTargetGaugeVec.WithLabelValues(fmtKey).Set(0)
-				}
-				if correctlyVotedHead {
-					ValidatorCorrectlyVotedHeadGaugeVec.WithLabelValues(fmtKey).Set(1)
-				} else {
-					ValidatorCorrectlyVotedHeadGaugeVec.WithLabelValues(fmtKey).Set(0)
-				}
-
-				// Phase0 specific metrics
-				if slots.ToEpoch(slot) < params.BeaconConfig().AltairForkEpoch {
-					if i < len(resp.InclusionDistances) {
-						ValidatorInclusionDistancesGaugeVec.WithLabelValues(fmtKey).Set(float64(resp.InclusionDistances[i]))
-					}
-				} else { // Altair specific metrics.
-					// Reset phase0 fields that no longer apply
-					ValidatorInclusionDistancesGaugeVec.DeleteLabelValues(fmtKey)
-					if i < len(resp.InactivityScores) {
-						ValidatorInactivityScoreGaugeVec.WithLabelValues(fmtKey).Set(float64(resp.InactivityScores[i]))
-					}
-				}
-			}
-		}
-		v.prevBalance[pubKeyBytes] = balBeforeEpoch
+		v.logValidatorGainsAndLossesPerKey(slot, prevEpoch, pubKey, i, resp)
 	}
 	v.prevBalanceLock.Unlock()
 
 	v.UpdateLogAggregateStats(resp, slot)
 	return nil
+}
+
+// logValidatorGainsAndLossesPerKey requires the v.prevBalanceLock to be held prior to calling this method.
+func (v *validator) logValidatorGainsAndLossesPerKey(slot types.Slot, prevEpoch types.Epoch, pubKey []byte, i int, resp *ethpb.ValidatorPerformanceResponse) {
+	gweiPerEth := float64(params.BeaconConfig().GweiPerEth)
+	truncatedKey := fmt.Sprintf("%#x", bytesutil.Trunc(pubKey))
+	pubKeyBytes := bytesutil.ToBytes48(pubKey)
+	if slot < params.BeaconConfig().SlotsPerEpoch {
+		v.prevBalance[pubKeyBytes] = params.BeaconConfig().MaxEffectiveBalance
+	}
+
+	log := log.WithField("pubKey", truncatedKey)
+
+	// Safely load data from response with slice out of bounds checks. The server should return
+	// the response with all slices of equal length, but the validator could panic if the server
+	// did not do so for whatever reason.
+	var balBeforeEpoch uint64
+	var balAfterEpoch uint64
+	var correctlyVotedSource bool
+	var correctlyVotedTarget bool
+	var correctlyVotedHead bool
+	if i < len(resp.BalancesBeforeEpochTransition) {
+		balBeforeEpoch = resp.BalancesBeforeEpochTransition[i]
+	} else {
+		log.Warn("Missing balance before epoch transition")
+	}
+	if i < len(resp.BalancesAfterEpochTransition) {
+		balAfterEpoch = resp.BalancesAfterEpochTransition[i]
+	}
+	if i < len(resp.CorrectlyVotedSource) {
+		correctlyVotedSource = resp.CorrectlyVotedSource[i]
+	} else {
+		log.Warn("Missing correctly voted source")
+	}
+	if i < len(resp.CorrectlyVotedTarget) {
+		correctlyVotedTarget = resp.CorrectlyVotedTarget[i]
+	} else {
+		log.Warn("Missing correctly voted target")
+	}
+	if i < len(resp.CorrectlyVotedHead) {
+		correctlyVotedHead = resp.CorrectlyVotedHead[i]
+	} else {
+		log.Warn("Missing correctly voted head")
+	}
+
+	if _, ok := v.startBalances[pubKeyBytes]; !ok {
+		v.startBalances[pubKeyBytes] = balBeforeEpoch
+	}
+
+	fmtKey := fmt.Sprintf("%#x", pubKey)
+	if v.prevBalance[pubKeyBytes] > 0 {
+		newBalance := float64(balAfterEpoch) / gweiPerEth
+		prevBalance := float64(balBeforeEpoch) / gweiPerEth
+		startBalance := float64(v.startBalances[pubKeyBytes]) / gweiPerEth
+		percentNet := (newBalance - prevBalance) / prevBalance
+		percentSinceStart := (newBalance - startBalance) / startBalance
+
+		previousEpochSummaryFields := logrus.Fields{
+			"pubKey":                  truncatedKey,
+			"epoch":                   prevEpoch,
+			"correctlyVotedSource":    correctlyVotedSource,
+			"correctlyVotedTarget":    correctlyVotedTarget,
+			"correctlyVotedHead":      correctlyVotedHead,
+			"startBalance":            startBalance,
+			"oldBalance":              prevBalance,
+			"newBalance":              newBalance,
+			"percentChange":           fmt.Sprintf("%.5f%%", percentNet*100),
+			"percentChangeSinceStart": fmt.Sprintf("%.5f%%", percentSinceStart*100),
+		}
+
+		// These fields are deprecated after Altair.
+		if slots.ToEpoch(slot) < params.BeaconConfig().AltairForkEpoch {
+			if i < len(resp.InclusionSlots) {
+				previousEpochSummaryFields["inclusionSlot"] = resp.InclusionSlots[i]
+			} else {
+				log.Warn("Missing inclusion slot")
+			}
+			if i < len(resp.InclusionDistances) {
+				previousEpochSummaryFields["inclusionDistance"] = resp.InclusionDistances[i]
+			} else {
+				log.Warn("Missing inclusion distance")
+			}
+		}
+		if slots.ToEpoch(slot) >= params.BeaconConfig().AltairForkEpoch {
+			if i < len(resp.InactivityScores) {
+				previousEpochSummaryFields["inactivityScore"] = resp.InactivityScores[i]
+			} else {
+				log.Warn("Missing inactivity score")
+			}
+		}
+
+		log.WithFields(previousEpochSummaryFields).Info("Previous epoch voting summary")
+		if v.emitAccountMetrics {
+			ValidatorBalancesGaugeVec.WithLabelValues(fmtKey).Set(newBalance)
+			if correctlyVotedSource {
+				ValidatorCorrectlyVotedSourceGaugeVec.WithLabelValues(fmtKey).Set(1)
+			} else {
+				ValidatorCorrectlyVotedSourceGaugeVec.WithLabelValues(fmtKey).Set(0)
+			}
+			if correctlyVotedTarget {
+				ValidatorCorrectlyVotedTargetGaugeVec.WithLabelValues(fmtKey).Set(1)
+			} else {
+				ValidatorCorrectlyVotedTargetGaugeVec.WithLabelValues(fmtKey).Set(0)
+			}
+			if correctlyVotedHead {
+				ValidatorCorrectlyVotedHeadGaugeVec.WithLabelValues(fmtKey).Set(1)
+			} else {
+				ValidatorCorrectlyVotedHeadGaugeVec.WithLabelValues(fmtKey).Set(0)
+			}
+
+			// Phase0 specific metrics
+			if slots.ToEpoch(slot) < params.BeaconConfig().AltairForkEpoch {
+				if i < len(resp.InclusionDistances) {
+					ValidatorInclusionDistancesGaugeVec.WithLabelValues(fmtKey).Set(float64(resp.InclusionDistances[i]))
+				}
+			} else { // Altair specific metrics.
+				// Reset phase0 fields that no longer apply
+				ValidatorInclusionDistancesGaugeVec.DeleteLabelValues(fmtKey)
+				if i < len(resp.InactivityScores) {
+					ValidatorInactivityScoreGaugeVec.WithLabelValues(fmtKey).Set(float64(resp.InactivityScores[i]))
+				}
+			}
+		}
+	}
+	v.prevBalance[pubKeyBytes] = balBeforeEpoch
 }
 
 // UpdateLogAggregateStats updates and logs the voteStats struct of a validator using the RPC response obtained from LogValidatorGainsAndLosses.
