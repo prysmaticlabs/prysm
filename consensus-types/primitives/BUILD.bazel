@@ -6,7 +6,6 @@ go_library(
         "committee_index.go",
         "domain.go",
         "epoch.go",
-        "math.go",
         "slot.go",
         "sszbytes.go",
         "sszuint64.go",
@@ -14,7 +13,10 @@ go_library(
     ],
     importpath = "github.com/prysmaticlabs/prysm/consensus-types/primitives",
     visibility = ["//visibility:public"],
-    deps = ["@com_github_ferranbt_fastssz//:go_default_library"],
+    deps = [
+        "//math:go_default_library",
+        "@com_github_ferranbt_fastssz//:go_default_library",
+    ],
 )
 
 go_test(
@@ -23,7 +25,6 @@ go_test(
         "committee_index_test.go",
         "domain_test.go",
         "epoch_test.go",
-        "math_test.go",
         "slot_test.go",
         "sszbytes_test.go",
         "sszuint64_test.go",

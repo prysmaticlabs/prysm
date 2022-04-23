@@ -4,6 +4,7 @@ import (
 	fmt "fmt"
 
 	fssz "github.com/ferranbt/fastssz"
+	"github.com/prysmaticlabs/prysm/math"
 )
 
 var _ fssz.HashRoot = (Slot)(0)
@@ -26,7 +27,7 @@ func (s Slot) Mul(x uint64) Slot {
 // SafeMul multiplies slot by x.
 // In case of arithmetic issues (overflow/underflow/div by zero) error is returned.
 func (s Slot) SafeMul(x uint64) (Slot, error) {
-	res, err := Mul64(uint64(s), x)
+	res, err := math.Mul64(uint64(s), x)
 	return Slot(res), err
 }
 
@@ -55,7 +56,7 @@ func (s Slot) Div(x uint64) Slot {
 // SafeDiv divides slot by x.
 // In case of arithmetic issues (overflow/underflow/div by zero) error is returned.
 func (s Slot) SafeDiv(x uint64) (Slot, error) {
-	res, err := Div64(uint64(s), x)
+	res, err := math.Div64(uint64(s), x)
 	return Slot(res), err
 }
 
@@ -84,7 +85,7 @@ func (s Slot) Add(x uint64) Slot {
 // SafeAdd increases slot by x.
 // In case of arithmetic issues (overflow/underflow/div by zero) error is returned.
 func (s Slot) SafeAdd(x uint64) (Slot, error) {
-	res, err := Add64(uint64(s), x)
+	res, err := math.Add64(uint64(s), x)
 	return Slot(res), err
 }
 
@@ -113,7 +114,7 @@ func (s Slot) Sub(x uint64) Slot {
 // SafeSub subtracts x from the slot.
 // In case of arithmetic issues (overflow/underflow/div by zero) error is returned.
 func (s Slot) SafeSub(x uint64) (Slot, error) {
-	res, err := Sub64(uint64(s), x)
+	res, err := math.Sub64(uint64(s), x)
 	return Slot(res), err
 }
 
@@ -142,7 +143,7 @@ func (s Slot) Mod(x uint64) Slot {
 // SafeMod returns result of `slot % x`.
 // In case of arithmetic issues (overflow/underflow/div by zero) error is returned.
 func (s Slot) SafeMod(x uint64) (Slot, error) {
-	res, err := Mod64(uint64(s), x)
+	res, err := math.Mod64(uint64(s), x)
 	return Slot(res), err
 }
 

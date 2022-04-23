@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	fssz "github.com/ferranbt/fastssz"
+	"github.com/prysmaticlabs/prysm/math"
 )
 
 var _ fssz.HashRoot = (Epoch)(0)
@@ -26,7 +27,7 @@ func (e Epoch) Mul(x uint64) Epoch {
 // SafeMul multiplies epoch by x.
 // In case of arithmetic issues (overflow/underflow/div by zero) error is returned.
 func (e Epoch) SafeMul(x uint64) (Epoch, error) {
-	res, err := Mul64(uint64(e), x)
+	res, err := math.Mul64(uint64(e), x)
 	return Epoch(res), err
 }
 
@@ -43,7 +44,7 @@ func (e Epoch) Div(x uint64) Epoch {
 // SafeDiv divides epoch by x.
 // In case of arithmetic issues (overflow/underflow/div by zero) error is returned.
 func (e Epoch) SafeDiv(x uint64) (Epoch, error) {
-	res, err := Div64(uint64(e), x)
+	res, err := math.Div64(uint64(e), x)
 	return Epoch(res), err
 }
 
@@ -60,7 +61,7 @@ func (e Epoch) Add(x uint64) Epoch {
 // SafeAdd increases epoch by x.
 // In case of arithmetic issues (overflow/underflow/div by zero) error is returned.
 func (e Epoch) SafeAdd(x uint64) (Epoch, error) {
-	res, err := Add64(uint64(e), x)
+	res, err := math.Add64(uint64(e), x)
 	return Epoch(res), err
 }
 
@@ -89,7 +90,7 @@ func (e Epoch) Sub(x uint64) Epoch {
 // SafeSub subtracts x from the epoch.
 // In case of arithmetic issues (overflow/underflow/div by zero) error is returned.
 func (e Epoch) SafeSub(x uint64) (Epoch, error) {
-	res, err := Sub64(uint64(e), x)
+	res, err := math.Sub64(uint64(e), x)
 	return Epoch(res), err
 }
 
@@ -106,7 +107,7 @@ func (e Epoch) Mod(x uint64) Epoch {
 // SafeMod returns result of `epoch % x`.
 // In case of arithmetic issues (overflow/underflow/div by zero) error is returned.
 func (e Epoch) SafeMod(x uint64) (Epoch, error) {
-	res, err := Mod64(uint64(e), x)
+	res, err := math.Mod64(uint64(e), x)
 	return Epoch(res), err
 }
 
