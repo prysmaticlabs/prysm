@@ -434,7 +434,7 @@ type executionPayloadJson struct {
 	GasUsed       string   `json:"gas_used"`
 	TimeStamp     string   `json:"timestamp"`
 	ExtraData     string   `json:"extra_data" hex:"true"`
-	BaseFeePerGas string   `json:"base_fee_per_gas" hex:"true"`
+	BaseFeePerGas string   `json:"base_fee_per_gas" uint256:"true"`
 	BlockHash     string   `json:"block_hash" hex:"true"`
 	Transactions  []string `json:"transactions" hex:"true"`
 }

@@ -3,7 +3,7 @@ package initialsync
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"sync"
 	"testing"
 	"time"
@@ -53,7 +53,7 @@ type peerData struct {
 
 func TestMain(m *testing.M) {
 	logrus.SetLevel(logrus.DebugLevel)
-	logrus.SetOutput(ioutil.Discard)
+	logrus.SetOutput(io.Discard)
 
 	resetCfg := features.InitWithReset(&features.Flags{
 		EnablePeerScorer: true,

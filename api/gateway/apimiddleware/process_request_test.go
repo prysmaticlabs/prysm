@@ -15,30 +15,40 @@ import (
 )
 
 type testRequestContainer struct {
-	TestString    string
-	TestHexString string `hex:"true"`
+	TestString         string
+	TestHexString      string `hex:"true"`
+	TestEmptyHexString string `hex:"true"`
+	TestUint256String  string `uint256:"true"`
 }
 
 func defaultRequestContainer() *testRequestContainer {
 	return &testRequestContainer{
-		TestString:    "test string",
-		TestHexString: "0x666F6F", // hex encoding of "foo"
+		TestString:         "test string",
+		TestHexString:      "0x666F6F", // hex encoding of "foo"
+		TestEmptyHexString: "0x",
+		TestUint256String:  "4196",
 	}
 }
 
 type testResponseContainer struct {
-	TestString string
-	TestHex    string `hex:"true"`
-	TestEnum   string `enum:"true"`
-	TestTime   string `time:"true"`
+	TestString   string
+	TestHex      string `hex:"true"`
+	TestEmptyHex string `hex:"true"`
+	TestUint256  string `uint256:"true"`
+	TestEnum     string `enum:"true"`
+	TestTime     string `time:"true"`
 }
 
 func defaultResponseContainer() *testResponseContainer {
 	return &testResponseContainer{
-		TestString: "test string",
-		TestHex:    "Zm9v", // base64 encoding of "foo"
-		TestEnum:   "Test Enum",
-		TestTime:   "2006-01-02T15:04:05Z",
+		TestString:   "test string",
+		TestHex:      "Zm9v", // base64 encoding of "foo"
+		TestEmptyHex: "",
+		TestEnum:     "Test Enum",
+		TestTime:     "2006-01-02T15:04:05Z",
+
+		// base64 encoding of 4196 in little-endian
+		TestUint256: "ZBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
 	}
 }
 
@@ -106,6 +116,8 @@ func TestProcessRequestContainerFields(t *testing.T) {
 		errJson := ProcessRequestContainerFields(container)
 		require.Equal(t, true, errJson == nil)
 		assert.Equal(t, "Zm9v", container.TestHexString)
+		assert.Equal(t, "", container.TestEmptyHexString)
+		assert.Equal(t, "ZBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", container.TestUint256String)
 	})
 
 	t.Run("error", func(t *testing.T) {
@@ -128,8 +140,8 @@ func TestSetRequestBodyToRequestContainer(t *testing.T) {
 	contentLengthHeader, ok := request.Header["Content-Length"]
 	require.Equal(t, true, ok)
 	require.Equal(t, 1, len(contentLengthHeader), "wrong number of header values")
-	assert.Equal(t, "55", contentLengthHeader[0])
-	assert.Equal(t, int64(55), request.ContentLength)
+	assert.Equal(t, "108", contentLengthHeader[0])
+	assert.Equal(t, int64(108), request.ContentLength)
 }
 
 func TestPrepareRequestForProxying(t *testing.T) {
@@ -234,6 +246,8 @@ func TestProcessMiddlewareResponseFields(t *testing.T) {
 		errJson := ProcessMiddlewareResponseFields(container)
 		require.Equal(t, true, errJson == nil)
 		assert.Equal(t, "0x666f6f", container.TestHex)
+		assert.Equal(t, "0x", container.TestEmptyHex)
+		assert.Equal(t, "4196", container.TestUint256)
 		assert.Equal(t, "test enum", container.TestEnum)
 		assert.Equal(t, "1136214245", container.TestTime)
 	})
@@ -278,7 +292,7 @@ func TestWriteMiddlewareResponseHeadersAndBody(t *testing.T) {
 		v, ok = writer.Header()["Content-Length"]
 		require.Equal(t, true, ok, "header not found")
 		require.Equal(t, 1, len(v), "wrong number of header values")
-		assert.Equal(t, "102", v[0])
+		assert.Equal(t, "181", v[0])
 		assert.Equal(t, 204, writer.Code)
 		assert.DeepEqual(t, responseJson, writer.Body.Bytes())
 	})
