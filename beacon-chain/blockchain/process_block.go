@@ -113,11 +113,15 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 	if err != nil {
 		return err
 	}
-	isValidPayload, err := s.notifyNewPayload(ctx, preStateVersion, postStateVersion, preStateHeader, postStateHeader, signed)
+	isValidPayload, err := s.notifyNewPayload(ctx, postStateVersion, postStateHeader, signed)
 	if err != nil {
 		return errors.Wrap(err, "could not verify new payload")
 	}
-	if !isValidPayload {
+	if isValidPayload {
+		if err := s.validateMergeTransitionBlock(ctx, preStateVersion, preStateHeader, signed); err != nil {
+			return err
+		}
+	} else {
 		candidate, err := s.optimisticCandidateBlock(ctx, b)
 		if err != nil {
 			return errors.Wrap(err, "could not check if block is optimistic candidate")
@@ -407,15 +411,17 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 	// blocks have been verified, add them to forkchoice and call the engine
 	for i, b := range blks {
 		isValidPayload, err := s.notifyNewPayload(ctx,
-			preVersionAndHeaders[i].version,
 			postVersionAndHeaders[i].version,
-			preVersionAndHeaders[i].header,
 			postVersionAndHeaders[i].header, b)
-
 		if err != nil {
 			return nil, nil, err
 		}
-		if !isValidPayload {
+		if isValidPayload {
+			if err := s.validateMergeTransitionBlock(ctx, preVersionAndHeaders[i].version,
+				preVersionAndHeaders[i].header, b); err != nil {
+				return nil, nil, err
+			}
+		} else {
 			candidate, err := s.optimisticCandidateBlock(ctx, b.Block())
 			if err != nil {
 				return nil, nil, errors.Wrap(err, "could not check if block is optimistic candidate")
@@ -641,4 +647,37 @@ func (s *Service) pruneCanonicalAttsFromPool(ctx context.Context, r [32]byte, b 
 		}
 	}
 	return nil
+}
+
+// validateMergeTransitionBlock validates the merge transition block.
+func (s *Service) validateMergeTransitionBlock(ctx context.Context, stateVersion int, stateHeader *ethpb.ExecutionPayloadHeader, blk block.SignedBeaconBlock) error {
+	// Skip validation if block is older than Bellatrix.
+	if blocks.IsPreBellatrixVersion(blk.Block().Version()) {
+		return nil
+	}
+
+	// Skip validation if block has an empty payload.
+	payload, err := blk.Block().Body().ExecutionPayload()
+	if err != nil {
+		return err
+	}
+	if blocks.IsEmptyPayload(payload) {
+		return nil
+	}
+
+	// Handle case where pre-state is Altair but block contains payload.
+	// To reach here, the block must have contained a valid payload.
+	if blocks.IsPreBellatrixVersion(stateVersion) {
+		return s.validateMergeBlock(ctx, blk)
+	}
+
+	// Skip validation if the block is not a merge transition block.
+	atTransition, err := blocks.IsMergeTransitionBlockUsingPreStatePayloadHeader(stateHeader, blk.Block().Body())
+	if err != nil {
+		return errors.Wrap(err, "could not check if merge block is terminal")
+	}
+	if !atTransition {
+		return nil
+	}
+	return s.validateMergeBlock(ctx, blk)
 }

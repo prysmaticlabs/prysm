@@ -22,7 +22,6 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -229,7 +228,6 @@ func Test_NotifyNewPayload(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		preState       state.BeaconState
 		postState      state.BeaconState
 		isValidPayload bool
 		blk            block.SignedBeaconBlock
@@ -239,26 +237,22 @@ func Test_NotifyNewPayload(t *testing.T) {
 		{
 			name:           "phase 0 post state",
 			postState:      phase0State,
-			preState:       phase0State,
 			isValidPayload: true,
 		},
 		{
 			name:           "altair post state",
 			postState:      altairState,
-			preState:       altairState,
 			isValidPayload: true,
 		},
 		{
 			name:           "nil beacon block",
 			postState:      bellatrixState,
-			preState:       bellatrixState,
 			errString:      "signed beacon block can't be nil",
 			isValidPayload: false,
 		},
 		{
 			name:           "new payload with optimistic block",
 			postState:      bellatrixState,
-			preState:       bellatrixState,
 			blk:            bellatrixBlk,
 			newPayloadErr:  powchain.ErrAcceptedSyncingPayloadStatus,
 			isValidPayload: false,
@@ -266,7 +260,6 @@ func Test_NotifyNewPayload(t *testing.T) {
 		{
 			name:           "new payload with invalid block",
 			postState:      bellatrixState,
-			preState:       bellatrixState,
 			blk:            bellatrixBlk,
 			newPayloadErr:  powchain.ErrInvalidPayloadStatus,
 			errString:      "could not validate an INVALID payload from execution engine",
@@ -275,14 +268,12 @@ func Test_NotifyNewPayload(t *testing.T) {
 		{
 			name:           "altair pre state, altair block",
 			postState:      bellatrixState,
-			preState:       altairState,
 			blk:            altairBlk,
 			isValidPayload: true,
 		},
 		{
 			name:      "altair pre state, happy case",
 			postState: bellatrixState,
-			preState:  altairState,
 			blk: func() block.SignedBeaconBlock {
 				blk := &ethpb.SignedBeaconBlockBellatrix{
 					Block: &ethpb.BeaconBlockBellatrix{
@@ -300,17 +291,8 @@ func Test_NotifyNewPayload(t *testing.T) {
 			isValidPayload: true,
 		},
 		{
-			name:           "could not get merge block",
-			postState:      bellatrixState,
-			preState:       bellatrixState,
-			blk:            bellatrixBlk,
-			errString:      "could not get merge block parent hash and total difficulty",
-			isValidPayload: false,
-		},
-		{
 			name:      "not at merge transition",
 			postState: bellatrixState,
-			preState:  bellatrixState,
 			blk: func() block.SignedBeaconBlock {
 				blk := &ethpb.SignedBeaconBlockBellatrix{
 					Block: &ethpb.BeaconBlockBellatrix{
@@ -335,17 +317,8 @@ func Test_NotifyNewPayload(t *testing.T) {
 			isValidPayload: true,
 		},
 		{
-			name:           "could not get merge block",
-			postState:      bellatrixState,
-			preState:       bellatrixState,
-			blk:            bellatrixBlk,
-			errString:      "could not get merge block parent hash and total difficulty",
-			isValidPayload: false,
-		},
-		{
 			name:      "happy case",
 			postState: bellatrixState,
-			preState:  bellatrixState,
 			blk: func() block.SignedBeaconBlock {
 				blk := &ethpb.SignedBeaconBlockBellatrix{
 					Block: &ethpb.BeaconBlockBellatrix{
@@ -375,16 +348,11 @@ func Test_NotifyNewPayload(t *testing.T) {
 				TotalDifficulty: "0x1",
 			}
 			service.cfg.ExecutionEngineCaller = e
-			var payload *ethpb.ExecutionPayloadHeader
-			if tt.preState.Version() == version.Bellatrix {
-				payload, err = tt.preState.LatestExecutionPayloadHeader()
-				require.NoError(t, err)
-			}
 			root := [32]byte{'a'}
 			require.NoError(t, service.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx, 0, root, root, params.BeaconConfig().ZeroHash, 0, 0))
 			postVersion, postHeader, err := getStateVersionAndPayload(tt.postState)
 			require.NoError(t, err)
-			isValidPayload, err := service.notifyNewPayload(ctx, tt.preState.Version(), postVersion, payload, postHeader, tt.blk)
+			isValidPayload, err := service.notifyNewPayload(ctx, postVersion, postHeader, tt.blk)
 			if tt.errString != "" {
 				require.ErrorContains(t, tt.errString, err)
 			} else {
@@ -431,11 +399,9 @@ func Test_NotifyNewPayload_SetOptimisticToValid(t *testing.T) {
 		TotalDifficulty: "0x1",
 	}
 	service.cfg.ExecutionEngineCaller = e
-	payload, err := bellatrixState.LatestExecutionPayloadHeader()
-	require.NoError(t, err)
 	postVersion, postHeader, err := getStateVersionAndPayload(bellatrixState)
 	require.NoError(t, err)
-	validated, err := service.notifyNewPayload(ctx, bellatrixState.Version(), postVersion, payload, postHeader, bellatrixBlk)
+	validated, err := service.notifyNewPayload(ctx, postVersion, postHeader, bellatrixBlk)
 	require.NoError(t, err)
 	require.Equal(t, true, validated)
 }

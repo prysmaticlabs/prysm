@@ -74,7 +74,7 @@ func IsExecutionBlock(body block.BeaconBlockBody) (bool, error) {
 		return false, err
 	default:
 	}
-	return !isEmptyPayload(payload), nil
+	return !IsEmptyPayload(payload), nil
 }
 
 // IsExecutionEnabled returns true if the beacon chain can begin executing.
@@ -240,7 +240,7 @@ func PayloadToHeader(payload *enginev1.ExecutionPayload) (*ethpb.ExecutionPayloa
 	}, nil
 }
 
-func isEmptyPayload(p *enginev1.ExecutionPayload) bool {
+func IsEmptyPayload(p *enginev1.ExecutionPayload) bool {
 	if p == nil {
 		return true
 	}
