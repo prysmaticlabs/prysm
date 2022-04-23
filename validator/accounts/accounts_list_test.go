@@ -3,7 +3,7 @@ package accounts
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"math"
 	"os"
 	"strconv"
@@ -133,7 +133,7 @@ func TestListAccounts_LocalKeymanager(t *testing.T) {
 	)
 
 	require.NoError(t, writer.Close())
-	out, err := ioutil.ReadAll(r)
+	out, err := io.ReadAll(r)
 	require.NoError(t, err)
 	os.Stdout = rescueStdout
 
@@ -277,7 +277,7 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 		keymanager.ListKeymanagerAccountConfig{ShowPrivateKeys: true}))
 
 	require.NoError(t, writer.Close())
-	out, err := ioutil.ReadAll(r)
+	out, err := io.ReadAll(r)
 	require.NoError(t, err)
 	os.Stdout = rescueStdout
 
@@ -425,7 +425,7 @@ func TestListAccounts_RemoteKeymanager(t *testing.T) {
 			}))
 
 	require.NoError(t, writer.Close())
-	out, err := ioutil.ReadAll(r)
+	out, err := io.ReadAll(r)
 	require.NoError(t, err)
 	os.Stdout = rescueStdout
 
@@ -542,7 +542,7 @@ func TestListAccounts_ListValidatorIndices(t *testing.T) {
 	)
 
 	require.NoError(t, writer.Close())
-	out, err := ioutil.ReadAll(r)
+	out, err := io.ReadAll(r)
 	require.NoError(t, err)
 	os.Stdout = rescueStdout
 

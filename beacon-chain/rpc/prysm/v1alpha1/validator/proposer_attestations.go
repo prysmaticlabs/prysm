@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation/aggregation"
@@ -117,16 +116,7 @@ func (a proposerAtts) sortByProfitability() (proposerAtts, error) {
 	if len(a) < 2 {
 		return a, nil
 	}
-	if features.Get().ProposerAttsSelectionUsingMaxCover {
-		return a.sortByProfitabilityUsingMaxCover()
-	}
-	sort.Slice(a, func(i, j int) bool {
-		if a[i].Data.Slot == a[j].Data.Slot {
-			return a[i].AggregationBits.Count() > a[j].AggregationBits.Count()
-		}
-		return a[i].Data.Slot > a[j].Data.Slot
-	})
-	return a, nil
+	return a.sortByProfitabilityUsingMaxCover()
 }
 
 // sortByProfitabilityUsingMaxCover orders attestations by highest slot and by highest aggregation bit count.

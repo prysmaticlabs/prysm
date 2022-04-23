@@ -117,6 +117,10 @@ func (BeaconBlock) IsNil() bool {
 	return false
 }
 
+func (BeaconBlock) IsBlinded() bool {
+	return false
+}
+
 func (BeaconBlock) Proto() proto.Message {
 	panic("implement me")
 }

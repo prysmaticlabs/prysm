@@ -2,7 +2,7 @@ package attestations
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"sort"
 	"testing"
 
@@ -19,7 +19,7 @@ import (
 
 func TestMain(m *testing.M) {
 	logrus.SetLevel(logrus.DebugLevel)
-	logrus.SetOutput(ioutil.Discard)
+	logrus.SetOutput(io.Discard)
 	m.Run()
 }
 

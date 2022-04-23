@@ -3,7 +3,6 @@ package historycmd
 import (
 	"encoding/json"
 	"flag"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -38,7 +37,7 @@ func setupCliCtx(
 
 func TestImportExportSlashingProtectionCli_RoundTrip(t *testing.T) {
 	numValidators := 10
-	outputPath := filepath.Join(os.TempDir(), "slashing-exports")
+	outputPath := filepath.Join(t.TempDir(), "slashing-exports")
 	err := file.MkdirAll(outputPath)
 	require.NoError(t, err)
 	protectionFileName := "slashing_history_import.json"
@@ -111,7 +110,7 @@ func TestImportExportSlashingProtectionCli_RoundTrip(t *testing.T) {
 
 func TestImportExportSlashingProtectionCli_EmptyData(t *testing.T) {
 	numValidators := 10
-	outputPath := filepath.Join(os.TempDir(), "slashing-exports")
+	outputPath := filepath.Join(t.TempDir(), "slashing-exports")
 	err := file.MkdirAll(outputPath)
 	require.NoError(t, err)
 	protectionFileName := "slashing_history_import.json"
