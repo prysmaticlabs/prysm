@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	log "github.com/sirupsen/logrus"
@@ -31,7 +32,7 @@ func IsCurrentPeriodSyncCommittee(
 	if err != nil {
 		return false, err
 	}
-	indices, err := syncCommitteeCache.CurrentPeriodIndexPosition(bytesutil.ToBytes32(root), valIdx)
+	indices, err := syncCommitteeCache.CurrentPeriodIndexPosition(root, valIdx)
 	if err == cache.ErrNonExistingSyncCommitteeKey {
 		val, err := st.ValidatorAtIndex(valIdx)
 		if err != nil {
@@ -44,7 +45,7 @@ func IsCurrentPeriodSyncCommittee(
 
 		// Fill in the cache on miss.
 		go func() {
-			if err := syncCommitteeCache.UpdatePositionsInCommittee(bytesutil.ToBytes32(root), st); err != nil {
+			if err := syncCommitteeCache.UpdatePositionsInCommittee(root, st); err != nil {
 				log.Errorf("Could not fill sync committee cache on miss: %v", err)
 			}
 		}()
@@ -68,7 +69,7 @@ func IsNextPeriodSyncCommittee(
 	if err != nil {
 		return false, err
 	}
-	indices, err := syncCommitteeCache.NextPeriodIndexPosition(bytesutil.ToBytes32(root), valIdx)
+	indices, err := syncCommitteeCache.NextPeriodIndexPosition(root, valIdx)
 	if err == cache.ErrNonExistingSyncCommitteeKey {
 		val, err := st.ValidatorAtIndex(valIdx)
 		if err != nil {
@@ -95,7 +96,7 @@ func CurrentPeriodSyncSubcommitteeIndices(
 	if err != nil {
 		return nil, err
 	}
-	indices, err := syncCommitteeCache.CurrentPeriodIndexPosition(bytesutil.ToBytes32(root), valIdx)
+	indices, err := syncCommitteeCache.CurrentPeriodIndexPosition(root, valIdx)
 	if err == cache.ErrNonExistingSyncCommitteeKey {
 		val, err := st.ValidatorAtIndex(valIdx)
 		if err != nil {
@@ -108,7 +109,7 @@ func CurrentPeriodSyncSubcommitteeIndices(
 
 		// Fill in the cache on miss.
 		go func() {
-			if err := syncCommitteeCache.UpdatePositionsInCommittee(bytesutil.ToBytes32(root), st); err != nil {
+			if err := syncCommitteeCache.UpdatePositionsInCommittee(root, st); err != nil {
 				log.Errorf("Could not fill sync committee cache on miss: %v", err)
 			}
 		}()
@@ -129,7 +130,7 @@ func NextPeriodSyncSubcommitteeIndices(
 	if err != nil {
 		return nil, err
 	}
-	indices, err := syncCommitteeCache.NextPeriodIndexPosition(bytesutil.ToBytes32(root), valIdx)
+	indices, err := syncCommitteeCache.NextPeriodIndexPosition(root, valIdx)
 	if err == cache.ErrNonExistingSyncCommitteeKey {
 		val, err := st.ValidatorAtIndex(valIdx)
 		if err != nil {
@@ -169,7 +170,7 @@ func UpdateSyncCommitteeCache(st state.BeaconStateAltair) error {
 		return err
 	}
 
-	return syncCommitteeCache.UpdatePositionsInCommittee(prevBlockRoot, st)
+	return syncCommitteeCache.UpdatePositionsInCommittee(combineRootAndSlot(prevBlockRoot[:], uint64(header.Slot)), st)
 }
 
 // Loop through `pubKeys` for matching `pubKey` and get the indices where it matches.
@@ -186,19 +187,19 @@ func findSubCommitteeIndices(pubKey []byte, pubKeys [][]byte) []types.CommitteeI
 // Retrieve the current sync period boundary root by calculating sync period start epoch
 // and calling `BlockRoot`.
 // It uses the boundary slot - 1 for block root. (Ex: SlotsPerEpoch * EpochsPerSyncCommitteePeriod - 1)
-func syncPeriodBoundaryRoot(st state.ReadOnlyBeaconState) ([]byte, error) {
+func syncPeriodBoundaryRoot(st state.ReadOnlyBeaconState) ([32]byte, error) {
 	// Can't call `BlockRoot` until the first slot.
 	if st.Slot() == params.BeaconConfig().GenesisSlot {
-		return params.BeaconConfig().ZeroHash[:], nil
+		return params.BeaconConfig().ZeroHash, nil
 	}
 
 	startEpoch, err := slots.SyncCommitteePeriodStartEpoch(time.CurrentEpoch(st))
 	if err != nil {
-		return nil, err
+		return [32]byte{}, err
 	}
 	startEpochSlot, err := slots.EpochStart(startEpoch)
 	if err != nil {
-		return nil, err
+		return [32]byte{}, err
 	}
 
 	// Prevent underflow
@@ -206,5 +207,15 @@ func syncPeriodBoundaryRoot(st state.ReadOnlyBeaconState) ([]byte, error) {
 		startEpochSlot--
 	}
 
-	return BlockRootAtSlot(st, startEpochSlot)
+	root, err := BlockRootAtSlot(st, startEpochSlot)
+	if err != nil {
+		return [32]byte{}, err
+	}
+	return combineRootAndSlot(root, uint64(startEpochSlot)), nil
+}
+
+func combineRootAndSlot(root []byte, slot uint64) [32]byte {
+	slotBytes := bytesutil.Uint64ToBytesLittleEndian(slot)
+	keyHash := hash.Hash(append(root, slotBytes...))
+	return keyHash
 }

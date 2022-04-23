@@ -7,7 +7,6 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -76,11 +75,6 @@ func TestTotalActiveBalance(t *testing.T) {
 }
 
 func TestTotalActiveBalance_WithCache(t *testing.T) {
-	resetCfg := features.InitWithReset(&features.Flags{
-		EnableActiveBalanceCache: true,
-	})
-	defer resetCfg()
-
 	tests := []struct {
 		vCount    int
 		wantCount int
