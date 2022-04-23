@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
@@ -356,22 +355,23 @@ func attestationDelta(
 
 // UnrealizedJustificationCheckpoint returns the justification checkpoint of the
 // given state as if it was progressed with empty slots until the next epoch.
-func UnrealizedJustificationCheckpoint(ctx context.Context, state state.BeaconStateAltair) (*ethpb.Checkpoint, error) {
-	if state == nil || state.IsNil() {
+func UnrealizedJustificationCheckpoint(ctx context.Context, st state.BeaconStateAltair) (*ethpb.Checkpoint, error) {
+	if st == nil || st.IsNil() {
 		return nil, errors.New("nil state")
 	}
 
-	prevEpoch := time.PrevEpoch(state)
-	currentEpoch := time.CurrentEpoch(state)
+	prevEpoch := time.PrevEpoch(st)
+	currentEpoch := time.CurrentEpoch(st)
 	activeBalance := uint64(0)
 	currentTarget := uint64(0)
 	prevTarget := uint64(0)
-	cp, err := state.CurrentEpochParticipation()
+
+	cp, err := st.CurrentEpochParticipation() // TODO: Use read only
 	if err != nil {
 		return nil, err
 	}
 
-	pp, err := state.PreviousEpochParticipation()
+	pp, err := st.PreviousEpochParticipation()
 	if err != nil {
 		return nil, err
 	}
@@ -379,58 +379,52 @@ func UnrealizedJustificationCheckpoint(ctx context.Context, state state.BeaconSt
 	cfg := params.BeaconConfig()
 	targetIdx := cfg.TimelyTargetFlagIndex
 
-	for i := 0; i < state.NumValidators(); i++ {
-		val, err := state.ValidatorAtIndexReadOnly(types.ValidatorIndex(i))
-		if err != nil {
-			return nil, err
-		}
+	if err := st.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
 		if helpers.IsActiveValidatorUsingTrie(val, currentEpoch) && !val.Slashed() {
 			activeBalance, err = math.Add64(activeBalance, val.EffectiveBalance())
 			if err != nil {
-				return nil, err
+				return err
 			}
-			if i < len(cp) {
-				has, err := HasValidatorFlag(cp[i], targetIdx)
+			has, err := HasValidatorFlag(cp[idx], targetIdx)
+			if err != nil {
+				return err
+			}
+			if has {
+				currentTarget, err = math.Add64(currentTarget, val.EffectiveBalance())
 				if err != nil {
-					return nil, err
-				}
-				if has {
-					currentTarget, err = math.Add64(currentTarget, val.EffectiveBalance())
-					if err != nil {
-						return nil, err
-					}
+					return err
 				}
 			}
-
-			if i < len(pp) {
-				has, err := HasValidatorFlag(pp[i], targetIdx)
+			has, err = HasValidatorFlag(pp[idx], targetIdx)
+			if err != nil {
+				return err
+			}
+			if has {
+				prevTarget, err = math.Add64(prevTarget, val.EffectiveBalance())
 				if err != nil {
-					return nil, err
-				}
-				if has {
-					prevTarget, err = math.Add64(prevTarget, val.EffectiveBalance())
-					if err != nil {
-						return nil, err
-					}
+					return err
 				}
 			}
 		}
+		return nil
+	}); err != nil {
+		return nil, errors.Wrap(err, "could not read every validator")
 	}
 
-	justification := precompute.ProcessJustificationBits(state, activeBalance, prevTarget, currentTarget)
+	justification := precompute.ProcessJustificationBits(st, activeBalance, prevTarget, currentTarget)
 	if justification.BitAt(0) {
-		blockRoot, err := helpers.BlockRoot(state, currentEpoch)
+		blockRoot, err := helpers.BlockRoot(st, currentEpoch)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not get block root for current epoch %d", prevEpoch)
 		}
 		return &ethpb.Checkpoint{Epoch: currentEpoch, Root: blockRoot}, nil
 	}
 	if justification.BitAt(1) {
-		blockRoot, err := helpers.BlockRoot(state, prevEpoch)
+		blockRoot, err := helpers.BlockRoot(st, prevEpoch)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not get block root for previous epoch %d", prevEpoch)
 		}
 		return &ethpb.Checkpoint{Epoch: prevEpoch, Root: blockRoot}, nil
 	}
-	return state.CurrentJustifiedCheckpoint(), nil
+	return st.CurrentJustifiedCheckpoint(), nil
 }
