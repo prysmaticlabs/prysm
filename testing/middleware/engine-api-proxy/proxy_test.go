@@ -10,6 +10,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/prysmaticlabs/prysm/crypto/rand"
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/sirupsen/logrus"
@@ -21,7 +22,9 @@ func TestProxy(t *testing.T) {
 		logger := logrus.New()
 		hook := logTest.NewLocal(logger)
 		ctx := context.Background()
+		r := rand.NewGenerator()
 		proxy, err := New(
+			WithPort(r.Intn(50000)),
 			WithDestinationAddress("http://localhost:43239"), // Nothing running at destination server.
 			WithLogger(logger),
 		)
@@ -55,7 +58,9 @@ func TestProxy(t *testing.T) {
 		defer srv.Close()
 
 		// Destination address server responds to JSON-RPC requests.
+		r := rand.NewGenerator()
 		proxy, err := New(
+			WithPort(r.Intn(50000)),
 			WithDestinationAddress(srv.URL),
 		)
 		require.NoError(t, err)
@@ -93,7 +98,9 @@ func TestProxy_CustomInterceptors(t *testing.T) {
 		defer srv.Close()
 
 		// Destination address server responds to JSON-RPC requests.
+		r := rand.NewGenerator()
 		proxy, err := New(
+			WithPort(r.Intn(50000)),
 			WithDestinationAddress(srv.URL),
 		)
 		require.NoError(t, err)
@@ -141,7 +148,9 @@ func TestProxy_CustomInterceptors(t *testing.T) {
 		defer srv.Close()
 
 		// Destination address server responds to JSON-RPC requests.
+		r := rand.NewGenerator()
 		proxy, err := New(
+			WithPort(r.Intn(50000)),
 			WithDestinationAddress(srv.URL),
 		)
 		require.NoError(t, err)
@@ -205,7 +214,9 @@ func TestProxy_CustomInterceptors(t *testing.T) {
 		defer srv.Close()
 
 		// Destination address server responds to JSON-RPC requests.
+		r := rand.NewGenerator()
 		proxy, err := New(
+			WithPort(r.Intn(50000)),
 			WithDestinationAddress(srv.URL),
 		)
 		require.NoError(t, err)
