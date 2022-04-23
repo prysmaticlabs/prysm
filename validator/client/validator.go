@@ -345,6 +345,8 @@ func (v *validator) ReceiveBlocks(ctx context.Context, connectionErrorChannel ch
 			blk, err = wrapper.WrappedSignedBeaconBlock(b.Phase0Block)
 		case *ethpb.StreamBlocksResponse_AltairBlock:
 			blk, err = wrapper.WrappedSignedBeaconBlock(b.AltairBlock)
+		case *ethpb.StreamBlocksResponse_BellatrixBlock:
+			blk, err = wrapper.WrappedSignedBeaconBlock(b.BellatrixBlock)
 		}
 		if err != nil {
 			log.WithError(err).Error("Failed to wrap signed block")
@@ -984,13 +986,18 @@ func (v *validator) feeRecipients(ctx context.Context, pubkeys [][fieldparams.BL
 			validatorIndex = ind
 			v.pubkeyToValidatorIndex[key] = validatorIndex
 		}
+		if v.feeRecipientConfig.DefaultConfig != nil {
+			feeRecipient = v.feeRecipientConfig.DefaultConfig.FeeRecipient
+		}
 		if v.feeRecipientConfig.ProposeConfig != nil {
 			option, ok := v.feeRecipientConfig.ProposeConfig[key]
-			if option != nil && ok {
+			if ok && option != nil {
+				// override the default if a proposeconfig is set
 				feeRecipient = option.FeeRecipient
-			} else {
-				feeRecipient = v.feeRecipientConfig.DefaultConfig.FeeRecipient
 			}
+		}
+		if hexutil.Encode(feeRecipient.Bytes()) == fieldparams.EthBurnAddressHex {
+			log.Warnln("Fee recipient is set to the burn address. You will not be rewarded transaction fees on this setting. Please set a different fee recipient.")
 		}
 		validatorToFeeRecipientArray = append(validatorToFeeRecipientArray, &ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
 			ValidatorIndex: validatorIndex,

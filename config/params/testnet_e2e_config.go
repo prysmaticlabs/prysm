@@ -36,7 +36,7 @@ func E2ETestConfig() *BeaconChainConfig {
 	e2eConfig.SlotsPerEpoch = 6
 	e2eConfig.SqrRootSlotsPerEpoch = 2
 	e2eConfig.SecondsPerETH1Block = 2
-	e2eConfig.Eth1FollowDistance = 4
+	e2eConfig.Eth1FollowDistance = 8
 	e2eConfig.EpochsPerEth1VotingPeriod = 2
 	e2eConfig.ShardCommitteePeriod = 4
 	e2eConfig.MaxSeedLookahead = 1
@@ -50,7 +50,7 @@ func E2ETestConfig() *BeaconChainConfig {
 	e2eConfig.BellatrixForkEpoch = bellatrixE2EForkEpoch
 
 	// Terminal Total Difficulty.
-	e2eConfig.TerminalTotalDifficulty = "600"
+	e2eConfig.TerminalTotalDifficulty = "616"
 
 	// Prysm constants.
 	e2eConfig.ConfigName = ConfigNames[EndToEnd]
@@ -75,7 +75,7 @@ func E2EMainnetTestConfig() *BeaconChainConfig {
 	e2eConfig.SecondsPerSlot = 6
 	e2eConfig.SqrRootSlotsPerEpoch = 5
 	e2eConfig.SecondsPerETH1Block = 2
-	e2eConfig.Eth1FollowDistance = 4
+	e2eConfig.Eth1FollowDistance = 8
 	e2eConfig.ShardCommitteePeriod = 4
 
 	// PoW parameters.
@@ -87,7 +87,7 @@ func E2EMainnetTestConfig() *BeaconChainConfig {
 	e2eConfig.BellatrixForkEpoch = bellatrixE2EForkEpoch
 
 	// Terminal Total Difficulty.
-	e2eConfig.TerminalTotalDifficulty = "600"
+	e2eConfig.TerminalTotalDifficulty = "616"
 
 	// Prysm constants.
 	e2eConfig.ConfigName = ConfigNames[EndToEnd]

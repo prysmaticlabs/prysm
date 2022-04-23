@@ -4,7 +4,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -36,7 +35,7 @@ func TestNode_Builds(t *testing.T) {
 	require.NoError(t, os.MkdirAll(passwordDir, os.ModePerm))
 	passwordFile := filepath.Join(passwordDir, "password.txt")
 	walletPassword := "$$Passw0rdz2$$"
-	require.NoError(t, ioutil.WriteFile(
+	require.NoError(t, os.WriteFile(
 		passwordFile,
 		[]byte(walletPassword),
 		os.ModePerm,
@@ -484,7 +483,7 @@ func TestFeeRecipientConfig(t *testing.T) {
 				require.NoError(t, set.Set(flags.FeeRecipientConfigFileFlag.Name, tt.args.feeRecipientFlagValues.dir))
 			}
 			if tt.args.feeRecipientFlagValues.url != "" {
-				content, err := ioutil.ReadFile(tt.args.feeRecipientFlagValues.url)
+				content, err := os.ReadFile(tt.args.feeRecipientFlagValues.url)
 				require.NoError(t, err)
 				srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					w.WriteHeader(200)

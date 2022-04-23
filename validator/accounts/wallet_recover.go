@@ -3,7 +3,6 @@ package accounts
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"sort"
 	"strconv"
@@ -157,7 +156,7 @@ func RecoverWallet(ctx context.Context, cfg *RecoverWalletConfig) (*wallet.Walle
 func inputMnemonic(cliCtx *cli.Context) (mnemonicPhrase string, err error) {
 	if cliCtx.IsSet(flags.MnemonicFileFlag.Name) {
 		mnemonicFilePath := cliCtx.String(flags.MnemonicFileFlag.Name)
-		data, err := ioutil.ReadFile(mnemonicFilePath) // #nosec G304 -- ReadFile is safe
+		data, err := os.ReadFile(mnemonicFilePath) // #nosec G304 -- ReadFile is safe
 		if err != nil {
 			return "", err
 		}
