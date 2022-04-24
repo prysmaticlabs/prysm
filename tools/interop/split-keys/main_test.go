@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -55,10 +54,7 @@ func Test_generateKeysFromMnemonicList(t *testing.T) {
 
 func Test_spreadKeysAcrossImportedWallets(t *testing.T) {
 	walletPassword := "Sr0ngPass0q0z929301"
-	tmpDir := filepath.Join(os.TempDir(), "testwallets")
-	t.Cleanup(func() {
-		require.NoError(t, os.RemoveAll(tmpDir))
-	})
+	tmpDir := filepath.Join(t.TempDir(), "testwallets")
 
 	// Spread 5 keys across 5 wallets, meaning there is 1
 	// key per wallet stored on disk.
