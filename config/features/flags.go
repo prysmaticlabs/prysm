@@ -105,10 +105,6 @@ var (
 		Name:  "disable-batch-gossip-verification",
 		Usage: "This enables batch verification of signatures received over gossip.",
 	}
-	disableBalanceTrieComputation = &cli.BoolFlag{
-		Name:  "disable-balance-trie-computation",
-		Usage: "This disables optimized hash tree root operations for our balance field.",
-	}
 	enableNativeState = &cli.BoolFlag{
 		Name:  "enable-native-state",
 		Usage: "Enables representing the beacon state as a pure Go struct.",
@@ -164,7 +160,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableCorrectlyInsertOrphanedAtts,
 	disableCorrectlyPruneCanonicalAtts,
 	disableBatchGossipVerification,
-	disableBalanceTrieComputation,
 	enableNativeState,
 	enableVecHTR,
 	enableForkChoiceDoublyLinkedTree,
