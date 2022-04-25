@@ -24,6 +24,8 @@ import (
 	"go.opencensus.io/trace"
 )
 
+var ErrUndefinedExecutionEngineError = errors.New("received an undefined ee error")
+
 // notifyForkchoiceUpdate signals execution engine the fork choice updates. Execution engine should:
 // 1. Re-organizes the execution payload chain and corresponding state to make head_block_hash the head.
 // 2. Applies finality to the execution state: it irreversibly persists the chain of all execution payloads and corresponding state, up to and including finalized_block_hash.
@@ -91,7 +93,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headState state.Be
 			}).Info("Called fork choice updated with optimistic block")
 			return payloadID, nil
 		default:
-			return nil, errors.Wrap(err, "could not notify forkchoice update from execution engine")
+			return nil, errors.WithMessage(ErrUndefinedExecutionEngineError, err.Error())
 		}
 	}
 	forkchoiceUpdatedValidNodeCount.Inc()
@@ -160,7 +162,7 @@ func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
 		}
 		return false, errors.New("could not validate an INVALID payload from execution engine")
 	default:
-		return false, errors.Wrap(err, "could not validate execution payload from execution engine")
+		return false, errors.WithMessage(ErrUndefinedExecutionEngineError, err.Error())
 	}
 }
 
