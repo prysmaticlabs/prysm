@@ -117,23 +117,13 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headState state.Be
 				if err != nil {
 					return nil, errors.Wrap(err, "could not get execution payload")
 				}
-				var finalizedHash []byte
-				if blocks.IsPreBellatrixVersion(finalizedBlock.Block().Version()) {
-					finalizedHash = params.BeaconConfig().ZeroHash[:]
-				} else {
-					payload, err := finalizedBlock.Block().Body().ExecutionPayload()
-					if err != nil {
-						return nil, errors.Wrap(err, "could not get finalized block execution payload")
-					}
-					finalizedHash = payload.BlockHash
-				}
 
 				fcs := &enginev1.ForkchoiceState{
 					HeadBlockHash:      headPayload.BlockHash,
 					SafeBlockHash:      headPayload.BlockHash,
 					FinalizedBlockHash: finalizedHash,
 				}
-				payloadID, lastValidHash, err = s.cfg.ExecutionEngineCaller.ForkchoiceUpdated(ctx, fcs, nil)
+				payloadID, lastValidHash, err = s.cfg.ExecutionEngineCaller.ForkchoiceUpdated(ctx, fcs, nil /* attribute */)
 			}
 		default:
 			return nil, errors.Wrap(err, "could not notify forkchoice update from execution engine")
