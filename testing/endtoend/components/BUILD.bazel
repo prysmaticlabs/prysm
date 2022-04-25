@@ -63,6 +63,5 @@ go_test(
         "//config/params:go_default_library",
         "//testing/endtoend/params:go_default_library",
         "//testing/require:go_default_library",
-        "@io_bazel_rules_go//go/tools/bazel:go_default_library",
     ],
 )
