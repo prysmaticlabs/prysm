@@ -338,6 +338,26 @@ func Test_NotifyNewPayload(t *testing.T) {
 			}(),
 			isValidPayload: true,
 		},
+		{
+			name:      "undefined error from ee",
+			postState: bellatrixState,
+			blk: func() block.SignedBeaconBlock {
+				blk := &ethpb.SignedBeaconBlockBellatrix{
+					Block: &ethpb.BeaconBlockBellatrix{
+						Body: &ethpb.BeaconBlockBodyBellatrix{
+							ExecutionPayload: &v1.ExecutionPayload{
+								ParentHash: bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength),
+							},
+						},
+					},
+				}
+				b, err := wrapper.WrappedSignedBeaconBlock(blk)
+				require.NoError(t, err)
+				return b
+			}(),
+			newPayloadErr: ErrUndefinedExecutionEngineError,
+			errString:     ErrUndefinedExecutionEngineError.Error(),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
