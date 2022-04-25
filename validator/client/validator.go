@@ -944,9 +944,9 @@ func (v *validator) UpdateFeeRecipient(ctx context.Context, km keymanager.IKeyma
 	if v.feeRecipientConfig == nil {
 		e := params.BeaconConfig().BellatrixForkEpoch
 		if e != math.MaxUint64 && slots.ToEpoch(slots.CurrentSlot(v.genesisTime)) < e {
-			log.Warnln("Please plan for using the fee recipient flags post Bellatrix Hard Fork to receive transaction fee rewards on validator work.")
+			log.Warnln("Please plan for using the fee recipient flags post Bellatrix Hard Fork to receive transaction fee rewards on validator work!!")
 		} else {
-			log.Warnln("Fee recipient config not set, skipping fee recipient update. Validator will continue proposing using beacon node specified fee recipient.")
+			log.Warnln("Fee recipient config not set, skipping fee recipient update!! Validator will continue proposing using beacon node specified fee recipient.")
 		}
 		return nil
 	}
