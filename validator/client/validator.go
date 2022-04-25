@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"math"
 	"strconv"
 	"strings"
 	"sync"
@@ -345,6 +346,8 @@ func (v *validator) ReceiveBlocks(ctx context.Context, connectionErrorChannel ch
 			blk, err = wrapper.WrappedSignedBeaconBlock(b.Phase0Block)
 		case *ethpb.StreamBlocksResponse_AltairBlock:
 			blk, err = wrapper.WrappedSignedBeaconBlock(b.AltairBlock)
+		case *ethpb.StreamBlocksResponse_BellatrixBlock:
+			blk, err = wrapper.WrappedSignedBeaconBlock(b.BellatrixBlock)
 		}
 		if err != nil {
 			log.WithError(err).Error("Failed to wrap signed block")
@@ -937,8 +940,14 @@ func (v *validator) logDuties(slot types.Slot, duties []*ethpb.DutiesResponse_Du
 
 // UpdateFeeRecipient calls the prepareBeaconProposer RPC to set the fee recipient.
 func (v *validator) UpdateFeeRecipient(ctx context.Context, km keymanager.IKeymanager) error {
+	// only used after Bellatrix
 	if v.feeRecipientConfig == nil {
-		log.Warnln("Fee recipient config not set, skipping fee recipient update. Validator will continue proposing using beacon node specified fee recipient.")
+		e := params.BeaconConfig().BellatrixForkEpoch
+		if e != math.MaxUint64 && slots.ToEpoch(slots.CurrentSlot(v.genesisTime)) < e {
+			log.Warnln("Please plan for using the fee recipient flags post Bellatrix Hard Fork to receive transaction fee rewards on validator work!!")
+		} else {
+			log.Warnln("Fee recipient config not set, skipping fee recipient update!! Validator will continue proposing using beacon node specified fee recipient.")
+		}
 		return nil
 	}
 	if km == nil {
@@ -984,13 +993,18 @@ func (v *validator) feeRecipients(ctx context.Context, pubkeys [][fieldparams.BL
 			validatorIndex = ind
 			v.pubkeyToValidatorIndex[key] = validatorIndex
 		}
+		if v.feeRecipientConfig.DefaultConfig != nil {
+			feeRecipient = v.feeRecipientConfig.DefaultConfig.FeeRecipient
+		}
 		if v.feeRecipientConfig.ProposeConfig != nil {
 			option, ok := v.feeRecipientConfig.ProposeConfig[key]
-			if option != nil && ok {
+			if ok && option != nil {
+				// override the default if a proposeconfig is set
 				feeRecipient = option.FeeRecipient
-			} else {
-				feeRecipient = v.feeRecipientConfig.DefaultConfig.FeeRecipient
 			}
+		}
+		if hexutil.Encode(feeRecipient.Bytes()) == fieldparams.EthBurnAddressHex {
+			log.Warnln("Fee recipient is set to the burn address. You will not be rewarded transaction fees on this setting. Please set a different fee recipient.")
 		}
 		validatorToFeeRecipientArray = append(validatorToFeeRecipientArray, &ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
 			ValidatorIndex: validatorIndex,

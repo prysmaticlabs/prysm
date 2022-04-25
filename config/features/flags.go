@@ -75,17 +75,9 @@ var (
 		Name:  "slasher",
 		Usage: "Enables a slasher in the beacon node for detecting slashable offenses",
 	}
-	disableProposerAttsSelectionUsingMaxCover = &cli.BoolFlag{
-		Name:  "disable-proposer-atts-selection-using-max-cover",
-		Usage: "Disable max-cover algorithm when selecting attestations for proposer",
-	}
 	enableSlashingProtectionPruning = &cli.BoolFlag{
 		Name:  "enable-slashing-protection-history-pruning",
 		Usage: "Enables the pruning of the validator client's slashing protection database",
-	}
-	disableOptimizedBalanceUpdate = &cli.BoolFlag{
-		Name:  "disable-optimized-balance-update",
-		Usage: "Disable the optimized method of updating validator balances.",
 	}
 	enableDoppelGangerProtection = &cli.BoolFlag{
 		Name: "enable-doppelganger",
@@ -109,21 +101,9 @@ var (
 		Usage: "Disable the fix for bug where any block attestations can get incorrectly pruned, which improves validator profitability and overall network health," +
 			"see issue #9443 for further detail",
 	}
-	disableActiveBalanceCache = &cli.BoolFlag{
-		Name:  "disable-active-balance-cache",
-		Usage: "This disables active balance cache, which improves node performance during block processing",
-	}
-	disableGetBlockOptimizations = &cli.BoolFlag{
-		Name:  "disable-get-block-optimizations",
-		Usage: "This disables some optimizations on the GetBlock() function.",
-	}
 	disableBatchGossipVerification = &cli.BoolFlag{
 		Name:  "disable-batch-gossip-verification",
 		Usage: "This enables batch verification of signatures received over gossip.",
-	}
-	disableBalanceTrieComputation = &cli.BoolFlag{
-		Name:  "disable-balance-trie-computation",
-		Usage: "This disables optimized hash tree root operations for our balance field.",
 	}
 	enableNativeState = &cli.BoolFlag{
 		Name:  "enable-native-state",
@@ -176,15 +156,10 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	checkPtInfoCache,
 	disableBroadcastSlashingFlag,
 	enableSlasherFlag,
-	disableProposerAttsSelectionUsingMaxCover,
-	disableOptimizedBalanceUpdate,
 	enableHistoricalSpaceRepresentation,
 	disableCorrectlyInsertOrphanedAtts,
-	disableGetBlockOptimizations,
 	disableCorrectlyPruneCanonicalAtts,
-	disableActiveBalanceCache,
 	disableBatchGossipVerification,
-	disableBalanceTrieComputation,
 	enableNativeState,
 	enableVecHTR,
 	enableForkChoiceDoublyLinkedTree,
