@@ -186,6 +186,8 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	log.WithFields(logrus.Fields{
 		"blockSlot":          blk.Block().Slot(),
 		"sinceSlotStartTime": receivedTime.Sub(startTime),
+		"proposerIndex":      blk.Block().ProposerIndex(),
+		"graffiti":           string(blk.Block().Body().Graffiti()),
 	}).Debug("Received block")
 	return pubsub.ValidationAccept, nil
 }
