@@ -64,8 +64,34 @@ message SignedBeaconBlockContainerV2 {
   bytes signature = 4 [(ethereum.eth.ext.ssz_size) = "96"];
 }
 
+message BlindedBeaconBlockContainer {
+  oneof block {
+    v1.BeaconBlock phase0_block = 1;
+    BeaconBlockAltair altair_block = 2;
+    BlindedBeaconBlockBellatrix bellatrix_block = 3;
+  }
+}
+
+message SignedBlindedBeaconBlockContainer {
+  oneof message {
+    v1.BeaconBlock phase0_block = 1;
+    BeaconBlockAltair altair_block = 2;
+    BlindedBeaconBlockBellatrix bellatrix_block = 3;
+  }
+
+  // 96 byte BLS signature from the validator that produced this block.
+  bytes signature = 4 [(ethereum.eth.ext.ssz_size) = "96"];
+}
+
 message SignedBeaconBlockBellatrix {
   BeaconBlockBellatrix message = 1;
+
+  // 96 byte BLS signature from the validator that produced this block.
+  bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
+}
+
+message SignedBlindedBeaconBlockBellatrix {
+  BlindedBeaconBlockBellatrix message = 1;
 
   // 96 byte BLS signature from the validator that produced this block.
   bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
@@ -96,6 +122,23 @@ message BeaconBlockBellatrix {
   BeaconBlockBodyBellatrix body = 5;
 }
 
+// The Ethereum consensus beacon block. The message does not contain a validator signature.
+message BlindedBeaconBlockBellatrix {
+  // Beacon chain slot that this block represents.
+  uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
+
+  // Validator index of the validator that proposed the block header.
+  uint64 proposer_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.ValidatorIndex"];
+
+  // 32 byte root of the parent block.
+  bytes parent_root = 3 [(ethereum.eth.ext.ssz_size) = "32"];
+
+  // 32 byte root of the resulting state after processing this block.
+  bytes state_root = 4 [(ethereum.eth.ext.ssz_size) = "32"];
+
+  // The block body itself.
+  BlindedBeaconBlockBodyBellatrix body = 5;
+}
 
 // The Ethereum consensus beacon block. The message does not contain a validator signature.
 message BeaconBlockAltair {
@@ -149,6 +192,42 @@ message BeaconBlockBodyBellatrix {
 
   // Execution payload: the embedded execution payload of the block [New in Bellatrix]
   ethereum.engine.v1.ExecutionPayload execution_payload = 10;
+}
+
+message BlindedBeaconBlockBodyBellatrix {
+  // The validators RANDAO reveal 96 byte value.
+  bytes randao_reveal = 1 [(ethereum.eth.ext.ssz_size) = "96"];
+
+  // A reference to the Ethereum 1.x chain.
+  v1.Eth1Data eth1_data = 2;
+
+  // 32 byte field of arbitrary data. This field may contain any data and
+  // is not used for anything other than a fun message.
+  bytes graffiti = 3 [(ethereum.eth.ext.ssz_size) = "32"];
+
+  // Block operations
+  // Refer to spec constants at https://github.com/ethereum/consensus-specs/blob/dev/specs/core/0_beacon-chain.md#max-operations-per-block
+
+  // At most MAX_PROPOSER_SLASHINGS.
+  repeated v1.ProposerSlashing proposer_slashings = 4 [(ethereum.eth.ext.ssz_max) = "16"];
+
+  // At most MAX_ATTESTER_SLASHINGS.
+  repeated v1.AttesterSlashing attester_slashings = 5 [(ethereum.eth.ext.ssz_max) = "2"];
+
+  // At most MAX_ATTESTATIONS.
+  repeated v1.Attestation attestations = 6 [(ethereum.eth.ext.ssz_max) = "128"];
+
+  // At most MAX_DEPOSITS.
+  repeated v1.Deposit deposits = 7 [(ethereum.eth.ext.ssz_max) = "16"];
+
+  // At most MAX_VOLUNTARY_EXITS.
+  repeated v1.SignedVoluntaryExit voluntary_exits = 8 [(ethereum.eth.ext.ssz_max) = "16"];
+
+  // Sync aggregate object to track sync committee votes for light client support.
+  v1.SyncAggregate sync_aggregate = 9;
+
+  // Execution payload header: the embedded execution payload of the block [New in Bellatrix]
+  ethereum.engine.v1.ExecutionPayloadHeader execution_payload_header = 10;
 }
 
 message BeaconBlockBodyAltair {
