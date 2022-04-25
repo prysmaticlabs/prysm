@@ -157,9 +157,8 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			switch {
 			case errors.Is(ErrOptimisticParent, err): // Ok to continue process block with parent that is an optimistic candidate.
 			case errors.Is(blockchain.ErrUndefinedExecutionEngineError, err):
-				// don't mark the block as bad with an unknown EE error.
-				// EE could be offline.
-				log.Debugf("Could not validate block due to ee error %d: %v", b.Block().Slot(), err)
+				// don't mark the block as bad with an undefined EE error.
+				log.Debugf("Could not validate block due to undefined ee error %d: %v", b.Block().Slot(), err)
 				continue
 			case err != nil:
 				log.Debugf("Could not validate block from slot %d: %v", b.Block().Slot(), err)
