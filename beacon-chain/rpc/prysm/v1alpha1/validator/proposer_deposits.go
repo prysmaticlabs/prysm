@@ -139,8 +139,8 @@ func (vs *Server) depositTrie(ctx context.Context, canonicalEth1Data *ethpb.Eth1
 	upToEth1DataDeposits := vs.DepositFetcher.NonFinalizedDeposits(ctx, finalizedDeposits.MerkleTrieIndex, canonicalEth1DataHeight)
 	insertIndex := finalizedDeposits.MerkleTrieIndex + 1
 
-	if len(upToEth1DataDeposits) > 5000 {
-		log.Warnf("Too many unfinalized deposits, building a deposit trie from scratch. %d > 5000", len(upToEth1DataDeposits))
+	if shouldFallback(canonicalEth1Data.DepositCount, uint64(len(upToEth1DataDeposits))) {
+		log.Warnf("Too many unfinalized deposits, building a deposit trie from scratch. Num of unfinalized deposits %d", len(upToEth1DataDeposits))
 		return vs.rebuildDepositTrie(ctx, canonicalEth1Data, canonicalEth1DataHeight)
 	}
 	for _, dep := range upToEth1DataDeposits {
@@ -213,4 +213,22 @@ func constructMerkleProof(trie *trie.SparseMerkleTrie, index int, deposit *ethpb
 	// property changes during a state transition after a voting period.
 	deposit.Proof = proof
 	return deposit, nil
+}
+
+// This checks whether we should fallback to rebuild the whole deposit trie.
+func shouldFallback(totalDepCount, unFinalizedDeps uint64) bool {
+	if totalDepCount == 0 || unFinalizedDeps == 0 {
+		return false
+	}
+	// The total number of leaves and interior nodes hashed in a binary trie would be
+	// 2x, where x is the total number of leaves of the trie. For an S.M.T, we
+	// can extend it to 2x + K, with k being a constant. Since we already have
+	// the initial set of leaves computed we can represent it as num_of_leaves = 2x + k - x
+	// This can be reduced to num_of_leaves = x , where k is assumed to be a much smaller
+	// value to x and therefore ignored in the final result.
+	totalCompute := totalDepCount
+	// Since the depth = log(x) + k , we can find the total number of nodes to be hashed by
+	// calculating  y (log(x) + k) , where y is the number of unfinalized deposits.
+	unFinalizedCompute := unFinalizedDeps * params.BeaconConfig().DepositContractTreeDepth
+	return unFinalizedCompute > totalCompute
 }
