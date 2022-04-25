@@ -6,7 +6,6 @@ import (
 	"sort"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/config/features"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/fieldtrie"
@@ -378,21 +377,18 @@ func (b *BeaconState) rootSelector(field types.FieldIndex) ([32]byte, error) {
 		}
 		return b.recomputeFieldTrie(validators, b.validators)
 	case balances:
-		if features.Get().EnableBalanceTrieComputation {
-			if b.rebuildTrie[field] {
-				maxBalCap := uint64(fieldparams.ValidatorRegistryLimit)
-				elemSize := uint64(8)
-				balLimit := (maxBalCap*elemSize + 31) / 32
-				err := b.resetFieldTrie(field, b.balances, balLimit)
-				if err != nil {
-					return [32]byte{}, err
-				}
-				delete(b.rebuildTrie, field)
-				return b.stateFieldLeaves[field].TrieRoot()
+		if b.rebuildTrie[field] {
+			maxBalCap := uint64(fieldparams.ValidatorRegistryLimit)
+			elemSize := uint64(8)
+			balLimit := (maxBalCap*elemSize + 31) / 32
+			err := b.resetFieldTrie(field, b.balances, balLimit)
+			if err != nil {
+				return [32]byte{}, err
 			}
-			return b.recomputeFieldTrie(balances, b.balances)
+			delete(b.rebuildTrie, field)
+			return b.stateFieldLeaves[field].TrieRoot()
 		}
-		return stateutil.Uint64ListRootWithRegistryLimit(b.balances)
+		return b.recomputeFieldTrie(balances, b.balances)
 	case randaoMixes:
 		if b.rebuildTrie[field] {
 			err := b.resetFieldTrie(field, b.randaoMixes, fieldparams.RandaoMixesLength)
