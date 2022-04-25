@@ -93,8 +93,8 @@ func e2eMinimal(t *testing.T, args *testArgs) {
 		ev.FinishedSyncing,
 		ev.AllNodesHaveSameHead,
 		ev.ValidatorSyncParticipation,
-		ev.TransactionsPresent,
 		ev.FeeRecipientIsPresent,
+		//ev.TransactionsPresent, TODO: Renable Transaction evaluator once it tx pool issues are fixed.
 	}
 	testConfig := &types.E2EConfig{
 		BeaconFlags: []string{
