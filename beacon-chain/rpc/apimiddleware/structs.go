@@ -270,6 +270,12 @@ type produceBlockResponseV2Json struct {
 	Data    *beaconBlockContainerV2Json `json:"data"`
 }
 
+// produceBlindedBlockResponseJson is used in /v1/validator/blinded_blocks/{slot} API endpoint.
+type produceBlindedBlockResponseJson struct {
+	Version string                           `json:"version"`
+	Data    *blindedBeaconBlockContainerJson `json:"data"`
+}
+
 // produceAttestationDataResponseJson is used in /validator/attestation_data API endpoint.
 type produceAttestationDataResponseJson struct {
 	Data *attestationDataJson `json:"data"`
@@ -371,6 +377,12 @@ type beaconBlockContainerV2Json struct {
 	BellatrixBlock *beaconBlockBellatrixJson `json:"bellatrix_block"`
 }
 
+type blindedBeaconBlockContainerJson struct {
+	Phase0Block    *beaconBlockJson                 `json:"phase0_block"`
+	AltairBlock    *beaconBlockAltairJson           `json:"altair_block"`
+	BellatrixBlock *blindedBeaconBlockBellatrixJson `json:"bellatrix_block"`
+}
+
 type signedBeaconBlockAltairContainerJson struct {
 	Message   *beaconBlockAltairJson `json:"message"`
 	Signature string                 `json:"signature" hex:"true"`
@@ -379,6 +391,11 @@ type signedBeaconBlockAltairContainerJson struct {
 type signedBeaconBlockBellatrixContainerJson struct {
 	Message   *beaconBlockBellatrixJson `json:"message"`
 	Signature string                    `json:"signature" hex:"true"`
+}
+
+type signedBlindedBeaconBlockBellatrixContainerJson struct {
+	Message   *blindedBeaconBlockBellatrixJson `json:"message"`
+	Signature string                           `json:"signature" hex:"true"`
 }
 
 type beaconBlockAltairJson struct {
@@ -395,6 +412,14 @@ type beaconBlockBellatrixJson struct {
 	ParentRoot    string                        `json:"parent_root" hex:"true"`
 	StateRoot     string                        `json:"state_root" hex:"true"`
 	Body          *beaconBlockBodyBellatrixJson `json:"body"`
+}
+
+type blindedBeaconBlockBellatrixJson struct {
+	Slot          string                               `json:"slot"`
+	ProposerIndex string                               `json:"proposer_index"`
+	ParentRoot    string                               `json:"parent_root" hex:"true"`
+	StateRoot     string                               `json:"state_root" hex:"true"`
+	Body          *blindedBeaconBlockBodyBellatrixJson `json:"body"`
 }
 
 type beaconBlockBodyAltairJson struct {
@@ -420,6 +445,19 @@ type beaconBlockBodyBellatrixJson struct {
 	VoluntaryExits    []*signedVoluntaryExitJson `json:"voluntary_exits"`
 	SyncAggregate     *syncAggregateJson         `json:"sync_aggregate"`
 	ExecutionPayload  *executionPayloadJson      `json:"execution_payload"`
+}
+
+type blindedBeaconBlockBodyBellatrixJson struct {
+	RandaoReveal           string                      `json:"randao_reveal" hex:"true"`
+	Eth1Data               *eth1DataJson               `json:"eth1_data"`
+	Graffiti               string                      `json:"graffiti" hex:"true"`
+	ProposerSlashings      []*proposerSlashingJson     `json:"proposer_slashings"`
+	AttesterSlashings      []*attesterSlashingJson     `json:"attester_slashings"`
+	Attestations           []*attestationJson          `json:"attestations"`
+	Deposits               []*depositJson              `json:"deposits"`
+	VoluntaryExits         []*signedVoluntaryExitJson  `json:"voluntary_exits"`
+	SyncAggregate          *syncAggregateJson          `json:"sync_aggregate"`
+	ExecutionPayloadHeader *executionPayloadHeaderJson `json:"execution_payload"`
 }
 
 type executionPayloadJson struct {
