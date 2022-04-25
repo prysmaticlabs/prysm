@@ -126,6 +126,26 @@ func ProtobufBeaconStatePhase0(s interface{}) (*ethpb.BeaconState, error) {
 	return pbState, nil
 }
 
+// ProtobufBeaconStateAltair transforms an input into beacon state Altair in the form of protobuf.
+// Error is returned if the input is not type protobuf beacon state.
+func ProtobufBeaconStateAltair(s interface{}) (*ethpb.BeaconStateAltair, error) {
+	pbState, ok := s.(*ethpb.BeaconStateAltair)
+	if !ok {
+		return nil, errors.New("input is not type pb.BeaconStateAltair")
+	}
+	return pbState, nil
+}
+
+// ProtobufBeaconStateBellatrix transforms an input into beacon state Bellatrix in the form of protobuf.
+// Error is returned if the input is not type protobuf beacon state.
+func ProtobufBeaconStateBellatrix(s interface{}) (*ethpb.BeaconStateBellatrix, error) {
+	pbState, ok := s.(*ethpb.BeaconStateBellatrix)
+	if !ok {
+		return nil, errors.New("input is not type pb.BeaconStateBellatrix")
+	}
+	return pbState, nil
+}
+
 // InnerStateUnsafe returns the pointer value of the underlying
 // beacon state proto object, bypassing immutability. Use with care.
 func (b *BeaconState) InnerStateUnsafe() interface{} {

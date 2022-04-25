@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/genesis"
+	state_native "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
@@ -164,19 +165,37 @@ func (s *Store) SaveStatesEfficient(ctx context.Context, states []state.ReadOnly
 		var validators []*ethpb.Validator
 		switch st.InnerStateUnsafe().(type) {
 		case *ethpb.BeaconState:
-			pbState, err := v1.ProtobufBeaconState(st.InnerStateUnsafe())
+			var pbState *ethpb.BeaconState
+			var err error
+			if features.Get().EnableNativeState {
+				pbState, err = state_native.ProtobufBeaconStatePhase0(st.InnerStateUnsafe())
+			} else {
+				pbState, err = v1.ProtobufBeaconState(st.InnerStateUnsafe())
+			}
 			if err != nil {
 				return err
 			}
 			validators = pbState.Validators
 		case *ethpb.BeaconStateAltair:
-			pbState, err := v2.ProtobufBeaconState(st.InnerStateUnsafe())
+			var pbState *ethpb.BeaconStateAltair
+			var err error
+			if features.Get().EnableNativeState {
+				pbState, err = state_native.ProtobufBeaconStateAltair(st.InnerStateUnsafe())
+			} else {
+				pbState, err = v2.ProtobufBeaconState(st.InnerStateUnsafe())
+			}
 			if err != nil {
 				return err
 			}
 			validators = pbState.Validators
 		case *ethpb.BeaconStateBellatrix:
-			pbState, err := v3.ProtobufBeaconState(st.InnerStateUnsafe())
+			var pbState *ethpb.BeaconStateBellatrix
+			var err error
+			if features.Get().EnableNativeState {
+				pbState, err = state_native.ProtobufBeaconStateBellatrix(st.InnerStateUnsafe())
+			} else {
+				pbState, err = v3.ProtobufBeaconState(st.InnerStateUnsafe())
+			}
 			if err != nil {
 				return err
 			}
@@ -217,7 +236,13 @@ func (s *Store) SaveStatesEfficient(ctx context.Context, states []state.ReadOnly
 			// look at issue https://github.com/prysmaticlabs/prysm/issues/9262.
 			switch rawType := states[i].InnerStateUnsafe().(type) {
 			case *ethpb.BeaconState:
-				pbState, err := v1.ProtobufBeaconState(rawType)
+				var pbState *ethpb.BeaconState
+				var err error
+				if features.Get().EnableNativeState {
+					pbState, err = state_native.ProtobufBeaconStatePhase0(rawType)
+				} else {
+					pbState, err = v1.ProtobufBeaconState(rawType)
+				}
 				if err != nil {
 					return err
 				}
@@ -238,7 +263,13 @@ func (s *Store) SaveStatesEfficient(ctx context.Context, states []state.ReadOnly
 					return err
 				}
 			case *ethpb.BeaconStateAltair:
-				pbState, err := v2.ProtobufBeaconState(rawType)
+				var pbState *ethpb.BeaconStateAltair
+				var err error
+				if features.Get().EnableNativeState {
+					pbState, err = state_native.ProtobufBeaconStateAltair(rawType)
+				} else {
+					pbState, err = v2.ProtobufBeaconState(rawType)
+				}
 				if err != nil {
 					return err
 				}
@@ -260,7 +291,13 @@ func (s *Store) SaveStatesEfficient(ctx context.Context, states []state.ReadOnly
 					return err
 				}
 			case *ethpb.BeaconStateBellatrix:
-				pbState, err := v3.ProtobufBeaconState(rawType)
+				var pbState *ethpb.BeaconStateBellatrix
+				var err error
+				if features.Get().EnableNativeState {
+					pbState, err = state_native.ProtobufBeaconStateBellatrix(rawType)
+				} else {
+					pbState, err = v3.ProtobufBeaconState(rawType)
+				}
 				if err != nil {
 					return err
 				}
