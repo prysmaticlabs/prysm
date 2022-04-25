@@ -3,7 +3,6 @@ package kv
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 	"sync"
 	"testing"
@@ -501,7 +500,7 @@ func benchCheckSurroundVote(
 	shouldSurround bool,
 ) {
 	ctx := context.Background()
-	validatorDB, err := NewKVStore(ctx, filepath.Join(os.TempDir(), "benchsurroundvote"), &Config{
+	validatorDB, err := NewKVStore(ctx, filepath.Join(b.TempDir(), "benchsurroundvote"), &Config{
 		PubKeys: pubKeys,
 	})
 	require.NoError(b, err, "Failed to instantiate DB")

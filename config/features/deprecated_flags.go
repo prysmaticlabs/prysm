@@ -75,8 +75,23 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedDisableGetBlockOptimizations = &cli.BoolFlag{
+		Name:   "disable-get-block-optimizations",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 	deprecatedDisableProposerAttsSelectionUsingMaxCover = &cli.BoolFlag{
 		Name:   "disable-proposer-atts-selection-using-max-cover",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedDisableOptimizedBalanceUpdate = &cli.BoolFlag{
+		Name:   "disable-optimized-balance-update",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedDisableActiveBalanceCache = &cli.BoolFlag{
+		Name:   "disable-active-balance-cache",
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
@@ -101,5 +116,8 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedForceOptMaxCoverAggregationStategy,
 	deprecatedPyrmontTestnet,
 	deprecatedDisableProposerAttsSelectionUsingMaxCover,
+	deprecatedDisableGetBlockOptimizations,
+	deprecatedDisableOptimizedBalanceUpdate,
+	deprecatedDisableActiveBalanceCache,
 	deprecatedDisableBalanceTrieComputation,
 }

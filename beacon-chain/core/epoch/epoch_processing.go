@@ -15,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/math"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -250,6 +249,7 @@ func ProcessEffectiveBalanceUpdates(state state.BeaconState) (state.BeaconState,
 	upwardThreshold := hysteresisInc * params.BeaconConfig().HysteresisUpwardMultiplier
 
 	bals := state.Balances()
+
 	// Update effective balances with hysteresis.
 	validatorFunc := func(idx int, val *ethpb.Validator) (bool, *ethpb.Validator, error) {
 		if val == nil {
@@ -261,40 +261,18 @@ func ProcessEffectiveBalanceUpdates(state state.BeaconState) (state.BeaconState,
 		balance := bals[idx]
 
 		if balance+downwardThreshold < val.EffectiveBalance || val.EffectiveBalance+upwardThreshold < balance {
-			newVal := ethpb.CopyValidator(val)
-			newVal.EffectiveBalance = maxEffBalance
-			if newVal.EffectiveBalance > balance-balance%effBalanceInc {
-				newVal.EffectiveBalance = balance - balance%effBalanceInc
+			effectiveBal := maxEffBalance
+			if effectiveBal > balance-balance%effBalanceInc {
+				effectiveBal = balance - balance%effBalanceInc
 			}
-			return true, newVal, nil
-		}
-		return false, val, nil
-	}
-
-	if features.Get().EnableOptimizedBalanceUpdate {
-		validatorFunc = func(idx int, val *ethpb.Validator) (bool, *ethpb.Validator, error) {
-			if val == nil {
-				return false, nil, fmt.Errorf("validator %d is nil in state", idx)
-			}
-			if idx >= len(bals) {
-				return false, nil, fmt.Errorf("validator index exceeds validator length in state %d >= %d", idx, len(state.Balances()))
-			}
-			balance := bals[idx]
-
-			if balance+downwardThreshold < val.EffectiveBalance || val.EffectiveBalance+upwardThreshold < balance {
-				effectiveBal := maxEffBalance
-				if effectiveBal > balance-balance%effBalanceInc {
-					effectiveBal = balance - balance%effBalanceInc
-				}
-				if effectiveBal != val.EffectiveBalance {
-					newVal := ethpb.CopyValidator(val)
-					newVal.EffectiveBalance = effectiveBal
-					return true, newVal, nil
-				}
-				return false, val, nil
+			if effectiveBal != val.EffectiveBalance {
+				newVal := ethpb.CopyValidator(val)
+				newVal.EffectiveBalance = effectiveBal
+				return true, newVal, nil
 			}
 			return false, val, nil
 		}
+		return false, val, nil
 	}
 
 	if err := state.ApplyToEveryValidator(validatorFunc); err != nil {

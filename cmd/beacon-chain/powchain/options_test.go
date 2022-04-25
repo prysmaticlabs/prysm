@@ -3,7 +3,6 @@ package powchaincmd
 import (
 	"flag"
 	"fmt"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -53,13 +52,8 @@ func Test_parseJWTSecretFromFile(t *testing.T) {
 	t.Run("empty string in file", func(t *testing.T) {
 		app := cli.App{}
 		set := flag.NewFlagSet("test", 0)
-		fullPath := filepath.Join(os.TempDir(), "foohex")
+		fullPath := filepath.Join(t.TempDir(), "foohex")
 		require.NoError(t, file.WriteFile(fullPath, []byte{}))
-		t.Cleanup(func() {
-			if err := os.RemoveAll(fullPath); err != nil {
-				t.Fatalf("Could not delete temp dir: %v", err)
-			}
-		})
 		set.String(flags.ExecutionJWTSecretFlag.Name, fullPath, "")
 		ctx := cli.NewContext(&app, set, nil)
 		_, err := parseJWTSecretFromFile(ctx)
@@ -68,15 +62,10 @@ func Test_parseJWTSecretFromFile(t *testing.T) {
 	t.Run("less than 32 bytes", func(t *testing.T) {
 		app := cli.App{}
 		set := flag.NewFlagSet("test", 0)
-		fullPath := filepath.Join(os.TempDir(), "foohex")
+		fullPath := filepath.Join(t.TempDir(), "foohex")
 		secret := bytesutil.PadTo([]byte("foo"), 31)
 		hexData := fmt.Sprintf("%#x", secret)
 		require.NoError(t, file.WriteFile(fullPath, []byte(hexData)))
-		t.Cleanup(func() {
-			if err := os.RemoveAll(fullPath); err != nil {
-				t.Fatalf("Could not delete temp dir: %v", err)
-			}
-		})
 		set.String(flags.ExecutionJWTSecretFlag.Name, fullPath, "")
 		ctx := cli.NewContext(&app, set, nil)
 		_, err := parseJWTSecretFromFile(ctx)
@@ -85,14 +74,9 @@ func Test_parseJWTSecretFromFile(t *testing.T) {
 	t.Run("bad data", func(t *testing.T) {
 		app := cli.App{}
 		set := flag.NewFlagSet("test", 0)
-		fullPath := filepath.Join(os.TempDir(), "foohex")
+		fullPath := filepath.Join(t.TempDir(), "foohex")
 		secret := []byte("foo")
 		require.NoError(t, file.WriteFile(fullPath, secret))
-		t.Cleanup(func() {
-			if err := os.RemoveAll(fullPath); err != nil {
-				t.Fatalf("Could not delete temp dir: %v", err)
-			}
-		})
 		set.String(flags.ExecutionJWTSecretFlag.Name, fullPath, "")
 		ctx := cli.NewContext(&app, set, nil)
 		_, err := parseJWTSecretFromFile(ctx)
@@ -101,15 +85,10 @@ func Test_parseJWTSecretFromFile(t *testing.T) {
 	t.Run("correct format", func(t *testing.T) {
 		app := cli.App{}
 		set := flag.NewFlagSet("test", 0)
-		fullPath := filepath.Join(os.TempDir(), "foohex")
+		fullPath := filepath.Join(t.TempDir(), "foohex")
 		secret := bytesutil.ToBytes32([]byte("foo"))
 		secretHex := fmt.Sprintf("%#x", secret)
 		require.NoError(t, file.WriteFile(fullPath, []byte(secretHex)))
-		t.Cleanup(func() {
-			if err := os.RemoveAll(fullPath); err != nil {
-				t.Fatalf("Could not delete temp dir: %v", err)
-			}
-		})
 		set.String(flags.ExecutionJWTSecretFlag.Name, fullPath, "")
 		ctx := cli.NewContext(&app, set, nil)
 		got, err := parseJWTSecretFromFile(ctx)

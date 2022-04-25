@@ -7,18 +7,12 @@ import (
 
 	types "github.com/prysmaticlabs/eth2-types"
 	state "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestBalanceCache_AddGetBalance(t *testing.T) {
-	resetCfg := features.InitWithReset(&features.Flags{
-		EnableActiveBalanceCache: true,
-	})
-	defer resetCfg()
-
 	blockRoots := make([][]byte, params.BeaconConfig().SlotsPerHistoricalRoot)
 	for i := 0; i < len(blockRoots); i++ {
 		b := make([]byte, 8)
