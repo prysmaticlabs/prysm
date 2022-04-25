@@ -36,7 +36,6 @@ go_test(
         "//beacon-chain/db/testing:go_default_library",
         "//beacon-chain/operations/slashings/mock:go_default_library",
         "//beacon-chain/state/stategen/mock:go_default_library",
-        "//build/bazel:go_default_library",
         "//config/params:go_default_library",
         "//crypto/bls:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
