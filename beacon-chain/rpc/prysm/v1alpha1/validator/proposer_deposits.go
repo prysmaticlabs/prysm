@@ -220,15 +220,15 @@ func shouldFallback(totalDepCount, unFinalizedDeps uint64) bool {
 	if totalDepCount == 0 || unFinalizedDeps == 0 {
 		return false
 	}
-	// The total number of leaves and interior nodes hashed in a binary trie would be
-	// 2x, where x is the total number of leaves of the trie. For an S.M.T, we
-	// can extend it to 2x + K, with k being a constant. Since we already have
-	// the initial set of leaves computed we can represent it as num_of_leaves = 2x + k - x
-	// This can be reduced to num_of_leaves = x , where k is assumed to be a much smaller
-	// value to x and therefore ignored in the final result.
-	totalCompute := totalDepCount
-	// Since the depth = log(x) + k , we can find the total number of nodes to be hashed by
-	// calculating  y (log(x) + k) , where y is the number of unfinalized deposits.
+	// The total number interior nodes hashed in a binary trie would be
+	// x - 1, where x is the total number of leaves of the trie. For simplicity's
+	// sake we assume it as x here as this function is meant as a heuristic rather than
+	// and exact calculation.
+	//
+	// Since the effective_depth = log(x) , the total depth can be represented as
+	// depth = log(x) + k. We can then find the total number of nodes to be hashed by
+	// calculating  y (log(x) + k) , where y is the number of unfinalized deposits. For
+	// the deposit trie, the value of log(x) + k is fixed at 32.
 	unFinalizedCompute := unFinalizedDeps * params.BeaconConfig().DepositContractTreeDepth
-	return unFinalizedCompute > totalCompute
+	return unFinalizedCompute > totalDepCount
 }
