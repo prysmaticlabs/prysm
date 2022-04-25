@@ -79,7 +79,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headState state.Be
 		return nil, errors.Wrap(err, "could not get payload attribute")
 	}
 
-	payloadID, _, err := s.cfg.ExecutionEngineCaller.ForkchoiceUpdated(ctx, fcs, attr)
+	payloadID, lastValidHash, err := s.cfg.ExecutionEngineCaller.ForkchoiceUpdated(ctx, fcs, attr)
 	if err != nil {
 		switch err {
 		case powchain.ErrAcceptedSyncingPayloadStatus:
@@ -90,6 +90,51 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headState state.Be
 				"finalizedPayloadBlockHash": fmt.Sprintf("%#x", bytesutil.Trunc(finalizedHash)),
 			}).Info("Called fork choice updated with optimistic block")
 			return payloadID, nil
+		case powchain.ErrInvalidPayloadStatus:
+			for !errors.Is(err, powchain.ErrInvalidPayloadStatus) {
+				if err != ctx.Err() {
+					return nil, err
+				}
+
+				newPayloadInvalidNodeCount.Inc()
+				invalidRoots, err := s.ForkChoicer().SetOptimisticToInvalid(ctx, headRoot, bytesutil.ToBytes32(lastValidHash))
+				if err != nil {
+					return nil, err
+				}
+				if err := s.removeInvalidBlockAndState(ctx, invalidRoots); err != nil {
+					return nil, err
+				}
+
+				r, err := s.updateHead(ctx, s.justifiedBalances.balances)
+				if err != nil {
+					return nil, err
+				}
+				signedHeadBlk, err := s.cfg.BeaconDB.Block(ctx, r)
+				if err != nil {
+					return nil, err
+				}
+				headPayload, err = signedHeadBlk.Block().Body().ExecutionPayload()
+				if err != nil {
+					return nil, errors.Wrap(err, "could not get execution payload")
+				}
+				var finalizedHash []byte
+				if blocks.IsPreBellatrixVersion(finalizedBlock.Block().Version()) {
+					finalizedHash = params.BeaconConfig().ZeroHash[:]
+				} else {
+					payload, err := finalizedBlock.Block().Body().ExecutionPayload()
+					if err != nil {
+						return nil, errors.Wrap(err, "could not get finalized block execution payload")
+					}
+					finalizedHash = payload.BlockHash
+				}
+
+				fcs := &enginev1.ForkchoiceState{
+					HeadBlockHash:      headPayload.BlockHash,
+					SafeBlockHash:      headPayload.BlockHash,
+					FinalizedBlockHash: finalizedHash,
+				}
+				payloadID, lastValidHash, err = s.cfg.ExecutionEngineCaller.ForkchoiceUpdated(ctx, fcs, nil)
+			}
 		default:
 			return nil, errors.Wrap(err, "could not notify forkchoice update from execution engine")
 		}
