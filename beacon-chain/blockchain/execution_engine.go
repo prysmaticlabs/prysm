@@ -91,39 +91,31 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headState state.Be
 			}).Info("Called fork choice updated with optimistic block")
 			return payloadID, nil
 		case powchain.ErrInvalidPayloadStatus:
-			for !errors.Is(err, powchain.ErrInvalidPayloadStatus) {
-				if err != ctx.Err() {
-					return nil, err
-				}
+			newPayloadInvalidNodeCount.Inc()
+			invalidRoots, err := s.ForkChoicer().SetOptimisticToInvalid(ctx, headRoot, bytesutil.ToBytes32(lastValidHash))
+			if err != nil {
+				return nil, err
+			}
+			if err := s.removeInvalidBlockAndState(ctx, invalidRoots); err != nil {
+				return nil, err
+			}
 
-				newPayloadInvalidNodeCount.Inc()
-				invalidRoots, err := s.ForkChoicer().SetOptimisticToInvalid(ctx, headRoot, bytesutil.ToBytes32(lastValidHash))
-				if err != nil {
-					return nil, err
-				}
-				if err := s.removeInvalidBlockAndState(ctx, invalidRoots); err != nil {
-					return nil, err
-				}
-
-				r, err := s.updateHead(ctx, s.justifiedBalances.balances)
-				if err != nil {
-					return nil, err
-				}
-				signedHeadBlk, err := s.cfg.BeaconDB.Block(ctx, r)
-				if err != nil {
-					return nil, err
-				}
-				headPayload, err = signedHeadBlk.Block().Body().ExecutionPayload()
-				if err != nil {
-					return nil, errors.Wrap(err, "could not get execution payload")
-				}
-
-				fcs := &enginev1.ForkchoiceState{
-					HeadBlockHash:      headPayload.BlockHash,
-					SafeBlockHash:      headPayload.BlockHash,
-					FinalizedBlockHash: finalizedHash,
-				}
-				payloadID, lastValidHash, err = s.cfg.ExecutionEngineCaller.ForkchoiceUpdated(ctx, fcs, nil /* attribute */)
+			r, err := s.updateHead(ctx, s.justifiedBalances.balances)
+			if err != nil {
+				return nil, err
+			}
+			b, err := s.cfg.BeaconDB.Block(ctx, r)
+			if err != nil {
+				return nil, err
+			}
+			st, err := s.cfg.StateGen.StateByRoot(ctx, r)
+			if err != nil {
+				return nil, err
+			}
+			fRoot := st.FinalizedCheckpoint().Root
+			_, err = s.notifyForkchoiceUpdate(ctx, st, b.Block(), r, bytesutil.ToBytes32(fRoot))
+			if err != nil {
+				return nil, err
 			}
 		default:
 			return nil, errors.Wrap(err, "could not notify forkchoice update from execution engine")
