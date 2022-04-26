@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/container/trie"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc/codes"
@@ -139,8 +140,11 @@ func (vs *Server) depositTrie(ctx context.Context, canonicalEth1Data *ethpb.Eth1
 	upToEth1DataDeposits := vs.DepositFetcher.NonFinalizedDeposits(ctx, finalizedDeposits.MerkleTrieIndex, canonicalEth1DataHeight)
 	insertIndex := finalizedDeposits.MerkleTrieIndex + 1
 
-	if shouldFallback(canonicalEth1Data.DepositCount, uint64(len(upToEth1DataDeposits))) {
-		log.Warnf("Too many unfinalized deposits, building a deposit trie from scratch. Num of unfinalized deposits %d", len(upToEth1DataDeposits))
+	if shouldRebuildTrie(canonicalEth1Data.DepositCount, uint64(len(upToEth1DataDeposits))) {
+		log.WithFields(logrus.Fields{
+			"unfinalized deposits": len(upToEth1DataDeposits),
+			"total deposit count":  canonicalEth1Data.DepositCount,
+		}).Warn("Too many unfinalized deposits, building a deposit trie from scratch.")
 		return vs.rebuildDepositTrie(ctx, canonicalEth1Data, canonicalEth1DataHeight)
 	}
 	for _, dep := range upToEth1DataDeposits {
@@ -216,7 +220,7 @@ func constructMerkleProof(trie *trie.SparseMerkleTrie, index int, deposit *ethpb
 }
 
 // This checks whether we should fallback to rebuild the whole deposit trie.
-func shouldFallback(totalDepCount, unFinalizedDeps uint64) bool {
+func shouldRebuildTrie(totalDepCount, unFinalizedDeps uint64) bool {
 	if totalDepCount == 0 || unFinalizedDeps == 0 {
 		return false
 	}

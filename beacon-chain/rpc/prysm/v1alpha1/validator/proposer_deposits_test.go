@@ -48,8 +48,8 @@ func TestShouldFallback(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := shouldFallback(tt.totalDepCount, tt.unFinalizedDeps); got != tt.want {
-				t.Errorf("shouldFallback() = %v, want %v", got, tt.want)
+			if got := shouldRebuildTrie(tt.totalDepCount, tt.unFinalizedDeps); got != tt.want {
+				t.Errorf("shouldRebuildTrie() = %v, want %v", got, tt.want)
 			}
 		})
 	}
