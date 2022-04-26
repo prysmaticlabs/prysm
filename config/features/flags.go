@@ -101,10 +101,6 @@ var (
 		Usage: "Disable the fix for bug where any block attestations can get incorrectly pruned, which improves validator profitability and overall network health," +
 			"see issue #9443 for further detail",
 	}
-	disableBatchGossipVerification = &cli.BoolFlag{
-		Name:  "disable-batch-gossip-verification",
-		Usage: "This enables batch verification of signatures received over gossip.",
-	}
 	enableNativeState = &cli.BoolFlag{
 		Name:  "enable-native-state",
 		Usage: "Enables representing the beacon state as a pure Go struct.",
@@ -159,7 +155,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableHistoricalSpaceRepresentation,
 	disableCorrectlyInsertOrphanedAtts,
 	disableCorrectlyPruneCanonicalAtts,
-	disableBatchGossipVerification,
 	enableNativeState,
 	enableVecHTR,
 	enableForkChoiceDoublyLinkedTree,
