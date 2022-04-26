@@ -15,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -199,20 +198,7 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 	set := bls.NewSet()
 	set.Join(selectionSigSet).Join(aggregatorSigSet).Join(attSigSet)
 
-	if features.Get().EnableBatchVerification {
-		return s.validateWithBatchVerifier(ctx, "aggregate", set)
-	}
-	valid, err := set.Verify()
-	if err != nil {
-		tracing.AnnotateError(span, errors.Errorf("Could not join signature set"))
-		return pubsub.ValidationIgnore, err
-	}
-	if !valid {
-		err = errors.Errorf("Could not verify selection or aggregator or attestation signature")
-		tracing.AnnotateError(span, err)
-		return pubsub.ValidationReject, err
-	}
-	return pubsub.ValidationAccept, nil
+	return s.validateWithBatchVerifier(ctx, "aggregate", set)
 }
 
 func (s *Service) validateBlockInAttestation(ctx context.Context, satt *ethpb.SignedAggregateAttestationAndProof) bool {

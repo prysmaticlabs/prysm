@@ -12,7 +12,6 @@ import (
 	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -224,30 +223,22 @@ func (s *Service) rejectInvalidContributionSignature(m *ethpb.SignedContribution
 		if err != nil {
 			return pubsub.ValidationIgnore, err
 		}
-		if features.Get().EnableBatchVerification {
-			publicKey, err := bls.PublicKeyFromBytes(pubkey[:])
-			if err != nil {
-				tracing.AnnotateError(span, err)
-				return pubsub.ValidationReject, err
-			}
-			root, err := signing.ComputeSigningRoot(m.Message, d)
-			if err != nil {
-				tracing.AnnotateError(span, err)
-				return pubsub.ValidationReject, err
-			}
-			set := &bls.SignatureBatch{
-				Messages:   [][32]byte{root},
-				PublicKeys: []bls.PublicKey{publicKey},
-				Signatures: [][]byte{m.Signature},
-			}
-			return s.validateWithBatchVerifier(ctx, "sync contribution signature", set)
-		}
-
-		if err := signing.VerifySigningRoot(m.Message, pubkey[:], m.Signature, d); err != nil {
+		publicKey, err := bls.PublicKeyFromBytes(pubkey[:])
+		if err != nil {
 			tracing.AnnotateError(span, err)
 			return pubsub.ValidationReject, err
 		}
-		return pubsub.ValidationAccept, nil
+		root, err := signing.ComputeSigningRoot(m.Message, d)
+		if err != nil {
+			tracing.AnnotateError(span, err)
+			return pubsub.ValidationReject, err
+		}
+		set := &bls.SignatureBatch{
+			Messages:   [][32]byte{root},
+			PublicKeys: []bls.PublicKey{publicKey},
+			Signatures: [][]byte{m.Signature},
+		}
+		return s.validateWithBatchVerifier(ctx, "sync contribution signature", set)
 	}
 }
 
@@ -293,29 +284,17 @@ func (s *Service) rejectInvalidSyncAggregateSignature(m *ethpb.SignedContributio
 		}
 		// Aggregate pubkeys separately again to allow
 		// for signature sets to be created for batch verification.
-		if features.Get().EnableBatchVerification {
-			aggKey, err := bls.AggregatePublicKeys(activeRawPubkeys)
-			if err != nil {
-				tracing.AnnotateError(span, err)
-				return pubsub.ValidationIgnore, err
-			}
-			set := &bls.SignatureBatch{
-				Messages:   [][32]byte{sigRoot},
-				PublicKeys: []bls.PublicKey{aggKey},
-				Signatures: [][]byte{m.Message.Contribution.Signature},
-			}
-			return s.validateWithBatchVerifier(ctx, "sync contribution aggregate signature", set)
-		}
-		sig, err := bls.SignatureFromBytes(m.Message.Contribution.Signature)
+		aggKey, err := bls.AggregatePublicKeys(activeRawPubkeys)
 		if err != nil {
 			tracing.AnnotateError(span, err)
-			return pubsub.ValidationReject, err
+			return pubsub.ValidationIgnore, err
 		}
-		verified := sig.Eth2FastAggregateVerify(activePubkeys, sigRoot)
-		if !verified {
-			return pubsub.ValidationReject, errors.New("verification failed")
+		set := &bls.SignatureBatch{
+			Messages:   [][32]byte{sigRoot},
+			PublicKeys: []bls.PublicKey{aggKey},
+			Signatures: [][]byte{m.Message.Contribution.Signature},
 		}
-		return pubsub.ValidationAccept, nil
+		return s.validateWithBatchVerifier(ctx, "sync contribution aggregate signature", set)
 	}
 }
 
@@ -351,28 +330,25 @@ func (s *Service) verifySyncSelectionData(ctx context.Context, m *ethpb.Contribu
 	if err != nil {
 		return err
 	}
-	if features.Get().EnableBatchVerification {
-		publicKey, err := bls.PublicKeyFromBytes(pubkey[:])
-		if err != nil {
-			return err
-		}
-		root, err := signing.ComputeSigningRoot(selectionData, domain)
-		if err != nil {
-			return err
-		}
-		set := &bls.SignatureBatch{
-			Messages:   [][32]byte{root},
-			PublicKeys: []bls.PublicKey{publicKey},
-			Signatures: [][]byte{m.SelectionProof},
-		}
-		valid, err := s.validateWithBatchVerifier(ctx, "sync contribution selection signature", set)
-		if err != nil {
-			return err
-		}
-		if valid != pubsub.ValidationAccept {
-			return errors.New("invalid sync selection proof provided")
-		}
-		return nil
+	publicKey, err := bls.PublicKeyFromBytes(pubkey[:])
+	if err != nil {
+		return err
 	}
-	return signing.VerifySigningRoot(selectionData, pubkey[:], m.SelectionProof, domain)
+	root, err := signing.ComputeSigningRoot(selectionData, domain)
+	if err != nil {
+		return err
+	}
+	set := &bls.SignatureBatch{
+		Messages:   [][32]byte{root},
+		PublicKeys: []bls.PublicKey{publicKey},
+		Signatures: [][]byte{m.SelectionProof},
+	}
+	valid, err := s.validateWithBatchVerifier(ctx, "sync contribution selection signature", set)
+	if err != nil {
+		return err
+	}
+	if valid != pubsub.ValidationAccept {
+		return errors.New("invalid sync selection proof provided")
+	}
+	return nil
 }
