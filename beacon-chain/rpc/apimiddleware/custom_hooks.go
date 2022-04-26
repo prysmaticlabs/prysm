@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"strconv"
 	"strings"
@@ -209,6 +210,11 @@ type bellatrixPublishBlockRequestJson struct {
 	Signature      string                    `json:"signature" hex:"true"`
 }
 
+type bellatrixPublishBlindedBlockRequestJson struct {
+	BellatrixBlock *blindedBeaconBlockBellatrixJson `json:"bellatrix_block"`
+	Signature      string                           `json:"signature" hex:"true"`
+}
+
 // setInitialPublishBlockPostRequest is triggered before we deserialize the request JSON into a struct.
 // We don't know which version of the block got posted, but we can determine it from the slot.
 // We know that blocks of all versions have a Message field with a Slot field,
@@ -282,6 +288,79 @@ func preparePublishedBlock(endpoint *apimiddleware.Endpoint, _ http.ResponseWrit
 	return apimiddleware.InternalServerError(errors.New("unsupported block type"))
 }
 
+// setInitialPublishBlindedBlockPostRequest is triggered before we deserialize the request JSON into a struct.
+// We don't know which version of the block got posted, but we can determine it from the slot.
+// We know that blocks of all versions have a Message field with a Slot field,
+// so we deserialize the request into a struct s, which has the right fields, to obtain the slot.
+// Once we know the slot, we can determine what the PostRequest field of the endpoint should be, and we set it appropriately.
+func setInitialPublishBlindedBlockPostRequest(endpoint *apimiddleware.Endpoint,
+	_ http.ResponseWriter,
+	req *http.Request,
+) (apimiddleware.RunDefault, apimiddleware.ErrorJson) {
+	s := struct {
+		Message struct {
+			Slot string
+		}
+	}{}
+
+	buf, err := ioutil.ReadAll(req.Body)
+	if err != nil {
+		return false, apimiddleware.InternalServerErrorWithMessage(err, "could not read body")
+	}
+	if err := json.Unmarshal(buf, &s); err != nil {
+		return false, apimiddleware.InternalServerErrorWithMessage(err, "could not read slot from body")
+	}
+	slot, err := strconv.ParseUint(s.Message.Slot, 10, 64)
+	if err != nil {
+		return false, apimiddleware.InternalServerErrorWithMessage(err, "slot is not an unsigned integer")
+	}
+	currentEpoch := slots.ToEpoch(types.Slot(slot))
+	if currentEpoch < params.BeaconConfig().AltairForkEpoch {
+		endpoint.PostRequest = &signedBeaconBlockContainerJson{}
+	} else if currentEpoch < params.BeaconConfig().BellatrixForkEpoch {
+		endpoint.PostRequest = &signedBeaconBlockAltairContainerJson{}
+	} else {
+		endpoint.PostRequest = &signedBlindedBeaconBlockBellatrixContainerJson{}
+	}
+	req.Body = ioutil.NopCloser(bytes.NewBuffer(buf))
+	return true, nil
+}
+
+// In preparePublishedBlindedBlock we transform the PostRequest.
+// gRPC expects either an XXX_block field in the JSON object, but we have a message field at this point.
+// We do a simple conversion depending on the type of endpoint.PostRequest
+// (which was filled out previously in setInitialPublishBlockPostRequest).
+func preparePublishedBlindedBlock(endpoint *apimiddleware.Endpoint, _ http.ResponseWriter, _ *http.Request) apimiddleware.ErrorJson {
+	if block, ok := endpoint.PostRequest.(*signedBeaconBlockContainerJson); ok {
+		// Prepare post request that can be properly decoded on gRPC side.
+		actualPostReq := &phase0PublishBlockRequestJson{
+			Phase0Block: block.Message,
+			Signature:   block.Signature,
+		}
+		endpoint.PostRequest = actualPostReq
+		return nil
+	}
+	if block, ok := endpoint.PostRequest.(*signedBeaconBlockAltairContainerJson); ok {
+		// Prepare post request that can be properly decoded on gRPC side.
+		actualPostReq := &altairPublishBlockRequestJson{
+			AltairBlock: block.Message,
+			Signature:   block.Signature,
+		}
+		endpoint.PostRequest = actualPostReq
+		return nil
+	}
+	if block, ok := endpoint.PostRequest.(*signedBlindedBeaconBlockBellatrixContainerJson); ok {
+		// Prepare post request that can be properly decoded on gRPC side.
+		actualPostReq := &bellatrixPublishBlindedBlockRequestJson{
+			BellatrixBlock: block.Message,
+			Signature:      block.Signature,
+		}
+		endpoint.PostRequest = actualPostReq
+		return nil
+	}
+	return apimiddleware.InternalServerError(errors.New("unsupported block type"))
+}
+
 type tempSyncCommitteesResponseJson struct {
 	Data *tempSyncCommitteeValidatorsJson `json:"data"`
 }
@@ -341,7 +420,8 @@ func serializeV2Block(response interface{}) (apimiddleware.RunDefault, []byte, a
 	}
 
 	var actualRespContainer interface{}
-	if strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_PHASE0.String())) {
+	switch {
+	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_PHASE0.String())):
 		actualRespContainer = &phase0BlockResponseJson{
 			Version: respContainer.Version,
 			Data: &signedBeaconBlockContainerJson{
@@ -349,7 +429,7 @@ func serializeV2Block(response interface{}) (apimiddleware.RunDefault, []byte, a
 				Signature: respContainer.Data.Signature,
 			},
 		}
-	} else if strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_ALTAIR.String())) {
+	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_ALTAIR.String())):
 		actualRespContainer = &altairBlockResponseJson{
 			Version: respContainer.Version,
 			Data: &signedBeaconBlockAltairContainerJson{
@@ -357,7 +437,7 @@ func serializeV2Block(response interface{}) (apimiddleware.RunDefault, []byte, a
 				Signature: respContainer.Data.Signature,
 			},
 		}
-	} else if strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_BELLATRIX.String())) {
+	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_BELLATRIX.String())):
 		actualRespContainer = &bellatrixBlockResponseJson{
 			Version: respContainer.Version,
 			Data: &signedBeaconBlockBellatrixContainerJson{
@@ -365,7 +445,7 @@ func serializeV2Block(response interface{}) (apimiddleware.RunDefault, []byte, a
 				Signature: respContainer.Data.Signature,
 			},
 		}
-	} else {
+	default:
 		return false, nil, apimiddleware.InternalServerError(fmt.Errorf("unsupported block version '%s'", respContainer.Version))
 	}
 
@@ -440,6 +520,11 @@ type bellatrixProduceBlockResponseJson struct {
 	Data    *beaconBlockBellatrixJson `json:"data"`
 }
 
+type bellatrixProduceBlindedBlockResponseJson struct {
+	Version string                           `json:"version"`
+	Data    *blindedBeaconBlockBellatrixJson `json:"data"`
+}
+
 func serializeProducedV2Block(response interface{}) (apimiddleware.RunDefault, []byte, apimiddleware.ErrorJson) {
 	respContainer, ok := response.(*produceBlockResponseV2Json)
 	if !ok {
@@ -447,22 +532,57 @@ func serializeProducedV2Block(response interface{}) (apimiddleware.RunDefault, [
 	}
 
 	var actualRespContainer interface{}
-	if strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_PHASE0.String())) {
+	switch {
+	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_PHASE0.String())):
 		actualRespContainer = &phase0ProduceBlockResponseJson{
 			Version: respContainer.Version,
 			Data:    respContainer.Data.Phase0Block,
 		}
-	} else if strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_ALTAIR.String())) {
+	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_ALTAIR.String())):
 		actualRespContainer = &altairProduceBlockResponseJson{
 			Version: respContainer.Version,
 			Data:    respContainer.Data.AltairBlock,
 		}
-	} else if strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_BELLATRIX.String())) {
+	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_BELLATRIX.String())):
 		actualRespContainer = &bellatrixProduceBlockResponseJson{
 			Version: respContainer.Version,
 			Data:    respContainer.Data.BellatrixBlock,
 		}
-	} else {
+	default:
+		return false, nil, apimiddleware.InternalServerError(fmt.Errorf("unsupported block version '%s'", respContainer.Version))
+	}
+
+	j, err := json.Marshal(actualRespContainer)
+	if err != nil {
+		return false, nil, apimiddleware.InternalServerErrorWithMessage(err, "could not marshal response")
+	}
+	return false, j, nil
+}
+
+func serializeProducedBlindedBlock(response interface{}) (apimiddleware.RunDefault, []byte, apimiddleware.ErrorJson) {
+	respContainer, ok := response.(*produceBlindedBlockResponseJson)
+	if !ok {
+		return false, nil, apimiddleware.InternalServerError(errors.New("container is not of the correct type"))
+	}
+
+	var actualRespContainer interface{}
+	switch {
+	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_PHASE0.String())):
+		actualRespContainer = &phase0ProduceBlockResponseJson{
+			Version: respContainer.Version,
+			Data:    respContainer.Data.Phase0Block,
+		}
+	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_ALTAIR.String())):
+		actualRespContainer = &altairProduceBlockResponseJson{
+			Version: respContainer.Version,
+			Data:    respContainer.Data.AltairBlock,
+		}
+	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_BELLATRIX.String())):
+		actualRespContainer = &bellatrixProduceBlindedBlockResponseJson{
+			Version: respContainer.Version,
+			Data:    respContainer.Data.BellatrixBlock,
+		}
+	default:
 		return false, nil, apimiddleware.InternalServerError(fmt.Errorf("unsupported block version '%s'", respContainer.Version))
 	}
 

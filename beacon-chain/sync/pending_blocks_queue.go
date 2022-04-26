@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/async"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
@@ -155,6 +156,10 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			err = s.validateBeaconBlock(ctx, b, blkRoot)
 			switch {
 			case errors.Is(ErrOptimisticParent, err): // Ok to continue process block with parent that is an optimistic candidate.
+			case errors.Is(blockchain.ErrUndefinedExecutionEngineError, err):
+				// don't mark the block as bad with an undefined EE error.
+				log.Debugf("Could not validate block due to undefined ee error %d: %v", b.Block().Slot(), err)
+				continue
 			case err != nil:
 				log.Debugf("Could not validate block from slot %d: %v", b.Block().Slot(), err)
 				s.setBadBlock(ctx, blkRoot)
