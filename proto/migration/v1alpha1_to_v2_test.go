@@ -147,6 +147,51 @@ func Test_BellatrixToV1Alpha1SignedBlock(t *testing.T) {
 	assert.DeepEqual(t, v2Root, alphaRoot)
 }
 
+func Test_BlindedBellatrixToV1Alpha1SignedBlock(t *testing.T) {
+	v2Block := util.HydrateV2SignedBlindedBeaconBlockBellatrix(&ethpbv2.SignedBlindedBeaconBlockBellatrix{})
+	v2Block.Message.Slot = slot
+	v2Block.Message.ProposerIndex = validatorIndex
+	v2Block.Message.ParentRoot = parentRoot
+	v2Block.Message.StateRoot = stateRoot
+	v2Block.Message.Body.RandaoReveal = randaoReveal
+	v2Block.Message.Body.Eth1Data = &ethpbv1.Eth1Data{
+		DepositRoot:  depositRoot,
+		DepositCount: depositCount,
+		BlockHash:    blockHash,
+	}
+	syncCommitteeBits := bitfield.NewBitvector512()
+	syncCommitteeBits.SetBitAt(100, true)
+	v2Block.Message.Body.SyncAggregate = &ethpbv1.SyncAggregate{
+		SyncCommitteeBits:      syncCommitteeBits,
+		SyncCommitteeSignature: signature,
+	}
+	v2Block.Message.Body.ExecutionPayloadHeader = &enginev1.ExecutionPayloadHeader{
+		ParentHash:       parentHash,
+		FeeRecipient:     feeRecipient,
+		StateRoot:        stateRoot,
+		ReceiptsRoot:     receiptsRoot,
+		LogsBloom:        logsBloom,
+		PrevRandao:       prevRandao,
+		BlockNumber:      blockNumber,
+		GasLimit:         gasLimit,
+		GasUsed:          gasUsed,
+		Timestamp:        timestamp,
+		ExtraData:        extraData,
+		BaseFeePerGas:    baseFeePerGas,
+		BlockHash:        blockHash,
+		TransactionsRoot: transactionsRoot,
+	}
+	v2Block.Signature = signature
+
+	alphaBlock, err := BlindedBellatrixToV1Alpha1SignedBlock(v2Block)
+	require.NoError(t, err)
+	alphaRoot, err := alphaBlock.HashTreeRoot()
+	require.NoError(t, err)
+	v2Root, err := v2Block.HashTreeRoot()
+	require.NoError(t, err)
+	assert.DeepEqual(t, v2Root, alphaRoot)
+}
+
 func Test_V1Alpha1BeaconBlockBellatrixToV2(t *testing.T) {
 	alphaBlock := util.HydrateBeaconBlockBellatrix(&ethpbalpha.BeaconBlockBellatrix{})
 	alphaBlock.Slot = slot
@@ -167,6 +212,35 @@ func Test_V1Alpha1BeaconBlockBellatrixToV2(t *testing.T) {
 	}
 
 	v2Block, err := V1Alpha1BeaconBlockBellatrixToV2(alphaBlock)
+	require.NoError(t, err)
+	alphaRoot, err := alphaBlock.HashTreeRoot()
+	require.NoError(t, err)
+	v2Root, err := v2Block.HashTreeRoot()
+	require.NoError(t, err)
+	assert.DeepEqual(t, alphaRoot, v2Root)
+}
+
+func Test_V1Alpha1BeaconBlockBellatrixToV2Blinded(t *testing.T) {
+	alphaBlock := util.HydrateBeaconBlockBellatrix(&ethpbalpha.BeaconBlockBellatrix{})
+	alphaBlock.Slot = slot
+	alphaBlock.ProposerIndex = validatorIndex
+	alphaBlock.ParentRoot = parentRoot
+	alphaBlock.StateRoot = stateRoot
+	alphaBlock.Body.RandaoReveal = randaoReveal
+	alphaBlock.Body.Eth1Data = &ethpbalpha.Eth1Data{
+		DepositRoot:  depositRoot,
+		DepositCount: depositCount,
+		BlockHash:    blockHash,
+	}
+	syncCommitteeBits := bitfield.NewBitvector512()
+	syncCommitteeBits.SetBitAt(100, true)
+	alphaBlock.Body.SyncAggregate = &ethpbalpha.SyncAggregate{
+		SyncCommitteeBits:      syncCommitteeBits,
+		SyncCommitteeSignature: signature,
+	}
+	alphaBlock.Body.ExecutionPayload.Transactions = [][]byte{[]byte("transaction1"), []byte("transaction2")}
+
+	v2Block, err := V1Alpha1BeaconBlockBellatrixToV2Blinded(alphaBlock)
 	require.NoError(t, err)
 	alphaRoot, err := alphaBlock.HashTreeRoot()
 	require.NoError(t, err)

@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/components"
 	e2eparams "github.com/prysmaticlabs/prysm/testing/endtoend/params"
@@ -14,11 +13,8 @@ import (
 
 func TestWeb3RemoteSigner_StartsAndReturnsPublicKeys(t *testing.T) {
 	require.NoError(t, e2eparams.Init(0))
-	fp, err := bazel.Runfile("config/params/testdata/e2e_config.yaml")
-	if err != nil {
-		t.Fatal(err)
-	}
-	wsc := components.NewWeb3RemoteSigner(fp)
+
+	wsc := components.NewWeb3RemoteSigner()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
