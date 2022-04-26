@@ -5,7 +5,6 @@ import (
 	types "github.com/prysmaticlabs/eth2-types"
 	nativetypes "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
-	"github.com/prysmaticlabs/prysm/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -168,10 +167,6 @@ func (b *BeaconState) markFieldAsDirty(field nativetypes.FieldIndex) {
 // can be recomputed.
 func (b *BeaconState) addDirtyIndices(index nativetypes.FieldIndex, indices []uint64) {
 	if b.rebuildTrie[index] {
-		return
-	}
-	// Exit early if balance trie computation isn't enabled.
-	if !features.Get().EnableBalanceTrieComputation && index == nativetypes.Balances {
 		return
 	}
 	totalIndicesLen := len(b.dirtyIndices[index]) + len(indices)

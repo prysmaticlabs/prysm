@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
 	"math/big"
 	"os"
 	"os/exec"
@@ -223,7 +222,7 @@ func SendAndMineDeposits(keystorePath string, validatorNum, offset int, partial 
 	defer client.Close()
 	web3 := ethclient.NewClient(client)
 
-	keystoreBytes, err := ioutil.ReadFile(keystorePath) // #nosec G304
+	keystoreBytes, err := os.ReadFile(keystorePath) // #nosec G304
 	if err != nil {
 		return err
 	}

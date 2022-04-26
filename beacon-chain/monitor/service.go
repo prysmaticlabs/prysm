@@ -95,6 +95,7 @@ func NewService(ctx context.Context, config *ValidatorMonitorConfig, tracked []t
 		latestPerformance:           make(map[types.ValidatorIndex]ValidatorLatestPerformance),
 		aggregatedPerformance:       make(map[types.ValidatorIndex]ValidatorAggregatedPerformance),
 		trackedSyncCommitteeIndices: make(map[types.ValidatorIndex][]types.CommitteeIndex),
+		isLogging:                   false,
 	}
 	for _, idx := range tracked {
 		r.TrackedValidators[idx] = true
@@ -117,7 +118,6 @@ func (s *Service) Start() {
 		"ValidatorIndices": tracked,
 	}).Info("Starting service")
 
-	s.isLogging = false
 	stateChannel := make(chan *feed.Event, 1)
 	stateSub := s.config.StateNotifier.StateFeed().Subscribe(stateChannel)
 

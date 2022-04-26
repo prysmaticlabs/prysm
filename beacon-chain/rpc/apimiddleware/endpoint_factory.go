@@ -28,6 +28,7 @@ func (_ *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/beacon/headers",
 		"/eth/v1/beacon/headers/{block_id}",
 		"/eth/v1/beacon/blocks",
+		"/eth/v1/beacon/blinded_blocks",
 		"/eth/v1/beacon/blocks/{block_id}",
 		"/eth/v2/beacon/blocks/{block_id}",
 		"/eth/v1/beacon/blocks/{block_id}/root",
@@ -58,6 +59,7 @@ func (_ *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/validator/duties/sync/{epoch}",
 		"/eth/v1/validator/blocks/{slot}",
 		"/eth/v2/validator/blocks/{slot}",
+		"/eth/v1/validator/blinded_blocks/{slot}",
 		"/eth/v1/validator/attestation_data",
 		"/eth/v1/validator/aggregate_attestation",
 		"/eth/v1/validator/beacon_committee_subscriptions",
@@ -107,6 +109,11 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 		endpoint.Hooks = apimiddleware.HookCollection{
 			OnPreDeserializeRequestBodyIntoContainer:  setInitialPublishBlockPostRequest,
 			OnPostDeserializeRequestBodyIntoContainer: preparePublishedBlock,
+		}
+	case "/eth/v1/beacon/blinded_blocks":
+		endpoint.Hooks = apimiddleware.HookCollection{
+			OnPreDeserializeRequestBodyIntoContainer:  setInitialPublishBlindedBlockPostRequest,
+			OnPostDeserializeRequestBodyIntoContainer: preparePublishedBlindedBlock,
 		}
 	case "/eth/v1/beacon/blocks/{block_id}":
 		endpoint.GetResponse = &blockResponseJson{}
@@ -213,6 +220,13 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 		endpoint.RequestQueryParams = []apimiddleware.QueryParam{{Name: "randao_reveal", Hex: true}, {Name: "graffiti", Hex: true}}
 		endpoint.Hooks = apimiddleware.HookCollection{
 			OnPreSerializeMiddlewareResponseIntoJson: serializeProducedV2Block,
+		}
+	case "/eth/v1/validator/blinded_blocks/{slot}":
+		endpoint.GetResponse = &produceBlindedBlockResponseJson{}
+		endpoint.RequestURLLiterals = []string{"slot"}
+		endpoint.RequestQueryParams = []apimiddleware.QueryParam{{Name: "randao_reveal", Hex: true}, {Name: "graffiti", Hex: true}}
+		endpoint.Hooks = apimiddleware.HookCollection{
+			OnPreSerializeMiddlewareResponseIntoJson: serializeProducedBlindedBlock,
 		}
 	case "/eth/v1/validator/attestation_data":
 		endpoint.GetResponse = &produceAttestationDataResponseJson{}

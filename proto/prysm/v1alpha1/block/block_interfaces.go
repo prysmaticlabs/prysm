@@ -37,6 +37,7 @@ type BeaconBlock interface {
 	StateRoot() []byte
 	Body() BeaconBlockBody
 	IsNil() bool
+	IsBlinded() bool
 	HashTreeRoot() ([32]byte, error)
 	Proto() proto.Message
 	ssz.Marshaler

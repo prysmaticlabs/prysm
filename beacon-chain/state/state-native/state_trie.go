@@ -13,7 +13,6 @@ import (
 	nativetypes "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/types"
-	"github.com/prysmaticlabs/prysm/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/container/slice"
@@ -689,21 +688,18 @@ func (b *BeaconState) rootSelector(ctx context.Context, field nativetypes.FieldI
 		}
 		return b.recomputeFieldTrie(11, b.validators)
 	case nativetypes.Balances:
-		if features.Get().EnableBalanceTrieComputation {
-			if b.rebuildTrie[field] {
-				maxBalCap := uint64(fieldparams.ValidatorRegistryLimit)
-				elemSize := uint64(8)
-				balLimit := (maxBalCap*elemSize + 31) / 32
-				err := b.resetFieldTrie(field, b.balances, balLimit)
-				if err != nil {
-					return [32]byte{}, err
-				}
-				delete(b.rebuildTrie, field)
-				return b.stateFieldLeaves[field].TrieRoot()
+		if b.rebuildTrie[field] {
+			maxBalCap := uint64(fieldparams.ValidatorRegistryLimit)
+			elemSize := uint64(8)
+			balLimit := (maxBalCap*elemSize + 31) / 32
+			err := b.resetFieldTrie(field, b.balances, balLimit)
+			if err != nil {
+				return [32]byte{}, err
 			}
-			return b.recomputeFieldTrie(12, b.balances)
+			delete(b.rebuildTrie, field)
+			return b.stateFieldLeaves[field].TrieRoot()
 		}
-		return stateutil.Uint64ListRootWithRegistryLimit(b.balances)
+		return b.recomputeFieldTrie(12, b.balances)
 	case nativetypes.RandaoMixes:
 		if b.rebuildTrie[field] {
 			err := b.resetFieldTrie(field, b.randaoMixes, fieldparams.RandaoMixesLength)

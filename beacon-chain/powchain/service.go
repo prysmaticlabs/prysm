@@ -148,6 +148,7 @@ type Service struct {
 	connectedETH1           bool
 	isRunning               bool
 	processingLock          sync.RWMutex
+	latestEth1DataLock      sync.RWMutex
 	cfg                     *config
 	ctx                     context.Context
 	cancel                  context.CancelFunc
@@ -413,11 +414,14 @@ func (s *Service) initDepositCaches(ctx context.Context, ctrs []*ethpb.DepositCo
 		// accumulates. we finalize them here before we are ready to receive a block.
 		// Otherwise, the first few blocks will be slower to compute as we will
 		// hold the lock and be busy finalizing the deposits.
-		s.cfg.depositCache.InsertFinalizedDeposits(ctx, int64(currIndex)) // lint:ignore uintcast -- deposit index will not exceed int64 in your lifetime.
+		// The deposit index in the state is always the index of the next deposit
+		// to be included(rather than the last one to be processed). This was most likely
+		// done as the state cannot represent signed integers.
+		actualIndex := int64(currIndex) - 1 // lint:ignore uintcast -- deposit index will not exceed int64 in your lifetime.
+		s.cfg.depositCache.InsertFinalizedDeposits(ctx, actualIndex)
 		// Deposit proofs are only used during state transition and can be safely removed to save space.
 
-		// lint:ignore uintcast -- deposit index will not exceed int64 in your lifetime.
-		if err = s.cfg.depositCache.PruneProofs(ctx, int64(currIndex)); err != nil {
+		if err = s.cfg.depositCache.PruneProofs(ctx, actualIndex); err != nil {
 			return errors.Wrap(err, "could not prune deposit proofs")
 		}
 	}
@@ -437,9 +441,11 @@ func (s *Service) initDepositCaches(ctx context.Context, ctrs []*ethpb.DepositCo
 func (s *Service) processBlockHeader(header *gethTypes.Header) {
 	defer safelyHandlePanic()
 	blockNumberGauge.Set(float64(header.Number.Int64()))
+	s.latestEth1DataLock.Lock()
 	s.latestEth1Data.BlockHeight = header.Number.Uint64()
 	s.latestEth1Data.BlockHash = header.Hash().Bytes()
 	s.latestEth1Data.BlockTime = header.Time
+	s.latestEth1DataLock.Unlock()
 	log.WithFields(logrus.Fields{
 		"blockNumber": s.latestEth1Data.BlockHeight,
 		"blockHash":   hexutil.Encode(s.latestEth1Data.BlockHash),
@@ -566,9 +572,11 @@ func (s *Service) initPOWService() {
 				continue
 			}
 
+			s.latestEth1DataLock.Lock()
 			s.latestEth1Data.BlockHeight = header.Number.Uint64()
 			s.latestEth1Data.BlockHash = header.Hash().Bytes()
 			s.latestEth1Data.BlockTime = header.Time
+			s.latestEth1DataLock.Unlock()
 
 			if err := s.processPastLogs(ctx); err != nil {
 				s.retryExecutionClientConnection(ctx, err)

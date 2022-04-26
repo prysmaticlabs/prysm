@@ -3,7 +3,7 @@ package accounts
 import (
 	"context"
 	"flag"
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -33,7 +33,7 @@ const (
 
 func init() {
 	logrus.SetLevel(logrus.DebugLevel)
-	logrus.SetOutput(ioutil.Discard)
+	logrus.SetOutput(io.Discard)
 }
 
 type testWalletConfig struct {
@@ -105,7 +105,7 @@ func setupWalletAndPasswordsDir(t testing.TB) (string, string, string) {
 	passwordFileDir := filepath.Join(t.TempDir(), "passwordFile")
 	require.NoError(t, os.MkdirAll(passwordFileDir, params.BeaconIoConfig().ReadWriteExecutePermissions))
 	passwordFilePath := filepath.Join(passwordFileDir, passwordFileName)
-	require.NoError(t, ioutil.WriteFile(passwordFilePath, []byte(password), os.ModePerm))
+	require.NoError(t, os.WriteFile(passwordFilePath, []byte(password), os.ModePerm))
 	return walletDir, passwordsDir, passwordFilePath
 }
 
