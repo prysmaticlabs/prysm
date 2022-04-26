@@ -89,6 +89,13 @@ func VerifyBeaconStateMarshalSSZNilState(t *testing.T, factory getState, clear c
 	require.ErrorContains(t, "nil beacon state", err)
 }
 
+func VerifyBeaconStateMarshalSSZNilStateNative(t *testing.T, factory getState) {
+	s, err := factory()
+	require.NoError(t, err)
+	_, err = s.MarshalSSZ()
+	require.ErrorContains(t, "nil beacon state", err)
+}
+
 func VerifyBeaconStateValidatorByPubkey(t *testing.T, factory getState) {
 	keyCreator := func(input []byte) [fieldparams.BLSPubkeyLength]byte {
 		nKey := [fieldparams.BLSPubkeyLength]byte{}
