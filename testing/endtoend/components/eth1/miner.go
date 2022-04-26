@@ -127,6 +127,7 @@ func (m *Miner) Start(ctx context.Context) error {
 		"--mine",
 		"--unlock=0x878705ba3f8bc32fcf7f4caa1a35e72af65cf766",
 		"--allow-insecure-unlock",
+		"--txpool.locals=0x878705ba3f8bc32fcf7f4caa1a35e72af65cf766",
 		fmt.Sprintf("--password=%s", eth1Path+"/keystore/"+minerPasswordFile),
 	}
 

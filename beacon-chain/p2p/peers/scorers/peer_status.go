@@ -145,5 +145,7 @@ func (s *PeerStatusScorer) peerStatus(pid peer.ID) (*pb.Status, error) {
 
 // SetHeadSlot updates known head slot.
 func (s *PeerStatusScorer) SetHeadSlot(slot types.Slot) {
+	s.store.Lock()
+	defer s.store.Unlock()
 	s.ourHeadSlot = slot
 }

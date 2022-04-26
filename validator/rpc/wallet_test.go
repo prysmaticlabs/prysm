@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -62,9 +61,6 @@ func TestServer_CreateWallet_Local(t *testing.T) {
 		Keymanager:     pb.KeymanagerKind_IMPORTED,
 		WalletPassword: strongPass,
 	}
-	// We delete the directory at defaultWalletPath as CreateWallet will return an error if it tries to create a wallet
-	// where a directory already exists
-	require.NoError(t, os.RemoveAll(defaultWalletPath))
 	_, err = s.CreateWallet(ctx, req)
 	require.NoError(t, err)
 
@@ -113,9 +109,6 @@ func TestServer_CreateWallet_Local_PasswordTooWeak(t *testing.T) {
 		Keymanager:     pb.KeymanagerKind_IMPORTED,
 		WalletPassword: "", // Weak password, empty string
 	}
-	// We delete the directory at defaultWalletPath as CreateWallet will return an error if it tries to create a wallet
-	// where a directory already exists
-	require.NoError(t, os.RemoveAll(defaultWalletPath))
 	_, err := s.CreateWallet(ctx, req)
 	require.ErrorContains(t, "Password too weak", err)
 
@@ -138,9 +131,6 @@ func TestServer_RecoverWallet_Derived(t *testing.T) {
 		WalletPassword: strongPass,
 		NumAccounts:    0,
 	}
-	// We delete the directory at defaultWalletPath as RecoverWallet will return an error if it tries to create a wallet
-	// where a directory already exists
-	require.NoError(t, os.RemoveAll(localWalletDir))
 	_, err := s.RecoverWallet(ctx, req)
 	require.ErrorContains(t, "Must create at least 1 validator account", err)
 

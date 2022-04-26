@@ -11,6 +11,7 @@ import (
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
@@ -19,6 +20,7 @@ import (
 	doublylinkedtree "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
+	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
@@ -26,6 +28,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
@@ -1689,6 +1692,139 @@ func Test_getStateVersionAndPayload(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, tt.version, ver)
 			require.DeepEqual(t, tt.header, header)
+		})
+	}
+}
+
+func Test_validateMergeTransitionBlock(t *testing.T) {
+	cfg := params.BeaconConfig()
+	cfg.TerminalTotalDifficulty = "2"
+	cfg.TerminalBlockHash = params.BeaconConfig().ZeroHash
+	params.OverrideBeaconConfig(cfg)
+
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+	fcs := protoarray.New(0, 0, [32]byte{'a'})
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithStateGen(stategen.New(beaconDB)),
+		WithForkChoiceStore(fcs),
+		WithProposerIdsCache(cache.NewProposerPayloadIDsCache()),
+	}
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+
+	tests := []struct {
+		name         string
+		stateVersion int
+		header       *ethpb.ExecutionPayloadHeader
+		payload      *enginev1.ExecutionPayload
+		errString    string
+	}{
+		{
+			name:         "state older than Bellatrix, nil payload",
+			stateVersion: 1,
+			payload:      nil,
+		},
+		{
+			name:         "state older than Bellatrix, empty payload",
+			stateVersion: 1,
+			payload: &enginev1.ExecutionPayload{
+				ParentHash:    make([]byte, fieldparams.RootLength),
+				FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
+				StateRoot:     make([]byte, fieldparams.RootLength),
+				ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+				LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
+				PrevRandao:    make([]byte, fieldparams.RootLength),
+				BaseFeePerGas: make([]byte, fieldparams.RootLength),
+				BlockHash:     make([]byte, fieldparams.RootLength),
+			},
+		},
+		{
+			name:         "state older than Bellatrix, non empty payload",
+			stateVersion: 1,
+			payload: &enginev1.ExecutionPayload{
+				ParentHash: bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength),
+			},
+		},
+		{
+			name:         "state is Bellatrix, nil payload",
+			stateVersion: 2,
+			payload:      nil,
+		},
+		{
+			name:         "state is Bellatrix, empty payload",
+			stateVersion: 2,
+			payload: &enginev1.ExecutionPayload{
+				ParentHash:    make([]byte, fieldparams.RootLength),
+				FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
+				StateRoot:     make([]byte, fieldparams.RootLength),
+				ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+				LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
+				PrevRandao:    make([]byte, fieldparams.RootLength),
+				BaseFeePerGas: make([]byte, fieldparams.RootLength),
+				BlockHash:     make([]byte, fieldparams.RootLength),
+			},
+		},
+		{
+			name:         "state is Bellatrix, non empty payload, empty header",
+			stateVersion: 2,
+			payload: &enginev1.ExecutionPayload{
+				ParentHash: bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength),
+			},
+			header: &ethpb.ExecutionPayloadHeader{
+				ParentHash:       make([]byte, fieldparams.RootLength),
+				FeeRecipient:     make([]byte, fieldparams.FeeRecipientLength),
+				StateRoot:        make([]byte, fieldparams.RootLength),
+				ReceiptsRoot:     make([]byte, fieldparams.RootLength),
+				LogsBloom:        make([]byte, fieldparams.LogsBloomLength),
+				PrevRandao:       make([]byte, fieldparams.RootLength),
+				BaseFeePerGas:    make([]byte, fieldparams.RootLength),
+				BlockHash:        make([]byte, fieldparams.RootLength),
+				TransactionsRoot: make([]byte, fieldparams.RootLength),
+			},
+		},
+		{
+			name:         "state is Bellatrix, non empty payload, non empty header",
+			stateVersion: 2,
+			payload: &enginev1.ExecutionPayload{
+				ParentHash: bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength),
+			},
+			header: &ethpb.ExecutionPayloadHeader{
+				BlockNumber: 1,
+			},
+		},
+		{
+			name:         "state is Bellatrix, non empty payload, nil header",
+			stateVersion: 2,
+			payload: &enginev1.ExecutionPayload{
+				ParentHash: bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength),
+			},
+			errString: "nil header or block body",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			e := &mockPOW.EngineClient{BlockByHashMap: map[[32]byte]*enginev1.ExecutionBlock{}}
+			e.BlockByHashMap[[32]byte{'a'}] = &enginev1.ExecutionBlock{
+				ParentHash:      bytesutil.PadTo([]byte{'b'}, fieldparams.RootLength),
+				TotalDifficulty: "0x2",
+			}
+			e.BlockByHashMap[[32]byte{'b'}] = &enginev1.ExecutionBlock{
+				ParentHash:      bytesutil.PadTo([]byte{'3'}, fieldparams.RootLength),
+				TotalDifficulty: "0x1",
+			}
+			service.cfg.ExecutionEngineCaller = e
+			b := util.HydrateSignedBeaconBlockBellatrix(&ethpb.SignedBeaconBlockBellatrix{})
+			b.Block.Body.ExecutionPayload = tt.payload
+			blk, err := wrapper.WrappedSignedBeaconBlock(b)
+			require.NoError(t, err)
+			err = service.validateMergeTransitionBlock(ctx, tt.stateVersion, tt.header, blk)
+			if tt.errString != "" {
+				require.ErrorContains(t, tt.errString, err)
+			} else {
+				require.NoError(t, err)
+			}
 		})
 	}
 }
