@@ -342,7 +342,9 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 					return err
 				}
 				// set new block number after checking for chainstart for previous block.
+				s.latestEth1DataLock.Lock()
 				s.latestEth1Data.LastRequestedBlock = currentBlockNum
+				s.latestEth1DataLock.Unlock()
 				currentBlockNum = filterLog.BlockNumber
 			}
 			if err := s.ProcessLog(ctx, filterLog); err != nil {
@@ -363,7 +365,9 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 		}
 	}
 
+	s.latestEth1DataLock.Lock()
 	s.latestEth1Data.LastRequestedBlock = currentBlockNum
+	s.latestEth1DataLock.Unlock()
 
 	c, err := s.cfg.beaconDB.FinalizedCheckpoint(ctx)
 	if err != nil {
@@ -421,7 +425,9 @@ func (s *Service) requestBatchedHeadersAndLogs(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
+		s.latestEth1DataLock.Lock()
 		s.latestEth1Data.LastRequestedBlock = i
+		s.latestEth1DataLock.Unlock()
 	}
 
 	return nil
