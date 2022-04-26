@@ -9,7 +9,7 @@ import (
 type FieldIndex int
 
 // String returns the name of the field index.
-func (f FieldIndex) String(stateVersion int) string {
+func (f FieldIndex) String(_ int) string {
 	switch f {
 	case GenesisTime:
 		return "genesisTime"
@@ -81,7 +81,7 @@ func (f FieldIndex) ElemsInChunk() (uint64, error) {
 	}
 }
 
-func (f FieldIndex) Native() bool {
+func (FieldIndex) Native() bool {
 	return true
 }
 

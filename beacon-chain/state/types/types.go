@@ -106,7 +106,7 @@ func (f FieldIndex) ElemsInChunk() (uint64, error) {
 	}
 }
 
-func (f FieldIndex) Native() bool {
+func (FieldIndex) Native() bool {
 	return false
 }
 
