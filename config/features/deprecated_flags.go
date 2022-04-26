@@ -95,6 +95,16 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedDisableBalanceTrieComputation = &cli.BoolFlag{
+		Name:   "disable-balance-trie-computation",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedDisableBatchGossipVerification = &cli.BoolFlag{
+		Name:   "disable-batch-gossip-verification",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -114,4 +124,6 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedDisableGetBlockOptimizations,
 	deprecatedDisableOptimizedBalanceUpdate,
 	deprecatedDisableActiveBalanceCache,
+	deprecatedDisableBalanceTrieComputation,
+	deprecatedDisableBatchGossipVerification,
 }

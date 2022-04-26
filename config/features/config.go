@@ -45,8 +45,6 @@ type Flags struct {
 	DisableAttestingHistoryDBCache      bool // DisableAttestingHistoryDBCache for the validator client increases disk reads/writes.
 	EnableDoppelGanger                  bool // EnableDoppelGanger enables doppelganger protection on startup for the validator.
 	EnableHistoricalSpaceRepresentation bool // EnableHistoricalSpaceRepresentation enables the saving of registry validators in separate buckets to save space
-	EnableBatchVerification             bool // EnableBatchVerification enables batch signature verification on gossip messages.
-	EnableBalanceTrieComputation        bool // EnableBalanceTrieComputation enables our beacon state to use balance tries for hash tree root operations.
 	// Logging related toggles.
 	DisableGRPCConnectionLogs bool // Disables logging when a new grpc client has connected.
 
@@ -174,16 +172,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(disableCorrectlyPruneCanonicalAtts.Name) {
 		logDisabled(disableCorrectlyPruneCanonicalAtts)
 		cfg.CorrectlyPruneCanonicalAtts = false
-	}
-	cfg.EnableBatchVerification = true
-	if ctx.Bool(disableBatchGossipVerification.Name) {
-		logDisabled(disableBatchGossipVerification)
-		cfg.EnableBatchVerification = false
-	}
-	cfg.EnableBalanceTrieComputation = true
-	if ctx.Bool(disableBalanceTrieComputation.Name) {
-		logDisabled(disableBalanceTrieComputation)
-		cfg.EnableBalanceTrieComputation = false
 	}
 	cfg.EnableNativeState = false
 	if ctx.Bool(enableNativeState.Name) {

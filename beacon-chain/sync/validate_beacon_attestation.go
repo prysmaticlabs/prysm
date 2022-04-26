@@ -229,19 +229,12 @@ func (s *Service) validateUnaggregatedAttWithState(ctx context.Context, a *eth.A
 		return pubsub.ValidationReject, errors.New("attestation bitfield is invalid")
 	}
 
-	if features.Get().EnableBatchVerification {
-		set, err := blocks.AttestationSignatureBatch(ctx, bs, []*eth.Attestation{a})
-		if err != nil {
-			tracing.AnnotateError(span, err)
-			return pubsub.ValidationReject, err
-		}
-		return s.validateWithBatchVerifier(ctx, "attestation", set)
-	}
-	if err := blocks.VerifyAttestationSignature(ctx, bs, a); err != nil {
+	set, err := blocks.AttestationSignatureBatch(ctx, bs, []*eth.Attestation{a})
+	if err != nil {
 		tracing.AnnotateError(span, err)
 		return pubsub.ValidationReject, err
 	}
-	return pubsub.ValidationAccept, nil
+	return s.validateWithBatchVerifier(ctx, "attestation", set)
 }
 
 // Returns true if the attestation was already seen for the participating validator for the slot.

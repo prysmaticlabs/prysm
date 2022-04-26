@@ -39,8 +39,10 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 		ValidatorsRoot:   [32]byte{'A'},
 		ValidAttestation: true,
 	}
-
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	s := &Service{
+		ctx: ctx,
 		cfg: &config{
 			initialSync:         &mockSync.Sync{IsSyncing: false},
 			p2p:                 p,
@@ -50,8 +52,10 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 		},
 		blkRootToPendingAtts:             make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		seenUnAggregatedAttestationCache: lruwrpr.New(10),
+		signatureChan:                    make(chan *signatureVerifier, verifierLimit),
 	}
 	s.initCaches()
+	go s.verifierRoutine()
 
 	invalidRoot := [32]byte{'A', 'B', 'C', 'D'}
 	s.setBadBlock(ctx, invalidRoot)

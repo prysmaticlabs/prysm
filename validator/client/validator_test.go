@@ -1478,8 +1478,10 @@ func TestValidator_UdpateFeeRecipient(t *testing.T) {
 						NumValidatorKeys: 1,
 						Offset:           1,
 					},
+					genesisTime: 0,
 				}
-
+				// set bellatrix as current epoch
+				params.BeaconConfig().BellatrixForkEpoch = 0
 				err := v.WaitForKeymanagerInitialization(ctx)
 				require.NoError(t, err)
 				km, err := v.Keymanager()
@@ -1685,6 +1687,25 @@ func TestValidator_UdpateFeeRecipient(t *testing.T) {
 						FeeRecipient: common.HexToAddress(defaultFeeHex),
 					},
 				}
+				return &v
+			},
+		},
+		{
+			name: "Before Bellatrix returns nil",
+			validatorSetter: func(t *testing.T) *validator {
+				v := validator{
+					validatorClient:        client,
+					db:                     db,
+					pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
+					useWeb:                 false,
+					interopKeysConfig: &local.InteropKeymanagerConfig{
+						NumValidatorKeys: 1,
+						Offset:           1,
+					},
+				}
+				err := v.WaitForKeymanagerInitialization(ctx)
+				require.NoError(t, err)
+				params.BeaconConfig().BellatrixForkEpoch = 123456789
 				return &v
 			},
 		},

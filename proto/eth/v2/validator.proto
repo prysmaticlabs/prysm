@@ -55,6 +55,11 @@ message ProduceBlockResponseV2 {
   BeaconBlockContainerV2 data = 2;
 }
 
+message ProduceBlindedBlockResponse {
+  Version version = 1;
+  BlindedBeaconBlockContainer data = 2;
+}
+
 message SubmitSyncCommitteeSubscriptionsRequest {
   repeated SyncCommitteeSubscription data = 1;
 }
