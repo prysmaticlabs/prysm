@@ -90,7 +90,7 @@ func (f FieldIndex) Native() bool {
 // 0th field of the beacon state. This is helpful when we are
 // updating the Merkle branches up the trie representation
 // of the beacon state. The below field indexes correspond
-// to the v1 state.
+// to the state.
 const (
 	GenesisTime FieldIndex = iota
 	GenesisValidatorsRoot
