@@ -28,6 +28,10 @@ import (
 // 1. Re-organizes the execution payload chain and corresponding state to make head_block_hash the head.
 // 2. Applies finality to the execution state: it irreversibly persists the chain of all execution payloads and corresponding state, up to and including finalized_block_hash.
 func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headState state.BeaconState, headBlk block.BeaconBlock, headRoot [32]byte, finalizedRoot [32]byte) (*enginev1.PayloadIDBytes, error) {
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+
 	ctx, span := trace.StartSpan(ctx, "blockChain.notifyForkchoiceUpdate")
 	defer span.End()
 
@@ -69,7 +73,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headState state.Be
 
 	fcs := &enginev1.ForkchoiceState{
 		HeadBlockHash:      headPayload.BlockHash,
-		SafeBlockHash:      headPayload.BlockHash,
+		SafeBlockHash:      finalizedHash,
 		FinalizedBlockHash: finalizedHash,
 	}
 
@@ -112,8 +116,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headState state.Be
 			if err != nil {
 				return nil, err
 			}
-			fRoot := st.FinalizedCheckpoint().Root
-			_, err = s.notifyForkchoiceUpdate(ctx, st, b.Block(), r, bytesutil.ToBytes32(fRoot))
+			_, err = s.notifyForkchoiceUpdate(ctx, st, b.Block(), r, finalizedRoot)
 			if err != nil {
 				return nil, err
 			}
