@@ -506,6 +506,7 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState state.Beaco
 
 	if postState.Slot()+1 == s.nextEpochBoundarySlot {
 		// Update caches for the next epoch at epoch boundary slot - 1.
+		log.Info("UpdateCommitteeCache from handleEpochBoundary (postState.Slot()+1 == s.nextEpochBoundarySlot)")
 		if err := helpers.UpdateCommitteeCache(postState, coreTime.NextEpoch(postState)); err != nil {
 			return err
 		}
@@ -514,6 +515,7 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState state.Beaco
 		if err != nil {
 			return err
 		}
+		log.Info("UpdateProposerIndicesInCache from handleEpochBoundary (postState.Slot()+1 == s.nextEpochBoundarySlot)")
 		if err := helpers.UpdateProposerIndicesInCache(ctx, copied); err != nil {
 			return err
 		}
@@ -529,9 +531,12 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState state.Beaco
 
 		// Update caches at epoch boundary slot.
 		// The following updates have short cut to return nil cheaply if fulfilled during boundary slot - 1.
+		log.Info("UpdateCommitteeCache from handleEpochBoundary (postState.Slot() >= s.nextEpochBoundarySlot)")
 		if err := helpers.UpdateCommitteeCache(postState, coreTime.CurrentEpoch(postState)); err != nil {
 			return err
 		}
+
+		log.Info("UpdateProposerIndicesInCache from handleEpochBoundary (postState.Slot() >= s.nextEpochBoundarySlot)")
 		if err := helpers.UpdateProposerIndicesInCache(ctx, postState); err != nil {
 			return err
 		}

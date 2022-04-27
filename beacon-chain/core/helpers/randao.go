@@ -7,6 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	log "github.com/sirupsen/logrus"
 )
 
 // Seed returns the randao seed used for shuffling of a given epoch.
@@ -32,6 +33,8 @@ func Seed(state state.ReadOnlyBeaconState, epoch types.Epoch, domain [bls.Domain
 	seed = append(seed, randaoMix...)
 
 	seed32 := hash.Hash(seed)
+
+	log.Infof("seed computation params for slot=%d: domain=%#x, epoch=%d, randaoMix=%#x", state.Slot(), domain, epoch, randaoMix)
 
 	return seed32, nil
 }

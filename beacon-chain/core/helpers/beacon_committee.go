@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"sort"
 
 	"github.com/pkg/errors"
@@ -291,7 +292,9 @@ func UpdateCommitteeCache(state state.ReadOnlyBeaconState, epoch types.Epoch) er
 		if err != nil {
 			return err
 		}
+		log.Infof("computed seed=%#x for slot=%d", seed, state.Slot())
 		if committeeCache.HasEntry(string(seed[:])) {
+			log.Infof("UpdateCommitteeCache: seed=%#x already in cache at slot=%d", seed, state.Slot())
 			return nil
 		}
 
@@ -311,6 +314,7 @@ func UpdateCommitteeCache(state state.ReadOnlyBeaconState, epoch types.Epoch) er
 			return sortedIndices[i] < sortedIndices[j]
 		})
 
+		log.Infof("UpdateCommitteeCache: state.slot=%d, indices=%v, seed=%#x", state.Slot(), sortedIndices, seed)
 		if err := committeeCache.AddCommitteeShuffledList(&cache.Committees{
 			ShuffledIndices: shuffledIndices,
 			CommitteeCount:  uint64(params.BeaconConfig().SlotsPerEpoch.Mul(count)),
@@ -363,6 +367,7 @@ func UpdateProposerIndicesInCache(ctx context.Context, state state.ReadOnlyBeaco
 	if err != nil {
 		return err
 	}
+	log.Infof("UpdateProposerIndicesInCache: state.slot=%d, slot=%d, root=%#x, indices=%v", state.Slot(), s, r, indices)
 	return proposerIndicesCache.AddProposerIndices(&cache.ProposerIndices{
 		BlockRoot:       bytesutil.ToBytes32(r),
 		ProposerIndices: proposerIndices,
