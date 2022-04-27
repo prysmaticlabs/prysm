@@ -48,8 +48,9 @@ func init() {
 
 // testRunner abstracts E2E test configuration and running.
 type testRunner struct {
-	t      *testing.T
-	config *e2etypes.E2EConfig
+	t          *testing.T
+	config     *e2etypes.E2EConfig
+	comHandler *componentHandler
 }
 
 // newTestRunner creates E2E test runner.
@@ -62,221 +63,18 @@ func newTestRunner(t *testing.T, config *e2etypes.E2EConfig) *testRunner {
 
 // run executes configured E2E test.
 func (r *testRunner) run() {
-	t, config := r.t, r.config
-	t.Logf("Shard index: %d\n", e2e.TestParams.TestShardIndex)
-	t.Logf("Starting time: %s\n", time.Now().String())
-	t.Logf("Log Path: %s\n", e2e.TestParams.LogPath)
-
-	minGenesisActiveCount := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
-	multiClientActive := e2e.TestParams.LighthouseBeaconNodeCount > 0
-	var keyGen, lighthouseValidatorNodes e2etypes.ComponentRunner
-	var lighthouseNodes *components.LighthouseBeaconNodeSet
-
-	ctx, done := context.WithCancel(context.Background())
-	g, ctx := errgroup.WithContext(ctx)
-
-	tracingSink := components.NewTracingSink(config.TracingSinkEndpoint)
-	g.Go(func() error {
-		return tracingSink.Start(ctx)
-	})
-
-	if multiClientActive {
-		keyGen = components.NewKeystoreGenerator()
-
-		// Generate lighthouse keystores.
-		g.Go(func() error {
-			return keyGen.Start(ctx)
-		})
-	}
-
-	var web3RemoteSigner *components.Web3RemoteSigner
-	if config.UseWeb3RemoteSigner {
-		web3RemoteSigner = components.NewWeb3RemoteSigner()
-		g.Go(func() error {
-			if err := web3RemoteSigner.Start(ctx); err != nil {
-				return errors.Wrap(err, "failed to start web3 remote signer")
-			}
-			return nil
-		})
-	}
-
-	// Boot node.
-	bootNode := components.NewBootNode()
-	g.Go(func() error {
-		if err := bootNode.Start(ctx); err != nil {
-			return errors.Wrap(err, "failed to start bootnode")
-		}
-		return nil
-	})
-
-	// ETH1 miner.
-	eth1Miner := eth1.NewMiner()
-	g.Go(func() error {
-		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{bootNode}); err != nil {
-			return errors.Wrap(err, "sending and mining deposits require ETH1 nodes to run")
-		}
-		eth1Miner.SetBootstrapENR(bootNode.ENR())
-		if err := eth1Miner.Start(ctx); err != nil {
-			return errors.Wrap(err, "failed to start the ETH1 miner")
-		}
-		return nil
-	})
-
-	// ETH1 non-mining nodes.
-	eth1Nodes := eth1.NewNodeSet()
-	g.Go(func() error {
-		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Miner}); err != nil {
-			return errors.Wrap(err, "sending and mining deposits require ETH1 nodes to run")
-		}
-		eth1Nodes.SetMinerENR(eth1Miner.ENR())
-		if err := eth1Nodes.Start(ctx); err != nil {
-			return errors.Wrap(err, "failed to start ETH1 nodes")
-		}
-		return nil
-	})
-	g.Go(func() error {
-		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Nodes}); err != nil {
-			return errors.Wrap(err, "sending and mining deposits require ETH1 nodes to run")
-		}
-		if err := components.SendAndMineDeposits(eth1Miner.KeystorePath(), minGenesisActiveCount, 0, true /* partial */); err != nil {
-			return errors.Wrap(err, "failed to send and mine deposits")
-		}
-		return nil
-	})
-
-	// Beacon nodes.
-	beaconNodes := components.NewBeaconNodes(config)
-	g.Go(func() error {
-		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Nodes, bootNode}); err != nil {
-			return errors.Wrap(err, "beacon nodes require ETH1 and boot node to run")
-		}
-		beaconNodes.SetENR(bootNode.ENR())
-		if err := beaconNodes.Start(ctx); err != nil {
-			return errors.Wrap(err, "failed to start beacon nodes")
-		}
-		return nil
-	})
-
-	if multiClientActive {
-		lighthouseNodes = components.NewLighthouseBeaconNodes(config)
-		g.Go(func() error {
-			if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Nodes, bootNode, beaconNodes}); err != nil {
-				return errors.Wrap(err, "lighthouse beacon nodes require ETH1 and boot node to run")
-			}
-			lighthouseNodes.SetENR(bootNode.ENR())
-			if err := lighthouseNodes.Start(ctx); err != nil {
-				return errors.Wrap(err, "failed to start lighthouse beacon nodes")
-			}
-			return nil
-		})
-	}
-	// Validator nodes.
-	validatorNodes := components.NewValidatorNodeSet(config)
-	g.Go(func() error {
-		comps := []e2etypes.ComponentRunner{beaconNodes}
-		if config.UseWeb3RemoteSigner {
-			comps = append(comps, web3RemoteSigner)
-		}
-		if err := helpers.ComponentsStarted(ctx, comps); err != nil {
-			return errors.Wrap(err, "validator nodes require beacon nodes to run")
-		}
-		if err := validatorNodes.Start(ctx); err != nil {
-			return errors.Wrap(err, "failed to start validator nodes")
-		}
-		return nil
-	})
-
-	if multiClientActive {
-		// Lighthouse Validator nodes.
-		lighthouseValidatorNodes = components.NewLighthouseValidatorNodeSet(config)
-		g.Go(func() error {
-			if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{keyGen, lighthouseNodes}); err != nil {
-				return errors.Wrap(err, "validator nodes require beacon nodes to run")
-			}
-			if err := lighthouseValidatorNodes.Start(ctx); err != nil {
-				return errors.Wrap(err, "failed to start validator nodes")
-			}
-			return nil
-		})
-	}
+	r.comHandler = NewComponentHandler(r.config, r.t)
+	r.comHandler.setup()
 
 	// Run E2E evaluators and tests.
-	g.Go(func() error {
-		// When everything is done, cancel parent context (will stop all spawned nodes).
-		defer func() {
-			log.Info("All E2E evaluations are finished, cleaning up")
-			done()
-		}()
+	r.addEvent(r.defaultEndToEndRun)
 
-		// Wait for all required nodes to start.
-		requiredComponents := []e2etypes.ComponentRunner{
-			tracingSink, eth1Nodes, bootNode, beaconNodes, validatorNodes,
-		}
-		if multiClientActive {
-			requiredComponents = append(requiredComponents, []e2etypes.ComponentRunner{keyGen, lighthouseNodes, lighthouseValidatorNodes}...)
-		}
-		ctxAllNodesReady, cancel := context.WithTimeout(ctx, allNodesStartTimeout)
-		defer cancel()
-		if err := helpers.ComponentsStarted(ctxAllNodesReady, requiredComponents); err != nil {
-			return errors.Wrap(err, "components take too long to start")
-		}
-
-		// Since defer unwraps in LIFO order, parent context will be closed only after logs are written.
-		defer helpers.LogOutput(t)
-		if config.UsePprof {
-			defer func() {
-				log.Info("Writing output pprof files")
-				for i := 0; i < e2e.TestParams.BeaconNodeCount; i++ {
-					assert.NoError(t, helpers.WritePprofFiles(e2e.TestParams.LogPath, i))
-				}
-			}()
-		}
-
-		// Blocking, wait period varies depending on number of validators.
-		r.waitForChainStart()
-
-		// Failing early in case chain doesn't start.
-		if t.Failed() {
-			return errors.New("chain cannot start")
-		}
-
-		r.testDepositsAndTx(ctx, g, eth1Miner.KeystorePath(), []e2etypes.ComponentRunner{beaconNodes})
-
-		// Create GRPC connection to beacon nodes.
-		conns, closeConns, err := helpers.NewLocalConnections(ctx, e2e.TestParams.BeaconNodeCount)
-		require.NoError(t, err, "Cannot create local connections")
-		defer closeConns()
-
-		// Calculate genesis time.
-		nodeClient := eth.NewNodeClient(conns[0])
-		genesis, err := nodeClient.GetGenesis(context.Background(), &emptypb.Empty{})
-		require.NoError(t, err)
-		tickingStartTime := helpers.EpochTickerStartTime(genesis)
-
-		// Run assigned evaluators.
-		if err := r.runEvaluators(conns, tickingStartTime); err != nil {
-			return errors.Wrap(err, "one or more evaluators failed")
-		}
-
-		// If requested, run sync test.
-		if !config.TestSync {
-			return nil
-		}
-		if err := r.testBeaconChainSync(ctx, g, conns, tickingStartTime, bootNode.ENR(), eth1Miner.ENR()); err != nil {
-			return errors.Wrap(err, "beacon chain sync test failed")
-		}
-		if err := r.testDoppelGangerProtection(ctx); err != nil {
-			return errors.Wrap(err, "doppel ganger protection check failed")
-		}
-		return nil
-	})
-
-	if err := g.Wait(); err != nil && !errors.Is(err, context.Canceled) {
+	if err := r.comHandler.group.Wait(); err != nil && !errors.Is(err, context.Canceled) {
 		// At the end of the main evaluator goroutine all nodes are killed, no need to fail the test.
 		if strings.Contains(err.Error(), "signal: killed") {
 			return
 		}
-		t.Fatalf("E2E test ended in error: %v", err)
+		r.t.Fatalf("E2E test ended in error: %v", err)
 	}
 }
 
@@ -451,4 +249,85 @@ func (r *testRunner) testDoppelGangerProtection(ctx context.Context) error {
 		return fmt.Errorf("wanted an error of %s but received %v", errGeneralCode, err)
 	}
 	return nil
+}
+
+func (r *testRunner) defaultEndToEndRun() error {
+	t, config := r.t, r.config
+	// When everything is done, cancel parent context (will stop all spawned nodes).
+	defer func() {
+		log.Info("All E2E evaluations are finished, cleaning up")
+		r.comHandler.done()
+	}()
+
+	// Wait for all required nodes to start.
+	ctxAllNodesReady, cancel := context.WithTimeout(r.comHandler.ctx, allNodesStartTimeout)
+	defer cancel()
+	if err := helpers.ComponentsStarted(ctxAllNodesReady, r.comHandler.required()); err != nil {
+		return errors.Wrap(err, "components take too long to start")
+	}
+
+	// Since defer unwraps in LIFO order, parent context will be closed only after logs are written.
+	defer helpers.LogOutput(t)
+	if config.UsePprof {
+		defer func() {
+			log.Info("Writing output pprof files")
+			for i := 0; i < e2e.TestParams.BeaconNodeCount; i++ {
+				assert.NoError(t, helpers.WritePprofFiles(e2e.TestParams.LogPath, i))
+			}
+		}()
+	}
+
+	// Blocking, wait period varies depending on number of validators.
+	r.waitForChainStart()
+
+	// Failing early in case chain doesn't start.
+	if t.Failed() {
+		return errors.New("chain cannot start")
+	}
+	eth1Miner, ok := r.comHandler.eth1Miner.(*eth1.Miner)
+	if !ok {
+		return errors.New("incorrect component type")
+	}
+	beaconNodes, ok := r.comHandler.beaconNodes.(*components.BeaconNodeSet)
+	if !ok {
+		return errors.New("incorrect component type")
+	}
+	bootNode, ok := r.comHandler.bootnode.(*components.BootNode)
+	if !ok {
+		return errors.New("incorrect component type")
+	}
+
+	r.testDepositsAndTx(r.comHandler.ctx, r.comHandler.group, eth1Miner.KeystorePath(), []e2etypes.ComponentRunner{beaconNodes})
+
+	// Create GRPC connection to beacon nodes.
+	conns, closeConns, err := helpers.NewLocalConnections(r.comHandler.ctx, e2e.TestParams.BeaconNodeCount)
+	require.NoError(t, err, "Cannot create local connections")
+	defer closeConns()
+
+	// Calculate genesis time.
+	nodeClient := eth.NewNodeClient(conns[0])
+	genesis, err := nodeClient.GetGenesis(context.Background(), &emptypb.Empty{})
+	require.NoError(t, err)
+	tickingStartTime := helpers.EpochTickerStartTime(genesis)
+
+	// Run assigned evaluators.
+	if err := r.runEvaluators(conns, tickingStartTime); err != nil {
+		return errors.Wrap(err, "one or more evaluators failed")
+	}
+
+	// If requested, run sync test.
+	if !config.TestSync {
+		return nil
+	}
+	if err := r.testBeaconChainSync(r.comHandler.ctx, r.comHandler.group, conns, tickingStartTime, bootNode.ENR(), eth1Miner.ENR()); err != nil {
+		return errors.Wrap(err, "beacon chain sync test failed")
+	}
+	if err := r.testDoppelGangerProtection(r.comHandler.ctx); err != nil {
+		return errors.Wrap(err, "doppel ganger protection check failed")
+	}
+	return nil
+}
+
+func (r *testRunner) addEvent(ev func() error) {
+	r.comHandler.group.Go(ev)
 }

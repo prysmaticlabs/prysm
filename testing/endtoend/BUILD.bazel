@@ -1,4 +1,4 @@
-load("@prysm//tools/go:def.bzl", "go_test")
+load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 
 # gazelle:exclude geth_deps.go
 # gazelle:exclude mainnet_e2e_test.go
@@ -7,6 +7,7 @@ go_test(
     size = "large",
     testonly = True,
     srcs = [
+        "componentHandler.go",
         "endtoend_test.go",
         "minimal_e2e_test.go",
         "minimal_slashing_e2e_test.go",
@@ -64,6 +65,7 @@ go_test(
     size = "large",
     testonly = True,
     srcs = [
+        "componentHandler.go",
         "endtoend_test.go",
         "mainnet_e2e_test.go",
     ],
