@@ -317,17 +317,9 @@ func (s *Service) ancestorByDB(ctx context.Context, r [32]byte, slot types.Slot)
 		return nil, ctx.Err()
 	}
 
-	signed, err := s.cfg.BeaconDB.Block(ctx, r)
+	signed, err := s.getBlock(ctx, r)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get ancestor block")
-	}
-
-	if s.hasInitSyncBlock(r) {
-		signed = s.getInitSyncBlock(r)
-	}
-
-	if signed == nil || signed.IsNil() || signed.Block().IsNil() {
-		return nil, errors.New("nil block")
+		return nil, err
 	}
 	b := signed.Block()
 	if b.Slot() == slot || b.Slot() < slot {

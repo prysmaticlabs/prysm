@@ -186,11 +186,10 @@ func (s *Service) notifyEngineIfChangedHead(ctx context.Context, newHeadRoot [32
 		log.WithError(err).Error("Could not migrate init sync cached blocks to db")
 		return
 	}
-	s.clearInitSyncBlocks()
 
-	newHeadBlock, err := s.cfg.BeaconDB.Block(ctx, newHeadRoot)
+	newHeadBlock, err := s.getBlock(ctx, newHeadRoot)
 	if err != nil {
-		log.WithError(err).Error("Could not get block from db")
+		log.WithError(err).Error("Could not get new head block")
 		return
 	}
 	headState, err := s.cfg.StateGen.StateByRoot(ctx, newHeadRoot)

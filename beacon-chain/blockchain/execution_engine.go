@@ -48,15 +48,9 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headState state.Be
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get execution payload")
 	}
-	finalizedBlock, err := s.cfg.BeaconDB.Block(ctx, s.ensureRootNotZeros(finalizedRoot))
+	finalizedBlock, err := s.getBlock(ctx, s.ensureRootNotZeros(finalizedRoot))
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get finalized block")
-	}
-	if finalizedBlock == nil || finalizedBlock.IsNil() {
-		finalizedBlock = s.getInitSyncBlock(s.ensureRootNotZeros(finalizedRoot))
-		if finalizedBlock == nil || finalizedBlock.IsNil() {
-			return nil, errors.Errorf("finalized block with root %#x does not exist in the db or our cache", s.ensureRootNotZeros(finalizedRoot))
-		}
+		return nil, err
 	}
 	var finalizedHash []byte
 	if blocks.IsPreBellatrixVersion(finalizedBlock.Block().Version()) {
