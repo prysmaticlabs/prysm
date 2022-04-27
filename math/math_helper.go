@@ -21,8 +21,11 @@ func init() {
 
 // ErrOverflow occurs when an operation exceeds max or minimum values.
 var (
-	ErrOverflow  = errors.New("integer overflow")
-	ErrDivByZero = errors.New("integer divide by zero")
+	ErrOverflow     = errors.New("integer overflow")
+	ErrDivByZero    = errors.New("integer divide by zero")
+	ErrMulOverflow  = errors.New("multiplication overflows")
+	ErrAddOverflow  = errors.New("addition overflows")
+	ErrSubUnderflow = errors.New("subtraction underflow")
 )
 
 // Common square root values.
