@@ -13,7 +13,7 @@ import (
 
 // MigrateToCold advances the finalized info in between the cold and hot state sections.
 // It moves the recent finalized states from the hot section to the cold section and
-// only preserve the ones that's on archived point.
+// only preserves the ones that are on archived point.
 func (s *State) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "stateGen.MigrateToCold")
 	defer span.End()
@@ -31,9 +31,10 @@ func (s *State) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 		return nil
 	}
 
-	// Start at previous finalized slot, stop at current finalized slot.
+	// Start at previous finalized slot, stop at current finalized slot (it will be handled in the next migration).
 	// If the slot is on archived point, save the state of that slot to the DB.
-	for slot := oldFSlot; slot < fSlot; slot++ {
+slotLoop:
+	for slot := oldFSlot; slot <= fSlot; slot++ {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
@@ -69,7 +70,7 @@ func (s *State) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 					return err
 				}
 				aRoot = missingRoot
-				// There's no need to generate the state if the state already exists on the DB.
+				// There's no need to generate the state if the state already exists in the DB.
 				// We can skip saving the state.
 				if !s.beaconDB.HasState(ctx, aRoot) {
 					aState, err = s.StateByRoot(ctx, missingRoot)
@@ -80,7 +81,8 @@ func (s *State) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 			}
 
 			if s.beaconDB.HasState(ctx, aRoot) {
-				// Remove hot state DB root to prevent it gets deleted later when we turn hot state save DB mode off.
+				// If you are migrating a state and its already part of the hot state cache saved to the db,
+				// you can just remove it from the hot state cache as it becomes redundant.
 				s.saveHotStateDB.lock.Lock()
 				roots := s.saveHotStateDB.savedStateRoots
 				for i := 0; i < len(roots); i++ {
@@ -92,7 +94,7 @@ func (s *State) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 					}
 				}
 				s.saveHotStateDB.lock.Unlock()
-				continue
+				continue slotLoop
 			}
 
 			if err := s.beaconDB.SaveState(ctx, aState, aRoot); err != nil {

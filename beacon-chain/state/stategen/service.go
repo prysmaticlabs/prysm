@@ -100,7 +100,7 @@ func New(beaconDB db.NoHeadAccessDatabase, opts ...StateGenOption) *State {
 	return s
 }
 
-// Resume resumes a new state management object from previously saved finalized check point in DB.
+// Resume resumes a new state management object from previously saved finalized checkpoint in DB.
 func (s *State) Resume(ctx context.Context, fState state.BeaconState) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.Resume")
 	defer span.End()

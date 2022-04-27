@@ -42,8 +42,8 @@ type CanonicalHistory struct {
 	cache CachedGetter
 }
 
-func (ch *CanonicalHistory) ReplayerForSlot(target types.Slot) Replayer {
-	return &stateReplayer{chainer: ch, method: forSlot, target: target}
+func (c *CanonicalHistory) ReplayerForSlot(target types.Slot) Replayer {
+	return &stateReplayer{chainer: c, method: forSlot, target: target}
 }
 
 func (c *CanonicalHistory) BlockForSlot(ctx context.Context, target types.Slot) ([32]byte, block.SignedBeaconBlock, error) {

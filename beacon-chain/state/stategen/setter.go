@@ -21,15 +21,17 @@ func (s *State) SaveState(ctx context.Context, root [32]byte, st state.BeaconSta
 	return s.saveStateByRoot(ctx, root, st)
 }
 
-// ForceCheckpoint initiates a cold state save of the given state. This method does not update the
+// ForceCheckpoint initiates a cold state save of the given block root's state. This method does not update the
 // "last archived state" but simply saves the specified state from the root argument into the DB.
+//
+// The name "Checkpoint" isn't referring to checkpoint in the sense of our consensus type, but checkpoint for our historical states.
 func (s *State) ForceCheckpoint(ctx context.Context, root []byte) error {
 	ctx, span := trace.StartSpan(ctx, "stateGen.ForceCheckpoint")
 	defer span.End()
 
 	root32 := bytesutil.ToBytes32(root)
-	// Before the first finalized check point, the finalized root is zero hash.
-	// Return early if there hasn't been a finalized check point.
+	// Before the first finalized checkpoint, the finalized root is zero hash.
+	// Return early if there hasn't been a finalized checkpoint.
 	if root32 == params.BeaconConfig().ZeroHash {
 		return nil
 	}
@@ -72,14 +74,14 @@ func (s *State) saveStateByRoot(ctx context.Context, blockRoot [32]byte, st stat
 		return nil
 	}
 
-	// Only on an epoch boundary slot, saves epoch boundary state in epoch boundary root state cache.
+	// Only on an epoch boundary slot, save epoch boundary state in epoch boundary root state cache.
 	if slots.IsEpochStart(st.Slot()) {
 		if err := s.epochBoundaryStateCache.put(blockRoot, st); err != nil {
 			return err
 		}
 	}
 
-	// On an intermediate slots, save state summary.
+	// On an intermediate slot, save state summary.
 	if err := s.beaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{
 		Slot: st.Slot(),
 		Root: blockRoot[:],
