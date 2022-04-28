@@ -14,7 +14,7 @@ func TestMaxEpoch(t *testing.T) {
 	require.Equal(t, types.Epoch(0), types.MaxEpoch(0, 0))
 	require.Equal(t, types.Epoch(1), types.MaxEpoch(1, 0))
 	require.Equal(t, types.Epoch(1), types.MaxEpoch(0, 1))
-	require.Equal(t, types.Epoch(100), types.MaxEpoch(100, 1000))
+	require.Equal(t, types.Epoch(1000), types.MaxEpoch(100, 1000))
 }
 
 func TestEpoch_Mul(t *testing.T) {
