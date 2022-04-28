@@ -41,7 +41,9 @@
   },
   "composites": {
     "exclude_files": {
-      "external/.*": "Third party code"
+      "external/.*": "Third party code",
+      "validator/accounts/.*": "Fuzz",
+      "validator/accounts/wallet_recover_fuzz_test.go": "Fuzz code"
     }
   },
   "cgocall": {
@@ -75,6 +77,7 @@
       "shared/mock/.*\\.go": "Mocks are OK",
       ".*/.*mock\\.go": "Mocks are OK",
       ".*/testmain\\.go": "Test runner generated code",
+      "validator/accounts/wallet_recover_fuzz_test.go": "Fuzz code",
       "proto/.*": "Generated protobuf related code",
       "tools/analyzers/properpermissions/testdata/.*": "Analyzer breaks rules"
     }
@@ -100,6 +103,7 @@
     },
     "exclude_files": {
       ".*/.*_test\\.go": "Tests are OK to use weak crypto",
+      "external/.*": "Third party code",
       "crypto/rand/rand\\.go": "Abstracts CSPRNGs for common use",
       "shared/aggregation/testing/bitlistutils.go": "Test-only package"
     }
