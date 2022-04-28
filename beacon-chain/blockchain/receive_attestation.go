@@ -165,6 +165,10 @@ func (s *Service) notifyEngineIfChangedHead(ctx context.Context, newHeadRoot [32
 		"newHeadRoot": fmt.Sprintf("%#x", newHeadRoot),
 	}).Debug("Head changed due to attestations")
 
+	if !(s.cfg.BeaconDB.HasBlock(ctx, newHeadRoot) || s.hasInitSyncBlock(newHeadRoot)) {
+		return // We don't have the block, don't notify the engine.
+	}
+
 	finalized := s.store.FinalizedCheckpt()
 	if finalized == nil {
 		log.WithError(errNilFinalizedInStore).Error("could not get finalized checkpoint")
