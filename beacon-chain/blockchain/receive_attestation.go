@@ -170,9 +170,21 @@ func (s *Service) notifyEngineIfChangedHead(ctx context.Context, newHeadRoot [32
 		log.WithError(err).Error("Could not get block from db")
 		return
 	}
+	if newHeadBlock == nil || newHeadBlock.IsNil() {
+		log.WithFields(logrus.Fields{
+			"root": fmt.Sprintf("%#x", newHeadRoot),
+		}).Error("Block with root not found in database when notifying engine of head change")
+		return
+	}
 	headState, err := s.cfg.StateGen.StateByRoot(ctx, newHeadRoot)
 	if err != nil {
 		log.WithError(err).Error("Could not get state from db")
+		return
+	}
+	if headState == nil || headState.IsNil() {
+		log.WithFields(logrus.Fields{
+			"root": fmt.Sprintf("%#x", newHeadRoot),
+		}).Error("State for block with root not found in database when notifying engine of head change")
 		return
 	}
 	_, err = s.notifyForkchoiceUpdate(s.ctx,
