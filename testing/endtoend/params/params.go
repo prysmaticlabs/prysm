@@ -3,6 +3,7 @@
 package params
 
 import (
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"os"
@@ -127,6 +128,17 @@ func Init(beaconNodeCount int) error {
 	if err != nil {
 		return err
 	}
+	testTestTarget, ok := os.LookupEnv("TEST_TARGET")
+	if !ok {
+		testShardIndexStr = "0"
+	}
+	hasher := sha256.New()
+	_, err = hasher.Write([]byte(testTestTarget))
+	if err != nil {
+		return err
+	}
+	hash := hasher.Sum(nil)
+	testShardIndex += int(hash[0]) % 8
 
 	var existingRegistrations []int
 	testPorts := &ports{}
@@ -168,6 +180,17 @@ func InitMultiClient(beaconNodeCount int, lighthouseNodeCount int) error {
 	if err != nil {
 		return err
 	}
+	testTestTarget, ok := os.LookupEnv("TEST_TARGET")
+	if !ok {
+		testShardIndexStr = "0"
+	}
+	hasher := sha256.New()
+	_, err = hasher.Write([]byte(testTestTarget))
+	if err != nil {
+		return err
+	}
+	hash := hasher.Sum(nil)
+	testShardIndex += int(hash[0]) % 8
 
 	var existingRegistrations []int
 	testPorts := &ports{}
