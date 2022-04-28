@@ -30,6 +30,7 @@ go_test(
         "e2e",
         "manual",
         "minimal",
+        "exclusive",
         "requires-network",
     ],
     deps = [
@@ -83,6 +84,7 @@ go_test(
     shard_count = 2,
     tags = [
         "e2e",
+        "exclusive",
         "mainnet",
         "manual",
         "requires-network",
@@ -143,6 +145,7 @@ go_test(
         "manual",
         "multiclient",
         "requires-network",
+        "exclusive",
     ],
     deps = [
         "//beacon-chain/blockchain/testing:go_default_library",

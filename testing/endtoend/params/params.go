@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"strings"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ethereum/go-ethereum/common"
@@ -78,8 +77,7 @@ var ExpectedExecEngineTxsThreshold = 0.5
 
 // Base port values.
 const (
-	shardLimit = 5
-	portSpan   = 50
+	portSpan = 50
 
 	BootNodePort        = 2150
 	BootNodeMetricsPort = BootNodePort + portSpan
@@ -129,25 +127,6 @@ func Init(beaconNodeCount int) error {
 	if err != nil {
 		return err
 	}
-	testTestTarget, ok := os.LookupEnv("TEST_TARGET")
-	if !ok {
-		testShardIndexStr = "0"
-	}
-	// Assume that we will only ever have 5 shards running at any one time
-	// per test target.
-	if testShardIndex >= shardLimit {
-		return fmt.Errorf("running more shards than the specified limit. %d > %d", testShardIndex, shardLimit)
-	}
-	switch {
-	case strings.Contains(testTestTarget, "go_default_test"):
-		testShardIndex += 0
-	case strings.Contains(testTestTarget, "go_mainnet_test"):
-		testShardIndex += 5
-	case strings.Contains(testTestTarget, "go_multiclient_test"):
-		testShardIndex += 10
-	default:
-		return fmt.Errorf("test target %s is not recognized", testTestTarget)
-	}
 
 	var existingRegistrations []int
 	testPorts := &ports{}
@@ -188,25 +167,6 @@ func InitMultiClient(beaconNodeCount int, lighthouseNodeCount int) error {
 	testShardIndex, err := strconv.Atoi(testShardIndexStr)
 	if err != nil {
 		return err
-	}
-	testTestTarget, ok := os.LookupEnv("TEST_TARGET")
-	if !ok {
-		testShardIndexStr = "0"
-	}
-	// Assume that we will only ever have 5 shards running at any one time
-	// per test target.
-	if testShardIndex >= shardLimit {
-		return fmt.Errorf("running more shards than the specified limit. %d > %d", testShardIndex, shardLimit)
-	}
-	switch {
-	case strings.Contains(testTestTarget, "go_default_test"):
-		testShardIndex += 0
-	case strings.Contains(testTestTarget, "go_mainnet_test"):
-		testShardIndex += 5
-	case strings.Contains(testTestTarget, "go_multiclient_test"):
-		testShardIndex += 10
-	default:
-		return fmt.Errorf("test target %s is not recognized", testTestTarget)
 	}
 
 	var existingRegistrations []int
