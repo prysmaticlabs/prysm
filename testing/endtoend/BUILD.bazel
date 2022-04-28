@@ -140,11 +140,11 @@ go_test(
     eth_network = "mainnet",
     shard_count = 2,
     tags = [
+        "exclusive",
         "mainnet",
         "manual",
         "multiclient",
         "requires-network",
-        "exclusive",
     ],
     deps = [
         "//beacon-chain/blockchain/testing:go_default_library",
