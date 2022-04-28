@@ -1245,6 +1245,13 @@ def prysm_deps():
     )
 
     go_repository(
+        name = "com_github_gogo_protobuf",
+        importpath = "github.com/gogo/protobuf",
+        commit = "b03c65ea87cdc3521ede29f62fe3ce239267c1bc",
+        version = "v1.3.2",
+    )
+
+    go_repository(
         name = "com_github_golang_freetype",
         importpath = "github.com/golang/freetype",
         sum = "h1:DACJavvAHhabrF08vX0COfcOBJRhZ8lUbR+ZWIs0Y5g=",
@@ -2462,7 +2469,6 @@ def prysm_deps():
     )
     go_repository(
         name = "com_github_lucas_clemente_quic_go",
-        build_directives = ["gazelle:exclude internal/qtls/go118.go"],  # Remove this after go1.18 or later is supported in WORKSPACE.
         importpath = "github.com/lucas-clemente/quic-go",
         sum = "h1:ALBQXr9UJ8A1LyzvceX4jd9QFsHvlI0RR6BkV16o00A=",
         version = "v0.26.0",
