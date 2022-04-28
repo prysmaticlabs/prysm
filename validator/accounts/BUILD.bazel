@@ -10,6 +10,8 @@ go_library(
         "accounts_helper.go",
         "accounts_import.go",
         "accounts_list.go",
+        "cli_manager.go",
+        "cli_options.go",
         "doc.go",
         "log.go",
         "wallet_create.go",
