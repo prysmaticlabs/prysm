@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ethereum/go-ethereum/common"
@@ -137,12 +138,12 @@ func Init(beaconNodeCount int) error {
 	if testShardIndex >= shardLimit {
 		return fmt.Errorf("running more shards than the specified limit. %d > %d", testShardIndex, shardLimit)
 	}
-	switch testTestTarget {
-	case "go_default_test":
+	switch {
+	case strings.Contains(testTestTarget, "go_default_test"):
 		testShardIndex += 0
-	case "go_mainnet_test":
+	case strings.Contains(testTestTarget, "go_mainnet_test"):
 		testShardIndex += 5
-	case "go_multiclient_test":
+	case strings.Contains(testTestTarget, "go_multiclient_test"):
 		testShardIndex += 10
 	default:
 		return fmt.Errorf("test target %s is not recognized", testTestTarget)
@@ -197,12 +198,12 @@ func InitMultiClient(beaconNodeCount int, lighthouseNodeCount int) error {
 	if testShardIndex >= shardLimit {
 		return fmt.Errorf("running more shards than the specified limit. %d > %d", testShardIndex, shardLimit)
 	}
-	switch testTestTarget {
-	case "go_default_test":
+	switch {
+	case strings.Contains(testTestTarget, "go_default_test"):
 		testShardIndex += 0
-	case "go_mainnet_test":
+	case strings.Contains(testTestTarget, "go_mainnet_test"):
 		testShardIndex += 5
-	case "go_multiclient_test":
+	case strings.Contains(testTestTarget, "go_multiclient_test"):
 		testShardIndex += 10
 	default:
 		return fmt.Errorf("test target %s is not recognized", testTestTarget)
