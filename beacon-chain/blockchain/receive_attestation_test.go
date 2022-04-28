@@ -140,6 +140,9 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 	finalizedErr := "could not get finalized checkpoint"
 	require.LogsDoNotContain(t, hook, finalizedErr)
 	require.LogsDoNotContain(t, hook, hookErr)
+	gb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+	require.NoError(t, err)
+	service.saveInitSyncBlock([32]byte{'a'}, gb)
 	service.notifyEngineIfChangedHead(ctx, [32]byte{'a'})
 	require.LogsContain(t, hook, finalizedErr)
 
