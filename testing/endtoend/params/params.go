@@ -3,7 +3,6 @@
 package params
 
 import (
-	"crypto/sha256"
 	"errors"
 	"fmt"
 	"os"
@@ -78,7 +77,8 @@ var ExpectedExecEngineTxsThreshold = 0.5
 
 // Base port values.
 const (
-	portSpan = 50
+	shardLimit = 5
+	portSpan   = 50
 
 	BootNodePort        = 2150
 	BootNodeMetricsPort = BootNodePort + portSpan
@@ -132,13 +132,19 @@ func Init(beaconNodeCount int) error {
 	if !ok {
 		testShardIndexStr = "0"
 	}
-	hasher := sha256.New()
-	_, err = hasher.Write([]byte(testTestTarget))
-	if err != nil {
-		return err
+	// Assume that we will only ever have 5 shards running at any one time
+	// per test target.
+	if testShardIndex >= shardLimit {
+		return fmt.Errorf("running more shards than the specified limit. %d > %d", testShardIndex, shardLimit)
 	}
-	hash := hasher.Sum(nil)
-	testShardIndex += int(hash[0]) % 8
+	switch testTestTarget {
+	case "go_default_test":
+		testShardIndex += 0
+	case "go_mainnet_test":
+		testShardIndex += 5
+	case "go_multiclient_test":
+		testShardIndex += 10
+	}
 
 	var existingRegistrations []int
 	testPorts := &ports{}
@@ -184,13 +190,19 @@ func InitMultiClient(beaconNodeCount int, lighthouseNodeCount int) error {
 	if !ok {
 		testShardIndexStr = "0"
 	}
-	hasher := sha256.New()
-	_, err = hasher.Write([]byte(testTestTarget))
-	if err != nil {
-		return err
+	// Assume that we will only ever have 5 shards running at any one time
+	// per test target.
+	if testShardIndex >= shardLimit {
+		return fmt.Errorf("running more shards than the specified limit. %d > %d", testShardIndex, shardLimit)
 	}
-	hash := hasher.Sum(nil)
-	testShardIndex += int(hash[0]) % 8
+	switch testTestTarget {
+	case "go_default_test":
+		testShardIndex += 0
+	case "go_mainnet_test":
+		testShardIndex += 5
+	case "go_multiclient_test":
+		testShardIndex += 10
+	}
 
 	var existingRegistrations []int
 	testPorts := &ports{}
