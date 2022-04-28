@@ -3187,7 +3187,7 @@ def prysm_deps():
     )
     go_repository(
         name = "com_github_prysmaticlabs_eth2_types",
-        importpath = "github.com/prysmaticlabs/eth2-types",
+        importpath = "github.com/prysmaticlabs/prysm/consensus-types/primitives",
         sum = "h1:1dN7YAqMN3oAJ0LceWcyv/U4jHLh+5urnSnr4br6zg4=",
         version = "v0.0.0-20210303084904-c9735a06829d",
     )

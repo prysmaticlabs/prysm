@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	types "github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 )
 
 func TestSlot_Casting(t *testing.T) {

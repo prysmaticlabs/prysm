@@ -12,7 +12,7 @@ import (
 	sync "sync"
 
 	empty "github.com/golang/protobuf/ptypes/empty"
-	github_com_prysmaticlabs_eth2_types "github.com/prysmaticlabs/eth2-types"
+	github_com_prysmaticlabs_eth2_types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	_ "github.com/prysmaticlabs/prysm/proto/eth/ext"
 	v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	_ "google.golang.org/genproto/googleapis/api/annotations"

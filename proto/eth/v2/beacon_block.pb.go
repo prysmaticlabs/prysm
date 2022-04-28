@@ -10,7 +10,7 @@ import (
 	reflect "reflect"
 	sync "sync"
 
-	github_com_prysmaticlabs_eth2_types "github.com/prysmaticlabs/eth2-types"
+	github_com_prysmaticlabs_eth2_types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	v11 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	_ "github.com/prysmaticlabs/prysm/proto/eth/ext"
 	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"

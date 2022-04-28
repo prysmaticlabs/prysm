@@ -4,7 +4,7 @@ package eth
 
 import (
 	ssz "github.com/ferranbt/fastssz"
-	github_com_prysmaticlabs_eth2_types "github.com/prysmaticlabs/eth2-types"
+	github_com_prysmaticlabs_eth2_types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	v11 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 )

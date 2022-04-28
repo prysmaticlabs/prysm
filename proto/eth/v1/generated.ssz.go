@@ -4,7 +4,7 @@ package v1
 
 import (
 	ssz "github.com/ferranbt/fastssz"
-	github_com_prysmaticlabs_eth2_types "github.com/prysmaticlabs/eth2-types"
+	github_com_prysmaticlabs_eth2_types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 )
 
 // MarshalSSZ ssz marshals the Attestation object

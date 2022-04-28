@@ -77,10 +77,10 @@ message HighestAttestation {
   uint64 validator_index = 1;
   uint64 highest_source_epoch = 2
       [ (ethereum.eth.ext.cast_type) =
-            "github.com/prysmaticlabs/eth2-types.Epoch" ];
+            "github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch" ];
   uint64 highest_target_epoch = 3
       [ (ethereum.eth.ext.cast_type) =
-            "github.com/prysmaticlabs/eth2-types.Epoch" ];
+            "github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch" ];
 }
 
 // ProposalHistory defines the structure for recording a validator's historical
@@ -94,7 +94,7 @@ message ProposalHistory {
     deprecated = true
   ];
   uint64 latest_epoch_written = 2 [
-    (ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Epoch",
+    (ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch",
     deprecated = true
   ];
 }
@@ -110,7 +110,7 @@ message Slashable { bool slashable = 1 [ deprecated = true ]; }
 message AttestationHistory {
   map<uint64, uint64> target_to_source = 1 [ deprecated = true ];
   uint64 latest_epoch_written = 2 [
-    (ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Epoch",
+    (ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch",
     deprecated = true
   ];
 }

@@ -17,7 +17,7 @@ import (
 	emptypb "github.com/golang/protobuf/ptypes/empty"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/utilities"
-	github_com_prysmaticlabs_eth2_types "github.com/prysmaticlabs/eth2-types"
+	github_com_prysmaticlabs_eth2_types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"

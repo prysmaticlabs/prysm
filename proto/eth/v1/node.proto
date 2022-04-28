@@ -136,10 +136,10 @@ message SyncingResponse {
 
 message SyncInfo {
   // A uint64 states the latest head slot of the current node.
-  uint64 head_slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
+  uint64 head_slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"];
 
   // A uint64 indicating how many slots are left for the beacon node sync to complete.
-  uint64 sync_distance = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
+  uint64 sync_distance = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"];
 
   // A bool indicating whether the node is currently syncing or not.
   bool is_syncing = 3;
