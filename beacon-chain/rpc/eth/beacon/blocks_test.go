@@ -674,7 +674,7 @@ func TestSubmitBlindedBlock(t *testing.T) {
 		blk.Block.Slot = 5
 		blk.Block.ParentRoot = bsRoot[:]
 		blk.Block.Body.ExecutionPayload.Transactions = transactions
-		blindedBlk := util.NewBlindedBeaconBlockBellatrix()
+		blindedBlk := util.NewBlindedBeaconBlockBellatrixV2()
 		blindedBlk.Message.Slot = 5
 		blindedBlk.Message.ParentRoot = bsRoot[:]
 		blindedBlk.Message.Body.ExecutionPayloadHeader.TransactionsRoot = transactionsRoot[:]
