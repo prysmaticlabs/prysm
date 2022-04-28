@@ -3186,12 +3186,6 @@ def prysm_deps():
         version = "v0.10.0",
     )
     go_repository(
-        name = "com_github_prysmaticlabs_eth2_types",
-        importpath = "github.com/prysmaticlabs/prysm/consensus-types/primitives",
-        sum = "h1:1dN7YAqMN3oAJ0LceWcyv/U4jHLh+5urnSnr4br6zg4=",
-        version = "v0.0.0-20210303084904-c9735a06829d",
-    )
-    go_repository(
         name = "com_github_prysmaticlabs_go_bitfield",
         importpath = "github.com/prysmaticlabs/go-bitfield",
         sum = "h1:0tVE4tdWQK9ZpYygoV7+vS6QkDvQVySboMVEIxBJmXw=",

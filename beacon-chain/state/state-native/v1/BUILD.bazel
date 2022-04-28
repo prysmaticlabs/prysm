@@ -124,7 +124,7 @@ ssz_gen_marshal(
         "//beacon-chain/state/state-native/custom-types:go_default_library",
         "//config/fieldparams:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
-        "@com_github_prysmaticlabs_eth2_types//:go_default_library",
+        "//consensus-types/primitives:go_default_library",
     ],
     objs = [
         "BeaconState[no-htr]",
