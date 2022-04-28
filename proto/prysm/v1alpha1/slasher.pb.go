@@ -11,7 +11,7 @@ import (
 	reflect "reflect"
 	sync "sync"
 
-	github_com_prysmaticlabs_eth2_types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	github_com_prysmaticlabs_eth2_types "github.com/prysmaticlabs/eth2-types"
 	github_com_prysmaticlabs_go_bitfield "github.com/prysmaticlabs/go-bitfield"
 	_ "github.com/prysmaticlabs/prysm/proto/eth/ext"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
