@@ -926,6 +926,7 @@ func TestValidateSyncContributionAndProof(t *testing.T) {
 		WithStateNotifier(chainService.StateNotifier()),
 		WithOperationNotifier(chainService.OperationNotifier()),
 	)
+	go s.verifierRoutine()
 	s.cfg.stateGen = stategen.New(db)
 	msg.Message.Contribution.BlockRoot = headRoot[:]
 	s.cfg.beaconDB = db

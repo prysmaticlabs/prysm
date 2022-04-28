@@ -24,6 +24,8 @@ import (
 	"go.opencensus.io/trace"
 )
 
+var ErrUndefinedExecutionEngineError = errors.New("received an undefined ee error")
+
 // notifyForkchoiceUpdate signals execution engine the fork choice updates. Execution engine should:
 // 1. Re-organizes the execution payload chain and corresponding state to make head_block_hash the head.
 // 2. Applies finality to the execution state: it irreversibly persists the chain of all execution payloads and corresponding state, up to and including finalized_block_hash.
@@ -91,7 +93,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headState state.Be
 			}).Info("Called fork choice updated with optimistic block")
 			return payloadID, nil
 		default:
-			return nil, errors.Wrap(err, "could not notify forkchoice update from execution engine")
+			return nil, errors.WithMessage(ErrUndefinedExecutionEngineError, err.Error())
 		}
 	}
 	forkchoiceUpdatedValidNodeCount.Inc()
@@ -108,8 +110,8 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headState state.Be
 
 // notifyForkchoiceUpdate signals execution engine on a new payload.
 // It returns true if the EL has returned VALID for the block
-func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion, postStateVersion int,
-	preStateHeader, postStateHeader *ethpb.ExecutionPayloadHeader, blk block.SignedBeaconBlock) (bool, error) {
+func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
+	postStateHeader *ethpb.ExecutionPayloadHeader, blk block.SignedBeaconBlock) (bool, error) {
 	ctx, span := trace.StartSpan(ctx, "blockChain.notifyNewPayload")
 	defer span.End()
 
@@ -134,48 +136,34 @@ func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion, postSta
 		return false, errors.Wrap(err, "could not get execution payload")
 	}
 	lastValidHash, err := s.cfg.ExecutionEngineCaller.NewPayload(ctx, payload)
-	if err != nil {
-		switch err {
-		case powchain.ErrAcceptedSyncingPayloadStatus:
-			newPayloadOptimisticNodeCount.Inc()
-			log.WithFields(logrus.Fields{
-				"slot":             blk.Block().Slot(),
-				"payloadBlockHash": fmt.Sprintf("%#x", bytesutil.Trunc(payload.BlockHash)),
-			}).Info("Called new payload with optimistic block")
-			return false, nil
-		case powchain.ErrInvalidPayloadStatus:
-			newPayloadInvalidNodeCount.Inc()
-			root, err := blk.Block().HashTreeRoot()
-			if err != nil {
-				return false, err
-			}
-			invalidRoots, err := s.ForkChoicer().SetOptimisticToInvalid(ctx, root, bytesutil.ToBytes32(lastValidHash))
-			if err != nil {
-				return false, err
-			}
-			if err := s.removeInvalidBlockAndState(ctx, invalidRoots); err != nil {
-				return false, err
-			}
-			return false, errors.New("could not validate an INVALID payload from execution engine")
-		default:
-			return false, errors.Wrap(err, "could not validate execution payload from execution engine")
-		}
-	}
-	newPayloadValidNodeCount.Inc()
-	// During the transition event, the transition block should be verified for sanity.
-	if blocks.IsPreBellatrixVersion(preStateVersion) {
-		// Handle case where pre-state is Altair but block contains payload.
-		// To reach here, the block must have contained a valid payload.
-		return true, s.validateMergeBlock(ctx, blk)
-	}
-	atTransition, err := blocks.IsMergeTransitionBlockUsingPreStatePayloadHeader(preStateHeader, body)
-	if err != nil {
-		return true, errors.Wrap(err, "could not check if merge block is terminal")
-	}
-	if !atTransition {
+	switch err {
+	case nil:
+		newPayloadValidNodeCount.Inc()
 		return true, nil
+	case powchain.ErrAcceptedSyncingPayloadStatus:
+		newPayloadOptimisticNodeCount.Inc()
+		log.WithFields(logrus.Fields{
+			"slot":             blk.Block().Slot(),
+			"payloadBlockHash": fmt.Sprintf("%#x", bytesutil.Trunc(payload.BlockHash)),
+		}).Info("Called new payload with optimistic block")
+		return false, nil
+	case powchain.ErrInvalidPayloadStatus:
+		newPayloadInvalidNodeCount.Inc()
+		root, err := blk.Block().HashTreeRoot()
+		if err != nil {
+			return false, err
+		}
+		invalidRoots, err := s.ForkChoicer().SetOptimisticToInvalid(ctx, root, bytesutil.ToBytes32(lastValidHash))
+		if err != nil {
+			return false, err
+		}
+		if err := s.removeInvalidBlockAndState(ctx, invalidRoots); err != nil {
+			return false, err
+		}
+		return false, errors.New("could not validate an INVALID payload from execution engine")
+	default:
+		return false, errors.WithMessage(ErrUndefinedExecutionEngineError, err.Error())
 	}
-	return true, s.validateMergeBlock(ctx, blk)
 }
 
 // optimisticCandidateBlock returns true if this block can be optimistically synced.

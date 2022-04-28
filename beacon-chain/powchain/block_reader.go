@@ -114,8 +114,10 @@ func (s *Service) BlockByTimestamp(ctx context.Context, time uint64) (*types.Hea
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockByTimestamp")
 	defer span.End()
 
+	s.latestEth1DataLock.RLock()
 	latestBlkHeight := s.latestEth1Data.BlockHeight
 	latestBlkTime := s.latestEth1Data.BlockTime
+	s.latestEth1DataLock.RUnlock()
 
 	if time > latestBlkTime {
 		return nil, errors.Errorf("provided time is later than the current eth1 head. %d > %d", time, latestBlkTime)

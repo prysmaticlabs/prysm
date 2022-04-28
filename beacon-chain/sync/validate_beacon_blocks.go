@@ -9,6 +9,7 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
@@ -185,6 +186,8 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	log.WithFields(logrus.Fields{
 		"blockSlot":          blk.Block().Slot(),
 		"sinceSlotStartTime": receivedTime.Sub(startTime),
+		"proposerIndex":      blk.Block().ProposerIndex(),
+		"graffiti":           string(blk.Block().Body().Graffiti()),
 	}).Debug("Received block")
 	return pubsub.ValidationAccept, nil
 }
@@ -193,7 +196,7 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk block.SignedBeaco
 	ctx, span := trace.StartSpan(ctx, "sync.validateBeaconBlock")
 	defer span.End()
 
-	if err := s.cfg.chain.VerifyBlkDescendant(ctx, bytesutil.ToBytes32(blk.Block().ParentRoot())); err != nil {
+	if err := s.cfg.chain.VerifyFinalizedBlkDescendant(ctx, bytesutil.ToBytes32(blk.Block().ParentRoot())); err != nil {
 		s.setBadBlock(ctx, blockRoot)
 		return err
 	}
@@ -230,7 +233,7 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk block.SignedBeaco
 	}
 
 	if err = s.validateBellatrixBeaconBlock(ctx, parentState, blk.Block()); err != nil {
-		if errors.Is(err, ErrOptimisticParent) {
+		if errors.Is(err, ErrOptimisticParent) || errors.Is(blockchain.ErrUndefinedExecutionEngineError, err) {
 			return err
 		}
 		// for other kinds of errors, set this block as a bad block.
