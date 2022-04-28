@@ -5,6 +5,7 @@ import (
 	stdmath "math"
 	"testing"
 
+	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/math"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
@@ -82,6 +83,74 @@ func TestIntegerSquareRoot(t *testing.T) {
 
 	for _, testVals := range tt {
 		require.Equal(t, testVals.root, math.IntegerSquareRoot(testVals.number))
+	}
+}
+
+func TestMath_Div64(t *testing.T) {
+	type args struct {
+		a uint64
+		b uint64
+	}
+	tests := []struct {
+		args args
+		res  uint64
+		err  bool
+	}{
+		{args: args{0, 1}, res: 0, err: false},
+		{args: args{0, 1}, res: 0},
+		{args: args{1, 0}, res: 0, err: true},
+		{args: args{1 << 32, 1 << 32}, res: 1},
+		{args: args{429496729600, 1 << 32}, res: 100},
+		{args: args{9223372036854775808, 1 << 32}, res: 1 << 31},
+		{args: args{a: 1 << 32, b: 1 << 32}, res: 1},
+		{args: args{9223372036854775808, 1 << 62}, res: 2},
+		{args: args{9223372036854775808, 1 << 63}, res: 1},
+	}
+	for _, tt := range tests {
+		got, err := math.Div64(tt.args.a, tt.args.b)
+		if tt.err && err == nil {
+			t.Errorf("Div64() Expected Error = %v, want error", tt.err)
+			continue
+		}
+		if tt.res != got {
+			t.Errorf("Div64() %v, want %v", got, tt.res)
+		}
+	}
+}
+
+func TestMath_Mod(t *testing.T) {
+	type args struct {
+		a uint64
+		b uint64
+	}
+	tests := []struct {
+		args args
+		res  uint64
+		err  bool
+	}{
+		{args: args{1, 0}, res: 0, err: true},
+		{args: args{0, 1}, res: 0},
+		{args: args{1 << 32, 1 << 32}, res: 0},
+		{args: args{429496729600, 1 << 32}, res: 0},
+		{args: args{9223372036854775808, 1 << 32}, res: 0},
+		{args: args{1 << 32, 1 << 32}, res: 0},
+		{args: args{9223372036854775808, 1 << 62}, res: 0},
+		{args: args{9223372036854775808, 1 << 63}, res: 0},
+		{args: args{1 << 32, 17}, res: 1},
+		{args: args{1 << 32, 19}, res: (1 << 32) % 19},
+		{args: args{stdmath.MaxUint64, stdmath.MaxUint64}, res: 0},
+		{args: args{1 << 63, 2}, res: 0},
+		{args: args{1<<63 + 1, 2}, res: 1},
+	}
+	for _, tt := range tests {
+		got, err := types.Mod64(tt.args.a, tt.args.b)
+		if tt.err && err == nil {
+			t.Errorf("Mod64() Expected Error = %v, want error", tt.err)
+			continue
+		}
+		if tt.res != got {
+			t.Errorf("Mod64() %v, want %v", got, tt.res)
+		}
 	}
 }
 
