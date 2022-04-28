@@ -30,10 +30,10 @@ func (s *Service) hasInitSyncBlock(r [32]byte) bool {
 // Error is returned if the block is not found in either cache or DB.
 func (s *Service) getBlock(ctx context.Context, r [32]byte) (block.SignedBeaconBlock, error) {
 	s.initSyncBlocksLock.RLock()
-	defer s.initSyncBlocksLock.RUnlock()
 
 	// Check cache first because it's faster.
 	b, ok := s.initSyncBlocks[r]
+	s.initSyncBlocksLock.RUnlock()
 	var err error
 	if !ok {
 		b, err = s.cfg.BeaconDB.Block(ctx, r)
