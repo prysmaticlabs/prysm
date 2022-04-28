@@ -70,7 +70,7 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b block.BeaconBlock) er
 		return errors.New("could not reconstruct parent state")
 	}
 
-	if err := s.VerifyBlkDescendant(ctx, bytesutil.ToBytes32(b.ParentRoot())); err != nil {
+	if err := s.VerifyFinalizedBlkDescendant(ctx, bytesutil.ToBytes32(b.ParentRoot())); err != nil {
 		return err
 	}
 
@@ -87,10 +87,10 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b block.BeaconBlock) er
 	return nil
 }
 
-// VerifyBlkDescendant validates input block root is a descendant of the
+// VerifyFinalizedBlkDescendant validates if input block root is a descendant of the
 // current finalized block root.
-func (s *Service) VerifyBlkDescendant(ctx context.Context, root [32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "blockChain.VerifyBlkDescendant")
+func (s *Service) VerifyFinalizedBlkDescendant(ctx context.Context, root [32]byte) error {
+	ctx, span := trace.StartSpan(ctx, "blockChain.VerifyFinalizedBlkDescendant")
 	defer span.End()
 	finalized := s.store.FinalizedCheckpt()
 	if finalized == nil {
