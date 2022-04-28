@@ -166,7 +166,8 @@ func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
 	}
 }
 
-// optimisticCandidateBlock returns true if this block can be optimistically synced.
+// optimisticCandidateBlock returns an error if this block can't be optimistically synced.
+// It replaces boolean in spec code with `errNotOptimisticCandidate`.
 //
 // Spec pseudocode definition:
 // def is_optimistic_candidate_block(opt_store: OptimisticStore, current_slot: Slot, block: BeaconBlock) -> bool:
