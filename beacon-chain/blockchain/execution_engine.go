@@ -189,15 +189,15 @@ func (s *Service) optimisticCandidateBlock(ctx context.Context, blk block.Beacon
 	if parent == nil {
 		return errNilParentInDB
 	}
-
 	parentIsExecutionBlock, err := blocks.IsExecutionBlock(parent.Block().Body())
 	if err != nil {
 		return err
 	}
-	if !parentIsExecutionBlock {
-		return errNonExecutionParent
+	if parentIsExecutionBlock {
+		return nil
 	}
-	return nil
+
+	return errNotOptimisticCandidate
 }
 
 // getPayloadAttributes returns the payload attributes for the given state and slot.

@@ -495,7 +495,7 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 				require.NoError(tt, err)
 				return wr
 			}(t),
-			err: errNonExecutionParent,
+			err: errNotOptimisticCandidate,
 		},
 		{
 			name: "shallow block, Bellatrix justified chkpt without execution",
@@ -515,7 +515,7 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 				require.NoError(tt, err)
 				return wr
 			}(t),
-			err: errNonExecutionParent,
+			err: errNotOptimisticCandidate,
 		},
 	}
 	for _, tt := range tests {
