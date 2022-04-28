@@ -499,7 +499,7 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState state.Beacon
 // 2.) DB or cache
 // Checking 1.) is ten times faster than checking 2.)
 func (s *Service) hasBlock(ctx context.Context, root [32]byte) bool {
-	return s.cfg.ForkChoiceStore.HasNode(root) && (s.cfg.BeaconDB.HasBlock(ctx, root) || s.hasInitSyncBlock(root))
+	return s.cfg.ForkChoiceStore.HasNode(root) && (s.hasInitSyncBlock(root) || s.cfg.BeaconDB.HasBlock(ctx, root))
 }
 
 func spawnCountdownIfPreGenesis(ctx context.Context, genesisTime time.Time, db db.HeadAccessDatabase) {
