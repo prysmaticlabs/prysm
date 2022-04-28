@@ -438,7 +438,7 @@ func TestVerifyBeaconBlock_NoBlock(t *testing.T) {
 	require.NoError(t, err)
 
 	d := util.HydrateAttestationData(&ethpb.AttestationData{})
-	assert.ErrorContains(t, "block not found in cache or db", service.verifyBeaconBlock(ctx, d))
+	require.Equal(t, errBlockNotFoundInCacheOrDB, service.verifyBeaconBlock(ctx, d))
 }
 
 func TestVerifyBeaconBlock_futureBlock(t *testing.T) {

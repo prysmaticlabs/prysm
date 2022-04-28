@@ -165,10 +165,6 @@ func (s *Service) notifyEngineIfChangedHead(ctx context.Context, newHeadRoot [32
 		log.WithError(errNilFinalizedInStore).Error("could not get finalized checkpoint")
 		return
 	}
-	if err := s.cfg.BeaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
-		log.WithError(err).Error("Could not migrate init sync cached blocks to db")
-		return
-	}
 
 	newHeadBlock, err := s.getBlock(ctx, newHeadRoot)
 	if err != nil {
