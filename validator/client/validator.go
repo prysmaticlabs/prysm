@@ -944,9 +944,12 @@ func (v *validator) UpdateFeeRecipient(ctx context.Context, km keymanager.IKeyma
 	if v.feeRecipientConfig == nil {
 		e := params.BeaconConfig().BellatrixForkEpoch
 		if e != math.MaxUint64 && slots.ToEpoch(slots.CurrentSlot(v.genesisTime)) < e {
-			log.Warnln("Please plan for using the fee recipient flags post Bellatrix Hard Fork to receive transaction fee rewards on validator work!!")
+			log.Warn("After the Ethereum merge, you will need to specify the Ethereum addresses which will receive transaction fee rewards from proposing blocks. " +
+				"This is known as a fee recipient configuration. You can read more about this feature in our documentation portal here (https://docs.prylabs.network/docs/execution-node/fee-recipient)")
 		} else {
-			log.Warnln("Fee recipient config not set, skipping fee recipient update!! Validator will continue proposing using beacon node specified fee recipient.")
+			log.Warn("In order to receive transaction fees from proposing blocks, " +
+				"you must now specify a configuration known as a fee recipient config. " +
+				"If it not provided, transaction fees will be burnt. Please see our documentation for more information on this requirement (https://docs.prylabs.network/docs/execution-node/fee-recipient).")
 		}
 		return nil
 	}
