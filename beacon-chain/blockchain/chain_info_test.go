@@ -6,7 +6,6 @@ import (
 	"time"
 
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
@@ -259,23 +258,6 @@ func TestService_HeadValidatorsIndices(t *testing.T) {
 	indices, err = c.HeadValidatorsIndices(context.Background(), 0)
 	require.NoError(t, err)
 	require.Equal(t, 10, len(indices))
-}
-
-func TestService_HeadSeed(t *testing.T) {
-	s, _ := util.DeterministicGenesisState(t, 1)
-	c := &Service{}
-	seed, err := helpers.Seed(s, 0, params.BeaconConfig().DomainBeaconAttester)
-	require.NoError(t, err)
-
-	c.head = &head{}
-	root, err := c.HeadSeed(context.Background(), 0)
-	require.NoError(t, err)
-	require.Equal(t, [32]byte{}, root)
-
-	c.head = &head{state: s}
-	root, err = c.HeadSeed(context.Background(), 0)
-	require.NoError(t, err)
-	require.DeepEqual(t, seed, root)
 }
 
 func TestService_HeadGenesisValidatorsRoot(t *testing.T) {

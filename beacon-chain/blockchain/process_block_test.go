@@ -1343,7 +1343,7 @@ func TestVerifyBlkDescendant(t *testing.T) {
 		service, err := NewService(ctx, opts...)
 		require.NoError(t, err)
 		service.store.SetFinalizedCheckpt(&ethpb.Checkpoint{Root: tt.args.finalizedRoot[:]})
-		err = service.VerifyBlkDescendant(ctx, tt.args.parentRoot)
+		err = service.VerifyFinalizedBlkDescendant(ctx, tt.args.parentRoot)
 		if tt.wantedErr != "" {
 			assert.ErrorContains(t, tt.wantedErr, err)
 		} else if err != nil {

@@ -9,7 +9,7 @@ import (
 
 // GetForkChoice returns a fork choice store.
 func (ds *Server) GetForkChoice(_ context.Context, _ *empty.Empty) (*pbrpc.ForkChoiceResponse, error) {
-	store := ds.HeadFetcher.ForkChoicer()
+	store := ds.ForkFetcher.ForkChoicer()
 
 	return &pbrpc.ForkChoiceResponse{
 		JustifiedEpoch:  store.JustifiedEpoch(),

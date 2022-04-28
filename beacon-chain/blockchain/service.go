@@ -50,14 +50,13 @@ const headSyncMinEpochsAfterCheckpoint = 128
 // Service represents a service that handles the internal
 // logic of managing the full PoS beacon chain.
 type Service struct {
-	cfg         *config
-	ctx         context.Context
-	cancel      context.CancelFunc
-	genesisTime time.Time
-	head        *head
-	headLock    sync.RWMutex
-	// originBlockRoot is the genesis root, or weak subjectivity checkpoint root, depending on how the node is initialized
-	originBlockRoot       [32]byte
+	cfg                   *config
+	ctx                   context.Context
+	cancel                context.CancelFunc
+	genesisTime           time.Time
+	head                  *head
+	headLock              sync.RWMutex
+	originBlockRoot       [32]byte // genesis root, or weak subjectivity checkpoint root, depending on how the node is initialized
 	nextEpochBoundarySlot types.Slot
 	boundaryRoots         [][32]byte
 	checkpointStateCache  *cache.CheckpointStateCache
@@ -160,11 +159,12 @@ func (s *Service) Status() error {
 		return errors.New("genesis state has not been created")
 	}
 	if runtime.NumGoroutine() > s.cfg.MaxRoutines {
-		return fmt.Errorf("too many goroutines %d", runtime.NumGoroutine())
+		return fmt.Errorf("too many goroutines (%d)", runtime.NumGoroutine())
 	}
 	return nil
 }
 
+// StartFromSavedState initializes the blockchain using a previously saved finalized checkpoint.
 func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 	log.Info("Blockchain data already exists in DB, initializing...")
 	s.genesisTime = time.Unix(int64(saved.GenesisTime()), 0) // lint:ignore uintcast -- Genesis time will not exceed int64 in your lifetime.
@@ -191,14 +191,14 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 	}
 	s.store = store.New(justified, finalized)
 
-	var f f.ForkChoicer
+	var forkChoicer f.ForkChoicer
 	fRoot := bytesutil.ToBytes32(finalized.Root)
 	if features.Get().EnableForkChoiceDoublyLinkedTree {
-		f = doublylinkedtree.New(justified.Epoch, finalized.Epoch)
+		forkChoicer = doublylinkedtree.New(justified.Epoch, finalized.Epoch)
 	} else {
-		f = protoarray.New(justified.Epoch, finalized.Epoch, fRoot)
+		forkChoicer = protoarray.New(justified.Epoch, finalized.Epoch, fRoot)
 	}
-	s.cfg.ForkChoiceStore = f
+	s.cfg.ForkChoiceStore = forkChoicer
 	fb, err := s.cfg.BeaconDB.Block(s.ctx, s.ensureRootNotZeros(fRoot))
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized checkpoint block")
@@ -211,7 +211,7 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 		return errors.Wrap(err, "could not get execution payload hash")
 	}
 	fSlot := fb.Block().Slot()
-	if err := f.InsertOptimisticBlock(s.ctx, fSlot, fRoot, params.BeaconConfig().ZeroHash,
+	if err := forkChoicer.InsertOptimisticBlock(s.ctx, fSlot, fRoot, params.BeaconConfig().ZeroHash,
 		payloadHash, justified.Epoch, finalized.Epoch); err != nil {
 		return errors.Wrap(err, "could not insert finalized block to forkchoice")
 	}
@@ -221,7 +221,7 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 		return errors.Wrap(err, "could not get last validated checkpoint")
 	}
 	if bytes.Equal(finalized.Root, lastValidatedCheckpoint.Root) {
-		if err := f.SetOptimisticToValid(s.ctx, fRoot); err != nil {
+		if err := forkChoicer.SetOptimisticToValid(s.ctx, fRoot); err != nil {
 			return errors.Wrap(err, "could not set finalized block as validated")
 		}
 	}
@@ -281,9 +281,9 @@ func (s *Service) originRootFromSavedState(ctx context.Context) ([32]byte, error
 	return genesisBlkRoot, nil
 }
 
-// initializeHeadFromDB uses the finalized checkpoint and head block found in the database to set the current head
-// note that this may block until stategen replays blocks between the finalized and head blocks
-// if the head sync flag was specified and the gap between the finalized and head blocks is at least 128 epochs long
+// initializeHeadFromDB uses the finalized checkpoint and head block found in the database to set the current head.
+// Note that this may block until stategen replays blocks between the finalized and head blocks
+// if the head sync flag was specified and the gap between the finalized and head blocks is at least 128 epochs long.
 func (s *Service) initializeHeadFromDB(ctx context.Context) error {
 	finalized, err := s.cfg.BeaconDB.FinalizedCheckpoint(ctx)
 	if err != nil {
