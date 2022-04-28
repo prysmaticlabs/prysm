@@ -160,6 +160,11 @@ func (s *Service) notifyEngineIfChangedHead(ctx context.Context, newHeadRoot [32
 	if s.headRoot() == newHeadRoot {
 		return
 	}
+	log.WithFields(logrus.Fields{
+		"oldHeadRoot": fmt.Sprintf("%#x", s.headRoot()),
+		"newHeadRoot": fmt.Sprintf("%#x", newHeadRoot),
+	}).Debug("Head changed due to attestations")
+
 	finalized := s.store.FinalizedCheckpt()
 	if finalized == nil {
 		log.WithError(errNilFinalizedInStore).Error("could not get finalized checkpoint")
