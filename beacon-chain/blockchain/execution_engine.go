@@ -91,7 +91,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headState state.Be
 				"headPayloadBlockHash":      fmt.Sprintf("%#x", bytesutil.Trunc(headPayload.BlockHash)),
 				"finalizedPayloadBlockHash": fmt.Sprintf("%#x", bytesutil.Trunc(finalizedHash)),
 			}).Info("Called fork choice updated with optimistic block")
-			return payloadID, nil
+			return payloadID, s.optimisticCandidateBlock(ctx, headBlk)
 		default:
 			return nil, errors.WithMessage(ErrUndefinedExecutionEngineError, err.Error())
 		}
@@ -146,7 +146,7 @@ func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
 			"slot":             blk.Block().Slot(),
 			"payloadBlockHash": fmt.Sprintf("%#x", bytesutil.Trunc(payload.BlockHash)),
 		}).Info("Called new payload with optimistic block")
-		return false, nil
+		return false, s.optimisticCandidateBlock(ctx, blk.Block())
 	case powchain.ErrInvalidPayloadStatus:
 		newPayloadInvalidNodeCount.Inc()
 		root, err := blk.Block().HashTreeRoot()
@@ -177,24 +177,27 @@ func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
 //        return True
 //
 //    return False
-func (s *Service) optimisticCandidateBlock(ctx context.Context, blk block.BeaconBlock) (bool, error) {
+func (s *Service) optimisticCandidateBlock(ctx context.Context, blk block.BeaconBlock) error {
 	if blk.Slot()+params.BeaconConfig().SafeSlotsToImportOptimistically <= s.CurrentSlot() {
-		return true, nil
+		return nil
 	}
 
 	parent, err := s.cfg.BeaconDB.Block(ctx, bytesutil.ToBytes32(blk.ParentRoot()))
 	if err != nil {
-		return false, err
+		return err
 	}
 	if parent == nil {
-		return false, errNilParentInDB
+		return errNilParentInDB
 	}
 
 	parentIsExecutionBlock, err := blocks.IsExecutionBlock(parent.Block().Body())
 	if err != nil {
-		return false, err
+		return err
 	}
-	return parentIsExecutionBlock, nil
+	if !parentIsExecutionBlock {
+		return errNonExecutionParent
+	}
+	return nil
 }
 
 // getPayloadAttributes returns the payload attributes for the given state and slot.
