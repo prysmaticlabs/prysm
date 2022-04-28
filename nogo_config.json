@@ -42,13 +42,13 @@
   "composites": {
     "exclude_files": {
       "external/.*": "Third party code",
-      "validator/accounts/.*": "Fuzz",
-      "validator/accounts/wallet_recover_fuzz_test.go": "Fuzz code"
+      ".*testmain\\.go$": "Fuzz"
     }
   },
   "cgocall": {
     "exclude_files": {
-      "external/.*": "Third party code"
+      "external/.*": "Third party code",
+      ".*testmain\\.go$": "Fuzz"
     }
   },
   "assign": {
