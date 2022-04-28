@@ -3210,7 +3210,12 @@ def prysm_deps():
         sum = "h1:+jhXLjEYVW4qU2z5SOxlxN+Hv/A9FDf0HpfDurfMEz0=",
         version = "v0.0.0-20211014160335-757fae4f38c6",
     )
-
+    go_repository(
+        name = "com_github_prysmaticlabs_eth2_types",
+        importpath = "github.com/prysmaticlabs/eth2-types",
+        sum = "h1:IVswblgBm0x96fXntlW5MXngGL8ypa40+ynnsy6hLR4=",
+        version = "v0.0.0-20210712152240-10d33f6e0661",
+    )
     go_repository(
         name = "com_github_puerkitobio_purell",
         importpath = "github.com/PuerkitoBio/purell",
