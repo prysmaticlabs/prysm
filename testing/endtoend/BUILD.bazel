@@ -30,7 +30,6 @@ go_test(
         "e2e",
         "manual",
         "minimal",
-        "exclusive",
         "requires-network",
     ],
     deps = [
