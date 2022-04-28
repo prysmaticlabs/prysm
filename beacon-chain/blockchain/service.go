@@ -494,12 +494,16 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState state.Beacon
 	return nil
 }
 
-// This returns true if block has been processed before. A processed block must exist in:
-// 1.) Fork choice store.
-// 2.) DB or cache
+// This returns true if block has been processed before. Two ways to verify the block has been processed:
+// 1.) Check fork choice store.
+// 2.) Check DB.
 // Checking 1.) is ten times faster than checking 2.)
 func (s *Service) hasBlock(ctx context.Context, root [32]byte) bool {
-	return s.cfg.ForkChoiceStore.HasNode(root) && (s.hasInitSyncBlock(root) || s.cfg.BeaconDB.HasBlock(ctx, root))
+	if s.cfg.ForkChoiceStore.HasNode(root) {
+		return true
+	}
+
+	return s.cfg.BeaconDB.HasBlock(ctx, root)
 }
 
 func spawnCountdownIfPreGenesis(ctx context.Context, genesisTime time.Time, db db.HeadAccessDatabase) {
