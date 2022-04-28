@@ -1248,7 +1248,7 @@ def prysm_deps():
         name = "com_github_gogo_protobuf",
         importpath = "github.com/gogo/protobuf",
         commit = "b03c65ea87cdc3521ede29f62fe3ce239267c1bc",
-        version = "v1.3.2"
+        version = "v1.3.2",
     )
 
     go_repository(
