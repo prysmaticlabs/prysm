@@ -47,8 +47,7 @@
   },
   "cgocall": {
     "exclude_files": {
-      "external/.*": "Third party code",
-      ".*testmain\\.go$": "Fuzz"
+      "external/.*": "Third party code"
     }
   },
   "assign": {
@@ -76,8 +75,7 @@
       "rules_go_work-.*": "Third party code",
       "shared/mock/.*\\.go": "Mocks are OK",
       ".*/.*mock\\.go": "Mocks are OK",
-      ".*/testmain\\.go": "Test runner generated code",
-      "validator/accounts/wallet_recover_fuzz_test.go": "Fuzz code",
+      ".*testmain\\.go$": "Fuzz",
       "proto/.*": "Generated protobuf related code",
       "tools/analyzers/properpermissions/testdata/.*": "Analyzer breaks rules"
     }
