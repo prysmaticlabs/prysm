@@ -144,6 +144,8 @@ func Init(beaconNodeCount int) error {
 		testShardIndex += 5
 	case "go_multiclient_test":
 		testShardIndex += 10
+	default:
+		return fmt.Errorf("test target %s is not recognized", testTestTarget)
 	}
 
 	var existingRegistrations []int
@@ -202,6 +204,8 @@ func InitMultiClient(beaconNodeCount int, lighthouseNodeCount int) error {
 		testShardIndex += 5
 	case "go_multiclient_test":
 		testShardIndex += 10
+	default:
+		return fmt.Errorf("test target %s is not recognized", testTestTarget)
 	}
 
 	var existingRegistrations []int
