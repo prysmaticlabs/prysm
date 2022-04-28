@@ -33,14 +33,6 @@ func TestEndToEnd_MinimalConfig_Web3Signer(t *testing.T) {
 	})
 }
 
-// Run minimal e2e config with the current release validator against latest beacon node.
-func TestEndToEnd_MinimalConfig_ValidatorAtCurrentRelease(t *testing.T) {
-	e2eMinimal(t, &testArgs{
-		usePrysmSh:          true,
-		useWeb3RemoteSigner: false,
-	})
-}
-
 func e2eMinimal(t *testing.T, args *testArgs) {
 	params.UseE2EConfig()
 	require.NoError(t, e2eParams.Init(e2eParams.StandardBeaconCount))
