@@ -474,7 +474,6 @@ func (r *testRunner) waitForMatchingHead(ctx context.Context, check, ref *grpc.C
 	deadline := time.Now().Add(time.Second*time.Duration(extraSecondsToSync))
 	ctx, cancel := context.WithDeadline(ctx, deadline)
 	defer cancel()
-	pause := time.After(time.Second * 1)
 	checkClient := service.NewBeaconChainClient(check)
 	refClient := service.NewBeaconChainClient(ref)
 	for {
@@ -482,7 +481,7 @@ func (r *testRunner) waitForMatchingHead(ctx context.Context, check, ref *grpc.C
 		case <-ctx.Done():
 			// deadline ensures that the test eventually exits when beacon node fails to sync in a resonable timeframe
 			return fmt.Errorf("deadline exceeded waiting for known good block to appear in checkpoint-synced node")
-		case <-pause:
+		default:
 			cResp, err := checkClient.GetBlockRoot(ctx, &v1.BlockRequest{BlockId: []byte("head")})
 			if err != nil {
 				errStatus, ok := status.FromError(err)

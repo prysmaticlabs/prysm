@@ -506,7 +506,7 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState state.Beaco
 
 	if postState.Slot()+1 == s.nextEpochBoundarySlot {
 		// Update caches for the next epoch at epoch boundary slot - 1.
-		log.Info("UpdateCommitteeCache from handleEpochBoundary (postState.Slot()+1 == s.nextEpochBoundarySlot)")
+		log.Infof("UpdateCommitteeCache from handleEpochBoundary (postState.Slot()+1 == s.nextEpochBoundarySlot), slot=%d, epoch=%d", postState.Slot(), coreTime.CurrentEpoch(postState))
 		if err := helpers.UpdateCommitteeCache(postState, coreTime.NextEpoch(postState)); err != nil {
 			return err
 		}
