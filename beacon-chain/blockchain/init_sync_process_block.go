@@ -26,6 +26,14 @@ func (s *Service) hasInitSyncBlock(r [32]byte) bool {
 	return ok
 }
 
+// Returns true if a block for root `r` exists in the initial sync blocks cache or the DB.
+func (s *Service) hasBlockInInitSyncOrDB(ctx context.Context, r [32]byte) bool {
+	if s.hasInitSyncBlock(r) {
+		return true
+	}
+	return s.cfg.BeaconDB.HasBlock(ctx, r)
+}
+
 // Returns block for a given root `r` from either the initial sync blocks cache or the DB.
 // Error is returned if the block is not found in either cache or DB.
 func (s *Service) getBlock(ctx context.Context, r [32]byte) (block.SignedBeaconBlock, error) {

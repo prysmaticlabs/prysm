@@ -165,7 +165,7 @@ func (s *Service) notifyEngineIfChangedHead(ctx context.Context, newHeadRoot [32
 		"newHeadRoot": fmt.Sprintf("%#x", newHeadRoot),
 	}).Debug("Head changed due to attestations")
 
-	if !(s.cfg.BeaconDB.HasBlock(ctx, newHeadRoot) || s.hasInitSyncBlock(newHeadRoot)) {
+	if !s.hasBlockInInitSyncOrDB(ctx, newHeadRoot) {
 		return // We don't have the block, don't notify the engine and update head.
 	}
 
