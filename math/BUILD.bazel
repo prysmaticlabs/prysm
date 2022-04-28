@@ -14,7 +14,7 @@ go_test(
     srcs = ["math_helper_test.go"],
     deps = [
         ":go_default_library",
+        "//consensus-types/primitives:go_default_library",
         "//testing/require:go_default_library",
-        "@com_github_prysmaticlabs_eth2_types//:go_default_library",
     ],
 )
