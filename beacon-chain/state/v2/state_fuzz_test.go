@@ -7,10 +7,11 @@ import (
 	"context"
 	"testing"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	coreState "github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
-	v22 "github.com/prysmaticlabs/prysm/beacon-chain/state/native-state/v2"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	v22 "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/v2"
 	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -42,8 +43,9 @@ func FuzzV2StateHashTreeRoot(f *testing.F) {
 		if err != nil {
 			return
 		}
-		nativeState, err := v22.InitializeFromSSZBytes(stateSSZ)
-		assert.NoError(t, err)
+		nativeStateRaw := &v22.BeaconState{}
+		assert.NoError(t, nativeStateRaw.UnmarshalSSZ(stateSSZ))
+		nativeState := state.BeaconState(nativeStateRaw)
 
 		slotsToTransition %= 100
 		stateObj, err := v2.InitializeFromProtoUnsafe(pbState)
@@ -59,7 +61,8 @@ func FuzzV2StateHashTreeRoot(f *testing.F) {
 		}
 		assert.NoError(t, err)
 		// Perform a cold HTR calculation by initializing a new state.
-		innerState := stateObj.InnerStateUnsafe().(*ethpb.BeaconStateAltair)
+		innerState, ok := stateObj.InnerStateUnsafe().(*ethpb.BeaconStateAltair)
+		assert.Equal(t, true, ok, "inner state is a not a beacon state altair proto")
 		newState, err := v2.InitializeFromProtoUnsafe(innerState)
 		assert.NoError(t, err)
 

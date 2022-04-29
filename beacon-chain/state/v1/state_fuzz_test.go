@@ -7,10 +7,10 @@ import (
 	"context"
 	"testing"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	coreState "github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	v12 "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/v1"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -59,7 +59,8 @@ func FuzzV1StateHashTreeRoot(f *testing.F) {
 		}
 		assert.NoError(t, err)
 		// Perform a cold HTR calculation by initializing a new state.
-		innerState := stateObj.InnerStateUnsafe().(*ethpb.BeaconState)
+		innerState, ok := stateObj.InnerStateUnsafe().(*ethpb.BeaconState)
+		assert.Equal(t, true, ok, "inner state is a not a beacon state proto")
 		newState, err := v1.InitializeFromProtoUnsafe(innerState)
 		assert.NoError(t, err)
 
