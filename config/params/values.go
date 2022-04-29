@@ -14,6 +14,7 @@ const (
 	EndToEnd
 	Prater
 	EndToEndMainnet
+	Dynamic
 )
 
 // ConfigName enum describes the type of known network in use.
@@ -34,7 +35,9 @@ var ConfigNames = map[ConfigName]string{
 	EndToEnd:        "end-to-end",
 	Prater:          "prater",
 	EndToEndMainnet: "end-to-end-mainnet",
+	Dynamic:         "dynamic",
 }
+var reverseConfigNames map[string]ConfigName
 
 // KnownConfigs provides an index of all known BeaconChainConfig values.
 var KnownConfigs = map[ConfigName]func() *BeaconChainConfig{
@@ -60,6 +63,18 @@ func ConfigForVersion(version [fieldparams.VersionLength]byte) (*BeaconChainConf
 }
 
 func init() {
+	rebuildKnownForkVersions()
+	buildReverseConfigName()
+}
+
+func buildReverseConfigName() {
+	reverseConfigNames = make(map[string]ConfigName)
+	for cn, s := range ConfigNames {
+		reverseConfigNames[s] = cn
+	}
+}
+
+func rebuildKnownForkVersions() {
 	knownForkVersions = make(map[[fieldparams.VersionLength]byte]ConfigName)
 	for n, cfunc := range KnownConfigs {
 		cfg := cfunc()

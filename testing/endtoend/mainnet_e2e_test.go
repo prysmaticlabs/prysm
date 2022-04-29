@@ -20,6 +20,8 @@ func TestEndToEnd_MainnetConfig_ValidatorAtCurrentRelease(t *testing.T) {
 }
 
 func e2eMainnet(t *testing.T, usePrysmSh, useMultiClient bool) {
+	cfg := params.E2EMainnetTestConfig()
+	params.OverrideBeaconConfig(cfg)
 	params.UseE2EMainnetConfig()
 	if useMultiClient {
 		require.NoError(t, e2eParams.InitMultiClient(e2eParams.StandardBeaconCount, e2eParams.StandardLighthouseNodeCount))
@@ -75,7 +77,7 @@ func e2eMainnet(t *testing.T, usePrysmSh, useMultiClient bool) {
 		},
 		ValidatorFlags:          []string{},
 		EpochsToRun:             uint64(epochsToRun),
-		TestSync:                true,
+		TestSync:                false,
 		TestFeature:             true,
 		TestDeposits:            true,
 		UseFixedPeerIDs:         true,
@@ -85,6 +87,7 @@ func e2eMainnet(t *testing.T, usePrysmSh, useMultiClient bool) {
 		TracingSinkEndpoint:     tracingEndpoint,
 		Evaluators:              evals,
 		Seed:                    int64(seed),
+		BeaconChainConfig:       cfg,
 	}
 
 	newTestRunner(t, testConfig).run()

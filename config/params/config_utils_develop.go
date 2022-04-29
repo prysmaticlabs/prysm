@@ -26,6 +26,15 @@ func BeaconConfig() *BeaconChainConfig {
 func OverrideBeaconConfig(c *BeaconChainConfig) {
 	beaconConfigLock.Lock()
 	defer beaconConfigLock.Unlock()
+	c.InitializeForkSchedule()
+	name, ok := reverseConfigNames[c.ConfigName]
+	// if name collides with an existing config name, override it, because the fork versions probably conflict
+	if !ok {
+		// otherwise define it as the special "Dynamic" name, ie for a config loaded from a file at runtime
+		name = Dynamic
+	}
+	KnownConfigs[name] = func() *BeaconChainConfig { return c }
+	rebuildKnownForkVersions()
 	beaconConfig = c
 }
 

@@ -6,55 +6,36 @@ import (
 	"strconv"
 	"testing"
 
+	e2types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ev "github.com/prysmaticlabs/prysm/testing/endtoend/evaluators"
-	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
 	e2eParams "github.com/prysmaticlabs/prysm/testing/endtoend/params"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/types"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
-type testArgs struct {
-	usePrysmSh          bool
-	useWeb3RemoteSigner bool
-}
-
-func TestEndToEnd_MinimalConfig(t *testing.T) {
-	e2eMinimal(t, &testArgs{
-		usePrysmSh:          false,
-		useWeb3RemoteSigner: false,
-	})
-}
-
-func TestEndToEnd_MinimalConfig_Web3Signer(t *testing.T) {
-	e2eMinimal(t, &testArgs{
-		usePrysmSh:          false,
-		useWeb3RemoteSigner: true,
-	})
-}
-
-func e2eMinimal(t *testing.T, args *testArgs) {
-	cfg := params.E2ETestConfig()
-	params.OverrideBeaconConfig(cfg)
-	require.NoError(t, e2eParams.Init(e2eParams.StandardBeaconCount))
-
-	// Run for 12 epochs if not in long-running to confirm long-running has no issues.
+// This test customizes the minimal config in order to artificially shorten the weak subjectivity period
+// so that the state used will not be genesis despite there only being 10 epochs of history.
+func TestCheckpointSync_CustomConfig(t *testing.T) {
+	// Run for 10 epochs if not in long-running to confirm long-running has no issues.
 	var err error
-	epochsToRun := 12
+	epochsToRun := 10
 	epochStr, longRunning := os.LookupEnv("E2E_EPOCHS")
 	if longRunning {
 		epochsToRun, err = strconv.Atoi(epochStr)
 		require.NoError(t, err)
 	}
-	// TODO(#10053): Web3signer does not support bellatrix yet.
-	if args.useWeb3RemoteSigner {
-		epochsToRun = helpers.BellatrixE2EForkEpoch - 1
-	}
-	if args.usePrysmSh {
-		// If using prysm.sh, run for only 6 epochs.
-		// TODO(#9166): remove this block once v2 changes are live.
-		epochsToRun = helpers.AltairE2EForkEpoch - 1
-	}
+
+	cfg := params.E2ETestConfig()
+	// setting this to 1 should change the weak subjectivity computation,
+	// so the computed weak subjectivity checkpoint will just be a few epochs before head
+	cfg.MinValidatorWithdrawabilityDelay = e2types.Epoch(epochsToRun / 2)
+	cfg.SlotsPerEpoch = 6
+	cfg.SecondsPerSlot = 6
+	cfg.Eth1FollowDistance = 4
+	params.OverrideBeaconConfig(cfg)
+	require.NoError(t, e2eParams.Init(e2eParams.StandardBeaconCount))
+
 	seed := 0
 	seedStr, isValid := os.LookupEnv("E2E_SEED")
 	if isValid {
@@ -86,7 +67,6 @@ func e2eMinimal(t *testing.T, args *testArgs) {
 		ev.FinishedSyncing,
 		ev.AllNodesHaveSameHead,
 		ev.ValidatorSyncParticipation,
-		//ev.TransactionsPresent, TODO: Renable Transaction evaluator once it tx pool issues are fixed.
 	}
 	testConfig := &types.E2EConfig{
 		BeaconFlags: []string{
@@ -97,12 +77,12 @@ func e2eMinimal(t *testing.T, args *testArgs) {
 		},
 		ValidatorFlags:      []string{},
 		EpochsToRun:         uint64(epochsToRun),
-		TestSync:            false,
+		TestSync:            true,
 		TestFeature:         true,
 		TestDeposits:        true,
-		UsePrysmShValidator: args.usePrysmSh,
+		UseFixedPeerIDs:     true,
+		UsePrysmShValidator: false,
 		UsePprof:            !longRunning,
-		UseWeb3RemoteSigner: args.useWeb3RemoteSigner,
 		TracingSinkEndpoint: tracingEndpoint,
 		Evaluators:          evals,
 		Seed:                int64(seed),

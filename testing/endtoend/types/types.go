@@ -4,8 +4,13 @@ package types
 
 import (
 	"context"
+	"fmt"
+	"path"
 
+	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/io/file"
+	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
 	"google.golang.org/grpc"
 )
 
@@ -26,6 +31,20 @@ type E2EConfig struct {
 	BeaconFlags             []string
 	ValidatorFlags          []string
 	PeerIDs                 []string
+	BeaconChainConfig       *params.BeaconChainConfig
+}
+
+// BeaconChainConfigPath determines the canonical path to the yaml-encoded BeaconChainConfig
+// written by WriteBeaconChainConfig. Used by components to load a non-standard config in tests.
+func (cfg *E2EConfig) BeaconChainConfigPath() string {
+	fname := fmt.Sprintf("beacon-chain-config_%s.yaml", cfg.BeaconChainConfig.ConfigName)
+	return path.Join(e2e.TestParams.LogPath, fname)
+}
+
+// WriteBeaconChainConfig writes the yaml encoding of the BeaconChainConfig struct member
+// to a file at the path specified by BeaconChainConfigPath.
+func (cfg *E2EConfig) WriteBeaconChainConfig() error {
+	return file.WriteFile(cfg.BeaconChainConfigPath(), params.ConfigToYaml(cfg.BeaconChainConfig))
 }
 
 // Evaluator defines the structure of the evaluators used to

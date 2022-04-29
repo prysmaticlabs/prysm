@@ -269,6 +269,15 @@ func NewLocalConnections(ctx context.Context, numConns int) ([]*grpc.ClientConn,
 	}, nil
 }
 
+func BeaconAPIHostnames(numConns int) []string {
+	hostnames := make([]string, 0)
+	for i := 0; i < numConns; i++ {
+		port := e2e.TestParams.Ports.PrysmBeaconNodeGatewayPort + i
+		hostnames = append(hostnames, fmt.Sprintf("127.0.0.1:%d", port))
+	}
+	return hostnames
+}
+
 // ComponentsStarted checks, sequentially, each provided component, blocks until all of the components are ready.
 func ComponentsStarted(ctx context.Context, comps []e2etypes.ComponentRunner) error {
 	for _, comp := range comps {

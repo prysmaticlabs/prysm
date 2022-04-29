@@ -7,7 +7,10 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/testing/endtoend/types",
     visibility = ["//testing/endtoend:__subpackages__"],
     deps = [
+        "//config/params:go_default_library",
         "//consensus-types/primitives:go_default_library",
+        "//io/file:go_default_library",
+        "//testing/endtoend/params:go_default_library",
         "@org_golang_google_grpc//:go_default_library",
     ],
 )

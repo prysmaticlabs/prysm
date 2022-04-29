@@ -15,9 +15,14 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/api/client/beacon"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/io/file"
+	"github.com/prysmaticlabs/prysm/proto/eth/service"
+	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/components"
@@ -30,6 +35,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -48,33 +55,50 @@ func init() {
 
 // testRunner abstracts E2E test configuration and running.
 type testRunner struct {
-	t      *testing.T
-	config *e2etypes.E2EConfig
+	t        *testing.T
+	config   *e2etypes.E2EConfig
+	ctx      context.Context
+	doneChan context.CancelFunc
+	group    *errgroup.Group
 }
 
 // newTestRunner creates E2E test runner.
 func newTestRunner(t *testing.T, config *e2etypes.E2EConfig) *testRunner {
+	ctx, done := context.WithCancel(context.Background())
+	g, ctx := errgroup.WithContext(ctx)
 	return &testRunner{
-		t:      t,
-		config: config,
+		ctx:      ctx,
+		doneChan: done,
+		group:    g,
+		t:        t,
+		config:   config,
 	}
 }
 
 // run executes configured E2E test.
 func (r *testRunner) run() {
 	t, config := r.t, r.config
+	err := config.WriteBeaconChainConfig()
+	if err != nil {
+		t.Fatalf("failed to write BeaconChainConfig to bazel sandbox")
+	}
+
 	t.Logf("Shard index: %d\n", e2e.TestParams.TestShardIndex)
 	t.Logf("Starting time: %s\n", time.Now().String())
 	t.Logf("Log Path: %s\n", e2e.TestParams.LogPath)
 
+	// we need debug turned on and max ssz payload bumped up when running checkpoint sync teste2e.TestParams.BeaconNodeCounts
+	if config.TestSync {
+		config.BeaconFlags = appendDebugEndpoints(config.BeaconFlags)
+	}
 	minGenesisActiveCount := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
 	multiClientActive := e2e.TestParams.LighthouseBeaconNodeCount > 0
 	var keyGen, lighthouseValidatorNodes e2etypes.ComponentRunner
 	var lighthouseNodes *components.LighthouseBeaconNodeSet
 
-	ctx, done := context.WithCancel(context.Background())
-	g, ctx := errgroup.WithContext(ctx)
-
+	ctx := r.ctx
+	g := r.group
+	done := r.doneChan
 	tracingSink := components.NewTracingSink(config.TracingSinkEndpoint)
 	g.Go(func() error {
 		return tracingSink.Start(ctx)
@@ -145,7 +169,7 @@ func (r *testRunner) run() {
 	})
 
 	// Beacon nodes.
-	beaconNodes := components.NewBeaconNodes(config)
+	beaconNodes := components.NewBeaconNodes(config.BeaconFlags, config)
 	g.Go(func() error {
 		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Nodes, bootNode}); err != nil {
 			return errors.Wrap(err, "beacon nodes require ETH1 and boot node to run")
@@ -257,17 +281,24 @@ func (r *testRunner) run() {
 		if err := r.runEvaluators(conns, tickingStartTime); err != nil {
 			return errors.Wrap(err, "one or more evaluators failed")
 		}
-
-		// If requested, run sync test.
-		if !config.TestSync {
-			return nil
-		}
 		if err := r.testBeaconChainSync(ctx, g, conns, tickingStartTime, bootNode.ENR(), eth1Miner.ENR()); err != nil {
 			return errors.Wrap(err, "beacon chain sync test failed")
 		}
 		if err := r.testDoppelGangerProtection(ctx); err != nil {
 			return errors.Wrap(err, "doppel ganger protection check failed")
 		}
+
+		// If requested, run sync test.
+		if config.TestSync {
+			httpEndpoints := helpers.BeaconAPIHostnames(e2e.TestParams.BeaconNodeCount)
+			index := e2e.TestParams.BeaconNodeCount
+			menr := eth1Miner.ENR()
+			benr := bootNode.ENR()
+			if err := r.testCheckpointSync(index+1, conns, httpEndpoints[0], benr, menr); err != nil {
+				return errors.Wrap(err, "checkpoint sync test failed")
+			}
+		}
+
 		return nil
 	})
 
@@ -278,6 +309,14 @@ func (r *testRunner) run() {
 		}
 		t.Fatalf("E2E test ended in error: %v", err)
 	}
+}
+
+func appendDebugEndpoints(flags []string) []string {
+	debugFlags := []string{
+		"--enable-debug-rpc-endpoints",
+		"--grpc-max-msg-size=65568081",
+	}
+	return append(flags, debugFlags...)
 }
 
 // waitForChainStart allows to wait up until beacon nodes are started.
@@ -363,11 +402,116 @@ func (r *testRunner) testTxGeneration(ctx context.Context, g *errgroup.Group, ke
 	})
 }
 
+func (r *testRunner) waitForMatchingHead(ctx context.Context, check, ref *grpc.ClientConn) error {
+	// sleep hack copied from testBeaconChainSync
+	// Sleep a second for every 4 blocks that need to be synced for the newly started node.
+	secondsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
+	extraSecondsToSync := (r.config.EpochsToRun)*secondsPerEpoch + uint64(params.BeaconConfig().SlotsPerEpoch.Div(4).Mul(r.config.EpochsToRun))
+	deadline := time.Now().Add(time.Second * time.Duration(extraSecondsToSync))
+	ctx, cancel := context.WithDeadline(ctx, deadline)
+	defer cancel()
+	checkClient := service.NewBeaconChainClient(check)
+	refClient := service.NewBeaconChainClient(ref)
+	for {
+		select {
+		case <-ctx.Done():
+			// deadline ensures that the test eventually exits when beacon node fails to sync in a resonable timeframe
+			return fmt.Errorf("deadline exceeded waiting for known good block to appear in checkpoint-synced node")
+		default:
+			cResp, err := checkClient.GetBlockRoot(ctx, &v1.BlockRequest{BlockId: []byte("head")})
+			if err != nil {
+				errStatus, ok := status.FromError(err)
+				// in the happy path we expect NotFound results until the node has synced
+				if ok && errStatus.Code() == codes.NotFound {
+					continue
+				}
+				return fmt.Errorf("error requesting head from 'check' beacon node")
+			}
+			rResp, err := refClient.GetBlockRoot(ctx, &v1.BlockRequest{BlockId: []byte("head")})
+			if err != nil {
+				return errors.Wrap(err, "unexpected error requesting head block root from 'ref' beacon node")
+			}
+			if bytesutil.ToBytes32(cResp.Data.Root) == bytesutil.ToBytes32(rResp.Data.Root) {
+				return nil
+			}
+		}
+	}
+}
+
+func (r *testRunner) testCheckpointSync(i int, conns []*grpc.ClientConn, bnAPI, enr, minerEnr string) error {
+	ethNode := eth1.NewNode(i, minerEnr)
+	r.group.Go(func() error {
+		return ethNode.Start(r.ctx)
+	})
+	if err := helpers.ComponentsStarted(r.ctx, []e2etypes.ComponentRunner{ethNode}); err != nil {
+		return fmt.Errorf("sync beacon node not ready: %w", err)
+	}
+
+	client, err := beacon.NewClient(bnAPI)
+	if err != nil {
+		return err
+	}
+
+	od, err := beacon.DownloadOriginData(r.ctx, client)
+	if err != nil {
+		return err
+	}
+	blockPath, err := od.SaveBlock(e2e.TestParams.TestPath)
+	if err != nil {
+		return err
+	}
+	statePath, err := od.SaveState(e2e.TestParams.TestPath)
+	if err != nil {
+		return err
+	}
+	gb, err := client.GetState(r.ctx, beacon.IdGenesis)
+	if err != nil {
+		return err
+	}
+	genPath := path.Join(e2e.TestParams.TestPath, "genesis.ssz")
+	err = file.WriteFile(genPath, gb)
+	if err != nil {
+		return err
+	}
+
+	flags := append([]string{}, r.config.BeaconFlags...)
+	flags = append(flags, fmt.Sprintf("--weak-subjectivity-checkpoint=%s", od.CheckpointString()))
+	flags = append(flags, fmt.Sprintf("--checkpoint-state=%s", statePath))
+	flags = append(flags, fmt.Sprintf("--checkpoint-block=%s", blockPath))
+	flags = append(flags, fmt.Sprintf("--genesis-state=%s", genPath))
+
+	// zero-indexed, so next value would be len of list
+	cpsyncer := components.NewBeaconNode(i, enr, flags, r.config)
+	r.group.Go(func() error {
+		return cpsyncer.Start(r.ctx)
+	})
+	if err := helpers.ComponentsStarted(r.ctx, []e2etypes.ComponentRunner{cpsyncer}); err != nil {
+		return fmt.Errorf("checkpoint sync beacon node not ready: %w", err)
+	}
+	c, err := grpc.Dial(fmt.Sprintf("127.0.0.1:%d", e2e.TestParams.Ports.PrysmBeaconNodeRPCPort+i), grpc.WithInsecure())
+	require.NoError(r.t, err, "Failed to dial")
+
+	// this is so that the syncEvaluators checks can run on the checkpoint sync'd node
+	conns = append(conns, c)
+	err = r.waitForMatchingHead(r.ctx, c, conns[0])
+	if err != nil {
+		return err
+	}
+
+	syncEvaluators := []e2etypes.Evaluator{ev.FinishedSyncing, ev.AllNodesHaveSameHead}
+	for _, evaluator := range syncEvaluators {
+		r.t.Run(evaluator.Name, func(t *testing.T) {
+			assert.NoError(t, evaluator.Evaluation(conns...), "Evaluation failed for sync node")
+		})
+	}
+	return nil
+}
+
 // testBeaconChainSync creates another beacon node, and tests whether it can sync to head using previous nodes.
 func (r *testRunner) testBeaconChainSync(ctx context.Context, g *errgroup.Group,
 	conns []*grpc.ClientConn, tickingStartTime time.Time, bootnodeEnr, minerEnr string) error {
-	t, config := r.t, r.config
 	index := e2e.TestParams.BeaconNodeCount + e2e.TestParams.LighthouseBeaconNodeCount
+	t, config := r.t, r.config
 	ethNode := eth1.NewNode(index, minerEnr)
 	g.Go(func() error {
 		return ethNode.Start(ctx)
@@ -375,7 +519,7 @@ func (r *testRunner) testBeaconChainSync(ctx context.Context, g *errgroup.Group,
 	if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{ethNode}); err != nil {
 		return fmt.Errorf("sync beacon node not ready: %w", err)
 	}
-	syncBeaconNode := components.NewBeaconNode(config, index, bootnodeEnr)
+	syncBeaconNode := components.NewBeaconNode(index, bootnodeEnr, r.config.BeaconFlags, config)
 	g.Go(func() error {
 		return syncBeaconNode.Start(ctx)
 	})
@@ -388,17 +532,17 @@ func (r *testRunner) testBeaconChainSync(ctx context.Context, g *errgroup.Group,
 
 	// Sleep a second for every 4 blocks that need to be synced for the newly started node.
 	secondsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
-	extraSecondsToSync := (config.EpochsToRun)*secondsPerEpoch + uint64(params.BeaconConfig().SlotsPerEpoch.Div(4).Mul(config.EpochsToRun))
+	extraSecondsToSync := (r.config.EpochsToRun)*secondsPerEpoch + uint64(params.BeaconConfig().SlotsPerEpoch.Div(4).Mul(r.config.EpochsToRun))
 	waitForSync := tickingStartTime.Add(time.Duration(extraSecondsToSync) * time.Second)
 	time.Sleep(time.Until(waitForSync))
 
 	syncLogFile, err := os.Open(path.Join(e2e.TestParams.LogPath, fmt.Sprintf(e2e.BeaconNodeLogFileName, index)))
-	require.NoError(t, err)
-	defer helpers.LogErrorOutput(t, syncLogFile, "beacon chain node", index)
-	t.Run("sync completed", func(t *testing.T) {
+	require.NoError(r.t, err)
+	defer helpers.LogErrorOutput(r.t, syncLogFile, "beacon chain node", index)
+	r.t.Run("sync completed", func(t *testing.T) {
 		assert.NoError(t, helpers.WaitForTextInFile(syncLogFile, "Synced up to"), "Failed to sync")
 	})
-	if t.Failed() {
+	if r.t.Failed() {
 		return errors.New("cannot sync beacon node")
 	}
 
@@ -406,7 +550,7 @@ func (r *testRunner) testBeaconChainSync(ctx context.Context, g *errgroup.Group,
 	time.Sleep(time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
 	syncEvaluators := []e2etypes.Evaluator{ev.FinishedSyncing, ev.AllNodesHaveSameHead}
 	for _, evaluator := range syncEvaluators {
-		t.Run(evaluator.Name, func(t *testing.T) {
+		r.t.Run(evaluator.Name, func(t *testing.T) {
 			assert.NoError(t, evaluator.Evaluation(conns...), "Evaluation failed for sync node")
 		})
 	}
