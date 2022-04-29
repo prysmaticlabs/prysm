@@ -26,10 +26,6 @@ func (b *BeaconState) PreviousEpochAttestations() ([]*ethpb.PendingAttestation, 
 // previousEpochAttestationsVal corresponding to blocks on the beacon chain.
 // This assumes that a lock is already held on BeaconState.
 func (b *BeaconState) previousEpochAttestationsVal() []*ethpb.PendingAttestation {
-	if b.version != version.Phase0 {
-		return nil
-	}
-
 	return ethpb.CopyPendingAttestationSlice(b.previousEpochAttestations)
 }
 
@@ -52,9 +48,5 @@ func (b *BeaconState) CurrentEpochAttestations() ([]*ethpb.PendingAttestation, e
 // currentEpochAttestations corresponding to blocks on the beacon chain.
 // This assumes that a lock is already held on BeaconState.
 func (b *BeaconState) currentEpochAttestationsVal() []*ethpb.PendingAttestation {
-	if b.version != version.Phase0 {
-		return nil
-	}
-
 	return ethpb.CopyPendingAttestationSlice(b.currentEpochAttestations)
 }
