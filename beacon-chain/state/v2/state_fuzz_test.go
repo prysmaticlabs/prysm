@@ -44,7 +44,9 @@ func FuzzV2StateHashTreeRoot(f *testing.F) {
 			return
 		}
 		nativeStateRaw := &v22.BeaconState{}
-		assert.NoError(t, nativeStateRaw.UnmarshalSSZ(stateSSZ))
+		if err := nativeStateRaw.UnmarshalSSZ(stateSSZ); err != nil {
+			return
+		}
 		nativeState := state.BeaconState(nativeStateRaw)
 
 		slotsToTransition %= 100
