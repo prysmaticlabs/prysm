@@ -1,8 +1,9 @@
-package phase0
+package phase0_test
 
 import (
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/consensus-types/forks/phase0"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -29,7 +30,7 @@ func TestSignedBeaconBlock_Header(t *testing.T) {
 		},
 		Signature: signature,
 	}
-	wrapped := WrappedSignedBeaconBlock(block)
+	wrapped := phase0.WrappedSignedBeaconBlock(block)
 
 	header, err := wrapped.Header()
 	require.NoError(t, err)
@@ -45,7 +46,7 @@ func TestBeaconBlock_PbGenericBlock(t *testing.T) {
 	abb := &ethpb.SignedBeaconBlock{
 		Block: util.HydrateBeaconBlock(&ethpb.BeaconBlock{}),
 	}
-	wsb := WrappedSignedBeaconBlock(abb)
+	wsb := phase0.WrappedSignedBeaconBlock(abb)
 
 	got, err := wsb.PbGenericBlock()
 	require.NoError(t, err)
@@ -54,7 +55,7 @@ func TestBeaconBlock_PbGenericBlock(t *testing.T) {
 
 func TestBeaconBlock_AsSignRequestObject(t *testing.T) {
 	abb := util.HydrateBeaconBlock(&ethpb.BeaconBlock{})
-	wsb := WrappedBeaconBlock(abb)
+	wsb := phase0.WrappedBeaconBlock(abb)
 
 	sro := wsb.AsSignRequestObject()
 	got, ok := sro.(*validatorpb.SignRequest_Block)
@@ -66,7 +67,7 @@ func TestBeaconBlock_PbBlindedBellatrixBlock(t *testing.T) {
 	sb := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{Slot: 66},
 	}
-	wsb := WrappedSignedBeaconBlock(sb)
+	wsb := phase0.WrappedSignedBeaconBlock(sb)
 	_, err := wsb.PbBlindedBellatrixBlock()
 	require.ErrorContains(t, "unsupported blinded bellatrix block", err)
 }
@@ -75,7 +76,7 @@ func TestBeaconBlock_ExecutionPayloadHeader(t *testing.T) {
 	sb := &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{Slot: 66},
 	}
-	wsb := WrappedSignedBeaconBlock(sb)
+	wsb := phase0.WrappedSignedBeaconBlock(sb)
 	_, err := wsb.Block().Body().ExecutionPayloadHeader()
 	require.ErrorContains(t, "unsupported field for block type", err)
 }

@@ -1,10 +1,11 @@
-package bellatrix
+package bellatrix_test
 
 import (
 	"bytes"
 	"testing"
 
 	typeerrors "github.com/prysmaticlabs/prysm/consensus-types/errors"
+	"github.com/prysmaticlabs/prysm/consensus-types/forks/bellatrix"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
@@ -33,7 +34,7 @@ func TestSignedBeaconBlock_Header(t *testing.T) {
 		},
 		Signature: signature,
 	}
-	wrapped, err := WrappedSignedBeaconBlock(block)
+	wrapped, err := bellatrix.WrappedSignedBeaconBlock(block)
 	require.NoError(t, err)
 
 	header, err := wrapped.Header()
@@ -48,7 +49,7 @@ func TestSignedBeaconBlock_Header(t *testing.T) {
 
 func TestSignedBeaconBlock_Signature(t *testing.T) {
 	sig := []byte{0x11, 0x22}
-	wsb, err := WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: &ethpb.BeaconBlockBellatrix{}, Signature: sig})
+	wsb, err := bellatrix.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: &ethpb.BeaconBlockBellatrix{}, Signature: sig})
 	require.NoError(t, err)
 
 	if !bytes.Equal(sig, wsb.Signature()) {
@@ -58,17 +59,17 @@ func TestSignedBeaconBlock_Signature(t *testing.T) {
 
 func TestSignedBeaconBlock_Block(t *testing.T) {
 	blk := &ethpb.BeaconBlockBellatrix{Slot: 54}
-	wsb, err := WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: blk})
+	wsb, err := bellatrix.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: blk})
 	require.NoError(t, err)
 
 	assert.DeepEqual(t, blk, wsb.Block().Proto())
 }
 
 func TestSignedBeaconBlock_IsNil(t *testing.T) {
-	_, err := WrappedSignedBeaconBlock(nil)
+	_, err := bellatrix.WrappedSignedBeaconBlock(nil)
 	require.Equal(t, typeerrors.ErrNilObjectWrapped, err)
 
-	wsb, err := WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: &ethpb.BeaconBlockBellatrix{}})
+	wsb, err := bellatrix.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: &ethpb.BeaconBlockBellatrix{}})
 	require.NoError(t, err)
 
 	assert.Equal(t, false, wsb.IsNil())
@@ -83,14 +84,14 @@ func TestSignedBeaconBlock_Proto(t *testing.T) {
 		Block:     &ethpb.BeaconBlockBellatrix{Slot: 66},
 		Signature: []byte{0x11, 0x22},
 	}
-	wsb, err := WrappedSignedBeaconBlock(sb)
+	wsb, err := bellatrix.WrappedSignedBeaconBlock(sb)
 	require.NoError(t, err)
 
 	assert.Equal(t, sb, wsb.Proto())
 }
 
 func TestSignedBeaconBlock_PbPhase0Block(t *testing.T) {
-	wsb, err := WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: &ethpb.BeaconBlockBellatrix{}})
+	wsb, err := bellatrix.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: &ethpb.BeaconBlockBellatrix{}})
 	require.NoError(t, err)
 
 	if _, err := wsb.PbPhase0Block(); err != typeerrors.ErrUnsupportedPhase0Block {
@@ -103,7 +104,7 @@ func TestSignedBeaconBlock_PbBellatrixBlock(t *testing.T) {
 		Block:     &ethpb.BeaconBlockBellatrix{Slot: 66},
 		Signature: []byte{0x11, 0x22},
 	}
-	wsb, err := WrappedSignedBeaconBlock(sb)
+	wsb, err := bellatrix.WrappedSignedBeaconBlock(sb)
 	require.NoError(t, err)
 
 	got, err := wsb.PbBellatrixBlock()
@@ -112,7 +113,7 @@ func TestSignedBeaconBlock_PbBellatrixBlock(t *testing.T) {
 }
 
 func TestSignedBeaconBlock_MarshalSSZTo(t *testing.T) {
-	wsb, err := WrappedSignedBeaconBlock(util.HydrateSignedBeaconBlockBellatrix(&ethpb.SignedBeaconBlockBellatrix{}))
+	wsb, err := bellatrix.WrappedSignedBeaconBlock(util.HydrateSignedBeaconBlockBellatrix(&ethpb.SignedBeaconBlockBellatrix{}))
 	assert.NoError(t, err)
 
 	var b []byte
@@ -122,7 +123,7 @@ func TestSignedBeaconBlock_MarshalSSZTo(t *testing.T) {
 }
 
 func TestSignedBeaconBlock_SSZ(t *testing.T) {
-	wsb, err := WrappedSignedBeaconBlock(util.HydrateSignedBeaconBlockBellatrix(&ethpb.SignedBeaconBlockBellatrix{}))
+	wsb, err := bellatrix.WrappedSignedBeaconBlock(util.HydrateSignedBeaconBlockBellatrix(&ethpb.SignedBeaconBlockBellatrix{}))
 	assert.NoError(t, err)
 
 	b, err := wsb.MarshalSSZ()
@@ -135,7 +136,7 @@ func TestSignedBeaconBlock_SSZ(t *testing.T) {
 }
 
 func TestSignedBeaconBlock_Version(t *testing.T) {
-	wsb, err := WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: &ethpb.BeaconBlockBellatrix{}})
+	wsb, err := bellatrix.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: &ethpb.BeaconBlockBellatrix{}})
 	require.NoError(t, err)
 
 	assert.Equal(t, version.Bellatrix, wsb.Version())
@@ -143,7 +144,7 @@ func TestSignedBeaconBlock_Version(t *testing.T) {
 
 func TestBeaconBlock_Slot(t *testing.T) {
 	slot := types.Slot(546)
-	wb, err := WrappedBeaconBlock(&ethpb.BeaconBlockBellatrix{Slot: slot})
+	wb, err := bellatrix.WrappedBeaconBlock(&ethpb.BeaconBlockBellatrix{Slot: slot})
 	require.NoError(t, err)
 
 	assert.Equal(t, slot, wb.Slot())
@@ -151,7 +152,7 @@ func TestBeaconBlock_Slot(t *testing.T) {
 
 func TestBeaconBlock_ProposerIndex(t *testing.T) {
 	pi := types.ValidatorIndex(555)
-	wb, err := WrappedBeaconBlock(&ethpb.BeaconBlockBellatrix{ProposerIndex: pi})
+	wb, err := bellatrix.WrappedBeaconBlock(&ethpb.BeaconBlockBellatrix{ProposerIndex: pi})
 	require.NoError(t, err)
 
 	assert.Equal(t, pi, wb.ProposerIndex())
@@ -159,7 +160,7 @@ func TestBeaconBlock_ProposerIndex(t *testing.T) {
 
 func TestBeaconBlock_ParentRoot(t *testing.T) {
 	root := []byte{0xAA, 0xBF, 0x33, 0x01}
-	wb, err := WrappedBeaconBlock(&ethpb.BeaconBlockBellatrix{ParentRoot: root})
+	wb, err := bellatrix.WrappedBeaconBlock(&ethpb.BeaconBlockBellatrix{ParentRoot: root})
 	require.NoError(t, err)
 
 	assert.DeepEqual(t, root, wb.ParentRoot())
@@ -167,7 +168,7 @@ func TestBeaconBlock_ParentRoot(t *testing.T) {
 
 func TestBeaconBlock_StateRoot(t *testing.T) {
 	root := []byte{0xAA, 0xBF, 0x33, 0x01}
-	wb, err := WrappedBeaconBlock(&ethpb.BeaconBlockBellatrix{StateRoot: root})
+	wb, err := bellatrix.WrappedBeaconBlock(&ethpb.BeaconBlockBellatrix{StateRoot: root})
 	require.NoError(t, err)
 
 	assert.DeepEqual(t, root, wb.StateRoot())
@@ -175,30 +176,30 @@ func TestBeaconBlock_StateRoot(t *testing.T) {
 
 func TestBeaconBlock_Body(t *testing.T) {
 	body := &ethpb.BeaconBlockBodyBellatrix{Graffiti: []byte{0x44}}
-	wb, err := WrappedBeaconBlock(&ethpb.BeaconBlockBellatrix{Body: body})
+	wb, err := bellatrix.WrappedBeaconBlock(&ethpb.BeaconBlockBellatrix{Body: body})
 	require.NoError(t, err)
 
 	assert.Equal(t, body, wb.Body().Proto())
 }
 
 func TestBeaconBlock_IsNil(t *testing.T) {
-	_, err := WrappedBeaconBlock(nil)
+	_, err := bellatrix.WrappedBeaconBlock(nil)
 	require.Equal(t, typeerrors.ErrNilObjectWrapped, err)
 
-	wb, err := WrappedBeaconBlock(&ethpb.BeaconBlockBellatrix{})
+	wb, err := bellatrix.WrappedBeaconBlock(&ethpb.BeaconBlockBellatrix{})
 	require.NoError(t, err)
 
 	assert.Equal(t, false, wb.IsNil())
 }
 
 func TestBeaconBlock_IsBlinded(t *testing.T) {
-	wsb, err := WrappedBeaconBlock(&ethpb.BeaconBlockBellatrix{})
+	wsb, err := bellatrix.WrappedBeaconBlock(&ethpb.BeaconBlockBellatrix{})
 	require.NoError(t, err)
 	require.Equal(t, false, wsb.IsNil())
 }
 
 func TestBeaconBlock_HashTreeRoot(t *testing.T) {
-	wb, err := WrappedBeaconBlock(util.HydrateBeaconBlockBellatrix(&ethpb.BeaconBlockBellatrix{}))
+	wb, err := bellatrix.WrappedBeaconBlock(util.HydrateBeaconBlockBellatrix(&ethpb.BeaconBlockBellatrix{}))
 	require.NoError(t, err)
 
 	rt, err := wb.HashTreeRoot()
@@ -208,14 +209,14 @@ func TestBeaconBlock_HashTreeRoot(t *testing.T) {
 
 func TestBeaconBlock_Proto(t *testing.T) {
 	blk := &ethpb.BeaconBlockBellatrix{ProposerIndex: 234}
-	wb, err := WrappedBeaconBlock(blk)
+	wb, err := bellatrix.WrappedBeaconBlock(blk)
 	require.NoError(t, err)
 
 	assert.Equal(t, blk, wb.Proto())
 }
 
 func TestBeaconBlock_SSZ(t *testing.T) {
-	wb, err := WrappedBeaconBlock(util.HydrateBeaconBlockBellatrix(&ethpb.BeaconBlockBellatrix{}))
+	wb, err := bellatrix.WrappedBeaconBlock(util.HydrateBeaconBlockBellatrix(&ethpb.BeaconBlockBellatrix{}))
 	assert.NoError(t, err)
 
 	b, err := wb.MarshalSSZ()
@@ -228,7 +229,7 @@ func TestBeaconBlock_SSZ(t *testing.T) {
 }
 
 func TestBeaconBlock_Version(t *testing.T) {
-	wb, err := WrappedBeaconBlock(&ethpb.BeaconBlockBellatrix{})
+	wb, err := bellatrix.WrappedBeaconBlock(&ethpb.BeaconBlockBellatrix{})
 	require.NoError(t, err)
 
 	assert.Equal(t, version.Bellatrix, wb.Version())
@@ -236,7 +237,7 @@ func TestBeaconBlock_Version(t *testing.T) {
 
 func TestBeaconBlockBody_RandaoReveal(t *testing.T) {
 	root := []byte{0xAA, 0xBF, 0x33, 0x01}
-	wbb, err := WrappedBeaconBlockBody(&ethpb.BeaconBlockBodyBellatrix{RandaoReveal: root})
+	wbb, err := bellatrix.WrappedBeaconBlockBody(&ethpb.BeaconBlockBodyBellatrix{RandaoReveal: root})
 	require.NoError(t, err)
 
 	assert.DeepEqual(t, root, wbb.RandaoReveal())
@@ -247,7 +248,7 @@ func TestBeaconBlockBody_Eth1Data(t *testing.T) {
 	body := &ethpb.BeaconBlockBodyBellatrix{
 		Eth1Data: data,
 	}
-	wbb, err := WrappedBeaconBlockBody(body)
+	wbb, err := bellatrix.WrappedBeaconBlockBody(body)
 	require.NoError(t, err)
 	assert.Equal(t, data, wbb.Eth1Data())
 }
@@ -255,7 +256,7 @@ func TestBeaconBlockBody_Eth1Data(t *testing.T) {
 func TestBeaconBlockBody_Graffiti(t *testing.T) {
 	graffiti := []byte{0x66, 0xAA}
 	body := &ethpb.BeaconBlockBodyBellatrix{Graffiti: graffiti}
-	wbb, err := WrappedBeaconBlockBody(body)
+	wbb, err := bellatrix.WrappedBeaconBlockBody(body)
 	require.NoError(t, err)
 
 	assert.DeepEqual(t, graffiti, wbb.Graffiti())
@@ -268,7 +269,7 @@ func TestBeaconBlockBody_ProposerSlashings(t *testing.T) {
 		}},
 	}
 	body := &ethpb.BeaconBlockBodyBellatrix{ProposerSlashings: ps}
-	wbb, err := WrappedBeaconBlockBody(body)
+	wbb, err := bellatrix.WrappedBeaconBlockBody(body)
 	require.NoError(t, err)
 
 	assert.DeepEqual(t, ps, wbb.ProposerSlashings())
@@ -279,7 +280,7 @@ func TestBeaconBlockBody_AttesterSlashings(t *testing.T) {
 		{Attestation_1: &ethpb.IndexedAttestation{Signature: []byte{0x11}}},
 	}
 	body := &ethpb.BeaconBlockBodyBellatrix{AttesterSlashings: as}
-	wbb, err := WrappedBeaconBlockBody(body)
+	wbb, err := bellatrix.WrappedBeaconBlockBody(body)
 	require.NoError(t, err)
 
 	assert.DeepEqual(t, as, wbb.AttesterSlashings())
@@ -289,7 +290,7 @@ func TestBeaconBlockBody_Attestations(t *testing.T) {
 	atts := []*ethpb.Attestation{{Signature: []byte{0x88}}}
 
 	body := &ethpb.BeaconBlockBodyBellatrix{Attestations: atts}
-	wbb, err := WrappedBeaconBlockBody(body)
+	wbb, err := bellatrix.WrappedBeaconBlockBody(body)
 	require.NoError(t, err)
 
 	assert.DeepEqual(t, atts, wbb.Attestations())
@@ -300,7 +301,7 @@ func TestBeaconBlockBody_Deposits(t *testing.T) {
 		{Proof: [][]byte{{0x54, 0x10}}},
 	}
 	body := &ethpb.BeaconBlockBodyBellatrix{Deposits: deposits}
-	wbb, err := WrappedBeaconBlockBody(body)
+	wbb, err := bellatrix.WrappedBeaconBlockBody(body)
 	require.NoError(t, err)
 
 	assert.DeepEqual(t, deposits, wbb.Deposits())
@@ -311,24 +312,24 @@ func TestBeaconBlockBody_VoluntaryExits(t *testing.T) {
 		{Exit: &ethpb.VoluntaryExit{Epoch: 54}},
 	}
 	body := &ethpb.BeaconBlockBodyBellatrix{VoluntaryExits: exits}
-	wbb, err := WrappedBeaconBlockBody(body)
+	wbb, err := bellatrix.WrappedBeaconBlockBody(body)
 	require.NoError(t, err)
 
 	assert.DeepEqual(t, exits, wbb.VoluntaryExits())
 }
 
 func TestBeaconBlockBody_IsNil(t *testing.T) {
-	_, err := WrappedBeaconBlockBody(nil)
+	_, err := bellatrix.WrappedBeaconBlockBody(nil)
 	require.Equal(t, typeerrors.ErrNilObjectWrapped, err)
 
-	wbb, err := WrappedBeaconBlockBody(&ethpb.BeaconBlockBodyBellatrix{})
+	wbb, err := bellatrix.WrappedBeaconBlockBody(&ethpb.BeaconBlockBodyBellatrix{})
 	require.NoError(t, err)
 	assert.Equal(t, false, wbb.IsNil())
 
 }
 
 func TestBeaconBlockBody_HashTreeRoot(t *testing.T) {
-	wb, err := WrappedBeaconBlockBody(util.HydrateBeaconBlockBodyBellatrix(&ethpb.BeaconBlockBodyBellatrix{}))
+	wb, err := bellatrix.WrappedBeaconBlockBody(util.HydrateBeaconBlockBodyBellatrix(&ethpb.BeaconBlockBodyBellatrix{}))
 	assert.NoError(t, err)
 
 	rt, err := wb.HashTreeRoot()
@@ -338,7 +339,7 @@ func TestBeaconBlockBody_HashTreeRoot(t *testing.T) {
 
 func TestBeaconBlockBody_Proto(t *testing.T) {
 	body := &ethpb.BeaconBlockBodyBellatrix{Graffiti: []byte{0x66, 0xAA}}
-	wbb, err := WrappedBeaconBlockBody(body)
+	wbb, err := bellatrix.WrappedBeaconBlockBody(body)
 	require.NoError(t, err)
 
 	assert.Equal(t, body, wbb.Proto())
@@ -349,7 +350,7 @@ func TestBeaconBlockBody_ExecutionPayload(t *testing.T) {
 		BlockNumber: 100,
 	}
 	body := &ethpb.BeaconBlockBodyBellatrix{ExecutionPayload: payloads}
-	wbb, err := WrappedBeaconBlockBody(body)
+	wbb, err := bellatrix.WrappedBeaconBlockBody(body)
 	require.NoError(t, err)
 
 	got, err := wbb.ExecutionPayload()
@@ -361,7 +362,7 @@ func TestBeaconBlock_PbGenericBlock(t *testing.T) {
 	abb := &ethpb.SignedBeaconBlockBellatrix{
 		Block: util.HydrateBeaconBlockBellatrix(&ethpb.BeaconBlockBellatrix{}),
 	}
-	wsb, err := WrappedSignedBeaconBlock(abb)
+	wsb, err := bellatrix.WrappedSignedBeaconBlock(abb)
 	require.NoError(t, err)
 
 	got, err := wsb.PbGenericBlock()
@@ -371,7 +372,7 @@ func TestBeaconBlock_PbGenericBlock(t *testing.T) {
 
 func TestBeaconBlock_AsSignRequestObject(t *testing.T) {
 	abb := util.HydrateBeaconBlockBellatrix(&ethpb.BeaconBlockBellatrix{})
-	wsb, err := WrappedBeaconBlock(abb)
+	wsb, err := bellatrix.WrappedBeaconBlock(abb)
 	require.NoError(t, err)
 
 	sro := wsb.AsSignRequestObject()
@@ -384,7 +385,7 @@ func TestBeaconBlock_PbBlindedBellatrixBlock(t *testing.T) {
 	sb := &ethpb.SignedBeaconBlockBellatrix{
 		Block: &ethpb.BeaconBlockBellatrix{Slot: 66},
 	}
-	wsb, err := WrappedSignedBeaconBlock(sb)
+	wsb, err := bellatrix.WrappedSignedBeaconBlock(sb)
 	require.NoError(t, err)
 	_, err = wsb.PbBlindedBellatrixBlock()
 	require.ErrorContains(t, "unsupported blinded bellatrix block", err)
@@ -394,7 +395,7 @@ func TestBeaconBlock_ExecutionPayloadHeader(t *testing.T) {
 	sb := &ethpb.SignedBeaconBlockBellatrix{
 		Block: &ethpb.BeaconBlockBellatrix{Slot: 66},
 	}
-	wsb, err := WrappedSignedBeaconBlock(sb)
+	wsb, err := bellatrix.WrappedSignedBeaconBlock(sb)
 	require.NoError(t, err)
 	_, err = wsb.Block().Body().ExecutionPayloadHeader()
 	require.ErrorContains(t, "unsupported field for block type", err)

@@ -802,8 +802,9 @@ func TestSignBlock(t *testing.T) {
 		},
 	}
 	validator.keyManager = km
-	b := wrapper.WrappedPhase0BeaconBlock(blk.Block)
-	sig, blockRoot, err := validator.signBlock(ctx, pubKey, 0, 0, b)
+	b, err := wrapper.WrappedSignedBeaconBlock(blk.Block)
+	require.NoError(t, err)
+	sig, blockRoot, err := validator.signBlock(ctx, pubKey, 0, 0, b.Block())
 	require.NoError(t, err, "%x,%v", sig, err)
 	require.Equal(t, "a049e1dc723e5a8b5bd14f292973572dffd53785ddb337"+
 		"82f20bf762cbe10ee7b9b4f5ae1ad6ff2089d352403750bed402b94b58469c072536"+
@@ -812,7 +813,7 @@ func TestSignBlock(t *testing.T) {
 
 	// Verify the returned block root matches the expected root using the proposer signature
 	// domain.
-	wantedBlockRoot, err := signing.ComputeSigningRoot(b, proposerDomain)
+	wantedBlockRoot, err := signing.ComputeSigningRoot(b.Block(), proposerDomain)
 	if err != nil {
 		require.NoError(t, err)
 	}
@@ -842,7 +843,7 @@ func TestSignAltairBlock(t *testing.T) {
 		},
 	}
 	validator.keyManager = km
-	wb, err := wrapper.WrappedAltairBeaconBlock(blk.Block)
+	wb, err := wrapper.WrappedBeaconBlock(blk.Block)
 	require.NoError(t, err)
 	sig, blockRoot, err := validator.signBlock(ctx, pubKey, 0, 0, wb)
 	require.NoError(t, err, "%x,%v", sig, err)
@@ -878,7 +879,7 @@ func TestSignBellatrixBlock(t *testing.T) {
 		},
 	}
 	validator.keyManager = km
-	wb, err := wrapper.WrappedBellatrixBeaconBlock(blk.Block)
+	wb, err := wrapper.WrappedBeaconBlock(blk.Block)
 	require.NoError(t, err)
 	sig, blockRoot, err := validator.signBlock(ctx, pubKey, 0, 0, wb)
 	require.NoError(t, err, "%x,%v", sig, err)

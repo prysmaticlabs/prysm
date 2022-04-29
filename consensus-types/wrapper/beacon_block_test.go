@@ -1,9 +1,10 @@
-package wrapper
+package wrapper_test
 
 import (
 	"testing"
 
 	typeerrors "github.com/prysmaticlabs/prysm/consensus-types/errors"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
 )
@@ -34,7 +35,7 @@ func TestWrappedSignedBeaconBlock(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := WrappedSignedBeaconBlock(tt.blk)
+			_, err := wrapper.WrappedSignedBeaconBlock(tt.blk)
 			if tt.wantErr {
 				require.ErrorIs(t, err, typeerrors.ErrUnsupportedSignedBeaconBlock)
 			} else {
