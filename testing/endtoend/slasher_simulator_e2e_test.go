@@ -46,6 +46,7 @@ func (mockSyncChecker) IsSynced(_ context.Context) (bool, error) {
 }
 
 func TestEndToEnd_SlasherSimulator(t *testing.T) {
+	t.Skip()
 	hook := logTest.NewGlobal()
 	ctx := context.Background()
 

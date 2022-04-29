@@ -20,6 +20,7 @@ type testArgs struct {
 }
 
 func TestEndToEnd_MinimalConfig(t *testing.T) {
+	t.Skip()
 	e2eMinimal(t, &testArgs{
 		usePrysmSh:          false,
 		useWeb3RemoteSigner: false,
