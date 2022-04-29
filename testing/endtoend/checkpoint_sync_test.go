@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"testing"
 
-	e2types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/config/params"
+	e2types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	ev "github.com/prysmaticlabs/prysm/testing/endtoend/evaluators"
 	e2eParams "github.com/prysmaticlabs/prysm/testing/endtoend/params"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/types"

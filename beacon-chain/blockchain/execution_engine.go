@@ -69,7 +69,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headState state.Be
 	fcs := &enginev1.ForkchoiceState{
 		HeadBlockHash:      headPayload.BlockHash,
 		SafeBlockHash:      headPayload.BlockHash,
-		FinalizedBlockHash: finalizedHash[:],
+		FinalizedBlockHash: finalizedHash,
 	}
 
 	nextSlot := s.CurrentSlot() + 1 // Cache payload ID for next slot proposer.
@@ -86,7 +86,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headState state.Be
 			log.WithFields(logrus.Fields{
 				"headSlot":                  headBlk.Slot(),
 				"headPayloadBlockHash":      fmt.Sprintf("%#x", bytesutil.Trunc(headPayload.BlockHash)),
-				"finalizedPayloadBlockHash": fmt.Sprintf("%#x", bytesutil.Trunc(finalizedHash[:])),
+				"finalizedPayloadBlockHash": fmt.Sprintf("%#x", bytesutil.Trunc(finalizedHash)),
 			}).Info("Called fork choice updated with optimistic block")
 			return payloadID, s.optimisticCandidateBlock(ctx, headBlk)
 		case powchain.ErrInvalidPayloadStatus:
@@ -134,7 +134,10 @@ func (s *Service) getFinalizedPayloadHash(ctx context.Context, finalizedRoot [32
 		return getPayloadHash(b.Block())
 	}
 
-	b = s.getInitSyncBlock(finalizedRoot)
+	b, err = s.getBlock(ctx, finalizedRoot)
+	if err != nil {
+		return [32]byte{}, errors.Wrapf(err, "failed to retrieve block %#x", finalizedRoot)
+	}
 	if b != nil {
 		return getPayloadHash(b.Block())
 	}
