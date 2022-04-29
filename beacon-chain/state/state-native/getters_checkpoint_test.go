@@ -153,6 +153,14 @@ func TestBeaconState_FinalizedCheckpoint_Bellatrix(t *testing.T) {
 		})
 }
 
+func TestBeaconState_JustificationBitsNil_Phase0(t *testing.T) {
+	testtmpl.VerifyBeaconStateJustificationBitsNil(
+		t,
+		func() (state.BeaconState, error) {
+			return InitializeFromProtoUnsafePhase0(&ethpb.BeaconState{})
+		})
+}
+
 func TestBeaconState_JustificationBitsNil_Altair(t *testing.T) {
 	testtmpl.VerifyBeaconStateJustificationBitsNil(
 		t,
@@ -166,6 +174,14 @@ func TestBeaconState_JustificationBitsNil_Bellatrix(t *testing.T) {
 		t,
 		func() (state.BeaconState, error) {
 			return InitializeFromProtoUnsafeBellatrix(&ethpb.BeaconStateBellatrix{})
+		})
+}
+
+func TestBeaconState_JustificationBits_Phase0(t *testing.T) {
+	testtmpl.VerifyBeaconStateJustificationBits(
+		t,
+		func(bits bitfield.Bitvector4) (state.BeaconState, error) {
+			return InitializeFromProtoUnsafePhase0(&ethpb.BeaconState{JustificationBits: bits})
 		})
 }
 

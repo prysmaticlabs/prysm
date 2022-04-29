@@ -1,22 +1,15 @@
 package state_native
 
 import (
-	"fmt"
-
 	"github.com/prysmaticlabs/go-bitfield"
 	nativetypes "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/types"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/runtime/version"
 )
 
 // SetJustificationBits for the beacon state.
 func (b *BeaconState) SetJustificationBits(val bitfield.Bitvector4) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
-
-	if b.version == version.Phase0 {
-		return fmt.Errorf("SetJustificationBits is not supported for %s", version.String(b.version))
-	}
 
 	b.justificationBits = val
 	b.markFieldAsDirty(nativetypes.JustificationBits)
