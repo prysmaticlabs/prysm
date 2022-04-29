@@ -272,6 +272,7 @@ func GetSyncCommitteeContributionAndProofSignRequest(request *validatorpb.SignRe
 	}, nil
 }
 
+// GetBlockV2BellatrixSignRequest maps the request for signing type BLOCK_V2 BELLATRIX.
 func GetBlockV2BellatrixSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot []byte) (*BlockV2BellatrixSignRequest, error) {
 	if request == nil {
 		return nil, errors.New("nil sign request provided")
