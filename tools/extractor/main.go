@@ -5,11 +5,11 @@ import (
 	"flag"
 	"fmt"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/interop"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/config/features"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 )
 
 var (
