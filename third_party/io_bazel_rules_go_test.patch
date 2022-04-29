@@ -1,18 +1,18 @@
 diff --git a/go/private/rules/test.bzl b/go/private/rules/test.bzl
-index a7936ca9..cbfc996a 100644
+index a88ebcc9..f23b0dfb 100644
 --- a/go/private/rules/test.bzl
 +++ b/go/private/rules/test.bzl
-@@ -176,7 +176,7 @@ def _go_test_impl(ctx):
-         ),
+@@ -185,7 +185,7 @@ def _go_test_impl(ctx):
+         testing.TestEnvironment(env),
      ]
  
 -_go_test_kwargs = {
 +go_test_kwargs = {
      "implementation": _go_test_impl,
      "attrs": {
-         "data": attr.label_list(allow_files = True),
-@@ -213,8 +213,8 @@ _go_test_kwargs = {
-     "toolchains": ["@io_bazel_rules_go//go:toolchain"],
+         "data": attr.label_list(
+@@ -439,8 +439,8 @@ _go_test_kwargs = {
+     """,
  }
  
 -go_test = rule(**_go_test_kwargs)

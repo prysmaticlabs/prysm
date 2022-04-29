@@ -15,5 +15,6 @@ go_test(
     deps = [
         ":go_default_library",
         "//testing/require:go_default_library",
+        "@com_github_prysmaticlabs_eth2_types//:go_default_library",
     ],
 )
