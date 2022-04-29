@@ -153,21 +153,25 @@ func getSignRequestJson(ctx context.Context, validator *validator.Validate, requ
 		aggregationSlotSignRequestsTotal.Inc()
 		return json.Marshal(aggregationSlotSignRequest)
 	case *validatorpb.SignRequest_BlockV2:
-		blocv2AltairSignRequest, err := v1.GetBlockV2AltairSignRequest(request, genesisValidatorsRoot)
+		blockv2AltairSignRequest, err := v1.GetBlockV2AltairSignRequest(request, genesisValidatorsRoot)
 		if err != nil {
 			return nil, err
 		}
-		if err = validator.StructCtx(ctx, blocv2AltairSignRequest); err != nil {
+		if err = validator.StructCtx(ctx, blockv2AltairSignRequest); err != nil {
 			return nil, err
 		}
 		blockV2SignRequestsTotal.Inc()
-		return json.Marshal(blocv2AltairSignRequest)
-	// TODO(#10053): Need to add support for merge blocks.
-
-	/*
-		case *validatorpb.SignRequest_BlockV3:
-		return "BLOCK_V3", nil
-	*/
+		return json.Marshal(blockv2AltairSignRequest)
+	case *validatorpb.SignRequest_BlockV3:
+		blockv2BellatrixSignRequest, err := v1.GetBlockV2BellatrixSignRequest(request, genesisValidatorsRoot)
+		if err != nil {
+			return nil, err
+		}
+		if err = validator.StructCtx(ctx, blockv2BellatrixSignRequest); err != nil {
+			return nil, err
+		}
+		// blockV2SignRequestsTotal.Inc()
+		return json.Marshal(blockv2BellatrixSignRequest)
 
 	// We do not support "DEPOSIT" type.
 	/*
