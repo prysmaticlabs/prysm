@@ -582,7 +582,7 @@ func (b *BeaconState) recomputeDirtyFields(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		idx := b.fieldIndexesRev[field]
+		idx := b.fieldIndexPosition[field]
 		b.merkleLayers[0][idx] = root[:]
 		b.recomputeRoot(idx)
 		delete(b.dirtyFields, field)
@@ -1053,8 +1053,8 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 }
 
 func (b *BeaconState) populateFieldIndexes(fields []nativetypes.FieldIndex) {
-	b.fieldIndexesRev = make(map[nativetypes.FieldIndex]int, len(fields))
+	b.fieldIndexPosition = make(map[nativetypes.FieldIndex]int, len(fields))
 	for i, f := range fields {
-		b.fieldIndexesRev[f] = i
+		b.fieldIndexPosition[f] = i
 	}
 }

@@ -48,7 +48,7 @@ type BeaconState struct {
 	latestExecutionPayloadHeader *ethpb.ExecutionPayloadHeader `ssz-gen:"true"`
 
 	lock                  sync.RWMutex
-	fieldIndexesRev       map[nativetypes.FieldIndex]int
+	fieldIndexPosition    map[nativetypes.FieldIndex]int
 	dirtyFields           map[nativetypes.FieldIndex]bool
 	dirtyIndices          map[nativetypes.FieldIndex][]uint64
 	stateFieldLeaves      map[nativetypes.FieldIndex]*fieldtrie.FieldTrie
