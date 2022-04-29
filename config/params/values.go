@@ -111,3 +111,13 @@ func equalForkSchedules(a, b map[[fieldparams.VersionLength]byte]types.Epoch) er
 	}
 	return nil
 }
+
+var TestForkVersionSuffix byte = 252
+var MainnetForkVersionSuffix byte = 0
+
+func SetTestForkVersions(cfg *BeaconChainConfig, suffix byte) {
+	cfg.GenesisForkVersion = []byte{0, 0, 0, suffix}
+	cfg.AltairForkVersion = []byte{1, 0, 0, suffix}
+	cfg.BellatrixForkVersion = []byte{2, 0, 0, suffix}
+	cfg.ShardingForkVersion = []byte{3, 0, 0, suffix}
+}

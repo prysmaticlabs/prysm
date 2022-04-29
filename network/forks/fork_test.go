@@ -35,7 +35,6 @@ func TestFork(t *testing.T) {
 				cfg := params.BeaconConfig()
 				cfg.GenesisForkVersion = []byte{'A', 'B', 'C', 'D'}
 				cfg.ForkVersionSchedule = map[[4]byte]types.Epoch{}
-				params.OverrideBeaconConfig(cfg)
 			},
 		},
 		{
@@ -53,7 +52,6 @@ func TestFork(t *testing.T) {
 				cfg.ForkVersionSchedule = map[[4]byte]types.Epoch{
 					{'A', 'B', 'C', 'D'}: 0,
 				}
-				params.OverrideBeaconConfig(cfg)
 			},
 		},
 		{
@@ -73,7 +71,6 @@ func TestFork(t *testing.T) {
 					{'A', 'B', 'C', 'D'}: 0,
 					{'A', 'B', 'C', 'F'}: 10,
 				}
-				params.OverrideBeaconConfig(cfg)
 			},
 		},
 		{
@@ -93,7 +90,6 @@ func TestFork(t *testing.T) {
 					{'A', 'B', 'C', 'D'}: 0,
 					{'A', 'B', 'C', 'F'}: 10,
 				}
-				params.OverrideBeaconConfig(cfg)
 			},
 		},
 
@@ -114,7 +110,6 @@ func TestFork(t *testing.T) {
 					{'A', 'B', 'C', 'D'}: 0,
 					{'A', 'B', 'C', 'F'}: 10,
 				}
-				params.OverrideBeaconConfig(cfg)
 			},
 		},
 
@@ -135,7 +130,6 @@ func TestFork(t *testing.T) {
 					{'A', 'B', 'C', 'F'}: 10,
 					{'A', 'B', 'C', 'Z'}: 100,
 				}
-				params.OverrideBeaconConfig(cfg)
 			},
 		},
 		{
@@ -155,7 +149,6 @@ func TestFork(t *testing.T) {
 					{'A', 'B', 'C', 'F'}: 10,
 					{'A', 'B', 'C', 'Z'}: 100,
 				}
-				params.OverrideBeaconConfig(cfg)
 			},
 		},
 	}
@@ -183,7 +176,6 @@ func TestRetrieveForkDataFromDigest(t *testing.T) {
 		{'A', 'B', 'C', 'F'}: 10,
 		{'A', 'B', 'C', 'Z'}: 100,
 	}
-	params.OverrideBeaconConfig(cfg)
 	genValRoot := [32]byte{'A', 'B', 'C', 'D'}
 	digest, err := signing.ComputeForkDigest([]byte{'A', 'B', 'C', 'F'}, genValRoot[:])
 	assert.NoError(t, err)
@@ -264,7 +256,6 @@ func TestNextForkData(t *testing.T) {
 				cfg.ForkVersionSchedule = map[[4]byte]types.Epoch{
 					{'A', 'B', 'C', 'D'}: 0,
 				}
-				params.OverrideBeaconConfig(cfg)
 			},
 		},
 		{
@@ -280,7 +271,6 @@ func TestNextForkData(t *testing.T) {
 					{'A', 'B', 'C', 'D'}: 0,
 					{'A', 'B', 'C', 'F'}: 10,
 				}
-				params.OverrideBeaconConfig(cfg)
 			},
 		},
 		{
@@ -296,7 +286,6 @@ func TestNextForkData(t *testing.T) {
 					{'A', 'B', 'C', 'D'}: 0,
 					{'A', 'B', 'C', 'F'}: 10,
 				}
-				params.OverrideBeaconConfig(cfg)
 			},
 		},
 
@@ -313,7 +302,6 @@ func TestNextForkData(t *testing.T) {
 					{'A', 'B', 'C', 'D'}: 0,
 					{'A', 'B', 'C', 'F'}: 10,
 				}
-				params.OverrideBeaconConfig(cfg)
 			},
 		},
 
@@ -330,7 +318,6 @@ func TestNextForkData(t *testing.T) {
 					{'A', 'B', 'C', 'F'}: 10,
 					{'A', 'B', 'C', 'Z'}: 100,
 				}
-				params.OverrideBeaconConfig(cfg)
 			},
 		},
 		{
@@ -346,7 +333,6 @@ func TestNextForkData(t *testing.T) {
 					{'A', 'B', 'C', 'F'}: 10,
 					{'A', 'B', 'C', 'Z'}: 100,
 				}
-				params.OverrideBeaconConfig(cfg)
 			},
 		},
 		{
@@ -362,7 +348,6 @@ func TestNextForkData(t *testing.T) {
 					{'A', 'B', 'C', 'F'}: 10,
 					{'A', 'B', 'C', 'Z'}: 100,
 				}
-				params.OverrideBeaconConfig(cfg)
 			},
 		},
 	}

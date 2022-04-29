@@ -380,7 +380,6 @@ func TestForkSchedule_Ok(t *testing.T) {
 	schedule[bytesutil.ToBytes4(firstForkVersion)] = firstForkEpoch
 	schedule[bytesutil.ToBytes4(thirdForkVersion)] = thirdForkEpoch
 	config.ForkVersionSchedule = schedule
-	params.OverrideBeaconConfig(config)
 
 	s := &Server{}
 	resp, err := s.GetForkSchedule(context.Background(), &emptypb.Empty{})

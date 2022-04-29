@@ -101,7 +101,8 @@ func configureInteropConfig(cliCtx *cli.Context) {
 	votesIsSet := cliCtx.IsSet(flags.InteropMockEth1DataVotesFlag.Name)
 
 	if genStateIsSet || genTimeIsSet || numValsIsSet || votesIsSet {
-		bCfg := params.BeaconConfig()
+		bCfg := params.BeaconConfig().Copy()
+		params.SetTestForkVersions(bCfg, params.TestForkVersionSuffix)
 		bCfg.ConfigName = "interop"
 		params.OverrideBeaconConfig(bCfg)
 	}

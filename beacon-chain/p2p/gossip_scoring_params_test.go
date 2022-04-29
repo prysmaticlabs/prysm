@@ -17,6 +17,7 @@ func TestCorrect_ActiveValidatorsCount(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	cfg := params.MainnetConfig()
 	cfg.ConfigName = "test"
+	params.SetTestForkVersions(cfg, params.TestForkVersionSuffix)
 
 	params.OverrideBeaconConfig(cfg)
 

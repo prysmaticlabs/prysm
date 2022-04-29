@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
@@ -29,7 +30,7 @@ func testGenesisDataSaved(t *testing.T, db iface.Database) {
 
 	gb, err := db.GenesisBlock(ctx)
 	assert.NoError(t, err)
-	assert.NotNil(t, gb)
+	require.NotNil(t, gb)
 
 	gbHTR, err := gb.Block().HashTreeRoot()
 	assert.NoError(t, err)
@@ -47,8 +48,26 @@ func testGenesisDataSaved(t *testing.T, db iface.Database) {
 	assert.Equal(t, gbHTR, headHTR, "head block does not match genesis block")
 }
 
+func swapMainAndTestConfigs() {
+	mainCfg := params.MainnetConfig()
+	mainVer := params.MainnetConfig().GenesisForkVersion[3]
+	testCfg := params.BeaconConfig()
+	testVer := params.BeaconConfig().GenesisForkVersion[3]
+	params.SetTestForkVersions(mainCfg, testVer)
+	mainCfg.InitializeForkSchedule()
+	params.SetTestForkVersions(testCfg, mainVer)
+	testCfg.InitializeForkSchedule()
+}
+
 func TestLoadGenesisFromFile(t *testing.T) {
 	fp := "testdata/mainnet.genesis.ssz"
+	cfg := params.BeaconConfig()
+	// swap these around so versions do not conflict
+	swapMainAndTestConfigs()
+	defer func() {
+		swapMainAndTestConfigs()
+	}()
+	params.OverrideBeaconConfig(cfg)
 	rfp, err := bazel.Runfile(fp)
 	if err == nil {
 		fp = rfp
@@ -82,9 +101,7 @@ func TestLoadGenesisFromFile_mismatchedForkVersion(t *testing.T) {
 func TestEnsureEmbeddedGenesis(t *testing.T) {
 	// Embedded Genesis works with Mainnet config
 	params.SetupTestConfigCleanup(t)
-	cfg := params.BeaconConfig()
-	cfg.ConfigName = params.ConfigNames[params.Mainnet]
-	params.OverrideBeaconConfig(cfg)
+	params.OverrideBeaconConfig(params.MainnetConfig())
 
 	ctx := context.Background()
 	db := setupDB(t)

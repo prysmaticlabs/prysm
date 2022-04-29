@@ -146,7 +146,6 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 		c := params.BeaconConfig()
 		nextForkEpoch := types.Epoch(i)
 		c.ForkVersionSchedule[[4]byte{'A', 'B', 'C', 'D'}] = nextForkEpoch
-		params.OverrideBeaconConfig(c)
 
 		// We give every peer a different genesis validators root, which
 		// will cause each peer to have a different ForkDigest, preventing
@@ -264,17 +263,12 @@ func TestAddForkEntry_Genesis(t *testing.T) {
 	db, err := enode.OpenDB("")
 	require.NoError(t, err)
 
-	bCfg := params.BeaconConfig()
-	bCfg.ForkVersionSchedule = map[[4]byte]types.Epoch{}
-	bCfg.ForkVersionSchedule[bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion)] = bCfg.GenesisEpoch
-	params.OverrideBeaconConfig(bCfg)
-
 	localNode := enode.NewLocalNode(db, pkey)
 	localNode, err = addForkEntry(localNode, time.Now().Add(10*time.Second), bytesutil.PadTo([]byte{'A', 'B', 'C', 'D'}, 32))
 	require.NoError(t, err)
 	forkEntry, err := forkEntry(localNode.Node().Record())
 	require.NoError(t, err)
 	assert.DeepEqual(t,
-		params.BeaconConfig().GenesisForkVersion, forkEntry.NextForkVersion,
+		params.BeaconConfig().AltairForkVersion, forkEntry.NextForkVersion,
 		"Wanted Next Fork Version to be equal to genesis fork version")
 }

@@ -52,7 +52,6 @@ func TestGetState(t *testing.T) {
 		params.SetupTestConfigCleanup(t)
 		cfg := params.BeaconConfig()
 		cfg.ConfigName = "test"
-		params.OverrideBeaconConfig(cfg)
 
 		db := testDB.SetupDB(t)
 		b := util.NewBeaconBlock()

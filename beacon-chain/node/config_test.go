@@ -193,8 +193,11 @@ func TestConfigureInterop(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			cfg := params.BeaconConfig()
+			suffix := cfg.GenesisForkVersion[3]
 			configureInteropConfig(tt.flagSetter())
 			assert.DeepEqual(t, tt.configName, params.BeaconConfig().ConfigName)
+			params.SetTestForkVersions(cfg, suffix)
 		})
 	}
 }
