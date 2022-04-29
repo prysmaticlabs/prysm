@@ -20,7 +20,7 @@ type SignedBlindedBeaconBlock struct {
 	b *eth.SignedBlindedBeaconBlockBellatrix
 }
 
-// WrappedSignedBlindedBeaconBlock is a constructor which wraps a protobuf Bellatrix blinded block with the block wrappers.
+// WrappedSignedBlindedBeaconBlock is a constructor which wraps a protobuf Bellatrix blinded block with the block wrapper.
 func WrappedSignedBlindedBeaconBlock(b *eth.SignedBlindedBeaconBlockBellatrix) (*SignedBlindedBeaconBlock, error) {
 	w := &SignedBlindedBeaconBlock{b: b}
 	if w.IsNil() {
@@ -133,7 +133,7 @@ type BlindedBeaconBlock struct {
 }
 
 // WrappedBlindedBeaconBlock is a constructor which wraps a protobuf Bellatrix object
-// with the block wrappers.
+// with the block wrapper.
 func WrappedBlindedBeaconBlock(b *eth.BlindedBeaconBlockBellatrix) (*BlindedBeaconBlock, error) {
 	w := &BlindedBeaconBlock{b: b}
 	if w.IsNil() {
@@ -234,7 +234,7 @@ type BlindedBeaconBlockBody struct {
 }
 
 // WrappedBlindedBeaconBlockBody is a constructor which wraps a protobuf bellatrix object
-// with the block wrappers.
+// with the block wrapper.
 func WrappedBlindedBeaconBlockBody(b *eth.BlindedBeaconBlockBodyBellatrix) (*BlindedBeaconBlockBody, error) {
 	w := &BlindedBeaconBlockBody{b: b}
 	if w.IsNil() {

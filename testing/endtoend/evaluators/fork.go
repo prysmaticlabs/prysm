@@ -5,7 +5,7 @@ import (
 
 	"github.com/pkg/errors"
 	coreHelper "github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	wrapperv2 "github.com/prysmaticlabs/prysm/consensus-types/wrappers"
+	wrapperv2 "github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/policies"

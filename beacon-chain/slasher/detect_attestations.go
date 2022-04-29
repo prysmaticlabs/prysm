@@ -13,7 +13,7 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// Takes in a list of indexed attestation wrappers and returns any
+// Takes in a list of indexed attestation wrapper and returns any
 // found attester slashings to the caller.
 func (s *Service) checkSlashableAttestations(
 	ctx context.Context, currentEpoch types.Epoch, atts []*slashertypes.IndexedAttestationWrapper,

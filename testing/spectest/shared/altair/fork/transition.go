@@ -13,7 +13,7 @@ import (
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrappers"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/spectest/utils"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -99,7 +99,7 @@ func RunForkTransitionTest(t *testing.T, config string) {
 			ctx := context.Background()
 			var ok bool
 			for _, b := range preforkBlocks {
-				wsb, err := wrappers.WrappedSignedBeaconBlock(b)
+				wsb, err := wrapper.WrappedSignedBeaconBlock(b)
 				require.NoError(t, err)
 				st, err := transition.ExecuteStateTransition(ctx, beaconState, wsb)
 				require.NoError(t, err)
@@ -108,7 +108,7 @@ func RunForkTransitionTest(t *testing.T, config string) {
 			}
 			altairState := state.BeaconStateAltair(beaconState)
 			for _, b := range postforkBlocks {
-				wsb, err := wrappers.WrappedSignedBeaconBlock(b)
+				wsb, err := wrapper.WrappedSignedBeaconBlock(b)
 				require.NoError(t, err)
 				st, err := transition.ExecuteStateTransition(ctx, altairState, wsb)
 				require.NoError(t, err)

@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	block "github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrappers"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -31,7 +31,7 @@ var blockTests = []struct {
 			if root != nil {
 				b.Block.ParentRoot = root
 			}
-			return wrappers.WrappedSignedBeaconBlock(b)
+			return wrapper.WrappedSignedBeaconBlock(b)
 		},
 	},
 	{
@@ -42,7 +42,7 @@ var blockTests = []struct {
 			if root != nil {
 				b.Block.ParentRoot = root
 			}
-			return wrappers.WrappedSignedBeaconBlock(b)
+			return wrapper.WrappedSignedBeaconBlock(b)
 		},
 	},
 	{
@@ -53,7 +53,7 @@ var blockTests = []struct {
 			if root != nil {
 				b.Block.ParentRoot = root
 			}
-			return wrappers.WrappedSignedBeaconBlock(b)
+			return wrapper.WrappedSignedBeaconBlock(b)
 		},
 	},
 }
@@ -243,7 +243,7 @@ func TestStore_DeleteJustifiedBlock(t *testing.T) {
 	}
 	st, err := util.NewBeaconState()
 	require.NoError(t, err)
-	blk, err := wrappers.WrappedSignedBeaconBlock(b)
+	blk, err := wrapper.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, blk))
 	require.NoError(t, db.SaveState(ctx, st, root))
@@ -262,7 +262,7 @@ func TestStore_DeleteFinalizedBlock(t *testing.T) {
 	}
 	st, err := util.NewBeaconState()
 	require.NoError(t, err)
-	blk, err := wrappers.WrappedSignedBeaconBlock(b)
+	blk, err := wrapper.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, blk))
 	require.NoError(t, db.SaveState(ctx, st, root))
@@ -278,7 +278,7 @@ func TestStore_GenesisBlock(t *testing.T) {
 	blockRoot, err := genesisBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, blockRoot))
-	wsb, err := wrappers.WrappedSignedBeaconBlock(genesisBlock)
+	wsb, err := wrapper.WrappedSignedBeaconBlock(genesisBlock)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, wsb))
 	retrievedBlock, err := db.GenesisBlock(ctx)

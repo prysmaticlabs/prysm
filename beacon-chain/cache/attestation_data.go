@@ -156,7 +156,7 @@ func wrapperToKey(i interface{}) (string, error) {
 		return "", errors.New("nil wrapper")
 	}
 	if w.req == nil {
-		return "", errors.New("nil wrappers.request")
+		return "", errors.New("nil wrapper.request")
 	}
 	return reqToKey(w.req)
 }

@@ -17,7 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	block "github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrappers"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/time/slots"
 )
@@ -175,5 +175,5 @@ func (cf *VersionedUnmarshaler) UnmarshalBeaconBlock(marshaled []byte) (block.Si
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal SignedBeaconBlock in UnmarshalSSZ")
 	}
-	return wrappers.WrappedSignedBeaconBlock(blk)
+	return wrapper.WrappedSignedBeaconBlock(blk)
 }

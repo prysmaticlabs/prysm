@@ -15,7 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	block "github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrappers"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -144,7 +144,7 @@ func TestService_ReceiveBlock(t *testing.T) {
 			s.store.SetFinalizedCheckpt(&ethpb.Checkpoint{Root: gRoot[:]})
 			root, err := tt.args.block.Block.HashTreeRoot()
 			require.NoError(t, err)
-			wsb, err := wrappers.WrappedSignedBeaconBlock(tt.args.block)
+			wsb, err := wrapper.WrappedSignedBeaconBlock(tt.args.block)
 			require.NoError(t, err)
 			err = s.ReceiveBlock(ctx, wsb, root)
 			if tt.wantedErr != "" {
@@ -187,7 +187,7 @@ func TestService_ReceiveBlockUpdateHead(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
-		wsb, err := wrappers.WrappedSignedBeaconBlock(b)
+		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
 		require.NoError(t, err)
 		require.NoError(t, s.ReceiveBlock(ctx, wsb, root))
 		wg.Done()
@@ -265,7 +265,7 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 			s.store.SetFinalizedCheckpt(&ethpb.Checkpoint{Root: gRoot[:]})
 			root, err := tt.args.block.Block.HashTreeRoot()
 			require.NoError(t, err)
-			wsb, err := wrappers.WrappedSignedBeaconBlock(tt.args.block)
+			wsb, err := wrapper.WrappedSignedBeaconBlock(tt.args.block)
 			require.NoError(t, err)
 			blks := []block.SignedBeaconBlock{wsb}
 			roots := [][32]byte{root}
@@ -289,7 +289,7 @@ func TestService_HasInitSyncBlock(t *testing.T) {
 	if s.HasInitSyncBlock(r) {
 		t.Error("Should not have block")
 	}
-	wsb, err := wrappers.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+	wsb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
 	require.NoError(t, err)
 	s.saveInitSyncBlock(r, wsb)
 	if !s.HasInitSyncBlock(r) {

@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/cmd"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrappers"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -26,7 +26,7 @@ func TestRestore(t *testing.T) {
 	require.NoError(t, err)
 	head := util.NewBeaconBlock()
 	head.Block.Slot = 5000
-	wsb, err := wrappers.WrappedSignedBeaconBlock(head)
+	wsb, err := wrapper.WrappedSignedBeaconBlock(head)
 	require.NoError(t, err)
 	require.NoError(t, backupDb.SaveBlock(ctx, wsb))
 	root, err := head.Block.HashTreeRoot()

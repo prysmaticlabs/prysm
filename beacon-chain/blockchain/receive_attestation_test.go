@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrappers"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -48,7 +48,7 @@ func TestVerifyLMDFFGConsistent_NotOK(t *testing.T) {
 
 	b32 := util.NewBeaconBlock()
 	b32.Block.Slot = 32
-	wsb, err := wrappers.WrappedSignedBeaconBlock(b32)
+	wsb, err := wrapper.WrappedSignedBeaconBlock(b32)
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
 	r32, err := b32.Block.HashTreeRoot()
@@ -56,7 +56,7 @@ func TestVerifyLMDFFGConsistent_NotOK(t *testing.T) {
 	b33 := util.NewBeaconBlock()
 	b33.Block.Slot = 33
 	b33.Block.ParentRoot = r32[:]
-	wsb, err = wrappers.WrappedSignedBeaconBlock(b33)
+	wsb, err = wrapper.WrappedSignedBeaconBlock(b33)
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
 	r33, err := b33.Block.HashTreeRoot()
@@ -79,7 +79,7 @@ func TestVerifyLMDFFGConsistent_OK(t *testing.T) {
 
 	b32 := util.NewBeaconBlock()
 	b32.Block.Slot = 32
-	wsb, err := wrappers.WrappedSignedBeaconBlock(b32)
+	wsb, err := wrapper.WrappedSignedBeaconBlock(b32)
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
 	r32, err := b32.Block.HashTreeRoot()
@@ -87,7 +87,7 @@ func TestVerifyLMDFFGConsistent_OK(t *testing.T) {
 	b33 := util.NewBeaconBlock()
 	b33.Block.Slot = 33
 	b33.Block.ParentRoot = r32[:]
-	wsb, err = wrappers.WrappedSignedBeaconBlock(b33)
+	wsb, err = wrapper.WrappedSignedBeaconBlock(b33)
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
 	r33, err := b33.Block.HashTreeRoot()
@@ -140,7 +140,7 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 	finalizedErr := "could not get finalized checkpoint"
 	require.LogsDoNotContain(t, hook, finalizedErr)
 	require.LogsDoNotContain(t, hook, hookErr)
-	gb, err := wrappers.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+	gb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
 	require.NoError(t, err)
 	service.saveInitSyncBlock([32]byte{'a'}, gb)
 	service.notifyEngineIfChangedHead(ctx, [32]byte{'a'})
@@ -155,7 +155,7 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 	// Block in Cache
 	b := util.NewBeaconBlock()
 	b.Block.Slot = 2
-	wsb, err := wrappers.WrappedSignedBeaconBlock(b)
+	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)
 	r1, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -177,7 +177,7 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 	// Block in DB
 	b = util.NewBeaconBlock()
 	b.Block.Slot = 3
-	wsb, err = wrappers.WrappedSignedBeaconBlock(b)
+	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
 	r1, err = b.Block.HashTreeRoot()

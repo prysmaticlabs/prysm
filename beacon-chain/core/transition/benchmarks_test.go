@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrappers"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/benchmark"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -29,7 +29,7 @@ func BenchmarkExecuteStateTransition_FullBlock(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		wsb, err := wrappers.WrappedSignedBeaconBlock(block)
+		wsb, err := wrapper.WrappedSignedBeaconBlock(block)
 		require.NoError(b, err)
 		_, err = coreState.ExecuteStateTransition(context.Background(), cleanStates[i], wsb)
 		require.NoError(b, err)
@@ -52,14 +52,14 @@ func BenchmarkExecuteStateTransition_WithCache(b *testing.B) {
 	require.NoError(b, helpers.UpdateCommitteeCache(beaconState, time.CurrentEpoch(beaconState)))
 	require.NoError(b, beaconState.SetSlot(currentSlot))
 	// Run the state transition once to populate the cache.
-	wsb, err := wrappers.WrappedSignedBeaconBlock(block)
+	wsb, err := wrapper.WrappedSignedBeaconBlock(block)
 	require.NoError(b, err)
 	_, err = coreState.ExecuteStateTransition(context.Background(), beaconState, wsb)
 	require.NoError(b, err, "Failed to process block, benchmarks will fail")
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		wsb, err := wrappers.WrappedSignedBeaconBlock(block)
+		wsb, err := wrapper.WrappedSignedBeaconBlock(block)
 		require.NoError(b, err)
 		_, err = coreState.ExecuteStateTransition(context.Background(), cleanStates[i], wsb)
 		require.NoError(b, err, "Failed to process block, benchmarks will fail")

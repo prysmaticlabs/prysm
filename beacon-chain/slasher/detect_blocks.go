@@ -10,7 +10,7 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// detectProposerSlashings takes in signed block header wrappers and returns a list of proposer slashings detected.
+// detectProposerSlashings takes in signed block header wrapper and returns a list of proposer slashings detected.
 func (s *Service) detectProposerSlashings(
 	ctx context.Context,
 	proposedBlocks []*slashertypes.SignedBlockHeaderWrapper,

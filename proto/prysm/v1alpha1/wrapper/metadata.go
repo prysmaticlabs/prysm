@@ -13,7 +13,7 @@ type MetadataV0 struct {
 	md *pb.MetaDataV0
 }
 
-// WrappedMetadataV0 wrappers around the provided protobuf object.
+// WrappedMetadataV0 wrapper around the provided protobuf object.
 func WrappedMetadataV0(md *pb.MetaDataV0) MetadataV0 {
 	return MetadataV0{md: md}
 }
@@ -88,7 +88,7 @@ type MetadataV1 struct {
 	md *pb.MetaDataV1
 }
 
-// WrappedMetadataV1 wrappers around the provided protobuf object.
+// WrappedMetadataV1 wrapper around the provided protobuf object.
 func WrappedMetadataV1(md *pb.MetaDataV1) MetadataV1 {
 	return MetadataV1{md: md}
 }

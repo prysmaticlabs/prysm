@@ -6,13 +6,13 @@ import (
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 )
 
-// Struct for handling a thread-safe list of indexed attestation wrappers.
+// Struct for handling a thread-safe list of indexed attestation wrapper.
 type attestationsQueue struct {
 	sync.RWMutex
 	items []*slashertypes.IndexedAttestationWrapper
 }
 
-// Struct for handling a thread-safe list of beacon block header wrappers.
+// Struct for handling a thread-safe list of beacon block header wrapper.
 type blocksQueue struct {
 	lock  sync.RWMutex
 	items []*slashertypes.SignedBlockHeaderWrapper

@@ -17,7 +17,7 @@ import (
 	typeerrors "github.com/prysmaticlabs/prysm/consensus-types/errors"
 	block "github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrappers"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
@@ -713,7 +713,7 @@ func (bs *Server) submitPhase0Block(ctx context.Context, phase0Blk *ethpbv1.Beac
 	if err != nil {
 		return status.Errorf(codes.InvalidArgument, "Could not convert block to v1 block")
 	}
-	wrappedPhase0Blk, err := wrappers.WrappedSignedBeaconBlock(v1alpha1Blk)
+	wrappedPhase0Blk, err := wrapper.WrappedSignedBeaconBlock(v1alpha1Blk)
 	if err != nil {
 		return status.Errorf(codes.InvalidArgument, "Could not prepare block")
 	}
@@ -730,7 +730,7 @@ func (bs *Server) submitAltairBlock(ctx context.Context, altairBlk *ethpbv2.Beac
 	if err != nil {
 		return status.Errorf(codes.InvalidArgument, "Could not convert block to v1 block")
 	}
-	wrappedAltairBlk, err := wrappers.WrappedSignedBeaconBlock(v1alpha1Blk)
+	wrappedAltairBlk, err := wrapper.WrappedSignedBeaconBlock(v1alpha1Blk)
 	if err != nil {
 		return status.Errorf(codes.InvalidArgument, "Could not prepare block")
 	}
@@ -748,7 +748,7 @@ func (bs *Server) submitBellatrixBlock(ctx context.Context, bellatrixBlk *ethpbv
 	if err != nil {
 		return status.Errorf(codes.InvalidArgument, "Could not convert block to v1 block")
 	}
-	wrappedBellatrixBlk, err := wrappers.WrappedSignedBeaconBlock(v1alpha1Blk)
+	wrappedBellatrixBlk, err := wrapper.WrappedSignedBeaconBlock(v1alpha1Blk)
 	if err != nil {
 		return status.Errorf(codes.InvalidArgument, "Could not prepare block")
 	}
@@ -769,7 +769,7 @@ func (bs *Server) submitBlindedBellatrixBlock(ctx context.Context, blindedBellat
 	if err != nil {
 		return status.Errorf(codes.Internal, "Could not get blinded block: %v", err)
 	}
-	wrappedBellatrixSignedBlk, err := wrappers.WrappedSignedBeaconBlock(v1alpha1SignedBlk)
+	wrappedBellatrixSignedBlk, err := wrapper.WrappedSignedBeaconBlock(v1alpha1SignedBlk)
 	if err != nil {
 		return status.Errorf(codes.Internal, "Could not get blinded block: %v", err)
 	}

@@ -14,7 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	block "github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrappers"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -206,7 +206,7 @@ func newMockHistory(t *testing.T, hist []mockHistorySpec, current types.Slot) *m
 	require.NoError(t, err)
 
 	// generate new genesis block using the root of the deterministic state
-	gb, err := wrappers.WrappedSignedBeaconBlock(blocks.NewGenesisBlock(gsr[:]))
+	gb, err := wrapper.WrappedSignedBeaconBlock(blocks.NewGenesisBlock(gsr[:]))
 	require.NoError(t, err)
 	pr, err := gb.Block().HashTreeRoot()
 	require.NoError(t, err)
@@ -224,7 +224,7 @@ func newMockHistory(t *testing.T, hist []mockHistorySpec, current types.Slot) *m
 		require.NoError(t, err)
 
 		// create proposer block, setting values in the order seen in the validator.md spec
-		b, err := wrappers.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+		b, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
 		require.NoError(t, err)
 
 		// set slot to mock history spec value

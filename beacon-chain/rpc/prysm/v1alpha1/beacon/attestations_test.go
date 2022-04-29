@@ -24,7 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	block "github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrappers"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
@@ -95,7 +95,7 @@ func TestServer_ListAttestations_Genesis(t *testing.T) {
 	signedBlock.Block.Body.Attestations = []*ethpb.Attestation{att}
 	root, err := signedBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
-	wsb, err := wrappers.WrappedSignedBeaconBlock(signedBlock)
+	wsb, err := wrapper.WrappedSignedBeaconBlock(signedBlock)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, wsb))
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
@@ -134,7 +134,7 @@ func TestServer_ListAttestations_NoPagination(t *testing.T) {
 				AggregationBits: bitfield.Bitlist{0b11},
 			},
 		}
-		wsb, err := wrappers.WrappedSignedBeaconBlock(blockExample)
+		wsb, err := wrapper.WrappedSignedBeaconBlock(blockExample)
 		require.NoError(t, err)
 		require.NoError(t, db.SaveBlock(ctx, wsb))
 		atts = append(atts, blockExample.Block.Body.Attestations...)
@@ -245,7 +245,7 @@ func TestServer_ListAttestations_FiltersCorrectly(t *testing.T) {
 
 	var blocks []block.SignedBeaconBlock
 	for _, b := range unwrappedBlocks {
-		wsb, err := wrappers.WrappedSignedBeaconBlock(b)
+		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
 		require.NoError(t, err)
 		blocks = append(blocks, wsb)
 	}
@@ -287,7 +287,7 @@ func TestServer_ListAttestations_Pagination_CustomPageParameters(t *testing.T) {
 					AggregationBits: bitfield.Bitlist{0b11},
 				}),
 			}
-			wsb, err := wrappers.WrappedSignedBeaconBlock(blockExample)
+			wsb, err := wrapper.WrappedSignedBeaconBlock(blockExample)
 			require.NoError(t, err)
 			require.NoError(t, db.SaveBlock(ctx, wsb))
 			atts = append(atts, blockExample.Block.Body.Attestations...)
@@ -398,7 +398,7 @@ func TestServer_ListAttestations_Pagination_OutOfRange(t *testing.T) {
 				},
 			},
 		})
-		wsb, err := wrappers.WrappedSignedBeaconBlock(blockExample)
+		wsb, err := wrapper.WrappedSignedBeaconBlock(blockExample)
 		require.NoError(t, err)
 		require.NoError(t, db.SaveBlock(ctx, wsb))
 		atts = append(atts, blockExample.Block.Body.Attestations...)
@@ -451,7 +451,7 @@ func TestServer_ListAttestations_Pagination_DefaultPageSize(t *testing.T) {
 				AggregationBits: bitfield.Bitlist{0b11},
 			},
 		}
-		wsb, err := wrappers.WrappedSignedBeaconBlock(blockExample)
+		wsb, err := wrapper.WrappedSignedBeaconBlock(blockExample)
 		require.NoError(t, err)
 		require.NoError(t, db.SaveBlock(ctx, wsb))
 		atts = append(atts, blockExample.Block.Body.Attestations...)
@@ -543,7 +543,7 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 				AggregationBits: bitfield.NewBitlist(128 / uint64(params.BeaconConfig().SlotsPerEpoch)),
 			},
 		}
-		wsb, err := wrappers.WrappedSignedBeaconBlock(blockExample)
+		wsb, err := wrapper.WrappedSignedBeaconBlock(blockExample)
 		require.NoError(t, err)
 		require.NoError(t, db.SaveBlock(ctx, wsb))
 		if i%2 == 0 {
@@ -650,7 +650,7 @@ func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 				},
 			},
 		}
-		wsb, err := wrappers.WrappedSignedBeaconBlock(blockExample)
+		wsb, err := wrapper.WrappedSignedBeaconBlock(blockExample)
 		require.NoError(t, err)
 		require.NoError(t, db.SaveBlock(ctx, wsb))
 		atts = append(atts, blockExample.Block.Body.Attestations...)
@@ -876,7 +876,7 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 	numValidators := 64
 	headState, privKeys := util.DeterministicGenesisState(t, uint64(numValidators))
 	b := util.NewBeaconBlock()
-	wsb, err := wrappers.WrappedSignedBeaconBlock(b)
+	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, wsb))
 	gRoot, err := b.Block.HashTreeRoot()
