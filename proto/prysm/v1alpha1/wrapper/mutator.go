@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	typeerrors "github.com/prysmaticlabs/prysm/consensus-types/errors"
 	block "github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -41,7 +42,7 @@ func (m BlockMutator) Apply(b block.SignedBeaconBlock) error {
 		return nil
 	}
 	msg := fmt.Sprintf("version %d = %s", b.Version(), version.String(b.Version()))
-	return errors.Wrap(ErrUnsupportedSignedBeaconBlock, msg)
+	return errors.Wrap(typeerrors.ErrUnsupportedSignedBeaconBlock, msg)
 }
 
 func SetBlockStateRoot(b block.SignedBeaconBlock, sr [32]byte) error {

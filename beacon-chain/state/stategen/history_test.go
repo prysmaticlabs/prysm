@@ -8,11 +8,12 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrappers"
 
 	"github.com/pkg/errors"
 	block "github.com/prysmaticlabs/prysm/consensus-types/interfaces"
+	mock "github.com/prysmaticlabs/prysm/consensus-types/mocks"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block/mock"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
@@ -33,9 +34,9 @@ func TestChainForSlotFuture(t *testing.T) {
 }
 
 func TestBestForSlot(t *testing.T) {
-	nilBlock, err := wrapper.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlock{})
+	nilBlock, err := wrappers.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlock{})
 	require.NoError(t, err)
-	nilBody, err := wrapper.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}})
+	nilBody, err := wrappers.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}})
 	require.NoError(t, err)
 	derp := errors.New("fake hash tree root method no hash good")
 	badHTR := &mock.SignedBeaconBlock{BeaconBlock: &mock.BeaconBlock{HtrErr: derp, BeaconBlockBody: &mock.BeaconBlockBody{}}}

@@ -17,6 +17,7 @@ import (
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrappers"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -379,7 +380,7 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 	require.NoError(t, err, "Could not hash beacon block")
 	blockRoot2, err := block2.HashTreeRoot()
 	require.NoError(t, err)
-	wsb, err := wrapper.WrappedSignedBeaconBlock(block2)
+	wsb, err := wrappers.WrappedSignedBeaconBlock(block2)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, wsb))
 	justifiedRoot, err := justifiedBlock.Block.HashTreeRoot()
@@ -426,7 +427,7 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 		StateGen:            stategen.New(db),
 	}
 	require.NoError(t, db.SaveState(ctx, beaconState, blockRoot))
-	wsb, err = wrapper.WrappedSignedBeaconBlock(block)
+	wsb, err = wrappers.WrappedSignedBeaconBlock(block)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, wsb))
 	require.NoError(t, db.SaveHeadBlockRoot(ctx, blockRoot))

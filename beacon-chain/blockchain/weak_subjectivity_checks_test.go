@@ -9,6 +9,7 @@ import (
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrappers"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -21,7 +22,7 @@ func TestService_VerifyWeakSubjectivityRoot(t *testing.T) {
 
 	b := util.NewBeaconBlock()
 	b.Block.Slot = 1792480
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err := wrappers.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveBlock(context.Background(), wsb))
 	r, err := b.Block.HashTreeRoot()

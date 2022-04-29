@@ -36,6 +36,7 @@ go_test(
         "//beacon-chain/core/feed/block:go_default_library",
         "//beacon-chain/core/feed/operation:go_default_library",
         "//beacon-chain/core/feed/state:go_default_library",
+        "//consensus-types/wrappers:go_default_library",
         "//proto/eth/v1:go_default_library",
         "//proto/migration:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",

@@ -5,6 +5,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/network/forks"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 
 	ssz "github.com/ferranbt/fastssz"
 	"github.com/pkg/errors"

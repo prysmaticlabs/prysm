@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	block "github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrappers"
 	"github.com/prysmaticlabs/prysm/container/slice"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -520,7 +521,7 @@ func TestBlocksQueue_onDataReceivedEvent(t *testing.T) {
 			chain:               mc,
 			highestExpectedSlot: types.Slot(blockBatchLimit),
 		})
-		wsb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+		wsb, err := wrappers.WrappedSignedBeaconBlock(util.NewBeaconBlock())
 		require.NoError(t, err)
 		handlerFn := queue.onDataReceivedEvent(ctx)
 		response := &fetchRequestResponse{
@@ -617,7 +618,7 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 			chain:               mc,
 			highestExpectedSlot: types.Slot(blockBatchLimit),
 		})
-		wsb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+		wsb, err := wrappers.WrappedSignedBeaconBlock(util.NewBeaconBlock())
 		require.NoError(t, err)
 		queue.smm.addStateMachine(256)
 		queue.smm.addStateMachine(320)
@@ -644,7 +645,7 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 			chain:               mc,
 			highestExpectedSlot: types.Slot(blockBatchLimit),
 		})
-		wsb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+		wsb, err := wrappers.WrappedSignedBeaconBlock(util.NewBeaconBlock())
 		require.NoError(t, err)
 		queue.smm.addStateMachine(128)
 		queue.smm.machines[128].state = stateNew
@@ -677,7 +678,7 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 			chain:               mc,
 			highestExpectedSlot: types.Slot(blockBatchLimit),
 		})
-		wsb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+		wsb, err := wrappers.WrappedSignedBeaconBlock(util.NewBeaconBlock())
 		require.NoError(t, err)
 		queue.smm.addStateMachine(256)
 		queue.smm.machines[256].state = stateSkipped
@@ -1044,7 +1045,7 @@ func TestBlocksQueue_stuckInUnfavourableFork(t *testing.T) {
 	finalizedEpoch := slots.ToEpoch(finalizedSlot)
 
 	genesisBlock := chain1[0]
-	wsb, err := wrapper.WrappedSignedBeaconBlock(genesisBlock)
+	wsb, err := wrappers.WrappedSignedBeaconBlock(genesisBlock)
 	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveBlock(context.Background(), wsb))
 	genesisRoot, err := genesisBlock.Block.HashTreeRoot()
@@ -1088,7 +1089,7 @@ func TestBlocksQueue_stuckInUnfavourableFork(t *testing.T) {
 		parentRoot := bytesutil.ToBytes32(blk.Block.ParentRoot)
 		// Save block only if parent root is already in database or cache.
 		if beaconDB.HasBlock(ctx, parentRoot) || mc.HasInitSyncBlock(parentRoot) {
-			wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+			wsb, err := wrappers.WrappedSignedBeaconBlock(blk)
 			require.NoError(t, err)
 			require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
 			require.NoError(t, st.SetSlot(blk.Block.Slot))
@@ -1249,7 +1250,7 @@ func TestBlocksQueue_stuckWhenHeadIsSetToOrphanedBlock(t *testing.T) {
 	finalizedEpoch := slots.ToEpoch(finalizedSlot)
 
 	genesisBlock := chain[0]
-	wsb, err := wrapper.WrappedSignedBeaconBlock(genesisBlock)
+	wsb, err := wrappers.WrappedSignedBeaconBlock(genesisBlock)
 	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveBlock(context.Background(), wsb))
 	genesisRoot, err := genesisBlock.Block.HashTreeRoot()
@@ -1274,7 +1275,7 @@ func TestBlocksQueue_stuckWhenHeadIsSetToOrphanedBlock(t *testing.T) {
 		parentRoot := bytesutil.ToBytes32(blk.Block.ParentRoot)
 		// Save block only if parent root is already in database or cache.
 		if beaconDB.HasBlock(ctx, parentRoot) || mc.HasInitSyncBlock(parentRoot) {
-			wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+			wsb, err := wrappers.WrappedSignedBeaconBlock(blk)
 			require.NoError(t, err)
 			require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
 			require.NoError(t, st.SetSlot(blk.Block.Slot))
@@ -1288,7 +1289,7 @@ func TestBlocksQueue_stuckWhenHeadIsSetToOrphanedBlock(t *testing.T) {
 	orphanedBlock := util.NewBeaconBlock()
 	orphanedBlock.Block.Slot = 85
 	orphanedBlock.Block.StateRoot = util.Random32Bytes(t)
-	wsb, err = wrapper.WrappedSignedBeaconBlock(orphanedBlock)
+	wsb, err = wrappers.WrappedSignedBeaconBlock(orphanedBlock)
 	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
 	require.NoError(t, st.SetSlot(orphanedBlock.Block.Slot))

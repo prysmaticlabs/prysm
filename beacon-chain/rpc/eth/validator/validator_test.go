@@ -33,6 +33,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrappers"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
@@ -220,7 +221,7 @@ func TestGetAttesterDuties(t *testing.T) {
 		blk.Block.Slot = 31
 		root, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+		wsb, err := wrappers.WrappedSignedBeaconBlock(blk)
 		require.NoError(t, err)
 		require.NoError(t, db.SaveBlock(ctx, wsb))
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
@@ -375,7 +376,7 @@ func TestGetProposerDuties(t *testing.T) {
 		blk.Block.Slot = 31
 		root, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+		wsb, err := wrappers.WrappedSignedBeaconBlock(blk)
 		require.NoError(t, err)
 		require.NoError(t, db.SaveBlock(ctx, wsb))
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
@@ -598,7 +599,7 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 		blk.Block.ParentRoot = parentRoot[:]
 		root, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+		wsb, err := wrappers.WrappedSignedBeaconBlock(blk)
 		require.NoError(t, err)
 		require.NoError(t, db.SaveBlock(ctx, wsb))
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
@@ -656,7 +657,7 @@ func TestProduceBlock(t *testing.T) {
 	require.NoError(t, err, "Could not hash genesis state")
 
 	genesis := blocks.NewGenesisBlock(stateRoot[:])
-	wsb, err := wrapper.WrappedSignedBeaconBlock(genesis)
+	wsb, err := wrappers.WrappedSignedBeaconBlock(genesis)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, wsb), "Could not save genesis block")
 
@@ -760,7 +761,7 @@ func TestProduceBlockV2(t *testing.T) {
 		require.NoError(t, err, "Could not hash genesis state")
 
 		genesis := blocks.NewGenesisBlock(stateRoot[:])
-		wsb, err := wrapper.WrappedSignedBeaconBlock(genesis)
+		wsb, err := wrappers.WrappedSignedBeaconBlock(genesis)
 		require.NoError(t, err)
 		require.NoError(t, db.SaveBlock(ctx, wsb), "Could not save genesis block")
 
@@ -865,7 +866,7 @@ func TestProduceBlockV2(t *testing.T) {
 		require.NoError(t, err, "Could not hash genesis state")
 		genesisBlock := util.NewBeaconBlockAltair()
 		genesisBlock.Block.StateRoot = stateRoot[:]
-		wrappedAltairBlock, err := wrapper.WrappedSignedBeaconBlock(genesisBlock)
+		wrappedAltairBlock, err := wrappers.WrappedSignedBeaconBlock(genesisBlock)
 		require.NoError(t, err)
 		require.NoError(t, db.SaveBlock(ctx, wrappedAltairBlock))
 		parentRoot, err := genesisBlock.Block.HashTreeRoot()
@@ -1008,7 +1009,7 @@ func TestProduceBlockV2(t *testing.T) {
 		require.NoError(t, err, "Could not hash genesis state")
 		genesisBlock := util.NewBeaconBlockBellatrix()
 		genesisBlock.Block.StateRoot = stateRoot[:]
-		wrappedBellatrixBlock, err := wrapper.WrappedSignedBeaconBlock(genesisBlock)
+		wrappedBellatrixBlock, err := wrappers.WrappedSignedBeaconBlock(genesisBlock)
 		require.NoError(t, err)
 		require.NoError(t, db.SaveBlock(ctx, wrappedBellatrixBlock))
 		parentRoot, err := genesisBlock.Block.HashTreeRoot()
@@ -1160,7 +1161,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 		require.NoError(t, err, "Could not hash genesis state")
 
 		genesis := blocks.NewGenesisBlock(stateRoot[:])
-		wrapped, err := wrapper.WrappedSignedBeaconBlock(genesis)
+		wrapped, err := wrappers.WrappedSignedBeaconBlock(genesis)
 		require.NoError(t, err)
 		require.NoError(t, db.SaveBlock(ctx, wrapped), "Could not save genesis block")
 
@@ -1265,7 +1266,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 		require.NoError(t, err, "Could not hash genesis state")
 		genesisBlock := util.NewBeaconBlockAltair()
 		genesisBlock.Block.StateRoot = stateRoot[:]
-		wrappedAltairBlock, err := wrapper.WrappedSignedBeaconBlock(genesisBlock)
+		wrappedAltairBlock, err := wrappers.WrappedSignedBeaconBlock(genesisBlock)
 		require.NoError(t, err)
 		require.NoError(t, err)
 		require.NoError(t, db.SaveBlock(ctx, wrappedAltairBlock))
@@ -1409,7 +1410,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 		require.NoError(t, err, "Could not hash genesis state")
 		genesisBlock := util.NewBeaconBlockBellatrix()
 		genesisBlock.Block.StateRoot = stateRoot[:]
-		wrappedBellatrixBlock, err := wrapper.WrappedSignedBeaconBlock(genesisBlock)
+		wrappedBellatrixBlock, err := wrappers.WrappedSignedBeaconBlock(genesisBlock)
 		require.NoError(t, err)
 		require.NoError(t, db.SaveBlock(ctx, wrappedBellatrixBlock))
 		parentRoot, err := genesisBlock.Block.HashTreeRoot()

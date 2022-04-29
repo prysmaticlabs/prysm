@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrappers"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -137,7 +138,7 @@ func Test_validateMergeBlock(t *testing.T) {
 			},
 		},
 	}
-	b, err := wrapper.WrappedSignedBeaconBlock(blk)
+	b, err := wrappers.WrappedSignedBeaconBlock(blk)
 	require.NoError(t, err)
 	require.NoError(t, service.validateMergeBlock(ctx, b))
 

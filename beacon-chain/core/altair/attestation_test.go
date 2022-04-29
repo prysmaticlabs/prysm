@@ -16,6 +16,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrappers"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/math"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -47,7 +48,7 @@ func TestProcessAttestations_InclusionDelayFailure(t *testing.T) {
 		params.BeaconConfig().MinAttestationInclusionDelay,
 		beaconState.Slot(),
 	)
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err := wrappers.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)
 	_, err = altair.ProcessAttestationsNoVerifySignature(context.Background(), beaconState, wsb)
 	require.ErrorContains(t, want, err)
@@ -78,7 +79,7 @@ func TestProcessAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
 		time.PrevEpoch(beaconState),
 		time.CurrentEpoch(beaconState),
 	)
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err := wrappers.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)
 	_, err = altair.ProcessAttestationsNoVerifySignature(context.Background(), beaconState, wsb)
 	require.ErrorContains(t, want, err)
@@ -107,13 +108,13 @@ func TestProcessAttestations_CurrentEpochFFGDataMismatches(t *testing.T) {
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(cfc))
 
 	want := "source check point not equal to current justified checkpoint"
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err := wrappers.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)
 	_, err = altair.ProcessAttestationsNoVerifySignature(context.Background(), beaconState, wsb)
 	require.ErrorContains(t, want, err)
 	b.Block.Body.Attestations[0].Data.Source.Epoch = time.CurrentEpoch(beaconState)
 	b.Block.Body.Attestations[0].Data.Source.Root = []byte{}
-	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err = wrappers.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)
 	_, err = altair.ProcessAttestationsNoVerifySignature(context.Background(), beaconState, wsb)
 	require.ErrorContains(t, want, err)
@@ -148,14 +149,14 @@ func TestProcessAttestations_PrevEpochFFGDataMismatches(t *testing.T) {
 	require.NoError(t, beaconState.SetPreviousJustifiedCheckpoint(pfc))
 
 	want := "source check point not equal to previous justified checkpoint"
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err := wrappers.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)
 	_, err = altair.ProcessAttestationsNoVerifySignature(context.Background(), beaconState, wsb)
 	require.ErrorContains(t, want, err)
 	b.Block.Body.Attestations[0].Data.Source.Epoch = time.PrevEpoch(beaconState)
 	b.Block.Body.Attestations[0].Data.Target.Epoch = time.PrevEpoch(beaconState)
 	b.Block.Body.Attestations[0].Data.Source.Root = []byte{}
-	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err = wrappers.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)
 	_, err = altair.ProcessAttestationsNoVerifySignature(context.Background(), beaconState, wsb)
 	require.ErrorContains(t, want, err)
@@ -187,7 +188,7 @@ func TestProcessAttestations_InvalidAggregationBitsLength(t *testing.T) {
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(cfc))
 
 	expected := "failed to verify aggregation bitfield: wanted participants bitfield length 3, got: 4"
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err := wrappers.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)
 	_, err = altair.ProcessAttestationsNoVerifySignature(context.Background(), beaconState, wsb)
 	require.ErrorContains(t, expected, err)
@@ -231,7 +232,7 @@ func TestProcessAttestations_OK(t *testing.T) {
 
 	err = beaconState.SetSlot(beaconState.Slot() + params.BeaconConfig().MinAttestationInclusionDelay)
 	require.NoError(t, err)
-	wsb, err := wrapper.WrappedSignedBeaconBlock(block)
+	wsb, err := wrappers.WrappedSignedBeaconBlock(block)
 	require.NoError(t, err)
 	_, err = altair.ProcessAttestationsNoVerifySignature(context.Background(), beaconState, wsb)
 	require.NoError(t, err)
@@ -420,7 +421,7 @@ func TestFuzzProcessAttestationsNoVerify_10000(t *testing.T) {
 		}
 		s, err := stateAltair.InitializeFromProtoUnsafe(state)
 		require.NoError(t, err)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		wsb, err := wrappers.WrappedSignedBeaconBlock(b)
 		require.NoError(t, err)
 		r, err := altair.ProcessAttestationsNoVerifySignature(context.Background(), s, wsb)
 		if err != nil && r != nil {

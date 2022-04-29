@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/consensus-types/wrappers"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -51,7 +52,7 @@ func TestStore_LastValidatedCheckpoint_DefaultIsFinalized(t *testing.T) {
 	}
 
 	// a valid chain is required to save finalized checkpoint.
-	wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+	wsb, err := wrappers.WrappedSignedBeaconBlock(blk)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, wsb))
 	st, err := util.NewBeaconState()

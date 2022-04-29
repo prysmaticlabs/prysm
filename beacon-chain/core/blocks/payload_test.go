@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/consensus-types/forks/bellatrix"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
@@ -337,7 +338,7 @@ func Test_IsMergeTransitionBlockUsingPayloadHeader(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			blk := util.NewBeaconBlockBellatrix()
 			blk.Block.Body.ExecutionPayload = tt.payload
-			body, err := wrapper.WrappedBellatrixBeaconBlockBody(blk.Block.Body)
+			body, err := bellatrix.WrappedBeaconBlockBody(blk.Block.Body)
 			require.NoError(t, err)
 			got, err := blocks.IsMergeTransitionBlockUsingPreStatePayloadHeader(tt.header, body)
 			require.NoError(t, err)
@@ -373,7 +374,7 @@ func Test_IsExecutionBlock(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			blk := util.NewBeaconBlockBellatrix()
 			blk.Block.Body.ExecutionPayload = tt.payload
-			wrappedBlock, err := wrapper.WrappedBellatrixBeaconBlock(blk.Block)
+			wrappedBlock, err := bellatrix.WrappedBeaconBlock(blk.Block)
 			require.NoError(t, err)
 			got, err := blocks.IsExecutionBlock(wrappedBlock.Body())
 			require.NoError(t, err)
@@ -444,7 +445,7 @@ func Test_IsExecutionEnabled(t *testing.T) {
 			require.NoError(t, st.SetLatestExecutionPayloadHeader(tt.header))
 			blk := util.NewBeaconBlockBellatrix()
 			blk.Block.Body.ExecutionPayload = tt.payload
-			body, err := wrapper.WrappedBellatrixBeaconBlockBody(blk.Block.Body)
+			body, err := bellatrix.WrappedBeaconBlockBody(blk.Block.Body)
 			require.NoError(t, err)
 			if tt.useAltairSt {
 				st, _ = util.DeterministicGenesisStateAltair(t, 1)
@@ -510,7 +511,7 @@ func Test_IsExecutionEnabledUsingHeader(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			blk := util.NewBeaconBlockBellatrix()
 			blk.Block.Body.ExecutionPayload = tt.payload
-			body, err := wrapper.WrappedBellatrixBeaconBlockBody(blk.Block.Body)
+			body, err := bellatrix.WrappedBeaconBlockBody(blk.Block.Body)
 			require.NoError(t, err)
 			got, err := blocks.IsExecutionEnabledUsingHeader(tt.header, body)
 			require.NoError(t, err)

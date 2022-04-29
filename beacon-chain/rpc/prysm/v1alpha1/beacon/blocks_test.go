@@ -20,6 +20,7 @@ import (
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrappers"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/mock"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -92,7 +93,7 @@ func TestServer_ListBlocks_Genesis(t *testing.T) {
 	blk.Block.ParentRoot = parentRoot[:]
 	root, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
-	wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+	wsb, err := wrappers.WrappedSignedBeaconBlock(blk)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, wsb))
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
@@ -131,7 +132,7 @@ func TestServer_ListBlocks_Genesis_MultiBlocks(t *testing.T) {
 	blk.Block.ParentRoot = parentRoot[:]
 	root, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
-	wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+	wsb, err := wrappers.WrappedSignedBeaconBlock(blk)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, wsb))
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
@@ -142,7 +143,7 @@ func TestServer_ListBlocks_Genesis_MultiBlocks(t *testing.T) {
 		b := util.NewBeaconBlock()
 		b.Block.Slot = i
 		require.NoError(t, err)
-		blks[i], err = wrapper.WrappedSignedBeaconBlock(b)
+		blks[i], err = wrappers.WrappedSignedBeaconBlock(b)
 		require.NoError(t, err)
 	}
 	require.NoError(t, db.SaveBlocks(ctx, blks))
@@ -175,7 +176,7 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
 		chain.CanonicalRoots[root] = true
-		blks[i], err = wrapper.WrappedSignedBeaconBlock(b)
+		blks[i], err = wrappers.WrappedSignedBeaconBlock(b)
 		require.NoError(t, err)
 		blkContainers[i] = &ethpb.BeaconBlockContainer{
 			Block:     &ethpb.BeaconBlockContainer_Phase0Block{Phase0Block: b},
@@ -189,7 +190,7 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 	orphanedBlk.Block.Slot = 300
 	orphanedBlkRoot, err := orphanedBlk.Block.HashTreeRoot()
 	require.NoError(t, err)
-	wsb, err := wrapper.WrappedSignedBeaconBlock(orphanedBlk)
+	wsb, err := wrappers.WrappedSignedBeaconBlock(orphanedBlk)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, wsb))
 
@@ -383,7 +384,7 @@ func TestServer_GetChainHead_NoGenesis(t *testing.T) {
 
 	genBlock := util.NewBeaconBlock()
 	genBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'G'}, fieldparams.RootLength)
-	wsb, err := wrapper.WrappedSignedBeaconBlock(genBlock)
+	wsb, err := wrappers.WrappedSignedBeaconBlock(genBlock)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(context.Background(), wsb))
 	gRoot, err := genBlock.Block.HashTreeRoot()
@@ -416,7 +417,7 @@ func TestServer_GetChainHead_NoGenesis(t *testing.T) {
 			require.NoError(t, s.SetFinalizedCheckpoint(finalized))
 			require.NoError(t, c.zeroSetter(&ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]}))
 		})
-		wsb, err := wrapper.WrappedSignedBeaconBlock(genBlock)
+		wsb, err := wrappers.WrappedSignedBeaconBlock(genBlock)
 		require.NoError(t, err)
 		bs := &Server{
 			BeaconDB:    db,
@@ -443,14 +444,14 @@ func TestServer_GetChainHead_NoFinalizedBlock(t *testing.T) {
 
 	genBlock := util.NewBeaconBlock()
 	genBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'G'}, fieldparams.RootLength)
-	wsb, err := wrapper.WrappedSignedBeaconBlock(genBlock)
+	wsb, err := wrappers.WrappedSignedBeaconBlock(genBlock)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(context.Background(), wsb))
 	gRoot, err := genBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), gRoot))
 
-	wsb, err = wrapper.WrappedSignedBeaconBlock(genBlock)
+	wsb, err = wrappers.WrappedSignedBeaconBlock(genBlock)
 	require.NoError(t, err)
 
 	bs := &Server{
@@ -481,7 +482,7 @@ func TestServer_GetChainHead(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	genBlock := util.NewBeaconBlock()
 	genBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'G'}, fieldparams.RootLength)
-	wsb, err := wrapper.WrappedSignedBeaconBlock(genBlock)
+	wsb, err := wrappers.WrappedSignedBeaconBlock(genBlock)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(context.Background(), wsb))
 	gRoot, err := genBlock.Block.HashTreeRoot()
@@ -491,7 +492,7 @@ func TestServer_GetChainHead(t *testing.T) {
 	finalizedBlock := util.NewBeaconBlock()
 	finalizedBlock.Block.Slot = 1
 	finalizedBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'A'}, fieldparams.RootLength)
-	wsb, err = wrapper.WrappedSignedBeaconBlock(finalizedBlock)
+	wsb, err = wrappers.WrappedSignedBeaconBlock(finalizedBlock)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(context.Background(), wsb))
 	fRoot, err := finalizedBlock.Block.HashTreeRoot()
@@ -500,7 +501,7 @@ func TestServer_GetChainHead(t *testing.T) {
 	justifiedBlock := util.NewBeaconBlock()
 	justifiedBlock.Block.Slot = 2
 	justifiedBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'B'}, fieldparams.RootLength)
-	wsb, err = wrapper.WrappedSignedBeaconBlock(justifiedBlock)
+	wsb, err = wrappers.WrappedSignedBeaconBlock(justifiedBlock)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(context.Background(), wsb))
 	jRoot, err := justifiedBlock.Block.HashTreeRoot()
@@ -509,7 +510,7 @@ func TestServer_GetChainHead(t *testing.T) {
 	prevJustifiedBlock := util.NewBeaconBlock()
 	prevJustifiedBlock.Block.Slot = 3
 	prevJustifiedBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'C'}, fieldparams.RootLength)
-	wsb, err = wrapper.WrappedSignedBeaconBlock(prevJustifiedBlock)
+	wsb, err = wrappers.WrappedSignedBeaconBlock(prevJustifiedBlock)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(context.Background(), wsb))
 	pjRoot, err := prevJustifiedBlock.Block.HashTreeRoot()
@@ -527,7 +528,7 @@ func TestServer_GetChainHead(t *testing.T) {
 	b.Block.Slot, err = slots.EpochStart(s.PreviousJustifiedCheckpoint().Epoch)
 	require.NoError(t, err)
 	b.Block.Slot++
-	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err = wrappers.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)
 	bs := &Server{
 		BeaconDB:    db,
@@ -582,7 +583,7 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	genBlock := util.NewBeaconBlock()
 	genBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'G'}, fieldparams.RootLength)
-	wsb, err := wrapper.WrappedSignedBeaconBlock(genBlock)
+	wsb, err := wrappers.WrappedSignedBeaconBlock(genBlock)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(context.Background(), wsb))
 	gRoot, err := genBlock.Block.HashTreeRoot()
@@ -592,7 +593,7 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 	finalizedBlock := util.NewBeaconBlock()
 	finalizedBlock.Block.Slot = 32
 	finalizedBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'A'}, fieldparams.RootLength)
-	wsb, err = wrapper.WrappedSignedBeaconBlock(finalizedBlock)
+	wsb, err = wrappers.WrappedSignedBeaconBlock(finalizedBlock)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(context.Background(), wsb))
 	fRoot, err := finalizedBlock.Block.HashTreeRoot()
@@ -601,7 +602,7 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 	justifiedBlock := util.NewBeaconBlock()
 	justifiedBlock.Block.Slot = 64
 	justifiedBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'B'}, fieldparams.RootLength)
-	wsb, err = wrapper.WrappedSignedBeaconBlock(justifiedBlock)
+	wsb, err = wrappers.WrappedSignedBeaconBlock(justifiedBlock)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(context.Background(), wsb))
 	jRoot, err := justifiedBlock.Block.HashTreeRoot()
@@ -610,7 +611,7 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 	prevJustifiedBlock := util.NewBeaconBlock()
 	prevJustifiedBlock.Block.Slot = 96
 	prevJustifiedBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'C'}, fieldparams.RootLength)
-	wsb, err = wrapper.WrappedSignedBeaconBlock(prevJustifiedBlock)
+	wsb, err = wrappers.WrappedSignedBeaconBlock(prevJustifiedBlock)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(context.Background(), wsb))
 	pjRoot, err := prevJustifiedBlock.Block.HashTreeRoot()
@@ -633,7 +634,7 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 
 	chainService := &chainMock.ChainService{}
 	ctx := context.Background()
-	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err = wrappers.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)
 	server := &Server{
 		Ctx:           ctx,
@@ -765,7 +766,7 @@ func TestServer_StreamBlocks_OnHeadUpdated(t *testing.T) {
 
 	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
 	for sent := 0; sent == 0; {
-		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		wsb, err := wrappers.WrappedSignedBeaconBlock(b)
 		require.NoError(t, err)
 		sent = server.BlockNotifier.BlockFeed().Send(&feed.Event{
 			Type: blockfeed.ReceivedBlock,
@@ -785,7 +786,7 @@ func TestServer_StreamBlocksVerified_OnHeadUpdated(t *testing.T) {
 	require.NoError(t, err)
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err := wrappers.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, wsb))
 	chainService := &chainMock.ChainService{State: beaconState}
@@ -812,7 +813,7 @@ func TestServer_StreamBlocksVerified_OnHeadUpdated(t *testing.T) {
 
 	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
 	for sent := 0; sent == 0; {
-		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		wsb, err := wrappers.WrappedSignedBeaconBlock(b)
 		require.NoError(t, err)
 		sent = server.StateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.BlockProcessed,
@@ -870,7 +871,7 @@ func TestServer_ListBeaconBlocks_Genesis(t *testing.T) {
 		blk.Block.ParentRoot = parentRoot[:]
 		blkContainer := &ethpb.BeaconBlockContainer{
 			Block: &ethpb.BeaconBlockContainer_Phase0Block{Phase0Block: blk}}
-		wrappedB, err := wrapper.WrappedSignedBeaconBlock(blk)
+		wrappedB, err := wrappers.WrappedSignedBeaconBlock(blk)
 		assert.NoError(t, err)
 		runListBlocksGenesis(t, wrappedB, blkContainer)
 	})
@@ -878,7 +879,7 @@ func TestServer_ListBeaconBlocks_Genesis(t *testing.T) {
 		parentRoot := [32]byte{'a'}
 		blk := util.NewBeaconBlockAltair()
 		blk.Block.ParentRoot = parentRoot[:]
-		wrapped, err := wrapper.WrappedSignedBeaconBlock(blk)
+		wrapped, err := wrappers.WrappedSignedBeaconBlock(blk)
 		assert.NoError(t, err)
 		blkContainer := &ethpb.BeaconBlockContainer{
 			Block: &ethpb.BeaconBlockContainer_AltairBlock{AltairBlock: blk}}
@@ -888,7 +889,7 @@ func TestServer_ListBeaconBlocks_Genesis(t *testing.T) {
 		parentRoot := [32]byte{'a'}
 		blk := util.NewBeaconBlockBellatrix()
 		blk.Block.ParentRoot = parentRoot[:]
-		wrapped, err := wrapper.WrappedSignedBeaconBlock(blk)
+		wrapped, err := wrappers.WrappedSignedBeaconBlock(blk)
 		assert.NoError(t, err)
 		blkContainer := &ethpb.BeaconBlockContainer{
 			Block: &ethpb.BeaconBlockContainer_BellatrixBlock{BellatrixBlock: blk}}
@@ -943,11 +944,11 @@ func TestServer_ListBeaconBlocks_Genesis_MultiBlocks(t *testing.T) {
 		blockCreator := func(i types.Slot) block.SignedBeaconBlock {
 			b := util.NewBeaconBlock()
 			b.Block.Slot = i
-			wrappedB, err := wrapper.WrappedSignedBeaconBlock(b)
+			wrappedB, err := wrappers.WrappedSignedBeaconBlock(b)
 			assert.NoError(t, err)
 			return wrappedB
 		}
-		genB, err := wrapper.WrappedSignedBeaconBlock(blk)
+		genB, err := wrappers.WrappedSignedBeaconBlock(blk)
 		assert.NoError(t, err)
 		runListBeaconBlocksGenesisMultiBlocks(t, genB, blockCreator)
 	})
@@ -958,11 +959,11 @@ func TestServer_ListBeaconBlocks_Genesis_MultiBlocks(t *testing.T) {
 		blockCreator := func(i types.Slot) block.SignedBeaconBlock {
 			b := util.NewBeaconBlockAltair()
 			b.Block.Slot = i
-			wrappedB, err := wrapper.WrappedSignedBeaconBlock(b)
+			wrappedB, err := wrappers.WrappedSignedBeaconBlock(b)
 			assert.NoError(t, err)
 			return wrappedB
 		}
-		gBlock, err := wrapper.WrappedSignedBeaconBlock(blk)
+		gBlock, err := wrappers.WrappedSignedBeaconBlock(blk)
 		assert.NoError(t, err)
 		runListBeaconBlocksGenesisMultiBlocks(t, gBlock, blockCreator)
 	})
@@ -973,11 +974,11 @@ func TestServer_ListBeaconBlocks_Genesis_MultiBlocks(t *testing.T) {
 		blockCreator := func(i types.Slot) block.SignedBeaconBlock {
 			b := util.NewBeaconBlockBellatrix()
 			b.Block.Slot = i
-			wrappedB, err := wrapper.WrappedSignedBeaconBlock(b)
+			wrappedB, err := wrappers.WrappedSignedBeaconBlock(b)
 			assert.NoError(t, err)
 			return wrappedB
 		}
-		gBlock, err := wrapper.WrappedSignedBeaconBlock(blk)
+		gBlock, err := wrappers.WrappedSignedBeaconBlock(blk)
 		assert.NoError(t, err)
 		runListBeaconBlocksGenesisMultiBlocks(t, gBlock, blockCreator)
 	})
@@ -1022,7 +1023,7 @@ func TestServer_ListBeaconBlocks_Pagination(t *testing.T) {
 		blockCreator := func(i types.Slot) block.SignedBeaconBlock {
 			b := util.NewBeaconBlock()
 			b.Block.Slot = i
-			wrappedB, err := wrapper.WrappedSignedBeaconBlock(b)
+			wrappedB, err := wrappers.WrappedSignedBeaconBlock(b)
 			assert.NoError(t, err)
 			return wrappedB
 		}
@@ -1036,7 +1037,7 @@ func TestServer_ListBeaconBlocks_Pagination(t *testing.T) {
 				Canonical: canonical}
 			return ctr
 		}
-		wrappedB, err := wrapper.WrappedSignedBeaconBlock(blk)
+		wrappedB, err := wrappers.WrappedSignedBeaconBlock(blk)
 		assert.NoError(t, err)
 		runListBeaconBlocksPagination(t, wrappedB, blockCreator, containerCreator)
 	})
@@ -1046,7 +1047,7 @@ func TestServer_ListBeaconBlocks_Pagination(t *testing.T) {
 		blockCreator := func(i types.Slot) block.SignedBeaconBlock {
 			b := util.NewBeaconBlockAltair()
 			b.Block.Slot = i
-			wrappedB, err := wrapper.WrappedSignedBeaconBlock(b)
+			wrappedB, err := wrappers.WrappedSignedBeaconBlock(b)
 			assert.NoError(t, err)
 			return wrappedB
 		}
@@ -1060,7 +1061,7 @@ func TestServer_ListBeaconBlocks_Pagination(t *testing.T) {
 				Canonical: canonical}
 			return ctr
 		}
-		orphanedB, err := wrapper.WrappedSignedBeaconBlock(blk)
+		orphanedB, err := wrappers.WrappedSignedBeaconBlock(blk)
 		assert.NoError(t, err)
 		runListBeaconBlocksPagination(t, orphanedB, blockCreator, containerCreator)
 	})
@@ -1070,7 +1071,7 @@ func TestServer_ListBeaconBlocks_Pagination(t *testing.T) {
 		blockCreator := func(i types.Slot) block.SignedBeaconBlock {
 			b := util.NewBeaconBlockBellatrix()
 			b.Block.Slot = i
-			wrappedB, err := wrapper.WrappedSignedBeaconBlock(b)
+			wrappedB, err := wrappers.WrappedSignedBeaconBlock(b)
 			assert.NoError(t, err)
 			return wrappedB
 		}
@@ -1084,7 +1085,7 @@ func TestServer_ListBeaconBlocks_Pagination(t *testing.T) {
 				Canonical: canonical}
 			return ctr
 		}
-		orphanedB, err := wrapper.WrappedSignedBeaconBlock(blk)
+		orphanedB, err := wrappers.WrappedSignedBeaconBlock(blk)
 		assert.NoError(t, err)
 		runListBeaconBlocksPagination(t, orphanedB, blockCreator, containerCreator)
 	})

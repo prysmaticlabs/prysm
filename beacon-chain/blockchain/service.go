@@ -203,7 +203,7 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized checkpoint block")
 	}
-	if fb == nil {
+	if fb == nil || fb.IsNil() {
 		return errNilFinalizedInStore
 	}
 	payloadHash, err := getBlockPayloadHash(fb.Block())

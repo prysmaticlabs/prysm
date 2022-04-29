@@ -33,6 +33,7 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	prysmNetwork "github.com/prysmaticlabs/prysm/network"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"

@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrappers"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
 	"github.com/sirupsen/logrus"
@@ -236,7 +237,7 @@ func TestProcessAttestations(t *testing.T) {
 		},
 	}
 
-	wrappedBlock, err := wrapper.WrappedAltairBeaconBlock(block)
+	wrappedBlock, err := wrappers.WrappedBeaconBlock(block)
 	require.NoError(t, err)
 	s.processAttestations(ctx, state, wrappedBlock)
 	wanted1 := "\"Attestation included\" BalanceChange=0 CorrectHead=true CorrectSource=true CorrectTarget=true Head=0x68656c6c6f2d InclusionSlot=2 NewBalance=32000000000 Slot=1 Source=0x68656c6c6f2d Target=0x68656c6c6f2d ValidatorIndex=2 prefix=monitor"

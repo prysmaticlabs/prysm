@@ -21,6 +21,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrappers"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -47,7 +48,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerReturnsBlocks(t *testing.T) {
 	for i := req.StartSlot; i < req.StartSlot.Add(req.Step*req.Count); i += types.Slot(req.Step) {
 		blk := util.NewBeaconBlock()
 		blk.Block.Slot = i
-		wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+		wsb, err := wrappers.WrappedSignedBeaconBlock(blk)
 		require.NoError(t, err)
 		require.NoError(t, d.SaveBlock(context.Background(), wsb))
 	}
@@ -110,7 +111,7 @@ func TestRPCBeaconBlocksByRange_ReturnCorrectNumberBack(t *testing.T) {
 			require.NoError(t, err)
 			genRoot = rt
 		}
-		wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+		wsb, err := wrappers.WrappedSignedBeaconBlock(blk)
 		require.NoError(t, err)
 		require.NoError(t, d.SaveBlock(context.Background(), wsb))
 	}
@@ -176,7 +177,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerReturnsSortedBlocks(t *testing.T) {
 		rt, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
 		expectedRoots[j] = rt
-		wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+		wsb, err := wrappers.WrappedSignedBeaconBlock(blk)
 		require.NoError(t, err)
 		require.NoError(t, d.SaveBlock(context.Background(), wsb))
 		j--
@@ -244,7 +245,7 @@ func TestRPCBeaconBlocksByRange_ReturnsGenesisBlock(t *testing.T) {
 		if i == 0 {
 			require.NoError(t, d.SaveGenesisBlockRoot(context.Background(), rt))
 		}
-		wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+		wsb, err := wrappers.WrappedSignedBeaconBlock(blk)
 		require.NoError(t, err)
 		require.NoError(t, d.SaveBlock(context.Background(), wsb))
 		prevRoot = rt
@@ -291,7 +292,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 			if req.Step == 1 {
 				block.Block.ParentRoot = parentRoot[:]
 			}
-			wsb, err := wrapper.WrappedSignedBeaconBlock(block)
+			wsb, err := wrappers.WrappedSignedBeaconBlock(block)
 			require.NoError(t, err)
 			require.NoError(t, d.SaveBlock(context.Background(), wsb))
 			rt, err := block.Block.HashTreeRoot()
@@ -552,7 +553,7 @@ func TestRPCBeaconBlocksByRange_EnforceResponseInvariants(t *testing.T) {
 			block := util.NewBeaconBlock()
 			block.Block.Slot = i
 			block.Block.ParentRoot = parentRoot[:]
-			wsb, err := wrapper.WrappedSignedBeaconBlock(block)
+			wsb, err := wrappers.WrappedSignedBeaconBlock(block)
 			require.NoError(t, err)
 			require.NoError(t, d.SaveBlock(context.Background(), wsb))
 			rt, err := block.Block.HashTreeRoot()
@@ -629,7 +630,7 @@ func TestRPCBeaconBlocksByRange_FilterBlocks(t *testing.T) {
 		previousRoot, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
 
-		wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+		wsb, err := wrappers.WrappedSignedBeaconBlock(blk)
 		require.NoError(t, err)
 		require.NoError(t, d.SaveBlock(context.Background(), wsb))
 		require.NoError(t, d.SaveGenesisBlockRoot(context.Background(), previousRoot))
@@ -644,7 +645,7 @@ func TestRPCBeaconBlocksByRange_FilterBlocks(t *testing.T) {
 			var err error
 			previousRoot, err = blocks[j].Block.HashTreeRoot()
 			require.NoError(t, err)
-			wsb, err := wrapper.WrappedSignedBeaconBlock(blocks[j])
+			wsb, err := wrappers.WrappedSignedBeaconBlock(blocks[j])
 			require.NoError(t, err)
 			require.NoError(t, d.SaveBlock(context.Background(), wsb))
 			j++
@@ -679,7 +680,7 @@ func TestRPCBeaconBlocksByRange_FilterBlocks(t *testing.T) {
 		require.NoError(t, err)
 		genRoot := previousRoot
 
-		wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+		wsb, err := wrappers.WrappedSignedBeaconBlock(blk)
 		require.NoError(t, err)
 		require.NoError(t, d.SaveBlock(context.Background(), wsb))
 		require.NoError(t, d.SaveGenesisBlockRoot(context.Background(), previousRoot))
@@ -698,7 +699,7 @@ func TestRPCBeaconBlocksByRange_FilterBlocks(t *testing.T) {
 			var err error
 			previousRoot, err = blocks[j].Block.HashTreeRoot()
 			require.NoError(t, err)
-			wsb, err := wrapper.WrappedSignedBeaconBlock(blocks[j])
+			wsb, err := wrappers.WrappedSignedBeaconBlock(blocks[j])
 			require.NoError(t, err)
 			require.NoError(t, d.SaveBlock(context.Background(), wsb))
 			j++

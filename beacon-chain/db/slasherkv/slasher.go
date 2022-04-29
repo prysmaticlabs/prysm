@@ -344,7 +344,7 @@ func (s *Store) CheckDoubleBlockProposals(
 					return err
 				}
 				proposerSlashings = append(proposerSlashings, &ethpb.ProposerSlashing{
-					Header_1: existingProposalwrappers.SignedBeaconBlockHeader,
+					Header_1: existingProposalWrapper.SignedBeaconBlockHeader,
 					Header_2: proposal.SignedBeaconBlockHeader,
 				})
 			}
@@ -454,8 +454,8 @@ func (s *Store) HighestAttestations(
 					}
 					highestAtt := &ethpb.HighestAttestation{
 						ValidatorIndex:     uint64(indices[i]),
-						HighestSourceEpoch: attwrappers.IndexedAttestation.Data.Source.Epoch,
-						HighestTargetEpoch: attwrappers.IndexedAttestation.Data.Target.Epoch,
+						HighestSourceEpoch: attWrapper.IndexedAttestation.Data.Source.Epoch,
+						HighestTargetEpoch: attWrapper.IndexedAttestation.Data.Target.Epoch,
 					}
 					history = append(history, highestAtt)
 					break

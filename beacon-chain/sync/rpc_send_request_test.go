@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	block "github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrappers"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -65,7 +66,7 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 
 			for i := req.StartSlot; i < req.StartSlot.Add(req.Count*req.Step); i += types.Slot(req.Step) {
 				if processor != nil {
-					wsb, err := wrapper.WrappedSignedBeaconBlock(knownBlocks[i])
+					wsb, err := wrappers.WrappedSignedBeaconBlock(knownBlocks[i])
 					require.NoError(t, err)
 					if processorErr := processor(wsb); processorErr != nil {
 						if errors.Is(processorErr, io.EOF) {
@@ -84,7 +85,7 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 					break
 				}
 				chain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
-				wsb, err := wrapper.WrappedSignedBeaconBlock(knownBlocks[i])
+				wsb, err := wrappers.WrappedSignedBeaconBlock(knownBlocks[i])
 				require.NoError(t, err)
 				err = WriteBlockChunk(stream, chain, p2pProvider.Encoding(), wsb)
 				if err != nil && err.Error() != mux.ErrReset.Error() {
@@ -239,7 +240,7 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 					break
 				}
 				chain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
-				wsb, err := wrapper.WrappedSignedBeaconBlock(knownBlocks[i])
+				wsb, err := wrappers.WrappedSignedBeaconBlock(knownBlocks[i])
 				err = WriteBlockChunk(stream, chain, p2.Encoding(), wsb)
 				if err != nil && err.Error() != mux.ErrReset.Error() {
 					require.NoError(t, err)
@@ -283,7 +284,7 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 					break
 				}
 				chain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
-				wsb, err := wrapper.WrappedSignedBeaconBlock(knownBlocks[i])
+				wsb, err := wrappers.WrappedSignedBeaconBlock(knownBlocks[i])
 				require.NoError(t, err)
 				err = WriteBlockChunk(stream, chain, p2.Encoding(), wsb)
 				if err != nil && err.Error() != mux.ErrReset.Error() {
@@ -346,7 +347,7 @@ func TestSendRequest_SendBeaconBlocksByRootRequest(t *testing.T) {
 			for _, root := range *req {
 				if blk, ok := knownBlocks[root]; ok {
 					if processor != nil {
-						wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+						wsb, err := wrappers.WrappedSignedBeaconBlock(blk)
 						require.NoError(t, err)
 						if processorErr := processor(wsb); processorErr != nil {
 							if errors.Is(processorErr, io.EOF) {

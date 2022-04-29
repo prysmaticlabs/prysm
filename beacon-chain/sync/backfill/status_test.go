@@ -6,6 +6,8 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrappers"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -144,7 +146,7 @@ func goodBlockRoot(root [32]byte) func(ctx context.Context) ([32]byte, error) {
 
 func setupTestBlock(slot types.Slot) (block.SignedBeaconBlock, error) {
 	bRaw := util.NewBeaconBlock()
-	b, err := wrapper.WrappedSignedBeaconBlock(bRaw)
+	b, err := wrappers.WrappedSignedBeaconBlock(bRaw)
 	if err != nil {
 		return nil, err
 	}

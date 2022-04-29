@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/consensus-types/wrappers"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
 )
@@ -37,7 +38,7 @@ func TestServer_getExecutionPayload(t *testing.T) {
 	b1pb := util.NewBeaconBlock()
 	b1r, err := b1pb.Block.HashTreeRoot()
 	require.NoError(t, err)
-	b1, err := wrapper.WrappedSignedBeaconBlock(b1pb)
+	b1, err := wrappers.WrappedSignedBeaconBlock(b1pb)
 	require.NoError(t, err)
 	require.NoError(t, nonTransitionSt.SetFinalizedCheckpoint(&ethpb.Checkpoint{
 		Root: b1r[:],
@@ -48,7 +49,7 @@ func TestServer_getExecutionPayload(t *testing.T) {
 	b2pb := util.NewBeaconBlockBellatrix()
 	b2r, err := b2pb.Block.HashTreeRoot()
 	require.NoError(t, err)
-	b2, err := wrapper.WrappedSignedBeaconBlock(b2pb)
+	b2, err := wrappers.WrappedSignedBeaconBlock(b2pb)
 	require.NoError(t, err)
 	require.NoError(t, transitionSt.SetFinalizedCheckpoint(&ethpb.Checkpoint{
 		Root: b2r[:],

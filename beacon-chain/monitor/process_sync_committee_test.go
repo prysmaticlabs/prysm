@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrappers"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -48,7 +49,7 @@ func TestProcessSyncAggregate(t *testing.T) {
 		},
 	}
 
-	wrappedBlock, err := wrapper.WrappedAltairBeaconBlock(block)
+	wrappedBlock, err := wrappers.WrappedBeaconBlock(block)
 	require.NoError(t, err)
 
 	s.processSyncAggregate(beaconState, wrappedBlock)

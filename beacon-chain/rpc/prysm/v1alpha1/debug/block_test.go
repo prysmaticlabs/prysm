@@ -13,6 +13,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrappers"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -24,7 +25,7 @@ func TestServer_GetBlock(t *testing.T) {
 
 	b := util.NewBeaconBlock()
 	b.Block.Slot = 100
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err := wrappers.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, wsb))
 	blockRoot, err := b.Block.HashTreeRoot()
@@ -78,7 +79,7 @@ func TestServer_GetAttestationInclusionSlot(t *testing.T) {
 	b := util.NewBeaconBlock()
 	b.Block.Slot = 2
 	b.Block.Body.Attestations = []*ethpb.Attestation{a}
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err := wrappers.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)
 	require.NoError(t, bs.BeaconDB.SaveBlock(ctx, wsb))
 	res, err := bs.GetInclusionSlot(ctx, &ethpb.InclusionSlotRequest{Slot: 1, Id: uint64(c[0])})

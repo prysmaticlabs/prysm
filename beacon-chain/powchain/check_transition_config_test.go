@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrappers"
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"google.golang.org/protobuf/proto"
@@ -64,7 +65,7 @@ func Test_checkTransitionConfiguration(t *testing.T) {
 		}()
 		payload := emptyPayload()
 		payload.GasUsed = 21000
-		wrappedBlock, err := wrapper.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{
+		wrappedBlock, err := wrappers.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{
 			Block: &ethpb.BeaconBlockBellatrix{
 				Body: &ethpb.BeaconBlockBodyBellatrix{
 					ExecutionPayload: payload,

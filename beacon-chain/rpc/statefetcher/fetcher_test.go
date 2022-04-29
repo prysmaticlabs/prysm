@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrappers"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
@@ -15,7 +17,6 @@ import (
 	mockstategen "github.com/prysmaticlabs/prysm/beacon-chain/state/stategen/mock"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrappers"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -56,7 +57,7 @@ func TestGetState(t *testing.T) {
 		db := testDB.SetupDB(t)
 		b := util.NewBeaconBlock()
 		b.Block.StateRoot = bytesutil.PadTo([]byte("foo"), 32)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		wsb, err := wrappers.WrappedSignedBeaconBlock(b)
 		require.NoError(t, err)
 		require.NoError(t, db.SaveBlock(ctx, wsb))
 		r, err := b.Block.HashTreeRoot()
@@ -210,7 +211,7 @@ func TestGetStateRoot(t *testing.T) {
 	t.Run("head", func(t *testing.T) {
 		b := util.NewBeaconBlock()
 		b.Block.StateRoot = stateRoot[:]
-		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		wsb, err := wrappers.WrappedSignedBeaconBlock(b)
 		require.NoError(t, err)
 		p := StateProvider{
 			ChainInfoFetcher: &chainMock.ChainService{
@@ -227,7 +228,7 @@ func TestGetStateRoot(t *testing.T) {
 	t.Run("genesis", func(t *testing.T) {
 		db := testDB.SetupDB(t)
 		b := util.NewBeaconBlock()
-		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		wsb, err := wrappers.WrappedSignedBeaconBlock(b)
 		require.NoError(t, err)
 		require.NoError(t, db.SaveBlock(ctx, wsb))
 		r, err := b.Block.HashTreeRoot()
@@ -268,7 +269,7 @@ func TestGetStateRoot(t *testing.T) {
 			Root:  root[:],
 		}
 		// a valid chain is required to save finalized checkpoint.
-		wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+		wsb, err := wrappers.WrappedSignedBeaconBlock(blk)
 		require.NoError(t, err)
 		require.NoError(t, db.SaveBlock(ctx, wsb))
 		st, err := util.NewBeaconState()
@@ -301,7 +302,7 @@ func TestGetStateRoot(t *testing.T) {
 			Root:  root[:],
 		}
 		// a valid chain is required to save finalized checkpoint.
-		wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+		wsb, err := wrappers.WrappedSignedBeaconBlock(blk)
 		require.NoError(t, err)
 		require.NoError(t, db.SaveBlock(ctx, wsb))
 		st, err := util.NewBeaconState()
@@ -352,7 +353,7 @@ func TestGetStateRoot(t *testing.T) {
 		blk.Block.Slot = 40
 		root, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+		wsb, err := wrappers.WrappedSignedBeaconBlock(blk)
 		require.NoError(t, err)
 		require.NoError(t, db.SaveBlock(ctx, wsb))
 		st, err := util.NewBeaconState()

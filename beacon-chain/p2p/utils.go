@@ -21,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/network"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/metadata"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/proto"
 )
@@ -128,7 +129,7 @@ func metaDataFromConfig(cfg *Config) (metadata.Metadata, error) {
 		if err := file.WriteFile(defaultKeyPath, dst); err != nil {
 			return nil, err
 		}
-		return wrappers.WrappedMetadataV0(metaData), nil
+		return wrapper.WrappedMetadataV0(metaData), nil
 	}
 	if defaultMetadataExist && metaDataPath == "" {
 		metaDataPath = defaultKeyPath
@@ -142,7 +143,7 @@ func metaDataFromConfig(cfg *Config) (metadata.Metadata, error) {
 	if err := proto.Unmarshal(src, metaData); err != nil {
 		return nil, err
 	}
-	return wrappers.WrappedMetadataV0(metaData), nil
+	return wrapper.WrappedMetadataV0(metaData), nil
 }
 
 // Retrieves an external ipv4 address and converts into a libp2p formatted value.

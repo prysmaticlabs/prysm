@@ -14,6 +14,7 @@ import (
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrappers"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -131,7 +132,7 @@ func TestHeadRoot_UseDB(t *testing.T) {
 	b := util.NewBeaconBlock()
 	br, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err := wrappers.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveBlock(context.Background(), wsb))
 	require.NoError(t, beaconDB.SaveStateSummary(context.Background(), &ethpb.StateSummary{Root: br[:]}))
@@ -146,7 +147,7 @@ func TestHeadBlock_CanRetrieve(t *testing.T) {
 	b.Block.Slot = 1
 	s, err := v1.InitializeFromProto(&ethpb.BeaconState{})
 	require.NoError(t, err)
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err := wrappers.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)
 	c := &Service{}
 	c.head = &head{block: wsb, state: s}
@@ -231,7 +232,7 @@ func TestIsCanonical_Ok(t *testing.T) {
 	blk.Block.Slot = 0
 	root, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
-	wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+	wsb, err := wrappers.WrappedSignedBeaconBlock(blk)
 	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, root))
@@ -434,7 +435,7 @@ func TestService_IsOptimisticForRoot_DB_ProtoArray(t *testing.T) {
 	b.Block.Slot = 10
 	br, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err := wrappers.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveBlock(context.Background(), wsb))
 	require.NoError(t, beaconDB.SaveStateSummary(context.Background(), &ethpb.StateSummary{Root: br[:], Slot: 10}))
@@ -443,7 +444,7 @@ func TestService_IsOptimisticForRoot_DB_ProtoArray(t *testing.T) {
 	optimisticBlock.Block.Slot = 97
 	optimisticRoot, err := optimisticBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
-	wsb, err = wrapper.WrappedSignedBeaconBlock(optimisticBlock)
+	wsb, err = wrappers.WrappedSignedBeaconBlock(optimisticBlock)
 	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveBlock(context.Background(), wsb))
 
@@ -451,7 +452,7 @@ func TestService_IsOptimisticForRoot_DB_ProtoArray(t *testing.T) {
 	validatedBlock.Block.Slot = 9
 	validatedRoot, err := validatedBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
-	wsb, err = wrapper.WrappedSignedBeaconBlock(validatedBlock)
+	wsb, err = wrappers.WrappedSignedBeaconBlock(validatedBlock)
 	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveBlock(context.Background(), wsb))
 
@@ -499,7 +500,7 @@ func TestService_IsOptimisticForRoot_DB_DoublyLinkedTree(t *testing.T) {
 	b.Block.Slot = 10
 	br, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err := wrappers.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveBlock(context.Background(), wsb))
 	require.NoError(t, beaconDB.SaveStateSummary(context.Background(), &ethpb.StateSummary{Root: br[:], Slot: 10}))
@@ -508,7 +509,7 @@ func TestService_IsOptimisticForRoot_DB_DoublyLinkedTree(t *testing.T) {
 	optimisticBlock.Block.Slot = 97
 	optimisticRoot, err := optimisticBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
-	wsb, err = wrapper.WrappedSignedBeaconBlock(optimisticBlock)
+	wsb, err = wrappers.WrappedSignedBeaconBlock(optimisticBlock)
 	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveBlock(context.Background(), wsb))
 
@@ -516,7 +517,7 @@ func TestService_IsOptimisticForRoot_DB_DoublyLinkedTree(t *testing.T) {
 	validatedBlock.Block.Slot = 9
 	validatedRoot, err := validatedBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
-	wsb, err = wrapper.WrappedSignedBeaconBlock(validatedBlock)
+	wsb, err = wrappers.WrappedSignedBeaconBlock(validatedBlock)
 	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveBlock(context.Background(), wsb))
 
@@ -563,7 +564,7 @@ func TestService_IsOptimisticForRoot_DB_non_canonical(t *testing.T) {
 	b.Block.Slot = 10
 	br, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err := wrappers.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveBlock(context.Background(), wsb))
 	require.NoError(t, beaconDB.SaveStateSummary(context.Background(), &ethpb.StateSummary{Root: br[:], Slot: 10}))
@@ -572,7 +573,7 @@ func TestService_IsOptimisticForRoot_DB_non_canonical(t *testing.T) {
 	optimisticBlock.Block.Slot = 97
 	optimisticRoot, err := optimisticBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
-	wsb, err = wrapper.WrappedSignedBeaconBlock(optimisticBlock)
+	wsb, err = wrappers.WrappedSignedBeaconBlock(optimisticBlock)
 	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveBlock(context.Background(), wsb))
 
@@ -580,7 +581,7 @@ func TestService_IsOptimisticForRoot_DB_non_canonical(t *testing.T) {
 	validatedBlock.Block.Slot = 9
 	validatedRoot, err := validatedBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
-	wsb, err = wrapper.WrappedSignedBeaconBlock(validatedBlock)
+	wsb, err = wrappers.WrappedSignedBeaconBlock(validatedBlock)
 	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveBlock(context.Background(), wsb))
 

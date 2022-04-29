@@ -3,6 +3,7 @@ package monitor
 import (
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/consensus-types/forks/phase0"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -39,7 +40,7 @@ func TestProcessExitsFromBlockTrackedIndices(t *testing.T) {
 		},
 	}
 
-	s.processExitsFromBlock(wrapper.WrappedPhase0BeaconBlock(block))
+	s.processExitsFromBlock(phase0.WrappedBeaconBlock(block))
 	require.LogsContain(t, hook, "\"Voluntary exit was included\" Slot=0 ValidatorIndex=2")
 }
 
@@ -73,7 +74,7 @@ func TestProcessExitsFromBlockUntrackedIndices(t *testing.T) {
 		},
 	}
 
-	s.processExitsFromBlock(wrapper.WrappedPhase0BeaconBlock(block))
+	s.processExitsFromBlock(phase0.WrappedBeaconBlock(block))
 	require.LogsDoNotContain(t, hook, "\"Voluntary exit was included\"")
 }
 

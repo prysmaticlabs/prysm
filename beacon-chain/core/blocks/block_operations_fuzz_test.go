@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrappers"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
@@ -41,7 +42,7 @@ func TestFuzzProcessBlockHeader_10000(t *testing.T) {
 
 		s, err := v1.InitializeFromProtoUnsafe(state)
 		require.NoError(t, err)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(block)
+		wsb, err := wrappers.WrappedSignedBeaconBlock(block)
 		require.NoError(t, err)
 		_, err = ProcessBlockHeader(context.Background(), s, wsb)
 		_ = err
@@ -142,7 +143,7 @@ func TestFuzzProcessRandao_10000(t *testing.T) {
 		fuzzer.Fuzz(b)
 		s, err := v1.InitializeFromProtoUnsafe(state)
 		require.NoError(t, err)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		wsb, err := wrappers.WrappedSignedBeaconBlock(b)
 		require.NoError(t, err)
 		r, err := ProcessRandao(context.Background(), s, wsb)
 		if err != nil && r != nil {
@@ -263,7 +264,7 @@ func TestFuzzProcessAttestationsNoVerify_10000(t *testing.T) {
 		fuzzer.Fuzz(b)
 		s, err := v1.InitializeFromProtoUnsafe(state)
 		require.NoError(t, err)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		wsb, err := wrappers.WrappedSignedBeaconBlock(b)
 		require.NoError(t, err)
 		r, err := ProcessAttestationsNoVerifySignature(ctx, s, wsb)
 		if err != nil && r != nil {

@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	mathutil "github.com/prysmaticlabs/prysm/math"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"go.opencensus.io/trace"
 
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -147,7 +148,7 @@ func (s *Service) hasPeerWithSubnet(topic string) bool {
 func (s *Service) updateSubnetRecordWithMetadata(bitV bitfield.Bitvector64) {
 	entry := enr.WithEntry(attSubnetEnrKey, &bitV)
 	s.dv5Listener.LocalNode().Set(entry)
-	s.metaData = wrappers.WrappedMetadataV0(&pb.MetaDataV0{
+	s.metaData = wrapper.WrappedMetadataV0(&pb.MetaDataV0{
 		SeqNumber: s.metaData.SequenceNumber() + 1,
 		Attnets:   bitV,
 	})
@@ -162,7 +163,7 @@ func (s *Service) updateSubnetRecordWithMetadataV2(bitVAtt bitfield.Bitvector64,
 	subEntry := enr.WithEntry(syncCommsSubnetEnrKey, &bitVSync)
 	s.dv5Listener.LocalNode().Set(entry)
 	s.dv5Listener.LocalNode().Set(subEntry)
-	s.metaData = wrappers.WrappedMetadataV1(&pb.MetaDataV1{
+	s.metaData = wrapper.WrappedMetadataV1(&pb.MetaDataV1{
 		SeqNumber: s.metaData.SequenceNumber() + 1,
 		Attnets:   bitVAtt,
 		Syncnets:  bitVSync,

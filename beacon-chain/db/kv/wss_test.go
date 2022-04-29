@@ -6,6 +6,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/genesis"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrappers"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
 )
@@ -36,7 +37,7 @@ func TestSaveOrigin(t *testing.T) {
 	csb, err := cst.MarshalSSZ()
 	require.NoError(t, err)
 	cb := util.NewBeaconBlock()
-	scb, err := wrapper.WrappedSignedBeaconBlock(cb)
+	scb, err := wrappers.WrappedSignedBeaconBlock(cb)
 	require.NoError(t, err)
 	cbb, err := scb.MarshalSSZ()
 	require.NoError(t, err)

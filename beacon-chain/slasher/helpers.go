@@ -58,20 +58,20 @@ func (s *Service) filterAttestations(
 	validInFuture = make([]*slashertypes.IndexedAttestationWrapper, 0, len(atts))
 
 	for _, attWrapper := range atts {
-		if attWrapper == nil || !validateAttestationIntegrity(attwrappers.IndexedAttestation) {
+		if attWrapper == nil || !validateAttestationIntegrity(attWrapper.IndexedAttestation) {
 			numDropped++
 			continue
 		}
 
 		// If an attestation's source is epoch is older than the max history length
 		// we keep track of for slashing detection, we drop it.
-		if attwrappers.IndexedAttestation.Data.Source.Epoch+s.params.historyLength <= currentEpoch {
+		if attWrapper.IndexedAttestation.Data.Source.Epoch+s.params.historyLength <= currentEpoch {
 			numDropped++
 			continue
 		}
 
 		// If an attestations's target epoch is in the future, we defer processing for later.
-		if attwrappers.IndexedAttestation.Data.Target.Epoch > currentEpoch {
+		if attWrapper.IndexedAttestation.Data.Target.Epoch > currentEpoch {
 			validInFuture = append(validInFuture, attWrapper)
 		} else {
 			valid = append(valid, attWrapper)
