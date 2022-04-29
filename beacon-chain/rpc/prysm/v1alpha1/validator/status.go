@@ -141,7 +141,12 @@ func (vs *Server) CheckDoppelGanger(ctx context.Context, req *ethpb.DoppelGanger
 
 	// We request a state 32 slots ago. We are guaranteed to have
 	// currentSlot > 32 since we assume that we are in Altair's fork.
-	prevState, err := vs.ReplayerBuilder.ReplayerForSlot(headSlot - params.BeaconConfig().SlotsPerEpoch).ReplayBlocks(ctx)
+	prevStateSlot := headSlot - params.BeaconConfig().SlotsPerEpoch
+	prevEpochEnd, err := slots.EpochEnd(slots.ToEpoch(prevStateSlot))
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not get previous epoch's end")
+	}
+	prevState, err := vs.ReplayerBuilder.ReplayerForSlot(prevEpochEnd).ReplayBlocks(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get previous state")
 	}
@@ -171,7 +176,7 @@ func (vs *Server) CheckDoppelGanger(ctx context.Context, req *ethpb.DoppelGanger
 		// ago, the current doppelganger check will not be able to
 		// identify dopplelgangers since an attestation can take up to
 		// 31 slots to be included.
-		if v.Epoch+1 >= currEpoch {
+		if v.Epoch+2 >= currEpoch {
 			resp.Responses = append(resp.Responses,
 				&ethpb.DoppelGangerResponse_ValidatorResponse{
 					PublicKey:       v.PublicKey,
@@ -376,8 +381,8 @@ func checkValidatorsAreRecent(headEpoch types.Epoch, req *ethpb.DoppelGangerRequ
 		// Due to how balances are reflected for individual
 		// validators, we can only effectively determine if a
 		// validator voted or not if we are able to look
-		// back more than 1 epoch into the past.
-		if v.Epoch+1 < headEpoch {
+		// back more than 2 epoch into the past.
+		if v.Epoch+2 < headEpoch {
 			validatorsAreRecent = false
 			// Zero out response if we encounter non-recent validators to
 			// guard against potential misuse.

@@ -961,7 +961,7 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 			svSetup: func(t *testing.T) (*Server, *ethpb.DoppelGangerRequest, *ethpb.DoppelGangerResponse) {
 				hs, ps, keys := createStateSetupAltair(t, 3)
 				rb := mockstategen.NewMockReplayerBuilder()
-				rb.SetMockStateForSlot(ps, 20)
+				rb.SetMockStateForSlot(ps, 23)
 				vs := &Server{
 					HeadFetcher: &mockChain.ChainService{
 						State: hs,
@@ -993,7 +993,7 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 			svSetup: func(t *testing.T) (*Server, *ethpb.DoppelGangerRequest, *ethpb.DoppelGangerResponse) {
 				hs, ps, keys := createStateSetupAltair(t, 3)
 				rb := mockstategen.NewMockReplayerBuilder()
-				rb.SetMockStateForSlot(ps, 20)
+				rb.SetMockStateForSlot(ps, 23)
 				currentIndices := make([]byte, 64)
 				currentIndices[2] = 1
 				require.NoError(t, hs.SetCurrentParticipationBits(currentIndices))
@@ -1024,7 +1024,7 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 				// Add in for duplicate validator
 				request.ValidatorRequests = append(request.ValidatorRequests, &ethpb.DoppelGangerRequest_ValidatorRequest{
 					PublicKey:  keys[2].PublicKey().Marshal(),
-					Epoch:      1,
+					Epoch:      0,
 					SignedRoot: []byte{'A'},
 				})
 				response.Responses = append(response.Responses, &ethpb.DoppelGangerResponse_ValidatorResponse{
@@ -1043,7 +1043,7 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 				prevIndices[2] = 1
 				require.NoError(t, ps.SetPreviousParticipationBits(prevIndices))
 				rb := mockstategen.NewMockReplayerBuilder()
-				rb.SetMockStateForSlot(ps, 20)
+				rb.SetMockStateForSlot(ps, 23)
 
 				vs := &Server{
 					HeadFetcher: &mockChain.ChainService{
@@ -1071,7 +1071,7 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 				// Add in for duplicate validator
 				request.ValidatorRequests = append(request.ValidatorRequests, &ethpb.DoppelGangerRequest_ValidatorRequest{
 					PublicKey:  keys[2].PublicKey().Marshal(),
-					Epoch:      1,
+					Epoch:      0,
 					SignedRoot: []byte{'A'},
 				})
 				response.Responses = append(response.Responses, &ethpb.DoppelGangerResponse_ValidatorResponse{
@@ -1091,7 +1091,7 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 				currentIndices[11] = 2
 				require.NoError(t, hs.SetPreviousParticipationBits(currentIndices))
 				rb := mockstategen.NewMockReplayerBuilder()
-				rb.SetMockStateForSlot(ps, 20)
+				rb.SetMockStateForSlot(ps, 23)
 
 				prevIndices := make([]byte, 64)
 				for i := 12; i < 20; i++ {
@@ -1114,7 +1114,7 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 					// Add in for duplicate validator
 					request.ValidatorRequests = append(request.ValidatorRequests, &ethpb.DoppelGangerRequest_ValidatorRequest{
 						PublicKey:  keys[i].PublicKey().Marshal(),
-						Epoch:      1,
+						Epoch:      0,
 						SignedRoot: []byte{'A'},
 					})
 					response.Responses = append(response.Responses, &ethpb.DoppelGangerResponse_ValidatorResponse{
@@ -1143,8 +1143,11 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 			svSetup: func(t *testing.T) (*Server, *ethpb.DoppelGangerRequest, *ethpb.DoppelGangerResponse) {
 				hs, ps, keys := createStateSetupAltair(t, 3)
 				rb := mockstategen.NewMockReplayerBuilder()
-				rb.SetMockStateForSlot(ps, 20)
-
+				rb.SetMockStateForSlot(ps, 23)
+				currentIndices := make([]byte, 64)
+				currentIndices[0] = 1
+				currentIndices[1] = 2
+				require.NoError(t, hs.SetPreviousParticipationBits(currentIndices))
 				vs := &Server{
 					HeadFetcher: &mockChain.ChainService{
 						State: hs,
@@ -1160,6 +1163,43 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 					request.ValidatorRequests = append(request.ValidatorRequests, &ethpb.DoppelGangerRequest_ValidatorRequest{
 						PublicKey:  keys[i].PublicKey().Marshal(),
 						Epoch:      2,
+						SignedRoot: []byte{'A'},
+					})
+					response.Responses = append(response.Responses, &ethpb.DoppelGangerResponse_ValidatorResponse{
+						PublicKey:       keys[i].PublicKey().Marshal(),
+						DuplicateExists: false,
+					})
+				}
+
+				return vs, request, response
+			},
+		},
+		{
+			name:    "attesters are too recent(previous state)",
+			wantErr: false,
+			svSetup: func(t *testing.T) (*Server, *ethpb.DoppelGangerRequest, *ethpb.DoppelGangerResponse) {
+				hs, ps, keys := createStateSetupAltair(t, 3)
+				rb := mockstategen.NewMockReplayerBuilder()
+				rb.SetMockStateForSlot(ps, 23)
+				currentIndices := make([]byte, 64)
+				currentIndices[0] = 1
+				currentIndices[1] = 2
+				require.NoError(t, ps.SetPreviousParticipationBits(currentIndices))
+				vs := &Server{
+					HeadFetcher: &mockChain.ChainService{
+						State: hs,
+					},
+					SyncChecker:     &mockSync.Sync{IsSyncing: false},
+					ReplayerBuilder: rb,
+				}
+				request := &ethpb.DoppelGangerRequest{
+					ValidatorRequests: make([]*ethpb.DoppelGangerRequest_ValidatorRequest, 0),
+				}
+				response := &ethpb.DoppelGangerResponse{Responses: make([]*ethpb.DoppelGangerResponse_ValidatorResponse, 0)}
+				for i := 0; i < 15; i++ {
+					request.ValidatorRequests = append(request.ValidatorRequests, &ethpb.DoppelGangerRequest_ValidatorRequest{
+						PublicKey:  keys[i].PublicKey().Marshal(),
+						Epoch:      1,
 						SignedRoot: []byte{'A'},
 					})
 					response.Responses = append(response.Responses, &ethpb.DoppelGangerResponse_ValidatorResponse{
