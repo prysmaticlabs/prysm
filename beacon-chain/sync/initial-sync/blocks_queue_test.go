@@ -1088,7 +1088,7 @@ func TestBlocksQueue_stuckInUnfavourableFork(t *testing.T) {
 	for _, blk := range chain1[1:] {
 		parentRoot := bytesutil.ToBytes32(blk.Block.ParentRoot)
 		// Save block only if parent root is already in database or cache.
-		if beaconDB.HasBlock(ctx, parentRoot) || mc.HasInitSyncBlock(parentRoot) {
+		if beaconDB.HasBlock(ctx, parentRoot) || mc.HasBlock(ctx, parentRoot) {
 			wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
 			require.NoError(t, err)
 			require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
@@ -1274,7 +1274,7 @@ func TestBlocksQueue_stuckWhenHeadIsSetToOrphanedBlock(t *testing.T) {
 	for _, blk := range chain[1:84] {
 		parentRoot := bytesutil.ToBytes32(blk.Block.ParentRoot)
 		// Save block only if parent root is already in database or cache.
-		if beaconDB.HasBlock(ctx, parentRoot) || mc.HasInitSyncBlock(parentRoot) {
+		if beaconDB.HasBlock(ctx, parentRoot) || mc.HasBlock(ctx, parentRoot) {
 			wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
 			require.NoError(t, err)
 			require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
@@ -1325,7 +1325,7 @@ func TestBlocksQueue_stuckWhenHeadIsSetToOrphanedBlock(t *testing.T) {
 		if err != nil {
 			return false
 		}
-		if blk.Block().Slot() <= finalizedSlot || (beaconDB.HasBlock(ctx, blkRoot) || mc.HasInitSyncBlock(blkRoot)) {
+		if blk.Block().Slot() <= finalizedSlot || (beaconDB.HasBlock(ctx, blkRoot) || mc.HasBlock(ctx, blkRoot)) {
 			return true
 		}
 		return false
@@ -1344,7 +1344,7 @@ func TestBlocksQueue_stuckWhenHeadIsSetToOrphanedBlock(t *testing.T) {
 			}
 
 			parentRoot := bytesutil.ToBytes32(blk.Block().ParentRoot())
-			if !beaconDB.HasBlock(ctx, parentRoot) && !mc.HasInitSyncBlock(parentRoot) {
+			if !beaconDB.HasBlock(ctx, parentRoot) && !mc.HasBlock(ctx, parentRoot) {
 				log.Errorf("%v: %#x", errParentDoesNotExist, blk.Block().ParentRoot())
 				continue
 			}
@@ -1360,6 +1360,6 @@ func TestBlocksQueue_stuckWhenHeadIsSetToOrphanedBlock(t *testing.T) {
 	for _, blk := range chain[:orphanedBlock.Block.Slot+32] {
 		blkRoot, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
-		require.Equal(t, true, beaconDB.HasBlock(ctx, blkRoot) || mc.HasInitSyncBlock(blkRoot), "slot %d", blk.Block.Slot)
+		require.Equal(t, true, beaconDB.HasBlock(ctx, blkRoot) || mc.HasBlock(ctx, blkRoot), "slot %d", blk.Block.Slot)
 	}
 }

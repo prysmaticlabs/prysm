@@ -223,7 +223,7 @@ func TestBlocksFetcher_findFork(t *testing.T) {
 	for _, blk := range chain1 {
 		blkRoot, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
-		require.Equal(t, true, beaconDB.HasBlock(ctx, blkRoot) || mc.HasInitSyncBlock(blkRoot))
+		require.Equal(t, true, beaconDB.HasBlock(ctx, blkRoot) || mc.HasBlock(ctx, blkRoot))
 	}
 	assert.Equal(t, types.Slot(250), mc.HeadSlot())
 
@@ -273,7 +273,7 @@ func TestBlocksFetcher_findFork(t *testing.T) {
 	for _, blk := range chain2[forkSlot:] {
 		blkRoot, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
-		require.Equal(t, false, beaconDB.HasBlock(ctx, blkRoot) || mc.HasInitSyncBlock(blkRoot))
+		require.Equal(t, false, beaconDB.HasBlock(ctx, blkRoot) || mc.HasBlock(ctx, blkRoot))
 	}
 
 	// Search for alternative paths (add single peer having alternative path).
@@ -299,7 +299,7 @@ func TestBlocksFetcher_findFork(t *testing.T) {
 		require.Equal(t, blk.Block.Slot, i, "incorrect block selected for slot %d", i)
 		// Only save is parent block exists.
 		parentRoot := bytesutil.ToBytes32(blk.Block.ParentRoot)
-		if beaconDB.HasBlock(ctx, parentRoot) || mc.HasInitSyncBlock(parentRoot) {
+		if beaconDB.HasBlock(ctx, parentRoot) || mc.HasBlock(ctx, parentRoot) {
 			wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
 			require.NoError(t, err)
 			require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
@@ -311,7 +311,7 @@ func TestBlocksFetcher_findFork(t *testing.T) {
 	for _, blk := range chain2 {
 		blkRoot, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
-		require.Equal(t, true, beaconDB.HasBlock(ctx, blkRoot) || mc.HasInitSyncBlock(blkRoot), "slot %d", blk.Block.Slot)
+		require.Equal(t, true, beaconDB.HasBlock(ctx, blkRoot) || mc.HasBlock(ctx, blkRoot), "slot %d", blk.Block.Slot)
 	}
 }
 
