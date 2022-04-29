@@ -1,5 +1,3 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_binary")
-load("@prysm//tools/go:def.bzl", "go_library")
 load("@bazel_tools//tools/build_defs/pkg:pkg.bzl", "pkg_tar")
 load("@io_bazel_rules_docker//contrib:passwd.bzl", "passwd_entry", "passwd_file")
 load("@io_bazel_rules_docker//container:container.bzl", "container_image")
@@ -99,18 +97,5 @@ container_image(
     tags = ["manual"],
     tars = [":passwd_tar"],
     user = "root",
-    visibility = ["//visibility:public"],
-)
-
-go_library(
-    name = "go_default_library",
-    srcs = ["derp.go"],
-    importpath = "github.com/prysmaticlabs/prysm/tools",
-    visibility = ["//visibility:private"],
-)
-
-go_binary(
-    name = "tools",
-    embed = [":go_default_library"],
     visibility = ["//visibility:public"],
 )
