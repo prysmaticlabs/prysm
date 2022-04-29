@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -97,6 +98,7 @@ type POWBlockFetcher interface {
 	BlockByTimestamp(ctx context.Context, time uint64) (*types.HeaderInfo, error)
 	BlockHashByHeight(ctx context.Context, height *big.Int) (common.Hash, error)
 	BlockExists(ctx context.Context, hash common.Hash) (bool, *big.Int, error)
+	BlockExistsWithCache(ctx context.Context, hash common.Hash) (bool, *big.Int, error)
 }
 
 // Chain defines a standard interface for the powchain service in Prysm.
@@ -112,6 +114,7 @@ type RPCDataFetcher interface {
 	Close()
 	HeaderByNumber(ctx context.Context, number *big.Int) (*gethTypes.Header, error)
 	HeaderByHash(ctx context.Context, hash common.Hash) (*gethTypes.Header, error)
+	SyncProgress(ctx context.Context) (*ethereum.SyncProgress, error)
 }
 
 // RPCClient defines the rpc methods required to interact with the eth1 node.
@@ -136,8 +139,8 @@ type config struct {
 }
 
 // Service fetches important information about the canonical
-// Ethereum ETH1.0 chain via a web3 endpoint using an ethclient.
-// The Beacon Chain requires synchronization with the ETH1.0 chain's current
+// Ethereum ETH1.0 chain via a web3 endpoint using an ethclient. The Random
+// Beacon Chain requires synchronization with the ETH1.0 chain's current
 // blockhash, block number, and access to logs within the
 // Validator Registration Contract on the ETH1.0 chain to kick off the beacon
 // chain's validator registration process.
