@@ -1,4 +1,4 @@
-package interfaces
+package interfaces_test
 
 import (
 	"testing"
@@ -7,6 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/consensus-types/forks/altair"
 	"github.com/prysmaticlabs/prysm/consensus-types/forks/bellatrix"
 	"github.com/prysmaticlabs/prysm/consensus-types/forks/phase0"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrappers"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -15,20 +16,21 @@ import (
 )
 
 var (
-	_ = SignedBeaconBlock(&phase0.SignedBeaconBlock{})
-	_ = BeaconBlock(&phase0.BeaconBlock{})
-	_ = BeaconBlockBody(&phase0.BeaconBlockBody{})
+	_ = interfaces.SignedBeaconBlock(&phase0.SignedBeaconBlock{})
+	_ = interfaces.BeaconBlock(&phase0.BeaconBlock{})
+	_ = interfaces.BeaconBlockBody(&phase0.BeaconBlockBody{})
 
-	_ = SignedBeaconBlock(&altair.SignedBeaconBlock{})
-	_ = BeaconBlock(&altair.BeaconBlock{})
-	_ = BeaconBlockBody(&altair.BeaconBlockBody{})
+	_ = interfaces.SignedBeaconBlock(&altair.SignedBeaconBlock{})
+	_ = interfaces.BeaconBlock(&altair.BeaconBlock{})
+	_ = interfaces.BeaconBlockBody(&altair.BeaconBlockBody{})
 
-	_ = SignedBeaconBlock(&bellatrix.SignedBeaconBlock{})
-	_ = BeaconBlock(&bellatrix.BeaconBlock{})
-	_ = BeaconBlockBody(&bellatrix.BeaconBlockBody{})
+	_ = interfaces.SignedBeaconBlock(&bellatrix.SignedBeaconBlock{})
+	_ = interfaces.BeaconBlock(&bellatrix.BeaconBlock{})
+	_ = interfaces.BeaconBlockBody(&bellatrix.BeaconBlockBody{})
 
-	_ = SignedBeaconBlock(&bellatrix.SignedBlindedBeaconBlock{})
-	_ = BeaconBlock(&bellatrix.BlindedBeaconBlock{})
+	_ = interfaces.SignedBeaconBlock(&bellatrix.SignedBlindedBeaconBlock{})
+	_ = interfaces.BeaconBlock(&bellatrix.BlindedBeaconBlock{})
+	_ = interfaces.BeaconBlockBody(&bellatrix.BlindedBeaconBlockBody{})
 )
 
 func TestBeaconBlockHeaderFromBlock(t *testing.T) {
@@ -63,7 +65,7 @@ func TestBeaconBlockHeaderFromBlock(t *testing.T) {
 		BodyRoot:      bodyRoot[:],
 	}
 
-	bh, err := BeaconBlockHeaderFromBlock(blk)
+	bh, err := interfaces.BeaconBlockHeaderFromBlock(blk)
 	require.NoError(t, err)
 	assert.DeepEqual(t, want, bh)
 }
@@ -100,7 +102,7 @@ func TestBeaconBlockHeaderFromBlockInterface(t *testing.T) {
 		BodyRoot:      bodyRoot[:],
 	}
 
-	bh, err := BeaconBlockHeaderFromBlockInterface(phase0.WrappedBeaconBlock(blk))
+	bh, err := interfaces.BeaconBlockHeaderFromBlockInterface(phase0.WrappedBeaconBlock(blk))
 	require.NoError(t, err)
 	assert.DeepEqual(t, want, bh)
 }
@@ -113,7 +115,7 @@ func TestBeaconBlockHeaderFromBlock_NilBlockBody(t *testing.T) {
 		ParentRoot:    bytesutil.PadTo([]byte("parent root"), hashLen),
 		StateRoot:     bytesutil.PadTo([]byte("state root"), hashLen),
 	}
-	_, err := BeaconBlockHeaderFromBlock(blk)
+	_, err := interfaces.BeaconBlockHeaderFromBlock(blk)
 	require.ErrorContains(t, "nil block body", err)
 }
 
@@ -153,7 +155,7 @@ func TestSignedBeaconBlockHeaderFromBlock(t *testing.T) {
 		Signature: blk.Signature,
 	}
 
-	bh, err := SignedBeaconBlockHeaderFromBlock(blk)
+	bh, err := interfaces.SignedBeaconBlockHeaderFromBlock(blk)
 	require.NoError(t, err)
 	assert.DeepEqual(t, want, bh)
 }
@@ -195,7 +197,7 @@ func TestSignedBeaconBlockHeaderFromBlockInterface(t *testing.T) {
 	}
 	wsb, err := wrappers.WrappedSignedBeaconBlock(blk)
 	require.NoError(t, err)
-	bh, err := SignedBeaconBlockHeaderFromBlockInterface(wsb)
+	bh, err := interfaces.SignedBeaconBlockHeaderFromBlockInterface(wsb)
 	require.NoError(t, err)
 	assert.DeepEqual(t, want, bh)
 }
@@ -210,6 +212,6 @@ func TestSignedBeaconBlockHeaderFromBlock_NilBlockBody(t *testing.T) {
 	},
 		Signature: bytesutil.PadTo([]byte("signature"), fieldparams.BLSSignatureLength),
 	}
-	_, err := SignedBeaconBlockHeaderFromBlock(blk)
+	_, err := interfaces.SignedBeaconBlockHeaderFromBlock(blk)
 	require.ErrorContains(t, "nil block", err)
 }

@@ -4,6 +4,7 @@ import (
 	ssz "github.com/ferranbt/fastssz"
 	"github.com/pkg/errors"
 	typeerrors "github.com/prysmaticlabs/prysm/consensus-types/errors"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -26,8 +27,8 @@ type BeaconBlock struct {
 
 // WrappedSignedBeaconBlock is constructor which wraps a protobuf phase 0 block
 // with the block wrapper.
-func WrappedSignedBeaconBlock(b *eth.SignedBeaconBlock) SignedBeaconBlock {
-	return SignedBeaconBlock{b: b}
+func WrappedSignedBeaconBlock(b *eth.SignedBeaconBlock) *SignedBeaconBlock {
+	return &SignedBeaconBlock{b: b}
 }
 
 // Signature returns the respective block signature.
@@ -36,7 +37,7 @@ func (w SignedBeaconBlock) Signature() []byte {
 }
 
 // Block returns the underlying beacon block object.
-func (w SignedBeaconBlock) Block() BeaconBlock {
+func (w SignedBeaconBlock) Block() interfaces.BeaconBlock {
 	return WrappedBeaconBlock(w.b.Block)
 }
 
@@ -48,7 +49,7 @@ func (w SignedBeaconBlock) IsNil() bool {
 
 // Copy performs a deep copy of the signed beacon block
 // object.
-func (w SignedBeaconBlock) Copy() SignedBeaconBlock {
+func (w SignedBeaconBlock) Copy() interfaces.SignedBeaconBlock {
 	return WrappedSignedBeaconBlock(eth.CopySignedBeaconBlock(w.b))
 }
 
@@ -158,7 +159,7 @@ func (w BeaconBlock) StateRoot() []byte {
 }
 
 // Body returns the underlying block body.
-func (w BeaconBlock) Body() BeaconBlockBody {
+func (w BeaconBlock) Body() interfaces.BeaconBlockBody {
 	return WrappedBeaconBlockBody(w.b.Body)
 }
 
@@ -229,8 +230,8 @@ type BeaconBlockBody struct {
 }
 
 // WrappedBeaconBlockBody is constructor which wraps a protobuf phase 0 object with the block wrapper.
-func WrappedBeaconBlockBody(b *eth.BeaconBlockBody) BeaconBlockBody {
-	return BeaconBlockBody{b: b}
+func WrappedBeaconBlockBody(b *eth.BeaconBlockBody) *BeaconBlockBody {
+	return &BeaconBlockBody{b: b}
 }
 
 // RandaoReveal returns the randao reveal from the block body.

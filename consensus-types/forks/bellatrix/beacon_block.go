@@ -4,6 +4,7 @@ import (
 	ssz "github.com/ferranbt/fastssz"
 	"github.com/pkg/errors"
 	typeerrors "github.com/prysmaticlabs/prysm/consensus-types/errors"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -21,8 +22,8 @@ type SignedBeaconBlock struct {
 }
 
 // WrappedSignedBeaconBlock is a constructor which wraps a protobuf Bellatrix block with the block wrapper.
-func WrappedSignedBeaconBlock(b *eth.SignedBeaconBlockBellatrix) (block.SignedBeaconBlock, error) {
-	w := SignedBeaconBlock{b: b}
+func WrappedSignedBeaconBlock(b *eth.SignedBeaconBlockBellatrix) (*SignedBeaconBlock, error) {
+	w := &SignedBeaconBlock{b: b}
 	if w.IsNil() {
 		return nil, typeerrors.ErrNilObjectWrapped
 	}
@@ -35,8 +36,8 @@ func (w SignedBeaconBlock) Signature() []byte {
 }
 
 // Block returns the underlying beacon block object.
-func (w SignedBeaconBlock) Block() block.BeaconBlock {
-	return BeaconBlock{b: w.b.Block}
+func (w SignedBeaconBlock) Block() interfaces.BeaconBlock {
+	return &BeaconBlock{b: w.b.Block}
 }
 
 // IsNil checks if the underlying beacon block is nil.
@@ -45,8 +46,8 @@ func (w SignedBeaconBlock) IsNil() bool {
 }
 
 // Copy performs a deep copy of the signed beacon block object.
-func (w SignedBeaconBlock) Copy() block.SignedBeaconBlock {
-	return SignedBeaconBlock{b: eth.CopySignedBeaconBlockBellatrix(w.b)}
+func (w SignedBeaconBlock) Copy() interfaces.SignedBeaconBlock {
+	return &SignedBeaconBlock{b: eth.CopySignedBeaconBlockBellatrix(w.b)}
 }
 
 // MarshalSSZ marshals the signed beacon block to its relevant ssz form.
@@ -133,8 +134,8 @@ type BeaconBlock struct {
 
 // WrappedBeaconBlock is a constructor which wraps a protobuf Bellatrix object
 // with the block wrapper.
-func WrappedBeaconBlock(b *eth.BeaconBlockBellatrix) (block.BeaconBlock, error) {
-	w := BeaconBlock{b: b}
+func WrappedBeaconBlock(b *eth.BeaconBlockBellatrix) (*BeaconBlock, error) {
+	w := &BeaconBlock{b: b}
 	if w.IsNil() {
 		return nil, typeerrors.ErrNilObjectWrapped
 	}
@@ -162,8 +163,8 @@ func (w BeaconBlock) StateRoot() []byte {
 }
 
 // Body returns the underlying block body.
-func (w BeaconBlock) Body() block.BeaconBlockBody {
-	return BeaconBlockBody{b: w.b.Body}
+func (w BeaconBlock) Body() interfaces.BeaconBlockBody {
+	return &BeaconBlockBody{b: w.b.Body}
 }
 
 // IsNil checks if the beacon block is nil.

@@ -4,10 +4,10 @@ import (
 	ssz "github.com/ferranbt/fastssz"
 	"github.com/pkg/errors"
 	typeerrors "github.com/prysmaticlabs/prysm/consensus-types/errors"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"google.golang.org/protobuf/proto"
@@ -21,8 +21,8 @@ type SignedBlindedBeaconBlock struct {
 }
 
 // WrappedSignedBlindedBeaconBlock is a constructor which wraps a protobuf Bellatrix blinded block with the block wrapper.
-func WrappedSignedBlindedBeaconBlock(b *eth.SignedBlindedBeaconBlockBellatrix) (block.SignedBeaconBlock, error) {
-	w := SignedBlindedBeaconBlock{b: b}
+func WrappedSignedBlindedBeaconBlock(b *eth.SignedBlindedBeaconBlockBellatrix) (*SignedBlindedBeaconBlock, error) {
+	w := &SignedBlindedBeaconBlock{b: b}
 	if w.IsNil() {
 		return nil, typeerrors.ErrNilObjectWrapped
 	}
@@ -35,8 +35,8 @@ func (w SignedBlindedBeaconBlock) Signature() []byte {
 }
 
 // Block returns the underlying beacon block object.
-func (w SignedBlindedBeaconBlock) Block() block.BeaconBlock {
-	return BlindedBeaconBlock{b: w.b.Block}
+func (w SignedBlindedBeaconBlock) Block() interfaces.BeaconBlock {
+	return &BlindedBeaconBlock{b: w.b.Block}
 }
 
 // IsNil checks if the underlying beacon block is nil.
@@ -45,8 +45,8 @@ func (w SignedBlindedBeaconBlock) IsNil() bool {
 }
 
 // Copy performs a deep copy of the signed beacon block object.
-func (w SignedBlindedBeaconBlock) Copy() block.SignedBeaconBlock {
-	return SignedBlindedBeaconBlock{b: eth.CopySignedBlindedBeaconBlockBellatrix(w.b)}
+func (w SignedBlindedBeaconBlock) Copy() interfaces.SignedBeaconBlock {
+	return &SignedBlindedBeaconBlock{b: eth.CopySignedBlindedBeaconBlockBellatrix(w.b)}
 }
 
 // MarshalSSZ marshals the signed beacon block to its relevant ssz form.
@@ -134,8 +134,8 @@ type BlindedBeaconBlock struct {
 
 // WrappedBlindedBeaconBlock is a constructor which wraps a protobuf Bellatrix object
 // with the block wrapper.
-func WrappedBlindedBeaconBlock(b *eth.BlindedBeaconBlockBellatrix) (block.BeaconBlock, error) {
-	w := BlindedBeaconBlock{b: b}
+func WrappedBlindedBeaconBlock(b *eth.BlindedBeaconBlockBellatrix) (*BlindedBeaconBlock, error) {
+	w := &BlindedBeaconBlock{b: b}
 	if w.IsNil() {
 		return nil, typeerrors.ErrNilObjectWrapped
 	}
@@ -163,8 +163,8 @@ func (w BlindedBeaconBlock) StateRoot() []byte {
 }
 
 // Body returns the underlying block body.
-func (w BlindedBeaconBlock) Body() block.BeaconBlockBody {
-	return blindedBeaconBlockBodyBellatrix{b: w.b.Body}
+func (w BlindedBeaconBlock) Body() interfaces.BeaconBlockBody {
+	return &BlindedBeaconBlockBody{b: w.b.Body}
 }
 
 // IsNil checks if the beacon block is nil.
@@ -228,15 +228,15 @@ func (w BlindedBeaconBlock) AsSignRequestObject() validatorpb.SignRequestObject 
 	}
 }
 
-// blindedBeaconBlockBodyBellatrix is a wrapper of a beacon block body.
-type blindedBeaconBlockBodyBellatrix struct {
+// BlindedBeaconBlockBodyBellatrix is a wrapper of a beacon block body.
+type BlindedBeaconBlockBody struct {
 	b *eth.BlindedBeaconBlockBodyBellatrix
 }
 
-// WrappedBellatrixBlindedBeaconBlockBody is a constructor which wraps a protobuf bellatrix object
+// WrappedBlindedBeaconBlockBody is a constructor which wraps a protobuf bellatrix object
 // with the block wrapper.
-func WrappedBellatrixBlindedBeaconBlockBody(b *eth.BlindedBeaconBlockBodyBellatrix) (block.BeaconBlockBody, error) {
-	w := blindedBeaconBlockBodyBellatrix{b: b}
+func WrappedBlindedBeaconBlockBody(b *eth.BlindedBeaconBlockBodyBellatrix) (*BlindedBeaconBlockBody, error) {
+	w := &BlindedBeaconBlockBody{b: b}
 	if w.IsNil() {
 		return nil, typeerrors.ErrNilObjectWrapped
 	}
@@ -244,72 +244,72 @@ func WrappedBellatrixBlindedBeaconBlockBody(b *eth.BlindedBeaconBlockBodyBellatr
 }
 
 // RandaoReveal returns the randao reveal from the block body.
-func (w blindedBeaconBlockBodyBellatrix) RandaoReveal() []byte {
+func (w BlindedBeaconBlockBody) RandaoReveal() []byte {
 	return w.b.RandaoReveal
 }
 
 // Eth1Data returns the eth1 data in the block.
-func (w blindedBeaconBlockBodyBellatrix) Eth1Data() *eth.Eth1Data {
+func (w BlindedBeaconBlockBody) Eth1Data() *eth.Eth1Data {
 	return w.b.Eth1Data
 }
 
 // Graffiti returns the graffiti in the block.
-func (w blindedBeaconBlockBodyBellatrix) Graffiti() []byte {
+func (w BlindedBeaconBlockBody) Graffiti() []byte {
 	return w.b.Graffiti
 }
 
 // ProposerSlashings returns the proposer slashings in the block.
-func (w blindedBeaconBlockBodyBellatrix) ProposerSlashings() []*eth.ProposerSlashing {
+func (w BlindedBeaconBlockBody) ProposerSlashings() []*eth.ProposerSlashing {
 	return w.b.ProposerSlashings
 }
 
 // AttesterSlashings returns the attester slashings in the block.
-func (w blindedBeaconBlockBodyBellatrix) AttesterSlashings() []*eth.AttesterSlashing {
+func (w BlindedBeaconBlockBody) AttesterSlashings() []*eth.AttesterSlashing {
 	return w.b.AttesterSlashings
 }
 
 // Attestations returns the stored attestations in the block.
-func (w blindedBeaconBlockBodyBellatrix) Attestations() []*eth.Attestation {
+func (w BlindedBeaconBlockBody) Attestations() []*eth.Attestation {
 	return w.b.Attestations
 }
 
 // Deposits returns the stored deposits in the block.
-func (w blindedBeaconBlockBodyBellatrix) Deposits() []*eth.Deposit {
+func (w BlindedBeaconBlockBody) Deposits() []*eth.Deposit {
 	return w.b.Deposits
 }
 
 // VoluntaryExits returns the voluntary exits in the block.
-func (w blindedBeaconBlockBodyBellatrix) VoluntaryExits() []*eth.SignedVoluntaryExit {
+func (w BlindedBeaconBlockBody) VoluntaryExits() []*eth.SignedVoluntaryExit {
 	return w.b.VoluntaryExits
 }
 
 // SyncAggregate returns the sync aggregate in the block.
-func (w blindedBeaconBlockBodyBellatrix) SyncAggregate() (*eth.SyncAggregate, error) {
+func (w BlindedBeaconBlockBody) SyncAggregate() (*eth.SyncAggregate, error) {
 	return w.b.SyncAggregate, nil
 }
 
 // IsNil checks if the block body is nil.
-func (w blindedBeaconBlockBodyBellatrix) IsNil() bool {
+func (w BlindedBeaconBlockBody) IsNil() bool {
 	return w.b == nil
 }
 
 // HashTreeRoot returns the ssz root of the block body.
-func (w blindedBeaconBlockBodyBellatrix) HashTreeRoot() ([32]byte, error) {
+func (w BlindedBeaconBlockBody) HashTreeRoot() ([32]byte, error) {
 	return w.b.HashTreeRoot()
 }
 
 // Proto returns the underlying proto form of the block
 // body.
-func (w blindedBeaconBlockBodyBellatrix) Proto() proto.Message {
+func (w BlindedBeaconBlockBody) Proto() proto.Message {
 	return w.b
 }
 
 // ExecutionPayload returns the execution payload of the block body.
-func (w blindedBeaconBlockBodyBellatrix) ExecutionPayload() (*enginev1.ExecutionPayload, error) {
+func (w BlindedBeaconBlockBody) ExecutionPayload() (*enginev1.ExecutionPayload, error) {
 	return nil, errors.Wrapf(typeerrors.ErrUnsupportedField, "ExecutionPayload for %T", w)
 }
 
 // ExecutionPayloadHeader returns the execution payload header of the block body.
-func (w blindedBeaconBlockBodyBellatrix) ExecutionPayloadHeader() (*eth.ExecutionPayloadHeader, error) {
+func (w BlindedBeaconBlockBody) ExecutionPayloadHeader() (*eth.ExecutionPayloadHeader, error) {
 	return w.b.ExecutionPayloadHeader, nil
 }

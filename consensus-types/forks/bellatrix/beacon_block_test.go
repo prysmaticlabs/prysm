@@ -1,0 +1,401 @@
+package bellatrix
+
+import (
+	"bytes"
+	"testing"
+
+	typeerrors "github.com/prysmaticlabs/prysm/consensus-types/errors"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/runtime/version"
+	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
+)
+
+func TestSignedBeaconBlock_Header(t *testing.T) {
+	root := bytesutil.PadTo([]byte("root"), 32)
+	signature := bytesutil.PadTo([]byte("sig"), 96)
+	body := &ethpb.BeaconBlockBodyBellatrix{}
+	body = util.HydrateBeaconBlockBodyBellatrix(body)
+	bodyRoot, err := body.HashTreeRoot()
+	require.NoError(t, err)
+	block := &ethpb.SignedBeaconBlockBellatrix{
+		Block: &ethpb.BeaconBlockBellatrix{
+			Slot:          1,
+			ProposerIndex: 1,
+			ParentRoot:    root,
+			StateRoot:     root,
+			Body:          body,
+		},
+		Signature: signature,
+	}
+	wrapped, err := WrappedSignedBeaconBlock(block)
+	require.NoError(t, err)
+
+	header, err := wrapped.Header()
+	require.NoError(t, err)
+	assert.Equal(t, types.ValidatorIndex(1), header.Header.ProposerIndex)
+	assert.Equal(t, types.Slot(1), header.Header.Slot)
+	assert.DeepEqual(t, bodyRoot[:], header.Header.BodyRoot)
+	assert.DeepEqual(t, root, header.Header.StateRoot)
+	assert.DeepEqual(t, root, header.Header.ParentRoot)
+	assert.DeepEqual(t, signature, header.Signature)
+}
+
+func TestSignedBeaconBlock_Signature(t *testing.T) {
+	sig := []byte{0x11, 0x22}
+	wsb, err := WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: &ethpb.BeaconBlockBellatrix{}, Signature: sig})
+	require.NoError(t, err)
+
+	if !bytes.Equal(sig, wsb.Signature()) {
+		t.Error("Wrong signature returned")
+	}
+}
+
+func TestSignedBeaconBlock_Block(t *testing.T) {
+	blk := &ethpb.BeaconBlockBellatrix{Slot: 54}
+	wsb, err := WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: blk})
+	require.NoError(t, err)
+
+	assert.DeepEqual(t, blk, wsb.Block().Proto())
+}
+
+func TestSignedBeaconBlock_IsNil(t *testing.T) {
+	_, err := WrappedSignedBeaconBlock(nil)
+	require.Equal(t, typeerrors.ErrNilObjectWrapped, err)
+
+	wsb, err := WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: &ethpb.BeaconBlockBellatrix{}})
+	require.NoError(t, err)
+
+	assert.Equal(t, false, wsb.IsNil())
+}
+
+func TestSignedBeaconBlock_Copy(t *testing.T) {
+	t.Skip("TODO: Missing mutation evaluation helpers")
+}
+
+func TestSignedBeaconBlock_Proto(t *testing.T) {
+	sb := &ethpb.SignedBeaconBlockBellatrix{
+		Block:     &ethpb.BeaconBlockBellatrix{Slot: 66},
+		Signature: []byte{0x11, 0x22},
+	}
+	wsb, err := WrappedSignedBeaconBlock(sb)
+	require.NoError(t, err)
+
+	assert.Equal(t, sb, wsb.Proto())
+}
+
+func TestSignedBeaconBlock_PbPhase0Block(t *testing.T) {
+	wsb, err := WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: &ethpb.BeaconBlockBellatrix{}})
+	require.NoError(t, err)
+
+	if _, err := wsb.PbPhase0Block(); err != typeerrors.ErrUnsupportedPhase0Block {
+		t.Errorf("Wrong error returned. Want %v got %v", typeerrors.ErrUnsupportedPhase0Block, err)
+	}
+}
+
+func TestSignedBeaconBlock_PbBellatrixBlock(t *testing.T) {
+	sb := &ethpb.SignedBeaconBlockBellatrix{
+		Block:     &ethpb.BeaconBlockBellatrix{Slot: 66},
+		Signature: []byte{0x11, 0x22},
+	}
+	wsb, err := WrappedSignedBeaconBlock(sb)
+	require.NoError(t, err)
+
+	got, err := wsb.PbBellatrixBlock()
+	assert.NoError(t, err)
+	assert.Equal(t, sb, got)
+}
+
+func TestSignedBeaconBlock_MarshalSSZTo(t *testing.T) {
+	wsb, err := WrappedSignedBeaconBlock(util.HydrateSignedBeaconBlockBellatrix(&ethpb.SignedBeaconBlockBellatrix{}))
+	assert.NoError(t, err)
+
+	var b []byte
+	b, err = wsb.MarshalSSZTo(b)
+	assert.NoError(t, err)
+	assert.NotEqual(t, 0, len(b))
+}
+
+func TestSignedBeaconBlock_SSZ(t *testing.T) {
+	wsb, err := WrappedSignedBeaconBlock(util.HydrateSignedBeaconBlockBellatrix(&ethpb.SignedBeaconBlockBellatrix{}))
+	assert.NoError(t, err)
+
+	b, err := wsb.MarshalSSZ()
+	assert.NoError(t, err)
+	assert.NotEqual(t, 0, len(b))
+
+	assert.NotEqual(t, 0, wsb.SizeSSZ())
+
+	assert.NoError(t, wsb.UnmarshalSSZ(b))
+}
+
+func TestSignedBeaconBlock_Version(t *testing.T) {
+	wsb, err := WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: &ethpb.BeaconBlockBellatrix{}})
+	require.NoError(t, err)
+
+	assert.Equal(t, version.Bellatrix, wsb.Version())
+}
+
+func TestBeaconBlock_Slot(t *testing.T) {
+	slot := types.Slot(546)
+	wb, err := WrappedBeaconBlock(&ethpb.BeaconBlockBellatrix{Slot: slot})
+	require.NoError(t, err)
+
+	assert.Equal(t, slot, wb.Slot())
+}
+
+func TestBeaconBlock_ProposerIndex(t *testing.T) {
+	pi := types.ValidatorIndex(555)
+	wb, err := WrappedBeaconBlock(&ethpb.BeaconBlockBellatrix{ProposerIndex: pi})
+	require.NoError(t, err)
+
+	assert.Equal(t, pi, wb.ProposerIndex())
+}
+
+func TestBeaconBlock_ParentRoot(t *testing.T) {
+	root := []byte{0xAA, 0xBF, 0x33, 0x01}
+	wb, err := WrappedBeaconBlock(&ethpb.BeaconBlockBellatrix{ParentRoot: root})
+	require.NoError(t, err)
+
+	assert.DeepEqual(t, root, wb.ParentRoot())
+}
+
+func TestBeaconBlock_StateRoot(t *testing.T) {
+	root := []byte{0xAA, 0xBF, 0x33, 0x01}
+	wb, err := WrappedBeaconBlock(&ethpb.BeaconBlockBellatrix{StateRoot: root})
+	require.NoError(t, err)
+
+	assert.DeepEqual(t, root, wb.StateRoot())
+}
+
+func TestBeaconBlock_Body(t *testing.T) {
+	body := &ethpb.BeaconBlockBodyBellatrix{Graffiti: []byte{0x44}}
+	wb, err := WrappedBeaconBlock(&ethpb.BeaconBlockBellatrix{Body: body})
+	require.NoError(t, err)
+
+	assert.Equal(t, body, wb.Body().Proto())
+}
+
+func TestBeaconBlock_IsNil(t *testing.T) {
+	_, err := WrappedBeaconBlock(nil)
+	require.Equal(t, typeerrors.ErrNilObjectWrapped, err)
+
+	wb, err := WrappedBeaconBlock(&ethpb.BeaconBlockBellatrix{})
+	require.NoError(t, err)
+
+	assert.Equal(t, false, wb.IsNil())
+}
+
+func TestBeaconBlock_IsBlinded(t *testing.T) {
+	wsb, err := WrappedBeaconBlock(&ethpb.BeaconBlockBellatrix{})
+	require.NoError(t, err)
+	require.Equal(t, false, wsb.IsNil())
+}
+
+func TestBeaconBlock_HashTreeRoot(t *testing.T) {
+	wb, err := WrappedBeaconBlock(util.HydrateBeaconBlockBellatrix(&ethpb.BeaconBlockBellatrix{}))
+	require.NoError(t, err)
+
+	rt, err := wb.HashTreeRoot()
+	assert.NoError(t, err)
+	assert.NotEmpty(t, rt)
+}
+
+func TestBeaconBlock_Proto(t *testing.T) {
+	blk := &ethpb.BeaconBlockBellatrix{ProposerIndex: 234}
+	wb, err := WrappedBeaconBlock(blk)
+	require.NoError(t, err)
+
+	assert.Equal(t, blk, wb.Proto())
+}
+
+func TestBeaconBlock_SSZ(t *testing.T) {
+	wb, err := WrappedBeaconBlock(util.HydrateBeaconBlockBellatrix(&ethpb.BeaconBlockBellatrix{}))
+	assert.NoError(t, err)
+
+	b, err := wb.MarshalSSZ()
+	assert.NoError(t, err)
+	assert.NotEqual(t, 0, len(b))
+
+	assert.NotEqual(t, 0, wb.SizeSSZ())
+
+	assert.NoError(t, wb.UnmarshalSSZ(b))
+}
+
+func TestBeaconBlock_Version(t *testing.T) {
+	wb, err := WrappedBeaconBlock(&ethpb.BeaconBlockBellatrix{})
+	require.NoError(t, err)
+
+	assert.Equal(t, version.Bellatrix, wb.Version())
+}
+
+func TestBeaconBlockBody_RandaoReveal(t *testing.T) {
+	root := []byte{0xAA, 0xBF, 0x33, 0x01}
+	wbb, err := WrappedBeaconBlockBody(&ethpb.BeaconBlockBodyBellatrix{RandaoReveal: root})
+	require.NoError(t, err)
+
+	assert.DeepEqual(t, root, wbb.RandaoReveal())
+}
+
+func TestBeaconBlockBody_Eth1Data(t *testing.T) {
+	data := &ethpb.Eth1Data{}
+	body := &ethpb.BeaconBlockBodyBellatrix{
+		Eth1Data: data,
+	}
+	wbb, err := WrappedBeaconBlockBody(body)
+	require.NoError(t, err)
+	assert.Equal(t, data, wbb.Eth1Data())
+}
+
+func TestBeaconBlockBody_Graffiti(t *testing.T) {
+	graffiti := []byte{0x66, 0xAA}
+	body := &ethpb.BeaconBlockBodyBellatrix{Graffiti: graffiti}
+	wbb, err := WrappedBeaconBlockBody(body)
+	require.NoError(t, err)
+
+	assert.DeepEqual(t, graffiti, wbb.Graffiti())
+}
+
+func TestBeaconBlockBody_ProposerSlashings(t *testing.T) {
+	ps := []*ethpb.ProposerSlashing{
+		{Header_1: &ethpb.SignedBeaconBlockHeader{
+			Signature: []byte{0x11, 0x20},
+		}},
+	}
+	body := &ethpb.BeaconBlockBodyBellatrix{ProposerSlashings: ps}
+	wbb, err := WrappedBeaconBlockBody(body)
+	require.NoError(t, err)
+
+	assert.DeepEqual(t, ps, wbb.ProposerSlashings())
+}
+
+func TestBeaconBlockBody_AttesterSlashings(t *testing.T) {
+	as := []*ethpb.AttesterSlashing{
+		{Attestation_1: &ethpb.IndexedAttestation{Signature: []byte{0x11}}},
+	}
+	body := &ethpb.BeaconBlockBodyBellatrix{AttesterSlashings: as}
+	wbb, err := WrappedBeaconBlockBody(body)
+	require.NoError(t, err)
+
+	assert.DeepEqual(t, as, wbb.AttesterSlashings())
+}
+
+func TestBeaconBlockBody_Attestations(t *testing.T) {
+	atts := []*ethpb.Attestation{{Signature: []byte{0x88}}}
+
+	body := &ethpb.BeaconBlockBodyBellatrix{Attestations: atts}
+	wbb, err := WrappedBeaconBlockBody(body)
+	require.NoError(t, err)
+
+	assert.DeepEqual(t, atts, wbb.Attestations())
+}
+
+func TestBeaconBlockBody_Deposits(t *testing.T) {
+	deposits := []*ethpb.Deposit{
+		{Proof: [][]byte{{0x54, 0x10}}},
+	}
+	body := &ethpb.BeaconBlockBodyBellatrix{Deposits: deposits}
+	wbb, err := WrappedBeaconBlockBody(body)
+	require.NoError(t, err)
+
+	assert.DeepEqual(t, deposits, wbb.Deposits())
+}
+
+func TestBeaconBlockBody_VoluntaryExits(t *testing.T) {
+	exits := []*ethpb.SignedVoluntaryExit{
+		{Exit: &ethpb.VoluntaryExit{Epoch: 54}},
+	}
+	body := &ethpb.BeaconBlockBodyBellatrix{VoluntaryExits: exits}
+	wbb, err := WrappedBeaconBlockBody(body)
+	require.NoError(t, err)
+
+	assert.DeepEqual(t, exits, wbb.VoluntaryExits())
+}
+
+func TestBeaconBlockBody_IsNil(t *testing.T) {
+	_, err := WrappedBeaconBlockBody(nil)
+	require.Equal(t, typeerrors.ErrNilObjectWrapped, err)
+
+	wbb, err := WrappedBeaconBlockBody(&ethpb.BeaconBlockBodyBellatrix{})
+	require.NoError(t, err)
+	assert.Equal(t, false, wbb.IsNil())
+
+}
+
+func TestBeaconBlockBody_HashTreeRoot(t *testing.T) {
+	wb, err := WrappedBeaconBlockBody(util.HydrateBeaconBlockBodyBellatrix(&ethpb.BeaconBlockBodyBellatrix{}))
+	assert.NoError(t, err)
+
+	rt, err := wb.HashTreeRoot()
+	assert.NoError(t, err)
+	assert.NotEmpty(t, rt)
+}
+
+func TestBeaconBlockBody_Proto(t *testing.T) {
+	body := &ethpb.BeaconBlockBodyBellatrix{Graffiti: []byte{0x66, 0xAA}}
+	wbb, err := WrappedBeaconBlockBody(body)
+	require.NoError(t, err)
+
+	assert.Equal(t, body, wbb.Proto())
+}
+
+func TestBeaconBlockBody_ExecutionPayload(t *testing.T) {
+	payloads := &enginev1.ExecutionPayload{
+		BlockNumber: 100,
+	}
+	body := &ethpb.BeaconBlockBodyBellatrix{ExecutionPayload: payloads}
+	wbb, err := WrappedBeaconBlockBody(body)
+	require.NoError(t, err)
+
+	got, err := wbb.ExecutionPayload()
+	require.NoError(t, err)
+	assert.DeepEqual(t, payloads, got)
+}
+
+func TestBeaconBlock_PbGenericBlock(t *testing.T) {
+	abb := &ethpb.SignedBeaconBlockBellatrix{
+		Block: util.HydrateBeaconBlockBellatrix(&ethpb.BeaconBlockBellatrix{}),
+	}
+	wsb, err := WrappedSignedBeaconBlock(abb)
+	require.NoError(t, err)
+
+	got, err := wsb.PbGenericBlock()
+	require.NoError(t, err)
+	assert.Equal(t, abb, got.GetBellatrix())
+}
+
+func TestBeaconBlock_AsSignRequestObject(t *testing.T) {
+	abb := util.HydrateBeaconBlockBellatrix(&ethpb.BeaconBlockBellatrix{})
+	wsb, err := WrappedBeaconBlock(abb)
+	require.NoError(t, err)
+
+	sro := wsb.AsSignRequestObject()
+	got, ok := sro.(*validatorpb.SignRequest_BlockV3)
+	require.Equal(t, true, ok, "Not a SignRequest_BlockV3")
+	assert.Equal(t, abb, got.BlockV3)
+}
+
+func TestBeaconBlock_PbBlindedBellatrixBlock(t *testing.T) {
+	sb := &ethpb.SignedBeaconBlockBellatrix{
+		Block: &ethpb.BeaconBlockBellatrix{Slot: 66},
+	}
+	wsb, err := WrappedSignedBeaconBlock(sb)
+	require.NoError(t, err)
+	_, err = wsb.PbBlindedBellatrixBlock()
+	require.ErrorContains(t, "unsupported blinded bellatrix block", err)
+}
+
+func TestBeaconBlock_ExecutionPayloadHeader(t *testing.T) {
+	sb := &ethpb.SignedBeaconBlockBellatrix{
+		Block: &ethpb.BeaconBlockBellatrix{Slot: 66},
+	}
+	wsb, err := WrappedSignedBeaconBlock(sb)
+	require.NoError(t, err)
+	_, err = wsb.Block().Body().ExecutionPayloadHeader()
+	require.ErrorContains(t, "unsupported field for block type", err)
+}
