@@ -16,7 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 )
 
 // RandaoReveal returns a signature of the requested epoch using the beacon proposer private key.
@@ -40,7 +39,7 @@ func BlockSignature(
 	block *ethpb.BeaconBlock,
 	privKeys []bls.SecretKey,
 ) (bls.Signature, error) {
-	wsb, err := wrapper.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: block})
+	wsb, err := wrappers.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: block})
 	if err != nil {
 		return nil, errors.Wrap(err, "could not wrap block")
 	}

@@ -5,10 +5,10 @@ import (
 	"github.com/pkg/errors"
 	typeerrors "github.com/prysmaticlabs/prysm/consensus-types/errors"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
+	block "github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"google.golang.org/protobuf/proto"
@@ -21,7 +21,7 @@ type SignedBeaconBlock struct {
 	b *eth.SignedBeaconBlockAltair
 }
 
-// WrappedSignedBeaconBlock is constructor which wraps a protobuf altair block with the block wrapper.
+// WrappedSignedBeaconBlock is constructor which wraps a protobuf altair block with the block wrappers.
 func WrappedSignedBeaconBlock(b *eth.SignedBeaconBlockAltair) (*SignedBeaconBlock, error) {
 	w := &SignedBeaconBlock{b: b}
 	if w.IsNil() {
@@ -137,7 +137,7 @@ type BeaconBlock struct {
 }
 
 // WrappedBeaconBlock is constructor which wraps a protobuf altair object
-// with the block wrapper.
+// with the block wrappers.
 func WrappedBeaconBlock(b *eth.BeaconBlockAltair) (*BeaconBlock, error) {
 	w := &BeaconBlock{b: b}
 	if w.IsNil() {
@@ -238,7 +238,7 @@ type BeaconBlockBody struct {
 }
 
 // WrappedBeaconBlockBody is constructor which wraps a protobuf altair object
-// with the block wrapper.
+// with the block wrappers.
 func WrappedBeaconBlockBody(b *eth.BeaconBlockBodyAltair) (block.BeaconBlockBody, error) {
 	w := BeaconBlockBody{b: b}
 	if w.IsNil() {

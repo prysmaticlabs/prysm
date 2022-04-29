@@ -232,7 +232,7 @@ type scopeSub struct {
 }
 
 // Track starts tracking a subscription. If the scope is closed, Track returns nil. The
-// returned subscription is a wrapper. Unsubscribing the wrapper removes it from the
+// returned subscription is a wrappers. Unsubscribing the wrapper removes it from the
 // scope.
 func (sc *SubscriptionScope) Track(s Subscription) Subscription {
 	sc.mu.Lock()

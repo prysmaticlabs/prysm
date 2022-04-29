@@ -10,10 +10,9 @@ import (
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 
 	"github.com/pkg/errors"
+	block "github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block/mock"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 

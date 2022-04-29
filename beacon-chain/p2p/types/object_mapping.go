@@ -2,11 +2,10 @@ package types
 
 import (
 	"github.com/prysmaticlabs/prysm/config/params"
+	block "github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/metadata"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 )
 
 func init() {
@@ -33,26 +32,26 @@ func InitializeDataMaps() {
 	// Reset our block map.
 	BlockMap = map[[4]byte]func() (block.SignedBeaconBlock, error){
 		bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion): func() (block.SignedBeaconBlock, error) {
-			return wrapper.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlock{})
+			return wrappers.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlock{})
 		},
 		bytesutil.ToBytes4(params.BeaconConfig().AltairForkVersion): func() (block.SignedBeaconBlock, error) {
-			return wrapper.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: &ethpb.BeaconBlockAltair{}})
+			return wrappers.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: &ethpb.BeaconBlockAltair{}})
 		},
 		bytesutil.ToBytes4(params.BeaconConfig().BellatrixForkVersion): func() (block.SignedBeaconBlock, error) {
-			return wrapper.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: &ethpb.BeaconBlockBellatrix{}})
+			return wrappers.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: &ethpb.BeaconBlockBellatrix{}})
 		},
 	}
 
 	// Reset our metadata map.
 	MetaDataMap = map[[4]byte]func() metadata.Metadata{
 		bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion): func() metadata.Metadata {
-			return wrapper.WrappedMetadataV0(&ethpb.MetaDataV0{})
+			return wrappers.WrappedMetadataV0(&ethpb.MetaDataV0{})
 		},
 		bytesutil.ToBytes4(params.BeaconConfig().AltairForkVersion): func() metadata.Metadata {
-			return wrapper.WrappedMetadataV1(&ethpb.MetaDataV1{})
+			return wrappers.WrappedMetadataV1(&ethpb.MetaDataV1{})
 		},
 		bytesutil.ToBytes4(params.BeaconConfig().BellatrixForkVersion): func() metadata.Metadata {
-			return wrapper.WrappedMetadataV1(&ethpb.MetaDataV1{})
+			return wrappers.WrappedMetadataV1(&ethpb.MetaDataV1{})
 		},
 	}
 }

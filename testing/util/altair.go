@@ -22,7 +22,6 @@ import (
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 )
 
 // DeterministicGenesisStateAltair returns a genesis state in hard fork 1 format made using the deterministic deposits.
@@ -278,7 +277,7 @@ func BlockSignatureAltair(
 	privKeys []bls.SecretKey,
 ) (bls.Signature, error) {
 	var err error
-	wsb, err := wrapper.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: block})
+	wsb, err := wrappers.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: block})
 	if err != nil {
 		return nil, err
 	}

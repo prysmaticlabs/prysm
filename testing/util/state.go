@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	block "github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/testing/require"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"

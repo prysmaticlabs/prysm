@@ -35,7 +35,7 @@ filegroup(
 
 filegroup(
     name = "cc_wrapper",
-    srcs = ["cc_wrapper.sh"],
+    srcs = ["cc_wrappers.sh"],
     tags = ["manual"],
 )
 

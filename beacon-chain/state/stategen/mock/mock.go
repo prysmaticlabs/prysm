@@ -4,9 +4,9 @@ import (
 	"context"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	block "github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 )
 
 // MockStateManager is a fake implementation of StateManager.

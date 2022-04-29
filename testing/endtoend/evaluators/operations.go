@@ -10,11 +10,10 @@ import (
 	corehelpers "github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/config/params"
+	block "github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/policies"
@@ -411,16 +410,16 @@ var expectedEth1DataVote []byte
 
 func convertToBlockInterface(obj *ethpb.BeaconBlockContainer) (block.SignedBeaconBlock, error) {
 	if obj.GetPhase0Block() != nil {
-		return wrapper.WrappedSignedBeaconBlock(obj.GetPhase0Block())
+		return wrappers.WrappedSignedBeaconBlock(obj.GetPhase0Block())
 	}
 	if obj.GetAltairBlock() != nil {
-		return wrapper.WrappedSignedBeaconBlock(obj.GetAltairBlock())
+		return wrappers.WrappedSignedBeaconBlock(obj.GetAltairBlock())
 	}
 	if obj.GetBellatrixBlock() != nil {
-		return wrapper.WrappedSignedBeaconBlock(obj.GetBellatrixBlock())
+		return wrappers.WrappedSignedBeaconBlock(obj.GetBellatrixBlock())
 	}
 	if obj.GetBellatrixBlock() != nil {
-		return wrapper.WrappedSignedBeaconBlock(obj.GetBellatrixBlock())
+		return wrappers.WrappedSignedBeaconBlock(obj.GetBellatrixBlock())
 	}
 	return nil, errors.New("container has no block")
 }

@@ -14,7 +14,6 @@ import (
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/encoding/ssz/equality"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -174,7 +173,7 @@ func main() {
 					blkRoot,
 					preStateRoot,
 				)
-				wsb, err := wrapper.WrappedSignedBeaconBlock(block)
+				wsb, err := wrappers.WrappedSignedBeaconBlock(block)
 				if err != nil {
 					log.Fatal(err)
 				}

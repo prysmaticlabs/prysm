@@ -7,7 +7,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/interop"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 )
 
 func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BeaconBlockBellatrix, error) {
@@ -40,7 +39,7 @@ func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockR
 		},
 	}
 	// Compute state root with the newly constructed block.
-	wsb, err := wrapper.WrappedSignedBeaconBlock(
+	wsb, err := wrappers.WrappedSignedBeaconBlock(
 		&ethpb.SignedBeaconBlockBellatrix{Block: blk, Signature: make([]byte, 96)},
 	)
 	if err != nil {

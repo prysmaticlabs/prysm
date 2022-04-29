@@ -11,14 +11,13 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	block "github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"github.com/prysmaticlabs/prysm/validator/client/iface"
@@ -88,7 +87,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [f
 	}
 
 	// Sign returned block from beacon node
-	wb, err := wrapper.WrappedBeaconBlock(b.Block)
+	wb, err := wrappers.WrappedBeaconBlock(b.Block)
 	if err != nil {
 		log.WithError(err).Error("Failed to wrap block")
 		if v.emitAccountMetrics {
@@ -106,7 +105,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [f
 		return
 	}
 
-	blk, err := wrapper.BuildSignedBeaconBlock(wb, sig)
+	blk, err := wrappers.BuildSignedBeaconBlock(wb, sig)
 	if err != nil {
 		log.WithError(err).Error("Failed to build signed beacon block")
 		return

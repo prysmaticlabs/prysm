@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	synccontribution "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation/aggregation/sync_contribution"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"go.opencensus.io/trace"
 )
 
@@ -60,7 +59,7 @@ func (vs *Server) getAltairBeaconBlock(ctx context.Context, req *ethpb.BlockRequ
 		return nil, fmt.Errorf("could not build block data: %v", err)
 	}
 	// Compute state root with the newly constructed block.
-	wsb, err := wrapper.WrappedSignedBeaconBlock(
+	wsb, err := wrappers.WrappedSignedBeaconBlock(
 		&ethpb.SignedBeaconBlockAltair{Block: blk, Signature: make([]byte, 96)},
 	)
 	if err != nil {

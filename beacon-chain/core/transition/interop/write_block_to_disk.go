@@ -6,8 +6,8 @@ import (
 	"path"
 
 	"github.com/prysmaticlabs/prysm/config/features"
+	block "github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/io/file"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 )
 
 // WriteBlockToDisk as a block ssz. Writes to temp directory. Debug!

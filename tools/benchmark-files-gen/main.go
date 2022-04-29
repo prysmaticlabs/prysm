@@ -18,7 +18,6 @@ import (
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/io/file"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/runtime/interop"
 	"github.com/prysmaticlabs/prysm/testing/benchmark"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -103,7 +102,7 @@ func generateMarshalledFullStateAndBlock() error {
 	if err != nil {
 		return err
 	}
-	wsb, err := wrapper.WrappedSignedBeaconBlock(block)
+	wsb, err := wrappers.WrappedSignedBeaconBlock(block)
 	if err != nil {
 		return err
 	}
@@ -131,7 +130,7 @@ func generateMarshalledFullStateAndBlock() error {
 	}
 	block.Block.Body.Attestations = append(atts, block.Block.Body.Attestations...)
 
-	wsb, err = wrapper.WrappedSignedBeaconBlock(block)
+	wsb, err = wrappers.WrappedSignedBeaconBlock(block)
 	if err != nil {
 		return err
 	}
@@ -166,7 +165,7 @@ func generateMarshalledFullStateAndBlock() error {
 	}
 
 	// Running a single state transition to make sure the generated files aren't broken.
-	wsb, err = wrapper.WrappedSignedBeaconBlock(block)
+	wsb, err = wrappers.WrappedSignedBeaconBlock(block)
 	if err != nil {
 		return err
 	}
@@ -204,7 +203,7 @@ func generate2FullEpochState() error {
 		if err != nil {
 			return err
 		}
-		wsb, err := wrapper.WrappedSignedBeaconBlock(block)
+		wsb, err := wrappers.WrappedSignedBeaconBlock(block)
 		if err != nil {
 			return err
 		}

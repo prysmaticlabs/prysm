@@ -6,8 +6,8 @@ package state
 import (
 	"time"
 
+	block "github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 )
 
 const (

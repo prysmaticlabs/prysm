@@ -14,13 +14,12 @@ import (
 	rpchelpers "github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	block "github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/proto/migration"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
@@ -331,7 +330,7 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 		}, nil
 	}
 	// ErrUnsupportedPhase0Block means that we have another block type
-	if !errors.Is(err, wrapper.ErrUnsupportedPhase0Block) {
+	if !errors.Is(err, typeerrorsUnsupportedPhase0Block) {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
 
@@ -354,7 +353,7 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 		}, nil
 	}
 	// ErrUnsupportedAltairBlock means that we have another block type
-	if !errors.Is(err, wrapper.ErrUnsupportedAltairBlock) {
+	if !errors.Is(err, typeerrorsUnsupportedAltairBlock) {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
 
@@ -385,7 +384,7 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 		}, nil
 	}
 	// ErrUnsupportedBellatrixBlock means that we have another block type
-	if !errors.Is(err, wrapper.ErrUnsupportedBellatrixBlock) {
+	if !errors.Is(err, typeerrorsUnsupportedBellatrixBlock) {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
 
@@ -416,7 +415,7 @@ func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2
 		return &ethpbv2.BlockSSZResponseV2{Version: ethpbv2.Version_PHASE0, Data: sszBlock}, nil
 	}
 	// ErrUnsupportedPhase0Block means that we have another block type
-	if !errors.Is(err, wrapper.ErrUnsupportedPhase0Block) {
+	if !errors.Is(err, typeerrorsUnsupportedPhase0Block) {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
 
@@ -440,7 +439,7 @@ func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2
 		return &ethpbv2.BlockSSZResponseV2{Version: ethpbv2.Version_ALTAIR, Data: sszData}, nil
 	}
 	// ErrUnsupportedAltairBlock means that we have another block type
-	if !errors.Is(err, wrapper.ErrUnsupportedAltairBlock) {
+	if !errors.Is(err, typeerrorsUnsupportedAltairBlock) {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
 
@@ -464,7 +463,7 @@ func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2
 		return &ethpbv2.BlockSSZResponseV2{Version: ethpbv2.Version_BELLATRIX, Data: sszData}, nil
 	}
 	// ErrUnsupportedBellatrixBlock means that we have another block type
-	if !errors.Is(err, wrapper.ErrUnsupportedBellatrixBlock) {
+	if !errors.Is(err, typeerrorsUnsupportedBellatrixBlock) {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
 
@@ -568,7 +567,7 @@ func (bs *Server) ListBlockAttestations(ctx context.Context, req *ethpbv1.BlockR
 	}
 
 	_, err = blk.PbPhase0Block()
-	if err != nil && !errors.Is(err, wrapper.ErrUnsupportedPhase0Block) {
+	if err != nil && !errors.Is(err, typeerrorsUnsupportedPhase0Block) {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
 	if err == nil {
@@ -583,7 +582,7 @@ func (bs *Server) ListBlockAttestations(ctx context.Context, req *ethpbv1.BlockR
 	}
 
 	altairBlk, err := blk.PbAltairBlock()
-	if err != nil && !errors.Is(err, wrapper.ErrUnsupportedAltairBlock) {
+	if err != nil && !errors.Is(err, typeerrorsUnsupportedAltairBlock) {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
 	if err == nil {
@@ -601,7 +600,7 @@ func (bs *Server) ListBlockAttestations(ctx context.Context, req *ethpbv1.BlockR
 	}
 
 	bellatrixBlock, err := blk.PbBellatrixBlock()
-	if err != nil && !errors.Is(err, wrapper.ErrUnsupportedBellatrixBlock) {
+	if err != nil && !errors.Is(err, typeerrorsUnsupportedBellatrixBlock) {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
 	if err == nil {
@@ -712,7 +711,7 @@ func (bs *Server) submitPhase0Block(ctx context.Context, phase0Blk *ethpbv1.Beac
 	if err != nil {
 		return status.Errorf(codes.InvalidArgument, "Could not convert block to v1 block")
 	}
-	wrappedPhase0Blk, err := wrapper.WrappedSignedBeaconBlock(v1alpha1Blk)
+	wrappedPhase0Blk, err := wrappers.WrappedSignedBeaconBlock(v1alpha1Blk)
 	if err != nil {
 		return status.Errorf(codes.InvalidArgument, "Could not prepare block")
 	}
@@ -729,7 +728,7 @@ func (bs *Server) submitAltairBlock(ctx context.Context, altairBlk *ethpbv2.Beac
 	if err != nil {
 		return status.Errorf(codes.InvalidArgument, "Could not convert block to v1 block")
 	}
-	wrappedAltairBlk, err := wrapper.WrappedSignedBeaconBlock(v1alpha1Blk)
+	wrappedAltairBlk, err := wrappers.WrappedSignedBeaconBlock(v1alpha1Blk)
 	if err != nil {
 		return status.Errorf(codes.InvalidArgument, "Could not prepare block")
 	}
@@ -747,7 +746,7 @@ func (bs *Server) submitBellatrixBlock(ctx context.Context, bellatrixBlk *ethpbv
 	if err != nil {
 		return status.Errorf(codes.InvalidArgument, "Could not convert block to v1 block")
 	}
-	wrappedBellatrixBlk, err := wrapper.WrappedSignedBeaconBlock(v1alpha1Blk)
+	wrappedBellatrixBlk, err := wrappers.WrappedSignedBeaconBlock(v1alpha1Blk)
 	if err != nil {
 		return status.Errorf(codes.InvalidArgument, "Could not prepare block")
 	}
@@ -768,7 +767,7 @@ func (bs *Server) submitBlindedBellatrixBlock(ctx context.Context, blindedBellat
 	if err != nil {
 		return status.Errorf(codes.Internal, "Could not get blinded block: %v", err)
 	}
-	wrappedBellatrixSignedBlk, err := wrapper.WrappedSignedBeaconBlock(v1alpha1SignedBlk)
+	wrappedBellatrixSignedBlk, err := wrappers.WrappedSignedBeaconBlock(v1alpha1SignedBlk)
 	if err != nil {
 		return status.Errorf(codes.Internal, "Could not get blinded block: %v", err)
 	}

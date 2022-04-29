@@ -7,10 +7,9 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/config/params"
+	block "github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
@@ -74,13 +73,13 @@ func main() {
 
 func wrapBlock(b *v1alpha1.BeaconBlockContainer) block.BeaconBlock {
 	if bb := b.GetAltairBlock(); bb != nil {
-		wb, err := wrapper.WrappedAltairBeaconBlock(bb.Block)
+		wb, err := wrappers.WrappedAltairBeaconBlock(bb.Block)
 		if err != nil {
 			panic(err)
 		}
 		return wb
 	} else if bb := b.GetPhase0Block(); bb != nil {
-		return wrapper.WrappedPhase0BeaconBlock(bb.Block)
+		return wrappers.WrappedPhase0BeaconBlock(bb.Block)
 	}
 	panic("No block")
 }

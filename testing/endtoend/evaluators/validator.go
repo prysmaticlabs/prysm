@@ -6,10 +6,9 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/params"
+	block "github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	ethtypes "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/policies"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/types"
@@ -217,10 +216,10 @@ func syncCompatibleBlockFromCtr(container *ethpb.BeaconBlockContainer) (block.Si
 		return nil, errors.New("block doesn't support sync committees")
 	}
 	if container.GetAltairBlock() != nil {
-		return wrapper.WrappedSignedBeaconBlock(container.GetAltairBlock())
+		return wrappers.WrappedSignedBeaconBlock(container.GetAltairBlock())
 	}
 	if container.GetBellatrixBlock() != nil {
-		return wrapper.WrappedSignedBeaconBlock(container.GetBellatrixBlock())
+		return wrappers.WrappedSignedBeaconBlock(container.GetBellatrixBlock())
 	}
 	return nil, errors.New("no supported block type in container")
 }

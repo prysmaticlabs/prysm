@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 )
 
 // BlockSignatureBellatrix calculates the post-state root of the block and returns the signature.
@@ -21,7 +20,7 @@ func BlockSignatureBellatrix(
 	privKeys []bls.SecretKey,
 ) (bls.Signature, error) {
 	var err error
-	wsb, err := wrapper.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: block})
+	wsb, err := wrappers.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: block})
 	if err != nil {
 		return nil, err
 	}

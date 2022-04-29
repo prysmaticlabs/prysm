@@ -12,7 +12,6 @@ import (
 	statev1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 )
 
 // SaveGenesisData bootstraps the beaconDB with a given genesis state.
@@ -26,7 +25,7 @@ func (s *Store) SaveGenesisData(ctx context.Context, genesisState state.BeaconSt
 	if err != nil {
 		return errors.Wrap(err, "could not get genesis block root")
 	}
-	wsb, err := wrapper.WrappedSignedBeaconBlock(genesisBlk)
+	wsb, err := wrappers.WrappedSignedBeaconBlock(genesisBlk)
 	if err != nil {
 		return errors.Wrap(err, "could not wrap genesis block")
 	}

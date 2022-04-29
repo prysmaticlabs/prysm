@@ -9,12 +9,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/config/features"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"google.golang.org/protobuf/proto"
 )
 
 func (s *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) error {
-	signed, err := wrapper.WrappedSignedBeaconBlock(msg)
+	signed, err := wrappers.WrappedSignedBeaconBlock(msg)
 	if err != nil {
 		return err
 	}

@@ -26,7 +26,7 @@ type BeaconBlock struct {
 }
 
 // WrappedSignedBeaconBlock is constructor which wraps a protobuf phase 0 block
-// with the block wrapper.
+// with the block wrappers.
 func WrappedSignedBeaconBlock(b *eth.SignedBeaconBlock) *SignedBeaconBlock {
 	return &SignedBeaconBlock{b: b}
 }
@@ -133,7 +133,7 @@ func (w SignedBeaconBlock) Header() (*eth.SignedBeaconBlockHeader, error) {
 }
 
 // WrappedBeaconBlock is constructor which wraps a protobuf phase 0 object
-// with the block wrapper.
+// with the block wrappers.
 func WrappedBeaconBlock(b *eth.BeaconBlock) BeaconBlock {
 	return BeaconBlock{b: b}
 }
@@ -229,7 +229,7 @@ type BeaconBlockBody struct {
 	b *eth.BeaconBlockBody
 }
 
-// WrappedBeaconBlockBody is constructor which wraps a protobuf phase 0 object with the block wrapper.
+// WrappedBeaconBlockBody is constructor which wraps a protobuf phase 0 object with the block wrappers.
 func WrappedBeaconBlockBody(b *eth.BeaconBlockBody) *BeaconBlockBody {
 	return &BeaconBlockBody{b: b}
 }

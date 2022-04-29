@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
+	block "github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"github.com/prysmaticlabs/prysm/time/slots"
 )

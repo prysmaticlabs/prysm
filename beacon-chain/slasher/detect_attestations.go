@@ -193,8 +193,8 @@ func (s *Service) checkDoubleVotesOnDisk(
 	for _, doubleVote := range doubleVotes {
 		doubleVotesTotal.Inc()
 		doubleVoteSlashings = append(doubleVoteSlashings, &ethpb.AttesterSlashing{
-			Attestation_1: doubleVote.PrevAttestationWrapper.IndexedAttestation,
-			Attestation_2: doubleVote.AttestationWrapper.IndexedAttestation,
+			Attestation_1: doubleVote.PrevAttestationwrappers.IndexedAttestation,
+			Attestation_2: doubleVote.Attestationwrappers.IndexedAttestation,
 		})
 	}
 	return doubleVoteSlashings, nil

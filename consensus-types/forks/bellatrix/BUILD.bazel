@@ -14,7 +14,6 @@ go_library(
         "//consensus-types/primitives:go_default_library",
         "//proto/engine/v1:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
-        "//proto/prysm/v1alpha1/block:go_default_library",
         "//proto/prysm/v1alpha1/validator-client:go_default_library",
         "//runtime/version:go_default_library",
         "@com_github_ferranbt_fastssz//:go_default_library",
