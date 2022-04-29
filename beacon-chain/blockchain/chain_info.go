@@ -50,7 +50,6 @@ type HeadFetcher interface {
 	HeadBlock(ctx context.Context) (block.SignedBeaconBlock, error)
 	HeadState(ctx context.Context) (state.BeaconState, error)
 	HeadValidatorsIndices(ctx context.Context, epoch types.Epoch) ([]types.ValidatorIndex, error)
-	HeadSeed(ctx context.Context, epoch types.Epoch) ([32]byte, error)
 	HeadGenesisValidatorsRoot() [32]byte
 	HeadETH1Data() *ethpb.Eth1Data
 	HeadPublicKeyToValidatorIndex(pubKey [fieldparams.BLSPubkeyLength]byte) (types.ValidatorIndex, bool)
@@ -60,18 +59,17 @@ type HeadFetcher interface {
 	IsOptimisticForRoot(ctx context.Context, root [32]byte) (bool, error)
 	HeadSyncCommitteeFetcher
 	HeadDomainFetcher
-	ForkChoicer() forkchoice.ForkChoicer
 }
 
 // ForkFetcher retrieves the current fork information of the Ethereum beacon chain.
 type ForkFetcher interface {
+	ForkChoicer() forkchoice.ForkChoicer
 	CurrentFork() *ethpb.Fork
 }
 
 // CanonicalFetcher retrieves the current chain's canonical information.
 type CanonicalFetcher interface {
 	IsCanonical(ctx context.Context, blockRoot [32]byte) (bool, error)
-	VerifyBlkDescendant(ctx context.Context, blockRoot [32]byte) error
 }
 
 // FinalizationFetcher defines a common interface for methods in blockchain service which
@@ -80,6 +78,7 @@ type FinalizationFetcher interface {
 	FinalizedCheckpt() *ethpb.Checkpoint
 	CurrentJustifiedCheckpt() *ethpb.Checkpoint
 	PreviousJustifiedCheckpt() *ethpb.Checkpoint
+	VerifyFinalizedBlkDescendant(ctx context.Context, blockRoot [32]byte) error
 }
 
 // FinalizedCheckpt returns the latest finalized checkpoint from chain store.
@@ -203,18 +202,6 @@ func (s *Service) HeadValidatorsIndices(ctx context.Context, epoch types.Epoch) 
 		return []types.ValidatorIndex{}, nil
 	}
 	return helpers.ActiveValidatorIndices(ctx, s.headState(ctx), epoch)
-}
-
-// HeadSeed returns the seed from the head view of a given epoch.
-func (s *Service) HeadSeed(ctx context.Context, epoch types.Epoch) ([32]byte, error) {
-	s.headLock.RLock()
-	defer s.headLock.RUnlock()
-
-	if !s.hasHeadState() {
-		return [32]byte{}, nil
-	}
-
-	return helpers.Seed(s.headState(ctx), epoch, params.BeaconConfig().DomainBeaconAttester)
 }
 
 // HeadGenesisValidatorsRoot returns genesis validators root of the head state.

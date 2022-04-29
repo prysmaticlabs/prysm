@@ -102,6 +102,7 @@ go_test(
         "blocks_test.go",
         "exit_test.go",
         "proposer_attestations_test.go",
+        "proposer_deposits_test.go",
         "proposer_execution_payload_test.go",
         "proposer_sync_aggregate_test.go",
         "proposer_test.go",
