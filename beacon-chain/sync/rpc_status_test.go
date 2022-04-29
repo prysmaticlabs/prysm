@@ -24,6 +24,7 @@ import (
 	block "github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
+	wrapperpb "github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -253,12 +254,12 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 	p2 := p2ptest.NewTestP2P(t)
 	db := testingDB.SetupDB(t)
 
-	p1.LocalMetadata = wrapper.WrappedMetadataV0(&ethpb.MetaDataV0{
+	p1.LocalMetadata = wrapperpb.WrappedMetadataV0(&ethpb.MetaDataV0{
 		SeqNumber: 2,
 		Attnets:   bytesutil.PadTo([]byte{'A', 'B'}, 8),
 	})
 
-	p2.LocalMetadata = wrapper.WrappedMetadataV0(&ethpb.MetaDataV0{
+	p2.LocalMetadata = wrapperpb.WrappedMetadataV0(&ethpb.MetaDataV0{
 		SeqNumber: 2,
 		Attnets:   bytesutil.PadTo([]byte{'C', 'D'}, 8),
 	})

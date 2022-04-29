@@ -12,6 +12,7 @@ import (
 	"github.com/kr/pretty"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/ssz/equality"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
@@ -173,7 +174,7 @@ func main() {
 					blkRoot,
 					preStateRoot,
 				)
-				wsb, err := wrappers.WrappedSignedBeaconBlock(block)
+				wsb, err := wrapper.WrappedSignedBeaconBlock(block)
 				if err != nil {
 					log.Fatal(err)
 				}

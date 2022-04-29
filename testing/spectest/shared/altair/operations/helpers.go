@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	block "github.com/prysmaticlabs/prysm/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -53,7 +54,7 @@ func RunBlockOperationTest(
 	helpers.ClearCache()
 	b := util.NewBeaconBlockAltair()
 	b.Block.Body = body
-	wsb, err := wrappers.WrappedSignedBeaconBlock(b)
+	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)
 	beaconState, err := operationFn(context.Background(), preState, wsb)
 	if postSSZExists {

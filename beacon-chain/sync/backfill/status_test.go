@@ -4,15 +4,14 @@ import (
 	"context"
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-
-	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/params"
 	block "github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
+	wrapperpb "github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
 )
@@ -150,7 +149,7 @@ func setupTestBlock(slot types.Slot) (block.SignedBeaconBlock, error) {
 	if err != nil {
 		return nil, err
 	}
-	return b, wrapper.SetBlockSlot(b, slot)
+	return b, wrapperpb.SetBlockSlot(b, slot)
 }
 
 func TestReload(t *testing.T) {

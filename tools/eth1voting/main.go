@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/forks/altair"
+	"github.com/prysmaticlabs/prysm/consensus-types/forks/phase0"
 	block "github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -73,13 +75,13 @@ func main() {
 
 func wrapBlock(b *v1alpha1.BeaconBlockContainer) block.BeaconBlock {
 	if bb := b.GetAltairBlock(); bb != nil {
-		wb, err := wrappers.WrappedAltairBeaconBlock(bb.Block)
+		wb, err := altair.WrappedBeaconBlock(bb.Block)
 		if err != nil {
 			panic(err)
 		}
 		return wb
 	} else if bb := b.GetPhase0Block(); bb != nil {
-		return wrappers.WrappedPhase0BeaconBlock(bb.Block)
+		return phase0.WrappedBeaconBlock(bb.Block)
 	}
 	panic("No block")
 }
