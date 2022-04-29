@@ -166,6 +166,7 @@ func (s *Service) notifyEngineIfChangedHead(ctx context.Context, newHeadRoot [32
 	}).Debug("Head changed due to attestations")
 
 	if !s.hasBlockInInitSyncOrDB(ctx, newHeadRoot) {
+		log.Debug("New head does not exist in DB. Do nothing")
 		return // We don't have the block, don't notify the engine and update head.
 	}
 
