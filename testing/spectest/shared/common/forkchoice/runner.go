@@ -3,19 +3,21 @@ package forkchoice
 import (
 	"context"
 	"fmt"
+	"math/big"
 	"path"
 	"testing"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/golang/snappy"
-	types "github.com/prysmaticlabs/eth2-types"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
@@ -24,6 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/spectest/utils"
 	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 // Run executes "forkchoice" test.
@@ -69,7 +72,10 @@ func Run(t *testing.T, config string, fork int) {
 					t.Fatalf("unknown fork version: %v", fork)
 				}
 
-				service := startChainService(t, beaconState, beaconBlock)
+				execMock := &engineMock{
+					powBlocks: make(map[[32]byte]*ethpb.PowBlock),
+				}
+				service := startChainService(t, beaconState, beaconBlock, execMock)
 				var lastTick int64
 				for _, step := range steps {
 					if step.Tick != nil {
@@ -99,6 +105,14 @@ func Run(t *testing.T, config string, fork int) {
 						}
 						r, err := beaconBlock.Block().HashTreeRoot()
 						require.NoError(t, err)
+						slotsSinceGenesis := slots.SinceGenesis(service.GenesisTime())
+						args := &forkchoicetypes.ProposerBoostRootArgs{
+							BlockRoot:       r,
+							BlockSlot:       beaconBlock.Block().Slot(),
+							CurrentSlot:     slotsSinceGenesis,
+							SecondsIntoSlot: uint64(lastTick) % params.BeaconConfig().SecondsPerSlot,
+						}
+						require.NoError(t, service.ForkChoicer().BoostProposerRoot(ctx, args))
 						if step.Valid != nil && !*step.Valid {
 							require.Equal(t, true, service.ReceiveBlock(ctx, beaconBlock, r) != nil)
 						} else {
@@ -114,8 +128,20 @@ func Run(t *testing.T, config string, fork int) {
 						require.NoError(t, att.UnmarshalSSZ(attSSZ), "Failed to unmarshal")
 						require.NoError(t, service.OnAttestation(ctx, att))
 					}
+					if step.PowBlock != nil {
+						powBlockFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), fmt.Sprint(*step.PowBlock, ".ssz_snappy"))
+						require.NoError(t, err)
+						p, err := snappy.Decode(nil /* dst */, powBlockFile)
+						require.NoError(t, err)
+						pb := &ethpb.PowBlock{}
+						require.NoError(t, pb.UnmarshalSSZ(p), "Failed to unmarshal")
+						execMock.powBlocks[bytesutil.ToBytes32(pb.BlockHash)] = pb
+						tdInBigEndian := bytesutil.ReverseByteOrder(pb.TotalDifficulty)
+						tdBigint := new(big.Int)
+						tdBigint.SetBytes(tdInBigEndian)
+					}
 					if step.Check != nil {
-						require.NoError(t, service.UpdateHeadWithBalances(ctx))
+						require.NoError(t, service.UpdateAndSaveHeadWithBalances(ctx))
 						c := step.Check
 						if c.Head != nil {
 							r, err := service.HeadRoot(ctx)
@@ -145,8 +171,9 @@ func Run(t *testing.T, config string, fork int) {
 							require.DeepSSZEqual(t, cp, service.FinalizedCheckpt())
 						}
 						if c.ProposerBoostRoot != nil {
-							want := common.FromHex(*c.ProposerBoostRoot)
-							require.DeepEqual(t, bytesutil.ToBytes32(want), service.ForkChoiceStore().ProposerBoost())
+							want := fmt.Sprintf("%#x", common.FromHex(*c.ProposerBoostRoot))
+							got := fmt.Sprintf("%#x", service.ForkChoiceStore().ProposerBoost())
+							require.DeepEqual(t, want, got)
 						}
 					}
 				}

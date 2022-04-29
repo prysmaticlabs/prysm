@@ -6,11 +6,11 @@ import (
 	"sync"
 	"testing"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -195,4 +195,20 @@ func TestBeaconState_AppendBalanceWithTrie(t *testing.T) {
 	wantedRt, err := stateutil.Uint64ListRootWithRegistryLimit(st.state.Balances)
 	assert.NoError(t, err)
 	assert.Equal(t, wantedRt, newRt, "state roots are unequal")
+}
+
+func TestBeaconState_ModifyPreviousParticipationBits(t *testing.T) {
+	st, err := InitializeFromProtoUnsafe(&ethpb.BeaconState{})
+	assert.NoError(t, err)
+	assert.ErrorContains(t, "ModifyPreviousParticipationBits is not supported for phase 0 beacon state", st.ModifyPreviousParticipationBits(func(val []byte) ([]byte, error) {
+		return nil, nil
+	}))
+}
+
+func TestBeaconState_ModifyCurrentParticipationBits(t *testing.T) {
+	st, err := InitializeFromProtoUnsafe(&ethpb.BeaconState{})
+	assert.NoError(t, err)
+	assert.ErrorContains(t, "ModifyCurrentParticipationBits is not supported for phase 0 beacon state", st.ModifyCurrentParticipationBits(func(val []byte) ([]byte, error) {
+		return nil, nil
+	}))
 }

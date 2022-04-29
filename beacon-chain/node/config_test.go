@@ -7,10 +7,10 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -90,19 +90,19 @@ func TestConfigureExecutionSetting(t *testing.T) {
 
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	set.String(flags.FeeRecipient.Name, "", "")
-	require.NoError(t, set.Set(flags.FeeRecipient.Name, "0xB"))
+	set.String(flags.SuggestedFeeRecipient.Name, "", "")
+	require.NoError(t, set.Set(flags.SuggestedFeeRecipient.Name, "0xB"))
 	cliCtx := cli.NewContext(&app, set, nil)
 	err := configureExecutionSetting(cliCtx)
 	require.ErrorContains(t, "0xB is not a valid fee recipient address", err)
 
-	require.NoError(t, set.Set(flags.FeeRecipient.Name, "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"))
+	require.NoError(t, set.Set(flags.SuggestedFeeRecipient.Name, "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"))
 	cliCtx = cli.NewContext(&app, set, nil)
 	err = configureExecutionSetting(cliCtx)
 	require.NoError(t, err)
 	assert.Equal(t, common.HexToAddress("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"), params.BeaconConfig().DefaultFeeRecipient)
 
-	require.NoError(t, set.Set(flags.FeeRecipient.Name, "0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"))
+	require.NoError(t, set.Set(flags.SuggestedFeeRecipient.Name, "0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"))
 	cliCtx = cli.NewContext(&app, set, nil)
 	err = configureExecutionSetting(cliCtx)
 	require.NoError(t, err)

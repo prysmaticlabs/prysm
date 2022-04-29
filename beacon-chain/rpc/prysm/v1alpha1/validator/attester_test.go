@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -17,6 +16,7 @@ import (
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -380,7 +380,9 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 	require.NoError(t, err, "Could not hash beacon block")
 	blockRoot2, err := block2.HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(block2)))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(block2)
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, wsb))
 	justifiedRoot, err := justifiedBlock.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root for justified block")
 	targetRoot, err := targetBlock.Block.HashTreeRoot()
@@ -425,7 +427,9 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 		StateGen:            stategen.New(db),
 	}
 	require.NoError(t, db.SaveState(ctx, beaconState, blockRoot))
-	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(block)))
+	wsb, err = wrapper.WrappedSignedBeaconBlock(block)
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, wsb))
 	require.NoError(t, db.SaveHeadBlockRoot(ctx, blockRoot))
 
 	req := &ethpb.AttestationDataRequest{

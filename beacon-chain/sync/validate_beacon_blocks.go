@@ -8,7 +8,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
@@ -17,10 +17,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/runtime/version"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
@@ -167,11 +167,11 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 
 	err = s.validateBeaconBlock(ctx, blk, blockRoot)
 	if err != nil {
-		// If the parent is optimistic, be gracious and don't penalize the peer.
-		if errors.Is(ErrOptimisticParent, err) {
-			return pubsub.ValidationIgnore, err
+		// If the parent is optimistic, process the block as usual
+		// This also does not penalize a peer which sends optimistic blocks
+		if !errors.Is(ErrOptimisticParent, err) {
+			return pubsub.ValidationReject, err
 		}
-		return pubsub.ValidationReject, err
 	}
 
 	// Record attribute of valid block.
@@ -186,6 +186,8 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	log.WithFields(logrus.Fields{
 		"blockSlot":          blk.Block().Slot(),
 		"sinceSlotStartTime": receivedTime.Sub(startTime),
+		"proposerIndex":      blk.Block().ProposerIndex(),
+		"graffiti":           string(blk.Block().Body().Graffiti()),
 	}).Debug("Received block")
 	return pubsub.ValidationAccept, nil
 }
@@ -194,7 +196,7 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk block.SignedBeaco
 	ctx, span := trace.StartSpan(ctx, "sync.validateBeaconBlock")
 	defer span.End()
 
-	if err := s.cfg.chain.VerifyBlkDescendant(ctx, bytesutil.ToBytes32(blk.Block().ParentRoot())); err != nil {
+	if err := s.cfg.chain.VerifyFinalizedBlkDescendant(ctx, bytesutil.ToBytes32(blk.Block().ParentRoot())); err != nil {
 		s.setBadBlock(ctx, blockRoot)
 		return err
 	}
@@ -231,7 +233,7 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk block.SignedBeaco
 	}
 
 	if err = s.validateBellatrixBeaconBlock(ctx, parentState, blk.Block()); err != nil {
-		if errors.Is(err, ErrOptimisticParent) {
+		if errors.Is(err, ErrOptimisticParent) || errors.Is(blockchain.ErrUndefinedExecutionEngineError, err) {
 			return err
 		}
 		// for other kinds of errors, set this block as a bad block.
@@ -258,12 +260,9 @@ func (s *Service) validateBellatrixBeaconBlock(ctx context.Context, parentState 
 	if parentState.Version() != blk.Version() {
 		return errors.New("block and state are not the same version")
 	}
-	if parentState.Version() != version.Bellatrix || blk.Version() != version.Bellatrix {
-		return nil
-	}
 
 	body := blk.Body()
-	executionEnabled, err := blocks.ExecutionEnabled(parentState, body)
+	executionEnabled, err := blocks.IsExecutionEnabled(parentState, body)
 	if err != nil {
 		return err
 	}
@@ -287,7 +286,6 @@ func (s *Service) validateBellatrixBeaconBlock(ctx context.Context, parentState 
 	}
 
 	parentRoot := bytesutil.ToBytes32(blk.ParentRoot())
-	// TODO(10261) Check optimistic status if parent is in DB.
 	isParentOptimistic, err := s.cfg.chain.IsOptimisticForRoot(ctx, parentRoot)
 	if err != nil {
 		return err

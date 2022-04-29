@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -21,15 +21,14 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1/mocks"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
-	"github.com/prysmaticlabs/prysm/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/container/trie"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -60,7 +59,9 @@ func TestProposer_GetBlock_OK(t *testing.T) {
 	require.NoError(t, err, "Could not hash genesis state")
 
 	genesis := b.NewGenesisBlock(stateRoot[:])
-	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(genesis)), "Could not save genesis block")
+	wsb, err := wrapper.WrappedSignedBeaconBlock(genesis)
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, wsb), "Could not save genesis block")
 
 	parentRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
@@ -141,7 +142,9 @@ func TestProposer_GetBlock_AddsUnaggregatedAtts(t *testing.T) {
 	require.NoError(t, err, "Could not hash genesis state")
 
 	genesis := b.NewGenesisBlock(stateRoot[:])
-	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(genesis)), "Could not save genesis block")
+	wsb, err := wrapper.WrappedSignedBeaconBlock(genesis)
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, wsb), "Could not save genesis block")
 
 	parentRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
@@ -260,7 +263,9 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 			params.OverrideBeaconConfig(params.MainnetConfig())
 
 			genesis := util.NewBeaconBlock()
-			require.NoError(t, db.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(genesis)), "Could not save genesis block")
+			wsb, err := wrapper.WrappedSignedBeaconBlock(genesis)
+			require.NoError(t, err)
+			require.NoError(t, db.SaveBlock(context.Background(), wsb), "Could not save genesis block")
 
 			numDeposits := uint64(64)
 			beaconState, _ := util.DeterministicGenesisState(t, numDeposits)
@@ -302,7 +307,9 @@ func TestProposer_ComputeStateRoot_OK(t *testing.T) {
 	require.NoError(t, err, "Could not hash genesis state")
 
 	genesis := b.NewGenesisBlock(stateRoot[:])
-	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(genesis)), "Could not save genesis block")
+	wsb, err := wrapper.WrappedSignedBeaconBlock(genesis)
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, wsb), "Could not save genesis block")
 
 	parentRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
@@ -330,7 +337,9 @@ func TestProposer_ComputeStateRoot_OK(t *testing.T) {
 	req.Signature, err = signing.ComputeDomainAndSign(beaconState, currentEpoch, req.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 
-	_, err = proposerServer.computeStateRoot(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(req))
+	wsb, err = wrapper.WrappedSignedBeaconBlock(req)
+	require.NoError(t, err)
+	_, err = proposerServer.computeStateRoot(context.Background(), wsb)
 	require.NoError(t, err)
 }
 
@@ -2040,7 +2049,7 @@ func TestProposer_GetBeaconBlock_PreForkEpoch(t *testing.T) {
 		},
 		Signature: genesis.Signature,
 	}
-	wsb := wrapper.WrappedPhase0SignedBeaconBlock(genBlk)
+	wsb, err := wrapper.WrappedSignedBeaconBlock(genBlk)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, wsb), "Could not save genesis block")
 
@@ -2132,7 +2141,7 @@ func TestProposer_GetBeaconBlock_PostForkEpoch(t *testing.T) {
 	require.NoError(t, err, "Could not hash genesis state")
 
 	genesis := b.NewGenesisBlock(stateRoot[:])
-	wsb := wrapper.WrappedPhase0SignedBeaconBlock(genesis)
+	wsb, err := wrapper.WrappedSignedBeaconBlock(genesis)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, wsb), "Could not save genesis block")
 
@@ -2251,7 +2260,7 @@ func TestProposer_GetBeaconBlock_BellatrixEpoch(t *testing.T) {
 	require.NoError(t, err, "Could not hash genesis state")
 
 	genesis := b.NewGenesisBlock(stateRoot[:])
-	wsb := wrapper.WrappedPhase0SignedBeaconBlock(genesis)
+	wsb, err := wrapper.WrappedSignedBeaconBlock(genesis)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, wsb), "Could not save genesis block")
 
@@ -2331,11 +2340,12 @@ func TestProposer_GetBeaconBlock_BellatrixEpoch(t *testing.T) {
 		ExitPool:          voluntaryexits.NewPool(),
 		StateGen:          stategen.New(db),
 		SyncCommitteePool: synccommittee.NewStore(),
-		ExecutionEngineCaller: &mocks.EngineClient{
+		ExecutionEngineCaller: &mockPOW.EngineClient{
 			PayloadIDBytes:   &enginev1.PayloadIDBytes{1},
 			ExecutionPayload: payload,
 		},
-		BeaconDB: db,
+		BeaconDB:               db,
+		ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
 	}
 
 	randaoReveal, err := util.RandaoReveal(beaconState, 0, privKeys)
@@ -2349,10 +2359,6 @@ func TestProposer_GetBeaconBlock_BellatrixEpoch(t *testing.T) {
 		Graffiti:     graffiti[:],
 	}
 
-	proposerIndex := types.ValidatorIndex(40)
-	addr := common.Address{'a'}
-	require.NoError(t, proposerServer.BeaconDB.SaveFeeRecipientsByValidatorIDs(ctx, []types.ValidatorIndex{proposerIndex}, []common.Address{addr}))
-
 	block, err := proposerServer.GetBeaconBlock(ctx, req)
 	require.NoError(t, err)
 	bellatrixBlk, ok := block.GetBlock().(*ethpb.GenericBeaconBlock_Bellatrix)
@@ -2363,8 +2369,18 @@ func TestProposer_GetBeaconBlock_BellatrixEpoch(t *testing.T) {
 	assert.DeepEqual(t, randaoReveal, bellatrixBlk.Bellatrix.Body.RandaoReveal, "Expected block to have correct randao reveal")
 	assert.DeepEqual(t, req.Graffiti, bellatrixBlk.Bellatrix.Body.Graffiti, "Expected block to have correct Graffiti")
 
-	require.LogsDoNotContain(t, hook, "Fee recipient not found. Using default fee recipient.")
+	require.LogsContain(t, hook, "Fee recipient not set. Using burn address")
 	require.DeepEqual(t, payload, bellatrixBlk.Bellatrix.Body.ExecutionPayload) // Payload should equal.
+
+	// Operator sets default fee recipient to not be burned through beacon node cli.
+	newHook := logTest.NewGlobal()
+	params.SetupTestConfigCleanup(t)
+	cfg = params.MainnetConfig().Copy()
+	cfg.DefaultFeeRecipient = common.Address{'b'}
+	params.OverrideBeaconConfig(cfg)
+	_, err = proposerServer.GetBeaconBlock(ctx, req)
+	require.NoError(t, err)
+	require.LogsDoNotContain(t, newHook, "Fee recipient not set. Using burn address")
 }
 
 func TestProposer_GetBeaconBlock_Optimistic(t *testing.T) {
@@ -2431,6 +2447,63 @@ func TestProposer_GetSyncAggregate_OK(t *testing.T) {
 	require.DeepEqual(t, bitfield.NewBitvector512(), aggregate.SyncCommitteeBits)
 }
 
+func TestProposer_PrepareBeaconProposer(t *testing.T) {
+	type args struct {
+		request *ethpb.PrepareBeaconProposerRequest
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr string
+	}{
+		{
+			name: "Happy Path",
+			args: args{
+				request: &ethpb.PrepareBeaconProposerRequest{
+					Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
+						{
+							FeeRecipient:   make([]byte, fieldparams.FeeRecipientLength),
+							ValidatorIndex: 1,
+						},
+					},
+				},
+			},
+			wantErr: "",
+		},
+		{
+			name: "invalid fee recipient length",
+			args: args{
+				request: &ethpb.PrepareBeaconProposerRequest{
+					Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
+						{
+							FeeRecipient:   make([]byte, fieldparams.BLSPubkeyLength),
+							ValidatorIndex: 1,
+						},
+					},
+				},
+			},
+			wantErr: "Invalid fee recipient address",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			db := dbutil.SetupDB(t)
+			ctx := context.Background()
+			proposerServer := &Server{BeaconDB: db}
+			_, err := proposerServer.PrepareBeaconProposer(ctx, tt.args.request)
+			if tt.wantErr != "" {
+				require.ErrorContains(t, tt.wantErr, err)
+				return
+			}
+			require.NoError(t, err)
+			address, err := proposerServer.BeaconDB.FeeRecipientByValidatorID(ctx, 1)
+			require.NoError(t, err)
+			require.Equal(t, common.BytesToAddress(tt.args.request.Recipients[0].FeeRecipient), address)
+
+		})
+	}
+}
+
 func majorityVoteBoundaryTime(slot types.Slot) (uint64, uint64) {
 	slots := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod))
 	slotStartTime := uint64(mockPOW.GenesisTime) + uint64((slot - (slot % (slots))).Mul(params.BeaconConfig().SecondsPerSlot))
@@ -2441,19 +2514,6 @@ func majorityVoteBoundaryTime(slot types.Slot) (uint64, uint64) {
 }
 
 func BenchmarkGetBlock(b *testing.B) {
-	proposerServer, beaconState, privKeys := setupGetBlock(b)
-	ctx := context.Background()
-	for n := 1; n < b.N; n++ {
-		runGetBlock(ctx, b, proposerServer, beaconState, privKeys, n)
-	}
-}
-
-func BenchmarkOptimisedGetBlock(b *testing.B) {
-	// enable block optimisations flag
-	resetCfg := features.InitWithReset(&features.Flags{
-		EnableGetBlockOptimizations: true,
-	})
-	defer resetCfg()
 	proposerServer, beaconState, privKeys := setupGetBlock(b)
 	ctx := context.Background()
 	for n := 1; n < b.N; n++ {
@@ -2488,7 +2548,9 @@ func setupGetBlock(bm *testing.B) (*Server, state.BeaconState, []bls.SecretKey) 
 	require.NoError(bm, err, "Could not hash genesis state")
 
 	genesis := b.NewGenesisBlock(stateRoot[:])
-	require.NoError(bm, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(genesis)), "Could not save genesis block")
+	wsb, err := wrapper.WrappedSignedBeaconBlock(genesis)
+	require.NoError(bm, err)
+	require.NoError(bm, db.SaveBlock(ctx, wsb), "Could not save genesis block")
 
 	parentRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(bm, err, "Could not get signing root")

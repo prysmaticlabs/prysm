@@ -4,7 +4,7 @@ import (
 	"archive/zip"
 	"encoding/hex"
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -27,7 +27,7 @@ func TestBackupAccounts_Noninteractive_Derived(t *testing.T) {
 	walletDir, _, passwordFilePath := setupWalletAndPasswordsDir(t)
 	// Specify the password locally to this file for convenience.
 	password := "Pa$sW0rD0__Fo0xPr"
-	require.NoError(t, ioutil.WriteFile(passwordFilePath, []byte(password), os.ModePerm))
+	require.NoError(t, os.WriteFile(passwordFilePath, []byte(password), os.ModePerm))
 
 	// Write a directory where we will backup accounts to.
 	backupDir := filepath.Join(t.TempDir(), "backupDir")
@@ -35,7 +35,7 @@ func TestBackupAccounts_Noninteractive_Derived(t *testing.T) {
 
 	// Write a password for the accounts we wish to backup to a file.
 	backupPasswordFile := filepath.Join(backupDir, "backuppass.txt")
-	err := ioutil.WriteFile(
+	err := os.WriteFile(
 		backupPasswordFile,
 		[]byte("Passw0rdz4938%%"),
 		params.BeaconIoConfig().ReadWritePermissions,
@@ -116,7 +116,7 @@ func TestBackupAccounts_Noninteractive_Derived(t *testing.T) {
 	for i, unzipped := range r.File {
 		ff, err := unzipped.Open()
 		require.NoError(t, err)
-		encodedBytes, err := ioutil.ReadAll(ff)
+		encodedBytes, err := io.ReadAll(ff)
 		require.NoError(t, err)
 		keystoreFile := &keymanager.Keystore{}
 		require.NoError(t, json.Unmarshal(encodedBytes, keystoreFile))
@@ -148,7 +148,7 @@ func TestBackupAccounts_Noninteractive_Imported(t *testing.T) {
 
 	// Write a password for the accounts we wish to backup to a file.
 	backupPasswordFile := filepath.Join(backupDir, "backuppass.txt")
-	err := ioutil.WriteFile(
+	err := os.WriteFile(
 		backupPasswordFile,
 		[]byte("Passw0rdz4938%%"),
 		params.BeaconIoConfig().ReadWritePermissions,
@@ -206,7 +206,7 @@ func TestBackupAccounts_Noninteractive_Imported(t *testing.T) {
 	for i, unzipped := range r.File {
 		ff, err := unzipped.Open()
 		require.NoError(t, err)
-		encodedBytes, err := ioutil.ReadAll(ff)
+		encodedBytes, err := io.ReadAll(ff)
 		require.NoError(t, err)
 		keystoreFile := &keymanager.Keystore{}
 		require.NoError(t, json.Unmarshal(encodedBytes, keystoreFile))

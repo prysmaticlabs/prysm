@@ -7,6 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/async/event"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
+	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 )
@@ -53,4 +54,15 @@ func (*MockKeymanager) ExtractKeystores(
 	ctx context.Context, publicKeys []bls.PublicKey, password string,
 ) ([]*keymanager.Keystore, error) {
 	return nil, errors.New("extracting keys not supported for a remote keymanager")
+}
+
+// ListKeymanagerAccounts --
+func (*MockKeymanager) ListKeymanagerAccounts(
+	context.Context, keymanager.ListKeymanagerAccountConfig) error {
+	return nil
+}
+
+func (*MockKeymanager) DeleteKeystores(context.Context, [][]byte,
+) ([]*ethpbservice.DeletedKeystoreStatus, error) {
+	return nil, nil
 }

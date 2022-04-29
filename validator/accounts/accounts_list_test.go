@@ -3,7 +3,7 @@ package accounts
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"math"
 	"os"
 	"strconv"
@@ -12,11 +12,12 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/google/uuid"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/async/event"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -52,6 +53,14 @@ func (_ *mockRemoteKeymanager) SubscribeAccountChanges(_ chan [][fieldparams.BLS
 func (_ *mockRemoteKeymanager) ExtractKeystores(
 	ctx context.Context, publicKeys []bls.PublicKey, password string,
 ) ([]*keymanager.Keystore, error) {
+	return nil, nil
+}
+
+func (km *mockRemoteKeymanager) ListKeymanagerAccounts(ctx context.Context, cfg keymanager.ListKeymanagerAccountConfig) error {
+	return remote.ListKeymanagerAccountsImpl(ctx, cfg, km, km.opts)
+}
+
+func (*mockRemoteKeymanager) DeleteKeystores(context.Context, [][]byte) ([]*ethpbservice.DeletedKeystoreStatus, error) {
 	return nil, nil
 }
 
@@ -116,16 +125,15 @@ func TestListAccounts_LocalKeymanager(t *testing.T) {
 	// We call the list local keymanager accounts function.
 	require.NoError(
 		t,
-		listLocalKeymanagerAccounts(
-			context.Background(),
-			true, /* show deposit data */
-			true, /*show private keys */
-			km,
-		),
+		km.ListKeymanagerAccounts(cliCtx.Context,
+			keymanager.ListKeymanagerAccountConfig{
+				ShowDepositData: true,
+				ShowPrivateKeys: true,
+			}),
 	)
 
 	require.NoError(t, writer.Close())
-	out, err := ioutil.ReadAll(r)
+	out, err := io.ReadAll(r)
 	require.NoError(t, err)
 	os.Stdout = rescueStdout
 
@@ -246,7 +254,7 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	keymanager, err := derived.NewKeymanager(
+	km, err := derived.NewKeymanager(
 		cliCtx.Context,
 		&derived.SetupConfig{
 			Wallet:           w,
@@ -256,7 +264,7 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 	require.NoError(t, err)
 
 	numAccounts := 5
-	err = keymanager.RecoverAccountsFromMnemonic(cliCtx.Context, constant.TestMnemonic, "", numAccounts)
+	err = km.RecoverAccountsFromMnemonic(cliCtx.Context, constant.TestMnemonic, "", numAccounts)
 	require.NoError(t, err)
 
 	rescueStdout := os.Stdout
@@ -265,10 +273,11 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 	os.Stdout = writer
 
 	// We call the list local keymanager accounts function.
-	require.NoError(t, listDerivedKeymanagerAccounts(cliCtx.Context, true, keymanager))
+	require.NoError(t, km.ListKeymanagerAccounts(cliCtx.Context,
+		keymanager.ListKeymanagerAccountConfig{ShowPrivateKeys: true}))
 
 	require.NoError(t, writer.Close())
-	out, err := ioutil.ReadAll(r)
+	out, err := io.ReadAll(r)
 	require.NoError(t, err)
 	os.Stdout = rescueStdout
 
@@ -331,7 +340,7 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 	assert.Equal(t, true, kindFound, "Keymanager Kind %s not found on the first line", kindString)
 
 	// Get account names and require the correct count
-	accountNames, err := keymanager.ValidatingAccountNames(cliCtx.Context)
+	accountNames, err := km.ValidatingAccountNames(cliCtx.Context)
 	require.NoError(t, err)
 	require.Equal(t, numAccounts, len(accountNames))
 
@@ -343,7 +352,7 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 	}
 
 	// Get public keys and require the correct count
-	pubKeys, err := keymanager.FetchValidatingPublicKeys(cliCtx.Context)
+	pubKeys, err := km.FetchValidatingPublicKeys(cliCtx.Context)
 	require.NoError(t, err)
 	require.Equal(t, numAccounts, len(pubKeys))
 
@@ -356,7 +365,7 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 	}
 
 	// Get validating private keys and require the correct count
-	validatingPrivKeys, err := keymanager.FetchValidatingPrivateKeys(cliCtx.Context)
+	validatingPrivKeys, err := km.FetchValidatingPrivateKeys(cliCtx.Context)
 	require.NoError(t, err)
 	require.Equal(t, numAccounts, len(pubKeys))
 
@@ -409,10 +418,14 @@ func TestListAccounts_RemoteKeymanager(t *testing.T) {
 		},
 	}
 	// We call the list remote keymanager accounts function.
-	require.NoError(t, listRemoteKeymanagerAccounts(context.Background(), w, km, km.opts))
+	require.NoError(t,
+		km.ListKeymanagerAccounts(context.Background(),
+			keymanager.ListKeymanagerAccountConfig{
+				KeymanagerConfigFileName: wallet.KeymanagerConfigFileName,
+			}))
 
 	require.NoError(t, writer.Close())
-	out, err := ioutil.ReadAll(r)
+	out, err := io.ReadAll(r)
 	require.NoError(t, err)
 	os.Stdout = rescueStdout
 
@@ -529,7 +542,7 @@ func TestListAccounts_ListValidatorIndices(t *testing.T) {
 	)
 
 	require.NoError(t, writer.Close())
-	out, err := ioutil.ReadAll(r)
+	out, err := io.ReadAll(r)
 	require.NoError(t, err)
 	os.Stdout = rescueStdout
 

@@ -8,10 +8,11 @@ import (
 	"errors"
 	"sync"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/sync/backfill"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
@@ -33,12 +34,12 @@ type StateManager interface {
 	StateByRoot(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error)
 	StateByRootIfCachedNoCopy(blockRoot [32]byte) state.BeaconState
 	StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error)
-	StateBySlot(ctx context.Context, slot types.Slot) (state.BeaconState, error)
 	RecoverStateSummary(ctx context.Context, blockRoot [32]byte) (*ethpb.StateSummary, error)
 	SaveState(ctx context.Context, root [32]byte, st state.BeaconState) error
 	ForceCheckpoint(ctx context.Context, root []byte) error
 	EnableSaveHotStateToDB(_ context.Context)
 	DisableSaveHotStateToDB(ctx context.Context) error
+	DeleteStateFromCaches(ctx context.Context, blockRoot [32]byte) error
 }
 
 // State is a concrete implementation of StateManager.
@@ -49,6 +50,7 @@ type State struct {
 	finalizedInfo           *finalizedInfo
 	epochBoundaryStateCache *epochBoundaryState
 	saveHotStateDB          *saveHotStateDbConfig
+	backfillStatus          *backfill.Status
 }
 
 // This tracks the config in the event of long non-finality,
@@ -70,9 +72,18 @@ type finalizedInfo struct {
 	lock  sync.RWMutex
 }
 
+// StateGenOption is a functional option for controlling the initialization of a *State value
+type StateGenOption func(*State)
+
+func WithBackfillStatus(bfs *backfill.Status) StateGenOption {
+	return func(sg *State) {
+		sg.backfillStatus = bfs
+	}
+}
+
 // New returns a new state management object.
-func New(beaconDB db.NoHeadAccessDatabase) *State {
-	return &State{
+func New(beaconDB db.NoHeadAccessDatabase, opts ...StateGenOption) *State {
+	s := &State{
 		beaconDB:                beaconDB,
 		hotStateCache:           newHotStateCache(),
 		finalizedInfo:           &finalizedInfo{slot: 0, root: params.BeaconConfig().ZeroHash},
@@ -82,6 +93,11 @@ func New(beaconDB db.NoHeadAccessDatabase) *State {
 			duration: defaultHotStateDBInterval,
 		},
 	}
+	for _, o := range opts {
+		o(s)
+	}
+
+	return s
 }
 
 // Resume resumes a new state management object from previously saved finalized check point in DB.

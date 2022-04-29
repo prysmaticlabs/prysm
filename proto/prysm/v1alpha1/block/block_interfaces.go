@@ -2,7 +2,7 @@ package block
 
 import (
 	ssz "github.com/ferranbt/fastssz"
-	types "github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
@@ -21,6 +21,7 @@ type SignedBeaconBlock interface {
 	PbPhase0Block() (*ethpb.SignedBeaconBlock, error)
 	PbAltairBlock() (*ethpb.SignedBeaconBlockAltair, error)
 	PbBellatrixBlock() (*ethpb.SignedBeaconBlockBellatrix, error)
+	PbBlindedBellatrixBlock() (*ethpb.SignedBlindedBeaconBlockBellatrix, error)
 	ssz.Marshaler
 	ssz.Unmarshaler
 	Version() int
@@ -36,6 +37,7 @@ type BeaconBlock interface {
 	StateRoot() []byte
 	Body() BeaconBlockBody
 	IsNil() bool
+	IsBlinded() bool
 	HashTreeRoot() ([32]byte, error)
 	Proto() proto.Message
 	ssz.Marshaler
@@ -61,4 +63,5 @@ type BeaconBlockBody interface {
 	HashTreeRoot() ([32]byte, error)
 	Proto() proto.Message
 	ExecutionPayload() (*enginev1.ExecutionPayload, error)
+	ExecutionPayloadHeader() (*ethpb.ExecutionPayloadHeader, error)
 }

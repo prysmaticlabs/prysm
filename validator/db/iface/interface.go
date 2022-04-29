@@ -5,8 +5,8 @@ import (
 	"context"
 	"io"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/monitoring/backup"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/validator/db/kv"

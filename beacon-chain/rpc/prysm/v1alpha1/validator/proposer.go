@@ -6,12 +6,15 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	emptypb "github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
@@ -84,23 +87,9 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSignedBeaconBlock) (*ethpb.ProposeResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.ProposeBeaconBlock")
 	defer span.End()
-	var blk block.SignedBeaconBlock
-	var err error
-	switch b := req.Block.(type) {
-	case *ethpb.GenericSignedBeaconBlock_Phase0:
-		blk = wrapper.WrappedPhase0SignedBeaconBlock(b.Phase0)
-	case *ethpb.GenericSignedBeaconBlock_Altair:
-		blk, err = wrapper.WrappedAltairSignedBeaconBlock(b.Altair)
-		if err != nil {
-			return nil, status.Error(codes.Internal, "could not wrap altair beacon block")
-		}
-	case *ethpb.GenericSignedBeaconBlock_Bellatrix:
-		blk, err = wrapper.WrappedBellatrixSignedBeaconBlock(b.Bellatrix)
-		if err != nil {
-			return nil, status.Error(codes.Internal, "could not wrap Bellatrix beacon block")
-		}
-	default:
-		return nil, status.Error(codes.Internal, "block version not supported")
+	blk, err := wrapper.WrappedSignedBeaconBlock(req.Block)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Could not decode block: %v", err)
 	}
 	return vs.proposeGenericBeaconBlock(ctx, blk)
 }
@@ -112,15 +101,36 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 func (vs *Server) ProposeBlock(ctx context.Context, rBlk *ethpb.SignedBeaconBlock) (*ethpb.ProposeResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.ProposeBlock")
 	defer span.End()
-	blk := wrapper.WrappedPhase0SignedBeaconBlock(rBlk)
+	blk, err := wrapper.WrappedSignedBeaconBlock(rBlk)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Could not decode block: %v", err)
+	}
 	return vs.proposeGenericBeaconBlock(ctx, blk)
 }
 
-// PrepareBeaconProposer --
+// PrepareBeaconProposer caches and updates the fee recipient for the given proposer.
 func (vs *Server) PrepareBeaconProposer(
-	_ context.Context, _ *ethpb.PrepareBeaconProposerRequest,
+	ctx context.Context, request *ethpb.PrepareBeaconProposerRequest,
 ) (*emptypb.Empty, error) {
-	return &emptypb.Empty{}, status.Error(codes.Unimplemented, "Unimplemented")
+	_, span := trace.StartSpan(ctx, "validator.PrepareBeaconProposer")
+	defer span.End()
+	var feeRecipients []common.Address
+	var validatorIndices []types.ValidatorIndex
+	for _, recipientContainer := range request.Recipients {
+		recipient := hexutil.Encode(recipientContainer.FeeRecipient)
+		if !common.IsHexAddress(recipient) {
+			return nil, status.Errorf(codes.InvalidArgument, fmt.Sprintf("Invalid fee recipient address: %v", recipient))
+		}
+		feeRecipients = append(feeRecipients, common.BytesToAddress(recipientContainer.FeeRecipient))
+		validatorIndices = append(validatorIndices, recipientContainer.ValidatorIndex)
+	}
+	if err := vs.BeaconDB.SaveFeeRecipientsByValidatorIDs(ctx, validatorIndices, feeRecipients); err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not save fee recipients: %v", err)
+	}
+	log.WithFields(logrus.Fields{
+		"validatorIndices": validatorIndices,
+	}).Info("Updated fee recipient addresses for validator indices")
+	return &emptypb.Empty{}, nil
 }
 
 func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk block.SignedBeaconBlock) (*ethpb.ProposeResponse, error) {

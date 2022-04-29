@@ -29,6 +29,7 @@ type ports struct {
 	BootNodeMetricsPort             int
 	Eth1Port                        int
 	Eth1RPCPort                     int
+	Eth1AuthRPCPort                 int
 	Eth1WSPort                      int
 	PrysmBeaconNodeRPCPort          int
 	PrysmBeaconNodeUDPPort          int
@@ -68,6 +69,12 @@ var StandardLighthouseNodeCount = 2
 // DepositCount is the amount of deposits E2E makes on a separate validator client.
 var DepositCount = uint64(64)
 
+// NumOfExecEngineTxs is the number of transaction sent to the execution engine.
+var NumOfExecEngineTxs = uint64(200)
+
+// ExpectedExecEngineTxsThreshold is the portion of execution engine transactions we expect to find in blocks.
+var ExpectedExecEngineTxsThreshold = 0.5
+
 // Base port values.
 const (
 	portSpan = 50
@@ -75,9 +82,10 @@ const (
 	BootNodePort        = 2150
 	BootNodeMetricsPort = BootNodePort + portSpan
 
-	Eth1Port    = 3150
-	Eth1RPCPort = Eth1Port + portSpan
-	Eth1WSPort  = Eth1Port + 2*portSpan
+	Eth1Port        = 3150
+	Eth1RPCPort     = Eth1Port + portSpan
+	Eth1WSPort      = Eth1Port + 2*portSpan
+	Eth1AuthRPCPort = Eth1Port + 3*portSpan
 
 	PrysmBeaconNodeRPCPort     = 4150
 	PrysmBeaconNodeUDPPort     = PrysmBeaconNodeRPCPort + portSpan
@@ -221,6 +229,10 @@ func initializeStandardPorts(shardCount, shardIndex int, ports *ports, existingR
 	if err != nil {
 		return err
 	}
+	eth1AuthPort, err := port(Eth1AuthRPCPort, shardCount, shardIndex, existingRegistrations)
+	if err != nil {
+		return err
+	}
 	beaconNodeRPCPort, err := port(PrysmBeaconNodeRPCPort, shardCount, shardIndex, existingRegistrations)
 	if err != nil {
 		return err
@@ -261,6 +273,7 @@ func initializeStandardPorts(shardCount, shardIndex int, ports *ports, existingR
 	ports.BootNodeMetricsPort = bootnodeMetricsPort
 	ports.Eth1Port = eth1Port
 	ports.Eth1RPCPort = eth1RPCPort
+	ports.Eth1AuthRPCPort = eth1AuthPort
 	ports.Eth1WSPort = eth1WSPort
 	ports.PrysmBeaconNodeRPCPort = beaconNodeRPCPort
 	ports.PrysmBeaconNodeUDPPort = beaconNodeUDPPort

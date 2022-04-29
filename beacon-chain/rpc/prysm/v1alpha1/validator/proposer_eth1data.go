@@ -6,11 +6,10 @@ import (
 
 	fastssz "github.com/ferranbt/fastssz"
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -48,14 +47,6 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState state.Be
 	eth1FollowDistance := params.BeaconConfig().Eth1FollowDistance
 	earliestValidTime := votingPeriodStartTime - 2*params.BeaconConfig().SecondsPerETH1Block*eth1FollowDistance
 	latestValidTime := votingPeriodStartTime - params.BeaconConfig().SecondsPerETH1Block*eth1FollowDistance
-
-	if !features.Get().EnableGetBlockOptimizations {
-		_, err := vs.Eth1BlockFetcher.BlockByTimestamp(ctx, earliestValidTime)
-		if err != nil {
-			log.WithError(err).Error("Could not get last block by earliest valid time")
-			return vs.randomETH1DataVote(ctx)
-		}
-	}
 
 	lastBlockByLatestValidTime, err := vs.Eth1BlockFetcher.BlockByTimestamp(ctx, latestValidTime)
 	if err != nil {

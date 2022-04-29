@@ -3,8 +3,8 @@ package doublylinkedtree
 import (
 	"sync"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 )
 
 // ForkChoice defines the overall fork choice store which includes all block nodes, validator's latest votes and balances.
@@ -26,6 +26,7 @@ type Store struct {
 	treeRootNode               *Node                                  // the root node of the store tree.
 	headNode                   *Node                                  // last head Node
 	nodeByRoot                 map[[fieldparams.RootLength]byte]*Node // nodes indexed by roots.
+	nodeByPayload              map[[fieldparams.RootLength]byte]*Node // nodes indexed by payload Hash
 	nodesLock                  sync.RWMutex
 	proposerBoostLock          sync.RWMutex
 }
@@ -35,6 +36,7 @@ type Store struct {
 type Node struct {
 	slot           types.Slot                   // slot of the block converted to the node.
 	root           [fieldparams.RootLength]byte // root of the block converted to the node.
+	payloadHash    [fieldparams.RootLength]byte // payloadHash of the block converted to the node.
 	parent         *Node                        // parent index of this node.
 	children       []*Node                      // the list of direct children of this Node
 	justifiedEpoch types.Epoch                  // justifiedEpoch of this node.

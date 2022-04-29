@@ -3,14 +3,13 @@ package db
 import (
 	"context"
 	"flag"
-	"io/ioutil"
 	"os"
 	"path"
 	"testing"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/cmd"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -27,7 +26,9 @@ func TestRestore(t *testing.T) {
 	require.NoError(t, err)
 	head := util.NewBeaconBlock()
 	head.Block.Slot = 5000
-	require.NoError(t, backupDb.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(head)))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(head)
+	require.NoError(t, err)
+	require.NoError(t, backupDb.SaveBlock(ctx, wsb))
 	root, err := head.Block.HashTreeRoot()
 	require.NoError(t, err)
 	st, err := util.NewBeaconState()
@@ -53,7 +54,7 @@ func TestRestore(t *testing.T) {
 
 	assert.NoError(t, Restore(cliCtx))
 
-	files, err := ioutil.ReadDir(path.Join(restoreDir, kv.BeaconNodeDbDirName))
+	files, err := os.ReadDir(path.Join(restoreDir, kv.BeaconNodeDbDirName))
 	require.NoError(t, err)
 	assert.Equal(t, 1, len(files))
 	assert.Equal(t, kv.DatabaseFileName, files[0].Name())

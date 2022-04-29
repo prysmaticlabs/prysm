@@ -3,13 +3,12 @@ package kv
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 	"sync"
 	"testing"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -501,7 +500,7 @@ func benchCheckSurroundVote(
 	shouldSurround bool,
 ) {
 	ctx := context.Background()
-	validatorDB, err := NewKVStore(ctx, filepath.Join(os.TempDir(), "benchsurroundvote"), &Config{
+	validatorDB, err := NewKVStore(ctx, filepath.Join(b.TempDir(), "benchsurroundvote"), &Config{
 		PubKeys: pubKeys,
 	})
 	require.NoError(b, err, "Failed to instantiate DB")

@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
@@ -223,7 +223,7 @@ func TestProcessBlock_AllEventsTrackedVals(t *testing.T) {
 	wanted2 := fmt.Sprintf("\"Proposer slashing was included\" BodyRoot1=0x000100000000 BodyRoot2=0x000200000000 ProposerIndex=%d SlashingSlot=0 Slot=1 prefix=monitor", idx)
 	wanted3 := "\"Sync committee contribution included\" BalanceChange=0 ContribCount=3 ExpectedContribCount=3 NewBalance=32000000000 ValidatorIndex=1 prefix=monitor"
 	wanted4 := "\"Sync committee contribution included\" BalanceChange=0 ContribCount=1 ExpectedContribCount=1 NewBalance=32000000000 ValidatorIndex=2 prefix=monitor"
-	wrapped, err := wrapper.WrappedAltairSignedBeaconBlock(b)
+	wrapped, err := wrapper.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)
 	s.processBlock(ctx, wrapped)
 	require.LogsContain(t, hook, wanted1)

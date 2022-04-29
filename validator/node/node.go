@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -18,6 +17,7 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/pkg/errors"
@@ -27,7 +27,9 @@ import (
 	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	validatorServiceConfig "github.com/prysmaticlabs/prysm/config/validator/service"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/monitoring/backup"
@@ -107,14 +109,14 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 
 	if cliCtx.IsSet(cmd.ChainConfigFileFlag.Name) {
 		chainConfigFileName := cliCtx.String(cmd.ChainConfigFileFlag.Name)
-		params.LoadChainConfigFile(chainConfigFileName)
+		params.LoadChainConfigFile(chainConfigFileName, nil)
 	}
 
 	// If the --web flag is enabled to administer the validator
 	// client via a web portal, we start the validator client in a different way.
 	if cliCtx.IsSet(flags.EnableWebFlag.Name) {
 		if cliCtx.IsSet(flags.Web3SignerURLFlag.Name) || cliCtx.IsSet(flags.Web3SignerPublicValidatorKeysFlag.Name) {
-			return nil, errors.New("web3signer cannot be used with --web")
+			log.Warn("Remote Keymanager API enabled. Prysm web does not properly support web3signer at this time")
 		}
 		log.Info("Enabling web portal to manage the validator client")
 		if err := validatorClient.initializeForWeb(cliCtx); err != nil {
@@ -125,7 +127,7 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 
 	if cliCtx.IsSet(cmd.ChainConfigFileFlag.Name) {
 		chainConfigFileName := cliCtx.String(cmd.ChainConfigFileFlag.Name)
-		params.LoadChainConfigFile(chainConfigFileName)
+		params.LoadChainConfigFile(chainConfigFileName, nil)
 	}
 
 	// Initializes any forks here.
@@ -188,12 +190,8 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 	dataDir := cliCtx.String(flags.WalletDirFlag.Name)
 	if !cliCtx.IsSet(flags.InteropNumValidators.Name) {
 		// Custom Check For Web3Signer
-		if cliCtx.IsSet(flags.Web3SignerURLFlag.Name) || cliCtx.IsSet(flags.Web3SignerPublicValidatorKeysFlag.Name) {
-			if cliCtx.IsSet(flags.Web3SignerURLFlag.Name) && cliCtx.IsSet(flags.Web3SignerPublicValidatorKeysFlag.Name) {
-				c.wallet = wallet.NewWalletForWeb3Signer()
-			} else {
-				return errors.New("--validators-external-signer-url and --validators-external-signer-public-keys must be used together")
-			}
+		if cliCtx.IsSet(flags.Web3SignerURLFlag.Name) {
+			c.wallet = wallet.NewWalletForWeb3Signer()
 		} else {
 			w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
 				return nil, wallet.ErrNoWalletFound
@@ -272,24 +270,28 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 
 func (c *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 	var err error
-
-	// Read the wallet password file from the cli context.
-	if err = setWalletPasswordFilePath(cliCtx); err != nil {
-		return errors.Wrap(err, "could not read wallet password file")
-	}
-
-	// Read the wallet from the specified path.
-	w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
-		return nil, nil
-	})
-	if err != nil {
-		return errors.Wrap(err, "could not open wallet")
-	}
-	c.wallet = w
 	dataDir := cliCtx.String(flags.WalletDirFlag.Name)
-	if c.wallet != nil {
-		dataDir = c.wallet.AccountsDir()
+	if cliCtx.IsSet(flags.Web3SignerURLFlag.Name) {
+		c.wallet = wallet.NewWalletForWeb3Signer()
+	} else {
+		// Read the wallet password file from the cli context.
+		if err = setWalletPasswordFilePath(cliCtx); err != nil {
+			return errors.Wrap(err, "could not read wallet password file")
+		}
+
+		// Read the wallet from the specified path.
+		w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
+			return nil, nil
+		})
+		if err != nil {
+			return errors.Wrap(err, "could not open wallet")
+		}
+		c.wallet = w
+		if c.wallet != nil {
+			dataDir = c.wallet.AccountsDir()
+		}
 	}
+
 	if cliCtx.String(cmd.DataDirFlag.Name) != cmd.DefaultDataDir() {
 		dataDir = cliCtx.String(cmd.DataDirFlag.Name)
 	}
@@ -368,6 +370,7 @@ func (c *ValidatorClient) registerPrometheusService(cliCtx *cli.Context) error {
 }
 
 func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
+
 	endpoint := c.cliCtx.String(flags.BeaconRPCProviderFlag.Name)
 	dataDir := c.cliCtx.String(cmd.DataDirFlag.Name)
 	logValidatorBalances := !c.cliCtx.Bool(flags.DisablePenaltyRewardLogFlag.Name)
@@ -400,6 +403,11 @@ func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
 		return err
 	}
 
+	bpc, err := feeRecipientConfig(c.cliCtx)
+	if err != nil {
+		return err
+	}
+
 	v, err := client.NewValidatorService(c.cliCtx.Context, &client.Config{
 		Endpoint:                   endpoint,
 		DataDir:                    dataDir,
@@ -419,6 +427,7 @@ func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
 		GraffitiStruct:             gStruct,
 		LogDutyCountDown:           c.cliCtx.Bool(flags.EnableDutyCountDown.Name),
 		Web3SignerConfig:           wsc,
+		FeeRecipientConfig:         bpc,
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not initialize validator service")
@@ -429,9 +438,8 @@ func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
 
 func web3SignerConfig(cliCtx *cli.Context) (*remote_web3signer.SetupConfig, error) {
 	var web3signerConfig *remote_web3signer.SetupConfig
-	if cliCtx.IsSet(flags.Web3SignerURLFlag.Name) && cliCtx.IsSet(flags.Web3SignerPublicValidatorKeysFlag.Name) {
+	if cliCtx.IsSet(flags.Web3SignerURLFlag.Name) {
 		urlStr := cliCtx.String(flags.Web3SignerURLFlag.Name)
-		publicKeysStr := cliCtx.String(flags.Web3SignerPublicValidatorKeysFlag.Name)
 		u, err := url.ParseRequestURI(urlStr)
 		if err != nil {
 			return nil, errors.Wrapf(err, "web3signer url %s is invalid", urlStr)
@@ -443,22 +451,101 @@ func web3SignerConfig(cliCtx *cli.Context) (*remote_web3signer.SetupConfig, erro
 			BaseEndpoint:          u.String(),
 			GenesisValidatorsRoot: nil,
 		}
-		pURL, err := url.ParseRequestURI(publicKeysStr)
-		if err == nil && pURL.Scheme != "" && pURL.Host != "" {
-			web3signerConfig.PublicKeysURL = publicKeysStr
-		} else {
-			var validatorKeys [][48]byte
-			for _, key := range strings.Split(publicKeysStr, ",") {
-				decodedKey, decodeErr := hexutil.Decode(key)
-				if decodeErr != nil {
-					return nil, errors.Wrapf(decodeErr, "could not decode public key for web3signer: %s", key)
+		if cliCtx.IsSet(flags.Web3SignerPublicValidatorKeysFlag.Name) {
+			publicKeysStr := cliCtx.String(flags.Web3SignerPublicValidatorKeysFlag.Name)
+			pURL, err := url.ParseRequestURI(publicKeysStr)
+			if err == nil && pURL.Scheme != "" && pURL.Host != "" {
+				web3signerConfig.PublicKeysURL = publicKeysStr
+			} else {
+				var validatorKeys [][48]byte
+				for _, key := range strings.Split(publicKeysStr, ",") {
+					decodedKey, decodeErr := hexutil.Decode(key)
+					if decodeErr != nil {
+						return nil, errors.Wrapf(decodeErr, "could not decode public key for web3signer: %s", key)
+					}
+					validatorKeys = append(validatorKeys, bytesutil.ToBytes48(decodedKey))
 				}
-				validatorKeys = append(validatorKeys, bytesutil.ToBytes48(decodedKey))
+				web3signerConfig.ProvidedPublicKeys = validatorKeys
 			}
-			web3signerConfig.ProvidedPublicKeys = validatorKeys
 		}
 	}
 	return web3signerConfig, nil
+}
+
+func feeRecipientConfig(cliCtx *cli.Context) (*validatorServiceConfig.FeeRecipientConfig, error) {
+	var fileConfig *validatorServiceConfig.FeeRecipientFileConfig
+	if cliCtx.IsSet(flags.FeeRecipientConfigFileFlag.Name) && cliCtx.IsSet(flags.FeeRecipientConfigURLFlag.Name) {
+		return nil, errors.New("cannot specify both --validators-proposer-fileConfig-dir and --validators-proposer-fileConfig-url")
+	}
+	if cliCtx.IsSet(flags.FeeRecipientConfigFileFlag.Name) {
+		if err := unmarshalFromFile(cliCtx.Context, cliCtx.String(flags.FeeRecipientConfigFileFlag.Name), &fileConfig); err != nil {
+			return nil, err
+		}
+	}
+	if cliCtx.IsSet(flags.FeeRecipientConfigURLFlag.Name) {
+		if err := unmarshalFromURL(cliCtx.Context, cliCtx.String(flags.FeeRecipientConfigURLFlag.Name), &fileConfig); err != nil {
+			return nil, err
+		}
+	}
+	// override the default fileConfig with the fileConfig from the command line
+	if cliCtx.IsSet(flags.SuggestedFeeRecipientFlag.Name) {
+		suggestedFee := cliCtx.String(flags.SuggestedFeeRecipientFlag.Name)
+		fileConfig = &validatorServiceConfig.FeeRecipientFileConfig{
+			ProposeConfig: nil,
+			DefaultConfig: &validatorServiceConfig.FeeRecipientFileOptions{
+				FeeRecipient: suggestedFee,
+			},
+		}
+	}
+	// nothing is set, so just return nil
+	if fileConfig == nil {
+		return nil, nil
+	}
+	//convert file config to proposer config for internal use
+	frConfig := &validatorServiceConfig.FeeRecipientConfig{}
+
+	// default fileConfig is mandatory
+	if fileConfig.DefaultConfig == nil {
+		return nil, errors.New("default fileConfig is required")
+	}
+	bytes, err := hexutil.Decode(fileConfig.DefaultConfig.FeeRecipient)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not decode fee recipient %s", fileConfig.DefaultConfig.FeeRecipient)
+	}
+	if !common.IsHexAddress(fileConfig.DefaultConfig.FeeRecipient) {
+		return nil, errors.New("default fileConfig fee recipient is not a valid eth1 address")
+	}
+	frConfig.DefaultConfig = &validatorServiceConfig.FeeRecipientOptions{
+		FeeRecipient: common.BytesToAddress(bytes),
+	}
+
+	if fileConfig.ProposeConfig != nil {
+		frConfig.ProposeConfig = make(map[[fieldparams.BLSPubkeyLength]byte]*validatorServiceConfig.FeeRecipientOptions)
+		for key, option := range fileConfig.ProposeConfig {
+			decodedKey, err := hexutil.Decode(key)
+			if err != nil {
+				return nil, errors.Wrapf(err, "could not decode public key for web3signer: %s", key)
+			}
+			if len(decodedKey) != fieldparams.BLSPubkeyLength {
+				return nil, fmt.Errorf("%v  is not a bls public key", key)
+			}
+			if option == nil {
+				return nil, fmt.Errorf("fee recipient is required for proposer %s", key)
+			}
+			feebytes, err := hexutil.Decode(option.FeeRecipient)
+			if err != nil {
+				return nil, errors.Wrapf(err, "could not decode fee recipient %s", option.FeeRecipient)
+			}
+			if !common.IsHexAddress(option.FeeRecipient) {
+				return nil, errors.New("fee recipient is not a valid eth1 address")
+			}
+			frConfig.ProposeConfig[bytesutil.ToBytes48(decodedKey)] = &validatorServiceConfig.FeeRecipientOptions{
+				FeeRecipient: common.BytesToAddress(feebytes),
+			}
+		}
+	}
+
+	return frConfig, nil
 }
 
 func (c *ValidatorClient) registerRPCService(cliCtx *cli.Context) error {
@@ -701,7 +788,7 @@ func unmarshalFromFile(ctx context.Context, from string, to interface{}) error {
 			log.WithError(err).Error("failed to close json file")
 		}
 	}(jsonFile)
-	byteValue, readerror := ioutil.ReadAll(jsonFile)
+	byteValue, readerror := io.ReadAll(jsonFile)
 	if readerror != nil {
 		return errors.Wrap(readerror, "failed to read json file")
 	}

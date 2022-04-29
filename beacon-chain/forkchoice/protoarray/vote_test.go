@@ -12,7 +12,6 @@ import (
 func TestVotes_CanFindHead(t *testing.T) {
 	balances := []uint64{1, 1}
 	f := setup(1, 1)
-	syncedTips := &optimisticStore{}
 
 	// The head should always start at the finalized block.
 	r, err := f.Head(context.Background(), 1, params.BeaconConfig().ZeroHash, balances, 1)
@@ -23,7 +22,7 @@ func TestVotes_CanFindHead(t *testing.T) {
 	//         0
 	//        /
 	//       2 <- head
-	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 0, indexToHash(2), params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 0, indexToHash(2), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 1, 1))
 
 	r, err = f.Head(context.Background(), 1, params.BeaconConfig().ZeroHash, balances, 1)
 	require.NoError(t, err)
@@ -33,7 +32,7 @@ func TestVotes_CanFindHead(t *testing.T) {
 	//            0
 	//           / \
 	//  head -> 2  1
-	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 0, indexToHash(1), params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 0, indexToHash(1), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 1, 1))
 
 	r, err = f.Head(context.Background(), 1, params.BeaconConfig().ZeroHash, balances, 1)
 	require.NoError(t, err)
@@ -63,7 +62,7 @@ func TestVotes_CanFindHead(t *testing.T) {
 	//  head -> 2  1
 	//             |
 	//             3
-	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 0, indexToHash(3), indexToHash(1), 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 0, indexToHash(3), indexToHash(1), params.BeaconConfig().ZeroHash, 1, 1))
 
 	r, err = f.Head(context.Background(), 1, params.BeaconConfig().ZeroHash, balances, 1)
 	require.NoError(t, err)
@@ -99,7 +98,7 @@ func TestVotes_CanFindHead(t *testing.T) {
 	//             3
 	//             |
 	//             4 <- head
-	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 0, indexToHash(4), indexToHash(3), 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 0, indexToHash(4), indexToHash(3), params.BeaconConfig().ZeroHash, 1, 1))
 
 	r, err = f.Head(context.Background(), 1, params.BeaconConfig().ZeroHash, balances, 1)
 	require.NoError(t, err)
@@ -115,7 +114,7 @@ func TestVotes_CanFindHead(t *testing.T) {
 	//             4 <- head
 	//            /
 	//           5 <- justified epoch = 2
-	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 0, indexToHash(5), indexToHash(4), 2, 2))
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 0, indexToHash(5), indexToHash(4), params.BeaconConfig().ZeroHash, 2, 2))
 
 	r, err = f.Head(context.Background(), 1, params.BeaconConfig().ZeroHash, balances, 1)
 	require.NoError(t, err)
@@ -131,7 +130,7 @@ func TestVotes_CanFindHead(t *testing.T) {
 	//             4 <- head
 	//            / \
 	//           5  6 <- justified epoch = 0
-	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 0, indexToHash(6), indexToHash(4), 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 0, indexToHash(6), indexToHash(4), params.BeaconConfig().ZeroHash, 1, 1))
 
 	// Moved 2 votes to block 5:
 	//            0
@@ -143,7 +142,7 @@ func TestVotes_CanFindHead(t *testing.T) {
 	//             4
 	//            / \
 	// 2 votes-> 5  6
-	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 0, indexToHash(6), indexToHash(4), 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 0, indexToHash(6), indexToHash(4), params.BeaconConfig().ZeroHash, 1, 1))
 
 	f.ProcessAttestation(context.Background(), []uint64{0, 1}, indexToHash(5), 4)
 
@@ -164,9 +163,9 @@ func TestVotes_CanFindHead(t *testing.T) {
 	//           8
 	//           |
 	//           9
-	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 0, indexToHash(7), indexToHash(5), 2, 2))
-	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 0, indexToHash(8), indexToHash(7), 2, 2))
-	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 0, indexToHash(9), indexToHash(8), 2, 2))
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 0, indexToHash(7), indexToHash(5), params.BeaconConfig().ZeroHash, 2, 2))
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 0, indexToHash(8), indexToHash(7), params.BeaconConfig().ZeroHash, 2, 2))
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 0, indexToHash(9), indexToHash(8), params.BeaconConfig().ZeroHash, 2, 2))
 
 	r, err = f.Head(context.Background(), 1, params.BeaconConfig().ZeroHash, balances, 1)
 	require.NoError(t, err)
@@ -211,7 +210,7 @@ func TestVotes_CanFindHead(t *testing.T) {
 	//           / \
 	// 2 votes->9  10
 	f.ProcessAttestation(context.Background(), []uint64{0, 1}, indexToHash(9), 5)
-	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 0, indexToHash(10), indexToHash(8), 2, 2))
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 0, indexToHash(10), indexToHash(8), params.BeaconConfig().ZeroHash, 2, 2))
 
 	r, err = f.Head(context.Background(), 2, indexToHash(5), balances, 2)
 	require.NoError(t, err)
@@ -249,7 +248,7 @@ func TestVotes_CanFindHead(t *testing.T) {
 
 	// Verify pruning below the prune threshold does not affect head.
 	f.store.pruneThreshold = 1000
-	require.NoError(t, f.store.prune(context.Background(), indexToHash(5), syncedTips))
+	require.NoError(t, f.store.prune(context.Background(), indexToHash(5)))
 	assert.Equal(t, 11, len(f.store.nodes), "Incorrect nodes length after prune")
 
 	r, err = f.Head(context.Background(), 2, indexToHash(5), balances, 2)
@@ -273,7 +272,7 @@ func TestVotes_CanFindHead(t *testing.T) {
 	//         / \
 	//        9  10
 	f.store.pruneThreshold = 1
-	require.NoError(t, f.store.prune(context.Background(), indexToHash(5), syncedTips))
+	require.NoError(t, f.store.prune(context.Background(), indexToHash(5)))
 	assert.Equal(t, 5, len(f.store.nodes), "Incorrect nodes length after prune")
 
 	r, err = f.Head(context.Background(), 2, indexToHash(5), balances, 2)
@@ -290,7 +289,7 @@ func TestVotes_CanFindHead(t *testing.T) {
 	//        9  10
 	//        |
 	// head-> 11
-	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 0, indexToHash(11), indexToHash(9), 2, 2))
+	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 0, indexToHash(11), indexToHash(9), params.BeaconConfig().ZeroHash, 2, 2))
 
 	r, err = f.Head(context.Background(), 2, indexToHash(5), balances, 2)
 	require.NoError(t, err)

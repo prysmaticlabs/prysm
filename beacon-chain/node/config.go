@@ -4,10 +4,10 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	tracing2 "github.com/prysmaticlabs/prysm/monitoring/tracing"
 	"github.com/urfave/cli/v2"
 )
@@ -25,7 +25,7 @@ func configureTracing(cliCtx *cli.Context) error {
 func configureChainConfig(cliCtx *cli.Context) {
 	if cliCtx.IsSet(cmd.ChainConfigFileFlag.Name) {
 		chainConfigFileName := cliCtx.String(cmd.ChainConfigFileFlag.Name)
-		params.LoadChainConfigFile(chainConfigFileName)
+		params.LoadChainConfigFile(chainConfigFileName, nil)
 	}
 }
 
@@ -108,12 +108,12 @@ func configureInteropConfig(cliCtx *cli.Context) {
 }
 
 func configureExecutionSetting(cliCtx *cli.Context) error {
-	if !cliCtx.IsSet(flags.FeeRecipient.Name) {
+	if !cliCtx.IsSet(flags.SuggestedFeeRecipient.Name) {
 		return nil
 	}
 
 	c := params.BeaconConfig()
-	ha := cliCtx.String(flags.FeeRecipient.Name)
+	ha := cliCtx.String(flags.SuggestedFeeRecipient.Name)
 	if !common.IsHexAddress(ha) {
 		return fmt.Errorf("%s is not a valid fee recipient address", ha)
 	}

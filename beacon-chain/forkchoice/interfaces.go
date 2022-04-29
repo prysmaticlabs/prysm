@@ -2,10 +2,10 @@ package forkchoice
 
 import (
 	"context"
-	"time"
 
-	types "github.com/prysmaticlabs/eth2-types"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -24,7 +24,7 @@ type ForkChoicer interface {
 type HeadRetriever interface {
 	Head(context.Context, types.Epoch, [32]byte, []uint64, types.Epoch) ([32]byte, error)
 	Tips() ([][32]byte, []types.Slot)
-	IsOptimistic(ctx context.Context, root [32]byte) (bool, error)
+	IsOptimistic(root [32]byte) (bool, error)
 }
 
 // BlockProcessor processes the block that's used for accounting fork choice.
@@ -33,6 +33,7 @@ type BlockProcessor interface {
 		slot types.Slot,
 		root [32]byte,
 		parentRoot [32]byte,
+		payloadHash [32]byte,
 		justifiedEpoch types.Epoch,
 		finalizedEpoch types.Epoch,
 	) error
@@ -50,7 +51,7 @@ type Pruner interface {
 
 // ProposerBooster is able to boost the proposer's root score during fork choice.
 type ProposerBooster interface {
-	BoostProposerRoot(ctx context.Context, blockSlot types.Slot, blockRoot [32]byte, genesisTime time.Time) error
+	BoostProposerRoot(ctx context.Context, args *forkchoicetypes.ProposerBoostRootArgs) error
 	ResetBoostedProposerRoot(ctx context.Context) error
 }
 
@@ -70,5 +71,5 @@ type Getter interface {
 // Setter allows to set forkchoice information
 type Setter interface {
 	SetOptimisticToValid(context.Context, [fieldparams.RootLength]byte) error
-	SetOptimisticToInvalid(context.Context, [fieldparams.RootLength]byte) error
+	SetOptimisticToInvalid(context.Context, [fieldparams.RootLength]byte, [fieldparams.RootLength]byte) ([][32]byte, error)
 }

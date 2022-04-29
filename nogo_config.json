@@ -41,7 +41,8 @@
   },
   "composites": {
     "exclude_files": {
-      "external/.*": "Third party code"
+      "external/.*": "Third party code",
+      ".*testmain\\.go$": "Fuzz"
     }
   },
   "cgocall": {
@@ -74,7 +75,7 @@
       "rules_go_work-.*": "Third party code",
       "shared/mock/.*\\.go": "Mocks are OK",
       ".*/.*mock\\.go": "Mocks are OK",
-      ".*/testmain\\.go": "Test runner generated code",
+      ".*testmain\\.go$": "Fuzz",
       "proto/.*": "Generated protobuf related code",
       "tools/analyzers/properpermissions/testdata/.*": "Analyzer breaks rules"
     }
@@ -100,6 +101,7 @@
     },
     "exclude_files": {
       ".*/.*_test\\.go": "Tests are OK to use weak crypto",
+      "external/.*": "Third party code",
       "crypto/rand/rand\\.go": "Abstracts CSPRNGs for common use",
       "shared/aggregation/testing/bitlistutils.go": "Test-only package"
     }
@@ -169,6 +171,16 @@
       "external/.*": "Third party code",
       "rules_go_work-.*": "Third party code",
       ".*_test\\.go": "Tests are ok"
+    }
+  },
+  "gocognit": {
+    "exclude_files": {
+      "external/.*": "Third party code",
+      "rules_go_work-.*": "Third party code",
+      ".*\\.pb.*.go": "Generated code is ok",
+      ".*generated\\.ssz\\.go": "Generated code is ok",
+      ".*_test\\.go": "Tests are ok (for now)",
+      "tools/analyzers/ineffassign/ineffassign\\.go": "3rd party code with a massive switch statement"
     }
   }
 }

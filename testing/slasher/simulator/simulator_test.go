@@ -3,10 +3,10 @@ package simulator
 import (
 	"testing"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockstategen "github.com/prysmaticlabs/prysm/beacon-chain/state/stategen/mock"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"

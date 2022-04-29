@@ -9,7 +9,6 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
@@ -17,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/features"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -147,7 +147,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 
 	if err := s.cfg.chain.VerifyFinalizedConsistency(ctx, att.Data.BeaconBlockRoot); err != nil {
 		tracing.AnnotateError(span, err)
-		return pubsub.ValidationReject, err
+		return pubsub.ValidationIgnore, err
 	}
 	if err := s.cfg.chain.VerifyLmdFfgConsistency(ctx, att); err != nil {
 		tracing.AnnotateError(span, err)
@@ -229,19 +229,12 @@ func (s *Service) validateUnaggregatedAttWithState(ctx context.Context, a *eth.A
 		return pubsub.ValidationReject, errors.New("attestation bitfield is invalid")
 	}
 
-	if features.Get().EnableBatchVerification {
-		set, err := blocks.AttestationSignatureBatch(ctx, bs, []*eth.Attestation{a})
-		if err != nil {
-			tracing.AnnotateError(span, err)
-			return pubsub.ValidationReject, err
-		}
-		return s.validateWithBatchVerifier(ctx, "attestation", set)
-	}
-	if err := blocks.VerifyAttestationSignature(ctx, bs, a); err != nil {
+	set, err := blocks.AttestationSignatureBatch(ctx, bs, []*eth.Attestation{a})
+	if err != nil {
 		tracing.AnnotateError(span, err)
 		return pubsub.ValidationReject, err
 	}
-	return pubsub.ValidationAccept, nil
+	return s.validateWithBatchVerifier(ctx, "attestation", set)
 }
 
 // Returns true if the attestation was already seen for the participating validator for the slot.

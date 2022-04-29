@@ -54,6 +54,7 @@ message StateRequest {
 
 message StateRootResponse {
     StateRoot data = 1;
+    bool execution_optimistic = 2;
 
     message StateRoot {
         // SSZ encoded state root for the requested state.
@@ -63,10 +64,12 @@ message StateRootResponse {
 
 message StateForkResponse {
     Fork data = 1;
+    bool execution_optimistic = 2;
 }
 
 message StateFinalityCheckpointResponse {
     StateFinalityCheckpoint data = 1;
+    bool execution_optimistic = 2;
 
     message StateFinalityCheckpoint {
         ethereum.eth.v1.Checkpoint previous_justified = 1;
@@ -100,15 +103,17 @@ message ValidatorBalancesRequest {
 
 message StateValidatorsResponse {
     repeated ValidatorContainer data = 1;
+    bool execution_optimistic = 2;
 }
 
 message ValidatorBalancesResponse {
     repeated ValidatorBalance data = 1;
+    bool execution_optimistic = 2;
 }
 
 message ValidatorBalance {
     // The index of the validator the retrieved balance is for.
-    uint64 index = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.ValidatorIndex"];
+    uint64 index = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.ValidatorIndex"];
 
     // The balance of the requested validator.
     uint64 balance = 2;
@@ -125,6 +130,7 @@ message StateValidatorRequest {
 
 message StateValidatorResponse {
     ValidatorContainer data = 1;
+    bool execution_optimistic = 2;
 }
 
 message StateCommitteesRequest {
@@ -133,23 +139,25 @@ message StateCommitteesRequest {
     bytes state_id = 1;
 
     // The epoch to retrieve the committees of.
-    optional uint64 epoch = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Epoch"];
+    optional uint64 epoch = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch"];
 
     // Committee index requested.
-    optional uint64 index = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.CommitteeIndex"];
+    optional uint64 index = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.CommitteeIndex"];
 
     // Committee slot requested.
-    optional uint64 slot = 4 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
+    optional uint64 slot = 4 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"];
 }
 
 message StateCommitteesResponse {
     repeated Committee data = 1;
+    bool execution_optimistic = 2;
 }
 
 // Beacon Block API related messages.
 
 message BlockAttestationsResponse {
     repeated ethereum.eth.v1.Attestation data = 1;
+    bool execution_optimistic = 2;
 }
 
 message BlockRootContainer {
@@ -159,11 +167,12 @@ message BlockRootContainer {
 
 message BlockRootResponse {
     BlockRootContainer data = 1;
+    bool execution_optimistic = 2;
 }
 
 message BlockHeadersRequest {
     // Beacon chain slot of the requested block.
-    optional uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
+    optional uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"];
 
     // 32 byte merkle tree root of the ssz encoded parent block.
     optional bytes parent_root = 2 [(ethereum.eth.ext.ssz_size) = "32"];
@@ -171,6 +180,7 @@ message BlockHeadersRequest {
 
 message BlockHeadersResponse {
     repeated BlockHeaderContainer data = 1;
+    bool execution_optimistic = 2;
 }
 
 message BlockRequest {
@@ -181,6 +191,7 @@ message BlockRequest {
 
 message BlockHeaderResponse {
     BlockHeaderContainer data = 1;
+    bool execution_optimistic = 2;
 }
 
 message BlockHeaderContainer {
@@ -220,8 +231,8 @@ message BeaconBlockContainer {
 // Beacon Pool related API service.
 
 message AttestationsPoolRequest {
-    optional uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
-    optional uint64 committee_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.CommitteeIndex"];
+    optional uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"];
+    optional uint64 committee_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.CommitteeIndex"];
 }
 
 message SubmitAttestationsRequest {
@@ -269,4 +280,13 @@ message DepositContract {
 
     // The address of the deployed deposit contract in use.
     string address = 2;
+}
+
+message WeakSubjectivityResponse {
+	WeakSubjectivityData data = 1;
+}
+
+message WeakSubjectivityData {
+    ethereum.eth.v1.Checkpoint ws_checkpoint = 1;
+    bytes state_root = 2;
 }

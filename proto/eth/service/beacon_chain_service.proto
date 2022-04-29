@@ -45,6 +45,12 @@ service BeaconChain {
     option (google.api.http) = { get: "/internal/eth/v1/beacon/genesis" };
   }
 
+  // GetWeakSubjectivity is a new proposed endpoint to retrieve the details necessary to download
+  // the ssz data needed to start a beacon node - checkpoint(epoch + block_root) and state_root
+  rpc GetWeakSubjectivity(google.protobuf.Empty) returns (v1.WeakSubjectivityResponse) {
+    option (google.api.http) = { get: "/internal/eth/v1/beacon/weak_subjectivity" };
+  }
+
   // GetStateRoot calculates HashTreeRoot for state with given 'stateId'. If stateId is root, same value will be returned.
   rpc GetStateRoot(v1.StateRequest) returns (v1.StateRootResponse) {
     option (google.api.http) = {
@@ -126,6 +132,21 @@ service BeaconChain {
   rpc SubmitBlock(v2.SignedBeaconBlockContainerV2) returns (google.protobuf.Empty) {
     option (google.api.http) = {
       post: "/internal/eth/v1/beacon/blocks"
+      body: "*"
+    };
+  }
+
+  // SubmitBlindedBlock instructs the beacon node to use the components of the `SignedBlindedBeaconBlock` to construct
+  // and publish a `SignedBeaconBlock` by swapping out the `transactions_root` for the corresponding full list of `transactions`.
+  // The beacon node should broadcast a newly constructed `SignedBeaconBlock` to the beacon network,
+  // to be included in the beacon chain. The beacon node is not required to validate the signed
+  // `BeaconBlock`, and a successful response (20X) only indicates that the broadcast has been
+  // successful. The beacon node is expected to integrate the new block into its state, and
+  // therefore validate the block internally, however blocks which fail the validation are still
+  // broadcast but a different status code is returned (202).
+  rpc SubmitBlindedBlock(v2.SignedBlindedBeaconBlockContainer) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/internal/eth/v1/beacon/blinded_blocks"
       body: "*"
     };
   }

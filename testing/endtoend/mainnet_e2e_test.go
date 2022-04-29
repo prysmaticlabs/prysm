@@ -14,14 +14,18 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
-func TestEndToEnd_MainnetConfig(t *testing.T) {
-	e2eMainnet(t, false /*usePrysmSh*/)
+// Run mainnet e2e config with the current release validator against latest beacon node.
+func TestEndToEnd_MainnetConfig_ValidatorAtCurrentRelease(t *testing.T) {
+	e2eMainnet(t, true, false)
 }
 
-func e2eMainnet(t *testing.T, usePrysmSh bool) {
+func e2eMainnet(t *testing.T, usePrysmSh, useMultiClient bool) {
 	params.UseE2EMainnetConfig()
-	require.NoError(t, e2eParams.InitMultiClient(e2eParams.StandardBeaconCount, e2eParams.StandardLighthouseNodeCount))
-
+	if useMultiClient {
+		require.NoError(t, e2eParams.InitMultiClient(e2eParams.StandardBeaconCount, e2eParams.StandardLighthouseNodeCount))
+	} else {
+		require.NoError(t, e2eParams.Init(e2eParams.StandardBeaconCount))
+	}
 	// Run for 10 epochs if not in long-running to confirm long-running has no issues.
 	var err error
 	epochsToRun := 10
@@ -36,6 +40,12 @@ func e2eMainnet(t *testing.T, usePrysmSh bool) {
 		// TODO(#9166): remove this block once v2 changes are live.
 		epochsToRun = helpers.AltairE2EForkEpoch - 1
 	}
+	seed := 0
+	seedStr, isValid := os.LookupEnv("E2E_SEED")
+	if isValid {
+		seed, err = strconv.Atoi(seedStr)
+		require.NoError(t, err)
+	}
 	tracingPort := e2eParams.TestParams.Ports.JaegerTracingPort
 	tracingEndpoint := fmt.Sprintf("127.0.0.1:%d", tracingPort)
 	evals := []types.Evaluator{
@@ -48,11 +58,13 @@ func e2eMainnet(t *testing.T, usePrysmSh bool) {
 		ev.ProposeVoluntaryExit,
 		ev.ValidatorHasExited,
 		ev.ColdStateCheckpoint,
-		ev.ForkTransition,
+		ev.AltairForkTransition,
+		ev.BellatrixForkTransition,
 		ev.APIMiddlewareVerifyIntegrity,
 		ev.APIGatewayV1Alpha1VerifyIntegrity,
 		ev.FinishedSyncing,
 		ev.AllNodesHaveSameHead,
+		//ev.TransactionsPresent, TODO: Renable Transaction evaluator once it tx pool issues are fixed.
 	}
 	testConfig := &types.E2EConfig{
 		BeaconFlags: []string{
@@ -72,6 +84,7 @@ func e2eMainnet(t *testing.T, usePrysmSh bool) {
 		UsePprof:                !longRunning,
 		TracingSinkEndpoint:     tracingEndpoint,
 		Evaluators:              evals,
+		Seed:                    int64(seed),
 	}
 
 	newTestRunner(t, testConfig).run()

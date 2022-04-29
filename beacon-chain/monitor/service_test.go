@@ -7,13 +7,13 @@ import (
 	"testing"
 	"time"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -244,7 +244,7 @@ func TestMonitorRoutine(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, s.config.StateGen.SaveState(ctx, root, genesis))
 
-	wrapped, err := wrapper.WrappedAltairSignedBeaconBlock(block)
+	wrapped, err := wrapper.WrappedSignedBeaconBlock(block)
 	require.NoError(t, err)
 
 	stateChannel <- &feed.Event{

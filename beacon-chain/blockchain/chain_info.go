@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/doubly-linked-tree"
@@ -12,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
@@ -50,7 +50,6 @@ type HeadFetcher interface {
 	HeadBlock(ctx context.Context) (block.SignedBeaconBlock, error)
 	HeadState(ctx context.Context) (state.BeaconState, error)
 	HeadValidatorsIndices(ctx context.Context, epoch types.Epoch) ([]types.ValidatorIndex, error)
-	HeadSeed(ctx context.Context, epoch types.Epoch) ([32]byte, error)
 	HeadGenesisValidatorsRoot() [32]byte
 	HeadETH1Data() *ethpb.Eth1Data
 	HeadPublicKeyToValidatorIndex(pubKey [fieldparams.BLSPubkeyLength]byte) (types.ValidatorIndex, bool)
@@ -60,18 +59,17 @@ type HeadFetcher interface {
 	IsOptimisticForRoot(ctx context.Context, root [32]byte) (bool, error)
 	HeadSyncCommitteeFetcher
 	HeadDomainFetcher
-	ForkChoicer() forkchoice.ForkChoicer
 }
 
 // ForkFetcher retrieves the current fork information of the Ethereum beacon chain.
 type ForkFetcher interface {
+	ForkChoicer() forkchoice.ForkChoicer
 	CurrentFork() *ethpb.Fork
 }
 
 // CanonicalFetcher retrieves the current chain's canonical information.
 type CanonicalFetcher interface {
 	IsCanonical(ctx context.Context, blockRoot [32]byte) (bool, error)
-	VerifyBlkDescendant(ctx context.Context, blockRoot [32]byte) error
 }
 
 // FinalizationFetcher defines a common interface for methods in blockchain service which
@@ -80,6 +78,7 @@ type FinalizationFetcher interface {
 	FinalizedCheckpt() *ethpb.Checkpoint
 	CurrentJustifiedCheckpt() *ethpb.Checkpoint
 	PreviousJustifiedCheckpt() *ethpb.Checkpoint
+	VerifyFinalizedBlkDescendant(ctx context.Context, blockRoot [32]byte) error
 }
 
 // FinalizedCheckpt returns the latest finalized checkpoint from chain store.
@@ -205,18 +204,6 @@ func (s *Service) HeadValidatorsIndices(ctx context.Context, epoch types.Epoch) 
 	return helpers.ActiveValidatorIndices(ctx, s.headState(ctx), epoch)
 }
 
-// HeadSeed returns the seed from the head view of a given epoch.
-func (s *Service) HeadSeed(ctx context.Context, epoch types.Epoch) ([32]byte, error) {
-	s.headLock.RLock()
-	defer s.headLock.RUnlock()
-
-	if !s.hasHeadState() {
-		return [32]byte{}, nil
-	}
-
-	return helpers.Seed(s.headState(ctx), epoch, params.BeaconConfig().DomainBeaconAttester)
-}
-
 // HeadGenesisValidatorsRoot returns genesis validators root of the head state.
 func (s *Service) HeadGenesisValidatorsRoot() [32]byte {
 	s.headLock.RLock()
@@ -273,13 +260,13 @@ func (s *Service) CurrentFork() *ethpb.Fork {
 
 // IsCanonical returns true if the input block root is part of the canonical chain.
 func (s *Service) IsCanonical(ctx context.Context, blockRoot [32]byte) (bool, error) {
-	// If the block has been finalized, the block will always be part of the canonical chain.
-	if s.cfg.BeaconDB.IsFinalizedBlock(ctx, blockRoot) {
-		return true, nil
+	// If the block has not been finalized, check fork choice store to see if the block is canonical
+	if s.cfg.ForkChoiceStore.HasNode(blockRoot) {
+		return s.cfg.ForkChoiceStore.IsCanonical(blockRoot), nil
 	}
 
-	// If the block has not been finalized, check fork choice store to see if the block is canonical
-	return s.cfg.ForkChoiceStore.IsCanonical(blockRoot), nil
+	// If the block has been finalized, the block will always be part of the canonical chain.
+	return s.cfg.BeaconDB.IsFinalizedBlock(ctx, blockRoot), nil
 }
 
 // ChainHeads returns all possible chain heads (leaves of fork choice tree).
@@ -328,10 +315,10 @@ func (s *Service) IsOptimistic(ctx context.Context) (bool, error) {
 	return s.IsOptimisticForRoot(ctx, s.head.root)
 }
 
-// IsOptimisticForRoot takes the root and slot as aguments instead of the current head
+// IsOptimisticForRoot takes the root and slot as arguments instead of the current head
 // and returns true if it is optimistic.
 func (s *Service) IsOptimisticForRoot(ctx context.Context, root [32]byte) (bool, error) {
-	optimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(ctx, root)
+	optimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(root)
 	if err == nil {
 		return optimistic, nil
 	}
@@ -358,11 +345,26 @@ func (s *Service) IsOptimisticForRoot(ctx context.Context, root [32]byte) (bool,
 		return false, nil
 	}
 
-	lastValidated, err := s.cfg.BeaconDB.StateSummary(ctx, bytesutil.ToBytes32(validatedCheckpoint.Root))
+	// checkpoint root could be zeros before the first finalized epoch. Use genesis root if the case.
+	lastValidated, err := s.cfg.BeaconDB.StateSummary(ctx, s.ensureRootNotZeros(bytesutil.ToBytes32(validatedCheckpoint.Root)))
 	if err != nil {
 		return false, err
 	}
-	return ss.Slot > lastValidated.Slot, nil
+	if lastValidated == nil {
+		return false, errInvalidNilSummary
+	}
+
+	if ss.Slot > lastValidated.Slot {
+		return true, nil
+	}
+
+	isCanonical, err := s.IsCanonical(ctx, root)
+	if err != nil {
+		return false, err
+	}
+
+	// historical non-canonical blocks here are returned as optimistic for safety.
+	return !isCanonical, nil
 }
 
 // SetGenesisTime sets the genesis time of beacon chain.

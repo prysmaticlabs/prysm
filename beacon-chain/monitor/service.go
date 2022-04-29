@@ -6,7 +6,6 @@ import (
 	"sort"
 	"sync"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -15,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 )
@@ -95,6 +95,7 @@ func NewService(ctx context.Context, config *ValidatorMonitorConfig, tracked []t
 		latestPerformance:           make(map[types.ValidatorIndex]ValidatorLatestPerformance),
 		aggregatedPerformance:       make(map[types.ValidatorIndex]ValidatorAggregatedPerformance),
 		trackedSyncCommitteeIndices: make(map[types.ValidatorIndex][]types.CommitteeIndex),
+		isLogging:                   false,
 	}
 	for _, idx := range tracked {
 		r.TrackedValidators[idx] = true
@@ -117,7 +118,6 @@ func (s *Service) Start() {
 		"ValidatorIndices": tracked,
 	}).Info("Starting service")
 
-	s.isLogging = false
 	stateChannel := make(chan *feed.Event, 1)
 	stateSub := s.config.StateNotifier.StateFeed().Subscribe(stateChannel)
 

@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"go.opencensus.io/trace"
 )
 
@@ -96,7 +96,7 @@ func (s *Store) head(ctx context.Context, justifiedRoot [32]byte) ([32]byte, err
 // It then updates the new node's parent with best child and descendant node.
 func (s *Store) insert(ctx context.Context,
 	slot types.Slot,
-	root, parentRoot [fieldparams.RootLength]byte,
+	root, parentRoot, payloadHash [fieldparams.RootLength]byte,
 	justifiedEpoch, finalizedEpoch types.Epoch) error {
 	_, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.insert")
 	defer span.End()
@@ -118,8 +118,10 @@ func (s *Store) insert(ctx context.Context,
 		justifiedEpoch: justifiedEpoch,
 		finalizedEpoch: finalizedEpoch,
 		optimistic:     true,
+		payloadHash:    payloadHash,
 	}
 
+	s.nodeByPayload[payloadHash] = n
 	s.nodeByRoot[root] = n
 	if parent != nil {
 		parent.children = append(parent.children, n)

@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"regexp"
 	"strings"
@@ -175,7 +174,11 @@ func main() {
 					blkRoot,
 					preStateRoot,
 				)
-				postState, err := transition.ExecuteStateTransition(context.Background(), stateObj, wrapper.WrappedPhase0SignedBeaconBlock(block))
+				wsb, err := wrapper.WrappedSignedBeaconBlock(block)
+				if err != nil {
+					log.Fatal(err)
+				}
+				postState, err := transition.ExecuteStateTransition(context.Background(), stateObj, wsb)
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -208,7 +211,7 @@ func main() {
 
 // dataFetcher fetches and unmarshals data from file to provided data structure.
 func dataFetcher(fPath string, data fssz.Unmarshaler) error {
-	rawFile, err := ioutil.ReadFile(fPath) // #nosec G304
+	rawFile, err := os.ReadFile(fPath) // #nosec G304
 	if err != nil {
 		return err
 	}

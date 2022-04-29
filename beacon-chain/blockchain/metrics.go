@@ -6,11 +6,11 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
@@ -137,6 +137,26 @@ var (
 	stateBalanceCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "state_balance_cache_miss",
 		Help: "Count the number of state balance cache hits.",
+	})
+	newPayloadValidNodeCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "new_payload_valid_node_count",
+		Help: "Count the number of valid nodes after newPayload EE call",
+	})
+	newPayloadOptimisticNodeCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "new_payload_optimistic_node_count",
+		Help: "Count the number of optimistic nodes after newPayload EE call",
+	})
+	newPayloadInvalidNodeCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "new_payload_invalid_node_count",
+		Help: "Count the number of invalid nodes after newPayload EE call",
+	})
+	forkchoiceUpdatedValidNodeCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "forkchoice_updated_valid_node_count",
+		Help: "Count the number of valid nodes after forkchoiceUpdated EE call",
+	})
+	forkchoiceUpdatedOptimisticNodeCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "forkchoice_updated_optimistic_node_count",
+		Help: "Count the number of optimistic nodes after forkchoiceUpdated EE call",
 	})
 )
 

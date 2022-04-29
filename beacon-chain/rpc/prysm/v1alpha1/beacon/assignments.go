@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"strconv"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/api/pagination"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/cmd"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/time/slots"
@@ -59,7 +59,7 @@ func (bs *Server) ListValidatorAssignments(
 	if err != nil {
 		return nil, err
 	}
-	requestedState, err := bs.ReplayerBuilder.ForSlot(startSlot).ReplayBlocks(ctx)
+	requestedState, err := bs.ReplayerBuilder.ReplayerForSlot(startSlot).ReplayBlocks(ctx)
 	if err != nil {
 		msg := fmt.Sprintf("could not replay all blocks from the closest stored state (at slot %d) "+
 			"to the requested epoch (%d) - %v", startSlot, requestedEpoch, err)

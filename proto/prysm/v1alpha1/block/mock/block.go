@@ -2,7 +2,7 @@ package mock
 
 import (
 	ssz "github.com/ferranbt/fastssz"
-	types "github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
@@ -47,6 +47,10 @@ func (SignedBeaconBlock) PbAltairBlock() (*eth.SignedBeaconBlockAltair, error) {
 }
 
 func (SignedBeaconBlock) PbBellatrixBlock() (*eth.SignedBeaconBlockBellatrix, error) {
+	panic("implement me")
+}
+
+func (SignedBeaconBlock) PbBlindedBellatrixBlock() (*eth.SignedBlindedBeaconBlockBellatrix, error) {
 	panic("implement me")
 }
 
@@ -110,6 +114,10 @@ func (m BeaconBlock) Body() block.BeaconBlockBody {
 }
 
 func (BeaconBlock) IsNil() bool {
+	return false
+}
+
+func (BeaconBlock) IsBlinded() bool {
 	return false
 }
 
@@ -192,6 +200,10 @@ func (BeaconBlockBody) Proto() proto.Message {
 }
 
 func (BeaconBlockBody) ExecutionPayload() (*enginev1.ExecutionPayload, error) {
+	panic("implement me")
+}
+
+func (BeaconBlockBody) ExecutionPayloadHeader() (*eth.ExecutionPayloadHeader, error) {
 	panic("implement me")
 }
 

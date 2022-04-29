@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"github.com/prysmaticlabs/prysm/async/event"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -11,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
-	enginev1 "github.com/prysmaticlabs/prysm/beacon-chain/powchain/engine-api-client/v1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -52,7 +52,7 @@ func WithChainStartFetcher(f powchain.ChainStartFetcher) Option {
 }
 
 // WithExecutionEngineCaller to call execution engine.
-func WithExecutionEngineCaller(c enginev1.Caller) Option {
+func WithExecutionEngineCaller(c powchain.EngineCaller) Option {
 	return func(s *Service) error {
 		s.cfg.ExecutionEngineCaller = c
 		return nil
@@ -63,6 +63,14 @@ func WithExecutionEngineCaller(c enginev1.Caller) Option {
 func WithDepositCache(c *depositcache.DepositCache) Option {
 	return func(s *Service) error {
 		s.cfg.DepositCache = c
+		return nil
+	}
+}
+
+// WithProposerIdsCache for proposer id cache.
+func WithProposerIdsCache(c *cache.ProposerPayloadIDsCache) Option {
+	return func(s *Service) error {
+		s.cfg.ProposerSlotIndexCache = c
 		return nil
 	}
 }

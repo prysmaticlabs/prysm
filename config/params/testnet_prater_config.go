@@ -45,5 +45,6 @@ func PraterConfig() *BeaconChainConfig {
 	cfg.BellatrixForkVersion = []byte{0x2, 0x0, 0x10, 0x20}
 	cfg.TerminalTotalDifficulty = "4294967296"
 	cfg.DepositContractAddress = "0xff50ed3d0ec03aC01D4C79aAd74928BFF48a7b2b"
+	cfg.InitializeForkSchedule()
 	return cfg
 }

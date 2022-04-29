@@ -2,8 +2,6 @@ package v2
 
 import (
 	"context"
-	"io"
-	"io/ioutil"
 	"runtime"
 	"sort"
 
@@ -13,7 +11,6 @@ import (
 	customtypes "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/custom-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/types"
-	"github.com/prysmaticlabs/prysm/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/container/slice"
@@ -28,27 +25,6 @@ import (
 // InitializeFromProto the beacon state from a protobuf representation.
 func InitializeFromProto(st *ethpb.BeaconStateAltair) (state.BeaconStateAltair, error) {
 	return InitializeFromProtoUnsafe(proto.Clone(st).(*ethpb.BeaconStateAltair))
-}
-
-// InitializeFromSSZReader can be used when the source for a serialized BeaconState object
-// is an io.Reader. This allows client code to remain agnostic about whether the data comes
-// from the network or a file without needing to read the entire state into mem as a large byte slice.
-func InitializeFromSSZReader(r io.Reader) (state.BeaconStateAltair, error) {
-	b, err := ioutil.ReadAll(r)
-	if err != nil {
-		return nil, err
-	}
-	return InitializeFromSSZBytes(b)
-}
-
-// InitializeFromSSZBytes is a convenience method to obtain a BeaconState by unmarshaling
-// a slice of bytes containing the ssz-serialized representation of the state.
-func InitializeFromSSZBytes(marshaled []byte) (*BeaconState, error) {
-	st := &ethpb.BeaconStateAltair{}
-	if err := st.UnmarshalSSZ(marshaled); err != nil {
-		return nil, err
-	}
-	return InitializeFromProtoUnsafe(st)
 }
 
 // InitializeFromProtoUnsafe directly uses the beacon state protobuf fields
@@ -402,21 +378,18 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 		}
 		return b.recomputeFieldTrie(validators, b.validators)
 	case balances:
-		if features.Get().EnableBalanceTrieComputation {
-			if b.rebuildTrie[field] {
-				maxBalCap := uint64(fieldparams.ValidatorRegistryLimit)
-				elemSize := uint64(8)
-				balLimit := (maxBalCap*elemSize + 31) / 32
-				err := b.resetFieldTrie(field, b.balances, balLimit)
-				if err != nil {
-					return [32]byte{}, err
-				}
-				delete(b.rebuildTrie, field)
-				return b.stateFieldLeaves[field].TrieRoot()
+		if b.rebuildTrie[field] {
+			maxBalCap := uint64(fieldparams.ValidatorRegistryLimit)
+			elemSize := uint64(8)
+			balLimit := (maxBalCap*elemSize + 31) / 32
+			err := b.resetFieldTrie(field, b.balances, balLimit)
+			if err != nil {
+				return [32]byte{}, err
 			}
-			return b.recomputeFieldTrie(balances, b.balances)
+			delete(b.rebuildTrie, field)
+			return b.stateFieldLeaves[field].TrieRoot()
 		}
-		return stateutil.Uint64ListRootWithRegistryLimit(b.balances)
+		return b.recomputeFieldTrie(balances, b.balances)
 	case randaoMixes:
 		if b.rebuildTrie[field] {
 			err := b.resetFieldTrie(field, b.randaoMixes, fieldparams.RandaoMixesLength)

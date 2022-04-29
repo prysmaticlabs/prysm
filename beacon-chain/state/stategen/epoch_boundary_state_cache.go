@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"sync"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -149,6 +149,15 @@ func (e *epochBoundaryState) put(r [32]byte, s state.BeaconState) error {
 	trim(e.slotRootCache, maxCacheSize)
 
 	return nil
+}
+
+// delete the state from the epoch boundary state cache.
+func (e *epochBoundaryState) delete(r [32]byte) error {
+	e.lock.Lock()
+	defer e.lock.Unlock()
+	return e.rootStateCache.Delete(&rootStateInfo{
+		root: r,
+	})
 }
 
 // trim the FIFO queue to the maxSize.

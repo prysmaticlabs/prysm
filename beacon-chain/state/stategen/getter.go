@@ -4,14 +4,16 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"go.opencensus.io/trace"
 )
+
+var ErrNoDataForSlot = errors.New("cannot retrieve data for slot")
 
 // HasState returns true if the state exists in cache or in DB.
 func (s *State) HasState(ctx context.Context, blockRoot [32]byte) (bool, error) {
@@ -37,7 +39,7 @@ func (s *State) HasStateInCache(ctx context.Context, blockRoot [32]byte) (bool, 
 	return has, nil
 }
 
-// StateByRootIfCached retrieves a state using the input block root only if the state is already in the cache
+// StateByRootIfCachedNoCopy retrieves a state using the input block root only if the state is already in the cache
 func (s *State) StateByRootIfCachedNoCopy(blockRoot [32]byte) state.BeaconState {
 	if !s.hotStateCache.has(blockRoot) {
 		return nil
@@ -111,14 +113,6 @@ func (s *State) StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) 
 	return startState, nil
 }
 
-// StateBySlot retrieves the state using input slot.
-func (s *State) StateBySlot(ctx context.Context, slot types.Slot) (state.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "stateGen.StateBySlot")
-	defer span.End()
-
-	return s.loadStateBySlot(ctx, slot)
-}
-
 // This returns the state summary object of a given block root, it first checks the cache
 // then checks the DB. An error is returned if state summary object is nil.
 func (s *State) stateSummary(ctx context.Context, blockRoot [32]byte) (*ethpb.StateSummary, error) {
@@ -150,6 +144,12 @@ func (s *State) RecoverStateSummary(ctx context.Context, blockRoot [32]byte) (*e
 		return summary, nil
 	}
 	return nil, errors.New("could not find block in DB")
+}
+
+// DeleteStateFromCaches deletes the state from the caches.
+func (s *State) DeleteStateFromCaches(_ context.Context, blockRoot [32]byte) error {
+	s.hotStateCache.delete(blockRoot)
+	return s.epochBoundaryStateCache.delete(blockRoot)
 }
 
 // This loads a beacon state from either the cache or DB then replay blocks up the requested block root.
@@ -208,36 +208,6 @@ func (s *State) loadStateByRoot(ctx context.Context, blockRoot [32]byte) (state.
 	return s.ReplayBlocks(ctx, startState, blks, targetSlot)
 }
 
-// This loads a state by slot.
-func (s *State) loadStateBySlot(ctx context.Context, slot types.Slot) (state.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "stateGen.loadStateBySlot")
-	defer span.End()
-
-	// Return genesis state if slot is 0.
-	if slot == 0 {
-		return s.beaconDB.GenesisState(ctx)
-	}
-
-	// Gather the last saved block root and the slot number.
-	lastValidRoot, lastValidSlot, err := s.lastSavedBlock(ctx, slot)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get last valid block for hot state using slot")
-	}
-
-	replayStartState, err := s.loadStateByRoot(ctx, lastValidRoot)
-	if err != nil {
-		return nil, err
-	}
-
-	if lastValidSlot < slot {
-		replayStartState, err = ReplayProcessSlots(ctx, replayStartState, slot)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return replayStartState, nil
-}
-
 // This returns the highest available ancestor state of the input block root.
 // It recursively look up block's parent until a corresponding state of the block root
 // is found in the caches or DB.
@@ -266,12 +236,18 @@ func (s *State) LastAncestorState(ctx context.Context, root [32]byte) (state.Bea
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
+
 		// Is the state a genesis state.
 		parentRoot := bytesutil.ToBytes32(b.Block().ParentRoot())
 		if parentRoot == params.BeaconConfig().ZeroHash {
 			return s.beaconDB.GenesisState(ctx)
 		}
 
+		// return an error if slot hasn't been covered by checkpoint sync backfill
+		ps := b.Block().Slot() - 1
+		if !s.slotAvailable(ps) {
+			return nil, errors.Wrapf(ErrNoDataForSlot, "slot %d not in db due to checkpoint sync", ps)
+		}
 		// Does the state exist in the hot state cache.
 		if s.hotStateCache.has(parentRoot) {
 			return s.hotStateCache.get(parentRoot), nil
@@ -314,4 +290,12 @@ func (s *State) CombinedCache() *CombinedCache {
 		getters = append(getters, s.epochBoundaryStateCache)
 	}
 	return &CombinedCache{getters: getters}
+}
+
+func (s *State) slotAvailable(slot types.Slot) bool {
+	// default to assuming node was initialized from genesis - backfill only needs to be specified for checkpoint sync
+	if s.backfillStatus == nil {
+		return true
+	}
+	return s.backfillStatus.SlotCovered(slot)
 }

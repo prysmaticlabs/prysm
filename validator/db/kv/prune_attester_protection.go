@@ -3,8 +3,8 @@ package kv
 import (
 	"context"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"

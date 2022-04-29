@@ -27,7 +27,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -55,7 +55,7 @@ type Keystore struct {
 // GetKey from file using the filename path and a decryption password.
 func (_ Keystore) GetKey(filename, password string) (*Key, error) {
 	// Load the key from the keystore and decrypt its contents
-	keyJSON, err := ioutil.ReadFile(filename) // #nosec G304 -- ReadFile is safe
+	keyJSON, err := os.ReadFile(filename) // #nosec G304 -- ReadFile is safe
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +67,7 @@ func (_ Keystore) GetKey(filename, password string) (*Key, error) {
 func (_ Keystore) GetKeys(directory, filePrefix, password string, warnOnFail bool) (map[string]*Key, error) {
 	// Load the key from the keystore and decrypt its contents
 	// #nosec G304
-	files, err := ioutil.ReadDir(directory)
+	files, err := os.ReadDir(directory)
 	if err != nil {
 		return nil, err
 	}
@@ -76,19 +76,21 @@ func (_ Keystore) GetKeys(directory, filePrefix, password string, warnOnFail boo
 		n := f.Name()
 		filePath := filepath.Join(directory, n)
 		filePath = filepath.Clean(filePath)
-		if f.Mode()&os.ModeSymlink == os.ModeSymlink {
+		if f.Type()&os.ModeSymlink == os.ModeSymlink {
 			if targetFilePath, err := filepath.EvalSymlinks(filePath); err == nil {
 				filePath = targetFilePath
 				// Override link stats with target file's stats.
-				if f, err = os.Stat(filePath); err != nil {
+				dirEntry, err := os.Stat(filePath)
+				if err != nil {
 					return nil, err
 				}
+				f = fs.FileInfoToDirEntry(dirEntry)
 			}
 		}
 		cp := strings.Contains(n, strings.TrimPrefix(filePrefix, "/"))
-		if f.Mode().IsRegular() && cp {
+		if f.Type().IsRegular() && cp {
 			// #nosec G304
-			keyJSON, err := ioutil.ReadFile(filePath)
+			keyJSON, err := os.ReadFile(filePath)
 			if err != nil {
 				return nil, err
 			}

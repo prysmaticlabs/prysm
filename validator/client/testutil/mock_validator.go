@@ -5,8 +5,8 @@ import (
 	"context"
 	"time"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"github.com/prysmaticlabs/prysm/validator/client/iface"
@@ -245,4 +245,14 @@ func (fv *FakeValidator) HandleKeyReload(_ context.Context, newKeys [][fieldpara
 
 // SubmitSignedContributionAndProof for mocking
 func (_ *FakeValidator) SubmitSignedContributionAndProof(_ context.Context, _ types.Slot, _ [fieldparams.BLSPubkeyLength]byte) {
+}
+
+// UpdateFeeRecipient for mocking
+func (_ *FakeValidator) UpdateFeeRecipient(_ context.Context, _ keymanager.IKeymanager) error {
+	return nil
+}
+
+// SetPubKeyToValidatorIndexMap for mocking
+func (_ *FakeValidator) SetPubKeyToValidatorIndexMap(_ context.Context, _ keymanager.IKeymanager) error {
+	return nil
 }
