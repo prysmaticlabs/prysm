@@ -140,6 +140,9 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 	finalizedErr := "could not get finalized checkpoint"
 	require.LogsDoNotContain(t, hook, finalizedErr)
 	require.LogsDoNotContain(t, hook, hookErr)
+	gb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+	require.NoError(t, err)
+	service.saveInitSyncBlock([32]byte{'a'}, gb)
 	service.notifyEngineIfChangedHead(ctx, [32]byte{'a'})
 	require.LogsContain(t, hook, finalizedErr)
 
@@ -149,15 +152,38 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 		block: nil, /* should not panic if notify head uses correct head */
 	}
 
+	// Block in Cache
 	b := util.NewBeaconBlock()
 	b.Block.Slot = 2
 	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
 	r1, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
+	service.saveInitSyncBlock(r1, wsb)
 	finalized := &ethpb.Checkpoint{Root: r1[:], Epoch: 0}
 	st, _ := util.DeterministicGenesisState(t, 1)
+	service.head = &head{
+		slot:  1,
+		root:  r1,
+		block: wsb,
+		state: st,
+	}
+	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(2, 1, [8]byte{1})
+	service.store.SetFinalizedCheckpt(finalized)
+	service.notifyEngineIfChangedHead(ctx, r1)
+	require.LogsDoNotContain(t, hook, finalizedErr)
+	require.LogsDoNotContain(t, hook, hookErr)
+
+	// Block in DB
+	b = util.NewBeaconBlock()
+	b.Block.Slot = 3
+	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
+	r1, err = b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	finalized = &ethpb.Checkpoint{Root: r1[:], Epoch: 0}
+	st, _ = util.DeterministicGenesisState(t, 1)
 	service.head = &head{
 		slot:  1,
 		root:  r1,
