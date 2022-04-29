@@ -29,10 +29,10 @@ option php_namespace = "Ethereum\\Eth\\v1";
 // The Ethereum consensus beacon block. The message does not contain a validator signature.
 message BeaconBlock {
     // Beacon chain slot that this block represents.
-    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
+    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"];
 
     // Validator index of the validator that proposed the block header.
-    uint64 proposer_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.ValidatorIndex"];
+    uint64 proposer_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.ValidatorIndex"];
 
     // 32 byte root of the parent block.
     bytes parent_root = 3 [(ethereum.eth.ext.ssz_size) = "32"];
@@ -132,10 +132,10 @@ message Deposit {
 // validator signature.
 message VoluntaryExit {
     // The epoch on when exit request becomes valid.
-    uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Epoch"];
+    uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch"];
 
     // Index of the exiting validator.
-    uint64 validator_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.ValidatorIndex"];
+    uint64 validator_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.ValidatorIndex"];
 }
 
 // The signed version of voluntary exit.
@@ -168,10 +168,10 @@ message Eth1Data {
 // a validator signature.
 message BeaconBlockHeader {
     // Beacon chain slot that this block represents.
-    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
+    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"];
 
     // Validator index of the validator that proposed the block header.
-    uint64 proposer_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.ValidatorIndex"];
+    uint64 proposer_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.ValidatorIndex"];
 
     // 32 byte merkle tree root of the parent ssz encoded block.
     bytes parent_root = 3 [(ethereum.eth.ext.ssz_size) = "32"];

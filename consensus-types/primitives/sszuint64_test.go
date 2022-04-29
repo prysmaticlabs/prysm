@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	types "github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 )
 
 func TestSSZUint64_Limit(t *testing.T) {

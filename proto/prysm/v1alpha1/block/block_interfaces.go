@@ -2,7 +2,7 @@ package block
 
 import (
 	ssz "github.com/ferranbt/fastssz"
-	types "github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"

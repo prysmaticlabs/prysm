@@ -28,10 +28,10 @@ option php_namespace = "Ethereum\\Eth\\v2";
 
 message SyncCommitteeDutiesRequest {
   // Must fulfill: epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD <= current_epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD + 1
-  uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Epoch"];
+  uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch"];
 
   // Validator indices to request duties for.
-  repeated uint64 index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.ValidatorIndex"];
+  repeated uint64 index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.ValidatorIndex"];
 }
 
 message SyncCommitteeDutiesResponse {
@@ -44,7 +44,7 @@ message SyncCommitteeDuty {
   bytes pubkey = 1 [(ethereum.eth.ext.ssz_size) = "48"];
 
   // Index of validator in validator registry.
-  uint64 validator_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.ValidatorIndex"];
+  uint64 validator_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.ValidatorIndex"];
 
   // The indices of the validator in the sync committee.
   repeated uint64 validator_sync_committee_indices = 3;
@@ -66,18 +66,18 @@ message SubmitSyncCommitteeSubscriptionsRequest {
 
 message SyncCommitteeSubscription {
   // The validator index to subscribe for.
-  uint64 validator_index = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.ValidatorIndex"];
+  uint64 validator_index = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.ValidatorIndex"];
 
   // The sync committee indices to be subscribed to.
   repeated uint64 sync_committee_indices = 2;
 
   // The final epoch (exclusive value) that the specified validator requires the subscription for.
-  uint64 until_epoch = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Epoch"];
+  uint64 until_epoch = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch"];
 }
 
 message ProduceSyncCommitteeContributionRequest {
   // The slot for which a sync committee contribution should be created.
-  uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
+  uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"];
 
   // The subcommittee index for which to produce the contribution.
   uint64 subcommittee_index = 2;
@@ -93,7 +93,7 @@ message ProduceSyncCommitteeContributionResponse {
 // Aggregated sync committee object to support light client.
 message SyncCommitteeContribution {
   // Slot to which this contribution pertains.
-  uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
+  uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"];
 
   // 32 byte block root for this signature.
   bytes beacon_block_root = 2 [(ethereum.eth.ext.ssz_size) = "32"];
@@ -116,7 +116,7 @@ message SubmitContributionAndProofsRequest {
 // Aggregated sync committee signature object with selection proof to support light client.
 message ContributionAndProof {
   // Index of the aggregator that produced this proof.
-  uint64 aggregator_index = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.ValidatorIndex"];
+  uint64 aggregator_index = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.ValidatorIndex"];
 
   SyncCommitteeContribution contribution = 2;
 

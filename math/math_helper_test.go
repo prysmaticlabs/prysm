@@ -5,7 +5,6 @@ import (
 	stdmath "math"
 	"testing"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/math"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
@@ -143,7 +142,7 @@ func TestMath_Mod(t *testing.T) {
 		{args: args{1<<63 + 1, 2}, res: 1},
 	}
 	for _, tt := range tests {
-		got, err := types.Mod64(tt.args.a, tt.args.b)
+		got, err := math.Mod64(tt.args.a, tt.args.b)
 		if tt.err && err == nil {
 			t.Errorf("Mod64() Expected Error = %v, want error", tt.err)
 			continue

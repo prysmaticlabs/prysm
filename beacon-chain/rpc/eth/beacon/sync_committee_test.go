@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	types "github.com/prysmaticlabs/eth2-types"
 	grpcutil "github.com/prysmaticlabs/prysm/api/grpc"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -19,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/testutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"

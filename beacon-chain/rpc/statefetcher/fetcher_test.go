@@ -10,11 +10,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	types "github.com/prysmaticlabs/eth2-types"
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockstategen "github.com/prysmaticlabs/prysm/beacon-chain/state/stategen/mock"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
