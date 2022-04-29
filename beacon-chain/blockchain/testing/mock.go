@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -22,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
@@ -301,11 +301,6 @@ func (_ *ChainService) ReceiveAttestation(_ context.Context, _ *ethpb.Attestatio
 	return nil
 }
 
-// ReceiveAttestationNoPubsub mocks ReceiveAttestationNoPubsub method in chain service.
-func (_ *ChainService) ReceiveAttestationNoPubsub(context.Context, *ethpb.Attestation) error {
-	return nil
-}
-
 // AttestationTargetState mocks AttestationTargetState method in chain service.
 func (s *ChainService) AttestationTargetState(_ context.Context, _ *ethpb.Checkpoint) (state.BeaconState, error) {
 	return s.State, nil
@@ -317,11 +312,6 @@ func (s *ChainService) HeadValidatorsIndices(ctx context.Context, epoch types.Ep
 		return []types.ValidatorIndex{}, nil
 	}
 	return helpers.ActiveValidatorIndices(ctx, s.State, epoch)
-}
-
-// HeadSeed mocks the same method in the chain service.
-func (s *ChainService) HeadSeed(_ context.Context, epoch types.Epoch) ([32]byte, error) {
-	return helpers.Seed(s.State, epoch, params.BeaconConfig().DomainBeaconAttester)
 }
 
 // HeadETH1Data provides the current ETH1Data of the head state.
@@ -381,7 +371,7 @@ func (_ *ChainService) HeadGenesisValidatorsRoot() [32]byte {
 }
 
 // VerifyBlkDescendant mocks VerifyBlkDescendant and always returns nil.
-func (s *ChainService) VerifyBlkDescendant(_ context.Context, _ [32]byte) error {
+func (s *ChainService) VerifyFinalizedBlkDescendant(_ context.Context, _ [32]byte) error {
 	return s.VerifyBlkDescendantErr
 }
 

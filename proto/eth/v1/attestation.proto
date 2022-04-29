@@ -38,7 +38,7 @@ message Attestation {
 
 message AggregateAttestationAndProof {
     // The aggregator index that submitted this aggregated attestation and proof.
-    uint64 aggregator_index = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.ValidatorIndex"];
+    uint64 aggregator_index = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.ValidatorIndex"];
 
     // The aggregated attestation that was submitted.
     Attestation aggregate = 3;
@@ -60,10 +60,10 @@ message AttestationData {
     // See: https://arxiv.org/pdf/1710.09437.pdf
 
     // Slot of the attestation attesting for.
-    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
+    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"];
 
     // The committee index that submitted this attestation.
-    uint64 index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.CommitteeIndex"];
+    uint64 index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.CommitteeIndex"];
 
     // 32 byte root of the LMD GHOST block vote.
     bytes beacon_block_root = 3 [(ethereum.eth.ext.ssz_size) = "32"];
@@ -80,7 +80,7 @@ message Checkpoint {
     // is to link the check points together for justification and finalization.
 
     // Epoch the checkpoint references.
-    uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Epoch"];
+    uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch"];
 
     // Block root of the checkpoint references.
     bytes root = 2 [(ethereum.eth.ext.ssz_size) = "32"];

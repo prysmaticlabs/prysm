@@ -6,10 +6,10 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	mathutil "github.com/prysmaticlabs/prysm/math"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
@@ -70,7 +70,7 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b block.BeaconBlock) er
 		return errors.New("could not reconstruct parent state")
 	}
 
-	if err := s.VerifyBlkDescendant(ctx, bytesutil.ToBytes32(b.ParentRoot())); err != nil {
+	if err := s.VerifyFinalizedBlkDescendant(ctx, bytesutil.ToBytes32(b.ParentRoot())); err != nil {
 		return err
 	}
 
@@ -87,10 +87,10 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b block.BeaconBlock) er
 	return nil
 }
 
-// VerifyBlkDescendant validates input block root is a descendant of the
+// VerifyFinalizedBlkDescendant validates if input block root is a descendant of the
 // current finalized block root.
-func (s *Service) VerifyBlkDescendant(ctx context.Context, root [32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "blockChain.VerifyBlkDescendant")
+func (s *Service) VerifyFinalizedBlkDescendant(ctx context.Context, root [32]byte) error {
+	ctx, span := trace.StartSpan(ctx, "blockChain.VerifyFinalizedBlkDescendant")
 	defer span.End()
 	finalized := s.store.FinalizedCheckpt()
 	if finalized == nil {
@@ -317,17 +317,9 @@ func (s *Service) ancestorByDB(ctx context.Context, r [32]byte, slot types.Slot)
 		return nil, ctx.Err()
 	}
 
-	signed, err := s.cfg.BeaconDB.Block(ctx, r)
+	signed, err := s.getBlock(ctx, r)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get ancestor block")
-	}
-
-	if s.hasInitSyncBlock(r) {
-		signed = s.getInitSyncBlock(r)
-	}
-
-	if signed == nil || signed.IsNil() || signed.Block().IsNil() {
-		return nil, errors.New("nil block")
+		return nil, err
 	}
 	b := signed.Block()
 	if b.Slot() == slot || b.Slot() < slot {

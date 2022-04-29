@@ -6,9 +6,9 @@ import (
 
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/patrickmn/go-cache"
-	types "github.com/prysmaticlabs/eth2-types"
 	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/container/slice"
 )
 

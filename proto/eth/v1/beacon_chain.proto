@@ -113,7 +113,7 @@ message ValidatorBalancesResponse {
 
 message ValidatorBalance {
     // The index of the validator the retrieved balance is for.
-    uint64 index = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.ValidatorIndex"];
+    uint64 index = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.ValidatorIndex"];
 
     // The balance of the requested validator.
     uint64 balance = 2;
@@ -139,13 +139,13 @@ message StateCommitteesRequest {
     bytes state_id = 1;
 
     // The epoch to retrieve the committees of.
-    optional uint64 epoch = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Epoch"];
+    optional uint64 epoch = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch"];
 
     // Committee index requested.
-    optional uint64 index = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.CommitteeIndex"];
+    optional uint64 index = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.CommitteeIndex"];
 
     // Committee slot requested.
-    optional uint64 slot = 4 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
+    optional uint64 slot = 4 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"];
 }
 
 message StateCommitteesResponse {
@@ -172,7 +172,7 @@ message BlockRootResponse {
 
 message BlockHeadersRequest {
     // Beacon chain slot of the requested block.
-    optional uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
+    optional uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"];
 
     // 32 byte merkle tree root of the ssz encoded parent block.
     optional bytes parent_root = 2 [(ethereum.eth.ext.ssz_size) = "32"];
@@ -231,8 +231,8 @@ message BeaconBlockContainer {
 // Beacon Pool related API service.
 
 message AttestationsPoolRequest {
-    optional uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
-    optional uint64 committee_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.CommitteeIndex"];
+    optional uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"];
+    optional uint64 committee_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.CommitteeIndex"];
 }
 
 message SubmitAttestationsRequest {

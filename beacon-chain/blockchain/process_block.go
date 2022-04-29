@@ -121,14 +121,6 @@ func (s *Service) onBlock(ctx context.Context, signed block.SignedBeaconBlock, b
 		if err := s.validateMergeTransitionBlock(ctx, preStateVersion, preStateHeader, signed); err != nil {
 			return err
 		}
-	} else {
-		candidate, err := s.optimisticCandidateBlock(ctx, b)
-		if err != nil {
-			return errors.Wrap(err, "could not check if block is optimistic candidate")
-		}
-		if !candidate {
-			return errNotOptimisticCandidate
-		}
 	}
 
 	if err := s.insertBlockAndAttestationsToForkChoiceStore(ctx, signed.Block(), blockRoot, postState); err != nil {
@@ -420,14 +412,6 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []block.SignedBeaconBlo
 			if err := s.validateMergeTransitionBlock(ctx, preVersionAndHeaders[i].version,
 				preVersionAndHeaders[i].header, b); err != nil {
 				return nil, nil, err
-			}
-		} else {
-			candidate, err := s.optimisticCandidateBlock(ctx, b.Block())
-			if err != nil {
-				return nil, nil, errors.Wrap(err, "could not check if block is optimistic candidate")
-			}
-			if !candidate {
-				return nil, nil, errNotOptimisticCandidate
 			}
 		}
 

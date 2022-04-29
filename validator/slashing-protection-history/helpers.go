@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/k0kubun/go-ansi"
-	types "github.com/prysmaticlabs/eth2-types"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/schollz/progressbar/v3"
 )
 

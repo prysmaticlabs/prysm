@@ -68,11 +68,14 @@ var Commands = &cli.Command{
 				if err := cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags); err != nil {
 					return err
 				}
-				return tos.VerifyTosAcceptedOrPrompt(cliCtx)
+				if err := tos.VerifyTosAcceptedOrPrompt(cliCtx); err != nil {
+					return err
+				}
+				features.ConfigureValidator(cliCtx)
+				return nil
 			},
 			Action: func(cliCtx *cli.Context) error {
-				features.ConfigureValidator(cliCtx)
-				if err := accounts.ListAccountsCli(cliCtx); err != nil {
+				if err := accountsList(cliCtx); err != nil {
 					log.Fatalf("Could not list accounts: %v", err)
 				}
 				return nil
