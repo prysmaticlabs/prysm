@@ -115,8 +115,19 @@ function get_prysm_version() {
         readonly prysm_version="${USE_PRYSM_VERSION}"
     else
         # Find the latest Prysm version available for download.
+        local process=${1}
+        local modern=""
+        if [ "${USE_PRYSM_MODERN:=false}" = "true" ] &&  [ "${process}" = "beacon-chain" ]; then
+          # inject modern string in the binary file name
+          modern="-modern"
+        fi
         readonly reason="automatically selected latest available version"
-        prysm_version=$(curl -f -s https://prysmaticlabs.com/releases/latest) || (color "31" "Starting prysm requires an internet connection. If you are being blocked by your antivirus, you can download the beacon chain and validator executables from our releases page on Github here https://github.com/prysmaticlabs/prysm/releases/" && exit 1)
+        prysm_version=$(curl -f -s https://prysmaticlabs.com/releases/latest) || (color "33" "Could not retrieve latest available prysm version. Please, verify your internet connection. If you are being blocked by your antivirus, you can download the beacon chain and validator executables from our releases page on Github here https://github.com/prysmaticlabs/prysm/releases/")
+        if [[ -z "${prysm_version}" ]]; then
+            color "33" "Will attempt to use the highest previously stable downloaded prysm binary for '${process}'"
+            prysm_version=$(find "${wrapper_dir}" -type f -executable | sed -n -E "s;${wrapper_dir}/${process}-(v[0-9]+\.[0-9]+\.[0-9]+)${modern}-${system}-${arch};\1;p" | sort -V | tail -n1)
+            test -n "${prysm_version}" || (color "31" "Could not infer prysm version from binaries in ${wrapper_dir}" && exit 1)
+        fi
         readonly prysm_version
     fi
 }
@@ -171,7 +182,7 @@ END
     exit 1
 }
 
-get_prysm_version
+get_prysm_version "${1}"
 
 color "37" "Latest Prysm version is $prysm_version."
 
