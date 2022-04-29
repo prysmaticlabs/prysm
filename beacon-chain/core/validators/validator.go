@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/math"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/time/slots"
 )
@@ -142,8 +141,8 @@ func SlashValidator(
 		return nil, err
 	}
 	validator.Slashed = true
-	maxWithdrawableEpoch := math.Max(uint64(validator.WithdrawableEpoch), uint64(currentEpoch+params.BeaconConfig().EpochsPerSlashingsVector))
-	validator.WithdrawableEpoch = types.Epoch(maxWithdrawableEpoch)
+	maxWithdrawableEpoch := types.MaxEpoch(validator.WithdrawableEpoch, currentEpoch+params.BeaconConfig().EpochsPerSlashingsVector)
+	validator.WithdrawableEpoch = maxWithdrawableEpoch
 
 	if err := s.UpdateValidatorAtIndex(slashedIdx, validator); err != nil {
 		return nil, err
@@ -198,8 +197,8 @@ func SlashedValidatorIndices(epoch types.Epoch, validators []*ethpb.Validator) [
 	slashed := make([]types.ValidatorIndex, 0)
 	for i := 0; i < len(validators); i++ {
 		val := validators[i]
-		maxWithdrawableEpoch := math.Max(uint64(val.WithdrawableEpoch), uint64(epoch+params.BeaconConfig().EpochsPerSlashingsVector))
-		if val.WithdrawableEpoch == types.Epoch(maxWithdrawableEpoch) && val.Slashed {
+		maxWithdrawableEpoch := types.MaxEpoch(val.WithdrawableEpoch, epoch+params.BeaconConfig().EpochsPerSlashingsVector)
+		if val.WithdrawableEpoch == maxWithdrawableEpoch && val.Slashed {
 			slashed = append(slashed, types.ValidatorIndex(i))
 		}
 	}
