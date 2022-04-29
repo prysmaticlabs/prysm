@@ -27,6 +27,7 @@ func TestEndToEnd_MinimalConfig(t *testing.T) {
 }
 
 func TestEndToEnd_MinimalConfig_Web3Signer(t *testing.T) {
+	t.Skip()
 	e2eMinimal(t, &testArgs{
 		usePrysmSh:          false,
 		useWeb3RemoteSigner: true,
