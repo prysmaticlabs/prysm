@@ -291,7 +291,7 @@ func (r *testRunner) run() {
 		// If requested, run sync test.
 		if config.TestSync {
 			httpEndpoints := helpers.BeaconAPIHostnames(e2e.TestParams.BeaconNodeCount)
-			index := e2e.TestParams.BeaconNodeCount
+			index := e2e.TestParams.BeaconNodeCount + e2e.TestParams.LighthouseBeaconNodeCount
 			menr := eth1Miner.ENR()
 			benr := bootNode.ENR()
 			if err := r.testCheckpointSync(index+1, conns, httpEndpoints[0], benr, menr); err != nil {
@@ -406,15 +406,15 @@ func (r *testRunner) waitForMatchingHead(ctx context.Context, check, ref *grpc.C
 	// sleep hack copied from testBeaconChainSync
 	// Sleep a second for every 4 blocks that need to be synced for the newly started node.
 	secondsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
-	extraSecondsToSync := (r.config.EpochsToRun)*secondsPerEpoch + uint64(params.BeaconConfig().SlotsPerEpoch.Div(2).Mul(r.config.EpochsToRun))
+	extraSecondsToSync := (r.config.EpochsToRun)*secondsPerEpoch
 	deadline := time.Now().Add(time.Second * time.Duration(extraSecondsToSync))
-	ctx, cancel := context.WithDeadline(ctx, deadline)
+	dctx, cancel := context.WithDeadline(ctx, deadline)
 	defer cancel()
 	checkClient := service.NewBeaconChainClient(check)
 	refClient := service.NewBeaconChainClient(ref)
 	for {
 		select {
-		case <-ctx.Done():
+		case <-dctx.Done():
 			// deadline ensures that the test eventually exits when beacon node fails to sync in a resonable timeframe
 			return fmt.Errorf("deadline exceeded waiting for known good block to appear in checkpoint-synced node")
 		default:
