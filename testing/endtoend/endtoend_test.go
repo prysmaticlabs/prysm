@@ -406,7 +406,7 @@ func (r *testRunner) waitForMatchingHead(ctx context.Context, check, ref *grpc.C
 	// sleep hack copied from testBeaconChainSync
 	// Sleep a second for every 4 blocks that need to be synced for the newly started node.
 	secondsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
-	extraSecondsToSync := (r.config.EpochsToRun)*secondsPerEpoch + uint64(params.BeaconConfig().SlotsPerEpoch.Div(4).Mul(r.config.EpochsToRun))
+	extraSecondsToSync := (r.config.EpochsToRun)*secondsPerEpoch + uint64(params.BeaconConfig().SlotsPerEpoch.Div(2).Mul(r.config.EpochsToRun))
 	deadline := time.Now().Add(time.Second * time.Duration(extraSecondsToSync))
 	ctx, cancel := context.WithDeadline(ctx, deadline)
 	defer cancel()
