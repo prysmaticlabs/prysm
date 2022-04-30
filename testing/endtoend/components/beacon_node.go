@@ -118,7 +118,7 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 	}
 	expectedNumOfPeers := e2e.TestParams.BeaconNodeCount + e2e.TestParams.LighthouseBeaconNodeCount - 1
 	if node.config.TestSync {
-		expectedNumOfPeers += 1
+		expectedNumOfPeers += 2
 	}
 	jwtPath := path.Join(e2e.TestParams.TestPath, "eth1data/"+strconv.Itoa(node.index)+"/")
 	if index == 0 {
