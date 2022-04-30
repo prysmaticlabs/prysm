@@ -120,6 +120,7 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 	if node.config.TestSync {
 		expectedNumOfPeers += 2
 	}
+	expectedNumOfPeers += 10
 	jwtPath := path.Join(e2e.TestParams.TestPath, "eth1data/"+strconv.Itoa(node.index)+"/")
 	if index == 0 {
 		jwtPath = path.Join(e2e.TestParams.TestPath, "eth1data/miner/")
