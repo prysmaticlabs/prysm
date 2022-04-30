@@ -261,7 +261,7 @@ func (f *blocksFetcher) findAncestor(ctx context.Context, pid peer.ID, b block.S
 	outBlocks := []block.SignedBeaconBlock{b}
 	for i := uint64(0); i < backtrackingMaxHops; i++ {
 		parentRoot := bytesutil.ToBytes32(outBlocks[len(outBlocks)-1].Block().ParentRoot())
-		if !f.chain.HasBlock(ctx, parentRoot) {
+		if f.chain.HasBlock(ctx, parentRoot) {
 			// Common ancestor found, forward blocks back to processor.
 			sort.Slice(outBlocks, func(i, j int) bool {
 				return outBlocks[i].Block().Slot() < outBlocks[j].Block().Slot()
