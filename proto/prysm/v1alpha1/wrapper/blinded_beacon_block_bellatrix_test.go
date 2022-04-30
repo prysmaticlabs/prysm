@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"testing"
 
-	types "github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
@@ -200,6 +200,13 @@ func TestBellatrixBlindedBeaconBlock_IsNil(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, false, wb.IsNil())
+}
+
+func TestBellatrixBlindedBeaconBlock_IsBlinded(t *testing.T) {
+	wb, err := wrapper.WrappedBeaconBlock(&ethpb.BlindedBeaconBlockBellatrix{})
+	require.NoError(t, err)
+
+	assert.Equal(t, true, wb.IsBlinded())
 }
 
 func TestBellatrixBlindedBeaconBlock_HashTreeRoot(t *testing.T) {

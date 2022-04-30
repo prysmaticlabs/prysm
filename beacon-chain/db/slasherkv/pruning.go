@@ -6,7 +6,7 @@ import (
 	"encoding/binary"
 
 	fssz "github.com/ferranbt/fastssz"
-	types "github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	bolt "go.etcd.io/bbolt"
 )

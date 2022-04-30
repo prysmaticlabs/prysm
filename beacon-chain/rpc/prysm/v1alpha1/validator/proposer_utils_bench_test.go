@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	aggtesting "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation/aggregation/testing"
@@ -55,24 +54,8 @@ func BenchmarkProposerAtts_sortByProfitability(b *testing.B) {
 	}
 
 	for _, tt := range tests {
-		b.Run(fmt.Sprintf("naive_%s", tt.name), func(b *testing.B) {
-			b.StopTimer()
-			resetCfg := features.InitWithReset(&features.Flags{
-				ProposerAttsSelectionUsingMaxCover: false,
-			})
-			defer resetCfg()
-			atts := aggtesting.MakeAttestationsFromBitlists(tt.inputs)
-			b.StartTimer()
-			for i := 0; i < b.N; i++ {
-				runner(atts)
-			}
-		})
 		b.Run(fmt.Sprintf("max-cover_%s", tt.name), func(b *testing.B) {
 			b.StopTimer()
-			resetCfg := features.InitWithReset(&features.Flags{
-				ProposerAttsSelectionUsingMaxCover: true,
-			})
-			defer resetCfg()
 			atts := aggtesting.MakeAttestationsFromBitlists(tt.inputs)
 			b.StartTimer()
 			for i := 0; i < b.N; i++ {

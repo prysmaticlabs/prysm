@@ -3,7 +3,7 @@ package wrapper
 import (
 	ssz "github.com/ferranbt/fastssz"
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
@@ -177,6 +177,11 @@ func (w blindedBeaconBlockBellatrix) Body() block.BeaconBlockBody {
 // IsNil checks if the beacon block is nil.
 func (w blindedBeaconBlockBellatrix) IsNil() bool {
 	return w.b == nil
+}
+
+// IsBlinded checks if the beacon block is a blinded block.
+func (blindedBeaconBlockBellatrix) IsBlinded() bool {
+	return true
 }
 
 // HashTreeRoot returns the ssz root of the block.

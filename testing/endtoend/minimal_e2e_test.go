@@ -33,21 +33,13 @@ func TestEndToEnd_MinimalConfig_Web3Signer(t *testing.T) {
 	})
 }
 
-// Run minimal e2e config with the current release validator against latest beacon node.
-func TestEndToEnd_MinimalConfig_ValidatorAtCurrentRelease(t *testing.T) {
-	e2eMinimal(t, &testArgs{
-		usePrysmSh:          true,
-		useWeb3RemoteSigner: false,
-	})
-}
-
 func e2eMinimal(t *testing.T, args *testArgs) {
 	params.UseE2EConfig()
 	require.NoError(t, e2eParams.Init(e2eParams.StandardBeaconCount))
 
-	// Run for 10 epochs if not in long-running to confirm long-running has no issues.
+	// Run for 12 epochs if not in long-running to confirm long-running has no issues.
 	var err error
-	epochsToRun := 10
+	epochsToRun := 12
 	epochStr, longRunning := os.LookupEnv("E2E_EPOCHS")
 	if longRunning {
 		epochsToRun, err = strconv.Atoi(epochStr)
@@ -93,7 +85,7 @@ func e2eMinimal(t *testing.T, args *testArgs) {
 		ev.FinishedSyncing,
 		ev.AllNodesHaveSameHead,
 		ev.ValidatorSyncParticipation,
-		ev.TransactionsPresent,
+		//ev.TransactionsPresent, TODO: Renable Transaction evaluator once it tx pool issues are fixed.
 	}
 	testConfig := &types.E2EConfig{
 		BeaconFlags: []string{

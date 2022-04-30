@@ -136,6 +136,21 @@ service BeaconChain {
     };
   }
 
+  // SubmitBlindedBlock instructs the beacon node to use the components of the `SignedBlindedBeaconBlock` to construct
+  // and publish a `SignedBeaconBlock` by swapping out the `transactions_root` for the corresponding full list of `transactions`.
+  // The beacon node should broadcast a newly constructed `SignedBeaconBlock` to the beacon network,
+  // to be included in the beacon chain. The beacon node is not required to validate the signed
+  // `BeaconBlock`, and a successful response (20X) only indicates that the broadcast has been
+  // successful. The beacon node is expected to integrate the new block into its state, and
+  // therefore validate the block internally, however blocks which fail the validation are still
+  // broadcast but a different status code is returned (202).
+  rpc SubmitBlindedBlock(v2.SignedBlindedBeaconBlockContainer) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/internal/eth/v1/beacon/blinded_blocks"
+      body: "*"
+    };
+  }
+
   // GetBlockRoot retrieves hashTreeRoot of BeaconBlock/BeaconBlockHeader.
   rpc GetBlockRoot(v1.BlockRequest) returns (v1.BlockRootResponse) {
     option (google.api.http) = {

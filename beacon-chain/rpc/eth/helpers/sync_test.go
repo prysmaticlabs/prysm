@@ -6,10 +6,10 @@ import (
 	"testing"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	types "github.com/prysmaticlabs/eth2-types"
 	grpcutil "github.com/prysmaticlabs/prysm/api/grpc"
 	chainmock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	syncmock "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"

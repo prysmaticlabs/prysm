@@ -1,7 +1,7 @@
 package sync
 
 import (
-	"io/ioutil"
+	"io"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
@@ -10,7 +10,7 @@ import (
 
 func TestMain(m *testing.M) {
 	logrus.SetLevel(logrus.DebugLevel)
-	logrus.SetOutput(ioutil.Discard)
+	logrus.SetOutput(io.Discard)
 
 	resetFlags := flags.Get()
 	flags.Init(&flags.GlobalFlags{

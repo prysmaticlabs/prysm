@@ -4,11 +4,11 @@ import (
 	"context"
 	"testing"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/stateutils"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
@@ -273,6 +273,33 @@ func TestHydrateBlindedBeaconBlockBellatrix_NoError(t *testing.T) {
 func TestHydrateBlindedBeaconBlockBodyBellatrix_NoError(t *testing.T) {
 	b := &ethpbalpha.BlindedBeaconBlockBodyBellatrix{}
 	b = HydrateBlindedBeaconBlockBodyBellatrix(b)
+	_, err := b.HashTreeRoot()
+	require.NoError(t, err)
+}
+
+func TestHydrateV2SignedBlindedBeaconBlockBellatrix_NoError(t *testing.T) {
+	b := &ethpbv2.SignedBlindedBeaconBlockBellatrix{}
+	b = HydrateV2SignedBlindedBeaconBlockBellatrix(b)
+	_, err := b.HashTreeRoot()
+	require.NoError(t, err)
+	_, err = b.Message.HashTreeRoot()
+	require.NoError(t, err)
+	_, err = b.Message.Body.HashTreeRoot()
+	require.NoError(t, err)
+}
+
+func TestHydrateV2BlindedBeaconBlockBellatrix_NoError(t *testing.T) {
+	b := &ethpbv2.BlindedBeaconBlockBellatrix{}
+	b = HydrateV2BlindedBeaconBlockBellatrix(b)
+	_, err := b.HashTreeRoot()
+	require.NoError(t, err)
+	_, err = b.Body.HashTreeRoot()
+	require.NoError(t, err)
+}
+
+func TestHydrateV2BlindedBeaconBlockBodyBellatrix_NoError(t *testing.T) {
+	b := &ethpbv2.BlindedBeaconBlockBodyBellatrix{}
+	b = HydrateV2BlindedBeaconBlockBodyBellatrix(b)
 	_, err := b.HashTreeRoot()
 	require.NoError(t, err)
 }

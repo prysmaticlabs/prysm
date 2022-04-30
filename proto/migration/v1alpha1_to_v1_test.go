@@ -3,9 +3,9 @@ package migration
 import (
 	"testing"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -44,6 +44,7 @@ var (
 	prevRandao       = bytesutil.PadTo([]byte("prevrandao"), 32)
 	extraData        = bytesutil.PadTo([]byte("extradata"), 32)
 	baseFeePerGas    = bytesutil.PadTo([]byte("basefeepergas"), 32)
+	transactionsRoot = bytesutil.PadTo([]byte("transactions"), 32)
 	aggregationBits  = bitfield.Bitlist{0x01}
 )
 

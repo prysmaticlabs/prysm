@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -98,7 +98,7 @@ func NewKeymanager(_ context.Context, cfg *SetupConfig) (*Keymanager, error) {
 		// Load the CA for the server certificate if present.
 		cp := x509.NewCertPool()
 		if cfg.Opts.RemoteCertificate.CACertPath != "" {
-			serverCA, err := ioutil.ReadFile(cfg.Opts.RemoteCertificate.CACertPath)
+			serverCA, err := os.ReadFile(cfg.Opts.RemoteCertificate.CACertPath)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to obtain server's CA certificate")
 			}
@@ -143,7 +143,7 @@ func NewKeymanager(_ context.Context, cfg *SetupConfig) (*Keymanager, error) {
 // UnmarshalOptionsFile attempts to JSON unmarshal a keymanager
 // options file into a struct.
 func UnmarshalOptionsFile(r io.ReadCloser) (*KeymanagerOpts, error) {
-	enc, err := ioutil.ReadAll(r)
+	enc, err := io.ReadAll(r)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not read config")
 	}

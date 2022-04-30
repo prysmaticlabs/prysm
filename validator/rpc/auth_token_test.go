@@ -16,9 +16,6 @@ import (
 func setupWalletDir(t testing.TB) string {
 	walletDir := filepath.Join(t.TempDir(), "wallet")
 	require.NoError(t, os.MkdirAll(walletDir, os.ModePerm))
-	t.Cleanup(func() {
-		require.NoError(t, os.RemoveAll(walletDir))
-	})
 	return walletDir
 }
 
@@ -102,7 +99,6 @@ func Test_initializeAuthToken(t *testing.T) {
 
 	// Deleting the auth token and re-initializing means we create a jwt token
 	// and secret from scratch again.
-	require.NoError(t, os.RemoveAll(walletDir))
 	srv3 := &Server{}
 	walletDir = setupWalletDir(t)
 	token3, err := srv3.initializeAuthToken(walletDir)

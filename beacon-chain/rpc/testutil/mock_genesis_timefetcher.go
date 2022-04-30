@@ -3,8 +3,8 @@ package testutil
 import (
 	"time"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 )
 
 // MockGenesisTimeFetcher is a fake implementation of the blockchain.TimeFetcher
