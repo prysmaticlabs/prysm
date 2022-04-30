@@ -50,7 +50,7 @@ func (f *ForkChoice) SetOptimisticToValid(ctx context.Context, root [32]byte) er
 // SetOptimisticToInvalid updates the synced_tips map when the block with the given root becomes INVALID.
 // It takes two parameters: the root of the INVALID block and the payload Hash
 // of the last valid block.s
-func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root, payloadHash [32]byte) ([][32]byte, error) {
+func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root, parentRoot, payloadHash [32]byte) ([][32]byte, error) {
 	f.store.nodesLock.Lock()
 	defer f.store.nodesLock.Unlock()
 	invalidRoots := make([][32]byte, 0)
