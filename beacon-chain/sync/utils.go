@@ -4,7 +4,7 @@ import (
 	"errors"
 	"sort"
 
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	"github.com/prysmaticlabs/prysm/consensus-types/block"
 )
 
 // A type to represent beacon blocks and roots which have methods

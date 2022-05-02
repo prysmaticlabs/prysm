@@ -35,7 +35,7 @@ message BeaconStateV2 {
   // Versioning [1001-2000]
   uint64 genesis_time = 1001;
   bytes genesis_validators_root = 1002 [(ethereum.eth.ext.ssz_size) = "32"];
-  uint64 slot = 1003 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
+  uint64 slot = 1003 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"];
   v1.Fork fork = 1004;
 
   // History [2001-3000]
@@ -80,7 +80,7 @@ message BeaconStateBellatrix {
   // Versioning [1001-2000]
   uint64 genesis_time = 1001;
   bytes genesis_validators_root = 1002 [(ethereum.eth.ext.ssz_size) = "32"];
-  uint64 slot = 1003 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
+  uint64 slot = 1003 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"];
   v1.Fork fork = 1004;
 
   // History [2001-3000]
@@ -155,6 +155,6 @@ message ForkChoiceHeadsResponse {
 
 message ForkChoiceHead {
   bytes root = 1 [(ethereum.eth.ext.ssz_size) = "32"];
-  uint64 slot = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
+  uint64 slot = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"];
   bool execution_optimistic = 3;
 }

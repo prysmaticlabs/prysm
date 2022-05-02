@@ -8,8 +8,8 @@ import (
 	"regexp"
 
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 )
 
 var hexRegex = regexp.MustCompile("^0x[0-9a-fA-F]+$")

@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
@@ -15,10 +14,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/block"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -48,15 +48,9 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headState state.Be
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get execution payload")
 	}
-	finalizedBlock, err := s.cfg.BeaconDB.Block(ctx, s.ensureRootNotZeros(finalizedRoot))
+	finalizedBlock, err := s.getBlock(ctx, s.ensureRootNotZeros(finalizedRoot))
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get finalized block")
-	}
-	if finalizedBlock == nil || finalizedBlock.IsNil() {
-		finalizedBlock = s.getInitSyncBlock(s.ensureRootNotZeros(finalizedRoot))
-		if finalizedBlock == nil || finalizedBlock.IsNil() {
-			return nil, errors.Errorf("finalized block with root %#x does not exist in the db or our cache", s.ensureRootNotZeros(finalizedRoot))
-		}
+		return nil, err
 	}
 	var finalizedHash []byte
 	if blocks.IsPreBellatrixVersion(finalizedBlock.Block().Version()) {
@@ -91,7 +85,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headState state.Be
 				"headPayloadBlockHash":      fmt.Sprintf("%#x", bytesutil.Trunc(headPayload.BlockHash)),
 				"finalizedPayloadBlockHash": fmt.Sprintf("%#x", bytesutil.Trunc(finalizedHash)),
 			}).Info("Called fork choice updated with optimistic block")
-			return payloadID, nil
+			return payloadID, s.optimisticCandidateBlock(ctx, headBlk)
 		default:
 			return nil, errors.WithMessage(ErrUndefinedExecutionEngineError, err.Error())
 		}
@@ -146,14 +140,14 @@ func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
 			"slot":             blk.Block().Slot(),
 			"payloadBlockHash": fmt.Sprintf("%#x", bytesutil.Trunc(payload.BlockHash)),
 		}).Info("Called new payload with optimistic block")
-		return false, nil
+		return false, s.optimisticCandidateBlock(ctx, blk.Block())
 	case powchain.ErrInvalidPayloadStatus:
 		newPayloadInvalidNodeCount.Inc()
 		root, err := blk.Block().HashTreeRoot()
 		if err != nil {
 			return false, err
 		}
-		invalidRoots, err := s.ForkChoicer().SetOptimisticToInvalid(ctx, root, bytesutil.ToBytes32(lastValidHash))
+		invalidRoots, err := s.ForkChoicer().SetOptimisticToInvalid(ctx, root, bytesutil.ToBytes32(blk.Block().ParentRoot()), bytesutil.ToBytes32(lastValidHash))
 		if err != nil {
 			return false, err
 		}
@@ -166,7 +160,8 @@ func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
 	}
 }
 
-// optimisticCandidateBlock returns true if this block can be optimistically synced.
+// optimisticCandidateBlock returns an error if this block can't be optimistically synced.
+// It replaces boolean in spec code with `errNotOptimisticCandidate`.
 //
 // Spec pseudocode definition:
 // def is_optimistic_candidate_block(opt_store: OptimisticStore, current_slot: Slot, block: BeaconBlock) -> bool:
@@ -177,24 +172,27 @@ func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
 //        return True
 //
 //    return False
-func (s *Service) optimisticCandidateBlock(ctx context.Context, blk block.BeaconBlock) (bool, error) {
+func (s *Service) optimisticCandidateBlock(ctx context.Context, blk block.BeaconBlock) error {
 	if blk.Slot()+params.BeaconConfig().SafeSlotsToImportOptimistically <= s.CurrentSlot() {
-		return true, nil
+		return nil
 	}
 
 	parent, err := s.cfg.BeaconDB.Block(ctx, bytesutil.ToBytes32(blk.ParentRoot()))
 	if err != nil {
-		return false, err
+		return err
 	}
 	if parent == nil {
-		return false, errNilParentInDB
+		return errNilParentInDB
 	}
-
 	parentIsExecutionBlock, err := blocks.IsExecutionBlock(parent.Block().Body())
 	if err != nil {
-		return false, err
+		return err
 	}
-	return parentIsExecutionBlock, nil
+	if parentIsExecutionBlock {
+		return nil
+	}
+
+	return errNotOptimisticCandidate
 }
 
 // getPayloadAttributes returns the payload attributes for the given state and slot.

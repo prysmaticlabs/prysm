@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"sync"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"k8s.io/client-go/tools/cache"
 )
 

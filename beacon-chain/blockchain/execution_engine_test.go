@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -17,11 +16,12 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/block"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	v1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -455,7 +455,7 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 		name      string
 		blk       block.BeaconBlock
 		justified block.SignedBeaconBlock
-		want      bool
+		err       error
 	}{
 		{
 			name: "deep block",
@@ -475,7 +475,7 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 				require.NoError(tt, err)
 				return wr
 			}(t),
-			want: true,
+			err: nil,
 		},
 		{
 			name: "shallow block, Altair justified chkpt",
@@ -495,7 +495,7 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 				require.NoError(tt, err)
 				return wr
 			}(t),
-			want: false,
+			err: errNotOptimisticCandidate,
 		},
 		{
 			name: "shallow block, Bellatrix justified chkpt without execution",
@@ -515,7 +515,7 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 				require.NoError(tt, err)
 				return wr
 			}(t),
-			want: false,
+			err: errNotOptimisticCandidate,
 		},
 	}
 	for _, tt := range tests {
@@ -529,9 +529,8 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 			})
 		require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrappedParentBlock))
 
-		candidate, err := service.optimisticCandidateBlock(ctx, tt.blk)
-		require.NoError(t, err)
-		require.Equal(t, tt.want, candidate, tt.name)
+		err = service.optimisticCandidateBlock(ctx, tt.blk)
+		require.Equal(t, tt.err, err)
 	}
 }
 
@@ -579,9 +578,8 @@ func Test_IsOptimisticShallowExecutionParent(t *testing.T) {
 	wrappedChild, err := wrapper.WrappedSignedBeaconBlock(childBlock)
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrappedChild))
-	candidate, err := service.optimisticCandidateBlock(ctx, wrappedChild.Block())
+	err = service.optimisticCandidateBlock(ctx, wrappedChild.Block())
 	require.NoError(t, err)
-	require.Equal(t, true, candidate)
 }
 
 func Test_GetPayloadAttribute(t *testing.T) {
