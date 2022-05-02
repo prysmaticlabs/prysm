@@ -24,55 +24,72 @@ import (
 func TestPruneInvalid(t *testing.T) {
 	tests := []struct {
 		root             [32]byte // the root of the new INVALID block
+		parentRoot       [32]byte // the root of the parent block
 		payload          [32]byte // the last valid hash
 		wantedNodeNumber int
 		wantedRoots      [][32]byte
+		wantedErr        error
 	}{
 		{
 			[32]byte{'j'},
+			[32]byte{'b'},
 			[32]byte{'B'},
 			12,
 			[][32]byte{[32]byte{'j'}},
+			nil,
 		},
 		{
 			[32]byte{'c'},
+			[32]byte{'b'},
 			[32]byte{'B'},
 			4,
 			[][32]byte{[32]byte{'f'}, [32]byte{'e'}, [32]byte{'i'}, [32]byte{'h'}, [32]byte{'l'},
 				[32]byte{'k'}, [32]byte{'g'}, [32]byte{'d'}, [32]byte{'c'}},
+			nil,
 		},
 		{
 			[32]byte{'i'},
+			[32]byte{'h'},
 			[32]byte{'H'},
 			12,
 			[][32]byte{[32]byte{'i'}},
+			nil,
 		},
 		{
 			[32]byte{'h'},
+			[32]byte{'g'},
 			[32]byte{'G'},
 			11,
 			[][32]byte{[32]byte{'i'}, [32]byte{'h'}},
+			nil,
 		},
 		{
 			[32]byte{'g'},
+			[32]byte{'d'},
 			[32]byte{'D'},
 			8,
 			[][32]byte{[32]byte{'i'}, [32]byte{'h'}, [32]byte{'l'}, [32]byte{'k'}, [32]byte{'g'}},
+			nil,
 		},
 		{
 			[32]byte{'i'},
+			[32]byte{'h'},
 			[32]byte{'D'},
 			8,
 			[][32]byte{[32]byte{'i'}, [32]byte{'h'}, [32]byte{'l'}, [32]byte{'k'}, [32]byte{'g'}},
+			nil,
 		},
 		{
 			[32]byte{'f'},
+			[32]byte{'e'},
 			[32]byte{'D'},
 			11,
 			[][32]byte{[32]byte{'f'}, [32]byte{'e'}},
+			nil,
 		},
 		{
 			[32]byte{'h'},
+			[32]byte{'g'},
 			[32]byte{'C'},
 			5,
 			[][32]byte{
@@ -85,12 +102,55 @@ func TestPruneInvalid(t *testing.T) {
 				[32]byte{'g'},
 				[32]byte{'d'},
 			},
+			nil,
 		},
 		{
 			[32]byte{'g'},
+			[32]byte{'d'},
 			[32]byte{'E'},
 			8,
 			[][32]byte{[32]byte{'i'}, [32]byte{'h'}, [32]byte{'l'}, [32]byte{'k'}, [32]byte{'g'}},
+			nil,
+		},
+		{
+			[32]byte{'z'},
+			[32]byte{'j'},
+			[32]byte{'B'},
+			12,
+			[][32]byte{[32]byte{'j'}},
+			nil,
+		},
+		{
+			[32]byte{'z'},
+			[32]byte{'j'},
+			[32]byte{'J'},
+			13,
+			[][32]byte{},
+			nil,
+		},
+		{
+			[32]byte{'j'},
+			[32]byte{'a'},
+			[32]byte{'B'},
+			0,
+			[][32]byte{},
+			errInvalidParentRoot,
+		},
+		{
+			[32]byte{'z'},
+			[32]byte{'h'},
+			[32]byte{'D'},
+			8,
+			[][32]byte{[32]byte{'i'}, [32]byte{'h'}, [32]byte{'l'}, [32]byte{'k'}, [32]byte{'g'}},
+			nil,
+		},
+		{
+			[32]byte{'z'},
+			[32]byte{'h'},
+			[32]byte{'D'},
+			8,
+			[][32]byte{[32]byte{'i'}, [32]byte{'h'}, [32]byte{'l'}, [32]byte{'k'}, [32]byte{'g'}},
+			nil,
 		},
 	}
 	for _, tc := range tests {
@@ -110,10 +170,14 @@ func TestPruneInvalid(t *testing.T) {
 		require.NoError(t, f.InsertOptimisticBlock(ctx, 106, [32]byte{'i'}, [32]byte{'h'}, [32]byte{'I'}, 1, 1))
 		require.NoError(t, f.InsertOptimisticBlock(ctx, 106, [32]byte{'l'}, [32]byte{'k'}, [32]byte{'L'}, 1, 1))
 
-		roots, err := f.store.setOptimisticToInvalid(context.Background(), tc.root, tc.payload)
-		require.NoError(t, err)
-		require.DeepEqual(t, tc.wantedRoots, roots)
-		require.Equal(t, tc.wantedNodeNumber, f.NodeCount())
+		roots, err := f.store.setOptimisticToInvalid(context.Background(), tc.root, tc.parentRoot, tc.payload)
+		if tc.wantedErr == nil {
+			require.NoError(t, err)
+			require.DeepEqual(t, tc.wantedRoots, roots)
+			require.Equal(t, tc.wantedNodeNumber, f.NodeCount())
+		} else {
+			require.ErrorIs(t, tc.wantedErr, err)
+		}
 	}
 }
 
@@ -131,7 +195,7 @@ func TestSetOptimisticToInvalid_ProposerBoost(t *testing.T) {
 	f.store.previousProposerBoostRoot = [32]byte{'b'}
 	f.store.proposerBoostLock.Unlock()
 
-	_, err := f.SetOptimisticToInvalid(ctx, [32]byte{'c'}, [32]byte{'A'})
+	_, err := f.SetOptimisticToInvalid(ctx, [32]byte{'c'}, [32]byte{'b'}, [32]byte{'A'})
 	require.NoError(t, err)
 	f.store.proposerBoostLock.RLock()
 	require.Equal(t, uint64(0), f.store.previousProposerBoostScore)
