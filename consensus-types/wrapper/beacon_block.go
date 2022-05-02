@@ -68,9 +68,9 @@ func WrappedBeaconBlock(i interface{}) (interfaces.BeaconBlock, error) {
 	case *eth.BeaconBlock:
 		return WrappedPhase0BeaconBlock(b), nil
 	case *eth.GenericBeaconBlock_Altair:
-		return WrappedAltairBeaconBlock(b.Altair)
+		return wrappedAltairBeaconBlock(b.Altair)
 	case *eth.BeaconBlockAltair:
-		return WrappedAltairBeaconBlock(b)
+		return wrappedAltairBeaconBlock(b)
 	case *eth.GenericBeaconBlock_Bellatrix:
 		return WrappedBellatrixBeaconBlock(b.Bellatrix)
 	case *eth.BeaconBlockBellatrix:

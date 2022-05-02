@@ -842,7 +842,7 @@ func TestSignAltairBlock(t *testing.T) {
 		},
 	}
 	validator.keyManager = km
-	wb, err := wrapper.WrappedAltairBeaconBlock(blk.Block)
+	wb, err := wrapper.WrappedBeaconBlock(blk.Block)
 	require.NoError(t, err)
 	sig, blockRoot, err := validator.signBlock(ctx, pubKey, 0, 0, wb)
 	require.NoError(t, err, "%x,%v", sig, err)
