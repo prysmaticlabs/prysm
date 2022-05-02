@@ -33,7 +33,7 @@ const (
 	fileBufferSize        = 64 * 1024
 	maxFileBufferSize     = 1024 * 1024
 	AltairE2EForkEpoch    = 6
-	BellatrixE2EForkEpoch = 8
+	BellatrixE2EForkEpoch = 100
 )
 
 // Graffiti is a list of sample graffiti strings.
