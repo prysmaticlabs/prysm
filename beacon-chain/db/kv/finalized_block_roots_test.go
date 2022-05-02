@@ -6,7 +6,7 @@ import (
 
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/block"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -140,7 +140,7 @@ func TestStore_IsFinalizedChildBlock(t *testing.T) {
 	slotsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch)
 	ctx := context.Background()
 
-	eval := func(t testing.TB, ctx context.Context, db *Store, blks []block.SignedBeaconBlock) {
+	eval := func(t testing.TB, ctx context.Context, db *Store, blks []interfaces.SignedBeaconBlock) {
 		require.NoError(t, db.SaveBlocks(ctx, blks))
 		root, err := blks[slotsPerEpoch].Block().HashTreeRoot()
 		require.NoError(t, err)
@@ -191,15 +191,15 @@ func TestStore_IsFinalizedChildBlock(t *testing.T) {
 	})
 }
 
-func sszRootOrDie(t *testing.T, block block.SignedBeaconBlock) []byte {
+func sszRootOrDie(t *testing.T, block interfaces.SignedBeaconBlock) []byte {
 	root, err := block.Block().HashTreeRoot()
 	require.NoError(t, err)
 	return root[:]
 }
 
-func makeBlocks(t *testing.T, i, n uint64, previousRoot [32]byte) []block.SignedBeaconBlock {
+func makeBlocks(t *testing.T, i, n uint64, previousRoot [32]byte) []interfaces.SignedBeaconBlock {
 	blocks := make([]*ethpb.SignedBeaconBlock, n)
-	ifaceBlocks := make([]block.SignedBeaconBlock, n)
+	ifaceBlocks := make([]interfaces.SignedBeaconBlock, n)
 	for j := i; j < n+i; j++ {
 		parentRoot := make([]byte, fieldparams.RootLength)
 		copy(parentRoot, previousRoot[:])
@@ -215,9 +215,9 @@ func makeBlocks(t *testing.T, i, n uint64, previousRoot [32]byte) []block.Signed
 	return ifaceBlocks
 }
 
-func makeBlocksAltair(t *testing.T, startIdx, num uint64, previousRoot [32]byte) []block.SignedBeaconBlock {
+func makeBlocksAltair(t *testing.T, startIdx, num uint64, previousRoot [32]byte) []interfaces.SignedBeaconBlock {
 	blocks := make([]*ethpb.SignedBeaconBlockAltair, num)
-	ifaceBlocks := make([]block.SignedBeaconBlock, num)
+	ifaceBlocks := make([]interfaces.SignedBeaconBlock, num)
 	for j := startIdx; j < num+startIdx; j++ {
 		parentRoot := make([]byte, fieldparams.RootLength)
 		copy(parentRoot, previousRoot[:])

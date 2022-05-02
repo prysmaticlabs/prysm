@@ -6,10 +6,10 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/block"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -23,7 +23,7 @@ type mockBackfillDB struct {
 	genesisBlockRoot          func(ctx context.Context) ([32]byte, error)
 	originCheckpointBlockRoot func(ctx context.Context) ([32]byte, error)
 	backfillBlockRoot         func(ctx context.Context) ([32]byte, error)
-	block                     func(ctx context.Context, blockRoot [32]byte) (block.SignedBeaconBlock, error)
+	block                     func(ctx context.Context, blockRoot [32]byte) (interfaces.SignedBeaconBlock, error)
 }
 
 var _ BackfillDB = &mockBackfillDB{}
@@ -56,7 +56,7 @@ func (db *mockBackfillDB) BackfillBlockRoot(ctx context.Context) ([32]byte, erro
 	return [32]byte{}, errEmptyMockDBMethod
 }
 
-func (db *mockBackfillDB) Block(ctx context.Context, blockRoot [32]byte) (block.SignedBeaconBlock, error) {
+func (db *mockBackfillDB) Block(ctx context.Context, blockRoot [32]byte) (interfaces.SignedBeaconBlock, error) {
 	if db.block != nil {
 		return db.block(ctx, blockRoot)
 	}
@@ -143,7 +143,7 @@ func goodBlockRoot(root [32]byte) func(ctx context.Context) ([32]byte, error) {
 	}
 }
 
-func setupTestBlock(slot types.Slot) (block.SignedBeaconBlock, error) {
+func setupTestBlock(slot types.Slot) (interfaces.SignedBeaconBlock, error) {
 	bRaw := util.NewBeaconBlock()
 	b, err := wrapper.WrappedSignedBeaconBlock(bRaw)
 	if err != nil {
@@ -191,7 +191,7 @@ func TestReload(t *testing.T) {
 					return [32]byte{}, db.ErrNotFoundGenesisBlockRoot
 				},
 				originCheckpointBlockRoot: goodBlockRoot(originRoot),
-				block: func(ctx context.Context, root [32]byte) (block.SignedBeaconBlock, error) {
+				block: func(ctx context.Context, root [32]byte) (interfaces.SignedBeaconBlock, error) {
 					switch root {
 					case originRoot:
 						return originBlock, nil
@@ -208,7 +208,7 @@ func TestReload(t *testing.T) {
 					return [32]byte{}, derp
 				},
 				originCheckpointBlockRoot: goodBlockRoot(originRoot),
-				block: func(ctx context.Context, root [32]byte) (block.SignedBeaconBlock, error) {
+				block: func(ctx context.Context, root [32]byte) (interfaces.SignedBeaconBlock, error) {
 					switch root {
 					case originRoot:
 						return originBlock, nil
@@ -231,7 +231,7 @@ func TestReload(t *testing.T) {
 			db: &mockBackfillDB{
 				genesisBlockRoot:          goodBlockRoot(params.BeaconConfig().ZeroHash),
 				originCheckpointBlockRoot: goodBlockRoot(originRoot),
-				block: func(ctx context.Context, root [32]byte) (block.SignedBeaconBlock, error) {
+				block: func(ctx context.Context, root [32]byte) (interfaces.SignedBeaconBlock, error) {
 					return nil, nil
 				},
 			},
@@ -242,7 +242,7 @@ func TestReload(t *testing.T) {
 			db: &mockBackfillDB{
 				genesisBlockRoot:          goodBlockRoot(params.BeaconConfig().ZeroHash),
 				originCheckpointBlockRoot: goodBlockRoot(originRoot),
-				block: func(ctx context.Context, root [32]byte) (block.SignedBeaconBlock, error) {
+				block: func(ctx context.Context, root [32]byte) (interfaces.SignedBeaconBlock, error) {
 					return nil, derp
 				},
 			},
@@ -253,7 +253,7 @@ func TestReload(t *testing.T) {
 			db: &mockBackfillDB{
 				genesisBlockRoot:          goodBlockRoot(params.BeaconConfig().ZeroHash),
 				originCheckpointBlockRoot: goodBlockRoot(originRoot),
-				block: func(ctx context.Context, root [32]byte) (block.SignedBeaconBlock, error) {
+				block: func(ctx context.Context, root [32]byte) (interfaces.SignedBeaconBlock, error) {
 					return originBlock, nil
 				},
 				backfillBlockRoot: func(ctx context.Context) ([32]byte, error) {
@@ -267,7 +267,7 @@ func TestReload(t *testing.T) {
 			db: &mockBackfillDB{
 				genesisBlockRoot:          goodBlockRoot(params.BeaconConfig().ZeroHash),
 				originCheckpointBlockRoot: goodBlockRoot(originRoot),
-				block: func(ctx context.Context, root [32]byte) (block.SignedBeaconBlock, error) {
+				block: func(ctx context.Context, root [32]byte) (interfaces.SignedBeaconBlock, error) {
 					switch root {
 					case originRoot:
 						return originBlock, nil
@@ -287,7 +287,7 @@ func TestReload(t *testing.T) {
 			db: &mockBackfillDB{
 				genesisBlockRoot:          goodBlockRoot(params.BeaconConfig().ZeroHash),
 				originCheckpointBlockRoot: goodBlockRoot(originRoot),
-				block: func(ctx context.Context, root [32]byte) (block.SignedBeaconBlock, error) {
+				block: func(ctx context.Context, root [32]byte) (interfaces.SignedBeaconBlock, error) {
 					switch root {
 					case originRoot:
 						return originBlock, nil
@@ -305,7 +305,7 @@ func TestReload(t *testing.T) {
 			db: &mockBackfillDB{
 				genesisBlockRoot:          goodBlockRoot(params.BeaconConfig().ZeroHash),
 				originCheckpointBlockRoot: goodBlockRoot(originRoot),
-				block: func(ctx context.Context, root [32]byte) (block.SignedBeaconBlock, error) {
+				block: func(ctx context.Context, root [32]byte) (interfaces.SignedBeaconBlock, error) {
 					switch root {
 					case originRoot:
 						return originBlock, nil
@@ -323,7 +323,7 @@ func TestReload(t *testing.T) {
 			db: &mockBackfillDB{
 				genesisBlockRoot:          goodBlockRoot(params.BeaconConfig().ZeroHash),
 				originCheckpointBlockRoot: goodBlockRoot(originRoot),
-				block: func(ctx context.Context, root [32]byte) (block.SignedBeaconBlock, error) {
+				block: func(ctx context.Context, root [32]byte) (interfaces.SignedBeaconBlock, error) {
 					switch root {
 					case originRoot:
 						return originBlock, nil

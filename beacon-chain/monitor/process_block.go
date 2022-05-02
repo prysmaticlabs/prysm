@@ -7,7 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/block"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/time/slots"
@@ -23,7 +23,7 @@ const AggregateReportingPeriod = 5
 // - An Exit by one of our validators was included
 // - A Slashing by one of our tracked validators was included
 // - A Sync Committee Contribution by one of our tracked validators was included
-func (s *Service) processBlock(ctx context.Context, b block.SignedBeaconBlock) {
+func (s *Service) processBlock(ctx context.Context, b interfaces.SignedBeaconBlock) {
 	if b == nil || b.Block() == nil {
 		return
 	}
@@ -64,7 +64,7 @@ func (s *Service) processBlock(ctx context.Context, b block.SignedBeaconBlock) {
 }
 
 // processProposedBlock logs when the beacon node observes a beacon block from a tracked validator.
-func (s *Service) processProposedBlock(state state.BeaconState, root [32]byte, blk block.BeaconBlock) {
+func (s *Service) processProposedBlock(state state.BeaconState, root [32]byte, blk interfaces.BeaconBlock) {
 	s.Lock()
 	defer s.Unlock()
 	if s.trackedIndex(blk.ProposerIndex()) {
@@ -101,7 +101,7 @@ func (s *Service) processProposedBlock(state state.BeaconState, root [32]byte, b
 }
 
 // processSlashings logs the event when tracked validators was slashed
-func (s *Service) processSlashings(blk block.BeaconBlock) {
+func (s *Service) processSlashings(blk interfaces.BeaconBlock) {
 	s.RLock()
 	defer s.RUnlock()
 	for _, slashing := range blk.Body().ProposerSlashings() {

@@ -17,7 +17,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	validator_service_config "github.com/prysmaticlabs/prysm/config/validator/service"
-	"github.com/prysmaticlabs/prysm/consensus-types/block"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
@@ -214,7 +214,7 @@ func (v *ValidatorService) Start() {
 	// the inner type of the feed before hand. So that
 	// during future accesses, there will be no panics here
 	// from type incompatibility.
-	tempChan := make(chan block.SignedBeaconBlock)
+	tempChan := make(chan interfaces.SignedBeaconBlock)
 	sub := valStruct.blockFeed.Subscribe(tempChan)
 	sub.Unsubscribe()
 	close(tempChan)

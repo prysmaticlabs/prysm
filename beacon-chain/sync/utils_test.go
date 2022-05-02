@@ -4,7 +4,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/consensus-types/block"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -15,7 +15,7 @@ import (
 func TestSortedObj_SortBlocksRoots(t *testing.T) {
 	source := rand.NewSource(33)
 	randGen := rand.New(source)
-	var blks []block.SignedBeaconBlock
+	var blks []interfaces.SignedBeaconBlock
 	var roots [][32]byte
 	randFunc := func() int64 {
 		return randGen.Int63n(50)
@@ -49,7 +49,7 @@ func TestSortedObj_SortBlocksRoots(t *testing.T) {
 func TestSortedObj_NoDuplicates(t *testing.T) {
 	source := rand.NewSource(33)
 	randGen := rand.New(source)
-	var blks []block.SignedBeaconBlock
+	var blks []interfaces.SignedBeaconBlock
 	var roots [][32]byte
 	randFunc := func() int64 {
 		return randGen.Int63n(50)
