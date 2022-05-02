@@ -3,6 +3,7 @@ package detect
 import (
 	"fmt"
 
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/network/forks"
 

@@ -3,6 +3,8 @@ package sync
 import (
 	"errors"
 	"sort"
+
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 )
 
 // A type to represent beacon blocks and roots which have methods

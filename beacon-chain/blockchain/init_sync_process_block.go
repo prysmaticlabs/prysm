@@ -5,6 +5,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 )
 
 var errBlockNotFoundInCacheOrDB = errors.New("block not found in cache or db")

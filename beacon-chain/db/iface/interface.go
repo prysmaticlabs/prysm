@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/monitoring/backup"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"

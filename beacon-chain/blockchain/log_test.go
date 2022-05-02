@@ -3,6 +3,7 @@ package blockchain
 import (
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"

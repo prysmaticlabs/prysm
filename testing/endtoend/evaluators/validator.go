@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	ethtypes "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"

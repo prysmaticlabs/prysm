@@ -6,6 +6,7 @@ import (
 	"path"
 
 	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/io/file"
 )
 

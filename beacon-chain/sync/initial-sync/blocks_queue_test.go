@@ -14,6 +14,7 @@ import (
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	beaconsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/container/slice"

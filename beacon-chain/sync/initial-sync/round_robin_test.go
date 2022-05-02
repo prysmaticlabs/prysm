@@ -10,6 +10,7 @@ import (
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/container/slice"

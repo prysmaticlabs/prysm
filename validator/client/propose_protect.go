@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	"github.com/sirupsen/logrus"
 )
 

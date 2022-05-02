@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"

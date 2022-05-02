@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/interop"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	"github.com/prysmaticlabs/prysm/runtime/version"

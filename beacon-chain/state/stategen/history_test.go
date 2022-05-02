@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/consensus-types/mock"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 

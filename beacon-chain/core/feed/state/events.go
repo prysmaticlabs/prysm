@@ -6,6 +6,7 @@ package state
 import (
 	"time"
 
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 )
 

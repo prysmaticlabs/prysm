@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
@@ -180,7 +181,7 @@ func (s *Service) optimisticCandidateBlock(ctx context.Context, blk interfaces.B
 	if err != nil {
 		return err
 	}
-	if parent == nil {
+	if parent == nil || parent.IsNil() {
 		return errNilParentInDB
 	}
 	parentIsExecutionBlock, err := blocks.IsExecutionBlock(parent.Block().Body())

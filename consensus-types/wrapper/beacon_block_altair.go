@@ -3,6 +3,7 @@ package wrapper
 import (
 	ssz "github.com/ferranbt/fastssz"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"

@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	beaconsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"

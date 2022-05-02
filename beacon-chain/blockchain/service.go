@@ -33,6 +33,7 @@ import (
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -202,7 +203,7 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized checkpoint block")
 	}
-	if fb == nil {
+	if fb == nil || fb.IsNil() {
 		return errNilFinalizedInStore
 	}
 	payloadHash, err := getBlockPayloadHash(fb.Block())
