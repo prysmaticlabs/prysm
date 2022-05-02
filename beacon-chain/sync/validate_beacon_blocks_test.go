@@ -367,6 +367,7 @@ func TestValidateBeaconBlockPubSub_WithLookahead(t *testing.T) {
 	stateGen := stategen.New(db)
 	offset := int64(blkSlot.Mul(params.BeaconConfig().SecondsPerSlot))
 	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-offset, 0),
+		DB:    db,
 		State: beaconState,
 		FinalizedCheckPoint: &ethpb.Checkpoint{
 			Epoch: 0,
@@ -840,6 +841,7 @@ func TestValidateBeaconBlockPubSub_ParentNotFinalizedDescendant(t *testing.T) {
 			Root:  make([]byte, 32),
 		},
 		VerifyBlkDescendantErr: errors.New("not part of finalized chain"),
+		DB:                     db,
 	}
 	r := &Service{
 		cfg: &config{

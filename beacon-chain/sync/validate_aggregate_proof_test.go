@@ -369,6 +369,7 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 			beaconDB:    db,
 			initialSync: &mockSync.Sync{IsSyncing: false},
 			chain: &mock.ChainService{Genesis: time.Now().Add(-oneEpoch()),
+				DB:               db,
 				State:            beaconState,
 				ValidAttestation: true,
 				FinalizedCheckPoint: &ethpb.Checkpoint{
@@ -470,6 +471,7 @@ func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 			beaconDB:    db,
 			initialSync: &mockSync.Sync{IsSyncing: false},
 			chain: &mock.ChainService{Genesis: time.Now().Add(-oneEpoch()),
+				DB:               db,
 				ValidatorsRoot:   [32]byte{'A'},
 				State:            beaconState,
 				ValidAttestation: true,
