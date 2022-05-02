@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -31,6 +31,7 @@ func TestGetSpec(t *testing.T) {
 	config.HysteresisQuotient = 9
 	config.HysteresisDownwardMultiplier = 10
 	config.HysteresisUpwardMultiplier = 11
+	config.SafeSlotsToImportOptimistically = 128
 	config.SafeSlotsToUpdateJustified = 12
 	config.Eth1FollowDistance = 13
 	config.TargetAggregatorsPerCommittee = 14
@@ -51,7 +52,6 @@ func TestGetSpec(t *testing.T) {
 	config.BellatrixForkEpoch = 101
 	config.ShardingForkVersion = []byte("ShardingForkVersion")
 	config.ShardingForkEpoch = 102
-	config.MinAnchorPowBlockDifficulty = 1000
 	config.BLSWithdrawalPrefixByte = byte('b')
 	config.GenesisDelay = 24
 	config.SecondsPerSlot = 25
@@ -99,8 +99,8 @@ func TestGetSpec(t *testing.T) {
 	config.MinSyncCommitteeParticipants = 71
 	config.TerminalBlockHash = common.HexToHash("TerminalBlockHash")
 	config.TerminalBlockHashActivationEpoch = 72
-	config.TerminalTotalDifficulty = 73
-	config.FeeRecipient = common.HexToAddress("FeeRecipient")
+	config.TerminalTotalDifficulty = "73"
+	config.DefaultFeeRecipient = common.HexToAddress("DefaultFeeRecipient")
 
 	var dbp [4]byte
 	copy(dbp[:], []byte{'0', '0', '0', '1'})
@@ -130,7 +130,7 @@ func TestGetSpec(t *testing.T) {
 	resp, err := server.GetSpec(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 
-	assert.Equal(t, 99, len(resp.Data))
+	assert.Equal(t, 98, len(resp.Data))
 	for k, v := range resp.Data {
 		switch k {
 		case "CONFIG_NAME":
@@ -329,8 +329,8 @@ func TestGetSpec(t *testing.T) {
 			assert.Equal(t, common.HexToHash("TerminalBlockHash"), common.HexToHash(v))
 		case "TERMINAL_TOTAL_DIFFICULTY":
 			assert.Equal(t, "73", v)
-		case "FeeRecipient":
-			assert.Equal(t, common.HexToAddress("FeeRecipient"), v)
+		case "DefaultFeeRecipient":
+			assert.Equal(t, common.HexToAddress("DefaultFeeRecipient"), v)
 		case "PROPORTIONAL_SLASHING_MULTIPLIER_BELLATRIX":
 			assert.Equal(t, "3", v)
 		case "MIN_SLASHING_PENALTY_QUOTIENT_BELLATRIX":
@@ -341,6 +341,8 @@ func TestGetSpec(t *testing.T) {
 			assert.Equal(t, "70", v)
 		case "INTERVALS_PER_SLOT":
 			assert.Equal(t, "3", v)
+		case "SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY":
+			assert.Equal(t, "128", v)
 		default:
 			t.Errorf("Incorrect key: %s", k)
 		}

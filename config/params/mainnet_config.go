@@ -4,12 +4,14 @@ import (
 	"math"
 	"time"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 )
 
 // MainnetConfig returns the configuration to be used in the main network.
 func MainnetConfig() *BeaconChainConfig {
+	if mainnetBeaconConfig.ForkVersionSchedule == nil {
+		mainnetBeaconConfig.InitializeForkSchedule()
+	}
 	return mainnetBeaconConfig
 }
 
@@ -196,20 +198,14 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	SafetyDecay: 10,
 
 	// Fork related values.
-	GenesisForkVersion:          []byte{0, 0, 0, 0},
-	AltairForkVersion:           []byte{1, 0, 0, 0},
-	AltairForkEpoch:             mainnetAltairForkEpoch,
-	BellatrixForkVersion:        []byte{2, 0, 0, 0},
-	BellatrixForkEpoch:          math.MaxUint64,
-	ShardingForkVersion:         []byte{3, 0, 0, 0},
-	ShardingForkEpoch:           math.MaxUint64,
-	MinAnchorPowBlockDifficulty: 4294967296,
-	ForkVersionSchedule: map[[4]byte]types.Epoch{
-		{0, 0, 0, 0}: genesisForkEpoch,
-		{1, 0, 0, 0}: mainnetAltairForkEpoch,
-		{2, 0, 0, 0}: mainnetBellatrixForkEpoch,
-		// Any further forks must be specified here by their epoch number.
-	},
+	GenesisEpoch:         genesisForkEpoch,
+	GenesisForkVersion:   []byte{0, 0, 0, 0},
+	AltairForkVersion:    []byte{1, 0, 0, 0},
+	AltairForkEpoch:      mainnetAltairForkEpoch,
+	BellatrixForkVersion: []byte{2, 0, 0, 0},
+	BellatrixForkEpoch:   mainnetBellatrixForkEpoch,
+	ShardingForkVersion:  []byte{3, 0, 0, 0},
+	ShardingForkEpoch:    math.MaxUint64,
 
 	// New values introduced in Altair hard fork 1.
 	// Participation flag indices.
@@ -247,5 +243,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	MinSyncCommitteeParticipants: 1,
 
 	// Bellatrix
-	TerminalBlockHashActivationEpoch: math.MaxUint64,
+	TerminalBlockHashActivationEpoch: 18446744073709551615,
+	TerminalBlockHash:                [32]byte{},
+	TerminalTotalDifficulty:          "115792089237316195423570985008687907853269984665640564039457584007913129638912",
 }

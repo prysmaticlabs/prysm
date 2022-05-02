@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
@@ -17,7 +18,7 @@ import (
 
 var (
 	beacon  = flag.String("beacon", "127.0.0.1:4000", "gRPC address of the Prysm beacon node")
-	genesis = flag.Uint64("genesis", 1606824023, "Genesis time. mainnet=1606824023, prater=1616508000, pyrmont=1605722407")
+	genesis = flag.Uint64("genesis", 1606824023, "Genesis time. mainnet=1606824023, prater=1616508000")
 )
 
 func main() {
@@ -47,7 +48,7 @@ func main() {
 	}
 	fmt.Printf("Next period starts at epoch %d (%s)\n", nextStart, time.Until(nextStartTime))
 
-	for i := 0; i < int(current.Sub(uint64(start))); i++ {
+	for i := types.Epoch(0); i < current.Sub(uint64(start)); i++ {
 		j := i
 		g.Go(func() error {
 			resp, err := c.ListBeaconBlocks(ctx, &v1alpha1.ListBlocksRequest{

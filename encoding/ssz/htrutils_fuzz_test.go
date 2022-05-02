@@ -48,7 +48,7 @@ func FuzzForkRoot(f *testing.F) {
 
 func FuzzPackChunks(f *testing.F) {
 	f.Fuzz(func(t *testing.T, b []byte) {
-		if _, err := ssz.PackChunks(b); err != nil {
+		if _, err := ssz.PackByChunk([][]byte{b}); err != nil {
 			t.Fatal(err)
 		}
 	})

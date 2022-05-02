@@ -4,9 +4,9 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
@@ -138,7 +138,7 @@ func (b *BeaconState) ValidatorIndexByPubkey(key [fieldparams.BLSPubkeyLength]by
 	numOfVals := len(b.state.Validators)
 
 	idx, ok := b.valMapHandler.Get(key)
-	if ok && numOfVals <= int(idx) {
+	if ok && types.ValidatorIndex(numOfVals) <= idx {
 		return types.ValidatorIndex(0), false
 	}
 	return idx, ok

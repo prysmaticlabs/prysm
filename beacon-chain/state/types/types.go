@@ -30,8 +30,8 @@ func (f FieldIndex) String(stateVersion int) string {
 	switch f {
 	case GenesisTime:
 		return "genesisTime"
-	case GenesisValidatorRoot:
-		return "genesisValidatorRoot"
+	case GenesisValidatorsRoot:
+		return "genesisValidatorsRoot"
 	case Slot:
 		return "slot"
 	case Fork:
@@ -108,7 +108,7 @@ func (f FieldIndex) ElemsInChunk() (uint64, error) {
 // to the v1 state.
 const (
 	GenesisTime FieldIndex = iota
-	GenesisValidatorRoot
+	GenesisValidatorsRoot
 	Slot
 	Fork
 	LatestBlockHeader

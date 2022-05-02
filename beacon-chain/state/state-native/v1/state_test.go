@@ -6,14 +6,15 @@ import (
 	"sync"
 	"testing"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestValidatorMap_DistinctCopy(t *testing.T) {
@@ -67,6 +68,8 @@ func TestBeaconState_NoDeadlock(t *testing.T) {
 		Validators: vals,
 	})
 	assert.NoError(t, err)
+	s, ok := st.(*BeaconState)
+	require.Equal(t, true, ok)
 
 	wg := new(sync.WaitGroup)
 
@@ -75,7 +78,7 @@ func TestBeaconState_NoDeadlock(t *testing.T) {
 		// Continuously lock and unlock the state
 		// by acquiring the lock.
 		for i := 0; i < 1000; i++ {
-			for _, f := range st.stateFieldLeaves {
+			for _, f := range s.stateFieldLeaves {
 				f.Lock()
 				if f.Empty() {
 					f.InsertFieldLayer(make([][]*[32]byte, 10))
@@ -180,8 +183,26 @@ func TestBeaconState_AppendBalanceWithTrie(t *testing.T) {
 	}
 	_, err = st.HashTreeRoot(context.Background())
 	assert.NoError(t, err)
-	newRt := bytesutil.ToBytes32(st.merkleLayers[0][balances])
-	wantedRt, err := stateutil.Uint64ListRootWithRegistryLimit(st.balances)
+	s, ok := st.(*BeaconState)
+	require.Equal(t, true, ok)
+	newRt := bytesutil.ToBytes32(s.merkleLayers[0][balances])
+	wantedRt, err := stateutil.Uint64ListRootWithRegistryLimit(s.Balances())
 	assert.NoError(t, err)
 	assert.Equal(t, wantedRt, newRt, "state roots are unequal")
+}
+
+func TestBeaconState_ModifyPreviousParticipationBits(t *testing.T) {
+	st, err := InitializeFromProtoUnsafe(&ethpb.BeaconState{})
+	assert.NoError(t, err)
+	assert.ErrorContains(t, "ModifyPreviousParticipationBits is not supported for phase 0 beacon state", st.ModifyPreviousParticipationBits(func(val []byte) ([]byte, error) {
+		return nil, nil
+	}))
+}
+
+func TestBeaconState_ModifyCurrentParticipationBits(t *testing.T) {
+	st, err := InitializeFromProtoUnsafe(&ethpb.BeaconState{})
+	assert.NoError(t, err)
+	assert.ErrorContains(t, "ModifyCurrentParticipationBits is not supported for phase 0 beacon state", st.ModifyCurrentParticipationBits(func(val []byte) ([]byte, error) {
+		return nil, nil
+	}))
 }

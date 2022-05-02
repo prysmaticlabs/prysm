@@ -4,18 +4,18 @@ import (
 	"context"
 	"errors"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/contracts/deposit"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
@@ -23,9 +23,10 @@ import (
 )
 
 var errPubkeyDoesNotExist = errors.New("pubkey does not exist")
+var errOptimisticMode = errors.New("the node is currently optimistic and cannot serve validators")
 var nonExistentIndex = types.ValidatorIndex(^uint64(0))
 
-const numStatesToCheck = 2
+var errParticipation = status.Errorf(codes.Internal, "Failed to obtain epoch participation")
 
 // ValidatorStatus returns the validator status of the current epoch.
 // The status response can be one of the following:
@@ -110,44 +111,72 @@ func (vs *Server) CheckDoppelGanger(ctx context.Context, req *ethpb.DoppelGanger
 		return nil, status.Error(codes.Internal, "Could not get head state")
 	}
 
-	currEpoch := slots.ToEpoch(headState.Slot())
-	isRecent, resp := checkValidatorsAreRecent(currEpoch, req)
+	// Return early if we are in phase0.
+	if headState.Version() == version.Phase0 {
+		log.Info("Skipping goppelganger check for Phase 0")
+
+		resp := &ethpb.DoppelGangerResponse{
+			Responses: []*ethpb.DoppelGangerResponse_ValidatorResponse{},
+		}
+		for _, v := range req.ValidatorRequests {
+			resp.Responses = append(resp.Responses,
+				&ethpb.DoppelGangerResponse_ValidatorResponse{
+					PublicKey:       v.PublicKey,
+					DuplicateExists: false,
+				})
+		}
+		return resp, nil
+	}
+
+	headSlot := headState.Slot()
+	currEpoch := slots.ToEpoch(headSlot)
+
 	// If all provided keys are recent we skip this check
 	// as we are unable to effectively determine if a doppelganger
 	// is active.
+	isRecent, resp := checkValidatorsAreRecent(currEpoch, req)
 	if isRecent {
 		return resp, nil
 	}
-	// We walk back from the current head state to the state at the beginning of the previous 2 epochs.
-	// Where S_i , i := 0,1,2. i = 0 would signify the current head state in this epoch.
-	previousEpoch, err := currEpoch.SafeSub(1)
+
+	// We request a state 32 slots ago. We are guaranteed to have
+	// currentSlot > 32 since we assume that we are in Altair's fork.
+	prevStateSlot := headSlot - params.BeaconConfig().SlotsPerEpoch
+	prevEpochEnd, err := slots.EpochEnd(slots.ToEpoch(prevStateSlot))
 	if err != nil {
-		previousEpoch = currEpoch
+		return nil, status.Error(codes.Internal, "Could not get previous epoch's end")
 	}
-	olderEpoch, err := previousEpoch.SafeSub(1)
-	if err != nil {
-		olderEpoch = previousEpoch
-	}
-	prevState, err := vs.retrieveAfterEpochTransition(ctx, previousEpoch)
+	prevState, err := vs.ReplayerBuilder.ReplayerForSlot(prevEpochEnd).ReplayBlocks(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get previous state")
 	}
-	olderState, err := vs.retrieveAfterEpochTransition(ctx, olderEpoch)
+
+	headCurrentParticipation, err := headState.CurrentEpochParticipation()
 	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not get older state")
+		return nil, errParticipation
 	}
+	headPreviousParticipation, err := headState.PreviousEpochParticipation()
+	if err != nil {
+		return nil, errParticipation
+	}
+	prevCurrentParticipation, err := prevState.CurrentEpochParticipation()
+	if err != nil {
+		return nil, errParticipation
+	}
+	prevPreviousParticipation, err := prevState.PreviousEpochParticipation()
+	if err != nil {
+		return nil, errParticipation
+	}
+
 	resp = &ethpb.DoppelGangerResponse{
 		Responses: []*ethpb.DoppelGangerResponse_ValidatorResponse{},
 	}
 	for _, v := range req.ValidatorRequests {
-		// If the validator's last recorded epoch was
-		// less than or equal to `numStatesToCheck` epochs ago, this method will not
-		// be able to catch duplicates. This is due to how attestation
-		// inclusion works, where an attestation for the current epoch
-		// is able to included in the current or next epoch. Depending
-		// on which epoch it is included the balance change will be
-		// reflected in the following epoch.
-		if v.Epoch+numStatesToCheck >= currEpoch {
+		// If the validator's last recorded epoch was less than 1 epoch
+		// ago, the current doppelganger check will not be able to
+		// identify dopplelgangers since an attestation can take up to
+		// 31 slots to be included.
+		if v.Epoch+2 >= currEpoch {
 			resp.Responses = append(resp.Responses,
 				&ethpb.DoppelGangerResponse_ValidatorResponse{
 					PublicKey:       v.PublicKey,
@@ -155,37 +184,15 @@ func (vs *Server) CheckDoppelGanger(ctx context.Context, req *ethpb.DoppelGanger
 				})
 			continue
 		}
-		valIndex, ok := olderState.ValidatorIndexByPubkey(bytesutil.ToBytes48(v.PublicKey))
+		valIndex, ok := prevState.ValidatorIndexByPubkey(bytesutil.ToBytes48(v.PublicKey))
 		if !ok {
 			// Ignore if validator pubkey doesn't exist.
 			continue
 		}
-		baseBal, err := olderState.BalanceAtIndex(valIndex)
-		if err != nil {
-			return nil, status.Error(codes.Internal, "Could not get validator's balance")
-		}
-		nextBal, err := prevState.BalanceAtIndex(valIndex)
-		if err != nil {
-			return nil, status.Error(codes.Internal, "Could not get validator's balance")
-		}
-		// If the next epoch's balance is higher, we mark it as an existing
-		// duplicate.
-		if nextBal > baseBal {
-			log.Infof("current %d with last epoch %d and difference in bal %d gwei", currEpoch, v.Epoch, nextBal-baseBal)
-			resp.Responses = append(resp.Responses,
-				&ethpb.DoppelGangerResponse_ValidatorResponse{
-					PublicKey:       v.PublicKey,
-					DuplicateExists: true,
-				})
-			continue
-		}
-		currBal, err := headState.BalanceAtIndex(valIndex)
-		if err != nil {
-			return nil, status.Error(codes.Internal, "Could not get validator's balance")
-		}
-		// If the current epoch's balance is higher, we mark it as an existing
-		// duplicate.
-		if currBal > nextBal {
+
+		if (headCurrentParticipation[valIndex] != 0) || (headPreviousParticipation[valIndex] != 0) ||
+			(prevCurrentParticipation[valIndex] != 0) || (prevPreviousParticipation[valIndex] != 0) {
+			log.WithField("ValidatorIndex", valIndex).Infof("Participation flag found")
 			resp.Responses = append(resp.Responses,
 				&ethpb.DoppelGangerResponse_ValidatorResponse{
 					PublicKey:       v.PublicKey,
@@ -235,6 +242,29 @@ func (vs *Server) activationStatus(
 	}
 
 	return activeValidatorExists, statusResponses, nil
+}
+
+// optimisticStatus returns an error if the node is currently optimistic with respect to head.
+// by definition, an optimistic node is not a full node. It is unable to produce blocks,
+// since an execution engine cannot produce a payload upon an unknown parent.
+// It cannot faithfully attest to the head block of the chain, since it has not fully verified that block.
+//
+// Spec:
+// https://github.com/ethereum/consensus-specs/blob/dev/sync/optimistic.md
+func (vs *Server) optimisticStatus(ctx context.Context) error {
+	if slots.ToEpoch(vs.TimeFetcher.CurrentSlot()) < params.BeaconConfig().BellatrixForkEpoch {
+		return nil
+	}
+	optimistic, err := vs.HeadFetcher.IsOptimistic(ctx)
+	if err != nil {
+		return status.Errorf(codes.Internal, "Could not determine if the node is a optimistic node: %v", err)
+	}
+	if !optimistic {
+		return nil
+	}
+
+	return status.Errorf(codes.Unavailable, errOptimisticMode.Error())
+
 }
 
 // validatorStatus searches for the requested validator's state and deposit to retrieve its inclusion estimate. Also returns the validators index.
@@ -338,11 +368,8 @@ func (vs *Server) retrieveAfterEpochTransition(ctx context.Context, epoch types.
 	if err != nil {
 		return nil, err
 	}
-	retState, err := vs.StateGen.StateBySlot(ctx, endSlot)
-	if err != nil {
-		return nil, err
-	}
-	return transition.ProcessSlots(ctx, retState, retState.Slot()+1)
+	// replay to first slot of following epoch
+	return vs.ReplayerBuilder.ReplayerForSlot(endSlot).ReplayToSlot(ctx, endSlot+1)
 }
 
 func checkValidatorsAreRecent(headEpoch types.Epoch, req *ethpb.DoppelGangerRequest) (bool, *ethpb.DoppelGangerResponse) {
@@ -354,8 +381,8 @@ func checkValidatorsAreRecent(headEpoch types.Epoch, req *ethpb.DoppelGangerRequ
 		// Due to how balances are reflected for individual
 		// validators, we can only effectively determine if a
 		// validator voted or not if we are able to look
-		// back more than `numStatesToCheck` epochs into the past.
-		if v.Epoch+numStatesToCheck < headEpoch {
+		// back more than 2 epoch into the past.
+		if v.Epoch+2 < headEpoch {
 			validatorsAreRecent = false
 			// Zero out response if we encounter non-recent validators to
 			// guard against potential misuse.

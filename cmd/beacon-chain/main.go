@@ -17,6 +17,8 @@ import (
 	dbcommands "github.com/prysmaticlabs/prysm/cmd/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	powchaincmd "github.com/prysmaticlabs/prysm/cmd/beacon-chain/powchain"
+	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/sync/checkpoint"
+	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/sync/genesis"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/io/logs"
@@ -33,6 +35,7 @@ import (
 var appFlags = []cli.Flag{
 	flags.DepositContractFlag,
 	flags.HTTPWeb3ProviderFlag,
+	flags.ExecutionJWTSecretFlag,
 	flags.FallbackWeb3ProviderFlag,
 	flags.RPCHost,
 	flags.RPCPort,
@@ -61,11 +64,10 @@ var appFlags = []cli.Flag{
 	flags.HistoricalSlasherNode,
 	flags.ChainID,
 	flags.NetworkID,
-	flags.WeakSubjectivityCheckpt,
+	flags.WeakSubjectivityCheckpoint,
 	flags.Eth1HeaderReqLimit,
-	flags.GenesisStatePath,
 	flags.MinPeersPerSubnet,
-	flags.FeeRecipient,
+	flags.SuggestedFeeRecipient,
 	cmd.EnableBackupWebhookFlag,
 	cmd.BackupWebhookOutputDir,
 	cmd.MinimalConfigFlag,
@@ -116,6 +118,12 @@ var appFlags = []cli.Flag{
 	cmd.RestoreTargetDirFlag,
 	cmd.BoltMMapInitialSizeFlag,
 	cmd.ValidatorMonitorIndicesFlag,
+	cmd.ApiTimeoutFlag,
+	checkpoint.BlockPath,
+	checkpoint.StatePath,
+	checkpoint.RemoteURL,
+	genesis.StatePath,
+	genesis.BeaconAPIURL,
 }
 
 func init() {
@@ -230,16 +238,31 @@ func startNode(ctx *cli.Context) error {
 
 	blockchainFlagOpts, err := blockchaincmd.FlagOptions(ctx)
 	if err != nil {
-		return nil
+		return err
 	}
 	powchainFlagOpts, err := powchaincmd.FlagOptions(ctx)
 	if err != nil {
-		return nil
+		return err
 	}
 	opts := []node.Option{
 		node.WithBlockchainFlagOptions(blockchainFlagOpts),
 		node.WithPowchainFlagOptions(powchainFlagOpts),
 	}
+
+	optFuncs := []func(*cli.Context) (node.Option, error){
+		genesis.BeaconNodeOptions,
+		checkpoint.BeaconNodeOptions,
+	}
+	for _, of := range optFuncs {
+		ofo, err := of(ctx)
+		if err != nil {
+			return err
+		}
+		if ofo != nil {
+			opts = append(opts, ofo)
+		}
+	}
+
 	beacon, err := node.New(ctx, opts...)
 	if err != nil {
 		return err

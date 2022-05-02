@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io"
-	"io/ioutil"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -28,7 +26,11 @@ func (s *Store) SaveGenesisData(ctx context.Context, genesisState state.BeaconSt
 	if err != nil {
 		return errors.Wrap(err, "could not get genesis block root")
 	}
-	if err := s.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(genesisBlk)); err != nil {
+	wsb, err := wrapper.WrappedSignedBeaconBlock(genesisBlk)
+	if err != nil {
+		return errors.Wrap(err, "could not wrap genesis block")
+	}
+	if err := s.SaveBlock(ctx, wsb); err != nil {
 		return errors.Wrap(err, "could not save genesis block")
 	}
 	if err := s.SaveState(ctx, genesisState, genesisBlkRoot); err != nil {
@@ -50,14 +52,10 @@ func (s *Store) SaveGenesisData(ctx context.Context, genesisState state.BeaconSt
 	return nil
 }
 
-// LoadGenesis loads a genesis state from a given file path, if no genesis exists already.
-func (s *Store) LoadGenesis(ctx context.Context, r io.Reader) error {
-	b, err := ioutil.ReadAll(r)
-	if err != nil {
-		return err
-	}
+// LoadGenesis loads a genesis state from a ssz-serialized byte slice, if no genesis exists already.
+func (s *Store) LoadGenesis(ctx context.Context, sb []byte) error {
 	st := &ethpb.BeaconState{}
-	if err := st.UnmarshalSSZ(b); err != nil {
+	if err := st.UnmarshalSSZ(sb); err != nil {
 		return err
 	}
 	gs, err := statev1.InitializeFromProtoUnsafe(st)

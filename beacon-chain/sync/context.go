@@ -2,6 +2,7 @@ package sync
 
 import (
 	"github.com/libp2p/go-libp2p-core/network"
+	"github.com/libp2p/go-libp2p-core/protocol"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
@@ -61,7 +62,7 @@ func rpcContext(stream network.Stream, chain blockchain.ChainInfoFetcher) ([]byt
 		return []byte{}, nil
 	case p2p.SchemaVersionV2:
 		currFork := chain.CurrentFork()
-		genRoot := chain.GenesisValidatorRoot()
+		genRoot := chain.GenesisValidatorsRoot()
 		digest, err := signing.ComputeForkDigest(currFork.CurrentVersion, genRoot[:])
 		if err != nil {
 			return nil, err
@@ -72,8 +73,13 @@ func rpcContext(stream network.Stream, chain blockchain.ChainInfoFetcher) ([]byt
 	}
 }
 
+// Minimal interface for a stream with a protocol.
+type withProtocol interface {
+	Protocol() protocol.ID
+}
+
 // Validates that the rpc topic matches the provided version.
-func validateVersion(version string, stream network.Stream) error {
+func validateVersion(version string, stream withProtocol) error {
 	_, _, streamVersion, err := p2p.TopicDeconstructor(string(stream.Protocol()))
 	if err != nil {
 		return err

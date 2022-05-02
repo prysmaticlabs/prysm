@@ -6,7 +6,6 @@ import (
 	"sort"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/config/features"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/fieldtrie"
@@ -25,13 +24,13 @@ import (
 )
 
 // InitializeFromProto the beacon state from a protobuf representation.
-func InitializeFromProto(st *ethpb.BeaconStateBellatrix) (*BeaconState, error) {
+func InitializeFromProto(st *ethpb.BeaconStateBellatrix) (state.BeaconStateBellatrix, error) {
 	return InitializeFromProtoUnsafe(proto.Clone(st).(*ethpb.BeaconStateBellatrix))
 }
 
 // InitializeFromProtoUnsafe directly uses the beacon state protobuf fields
 // and sets them as fields of the BeaconState type.
-func InitializeFromProtoUnsafe(st *ethpb.BeaconStateBellatrix) (*BeaconState, error) {
+func InitializeFromProtoUnsafe(st *ethpb.BeaconStateBellatrix) (state.BeaconStateBellatrix, error) {
 	if st == nil {
 		return nil, errors.New("received nil state")
 	}
@@ -315,7 +314,7 @@ func (b *BeaconState) rootSelector(field types.FieldIndex) ([32]byte, error) {
 	switch field {
 	case genesisTime:
 		return ssz.Uint64Root(b.genesisTime), nil
-	case genesisValidatorRoot:
+	case genesisValidatorsRoot:
 		return b.genesisValidatorsRoot, nil
 	case slot:
 		return ssz.Uint64Root(uint64(b.slot)), nil
@@ -378,21 +377,18 @@ func (b *BeaconState) rootSelector(field types.FieldIndex) ([32]byte, error) {
 		}
 		return b.recomputeFieldTrie(validators, b.validators)
 	case balances:
-		if features.Get().EnableBalanceTrieComputation {
-			if b.rebuildTrie[field] {
-				maxBalCap := uint64(fieldparams.ValidatorRegistryLimit)
-				elemSize := uint64(8)
-				balLimit := (maxBalCap*elemSize + 31) / 32
-				err := b.resetFieldTrie(field, b.balances, balLimit)
-				if err != nil {
-					return [32]byte{}, err
-				}
-				delete(b.rebuildTrie, field)
-				return b.stateFieldLeaves[field].TrieRoot()
+		if b.rebuildTrie[field] {
+			maxBalCap := uint64(fieldparams.ValidatorRegistryLimit)
+			elemSize := uint64(8)
+			balLimit := (maxBalCap*elemSize + 31) / 32
+			err := b.resetFieldTrie(field, b.balances, balLimit)
+			if err != nil {
+				return [32]byte{}, err
 			}
-			return b.recomputeFieldTrie(balances, b.balances)
+			delete(b.rebuildTrie, field)
+			return b.stateFieldLeaves[field].TrieRoot()
 		}
-		return stateutil.Uint64ListRootWithRegistryLimit(b.balances)
+		return b.recomputeFieldTrie(balances, b.balances)
 	case randaoMixes:
 		if b.rebuildTrie[field] {
 			err := b.resetFieldTrie(field, b.randaoMixes, fieldparams.RandaoMixesLength)

@@ -6,23 +6,14 @@ import (
 	"errors"
 	"testing"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/time/slots"
 )
-
-type mockStateByRoot struct {
-	state state.BeaconState
-	err   error
-}
-
-func (m *mockStateByRoot) StateByRoot(context.Context, [32]byte) (state.BeaconState, error) {
-	return m.state, m.err
-}
 
 type testStateOpt func(*ethpb.BeaconStateAltair)
 

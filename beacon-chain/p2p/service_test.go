@@ -306,7 +306,7 @@ func TestService_JoinLeaveTopic(t *testing.T) {
 // digest associated with that genesis event.
 func initializeStateWithForkDigest(ctx context.Context, t *testing.T, ef *event.Feed) [4]byte {
 	gt := prysmTime.Now()
-	gvr := bytesutil.PadTo([]byte("genesis validator root"), 32)
+	gvr := bytesutil.PadTo([]byte("genesis validators root"), 32)
 	for n := 0; n == 0; {
 		if ctx.Err() != nil {
 			t.Fatal(ctx.Err())

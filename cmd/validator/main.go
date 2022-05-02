@@ -75,6 +75,9 @@ var appFlags = []cli.Flag{
 	// Consensys' Web3Signer flags
 	flags.Web3SignerURLFlag,
 	flags.Web3SignerPublicValidatorKeysFlag,
+	flags.FeeRecipientConfigFileFlag,
+	flags.FeeRecipientConfigURLFlag,
+	flags.SuggestedFeeRecipientFlag,
 	////////////////////
 	cmd.DisableMonitoringFlag,
 	cmd.MonitoringHostFlag,
@@ -96,6 +99,7 @@ var appFlags = []cli.Flag{
 	cmd.ChainConfigFileFlag,
 	cmd.GrpcMaxCallRecvMsgSizeFlag,
 	cmd.BoltMMapInitialSizeFlag,
+	cmd.ApiTimeoutFlag,
 	debug.PProfFlag,
 	debug.PProfAddrFlag,
 	debug.PProfPortFlag,

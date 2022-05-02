@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"sync"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -64,6 +64,18 @@ func newBoundaryStateCache() *epochBoundaryState {
 		rootStateCache: cache.NewFIFO(rootKeyFn),
 		slotRootCache:  cache.NewFIFO(slotKeyFn),
 	}
+}
+
+// ByRoot satisfies the CachedGetter interface
+func (e *epochBoundaryState) ByRoot(r [32]byte) (state.BeaconState, error) {
+	rsi, ok, err := e.getByRoot(r)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		return nil, ErrNotInCache
+	}
+	return rsi.state, nil
 }
 
 // get epoch boundary state by its block root. Returns copied state in state info object if exists. Otherwise returns nil.
@@ -137,6 +149,15 @@ func (e *epochBoundaryState) put(r [32]byte, s state.BeaconState) error {
 	trim(e.slotRootCache, maxCacheSize)
 
 	return nil
+}
+
+// delete the state from the epoch boundary state cache.
+func (e *epochBoundaryState) delete(r [32]byte) error {
+	e.lock.Lock()
+	defer e.lock.Unlock()
+	return e.rootStateCache.Delete(&rootStateInfo{
+		root: r,
+	})
 }
 
 // trim the FIFO queue to the maxSize.

@@ -434,7 +434,7 @@ func CopyExecutionPayload(payload *enginev1.ExecutionPayload) *enginev1.Executio
 		StateRoot:     bytesutil.SafeCopyBytes(payload.StateRoot),
 		ReceiptsRoot:  bytesutil.SafeCopyBytes(payload.ReceiptsRoot),
 		LogsBloom:     bytesutil.SafeCopyBytes(payload.LogsBloom),
-		Random:        bytesutil.SafeCopyBytes(payload.Random),
+		PrevRandao:    bytesutil.SafeCopyBytes(payload.PrevRandao),
 		BlockNumber:   payload.BlockNumber,
 		GasLimit:      payload.GasLimit,
 		GasUsed:       payload.GasUsed,
@@ -455,9 +455,9 @@ func CopyExecutionPayloadHeader(payload *ExecutionPayloadHeader) *ExecutionPaylo
 		ParentHash:       bytesutil.SafeCopyBytes(payload.ParentHash),
 		FeeRecipient:     bytesutil.SafeCopyBytes(payload.FeeRecipient),
 		StateRoot:        bytesutil.SafeCopyBytes(payload.StateRoot),
-		ReceiptRoot:      bytesutil.SafeCopyBytes(payload.ReceiptRoot),
+		ReceiptsRoot:     bytesutil.SafeCopyBytes(payload.ReceiptsRoot),
 		LogsBloom:        bytesutil.SafeCopyBytes(payload.LogsBloom),
-		Random:           bytesutil.SafeCopyBytes(payload.Random),
+		PrevRandao:       bytesutil.SafeCopyBytes(payload.PrevRandao),
 		BlockNumber:      payload.BlockNumber,
 		GasLimit:         payload.GasLimit,
 		GasUsed:          payload.GasUsed,
@@ -466,5 +466,49 @@ func CopyExecutionPayloadHeader(payload *ExecutionPayloadHeader) *ExecutionPaylo
 		ExtraData:        bytesutil.SafeCopyBytes(payload.ExtraData),
 		BlockHash:        bytesutil.SafeCopyBytes(payload.BlockHash),
 		TransactionsRoot: bytesutil.SafeCopyBytes(payload.TransactionsRoot),
+	}
+}
+
+// CopySignedBlindedBeaconBlockBellatrix copies the provided SignedBlindedBeaconBlockBellatrix.
+func CopySignedBlindedBeaconBlockBellatrix(sigBlock *SignedBlindedBeaconBlockBellatrix) *SignedBlindedBeaconBlockBellatrix {
+	if sigBlock == nil {
+		return nil
+	}
+	return &SignedBlindedBeaconBlockBellatrix{
+		Block:     CopyBlindedBeaconBlockBellatrix(sigBlock.Block),
+		Signature: bytesutil.SafeCopyBytes(sigBlock.Signature),
+	}
+}
+
+// CopyBlindedBeaconBlockBellatrix copies the provided BlindedBeaconBlockBellatrix.
+func CopyBlindedBeaconBlockBellatrix(block *BlindedBeaconBlockBellatrix) *BlindedBeaconBlockBellatrix {
+	if block == nil {
+		return nil
+	}
+	return &BlindedBeaconBlockBellatrix{
+		Slot:          block.Slot,
+		ProposerIndex: block.ProposerIndex,
+		ParentRoot:    bytesutil.SafeCopyBytes(block.ParentRoot),
+		StateRoot:     bytesutil.SafeCopyBytes(block.StateRoot),
+		Body:          CopyBlindedBeaconBlockBodyBellatrix(block.Body),
+	}
+}
+
+// CopyBlindedBeaconBlockBodyBellatrix copies the provided BlindedBeaconBlockBodyBellatrix.
+func CopyBlindedBeaconBlockBodyBellatrix(body *BlindedBeaconBlockBodyBellatrix) *BlindedBeaconBlockBodyBellatrix {
+	if body == nil {
+		return nil
+	}
+	return &BlindedBeaconBlockBodyBellatrix{
+		RandaoReveal:           bytesutil.SafeCopyBytes(body.RandaoReveal),
+		Eth1Data:               CopyETH1Data(body.Eth1Data),
+		Graffiti:               bytesutil.SafeCopyBytes(body.Graffiti),
+		ProposerSlashings:      CopyProposerSlashings(body.ProposerSlashings),
+		AttesterSlashings:      CopyAttesterSlashings(body.AttesterSlashings),
+		Attestations:           CopyAttestations(body.Attestations),
+		Deposits:               CopyDeposits(body.Deposits),
+		VoluntaryExits:         CopySignedVoluntaryExits(body.VoluntaryExits),
+		SyncAggregate:          CopySyncAggregate(body.SyncAggregate),
+		ExecutionPayloadHeader: CopyExecutionPayloadHeader(body.ExecutionPayloadHeader),
 	}
 }

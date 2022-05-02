@@ -45,4 +45,5 @@ type Server struct {
 	CollectedAttestationsBuffer chan []*ethpb.Attestation
 	StateGen                    stategen.StateManager
 	SyncChecker                 sync.Checker
+	ReplayerBuilder             stategen.ReplayerBuilder
 }

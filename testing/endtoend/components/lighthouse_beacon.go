@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
@@ -101,23 +102,31 @@ func (node *LighthouseBeaconNode) Start(ctx context.Context) error {
 		return err
 	}
 
+	prysmNodeCount := e2e.TestParams.BeaconNodeCount
+	jwtPath := path.Join(e2e.TestParams.TestPath, "eth1data/"+strconv.Itoa(node.index+prysmNodeCount)+"/")
+	jwtPath = path.Join(jwtPath, "geth/jwtsecret")
 	args := []string{
 		"beacon_node",
 		fmt.Sprintf("--datadir=%s/lighthouse-beacon-node-%d", e2e.TestParams.TestPath, index),
 		fmt.Sprintf("--testnet-dir=%s", testDir),
 		"--staking",
 		"--enr-address=127.0.0.1",
-		fmt.Sprintf("--enr-udp-port=%d", e2e.TestParams.BeaconNodeRPCPort+index+e2e.LighthouseP2PPortOffset),
-		fmt.Sprintf("--enr-tcp-port=%d", e2e.TestParams.BeaconNodeRPCPort+index+e2e.LighthouseP2PPortOffset),
-		fmt.Sprintf("--port=%d", e2e.TestParams.BeaconNodeRPCPort+index+e2e.LighthouseP2PPortOffset),
-		fmt.Sprintf("--http-port=%d", e2e.TestParams.BeaconNodeRPCPort+index+e2e.LighthouseHTTPPortOffset),
+		fmt.Sprintf("--enr-udp-port=%d", e2e.TestParams.Ports.LighthouseBeaconNodeP2PPort+index),
+		fmt.Sprintf("--enr-tcp-port=%d", e2e.TestParams.Ports.LighthouseBeaconNodeP2PPort+index),
+		fmt.Sprintf("--port=%d", e2e.TestParams.Ports.LighthouseBeaconNodeP2PPort+index),
+		fmt.Sprintf("--http-port=%d", e2e.TestParams.Ports.LighthouseBeaconNodeHTTPPort+index),
 		fmt.Sprintf("--target-peers=%d", 10),
-		fmt.Sprintf("--eth1-endpoints=http://127.0.0.1:%d", e2e.TestParams.Eth1RPCPort),
+		fmt.Sprintf("--eth1-endpoints=http://127.0.0.1:%d", e2e.TestParams.Ports.Eth1RPCPort+prysmNodeCount+index),
+		fmt.Sprintf("--execution-endpoints=http://127.0.0.1:%d", e2e.TestParams.Ports.Eth1AuthRPCPort+prysmNodeCount+index),
+		fmt.Sprintf("--jwt-secrets=%s", jwtPath),
 		fmt.Sprintf("--boot-nodes=%s", node.enr),
-		fmt.Sprintf("--metrics-port=%d", e2e.TestParams.BeaconNodeMetricsPort+index+e2e.LighthouseMetricsPortOffset),
+		fmt.Sprintf("--metrics-port=%d", e2e.TestParams.Ports.LighthouseBeaconNodeMetricsPort+index),
 		"--metrics",
 		"--http",
+		"--http-allow-sync-stalled",
+		"--enable-private-discovery",
 		"--debug-level=debug",
+		"--merge",
 	}
 	if node.config.UseFixedPeerIDs {
 		flagVal := strings.Join(node.config.PeerIDs, ",")

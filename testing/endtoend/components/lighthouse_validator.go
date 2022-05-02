@@ -103,19 +103,19 @@ func (v *LighthouseValidatorNode) Start(ctx context.Context) error {
 	}
 
 	_, _, index, _ := v.config, v.validatorNum, v.index, v.offset
-	beaconRPCPort := e2e.TestParams.BeaconNodeRPCPort + index
-	if beaconRPCPort >= e2e.TestParams.BeaconNodeRPCPort+e2e.TestParams.BeaconNodeCount {
+	beaconRPCPort := e2e.TestParams.Ports.PrysmBeaconNodeRPCPort + index
+	if beaconRPCPort >= e2e.TestParams.Ports.PrysmBeaconNodeRPCPort+e2e.TestParams.BeaconNodeCount {
 		// Point any extra validator clients to a node we know is running.
-		beaconRPCPort = e2e.TestParams.BeaconNodeRPCPort
+		beaconRPCPort = e2e.TestParams.Ports.PrysmBeaconNodeRPCPort
 	}
 	kPath := e2e.TestParams.TestPath + fmt.Sprintf("/lighthouse-validator-%d", index)
 	testNetDir := e2e.TestParams.TestPath + fmt.Sprintf("/lighthouse-testnet-%d", index)
-	httpOffset := e2e.LighthouseHTTPPortOffset
+	httpPort := e2e.TestParams.Ports.LighthouseBeaconNodeHTTPPort
 	// In the event we want to run a LH validator with a non LH
 	// beacon node, we split half the validators to run with
 	// lighthouse and the other half with prysm.
 	if v.config.UseValidatorCrossClient && index%2 == 0 {
-		httpOffset = e2e.PrysmBeaconGatewayOffset
+		httpPort = e2e.TestParams.Ports.PrysmBeaconNodeGatewayPort
 	}
 	args := []string{
 		"validator_client",
@@ -123,7 +123,7 @@ func (v *LighthouseValidatorNode) Start(ctx context.Context) error {
 		"--init-slashing-protection",
 		fmt.Sprintf("--datadir=%s", kPath),
 		fmt.Sprintf("--testnet-dir=%s", testNetDir),
-		fmt.Sprintf("--beacon-nodes=http://localhost:%d", e2e.TestParams.BeaconNodeRPCPort+index+httpOffset),
+		fmt.Sprintf("--beacon-nodes=http://localhost:%d", httpPort+index),
 	}
 
 	cmd := exec.CommandContext(ctx, binaryPath, args...) // #nosec G204 -- Safe

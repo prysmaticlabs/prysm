@@ -114,15 +114,17 @@ func (s *Service) BlockByTimestamp(ctx context.Context, time uint64) (*types.Hea
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockByTimestamp")
 	defer span.End()
 
+	s.latestEth1DataLock.RLock()
 	latestBlkHeight := s.latestEth1Data.BlockHeight
 	latestBlkTime := s.latestEth1Data.BlockTime
+	s.latestEth1DataLock.RUnlock()
 
 	if time > latestBlkTime {
-		return nil, errors.New("provided time is later than the current eth1 head")
+		return nil, errors.Errorf("provided time is later than the current eth1 head. %d > %d", time, latestBlkTime)
 	}
 	// Initialize a pointer to eth1 chain's history to start our search
 	// from.
-	cursorNum := big.NewInt(int64(latestBlkHeight))
+	cursorNum := big.NewInt(0).SetUint64(latestBlkHeight)
 	cursorTime := latestBlkTime
 
 	numOfBlocks := uint64(0)
@@ -168,9 +170,9 @@ func (s *Service) BlockByTimestamp(ctx context.Context, time uint64) (*types.Hea
 		return s.retrieveHeaderInfo(ctx, cursorNum.Uint64())
 	}
 	if cursorTime > time {
-		return s.findLessTargetEth1Block(ctx, big.NewInt(int64(estimatedBlk)), time)
+		return s.findLessTargetEth1Block(ctx, big.NewInt(0).SetUint64(estimatedBlk), time)
 	}
-	return s.findMoreTargetEth1Block(ctx, big.NewInt(int64(estimatedBlk)), time)
+	return s.findMoreTargetEth1Block(ctx, big.NewInt(0).SetUint64(estimatedBlk), time)
 }
 
 // Performs a search to find a target eth1 block which is earlier than or equal to the
@@ -214,7 +216,7 @@ func (s *Service) findMoreTargetEth1Block(ctx context.Context, startBlk *big.Int
 }
 
 func (s *Service) retrieveHeaderInfo(ctx context.Context, bNum uint64) (*types.HeaderInfo, error) {
-	bn := big.NewInt(int64(bNum))
+	bn := big.NewInt(0).SetUint64(bNum)
 	exists, info, err := s.headerCache.HeaderInfoByHeight(bn)
 	if err != nil {
 		return nil, err

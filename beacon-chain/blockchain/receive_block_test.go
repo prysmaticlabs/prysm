@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	blockchainTesting "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
@@ -14,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
@@ -132,6 +132,7 @@ func TestService_ReceiveBlock(t *testing.T) {
 				WithExitPool(voluntaryexits.NewPool()),
 				WithStateNotifier(&blockchainTesting.MockStateNotifier{RecordEvents: true}),
 				WithStateGen(stategen.New(beaconDB)),
+				WithFinalizedStateAtStartUp(genesis),
 			}
 			s, err := NewService(ctx, opts...)
 			require.NoError(t, err)
@@ -143,7 +144,9 @@ func TestService_ReceiveBlock(t *testing.T) {
 			s.store.SetFinalizedCheckpt(&ethpb.Checkpoint{Root: gRoot[:]})
 			root, err := tt.args.block.Block.HashTreeRoot()
 			require.NoError(t, err)
-			err = s.ReceiveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(tt.args.block), root)
+			wsb, err := wrapper.WrappedSignedBeaconBlock(tt.args.block)
+			require.NoError(t, err)
+			err = s.ReceiveBlock(ctx, wsb, root)
 			if tt.wantedErr != "" {
 				assert.ErrorContains(t, tt.wantedErr, err)
 			} else {
@@ -184,7 +187,9 @@ func TestService_ReceiveBlockUpdateHead(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
-		require.NoError(t, s.ReceiveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b), root))
+		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		require.NoError(t, err)
+		require.NoError(t, s.ReceiveBlock(ctx, wsb, root))
 		wg.Done()
 	}()
 	wg.Wait()
@@ -192,7 +197,7 @@ func TestService_ReceiveBlockUpdateHead(t *testing.T) {
 		t.Errorf("Received %d state notifications, expected at least 1", recvd)
 	}
 	// Verify fork choice has processed the block. (Genesis block and the new block)
-	assert.Equal(t, 2, len(s.cfg.ForkChoiceStore.Nodes()))
+	assert.Equal(t, 2, s.cfg.ForkChoiceStore.NodeCount())
 }
 
 func TestService_ReceiveBlockBatch(t *testing.T) {
@@ -260,7 +265,9 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 			s.store.SetFinalizedCheckpt(&ethpb.Checkpoint{Root: gRoot[:]})
 			root, err := tt.args.block.Block.HashTreeRoot()
 			require.NoError(t, err)
-			blks := []block.SignedBeaconBlock{wrapper.WrappedPhase0SignedBeaconBlock(tt.args.block)}
+			wsb, err := wrapper.WrappedSignedBeaconBlock(tt.args.block)
+			require.NoError(t, err)
+			blks := []block.SignedBeaconBlock{wsb}
 			roots := [][32]byte{root}
 			err = s.ReceiveBlockBatch(ctx, blks, roots)
 			if tt.wantedErr != "" {
@@ -282,7 +289,9 @@ func TestService_HasInitSyncBlock(t *testing.T) {
 	if s.HasInitSyncBlock(r) {
 		t.Error("Should not have block")
 	}
-	s.saveInitSyncBlock(r, wrapper.WrappedPhase0SignedBeaconBlock(util.NewBeaconBlock()))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+	require.NoError(t, err)
+	s.saveInitSyncBlock(r, wsb)
 	if !s.HasInitSyncBlock(r) {
 		t.Error("Should have block")
 	}

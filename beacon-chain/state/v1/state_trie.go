@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/fieldtrie"
+	statenative "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/v1"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/types"
 	"github.com/prysmaticlabs/prysm/config/features"
@@ -23,13 +24,20 @@ import (
 )
 
 // InitializeFromProto the beacon state from a protobuf representation.
-func InitializeFromProto(st *ethpb.BeaconState) (*BeaconState, error) {
+func InitializeFromProto(st *ethpb.BeaconState) (state.BeaconState, error) {
+	if features.Get().EnableNativeState {
+		return statenative.InitializeFromProtoUnsafe(proto.Clone(st).(*ethpb.BeaconState))
+	}
 	return InitializeFromProtoUnsafe(proto.Clone(st).(*ethpb.BeaconState))
 }
 
 // InitializeFromProtoUnsafe directly uses the beacon state protobuf pointer
 // and sets it as the inner state of the BeaconState type.
-func InitializeFromProtoUnsafe(st *ethpb.BeaconState) (*BeaconState, error) {
+func InitializeFromProtoUnsafe(st *ethpb.BeaconState) (state.BeaconState, error) {
+	if features.Get().EnableNativeState {
+		return statenative.InitializeFromProtoUnsafe(st)
+	}
+
 	if st == nil {
 		return nil, errors.New("received nil state")
 	}
@@ -110,7 +118,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 			PreviousJustifiedCheckpoint: b.previousJustifiedCheckpoint(),
 			CurrentJustifiedCheckpoint:  b.currentJustifiedCheckpoint(),
 			FinalizedCheckpoint:         b.finalizedCheckpoint(),
-			GenesisValidatorsRoot:       b.genesisValidatorRoot(),
+			GenesisValidatorsRoot:       b.genesisValidatorsRoot(),
 		},
 		dirtyFields:           make(map[types.FieldIndex]bool, fieldCount),
 		dirtyIndices:          make(map[types.FieldIndex][]uint64, fieldCount),
@@ -270,7 +278,7 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 	switch field {
 	case genesisTime:
 		return ssz.Uint64Root(b.state.GenesisTime), nil
-	case genesisValidatorRoot:
+	case genesisValidatorsRoot:
 		return bytesutil.ToBytes32(b.state.GenesisValidatorsRoot), nil
 	case slot:
 		return ssz.Uint64Root(uint64(b.state.Slot)), nil
@@ -329,21 +337,18 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 		}
 		return b.recomputeFieldTrie(validators, b.state.Validators)
 	case balances:
-		if features.Get().EnableBalanceTrieComputation {
-			if b.rebuildTrie[field] {
-				maxBalCap := uint64(fieldparams.ValidatorRegistryLimit)
-				elemSize := uint64(8)
-				balLimit := (maxBalCap*elemSize + 31) / 32
-				err := b.resetFieldTrie(field, b.state.Balances, balLimit)
-				if err != nil {
-					return [32]byte{}, err
-				}
-				delete(b.rebuildTrie, field)
-				return b.stateFieldLeaves[field].TrieRoot()
+		if b.rebuildTrie[field] {
+			maxBalCap := uint64(fieldparams.ValidatorRegistryLimit)
+			elemSize := uint64(8)
+			balLimit := (maxBalCap*elemSize + 31) / 32
+			err := b.resetFieldTrie(field, b.state.Balances, balLimit)
+			if err != nil {
+				return [32]byte{}, err
 			}
-			return b.recomputeFieldTrie(balances, b.state.Balances)
+			delete(b.rebuildTrie, field)
+			return b.stateFieldLeaves[field].TrieRoot()
 		}
-		return stateutil.Uint64ListRootWithRegistryLimit(b.state.Balances)
+		return b.recomputeFieldTrie(balances, b.state.Balances)
 	case randaoMixes:
 		if b.rebuildTrie[field] {
 			err := b.resetFieldTrie(field, b.state.RandaoMixes, fieldparams.RandaoMixesLength)

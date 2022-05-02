@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/mohae/deepcopy"
-	types "github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 )
 
 // NetworkConfig defines the spec based network parameters.

@@ -6,12 +6,12 @@ import (
 	"strconv"
 
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/async"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/time/slots"
@@ -76,14 +76,9 @@ func verifyAttTargetEpoch(_ context.Context, genesisTime, nowTime uint64, c *eth
 // verifyBeaconBlock verifies beacon head block is known and not from the future.
 func (s *Service) verifyBeaconBlock(ctx context.Context, data *ethpb.AttestationData) error {
 	r := bytesutil.ToBytes32(data.BeaconBlockRoot)
-	b, err := s.cfg.BeaconDB.Block(ctx, r)
+	b, err := s.getBlock(ctx, r)
 	if err != nil {
 		return err
-	}
-	// If the block does not exist in db, check again if block exists in initial sync block cache.
-	// This could happen as the node first syncs to head.
-	if (b == nil || b.IsNil()) && s.hasInitSyncBlock(r) {
-		b = s.getInitSyncBlock(r)
 	}
 	if err := helpers.BeaconBlockIsNil(b); err != nil {
 		return err

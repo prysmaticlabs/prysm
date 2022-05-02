@@ -349,6 +349,36 @@ func TestCopyBeaconBlockBodyBellatrix(t *testing.T) {
 	assert.NotEmpty(t, bb, "Copied beacon block body Bellatrix has empty fields")
 }
 
+func TestCopySignedBlindedBeaconBlockBellatrix(t *testing.T) {
+	sbb := genSignedBeaconBlockBellatrix()
+
+	got := v1alpha1.CopySignedBeaconBlockBellatrix(sbb)
+	if !reflect.DeepEqual(got, sbb) {
+		t.Errorf("CopySignedBeaconBlockBellatrix() = %v, want %v", got, sbb)
+	}
+	assert.NotEmpty(t, sbb, "Copied signed blinded beacon block Bellatrix has empty fields")
+}
+
+func TestCopyBlindedBeaconBlockBellatrix(t *testing.T) {
+	b := genBeaconBlockBellatrix()
+
+	got := v1alpha1.CopyBeaconBlockBellatrix(b)
+	if !reflect.DeepEqual(got, b) {
+		t.Errorf("CopyBeaconBlockBellatrix() = %v, want %v", got, b)
+	}
+	assert.NotEmpty(t, b, "Copied blinded beacon block Bellatrix has empty fields")
+}
+
+func TestCopyBlindedBeaconBlockBodyBellatrix(t *testing.T) {
+	bb := genBeaconBlockBodyBellatrix()
+
+	got := v1alpha1.CopyBeaconBlockBodyBellatrix(bb)
+	if !reflect.DeepEqual(got, bb) {
+		t.Errorf("CopyBeaconBlockBodyBellatrix() = %v, want %v", got, bb)
+	}
+	assert.NotEmpty(t, bb, "Copied blinded beacon block body Bellatrix has empty fields")
+}
+
 func bytes() []byte {
 	b := make([]byte, 32)
 	_, err := rand.Read(b)
@@ -637,6 +667,38 @@ func genSignedBeaconBlockBellatrix() *v1alpha1.SignedBeaconBlockBellatrix {
 	}
 }
 
+func genBlindedBeaconBlockBodyBellatrix() *v1alpha1.BlindedBeaconBlockBodyBellatrix {
+	return &v1alpha1.BlindedBeaconBlockBodyBellatrix{
+		RandaoReveal:           bytes(),
+		Eth1Data:               genEth1Data(),
+		Graffiti:               bytes(),
+		ProposerSlashings:      genProposerSlashings(5),
+		AttesterSlashings:      genAttesterSlashings(5),
+		Attestations:           genAttestations(10),
+		Deposits:               genDeposits(5),
+		VoluntaryExits:         genSignedVoluntaryExits(12),
+		SyncAggregate:          genSyncAggregate(),
+		ExecutionPayloadHeader: genPayloadHeader(),
+	}
+}
+
+func genBlindedBeaconBlockBellatrix() *v1alpha1.BlindedBeaconBlockBellatrix {
+	return &v1alpha1.BlindedBeaconBlockBellatrix{
+		Slot:          123455,
+		ProposerIndex: 55433,
+		ParentRoot:    bytes(),
+		StateRoot:     bytes(),
+		Body:          genBlindedBeaconBlockBodyBellatrix(),
+	}
+}
+
+func genSignedBlindedBeaconBlockBellatrix() *v1alpha1.SignedBlindedBeaconBlockBellatrix {
+	return &v1alpha1.SignedBlindedBeaconBlockBellatrix{
+		Block:     genBlindedBeaconBlockBellatrix(),
+		Signature: bytes(),
+	}
+}
+
 func genSyncCommitteeMessage() *v1alpha1.SyncCommitteeMessage {
 	return &v1alpha1.SyncCommitteeMessage{
 		Slot:           424555,
@@ -653,7 +715,7 @@ func genPayload() *enginev1.ExecutionPayload {
 		StateRoot:     bytes(),
 		ReceiptsRoot:  bytes(),
 		LogsBloom:     bytes(),
-		Random:        bytes(),
+		PrevRandao:    bytes(),
 		BlockNumber:   1,
 		GasLimit:      2,
 		GasUsed:       3,
@@ -670,9 +732,9 @@ func genPayloadHeader() *v1alpha1.ExecutionPayloadHeader {
 		ParentHash:       bytes(),
 		FeeRecipient:     bytes(),
 		StateRoot:        bytes(),
-		ReceiptRoot:      bytes(),
+		ReceiptsRoot:     bytes(),
 		LogsBloom:        bytes(),
-		Random:           bytes(),
+		PrevRandao:       bytes(),
 		BlockNumber:      1,
 		GasLimit:         2,
 		GasUsed:          3,

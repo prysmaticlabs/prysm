@@ -3,8 +3,8 @@ package validator
 import (
 	"context"
 	"testing"
+	"time"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
@@ -13,11 +13,14 @@ import (
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -25,10 +28,35 @@ func TestGetSyncMessageBlockRoot_OK(t *testing.T) {
 	r := []byte{'a'}
 	server := &Server{
 		HeadFetcher: &mock.ChainService{Root: r},
+		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
 	}
 	res, err := server.GetSyncMessageBlockRoot(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 	require.DeepEqual(t, r, res.Root)
+}
+
+func TestGetSyncMessageBlockRoot_Optimistic(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig()
+	cfg.BellatrixForkEpoch = 0
+	params.OverrideBeaconConfig(cfg)
+
+	server := &Server{
+		HeadFetcher: &mock.ChainService{Optimistic: true},
+		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
+	}
+	_, err := server.GetSyncMessageBlockRoot(context.Background(), &emptypb.Empty{})
+	s, ok := status.FromError(err)
+	require.Equal(t, true, ok)
+	require.DeepEqual(t, codes.Unavailable, s.Code())
+	require.ErrorContains(t, errOptimisticMode.Error(), err)
+
+	server = &Server{
+		HeadFetcher: &mock.ChainService{Optimistic: false},
+		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
+	}
+	_, err = server.GetSyncMessageBlockRoot(context.Background(), &emptypb.Empty{})
+	require.NoError(t, err)
 }
 
 func TestSubmitSyncMessage_OK(t *testing.T) {
@@ -80,6 +108,7 @@ func TestGetSyncCommitteeContribution_FiltersDuplicates(t *testing.T) {
 			State:                st,
 			SyncCommitteeIndices: []types.CommitteeIndex{10},
 		},
+		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
 	}
 	secKey, err := bls.RandKey()
 	require.NoError(t, err)

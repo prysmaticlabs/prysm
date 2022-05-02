@@ -23,18 +23,21 @@ func (s *Server) ListKeystores(
 	ctx context.Context, _ *empty.Empty,
 ) (*ethpbservice.ListKeystoresResponse, error) {
 	if !s.walletInitialized {
-		return nil, status.Error(codes.Internal, "Wallet not ready")
+		return nil, status.Error(codes.FailedPrecondition, "Prysm Wallet not initialized. Please create a new wallet.")
 	}
 	if s.validatorService == nil {
-		return nil, status.Error(codes.Internal, "Validator service not ready")
+		return nil, status.Error(codes.FailedPrecondition, "Validator service not ready. Please try again once validator is ready.")
 	}
 	km, err := s.validatorService.Keymanager()
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get keymanager: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not get Prysm keymanager (possibly due to beacon node unavailable): %v", err)
+	}
+	if s.wallet.KeymanagerKind() != keymanager.Derived && s.wallet.KeymanagerKind() != keymanager.Local {
+		return nil, status.Errorf(codes.FailedPrecondition, "Prysm validator keys are not stored locally with this keymanager type.")
 	}
 	pubKeys, err := km.FetchValidatingPublicKeys(ctx)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not list keystores: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not retrieve keystores: %v", err)
 	}
 	keystoreResponse := make([]*ethpbservice.ListKeystoresResponse_Keystore, len(pubKeys))
 	for i := 0; i < len(pubKeys); i++ {
@@ -46,7 +49,7 @@ func (s *Server) ListKeystores(
 		}
 	}
 	return &ethpbservice.ListKeystoresResponse{
-		Keystores: keystoreResponse,
+		Data: keystoreResponse,
 	}, nil
 }
 
@@ -55,32 +58,32 @@ func (s *Server) ImportKeystores(
 	ctx context.Context, req *ethpbservice.ImportKeystoresRequest,
 ) (*ethpbservice.ImportKeystoresResponse, error) {
 	if !s.walletInitialized {
-		return nil, status.Error(codes.Internal, "Wallet not ready")
+		statuses := groupImportErrors(req, "Prysm Wallet not initialized. Please create a new wallet.")
+		return &ethpbservice.ImportKeystoresResponse{Data: statuses}, nil
 	}
 	if s.validatorService == nil {
-		return nil, status.Error(codes.Internal, "Validator service not ready")
+		statuses := groupImportErrors(req, "Validator service not ready. Please try again once validator is ready.")
+		return &ethpbservice.ImportKeystoresResponse{Data: statuses}, nil
 	}
 	km, err := s.validatorService.Keymanager()
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get keymanager: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not get keymanager (possibly due to beacon node unavailable): %v", err)
 	}
 	importer, ok := km.(keymanager.Importer)
 	if !ok {
-		return nil, status.Error(codes.Internal, "Keymanager kind cannot import keys")
+		statuses := groupImportErrors(req, "Keymanager kind cannot import keys")
+		return &ethpbservice.ImportKeystoresResponse{Data: statuses}, nil
 	}
-	if len(req.Passwords) == 0 {
-		return nil, status.Error(codes.Internal, "No passwords provided for keystores")
-	}
-	if len(req.Passwords) != len(req.Keystores) {
-		return nil, status.Error(codes.Internal, "Number of passwords does not match number of keystores")
+	if len(req.Keystores) == 0 {
+		return &ethpbservice.ImportKeystoresResponse{}, nil
 	}
 	keystores := make([]*keymanager.Keystore, len(req.Keystores))
 	for i := 0; i < len(req.Keystores); i++ {
 		k := &keymanager.Keystore{}
-		if err := json.Unmarshal([]byte(req.Keystores[i]), k); err != nil {
-			return nil, status.Errorf(
-				codes.Internal, "Invalid keystore at index %d in request: %v", i, err,
-			)
+		err = json.Unmarshal([]byte(req.Keystores[i]), k)
+		if err != nil {
+			// we want to ignore unmarshal errors for now, proper status in importKeystore
+			k.Pubkey = "invalid format"
 		}
 		keystores[i] = k
 	}
@@ -95,9 +98,23 @@ func (s *Server) ImportKeystores(
 					Message: fmt.Sprintf("could not import slashing protection: %v", err),
 				}
 			}
-			return &ethpbservice.ImportKeystoresResponse{Statuses: statuses}, nil
+			return &ethpbservice.ImportKeystoresResponse{Data: statuses}, nil
 		}
 	}
+	if len(req.Passwords) == 0 {
+		req.Passwords = make([]string, len(req.Keystores))
+	}
+
+	// req.Passwords and req.Keystores are checked for 0 length in code above.
+	if len(req.Passwords) > len(req.Keystores) {
+		req.Passwords = req.Passwords[:len(req.Keystores)]
+	}
+	if len(req.Passwords) < len(req.Keystores) {
+		passwordList := make([]string, len(req.Keystores))
+		copy(passwordList, req.Passwords)
+		req.Passwords = passwordList
+	}
+
 	statuses, err := importer.ImportKeystores(ctx, keystores, req.Passwords)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not import keystores: %v", err)
@@ -105,7 +122,18 @@ func (s *Server) ImportKeystores(
 
 	// If any of the keys imported had a slashing protection history before, we
 	// stop marking them as deleted from our validator database.
-	return &ethpbservice.ImportKeystoresResponse{Statuses: statuses}, nil
+	return &ethpbservice.ImportKeystoresResponse{Data: statuses}, nil
+}
+
+func groupImportErrors(req *ethpbservice.ImportKeystoresRequest, errorMessage string) []*ethpbservice.ImportedKeystoreStatus {
+	statuses := make([]*ethpbservice.ImportedKeystoreStatus, len(req.Keystores))
+	for i := 0; i < len(req.Keystores); i++ {
+		statuses[i] = &ethpbservice.ImportedKeystoreStatus{
+			Status:  ethpbservice.ImportedKeystoreStatus_ERROR,
+			Message: errorMessage,
+		}
+	}
+	return statuses
 }
 
 // DeleteKeystores allows for deleting specified public keys from Prysm.
@@ -113,47 +141,35 @@ func (s *Server) DeleteKeystores(
 	ctx context.Context, req *ethpbservice.DeleteKeystoresRequest,
 ) (*ethpbservice.DeleteKeystoresResponse, error) {
 	if !s.walletInitialized {
-		return nil, status.Error(codes.Internal, "Wallet not ready")
+		statuses := groupExportErrors(req, "Prysm Wallet not initialized. Please create a new wallet.")
+		return &ethpbservice.DeleteKeystoresResponse{Data: statuses}, nil
 	}
 	if s.validatorService == nil {
-		return nil, status.Error(codes.Internal, "Validator service not ready")
+		statuses := groupExportErrors(req, "Validator service not ready")
+		return &ethpbservice.DeleteKeystoresResponse{Data: statuses}, nil
 	}
 	km, err := s.validatorService.Keymanager()
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get keymanager: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not get keymanager (possibly due to beacon node unavailable): %v", err)
 	}
-	deleter, ok := km.(keymanager.Deleter)
-	if !ok {
-		return nil, status.Error(codes.Internal, "Keymanager kind cannot delete keys")
+	if len(req.Pubkeys) == 0 {
+		return &ethpbservice.DeleteKeystoresResponse{Data: make([]*ethpbservice.DeletedKeystoreStatus, 0)}, nil
 	}
-	if len(req.PublicKeys) == 0 {
-		return &ethpbservice.DeleteKeystoresResponse{Statuses: make([]*ethpbservice.DeletedKeystoreStatus, 0)}, nil
-	}
-	statuses, err := deleter.DeleteKeystores(ctx, req.PublicKeys)
+	statuses, err := km.DeleteKeystores(ctx, req.Pubkeys)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not delete keys: %v", err)
 	}
-	if len(statuses) != len(req.PublicKeys) {
-		return nil, status.Errorf(
-			codes.Internal,
-			"Wanted same amount of statuses %d as public keys %d",
-			len(statuses),
-			len(req.PublicKeys),
-		)
-	}
 
-	statuses, err = s.transformDeletedKeysStatuses(ctx, req.PublicKeys, statuses)
+	statuses, err = s.transformDeletedKeysStatuses(ctx, req.Pubkeys, statuses)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not transform deleted keys statuses: %v", err)
 	}
 
-	exportedHistory, err := s.slashingProtectionHistoryForDeletedKeys(ctx, req.PublicKeys, statuses)
+	exportedHistory, err := s.slashingProtectionHistoryForDeletedKeys(ctx, req.Pubkeys, statuses)
 	if err != nil {
-		return nil, status.Errorf(
-			codes.Internal,
-			"Could not export slashing protection history: %v",
-			err,
-		)
+		log.Warnf("Could not get slashing protection history for deleted keys: %v", err)
+		statuses := groupExportErrors(req, "Non duplicate keys that were existing were deleted, but could not export slashing protection history.")
+		return &ethpbservice.DeleteKeystoresResponse{Data: statuses}, nil
 	}
 	jsonHist, err := json.Marshal(exportedHistory)
 	if err != nil {
@@ -164,9 +180,20 @@ func (s *Server) DeleteKeystores(
 		)
 	}
 	return &ethpbservice.DeleteKeystoresResponse{
-		Statuses:           statuses,
+		Data:               statuses,
 		SlashingProtection: string(jsonHist),
 	}, nil
+}
+
+func groupExportErrors(req *ethpbservice.DeleteKeystoresRequest, errorMessage string) []*ethpbservice.DeletedKeystoreStatus {
+	statuses := make([]*ethpbservice.DeletedKeystoreStatus, len(req.Pubkeys))
+	for i := 0; i < len(req.Pubkeys); i++ {
+		statuses[i] = &ethpbservice.DeletedKeystoreStatus{
+			Status:  ethpbservice.DeletedKeystoreStatus_ERROR,
+			Message: errorMessage,
+		}
+	}
+	return statuses
 }
 
 // For a list of deleted keystore statuses, we check if any NOT_FOUND status actually
@@ -223,4 +250,135 @@ func (s *Server) slashingProtectionHistoryForDeletedKeys(
 		}
 	}
 	return slashingprotection.ExportStandardProtectionJSON(ctx, s.valDB, filteredKeys...)
+}
+
+// ListRemoteKeys returns a list of all public keys defined for web3signer keymanager type.
+func (s *Server) ListRemoteKeys(ctx context.Context, _ *empty.Empty) (*ethpbservice.ListRemoteKeysResponse, error) {
+	if !s.walletInitialized {
+		return nil, status.Error(codes.FailedPrecondition, "Prysm Wallet not initialized. Please create a new wallet.")
+	}
+	if s.validatorService == nil {
+		return nil, status.Error(codes.FailedPrecondition, "Validator service not ready.")
+	}
+	km, err := s.validatorService.Keymanager()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get Prysm keymanager (possibly due to beacon node unavailable): %v", err)
+	}
+	if s.wallet.KeymanagerKind() != keymanager.Web3Signer {
+		return nil, status.Errorf(codes.FailedPrecondition, "Prysm Wallet is not of type Web3Signer. Please execute validator client with web3signer flags.")
+	}
+	pubKeys, err := km.FetchValidatingPublicKeys(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not retrieve keystores: %v", err)
+	}
+	keystoreResponse := make([]*ethpbservice.ListRemoteKeysResponse_Keystore, len(pubKeys))
+	for i := 0; i < len(pubKeys); i++ {
+		keystoreResponse[i] = &ethpbservice.ListRemoteKeysResponse_Keystore{
+			Pubkey:   pubKeys[i][:],
+			Url:      s.validatorService.Web3SignerConfig.BaseEndpoint,
+			Readonly: true,
+		}
+	}
+	return &ethpbservice.ListRemoteKeysResponse{
+		Data: keystoreResponse,
+	}, nil
+}
+
+// ImportRemoteKeys imports a list of public keys defined for web3signer keymanager type.
+func (s *Server) ImportRemoteKeys(ctx context.Context, req *ethpbservice.ImportRemoteKeysRequest) (*ethpbservice.ImportRemoteKeysResponse, error) {
+	if !s.walletInitialized {
+		return nil, status.Error(codes.FailedPrecondition, "Prysm Wallet not initialized. Please create a new wallet.")
+	}
+	if s.validatorService == nil {
+		return nil, status.Error(codes.FailedPrecondition, "Validator service not ready.")
+	}
+	km, err := s.validatorService.Keymanager()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, fmt.Sprintf("Could not get Prysm keymanager (possibly due to beacon node unavailable): %v", err))
+	}
+	if s.wallet.KeymanagerKind() != keymanager.Web3Signer {
+		return nil, status.Errorf(codes.FailedPrecondition, "Prysm Wallet is not of type Web3Signer. Please execute validator client with web3signer flags.")
+	}
+	adder, ok := km.(keymanager.PublicKeyAdder)
+	if !ok {
+		statuses := groupImportRemoteKeysErrors(req, "Keymanager kind cannot import public keys for web3signer keymanager type.")
+		return &ethpbservice.ImportRemoteKeysResponse{Data: statuses}, nil
+	}
+
+	remoteKeys := make([][fieldparams.BLSPubkeyLength]byte, len(req.RemoteKeys))
+	isUrlUsed := false
+	for i, obj := range req.RemoteKeys {
+		remoteKeys[i] = bytesutil.ToBytes48(obj.Pubkey)
+		if obj.Url != "" {
+			isUrlUsed = true
+		}
+	}
+	if isUrlUsed {
+		log.Warnf("Setting web3signer base url for imported keys is not supported. Prysm only uses the url from --validators-external-signer-url flag for web3signer.")
+	}
+
+	statuses, err := adder.AddPublicKeys(ctx, remoteKeys)
+	if err != nil {
+		sts := groupImportRemoteKeysErrors(req, fmt.Sprintf("Could not add keys;error: %v", err))
+		return &ethpbservice.ImportRemoteKeysResponse{Data: sts}, nil
+	}
+	return &ethpbservice.ImportRemoteKeysResponse{
+		Data: statuses,
+	}, nil
+}
+
+func groupImportRemoteKeysErrors(req *ethpbservice.ImportRemoteKeysRequest, errorMessage string) []*ethpbservice.ImportedRemoteKeysStatus {
+	statuses := make([]*ethpbservice.ImportedRemoteKeysStatus, len(req.RemoteKeys))
+	for i := 0; i < len(req.RemoteKeys); i++ {
+		statuses[i] = &ethpbservice.ImportedRemoteKeysStatus{
+			Status:  ethpbservice.ImportedRemoteKeysStatus_ERROR,
+			Message: errorMessage,
+		}
+	}
+	return statuses
+}
+
+// DeleteRemoteKeys deletes a list of public keys defined for web3signer keymanager type.
+func (s *Server) DeleteRemoteKeys(ctx context.Context, req *ethpbservice.DeleteRemoteKeysRequest) (*ethpbservice.DeleteRemoteKeysResponse, error) {
+	if !s.walletInitialized {
+		return nil, status.Error(codes.FailedPrecondition, "Prysm Wallet not initialized. Please create a new wallet.")
+	}
+	if s.validatorService == nil {
+		return nil, status.Error(codes.FailedPrecondition, "Validator service not ready.")
+	}
+	km, err := s.validatorService.Keymanager()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get Prysm keymanager (possibly due to beacon node unavailable): %v", err)
+	}
+	if s.wallet.KeymanagerKind() != keymanager.Web3Signer {
+		return nil, status.Errorf(codes.FailedPrecondition, "Prysm Wallet is not of type Web3Signer. Please execute validator client with web3signer flags.")
+	}
+	deleter, ok := km.(keymanager.PublicKeyDeleter)
+	if !ok {
+		statuses := groupDeleteRemoteKeysErrors(req, "Keymanager kind cannot delete public keys for web3signer keymanager type.")
+		return &ethpbservice.DeleteRemoteKeysResponse{Data: statuses}, nil
+	}
+	remoteKeys := make([][fieldparams.BLSPubkeyLength]byte, len(req.Pubkeys))
+	for i, key := range req.Pubkeys {
+		remoteKeys[i] = bytesutil.ToBytes48(key)
+	}
+	statuses, err := deleter.DeletePublicKeys(ctx, remoteKeys)
+	if err != nil {
+		sts := groupDeleteRemoteKeysErrors(req, fmt.Sprintf("Could not delete keys;error: %v", err))
+		return &ethpbservice.DeleteRemoteKeysResponse{Data: sts}, nil
+	}
+	return &ethpbservice.DeleteRemoteKeysResponse{
+		Data: statuses,
+	}, nil
+}
+
+func groupDeleteRemoteKeysErrors(req *ethpbservice.DeleteRemoteKeysRequest, errorMessage string) []*ethpbservice.DeletedRemoteKeysStatus {
+	statuses := make([]*ethpbservice.DeletedRemoteKeysStatus, len(req.Pubkeys))
+	for i := 0; i < len(req.Pubkeys); i++ {
+		statuses[i] = &ethpbservice.DeletedRemoteKeysStatus{
+			Status:  ethpbservice.DeletedRemoteKeysStatus_ERROR,
+			Message: errorMessage,
+		}
+	}
+	return statuses
 }

@@ -5,7 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -162,7 +162,7 @@ func ImportAccountsCli(cliCtx *cli.Context) error {
 	}
 	keystoresImported := make([]*keymanager.Keystore, 0)
 	if isDir {
-		files, err := ioutil.ReadDir(keysDir)
+		files, err := os.ReadDir(keysDir)
 		if err != nil {
 			return errors.Wrap(err, "could not read dir")
 		}
@@ -199,7 +199,7 @@ func ImportAccountsCli(cliCtx *cli.Context) error {
 	var accountsPassword string
 	if cliCtx.IsSet(flags.AccountPasswordFileFlag.Name) {
 		passwordFilePath := cliCtx.String(flags.AccountPasswordFileFlag.Name)
-		data, err := ioutil.ReadFile(passwordFilePath) // #nosec G304
+		data, err := os.ReadFile(passwordFilePath) // #nosec G304
 		if err != nil {
 			return err
 		}
@@ -239,6 +239,19 @@ func ImportAccountsCli(cliCtx *cli.Context) error {
 // ImportAccounts can import external, EIP-2335 compliant keystore.json files as
 // new accounts into the Prysm validator wallet.
 func ImportAccounts(ctx context.Context, cfg *ImportAccountsConfig) ([]*ethpbservice.ImportedKeystoreStatus, error) {
+	if cfg.AccountPassword == "" {
+		statuses := make([]*ethpbservice.ImportedKeystoreStatus, len(cfg.Keystores))
+		for i, keystore := range cfg.Keystores {
+			statuses[i] = &ethpbservice.ImportedKeystoreStatus{
+				Status: ethpbservice.ImportedKeystoreStatus_ERROR,
+				Message: fmt.Sprintf(
+					"account password is required to import keystore %s",
+					keystore.Pubkey,
+				),
+			}
+		}
+		return statuses, nil
+	}
 	passwords := make([]string, len(cfg.Keystores))
 	for i := 0; i < len(cfg.Keystores); i++ {
 		passwords[i] = cfg.AccountPassword
@@ -261,7 +274,7 @@ func importPrivateKeyAsAccount(cliCtx *cli.Context, wallet *wallet.Wallet, impor
 	if !file.FileExists(fullPath) {
 		return fmt.Errorf("file %s does not exist", fullPath)
 	}
-	privKeyHex, err := ioutil.ReadFile(fullPath) // #nosec G304
+	privKeyHex, err := os.ReadFile(fullPath) // #nosec G304
 	if err != nil {
 		return errors.Wrapf(err, "could not read private key file at path %s", fullPath)
 	}
@@ -309,7 +322,7 @@ func importPrivateKeyAsAccount(cliCtx *cli.Context, wallet *wallet.Wallet, impor
 }
 
 func readKeystoreFile(_ context.Context, keystoreFilePath string) (*keymanager.Keystore, error) {
-	keystoreBytes, err := ioutil.ReadFile(keystoreFilePath) // #nosec G304
+	keystoreBytes, err := os.ReadFile(keystoreFilePath) // #nosec G304
 	if err != nil {
 		return nil, errors.Wrap(err, "could not read keystore file")
 	}

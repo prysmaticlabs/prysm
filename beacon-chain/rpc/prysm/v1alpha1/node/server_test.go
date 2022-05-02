@@ -153,8 +153,8 @@ func TestNodeServer_ListPeers(t *testing.T) {
 func TestNodeServer_GetETH1ConnectionStatus(t *testing.T) {
 	server := grpc.NewServer()
 	eps := []string{"foo", "bar"}
-	errs := []error{fmt.Errorf("error 1"), fmt.Errorf("error 2")}
-	errStrs := []string{"error 1", "error 2"}
+	errs := []error{fmt.Errorf("error 1"), fmt.Errorf("error 2"), nil}
+	errStrs := []string{"error 1", "error 2", ""}
 	mockFetcher := &testutil.MockPOWChainInfoFetcher{
 		CurrEndpoint: eps[0],
 		CurrError:    errs[0],

@@ -68,7 +68,7 @@ func UpgradeToAltair(ctx context.Context, state state.BeaconState) (state.Beacon
 	numValidators := state.NumValidators()
 	s := &ethpb.BeaconStateAltair{
 		GenesisTime:           state.GenesisTime(),
-		GenesisValidatorsRoot: state.GenesisValidatorRoot(),
+		GenesisValidatorsRoot: state.GenesisValidatorsRoot(),
 		Slot:                  state.Slot(),
 		Fork: &ethpb.Fork{
 			PreviousVersion: state.Fork().CurrentVersion,
@@ -137,7 +137,7 @@ func UpgradeToAltair(ctx context.Context, state state.BeaconState) (state.Beacon
 //        for index in get_attesting_indices(state, data, attestation.aggregation_bits):
 //            for flag_index in participation_flag_indices:
 //                epoch_participation[index] = add_flag(epoch_participation[index], flag_index)
-func TranslateParticipation(ctx context.Context, state *statealtair.BeaconState, atts []*ethpb.PendingAttestation) (*statealtair.BeaconState, error) {
+func TranslateParticipation(ctx context.Context, state state.BeaconStateAltair, atts []*ethpb.PendingAttestation) (state.BeaconStateAltair, error) {
 	epochParticipation, err := state.PreviousEpochParticipation()
 	if err != nil {
 		return nil, err

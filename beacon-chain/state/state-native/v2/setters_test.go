@@ -5,14 +5,17 @@ import (
 	"strconv"
 	"testing"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+	testtmpl "github.com/prysmaticlabs/prysm/beacon-chain/state/testing"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestBeaconState_AppendBalanceWithTrie(t *testing.T) {
@@ -106,8 +109,70 @@ func TestBeaconState_AppendBalanceWithTrie(t *testing.T) {
 	}
 	_, err = st.HashTreeRoot(context.Background())
 	assert.NoError(t, err)
-	newRt := bytesutil.ToBytes32(st.merkleLayers[0][balances])
-	wantedRt, err := stateutil.Uint64ListRootWithRegistryLimit(st.balances)
+	s, ok := st.(*BeaconState)
+	require.Equal(t, true, ok)
+	newRt := bytesutil.ToBytes32(s.merkleLayers[0][balances])
+	wantedRt, err := stateutil.Uint64ListRootWithRegistryLimit(st.Balances())
 	assert.NoError(t, err)
 	assert.Equal(t, wantedRt, newRt, "state roots are unequal")
+}
+
+func TestBeaconState_ModifyPreviousParticipationBits(t *testing.T) {
+	testState := createState(200)
+	testtmpl.VerifyBeaconStateModifyPreviousParticipationField(
+		t,
+		func() (state.BeaconState, error) {
+			return InitializeFromProto(testState)
+		},
+	)
+	testtmpl.VerifyBeaconStateModifyPreviousParticipationField_NestedAction(
+		t,
+		func() (state.BeaconState, error) {
+			return InitializeFromProto(testState)
+		},
+	)
+}
+
+func TestBeaconState_ModifyCurrentParticipationBits(t *testing.T) {
+	testState := createState(200)
+	testtmpl.VerifyBeaconStateModifyCurrentParticipationField(
+		t,
+		func() (state.BeaconState, error) {
+			return InitializeFromProto(testState)
+		},
+	)
+	testtmpl.VerifyBeaconStateModifyCurrentParticipationField_NestedAction(
+		t,
+		func() (state.BeaconState, error) {
+			return InitializeFromProto(testState)
+		},
+	)
+}
+
+func createState(count uint64) *ethpb.BeaconStateAltair {
+	vals := make([]*ethpb.Validator, 0, count)
+	bals := make([]uint64, 0, count)
+	for i := uint64(0); i < count; i++ {
+		someRoot := [32]byte{}
+		someKey := [fieldparams.BLSPubkeyLength]byte{}
+		copy(someRoot[:], strconv.Itoa(int(i)))
+		copy(someKey[:], strconv.Itoa(int(i)))
+		vals = append(vals, &ethpb.Validator{
+			PublicKey:                  someKey[:],
+			WithdrawalCredentials:      someRoot[:],
+			EffectiveBalance:           params.BeaconConfig().MaxEffectiveBalance,
+			Slashed:                    false,
+			ActivationEligibilityEpoch: 1,
+			ActivationEpoch:            1,
+			ExitEpoch:                  1,
+			WithdrawableEpoch:          1,
+		})
+		bals = append(bals, params.BeaconConfig().MaxEffectiveBalance)
+	}
+	return &ethpb.BeaconStateAltair{
+		CurrentEpochParticipation:  make([]byte, count),
+		PreviousEpochParticipation: make([]byte, count),
+		Validators:                 vals,
+		Balances:                   bals,
+	}
 }

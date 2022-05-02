@@ -105,18 +105,6 @@ func TestLocalKeymanager_ImportKeystores(t *testing.T) {
 		accountsStore: &accountStore{},
 	}
 
-	t.Run("no passwords provided", func(t *testing.T) {
-		_, err := dr.ImportKeystores(ctx, nil, nil)
-		require.ErrorContains(t, "no passwords provided", err)
-	})
-	t.Run("number of passwords does not match number of keystores", func(t *testing.T) {
-		_, err := dr.ImportKeystores(
-			ctx,
-			[]*keymanager.Keystore{{}, {}},
-			[]string{"foo", "bar", "baz"},
-		)
-		require.ErrorContains(t, "number of passwords does not match", err)
-	})
 	t.Run("same password used to decrypt all keystores", func(t *testing.T) {
 		numKeystores := 5
 		keystores := make([]*keymanager.Keystore, numKeystores)

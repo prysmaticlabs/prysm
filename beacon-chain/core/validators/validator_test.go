@@ -4,12 +4,13 @@ import (
 	"context"
 	"testing"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
@@ -129,8 +130,7 @@ func TestSlashValidator_OK(t *testing.T) {
 	cfg := params.BeaconConfig()
 	slashedState, err := SlashValidator(context.Background(), state, slashedIdx, cfg.MinSlashingPenaltyQuotient, cfg.ProposerRewardQuotient)
 	require.NoError(t, err, "Could not slash validator")
-	state, ok := slashedState.(*v1.BeaconState)
-	require.Equal(t, true, ok)
+	require.Equal(t, true, slashedState.Version() == version.Phase0)
 
 	v, err := state.ValidatorAtIndex(slashedIdx)
 	require.NoError(t, err)

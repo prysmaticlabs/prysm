@@ -19,7 +19,7 @@ func TestUpgradeToBellatrix(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, preForkState.GenesisTime(), mSt.GenesisTime())
-	require.DeepSSZEqual(t, preForkState.GenesisValidatorRoot(), mSt.GenesisValidatorRoot())
+	require.DeepSSZEqual(t, preForkState.GenesisValidatorsRoot(), mSt.GenesisValidatorsRoot())
 	require.Equal(t, preForkState.Slot(), mSt.Slot())
 	require.DeepSSZEqual(t, preForkState.LatestBlockHeader(), mSt.LatestBlockHeader())
 	require.DeepSSZEqual(t, preForkState.BlockRoots(), mSt.BlockRoots())
@@ -65,9 +65,9 @@ func TestUpgradeToBellatrix(t *testing.T) {
 		ParentHash:       make([]byte, 32),
 		FeeRecipient:     make([]byte, 20),
 		StateRoot:        make([]byte, 32),
-		ReceiptRoot:      make([]byte, 32),
+		ReceiptsRoot:     make([]byte, 32),
 		LogsBloom:        make([]byte, 256),
-		Random:           make([]byte, 32),
+		PrevRandao:       make([]byte, 32),
 		BlockNumber:      0,
 		GasLimit:         0,
 		GasUsed:          0,

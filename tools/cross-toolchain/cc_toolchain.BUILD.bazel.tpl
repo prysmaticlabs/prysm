@@ -41,6 +41,15 @@ config_setting(
 )
 
 config_setting(
+    name = "osx_arm64",
+    constraint_values = [
+        "@platforms//os:osx",
+        "@platforms//cpu:arm64",
+    ],
+    tags = ["manual"],
+)
+
+config_setting(
     name = "linux_arm64",
     constraint_values = [
         "@platforms//os:linux",
@@ -156,6 +165,7 @@ toolchain(
         ":linux_arm64": ":cc-clang-arm64",
         ":linux_amd64": ":cc-clang-amd64",
         ":osx_amd64": ":cc-clang-osx",
+        ":osx_arm64": ":cc-clang-osx",
         ":windows_amd64": ":cc-mingw-amd64",
     }),
     toolchain_type = "@bazel_tools//tools/cpp:toolchain_type",

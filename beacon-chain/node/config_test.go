@@ -7,10 +7,10 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -35,6 +35,20 @@ func TestConfigureHistoricalSlasher(t *testing.T) {
 			params.BeaconConfig().SlotsPerArchivedPoint,
 			int(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().MaxAttestations))),
 	)
+}
+
+func TestConfigureSafeSlotsToImportOptimistically(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+
+	app := cli.App{}
+	set := flag.NewFlagSet("test", 0)
+	set.Int(flags.SafeSlotsToImportOptimistically.Name, 0, "")
+	require.NoError(t, set.Set(flags.SafeSlotsToImportOptimistically.Name, strconv.Itoa(128)))
+	cliCtx := cli.NewContext(&app, set, nil)
+
+	configureSafeSlotsToImportOptimistically(cliCtx)
+
+	assert.Equal(t, types.Slot(128), params.BeaconConfig().SafeSlotsToImportOptimistically)
 }
 
 func TestConfigureSlotsPerArchivedPoint(t *testing.T) {
@@ -76,12 +90,23 @@ func TestConfigureExecutionSetting(t *testing.T) {
 
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	set.String(flags.FeeRecipient.Name, "", "")
-	require.NoError(t, set.Set(flags.FeeRecipient.Name, "0xB"))
+	set.String(flags.SuggestedFeeRecipient.Name, "", "")
+	require.NoError(t, set.Set(flags.SuggestedFeeRecipient.Name, "0xB"))
 	cliCtx := cli.NewContext(&app, set, nil)
+	err := configureExecutionSetting(cliCtx)
+	require.ErrorContains(t, "0xB is not a valid fee recipient address", err)
 
-	configureExecutionSetting(cliCtx)
-	assert.Equal(t, common.HexToAddress("0xB"), params.BeaconConfig().FeeRecipient)
+	require.NoError(t, set.Set(flags.SuggestedFeeRecipient.Name, "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"))
+	cliCtx = cli.NewContext(&app, set, nil)
+	err = configureExecutionSetting(cliCtx)
+	require.NoError(t, err)
+	assert.Equal(t, common.HexToAddress("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"), params.BeaconConfig().DefaultFeeRecipient)
+
+	require.NoError(t, set.Set(flags.SuggestedFeeRecipient.Name, "0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"))
+	cliCtx = cli.NewContext(&app, set, nil)
+	err = configureExecutionSetting(cliCtx)
+	require.NoError(t, err)
+	assert.Equal(t, common.HexToAddress("0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"), params.BeaconConfig().DefaultFeeRecipient)
 }
 
 func TestConfigureNetwork(t *testing.T) {

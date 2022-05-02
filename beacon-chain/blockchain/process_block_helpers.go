@@ -6,11 +6,12 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	mathutil "github.com/prysmaticlabs/prysm/math"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
@@ -69,7 +70,7 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b block.BeaconBlock) er
 		return errors.New("could not reconstruct parent state")
 	}
 
-	if err := s.VerifyBlkDescendant(ctx, bytesutil.ToBytes32(b.ParentRoot())); err != nil {
+	if err := s.VerifyFinalizedBlkDescendant(ctx, bytesutil.ToBytes32(b.ParentRoot())); err != nil {
 		return err
 	}
 
@@ -86,10 +87,10 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b block.BeaconBlock) er
 	return nil
 }
 
-// VerifyBlkDescendant validates input block root is a descendant of the
+// VerifyFinalizedBlkDescendant validates if input block root is a descendant of the
 // current finalized block root.
-func (s *Service) VerifyBlkDescendant(ctx context.Context, root [32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "blockChain.VerifyBlkDescendant")
+func (s *Service) VerifyFinalizedBlkDescendant(ctx context.Context, root [32]byte) error {
+	ctx, span := trace.StartSpan(ctx, "blockChain.VerifyFinalizedBlkDescendant")
 	defer span.End()
 	finalized := s.store.FinalizedCheckpt()
 	if finalized == nil {
@@ -113,7 +114,7 @@ func (s *Service) VerifyBlkDescendant(ctx context.Context, root [32]byte) error 
 	}
 
 	if !bytes.Equal(bFinalizedRoot, fRoot[:]) {
-		err := fmt.Errorf("block %#x is not a descendent of the current finalized block slot %d, %#x != %#x",
+		err := fmt.Errorf("block %#x is not a descendant of the current finalized block slot %d, %#x != %#x",
 			bytesutil.Trunc(root[:]), finalizedBlk.Slot(), bytesutil.Trunc(bFinalizedRoot),
 			bytesutil.Trunc(fRoot[:]))
 		tracing.AnnotateError(span, err)
@@ -247,10 +248,19 @@ func (s *Service) updateFinalized(ctx context.Context, cp *ethpb.Checkpoint) err
 	}
 
 	fRoot := bytesutil.ToBytes32(cp.Root)
+	optimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(fRoot)
+	if err != nil {
+		return err
+	}
+	if !optimistic {
+		err = s.cfg.BeaconDB.SaveLastValidatedCheckpoint(ctx, cp)
+		if err != nil {
+			return err
+		}
+	}
 	if err := s.cfg.StateGen.MigrateToCold(ctx, fRoot); err != nil {
 		return errors.Wrap(err, "could not migrate to cold")
 	}
-
 	return nil
 }
 
@@ -307,17 +317,9 @@ func (s *Service) ancestorByDB(ctx context.Context, r [32]byte, slot types.Slot)
 		return nil, ctx.Err()
 	}
 
-	signed, err := s.cfg.BeaconDB.Block(ctx, r)
+	signed, err := s.getBlock(ctx, r)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get ancestor block")
-	}
-
-	if s.hasInitSyncBlock(r) {
-		signed = s.getInitSyncBlock(r)
-	}
-
-	if signed == nil || signed.IsNil() || signed.Block().IsNil() {
-		return nil, errors.New("nil block")
+		return nil, err
 	}
 	b := signed.Block()
 	if b.Slot() == slot || b.Slot() < slot {
@@ -366,14 +368,17 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk block.B
 	for i := len(pendingNodes) - 1; i >= 0; i-- {
 		b := pendingNodes[i]
 		r := pendingRoots[i]
-		if err := s.cfg.ForkChoiceStore.ProcessBlock(ctx,
-			b.Slot(), r, bytesutil.ToBytes32(b.ParentRoot()), bytesutil.ToBytes32(b.Body().Graffiti()),
+		payloadHash, err := getBlockPayloadHash(blk)
+		if err != nil {
+			return err
+		}
+		if err := s.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx,
+			b.Slot(), r, bytesutil.ToBytes32(b.ParentRoot()), payloadHash,
 			jCheckpoint.Epoch,
 			fCheckpoint.Epoch); err != nil {
 			return errors.Wrap(err, "could not process block for proto array fork choice")
 		}
 	}
-
 	return nil
 }
 
@@ -390,10 +395,17 @@ func (s *Service) insertFinalizedDeposits(ctx context.Context, fRoot [32]byte) e
 	// We update the cache up to the last deposit index in the finalized block's state.
 	// We can be confident that these deposits will be included in some block
 	// because the Eth1 follow distance makes such long-range reorgs extremely unlikely.
-	eth1DepositIndex := int64(finalizedState.Eth1Data().DepositCount - 1)
-	s.cfg.DepositCache.InsertFinalizedDeposits(ctx, eth1DepositIndex)
+	eth1DepositIndex, err := mathutil.Int(finalizedState.Eth1DepositIndex())
+	if err != nil {
+		return errors.Wrap(err, "could not cast eth1 deposit index")
+	}
+	// The deposit index in the state is always the index of the next deposit
+	// to be included(rather than the last one to be processed). This was most likely
+	// done as the state cannot represent signed integers.
+	eth1DepositIndex -= 1
+	s.cfg.DepositCache.InsertFinalizedDeposits(ctx, int64(eth1DepositIndex))
 	// Deposit proofs are only used during state transition and can be safely removed to save space.
-	if err = s.cfg.DepositCache.PruneProofs(ctx, eth1DepositIndex); err != nil {
+	if err = s.cfg.DepositCache.PruneProofs(ctx, int64(eth1DepositIndex)); err != nil {
 		return errors.Wrap(err, "could not prune deposit proofs")
 	}
 	return nil

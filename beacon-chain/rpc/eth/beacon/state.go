@@ -5,11 +5,11 @@ import (
 	"context"
 	"strconv"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/statefetcher"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/time/slots"
@@ -34,7 +34,7 @@ func (bs *Server) GetGenesis(ctx context.Context, _ *emptypb.Empty) (*ethpb.Gene
 	if genesisTime.IsZero() {
 		return nil, status.Errorf(codes.NotFound, "Chain genesis info is not yet known")
 	}
-	validatorRoot := bs.ChainInfoFetcher.GenesisValidatorRoot()
+	validatorRoot := bs.ChainInfoFetcher.GenesisValidatorsRoot()
 	if bytes.Equal(validatorRoot[:], params.BeaconConfig().ZeroHash[:]) {
 		return nil, status.Errorf(codes.NotFound, "Chain genesis info is not yet known")
 	}
@@ -58,11 +58,11 @@ func (bs *Server) GetStateRoot(ctx context.Context, req *ethpb.StateRequest) (*e
 	defer span.End()
 
 	var (
-		root []byte
-		err  error
+		stateRoot []byte
+		err       error
 	)
 
-	root, err = bs.StateFetcher.StateRoot(ctx, req.StateId)
+	stateRoot, err = bs.StateFetcher.StateRoot(ctx, req.StateId)
 	if err != nil {
 		if rootNotFoundErr, ok := err.(*statefetcher.StateRootNotFoundError); ok {
 			return nil, status.Errorf(codes.NotFound, "State root not found: %v", rootNotFoundErr)
@@ -71,11 +71,20 @@ func (bs *Server) GetStateRoot(ctx context.Context, req *ethpb.StateRequest) (*e
 		}
 		return nil, status.Errorf(codes.Internal, "Could not get state root: %v", err)
 	}
+	st, err := bs.StateFetcher.State(ctx, req.StateId)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
+	}
+	isOptimistic, err := helpers.IsOptimistic(ctx, st, bs.HeadFetcher)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
+	}
 
 	return &ethpb.StateRootResponse{
 		Data: &ethpb.StateRootResponse_StateRoot{
-			Root: root,
+			Root: stateRoot,
 		},
+		ExecutionOptimistic: isOptimistic,
 	}, nil
 }
 
@@ -93,14 +102,19 @@ func (bs *Server) GetStateFork(ctx context.Context, req *ethpb.StateRequest) (*e
 	if err != nil {
 		return nil, helpers.PrepareStateFetchGRPCError(err)
 	}
-
 	fork := st.Fork()
+	isOptimistic, err := helpers.IsOptimistic(ctx, st, bs.HeadFetcher)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
+	}
+
 	return &ethpb.StateForkResponse{
 		Data: &ethpb.Fork{
 			PreviousVersion: fork.PreviousVersion,
 			CurrentVersion:  fork.CurrentVersion,
 			Epoch:           fork.Epoch,
 		},
+		ExecutionOptimistic: isOptimistic,
 	}, nil
 }
 
@@ -117,12 +131,11 @@ func (bs *Server) GetFinalityCheckpoints(ctx context.Context, req *ethpb.StateRe
 
 	st, err = bs.StateFetcher.State(ctx, req.StateId)
 	if err != nil {
-		if stateNotFoundErr, ok := err.(*statefetcher.StateNotFoundError); ok {
-			return nil, status.Errorf(codes.NotFound, "State not found: %v", stateNotFoundErr)
-		} else if parseErr, ok := err.(*statefetcher.StateIdParseError); ok {
-			return nil, status.Errorf(codes.InvalidArgument, "Invalid state ID: %v", parseErr)
-		}
-		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
+		return nil, helpers.PrepareStateFetchGRPCError(err)
+	}
+	isOptimistic, err := helpers.IsOptimistic(ctx, st, bs.HeadFetcher)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
 	}
 
 	return &ethpb.StateFinalityCheckpointResponse{
@@ -131,6 +144,7 @@ func (bs *Server) GetFinalityCheckpoints(ctx context.Context, req *ethpb.StateRe
 			CurrentJustified:  checkpoint(st.CurrentJustifiedCheckpoint()),
 			Finalized:         checkpoint(st.FinalizedCheckpoint()),
 		},
+		ExecutionOptimistic: isOptimistic,
 	}, nil
 }
 

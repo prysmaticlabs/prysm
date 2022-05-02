@@ -23,8 +23,6 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/accounts/userprompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/local"
 	"github.com/urfave/cli/v2"
 )
 
@@ -94,32 +92,9 @@ func BackupAccountsCli(cliCtx *cli.Context) error {
 		return errors.Wrap(err, "could not determine password for backed up accounts")
 	}
 
-	var keystoresToBackup []*keymanager.Keystore
-	switch w.KeymanagerKind() {
-	case keymanager.Local:
-		km, ok := km.(*local.Keymanager)
-		if !ok {
-			return errors.New("could not assert keymanager interface to concrete type")
-		}
-		keystoresToBackup, err = km.ExtractKeystores(cliCtx.Context, filteredPubKeys, backupsPassword)
-		if err != nil {
-			return errors.Wrap(err, "could not backup accounts for local keymanager")
-		}
-	case keymanager.Derived:
-		km, ok := km.(*derived.Keymanager)
-		if !ok {
-			return errors.New("could not assert keymanager interface to concrete type")
-		}
-		keystoresToBackup, err = km.ExtractKeystores(cliCtx.Context, filteredPubKeys, backupsPassword)
-		if err != nil {
-			return errors.Wrap(err, "could not backup accounts for derived keymanager")
-		}
-	case keymanager.Remote:
-		return errors.New("backing up keys is not supported for a remote keymanager")
-	case keymanager.Web3Signer:
-		return errors.New("backing up keys is not supported for a web3signer keymanager")
-	default:
-		return fmt.Errorf(errKeymanagerNotSupported, w.KeymanagerKind())
+	keystoresToBackup, err := km.ExtractKeystores(cliCtx.Context, filteredPubKeys, backupsPassword)
+	if err != nil {
+		return errors.Wrap(err, "could not extract keys from keymanager")
 	}
 	return zipKeystoresToOutputDir(keystoresToBackup, backupDir)
 }

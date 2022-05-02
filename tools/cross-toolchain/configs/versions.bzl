@@ -3,7 +3,7 @@
 """Definitions to be used in rbe_repo attr of an rbe_autoconf rule  """
 toolchain_config_spec0 = struct(config_repos = ["prysm_toolchains"], create_cc_configs = True, create_java_configs = True, env = {"BAZEL_COMPILER": "clang", "BAZEL_LINKLIBS": "-l%:libstdc++.a", "BAZEL_LINKOPTS": "-lm:-static-libgcc", "BAZEL_USE_LLVM_NATIVE_COVERAGE": "1", "GCOV": "llvm-profdata", "CC": "clang", "CXX": "clang++"}, java_home = "/usr/lib/jvm/java-8-openjdk-amd64", name = "clang")
 _TOOLCHAIN_CONFIG_SPECS = [toolchain_config_spec0]
-_BAZEL_TO_CONFIG_SPEC_NAMES = {"4.2.1": ["clang"]}
+_BAZEL_TO_CONFIG_SPEC_NAMES = {"5.0.0": ["clang"]}
 LATEST = "sha256:ebf03ab43a88499e70c8bb4dad70b8bdbc9f9923a87bc72c39e9e7690fcd49f2"
 CONTAINER_TO_CONFIG_SPEC_NAMES = {"sha256:ebf03ab43a88499e70c8bb4dad70b8bdbc9f9923a87bc72c39e9e7690fcd49f2": ["clang"]}
 _DEFAULT_TOOLCHAIN_CONFIG_SPEC = toolchain_config_spec0

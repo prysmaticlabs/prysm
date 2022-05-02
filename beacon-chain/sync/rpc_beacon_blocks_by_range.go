@@ -6,11 +6,11 @@ import (
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -60,8 +60,8 @@ func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 	}
 	remainingBucketCapacity := blockLimiter.Remaining(stream.Conn().RemotePeer().String())
 	span.AddAttributes(
-		trace.Int64Attribute("start", int64(startSlot)),
-		trace.Int64Attribute("end", int64(endReqSlot)),
+		trace.Int64Attribute("start", int64(startSlot)), // lint:ignore uintcast -- This conversion is OK for tracing.
+		trace.Int64Attribute("end", int64(endReqSlot)),  // lint:ignore uintcast -- This conversion is OK for tracing.
 		trace.Int64Attribute("step", int64(m.Step)),
 		trace.Int64Attribute("count", int64(m.Count)),
 		trace.StringAttribute("peer", stream.Conn().RemotePeer().Pretty()),

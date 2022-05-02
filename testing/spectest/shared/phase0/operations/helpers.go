@@ -2,7 +2,7 @@ package operations
 
 import (
 	"context"
-	"io/ioutil"
+	"os"
 	"path"
 	"strings"
 	"testing"
@@ -54,11 +54,13 @@ func RunBlockOperationTest(
 	helpers.ClearCache()
 	b := util.NewBeaconBlock()
 	b.Block.Body = body
-	beaconState, err := operationFn(context.Background(), preState, wrapper.WrappedPhase0SignedBeaconBlock(b))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	beaconState, err := operationFn(context.Background(), preState, wsb)
 	if postSSZExists {
 		require.NoError(t, err)
 
-		postBeaconStateFile, err := ioutil.ReadFile(postSSZFilepath) // #nosec G304
+		postBeaconStateFile, err := os.ReadFile(postSSZFilepath) // #nosec G304
 		require.NoError(t, err)
 		postBeaconStateSSZ, err := snappy.Decode(nil /* dst */, postBeaconStateFile)
 		require.NoError(t, err, "Failed to decompress")

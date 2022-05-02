@@ -10,13 +10,13 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -454,8 +454,8 @@ func TestSignAttestation(t *testing.T) {
 		CurrentVersion:  []byte{'d', 'e', 'f', 'f'},
 		Epoch:           0,
 	}
-	genesisValidatorRoot := [32]byte{0x01, 0x02}
-	attesterDomain, err := signing.Domain(wantedFork, 0, params.BeaconConfig().DomainBeaconAttester, genesisValidatorRoot[:])
+	genesisValidatorsRoot := [32]byte{0x01, 0x02}
+	attesterDomain, err := signing.Domain(wantedFork, 0, params.BeaconConfig().DomainBeaconAttester, genesisValidatorsRoot[:])
 	require.NoError(t, err)
 	m.validatorClient.EXPECT().
 		DomainData(gomock.Any(), gomock.Any()).
@@ -540,10 +540,12 @@ func TestServer_WaitToSlotOneThird_ReceiveBlockSlot(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		time.Sleep(100 * time.Millisecond)
-		v.blockFeed.Send(wrapper.WrappedPhase0SignedBeaconBlock(
+		wsb, err := wrapper.WrappedSignedBeaconBlock(
 			&ethpb.SignedBeaconBlock{
 				Block: &ethpb.BeaconBlock{Slot: currentSlot},
-			}))
+			})
+		require.NoError(t, err)
+		v.blockFeed.Send(wsb)
 		wg.Done()
 	}()
 

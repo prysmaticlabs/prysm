@@ -5,13 +5,14 @@ package types
 import (
 	"context"
 
-	types "github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"google.golang.org/grpc"
 )
 
 // E2EConfig defines the struct for all configurations needed for E2E testing.
 type E2EConfig struct {
 	TestSync                bool
+	TestFeature             bool
 	UsePrysmShValidator     bool
 	UsePprof                bool
 	UseWeb3RemoteSigner     bool
@@ -19,6 +20,7 @@ type E2EConfig struct {
 	UseFixedPeerIDs         bool
 	UseValidatorCrossClient bool
 	EpochsToRun             uint64
+	Seed                    int64
 	TracingSinkEndpoint     string
 	Evaluators              []Evaluator
 	BeaconFlags             []string

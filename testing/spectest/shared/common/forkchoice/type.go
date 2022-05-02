@@ -5,6 +5,7 @@ type Step struct {
 	Block       *string `json:"block"`
 	Valid       *bool   `json:"valid"`
 	Attestation *string `json:"attestation"`
+	PowBlock    *string `json:"pow_block"`
 	Check       *Check  `json:"checks"`
 }
 

@@ -16,6 +16,7 @@ import (
 	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/synccommittee"
@@ -40,6 +41,7 @@ import (
 type Server struct {
 	Ctx                    context.Context
 	AttestationCache       *cache.AttestationCache
+	ProposerSlotIndexCache *cache.ProposerPayloadIDsCache
 	HeadFetcher            blockchain.HeadFetcher
 	ForkFetcher            blockchain.ForkFetcher
 	FinalizationFetcher    blockchain.FinalizationFetcher
@@ -62,6 +64,9 @@ type Server struct {
 	PendingDepositsFetcher depositcache.PendingDepositsFetcher
 	OperationNotifier      opfeed.Notifier
 	StateGen               stategen.StateManager
+	ReplayerBuilder        stategen.ReplayerBuilder
+	BeaconDB               db.HeadAccessDatabase
+	ExecutionEngineCaller  powchain.EngineCaller
 }
 
 // WaitForActivation checks if a validator public key exists in the active validator registry of the current
@@ -127,8 +132,8 @@ func (vs *Server) DomainData(_ context.Context, request *ethpb.DomainRequest) (*
 	if err != nil {
 		return nil, err
 	}
-	headGenesisValidatorRoot := vs.HeadFetcher.HeadGenesisValidatorRoot()
-	dv, err := signing.Domain(fork, request.Epoch, bytesutil.ToBytes4(request.Domain), headGenesisValidatorRoot[:])
+	headGenesisValidatorsRoot := vs.HeadFetcher.HeadGenesisValidatorsRoot()
+	dv, err := signing.Domain(fork, request.Epoch, bytesutil.ToBytes4(request.Domain), headGenesisValidatorsRoot[:])
 	if err != nil {
 		return nil, err
 	}
@@ -164,7 +169,7 @@ func (vs *Server) WaitForChainStart(_ *emptypb.Empty, stream ethpb.BeaconNodeVal
 		res := &ethpb.ChainStartResponse{
 			Started:               true,
 			GenesisTime:           head.GenesisTime(),
-			GenesisValidatorsRoot: head.GenesisValidatorRoot(),
+			GenesisValidatorsRoot: head.GenesisValidatorsRoot(),
 		}
 		return stream.Send(res)
 	}

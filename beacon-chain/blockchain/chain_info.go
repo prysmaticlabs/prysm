@@ -4,15 +4,18 @@ import (
 	"context"
 	"time"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"go.opencensus.io/trace"
 )
 
@@ -36,7 +39,7 @@ type TimeFetcher interface {
 
 // GenesisFetcher retrieves the Ethereum consensus data related to its genesis.
 type GenesisFetcher interface {
-	GenesisValidatorRoot() [32]byte
+	GenesisValidatorsRoot() [32]byte
 }
 
 // HeadFetcher defines a common interface for methods in blockchain service which
@@ -47,27 +50,26 @@ type HeadFetcher interface {
 	HeadBlock(ctx context.Context) (block.SignedBeaconBlock, error)
 	HeadState(ctx context.Context) (state.BeaconState, error)
 	HeadValidatorsIndices(ctx context.Context, epoch types.Epoch) ([]types.ValidatorIndex, error)
-	HeadSeed(ctx context.Context, epoch types.Epoch) ([32]byte, error)
-	HeadGenesisValidatorRoot() [32]byte
+	HeadGenesisValidatorsRoot() [32]byte
 	HeadETH1Data() *ethpb.Eth1Data
 	HeadPublicKeyToValidatorIndex(pubKey [fieldparams.BLSPubkeyLength]byte) (types.ValidatorIndex, bool)
 	HeadValidatorIndexToPublicKey(ctx context.Context, index types.ValidatorIndex) ([fieldparams.BLSPubkeyLength]byte, error)
-	ProtoArrayStore() *protoarray.Store
 	ChainHeads() ([][32]byte, []types.Slot)
 	IsOptimistic(ctx context.Context) (bool, error)
+	IsOptimisticForRoot(ctx context.Context, root [32]byte) (bool, error)
 	HeadSyncCommitteeFetcher
 	HeadDomainFetcher
 }
 
 // ForkFetcher retrieves the current fork information of the Ethereum beacon chain.
 type ForkFetcher interface {
+	ForkChoicer() forkchoice.ForkChoicer
 	CurrentFork() *ethpb.Fork
 }
 
 // CanonicalFetcher retrieves the current chain's canonical information.
 type CanonicalFetcher interface {
 	IsCanonical(ctx context.Context, blockRoot [32]byte) (bool, error)
-	VerifyBlkDescendant(ctx context.Context, blockRoot [32]byte) error
 }
 
 // FinalizationFetcher defines a common interface for methods in blockchain service which
@@ -76,6 +78,7 @@ type FinalizationFetcher interface {
 	FinalizedCheckpt() *ethpb.Checkpoint
 	CurrentJustifiedCheckpt() *ethpb.Checkpoint
 	PreviousJustifiedCheckpt() *ethpb.Checkpoint
+	VerifyFinalizedBlkDescendant(ctx context.Context, blockRoot [32]byte) error
 }
 
 // FinalizedCheckpt returns the latest finalized checkpoint from chain store.
@@ -201,20 +204,8 @@ func (s *Service) HeadValidatorsIndices(ctx context.Context, epoch types.Epoch) 
 	return helpers.ActiveValidatorIndices(ctx, s.headState(ctx), epoch)
 }
 
-// HeadSeed returns the seed from the head view of a given epoch.
-func (s *Service) HeadSeed(ctx context.Context, epoch types.Epoch) ([32]byte, error) {
-	s.headLock.RLock()
-	defer s.headLock.RUnlock()
-
-	if !s.hasHeadState() {
-		return [32]byte{}, nil
-	}
-
-	return helpers.Seed(s.headState(ctx), epoch, params.BeaconConfig().DomainBeaconAttester)
-}
-
-// HeadGenesisValidatorRoot returns genesis validator root of the head state.
-func (s *Service) HeadGenesisValidatorRoot() [32]byte {
+// HeadGenesisValidatorsRoot returns genesis validators root of the head state.
+func (s *Service) HeadGenesisValidatorsRoot() [32]byte {
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
 
@@ -222,7 +213,7 @@ func (s *Service) HeadGenesisValidatorRoot() [32]byte {
 		return [32]byte{}
 	}
 
-	return s.headGenesisValidatorRoot()
+	return s.headGenesisValidatorsRoot()
 }
 
 // HeadETH1Data returns the eth1data of the current head state.
@@ -236,26 +227,21 @@ func (s *Service) HeadETH1Data() *ethpb.Eth1Data {
 	return s.head.state.Eth1Data()
 }
 
-// ProtoArrayStore returns the proto array store object.
-func (s *Service) ProtoArrayStore() *protoarray.Store {
-	return s.cfg.ForkChoiceStore.Store()
-}
-
 // GenesisTime returns the genesis time of beacon chain.
 func (s *Service) GenesisTime() time.Time {
 	return s.genesisTime
 }
 
-// GenesisValidatorRoot returns the genesis validator
+// GenesisValidatorsRoot returns the genesis validator
 // root of the chain.
-func (s *Service) GenesisValidatorRoot() [32]byte {
+func (s *Service) GenesisValidatorsRoot() [32]byte {
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
 
 	if !s.hasHeadState() {
 		return [32]byte{}
 	}
-	return bytesutil.ToBytes32(s.head.state.GenesisValidatorRoot())
+	return bytesutil.ToBytes32(s.head.state.GenesisValidatorsRoot())
 }
 
 // CurrentFork retrieves the latest fork information of the beacon chain.
@@ -274,35 +260,19 @@ func (s *Service) CurrentFork() *ethpb.Fork {
 
 // IsCanonical returns true if the input block root is part of the canonical chain.
 func (s *Service) IsCanonical(ctx context.Context, blockRoot [32]byte) (bool, error) {
-	// If the block has been finalized, the block will always be part of the canonical chain.
-	if s.cfg.BeaconDB.IsFinalizedBlock(ctx, blockRoot) {
-		return true, nil
+	// If the block has not been finalized, check fork choice store to see if the block is canonical
+	if s.cfg.ForkChoiceStore.HasNode(blockRoot) {
+		return s.cfg.ForkChoiceStore.IsCanonical(blockRoot), nil
 	}
 
-	// If the block has not been finalized, check fork choice store to see if the block is canonical
-	return s.cfg.ForkChoiceStore.IsCanonical(blockRoot), nil
+	// If the block has been finalized, the block will always be part of the canonical chain.
+	return s.cfg.BeaconDB.IsFinalizedBlock(ctx, blockRoot), nil
 }
 
 // ChainHeads returns all possible chain heads (leaves of fork choice tree).
 // Heads roots and heads slots are returned.
 func (s *Service) ChainHeads() ([][32]byte, []types.Slot) {
-	nodes := s.ProtoArrayStore().Nodes()
-
-	// Deliberate choice to not preallocate space for below.
-	// Heads cant be more than 2-3 in the worst case where pre-allocation will be 64 to begin with.
-	headsRoots := make([][32]byte, 0)
-	headsSlots := make([]types.Slot, 0)
-
-	nonExistentNode := ^uint64(0)
-	for _, node := range nodes {
-		// Possible heads have no children.
-		if node.BestDescendant() == nonExistentNode && node.BestChild() == nonExistentNode {
-			headsRoots = append(headsRoots, node.Root())
-			headsSlots = append(headsSlots, node.Slot())
-		}
-	}
-
-	return headsRoots, headsSlots
+	return s.cfg.ForkChoiceStore.Tips()
 }
 
 // HeadPublicKeyToValidatorIndex returns the validator index of the `pubkey` in current head state.
@@ -329,14 +299,80 @@ func (s *Service) HeadValidatorIndexToPublicKey(_ context.Context, index types.V
 	return v.PublicKey(), nil
 }
 
+// ForkChoicer returns the forkchoice interface
+func (s *Service) ForkChoicer() forkchoice.ForkChoicer {
+	return s.cfg.ForkChoiceStore
+}
+
 // IsOptimistic returns true if the current head is optimistic.
 func (s *Service) IsOptimistic(ctx context.Context) (bool, error) {
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
-	return s.cfg.ForkChoiceStore.Optimistic(ctx, s.head.root, s.head.slot)
+	if slots.ToEpoch(s.CurrentSlot()) < params.BeaconConfig().BellatrixForkEpoch {
+		return false, nil
+	}
+
+	return s.IsOptimisticForRoot(ctx, s.head.root)
+}
+
+// IsOptimisticForRoot takes the root and slot as arguments instead of the current head
+// and returns true if it is optimistic.
+func (s *Service) IsOptimisticForRoot(ctx context.Context, root [32]byte) (bool, error) {
+	optimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(root)
+	if err == nil {
+		return optimistic, nil
+	}
+	if err != protoarray.ErrUnknownNodeRoot && err != doublylinkedtree.ErrNilNode {
+		return false, err
+	}
+	ss, err := s.cfg.BeaconDB.StateSummary(ctx, root)
+	if err != nil {
+		return false, err
+	}
+	if ss == nil {
+		return false, errInvalidNilSummary
+	}
+
+	validatedCheckpoint, err := s.cfg.BeaconDB.LastValidatedCheckpoint(ctx)
+	if err != nil {
+		return false, err
+	}
+	if slots.ToEpoch(ss.Slot) > validatedCheckpoint.Epoch {
+		return true, nil
+	}
+
+	if slots.ToEpoch(ss.Slot)+1 < validatedCheckpoint.Epoch {
+		return false, nil
+	}
+
+	// checkpoint root could be zeros before the first finalized epoch. Use genesis root if the case.
+	lastValidated, err := s.cfg.BeaconDB.StateSummary(ctx, s.ensureRootNotZeros(bytesutil.ToBytes32(validatedCheckpoint.Root)))
+	if err != nil {
+		return false, err
+	}
+	if lastValidated == nil {
+		return false, errInvalidNilSummary
+	}
+
+	if ss.Slot > lastValidated.Slot {
+		return true, nil
+	}
+
+	isCanonical, err := s.IsCanonical(ctx, root)
+	if err != nil {
+		return false, err
+	}
+
+	// historical non-canonical blocks here are returned as optimistic for safety.
+	return !isCanonical, nil
 }
 
 // SetGenesisTime sets the genesis time of beacon chain.
 func (s *Service) SetGenesisTime(t time.Time) {
 	s.genesisTime = t
+}
+
+// ForkChoiceStore returns the fork choice store in the service
+func (s *Service) ForkChoiceStore() forkchoice.ForkChoicer {
+	return s.cfg.ForkChoiceStore
 }

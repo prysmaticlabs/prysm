@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path"
@@ -27,13 +26,14 @@ import (
 )
 
 const (
-	maxPollingWaitTime  = 60 * time.Second // A minute so timing out doesn't take very long.
-	filePollingInterval = 500 * time.Millisecond
-	memoryHeapFileName  = "node_heap_%d.pb.gz"
-	cpuProfileFileName  = "node_cpu_profile_%d.pb.gz"
-	fileBufferSize      = 64 * 1024
-	maxFileBufferSize   = 1024 * 1024
-	AltairE2EForkEpoch  = 6
+	maxPollingWaitTime    = 60 * time.Second // A minute so timing out doesn't take very long.
+	filePollingInterval   = 500 * time.Millisecond
+	memoryHeapFileName    = "node_heap_%d.pb.gz"
+	cpuProfileFileName    = "node_cpu_profile_%d.pb.gz"
+	fileBufferSize        = 64 * 1024
+	maxFileBufferSize     = 1024 * 1024
+	AltairE2EForkEpoch    = 6
+	BellatrixE2EForkEpoch = 8
 )
 
 // Graffiti is a list of sample graffiti strings.
@@ -69,7 +69,7 @@ func WaitForTextInFile(file *os.File, text string) error {
 	for {
 		select {
 		case <-ctx.Done():
-			contents, err := ioutil.ReadAll(file)
+			contents, err := io.ReadAll(file)
 			if err != nil {
 				return err
 			}
@@ -107,7 +107,7 @@ func FindFollowingTextInFile(file *os.File, text string) (string, error) {
 	for {
 		select {
 		case <-ctx.Done():
-			contents, err := ioutil.ReadAll(file)
+			contents, err := io.ReadAll(file)
 			if err != nil {
 				return "", err
 			}
@@ -145,13 +145,13 @@ func FindFollowingTextInFile(file *os.File, text string) (string, error) {
 // GraffitiYamlFile outputs graffiti YAML file into a testing directory.
 func GraffitiYamlFile(testDir string) (string, error) {
 	b := []byte(`default: "Rice"
-random: 
+random:
   - "Sushi"
   - "Ramen"
   - "Takoyaki"
 `)
 	f := filepath.Join(testDir, "graffiti.yaml")
-	if err := ioutil.WriteFile(f, b, os.ModePerm); err != nil {
+	if err := os.WriteFile(f, b, os.ModePerm); err != nil {
 		return "", err
 	}
 	return f, nil
@@ -200,12 +200,12 @@ func LogErrorOutput(t *testing.T, file io.Reader, title string, index int) {
 
 // WritePprofFiles writes the memory heap and cpu profile files to the test path.
 func WritePprofFiles(testDir string, index int) error {
-	url := fmt.Sprintf("http://127.0.0.1:%d/debug/pprof/heap", e2e.TestParams.BeaconNodeRPCPort+50+index)
+	url := fmt.Sprintf("http://127.0.0.1:%d/debug/pprof/heap", e2e.TestParams.Ports.PrysmBeaconNodePprofPort+index)
 	filePath := filepath.Join(testDir, fmt.Sprintf(memoryHeapFileName, index))
 	if err := writeURLRespAtPath(url, filePath); err != nil {
 		return err
 	}
-	url = fmt.Sprintf("http://127.0.0.1:%d/debug/pprof/profile", e2e.TestParams.BeaconNodeRPCPort+50+index)
+	url = fmt.Sprintf("http://127.0.0.1:%d/debug/pprof/profile", e2e.TestParams.Ports.PrysmBeaconNodePprofPort+index)
 	filePath = filepath.Join(testDir, fmt.Sprintf(cpuProfileFileName, index))
 	return writeURLRespAtPath(url, filePath)
 }
@@ -221,7 +221,7 @@ func writeURLRespAtPath(url, fp string) error {
 		}
 	}()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
@@ -254,7 +254,7 @@ func NewLocalConnection(ctx context.Context, port int) (*grpc.ClientConn, error)
 func NewLocalConnections(ctx context.Context, numConns int) ([]*grpc.ClientConn, func(), error) {
 	conns := make([]*grpc.ClientConn, numConns)
 	for i := 0; i < len(conns); i++ {
-		conn, err := NewLocalConnection(ctx, e2e.TestParams.BeaconNodeRPCPort+i)
+		conn, err := NewLocalConnection(ctx, e2e.TestParams.Ports.PrysmBeaconNodeRPCPort+i)
 		if err != nil {
 			return nil, nil, err
 		}

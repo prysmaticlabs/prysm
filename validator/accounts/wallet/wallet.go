@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -367,7 +366,7 @@ func (w *Wallet) ReadFileAtPath(_ context.Context, filePath, fileName string) ([
 	if len(matches) == 0 {
 		return []byte{}, fmt.Errorf("no files found in path: %s", fullPath)
 	}
-	rawData, err := ioutil.ReadFile(matches[0])
+	rawData, err := os.ReadFile(matches[0])
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not read path: %s", filePath)
 	}

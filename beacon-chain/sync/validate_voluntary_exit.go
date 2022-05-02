@@ -6,10 +6,10 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"go.opencensus.io/trace"
@@ -26,6 +26,16 @@ func (s *Service) validateVoluntaryExit(ctx context.Context, pid peer.ID, msg *p
 
 	// The head state will be too far away to validate any voluntary exit.
 	if s.cfg.initialSync.Syncing() {
+		return pubsub.ValidationIgnore, nil
+	}
+
+	// We should not attempt to process this message if the node is running in optimistic mode.
+	// We just ignore in p2p so that the peer is not penalized.
+	optimistic, err := s.cfg.chain.IsOptimistic(ctx)
+	if err != nil {
+		return pubsub.ValidationReject, err
+	}
+	if optimistic {
 		return pubsub.ValidationIgnore, nil
 	}
 
@@ -62,7 +72,7 @@ func (s *Service) validateVoluntaryExit(ctx context.Context, pid peer.ID, msg *p
 	if err != nil {
 		return pubsub.ValidationIgnore, err
 	}
-	if err := blocks.VerifyExitAndSignature(val, headState.Slot(), headState.Fork(), exit, headState.GenesisValidatorRoot()); err != nil {
+	if err := blocks.VerifyExitAndSignature(val, headState.Slot(), headState.Fork(), exit, headState.GenesisValidatorsRoot()); err != nil {
 		return pubsub.ValidationReject, err
 	}
 

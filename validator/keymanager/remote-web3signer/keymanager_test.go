@@ -8,8 +8,10 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/internal"
@@ -55,9 +57,9 @@ func TestKeymanager_Sign(t *testing.T) {
 		fmt.Printf("error: %v", err)
 	}
 	config := &SetupConfig{
-		BaseEndpoint:          "example.com",
+		BaseEndpoint:          "http://example.com",
 		GenesisValidatorsRoot: root,
-		PublicKeysURL:         "example2.com/api/v1/eth2/publicKeys",
+		PublicKeysURL:         "http://example2.com/api/v1/eth2/publicKeys",
 	}
 	km, err := NewKeymanager(ctx, config)
 	if err != nil {
@@ -189,7 +191,7 @@ func TestKeymanager_FetchValidatingPublicKeys_HappyPath_WithKeyList(t *testing.T
 		fmt.Printf("error: %v", err)
 	}
 	config := &SetupConfig{
-		BaseEndpoint:          "example.com",
+		BaseEndpoint:          "http://example.com",
 		GenesisValidatorsRoot: root,
 		ProvidedPublicKeys:    keys,
 	}
@@ -223,9 +225,9 @@ func TestKeymanager_FetchValidatingPublicKeys_HappyPath_WithExternalURL(t *testi
 		fmt.Printf("error: %v", err)
 	}
 	config := &SetupConfig{
-		BaseEndpoint:          "example.com",
+		BaseEndpoint:          "http://example.com",
 		GenesisValidatorsRoot: root,
-		PublicKeysURL:         "example2.com/api/v1/eth2/publicKeys",
+		PublicKeysURL:         "http://example2.com/api/v1/eth2/publicKeys",
 	}
 	km, err := NewKeymanager(ctx, config)
 	if err != nil {
@@ -252,9 +254,9 @@ func TestKeymanager_FetchValidatingPublicKeys_WithExternalURL_ThrowsError(t *tes
 		fmt.Printf("error: %v", err)
 	}
 	config := &SetupConfig{
-		BaseEndpoint:          "example.com",
+		BaseEndpoint:          "http://example.com",
 		GenesisValidatorsRoot: root,
-		PublicKeysURL:         "example2.com/api/v1/eth2/publicKeys",
+		PublicKeysURL:         "http://example2.com/api/v1/eth2/publicKeys",
 	}
 	km, err := NewKeymanager(ctx, config)
 	if err != nil {
@@ -264,5 +266,74 @@ func TestKeymanager_FetchValidatingPublicKeys_WithExternalURL_ThrowsError(t *tes
 	resp, err := km.FetchValidatingPublicKeys(ctx)
 	assert.NotNil(t, err)
 	assert.Nil(t, resp)
-	assert.Equal(t, fmt.Errorf("mock error"), err)
+	assert.Equal(t, "could not get public keys from remote server url: http://example2.com/api/v1/eth2/publicKeys: mock error", fmt.Sprintf("%v", err))
+}
+
+func TestKeymanager_AddPublicKeys(t *testing.T) {
+	ctx := context.Background()
+	root, err := hexutil.Decode("0x270d43e74ce340de4bca2b1936beca0f4f5408d9e78aec4850920baf659d5b69")
+	if err != nil {
+		fmt.Printf("error: %v", err)
+	}
+	config := &SetupConfig{
+		BaseEndpoint:          "http://example.com",
+		GenesisValidatorsRoot: root,
+	}
+	km, err := NewKeymanager(ctx, config)
+	if err != nil {
+		fmt.Printf("error: %v", err)
+	}
+	pubkey, err := hexutil.Decode("0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820")
+	require.NoError(t, err)
+	publicKeys := [][fieldparams.BLSPubkeyLength]byte{
+		bytesutil.ToBytes48(pubkey),
+	}
+	statuses, err := km.AddPublicKeys(ctx, publicKeys)
+	require.NoError(t, err)
+	for _, status := range statuses {
+		require.Equal(t, ethpbservice.ImportedRemoteKeysStatus_IMPORTED, status.Status)
+	}
+	statuses, err = km.AddPublicKeys(ctx, publicKeys)
+	require.NoError(t, err)
+	for _, status := range statuses {
+		require.Equal(t, ethpbservice.ImportedRemoteKeysStatus_DUPLICATE, status.Status)
+	}
+}
+
+func TestKeymanager_DeletePublicKeys(t *testing.T) {
+	ctx := context.Background()
+	root, err := hexutil.Decode("0x270d43e74ce340de4bca2b1936beca0f4f5408d9e78aec4850920baf659d5b69")
+	if err != nil {
+		fmt.Printf("error: %v", err)
+	}
+	config := &SetupConfig{
+		BaseEndpoint:          "http://example.com",
+		GenesisValidatorsRoot: root,
+	}
+	km, err := NewKeymanager(ctx, config)
+	if err != nil {
+		fmt.Printf("error: %v", err)
+	}
+	pubkey, err := hexutil.Decode("0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820")
+	require.NoError(t, err)
+	publicKeys := [][fieldparams.BLSPubkeyLength]byte{
+		bytesutil.ToBytes48(pubkey),
+	}
+	statuses, err := km.AddPublicKeys(ctx, publicKeys)
+	require.NoError(t, err)
+	for _, status := range statuses {
+		require.Equal(t, ethpbservice.ImportedRemoteKeysStatus_IMPORTED, status.Status)
+	}
+
+	s, err := km.DeletePublicKeys(ctx, publicKeys)
+	require.NoError(t, err)
+	for _, status := range s {
+		require.Equal(t, ethpbservice.DeletedRemoteKeysStatus_DELETED, status.Status)
+	}
+
+	s, err = km.DeletePublicKeys(ctx, publicKeys)
+	require.NoError(t, err)
+	for _, status := range s {
+		require.Equal(t, ethpbservice.DeletedRemoteKeysStatus_NOT_FOUND, status.Status)
+	}
 }

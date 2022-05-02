@@ -2,10 +2,14 @@ package forkchoice
 
 import (
 	"context"
+	"math/big"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	coreTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -14,12 +18,14 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
-func startChainService(t *testing.T, st state.BeaconState, block block.SignedBeaconBlock) *blockchain.Service {
+func startChainService(t *testing.T, st state.BeaconState, block block.SignedBeaconBlock, engineMock *engineMock) *blockchain.Service {
 	db := testDB.SetupDB(t)
 	ctx := context.Background()
 	require.NoError(t, db.SaveBlock(ctx, block))
@@ -31,6 +37,7 @@ func startChainService(t *testing.T, st state.BeaconState, block block.SignedBea
 		Epoch: coreTime.CurrentEpoch(st),
 		Root:  r[:],
 	}
+
 	require.NoError(t, db.SaveJustifiedCheckpoint(ctx, cp))
 	require.NoError(t, db.SaveFinalizedCheckpoint(ctx, cp))
 	attPool, err := attestations.NewService(ctx, &attestations.Config{
@@ -42,6 +49,7 @@ func startChainService(t *testing.T, st state.BeaconState, block block.SignedBea
 	require.NoError(t, err)
 
 	opts := append([]blockchain.Option{},
+		blockchain.WithExecutionEngineCaller(engineMock),
 		blockchain.WithFinalizedStateAtStartUp(st),
 		blockchain.WithDatabase(db),
 		blockchain.WithAttestationService(attPool),
@@ -50,9 +58,51 @@ func startChainService(t *testing.T, st state.BeaconState, block block.SignedBea
 		blockchain.WithStateNotifier(&mock.MockStateNotifier{}),
 		blockchain.WithAttestationPool(attestations.NewPool()),
 		blockchain.WithDepositCache(depositCache),
+		blockchain.WithProposerIdsCache(cache.NewProposerPayloadIDsCache()),
 	)
 	service, err := blockchain.NewService(context.Background(), opts...)
 	require.NoError(t, err)
-	service.Start()
+	require.NoError(t, service.StartFromSavedState(st))
 	return service
+}
+
+type engineMock struct {
+	powBlocks map[[32]byte]*ethpb.PowBlock
+}
+
+func (m *engineMock) GetPayload(context.Context, [8]byte) (*pb.ExecutionPayload, error) {
+	return nil, nil
+}
+func (m *engineMock) ForkchoiceUpdated(context.Context, *pb.ForkchoiceState, *pb.PayloadAttributes) (*pb.PayloadIDBytes, []byte, error) {
+	return nil, nil, nil
+}
+func (m *engineMock) NewPayload(context.Context, *pb.ExecutionPayload) ([]byte, error) {
+	return nil, nil
+}
+
+func (m *engineMock) LatestExecutionBlock(context.Context) (*pb.ExecutionBlock, error) {
+	return nil, nil
+}
+
+func (m *engineMock) ExchangeTransitionConfiguration(context.Context, *pb.TransitionConfiguration) error {
+	return nil
+}
+
+func (m *engineMock) ExecutionBlockByHash(_ context.Context, hash common.Hash) (*pb.ExecutionBlock, error) {
+	b, ok := m.powBlocks[bytesutil.ToBytes32(hash.Bytes())]
+	if !ok {
+		return nil, nil
+	}
+
+	td := new(big.Int).SetBytes(bytesutil.ReverseByteOrder(b.TotalDifficulty))
+	tdHex := hexutil.EncodeBig(td)
+	return &pb.ExecutionBlock{
+		ParentHash:      b.ParentHash,
+		TotalDifficulty: tdHex,
+		Hash:            b.BlockHash,
+	}, nil
+}
+
+func (m *engineMock) GetTerminalBlockHash(context.Context) ([]byte, bool, error) {
+	return nil, false, nil
 }

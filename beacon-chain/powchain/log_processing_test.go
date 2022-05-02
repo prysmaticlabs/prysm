@@ -34,6 +34,11 @@ func TestProcessDepositLog_OK(t *testing.T) {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
+	server, endpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		server.Stop()
+	})
 	web3Service, err := NewService(context.Background(),
 		WithHttpEndpoints([]string{endpoint}),
 		WithDepositContractAddress(testAcc.ContractAddr),
@@ -97,6 +102,11 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
+	server, endpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		server.Stop()
+	})
 
 	web3Service, err := NewService(context.Background(),
 		WithHttpEndpoints([]string{endpoint}),
@@ -154,6 +164,11 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB := testDB.SetupDB(t)
+	server, endpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		server.Stop()
+	})
 	web3Service, err := NewService(context.Background(),
 		WithHttpEndpoints([]string{endpoint}),
 		WithDepositContractAddress(testAcc.ContractAddr),
@@ -203,6 +218,11 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
+	server, endpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		server.Stop()
+	})
 
 	web3Service, err := NewService(context.Background(),
 		WithHttpEndpoints([]string{endpoint}),
@@ -274,6 +294,11 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
+	server, endpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		server.Stop()
+	})
 	web3Service, err := NewService(context.Background(),
 		WithHttpEndpoints([]string{endpoint}),
 		WithDepositContractAddress(testAcc.ContractAddr),
@@ -333,7 +358,7 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 	err = web3Service.ProcessETH1Block(context.Background(), big.NewInt(int64(logs[len(logs)-1].BlockNumber)))
 	require.NoError(t, err)
 
-	cachedDeposits := web3Service.ChainStartDeposits()
+	cachedDeposits := web3Service.chainStartData.ChainstartDeposits
 	require.Equal(t, depositsReqForChainStart, len(cachedDeposits))
 
 	// Receive the chain started event.
@@ -359,6 +384,11 @@ func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
 	kvStore := testDB.SetupDB(t)
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
+	server, endpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		server.Stop()
+	})
 
 	web3Service, err := NewService(context.Background(),
 		WithHttpEndpoints([]string{endpoint}),
@@ -425,7 +455,7 @@ func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
 	err = web3Service.processPastLogs(context.Background())
 	require.NoError(t, err)
 
-	cachedDeposits := web3Service.ChainStartDeposits()
+	cachedDeposits := web3Service.chainStartData.ChainstartDeposits
 	requiredDepsForChainstart := depositsReqForChainStart + depositOffset
 	require.Equal(t, requiredDepsForChainstart, len(cachedDeposits), "Did not cache the chain start deposits correctly")
 
@@ -452,6 +482,11 @@ func TestProcessETH2GenesisLog_LargePeriodOfNoLogs(t *testing.T) {
 	kvStore := testDB.SetupDB(t)
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
+	server, endpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		server.Stop()
+	})
 
 	web3Service, err := NewService(context.Background(),
 		WithHttpEndpoints([]string{endpoint}),
@@ -529,7 +564,7 @@ func TestProcessETH2GenesisLog_LargePeriodOfNoLogs(t *testing.T) {
 	err = web3Service.processPastLogs(context.Background())
 	require.NoError(t, err)
 
-	cachedDeposits := web3Service.ChainStartDeposits()
+	cachedDeposits := web3Service.chainStartData.ChainstartDeposits
 	require.Equal(t, totalNumOfDeposits, len(cachedDeposits), "Did not cache the chain start deposits correctly")
 
 	// Receive the chain started event.
@@ -561,6 +596,11 @@ func TestCheckForChainstart_NoValidator(t *testing.T) {
 func newPowchainService(t *testing.T, eth1Backend *mock.TestAccount, beaconDB db.Database) *Service {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
+	server, endpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		server.Stop()
+	})
 	web3Service, err := NewService(context.Background(),
 		WithHttpEndpoints([]string{endpoint}),
 		WithDepositContractAddress(eth1Backend.ContractAddr),

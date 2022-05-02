@@ -1,7 +1,7 @@
 package v1
 
 import (
-	types "github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 )
@@ -14,8 +14,8 @@ func (b *BeaconState) GenesisTime() uint64 {
 	return b.genesisTime
 }
 
-// GenesisValidatorRoot of the beacon state.
-func (b *BeaconState) GenesisValidatorRoot() []byte {
+// GenesisValidatorsRoot of the beacon state.
+func (b *BeaconState) GenesisValidatorsRoot() []byte {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 

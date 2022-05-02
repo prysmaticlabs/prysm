@@ -8,8 +8,8 @@ import (
 	"regexp"
 
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 )
 
 var hexRegex = regexp.MustCompile("^0x[0-9a-fA-F]+$")
@@ -190,7 +190,7 @@ func ToLowInt64(x []byte) int64 {
 	}
 	// Use the first 8 bytes.
 	x = x[:8]
-	return int64(binary.LittleEndian.Uint64(x))
+	return int64(binary.LittleEndian.Uint64(x)) // lint:ignore uintcast -- A negative number might be the expected result.
 }
 
 // SafeCopyRootAtIndex takes a copy of an 32-byte slice in a slice of byte slices. Returns error if index out of range.

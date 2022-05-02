@@ -3,10 +3,10 @@ package kv
 import (
 	"bytes"
 	"context"
+	"fmt"
 
 	"github.com/golang/snappy"
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/genesis"
@@ -15,6 +15,7 @@ import (
 	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -44,6 +45,19 @@ func (s *Store) State(ctx context.Context, blockRoot [32]byte) (state.BeaconStat
 	}
 
 	return s.unmarshalState(ctx, enc, valEntries)
+}
+
+// StateOrError is just like State(), except it only returns a non-error response
+// if the requested state is found in the database.
+func (s *Store) StateOrError(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error) {
+	st, err := s.State(ctx, blockRoot)
+	if err != nil {
+		return nil, err
+	}
+	if st == nil || st.IsNil() {
+		return nil, errors.Wrap(ErrNotFoundState, fmt.Sprintf("no state with blockroot=%#x", blockRoot))
+	}
+	return st, nil
 }
 
 // GenesisState returns the genesis state in beacon chain.
@@ -137,6 +151,10 @@ func (s *Store) SaveStates(ctx context.Context, states []state.ReadOnlyBeaconSta
 	})
 }
 
+type withValidators interface {
+	GetValidators() []*ethpb.Validator
+}
+
 // SaveStatesEfficient stores multiple states to the db (new schema) using the provided corresponding roots.
 func (s *Store) SaveStatesEfficient(ctx context.Context, states []state.ReadOnlyBeaconState, blockRoots [][32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveStatesEfficient")
@@ -147,29 +165,12 @@ func (s *Store) SaveStatesEfficient(ctx context.Context, states []state.ReadOnly
 	validatorsEntries := make(map[string]*ethpb.Validator) // It's a map to make sure that you store only new validator entries.
 	validatorKeys := make([][]byte, len(states))           // For every state, this stores a compressed list of validator keys.
 	for i, st := range states {
-		var validators []*ethpb.Validator
-		switch st.InnerStateUnsafe().(type) {
-		case *ethpb.BeaconState:
-			pbState, err := v1.ProtobufBeaconState(st.InnerStateUnsafe())
-			if err != nil {
-				return err
-			}
-			validators = pbState.Validators
-		case *ethpb.BeaconStateAltair:
-			pbState, err := v2.ProtobufBeaconState(st.InnerStateUnsafe())
-			if err != nil {
-				return err
-			}
-			validators = pbState.Validators
-		case *ethpb.BeaconStateBellatrix:
-			pbState, err := v3.ProtobufBeaconState(st.InnerStateUnsafe())
-			if err != nil {
-				return err
-			}
-			validators = pbState.Validators
-		default:
-			return errors.New("invalid state type")
+		pb, ok := st.InnerStateUnsafe().(withValidators)
+		if !ok {
+			return errors.New("could not cast state to interface with GetValidators()")
 		}
+		validators := pb.GetValidators()
+
 		// yank out the validators and store them in separate table to save space.
 		var hashes []byte
 		for _, val := range validators {
@@ -332,19 +333,31 @@ func (s *Store) DeleteState(ctx context.Context, blockRoot [32]byte) error {
 
 		bkt = tx.Bucket(checkpointBucket)
 		enc := bkt.Get(finalizedCheckpointKey)
-		checkpoint := &ethpb.Checkpoint{}
+		finalized := &ethpb.Checkpoint{}
 		if enc == nil {
-			checkpoint = &ethpb.Checkpoint{Root: genesisBlockRoot}
-		} else if err := decode(ctx, enc, checkpoint); err != nil {
+			finalized = &ethpb.Checkpoint{Root: genesisBlockRoot}
+		} else if err := decode(ctx, enc, finalized); err != nil {
 			return err
 		}
 
-		blockBkt := tx.Bucket(blocksBucket)
-		headBlkRoot := blockBkt.Get(headBlockRootKey)
+		enc = bkt.Get(justifiedCheckpointKey)
+		justified := &ethpb.Checkpoint{}
+		if enc == nil {
+			justified = &ethpb.Checkpoint{Root: genesisBlockRoot}
+		} else if err := decode(ctx, enc, justified); err != nil {
+			return err
+		}
+
 		bkt = tx.Bucket(stateBucket)
-		// Safe guard against deleting genesis, finalized, head state.
-		if bytes.Equal(blockRoot[:], checkpoint.Root) || bytes.Equal(blockRoot[:], genesisBlockRoot) || bytes.Equal(blockRoot[:], headBlkRoot) {
-			return errors.New("cannot delete genesis, finalized, or head state")
+		// Safeguard against deleting genesis, finalized, head state.
+		if bytes.Equal(blockRoot[:], finalized.Root) || bytes.Equal(blockRoot[:], genesisBlockRoot) || bytes.Equal(blockRoot[:], justified.Root) {
+			return ErrDeleteJustifiedAndFinalized
+		}
+
+		// Nothing to delete if state doesn't exist.
+		enc = bkt.Get(blockRoot[:])
+		if enc == nil {
+			return nil
 		}
 
 		slot, err := s.slotByBlockRoot(ctx, tx, blockRoot[:])
@@ -624,7 +637,11 @@ func (s *Store) slotByBlockRoot(ctx context.Context, tx *bolt.Tx, blockRoot []by
 		if err != nil {
 			return 0, err
 		}
-		if err := helpers.BeaconBlockIsNil(wrapper.WrappedPhase0SignedBeaconBlock(b)); err != nil {
+		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		if err != nil {
+			return 0, err
+		}
+		if err := helpers.BeaconBlockIsNil(wsb); err != nil {
 			return 0, err
 		}
 		return b.Block.Slot, nil

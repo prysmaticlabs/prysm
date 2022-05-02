@@ -5,14 +5,13 @@ import (
 	"sort"
 
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation/aggregation"
 	attaggregation "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation/aggregation/attestations"
@@ -89,7 +88,7 @@ func (a proposerAtts) filter(ctx context.Context, st state.BeaconState) (propose
 	switch st.Version() {
 	case version.Phase0:
 		attestationProcessor = blocks.ProcessAttestationNoVerifySignature
-	case version.Altair:
+	case version.Altair, version.Bellatrix:
 		// Use a wrapper here, as go needs strong typing for the function signature.
 		attestationProcessor = func(ctx context.Context, st state.BeaconState, attestation *ethpb.Attestation) (state.BeaconState, error) {
 			totalBalance, err := helpers.TotalActiveBalance(st)
@@ -117,16 +116,7 @@ func (a proposerAtts) sortByProfitability() (proposerAtts, error) {
 	if len(a) < 2 {
 		return a, nil
 	}
-	if features.Get().ProposerAttsSelectionUsingMaxCover {
-		return a.sortByProfitabilityUsingMaxCover()
-	}
-	sort.Slice(a, func(i, j int) bool {
-		if a[i].Data.Slot == a[j].Data.Slot {
-			return a[i].AggregationBits.Count() > a[j].AggregationBits.Count()
-		}
-		return a[i].Data.Slot > a[j].Data.Slot
-	})
-	return a, nil
+	return a.sortByProfitabilityUsingMaxCover()
 }
 
 // sortByProfitabilityUsingMaxCover orders attestations by highest slot and by highest aggregation bit count.

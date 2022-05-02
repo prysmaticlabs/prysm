@@ -20,24 +20,26 @@ func TestStateReferenceSharing_Finalizer(t *testing.T) {
 
 	a, err := InitializeFromProtoUnsafe(&ethpb.BeaconState{RandaoMixes: [][]byte{[]byte("foo")}})
 	require.NoError(t, err)
-	assert.Equal(t, uint(1), a.sharedFieldReferences[randaoMixes].Refs(), "Expected a single reference for RANDAO mixes")
+	s, ok := a.(*BeaconState)
+	require.Equal(t, true, ok)
+	assert.Equal(t, uint(1), s.sharedFieldReferences[randaoMixes].Refs(), "Expected a single reference for RANDAO mixes")
 
 	func() {
 		// Create object in a different scope for GC
 		b := a.Copy()
-		assert.Equal(t, uint(2), a.sharedFieldReferences[randaoMixes].Refs(), "Expected 2 references to RANDAO mixes")
+		assert.Equal(t, uint(2), s.sharedFieldReferences[randaoMixes].Refs(), "Expected 2 references to RANDAO mixes")
 		_ = b
 	}()
 
 	runtime.GC() // Should run finalizer on object b
-	assert.Equal(t, uint(1), a.sharedFieldReferences[randaoMixes].Refs(), "Expected 1 shared reference to RANDAO mixes!")
+	assert.Equal(t, uint(1), s.sharedFieldReferences[randaoMixes].Refs(), "Expected 1 shared reference to RANDAO mixes!")
 
 	copied := a.Copy()
 	b, ok := copied.(*BeaconState)
 	require.Equal(t, true, ok)
 	assert.Equal(t, uint(2), b.sharedFieldReferences[randaoMixes].Refs(), "Expected 2 shared references to RANDAO mixes")
 	require.NoError(t, b.UpdateRandaoMixesAtIndex(0, []byte("bar")))
-	if b.sharedFieldReferences[randaoMixes].Refs() != 1 || a.sharedFieldReferences[randaoMixes].Refs() != 1 {
+	if b.sharedFieldReferences[randaoMixes].Refs() != 1 || s.sharedFieldReferences[randaoMixes].Refs() != 1 {
 		t.Error("Expected 1 shared reference to RANDAO mix for both a and b")
 	}
 }
@@ -53,15 +55,17 @@ func TestStateReferenceCopy_NoUnexpectedRootsMutation(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	assertRefCount(t, a, blockRoots, 1)
-	assertRefCount(t, a, stateRoots, 1)
+	s, ok := a.(*BeaconState)
+	require.Equal(t, true, ok)
+	assertRefCount(t, s, blockRoots, 1)
+	assertRefCount(t, s, stateRoots, 1)
 
 	// Copy, increases reference count.
 	copied := a.Copy()
 	b, ok := copied.(*BeaconState)
 	require.Equal(t, true, ok)
-	assertRefCount(t, a, blockRoots, 2)
-	assertRefCount(t, a, stateRoots, 2)
+	assertRefCount(t, s, blockRoots, 2)
+	assertRefCount(t, s, stateRoots, 2)
 	assertRefCount(t, b, blockRoots, 2)
 	assertRefCount(t, b, stateRoots, 2)
 	assert.Equal(t, 8192, len(b.BlockRoots()), "Wrong number of block roots found")
@@ -106,8 +110,8 @@ func TestStateReferenceCopy_NoUnexpectedRootsMutation(t *testing.T) {
 	assert.DeepEqual(t, root1[:], stateRootsB[0], "Unexpected mutation found")
 
 	// Copy on write happened, reference counters are reset.
-	assertRefCount(t, a, blockRoots, 1)
-	assertRefCount(t, a, stateRoots, 1)
+	assertRefCount(t, s, blockRoots, 1)
+	assertRefCount(t, s, stateRoots, 1)
 	assertRefCount(t, b, blockRoots, 1)
 	assertRefCount(t, b, stateRoots, 1)
 }
@@ -121,13 +125,15 @@ func TestStateReferenceCopy_NoUnexpectedRandaoMutation(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	assertRefCount(t, a, randaoMixes, 1)
+	s, ok := a.(*BeaconState)
+	require.Equal(t, true, ok)
+	assertRefCount(t, s, randaoMixes, 1)
 
 	// Copy, increases reference count.
 	copied := a.Copy()
 	b, ok := copied.(*BeaconState)
 	require.Equal(t, true, ok)
-	assertRefCount(t, a, randaoMixes, 2)
+	assertRefCount(t, s, randaoMixes, 2)
 	assertRefCount(t, b, randaoMixes, 2)
 
 	// Assert shared state.
@@ -156,7 +162,7 @@ func TestStateReferenceCopy_NoUnexpectedRandaoMutation(t *testing.T) {
 	assert.DeepEqual(t, val1, mixesB[0], "Unexpected mutation found")
 
 	// Copy on write happened, reference counters are reset.
-	assertRefCount(t, a, randaoMixes, 1)
+	assertRefCount(t, s, randaoMixes, 1)
 	assertRefCount(t, b, randaoMixes, 1)
 }
 
@@ -182,16 +188,18 @@ func TestStateReferenceCopy_NoUnexpectedAttestationsMutation(t *testing.T) {
 
 	a, err := InitializeFromProtoUnsafe(&ethpb.BeaconState{})
 	require.NoError(t, err)
-	assertRefCount(t, a, previousEpochAttestations, 1)
-	assertRefCount(t, a, currentEpochAttestations, 1)
+	s, ok := a.(*BeaconState)
+	require.Equal(t, true, ok)
+	assertRefCount(t, s, previousEpochAttestations, 1)
+	assertRefCount(t, s, currentEpochAttestations, 1)
 
 	// Update initial state.
 	atts := []*ethpb.PendingAttestation{
 		{AggregationBits: bitfield.NewBitlist(1)},
 		{AggregationBits: bitfield.NewBitlist(2)},
 	}
-	a.setPreviousEpochAttestations(atts[:1])
-	a.setCurrentEpochAttestations(atts[:1])
+	s.setPreviousEpochAttestations(atts[:1])
+	s.setCurrentEpochAttestations(atts[:1])
 	curAtt, err := a.CurrentEpochAttestations()
 	require.NoError(t, err)
 	assert.Equal(t, 1, len(curAtt), "Unexpected number of attestations")
@@ -203,8 +211,8 @@ func TestStateReferenceCopy_NoUnexpectedAttestationsMutation(t *testing.T) {
 	copied := a.Copy()
 	b, ok := copied.(*BeaconState)
 	require.Equal(t, true, ok)
-	assertRefCount(t, a, previousEpochAttestations, 2)
-	assertRefCount(t, a, currentEpochAttestations, 2)
+	assertRefCount(t, s, previousEpochAttestations, 2)
+	assertRefCount(t, s, currentEpochAttestations, 2)
 	assertRefCount(t, b, previousEpochAttestations, 2)
 	assertRefCount(t, b, currentEpochAttestations, 2)
 	bPrevEpochAtts, err := b.PreviousEpochAttestations()
@@ -289,7 +297,7 @@ func TestStateReferenceCopy_NoUnexpectedAttestationsMutation(t *testing.T) {
 			state.previousEpochAttestations[i] = att
 		}
 	}
-	applyToEveryAttestation(a)
+	applyToEveryAttestation(s)
 
 	aCurrEpochAtts, err = a.CurrentEpochAttestations()
 	require.NoError(t, err)
@@ -315,9 +323,9 @@ func TestStateReferenceCopy_NoUnexpectedAttestationsMutation(t *testing.T) {
 	assertAttNotFound(bPrevEpochAtts, 2)
 
 	// Copy on write happened, reference counters are reset.
-	assertRefCount(t, a, currentEpochAttestations, 1)
+	assertRefCount(t, s, currentEpochAttestations, 1)
 	assertRefCount(t, b, currentEpochAttestations, 1)
-	assertRefCount(t, a, previousEpochAttestations, 1)
+	assertRefCount(t, s, previousEpochAttestations, 1)
 	assertRefCount(t, b, previousEpochAttestations, 1)
 }
 

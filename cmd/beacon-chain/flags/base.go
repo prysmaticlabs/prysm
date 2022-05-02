@@ -3,9 +3,9 @@
 package flags
 
 import (
-	"encoding/hex"
 	"strings"
 
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/urfave/cli/v2"
 )
@@ -15,6 +15,18 @@ var (
 	HTTPWeb3ProviderFlag = &cli.StringFlag{
 		Name:  "http-web3provider",
 		Usage: "A mainchain web3 provider string http endpoint. Can contain auth header as well in the format --http-web3provider=\"https://goerli.infura.io/v3/xxxx,Basic xxx\" for project secret (base64 encoded) and --http-web3provider=\"https://goerli.infura.io/v3/xxxx,Bearer xxx\" for jwt use",
+		Value: "http://localhost:8545",
+	}
+	// ExecutionJWTSecretFlag provides a path to a file containing a hex-encoded string representing a 32 byte secret
+	// used to authenticate with an execution node via HTTP. This is required if using an HTTP connection, otherwise all requests
+	// to execution nodes for consensus-related calls will fail. This is not required if using an IPC connection.
+	ExecutionJWTSecretFlag = &cli.StringFlag{
+		Name: "jwt-secret",
+		Usage: "REQUIRED if connecting to an execution node via HTTP. Provides a path to a file containing " +
+			"a hex-encoded string representing a 32 byte secret used for authentication with an execution node via " +
+			"HTTP. If this is not set, all requests to execution nodes via HTTP for consensus-related calls will " +
+			"fail, which will prevent your validators from performing their duties. " +
+			"This is not required if using an IPC connection.",
 		Value: "",
 	}
 	// FallbackWeb3ProviderFlag provides a fallback endpoint to an ETH 1.0 RPC.
@@ -84,7 +96,7 @@ var (
 		Name: "grpc-gateway-corsdomain",
 		Usage: "Comma separated list of domains from which to accept cross origin requests " +
 			"(browser enforced). This flag has no effect if not used with --grpc-gateway-port.",
-		Value: "http://localhost:4200,http://localhost:7500,http://127.0.0.1:4200,http://127.0.0.1:7500,http://0.0.0.0:4200,http://0.0.0.0:7500",
+		Value: "http://localhost:4200,http://localhost:7500,http://127.0.0.1:4200,http://127.0.0.1:7500,http://0.0.0.0:4200,http://0.0.0.0:7500,http://localhost:3000,http://0.0.0.0:3000,http://127.0.0.1:3000",
 	}
 	// MinSyncPeers specifies the required number of successful peer handshakes in order
 	// to start syncing with external peers.
@@ -109,6 +121,14 @@ var (
 	HeadSync = &cli.BoolFlag{
 		Name:  "head-sync",
 		Usage: "Starts the beacon node with the previously saved head state instead of finalized state.",
+	}
+	// SafeSlotsToImportOptimistically specifies the number of slots that a
+	// node should wait before being able to optimistically sync blocks
+	// across the merge boundary
+	SafeSlotsToImportOptimistically = &cli.IntFlag{
+		Name:  "safe-slots-to-import-optimistically",
+		Usage: "The number of slots to wait before optimistically syncing a block without enabled execution.",
+		Value: 128,
 	}
 	// SlotsPerArchivedPoint specifies the number of slots between the archived points, to save beacon state in the cold
 	// section of beaconDB.
@@ -165,24 +185,19 @@ var (
 		Name:  "network-id",
 		Usage: "Sets the network id of the beacon chain.",
 	}
-	// WeakSubjectivityCheckpt defines the weak subjectivity checkpoint the node must sync through to defend against long range attacks.
-	WeakSubjectivityCheckpt = &cli.StringFlag{
-		Name: "weak-subjectivity-checkpoint",
-		Usage: "Input in `block_root:epoch_number` format. This guarantees that syncing leads to the given Weak Subjectivity Checkpoint along the canonical chain. " +
-			"If such a sync is not possible, the node will treat it a critical and irrecoverable failure",
-		Value: "",
-	}
 	// Eth1HeaderReqLimit defines a flag to set the maximum number of headers that a deposit log query can fetch. If none is set, 1000 will be the limit.
 	Eth1HeaderReqLimit = &cli.Uint64Flag{
 		Name:  "eth1-header-req-limit",
 		Usage: "Sets the maximum number of headers that a deposit log query can fetch.",
 		Value: uint64(1000),
 	}
-	// GenesisStatePath defines a flag to start the beacon chain from a give genesis state file.
-	GenesisStatePath = &cli.StringFlag{
-		Name: "genesis-state",
-		Usage: "Load a genesis state from ssz file. Testnet genesis files can be found in the " +
-			"eth2-clients/eth2-testnets repository on github.",
+	// WeakSubjectivityCheckpoint defines the weak subjectivity checkpoint the node must sync through to defend against long range attacks.
+	WeakSubjectivityCheckpoint = &cli.StringFlag{
+		Name: "weak-subjectivity-checkpoint",
+		Usage: "Input in `block_root:epoch_number` format." +
+			" This guarantees that syncing leads to the given Weak Subjectivity Checkpoint along the canonical chain. " +
+			"If such a sync is not possible, the node will treat it as a critical and irrecoverable failure",
+		Value: "",
 	}
 	// MinPeersPerSubnet defines a flag to set the minimum number of peers that a node will attempt to peer with for a subnet.
 	MinPeersPerSubnet = &cli.Uint64Flag{
@@ -190,10 +205,10 @@ var (
 		Usage: "Sets the minimum number of peers that a node will attempt to peer with that are subscribed to a subnet.",
 		Value: 6,
 	}
-	// FeeRecipient specifies the fee recipient for the transaction fees.
-	FeeRecipient = &cli.StringFlag{
-		Name:  "fee-recipient",
-		Usage: "Post bellatrix, this address will receive the transaction fees produced by any blocks from this node. Default to junk whilst bellatrix is in development state.",
-		Value: hex.EncodeToString([]byte("0x0000000000000000000000000000000000000001")),
+	// SuggestedFeeRecipient specifies the fee recipient for the transaction fees.
+	SuggestedFeeRecipient = &cli.StringFlag{
+		Name:  "suggested-fee-recipient",
+		Usage: "Post bellatrix, this address will receive the transaction fees produced by any blocks from this node. Default to junk whilst bellatrix is in development state. Validator client can override this value through the preparebeaconproposer api.",
+		Value: fieldparams.EthBurnAddressHex,
 	}
 )

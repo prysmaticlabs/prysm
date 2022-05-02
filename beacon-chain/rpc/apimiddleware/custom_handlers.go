@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"strconv"
 	"strings"
@@ -74,7 +73,7 @@ func handleGetSSZ(
 		apimiddleware.WriteError(w, errJson, nil)
 		return true
 	}
-	grpcResponse, errJson := apimiddleware.ProxyRequest(req)
+	grpcResponse, errJson := m.ProxyRequest(req)
 	if errJson != nil {
 		apimiddleware.WriteError(w, errJson, nil)
 		return true
@@ -179,7 +178,7 @@ func writeSSZResponseHeaderAndBody(grpcResp *http.Response, w http.ResponseWrite
 	} else {
 		w.WriteHeader(grpcResp.StatusCode)
 	}
-	if _, err := io.Copy(w, ioutil.NopCloser(bytes.NewReader(respSsz))); err != nil {
+	if _, err := io.Copy(w, io.NopCloser(bytes.NewReader(respSsz))); err != nil {
 		return apimiddleware.InternalServerErrorWithMessage(err, "could not write response message")
 	}
 	return nil

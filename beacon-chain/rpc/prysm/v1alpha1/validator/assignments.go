@@ -5,7 +5,6 @@ import (
 	"context"
 	"time"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
@@ -14,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	beaconState "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
@@ -138,7 +138,7 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 		return nil, status.Errorf(codes.Internal, "Could not compute committee assignments: %v", err)
 	}
 	// Query the next epoch assignments for committee subnet subscriptions.
-	nextCommitteeAssignments, _, err := helpers.CommitteeAssignments(ctx, s, req.Epoch+1)
+	nextCommitteeAssignments, nextProposerIndexToSlots, err := helpers.CommitteeAssignments(ctx, s, req.Epoch+1)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not compute next committee assignments: %v", err)
 	}
@@ -180,6 +180,16 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 				nextAssignment.AttesterSlot = ca.AttesterSlot
 				nextAssignment.CommitteeIndex = ca.CommitteeIndex
 			}
+			// Cache proposer assignment for the current epoch.
+			for _, slot := range proposerIndexToSlots[idx] {
+				vs.ProposerSlotIndexCache.SetProposerAndPayloadIDs(slot, idx, [8]byte{} /* payloadID */)
+			}
+			// Cache proposer assignment for the next epoch.
+			for _, slot := range nextProposerIndexToSlots[idx] {
+				vs.ProposerSlotIndexCache.SetProposerAndPayloadIDs(slot, idx, [8]byte{} /* payloadID */)
+			}
+			// Prune payload ID cache for any slots before request slot.
+			vs.ProposerSlotIndexCache.PrunePayloadIDs(epochStartSlot)
 		} else {
 			// If the validator isn't in the beacon state, try finding their deposit to determine their status.
 			vStatus, _ := vs.validatorStatus(ctx, s, pubKey)
@@ -187,7 +197,7 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 		}
 
 		// Are the validators in current or next epoch sync committee.
-		if ok && coreTime.AltairCompatible(s, req.Epoch) {
+		if ok && coreTime.HigherEqualThanAltairVersionAndEpoch(s, req.Epoch) {
 			assignment.IsSyncCommittee, err = helpers.IsCurrentPeriodSyncCommittee(s, idx)
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not determine current epoch sync committee: %v", err)

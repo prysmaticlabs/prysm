@@ -9,6 +9,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
+	"github.com/golang/protobuf/ptypes/empty"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	grpc "google.golang.org/grpc"
 	metadata "google.golang.org/grpc/metadata"
@@ -236,6 +237,14 @@ func (mr *MockBeaconNodeValidatorClientMockRecorder) MultipleValidatorStatus(arg
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MultipleValidatorStatus", reflect.TypeOf((*MockBeaconNodeValidatorClient)(nil).MultipleValidatorStatus), varargs...)
+}
+
+// ProposeBeaconBlock mocks base method
+func (m *MockBeaconNodeValidatorClient) PrepareBeaconProposer(
+	arg0 context.Context, arg1 *eth.PrepareBeaconProposerRequest, arg2 ...grpc.CallOption,
+) (*empty.Empty, error) {
+	return &empty.Empty{}, nil
+
 }
 
 // ProposeAttestation mocks base method

@@ -32,21 +32,21 @@ func WriteBlockChunk(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher
 	var obtainedCtx []byte
 	switch blk.Version() {
 	case version.Phase0:
-		valRoot := chain.GenesisValidatorRoot()
+		valRoot := chain.GenesisValidatorsRoot()
 		digest, err := forks.ForkDigestFromEpoch(params.BeaconConfig().GenesisEpoch, valRoot[:])
 		if err != nil {
 			return err
 		}
 		obtainedCtx = digest[:]
 	case version.Altair:
-		valRoot := chain.GenesisValidatorRoot()
+		valRoot := chain.GenesisValidatorsRoot()
 		digest, err := forks.ForkDigestFromEpoch(params.BeaconConfig().AltairForkEpoch, valRoot[:])
 		if err != nil {
 			return err
 		}
 		obtainedCtx = digest[:]
 	case version.Bellatrix:
-		valRoot := chain.GenesisValidatorRoot()
+		valRoot := chain.GenesisValidatorsRoot()
 		digest, err := forks.ForkDigestFromEpoch(params.BeaconConfig().BellatrixForkEpoch, valRoot[:])
 		if err != nil {
 			return err
@@ -129,7 +129,7 @@ func extractBlockDataType(digest []byte, chain blockchain.ChainInfoFetcher) (blo
 	if len(digest) != forkDigestLength {
 		return nil, errors.Errorf("invalid digest returned, wanted a length of %d but received %d", forkDigestLength, len(digest))
 	}
-	vRoot := chain.GenesisValidatorRoot()
+	vRoot := chain.GenesisValidatorsRoot()
 	for k, blkFunc := range types.BlockMap {
 		rDigest, err := signing.ComputeForkDigest(k[:], vRoot[:])
 		if err != nil {

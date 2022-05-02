@@ -7,7 +7,6 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/v1"
-	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -15,12 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
 )
-
-func TestMain(m *testing.M) {
-	resetCfg := features.InitWithReset(&features.Flags{EnableBalanceTrieComputation: true})
-	defer resetCfg()
-	m.Run()
-}
 
 func TestInitializeFromProto(t *testing.T) {
 	testState, _ := util.DeterministicGenesisState(t, 64)
@@ -257,4 +250,22 @@ func TestBeaconState_AppendValidator_DoesntMutateCopy(t *testing.T) {
 	assert.Equal(t, originalCount, st1.NumValidators(), "st1 NumValidators mutated")
 	_, ok := st1.ValidatorIndexByPubkey(bytesutil.ToBytes48(val.PublicKey))
 	assert.Equal(t, false, ok, "Expected no validator index to be present in st1 for the newly inserted pubkey")
+}
+
+func BenchmarkBeaconState(b *testing.B) {
+	testState, _ := util.DeterministicGenesisState(b, 16000)
+	pbState, err := v1.ProtobufBeaconState(testState.InnerStateUnsafe())
+	require.NoError(b, err)
+
+	b.Run("Vectorized SHA256", func(b *testing.B) {
+		st, err := v1.InitializeFromProtoUnsafe(pbState)
+		require.NoError(b, err)
+		_, err = st.HashTreeRoot(context.Background())
+		assert.NoError(b, err)
+	})
+
+	b.Run("Current SHA256", func(b *testing.B) {
+		_, err := pbState.HashTreeRoot()
+		require.NoError(b, err)
+	})
 }

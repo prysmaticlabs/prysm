@@ -3,7 +3,7 @@ package sanity
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path"
 	"strings"
 	"testing"
@@ -61,7 +61,7 @@ func RunBlockProcessingTest(t *testing.T, config, folderPath string) {
 				require.NoError(t, err, "Failed to decompress")
 				block := &ethpb.SignedBeaconBlockAltair{}
 				require.NoError(t, block.UnmarshalSSZ(blockSSZ), "Failed to unmarshal")
-				wsb, err := wrapper.WrappedAltairSignedBeaconBlock(block)
+				wsb, err := wrapper.WrappedSignedBeaconBlock(block)
 				require.NoError(t, err)
 				processedState, transitionError = transition.ExecuteStateTransition(context.Background(), beaconState, wsb)
 				if transitionError != nil {
@@ -85,7 +85,7 @@ func RunBlockProcessingTest(t *testing.T, config, folderPath string) {
 					t.Errorf("Unexpected error: %v", transitionError)
 				}
 
-				postBeaconStateFile, err := ioutil.ReadFile(postSSZFilepath) // #nosec G304
+				postBeaconStateFile, err := os.ReadFile(postSSZFilepath) // #nosec G304
 				require.NoError(t, err)
 				postBeaconStateSSZ, err := snappy.Decode(nil /* dst */, postBeaconStateFile)
 				require.NoError(t, err, "Failed to decompress")

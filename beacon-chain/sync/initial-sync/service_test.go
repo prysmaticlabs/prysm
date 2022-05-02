@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/paulbellamy/ratecounter"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/async/abool"
 	"github.com/prysmaticlabs/prysm/async/event"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
@@ -17,6 +16,7 @@ import (
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -168,11 +168,7 @@ func TestService_InitStartStop(t *testing.T) {
 				Chain:         mc,
 				StateNotifier: notifier,
 			})
-			time.Sleep(500 * time.Millisecond)
 			assert.NotNil(t, s)
-			if tt.methodRuns != nil {
-				tt.methodRuns(notifier.StateFeed())
-			}
 
 			wg := &sync.WaitGroup{}
 			wg.Add(1)
@@ -180,6 +176,11 @@ func TestService_InitStartStop(t *testing.T) {
 				s.Start()
 				wg.Done()
 			}()
+
+			time.Sleep(500 * time.Millisecond)
+			if tt.methodRuns != nil {
+				tt.methodRuns(notifier.StateFeed())
+			}
 
 			go func() {
 				// Allow to exit from test (on no head loop waiting for head is started).
@@ -207,7 +208,6 @@ func TestService_waitForStateInitialization(t *testing.T) {
 			synced:       abool.New(),
 			chainStarted: abool.New(),
 			counter:      ratecounter.NewRateCounter(counterSeconds * time.Second),
-			genesisChan:  make(chan time.Time),
 		}
 		return s
 	}
@@ -221,9 +221,8 @@ func TestService_waitForStateInitialization(t *testing.T) {
 		wg := &sync.WaitGroup{}
 		wg.Add(1)
 		go func() {
-			go s.waitForStateInitialization()
-			currTime := <-s.genesisChan
-			assert.Equal(t, true, currTime.IsZero())
+			_, err := s.waitForStateInitialization()
+			assert.ErrorContains(t, "context closed", err)
 			wg.Done()
 		}()
 		go func() {
@@ -236,8 +235,6 @@ func TestService_waitForStateInitialization(t *testing.T) {
 			t.Fatalf("Test should have exited by now, timed out")
 		}
 		assert.LogsContain(t, hook, "Waiting for state to be initialized")
-		assert.LogsContain(t, hook, "Context closed, exiting goroutine")
-		assert.LogsDoNotContain(t, hook, "Subscription to state notifier failed")
 	})
 
 	t.Run("no state and state init event received", func(t *testing.T) {
@@ -251,8 +248,9 @@ func TestService_waitForStateInitialization(t *testing.T) {
 		wg := &sync.WaitGroup{}
 		wg.Add(1)
 		go func() {
-			go s.waitForStateInitialization()
-			receivedGenesisTime = <-s.genesisChan
+			var err error
+			receivedGenesisTime, err = s.waitForStateInitialization()
+			require.NoError(t, err)
 			assert.Equal(t, false, receivedGenesisTime.IsZero())
 			wg.Done()
 		}()
@@ -281,7 +279,6 @@ func TestService_waitForStateInitialization(t *testing.T) {
 		assert.LogsContain(t, hook, "Event feed data is not type *statefeed.InitializedData")
 		assert.LogsContain(t, hook, "Waiting for state to be initialized")
 		assert.LogsContain(t, hook, "Received state initialized event")
-		assert.LogsDoNotContain(t, hook, "Context closed, exiting goroutine")
 	})
 
 	t.Run("no state and state init event received and service start", func(t *testing.T) {
@@ -296,7 +293,8 @@ func TestService_waitForStateInitialization(t *testing.T) {
 		wg := &sync.WaitGroup{}
 		wg.Add(1)
 		go func() {
-			s.waitForStateInitialization()
+			_, err := s.waitForStateInitialization()
+			require.NoError(t, err)
 			wg.Done()
 		}()
 
@@ -321,7 +319,6 @@ func TestService_waitForStateInitialization(t *testing.T) {
 		}
 		assert.LogsContain(t, hook, "Waiting for state to be initialized")
 		assert.LogsContain(t, hook, "Received state initialized event")
-		assert.LogsDoNotContain(t, hook, "Context closed, exiting goroutine")
 	})
 }
 
@@ -378,7 +375,9 @@ func TestService_Resync(t *testing.T) {
 	}, p.Peers())
 	cache.initializeRootCache(makeSequence(1, 160), t)
 	beaconDB := dbtest.SetupDB(t)
-	err := beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(util.NewBeaconBlock()))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+	require.NoError(t, err)
+	err = beaconDB.SaveBlock(context.Background(), wsb)
 	require.NoError(t, err)
 	cache.RLock()
 	genesisRoot := cache.rootCache[0]

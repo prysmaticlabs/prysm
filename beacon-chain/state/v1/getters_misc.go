@@ -1,8 +1,8 @@
 package v1
 
 import (
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
@@ -30,8 +30,8 @@ func (b *BeaconState) genesisTime() uint64 {
 	return b.state.GenesisTime
 }
 
-// GenesisValidatorRoot of the beacon state.
-func (b *BeaconState) GenesisValidatorRoot() []byte {
+// GenesisValidatorsRoot of the beacon state.
+func (b *BeaconState) GenesisValidatorsRoot() []byte {
 	if !b.hasInnerState() {
 		return nil
 	}
@@ -42,12 +42,12 @@ func (b *BeaconState) GenesisValidatorRoot() []byte {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.genesisValidatorRoot()
+	return b.genesisValidatorsRoot()
 }
 
-// genesisValidatorRoot of the beacon state.
+// genesisValidatorsRoot of the beacon state.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) genesisValidatorRoot() []byte {
+func (b *BeaconState) genesisValidatorsRoot() []byte {
 	if !b.hasInnerState() {
 		return nil
 	}

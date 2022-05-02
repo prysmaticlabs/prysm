@@ -4,12 +4,12 @@ import (
 	"context"
 	"testing"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/store"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -25,11 +25,11 @@ func TestService_newSlot(t *testing.T) {
 	}
 	ctx := context.Background()
 
-	require.NoError(t, fcs.ProcessBlock(ctx, 0, [32]byte{}, [32]byte{}, [32]byte{}, 0, 0))        // genesis
-	require.NoError(t, fcs.ProcessBlock(ctx, 32, [32]byte{'a'}, [32]byte{}, [32]byte{}, 0, 0))    // finalized
-	require.NoError(t, fcs.ProcessBlock(ctx, 64, [32]byte{'b'}, [32]byte{'a'}, [32]byte{}, 0, 0)) // justified
-	require.NoError(t, fcs.ProcessBlock(ctx, 96, [32]byte{'c'}, [32]byte{'a'}, [32]byte{}, 0, 0)) // best justified
-	require.NoError(t, fcs.ProcessBlock(ctx, 97, [32]byte{'d'}, [32]byte{}, [32]byte{}, 0, 0))    // bad
+	require.NoError(t, fcs.InsertOptimisticBlock(ctx, 0, [32]byte{}, [32]byte{}, [32]byte{}, 0, 0))        // genesis
+	require.NoError(t, fcs.InsertOptimisticBlock(ctx, 32, [32]byte{'a'}, [32]byte{}, [32]byte{}, 0, 0))    // finalized
+	require.NoError(t, fcs.InsertOptimisticBlock(ctx, 64, [32]byte{'b'}, [32]byte{'a'}, [32]byte{}, 0, 0)) // justified
+	require.NoError(t, fcs.InsertOptimisticBlock(ctx, 96, [32]byte{'c'}, [32]byte{'a'}, [32]byte{}, 0, 0)) // best justified
+	require.NoError(t, fcs.InsertOptimisticBlock(ctx, 97, [32]byte{'d'}, [32]byte{}, [32]byte{}, 0, 0))    // bad
 
 	type args struct {
 		slot          types.Slot
@@ -86,9 +86,9 @@ func TestService_newSlot(t *testing.T) {
 	for _, test := range tests {
 		service, err := NewService(ctx, opts...)
 		require.NoError(t, err)
-		store := store.New(test.args.justified, test.args.finalized)
-		store.SetBestJustifiedCheckpt(test.args.bestJustified)
-		service.store = store
+		s := store.New(test.args.justified, test.args.finalized)
+		s.SetBestJustifiedCheckpt(test.args.bestJustified)
+		service.store = s
 
 		require.NoError(t, service.NewSlot(ctx, test.args.slot))
 		if test.args.shouldEqual {

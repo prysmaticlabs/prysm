@@ -6,9 +6,9 @@ package state
 import (
 	"context"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -42,7 +42,7 @@ type ReadOnlyBeaconState interface {
 	InnerStateUnsafe() interface{}
 	CloneInnerState() interface{}
 	GenesisTime() uint64
-	GenesisValidatorRoot() []byte
+	GenesisValidatorsRoot() []byte
 	Slot() types.Slot
 	Fork() *ethpb.Fork
 	LatestBlockHeader() *ethpb.BeaconBlockHeader
@@ -66,7 +66,7 @@ type WriteOnlyBeaconState interface {
 	WriteOnlyCheckpoint
 	WriteOnlyAttestations
 	SetGenesisTime(val uint64) error
-	SetGenesisValidatorRoot(val []byte) error
+	SetGenesisValidatorsRoot(val []byte) error
 	SetSlot(val types.Slot) error
 	SetFork(val *ethpb.Fork) error
 	SetLatestBlockHeader(val *ethpb.BeaconBlockHeader) error
@@ -221,6 +221,8 @@ type FutureForkStub interface {
 	SetCurrentSyncCommittee(val *ethpb.SyncCommittee) error
 	SetPreviousParticipationBits(val []byte) error
 	SetCurrentParticipationBits(val []byte) error
+	ModifyCurrentParticipationBits(func(val []byte) ([]byte, error)) error
+	ModifyPreviousParticipationBits(func(val []byte) ([]byte, error)) error
 	NextSyncCommittee() (*ethpb.SyncCommittee, error)
 	SetNextSyncCommittee(val *ethpb.SyncCommittee) error
 }
