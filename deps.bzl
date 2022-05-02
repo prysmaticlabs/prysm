@@ -1245,6 +1245,13 @@ def prysm_deps():
     )
 
     go_repository(
+        name = "com_github_gogo_protobuf",
+        importpath = "github.com/gogo/protobuf",
+        commit = "b03c65ea87cdc3521ede29f62fe3ce239267c1bc",
+        version = "v1.3.2",
+    )
+
+    go_repository(
         name = "com_github_golang_freetype",
         importpath = "github.com/golang/freetype",
         sum = "h1:DACJavvAHhabrF08vX0COfcOBJRhZ8lUbR+ZWIs0Y5g=",
@@ -1500,8 +1507,8 @@ def prysm_deps():
         name = "com_github_grpc_ecosystem_grpc_gateway_v2",
         importpath = "github.com/grpc-ecosystem/grpc-gateway/v2",
         replace = "github.com/prysmaticlabs/grpc-gateway/v2",
-        sum = "h1:xcu59yYL6AWWTl6jtejBfE0y8uF35fArCBeZjRlvJss=",
-        version = "v2.3.1-0.20210702154020-550e1cd83ec1",
+        sum = "h1:X89lsbPFK9rUDa8mxXazgAT34jlXdCHZrn8kdptFbBU=",
+        version = "v2.3.1-0.20220428175429-ee99f663f83d",
     )
     go_repository(
         name = "com_github_gxed_hashland_keccakpg",
@@ -2462,7 +2469,6 @@ def prysm_deps():
     )
     go_repository(
         name = "com_github_lucas_clemente_quic_go",
-        build_directives = ["gazelle:exclude internal/qtls/go118.go"],  # Remove this after go1.18 or later is supported in WORKSPACE.
         importpath = "github.com/lucas-clemente/quic-go",
         sum = "h1:ALBQXr9UJ8A1LyzvceX4jd9QFsHvlI0RR6BkV16o00A=",
         version = "v0.26.0",
@@ -3184,12 +3190,6 @@ def prysm_deps():
         importpath = "github.com/prometheus/tsdb",
         sum = "h1:If5rVCMTp6W2SiRAQFlbpJNgVlgMEd+U2GZckwK38ic=",
         version = "v0.10.0",
-    )
-    go_repository(
-        name = "com_github_prysmaticlabs_eth2_types",
-        importpath = "github.com/prysmaticlabs/eth2-types",
-        sum = "h1:1dN7YAqMN3oAJ0LceWcyv/U4jHLh+5urnSnr4br6zg4=",
-        version = "v0.0.0-20210303084904-c9735a06829d",
     )
     go_repository(
         name = "com_github_prysmaticlabs_go_bitfield",

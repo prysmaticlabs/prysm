@@ -4,10 +4,10 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 )
 
 // NewStatus correctly initializes a Status value with the required database value.
@@ -118,5 +118,5 @@ type BackfillDB interface {
 	GenesisBlockRoot(ctx context.Context) ([32]byte, error)
 	OriginCheckpointBlockRoot(ctx context.Context) ([32]byte, error)
 	BackfillBlockRoot(ctx context.Context) ([32]byte, error)
-	Block(ctx context.Context, blockRoot [32]byte) (block.SignedBeaconBlock, error)
+	Block(ctx context.Context, blockRoot [32]byte) (interfaces.SignedBeaconBlock, error)
 }

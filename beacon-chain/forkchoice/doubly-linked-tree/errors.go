@@ -3,6 +3,7 @@ package doublylinkedtree
 import "errors"
 
 var ErrNilNode = errors.New("invalid nil or unknown node")
+var errInvalidParentRoot = errors.New("invalid parent root")
 var errInvalidProposerBoostRoot = errors.New("invalid proposer boost root")
 var errUnknownFinalizedRoot = errors.New("unknown finalized root")
 var errUnknownJustifiedRoot = errors.New("unknown justified root")

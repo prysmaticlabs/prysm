@@ -4,10 +4,10 @@ import (
 	"math"
 
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
@@ -18,7 +18,7 @@ var ErrNilBeaconBlockBody = errors.New("beacon block body can't be nil")
 // BeaconBlockIsNil checks if any composite field of input signed beacon block is nil.
 // Access to these nil fields will result in run time panic,
 // it is recommended to run these checks as first line of defense.
-func BeaconBlockIsNil(b block.SignedBeaconBlock) error {
+func BeaconBlockIsNil(b interfaces.SignedBeaconBlock) error {
 	if b == nil || b.IsNil() {
 		return ErrNilSignedBeaconBlock
 	}
