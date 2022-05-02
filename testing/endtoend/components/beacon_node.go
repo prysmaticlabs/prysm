@@ -117,8 +117,12 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 		expectedNumOfPeers += 1
 	}
 	jwtPath := path.Join(e2e.TestParams.TestPath, "eth1data/"+strconv.Itoa(node.index)+"/")
+	eth1Port := e2e.TestParams.Ports.Eth1AuthRPCPort
+	// The first beacon node should be connecting to an execution client with authentication
+	// via a proxy middleware we can use to test SYNCING responses in the engine API.
 	if index == 0 {
 		jwtPath = path.Join(e2e.TestParams.TestPath, "eth1data/miner/")
+		eth1Port = e2e.TestParams.Ports.Eth1ProxyPort
 	}
 	jwtPath = path.Join(jwtPath, "geth/jwtsecret")
 	args := []string{
@@ -126,7 +130,7 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 		fmt.Sprintf("--%s=%s", cmdshared.LogFileName.Name, stdOutFile.Name()),
 		fmt.Sprintf("--%s=%s", flags.DepositContractFlag.Name, e2e.TestParams.ContractAddress.Hex()),
 		fmt.Sprintf("--%s=%d", flags.RPCPort.Name, e2e.TestParams.Ports.PrysmBeaconNodeRPCPort+index),
-		fmt.Sprintf("--%s=http://127.0.0.1:%d", flags.HTTPWeb3ProviderFlag.Name, e2e.TestParams.Ports.Eth1AuthRPCPort+index),
+		fmt.Sprintf("--%s=http://127.0.0.1:%d", flags.HTTPWeb3ProviderFlag.Name, eth1Port+index),
 		fmt.Sprintf("--%s=%s", flags.ExecutionJWTSecretFlag.Name, jwtPath),
 		fmt.Sprintf("--%s=%d", flags.MinSyncPeers.Name, 1),
 		fmt.Sprintf("--%s=%d", cmdshared.P2PUDPPort.Name, e2e.TestParams.Ports.PrysmBeaconNodeUDPPort+index),

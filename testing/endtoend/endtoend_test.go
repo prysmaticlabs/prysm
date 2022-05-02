@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -26,6 +27,7 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
 	e2etypes "github.com/prysmaticlabs/prysm/testing/endtoend/types"
+	proxy "github.com/prysmaticlabs/prysm/testing/middleware/engine-api-proxy"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
@@ -80,6 +82,21 @@ func (r *testRunner) run() {
 		return tracingSink.Start(ctx)
 	})
 
+	// Creates an engine API proxy middleware for mocking certain responses between
+	// the beacon node and the execution client. This helps us simulate scenarios such as
+	// the execution client signaling Prysm that it is SYNCING, and therefore triggering optimistic sync
+	// in our end-to-end test suite.
+	engineProxyMiddleware, err := proxy.New(
+		proxy.WithHost("127.0.0.1"),
+		proxy.WithPort(e2e.TestParams.Ports.Eth1ProxyPort),
+		proxy.WithDestinationAddress("127.0.0.1:"+strconv.Itoa(e2e.TestParams.Ports.Eth1RPCPort)),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	g.Go(func() error {
+		return engineProxyMiddleware.Start(ctx)
+	})
 	if multiClientActive {
 		keyGen = components.NewKeystoreGenerator()
 

@@ -29,6 +29,7 @@ type ports struct {
 	BootNodeMetricsPort             int
 	Eth1Port                        int
 	Eth1RPCPort                     int
+	Eth1ProxyPort                   int
 	Eth1AuthRPCPort                 int
 	Eth1WSPort                      int
 	PrysmBeaconNodeRPCPort          int
@@ -86,6 +87,7 @@ const (
 	Eth1RPCPort     = Eth1Port + portSpan
 	Eth1WSPort      = Eth1Port + 2*portSpan
 	Eth1AuthRPCPort = Eth1Port + 3*portSpan
+	Eth1ProxyPort   = Eth1Port + 4*portSpan
 
 	PrysmBeaconNodeRPCPort     = 4150
 	PrysmBeaconNodeUDPPort     = PrysmBeaconNodeRPCPort + portSpan
@@ -233,6 +235,10 @@ func initializeStandardPorts(shardCount, shardIndex int, ports *ports, existingR
 	if err != nil {
 		return err
 	}
+	eth1ProxyPort, err := port(Eth1ProxyPort, shardCount, shardIndex, existingRegistrations)
+	if err != nil {
+		return err
+	}
 	beaconNodeRPCPort, err := port(PrysmBeaconNodeRPCPort, shardCount, shardIndex, existingRegistrations)
 	if err != nil {
 		return err
@@ -274,6 +280,7 @@ func initializeStandardPorts(shardCount, shardIndex int, ports *ports, existingR
 	ports.Eth1Port = eth1Port
 	ports.Eth1RPCPort = eth1RPCPort
 	ports.Eth1AuthRPCPort = eth1AuthPort
+	ports.Eth1ProxyPort = eth1ProxyPort
 	ports.Eth1WSPort = eth1WSPort
 	ports.PrysmBeaconNodeRPCPort = beaconNodeRPCPort
 	ports.PrysmBeaconNodeUDPPort = beaconNodeUDPPort
