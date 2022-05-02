@@ -107,10 +107,10 @@ message SignedBeaconBlockAltair {
 // The Ethereum consensus beacon block. The message does not contain a validator signature.
 message BeaconBlockBellatrix {
   // Beacon chain slot that this block represents.
-  uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
+  uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"];
 
   // Validator index of the validator that proposed the block header.
-  uint64 proposer_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.ValidatorIndex"];
+  uint64 proposer_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.ValidatorIndex"];
 
   // 32 byte root of the parent block.
   bytes parent_root = 3 [(ethereum.eth.ext.ssz_size) = "32"];
@@ -125,10 +125,10 @@ message BeaconBlockBellatrix {
 // The Ethereum consensus beacon block. The message does not contain a validator signature.
 message BlindedBeaconBlockBellatrix {
   // Beacon chain slot that this block represents.
-  uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
+  uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"];
 
   // Validator index of the validator that proposed the block header.
-  uint64 proposer_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.ValidatorIndex"];
+  uint64 proposer_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.ValidatorIndex"];
 
   // 32 byte root of the parent block.
   bytes parent_root = 3 [(ethereum.eth.ext.ssz_size) = "32"];
@@ -143,10 +143,10 @@ message BlindedBeaconBlockBellatrix {
 // The Ethereum consensus beacon block. The message does not contain a validator signature.
 message BeaconBlockAltair {
   // Beacon chain slot that this block represents.
-  uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
+  uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"];
 
   // Validator index of the validator that proposed the block header.
-  uint64 proposer_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.ValidatorIndex"];
+  uint64 proposer_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.ValidatorIndex"];
 
   // 32 byte root of the parent block.
   bytes parent_root = 3 [(ethereum.eth.ext.ssz_size) = "32"];

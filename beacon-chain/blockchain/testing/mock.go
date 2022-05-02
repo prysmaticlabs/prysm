@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -22,9 +21,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/sirupsen/logrus"
 )
 
@@ -47,10 +47,10 @@ type ChainService struct {
 	InitSyncBlockRoots          map[[32]byte]bool
 	DB                          db.Database
 	State                       state.BeaconState
-	Block                       block.SignedBeaconBlock
+	Block                       interfaces.SignedBeaconBlock
 	VerifyBlkDescendantErr      error
 	stateNotifier               statefeed.Notifier
-	BlocksReceived              []block.SignedBeaconBlock
+	BlocksReceived              []interfaces.SignedBeaconBlock
 	SyncCommitteeIndices        []types.CommitteeIndex
 	blockNotifier               blockfeed.Notifier
 	opNotifier                  opfeed.Notifier
@@ -165,7 +165,7 @@ func (mon *MockOperationNotifier) OperationFeed() *event.Feed {
 }
 
 // ReceiveBlockInitialSync mocks ReceiveBlockInitialSync method in chain service.
-func (s *ChainService) ReceiveBlockInitialSync(ctx context.Context, block block.SignedBeaconBlock, _ [32]byte) error {
+func (s *ChainService) ReceiveBlockInitialSync(ctx context.Context, block interfaces.SignedBeaconBlock, _ [32]byte) error {
 	if s.State == nil {
 		return ErrNilState
 	}
@@ -192,7 +192,7 @@ func (s *ChainService) ReceiveBlockInitialSync(ctx context.Context, block block.
 }
 
 // ReceiveBlockBatch processes blocks in batches from initial-sync.
-func (s *ChainService) ReceiveBlockBatch(ctx context.Context, blks []block.SignedBeaconBlock, _ [][32]byte) error {
+func (s *ChainService) ReceiveBlockBatch(ctx context.Context, blks []interfaces.SignedBeaconBlock, _ [][32]byte) error {
 	if s.State == nil {
 		return ErrNilState
 	}
@@ -221,7 +221,7 @@ func (s *ChainService) ReceiveBlockBatch(ctx context.Context, blks []block.Signe
 }
 
 // ReceiveBlock mocks ReceiveBlock method in chain service.
-func (s *ChainService) ReceiveBlock(ctx context.Context, block block.SignedBeaconBlock, _ [32]byte) error {
+func (s *ChainService) ReceiveBlock(ctx context.Context, block interfaces.SignedBeaconBlock, _ [32]byte) error {
 	if s.ReceiveBlockMockErr != nil {
 		return s.ReceiveBlockMockErr
 	}
@@ -267,7 +267,7 @@ func (s *ChainService) HeadRoot(_ context.Context) ([]byte, error) {
 }
 
 // HeadBlock mocks HeadBlock method in chain service.
-func (s *ChainService) HeadBlock(context.Context) (block.SignedBeaconBlock, error) {
+func (s *ChainService) HeadBlock(context.Context) (interfaces.SignedBeaconBlock, error) {
 	return s.Block, nil
 }
 
@@ -301,11 +301,6 @@ func (_ *ChainService) ReceiveAttestation(_ context.Context, _ *ethpb.Attestatio
 	return nil
 }
 
-// ReceiveAttestationNoPubsub mocks ReceiveAttestationNoPubsub method in chain service.
-func (_ *ChainService) ReceiveAttestationNoPubsub(context.Context, *ethpb.Attestation) error {
-	return nil
-}
-
 // AttestationTargetState mocks AttestationTargetState method in chain service.
 func (s *ChainService) AttestationTargetState(_ context.Context, _ *ethpb.Checkpoint) (state.BeaconState, error) {
 	return s.State, nil
@@ -317,11 +312,6 @@ func (s *ChainService) HeadValidatorsIndices(ctx context.Context, epoch types.Ep
 		return []types.ValidatorIndex{}, nil
 	}
 	return helpers.ActiveValidatorIndices(ctx, s.State, epoch)
-}
-
-// HeadSeed mocks the same method in the chain service.
-func (s *ChainService) HeadSeed(_ context.Context, epoch types.Epoch) ([32]byte, error) {
-	return helpers.Seed(s.State, epoch, params.BeaconConfig().DomainBeaconAttester)
 }
 
 // HeadETH1Data provides the current ETH1Data of the head state.
@@ -381,7 +371,7 @@ func (_ *ChainService) HeadGenesisValidatorsRoot() [32]byte {
 }
 
 // VerifyBlkDescendant mocks VerifyBlkDescendant and always returns nil.
-func (s *ChainService) VerifyBlkDescendant(_ context.Context, _ [32]byte) error {
+func (s *ChainService) VerifyFinalizedBlkDescendant(_ context.Context, _ [32]byte) error {
 	return s.VerifyBlkDescendantErr
 }
 

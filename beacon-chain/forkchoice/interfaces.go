@@ -3,9 +3,9 @@ package forkchoice
 import (
 	"context"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -71,5 +71,5 @@ type Getter interface {
 // Setter allows to set forkchoice information
 type Setter interface {
 	SetOptimisticToValid(context.Context, [fieldparams.RootLength]byte) error
-	SetOptimisticToInvalid(context.Context, [fieldparams.RootLength]byte, [fieldparams.RootLength]byte) ([][32]byte, error)
+	SetOptimisticToInvalid(context.Context, [fieldparams.RootLength]byte, [fieldparams.RootLength]byte, [fieldparams.RootLength]byte) ([][32]byte, error)
 }

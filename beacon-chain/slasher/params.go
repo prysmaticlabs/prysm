@@ -2,7 +2,7 @@ package slasher
 
 import (
 	ssz "github.com/ferranbt/fastssz"
-	types "github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 )
 
 // Parameters for slashing detection.
