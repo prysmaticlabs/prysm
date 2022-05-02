@@ -127,7 +127,9 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 	if err := s.insertBlockAndAttestationsToForkChoiceStore(ctx, signed.Block(), blockRoot, postState); err != nil {
 		return errors.Wrapf(err, "could not insert block %d to fork choice store", signed.Block().Slot())
 	}
-	s.insertSlashingsToForkChoiceStore(ctx, signed.Block())
+	if err := s.insertSlashingsToForkChoiceStore(ctx, signed.Block()); err != nil {
+		return errors.Wrap(err, "could not insert attester slashings to forkchoice store")
+	}
 	if isValidPayload {
 		if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, blockRoot); err != nil {
 			return errors.Wrap(err, "could not set optimistic block to valid")
