@@ -3,10 +3,10 @@ package blockchain
 import (
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
@@ -25,7 +25,7 @@ func Test_logStateTransitionData(t *testing.T) {
 	require.NoError(t, err)
 	tests := []struct {
 		name string
-		b    block.BeaconBlock
+		b    interfaces.BeaconBlock
 		want string
 	}{
 		{name: "empty block body",

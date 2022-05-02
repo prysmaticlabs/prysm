@@ -188,6 +188,7 @@ func TestSetOptimisticToInvalid(t *testing.T) {
 	tests := []struct {
 		name              string   // test description
 		root              [32]byte // the root of the new INVALID block
+		parentRoot        [32]byte // the root of the parent block
 		payload           [32]byte // the payload of the last valid hash
 		newBestChild      uint64
 		newBestDescendant uint64
@@ -197,6 +198,7 @@ func TestSetOptimisticToInvalid(t *testing.T) {
 		{
 			"Remove tip, parent was valid",
 			[32]byte{'j'},
+			[32]byte{'b'},
 			[32]byte{'B'},
 			3,
 			12,
@@ -206,6 +208,7 @@ func TestSetOptimisticToInvalid(t *testing.T) {
 		{
 			"Remove tip, parent was optimistic",
 			[32]byte{'i'},
+			[32]byte{'h'},
 			[32]byte{'H'},
 			NonExistentNode,
 			NonExistentNode,
@@ -215,6 +218,7 @@ func TestSetOptimisticToInvalid(t *testing.T) {
 		{
 			"Remove tip, lvh is inner and valid",
 			[32]byte{'i'},
+			[32]byte{'h'},
 			[32]byte{'D'},
 			6,
 			8,
@@ -224,6 +228,7 @@ func TestSetOptimisticToInvalid(t *testing.T) {
 		{
 			"Remove inner, lvh is inner and optimistic",
 			[32]byte{'h'},
+			[32]byte{'g'},
 			[32]byte{'G'},
 			10,
 			12,
@@ -233,6 +238,7 @@ func TestSetOptimisticToInvalid(t *testing.T) {
 		{
 			"Remove tip, lvh is inner and optimistic",
 			[32]byte{'l'},
+			[32]byte{'k'},
 			[32]byte{'G'},
 			9,
 			11,
@@ -242,6 +248,7 @@ func TestSetOptimisticToInvalid(t *testing.T) {
 		{
 			"Remove tip, lvh is not an ancestor",
 			[32]byte{'j'},
+			[32]byte{'b'},
 			[32]byte{'C'},
 			5,
 			12,
@@ -251,11 +258,32 @@ func TestSetOptimisticToInvalid(t *testing.T) {
 		{
 			"Remove inner, lvh is not an ancestor",
 			[32]byte{'g'},
+			[32]byte{'d'},
 			[32]byte{'J'},
 			NonExistentNode,
 			NonExistentNode,
 			1,
 			[][32]byte{[32]byte{'g'}, [32]byte{'h'}, [32]byte{'k'}, [32]byte{'i'}, [32]byte{'l'}},
+		},
+		{
+			"Remove not inserted, parent was invalid",
+			[32]byte{'z'},
+			[32]byte{'j'},
+			[32]byte{'B'},
+			3,
+			12,
+			8,
+			[][32]byte{[32]byte{'j'}},
+		},
+		{
+			"Remove not inserted, parent was valid",
+			[32]byte{'z'},
+			[32]byte{'j'},
+			[32]byte{'J'},
+			NonExistentNode,
+			NonExistentNode,
+			1,
+			[][32]byte{},
 		},
 	}
 	for _, tc := range tests {
@@ -281,7 +309,7 @@ func TestSetOptimisticToInvalid(t *testing.T) {
 		}
 		f.store.nodesLock.Unlock()
 		require.NoError(t, f.SetOptimisticToValid(ctx, [32]byte{'e'}))
-		roots, err := f.SetOptimisticToInvalid(ctx, tc.root, tc.payload)
+		roots, err := f.SetOptimisticToInvalid(ctx, tc.root, tc.parentRoot, tc.payload)
 		require.NoError(t, err)
 		f.store.nodesLock.RLock()
 		_, ok := f.store.nodesIndices[tc.root]
@@ -303,9 +331,9 @@ func TestSetOptimisticToInvalid_InvalidRoots(t *testing.T) {
 
 	require.NoError(t, f.InsertOptimisticBlock(ctx, 100, [32]byte{'a'}, params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 1, 1))
 	require.NoError(t, f.InsertOptimisticBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'B'}, 1, 1))
-	_, err := f.SetOptimisticToInvalid(ctx, [32]byte{'p'}, [32]byte{'B'})
+	_, err := f.SetOptimisticToInvalid(ctx, [32]byte{'p'}, [32]byte{'p'}, [32]byte{'B'})
 	require.ErrorIs(t, ErrUnknownNodeRoot, err)
-	_, err = f.SetOptimisticToInvalid(ctx, [32]byte{'a'}, [32]byte{'p'})
+	_, err = f.SetOptimisticToInvalid(ctx, [32]byte{'a'}, [32]byte{}, [32]byte{'p'})
 	require.ErrorIs(t, errInvalidFinalizedNode, err)
 }
 
@@ -323,7 +351,7 @@ func TestSetOptimisticToInvalid_ProposerBoost(t *testing.T) {
 	f.store.previousProposerBoostRoot = [32]byte{'b'}
 	f.store.proposerBoostLock.Unlock()
 
-	_, err := f.SetOptimisticToInvalid(ctx, [32]byte{'c'}, [32]byte{'A'})
+	_, err := f.SetOptimisticToInvalid(ctx, [32]byte{'c'}, [32]byte{'b'}, [32]byte{'A'})
 	require.NoError(t, err)
 	f.store.proposerBoostLock.RLock()
 	require.Equal(t, uint64(0), f.store.previousProposerBoostScore)
