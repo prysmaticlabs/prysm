@@ -64,21 +64,21 @@ func WrappedSignedBeaconBlock(i interface{}) (interfaces.SignedBeaconBlock, erro
 func WrappedBeaconBlock(i interface{}) (interfaces.BeaconBlock, error) {
 	switch b := i.(type) {
 	case *eth.GenericBeaconBlock_Phase0:
-		return WrappedPhase0BeaconBlock(b.Phase0), nil
+		return wrappedPhase0BeaconBlock(b.Phase0), nil
 	case *eth.BeaconBlock:
-		return WrappedPhase0BeaconBlock(b), nil
+		return wrappedPhase0BeaconBlock(b), nil
 	case *eth.GenericBeaconBlock_Altair:
 		return wrappedAltairBeaconBlock(b.Altair)
 	case *eth.BeaconBlockAltair:
 		return wrappedAltairBeaconBlock(b)
 	case *eth.GenericBeaconBlock_Bellatrix:
-		return WrappedBellatrixBeaconBlock(b.Bellatrix)
+		return wrappedBellatrixBeaconBlock(b.Bellatrix)
 	case *eth.BeaconBlockBellatrix:
-		return WrappedBellatrixBeaconBlock(b)
+		return wrappedBellatrixBeaconBlock(b)
 	case *eth.GenericBeaconBlock_BlindedBellatrix:
-		return WrappedBellatrixBlindedBeaconBlock(b.BlindedBellatrix)
+		return wrappedBellatrixBlindedBeaconBlock(b.BlindedBellatrix)
 	case *eth.BlindedBeaconBlockBellatrix:
-		return WrappedBellatrixBlindedBeaconBlock(b)
+		return wrappedBellatrixBlindedBeaconBlock(b)
 	default:
 		return nil, errors.Wrapf(ErrUnsupportedBeaconBlock, "unable to wrap block of type %T", i)
 	}

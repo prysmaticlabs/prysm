@@ -586,7 +586,7 @@ func TestCachedPreState_CanGetFromStateSummary_ProtoArray(t *testing.T) {
 	b.Block.ParentRoot = gRoot[:]
 	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Slot: 1, Root: gRoot[:]}))
 	require.NoError(t, service.cfg.StateGen.SaveState(ctx, gRoot, s))
-	require.NoError(t, service.verifyBlkPreState(ctx, wrapper.WrappedPhase0BeaconBlock(b.Block)))
+	require.NoError(t, service.verifyBlkPreState(ctx, wrapper.WrappedBeaconBlock(b.Block)))
 }
 
 func TestCachedPreState_CanGetFromStateSummary_DoublyLinkedTree(t *testing.T) {
@@ -621,7 +621,7 @@ func TestCachedPreState_CanGetFromStateSummary_DoublyLinkedTree(t *testing.T) {
 	b.Block.ParentRoot = gRoot[:]
 	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Slot: 1, Root: gRoot[:]}))
 	require.NoError(t, service.cfg.StateGen.SaveState(ctx, gRoot, s))
-	require.NoError(t, service.verifyBlkPreState(ctx, wrapper.WrappedPhase0BeaconBlock(b.Block)))
+	require.NoError(t, service.verifyBlkPreState(ctx, wrapper.WrappedBeaconBlock(b.Block)))
 }
 
 func TestCachedPreState_CanGetFromDB(t *testing.T) {
@@ -651,7 +651,7 @@ func TestCachedPreState_CanGetFromDB(t *testing.T) {
 	b := util.NewBeaconBlock()
 	b.Block.Slot = 1
 	service.store.SetFinalizedCheckpt(&ethpb.Checkpoint{Root: gRoot[:]})
-	err = service.verifyBlkPreState(ctx, wrapper.WrappedPhase0BeaconBlock(b.Block))
+	err = service.verifyBlkPreState(ctx, wrapper.WrappedBeaconBlock(b.Block))
 	wanted := "could not reconstruct parent state"
 	assert.ErrorContains(t, wanted, err)
 

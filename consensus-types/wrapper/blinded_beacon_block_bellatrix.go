@@ -137,11 +137,9 @@ type blindedBeaconBlockBellatrix struct {
 	b *eth.BlindedBeaconBlockBellatrix
 }
 
-// WrappedBellatrixBlindedBeaconBlock is a constructor which wraps a protobuf Bellatrix object
+// wrappedBellatrixBlindedBeaconBlock is a constructor which wraps a protobuf Bellatrix object
 // with the block wrapper.
-//
-// Deprecated: Use WrappedBeaconBlock.
-func WrappedBellatrixBlindedBeaconBlock(b *eth.BlindedBeaconBlockBellatrix) (interfaces.BeaconBlock, error) {
+func wrappedBellatrixBlindedBeaconBlock(b *eth.BlindedBeaconBlockBellatrix) (interfaces.BeaconBlock, error) {
 	w := blindedBeaconBlockBellatrix{b: b}
 	if w.IsNil() {
 		return nil, ErrNilObjectWrapped

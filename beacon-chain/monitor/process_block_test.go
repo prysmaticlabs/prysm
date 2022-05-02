@@ -124,7 +124,7 @@ func TestProcessSlashings(t *testing.T) {
 					2: true,
 				},
 			}
-			s.processSlashings(wrapper.WrappedPhase0BeaconBlock(tt.block))
+			s.processSlashings(wrapper.WrappedBeaconBlock(tt.block))
 			if tt.wantedErr != "" {
 				require.LogsContain(t, hook, tt.wantedErr)
 			} else {
@@ -168,7 +168,7 @@ func TestProcessProposedBlock(t *testing.T) {
 			beaconState, _ := util.DeterministicGenesisState(t, 256)
 			root := [32]byte{}
 			copy(root[:], "hello-world")
-			s.processProposedBlock(beaconState, root, wrapper.WrappedPhase0BeaconBlock(tt.block))
+			s.processProposedBlock(beaconState, root, wrapper.WrappedBeaconBlock(tt.block))
 			if tt.wantedErr != "" {
 				require.LogsContain(t, hook, tt.wantedErr)
 			} else {

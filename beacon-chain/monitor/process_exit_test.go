@@ -40,7 +40,7 @@ func TestProcessExitsFromBlockTrackedIndices(t *testing.T) {
 		},
 	}
 
-	s.processExitsFromBlock(wrapper.WrappedPhase0BeaconBlock(block))
+	s.processExitsFromBlock(wrapper.WrappedBeaconBlock(block))
 	require.LogsContain(t, hook, "\"Voluntary exit was included\" Slot=0 ValidatorIndex=2")
 }
 
@@ -74,7 +74,7 @@ func TestProcessExitsFromBlockUntrackedIndices(t *testing.T) {
 		},
 	}
 
-	s.processExitsFromBlock(wrapper.WrappedPhase0BeaconBlock(block))
+	s.processExitsFromBlock(wrapper.WrappedBeaconBlock(block))
 	require.LogsDoNotContain(t, hook, "\"Voluntary exit was included\"")
 }
 
