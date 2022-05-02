@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	e2types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	ev "github.com/prysmaticlabs/prysm/testing/endtoend/evaluators"
+	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
 	e2eParams "github.com/prysmaticlabs/prysm/testing/endtoend/params"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/types"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -33,7 +34,7 @@ func TestCheckpointSync_CustomConfig(t *testing.T) {
 	cfg.SlotsPerEpoch = 6
 	cfg.SecondsPerSlot = 6
 	cfg.Eth1FollowDistance = 4
-	cfg.BellatrixForkEpoch = cfg.BellatrixForkEpoch + 100
+	cfg.BellatrixForkEpoch = helpers.BellatrixE2EForkEpoch
 	params.OverrideBeaconConfig(cfg)
 	require.NoError(t, e2eParams.Init(e2eParams.StandardBeaconCount))
 
