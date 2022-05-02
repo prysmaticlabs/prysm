@@ -330,7 +330,7 @@ func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root, payloadHa
 // InsertSlashedIndex adds the given slashed validator index to the
 // store-tracked list. Votes from these validators are not accounted for
 // in forkchoice.
-func (f *ForkChoice) InsertSlashedIndex(ctx context.Context, index types.ValidatorIndex) {
+func (f *ForkChoice) InsertSlashedIndex(_ context.Context, index types.ValidatorIndex) {
 	f.store.nodesLock.Lock()
 	defer f.store.nodesLock.Unlock()
 	f.store.slashedIndices[index] = true
