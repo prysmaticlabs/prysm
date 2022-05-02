@@ -2,8 +2,8 @@ package wrapper
 
 import (
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/consensus-types/block"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 )
 
 var (

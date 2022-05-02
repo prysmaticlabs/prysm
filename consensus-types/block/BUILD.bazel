@@ -6,7 +6,7 @@ go_library(
         "block_interfaces.go",
         "block_utils.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block",
+    importpath = "github.com/prysmaticlabs/prysm/consensus-types/block",
     visibility = ["//visibility:public"],
     deps = [
         "//consensus-types/primitives:go_default_library",
