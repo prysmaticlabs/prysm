@@ -4,10 +4,10 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	tracing2 "github.com/prysmaticlabs/prysm/monitoring/tracing"
 	"github.com/urfave/cli/v2"
 )

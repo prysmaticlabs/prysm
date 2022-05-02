@@ -4,11 +4,10 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/testing/require"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
@@ -16,6 +15,7 @@ import (
 	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -65,7 +65,7 @@ func WithStateSlot(slot types.Slot) NewBeaconStateOption {
 	}
 }
 
-func WithLatestHeaderFromBlock(t *testing.T, b block.SignedBeaconBlock) NewBeaconStateOption {
+func WithLatestHeaderFromBlock(t *testing.T, b interfaces.SignedBeaconBlock) NewBeaconStateOption {
 	return func(st *ethpb.BeaconState) error {
 		sh, err := b.Header()
 		require.NoError(t, err)

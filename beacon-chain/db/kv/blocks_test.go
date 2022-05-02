@@ -6,13 +6,13 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -21,11 +21,11 @@ import (
 
 var blockTests = []struct {
 	name     string
-	newBlock func(types.Slot, []byte) (block.SignedBeaconBlock, error)
+	newBlock func(types.Slot, []byte) (interfaces.SignedBeaconBlock, error)
 }{
 	{
 		name: "phase0",
-		newBlock: func(slot types.Slot, root []byte) (block.SignedBeaconBlock, error) {
+		newBlock: func(slot types.Slot, root []byte) (interfaces.SignedBeaconBlock, error) {
 			b := util.NewBeaconBlock()
 			b.Block.Slot = slot
 			if root != nil {
@@ -36,7 +36,7 @@ var blockTests = []struct {
 	},
 	{
 		name: "altair",
-		newBlock: func(slot types.Slot, root []byte) (block.SignedBeaconBlock, error) {
+		newBlock: func(slot types.Slot, root []byte) (interfaces.SignedBeaconBlock, error) {
 			b := util.NewBeaconBlockAltair()
 			b.Block.Slot = slot
 			if root != nil {
@@ -47,7 +47,7 @@ var blockTests = []struct {
 	},
 	{
 		name: "bellatrix",
-		newBlock: func(slot types.Slot, root []byte) (block.SignedBeaconBlock, error) {
+		newBlock: func(slot types.Slot, root []byte) (interfaces.SignedBeaconBlock, error) {
 			b := util.NewBeaconBlockBellatrix()
 			b.Block.Slot = slot
 			if root != nil {
@@ -149,7 +149,7 @@ func TestStore_BlocksHandleZeroCase(t *testing.T) {
 			db := setupDB(t)
 			ctx := context.Background()
 			numBlocks := 10
-			totalBlocks := make([]block.SignedBeaconBlock, numBlocks)
+			totalBlocks := make([]interfaces.SignedBeaconBlock, numBlocks)
 			for i := 0; i < len(totalBlocks); i++ {
 				b, err := tt.newBlock(types.Slot(i), bytesutil.PadTo([]byte("parent"), 32))
 				require.NoError(t, err)
@@ -172,7 +172,7 @@ func TestStore_BlocksHandleInvalidEndSlot(t *testing.T) {
 			db := setupDB(t)
 			ctx := context.Background()
 			numBlocks := 10
-			totalBlocks := make([]block.SignedBeaconBlock, numBlocks)
+			totalBlocks := make([]interfaces.SignedBeaconBlock, numBlocks)
 			// Save blocks from slot 1 onwards.
 			for i := 0; i < len(totalBlocks); i++ {
 				b, err := tt.newBlock(types.Slot(i+1), bytesutil.PadTo([]byte("parent"), 32))
@@ -333,7 +333,7 @@ func TestStore_Blocks_FiltersCorrectly(t *testing.T) {
 			require.NoError(t, err)
 			b8, err := tt.newBlock(types.Slot(8), bytesutil.PadTo([]byte("parent4"), 32))
 			require.NoError(t, err)
-			blocks := []block.SignedBeaconBlock{
+			blocks := []interfaces.SignedBeaconBlock{
 				b4,
 				b5,
 				b6,
@@ -437,7 +437,7 @@ func TestStore_Blocks_Retrieve_SlotRange(t *testing.T) {
 	for _, tt := range blockTests {
 		t.Run(tt.name, func(t *testing.T) {
 			db := setupDB(t)
-			totalBlocks := make([]block.SignedBeaconBlock, 500)
+			totalBlocks := make([]interfaces.SignedBeaconBlock, 500)
 			for i := 0; i < 500; i++ {
 				b, err := tt.newBlock(types.Slot(i), bytesutil.PadTo([]byte("parent"), 32))
 				require.NoError(t, err)
@@ -457,7 +457,7 @@ func TestStore_Blocks_Retrieve_Epoch(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			db := setupDB(t)
 			slots := params.BeaconConfig().SlotsPerEpoch.Mul(7)
-			totalBlocks := make([]block.SignedBeaconBlock, slots)
+			totalBlocks := make([]interfaces.SignedBeaconBlock, slots)
 			for i := types.Slot(0); i < slots; i++ {
 				b, err := tt.newBlock(i, bytesutil.PadTo([]byte("parent"), 32))
 				require.NoError(t, err)
@@ -481,7 +481,7 @@ func TestStore_Blocks_Retrieve_SlotRangeWithStep(t *testing.T) {
 	for _, tt := range blockTests {
 		t.Run(tt.name, func(t *testing.T) {
 			db := setupDB(t)
-			totalBlocks := make([]block.SignedBeaconBlock, 500)
+			totalBlocks := make([]interfaces.SignedBeaconBlock, 500)
 			for i := 0; i < 500; i++ {
 				b, err := tt.newBlock(types.Slot(i), bytesutil.PadTo([]byte("parent"), 32))
 				require.NoError(t, err)
@@ -568,7 +568,7 @@ func TestStore_SaveBlocks_HasCachedBlocks(t *testing.T) {
 			db := setupDB(t)
 			ctx := context.Background()
 
-			b := make([]block.SignedBeaconBlock, 500)
+			b := make([]interfaces.SignedBeaconBlock, 500)
 			for i := 0; i < 500; i++ {
 				blk, err := tt.newBlock(types.Slot(i), bytesutil.PadTo([]byte("parent"), 32))
 				require.NoError(t, err)
@@ -592,7 +592,7 @@ func TestStore_SaveBlocks_HasRootsMatched(t *testing.T) {
 			db := setupDB(t)
 			ctx := context.Background()
 
-			b := make([]block.SignedBeaconBlock, 500)
+			b := make([]interfaces.SignedBeaconBlock, 500)
 			for i := 0; i < 500; i++ {
 				blk, err := tt.newBlock(types.Slot(i), bytesutil.PadTo([]byte("parent"), 32))
 				require.NoError(t, err)

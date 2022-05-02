@@ -66,8 +66,8 @@ message SignRequest {
         ethereum.eth.v1alpha1.AttestationData attestation_data = 102;
         ethereum.eth.v1alpha1.AggregateAttestationAndProof aggregate_attestation_and_proof = 103;
         ethereum.eth.v1alpha1.VoluntaryExit exit = 104;
-        uint64 slot = 105 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
-        uint64 epoch = 106 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Epoch"];
+        uint64 slot = 105 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"];
+        uint64 epoch = 106 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch"];
 
         // Altair objects.
         ethereum.eth.v1alpha1.BeaconBlockAltair blockV2 = 107;
@@ -80,7 +80,7 @@ message SignRequest {
         ethereum.eth.v1alpha1.BlindedBeaconBlockBellatrix blinded_blockV3 = 112;
     }
     reserved 4, 5; // Reserving old, deleted fields.
-    uint64 signing_slot = 6 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
+    uint64 signing_slot = 6 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"];
 }
 
 // SignResponse returned by a RemoteSigner gRPC service.

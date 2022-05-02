@@ -4,9 +4,9 @@ import (
 	"sync"
 
 	lru "github.com/hashicorp/golang-lru"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 )
 
