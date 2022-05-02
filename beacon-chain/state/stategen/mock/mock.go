@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/consensus-types/block"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
@@ -47,7 +47,7 @@ func (_ *MockStateManager) MigrateToCold(_ context.Context, _ [32]byte) error {
 func (_ *MockStateManager) ReplayBlocks(
 	_ context.Context,
 	_ state.BeaconState,
-	_ []block.SignedBeaconBlock,
+	_ []interfaces.SignedBeaconBlock,
 	_ types.Slot,
 ) (state.BeaconState, error) {
 	panic("implement me")
@@ -58,7 +58,7 @@ func (_ *MockStateManager) LoadBlocks(
 	_ context.Context,
 	_, _ types.Slot,
 	_ [32]byte,
-) ([]block.SignedBeaconBlock, error) {
+) ([]interfaces.SignedBeaconBlock, error) {
 	panic("implement me")
 }
 

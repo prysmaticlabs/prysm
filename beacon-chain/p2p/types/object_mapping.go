@@ -2,7 +2,7 @@ package types
 
 import (
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/block"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -21,7 +21,7 @@ func init() {
 var (
 	// BlockMap maps the fork-version to the underlying data type for that
 	// particular fork period.
-	BlockMap map[[4]byte]func() (block.SignedBeaconBlock, error)
+	BlockMap map[[4]byte]func() (interfaces.SignedBeaconBlock, error)
 	// MetaDataMap maps the fork-version to the underlying data type for that
 	// particular fork period.
 	MetaDataMap map[[4]byte]func() metadata.Metadata
@@ -31,14 +31,14 @@ var (
 // reset maps and reinitialize them.
 func InitializeDataMaps() {
 	// Reset our block map.
-	BlockMap = map[[4]byte]func() (block.SignedBeaconBlock, error){
-		bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion): func() (block.SignedBeaconBlock, error) {
+	BlockMap = map[[4]byte]func() (interfaces.SignedBeaconBlock, error){
+		bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion): func() (interfaces.SignedBeaconBlock, error) {
 			return wrapper.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlock{})
 		},
-		bytesutil.ToBytes4(params.BeaconConfig().AltairForkVersion): func() (block.SignedBeaconBlock, error) {
+		bytesutil.ToBytes4(params.BeaconConfig().AltairForkVersion): func() (interfaces.SignedBeaconBlock, error) {
 			return wrapper.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: &ethpb.BeaconBlockAltair{}})
 		},
-		bytesutil.ToBytes4(params.BeaconConfig().BellatrixForkVersion): func() (block.SignedBeaconBlock, error) {
+		bytesutil.ToBytes4(params.BeaconConfig().BellatrixForkVersion): func() (interfaces.SignedBeaconBlock, error) {
 			return wrapper.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: &ethpb.BeaconBlockBellatrix{}})
 		},
 	}

@@ -3,7 +3,7 @@ package wrapper
 import (
 	ssz "github.com/ferranbt/fastssz"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/consensus-types/block"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -13,9 +13,9 @@ import (
 )
 
 var (
-	_ = block.SignedBeaconBlock(&signedBlindedBeaconBlockBellatrix{})
-	_ = block.BeaconBlock(&blindedBeaconBlockBellatrix{})
-	_ = block.BeaconBlockBody(&blindedBeaconBlockBodyBellatrix{})
+	_ = interfaces.SignedBeaconBlock(&signedBlindedBeaconBlockBellatrix{})
+	_ = interfaces.BeaconBlock(&blindedBeaconBlockBellatrix{})
+	_ = interfaces.BeaconBlockBody(&blindedBeaconBlockBodyBellatrix{})
 )
 
 // signedBlindedBeaconBlockBellatrix is a convenience wrapper around a Bellatrix blinded beacon block
@@ -26,7 +26,7 @@ type signedBlindedBeaconBlockBellatrix struct {
 }
 
 // wrappedBellatrixSignedBlindedBeaconBlock is a constructor which wraps a protobuf Bellatrix blinded block with the block wrapper.
-func wrappedBellatrixSignedBlindedBeaconBlock(b *eth.SignedBlindedBeaconBlockBellatrix) (block.SignedBeaconBlock, error) {
+func wrappedBellatrixSignedBlindedBeaconBlock(b *eth.SignedBlindedBeaconBlockBellatrix) (interfaces.SignedBeaconBlock, error) {
 	w := signedBlindedBeaconBlockBellatrix{b: b}
 	if w.IsNil() {
 		return nil, ErrNilObjectWrapped
@@ -40,7 +40,7 @@ func (w signedBlindedBeaconBlockBellatrix) Signature() []byte {
 }
 
 // Block returns the underlying beacon block object.
-func (w signedBlindedBeaconBlockBellatrix) Block() block.BeaconBlock {
+func (w signedBlindedBeaconBlockBellatrix) Block() interfaces.BeaconBlock {
 	return blindedBeaconBlockBellatrix{b: w.b.Block}
 }
 
@@ -50,7 +50,7 @@ func (w signedBlindedBeaconBlockBellatrix) IsNil() bool {
 }
 
 // Copy performs a deep copy of the signed beacon block object.
-func (w signedBlindedBeaconBlockBellatrix) Copy() block.SignedBeaconBlock {
+func (w signedBlindedBeaconBlockBellatrix) Copy() interfaces.SignedBeaconBlock {
 	return signedBlindedBeaconBlockBellatrix{b: eth.CopySignedBlindedBeaconBlockBellatrix(w.b)}
 }
 
@@ -141,7 +141,7 @@ type blindedBeaconBlockBellatrix struct {
 // with the block wrapper.
 //
 // Deprecated: Use WrappedBeaconBlock.
-func WrappedBellatrixBlindedBeaconBlock(b *eth.BlindedBeaconBlockBellatrix) (block.BeaconBlock, error) {
+func WrappedBellatrixBlindedBeaconBlock(b *eth.BlindedBeaconBlockBellatrix) (interfaces.BeaconBlock, error) {
 	w := blindedBeaconBlockBellatrix{b: b}
 	if w.IsNil() {
 		return nil, ErrNilObjectWrapped
@@ -170,7 +170,7 @@ func (w blindedBeaconBlockBellatrix) StateRoot() []byte {
 }
 
 // Body returns the underlying block body.
-func (w blindedBeaconBlockBellatrix) Body() block.BeaconBlockBody {
+func (w blindedBeaconBlockBellatrix) Body() interfaces.BeaconBlockBody {
 	return blindedBeaconBlockBodyBellatrix{b: w.b.Body}
 }
 
@@ -242,7 +242,7 @@ type blindedBeaconBlockBodyBellatrix struct {
 
 // WrappedBellatrixBlindedBeaconBlockBody is a constructor which wraps a protobuf bellatrix object
 // with the block wrapper.
-func WrappedBellatrixBlindedBeaconBlockBody(b *eth.BlindedBeaconBlockBodyBellatrix) (block.BeaconBlockBody, error) {
+func WrappedBellatrixBlindedBeaconBlockBody(b *eth.BlindedBeaconBlockBodyBellatrix) (interfaces.BeaconBlockBody, error) {
 	w := blindedBeaconBlockBodyBellatrix{b: b}
 	if w.IsNil() {
 		return nil, ErrNilObjectWrapped

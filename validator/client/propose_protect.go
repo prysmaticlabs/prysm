@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/block"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	"github.com/sirupsen/logrus"
 )
 
@@ -16,7 +16,7 @@ var failedBlockSignLocalErr = "attempted to sign a double proposal, block reject
 var failedBlockSignExternalErr = "attempted a double proposal, block rejected by remote slashing protection"
 
 func (v *validator) slashableProposalCheck(
-	ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, signedBlock block.SignedBeaconBlock, signingRoot [32]byte,
+	ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, signedBlock interfaces.SignedBeaconBlock, signingRoot [32]byte,
 ) error {
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
 
@@ -59,7 +59,7 @@ func (v *validator) slashableProposalCheck(
 	}
 
 	if features.Get().RemoteSlasherProtection {
-		blockHdr, err := block.SignedBeaconBlockHeaderFromBlockInterface(signedBlock)
+		blockHdr, err := interfaces.SignedBeaconBlockHeaderFromBlockInterface(signedBlock)
 		if err != nil {
 			return errors.Wrap(err, "failed to get block header from block")
 		}
@@ -83,7 +83,7 @@ func (v *validator) slashableProposalCheck(
 	return nil
 }
 
-func blockLogFields(pubKey [fieldparams.BLSPubkeyLength]byte, blk block.BeaconBlock, sig []byte) logrus.Fields {
+func blockLogFields(pubKey [fieldparams.BLSPubkeyLength]byte, blk interfaces.BeaconBlock, sig []byte) logrus.Fields {
 	fields := logrus.Fields{
 		"proposerPublicKey": fmt.Sprintf("%#x", pubKey),
 		"proposerIndex":     blk.ProposerIndex(),

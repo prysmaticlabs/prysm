@@ -9,7 +9,7 @@ import (
 	"github.com/pkg/errors"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/consensus-types/block"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/spectest/utils"
@@ -31,7 +31,7 @@ func RunAttestationTest(t *testing.T, config string) {
 			require.NoError(t, att.UnmarshalSSZ(attestationSSZ), "Failed to unmarshal")
 
 			body := &ethpb.BeaconBlockBody{Attestations: []*ethpb.Attestation{att}}
-			processAtt := func(ctx context.Context, st state.BeaconState, blk block.SignedBeaconBlock) (state.BeaconState, error) {
+			processAtt := func(ctx context.Context, st state.BeaconState, blk interfaces.SignedBeaconBlock) (state.BeaconState, error) {
 				st, err = b.ProcessAttestationsNoVerifySignature(ctx, st, blk)
 				if err != nil {
 					return nil, err

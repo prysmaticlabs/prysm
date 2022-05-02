@@ -22,7 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/cmd"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/block"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -243,7 +243,7 @@ func TestServer_ListAttestations_FiltersCorrectly(t *testing.T) {
 			}),
 	}
 
-	var blocks []block.SignedBeaconBlock
+	var blocks []interfaces.SignedBeaconBlock
 	for _, b := range unwrappedBlocks {
 		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
 		require.NoError(t, err)

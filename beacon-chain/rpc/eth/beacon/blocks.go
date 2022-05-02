@@ -14,7 +14,7 @@ import (
 	rpchelpers "github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/block"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -133,7 +133,7 @@ func (bs *Server) ListBlockHeaders(ctx context.Context, req *ethpbv1.BlockHeader
 	defer span.End()
 
 	var err error
-	var blks []block.SignedBeaconBlock
+	var blks []interfaces.SignedBeaconBlock
 	var blkRoots [][32]byte
 	if len(req.ParentRoot) == 32 {
 		blks, blkRoots, err = bs.BeaconDB.Blocks(ctx, filters.NewFilter().SetParentRoot(req.ParentRoot))
@@ -629,9 +629,9 @@ func (bs *Server) ListBlockAttestations(ctx context.Context, req *ethpbv1.BlockR
 	return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 }
 
-func (bs *Server) blockFromBlockID(ctx context.Context, blockId []byte) (block.SignedBeaconBlock, error) {
+func (bs *Server) blockFromBlockID(ctx context.Context, blockId []byte) (interfaces.SignedBeaconBlock, error) {
 	var err error
-	var blk block.SignedBeaconBlock
+	var blk interfaces.SignedBeaconBlock
 	switch string(blockId) {
 	case "head":
 		blk, err = bs.ChainInfoFetcher.HeadBlock(ctx)
@@ -694,7 +694,7 @@ func (bs *Server) blockFromBlockID(ctx context.Context, blockId []byte) (block.S
 	return blk, nil
 }
 
-func handleGetBlockError(blk block.SignedBeaconBlock, err error) error {
+func handleGetBlockError(blk interfaces.SignedBeaconBlock, err error) error {
 	if invalidBlockIdErr, ok := err.(*blockIdParseError); ok {
 		return status.Errorf(codes.InvalidArgument, "Invalid block ID: %v", invalidBlockIdErr)
 	}
@@ -781,7 +781,7 @@ func (bs *Server) submitBlindedBellatrixBlock(ctx context.Context, blindedBellat
 	return bs.submitBlock(ctx, root, wrappedBellatrixSignedBlk)
 }
 
-func (bs *Server) submitBlock(ctx context.Context, blockRoot [fieldparams.RootLength]byte, block block.SignedBeaconBlock) error {
+func (bs *Server) submitBlock(ctx context.Context, blockRoot [fieldparams.RootLength]byte, block interfaces.SignedBeaconBlock) error {
 	// Do not block proposal critical path with debug logging or block feed updates.
 	defer func() {
 		log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(blockRoot[:]))).Debugf(

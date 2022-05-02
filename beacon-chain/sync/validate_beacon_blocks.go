@@ -17,7 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/block"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
@@ -59,7 +59,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	s.validateBlockLock.Lock()
 	defer s.validateBlockLock.Unlock()
 
-	blk, ok := m.(block.SignedBeaconBlock)
+	blk, ok := m.(interfaces.SignedBeaconBlock)
 	if !ok {
 		return pubsub.ValidationReject, errors.New("msg is not ethpb.SignedBeaconBlock")
 	}
@@ -81,7 +81,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		// Feed the block header to slasher if enabled. This action
 		// is done in the background to avoid adding more load to this critical code path.
 		go func() {
-			blockHeader, err := block.SignedBeaconBlockHeaderFromBlockInterface(blk)
+			blockHeader, err := interfaces.SignedBeaconBlockHeaderFromBlockInterface(blk)
 			if err != nil {
 				log.WithError(err).WithField("blockSlot", blk.Block().Slot()).Warn("Could not extract block header")
 			}
@@ -192,7 +192,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	return pubsub.ValidationAccept, nil
 }
 
-func (s *Service) validateBeaconBlock(ctx context.Context, blk block.SignedBeaconBlock, blockRoot [32]byte) error {
+func (s *Service) validateBeaconBlock(ctx context.Context, blk interfaces.SignedBeaconBlock, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "sync.validateBeaconBlock")
 	defer span.End()
 
@@ -255,7 +255,7 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk block.SignedBeaco
 //      otherwise:
 //         [IGNORE] The block's parent (defined by block.parent_root) passes all validation (including execution
 //          node verification of the block.body.execution_payload).
-func (s *Service) validateBellatrixBeaconBlock(ctx context.Context, parentState state.BeaconState, blk block.BeaconBlock) error {
+func (s *Service) validateBellatrixBeaconBlock(ctx context.Context, parentState state.BeaconState, blk interfaces.BeaconBlock) error {
 	// Error if block and state are not the same version
 	if parentState.Version() != blk.Version() {
 		return errors.New("block and state are not the same version")

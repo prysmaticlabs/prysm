@@ -8,7 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/consensus-types/block"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/ssz/detect"
 	"github.com/prysmaticlabs/prysm/io/file"
@@ -25,7 +25,7 @@ type OriginData struct {
 	sb  []byte
 	bb  []byte
 	st  state.BeaconState
-	b   block.SignedBeaconBlock
+	b   interfaces.SignedBeaconBlock
 	cf  *detect.VersionedUnmarshaler
 }
 

@@ -27,7 +27,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/block"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
@@ -300,7 +300,7 @@ func TestStore_OnBlockBatch_ProtoArray(t *testing.T) {
 
 	bState := st.Copy()
 
-	var blks []block.SignedBeaconBlock
+	var blks []interfaces.SignedBeaconBlock
 	var blkRoots [][32]byte
 	var firstState state.BeaconState
 	for i := 1; i < 10; i++ {
@@ -364,7 +364,7 @@ func TestStore_OnBlockBatch_DoublyLinkedTree(t *testing.T) {
 
 	bState := st.Copy()
 
-	var blks []block.SignedBeaconBlock
+	var blks []interfaces.SignedBeaconBlock
 	var blkRoots [][32]byte
 	var firstState state.BeaconState
 	for i := 1; i < 10; i++ {
@@ -421,7 +421,7 @@ func TestStore_OnBlockBatch_NotifyNewPayload(t *testing.T) {
 	st, keys := util.DeterministicGenesisState(t, 64)
 	bState := st.Copy()
 
-	var blks []block.SignedBeaconBlock
+	var blks []interfaces.SignedBeaconBlock
 	var blkRoots [][32]byte
 	var firstState state.BeaconState
 	blkCount := 4
