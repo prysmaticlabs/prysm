@@ -5,13 +5,13 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/consensus-types/block"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 )
 
 var errBlockNotFoundInCacheOrDB = errors.New("block not found in cache or db")
 
 // This saves a beacon block to the initial sync blocks cache.
-func (s *Service) saveInitSyncBlock(r [32]byte, b block.SignedBeaconBlock) {
+func (s *Service) saveInitSyncBlock(r [32]byte, b interfaces.SignedBeaconBlock) {
 	s.initSyncBlocksLock.Lock()
 	defer s.initSyncBlocksLock.Unlock()
 	s.initSyncBlocks[r] = b
@@ -36,7 +36,7 @@ func (s *Service) hasBlockInInitSyncOrDB(ctx context.Context, r [32]byte) bool {
 
 // Returns block for a given root `r` from either the initial sync blocks cache or the DB.
 // Error is returned if the block is not found in either cache or DB.
-func (s *Service) getBlock(ctx context.Context, r [32]byte) (block.SignedBeaconBlock, error) {
+func (s *Service) getBlock(ctx context.Context, r [32]byte) (interfaces.SignedBeaconBlock, error) {
 	s.initSyncBlocksLock.RLock()
 
 	// Check cache first because it's faster.
@@ -57,11 +57,11 @@ func (s *Service) getBlock(ctx context.Context, r [32]byte) (block.SignedBeaconB
 
 // This retrieves all the beacon blocks from the initial sync blocks cache, the returned
 // blocks are unordered.
-func (s *Service) getInitSyncBlocks() []block.SignedBeaconBlock {
+func (s *Service) getInitSyncBlocks() []interfaces.SignedBeaconBlock {
 	s.initSyncBlocksLock.RLock()
 	defer s.initSyncBlocksLock.RUnlock()
 
-	blks := make([]block.SignedBeaconBlock, 0, len(s.initSyncBlocks))
+	blks := make([]interfaces.SignedBeaconBlock, 0, len(s.initSyncBlocks))
 	for _, b := range s.initSyncBlocks {
 		blks = append(blks, b)
 	}
@@ -72,5 +72,5 @@ func (s *Service) getInitSyncBlocks() []block.SignedBeaconBlock {
 func (s *Service) clearInitSyncBlocks() {
 	s.initSyncBlocksLock.Lock()
 	defer s.initSyncBlocksLock.Unlock()
-	s.initSyncBlocks = make(map[[32]byte]block.SignedBeaconBlock)
+	s.initSyncBlocks = make(map[[32]byte]interfaces.SignedBeaconBlock)
 }

@@ -17,7 +17,7 @@ go_library(
     ],
     deps = [
         "//config/params:go_default_library",
-        "//consensus-types/block:go_default_library",
+        "//consensus-types/interfaces:go_default_library",
         "//consensus-types/primitives:go_default_library",
         "//consensus-types/wrapper:go_default_library",
         "//encoding/bytesutil:go_default_library",

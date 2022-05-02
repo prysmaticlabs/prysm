@@ -16,7 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/block"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -59,7 +59,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 
 	tests := []struct {
 		name             string
-		blk              block.BeaconBlock
+		blk              interfaces.BeaconBlock
 		finalizedRoot    [32]byte
 		newForkchoiceErr error
 		errString        string
@@ -70,7 +70,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 		},
 		{
 			name: "phase0 block",
-			blk: func() block.BeaconBlock {
+			blk: func() interfaces.BeaconBlock {
 				b, err := wrapper.WrappedBeaconBlock(&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{}})
 				require.NoError(t, err)
 				return b
@@ -78,7 +78,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 		},
 		{
 			name: "altair block",
-			blk: func() block.BeaconBlock {
+			blk: func() interfaces.BeaconBlock {
 				b, err := wrapper.WrappedBeaconBlock(&ethpb.BeaconBlockAltair{Body: &ethpb.BeaconBlockBodyAltair{}})
 				require.NoError(t, err)
 				return b
@@ -86,7 +86,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 		},
 		{
 			name: "not execution block",
-			blk: func() block.BeaconBlock {
+			blk: func() interfaces.BeaconBlock {
 				b, err := wrapper.WrappedBeaconBlock(&ethpb.BeaconBlockBellatrix{
 					Body: &ethpb.BeaconBlockBodyBellatrix{
 						ExecutionPayload: &v1.ExecutionPayload{
@@ -107,7 +107,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 		},
 		{
 			name: "happy case: finalized root is altair block",
-			blk: func() block.BeaconBlock {
+			blk: func() interfaces.BeaconBlock {
 				b, err := wrapper.WrappedBeaconBlock(&ethpb.BeaconBlockBellatrix{
 					Body: &ethpb.BeaconBlockBodyBellatrix{
 						ExecutionPayload: &v1.ExecutionPayload{},
@@ -120,7 +120,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 		},
 		{
 			name: "happy case: finalized root is bellatrix block",
-			blk: func() block.BeaconBlock {
+			blk: func() interfaces.BeaconBlock {
 				b, err := wrapper.WrappedBeaconBlock(&ethpb.BeaconBlockBellatrix{
 					Body: &ethpb.BeaconBlockBodyBellatrix{
 						ExecutionPayload: &v1.ExecutionPayload{},
@@ -133,7 +133,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 		},
 		{
 			name: "forkchoice updated with optimistic block",
-			blk: func() block.BeaconBlock {
+			blk: func() interfaces.BeaconBlock {
 				b, err := wrapper.WrappedBeaconBlock(&ethpb.BeaconBlockBellatrix{
 					Body: &ethpb.BeaconBlockBodyBellatrix{
 						ExecutionPayload: &v1.ExecutionPayload{},
@@ -147,7 +147,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 		},
 		{
 			name: "forkchoice updated with invalid block",
-			blk: func() block.BeaconBlock {
+			blk: func() interfaces.BeaconBlock {
 				b, err := wrapper.WrappedBeaconBlock(&ethpb.BeaconBlockBellatrix{
 					Body: &ethpb.BeaconBlockBodyBellatrix{
 						ExecutionPayload: &v1.ExecutionPayload{},
@@ -230,7 +230,7 @@ func Test_NotifyNewPayload(t *testing.T) {
 		name           string
 		postState      state.BeaconState
 		isValidPayload bool
-		blk            block.SignedBeaconBlock
+		blk            interfaces.SignedBeaconBlock
 		newPayloadErr  error
 		errString      string
 	}{
@@ -274,7 +274,7 @@ func Test_NotifyNewPayload(t *testing.T) {
 		{
 			name:      "altair pre state, happy case",
 			postState: bellatrixState,
-			blk: func() block.SignedBeaconBlock {
+			blk: func() interfaces.SignedBeaconBlock {
 				blk := &ethpb.SignedBeaconBlockBellatrix{
 					Block: &ethpb.BeaconBlockBellatrix{
 						Body: &ethpb.BeaconBlockBodyBellatrix{
@@ -293,7 +293,7 @@ func Test_NotifyNewPayload(t *testing.T) {
 		{
 			name:      "not at merge transition",
 			postState: bellatrixState,
-			blk: func() block.SignedBeaconBlock {
+			blk: func() interfaces.SignedBeaconBlock {
 				blk := &ethpb.SignedBeaconBlockBellatrix{
 					Block: &ethpb.BeaconBlockBellatrix{
 						Body: &ethpb.BeaconBlockBodyBellatrix{
@@ -319,7 +319,7 @@ func Test_NotifyNewPayload(t *testing.T) {
 		{
 			name:      "happy case",
 			postState: bellatrixState,
-			blk: func() block.SignedBeaconBlock {
+			blk: func() interfaces.SignedBeaconBlock {
 				blk := &ethpb.SignedBeaconBlockBellatrix{
 					Block: &ethpb.BeaconBlockBellatrix{
 						Body: &ethpb.BeaconBlockBodyBellatrix{
@@ -338,7 +338,7 @@ func Test_NotifyNewPayload(t *testing.T) {
 		{
 			name:      "undefined error from ee",
 			postState: bellatrixState,
-			blk: func() block.SignedBeaconBlock {
+			blk: func() interfaces.SignedBeaconBlock {
 				blk := &ethpb.SignedBeaconBlockBellatrix{
 					Block: &ethpb.BeaconBlockBellatrix{
 						Body: &ethpb.BeaconBlockBodyBellatrix{
@@ -453,13 +453,13 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 
 	tests := []struct {
 		name      string
-		blk       block.BeaconBlock
-		justified block.SignedBeaconBlock
+		blk       interfaces.BeaconBlock
+		justified interfaces.SignedBeaconBlock
 		err       error
 	}{
 		{
 			name: "deep block",
-			blk: func(tt *testing.T) block.BeaconBlock {
+			blk: func(tt *testing.T) interfaces.BeaconBlock {
 				blk := util.NewBeaconBlockBellatrix()
 				blk.Block.Slot = 1
 				blk.Block.ParentRoot = parentRoot[:]
@@ -467,7 +467,7 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 				require.NoError(tt, err)
 				return wr
 			}(t),
-			justified: func(tt *testing.T) block.SignedBeaconBlock {
+			justified: func(tt *testing.T) interfaces.SignedBeaconBlock {
 				blk := util.NewBeaconBlockBellatrix()
 				blk.Block.Slot = 32
 				blk.Block.ParentRoot = parentRoot[:]
@@ -479,7 +479,7 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 		},
 		{
 			name: "shallow block, Altair justified chkpt",
-			blk: func(tt *testing.T) block.BeaconBlock {
+			blk: func(tt *testing.T) interfaces.BeaconBlock {
 				blk := util.NewBeaconBlockAltair()
 				blk.Block.Slot = 200
 				blk.Block.ParentRoot = parentRoot[:]
@@ -487,7 +487,7 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 				require.NoError(tt, err)
 				return wr
 			}(t),
-			justified: func(tt *testing.T) block.SignedBeaconBlock {
+			justified: func(tt *testing.T) interfaces.SignedBeaconBlock {
 				blk := util.NewBeaconBlockAltair()
 				blk.Block.Slot = 32
 				blk.Block.ParentRoot = parentRoot[:]
@@ -499,7 +499,7 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 		},
 		{
 			name: "shallow block, Bellatrix justified chkpt without execution",
-			blk: func(tt *testing.T) block.BeaconBlock {
+			blk: func(tt *testing.T) interfaces.BeaconBlock {
 				blk := util.NewBeaconBlockBellatrix()
 				blk.Block.Slot = 200
 				blk.Block.ParentRoot = parentRoot[:]
@@ -507,7 +507,7 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 				require.NoError(tt, err)
 				return wr
 			}(t),
-			justified: func(tt *testing.T) block.SignedBeaconBlock {
+			justified: func(tt *testing.T) interfaces.SignedBeaconBlock {
 				blk := util.NewBeaconBlockBellatrix()
 				blk.Block.Slot = 32
 				blk.Block.ParentRoot = parentRoot[:]
