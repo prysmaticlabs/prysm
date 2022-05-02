@@ -172,6 +172,7 @@ func TestValidateBeaconBlockPubSub_CanRecoverStateSummary(t *testing.T) {
 			Epoch: 0,
 			Root:  make([]byte, 32),
 		},
+		DB: db,
 	}
 	r := &Service{
 		cfg: &config{
@@ -236,6 +237,7 @@ func TestValidateBeaconBlockPubSub_IsInCache(t *testing.T) {
 			Root:  make([]byte, 32),
 		},
 		InitSyncBlockRoots: map[[32]byte]bool{bRoot: true},
+		DB:                 db,
 	}
 	r := &Service{
 		cfg: &config{
@@ -302,6 +304,7 @@ func TestValidateBeaconBlockPubSub_ValidProposerSignature(t *testing.T) {
 			Epoch: 0,
 			Root:  make([]byte, 32),
 		},
+		DB: db,
 	}
 	r := &Service{
 		cfg: &config{
@@ -437,6 +440,7 @@ func TestValidateBeaconBlockPubSub_AdvanceEpochsForState(t *testing.T) {
 	stateGen := stategen.New(db)
 	offset := int64(blkSlot.Mul(params.BeaconConfig().SecondsPerSlot))
 	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-offset, 0),
+		DB:    db,
 		State: beaconState,
 		FinalizedCheckPoint: &ethpb.Checkpoint{
 			Epoch: 0,
@@ -1109,6 +1113,7 @@ func TestValidateBeaconBlockPubSub_ValidExecutionPayload(t *testing.T) {
 
 	stateGen := stategen.New(db)
 	chainService := &mock.ChainService{Genesis: time.Unix(presentTime-int64(params.BeaconConfig().SecondsPerSlot), 0),
+		DB: db,
 		FinalizedCheckPoint: &ethpb.Checkpoint{
 			Epoch: 0,
 			Root:  make([]byte, 32),
@@ -1182,6 +1187,7 @@ func TestValidateBeaconBlockPubSub_InvalidPayloadTimestamp(t *testing.T) {
 
 	stateGen := stategen.New(db)
 	chainService := &mock.ChainService{Genesis: time.Unix(presentTime-int64(params.BeaconConfig().SecondsPerSlot), 0),
+		DB: db,
 		FinalizedCheckPoint: &ethpb.Checkpoint{
 			Epoch: 0,
 			Root:  make([]byte, 32),
