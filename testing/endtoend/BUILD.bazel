@@ -49,6 +49,7 @@ go_test(
         "//testing/endtoend/helpers:go_default_library",
         "//testing/endtoend/params:go_default_library",
         "//testing/endtoend/types:go_default_library",
+        "//testing/middleware/engine-api-proxy:go_default_library",
         "//testing/require:go_default_library",
         "//testing/slasher/simulator:go_default_library",
         "//testing/util:go_default_library",
