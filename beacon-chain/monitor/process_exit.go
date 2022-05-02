@@ -1,8 +1,8 @@
 package monitor
 
 import (
+	"github.com/prysmaticlabs/prysm/consensus-types/block"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/sirupsen/logrus"
 )
 
