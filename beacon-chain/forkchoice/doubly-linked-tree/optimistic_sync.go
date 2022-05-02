@@ -6,13 +6,30 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 )
 
-func (s *Store) setOptimisticToInvalid(ctx context.Context, root, payloadHash [32]byte) ([][32]byte, error) {
+func (s *Store) setOptimisticToInvalid(ctx context.Context, root, parentRoot, payloadHash [32]byte) ([][32]byte, error) {
 	s.nodesLock.Lock()
 	invalidRoots := make([][32]byte, 0)
 	node, ok := s.nodeByRoot[root]
-	if !ok || node == nil {
-		s.nodesLock.Unlock()
-		return invalidRoots, ErrNilNode
+	if !ok {
+		node, ok = s.nodeByRoot[parentRoot]
+		if !ok || node == nil {
+			s.nodesLock.Unlock()
+			return invalidRoots, ErrNilNode
+		}
+		// return early if the parent is LVH
+		if node.payloadHash == payloadHash {
+			s.nodesLock.Unlock()
+			return invalidRoots, nil
+		}
+	} else {
+		if node == nil {
+			s.nodesLock.Unlock()
+			return invalidRoots, ErrNilNode
+		}
+		if node.parent.root != parentRoot {
+			s.nodesLock.Unlock()
+			return invalidRoots, errInvalidParentRoot
+		}
 	}
 	// Check if last valid hash is an ancestor of the passed node.
 	lastValid, ok := s.nodeByPayload[payloadHash]
@@ -27,9 +44,14 @@ func (s *Store) setOptimisticToInvalid(ctx context.Context, root, payloadHash [3
 			return invalidRoots, ctx.Err()
 		}
 	}
-	// If the last valid payload is in a different fork, we remove only the
-	// passed node.
+	// Deal with the case that the last valid payload is in a different fork
+	// This means we are dealing with an EE that does not follow the spec
 	if firstInvalid.parent == nil {
+		// return early if the invalid node was not imported
+		if node.root == parentRoot {
+			s.nodesLock.Unlock()
+			return invalidRoots, nil
+		}
 		firstInvalid = node
 	}
 	s.nodesLock.Unlock()
