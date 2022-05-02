@@ -33,6 +33,7 @@ func TestCheckpointSync_CustomConfig(t *testing.T) {
 	cfg.SlotsPerEpoch = 6
 	cfg.SecondsPerSlot = 6
 	cfg.Eth1FollowDistance = 4
+	cfg.BellatrixForkEpoch = cfg.BellatrixForkEpoch + 100
 	params.OverrideBeaconConfig(cfg)
 	require.NoError(t, e2eParams.Init(e2eParams.StandardBeaconCount))
 
