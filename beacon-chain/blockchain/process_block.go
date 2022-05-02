@@ -16,14 +16,14 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
-	ethType "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/block"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"go.opencensus.io/trace"
@@ -583,13 +583,10 @@ func (s *Service) insertBlockToForkChoiceStore(ctx context.Context, blk block.Be
 // To call this function, it's caller's responsibility to ensure the slashing object is valid.
 func (s *Service) insertSlashingsToForkChoiceStore(ctx context.Context, blk block.BeaconBlock) error {
 	slashings := blk.Body().AttesterSlashings()
-	if len(slashings) == 0 {
-		return nil
-	}
 	for _, slashing := range slashings {
 		indices := blocks.SlashableAttesterIndices(slashing)
 		for _, index := range indices {
-			s.ForkChoicer().InsertSlashedIndex(ctx, ethType.ValidatorIndex(index))
+			s.ForkChoicer().InsertSlashedIndex(ctx, types.ValidatorIndex(index))
 		}
 	}
 	return nil
