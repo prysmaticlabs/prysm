@@ -1349,6 +1349,7 @@ func Test_validateBeaconBlockProcessingWhenParentIsOptimistic(t *testing.T) {
 	require.NoError(t, err)
 
 	chainService := &mock.ChainService{Genesis: time.Unix(int64(beaconState.GenesisTime()), 0),
+		DB:         db,
 		Optimistic: true,
 		FinalizedCheckPoint: &ethpb.Checkpoint{
 			Epoch: 0,
