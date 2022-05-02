@@ -15,9 +15,9 @@ type CombinedCache struct {
 	getters []CachedGetter
 }
 
-func (c CombinedCache) ByRoot(root [32]byte) (state.BeaconState, error) {
+func (c CombinedCache) ByRoot(blockRoot [32]byte) (state.BeaconState, error) {
 	for _, getter := range c.getters {
-		st, err := getter.ByRoot(root)
+		st, err := getter.ByRoot(blockRoot)
 		if err == nil {
 			return st, nil
 		}

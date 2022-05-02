@@ -134,9 +134,9 @@ func (c *CanonicalHistory) chainForSlot(ctx context.Context, target types.Slot) 
 	return s, descendants, nil
 }
 
-func (c *CanonicalHistory) getState(ctx context.Context, root [32]byte) (state.BeaconState, error) {
+func (c *CanonicalHistory) getState(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error) {
 	if c.cache != nil {
-		st, err := c.cache.ByRoot(root)
+		st, err := c.cache.ByRoot(blockRoot)
 		if err == nil {
 			return st, nil
 		}
@@ -144,7 +144,7 @@ func (c *CanonicalHistory) getState(ctx context.Context, root [32]byte) (state.B
 			return nil, errors.Wrap(err, "error reading from state cache during state replay")
 		}
 	}
-	return c.h.StateOrError(ctx, root)
+	return c.h.StateOrError(ctx, blockRoot)
 }
 
 // ancestorChain works backwards through the chain lineage, accumulating blocks and checking for a saved state.

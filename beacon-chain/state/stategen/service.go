@@ -35,7 +35,7 @@ type StateManager interface {
 	StateByRootIfCachedNoCopy(blockRoot [32]byte) state.BeaconState
 	StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error)
 	RecoverStateSummary(ctx context.Context, blockRoot [32]byte) (*ethpb.StateSummary, error)
-	SaveState(ctx context.Context, root [32]byte, st state.BeaconState) error
+	SaveState(ctx context.Context, blockRoot [32]byte, st state.BeaconState) error
 	ForceCheckpoint(ctx context.Context, root []byte) error
 	EnableSaveHotStateToDB(_ context.Context)
 	DisableSaveHotStateToDB(ctx context.Context) error

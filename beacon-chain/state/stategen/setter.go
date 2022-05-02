@@ -14,22 +14,22 @@ import (
 )
 
 // SaveState saves the state in the cache and/or DB.
-func (s *State) SaveState(ctx context.Context, root [32]byte, st state.BeaconState) error {
+func (s *State) SaveState(ctx context.Context, blockRoot [32]byte, st state.BeaconState) error {
 	ctx, span := trace.StartSpan(ctx, "stateGen.SaveState")
 	defer span.End()
 
-	return s.saveStateByRoot(ctx, root, st)
+	return s.saveStateByRoot(ctx, blockRoot, st)
 }
 
 // ForceCheckpoint initiates a cold state save of the given block root's state. This method does not update the
 // "last archived state" but simply saves the specified state from the root argument into the DB.
 //
 // The name "Checkpoint" isn't referring to checkpoint in the sense of our consensus type, but checkpoint for our historical states.
-func (s *State) ForceCheckpoint(ctx context.Context, root []byte) error {
+func (s *State) ForceCheckpoint(ctx context.Context, blockRoot []byte) error {
 	ctx, span := trace.StartSpan(ctx, "stateGen.ForceCheckpoint")
 	defer span.End()
 
-	root32 := bytesutil.ToBytes32(root)
+	root32 := bytesutil.ToBytes32(blockRoot)
 	// Before the first finalized checkpoint, the finalized root is zero hash.
 	// Return early if there hasn't been a finalized checkpoint.
 	if root32 == params.BeaconConfig().ZeroHash {

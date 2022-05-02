@@ -216,15 +216,15 @@ func (s *State) loadStateByRoot(ctx context.Context, blockRoot [32]byte) (state.
 // 1) block parent state is the last finalized state
 // 2) block parent state is the epoch boundary state and exists in epoch boundary cache
 // 3) block parent state is in DB
-func (s *State) LastAncestorState(ctx context.Context, root [32]byte) (state.BeaconState, error) {
+func (s *State) LastAncestorState(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.LastAncestorState")
 	defer span.End()
 
-	if s.isFinalizedRoot(root) && s.finalizedState() != nil {
+	if s.isFinalizedRoot(blockRoot) && s.finalizedState() != nil {
 		return s.finalizedState(), nil
 	}
 
-	b, err := s.beaconDB.Block(ctx, root)
+	b, err := s.beaconDB.Block(ctx, blockRoot)
 	if err != nil {
 		return nil, err
 	}
