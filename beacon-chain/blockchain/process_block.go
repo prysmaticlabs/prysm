@@ -127,9 +127,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 	if err := s.insertBlockAndAttestationsToForkChoiceStore(ctx, signed.Block(), blockRoot, postState); err != nil {
 		return errors.Wrapf(err, "could not insert block %d to fork choice store", signed.Block().Slot())
 	}
-	if err := s.insertSlashingsToForkChoiceStore(ctx, signed.Block()); err != nil {
-		return errors.Wrap(err, "could not insert attester slashings to forkchoice store")
-	}
+	s.insertSlashingsToForkChoiceStore(ctx, signed.Block())
 	if isValidPayload {
 		if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, blockRoot); err != nil {
 			return errors.Wrap(err, "could not set optimistic block to valid")
@@ -583,7 +581,7 @@ func (s *Service) insertBlockToForkChoiceStore(ctx context.Context, blk interfac
 
 // Inserts attester slashing indices to fork choice store.
 // To call this function, it's caller's responsibility to ensure the slashing object is valid.
-func (s *Service) insertSlashingsToForkChoiceStore(ctx context.Context, blk interfaces.BeaconBlock) error {
+func (s *Service) insertSlashingsToForkChoiceStore(ctx context.Context, blk interfaces.BeaconBlock) {
 	slashings := blk.Body().AttesterSlashings()
 	for _, slashing := range slashings {
 		indices := blocks.SlashableAttesterIndices(slashing)
@@ -591,7 +589,6 @@ func (s *Service) insertSlashingsToForkChoiceStore(ctx context.Context, blk inte
 			s.ForkChoicer().InsertSlashedIndex(ctx, types.ValidatorIndex(index))
 		}
 	}
-	return nil
 }
 
 func getBlockPayloadHash(blk interfaces.BeaconBlock) ([32]byte, error) {
