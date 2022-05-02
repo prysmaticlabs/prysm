@@ -221,6 +221,7 @@ func TestForkChoice_RemoveEquivocating(t *testing.T) {
 	// Process index where index == vote length. Should not panic.
 	f.InsertSlashedIndex(ctx, types.ValidatorIndex(len(f.balances)))
 	f.InsertSlashedIndex(ctx, types.ValidatorIndex(len(f.votes)))
+	require.Equal(t, true, len(f.store.slashedIndices) > 0)
 }
 
 func indexToHash(i uint64) [32]byte {

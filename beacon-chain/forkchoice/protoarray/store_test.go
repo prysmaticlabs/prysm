@@ -805,4 +805,5 @@ func TestStore_RemoveEquivocating(t *testing.T) {
 	// Process index where index == vote length. Should not panic.
 	f.InsertSlashedIndex(ctx, types.ValidatorIndex(len(f.balances)))
 	f.InsertSlashedIndex(ctx, types.ValidatorIndex(len(f.votes)))
+	require.Equal(t, true, len(f.store.slashedIndices) > 0)
 }
