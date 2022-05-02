@@ -60,11 +60,11 @@ func (s *State) saveStateByRoot(ctx context.Context, blockRoot [32]byte, st stat
 			s.saveHotStateDB.lock.Unlock()
 			return err
 		}
-		s.saveHotStateDB.savedStateRoots = append(s.saveHotStateDB.savedStateRoots, blockRoot)
+		s.saveHotStateDB.blockRootsOfSavedStates = append(s.saveHotStateDB.blockRootsOfSavedStates, blockRoot)
 
 		log.WithFields(logrus.Fields{
 			"slot":                   st.Slot(),
-			"totalHotStateSavedInDB": len(s.saveHotStateDB.savedStateRoots),
+			"totalHotStateSavedInDB": len(s.saveHotStateDB.blockRootsOfSavedStates),
 		}).Info("Saving hot state to DB")
 	}
 	s.saveHotStateDB.lock.Unlock()
@@ -123,15 +123,15 @@ func (s *State) DisableSaveHotStateToDB(ctx context.Context) error {
 
 	log.WithFields(logrus.Fields{
 		"enabled":          s.saveHotStateDB.enabled,
-		"deletedHotStates": len(s.saveHotStateDB.savedStateRoots),
+		"deletedHotStates": len(s.saveHotStateDB.blockRootsOfSavedStates),
 	}).Warn("Exiting mode to save hot states in DB")
 
 	// Delete previous saved states in DB as we are turning this mode off.
 	s.saveHotStateDB.enabled = false
-	if err := s.beaconDB.DeleteStates(ctx, s.saveHotStateDB.savedStateRoots); err != nil {
+	if err := s.beaconDB.DeleteStates(ctx, s.saveHotStateDB.blockRootsOfSavedStates); err != nil {
 		return err
 	}
-	s.saveHotStateDB.savedStateRoots = nil
+	s.saveHotStateDB.blockRootsOfSavedStates = nil
 
 	return nil
 }

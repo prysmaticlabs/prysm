@@ -57,10 +57,10 @@ type State struct {
 // how often does the node save hot states to db? what are
 // the saved hot states in db?... etc
 type saveHotStateDbConfig struct {
-	enabled         bool
-	lock            sync.Mutex
-	duration        types.Slot
-	savedStateRoots [][32]byte
+	enabled                 bool
+	lock                    sync.Mutex
+	duration                types.Slot
+	blockRootsOfSavedStates [][32]byte
 }
 
 // This tracks the finalized point. It's also the point where slot and the block root of

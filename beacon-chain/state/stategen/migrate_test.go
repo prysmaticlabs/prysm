@@ -142,8 +142,8 @@ func TestMigrateToCold_StateExistsInDB(t *testing.T) {
 	require.NoError(t, service.epochBoundaryStateCache.put(fRoot, beaconState))
 	require.NoError(t, service.beaconDB.SaveState(ctx, beaconState, fRoot))
 
-	service.saveHotStateDB.savedStateRoots = [][32]byte{{1}, {2}, {3}, {4}, fRoot}
+	service.saveHotStateDB.blockRootsOfSavedStates = [][32]byte{{1}, {2}, {3}, {4}, fRoot}
 	require.NoError(t, service.MigrateToCold(ctx, fRoot))
-	assert.DeepEqual(t, [][32]byte{{1}, {2}, {3}, {4}}, service.saveHotStateDB.savedStateRoots)
+	assert.DeepEqual(t, [][32]byte{{1}, {2}, {3}, {4}}, service.saveHotStateDB.blockRootsOfSavedStates)
 	assert.LogsDoNotContain(t, hook, "Saved state in DB")
 }

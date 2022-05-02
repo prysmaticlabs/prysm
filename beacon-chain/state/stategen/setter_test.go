@@ -190,11 +190,11 @@ func TestEnableSaveHotStateToDB_Disabled(t *testing.T) {
 	require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	service.saveHotStateDB.savedStateRoots = [][32]byte{r}
+	service.saveHotStateDB.blockRootsOfSavedStates = [][32]byte{r}
 	require.NoError(t, service.DisableSaveHotStateToDB(ctx))
 	require.LogsContain(t, hook, "Exiting mode to save hot states in DB")
 	require.Equal(t, false, service.saveHotStateDB.enabled)
-	require.Equal(t, 0, len(service.saveHotStateDB.savedStateRoots))
+	require.Equal(t, 0, len(service.saveHotStateDB.blockRootsOfSavedStates))
 }
 
 func TestEnableSaveHotStateToDB_AlreadyDisabled(t *testing.T) {
