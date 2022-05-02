@@ -1,10 +1,10 @@
-package block_test
+package interfaces_test
 
 import (
 	"testing"
 
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/consensus-types/block"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -44,7 +44,7 @@ func TestBeaconBlockHeaderFromBlock(t *testing.T) {
 		BodyRoot:      bodyRoot[:],
 	}
 
-	bh, err := block.BeaconBlockHeaderFromBlock(blk)
+	bh, err := interfaces.BeaconBlockHeaderFromBlock(blk)
 	require.NoError(t, err)
 	assert.DeepEqual(t, want, bh)
 }
@@ -81,7 +81,7 @@ func TestBeaconBlockHeaderFromBlockInterface(t *testing.T) {
 		BodyRoot:      bodyRoot[:],
 	}
 
-	bh, err := block.BeaconBlockHeaderFromBlockInterface(wrapper.WrappedPhase0BeaconBlock(blk))
+	bh, err := interfaces.BeaconBlockHeaderFromBlockInterface(wrapper.WrappedPhase0BeaconBlock(blk))
 	require.NoError(t, err)
 	assert.DeepEqual(t, want, bh)
 }
@@ -94,7 +94,7 @@ func TestBeaconBlockHeaderFromBlock_NilBlockBody(t *testing.T) {
 		ParentRoot:    bytesutil.PadTo([]byte("parent root"), hashLen),
 		StateRoot:     bytesutil.PadTo([]byte("state root"), hashLen),
 	}
-	_, err := block.BeaconBlockHeaderFromBlock(blk)
+	_, err := interfaces.BeaconBlockHeaderFromBlock(blk)
 	require.ErrorContains(t, "nil block body", err)
 }
 
@@ -134,7 +134,7 @@ func TestSignedBeaconBlockHeaderFromBlock(t *testing.T) {
 		Signature: blk.Signature,
 	}
 
-	bh, err := block.SignedBeaconBlockHeaderFromBlock(blk)
+	bh, err := interfaces.SignedBeaconBlockHeaderFromBlock(blk)
 	require.NoError(t, err)
 	assert.DeepEqual(t, want, bh)
 }
@@ -176,7 +176,7 @@ func TestSignedBeaconBlockHeaderFromBlockInterface(t *testing.T) {
 	}
 	wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
 	require.NoError(t, err)
-	bh, err := block.SignedBeaconBlockHeaderFromBlockInterface(wsb)
+	bh, err := interfaces.SignedBeaconBlockHeaderFromBlockInterface(wsb)
 	require.NoError(t, err)
 	assert.DeepEqual(t, want, bh)
 }
@@ -191,6 +191,6 @@ func TestSignedBeaconBlockHeaderFromBlock_NilBlockBody(t *testing.T) {
 	},
 		Signature: bytesutil.PadTo([]byte("signature"), fieldparams.BLSSignatureLength),
 	}
-	_, err := block.SignedBeaconBlockHeaderFromBlock(blk)
+	_, err := interfaces.SignedBeaconBlockHeaderFromBlock(blk)
 	require.ErrorContains(t, "nil block", err)
 }

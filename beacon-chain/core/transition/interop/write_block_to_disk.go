@@ -6,12 +6,12 @@ import (
 	"path"
 
 	"github.com/prysmaticlabs/prysm/config/features"
-	"github.com/prysmaticlabs/prysm/consensus-types/block"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/io/file"
 )
 
 // WriteBlockToDisk as a block ssz. Writes to temp directory. Debug!
-func WriteBlockToDisk(block block.SignedBeaconBlock, failed bool) {
+func WriteBlockToDisk(block interfaces.SignedBeaconBlock, failed bool) {
 	if !features.Get().WriteSSZStateTransitions {
 		return
 	}

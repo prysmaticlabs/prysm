@@ -3,7 +3,7 @@ package blockchain
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/consensus-types/block"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -25,7 +25,7 @@ func Test_logStateTransitionData(t *testing.T) {
 	require.NoError(t, err)
 	tests := []struct {
 		name string
-		b    block.BeaconBlock
+		b    interfaces.BeaconBlock
 		want string
 	}{
 		{name: "empty block body",

@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/block"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
@@ -23,7 +23,7 @@ import (
 func ProcessAttestationsNoVerifySignature(
 	ctx context.Context,
 	beaconState state.BeaconState,
-	b block.SignedBeaconBlock,
+	b interfaces.SignedBeaconBlock,
 ) (state.BeaconState, error) {
 	if err := helpers.BeaconBlockIsNil(b); err != nil {
 		return nil, err

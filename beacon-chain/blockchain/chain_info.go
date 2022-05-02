@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/block"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -47,7 +47,7 @@ type GenesisFetcher interface {
 type HeadFetcher interface {
 	HeadSlot() types.Slot
 	HeadRoot(ctx context.Context) ([]byte, error)
-	HeadBlock(ctx context.Context) (block.SignedBeaconBlock, error)
+	HeadBlock(ctx context.Context) (interfaces.SignedBeaconBlock, error)
 	HeadState(ctx context.Context) (state.BeaconState, error)
 	HeadValidatorsIndices(ctx context.Context, epoch types.Epoch) ([]types.ValidatorIndex, error)
 	HeadGenesisValidatorsRoot() [32]byte
@@ -163,7 +163,7 @@ func (s *Service) HeadRoot(ctx context.Context) ([]byte, error) {
 // HeadBlock returns the head block of the chain.
 // If the head is nil from service struct,
 // it will attempt to get the head block from DB.
-func (s *Service) HeadBlock(ctx context.Context) (block.SignedBeaconBlock, error) {
+func (s *Service) HeadBlock(ctx context.Context) (interfaces.SignedBeaconBlock, error) {
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
 

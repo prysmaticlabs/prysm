@@ -3,7 +3,7 @@ package migration
 import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/consensus-types/block"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -11,7 +11,7 @@ import (
 )
 
 // BlockIfaceToV1BlockHeader converts a signed beacon block interface into a signed beacon block header.
-func BlockIfaceToV1BlockHeader(block block.SignedBeaconBlock) (*ethpbv1.SignedBeaconBlockHeader, error) {
+func BlockIfaceToV1BlockHeader(block interfaces.SignedBeaconBlock) (*ethpbv1.SignedBeaconBlockHeader, error) {
 	bodyRoot, err := block.Block().Body().HashTreeRoot()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get body root of block")
@@ -335,7 +335,7 @@ func V1ValidatorToV1Alpha1(v1Validator *ethpbv1.Validator) *ethpbalpha.Validator
 }
 
 // SignedBeaconBlock converts a signed beacon block interface to a v1alpha1 block.
-func SignedBeaconBlock(block block.SignedBeaconBlock) (*ethpbv1.SignedBeaconBlock, error) {
+func SignedBeaconBlock(block interfaces.SignedBeaconBlock) (*ethpbv1.SignedBeaconBlock, error) {
 	if block == nil || block.IsNil() {
 		return nil, errors.New("could not find requested block")
 	}

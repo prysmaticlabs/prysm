@@ -3,6 +3,7 @@ package detect
 import (
 	"fmt"
 
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/network/forks"
 
@@ -14,7 +15,6 @@ import (
 	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/block"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -140,7 +140,7 @@ var errBlockForkMismatch = errors.New("fork or config detected from state is dif
 
 // UnmarshalBeaconBlock uses internal knowledge in the VersionedUnmarshaler to pick the right concrete SignedBeaconBlock type,
 // then Unmarshal()s the type and returns an instance of block.SignedBeaconBlock if successful.
-func (cf *VersionedUnmarshaler) UnmarshalBeaconBlock(marshaled []byte) (block.SignedBeaconBlock, error) {
+func (cf *VersionedUnmarshaler) UnmarshalBeaconBlock(marshaled []byte) (interfaces.SignedBeaconBlock, error) {
 	slot, err := slotFromBlock(marshaled)
 	if err != nil {
 		return nil, err
