@@ -34,6 +34,7 @@ func New(justifiedEpoch, finalizedEpoch types.Epoch, finalizedRoot [32]byte) *Fo
 		nodesIndices:      make(map[[32]byte]uint64),
 		payloadIndices:    make(map[[32]byte]uint64),
 		canonicalNodes:    make(map[[32]byte]bool),
+		slashedIndices:    make(map[types.ValidatorIndex]bool),
 		pruneThreshold:    defaultPruneThreshold,
 	}
 
@@ -63,7 +64,7 @@ func (f *ForkChoice) Head(
 	// Using the write lock here because `updateCanonicalNodes` that gets called subsequently requires a write operation.
 	f.store.nodesLock.Lock()
 	defer f.store.nodesLock.Unlock()
-	deltas, newVotes, err := computeDeltas(ctx, f.store.nodesIndices, f.votes, f.balances, newBalances)
+	deltas, newVotes, err := computeDeltas(ctx, f.store.nodesIndices, f.votes, f.balances, newBalances, f.store.slashedIndices)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "Could not compute deltas")
 	}
@@ -740,4 +741,49 @@ func (f *ForkChoice) ForkChoiceNodes() []*pbrpc.ForkChoiceNode {
 		}
 	}
 	return ret
+}
+
+// InsertSlashedIndex adds the given slashed validator index to the
+// store-tracked list. Votes from these validators are not accounted for
+// in forkchoice.
+func (f *ForkChoice) InsertSlashedIndex(ctx context.Context, index types.ValidatorIndex) {
+	f.store.nodesLock.Lock()
+	defer f.store.nodesLock.Unlock()
+	f.store.slashedIndices[index] = true
+
+	// Subtract last vote from this equivocating validator
+	f.votesLock.RLock()
+	defer f.votesLock.RUnlock()
+
+	if index > types.ValidatorIndex(len(f.balances)) {
+		return
+	}
+
+	if index > types.ValidatorIndex(len(f.votes)) {
+		return
+	}
+
+	nodeIndex, ok := f.store.nodesIndices[f.votes[index].currentRoot]
+	if !ok {
+		return
+	}
+
+	var node *Node
+	for nodeIndex != NonExistentNode {
+		if ctx.Err() != nil {
+			return
+		}
+
+		node = f.store.nodes[nodeIndex]
+		if node == nil {
+			return
+		}
+
+		if node.weight < f.balances[index] {
+			node.weight = 0
+		} else {
+			node.weight -= f.balances[index]
+		}
+		nodeIndex = node.parent
+	}
 }
