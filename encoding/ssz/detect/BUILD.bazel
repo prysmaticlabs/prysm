@@ -15,7 +15,6 @@ go_library(
         "//beacon-chain/state/v3:go_default_library",
         "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",
-        "//consensus-types/block:go_default_library",
         "//consensus-types/primitives:go_default_library",
         "//consensus-types/wrapper:go_default_library",
         "//encoding/bytesutil:go_default_library",
@@ -38,7 +37,6 @@ go_test(
     deps = [
         "//beacon-chain/state:go_default_library",
         "//config/params:go_default_library",
-        "//consensus-types/block:go_default_library",
         "//consensus-types/primitives:go_default_library",
         "//consensus-types/wrapper:go_default_library",
         "//encoding/bytesutil:go_default_library",

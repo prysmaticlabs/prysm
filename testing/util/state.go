@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/consensus-types/block"
 	"github.com/prysmaticlabs/prysm/testing/require"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -65,7 +64,7 @@ func WithStateSlot(slot types.Slot) NewBeaconStateOption {
 	}
 }
 
-func WithLatestHeaderFromBlock(t *testing.T, b block.SignedBeaconBlock) NewBeaconStateOption {
+func WithLatestHeaderFromBlock(t *testing.T, b interfaces.SignedBeaconBlock) NewBeaconStateOption {
 	return func(st *ethpb.BeaconState) error {
 		sh, err := b.Header()
 		require.NoError(t, err)

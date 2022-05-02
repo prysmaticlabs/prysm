@@ -2,7 +2,6 @@ package mock
 
 import (
 	ssz "github.com/ferranbt/fastssz"
-	"github.com/prysmaticlabs/prysm/consensus-types/block"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -11,14 +10,14 @@ import (
 )
 
 type SignedBeaconBlock struct {
-	BeaconBlock block.BeaconBlock
+	BeaconBlock interfaces.BeaconBlock
 }
 
 func (SignedBeaconBlock) PbGenericBlock() (*eth.GenericSignedBeaconBlock, error) {
 	panic("implement me")
 }
 
-func (m SignedBeaconBlock) Block() block.BeaconBlock {
+func (m SignedBeaconBlock) Block() interfaces.BeaconBlock {
 	return m.BeaconBlock
 }
 
@@ -30,7 +29,7 @@ func (m SignedBeaconBlock) IsNil() bool {
 	return m.BeaconBlock == nil || m.Block().IsNil()
 }
 
-func (SignedBeaconBlock) Copy() block.SignedBeaconBlock {
+func (SignedBeaconBlock) Copy() interfaces.SignedBeaconBlock {
 	panic("implement me")
 }
 
@@ -81,7 +80,7 @@ func (SignedBeaconBlock) Header() (*eth.SignedBeaconBlockHeader, error) {
 type BeaconBlock struct {
 	Htr             [32]byte
 	HtrErr          error
-	BeaconBlockBody block.BeaconBlockBody
+	BeaconBlockBody interfaces.BeaconBlockBody
 	BlockSlot       types.Slot
 }
 
@@ -109,7 +108,7 @@ func (BeaconBlock) StateRoot() []byte {
 	panic("implement me")
 }
 
-func (m BeaconBlock) Body() block.BeaconBlockBody {
+func (m BeaconBlock) Body() interfaces.BeaconBlockBody {
 	return m.BeaconBlockBody
 }
 
@@ -207,6 +206,6 @@ func (BeaconBlockBody) ExecutionPayloadHeader() (*eth.ExecutionPayloadHeader, er
 	panic("implement me")
 }
 
-var _ block.SignedBeaconBlock = &SignedBeaconBlock{}
-var _ block.BeaconBlock = &BeaconBlock{}
-var _ block.BeaconBlockBody = &BeaconBlockBody{}
+var _ interfaces.SignedBeaconBlock = &SignedBeaconBlock{}
+var _ interfaces.BeaconBlock = &BeaconBlock{}
+var _ interfaces.BeaconBlockBody = &BeaconBlockBody{}

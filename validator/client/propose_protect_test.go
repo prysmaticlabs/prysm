@@ -8,7 +8,6 @@ import (
 	"github.com/prysmaticlabs/prysm/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/block"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -113,7 +112,7 @@ func Test_slashableProposalCheck(t *testing.T) {
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	sBlock, err := wrapper.WrappedSignedBeaconBlock(blk)
 	require.NoError(t, err)
-	blockHdr, err := block.SignedBeaconBlockHeaderFromBlockInterface(sBlock)
+	blockHdr, err := interfaces.SignedBeaconBlockHeaderFromBlockInterface(sBlock)
 	require.NoError(t, err)
 
 	mocks.slasherClient.EXPECT().IsSlashableBlock(
@@ -146,7 +145,7 @@ func Test_slashableProposalCheck(t *testing.T) {
 	blk.Block.Slot = 9
 	sBlock, err = wrapper.WrappedSignedBeaconBlock(blk)
 	require.NoError(t, err)
-	blockHdr, err = block.SignedBeaconBlockHeaderFromBlockInterface(sBlock)
+	blockHdr, err = interfaces.SignedBeaconBlockHeaderFromBlockInterface(sBlock)
 	require.NoError(t, err)
 	mocks.slasherClient.EXPECT().IsSlashableBlock(
 		gomock.Any(), // ctx
@@ -171,7 +170,7 @@ func Test_slashableProposalCheck_RemoteProtection(t *testing.T) {
 	blk.Block.Slot = 10
 	sBlock, err := wrapper.WrappedSignedBeaconBlock(blk)
 	require.NoError(t, err)
-	blockHdr, err := block.SignedBeaconBlockHeaderFromBlockInterface(sBlock)
+	blockHdr, err := interfaces.SignedBeaconBlockHeaderFromBlockInterface(sBlock)
 	require.NoError(t, err)
 	m.slasherClient.EXPECT().IsSlashableBlock(
 		gomock.Any(), // ctx
