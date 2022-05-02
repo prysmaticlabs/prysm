@@ -58,7 +58,7 @@ var blockTests = []struct {
 	},
 	{
 		name: "bellatrix blind",
-		newBlock: func(slot types.Slot, root []byte) (block.SignedBeaconBlock, error) {
+		newBlock: func(slot types.Slot, root []byte) (interfaces.SignedBeaconBlock, error) {
 			b := util.NewBlindedBeaconBlockBellatrix()
 			b.Block.Slot = slot
 			if root != nil {
