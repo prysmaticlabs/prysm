@@ -1,10 +1,7 @@
 package gateway
 
 import (
-	"time"
-
 	"github.com/gorilla/mux"
-	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/prysmaticlabs/prysm/api/gateway/apimiddleware"
 )
 
@@ -79,15 +76,6 @@ func WithMaxCallRecvMsgSize(size uint64) Option {
 func WithApiMiddleware(endpointFactory apimiddleware.EndpointFactory) Option {
 	return func(g *Gateway) error {
 		g.cfg.apiMiddlewareEndpointFactory = endpointFactory
-		return nil
-	}
-}
-
-// WithTimeout allows changing the timeout value for API calls.
-func WithTimeout(seconds uint64) Option {
-	return func(g *Gateway) error {
-		g.cfg.timeout = time.Second * time.Duration(seconds)
-		gwruntime.DefaultContextTimeout = time.Second * time.Duration(seconds)
 		return nil
 	}
 }

@@ -859,7 +859,6 @@ func (b *BeaconNode) registerGRPCGateway() error {
 	selfCert := b.cliCtx.String(flags.CertFlag.Name)
 	maxCallSize := b.cliCtx.Uint64(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
 	httpModules := b.cliCtx.String(flags.HTTPModules.Name)
-	timeout := b.cliCtx.Int(cmd.ApiTimeoutFlag.Name)
 	if enableDebugRPCEndpoints {
 		maxCallSize = uint64(math.Max(float64(maxCallSize), debugGrpcMaxMsgSize))
 	}
@@ -881,7 +880,6 @@ func (b *BeaconNode) registerGRPCGateway() error {
 		apigateway.WithRemoteCert(selfCert),
 		apigateway.WithMaxCallRecvMsgSize(maxCallSize),
 		apigateway.WithAllowedOrigins(allowedOrigins),
-		apigateway.WithTimeout(uint64(timeout)),
 	}
 	if flags.EnableHTTPEthAPI(httpModules) {
 		opts = append(opts, apigateway.WithApiMiddleware(&apimiddleware.BeaconEndpointFactory{}))
