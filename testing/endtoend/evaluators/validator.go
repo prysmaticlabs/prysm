@@ -159,9 +159,12 @@ func validatorsSyncParticipation(conns ...*grpc.ClientConn) error {
 		if err != nil {
 			return err
 		}
-		// Skip evaluation of the fork slot.
-		if b.Block().Slot() == forkSlot || b.Block().Slot() == nexForkSlot {
+		switch b.Block().Slot() {
+		case forkSlot, forkSlot + 1, nexForkSlot:
+			// Skip evaluation of the slot.
 			continue
+		default:
+			// no-op
 		}
 		syncAgg, err := b.Block().Body().SyncAggregate()
 		if err != nil {
@@ -196,9 +199,12 @@ func validatorsSyncParticipation(conns ...*grpc.ClientConn) error {
 		if err != nil {
 			return err
 		}
-		// Skip evaluation of the fork slot.
-		if b.Block().Slot() == forkSlot || b.Block().Slot() == nexForkSlot {
+		switch b.Block().Slot() {
+		case forkSlot, forkSlot + 1, nexForkSlot:
+			// Skip evaluation of the slot.
 			continue
+		default:
+			// no-op
 		}
 		syncAgg, err := b.Block().Body().SyncAggregate()
 		if err != nil {
