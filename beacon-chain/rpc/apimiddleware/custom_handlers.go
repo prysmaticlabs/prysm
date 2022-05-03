@@ -213,8 +213,8 @@ func receiveEvents(eventChan <-chan *sse.Event, w http.ResponseWriter, req *http
 		case msg := <-eventChan:
 			var data interface{}
 
-			// The message's event comes to us with trailing whitespace.  Remove it here for
-			// ease of future procesing.
+			// The message's event comes to us with trailing whitespace. Remove it here for
+			// ease of future processing.
 			msg.Event = bytes.TrimSpace(msg.Event)
 
 			switch string(msg.Event) {
