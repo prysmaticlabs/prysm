@@ -288,7 +288,7 @@ func handleRPCError(err error) error {
 	}
 	e, ok := err.(rpc.Error)
 	if !ok {
-		if strings.Contains(e.Error(), "Unauthorized") {
+		if strings.Contains(e.Error(), "401 Unauthorized") {
 			log.Error("HTTP authentication to your execution client is not working. Please ensure " +
 				"you are setting a correct value for the --jwt-secret flag in Prysm, or use an IPC connection if on " +
 				"the same machine. Please see our documentation for more information on authenticating connections " +
