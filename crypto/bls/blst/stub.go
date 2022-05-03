@@ -104,6 +104,11 @@ func SignatureFromBytes(_ []byte) (Signature, error) {
 	panic(err)
 }
 
+// MultipleSignaturesFromBytes -- stub
+func MultipleSignaturesFromBytes(multiSigs [][]byte) ([]common.Signature, error) {
+	panic(err)
+}
+
 // AggregatePublicKeys -- stub
 func AggregatePublicKeys(_ [][]byte) (PublicKey, error) {
 	panic(err)
