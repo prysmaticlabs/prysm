@@ -7,7 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/consensus-types/block"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -27,9 +27,9 @@ const (
 
 // HistoryAccessor describes the minimum set of database methods needed to support the ReplayerBuilder.
 type HistoryAccessor interface {
-	HighestSlotBlocksBelow(ctx context.Context, slot types.Slot) ([]block.SignedBeaconBlock, error)
-	GenesisBlock(ctx context.Context) (block.SignedBeaconBlock, error)
-	Block(ctx context.Context, blockRoot [32]byte) (block.SignedBeaconBlock, error)
+	HighestSlotBlocksBelow(ctx context.Context, slot types.Slot) ([]interfaces.SignedBeaconBlock, error)
+	GenesisBlock(ctx context.Context) (interfaces.SignedBeaconBlock, error)
+	Block(ctx context.Context, blockRoot [32]byte) (interfaces.SignedBeaconBlock, error)
 	StateOrError(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error)
 }
 
@@ -60,7 +60,7 @@ var _ Replayer = &stateReplayer{}
 // chainer is responsible for supplying the chain components necessary to rebuild a state,
 // namely a starting BeaconState and all available blocks from the starting state up to and including the target slot
 type chainer interface {
-	chainForSlot(ctx context.Context, target types.Slot) (state.BeaconState, []block.SignedBeaconBlock, error)
+	chainForSlot(ctx context.Context, target types.Slot) (state.BeaconState, []interfaces.SignedBeaconBlock, error)
 }
 
 type stateReplayer struct {
@@ -77,7 +77,7 @@ func (rs *stateReplayer) ReplayBlocks(ctx context.Context) (state.BeaconState, e
 	defer span.End()
 
 	var s state.BeaconState
-	var descendants []block.SignedBeaconBlock
+	var descendants []interfaces.SignedBeaconBlock
 	var err error
 	switch rs.method {
 	case forSlot:

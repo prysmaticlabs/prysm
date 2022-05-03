@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/block"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	mathutil "github.com/prysmaticlabs/prysm/math"
@@ -27,7 +27,7 @@ func (s *Service) CurrentSlot() types.Slot {
 // getBlockPreState returns the pre state of an incoming block. It uses the parent root of the block
 // to retrieve the state in DB. It verifies the pre state's validity and the incoming block
 // is in the correct time window.
-func (s *Service) getBlockPreState(ctx context.Context, b block.BeaconBlock) (state.BeaconState, error) {
+func (s *Service) getBlockPreState(ctx context.Context, b interfaces.BeaconBlock) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "blockChain.getBlockPreState")
 	defer span.End()
 
@@ -58,7 +58,7 @@ func (s *Service) getBlockPreState(ctx context.Context, b block.BeaconBlock) (st
 }
 
 // verifyBlkPreState validates input block has a valid pre-state.
-func (s *Service) verifyBlkPreState(ctx context.Context, b block.BeaconBlock) error {
+func (s *Service) verifyBlkPreState(ctx context.Context, b interfaces.BeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.verifyBlkPreState")
 	defer span.End()
 
@@ -125,7 +125,7 @@ func (s *Service) VerifyFinalizedBlkDescendant(ctx context.Context, root [32]byt
 
 // verifyBlkFinalizedSlot validates input block is not less than or equal
 // to current finalized slot.
-func (s *Service) verifyBlkFinalizedSlot(b block.BeaconBlock) error {
+func (s *Service) verifyBlkFinalizedSlot(b interfaces.BeaconBlock) error {
 	finalized := s.store.FinalizedCheckpt()
 	if finalized == nil {
 		return errNilFinalizedInStore
@@ -331,9 +331,9 @@ func (s *Service) ancestorByDB(ctx context.Context, r [32]byte, slot types.Slot)
 
 // This retrieves missing blocks from DB (ie. the blocks that couldn't be received over sync) and inserts them to fork choice store.
 // This is useful for block tree visualizer and additional vote accounting.
-func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk block.BeaconBlock,
+func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk interfaces.BeaconBlock,
 	fCheckpoint, jCheckpoint *ethpb.Checkpoint) error {
-	pendingNodes := make([]block.BeaconBlock, 0)
+	pendingNodes := make([]interfaces.BeaconBlock, 0)
 	pendingRoots := make([][32]byte, 0)
 
 	parentRoot := bytesutil.ToBytes32(blk.ParentRoot())

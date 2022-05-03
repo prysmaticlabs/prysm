@@ -16,7 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/cmd"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/block"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -138,7 +138,7 @@ func TestServer_ListBlocks_Genesis_MultiBlocks(t *testing.T) {
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
 	count := types.Slot(100)
-	blks := make([]block.SignedBeaconBlock, count)
+	blks := make([]interfaces.SignedBeaconBlock, count)
 	for i := types.Slot(0); i < count; i++ {
 		b := util.NewBeaconBlock()
 		b.Block.Slot = i
@@ -168,7 +168,7 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 	ctx := context.Background()
 
 	count := types.Slot(100)
-	blks := make([]block.SignedBeaconBlock, count)
+	blks := make([]interfaces.SignedBeaconBlock, count)
 	blkContainers := make([]*ethpb.BeaconBlockContainer, count)
 	for i := types.Slot(0); i < count; i++ {
 		b := util.NewBeaconBlock()
@@ -897,7 +897,7 @@ func TestServer_ListBeaconBlocks_Genesis(t *testing.T) {
 	})
 }
 
-func runListBlocksGenesis(t *testing.T, blk block.SignedBeaconBlock, blkContainer *ethpb.BeaconBlockContainer) {
+func runListBlocksGenesis(t *testing.T, blk interfaces.SignedBeaconBlock, blkContainer *ethpb.BeaconBlockContainer) {
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 
@@ -941,7 +941,7 @@ func TestServer_ListBeaconBlocks_Genesis_MultiBlocks(t *testing.T) {
 		parentRoot := [32]byte{1, 2, 3}
 		blk := util.NewBeaconBlock()
 		blk.Block.ParentRoot = parentRoot[:]
-		blockCreator := func(i types.Slot) block.SignedBeaconBlock {
+		blockCreator := func(i types.Slot) interfaces.SignedBeaconBlock {
 			b := util.NewBeaconBlock()
 			b.Block.Slot = i
 			wrappedB, err := wrapper.WrappedSignedBeaconBlock(b)
@@ -956,7 +956,7 @@ func TestServer_ListBeaconBlocks_Genesis_MultiBlocks(t *testing.T) {
 		parentRoot := [32]byte{1, 2, 3}
 		blk := util.NewBeaconBlockAltair()
 		blk.Block.ParentRoot = parentRoot[:]
-		blockCreator := func(i types.Slot) block.SignedBeaconBlock {
+		blockCreator := func(i types.Slot) interfaces.SignedBeaconBlock {
 			b := util.NewBeaconBlockAltair()
 			b.Block.Slot = i
 			wrappedB, err := wrapper.WrappedSignedBeaconBlock(b)
@@ -971,7 +971,7 @@ func TestServer_ListBeaconBlocks_Genesis_MultiBlocks(t *testing.T) {
 		parentRoot := [32]byte{1, 2, 3}
 		blk := util.NewBeaconBlockBellatrix()
 		blk.Block.ParentRoot = parentRoot[:]
-		blockCreator := func(i types.Slot) block.SignedBeaconBlock {
+		blockCreator := func(i types.Slot) interfaces.SignedBeaconBlock {
 			b := util.NewBeaconBlockBellatrix()
 			b.Block.Slot = i
 			wrappedB, err := wrapper.WrappedSignedBeaconBlock(b)
@@ -984,8 +984,8 @@ func TestServer_ListBeaconBlocks_Genesis_MultiBlocks(t *testing.T) {
 	})
 }
 
-func runListBeaconBlocksGenesisMultiBlocks(t *testing.T, genBlock block.SignedBeaconBlock,
-	blockCreator func(i types.Slot) block.SignedBeaconBlock) {
+func runListBeaconBlocksGenesisMultiBlocks(t *testing.T, genBlock interfaces.SignedBeaconBlock,
+	blockCreator func(i types.Slot) interfaces.SignedBeaconBlock) {
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 
@@ -999,7 +999,7 @@ func runListBeaconBlocksGenesisMultiBlocks(t *testing.T, genBlock block.SignedBe
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
 	count := types.Slot(100)
-	blks := make([]block.SignedBeaconBlock, count)
+	blks := make([]interfaces.SignedBeaconBlock, count)
 	for i := types.Slot(0); i < count; i++ {
 		blks[i] = blockCreator(i)
 	}
@@ -1020,7 +1020,7 @@ func TestServer_ListBeaconBlocks_Pagination(t *testing.T) {
 	t.Run("phase 0 block", func(t *testing.T) {
 		blk := util.NewBeaconBlock()
 		blk.Block.Slot = 300
-		blockCreator := func(i types.Slot) block.SignedBeaconBlock {
+		blockCreator := func(i types.Slot) interfaces.SignedBeaconBlock {
 			b := util.NewBeaconBlock()
 			b.Block.Slot = i
 			wrappedB, err := wrapper.WrappedSignedBeaconBlock(b)
@@ -1044,7 +1044,7 @@ func TestServer_ListBeaconBlocks_Pagination(t *testing.T) {
 	t.Run("altair block", func(t *testing.T) {
 		blk := util.NewBeaconBlockAltair()
 		blk.Block.Slot = 300
-		blockCreator := func(i types.Slot) block.SignedBeaconBlock {
+		blockCreator := func(i types.Slot) interfaces.SignedBeaconBlock {
 			b := util.NewBeaconBlockAltair()
 			b.Block.Slot = i
 			wrappedB, err := wrapper.WrappedSignedBeaconBlock(b)
@@ -1068,7 +1068,7 @@ func TestServer_ListBeaconBlocks_Pagination(t *testing.T) {
 	t.Run("bellatrix block", func(t *testing.T) {
 		blk := util.NewBeaconBlockBellatrix()
 		blk.Block.Slot = 300
-		blockCreator := func(i types.Slot) block.SignedBeaconBlock {
+		blockCreator := func(i types.Slot) interfaces.SignedBeaconBlock {
 			b := util.NewBeaconBlockBellatrix()
 			b.Block.Slot = i
 			wrappedB, err := wrapper.WrappedSignedBeaconBlock(b)
@@ -1091,8 +1091,8 @@ func TestServer_ListBeaconBlocks_Pagination(t *testing.T) {
 	})
 }
 
-func runListBeaconBlocksPagination(t *testing.T, orphanedBlk block.SignedBeaconBlock,
-	blockCreator func(i types.Slot) block.SignedBeaconBlock, containerCreator func(i types.Slot, root []byte, canonical bool) *ethpb.BeaconBlockContainer) {
+func runListBeaconBlocksPagination(t *testing.T, orphanedBlk interfaces.SignedBeaconBlock,
+	blockCreator func(i types.Slot) interfaces.SignedBeaconBlock, containerCreator func(i types.Slot, root []byte, canonical bool) *ethpb.BeaconBlockContainer) {
 
 	db := dbTest.SetupDB(t)
 	chain := &chainMock.ChainService{
@@ -1101,7 +1101,7 @@ func runListBeaconBlocksPagination(t *testing.T, orphanedBlk block.SignedBeaconB
 	ctx := context.Background()
 
 	count := types.Slot(100)
-	blks := make([]block.SignedBeaconBlock, count)
+	blks := make([]interfaces.SignedBeaconBlock, count)
 	blkContainers := make([]*ethpb.BeaconBlockContainer, count)
 	for i := types.Slot(0); i < count; i++ {
 		b := blockCreator(i)

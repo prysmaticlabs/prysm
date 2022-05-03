@@ -29,7 +29,7 @@ import (
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/block"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -542,7 +542,7 @@ func TestServiceStop_SaveCachedBlocks(t *testing.T) {
 		cfg:            &config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB)},
 		ctx:            ctx,
 		cancel:         cancel,
-		initSyncBlocks: make(map[[32]byte]block.SignedBeaconBlock),
+		initSyncBlocks: make(map[[32]byte]interfaces.SignedBeaconBlock),
 	}
 	b := util.NewBeaconBlock()
 	r, err := b.Block.HashTreeRoot()

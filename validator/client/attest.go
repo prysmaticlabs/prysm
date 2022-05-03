@@ -14,7 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/block"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -268,7 +268,7 @@ func (v *validator) waitOneThirdOrValidBlock(ctx context.Context, slot types.Slo
 	t := time.NewTimer(wait)
 	defer t.Stop()
 
-	bChannel := make(chan block.SignedBeaconBlock, 1)
+	bChannel := make(chan interfaces.SignedBeaconBlock, 1)
 	sub := v.blockFeed.Subscribe(bChannel)
 	defer sub.Unsubscribe()
 

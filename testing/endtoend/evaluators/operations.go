@@ -10,7 +10,7 @@ import (
 	corehelpers "github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/block"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -409,7 +409,7 @@ func validatorsVoteWithTheMajority(conns ...*grpc.ClientConn) error {
 
 var expectedEth1DataVote []byte
 
-func convertToBlockInterface(obj *ethpb.BeaconBlockContainer) (block.SignedBeaconBlock, error) {
+func convertToBlockInterface(obj *ethpb.BeaconBlockContainer) (interfaces.SignedBeaconBlock, error) {
 	if obj.GetPhase0Block() != nil {
 		return wrapper.WrappedSignedBeaconBlock(obj.GetPhase0Block())
 	}

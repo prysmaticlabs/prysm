@@ -6,7 +6,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
-	"github.com/prysmaticlabs/prysm/consensus-types/block"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -182,11 +182,11 @@ func (s *Store) IsFinalizedBlock(ctx context.Context, blockRoot [32]byte) bool {
 // FinalizedChildBlock returns the child block of a provided finalized block. If
 // no finalized block or its respective child block exists we return with a nil
 // block.
-func (s *Store) FinalizedChildBlock(ctx context.Context, blockRoot [32]byte) (block.SignedBeaconBlock, error) {
+func (s *Store) FinalizedChildBlock(ctx context.Context, blockRoot [32]byte) (interfaces.SignedBeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.FinalizedChildBlock")
 	defer span.End()
 
-	var blk block.SignedBeaconBlock
+	var blk interfaces.SignedBeaconBlock
 	err := s.db.View(func(tx *bolt.Tx) error {
 		blkBytes := tx.Bucket(finalizedBlockRootsIndexBucket).Get(blockRoot[:])
 		if blkBytes == nil {
