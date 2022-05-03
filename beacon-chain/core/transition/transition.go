@@ -18,10 +18,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/math"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"go.opencensus.io/trace"
 )
@@ -47,7 +47,7 @@ import (
 func ExecuteStateTransition(
 	ctx context.Context,
 	state state.BeaconState,
-	signed block.SignedBeaconBlock,
+	signed interfaces.SignedBeaconBlock,
 ) (state.BeaconState, error) {
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
@@ -295,7 +295,7 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 }
 
 // VerifyOperationLengths verifies that block operation lengths are valid.
-func VerifyOperationLengths(_ context.Context, state state.BeaconState, b block.SignedBeaconBlock) (state.BeaconState, error) {
+func VerifyOperationLengths(_ context.Context, state state.BeaconState, b interfaces.SignedBeaconBlock) (state.BeaconState, error) {
 	if err := helpers.BeaconBlockIsNil(b); err != nil {
 		return nil, err
 	}

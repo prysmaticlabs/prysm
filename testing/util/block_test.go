@@ -9,11 +9,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/stateutils"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 

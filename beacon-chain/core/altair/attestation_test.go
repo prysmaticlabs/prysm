@@ -16,11 +16,11 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/math"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
 )
