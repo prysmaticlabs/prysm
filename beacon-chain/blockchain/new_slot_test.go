@@ -5,14 +5,20 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/store"
+	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 func TestService_newSlot(t *testing.T) {
@@ -97,4 +103,54 @@ func TestService_newSlot(t *testing.T) {
 			require.DeepNotSSZEqual(t, service.store.BestJustifiedCheckpt(), service.store.JustifiedCheckpt())
 		}
 	}
+}
+
+func TestService_NewSlot_insertSlashings(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+	fcs := protoarray.New(0, 0, [32]byte{'a'})
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithStateGen(stategen.New(beaconDB)),
+		WithForkChoiceStore(fcs),
+		WithProposerIdsCache(cache.NewProposerPayloadIDsCache()),
+		WithSlashingPool(slashings.NewPool()),
+	}
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+
+	beaconState, privKeys := util.DeterministicGenesisState(t, 100)
+	att1 := util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+		Data: &ethpb.AttestationData{
+			Source: &ethpb.Checkpoint{Epoch: 1},
+		},
+		AttestingIndices: []uint64{0, 1},
+	})
+	domain, err := signing.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorsRoot())
+	require.NoError(t, err)
+	signingRoot, err := signing.ComputeSigningRoot(att1.Data, domain)
+	assert.NoError(t, err, "Could not get signing root of beacon block header")
+	sig0 := privKeys[0].Sign(signingRoot[:])
+	sig1 := privKeys[1].Sign(signingRoot[:])
+	aggregateSig := bls.AggregateSignatures([]bls.Signature{sig0, sig1})
+	att1.Signature = aggregateSig.Marshal()
+
+	att2 := util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+		AttestingIndices: []uint64{0, 1},
+	})
+	signingRoot, err = signing.ComputeSigningRoot(att2.Data, domain)
+	assert.NoError(t, err, "Could not get signing root of beacon block header")
+	sig0 = privKeys[0].Sign(signingRoot[:])
+	sig1 = privKeys[1].Sign(signingRoot[:])
+	aggregateSig = bls.AggregateSignatures([]bls.Signature{sig0, sig1})
+	att2.Signature = aggregateSig.Marshal()
+	slashings := []*ethpb.AttesterSlashing{
+		{
+			Attestation_1: att1,
+			Attestation_2: att2,
+		},
+	}
+	service.head = &head{state: beaconState}
+	require.NoError(t, service.cfg.SlashingPool.InsertAttesterSlashing(ctx, beaconState, slashings[0]))
+	require.NoError(t, service.NewSlot(ctx, 1))
 }
