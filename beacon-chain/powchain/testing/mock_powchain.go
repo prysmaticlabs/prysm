@@ -179,11 +179,6 @@ func (m *POWChain) InsertBlock(height int, time uint64, hash []byte) *POWChain {
 	return m
 }
 
-// BlockExistsWithCache --
-func (m *POWChain) BlockExistsWithCache(ctx context.Context, hash common.Hash) (bool, *big.Int, error) {
-	return m.BlockExists(ctx, hash)
-}
-
 func SetupRPCServer() (*rpc.Server, string, error) {
 	srv := rpc.NewServer()
 	if err := srv.RegisterName("eth", &testETHRPC{}); err != nil {
