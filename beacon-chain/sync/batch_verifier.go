@@ -88,7 +88,7 @@ func verifyBatch(verifierBatch []*signatureVerifier) {
 	for i := 1; i < len(verifierBatch); i++ {
 		aggSet = aggSet.Join(verifierBatch[i].set)
 	}
-	verificationErr := error(nil)
+	var verificationErr error
 
 	if features.Get().EnableBatchGossipAggregation {
 		num, currLen := 0, len(aggSet.Signatures)
