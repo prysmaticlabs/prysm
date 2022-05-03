@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	pmath "github.com/prysmaticlabs/prysm/math"
 	"go.opencensus.io/trace"
 )
@@ -15,6 +16,7 @@ func computeDeltas(
 	blockIndices map[[32]byte]uint64,
 	votes []Vote,
 	oldBalances, newBalances []uint64,
+	slashedIndices map[types.ValidatorIndex]bool,
 ) ([]int, []Vote, error) {
 	_, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.computeDeltas")
 	defer span.End()
@@ -22,6 +24,10 @@ func computeDeltas(
 	deltas := make([]int, len(blockIndices))
 
 	for validatorIndex, vote := range votes {
+		// Skip if validator has been slashed
+		if slashedIndices[types.ValidatorIndex(validatorIndex)] {
+			continue
+		}
 		oldBalance := uint64(0)
 		newBalance := uint64(0)
 
