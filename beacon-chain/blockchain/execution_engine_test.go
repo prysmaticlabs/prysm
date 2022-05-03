@@ -56,10 +56,12 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 	}
 	require.NoError(t, err)
 	require.NoError(t, fcs.InsertOptimisticBlock(ctx, 0, [32]byte{}, [32]byte{}, params.BeaconConfig().ZeroHash, 0, 0))
+	require.NoError(t, fcs.InsertOptimisticBlock(ctx, 1, [32]byte{'a'}, [32]byte{}, params.BeaconConfig().ZeroHash, 0, 0))
 
 	tests := []struct {
 		name             string
 		blk              interfaces.BeaconBlock
+		headRoot         [32]byte
 		finalizedRoot    [32]byte
 		newForkchoiceErr error
 		errString        string
@@ -158,7 +160,8 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 			}(),
 			newForkchoiceErr: powchain.ErrInvalidPayloadStatus,
 			finalizedRoot:    bellatrixBlkRoot,
-			errString:        ErrUndefinedExecutionEngineError.Error(),
+			headRoot:         [32]byte{'a'},
+			errString:        ErrInvalidPayload.Error(),
 		},
 	}
 
@@ -166,7 +169,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			service.cfg.ExecutionEngineCaller = &mockPOW.EngineClient{ErrForkchoiceUpdated: tt.newForkchoiceErr}
 			st, _ := util.DeterministicGenesisState(t, 1)
-			_, err := service.notifyForkchoiceUpdate(ctx, st, tt.blk, service.headRoot(), tt.finalizedRoot)
+			_, err := service.notifyForkchoiceUpdate(ctx, st, tt.blk, tt.headRoot, tt.finalizedRoot)
 			if tt.errString != "" {
 				require.ErrorContains(t, tt.errString, err)
 			} else {
@@ -262,7 +265,7 @@ func Test_NotifyNewPayload(t *testing.T) {
 			postState:      bellatrixState,
 			blk:            bellatrixBlk,
 			newPayloadErr:  powchain.ErrInvalidPayloadStatus,
-			errString:      "could not validate an INVALID payload from execution engine",
+			errString:      ErrInvalidPayload.Error(),
 			isValidPayload: false,
 		},
 		{
