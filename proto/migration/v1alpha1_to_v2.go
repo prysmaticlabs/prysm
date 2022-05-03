@@ -257,10 +257,7 @@ func BeaconStateAltairToProto(altairState state.BeaconStateAltair) (*ethpbv2.Bea
 	sourceEth1Data := altairState.Eth1Data()
 	sourceEth1DataVotes := altairState.Eth1DataVotes()
 	sourceValidators := altairState.Validators()
-	sourceJustificationBits, err := altairState.JustificationBits()
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not get justification bits from state")
-	}
+	sourceJustificationBits := altairState.JustificationBits()
 	sourcePrevJustifiedCheckpoint := altairState.PreviousJustifiedCheckpoint()
 	sourceCurrJustifiedCheckpoint := altairState.CurrentJustifiedCheckpoint()
 	sourceFinalizedCheckpoint := altairState.FinalizedCheckpoint()
@@ -374,10 +371,7 @@ func BeaconStateBellatrixToProto(st state.BeaconStateBellatrix) (*ethpbv2.Beacon
 	sourceEth1Data := st.Eth1Data()
 	sourceEth1DataVotes := st.Eth1DataVotes()
 	sourceValidators := st.Validators()
-	sourceJustificationBits, err := st.JustificationBits()
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not get justification bits from state")
-	}
+	sourceJustificationBits := st.JustificationBits()
 	sourcePrevJustifiedCheckpoint := st.PreviousJustifiedCheckpoint()
 	sourceCurrJustifiedCheckpoint := st.CurrentJustifiedCheckpoint()
 	sourceFinalizedCheckpoint := st.FinalizedCheckpoint()

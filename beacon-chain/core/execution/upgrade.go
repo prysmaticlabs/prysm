@@ -31,10 +31,6 @@ func UpgradeToBellatrix(ctx context.Context, state state.BeaconState) (state.Bea
 	if err != nil {
 		return nil, err
 	}
-	justificationBits, err := state.JustificationBits()
-	if err != nil {
-		return nil, err
-	}
 	inactivityScores, err := state.InactivityScores()
 	if err != nil {
 		return nil, err
@@ -62,7 +58,7 @@ func UpgradeToBellatrix(ctx context.Context, state state.BeaconState) (state.Bea
 		Slashings:                   state.Slashings(),
 		PreviousEpochParticipation:  prevEpochParticipation,
 		CurrentEpochParticipation:   currentEpochParticipation,
-		JustificationBits:           justificationBits,
+		JustificationBits:           state.JustificationBits(),
 		PreviousJustifiedCheckpoint: state.PreviousJustifiedCheckpoint(),
 		CurrentJustifiedCheckpoint:  state.CurrentJustifiedCheckpoint(),
 		FinalizedCheckpoint:         state.FinalizedCheckpoint(),

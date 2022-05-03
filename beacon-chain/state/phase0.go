@@ -116,7 +116,7 @@ type ReadOnlyCheckpoint interface {
 	MatchPreviousJustifiedCheckpoint(c *ethpb.Checkpoint) bool
 	FinalizedCheckpoint() *ethpb.Checkpoint
 	FinalizedCheckpointEpoch() types.Epoch
-	JustificationBits() (bitfield.Bitvector4, error)
+	JustificationBits() bitfield.Bitvector4
 }
 
 // ReadOnlyBlockRoots defines a struct which only has read access to block roots methods.

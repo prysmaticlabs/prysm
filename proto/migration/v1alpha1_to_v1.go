@@ -367,10 +367,7 @@ func BeaconStateToProto(state state.BeaconState) (*ethpbv1.BeaconState, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not get current epoch attestations from state")
 	}
-	sourceJustificationBits, err := state.JustificationBits()
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not get justification bits from state")
-	}
+	sourceJustificationBits := state.JustificationBits()
 	sourcePrevJustifiedCheckpoint := state.PreviousJustifiedCheckpoint()
 	sourceCurrJustifiedCheckpoint := state.CurrentJustifiedCheckpoint()
 	sourceFinalizedCheckpoint := state.FinalizedCheckpoint()

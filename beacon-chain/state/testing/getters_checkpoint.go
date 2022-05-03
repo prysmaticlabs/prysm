@@ -14,10 +14,7 @@ import (
 func VerifyBeaconStateJustificationBitsNil(t *testing.T, factory getState) {
 	s, err := factory()
 	require.NoError(t, err)
-
-	bits, err := s.JustificationBits()
-	require.NoError(t, err)
-	require.DeepEqual(t, bitfield.Bitvector4{}.Bytes(), bits.Bytes())
+	require.DeepEqual(t, bitfield.Bitvector4{}.Bytes(), s.JustificationBits().Bytes())
 }
 
 type getStateWithJustificationBits = func(bitfield.Bitvector4) (state.BeaconState, error)
@@ -25,10 +22,7 @@ type getStateWithJustificationBits = func(bitfield.Bitvector4) (state.BeaconStat
 func VerifyBeaconStateJustificationBits(t *testing.T, factory getStateWithJustificationBits) {
 	s, err := factory(bitfield.Bitvector4{1, 2, 3, 4})
 	require.NoError(t, err)
-
-	bits, err := s.JustificationBits()
-	require.NoError(t, err)
-	require.DeepEqual(t, bitfield.Bitvector4{1, 2, 3, 4}.Bytes(), bits.Bytes())
+	require.DeepEqual(t, bitfield.Bitvector4{1, 2, 3, 4}.Bytes(), s.JustificationBits().Bytes())
 }
 
 func VerifyBeaconStatePreviousJustifiedCheckpointNil(t *testing.T, factory getState) {
