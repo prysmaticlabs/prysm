@@ -130,7 +130,7 @@ func (s *Service) getFinalizedPayloadHash(ctx context.Context, finalizedRoot [32
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not get finalized block")
 	}
-	if b != nil {
+	if b != nil && !b.IsNil() {
 		return getPayloadHash(b.Block())
 	}
 
@@ -138,7 +138,7 @@ func (s *Service) getFinalizedPayloadHash(ctx context.Context, finalizedRoot [32
 	if err != nil {
 		return [32]byte{}, errors.Wrapf(err, "failed to retrieve block %#x", finalizedRoot)
 	}
-	if b != nil {
+	if b != nil && !b.IsNil() {
 		return getPayloadHash(b.Block())
 	}
 
@@ -150,7 +150,7 @@ func (s *Service) getFinalizedPayloadHash(ctx context.Context, finalizedRoot [32
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not get finalized block")
 	}
-	if b != nil {
+	if b != nil && !b.IsNil() {
 		return getPayloadHash(b.Block())
 	}
 
@@ -159,7 +159,7 @@ func (s *Service) getFinalizedPayloadHash(ctx context.Context, finalizedRoot [32
 
 // getPayloadHash returns the payload hash for the input given block.
 // zeros are returned if the block is older than bellatrix.
-func getPayloadHash(b block.BeaconBlock) ([32]byte, error) {
+func getPayloadHash(b interfaces.BeaconBlock) ([32]byte, error) {
 	if blocks.IsPreBellatrixVersion(b.Version()) {
 		return params.BeaconConfig().ZeroHash, nil
 	}
