@@ -755,11 +755,11 @@ func (f *ForkChoice) InsertSlashedIndex(ctx context.Context, index types.Validat
 	f.votesLock.RLock()
 	defer f.votesLock.RUnlock()
 
-	if index > types.ValidatorIndex(len(f.balances)) {
+	if index >= types.ValidatorIndex(len(f.balances)) {
 		return
 	}
 
-	if index > types.ValidatorIndex(len(f.votes)) {
+	if index >= types.ValidatorIndex(len(f.votes)) {
 		return
 	}
 
