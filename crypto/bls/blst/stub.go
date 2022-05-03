@@ -125,7 +125,7 @@ func AggregateSignatures(_ []common.Signature) common.Signature {
 }
 
 // AggregateMultiplePubkeys -- stub
-func AggregateMultiplePubkeys(pubs []PublicKey) PublicKey {
+func AggregateMultiplePubkeys(pubs []common.PublicKey) common.PublicKey {
 	panic(err)
 }
 
