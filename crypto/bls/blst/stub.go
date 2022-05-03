@@ -57,7 +57,7 @@ func (p PublicKey) IsInfinite() bool {
 }
 
 // Equals -- stub
-func (p PublicKey) Equals() bool {
+func (p PublicKey) Equals(_ common.PublicKey) bool {
 	panic(err)
 }
 
