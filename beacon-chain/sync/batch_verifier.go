@@ -6,6 +6,7 @@ import (
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	"go.opencensus.io/trace"
@@ -62,7 +63,7 @@ func (s *Service) validateWithBatchVerifier(ctx context.Context, message string,
 	// If verification fails we fallback to individual verification
 	// of each signature set.
 	if resErr != nil {
-		log.WithError(resErr).Debugf("Could not perform batch verification of %s", message)
+		log.WithError(resErr).Tracef("Could not perform batch verification of %s", message)
 		verified, err := set.Verify()
 		if err != nil {
 			verErr := errors.Wrapf(err, "Could not verify %s", message)
@@ -87,13 +88,18 @@ func verifyBatch(verifierBatch []*signatureVerifier) {
 	for i := 1; i < len(verifierBatch); i++ {
 		aggSet = aggSet.Join(verifierBatch[i].set)
 	}
+	verificationErr := error(nil)
 
-	totalLength := len(aggSet.Signatures)
-	num := 0
-	num, aggSet = aggSet.RemoveDuplicates()
-	aggSet, verificationErr := aggSet.AggregateBatch()
-	if num != 0 {
-		log.Infof("Removed %d duplicates from a set of size %d. Current size %d", num, totalLength, len(aggSet.Signatures))
+	if features.Get().EnableBatchGossipAggregation {
+		num, currLen := 0, len(aggSet.Signatures)
+		num, aggSet = aggSet.RemoveDuplicates()
+		duplicatesRemovedCounter.Add(float64(num))
+		// Aggregate batches in the provided signature batch.
+		aggSet, verificationErr = aggSet.AggregateBatch()
+		// Record number of signature sets successfully batched.
+		if verificationErr == nil && currLen > len(aggSet.Signatures) {
+			numberOfSetsAggregated.Add(float64(currLen - len(aggSet.Signatures)))
+		}
 	}
 	if verificationErr == nil {
 		verified, err := aggSet.Verify()

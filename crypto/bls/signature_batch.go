@@ -55,6 +55,7 @@ func (s *SignatureBatch) Copy() *SignatureBatch {
 	}
 }
 
+// RemoveDuplicates removes duplicate signature sets from the signature batch.
 func (s *SignatureBatch) RemoveDuplicates() (int, *SignatureBatch) {
 	if len(s.Signatures) == 0 || len(s.PublicKeys) == 0 || len(s.Messages) == 0 {
 		return 0, s
@@ -93,6 +94,9 @@ func (s *SignatureBatch) RemoveDuplicates() (int, *SignatureBatch) {
 	return len(duplicateSet), s
 }
 
+// AggregateBatch aggregates common messages in the provided batch to
+// reduce the number of pairings required when we finally verify the
+// whole batch.
 func (s *SignatureBatch) AggregateBatch() (*SignatureBatch, error) {
 	if len(s.Signatures) == 0 || len(s.PublicKeys) == 0 || len(s.Messages) == 0 {
 		return s, nil

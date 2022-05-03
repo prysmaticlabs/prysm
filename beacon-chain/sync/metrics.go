@@ -62,6 +62,18 @@ var (
 			Help: "Count the number of times a node resyncs.",
 		},
 	)
+	duplicatesRemovedCounter = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "number_of_duplicates_removed",
+			Help: "Count the number of times a duplicate signature set has been removed.",
+		},
+	)
+	numberOfSetsAggregated = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "number_of_sets_aggregated",
+			Help: "Count the number of times different sets have been successfully aggregated in a batch.",
+		},
+	)
 
 	arrivalBlockPropagationHistogram = promauto.NewHistogram(
 		prometheus.HistogramOpts{

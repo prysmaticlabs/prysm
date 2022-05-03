@@ -47,6 +47,7 @@ func SignatureFromBytes(sig []byte) (common.Signature, error) {
 	return &Signature{s: signature}, nil
 }
 
+// AggregateCompressedSignatures converts a list of compressed signatures into a single, aggregated sig.
 func AggregateCompressedSignatures(multiSigs [][]byte) (common.Signature, error) {
 	signature := new(blstAggregateSignature)
 	valid := signature.AggregateCompressed(multiSigs, true)

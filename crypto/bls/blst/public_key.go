@@ -114,6 +114,7 @@ func (p *PublicKey) Aggregate(p2 common.PublicKey) common.PublicKey {
 	return p
 }
 
+// AggregateMultiplePubkeys aggregates the provided decompressed keys into a single key.
 func AggregateMultiplePubkeys(pubkeys []common.PublicKey) common.PublicKey {
 	if features.Get().SkipBLSVerify {
 		return &PublicKey{}
