@@ -165,7 +165,7 @@ func (w Phase0BeaconBlock) StateRoot() []byte {
 
 // Body returns the underlying block body.
 func (w Phase0BeaconBlock) Body() interfaces.BeaconBlockBody {
-	return WrappedPhase0BeaconBlockBody(w.b.Body)
+	return wrappedPhase0BeaconBlockBody(w.b.Body)
 }
 
 // IsNil checks if the beacon block is nil.
@@ -234,9 +234,9 @@ type Phase0BeaconBlockBody struct {
 	b *eth.BeaconBlockBody
 }
 
-// WrappedPhase0BeaconBlockBody is constructor which wraps a protobuf phase 0 object
+// wrappedPhase0BeaconBlockBody is constructor which wraps a protobuf phase 0 object
 // with the block wrapper.
-func WrappedPhase0BeaconBlockBody(b *eth.BeaconBlockBody) interfaces.BeaconBlockBody {
+func wrappedPhase0BeaconBlockBody(b *eth.BeaconBlockBody) interfaces.BeaconBlockBody {
 	return Phase0BeaconBlockBody{b: b}
 }
 

@@ -204,7 +204,7 @@ func TestAltairBeaconBlock_Version(t *testing.T) {
 
 func TestAltairBeaconBlockBody_RandaoReveal(t *testing.T) {
 	root := []byte{0xAA, 0xBF, 0x33, 0x01}
-	wbb, err := wrapper.WrappedAltairBeaconBlockBody(&ethpb.BeaconBlockBodyAltair{RandaoReveal: root})
+	wbb, err := wrapper.WrappedBeaconBlockBody(&ethpb.BeaconBlockBodyAltair{RandaoReveal: root})
 	require.NoError(t, err)
 
 	assert.DeepEqual(t, root, wbb.RandaoReveal())
@@ -215,7 +215,7 @@ func TestAltairBeaconBlockBody_Eth1Data(t *testing.T) {
 	body := &ethpb.BeaconBlockBodyAltair{
 		Eth1Data: data,
 	}
-	wbb, err := wrapper.WrappedAltairBeaconBlockBody(body)
+	wbb, err := wrapper.WrappedBeaconBlockBody(body)
 	require.NoError(t, err)
 	assert.Equal(t, data, wbb.Eth1Data())
 }
@@ -223,7 +223,7 @@ func TestAltairBeaconBlockBody_Eth1Data(t *testing.T) {
 func TestAltairBeaconBlockBody_Graffiti(t *testing.T) {
 	graffiti := []byte{0x66, 0xAA}
 	body := &ethpb.BeaconBlockBodyAltair{Graffiti: graffiti}
-	wbb, err := wrapper.WrappedAltairBeaconBlockBody(body)
+	wbb, err := wrapper.WrappedBeaconBlockBody(body)
 	require.NoError(t, err)
 
 	assert.DeepEqual(t, graffiti, wbb.Graffiti())
@@ -236,7 +236,7 @@ func TestAltairBeaconBlockBody_ProposerSlashings(t *testing.T) {
 		}},
 	}
 	body := &ethpb.BeaconBlockBodyAltair{ProposerSlashings: ps}
-	wbb, err := wrapper.WrappedAltairBeaconBlockBody(body)
+	wbb, err := wrapper.WrappedBeaconBlockBody(body)
 	require.NoError(t, err)
 
 	assert.DeepEqual(t, ps, wbb.ProposerSlashings())
@@ -247,7 +247,7 @@ func TestAltairBeaconBlockBody_AttesterSlashings(t *testing.T) {
 		{Attestation_1: &ethpb.IndexedAttestation{Signature: []byte{0x11}}},
 	}
 	body := &ethpb.BeaconBlockBodyAltair{AttesterSlashings: as}
-	wbb, err := wrapper.WrappedAltairBeaconBlockBody(body)
+	wbb, err := wrapper.WrappedBeaconBlockBody(body)
 	require.NoError(t, err)
 
 	assert.DeepEqual(t, as, wbb.AttesterSlashings())
@@ -257,7 +257,7 @@ func TestAltairBeaconBlockBody_Attestations(t *testing.T) {
 	atts := []*ethpb.Attestation{{Signature: []byte{0x88}}}
 
 	body := &ethpb.BeaconBlockBodyAltair{Attestations: atts}
-	wbb, err := wrapper.WrappedAltairBeaconBlockBody(body)
+	wbb, err := wrapper.WrappedBeaconBlockBody(body)
 	require.NoError(t, err)
 
 	assert.DeepEqual(t, atts, wbb.Attestations())
@@ -268,7 +268,7 @@ func TestAltairBeaconBlockBody_Deposits(t *testing.T) {
 		{Proof: [][]byte{{0x54, 0x10}}},
 	}
 	body := &ethpb.BeaconBlockBodyAltair{Deposits: deposits}
-	wbb, err := wrapper.WrappedAltairBeaconBlockBody(body)
+	wbb, err := wrapper.WrappedBeaconBlockBody(body)
 	require.NoError(t, err)
 
 	assert.DeepEqual(t, deposits, wbb.Deposits())
@@ -279,24 +279,24 @@ func TestAltairBeaconBlockBody_VoluntaryExits(t *testing.T) {
 		{Exit: &ethpb.VoluntaryExit{Epoch: 54}},
 	}
 	body := &ethpb.BeaconBlockBodyAltair{VoluntaryExits: exits}
-	wbb, err := wrapper.WrappedAltairBeaconBlockBody(body)
+	wbb, err := wrapper.WrappedBeaconBlockBody(body)
 	require.NoError(t, err)
 
 	assert.DeepEqual(t, exits, wbb.VoluntaryExits())
 }
 
 func TestAltairBeaconBlockBody_IsNil(t *testing.T) {
-	_, err := wrapper.WrappedAltairBeaconBlockBody(nil)
+	_, err := wrapper.WrappedBeaconBlockBody(nil)
 	require.Equal(t, wrapper.ErrNilObjectWrapped, err)
 
-	wbb, err := wrapper.WrappedAltairBeaconBlockBody(&ethpb.BeaconBlockBodyAltair{})
+	wbb, err := wrapper.WrappedBeaconBlockBody(&ethpb.BeaconBlockBodyAltair{})
 	require.NoError(t, err)
 	assert.Equal(t, false, wbb.IsNil())
 
 }
 
 func TestAltairBeaconBlockBody_HashTreeRoot(t *testing.T) {
-	wb, err := wrapper.WrappedAltairBeaconBlockBody(util.HydrateBeaconBlockBodyAltair(&ethpb.BeaconBlockBodyAltair{}))
+	wb, err := wrapper.WrappedBeaconBlockBody(util.HydrateBeaconBlockBodyAltair(&ethpb.BeaconBlockBodyAltair{}))
 	assert.NoError(t, err)
 
 	rt, err := wb.HashTreeRoot()
@@ -306,7 +306,7 @@ func TestAltairBeaconBlockBody_HashTreeRoot(t *testing.T) {
 
 func TestAltairBeaconBlockBody_Proto(t *testing.T) {
 	body := &ethpb.BeaconBlockBodyAltair{Graffiti: []byte{0x66, 0xAA}}
-	wbb, err := wrapper.WrappedAltairBeaconBlockBody(body)
+	wbb, err := wrapper.WrappedBeaconBlockBody(body)
 	require.NoError(t, err)
 
 	assert.Equal(t, body, wbb.Proto())

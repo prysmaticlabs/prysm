@@ -236,7 +236,7 @@ func TestBellatrixBeaconBlock_Version(t *testing.T) {
 
 func TestBellatrixBeaconBlockBody_RandaoReveal(t *testing.T) {
 	root := []byte{0xAA, 0xBF, 0x33, 0x01}
-	wbb, err := wrapper.WrappedBellatrixBeaconBlockBody(&ethpb.BeaconBlockBodyBellatrix{RandaoReveal: root})
+	wbb, err := wrapper.WrappedBeaconBlockBody(&ethpb.BeaconBlockBodyBellatrix{RandaoReveal: root})
 	require.NoError(t, err)
 
 	assert.DeepEqual(t, root, wbb.RandaoReveal())
@@ -247,7 +247,7 @@ func TestBellatrixBeaconBlockBody_Eth1Data(t *testing.T) {
 	body := &ethpb.BeaconBlockBodyBellatrix{
 		Eth1Data: data,
 	}
-	wbb, err := wrapper.WrappedBellatrixBeaconBlockBody(body)
+	wbb, err := wrapper.WrappedBeaconBlockBody(body)
 	require.NoError(t, err)
 	assert.Equal(t, data, wbb.Eth1Data())
 }
@@ -255,7 +255,7 @@ func TestBellatrixBeaconBlockBody_Eth1Data(t *testing.T) {
 func TestBellatrixBeaconBlockBody_Graffiti(t *testing.T) {
 	graffiti := []byte{0x66, 0xAA}
 	body := &ethpb.BeaconBlockBodyBellatrix{Graffiti: graffiti}
-	wbb, err := wrapper.WrappedBellatrixBeaconBlockBody(body)
+	wbb, err := wrapper.WrappedBeaconBlockBody(body)
 	require.NoError(t, err)
 
 	assert.DeepEqual(t, graffiti, wbb.Graffiti())
@@ -268,7 +268,7 @@ func TestBellatrixBeaconBlockBody_ProposerSlashings(t *testing.T) {
 		}},
 	}
 	body := &ethpb.BeaconBlockBodyBellatrix{ProposerSlashings: ps}
-	wbb, err := wrapper.WrappedBellatrixBeaconBlockBody(body)
+	wbb, err := wrapper.WrappedBeaconBlockBody(body)
 	require.NoError(t, err)
 
 	assert.DeepEqual(t, ps, wbb.ProposerSlashings())
@@ -279,7 +279,7 @@ func TestBellatrixBeaconBlockBody_AttesterSlashings(t *testing.T) {
 		{Attestation_1: &ethpb.IndexedAttestation{Signature: []byte{0x11}}},
 	}
 	body := &ethpb.BeaconBlockBodyBellatrix{AttesterSlashings: as}
-	wbb, err := wrapper.WrappedBellatrixBeaconBlockBody(body)
+	wbb, err := wrapper.WrappedBeaconBlockBody(body)
 	require.NoError(t, err)
 
 	assert.DeepEqual(t, as, wbb.AttesterSlashings())
@@ -289,7 +289,7 @@ func TestBellatrixBeaconBlockBody_Attestations(t *testing.T) {
 	atts := []*ethpb.Attestation{{Signature: []byte{0x88}}}
 
 	body := &ethpb.BeaconBlockBodyBellatrix{Attestations: atts}
-	wbb, err := wrapper.WrappedBellatrixBeaconBlockBody(body)
+	wbb, err := wrapper.WrappedBeaconBlockBody(body)
 	require.NoError(t, err)
 
 	assert.DeepEqual(t, atts, wbb.Attestations())
@@ -300,7 +300,7 @@ func TestBellatrixBeaconBlockBody_Deposits(t *testing.T) {
 		{Proof: [][]byte{{0x54, 0x10}}},
 	}
 	body := &ethpb.BeaconBlockBodyBellatrix{Deposits: deposits}
-	wbb, err := wrapper.WrappedBellatrixBeaconBlockBody(body)
+	wbb, err := wrapper.WrappedBeaconBlockBody(body)
 	require.NoError(t, err)
 
 	assert.DeepEqual(t, deposits, wbb.Deposits())
@@ -311,24 +311,24 @@ func TestBellatrixBeaconBlockBody_VoluntaryExits(t *testing.T) {
 		{Exit: &ethpb.VoluntaryExit{Epoch: 54}},
 	}
 	body := &ethpb.BeaconBlockBodyBellatrix{VoluntaryExits: exits}
-	wbb, err := wrapper.WrappedBellatrixBeaconBlockBody(body)
+	wbb, err := wrapper.WrappedBeaconBlockBody(body)
 	require.NoError(t, err)
 
 	assert.DeepEqual(t, exits, wbb.VoluntaryExits())
 }
 
 func TestBellatrixBeaconBlockBody_IsNil(t *testing.T) {
-	_, err := wrapper.WrappedBellatrixBeaconBlockBody(nil)
+	_, err := wrapper.WrappedBeaconBlockBody(nil)
 	require.Equal(t, wrapper.ErrNilObjectWrapped, err)
 
-	wbb, err := wrapper.WrappedBellatrixBeaconBlockBody(&ethpb.BeaconBlockBodyBellatrix{})
+	wbb, err := wrapper.WrappedBeaconBlockBody(&ethpb.BeaconBlockBodyBellatrix{})
 	require.NoError(t, err)
 	assert.Equal(t, false, wbb.IsNil())
 
 }
 
 func TestBellatrixBeaconBlockBody_HashTreeRoot(t *testing.T) {
-	wb, err := wrapper.WrappedBellatrixBeaconBlockBody(util.HydrateBeaconBlockBodyBellatrix(&ethpb.BeaconBlockBodyBellatrix{}))
+	wb, err := wrapper.WrappedBeaconBlockBody(util.HydrateBeaconBlockBodyBellatrix(&ethpb.BeaconBlockBodyBellatrix{}))
 	assert.NoError(t, err)
 
 	rt, err := wb.HashTreeRoot()
@@ -338,7 +338,7 @@ func TestBellatrixBeaconBlockBody_HashTreeRoot(t *testing.T) {
 
 func TestBellatrixBeaconBlockBody_Proto(t *testing.T) {
 	body := &ethpb.BeaconBlockBodyBellatrix{Graffiti: []byte{0x66, 0xAA}}
-	wbb, err := wrapper.WrappedBellatrixBeaconBlockBody(body)
+	wbb, err := wrapper.WrappedBeaconBlockBody(body)
 	require.NoError(t, err)
 
 	assert.Equal(t, body, wbb.Proto())
@@ -349,7 +349,7 @@ func TestBellatrixBeaconBlockBody_ExecutionPayload(t *testing.T) {
 		BlockNumber: 100,
 	}
 	body := &ethpb.BeaconBlockBodyBellatrix{ExecutionPayload: payloads}
-	wbb, err := wrapper.WrappedBellatrixBeaconBlockBody(body)
+	wbb, err := wrapper.WrappedBeaconBlockBody(body)
 	require.NoError(t, err)
 
 	got, err := wbb.ExecutionPayload()
