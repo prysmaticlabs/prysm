@@ -84,7 +84,11 @@ func Run(t *testing.T, config string, fork int) {
 						default:
 							t.Fatalf("unknown fork version: %v", fork)
 						}
-						builder.Block(t, beaconBlock, step.Valid != nil && !*step.Valid)
+						if step.Valid != nil && !*step.Valid {
+							builder.InvalidBlock(t, beaconBlock)
+						} else {
+							builder.ValidBlock(t, beaconBlock)
+						}
 					}
 					if step.Attestation != nil {
 						attFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), fmt.Sprint(*step.Attestation, ".ssz_snappy"))

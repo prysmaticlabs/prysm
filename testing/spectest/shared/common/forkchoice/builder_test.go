@@ -20,13 +20,13 @@ func TestBuilderTick(t *testing.T) {
 	require.Equal(t, int64(10), builder.lastTick)
 }
 
-func TestBuilderBlock(t *testing.T) {
+func TestBuilderInvalidBlock(t *testing.T) {
 	st, err := util.NewBeaconState()
 	require.NoError(t, err)
 	blk, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
 	require.NoError(t, err)
 	builder := NewBuilder(t, st, blk)
-	builder.Block(t, blk, true /*invalid*/)
+	builder.InvalidBlock(t, blk)
 }
 
 func TestPoWBlock(t *testing.T) {

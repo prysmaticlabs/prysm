@@ -19,25 +19,25 @@ import (
 	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
-type builder struct {
+type Builder struct {
 	service  *blockchain.Service
 	lastTick int64
 	execMock *engineMock
 }
 
-func NewBuilder(t testing.TB, initialState state.BeaconState, initialBlock interfaces.SignedBeaconBlock) *builder {
+func NewBuilder(t testing.TB, initialState state.BeaconState, initialBlock interfaces.SignedBeaconBlock) *Builder {
 	execMock := &engineMock{
 		powBlocks: make(map[[32]byte]*ethpb.PowBlock),
 	}
 	service := startChainService(t, initialState, initialBlock, execMock)
-	return &builder{
+	return &Builder{
 		service:  service,
 		execMock: execMock,
 	}
 }
 
 // Tick resets the genesis time to now()-tick and adjusts the slot to the appropriate value.
-func (bb *builder) Tick(t testing.TB, tick int64) {
+func (bb *Builder) Tick(t testing.TB, tick int64) {
 	bb.service.SetGenesisTime(time.Unix(time.Now().Unix()-tick, 0))
 	if tick > bb.lastTick {
 		slot := uint64(tick) / params.BeaconConfig().SecondsPerSlot
@@ -46,10 +46,9 @@ func (bb *builder) Tick(t testing.TB, tick int64) {
 	}
 }
 
-// Block receives the block and notifies forkchoice.
-func (bb *builder) Block(t testing.TB, b interfaces.SignedBeaconBlock, invalid bool) {
+// block provides the block to forkchoice proposer boost and returns the block root.
+func (bb *Builder) block(t testing.TB, b interfaces.SignedBeaconBlock) [32]byte {
 	ctx := context.TODO()
-
 	r, err := b.Block().HashTreeRoot()
 	require.NoError(t, err)
 	slotsSinceGenesis := slots.SinceGenesis(bb.service.GenesisTime())
@@ -60,25 +59,33 @@ func (bb *builder) Block(t testing.TB, b interfaces.SignedBeaconBlock, invalid b
 		SecondsIntoSlot: uint64(bb.lastTick) % params.BeaconConfig().SecondsPerSlot,
 	}
 	require.NoError(t, bb.service.ForkChoicer().BoostProposerRoot(ctx, args))
-	if invalid {
-		require.Equal(t, true, bb.service.ReceiveBlock(ctx, b, r) != nil)
-	} else {
-		require.NoError(t, bb.service.ReceiveBlock(ctx, b, r))
-	}
+	return r
+}
+
+// InvalidBlock receives the invalid block and notifies forkchoice.
+func (bb *Builder) InvalidBlock(t testing.TB, b interfaces.SignedBeaconBlock) {
+	r := bb.block(t, b)
+	require.Equal(t, true, bb.service.ReceiveBlock(context.TODO(), b, r) != nil)
+}
+
+// ValidBlock receives the valid block and notifies forkchoice.
+func (bb *Builder) ValidBlock(t testing.TB, b interfaces.SignedBeaconBlock) {
+	r := bb.block(t, b)
+	require.NoError(t, bb.service.ReceiveBlock(context.TODO(), b, r))
 }
 
 // PoWBlock receives the block and notifies a mocked execution engine.
-func (bb *builder) PoWBlock(t testing.TB, pb *ethpb.PowBlock) {
+func (bb *Builder) PoWBlock(t testing.TB, pb *ethpb.PowBlock) {
 	bb.execMock.powBlocks[bytesutil.ToBytes32(pb.BlockHash)] = pb
 }
 
 // Attestation receives the attestation and updates forkchoice.
-func (bb *builder) Attestation(t testing.TB, a *ethpb.Attestation) {
+func (bb *Builder) Attestation(t testing.TB, a *ethpb.Attestation) {
 	require.NoError(t, bb.service.OnAttestation(context.TODO(), a))
 }
 
 // Check evaluates the fork choice results and compares them to the expected values.
-func (bb *builder) Check(t testing.TB, c *Check) {
+func (bb *Builder) Check(t testing.TB, c *Check) {
 	if c == nil {
 		return
 	}
