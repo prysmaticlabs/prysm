@@ -1,4 +1,4 @@
-package block
+package interfaces
 
 import (
 	ssz "github.com/ferranbt/fastssz"

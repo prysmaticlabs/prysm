@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -183,6 +184,44 @@ func TestForkChoice_AncestorLowerSlot(t *testing.T) {
 	require.NoError(t, err)
 	root := bytesutil.ToBytes32(r)
 	require.Equal(t, root, [32]byte{'1'})
+}
+
+func TestForkChoice_RemoveEquivocating(t *testing.T) {
+	ctx := context.Background()
+	f := setup(1, 1)
+	// Insert a block it will be head
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 1, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 1, 1))
+	head, err := f.Head(ctx, 1, params.BeaconConfig().ZeroHash, []uint64{}, 1)
+	require.NoError(t, err)
+	require.Equal(t, [32]byte{'a'}, head)
+
+	// Insert two extra blocks
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 2, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'B'}, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 3, [32]byte{'c'}, [32]byte{'a'}, [32]byte{'C'}, 1, 1))
+	head, err = f.Head(ctx, 1, params.BeaconConfig().ZeroHash, []uint64{}, 1)
+	require.NoError(t, err)
+	require.Equal(t, [32]byte{'c'}, head)
+
+	// Insert two attestations for block b, one for c it becomes head
+	f.ProcessAttestation(ctx, []uint64{1, 2}, [32]byte{'b'}, 1)
+	f.ProcessAttestation(ctx, []uint64{3}, [32]byte{'c'}, 1)
+	head, err = f.Head(ctx, 1, params.BeaconConfig().ZeroHash, []uint64{100, 200, 200, 300}, 1)
+	require.NoError(t, err)
+	require.Equal(t, [32]byte{'b'}, head)
+
+	// Process b's slashing, c is now head
+	f.InsertSlashedIndex(ctx, 1)
+	require.Equal(t, uint64(200), f.store.nodeByRoot[[32]byte{'b'}].balance)
+	head, err = f.Head(ctx, 1, params.BeaconConfig().ZeroHash, []uint64{100, 200, 200, 300}, 1)
+	require.Equal(t, uint64(200), f.store.nodeByRoot[[32]byte{'b'}].weight)
+	require.Equal(t, uint64(300), f.store.nodeByRoot[[32]byte{'c'}].weight)
+	require.NoError(t, err)
+	require.Equal(t, [32]byte{'c'}, head)
+
+	// Process index where index == vote length. Should not panic.
+	f.InsertSlashedIndex(ctx, types.ValidatorIndex(len(f.balances)))
+	f.InsertSlashedIndex(ctx, types.ValidatorIndex(len(f.votes)))
+	require.Equal(t, true, len(f.store.slashedIndices) > 0)
 }
 
 func indexToHash(i uint64) [32]byte {
