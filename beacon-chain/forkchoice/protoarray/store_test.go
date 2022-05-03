@@ -801,4 +801,9 @@ func TestStore_RemoveEquivocating(t *testing.T) {
 	head, err = f.Head(ctx, 1, params.BeaconConfig().ZeroHash, []uint64{100, 200}, 1)
 	require.NoError(t, err)
 	require.Equal(t, [32]byte{'c'}, head)
+
+	// Process index where index == vote length. Should not panic.
+	f.InsertSlashedIndex(ctx, types.ValidatorIndex(len(f.balances)))
+	f.InsertSlashedIndex(ctx, types.ValidatorIndex(len(f.votes)))
+	require.Equal(t, true, len(f.store.slashedIndices) > 0)
 }
