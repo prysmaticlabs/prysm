@@ -82,6 +82,8 @@ func WrappedBeaconBlock(i interface{}) (interfaces.BeaconBlock, error) {
 		return wrappedBellatrixBlindedBeaconBlock(b.BlindedBellatrix)
 	case *eth.BlindedBeaconBlockBellatrix:
 		return wrappedBellatrixBlindedBeaconBlock(b)
+	case nil:
+		return nil, ErrNilObjectWrapped
 	default:
 		return nil, errors.Wrapf(ErrUnsupportedBeaconBlock, "unable to wrap block of type %T", i)
 	}
@@ -99,6 +101,8 @@ func WrappedBeaconBlockBody(i interface{}) (interfaces.BeaconBlockBody, error) {
 		return wrappedBellatrixBeaconBlockBody(b)
 	case *eth.BlindedBeaconBlockBodyBellatrix:
 		return wrappedBellatrixBlindedBeaconBlockBody(b)
+	case nil:
+		return nil, ErrNilObjectWrapped
 	default:
 		return nil, errors.Wrapf(ErrUnsupportedBeaconBlockBody, "unable to wrap block body of type %T", i)
 	}
