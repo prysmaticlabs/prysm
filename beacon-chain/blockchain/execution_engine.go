@@ -24,7 +24,10 @@ import (
 	"go.opencensus.io/trace"
 )
 
-var ErrUndefinedExecutionEngineError = errors.New("received an undefined ee error")
+var (
+	ErrInvalidPayload                = errors.New("recevied an INVALID payload from execution engine")
+	ErrUndefinedExecutionEngineError = errors.New("received an undefined ee error")
+)
 
 // notifyForkchoiceUpdate signals execution engine the fork choice updates. Execution engine should:
 // 1. Re-organizes the execution payload chain and corresponding state to make head_block_hash the head.
@@ -75,7 +78,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headState state.Be
 		return nil, errors.Wrap(err, "could not get payload attribute")
 	}
 
-	payloadID, _, err := s.cfg.ExecutionEngineCaller.ForkchoiceUpdated(ctx, fcs, attr)
+	payloadID, lastValidHash, err := s.cfg.ExecutionEngineCaller.ForkchoiceUpdated(ctx, fcs, attr)
 	if err != nil {
 		switch err {
 		case powchain.ErrAcceptedSyncingPayloadStatus:
@@ -86,6 +89,20 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headState state.Be
 				"finalizedPayloadBlockHash": fmt.Sprintf("%#x", bytesutil.Trunc(finalizedHash)),
 			}).Info("Called fork choice updated with optimistic block")
 			return payloadID, s.optimisticCandidateBlock(ctx, headBlk)
+		case powchain.ErrInvalidPayloadStatus:
+			invalidRoots, err := s.ForkChoicer().SetOptimisticToInvalid(ctx, headRoot, bytesutil.ToBytes32(headBlk.ParentRoot()), bytesutil.ToBytes32(lastValidHash))
+			if err != nil {
+				return nil, err
+			}
+			if err := s.removeInvalidBlockAndState(ctx, invalidRoots); err != nil {
+				return nil, err
+			}
+			log.WithFields(logrus.Fields{
+				"slot":         headBlk.Slot(),
+				"blockRoot":    fmt.Sprintf("%#x", headRoot),
+				"invalidCount": len(invalidRoots),
+			}).Warn("Pruned invalid blocks")
+			return nil, ErrInvalidPayload
 		default:
 			return nil, errors.WithMessage(ErrUndefinedExecutionEngineError, err.Error())
 		}
@@ -154,7 +171,12 @@ func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
 		if err := s.removeInvalidBlockAndState(ctx, invalidRoots); err != nil {
 			return false, err
 		}
-		return false, errors.New("could not validate an INVALID payload from execution engine")
+		log.WithFields(logrus.Fields{
+			"slot":         blk.Block().Slot(),
+			"blockRoot":    fmt.Sprintf("%#x", root),
+			"invalidCount": len(invalidRoots),
+		}).Warn("Pruned invalid blocks")
+		return false, ErrInvalidPayload
 	default:
 		return false, errors.WithMessage(ErrUndefinedExecutionEngineError, err.Error())
 	}
