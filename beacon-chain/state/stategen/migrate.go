@@ -33,7 +33,7 @@ func (s *State) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 
 	// Start at previous finalized slot, stop at current finalized slot (it will be handled in the next migration).
 	// If the slot is on archived point, save the state of that slot to the DB.
-	for slot := oldFSlot; slot <= fSlot; slot++ {
+	for slot := oldFSlot; slot < fSlot; slot++ {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
