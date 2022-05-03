@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/api/grpc"
@@ -81,11 +80,7 @@ func (m *ApiProxyMiddleware) PrepareRequestForProxying(endpoint Endpoint, req *h
 // ProxyRequest proxies the request to grpc-gateway.
 func (m *ApiProxyMiddleware) ProxyRequest(req *http.Request) (*http.Response, ErrorJson) {
 	// We do not use http.DefaultClient because it does not have any timeout.
-	timeout := m.Timeout
-	if req.Header.Get("Content-Type") == "text/event-stream" {
-		timeout = time.Duration(0)
-	}
-	netClient := &http.Client{Timeout: timeout}
+	netClient := &http.Client{Timeout: m.Timeout}
 	grpcResp, err := netClient.Do(req)
 	if err != nil {
 		if err, ok := err.(net.Error); ok && err.Timeout() {
