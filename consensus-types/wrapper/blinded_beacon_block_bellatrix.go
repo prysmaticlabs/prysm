@@ -110,7 +110,7 @@ func (signedBlindedBeaconBlockBellatrix) PbAltairBlock() (*eth.SignedBeaconBlock
 
 // Version of the underlying protobuf object.
 func (signedBlindedBeaconBlockBellatrix) Version() int {
-	return version.Bellatrix
+	return version.BellatrixBlind
 }
 
 // Header converts the underlying protobuf object from blinded block to header format.
@@ -225,7 +225,7 @@ func (w blindedBeaconBlockBellatrix) Proto() proto.Message {
 
 // Version of the underlying protobuf object.
 func (blindedBeaconBlockBellatrix) Version() int {
-	return version.Bellatrix
+	return version.BellatrixBlind
 }
 
 // AsSignRequestObject returns the underlying sign request object.
