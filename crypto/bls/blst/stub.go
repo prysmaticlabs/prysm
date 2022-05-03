@@ -56,6 +56,11 @@ func (p PublicKey) IsInfinite() bool {
 	panic(err)
 }
 
+// Equals -- stub
+func (p PublicKey) Equals() bool {
+	panic(err)
+}
+
 // Signature -- stub
 type Signature struct{}
 
@@ -111,6 +116,16 @@ func AggregatePublicKeys(_ [][]byte) (PublicKey, error) {
 
 // AggregateSignatures -- stub
 func AggregateSignatures(_ []common.Signature) common.Signature {
+	panic(err)
+}
+
+// AggregateMultiplePubkeys -- stub
+func AggregateMultiplePubkeys(pubs []PublicKey) PublicKey {
+	panic(err)
+}
+
+// AggregateCompressedSignatures -- stub
+func AggregateCompressedSignatures(multiSigs [][]byte) (common.Signature, error) {
 	panic(err)
 }
 
