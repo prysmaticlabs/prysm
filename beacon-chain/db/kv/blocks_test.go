@@ -56,6 +56,17 @@ var blockTests = []struct {
 			return wrapper.WrappedSignedBeaconBlock(b)
 		},
 	},
+	{
+		name: "bellatrix blind",
+		newBlock: func(slot types.Slot, root []byte) (interfaces.SignedBeaconBlock, error) {
+			b := util.NewBlindedBeaconBlockBellatrix()
+			b.Block.Slot = slot
+			if root != nil {
+				b.Block.ParentRoot = root
+			}
+			return wrapper.WrappedSignedBeaconBlock(b)
+		},
+	},
 }
 
 func TestStore_SaveBackfillBlockRoot(t *testing.T) {

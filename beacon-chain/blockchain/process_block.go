@@ -209,20 +209,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 	if err != nil {
 		log.WithError(err).Warn("Could not update head")
 	}
-	headBlock, err := s.cfg.BeaconDB.Block(ctx, headRoot)
-	if err != nil {
-		return err
-	}
-	headState, err := s.cfg.StateGen.StateByRoot(ctx, headRoot)
-	if err != nil {
-		return err
-	}
-	if _, err := s.notifyForkchoiceUpdate(ctx, headState, headBlock.Block(), headRoot, bytesutil.ToBytes32(finalized.Root)); err != nil {
-		return err
-	}
-	if err := s.saveHead(ctx, headRoot, headBlock, headState); err != nil {
-		return errors.Wrap(err, "could not save head")
-	}
+	s.notifyEngineIfChangedHead(ctx, headRoot)
 
 	if err := s.pruneCanonicalAttsFromPool(ctx, blockRoot, signed); err != nil {
 		return err
