@@ -149,7 +149,7 @@ func TestBellatrixSignedBlindedBeaconBlock_Version(t *testing.T) {
 	wsb, err := wrapper.WrappedSignedBeaconBlock(&ethpb.SignedBlindedBeaconBlockBellatrix{Block: &ethpb.BlindedBeaconBlockBellatrix{}})
 	require.NoError(t, err)
 
-	assert.Equal(t, version.Bellatrix, wsb.Version())
+	assert.Equal(t, version.BellatrixBlind, wsb.Version())
 }
 
 func TestBellatrixBlindedBeaconBlock_Slot(t *testing.T) {
@@ -243,7 +243,7 @@ func TestBellatrixBlindedBeaconBlock_Version(t *testing.T) {
 	wb, err := wrapper.WrappedBeaconBlock(&ethpb.BlindedBeaconBlockBellatrix{})
 	require.NoError(t, err)
 
-	assert.Equal(t, version.Bellatrix, wb.Version())
+	assert.Equal(t, version.BellatrixBlind, wb.Version())
 }
 
 func TestBellatrixBlindedBeaconBlockBody_RandaoReveal(t *testing.T) {
