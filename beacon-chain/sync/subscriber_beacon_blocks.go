@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/interop"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
@@ -32,7 +33,7 @@ func (s *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) 
 	}
 
 	if err := s.cfg.chain.ReceiveBlock(ctx, signed, root); err != nil {
-		if !errors.Is(err, powchain.ErrHTTPTimeout) {
+		if !errors.Is(err, powchain.ErrHTTPTimeout) && !errors.Is(blockchain.ErrUndefinedExecutionEngineError, err) {
 			interop.WriteBlockToDisk(signed, true /*failed*/)
 			s.setBadBlock(ctx, root)
 		}
