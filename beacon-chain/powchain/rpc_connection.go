@@ -62,11 +62,17 @@ func (s *Service) pollConnectionStatus(ctx context.Context) {
 		select {
 		case <-ticker.C:
 			log.Debugf("Trying to dial endpoint: %s", logs.MaskCredentialsLogging(s.cfg.currHttpEndpoint.Url))
+			currClient := s.rpcClient
 			if err := s.setupExecutionClientConnections(ctx, s.cfg.currHttpEndpoint); err != nil {
 				errorLogger(err, "Could not connect to execution client endpoint")
 				s.runError = err
 				s.fallbackToNextEndpoint()
+				continue
 			}
+			// Close previous client, if connection was successful.
+			currClient.Close()
+			log.Infof("Connected to new endpoint: %s", logs.MaskCredentialsLogging(s.cfg.currHttpEndpoint.Url))
+			return
 		case <-s.ctx.Done():
 			log.Debug("Received cancelled context,closing existing powchain service")
 			return
@@ -80,10 +86,13 @@ func (s *Service) retryExecutionClientConnection(ctx context.Context, err error)
 	s.updateConnectedETH1(false)
 	// Back off for a while before redialing.
 	time.Sleep(backOffPeriod)
+	currClient := s.rpcClient
 	if err := s.setupExecutionClientConnections(ctx, s.cfg.currHttpEndpoint); err != nil {
 		s.runError = err
 		return
 	}
+	// Close previous client, if connection was successful.
+	currClient.Close()
 	// Reset run error in the event of a successful connection.
 	s.runError = nil
 }
@@ -99,10 +108,13 @@ func (s *Service) checkDefaultEndpoint(ctx context.Context) {
 		return
 	}
 
+	currClient := s.rpcClient
 	if err := s.setupExecutionClientConnections(ctx, primaryEndpoint); err != nil {
 		log.Debugf("Primary endpoint not ready: %v", err)
 		return
 	}
+	// Close previous client, if connection was successful.
+	currClient.Close()
 	s.updateCurrHttpEndpoint(primaryEndpoint)
 }
 

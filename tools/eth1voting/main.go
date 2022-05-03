@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"time"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
@@ -72,7 +72,7 @@ func main() {
 	fmt.Println(v.Report())
 }
 
-func wrapBlock(b *v1alpha1.BeaconBlockContainer) block.BeaconBlock {
+func wrapBlock(b *v1alpha1.BeaconBlockContainer) interfaces.BeaconBlock {
 	if bb := b.GetAltairBlock(); bb != nil {
 		wb, err := wrapper.WrappedAltairBeaconBlock(bb.Block)
 		if err != nil {
