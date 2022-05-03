@@ -12,7 +12,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/block"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
@@ -37,7 +37,7 @@ import (
 //    assert pow_parent is not None
 //    # Check if `pow_block` is a valid terminal PoW block
 //    assert is_valid_terminal_pow_block(pow_block, pow_parent)
-func (s *Service) validateMergeBlock(ctx context.Context, b block.SignedBeaconBlock) error {
+func (s *Service) validateMergeBlock(ctx context.Context, b interfaces.SignedBeaconBlock) error {
 	if err := helpers.BeaconBlockIsNil(b); err != nil {
 		return err
 	}

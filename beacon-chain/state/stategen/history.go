@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/block"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"go.opencensus.io/trace"
@@ -46,7 +46,7 @@ func (ch *CanonicalHistory) ReplayerForSlot(target types.Slot) Replayer {
 	return &stateReplayer{chainer: ch, method: forSlot, target: target}
 }
 
-func (c *CanonicalHistory) BlockForSlot(ctx context.Context, target types.Slot) ([32]byte, block.SignedBeaconBlock, error) {
+func (c *CanonicalHistory) BlockForSlot(ctx context.Context, target types.Slot) ([32]byte, interfaces.SignedBeaconBlock, error) {
 	currentSlot := c.cs.CurrentSlot()
 	if target > currentSlot {
 		return [32]byte{}, nil, errors.Wrap(ErrFutureSlotRequested, fmt.Sprintf("requested=%d, current=%d", target, currentSlot))
@@ -83,7 +83,7 @@ func (c *CanonicalHistory) BlockForSlot(ctx context.Context, target types.Slot) 
 	if err != nil {
 		return [32]byte{}, nil, errors.Wrap(err, "db error while retrieving genesis block")
 	}
-	root, _, err := c.bestForSlot(ctx, []block.SignedBeaconBlock{b})
+	root, _, err := c.bestForSlot(ctx, []interfaces.SignedBeaconBlock{b})
 	if err != nil {
 		return [32]byte{}, nil, errors.Wrap(err, "problem retrieving genesis block")
 	}
@@ -92,7 +92,7 @@ func (c *CanonicalHistory) BlockForSlot(ctx context.Context, target types.Slot) 
 
 // bestForSlot encapsulates several messy realities of the underlying db code, looping through multiple blocks,
 // performing null/validity checks, and using CanonicalChecker to only pick canonical blocks.
-func (c *CanonicalHistory) bestForSlot(ctx context.Context, hbs []block.SignedBeaconBlock) ([32]byte, block.SignedBeaconBlock, error) {
+func (c *CanonicalHistory) bestForSlot(ctx context.Context, hbs []interfaces.SignedBeaconBlock) ([32]byte, interfaces.SignedBeaconBlock, error) {
 	for _, b := range hbs {
 		if helpers.BeaconBlockIsNil(b) != nil {
 			continue
@@ -119,7 +119,7 @@ func (c *CanonicalHistory) bestForSlot(ctx context.Context, hbs []block.SignedBe
 // and the stategen transition helper methods. This implementation uses the following algorithm:
 // - find the highest canonical block <= the target slot
 // - starting with this block, recursively search backwards for a stored state, and accumulate intervening blocks
-func (c *CanonicalHistory) chainForSlot(ctx context.Context, target types.Slot) (state.BeaconState, []block.SignedBeaconBlock, error) {
+func (c *CanonicalHistory) chainForSlot(ctx context.Context, target types.Slot) (state.BeaconState, []interfaces.SignedBeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "canonicalChainer.chainForSlot")
 	defer span.End()
 	_, b, err := c.BlockForSlot(ctx, target)
@@ -152,10 +152,10 @@ func (c *CanonicalHistory) getState(ctx context.Context, root [32]byte) (state.B
 // all blocks in the lineage, including the tail block. Blocks are returned in ascending order.
 // Note that this function assumes that the tail is a canonical block, and therefore assumes that
 // all ancestors are also canonical.
-func (c *CanonicalHistory) ancestorChain(ctx context.Context, tail block.SignedBeaconBlock) (state.BeaconState, []block.SignedBeaconBlock, error) {
+func (c *CanonicalHistory) ancestorChain(ctx context.Context, tail interfaces.SignedBeaconBlock) (state.BeaconState, []interfaces.SignedBeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "canonicalChainer.ancestorChain")
 	defer span.End()
-	chain := make([]block.SignedBeaconBlock, 0)
+	chain := make([]interfaces.SignedBeaconBlock, 0)
 	for {
 		if err := ctx.Err(); err != nil {
 			msg := fmt.Sprintf("context canceled while finding ancestors of block at slot %d", tail.Block().Slot())
@@ -197,7 +197,7 @@ func (c *CanonicalHistory) ancestorChain(ctx context.Context, tail block.SignedB
 	}
 }
 
-func reverseChain(c []block.SignedBeaconBlock) {
+func reverseChain(c []interfaces.SignedBeaconBlock) {
 	last := len(c) - 1
 	swaps := (last + 1) / 2
 	for i := 0; i < swaps; i++ {

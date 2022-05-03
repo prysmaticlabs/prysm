@@ -8,7 +8,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/block"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/runtime/version"
@@ -199,7 +199,7 @@ func TestUnmarshalBlock(t *testing.T) {
 	bellaS, err := slots.EpochStart(bc.BellatrixForkEpoch)
 	require.NoError(t, err)
 	cases := []struct {
-		b       func(*testing.T, types.Slot) block.SignedBeaconBlock
+		b       func(*testing.T, types.Slot) interfaces.SignedBeaconBlock
 		name    string
 		version [4]byte
 		slot    types.Slot
@@ -277,7 +277,7 @@ func TestUnmarshalBlock(t *testing.T) {
 	}
 }
 
-func signedTestBlockGenesis(t *testing.T, slot types.Slot) block.SignedBeaconBlock {
+func signedTestBlockGenesis(t *testing.T, slot types.Slot) interfaces.SignedBeaconBlock {
 	b := testBlockGenesis()
 	b.Block.Slot = slot
 	s, err := wrapper.WrappedSignedBeaconBlock(b)
@@ -310,7 +310,7 @@ func testBlockGenesis() *ethpb.SignedBeaconBlock {
 	}
 }
 
-func signedTestBlockAltair(t *testing.T, slot types.Slot) block.SignedBeaconBlock {
+func signedTestBlockAltair(t *testing.T, slot types.Slot) interfaces.SignedBeaconBlock {
 	b := testBlockAltair()
 	b.Block.Slot = slot
 	s, err := wrapper.WrappedSignedBeaconBlock(b)
@@ -347,7 +347,7 @@ func testBlockAltair() *ethpb.SignedBeaconBlockAltair {
 	}
 }
 
-func signedTestBlockBellatrix(t *testing.T, slot types.Slot) block.SignedBeaconBlock {
+func signedTestBlockBellatrix(t *testing.T, slot types.Slot) interfaces.SignedBeaconBlock {
 	b := testBlockBellatrix()
 	b.Block.Slot = slot
 	s, err := wrapper.WrappedSignedBeaconBlock(b)

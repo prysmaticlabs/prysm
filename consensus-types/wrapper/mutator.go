@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/consensus-types/block"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
@@ -16,7 +16,7 @@ type BlockMutator struct {
 	Bellatrix func(beaconBlock *eth.SignedBeaconBlockBellatrix)
 }
 
-func (m BlockMutator) Apply(b block.SignedBeaconBlock) error {
+func (m BlockMutator) Apply(b interfaces.SignedBeaconBlock) error {
 	switch b.Version() {
 	case version.Phase0:
 		bb, err := b.PbPhase0Block()
@@ -44,7 +44,7 @@ func (m BlockMutator) Apply(b block.SignedBeaconBlock) error {
 	return errors.Wrap(ErrUnsupportedSignedBeaconBlock, msg)
 }
 
-func SetBlockStateRoot(b block.SignedBeaconBlock, sr [32]byte) error {
+func SetBlockStateRoot(b interfaces.SignedBeaconBlock, sr [32]byte) error {
 	return BlockMutator{
 		Phase0:    func(bb *eth.SignedBeaconBlock) { bb.Block.StateRoot = sr[:] },
 		Altair:    func(bb *eth.SignedBeaconBlockAltair) { bb.Block.StateRoot = sr[:] },
@@ -52,7 +52,7 @@ func SetBlockStateRoot(b block.SignedBeaconBlock, sr [32]byte) error {
 	}.Apply(b)
 }
 
-func SetBlockParentRoot(b block.SignedBeaconBlock, pr [32]byte) error {
+func SetBlockParentRoot(b interfaces.SignedBeaconBlock, pr [32]byte) error {
 	return BlockMutator{
 		Phase0:    func(bb *eth.SignedBeaconBlock) { bb.Block.ParentRoot = pr[:] },
 		Altair:    func(bb *eth.SignedBeaconBlockAltair) { bb.Block.ParentRoot = pr[:] },
@@ -60,7 +60,7 @@ func SetBlockParentRoot(b block.SignedBeaconBlock, pr [32]byte) error {
 	}.Apply(b)
 }
 
-func SetBlockSlot(b block.SignedBeaconBlock, s types.Slot) error {
+func SetBlockSlot(b interfaces.SignedBeaconBlock, s types.Slot) error {
 	return BlockMutator{
 		Phase0:    func(bb *eth.SignedBeaconBlock) { bb.Block.Slot = s },
 		Altair:    func(bb *eth.SignedBeaconBlockAltair) { bb.Block.Slot = s },
@@ -68,7 +68,7 @@ func SetBlockSlot(b block.SignedBeaconBlock, s types.Slot) error {
 	}.Apply(b)
 }
 
-func SetProposerIndex(b block.SignedBeaconBlock, idx types.ValidatorIndex) error {
+func SetProposerIndex(b interfaces.SignedBeaconBlock, idx types.ValidatorIndex) error {
 	return BlockMutator{
 		Phase0:    func(bb *eth.SignedBeaconBlock) { bb.Block.ProposerIndex = idx },
 		Altair:    func(bb *eth.SignedBeaconBlockAltair) { bb.Block.ProposerIndex = idx },

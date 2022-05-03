@@ -35,7 +35,7 @@ go_library(
         "//beacon-chain/state/v3:go_default_library",
         "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",
-        "//consensus-types/block:go_default_library",
+        "//consensus-types/interfaces:go_default_library",
         "//consensus-types/primitives:go_default_library",
         "//consensus-types/wrapper:go_default_library",
         "//container/trie:go_default_library",

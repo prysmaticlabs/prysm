@@ -2,9 +2,7 @@
 // during the runtime of a beacon node.
 package block
 
-import (
-	"github.com/prysmaticlabs/prysm/consensus-types/block"
-)
+import "github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 
 const (
 	// ReceivedBlock is sent after a block has been received by the beacon node via p2p or RPC.
@@ -13,6 +11,6 @@ const (
 
 // ReceivedBlockData is the data sent with ReceivedBlock events.
 type ReceivedBlockData struct {
-	SignedBlock  block.SignedBeaconBlock
+	SignedBlock  interfaces.SignedBeaconBlock
 	IsOptimistic bool
 }

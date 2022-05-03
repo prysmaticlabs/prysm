@@ -168,7 +168,11 @@ func TestService_InitStartStop(t *testing.T) {
 				Chain:         mc,
 				StateNotifier: notifier,
 			})
+			time.Sleep(500 * time.Millisecond)
 			assert.NotNil(t, s)
+			if tt.methodRuns != nil {
+				tt.methodRuns(notifier.StateFeed())
+			}
 
 			wg := &sync.WaitGroup{}
 			wg.Add(1)
@@ -176,11 +180,6 @@ func TestService_InitStartStop(t *testing.T) {
 				s.Start()
 				wg.Done()
 			}()
-
-			time.Sleep(500 * time.Millisecond)
-			if tt.methodRuns != nil {
-				tt.methodRuns(notifier.StateFeed())
-			}
 
 			go func() {
 				// Allow to exit from test (on no head loop waiting for head is started).
@@ -208,6 +207,7 @@ func TestService_waitForStateInitialization(t *testing.T) {
 			synced:       abool.New(),
 			chainStarted: abool.New(),
 			counter:      ratecounter.NewRateCounter(counterSeconds * time.Second),
+			genesisChan:  make(chan time.Time),
 		}
 		return s
 	}
@@ -221,8 +221,9 @@ func TestService_waitForStateInitialization(t *testing.T) {
 		wg := &sync.WaitGroup{}
 		wg.Add(1)
 		go func() {
-			_, err := s.waitForStateInitialization()
-			assert.ErrorContains(t, "context closed", err)
+			go s.waitForStateInitialization()
+			currTime := <-s.genesisChan
+			assert.Equal(t, true, currTime.IsZero())
 			wg.Done()
 		}()
 		go func() {
@@ -235,6 +236,8 @@ func TestService_waitForStateInitialization(t *testing.T) {
 			t.Fatalf("Test should have exited by now, timed out")
 		}
 		assert.LogsContain(t, hook, "Waiting for state to be initialized")
+		assert.LogsContain(t, hook, "Context closed, exiting goroutine")
+		assert.LogsDoNotContain(t, hook, "Subscription to state notifier failed")
 	})
 
 	t.Run("no state and state init event received", func(t *testing.T) {
@@ -248,9 +251,8 @@ func TestService_waitForStateInitialization(t *testing.T) {
 		wg := &sync.WaitGroup{}
 		wg.Add(1)
 		go func() {
-			var err error
-			receivedGenesisTime, err = s.waitForStateInitialization()
-			require.NoError(t, err)
+			go s.waitForStateInitialization()
+			receivedGenesisTime = <-s.genesisChan
 			assert.Equal(t, false, receivedGenesisTime.IsZero())
 			wg.Done()
 		}()
@@ -279,6 +281,7 @@ func TestService_waitForStateInitialization(t *testing.T) {
 		assert.LogsContain(t, hook, "Event feed data is not type *statefeed.InitializedData")
 		assert.LogsContain(t, hook, "Waiting for state to be initialized")
 		assert.LogsContain(t, hook, "Received state initialized event")
+		assert.LogsDoNotContain(t, hook, "Context closed, exiting goroutine")
 	})
 
 	t.Run("no state and state init event received and service start", func(t *testing.T) {
@@ -293,8 +296,7 @@ func TestService_waitForStateInitialization(t *testing.T) {
 		wg := &sync.WaitGroup{}
 		wg.Add(1)
 		go func() {
-			_, err := s.waitForStateInitialization()
-			require.NoError(t, err)
+			s.waitForStateInitialization()
 			wg.Done()
 		}()
 
@@ -319,6 +321,7 @@ func TestService_waitForStateInitialization(t *testing.T) {
 		}
 		assert.LogsContain(t, hook, "Waiting for state to be initialized")
 		assert.LogsContain(t, hook, "Received state initialized event")
+		assert.LogsDoNotContain(t, hook, "Context closed, exiting goroutine")
 	})
 }
 

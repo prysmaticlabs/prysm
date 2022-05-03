@@ -1,4 +1,4 @@
-package block
+package interfaces
 
 import (
 	"github.com/pkg/errors"

@@ -14,7 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/block"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
@@ -24,12 +24,15 @@ import (
 	"go.opencensus.io/trace"
 )
 
-var ErrUndefinedExecutionEngineError = errors.New("received an undefined ee error")
+var (
+	ErrInvalidPayload                = errors.New("recevied an INVALID payload from execution engine")
+	ErrUndefinedExecutionEngineError = errors.New("received an undefined ee error")
+)
 
 // notifyForkchoiceUpdate signals execution engine the fork choice updates. Execution engine should:
 // 1. Re-organizes the execution payload chain and corresponding state to make head_block_hash the head.
 // 2. Applies finality to the execution state: it irreversibly persists the chain of all execution payloads and corresponding state, up to and including finalized_block_hash.
-func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headState state.BeaconState, headBlk block.BeaconBlock, headRoot [32]byte, finalizedRoot [32]byte) (*enginev1.PayloadIDBytes, error) {
+func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headState state.BeaconState, headBlk interfaces.BeaconBlock, headRoot [32]byte, finalizedRoot [32]byte) (*enginev1.PayloadIDBytes, error) {
 	ctx, span := trace.StartSpan(ctx, "blockChain.notifyForkchoiceUpdate")
 	defer span.End()
 
@@ -75,7 +78,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headState state.Be
 		return nil, errors.Wrap(err, "could not get payload attribute")
 	}
 
-	payloadID, _, err := s.cfg.ExecutionEngineCaller.ForkchoiceUpdated(ctx, fcs, attr)
+	payloadID, lastValidHash, err := s.cfg.ExecutionEngineCaller.ForkchoiceUpdated(ctx, fcs, attr)
 	if err != nil {
 		switch err {
 		case powchain.ErrAcceptedSyncingPayloadStatus:
@@ -86,6 +89,20 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headState state.Be
 				"finalizedPayloadBlockHash": fmt.Sprintf("%#x", bytesutil.Trunc(finalizedHash)),
 			}).Info("Called fork choice updated with optimistic block")
 			return payloadID, s.optimisticCandidateBlock(ctx, headBlk)
+		case powchain.ErrInvalidPayloadStatus:
+			invalidRoots, err := s.ForkChoicer().SetOptimisticToInvalid(ctx, headRoot, bytesutil.ToBytes32(headBlk.ParentRoot()), bytesutil.ToBytes32(lastValidHash))
+			if err != nil {
+				return nil, err
+			}
+			if err := s.removeInvalidBlockAndState(ctx, invalidRoots); err != nil {
+				return nil, err
+			}
+			log.WithFields(logrus.Fields{
+				"slot":         headBlk.Slot(),
+				"blockRoot":    fmt.Sprintf("%#x", headRoot),
+				"invalidCount": len(invalidRoots),
+			}).Warn("Pruned invalid blocks")
+			return nil, ErrInvalidPayload
 		default:
 			return nil, errors.WithMessage(ErrUndefinedExecutionEngineError, err.Error())
 		}
@@ -105,7 +122,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headState state.Be
 // notifyForkchoiceUpdate signals execution engine on a new payload.
 // It returns true if the EL has returned VALID for the block
 func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
-	postStateHeader *ethpb.ExecutionPayloadHeader, blk block.SignedBeaconBlock) (bool, error) {
+	postStateHeader *ethpb.ExecutionPayloadHeader, blk interfaces.SignedBeaconBlock) (bool, error) {
 	ctx, span := trace.StartSpan(ctx, "blockChain.notifyNewPayload")
 	defer span.End()
 
@@ -154,7 +171,12 @@ func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
 		if err := s.removeInvalidBlockAndState(ctx, invalidRoots); err != nil {
 			return false, err
 		}
-		return false, errors.New("could not validate an INVALID payload from execution engine")
+		log.WithFields(logrus.Fields{
+			"slot":         blk.Block().Slot(),
+			"blockRoot":    fmt.Sprintf("%#x", root),
+			"invalidCount": len(invalidRoots),
+		}).Warn("Pruned invalid blocks")
+		return false, ErrInvalidPayload
 	default:
 		return false, errors.WithMessage(ErrUndefinedExecutionEngineError, err.Error())
 	}
@@ -172,7 +194,7 @@ func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
 //        return True
 //
 //    return False
-func (s *Service) optimisticCandidateBlock(ctx context.Context, blk block.BeaconBlock) error {
+func (s *Service) optimisticCandidateBlock(ctx context.Context, blk interfaces.BeaconBlock) error {
 	if blk.Slot()+params.BeaconConfig().SafeSlotsToImportOptimistically <= s.CurrentSlot() {
 		return nil
 	}
@@ -181,7 +203,7 @@ func (s *Service) optimisticCandidateBlock(ctx context.Context, blk block.Beacon
 	if err != nil {
 		return err
 	}
-	if parent == nil {
+	if parent == nil || parent.IsNil() {
 		return errNilParentInDB
 	}
 	parentIsExecutionBlock, err := blocks.IsExecutionBlock(parent.Block().Body())

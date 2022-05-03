@@ -2,7 +2,7 @@ package wrapper
 
 import (
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/consensus-types/block"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -34,7 +34,7 @@ var (
 
 // WrappedSignedBeaconBlock will wrap a signed beacon block to conform to the
 // signed beacon block interface.
-func WrappedSignedBeaconBlock(i interface{}) (block.SignedBeaconBlock, error) {
+func WrappedSignedBeaconBlock(i interface{}) (interfaces.SignedBeaconBlock, error) {
 	switch b := i.(type) {
 	case *eth.GenericSignedBeaconBlock_Phase0:
 		return wrappedPhase0SignedBeaconBlock(b.Phase0), nil
@@ -61,7 +61,7 @@ func WrappedSignedBeaconBlock(i interface{}) (block.SignedBeaconBlock, error) {
 
 // WrappedBeaconBlock will wrap a signed beacon block to conform to the
 // signed beacon block interface.
-func WrappedBeaconBlock(i interface{}) (block.BeaconBlock, error) {
+func WrappedBeaconBlock(i interface{}) (interfaces.BeaconBlock, error) {
 	switch b := i.(type) {
 	case *eth.GenericBeaconBlock_Phase0:
 		return WrappedPhase0BeaconBlock(b.Phase0), nil
@@ -87,7 +87,7 @@ func WrappedBeaconBlock(i interface{}) (block.BeaconBlock, error) {
 // BuildSignedBeaconBlock assembles a block.SignedBeaconBlock interface compatible struct from a
 // given beacon block an the appropriate signature. This method may be used to easily create a
 // signed beacon block.
-func BuildSignedBeaconBlock(blk block.BeaconBlock, signature []byte) (block.SignedBeaconBlock, error) {
+func BuildSignedBeaconBlock(blk interfaces.BeaconBlock, signature []byte) (interfaces.SignedBeaconBlock, error) {
 	switch b := blk.(type) {
 	case Phase0BeaconBlock:
 		pb, ok := b.Proto().(*eth.BeaconBlock)
@@ -118,7 +118,7 @@ func BuildSignedBeaconBlock(blk block.BeaconBlock, signature []byte) (block.Sign
 	}
 }
 
-func UnwrapGenericSignedBeaconBlock(gb *eth.GenericSignedBeaconBlock) (block.SignedBeaconBlock, error) {
+func UnwrapGenericSignedBeaconBlock(gb *eth.GenericSignedBeaconBlock) (interfaces.SignedBeaconBlock, error) {
 	if gb == nil {
 		return nil, ErrNilObjectWrapped
 	}

@@ -36,7 +36,7 @@ go_library(
         "//beacon-chain/state/stateutil:go_default_library",
         "//beacon-chain/state/v1:go_default_library",
         "//config/params:go_default_library",
-        "//consensus-types/block:go_default_library",
+        "//consensus-types/interfaces:go_default_library",
         "//consensus-types/primitives:go_default_library",
         "//crypto/bls:go_default_library",
         "//crypto/hash:go_default_library",
