@@ -25,7 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
-func startChainService(t *testing.T, st state.BeaconState, block interfaces.SignedBeaconBlock, engineMock *engineMock) *blockchain.Service {
+func startChainService(t testing.TB, st state.BeaconState, block interfaces.SignedBeaconBlock, engineMock *engineMock) *blockchain.Service {
 	db := testDB.SetupDB(t)
 	ctx := context.Background()
 	require.NoError(t, db.SaveBlock(ctx, block))
