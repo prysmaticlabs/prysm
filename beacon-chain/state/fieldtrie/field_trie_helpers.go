@@ -67,27 +67,6 @@ func validateElements(field types.FieldIdx, dataType types.DataType, elements in
 
 // fieldConverters converts the corresponding field and the provided elements to the appropriate roots.
 func fieldConverters(field types.FieldIdx, indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
-	if field.Native() {
-		switch field {
-		case nativetypes.BlockRoots:
-			return convertBlockRoots(indices, elements, convertAll)
-		case nativetypes.StateRoots:
-			return convertStateRoots(indices, elements, convertAll)
-		case nativetypes.RandaoMixes:
-			return convertRandaoMixes(indices, elements, convertAll)
-		case nativetypes.Eth1DataVotes:
-			return convertEth1DataVotes(indices, elements, convertAll)
-		case nativetypes.Validators:
-			return convertValidators(indices, elements, convertAll)
-		case nativetypes.PreviousEpochAttestations, nativetypes.CurrentEpochAttestations:
-			return convertAttestations(indices, elements, convertAll)
-		case nativetypes.Balances:
-			return convertBalances(indices, elements, convertAll)
-		default:
-			return [][32]byte{}, errors.Errorf("got unsupported type of %v", reflect.TypeOf(elements).Name())
-		}
-	}
-
 	switch field {
 	case types.BlockRoots:
 		return convertBlockRoots(indices, elements, convertAll)
@@ -102,6 +81,28 @@ func fieldConverters(field types.FieldIdx, indices []uint64, elements interface{
 	case types.PreviousEpochAttestations, types.CurrentEpochAttestations:
 		return convertAttestations(indices, elements, convertAll)
 	case types.Balances:
+		return convertBalances(indices, elements, convertAll)
+	default:
+		return [][32]byte{}, errors.Errorf("got unsupported type of %v", reflect.TypeOf(elements).Name())
+	}
+}
+
+// fieldConvertersNative converts the corresponding field and the provided elements to the appropriate roots.
+func fieldConvertersNative(field types.FieldIdx, indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
+	switch field {
+	case nativetypes.BlockRoots:
+		return convertBlockRoots(indices, elements, convertAll)
+	case nativetypes.StateRoots:
+		return convertStateRoots(indices, elements, convertAll)
+	case nativetypes.RandaoMixes:
+		return convertRandaoMixes(indices, elements, convertAll)
+	case nativetypes.Eth1DataVotes:
+		return convertEth1DataVotes(indices, elements, convertAll)
+	case nativetypes.Validators:
+		return convertValidators(indices, elements, convertAll)
+	case nativetypes.PreviousEpochAttestations, nativetypes.CurrentEpochAttestations:
+		return convertAttestations(indices, elements, convertAll)
+	case nativetypes.Balances:
 		return convertBalances(indices, elements, convertAll)
 	default:
 		return [][32]byte{}, errors.Errorf("got unsupported type of %v", reflect.TypeOf(elements).Name())

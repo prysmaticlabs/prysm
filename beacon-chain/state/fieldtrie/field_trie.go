@@ -36,10 +36,19 @@ func NewFieldTrie(field types.FieldIdx, dataType types.DataType, elements interf
 			numOfElems: 0,
 		}, nil
 	}
-	fieldRoots, err := fieldConverters(field, []uint64{}, elements, true)
+
+	var fieldRoots [][32]byte
+	var err error
+	if field.Native() {
+		fieldRoots, err = fieldConvertersNative(field, []uint64{}, elements, true)
+	} else {
+		fieldRoots, err = fieldConverters(field, []uint64{}, elements, true)
+	}
+
 	if err != nil {
 		return nil, err
 	}
+
 	if err := validateElements(field, dataType, elements, length); err != nil {
 		return nil, err
 	}
