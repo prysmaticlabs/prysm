@@ -65,7 +65,12 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		counter:      ratecounter.NewRateCounter(counterSeconds * time.Second),
 		genesisChan:  make(chan time.Time),
 	}
+
+	// The reason why we have this goroutine in the constructor is to avoid a race condition
+	// between services' Start method and the initialization event.
+	// See https://github.com/prysmaticlabs/prysm/issues/10602 for details.
 	go s.waitForStateInitialization()
+
 	return s
 }
 
