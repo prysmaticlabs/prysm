@@ -136,7 +136,7 @@ func (c *CanonicalHistory) chainForSlot(ctx context.Context, target types.Slot) 
 
 func (c *CanonicalHistory) getState(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error) {
 	if c.cache != nil {
-		st, err := c.cache.ByRoot(blockRoot)
+		st, err := c.cache.ByBlockRoot(blockRoot)
 		if err == nil {
 			return st, nil
 		}

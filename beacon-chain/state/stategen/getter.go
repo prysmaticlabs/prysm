@@ -32,7 +32,7 @@ func (s *State) HasStateInCache(_ context.Context, blockRoot [32]byte) (bool, er
 	if s.hotStateCache.has(blockRoot) {
 		return true, nil
 	}
-	_, has, err := s.epochBoundaryStateCache.getByRoot(blockRoot)
+	_, has, err := s.epochBoundaryStateCache.getByBlockRoot(blockRoot)
 	if err != nil {
 		return false, err
 	}
@@ -44,8 +44,7 @@ func (s *State) StateByRootIfCachedNoCopy(blockRoot [32]byte) state.BeaconState 
 	if !s.hotStateCache.has(blockRoot) {
 		return nil
 	}
-	st := s.hotStateCache.getWithoutCopy(blockRoot)
-	return st
+	return s.hotStateCache.getWithoutCopy(blockRoot)
 }
 
 // StateByRoot retrieves the state using input block root.
@@ -80,7 +79,7 @@ func (s *State) StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) 
 		return s.hotStateCache.getWithoutCopy(blockRoot), nil
 	}
 
-	cachedInfo, ok, err := s.epochBoundaryStateCache.getByRoot(blockRoot)
+	cachedInfo, ok, err := s.epochBoundaryStateCache.getByBlockRoot(blockRoot)
 	if err != nil {
 		return nil, err
 	}
@@ -165,7 +164,7 @@ func (s *State) loadStateByRoot(ctx context.Context, blockRoot [32]byte) (state.
 	}
 
 	// Second, it checks if the state exists in epoch boundary state cache.
-	cachedInfo, ok, err := s.epochBoundaryStateCache.getByRoot(blockRoot)
+	cachedInfo, ok, err := s.epochBoundaryStateCache.getByBlockRoot(blockRoot)
 	if err != nil {
 		return nil, err
 	}
@@ -259,7 +258,7 @@ func (s *State) LastAncestorState(ctx context.Context, blockRoot [32]byte) (stat
 		}
 
 		// Does the state exist in epoch boundary cache.
-		cachedInfo, ok, err := s.epochBoundaryStateCache.getByRoot(parentRoot)
+		cachedInfo, ok, err := s.epochBoundaryStateCache.getByBlockRoot(parentRoot)
 		if err != nil {
 			return nil, err
 		}

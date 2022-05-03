@@ -52,8 +52,8 @@ func (c *hotStateCache) get(blockRoot [32]byte) state.BeaconState {
 	return nil
 }
 
-func (c *hotStateCache) ByRoot(blockRoot [32]byte) (state.BeaconState, error) {
-	st := c.get(blockRoot)
+func (c *hotStateCache) ByBlockRoot(r [32]byte) (state.BeaconState, error) {
+	st := c.get(r)
 	if st == nil {
 		return nil, ErrNotInCache
 	}

@@ -27,7 +27,7 @@ func TestSaveState_HotStateCanBeSaved(t *testing.T) {
 	require.NoError(t, service.SaveState(ctx, r, beaconState))
 
 	// Should save both state and state summary.
-	_, ok, err := service.epochBoundaryStateCache.getByRoot(r)
+	_, ok, err := service.epochBoundaryStateCache.getByBlockRoot(r)
 	require.NoError(t, err)
 	assert.Equal(t, true, ok, "Should have saved the state")
 	assert.Equal(t, true, service.beaconDB.HasStateSummary(ctx, r), "Should have saved the state summary")
@@ -105,7 +105,7 @@ func TestSaveState_CanSaveOnEpochBoundary(t *testing.T) {
 	require.NoError(t, service.saveStateByRoot(ctx, r, beaconState))
 
 	// Should save both state and state summary.
-	_, ok, err := service.epochBoundaryStateCache.getByRoot(r)
+	_, ok, err := service.epochBoundaryStateCache.getByBlockRoot(r)
 	require.NoError(t, err)
 	require.Equal(t, true, ok, "Did not save epoch boundary state")
 	assert.Equal(t, true, service.beaconDB.HasStateSummary(ctx, r), "Should have saved the state summary")

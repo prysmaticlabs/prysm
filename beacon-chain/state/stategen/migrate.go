@@ -33,7 +33,6 @@ func (s *State) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 
 	// Start at previous finalized slot, stop at current finalized slot (it will be handled in the next migration).
 	// If the slot is on archived point, save the state of that slot to the DB.
-slotLoop:
 	for slot := oldFSlot; slot <= fSlot; slot++ {
 		if ctx.Err() != nil {
 			return ctx.Err()
@@ -94,7 +93,7 @@ slotLoop:
 					}
 				}
 				s.saveHotStateDB.lock.Unlock()
-				continue slotLoop
+				continue
 			}
 
 			if err := s.beaconDB.SaveState(ctx, aState, aRoot); err != nil {
@@ -109,7 +108,7 @@ slotLoop:
 	}
 
 	// Update finalized info in memory.
-	fInfo, ok, err := s.epochBoundaryStateCache.getByRoot(fRoot)
+	fInfo, ok, err := s.epochBoundaryStateCache.getByBlockRoot(fRoot)
 	if err != nil {
 		return err
 	}
