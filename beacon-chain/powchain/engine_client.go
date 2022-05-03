@@ -290,7 +290,7 @@ func handleRPCError(err error) error {
 	if !ok {
 		if strings.Contains(e.Error(), "Unauthorized") {
 			log.Error("HTTP authentication to your execution client is not working. Please ensure " +
-				"you are setting a correct value for the --jwt-secret, or use an IPC connection if on " +
+				"you are setting a correct value for the --jwt-secret flag in Prysm, or use an IPC connection if on " +
 				"the same machine. Please see our documentation for more information on authenticating connections " +
 				"here https://docs.prylabs.network/docs/execution-node/authentication")
 			return fmt.Errorf("could not authenticate connection to execution client: %v", err)
