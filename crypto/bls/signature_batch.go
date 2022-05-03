@@ -1,5 +1,7 @@
 package bls
 
+import "github.com/pkg/errors"
+
 // SignatureBatch refers to the defined set of
 // signatures and its respective public keys and
 // messages required to verify it.
@@ -56,22 +58,25 @@ func (s *SignatureBatch) Copy() *SignatureBatch {
 }
 
 // RemoveDuplicates removes duplicate signature sets from the signature batch.
-func (s *SignatureBatch) RemoveDuplicates() (int, *SignatureBatch) {
+func (s *SignatureBatch) RemoveDuplicates() (int, *SignatureBatch, error) {
 	if len(s.Signatures) == 0 || len(s.PublicKeys) == 0 || len(s.Messages) == 0 {
-		return 0, s
+		return 0, s, nil
+	}
+	if len(s.Signatures) != len(s.PublicKeys) || len(s.Signatures) != len(s.Messages) {
+		return 0, s, errors.Errorf("mismatch number of signatures, publickeys and messages in signature batch. "+
+			"Signatures %d, Public Keys %d , Messages %d", s.Signatures, s.PublicKeys, s.Messages)
 	}
 	sigMap := make(map[string]int)
 	duplicateSet := make(map[int]bool)
 	for i := 0; i < len(s.Signatures); i++ {
-		currSig := string(s.Signatures[i])
-		if sigIdx, ok := sigMap[currSig]; ok {
+		if sigIdx, ok := sigMap[string(s.Signatures[i])]; ok {
 			if s.PublicKeys[sigIdx].Equals(s.PublicKeys[i]) &&
 				s.Messages[sigIdx] == s.Messages[i] {
 				duplicateSet[i] = true
 				continue
 			}
 		}
-		sigMap[currSig] = i
+		sigMap[string(s.Signatures[i])] = i
 	}
 
 	sigs := s.Signatures[:0]
@@ -91,7 +96,7 @@ func (s *SignatureBatch) RemoveDuplicates() (int, *SignatureBatch) {
 	s.PublicKeys = pubs
 	s.Messages = msgs
 
-	return len(duplicateSet), s
+	return len(duplicateSet), s, nil
 }
 
 // AggregateBatch aggregates common messages in the provided batch to
@@ -100,6 +105,10 @@ func (s *SignatureBatch) RemoveDuplicates() (int, *SignatureBatch) {
 func (s *SignatureBatch) AggregateBatch() (*SignatureBatch, error) {
 	if len(s.Signatures) == 0 || len(s.PublicKeys) == 0 || len(s.Messages) == 0 {
 		return s, nil
+	}
+	if len(s.Signatures) != len(s.PublicKeys) || len(s.Signatures) != len(s.Messages) {
+		return s, errors.Errorf("mismatch number of signatures, publickeys and messages in signature batch. "+
+			"Signatures %d, Public Keys %d , Messages %d", s.Signatures, s.PublicKeys, s.Messages)
 	}
 	msgMap := make(map[[32]byte]*SignatureBatch)
 

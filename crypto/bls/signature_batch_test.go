@@ -309,7 +309,8 @@ func TestSignatureBatch_RemoveDuplicates(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			input, output := tt.batchCreator()
-			num, res := input.RemoveDuplicates()
+			num, res, err := input.RemoveDuplicates()
+			assert.NoError(t, err)
 			if num != tt.want {
 				t.Errorf("RemoveDuplicates() got = %v, want %v", num, tt.want)
 			}

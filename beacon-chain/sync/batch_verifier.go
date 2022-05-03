@@ -91,15 +91,7 @@ func verifyBatch(verifierBatch []*signatureVerifier) {
 	var verificationErr error
 
 	if features.Get().EnableBatchGossipAggregation {
-		num, currLen := 0, len(aggSet.Signatures)
-		num, aggSet = aggSet.RemoveDuplicates()
-		duplicatesRemovedCounter.Add(float64(num))
-		// Aggregate batches in the provided signature batch.
-		aggSet, verificationErr = aggSet.AggregateBatch()
-		// Record number of signature sets successfully batched.
-		if verificationErr == nil && currLen > len(aggSet.Signatures) {
-			numberOfSetsAggregated.Add(float64(currLen - len(aggSet.Signatures)))
-		}
+		aggSet, verificationErr = performBatchAggregation(aggSet)
 	}
 	if verificationErr == nil {
 		verified, err := aggSet.Verify()
@@ -113,4 +105,23 @@ func verifyBatch(verifierBatch []*signatureVerifier) {
 	for i := 0; i < len(verifierBatch); i++ {
 		verifierBatch[i].resChan <- verificationErr
 	}
+}
+
+func performBatchAggregation(aggSet *bls.SignatureBatch) (*bls.SignatureBatch, error) {
+	currLen := len(aggSet.Signatures)
+	num, aggSet, err := aggSet.RemoveDuplicates()
+	if err != nil {
+		return nil, err
+	}
+	duplicatesRemovedCounter.Add(float64(num))
+	// Aggregate batches in the provided signature batch.
+	aggSet, err = aggSet.AggregateBatch()
+	if err != nil {
+		return nil, err
+	}
+	// Record number of signature sets successfully batched.
+	if currLen > len(aggSet.Signatures) {
+		numberOfSetsAggregated.Observe(float64(currLen - len(aggSet.Signatures)))
+	}
+	return aggSet, nil
 }

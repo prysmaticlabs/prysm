@@ -68,10 +68,11 @@ var (
 			Help: "Count the number of times a duplicate signature set has been removed.",
 		},
 	)
-	numberOfSetsAggregated = promauto.NewCounter(
-		prometheus.CounterOpts{
-			Name: "number_of_sets_aggregated",
-			Help: "Count the number of times different sets have been successfully aggregated in a batch.",
+	numberOfSetsAggregated = promauto.NewHistogram(
+		prometheus.HistogramOpts{
+			Name:    "number_of_sets_aggregated",
+			Help:    "Count the number of times different sets have been successfully aggregated in a batch.",
+			Buckets: []float64{10, 50, 100, 200, 400, 800, 1600, 3200},
 		},
 	)
 
