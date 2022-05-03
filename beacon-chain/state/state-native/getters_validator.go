@@ -253,7 +253,7 @@ func (b *BeaconState) slashingsVal() []uint64 {
 // InactivityScores of validators participating in consensus on the beacon chain.
 func (b *BeaconState) InactivityScores() ([]uint64, error) {
 	if b.version == version.Phase0 {
-		return nil, fmt.Errorf("InactivityScores is not supported for %s", version.String(b.version))
+		return nil, errNotSupported("InactivityScores", b.version)
 	}
 
 	if b.inactivityScores == nil {

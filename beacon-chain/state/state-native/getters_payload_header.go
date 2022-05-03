@@ -1,8 +1,6 @@
 package state_native
 
 import (
-	"fmt"
-
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 )
@@ -10,7 +8,7 @@ import (
 // LatestExecutionPayloadHeader of the beacon state.
 func (b *BeaconState) LatestExecutionPayloadHeader() (*ethpb.ExecutionPayloadHeader, error) {
 	if b.version == version.Phase0 || b.version == version.Altair {
-		return nil, fmt.Errorf("LatestExecutionPayloadHeader is not supported for %s", version.String(b.version))
+		return nil, errNotSupported("LatestExecutionPayloadHeader", b.version)
 	}
 
 	if b.latestExecutionPayloadHeader == nil {

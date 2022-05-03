@@ -1,8 +1,6 @@
 package state_native
 
 import (
-	"fmt"
-
 	nativetypes "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/runtime/version"
@@ -15,7 +13,7 @@ func (b *BeaconState) SetPreviousParticipationBits(val []byte) error {
 	defer b.lock.Unlock()
 
 	if b.version == version.Phase0 {
-		return fmt.Errorf("SetPreviousParticipationBits is not supported for %s", version.String(b.version))
+		return errNotSupported("SetPreviousParticipationBits", b.version)
 	}
 
 	b.sharedFieldReferences[nativetypes.PreviousEpochParticipationBits].MinusRef()
@@ -34,7 +32,7 @@ func (b *BeaconState) SetCurrentParticipationBits(val []byte) error {
 	defer b.lock.Unlock()
 
 	if b.version == version.Phase0 {
-		return fmt.Errorf("SetCurrentParticipationBits is not supported for %s", version.String(b.version))
+		return errNotSupported("SetCurrentParticipationBits", b.version)
 	}
 
 	b.sharedFieldReferences[nativetypes.CurrentEpochParticipationBits].MinusRef()
@@ -53,7 +51,7 @@ func (b *BeaconState) AppendCurrentParticipationBits(val byte) error {
 	defer b.lock.Unlock()
 
 	if b.version == version.Phase0 {
-		return fmt.Errorf("AppendCurrentParticipationBits is not supported for %s", version.String(b.version))
+		return errNotSupported("AppendCurrentParticipationBits", b.version)
 	}
 
 	participation := b.currentEpochParticipation
@@ -78,7 +76,7 @@ func (b *BeaconState) AppendPreviousParticipationBits(val byte) error {
 	defer b.lock.Unlock()
 
 	if b.version == version.Phase0 {
-		return fmt.Errorf("AppendPreviousParticipationBits is not supported for %s", version.String(b.version))
+		return errNotSupported("AppendPreviousParticipationBits", b.version)
 	}
 
 	bits := b.previousEpochParticipation
@@ -103,7 +101,7 @@ func (b *BeaconState) ModifyPreviousParticipationBits(mutator func(val []byte) (
 
 	if b.version == version.Phase0 {
 		b.lock.Unlock()
-		return fmt.Errorf("ModifyPreviousParticipationBits is not supported for %s", version.String(b.version))
+		return errNotSupported("ModifyPreviousParticipationBits", b.version)
 	}
 
 	participation := b.previousEpochParticipation
@@ -138,7 +136,7 @@ func (b *BeaconState) ModifyCurrentParticipationBits(mutator func(val []byte) ([
 
 	if b.version == version.Phase0 {
 		b.lock.Unlock()
-		return fmt.Errorf("ModifyCurrentParticipationBits is not supported for %s", version.String(b.version))
+		return errNotSupported("ModifyCurrentParticipationBits", b.version)
 	}
 
 	participation := b.currentEpochParticipation

@@ -1,8 +1,6 @@
 package state_native
 
 import (
-	"fmt"
-
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
@@ -14,7 +12,7 @@ func (b *BeaconState) CurrentSyncCommittee() (*ethpb.SyncCommittee, error) {
 	defer b.lock.RUnlock()
 
 	if b.version == version.Phase0 {
-		return nil, fmt.Errorf("CurrentSyncCommittee is not supported for %s", version.String(b.version))
+		return nil, errNotSupported("CurrentSyncCommittee", b.version)
 	}
 
 	if b.currentSyncCommittee == nil {
@@ -36,7 +34,7 @@ func (b *BeaconState) NextSyncCommittee() (*ethpb.SyncCommittee, error) {
 	defer b.lock.RUnlock()
 
 	if b.version == version.Phase0 {
-		return nil, fmt.Errorf("NextSyncCommittee is not supported for %s", version.String(b.version))
+		return nil, errNotSupported("NextSyncCommittee", b.version)
 	}
 
 	if b.nextSyncCommittee == nil {

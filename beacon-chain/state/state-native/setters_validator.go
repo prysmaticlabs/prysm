@@ -1,8 +1,6 @@
 package state_native
 
 import (
-	"fmt"
-
 	"github.com/pkg/errors"
 	nativetypes "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
@@ -210,7 +208,7 @@ func (b *BeaconState) AppendInactivityScore(s uint64) error {
 	defer b.lock.Unlock()
 
 	if b.version == version.Phase0 {
-		return fmt.Errorf("AppendInactivityScore is not supported for %s", version.String(b.version))
+		return errNotSupported("AppendInactivityScore", b.version)
 	}
 
 	scores := b.inactivityScores
@@ -232,7 +230,7 @@ func (b *BeaconState) SetInactivityScores(val []uint64) error {
 	defer b.lock.Unlock()
 
 	if b.version == version.Phase0 {
-		return fmt.Errorf("SetInactivityScores is not supported for %s", version.String(b.version))
+		return errNotSupported("SetInactivityScores", b.version)
 	}
 
 	b.sharedFieldReferences[nativetypes.InactivityScores].MinusRef()

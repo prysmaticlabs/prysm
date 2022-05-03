@@ -1,8 +1,6 @@
 package state_native
 
 import (
-	"fmt"
-
 	nativetypes "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/types"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
@@ -14,7 +12,7 @@ func (b *BeaconState) SetCurrentSyncCommittee(val *ethpb.SyncCommittee) error {
 	defer b.lock.Unlock()
 
 	if b.version == version.Phase0 {
-		return fmt.Errorf("SetCurrentSyncCommittee is not supported for %s", version.String(b.version))
+		return errNotSupported("SetCurrentSyncCommittee", b.version)
 	}
 
 	b.currentSyncCommittee = val
@@ -28,7 +26,7 @@ func (b *BeaconState) SetNextSyncCommittee(val *ethpb.SyncCommittee) error {
 	defer b.lock.Unlock()
 
 	if b.version == version.Phase0 {
-		return fmt.Errorf("SetNextSyncCommittee is not supported for %s", version.String(b.version))
+		return errNotSupported("SetNextSyncCommittee", b.version)
 	}
 
 	b.nextSyncCommittee = val

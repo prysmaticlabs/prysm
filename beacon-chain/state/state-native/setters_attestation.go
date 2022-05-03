@@ -17,7 +17,7 @@ func (b *BeaconState) RotateAttestations() error {
 	defer b.lock.Unlock()
 
 	if b.version != version.Phase0 {
-		return fmt.Errorf("RotateAttestations is not supported for %s", version.String(b.version))
+		return errNotSupported("RotateAttestations", b.version)
 	}
 
 	b.setPreviousEpochAttestations(b.currentEpochAttestationsVal())
@@ -50,7 +50,7 @@ func (b *BeaconState) AppendCurrentEpochAttestations(val *ethpb.PendingAttestati
 	defer b.lock.Unlock()
 
 	if b.version != version.Phase0 {
-		return fmt.Errorf("AppendCurrentEpochAttestations is not supported for %s", version.String(b.version))
+		return errNotSupported("AppendCurrentEpochAttestations", b.version)
 	}
 
 	atts := b.currentEpochAttestations
@@ -80,7 +80,7 @@ func (b *BeaconState) AppendPreviousEpochAttestations(val *ethpb.PendingAttestat
 	defer b.lock.Unlock()
 
 	if b.version != version.Phase0 {
-		return fmt.Errorf("AppendPreviousEpochAttestations is not supported for %s", version.String(b.version))
+		return errNotSupported("AppendPreviousEpochAttestations", b.version)
 	}
 
 	atts := b.previousEpochAttestations

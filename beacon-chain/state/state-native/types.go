@@ -1,9 +1,12 @@
 package state_native
 
 import (
+	"fmt"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	nativetypes "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/types"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 )
 
 // Ensure type BeaconState below implements BeaconState interface.
@@ -27,3 +30,7 @@ func init() {
 // fieldMap keeps track of each field
 // to its corresponding data type.
 var fieldMap map[nativetypes.FieldIndex]types.DataType
+
+func errNotSupported(funcName string, ver int) error {
+	return fmt.Errorf("%s is not supported for %s", funcName, version.String(ver))
+}

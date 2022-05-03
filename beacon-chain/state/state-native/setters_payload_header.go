@@ -1,8 +1,6 @@
 package state_native
 
 import (
-	"fmt"
-
 	nativetypes "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/types"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
@@ -14,7 +12,7 @@ func (b *BeaconState) SetLatestExecutionPayloadHeader(val *ethpb.ExecutionPayloa
 	defer b.lock.Unlock()
 
 	if b.version == version.Phase0 || b.version == version.Altair {
-		return fmt.Errorf("SetLatestExecutionPayloadHeader is not supported for %s", version.String(b.version))
+		return errNotSupported("SetLatestExecutionPayloadHeader", b.version)
 	}
 
 	b.latestExecutionPayloadHeader = val
