@@ -358,3 +358,50 @@ func TestGetVoluntaryExitSignRequest(t *testing.T) {
 		})
 	}
 }
+
+func TestGetBlockV3BellatrixSignRequest(t *testing.T) {
+	type args struct {
+		request               *validatorpb.SignRequest
+		genesisValidatorsRoot []byte
+		isBlinded             bool
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    *v1.BlockV2BellatrixSignRequest
+		wantErr bool
+	}{
+		{
+			name: "Happy Path Test non blinded",
+			args: args{
+				request:               mock.GetMockSignRequest("BLOCK_V2_BELLATRIX"),
+				genesisValidatorsRoot: make([]byte, fieldparams.RootLength),
+				isBlinded:             false,
+			},
+			want:    mock.MockBlockV2BellatrixSignRequest(false),
+			wantErr: false,
+		},
+		{
+			name: "Happy Path Test blinded",
+			args: args{
+				request:               mock.GetMockSignRequest("BLOCK_V2_BLINDED_BELLATRIX"),
+				genesisValidatorsRoot: make([]byte, fieldparams.RootLength),
+				isBlinded:             true,
+			},
+			want:    mock.MockBlockV2BellatrixSignRequest(true),
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := v1.GetBlockV2BellatrixSignRequest(tt.args.request, tt.args.genesisValidatorsRoot, tt.args.isBlinded)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("GetBlockV2BellatrixSignRequest() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetBlockV2AltairSignRequest() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
