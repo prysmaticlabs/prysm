@@ -234,7 +234,7 @@ func (f *blocksFetcher) findForkWithPeer(ctx context.Context, pid peer.ID, slot 
 	// Traverse blocks, and if we've got one that doesn't have parent in DB, backtrack on it.
 	for i, block := range blocks {
 		parentRoot := bytesutil.ToBytes32(block.Block().ParentRoot())
-		if !f.db.HasBlock(ctx, parentRoot) && !f.chain.HasInitSyncBlock(parentRoot) {
+		if !f.chain.HasBlock(ctx, parentRoot) {
 			log.WithFields(logrus.Fields{
 				"peer": pid,
 				"slot": block.Block().Slot(),
@@ -261,7 +261,7 @@ func (f *blocksFetcher) findAncestor(ctx context.Context, pid peer.ID, b interfa
 	outBlocks := []interfaces.SignedBeaconBlock{b}
 	for i := uint64(0); i < backtrackingMaxHops; i++ {
 		parentRoot := bytesutil.ToBytes32(outBlocks[len(outBlocks)-1].Block().ParentRoot())
-		if f.db.HasBlock(ctx, parentRoot) || f.chain.HasInitSyncBlock(parentRoot) {
+		if f.chain.HasBlock(ctx, parentRoot) {
 			// Common ancestor found, forward blocks back to processor.
 			sort.Slice(outBlocks, func(i, j int) bool {
 				return outBlocks[i].Block().Slot() < outBlocks[j].Block().Slot()

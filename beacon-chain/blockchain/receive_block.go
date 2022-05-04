@@ -21,7 +21,7 @@ var epochsSinceFinalitySaveHotStateDB = types.Epoch(100)
 type BlockReceiver interface {
 	ReceiveBlock(ctx context.Context, block interfaces.SignedBeaconBlock, blockRoot [32]byte) error
 	ReceiveBlockBatch(ctx context.Context, blocks []interfaces.SignedBeaconBlock, blkRoots [][32]byte) error
-	HasInitSyncBlock(root [32]byte) bool
+	HasBlock(ctx context.Context, root [32]byte) bool
 }
 
 // ReceiveBlock is a function that defines the the operations (minus pubsub)
@@ -128,9 +128,9 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []interfaces.Sig
 	return nil
 }
 
-// HasInitSyncBlock returns true if the block of the input root exists in initial sync blocks cache.
-func (s *Service) HasInitSyncBlock(root [32]byte) bool {
-	return s.hasInitSyncBlock(root)
+// HasBlock returns true if the block of the input root exists in initial sync blocks cache or DB.
+func (s *Service) HasBlock(ctx context.Context, root [32]byte) bool {
+	return s.hasBlockInInitSyncOrDB(ctx, root)
 }
 
 func (s *Service) handlePostBlockOperations(b interfaces.BeaconBlock) error {
