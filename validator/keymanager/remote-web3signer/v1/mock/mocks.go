@@ -480,13 +480,7 @@ func MockBlockV2AltairSignRequest() *v1.BlockV2AltairSignRequest {
 	}
 }
 
-func MockBlockV2BellatrixSignRequest(isBlinded bool) *v1.BlockV2BellatrixSignRequest {
-	var bodyRoot string
-	if isBlinded {
-		bodyRoot = "0xbabb9c2d10dd3f16dc50e31fd6eb270c9c5e95a6dcb5a1eb34389ef28194285b"
-	} else {
-		bodyRoot = "0xcd7c49966ebe72b1214e6d4733adf6bf06935c5fbc3b3ad08e84e3085428b82f"
-	}
+func MockBlockV2BellatrixSignRequest(bodyRoot string) *v1.BlockV2BellatrixSignRequest {
 	return &v1.BlockV2BellatrixSignRequest{
 		Type:        "BLOCK_V2",
 		ForkInfo:    MockForkInfo(),

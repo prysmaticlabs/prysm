@@ -363,7 +363,6 @@ func TestGetBlockV3BellatrixSignRequest(t *testing.T) {
 	type args struct {
 		request               *validatorpb.SignRequest
 		genesisValidatorsRoot []byte
-		isBlinded             bool
 	}
 	tests := []struct {
 		name    string
@@ -376,9 +375,8 @@ func TestGetBlockV3BellatrixSignRequest(t *testing.T) {
 			args: args{
 				request:               mock.GetMockSignRequest("BLOCK_V2_BELLATRIX"),
 				genesisValidatorsRoot: make([]byte, fieldparams.RootLength),
-				isBlinded:             false,
 			},
-			want:    mock.MockBlockV2BellatrixSignRequest(false),
+			want:    mock.MockBlockV2BellatrixSignRequest("0xcd7c49966ebe72b1214e6d4733adf6bf06935c5fbc3b3ad08e84e3085428b82f"),
 			wantErr: false,
 		},
 		{
@@ -386,15 +384,14 @@ func TestGetBlockV3BellatrixSignRequest(t *testing.T) {
 			args: args{
 				request:               mock.GetMockSignRequest("BLOCK_V2_BLINDED_BELLATRIX"),
 				genesisValidatorsRoot: make([]byte, fieldparams.RootLength),
-				isBlinded:             true,
 			},
-			want:    mock.MockBlockV2BellatrixSignRequest(true),
+			want:    mock.MockBlockV2BellatrixSignRequest("0xbabb9c2d10dd3f16dc50e31fd6eb270c9c5e95a6dcb5a1eb34389ef28194285b"),
 			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := v1.GetBlockV2BellatrixSignRequest(tt.args.request, tt.args.genesisValidatorsRoot, tt.args.isBlinded)
+			got, err := v1.GetBlockV2BellatrixSignRequest(tt.args.request, tt.args.genesisValidatorsRoot)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetBlockV2BellatrixSignRequest() error = %v, wantErr %v", err, tt.wantErr)
 				return
