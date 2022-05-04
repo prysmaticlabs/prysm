@@ -830,7 +830,7 @@ func TestService_getFinalizedPayloadHash(t *testing.T) {
 	// None of the above should error
 	require.NoError(t, service.cfg.BeaconDB.SaveOriginCheckpointBlockRoot(ctx, [32]byte{'a'}))
 	_, err = service.getFinalizedPayloadHash(ctx, [32]byte{'a'})
-	require.ErrorContains(t, "does not exist in the db or our cache", err)
+	require.ErrorIs(t, err, errBlockNotFoundInCacheOrDB)
 }
 
 func TestService_getPayloadHash(t *testing.T) {
