@@ -60,7 +60,6 @@ type Flags struct {
 	EnableSlashingProtectionPruning bool
 
 	// Bug fixes related flags.
-	CorrectlyInsertOrphanedAtts bool
 	CorrectlyPruneCanonicalAtts bool
 
 	EnableNativeState                bool // EnableNativeState defines whether the beacon state will be represented as a pure Go struct or a Go struct that wraps a proto struct.
@@ -163,11 +162,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(enableHistoricalSpaceRepresentation.Name) {
 		log.WithField(enableHistoricalSpaceRepresentation.Name, enableHistoricalSpaceRepresentation.Usage).Warn(enabledFeatureFlag)
 		cfg.EnableHistoricalSpaceRepresentation = true
-	}
-	cfg.CorrectlyInsertOrphanedAtts = true
-	if ctx.Bool(disableCorrectlyInsertOrphanedAtts.Name) {
-		logDisabled(disableCorrectlyInsertOrphanedAtts)
-		cfg.CorrectlyInsertOrphanedAtts = false
 	}
 	cfg.CorrectlyPruneCanonicalAtts = true
 	if ctx.Bool(disableCorrectlyPruneCanonicalAtts.Name) {
