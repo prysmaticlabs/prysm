@@ -93,10 +93,18 @@ func (f *FieldTrie) RecomputeTrie(indices []uint64, elements interface{}) ([32]b
 	if len(indices) == 0 {
 		return f.TrieRoot()
 	}
-	fieldRoots, err := fieldConverters(f.field, indices, elements, false)
+
+	var fieldRoots [][32]byte
+	var err error
+	if f.field.Native() {
+		fieldRoots, err = fieldConvertersNative(f.field, indices, elements, false)
+	} else {
+		fieldRoots, err = fieldConverters(f.field, indices, elements, false)
+	}
 	if err != nil {
 		return [32]byte{}, err
 	}
+
 	if err := f.validateIndices(indices); err != nil {
 		return [32]byte{}, err
 	}
