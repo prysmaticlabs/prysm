@@ -3,11 +3,11 @@ package params
 import (
 	"encoding/hex"
 	"fmt"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/math"
 	"os"
 	"strings"
 
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/math"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 )
@@ -40,13 +40,6 @@ func UnmarshalChainConfigFile(chainConfigFileName string, conf *BeaconChainConfi
 			// Default to using mainnet.
 			conf = MainnetConfig().Copy()
 		}
-		/*
-	} else {
-		if conf.ConfigName != "" {
-			hasConfigName = true
-		}
-
-		 */
 	}
 	for i, line := range lines {
 		// No need to convert the deposit contract address to byte array (as config expects a string).

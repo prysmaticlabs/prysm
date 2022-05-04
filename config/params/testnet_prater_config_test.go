@@ -1,8 +1,9 @@
 package params_test
 
 import (
-	"github.com/prysmaticlabs/prysm/config/params"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/config/params"
 )
 
 func TestPraterConfigMatchesUpstreamYaml(t *testing.T) {

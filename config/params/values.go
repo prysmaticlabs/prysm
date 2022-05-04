@@ -79,6 +79,7 @@ func buildReverseConfigName() {
 }
 
 var rblock sync.Mutex
+
 func rebuildKnownForkVersions() error {
 	rblock.Lock()
 	defer rblock.Unlock()
