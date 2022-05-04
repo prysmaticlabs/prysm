@@ -38,7 +38,7 @@ func (w Phase0SignedBeaconBlock) Signature() []byte {
 
 // Block returns the underlying beacon block object.
 func (w Phase0SignedBeaconBlock) Block() interfaces.BeaconBlock {
-	return WrappedPhase0BeaconBlock(w.b.Block)
+	return wrappedPhase0BeaconBlock(w.b.Block)
 }
 
 // IsNil checks if the underlying beacon block is
@@ -137,11 +137,9 @@ type Phase0BeaconBlock struct {
 	b *eth.BeaconBlock
 }
 
-// WrappedPhase0BeaconBlock is constructor which wraps a protobuf phase 0 object
+// wrappedPhase0BeaconBlock is constructor which wraps a protobuf phase 0 object
 // with the block wrapper.
-//
-// Deprecated: Use WrappedBeaconBlock.
-func WrappedPhase0BeaconBlock(b *eth.BeaconBlock) interfaces.BeaconBlock {
+func wrappedPhase0BeaconBlock(b *eth.BeaconBlock) interfaces.BeaconBlock {
 	return Phase0BeaconBlock{b: b}
 }
 
@@ -167,7 +165,7 @@ func (w Phase0BeaconBlock) StateRoot() []byte {
 
 // Body returns the underlying block body.
 func (w Phase0BeaconBlock) Body() interfaces.BeaconBlockBody {
-	return WrappedPhase0BeaconBlockBody(w.b.Body)
+	return wrappedPhase0BeaconBlockBody(w.b.Body)
 }
 
 // IsNil checks if the beacon block is nil.
@@ -236,9 +234,9 @@ type Phase0BeaconBlockBody struct {
 	b *eth.BeaconBlockBody
 }
 
-// WrappedPhase0BeaconBlockBody is constructor which wraps a protobuf phase 0 object
+// wrappedPhase0BeaconBlockBody is constructor which wraps a protobuf phase 0 object
 // with the block wrapper.
-func WrappedPhase0BeaconBlockBody(b *eth.BeaconBlockBody) interfaces.BeaconBlockBody {
+func wrappedPhase0BeaconBlockBody(b *eth.BeaconBlockBody) interfaces.BeaconBlockBody {
 	return Phase0BeaconBlockBody{b: b}
 }
 

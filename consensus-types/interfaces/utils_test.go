@@ -81,7 +81,9 @@ func TestBeaconBlockHeaderFromBlockInterface(t *testing.T) {
 		BodyRoot:      bodyRoot[:],
 	}
 
-	bh, err := interfaces.BeaconBlockHeaderFromBlockInterface(wrapper.WrappedPhase0BeaconBlock(blk))
+	wb, err := wrapper.WrappedBeaconBlock(blk)
+	require.NoError(t, err)
+	bh, err := interfaces.BeaconBlockHeaderFromBlockInterface(wb)
 	require.NoError(t, err)
 	assert.DeepEqual(t, want, bh)
 }
