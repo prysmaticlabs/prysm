@@ -15,7 +15,6 @@ import (
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -60,7 +59,6 @@ func startChainService(t testing.TB, st state.BeaconState, block interfaces.Sign
 		blockchain.WithAttestationPool(attestations.NewPool()),
 		blockchain.WithDepositCache(depositCache),
 		blockchain.WithProposerIdsCache(cache.NewProposerPayloadIDsCache()),
-		blockchain.WithSlashingPool(slashings.NewPool()),
 	)
 	service, err := blockchain.NewService(context.Background(), opts...)
 	require.NoError(t, err)

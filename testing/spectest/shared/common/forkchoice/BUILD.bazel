@@ -21,7 +21,6 @@ go_library(
         "//beacon-chain/forkchoice/protoarray:go_default_library",
         "//beacon-chain/forkchoice/types:go_default_library",
         "//beacon-chain/operations/attestations:go_default_library",
-        "//beacon-chain/operations/slashings:go_default_library",
         "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/stategen:go_default_library",
         "//beacon-chain/state/v1:go_default_library",
