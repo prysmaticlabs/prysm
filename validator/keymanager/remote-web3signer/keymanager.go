@@ -163,7 +163,7 @@ func getSignRequestJson(ctx context.Context, validator *validator.Validate, requ
 		blockV2SignRequestsTotal.Inc()
 		return json.Marshal(blockv2AltairSignRequest)
 	case *validatorpb.SignRequest_BlockV3:
-		blockv2BellatrixSignRequest, err := v1.GetBlockV2BellatrixSignRequest(request, genesisValidatorsRoot, false)
+		blockv2BellatrixSignRequest, err := v1.GetBlockV2BellatrixSignRequest(request, genesisValidatorsRoot)
 		if err != nil {
 			return nil, err
 		}
@@ -173,7 +173,7 @@ func getSignRequestJson(ctx context.Context, validator *validator.Validate, requ
 		// blockV2SignRequestsTotal.Inc()
 		return json.Marshal(blockv2BellatrixSignRequest)
 	case *validatorpb.SignRequest_BlindedBlockV3:
-		blindedBlockv2SignRequest, err := v1.GetBlockV2BellatrixSignRequest(request, genesisValidatorsRoot, true)
+		blindedBlockv2SignRequest, err := v1.GetBlockV2BellatrixSignRequest(request, genesisValidatorsRoot)
 		if err != nil {
 			return nil, err
 		}
