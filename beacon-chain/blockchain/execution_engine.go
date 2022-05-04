@@ -61,11 +61,11 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get execution payload")
 	}
-	finalizedHash, err := s.getFinalizedHash(ctx, arg.finalizedRoot)
+	finalizedHash, err := s.getPayloadHash(ctx, arg.finalizedRoot)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get finalized block hash")
 	}
-	justifiedHash, err := s.getJustifiedHash(ctx, arg.justifiedRoot)
+	justifiedHash, err := s.getPayloadHash(ctx, arg.justifiedRoot)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get justified block hash")
 	}
@@ -123,10 +123,10 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 	return payloadID, nil
 }
 
-// getFinalizedHash returns the finalized payload hash given the finalized root.
-// if the finalized payload is before the first finalized block, it returns the zero hash.
-func (s *Service) getFinalizedHash(ctx context.Context, finalizedRoot [32]byte) ([]byte, error) {
-	finalizedBlock, err := s.getBlock(ctx, s.ensureRootNotZeros(finalizedRoot))
+// getPayloadHash returns the payload hash given the block root.
+// if the block is before bellatrix fork epoch, it returns the zero hash.
+func (s *Service) getPayloadHash(ctx context.Context, root [32]byte) ([]byte, error) {
+	finalizedBlock, err := s.getBlock(ctx, s.ensureRootNotZeros(root))
 	if err != nil {
 		return nil, err
 	}
@@ -135,24 +135,7 @@ func (s *Service) getFinalizedHash(ctx context.Context, finalizedRoot [32]byte) 
 	}
 	payload, err := finalizedBlock.Block().Body().ExecutionPayload()
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get finalized block execution payload")
-	}
-	return payload.BlockHash, nil
-}
-
-// getJustifiedHash returns the justified payload hash given the justified root.
-// if the justified payload is before the first justified block, it returns the zero hash.
-func (s *Service) getJustifiedHash(ctx context.Context, justifiedRoot [32]byte) ([]byte, error) {
-	justifiedBlock, err := s.getBlock(ctx, s.ensureRootNotZeros(justifiedRoot))
-	if err != nil {
-		return nil, err
-	}
-	if blocks.IsPreBellatrixVersion(justifiedBlock.Block().Version()) {
-		return params.BeaconConfig().ZeroHash[:], nil
-	}
-	payload, err := justifiedBlock.Block().Body().ExecutionPayload()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get justified block execution payload")
+		return nil, errors.Wrap(err, "could not get execution payload")
 	}
 	return payload.BlockHash, nil
 }

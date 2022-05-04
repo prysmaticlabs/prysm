@@ -792,7 +792,7 @@ func TestService_removeInvalidBlockAndState(t *testing.T) {
 	require.Equal(t, false, has)
 }
 
-func TestService_getFinalizedHash(t *testing.T) {
+func TestService_getPayloadHash(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 	opts := []Option{
@@ -803,7 +803,7 @@ func TestService_getFinalizedHash(t *testing.T) {
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 
-	_, err = service.getFinalizedHash(ctx, [32]byte{})
+	_, err = service.getPayloadHash(ctx, [32]byte{})
 	require.ErrorIs(t, errBlockNotFoundInCacheOrDB, err)
 
 	b := util.NewBeaconBlock()
@@ -813,7 +813,7 @@ func TestService_getFinalizedHash(t *testing.T) {
 	require.NoError(t, err)
 	service.saveInitSyncBlock(r, wsb)
 
-	h, err := service.getFinalizedHash(ctx, r)
+	h, err := service.getPayloadHash(ctx, r)
 	require.NoError(t, err)
 	require.DeepEqual(t, params.BeaconConfig().ZeroHash[:], h)
 
@@ -826,46 +826,7 @@ func TestService_getFinalizedHash(t *testing.T) {
 	require.NoError(t, err)
 	service.saveInitSyncBlock(r, wsb)
 
-	h, err = service.getFinalizedHash(ctx, r)
-	require.NoError(t, err)
-	require.DeepEqual(t, []byte{'a'}, h)
-}
-
-func TestService_getJustifiedHash(t *testing.T) {
-	ctx := context.Background()
-	beaconDB := testDB.SetupDB(t)
-	opts := []Option{
-		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
-		WithForkChoiceStore(protoarray.New(0, 0, [32]byte{})),
-	}
-	service, err := NewService(ctx, opts...)
-	require.NoError(t, err)
-
-	_, err = service.getJustifiedHash(ctx, [32]byte{})
-	require.ErrorIs(t, errBlockNotFoundInCacheOrDB, err)
-
-	b := util.NewBeaconBlock()
-	r, err := b.Block.HashTreeRoot()
-	require.NoError(t, err)
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
-	require.NoError(t, err)
-	service.saveInitSyncBlock(r, wsb)
-
-	h, err := service.getJustifiedHash(ctx, r)
-	require.NoError(t, err)
-	require.DeepEqual(t, params.BeaconConfig().ZeroHash[:], h)
-
-	bb := util.NewBeaconBlockBellatrix()
-	h = []byte{'a'}
-	bb.Block.Body.ExecutionPayload.BlockHash = h
-	r, err = b.Block.HashTreeRoot()
-	require.NoError(t, err)
-	wsb, err = wrapper.WrappedSignedBeaconBlock(bb)
-	require.NoError(t, err)
-	service.saveInitSyncBlock(r, wsb)
-
-	h, err = service.getJustifiedHash(ctx, r)
+	h, err = service.getPayloadHash(ctx, r)
 	require.NoError(t, err)
 	require.DeepEqual(t, []byte{'a'}, h)
 }
