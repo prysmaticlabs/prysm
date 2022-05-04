@@ -280,21 +280,29 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 	}
 }
 
-func TestService_HasInitSyncBlock(t *testing.T) {
-	opts := testServiceOptsNoDB()
+func TestService_HasBlock(t *testing.T) {
+	opts := testServiceOptsWithDB(t)
 	opts = append(opts, WithStateNotifier(&blockchainTesting.MockStateNotifier{}))
 	s, err := NewService(context.Background(), opts...)
 	require.NoError(t, err)
 	r := [32]byte{'a'}
-	if s.HasInitSyncBlock(r) {
+	if s.HasBlock(context.Background(), r) {
 		t.Error("Should not have block")
 	}
 	wsb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
 	require.NoError(t, err)
 	s.saveInitSyncBlock(r, wsb)
-	if !s.HasInitSyncBlock(r) {
+	if !s.HasBlock(context.Background(), r) {
 		t.Error("Should have block")
 	}
+	b := util.NewBeaconBlock()
+	b.Block.Slot = 1
+	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	r, err = b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, s.cfg.BeaconDB.SaveBlock(context.Background(), wsb))
+	require.Equal(t, true, s.HasBlock(context.Background(), r))
 }
 
 func TestCheckSaveHotStateDB_Enabling(t *testing.T) {
