@@ -71,5 +71,5 @@ func TestProposerCache_CanRotate(t *testing.T) {
 		item := &ProposerIndices{BlockRoot: bytesutil.ToBytes32(s)}
 		require.NoError(t, cache.AddProposerIndices(item))
 	}
-	assert.Equal(t, maxProposerIndicesCacheSize, cache.Len())
+	assert.Equal(t, int(maxProposerIndicesCacheSize), cache.Len())
 }
