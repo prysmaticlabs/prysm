@@ -25,7 +25,6 @@ func BeaconConfig() *BeaconChainConfig {
 // return this new configuration.
 func OverrideBeaconConfig(c *BeaconChainConfig) {
 	beaconConfigLock.Lock()
-	defer beaconConfigLock.Unlock()
 	c.InitializeForkSchedule()
 	name, ok := reverseConfigNames[c.ConfigName]
 	// if name collides with an existing config name, override it, because the fork versions probably conflict
@@ -34,8 +33,11 @@ func OverrideBeaconConfig(c *BeaconChainConfig) {
 		name = Dynamic
 	}
 	KnownConfigs[name] = func() *BeaconChainConfig { return c }
-	rebuildKnownForkVersions()
 	beaconConfig = c
+	beaconConfigLock.Unlock()
+	if err := rebuildKnownForkVersions(); err != nil {
+		panic(err)
+	}
 }
 
 // Copy returns a copy of the config object.

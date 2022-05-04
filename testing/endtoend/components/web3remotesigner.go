@@ -240,7 +240,8 @@ func writeKeystoreKeys(ctx context.Context, keystorePath string, numKeys uint64)
 func (w *Web3RemoteSigner) createTestnetDir() (string, error) {
 	testNetDir := e2e.TestParams.TestPath + "/web3signer-testnet"
 	configPath := filepath.Join(testNetDir, "config.yaml")
-	rawYaml := params.E2ETestConfigYaml()
+	cfg := params.E2ETestConfig()
+	rawYaml := params.ConfigToYaml(cfg)
 	// Add in deposit contract in yaml
 	depContractStr := fmt.Sprintf("\nDEPOSIT_CONTRACT_ADDRESS: %#x", e2e.TestParams.ContractAddress)
 	rawYaml = append(rawYaml, []byte(depContractStr)...)

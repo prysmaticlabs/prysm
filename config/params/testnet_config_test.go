@@ -25,15 +25,15 @@ func TestE2EConfigParity(t *testing.T) {
 	yamlDir := filepath.Join(testDir, "config.yaml")
 
 	testCfg := params.E2EMainnetTestConfig()
-	yamlObj := params.E2EMainnetConfigYaml()
+	yamlObj := params.ConfigToYaml(testCfg)
 	assert.NoError(t, file.WriteFile(yamlDir, yamlObj))
 
-	params.LoadChainConfigFile(yamlDir, params.MainnetConfig().Copy())
+	cfg := params.UnmarshalChainConfigFile(yamlDir, params.MainnetConfig().Copy())
 
 	// compareConfigs makes it easier to figure out exactly what changed
-	compareConfigs(t, params.BeaconConfig(), testCfg)
+	compareConfigs(t, cfg, testCfg)
 	// failsafe in case compareConfigs is not updated when new fields are added
-	require.DeepEqual(t, params.BeaconConfig(), testCfg)
+	require.DeepEqual(t, cfg, testCfg)
 }
 
 func compareConfigs(t *testing.T, expected, actual *params.BeaconChainConfig) {

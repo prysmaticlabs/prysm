@@ -27,7 +27,9 @@ func OverrideBeaconConfig(c *BeaconChainConfig) {
 		name = Dynamic
 	}
 	KnownConfigs[name] = func() *BeaconChainConfig { return c }
-	rebuildKnownForkVersions()
+	if err := rebuildKnownForkVersions(); err != nil {
+		panic(err)
+	}
 	beaconConfig = c
 }
 

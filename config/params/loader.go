@@ -3,11 +3,11 @@ package params
 import (
 	"encoding/hex"
 	"fmt"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/math"
 	"os"
 	"strings"
 
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/math"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 )
@@ -24,9 +24,7 @@ func isMinimal(lines []string) bool {
 	return false
 }
 
-// LoadChainConfigFile load, convert hex values into valid param yaml format,
-// unmarshal , and apply beacon chain config file.
-func LoadChainConfigFile(chainConfigFileName string, conf *BeaconChainConfig) {
+func UnmarshalChainConfigFile(chainConfigFileName string, conf *BeaconChainConfig) *BeaconChainConfig {
 	yamlFile, err := os.ReadFile(chainConfigFileName) // #nosec G304
 	if err != nil {
 		log.WithError(err).Fatal("Failed to read chain config file.")
@@ -42,6 +40,13 @@ func LoadChainConfigFile(chainConfigFileName string, conf *BeaconChainConfig) {
 			// Default to using mainnet.
 			conf = MainnetConfig().Copy()
 		}
+		/*
+	} else {
+		if conf.ConfigName != "" {
+			hasConfigName = true
+		}
+
+		 */
 	}
 	for i, line := range lines {
 		// No need to convert the deposit contract address to byte array (as config expects a string).
@@ -70,7 +75,15 @@ func LoadChainConfigFile(chainConfigFileName string, conf *BeaconChainConfig) {
 	// recompute SqrRootSlotsPerEpoch constant to handle non-standard values of SlotsPerEpoch
 	conf.SqrRootSlotsPerEpoch = types.Slot(math.IntegerSquareRoot(uint64(conf.SlotsPerEpoch)))
 	log.Debugf("Config file values: %+v", conf)
-	OverrideBeaconConfig(conf)
+	conf.InitializeForkSchedule()
+	return conf
+}
+
+// LoadChainConfigFile load, convert hex values into valid param yaml format,
+// unmarshal , and apply beacon chain config file.
+func LoadChainConfigFile(chainConfigFileName string, conf *BeaconChainConfig) {
+	cfg := UnmarshalChainConfigFile(chainConfigFileName, conf)
+	OverrideBeaconConfig(cfg)
 }
 
 // ReplaceHexStringWithYAMLFormat will replace hex strings that the yaml parser will understand.

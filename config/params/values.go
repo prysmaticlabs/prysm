@@ -2,6 +2,7 @@ package params
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
@@ -63,7 +64,10 @@ func ConfigForVersion(version [fieldparams.VersionLength]byte) (*BeaconChainConf
 }
 
 func init() {
-	rebuildKnownForkVersions()
+	err := rebuildKnownForkVersions()
+	if err != nil {
+		panic(err)
+	}
 	buildReverseConfigName()
 }
 
@@ -74,26 +78,29 @@ func buildReverseConfigName() {
 	}
 }
 
-func rebuildKnownForkVersions() {
+var rblock sync.Mutex
+func rebuildKnownForkVersions() error {
+	rblock.Lock()
+	defer rblock.Unlock()
 	knownForkVersions = make(map[[fieldparams.VersionLength]byte]ConfigName)
 	for n, cfunc := range KnownConfigs {
 		cfg := cfunc()
 		// ensure that fork schedule is consistent w/ struct fields for all known configurations
 		if err := equalForkSchedules(configForkSchedule(cfg), cfg.ForkVersionSchedule); err != nil {
-			panic(errors.Wrapf(err, "improperly initialized for schedule for config %s", n.String()))
+			return errors.Wrapf(err, "improperly initialized fork schedule for config %s", n.String())
 		}
 		// ensure that all fork versions are unique
 		for v := range cfg.ForkVersionSchedule {
 			pn, exists := knownForkVersions[v]
 			if exists {
 				previous := KnownConfigs[pn]()
-				msg := fmt.Sprintf("version %#x is duplicated in 2 configs, %s at epoch %d, %s at epoch %d",
+				return fmt.Errorf("version %#x is duplicated in 2 configs, %s at epoch %d, %s at epoch %d",
 					v, pn, previous.ForkVersionSchedule[v], n, cfg.ForkVersionSchedule[v])
-				panic(msg)
 			}
 			knownForkVersions[v] = n
 		}
 	}
+	return nil
 }
 
 func equalForkSchedules(a, b map[[fieldparams.VersionLength]byte]types.Epoch) error {
