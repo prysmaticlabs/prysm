@@ -49,7 +49,7 @@ func TestProcessSyncAggregate(t *testing.T) {
 		},
 	}
 
-	wrappedBlock, err := wrapper.WrappedAltairBeaconBlock(block)
+	wrappedBlock, err := wrapper.WrappedBeaconBlock(block)
 	require.NoError(t, err)
 
 	s.processSyncAggregate(beaconState, wrappedBlock)
