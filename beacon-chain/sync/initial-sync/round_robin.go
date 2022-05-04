@@ -11,9 +11,9 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/paulbellamy/ratecounter"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 )
@@ -24,10 +24,10 @@ const (
 )
 
 // blockReceiverFn defines block receiving function.
-type blockReceiverFn func(ctx context.Context, block block.SignedBeaconBlock, blockRoot [32]byte) error
+type blockReceiverFn func(ctx context.Context, block interfaces.SignedBeaconBlock, blockRoot [32]byte) error
 
 // batchBlockReceiverFn defines batch receiving function.
-type batchBlockReceiverFn func(ctx context.Context, blks []block.SignedBeaconBlock, roots [][32]byte) error
+type batchBlockReceiverFn func(ctx context.Context, blks []interfaces.SignedBeaconBlock, roots [][32]byte) error
 
 // Round Robin sync looks at the latest peer statuses and syncs up to the highest known epoch.
 //
@@ -178,7 +178,7 @@ func (s *Service) highestFinalizedEpoch() types.Epoch {
 }
 
 // logSyncStatus and increment block processing counter.
-func (s *Service) logSyncStatus(genesis time.Time, blk block.BeaconBlock, blkRoot [32]byte) {
+func (s *Service) logSyncStatus(genesis time.Time, blk interfaces.BeaconBlock, blkRoot [32]byte) {
 	s.counter.Incr(1)
 	rate := float64(s.counter.Rate()) / counterSeconds
 	if rate == 0 {
@@ -198,7 +198,7 @@ func (s *Service) logSyncStatus(genesis time.Time, blk block.BeaconBlock, blkRoo
 }
 
 // logBatchSyncStatus and increments the block processing counter.
-func (s *Service) logBatchSyncStatus(genesis time.Time, blks []block.SignedBeaconBlock, blkRoot [32]byte) {
+func (s *Service) logBatchSyncStatus(genesis time.Time, blks []interfaces.SignedBeaconBlock, blkRoot [32]byte) {
 	s.counter.Incr(int64(len(blks)))
 	rate := float64(s.counter.Rate()) / counterSeconds
 	if rate == 0 {
@@ -220,7 +220,7 @@ func (s *Service) logBatchSyncStatus(genesis time.Time, blks []block.SignedBeaco
 func (s *Service) processBlock(
 	ctx context.Context,
 	genesis time.Time,
-	blk block.SignedBeaconBlock,
+	blk interfaces.SignedBeaconBlock,
 	blockReceiver blockReceiverFn,
 ) error {
 	blkRoot, err := blk.Block().HashTreeRoot()
@@ -233,14 +233,14 @@ func (s *Service) processBlock(
 
 	s.logSyncStatus(genesis, blk.Block(), blkRoot)
 	parentRoot := bytesutil.ToBytes32(blk.Block().ParentRoot())
-	if !s.cfg.DB.HasBlock(ctx, parentRoot) && !s.cfg.Chain.HasInitSyncBlock(parentRoot) {
+	if !s.cfg.Chain.HasBlock(ctx, parentRoot) {
 		return fmt.Errorf("%w: (in processBlock, slot=%d) %#x", errParentDoesNotExist, blk.Block().Slot(), blk.Block().ParentRoot())
 	}
 	return blockReceiver(ctx, blk, blkRoot)
 }
 
 func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
-	blks []block.SignedBeaconBlock, bFunc batchBlockReceiverFn) error {
+	blks []interfaces.SignedBeaconBlock, bFunc batchBlockReceiverFn) error {
 	if len(blks) == 0 {
 		return errors.New("0 blocks provided into method")
 	}
@@ -263,7 +263,7 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 	}
 	s.logBatchSyncStatus(genesis, blks, blkRoot)
 	parentRoot := bytesutil.ToBytes32(firstBlock.Block().ParentRoot())
-	if !s.cfg.DB.HasBlock(ctx, parentRoot) && !s.cfg.Chain.HasInitSyncBlock(parentRoot) {
+	if !s.cfg.Chain.HasBlock(ctx, parentRoot) {
 		return fmt.Errorf("%w: %#x (in processBatchedBlocks, slot=%d)", errParentDoesNotExist, firstBlock.Block().ParentRoot(), firstBlock.Block().Slot())
 	}
 	blockRoots := make([][32]byte, len(blks))
@@ -299,7 +299,7 @@ func (s *Service) updatePeerScorerStats(pid peer.ID, startSlot types.Slot) {
 }
 
 // isProcessedBlock checks DB and local cache for presence of a given block, to avoid duplicates.
-func (s *Service) isProcessedBlock(ctx context.Context, blk block.SignedBeaconBlock, blkRoot [32]byte) bool {
+func (s *Service) isProcessedBlock(ctx context.Context, blk interfaces.SignedBeaconBlock, blkRoot [32]byte) bool {
 	finalizedSlot, err := slots.EpochStart(s.cfg.Chain.FinalizedCheckpt().Epoch)
 	if err != nil {
 		return false
@@ -309,10 +309,9 @@ func (s *Service) isProcessedBlock(ctx context.Context, blk block.SignedBeaconBl
 	if blk.Block().Slot() <= finalizedSlot {
 		return true
 	}
-	blockExistsInDB := s.cfg.DB.HasBlock(ctx, blkRoot) || s.cfg.Chain.HasInitSyncBlock(blkRoot)
 	// If block exists in our db and is before or equal to our current head
 	// we ignore it.
-	if blockExistsInDB && s.cfg.Chain.HeadSlot() >= blk.Block().Slot() {
+	if s.cfg.Chain.HeadSlot() >= blk.Block().Slot() && s.cfg.Chain.HasBlock(ctx, blkRoot) {
 		return true
 	}
 	return false

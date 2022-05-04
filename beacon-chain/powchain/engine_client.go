@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -287,6 +288,13 @@ func handleRPCError(err error) error {
 	}
 	e, ok := err.(rpc.Error)
 	if !ok {
+		if strings.Contains(err.Error(), "401 Unauthorized") {
+			log.Error("HTTP authentication to your execution client is not working. Please ensure " +
+				"you are setting a correct value for the --jwt-secret flag in Prysm, or use an IPC connection if on " +
+				"the same machine. Please see our documentation for more information on authenticating connections " +
+				"here https://docs.prylabs.network/docs/execution-node/authentication")
+			return fmt.Errorf("could not authenticate connection to execution client: %v", err)
+		}
 		return errors.Wrap(err, "got an unexpected error")
 	}
 	switch e.ErrorCode() {

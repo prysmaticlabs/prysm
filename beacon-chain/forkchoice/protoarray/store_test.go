@@ -773,3 +773,48 @@ func TestStore_UpdateCanonicalNodes_RemoveOldCanonical(t *testing.T) {
 	_, ok := f.store.canonicalNodes[[32]byte{'c'}]
 	require.Equal(t, false, ok)
 }
+
+func TestStore_RemoveEquivocating(t *testing.T) {
+	ctx := context.Background()
+	f := setup(1, 1)
+	// Insert a block it will be head
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 1, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 1, 1))
+	head, err := f.Head(ctx, 1, params.BeaconConfig().ZeroHash, []uint64{}, 1)
+	require.NoError(t, err)
+	require.Equal(t, [32]byte{'a'}, head)
+
+	// Insert two extra blocks
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 2, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'B'}, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 3, [32]byte{'c'}, [32]byte{'a'}, [32]byte{'C'}, 1, 1))
+	head, err = f.Head(ctx, 1, params.BeaconConfig().ZeroHash, []uint64{}, 1)
+	require.NoError(t, err)
+	require.Equal(t, [32]byte{'c'}, head)
+
+	// Insert two attestations for block b, it becomes head
+	f.ProcessAttestation(ctx, []uint64{1, 2}, [32]byte{'b'}, 1)
+	f.ProcessAttestation(ctx, []uint64{3}, [32]byte{'c'}, 1)
+	head, err = f.Head(ctx, 1, params.BeaconConfig().ZeroHash, []uint64{100, 200, 200, 300}, 1)
+	require.NoError(t, err)
+	require.Equal(t, [32]byte{'b'}, head)
+
+	// Process b's slashing, c is now head
+	f.InsertSlashedIndex(ctx, 1)
+	head, err = f.Head(ctx, 1, params.BeaconConfig().ZeroHash, []uint64{100, 200, 200, 300}, 1)
+	require.NoError(t, err)
+	require.Equal(t, [32]byte{'c'}, head)
+	require.Equal(t, uint64(200), f.store.nodes[2].weight)
+	require.Equal(t, uint64(300), f.store.nodes[3].weight)
+
+	// Process the same slashing again, should be a noop
+	f.InsertSlashedIndex(ctx, 1)
+	head, err = f.Head(ctx, 1, params.BeaconConfig().ZeroHash, []uint64{100, 200, 200, 300}, 1)
+	require.NoError(t, err)
+	require.Equal(t, [32]byte{'c'}, head)
+	require.Equal(t, uint64(200), f.store.nodes[2].weight)
+	require.Equal(t, uint64(300), f.store.nodes[3].weight)
+
+	// Process index where index == vote length. Should not panic.
+	f.InsertSlashedIndex(ctx, types.ValidatorIndex(len(f.balances)))
+	f.InsertSlashedIndex(ctx, types.ValidatorIndex(len(f.votes)))
+	require.Equal(t, true, len(f.store.slashedIndices) > 0)
+}

@@ -3,19 +3,19 @@ package wrapper
 import (
 	ssz "github.com/ferranbt/fastssz"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"google.golang.org/protobuf/proto"
 )
 
 var (
-	_ = block.SignedBeaconBlock(&Phase0SignedBeaconBlock{})
-	_ = block.BeaconBlock(&Phase0BeaconBlock{})
-	_ = block.BeaconBlockBody(&Phase0BeaconBlockBody{})
+	_ = interfaces.SignedBeaconBlock(&Phase0SignedBeaconBlock{})
+	_ = interfaces.BeaconBlock(&Phase0BeaconBlock{})
+	_ = interfaces.BeaconBlockBody(&Phase0BeaconBlockBody{})
 )
 
 // Phase0SignedBeaconBlock is a convenience wrapper around a phase 0 beacon block
@@ -27,7 +27,7 @@ type Phase0SignedBeaconBlock struct {
 
 // wrappedPhase0SignedBeaconBlock is constructor which wraps a protobuf phase 0 block
 // with the block wrapper.
-func wrappedPhase0SignedBeaconBlock(b *eth.SignedBeaconBlock) block.SignedBeaconBlock {
+func wrappedPhase0SignedBeaconBlock(b *eth.SignedBeaconBlock) interfaces.SignedBeaconBlock {
 	return Phase0SignedBeaconBlock{b: b}
 }
 
@@ -37,8 +37,8 @@ func (w Phase0SignedBeaconBlock) Signature() []byte {
 }
 
 // Block returns the underlying beacon block object.
-func (w Phase0SignedBeaconBlock) Block() block.BeaconBlock {
-	return WrappedPhase0BeaconBlock(w.b.Block)
+func (w Phase0SignedBeaconBlock) Block() interfaces.BeaconBlock {
+	return wrappedPhase0BeaconBlock(w.b.Block)
 }
 
 // IsNil checks if the underlying beacon block is
@@ -49,7 +49,7 @@ func (w Phase0SignedBeaconBlock) IsNil() bool {
 
 // Copy performs a deep copy of the signed beacon block
 // object.
-func (w Phase0SignedBeaconBlock) Copy() block.SignedBeaconBlock {
+func (w Phase0SignedBeaconBlock) Copy() interfaces.SignedBeaconBlock {
 	return wrappedPhase0SignedBeaconBlock(eth.CopySignedBeaconBlock(w.b))
 }
 
@@ -137,11 +137,9 @@ type Phase0BeaconBlock struct {
 	b *eth.BeaconBlock
 }
 
-// WrappedPhase0BeaconBlock is constructor which wraps a protobuf phase 0 object
+// wrappedPhase0BeaconBlock is constructor which wraps a protobuf phase 0 object
 // with the block wrapper.
-//
-// Deprecated: Use WrappedBeaconBlock.
-func WrappedPhase0BeaconBlock(b *eth.BeaconBlock) block.BeaconBlock {
+func wrappedPhase0BeaconBlock(b *eth.BeaconBlock) interfaces.BeaconBlock {
 	return Phase0BeaconBlock{b: b}
 }
 
@@ -166,8 +164,8 @@ func (w Phase0BeaconBlock) StateRoot() []byte {
 }
 
 // Body returns the underlying block body.
-func (w Phase0BeaconBlock) Body() block.BeaconBlockBody {
-	return WrappedPhase0BeaconBlockBody(w.b.Body)
+func (w Phase0BeaconBlock) Body() interfaces.BeaconBlockBody {
+	return wrappedPhase0BeaconBlockBody(w.b.Body)
 }
 
 // IsNil checks if the beacon block is nil.
@@ -236,9 +234,9 @@ type Phase0BeaconBlockBody struct {
 	b *eth.BeaconBlockBody
 }
 
-// WrappedPhase0BeaconBlockBody is constructor which wraps a protobuf phase 0 object
+// wrappedPhase0BeaconBlockBody is constructor which wraps a protobuf phase 0 object
 // with the block wrapper.
-func WrappedPhase0BeaconBlockBody(b *eth.BeaconBlockBody) block.BeaconBlockBody {
+func wrappedPhase0BeaconBlockBody(b *eth.BeaconBlockBody) interfaces.BeaconBlockBody {
 	return Phase0BeaconBlockBody{b: b}
 }
 

@@ -1,3 +1,6 @@
+//go:build !fuzz
+// +build !fuzz
+
 package cache
 
 import (
@@ -68,7 +71,5 @@ func TestProposerCache_CanRotate(t *testing.T) {
 		item := &ProposerIndices{BlockRoot: bytesutil.ToBytes32(s)}
 		require.NoError(t, cache.AddProposerIndices(item))
 	}
-
-	k := cache.ProposerIndicesCache.ListKeys()
-	assert.Equal(t, maxProposerIndicesCacheSize, uint64(len(k)))
+	assert.Equal(t, int(maxProposerIndicesCacheSize), cache.Len())
 }

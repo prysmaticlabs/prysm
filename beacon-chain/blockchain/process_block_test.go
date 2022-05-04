@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -26,12 +27,13 @@ import (
 	"github.com/prysmaticlabs/prysm/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -298,7 +300,7 @@ func TestStore_OnBlockBatch_ProtoArray(t *testing.T) {
 
 	bState := st.Copy()
 
-	var blks []block.SignedBeaconBlock
+	var blks []interfaces.SignedBeaconBlock
 	var blkRoots [][32]byte
 	var firstState state.BeaconState
 	for i := 1; i < 10; i++ {
@@ -362,7 +364,7 @@ func TestStore_OnBlockBatch_DoublyLinkedTree(t *testing.T) {
 
 	bState := st.Copy()
 
-	var blks []block.SignedBeaconBlock
+	var blks []interfaces.SignedBeaconBlock
 	var blkRoots [][32]byte
 	var firstState state.BeaconState
 	for i := 1; i < 10; i++ {
@@ -419,7 +421,7 @@ func TestStore_OnBlockBatch_NotifyNewPayload(t *testing.T) {
 	st, keys := util.DeterministicGenesisState(t, 64)
 	bState := st.Copy()
 
-	var blks []block.SignedBeaconBlock
+	var blks []interfaces.SignedBeaconBlock
 	var blkRoots [][32]byte
 	var firstState state.BeaconState
 	blkCount := 4
@@ -586,7 +588,9 @@ func TestCachedPreState_CanGetFromStateSummary_ProtoArray(t *testing.T) {
 	b.Block.ParentRoot = gRoot[:]
 	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Slot: 1, Root: gRoot[:]}))
 	require.NoError(t, service.cfg.StateGen.SaveState(ctx, gRoot, s))
-	require.NoError(t, service.verifyBlkPreState(ctx, wrapper.WrappedPhase0BeaconBlock(b.Block)))
+	wb, err := wrapper.WrappedBeaconBlock(b.Block)
+	require.NoError(t, err)
+	require.NoError(t, service.verifyBlkPreState(ctx, wb))
 }
 
 func TestCachedPreState_CanGetFromStateSummary_DoublyLinkedTree(t *testing.T) {
@@ -621,7 +625,9 @@ func TestCachedPreState_CanGetFromStateSummary_DoublyLinkedTree(t *testing.T) {
 	b.Block.ParentRoot = gRoot[:]
 	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Slot: 1, Root: gRoot[:]}))
 	require.NoError(t, service.cfg.StateGen.SaveState(ctx, gRoot, s))
-	require.NoError(t, service.verifyBlkPreState(ctx, wrapper.WrappedPhase0BeaconBlock(b.Block)))
+	wb, err := wrapper.WrappedBeaconBlock(b.Block)
+	require.NoError(t, err)
+	require.NoError(t, service.verifyBlkPreState(ctx, wb))
 }
 
 func TestCachedPreState_CanGetFromDB(t *testing.T) {
@@ -651,7 +657,9 @@ func TestCachedPreState_CanGetFromDB(t *testing.T) {
 	b := util.NewBeaconBlock()
 	b.Block.Slot = 1
 	service.store.SetFinalizedCheckpt(&ethpb.Checkpoint{Root: gRoot[:]})
-	err = service.verifyBlkPreState(ctx, wrapper.WrappedPhase0BeaconBlock(b.Block))
+	wb, err := wrapper.WrappedBeaconBlock(b.Block)
+	require.NoError(t, err)
+	err = service.verifyBlkPreState(ctx, wb)
 	wanted := "could not reconstruct parent state"
 	assert.ErrorContains(t, wanted, err)
 
@@ -1827,4 +1835,55 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestService_insertSlashingsToForkChoiceStore(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+	fcs := protoarray.New(0, 0, [32]byte{'a'})
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithStateGen(stategen.New(beaconDB)),
+		WithForkChoiceStore(fcs),
+		WithProposerIdsCache(cache.NewProposerPayloadIDsCache()),
+	}
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+
+	beaconState, privKeys := util.DeterministicGenesisState(t, 100)
+	att1 := util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+		Data: &ethpb.AttestationData{
+			Source: &ethpb.Checkpoint{Epoch: 1},
+		},
+		AttestingIndices: []uint64{0, 1},
+	})
+	domain, err := signing.Domain(beaconState.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, beaconState.GenesisValidatorsRoot())
+	require.NoError(t, err)
+	signingRoot, err := signing.ComputeSigningRoot(att1.Data, domain)
+	assert.NoError(t, err, "Could not get signing root of beacon block header")
+	sig0 := privKeys[0].Sign(signingRoot[:])
+	sig1 := privKeys[1].Sign(signingRoot[:])
+	aggregateSig := bls.AggregateSignatures([]bls.Signature{sig0, sig1})
+	att1.Signature = aggregateSig.Marshal()
+
+	att2 := util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+		AttestingIndices: []uint64{0, 1},
+	})
+	signingRoot, err = signing.ComputeSigningRoot(att2.Data, domain)
+	assert.NoError(t, err, "Could not get signing root of beacon block header")
+	sig0 = privKeys[0].Sign(signingRoot[:])
+	sig1 = privKeys[1].Sign(signingRoot[:])
+	aggregateSig = bls.AggregateSignatures([]bls.Signature{sig0, sig1})
+	att2.Signature = aggregateSig.Marshal()
+	slashings := []*ethpb.AttesterSlashing{
+		{
+			Attestation_1: att1,
+			Attestation_2: att2,
+		},
+	}
+	b := util.NewBeaconBlock()
+	b.Block.Body.AttesterSlashings = slashings
+	wb, err := wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	service.insertSlashingsToForkChoiceStore(ctx, wb.Block())
 }

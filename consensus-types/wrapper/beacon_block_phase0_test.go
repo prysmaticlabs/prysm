@@ -4,10 +4,10 @@ import (
 	"testing"
 
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -30,7 +30,8 @@ func TestPhase0SignedBeaconBlock_Header(t *testing.T) {
 		},
 		Signature: signature,
 	}
-	wrapped, _ := wrapper.WrappedSignedBeaconBlock(block)
+	wrapped, err := wrapper.WrappedSignedBeaconBlock(block)
+	require.NoError(t, err)
 
 	header, err := wrapped.Header()
 	require.NoError(t, err)
