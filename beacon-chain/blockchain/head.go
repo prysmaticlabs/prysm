@@ -355,10 +355,6 @@ func (s *Service) notifyNewHeadEvent(
 // attestation pool. It also filters out the attestations that is one epoch older as a
 // defense so invalid attestations don't flow into the attestation pool.
 func (s *Service) saveOrphanedAtts(ctx context.Context, orphanedRoot [32]byte) error {
-	if !features.Get().CorrectlyInsertOrphanedAtts {
-		return nil
-	}
-
 	orphanedBlk, err := s.cfg.BeaconDB.Block(ctx, orphanedRoot)
 	if err != nil {
 		return err
