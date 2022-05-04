@@ -22,7 +22,6 @@ func TestEndToEnd_MainnetConfig_ValidatorAtCurrentRelease(t *testing.T) {
 func e2eMainnet(t *testing.T, usePrysmSh, useMultiClient bool) {
 	cfg := params.E2EMainnetTestConfig()
 	params.OverrideBeaconConfig(cfg)
-	params.UseE2EMainnetConfig()
 	if useMultiClient {
 		require.NoError(t, e2eParams.InitMultiClient(e2eParams.StandardBeaconCount, e2eParams.StandardLighthouseNodeCount))
 	} else {
