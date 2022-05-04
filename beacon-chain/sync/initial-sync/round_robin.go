@@ -233,7 +233,7 @@ func (s *Service) processBlock(
 
 	s.logSyncStatus(genesis, blk.Block(), blkRoot)
 	parentRoot := bytesutil.ToBytes32(blk.Block().ParentRoot())
-	if !s.cfg.DB.HasBlock(ctx, parentRoot) && !s.cfg.Chain.HasInitSyncBlock(parentRoot) {
+	if !s.cfg.Chain.HasBlock(ctx, parentRoot) {
 		return fmt.Errorf("%w: (in processBlock, slot=%d) %#x", errParentDoesNotExist, blk.Block().Slot(), blk.Block().ParentRoot())
 	}
 	return blockReceiver(ctx, blk, blkRoot)
@@ -263,7 +263,7 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 	}
 	s.logBatchSyncStatus(genesis, blks, blkRoot)
 	parentRoot := bytesutil.ToBytes32(firstBlock.Block().ParentRoot())
-	if !s.cfg.DB.HasBlock(ctx, parentRoot) && !s.cfg.Chain.HasInitSyncBlock(parentRoot) {
+	if !s.cfg.Chain.HasBlock(ctx, parentRoot) {
 		return fmt.Errorf("%w: %#x (in processBatchedBlocks, slot=%d)", errParentDoesNotExist, firstBlock.Block().ParentRoot(), firstBlock.Block().Slot())
 	}
 	blockRoots := make([][32]byte, len(blks))
@@ -309,10 +309,9 @@ func (s *Service) isProcessedBlock(ctx context.Context, blk interfaces.SignedBea
 	if blk.Block().Slot() <= finalizedSlot {
 		return true
 	}
-	blockExistsInDB := s.cfg.DB.HasBlock(ctx, blkRoot) || s.cfg.Chain.HasInitSyncBlock(blkRoot)
 	// If block exists in our db and is before or equal to our current head
 	// we ignore it.
-	if blockExistsInDB && s.cfg.Chain.HeadSlot() >= blk.Block().Slot() {
+	if s.cfg.Chain.HasBlock(ctx, blkRoot) && s.cfg.Chain.HeadSlot() >= blk.Block().Slot() {
 		return true
 	}
 	return false
