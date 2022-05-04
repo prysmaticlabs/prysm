@@ -41,6 +41,30 @@ func TestAggregateVerify(t *testing.T) {
 	assert.Equal(t, true, aggSig.AggregateVerify(pubkeys, msgs), "Signature did not verify")
 }
 
+func TestAggregateVerify_CompressedSignatures(t *testing.T) {
+	pubkeys := make([]common.PublicKey, 0, 100)
+	sigs := make([]common.Signature, 0, 100)
+	sigBytes := [][]byte{}
+	var msgs [][32]byte
+	for i := 0; i < 100; i++ {
+		msg := [32]byte{'h', 'e', 'l', 'l', 'o', byte(i)}
+		priv, err := RandKey()
+		require.NoError(t, err)
+		pub := priv.PublicKey()
+		sig := priv.Sign(msg[:])
+		pubkeys = append(pubkeys, pub)
+		sigs = append(sigs, sig)
+		sigBytes = append(sigBytes, sig.Marshal())
+		msgs = append(msgs, msg)
+	}
+	aggSig := AggregateSignatures(sigs)
+	assert.Equal(t, true, aggSig.AggregateVerify(pubkeys, msgs), "Signature did not verify")
+
+	aggSig2, err := AggregateCompressedSignatures(sigBytes)
+	assert.NoError(t, err)
+	assert.DeepEqual(t, aggSig.Marshal(), aggSig2.Marshal(), "Signature did not match up")
+}
+
 func TestFastAggregateVerify(t *testing.T) {
 	pubkeys := make([]common.PublicKey, 0, 100)
 	sigs := make([]common.Signature, 0, 100)
