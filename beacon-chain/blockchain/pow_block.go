@@ -68,6 +68,10 @@ func (s *Service) validateMergeBlock(ctx context.Context, b interfaces.SignedBea
 			params.BeaconConfig().TerminalTotalDifficulty, mergeBlockTD, mergeBlockParentTD)
 	}
 
+	if err := s.validateTerminalBlockTimestamp(payload.Timestamp, b.Block().Slot()); err != nil {
+		return err
+	}
+
 	log.WithFields(logrus.Fields{
 		"slot":                            b.Block().Slot(),
 		"mergeBlockHash":                  common.BytesToHash(payload.ParentHash).String(),
@@ -77,6 +81,18 @@ func (s *Service) validateMergeBlock(ctx context.Context, b interfaces.SignedBea
 		"mergeBlockParentTotalDifficulty": mergeBlockParentTD,
 	}).Info("Validated terminal block")
 
+	return nil
+}
+
+// validateTerminalBlockTimestamp ensures that the terminal block is not from the future
+func (s *Service) validateTerminalBlockTimestamp(timestamp uint64, slot types.Slot) error {
+	mergeBlockTime, err := slots.ToTime(uint64(s.genesisTime.Unix()), slot)
+	if err != nil {
+		return errors.Wrap(err, "could not get merge block slot start time")
+	}
+	if timestamp > uint64(mergeBlockTime.Unix()) {
+		return errInvalidTerminalBlockTimestamp
+	}
 	return nil
 }
 

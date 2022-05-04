@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 	"testing"
+	"time"
 
 	"github.com/holiman/uint256"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -13,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
@@ -208,4 +210,24 @@ func Test_validateTerminalBlockHash(t *testing.T) {
 	require.ErrorContains(t, "parent hash does not match terminal block hash", validateTerminalBlockHash(1, &enginev1.ExecutionPayload{}))
 
 	require.NoError(t, validateTerminalBlockHash(1, &enginev1.ExecutionPayload{ParentHash: cfg.TerminalBlockHash.Bytes()}))
+}
+
+func Test_validateTerminalBlockTimestamp(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+	fcs := protoarray.New(0, 0, [32]byte{'a'})
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithStateGen(stategen.New(beaconDB)),
+		WithForkChoiceStore(fcs),
+	}
+	s, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+	s.SetGenesisTime(time.Now())
+	mergeSlot := uint64(10)
+	futureTimestamp := uint64(s.genesisTime.Unix()) + (mergeSlot+1)*params.BeaconConfig().SecondsPerSlot
+	pastTimestamp := uint64(s.genesisTime.Unix()) + mergeSlot*params.BeaconConfig().SecondsPerSlot - 1
+
+	require.ErrorIs(t, errInvalidTerminalBlockTimestamp, s.validateTerminalBlockTimestamp(futureTimestamp, types.Slot(mergeSlot)))
+	require.NoError(t, s.validateTerminalBlockTimestamp(pastTimestamp, types.Slot(mergeSlot)))
 }

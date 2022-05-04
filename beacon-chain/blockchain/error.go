@@ -18,4 +18,6 @@ var (
 	errWrongBlockCount = errors.New("wrong number of blocks or block roots")
 	// block is not a valid optimistic candidate block
 	errNotOptimisticCandidate = errors.New("block is not suitable for optimistic sync")
+	// invalid terminal block timestamp
+	errInvalidTerminalBlockTimestamp = errors.New("invalid terminal block timestamp")
 )
