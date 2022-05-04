@@ -12,7 +12,6 @@ import (
 )
 
 func TestEndToEnd_Slasher_MinimalConfig(t *testing.T) {
-	t.Skip()
 	cfg := params.E2ETestConfig()
 	params.OverrideBeaconConfig(cfg)
 	require.NoError(t, e2eParams.Init(e2eParams.StandardBeaconCount))

@@ -16,7 +16,6 @@ import (
 
 // Run mainnet e2e config with the current release validator against latest beacon node.
 func TestEndToEnd_MainnetConfig_ValidatorAtCurrentRelease(t *testing.T) {
-	t.Skip()
 	e2eMainnet(t, true, false)
 }
 
