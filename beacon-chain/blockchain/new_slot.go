@@ -36,10 +36,6 @@ func (s *Service) NewSlot(ctx context.Context, slot types.Slot) error {
 		return errors.Wrap(err, "could not reset boosted proposer root in fork choice")
 	}
 
-	// Insert slashings to forkchoice.
-	slashings := s.cfg.SlashingPool.PendingAttesterSlashings(ctx, s.head.state, true)
-	s.insertSlashingsToForkChoiceStore(ctx, slashings)
-
 	// Return if it's not a new epoch.
 	if !slots.IsEpochStart(slot) {
 		return nil
