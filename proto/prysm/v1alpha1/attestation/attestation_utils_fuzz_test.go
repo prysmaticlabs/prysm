@@ -30,7 +30,12 @@ func FuzzConvertToIndexed(f *testing.F) {
 		for _, idx := range cb.BitIndices() {
 			committee = append(committee, types.ValidatorIndex(idx))
 		}
-		_, err = attestation.ConvertToIndexed(context.TODO(), att, committee)
-		_ = err
+		indexed, err := attestation.ConvertToIndexed(context.TODO(), att, committee)
+		if err != nil {
+			return
+		}
+		if err := attestation.IsValidAttestationIndices(context.TODO(), indexed); err != nil {
+			return
+		}
 	})
 }
