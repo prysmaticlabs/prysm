@@ -15,6 +15,29 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
+func FuzzProcessAttestationNoVerify(f *testing.F) {
+	f.Fuzz(func(t *testing.T, stateRaw []byte, attRaw []byte) {
+		att := &ethpb.Attestation{}
+		if err := att.UnmarshalSSZ(attRaw); err != nil {
+			return
+		}
+
+		s := &ethpb.BeaconState{}
+		if err := s.UnmarshalSSZ(stateRaw); err != nil {
+			return
+		}
+
+		st, err := v1.InitializeFromProtoUnsafe(s)
+		if err != nil {
+			return
+		}
+		_, err = ProcessAttestationNoVerifySignature(context.Background(), st, att)
+		if err != nil {
+			return
+		}
+	})
+}
+
 func TestFuzzProcessAttestationNoVerify_10000(t *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
 	ctx := context.Background()
