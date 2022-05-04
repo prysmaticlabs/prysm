@@ -141,11 +141,9 @@ type altairBeaconBlock struct {
 	b *eth.BeaconBlockAltair
 }
 
-// WrappedAltairBeaconBlock is constructor which wraps a protobuf altair object
+// wrappedAltairBeaconBlock is constructor which wraps a protobuf altair object
 // with the block wrapper.
-//
-// Deprecated: Use WrappedBeaconBlock.
-func WrappedAltairBeaconBlock(b *eth.BeaconBlockAltair) (interfaces.BeaconBlock, error) {
+func wrappedAltairBeaconBlock(b *eth.BeaconBlockAltair) (interfaces.BeaconBlock, error) {
 	w := altairBeaconBlock{b: b}
 	if w.IsNil() {
 		return nil, ErrNilObjectWrapped
@@ -244,9 +242,9 @@ type altairBeaconBlockBody struct {
 	b *eth.BeaconBlockBodyAltair
 }
 
-// WrappedAltairBeaconBlockBody is constructor which wraps a protobuf altair object
+// wrappedAltairBeaconBlockBody is constructor which wraps a protobuf altair object
 // with the block wrapper.
-func WrappedAltairBeaconBlockBody(b *eth.BeaconBlockBodyAltair) (interfaces.BeaconBlockBody, error) {
+func wrappedAltairBeaconBlockBody(b *eth.BeaconBlockBodyAltair) (interfaces.BeaconBlockBody, error) {
 	w := altairBeaconBlockBody{b: b}
 	if w.IsNil() {
 		return nil, ErrNilObjectWrapped
