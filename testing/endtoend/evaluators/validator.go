@@ -9,6 +9,8 @@ import (
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	ethtypes "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
+	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
+	"github.com/prysmaticlabs/prysm/proto/eth/v2"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/policies"
@@ -102,6 +104,7 @@ func validatorsAreActive(conns ...*grpc.ClientConn) error {
 func validatorsParticipating(conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	client := ethpb.NewBeaconChainClient(conn)
+	debugClient := ethpbservice.NewBeaconDebugClient(conn)
 	validatorRequest := &ethpb.GetValidatorParticipationRequest{}
 	participation, err := client.GetValidatorParticipation(context.Background(), validatorRequest)
 	if err != nil {
@@ -111,11 +114,33 @@ func validatorsParticipating(conns ...*grpc.ClientConn) error {
 	partRate := participation.Participation.GlobalParticipationRate
 	expected := float32(expectedParticipation)
 	if partRate < expected {
+		st, err := debugClient.GetBeaconStateV2(context.Background(), &eth.StateRequestV2{StateId: []byte("head")})
+		if err != nil {
+			return errors.Wrap(err, "failed to get beacon state")
+		}
+		missingValidators := []uint64{}
+		switch obj := st.Data.State.(type) {
+		case *eth.BeaconStateContainer_Phase0State:
+		// Do Nothing
+		case *eth.BeaconStateContainer_AltairState:
+			for i, b := range obj.AltairState.PreviousEpochParticipation {
+				if b == 0 {
+					missingValidators = append(missingValidators, uint64(i))
+				}
+			}
+		case *eth.BeaconStateContainer_BellatrixState:
+			for i, b := range obj.BellatrixState.PreviousEpochParticipation {
+				if b == 0 {
+					missingValidators = append(missingValidators, uint64(i))
+				}
+			}
+		}
 		return fmt.Errorf(
-			"validator participation was below for epoch %d, expected %f, received: %f",
+			"validator participation was below for epoch %d, expected %f, received: %f. Missing validators are %v",
 			participation.Epoch,
 			expected,
 			partRate,
+			missingValidators,
 		)
 	}
 	return nil
