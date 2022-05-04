@@ -2,6 +2,8 @@ package types
 
 import (
 	"github.com/pkg/errors"
+	beaconState "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 )
 
 // FieldIndex represents the relevant field position in the
@@ -70,6 +72,170 @@ func (f FieldIndex) String(_ int) string {
 	}
 }
 
+// RealPosition denotes the position of the field in the provided beacon state.
+// The value might differ for different state versions.
+func (f FieldIndex) RealPosition(s beaconState.BeaconState) int {
+	switch s.Version() {
+	case version.Phase0:
+		switch f {
+		case GenesisTime:
+			return 0
+		case GenesisValidatorsRoot:
+			return 1
+		case Slot:
+			return 2
+		case Fork:
+			return 3
+		case LatestBlockHeader:
+			return 4
+		case BlockRoots:
+			return 5
+		case StateRoots:
+			return 6
+		case HistoricalRoots:
+			return 7
+		case Eth1Data:
+			return 8
+		case Eth1DataVotes:
+			return 9
+		case Eth1DepositIndex:
+			return 10
+		case Validators:
+			return 11
+		case Balances:
+			return 12
+		case RandaoMixes:
+			return 13
+		case Slashings:
+			return 14
+		case PreviousEpochAttestations:
+			return 15
+		case CurrentEpochAttestations:
+			return 16
+		case JustificationBits:
+			return 17
+		case PreviousJustifiedCheckpoint:
+			return 18
+		case CurrentJustifiedCheckpoint:
+			return 19
+		case FinalizedCheckpoint:
+			return 20
+		default:
+			return -1
+		}
+	case version.Altair:
+		switch f {
+		case GenesisTime:
+			return 0
+		case GenesisValidatorsRoot:
+			return 1
+		case Slot:
+			return 2
+		case Fork:
+			return 3
+		case LatestBlockHeader:
+			return 4
+		case BlockRoots:
+			return 5
+		case StateRoots:
+			return 6
+		case HistoricalRoots:
+			return 7
+		case Eth1Data:
+			return 8
+		case Eth1DataVotes:
+			return 9
+		case Eth1DepositIndex:
+			return 10
+		case Validators:
+			return 11
+		case Balances:
+			return 12
+		case RandaoMixes:
+			return 13
+		case Slashings:
+			return 14
+		case PreviousEpochParticipationBits:
+			return 15
+		case CurrentEpochParticipationBits:
+			return 16
+		case JustificationBits:
+			return 17
+		case PreviousJustifiedCheckpoint:
+			return 18
+		case CurrentJustifiedCheckpoint:
+			return 19
+		case FinalizedCheckpoint:
+			return 20
+		case InactivityScores:
+			return 21
+		case CurrentSyncCommittee:
+			return 22
+		case NextSyncCommittee:
+			return 23
+		default:
+			return -1
+		}
+	case version.Bellatrix:
+		switch f {
+		case GenesisTime:
+			return 0
+		case GenesisValidatorsRoot:
+			return 1
+		case Slot:
+			return 2
+		case Fork:
+			return 3
+		case LatestBlockHeader:
+			return 4
+		case BlockRoots:
+			return 5
+		case StateRoots:
+			return 6
+		case HistoricalRoots:
+			return 7
+		case Eth1Data:
+			return 8
+		case Eth1DataVotes:
+			return 9
+		case Eth1DepositIndex:
+			return 10
+		case Validators:
+			return 11
+		case Balances:
+			return 12
+		case RandaoMixes:
+			return 13
+		case Slashings:
+			return 14
+		case PreviousEpochParticipationBits:
+			return 15
+		case CurrentEpochParticipationBits:
+			return 16
+		case JustificationBits:
+			return 17
+		case PreviousJustifiedCheckpoint:
+			return 18
+		case CurrentJustifiedCheckpoint:
+			return 19
+		case FinalizedCheckpoint:
+			return 20
+		case InactivityScores:
+			return 21
+		case CurrentSyncCommittee:
+			return 22
+		case NextSyncCommittee:
+			return 23
+		case LatestExecutionPayloadHeader:
+			return 24
+		default:
+			return -1
+		}
+	default:
+		return -1
+	}
+}
+
 // ElemsInChunk returns the number of elements in the chunk (number of
 // elements that are able to be packed).
 func (f FieldIndex) ElemsInChunk() (uint64, error) {
@@ -115,10 +281,8 @@ const (
 	PreviousJustifiedCheckpoint
 	CurrentJustifiedCheckpoint
 	FinalizedCheckpoint
-	// State Fields Added in Altair.
 	InactivityScores
 	CurrentSyncCommittee
 	NextSyncCommittee
-	// State fields added in Bellatrix.
 	LatestExecutionPayloadHeader
 )

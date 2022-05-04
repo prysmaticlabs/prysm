@@ -26,7 +26,7 @@ func (b *BeaconState) CurrentSyncCommitteeGeneralizedIndex() (uint64, error) {
 		return 0, fmt.Errorf("CurrentSyncCommitteeGeneralizedIndex is not supported for %s", version.String(b.version))
 	}
 
-	return uint64(b.fieldIndexPosition[nativetypes.CurrentSyncCommittee]), nil
+	return uint64(nativetypes.CurrentSyncCommittee.RealPosition(b)), nil
 }
 
 // NextSyncCommitteeGeneralizedIndex for the beacon state.
@@ -35,7 +35,7 @@ func (b *BeaconState) NextSyncCommitteeGeneralizedIndex() (uint64, error) {
 		return 0, fmt.Errorf("NextSyncCommitteeGeneralizedIndex is not supported for %s", version.String(b.version))
 	}
 
-	return uint64(b.fieldIndexPosition[nativetypes.NextSyncCommittee]), nil
+	return uint64(nativetypes.NextSyncCommittee.RealPosition(b)), nil
 }
 
 // CurrentSyncCommitteeProof from the state's Merkle trie representation.
@@ -57,7 +57,7 @@ func (b *BeaconState) CurrentSyncCommitteeProof(ctx context.Context) ([][]byte, 
 	if err := b.recomputeDirtyFields(ctx); err != nil {
 		return nil, err
 	}
-	return fieldtrie.ProofFromMerkleLayers(b.merkleLayers, int(b.fieldIndexPosition[nativetypes.CurrentSyncCommittee])), nil
+	return fieldtrie.ProofFromMerkleLayers(b.merkleLayers, nativetypes.CurrentSyncCommittee.RealPosition(b)), nil
 }
 
 // NextSyncCommitteeProof from the state's Merkle trie representation.
@@ -75,7 +75,7 @@ func (b *BeaconState) NextSyncCommitteeProof(ctx context.Context) ([][]byte, err
 	if err := b.recomputeDirtyFields(ctx); err != nil {
 		return nil, err
 	}
-	return fieldtrie.ProofFromMerkleLayers(b.merkleLayers, int(b.fieldIndexPosition[nativetypes.NextSyncCommittee])), nil
+	return fieldtrie.ProofFromMerkleLayers(b.merkleLayers, nativetypes.NextSyncCommittee.RealPosition(b)), nil
 }
 
 // FinalizedRootProof crafts a Merkle proof for the finalized root
@@ -103,7 +103,7 @@ func (b *BeaconState) FinalizedRootProof(ctx context.Context) ([][]byte, error) 
 	epochRoot := bytesutil.ToBytes32(epochBuf)
 	proof := make([][]byte, 0)
 	proof = append(proof, epochRoot[:])
-	branch := fieldtrie.ProofFromMerkleLayers(b.merkleLayers, int(b.fieldIndexPosition[nativetypes.FinalizedCheckpoint]))
+	branch := fieldtrie.ProofFromMerkleLayers(b.merkleLayers, nativetypes.FinalizedCheckpoint.RealPosition(b))
 	proof = append(proof, branch...)
 	return proof, nil
 }

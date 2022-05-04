@@ -175,8 +175,6 @@ func InitializeFromProtoUnsafePhase0(st *ethpb.BeaconState) (state.BeaconState, 
 		valMapHandler:         stateutil.NewValMapHandler(st.Validators),
 	}
 
-	b.populateFieldIndexes(phase0Fields)
-
 	for _, f := range phase0Fields {
 		b.dirtyFields[f] = true
 		b.rebuildTrie[f] = true
@@ -263,8 +261,6 @@ func InitializeFromProtoUnsafeAltair(st *ethpb.BeaconStateAltair) (state.BeaconS
 		rebuildTrie:           make(map[nativetypes.FieldIndex]bool, fieldCount),
 		valMapHandler:         stateutil.NewValMapHandler(st.Validators),
 	}
-
-	b.populateFieldIndexes(altairFields)
 
 	for _, f := range altairFields {
 		b.dirtyFields[f] = true
@@ -354,8 +350,6 @@ func InitializeFromProtoUnsafeBellatrix(st *ethpb.BeaconStateBellatrix) (state.B
 		rebuildTrie:           make(map[nativetypes.FieldIndex]bool, fieldCount),
 		valMapHandler:         stateutil.NewValMapHandler(st.Validators),
 	}
-
-	b.populateFieldIndexes(bellatrixFields)
 
 	for _, f := range bellatrixFields {
 		b.dirtyFields[f] = true
@@ -451,13 +445,10 @@ func (b *BeaconState) Copy() state.BeaconState {
 	switch b.version {
 	case version.Phase0:
 		dst.sharedFieldReferences = make(map[nativetypes.FieldIndex]*stateutil.Reference, 10)
-		dst.populateFieldIndexes(phase0Fields)
 	case version.Altair:
 		dst.sharedFieldReferences = make(map[nativetypes.FieldIndex]*stateutil.Reference, 11)
-		dst.populateFieldIndexes(altairFields)
 	case version.Bellatrix:
 		dst.sharedFieldReferences = make(map[nativetypes.FieldIndex]*stateutil.Reference, 11)
-		dst.populateFieldIndexes(bellatrixFields)
 	}
 
 	for field, ref := range b.sharedFieldReferences {
@@ -581,7 +572,7 @@ func (b *BeaconState) recomputeDirtyFields(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		idx := b.fieldIndexPosition[field]
+		idx := field.RealPosition(b)
 		b.merkleLayers[0][idx] = root[:]
 		b.recomputeRoot(idx)
 		delete(b.dirtyFields, field)
@@ -798,11 +789,4 @@ func (b *BeaconState) resetFieldTrie(index nativetypes.FieldIndex, elements inte
 	b.stateFieldLeaves[index] = fTrie
 	b.dirtyIndices[index] = []uint64{}
 	return nil
-}
-
-func (b *BeaconState) populateFieldIndexes(fields []nativetypes.FieldIndex) {
-	b.fieldIndexPosition = make(map[nativetypes.FieldIndex]int, len(fields))
-	for i, f := range fields {
-		b.fieldIndexPosition[f] = i
-	}
 }
