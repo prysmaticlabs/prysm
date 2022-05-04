@@ -7,6 +7,7 @@ import (
 	fuzz "github.com/google/gofuzz"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
@@ -22,12 +23,12 @@ func FuzzProcessAttestationNoVerify(f *testing.F) {
 			return
 		}
 
-		s := &ethpb.BeaconState{}
+		s := &ethpb.BeaconStateBellatrix{}
 		if err := s.UnmarshalSSZ(stateRaw); err != nil {
 			return
 		}
 
-		st, err := v1.InitializeFromProtoUnsafe(s)
+		st, err := v3.InitializeFromProtoUnsafe(s)
 		if err != nil {
 			return
 		}
