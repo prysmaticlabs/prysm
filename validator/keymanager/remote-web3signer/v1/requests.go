@@ -314,6 +314,9 @@ func GetBlockV2BellatrixSignRequest(request *validatorpb.SignRequest, genesisVal
 		return nil, err
 	}
 	beaconBlockHeader, err := interfaces.BeaconBlockHeaderFromBlockInterface(b)
+	if err != nil {
+		return nil, err
+	}
 	return &BlockV2BellatrixSignRequest{
 		Type:        "BLOCK_V2",
 		ForkInfo:    fork,
