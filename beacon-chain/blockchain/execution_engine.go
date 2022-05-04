@@ -130,7 +130,6 @@ func (s *Service) getFinalizedHash(ctx context.Context, finalizedRoot [32]byte) 
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println(finalizedBlock.Version())
 	if blocks.IsPreBellatrixVersion(finalizedBlock.Block().Version()) {
 		return params.BeaconConfig().ZeroHash[:], nil
 	}
