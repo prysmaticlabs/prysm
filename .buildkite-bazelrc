@@ -44,3 +44,6 @@ build --flaky_test_attempts=5
 # Better caching
 build:nostamp --nostamp
 build:nostamp --workspace_status_command=./hack/workspace_status_ci.sh
+
+# More verbose tests
+test --test_arg=-test.v
