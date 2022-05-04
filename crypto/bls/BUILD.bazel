@@ -15,6 +15,7 @@ go_library(
         "//crypto/bls/blst:go_default_library",
         "//crypto/bls/common:go_default_library",
         "//crypto/bls/herumi:go_default_library",
+        "@com_github_pkg_errors//:go_default_library",
     ],
 )
 
