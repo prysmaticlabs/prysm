@@ -96,11 +96,6 @@ var (
 		Usage: "Disable the fix for bug where orphaned attestations don't get reinserted back to mem pool. Which is an improves validator profitability and overall network health," +
 			"see issue #9441 for further detail",
 	}
-	disableCorrectlyPruneCanonicalAtts = &cli.BoolFlag{
-		Name: "disable-correctly-prune-canonical-atts",
-		Usage: "Disable the fix for bug where any block attestations can get incorrectly pruned, which improves validator profitability and overall network health," +
-			"see issue #9443 for further detail",
-	}
 	enableNativeState = &cli.BoolFlag{
 		Name:  "enable-native-state",
 		Usage: "Enables representing the beacon state as a pure Go struct.",
@@ -159,7 +154,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableSlasherFlag,
 	enableHistoricalSpaceRepresentation,
 	disableCorrectlyInsertOrphanedAtts,
-	disableCorrectlyPruneCanonicalAtts,
 	enableNativeState,
 	enableVecHTR,
 	enableForkChoiceDoublyLinkedTree,

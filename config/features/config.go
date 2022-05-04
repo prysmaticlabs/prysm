@@ -61,7 +61,6 @@ type Flags struct {
 
 	// Bug fixes related flags.
 	CorrectlyInsertOrphanedAtts bool
-	CorrectlyPruneCanonicalAtts bool
 
 	EnableNativeState                bool // EnableNativeState defines whether the beacon state will be represented as a pure Go struct or a Go struct that wraps a proto struct.
 	EnableVectorizedHTR              bool // EnableVectorizedHTR specifies whether the beacon state will use the optimized sha256 routines.
@@ -168,11 +167,6 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(disableCorrectlyInsertOrphanedAtts.Name) {
 		logDisabled(disableCorrectlyInsertOrphanedAtts)
 		cfg.CorrectlyInsertOrphanedAtts = false
-	}
-	cfg.CorrectlyPruneCanonicalAtts = true
-	if ctx.Bool(disableCorrectlyPruneCanonicalAtts.Name) {
-		logDisabled(disableCorrectlyPruneCanonicalAtts)
-		cfg.CorrectlyPruneCanonicalAtts = false
 	}
 	cfg.EnableNativeState = false
 	if ctx.Bool(enableNativeState.Name) {
