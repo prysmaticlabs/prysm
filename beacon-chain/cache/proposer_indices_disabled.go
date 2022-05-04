@@ -10,9 +10,6 @@ import types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 type FakeProposerIndicesCache struct {
 }
 
-// ProposerIndicesCache is an alias for FakeProposerIndicesCache
-// type ProposerIndicesCache = FakeProposerIndicesCache
-
 // NewProposerIndicesCache creates a new proposer indices cache for storing/accessing proposer index assignments of an epoch.
 func NewProposerIndicesCache() *FakeProposerIndicesCache {
 	return &FakeProposerIndicesCache{}
