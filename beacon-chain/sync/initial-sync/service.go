@@ -49,29 +49,35 @@ type Service struct {
 	synced       *abool.AtomicBool
 	chainStarted *abool.AtomicBool
 	counter      *ratecounter.RateCounter
+	genesisChan  chan time.Time
 }
 
 // NewService configures the initial sync service responsible for bringing the node up to the
 // latest head of the blockchain.
 func NewService(ctx context.Context, cfg *Config) *Service {
 	ctx, cancel := context.WithCancel(ctx)
-	return &Service{
+	s := &Service{
 		cfg:          cfg,
 		ctx:          ctx,
 		cancel:       cancel,
 		synced:       abool.New(),
 		chainStarted: abool.New(),
 		counter:      ratecounter.NewRateCounter(counterSeconds * time.Second),
+		genesisChan:  make(chan time.Time),
 	}
+
+	// The reason why we have this goroutine in the constructor is to avoid a race condition
+	// between services' Start method and the initialization event.
+	// See https://github.com/prysmaticlabs/prysm/issues/10602 for details.
+	go s.waitForStateInitialization()
+
+	return s
 }
 
 // Start the initial sync service.
 func (s *Service) Start() {
-	genesis, err := s.waitForStateInitialization()
-	if err != nil {
-		log.WithError(err).Fatal("Failed to wait for state initialization.")
-		return
-	}
+	// Wait for state initialized event.
+	genesis := <-s.genesisChan
 	if genesis.IsZero() {
 		log.Debug("Exiting Initial Sync Service")
 		return
@@ -179,10 +185,9 @@ func (s *Service) waitForMinimumPeers() {
 	}
 }
 
-// TODO: Return error
 // waitForStateInitialization makes sure that beacon node is ready to be accessed: it is either
 // already properly configured or system waits up until state initialized event is triggered.
-func (s *Service) waitForStateInitialization() (time.Time, error) {
+func (s *Service) waitForStateInitialization() {
 	// Wait for state to be initialized.
 	stateChannel := make(chan *feed.Event, 1)
 	stateSub := s.cfg.StateNotifier.StateFeed().Subscribe(stateChannel)
@@ -198,14 +203,19 @@ func (s *Service) waitForStateInitialization() (time.Time, error) {
 					continue
 				}
 				log.WithField("starttime", data.StartTime).Debug("Received state initialized event")
-				return data.StartTime, nil
+				s.genesisChan <- data.StartTime
+				return
 			}
 		case <-s.ctx.Done():
+			log.Debug("Context closed, exiting goroutine")
 			// Send a zero time in the event we are exiting.
-			return time.Time{}, errors.New("context closed, exiting goroutine")
+			s.genesisChan <- time.Time{}
+			return
 		case err := <-stateSub.Err():
+			log.WithError(err).Error("Subscription to state notifier failed")
 			// Send a zero time in the event we are exiting.
-			return time.Time{}, errors.Wrap(err, "subscription to state notifier failed")
+			s.genesisChan <- time.Time{}
+			return
 		}
 	}
 }

@@ -10,7 +10,6 @@ import (
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
@@ -231,11 +230,6 @@ func Test_notifyNewHeadEvent(t *testing.T) {
 }
 
 func TestSaveOrphanedAtts(t *testing.T) {
-	resetCfg := features.InitWithReset(&features.Flags{
-		CorrectlyInsertOrphanedAtts: true,
-	})
-	defer resetCfg()
-
 	genesis, keys := util.DeterministicGenesisState(t, 64)
 	b, err := util.GenerateFullBlock(genesis, keys, util.DefaultBlockGenConfig(), 1)
 	assert.NoError(t, err)
@@ -259,11 +253,6 @@ func TestSaveOrphanedAtts(t *testing.T) {
 }
 
 func TestSaveOrphanedAtts_CanFilter(t *testing.T) {
-	resetCfg := features.InitWithReset(&features.Flags{
-		CorrectlyInsertOrphanedAtts: true,
-	})
-	defer resetCfg()
-
 	genesis, keys := util.DeterministicGenesisState(t, 64)
 	b, err := util.GenerateFullBlock(genesis, keys, util.DefaultBlockGenConfig(), 1)
 	assert.NoError(t, err)

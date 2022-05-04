@@ -73,14 +73,18 @@ func main() {
 }
 
 func wrapBlock(b *v1alpha1.BeaconBlockContainer) interfaces.BeaconBlock {
-	if bb := b.GetAltairBlock(); bb != nil {
-		wb, err := wrapper.WrappedAltairBeaconBlock(bb.Block)
-		if err != nil {
-			panic(err)
-		}
-		return wb
-	} else if bb := b.GetPhase0Block(); bb != nil {
-		return wrapper.WrappedPhase0BeaconBlock(bb.Block)
+	var err error
+	var wb interfaces.SignedBeaconBlock
+	switch bb := b.Block.(type) {
+	case *v1alpha1.BeaconBlockContainer_Phase0Block:
+		wb, err = wrapper.WrappedSignedBeaconBlock(bb.Phase0Block)
+	case *v1alpha1.BeaconBlockContainer_AltairBlock:
+		wb, err = wrapper.WrappedSignedBeaconBlock(bb.AltairBlock)
+	case *v1alpha1.BeaconBlockContainer_BellatrixBlock:
+		wb, err = wrapper.WrappedSignedBeaconBlock(bb.BellatrixBlock)
 	}
-	panic("No block")
+	if err != nil {
+		panic("no block")
+	}
+	return wb.Block()
 }
