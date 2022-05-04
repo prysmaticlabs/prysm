@@ -233,7 +233,7 @@ func TestBeaconProposerIndex_BadState(t *testing.T) {
 	require.NoError(t, state.SetSlot(100))
 	_, err = BeaconProposerIndex(context.Background(), state)
 	require.NoError(t, err)
-	assert.Equal(t, 0, len(proposerIndicesCache.ProposerIndicesCache.ListKeys()))
+	assert.Equal(t, 0, proposerIndicesCache.Len())
 }
 
 func TestComputeProposerIndex_Compatibility(t *testing.T) {

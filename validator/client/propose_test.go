@@ -802,7 +802,8 @@ func TestSignBlock(t *testing.T) {
 		},
 	}
 	validator.keyManager = km
-	b := wrapper.WrappedPhase0BeaconBlock(blk.Block)
+	b, err := wrapper.WrappedBeaconBlock(blk.Block)
+	require.NoError(t, err)
 	sig, blockRoot, err := validator.signBlock(ctx, pubKey, 0, 0, b)
 	require.NoError(t, err, "%x,%v", sig, err)
 	require.Equal(t, "a049e1dc723e5a8b5bd14f292973572dffd53785ddb337"+
@@ -842,7 +843,7 @@ func TestSignAltairBlock(t *testing.T) {
 		},
 	}
 	validator.keyManager = km
-	wb, err := wrapper.WrappedAltairBeaconBlock(blk.Block)
+	wb, err := wrapper.WrappedBeaconBlock(blk.Block)
 	require.NoError(t, err)
 	sig, blockRoot, err := validator.signBlock(ctx, pubKey, 0, 0, wb)
 	require.NoError(t, err, "%x,%v", sig, err)
@@ -878,7 +879,7 @@ func TestSignBellatrixBlock(t *testing.T) {
 		},
 	}
 	validator.keyManager = km
-	wb, err := wrapper.WrappedBellatrixBeaconBlock(blk.Block)
+	wb, err := wrapper.WrappedBeaconBlock(blk.Block)
 	require.NoError(t, err)
 	sig, blockRoot, err := validator.signBlock(ctx, pubKey, 0, 0, wb)
 	require.NoError(t, err, "%x,%v", sig, err)
