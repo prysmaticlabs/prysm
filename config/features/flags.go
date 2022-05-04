@@ -113,6 +113,10 @@ var (
 		Name:  "enable-forkchoice-doubly-linked-tree",
 		Usage: "Enables new forkchoice store structure that uses doubly linked trees",
 	}
+	enableGossipBatchAggregation = &cli.BoolFlag{
+		Name:  "enable-gossip-batch-aggregation",
+		Usage: "Enables new methods to further aggregate our gossip batches before verifying them.",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
@@ -120,6 +124,7 @@ var devModeFlags = []cli.Flag{
 	enablePeerScorer,
 	enableVecHTR,
 	enableForkChoiceDoublyLinkedTree,
+	enableGossipBatchAggregation,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -158,6 +163,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableNativeState,
 	enableVecHTR,
 	enableForkChoiceDoublyLinkedTree,
+	enableGossipBatchAggregation,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
