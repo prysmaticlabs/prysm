@@ -32,3 +32,6 @@ dist
 
 # deepsource cli
 bin
+
+# p2p metaData
+metaData
