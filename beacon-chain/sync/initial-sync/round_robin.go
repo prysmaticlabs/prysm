@@ -311,7 +311,7 @@ func (s *Service) isProcessedBlock(ctx context.Context, blk interfaces.SignedBea
 	}
 	// If block exists in our db and is before or equal to our current head
 	// we ignore it.
-	if s.cfg.Chain.HasBlock(ctx, blkRoot) && s.cfg.Chain.HeadSlot() >= blk.Block().Slot() {
+	if s.cfg.Chain.HeadSlot() >= blk.Block().Slot() && s.cfg.Chain.HasBlock(ctx, blkRoot) {
 		return true
 	}
 	return false
