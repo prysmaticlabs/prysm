@@ -95,9 +95,9 @@ func WithTimeout(timeout time.Duration) ClientOpt {
 
 // Client provides a collection of helper methods for calling the Eth Beacon Node API endpoints.
 type Client struct {
-	hc     *http.Client
-	host   string
-	scheme string
+	hc      *http.Client
+	host    string
+	scheme  string
 	baseURL *url.URL
 }
 
@@ -110,7 +110,7 @@ func NewClient(host string, opts ...ClientOpt) (*Client, error) {
 		return nil, err
 	}
 	c := &Client{
-		hc:     &http.Client{},
+		hc:      &http.Client{},
 		baseURL: u,
 	}
 	for _, o := range opts {

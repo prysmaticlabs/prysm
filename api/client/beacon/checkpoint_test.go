@@ -67,7 +67,7 @@ func TestMarshalToEnvelope(t *testing.T) {
 
 func TestFallbackVersionCheck(t *testing.T) {
 	c := &Client{
-		hc:     &http.Client{},
+		hc:      &http.Client{},
 		baseURL: &url.URL{Host: "localhost:3500", Scheme: "http"},
 	}
 	c.hc.Transport = &testRT{rt: func(req *http.Request) (*http.Response, error) {
@@ -200,7 +200,7 @@ func TestDownloadOriginData(t *testing.T) {
 		}},
 	}
 	c := &Client{
-		hc:     hc,
+		hc:      hc,
 		baseURL: &url.URL{Host: "localhost:3500", Scheme: "http"},
 	}
 
@@ -293,7 +293,7 @@ func TestDownloadBackwardsCompatibleCombined(t *testing.T) {
 		}},
 	}
 	c := &Client{
-		hc:     hc,
+		hc:      hc,
 		baseURL: &url.URL{Host: "localhost:3500", Scheme: "http"},
 	}
 
@@ -325,7 +325,7 @@ func TestGetWeakSubjectivityEpochFromHead(t *testing.T) {
 		}},
 	}
 	c := &Client{
-		hc:     hc,
+		hc:      hc,
 		baseURL: &url.URL{Host: "localhost:3500", Scheme: "http"},
 	}
 	actualEpoch, err := getWeakSubjectivityEpochFromHead(context.Background(), c)

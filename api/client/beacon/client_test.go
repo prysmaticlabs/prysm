@@ -81,41 +81,41 @@ func TestParseNodeVersion(t *testing.T) {
 }
 
 func TestValidHostname(t *testing.T) {
-	cases := []struct{
-		name string
+	cases := []struct {
+		name    string
 		hostArg string
-		path string
-		joined string
-		err error
+		path    string
+		joined  string
+		err     error
 	}{
 		{
-			name: "hostname without port",
+			name:    "hostname without port",
 			hostArg: "mydomain.org",
-			err: ErrMalformedHostname,
+			err:     ErrMalformedHostname,
 		},
 		{
-			name: "hostname with port",
+			name:    "hostname with port",
 			hostArg: "mydomain.org:3500",
-			path: getNodeVersionPath,
-			joined: "http://mydomain.org:3500/eth/v1/node/version",
+			path:    getNodeVersionPath,
+			joined:  "http://mydomain.org:3500/eth/v1/node/version",
 		},
 		{
-			name: "https scheme, hostname with port",
+			name:    "https scheme, hostname with port",
 			hostArg: "https://mydomain.org:3500",
-			path: getNodeVersionPath,
-			joined: "https://mydomain.org:3500/eth/v1/node/version",
+			path:    getNodeVersionPath,
+			joined:  "https://mydomain.org:3500/eth/v1/node/version",
 		},
 		{
-			name: "http scheme, hostname without port",
+			name:    "http scheme, hostname without port",
 			hostArg: "http://mydomain.org",
-			path: getNodeVersionPath,
-			joined: "http://mydomain.org/eth/v1/node/version",
+			path:    getNodeVersionPath,
+			joined:  "http://mydomain.org/eth/v1/node/version",
 		},
 		{
-			name: "http scheme, trailing slash, hostname without port",
+			name:    "http scheme, trailing slash, hostname without port",
 			hostArg: "http://mydomain.org/",
-			path: getNodeVersionPath,
-			joined: "http://mydomain.org/eth/v1/node/version",
+			path:    getNodeVersionPath,
+			joined:  "http://mydomain.org/eth/v1/node/version",
 		},
 	}
 	for _, c := range cases {
