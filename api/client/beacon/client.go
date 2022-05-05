@@ -52,6 +52,8 @@ const (
 	IdJustified StateOrBlockId = "justified"
 )
 
+var ErrMalformedHostname = errors.New("hostname must include port, separated by one colon, like example.com:3500")
+
 // IdFromRoot encodes a block root in the format expected by the API in places where a root can be used to identify
 // a BeaconState or SignedBeaconBlock.
 func IdFromRoot(r [32]byte) StateOrBlockId {
@@ -93,23 +95,23 @@ func WithTimeout(timeout time.Duration) ClientOpt {
 
 // Client provides a collection of helper methods for calling the Eth Beacon Node API endpoints.
 type Client struct {
-	hc     *http.Client
-	host   string
-	scheme string
+	hc      *http.Client
+	host    string
+	scheme  string
+	baseURL *url.URL
 }
 
 // NewClient constructs a new client with the provided options (ex WithTimeout).
 // `host` is the base host + port used to construct request urls. This value can be
 // a URL string, or NewClient will assume an http endpoint if just `host:port` is used.
 func NewClient(host string, opts ...ClientOpt) (*Client, error) {
-	host, err := validHostname(host)
+	u, err := urlForHost(host)
 	if err != nil {
 		return nil, err
 	}
 	c := &Client{
-		hc:     &http.Client{},
-		scheme: "http",
-		host:   host,
+		hc:      &http.Client{},
+		baseURL: u,
 	}
 	for _, o := range opts {
 		o(c)
@@ -117,36 +119,23 @@ func NewClient(host string, opts ...ClientOpt) (*Client, error) {
 	return c, nil
 }
 
-func validHostname(h string) (string, error) {
+func urlForHost(h string) (*url.URL, error) {
 	// try to parse as url (being permissive)
 	u, err := url.Parse(h)
 	if err == nil && u.Host != "" {
-		return u.Host, nil
+		return u, nil
 	}
 	// try to parse as host:port
 	host, port, err := net.SplitHostPort(h)
 	if err != nil {
-		return "", err
+		return nil, ErrMalformedHostname
 	}
-	return fmt.Sprintf("%s:%s", host, port), nil
+	return &url.URL{Host: fmt.Sprintf("%s:%s", host, port), Scheme: "http"}, nil
 }
 
 // NodeURL returns a human-readable string representation of the beacon node base url.
 func (c *Client) NodeURL() string {
-	u := &url.URL{
-		Scheme: c.scheme,
-		Host:   c.host,
-	}
-	return u.String()
-}
-
-func (c *Client) urlForPath(methodPath string) *url.URL {
-	u := &url.URL{
-		Scheme: c.scheme,
-		Host:   c.host,
-	}
-	u.Path = path.Join(u.Path, methodPath)
-	return u
+	return c.baseURL.String()
 }
 
 type reqOption func(*http.Request)
@@ -159,7 +148,7 @@ func withSSZEncoding() reqOption {
 
 // get is a generic, opinionated GET function to reduce boilerplate amongst the getters in this package.
 func (c *Client) get(ctx context.Context, path string, opts ...reqOption) ([]byte, error) {
-	u := c.urlForPath(path)
+	u := c.baseURL.ResolveReference(&url.URL{Path: path})
 	log.Printf("requesting %s", u.String())
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
 	if err != nil {

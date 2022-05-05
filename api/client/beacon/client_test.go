@@ -1,6 +1,7 @@
 package beacon
 
 import (
+	"net/url"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -75,6 +76,63 @@ func TestParseNodeVersion(t *testing.T) {
 				require.NoError(t, err)
 				require.DeepEqual(t, c.nv, nv)
 			}
+		})
+	}
+}
+
+func TestValidHostname(t *testing.T) {
+	cases := []struct {
+		name    string
+		hostArg string
+		path    string
+		joined  string
+		err     error
+	}{
+		{
+			name:    "hostname without port",
+			hostArg: "mydomain.org",
+			err:     ErrMalformedHostname,
+		},
+		{
+			name:    "hostname with port",
+			hostArg: "mydomain.org:3500",
+			path:    getNodeVersionPath,
+			joined:  "http://mydomain.org:3500/eth/v1/node/version",
+		},
+		{
+			name:    "https scheme, hostname with port",
+			hostArg: "https://mydomain.org:3500",
+			path:    getNodeVersionPath,
+			joined:  "https://mydomain.org:3500/eth/v1/node/version",
+		},
+		{
+			name:    "http scheme, hostname without port",
+			hostArg: "http://mydomain.org",
+			path:    getNodeVersionPath,
+			joined:  "http://mydomain.org/eth/v1/node/version",
+		},
+		{
+			name:    "http scheme, trailing slash, hostname without port",
+			hostArg: "http://mydomain.org/",
+			path:    getNodeVersionPath,
+			joined:  "http://mydomain.org/eth/v1/node/version",
+		},
+		{
+			name:    "http scheme, hostname with basic auth creds and no port",
+			hostArg: "http://username:pass@mydomain.org/",
+			path:    getNodeVersionPath,
+			joined:  "http://username:pass@mydomain.org/eth/v1/node/version",
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			cl, err := NewClient(c.hostArg)
+			if c.err != nil {
+				require.ErrorIs(t, err, c.err)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, c.joined, cl.baseURL.ResolveReference(&url.URL{Path: c.path}).String())
 		})
 	}
 }
