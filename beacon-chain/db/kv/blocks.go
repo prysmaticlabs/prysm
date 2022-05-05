@@ -717,19 +717,32 @@ func unmarshalBlock(_ context.Context, enc []byte) (interfaces.SignedBeaconBlock
 
 // marshal versioned beacon block from struct type down to bytes.
 func marshalBlock(_ context.Context, blk interfaces.SignedBeaconBlock) ([]byte, error) {
-	if blk.Version() == version.Bellatrix {
-	}
-	obj, err := blk.MarshalSSZ()
-	if err != nil {
-		return nil, err
+	var encodedBlock []byte
+	var err error
+	// If the version is pre-bellatrix, we encode the block as is.
+	if blk.Version() == version.Altair || blk.Version() == version.Phase0 {
+		encodedBlock, err = blk.MarshalSSZ()
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// Else, we only store signed, blinded beacon blocks in the database.
+		blindedBlock, err := wrapper.WrapSignedBlindedBeaconBlock(b)
+		if err != nil {
+			return nil, err
+		}
+		encodedBlock, err = blindedBlock.MarshalSSZ()
+		if err != nil {
+			return nil, err
+		}
 	}
 	switch blk.Version() {
-	case version.Bellatrix:
-		return snappy.Encode(nil, append(bellatrixBlindKey, obj...)), nil
+	case version.Bellatrix, version.BellatrixBlind:
+		return snappy.Encode(nil, append(bellatrixBlindKey, encodedBlock...)), nil
 	case version.Altair:
-		return snappy.Encode(nil, append(altairKey, obj...)), nil
+		return snappy.Encode(nil, append(altairKey, encodedBlock...)), nil
 	case version.Phase0:
-		return snappy.Encode(nil, obj), nil
+		return snappy.Encode(nil, encodedBlock), nil
 	default:
 		return nil, errors.New("Unknown block version")
 	}
