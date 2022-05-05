@@ -105,7 +105,7 @@ func e2eMinimal(t *testing.T, args *testArgs) {
 		TracingSinkEndpoint: tracingEndpoint,
 		Evaluators:          evals,
 		Seed:                int64(seed),
-		ExtraEpochs: 3,
+		ExtraEpochs:         3,
 	}
 
 	newTestRunner(t, testConfig).run()
