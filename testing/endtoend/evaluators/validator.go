@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	ethtypes "github.com/prysmaticlabs/prysm/consensus-types/primitives"
@@ -118,29 +119,34 @@ func validatorsParticipating(conns ...*grpc.ClientConn) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to get beacon state")
 		}
-		missingValidators := []uint64{}
+		missSrcVals := []uint64{}
+		missTgtVals := []uint64{}
+		missHeadVals := []uint64{}
 		switch obj := st.Data.State.(type) {
 		case *eth.BeaconStateContainer_Phase0State:
 		// Do Nothing
 		case *eth.BeaconStateContainer_AltairState:
-			for i, b := range obj.AltairState.PreviousEpochParticipation {
-				if b == 0 {
-					missingValidators = append(missingValidators, uint64(i))
-				}
+			missSrcVals, missTgtVals, missHeadVals, err = findMissingValidators(obj.AltairState.PreviousEpochParticipation)
+			if err != nil {
+				return errors.Wrap(err, "failed to get missing validators")
 			}
 		case *eth.BeaconStateContainer_BellatrixState:
-			for i, b := range obj.BellatrixState.PreviousEpochParticipation {
-				if b == 0 {
-					missingValidators = append(missingValidators, uint64(i))
-				}
+			missSrcVals, missTgtVals, missHeadVals, err = findMissingValidators(obj.BellatrixState.PreviousEpochParticipation)
+			if err != nil {
+				return errors.Wrap(err, "failed to get missing validators")
 			}
+		default:
+			return fmt.Errorf("unrecognized version: %v", st.Version)
 		}
 		return fmt.Errorf(
-			"validator participation was below for epoch %d, expected %f, received: %f. Missing validators are %v",
+			"validator participation was below for epoch %d, expected %f, received: %f."+
+				" Missing Source,Target and Head validators are %v, %v, %v",
 			participation.Epoch,
 			expected,
 			partRate,
-			missingValidators,
+			missSrcVals,
+			missTgtVals,
+			missHeadVals,
 		)
 	}
 	return nil
@@ -254,4 +260,38 @@ func syncCompatibleBlockFromCtr(container *ethpb.BeaconBlockContainer) (interfac
 		return wrapper.WrappedSignedBeaconBlock(container.GetBellatrixBlock())
 	}
 	return nil, errors.New("no supported block type in container")
+}
+
+func findMissingValidators(participation []byte) ([]uint64, []uint64, []uint64, error) {
+	cfg := params.BeaconConfig()
+	sourceFlagIndex := cfg.TimelySourceFlagIndex
+	targetFlagIndex := cfg.TimelyTargetFlagIndex
+	headFlagIndex := cfg.TimelyHeadFlagIndex
+	missingSourceValidators := []uint64{}
+	missingHeadValidators := []uint64{}
+	missingTargetValidators := []uint64{}
+	for i, b := range participation {
+		hasSource, err := altair.HasValidatorFlag(b, sourceFlagIndex)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		if !hasSource {
+			missingSourceValidators = append(missingSourceValidators, uint64(i))
+		}
+		hasTarget, err := altair.HasValidatorFlag(b, targetFlagIndex)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		if !hasTarget {
+			missingTargetValidators = append(missingTargetValidators, uint64(i))
+		}
+		hasHead, err := altair.HasValidatorFlag(b, headFlagIndex)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		if !hasHead {
+			missingHeadValidators = append(missingHeadValidators, uint64(i))
+		}
+	}
+	return missingSourceValidators, missingTargetValidators, missingHeadValidators, nil
 }
