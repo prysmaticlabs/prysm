@@ -20,6 +20,6 @@ func SetMaxFdLimits() error {
 	if err != nil {
 		return err
 	}
-	log.Infof("Raised maximum fd limit to %d from %d", raisedVal, curr)
+	log.Infof("Raised fd limit to %d from %d", raisedVal, curr)
 	return nil
 }
