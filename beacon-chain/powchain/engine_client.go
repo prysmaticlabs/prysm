@@ -163,6 +163,7 @@ func (s *Service) ExchangeTransitionConfiguration(
 	ctx, cancel := context.WithDeadline(ctx, d)
 	result := &pb.TransitionConfiguration{}
 	if err := s.rpcClient.CallContext(ctx, result, ExchangeTransitionConfigurationMethod, cfg); err != nil {
+		cancel()
 		return handleRPCError(err)
 	}
 	cancel()
