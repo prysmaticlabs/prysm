@@ -186,12 +186,14 @@ func (s *Service) notifyEngineIfChangedHead(ctx context.Context, newHeadRoot [32
 		log.WithError(err).Error("Could not get state from db")
 		return
 	}
-	_, err = s.notifyForkchoiceUpdate(s.ctx,
-		headState,
-		newHeadBlock.Block(),
-		newHeadRoot,
-		bytesutil.ToBytes32(finalized.Root),
-	)
+	arg := &notifyForkchoiceUpdateArg{
+		headState:     headState,
+		headRoot:      newHeadRoot,
+		headBlock:     newHeadBlock.Block(),
+		finalizedRoot: bytesutil.ToBytes32(finalized.Root),
+		justifiedRoot: bytesutil.ToBytes32(s.store.JustifiedCheckpt().Root),
+	}
+	_, err = s.notifyForkchoiceUpdate(s.ctx, arg)
 	if err != nil {
 		log.WithError(err).Error("could not notify forkchoice update")
 	}
