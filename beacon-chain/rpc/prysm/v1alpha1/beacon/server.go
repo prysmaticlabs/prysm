@@ -29,6 +29,7 @@ type Server struct {
 	Ctx                         context.Context
 	ChainStartFetcher           powchain.ChainStartFetcher
 	HeadFetcher                 blockchain.HeadFetcher
+	HeadUpdater                 blockchain.ChainInfoUpdater
 	CanonicalFetcher            blockchain.CanonicalFetcher
 	FinalizationFetcher         blockchain.FinalizationFetcher
 	DepositFetcher              depositcache.DepositFetcher

@@ -33,6 +33,7 @@ type Server struct {
 	VoluntaryExitsPool      voluntaryexits.PoolManager
 	StateGenService         stategen.StateManager
 	StateFetcher            statefetcher.Fetcher
+	HeadUpdater             blockchain.ChainInfoUpdater
 	HeadFetcher             blockchain.HeadFetcher
 	V1Alpha1ValidatorServer *v1alpha1validator.Server
 	SyncChecker             sync.Checker
