@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -123,7 +124,11 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 	burnAddr := bytesutil.PadTo([]byte{}, fieldparams.FeeRecipientLength)
 	switch err == nil {
 	case true:
-		feeRecipient = recipient
+		mixedcaseAddress := common.NewMixedcaseAddress(recipient)
+		if !mixedcaseAddress.ValidChecksum() {
+			return nil, fmt.Errorf("invalid checksum for fee recipient address: %s", feeRecipient.Hex())
+		}
+		feeRecipient = mixedcaseAddress.Address()
 	case errors.As(err, kv.ErrNotFoundFeeRecipient):
 		// If fee recipient is not found in DB and not set from beacon node CLI,
 		// use the burn address.
