@@ -81,7 +81,11 @@ func (m *SparseMerkleTrie) Items() [][]byte {
 // HashTreeRoot of the Merkle trie as defined in the deposit contract.
 //  Spec Definition:
 //   sha256(concat(node, self.to_little_endian_64(self.deposit_count), slice(zero_bytes32, start=0, len=24)))
-func (m *SparseMerkleTrie) HashTreeRoot() [32]byte {
+func (m *SparseMerkleTrie) HashTreeRoot() ([32]byte, error) {
+	if len(m.branches) == 0 || len(m.branches[len(m.branches)-1]) == 0 {
+		return [32]byte{}, errors.New("invalid branches provided to compute root")
+	}
+
 	enc := [32]byte{}
 	depositCount := uint64(len(m.originalItems))
 	if len(m.originalItems) == 1 && bytes.Equal(m.originalItems[0], ZeroHashes[0][:]) {
@@ -89,7 +93,7 @@ func (m *SparseMerkleTrie) HashTreeRoot() [32]byte {
 		depositCount = 0
 	}
 	binary.LittleEndian.PutUint64(enc[:], depositCount)
-	return hash.Hash(append(m.branches[len(m.branches)-1][0], enc[:]...))
+	return hash.Hash(append(m.branches[len(m.branches)-1][0], enc[:]...)), nil
 }
 
 // Insert an item into the trie.
