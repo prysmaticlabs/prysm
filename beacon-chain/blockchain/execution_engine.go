@@ -29,13 +29,23 @@ var (
 	ErrUndefinedExecutionEngineError = errors.New("received an undefined ee error")
 )
 
+// notifyForkchoiceUpdateArg is the argument for the forkchoice update notification `notifyForkchoiceUpdate`.
+type notifyForkchoiceUpdateArg struct {
+	headState     state.BeaconState
+	headRoot      [32]byte
+	headBlock     interfaces.BeaconBlock
+	finalizedRoot [32]byte
+	justifiedRoot [32]byte
+}
+
 // notifyForkchoiceUpdate signals execution engine the fork choice updates. Execution engine should:
 // 1. Re-organizes the execution payload chain and corresponding state to make head_block_hash the head.
 // 2. Applies finality to the execution state: it irreversibly persists the chain of all execution payloads and corresponding state, up to and including finalized_block_hash.
-func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headState state.BeaconState, headBlk interfaces.BeaconBlock, headRoot [32]byte, finalizedRoot [32]byte) (*enginev1.PayloadIDBytes, error) {
+func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkchoiceUpdateArg) (*enginev1.PayloadIDBytes, error) {
 	ctx, span := trace.StartSpan(ctx, "blockChain.notifyForkchoiceUpdate")
 	defer span.End()
 
+	headBlk := arg.headBlock
 	if headBlk == nil || headBlk.IsNil() || headBlk.Body().IsNil() {
 		return nil, errors.New("nil head block")
 	}
@@ -51,29 +61,22 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headState state.Be
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get execution payload")
 	}
-	finalizedBlock, err := s.getBlock(ctx, s.ensureRootNotZeros(finalizedRoot))
+	finalizedHash, err := s.getPayloadHash(ctx, arg.finalizedRoot)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not get finalized block hash")
 	}
-	var finalizedHash []byte
-	if blocks.IsPreBellatrixVersion(finalizedBlock.Block().Version()) {
-		finalizedHash = params.BeaconConfig().ZeroHash[:]
-	} else {
-		payload, err := finalizedBlock.Block().Body().ExecutionPayload()
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get finalized block execution payload")
-		}
-		finalizedHash = payload.BlockHash
+	justifiedHash, err := s.getPayloadHash(ctx, arg.justifiedRoot)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get justified block hash")
 	}
-
 	fcs := &enginev1.ForkchoiceState{
 		HeadBlockHash:      headPayload.BlockHash,
-		SafeBlockHash:      headPayload.BlockHash,
+		SafeBlockHash:      justifiedHash,
 		FinalizedBlockHash: finalizedHash,
 	}
 
 	nextSlot := s.CurrentSlot() + 1 // Cache payload ID for next slot proposer.
-	hasAttr, attr, proposerId, err := s.getPayloadAttribute(ctx, headState, nextSlot)
+	hasAttr, attr, proposerId, err := s.getPayloadAttribute(ctx, arg.headState, nextSlot)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get payload attribute")
 	}
@@ -90,6 +93,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headState state.Be
 			}).Info("Called fork choice updated with optimistic block")
 			return payloadID, s.optimisticCandidateBlock(ctx, headBlk)
 		case powchain.ErrInvalidPayloadStatus:
+			headRoot := arg.headRoot
 			invalidRoots, err := s.ForkChoicer().SetOptimisticToInvalid(ctx, headRoot, bytesutil.ToBytes32(headBlk.ParentRoot()), bytesutil.ToBytes32(lastValidHash))
 			if err != nil {
 				return nil, err
@@ -108,7 +112,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headState state.Be
 		}
 	}
 	forkchoiceUpdatedValidNodeCount.Inc()
-	if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, headRoot); err != nil {
+	if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, arg.headRoot); err != nil {
 		return nil, errors.Wrap(err, "could not set block to valid")
 	}
 	if hasAttr { // If the forkchoice update call has an attribute, update the proposer payload ID cache.
@@ -117,6 +121,23 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headState state.Be
 		s.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(nextSlot, proposerId, pId)
 	}
 	return payloadID, nil
+}
+
+// getPayloadHash returns the payload hash given the block root.
+// if the block is before bellatrix fork epoch, it returns the zero hash.
+func (s *Service) getPayloadHash(ctx context.Context, root [32]byte) ([]byte, error) {
+	finalizedBlock, err := s.getBlock(ctx, s.ensureRootNotZeros(root))
+	if err != nil {
+		return nil, err
+	}
+	if blocks.IsPreBellatrixVersion(finalizedBlock.Block().Version()) {
+		return params.BeaconConfig().ZeroHash[:], nil
+	}
+	payload, err := finalizedBlock.Block().Body().ExecutionPayload()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get execution payload")
+	}
+	return payload.BlockHash, nil
 }
 
 // notifyForkchoiceUpdate signals execution engine on a new payload.
