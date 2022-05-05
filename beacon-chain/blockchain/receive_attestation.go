@@ -117,7 +117,7 @@ func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
 			log.Warn("Genesis time received, now available to process attestations")
 		}
 
-		st := slots.NewSlotTicker(s.genesisTime, params.BeaconConfig().SecondsPerSlot)
+		st := slots.NewSlotTicker(s.genesisTime, params.BeaconConfig().SecondsPerSlot/2)
 		for {
 			select {
 			case <-s.ctx.Done():
