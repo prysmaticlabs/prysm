@@ -3,6 +3,7 @@ package wrapper
 import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
+	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -139,6 +140,67 @@ func BuildSignedBeaconBlock(blk interfaces.BeaconBlock, signature []byte) (inter
 		return WrappedSignedBeaconBlock(&eth.SignedBlindedBeaconBlockBellatrix{Block: pb, Signature: signature})
 	default:
 		return nil, errors.Wrapf(ErrUnsupportedBeaconBlock, "unable to wrap block of type %T", b)
+	}
+}
+
+func BuildSignedBeaconBlockFromExecutionPayload(
+	blk interfaces.SignedBeaconBlock, payload *enginev1.ExecutionPayload,
+) (interfaces.SignedBeaconBlock, error) {
+	return nil, nil
+}
+
+// WrapSignedBlindedBeaconBlock converts a
+func WrapSignedBlindedBeaconBlock(blk interfaces.SignedBeaconBlock) (interfaces.SignedBeaconBlock, error) {
+	switch tp := blk.(type) {
+	case Phase0SignedBeaconBlock, altairSignedBeaconBlock:
+		return nil, errors.New("cannot build a blinded beacon block for Phase 0 or Altair fork versions")
+	default:
+		b := tp.Block()
+		payload, err := b.Body().ExecutionPayload()
+		if err != nil {
+			return nil, err
+		}
+		syncAgg, err := b.Body().SyncAggregate()
+		if err != nil {
+			return nil, err
+		}
+		blindedBlock := &eth.SignedBlindedBeaconBlockBellatrix{
+			Block: &eth.BlindedBeaconBlockBellatrix{
+				Slot:          b.Slot(),
+				ProposerIndex: b.ProposerIndex(),
+				ParentRoot:    b.ParentRoot(),
+				StateRoot:     b.StateRoot(),
+				Body: &eth.BlindedBeaconBlockBodyBellatrix{
+					RandaoReveal:      b.Body().RandaoReveal(),
+					Eth1Data:          b.Body().Eth1Data(),
+					Graffiti:          b.Body().Graffiti(),
+					ProposerSlashings: b.Body().ProposerSlashings(),
+					AttesterSlashings: b.Body().AttesterSlashings(),
+					Attestations:      b.Body().Attestations(),
+					Deposits:          b.Body().Deposits(),
+					VoluntaryExits:    b.Body().VoluntaryExits(),
+					SyncAggregate:     syncAgg,
+					ExecutionPayloadHeader: &eth.ExecutionPayloadHeader{
+						ParentHash:       payload.ParentHash,
+						FeeRecipient:     payload.FeeRecipient,
+						StateRoot:        payload.StateRoot,
+						ReceiptsRoot:     payload.ReceiptsRoot,
+						LogsBloom:        payload.LogsBloom,
+						PrevRandao:       payload.PrevRandao,
+						BlockNumber:      payload.BlockNumber,
+						GasLimit:         payload.GasLimit,
+						GasUsed:          payload.GasUsed,
+						Timestamp:        payload.Timestamp,
+						ExtraData:        payload.ExtraData,
+						BaseFeePerGas:    payload.BaseFeePerGas,
+						BlockHash:        payload.BlockHash,
+						TransactionsRoot: nil,
+					},
+				},
+			},
+			Signature: blk.Signature(),
+		}
+		return wrappedBellatrixSignedBlindedBeaconBlock(blindedBlock)
 	}
 }
 

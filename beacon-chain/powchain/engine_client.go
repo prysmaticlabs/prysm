@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -276,6 +277,20 @@ func (s *Service) ExecutionBlockByHash(ctx context.Context, hash common.Hash) (*
 	result := &pb.ExecutionBlock{}
 	err := s.rpcClient.CallContext(ctx, result, ExecutionBlockByHashMethod, hash, false /* no full transaction objects */)
 	return result, handleRPCError(err)
+}
+
+// RecontructFullBellatrixBlock ---
+func (s *Service) ReconstructFullBellatrixBlock(
+	ctx context.Context, blinded *ethpb.SignedBlindedBeaconBlockBellatrix,
+) (*ethpb.SignedBeaconBlockBellatrix, error) {
+	executionBlockHash := common.BytesToHash(blinded.Block.Body.ExecutionPayloadHeader.BlockHash)
+	executionBlock, err := s.ExecutionBlockByHash(ctx, executionBlockHash)
+	if err != nil {
+		return nil, err
+	}
+	//executionBlock.
+	_ = executionBlock
+	return nil, nil
 }
 
 // Handles errors received from the RPC server according to the specification.
