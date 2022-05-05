@@ -3,6 +3,7 @@ package wrapper
 import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/encoding/ssz"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
@@ -143,13 +144,16 @@ func BuildSignedBeaconBlock(blk interfaces.BeaconBlock, signature []byte) (inter
 	}
 }
 
+// BuildSignedBeaconBlockFromExecutionPayload takes a signed, blinded beacon block and converts into
+// a full, signed beacon block by specifying an execution payload.
 func BuildSignedBeaconBlockFromExecutionPayload(
 	blk interfaces.SignedBeaconBlock, payload *enginev1.ExecutionPayload,
 ) (interfaces.SignedBeaconBlock, error) {
+	// Should sanity check htr(payload) == htr(blk.body.payload_header).
 	return nil, nil
 }
 
-// WrapSignedBlindedBeaconBlock converts a
+// WrapSignedBlindedBeaconBlock converts a signed beacon block into a blinded format.
 func WrapSignedBlindedBeaconBlock(blk interfaces.SignedBeaconBlock) (interfaces.SignedBeaconBlock, error) {
 	switch tp := blk.(type) {
 	case Phase0SignedBeaconBlock, altairSignedBeaconBlock:
@@ -161,6 +165,10 @@ func WrapSignedBlindedBeaconBlock(blk interfaces.SignedBeaconBlock) (interfaces.
 			return nil, err
 		}
 		syncAgg, err := b.Body().SyncAggregate()
+		if err != nil {
+			return nil, err
+		}
+		txsRoot, err := ssz.TransactionsRoot(payload.Transactions)
 		if err != nil {
 			return nil, err
 		}
@@ -194,7 +202,7 @@ func WrapSignedBlindedBeaconBlock(blk interfaces.SignedBeaconBlock) (interfaces.
 						ExtraData:        payload.ExtraData,
 						BaseFeePerGas:    payload.BaseFeePerGas,
 						BlockHash:        payload.BlockHash,
-						TransactionsRoot: nil,
+						TransactionsRoot: txsRoot[:],
 					},
 				},
 			},
