@@ -169,6 +169,11 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			service.cfg.ExecutionEngineCaller = &mockPOW.EngineClient{ErrForkchoiceUpdated: tt.newForkchoiceErr}
 			st, _ := util.DeterministicGenesisState(t, 1)
+			require.NoError(t, beaconDB.SaveState(ctx, st, tt.finalizedRoot))
+			require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, tt.finalizedRoot))
+			fc := &ethpb.Checkpoint{Epoch: 1, Root: tt.finalizedRoot[:]}
+			service.store.SetFinalizedCheckpt(fc)
+			service.store.SetJustifiedCheckpt(fc)
 			_, err := service.notifyForkchoiceUpdate(ctx, st, tt.blk, tt.headRoot, tt.finalizedRoot)
 			if tt.errString != "" {
 				require.ErrorContains(t, tt.errString, err)
@@ -196,7 +201,7 @@ func Test_NotifyForkchoiceUpdateRecursive(t *testing.T) {
 	}
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
-	require.NoError(t, fcs.InsertOptimisticBlock(ctx, 0, [32]byte{}, [32]byte{}, params.BeaconConfig().ZeroHash, 0, 0))
+	require.NoError(t, fcs.InsertOptimisticBlock(ctx, 1, [32]byte{}, [32]byte{}, params.BeaconConfig().ZeroHash, 0, 0))
 
 	service.cfg.ExecutionEngineCaller = &mockPOW.EngineClient{ErrForkchoiceUpdated: powchain.ErrInvalidPayloadStatus}
 	st, _ := util.DeterministicGenesisState(t, 1)
@@ -206,7 +211,13 @@ func Test_NotifyForkchoiceUpdateRecursive(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
+	require.NoError(t, beaconDB.SaveState(ctx, st, bellatrixBlkRoot))
+	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, bellatrixBlkRoot))
+	fc := &ethpb.Checkpoint{Epoch: 0, Root: bellatrixBlkRoot[:]}
+	service.store.SetFinalizedCheckpt(fc)
+	service.store.SetJustifiedCheckpt(fc)
 	_, err = service.notifyForkchoiceUpdate(ctx, st, b, service.headRoot(), bellatrixBlkRoot)
+
 	require.ErrorContains(t, "invalid finalized block on chain", err)
 }
 
