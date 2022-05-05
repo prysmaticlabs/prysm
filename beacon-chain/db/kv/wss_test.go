@@ -42,4 +42,8 @@ func TestSaveOrigin(t *testing.T) {
 	cbb, err := scb.MarshalSSZ()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveOrigin(ctx, csb, cbb))
+
+	broot, err := scb.Block().HashTreeRoot()
+	require.NoError(t, err)
+	require.Equal(t, true, db.IsFinalizedBlock(ctx, broot))
 }
