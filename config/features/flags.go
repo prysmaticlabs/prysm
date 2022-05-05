@@ -91,11 +91,6 @@ var (
 			" (Warning): Once enabled, this feature migrates your database in to a new schema and " +
 			"there is no going back. At worst, your entire database might get corrupted.",
 	}
-	disableCorrectlyInsertOrphanedAtts = &cli.BoolFlag{
-		Name: "disable-correctly-insert-orphaned-atts",
-		Usage: "Disable the fix for bug where orphaned attestations don't get reinserted back to mem pool. Which is an improves validator profitability and overall network health," +
-			"see issue #9441 for further detail",
-	}
 	disableCorrectlyPruneCanonicalAtts = &cli.BoolFlag{
 		Name: "disable-correctly-prune-canonical-atts",
 		Usage: "Disable the fix for bug where any block attestations can get incorrectly pruned, which improves validator profitability and overall network health," +
@@ -158,7 +153,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableBroadcastSlashingFlag,
 	enableSlasherFlag,
 	enableHistoricalSpaceRepresentation,
-	disableCorrectlyInsertOrphanedAtts,
 	disableCorrectlyPruneCanonicalAtts,
 	enableNativeState,
 	enableVecHTR,

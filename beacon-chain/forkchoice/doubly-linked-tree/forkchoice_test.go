@@ -218,6 +218,15 @@ func TestForkChoice_RemoveEquivocating(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, [32]byte{'c'}, head)
 
+	// Process b's slashing again, should be a noop
+	f.InsertSlashedIndex(ctx, 1)
+	require.Equal(t, uint64(200), f.store.nodeByRoot[[32]byte{'b'}].balance)
+	head, err = f.Head(ctx, 1, params.BeaconConfig().ZeroHash, []uint64{100, 200, 200, 300}, 1)
+	require.Equal(t, uint64(200), f.store.nodeByRoot[[32]byte{'b'}].weight)
+	require.Equal(t, uint64(300), f.store.nodeByRoot[[32]byte{'c'}].weight)
+	require.NoError(t, err)
+	require.Equal(t, [32]byte{'c'}, head)
+
 	// Process index where index == vote length. Should not panic.
 	f.InsertSlashedIndex(ctx, types.ValidatorIndex(len(f.balances)))
 	f.InsertSlashedIndex(ctx, types.ValidatorIndex(len(f.votes)))
