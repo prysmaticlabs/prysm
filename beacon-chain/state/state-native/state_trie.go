@@ -572,7 +572,7 @@ func (b *BeaconState) recomputeDirtyFields(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		idx := field.RealPosition(b)
+		idx := field.RealPosition()
 		b.merkleLayers[0][idx] = root[:]
 		b.recomputeRoot(idx)
 		delete(b.dirtyFields, field)

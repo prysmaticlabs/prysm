@@ -5,9 +5,5 @@ go_library(
     srcs = ["types.go"],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/types",
     visibility = ["//visibility:public"],
-    deps = [
-        "//beacon-chain/state:go_default_library",
-        "//runtime/version:go_default_library",
-        "@com_github_pkg_errors//:go_default_library",
-    ],
+    deps = ["@com_github_pkg_errors//:go_default_library"],
 )
