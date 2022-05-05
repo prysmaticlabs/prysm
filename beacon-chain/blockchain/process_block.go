@@ -427,7 +427,15 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 		return nil, nil, err
 	}
 	f := fCheckpoints[len(fCheckpoints)-1]
-	if _, err := s.notifyForkchoiceUpdate(ctx, preState, lastB.Block(), lastBR, bytesutil.ToBytes32(f.Root)); err != nil {
+	j := jCheckpoints[len(jCheckpoints)-1]
+	arg := &notifyForkchoiceUpdateArg{
+		headState:     preState,
+		headRoot:      lastBR,
+		headBlock:     lastB.Block(),
+		finalizedRoot: bytesutil.ToBytes32(f.Root),
+		justifiedRoot: bytesutil.ToBytes32(j.Root),
+	}
+	if _, err := s.notifyForkchoiceUpdate(ctx, arg); err != nil {
 		return nil, nil, err
 	}
 	if err := s.saveHeadNoDB(ctx, lastB, lastBR, preState); err != nil {

@@ -333,6 +333,10 @@ func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root, parentRoo
 func (f *ForkChoice) InsertSlashedIndex(_ context.Context, index types.ValidatorIndex) {
 	f.store.nodesLock.Lock()
 	defer f.store.nodesLock.Unlock()
+	// return early if the index was already included:
+	if f.store.slashedIndices[index] {
+		return
+	}
 	f.store.slashedIndices[index] = true
 
 	// Subtract last vote from this equivocating validator
