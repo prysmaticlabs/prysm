@@ -101,6 +101,12 @@ func (m *SparseMerkleTrie) Insert(item []byte, index int) error {
 	if index < 0 {
 		return fmt.Errorf("negative index provided: %d", index)
 	}
+	if len(m.branches) == 0 {
+		return errors.New("invalid trie: no branches")
+	}
+	if m.depth > uint(len(m.branches)) {
+		return errors.New("invalid trie: depth is greater than number of branches")
+	}
 	for index >= len(m.branches[0]) {
 		m.branches[0] = append(m.branches[0], ZeroHashes[0][:])
 	}

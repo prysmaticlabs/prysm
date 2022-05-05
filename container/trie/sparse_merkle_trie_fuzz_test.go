@@ -67,3 +67,32 @@ func FuzzSparseMerkleTrie_MerkleProof(f *testing.F) {
 		trie.CreateTrieFromProto(pb).MerkleProof(i)
 	})
 }
+
+func FuzzSparseMerkleTrie_Insert(f *testing.F) {
+	h := hash.Hash([]byte("hi"))
+	pb := &ethpb.SparseMerkleTrie{
+		Layers: []*ethpb.TrieLayer{
+			{
+				Layer: [][]byte{h[:]},
+			},
+			{
+				Layer: [][]byte{h[:]},
+			},
+			{
+				Layer: [][]byte{},
+			},
+		},
+		Depth: 4,
+	}
+	b, err := proto.Marshal(pb)
+	require.NoError(f, err)
+	f.Add(b, []byte{}, 0)
+
+	f.Fuzz(func(t *testing.T, b, item []byte, i int) {
+		pb := &ethpb.SparseMerkleTrie{}
+		if err := proto.Unmarshal(b, pb); err != nil {
+			return
+		}
+		trie.CreateTrieFromProto(pb).Insert(item, i)
+	})
+}
