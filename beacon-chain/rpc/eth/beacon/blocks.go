@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
@@ -24,6 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -220,6 +222,77 @@ func (bs *Server) SubmitBlock(ctx context.Context, req *ethpbv2.SignedBeaconBloc
 			return nil, err
 		}
 	}
+	return &emptypb.Empty{}, nil
+}
+
+// SubmitBlockSSZ instructs the beacon node to broadcast a newly signed beacon block to the beacon network, to be
+// included in the beacon chain. The beacon node is not required to validate the signed BeaconBlock, and a successful
+// response (20X) only indicates that the broadcast has been successful. The beacon node is expected to integrate the
+// new block into its state, and therefore validate the block internally, however blocks which fail the validation are
+// still broadcast but a different status code is returned (202).
+//
+// The provided block must be SSZ-serialized.
+func (bs *Server) SubmitBlockSSZ(ctx context.Context, req *ethpbv2.SignedBeaconBlockSSZContainer) (*emptypb.Empty, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon.SubmitBlock")
+	defer span.End()
+
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not read eth-consensus-version header")
+	}
+	ver := md.Get("eth-consensus-version")
+	if len(ver) == 0 {
+		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not read eth-consensus-version header")
+	}
+
+	switch strings.ToLower(ver[0]) {
+	case strings.ToLower(ethpbv2.Version_PHASE0.String()):
+		block := &ethpbv1.SignedBeaconBlock{}
+		if err := block.UnmarshalSSZ(req.Data); err != nil {
+			return &emptypb.Empty{},
+				status.Errorf(
+					codes.InvalidArgument,
+					"could not unmarshal data into %s block: %v",
+					strings.ToLower(ethpbv2.Version_PHASE0.String()),
+					err,
+				)
+		}
+		if err := bs.submitPhase0Block(ctx, block.Block, block.Signature); err != nil {
+			return nil, err
+		}
+	case strings.ToLower(ethpbv2.Version_ALTAIR.String()):
+		block := &ethpbv2.SignedBeaconBlockAltair{}
+		if err := block.UnmarshalSSZ(req.Data); err != nil {
+			return &emptypb.Empty{},
+				status.Errorf(
+					codes.InvalidArgument,
+					"could not unmarshal data into %s block: %v",
+					strings.ToLower(ethpbv2.Version_ALTAIR.String()),
+					err,
+				)
+		}
+		if err := bs.submitAltairBlock(ctx, block.Message, block.Signature); err != nil {
+			return nil, err
+		}
+	case strings.ToLower(ethpbv2.Version_BELLATRIX.String()):
+		block := &ethpbv2.SignedBeaconBlockBellatrix{}
+		if err := block.UnmarshalSSZ(req.Data); err != nil {
+			return &emptypb.Empty{},
+				status.Errorf(
+					codes.InvalidArgument,
+					"could not unmarshal data into %s block: %v",
+					strings.ToLower(ethpbv2.Version_BELLATRIX.String()),
+					err,
+				)
+		}
+		if err := bs.submitBellatrixBlock(ctx, block.Message, block.Signature); err != nil {
+			return nil, err
+		}
+	default:
+		return &emptypb.Empty{}, status.Errorf(codes.InvalidArgument, "Unsupported Eth-Consensus-Version %s", ver)
+
+	}
+
 	return &emptypb.Empty{}, nil
 }
 
