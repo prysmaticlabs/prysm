@@ -117,6 +117,12 @@ func TestValidHostname(t *testing.T) {
 			path:    getNodeVersionPath,
 			joined:  "http://mydomain.org/eth/v1/node/version",
 		},
+		{
+			name:    "http scheme, hostname with basic auth creds and no port",
+			hostArg: "http://username:pass@mydomain.org/",
+			path:    getNodeVersionPath,
+			joined:  "http://username:pass@mydomain.org/eth/v1/node/version",
+		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
