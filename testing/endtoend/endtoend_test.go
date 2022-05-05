@@ -273,7 +273,7 @@ func (r *testRunner) run() {
 
 		if config.ExtraEpochs > 0 {
 			secondsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
-			dl := time.Now().Add(time.Second * time.Duration(config.ExtraEpochs * secondsPerEpoch))
+			dl := time.Now().Add(time.Second * time.Duration(config.ExtraEpochs*secondsPerEpoch))
 			if err := r.waitUntilEpoch(ctx, types.Epoch(config.EpochsToRun+config.ExtraEpochs), conns[0], dl); err != nil {
 				return errors.Wrap(err, "error while waiting for ExtraEpochs")
 			}
@@ -303,7 +303,7 @@ func (r *testRunner) waitUntilEpoch(ctx context.Context, e types.Epoch, conn *gr
 	defer cancel()
 	for {
 		select {
-		case <- ctx.Done():
+		case <-ctx.Done():
 			return errors.Wrapf(ctx.Err(), "context deadline/cancel while waiting for epoch %d", e)
 		default:
 			chainHead, err := beaconClient.GetChainHead(ctx, &emptypb.Empty{})
