@@ -24,31 +24,24 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// UpdateAndSaveHeadWithBalances updates the beacon state head after getting justified balanced from cache.
-// This function is only used in spec-tests, it does save the head after updating it.
-func (s *Service) UpdateAndSaveHeadWithBalances(ctx context.Context) error {
+// UpdateAndSaveHead updates the beacon state head using the latest information from forkchoice
+// This function is used in spec-tests and before proposing a block, it saves the head after updating it.
+func (s *Service) UpdateAndSaveHead(ctx context.Context) {
 	cp := s.store.JustifiedCheckpt()
 	if cp == nil {
-		return errors.New("no justified checkpoint")
+		log.Error("no justified checkpoint")
+		return
 	}
 	balances, err := s.justifiedBalances.get(ctx, bytesutil.ToBytes32(cp.Root))
 	if err != nil {
-		msg := fmt.Sprintf("could not read balances for state w/ justified checkpoint %#x", cp.Root)
-		return errors.Wrap(err, msg)
+		log.WithError(err).Errorf("could not read balances for state w/ justified checkpoint %#x", cp.Root)
+		return
 	}
 	headRoot, err := s.updateHead(ctx, balances)
 	if err != nil {
-		return errors.Wrap(err, "could not update head")
+		log.WithError(err).Error("could not update head")
 	}
-	headBlock, err := s.cfg.BeaconDB.Block(ctx, headRoot)
-	if err != nil {
-		return err
-	}
-	headState, err := s.cfg.StateGen.StateByRoot(ctx, headRoot)
-	if err != nil {
-		return errors.Wrap(err, "could not retrieve head state in DB")
-	}
-	return s.saveHead(ctx, headRoot, headBlock, headState)
+	s.notifyEngineIfChangedHead(ctx, headRoot)
 }
 
 // This defines the current chain service's view of head.

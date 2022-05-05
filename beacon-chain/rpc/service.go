@@ -78,6 +78,7 @@ type Config struct {
 	BeaconMonitoringPort    int
 	BeaconDB                db.HeadAccessDatabase
 	ChainInfoFetcher        blockchain.ChainInfoFetcher
+	ChainInfoUpdater        blockchain.ChainInfoUpdater
 	HeadFetcher             blockchain.HeadFetcher
 	CanonicalFetcher        blockchain.CanonicalFetcher
 	ForkFetcher             blockchain.ForkFetcher
@@ -188,6 +189,7 @@ func (s *Service) Start() {
 		AttestationCache:       cache.NewAttestationCache(),
 		AttPool:                s.cfg.AttestationsPool,
 		ExitPool:               s.cfg.ExitPool,
+		HeadUpdater:            s.cfg.ChainInfoUpdater,
 		HeadFetcher:            s.cfg.HeadFetcher,
 		ForkFetcher:            s.cfg.ForkFetcher,
 		FinalizationFetcher:    s.cfg.FinalizationFetcher,
