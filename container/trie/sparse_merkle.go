@@ -147,11 +147,17 @@ func (m *SparseMerkleTrie) MerkleProof(index int) ([][]byte, error) {
 	if index < 0 {
 		return nil, fmt.Errorf("merkle index is negative: %d", index)
 	}
-	merkleIndex := uint(index)
+	if len(m.branches) == 0 {
+		return nil, errors.New("invalid trie: no branches")
+	}
 	leaves := m.branches[0]
 	if index >= len(leaves) {
 		return nil, fmt.Errorf("merkle index out of range in trie, max range: %d, received: %d", len(leaves), index)
 	}
+	if m.depth > uint(len(m.branches)) {
+		return nil, errors.New("invalid trie: depth is greater than number of branches")
+	}
+	merkleIndex := uint(index)
 	proof := make([][]byte, m.depth+1)
 	for i := uint(0); i < m.depth; i++ {
 		subIndex := (merkleIndex / (1 << i)) ^ 1
