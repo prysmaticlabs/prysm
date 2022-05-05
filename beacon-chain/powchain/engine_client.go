@@ -33,6 +33,10 @@ const (
 	ExecutionBlockByHashMethod = "eth_getBlockByHash"
 	// ExecutionBlockByNumberMethod request string for JSON-RPC.
 	ExecutionBlockByNumberMethod = "eth_getBlockByNumber"
+	// Defines the seconds to wait before timing out engine endpoints with block execution semantics.
+	blockExecutionTimeOut = 8 * time.Second
+	// Defines the seconds before timing out engine endpoints with non-block execution semantics.
+	nonBlockExecutionTimeOut = time.Second
 )
 
 // ForkchoiceUpdatedResponse is the response kind received by the
@@ -65,9 +69,11 @@ func (s *Service) NewPayload(ctx context.Context, payload *pb.ExecutionPayload) 
 	defer func() {
 		newPayloadLatency.Observe(float64(time.Since(start).Milliseconds()))
 	}()
-
+	d := time.Now().Add(blockExecutionTimeOut)
+	ctx, cancel := context.WithDeadline(ctx, d)
 	result := &pb.PayloadStatus{}
 	err := s.rpcClient.CallContext(ctx, result, NewPayloadMethod, payload)
+	cancel()
 	if err != nil {
 		return nil, handleRPCError(err)
 	}
@@ -99,8 +105,11 @@ func (s *Service) ForkchoiceUpdated(
 		forkchoiceUpdatedLatency.Observe(float64(time.Since(start).Milliseconds()))
 	}()
 
+	d := time.Now().Add(blockExecutionTimeOut)
+	ctx, cancel := context.WithDeadline(ctx, d)
 	result := &ForkchoiceUpdatedResponse{}
 	err := s.rpcClient.CallContext(ctx, result, ForkchoiceUpdatedMethod, state, attrs)
+	cancel()
 	if err != nil {
 		return nil, nil, handleRPCError(err)
 	}
@@ -132,6 +141,9 @@ func (s *Service) GetPayload(ctx context.Context, payloadId [8]byte) (*pb.Execut
 		getPayloadLatency.Observe(float64(time.Since(start).Milliseconds()))
 	}()
 
+	d := time.Now().Add(nonBlockExecutionTimeOut)
+	ctx, cancel := context.WithDeadline(ctx, d)
+	defer cancel()
 	result := &pb.ExecutionPayload{}
 	err := s.rpcClient.CallContext(ctx, result, GetPayloadMethod, pb.PayloadIDBytes(payloadId))
 	return result, handleRPCError(err)
@@ -147,10 +159,14 @@ func (s *Service) ExchangeTransitionConfiguration(
 	// We set terminal block number to 0 as the parameter is not set on the consensus layer.
 	zeroBigNum := big.NewInt(0)
 	cfg.TerminalBlockNumber = zeroBigNum.Bytes()
+	d := time.Now().Add(nonBlockExecutionTimeOut)
+	ctx, cancel := context.WithDeadline(ctx, d)
 	result := &pb.TransitionConfiguration{}
 	if err := s.rpcClient.CallContext(ctx, result, ExchangeTransitionConfigurationMethod, cfg); err != nil {
 		return handleRPCError(err)
 	}
+	cancel()
+
 	// We surface an error to the user if local configuration settings mismatch
 	// according to the response from the execution node.
 	cfgTerminalHash := params.BeaconConfig().TerminalBlockHash[:]
