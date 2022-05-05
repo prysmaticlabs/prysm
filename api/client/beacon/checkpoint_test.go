@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
@@ -67,8 +68,7 @@ func TestMarshalToEnvelope(t *testing.T) {
 func TestFallbackVersionCheck(t *testing.T) {
 	c := &Client{
 		hc:     &http.Client{},
-		host:   "localhost:3500",
-		scheme: "http",
+		baseURL: &url.URL{Host: "localhost:3500", Scheme: "http"},
 	}
 	c.hc.Transport = &testRT{rt: func(req *http.Request) (*http.Response, error) {
 		res := &http.Response{Request: req}
@@ -201,8 +201,7 @@ func TestDownloadOriginData(t *testing.T) {
 	}
 	c := &Client{
 		hc:     hc,
-		host:   "localhost:3500",
-		scheme: "http",
+		baseURL: &url.URL{Host: "localhost:3500", Scheme: "http"},
 	}
 
 	od, err := DownloadOriginData(ctx, c)
@@ -295,8 +294,7 @@ func TestDownloadBackwardsCompatibleCombined(t *testing.T) {
 	}
 	c := &Client{
 		hc:     hc,
-		host:   "localhost:3500",
-		scheme: "http",
+		baseURL: &url.URL{Host: "localhost:3500", Scheme: "http"},
 	}
 
 	odPub, err := DownloadOriginData(ctx, c)
@@ -328,8 +326,7 @@ func TestGetWeakSubjectivityEpochFromHead(t *testing.T) {
 	}
 	c := &Client{
 		hc:     hc,
-		host:   "localhost:3500",
-		scheme: "http",
+		baseURL: &url.URL{Host: "localhost:3500", Scheme: "http"},
 	}
 	actualEpoch, err := getWeakSubjectivityEpochFromHead(context.Background(), c)
 	require.NoError(t, err)
