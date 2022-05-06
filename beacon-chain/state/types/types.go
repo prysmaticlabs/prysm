@@ -25,7 +25,8 @@ const (
 	CompressedArray
 )
 
-type FieldIdx interface {
+// BeaconStateField represents a field of the beacon state.
+type BeaconStateField interface {
 	String(stateVersion int) string
 	RealPosition() int
 	ElemsInChunk() (uint64, error)

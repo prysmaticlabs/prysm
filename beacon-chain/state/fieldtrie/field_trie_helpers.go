@@ -50,7 +50,7 @@ func (f *FieldTrie) validateIndices(idxs []uint64) error {
 	return nil
 }
 
-func validateElements(field types.FieldIdx, dataType types.DataType, elements interface{}, length uint64) error {
+func validateElements(field types.BeaconStateField, dataType types.DataType, elements interface{}, length uint64) error {
 	if dataType == types.CompressedArray {
 		comLength, err := field.ElemsInChunk()
 		if err != nil {
@@ -66,7 +66,7 @@ func validateElements(field types.FieldIdx, dataType types.DataType, elements in
 }
 
 // fieldConverters converts the corresponding field and the provided elements to the appropriate roots.
-func fieldConverters(field types.FieldIdx, indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
+func fieldConverters(field types.BeaconStateField, indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
 	switch field {
 	case types.BlockRoots:
 		return convertBlockRoots(indices, elements, convertAll)
@@ -88,7 +88,7 @@ func fieldConverters(field types.FieldIdx, indices []uint64, elements interface{
 }
 
 // fieldConvertersNative converts the corresponding field and the provided elements to the appropriate roots.
-func fieldConvertersNative(field types.FieldIdx, indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
+func fieldConvertersNative(field types.BeaconStateField, indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
 	switch field {
 	case nativetypes.BlockRoots:
 		return convertBlockRoots(indices, elements, convertAll)
