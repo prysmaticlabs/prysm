@@ -110,6 +110,7 @@ type Config struct {
 	MaxMsgSize              int
 	ExecutionEngineCaller   powchain.EngineCaller
 	ProposerIdsCache        *cache.ProposerPayloadIDsCache
+	OptimisticSyncFetcher   blockchain.OptimisticSyncFetcher
 }
 
 // NewService instantiates a new RPC service instance that will
@@ -228,7 +229,8 @@ func (s *Service) Start() {
 			StateGenService:    s.cfg.StateGen,
 			ReplayerBuilder:    ch,
 		},
-		SyncCommitteePool: s.cfg.SyncCommitteeObjectPool,
+		OptimisticSyncFetcher: s.cfg.OptimisticSyncFetcher,
+		SyncCommitteePool:     s.cfg.SyncCommitteeObjectPool,
 	}
 
 	nodeServer := &nodev1alpha1.Server{
@@ -297,6 +299,7 @@ func (s *Service) Start() {
 			StateGenService:    s.cfg.StateGen,
 			ReplayerBuilder:    ch,
 		},
+		OptimisticSyncFetcher:   s.cfg.OptimisticSyncFetcher,
 		HeadFetcher:             s.cfg.HeadFetcher,
 		VoluntaryExitsPool:      s.cfg.ExitPool,
 		V1Alpha1ValidatorServer: validatorServer,
@@ -335,6 +338,7 @@ func (s *Service) Start() {
 				StateGenService:    s.cfg.StateGen,
 				ReplayerBuilder:    ch,
 			},
+			OptimisticSyncFetcher: s.cfg.OptimisticSyncFetcher,
 		}
 		ethpbv1alpha1.RegisterDebugServer(s.grpcServer, debugServer)
 		ethpbservice.RegisterBeaconDebugServer(s.grpcServer, debugServerV1)
