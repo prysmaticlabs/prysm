@@ -1435,6 +1435,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 			HeadFetcher:            &mockChain.ChainService{State: beaconState, Root: parentRoot[:]},
 			SyncChecker:            &mockSync.Sync{IsSyncing: false},
 			BlockReceiver:          &mockChain.ChainService{},
+			HeadUpdater:            &mockChain.ChainService{},
 			ChainStartFetcher:      &mockPOW.POWChain{},
 			Eth1InfoFetcher:        &mockPOW.POWChain{},
 			Eth1BlockFetcher:       &mockPOW.POWChain{},
