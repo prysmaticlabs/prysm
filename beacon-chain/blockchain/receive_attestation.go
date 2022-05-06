@@ -163,7 +163,7 @@ func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
 
 // This calls notify Forkchoice Update in the event that the head has changed
 func (s *Service) notifyEngineIfChangedHead(ctx context.Context, newHeadRoot [32]byte) {
-	if s.headRoot() == newHeadRoot {
+	if newHeadRoot == [32]byte{} || s.headRoot() == newHeadRoot {
 		return
 	}
 

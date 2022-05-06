@@ -199,4 +199,9 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 	require.Equal(t, true, has)
 	require.Equal(t, types.ValidatorIndex(1), vId)
 	require.Equal(t, [8]byte{1}, payloadID)
+
+	// Test zero headRoot returns immediately.
+	headRoot := service.headRoot()
+	service.notifyEngineIfChangedHead(ctx, [32]byte{})
+	require.Equal(t, service.headRoot(), headRoot)
 }
