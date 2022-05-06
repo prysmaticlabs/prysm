@@ -703,10 +703,18 @@ func (s *Service) cacheHeadersForEth1DataVote(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	// We call batchRequestHeaders for its header caching side-effect, so we don't need the return value.
-	_, err = s.batchRequestHeaders(start, end)
-	if err != nil {
-		return err
+	batchSize := s.cfg.eth1HeaderReqLimit
+	for i := start; i < end; i += batchSize {
+		startReq := i
+		endReq := i + batchSize
+		if endReq > end {
+			endReq = end
+		}
+		// We call batchRequestHeaders for its header caching side-effect, so we don't need the return value.
+		_, err = s.batchRequestHeaders(startReq, endReq)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
