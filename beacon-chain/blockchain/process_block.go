@@ -195,9 +195,19 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 	newFinalized := postState.FinalizedCheckpointEpoch() > finalized.Epoch
 	if newFinalized {
 		s.store.SetPrevFinalizedCheckpt(finalized)
-		s.store.SetFinalizedCheckpt(postState.FinalizedCheckpoint())
+		cp := postState.FinalizedCheckpoint()
+		h, err := s.getPayloadHash(ctx, cp.Root)
+		if err != nil {
+			return err
+		}
+		s.store.SetFinalizedCheckptAndPayloadHash(cp, h)
 		s.store.SetPrevJustifiedCheckpt(justified)
-		s.store.SetJustifiedCheckpt(postState.CurrentJustifiedCheckpoint())
+		cp = postState.CurrentJustifiedCheckpoint()
+		h, err = s.getPayloadHash(ctx, cp.Root)
+		if err != nil {
+			return err
+		}
+		s.store.SetJustifiedCheckptAndPayloadHash(postState.CurrentJustifiedCheckpoint(), h)
 	}
 
 	balances, err := s.justifiedBalances.get(ctx, bytesutil.ToBytes32(justified.Root))
@@ -413,6 +423,10 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 			}
 		}
 		s.saveInitSyncBlock(blockRoots[i], b)
+		if err = s.handleBlockAfterBatchVerify(ctx, b, blockRoots[i], fCheckpoints[i], jCheckpoints[i]); err != nil {
+			tracing.AnnotateError(span, err)
+			return nil, nil, err
+		}
 	}
 
 	for r, st := range boundaries {
@@ -426,14 +440,10 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 	if err := s.cfg.StateGen.SaveState(ctx, lastBR, preState); err != nil {
 		return nil, nil, err
 	}
-	f := fCheckpoints[len(fCheckpoints)-1]
-	j := jCheckpoints[len(jCheckpoints)-1]
 	arg := &notifyForkchoiceUpdateArg{
-		headState:     preState,
-		headRoot:      lastBR,
-		headBlock:     lastB.Block(),
-		finalizedRoot: bytesutil.ToBytes32(f.Root),
-		justifiedRoot: bytesutil.ToBytes32(j.Root),
+		headState: preState,
+		headRoot:  lastBR,
+		headBlock: lastB.Block(),
 	}
 	if _, err := s.notifyForkchoiceUpdate(ctx, arg); err != nil {
 		return nil, nil, err
@@ -484,7 +494,11 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed interf
 			return err
 		}
 		s.store.SetPrevFinalizedCheckpt(finalized)
-		s.store.SetFinalizedCheckpt(fCheckpoint)
+		h, err := s.getPayloadHash(ctx, fCheckpoint.Root)
+		if err != nil {
+			return err
+		}
+		s.store.SetFinalizedCheckptAndPayloadHash(fCheckpoint, h)
 	}
 	return nil
 }

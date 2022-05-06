@@ -169,7 +169,7 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 		state: st,
 	}
 	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(2, 1, [8]byte{1})
-	service.store.SetFinalizedCheckpt(finalized)
+	service.store.SetFinalizedCheckptAndPayloadHash(finalized, [32]byte{})
 	service.notifyEngineIfChangedHead(ctx, r1)
 	require.LogsDoNotContain(t, hook, finalizedErr)
 	require.LogsDoNotContain(t, hook, hookErr)
@@ -191,7 +191,7 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 		state: st,
 	}
 	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(2, 1, [8]byte{1})
-	service.store.SetFinalizedCheckpt(finalized)
+	service.store.SetFinalizedCheckptAndPayloadHash(finalized, [32]byte{})
 	service.notifyEngineIfChangedHead(ctx, r1)
 	require.LogsDoNotContain(t, hook, finalizedErr)
 	require.LogsDoNotContain(t, hook, hookErr)
