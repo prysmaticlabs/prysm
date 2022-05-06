@@ -450,3 +450,6 @@ func (s *ChainService) IsOptimistic(_ context.Context) (bool, error) {
 func (s *ChainService) IsOptimisticForRoot(_ context.Context, _ [32]byte) (bool, error) {
 	return s.Optimistic, nil
 }
+
+// ProcessAttestationsAndUpdateHead mocks the same method in the chain service.
+func (s *ChainService) ProcessAttestationsAndUpdateHead(_ context.Context) error { return nil }
