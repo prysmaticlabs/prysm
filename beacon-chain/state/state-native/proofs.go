@@ -3,7 +3,6 @@ package state_native
 import (
 	"context"
 	"encoding/binary"
-	"fmt"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/fieldtrie"
 	nativetypes "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/types"
@@ -23,7 +22,7 @@ func FinalizedRootGeneralizedIndex() uint64 {
 // CurrentSyncCommitteeGeneralizedIndex for the beacon state.
 func (b *BeaconState) CurrentSyncCommitteeGeneralizedIndex() (uint64, error) {
 	if b.version == version.Phase0 {
-		return 0, fmt.Errorf("CurrentSyncCommitteeGeneralizedIndex is not supported for %s", version.String(b.version))
+		return 0, errNotSupported("CurrentSyncCommitteeGeneralizedIndex", b.version)
 	}
 
 	return uint64(nativetypes.CurrentSyncCommittee.RealPosition()), nil
@@ -32,7 +31,7 @@ func (b *BeaconState) CurrentSyncCommitteeGeneralizedIndex() (uint64, error) {
 // NextSyncCommitteeGeneralizedIndex for the beacon state.
 func (b *BeaconState) NextSyncCommitteeGeneralizedIndex() (uint64, error) {
 	if b.version == version.Phase0 {
-		return 0, fmt.Errorf("NextSyncCommitteeGeneralizedIndex is not supported for %s", version.String(b.version))
+		return 0, errNotSupported("NextSyncCommitteeGeneralizedIndex", b.version)
 	}
 
 	return uint64(nativetypes.NextSyncCommittee.RealPosition()), nil
@@ -44,7 +43,7 @@ func (b *BeaconState) CurrentSyncCommitteeProof(ctx context.Context) ([][]byte, 
 	defer b.lock.Unlock()
 
 	if b.version == version.Phase0 {
-		return nil, fmt.Errorf("CurrentSyncCommitteeProof is not supported for %s", version.String(b.version))
+		return nil, errNotSupported("CurrentSyncCommitteeProof", b.version)
 	}
 
 	// In case the Merkle layers of the trie are not populated, we need
@@ -66,7 +65,7 @@ func (b *BeaconState) NextSyncCommitteeProof(ctx context.Context) ([][]byte, err
 	defer b.lock.Unlock()
 
 	if b.version == version.Phase0 {
-		return nil, fmt.Errorf("NextSyncCommitteeProof is not supported for %s", version.String(b.version))
+		return nil, errNotSupported("NextSyncCommitteeProof", b.version)
 	}
 
 	if err := b.initializeMerkleLayers(ctx); err != nil {
@@ -85,7 +84,7 @@ func (b *BeaconState) FinalizedRootProof(ctx context.Context) ([][]byte, error) 
 	defer b.lock.Unlock()
 
 	if b.version == version.Phase0 {
-		return nil, fmt.Errorf("FinalizedRootProof is not supported for %s", version.String(b.version))
+		return nil, errNotSupported("FinalizedRootProof", b.version)
 	}
 
 	if err := b.initializeMerkleLayers(ctx); err != nil {
