@@ -149,6 +149,12 @@ func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
 				if err != nil {
 					log.WithError(err).Warn("Resolving fork due to new attestation")
 				}
+				if s.headRoot() != newHeadRoot {
+					log.WithFields(logrus.Fields{
+						"oldHeadRoot": fmt.Sprintf("%#x", s.headRoot()),
+						"newHeadRoot": fmt.Sprintf("%#x", newHeadRoot),
+					}).Debug("Head changed due to attestations")
+				}
 				s.notifyEngineIfChangedHead(s.ctx, newHeadRoot)
 			}
 		}
@@ -160,10 +166,6 @@ func (s *Service) notifyEngineIfChangedHead(ctx context.Context, newHeadRoot [32
 	if s.headRoot() == newHeadRoot {
 		return
 	}
-	log.WithFields(logrus.Fields{
-		"oldHeadRoot": fmt.Sprintf("%#x", s.headRoot()),
-		"newHeadRoot": fmt.Sprintf("%#x", newHeadRoot),
-	}).Debug("Head changed")
 
 	if !s.hasBlockInInitSyncOrDB(ctx, newHeadRoot) {
 		log.Debug("New head does not exist in DB. Do nothing")

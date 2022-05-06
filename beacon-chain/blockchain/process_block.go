@@ -495,13 +495,13 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState state.Beaco
 	defer span.End()
 
 	if postState.Slot()+1 == s.nextEpochBoundarySlot {
-		// Update caches for the next epoch at epoch boundary slot - 1.
-		if err := helpers.UpdateCommitteeCache(postState, coreTime.NextEpoch(postState)); err != nil {
-			return err
-		}
 		copied := postState.Copy()
 		copied, err := transition.ProcessSlots(ctx, copied, copied.Slot()+1)
 		if err != nil {
+			return err
+		}
+		// Update caches for the next epoch at epoch boundary slot - 1.
+		if err := helpers.UpdateCommitteeCache(copied, coreTime.CurrentEpoch(copied)); err != nil {
 			return err
 		}
 		if err := helpers.UpdateProposerIndicesInCache(ctx, copied); err != nil {
