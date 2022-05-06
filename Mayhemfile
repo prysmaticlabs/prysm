@@ -1,6 +1,5 @@
 project: rnshah9/mayhem-prysm
 target: validator
-image: ghcr.io/rnshah9/mayhem-prysm
 
 cmds:
   - cmd: /validator wallet create --wallet-dir=/data2 --keymanager-kind=imported --wallet-password-file @@ --accept-terms-of-use

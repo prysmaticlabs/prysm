@@ -22,4 +22,3 @@ ADD . /mayhem-prysm
 FROM --platform=linux/amd64 ubuntu:20.04
 
 COPY --from=builder /prysm/bazel-bin/cmd/validator/validator_/validator /
-
