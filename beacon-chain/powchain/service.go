@@ -713,6 +713,16 @@ func (s *Service) cacheHeadersForEth1DataVote(ctx context.Context) error {
 		// We call batchRequestHeaders for its header caching side-effect, so we don't need the return value.
 		_, err = s.batchRequestHeaders(startReq, endReq)
 		if err != nil {
+			if clientTimedOutError(err) {
+				// Reset request value
+				if i > batchSize {
+					i -= batchSize
+				}
+				// Reduce batch size as eth1 node is
+				// unable to respond to the request in time.
+				batchSize /= 2
+				continue
+			}
 			return err
 		}
 	}

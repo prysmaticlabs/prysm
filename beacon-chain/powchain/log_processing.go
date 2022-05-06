@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math/big"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum"
@@ -40,6 +41,10 @@ const multiplicativeDecreaseDivisor = 2
 func tooMuchDataRequestedError(err error) bool {
 	// this error is only infura specific (other providers might have different error messages)
 	return err.Error() == "query returned more than 10000 results"
+}
+
+func clientTimedOutError(err error) bool {
+	return strings.Contains(err.Error(), "net/http: request canceled")
 }
 
 // Eth2GenesisPowchainInfo retrieves the genesis time and eth1 block number of the beacon chain
