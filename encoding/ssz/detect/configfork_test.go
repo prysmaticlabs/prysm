@@ -177,21 +177,21 @@ func hackBellatrixMaxuint() (*params.BeaconChainConfig, func()) {
 	bc.InitializeForkSchedule()
 	params.OverrideBeaconConfig(bc)
 	// override the param used for mainnet with the patched version
-	params.KnownConfigs[params.Mainnet] = func() *params.BeaconChainConfig {
+	params.KnownConfigs[params.MainnetName] = func() *params.BeaconChainConfig {
 		return bc
 	}
 	return bc, func() {
 		// put the previous BeaconChainConfig back in place at the end of the test
 		params.OverrideBeaconConfig(previous)
 		// restore the normal MainnetConfig func in the KnownConfigs mapping
-		params.KnownConfigs[params.Mainnet] = params.MainnetConfig
+		params.KnownConfigs[params.MainnetName] = params.MainnetConfig
 	}
 }
 
 func TestUnmarshalBlock(t *testing.T) {
 	bc, cleanup := hackBellatrixMaxuint()
 	defer cleanup()
-	require.Equal(t, types.Epoch(math.MaxUint32), params.KnownConfigs[params.Mainnet]().BellatrixForkEpoch)
+	require.Equal(t, types.Epoch(math.MaxUint32), params.KnownConfigs[params.MainnetName]().BellatrixForkEpoch)
 	genv := bytesutil.ToBytes4(bc.GenesisForkVersion)
 	altairv := bytesutil.ToBytes4(bc.AltairForkVersion)
 	bellav := bytesutil.ToBytes4(bc.BellatrixForkVersion)
