@@ -9,11 +9,11 @@ import (
 )
 
 const (
-	EndToEndName = "end-to-end"
+	EndToEndName        = "end-to-end"
 	EndToEndMainnetName = "end-to-end-mainnet"
-	MainnetName = "mainnet"
-	MinimalName = "minimal"
-	PraterName = "prater"
+	MainnetName         = "mainnet"
+	MinimalName         = "minimal"
+	PraterName          = "prater"
 )
 
 // KnownConfigs provides an index of all known BeaconChainConfig values.
