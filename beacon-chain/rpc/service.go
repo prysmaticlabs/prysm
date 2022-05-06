@@ -78,6 +78,7 @@ type Config struct {
 	BeaconMonitoringPort    int
 	BeaconDB                db.HeadAccessDatabase
 	ChainInfoFetcher        blockchain.ChainInfoFetcher
+	HeadUpdater             blockchain.HeadUpdater
 	HeadFetcher             blockchain.HeadFetcher
 	CanonicalFetcher        blockchain.CanonicalFetcher
 	ForkFetcher             blockchain.ForkFetcher
@@ -215,6 +216,7 @@ func (s *Service) Start() {
 	}
 	validatorServerV1 := &validator.Server{
 		HeadFetcher:      s.cfg.HeadFetcher,
+		HeadUpdater:      s.cfg.HeadUpdater,
 		TimeFetcher:      s.cfg.GenesisTimeFetcher,
 		SyncChecker:      s.cfg.SyncService,
 		AttestationsPool: s.cfg.AttestationsPool,
@@ -261,6 +263,7 @@ func (s *Service) Start() {
 		BeaconDB:                    s.cfg.BeaconDB,
 		AttestationsPool:            s.cfg.AttestationsPool,
 		SlashingsPool:               s.cfg.SlashingsPool,
+		HeadUpdater:                 s.cfg.HeadUpdater,
 		HeadFetcher:                 s.cfg.HeadFetcher,
 		FinalizationFetcher:         s.cfg.FinalizationFetcher,
 		CanonicalFetcher:            s.cfg.CanonicalFetcher,

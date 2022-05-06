@@ -50,21 +50,22 @@ const headSyncMinEpochsAfterCheckpoint = 128
 // Service represents a service that handles the internal
 // logic of managing the full PoS beacon chain.
 type Service struct {
-	cfg                   *config
-	ctx                   context.Context
-	cancel                context.CancelFunc
-	genesisTime           time.Time
-	head                  *head
-	headLock              sync.RWMutex
-	originBlockRoot       [32]byte // genesis root, or weak subjectivity checkpoint root, depending on how the node is initialized
-	nextEpochBoundarySlot types.Slot
-	boundaryRoots         [][32]byte
-	checkpointStateCache  *cache.CheckpointStateCache
-	initSyncBlocks        map[[32]byte]interfaces.SignedBeaconBlock
-	initSyncBlocksLock    sync.RWMutex
-	justifiedBalances     *stateBalanceCache
-	wsVerifier            *WeakSubjectivityVerifier
-	store                 *store.Store
+	cfg                     *config
+	ctx                     context.Context
+	cancel                  context.CancelFunc
+	genesisTime             time.Time
+	head                    *head
+	headLock                sync.RWMutex
+	originBlockRoot         [32]byte // genesis root, or weak subjectivity checkpoint root, depending on how the node is initialized
+	nextEpochBoundarySlot   types.Slot
+	boundaryRoots           [][32]byte
+	checkpointStateCache    *cache.CheckpointStateCache
+	initSyncBlocks          map[[32]byte]interfaces.SignedBeaconBlock
+	initSyncBlocksLock      sync.RWMutex
+	justifiedBalances       *stateBalanceCache
+	wsVerifier              *WeakSubjectivityVerifier
+	store                   *store.Store
+	processAttestationsLock sync.Mutex
 }
 
 // config options for the service.

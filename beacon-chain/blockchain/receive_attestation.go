@@ -128,37 +128,49 @@ func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
 					return
 				}
 
-				// Continue when there's no fork choice attestation, there's nothing to process and update head.
-				// This covers the condition when the node is still initial syncing to the head of the chain.
-				if s.cfg.AttPool.ForkchoiceAttestationCount() == 0 {
-					continue
+				if err := s.ProcessAttestationsAndUpdateHead(s.ctx); err != nil {
+					log.WithError(err).Error("Could not process attestations and update head")
+					return
 				}
-				s.processAttestations(s.ctx)
-
-				justified := s.store.JustifiedCheckpt()
-				if justified == nil {
-					log.WithError(errNilJustifiedInStore).Error("Could not get justified checkpoint")
-					continue
-				}
-				balances, err := s.justifiedBalances.get(s.ctx, bytesutil.ToBytes32(justified.Root))
-				if err != nil {
-					log.WithError(err).Errorf("Unable to get justified balances for root %v", justified.Root)
-					continue
-				}
-				newHeadRoot, err := s.updateHead(s.ctx, balances)
-				if err != nil {
-					log.WithError(err).Warn("Resolving fork due to new attestation")
-				}
-				if s.headRoot() != newHeadRoot {
-					log.WithFields(logrus.Fields{
-						"oldHeadRoot": fmt.Sprintf("%#x", s.headRoot()),
-						"newHeadRoot": fmt.Sprintf("%#x", newHeadRoot),
-					}).Debug("Head changed due to attestations")
-				}
-				s.notifyEngineIfChangedHead(s.ctx, newHeadRoot)
 			}
 		}
 	}()
+}
+
+// ProcessAttestationsAndUpdateHead processes fork choice attestations from the pool and updates the head.
+func (s *Service) ProcessAttestationsAndUpdateHead(ctx context.Context) error {
+	// Continue when there's no fork choice attestation, there's nothing to process and update head.
+	// This covers the condition when the node is still initial syncing to the head of the chain.
+	if s.cfg.AttPool.ForkchoiceAttestationCount() == 0 {
+		return nil
+	}
+
+	// Only one process can process attestations and update head at a time.
+	s.processAttestationsLock.Lock()
+	defer s.processAttestationsLock.Unlock()
+
+	s.processAttestations(s.ctx)
+
+	justified := s.store.JustifiedCheckpt()
+	if justified == nil {
+		return errNilJustifiedInStore
+	}
+	balances, err := s.justifiedBalances.get(s.ctx, bytesutil.ToBytes32(justified.Root))
+	if err != nil {
+		return err
+	}
+	newHeadRoot, err := s.updateHead(s.ctx, balances)
+	if err != nil {
+		log.WithError(err).Warn("Resolving fork due to new attestation")
+	}
+	if s.headRoot() != newHeadRoot {
+		log.WithFields(logrus.Fields{
+			"oldHeadRoot": fmt.Sprintf("%#x", s.headRoot()),
+			"newHeadRoot": fmt.Sprintf("%#x", newHeadRoot),
+		}).Debug("Head changed due to attestations")
+	}
+	s.notifyEngineIfChangedHead(s.ctx, newHeadRoot)
+	return nil
 }
 
 // This calls notify Forkchoice Update in the event that the head has changed
