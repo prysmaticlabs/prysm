@@ -714,13 +714,14 @@ func (s *Service) cacheHeadersForEth1DataVote(ctx context.Context) error {
 		_, err = s.batchRequestHeaders(startReq, endReq)
 		if err != nil {
 			if clientTimedOutError(err) {
+				// Reduce batch size as eth1 node is
+				// unable to respond to the request in time.
+				batchSize /= 2
+
 				// Reset request value
 				if i > batchSize {
 					i -= batchSize
 				}
-				// Reduce batch size as eth1 node is
-				// unable to respond to the request in time.
-				batchSize /= 2
 				continue
 			}
 			return err
