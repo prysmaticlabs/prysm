@@ -19,7 +19,10 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["attestation_utils_test.go"],
+    srcs = [
+        "attestation_utils_fuzz_test.go",
+        "attestation_utils_test.go",
+    ],
     deps = [
         ":go_default_library",
         "//config/fieldparams:go_default_library",
@@ -28,6 +31,7 @@ go_test(
         "//proto/prysm/v1alpha1:go_default_library",
         "//testing/assert:go_default_library",
         "//testing/require:go_default_library",
+        "//testing/util:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
     ],
 )

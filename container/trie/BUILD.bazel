@@ -19,7 +19,11 @@ go_library(
 go_test(
     name = "go_default_test",
     size = "small",
-    srcs = ["sparse_merkle_test.go"],
+    srcs = [
+        "sparse_merkle_test.go",
+        "sparse_merkle_trie_fuzz_test.go",
+    ],
+    data = glob(["testdata/**"]),
     deps = [
         ":go_default_library",
         "//config/fieldparams:go_default_library",
@@ -31,5 +35,6 @@ go_test(
         "//testing/assert:go_default_library",
         "//testing/require:go_default_library",
         "@com_github_ethereum_go_ethereum//accounts/abi/bind:go_default_library",
+        "@com_github_golang_protobuf//proto:go_default_library",
     ],
 )

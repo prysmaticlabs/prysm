@@ -31,6 +31,7 @@ go_test(
         "hashers_test.go",
         "helpers_test.go",
         "htrutils_test.go",
+        "merkleize_fuzz_test.go",
         "merkleize_test.go",
     ],
     deps = [

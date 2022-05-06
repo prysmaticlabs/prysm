@@ -155,14 +155,21 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 	}
 
 	// We always store all historical deposits in the DB.
-	err = s.cfg.depositCache.InsertDeposit(ctx, deposit, depositLog.BlockNumber, index, s.depositTrie.HashTreeRoot())
+	root, err := s.depositTrie.HashTreeRoot()
+	if err != nil {
+		return errors.Wrap(err, "Unable to determine root of deposit trie")
+	}
+	err = s.cfg.depositCache.InsertDeposit(ctx, deposit, depositLog.BlockNumber, index, root)
 	if err != nil {
 		return errors.Wrap(err, "unable to insert deposit into cache")
 	}
 	validData := true
 	if !s.chainStartData.Chainstarted {
 		s.chainStartData.ChainstartDeposits = append(s.chainStartData.ChainstartDeposits, deposit)
-		root := s.depositTrie.HashTreeRoot()
+		root, err := s.depositTrie.HashTreeRoot()
+		if err != nil {
+			return errors.Wrap(err, "Unable to determine root of deposit trie")
+		}
 		eth1Data := &ethpb.Eth1Data{
 			DepositRoot:  root[:],
 			DepositCount: uint64(len(s.chainStartData.ChainstartDeposits)),
@@ -172,7 +179,11 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 			validData = false
 		}
 	} else {
-		s.cfg.depositCache.InsertPendingDeposit(ctx, deposit, depositLog.BlockNumber, index, s.depositTrie.HashTreeRoot())
+		root, err := s.depositTrie.HashTreeRoot()
+		if err != nil {
+			return errors.Wrap(err, "Unable to determine root of deposit trie")
+		}
+		s.cfg.depositCache.InsertPendingDeposit(ctx, deposit, depositLog.BlockNumber, index, root)
 	}
 	if validData {
 		log.WithFields(logrus.Fields{
@@ -221,7 +232,11 @@ func (s *Service) ProcessChainStart(genesisTime uint64, eth1BlockHash [32]byte, 
 		s.chainStartData.ChainstartDeposits[i].Proof = proof
 	}
 
-	root := s.depositTrie.HashTreeRoot()
+	root, err := s.depositTrie.HashTreeRoot()
+	if err != nil { // This should never happen.
+		log.WithError(err).Error("Unable to determine root of deposit trie, aborting chain start")
+		return
+	}
 	s.chainStartData.Eth1Data = &ethpb.Eth1Data{
 		DepositCount: uint64(len(s.chainStartData.ChainstartDeposits)),
 		DepositRoot:  root[:],

@@ -36,7 +36,10 @@ func FuzzSparseMerkleTrie_HashTreeRoot(f *testing.F) {
 		if err := proto.Unmarshal(b, pb); err != nil {
 			return
 		}
-		trie.CreateTrieFromProto(pb).HashTreeRoot()
+		_, err := trie.CreateTrieFromProto(pb).HashTreeRoot()
+		if err != nil {
+			return
+		}
 	})
 }
 
@@ -65,7 +68,10 @@ func FuzzSparseMerkleTrie_MerkleProof(f *testing.F) {
 		if err := proto.Unmarshal(b, pb); err != nil {
 			return
 		}
-		trie.CreateTrieFromProto(pb).MerkleProof(i)
+		_, err := trie.CreateTrieFromProto(pb).MerkleProof(i)
+		if err != nil {
+			return
+		}
 	})
 }
 
@@ -94,7 +100,9 @@ func FuzzSparseMerkleTrie_Insert(f *testing.F) {
 		if err := proto.Unmarshal(b, pb); err != nil {
 			return
 		}
-		trie.CreateTrieFromProto(pb).Insert(item, i)
+		if err := trie.CreateTrieFromProto(pb).Insert(item, i); err != nil {
+			return
+		}
 	})
 }
 
