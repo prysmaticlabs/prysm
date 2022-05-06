@@ -200,14 +200,17 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 		s.store.SetJustifiedCheckpt(postState.CurrentJustifiedCheckpoint())
 	}
 
-	balances, err := s.justifiedBalances.get(ctx, bytesutil.ToBytes32(justified.Root))
-	if err != nil {
-		msg := fmt.Sprintf("could not read balances for state w/ justified checkpoint %#x", justified.Root)
-		return errors.Wrap(err, msg)
-	}
-	headRoot, err := s.updateHead(ctx, balances)
-	if err != nil {
-		log.WithError(err).Warn("Could not update head")
+	headRoot := blockRoot
+	if s.headRoot() != bytesutil.ToBytes32(b.ParentRoot()) {
+		balances, err := s.justifiedBalances.get(ctx, bytesutil.ToBytes32(justified.Root))
+		if err != nil {
+			msg := fmt.Sprintf("could not read balances for state w/ justified checkpoint %#x", justified.Root)
+			return errors.Wrap(err, msg)
+		}
+		headRoot, err = s.updateHead(ctx, balances)
+		if err != nil {
+			log.WithError(err).Warn("Could not update head")
+		}
 	}
 	s.notifyEngineIfChangedHead(ctx, headRoot)
 
