@@ -149,17 +149,17 @@ func (s *Service) ProcessAttestationsAndUpdateHead(ctx context.Context) error {
 	s.processAttestationsLock.Lock()
 	defer s.processAttestationsLock.Unlock()
 
-	s.processAttestations(s.ctx)
+	s.processAttestations(ctx)
 
 	justified := s.store.JustifiedCheckpt()
 	if justified == nil {
 		return errNilJustifiedInStore
 	}
-	balances, err := s.justifiedBalances.get(s.ctx, bytesutil.ToBytes32(justified.Root))
+	balances, err := s.justifiedBalances.get(ctx, bytesutil.ToBytes32(justified.Root))
 	if err != nil {
 		return err
 	}
-	newHeadRoot, err := s.updateHead(s.ctx, balances)
+	newHeadRoot, err := s.updateHead(ctx, balances)
 	if err != nil {
 		log.WithError(err).Warn("Resolving fork due to new attestation")
 	}
@@ -169,7 +169,7 @@ func (s *Service) ProcessAttestationsAndUpdateHead(ctx context.Context) error {
 			"newHeadRoot": fmt.Sprintf("%#x", newHeadRoot),
 		}).Debug("Head changed due to attestations")
 	}
-	s.notifyEngineIfChangedHead(s.ctx, newHeadRoot)
+	s.notifyEngineIfChangedHead(ctx, newHeadRoot)
 	return nil
 }
 
