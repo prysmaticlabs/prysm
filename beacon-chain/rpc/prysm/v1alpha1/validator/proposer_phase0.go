@@ -81,6 +81,10 @@ func (vs *Server) buildPhase0BlockData(ctx context.Context, req *ethpb.BlockRequ
 	if vs.SyncChecker.Syncing() {
 		return nil, fmt.Errorf("syncing to latest head, not ready to respond")
 	}
+	// update fork choice head before proposing
+	if err := vs.HeadUpdater.UpdateAndSaveHead(ctx); err != nil {
+		log.WithError(err).Error("could not update head before proposing")
+	}
 
 	// Retrieve the parent block as the current head of the canonical chain.
 	parentRoot, err := vs.HeadFetcher.HeadRoot(ctx)

@@ -34,7 +34,7 @@ type ChainInfoFetcher interface {
 // ChainInfoUpdater defines a common interface for methods in blockchain service
 // which allow to update the blockchain status
 type ChainInfoUpdater interface {
-	UpdateAndSaveHead(context.Context)
+	UpdateAndSaveHead(context.Context) error
 }
 
 // TimeFetcher retrieves the Ethereum consensus data that's related to time.

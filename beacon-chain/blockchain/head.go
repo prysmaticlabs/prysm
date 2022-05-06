@@ -26,22 +26,21 @@ import (
 
 // UpdateAndSaveHead updates the beacon state head using the latest information from forkchoice
 // This function is used in spec-tests and before proposing a block, it saves the head after updating it.
-func (s *Service) UpdateAndSaveHead(ctx context.Context) {
+func (s *Service) UpdateAndSaveHead(ctx context.Context) error {
 	cp := s.store.JustifiedCheckpt()
 	if cp == nil {
-		log.Error("no justified checkpoint")
-		return
+		return errors.New("no justified checkpoint")
 	}
 	balances, err := s.justifiedBalances.get(ctx, bytesutil.ToBytes32(cp.Root))
 	if err != nil {
-		log.WithError(err).Errorf("could not read balances for state w/ justified checkpoint %#x", cp.Root)
-		return
+		return errors.Wrapf(err, "could not read balances for state w/ justified checkpoint %#x", cp.Root)
 	}
 	headRoot, err := s.updateHead(ctx, balances)
 	if err != nil {
-		log.WithError(err).Error("could not update head")
+		return errors.Wrap(err, "could not update head")
 	}
 	s.notifyEngineIfChangedHead(ctx, headRoot)
+	return nil
 }
 
 // This defines the current chain service's view of head.

@@ -91,7 +91,7 @@ func (bb *Builder) Check(t testing.TB, c *Check) {
 	}
 	ctx := context.TODO()
 
-	bb.service.UpdateAndSaveHead(ctx)
+	require.NoError(t, bb.service.UpdateAndSaveHead(ctx))
 	if c.Head != nil {
 		r, err := bb.service.HeadRoot(ctx)
 		require.NoError(t, err)
