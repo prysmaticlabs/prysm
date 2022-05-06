@@ -209,20 +209,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 	if err != nil {
 		log.WithError(err).Warn("Could not update head")
 	}
-	headBlock, err := s.cfg.BeaconDB.Block(ctx, headRoot)
-	if err != nil {
-		return err
-	}
-	headState, err := s.cfg.StateGen.StateByRoot(ctx, headRoot)
-	if err != nil {
-		return err
-	}
-	if _, err := s.notifyForkchoiceUpdate(ctx, headState, headBlock.Block(), headRoot, bytesutil.ToBytes32(finalized.Root)); err != nil {
-		return err
-	}
-	if err := s.saveHead(ctx, headRoot, headBlock, headState); err != nil {
-		return errors.Wrap(err, "could not save head")
-	}
+	s.notifyEngineIfChangedHead(ctx, headRoot)
 
 	if err := s.pruneCanonicalAttsFromPool(ctx, blockRoot, signed); err != nil {
 		return err
@@ -440,7 +427,15 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 		return nil, nil, err
 	}
 	f := fCheckpoints[len(fCheckpoints)-1]
-	if _, err := s.notifyForkchoiceUpdate(ctx, preState, lastB.Block(), lastBR, bytesutil.ToBytes32(f.Root)); err != nil {
+	j := jCheckpoints[len(jCheckpoints)-1]
+	arg := &notifyForkchoiceUpdateArg{
+		headState:     preState,
+		headRoot:      lastBR,
+		headBlock:     lastB.Block(),
+		finalizedRoot: bytesutil.ToBytes32(f.Root),
+		justifiedRoot: bytesutil.ToBytes32(j.Root),
+	}
+	if _, err := s.notifyForkchoiceUpdate(ctx, arg); err != nil {
 		return nil, nil, err
 	}
 	if err := s.saveHeadNoDB(ctx, lastB, lastBR, preState); err != nil {
@@ -500,13 +495,13 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState state.Beaco
 	defer span.End()
 
 	if postState.Slot()+1 == s.nextEpochBoundarySlot {
-		// Update caches for the next epoch at epoch boundary slot - 1.
-		if err := helpers.UpdateCommitteeCache(postState, coreTime.NextEpoch(postState)); err != nil {
-			return err
-		}
 		copied := postState.Copy()
 		copied, err := transition.ProcessSlots(ctx, copied, copied.Slot()+1)
 		if err != nil {
+			return err
+		}
+		// Update caches for the next epoch at epoch boundary slot - 1.
+		if err := helpers.UpdateCommitteeCache(copied, coreTime.CurrentEpoch(copied)); err != nil {
 			return err
 		}
 		if err := helpers.UpdateProposerIndicesInCache(ctx, copied); err != nil {

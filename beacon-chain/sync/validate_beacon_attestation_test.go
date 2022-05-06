@@ -38,6 +38,7 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 		Genesis:          time.Now().Add(time.Duration(-1*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second),
 		ValidatorsRoot:   [32]byte{'A'},
 		ValidAttestation: true,
+		DB:               db,
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

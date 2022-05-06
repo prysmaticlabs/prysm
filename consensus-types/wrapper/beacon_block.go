@@ -17,6 +17,9 @@ var (
 	// ErrUnsupportedBeaconBlock is returned when the struct type is not a supported beacon block
 	// type.
 	ErrUnsupportedBeaconBlock = errors.New("unsupported beacon block")
+	// ErrUnsupportedBeaconBlockBody is returned when the struct type is not a supported beacon block body
+	// type.
+	ErrUnsupportedBeaconBlockBody = errors.New("unsupported beacon block body")
 	// ErrUnsupportedPhase0Block is returned when accessing a phase0 block from a non-phase0 wrapped
 	// block.
 	ErrUnsupportedPhase0Block = errors.New("unsupported phase0 block")
@@ -59,28 +62,49 @@ func WrappedSignedBeaconBlock(i interface{}) (interfaces.SignedBeaconBlock, erro
 	}
 }
 
-// WrappedBeaconBlock will wrap a signed beacon block to conform to the
-// signed beacon block interface.
+// WrappedBeaconBlock will wrap a beacon block to conform to the
+// beacon block interface.
 func WrappedBeaconBlock(i interface{}) (interfaces.BeaconBlock, error) {
 	switch b := i.(type) {
 	case *eth.GenericBeaconBlock_Phase0:
-		return WrappedPhase0BeaconBlock(b.Phase0), nil
+		return wrappedPhase0BeaconBlock(b.Phase0), nil
 	case *eth.BeaconBlock:
-		return WrappedPhase0BeaconBlock(b), nil
+		return wrappedPhase0BeaconBlock(b), nil
 	case *eth.GenericBeaconBlock_Altair:
-		return WrappedAltairBeaconBlock(b.Altair)
+		return wrappedAltairBeaconBlock(b.Altair)
 	case *eth.BeaconBlockAltair:
-		return WrappedAltairBeaconBlock(b)
+		return wrappedAltairBeaconBlock(b)
 	case *eth.GenericBeaconBlock_Bellatrix:
-		return WrappedBellatrixBeaconBlock(b.Bellatrix)
+		return wrappedBellatrixBeaconBlock(b.Bellatrix)
 	case *eth.BeaconBlockBellatrix:
-		return WrappedBellatrixBeaconBlock(b)
+		return wrappedBellatrixBeaconBlock(b)
 	case *eth.GenericBeaconBlock_BlindedBellatrix:
-		return WrappedBellatrixBlindedBeaconBlock(b.BlindedBellatrix)
+		return wrappedBellatrixBlindedBeaconBlock(b.BlindedBellatrix)
 	case *eth.BlindedBeaconBlockBellatrix:
-		return WrappedBellatrixBlindedBeaconBlock(b)
+		return wrappedBellatrixBlindedBeaconBlock(b)
+	case nil:
+		return nil, ErrNilObjectWrapped
 	default:
 		return nil, errors.Wrapf(ErrUnsupportedBeaconBlock, "unable to wrap block of type %T", i)
+	}
+}
+
+// WrappedBeaconBlockBody will wrap a beacon block body to conform to the
+// beacon block interface.
+func WrappedBeaconBlockBody(i interface{}) (interfaces.BeaconBlockBody, error) {
+	switch b := i.(type) {
+	case *eth.BeaconBlockBody:
+		return wrappedPhase0BeaconBlockBody(b), nil
+	case *eth.BeaconBlockBodyAltair:
+		return wrappedAltairBeaconBlockBody(b)
+	case *eth.BeaconBlockBodyBellatrix:
+		return wrappedBellatrixBeaconBlockBody(b)
+	case *eth.BlindedBeaconBlockBodyBellatrix:
+		return wrappedBellatrixBlindedBeaconBlockBody(b)
+	case nil:
+		return nil, ErrNilObjectWrapped
+	default:
+		return nil, errors.Wrapf(ErrUnsupportedBeaconBlockBody, "unable to wrap block body of type %T", i)
 	}
 }
 

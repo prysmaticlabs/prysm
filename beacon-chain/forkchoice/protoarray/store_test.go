@@ -790,17 +790,28 @@ func TestStore_RemoveEquivocating(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, [32]byte{'c'}, head)
 
-	// Insert an attestation for block b, it becomes head
-	f.ProcessAttestation(ctx, []uint64{1}, [32]byte{'b'}, 1)
-	head, err = f.Head(ctx, 1, params.BeaconConfig().ZeroHash, []uint64{100, 200}, 1)
+	// Insert two attestations for block b, it becomes head
+	f.ProcessAttestation(ctx, []uint64{1, 2}, [32]byte{'b'}, 1)
+	f.ProcessAttestation(ctx, []uint64{3}, [32]byte{'c'}, 1)
+	head, err = f.Head(ctx, 1, params.BeaconConfig().ZeroHash, []uint64{100, 200, 200, 300}, 1)
 	require.NoError(t, err)
 	require.Equal(t, [32]byte{'b'}, head)
 
 	// Process b's slashing, c is now head
 	f.InsertSlashedIndex(ctx, 1)
-	head, err = f.Head(ctx, 1, params.BeaconConfig().ZeroHash, []uint64{100, 200}, 1)
+	head, err = f.Head(ctx, 1, params.BeaconConfig().ZeroHash, []uint64{100, 200, 200, 300}, 1)
 	require.NoError(t, err)
 	require.Equal(t, [32]byte{'c'}, head)
+	require.Equal(t, uint64(200), f.store.nodes[2].weight)
+	require.Equal(t, uint64(300), f.store.nodes[3].weight)
+
+	// Process the same slashing again, should be a noop
+	f.InsertSlashedIndex(ctx, 1)
+	head, err = f.Head(ctx, 1, params.BeaconConfig().ZeroHash, []uint64{100, 200, 200, 300}, 1)
+	require.NoError(t, err)
+	require.Equal(t, [32]byte{'c'}, head)
+	require.Equal(t, uint64(200), f.store.nodes[2].weight)
+	require.Equal(t, uint64(300), f.store.nodes[3].weight)
 
 	// Process index where index == vote length. Should not panic.
 	f.InsertSlashedIndex(ctx, types.ValidatorIndex(len(f.balances)))
