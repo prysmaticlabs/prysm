@@ -717,6 +717,10 @@ func (s *Service) cacheHeadersForEth1DataVote(ctx context.Context) error {
 				// Reduce batch size as eth1 node is
 				// unable to respond to the request in time.
 				batchSize /= 2
+				// Always have it greater than 0.
+				if batchSize == 0 {
+					batchSize += 1
+				}
 
 				// Reset request value
 				if i > batchSize {
