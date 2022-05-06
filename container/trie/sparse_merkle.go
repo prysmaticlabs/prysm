@@ -201,6 +201,9 @@ func VerifyMerkleProofWithDepth(root, item []byte, merkleIndex uint64, proof [][
 	if uint64(len(proof)) != depth+1 {
 		return false
 	}
+	if depth >= 64 {
+		return false // PowerOf2 would overflow.
+	}
 	node := bytesutil.ToBytes32(item)
 	for i := uint64(0); i <= depth; i++ {
 		if (merkleIndex / math.PowerOf2(i) % 2) != 0 {
