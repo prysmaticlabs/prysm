@@ -63,6 +63,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 		blk              interfaces.BeaconBlock
 		headRoot         [32]byte
 		finalizedRoot    [32]byte
+		justifiedRoot    [32]byte
 		newForkchoiceErr error
 		errString        string
 	}{
@@ -119,6 +120,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 				return b
 			}(),
 			finalizedRoot: altairBlkRoot,
+			justifiedRoot: altairBlkRoot,
 		},
 		{
 			name: "happy case: finalized root is bellatrix block",
@@ -132,6 +134,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 				return b
 			}(),
 			finalizedRoot: bellatrixBlkRoot,
+			justifiedRoot: bellatrixBlkRoot,
 		},
 		{
 			name: "forkchoice updated with optimistic block",
@@ -146,6 +149,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 			}(),
 			newForkchoiceErr: powchain.ErrAcceptedSyncingPayloadStatus,
 			finalizedRoot:    bellatrixBlkRoot,
+			justifiedRoot:    bellatrixBlkRoot,
 		},
 		{
 			name: "forkchoice updated with invalid block",
@@ -160,6 +164,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 			}(),
 			newForkchoiceErr: powchain.ErrInvalidPayloadStatus,
 			finalizedRoot:    bellatrixBlkRoot,
+			justifiedRoot:    bellatrixBlkRoot,
 			headRoot:         [32]byte{'a'},
 			errString:        ErrInvalidPayload.Error(),
 		},
@@ -169,7 +174,14 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			service.cfg.ExecutionEngineCaller = &mockPOW.EngineClient{ErrForkchoiceUpdated: tt.newForkchoiceErr}
 			st, _ := util.DeterministicGenesisState(t, 1)
-			_, err := service.notifyForkchoiceUpdate(ctx, st, tt.blk, tt.headRoot, tt.finalizedRoot)
+			arg := &notifyForkchoiceUpdateArg{
+				headState:     st,
+				headRoot:      tt.headRoot,
+				headBlock:     tt.blk,
+				finalizedRoot: tt.finalizedRoot,
+				justifiedRoot: tt.justifiedRoot,
+			}
+			_, err := service.notifyForkchoiceUpdate(ctx, arg)
 			if tt.errString != "" {
 				require.ErrorContains(t, tt.errString, err)
 			} else {
@@ -778,4 +790,43 @@ func TestService_removeInvalidBlockAndState(t *testing.T) {
 	has, err = service.cfg.StateGen.HasState(ctx, r2)
 	require.NoError(t, err)
 	require.Equal(t, false, has)
+}
+
+func TestService_getPayloadHash(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithStateGen(stategen.New(beaconDB)),
+		WithForkChoiceStore(protoarray.New(0, 0, [32]byte{})),
+	}
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+
+	_, err = service.getPayloadHash(ctx, [32]byte{})
+	require.ErrorIs(t, errBlockNotFoundInCacheOrDB, err)
+
+	b := util.NewBeaconBlock()
+	r, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	service.saveInitSyncBlock(r, wsb)
+
+	h, err := service.getPayloadHash(ctx, r)
+	require.NoError(t, err)
+	require.DeepEqual(t, params.BeaconConfig().ZeroHash[:], h)
+
+	bb := util.NewBeaconBlockBellatrix()
+	h = []byte{'a'}
+	bb.Block.Body.ExecutionPayload.BlockHash = h
+	r, err = b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	wsb, err = wrapper.WrappedSignedBeaconBlock(bb)
+	require.NoError(t, err)
+	service.saveInitSyncBlock(r, wsb)
+
+	h, err = service.getPayloadHash(ctx, r)
+	require.NoError(t, err)
+	require.DeepEqual(t, []byte{'a'}, h)
 }
