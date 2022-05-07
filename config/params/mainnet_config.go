@@ -183,7 +183,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	MaxPeersToSync:                 15,
 	SlotsPerArchivedPoint:          2048,
 	GenesisCountdownInterval:       time.Minute,
-	ConfigName:                     ConfigNames[Mainnet],
+	ConfigName:                     MainnetName,
 	PresetBase:                     "mainnet",
 	BeaconStateFieldCount:          21,
 	BeaconStateAltairFieldCount:    24,
