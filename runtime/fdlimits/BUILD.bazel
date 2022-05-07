@@ -17,5 +17,6 @@ go_test(
     deps = [
         ":go_default_library",
         "//testing/assert:go_default_library",
+        "@com_github_ethereum_go_ethereum//common/fdlimit:go_default_library",
     ],
 )
