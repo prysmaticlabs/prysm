@@ -148,6 +148,7 @@ type Service struct {
 	connectedETH1           bool
 	isRunning               bool
 	processingLock          sync.RWMutex
+	latestEth1DataLock      sync.RWMutex
 	cfg                     *config
 	ctx                     context.Context
 	cancel                  context.CancelFunc
@@ -246,7 +247,7 @@ func (s *Service) Start() {
 	s.isRunning = true
 
 	// Poll the execution client connection and fallback if errors occur.
-	go s.pollConnectionStatus(s.ctx)
+	s.pollConnectionStatus(s.ctx)
 
 	// Check transition configuration for the engine API client in the background.
 	go s.checkTransitionConfiguration(s.ctx, make(chan *feed.Event, 1))
@@ -355,6 +356,7 @@ func (s *Service) ETH1ConnectionErrors() []error {
 	for _, ep := range s.cfg.httpEndpoints {
 		client, err := s.newRPCClientWithAuth(s.ctx, ep)
 		if err != nil {
+			client.Close()
 			errs = append(errs, err)
 			continue
 		}
@@ -440,9 +442,11 @@ func (s *Service) initDepositCaches(ctx context.Context, ctrs []*ethpb.DepositCo
 func (s *Service) processBlockHeader(header *gethTypes.Header) {
 	defer safelyHandlePanic()
 	blockNumberGauge.Set(float64(header.Number.Int64()))
+	s.latestEth1DataLock.Lock()
 	s.latestEth1Data.BlockHeight = header.Number.Uint64()
 	s.latestEth1Data.BlockHash = header.Hash().Bytes()
 	s.latestEth1Data.BlockTime = header.Time
+	s.latestEth1DataLock.Unlock()
 	log.WithFields(logrus.Fields{
 		"blockNumber": s.latestEth1Data.BlockHeight,
 		"blockHash":   hexutil.Encode(s.latestEth1Data.BlockHash),
@@ -569,9 +573,11 @@ func (s *Service) initPOWService() {
 				continue
 			}
 
+			s.latestEth1DataLock.Lock()
 			s.latestEth1Data.BlockHeight = header.Number.Uint64()
 			s.latestEth1Data.BlockHash = header.Hash().Bytes()
 			s.latestEth1Data.BlockTime = header.Time
+			s.latestEth1DataLock.Unlock()
 
 			if err := s.processPastLogs(ctx); err != nil {
 				s.retryExecutionClientConnection(ctx, err)
@@ -602,7 +608,9 @@ func (s *Service) initPOWService() {
 				}
 				s.chainStartData.GenesisBlock = genBlock
 				if err := s.savePowchainData(ctx); err != nil {
+					s.retryExecutionClientConnection(ctx, err)
 					errorLogger(err, "Unable to save execution client data")
+					continue
 				}
 			}
 			return
@@ -624,17 +632,19 @@ func (s *Service) run(done <-chan struct{}) {
 		case <-done:
 			s.isRunning = false
 			s.runError = nil
+			s.rpcClient.Close()
 			s.updateConnectedETH1(false)
 			log.Debug("Context closed, exiting goroutine")
 			return
 		case <-s.headTicker.C:
 			head, err := s.eth1DataFetcher.HeaderByNumber(s.ctx, nil)
 			if err != nil {
+				s.pollConnectionStatus(s.ctx)
 				log.WithError(err).Debug("Could not fetch latest eth1 header")
 				continue
 			}
 			if eth1HeadIsBehind(head.Time) {
-				s.retryExecutionClientConnection(s.ctx, err)
+				s.pollConnectionStatus(s.ctx)
 				log.WithError(errFarBehind).Debug("Could not get an up to date eth1 header")
 				continue
 			}

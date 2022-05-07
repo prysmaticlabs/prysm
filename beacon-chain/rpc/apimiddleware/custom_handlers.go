@@ -186,6 +186,7 @@ func writeSSZResponseHeaderAndBody(grpcResp *http.Response, w http.ResponseWrite
 
 func handleEvents(m *apimiddleware.ApiProxyMiddleware, _ apimiddleware.Endpoint, w http.ResponseWriter, req *http.Request) (handled bool) {
 	sseClient := sse.NewClient("http://" + m.GatewayAddress + "/internal" + req.URL.RequestURI())
+	sseClient.Headers["Grpc-Timeout"] = "0S"
 	eventChan := make(chan *sse.Event)
 
 	// We use grpc-gateway as the server side of events, not the sse library.
@@ -212,8 +213,8 @@ func receiveEvents(eventChan <-chan *sse.Event, w http.ResponseWriter, req *http
 		case msg := <-eventChan:
 			var data interface{}
 
-			// The message's event comes to us with trailing whitespace.  Remove it here for
-			// ease of future procesing.
+			// The message's event comes to us with trailing whitespace. Remove it here for
+			// ease of future processing.
 			msg.Event = bytes.TrimSpace(msg.Event)
 
 			switch string(msg.Event) {

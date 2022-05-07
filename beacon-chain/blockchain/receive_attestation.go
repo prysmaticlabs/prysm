@@ -28,25 +28,8 @@ type AttestationStateFetcher interface {
 // AttestationReceiver interface defines the methods of chain service receive and processing new attestations.
 type AttestationReceiver interface {
 	AttestationStateFetcher
-	ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Attestation) error
 	VerifyLmdFfgConsistency(ctx context.Context, att *ethpb.Attestation) error
 	VerifyFinalizedConsistency(ctx context.Context, root []byte) error
-}
-
-// ReceiveAttestationNoPubsub is a function that defines the operations that are performed on
-// attestation that is received from regular sync. The operations consist of:
-//  1. Validate attestation, update validator's latest vote
-//  2. Apply fork choice to the processed attestation
-//  3. Save latest head info
-func (s *Service) ReceiveAttestationNoPubsub(ctx context.Context, att *ethpb.Attestation) error {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.ReceiveAttestationNoPubsub")
-	defer span.End()
-
-	if err := s.OnAttestation(ctx, att); err != nil {
-		return errors.Wrap(err, "could not process attestation")
-	}
-
-	return nil
 }
 
 // AttestationTargetState returns the pre state of attestation.
@@ -166,6 +149,12 @@ func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
 				if err != nil {
 					log.WithError(err).Warn("Resolving fork due to new attestation")
 				}
+				if s.headRoot() != newHeadRoot {
+					log.WithFields(logrus.Fields{
+						"oldHeadRoot": fmt.Sprintf("%#x", s.headRoot()),
+						"newHeadRoot": fmt.Sprintf("%#x", newHeadRoot),
+					}).Debug("Head changed due to attestations")
+				}
 				s.notifyEngineIfChangedHead(s.ctx, newHeadRoot)
 			}
 		}
@@ -177,14 +166,21 @@ func (s *Service) notifyEngineIfChangedHead(ctx context.Context, newHeadRoot [32
 	if s.headRoot() == newHeadRoot {
 		return
 	}
+
+	if !s.hasBlockInInitSyncOrDB(ctx, newHeadRoot) {
+		log.Debug("New head does not exist in DB. Do nothing")
+		return // We don't have the block, don't notify the engine and update head.
+	}
+
 	finalized := s.store.FinalizedCheckpt()
 	if finalized == nil {
 		log.WithError(errNilFinalizedInStore).Error("could not get finalized checkpoint")
 		return
 	}
-	newHeadBlock, err := s.cfg.BeaconDB.Block(ctx, newHeadRoot)
+
+	newHeadBlock, err := s.getBlock(ctx, newHeadRoot)
 	if err != nil {
-		log.WithError(err).Error("Could not get block from db")
+		log.WithError(err).Error("Could not get new head block")
 		return
 	}
 	headState, err := s.cfg.StateGen.StateByRoot(ctx, newHeadRoot)
@@ -192,12 +188,14 @@ func (s *Service) notifyEngineIfChangedHead(ctx context.Context, newHeadRoot [32
 		log.WithError(err).Error("Could not get state from db")
 		return
 	}
-	_, err = s.notifyForkchoiceUpdate(s.ctx,
-		headState,
-		newHeadBlock.Block(),
-		newHeadRoot,
-		bytesutil.ToBytes32(finalized.Root),
-	)
+	arg := &notifyForkchoiceUpdateArg{
+		headState:     headState,
+		headRoot:      newHeadRoot,
+		headBlock:     newHeadBlock.Block(),
+		finalizedRoot: bytesutil.ToBytes32(finalized.Root),
+		justifiedRoot: bytesutil.ToBytes32(s.store.JustifiedCheckpt().Root),
+	}
+	_, err = s.notifyForkchoiceUpdate(s.ctx, arg)
 	if err != nil {
 		log.WithError(err).Error("could not notify forkchoice update")
 	}
@@ -232,7 +230,7 @@ func (s *Service) processAttestations(ctx context.Context) {
 			continue
 		}
 
-		if err := s.ReceiveAttestationNoPubsub(ctx, a); err != nil {
+		if err := s.receiveAttestationNoPubsub(ctx, a); err != nil {
 			log.WithFields(logrus.Fields{
 				"slot":             a.Data.Slot,
 				"committeeIndex":   a.Data.CommitteeIndex,
@@ -242,4 +240,20 @@ func (s *Service) processAttestations(ctx context.Context) {
 			}).WithError(err).Warn("Could not process attestation for fork choice")
 		}
 	}
+}
+
+// receiveAttestationNoPubsub is a function that defines the operations that are performed on
+// attestation that is received from regular sync. The operations consist of:
+//  1. Validate attestation, update validator's latest vote
+//  2. Apply fork choice to the processed attestation
+//  3. Save latest head info
+func (s *Service) receiveAttestationNoPubsub(ctx context.Context, att *ethpb.Attestation) error {
+	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.receiveAttestationNoPubsub")
+	defer span.End()
+
+	if err := s.OnAttestation(ctx, att); err != nil {
+		return errors.Wrap(err, "could not process attestation")
+	}
+
+	return nil
 }

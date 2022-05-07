@@ -20,10 +20,7 @@ type sampleRPCRequest struct {
 }
 
 func Test_parseAndCaptureRequest(t *testing.T) {
-	tmpFile := filepath.Join(os.TempDir(), "faketest.log")
-	t.Cleanup(func() {
-		require.NoError(t, os.RemoveAll(tmpFile))
-	})
+	tmpFile := filepath.Join(t.TempDir(), "faketest.log")
 	body := &sampleRPCRequest{
 		Name:      "eth2",
 		ETHMethod: "eth2_produceBlock",

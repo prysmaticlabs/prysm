@@ -6,7 +6,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/genesis"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
 )
@@ -42,4 +42,8 @@ func TestSaveOrigin(t *testing.T) {
 	cbb, err := scb.MarshalSSZ()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveOrigin(ctx, csb, cbb))
+
+	broot, err := scb.Block().HashTreeRoot()
+	require.NoError(t, err)
+	require.Equal(t, true, db.IsFinalizedBlock(ctx, broot))
 }

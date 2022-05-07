@@ -43,22 +43,14 @@ type Flags struct {
 	EnableLargerGossipHistory           bool // EnableLargerGossipHistory increases the gossip history we store in our caches.
 	WriteWalletPasswordOnWebOnboarding  bool // WriteWalletPasswordOnWebOnboarding writes the password to disk after Prysm web signup.
 	DisableAttestingHistoryDBCache      bool // DisableAttestingHistoryDBCache for the validator client increases disk reads/writes.
-	ProposerAttsSelectionUsingMaxCover  bool // ProposerAttsSelectionUsingMaxCover enables max-cover algorithm when selecting attestations for proposing.
-	EnableOptimizedBalanceUpdate        bool // EnableOptimizedBalanceUpdate uses an updated method of performing balance updates.
 	EnableDoppelGanger                  bool // EnableDoppelGanger enables doppelganger protection on startup for the validator.
 	EnableHistoricalSpaceRepresentation bool // EnableHistoricalSpaceRepresentation enables the saving of registry validators in separate buckets to save space
-	EnableGetBlockOptimizations         bool // EnableGetBlockOptimizations optimizes some elements of the GetBlock() function.
-	EnableBatchVerification             bool // EnableBatchVerification enables batch signature verification on gossip messages.
-	EnableBalanceTrieComputation        bool // EnableBalanceTrieComputation enables our beacon state to use balance tries for hash tree root operations.
 	// Logging related toggles.
 	DisableGRPCConnectionLogs bool // Disables logging when a new grpc client has connected.
 
 	// Slasher toggles.
 	DisableLookback           bool // DisableLookback updates slasher to not use the lookback and update validator histories until epoch 0.
 	DisableBroadcastSlashings bool // DisableBroadcastSlashings disables p2p broadcasting of proposer and attester slashings.
-
-	// Cache toggles.
-	EnableActiveBalanceCache bool // EnableActiveBalanceCache enables active balance cache.
 
 	// Bug fixes related flags.
 	AttestTimely bool // AttestTimely fixes #8185. It is gated behind a flag to ensure beacon node's fix can safely roll out first. We'll invert this in v1.1.0.
@@ -68,12 +60,12 @@ type Flags struct {
 	EnableSlashingProtectionPruning bool
 
 	// Bug fixes related flags.
-	CorrectlyInsertOrphanedAtts bool
 	CorrectlyPruneCanonicalAtts bool
 
 	EnableNativeState                bool // EnableNativeState defines whether the beacon state will be represented as a pure Go struct or a Go struct that wraps a proto struct.
 	EnableVectorizedHTR              bool // EnableVectorizedHTR specifies whether the beacon state will use the optimized sha256 routines.
 	EnableForkChoiceDoublyLinkedTree bool // EnableForkChoiceDoublyLinkedTree specifies whether fork choice store will use a doubly linked tree.
+	EnableBatchGossipAggregation     bool // EnableBatchGossipAggregation specifies whether to further aggregate our gossip batches before verifying them.
 
 	// KeystoreImportDebounceInterval specifies the time duration the validator waits to reload new keys if they have
 	// changed on disk. This feature is for advanced use cases only.
@@ -167,49 +159,14 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		log.WithField(enableSlasherFlag.Name, enableSlasherFlag.Usage).Warn(enabledFeatureFlag)
 		cfg.EnableSlasher = true
 	}
-	cfg.ProposerAttsSelectionUsingMaxCover = true
-	if ctx.Bool(disableProposerAttsSelectionUsingMaxCover.Name) {
-		logDisabled(disableProposerAttsSelectionUsingMaxCover)
-		cfg.ProposerAttsSelectionUsingMaxCover = false
-	}
-	cfg.EnableOptimizedBalanceUpdate = true
-	if ctx.Bool(disableOptimizedBalanceUpdate.Name) {
-		logDisabled(disableOptimizedBalanceUpdate)
-		cfg.EnableOptimizedBalanceUpdate = false
-	}
 	if ctx.Bool(enableHistoricalSpaceRepresentation.Name) {
 		log.WithField(enableHistoricalSpaceRepresentation.Name, enableHistoricalSpaceRepresentation.Usage).Warn(enabledFeatureFlag)
 		cfg.EnableHistoricalSpaceRepresentation = true
-	}
-	cfg.CorrectlyInsertOrphanedAtts = true
-	if ctx.Bool(disableCorrectlyInsertOrphanedAtts.Name) {
-		logDisabled(disableCorrectlyInsertOrphanedAtts)
-		cfg.CorrectlyInsertOrphanedAtts = false
 	}
 	cfg.CorrectlyPruneCanonicalAtts = true
 	if ctx.Bool(disableCorrectlyPruneCanonicalAtts.Name) {
 		logDisabled(disableCorrectlyPruneCanonicalAtts)
 		cfg.CorrectlyPruneCanonicalAtts = false
-	}
-	cfg.EnableActiveBalanceCache = true
-	if ctx.Bool(disableActiveBalanceCache.Name) {
-		logDisabled(disableActiveBalanceCache)
-		cfg.EnableActiveBalanceCache = false
-	}
-	cfg.EnableGetBlockOptimizations = true
-	if ctx.Bool(disableGetBlockOptimizations.Name) {
-		logDisabled(disableGetBlockOptimizations)
-		cfg.EnableGetBlockOptimizations = false
-	}
-	cfg.EnableBatchVerification = true
-	if ctx.Bool(disableBatchGossipVerification.Name) {
-		logDisabled(disableBatchGossipVerification)
-		cfg.EnableBatchVerification = false
-	}
-	cfg.EnableBalanceTrieComputation = true
-	if ctx.Bool(disableBalanceTrieComputation.Name) {
-		logDisabled(disableBalanceTrieComputation)
-		cfg.EnableBalanceTrieComputation = false
 	}
 	cfg.EnableNativeState = false
 	if ctx.Bool(enableNativeState.Name) {
@@ -223,6 +180,10 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 	if ctx.Bool(enableForkChoiceDoublyLinkedTree.Name) {
 		logEnabled(enableForkChoiceDoublyLinkedTree)
 		cfg.EnableForkChoiceDoublyLinkedTree = true
+	}
+	if ctx.Bool(enableGossipBatchAggregation.Name) {
+		logEnabled(enableGossipBatchAggregation)
+		cfg.EnableBatchGossipAggregation = true
 	}
 	Init(cfg)
 }
