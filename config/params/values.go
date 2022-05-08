@@ -9,43 +9,23 @@ import (
 )
 
 const (
-	Mainnet ConfigName = iota
-	Minimal
-	EndToEnd
-	Prater
-	EndToEndMainnet
+	EndToEndName        = "end-to-end"
+	EndToEndMainnetName = "end-to-end-mainnet"
+	MainnetName         = "mainnet"
+	MinimalName         = "minimal"
+	PraterName          = "prater"
 )
 
-// ConfigName enum describes the type of known network in use.
-type ConfigName int
-
-func (n ConfigName) String() string {
-	s, ok := ConfigNames[n]
-	if !ok {
-		return "undefined"
-	}
-	return s
-}
-
-// ConfigNames provides network configuration names.
-var ConfigNames = map[ConfigName]string{
-	Mainnet:         "mainnet",
-	Minimal:         "minimal",
-	EndToEnd:        "end-to-end",
-	Prater:          "prater",
-	EndToEndMainnet: "end-to-end-mainnet",
-}
-
 // KnownConfigs provides an index of all known BeaconChainConfig values.
-var KnownConfigs = map[ConfigName]func() *BeaconChainConfig{
-	Mainnet:         MainnetConfig,
-	Prater:          PraterConfig,
-	Minimal:         MinimalSpecConfig,
-	EndToEnd:        E2ETestConfig,
-	EndToEndMainnet: E2EMainnetTestConfig,
+var KnownConfigs = map[string]func() *BeaconChainConfig{
+	MainnetName:         MainnetConfig,
+	PraterName:          PraterConfig,
+	MinimalName:         MinimalSpecConfig,
+	EndToEndName:        E2ETestConfig,
+	EndToEndMainnetName: E2EMainnetTestConfig,
 }
 
-var knownForkVersions map[[fieldparams.VersionLength]byte]ConfigName
+var knownForkVersions map[[fieldparams.VersionLength]byte]string
 
 var errUnknownForkVersion = errors.New("version not found in fork version schedule for any known config")
 
@@ -60,12 +40,12 @@ func ConfigForVersion(version [fieldparams.VersionLength]byte) (*BeaconChainConf
 }
 
 func init() {
-	knownForkVersions = make(map[[fieldparams.VersionLength]byte]ConfigName)
+	knownForkVersions = make(map[[fieldparams.VersionLength]byte]string)
 	for n, cfunc := range KnownConfigs {
 		cfg := cfunc()
 		// ensure that fork schedule is consistent w/ struct fields for all known configurations
 		if err := equalForkSchedules(configForkSchedule(cfg), cfg.ForkVersionSchedule); err != nil {
-			panic(errors.Wrapf(err, "improperly initialized for schedule for config %s", n.String()))
+			panic(errors.Wrapf(err, "improperly initialized for schedule for config %s", n))
 		}
 		// ensure that all fork versions are unique
 		for v := range cfg.ForkVersionSchedule {
