@@ -57,9 +57,34 @@ func ProcessJustificationBits(state state.BeaconState, totalActiveBalance, prevE
 	return newBits
 }
 
-// weighJustificationAndFinalization processes justification and finalization during
+// updateJustificationAndFinalization processes justification and finalization during
 // epoch processing. This is where a beacon node can justify and finalize a new epoch.
-//
+func weighJustificationAndFinalization(state state.BeaconStateAltair, newBits bitfield.Bitvector4) (state.BeaconState, error) {
+	if err := state.SetPreviousJustifiedCheckpoint(state.CurrentJustifiedCheckpoint()); err != nil {
+		return nil, err
+	}
+
+	jc, fc, err := ComputeCheckpoints(state, newBits)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := state.SetCurrentJustifiedCheckpoint(jc); err != nil {
+		return nil, err
+	}
+
+	if err := state.SetJustificationBits(newBits); err != nil {
+		return nil, err
+	}
+
+	if err := state.SetFinalizedCheckpoint(fc); err != nil {
+		return nil, err
+	}
+	return state, nil
+}
+
+// ComputeCheckpoints computes the new Justification and Finalization
+// checkpoints at epoch transition
 // Spec pseudocode definition:
 // def weigh_justification_and_finalization(state: BeaconState,
 //                                         total_active_balance: Gwei,
@@ -97,39 +122,31 @@ func ProcessJustificationBits(state state.BeaconState, totalActiveBalance, prevE
 //    # The 1st/2nd most recent epochs are justified, the 1st using the 2nd as source
 //    if all(bits[0:2]) and old_current_justified_checkpoint.epoch + 1 == current_epoch:
 //        state.finalized_checkpoint = old_current_justified_checkpoint
-func weighJustificationAndFinalization(state state.BeaconState, newBits bitfield.Bitvector4) (state.BeaconState, error) {
+func ComputeCheckpoints(state state.BeaconState, newBits bitfield.Bitvector4) (*ethpb.Checkpoint, *ethpb.Checkpoint, error) {
 	prevEpoch := time.PrevEpoch(state)
 	currentEpoch := time.CurrentEpoch(state)
 	oldPrevJustifiedCheckpoint := state.PreviousJustifiedCheckpoint()
 	oldCurrJustifiedCheckpoint := state.CurrentJustifiedCheckpoint()
 
-	// Process justifications
-	if err := state.SetPreviousJustifiedCheckpoint(state.CurrentJustifiedCheckpoint()); err != nil {
-		return nil, err
-	}
+	justifiedCheckpoint := &ethpb.Checkpoint{}
+	finalizedCheckpoint := &ethpb.Checkpoint{}
 
 	// If 2/3 or more of the total balance attested in the current epoch.
 	if newBits.BitAt(0) {
 		blockRoot, err := helpers.BlockRoot(state, currentEpoch)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not get block root for current epoch %d", prevEpoch)
+			return nil, nil, errors.Wrapf(err, "could not get block root for current epoch %d", prevEpoch)
 		}
-		if err := state.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{Epoch: currentEpoch, Root: blockRoot}); err != nil {
-			return nil, err
-		}
+		justifiedCheckpoint.Epoch = currentEpoch
+		justifiedCheckpoint.Root = blockRoot
 	} else if newBits.BitAt(1) {
 		// If 2/3 or more of total balance attested in the previous epoch.
 		blockRoot, err := helpers.BlockRoot(state, prevEpoch)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not get block root for previous epoch %d", prevEpoch)
+			return nil, nil, errors.Wrapf(err, "could not get block root for previous epoch %d", prevEpoch)
 		}
-		if err := state.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{Epoch: prevEpoch, Root: blockRoot}); err != nil {
-			return nil, err
-		}
-	}
-
-	if err := state.SetJustificationBits(newBits); err != nil {
-		return nil, err
+		justifiedCheckpoint.Epoch = prevEpoch
+		justifiedCheckpoint.Root = blockRoot
 	}
 
 	// Process finalization according to Ethereum Beacon Chain specification.
@@ -137,31 +154,22 @@ func weighJustificationAndFinalization(state state.BeaconState, newBits bitfield
 
 	// 2nd/3rd/4th (0b1110) most recent epochs are justified, the 2nd using the 4th as source.
 	if justification&0x0E == 0x0E && (oldPrevJustifiedCheckpoint.Epoch+3) == currentEpoch {
-		if err := state.SetFinalizedCheckpoint(oldPrevJustifiedCheckpoint); err != nil {
-			return nil, err
-		}
+		finalizedCheckpoint = oldPrevJustifiedCheckpoint
 	}
 
 	// 2nd/3rd (0b0110) most recent epochs are justified, the 2nd using the 3rd as source.
 	if justification&0x06 == 0x06 && (oldPrevJustifiedCheckpoint.Epoch+2) == currentEpoch {
-		if err := state.SetFinalizedCheckpoint(oldPrevJustifiedCheckpoint); err != nil {
-			return nil, err
-		}
+		finalizedCheckpoint = oldPrevJustifiedCheckpoint
 	}
 
 	// 1st/2nd/3rd (0b0111) most recent epochs are justified, the 1st using the 3rd as source.
 	if justification&0x07 == 0x07 && (oldCurrJustifiedCheckpoint.Epoch+2) == currentEpoch {
-		if err := state.SetFinalizedCheckpoint(oldCurrJustifiedCheckpoint); err != nil {
-			return nil, err
-		}
+		finalizedCheckpoint = oldCurrJustifiedCheckpoint
 	}
 
 	// The 1st/2nd (0b0011) most recent epochs are justified, the 1st using the 2nd as source
 	if justification&0x03 == 0x03 && (oldCurrJustifiedCheckpoint.Epoch+1) == currentEpoch {
-		if err := state.SetFinalizedCheckpoint(oldCurrJustifiedCheckpoint); err != nil {
-			return nil, err
-		}
+		finalizedCheckpoint = oldCurrJustifiedCheckpoint
 	}
-
-	return state, nil
+	return justifiedCheckpoint, finalizedCheckpoint, nil
 }

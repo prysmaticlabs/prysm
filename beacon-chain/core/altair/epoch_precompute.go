@@ -353,14 +353,12 @@ func attestationDelta(
 	return reward, penalty, nil
 }
 
-// UnrealizedJustificationCheckpoint returns the justification checkpoint of the
+// UnrealizedCheckpoints returns the justification and finalization checkpoints of the
 // given state as if it was progressed with empty slots until the next epoch.
-func UnrealizedJustificationCheckpoint(ctx context.Context, st state.BeaconStateAltair) (*ethpb.Checkpoint, error) {
+func UnrealizedCheckpoints(ctx context.Context, st state.BeaconStateAltair) (*ethpb.Checkpoint, *ethpb.Checkpoint, error) {
 	if st == nil || st.IsNil() {
-		return nil, errors.New("nil state")
+		return nil, nil, errNilState
 	}
-
-	prevEpoch := time.PrevEpoch(st)
 	currentEpoch := time.CurrentEpoch(st)
 	activeBalance := uint64(0)
 	currentTarget := uint64(0)
@@ -368,12 +366,12 @@ func UnrealizedJustificationCheckpoint(ctx context.Context, st state.BeaconState
 
 	cp, err := st.CurrentEpochParticipation() // TODO: Use read only
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	pp, err := st.PreviousEpochParticipation()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	cfg := params.BeaconConfig()
@@ -408,23 +406,9 @@ func UnrealizedJustificationCheckpoint(ctx context.Context, st state.BeaconState
 		}
 		return nil
 	}); err != nil {
-		return nil, errors.Wrap(err, "could not read every validator")
+		return nil, nil, errors.Wrap(err, "could not read every validator")
 	}
 
 	justification := precompute.ProcessJustificationBits(st, activeBalance, prevTarget, currentTarget)
-	if justification.BitAt(0) {
-		blockRoot, err := helpers.BlockRoot(st, currentEpoch)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not get block root for current epoch %d", prevEpoch)
-		}
-		return &ethpb.Checkpoint{Epoch: currentEpoch, Root: blockRoot}, nil
-	}
-	if justification.BitAt(1) {
-		blockRoot, err := helpers.BlockRoot(st, prevEpoch)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not get block root for previous epoch %d", prevEpoch)
-		}
-		return &ethpb.Checkpoint{Epoch: prevEpoch, Root: blockRoot}, nil
-	}
-	return st.CurrentJustifiedCheckpoint(), nil
+	return precompute.ComputeCheckpoints(st, justification)
 }
