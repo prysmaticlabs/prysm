@@ -37,6 +37,9 @@ func (*ValidatorEndpointFactory) Create(path string) (*apimiddleware.Endpoint, e
 		endpoint.PostResponse = &importRemoteKeysResponseJson{}
 		endpoint.DeleteRequest = &deleteRemoteKeysRequestJson{}
 		endpoint.DeleteResponse = &deleteRemoteKeysResponseJson{}
+	case "/eth/v1/validator/{pubkey}/feerecipient":
+		endpoint.GetResponse = &getFeeRecipientByPubkeyResponseJson{}
+		endpoint.PostRequest = &setFeeRecipientByPubkeyRequestJson{}
 	default:
 		return nil, errors.New("invalid path")
 	}

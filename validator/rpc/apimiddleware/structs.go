@@ -66,3 +66,16 @@ type deleteRemoteKeysRequestJson struct {
 type deleteRemoteKeysResponseJson struct {
 	Statuses []*statusJson `json:"data"`
 }
+
+type getFeeRecipientByPubkeyRequestJson struct {
+	Pubkey string `json:"pubkey" hex:"true"`
+}
+
+type getFeeRecipientByPubkeyResponseJson struct {
+	FeeRecipient string `json:"data" hex:"true"`
+}
+
+type setFeeRecipientByPubkeyRequestJson struct {
+	Pubkey       string `json:"pubkey" hex:"true"`
+	FeeRecipient string `json:"fee_recipient" hex:"true"`
+}
