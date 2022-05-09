@@ -137,7 +137,7 @@ func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
 	}()
 }
 
-// UpdateHead processes fork choice attestations from the pool and updates the head.
+// UpdateHead processes fork choice attestations from the pool and updates the forkchoice to the canonical head.
 func (s *Service) UpdateHead(ctx context.Context) error {
 	// Continue when there's no fork choice attestation, there's nothing to process and update head.
 	// This covers the condition when the node is still initial syncing to the head of the chain.
