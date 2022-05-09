@@ -104,7 +104,7 @@ func (m *SparseMerkleTrie) Insert(item []byte, index int) error {
 	if len(m.branches) == 0 {
 		return errors.New("invalid trie: no branches")
 	}
-	if m.depth > uint(len(m.branches)) {
+	if m.depth >= uint(len(m.branches)) {
 		return errors.New("invalid trie: depth is greater than number of branches")
 	}
 	for index >= len(m.branches[0]) {
@@ -136,7 +136,8 @@ func (m *SparseMerkleTrie) Insert(item []byte, index int) error {
 			root = parentHash
 		}
 		parentIdx := currentIndex / 2
-		if len(m.branches[i+1]) == 0 || parentIdx >= len(m.branches[i+1]) {
+		if len(m.branches[i+1]) == 0 ||
+			parentIdx >= len(m.branches[i+1]) {
 			newItem := root
 			m.branches[i+1] = append(m.branches[i+1], newItem[:])
 		} else {
