@@ -230,7 +230,7 @@ func TestService_ProcessAttestationsAndUpdateHead(t *testing.T) {
 	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wb))
 	service.head.root = r // Old head
 	require.Equal(t, 1, len(service.cfg.AttPool.ForkchoiceAttestations()))
-	require.NoError(t, err, service.ProcessAttestationsAndUpdateHead(ctx))
+	require.NoError(t, err, service.UpdateHead(ctx))
 	require.Equal(t, tRoot, service.head.root)                             // Validate head is the new one
 	require.Equal(t, 0, len(service.cfg.AttPool.ForkchoiceAttestations())) // Validate att pool is empty
 }

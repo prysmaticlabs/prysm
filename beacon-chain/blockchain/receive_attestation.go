@@ -128,7 +128,7 @@ func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
 					return
 				}
 
-				if err := s.ProcessAttestationsAndUpdateHead(s.ctx); err != nil {
+				if err := s.UpdateHead(s.ctx); err != nil {
 					log.WithError(err).Error("Could not process attestations and update head")
 					return
 				}
@@ -137,8 +137,8 @@ func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
 	}()
 }
 
-// ProcessAttestationsAndUpdateHead processes fork choice attestations from the pool and updates the head.
-func (s *Service) ProcessAttestationsAndUpdateHead(ctx context.Context) error {
+// UpdateHead processes fork choice attestations from the pool and updates the head.
+func (s *Service) UpdateHead(ctx context.Context) error {
 	// Continue when there's no fork choice attestation, there's nothing to process and update head.
 	// This covers the condition when the node is still initial syncing to the head of the chain.
 	if s.cfg.AttPool.ForkchoiceAttestationCount() == 0 {
