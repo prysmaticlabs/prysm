@@ -148,7 +148,9 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 		args = append(args, "--pprof", fmt.Sprintf("--pprofport=%d", e2e.TestParams.Ports.PrysmBeaconNodePprofPort+index))
 	}
 	// Only add in the feature flags if we either aren't performing a control test
-	// on our features or the beacon index is a power of 2.
+	// on our features or the beacon index is a multiplier of 2 (idea is to split nodes
+	// equally down the line with one group having feature flags and the other without
+	// feature flags; this is to allow A-B testing on new features)
 	if !config.TestFeature || index%2 == 0 {
 		args = append(args, features.E2EBeaconChainFlags...)
 	}

@@ -1885,5 +1885,5 @@ func TestService_insertSlashingsToForkChoiceStore(t *testing.T) {
 	b.Block.Body.AttesterSlashings = slashings
 	wb, err := wrapper.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)
-	service.insertSlashingsToForkChoiceStore(ctx, wb.Block())
+	service.insertSlashingsToForkChoiceStore(ctx, wb.Block().Body().AttesterSlashings())
 }

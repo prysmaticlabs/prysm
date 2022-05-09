@@ -9,15 +9,15 @@ import (
 
 func TestGenesisState(t *testing.T) {
 	tests := []struct {
-		name params.ConfigName
+		name string
 	}{
 		{
-			name: params.Mainnet,
+			name: params.MainnetName,
 		},
 	}
 	for _, tt := range tests {
-		t.Run(params.ConfigNames[tt.name], func(t *testing.T) {
-			st, err := genesis.State(params.ConfigNames[tt.name])
+		t.Run(tt.name, func(t *testing.T) {
+			st, err := genesis.State(tt.name)
 			if err != nil {
 				t.Fatal(err)
 			}
