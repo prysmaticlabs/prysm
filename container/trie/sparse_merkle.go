@@ -81,7 +81,11 @@ func (m *SparseMerkleTrie) Items() [][]byte {
 // HashTreeRoot of the Merkle trie as defined in the deposit contract.
 //  Spec Definition:
 //   sha256(concat(node, self.to_little_endian_64(self.deposit_count), slice(zero_bytes32, start=0, len=24)))
-func (m *SparseMerkleTrie) HashTreeRoot() [32]byte {
+func (m *SparseMerkleTrie) HashTreeRoot() ([32]byte, error) {
+	if len(m.branches) == 0 || len(m.branches[len(m.branches)-1]) == 0 {
+		return [32]byte{}, errors.New("invalid branches provided to compute root")
+	}
+
 	enc := [32]byte{}
 	depositCount := uint64(len(m.originalItems))
 	if len(m.originalItems) == 1 && bytes.Equal(m.originalItems[0], ZeroHashes[0][:]) {
@@ -89,13 +93,19 @@ func (m *SparseMerkleTrie) HashTreeRoot() [32]byte {
 		depositCount = 0
 	}
 	binary.LittleEndian.PutUint64(enc[:], depositCount)
-	return hash.Hash(append(m.branches[len(m.branches)-1][0], enc[:]...))
+	return hash.Hash(append(m.branches[len(m.branches)-1][0], enc[:]...)), nil
 }
 
 // Insert an item into the trie.
 func (m *SparseMerkleTrie) Insert(item []byte, index int) error {
 	if index < 0 {
 		return fmt.Errorf("negative index provided: %d", index)
+	}
+	if len(m.branches) == 0 {
+		return errors.New("invalid trie: no branches")
+	}
+	if m.depth > uint(len(m.branches)) {
+		return errors.New("invalid trie: depth is greater than number of branches")
 	}
 	for index >= len(m.branches[0]) {
 		m.branches[0] = append(m.branches[0], ZeroHashes[0][:])
@@ -143,11 +153,17 @@ func (m *SparseMerkleTrie) MerkleProof(index int) ([][]byte, error) {
 	if index < 0 {
 		return nil, fmt.Errorf("merkle index is negative: %d", index)
 	}
-	merkleIndex := uint(index)
+	if len(m.branches) == 0 {
+		return nil, errors.New("invalid trie: no branches")
+	}
 	leaves := m.branches[0]
 	if index >= len(leaves) {
 		return nil, fmt.Errorf("merkle index out of range in trie, max range: %d, received: %d", len(leaves), index)
 	}
+	if m.depth > uint(len(m.branches)) {
+		return nil, errors.New("invalid trie: depth is greater than number of branches")
+	}
+	merkleIndex := uint(index)
 	proof := make([][]byte, m.depth+1)
 	for i := uint(0); i < m.depth; i++ {
 		subIndex := (merkleIndex / (1 << i)) ^ 1
@@ -185,6 +201,9 @@ func VerifyMerkleProofWithDepth(root, item []byte, merkleIndex uint64, proof [][
 	if uint64(len(proof)) != depth+1 {
 		return false
 	}
+	if depth >= 64 {
+		return false // PowerOf2 would overflow.
+	}
 	node := bytesutil.ToBytes32(item)
 	for i := uint64(0); i <= depth; i++ {
 		if (merkleIndex / math.PowerOf2(i) % 2) != 0 {
@@ -200,15 +219,10 @@ func VerifyMerkleProofWithDepth(root, item []byte, merkleIndex uint64, proof [][
 // VerifyMerkleProof given a trie root, a leaf, the generalized merkle index
 // of the leaf in the trie, and the proof itself.
 func VerifyMerkleProof(root, item []byte, merkleIndex uint64, proof [][]byte) bool {
-	node := bytesutil.ToBytes32(item)
-	for i := 0; i < len(proof); i++ {
-		if (merkleIndex / math.PowerOf2(uint64(i)) % 2) != 0 {
-			node = hash.Hash(append(proof[i], node[:]...))
-		} else {
-			node = hash.Hash(append(node[:], proof[i]...))
-		}
+	if len(proof) == 0 {
+		return false
 	}
-	return bytes.Equal(root, node[:])
+	return VerifyMerkleProofWithDepth(root, item, merkleIndex, proof, uint64(len(proof)-1))
 }
 
 // Copy performs a deep copy of the trie.
