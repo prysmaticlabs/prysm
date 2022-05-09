@@ -813,7 +813,7 @@ func TestService_getPayloadHash(t *testing.T) {
 
 	h, err := service.getPayloadHash(ctx, r[:])
 	require.NoError(t, err)
-	require.DeepEqual(t, params.BeaconConfig().ZeroHash[:], h)
+	require.DeepEqual(t, params.BeaconConfig().ZeroHash, h)
 
 	bb := util.NewBeaconBlockBellatrix()
 	h = [32]byte{'a'}
@@ -826,5 +826,5 @@ func TestService_getPayloadHash(t *testing.T) {
 
 	h, err = service.getPayloadHash(ctx, r[:])
 	require.NoError(t, err)
-	require.DeepEqual(t, []byte{'a'}, h)
+	require.DeepEqual(t, [32]byte{'a'}, h)
 }

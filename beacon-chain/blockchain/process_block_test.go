@@ -290,6 +290,7 @@ func TestStore_OnBlockBatch_ProtoArray(t *testing.T) {
 	gRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err)
 	service.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{Root: gRoot[:]}, [32]byte{})
+	service.store.SetJustifiedCheckptAndPayloadHash(&ethpb.Checkpoint{Root: gRoot[:]}, [32]byte{})
 
 	service.cfg.ForkChoiceStore = protoarray.New(0, 0, [32]byte{})
 	wsb, err = wrapper.WrappedSignedBeaconBlock(genesis)
@@ -354,6 +355,7 @@ func TestStore_OnBlockBatch_DoublyLinkedTree(t *testing.T) {
 	gRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err)
 	service.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{Root: gRoot[:]}, [32]byte{})
+	service.store.SetJustifiedCheckptAndPayloadHash(&ethpb.Checkpoint{Root: gRoot[:]}, [32]byte{})
 
 	service.cfg.ForkChoiceStore = doublylinkedtree.New(0, 0)
 	wsb, err = wrapper.WrappedSignedBeaconBlock(genesis)
@@ -416,6 +418,8 @@ func TestStore_OnBlockBatch_NotifyNewPayload(t *testing.T) {
 	gRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err)
 	service.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{Root: gRoot[:]}, [32]byte{})
+	service.store.SetJustifiedCheckptAndPayloadHash(&ethpb.Checkpoint{Root: gRoot[:]}, [32]byte{})
+
 	service.cfg.ForkChoiceStore = doublylinkedtree.New(0, 0)
 	service.saveInitSyncBlock(gRoot, wsb)
 	st, keys := util.DeterministicGenesisState(t, 64)
