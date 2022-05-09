@@ -36,7 +36,7 @@ var (
 const eth1DataSavingInterval = 1000
 const maxTolerableDifference = 50
 const defaultEth1HeaderReqLimit = uint64(1000)
-const depositlogRequestLimit = 10000
+const depositLogRequestLimit = 10000
 const additiveFactorMultiplier = 0.10
 const multiplicativeDecreaseDivisor = 2
 
@@ -57,7 +57,7 @@ func (s *Service) Eth2GenesisPowchainInfo() (uint64, *big.Int) {
 	return s.chainStartData.GenesisTime, big.NewInt(int64(s.chainStartData.GenesisBlock))
 }
 
-// ProcessETH1Block processes the logs from the provided eth1Block.
+// ProcessETH1Block processes logs from the provided eth1 block.
 func (s *Service) ProcessETH1Block(ctx context.Context, blkNum *big.Int) error {
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{
@@ -80,7 +80,7 @@ func (s *Service) ProcessETH1Block(ctx context.Context, blkNum *big.Int) error {
 		}
 	}
 	if !s.chainStartData.Chainstarted {
-		if err := s.checkBlockNumberForChainStart(ctx, blkNum); err != nil {
+		if err := s.processChainStartFromBlockNum(ctx, blkNum); err != nil {
 			return err
 		}
 	}
@@ -88,7 +88,7 @@ func (s *Service) ProcessETH1Block(ctx context.Context, blkNum *big.Int) error {
 }
 
 // ProcessLog is the main method which handles the processing of all
-// logs from the deposit contract on the ETH1.0 chain.
+// logs from the deposit contract on the eth1 chain.
 func (s *Service) ProcessLog(ctx context.Context, depositLog gethTypes.Log) error {
 	s.processingLock.RLock()
 	defer s.processingLock.RUnlock()
@@ -107,7 +107,7 @@ func (s *Service) ProcessLog(ctx context.Context, depositLog gethTypes.Log) erro
 }
 
 // ProcessDepositLog processes the log which had been received from
-// the ETH1.0 chain by trying to ascertain which participant deposited
+// the eth1 chain by trying to ascertain which participant deposited
 // in the contract.
 func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Log) error {
 	pubkey, withdrawalCredentials, amount, signature, merkleTreeIndex, err := contracts.UnpackDepositLogData(depositLog.Data)
@@ -215,7 +215,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 }
 
 // ProcessChainStart processes the log which had been received from
-// the ETH1.0 chain by trying to determine when to start the beacon chain.
+// the eth1 chain by trying to determine when to start the beacon chain.
 func (s *Service) ProcessChainStart(genesisTime uint64, eth1BlockHash [32]byte, blockNumber *big.Int) {
 	s.chainStartData.Chainstarted = true
 	s.chainStartData.GenesisBlock = blockNumber.Uint64()
@@ -247,15 +247,15 @@ func (s *Service) ProcessChainStart(genesisTime uint64, eth1BlockHash [32]byte, 
 		},
 	})
 	if err := s.savePowchainData(s.ctx); err != nil {
-		// continue on, if the save fails as this will get re-saved
+		// continue on if the save fails as this will get re-saved
 		// in the next interval.
 		log.Error(err)
 	}
 }
 
+// createGenesisTime adds in the genesis delay to the eth1 block time
+// on which it was triggered.
 func createGenesisTime(timeStamp uint64) uint64 {
-	// adds in the genesis delay to the eth1 block time
-	// on which it was triggered.
 	return timeStamp + params.BeaconConfig().GenesisDelay
 }
 
@@ -292,7 +292,7 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 		}
 		return nil
 	}
-	latestFollowHeight, err := s.followBlockHeight(ctx)
+	latestFollowHeight, err := s.followedBlockHeight(ctx)
 	if err != nil {
 		return err
 	}
@@ -318,7 +318,7 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 		remainingLogs := logCount - uint64(s.lastReceivedMerkleIndex+1)
 		// only change the end block if the remaining logs are below the required log limit.
 		// reset our query and end block in this case.
-		withinLimit := remainingLogs < depositlogRequestLimit
+		withinLimit := remainingLogs < depositLogRequestLimit
 		aboveFollowHeight := end >= latestFollowHeight
 		if withinLimit && aboveFollowHeight {
 			query.ToBlock = big.NewInt(0).SetUint64(latestFollowHeight)
@@ -413,9 +413,9 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 // logs from the period last polled to now.
 func (s *Service) requestBatchedHeadersAndLogs(ctx context.Context) error {
 	// We request for the nth block behind the current head, in order to have
-	// stabilized logs when we retrieve it from the 1.0 chain.
+	// stabilized logs when we retrieve it from the eth1 chain.
 
-	requestedBlock, err := s.followBlockHeight(ctx)
+	requestedBlock, err := s.followedBlockHeight(ctx)
 	if err != nil {
 		return err
 	}
@@ -457,18 +457,17 @@ func (s *Service) retrieveBlockHashAndTime(ctx context.Context, blkNum *big.Int)
 	return bHash, timeStamp, nil
 }
 
-// checkBlockNumberForChainStart checks the given block number for if chainstart has occurred.
-func (s *Service) checkBlockNumberForChainStart(ctx context.Context, blkNum *big.Int) error {
+func (s *Service) processChainStartFromBlockNum(ctx context.Context, blkNum *big.Int) error {
 	bHash, timeStamp, err := s.retrieveBlockHashAndTime(ctx, blkNum)
 	if err != nil {
 		return err
 	}
-	s.checkForChainstart(ctx, bHash, blkNum, timeStamp)
+	s.processChainStartIfReady(ctx, bHash, blkNum, timeStamp)
 	return nil
 }
 
-func (s *Service) checkHeaderForChainstart(ctx context.Context, header *gethTypes.Header) {
-	s.checkForChainstart(ctx, header.Hash(), header.Number, header.Time)
+func (s *Service) processChainStartFromHeader(ctx context.Context, header *gethTypes.Header) {
+	s.processChainStartIfReady(ctx, header.Hash(), header.Number, header.Time)
 }
 
 func (s *Service) checkHeaderRange(ctx context.Context, start, end uint64, headersMap map[uint64]*gethTypes.Header,
@@ -484,7 +483,7 @@ func (s *Service) checkHeaderRange(ctx context.Context, start, end uint64, heade
 				i--
 				continue
 			}
-			s.checkHeaderForChainstart(ctx, h)
+			s.processChainStartFromHeader(ctx, h)
 		}
 	}
 	return nil
@@ -504,7 +503,7 @@ func (s *Service) currentCountAndTime(ctx context.Context, blockTime uint64) (ui
 	return valCount, createGenesisTime(blockTime)
 }
 
-func (s *Service) checkForChainstart(ctx context.Context, blockHash [32]byte, blockNumber *big.Int, blockTime uint64) {
+func (s *Service) processChainStartIfReady(ctx context.Context, blockHash [32]byte, blockNumber *big.Int, blockTime uint64) {
 	valCount, genesisTime := s.currentCountAndTime(ctx, blockTime)
 	if valCount == 0 {
 		return
@@ -516,7 +515,7 @@ func (s *Service) checkForChainstart(ctx context.Context, blockHash [32]byte, bl
 	}
 }
 
-// save all powchain related metadata to disk.
+// savePowchainData saves all powchain related metadata to disk.
 func (s *Service) savePowchainData(ctx context.Context) error {
 	var pbState *ethpb.BeaconState
 	var err error

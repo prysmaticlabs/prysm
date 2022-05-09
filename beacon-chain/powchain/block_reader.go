@@ -22,7 +22,7 @@ const repeatedSearches = 2 * searchThreshold
 
 // BlockExists returns true if the block exists, its height and any possible error encountered.
 func (s *Service) BlockExists(ctx context.Context, hash common.Hash) (bool, *big.Int, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockExists")
+	ctx, span := trace.StartSpan(ctx, "powchain.BlockExists")
 	defer span.End()
 
 	if exists, hdrInfo, err := s.headerCache.HeaderInfoByHash(hash); exists || err != nil {
@@ -45,24 +45,9 @@ func (s *Service) BlockExists(ctx context.Context, hash common.Hash) (bool, *big
 	return true, new(big.Int).Set(header.Number), nil
 }
 
-// BlockExistsWithCache returns true if the block exists in cache, its height and any possible error encountered.
-func (s *Service) BlockExistsWithCache(ctx context.Context, hash common.Hash) (bool, *big.Int, error) {
-	_, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockExistsWithCache")
-	defer span.End()
-	if exists, hdrInfo, err := s.headerCache.HeaderInfoByHash(hash); exists || err != nil {
-		if err != nil {
-			return false, nil, err
-		}
-		span.AddAttributes(trace.BoolAttribute("blockCacheHit", true))
-		return true, hdrInfo.Number, nil
-	}
-	span.AddAttributes(trace.BoolAttribute("blockCacheHit", false))
-	return false, nil, nil
-}
-
 // BlockHashByHeight returns the block hash of the block at the given height.
 func (s *Service) BlockHashByHeight(ctx context.Context, height *big.Int) (common.Hash, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockHashByHeight")
+	ctx, span := trace.StartSpan(ctx, "powchain.BlockHashByHeight")
 	defer span.End()
 
 	if exists, hInfo, err := s.headerCache.HeaderInfoByHeight(height); exists || err != nil {
@@ -90,9 +75,9 @@ func (s *Service) BlockHashByHeight(ctx context.Context, height *big.Int) (commo
 	return header.Hash(), nil
 }
 
-// BlockTimeByHeight fetches an eth1.0 block timestamp by its height.
+// BlockTimeByHeight fetches an eth1 block timestamp by its height.
 func (s *Service) BlockTimeByHeight(ctx context.Context, height *big.Int) (uint64, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockTimeByHeight")
+	ctx, span := trace.StartSpan(ctx, "powchain.BlockTimeByHeight")
 	defer span.End()
 	if s.eth1DataFetcher == nil {
 		err := errors.New("nil eth1DataFetcher")
@@ -111,7 +96,7 @@ func (s *Service) BlockTimeByHeight(ctx context.Context, height *big.Int) (uint6
 // This is an optimized version with the worst case being O(2*repeatedSearches) number of calls
 // while in best case search for the block is performed in O(1).
 func (s *Service) BlockByTimestamp(ctx context.Context, time uint64) (*types.HeaderInfo, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon-chain.web3service.BlockByTimestamp")
+	ctx, span := trace.StartSpan(ctx, "powchain.BlockByTimestamp")
 	defer span.End()
 
 	s.latestEth1DataLock.RLock()
@@ -122,15 +107,14 @@ func (s *Service) BlockByTimestamp(ctx context.Context, time uint64) (*types.Hea
 	if time > latestBlkTime {
 		return nil, errors.Errorf("provided time is later than the current eth1 head. %d > %d", time, latestBlkTime)
 	}
-	// Initialize a pointer to eth1 chain's history to start our search
-	// from.
+	// Initialize a pointer to eth1 chain's history to start our search from.
 	cursorNum := big.NewInt(0).SetUint64(latestBlkHeight)
 	cursorTime := latestBlkTime
 
 	numOfBlocks := uint64(0)
 	estimatedBlk := cursorNum.Uint64()
 	maxTimeBuffer := searchThreshold * params.BeaconConfig().SecondsPerETH1Block
-	// Terminate if we cant find an acceptable block after
+	// Terminate if we can't find an acceptable block after
 	// repeated searches.
 	for i := 0; i < repeatedSearches; i++ {
 		if ctx.Err() != nil {
@@ -157,12 +141,12 @@ func (s *Service) BlockByTimestamp(ctx context.Context, time uint64) (*types.Hea
 			// time - buffer <= head.time <= time + buffer
 			break
 		}
-		hinfo, err := s.retrieveHeaderInfo(ctx, estimatedBlk)
+		hInfo, err := s.retrieveHeaderInfo(ctx, estimatedBlk)
 		if err != nil {
 			return nil, err
 		}
-		cursorNum = hinfo.Number
-		cursorTime = hinfo.Time
+		cursorNum = hInfo.Number
+		cursorTime = hInfo.Time
 	}
 
 	// Exit early if we get the desired block.
@@ -170,15 +154,15 @@ func (s *Service) BlockByTimestamp(ctx context.Context, time uint64) (*types.Hea
 		return s.retrieveHeaderInfo(ctx, cursorNum.Uint64())
 	}
 	if cursorTime > time {
-		return s.findLessTargetEth1Block(ctx, big.NewInt(0).SetUint64(estimatedBlk), time)
+		return s.findMaxTargetEth1Block(ctx, big.NewInt(0).SetUint64(estimatedBlk), time)
 	}
-	return s.findMoreTargetEth1Block(ctx, big.NewInt(0).SetUint64(estimatedBlk), time)
+	return s.findMinTargetEth1Block(ctx, big.NewInt(0).SetUint64(estimatedBlk), time)
 }
 
 // Performs a search to find a target eth1 block which is earlier than or equal to the
 // target time. This method is used when head.time > targetTime
-func (s *Service) findLessTargetEth1Block(ctx context.Context, startBlk *big.Int, targetTime uint64) (*types.HeaderInfo, error) {
-	for bn := startBlk; ; bn = big.NewInt(0).Sub(bn, big.NewInt(1)) {
+func (s *Service) findMaxTargetEth1Block(ctx context.Context, upperBoundBlk *big.Int, targetTime uint64) (*types.HeaderInfo, error) {
+	for bn := upperBoundBlk; ; bn = big.NewInt(0).Sub(bn, big.NewInt(1)) {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
@@ -194,8 +178,8 @@ func (s *Service) findLessTargetEth1Block(ctx context.Context, startBlk *big.Int
 
 // Performs a search to find a target eth1 block which is just earlier than or equal to the
 // target time. This method is used when head.time < targetTime
-func (s *Service) findMoreTargetEth1Block(ctx context.Context, startBlk *big.Int, targetTime uint64) (*types.HeaderInfo, error) {
-	for bn := startBlk; ; bn = big.NewInt(0).Add(bn, big.NewInt(1)) {
+func (s *Service) findMinTargetEth1Block(ctx context.Context, lowerBoundBlk *big.Int, targetTime uint64) (*types.HeaderInfo, error) {
+	for bn := lowerBoundBlk; ; bn = big.NewInt(0).Add(bn, big.NewInt(1)) {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
@@ -203,8 +187,7 @@ func (s *Service) findMoreTargetEth1Block(ctx context.Context, startBlk *big.Int
 		if err != nil {
 			return nil, err
 		}
-		// Return the last block before we hit the threshold
-		// time.
+		// Return the last block before we hit the threshold time.
 		if info.Time > targetTime {
 			return s.retrieveHeaderInfo(ctx, info.Number.Uint64()-1)
 		}
