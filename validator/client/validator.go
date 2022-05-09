@@ -1007,11 +1007,6 @@ func (v *validator) feeRecipients(ctx context.Context, pubkeys [][fieldparams.BL
 				feeRecipient = option.FeeRecipient
 			}
 		}
-		mixedcaseAddress := common.NewMixedcaseAddress(feeRecipient)
-		if !mixedcaseAddress.ValidChecksum() {
-			return nil, fmt.Errorf("invalid checksum for fee recipient address: %s", feeRecipient.Hex())
-		}
-		feeRecipient = mixedcaseAddress.Address()
 		if hexutil.Encode(feeRecipient.Bytes()) == fieldparams.EthBurnAddressHex {
 			log.Warnln("Fee recipient is set to the burn address. You will not be rewarded transaction fees on this setting. Please set a different fee recipient.")
 		}
