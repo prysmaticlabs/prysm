@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/time"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"go.opencensus.io/trace"
@@ -22,6 +23,11 @@ type BlockReceiver interface {
 	ReceiveBlock(ctx context.Context, block interfaces.SignedBeaconBlock, blockRoot [32]byte) error
 	ReceiveBlockBatch(ctx context.Context, blocks []interfaces.SignedBeaconBlock, blkRoots [][32]byte) error
 	HasBlock(ctx context.Context, root [32]byte) bool
+}
+
+// SlashingReceiver interface defines the methods of chain service for receiving validated slashing over the wire.
+type SlashingReceiver interface {
+	ReceiveAttesterSlashing(ctx context.Context, slashings *ethpb.AttesterSlashing)
 }
 
 // ReceiveBlock is a function that defines the the operations (minus pubsub)
@@ -131,6 +137,11 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []interfaces.Sig
 // HasBlock returns true if the block of the input root exists in initial sync blocks cache or DB.
 func (s *Service) HasBlock(ctx context.Context, root [32]byte) bool {
 	return s.hasBlockInInitSyncOrDB(ctx, root)
+}
+
+// ReceiveAttesterSlashing receives an attester slashing and inserts it to forkchoice
+func (s *Service) ReceiveAttesterSlashing(ctx context.Context, slashing *ethpb.AttesterSlashing) {
+	s.insertSlashingsToForkChoiceStore(ctx, []*ethpb.AttesterSlashing{slashing})
 }
 
 func (s *Service) handlePostBlockOperations(b interfaces.BeaconBlock) error {
