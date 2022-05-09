@@ -5,9 +5,14 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/fieldtrie"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	testtmpl "github.com/prysmaticlabs/prysm/beacon-chain/state/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/types"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestBeaconState_SlotDataRace(t *testing.T) {
@@ -127,4 +132,23 @@ func TestBeaconState_ValidatorByPubkey(t *testing.T) {
 	testtmpl.VerifyBeaconStateValidatorByPubkey(t, func() (state.BeaconState, error) {
 		return InitializeFromProto(&ethpb.BeaconStateAltair{})
 	})
+}
+
+func TestBeaconState_CurrentEpochParticipation(t *testing.T) {
+	fieldCount := params.BeaconConfig().BeaconStateAltairFieldCount
+	b := &BeaconState{
+		state:                 nil,
+		dirtyFields:           make(map[types.FieldIndex]bool, fieldCount),
+		dirtyIndices:          make(map[types.FieldIndex][]uint64, fieldCount),
+		stateFieldLeaves:      make(map[types.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
+		sharedFieldReferences: make(map[types.FieldIndex]*stateutil.Reference, 11),
+		rebuildTrie:           make(map[types.FieldIndex]bool, fieldCount),
+	}
+	_, err := b.CurrentEpochParticipation()
+	require.ErrorIs(t, ErrNilInnerState, err)
+
+	st, err := InitializeFromProtoUnsafe(&ethpb.BeaconStateAltair{})
+	require.NoError(t, err)
+	_, err = st.CurrentEpochParticipation()
+	require.ErrorIs(t, errNilField, err)
 }

@@ -36,7 +36,7 @@ func (b *BeaconState) RandaoMixAtIndex(idx uint64) ([]byte, error) {
 		return nil, ErrNilInnerState
 	}
 	if b.state.RandaoMixes == nil {
-		return nil, nil
+		return nil, errNilField
 	}
 
 	b.lock.RLock()

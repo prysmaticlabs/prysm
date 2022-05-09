@@ -28,14 +28,14 @@ func (b *BeaconState) nextSyncCommittee() *ethpb.SyncCommittee {
 // CurrentSyncCommittee of the current sync committee in beacon chain state.
 func (b *BeaconState) CurrentSyncCommittee() (*ethpb.SyncCommittee, error) {
 	if !b.hasInnerState() {
-		return nil, nil
+		return nil, ErrNilInnerState
 	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
 	if b.state.CurrentSyncCommittee == nil {
-		return nil, nil
+		return nil, errNilField
 	}
 
 	return b.currentSyncCommittee(), nil
@@ -44,14 +44,14 @@ func (b *BeaconState) CurrentSyncCommittee() (*ethpb.SyncCommittee, error) {
 // NextSyncCommittee of the next sync committee in beacon chain state.
 func (b *BeaconState) NextSyncCommittee() (*ethpb.SyncCommittee, error) {
 	if !b.hasInnerState() {
-		return nil, nil
+		return nil, ErrNilInnerState
 	}
 
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
 	if b.state.NextSyncCommittee == nil {
-		return nil, nil
+		return nil, errNilField
 	}
 
 	return b.nextSyncCommittee(), nil

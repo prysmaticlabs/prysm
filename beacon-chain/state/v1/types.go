@@ -3,7 +3,6 @@ package v1
 import (
 	"sync"
 
-	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/fieldtrie"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
@@ -33,10 +32,6 @@ func init() {
 // fieldMap keeps track of each field
 // to its corresponding data type.
 var fieldMap map[types.FieldIndex]types.DataType
-
-// ErrNilInnerState returns when the inner state is nil and no copy set or get
-// operations can be performed on state.
-var ErrNilInnerState = errors.New("nil inner state")
 
 // BeaconState defines a struct containing utilities for the Ethereum Beacon Chain state, defining
 // getters and setters for its respective values and helpful functions such as HashTreeRoot().
