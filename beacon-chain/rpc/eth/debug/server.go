@@ -15,5 +15,5 @@ type Server struct {
 	BeaconDB              db.ReadOnlyDatabase
 	HeadFetcher           blockchain.HeadFetcher
 	StateFetcher          statefetcher.Fetcher
-	OptimisticSyncFetcher blockchain.OptimisticSyncFetcher
+	OptimisticModeFetcher blockchain.OptimisticModeFetcher
 }

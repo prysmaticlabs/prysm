@@ -20,7 +20,7 @@ type Server struct {
 	PeerManager           p2p.PeerManager
 	Broadcaster           p2p.Broadcaster
 	StateFetcher          statefetcher.Fetcher
-	OptimisticSyncFetcher blockchain.OptimisticSyncFetcher
+	OptimisticModeFetcher blockchain.OptimisticModeFetcher
 	SyncCommitteePool     synccommittee.Pool
 	V1Alpha1Server        *v1alpha1validator.Server
 }

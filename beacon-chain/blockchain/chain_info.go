@@ -55,7 +55,6 @@ type HeadFetcher interface {
 	HeadPublicKeyToValidatorIndex(pubKey [fieldparams.BLSPubkeyLength]byte) (types.ValidatorIndex, bool)
 	HeadValidatorIndexToPublicKey(ctx context.Context, index types.ValidatorIndex) ([fieldparams.BLSPubkeyLength]byte, error)
 	ChainHeads() ([][32]byte, []types.Slot)
-	IsOptimistic(ctx context.Context) (bool, error)
 	HeadSyncCommitteeFetcher
 	HeadDomainFetcher
 }
@@ -80,8 +79,9 @@ type FinalizationFetcher interface {
 	VerifyFinalizedBlkDescendant(ctx context.Context, blockRoot [32]byte) error
 }
 
-// OptimisticSyncFetcher retrieves information about optimistic sync.
-type OptimisticSyncFetcher interface {
+// OptimisticModeFetcher retrieves information about optimistic status of the node.
+type OptimisticModeFetcher interface {
+	IsOptimistic(ctx context.Context) (bool, error)
 	IsOptimisticForRoot(ctx context.Context, root [32]byte) (bool, error)
 }
 

@@ -34,7 +34,7 @@ type Server struct {
 	StateGenService         stategen.StateManager
 	StateFetcher            statefetcher.Fetcher
 	HeadFetcher             blockchain.HeadFetcher
-	OptimisticSyncFetcher   blockchain.OptimisticSyncFetcher
+	OptimisticModeFetcher   blockchain.OptimisticModeFetcher
 	V1Alpha1ValidatorServer *v1alpha1validator.Server
 	SyncChecker             sync.Checker
 	CanonicalHistory        *stategen.CanonicalHistory
