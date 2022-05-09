@@ -357,8 +357,14 @@ func (s *ChainService) IsCanonical(_ context.Context, r [32]byte) (bool, error) 
 	return true, nil
 }
 
-// HasInitSyncBlock mocks the same method in the chain service.
-func (s *ChainService) HasInitSyncBlock(rt [32]byte) bool {
+// HasBlock mocks the same method in the chain service.
+func (s *ChainService) HasBlock(ctx context.Context, rt [32]byte) bool {
+	if s.DB == nil {
+		return false
+	}
+	if s.DB.HasBlock(ctx, rt) {
+		return true
+	}
 	if s.InitSyncBlockRoots == nil {
 		return false
 	}
@@ -443,4 +449,8 @@ func (s *ChainService) IsOptimistic(_ context.Context) (bool, error) {
 // IsOptimisticForRoot mocks the same method in the chain service.
 func (s *ChainService) IsOptimisticForRoot(_ context.Context, _ [32]byte) (bool, error) {
 	return s.Optimistic, nil
+}
+
+// ReceiveAttesterSlashing mocks the same method in the chain service.
+func (s *ChainService) ReceiveAttesterSlashing(context.Context, *ethpb.AttesterSlashing) {
 }

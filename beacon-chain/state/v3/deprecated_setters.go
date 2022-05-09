@@ -7,7 +7,7 @@ import (
 
 // AppendCurrentEpochAttestations is not supported for HF1 beacon state.
 func (*BeaconState) AppendCurrentEpochAttestations(_ *ethpb.PendingAttestation) error {
-	return errors.New("AppendCurrentEpochAttestations is not supported for version Bellatrix beacon state")
+	return errors.New("AppendCurrentEpochAttestations is not supported for Bellatrix beacon state")
 }
 
 // AppendPreviousEpochAttestations is not supported for HF1 beacon state.

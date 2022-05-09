@@ -83,7 +83,7 @@ func TestEnsureEmbeddedGenesis(t *testing.T) {
 	// Embedded Genesis works with Mainnet config
 	params.SetupTestConfigCleanup(t)
 	cfg := params.BeaconConfig()
-	cfg.ConfigName = params.ConfigNames[params.Mainnet]
+	cfg.ConfigName = params.MainnetName
 	params.OverrideBeaconConfig(cfg)
 
 	ctx := context.Background()

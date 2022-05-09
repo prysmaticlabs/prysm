@@ -1,9 +1,10 @@
-load("@prysm//tools/go:def.bzl", "go_library")
+load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
     testonly = True,
     srcs = [
+        "builder.go",
         "runner.go",
         "service.go",
         "type.go",
@@ -41,5 +42,17 @@ go_library(
         "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_ethereum_go_ethereum//common/hexutil:go_default_library",
         "@com_github_golang_snappy//:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["builder_test.go"],
+    embed = [":go_default_library"],
+    deps = [
+        "//consensus-types/wrapper:go_default_library",
+        "//proto/prysm/v1alpha1:go_default_library",
+        "//testing/require:go_default_library",
+        "//testing/util:go_default_library",
     ],
 )
