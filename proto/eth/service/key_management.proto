@@ -254,3 +254,16 @@ message DeletedRemoteKeysStatus {
   string message = 2;
 }
 
+
+message GetFeeRecipientByPubkeyRequest {
+  bytes pubkey = 1;
+}
+
+message GetFeeRecipientByPubkeyResponse {
+  bytes fee_recipient = 1;
+}
+
+message SetFeeRecipientByPubkeyRequest {
+  bytes pubkey = 1;
+  bytes fee_recipient = 2;
+}
