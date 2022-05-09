@@ -91,11 +91,6 @@ var (
 			" (Warning): Once enabled, this feature migrates your database in to a new schema and " +
 			"there is no going back. At worst, your entire database might get corrupted.",
 	}
-	disableCorrectlyInsertOrphanedAtts = &cli.BoolFlag{
-		Name: "disable-correctly-insert-orphaned-atts",
-		Usage: "Disable the fix for bug where orphaned attestations don't get reinserted back to mem pool. Which is an improves validator profitability and overall network health," +
-			"see issue #9441 for further detail",
-	}
 	enableNativeState = &cli.BoolFlag{
 		Name:  "enable-native-state",
 		Usage: "Enables representing the beacon state as a pure Go struct.",
@@ -153,7 +148,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableBroadcastSlashingFlag,
 	enableSlasherFlag,
 	enableHistoricalSpaceRepresentation,
-	disableCorrectlyInsertOrphanedAtts,
 	enableNativeState,
 	enableVecHTR,
 	enableForkChoiceDoublyLinkedTree,

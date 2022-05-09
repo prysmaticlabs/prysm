@@ -142,20 +142,6 @@ func (vs *Server) DomainData(_ context.Context, request *ethpb.DomainRequest) (*
 	}, nil
 }
 
-// CanonicalHead of the current beacon chain. This method is requested on-demand
-// by a validator when it is their time to propose or attest.
-func (vs *Server) CanonicalHead(ctx context.Context, _ *emptypb.Empty) (*ethpb.SignedBeaconBlock, error) {
-	headBlk, err := vs.HeadFetcher.HeadBlock(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get head block: %v", err)
-	}
-	b, err := headBlk.PbPhase0Block()
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get head block: %v", err)
-	}
-	return b, nil
-}
-
 // WaitForChainStart queries the logs of the Deposit Contract in order to verify the beacon chain
 // has started its runtime and validators begin their responsibilities. If it has not, it then
 // subscribes to an event stream triggered by the powchain service whenever the ChainStart log does

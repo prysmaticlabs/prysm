@@ -40,15 +40,15 @@ func (od *OriginData) CheckpointString() string {
 // SaveBlock saves the downloaded block to a unique file in the given path.
 // For readability and collision avoidance, the file name includes: type, config name, slot and root
 func (od *OriginData) SaveBlock(dir string) (string, error) {
-	blockPath := path.Join(dir, fname("state", od.cf, od.st.Slot(), od.wsd.BlockRoot))
-	return blockPath, file.WriteFile(blockPath, od.sb)
+	blockPath := path.Join(dir, fname("block", od.cf, od.b.Block().Slot(), od.wsd.BlockRoot))
+	return blockPath, file.WriteFile(blockPath, od.BlockBytes())
 }
 
 // SaveState saves the downloaded state to a unique file in the given path.
 // For readability and collision avoidance, the file name includes: type, config name, slot and root
 func (od *OriginData) SaveState(dir string) (string, error) {
 	statePath := path.Join(dir, fname("state", od.cf, od.st.Slot(), od.wsd.StateRoot))
-	return statePath, file.WriteFile(statePath, od.sb)
+	return statePath, file.WriteFile(statePath, od.StateBytes())
 }
 
 // StateBytes returns the ssz-encoded bytes of the downloaded BeaconState value.

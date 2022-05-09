@@ -749,6 +749,10 @@ func (f *ForkChoice) ForkChoiceNodes() []*pbrpc.ForkChoiceNode {
 func (f *ForkChoice) InsertSlashedIndex(ctx context.Context, index types.ValidatorIndex) {
 	f.store.nodesLock.Lock()
 	defer f.store.nodesLock.Unlock()
+	// return early if the index was already included:
+	if f.store.slashedIndices[index] {
+		return
+	}
 	f.store.slashedIndices[index] = true
 
 	// Subtract last vote from this equivocating validator
