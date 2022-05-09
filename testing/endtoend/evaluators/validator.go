@@ -114,6 +114,12 @@ func validatorsParticipating(conns ...*grpc.ClientConn) error {
 
 	partRate := participation.Participation.GlobalParticipationRate
 	expected := float32(expectedParticipation)
+	if participation.Epoch > 0 && participation.Epoch.Sub(1) == helpers.BellatrixE2EForkEpoch {
+		// Reduce Participation requirement to 95% to account for longer EE calls for
+		// the merge block. Target and head will likely be missed for a few validators at
+		// slot 0.
+		expected = 0.95
+	}
 	if partRate < expected {
 		st, err := debugClient.GetBeaconStateV2(context.Background(), &eth.StateRequestV2{StateId: []byte("head")})
 		if err != nil {
