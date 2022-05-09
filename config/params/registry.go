@@ -1,8 +1,6 @@
 package params
 
 import (
-	"sync"
-
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 )
@@ -16,7 +14,6 @@ var ErrConfigNameConflict = errors.New("config with conflicting name already exi
 var Registry *registry
 
 type registry struct {
-	sync.RWMutex
 	active        *BeaconChainConfig
 	versionToName map[[fieldparams.VersionLength]byte]string
 	nameToConfig  map[string]*BeaconChainConfig
@@ -124,8 +121,19 @@ func (r *registry) SetActive(c *BeaconChainConfig) error {
 	return r.Replace(c)
 }
 
-func (r *registry) SetActiveWithUndo(c *BeaconChainConfig) error {
-
+func (r *registry) SetActiveWithUndo(c *BeaconChainConfig) (func() error, error) {
+	active := r.active
+	undo, err := r.ReplaceWithUndo(c)
+	if err != nil {
+		return nil, err
+	}
+	return func() error {
+		r.active = active
+		if err := undo(); err != nil {
+			return err
+		}
+		return nil
+	}, nil
 }
 
 func init() {

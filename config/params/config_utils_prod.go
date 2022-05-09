@@ -19,11 +19,16 @@ func BeaconConfig() *BeaconChainConfig {
 // OverrideBeaconConfig(c). Any subsequent calls to params.BeaconConfig() will
 // return this new configuration.
 func OverrideBeaconConfig(c *BeaconChainConfig) {
-	Registry.active = c
+	if err := Registry.SetActive(c); err != nil {
+		panic(err)
+	}
 }
 
 // Copy returns a copy of the config object.
 func (b *BeaconChainConfig) Copy() *BeaconChainConfig {
-	config := deepcopy.Copy(*b).(BeaconChainConfig)
+	config, ok := deepcopy.Copy(*b).(BeaconChainConfig)
+	if !ok {
+		panic("somehow deepcopy produced a BeaconChainConfig that is not of the same type as the original")
+	}
 	return &config
 }

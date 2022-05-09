@@ -21,6 +21,12 @@ func TestRegistry_Add(t *testing.T) {
 	require.ErrorIs(t, r.Add(params.MainnetConfig()), params.ErrRegistryCollision)
 }
 
+func TestRegistry_ReplaceMainnet(t *testing.T) {
+	r := params.NewRegistry()
+	mainnet := params.MainnetConfig().Copy()
+	require.NoError(t, r.Replace(mainnet))
+}
+
 func TestRegistry_Replace(t *testing.T) {
 	r := params.NewRegistry()
 	mainnet := params.MainnetConfig().Copy()
