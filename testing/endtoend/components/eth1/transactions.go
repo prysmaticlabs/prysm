@@ -4,9 +4,9 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"fmt"
-	"io/ioutil"
 	"math/big"
 	mathRand "math/rand"
+	"os"
 	"time"
 
 	"github.com/MariusVanDerWijden/FuzzyVM/filler"
@@ -49,7 +49,7 @@ func (t *TransactionGenerator) Start(ctx context.Context) error {
 	// deterministically generated.
 	mathRand.Seed(seed)
 
-	keystoreBytes, err := ioutil.ReadFile(t.keystore) // #nosec G304
+	keystoreBytes, err := os.ReadFile(t.keystore) // #nosec G304
 	if err != nil {
 		return err
 	}
@@ -65,7 +65,7 @@ func (t *TransactionGenerator) Start(ctx context.Context) error {
 	}
 	f := filler.NewFiller(rnd)
 	// Broadcast Transactions every 3 blocks
-	txPeriod := time.Duration(params.BeaconConfig().SecondsPerETH1Block*3) * time.Second
+	txPeriod := time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second
 	ticker := time.NewTicker(txPeriod)
 	gasPrice := big.NewInt(1e11)
 	for {

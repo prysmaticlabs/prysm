@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -17,12 +16,12 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	v1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
-	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -57,11 +56,14 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 	}
 	require.NoError(t, err)
 	require.NoError(t, fcs.InsertOptimisticBlock(ctx, 0, [32]byte{}, [32]byte{}, params.BeaconConfig().ZeroHash, 0, 0))
+	require.NoError(t, fcs.InsertOptimisticBlock(ctx, 1, [32]byte{'a'}, [32]byte{}, params.BeaconConfig().ZeroHash, 0, 0))
 
 	tests := []struct {
 		name             string
-		blk              block.BeaconBlock
+		blk              interfaces.BeaconBlock
+		headRoot         [32]byte
 		finalizedRoot    [32]byte
+		justifiedRoot    [32]byte
 		newForkchoiceErr error
 		errString        string
 	}{
@@ -71,7 +73,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 		},
 		{
 			name: "phase0 block",
-			blk: func() block.BeaconBlock {
+			blk: func() interfaces.BeaconBlock {
 				b, err := wrapper.WrappedBeaconBlock(&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{}})
 				require.NoError(t, err)
 				return b
@@ -79,7 +81,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 		},
 		{
 			name: "altair block",
-			blk: func() block.BeaconBlock {
+			blk: func() interfaces.BeaconBlock {
 				b, err := wrapper.WrappedBeaconBlock(&ethpb.BeaconBlockAltair{Body: &ethpb.BeaconBlockBodyAltair{}})
 				require.NoError(t, err)
 				return b
@@ -87,7 +89,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 		},
 		{
 			name: "not execution block",
-			blk: func() block.BeaconBlock {
+			blk: func() interfaces.BeaconBlock {
 				b, err := wrapper.WrappedBeaconBlock(&ethpb.BeaconBlockBellatrix{
 					Body: &ethpb.BeaconBlockBodyBellatrix{
 						ExecutionPayload: &v1.ExecutionPayload{
@@ -108,7 +110,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 		},
 		{
 			name: "happy case: finalized root is altair block",
-			blk: func() block.BeaconBlock {
+			blk: func() interfaces.BeaconBlock {
 				b, err := wrapper.WrappedBeaconBlock(&ethpb.BeaconBlockBellatrix{
 					Body: &ethpb.BeaconBlockBodyBellatrix{
 						ExecutionPayload: &v1.ExecutionPayload{},
@@ -118,10 +120,11 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 				return b
 			}(),
 			finalizedRoot: altairBlkRoot,
+			justifiedRoot: altairBlkRoot,
 		},
 		{
 			name: "happy case: finalized root is bellatrix block",
-			blk: func() block.BeaconBlock {
+			blk: func() interfaces.BeaconBlock {
 				b, err := wrapper.WrappedBeaconBlock(&ethpb.BeaconBlockBellatrix{
 					Body: &ethpb.BeaconBlockBodyBellatrix{
 						ExecutionPayload: &v1.ExecutionPayload{},
@@ -131,10 +134,11 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 				return b
 			}(),
 			finalizedRoot: bellatrixBlkRoot,
+			justifiedRoot: bellatrixBlkRoot,
 		},
 		{
 			name: "forkchoice updated with optimistic block",
-			blk: func() block.BeaconBlock {
+			blk: func() interfaces.BeaconBlock {
 				b, err := wrapper.WrappedBeaconBlock(&ethpb.BeaconBlockBellatrix{
 					Body: &ethpb.BeaconBlockBodyBellatrix{
 						ExecutionPayload: &v1.ExecutionPayload{},
@@ -145,10 +149,11 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 			}(),
 			newForkchoiceErr: powchain.ErrAcceptedSyncingPayloadStatus,
 			finalizedRoot:    bellatrixBlkRoot,
+			justifiedRoot:    bellatrixBlkRoot,
 		},
 		{
 			name: "forkchoice updated with invalid block",
-			blk: func() block.BeaconBlock {
+			blk: func() interfaces.BeaconBlock {
 				b, err := wrapper.WrappedBeaconBlock(&ethpb.BeaconBlockBellatrix{
 					Body: &ethpb.BeaconBlockBodyBellatrix{
 						ExecutionPayload: &v1.ExecutionPayload{},
@@ -159,7 +164,9 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 			}(),
 			newForkchoiceErr: powchain.ErrInvalidPayloadStatus,
 			finalizedRoot:    bellatrixBlkRoot,
-			errString:        "could not notify forkchoice update from execution engine: payload status is INVALID",
+			justifiedRoot:    bellatrixBlkRoot,
+			headRoot:         [32]byte{'a'},
+			errString:        ErrInvalidPayload.Error(),
 		},
 	}
 
@@ -167,7 +174,14 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			service.cfg.ExecutionEngineCaller = &mockPOW.EngineClient{ErrForkchoiceUpdated: tt.newForkchoiceErr}
 			st, _ := util.DeterministicGenesisState(t, 1)
-			_, err := service.notifyForkchoiceUpdate(ctx, st, tt.blk, service.headRoot(), tt.finalizedRoot)
+			arg := &notifyForkchoiceUpdateArg{
+				headState:     st,
+				headRoot:      tt.headRoot,
+				headBlock:     tt.blk,
+				finalizedRoot: tt.finalizedRoot,
+				justifiedRoot: tt.justifiedRoot,
+			}
+			_, err := service.notifyForkchoiceUpdate(ctx, arg)
 			if tt.errString != "" {
 				require.ErrorContains(t, tt.errString, err)
 			} else {
@@ -229,36 +243,31 @@ func Test_NotifyNewPayload(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		preState       state.BeaconState
 		postState      state.BeaconState
 		isValidPayload bool
-		blk            block.SignedBeaconBlock
+		blk            interfaces.SignedBeaconBlock
 		newPayloadErr  error
 		errString      string
 	}{
 		{
 			name:           "phase 0 post state",
 			postState:      phase0State,
-			preState:       phase0State,
 			isValidPayload: true,
 		},
 		{
 			name:           "altair post state",
 			postState:      altairState,
-			preState:       altairState,
 			isValidPayload: true,
 		},
 		{
 			name:           "nil beacon block",
 			postState:      bellatrixState,
-			preState:       bellatrixState,
 			errString:      "signed beacon block can't be nil",
 			isValidPayload: false,
 		},
 		{
 			name:           "new payload with optimistic block",
 			postState:      bellatrixState,
-			preState:       bellatrixState,
 			blk:            bellatrixBlk,
 			newPayloadErr:  powchain.ErrAcceptedSyncingPayloadStatus,
 			isValidPayload: false,
@@ -266,24 +275,21 @@ func Test_NotifyNewPayload(t *testing.T) {
 		{
 			name:           "new payload with invalid block",
 			postState:      bellatrixState,
-			preState:       bellatrixState,
 			blk:            bellatrixBlk,
 			newPayloadErr:  powchain.ErrInvalidPayloadStatus,
-			errString:      "could not validate an INVALID payload from execution engine",
+			errString:      ErrInvalidPayload.Error(),
 			isValidPayload: false,
 		},
 		{
 			name:           "altair pre state, altair block",
 			postState:      bellatrixState,
-			preState:       altairState,
 			blk:            altairBlk,
 			isValidPayload: true,
 		},
 		{
 			name:      "altair pre state, happy case",
 			postState: bellatrixState,
-			preState:  altairState,
-			blk: func() block.SignedBeaconBlock {
+			blk: func() interfaces.SignedBeaconBlock {
 				blk := &ethpb.SignedBeaconBlockBellatrix{
 					Block: &ethpb.BeaconBlockBellatrix{
 						Body: &ethpb.BeaconBlockBodyBellatrix{
@@ -300,18 +306,9 @@ func Test_NotifyNewPayload(t *testing.T) {
 			isValidPayload: true,
 		},
 		{
-			name:           "could not get merge block",
-			postState:      bellatrixState,
-			preState:       bellatrixState,
-			blk:            bellatrixBlk,
-			errString:      "could not get merge block parent hash and total difficulty",
-			isValidPayload: false,
-		},
-		{
 			name:      "not at merge transition",
 			postState: bellatrixState,
-			preState:  bellatrixState,
-			blk: func() block.SignedBeaconBlock {
+			blk: func() interfaces.SignedBeaconBlock {
 				blk := &ethpb.SignedBeaconBlockBellatrix{
 					Block: &ethpb.BeaconBlockBellatrix{
 						Body: &ethpb.BeaconBlockBodyBellatrix{
@@ -335,18 +332,9 @@ func Test_NotifyNewPayload(t *testing.T) {
 			isValidPayload: true,
 		},
 		{
-			name:           "could not get merge block",
-			postState:      bellatrixState,
-			preState:       bellatrixState,
-			blk:            bellatrixBlk,
-			errString:      "could not get merge block parent hash and total difficulty",
-			isValidPayload: false,
-		},
-		{
 			name:      "happy case",
 			postState: bellatrixState,
-			preState:  bellatrixState,
-			blk: func() block.SignedBeaconBlock {
+			blk: func() interfaces.SignedBeaconBlock {
 				blk := &ethpb.SignedBeaconBlockBellatrix{
 					Block: &ethpb.BeaconBlockBellatrix{
 						Body: &ethpb.BeaconBlockBodyBellatrix{
@@ -362,6 +350,26 @@ func Test_NotifyNewPayload(t *testing.T) {
 			}(),
 			isValidPayload: true,
 		},
+		{
+			name:      "undefined error from ee",
+			postState: bellatrixState,
+			blk: func() interfaces.SignedBeaconBlock {
+				blk := &ethpb.SignedBeaconBlockBellatrix{
+					Block: &ethpb.BeaconBlockBellatrix{
+						Body: &ethpb.BeaconBlockBodyBellatrix{
+							ExecutionPayload: &v1.ExecutionPayload{
+								ParentHash: bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength),
+							},
+						},
+					},
+				}
+				b, err := wrapper.WrappedSignedBeaconBlock(blk)
+				require.NoError(t, err)
+				return b
+			}(),
+			newPayloadErr: ErrUndefinedExecutionEngineError,
+			errString:     ErrUndefinedExecutionEngineError.Error(),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -375,16 +383,11 @@ func Test_NotifyNewPayload(t *testing.T) {
 				TotalDifficulty: "0x1",
 			}
 			service.cfg.ExecutionEngineCaller = e
-			var payload *ethpb.ExecutionPayloadHeader
-			if tt.preState.Version() == version.Bellatrix {
-				payload, err = tt.preState.LatestExecutionPayloadHeader()
-				require.NoError(t, err)
-			}
 			root := [32]byte{'a'}
 			require.NoError(t, service.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx, 0, root, root, params.BeaconConfig().ZeroHash, 0, 0))
 			postVersion, postHeader, err := getStateVersionAndPayload(tt.postState)
 			require.NoError(t, err)
-			isValidPayload, err := service.notifyNewPayload(ctx, tt.preState.Version(), postVersion, payload, postHeader, tt.blk)
+			isValidPayload, err := service.notifyNewPayload(ctx, postVersion, postHeader, tt.blk)
 			if tt.errString != "" {
 				require.ErrorContains(t, tt.errString, err)
 			} else {
@@ -431,11 +434,9 @@ func Test_NotifyNewPayload_SetOptimisticToValid(t *testing.T) {
 		TotalDifficulty: "0x1",
 	}
 	service.cfg.ExecutionEngineCaller = e
-	payload, err := bellatrixState.LatestExecutionPayloadHeader()
-	require.NoError(t, err)
 	postVersion, postHeader, err := getStateVersionAndPayload(bellatrixState)
 	require.NoError(t, err)
-	validated, err := service.notifyNewPayload(ctx, bellatrixState.Version(), postVersion, payload, postHeader, bellatrixBlk)
+	validated, err := service.notifyNewPayload(ctx, postVersion, postHeader, bellatrixBlk)
 	require.NoError(t, err)
 	require.Equal(t, true, validated)
 }
@@ -467,13 +468,13 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 
 	tests := []struct {
 		name      string
-		blk       block.BeaconBlock
-		justified block.SignedBeaconBlock
-		want      bool
+		blk       interfaces.BeaconBlock
+		justified interfaces.SignedBeaconBlock
+		err       error
 	}{
 		{
 			name: "deep block",
-			blk: func(tt *testing.T) block.BeaconBlock {
+			blk: func(tt *testing.T) interfaces.BeaconBlock {
 				blk := util.NewBeaconBlockBellatrix()
 				blk.Block.Slot = 1
 				blk.Block.ParentRoot = parentRoot[:]
@@ -481,7 +482,7 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 				require.NoError(tt, err)
 				return wr
 			}(t),
-			justified: func(tt *testing.T) block.SignedBeaconBlock {
+			justified: func(tt *testing.T) interfaces.SignedBeaconBlock {
 				blk := util.NewBeaconBlockBellatrix()
 				blk.Block.Slot = 32
 				blk.Block.ParentRoot = parentRoot[:]
@@ -489,11 +490,11 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 				require.NoError(tt, err)
 				return wr
 			}(t),
-			want: true,
+			err: nil,
 		},
 		{
 			name: "shallow block, Altair justified chkpt",
-			blk: func(tt *testing.T) block.BeaconBlock {
+			blk: func(tt *testing.T) interfaces.BeaconBlock {
 				blk := util.NewBeaconBlockAltair()
 				blk.Block.Slot = 200
 				blk.Block.ParentRoot = parentRoot[:]
@@ -501,7 +502,7 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 				require.NoError(tt, err)
 				return wr
 			}(t),
-			justified: func(tt *testing.T) block.SignedBeaconBlock {
+			justified: func(tt *testing.T) interfaces.SignedBeaconBlock {
 				blk := util.NewBeaconBlockAltair()
 				blk.Block.Slot = 32
 				blk.Block.ParentRoot = parentRoot[:]
@@ -509,11 +510,11 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 				require.NoError(tt, err)
 				return wr
 			}(t),
-			want: false,
+			err: errNotOptimisticCandidate,
 		},
 		{
 			name: "shallow block, Bellatrix justified chkpt without execution",
-			blk: func(tt *testing.T) block.BeaconBlock {
+			blk: func(tt *testing.T) interfaces.BeaconBlock {
 				blk := util.NewBeaconBlockBellatrix()
 				blk.Block.Slot = 200
 				blk.Block.ParentRoot = parentRoot[:]
@@ -521,7 +522,7 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 				require.NoError(tt, err)
 				return wr
 			}(t),
-			justified: func(tt *testing.T) block.SignedBeaconBlock {
+			justified: func(tt *testing.T) interfaces.SignedBeaconBlock {
 				blk := util.NewBeaconBlockBellatrix()
 				blk.Block.Slot = 32
 				blk.Block.ParentRoot = parentRoot[:]
@@ -529,7 +530,7 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 				require.NoError(tt, err)
 				return wr
 			}(t),
-			want: false,
+			err: errNotOptimisticCandidate,
 		},
 	}
 	for _, tt := range tests {
@@ -543,9 +544,8 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 			})
 		require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrappedParentBlock))
 
-		candidate, err := service.optimisticCandidateBlock(ctx, tt.blk)
-		require.NoError(t, err)
-		require.Equal(t, tt.want, candidate, tt.name)
+		err = service.optimisticCandidateBlock(ctx, tt.blk)
+		require.Equal(t, tt.err, err)
 	}
 }
 
@@ -593,9 +593,8 @@ func Test_IsOptimisticShallowExecutionParent(t *testing.T) {
 	wrappedChild, err := wrapper.WrappedSignedBeaconBlock(childBlock)
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrappedChild))
-	candidate, err := service.optimisticCandidateBlock(ctx, wrappedChild.Block())
+	err = service.optimisticCandidateBlock(ctx, wrappedChild.Block())
 	require.NoError(t, err)
-	require.Equal(t, true, candidate)
 }
 
 func Test_GetPayloadAttribute(t *testing.T) {
@@ -791,4 +790,43 @@ func TestService_removeInvalidBlockAndState(t *testing.T) {
 	has, err = service.cfg.StateGen.HasState(ctx, r2)
 	require.NoError(t, err)
 	require.Equal(t, false, has)
+}
+
+func TestService_getPayloadHash(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithStateGen(stategen.New(beaconDB)),
+		WithForkChoiceStore(protoarray.New(0, 0, [32]byte{})),
+	}
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+
+	_, err = service.getPayloadHash(ctx, [32]byte{})
+	require.ErrorIs(t, errBlockNotFoundInCacheOrDB, err)
+
+	b := util.NewBeaconBlock()
+	r, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	service.saveInitSyncBlock(r, wsb)
+
+	h, err := service.getPayloadHash(ctx, r)
+	require.NoError(t, err)
+	require.DeepEqual(t, params.BeaconConfig().ZeroHash[:], h)
+
+	bb := util.NewBeaconBlockBellatrix()
+	h = []byte{'a'}
+	bb.Block.Body.ExecutionPayload.BlockHash = h
+	r, err = b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	wsb, err = wrapper.WrappedSignedBeaconBlock(bb)
+	require.NoError(t, err)
+	service.saveInitSyncBlock(r, wsb)
+
+	h, err = service.getPayloadHash(ctx, r)
+	require.NoError(t, err)
+	require.DeepEqual(t, []byte{'a'}, h)
 }

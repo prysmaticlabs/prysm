@@ -2,7 +2,7 @@ package synccommittee
 
 import (
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/container/queue"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )

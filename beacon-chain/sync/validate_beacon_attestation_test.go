@@ -21,9 +21,9 @@ import (
 	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -38,9 +38,12 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 		Genesis:          time.Now().Add(time.Duration(-1*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second),
 		ValidatorsRoot:   [32]byte{'A'},
 		ValidAttestation: true,
+		DB:               db,
 	}
-
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	s := &Service{
+		ctx: ctx,
 		cfg: &config{
 			initialSync:         &mockSync.Sync{IsSyncing: false},
 			p2p:                 p,
@@ -50,8 +53,10 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 		},
 		blkRootToPendingAtts:             make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		seenUnAggregatedAttestationCache: lruwrpr.New(10),
+		signatureChan:                    make(chan *signatureVerifier, verifierLimit),
 	}
 	s.initCaches()
+	go s.verifierRoutine()
 
 	invalidRoot := [32]byte{'A', 'B', 'C', 'D'}
 	s.setBadBlock(ctx, invalidRoot)

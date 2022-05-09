@@ -7,13 +7,13 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
 	p2pTypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -24,7 +24,7 @@ import (
 // either in DB or initial sync cache.
 type forkData struct {
 	peer   peer.ID
-	blocks []block.SignedBeaconBlock
+	blocks []interfaces.SignedBeaconBlock
 }
 
 // nonSkippedSlotAfter checks slots after the given one in an attempt to find a non-empty future slot.
@@ -234,7 +234,7 @@ func (f *blocksFetcher) findForkWithPeer(ctx context.Context, pid peer.ID, slot 
 	// Traverse blocks, and if we've got one that doesn't have parent in DB, backtrack on it.
 	for i, block := range blocks {
 		parentRoot := bytesutil.ToBytes32(block.Block().ParentRoot())
-		if !f.db.HasBlock(ctx, parentRoot) && !f.chain.HasInitSyncBlock(parentRoot) {
+		if !f.chain.HasBlock(ctx, parentRoot) {
 			log.WithFields(logrus.Fields{
 				"peer": pid,
 				"slot": block.Block().Slot(),
@@ -257,11 +257,11 @@ func (f *blocksFetcher) findForkWithPeer(ctx context.Context, pid peer.ID, slot 
 }
 
 // findAncestor tries to figure out common ancestor slot that connects a given root to known block.
-func (f *blocksFetcher) findAncestor(ctx context.Context, pid peer.ID, b block.SignedBeaconBlock) (*forkData, error) {
-	outBlocks := []block.SignedBeaconBlock{b}
+func (f *blocksFetcher) findAncestor(ctx context.Context, pid peer.ID, b interfaces.SignedBeaconBlock) (*forkData, error) {
+	outBlocks := []interfaces.SignedBeaconBlock{b}
 	for i := uint64(0); i < backtrackingMaxHops; i++ {
 		parentRoot := bytesutil.ToBytes32(outBlocks[len(outBlocks)-1].Block().ParentRoot())
-		if f.db.HasBlock(ctx, parentRoot) || f.chain.HasInitSyncBlock(parentRoot) {
+		if f.chain.HasBlock(ctx, parentRoot) {
 			// Common ancestor found, forward blocks back to processor.
 			sort.Slice(outBlocks, func(i, j int) bool {
 				return outBlocks[i].Block().Slot() < outBlocks[j].Block().Slot()

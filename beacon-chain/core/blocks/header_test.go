@@ -2,7 +2,7 @@ package blocks_test
 
 import (
 	"context"
-	"io/ioutil"
+	"io"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -11,10 +11,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -23,7 +23,7 @@ import (
 )
 
 func init() {
-	logrus.SetOutput(ioutil.Discard) // Ignore "validator activated" logs
+	logrus.SetOutput(io.Discard) // Ignore "validator activated" logs
 }
 
 func TestProcessBlockHeader_ImproperBlockSlot(t *testing.T) {

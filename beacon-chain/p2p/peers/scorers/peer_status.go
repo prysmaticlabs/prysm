@@ -5,9 +5,9 @@ import (
 	"math"
 
 	"github.com/libp2p/go-libp2p-core/peer"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/time"
 )
@@ -145,5 +145,7 @@ func (s *PeerStatusScorer) peerStatus(pid peer.ID) (*pb.Status, error) {
 
 // SetHeadSlot updates known head slot.
 func (s *PeerStatusScorer) SetHeadSlot(slot types.Slot) {
+	s.store.Lock()
+	defer s.store.Unlock()
 	s.ourHeadSlot = slot
 }

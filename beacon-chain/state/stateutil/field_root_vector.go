@@ -6,7 +6,7 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
 )
 
-func arraysRoot(input [][]byte, length uint64) ([32]byte, error) {
+func ArraysRoot(input [][]byte, length uint64) ([32]byte, error) {
 	hashFunc := hash.CustomSHA256Hasher()
 
 	leaves := make([][32]byte, length)

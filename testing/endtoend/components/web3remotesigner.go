@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -18,6 +19,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/runtime/interop"
 	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
 	e2etypes "github.com/prysmaticlabs/prysm/testing/endtoend/types"
@@ -37,16 +39,14 @@ type rawKeyFile struct {
 }
 
 type Web3RemoteSigner struct {
-	ctx            context.Context
-	started        chan struct{}
-	configFilePath string
-	cmd            *exec.Cmd
+	ctx     context.Context
+	started chan struct{}
+	cmd     *exec.Cmd
 }
 
-func NewWeb3RemoteSigner(configFilePath string) *Web3RemoteSigner {
+func NewWeb3RemoteSigner() *Web3RemoteSigner {
 	return &Web3RemoteSigner{
-		started:        make(chan struct{}, 1),
-		configFilePath: configFilePath,
+		started: make(chan struct{}, 1),
 	}
 }
 
@@ -69,10 +69,15 @@ func (w *Web3RemoteSigner) Start(ctx context.Context) error {
 		return err
 	}
 
+	testDir, err := w.createTestnetDir()
+	if err != nil {
+		return err
+	}
+
 	network := "minimal"
-	if len(w.configFilePath) > 0 {
+	if len(testDir) > 0 {
 		// A file path to yaml config file is acceptable network argument.
-		network = w.configFilePath
+		network = testDir
 	}
 
 	args := []string{
@@ -230,4 +235,22 @@ func writeKeystoreKeys(ctx context.Context, keystorePath string, numKeys uint64)
 	}
 
 	return nil
+}
+
+func (w *Web3RemoteSigner) createTestnetDir() (string, error) {
+	testNetDir := e2e.TestParams.TestPath + "/web3signer-testnet"
+	configPath := filepath.Join(testNetDir, "config.yaml")
+	rawYaml := params.E2ETestConfigYaml()
+	// Add in deposit contract in yaml
+	depContractStr := fmt.Sprintf("\nDEPOSIT_CONTRACT_ADDRESS: %#x", e2e.TestParams.ContractAddress)
+	rawYaml = append(rawYaml, []byte(depContractStr)...)
+
+	if err := file.MkdirAll(testNetDir); err != nil {
+		return "", err
+	}
+	if err := file.WriteFile(configPath, rawYaml); err != nil {
+		return "", err
+	}
+
+	return configPath, nil
 }

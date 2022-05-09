@@ -8,12 +8,12 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/time/slots"
 )
@@ -47,7 +47,7 @@ func IsMergeTransitionComplete(st state.BeaconState) (bool, error) {
 // IsMergeTransitionBlockUsingPreStatePayloadHeader returns true if the input block is the terminal merge block.
 // Terminal merge block must be associated with an empty payload header.
 // This assumes the header `h` is referenced as the parent state for block body `body.
-func IsMergeTransitionBlockUsingPreStatePayloadHeader(h *ethpb.ExecutionPayloadHeader, body block.BeaconBlockBody) (bool, error) {
+func IsMergeTransitionBlockUsingPreStatePayloadHeader(h *ethpb.ExecutionPayloadHeader, body interfaces.BeaconBlockBody) (bool, error) {
 	if h == nil || body == nil {
 		return false, errors.New("nil header or block body")
 	}
@@ -62,7 +62,7 @@ func IsMergeTransitionBlockUsingPreStatePayloadHeader(h *ethpb.ExecutionPayloadH
 // Spec code:
 // def is_execution_block(block: BeaconBlock) -> bool:
 //     return block.body.execution_payload != ExecutionPayload()
-func IsExecutionBlock(body block.BeaconBlockBody) (bool, error) {
+func IsExecutionBlock(body interfaces.BeaconBlockBody) (bool, error) {
 	if body == nil {
 		return false, errors.New("nil block body")
 	}
@@ -74,7 +74,7 @@ func IsExecutionBlock(body block.BeaconBlockBody) (bool, error) {
 		return false, err
 	default:
 	}
-	return !isEmptyPayload(payload), nil
+	return !IsEmptyPayload(payload), nil
 }
 
 // IsExecutionEnabled returns true if the beacon chain can begin executing.
@@ -83,7 +83,7 @@ func IsExecutionBlock(body block.BeaconBlockBody) (bool, error) {
 // Spec code:
 // def is_execution_enabled(state: BeaconState, body: BeaconBlockBody) -> bool:
 //    return is_merge_block(state, body) or is_merge_complete(state)
-func IsExecutionEnabled(st state.BeaconState, body block.BeaconBlockBody) (bool, error) {
+func IsExecutionEnabled(st state.BeaconState, body interfaces.BeaconBlockBody) (bool, error) {
 	if st == nil || body == nil {
 		return false, errors.New("nil state or block body")
 	}
@@ -99,7 +99,7 @@ func IsExecutionEnabled(st state.BeaconState, body block.BeaconBlockBody) (bool,
 
 // IsExecutionEnabledUsingHeader returns true if the execution is enabled using post processed payload header and block body.
 // This is an optimized version of IsExecutionEnabled where beacon state is not required as an argument.
-func IsExecutionEnabledUsingHeader(header *ethpb.ExecutionPayloadHeader, body block.BeaconBlockBody) (bool, error) {
+func IsExecutionEnabledUsingHeader(header *ethpb.ExecutionPayloadHeader, body interfaces.BeaconBlockBody) (bool, error) {
 	if !isEmptyHeader(header) {
 		return true, nil
 	}
@@ -240,7 +240,7 @@ func PayloadToHeader(payload *enginev1.ExecutionPayload) (*ethpb.ExecutionPayloa
 	}, nil
 }
 
-func isEmptyPayload(p *enginev1.ExecutionPayload) bool {
+func IsEmptyPayload(p *enginev1.ExecutionPayload) bool {
 	if p == nil {
 		return true
 	}

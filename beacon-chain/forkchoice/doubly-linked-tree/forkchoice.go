@@ -5,9 +5,9 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/sirupsen/logrus"
@@ -22,6 +22,7 @@ func New(justifiedEpoch, finalizedEpoch types.Epoch) *ForkChoice {
 		proposerBoostRoot: [32]byte{},
 		nodeByRoot:        make(map[[fieldparams.RootLength]byte]*Node),
 		nodeByPayload:     make(map[[fieldparams.RootLength]byte]*Node),
+		slashedIndices:    make(map[types.ValidatorIndex]bool),
 		pruneThreshold:    defaultPruneThreshold,
 	}
 
@@ -216,6 +217,10 @@ func (f *ForkChoice) AncestorRoot(ctx context.Context, root [32]byte, slot types
 // validators' latest votes.
 func (f *ForkChoice) updateBalances(newBalances []uint64) error {
 	for index, vote := range f.votes {
+		// Skip if validator has been slashed
+		if f.store.slashedIndices[types.ValidatorIndex(index)] {
+			continue
+		}
 		// Skip if validator has never voted for current root and next root (i.e. if the
 		// votes are zero hash aka genesis block), there's nothing to compute.
 		if vote.currentRoot == params.BeaconConfig().ZeroHash && vote.nextRoot == params.BeaconConfig().ZeroHash {
@@ -318,6 +323,42 @@ func (f *ForkChoice) ForkChoiceNodes() []*pbrpc.ForkChoiceNode {
 }
 
 // SetOptimisticToInvalid removes a block with an invalid execution payload from fork choice store
-func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root, payloadHash [fieldparams.RootLength]byte) ([][32]byte, error) {
-	return f.store.setOptimisticToInvalid(ctx, root, payloadHash)
+func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root, parentRoot, payloadHash [fieldparams.RootLength]byte) ([][32]byte, error) {
+	return f.store.setOptimisticToInvalid(ctx, root, parentRoot, payloadHash)
+}
+
+// InsertSlashedIndex adds the given slashed validator index to the
+// store-tracked list. Votes from these validators are not accounted for
+// in forkchoice.
+func (f *ForkChoice) InsertSlashedIndex(_ context.Context, index types.ValidatorIndex) {
+	f.store.nodesLock.Lock()
+	defer f.store.nodesLock.Unlock()
+	// return early if the index was already included:
+	if f.store.slashedIndices[index] {
+		return
+	}
+	f.store.slashedIndices[index] = true
+
+	// Subtract last vote from this equivocating validator
+	f.votesLock.RLock()
+	defer f.votesLock.RUnlock()
+
+	if index >= types.ValidatorIndex(len(f.balances)) {
+		return
+	}
+
+	if index >= types.ValidatorIndex(len(f.votes)) {
+		return
+	}
+
+	node, ok := f.store.nodeByRoot[f.votes[index].currentRoot]
+	if !ok || node == nil {
+		return
+	}
+
+	if node.balance < f.balances[index] {
+		node.balance = 0
+	} else {
+		node.balance -= f.balances[index]
+	}
 }

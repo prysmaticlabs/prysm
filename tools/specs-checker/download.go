@@ -3,7 +3,7 @@ package main
 import (
 	_ "embed"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"path"
@@ -62,7 +62,7 @@ func getAndSaveFile(specDocUrl, outFilePath string) error {
 	}()
 
 	// Transform and save spec docs.
-	specDoc, err := ioutil.ReadAll(resp.Body)
+	specDoc, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}

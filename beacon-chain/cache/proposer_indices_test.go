@@ -1,10 +1,13 @@
+//go:build !fuzz
+// +build !fuzz
+
 package cache
 
 import (
 	"strconv"
 	"testing"
 
-	types "github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -68,7 +71,5 @@ func TestProposerCache_CanRotate(t *testing.T) {
 		item := &ProposerIndices{BlockRoot: bytesutil.ToBytes32(s)}
 		require.NoError(t, cache.AddProposerIndices(item))
 	}
-
-	k := cache.ProposerIndicesCache.ListKeys()
-	assert.Equal(t, maxProposerIndicesCacheSize, uint64(len(k)))
+	assert.Equal(t, int(maxProposerIndicesCacheSize), cache.Len())
 }
