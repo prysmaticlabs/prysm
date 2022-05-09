@@ -71,9 +71,9 @@ func (s *Service) NewPayload(ctx context.Context, payload *pb.ExecutionPayload) 
 	}()
 	d := time.Now().Add(payloadAndForkchoiceUpdatedTimeout)
 	ctx, cancel := context.WithDeadline(ctx, d)
+	defer cancel()
 	result := &pb.PayloadStatus{}
 	err := s.rpcClient.CallContext(ctx, result, NewPayloadMethod, payload)
-	cancel()
 	if err != nil {
 		return nil, handleRPCError(err)
 	}
