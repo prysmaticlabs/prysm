@@ -58,6 +58,13 @@ func handleGetBeaconBlockSSZV2(m *apimiddleware.ApiProxyMiddleware, endpoint api
 	return handleGetSSZ(m, endpoint, w, req, config)
 }
 
+func handleSubmitBlockSSZ(m *apimiddleware.ApiProxyMiddleware, endpoint apimiddleware.Endpoint, w http.ResponseWriter, req *http.Request) (handled bool) {
+	config := sszConfig{
+		sszPath: "/eth/v1/beacon/blocks/ssz",
+	}
+	return handlePostSSZ(m, endpoint, w, req, config)
+}
+
 func handleGetSSZ(
 	m *apimiddleware.ApiProxyMiddleware,
 	endpoint apimiddleware.Endpoint,
@@ -112,6 +119,53 @@ func handleGetSSZ(
 	return true
 }
 
+func handlePostSSZ(
+	m *apimiddleware.ApiProxyMiddleware,
+	endpoint apimiddleware.Endpoint,
+	w http.ResponseWriter,
+	req *http.Request,
+	config sszConfig,
+) (handled bool) {
+	if !sszPosted(req) {
+		return false
+	}
+
+	if errJson := prepareSSZRequestForProxying(m, endpoint, req, config.sszPath); errJson != nil {
+		apimiddleware.WriteError(w, errJson, nil)
+		return true
+	}
+	prepareCustomHeaders(req)
+	if errJson := preparePostedSSZData(req); errJson != nil {
+		apimiddleware.WriteError(w, errJson, nil)
+		return true
+	}
+
+	grpcResponse, errJson := m.ProxyRequest(req)
+	if errJson != nil {
+		apimiddleware.WriteError(w, errJson, nil)
+		return true
+	}
+	grpcResponseBody, errJson := apimiddleware.ReadGrpcResponseBody(grpcResponse.Body)
+	if errJson != nil {
+		apimiddleware.WriteError(w, errJson, nil)
+		return true
+	}
+	respHasError, errJson := apimiddleware.HandleGrpcResponseError(endpoint.Err, grpcResponse, grpcResponseBody, w)
+	if errJson != nil {
+		apimiddleware.WriteError(w, errJson, nil)
+		return
+	}
+	if respHasError {
+		return
+	}
+	if errJson := apimiddleware.Cleanup(grpcResponse.Body); errJson != nil {
+		apimiddleware.WriteError(w, errJson, nil)
+		return true
+	}
+
+	return true
+}
+
 func sszRequested(req *http.Request) bool {
 	accept, ok := req.Header["Accept"]
 	if !ok {
@@ -123,6 +177,17 @@ func sszRequested(req *http.Request) bool {
 		}
 	}
 	return false
+}
+
+func sszPosted(req *http.Request) bool {
+	ct, ok := req.Header["Content-Type"]
+	if !ok {
+		return false
+	}
+	if len(ct) != 1 {
+		return false
+	}
+	return ct[0] == "application/octet-stream"
 }
 
 func prepareSSZRequestForProxying(
@@ -139,6 +204,30 @@ func prepareSSZRequestForProxying(
 	}
 	// We have to add the prefix after handling parameters because adding the prefix changes URL segment indexing.
 	req.URL.Path = "/internal" + req.URL.Path
+	return nil
+}
+
+func prepareCustomHeaders(req *http.Request) {
+	ver := req.Header.Get("Eth-Consensus-Version")
+	if ver != "" {
+		req.Header.Del("Eth-Consensus-Version")
+		req.Header.Add("Grpc-metadata-Eth-Consensus-Version", ver)
+	}
+}
+
+func preparePostedSSZData(req *http.Request) apimiddleware.ErrorJson {
+	buf, err := io.ReadAll(req.Body)
+	if err != nil {
+		return apimiddleware.InternalServerErrorWithMessage(err, "could not read body")
+	}
+	j := sszRequestJson{Data: base64.StdEncoding.EncodeToString(buf)}
+	data, err := json.Marshal(j)
+	if err != nil {
+		return apimiddleware.InternalServerErrorWithMessage(err, "could not prepare POST data")
+	}
+	req.Body = io.NopCloser(bytes.NewBuffer(data))
+	req.ContentLength = int64(len(data))
+	req.Header.Set("Content-Type", "application/json")
 	return nil
 }
 
