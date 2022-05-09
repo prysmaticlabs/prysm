@@ -314,9 +314,10 @@ func TestServer_ListBlockHeaders(t *testing.T) {
 		FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 	}
 	bs := &Server{
-		BeaconDB:         beaconDB,
-		ChainInfoFetcher: mockChainFetcher,
-		HeadFetcher:      mockChainFetcher,
+		BeaconDB:              beaconDB,
+		ChainInfoFetcher:      mockChainFetcher,
+		HeadFetcher:           mockChainFetcher,
+		OptimisticModeFetcher: mockChainFetcher,
 	}
 
 	b2 := util.NewBeaconBlock()
@@ -418,9 +419,10 @@ func TestServer_ListBlockHeaders(t *testing.T) {
 			Optimistic:          true,
 		}
 		bs := &Server{
-			BeaconDB:         beaconDB,
-			ChainInfoFetcher: mockChainFetcher,
-			HeadFetcher:      mockChainFetcher,
+			BeaconDB:              beaconDB,
+			ChainInfoFetcher:      mockChainFetcher,
+			HeadFetcher:           mockChainFetcher,
+			OptimisticModeFetcher: mockChainFetcher,
 		}
 		slot := types.Slot(30)
 		headers, err := bs.ListBlockHeaders(ctx, &ethpbv1.BlockHeadersRequest{

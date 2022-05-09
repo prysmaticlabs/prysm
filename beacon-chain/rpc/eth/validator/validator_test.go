@@ -288,9 +288,10 @@ func TestGetProposerDuties(t *testing.T) {
 		State: bs, Root: genesisRoot[:], Slot: &chainSlot,
 	}
 	vs := &Server{
-		HeadFetcher: chain,
-		TimeFetcher: chain,
-		SyncChecker: &mockSync.Sync{IsSyncing: false},
+		HeadFetcher:           chain,
+		TimeFetcher:           chain,
+		OptimisticModeFetcher: chain,
+		SyncChecker:           &mockSync.Sync{IsSyncing: false},
 	}
 
 	t.Run("Ok", func(t *testing.T) {
@@ -309,8 +310,8 @@ func TestGetProposerDuties(t *testing.T) {
 			}
 		}
 		require.NotNil(t, expectedDuty, "Expected duty for slot 11 not found")
-		assert.Equal(t, types.ValidatorIndex(9982), expectedDuty.ValidatorIndex)
-		assert.DeepEqual(t, pubKeys[9982], expectedDuty.Pubkey)
+		assert.Equal(t, types.ValidatorIndex(12289), expectedDuty.ValidatorIndex)
+		assert.DeepEqual(t, pubKeys[12289], expectedDuty.Pubkey)
 	})
 
 	t.Run("Require slot processing", func(t *testing.T) {
@@ -338,9 +339,10 @@ func TestGetProposerDuties(t *testing.T) {
 			State: bs, Root: genesisRoot[:], Slot: &chainSlot,
 		}
 		vs := &Server{
-			HeadFetcher: chain,
-			TimeFetcher: chain,
-			SyncChecker: &mockSync.Sync{IsSyncing: false},
+			HeadFetcher:           chain,
+			TimeFetcher:           chain,
+			OptimisticModeFetcher: chain,
+			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 		}
 
 		req := &ethpbv1.ProposerDutiesRequest{
@@ -389,9 +391,10 @@ func TestGetProposerDuties(t *testing.T) {
 			State: bs, Root: genesisRoot[:], Slot: &chainSlot, Optimistic: true,
 		}
 		vs := &Server{
-			HeadFetcher: chain,
-			TimeFetcher: chain,
-			SyncChecker: &mockSync.Sync{IsSyncing: false},
+			HeadFetcher:           chain,
+			TimeFetcher:           chain,
+			OptimisticModeFetcher: chain,
+			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 		}
 		req := &ethpbv1.ProposerDutiesRequest{
 			Epoch: 0,
