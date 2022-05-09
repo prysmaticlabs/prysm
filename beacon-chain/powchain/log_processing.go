@@ -140,7 +140,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 
 	depositHash, err := depositData.HashTreeRoot()
 	if err != nil {
-		return errors.Wrap(err, "Unable to determine hashed value of deposit")
+		return errors.Wrap(err, "unable to determine hashed value of deposit")
 	}
 
 	// Defensive check to validate incoming index.
@@ -158,7 +158,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 	if !s.chainStartData.Chainstarted {
 		proof, err := s.depositTrie.MerkleProof(int(index))
 		if err != nil {
-			return errors.Wrap(err, "Unable to generate merkle proof for deposit")
+			return errors.Wrap(err, "unable to generate merkle proof for deposit")
 		}
 		deposit.Proof = proof
 	}
@@ -166,7 +166,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 	// We always store all historical deposits in the DB.
 	root, err := s.depositTrie.HashTreeRoot()
 	if err != nil {
-		return errors.Wrap(err, "Unable to determine root of deposit trie")
+		return errors.Wrap(err, "unable to determine root of deposit trie")
 	}
 	err = s.cfg.depositCache.InsertDeposit(ctx, deposit, depositLog.BlockNumber, index, root)
 	if err != nil {
@@ -177,7 +177,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 		s.chainStartData.ChainstartDeposits = append(s.chainStartData.ChainstartDeposits, deposit)
 		root, err := s.depositTrie.HashTreeRoot()
 		if err != nil {
-			return errors.Wrap(err, "Unable to determine root of deposit trie")
+			return errors.Wrap(err, "unable to determine root of deposit trie")
 		}
 		eth1Data := &ethpb.Eth1Data{
 			DepositRoot:  root[:],
@@ -190,7 +190,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethTypes.Lo
 	} else {
 		root, err := s.depositTrie.HashTreeRoot()
 		if err != nil {
-			return errors.Wrap(err, "Unable to determine root of deposit trie")
+			return errors.Wrap(err, "unable to determine root of deposit trie")
 		}
 		s.cfg.depositCache.InsertPendingDeposit(ctx, deposit, depositLog.BlockNumber, index, root)
 	}
@@ -236,14 +236,14 @@ func (s *Service) ProcessChainStart(genesisTime uint64, eth1BlockHash [32]byte, 
 	for i := range s.chainStartData.ChainstartDeposits {
 		proof, err := s.depositTrie.MerkleProof(i)
 		if err != nil {
-			log.Errorf("Unable to generate deposit proof %v", err)
+			log.Errorf("unable to generate deposit proof %v", err)
 		}
 		s.chainStartData.ChainstartDeposits[i].Proof = proof
 	}
 
 	root, err := s.depositTrie.HashTreeRoot()
 	if err != nil { // This should never happen.
-		log.WithError(err).Error("Unable to determine root of deposit trie, aborting chain start")
+		log.WithError(err).Error("unable to determine root of deposit trie, aborting chain start")
 		return
 	}
 	s.chainStartData.Eth1Data = &ethpb.Eth1Data{
