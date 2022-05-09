@@ -15,10 +15,10 @@ import (
 // RootsArrayHashTreeRoot computes the Merkle root of arrays of 32-byte hashes, such as [64][32]byte
 // according to the Simple Serialize specification of Ethereum.
 func RootsArrayHashTreeRoot(vals [][]byte, length uint64) ([32]byte, error) {
-	return arraysRoot(vals, length)
+	return ArraysRoot(vals, length)
 }
 
-func epochAttestationsRoot(atts []*ethpb.PendingAttestation) ([32]byte, error) {
+func EpochAttestationsRoot(atts []*ethpb.PendingAttestation) ([32]byte, error) {
 	max := uint64(fieldparams.CurrentEpochAttestationsLength)
 	if uint64(len(atts)) > max {
 		return [32]byte{}, fmt.Errorf("epoch attestation exceeds max length %d", max)

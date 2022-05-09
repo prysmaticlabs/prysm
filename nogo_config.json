@@ -147,11 +147,6 @@
       "shared/.*": "",
       "slasher/.*": "",
       "validator/.*": ""
-    },
-    "exclude_files": {
-      "beacon-chain/state/state-native/v1/generated.ssz.go": "Exclude generated SSZ file",
-      "beacon-chain/state/state-native/v2/generated.ssz.go": "Exclude generated SSZ file",
-      "beacon-chain/state/state-native/v3/generated.ssz.go": "Exclude generated SSZ file"
     }
   },
   "properpermissions": {

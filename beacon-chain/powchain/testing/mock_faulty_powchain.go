@@ -71,8 +71,3 @@ func (_ *FaultyMockPOWChain) ClearPreGenesisData() {
 func (_ *FaultyMockPOWChain) IsConnectedToETH1() bool {
 	return true
 }
-
-// BlockExistsWithCache --
-func (f *FaultyMockPOWChain) BlockExistsWithCache(ctx context.Context, hash common.Hash) (bool, *big.Int, error) {
-	return f.BlockExists(ctx, hash)
-}
