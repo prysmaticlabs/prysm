@@ -115,7 +115,13 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 			if err != nil {
 				return nil, err
 			}
-			_, err = s.notifyForkchoiceUpdate(ctx, &notifyForkchoiceUpdateArg{})
+			_, err = s.notifyForkchoiceUpdate(ctx, &notifyForkchoiceUpdateArg{
+				headState:     st,
+				headRoot:      r,
+				headBlock:     b.Block(),
+				justifiedRoot: arg.justifiedRoot,
+				finalizedRoot: arg.finalizedRoot,
+			})
 			if err != nil {
 				return nil, err
 			}

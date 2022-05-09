@@ -228,7 +228,14 @@ func Test_NotifyForkchoiceUpdateRecursive(t *testing.T) {
 	fc := &ethpb.Checkpoint{Epoch: 0, Root: bellatrixBlkRoot[:]}
 	service.store.SetFinalizedCheckpt(fc)
 	service.store.SetJustifiedCheckpt(fc)
-	_, err = service.notifyForkchoiceUpdate(ctx, st, b, service.headRoot(), bellatrixBlkRoot)
+	a := &notifyForkchoiceUpdateArg{
+		headState:     st,
+		headBlock:     b,
+		headRoot:      service.headRoot(),
+		justifiedRoot: bellatrixBlkRoot,
+		finalizedRoot: bellatrixBlkRoot,
+	}
+	_, err = service.notifyForkchoiceUpdate(ctx, a)
 
 	require.ErrorContains(t, "invalid finalized block on chain", err)
 }
