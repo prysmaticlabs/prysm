@@ -197,10 +197,16 @@ func (vs *Server) rebuildDepositTrie(ctx context.Context, canonicalEth1Data *eth
 
 // validate that the provided deposit trie matches up with the canonical eth1 data provided.
 func validateDepositTrie(trie *trie.SparseMerkleTrie, canonicalEth1Data *ethpb.Eth1Data) (bool, error) {
+	if trie == nil || canonicalEth1Data == nil {
+		return false, errors.New("nil trie or eth1data provided")
+	}
 	if trie.NumOfItems() != int(canonicalEth1Data.DepositCount) {
 		return false, errors.Errorf("wanted the canonical count of %d but received %d", canonicalEth1Data.DepositCount, trie.NumOfItems())
 	}
-	rt := trie.HashTreeRoot()
+	rt, err := trie.HashTreeRoot()
+	if err != nil {
+		return false, err
+	}
 	if !bytes.Equal(rt[:], canonicalEth1Data.DepositRoot) {
 		return false, errors.Errorf("wanted the canonical deposit root of %#x but received %#x", canonicalEth1Data.DepositRoot, rt)
 	}
