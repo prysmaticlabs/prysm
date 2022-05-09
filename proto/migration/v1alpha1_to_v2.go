@@ -257,6 +257,7 @@ func BeaconStateAltairToProto(altairState state.BeaconStateAltair) (*ethpbv2.Bea
 	sourceEth1Data := altairState.Eth1Data()
 	sourceEth1DataVotes := altairState.Eth1DataVotes()
 	sourceValidators := altairState.Validators()
+	sourceJustificationBits := altairState.JustificationBits()
 	sourcePrevJustifiedCheckpoint := altairState.PreviousJustifiedCheckpoint()
 	sourceCurrJustifiedCheckpoint := altairState.CurrentJustifiedCheckpoint()
 	sourceFinalizedCheckpoint := altairState.FinalizedCheckpoint()
@@ -336,7 +337,7 @@ func BeaconStateAltairToProto(altairState state.BeaconStateAltair) (*ethpbv2.Bea
 		Slashings:                  altairState.Slashings(),
 		PreviousEpochParticipation: bytesutil.SafeCopyBytes(sourcePrevEpochParticipation),
 		CurrentEpochParticipation:  bytesutil.SafeCopyBytes(sourceCurrEpochParticipation),
-		JustificationBits:          bytesutil.SafeCopyBytes(altairState.JustificationBits()),
+		JustificationBits:          bytesutil.SafeCopyBytes(sourceJustificationBits),
 		PreviousJustifiedCheckpoint: &ethpbv1.Checkpoint{
 			Epoch: sourcePrevJustifiedCheckpoint.Epoch,
 			Root:  bytesutil.SafeCopyBytes(sourcePrevJustifiedCheckpoint.Root),
@@ -370,6 +371,7 @@ func BeaconStateBellatrixToProto(st state.BeaconStateBellatrix) (*ethpbv2.Beacon
 	sourceEth1Data := st.Eth1Data()
 	sourceEth1DataVotes := st.Eth1DataVotes()
 	sourceValidators := st.Validators()
+	sourceJustificationBits := st.JustificationBits()
 	sourcePrevJustifiedCheckpoint := st.PreviousJustifiedCheckpoint()
 	sourceCurrJustifiedCheckpoint := st.CurrentJustifiedCheckpoint()
 	sourceFinalizedCheckpoint := st.FinalizedCheckpoint()
@@ -453,7 +455,7 @@ func BeaconStateBellatrixToProto(st state.BeaconStateBellatrix) (*ethpbv2.Beacon
 		Slashings:                  st.Slashings(),
 		PreviousEpochParticipation: bytesutil.SafeCopyBytes(sourcePrevEpochParticipation),
 		CurrentEpochParticipation:  bytesutil.SafeCopyBytes(sourceCurrEpochParticipation),
-		JustificationBits:          bytesutil.SafeCopyBytes(st.JustificationBits()),
+		JustificationBits:          bytesutil.SafeCopyBytes(sourceJustificationBits),
 		PreviousJustifiedCheckpoint: &ethpbv1.Checkpoint{
 			Epoch: sourcePrevJustifiedCheckpoint.Epoch,
 			Root:  bytesutil.SafeCopyBytes(sourcePrevJustifiedCheckpoint.Root),
