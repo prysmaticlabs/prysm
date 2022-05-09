@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/genesis"
+	state_native "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
@@ -204,7 +205,13 @@ func (s *Store) SaveStatesEfficient(ctx context.Context, states []state.ReadOnly
 			// look at issue https://github.com/prysmaticlabs/prysm/issues/9262.
 			switch rawType := states[i].InnerStateUnsafe().(type) {
 			case *ethpb.BeaconState:
-				pbState, err := v1.ProtobufBeaconState(rawType)
+				var pbState *ethpb.BeaconState
+				var err error
+				if features.Get().EnableNativeState {
+					pbState, err = state_native.ProtobufBeaconStatePhase0(rawType)
+				} else {
+					pbState, err = v1.ProtobufBeaconState(rawType)
+				}
 				if err != nil {
 					return err
 				}
@@ -225,7 +232,13 @@ func (s *Store) SaveStatesEfficient(ctx context.Context, states []state.ReadOnly
 					return err
 				}
 			case *ethpb.BeaconStateAltair:
-				pbState, err := v2.ProtobufBeaconState(rawType)
+				var pbState *ethpb.BeaconStateAltair
+				var err error
+				if features.Get().EnableNativeState {
+					pbState, err = state_native.ProtobufBeaconStateAltair(rawType)
+				} else {
+					pbState, err = v2.ProtobufBeaconState(rawType)
+				}
 				if err != nil {
 					return err
 				}
@@ -247,7 +260,13 @@ func (s *Store) SaveStatesEfficient(ctx context.Context, states []state.ReadOnly
 					return err
 				}
 			case *ethpb.BeaconStateBellatrix:
-				pbState, err := v3.ProtobufBeaconState(rawType)
+				var pbState *ethpb.BeaconStateBellatrix
+				var err error
+				if features.Get().EnableNativeState {
+					pbState, err = state_native.ProtobufBeaconStateBellatrix(rawType)
+				} else {
+					pbState, err = v3.ProtobufBeaconState(rawType)
+				}
 				if err != nil {
 					return err
 				}
@@ -274,32 +293,36 @@ func (s *Store) SaveStatesEfficient(ctx context.Context, states []state.ReadOnly
 		}
 
 		// store the validator entries separately to save space.
-		valBkt := tx.Bucket(stateValidatorsBucket)
-		for hashStr, validatorEntry := range validatorsEntries {
-			key := []byte(hashStr)
-			// if the entry is not in the cache and not in the DB,
-			// then insert it in the DB and add to the cache.
-			if _, ok := s.validatorEntryCache.Get(key); !ok {
-				validatorEntryCacheMiss.Inc()
-				if valEntry := valBkt.Get(key); valEntry == nil {
-					valBytes, encodeErr := encode(ctx, validatorEntry)
-					if encodeErr != nil {
-						return encodeErr
-					}
-					if putErr := valBkt.Put(key, valBytes); putErr != nil {
-						return putErr
-					}
-					s.validatorEntryCache.Set(key, validatorEntry, int64(len(valBytes)))
-				}
-			} else {
-				validatorEntryCacheHit.Inc()
-			}
-		}
-		return nil
+		return s.storeValidatorEntriesSeparately(ctx, tx, validatorsEntries)
 	}); err != nil {
 		return err
 	}
 
+	return nil
+}
+
+func (s *Store) storeValidatorEntriesSeparately(ctx context.Context, tx *bolt.Tx, validatorsEntries map[string]*ethpb.Validator) error {
+	valBkt := tx.Bucket(stateValidatorsBucket)
+	for hashStr, validatorEntry := range validatorsEntries {
+		key := []byte(hashStr)
+		// if the entry is not in the cache and not in the DB,
+		// then insert it in the DB and add to the cache.
+		if _, ok := s.validatorEntryCache.Get(key); !ok {
+			validatorEntryCacheMiss.Inc()
+			if valEntry := valBkt.Get(key); valEntry == nil {
+				valBytes, encodeErr := encode(ctx, validatorEntry)
+				if encodeErr != nil {
+					return encodeErr
+				}
+				if putErr := valBkt.Put(key, valBytes); putErr != nil {
+					return putErr
+				}
+				s.validatorEntryCache.Set(key, validatorEntry, int64(len(valBytes)))
+			}
+		} else {
+			validatorEntryCacheHit.Inc()
+		}
+	}
 	return nil
 }
 

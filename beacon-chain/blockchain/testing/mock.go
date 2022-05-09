@@ -450,3 +450,7 @@ func (s *ChainService) IsOptimistic(_ context.Context) (bool, error) {
 func (s *ChainService) IsOptimisticForRoot(_ context.Context, _ [32]byte) (bool, error) {
 	return s.Optimistic, nil
 }
+
+// ReceiveAttesterSlashing mocks the same method in the chain service.
+func (s *ChainService) ReceiveAttesterSlashing(context.Context, *ethpb.AttesterSlashing) {
+}
