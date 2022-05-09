@@ -107,9 +107,9 @@ func (s *Service) ForkchoiceUpdated(
 
 	d := time.Now().Add(payloadAndForkchoiceUpdatedTimeout)
 	ctx, cancel := context.WithDeadline(ctx, d)
+	defer cancel()
 	result := &ForkchoiceUpdatedResponse{}
 	err := s.rpcClient.CallContext(ctx, result, ForkchoiceUpdatedMethod, state, attrs)
-	cancel()
 	if err != nil {
 		return nil, nil, handleRPCError(err)
 	}
