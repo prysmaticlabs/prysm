@@ -24,7 +24,7 @@ var (
 	})
 )
 
-// hotStateCache is used to store the processed beacon state after finalized check point..
+// hotStateCache is used to store the processed beacon state after finalized check point.
 type hotStateCache struct {
 	cache *lru.Cache
 	lock  sync.RWMutex
@@ -39,10 +39,10 @@ func newHotStateCache() *hotStateCache {
 
 // Get returns a cached response via input block root, if any.
 // The response is copied by default.
-func (c *hotStateCache) get(root [32]byte) state.BeaconState {
+func (c *hotStateCache) get(blockRoot [32]byte) state.BeaconState {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
-	item, exists := c.cache.Get(root)
+	item, exists := c.cache.Get(blockRoot)
 
 	if exists && item != nil {
 		hotStateCacheHit.Inc()
@@ -52,8 +52,8 @@ func (c *hotStateCache) get(root [32]byte) state.BeaconState {
 	return nil
 }
 
-func (c *hotStateCache) ByRoot(root [32]byte) (state.BeaconState, error) {
-	st := c.get(root)
+func (c *hotStateCache) ByBlockRoot(r [32]byte) (state.BeaconState, error) {
+	st := c.get(r)
 	if st == nil {
 		return nil, ErrNotInCache
 	}
@@ -61,10 +61,10 @@ func (c *hotStateCache) ByRoot(root [32]byte) (state.BeaconState, error) {
 }
 
 // GetWithoutCopy returns a non-copied cached response via input block root.
-func (c *hotStateCache) getWithoutCopy(root [32]byte) state.BeaconState {
+func (c *hotStateCache) getWithoutCopy(blockRoot [32]byte) state.BeaconState {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
-	item, exists := c.cache.Get(root)
+	item, exists := c.cache.Get(blockRoot)
 	if exists && item != nil {
 		hotStateCacheHit.Inc()
 		return item.(state.BeaconState)
@@ -74,22 +74,22 @@ func (c *hotStateCache) getWithoutCopy(root [32]byte) state.BeaconState {
 }
 
 // put the response in the cache.
-func (c *hotStateCache) put(root [32]byte, state state.BeaconState) {
+func (c *hotStateCache) put(blockRoot [32]byte, state state.BeaconState) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	c.cache.Add(root, state)
+	c.cache.Add(blockRoot, state)
 }
 
 // has returns true if the key exists in the cache.
-func (c *hotStateCache) has(root [32]byte) bool {
+func (c *hotStateCache) has(blockRoot [32]byte) bool {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
-	return c.cache.Contains(root)
+	return c.cache.Contains(blockRoot)
 }
 
 // delete deletes the key exists in the cache.
-func (c *hotStateCache) delete(root [32]byte) bool {
+func (c *hotStateCache) delete(blockRoot [32]byte) bool {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	return c.cache.Remove(root)
+	return c.cache.Remove(blockRoot)
 }
