@@ -44,8 +44,9 @@ func TestGetBeaconStateV2(t *testing.T) {
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: fakeState,
 			},
-			HeadFetcher: &blockchainmock.ChainService{},
-			BeaconDB:    db,
+			HeadFetcher:           &blockchainmock.ChainService{},
+			OptimisticModeFetcher: &blockchainmock.ChainService{},
+			BeaconDB:              db,
 		}
 		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.StateRequestV2{
 			StateId: make([]byte, 0),
@@ -60,8 +61,9 @@ func TestGetBeaconStateV2(t *testing.T) {
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: fakeState,
 			},
-			HeadFetcher: &blockchainmock.ChainService{},
-			BeaconDB:    db,
+			HeadFetcher:           &blockchainmock.ChainService{},
+			OptimisticModeFetcher: &blockchainmock.ChainService{},
+			BeaconDB:              db,
 		}
 		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.StateRequestV2{
 			StateId: make([]byte, 0),
@@ -76,8 +78,9 @@ func TestGetBeaconStateV2(t *testing.T) {
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: fakeState,
 			},
-			HeadFetcher: &blockchainmock.ChainService{},
-			BeaconDB:    db,
+			HeadFetcher:           &blockchainmock.ChainService{},
+			OptimisticModeFetcher: &blockchainmock.ChainService{},
+			BeaconDB:              db,
 		}
 		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.StateRequestV2{
 			StateId: make([]byte, 0),
@@ -102,8 +105,9 @@ func TestGetBeaconStateV2(t *testing.T) {
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: fakeState,
 			},
-			HeadFetcher: &blockchainmock.ChainService{Optimistic: true},
-			BeaconDB:    db,
+			HeadFetcher:           &blockchainmock.ChainService{},
+			OptimisticModeFetcher: &blockchainmock.ChainService{Optimistic: true},
+			BeaconDB:              db,
 		}
 		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.StateRequestV2{
 			StateId: make([]byte, 0),

@@ -187,9 +187,10 @@ func TestServer_GetBlockHeader(t *testing.T) {
 		FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
 	}
 	bs := &Server{
-		BeaconDB:         beaconDB,
-		ChainInfoFetcher: mockChainService,
-		HeadFetcher:      mockChainService,
+		BeaconDB:              beaconDB,
+		ChainInfoFetcher:      mockChainService,
+		HeadFetcher:           mockChainService,
+		OptimisticModeFetcher: mockChainService,
 	}
 
 	tests := []struct {
@@ -287,9 +288,10 @@ func TestServer_GetBlockHeader(t *testing.T) {
 			Optimistic:          true,
 		}
 		bs := &Server{
-			BeaconDB:         beaconDB,
-			ChainInfoFetcher: mockChainService,
-			HeadFetcher:      mockChainService,
+			BeaconDB:              beaconDB,
+			ChainInfoFetcher:      mockChainService,
+			HeadFetcher:           mockChainService,
+			OptimisticModeFetcher: mockChainService,
 		}
 		header, err := bs.GetBlockHeader(ctx, &ethpbv1.BlockRequest{BlockId: []byte("head")})
 		require.NoError(t, err)

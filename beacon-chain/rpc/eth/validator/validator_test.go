@@ -82,9 +82,10 @@ func TestGetAttesterDuties(t *testing.T) {
 		State: bs, Root: genesisRoot[:], Slot: &chainSlot,
 	}
 	vs := &Server{
-		HeadFetcher: chain,
-		TimeFetcher: chain,
-		SyncChecker: &mockSync.Sync{IsSyncing: false},
+		HeadFetcher:           chain,
+		TimeFetcher:           chain,
+		SyncChecker:           &mockSync.Sync{IsSyncing: false},
+		OptimisticModeFetcher: chain,
 	}
 
 	t.Run("Single validator", func(t *testing.T) {
@@ -160,9 +161,10 @@ func TestGetAttesterDuties(t *testing.T) {
 			State: bs, Root: genesisRoot[:], Slot: &chainSlot,
 		}
 		vs := &Server{
-			HeadFetcher: chain,
-			TimeFetcher: chain,
-			SyncChecker: &mockSync.Sync{IsSyncing: false},
+			HeadFetcher:           chain,
+			TimeFetcher:           chain,
+			OptimisticModeFetcher: chain,
+			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 		}
 
 		req := &ethpbv1.AttesterDutiesRequest{
@@ -231,9 +233,10 @@ func TestGetAttesterDuties(t *testing.T) {
 			State: bs, Root: genesisRoot[:], Slot: &chainSlot, Optimistic: true,
 		}
 		vs := &Server{
-			HeadFetcher: chain,
-			TimeFetcher: chain,
-			SyncChecker: &mockSync.Sync{IsSyncing: false},
+			HeadFetcher:           chain,
+			TimeFetcher:           chain,
+			OptimisticModeFetcher: chain,
+			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 		}
 		req := &ethpbv1.AttesterDutiesRequest{
 			Epoch: 0,
