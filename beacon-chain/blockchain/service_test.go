@@ -221,7 +221,8 @@ func TestChainService_InitializeBeaconChain(t *testing.T) {
 	require.NoError(t, err)
 	trie, _, err := util.DepositTrieFromDeposits(deposits)
 	require.NoError(t, err)
-	hashTreeRoot := trie.HashTreeRoot()
+	hashTreeRoot, err := trie.HashTreeRoot()
+	require.NoError(t, err)
 	genState, err := transition.EmptyGenesisState()
 	require.NoError(t, err)
 	err = genState.SetEth1Data(&ethpb.Eth1Data{
