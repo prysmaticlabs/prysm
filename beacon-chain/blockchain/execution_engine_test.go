@@ -215,7 +215,7 @@ func Test_NotifyForkchoiceUpdateRecursive(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, fcs.InsertOptimisticBlock(ctx, 1, [32]byte{}, [32]byte{}, params.BeaconConfig().ZeroHash, 0, 0))
 
-	service.cfg.ExecutionEngineCaller = &mockPOW.EngineClient{ErrForkchoiceUpdated: powchain.ErrInvalidPayloadStatus}
+	service.cfg.ExecutionEngineCaller = &mockPOW.EngineClient{}
 	st, _ := util.DeterministicGenesisState(t, 1)
 	b, err := wrapper.WrappedBeaconBlock(&ethpb.BeaconBlockBellatrix{
 		Body: &ethpb.BeaconBlockBodyBellatrix{
@@ -236,8 +236,7 @@ func Test_NotifyForkchoiceUpdateRecursive(t *testing.T) {
 		finalizedRoot: bellatrixBlkRoot,
 	}
 	_, err = service.notifyForkchoiceUpdate(ctx, a)
-
-	require.ErrorContains(t, "invalid finalized block on chain", err)
+	require.NoError(t, err)
 }
 
 func Test_NotifyNewPayload(t *testing.T) {
