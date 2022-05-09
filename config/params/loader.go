@@ -26,7 +26,7 @@ func isMinimal(lines []string) bool {
 
 // LoadChainConfigFile load, convert hex values into valid param yaml format,
 // unmarshal , and apply beacon chain config file.
-func LoadChainConfigFile(chainConfigFileName string, conf *BeaconChainConfig) {
+func LoadChainConfigFile(chainConfigFileName string, conf *BeaconChainConfig) error {
 	yamlFile, err := os.ReadFile(chainConfigFileName) // #nosec G304
 	if err != nil {
 		log.WithError(err).Fatal("Failed to read chain config file.")
@@ -70,8 +70,7 @@ func LoadChainConfigFile(chainConfigFileName string, conf *BeaconChainConfig) {
 	// recompute SqrRootSlotsPerEpoch constant to handle non-standard values of SlotsPerEpoch
 	conf.SqrRootSlotsPerEpoch = types.Slot(math.IntegerSquareRoot(uint64(conf.SlotsPerEpoch)))
 	log.Debugf("Config file values: %+v", conf)
-	conf.InitializeForkSchedule()
-	OverrideBeaconConfig(conf)
+	return Registry.SetActive(conf)
 }
 
 // ReplaceHexStringWithYAMLFormat will replace hex strings that the yaml parser will understand.

@@ -23,11 +23,12 @@ func configureTracing(cliCtx *cli.Context) error {
 	)
 }
 
-func configureChainConfig(cliCtx *cli.Context) {
+func configureChainConfig(cliCtx *cli.Context) error {
 	if cliCtx.IsSet(cmd.ChainConfigFileFlag.Name) {
 		chainConfigFileName := cliCtx.String(cmd.ChainConfigFileFlag.Name)
-		params.LoadChainConfigFile(chainConfigFileName, nil)
+		return params.LoadChainConfigFile(chainConfigFileName, nil)
 	}
+	return nil
 }
 
 func configureHistoricalSlasher(cliCtx *cli.Context) {

@@ -111,10 +111,10 @@ func TestLoadConfigFile(t *testing.T) {
 	t.Run("mainnet", func(t *testing.T) {
 		mainnetPresetsFiles := presetsFilePath(t, "mainnet")
 		for _, fp := range mainnetPresetsFiles {
-			params.LoadChainConfigFile(fp, nil)
+			require.NoError(t, params.LoadChainConfigFile(fp, nil))
 		}
 		mainnetConfigFile := configFilePath(t, "mainnet")
-		params.LoadChainConfigFile(mainnetConfigFile, nil)
+		require.NoError(t, params.LoadChainConfigFile(mainnetConfigFile, nil))
 		fields := fieldsFromYamls(t, append(mainnetPresetsFiles, mainnetConfigFile))
 		assertVals("mainnet", fields, params.MainnetConfig(), params.BeaconConfig())
 	})
@@ -122,10 +122,10 @@ func TestLoadConfigFile(t *testing.T) {
 	t.Run("minimal", func(t *testing.T) {
 		minimalPresetsFiles := presetsFilePath(t, "minimal")
 		for _, fp := range minimalPresetsFiles {
-			params.LoadChainConfigFile(fp, nil)
+			require.NoError(t, params.LoadChainConfigFile(fp, nil))
 		}
 		minimalConfigFile := configFilePath(t, "minimal")
-		params.LoadChainConfigFile(minimalConfigFile, nil)
+		require.NoError(t, params.LoadChainConfigFile(minimalConfigFile, nil))
 		fields := fieldsFromYamls(t, append(minimalPresetsFiles, minimalConfigFile))
 		assertVals("minimal", fields, params.MinimalSpecConfig(), params.BeaconConfig())
 	})
@@ -133,10 +133,10 @@ func TestLoadConfigFile(t *testing.T) {
 	t.Run("e2e", func(t *testing.T) {
 		minimalPresetsFiles := presetsFilePath(t, "minimal")
 		for _, fp := range minimalPresetsFiles {
-			params.LoadChainConfigFile(fp, nil)
+			require.NoError(t, params.LoadChainConfigFile(fp, nil))
 		}
 		configFile := "testdata/e2e_config.yaml"
-		params.LoadChainConfigFile(configFile, nil)
+		require.NoError(t, params.LoadChainConfigFile(configFile, nil))
 		fields := fieldsFromYamls(t, append(minimalPresetsFiles, configFile))
 		assertVals("e2e", fields, params.E2ETestConfig(), params.BeaconConfig())
 	})
@@ -149,7 +149,7 @@ func TestLoadConfigFile_OverwriteCorrectly(t *testing.T) {
 	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 
 	// load empty config file, so that it defaults to mainnet values
-	params.LoadChainConfigFile(file.Name(), nil)
+	require.NoError(t, params.LoadChainConfigFile(file.Name(), nil))
 	if params.BeaconConfig().MinGenesisTime != params.MainnetConfig().MinGenesisTime {
 		t.Errorf("Expected MinGenesisTime to be set to mainnet value: %d found: %d",
 			params.MainnetConfig().MinGenesisTime,
@@ -241,7 +241,7 @@ func TestConfigParityYaml(t *testing.T) {
 	yamlObj := params.ConfigToYaml(testCfg)
 	assert.NoError(t, file.WriteFile(yamlDir, yamlObj))
 
-	params.LoadChainConfigFile(yamlDir, params.E2ETestConfig().Copy())
+	require.NoError(t, params.LoadChainConfigFile(yamlDir, params.E2ETestConfig().Copy()))
 	assert.DeepEqual(t, params.BeaconConfig(), testCfg)
 }
 
