@@ -143,6 +143,7 @@ func (s *Service) Stop() error {
 	defer s.cancel()
 
 	if s.cfg.StateGen != nil && s.head != nil && s.head.state != nil {
+		// Save the last finalized state so that starting up in the following run will be much faster.
 		if err := s.cfg.StateGen.ForceCheckpoint(s.ctx, s.head.state.FinalizedCheckpoint().Root); err != nil {
 			return err
 		}
