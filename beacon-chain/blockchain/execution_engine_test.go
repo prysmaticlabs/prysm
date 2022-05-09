@@ -539,7 +539,7 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 			&ethpb.Checkpoint{
 				Root:  jRoot[:],
 				Epoch: slots.ToEpoch(tt.justified.Block().Slot()),
-			}, [32]byte{})
+			}, [32]byte{'a'})
 		require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrappedParentBlock))
 
 		err = service.optimisticCandidateBlock(ctx, tt.blk)

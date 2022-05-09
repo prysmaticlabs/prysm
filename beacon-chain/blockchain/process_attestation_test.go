@@ -324,9 +324,9 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 	r := [32]byte{'g'}
 	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, s, r))
 
-	service.store.SetJustifiedCheckptAndPayloadHash(&ethpb.Checkpoint{Root: r[:]}, [32]byte{})
+	service.store.SetJustifiedCheckptAndPayloadHash(&ethpb.Checkpoint{Root: r[:]}, [32]byte{'a'})
 	service.store.SetBestJustifiedCheckpt(&ethpb.Checkpoint{Root: r[:]})
-	service.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{Root: r[:]}, [32]byte{})
+	service.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{Root: r[:]}, [32]byte{'b'})
 	service.store.SetPrevFinalizedCheckpt(&ethpb.Checkpoint{Root: r[:]})
 
 	r = bytesutil.ToBytes32([]byte{'A'})
@@ -358,9 +358,9 @@ func TestStore_SaveCheckpointState(t *testing.T) {
 	assert.Equal(t, 2*params.BeaconConfig().SlotsPerEpoch, s2.Slot(), "Unexpected state slot")
 
 	require.NoError(t, s.SetSlot(params.BeaconConfig().SlotsPerEpoch+1))
-	service.store.SetJustifiedCheckptAndPayloadHash(&ethpb.Checkpoint{Root: r[:]}, [32]byte{})
+	service.store.SetJustifiedCheckptAndPayloadHash(&ethpb.Checkpoint{Root: r[:]}, [32]byte{'a'})
 	service.store.SetBestJustifiedCheckpt(&ethpb.Checkpoint{Root: r[:]})
-	service.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{Root: r[:]}, [32]byte{})
+	service.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{Root: r[:]}, [32]byte{'b'})
 	service.store.SetPrevFinalizedCheckpt(&ethpb.Checkpoint{Root: r[:]})
 	cp3 := &ethpb.Checkpoint{Epoch: 1, Root: bytesutil.PadTo([]byte{'C'}, fieldparams.RootLength)}
 	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, s, bytesutil.ToBytes32([]byte{'C'})))

@@ -51,7 +51,7 @@ func TestFinalizedCheckpt_CanRetrieve(t *testing.T) {
 
 	cp := &ethpb.Checkpoint{Epoch: 5, Root: bytesutil.PadTo([]byte("foo"), 32)}
 	c := setupBeaconChain(t, beaconDB)
-	c.store.SetFinalizedCheckptAndPayloadHash(cp, [32]byte{})
+	c.store.SetFinalizedCheckptAndPayloadHash(cp, [32]byte{'a'})
 
 	assert.Equal(t, cp.Epoch, c.FinalizedCheckpt().Epoch, "Unexpected finalized epoch")
 }
@@ -62,7 +62,7 @@ func TestFinalizedCheckpt_GenesisRootOk(t *testing.T) {
 	genesisRoot := [32]byte{'A'}
 	cp := &ethpb.Checkpoint{Root: genesisRoot[:]}
 	c := setupBeaconChain(t, beaconDB)
-	c.store.SetFinalizedCheckptAndPayloadHash(cp, [32]byte{})
+	c.store.SetFinalizedCheckptAndPayloadHash(cp, [32]byte{'a'})
 	c.originBlockRoot = genesisRoot
 	assert.DeepEqual(t, c.originBlockRoot[:], c.FinalizedCheckpt().Root)
 }
