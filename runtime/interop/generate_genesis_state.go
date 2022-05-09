@@ -54,7 +54,10 @@ func GenerateGenesisStateFromDepositData(
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not generate deposits from the deposit data provided")
 	}
-	root := trie.HashTreeRoot()
+	root, err := trie.HashTreeRoot()
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "could not hash tree root of deposit trie")
+	}
 	if genesisTime == 0 {
 		genesisTime = uint64(time.Now().Unix())
 	}
