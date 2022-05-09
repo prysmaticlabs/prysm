@@ -42,8 +42,8 @@ type CanonicalHistory struct {
 	cache CachedGetter
 }
 
-func (ch *CanonicalHistory) ReplayerForSlot(target types.Slot) Replayer {
-	return &stateReplayer{chainer: ch, method: forSlot, target: target}
+func (c *CanonicalHistory) ReplayerForSlot(target types.Slot) Replayer {
+	return &stateReplayer{chainer: c, method: forSlot, target: target}
 }
 
 func (c *CanonicalHistory) BlockForSlot(ctx context.Context, target types.Slot) ([32]byte, interfaces.SignedBeaconBlock, error) {
@@ -134,9 +134,9 @@ func (c *CanonicalHistory) chainForSlot(ctx context.Context, target types.Slot) 
 	return s, descendants, nil
 }
 
-func (c *CanonicalHistory) getState(ctx context.Context, root [32]byte) (state.BeaconState, error) {
+func (c *CanonicalHistory) getState(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error) {
 	if c.cache != nil {
-		st, err := c.cache.ByRoot(root)
+		st, err := c.cache.ByBlockRoot(blockRoot)
 		if err == nil {
 			return st, nil
 		}
@@ -144,7 +144,7 @@ func (c *CanonicalHistory) getState(ctx context.Context, root [32]byte) (state.B
 			return nil, errors.Wrap(err, "error reading from state cache during state replay")
 		}
 	}
-	return c.h.StateOrError(ctx, root)
+	return c.h.StateOrError(ctx, blockRoot)
 }
 
 // ancestorChain works backwards through the chain lineage, accumulating blocks and checking for a saved state.
