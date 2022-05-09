@@ -310,8 +310,8 @@ func TestGetProposerDuties(t *testing.T) {
 			}
 		}
 		require.NotNil(t, expectedDuty, "Expected duty for slot 11 not found")
-		assert.Equal(t, types.ValidatorIndex(12289), expectedDuty.ValidatorIndex)
-		assert.DeepEqual(t, pubKeys[12289], expectedDuty.Pubkey)
+		assert.Equal(t, types.ValidatorIndex(9982), expectedDuty.ValidatorIndex)
+		assert.DeepEqual(t, pubKeys[9982], expectedDuty.Pubkey)
 	})
 
 	t.Run("Require slot processing", func(t *testing.T) {
@@ -439,10 +439,11 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 
 	mockChainService := &mockChain.ChainService{Genesis: genesisTime}
 	vs := &Server{
-		StateFetcher: &testutil.MockFetcher{BeaconState: st},
-		SyncChecker:  &mockSync.Sync{IsSyncing: false},
-		TimeFetcher:  mockChainService,
-		HeadFetcher:  mockChainService,
+		StateFetcher:          &testutil.MockFetcher{BeaconState: st},
+		SyncChecker:           &mockSync.Sync{IsSyncing: false},
+		TimeFetcher:           mockChainService,
+		HeadFetcher:           mockChainService,
+		OptimisticModeFetcher: mockChainService,
 	}
 
 	t.Run("Single validator", func(t *testing.T) {
@@ -577,10 +578,11 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 		}
 		mockChainService := &mockChain.ChainService{Genesis: genesisTime, Slot: &newSyncPeriodStartSlot}
 		vs := &Server{
-			StateFetcher: &testutil.MockFetcher{BeaconState: stateFetchFn(newSyncPeriodStartSlot)},
-			SyncChecker:  &mockSync.Sync{IsSyncing: false},
-			TimeFetcher:  mockChainService,
-			HeadFetcher:  mockChainService,
+			StateFetcher:          &testutil.MockFetcher{BeaconState: stateFetchFn(newSyncPeriodStartSlot)},
+			SyncChecker:           &mockSync.Sync{IsSyncing: false},
+			TimeFetcher:           mockChainService,
+			HeadFetcher:           mockChainService,
+			OptimisticModeFetcher: mockChainService,
 		}
 
 		req := &ethpbv2.SyncCommitteeDutiesRequest{
@@ -612,10 +614,11 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 
 		mockChainService := &mockChain.ChainService{Genesis: genesisTime, Optimistic: true}
 		vs := &Server{
-			StateFetcher: &testutil.MockFetcher{BeaconState: st},
-			SyncChecker:  &mockSync.Sync{IsSyncing: false},
-			TimeFetcher:  mockChainService,
-			HeadFetcher:  mockChainService,
+			StateFetcher:          &testutil.MockFetcher{BeaconState: st},
+			SyncChecker:           &mockSync.Sync{IsSyncing: false},
+			TimeFetcher:           mockChainService,
+			HeadFetcher:           mockChainService,
+			OptimisticModeFetcher: mockChainService,
 		}
 		req := &ethpbv2.SyncCommitteeDutiesRequest{
 			Epoch: 0,
@@ -630,9 +633,10 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 func TestGetSyncCommitteeDuties_SyncNotReady(t *testing.T) {
 	chainService := &mockChain.ChainService{}
 	vs := &Server{
-		SyncChecker: &mockSync.Sync{IsSyncing: true},
-		HeadFetcher: chainService,
-		TimeFetcher: chainService,
+		SyncChecker:           &mockSync.Sync{IsSyncing: true},
+		HeadFetcher:           chainService,
+		TimeFetcher:           chainService,
+		OptimisticModeFetcher: chainService,
 	}
 	_, err := vs.GetSyncCommitteeDuties(context.Background(), &ethpbv2.SyncCommitteeDutiesRequest{})
 	assert.ErrorContains(t, "Syncing to latest head, not ready to respond", err)
@@ -1032,6 +1036,7 @@ func TestProduceBlockV2(t *testing.T) {
 			},
 			TimeFetcher:            &mockChain.ChainService{},
 			HeadFetcher:            &mockChain.ChainService{State: beaconState, Root: parentRoot[:]},
+			OptimisticModeFetcher:  &mockChain.ChainService{},
 			SyncChecker:            &mockSync.Sync{IsSyncing: false},
 			BlockReceiver:          &mockChain.ChainService{},
 			ChainStartFetcher:      &mockPOW.POWChain{},
@@ -1433,6 +1438,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 			},
 			TimeFetcher:            &mockChain.ChainService{},
 			HeadFetcher:            &mockChain.ChainService{State: beaconState, Root: parentRoot[:]},
+			OptimisticModeFetcher:  &mockChain.ChainService{},
 			SyncChecker:            &mockSync.Sync{IsSyncing: false},
 			BlockReceiver:          &mockChain.ChainService{},
 			ChainStartFetcher:      &mockPOW.POWChain{},

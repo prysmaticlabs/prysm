@@ -80,13 +80,15 @@ func TestGetStateRoot(t *testing.T) {
 	require.NoError(t, err)
 	db := dbTest.SetupDB(t)
 
+	chainService := &chainMock.ChainService{}
 	server := &Server{
 		StateFetcher: &testutil.MockFetcher{
 			BeaconStateRoot: stateRoot[:],
 			BeaconState:     fakeState,
 		},
-		HeadFetcher: &chainMock.ChainService{},
-		BeaconDB:    db,
+		HeadFetcher:           chainService,
+		OptimisticModeFetcher: chainService,
+		BeaconDB:              db,
 	}
 
 	resp, err := server.GetStateRoot(context.Background(), &eth.StateRequest{
@@ -107,13 +109,15 @@ func TestGetStateRoot(t *testing.T) {
 		require.NoError(t, db.SaveBlock(ctx, wsb))
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
+		chainService := &chainMock.ChainService{Optimistic: true}
 		server := &Server{
 			StateFetcher: &testutil.MockFetcher{
 				BeaconStateRoot: stateRoot[:],
 				BeaconState:     fakeState,
 			},
-			HeadFetcher: &chainMock.ChainService{Optimistic: true},
-			BeaconDB:    db,
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			BeaconDB:              db,
 		}
 		resp, err := server.GetStateRoot(context.Background(), &eth.StateRequest{
 			StateId: make([]byte, 0),
@@ -138,12 +142,14 @@ func TestGetStateFork(t *testing.T) {
 	require.NoError(t, err)
 	db := dbTest.SetupDB(t)
 
+	chainService := &chainMock.ChainService{}
 	server := &Server{
 		StateFetcher: &testutil.MockFetcher{
 			BeaconState: fakeState,
 		},
-		HeadFetcher: &chainMock.ChainService{},
-		BeaconDB:    db,
+		HeadFetcher:           chainService,
+		OptimisticModeFetcher: chainService,
+		BeaconDB:              db,
 	}
 
 	resp, err := server.GetStateFork(ctx, &eth.StateRequest{
@@ -167,12 +173,14 @@ func TestGetStateFork(t *testing.T) {
 		require.NoError(t, db.SaveBlock(ctx, wsb))
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
+		chainService := &chainMock.ChainService{Optimistic: true}
 		server := &Server{
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: fakeState,
 			},
-			HeadFetcher: &chainMock.ChainService{Optimistic: true},
-			BeaconDB:    db,
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			BeaconDB:              db,
 		}
 		resp, err := server.GetStateFork(context.Background(), &eth.StateRequest{
 			StateId: make([]byte, 0),
@@ -204,12 +212,14 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 	require.NoError(t, err)
 	db := dbTest.SetupDB(t)
 
+	chainService := &chainMock.ChainService{}
 	server := &Server{
 		StateFetcher: &testutil.MockFetcher{
 			BeaconState: fakeState,
 		},
-		HeadFetcher: &chainMock.ChainService{},
-		BeaconDB:    db,
+		HeadFetcher:           chainService,
+		OptimisticModeFetcher: chainService,
+		BeaconDB:              db,
 	}
 
 	resp, err := server.GetFinalityCheckpoints(ctx, &eth.StateRequest{
@@ -235,12 +245,14 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 		require.NoError(t, db.SaveBlock(ctx, wsb))
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
+		chainService := &chainMock.ChainService{Optimistic: true}
 		server := &Server{
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: fakeState,
 			},
-			HeadFetcher: &chainMock.ChainService{Optimistic: true},
-			BeaconDB:    db,
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			BeaconDB:              db,
 		}
 		resp, err := server.GetFinalityCheckpoints(context.Background(), &eth.StateRequest{
 			StateId: make([]byte, 0),
