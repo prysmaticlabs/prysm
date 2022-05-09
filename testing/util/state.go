@@ -23,7 +23,7 @@ import (
 // It fills state and block roots with hex representations of natural numbers starting with 0.
 // Example: 16 becomes 0x00...0f.
 func FillRootsNaturalOpt(state *ethpb.BeaconState) error {
-	roots, err := prepareRoots()
+	roots, err := PrepareRoots(int(params.BeaconConfig().SlotsPerHistoricalRoot))
 	if err != nil {
 		return err
 	}
@@ -36,7 +36,7 @@ func FillRootsNaturalOpt(state *ethpb.BeaconState) error {
 // It fills state and block roots with hex representations of natural numbers starting with 0.
 // Example: 16 becomes 0x00...0f.
 func FillRootsNaturalOptAltair(state *ethpb.BeaconStateAltair) error {
-	roots, err := prepareRoots()
+	roots, err := PrepareRoots(int(params.BeaconConfig().SlotsPerHistoricalRoot))
 	if err != nil {
 		return err
 	}
@@ -49,7 +49,7 @@ func FillRootsNaturalOptAltair(state *ethpb.BeaconStateAltair) error {
 // It fills state and block roots with hex representations of natural numbers starting with 0.
 // Example: 16 becomes 0x00...0f.
 func FillRootsNaturalOptBellatrix(state *ethpb.BeaconStateBellatrix) error {
-	roots, err := prepareRoots()
+	roots, err := PrepareRoots(int(params.BeaconConfig().SlotsPerHistoricalRoot))
 	if err != nil {
 		return err
 	}
@@ -250,10 +250,11 @@ func filledByteSlice2D(length, innerLen uint64) [][]byte {
 	return b
 }
 
-func prepareRoots() ([][]byte, error) {
-	rootsLen := params.MainnetConfig().SlotsPerHistoricalRoot
-	roots := make([][]byte, rootsLen)
-	for i := types.Slot(0); i < rootsLen; i++ {
+// PrepareRoots returns a list of roots with hex representations of natural numbers starting with 0.
+// Example: 16 becomes 0x00...0f.
+func PrepareRoots(size int) ([][]byte, error) {
+	roots := make([][]byte, size)
+	for i := 0; i < size; i++ {
 		roots[i] = make([]byte, fieldparams.RootLength)
 	}
 	for j := 0; j < len(roots); j++ {

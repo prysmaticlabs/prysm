@@ -15,13 +15,13 @@ func TestSaveOrigin(t *testing.T) {
 	// Embedded Genesis works with Mainnet config
 	params.SetupTestConfigCleanup(t)
 	cfg := params.BeaconConfig()
-	cfg.ConfigName = params.ConfigNames[params.Mainnet]
+	cfg.ConfigName = params.MainnetName
 	params.OverrideBeaconConfig(cfg)
 
 	ctx := context.Background()
 	db := setupDB(t)
 
-	st, err := genesis.State(params.Mainnet.String())
+	st, err := genesis.State(params.MainnetName)
 	require.NoError(t, err)
 
 	sb, err := st.MarshalSSZ()
@@ -42,4 +42,8 @@ func TestSaveOrigin(t *testing.T) {
 	cbb, err := scb.MarshalSSZ()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveOrigin(ctx, csb, cbb))
+
+	broot, err := scb.Block().HashTreeRoot()
+	require.NoError(t, err)
+	require.Equal(t, true, db.IsFinalizedBlock(ctx, broot))
 }

@@ -14,45 +14,29 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
-type testArgs struct {
-	usePrysmSh          bool
-	useWeb3RemoteSigner bool
-}
-
 func TestEndToEnd_MinimalConfig(t *testing.T) {
-	e2eMinimal(t, &testArgs{
-		usePrysmSh:          false,
-		useWeb3RemoteSigner: false,
-	})
+	e2eMinimal(t, false, 3)
 }
 
 func TestEndToEnd_MinimalConfig_Web3Signer(t *testing.T) {
-	e2eMinimal(t, &testArgs{
-		usePrysmSh:          false,
-		useWeb3RemoteSigner: true,
-	})
+	e2eMinimal(t, true, 0)
 }
 
-func e2eMinimal(t *testing.T, args *testArgs) {
+func e2eMinimal(t *testing.T, useWeb3RemoteSigner bool, extraEpochs uint64) {
 	params.UseE2EConfig()
 	require.NoError(t, e2eParams.Init(e2eParams.StandardBeaconCount))
 
 	// Run for 12 epochs if not in long-running to confirm long-running has no issues.
 	var err error
-	epochsToRun := 12
+	epochsToRun := 10
 	epochStr, longRunning := os.LookupEnv("E2E_EPOCHS")
 	if longRunning {
 		epochsToRun, err = strconv.Atoi(epochStr)
 		require.NoError(t, err)
 	}
 	// TODO(#10053): Web3signer does not support bellatrix yet.
-	if args.useWeb3RemoteSigner {
+	if useWeb3RemoteSigner {
 		epochsToRun = helpers.BellatrixE2EForkEpoch - 1
-	}
-	if args.usePrysmSh {
-		// If using prysm.sh, run for only 6 epochs.
-		// TODO(#9166): remove this block once v2 changes are live.
-		epochsToRun = helpers.AltairE2EForkEpoch - 1
 	}
 	seed := 0
 	seedStr, isValid := os.LookupEnv("E2E_SEED")
@@ -99,12 +83,13 @@ func e2eMinimal(t *testing.T, args *testArgs) {
 		TestSync:            true,
 		TestFeature:         true,
 		TestDeposits:        true,
-		UsePrysmShValidator: args.usePrysmSh,
+		UsePrysmShValidator: false,
 		UsePprof:            !longRunning,
-		UseWeb3RemoteSigner: args.useWeb3RemoteSigner,
+		UseWeb3RemoteSigner: useWeb3RemoteSigner,
 		TracingSinkEndpoint: tracingEndpoint,
 		Evaluators:          evals,
 		Seed:                int64(seed),
+		ExtraEpochs:         extraEpochs,
 	}
 
 	newTestRunner(t, testConfig).run()
