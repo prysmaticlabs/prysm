@@ -161,12 +161,11 @@ func (s *Service) ExchangeTransitionConfiguration(
 	cfg.TerminalBlockNumber = zeroBigNum.Bytes()
 	d := time.Now().Add(defaultTimeout)
 	ctx, cancel := context.WithDeadline(ctx, d)
+	defer cancel()
 	result := &pb.TransitionConfiguration{}
 	if err := s.rpcClient.CallContext(ctx, result, ExchangeTransitionConfigurationMethod, cfg); err != nil {
-		cancel()
 		return handleRPCError(err)
 	}
-	cancel()
 
 	// We surface an error to the user if local configuration settings mismatch
 	// according to the response from the execution node.
