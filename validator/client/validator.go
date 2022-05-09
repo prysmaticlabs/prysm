@@ -998,7 +998,6 @@ func (v *validator) feeRecipients(ctx context.Context, pubkeys [][fieldparams.BL
 		}
 		if v.feeRecipientConfig.DefaultConfig != nil {
 			feeRecipient = v.feeRecipientConfig.DefaultConfig.FeeRecipient
-
 		}
 		if v.feeRecipientConfig.ProposeConfig != nil {
 			option, ok := v.feeRecipientConfig.ProposeConfig[key]
