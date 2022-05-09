@@ -17,15 +17,15 @@ var Registry *registry
 
 type registry struct {
 	sync.RWMutex
-	active *BeaconChainConfig
+	active        *BeaconChainConfig
 	versionToName map[[fieldparams.VersionLength]byte]string
-	nameToConfig map[string]*BeaconChainConfig
+	nameToConfig  map[string]*BeaconChainConfig
 }
 
 func NewRegistry(configs ...*BeaconChainConfig) *registry {
 	r := &registry{
 		versionToName: make(map[[fieldparams.VersionLength]byte]string),
-		nameToConfig: make(map[string]*BeaconChainConfig),
+		nameToConfig:  make(map[string]*BeaconChainConfig),
 	}
 	for _, c := range configs {
 		if err := r.Add(c); err != nil {
