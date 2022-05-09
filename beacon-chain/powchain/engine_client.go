@@ -36,7 +36,7 @@ const (
 	// Defines the seconds to wait before timing out engine endpoints with block execution semantics (newPayload, forkchoiceUpdated).
 	payloadAndForkchoiceUpdatedTimeout = 8 * time.Second
 	// Defines the seconds before timing out engine endpoints with non-block execution semantics.
-	defaultTimeout = time.Second
+	defaultEngineTimeout = time.Second
 )
 
 // ForkchoiceUpdatedResponse is the response kind received by the
@@ -141,7 +141,7 @@ func (s *Service) GetPayload(ctx context.Context, payloadId [8]byte) (*pb.Execut
 		getPayloadLatency.Observe(float64(time.Since(start).Milliseconds()))
 	}()
 
-	d := time.Now().Add(defaultTimeout)
+	d := time.Now().Add(defaultEngineTimeout)
 	ctx, cancel := context.WithDeadline(ctx, d)
 	defer cancel()
 	result := &pb.ExecutionPayload{}
@@ -159,7 +159,7 @@ func (s *Service) ExchangeTransitionConfiguration(
 	// We set terminal block number to 0 as the parameter is not set on the consensus layer.
 	zeroBigNum := big.NewInt(0)
 	cfg.TerminalBlockNumber = zeroBigNum.Bytes()
-	d := time.Now().Add(defaultTimeout)
+	d := time.Now().Add(defaultEngineTimeout)
 	ctx, cancel := context.WithDeadline(ctx, d)
 	defer cancel()
 	result := &pb.TransitionConfiguration{}
