@@ -30,7 +30,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	nativev1 "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/v1"
+	native "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/config/features"
@@ -273,7 +273,7 @@ func (s *Service) Stop() error {
 func (s *Service) ClearPreGenesisData() {
 	s.chainStartData.ChainstartDeposits = []*ethpb.Deposit{}
 	if features.Get().EnableNativeState {
-		s.preGenesisState = &nativev1.BeaconState{}
+		s.preGenesisState = &native.BeaconState{}
 	} else {
 		s.preGenesisState = &v1.BeaconState{}
 	}
@@ -703,10 +703,38 @@ func (s *Service) cacheHeadersForEth1DataVote(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	// We call batchRequestHeaders for its header caching side-effect, so we don't need the return value.
-	_, err = s.batchRequestHeaders(start, end)
-	if err != nil {
-		return err
+	return s.cacheBlockHeaders(start, end)
+}
+
+// Caches block headers from the desired range.
+func (s *Service) cacheBlockHeaders(start, end uint64) error {
+	batchSize := s.cfg.eth1HeaderReqLimit
+	for i := start; i < end; i += batchSize {
+		startReq := i
+		endReq := i + batchSize
+		if endReq > end {
+			endReq = end
+		}
+		// We call batchRequestHeaders for its header caching side-effect, so we don't need the return value.
+		_, err := s.batchRequestHeaders(startReq, endReq)
+		if err != nil {
+			if clientTimedOutError(err) {
+				// Reduce batch size as eth1 node is
+				// unable to respond to the request in time.
+				batchSize /= 2
+				// Always have it greater than 0.
+				if batchSize == 0 {
+					batchSize += 1
+				}
+
+				// Reset request value
+				if i > batchSize {
+					i -= batchSize
+				}
+				continue
+			}
+			return err
+		}
 	}
 	return nil
 }
@@ -802,7 +830,13 @@ func (s *Service) ensureValidPowchainData(ctx context.Context) error {
 		return errors.Wrap(err, "unable to retrieve eth1 data")
 	}
 	if eth1Data == nil || !eth1Data.ChainstartData.Chainstarted || !validateDepositContainers(eth1Data.DepositContainers) {
-		pbState, err := v1.ProtobufBeaconState(s.preGenesisState.InnerStateUnsafe())
+		var pbState *ethpb.BeaconState
+		var err error
+		if features.Get().EnableNativeState {
+			pbState, err = native.ProtobufBeaconStatePhase0(s.preGenesisState.InnerStateUnsafe())
+		} else {
+			pbState, err = v1.ProtobufBeaconState(s.preGenesisState.InnerStateUnsafe())
+		}
 		if err != nil {
 			return err
 		}

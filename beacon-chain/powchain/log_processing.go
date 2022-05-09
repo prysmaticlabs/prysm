@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math/big"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum"
@@ -16,7 +17,9 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	coreState "github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
+	state_native "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
@@ -37,9 +40,15 @@ const depositlogRequestLimit = 10000
 const additiveFactorMultiplier = 0.10
 const multiplicativeDecreaseDivisor = 2
 
+var errTimedOut = errors.New("net/http: request canceled")
+
 func tooMuchDataRequestedError(err error) bool {
 	// this error is only infura specific (other providers might have different error messages)
 	return err.Error() == "query returned more than 10000 results"
+}
+
+func clientTimedOutError(err error) bool {
+	return strings.Contains(err.Error(), errTimedOut.Error())
 }
 
 // Eth2GenesisPowchainInfo retrieves the genesis time and eth1 block number of the beacon chain
@@ -524,7 +533,13 @@ func (s *Service) checkForChainstart(ctx context.Context, blockHash [32]byte, bl
 
 // save all powchain related metadata to disk.
 func (s *Service) savePowchainData(ctx context.Context) error {
-	pbState, err := v1.ProtobufBeaconState(s.preGenesisState.InnerStateUnsafe())
+	var pbState *ethpb.BeaconState
+	var err error
+	if features.Get().EnableNativeState {
+		pbState, err = state_native.ProtobufBeaconStatePhase0(s.preGenesisState.InnerStateUnsafe())
+	} else {
+		pbState, err = v1.ProtobufBeaconState(s.preGenesisState.InnerStateUnsafe())
+	}
 	if err != nil {
 		return err
 	}

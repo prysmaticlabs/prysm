@@ -106,7 +106,7 @@ func weighJustificationAndFinalization(state state.BeaconState,
 		if err := state.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{Epoch: prevEpoch, Root: blockRoot}); err != nil {
 			return nil, err
 		}
-		newBits := state.JustificationBits()
+		newBits = state.JustificationBits()
 		newBits.SetBitAt(1, true)
 		if err := state.SetJustificationBits(newBits); err != nil {
 			return nil, err
@@ -122,7 +122,7 @@ func weighJustificationAndFinalization(state state.BeaconState,
 		if err := state.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{Epoch: currentEpoch, Root: blockRoot}); err != nil {
 			return nil, err
 		}
-		newBits := state.JustificationBits()
+		newBits = state.JustificationBits()
 		newBits.SetBitAt(0, true)
 		if err := state.SetJustificationBits(newBits); err != nil {
 			return nil, err
