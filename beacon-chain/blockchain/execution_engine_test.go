@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -199,7 +200,9 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 func Test_NotifyForkchoiceUpdateRecursive(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-	bellatrixBlk, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlockBellatrix())
+	b := util.NewBeaconBlockBellatrix()
+	b.Block.Body.ExecutionPayload.BlockNumber = 1
+	bellatrixBlk, err := wrapper.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)
 	bellatrixBlkRoot, err := bellatrixBlk.Block().HashTreeRoot()
 	require.NoError(t, err)
@@ -214,12 +217,12 @@ func Test_NotifyForkchoiceUpdateRecursive(t *testing.T) {
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 	require.NoError(t, fcs.InsertOptimisticBlock(ctx, 1, [32]byte{}, [32]byte{}, params.BeaconConfig().ZeroHash, 0, 0))
-
-	service.cfg.ExecutionEngineCaller = &mockPOW.EngineClient{}
+	pb := &v1.PayloadIDBytes{'a'}
+	service.cfg.ExecutionEngineCaller = &mockPOW.EngineClient{ErrForkchoiceUpdated: powchain.ErrInvalidPayloadStatus, PayloadIDBytes: pb}
 	st, _ := util.DeterministicGenesisState(t, 1)
-	b, err := wrapper.WrappedBeaconBlock(&ethpb.BeaconBlockBellatrix{
+	wb, err := wrapper.WrappedBeaconBlock(&ethpb.BeaconBlockBellatrix{
 		Body: &ethpb.BeaconBlockBodyBellatrix{
-			ExecutionPayload: &v1.ExecutionPayload{},
+			ExecutionPayload: &v1.ExecutionPayload{BlockNumber: 1},
 		},
 	})
 	require.NoError(t, err)
@@ -230,13 +233,14 @@ func Test_NotifyForkchoiceUpdateRecursive(t *testing.T) {
 	service.store.SetJustifiedCheckpt(fc)
 	a := &notifyForkchoiceUpdateArg{
 		headState:     st,
-		headBlock:     b,
+		headBlock:     wb,
 		headRoot:      service.headRoot(),
 		justifiedRoot: bellatrixBlkRoot,
 		finalizedRoot: bellatrixBlkRoot,
 	}
-	_, err = service.notifyForkchoiceUpdate(ctx, a)
-	require.NoError(t, err)
+	gotPb, err := service.notifyForkchoiceUpdate(ctx, a)
+	require.Equal(t, true, errors.Is(err, ErrInvalidPayload))
+	require.Equal(t, pb, gotPb)
 }
 
 func Test_NotifyNewPayload(t *testing.T) {

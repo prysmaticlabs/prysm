@@ -39,7 +39,9 @@ func (e *EngineClient) NewPayload(_ context.Context, _ *pb.ExecutionPayload) ([]
 func (e *EngineClient) ForkchoiceUpdated(
 	_ context.Context, _ *pb.ForkchoiceState, _ *pb.PayloadAttributes,
 ) (*pb.PayloadIDBytes, []byte, error) {
-	return e.PayloadIDBytes, e.ForkChoiceUpdatedResp, e.ErrForkchoiceUpdated
+	err := e.ErrForkchoiceUpdated
+	e.ErrForkchoiceUpdated = nil // clear out error after every call.
+	return e.PayloadIDBytes, e.ForkChoiceUpdatedResp, err
 }
 
 // GetPayload --

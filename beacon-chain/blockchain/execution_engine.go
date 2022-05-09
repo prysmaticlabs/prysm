@@ -115,7 +115,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 			if err != nil {
 				return nil, err
 			}
-			_, err = s.notifyForkchoiceUpdate(ctx, &notifyForkchoiceUpdateArg{
+			pid, err := s.notifyForkchoiceUpdate(ctx, &notifyForkchoiceUpdateArg{
 				headState:     st,
 				headRoot:      r,
 				headBlock:     b.Block(),
@@ -131,7 +131,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 				"blockRoot":    fmt.Sprintf("%#x", headRoot),
 				"invalidCount": len(invalidRoots),
 			}).Warn("Pruned invalid blocks")
-			return nil, ErrInvalidPayload
+			return pid, ErrInvalidPayload
 
 		default:
 			return nil, errors.WithMessage(ErrUndefinedExecutionEngineError, err.Error())
