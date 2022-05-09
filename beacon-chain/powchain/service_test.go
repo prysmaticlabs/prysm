@@ -12,7 +12,9 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
@@ -842,4 +844,51 @@ func TestETH1Endpoints(t *testing.T) {
 
 	// Check endpoints are all present.
 	assert.DeepSSZEqual(t, endpoints, s1.ETH1Endpoints(), "Unexpected http endpoint slice")
+}
+
+func TestService_CacheBlockHeaders(t *testing.T) {
+	rClient := &slowRPCClient{limit: 1000}
+	s := &Service{
+		cfg:         &config{eth1HeaderReqLimit: 1000},
+		rpcClient:   rClient,
+		headerCache: newHeaderCache(),
+	}
+	assert.NoError(t, s.cacheBlockHeaders(1, 1000))
+	assert.Equal(t, 1, rClient.numOfCalls)
+	// Reset Num of Calls
+	rClient.numOfCalls = 0
+
+	assert.NoError(t, s.cacheBlockHeaders(1000, 3000))
+	// 1000 - 2000 would be 1001 headers which is higher than our request limit, it
+	// is then reduced to 500 and tried again.
+	assert.Equal(t, 5, rClient.numOfCalls)
+}
+
+type slowRPCClient struct {
+	limit      int
+	numOfCalls int
+}
+
+func (s *slowRPCClient) Close() {
+	panic("implement me")
+}
+
+func (s *slowRPCClient) BatchCall(b []rpc.BatchElem) error {
+	s.numOfCalls++
+	if len(b) > s.limit {
+		return errTimedOut
+	}
+	for _, e := range b {
+		num, err := hexutil.DecodeBig(e.Args[0].(string))
+		if err != nil {
+			return err
+		}
+		h := &gethTypes.Header{Number: num}
+		*e.Result.(*gethTypes.Header) = *h
+	}
+	return nil
+}
+
+func (s *slowRPCClient) CallContext(ctx context.Context, result interface{}, method string, args ...interface{}) error {
+	panic("implement me")
 }
