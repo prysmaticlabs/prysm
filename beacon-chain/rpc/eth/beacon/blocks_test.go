@@ -593,11 +593,10 @@ func TestServer_SubmitBlockSSZ_OK(t *testing.T) {
 		wsb, err = wrapper.WrappedSignedBeaconBlock(req)
 		require.NoError(t, err)
 		require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
-		blockSsz, err := v1Block.Block.MarshalSSZ()
+		blockSsz, err := v1Block.MarshalSSZ()
 		require.NoError(t, err)
 		blockReq := &ethpbv2.SignedBeaconBlockSSZContainer{
-			Data:      blockSsz,
-			Signature: v1Block.Signature,
+			Data: blockSsz,
 		}
 		md := metadata.MD{}
 		md.Set("Eth-Consensus-Version", "phase0")
@@ -635,7 +634,7 @@ func TestServer_SubmitBlockSSZ_OK(t *testing.T) {
 		req := util.NewBeaconBlockAltair()
 		req.Block.Slot = 5
 		req.Block.ParentRoot = bsRoot[:]
-		v2Block, err := migration.V1Alpha1BeaconBlockAltairToV2(req.Block)
+		v2Block, err := migration.V1Alpha1SignedBeaconBlockAltairToV2(req)
 		require.NoError(t, err)
 		wrapped, err = wrapper.WrappedSignedBeaconBlock(req)
 		require.NoError(t, err)
@@ -643,8 +642,7 @@ func TestServer_SubmitBlockSSZ_OK(t *testing.T) {
 		blockSsz, err := v2Block.MarshalSSZ()
 		require.NoError(t, err)
 		blockReq := &ethpbv2.SignedBeaconBlockSSZContainer{
-			Data:      blockSsz,
-			Signature: req.Signature,
+			Data: blockSsz,
 		}
 		md := metadata.MD{}
 		md.Set("Eth-Consensus-Version", "altair")
@@ -682,7 +680,7 @@ func TestServer_SubmitBlockSSZ_OK(t *testing.T) {
 		req := util.NewBeaconBlockBellatrix()
 		req.Block.Slot = 5
 		req.Block.ParentRoot = bsRoot[:]
-		v2Block, err := migration.V1Alpha1BeaconBlockBellatrixToV2(req.Block)
+		v2Block, err := migration.V1Alpha1SignedBeaconBlockBellatrixToV2(req)
 		require.NoError(t, err)
 		wrapped, err = wrapper.WrappedSignedBeaconBlock(req)
 		require.NoError(t, err)
@@ -690,8 +688,7 @@ func TestServer_SubmitBlockSSZ_OK(t *testing.T) {
 		blockSsz, err := v2Block.MarshalSSZ()
 		require.NoError(t, err)
 		blockReq := &ethpbv2.SignedBeaconBlockSSZContainer{
-			Data:      blockSsz,
-			Signature: req.Signature,
+			Data: blockSsz,
 		}
 		md := metadata.MD{}
 		md.Set("Eth-Consensus-Version", "bellatrix")
