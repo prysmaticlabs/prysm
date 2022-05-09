@@ -11,7 +11,7 @@ var beaconConfig = MainnetConfig()
 
 // BeaconConfig retrieves beacon chain config.
 func BeaconConfig() *BeaconChainConfig {
-	return beaconConfig
+	return Registry.GetActive()
 }
 
 // OverrideBeaconConfig by replacing the config. The preferred pattern is to
@@ -19,14 +19,11 @@ func BeaconConfig() *BeaconChainConfig {
 // OverrideBeaconConfig(c). Any subsequent calls to params.BeaconConfig() will
 // return this new configuration.
 func OverrideBeaconConfig(c *BeaconChainConfig) {
-	beaconConfig = c
+	Registry.active = c
 }
 
 // Copy returns a copy of the config object.
 func (b *BeaconChainConfig) Copy() *BeaconChainConfig {
-	config, ok := deepcopy.Copy(*b).(BeaconChainConfig)
-	if !ok {
-		config = *beaconConfig
-	}
+	config := deepcopy.Copy(*b).(BeaconChainConfig)
 	return &config
 }
