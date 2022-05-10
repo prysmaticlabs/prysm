@@ -85,7 +85,7 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []interfaces.Sig
 	defer span.End()
 
 	// Apply state transition on the incoming newly received block batches, one by one.
-	fCheckpoints, jCheckpoints, err := s.onBlockBatch(ctx, blocks, blkRoots)
+	_, _, err := s.onBlockBatch(ctx, blocks, blkRoots)
 	if err != nil {
 		err := errors.Wrap(err, "could not process block in batch")
 		tracing.AnnotateError(span, err)
@@ -94,10 +94,6 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []interfaces.Sig
 
 	for i, b := range blocks {
 		blockCopy := b.Copy()
-		if err = s.handleBlockAfterBatchVerify(ctx, blockCopy, blkRoots[i], fCheckpoints[i], jCheckpoints[i]); err != nil {
-			tracing.AnnotateError(span, err)
-			return err
-		}
 		// Send notification of the processed block to the state feed.
 		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.BlockProcessed,
