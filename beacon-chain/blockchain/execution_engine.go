@@ -108,11 +108,9 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 				return nil, err
 			}
 			pid, err := s.notifyForkchoiceUpdate(ctx, &notifyForkchoiceUpdateArg{
-				headState:     st,
-				headRoot:      r,
-				headBlock:     b.Block(),
-				justifiedRoot: arg.justifiedRoot,
-				finalizedRoot: arg.finalizedRoot,
+				headState: st,
+				headRoot:  r,
+				headBlock: b.Block(),
 			})
 			if err != nil {
 				return nil, err
