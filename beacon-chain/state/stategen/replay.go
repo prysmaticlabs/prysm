@@ -114,7 +114,7 @@ func (s *State) LoadBlocks(ctx context.Context, startSlot, endSlot types.Slot, e
 	}
 
 	if blockRoots[length-1] != endBlockRoot {
-		return nil, errors.New("end block roots don't match")
+		return nil, errors.Errorf("end block roots don't match: got %#x but wanted %#x for %d to %d at length %d", blockRoots[length-1], endBlockRoot, startSlot, endSlot, length)
 	}
 
 	filteredBlocks := []interfaces.SignedBeaconBlock{blocks[length-1]}

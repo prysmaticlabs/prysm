@@ -145,6 +145,8 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 		"--" + cmdshared.E2EConfigFlag.Name,
 		"--" + cmdshared.AcceptTosFlag.Name,
 	}
+	args = append(args, "--pprof", fmt.Sprintf("--pprofport=%d", e2e.TestParams.Ports.PrysmBeaconNodePprofPort+20+index))
+
 	// Only apply e2e flags to the current branch. New flags may not exist in previous release.
 	if !v.config.UsePrysmShValidator {
 		args = append(args, features.E2EValidatorFlags...)

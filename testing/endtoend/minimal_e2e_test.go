@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/config/params"
-	ev "github.com/prysmaticlabs/prysm/testing/endtoend/evaluators"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
 	e2eParams "github.com/prysmaticlabs/prysm/testing/endtoend/params"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/types"
@@ -47,28 +46,6 @@ func e2eMinimal(t *testing.T, useWeb3RemoteSigner bool, extraEpochs uint64) {
 	tracingPort := e2eParams.TestParams.Ports.JaegerTracingPort
 	tracingEndpoint := fmt.Sprintf("127.0.0.1:%d", tracingPort)
 	evals := []types.Evaluator{
-		ev.PeersConnect,
-		ev.HealthzCheck,
-		ev.MetricsCheck,
-		ev.ValidatorsAreActive,
-		ev.ValidatorsParticipatingAtEpoch(2),
-		ev.FinalizationOccurs(3),
-		ev.PeersCheck,
-		ev.ProcessesDepositsInBlocks,
-		ev.VerifyBlockGraffiti,
-		ev.ActivatesDepositedValidators,
-		ev.DepositedValidatorsAreActive,
-		ev.ProposeVoluntaryExit,
-		ev.ValidatorHasExited,
-		ev.ValidatorsVoteWithTheMajority,
-		ev.ColdStateCheckpoint,
-		ev.AltairForkTransition,
-		ev.BellatrixForkTransition,
-		ev.APIMiddlewareVerifyIntegrity,
-		ev.APIGatewayV1Alpha1VerifyIntegrity,
-		ev.FinishedSyncing,
-		ev.AllNodesHaveSameHead,
-		ev.ValidatorSyncParticipation,
 		//ev.TransactionsPresent, TODO: Renable Transaction evaluator once it tx pool issues are fixed.
 	}
 	testConfig := &types.E2EConfig{
