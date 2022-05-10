@@ -430,7 +430,11 @@ func TestFinalizedDeposits_DepositsCachedCorrectly(t *testing.T) {
 	}
 	trie, err := trie.GenerateTrieFromItems(deps, params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not generate deposit trie")
-	assert.Equal(t, trie.HashTreeRoot(), cachedDeposits.Deposits.HashTreeRoot())
+	rootA, err := trie.HashTreeRoot()
+	require.NoError(t, err)
+	rootB, err := cachedDeposits.Deposits.HashTreeRoot()
+	require.NoError(t, err)
+	assert.Equal(t, rootA, rootB)
 }
 
 func TestFinalizedDeposits_UtilizesPreviouslyCachedDeposits(t *testing.T) {
@@ -488,7 +492,11 @@ func TestFinalizedDeposits_UtilizesPreviouslyCachedDeposits(t *testing.T) {
 	}
 	trie, err := trie.GenerateTrieFromItems(deps, params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not generate deposit trie")
-	assert.Equal(t, trie.HashTreeRoot(), cachedDeposits.Deposits.HashTreeRoot())
+	rootA, err := trie.HashTreeRoot()
+	require.NoError(t, err)
+	rootB, err := cachedDeposits.Deposits.HashTreeRoot()
+	require.NoError(t, err)
+	assert.Equal(t, rootA, rootB)
 }
 
 func TestFinalizedDeposits_HandleZeroDeposits(t *testing.T) {

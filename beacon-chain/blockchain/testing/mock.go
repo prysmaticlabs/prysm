@@ -451,6 +451,8 @@ func (s *ChainService) IsOptimisticForRoot(_ context.Context, _ [32]byte) (bool,
 	return s.Optimistic, nil
 }
 
+// ProcessAttestationsAndUpdateHead mocks the same method in the chain service.
+func (s *ChainService) UpdateHead(_ context.Context) error { return nil }
+
 // ReceiveAttesterSlashing mocks the same method in the chain service.
-func (s *ChainService) ReceiveAttesterSlashing(context.Context, *ethpb.AttesterSlashing) {
-}
+func (s *ChainService) ReceiveAttesterSlashing(context.Context, *ethpb.AttesterSlashing) {}
