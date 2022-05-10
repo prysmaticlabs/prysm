@@ -200,3 +200,37 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 	require.Equal(t, types.ValidatorIndex(1), vId)
 	require.Equal(t, [8]byte{1}, payloadID)
 }
+
+func TestService_ProcessAttestationsAndUpdateHead(t *testing.T) {
+	ctx := context.Background()
+	opts := testServiceOptsWithDB(t)
+	opts = append(opts, WithAttestationPool(attestations.NewPool()), WithStateNotifier(&mockBeaconNode{}))
+
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+	service.genesisTime = prysmTime.Now().Add(-1 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
+	genesisState, pks := util.DeterministicGenesisState(t, 64)
+	require.NoError(t, genesisState.SetGenesisTime(uint64(prysmTime.Now().Unix())-params.BeaconConfig().SecondsPerSlot))
+	require.NoError(t, service.saveGenesisData(ctx, genesisState))
+	atts, err := util.GenerateAttestations(genesisState, pks, 1, 0, false)
+	require.NoError(t, err)
+	tRoot := bytesutil.ToBytes32(atts[0].Data.Target.Root)
+	copied := genesisState.Copy()
+	copied, err = transition.ProcessSlots(ctx, copied, 1)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, copied, tRoot))
+	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Root: tRoot[:]}))
+	require.NoError(t, service.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx, 0, tRoot, tRoot, params.BeaconConfig().ZeroHash, 1, 1))
+	require.NoError(t, service.cfg.AttPool.SaveForkchoiceAttestations(atts))
+	b := util.NewBeaconBlock()
+	wb, err := wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	r, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wb))
+	service.head.root = r // Old head
+	require.Equal(t, 1, len(service.cfg.AttPool.ForkchoiceAttestations()))
+	require.NoError(t, err, service.UpdateHead(ctx))
+	require.Equal(t, tRoot, service.head.root)                             // Validate head is the new one
+	require.Equal(t, 0, len(service.cfg.AttPool.ForkchoiceAttestations())) // Validate att pool is empty
+}

@@ -271,7 +271,7 @@ type mockCachedGetter struct {
 	cache map[[32]byte]state.BeaconState
 }
 
-func (m mockCachedGetter) ByRoot(root [32]byte) (state.BeaconState, error) {
+func (m mockCachedGetter) ByBlockRoot(root [32]byte) (state.BeaconState, error) {
 	st, ok := m.cache[root]
 	if !ok {
 		return nil, ErrNotInCache
