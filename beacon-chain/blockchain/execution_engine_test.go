@@ -178,8 +178,8 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 			require.NoError(t, beaconDB.SaveState(ctx, st, tt.finalizedRoot))
 			require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, tt.finalizedRoot))
 			fc := &ethpb.Checkpoint{Epoch: 1, Root: tt.finalizedRoot[:]}
-			service.store.SetFinalizedCheckpt(fc)
-			service.store.SetJustifiedCheckpt(fc)
+			service.store.SetFinalizedCheckptAndPayloadHash(fc, [32]byte{'a'})
+			service.store.SetJustifiedCheckptAndPayloadHash(fc, [32]byte{'b'})
 			arg := &notifyForkchoiceUpdateArg{
 				headState: st,
 				headRoot:  tt.headRoot,
@@ -316,14 +316,12 @@ func Test_NotifyForkchoiceUpdateRecursive(t *testing.T) {
 	require.NoError(t, beaconDB.SaveState(ctx, st, bra))
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, bra))
 	fc := &ethpb.Checkpoint{Epoch: 0, Root: bra[:]}
-	service.store.SetFinalizedCheckpt(fc)
-	service.store.SetJustifiedCheckpt(fc)
+	service.store.SetFinalizedCheckptAndPayloadHash(fc, [32]byte{'a'})
+	service.store.SetJustifiedCheckptAndPayloadHash(fc, [32]byte{'b'})
 	a := &notifyForkchoiceUpdateArg{
-		headState:     st,
-		headBlock:     wbg.Block(),
-		headRoot:      brg,
-		justifiedRoot: bra,
-		finalizedRoot: bra,
+		headState: st,
+		headBlock: wbg.Block(),
+		headRoot:  brg,
 	}
 	_, err = service.notifyForkchoiceUpdate(ctx, a)
 	require.ErrorIs(t, ErrInvalidPayload, err)
