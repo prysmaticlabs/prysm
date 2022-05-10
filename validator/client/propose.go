@@ -8,7 +8,6 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/async"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -21,7 +20,6 @@ import (
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
-	"github.com/prysmaticlabs/prysm/validator/client/iface"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -45,10 +43,6 @@ func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [f
 	}
 	ctx, span := trace.StartSpan(ctx, "validator.ProposeBlock")
 	defer span.End()
-
-	lock := async.NewMultilock(fmt.Sprint(iface.RoleProposer), string(pubKey[:]))
-	lock.Lock()
-	defer lock.Unlock()
 
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
 	span.AddAttributes(trace.StringAttribute("validator", fmtKey))
@@ -131,6 +125,34 @@ func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [f
 		}
 		return
 	}
+	hasProposerNextSlot := false
+	hasProposerPrevSlot := false
+	hasProposerPrevPrevSlot := false
+	for _, d := range v.duties.Duties {
+		if slot < 6 {
+			continue
+		}
+		if len(d.ProposerSlots) > 0 && d.ProposerSlots[0] == slot+1 {
+			hasProposerNextSlot = true
+		}
+		if len(d.ProposerSlots) > 0 && d.ProposerSlots[0] == slot-1 {
+			hasProposerPrevSlot = true
+		}
+		if len(d.ProposerSlots) > 0 && d.ProposerSlots[0] == slot-2 {
+			hasProposerPrevPrevSlot = true
+		}
+	}
+	if hasProposerNextSlot && !hasProposerPrevSlot {
+		log.Infof("waiting for slot %d", slot+1)
+		<-v.propChan
+		log.Infof("received from slot %d", slot+1)
+	}
+	if hasProposerPrevSlot && !hasProposerPrevPrevSlot {
+		log.Infof("sending to slot %d", slot-1)
+		v.propChan <- true
+		log.Infof("sent to slot %d", slot-1)
+	}
+	ctx = context.Background()
 	blkResp, err := v.validatorClient.ProposeBeaconBlock(ctx, proposal)
 	if err != nil {
 		log.WithError(err).Error("Failed to propose block")
