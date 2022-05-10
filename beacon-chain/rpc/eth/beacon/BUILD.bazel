@@ -44,6 +44,7 @@ go_library(
         "//consensus-types/wrapper:go_default_library",
         "//crypto/bls:go_default_library",
         "//encoding/bytesutil:go_default_library",
+        "//encoding/ssz/detect:go_default_library",
         "//network/forks:go_default_library",
         "//proto/eth/v1:go_default_library",
         "//proto/eth/v2:go_default_library",
