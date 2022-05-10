@@ -8,7 +8,6 @@ import (
 
 	"github.com/prysmaticlabs/prysm/config/params"
 	ev "github.com/prysmaticlabs/prysm/testing/endtoend/evaluators"
-	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
 	e2eParams "github.com/prysmaticlabs/prysm/testing/endtoend/params"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/types"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -33,10 +32,6 @@ func e2eMinimal(t *testing.T, useWeb3RemoteSigner bool, extraEpochs uint64) {
 	if longRunning {
 		epochsToRun, err = strconv.Atoi(epochStr)
 		require.NoError(t, err)
-	}
-	// TODO(#10053): Web3signer does not support bellatrix yet.
-	if useWeb3RemoteSigner {
-		epochsToRun = helpers.BellatrixE2EForkEpoch - 1
 	}
 	seed := 0
 	seedStr, isValid := os.LookupEnv("E2E_SEED")
