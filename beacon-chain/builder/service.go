@@ -10,9 +10,9 @@ import (
 
 type BlockBuilder interface {
 	SubmitBlindedBlock(ctx context.Context, block *ethpb.SignedBlindedBeaconBlockBellatrix) (*v1.ExecutionPayload, error)
-	GetHeader(ctx context.Context, slot types.Slot, parentHash [32]byte, pubKey [48]byte) (*v1.SignedBuilderBid, error)
+	GetHeader(ctx context.Context, slot types.Slot, parentHash [32]byte, pubKey [48]byte) (*ethpb.SignedBuilderBid, error)
 	Status() error
-	RegisterValidator(ctx context.Context, regs []*v1.SignedValidatorRegistrationV1) error
+	RegisterValidator(ctx context.Context, regs []*ethpb.SignedValidatorRegistrationV1) error
 }
 
 type Service struct{}
@@ -35,22 +35,18 @@ func (s *Service) Stop() error {
 	return nil
 }
 
+func (s *Service) SubmitBlindedBlock(context.Context, *ethpb.SignedBlindedBeaconBlockBellatrix) (*v1.ExecutionPayload, error) {
+	panic("implement me")
+}
+
+func (s *Service) GetHeader(context.Context, types.Slot, [32]byte, [48]byte) (*ethpb.SignedBuilderBid, error) {
+	panic("implement me")
+}
+
 func (s *Service) Status() error {
-	return nil
-}
-
-func SubmitBlindedBlock(ctx context.Context, block *ethpb.SignedBlindedBeaconBlockBellatrix) (*v1.ExecutionPayload, error) {
 	panic("implement me")
 }
 
-func GetHeader(ctx context.Context, slot types.Slot, parentHash [32]byte, pubKey [48]byte) (*v1.SignedBuilderBid, error) {
-	panic("implement me")
-}
-
-func Status() error {
-	panic("implement me")
-}
-
-func RegisterValidator(ctx context.Context, regs []*v1.SignedValidatorRegistrationV1) error {
+func (s *Service) RegisterValidator(context.Context, []*ethpb.SignedValidatorRegistrationV1) error {
 	panic("implement me")
 }

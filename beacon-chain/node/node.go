@@ -20,6 +20,7 @@ import (
 	apigateway "github.com/prysmaticlabs/prysm/api/gateway"
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -76,6 +77,7 @@ const debugGrpcMaxMsgSize = 1 << 27
 type serviceFlagOpts struct {
 	blockchainFlagOpts []blockchain.Option
 	powchainFlagOpts   []powchain.Option
+	builderOpts        []builder.Option
 }
 
 // BeaconNode defines a struct that handles the services running a random beacon chain
@@ -209,6 +211,11 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 
 	log.Debugln("Starting Fork Choice")
 	beacon.startForkChoice()
+
+	log.Debugln("Registering builder service")
+	if err := beacon.registerBuilderService(); err != nil {
+		return nil, err
+	}
 
 	log.Debugln("Registering Blockchain Service")
 	if err := beacon.registerBlockchainService(); err != nil {
@@ -550,6 +557,14 @@ func (b *BeaconNode) fetchP2P() p2p.P2P {
 	return p
 }
 
+func (b *BeaconNode) fetchBuilderService() *builder.Service {
+	var s *builder.Service
+	if err := b.services.FetchService(&s); err != nil {
+		panic(err)
+	}
+	return s
+}
+
 func (b *BeaconNode) registerAttestationPool() error {
 	s, err := attestations.NewService(b.ctx, &attestations.Config{
 		Pool: b.attestationPool,
@@ -788,6 +803,7 @@ func (b *BeaconNode) registerRPCService() error {
 		AttestationReceiver:     chainService,
 		GenesisTimeFetcher:      chainService,
 		GenesisFetcher:          chainService,
+		BlockBuilder:            b.fetchBuilderService(),
 		AttestationsPool:        b.attestationPool,
 		ExitPool:                b.exitPool,
 		SlashingsPool:           b.slashingsPool,
@@ -946,6 +962,15 @@ func (b *BeaconNode) registerValidatorMonitorService() error {
 		HeadFetcher:         chainService,
 	}
 	svc, err := monitor.NewService(b.ctx, monitorConfig, tracked)
+	if err != nil {
+		return err
+	}
+	return b.services.RegisterService(svc)
+}
+
+func (b *BeaconNode) registerBuilderService() error {
+	options := b.serviceFlagOpts.builderOpts
+	svc, err := builder.NewService(b.ctx, options...)
 	if err != nil {
 		return err
 	}
