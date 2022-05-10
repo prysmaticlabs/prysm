@@ -1455,7 +1455,7 @@ func TestOnBlock_CanFinalize(t *testing.T) {
 	require.Equal(t, f.Epoch, service.FinalizedCheckpt().Epoch)
 }
 
-func TestOnBlock_ProcessTwoBlocksParallel(t *testing.T) {
+func TestOnBlock_ProcessBlocksParallel(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 	fcs := protoarray.New(0, 0, [32]byte{'a'})
@@ -1491,20 +1491,44 @@ func TestOnBlock_ProcessTwoBlocksParallel(t *testing.T) {
 	require.NoError(t, err)
 	wsb2, err := wrapper.WrappedSignedBeaconBlock(blk2)
 	require.NoError(t, err)
+	blk3, err := util.GenerateFullBlock(gs, keys, util.DefaultBlockGenConfig(), 3)
+	require.NoError(t, err)
+	r3, err := blk3.Block.HashTreeRoot()
+	require.NoError(t, err)
+	wsb3, err := wrapper.WrappedSignedBeaconBlock(blk3)
+	require.NoError(t, err)
+	blk4, err := util.GenerateFullBlock(gs, keys, util.DefaultBlockGenConfig(), 4)
+	require.NoError(t, err)
+	r4, err := blk4.Block.HashTreeRoot()
+	require.NoError(t, err)
+	wsb4, err := wrapper.WrappedSignedBeaconBlock(blk4)
+	require.NoError(t, err)
 
-	for i := 0; i < 1000; i++ {
+	for i := 0; i < 10; i++ {
 		var wg sync.WaitGroup
-		wg.Add(2)
+		wg.Add(4)
 		go func() {
 			require.NoError(t, service.onBlock(ctx, wsb1, r1))
 			wg.Done()
 		}()
-
 		go func() {
 			require.NoError(t, service.onBlock(ctx, wsb2, r2))
 			wg.Done()
 		}()
+		go func() {
+			require.NoError(t, service.onBlock(ctx, wsb3, r3))
+			wg.Done()
+		}()
+		go func() {
+			require.NoError(t, service.onBlock(ctx, wsb4, r4))
+			wg.Done()
+		}()
 		wg.Wait()
+		require.NoError(t, service.cfg.BeaconDB.DeleteBlock(ctx, r1))
+		require.NoError(t, service.cfg.BeaconDB.DeleteBlock(ctx, r2))
+		require.NoError(t, service.cfg.BeaconDB.DeleteBlock(ctx, r3))
+		require.NoError(t, service.cfg.BeaconDB.DeleteBlock(ctx, r4))
+		service.cfg.ForkChoiceStore = protoarray.New(0, 0, [32]byte{'a'})
 	}
 }
 
