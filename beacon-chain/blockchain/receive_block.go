@@ -30,9 +30,9 @@ type SlashingReceiver interface {
 	ReceiveAttesterSlashing(ctx context.Context, slashings *ethpb.AttesterSlashing)
 }
 
-// ReceiveBlock is a function that defines the the operations (minus pubsub)
-// that are performed on blocks that is received from regular sync service. The operations consists of:
-//   1. Validate block, apply state transition and update check points
+// ReceiveBlock is a function that defines the operations (minus pubsub)
+// that are performed on a received block. The operations consist of:
+//   1. Validate block, apply state transition and update checkpoints
 //   2. Apply fork choice to the processed block
 //   3. Save latest head info
 func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.SignedBeaconBlock, blockRoot [32]byte) error {
