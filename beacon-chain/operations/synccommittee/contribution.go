@@ -1,6 +1,7 @@
 package synccommittee
 
 import (
+	"bytes"
 	"strconv"
 
 	"github.com/pkg/errors"
@@ -83,6 +84,35 @@ func (s *Store) SyncCommitteeContributions(slot types.Slot) ([]*ethpb.SyncCommit
 	}
 
 	return contributions, nil
+}
+
+// HasSyncCommitteeContribution returns true if a sync committee contribution exits in the cache.
+// Exist means there's a similar contribution where the aggregation bits is the superset of the input bits.
+func (s *Store) HasSyncCommitteeContribution(c *ethpb.SyncCommitteeContribution) (bool, error) {
+	s.contributionLock.RLock()
+	defer s.contributionLock.RUnlock()
+
+	item := s.contributionCache.RetrieveByKey(syncCommitteeKey(c.Slot))
+	if item == nil {
+		return false, nil
+	}
+	contributions, ok := item.Value.([]*ethpb.SyncCommitteeContribution)
+	if !ok {
+		return false, errors.New("not typed []ethpb.SyncCommitteeContribution")
+	}
+	for _, contribution := range contributions {
+		if bytes.Equal(c.BlockRoot, contribution.BlockRoot) && c.SubcommitteeIndex == contribution.SubcommitteeIndex {
+			c, err := contribution.AggregationBits.Contains(c.AggregationBits)
+			if err != nil {
+				return false, err
+			}
+			if c {
+				return true, nil
+			}
+		}
+	}
+
+	return false, nil
 }
 
 func syncCommitteeKey(slot types.Slot) string {

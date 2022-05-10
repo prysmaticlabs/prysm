@@ -153,6 +153,23 @@ func (s *Service) ignoreSeenSyncContribution(m *ethpb.SignedContributionAndProof
 		if seen {
 			return pubsub.ValidationIgnore, nil
 		}
+		seen, err := s.cfg.syncCommsPool.HasSyncCommitteeContribution(m.Message.Contribution)
+		if err != nil {
+			return pubsub.ValidationIgnore, err
+		}
+		if seen {
+			return pubsub.ValidationIgnore, nil
+		}
+		return pubsub.ValidationAccept, nil
+	}
+}
+
+func (s *Service) ignoreCached(m *ethpb.SignedContributionAndProof) validationFn {
+	return func(ctx context.Context) (pubsub.ValidationResult, error) {
+		seen := s.hasSeenSyncContributionIndexSlot(m.Message.Contribution.Slot, m.Message.AggregatorIndex, types.CommitteeIndex(m.Message.Contribution.SubcommitteeIndex))
+		if seen {
+			return pubsub.ValidationIgnore, nil
+		}
 		return pubsub.ValidationAccept, nil
 	}
 }

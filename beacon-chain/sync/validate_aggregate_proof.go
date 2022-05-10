@@ -91,6 +91,14 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 		return pubsub.ValidationIgnore, err
 	}
 
+	has, err := s.cfg.attPool.HasAggregatedAttestation(m.Message.Aggregate)
+	if err != nil {
+		return pubsub.ValidationIgnore, err
+	}
+	if has {
+		return pubsub.ValidationIgnore, err
+	}
+
 	// Verify this is the first aggregate received from the aggregator with index and slot.
 	if s.hasSeenAggregatorIndexEpoch(m.Message.Aggregate.Data.Target.Epoch, m.Message.AggregatorIndex) {
 		return pubsub.ValidationIgnore, nil
