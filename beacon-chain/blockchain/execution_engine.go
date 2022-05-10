@@ -93,6 +93,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 			}).Info("Called fork choice updated with optimistic block")
 			return payloadID, s.optimisticCandidateBlock(ctx, headBlk)
 		case powchain.ErrInvalidPayloadStatus:
+			newPayloadInvalidNodeCount.Inc()
 			headRoot := arg.headRoot
 			invalidRoots, err := s.ForkChoicer().SetOptimisticToInvalid(ctx, headRoot, bytesutil.ToBytes32(headBlk.ParentRoot()), bytesutil.ToBytes32(lastValidHash))
 			if err != nil {
@@ -101,12 +102,37 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 			if err := s.removeInvalidBlockAndState(ctx, invalidRoots); err != nil {
 				return nil, err
 			}
+
+			r, err := s.updateHead(ctx, s.justifiedBalances.balances)
+			if err != nil {
+				return nil, err
+			}
+			b, err := s.getBlock(ctx, r)
+			if err != nil {
+				return nil, err
+			}
+			st, err := s.cfg.StateGen.StateByRoot(ctx, r)
+			if err != nil {
+				return nil, err
+			}
+			pid, err := s.notifyForkchoiceUpdate(ctx, &notifyForkchoiceUpdateArg{
+				headState:     st,
+				headRoot:      r,
+				headBlock:     b.Block(),
+				justifiedRoot: arg.justifiedRoot,
+				finalizedRoot: arg.finalizedRoot,
+			})
+			if err != nil {
+				return nil, err
+			}
+
 			log.WithFields(logrus.Fields{
 				"slot":         headBlk.Slot(),
 				"blockRoot":    fmt.Sprintf("%#x", headRoot),
 				"invalidCount": len(invalidRoots),
 			}).Warn("Pruned invalid blocks")
-			return nil, ErrInvalidPayload
+			return pid, ErrInvalidPayload
+
 		default:
 			return nil, errors.WithMessage(ErrUndefinedExecutionEngineError, err.Error())
 		}
