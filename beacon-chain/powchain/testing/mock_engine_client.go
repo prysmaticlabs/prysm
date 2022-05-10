@@ -40,7 +40,7 @@ func (e *EngineClient) NewPayload(_ context.Context, _ *pb.ExecutionPayload) ([]
 func (e *EngineClient) ForkchoiceUpdated(
 	_ context.Context, fcs *pb.ForkchoiceState, _ *pb.PayloadAttributes,
 ) (*pb.PayloadIDBytes, []byte, error) {
-	if bytesutil.ToBytes32(fcs.HeadBlockHash) == e.OverrideValidHash {
+	if e.OverrideValidHash != [32]byte{} && bytesutil.ToBytes32(fcs.HeadBlockHash) == e.OverrideValidHash {
 		return e.PayloadIDBytes, e.ForkChoiceUpdatedResp, nil
 	}
 	return e.PayloadIDBytes, e.ForkChoiceUpdatedResp, e.ErrForkchoiceUpdated
