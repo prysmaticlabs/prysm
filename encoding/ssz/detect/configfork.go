@@ -128,7 +128,10 @@ var beaconBlockSlot = fieldSpec{
 	t:      typeUint64,
 }
 
-func slotFromBlock(marshaled []byte) (types.Slot, error) {
+// SlotFromBlock exploits the fixed-size lower-order bytes in a beacon block
+// as a heuristic to obtain the value of the block.slot field without first
+// unmarshaling the block.
+func SlotFromBlock(marshaled []byte) (types.Slot, error) {
 	slot, err := beaconBlockSlot.uint64(marshaled)
 	if err != nil {
 		return 0, err
@@ -136,12 +139,12 @@ func slotFromBlock(marshaled []byte) (types.Slot, error) {
 	return types.Slot(slot), nil
 }
 
-var errBlockForkMismatch = errors.New("fork or config detected from state is different than block")
+var errBlockForkMismatch = errors.New("fork or config detected in unmarshaler is different than block")
 
 // UnmarshalBeaconBlock uses internal knowledge in the VersionedUnmarshaler to pick the right concrete SignedBeaconBlock type,
 // then Unmarshal()s the type and returns an instance of block.SignedBeaconBlock if successful.
 func (cf *VersionedUnmarshaler) UnmarshalBeaconBlock(marshaled []byte) (interfaces.SignedBeaconBlock, error) {
-	slot, err := slotFromBlock(marshaled)
+	slot, err := SlotFromBlock(marshaled)
 	if err != nil {
 		return nil, err
 	}

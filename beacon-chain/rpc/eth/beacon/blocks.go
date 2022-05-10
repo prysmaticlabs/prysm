@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strconv"
-	"strings"
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
@@ -19,6 +18,8 @@ import (
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/encoding/ssz/detect"
+	"github.com/prysmaticlabs/prysm/network/forks"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/proto/migration"
@@ -244,56 +245,24 @@ func (bs *Server) SubmitBlockSSZ(ctx context.Context, req *ethpbv2.SignedBeaconB
 	if len(ver) == 0 {
 		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not read eth-consensus-version header")
 	}
-
-	switch strings.ToLower(ver[0]) {
-	case strings.ToLower(ethpbv2.Version_PHASE0.String()):
-		block := &ethpbv1.SignedBeaconBlock{}
-		if err := block.UnmarshalSSZ(req.Data); err != nil {
-			return &emptypb.Empty{},
-				status.Errorf(
-					codes.InvalidArgument,
-					"could not unmarshal data into %s block: %v",
-					strings.ToLower(ethpbv2.Version_PHASE0.String()),
-					err,
-				)
-		}
-		if err := bs.submitPhase0Block(ctx, block.Block, block.Signature); err != nil {
-			return nil, err
-		}
-	case strings.ToLower(ethpbv2.Version_ALTAIR.String()):
-		block := &ethpbv2.SignedBeaconBlockAltair{}
-		if err := block.UnmarshalSSZ(req.Data); err != nil {
-			return &emptypb.Empty{},
-				status.Errorf(
-					codes.InvalidArgument,
-					"could not unmarshal data into %s block: %v",
-					strings.ToLower(ethpbv2.Version_ALTAIR.String()),
-					err,
-				)
-		}
-		if err := bs.submitAltairBlock(ctx, block.Message, block.Signature); err != nil {
-			return nil, err
-		}
-	case strings.ToLower(ethpbv2.Version_BELLATRIX.String()):
-		block := &ethpbv2.SignedBeaconBlockBellatrix{}
-		if err := block.UnmarshalSSZ(req.Data); err != nil {
-			return &emptypb.Empty{},
-				status.Errorf(
-					codes.InvalidArgument,
-					"could not unmarshal data into %s block: %v",
-					strings.ToLower(ethpbv2.Version_BELLATRIX.String()),
-					err,
-				)
-		}
-		if err := bs.submitBellatrixBlock(ctx, block.Message, block.Signature); err != nil {
-			return nil, err
-		}
-	default:
-		return &emptypb.Empty{}, status.Errorf(codes.InvalidArgument, "Unsupported Eth-Consensus-Version %s", ver)
-
+	schedule := forks.NewOrderedSchedule(params.BeaconConfig())
+	forkVer, err := schedule.VersionForName(ver[0])
+	if err != nil {
+		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not determine fork version: %v", err)
 	}
-
-	return &emptypb.Empty{}, nil
+	unmarshaler, err := detect.FromForkVersion(forkVer)
+	if err != nil {
+		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not create unmarshaler: %v", err)
+	}
+	block, err := unmarshaler.UnmarshalBeaconBlock(req.Data)
+	if err != nil {
+		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not unmarshal request data into block: %v", err)
+	}
+	root, err := block.Block().HashTreeRoot()
+	if err != nil {
+		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not compute block's hash tree root: %v", err)
+	}
+	return &emptypb.Empty{}, bs.submitBlock(ctx, root, block)
 }
 
 // SubmitBlindedBlock instructs the beacon node to use the components of the `SignedBlindedBeaconBlock` to construct
