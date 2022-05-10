@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 	"strconv"
+	"sync"
 	"testing"
 	"time"
 
@@ -1452,6 +1453,59 @@ func TestOnBlock_CanFinalize(t *testing.T) {
 	f, err := service.cfg.BeaconDB.FinalizedCheckpoint(ctx)
 	require.NoError(t, err)
 	require.Equal(t, f.Epoch, service.FinalizedCheckpt().Epoch)
+}
+
+func TestOnBlock_ProcessTwoBlocksParallel(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+	fcs := protoarray.New(0, 0, [32]byte{'a'})
+	depositCache, err := depositcache.New()
+	require.NoError(t, err)
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithStateGen(stategen.New(beaconDB)),
+		WithForkChoiceStore(fcs),
+		WithDepositCache(depositCache),
+		WithStateNotifier(&mock.MockStateNotifier{}),
+	}
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+
+	gs, keys := util.DeterministicGenesisState(t, 32)
+	require.NoError(t, service.saveGenesisData(ctx, gs))
+	gBlk, err := service.cfg.BeaconDB.GenesisBlock(ctx)
+	require.NoError(t, err)
+	gRoot, err := gBlk.Block().HashTreeRoot()
+	require.NoError(t, err)
+	service.store.SetFinalizedCheckpt(&ethpb.Checkpoint{Root: gRoot[:]})
+
+	blk1, err := util.GenerateFullBlock(gs, keys, util.DefaultBlockGenConfig(), 1)
+	require.NoError(t, err)
+	r1, err := blk1.Block.HashTreeRoot()
+	require.NoError(t, err)
+	wsb1, err := wrapper.WrappedSignedBeaconBlock(blk1)
+	require.NoError(t, err)
+	blk2, err := util.GenerateFullBlock(gs, keys, util.DefaultBlockGenConfig(), 2)
+	require.NoError(t, err)
+	r2, err := blk2.Block.HashTreeRoot()
+	require.NoError(t, err)
+	wsb2, err := wrapper.WrappedSignedBeaconBlock(blk2)
+	require.NoError(t, err)
+
+	for i := 0; i < 1000; i++ {
+		var wg sync.WaitGroup
+		wg.Add(2)
+		go func() {
+			require.NoError(t, service.onBlock(ctx, wsb1, r1))
+			wg.Done()
+		}()
+
+		go func() {
+			require.NoError(t, service.onBlock(ctx, wsb2, r2))
+			wg.Done()
+		}()
+		wg.Wait()
+	}
 }
 
 func TestOnBlock_CallNewPayloadAndForkchoiceUpdated(t *testing.T) {
