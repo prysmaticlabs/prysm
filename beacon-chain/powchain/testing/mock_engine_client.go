@@ -28,6 +28,7 @@ type EngineClient struct {
 	BlockByHashMap          map[[32]byte]*pb.ExecutionBlock
 	TerminalBlockHash       []byte
 	TerminalBlockHashExists bool
+	OverrideValidHash       [32]byte
 }
 
 // NewPayload --
@@ -37,8 +38,11 @@ func (e *EngineClient) NewPayload(_ context.Context, _ *pb.ExecutionPayload) ([]
 
 // ForkchoiceUpdated --
 func (e *EngineClient) ForkchoiceUpdated(
-	_ context.Context, _ *pb.ForkchoiceState, _ *pb.PayloadAttributes,
+	_ context.Context, fcs *pb.ForkchoiceState, _ *pb.PayloadAttributes,
 ) (*pb.PayloadIDBytes, []byte, error) {
+	if e.OverrideValidHash != [32]byte{} && bytesutil.ToBytes32(fcs.HeadBlockHash) == e.OverrideValidHash {
+		return e.PayloadIDBytes, e.ForkChoiceUpdatedResp, nil
+	}
 	return e.PayloadIDBytes, e.ForkChoiceUpdatedResp, e.ErrForkchoiceUpdated
 }
 
