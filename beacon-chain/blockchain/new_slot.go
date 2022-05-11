@@ -64,7 +64,11 @@ func (s *Service) NewSlot(ctx context.Context, slot types.Slot) error {
 			return err
 		}
 		if bytes.Equal(r, f.Root) {
-			s.store.SetJustifiedCheckpt(bj)
+			h, err := s.getPayloadHash(ctx, bj.Root)
+			if err != nil {
+				return err
+			}
+			s.store.SetJustifiedCheckptAndPayloadHash(bj, h)
 		}
 	}
 	return nil
