@@ -35,7 +35,6 @@ func FuzzValidateBeaconBlockPubSub(f *testing.F) {
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 	}
 	validTopic := fmt.Sprintf(p2p.BlockSubnetTopicFormat, []byte{0xb5, 0x30, 0x3f, 0x2a}) + "/" + encoder.ProtocolSuffixSSZSnappy
-	testing.CoverBlock{}
 	f.Add("junk", []byte("junk"), []byte("junk"), []byte("junk"), []byte(validTopic), []byte("junk"), []byte("junk"))
 	f.Fuzz(func(t *testing.T, pid string, from, data, seqno, topic, signature, key []byte) {
 		r.cfg.p2p = p2ptest.NewFuzzTestP2P()
