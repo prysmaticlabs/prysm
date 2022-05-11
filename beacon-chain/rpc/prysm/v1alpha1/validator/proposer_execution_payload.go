@@ -3,11 +3,11 @@ package validator
 import (
 	"bytes"
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
@@ -147,7 +148,19 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 	if payloadID == nil {
 		return nil, errors.New("nil payload id")
 	}
-	return vs.ExecutionEngineCaller.GetPayload(ctx, *payloadID)
+	payload, err := vs.ExecutionEngineCaller.GetPayload(ctx, *payloadID)
+	if err != nil {
+		return nil, err
+	}
+	// Warn if the fee recipient is not the value we expect.
+	if payload != nil && !bytes.Equal(payload.FeeRecipient, feeRecipient[:]) {
+		logrus.WithFields(logrus.Fields{
+			"wantedFeeRecipient": fmt.Sprintf("%#x", feeRecipient),
+			"received":           fmt.Sprintf("%#x", payload.FeeRecipient),
+		}).Warn("Fee recipient address from execution client is not what was expected. " +
+			"It is possible someone has compromised your client to try and take your transaction fees")
+	}
+	return payload, nil
 }
 
 // This returns the valid terminal block hash with an existence bool value.

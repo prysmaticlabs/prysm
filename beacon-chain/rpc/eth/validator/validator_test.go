@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
@@ -33,6 +32,8 @@ import (
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
@@ -40,7 +41,6 @@ import (
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/proto/migration"
 	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -670,6 +670,7 @@ func TestProduceBlock(t *testing.T) {
 		HeadFetcher:       &mockChain.ChainService{State: beaconState, Root: parentRoot[:]},
 		SyncChecker:       &mockSync.Sync{IsSyncing: false},
 		BlockReceiver:     &mockChain.ChainService{},
+		HeadUpdater:       &mockChain.ChainService{},
 		ChainStartFetcher: &mockPOW.POWChain{},
 		Eth1InfoFetcher:   &mockPOW.POWChain{},
 		Eth1BlockFetcher:  &mockPOW.POWChain{},
@@ -774,6 +775,7 @@ func TestProduceBlockV2(t *testing.T) {
 			HeadFetcher:       &mockChain.ChainService{State: beaconState, Root: parentRoot[:]},
 			SyncChecker:       &mockSync.Sync{IsSyncing: false},
 			BlockReceiver:     &mockChain.ChainService{},
+			HeadUpdater:       &mockChain.ChainService{},
 			ChainStartFetcher: &mockPOW.POWChain{},
 			Eth1InfoFetcher:   &mockPOW.POWChain{},
 			Eth1BlockFetcher:  &mockPOW.POWChain{},
@@ -879,6 +881,7 @@ func TestProduceBlockV2(t *testing.T) {
 			HeadFetcher:       &mockChain.ChainService{State: beaconState, Root: parentRoot[:]},
 			SyncChecker:       &mockSync.Sync{IsSyncing: false},
 			BlockReceiver:     &mockChain.ChainService{},
+			HeadUpdater:       &mockChain.ChainService{},
 			ChainStartFetcher: &mockPOW.POWChain{},
 			Eth1InfoFetcher:   &mockPOW.POWChain{},
 			Eth1BlockFetcher:  &mockPOW.POWChain{},
@@ -1028,6 +1031,7 @@ func TestProduceBlockV2(t *testing.T) {
 			HeadFetcher:            &mockChain.ChainService{State: beaconState, Root: parentRoot[:]},
 			SyncChecker:            &mockSync.Sync{IsSyncing: false},
 			BlockReceiver:          &mockChain.ChainService{},
+			HeadUpdater:            &mockChain.ChainService{},
 			ChainStartFetcher:      &mockPOW.POWChain{},
 			Eth1InfoFetcher:        &mockPOW.POWChain{},
 			Eth1BlockFetcher:       &mockPOW.POWChain{},
@@ -1174,6 +1178,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 			HeadFetcher:       &mockChain.ChainService{State: beaconState, Root: parentRoot[:]},
 			SyncChecker:       &mockSync.Sync{IsSyncing: false},
 			BlockReceiver:     &mockChain.ChainService{},
+			HeadUpdater:       &mockChain.ChainService{},
 			ChainStartFetcher: &mockPOW.POWChain{},
 			Eth1InfoFetcher:   &mockPOW.POWChain{},
 			Eth1BlockFetcher:  &mockPOW.POWChain{},
@@ -1280,6 +1285,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 			HeadFetcher:       &mockChain.ChainService{State: beaconState, Root: parentRoot[:]},
 			SyncChecker:       &mockSync.Sync{IsSyncing: false},
 			BlockReceiver:     &mockChain.ChainService{},
+			HeadUpdater:       &mockChain.ChainService{},
 			ChainStartFetcher: &mockPOW.POWChain{},
 			Eth1InfoFetcher:   &mockPOW.POWChain{},
 			Eth1BlockFetcher:  &mockPOW.POWChain{},
@@ -1429,6 +1435,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 			HeadFetcher:            &mockChain.ChainService{State: beaconState, Root: parentRoot[:]},
 			SyncChecker:            &mockSync.Sync{IsSyncing: false},
 			BlockReceiver:          &mockChain.ChainService{},
+			HeadUpdater:            &mockChain.ChainService{},
 			ChainStartFetcher:      &mockPOW.POWChain{},
 			Eth1InfoFetcher:        &mockPOW.POWChain{},
 			Eth1BlockFetcher:       &mockPOW.POWChain{},

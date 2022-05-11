@@ -4,9 +4,9 @@ import (
 	"sync"
 	"testing"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -85,6 +85,13 @@ func VerifyBeaconStateMarshalSSZNilState(t *testing.T, factory getState, clear c
 	s, err := factory()
 	require.NoError(t, err)
 	clear(s)
+	_, err = s.MarshalSSZ()
+	require.ErrorContains(t, "nil beacon state", err)
+}
+
+func VerifyBeaconStateMarshalSSZNilStateNative(t *testing.T, factory getState) {
+	s, err := factory()
+	require.NoError(t, err)
 	_, err = s.MarshalSSZ()
 	require.ErrorContains(t, "nil beacon state", err)
 }

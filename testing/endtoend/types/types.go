@@ -5,7 +5,7 @@ package types
 import (
 	"context"
 
-	types "github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"google.golang.org/grpc"
 )
 
@@ -26,6 +26,7 @@ type E2EConfig struct {
 	BeaconFlags             []string
 	ValidatorFlags          []string
 	PeerIDs                 []string
+	ExtraEpochs             uint64
 }
 
 // Evaluator defines the structure of the evaluators used to

@@ -1,7 +1,7 @@
 // Package testing includes useful mocks for slot tickers in unit tests.
 package testing
 
-import types "github.com/prysmaticlabs/eth2-types"
+import types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 
 // MockTicker defines a useful struct for mocking the Ticker interface
 // from the slotutil package.

@@ -4,11 +4,12 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/time"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"go.opencensus.io/trace"
@@ -17,19 +18,24 @@ import (
 // This defines how many epochs since finality the run time will begin to save hot state on to the DB.
 var epochsSinceFinalitySaveHotStateDB = types.Epoch(100)
 
-// BlockReceiver interface defines the methods of chain service receive and processing new blocks.
+// BlockReceiver interface defines the methods of chain service for receiving and processing new blocks.
 type BlockReceiver interface {
-	ReceiveBlock(ctx context.Context, block block.SignedBeaconBlock, blockRoot [32]byte) error
-	ReceiveBlockBatch(ctx context.Context, blocks []block.SignedBeaconBlock, blkRoots [][32]byte) error
-	HasInitSyncBlock(root [32]byte) bool
+	ReceiveBlock(ctx context.Context, block interfaces.SignedBeaconBlock, blockRoot [32]byte) error
+	ReceiveBlockBatch(ctx context.Context, blocks []interfaces.SignedBeaconBlock, blkRoots [][32]byte) error
+	HasBlock(ctx context.Context, root [32]byte) bool
 }
 
-// ReceiveBlock is a function that defines the the operations (minus pubsub)
-// that are performed on blocks that is received from regular sync service. The operations consists of:
-//   1. Validate block, apply state transition and update check points
+// SlashingReceiver interface defines the methods of chain service for receiving validated slashing over the wire.
+type SlashingReceiver interface {
+	ReceiveAttesterSlashing(ctx context.Context, slashings *ethpb.AttesterSlashing)
+}
+
+// ReceiveBlock is a function that defines the operations (minus pubsub)
+// that are performed on a received block. The operations consist of:
+//   1. Validate block, apply state transition and update checkpoints
 //   2. Apply fork choice to the processed block
 //   3. Save latest head info
-func (s *Service) ReceiveBlock(ctx context.Context, block block.SignedBeaconBlock, blockRoot [32]byte) error {
+func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.SignedBeaconBlock, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.ReceiveBlock")
 	defer span.End()
 	receivedTime := time.Now()
@@ -74,12 +80,12 @@ func (s *Service) ReceiveBlock(ctx context.Context, block block.SignedBeaconBloc
 // ReceiveBlockBatch processes the whole block batch at once, assuming the block batch is linear ,transitioning
 // the state, performing batch verification of all collected signatures and then performing the appropriate
 // actions for a block post-transition.
-func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []block.SignedBeaconBlock, blkRoots [][32]byte) error {
+func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []interfaces.SignedBeaconBlock, blkRoots [][32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.ReceiveBlockBatch")
 	defer span.End()
 
 	// Apply state transition on the incoming newly received block batches, one by one.
-	fCheckpoints, jCheckpoints, err := s.onBlockBatch(ctx, blocks, blkRoots)
+	_, _, err := s.onBlockBatch(ctx, blocks, blkRoots)
 	if err != nil {
 		err := errors.Wrap(err, "could not process block in batch")
 		tracing.AnnotateError(span, err)
@@ -88,10 +94,6 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []block.SignedBe
 
 	for i, b := range blocks {
 		blockCopy := b.Copy()
-		if err = s.handleBlockAfterBatchVerify(ctx, blockCopy, blkRoots[i], fCheckpoints[i], jCheckpoints[i]); err != nil {
-			tracing.AnnotateError(span, err)
-			return err
-		}
 		// Send notification of the processed block to the state feed.
 		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.BlockProcessed,
@@ -128,12 +130,17 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []block.SignedBe
 	return nil
 }
 
-// HasInitSyncBlock returns true if the block of the input root exists in initial sync blocks cache.
-func (s *Service) HasInitSyncBlock(root [32]byte) bool {
-	return s.hasInitSyncBlock(root)
+// HasBlock returns true if the block of the input root exists in initial sync blocks cache or DB.
+func (s *Service) HasBlock(ctx context.Context, root [32]byte) bool {
+	return s.hasBlockInInitSyncOrDB(ctx, root)
 }
 
-func (s *Service) handlePostBlockOperations(b block.BeaconBlock) error {
+// ReceiveAttesterSlashing receives an attester slashing and inserts it to forkchoice
+func (s *Service) ReceiveAttesterSlashing(ctx context.Context, slashing *ethpb.AttesterSlashing) {
+	s.insertSlashingsToForkChoiceStore(ctx, []*ethpb.AttesterSlashing{slashing})
+}
+
+func (s *Service) handlePostBlockOperations(b interfaces.BeaconBlock) error {
 	// Delete the processed block attestations from attestation pool.
 	if err := s.deletePoolAtts(b.Body().Attestations()); err != nil {
 		return err

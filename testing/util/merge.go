@@ -11,6 +11,11 @@ func NewBeaconBlockBellatrix() *ethpb.SignedBeaconBlockBellatrix {
 }
 
 // NewBlindedBeaconBlockBellatrix creates a blinded beacon block with minimum marshalable fields.
-func NewBlindedBeaconBlockBellatrix() *v2.SignedBlindedBeaconBlockBellatrix {
+func NewBlindedBeaconBlockBellatrix() *ethpb.SignedBlindedBeaconBlockBellatrix {
+	return HydrateSignedBlindedBeaconBlockBellatrix(&ethpb.SignedBlindedBeaconBlockBellatrix{})
+}
+
+// NewBlindedBeaconBlockBellatrixV2 creates a blinded beacon block with minimum marshalable fields.
+func NewBlindedBeaconBlockBellatrixV2() *v2.SignedBlindedBeaconBlockBellatrix {
 	return HydrateV2SignedBlindedBeaconBlockBellatrix(&v2.SignedBlindedBeaconBlockBellatrix{})
 }

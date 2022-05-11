@@ -20,7 +20,13 @@ func init() {
 }
 
 // ErrOverflow occurs when an operation exceeds max or minimum values.
-var ErrOverflow = errors.New("integer overflow")
+var (
+	ErrOverflow     = errors.New("integer overflow")
+	ErrDivByZero    = errors.New("integer divide by zero")
+	ErrMulOverflow  = errors.New("multiplication overflows")
+	ErrAddOverflow  = errors.New("addition overflows")
+	ErrSubUnderflow = errors.New("subtraction underflow")
+)
 
 // Common square root values.
 var squareRootTable = map[uint64]uint64{
@@ -115,6 +121,15 @@ func Mul64(a, b uint64) (uint64, error) {
 	return val, nil
 }
 
+// Div64 divides two 64-bit unsigned integers and checks for errors.
+func Div64(a, b uint64) (uint64, error) {
+	if b == 0 {
+		return 0, ErrDivByZero
+	}
+	val, _ := bits.Div64(0, a, b)
+	return val, nil
+}
+
 // Add64 adds 2 64-bit unsigned integers and checks if they
 // lead to an overflow. If they do not, it returns the result
 // without an error.
@@ -133,6 +148,15 @@ func Sub64(a, b uint64) (uint64, error) {
 		return 0, errors.New("subtraction underflow")
 	}
 	return res, nil
+}
+
+// Mod64 finds remainder of division of two 64-bit unsigned integers and checks for errors.
+func Mod64(a, b uint64) (uint64, error) {
+	if b == 0 {
+		return 0, ErrDivByZero
+	}
+	_, val := bits.Div64(0, a, b)
+	return val, nil
 }
 
 // Int returns the integer value of the uint64 argument. If there is an overlow, then an error is

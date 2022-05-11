@@ -5,17 +5,16 @@ import (
 	"testing"
 	"time"
 
-	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -52,7 +51,7 @@ func TestFinalizedCheckpt_CanRetrieve(t *testing.T) {
 
 	cp := &ethpb.Checkpoint{Epoch: 5, Root: bytesutil.PadTo([]byte("foo"), 32)}
 	c := setupBeaconChain(t, beaconDB)
-	c.store.SetFinalizedCheckpt(cp)
+	c.store.SetFinalizedCheckptAndPayloadHash(cp, [32]byte{'a'})
 
 	assert.Equal(t, cp.Epoch, c.FinalizedCheckpt().Epoch, "Unexpected finalized epoch")
 }
@@ -63,7 +62,7 @@ func TestFinalizedCheckpt_GenesisRootOk(t *testing.T) {
 	genesisRoot := [32]byte{'A'}
 	cp := &ethpb.Checkpoint{Root: genesisRoot[:]}
 	c := setupBeaconChain(t, beaconDB)
-	c.store.SetFinalizedCheckpt(cp)
+	c.store.SetFinalizedCheckptAndPayloadHash(cp, [32]byte{'a'})
 	c.originBlockRoot = genesisRoot
 	assert.DeepEqual(t, c.originBlockRoot[:], c.FinalizedCheckpt().Root)
 }
@@ -74,7 +73,7 @@ func TestCurrentJustifiedCheckpt_CanRetrieve(t *testing.T) {
 	c := setupBeaconChain(t, beaconDB)
 	assert.Equal(t, params.BeaconConfig().ZeroHash, bytesutil.ToBytes32(c.CurrentJustifiedCheckpt().Root), "Unexpected justified epoch")
 	cp := &ethpb.Checkpoint{Epoch: 6, Root: bytesutil.PadTo([]byte("foo"), 32)}
-	c.store.SetJustifiedCheckpt(cp)
+	c.store.SetJustifiedCheckptAndPayloadHash(cp, [32]byte{})
 	assert.Equal(t, cp.Epoch, c.CurrentJustifiedCheckpt().Epoch, "Unexpected justified epoch")
 }
 
@@ -84,7 +83,7 @@ func TestJustifiedCheckpt_GenesisRootOk(t *testing.T) {
 	c := setupBeaconChain(t, beaconDB)
 	genesisRoot := [32]byte{'B'}
 	cp := &ethpb.Checkpoint{Root: genesisRoot[:]}
-	c.store.SetJustifiedCheckpt(cp)
+	c.store.SetJustifiedCheckptAndPayloadHash(cp, [32]byte{})
 	c.originBlockRoot = genesisRoot
 	assert.DeepEqual(t, c.originBlockRoot[:], c.CurrentJustifiedCheckpt().Root)
 }
@@ -259,23 +258,6 @@ func TestService_HeadValidatorsIndices(t *testing.T) {
 	indices, err = c.HeadValidatorsIndices(context.Background(), 0)
 	require.NoError(t, err)
 	require.Equal(t, 10, len(indices))
-}
-
-func TestService_HeadSeed(t *testing.T) {
-	s, _ := util.DeterministicGenesisState(t, 1)
-	c := &Service{}
-	seed, err := helpers.Seed(s, 0, params.BeaconConfig().DomainBeaconAttester)
-	require.NoError(t, err)
-
-	c.head = &head{}
-	root, err := c.HeadSeed(context.Background(), 0)
-	require.NoError(t, err)
-	require.Equal(t, [32]byte{}, root)
-
-	c.head = &head{state: s}
-	root, err = c.HeadSeed(context.Background(), 0)
-	require.NoError(t, err)
-	require.DeepEqual(t, seed, root)
 }
 
 func TestService_HeadGenesisValidatorsRoot(t *testing.T) {

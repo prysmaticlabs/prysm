@@ -5,5 +5,5 @@ go_library(
     srcs = ["types.go"],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types",
     visibility = ["//visibility:public"],
-    deps = ["@com_github_prysmaticlabs_eth2_types//:go_default_library"],
+    deps = ["//consensus-types/primitives:go_default_library"],
 )
