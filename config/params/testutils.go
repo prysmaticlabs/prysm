@@ -1,3 +1,6 @@
+//go:build develop
+// +build develop
+
 package params
 
 import "testing"
@@ -9,6 +12,8 @@ func SetupTestConfigCleanup(t testing.TB) {
 	prevBeaconConfig := beaconConfig.Copy()
 	prevNetworkCfg := networkConfig.Copy()
 	t.Cleanup(func() {
+		beaconConfigLock.Lock()
+		defer beaconConfigLock.Unlock()
 		mainnetBeaconConfig = prevDefaultBeaconConfig
 		beaconConfig = prevBeaconConfig
 		networkConfig = prevNetworkCfg

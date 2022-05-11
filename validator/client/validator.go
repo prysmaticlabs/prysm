@@ -81,6 +81,7 @@ type validator struct {
 	domainDataCache                    *ristretto.Cache
 	highestValidSlot                   types.Slot
 	genesisTime                        uint64
+	propChan                           chan bool
 	blockFeed                          *event.Feed
 	interopKeysConfig                  *local.InteropKeymanagerConfig
 	wallet                             *wallet.Wallet
