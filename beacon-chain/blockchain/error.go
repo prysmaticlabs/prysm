@@ -18,4 +18,28 @@ var (
 	errWrongBlockCount = errors.New("wrong number of blocks or block roots")
 	// block is not a valid optimistic candidate block
 	errNotOptimisticCandidate = errors.New("block is not suitable for optimistic sync")
+	// ErrInvalidBlock is returned when a block is invalid.
+	ErrInvalidBlock = errors.New("invalid block")
 )
+
+type invalidBlock struct {
+	err error
+}
+
+type invalidBlockError interface {
+	Error() string
+	InvalidBlock() bool
+}
+
+func (e invalidBlock) Error() string {
+	return e.err.Error()
+}
+
+func (e invalidBlock) InvalidBlock() bool {
+	return true
+}
+
+func IsInvalidBlock(e error) bool {
+	d, ok := e.(invalidBlockError)
+	return ok && d.InvalidBlock()
+}

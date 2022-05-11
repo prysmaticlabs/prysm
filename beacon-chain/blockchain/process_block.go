@@ -93,7 +93,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 	ctx, span := trace.StartSpan(ctx, "blockChain.onBlock")
 	defer span.End()
 	if err := helpers.BeaconBlockIsNil(signed); err != nil {
-		return err
+		return invalidBlock{err}
 	}
 	b := signed.Block()
 
