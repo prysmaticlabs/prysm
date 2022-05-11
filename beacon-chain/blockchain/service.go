@@ -33,10 +33,10 @@ import (
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
@@ -50,21 +50,22 @@ const headSyncMinEpochsAfterCheckpoint = 128
 // Service represents a service that handles the internal
 // logic of managing the full PoS beacon chain.
 type Service struct {
-	cfg                   *config
-	ctx                   context.Context
-	cancel                context.CancelFunc
-	genesisTime           time.Time
-	head                  *head
-	headLock              sync.RWMutex
-	originBlockRoot       [32]byte // genesis root, or weak subjectivity checkpoint root, depending on how the node is initialized
-	nextEpochBoundarySlot types.Slot
-	boundaryRoots         [][32]byte
-	checkpointStateCache  *cache.CheckpointStateCache
-	initSyncBlocks        map[[32]byte]block.SignedBeaconBlock
-	initSyncBlocksLock    sync.RWMutex
-	justifiedBalances     *stateBalanceCache
-	wsVerifier            *WeakSubjectivityVerifier
-	store                 *store.Store
+	cfg                     *config
+	ctx                     context.Context
+	cancel                  context.CancelFunc
+	genesisTime             time.Time
+	head                    *head
+	headLock                sync.RWMutex
+	originBlockRoot         [32]byte // genesis root, or weak subjectivity checkpoint root, depending on how the node is initialized
+	nextEpochBoundarySlot   types.Slot
+	boundaryRoots           [][32]byte
+	checkpointStateCache    *cache.CheckpointStateCache
+	initSyncBlocks          map[[32]byte]interfaces.SignedBeaconBlock
+	initSyncBlocksLock      sync.RWMutex
+	justifiedBalances       *stateBalanceCache
+	wsVerifier              *WeakSubjectivityVerifier
+	store                   *store.Store
+	processAttestationsLock sync.Mutex
 }
 
 // config options for the service.
@@ -99,7 +100,7 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 		cancel:               cancel,
 		boundaryRoots:        [][32]byte{},
 		checkpointStateCache: cache.NewCheckpointStateCache(),
-		initSyncBlocks:       make(map[[32]byte]block.SignedBeaconBlock),
+		initSyncBlocks:       make(map[[32]byte]interfaces.SignedBeaconBlock),
 		cfg:                  &config{},
 		store:                &store.Store{},
 	}
@@ -143,6 +144,7 @@ func (s *Service) Stop() error {
 	defer s.cancel()
 
 	if s.cfg.StateGen != nil && s.head != nil && s.head.state != nil {
+		// Save the last finalized state so that starting up in the following run will be much faster.
 		if err := s.cfg.StateGen.ForceCheckpoint(s.ctx, s.head.state.FinalizedCheckpoint().Root); err != nil {
 			return err
 		}
@@ -203,7 +205,7 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized checkpoint block")
 	}
-	if fb == nil {
+	if fb == nil || fb.IsNil() {
 		return errNilFinalizedInStore
 	}
 	payloadHash, err := getBlockPayloadHash(fb.Block())

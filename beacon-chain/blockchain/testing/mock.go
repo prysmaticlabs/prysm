@@ -21,10 +21,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/sirupsen/logrus"
 )
 
@@ -47,10 +47,10 @@ type ChainService struct {
 	InitSyncBlockRoots          map[[32]byte]bool
 	DB                          db.Database
 	State                       state.BeaconState
-	Block                       block.SignedBeaconBlock
+	Block                       interfaces.SignedBeaconBlock
 	VerifyBlkDescendantErr      error
 	stateNotifier               statefeed.Notifier
-	BlocksReceived              []block.SignedBeaconBlock
+	BlocksReceived              []interfaces.SignedBeaconBlock
 	SyncCommitteeIndices        []types.CommitteeIndex
 	blockNotifier               blockfeed.Notifier
 	opNotifier                  opfeed.Notifier
@@ -165,7 +165,7 @@ func (mon *MockOperationNotifier) OperationFeed() *event.Feed {
 }
 
 // ReceiveBlockInitialSync mocks ReceiveBlockInitialSync method in chain service.
-func (s *ChainService) ReceiveBlockInitialSync(ctx context.Context, block block.SignedBeaconBlock, _ [32]byte) error {
+func (s *ChainService) ReceiveBlockInitialSync(ctx context.Context, block interfaces.SignedBeaconBlock, _ [32]byte) error {
 	if s.State == nil {
 		return ErrNilState
 	}
@@ -192,7 +192,7 @@ func (s *ChainService) ReceiveBlockInitialSync(ctx context.Context, block block.
 }
 
 // ReceiveBlockBatch processes blocks in batches from initial-sync.
-func (s *ChainService) ReceiveBlockBatch(ctx context.Context, blks []block.SignedBeaconBlock, _ [][32]byte) error {
+func (s *ChainService) ReceiveBlockBatch(ctx context.Context, blks []interfaces.SignedBeaconBlock, _ [][32]byte) error {
 	if s.State == nil {
 		return ErrNilState
 	}
@@ -221,7 +221,7 @@ func (s *ChainService) ReceiveBlockBatch(ctx context.Context, blks []block.Signe
 }
 
 // ReceiveBlock mocks ReceiveBlock method in chain service.
-func (s *ChainService) ReceiveBlock(ctx context.Context, block block.SignedBeaconBlock, _ [32]byte) error {
+func (s *ChainService) ReceiveBlock(ctx context.Context, block interfaces.SignedBeaconBlock, _ [32]byte) error {
 	if s.ReceiveBlockMockErr != nil {
 		return s.ReceiveBlockMockErr
 	}
@@ -267,7 +267,7 @@ func (s *ChainService) HeadRoot(_ context.Context) ([]byte, error) {
 }
 
 // HeadBlock mocks HeadBlock method in chain service.
-func (s *ChainService) HeadBlock(context.Context) (block.SignedBeaconBlock, error) {
+func (s *ChainService) HeadBlock(context.Context) (interfaces.SignedBeaconBlock, error) {
 	return s.Block, nil
 }
 
@@ -357,8 +357,14 @@ func (s *ChainService) IsCanonical(_ context.Context, r [32]byte) (bool, error) 
 	return true, nil
 }
 
-// HasInitSyncBlock mocks the same method in the chain service.
-func (s *ChainService) HasInitSyncBlock(rt [32]byte) bool {
+// HasBlock mocks the same method in the chain service.
+func (s *ChainService) HasBlock(ctx context.Context, rt [32]byte) bool {
+	if s.DB == nil {
+		return false
+	}
+	if s.DB.HasBlock(ctx, rt) {
+		return true
+	}
 	if s.InitSyncBlockRoots == nil {
 		return false
 	}
@@ -444,3 +450,9 @@ func (s *ChainService) IsOptimistic(_ context.Context) (bool, error) {
 func (s *ChainService) IsOptimisticForRoot(_ context.Context, _ [32]byte) (bool, error) {
 	return s.Optimistic, nil
 }
+
+// ProcessAttestationsAndUpdateHead mocks the same method in the chain service.
+func (s *ChainService) UpdateHead(_ context.Context) error { return nil }
+
+// ReceiveAttesterSlashing mocks the same method in the chain service.
+func (s *ChainService) ReceiveAttesterSlashing(context.Context, *ethpb.AttesterSlashing) {}

@@ -10,9 +10,9 @@ import (
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/io/file"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
 	history "github.com/prysmaticlabs/prysm/validator/slashing-protection-history"

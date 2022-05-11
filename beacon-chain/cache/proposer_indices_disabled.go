@@ -30,3 +30,7 @@ func (c *FakeProposerIndicesCache) ProposerIndices(r [32]byte) ([]types.Validato
 func (c *FakeProposerIndicesCache) HasProposerIndices(r [32]byte) (bool, error) {
 	return false, nil
 }
+
+func (c *FakeProposerIndicesCache) Len() int {
+	return 0
+}

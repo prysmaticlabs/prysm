@@ -8,9 +8,9 @@ import (
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -174,7 +174,7 @@ func TestDeleteStateFromCaches(t *testing.T) {
 	r := [32]byte{'A'}
 
 	require.Equal(t, false, service.hotStateCache.has(r))
-	_, has, err := service.epochBoundaryStateCache.getByRoot(r)
+	_, has, err := service.epochBoundaryStateCache.getByBlockRoot(r)
 	require.NoError(t, err)
 	require.Equal(t, false, has)
 
@@ -182,14 +182,14 @@ func TestDeleteStateFromCaches(t *testing.T) {
 	require.NoError(t, service.epochBoundaryStateCache.put(r, beaconState))
 
 	require.Equal(t, true, service.hotStateCache.has(r))
-	_, has, err = service.epochBoundaryStateCache.getByRoot(r)
+	_, has, err = service.epochBoundaryStateCache.getByBlockRoot(r)
 	require.NoError(t, err)
 	require.Equal(t, true, has)
 
 	require.NoError(t, service.DeleteStateFromCaches(ctx, r))
 
 	require.Equal(t, false, service.hotStateCache.has(r))
-	_, has, err = service.epochBoundaryStateCache.getByRoot(r)
+	_, has, err = service.epochBoundaryStateCache.getByBlockRoot(r)
 	require.NoError(t, err)
 	require.Equal(t, false, has)
 }

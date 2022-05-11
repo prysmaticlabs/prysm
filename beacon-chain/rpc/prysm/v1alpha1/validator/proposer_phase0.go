@@ -12,9 +12,9 @@ import (
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"go.opencensus.io/trace"
 )
 
@@ -80,6 +80,10 @@ func (vs *Server) buildPhase0BlockData(ctx context.Context, req *ethpb.BlockRequ
 
 	if vs.SyncChecker.Syncing() {
 		return nil, fmt.Errorf("syncing to latest head, not ready to respond")
+	}
+
+	if err := vs.HeadUpdater.UpdateHead(ctx); err != nil {
+		log.WithError(err).Error("Could not process attestations and update head")
 	}
 
 	// Retrieve the parent block as the current head of the canonical chain.

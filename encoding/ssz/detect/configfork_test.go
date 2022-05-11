@@ -8,9 +8,9 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/testing/util"
 	"github.com/prysmaticlabs/prysm/time/slots"
@@ -177,21 +177,21 @@ func hackBellatrixMaxuint() (*params.BeaconChainConfig, func()) {
 	bc.InitializeForkSchedule()
 	params.OverrideBeaconConfig(bc)
 	// override the param used for mainnet with the patched version
-	params.KnownConfigs[params.Mainnet] = func() *params.BeaconChainConfig {
+	params.KnownConfigs[params.MainnetName] = func() *params.BeaconChainConfig {
 		return bc
 	}
 	return bc, func() {
 		// put the previous BeaconChainConfig back in place at the end of the test
 		params.OverrideBeaconConfig(previous)
 		// restore the normal MainnetConfig func in the KnownConfigs mapping
-		params.KnownConfigs[params.Mainnet] = params.MainnetConfig
+		params.KnownConfigs[params.MainnetName] = params.MainnetConfig
 	}
 }
 
 func TestUnmarshalBlock(t *testing.T) {
 	bc, cleanup := hackBellatrixMaxuint()
 	defer cleanup()
-	require.Equal(t, types.Epoch(math.MaxUint32), params.KnownConfigs[params.Mainnet]().BellatrixForkEpoch)
+	require.Equal(t, types.Epoch(math.MaxUint32), params.KnownConfigs[params.MainnetName]().BellatrixForkEpoch)
 	genv := bytesutil.ToBytes4(bc.GenesisForkVersion)
 	altairv := bytesutil.ToBytes4(bc.AltairForkVersion)
 	bellav := bytesutil.ToBytes4(bc.BellatrixForkVersion)
@@ -199,7 +199,7 @@ func TestUnmarshalBlock(t *testing.T) {
 	bellaS, err := slots.EpochStart(bc.BellatrixForkEpoch)
 	require.NoError(t, err)
 	cases := []struct {
-		b       func(*testing.T, types.Slot) block.SignedBeaconBlock
+		b       func(*testing.T, types.Slot) interfaces.SignedBeaconBlock
 		name    string
 		version [4]byte
 		slot    types.Slot
@@ -277,7 +277,7 @@ func TestUnmarshalBlock(t *testing.T) {
 	}
 }
 
-func signedTestBlockGenesis(t *testing.T, slot types.Slot) block.SignedBeaconBlock {
+func signedTestBlockGenesis(t *testing.T, slot types.Slot) interfaces.SignedBeaconBlock {
 	b := testBlockGenesis()
 	b.Block.Slot = slot
 	s, err := wrapper.WrappedSignedBeaconBlock(b)
@@ -310,7 +310,7 @@ func testBlockGenesis() *ethpb.SignedBeaconBlock {
 	}
 }
 
-func signedTestBlockAltair(t *testing.T, slot types.Slot) block.SignedBeaconBlock {
+func signedTestBlockAltair(t *testing.T, slot types.Slot) interfaces.SignedBeaconBlock {
 	b := testBlockAltair()
 	b.Block.Slot = slot
 	s, err := wrapper.WrappedSignedBeaconBlock(b)
@@ -347,7 +347,7 @@ func testBlockAltair() *ethpb.SignedBeaconBlockAltair {
 	}
 }
 
-func signedTestBlockBellatrix(t *testing.T, slot types.Slot) block.SignedBeaconBlock {
+func signedTestBlockBellatrix(t *testing.T, slot types.Slot) interfaces.SignedBeaconBlock {
 	b := testBlockBellatrix()
 	b.Block.Slot = slot
 	s, err := wrapper.WrappedSignedBeaconBlock(b)

@@ -27,6 +27,7 @@ type Store struct {
 	headNode                   *Node                                  // last head Node
 	nodeByRoot                 map[[fieldparams.RootLength]byte]*Node // nodes indexed by roots.
 	nodeByPayload              map[[fieldparams.RootLength]byte]*Node // nodes indexed by payload Hash
+	slashedIndices             map[types.ValidatorIndex]bool          // the list of equivocating validator indices
 	nodesLock                  sync.RWMutex
 	proposerBoostLock          sync.RWMutex
 }

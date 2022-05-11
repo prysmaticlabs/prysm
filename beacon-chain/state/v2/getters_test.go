@@ -59,6 +59,7 @@ func TestNilState_NoPanic(t *testing.T) {
 	_, err = st.PreviousEpochParticipation()
 	_ = err
 	_ = st.JustificationBits()
+	_ = err
 	_ = st.PreviousJustifiedCheckpoint()
 	_ = st.CurrentJustifiedCheckpoint()
 	_ = st.FinalizedCheckpoint()

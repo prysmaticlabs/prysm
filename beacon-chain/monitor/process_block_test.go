@@ -9,9 +9,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -124,7 +124,9 @@ func TestProcessSlashings(t *testing.T) {
 					2: true,
 				},
 			}
-			s.processSlashings(wrapper.WrappedPhase0BeaconBlock(tt.block))
+			wb, err := wrapper.WrappedBeaconBlock(tt.block)
+			require.NoError(t, err)
+			s.processSlashings(wb)
 			if tt.wantedErr != "" {
 				require.LogsContain(t, hook, tt.wantedErr)
 			} else {
@@ -168,7 +170,9 @@ func TestProcessProposedBlock(t *testing.T) {
 			beaconState, _ := util.DeterministicGenesisState(t, 256)
 			root := [32]byte{}
 			copy(root[:], "hello-world")
-			s.processProposedBlock(beaconState, root, wrapper.WrappedPhase0BeaconBlock(tt.block))
+			wb, err := wrapper.WrappedBeaconBlock(tt.block)
+			require.NoError(t, err)
+			s.processProposedBlock(beaconState, root, wb)
 			if tt.wantedErr != "" {
 				require.LogsContain(t, hook, tt.wantedErr)
 			} else {
