@@ -83,7 +83,7 @@ func (b *BeaconState) validatorsReferences() []*ethpb.Validator {
 // ValidatorAtIndex is the validator at the provided index.
 func (b *BeaconState) ValidatorAtIndex(idx types.ValidatorIndex) (*ethpb.Validator, error) {
 	if b.validators == nil {
-		return &ethpb.Validator{}, nil
+		return &ethpb.Validator{}, ErrNilField
 	}
 	if uint64(len(b.validators)) <= uint64(idx) {
 		e := NewValidatorIndexOutOfRangeError(idx)
@@ -202,7 +202,7 @@ func (b *BeaconState) balancesVal() []uint64 {
 // BalanceAtIndex of validator with the provided index.
 func (b *BeaconState) BalanceAtIndex(idx types.ValidatorIndex) (uint64, error) {
 	if b.balances == nil {
-		return 0, nil
+		return 0, ErrNilField
 	}
 
 	b.lock.RLock()
@@ -257,7 +257,7 @@ func (b *BeaconState) InactivityScores() ([]uint64, error) {
 	}
 
 	if b.inactivityScores == nil {
-		return nil, nil
+		return nil, ErrNilField
 	}
 
 	b.lock.RLock()

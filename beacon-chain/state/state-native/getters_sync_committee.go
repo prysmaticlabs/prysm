@@ -16,7 +16,7 @@ func (b *BeaconState) CurrentSyncCommittee() (*ethpb.SyncCommittee, error) {
 	}
 
 	if b.currentSyncCommittee == nil {
-		return nil, nil
+		return nil, ErrNilField
 	}
 
 	return b.currentSyncCommitteeVal(), nil
@@ -38,7 +38,7 @@ func (b *BeaconState) NextSyncCommittee() (*ethpb.SyncCommittee, error) {
 	}
 
 	if b.nextSyncCommittee == nil {
-		return nil, nil
+		return nil, ErrNilField
 	}
 
 	return b.nextSyncCommitteeVal(), nil

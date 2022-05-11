@@ -12,7 +12,7 @@ func (b *BeaconState) PreviousEpochAttestations() ([]*ethpb.PendingAttestation, 
 	}
 
 	if b.previousEpochAttestations == nil {
-		return nil, nil
+		return nil, ErrNilField
 	}
 
 	b.lock.RLock()
@@ -34,7 +34,7 @@ func (b *BeaconState) CurrentEpochAttestations() ([]*ethpb.PendingAttestation, e
 	}
 
 	if b.currentEpochAttestations == nil {
-		return nil, nil
+		return nil, ErrNilField
 	}
 
 	b.lock.RLock()

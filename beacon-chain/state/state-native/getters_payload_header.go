@@ -12,7 +12,7 @@ func (b *BeaconState) LatestExecutionPayloadHeader() (*ethpb.ExecutionPayloadHea
 	}
 
 	if b.latestExecutionPayloadHeader == nil {
-		return nil, nil
+		return nil, ErrNilField
 	}
 
 	b.lock.RLock()

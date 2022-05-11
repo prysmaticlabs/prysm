@@ -20,7 +20,7 @@ func (b *BeaconState) RandaoMixes() [][]byte {
 // input index value.
 func (b *BeaconState) RandaoMixAtIndex(idx uint64) ([]byte, error) {
 	if b.randaoMixes == nil {
-		return nil, nil
+		return nil, ErrNilField
 	}
 
 	b.lock.RLock()

@@ -214,7 +214,7 @@ func (b *BeaconState) StateRoots() [][]byte {
 // input index value.
 func (b *BeaconState) StateRootAtIndex(idx uint64) ([]byte, error) {
 	if b.stateRoots == nil {
-		return nil, nil
+		return nil, ErrNilField
 	}
 
 	b.lock.RLock()

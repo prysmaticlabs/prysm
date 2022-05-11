@@ -11,7 +11,7 @@ func (b *BeaconState) CurrentEpochParticipation() ([]byte, error) {
 	}
 
 	if b.currentEpochParticipation == nil {
-		return nil, nil
+		return nil, ErrNilField
 	}
 
 	b.lock.RLock()
@@ -27,7 +27,7 @@ func (b *BeaconState) PreviousEpochParticipation() ([]byte, error) {
 	}
 
 	if b.previousEpochParticipation == nil {
-		return nil, nil
+		return nil, ErrNilField
 	}
 
 	b.lock.RLock()
