@@ -355,7 +355,7 @@ func TestFeeRecipientConfig(t *testing.T) {
 				}
 			},
 			wantErr: "",
-			wantLog: "is not a valid checksum address",
+			wantLog: "is not a checksum Ethereum address",
 		},
 		{
 			name: "Happy Path Config file File multiple fee recipients",
