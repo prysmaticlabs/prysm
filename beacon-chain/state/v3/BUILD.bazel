@@ -76,6 +76,7 @@ go_test(
     deps = [
         "//beacon-chain/core/transition:go_default_library",
         "//beacon-chain/state:go_default_library",
+        "//beacon-chain/state/fieldtrie:go_default_library",
         "//beacon-chain/state/state-native:go_default_library",
         "//beacon-chain/state/stateutil:go_default_library",
         "//beacon-chain/state/testing:go_default_library",
