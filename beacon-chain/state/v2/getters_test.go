@@ -150,5 +150,5 @@ func TestBeaconState_CurrentEpochParticipation(t *testing.T) {
 	st, err := InitializeFromProtoUnsafe(&ethpb.BeaconStateAltair{})
 	require.NoError(t, err)
 	_, err = st.CurrentEpochParticipation()
-	require.ErrorIs(t, errNilField, err)
+	require.ErrorIs(t, ErrNilField, err)
 }
