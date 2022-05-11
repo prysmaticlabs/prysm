@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
@@ -632,7 +633,7 @@ func TestServer_SubmitBlockSSZ_OK(t *testing.T) {
 			HeadFetcher:      c,
 		}
 		req := util.NewBeaconBlockAltair()
-		req.Block.Slot = 5
+		req.Block.Slot = params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().AltairForkEpoch))
 		req.Block.ParentRoot = bsRoot[:]
 		v2Block, err := migration.V1Alpha1SignedBeaconBlockAltairToV2(req)
 		require.NoError(t, err)
@@ -652,6 +653,14 @@ func TestServer_SubmitBlockSSZ_OK(t *testing.T) {
 	})
 
 	t.Run("Bellatrix", func(t *testing.T) {
+		// INFO: This code block can be removed once Bellatrix
+		// fork epoch is set to a value other than math.MaxUint64
+		params.SetupTestConfigCleanup(t)
+		cfg := params.BeaconConfig()
+		cfg.BellatrixForkEpoch = cfg.AltairForkEpoch + 1000
+		cfg.ForkVersionSchedule[bytesutil.ToBytes4(cfg.BellatrixForkVersion)] = cfg.AltairForkEpoch + 1000
+		params.OverrideBeaconConfig(cfg)
+
 		beaconDB := dbTest.SetupDB(t)
 		ctx := context.Background()
 
@@ -678,7 +687,7 @@ func TestServer_SubmitBlockSSZ_OK(t *testing.T) {
 			HeadFetcher:      c,
 		}
 		req := util.NewBeaconBlockBellatrix()
-		req.Block.Slot = 5
+		req.Block.Slot = params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().BellatrixForkEpoch))
 		req.Block.ParentRoot = bsRoot[:]
 		v2Block, err := migration.V1Alpha1SignedBeaconBlockBellatrixToV2(req)
 		require.NoError(t, err)
