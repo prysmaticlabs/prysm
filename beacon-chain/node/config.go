@@ -124,7 +124,7 @@ func configureExecutionSetting(cliCtx *cli.Context) error {
 	}
 	checksumAddress := common.HexToAddress(ha)
 	if !mixedcaseAddress.ValidChecksum() {
-		log.Warnf("fee recipient %s is not a checksum Ethereum address. The checksummed address is %s and will be used as the fee recipient. We recommend using a mixed-case address (checksum) to prevent spelling mistakes in your fee recipient Ethereum address", ha, checksumAddress.Hex())
+		log.Warnf("Fee recipient %s is not a checksum Ethereum address. The checksummed address is %s and will be used as the fee recipient. We recommend using a mixed-case address (checksum) to prevent spelling mistakes in your fee recipient Ethereum address", ha, checksumAddress.Hex())
 	}
 	c.DefaultFeeRecipient = checksumAddress
 	params.OverrideBeaconConfig(c)
