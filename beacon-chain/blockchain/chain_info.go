@@ -31,6 +31,12 @@ type ChainInfoFetcher interface {
 	HeadDomainFetcher
 }
 
+// HeadUpdater defines a common interface for methods in blockchain service
+// which allow to update the head info
+type HeadUpdater interface {
+	UpdateHead(context.Context) error
+}
+
 // TimeFetcher retrieves the Ethereum consensus data that's related to time.
 type TimeFetcher interface {
 	GenesisTime() time.Time

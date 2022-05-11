@@ -23,6 +23,13 @@ func (s *Store) JustifiedCheckpt() *ethpb.Checkpoint {
 	return s.justifiedCheckpt
 }
 
+// JustifiedPayloadBlockHash returns the justified payload block hash reflecting justified check point.
+func (s *Store) JustifiedPayloadBlockHash() [32]byte {
+	s.RLock()
+	defer s.RUnlock()
+	return s.justifiedPayloadBlockHash
+}
+
 // PrevFinalizedCheckpt returns the previous finalized checkpoint in the Store.
 func (s *Store) PrevFinalizedCheckpt() *ethpb.Checkpoint {
 	s.RLock()
@@ -35,6 +42,13 @@ func (s *Store) FinalizedCheckpt() *ethpb.Checkpoint {
 	s.RLock()
 	defer s.RUnlock()
 	return s.finalizedCheckpt
+}
+
+// FinalizedPayloadBlockHash returns the finalized payload block hash reflecting finalized check point.
+func (s *Store) FinalizedPayloadBlockHash() [32]byte {
+	s.RLock()
+	defer s.RUnlock()
+	return s.finalizedPayloadBlockHash
 }
 
 // SetPrevJustifiedCheckpt sets the previous justified checkpoint in the Store.
@@ -51,18 +65,20 @@ func (s *Store) SetBestJustifiedCheckpt(cp *ethpb.Checkpoint) {
 	s.bestJustifiedCheckpt = cp
 }
 
-// SetJustifiedCheckpt sets the justified checkpoint in the Store.
-func (s *Store) SetJustifiedCheckpt(cp *ethpb.Checkpoint) {
+// SetJustifiedCheckptAndPayloadHash sets the justified checkpoint and blockhash in the Store.
+func (s *Store) SetJustifiedCheckptAndPayloadHash(cp *ethpb.Checkpoint, h [32]byte) {
 	s.Lock()
 	defer s.Unlock()
 	s.justifiedCheckpt = cp
+	s.justifiedPayloadBlockHash = h
 }
 
-// SetFinalizedCheckpt sets the finalized checkpoint in the Store.
-func (s *Store) SetFinalizedCheckpt(cp *ethpb.Checkpoint) {
+// SetFinalizedCheckptAndPayloadHash sets the finalized checkpoint and blockhash in the Store.
+func (s *Store) SetFinalizedCheckptAndPayloadHash(cp *ethpb.Checkpoint, h [32]byte) {
 	s.Lock()
 	defer s.Unlock()
 	s.finalizedCheckpt = cp
+	s.finalizedPayloadBlockHash = h
 }
 
 // SetPrevFinalizedCheckpt sets the previous finalized checkpoint in the Store.
