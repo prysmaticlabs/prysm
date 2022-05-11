@@ -170,7 +170,7 @@ func getSignRequestJson(ctx context.Context, validator *validator.Validate, requ
 		if err = validator.StructCtx(ctx, blockv2BellatrixSignRequest); err != nil {
 			return nil, err
 		}
-		// blockV2SignRequestsTotal.Inc()
+		blockV3SignRequestsTotal.Inc()
 		return json.Marshal(blockv2BellatrixSignRequest)
 	case *validatorpb.SignRequest_BlindedBlockV3:
 		blindedBlockv2SignRequest, err := v1.GetBlockV2BellatrixSignRequest(request, genesisValidatorsRoot)
@@ -180,6 +180,7 @@ func getSignRequestJson(ctx context.Context, validator *validator.Validate, requ
 		if err = validator.StructCtx(ctx, blindedBlockv2SignRequest); err != nil {
 			return nil, err
 		}
+		blindedblockV3SignRequestsTotal.Inc()
 		return json.Marshal(blindedBlockv2SignRequest)
 	// We do not support "DEPOSIT" type.
 	/*
