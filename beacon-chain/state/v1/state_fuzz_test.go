@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	coreState "github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
-	v12 "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/v1"
+	native "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
@@ -42,7 +42,7 @@ func FuzzV1StateHashTreeRoot(f *testing.F) {
 		if err != nil {
 			return
 		}
-		nativeState, err := v12.InitializeFromProto(pbState)
+		nativeState, err := native.InitializeFromProtoPhase0(pbState)
 		assert.NoError(t, err)
 
 		slotsToTransition %= 100
@@ -73,6 +73,16 @@ func FuzzV1StateHashTreeRoot(f *testing.F) {
 		if err == nil {
 			assert.Equal(t, rt, newRt)
 			assert.Equal(t, rt, nativeRt)
+		}
+
+		newSSZ, newErr := newState.MarshalSSZ()
+		stateObjSSZ, err := stateObj.MarshalSSZ()
+		nativeSSZ, nativeErr := nativeState.MarshalSSZ()
+		assert.Equal(t, newErr != nil, err != nil)
+		assert.Equal(t, newErr != nil, nativeErr != nil)
+		if err == nil {
+			assert.DeepEqual(t, newSSZ, stateObjSSZ)
+			assert.DeepEqual(t, newSSZ, nativeSSZ)
 		}
 	})
 }

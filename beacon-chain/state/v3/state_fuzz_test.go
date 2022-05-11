@@ -1,7 +1,7 @@
 //go:build go1.18
 // +build go1.18
 
-package v2_test
+package v3_test
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 
 	coreState "github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	native "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native"
-	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
+	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -18,8 +18,8 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
-func FuzzV2StateHashTreeRoot(f *testing.F) {
-	gState, _ := util.DeterministicGenesisStateAltair(f, 100)
+func FuzzV3StateHashTreeRoot(f *testing.F) {
+	gState, _ := util.DeterministicGenesisStateBellatrix(f, 100)
 	output, err := gState.MarshalSSZ()
 	assert.NoError(f, err)
 	randPool := make([]byte, 100)
@@ -37,18 +37,18 @@ func FuzzV2StateHashTreeRoot(f *testing.F) {
 			// Perform a XOR on the byte of the selected index.
 			stateSSZ[num] ^= diffBuffer[i+8]
 		}
-		pbState := &ethpb.BeaconStateAltair{}
+		pbState := &ethpb.BeaconStateBellatrix{}
 		err := pbState.UnmarshalSSZ(stateSSZ)
 		if err != nil {
 			return
 		}
-		nativeState, err := native.InitializeFromProtoAltair(pbState)
+		nativeState, err := native.InitializeFromProtoBellatrix(pbState)
 		if err != nil {
 			return
 		}
 
 		slotsToTransition %= 100
-		stateObj, err := v2.InitializeFromProtoUnsafe(pbState)
+		stateObj, err := v3.InitializeFromProtoUnsafe(pbState)
 		assert.NoError(t, err)
 		for stateObj.Slot() < types.Slot(slotsToTransition) {
 			stateObj, err = coreState.ProcessSlots(context.Background(), stateObj, stateObj.Slot()+1)
@@ -61,9 +61,9 @@ func FuzzV2StateHashTreeRoot(f *testing.F) {
 		}
 		assert.NoError(t, err)
 		// Perform a cold HTR calculation by initializing a new state.
-		innerState, ok := stateObj.InnerStateUnsafe().(*ethpb.BeaconStateAltair)
-		assert.Equal(t, true, ok, "inner state is a not a beacon state altair proto")
-		newState, err := v2.InitializeFromProtoUnsafe(innerState)
+		innerState, ok := stateObj.InnerStateUnsafe().(*ethpb.BeaconStateBellatrix)
+		assert.Equal(t, true, ok, "inner state is a not a beacon state bellatrix proto")
+		newState, err := v3.InitializeFromProtoUnsafe(innerState)
 		assert.NoError(t, err)
 
 		newRt, newErr := newState.HashTreeRoot(context.Background())
