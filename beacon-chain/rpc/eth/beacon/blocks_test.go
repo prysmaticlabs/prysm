@@ -589,12 +589,10 @@ func TestServer_SubmitBlockSSZ_OK(t *testing.T) {
 		req := util.NewBeaconBlock()
 		req.Block.Slot = 5
 		req.Block.ParentRoot = bsRoot[:]
-		v1Block, err := migration.V1Alpha1ToV1SignedBlock(req)
-		require.NoError(t, err)
 		wsb, err = wrapper.WrappedSignedBeaconBlock(req)
 		require.NoError(t, err)
 		require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
-		blockSsz, err := v1Block.MarshalSSZ()
+		blockSsz, err := req.MarshalSSZ()
 		require.NoError(t, err)
 		blockReq := &ethpbv2.SignedBeaconBlockSSZContainer{
 			Data: blockSsz,
@@ -635,12 +633,10 @@ func TestServer_SubmitBlockSSZ_OK(t *testing.T) {
 		req := util.NewBeaconBlockAltair()
 		req.Block.Slot = params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().AltairForkEpoch))
 		req.Block.ParentRoot = bsRoot[:]
-		v2Block, err := migration.V1Alpha1SignedBeaconBlockAltairToV2(req)
-		require.NoError(t, err)
 		wrapped, err = wrapper.WrappedSignedBeaconBlock(req)
 		require.NoError(t, err)
 		require.NoError(t, beaconDB.SaveBlock(ctx, wrapped))
-		blockSsz, err := v2Block.MarshalSSZ()
+		blockSsz, err := req.MarshalSSZ()
 		require.NoError(t, err)
 		blockReq := &ethpbv2.SignedBeaconBlockSSZContainer{
 			Data: blockSsz,
@@ -689,12 +685,10 @@ func TestServer_SubmitBlockSSZ_OK(t *testing.T) {
 		req := util.NewBeaconBlockBellatrix()
 		req.Block.Slot = params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().BellatrixForkEpoch))
 		req.Block.ParentRoot = bsRoot[:]
-		v2Block, err := migration.V1Alpha1SignedBeaconBlockBellatrixToV2(req)
-		require.NoError(t, err)
 		wrapped, err = wrapper.WrappedSignedBeaconBlock(req)
 		require.NoError(t, err)
 		require.NoError(t, beaconDB.SaveBlock(ctx, wrapped))
-		blockSsz, err := v2Block.MarshalSSZ()
+		blockSsz, err := req.MarshalSSZ()
 		require.NoError(t, err)
 		blockReq := &ethpbv2.SignedBeaconBlockSSZContainer{
 			Data: blockSsz,
