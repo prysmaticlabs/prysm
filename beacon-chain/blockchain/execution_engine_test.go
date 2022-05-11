@@ -178,14 +178,12 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 			require.NoError(t, beaconDB.SaveState(ctx, st, tt.finalizedRoot))
 			require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, tt.finalizedRoot))
 			fc := &ethpb.Checkpoint{Epoch: 1, Root: tt.finalizedRoot[:]}
-			service.store.SetFinalizedCheckpt(fc)
-			service.store.SetJustifiedCheckpt(fc)
+			service.store.SetFinalizedCheckptAndPayloadHash(fc, [32]byte{'a'})
+			service.store.SetJustifiedCheckptAndPayloadHash(fc, [32]byte{'b'})
 			arg := &notifyForkchoiceUpdateArg{
-				headState:     st,
-				headRoot:      tt.headRoot,
-				headBlock:     tt.blk,
-				finalizedRoot: tt.finalizedRoot,
-				justifiedRoot: tt.justifiedRoot,
+				headState: st,
+				headRoot:  tt.headRoot,
+				headBlock: tt.blk,
 			}
 			_, err := service.notifyForkchoiceUpdate(ctx, arg)
 			if tt.errString != "" {
@@ -318,14 +316,12 @@ func Test_NotifyForkchoiceUpdateRecursive(t *testing.T) {
 	require.NoError(t, beaconDB.SaveState(ctx, st, bra))
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, bra))
 	fc := &ethpb.Checkpoint{Epoch: 0, Root: bra[:]}
-	service.store.SetFinalizedCheckpt(fc)
-	service.store.SetJustifiedCheckpt(fc)
+	service.store.SetFinalizedCheckptAndPayloadHash(fc, [32]byte{'a'})
+	service.store.SetJustifiedCheckptAndPayloadHash(fc, [32]byte{'b'})
 	a := &notifyForkchoiceUpdateArg{
-		headState:     st,
-		headBlock:     wbg.Block(),
-		headRoot:      brg,
-		justifiedRoot: bra,
-		finalizedRoot: bra,
+		headState: st,
+		headBlock: wbg.Block(),
+		headRoot:  brg,
 	}
 	_, err = service.notifyForkchoiceUpdate(ctx, a)
 	require.ErrorIs(t, ErrInvalidPayload, err)
@@ -686,11 +682,11 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 		jRoot, err := tt.justified.Block().HashTreeRoot()
 		require.NoError(t, err)
 		require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, tt.justified))
-		service.store.SetJustifiedCheckpt(
+		service.store.SetJustifiedCheckptAndPayloadHash(
 			&ethpb.Checkpoint{
 				Root:  jRoot[:],
 				Epoch: slots.ToEpoch(tt.justified.Block().Slot()),
-			})
+			}, [32]byte{'a'})
 		require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrappedParentBlock))
 
 		err = service.optimisticCandidateBlock(ctx, tt.blk)
@@ -952,7 +948,7 @@ func TestService_getPayloadHash(t *testing.T) {
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 
-	_, err = service.getPayloadHash(ctx, [32]byte{})
+	_, err = service.getPayloadHash(ctx, []byte{})
 	require.ErrorIs(t, errBlockNotFoundInCacheOrDB, err)
 
 	b := util.NewBeaconBlock()
@@ -962,20 +958,20 @@ func TestService_getPayloadHash(t *testing.T) {
 	require.NoError(t, err)
 	service.saveInitSyncBlock(r, wsb)
 
-	h, err := service.getPayloadHash(ctx, r)
+	h, err := service.getPayloadHash(ctx, r[:])
 	require.NoError(t, err)
-	require.DeepEqual(t, params.BeaconConfig().ZeroHash[:], h)
+	require.DeepEqual(t, params.BeaconConfig().ZeroHash, h)
 
 	bb := util.NewBeaconBlockBellatrix()
-	h = []byte{'a'}
-	bb.Block.Body.ExecutionPayload.BlockHash = h
+	h = [32]byte{'a'}
+	bb.Block.Body.ExecutionPayload.BlockHash = h[:]
 	r, err = b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	wsb, err = wrapper.WrappedSignedBeaconBlock(bb)
 	require.NoError(t, err)
 	service.saveInitSyncBlock(r, wsb)
 
-	h, err = service.getPayloadHash(ctx, r)
+	h, err = service.getPayloadHash(ctx, r[:])
 	require.NoError(t, err)
-	require.DeepEqual(t, []byte{'a'}, h)
+	require.DeepEqual(t, [32]byte{'a'}, h)
 }

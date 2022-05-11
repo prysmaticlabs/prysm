@@ -185,12 +185,6 @@ func (s *Service) notifyEngineIfChangedHead(ctx context.Context, newHeadRoot [32
 		return // We don't have the block, don't notify the engine and update head.
 	}
 
-	finalized := s.store.FinalizedCheckpt()
-	if finalized == nil {
-		log.WithError(errNilFinalizedInStore).Error("could not get finalized checkpoint")
-		return
-	}
-
 	newHeadBlock, err := s.getBlock(ctx, newHeadRoot)
 	if err != nil {
 		log.WithError(err).Error("Could not get new head block")
@@ -202,11 +196,9 @@ func (s *Service) notifyEngineIfChangedHead(ctx context.Context, newHeadRoot [32
 		return
 	}
 	arg := &notifyForkchoiceUpdateArg{
-		headState:     headState,
-		headRoot:      newHeadRoot,
-		headBlock:     newHeadBlock.Block(),
-		finalizedRoot: bytesutil.ToBytes32(finalized.Root),
-		justifiedRoot: bytesutil.ToBytes32(s.store.JustifiedCheckpt().Root),
+		headState: headState,
+		headRoot:  newHeadRoot,
+		headBlock: newHeadBlock.Block(),
 	}
 	_, err = s.notifyForkchoiceUpdate(s.ctx, arg)
 	if err != nil {
