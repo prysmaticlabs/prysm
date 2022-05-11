@@ -87,6 +87,7 @@ func TestConfigureProofOfWork(t *testing.T) {
 
 func TestConfigureExecutionSetting(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
+	hook := logTest.NewGlobal()
 
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
@@ -102,11 +103,15 @@ func TestConfigureExecutionSetting(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, common.HexToAddress("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"), params.BeaconConfig().DefaultFeeRecipient)
 
-	require.NoError(t, set.Set(flags.SuggestedFeeRecipient.Name, "0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"))
+	assert.LogsContain(t, hook,
+		"is not a checksum Ethereum address",
+	)
+	require.NoError(t, set.Set(flags.SuggestedFeeRecipient.Name, "0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa"))
 	cliCtx = cli.NewContext(&app, set, nil)
 	err = configureExecutionSetting(cliCtx)
 	require.NoError(t, err)
-	assert.Equal(t, common.HexToAddress("0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"), params.BeaconConfig().DefaultFeeRecipient)
+	assert.Equal(t, common.HexToAddress("0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa"), params.BeaconConfig().DefaultFeeRecipient)
+
 }
 
 func TestConfigureNetwork(t *testing.T) {
