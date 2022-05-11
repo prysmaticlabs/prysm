@@ -14,6 +14,7 @@ import (
 // providing RPC endpoints intended for validator clients.
 type Server struct {
 	HeadFetcher       blockchain.HeadFetcher
+	HeadUpdater       blockchain.HeadUpdater
 	TimeFetcher       blockchain.TimeFetcher
 	SyncChecker       sync.Checker
 	AttestationsPool  attestations.Pool
