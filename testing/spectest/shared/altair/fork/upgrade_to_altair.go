@@ -39,7 +39,7 @@ func RunUpgradeToAltair(t *testing.T, config string) {
 			preState, err := v1.InitializeFromProto(preStateBase)
 			require.NoError(t, err)
 			postState, err := altair.UpgradeToAltair(context.Background(), preState)
-			require.NoError(t, err)
+			require.ErrorIs(t, statealtair.ErrNilField, err)
 			postStateFromFunction, err := statealtair.ProtobufBeaconState(postState.InnerStateUnsafe())
 			require.NoError(t, err)
 
