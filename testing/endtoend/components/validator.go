@@ -3,6 +3,7 @@ package components
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"fmt"
 	"math/big"
 	"os"
@@ -22,6 +23,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/runtime/interop"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/components/eth1"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
@@ -65,19 +67,10 @@ func (s *ValidatorNodeSet) Start(ctx context.Context) error {
 	}
 	validatorsPerNode := validatorNum / beaconNodeNum
 	// Create validator nodes.
-	hexKeys := make([][]string, 0)
-	if len(s.config.Web3signerPubkeys) != 0 {
-		chunkSize := len(s.config.Web3signerPubkeys) / prysmBeaconNodeNum
-		hexKeys = chunkSlice(s.config.Web3signerPubkeys, chunkSize)
-	}
+
 	nodes := make([]e2etypes.ComponentRunner, prysmBeaconNodeNum)
 	for i := 0; i < prysmBeaconNodeNum; i++ {
-		switch {
-		case s.config.UseWeb3RemoteSigner:
-			nodes[i] = NewValidatorNode(s.config, validatorsPerNode, i, validatorsPerNode*i, WithWeb3signerPubkeys(hexKeys[i]))
-		default:
-			nodes[i] = NewValidatorNode(s.config, validatorsPerNode, i, validatorsPerNode*i)
-		}
+		nodes[i] = NewValidatorNode(s.config, validatorsPerNode, i, validatorsPerNode*i)
 
 	}
 
@@ -89,26 +82,6 @@ func (s *ValidatorNodeSet) Start(ctx context.Context) error {
 	})
 }
 
-func chunkSlice(slice []string, chunkSize int) [][]string {
-	var chunks [][]string
-	for {
-		if len(slice) == 0 {
-			break
-		}
-
-		// necessary check to avoid slicing beyond
-		// slice capacity
-		if len(slice) < chunkSize {
-			chunkSize = len(slice)
-		}
-
-		chunks = append(chunks, slice[0:chunkSize])
-		slice = slice[chunkSize:]
-	}
-
-	return chunks
-}
-
 // Started checks whether validator node set is started and all nodes are ready to be queried.
 func (s *ValidatorNodeSet) Started() <-chan struct{} {
 	return s.started
@@ -117,32 +90,21 @@ func (s *ValidatorNodeSet) Started() <-chan struct{} {
 // ValidatorNode represents a validator node.
 type ValidatorNode struct {
 	e2etypes.ComponentRunner
-	config            *e2etypes.E2EConfig
-	started           chan struct{}
-	validatorNum      int
-	index             int
-	offset            int
-	web3signerPubkeys []string
+	config       *e2etypes.E2EConfig
+	started      chan struct{}
+	validatorNum int
+	index        int
+	offset       int
 }
 
 // NewValidatorNode creates and returns a validator node.
-func NewValidatorNode(config *e2etypes.E2EConfig, validatorNum, index, offset int, options ...func(*ValidatorNode)) *ValidatorNode {
-	vn := &ValidatorNode{
+func NewValidatorNode(config *e2etypes.E2EConfig, validatorNum, index, offset int) *ValidatorNode {
+	return &ValidatorNode{
 		config:       config,
 		validatorNum: validatorNum,
 		index:        index,
 		offset:       offset,
 		started:      make(chan struct{}, 1),
-	}
-	for _, option := range options {
-		option(vn)
-	}
-	return vn
-}
-
-func WithWeb3signerPubkeys(hexPubkeys []string) func(*ValidatorNode) {
-	return func(vn *ValidatorNode) {
-		vn.web3signerPubkeys = hexPubkeys
 	}
 }
 
@@ -194,14 +156,15 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 		args = append(args, features.E2EValidatorFlags...)
 	}
 	if v.config.UseWeb3RemoteSigner {
-		if len(v.web3signerPubkeys) == 0 {
-			return errors.New("web3signer requires at least 1 Public key set for signing")
+		_, pubs, err := interop.DeterministicallyGenerateKeys(uint64(offset), uint64(validatorNum))
+		if err != nil {
+			return err
 		}
-		args = append(args, fmt.Sprintf("--%s=http://localhost:%d", flags.Web3SignerURLFlag.Name, Web3RemoteSignerPort))
-		// Write the pubkeys as comma seperated hex strings with 0x prefix.
-		// See: https://docs.teku.consensys.net/en/latest/HowTo/External-Signer/Use-External-Signer/
-
-		args = append(args, fmt.Sprintf("--%s=%s", flags.Web3SignerPublicValidatorKeysFlag.Name, strings.Join(v.web3signerPubkeys, ",")))
+		var hexPubs []string
+		for _, pub := range pubs {
+			hexPubs = append(hexPubs, "0x"+hex.EncodeToString(pub.Marshal()))
+		}
+		args = append(args, fmt.Sprintf("--%s=%s", flags.Web3SignerPublicValidatorKeysFlag.Name, strings.Join(hexPubs, ",")))
 	} else {
 		// When not using remote key signer, use interop keys.
 		args = append(args,
