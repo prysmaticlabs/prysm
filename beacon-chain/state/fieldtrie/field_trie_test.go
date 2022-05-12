@@ -18,7 +18,7 @@ func TestFieldTrie_NewTrie(t *testing.T) {
 	newState, _ := util.DeterministicGenesisState(t, 40)
 
 	// 5 represents the enum value of state roots
-	trie, err := fieldtrie.NewFieldTrie(5, stateTypes.BasicArray, newState.StateRoots(), uint64(params.BeaconConfig().SlotsPerHistoricalRoot))
+	trie, err := fieldtrie.NewFieldTrie(stateTypes.FieldIndex(5), stateTypes.BasicArray, newState.StateRoots(), uint64(params.BeaconConfig().SlotsPerHistoricalRoot))
 	require.NoError(t, err)
 	root, err := stateutil.RootsArrayHashTreeRoot(newState.StateRoots(), uint64(params.BeaconConfig().SlotsPerHistoricalRoot))
 	require.NoError(t, err)
@@ -30,7 +30,7 @@ func TestFieldTrie_NewTrie(t *testing.T) {
 func TestFieldTrie_RecomputeTrie(t *testing.T) {
 	newState, _ := util.DeterministicGenesisState(t, 32)
 	// 10 represents the enum value of validators
-	trie, err := fieldtrie.NewFieldTrie(11, stateTypes.CompositeArray, newState.Validators(), params.BeaconConfig().ValidatorRegistryLimit)
+	trie, err := fieldtrie.NewFieldTrie(stateTypes.FieldIndex(11), stateTypes.CompositeArray, newState.Validators(), params.BeaconConfig().ValidatorRegistryLimit)
 	require.NoError(t, err)
 
 	changedIdx := []uint64{2, 29}
@@ -58,7 +58,7 @@ func TestFieldTrie_RecomputeTrie(t *testing.T) {
 func TestFieldTrie_CopyTrieImmutable(t *testing.T) {
 	newState, _ := util.DeterministicGenesisState(t, 32)
 	// 12 represents the enum value of randao mixes.
-	trie, err := fieldtrie.NewFieldTrie(13, stateTypes.BasicArray, newState.RandaoMixes(), uint64(params.BeaconConfig().EpochsPerHistoricalVector))
+	trie, err := fieldtrie.NewFieldTrie(stateTypes.FieldIndex(13), stateTypes.BasicArray, newState.RandaoMixes(), uint64(params.BeaconConfig().EpochsPerHistoricalVector))
 	require.NoError(t, err)
 
 	newTrie := trie.CopyTrie()

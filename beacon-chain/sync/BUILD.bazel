@@ -149,6 +149,7 @@ go_test(
         "subscriber_beacon_blocks_test.go",
         "subscriber_test.go",
         "subscription_topic_handler_test.go",
+        "sync_fuzz_test.go",
         "sync_test.go",
         "utils_test.go",
         "validate_aggregate_proof_test.go",

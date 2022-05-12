@@ -138,7 +138,8 @@ func TestProcessDeposit_InvalidPublicKey(t *testing.T) {
 	deposits[0].Proof, err = trie.MerkleProof(0)
 	require.NoError(t, err)
 
-	root := trie.HashTreeRoot()
+	root, err := trie.HashTreeRoot()
+	require.NoError(t, err)
 
 	eth1Data := &ethpb.Eth1Data{
 		DepositCount: 1,
@@ -178,7 +179,8 @@ func TestProcessDeposit_InvalidSignature(t *testing.T) {
 	trie, err := trie.GenerateTrieFromItems([][]byte{leaf[:]}, params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err)
 
-	root := trie.HashTreeRoot()
+	root, err := trie.HashTreeRoot()
+	require.NoError(t, err)
 
 	eth1Data := &ethpb.Eth1Data{
 		DepositCount: 1,
@@ -213,7 +215,8 @@ func TestProcessDeposit_UnableToVerify(t *testing.T) {
 
 	trie, _, err := util.DepositTrieFromDeposits(deposits)
 	require.NoError(t, err)
-	root := trie.HashTreeRoot()
+	root, err := trie.HashTreeRoot()
+	require.NoError(t, err)
 	eth1Data := &ethpb.Eth1Data{
 		DepositCount: 1,
 		DepositRoot:  root[:],
@@ -265,7 +268,8 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 
 	trie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err)
-	root := trie.HashTreeRoot()
+	root, err := trie.HashTreeRoot()
+	require.NoError(t, err)
 	eth1Data := &ethpb.Eth1Data{
 		DepositCount: 1,
 		DepositRoot:  root[:],
@@ -281,7 +285,8 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 	for i := 0; i < int(factor-1); i++ {
 		assert.NoError(t, trie.Insert(dataRoot[:], i))
 
-		trieRoot := trie.HashTreeRoot()
+		trieRoot, err := trie.HashTreeRoot()
+		require.NoError(t, err)
 		eth1Data.DepositRoot = trieRoot[:]
 		eth1Data.DepositCount = uint64(i + 1)
 

@@ -35,7 +35,7 @@ type StateManager interface {
 	StateByRootIfCachedNoCopy(blockRoot [32]byte) state.BeaconState
 	StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error)
 	RecoverStateSummary(ctx context.Context, blockRoot [32]byte) (*ethpb.StateSummary, error)
-	SaveState(ctx context.Context, root [32]byte, st state.BeaconState) error
+	SaveState(ctx context.Context, blockRoot [32]byte, st state.BeaconState) error
 	ForceCheckpoint(ctx context.Context, root []byte) error
 	EnableSaveHotStateToDB(_ context.Context)
 	DisableSaveHotStateToDB(ctx context.Context) error
@@ -57,10 +57,10 @@ type State struct {
 // how often does the node save hot states to db? what are
 // the saved hot states in db?... etc
 type saveHotStateDbConfig struct {
-	enabled         bool
-	lock            sync.Mutex
-	duration        types.Slot
-	savedStateRoots [][32]byte
+	enabled                 bool
+	lock                    sync.Mutex
+	duration                types.Slot
+	blockRootsOfSavedStates [][32]byte
 }
 
 // This tracks the finalized point. It's also the point where slot and the block root of
@@ -100,7 +100,7 @@ func New(beaconDB db.NoHeadAccessDatabase, opts ...StateGenOption) *State {
 	return s
 }
 
-// Resume resumes a new state management object from previously saved finalized check point in DB.
+// Resume resumes a new state management object from previously saved finalized checkpoint in DB.
 func (s *State) Resume(ctx context.Context, fState state.BeaconState) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.Resume")
 	defer span.End()

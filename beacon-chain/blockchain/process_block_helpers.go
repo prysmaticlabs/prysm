@@ -208,7 +208,11 @@ func (s *Service) updateJustified(ctx context.Context, state state.ReadOnlyBeaco
 			return errNilJustifiedInStore
 		}
 		s.store.SetPrevJustifiedCheckpt(justified)
-		s.store.SetJustifiedCheckpt(cpt)
+		h, err := s.getPayloadHash(ctx, cpt.Root)
+		if err != nil {
+			return err
+		}
+		s.store.SetJustifiedCheckptAndPayloadHash(cpt, h)
 	}
 
 	return nil
@@ -227,7 +231,11 @@ func (s *Service) updateJustifiedInitSync(ctx context.Context, cp *ethpb.Checkpo
 	if err := s.cfg.BeaconDB.SaveJustifiedCheckpoint(ctx, cp); err != nil {
 		return err
 	}
-	s.store.SetJustifiedCheckpt(cp)
+	h, err := s.getPayloadHash(ctx, cp.Root)
+	if err != nil {
+		return err
+	}
+	s.store.SetJustifiedCheckptAndPayloadHash(cp, h)
 
 	return nil
 }

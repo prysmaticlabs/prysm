@@ -165,4 +165,5 @@ var E2EBeaconChainFlags = []string{
 	"--dev",
 	"--use-check-point-cache",
 	"--enable-active-balance-cache",
+	"--enable-native-state",
 }
