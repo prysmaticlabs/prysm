@@ -62,11 +62,9 @@ func (s *ValidatorNodeSet) Start(ctx context.Context) error {
 	}
 	validatorsPerNode := validatorNum / beaconNodeNum
 	// Create validator nodes.
-
 	nodes := make([]e2etypes.ComponentRunner, prysmBeaconNodeNum)
 	for i := 0; i < prysmBeaconNodeNum; i++ {
 		nodes[i] = NewValidatorNode(s.config, validatorsPerNode, i, validatorsPerNode*i)
-
 	}
 
 	// Wait for all nodes to finish their job (blocking).
@@ -151,6 +149,7 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 		args = append(args, features.E2EValidatorFlags...)
 	}
 	if v.config.UseWeb3RemoteSigner {
+		args = append(args, fmt.Sprintf("--%s=http://localhost:%d", flags.Web3SignerURLFlag.Name, Web3RemoteSignerPort))
 		_, pubs, err := interop.DeterministicallyGenerateKeys(uint64(offset), uint64(validatorNum))
 		if err != nil {
 			return err
