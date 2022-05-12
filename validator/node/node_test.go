@@ -16,6 +16,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	validator_service_config "github.com/prysmaticlabs/prysm/config/validator/service"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
@@ -312,6 +313,8 @@ func TestUnmarshalFromURL(t *testing.T) {
 }
 
 func TestFeeRecipientConfig(t *testing.T) {
+	hook := logTest.NewGlobal()
+
 	type feeRecipientFlag struct {
 		dir        string
 		url        string
@@ -326,12 +329,13 @@ func TestFeeRecipientConfig(t *testing.T) {
 		want        func() *validator_service_config.FeeRecipientConfig
 		urlResponse string
 		wantErr     string
+		wantLog     string
 	}{
 		{
-			name: "Happy Path Config file File",
+			name: "Happy Path Config file File, bad checksum",
 			args: args{
 				feeRecipientFlagValues: &feeRecipientFlag{
-					dir:        "./testdata/good-prepare-beacon-proposer-config.json",
+					dir:        "./testdata/good-prepare-beacon-proposer-config-badchecksum.json",
 					url:        "",
 					defaultfee: "",
 				},
@@ -342,15 +346,16 @@ func TestFeeRecipientConfig(t *testing.T) {
 				return &validator_service_config.FeeRecipientConfig{
 					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validator_service_config.FeeRecipientOptions{
 						bytesutil.ToBytes48(key1): {
-							FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
+							FeeRecipient: common.HexToAddress("0xae967917c465db8578ca9024c205720b1a3651A9"),
 						},
 					},
 					DefaultConfig: &validator_service_config.FeeRecipientOptions{
-						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
+						FeeRecipient: common.HexToAddress("0xae967917c465db8578ca9024c205720b1a3651A9"),
 					},
 				}
 			},
 			wantErr: "",
+			wantLog: "is not a checksum Ethereum address",
 		},
 		{
 			name: "Happy Path Config file File multiple fee recipients",
@@ -505,6 +510,11 @@ func TestFeeRecipientConfig(t *testing.T) {
 			if tt.wantErr != "" {
 				require.ErrorContains(t, tt.wantErr, err)
 				return
+			}
+			if tt.wantLog != "" {
+				assert.LogsContain(t, hook,
+					tt.wantLog,
+				)
 			}
 			w := tt.want()
 			require.DeepEqual(t, w, got)
