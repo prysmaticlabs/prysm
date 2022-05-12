@@ -154,8 +154,8 @@ func TestUpdateHead_MissingJustifiedRoot(t *testing.T) {
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	service.store.SetJustifiedCheckpt(&ethpb.Checkpoint{Root: r[:]})
-	service.store.SetFinalizedCheckpt(&ethpb.Checkpoint{})
+	service.store.SetJustifiedCheckptAndPayloadHash(&ethpb.Checkpoint{Root: r[:]}, [32]byte{'a'})
+	service.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{}, [32]byte{'b'})
 	service.store.SetBestJustifiedCheckpt(&ethpb.Checkpoint{})
 	headRoot, err := service.updateHead(context.Background(), []uint64{})
 	require.NoError(t, err)
@@ -298,8 +298,8 @@ func TestUpdateHead_noSavedChanges(t *testing.T) {
 		Root:  bellatrixBlkRoot[:],
 		Epoch: 1,
 	}
-	service.store.SetFinalizedCheckpt(fcp)
-	service.store.SetJustifiedCheckpt(fcp)
+	service.store.SetFinalizedCheckptAndPayloadHash(fcp, [32]byte{'a'})
+	service.store.SetJustifiedCheckptAndPayloadHash(fcp, [32]byte{'b'})
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, bellatrixBlkRoot))
 
 	bellatrixState, _ := util.DeterministicGenesisStateBellatrix(t, 2)

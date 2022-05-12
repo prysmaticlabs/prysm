@@ -81,7 +81,7 @@ func (s *Store) removeNode(ctx context.Context, node *Node) ([][32]byte, error) 
 				if i != len(children)-1 {
 					children[i] = children[len(children)-1]
 				}
-				node.parent.children = children[:len(children)-2]
+				node.parent.children = children[:len(children)-1]
 				break
 			}
 		}

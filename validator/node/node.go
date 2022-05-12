@@ -539,8 +539,19 @@ func feeRecipientConfig(cliCtx *cli.Context) (*validatorServiceConfig.FeeRecipie
 			if !common.IsHexAddress(option.FeeRecipient) {
 				return nil, errors.New("fee recipient is not a valid eth1 address")
 			}
+			mixedcaseAddress, err := common.NewMixedcaseAddressFromString(option.FeeRecipient)
+			if err != nil {
+				return nil, errors.Wrapf(err, "could not decode fee recipient %s", option.FeeRecipient)
+			}
+			checksumAddress := common.BytesToAddress(feebytes)
+			if !mixedcaseAddress.ValidChecksum() {
+				log.Warnf("Fee recipient %s is not a checksum Ethereum address. "+
+					"The checksummed address is %s and will be used as the fee recipient. "+
+					"We recommend using a mixed-case address (checksum) "+
+					"to prevent spelling mistakes in your fee recipient Ethereum address", option.FeeRecipient, checksumAddress.Hex())
+			}
 			frConfig.ProposeConfig[bytesutil.ToBytes48(decodedKey)] = &validatorServiceConfig.FeeRecipientOptions{
-				FeeRecipient: common.BytesToAddress(feebytes),
+				FeeRecipient: checksumAddress,
 			}
 		}
 	}
