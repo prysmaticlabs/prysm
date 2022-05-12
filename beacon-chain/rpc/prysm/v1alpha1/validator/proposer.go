@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -131,6 +132,12 @@ func (vs *Server) PrepareBeaconProposer(
 func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.SignedBeaconBlock) (*ethpb.ProposeResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.proposeGenericBeaconBlock")
 	defer span.End()
+
+	blk, err := vs.getBuilderBlock(ctx, blk)
+	if err != nil {
+		return nil, err
+	}
+
 	root, err := blk.Block().HashTreeRoot()
 	if err != nil {
 		return nil, fmt.Errorf("could not tree hash block: %v", err)
@@ -161,6 +168,75 @@ func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.
 	return &ethpb.ProposeResponse{
 		BlockRoot: root[:],
 	}, nil
+}
+
+func (vs *Server) getBuilderBlock(ctx context.Context, b interfaces.SignedBeaconBlock) (interfaces.SignedBeaconBlock, error) {
+	if b.Version() != version.BellatrixBlind {
+		return b, nil
+	}
+	if vs.BlockBuilder.Status() != nil {
+		return nil, status.Errorf(codes.FailedPrecondition, "Block builder is not running")
+	}
+	agg, err := b.Block().Body().SyncAggregate()
+	if err != nil {
+		return nil, err
+	}
+	h, err := b.Block().Body().ExecutionPayloadHeader()
+	if err != nil {
+		return nil, err
+	}
+	sb := &ethpb.SignedBlindedBeaconBlockBellatrix{
+		Block: &ethpb.BlindedBeaconBlockBellatrix{
+			Slot:          b.Block().Slot(),
+			ProposerIndex: b.Block().ProposerIndex(),
+			ParentRoot:    b.Block().ParentRoot(),
+			StateRoot:     b.Block().StateRoot(),
+			Body: &ethpb.BlindedBeaconBlockBodyBellatrix{
+				RandaoReveal:           b.Block().Body().RandaoReveal(),
+				Eth1Data:               b.Block().Body().Eth1Data(),
+				Graffiti:               b.Block().Body().Graffiti(),
+				ProposerSlashings:      b.Block().Body().ProposerSlashings(),
+				AttesterSlashings:      b.Block().Body().AttesterSlashings(),
+				Attestations:           b.Block().Body().Attestations(),
+				Deposits:               b.Block().Body().Deposits(),
+				VoluntaryExits:         b.Block().Body().VoluntaryExits(),
+				SyncAggregate:          agg,
+				ExecutionPayloadHeader: h,
+			},
+		},
+		Signature: nil,
+	}
+
+	payload, err := vs.BlockBuilder.SubmitBlindedBlock(ctx, sb)
+	if err != nil {
+		return nil, err
+	}
+	bb := &ethpb.SignedBeaconBlockBellatrix{
+		Block: &ethpb.BeaconBlockBellatrix{
+			Slot:          sb.Block.Slot,
+			ProposerIndex: sb.Block.ProposerIndex,
+			ParentRoot:    sb.Block.ParentRoot,
+			StateRoot:     sb.Block.StateRoot,
+			Body: &ethpb.BeaconBlockBodyBellatrix{
+				RandaoReveal:      sb.Block.Body.RandaoReveal,
+				Eth1Data:          sb.Block.Body.Eth1Data,
+				Graffiti:          sb.Block.Body.Graffiti,
+				ProposerSlashings: sb.Block.Body.ProposerSlashings,
+				AttesterSlashings: sb.Block.Body.AttesterSlashings,
+				Attestations:      sb.Block.Body.Attestations,
+				Deposits:          sb.Block.Body.Deposits,
+				VoluntaryExits:    sb.Block.Body.VoluntaryExits,
+				SyncAggregate:     agg,
+				ExecutionPayload:  payload,
+			},
+		},
+		Signature: nil,
+	}
+	wb, err := wrapper.WrappedSignedBeaconBlock(bb)
+	if err != nil {
+		return nil, err
+	}
+	return wb, nil
 }
 
 // computeStateRoot computes the state root after a block has been processed through a state transition and
