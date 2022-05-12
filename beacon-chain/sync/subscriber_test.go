@@ -441,7 +441,7 @@ func Test_wrapAndReportValidation(t *testing.T) {
 
 func TestFilterSubnetPeers(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	cfg := params.MainnetTestConfig().Copy()
+	cfg := params.MainnetConfig().Copy()
 	cfg.SecondsPerSlot = 1
 	params.OverrideBeaconConfig(cfg)
 
@@ -544,7 +544,7 @@ func TestSubscribeWithSyncSubnets_StaticOK(t *testing.T) {
 
 func TestSubscribeWithSyncSubnets_DynamicOK(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	cfg := params.MainnetTestConfig().Copy()
+	cfg := params.MainnetConfig().Copy()
 	cfg.SecondsPerSlot = 1
 	params.OverrideBeaconConfig(cfg)
 
