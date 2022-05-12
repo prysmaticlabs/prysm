@@ -203,3 +203,26 @@ func TestSetOptimisticToInvalid_ProposerBoost(t *testing.T) {
 	require.DeepEqual(t, params.BeaconConfig().ZeroHash, f.store.previousProposerBoostRoot)
 	f.store.proposerBoostLock.RUnlock()
 }
+
+// This is a regression test (10565)
+//     ----- C
+//   /
+//  A <- B
+//   \
+//     ----------D
+// D is invalid
+
+func TestSetOptimisticToInvalid_CorrectChildren(t *testing.T) {
+	ctx := context.Background()
+	f := setup(1, 1)
+
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 100, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'B'}, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 102, [32]byte{'c'}, [32]byte{'a'}, [32]byte{'C'}, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 103, [32]byte{'d'}, [32]byte{'a'}, [32]byte{'D'}, 1, 1))
+
+	_, err := f.store.setOptimisticToInvalid(ctx, [32]byte{'d'}, [32]byte{'a'}, [32]byte{'A'})
+	require.NoError(t, err)
+	require.Equal(t, 2, len(f.store.nodeByRoot[[32]byte{'a'}].children))
+
+}
