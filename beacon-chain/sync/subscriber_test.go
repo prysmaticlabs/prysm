@@ -143,6 +143,7 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 	topic := "/eth2/%x/attester_slashing"
 	var wg sync.WaitGroup
 	wg.Add(1)
+	var err error
 	p2pService.Digest, err = r.currentForkDigest()
 	require.NoError(t, err)
 	r.subscribe(topic, r.noopValidator, func(ctx context.Context, msg proto.Message) error {

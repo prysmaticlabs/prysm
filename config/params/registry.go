@@ -38,7 +38,7 @@ func (r *registry) Add(c *BeaconChainConfig) error {
 		return errors.Wrapf(ErrConfigNameConflict, "ConfigName=%s", name)
 	}
 	c.InitializeForkSchedule()
-	for v, _ := range c.ForkVersionSchedule {
+	for v := range c.ForkVersionSchedule {
 		if n, exists := r.versionToName[v]; exists {
 			return errors.Wrapf(ErrRegistryCollision, "config name=%s conflicts with existing config named=%s", name, n)
 		}
@@ -68,7 +68,7 @@ func (r *registry) delete(name string) {
 	if !exists {
 		return
 	}
-	for v, _ := range c.ForkVersionSchedule {
+	for v := range c.ForkVersionSchedule {
 		delete(r.versionToName, v)
 	}
 	delete(r.nameToConfig, name)
