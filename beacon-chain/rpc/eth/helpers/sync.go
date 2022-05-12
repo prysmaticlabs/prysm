@@ -39,7 +39,7 @@ func ValidateSync(ctx context.Context, syncChecker sync.Checker, headFetcher blo
 }
 
 // IsOptimistic checks whether the latest block header of the passed in beacon state is the header of an optimistic block.
-func IsOptimistic(ctx context.Context, st state.BeaconState, headFetcher blockchain.HeadFetcher) (bool, error) {
+func IsOptimistic(ctx context.Context, st state.BeaconState, optimisticSyncFetcher blockchain.OptimisticModeFetcher) (bool, error) {
 	root, err := st.HashTreeRoot(ctx)
 	if err != nil {
 		return false, errors.Wrap(err, "could not get state root")
@@ -50,7 +50,7 @@ func IsOptimistic(ctx context.Context, st state.BeaconState, headFetcher blockch
 	if err != nil {
 		return false, errors.Wrap(err, "could not get header root")
 	}
-	isOptimistic, err := headFetcher.IsOptimisticForRoot(ctx, headRoot)
+	isOptimistic, err := optimisticSyncFetcher.IsOptimisticForRoot(ctx, headRoot)
 	if err != nil {
 		return false, errors.Wrap(err, "could not check if block is optimistic")
 	}

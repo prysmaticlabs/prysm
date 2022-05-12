@@ -2437,7 +2437,7 @@ func TestProposer_GetBeaconBlock_Optimistic(t *testing.T) {
 	bellatrixSlot, err := slots.EpochStart(params.BeaconConfig().BellatrixForkEpoch)
 	require.NoError(t, err)
 
-	proposerServer := &Server{HeadFetcher: &mock.ChainService{Optimistic: true}, TimeFetcher: &mock.ChainService{}}
+	proposerServer := &Server{OptimisticModeFetcher: &mock.ChainService{Optimistic: true}, TimeFetcher: &mock.ChainService{}}
 	req := &ethpb.BlockRequest{
 		Slot: bellatrixSlot + 1,
 	}
