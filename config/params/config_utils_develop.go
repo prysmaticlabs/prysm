@@ -25,9 +25,7 @@ func BeaconConfig() *BeaconChainConfig {
 func OverrideBeaconConfig(c *BeaconChainConfig) {
 	cfgrw.Lock()
 	defer cfgrw.Unlock()
-	if err := Registry.SetActive(c); err != nil {
-		panic(err)
-	}
+	Registry.active = c
 }
 
 // Copy returns a copy of the config object.

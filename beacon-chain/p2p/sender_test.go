@@ -2,6 +2,7 @@ package p2p
 
 import (
 	"context"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"sync"
 	"testing"
 	"time"
@@ -17,6 +18,7 @@ import (
 )
 
 func TestService_Send(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	p1 := testp2p.NewTestP2P(t)
 	p2 := testp2p.NewTestP2P(t)
 	p1.Connect(p2)

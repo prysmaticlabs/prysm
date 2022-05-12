@@ -1,6 +1,7 @@
 package params
 
 import (
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"math"
 	"time"
 
@@ -246,4 +247,28 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	TerminalBlockHashActivationEpoch: 18446744073709551615,
 	TerminalBlockHash:                [32]byte{},
 	TerminalTotalDifficulty:          "115792089237316195423570985008687907853269984665640564039457584007913129638912",
+}
+
+// MainnetTestConfig provides a version of the mainnet config that has a different name
+// and a different fork choice schedule. This can be used in cases where we want to use config values
+// that are consistent with mainnet, but won't conflict or cause the hard-coded genesis to be loaded.
+func MainnetTestConfig() *BeaconChainConfig {
+	mn := MainnetConfig().Copy()
+	mn.ConfigName = MainnetTestName
+	FillTestVersions(mn, 128)
+	return mn
+}
+
+// FillTestVersions replaces the byte in the last position of each fork version
+// so that
+func FillTestVersions(c *BeaconChainConfig, b byte) {
+	c.GenesisForkVersion = make([]byte, fieldparams.VersionLength)
+	c.GenesisForkVersion[0] = 0
+	c.GenesisForkVersion[fieldparams.VersionLength-1] = b
+	c.AltairForkVersion[0] = 1
+	c.AltairForkVersion[fieldparams.VersionLength-1] = b
+	c.BellatrixForkVersion[0] = 2
+	c.BellatrixForkVersion[fieldparams.VersionLength-1] = b
+	c.ShardingForkVersion[0] = 3
+	c.ShardingForkVersion[fieldparams.VersionLength-1] = b
 }

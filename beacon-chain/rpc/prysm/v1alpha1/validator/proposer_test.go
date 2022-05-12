@@ -2585,7 +2585,7 @@ func setupGetBlock(bm *testing.B) (*Server, state.BeaconState, []bls.SecretKey) 
 	ctx := context.Background()
 
 	params.SetupTestConfigCleanup(bm)
-	params.OverrideBeaconConfig(params.MainnetConfig())
+	params.OverrideBeaconConfig(params.MainnetConfig().Copy())
 	beaconState, privKeys := util.DeterministicGenesisState(bm, 64)
 
 	stateRoot, err := beaconState.HashTreeRoot(ctx)

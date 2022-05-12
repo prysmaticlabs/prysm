@@ -50,7 +50,7 @@ func TestGetState(t *testing.T) {
 
 	t.Run("genesis", func(t *testing.T) {
 		params.SetupTestConfigCleanup(t)
-		cfg := params.BeaconConfig()
+		cfg := params.BeaconConfig().Copy()
 		cfg.ConfigName = "test"
 		params.OverrideBeaconConfig(cfg)
 

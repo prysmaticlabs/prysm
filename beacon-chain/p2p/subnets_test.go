@@ -3,6 +3,7 @@ package p2p
 import (
 	"context"
 	"crypto/rand"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"reflect"
 	"testing"
 	"time"
@@ -24,6 +25,7 @@ import (
 )
 
 func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	// This test needs to be entirely rewritten and should be done in a follow up PR from #7885.
 	t.Skip("This test is now failing after PR 7885 due to false positive")
 	gFlags := new(flags.GlobalFlags)
@@ -146,6 +148,7 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 }
 
 func Test_AttSubnets(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	tests := []struct {
 		name        string
 		record      func(t *testing.T) *enr.Record
@@ -330,6 +333,7 @@ func Test_AttSubnets(t *testing.T) {
 }
 
 func Test_SyncSubnets(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	tests := []struct {
 		name        string
 		record      func(t *testing.T) *enr.Record

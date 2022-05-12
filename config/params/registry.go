@@ -29,10 +29,6 @@ func NewRegistry(configs ...*BeaconChainConfig) *registry {
 			panic(err)
 		}
 	}
-	// ensure that main net is always present and active by default
-	if err := r.SetActive(MainnetConfig()); err != nil {
-		panic(err)
-	}
 	return r
 }
 
@@ -123,6 +119,7 @@ func (r *registry) SetActive(c *BeaconChainConfig) error {
 
 func (r *registry) SetActiveWithUndo(c *BeaconChainConfig) (func() error, error) {
 	active := r.active
+	r.active = c
 	undo, err := r.ReplaceWithUndo(c)
 	if err != nil {
 		return nil, err
@@ -136,6 +133,14 @@ func (r *registry) SetActiveWithUndo(c *BeaconChainConfig) (func() error, error)
 	}, nil
 }
 
+func (r *registry) All() []*BeaconChainConfig {
+	all := make([]*BeaconChainConfig, 0)
+	for _, c := range r.nameToConfig {
+		all = append(all, c)
+	}
+	return all
+}
+
 func init() {
 	defaults := []*BeaconChainConfig{
 		MainnetConfig(),
@@ -145,6 +150,10 @@ func init() {
 		E2EMainnetTestConfig(),
 	}
 	Registry = NewRegistry(defaults...)
+	// ensure that main net is always present and active by default
+	if err := Registry.SetActive(MainnetConfig()); err != nil {
+		panic(err)
+	}
 	// make sure mainnet is present and active
 	m, err := Registry.GetByName(MainnetName)
 	if err != nil {

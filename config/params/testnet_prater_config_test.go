@@ -9,11 +9,16 @@ import (
 
 func TestPraterConfigMatchesUpstreamYaml(t *testing.T) {
 	presetFPs := presetsFilePath(t, "mainnet")
+	mn, err := params.Registry.GetByName(params.MainnetName)
+	require.NoError(t, err)
+	cfg := mn.Copy()
 	for _, fp := range presetFPs {
-		require.NoError(t, params.LoadChainConfigFile(fp, nil))
+		cfg, err = params.UnmarshalConfigFile(fp, cfg)
+		require.NoError(t, err)
 	}
 	configFP := testnetConfigFilePath(t, "prater")
-	require.NoError(t, params.LoadChainConfigFile(configFP, nil))
+	pcfg, err := params.UnmarshalConfigFile(configFP, nil)
+	require.NoError(t, err)
 	fields := fieldsFromYamls(t, append(presetFPs, configFP))
-	assertYamlFieldsMatch(t, "prater", fields, params.BeaconConfig(), params.PraterConfig())
+	assertYamlFieldsMatch(t, "prater", fields, pcfg, params.PraterConfig())
 }

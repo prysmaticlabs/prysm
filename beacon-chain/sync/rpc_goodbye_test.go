@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"sync"
 	"testing"
 	"time"
@@ -20,6 +21,11 @@ import (
 )
 
 func TestGoodByeRPCHandler_Disconnects_With_Peer(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.MainnetConfig().Copy()
+	cfg.SecondsPerSlot = 1
+	params.OverrideBeaconConfig(cfg)
+
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)

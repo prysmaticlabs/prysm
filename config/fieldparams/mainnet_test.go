@@ -4,15 +4,21 @@
 package field_params_test
 
 import (
+	"github.com/prysmaticlabs/prysm/testing/require"
 	"testing"
 
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/testing/assert"
 )
 
 func TestFieldParametersValues(t *testing.T) {
-	params.UseMainnetConfig()
-	assert.Equal(t, "mainnet", fieldparams.Preset)
+	min, err := params.Registry.GetByName(params.MainnetName)
+	require.NoError(t, err)
+	undo, err := params.Registry.SetActiveWithUndo(min)
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, undo())
+	}()
+	require.Equal(t, "mainnet", fieldparams.Preset)
 	testFieldParametersMatchConfig(t)
 }

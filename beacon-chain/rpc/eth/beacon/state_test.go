@@ -22,7 +22,7 @@ import (
 func TestGetGenesis(t *testing.T) {
 	ctx := context.Background()
 	params.SetupTestConfigCleanup(t)
-	config := params.BeaconConfig()
+	config := params.BeaconConfig().Copy()
 	config.GenesisForkVersion = []byte("genesis")
 	params.OverrideBeaconConfig(config)
 	genesis := time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)

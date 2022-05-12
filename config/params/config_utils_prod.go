@@ -19,9 +19,7 @@ func BeaconConfig() *BeaconChainConfig {
 // OverrideBeaconConfig(c). Any subsequent calls to params.BeaconConfig() will
 // return this new configuration.
 func OverrideBeaconConfig(c *BeaconChainConfig) {
-	if err := Registry.SetActive(c); err != nil {
-		panic(err)
-	}
+	Registry.active = c
 }
 
 // Copy returns a copy of the config object.

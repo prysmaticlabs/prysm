@@ -96,7 +96,7 @@ func SetBenchmarkConfig() {
 	maxAtts := AttestationsPerEpoch
 	slotsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch)
 	committeeSize := (ValidatorCount / slotsPerEpoch) / (maxAtts / slotsPerEpoch)
-	c := params.BeaconConfig()
+	c := params.BeaconConfig().Copy()
 	c.ShardCommitteePeriod = 0
 	c.MinValidatorWithdrawabilityDelay = 0
 	c.TargetCommitteeSize = committeeSize
