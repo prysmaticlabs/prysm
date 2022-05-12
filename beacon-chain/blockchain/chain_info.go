@@ -20,7 +20,7 @@ import (
 )
 
 // ChainInfoFetcher defines a common interface for methods in blockchain service which
-// directly retrieves chain info related data.
+// directly retrieve chain info related data.
 type ChainInfoFetcher interface {
 	HeadFetcher
 	FinalizationFetcher
@@ -49,7 +49,7 @@ type GenesisFetcher interface {
 }
 
 // HeadFetcher defines a common interface for methods in blockchain service which
-// directly retrieves head related data.
+// directly retrieve head related data.
 type HeadFetcher interface {
 	HeadSlot() types.Slot
 	HeadRoot(ctx context.Context) ([]byte, error)
@@ -61,8 +61,6 @@ type HeadFetcher interface {
 	HeadPublicKeyToValidatorIndex(pubKey [fieldparams.BLSPubkeyLength]byte) (types.ValidatorIndex, bool)
 	HeadValidatorIndexToPublicKey(ctx context.Context, index types.ValidatorIndex) ([fieldparams.BLSPubkeyLength]byte, error)
 	ChainHeads() ([][32]byte, []types.Slot)
-	IsOptimistic(ctx context.Context) (bool, error)
-	IsOptimisticForRoot(ctx context.Context, root [32]byte) (bool, error)
 	HeadSyncCommitteeFetcher
 	HeadDomainFetcher
 }
@@ -79,12 +77,18 @@ type CanonicalFetcher interface {
 }
 
 // FinalizationFetcher defines a common interface for methods in blockchain service which
-// directly retrieves finalization and justification related data.
+// directly retrieve finalization and justification related data.
 type FinalizationFetcher interface {
 	FinalizedCheckpt() *ethpb.Checkpoint
 	CurrentJustifiedCheckpt() *ethpb.Checkpoint
 	PreviousJustifiedCheckpt() *ethpb.Checkpoint
 	VerifyFinalizedBlkDescendant(ctx context.Context, blockRoot [32]byte) error
+}
+
+// OptimisticModeFetcher retrieves information about optimistic status of the node.
+type OptimisticModeFetcher interface {
+	IsOptimistic(ctx context.Context) (bool, error)
+	IsOptimisticForRoot(ctx context.Context, root [32]byte) (bool, error)
 }
 
 // FinalizedCheckpt returns the latest finalized checkpoint from chain store.
@@ -238,7 +242,7 @@ func (s *Service) GenesisTime() time.Time {
 	return s.genesisTime
 }
 
-// GenesisValidatorsRoot returns the genesis validator
+// GenesisValidatorsRoot returns the genesis validators
 // root of the chain.
 func (s *Service) GenesisValidatorsRoot() [32]byte {
 	s.headLock.RLock()
@@ -305,7 +309,7 @@ func (s *Service) HeadValidatorIndexToPublicKey(_ context.Context, index types.V
 	return v.PublicKey(), nil
 }
 
-// ForkChoicer returns the forkchoice interface
+// ForkChoicer returns the forkchoice interface.
 func (s *Service) ForkChoicer() forkchoice.ForkChoicer {
 	return s.cfg.ForkChoiceStore
 }
@@ -321,7 +325,7 @@ func (s *Service) IsOptimistic(ctx context.Context) (bool, error) {
 	return s.IsOptimisticForRoot(ctx, s.head.root)
 }
 
-// IsOptimisticForRoot takes the root and slot as arguments instead of the current head
+// IsOptimisticForRoot takes the root as argument instead of the current head
 // and returns true if it is optimistic.
 func (s *Service) IsOptimisticForRoot(ctx context.Context, root [32]byte) (bool, error) {
 	optimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(root)
@@ -351,7 +355,7 @@ func (s *Service) IsOptimisticForRoot(ctx context.Context, root [32]byte) (bool,
 		return false, nil
 	}
 
-	// checkpoint root could be zeros before the first finalized epoch. Use genesis root if the case.
+	// Checkpoint root could be zeros before the first finalized epoch. Use genesis root if the case.
 	lastValidated, err := s.cfg.BeaconDB.StateSummary(ctx, s.ensureRootNotZeros(bytesutil.ToBytes32(validatedCheckpoint.Root)))
 	if err != nil {
 		return false, err
@@ -369,7 +373,7 @@ func (s *Service) IsOptimisticForRoot(ctx context.Context, root [32]byte) (bool,
 		return false, err
 	}
 
-	// historical non-canonical blocks here are returned as optimistic for safety.
+	// Historical non-canonical blocks here are returned as optimistic for safety.
 	return !isCanonical, nil
 }
 
@@ -378,7 +382,7 @@ func (s *Service) SetGenesisTime(t time.Time) {
 	s.genesisTime = t
 }
 
-// ForkChoiceStore returns the fork choice store in the service
+// ForkChoiceStore returns the fork choice store in the service.
 func (s *Service) ForkChoiceStore() forkchoice.ForkChoicer {
 	return s.cfg.ForkChoiceStore
 }
