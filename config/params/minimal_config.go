@@ -8,7 +8,7 @@ import (
 
 // UseMinimalConfig for beacon chain services.
 func UseMinimalConfig() {
-	beaconConfig = MinimalSpecConfig()
+	OverrideBeaconConfig(MinimalSpecConfig())
 }
 
 // MinimalSpecConfig retrieves the minimal config used in spec tests.

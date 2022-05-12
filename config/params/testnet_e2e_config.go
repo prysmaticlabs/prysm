@@ -7,16 +7,14 @@ const (
 
 // UseE2EConfig for beacon chain services.
 func UseE2EConfig() {
-	beaconConfig = E2ETestConfig()
-
+	OverrideBeaconConfig(E2ETestConfig().Copy())
 	cfg := BeaconNetworkConfig().Copy()
 	OverrideBeaconNetworkConfig(cfg)
 }
 
 // UseE2EMainnetConfig for beacon chain services.
 func UseE2EMainnetConfig() {
-	beaconConfig = E2EMainnetTestConfig()
-
+	OverrideBeaconConfig(E2EMainnetTestConfig())
 	cfg := BeaconNetworkConfig().Copy()
 	OverrideBeaconNetworkConfig(cfg)
 }
