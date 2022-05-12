@@ -22,7 +22,8 @@ func UseE2EMainnetConfig() {
 }
 
 // E2ETestConfig retrieves the configurations made specifically for E2E testing.
-// Warning: This config is only for testing, it is not meant for use outside of E2E.
+//
+// WARNING: This config is only for testing, it is not meant for use outside of E2E.
 func E2ETestConfig() *BeaconChainConfig {
 	e2eConfig := MinimalSpecConfig()
 
