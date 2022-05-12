@@ -186,6 +186,7 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		cfg.EnableBatchGossipAggregation = true
 	}
 	Init(cfg)
+	return nil
 }
 
 // ConfigureValidator sets the global config based
