@@ -137,14 +137,14 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 	service.cfg.ProposerSlotIndexCache = cache.NewProposerPayloadIDsCache()
 	service.notifyEngineIfChangedHead(ctx, service.headRoot())
 	hookErr := "could not notify forkchoice update"
-	finalizedErr := "could not get finalized checkpoint"
-	require.LogsDoNotContain(t, hook, finalizedErr)
+	invalidStateErr := "Could not get state from db"
+	require.LogsDoNotContain(t, hook, invalidStateErr)
 	require.LogsDoNotContain(t, hook, hookErr)
 	gb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
 	require.NoError(t, err)
 	service.saveInitSyncBlock([32]byte{'a'}, gb)
 	service.notifyEngineIfChangedHead(ctx, [32]byte{'a'})
-	require.LogsContain(t, hook, finalizedErr)
+	require.LogsContain(t, hook, invalidStateErr)
 
 	hook.Reset()
 	service.head = &head{
@@ -169,9 +169,9 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 		state: st,
 	}
 	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(2, 1, [8]byte{1})
-	service.store.SetFinalizedCheckpt(finalized)
+	service.store.SetFinalizedCheckptAndPayloadHash(finalized, [32]byte{})
 	service.notifyEngineIfChangedHead(ctx, r1)
-	require.LogsDoNotContain(t, hook, finalizedErr)
+	require.LogsDoNotContain(t, hook, invalidStateErr)
 	require.LogsDoNotContain(t, hook, hookErr)
 
 	// Block in DB
@@ -191,9 +191,9 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 		state: st,
 	}
 	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(2, 1, [8]byte{1})
-	service.store.SetFinalizedCheckpt(finalized)
+	service.store.SetFinalizedCheckptAndPayloadHash(finalized, [32]byte{})
 	service.notifyEngineIfChangedHead(ctx, r1)
-	require.LogsDoNotContain(t, hook, finalizedErr)
+	require.LogsDoNotContain(t, hook, invalidStateErr)
 	require.LogsDoNotContain(t, hook, hookErr)
 	vId, payloadID, has := service.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(2)
 	require.Equal(t, true, has)
