@@ -31,6 +31,8 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
+const versionHeader = "eth-consensus-version"
+
 // blockIdParseError represents an error scenario where a block ID could not be parsed.
 type blockIdParseError struct {
 	message string
@@ -239,11 +241,11 @@ func (bs *Server) SubmitBlockSSZ(ctx context.Context, req *ethpbv2.SignedBeaconB
 
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
-		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not read eth-consensus-version header")
+		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not read "+versionHeader+" header")
 	}
-	ver := md.Get("eth-consensus-version")
+	ver := md.Get(versionHeader)
 	if len(ver) == 0 {
-		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not read eth-consensus-version header")
+		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not read "+versionHeader+" header")
 	}
 	schedule := forks.NewOrderedSchedule(params.BeaconConfig())
 	forkVer, err := schedule.VersionForName(ver[0])

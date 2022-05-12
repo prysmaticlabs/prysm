@@ -16,6 +16,11 @@ import (
 	"github.com/r3labs/sse"
 )
 
+const (
+	versionHeader     = "Eth-Consensus-Version"
+	grpcVersionHeader = "Grpc-metadata-Eth-Consensus-Version"
+)
+
 type sszConfig struct {
 	sszPath      string
 	fileName     string
@@ -208,10 +213,10 @@ func prepareSSZRequestForProxying(
 }
 
 func prepareCustomHeaders(req *http.Request) {
-	ver := req.Header.Get("Eth-Consensus-Version")
+	ver := req.Header.Get(versionHeader)
 	if ver != "" {
-		req.Header.Del("Eth-Consensus-Version")
-		req.Header.Add("Grpc-metadata-Eth-Consensus-Version", ver)
+		req.Header.Del(versionHeader)
+		req.Header.Add(grpcVersionHeader, ver)
 	}
 }
 
