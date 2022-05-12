@@ -26,6 +26,7 @@ type E2EConfig struct {
 	BeaconFlags             []string
 	ValidatorFlags          []string
 	PeerIDs                 []string
+	Web3signerPubkeys       []string
 	ExtraEpochs             uint64
 }
 
