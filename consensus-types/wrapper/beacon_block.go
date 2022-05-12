@@ -1,6 +1,8 @@
 package wrapper
 
 import (
+	"fmt"
+
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
@@ -149,8 +151,57 @@ func BuildSignedBeaconBlock(blk interfaces.BeaconBlock, signature []byte) (inter
 func BuildSignedBeaconBlockFromExecutionPayload(
 	blk interfaces.SignedBeaconBlock, payload *enginev1.ExecutionPayload,
 ) (interfaces.SignedBeaconBlock, error) {
-	// Should sanity check htr(payload) == htr(blk.body.payload_header).
-	return nil, nil
+	switch tp := blk.(type) {
+	case Phase0SignedBeaconBlock, altairSignedBeaconBlock:
+		return nil, errors.New("cannot build a blinded beacon block for Phase 0 or Altair fork versions")
+	default:
+		b := tp.Block()
+		payloadRoot, err := payload.HashTreeRoot()
+		if err != nil {
+			return nil, err
+		}
+		payloadHeader, err := b.Body().ExecutionPayloadHeader()
+		if err != nil {
+			return nil, err
+		}
+		payloadHeaderRoot, err := payloadHeader.HashTreeRoot()
+		if err != nil {
+			return nil, err
+		}
+		if payloadRoot != payloadHeaderRoot {
+			return nil, fmt.Errorf(
+				"payload root %#x and header root %#x do not match",
+				payloadRoot,
+				payloadHeaderRoot,
+			)
+		}
+		syncAgg, err := b.Body().SyncAggregate()
+		if err != nil {
+			return nil, err
+		}
+		blindedBlock := &eth.SignedBeaconBlockBellatrix{
+			Block: &eth.BeaconBlockBellatrix{
+				Slot:          b.Slot(),
+				ProposerIndex: b.ProposerIndex(),
+				ParentRoot:    b.ParentRoot(),
+				StateRoot:     b.StateRoot(),
+				Body: &eth.BeaconBlockBodyBellatrix{
+					RandaoReveal:      b.Body().RandaoReveal(),
+					Eth1Data:          b.Body().Eth1Data(),
+					Graffiti:          b.Body().Graffiti(),
+					ProposerSlashings: b.Body().ProposerSlashings(),
+					AttesterSlashings: b.Body().AttesterSlashings(),
+					Attestations:      b.Body().Attestations(),
+					Deposits:          b.Body().Deposits(),
+					VoluntaryExits:    b.Body().VoluntaryExits(),
+					SyncAggregate:     syncAgg,
+					ExecutionPayload:  payload,
+				},
+			},
+			Signature: blk.Signature(),
+		}
+		return wrappedBellatrixSignedBeaconBlock(blindedBlock)
+	}
 }
 
 // WrapSignedBlindedBeaconBlock converts a signed beacon block into a blinded format.
