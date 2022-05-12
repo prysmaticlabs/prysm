@@ -185,7 +185,7 @@ func TestRetrieveForkDataFromDigest(t *testing.T) {
 	cfg.AltairForkEpoch = 10
 	cfg.BellatrixForkVersion = []byte{'A', 'B', 'C', 'Z'}
 	cfg.BellatrixForkEpoch = 100
-	cfg.ShardingForkVersion  = []byte{'A', 'B', 'C', 'Y'}
+	cfg.ShardingForkVersion = []byte{'A', 'B', 'C', 'Y'}
 	cfg.ShardingForkEpoch = 1000
 	cfg.InitializeForkSchedule()
 	params.OverrideBeaconConfig(cfg)

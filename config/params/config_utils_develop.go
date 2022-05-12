@@ -4,8 +4,9 @@
 package params
 
 import (
-	"github.com/mohae/deepcopy"
 	"sync"
+
+	"github.com/mohae/deepcopy"
 )
 
 var beaconConfig = MainnetConfig()

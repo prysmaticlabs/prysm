@@ -38,7 +38,6 @@ func TestService_ReceiveBlock(t *testing.T) {
 	bc.ShardCommitteePeriod = 0 // Required for voluntary exits test in reasonable time.
 	params.OverrideBeaconConfig(bc)
 
-
 	type args struct {
 		block *ethpb.SignedBeaconBlock
 	}

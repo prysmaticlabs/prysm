@@ -3,7 +3,6 @@ package p2p
 import (
 	"context"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/config/params"
 	"reflect"
 	"testing"
 	"time"
@@ -14,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/network/forks"
 	"github.com/prysmaticlabs/prysm/testing/assert"

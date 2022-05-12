@@ -6,7 +6,7 @@ const (
 	MainnetName         = "mainnet"
 	MinimalName         = "minimal"
 	PraterName          = "prater"
-	DevnetName	        = "devnet"
+	DevnetName          = "devnet"
 	MainnetTestName     = "mainnet-test"
 )
 

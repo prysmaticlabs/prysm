@@ -1,10 +1,10 @@
 package params
 
 import (
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"math"
 	"time"
 
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 )
 

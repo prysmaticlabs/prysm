@@ -72,4 +72,3 @@ func testConfig(name string) *params.BeaconChainConfig {
 	c.ConfigName = name
 	return c
 }
-

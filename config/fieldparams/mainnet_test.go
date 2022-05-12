@@ -4,11 +4,11 @@
 package field_params_test
 
 import (
-	"github.com/prysmaticlabs/prysm/testing/require"
 	"testing"
 
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestFieldParametersValues(t *testing.T) {

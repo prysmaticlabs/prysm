@@ -3,10 +3,10 @@ package params
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/pkg/errors"
 	"os"
 	"strings"
 
+	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/math"
 	log "github.com/sirupsen/logrus"

@@ -1,10 +1,10 @@
 package p2p
 
 import (
-	"github.com/prysmaticlabs/prysm/config/params"
 	"testing"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 )
 
