@@ -132,7 +132,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 			logrus.WithFields(logrus.Fields{
 				"validatorIndex": vIdx,
 				"burnAddress":    common.BytesToAddress(burnAddr).Hex(),
-			}).Error("Fee recipient not set. Using burn address")
+			}).Warn("Fee recipient not set. Using burn address")
 		}
 	default:
 		return nil, errors.Wrap(err, "could not get fee recipient in db")

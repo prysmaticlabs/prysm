@@ -282,7 +282,7 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 			logrus.WithFields(logrus.Fields{
 				"validatorIndex": proposerID,
 				"burnAddress":    fieldparams.EthBurnAddressHex,
-			}).Error("Fee recipient not set. Using burn address")
+			}).Warn("Fee recipient not set. Using burn address")
 		}
 	case err != nil:
 		return false, nil, 0, errors.Wrap(err, "could not get fee recipient in db")
