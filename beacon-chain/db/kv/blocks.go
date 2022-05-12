@@ -727,7 +727,7 @@ func marshalBlock(_ context.Context, blk interfaces.SignedBeaconBlock) ([]byte, 
 		}
 	} else {
 		// Else, we only store signed, blinded beacon blocks in the database.
-		blindedBlock, err := wrapper.WrapSignedBlindedBeaconBlock(b)
+		blindedBlock, err := wrapper.WrapSignedBlindedBeaconBlock(blk)
 		if err != nil {
 			return nil, err
 		}

@@ -18,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
@@ -599,15 +600,24 @@ func (s *Service) insertSlashingsToForkChoiceStore(ctx context.Context, slashing
 }
 
 func getBlockPayloadHash(blk interfaces.BeaconBlock) ([32]byte, error) {
-	payloadHash := [32]byte{}
+	var blockHashFromPayload [32]byte
 	if blocks.IsPreBellatrixVersion(blk.Version()) {
-		return payloadHash, nil
+		return blockHashFromPayload, nil
 	}
 	payload, err := blk.Body().ExecutionPayload()
-	if err != nil {
-		return payloadHash, err
+	switch {
+	case errors.Is(err, wrapper.ErrUnsupportedField):
+		payloadHeader, err := blk.Body().ExecutionPayloadHeader()
+		if err != nil {
+			return blockHashFromPayload, nil
+		}
+		blockHashFromPayload = bytesutil.ToBytes32(payloadHeader.BlockHash)
+	case err != nil:
+		return blockHashFromPayload, nil
+	default:
+		blockHashFromPayload = bytesutil.ToBytes32(payload.BlockHash)
 	}
-	return bytesutil.ToBytes32(payload.BlockHash), nil
+	return blockHashFromPayload, nil
 }
 
 // This saves post state info to DB or cache. This also saves post state info to fork choice store.

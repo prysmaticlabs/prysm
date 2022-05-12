@@ -71,6 +71,9 @@ func (s *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{
 		if blk == nil || blk.IsNil() {
 			continue
 		}
+
+		// TODO: Reconstruct the full payloads if needed using the engine API.
+
 		if err := s.chunkBlockWriter(stream, blk); err != nil {
 			return err
 		}
