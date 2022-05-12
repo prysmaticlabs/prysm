@@ -23,7 +23,7 @@ var (
 )
 
 type invalidBlock struct {
-	err error
+	error
 }
 
 type invalidBlockError interface {
@@ -31,9 +31,6 @@ type invalidBlockError interface {
 	InvalidBlock() bool
 }
 
-func (e invalidBlock) Error() string {
-	return e.err.Error()
-}
 
 func (e invalidBlock) InvalidBlock() bool {
 	return true
