@@ -7,8 +7,6 @@ import (
 	"github.com/mohae/deepcopy"
 )
 
-var beaconConfig = MainnetConfig()
-
 // BeaconConfig retrieves beacon chain config.
 func BeaconConfig() *BeaconChainConfig {
 	return Registry.GetActive()

@@ -126,10 +126,7 @@ func (r *registry) SetActiveWithUndo(c *BeaconChainConfig) (func() error, error)
 	}
 	return func() error {
 		r.active = active
-		if err := undo(); err != nil {
-			return err
-		}
-		return nil
+		return undo()
 	}, nil
 }
 

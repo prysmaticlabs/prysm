@@ -9,7 +9,6 @@ import (
 	"github.com/mohae/deepcopy"
 )
 
-var beaconConfig = MainnetConfig()
 var cfgrw sync.RWMutex
 
 // BeaconConfig retrieves beacon chain config.
