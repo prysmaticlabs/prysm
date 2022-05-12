@@ -120,7 +120,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 	}
 	if isValidPayload {
 		if err := s.validateMergeTransitionBlock(ctx, preStateVersion, preStateHeader, signed); err != nil {
-			return invalidBlock{err}
+			return err
 		}
 	}
 
@@ -410,7 +410,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 		if isValidPayload {
 			if err := s.validateMergeTransitionBlock(ctx, preVersionAndHeaders[i].version,
 				preVersionAndHeaders[i].header, b); err != nil {
-				return nil, nil, invalidBlock{err}
+				return nil, nil, err
 			}
 		}
 

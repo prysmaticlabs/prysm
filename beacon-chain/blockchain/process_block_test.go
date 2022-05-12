@@ -1493,6 +1493,39 @@ func TestOnBlock_NilBlock(t *testing.T) {
 	require.Equal(t, true, IsInvalidBlock(err))
 }
 
+func TestOnBlock_InvalidSignature(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+	fcs := protoarray.New(0, 0, [32]byte{'a'})
+	depositCache, err := depositcache.New()
+	require.NoError(t, err)
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithStateGen(stategen.New(beaconDB)),
+		WithForkChoiceStore(fcs),
+		WithDepositCache(depositCache),
+		WithStateNotifier(&mock.MockStateNotifier{}),
+	}
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+
+	gs, keys := util.DeterministicGenesisState(t, 32)
+	require.NoError(t, service.saveGenesisData(ctx, gs))
+	gBlk, err := service.cfg.BeaconDB.GenesisBlock(ctx)
+	require.NoError(t, err)
+	gRoot, err := gBlk.Block().HashTreeRoot()
+	require.NoError(t, err)
+	service.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{Root: gRoot[:]}, [32]byte{})
+
+	blk, err := util.GenerateFullBlock(gs, keys, util.DefaultBlockGenConfig(), 1)
+	require.NoError(t, err)
+	r, err := blk.Block.HashTreeRoot()
+	require.NoError(t, err)
+	wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+	require.NoError(t, err)
+	require.NoError(t, service.onBlock(ctx, wsb, r))
+}
+
 func TestOnBlock_CallNewPayloadAndForkchoiceUpdated(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	config := params.BeaconConfig()

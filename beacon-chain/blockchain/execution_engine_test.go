@@ -696,7 +696,14 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 		require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrappedParentBlock))
 
 		err = service.optimisticCandidateBlock(ctx, tt.blk)
-		require.Equal(t, tt.err, err)
+		if tt.err != nil {
+			require.Equal(t, tt.err.Error(), err.Error())
+			if err == errNotOptimisticCandidate {
+				require.Equal(t, true, IsInvalidBlock(err))
+			}
+		} else {
+			require.NoError(t, err)
+		}
 	}
 }
 
