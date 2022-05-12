@@ -4,6 +4,7 @@ import (
 	"math"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 )
 
@@ -75,7 +76,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	FarFutureSlot:            math.MaxUint64,
 	BaseRewardsPerEpoch:      4,
 	DepositContractTreeDepth: 32,
-	GenesisDelay:             604800, // 1 week.
+	GenesisDelay:             300, // 1 week.
 
 	// Misc constant.
 	TargetCommitteeSize:            128,
@@ -84,8 +85,8 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	MinPerEpochChurnLimit:          4,
 	ChurnLimitQuotient:             1 << 16,
 	ShuffleRoundCount:              90,
-	MinGenesisActiveValidatorCount: 16384,
-	MinGenesisTime:                 1606824000, // Dec 1, 2020, 12pm UTC.
+	MinGenesisActiveValidatorCount: 95000,
+	MinGenesisTime:                 1647007200, // Dec 1, 2020, 12pm UTC.
 	TargetAggregatorsPerCommittee:  16,
 	HysteresisQuotient:             4,
 	HysteresisDownwardMultiplier:   1,
@@ -113,7 +114,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	MinValidatorWithdrawabilityDelay: 256,
 	ShardCommitteePeriod:             256,
 	MinEpochsToInactivityPenalty:     4,
-	Eth1FollowDistance:               2048,
+	Eth1FollowDistance:               16,
 	SafeSlotsToUpdateJustified:       8,
 
 	// Fork choice algorithm constants.
@@ -121,9 +122,9 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	IntervalsPerSlot:   3,
 
 	// Ethereum PoW parameters.
-	DepositChainID:         1, // Chain ID of eth1 mainnet.
-	DepositNetworkID:       1, // Network ID of eth1 mainnet.
-	DepositContractAddress: "0x00000000219ab540356cBB839Cbe05303d7705Fa",
+	DepositChainID:         1337802, // Chain ID of eth1 mainnet.
+	DepositNetworkID:       1337802, // Network ID of eth1 mainnet.
+	DepositContractAddress: "0x4242424242424242424242424242424242424242",
 
 	// Validator params.
 	RandomSubnetsPerValidator:         1 << 0,
@@ -183,7 +184,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	MaxPeersToSync:                 15,
 	SlotsPerArchivedPoint:          2048,
 	GenesisCountdownInterval:       time.Minute,
-	ConfigName:                     MainnetName,
+	ConfigName:                     "kiln",
 	PresetBase:                     "mainnet",
 	BeaconStateFieldCount:          21,
 	BeaconStateAltairFieldCount:    24,
@@ -199,11 +200,11 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 
 	// Fork related values.
 	GenesisEpoch:         genesisForkEpoch,
-	GenesisForkVersion:   []byte{0, 0, 0, 0},
-	AltairForkVersion:    []byte{1, 0, 0, 0},
-	AltairForkEpoch:      mainnetAltairForkEpoch,
-	BellatrixForkVersion: []byte{2, 0, 0, 0},
-	BellatrixForkEpoch:   mainnetBellatrixForkEpoch,
+	GenesisForkVersion:   hexutil.MustDecode("0x70000069"),
+	AltairForkVersion:    hexutil.MustDecode("0x70000070"),
+	AltairForkEpoch:      50,
+	BellatrixForkVersion: hexutil.MustDecode("0x70000071"),
+	BellatrixForkEpoch:   150,
 	ShardingForkVersion:  []byte{3, 0, 0, 0},
 	ShardingForkEpoch:    math.MaxUint64,
 
@@ -245,5 +246,5 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	// Bellatrix
 	TerminalBlockHashActivationEpoch: 18446744073709551615,
 	TerminalBlockHash:                [32]byte{},
-	TerminalTotalDifficulty:          "115792089237316195423570985008687907853269984665640564039457584007913129638912",
+	TerminalTotalDifficulty:          "20000000000000",
 }

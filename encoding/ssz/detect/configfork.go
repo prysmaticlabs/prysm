@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/network/forks"
 
 	ssz "github.com/ferranbt/fastssz"
@@ -56,24 +55,21 @@ var ErrForkNotFound = errors.New("version found in fork schedule but can't be ma
 // FromForkVersion uses a lookup table to resolve a Version (from a beacon node api for instance, or obtained by peeking at
 // the bytes of a marshaled BeaconState) to a VersionedUnmarshaler.
 func FromForkVersion(cv [fieldparams.VersionLength]byte) (*VersionedUnmarshaler, error) {
-	cfg, err := params.ConfigForVersion(cv)
-	if err != nil {
-		return nil, err
-	}
-	var fork int
-	switch cv {
-	case bytesutil.ToBytes4(cfg.GenesisForkVersion):
-		fork = version.Phase0
-	case bytesutil.ToBytes4(cfg.AltairForkVersion):
-		fork = version.Altair
-	case bytesutil.ToBytes4(cfg.BellatrixForkVersion):
-		fork = version.Bellatrix
-	default:
-		return nil, errors.Wrapf(ErrForkNotFound, "version=%#x", cv)
-	}
+	cfg := params.KnownConfigs[params.MainnetName]()
+	//var fork int
+	//switch cv {
+	//case bytesutil.ToBytes4(cfg.GenesisForkVersion):
+	//	fork = version.Phase0
+	//case bytesutil.ToBytes4(cfg.AltairForkVersion):
+	//	fork = version.Altair
+	//case bytesutil.ToBytes4(cfg.BellatrixForkVersion):
+	//	fork = version.Bellatrix
+	//default:
+	//	return nil, errors.Wrapf(ErrForkNotFound, "version=%#x", cv)
+	//}
 	return &VersionedUnmarshaler{
 		Config:  cfg,
-		Fork:    fork,
+		Fork:    version.Bellatrix,
 		Version: cv,
 	}, nil
 }
