@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -130,7 +131,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 		if bytes.Equal(feeRecipient.Bytes(), burnAddr) {
 			logrus.WithFields(logrus.Fields{
 				"validatorIndex": vIdx,
-				"burnAddress":    burnAddr,
+				"burnAddress":    common.BytesToAddress(burnAddr).Hex(),
 			}).Error("Fee recipient not set. Using burn address")
 		}
 	default:
