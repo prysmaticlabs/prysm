@@ -57,15 +57,16 @@ func (s *Service) validateMergeBlock(ctx context.Context, b interfaces.SignedBea
 	}
 	_, mergeBlockParentTD, err := s.getBlkParentHashAndTD(ctx, mergeBlockParentHash)
 	if err != nil {
-		return errors.Wrap(err, "could not get merge parent block total difficulty")
+		return invalidBlock{errors.Wrap(err, "could not get merge parent block total difficulty")}
 	}
 	valid, err := validateTerminalBlockDifficulties(mergeBlockTD, mergeBlockParentTD)
 	if err != nil {
 		return err
 	}
 	if !valid {
-		return fmt.Errorf("invalid TTD, configTTD: %s, currentTTD: %s, parentTTD: %s",
+		err := fmt.Errorf("invalid TTD, configTTD: %s, currentTTD: %s, parentTTD: %s",
 			params.BeaconConfig().TerminalTotalDifficulty, mergeBlockTD, mergeBlockParentTD)
+		return invalidBlock{err}
 	}
 
 	log.WithFields(logrus.Fields{

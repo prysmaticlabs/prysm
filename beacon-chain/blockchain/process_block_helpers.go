@@ -51,7 +51,7 @@ func (s *Service) getBlockPreState(ctx context.Context, b interfaces.BeaconBlock
 
 	// Verify block is later than the finalized epoch slot.
 	if err := s.verifyBlkFinalizedSlot(b); err != nil {
-		return nil, invalidBlock{err}
+		return nil, err
 	}
 
 	return preState, nil
@@ -71,7 +71,7 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b interfaces.BeaconBloc
 	}
 
 	if err := s.VerifyFinalizedBlkDescendant(ctx, bytesutil.ToBytes32(b.ParentRoot())); err != nil {
-		return invalidBlock{err}
+		return err
 	}
 
 	has, err := s.cfg.StateGen.HasState(ctx, parentRoot)
@@ -118,7 +118,7 @@ func (s *Service) VerifyFinalizedBlkDescendant(ctx context.Context, root [32]byt
 			bytesutil.Trunc(root[:]), finalizedBlk.Slot(), bytesutil.Trunc(bFinalizedRoot),
 			bytesutil.Trunc(fRoot[:]))
 		tracing.AnnotateError(span, err)
-		return err
+		return invalidBlock{err}
 	}
 	return nil
 }
@@ -135,7 +135,8 @@ func (s *Service) verifyBlkFinalizedSlot(b interfaces.BeaconBlock) error {
 		return err
 	}
 	if finalizedSlot >= b.Slot() {
-		return fmt.Errorf("block is equal or earlier than finalized block, slot %d < slot %d", b.Slot(), finalizedSlot)
+		err = fmt.Errorf("block is equal or earlier than finalized block, slot %d < slot %d", b.Slot(), finalizedSlot)
+		return invalidBlock{err}
 	}
 	return nil
 }

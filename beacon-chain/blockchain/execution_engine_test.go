@@ -393,6 +393,7 @@ func Test_NotifyNewPayload(t *testing.T) {
 		blk            interfaces.SignedBeaconBlock
 		newPayloadErr  error
 		errString      string
+		invalidBlock   bool
 	}{
 		{
 			name:           "phase 0 post state",
@@ -424,6 +425,7 @@ func Test_NotifyNewPayload(t *testing.T) {
 			newPayloadErr:  powchain.ErrInvalidPayloadStatus,
 			errString:      ErrInvalidPayload.Error(),
 			isValidPayload: false,
+			invalidBlock:   true,
 		},
 		{
 			name:           "altair pre state, altair block",
@@ -535,9 +537,13 @@ func Test_NotifyNewPayload(t *testing.T) {
 			isValidPayload, err := service.notifyNewPayload(ctx, postVersion, postHeader, tt.blk)
 			if tt.errString != "" {
 				require.ErrorContains(t, tt.errString, err)
+				if tt.invalidBlock {
+					require.Equal(t, true, IsInvalidBlock(err))
+				}
 			} else {
 				require.NoError(t, err)
 				require.Equal(t, tt.isValidPayload, isValidPayload)
+				require.Equal(t, false, IsInvalidBlock(err))
 			}
 		})
 	}

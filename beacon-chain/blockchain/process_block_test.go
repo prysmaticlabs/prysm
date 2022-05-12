@@ -1316,9 +1316,10 @@ func TestVerifyBlkDescendant(t *testing.T) {
 		finalizedRoot [32]byte
 	}
 	tests := []struct {
-		name      string
-		args      args
-		wantedErr string
+		name             string
+		args             args
+		wantedErr        string
+		invalidBlockRoot bool
 	}{
 		{
 			name: "could not get finalized block in block service cache",
@@ -1341,7 +1342,8 @@ func TestVerifyBlkDescendant(t *testing.T) {
 				finalizedRoot: r1,
 				parentRoot:    r,
 			},
-			wantedErr: "is not a descendant of the current finalized block slot",
+			wantedErr:        "is not a descendant of the current finalized block slot",
+			invalidBlockRoot: true,
 		},
 		{
 			name: "is descendant",
@@ -1358,6 +1360,9 @@ func TestVerifyBlkDescendant(t *testing.T) {
 		err = service.VerifyFinalizedBlkDescendant(ctx, tt.args.parentRoot)
 		if tt.wantedErr != "" {
 			assert.ErrorContains(t, tt.wantedErr, err)
+			if tt.invalidBlockRoot {
+				require.Equal(t, true, IsInvalidBlock(err))
+			}
 		} else if err != nil {
 			assert.NoError(t, err)
 		}
@@ -1467,6 +1472,25 @@ func TestOnBlock_CanFinalize(t *testing.T) {
 	f, err := service.cfg.BeaconDB.FinalizedCheckpoint(ctx)
 	require.NoError(t, err)
 	require.Equal(t, f.Epoch, service.FinalizedCheckpt().Epoch)
+}
+
+func TestOnBlock_NilBlock(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+	fcs := protoarray.New(0, 0, [32]byte{'a'})
+	depositCache, err := depositcache.New()
+	require.NoError(t, err)
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithStateGen(stategen.New(beaconDB)),
+		WithForkChoiceStore(fcs),
+		WithDepositCache(depositCache),
+	}
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+
+	err = service.onBlock(ctx, nil, [32]byte{})
+	require.Equal(t, true, IsInvalidBlock(err))
 }
 
 func TestOnBlock_CallNewPayloadAndForkchoiceUpdated(t *testing.T) {
@@ -1890,4 +1914,24 @@ func TestService_insertSlashingsToForkChoiceStore(t *testing.T) {
 	wb, err := wrapper.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)
 	service.insertSlashingsToForkChoiceStore(ctx, wb.Block().Body().AttesterSlashings())
+}
+
+func Test_verifyBlkFinalizedSlot_invalidBlock(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+
+	fcs := protoarray.New(0, 0, [32]byte{'a'})
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithStateGen(stategen.New(beaconDB)),
+		WithForkChoiceStore(fcs),
+	}
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+	service.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{Epoch: 1}, [32]byte{'a'})
+	blk := util.HydrateBeaconBlock(&ethpb.BeaconBlock{Slot: 1})
+	wb, err := wrapper.WrappedBeaconBlock(blk)
+	require.NoError(t, err)
+	err = service.verifyBlkFinalizedSlot(wb)
+	require.Equal(t, true, IsInvalidBlock(err))
 }
