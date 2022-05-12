@@ -14,6 +14,8 @@ import (
 	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -295,18 +297,37 @@ func (s *Service) ExecutionBlockByHash(ctx context.Context, hash common.Hash) (*
 	return result, handleRPCError(err)
 }
 
-// RecontructFullBellatrixBlock ---
+// ReconstructFullBellatrixBlock takes in a blinded beacon block and reconstructs
+// a beacon block with a full execution payload via the engine API.
 func (s *Service) ReconstructFullBellatrixBlock(
 	ctx context.Context, blinded *ethpb.SignedBlindedBeaconBlockBellatrix,
-) (*ethpb.SignedBeaconBlockBellatrix, error) {
+) (interfaces.SignedBeaconBlock, error) {
 	executionBlockHash := common.BytesToHash(blinded.Block.Body.ExecutionPayloadHeader.BlockHash)
 	executionBlock, err := s.ExecutionBlockByHash(ctx, executionBlockHash)
 	if err != nil {
 		return nil, err
 	}
-	//executionBlock.
-	_ = executionBlock
-	return nil, nil
+	payload := &pb.ExecutionPayload{
+		ParentHash:    executionBlock.ParentHash,
+		FeeRecipient:  executionBlock.BaseFeePerGas,
+		StateRoot:     executionBlock.StateRoot,
+		ReceiptsRoot:  executionBlock.ReceiptsRoot,
+		LogsBloom:     executionBlock.LogsBloom,
+		PrevRandao:    nil,
+		BlockNumber:   0,
+		GasLimit:      0,
+		GasUsed:       0,
+		Timestamp:     0,
+		ExtraData:     executionBlock.ExtraData,
+		BaseFeePerGas: executionBlock.BaseFeePerGas,
+		BlockHash:     executionBlock.Hash,
+		Transactions:  executionBlock.Transactions,
+	}
+	signedBlock, err := wrapper.WrappedSignedBeaconBlock(blinded)
+	if err != nil {
+		return nil, err
+	}
+	return wrapper.BuildSignedBeaconBlockFromExecutionPayload(signedBlock, payload)
 }
 
 // Handles errors received from the RPC server according to the specification.
