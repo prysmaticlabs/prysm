@@ -52,7 +52,7 @@ func TestMarshalDepositWithProof(t *testing.T) {
 
 func TestMerkleTrie_MerkleProofOutOfRange(t *testing.T) {
 	h := hash.Hash([]byte("hi"))
-	m := trie.CreateTrieFromProto(&ethpb.SparseMerkleTrie{
+	m, err := trie.CreateTrieFromProto(&ethpb.SparseMerkleTrie{
 		Layers: []*ethpb.TrieLayer{
 			{
 				Layer: [][]byte{h[:]},
@@ -61,11 +61,12 @@ func TestMerkleTrie_MerkleProofOutOfRange(t *testing.T) {
 				Layer: [][]byte{h[:]},
 			},
 			{
-				Layer: [][]byte{},
+				Layer: [][]byte{h[:]},
 			},
 		},
-		Depth: 4,
+		Depth: 2,
 	})
+	require.NoError(t, err)
 	if _, err := m.MerkleProof(6); err == nil {
 		t.Error("Expected out of range failure, received nil", err)
 	}
@@ -209,7 +210,8 @@ func TestRoundtripProto_OK(t *testing.T) {
 	depositRoot, err := m.HashTreeRoot()
 	require.NoError(t, err)
 
-	newTrie := trie.CreateTrieFromProto(protoTrie)
+	newTrie, err := trie.CreateTrieFromProto(protoTrie)
+	require.NoError(t, err)
 	root, err := newTrie.HashTreeRoot()
 	require.NoError(t, err)
 	require.DeepEqual(t, depositRoot, root)
