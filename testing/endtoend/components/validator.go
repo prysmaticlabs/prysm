@@ -61,6 +61,7 @@ func (s *ValidatorNodeSet) Start(ctx context.Context) error {
 		return errors.New("validator count is not easily divisible by beacon node count")
 	}
 	validatorsPerNode := validatorNum / beaconNodeNum
+
 	// Create validator nodes.
 	nodes := make([]e2etypes.ComponentRunner, prysmBeaconNodeNum)
 	for i := 0; i < prysmBeaconNodeNum; i++ {
@@ -150,6 +151,8 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 	}
 	if v.config.UseWeb3RemoteSigner {
 		args = append(args, fmt.Sprintf("--%s=http://localhost:%d", flags.Web3SignerURLFlag.Name, Web3RemoteSignerPort))
+		// Write the pubkeys as comma seperated hex strings with 0x prefix.
+		// See: https://docs.teku.consensys.net/en/latest/HowTo/External-Signer/Use-External-Signer/
 		_, pubs, err := interop.DeterministicallyGenerateKeys(uint64(offset), uint64(validatorNum))
 		if err != nil {
 			return err
