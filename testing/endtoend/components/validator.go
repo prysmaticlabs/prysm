@@ -51,11 +51,6 @@ func NewValidatorNodeSet(config *e2etypes.E2EConfig) *ValidatorNodeSet {
 	}
 }
 
-//Web3signerPubKeys adds public keys imported to web3signer component to validator Node Set config.
-func (s *ValidatorNodeSet) Web3signerPubKeys(pubkeys []string) {
-	s.config.Web3signerPubkeys = pubkeys
-}
-
 // Start starts the configured amount of validators, also sending and mining their deposits.
 func (s *ValidatorNodeSet) Start(ctx context.Context) error {
 	// Always using genesis count since using anything else would be difficult to test for.
