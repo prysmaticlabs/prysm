@@ -108,7 +108,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 	}
 	postState, err := transition.ExecuteStateTransition(ctx, preState, signed)
 	if err != nil {
-		return err
+		return invalidBlock{err}
 	}
 	postStateVersion, postStateHeader, err := getStateVersionAndPayload(postState)
 	if err != nil {
@@ -120,7 +120,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 	}
 	if isValidPayload {
 		if err := s.validateMergeTransitionBlock(ctx, preStateVersion, preStateHeader, signed); err != nil {
-			return err
+			return invalidBlock{err}
 		}
 	}
 
@@ -329,7 +329,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 	}
 
 	if err := helpers.BeaconBlockIsNil(blks[0]); err != nil {
-		return nil, nil, err
+		return nil, nil, invalidBlock{err}
 	}
 	b := blks[0].Block()
 
@@ -372,7 +372,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 
 		set, preState, err = transition.ExecuteStateTransitionNoVerifyAnySig(ctx, preState, b)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, invalidBlock{err}
 		}
 		// Save potential boundary states.
 		if slots.IsEpochStart(preState.Slot()) {
@@ -393,7 +393,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 	}
 	verify, err := sigSet.Verify()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, invalidBlock{err}
 	}
 	if !verify {
 		return nil, nil, errors.New("batch block signature verification failed")
@@ -410,7 +410,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 		if isValidPayload {
 			if err := s.validateMergeTransitionBlock(ctx, preVersionAndHeaders[i].version,
 				preVersionAndHeaders[i].header, b); err != nil {
-				return nil, nil, err
+				return nil, nil, invalidBlock{err}
 			}
 		}
 
