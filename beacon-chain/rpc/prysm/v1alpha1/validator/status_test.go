@@ -603,7 +603,7 @@ func TestActivationStatus_OK(t *testing.T) {
 }
 
 func TestOptimisticStatus(t *testing.T) {
-	server := &Server{HeadFetcher: &mockChain.ChainService{}, TimeFetcher: &mockChain.ChainService{}}
+	server := &Server{OptimisticModeFetcher: &mockChain.ChainService{}, TimeFetcher: &mockChain.ChainService{}}
 	err := server.optimisticStatus(context.Background())
 	require.NoError(t, err)
 
@@ -612,14 +612,14 @@ func TestOptimisticStatus(t *testing.T) {
 	cfg.BellatrixForkEpoch = 2
 	params.OverrideBeaconConfig(cfg)
 
-	server = &Server{HeadFetcher: &mockChain.ChainService{Optimistic: true}, TimeFetcher: &mockChain.ChainService{}}
+	server = &Server{OptimisticModeFetcher: &mockChain.ChainService{Optimistic: true}, TimeFetcher: &mockChain.ChainService{}}
 	err = server.optimisticStatus(context.Background())
 	s, ok := status.FromError(err)
 	require.Equal(t, true, ok)
 	require.DeepEqual(t, codes.Unavailable, s.Code())
 	require.ErrorContains(t, errOptimisticMode.Error(), err)
 
-	server = &Server{HeadFetcher: &mockChain.ChainService{Optimistic: false}, TimeFetcher: &mockChain.ChainService{}}
+	server = &Server{OptimisticModeFetcher: &mockChain.ChainService{Optimistic: false}, TimeFetcher: &mockChain.ChainService{}}
 	err = server.optimisticStatus(context.Background())
 	require.NoError(t, err)
 }
