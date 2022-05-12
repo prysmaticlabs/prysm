@@ -55,13 +55,21 @@ func (s *Store) SaveOrigin(ctx context.Context, serState, serBlock []byte) error
 	if err != nil {
 		return errors.Wrap(err, "could not compute HashTreeRoot of checkpoint block")
 	}
-	log.Infof("saving checkpoint block to db, w/ root=%#x", blockRoot)
+	headerRoot, err := state.LatestBlockHeader().HashTreeRoot()
+	if err != nil {
+		return errors.Wrap(err, "could not compute HashTreeRoot of state.latest_block_header to validate checkpoint block root")
+	}
+	if headerRoot != blockRoot {
+		return errors.Wrapf(errCheckpointBlockRootMismatch, "htr(state.latest_block_header)=%#x, htr(block)=%#x", headerRoot, blockRoot)
+	}
+
+	log.Infof("saving checkpoint block to db, w/ slot=%d, root=%#x", blk.Slot(), blockRoot)
 	if err := s.SaveBlock(ctx, wblk); err != nil {
 		return errors.Wrap(err, "could not save checkpoint block")
 	}
 
 	// save state
-	log.Infof("calling SaveState w/ blockRoot=%x", blockRoot)
+	log.Infof("calling SaveState w/ blockRoot=%x, slot=%d, parent_root=%#x, block_root=%#x", blockRoot, state.Slot(), state.LatestBlockHeader().ParentRoot, state.LatestBlockHeader().BodyRoot)
 	if err = s.SaveState(ctx, state, blockRoot); err != nil {
 		return errors.Wrap(err, "could not save state")
 	}

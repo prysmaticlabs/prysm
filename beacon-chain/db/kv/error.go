@@ -21,3 +21,5 @@ var ErrNotFoundBackfillBlockRoot = errors.Wrap(ErrNotFound, "BackfillBlockRoot")
 
 // ErrNotFoundFeeRecipient is a not found error specifically for the fee recipient getter
 var ErrNotFoundFeeRecipient = errors.Wrap(ErrNotFound, "fee recipient")
+
+var errCheckpointBlockRootMismatch = errors.New("checkpoint block root does not match state.latest_block_header")
