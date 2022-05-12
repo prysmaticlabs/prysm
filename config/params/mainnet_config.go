@@ -18,7 +18,7 @@ func MainnetConfig() *BeaconChainConfig {
 
 // UseMainnetConfig for beacon chain services.
 func UseMainnetConfig() {
-	beaconConfig = MainnetConfig()
+	OverrideBeaconConfig(MainnetConfig().Copy())
 }
 
 const (

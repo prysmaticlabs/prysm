@@ -113,17 +113,17 @@ func InitWithReset(c *Flags) func() {
 func configureTestnet(ctx *cli.Context) {
 	if ctx.Bool(PraterTestnet.Name) {
 		log.Warn("Running on the Prater Testnet")
-		params.UsePraterConfig()
+		params.OverrideBeaconConfig(params.PraterConfig().Copy())
 		params.UsePraterNetworkConfig()
 	} else {
 		log.Warn("Running on Ethereum Consensus Mainnet")
-		params.UseMainnetConfig()
+		params.OverrideBeaconConfig(params.MainnetConfig().Copy())
 	}
 }
 
 // ConfigureBeaconChain sets the global config based
 // on what flags are enabled for the beacon-chain client.
-func ConfigureBeaconChain(ctx *cli.Context) {
+func ConfigureBeaconChain(ctx *cli.Context) error {
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
 	if ctx.Bool(devModeFlag.Name) {

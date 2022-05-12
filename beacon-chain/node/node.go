@@ -118,7 +118,9 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 		return nil, err
 	}
 	prereqs.WarnIfPlatformNotSupported(cliCtx.Context)
-	features.ConfigureBeaconChain(cliCtx)
+	if err := features.ConfigureBeaconChain(cliCtx); err != nil {
+		return nil, err
+	}
 	cmd.ConfigureBeaconChain(cliCtx)
 	flags.ConfigureGlobalFlags(cliCtx)
 	if err := configureChainConfig(cliCtx); err != nil {
