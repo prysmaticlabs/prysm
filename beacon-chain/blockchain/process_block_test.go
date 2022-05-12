@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 	"strconv"
+	"sync"
 	"testing"
 	"time"
 
@@ -39,6 +40,7 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestStore_OnBlock_ProtoArray(t *testing.T) {
@@ -1890,4 +1892,83 @@ func TestService_insertSlashingsToForkChoiceStore(t *testing.T) {
 	wb, err := wrapper.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)
 	service.insertSlashingsToForkChoiceStore(ctx, wb.Block().Body().AttesterSlashings())
+}
+
+func TestOnBlock_ProcessBlocksParallel(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+	fcs := protoarray.New(0, 0, [32]byte{'a'})
+	depositCache, err := depositcache.New()
+	require.NoError(t, err)
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithStateGen(stategen.New(beaconDB)),
+		WithForkChoiceStore(fcs),
+		WithDepositCache(depositCache),
+		WithStateNotifier(&mock.MockStateNotifier{}),
+	}
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+
+	gs, keys := util.DeterministicGenesisState(t, 32)
+	require.NoError(t, service.saveGenesisData(ctx, gs))
+	gBlk, err := service.cfg.BeaconDB.GenesisBlock(ctx)
+	require.NoError(t, err)
+	gRoot, err := gBlk.Block().HashTreeRoot()
+	require.NoError(t, err)
+	service.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{Root: gRoot[:]}, [32]byte{'a'})
+
+	blk1, err := util.GenerateFullBlock(gs, keys, util.DefaultBlockGenConfig(), 1)
+	require.NoError(t, err)
+	r1, err := blk1.Block.HashTreeRoot()
+	require.NoError(t, err)
+	wsb1, err := wrapper.WrappedSignedBeaconBlock(blk1)
+	require.NoError(t, err)
+	blk2, err := util.GenerateFullBlock(gs, keys, util.DefaultBlockGenConfig(), 2)
+	require.NoError(t, err)
+	r2, err := blk2.Block.HashTreeRoot()
+	require.NoError(t, err)
+	wsb2, err := wrapper.WrappedSignedBeaconBlock(blk2)
+	require.NoError(t, err)
+	blk3, err := util.GenerateFullBlock(gs, keys, util.DefaultBlockGenConfig(), 3)
+	require.NoError(t, err)
+	r3, err := blk3.Block.HashTreeRoot()
+	require.NoError(t, err)
+	wsb3, err := wrapper.WrappedSignedBeaconBlock(blk3)
+	require.NoError(t, err)
+	blk4, err := util.GenerateFullBlock(gs, keys, util.DefaultBlockGenConfig(), 4)
+	require.NoError(t, err)
+	r4, err := blk4.Block.HashTreeRoot()
+	require.NoError(t, err)
+	wsb4, err := wrapper.WrappedSignedBeaconBlock(blk4)
+	require.NoError(t, err)
+
+	logHook := logTest.NewGlobal()
+	for i := 0; i < 10; i++ {
+		var wg sync.WaitGroup
+		wg.Add(4)
+		go func() {
+			require.NoError(t, service.onBlock(ctx, wsb1, r1))
+			wg.Done()
+		}()
+		go func() {
+			require.NoError(t, service.onBlock(ctx, wsb2, r2))
+			wg.Done()
+		}()
+		go func() {
+			require.NoError(t, service.onBlock(ctx, wsb3, r3))
+			wg.Done()
+		}()
+		go func() {
+			require.NoError(t, service.onBlock(ctx, wsb4, r4))
+			wg.Done()
+		}()
+		wg.Wait()
+		require.LogsDoNotContain(t, logHook, "New head does not exist in DB. Do nothing")
+		require.NoError(t, service.cfg.BeaconDB.DeleteBlock(ctx, r1))
+		require.NoError(t, service.cfg.BeaconDB.DeleteBlock(ctx, r2))
+		require.NoError(t, service.cfg.BeaconDB.DeleteBlock(ctx, r3))
+		require.NoError(t, service.cfg.BeaconDB.DeleteBlock(ctx, r4))
+		service.cfg.ForkChoiceStore = protoarray.New(0, 0, [32]byte{'a'})
+	}
 }
