@@ -767,9 +767,12 @@ func (s *Service) initializeEth1Data(ctx context.Context, eth1DataInDB *ethpb.ET
 	if eth1DataInDB == nil {
 		return nil
 	}
-	s.depositTrie = trie.CreateTrieFromProto(eth1DataInDB.Trie)
-	s.chainStartData = eth1DataInDB.ChainstartData
 	var err error
+	s.depositTrie, err = trie.CreateTrieFromProto(eth1DataInDB.Trie)
+	if err != nil {
+		return err
+	}
+	s.chainStartData = eth1DataInDB.ChainstartData
 	if !reflect.ValueOf(eth1DataInDB.BeaconState).IsZero() {
 		s.preGenesisState, err = v1.InitializeFromProto(eth1DataInDB.BeaconState)
 		if err != nil {

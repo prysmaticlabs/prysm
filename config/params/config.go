@@ -144,6 +144,7 @@ type BeaconChainConfig struct {
 	ShardingForkVersion  []byte                                          `yaml:"SHARDING_FORK_VERSION" spec:"true"`  // ShardingForkVersion is used to represent the fork version for sharding.
 	ShardingForkEpoch    types.Epoch                                     `yaml:"SHARDING_FORK_EPOCH" spec:"true"`    // ShardingForkEpoch is used to represent the assigned fork epoch for sharding.
 	ForkVersionSchedule  map[[fieldparams.VersionLength]byte]types.Epoch // Schedule of fork epochs by version.
+	ForkVersionNames     map[[fieldparams.VersionLength]byte]string      // Human-readable names of fork versions.
 
 	// Weak subjectivity values.
 	SafetyDecay uint64 // SafetyDecay is defined as the loss in the 1/3 consensus safety margin of the casper FFG mechanism.
@@ -195,6 +196,7 @@ type BeaconChainConfig struct {
 func (b *BeaconChainConfig) InitializeForkSchedule() {
 	// Reset Fork Version Schedule.
 	b.ForkVersionSchedule = configForkSchedule(b)
+	b.ForkVersionNames = configForkNames(b)
 }
 
 func configForkSchedule(b *BeaconChainConfig) map[[fieldparams.VersionLength]byte]types.Epoch {
@@ -206,4 +208,15 @@ func configForkSchedule(b *BeaconChainConfig) map[[fieldparams.VersionLength]byt
 	// Set Bellatrix fork data.
 	fvs[bytesutil.ToBytes4(b.BellatrixForkVersion)] = b.BellatrixForkEpoch
 	return fvs
+}
+
+func configForkNames(b *BeaconChainConfig) map[[fieldparams.VersionLength]byte]string {
+	fvn := map[[fieldparams.VersionLength]byte]string{}
+	// Set Genesis fork data.
+	fvn[bytesutil.ToBytes4(b.GenesisForkVersion)] = "phase0"
+	// Set Altair fork data.
+	fvn[bytesutil.ToBytes4(b.AltairForkVersion)] = "altair"
+	// Set Bellatrix fork data.
+	fvn[bytesutil.ToBytes4(b.BellatrixForkVersion)] = "bellatrix"
+	return fvn
 }
