@@ -168,11 +168,11 @@ func (c *Client) GetHeader(ctx context.Context, slot types.Slot, parentHash [32]
 	if err != nil {
 		return nil, err
 	}
-	bb := &ExecHeaderResponse{}
-	if err := json.Unmarshal(hb, bb); err != nil {
+	hr := &ExecHeaderResponse{}
+	if err := json.Unmarshal(hb, hr); err != nil {
 		return nil, errors.Wrapf(err, "error unmarshaling the builder GetHeader response, using slot=%d, parentHash=%#x, pubkey=%#x", slot, parentHash, pubkey)
 	}
-	return bb.SignedBuilderBid, nil
+	return hr.ToProto()
 }
 
 // RegisterValidator encodes the SignedValidatorRegistrationV1 message to json (including hex-encoding the byte
