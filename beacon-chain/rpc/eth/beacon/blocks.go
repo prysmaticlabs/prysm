@@ -391,7 +391,6 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 		}
 
 		// Use the payload reconstructor...
-		log.Warn("RECONSTRUCTING FULL BELLATRIX BEACON BLOCK")
 		signedFullBlock, err := bs.ExecutionPayloadReconstructor.ReconstructFullBellatrixBlock(ctx, blindedBellatrixBlk)
 		if err != nil {
 			return nil, status.Errorf(

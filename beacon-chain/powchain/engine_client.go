@@ -311,30 +311,54 @@ func (s *Service) ExecutionBlockByHash(ctx context.Context, hash common.Hash) (*
 func (s *Service) ReconstructFullBellatrixBlock(
 	ctx context.Context, blinded *ethpb.SignedBlindedBeaconBlockBellatrix,
 ) (interfaces.SignedBeaconBlock, error) {
-	executionBlockHash := common.BytesToHash(blinded.Block.Body.ExecutionPayloadHeader.BlockHash)
+	if blinded == nil ||
+		blinded.Block == nil ||
+		blinded.Block.Body == nil ||
+		blinded.Block.Body.ExecutionPayloadHeader == nil {
+		return nil, errors.New("nil blinded beacon block")
+	}
+	header := blinded.Block.Body.ExecutionPayloadHeader
+	executionBlockHash := common.BytesToHash(header.BlockHash)
 	executionBlock, err := s.ExecutionBlockByHash(ctx, executionBlockHash)
 	if err != nil {
 		return nil, err
 	}
 	payload := &pb.ExecutionPayload{
-		ParentHash:    executionBlock.ParentHash,
-		FeeRecipient:  executionBlock.BaseFeePerGas,
-		StateRoot:     executionBlock.StateRoot,
-		ReceiptsRoot:  executionBlock.ReceiptsRoot,
-		LogsBloom:     executionBlock.LogsBloom,
-		PrevRandao:    nil,
-		BlockNumber:   0,
-		GasLimit:      0,
-		GasUsed:       0,
-		Timestamp:     0,
-		ExtraData:     executionBlock.ExtraData,
-		BaseFeePerGas: executionBlock.BaseFeePerGas,
+		ParentHash:    header.ParentHash,
+		FeeRecipient:  header.FeeRecipient,
+		StateRoot:     header.StateRoot,
+		ReceiptsRoot:  header.ReceiptsRoot,
+		LogsBloom:     header.LogsBloom,
+		PrevRandao:    header.PrevRandao,
+		BlockNumber:   header.BlockNumber,
+		GasLimit:      header.GasLimit,
+		GasUsed:       header.GasUsed,
+		Timestamp:     header.Timestamp,
+		ExtraData:     header.ExtraData,
+		BaseFeePerGas: header.BaseFeePerGas,
 		BlockHash:     executionBlock.Hash,
 		Transactions:  executionBlock.Transactions,
 	}
 	signedBlock, err := wrapper.WrappedSignedBeaconBlock(blinded)
 	if err != nil {
 		return nil, err
+	}
+	blindedRootHash, err := blinded.Block.HashTreeRoot()
+	if err != nil {
+		return nil, err
+	}
+	rootHash, err := signedBlock.Block().HashTreeRoot()
+	if err != nil {
+		return nil, err
+	}
+	// Check the root matches after the reconstruction for extra safety.
+	if blindedRootHash != rootHash {
+		return nil, fmt.Errorf(
+			"failed to safely reconstruct full execution payload, as beacon block root %#x "+
+				"does not match blinded beacon block root %#x",
+			rootHash,
+			blindedRootHash,
+		)
 	}
 	return wrapper.BuildSignedBeaconBlockFromExecutionPayload(signedBlock, payload)
 }
