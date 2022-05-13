@@ -1,0 +1,218 @@
+package builder
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	v1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"io"
+	"net"
+	"net/http"
+	"net/url"
+	"text/template"
+	"time"
+
+	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	log "github.com/sirupsen/logrus"
+)
+
+const (
+	getSignedBlockPath      = "/eth/v2/beacon/blocks"
+	getBlockRootPath        = "/eth/v1/beacon/blocks/{{.Id}}/root"
+	getStatePath            = "/eth/v2/debug/beacon/states"
+	getExecHeaderPath       = "/eth/v1/builder/header/{{.Slot}}/{{.ParentHash}}/{{.Pubkey}}"
+	postRegisterValidatorPath = "/eth/v1/builder/validators"
+	getStatus                 = "/eth/v1/builder/status"
+)
+
+// StateOrBlockId represents the block_id / state_id parameters that several of the Eth Beacon API methods accept.
+// StateOrBlockId constants are defined for named identifiers, and helper methods are provided
+// for slot and root identifiers. Example text from the Eth Beacon Node API documentation:
+//
+// "Block identifier can be one of: "head" (canonical head in node's view), "genesis", "finalized",
+// <slot>, <hex encoded blockRoot with 0x prefix>."
+type StateOrBlockId string
+
+const (
+	IdFinalized StateOrBlockId = "finalized"
+	IdGenesis   StateOrBlockId = "genesis"
+	IdHead      StateOrBlockId = "head"
+	IdJustified StateOrBlockId = "justified"
+)
+
+var ErrMalformedHostname = errors.New("hostname must include port, separated by one colon, like example.com:3500")
+
+
+
+// ClientOpt is a functional option for the Client type (http.Client wrapper)
+type ClientOpt func(*Client)
+
+// WithTimeout sets the .Timeout attribute of the wrapped http.Client.
+func WithTimeout(timeout time.Duration) ClientOpt {
+	return func(c *Client) {
+		c.hc.Timeout = timeout
+	}
+}
+
+// Client provides a collection of helper methods for calling the Eth Beacon Node API endpoints.
+type Client struct {
+	hc      *http.Client
+	host    string
+	scheme  string
+	baseURL *url.URL
+}
+
+// NewClient constructs a new client with the provided options (ex WithTimeout).
+// `host` is the base host + port used to construct request urls. This value can be
+// a URL string, or NewClient will assume an http endpoint if just `host:port` is used.
+func NewClient(host string, opts ...ClientOpt) (*Client, error) {
+	u, err := urlForHost(host)
+	if err != nil {
+		return nil, err
+	}
+	c := &Client{
+		hc:      &http.Client{},
+		baseURL: u,
+	}
+	for _, o := range opts {
+		o(c)
+	}
+	return c, nil
+}
+
+func urlForHost(h string) (*url.URL, error) {
+	// try to parse as url (being permissive)
+	u, err := url.Parse(h)
+	if err == nil && u.Host != "" {
+		return u, nil
+	}
+	// try to parse as host:port
+	host, port, err := net.SplitHostPort(h)
+	if err != nil {
+		return nil, ErrMalformedHostname
+	}
+	return &url.URL{Host: fmt.Sprintf("%s:%s", host, port), Scheme: "http"}, nil
+}
+
+// NodeURL returns a human-readable string representation of the beacon node base url.
+func (c *Client) NodeURL() string {
+	return c.baseURL.String()
+}
+
+type reqOption func(*http.Request)
+
+func withSSZEncoding() reqOption {
+	return func(req *http.Request) {
+		req.Header.Set("Accept", "application/octet-stream")
+	}
+}
+
+// do is a generic, opinionated GET function to reduce boilerplate amongst the getters in this package.
+func (c *Client) do(ctx context.Context, method string, path string, body io.Reader, opts ...reqOption) ([]byte, error) {
+	u := c.baseURL.ResolveReference(&url.URL{Path: path})
+	log.Printf("requesting %s", u.String())
+	req, err := http.NewRequestWithContext(ctx, method, u.String(), body)
+	if err != nil {
+		return nil, err
+	}
+	for _, o := range opts {
+		o(req)
+	}
+	r, err := c.hc.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		err = r.Body.Close()
+	}()
+	if r.StatusCode != http.StatusOK {
+		return nil, non200Err(r)
+	}
+	b, err := io.ReadAll(r.Body)
+	if err != nil {
+		return nil, errors.Wrap(err, "error reading http response body from GetBlock")
+	}
+	return b, nil
+}
+
+
+var execHeaderTemplate = template.Must(template.New("").Parse(getExecHeaderPath))
+func execHeaderPath(slot types.Slot, parentHash [32]byte, pubkey [48]byte) (string, error) {
+	v := struct{
+		Slot types.Slot
+		ParentHash string
+		Pubkey string
+	}{
+		Slot: slot,
+		ParentHash: fmt.Sprintf("%#x", parentHash),
+		Pubkey: fmt.Sprintf("%#x", pubkey),
+	}
+	b := bytes.NewBuffer(nil)
+	err := execHeaderTemplate.Execute(b, v)
+	if err != nil {
+		return "", errors.Wrapf(err, "error rendering exec header template with slot=%d, parentHash=%#x, pubkey=%#x", slot, parentHash, pubkey)
+	}
+	return b.String(), nil
+}
+
+// GetHeader is used by a proposing validator to request an ExecutionPayloadHeader from the Builder node.
+func (c *Client) GetHeader(ctx context.Context, slot types.Slot, parentHash [32]byte, pubkey [48]byte) (*ethpb.SignedBuilderBid, error) {
+	path, err := execHeaderPath(slot, parentHash, pubkey)
+	if err != nil {
+		return nil, err
+	}
+	hb, err := c.do(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, err
+	}
+	bb := &ExecHeaderResponse{}
+	if err := json.Unmarshal(hb, bb); err != nil {
+		return nil, errors.Wrapf(err, "error unmarshaling the builder GetHeader response, using slot=%d, parentHash=%#x, pubkey=%#x", slot, parentHash, pubkey)
+	}
+	return bb.SignedBuilderBid, nil
+}
+
+// RegisterValidator encodes the SignedValidatorRegistrationV1 message to json (including hex-encoding the byte
+// fields with 0x prefixes) and posts to the builder validator registration endpoint.
+func (c *Client) RegisterValidator(ctx context.Context, svr *ethpb.SignedValidatorRegistrationV1) error {
+	v := SignedValidatorRegistration{SignedValidatorRegistrationV1: svr}
+	body, err := json.Marshal(v)
+	if err != nil {
+		return errors.Wrap(err, "error encoding the SignedValidatorRegistration value body in RegisterValidator")
+	}
+	_, err = c.do(ctx, http.MethodPost, postRegisterValidatorPath, bytes.NewBuffer(body))
+	return err
+}
+
+// POST /eth/v1/builder/blinded_blocks
+func (c *Client) SubmitBlindedBlock(context.Context, *ethpb.SignedBlindedBeaconBlockBellatrix) (*v1.ExecutionPayload, error) {
+	panic("implement me")
+}
+
+// Status asks the remote builder server for a health check. A response of 200 with an empty body is the success/healthy
+// response, and an error response may have an error message. This method will return a nil value for error in the
+// happy path, and an error with information about the server response body for a non-200 response.
+func (c *Client) Status(ctx context.Context) error {
+	_, err := c.do(ctx, http.MethodGet, getStatus, nil)
+	return err
+}
+
+func non200Err(response *http.Response) error {
+	bodyBytes, err := io.ReadAll(response.Body)
+	var body string
+	if err != nil {
+		body = "(Unable to read response body.)"
+	} else {
+		body = "response body:\n" + string(bodyBytes)
+	}
+	msg := fmt.Sprintf("code=%d, url=%s, body=%s", response.StatusCode, response.Request.URL, body)
+	switch response.StatusCode {
+	case 404:
+		return errors.Wrap(ErrNotFound, msg)
+	default:
+		return errors.Wrap(ErrNotOK, msg)
+	}
+}
