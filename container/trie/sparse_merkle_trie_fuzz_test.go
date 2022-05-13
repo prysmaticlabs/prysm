@@ -22,10 +22,10 @@ func FuzzSparseMerkleTrie_HashTreeRoot(f *testing.F) {
 				Layer: [][]byte{h[:]},
 			},
 			{
-				Layer: [][]byte{},
+				Layer: [][]byte{h[:]},
 			},
 		},
-		Depth: 4,
+		Depth: 2,
 	}
 	b, err := proto.Marshal(pb)
 	require.NoError(f, err)
@@ -36,8 +36,11 @@ func FuzzSparseMerkleTrie_HashTreeRoot(f *testing.F) {
 		if err := proto.Unmarshal(b, pb); err != nil {
 			return
 		}
-		_, err := trie.CreateTrieFromProto(pb).HashTreeRoot()
+		smt, err := trie.CreateTrieFromProto(pb)
 		if err != nil {
+			return
+		}
+		if _, err := smt.HashTreeRoot(); err != nil {
 			return
 		}
 	})
@@ -54,10 +57,10 @@ func FuzzSparseMerkleTrie_MerkleProof(f *testing.F) {
 				Layer: [][]byte{h[:]},
 			},
 			{
-				Layer: [][]byte{},
+				Layer: [][]byte{h[:]},
 			},
 		},
-		Depth: 4,
+		Depth: 2,
 	}
 	b, err := proto.Marshal(pb)
 	require.NoError(f, err)
@@ -68,8 +71,11 @@ func FuzzSparseMerkleTrie_MerkleProof(f *testing.F) {
 		if err := proto.Unmarshal(b, pb); err != nil {
 			return
 		}
-		_, err := trie.CreateTrieFromProto(pb).MerkleProof(i)
+		smt, err := trie.CreateTrieFromProto(pb)
 		if err != nil {
+			return
+		}
+		if _, err := smt.MerkleProof(i); err != nil {
 			return
 		}
 	})
@@ -86,10 +92,10 @@ func FuzzSparseMerkleTrie_Insert(f *testing.F) {
 				Layer: [][]byte{h[:]},
 			},
 			{
-				Layer: [][]byte{},
+				Layer: [][]byte{h[:]},
 			},
 		},
-		Depth: 4,
+		Depth: 2,
 	}
 	b, err := proto.Marshal(pb)
 	require.NoError(f, err)
@@ -100,7 +106,11 @@ func FuzzSparseMerkleTrie_Insert(f *testing.F) {
 		if err := proto.Unmarshal(b, pb); err != nil {
 			return
 		}
-		if err := trie.CreateTrieFromProto(pb).Insert(item, i); err != nil {
+		smt, err := trie.CreateTrieFromProto(pb)
+		if err != nil {
+			return
+		}
+		if err := smt.Insert(item, i); err != nil {
 			return
 		}
 	})

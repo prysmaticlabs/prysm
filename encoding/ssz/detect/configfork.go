@@ -136,7 +136,7 @@ func slotFromBlock(marshaled []byte) (types.Slot, error) {
 	return types.Slot(slot), nil
 }
 
-var errBlockForkMismatch = errors.New("fork or config detected from state is different than block")
+var errBlockForkMismatch = errors.New("fork or config detected in unmarshaler is different than block")
 
 // UnmarshalBeaconBlock uses internal knowledge in the VersionedUnmarshaler to pick the right concrete SignedBeaconBlock type,
 // then Unmarshal()s the type and returns an instance of block.SignedBeaconBlock if successful.
