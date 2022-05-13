@@ -110,6 +110,7 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 			OnPreDeserializeRequestBodyIntoContainer:  setInitialPublishBlockPostRequest,
 			OnPostDeserializeRequestBodyIntoContainer: preparePublishedBlock,
 		}
+		endpoint.CustomHandlers = []apimiddleware.CustomHandler{handleSubmitBlockSSZ}
 	case "/eth/v1/beacon/blinded_blocks":
 		endpoint.Hooks = apimiddleware.HookCollection{
 			OnPreDeserializeRequestBodyIntoContainer:  setInitialPublishBlindedBlockPostRequest,

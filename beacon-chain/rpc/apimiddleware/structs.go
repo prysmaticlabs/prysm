@@ -833,6 +833,10 @@ type syncCommitteeContributionJson struct {
 // SSZ
 // ---------------
 
+type sszRequestJson struct {
+	Data string `json:"data"`
+}
+
 // sszResponseJson is a common abstraction over all SSZ responses.
 type sszResponseJson interface {
 	SSZVersion() string
