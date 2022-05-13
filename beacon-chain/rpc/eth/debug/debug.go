@@ -39,7 +39,7 @@ func (ds *Server) GetBeaconState(ctx context.Context, req *ethpbv1.StateRequest)
 }
 
 // GetBeaconStateSSZ returns the SSZ-serialized version of the full beacon state object for given state ID.
-func (ds *Server) GetBeaconStateSSZ(ctx context.Context, req *ethpbv1.StateRequest) (*ethpbv1.BeaconStateSSZResponse, error) {
+func (ds *Server) GetBeaconStateSSZ(ctx context.Context, req *ethpbv1.StateRequest) (*ethpbv2.SSZContainer, error) {
 	ctx, span := trace.StartSpan(ctx, "debug.GetBeaconStateSSZ")
 	defer span.End()
 
@@ -53,7 +53,7 @@ func (ds *Server) GetBeaconStateSSZ(ctx context.Context, req *ethpbv1.StateReque
 		return nil, status.Errorf(codes.Internal, "Could not marshal state into SSZ: %v", err)
 	}
 
-	return &ethpbv1.BeaconStateSSZResponse{Data: sszState}, nil
+	return &ethpbv2.SSZContainer{Data: sszState}, nil
 }
 
 // GetBeaconStateV2 returns the full beacon state for a given state ID.
@@ -121,21 +121,32 @@ func (ds *Server) GetBeaconStateV2(ctx context.Context, req *ethpbv2.StateReques
 }
 
 // GetBeaconStateSSZV2 returns the SSZ-serialized version of the full beacon state object for given state ID.
-func (ds *Server) GetBeaconStateSSZV2(ctx context.Context, req *ethpbv2.StateRequestV2) (*ethpbv2.BeaconStateSSZResponseV2, error) {
+func (ds *Server) GetBeaconStateSSZV2(ctx context.Context, req *ethpbv2.StateRequestV2) (*ethpbv2.SSZContainer, error) {
 	ctx, span := trace.StartSpan(ctx, "debug.GetBeaconStateSSZV2")
 	defer span.End()
 
-	state, err := ds.StateFetcher.State(ctx, req.StateId)
+	st, err := ds.StateFetcher.State(ctx, req.StateId)
 	if err != nil {
 		return nil, helpers.PrepareStateFetchGRPCError(err)
 	}
 
-	sszState, err := state.MarshalSSZ()
+	sszState, err := st.MarshalSSZ()
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not marshal state into SSZ: %v", err)
 	}
+	var ver ethpbv2.Version
+	switch st.Version() {
+	case version.Phase0:
+		ver = ethpbv2.Version_PHASE0
+	case version.Altair:
+		ver = ethpbv2.Version_ALTAIR
+	case version.Bellatrix:
+		ver = ethpbv2.Version_BELLATRIX
+	default:
+		return nil, status.Error(codes.Internal, "Unsupported state version")
+	}
 
-	return &ethpbv2.BeaconStateSSZResponseV2{Data: sszState}, nil
+	return &ethpbv2.SSZContainer{Data: sszState, Version: ver}, nil
 }
 
 // ListForkChoiceHeads retrieves the leaves of the current fork choice tree.

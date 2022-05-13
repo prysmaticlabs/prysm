@@ -24,14 +24,14 @@ const (
 type sszConfig struct {
 	sszPath      string
 	fileName     string
-	responseJson sszResponseJson
+	responseJson sszResponse
 }
 
 func handleGetBeaconStateSSZ(m *apimiddleware.ApiProxyMiddleware, endpoint apimiddleware.Endpoint, w http.ResponseWriter, req *http.Request) (handled bool) {
 	config := sszConfig{
 		sszPath:      "/eth/v1/debug/beacon/states/{state_id}/ssz",
 		fileName:     "beacon_state.ssz",
-		responseJson: &beaconStateSSZResponseJson{},
+		responseJson: &sszResponseJson{},
 	}
 	return handleGetSSZ(m, endpoint, w, req, config)
 }
@@ -40,7 +40,7 @@ func handleGetBeaconBlockSSZ(m *apimiddleware.ApiProxyMiddleware, endpoint apimi
 	config := sszConfig{
 		sszPath:      "/eth/v1/beacon/blocks/{block_id}/ssz",
 		fileName:     "beacon_block.ssz",
-		responseJson: &blockSSZResponseJson{},
+		responseJson: &sszResponseJson{},
 	}
 	return handleGetSSZ(m, endpoint, w, req, config)
 }
@@ -49,7 +49,7 @@ func handleGetBeaconStateSSZV2(m *apimiddleware.ApiProxyMiddleware, endpoint api
 	config := sszConfig{
 		sszPath:      "/eth/v2/debug/beacon/states/{state_id}/ssz",
 		fileName:     "beacon_state.ssz",
-		responseJson: &beaconStateSSZResponseV2Json{},
+		responseJson: &versionedSSZResponseJson{},
 	}
 	return handleGetSSZ(m, endpoint, w, req, config)
 }
@@ -58,7 +58,7 @@ func handleGetBeaconBlockSSZV2(m *apimiddleware.ApiProxyMiddleware, endpoint api
 	config := sszConfig{
 		sszPath:      "/eth/v2/beacon/blocks/{block_id}/ssz",
 		fileName:     "beacon_block.ssz",
-		responseJson: &blockSSZResponseV2Json{},
+		responseJson: &versionedSSZResponseJson{},
 	}
 	return handleGetSSZ(m, endpoint, w, req, config)
 }
@@ -236,7 +236,7 @@ func preparePostedSSZData(req *http.Request) apimiddleware.ErrorJson {
 	return nil
 }
 
-func serializeMiddlewareResponseIntoSSZ(respJson sszResponseJson) (version string, ssz []byte, errJson apimiddleware.ErrorJson) {
+func serializeMiddlewareResponseIntoSSZ(respJson sszResponse) (version string, ssz []byte, errJson apimiddleware.ErrorJson) {
 	// Serialize the SSZ part of the deserialized value.
 	data, err := base64.StdEncoding.DecodeString(respJson.SSZData())
 	if err != nil {
