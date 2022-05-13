@@ -19,8 +19,6 @@ var (
 	ErrUnknownPayload = errors.New("payload does not exist or is not available")
 	// ErrUnknownPayloadStatus when the payload status is unknown.
 	ErrUnknownPayloadStatus = errors.New("unknown payload status")
-	// ErrUnsupportedScheme for unsupported URL schemes.
-	ErrUnsupportedScheme = errors.New("unsupported url scheme, only http(s) and ipc are supported")
 	// ErrConfigMismatch when the execution node's terminal total difficulty or
 	// terminal block hash received via the API mismatches Prysm's configuration value.
 	ErrConfigMismatch = errors.New("execution client configuration mismatch")

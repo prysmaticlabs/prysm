@@ -123,11 +123,13 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 			return err
 		}
 	}
-
+	if err := s.savePostStateInfo(ctx, blockRoot, signed, postState); err != nil {
+		return err
+	}
 	if err := s.insertBlockAndAttestationsToForkChoiceStore(ctx, signed.Block(), blockRoot, postState); err != nil {
 		return errors.Wrapf(err, "could not insert block %d to fork choice store", signed.Block().Slot())
 	}
-	s.insertSlashingsToForkChoiceStore(ctx, signed.Block())
+	s.insertSlashingsToForkChoiceStore(ctx, signed.Block().Body().AttesterSlashings())
 	if isValidPayload {
 		if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, blockRoot); err != nil {
 			return errors.Wrap(err, "could not set optimistic block to valid")
@@ -146,9 +148,6 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 		return err
 	}
 
-	if err := s.savePostStateInfo(ctx, blockRoot, signed, postState); err != nil {
-		return err
-	}
 	// If slasher is configured, forward the attestations in the block via
 	// an event feed for processing.
 	if features.Get().EnableSlasher {
@@ -195,9 +194,19 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 	newFinalized := postState.FinalizedCheckpointEpoch() > finalized.Epoch
 	if newFinalized {
 		s.store.SetPrevFinalizedCheckpt(finalized)
-		s.store.SetFinalizedCheckpt(postState.FinalizedCheckpoint())
+		cp := postState.FinalizedCheckpoint()
+		h, err := s.getPayloadHash(ctx, cp.Root)
+		if err != nil {
+			return err
+		}
+		s.store.SetFinalizedCheckptAndPayloadHash(cp, h)
 		s.store.SetPrevJustifiedCheckpt(justified)
-		s.store.SetJustifiedCheckpt(postState.CurrentJustifiedCheckpoint())
+		cp = postState.CurrentJustifiedCheckpoint()
+		h, err = s.getPayloadHash(ctx, cp.Root)
+		if err != nil {
+			return err
+		}
+		s.store.SetJustifiedCheckptAndPayloadHash(postState.CurrentJustifiedCheckpoint(), h)
 	}
 
 	balances, err := s.justifiedBalances.get(ctx, bytesutil.ToBytes32(justified.Root))
@@ -413,6 +422,10 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 			}
 		}
 		s.saveInitSyncBlock(blockRoots[i], b)
+		if err = s.handleBlockAfterBatchVerify(ctx, b, blockRoots[i], fCheckpoints[i], jCheckpoints[i]); err != nil {
+			tracing.AnnotateError(span, err)
+			return nil, nil, err
+		}
 	}
 
 	for r, st := range boundaries {
@@ -426,14 +439,10 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 	if err := s.cfg.StateGen.SaveState(ctx, lastBR, preState); err != nil {
 		return nil, nil, err
 	}
-	f := fCheckpoints[len(fCheckpoints)-1]
-	j := jCheckpoints[len(jCheckpoints)-1]
 	arg := &notifyForkchoiceUpdateArg{
-		headState:     preState,
-		headRoot:      lastBR,
-		headBlock:     lastB.Block(),
-		finalizedRoot: bytesutil.ToBytes32(f.Root),
-		justifiedRoot: bytesutil.ToBytes32(j.Root),
+		headState: preState,
+		headRoot:  lastBR,
+		headBlock: lastB.Block(),
 	}
 	if _, err := s.notifyForkchoiceUpdate(ctx, arg); err != nil {
 		return nil, nil, err
@@ -484,7 +493,11 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed interf
 			return err
 		}
 		s.store.SetPrevFinalizedCheckpt(finalized)
-		s.store.SetFinalizedCheckpt(fCheckpoint)
+		h, err := s.getPayloadHash(ctx, fCheckpoint.Root)
+		if err != nil {
+			return err
+		}
+		s.store.SetFinalizedCheckptAndPayloadHash(fCheckpoint, h)
 	}
 	return nil
 }
@@ -576,8 +589,7 @@ func (s *Service) insertBlockToForkChoiceStore(ctx context.Context, blk interfac
 
 // Inserts attester slashing indices to fork choice store.
 // To call this function, it's caller's responsibility to ensure the slashing object is valid.
-func (s *Service) insertSlashingsToForkChoiceStore(ctx context.Context, blk interfaces.BeaconBlock) {
-	slashings := blk.Body().AttesterSlashings()
+func (s *Service) insertSlashingsToForkChoiceStore(ctx context.Context, slashings []*ethpb.AttesterSlashing) {
 	for _, slashing := range slashings {
 		indices := blocks.SlashableAttesterIndices(slashing)
 		for _, index := range indices {

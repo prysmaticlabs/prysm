@@ -14,22 +14,24 @@ import (
 )
 
 // SaveState saves the state in the cache and/or DB.
-func (s *State) SaveState(ctx context.Context, root [32]byte, st state.BeaconState) error {
+func (s *State) SaveState(ctx context.Context, blockRoot [32]byte, st state.BeaconState) error {
 	ctx, span := trace.StartSpan(ctx, "stateGen.SaveState")
 	defer span.End()
 
-	return s.saveStateByRoot(ctx, root, st)
+	return s.saveStateByRoot(ctx, blockRoot, st)
 }
 
-// ForceCheckpoint initiates a cold state save of the given state. This method does not update the
+// ForceCheckpoint initiates a cold state save of the given block root's state. This method does not update the
 // "last archived state" but simply saves the specified state from the root argument into the DB.
-func (s *State) ForceCheckpoint(ctx context.Context, root []byte) error {
+//
+// The name "Checkpoint" isn't referring to checkpoint in the sense of our consensus type, but checkpoint for our historical states.
+func (s *State) ForceCheckpoint(ctx context.Context, blockRoot []byte) error {
 	ctx, span := trace.StartSpan(ctx, "stateGen.ForceCheckpoint")
 	defer span.End()
 
-	root32 := bytesutil.ToBytes32(root)
-	// Before the first finalized check point, the finalized root is zero hash.
-	// Return early if there hasn't been a finalized check point.
+	root32 := bytesutil.ToBytes32(blockRoot)
+	// Before the first finalized checkpoint, the finalized root is zero hash.
+	// Return early if there hasn't been a finalized checkpoint.
 	if root32 == params.BeaconConfig().ZeroHash {
 		return nil
 	}
@@ -58,11 +60,11 @@ func (s *State) saveStateByRoot(ctx context.Context, blockRoot [32]byte, st stat
 			s.saveHotStateDB.lock.Unlock()
 			return err
 		}
-		s.saveHotStateDB.savedStateRoots = append(s.saveHotStateDB.savedStateRoots, blockRoot)
+		s.saveHotStateDB.blockRootsOfSavedStates = append(s.saveHotStateDB.blockRootsOfSavedStates, blockRoot)
 
 		log.WithFields(logrus.Fields{
 			"slot":                   st.Slot(),
-			"totalHotStateSavedInDB": len(s.saveHotStateDB.savedStateRoots),
+			"totalHotStateSavedInDB": len(s.saveHotStateDB.blockRootsOfSavedStates),
 		}).Info("Saving hot state to DB")
 	}
 	s.saveHotStateDB.lock.Unlock()
@@ -72,14 +74,14 @@ func (s *State) saveStateByRoot(ctx context.Context, blockRoot [32]byte, st stat
 		return nil
 	}
 
-	// Only on an epoch boundary slot, saves epoch boundary state in epoch boundary root state cache.
+	// Only on an epoch boundary slot, save epoch boundary state in epoch boundary root state cache.
 	if slots.IsEpochStart(st.Slot()) {
 		if err := s.epochBoundaryStateCache.put(blockRoot, st); err != nil {
 			return err
 		}
 	}
 
-	// On an intermediate slots, save state summary.
+	// On an intermediate slot, save state summary.
 	if err := s.beaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{
 		Slot: st.Slot(),
 		Root: blockRoot[:],
@@ -121,15 +123,15 @@ func (s *State) DisableSaveHotStateToDB(ctx context.Context) error {
 
 	log.WithFields(logrus.Fields{
 		"enabled":          s.saveHotStateDB.enabled,
-		"deletedHotStates": len(s.saveHotStateDB.savedStateRoots),
+		"deletedHotStates": len(s.saveHotStateDB.blockRootsOfSavedStates),
 	}).Warn("Exiting mode to save hot states in DB")
 
 	// Delete previous saved states in DB as we are turning this mode off.
 	s.saveHotStateDB.enabled = false
-	if err := s.beaconDB.DeleteStates(ctx, s.saveHotStateDB.savedStateRoots); err != nil {
+	if err := s.beaconDB.DeleteStates(ctx, s.saveHotStateDB.blockRootsOfSavedStates); err != nil {
 		return err
 	}
-	s.saveHotStateDB.savedStateRoots = nil
+	s.saveHotStateDB.blockRootsOfSavedStates = nil
 
 	return nil
 }

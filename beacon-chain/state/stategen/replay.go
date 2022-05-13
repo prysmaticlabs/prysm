@@ -23,6 +23,8 @@ import (
 )
 
 // ReplayBlocks replays the input blocks on the input state until the target slot is reached.
+//
+// WARNING Blocks passed to the function must be in decreasing slots order.
 func (_ *State) ReplayBlocks(
 	ctx context.Context,
 	state state.BeaconState,
@@ -59,7 +61,7 @@ func (_ *State) ReplayBlocks(
 		}
 	}
 
-	// If there is skip slots at the end.
+	// If there are skip slots at the end.
 	if targetSlot > state.Slot() {
 		state, err = ReplayProcessSlots(ctx, state, targetSlot)
 		if err != nil {
@@ -134,6 +136,7 @@ func (s *State) LoadBlocks(ctx context.Context, startSlot, endSlot types.Slot, e
 // executeStateTransitionStateGen applies state transition on input historical state and block for state gen usages.
 // There's no signature verification involved given state gen only works with stored block and state in DB.
 // If the objects are already in stored in DB, one can omit redundant signature checks and ssz hashing calculations.
+//
 // WARNING: This method should not be used on an unverified new block.
 func executeStateTransitionStateGen(
 	ctx context.Context,
@@ -146,12 +149,12 @@ func executeStateTransitionStateGen(
 	if err := helpers.BeaconBlockIsNil(signed); err != nil {
 		return nil, err
 	}
-	ctx, span := trace.StartSpan(ctx, "stategen.ExecuteStateTransitionStateGen")
+	ctx, span := trace.StartSpan(ctx, "stategen.executeStateTransitionStateGen")
 	defer span.End()
 	var err error
 
 	// Execute per slots transition.
-	// Given this is for state gen, a node uses the version process slots without skip slots cache.
+	// Given this is for state gen, a node uses the version of process slots without skip slots cache.
 	state, err = ReplayProcessSlots(ctx, state, signed.Block().Slot())
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process slot")
@@ -169,6 +172,7 @@ func executeStateTransitionStateGen(
 
 // ReplayProcessSlots to process old slots for state gen usages.
 // There's no skip slot cache involved given state gen only works with already stored block and state in DB.
+//
 // WARNING: This method should not be used for future slot.
 func ReplayProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stategen.ReplayProcessSlots")
@@ -178,7 +182,7 @@ func ReplayProcessSlots(ctx context.Context, state state.BeaconState, slot types
 	}
 
 	if state.Slot() > slot {
-		err := fmt.Errorf("expected state.slot %d < slot %d", state.Slot(), slot)
+		err := fmt.Errorf("expected state.slot %d <= slot %d", state.Slot(), slot)
 		return nil, err
 	}
 
@@ -207,7 +211,7 @@ func ReplayProcessSlots(ctx context.Context, state state.BeaconState, slot types
 					return nil, errors.Wrap(err, "could not process epoch")
 				}
 			default:
-				return nil, errors.New("beacon state should have a version")
+				return nil, fmt.Errorf("unsupported beacon state version: %s", version.String(state.Version()))
 			}
 		}
 		if err := state.SetSlot(state.Slot() + 1); err != nil {
