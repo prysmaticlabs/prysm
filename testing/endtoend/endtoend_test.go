@@ -375,14 +375,20 @@ func (r *testRunner) runEvaluators(conns []*grpc.ClientConn, tickingStartTime ti
 // testDepositsAndTx runs tests when config.TestDeposits is enabled.
 func (r *testRunner) testDepositsAndTx(ctx context.Context, g *errgroup.Group,
 	keystorePath string, requiredNodes []e2etypes.ComponentRunner) {
+
+	/// using a shallow copy so I don't mess up something else by changing web3signer setting
+	shallowCopyConfig := r.config
 	minGenesisActiveCount := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
-	depositCheckValidator := components.NewValidatorNode(r.config, int(e2e.DepositCount), e2e.TestParams.BeaconNodeCount, minGenesisActiveCount)
+	/// prysm with web3signer doesn't support deposits right now ///
+	shallowCopyConfig.UseWeb3RemoteSigner = false
+	////////////////////////////////////////////////////////////////
+	depositCheckValidator := components.NewValidatorNode(shallowCopyConfig, int(e2e.DepositCount), e2e.TestParams.BeaconNodeCount, minGenesisActiveCount)
 	g.Go(func() error {
 		if err := helpers.ComponentsStarted(ctx, requiredNodes); err != nil {
 			return fmt.Errorf("deposit check validator node requires beacon nodes to run: %w", err)
 		}
 		go func() {
-			if r.config.TestDeposits {
+			if shallowCopyConfig.TestDeposits {
 				log.Info("Running deposit tests")
 				err := components.SendAndMineDeposits(keystorePath, int(e2e.DepositCount), minGenesisActiveCount, false /* partial */)
 				if err != nil {
@@ -391,7 +397,7 @@ func (r *testRunner) testDepositsAndTx(ctx context.Context, g *errgroup.Group,
 			}
 			r.testTxGeneration(ctx, g, keystorePath, []e2etypes.ComponentRunner{})
 		}()
-		if r.config.TestDeposits {
+		if shallowCopyConfig.TestDeposits {
 			return depositCheckValidator.Start(ctx)
 		}
 		return nil
