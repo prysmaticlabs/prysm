@@ -164,7 +164,7 @@ func interact(
 	if !cliCtx.IsSet(flags.ExitAllFlag.Name) {
 		// Allow the user to interactively select the accounts to exit or optionally
 		// provide them via cli flags as a string of comma-separated, hex strings.
-		filteredPubKeys, err := filterPublicKeysFromUserInput(
+		filteredPubKeys, err := FilterPublicKeysFromUserInput(
 			cliCtx,
 			flags.VoluntaryExitPublicKeysFlag,
 			validatingPublicKeys,

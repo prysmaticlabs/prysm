@@ -11,6 +11,7 @@ go_library(
     visibility = [
         "//validator:__pkg__",
         "//validator:__subpackages__",
+        "//cmd/validator:__subpackages__",
     ],
     deps = [
         "//async/event:go_default_library",
