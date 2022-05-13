@@ -387,13 +387,13 @@ func Test_NotifyNewPayload(t *testing.T) {
 	require.NoError(t, fcs.InsertOptimisticBlock(ctx, 1, r, [32]byte{}, params.BeaconConfig().ZeroHash, 0, 0))
 
 	tests := []struct {
-		name           string
 		postState      state.BeaconState
+		invalidBlock   bool
 		isValidPayload bool
 		blk            interfaces.SignedBeaconBlock
 		newPayloadErr  error
 		errString      string
-		invalidBlock   bool
+		name           string
 	}{
 		{
 			name:           "phase 0 post state",
