@@ -6,6 +6,7 @@ import (
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
@@ -159,9 +160,10 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 		return err
 	}
 	for _, b := range blks {
-		if b == nil || b.IsNil() || b.Block().IsNil() {
+		if err := helpers.BeaconBlockIsNil(b); err != nil {
 			continue
 		}
+		// TODO: Reconstruct...
 		if chunkErr := s.chunkBlockWriter(stream, b); chunkErr != nil {
 			log.WithError(chunkErr).Debug("Could not send a chunked response")
 			s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)

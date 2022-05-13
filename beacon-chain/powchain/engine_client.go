@@ -49,6 +49,15 @@ type ForkchoiceUpdatedResponse struct {
 	PayloadId *pb.PayloadIDBytes `json:"payloadId"`
 }
 
+// ExecutionPayloadReconstructor defines a service that can reconstruct a full beacon
+// block with an execution payload from a signed beacon block and a connection
+// to an execution client's engine API.
+type ExecutionPayloadReconstructor interface {
+	ReconstructFullBellatrixBlock(
+		ctx context.Context, blinded *ethpb.SignedBlindedBeaconBlockBellatrix,
+	) (interfaces.SignedBeaconBlock, error)
+}
+
 // EngineCaller defines a client that can interact with an Ethereum
 // execution node's engine service via JSON-RPC.
 type EngineCaller interface {
