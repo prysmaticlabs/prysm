@@ -726,7 +726,7 @@ func local_request_BeaconChain_SubmitBlock_0(ctx context.Context, marshaler runt
 }
 
 func request_BeaconChain_SubmitBlockSSZ_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq eth.SignedBeaconBlockSSZContainer
+	var protoReq eth.SSZContainer
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -743,7 +743,7 @@ func request_BeaconChain_SubmitBlockSSZ_0(ctx context.Context, marshaler runtime
 }
 
 func local_request_BeaconChain_SubmitBlockSSZ_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq eth.SignedBeaconBlockSSZContainer
+	var protoReq eth.SSZContainer
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
