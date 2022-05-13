@@ -70,6 +70,7 @@ type EngineCaller interface {
 		ctx context.Context, cfg *pb.TransitionConfiguration,
 	) error
 	ExecutionBlockByHash(ctx context.Context, hash common.Hash) (*pb.ExecutionBlock, error)
+	ExecutionBlockByHashWithTxs(ctx context.Context, hash common.Hash) (*pb.ExecutionBlockWithTxs, error)
 	GetTerminalBlockHash(ctx context.Context) ([]byte, bool, error)
 }
 
@@ -300,9 +301,19 @@ func (s *Service) LatestExecutionBlock(ctx context.Context) (*pb.ExecutionBlock,
 func (s *Service) ExecutionBlockByHash(ctx context.Context, hash common.Hash) (*pb.ExecutionBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.ExecutionBlockByHash")
 	defer span.End()
-
 	result := &pb.ExecutionBlock{}
-	err := s.rpcClient.CallContext(ctx, result, ExecutionBlockByHashMethod, hash, false /* no full transaction objects */)
+	err := s.rpcClient.CallContext(ctx, result, ExecutionBlockByHashMethod, hash, true /* no full transaction objects */)
+	return result, handleRPCError(err)
+}
+
+// ExecutionBlockByHashWithTxs fetches an execution engine block by hash by calling
+// eth_blockByHash via JSON-RPC and asks for full transactions in the response.
+func (s *Service) ExecutionBlockByHashWithTxs(ctx context.Context, hash common.Hash) (*pb.ExecutionBlockWithTxs, error) {
+	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.ExecutionBlockByHash")
+	defer span.End()
+
+	result := &pb.ExecutionBlockWithTxs{}
+	err := s.rpcClient.CallContext(ctx, result, ExecutionBlockByHashMethod, hash, true /* no full transaction objects */)
 	return result, handleRPCError(err)
 }
 
@@ -319,7 +330,7 @@ func (s *Service) ReconstructFullBellatrixBlock(
 	}
 	header := blinded.Block.Body.ExecutionPayloadHeader
 	executionBlockHash := common.BytesToHash(header.BlockHash)
-	executionBlock, err := s.ExecutionBlockByHash(ctx, executionBlockHash)
+	executionBlock, err := s.ExecutionBlockByHashWithTxs(ctx, executionBlockHash)
 	if err != nil {
 		return nil, err
 	}
@@ -343,21 +354,21 @@ func (s *Service) ReconstructFullBellatrixBlock(
 	if err != nil {
 		return nil, err
 	}
-	blindedRootHash, err := blinded.Block.HashTreeRoot()
+	blindedBlockRoot, err := blinded.Block.HashTreeRoot()
 	if err != nil {
 		return nil, err
 	}
-	rootHash, err := signedBlock.Block().HashTreeRoot()
+	fullBlockRoot, err := signedBlock.Block().HashTreeRoot()
 	if err != nil {
 		return nil, err
 	}
 	// Check the root matches after the reconstruction for extra safety.
-	if blindedRootHash != rootHash {
+	if fullBlockRoot != blindedBlockRoot {
 		return nil, fmt.Errorf(
 			"failed to safely reconstruct full execution payload, as beacon block root %#x "+
 				"does not match blinded beacon block root %#x",
-			rootHash,
-			blindedRootHash,
+			fullBlockRoot,
+			blindedBlockRoot,
 		)
 	}
 	return wrapper.BuildSignedBeaconBlockFromExecutionPayload(signedBlock, payload)
