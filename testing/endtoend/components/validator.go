@@ -60,8 +60,9 @@ func (s *ValidatorNodeSet) Start(ctx context.Context) error {
 	if validatorNum%beaconNodeNum != 0 {
 		return errors.New("validator count is not easily divisible by beacon node count")
 	}
+	log.Infof("num of beacon nodes %v", beaconNodeNum)
 	validatorsPerNode := validatorNum / beaconNodeNum
-
+	log.Infof("validators per node %v", validatorsPerNode)
 	// Create validator nodes.
 	nodes := make([]e2etypes.ComponentRunner, prysmBeaconNodeNum)
 	for i := 0; i < prysmBeaconNodeNum; i++ {

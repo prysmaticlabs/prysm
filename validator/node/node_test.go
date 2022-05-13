@@ -521,3 +521,12 @@ func TestFeeRecipientConfig(t *testing.T) {
 		})
 	}
 }
+
+func TestChecksum(t *testing.T) {
+
+	mixedcaseAddress, err := common.NewMixedcaseAddressFromString("0xb2b4c1b1777970826b6683ceed5b72da7bec1f6f7cdfae6a599ae0d0d6d912098678327ee31fe383fc2b95bfed48bfce")
+	require.NoError(t, err)
+	b := mixedcaseAddress.ValidChecksum()
+	log.Info(mixedcaseAddress.Address())
+	log.Info(b)
+}

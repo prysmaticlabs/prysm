@@ -185,8 +185,8 @@ func (r *testRunner) run() {
 		if err != nil {
 			return err
 		}
-		for _, key := range keys {
-			log.Infof("web3signer key added %s", hexutil.Encode(key.Marshal()))
+		for i, key := range keys {
+			log.Infof("web3signer key added %s at index %v", hexutil.Encode(key.Marshal()), i)
 		}
 		if err := validatorNodes.Start(ctx); err != nil {
 			return errors.Wrap(err, "failed to start validator nodes")
