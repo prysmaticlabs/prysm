@@ -109,7 +109,7 @@ func (bs *Server) GetBlockHeader(ctx context.Context, req *ethpbv1.BlockRequest)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not determine if block root is canonical: %v", err)
 	}
-	isOptimistic, err := bs.HeadFetcher.IsOptimisticForRoot(ctx, blkRoot)
+	isOptimistic, err := bs.OptimisticModeFetcher.IsOptimisticForRoot(ctx, blkRoot)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not check if block is optimistic: %v", err)
 	}
@@ -175,7 +175,7 @@ func (bs *Server) ListBlockHeaders(ctx context.Context, req *ethpbv1.BlockHeader
 			return nil, status.Errorf(codes.Internal, "Could not determine if block root is canonical: %v", err)
 		}
 		if !isOptimistic {
-			isOptimistic, err = bs.HeadFetcher.IsOptimisticForRoot(ctx, blkRoots[i])
+			isOptimistic, err = bs.OptimisticModeFetcher.IsOptimisticForRoot(ctx, blkRoots[i])
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not check if block is optimistic: %v", err)
 			}
@@ -371,7 +371,7 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get block root: %v", err)
 		}
-		isOptimistic, err := bs.HeadFetcher.IsOptimisticForRoot(ctx, root)
+		isOptimistic, err := bs.OptimisticModeFetcher.IsOptimisticForRoot(ctx, root)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not check if block is optimistic: %v", err)
 		}
@@ -543,7 +543,7 @@ func (bs *Server) GetBlockRoot(ctx context.Context, req *ethpbv1.BlockRequest) (
 		}
 	}
 
-	isOptimistic, err := bs.HeadFetcher.IsOptimisticForRoot(ctx, bytesutil.ToBytes32(root))
+	isOptimistic, err := bs.OptimisticModeFetcher.IsOptimisticForRoot(ctx, bytesutil.ToBytes32(root))
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not check if block is optimistic: %v", err)
 	}
@@ -616,7 +616,7 @@ func (bs *Server) ListBlockAttestations(ctx context.Context, req *ethpbv1.BlockR
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get block root: %v", err)
 		}
-		isOptimistic, err := bs.HeadFetcher.IsOptimisticForRoot(ctx, root)
+		isOptimistic, err := bs.OptimisticModeFetcher.IsOptimisticForRoot(ctx, root)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not check if block is optimistic: %v", err)
 		}
