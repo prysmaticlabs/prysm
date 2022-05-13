@@ -33,12 +33,14 @@ func TestGetValidator(t *testing.T) {
 	st, _ = util.DeterministicGenesisState(t, 8192)
 
 	t.Run("Head Get Validator by index", func(t *testing.T) {
+		chainService := &chainMock.ChainService{}
 		s := Server{
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: st,
 			},
-			HeadFetcher: &chainMock.ChainService{},
-			BeaconDB:    db,
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			BeaconDB:              db,
 		}
 
 		resp, err := s.GetValidator(ctx, &ethpb.StateValidatorRequest{
@@ -50,12 +52,14 @@ func TestGetValidator(t *testing.T) {
 	})
 
 	t.Run("Head Get Validator by pubkey", func(t *testing.T) {
+		chainService := &chainMock.ChainService{}
 		s := Server{
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: st,
 			},
-			HeadFetcher: &chainMock.ChainService{},
-			BeaconDB:    db,
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			BeaconDB:              db,
 		}
 
 		pubKey := st.PubkeyAtIndex(types.ValidatorIndex(20))
@@ -93,12 +97,14 @@ func TestGetValidator(t *testing.T) {
 		require.NoError(t, db.SaveBlock(ctx, wsb))
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
+		chainService := &chainMock.ChainService{Optimistic: true}
 		s := Server{
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: st,
 			},
-			HeadFetcher: &chainMock.ChainService{Optimistic: true},
-			BeaconDB:    db,
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			BeaconDB:              db,
 		}
 		resp, err := s.GetValidator(ctx, &ethpb.StateValidatorRequest{
 			StateId:     []byte("head"),
@@ -117,12 +123,14 @@ func TestListValidators(t *testing.T) {
 	st, _ = util.DeterministicGenesisState(t, 8192)
 
 	t.Run("Head List All Validators", func(t *testing.T) {
+		chainService := &chainMock.ChainService{}
 		s := Server{
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: st,
 			},
-			HeadFetcher: &chainMock.ChainService{},
-			BeaconDB:    db,
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			BeaconDB:              db,
 		}
 
 		resp, err := s.ListValidators(ctx, &ethpb.StateValidatorsRequest{
@@ -136,12 +144,14 @@ func TestListValidators(t *testing.T) {
 	})
 
 	t.Run("Head List Validators by index", func(t *testing.T) {
+		chainService := &chainMock.ChainService{}
 		s := Server{
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: st,
 			},
-			HeadFetcher: &chainMock.ChainService{},
-			BeaconDB:    db,
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			BeaconDB:              db,
 		}
 
 		ids := [][]byte{[]byte("15"), []byte("26"), []byte("400")}
@@ -158,12 +168,14 @@ func TestListValidators(t *testing.T) {
 	})
 
 	t.Run("Head List Validators by pubkey", func(t *testing.T) {
+		chainService := &chainMock.ChainService{}
 		s := Server{
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: st,
 			},
-			HeadFetcher: &chainMock.ChainService{},
-			BeaconDB:    db,
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			BeaconDB:              db,
 		}
 		idNums := []types.ValidatorIndex{20, 66, 90, 100}
 		pubkey1 := st.PubkeyAtIndex(types.ValidatorIndex(20))
@@ -184,12 +196,14 @@ func TestListValidators(t *testing.T) {
 	})
 
 	t.Run("Head List Validators by both index and pubkey", func(t *testing.T) {
+		chainService := &chainMock.ChainService{}
 		s := Server{
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: st,
 			},
-			HeadFetcher: &chainMock.ChainService{},
-			BeaconDB:    db,
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			BeaconDB:              db,
 		}
 
 		idNums := []types.ValidatorIndex{20, 90, 170, 129}
@@ -212,12 +226,14 @@ func TestListValidators(t *testing.T) {
 	})
 
 	t.Run("Unknown public key is ignored", func(t *testing.T) {
+		chainService := &chainMock.ChainService{}
 		s := Server{
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: st,
 			},
-			HeadFetcher: &chainMock.ChainService{},
-			BeaconDB:    db,
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			BeaconDB:              db,
 		}
 
 		existingKey := st.PubkeyAtIndex(types.ValidatorIndex(1))
@@ -232,12 +248,14 @@ func TestListValidators(t *testing.T) {
 	})
 
 	t.Run("Unknown index is ignored", func(t *testing.T) {
+		chainService := &chainMock.ChainService{}
 		s := Server{
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: st,
 			},
-			HeadFetcher: &chainMock.ChainService{},
-			BeaconDB:    db,
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			BeaconDB:              db,
 		}
 
 		ids := [][]byte{[]byte("1"), []byte("99999")}
@@ -261,12 +279,14 @@ func TestListValidators(t *testing.T) {
 		require.NoError(t, db.SaveBlock(ctx, wsb))
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
+		chainService := &chainMock.ChainService{Optimistic: true}
 		s := Server{
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: st,
 			},
-			HeadFetcher: &chainMock.ChainService{Optimistic: true},
-			BeaconDB:    db,
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			BeaconDB:              db,
 		}
 		resp, err := s.ListValidators(ctx, &ethpb.StateValidatorsRequest{
 			StateId: []byte("head"),
@@ -349,12 +369,14 @@ func TestListValidators_Status(t *testing.T) {
 	}
 
 	t.Run("Head List All ACTIVE Validators", func(t *testing.T) {
+		chainService := &chainMock.ChainService{}
 		s := Server{
 			StateFetcher: &statefetcher.StateProvider{
 				ChainInfoFetcher: &chainMock.ChainService{State: st},
 			},
-			HeadFetcher: &chainMock.ChainService{},
-			BeaconDB:    db,
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			BeaconDB:              db,
 		}
 
 		resp, err := s.ListValidators(ctx, &ethpb.StateValidatorsRequest{
@@ -384,12 +406,14 @@ func TestListValidators_Status(t *testing.T) {
 	})
 
 	t.Run("Head List All ACTIVE_ONGOING Validators", func(t *testing.T) {
+		chainService := &chainMock.ChainService{}
 		s := Server{
 			StateFetcher: &statefetcher.StateProvider{
 				ChainInfoFetcher: &chainMock.ChainService{State: st},
 			},
-			HeadFetcher: &chainMock.ChainService{},
-			BeaconDB:    db,
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			BeaconDB:              db,
 		}
 
 		resp, err := s.ListValidators(ctx, &ethpb.StateValidatorsRequest{
@@ -418,12 +442,14 @@ func TestListValidators_Status(t *testing.T) {
 
 	require.NoError(t, st.SetSlot(params.BeaconConfig().SlotsPerEpoch*35))
 	t.Run("Head List All EXITED Validators", func(t *testing.T) {
+		chainService := &chainMock.ChainService{}
 		s := Server{
 			StateFetcher: &statefetcher.StateProvider{
 				ChainInfoFetcher: &chainMock.ChainService{State: st},
 			},
-			HeadFetcher: &chainMock.ChainService{},
-			BeaconDB:    db,
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			BeaconDB:              db,
 		}
 
 		resp, err := s.ListValidators(ctx, &ethpb.StateValidatorsRequest{
@@ -451,12 +477,14 @@ func TestListValidators_Status(t *testing.T) {
 	})
 
 	t.Run("Head List All PENDING_INITIALIZED and EXITED_UNSLASHED Validators", func(t *testing.T) {
+		chainService := &chainMock.ChainService{}
 		s := Server{
 			StateFetcher: &statefetcher.StateProvider{
 				ChainInfoFetcher: &chainMock.ChainService{State: st},
 			},
-			HeadFetcher: &chainMock.ChainService{},
-			BeaconDB:    db,
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			BeaconDB:              db,
 		}
 
 		resp, err := s.ListValidators(ctx, &ethpb.StateValidatorsRequest{
@@ -484,12 +512,14 @@ func TestListValidators_Status(t *testing.T) {
 	})
 
 	t.Run("Head List All PENDING and EXITED Validators", func(t *testing.T) {
+		chainService := &chainMock.ChainService{}
 		s := Server{
 			StateFetcher: &statefetcher.StateProvider{
 				ChainInfoFetcher: &chainMock.ChainService{State: st},
 			},
-			HeadFetcher: &chainMock.ChainService{},
-			BeaconDB:    db,
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			BeaconDB:              db,
 		}
 
 		resp, err := s.ListValidators(ctx, &ethpb.StateValidatorsRequest{
@@ -532,12 +562,14 @@ func TestListValidatorBalances(t *testing.T) {
 	require.NoError(t, st.SetBalances(balances))
 
 	t.Run("Head List Validators Balance by index", func(t *testing.T) {
+		chainService := &chainMock.ChainService{}
 		s := Server{
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: st,
 			},
-			HeadFetcher: &chainMock.ChainService{},
-			BeaconDB:    db,
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			BeaconDB:              db,
 		}
 
 		ids := [][]byte{[]byte("15"), []byte("26"), []byte("400")}
@@ -554,12 +586,14 @@ func TestListValidatorBalances(t *testing.T) {
 	})
 
 	t.Run("Head List Validators Balance by pubkey", func(t *testing.T) {
+		chainService := &chainMock.ChainService{}
 		s := Server{
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: st,
 			},
-			HeadFetcher: &chainMock.ChainService{},
-			BeaconDB:    db,
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			BeaconDB:              db,
 		}
 		idNums := []types.ValidatorIndex{20, 66, 90, 100}
 		pubkey1 := st.PubkeyAtIndex(types.ValidatorIndex(20))
@@ -579,12 +613,14 @@ func TestListValidatorBalances(t *testing.T) {
 	})
 
 	t.Run("Head List Validators Balance by both index and pubkey", func(t *testing.T) {
+		chainService := &chainMock.ChainService{}
 		s := Server{
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: st,
 			},
-			HeadFetcher: &chainMock.ChainService{},
-			BeaconDB:    db,
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			BeaconDB:              db,
 		}
 
 		idNums := []types.ValidatorIndex{20, 90, 170, 129}
@@ -613,12 +649,14 @@ func TestListValidatorBalances(t *testing.T) {
 		require.NoError(t, db.SaveBlock(ctx, wsb))
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
+		chainService := &chainMock.ChainService{Optimistic: true}
 		s := Server{
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: st,
 			},
-			HeadFetcher: &chainMock.ChainService{Optimistic: true},
-			BeaconDB:    db,
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			BeaconDB:              db,
 		}
 
 		ids := [][]byte{[]byte("15"), []byte("26"), []byte("400")}
@@ -640,12 +678,14 @@ func TestListCommittees(t *testing.T) {
 	epoch := slots.ToEpoch(st.Slot())
 
 	t.Run("Head All Committees", func(t *testing.T) {
+		chainService := &chainMock.ChainService{}
 		s := Server{
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: st,
 			},
-			HeadFetcher: &chainMock.ChainService{},
-			BeaconDB:    db,
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			BeaconDB:              db,
 		}
 
 		resp, err := s.ListCommittees(ctx, &ethpb.StateCommitteesRequest{
@@ -660,12 +700,14 @@ func TestListCommittees(t *testing.T) {
 	})
 
 	t.Run("Head All Committees of Epoch 10", func(t *testing.T) {
+		chainService := &chainMock.ChainService{}
 		s := Server{
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: st,
 			},
-			HeadFetcher: &chainMock.ChainService{},
-			BeaconDB:    db,
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			BeaconDB:              db,
 		}
 		epoch := types.Epoch(10)
 		resp, err := s.ListCommittees(ctx, &ethpb.StateCommitteesRequest{
@@ -679,12 +721,14 @@ func TestListCommittees(t *testing.T) {
 	})
 
 	t.Run("Head All Committees of Slot 4", func(t *testing.T) {
+		chainService := &chainMock.ChainService{}
 		s := Server{
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: st,
 			},
-			HeadFetcher: &chainMock.ChainService{},
-			BeaconDB:    db,
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			BeaconDB:              db,
 		}
 
 		slot := types.Slot(4)
@@ -704,12 +748,14 @@ func TestListCommittees(t *testing.T) {
 	})
 
 	t.Run("Head All Committees of Index 1", func(t *testing.T) {
+		chainService := &chainMock.ChainService{}
 		s := Server{
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: st,
 			},
-			HeadFetcher: &chainMock.ChainService{},
-			BeaconDB:    db,
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			BeaconDB:              db,
 		}
 
 		index := types.CommitteeIndex(1)
@@ -729,12 +775,14 @@ func TestListCommittees(t *testing.T) {
 	})
 
 	t.Run("Head All Committees of Slot 2, Index 1", func(t *testing.T) {
+		chainService := &chainMock.ChainService{}
 		s := Server{
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: st,
 			},
-			HeadFetcher: &chainMock.ChainService{},
-			BeaconDB:    db,
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			BeaconDB:              db,
 		}
 
 		index := types.CommitteeIndex(1)
@@ -764,12 +812,14 @@ func TestListCommittees(t *testing.T) {
 		require.NoError(t, db.SaveBlock(ctx, wsb))
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
+		chainService := &chainMock.ChainService{Optimistic: true}
 		s := Server{
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: st,
 			},
-			HeadFetcher: &chainMock.ChainService{Optimistic: true},
-			BeaconDB:    db,
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			BeaconDB:              db,
 		}
 
 		resp, err := s.ListCommittees(ctx, &ethpb.StateCommitteesRequest{
