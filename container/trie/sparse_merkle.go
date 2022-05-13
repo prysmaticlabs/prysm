@@ -55,7 +55,7 @@ func (m *SparseMerkleTrie) validate() error {
 		return errors.New("invalid branches provided")
 	}
 	if m.depth >= uint(len(m.branches)) {
-		return errors.New("depth is greater than number of branches")
+		return errors.New("depth is greater than or equal to number of branches")
 	}
 	if m.depth >= 64 {
 		return errors.New("depth exceeds 64") // PowerOf2 would overflow.
