@@ -3,7 +3,6 @@ package components
 import (
 	"bytes"
 	"context"
-	"encoding/hex"
 	"fmt"
 	"math/big"
 	"os"
@@ -14,6 +13,7 @@ import (
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
@@ -160,7 +160,7 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 		}
 		var hexPubs []string
 		for _, pub := range pubs {
-			hexPubs = append(hexPubs, "0x"+hex.EncodeToString(pub.Marshal()))
+			hexPubs = append(hexPubs, hexutil.Encode(pub.Marshal()))
 		}
 		args = append(args, fmt.Sprintf("--%s=%s", flags.Web3SignerPublicValidatorKeysFlag.Name, strings.Join(hexPubs, ",")))
 	} else {
