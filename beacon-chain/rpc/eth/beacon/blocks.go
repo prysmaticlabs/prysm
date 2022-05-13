@@ -384,8 +384,49 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 			ExecutionOptimistic: isOptimistic,
 		}, nil
 	}
+	blindedBellatrixBlk, err := blk.PbBlindedBellatrixBlock()
+	if err == nil {
+		if blindedBellatrixBlk == nil {
+			return nil, status.Errorf(codes.Internal, "Nil block")
+		}
+
+		// Use the payload reconstructor...
+		log.Warn("RECONSTRUCTING FULL BELLATRIX BEACON BLOCK")
+		signedFullBlock, err := bs.ExecutionPayloadReconstructor.ReconstructFullBellatrixBlock(ctx, blindedBellatrixBlk)
+		if err != nil {
+			return nil, status.Errorf(
+				codes.Internal,
+				"Could not reconstruct full execution payload to create signed beacon block: %v",
+				err,
+			)
+		}
+		bellatrixBlk, err = signedFullBlock.PbBellatrixBlock()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
+		}
+		v2Blk, err := migration.V1Alpha1BeaconBlockBellatrixToV2(bellatrixBlk.Block)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
+		}
+		root, err := blk.Block().HashTreeRoot()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get block root: %v", err)
+		}
+		isOptimistic, err := bs.OptimisticModeFetcher.IsOptimisticForRoot(ctx, root)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not check if block is optimistic: %v", err)
+		}
+		return &ethpbv2.BlockResponseV2{
+			Version: ethpbv2.Version_BELLATRIX,
+			Data: &ethpbv2.SignedBeaconBlockContainerV2{
+				Message:   &ethpbv2.SignedBeaconBlockContainerV2_BellatrixBlock{BellatrixBlock: v2Blk},
+				Signature: blk.Signature(),
+			},
+			ExecutionOptimistic: isOptimistic,
+		}, nil
+	}
 	// ErrUnsupportedBellatrixBlock means that we have another block type
-	if !errors.Is(err, wrapper.ErrUnsupportedBellatrixBlock) {
+	if !errors.Is(err, wrapper.ErrUnsupportedBlindedBellatrixBlock) {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
 
