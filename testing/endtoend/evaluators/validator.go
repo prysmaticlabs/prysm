@@ -118,7 +118,7 @@ func validatorsParticipating(conns ...*grpc.ClientConn) error {
 		// Reduce Participation requirement to 95% to account for longer EE calls for
 		// the merge block. Target and head will likely be missed for a few validators at
 		// slot 0.
-		expected = 0.90
+		expected = 0.95
 	}
 	if partRate < expected {
 		st, err := debugClient.GetBeaconStateV2(context.Background(), &eth.StateRequestV2{StateId: []byte("head")})

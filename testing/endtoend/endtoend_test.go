@@ -14,7 +14,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -180,13 +179,6 @@ func (r *testRunner) run() {
 		}
 		if err := helpers.ComponentsStarted(ctx, comps); err != nil {
 			return errors.Wrap(err, "validator nodes require components to run")
-		}
-		keys, err := web3RemoteSigner.PublicKeys(ctx)
-		if err != nil {
-			return err
-		}
-		for i, key := range keys {
-			log.Infof("web3signer key added %s at index %v", hexutil.Encode(key.Marshal()), i)
 		}
 		if err := validatorNodes.Start(ctx); err != nil {
 			return errors.Wrap(err, "failed to start validator nodes")
