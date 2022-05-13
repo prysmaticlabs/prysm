@@ -1519,11 +1519,13 @@ func TestOnBlock_InvalidSignature(t *testing.T) {
 
 	blk, err := util.GenerateFullBlock(gs, keys, util.DefaultBlockGenConfig(), 1)
 	require.NoError(t, err)
+	blk.Signature = []byte{'a'} // Mutate the signature.
 	r, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
 	wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
 	require.NoError(t, err)
-	require.NoError(t, service.onBlock(ctx, wsb, r))
+	err = service.onBlock(ctx, wsb, r)
+	require.Equal(t, true, IsInvalidBlock(err))
 }
 
 func TestOnBlock_CallNewPayloadAndForkchoiceUpdated(t *testing.T) {
