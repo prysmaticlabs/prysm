@@ -12,7 +12,7 @@ type BlockBuilder interface {
 	SubmitBlindedBlock(ctx context.Context, block *ethpb.SignedBlindedBeaconBlockBellatrix) (*v1.ExecutionPayload, error)
 	GetHeader(ctx context.Context, slot types.Slot, parentHash [32]byte, pubKey [48]byte) (*ethpb.SignedBuilderBid, error)
 	Status() error
-	RegisterValidator(ctx context.Context, regs []*ethpb.SignedValidatorRegistrationV1) error
+	RegisterValidator(ctx context.Context, reg *ethpb.SignedValidatorRegistrationV1) error
 }
 
 type Service struct{}
@@ -47,6 +47,6 @@ func (s *Service) Status() error {
 	panic("implement me")
 }
 
-func (s *Service) RegisterValidator(context.Context, []*ethpb.SignedValidatorRegistrationV1) error {
+func (s *Service) RegisterValidator(context.Context, *ethpb.SignedValidatorRegistrationV1) error {
 	panic("implement me")
 }
