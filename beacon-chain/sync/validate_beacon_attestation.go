@@ -261,6 +261,5 @@ func (s *Service) setSeenCommitteeIndicesSlot(slot types.Slot, committeeID types
 func (s *Service) hasBlockAndState(ctx context.Context, blockRoot [32]byte) bool {
 	hasStateSummary := s.cfg.beaconDB.HasStateSummary(ctx, blockRoot)
 	hasState := hasStateSummary || s.cfg.beaconDB.HasState(ctx, blockRoot)
-	hasBlock := s.cfg.chain.HasInitSyncBlock(blockRoot) || s.cfg.beaconDB.HasBlock(ctx, blockRoot)
-	return hasState && hasBlock
+	return hasState && s.cfg.chain.HasBlock(ctx, blockRoot)
 }

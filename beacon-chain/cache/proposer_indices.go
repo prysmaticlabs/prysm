@@ -31,7 +31,7 @@ var (
 
 // ProposerIndicesCache is a struct with 1 queue for looking up proposer indices by root.
 type ProposerIndicesCache struct {
-	ProposerIndicesCache *cache.FIFO
+	proposerIndicesCache *cache.FIFO
 	lock                 sync.RWMutex
 }
 
@@ -48,7 +48,7 @@ func proposerIndicesKeyFn(obj interface{}) (string, error) {
 // NewProposerIndicesCache creates a new proposer indices cache for storing/accessing proposer index assignments of an epoch.
 func NewProposerIndicesCache() *ProposerIndicesCache {
 	return &ProposerIndicesCache{
-		ProposerIndicesCache: cache.NewFIFO(proposerIndicesKeyFn),
+		proposerIndicesCache: cache.NewFIFO(proposerIndicesKeyFn),
 	}
 }
 
@@ -58,10 +58,10 @@ func (c *ProposerIndicesCache) AddProposerIndices(p *ProposerIndices) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	if err := c.ProposerIndicesCache.AddIfNotPresent(p); err != nil {
+	if err := c.proposerIndicesCache.AddIfNotPresent(p); err != nil {
 		return err
 	}
-	trim(c.ProposerIndicesCache, maxProposerIndicesCacheSize)
+	trim(c.proposerIndicesCache, maxProposerIndicesCacheSize)
 	return nil
 }
 
@@ -69,7 +69,7 @@ func (c *ProposerIndicesCache) AddProposerIndices(p *ProposerIndices) error {
 func (c *ProposerIndicesCache) HasProposerIndices(r [32]byte) (bool, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
-	_, exists, err := c.ProposerIndicesCache.GetByKey(key(r))
+	_, exists, err := c.proposerIndicesCache.GetByKey(key(r))
 	if err != nil {
 		return false, err
 	}
@@ -80,7 +80,7 @@ func (c *ProposerIndicesCache) HasProposerIndices(r [32]byte) (bool, error) {
 func (c *ProposerIndicesCache) ProposerIndices(r [32]byte) ([]types.ValidatorIndex, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
-	obj, exists, err := c.ProposerIndicesCache.GetByKey(key(r))
+	obj, exists, err := c.proposerIndicesCache.GetByKey(key(r))
 	if err != nil {
 		return nil, err
 	}
@@ -98,4 +98,9 @@ func (c *ProposerIndicesCache) ProposerIndices(r [32]byte) ([]types.ValidatorInd
 	}
 
 	return item.ProposerIndices, nil
+}
+
+// Len returns the number of keys in the underlying cache.
+func (c *ProposerIndicesCache) Len() int {
+	return len(c.proposerIndicesCache.ListKeys())
 }

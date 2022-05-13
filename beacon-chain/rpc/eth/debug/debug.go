@@ -65,7 +65,7 @@ func (ds *Server) GetBeaconStateV2(ctx context.Context, req *ethpbv2.StateReques
 	if err != nil {
 		return nil, helpers.PrepareStateFetchGRPCError(err)
 	}
-	isOptimistic, err := helpers.IsOptimistic(ctx, beaconSt, ds.HeadFetcher)
+	isOptimistic, err := helpers.IsOptimistic(ctx, beaconSt, ds.OptimisticModeFetcher)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
 	}
@@ -167,7 +167,7 @@ func (ds *Server) ListForkChoiceHeadsV2(ctx context.Context, _ *emptypb.Empty) (
 		Data: make([]*ethpbv2.ForkChoiceHead, len(headRoots)),
 	}
 	for i := range headRoots {
-		isOptimistic, err := ds.HeadFetcher.IsOptimisticForRoot(ctx, headRoots[i])
+		isOptimistic, err := ds.OptimisticModeFetcher.IsOptimisticForRoot(ctx, headRoots[i])
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not check if head is optimistic: %v", err)
 		}

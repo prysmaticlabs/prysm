@@ -3,7 +3,9 @@ package validator
 import (
 	"bytes"
 	"context"
+	"fmt"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -129,7 +131,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 		if bytes.Equal(feeRecipient.Bytes(), burnAddr) {
 			logrus.WithFields(logrus.Fields{
 				"validatorIndex": vIdx,
-				"burnAddress":    burnAddr,
+				"burnAddress":    common.BytesToAddress(burnAddr).Hex(),
 			}).Error("Fee recipient not set. Using burn address")
 		}
 	default:
@@ -147,7 +149,19 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 	if payloadID == nil {
 		return nil, errors.New("nil payload id")
 	}
-	return vs.ExecutionEngineCaller.GetPayload(ctx, *payloadID)
+	payload, err := vs.ExecutionEngineCaller.GetPayload(ctx, *payloadID)
+	if err != nil {
+		return nil, err
+	}
+	// Warn if the fee recipient is not the value we expect.
+	if payload != nil && !bytes.Equal(payload.FeeRecipient, feeRecipient[:]) {
+		logrus.WithFields(logrus.Fields{
+			"wantedFeeRecipient": fmt.Sprintf("%#x", feeRecipient),
+			"received":           fmt.Sprintf("%#x", payload.FeeRecipient),
+		}).Warn("Fee recipient address from execution client is not what was expected. " +
+			"It is possible someone has compromised your client to try and take your transaction fees")
+	}
+	return payload, nil
 }
 
 // This returns the valid terminal block hash with an existence bool value.

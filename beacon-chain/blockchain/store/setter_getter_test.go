@@ -30,8 +30,10 @@ func Test_store_JustifiedCheckpt(t *testing.T) {
 	var cp *ethpb.Checkpoint
 	require.Equal(t, cp, s.JustifiedCheckpt())
 	cp = &ethpb.Checkpoint{Epoch: 1, Root: []byte{'a'}}
-	s.SetJustifiedCheckpt(cp)
+	h := [32]byte{'b'}
+	s.SetJustifiedCheckptAndPayloadHash(cp, h)
 	require.Equal(t, cp, s.JustifiedCheckpt())
+	require.Equal(t, h, s.JustifiedPayloadBlockHash())
 }
 
 func Test_store_FinalizedCheckpt(t *testing.T) {
@@ -39,8 +41,10 @@ func Test_store_FinalizedCheckpt(t *testing.T) {
 	var cp *ethpb.Checkpoint
 	require.Equal(t, cp, s.FinalizedCheckpt())
 	cp = &ethpb.Checkpoint{Epoch: 1, Root: []byte{'a'}}
-	s.SetFinalizedCheckpt(cp)
+	h := [32]byte{'b'}
+	s.SetFinalizedCheckptAndPayloadHash(cp, h)
 	require.Equal(t, cp, s.FinalizedCheckpt())
+	require.Equal(t, h, s.FinalizedPayloadBlockHash())
 }
 
 func Test_store_PrevFinalizedCheckpt(t *testing.T) {

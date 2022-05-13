@@ -10,7 +10,6 @@ import (
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
@@ -155,8 +154,8 @@ func TestUpdateHead_MissingJustifiedRoot(t *testing.T) {
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	service.store.SetJustifiedCheckpt(&ethpb.Checkpoint{Root: r[:]})
-	service.store.SetFinalizedCheckpt(&ethpb.Checkpoint{})
+	service.store.SetJustifiedCheckptAndPayloadHash(&ethpb.Checkpoint{Root: r[:]}, [32]byte{'a'})
+	service.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{}, [32]byte{'b'})
 	service.store.SetBestJustifiedCheckpt(&ethpb.Checkpoint{})
 	headRoot, err := service.updateHead(context.Background(), []uint64{})
 	require.NoError(t, err)
@@ -231,11 +230,6 @@ func Test_notifyNewHeadEvent(t *testing.T) {
 }
 
 func TestSaveOrphanedAtts(t *testing.T) {
-	resetCfg := features.InitWithReset(&features.Flags{
-		CorrectlyInsertOrphanedAtts: true,
-	})
-	defer resetCfg()
-
 	genesis, keys := util.DeterministicGenesisState(t, 64)
 	b, err := util.GenerateFullBlock(genesis, keys, util.DefaultBlockGenConfig(), 1)
 	assert.NoError(t, err)
@@ -259,11 +253,6 @@ func TestSaveOrphanedAtts(t *testing.T) {
 }
 
 func TestSaveOrphanedAtts_CanFilter(t *testing.T) {
-	resetCfg := features.InitWithReset(&features.Flags{
-		CorrectlyInsertOrphanedAtts: true,
-	})
-	defer resetCfg()
-
 	genesis, keys := util.DeterministicGenesisState(t, 64)
 	b, err := util.GenerateFullBlock(genesis, keys, util.DefaultBlockGenConfig(), 1)
 	assert.NoError(t, err)
@@ -309,8 +298,8 @@ func TestUpdateHead_noSavedChanges(t *testing.T) {
 		Root:  bellatrixBlkRoot[:],
 		Epoch: 1,
 	}
-	service.store.SetFinalizedCheckpt(fcp)
-	service.store.SetJustifiedCheckpt(fcp)
+	service.store.SetFinalizedCheckptAndPayloadHash(fcp, [32]byte{'a'})
+	service.store.SetJustifiedCheckptAndPayloadHash(fcp, [32]byte{'b'})
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, bellatrixBlkRoot))
 
 	bellatrixState, _ := util.DeterministicGenesisStateBellatrix(t, 2)

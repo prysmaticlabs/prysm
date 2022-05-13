@@ -276,7 +276,7 @@ func displayExitInfo(rawExitedKeys [][]byte, trimmedExitedKeys []string) {
 		urlFormattedPubKeys := make([]string, len(rawExitedKeys))
 		for i, key := range rawExitedKeys {
 			var baseUrl string
-			if params.BeaconConfig().ConfigName == params.ConfigNames[params.Prater] {
+			if params.BeaconConfig().ConfigName == params.PraterName {
 				baseUrl = "https://prater.beaconcha.in/validator/"
 			} else {
 				baseUrl = "https://beaconcha.in/validator/"
