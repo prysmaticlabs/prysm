@@ -60,7 +60,7 @@ func TestCreateTrieFromProto_Validation(t *testing.T) {
 				Layers: genValidLayers(3),
 				Depth:  12,
 			},
-			errString: "depth is greater than number of branches",
+			errString: "depth is greater than or equal to number of branches",
 		},
 		{
 			trie: &ethpb.SparseMerkleTrie{
