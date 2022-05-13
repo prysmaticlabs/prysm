@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"time"
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -61,6 +62,7 @@ func (s *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{
 	}
 	s.rateLimiter.add(stream, int64(len(blockRoots)))
 
+	start := time.Now()
 	for _, root := range blockRoots {
 		blk, err := s.cfg.beaconDB.Block(ctx, root)
 		if err != nil {
@@ -79,18 +81,21 @@ func (s *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{
 				s.writeErrorResponseToStream(responseCodeServerError, types.ErrGeneric.Error(), stream)
 				return err
 			}
+			st := time.Now()
 			blk, err = s.cfg.executionPayloadReconstructor.ReconstructFullBellatrixBlock(ctx, blindedBellatrix)
 			if err != nil {
 				log.WithError(err).Debug("Could not get reconstruct full bellatrix block from blinded body")
 				s.writeErrorResponseToStream(responseCodeServerError, types.ErrGeneric.Error(), stream)
 				return err
 			}
+			log.WithField("elapsed", time.Since(st)).Warnf("Reconstructing block with slot %d", blk.Block().Slot())
 		}
 
 		if err := s.chunkBlockWriter(stream, blk); err != nil {
 			return err
 		}
 	}
+	log.WithField("elapsed", time.Since(start)).Warn("Finished responding to blocks by root request")
 	closeStream(stream, log)
 	return nil
 }

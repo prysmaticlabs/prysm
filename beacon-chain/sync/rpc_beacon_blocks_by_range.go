@@ -159,23 +159,27 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 		tracing.AnnotateError(span, err)
 		return err
 	}
+	start := time.Now()
 	for _, b := range blks {
 		if err := helpers.BeaconBlockIsNil(b); err != nil {
 			continue
 		}
 		if b.Block().IsBlinded() {
+			log.Warn("RECONSTRUCTED FULL BLOCK DURING BLOCKS BY RANGE REQUEST")
 			blindedBellatrix, err := b.PbBlindedBellatrixBlock()
 			if err != nil {
 				log.WithError(err).Debug("Could not get blinded bellatrix block")
 				s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
 				return err
 			}
+			st := time.Now()
 			fullBlock, err := s.cfg.executionPayloadReconstructor.ReconstructFullBellatrixBlock(ctx, blindedBellatrix)
 			if err != nil {
 				log.WithError(err).Debug("Could not get reconstruct full bellatrix block from blinded body")
 				s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
 				return err
 			}
+			log.WithField("elapsed", time.Since(st)).Warnf("Reconstructing block with slot %d", fullBlock.Block().Slot())
 			if chunkErr := s.chunkBlockWriter(stream, fullBlock); chunkErr != nil {
 				log.WithError(chunkErr).Debug("Could not send a chunked response")
 				s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
@@ -190,8 +194,8 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 				return chunkErr
 			}
 		}
-
 	}
+	log.WithField("elapsed", time.Since(start)).Warn("Finished responding to blocks by range request")
 	// Return error in the event we have an invalid parent.
 	return err
 }
