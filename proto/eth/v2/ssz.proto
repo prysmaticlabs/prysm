@@ -22,6 +22,9 @@ option java_outer_classname = "SszProto";
 option java_package = "org.ethereum.eth.v2";
 option php_namespace = "Ethereum\\Eth\\v2";
 
+import "proto/eth/v2/version.proto";
+
 message SSZContainer {
-  bytes data = 1;
+  Version version = 1;
+  bytes data = 2;
 }
