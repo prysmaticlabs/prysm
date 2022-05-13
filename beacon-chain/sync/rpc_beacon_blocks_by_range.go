@@ -163,12 +163,32 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 		if err := helpers.BeaconBlockIsNil(b); err != nil {
 			continue
 		}
-		// TODO: Reconstruct...
-		if chunkErr := s.chunkBlockWriter(stream, b); chunkErr != nil {
-			log.WithError(chunkErr).Debug("Could not send a chunked response")
-			s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
-			tracing.AnnotateError(span, chunkErr)
-			return chunkErr
+		if b.Block().IsBlinded() {
+			blindedBellatrix, err := b.PbBlindedBellatrixBlock()
+			if err != nil {
+				log.WithError(err).Debug("Could not get blinded bellatrix block")
+				s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
+				return err
+			}
+			fullBlock, err := s.cfg.executionPayloadReconstructor.ReconstructFullBellatrixBlock(ctx, blindedBellatrix)
+			if err != nil {
+				log.WithError(err).Debug("Could not get reconstruct full bellatrix block from blinded body")
+				s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
+				return err
+			}
+			if chunkErr := s.chunkBlockWriter(stream, fullBlock); chunkErr != nil {
+				log.WithError(chunkErr).Debug("Could not send a chunked response")
+				s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
+				tracing.AnnotateError(span, chunkErr)
+				return chunkErr
+			}
+		} else {
+			if chunkErr := s.chunkBlockWriter(stream, b); chunkErr != nil {
+				log.WithError(chunkErr).Debug("Could not send a chunked response")
+				s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
+				tracing.AnnotateError(span, chunkErr)
+				return chunkErr
+			}
 		}
 
 	}
