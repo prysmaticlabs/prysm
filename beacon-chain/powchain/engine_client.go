@@ -332,7 +332,7 @@ func (s *Service) ReconstructFullBellatrixBlock(
 	executionBlockHash := common.BytesToHash(header.BlockHash)
 	executionBlock, err := s.ExecutionBlockByHashWithTxs(ctx, executionBlockHash)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "could not fetch execution block with txs by hash %#x", executionBlockHash)
 	}
 	payload := &pb.ExecutionPayload{
 		ParentHash:    header.ParentHash,
@@ -352,15 +352,15 @@ func (s *Service) ReconstructFullBellatrixBlock(
 	}
 	signedBlock, err := wrapper.WrappedSignedBeaconBlock(blinded)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not wrap signed beacon block")
 	}
 	blindedBlockRoot, err := blinded.Block.HashTreeRoot()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not hash tree root blinded block")
 	}
 	fullBlockRoot, err := signedBlock.Block().HashTreeRoot()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not hash tree root full beacon block")
 	}
 	// Check the root matches after the reconstruction for extra safety.
 	if fullBlockRoot != blindedBlockRoot {

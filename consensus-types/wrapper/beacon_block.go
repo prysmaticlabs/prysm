@@ -1,7 +1,9 @@
 package wrapper
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
@@ -158,15 +160,18 @@ func BuildSignedBeaconBlockFromExecutionPayload(
 		b := tp.Block()
 		payloadRoot, err := payload.HashTreeRoot()
 		if err != nil {
-			return nil, err
+			if err := json.NewEncoder(os.Stdout).Encode(payload); err != nil {
+				return nil, err
+			}
+			return nil, errors.Wrap(err, "could not hash tree root execution payload")
 		}
 		payloadHeader, err := b.Body().ExecutionPayloadHeader()
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "could not get execution payload header")
 		}
 		payloadHeaderRoot, err := payloadHeader.HashTreeRoot()
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "could not hash tree root payload header")
 		}
 		if payloadRoot != payloadHeaderRoot {
 			return nil, fmt.Errorf(
@@ -177,7 +182,7 @@ func BuildSignedBeaconBlockFromExecutionPayload(
 		}
 		syncAgg, err := b.Body().SyncAggregate()
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "could not get sync aggregate from block body")
 		}
 		blindedBlock := &eth.SignedBeaconBlockBellatrix{
 			Block: &eth.BeaconBlockBellatrix{
