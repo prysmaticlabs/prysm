@@ -60,8 +60,6 @@ func WithTimeout(timeout time.Duration) ClientOpt {
 // Client provides a collection of helper methods for calling the Eth Beacon Node API endpoints.
 type Client struct {
 	hc      *http.Client
-	host    string
-	scheme  string
 	baseURL *url.URL
 }
 
@@ -137,7 +135,6 @@ func (c *Client) do(ctx context.Context, method string, path string, body io.Rea
 	}
 	return b, nil
 }
-
 
 var execHeaderTemplate = template.Must(template.New("").Parse(getExecHeaderPath))
 func execHeaderPath(slot types.Slot, parentHash [32]byte, pubkey [48]byte) (string, error) {
