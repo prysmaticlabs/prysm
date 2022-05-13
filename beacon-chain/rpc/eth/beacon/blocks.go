@@ -235,8 +235,8 @@ func (bs *Server) SubmitBlock(ctx context.Context, req *ethpbv2.SignedBeaconBloc
 // still broadcast but a different status code is returned (202).
 //
 // The provided block must be SSZ-serialized.
-func (bs *Server) SubmitBlockSSZ(ctx context.Context, req *ethpbv2.SignedBeaconBlockSSZContainer) (*emptypb.Empty, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon.SubmitBlock")
+func (bs *Server) SubmitBlockSSZ(ctx context.Context, req *ethpbv2.SSZContainer) (*emptypb.Empty, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon.SubmitBlockSSZ")
 	defer span.End()
 
 	md, ok := metadata.FromIncomingContext(ctx)
@@ -437,7 +437,7 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 }
 
 // GetBlockSSZV2 returns the SSZ-serialized version of the beacon block for given block ID.
-func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (*ethpbv2.BlockSSZResponseV2, error) {
+func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (*ethpbv2.SSZContainer, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon.GetBlockSSZV2")
 	defer span.End()
 
@@ -457,7 +457,7 @@ func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not marshal block into SSZ: %v", err)
 		}
-		return &ethpbv2.BlockSSZResponseV2{Version: ethpbv2.Version_PHASE0, Data: sszBlock}, nil
+		return &ethpbv2.SSZContainer{Version: ethpbv2.Version_PHASE0, Data: sszBlock}, nil
 	}
 	// ErrUnsupportedPhase0Block means that we have another block type
 	if !errors.Is(err, wrapper.ErrUnsupportedPhase0Block) {
@@ -481,7 +481,7 @@ func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not marshal block into SSZ: %v", err)
 		}
-		return &ethpbv2.BlockSSZResponseV2{Version: ethpbv2.Version_ALTAIR, Data: sszData}, nil
+		return &ethpbv2.SSZContainer{Version: ethpbv2.Version_ALTAIR, Data: sszData}, nil
 	}
 	// ErrUnsupportedAltairBlock means that we have another block type
 	if !errors.Is(err, wrapper.ErrUnsupportedAltairBlock) {
@@ -505,7 +505,7 @@ func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not marshal block into SSZ: %v", err)
 		}
-		return &ethpbv2.BlockSSZResponseV2{Version: ethpbv2.Version_BELLATRIX, Data: sszData}, nil
+		return &ethpbv2.SSZContainer{Version: ethpbv2.Version_BELLATRIX, Data: sszData}, nil
 	}
 	// ErrUnsupportedBellatrixBlock means that we have another block type
 	if !errors.Is(err, wrapper.ErrUnsupportedBellatrixBlock) {

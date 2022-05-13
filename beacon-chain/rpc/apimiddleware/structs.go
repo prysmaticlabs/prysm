@@ -7,6 +7,10 @@ import (
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 )
 
+//----------------
+// Requests and responses.
+//----------------
+
 // genesisResponseJson is used in /beacon/genesis API endpoint.
 type genesisResponseJson struct {
 	Data *genesisResponse_GenesisJson `json:"data"`
@@ -837,63 +841,34 @@ type sszRequestJson struct {
 	Data string `json:"data"`
 }
 
-// sszResponseJson is a common abstraction over all SSZ responses.
-type sszResponseJson interface {
+// sszResponse is a common abstraction over all SSZ responses.
+type sszResponse interface {
 	SSZVersion() string
 	SSZData() string
 }
 
-// blockSSZResponseJson is used in /beacon/blocks/{block_id} API endpoint.
-type blockSSZResponseJson struct {
+type sszResponseJson struct {
 	Data string `json:"data"`
 }
 
-func (ssz *blockSSZResponseJson) SSZData() string {
+func (ssz *sszResponseJson) SSZData() string {
 	return ssz.Data
 }
 
-func (*blockSSZResponseJson) SSZVersion() string {
+func (*sszResponseJson) SSZVersion() string {
 	return strings.ToLower(ethpbv2.Version_PHASE0.String())
 }
 
-// blockSSZResponseV2Json is used in /v2/beacon/blocks/{block_id} API endpoint.
-type blockSSZResponseV2Json struct {
+type versionedSSZResponseJson struct {
 	Version string `json:"version"`
 	Data    string `json:"data"`
 }
 
-func (ssz *blockSSZResponseV2Json) SSZData() string {
+func (ssz *versionedSSZResponseJson) SSZData() string {
 	return ssz.Data
 }
 
-func (ssz *blockSSZResponseV2Json) SSZVersion() string {
-	return ssz.Version
-}
-
-// beaconStateSSZResponseJson is used in /debug/beacon/states/{state_id} API endpoint.
-type beaconStateSSZResponseJson struct {
-	Data string `json:"data"`
-}
-
-func (ssz *beaconStateSSZResponseJson) SSZData() string {
-	return ssz.Data
-}
-
-func (*beaconStateSSZResponseJson) SSZVersion() string {
-	return strings.ToLower(ethpbv2.Version_PHASE0.String())
-}
-
-// beaconStateSSZResponseV2Json is used in /v2/debug/beacon/states/{state_id} API endpoint.
-type beaconStateSSZResponseV2Json struct {
-	Version string `json:"version"`
-	Data    string `json:"data"`
-}
-
-func (ssz *beaconStateSSZResponseV2Json) SSZData() string {
-	return ssz.Data
-}
-
-func (ssz *beaconStateSSZResponseV2Json) SSZVersion() string {
+func (ssz *versionedSSZResponseJson) SSZVersion() string {
 	return ssz.Version
 }
 
