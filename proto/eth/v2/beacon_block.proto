@@ -40,11 +40,6 @@ message BlockResponseV2 {
   bool execution_optimistic = 3;
 }
 
-message BlockSSZResponseV2 {
-  v2.Version version = 1;
-  bytes data = 2;
-}
-
 message BeaconBlockContainerV2 {
   oneof block {
     v1.BeaconBlock phase0_block = 1;
@@ -62,10 +57,6 @@ message SignedBeaconBlockContainerV2 {
 
   // 96 byte BLS signature from the validator that produced this block.
   bytes signature = 4 [(ethereum.eth.ext.ssz_size) = "96"];
-}
-
-message SignedBeaconBlockSSZContainer {
-  bytes data = 1;
 }
 
 message BlindedBeaconBlockContainer {

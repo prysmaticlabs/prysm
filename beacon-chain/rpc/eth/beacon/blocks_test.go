@@ -598,7 +598,7 @@ func TestServer_SubmitBlockSSZ_OK(t *testing.T) {
 		require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
 		blockSsz, err := req.MarshalSSZ()
 		require.NoError(t, err)
-		blockReq := &ethpbv2.SignedBeaconBlockSSZContainer{
+		blockReq := &ethpbv2.SSZContainer{
 			Data: blockSsz,
 		}
 		md := metadata.MD{}
@@ -642,7 +642,7 @@ func TestServer_SubmitBlockSSZ_OK(t *testing.T) {
 		require.NoError(t, beaconDB.SaveBlock(ctx, wrapped))
 		blockSsz, err := req.MarshalSSZ()
 		require.NoError(t, err)
-		blockReq := &ethpbv2.SignedBeaconBlockSSZContainer{
+		blockReq := &ethpbv2.SSZContainer{
 			Data: blockSsz,
 		}
 		md := metadata.MD{}
@@ -694,7 +694,7 @@ func TestServer_SubmitBlockSSZ_OK(t *testing.T) {
 		require.NoError(t, beaconDB.SaveBlock(ctx, wrapped))
 		blockSsz, err := req.MarshalSSZ()
 		require.NoError(t, err)
-		blockReq := &ethpbv2.SignedBeaconBlockSSZContainer{
+		blockReq := &ethpbv2.SSZContainer{
 			Data: blockSsz,
 		}
 		md := metadata.MD{}
