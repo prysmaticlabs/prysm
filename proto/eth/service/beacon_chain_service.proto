@@ -22,6 +22,7 @@ import "google/protobuf/empty.proto";
 import "proto/eth/v1/beacon_block.proto";
 import "proto/eth/v1/beacon_chain.proto";
 import "proto/eth/v2/beacon_block.proto";
+import "proto/eth/v2/ssz.proto";
 import "proto/eth/v2/sync_committee.proto";
 
 option csharp_namespace = "Ethereum.Eth.Service";
@@ -143,7 +144,7 @@ service BeaconChain {
   // still broadcast but a different status code is returned (202).
   //
   // The provided block must be SSZ-serialized.
-  rpc SubmitBlockSSZ(v2.SignedBeaconBlockSSZContainer) returns (google.protobuf.Empty) {
+  rpc SubmitBlockSSZ(v2.SSZContainer) returns (google.protobuf.Empty) {
     option (google.api.http) = {
       post: "/internal/eth/v1/beacon/blocks/ssz"
       body: "*"
@@ -175,7 +176,7 @@ service BeaconChain {
   // broadcast but a different status code is returned (202).
   //
   // The provided block must be SSZ-serialized.
-  rpc SubmitBlindedBlockSSZ(v2.SignedBeaconBlockSSZContainer) returns (google.protobuf.Empty) {
+  rpc SubmitBlindedBlockSSZ(v2.SSZContainer) returns (google.protobuf.Empty) {
     option (google.api.http) = {
       post: "/internal/eth/v1/beacon/blinded_blocks/ssz"
       body: "*"

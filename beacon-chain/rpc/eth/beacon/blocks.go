@@ -235,7 +235,7 @@ func (bs *Server) SubmitBlock(ctx context.Context, req *ethpbv2.SignedBeaconBloc
 // still broadcast but a different status code is returned (202).
 //
 // The provided block must be SSZ-serialized.
-func (bs *Server) SubmitBlockSSZ(ctx context.Context, req *ethpbv2.SignedBeaconBlockSSZContainer) (*emptypb.Empty, error) {
+func (bs *Server) SubmitBlockSSZ(ctx context.Context, req *ethpbv2.SSZContainer) (*emptypb.Empty, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon.SubmitBlockSSZ")
 	defer span.End()
 
@@ -313,7 +313,7 @@ func (bs *Server) SubmitBlindedBlock(ctx context.Context, req *ethpbv2.SignedBli
 // broadcast but a different status code is returned (202).
 //
 // The provided block must be SSZ-serialized.
-func (bs *Server) SubmitBlindedBlockSSZ(ctx context.Context, req *ethpbv2.SignedBeaconBlockSSZContainer) (*emptypb.Empty, error) {
+func (bs *Server) SubmitBlindedBlockSSZ(ctx context.Context, req *ethpbv2.SSZContainer) (*emptypb.Empty, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon.SubmitBlindedBlockSSZ")
 	defer span.End()
 

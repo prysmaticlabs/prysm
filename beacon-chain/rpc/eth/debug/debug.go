@@ -39,7 +39,7 @@ func (ds *Server) GetBeaconState(ctx context.Context, req *ethpbv1.StateRequest)
 }
 
 // GetBeaconStateSSZ returns the SSZ-serialized version of the full beacon state object for given state ID.
-func (ds *Server) GetBeaconStateSSZ(ctx context.Context, req *ethpbv1.StateRequest) (*ethpbv1.BeaconStateSSZResponse, error) {
+func (ds *Server) GetBeaconStateSSZ(ctx context.Context, req *ethpbv1.StateRequest) (*ethpbv2.SSZContainer, error) {
 	ctx, span := trace.StartSpan(ctx, "debug.GetBeaconStateSSZ")
 	defer span.End()
 
@@ -53,7 +53,7 @@ func (ds *Server) GetBeaconStateSSZ(ctx context.Context, req *ethpbv1.StateReque
 		return nil, status.Errorf(codes.Internal, "Could not marshal state into SSZ: %v", err)
 	}
 
-	return &ethpbv1.BeaconStateSSZResponse{Data: sszState}, nil
+	return &ethpbv2.SSZContainer{Data: sszState}, nil
 }
 
 // GetBeaconStateV2 returns the full beacon state for a given state ID.
