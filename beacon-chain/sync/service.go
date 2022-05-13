@@ -95,6 +95,7 @@ type blockchainService interface {
 	blockchain.TimeFetcher
 	blockchain.GenesisFetcher
 	blockchain.CanonicalFetcher
+	blockchain.OptimisticModeFetcher
 	blockchain.SlashingReceiver
 }
 

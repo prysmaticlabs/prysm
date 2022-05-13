@@ -51,6 +51,7 @@ type Server struct {
 	DepositFetcher         depositcache.DepositFetcher
 	ChainStartFetcher      powchain.ChainStartFetcher
 	Eth1InfoFetcher        powchain.ChainInfoFetcher
+	OptimisticModeFetcher  blockchain.OptimisticModeFetcher
 	SyncChecker            sync.Checker
 	StateNotifier          statefeed.Notifier
 	BlockNotifier          blockfeed.Notifier

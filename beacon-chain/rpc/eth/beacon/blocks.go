@@ -18,15 +18,20 @@ import (
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/encoding/ssz/detect"
+	"github.com/prysmaticlabs/prysm/network/forks"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/proto/migration"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
+
+const versionHeader = "eth-consensus-version"
 
 // blockIdParseError represents an error scenario where a block ID could not be parsed.
 type blockIdParseError struct {
@@ -109,7 +114,7 @@ func (bs *Server) GetBlockHeader(ctx context.Context, req *ethpbv1.BlockRequest)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not determine if block root is canonical: %v", err)
 	}
-	isOptimistic, err := bs.HeadFetcher.IsOptimisticForRoot(ctx, blkRoot)
+	isOptimistic, err := bs.OptimisticModeFetcher.IsOptimisticForRoot(ctx, blkRoot)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not check if block is optimistic: %v", err)
 	}
@@ -175,7 +180,7 @@ func (bs *Server) ListBlockHeaders(ctx context.Context, req *ethpbv1.BlockHeader
 			return nil, status.Errorf(codes.Internal, "Could not determine if block root is canonical: %v", err)
 		}
 		if !isOptimistic {
-			isOptimistic, err = bs.HeadFetcher.IsOptimisticForRoot(ctx, blkRoots[i])
+			isOptimistic, err = bs.OptimisticModeFetcher.IsOptimisticForRoot(ctx, blkRoots[i])
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not check if block is optimistic: %v", err)
 			}
@@ -221,6 +226,45 @@ func (bs *Server) SubmitBlock(ctx context.Context, req *ethpbv2.SignedBeaconBloc
 		}
 	}
 	return &emptypb.Empty{}, nil
+}
+
+// SubmitBlockSSZ instructs the beacon node to broadcast a newly signed beacon block to the beacon network, to be
+// included in the beacon chain. The beacon node is not required to validate the signed BeaconBlock, and a successful
+// response (20X) only indicates that the broadcast has been successful. The beacon node is expected to integrate the
+// new block into its state, and therefore validate the block internally, however blocks which fail the validation are
+// still broadcast but a different status code is returned (202).
+//
+// The provided block must be SSZ-serialized.
+func (bs *Server) SubmitBlockSSZ(ctx context.Context, req *ethpbv2.SignedBeaconBlockSSZContainer) (*emptypb.Empty, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon.SubmitBlock")
+	defer span.End()
+
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not read "+versionHeader+" header")
+	}
+	ver := md.Get(versionHeader)
+	if len(ver) == 0 {
+		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not read "+versionHeader+" header")
+	}
+	schedule := forks.NewOrderedSchedule(params.BeaconConfig())
+	forkVer, err := schedule.VersionForName(ver[0])
+	if err != nil {
+		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not determine fork version: %v", err)
+	}
+	unmarshaler, err := detect.FromForkVersion(forkVer)
+	if err != nil {
+		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not create unmarshaler: %v", err)
+	}
+	block, err := unmarshaler.UnmarshalBeaconBlock(req.Data)
+	if err != nil {
+		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not unmarshal request data into block: %v", err)
+	}
+	root, err := block.Block().HashTreeRoot()
+	if err != nil {
+		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not compute block's hash tree root: %v", err)
+	}
+	return &emptypb.Empty{}, bs.submitBlock(ctx, root, block)
 }
 
 // SubmitBlindedBlock instructs the beacon node to use the components of the `SignedBlindedBeaconBlock` to construct
@@ -371,7 +415,7 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get block root: %v", err)
 		}
-		isOptimistic, err := bs.HeadFetcher.IsOptimisticForRoot(ctx, root)
+		isOptimistic, err := bs.OptimisticModeFetcher.IsOptimisticForRoot(ctx, root)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not check if block is optimistic: %v", err)
 		}
@@ -543,7 +587,7 @@ func (bs *Server) GetBlockRoot(ctx context.Context, req *ethpbv1.BlockRequest) (
 		}
 	}
 
-	isOptimistic, err := bs.HeadFetcher.IsOptimisticForRoot(ctx, bytesutil.ToBytes32(root))
+	isOptimistic, err := bs.OptimisticModeFetcher.IsOptimisticForRoot(ctx, bytesutil.ToBytes32(root))
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not check if block is optimistic: %v", err)
 	}
@@ -616,7 +660,7 @@ func (bs *Server) ListBlockAttestations(ctx context.Context, req *ethpbv1.BlockR
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get block root: %v", err)
 		}
-		isOptimistic, err := bs.HeadFetcher.IsOptimisticForRoot(ctx, root)
+		isOptimistic, err := bs.OptimisticModeFetcher.IsOptimisticForRoot(ctx, root)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not check if block is optimistic: %v", err)
 		}
