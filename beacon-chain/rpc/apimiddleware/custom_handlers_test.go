@@ -75,6 +75,16 @@ func TestPrepareSSZRequestForProxying(t *testing.T) {
 	assert.Equal(t, "/internal/ssz", request.URL.Path)
 }
 
+func TestPreparePostedSszData(t *testing.T) {
+	var body bytes.Buffer
+	body.Write([]byte("body"))
+	request := httptest.NewRequest("POST", "http://foo.example", &body)
+
+	preparePostedSSZData(request)
+	assert.Equal(t, int64(19), request.ContentLength)
+	assert.Equal(t, "application/json", request.Header.Get("Content-Type"))
+}
+
 func TestSerializeMiddlewareResponseIntoSSZ(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
 		j := testSSZResponseJson{

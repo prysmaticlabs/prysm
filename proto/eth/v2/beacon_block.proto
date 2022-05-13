@@ -64,6 +64,10 @@ message SignedBeaconBlockContainerV2 {
   bytes signature = 4 [(ethereum.eth.ext.ssz_size) = "96"];
 }
 
+message SignedBeaconBlockSSZContainer {
+  bytes data = 1;
+}
+
 message BlindedBeaconBlockContainer {
   oneof block {
     v1.BeaconBlock phase0_block = 1;
