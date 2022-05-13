@@ -58,7 +58,7 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *ethpbv1.AttesterDu
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
 
-	isOptimistic, err := rpchelpers.IsOptimistic(ctx, s, vs.HeadFetcher)
+	isOptimistic, err := rpchelpers.IsOptimistic(ctx, s, vs.OptimisticModeFetcher)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
 	}
@@ -142,7 +142,7 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDu
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
 
-	isOptimistic, err := rpchelpers.IsOptimistic(ctx, s, vs.HeadFetcher)
+	isOptimistic, err := rpchelpers.IsOptimistic(ctx, s, vs.OptimisticModeFetcher)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
 	}
@@ -258,7 +258,7 @@ func (vs *Server) GetSyncCommitteeDuties(ctx context.Context, req *ethpbv2.SyncC
 		return nil, status.Errorf(codes.Internal, "Could not get duties: %v", err)
 	}
 
-	isOptimistic, err := rpchelpers.IsOptimistic(ctx, st, vs.HeadFetcher)
+	isOptimistic, err := rpchelpers.IsOptimistic(ctx, st, vs.OptimisticModeFetcher)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
 	}

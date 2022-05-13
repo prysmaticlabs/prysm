@@ -31,6 +31,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
+	"github.com/prysmaticlabs/prysm/container/trie"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -86,9 +87,11 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 	bState, _ := util.DeterministicGenesisState(t, 10)
 	pbState, err := v1.ProtobufBeaconState(bState.InnerStateUnsafe())
 	require.NoError(t, err)
+	mockTrie, err := trie.NewTrie(0)
+	require.NoError(t, err)
 	err = beaconDB.SavePowchainData(ctx, &ethpb.ETH1ChainData{
 		BeaconState: pbState,
-		Trie:        &ethpb.SparseMerkleTrie{},
+		Trie:        mockTrie.ToProto(),
 		CurrentEth1Data: &ethpb.LatestETH1Data{
 			BlockHash: make([]byte, 32),
 		},
