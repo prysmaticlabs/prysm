@@ -16,6 +16,68 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
+func TestCreateTrieFromProto_Validation(t *testing.T) {
+	h := hash.Hash([]byte("hi"))
+	genValidLayers := func(num int) []*ethpb.TrieLayer {
+		l := make([]*ethpb.TrieLayer, num)
+		for i := 0; i < num; i++ {
+			l[i] = &ethpb.TrieLayer{
+				Layer: [][]byte{h[:]},
+			}
+		}
+		return l
+	}
+	tests := []struct {
+		trie      *ethpb.SparseMerkleTrie
+		errString string
+	}{
+		{
+			trie: &ethpb.SparseMerkleTrie{
+				Layers: []*ethpb.TrieLayer{},
+				Depth:  0,
+			},
+			errString: "no branches",
+		},
+		{
+			trie: &ethpb.SparseMerkleTrie{
+				Layers: []*ethpb.TrieLayer{
+					{
+						Layer: [][]byte{h[:]},
+					},
+					{
+						Layer: [][]byte{h[:]},
+					},
+					{
+						Layer: [][]byte{},
+					},
+				},
+				Depth: 2,
+			},
+			errString: "invalid branches provided",
+		},
+		{
+			trie: &ethpb.SparseMerkleTrie{
+				Layers: genValidLayers(3),
+				Depth:  12,
+			},
+			errString: "depth is greater than number of branches",
+		},
+		{
+			trie: &ethpb.SparseMerkleTrie{
+				Layers: genValidLayers(66),
+				Depth:  65,
+			},
+			errString: "depth exceeds 64",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.errString, func(t *testing.T) {
+			_, err := trie.CreateTrieFromProto(tt.trie)
+			require.ErrorContains(t, tt.errString, err)
+		})
+	}
+}
+
 func TestMarshalDepositWithProof(t *testing.T) {
 	items := [][]byte{
 		[]byte("A"),
@@ -129,6 +191,7 @@ func TestMerkleTrie_VerifyMerkleProof(t *testing.T) {
 		[]byte("G"),
 		[]byte("H"),
 	}
+
 	m, err := trie.GenerateTrieFromItems(items, params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err)
 	proof, err := m.MerkleProof(0)
