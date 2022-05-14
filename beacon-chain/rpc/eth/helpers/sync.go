@@ -20,11 +20,9 @@ func ValidateSync(ctx context.Context, syncChecker sync.Checker, headFetcher blo
 		return nil
 	}
 	headSlot := headFetcher.HeadSlot()
-
 	// optimisticModeFetcher := TODO
 	// beaconServer := TODO -> ctx.beaconServer?
 	// beaconState, err := beaconServer.StateFetcher.State(ctx)
-	
 	// if err != nil {
 	// 	return status.Errorf(
 	// 		codes.Internal,
@@ -32,7 +30,6 @@ func ValidateSync(ctx context.Context, syncChecker sync.Checker, headFetcher blo
 	// 		err,
 	// 	)
 	// }
-	
 	isOptimistic, isOptimisticErr := IsOptimistic(ctx, nil, nil)
 	if isOptimisticErr != nil {
 		return status.Errorf(
@@ -41,7 +38,6 @@ func ValidateSync(ctx context.Context, syncChecker sync.Checker, headFetcher blo
 			isOptimisticErr,
 		)
 	}
-	
 	// QUESTION: how do we pass beaconstate / optimisticModeFetcher into IsOptimistic?
 	syncDetailsContainer := &SyncDetailsContainer{
 		SyncDetails: &SyncDetails{
