@@ -11,6 +11,12 @@ import (
 )
 
 var (
+	// MevBuilderFlag provides an HTTP access endpoint to a MEV builder network.
+	MevBuilderFlag = &cli.StringFlag{
+		Name:  "http-mev-builder",
+		Usage: "A MEV builder relay string http endpoint",
+		Value: "",
+	}
 	// HTTPWeb3ProviderFlag provides an HTTP access endpoint to an ETH 1.0 RPC.
 	HTTPWeb3ProviderFlag = &cli.StringFlag{
 		Name:  "http-web3provider",

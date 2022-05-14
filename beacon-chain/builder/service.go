@@ -4,6 +4,7 @@ import (
 	"context"
 
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/network"
 	v1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
@@ -15,7 +16,14 @@ type BlockBuilder interface {
 	RegisterValidator(ctx context.Context, reg *ethpb.SignedValidatorRegistrationV1) error
 }
 
-type Service struct{}
+// config defines a config struct for dependencies into the service.
+type config struct {
+	builderEndpoint network.Endpoint
+}
+
+type Service struct {
+	cfg *config
+}
 
 func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 	s := &Service{}
