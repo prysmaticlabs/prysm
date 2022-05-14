@@ -33,7 +33,7 @@ func ValidateSync(ctx context.Context, syncChecker sync.Checker, headFetcher blo
 	// 	)
 	// }
 	
-	// QUESTION: how do we pass beaconstate / modeFetcher into IsOptimistic?
+	// QUESTION: how do we pass beaconstate / optimisticModeFetcher into IsOptimistic?
 	syncDetailsContainer := &SyncDetailsContainer{
 		SyncDetails: &SyncDetails{
 			HeadSlot:     strconv.FormatUint(uint64(headSlot), 10),
