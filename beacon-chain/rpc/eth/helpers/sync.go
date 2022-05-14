@@ -20,12 +20,13 @@ func ValidateSync(ctx context.Context, syncChecker sync.Checker, headFetcher blo
 		return nil
 	}
 	headSlot := headFetcher.HeadSlot()
+	// QUESTION: should we +/ how do we pass beaconstate / modeFetcher into IsOptimistic?
 	syncDetailsContainer := &SyncDetailsContainer{
 		SyncDetails: &SyncDetails{
 			HeadSlot:     strconv.FormatUint(uint64(headSlot), 10),
 			SyncDistance: strconv.FormatUint(uint64(timeFetcher.CurrentSlot()-headSlot), 10),
 			IsSyncing:    true,
-			IsOptimistic: IsOptimistic(ctx) // QUESTION: should we +/ how do we pass beaconstate / modeFetcher into IsOptimistic?
+			IsOptimistic: IsOptimistic(ctx) 
 		},
 	}
 	err := grpc.AppendCustomErrorHeader(ctx, syncDetailsContainer)
