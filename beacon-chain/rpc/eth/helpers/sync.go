@@ -21,9 +21,9 @@ func ValidateSync(ctx context.Context, syncChecker sync.Checker, headFetcher blo
 	}
 	headSlot := headFetcher.HeadSlot()
 
-	optimisticModeFetcher := nil
-	beaconServer := nil // ctx.beaconServer
-	beaconState, err := nil // beaconServer.StateFetcher.State(ctx)
+	// optimisticModeFetcher := TODO
+	// beaconServer := TODO -> ctx.beaconServer?
+	// beaconState, err := beaconServer.StateFetcher.State(ctx)
 	
 	// if err != nil {
 	// 	return status.Errorf(
@@ -39,7 +39,7 @@ func ValidateSync(ctx context.Context, syncChecker sync.Checker, headFetcher blo
 			HeadSlot:     strconv.FormatUint(uint64(headSlot), 10),
 			SyncDistance: strconv.FormatUint(uint64(timeFetcher.CurrentSlot()-headSlot), 10),
 			IsSyncing:    true,
-			IsOptimistic: IsOptimistic(ctx, beaconState, optimisticModeFetcher),
+			IsOptimistic: IsOptimistic(ctx, nil, nil),
 		},
 	}
 	err := grpc.AppendCustomErrorHeader(ctx, syncDetailsContainer)
