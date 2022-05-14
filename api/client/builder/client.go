@@ -20,32 +20,12 @@ import (
 )
 
 const (
-	getSignedBlockPath      = "/eth/v2/beacon/blocks"
-	getBlockRootPath        = "/eth/v1/beacon/blocks/{{.Id}}/root"
-	getStatePath            = "/eth/v2/debug/beacon/states"
 	getExecHeaderPath       = "/eth/v1/builder/header/{{.Slot}}/{{.ParentHash}}/{{.Pubkey}}"
 	postRegisterValidatorPath = "/eth/v1/builder/validators"
 	getStatus                 = "/eth/v1/builder/status"
 )
 
-// StateOrBlockId represents the block_id / state_id parameters that several of the Eth Beacon API methods accept.
-// StateOrBlockId constants are defined for named identifiers, and helper methods are provided
-// for slot and root identifiers. Example text from the Eth Beacon Node API documentation:
-//
-// "Block identifier can be one of: "head" (canonical head in node's view), "genesis", "finalized",
-// <slot>, <hex encoded blockRoot with 0x prefix>."
-type StateOrBlockId string
-
-const (
-	IdFinalized StateOrBlockId = "finalized"
-	IdGenesis   StateOrBlockId = "genesis"
-	IdHead      StateOrBlockId = "head"
-	IdJustified StateOrBlockId = "justified"
-)
-
 var ErrMalformedHostname = errors.New("hostname must include port, separated by one colon, like example.com:3500")
-
-
 
 // ClientOpt is a functional option for the Client type (http.Client wrapper)
 type ClientOpt func(*Client)
