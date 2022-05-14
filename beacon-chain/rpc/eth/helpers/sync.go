@@ -33,13 +33,15 @@ func ValidateSync(ctx context.Context, syncChecker sync.Checker, headFetcher blo
 	// 	)
 	// }
 	
+	isOptimistic, err := IsOptimistic: IsOptimistic(ctx, nil, nil)
+
 	// QUESTION: how do we pass beaconstate / optimisticModeFetcher into IsOptimistic?
 	syncDetailsContainer := &SyncDetailsContainer{
 		SyncDetails: &SyncDetails{
 			HeadSlot:     strconv.FormatUint(uint64(headSlot), 10),
 			SyncDistance: strconv.FormatUint(uint64(timeFetcher.CurrentSlot()-headSlot), 10),
 			IsSyncing:    true,
-			IsOptimistic: IsOptimistic(ctx, nil, nil),
+			IsOptimistic: isOptimistic,
 		},
 	}
 	err := grpc.AppendCustomErrorHeader(ctx, syncDetailsContainer)
