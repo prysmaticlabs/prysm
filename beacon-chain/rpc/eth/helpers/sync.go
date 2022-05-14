@@ -33,10 +33,15 @@ func ValidateSync(ctx context.Context, syncChecker sync.Checker, headFetcher blo
 	// 	)
 	// }
 	
-	//	isOptimistic, isOptimisticErr := IsOptimistic(ctx, nil, nil)
-
-	isOptimistic := IsOptimistic(ctx, nil, nil)
-
+	isOptimistic, isOptimisticErr := IsOptimistic(ctx, nil, nil)
+	if isOptimisticErr != nil {
+		return status.Errorf(
+			codes.Internal,
+			"Error while invoking IsOptimistic: %v",
+			isOptimisticErr,
+		)
+	}
+	
 	// QUESTION: how do we pass beaconstate / optimisticModeFetcher into IsOptimistic?
 	syncDetailsContainer := &SyncDetailsContainer{
 		SyncDetails: &SyncDetails{
