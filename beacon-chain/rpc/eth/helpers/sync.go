@@ -20,11 +20,26 @@ func ValidateSync(ctx context.Context, syncChecker sync.Checker, headFetcher blo
 		return nil
 	}
 	headSlot := headFetcher.HeadSlot()
+
+	// optimisticModeFetcher := TODO
+	// beaconServer := TODO -> ctx.beaconServer?
+	// beaconState, err := beaconServer.StateFetcher.State(ctx)
+	
+	// if err != nil {
+	// 	return status.Errorf(
+	// 		codes.Internal,
+	// 		"Could not fetch state from beacon server: %v",
+	// 		err,
+	// 	)
+	// }
+	
+	// QUESTION: how do we pass beaconstate / optimisticModeFetcher into IsOptimistic?
 	syncDetailsContainer := &SyncDetailsContainer{
 		SyncDetails: &SyncDetails{
 			HeadSlot:     strconv.FormatUint(uint64(headSlot), 10),
 			SyncDistance: strconv.FormatUint(uint64(timeFetcher.CurrentSlot()-headSlot), 10),
 			IsSyncing:    true,
+			IsOptimistic: IsOptimistic(ctx, nil, nil),
 		},
 	}
 	err := grpc.AppendCustomErrorHeader(ctx, syncDetailsContainer)

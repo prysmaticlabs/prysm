@@ -198,7 +198,7 @@ type versionResponseJson struct {
 
 // syncingResponseJson is used in /node/syncing API endpoint.
 type syncingResponseJson struct {
-	Data *syncInfoJson `json:"data"`
+	Data *syncDetailsJson `json:"data"`
 }
 
 // beaconStateResponseJson is used in /debug/beacon/states/{state_id} API endpoint.
@@ -775,12 +775,6 @@ type depositContractJson struct {
 	Address string `json:"address"`
 }
 
-type syncInfoJson struct {
-	HeadSlot     string `json:"head_slot"`
-	SyncDistance string `json:"sync_distance"`
-	IsSyncing    bool   `json:"is_syncing"`
-}
-
 type attesterDutyJson struct {
 	Pubkey                  string `json:"pubkey" hex:"true"`
 	ValidatorIndex          string `json:"validator_index"`
@@ -932,7 +926,7 @@ type singleIndexedVerificationFailureJson struct {
 
 type nodeSyncDetailsErrorJson struct {
 	apimiddleware.DefaultErrorJson
-	SyncDetails syncDetails `json:"sync_details"`
+	SyncDetails syncDetailsJson `json:"sync_details"`
 }
 
 type eventErrorJson struct {
@@ -940,8 +934,10 @@ type eventErrorJson struct {
 	Message    string `json:"message"`
 }
 
-type syncDetails struct {
+// TODO: Duplicated in error_handling.go
+type syncDetailsJson struct {
 	HeadSlot     string `json:"head_slot"`
 	SyncDistance string `json:"sync_distance"`
 	IsSyncing    bool   `json:"is_syncing"`
+	IsOptimistic bool   `json:"is_optimistic"`
 }
