@@ -26,7 +26,7 @@ func ValidateSync(ctx context.Context, syncChecker sync.Checker, headFetcher blo
 			HeadSlot:     strconv.FormatUint(uint64(headSlot), 10),
 			SyncDistance: strconv.FormatUint(uint64(timeFetcher.CurrentSlot()-headSlot), 10),
 			IsSyncing:    true,
-			IsOptimistic: IsOptimistic(ctx) 
+			IsOptimistic: IsOptimistic(ctx),
 		},
 	}
 	err := grpc.AppendCustomErrorHeader(ctx, syncDetailsContainer)
