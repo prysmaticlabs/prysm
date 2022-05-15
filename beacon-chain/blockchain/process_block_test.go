@@ -1327,7 +1327,7 @@ func TestVerifyBlkDescendant(t *testing.T) {
 			args: args{
 				finalizedRoot: [32]byte{'a'},
 			},
-			wantedErr: "nil finalized block",
+			wantedErr: "block not found in cache or db",
 		},
 		{
 			name: "could not get finalized block root in DB",
