@@ -30,8 +30,8 @@ func ValidateSync(ctx context.Context, syncChecker sync.Checker, headFetcher blo
 	// 		err,
 	// 	)
 	// }
-	isOptimistic, isOptimisticErr := IsOptimistic(ctx, nil, nil)
-	if isOptimisticErr != nil {
+	isOptimistic, err := IsOptimistic(ctx, nil, nil)
+	if err != nil {
 		return status.Errorf(
 			codes.Internal,
 			"Error while invoking IsOptimistic: %v",
@@ -47,7 +47,8 @@ func ValidateSync(ctx context.Context, syncChecker sync.Checker, headFetcher blo
 			IsOptimistic: isOptimistic,
 		},
 	}
-	err := grpc.AppendCustomErrorHeader(ctx, syncDetailsContainer)
+
+	err = grpc.AppendCustomErrorHeader(ctx, syncDetailsContainer)
 	if err != nil {
 		return status.Errorf(
 			codes.Internal,

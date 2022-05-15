@@ -38,11 +38,11 @@ func (e *invalidValidatorIdError) Error() string {
 }
 
 // GetValidator returns a validator specified by state and id or public key along with status and balance.
-func (beaconServer *Server) GetValidator(ctx context.Context, req *ethpb.StateValidatorRequest) (*ethpb.StateValidatorResponse, error) {
+func (bs *Server) GetValidator(ctx context.Context, req *ethpb.StateValidatorRequest) (*ethpb.StateValidatorResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon.GetValidator")
 	defer span.End()
 
-	st, err := beaconServer.StateFetcher.State(ctx, req.StateId)
+	st, err := bs.StateFetcher.State(ctx, req.StateId)
 	if err != nil {
 		return nil, helpers.PrepareStateFetchGRPCError(err)
 	}
@@ -57,7 +57,7 @@ func (beaconServer *Server) GetValidator(ctx context.Context, req *ethpb.StateVa
 		return nil, status.Error(codes.NotFound, "Could not find validator")
 	}
 
-	isOptimistic, err := helpers.IsOptimistic(ctx, st, beaconServer.OptimisticModeFetcher)
+	isOptimistic, err := helpers.IsOptimistic(ctx, st, bs.OptimisticModeFetcher)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
 	}
@@ -66,11 +66,11 @@ func (beaconServer *Server) GetValidator(ctx context.Context, req *ethpb.StateVa
 }
 
 // ListValidators returns filterable list of validators with their balance, status and index.
-func (beaconServer *Server) ListValidators(ctx context.Context, req *ethpb.StateValidatorsRequest) (*ethpb.StateValidatorsResponse, error) {
+func (bs *Server) ListValidators(ctx context.Context, req *ethpb.StateValidatorsRequest) (*ethpb.StateValidatorsResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon.ListValidators")
 	defer span.End()
 
-	st, err := beaconServer.StateFetcher.State(ctx, req.StateId)
+	st, err := bs.StateFetcher.State(ctx, req.StateId)
 	if err != nil {
 		return nil, helpers.PrepareStateFetchGRPCError(err)
 	}
@@ -80,7 +80,7 @@ func (beaconServer *Server) ListValidators(ctx context.Context, req *ethpb.State
 		return nil, handleValContainerErr(err)
 	}
 
-	isOptimistic, err := helpers.IsOptimistic(ctx, st, beaconServer.OptimisticModeFetcher)
+	isOptimistic, err := helpers.IsOptimistic(ctx, st, bs.OptimisticModeFetcher)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
 	}
@@ -122,11 +122,11 @@ func (beaconServer *Server) ListValidators(ctx context.Context, req *ethpb.State
 }
 
 // ListValidatorBalances returns a filterable list of validator balances.
-func (beaconServer *Server) ListValidatorBalances(ctx context.Context, req *ethpb.ValidatorBalancesRequest) (*ethpb.ValidatorBalancesResponse, error) {
+func (bs *Server) ListValidatorBalances(ctx context.Context, req *ethpb.ValidatorBalancesRequest) (*ethpb.ValidatorBalancesResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon.ListValidatorBalances")
 	defer span.End()
 
-	st, err := beaconServer.StateFetcher.State(ctx, req.StateId)
+	st, err := bs.StateFetcher.State(ctx, req.StateId)
 	if err != nil {
 		return nil, helpers.PrepareStateFetchGRPCError(err)
 	}
@@ -143,7 +143,7 @@ func (beaconServer *Server) ListValidatorBalances(ctx context.Context, req *ethp
 		}
 	}
 
-	isOptimistic, err := helpers.IsOptimistic(ctx, st, beaconServer.OptimisticModeFetcher)
+	isOptimistic, err := helpers.IsOptimistic(ctx, st, bs.OptimisticModeFetcher)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
 	}
@@ -153,11 +153,11 @@ func (beaconServer *Server) ListValidatorBalances(ctx context.Context, req *ethp
 
 // ListCommittees retrieves the committees for the given state at the given epoch.
 // If the requested slot and index are defined, only those committees are returned.
-func (beaconServer *Server) ListCommittees(ctx context.Context, req *ethpb.StateCommitteesRequest) (*ethpb.StateCommitteesResponse, error) {
+func (bs *Server) ListCommittees(ctx context.Context, req *ethpb.StateCommitteesRequest) (*ethpb.StateCommitteesResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon.ListCommittees")
 	defer span.End()
 
-	st, err := beaconServer.StateFetcher.State(ctx, req.StateId)
+	st, err := bs.StateFetcher.State(ctx, req.StateId)
 	if err != nil {
 		return nil, helpers.PrepareStateFetchGRPCError(err)
 	}
@@ -202,7 +202,7 @@ func (beaconServer *Server) ListCommittees(ctx context.Context, req *ethpb.State
 		}
 	}
 
-	isOptimistic, err := helpers.IsOptimistic(ctx, st, beaconServer.OptimisticModeFetcher)
+	isOptimistic, err := helpers.IsOptimistic(ctx, st, bs.OptimisticModeFetcher)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
 	}
