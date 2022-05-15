@@ -337,7 +337,7 @@ func (s *Service) initializeHeadFromDB(ctx context.Context) error {
 		}
 	}
 	if finalizedState == nil || finalizedState.IsNil() {
-		return errors.New("finalized state and block can't be nil")
+		return errors.New("finalized state can't be nil")
 	}
 
 	finalizedBlock, err := s.getBlock(ctx, finalizedRoot)
