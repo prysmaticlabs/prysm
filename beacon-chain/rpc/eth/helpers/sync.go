@@ -38,6 +38,7 @@ func ValidateSync(ctx context.Context, syncChecker sync.Checker, headFetcher blo
 			err,
 		)
 	}
+	// QUESTION: should we pass beaconState / optimisticModeFetcher into IsOptimistic? If so, why? (TODO: inspect)
 	// QUESTION: how do we pass beaconstate / optimisticModeFetcher into IsOptimistic?
 	syncDetailsContainer := &SyncDetailsContainer{
 		SyncDetails: &SyncDetails{
