@@ -48,7 +48,6 @@ func ValidateSync(ctx context.Context, syncChecker sync.Checker, headFetcher blo
 			IsOptimistic: isOptimistic,
 		},
 	}
-
 	err = grpc.AppendCustomErrorHeader(ctx, syncDetailsContainer)
 	if err != nil {
 		return status.Errorf(
@@ -59,8 +58,10 @@ func ValidateSync(ctx context.Context, syncChecker sync.Checker, headFetcher blo
 	}
 	return status.Error(codes.Unavailable, "Syncing to latest head, not ready to respond")
 }
-
 // IsOptimistic checks whether the latest block header of the passed in beacon state is the header of an optimistic block.
+// This is exposed to end-users who interpret `true` as "your Prysm beacon node is optimistically tracking head - your execution node isn't yet fully synced"
+// INFO: https://ethereum.github.io/beacon-APIs/?urls.primaryName=dev#/Node/getSyncingStatus for spec
+// INFO: https://github.com/prysmaticlabs/documentation/pull/429 for a PR to user-facing docs that introduces v1/node/syncing as a way to check beacon node + execution node sync status
 func IsOptimistic(ctx context.Context, st state.BeaconState, optimisticSyncFetcher blockchain.OptimisticModeFetcher) (bool, error) {
 	root, err := st.HashTreeRoot(ctx)
 	if err != nil {
