@@ -58,6 +58,7 @@ func ValidateSync(ctx context.Context, syncChecker sync.Checker, headFetcher blo
 	}
 	return status.Error(codes.Unavailable, "Syncing to latest head, not ready to respond")
 }
+
 // IsOptimistic checks whether the latest block header of the passed in beacon state is the header of an optimistic block.
 // This is exposed to end-users who interpret `true` as "your Prysm beacon node is optimistically tracking head - your execution node isn't yet fully synced"
 // INFO: https://ethereum.github.io/beacon-APIs/?urls.primaryName=dev#/Node/getSyncingStatus for spec
