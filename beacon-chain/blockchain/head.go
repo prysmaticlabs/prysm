@@ -40,7 +40,7 @@ func (s *Service) UpdateAndSaveHeadWithBalances(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not update head")
 	}
-	headBlock, err := s.cfg.BeaconDB.Block(ctx, headRoot)
+	headBlock, err := s.getBlock(ctx, headRoot)
 	if err != nil {
 		return err
 	}
@@ -86,7 +86,7 @@ func (s *Service) updateHead(ctx context.Context, balances []uint64) ([32]byte, 
 	// re-initiate fork choice store using the latest justified info.
 	// This recovers a fatal condition and should not happen in run time.
 	if !s.cfg.ForkChoiceStore.HasNode(headStartRoot) {
-		jb, err := s.cfg.BeaconDB.Block(ctx, headStartRoot)
+		jb, err := s.getBlock(ctx, headStartRoot)
 		if err != nil {
 			return [32]byte{}, err
 		}
@@ -355,7 +355,7 @@ func (s *Service) notifyNewHeadEvent(
 // attestation pool. It also filters out the attestations that is one epoch older as a
 // defense so invalid attestations don't flow into the attestation pool.
 func (s *Service) saveOrphanedAtts(ctx context.Context, orphanedRoot [32]byte) error {
-	orphanedBlk, err := s.cfg.BeaconDB.Block(ctx, orphanedRoot)
+	orphanedBlk, err := s.getBlock(ctx, orphanedRoot)
 	if err != nil {
 		return err
 	}
