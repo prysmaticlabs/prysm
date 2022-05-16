@@ -2,7 +2,6 @@ package components
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -10,8 +9,10 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
@@ -21,6 +22,7 @@ import (
 
 var _ e2etypes.ComponentRunner = (*LighthouseBeaconNode)(nil)
 var _ e2etypes.ComponentRunner = (*LighthouseBeaconNodeSet)(nil)
+var _ e2etypes.MultipleComponentRunners = (*LighthouseBeaconNodeSet)(nil)
 var _ e2etypes.BeaconNodeSet = (*LighthouseBeaconNodeSet)(nil)
 
 // LighthouseBeaconNodeSet represents set of lighthouse beacon nodes.
@@ -29,6 +31,7 @@ type LighthouseBeaconNodeSet struct {
 	config  *e2etypes.E2EConfig
 	enr     string
 	started chan struct{}
+	nodes   []e2etypes.ComponentRunner
 }
 
 // SetENR assigns ENR to the set of beacon nodes.
@@ -55,6 +58,7 @@ func (s *LighthouseBeaconNodeSet) Start(ctx context.Context) error {
 	for i := 0; i < e2e.TestParams.LighthouseBeaconNodeCount; i++ {
 		nodes[i] = NewLighthouseBeaconNode(s.config, i, s.enr)
 	}
+	s.nodes = nodes
 
 	// Wait for all nodes to finish their job (blocking).
 	// Once nodes are ready passed in handler function will be called.
@@ -69,6 +73,54 @@ func (s *LighthouseBeaconNodeSet) Started() <-chan struct{} {
 	return s.started
 }
 
+func (s *LighthouseBeaconNodeSet) Pause() error {
+	for _, n := range s.nodes {
+		if err := n.Pause(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *LighthouseBeaconNodeSet) Resume() error {
+	for _, n := range s.nodes {
+		if err := n.Resume(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *LighthouseBeaconNodeSet) Stop() error {
+	for _, n := range s.nodes {
+		if err := n.Stop(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *LighthouseBeaconNodeSet) PauseAtIndex(i int) error {
+	if i >= len(s.nodes) {
+		return errors.Errorf("provided index exceeds slice size: %d >= %d", i, len(s.nodes))
+	}
+	return s.nodes[i].Pause()
+}
+
+func (s *LighthouseBeaconNodeSet) ResumeAtIndex(i int) error {
+	if i >= len(s.nodes) {
+		return errors.Errorf("provided index exceeds slice size: %d >= %d", i, len(s.nodes))
+	}
+	return s.nodes[i].Resume()
+}
+
+func (s *LighthouseBeaconNodeSet) StopAtIndex(i int) error {
+	if i >= len(s.nodes) {
+		return errors.Errorf("provided index exceeds slice size: %d >= %d", i, len(s.nodes))
+	}
+	return s.nodes[i].Stop()
+}
+
 // LighthouseBeaconNode represents a lighthouse beacon node.
 type LighthouseBeaconNode struct {
 	e2etypes.ComponentRunner
@@ -76,6 +128,7 @@ type LighthouseBeaconNode struct {
 	started chan struct{}
 	index   int
 	enr     string
+	cmd     *exec.Cmd
 }
 
 // NewBeaconNode creates and returns a beacon node.
@@ -164,6 +217,7 @@ func (node *LighthouseBeaconNode) Start(ctx context.Context) error {
 
 	// Mark node as ready.
 	close(node.started)
+	node.cmd = cmd
 
 	return cmd.Wait()
 }
@@ -171,6 +225,18 @@ func (node *LighthouseBeaconNode) Start(ctx context.Context) error {
 // Started checks whether beacon node is started and ready to be queried.
 func (node *LighthouseBeaconNode) Started() <-chan struct{} {
 	return node.started
+}
+
+func (node *LighthouseBeaconNode) Pause() error {
+	return node.cmd.Process.Signal(syscall.SIGSTOP)
+}
+
+func (node *LighthouseBeaconNode) Resume() error {
+	return node.cmd.Process.Signal(syscall.SIGCONT)
+}
+
+func (node *LighthouseBeaconNode) Stop() error {
+	return node.cmd.Process.Kill()
 }
 
 func (node *LighthouseBeaconNode) createTestnetDir(index int) (string, error) {

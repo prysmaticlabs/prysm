@@ -15,14 +15,18 @@ import (
 )
 
 func TestEndToEnd_MinimalConfig(t *testing.T) {
-	e2eMinimal(t, false, 3)
+	e2eMinimal(t, false, 3).run()
+}
+
+func TestEndToEnd_MinimalConfig_ScenarioRun(t *testing.T) {
+	e2eMinimal(t, false, 3).scenarioRunner()
 }
 
 func TestEndToEnd_MinimalConfig_Web3Signer(t *testing.T) {
-	e2eMinimal(t, true, 0)
+	e2eMinimal(t, true, 0).run()
 }
 
-func e2eMinimal(t *testing.T, useWeb3RemoteSigner bool, extraEpochs uint64) {
+func e2eMinimal(t *testing.T, useWeb3RemoteSigner bool, extraEpochs uint64) *testRunner {
 	params.UseE2EConfig()
 	require.NoError(t, e2eParams.Init(e2eParams.StandardBeaconCount))
 
@@ -92,5 +96,5 @@ func e2eMinimal(t *testing.T, useWeb3RemoteSigner bool, extraEpochs uint64) {
 		ExtraEpochs:         extraEpochs,
 	}
 
-	newTestRunner(t, testConfig).run()
+	return newTestRunner(t, testConfig)
 }

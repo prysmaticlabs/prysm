@@ -9,6 +9,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/google/uuid"
@@ -25,12 +26,14 @@ import (
 
 var _ e2etypes.ComponentRunner = (*LighthouseValidatorNode)(nil)
 var _ e2etypes.ComponentRunner = (*LighthouseValidatorNodeSet)(nil)
+var _ e2etypes.MultipleComponentRunners = (*LighthouseValidatorNodeSet)(nil)
 
 // LighthouseValidatorNodeSet represents set of lighthouse validator nodes.
 type LighthouseValidatorNodeSet struct {
 	e2etypes.ComponentRunner
 	config  *e2etypes.E2EConfig
 	started chan struct{}
+	nodes   []e2etypes.ComponentRunner
 }
 
 // NewLighthouseValidatorNodeSet creates and returns a set of lighthouse validator nodes.
@@ -59,6 +62,7 @@ func (s *LighthouseValidatorNodeSet) Start(ctx context.Context) error {
 		offsetIdx := i + prysmBeaconNum
 		nodes[i] = NewLighthouseValidatorNode(s.config, validatorsPerNode, i, validatorsPerNode*offsetIdx)
 	}
+	s.nodes = nodes
 
 	// Wait for all nodes to finish their job (blocking).
 	// Once nodes are ready passed in handler function will be called.
@@ -73,6 +77,54 @@ func (s *LighthouseValidatorNodeSet) Started() <-chan struct{} {
 	return s.started
 }
 
+func (s *LighthouseValidatorNodeSet) Pause() error {
+	for _, n := range s.nodes {
+		if err := n.Pause(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *LighthouseValidatorNodeSet) Resume() error {
+	for _, n := range s.nodes {
+		if err := n.Resume(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *LighthouseValidatorNodeSet) Stop() error {
+	for _, n := range s.nodes {
+		if err := n.Stop(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *LighthouseValidatorNodeSet) PauseAtIndex(i int) error {
+	if i >= len(s.nodes) {
+		return errors.Errorf("provided index exceeds slice size: %d >= %d", i, len(s.nodes))
+	}
+	return s.nodes[i].Pause()
+}
+
+func (s *LighthouseValidatorNodeSet) ResumeAtIndex(i int) error {
+	if i >= len(s.nodes) {
+		return errors.Errorf("provided index exceeds slice size: %d >= %d", i, len(s.nodes))
+	}
+	return s.nodes[i].Resume()
+}
+
+func (s *LighthouseValidatorNodeSet) StopAtIndex(i int) error {
+	if i >= len(s.nodes) {
+		return errors.Errorf("provided index exceeds slice size: %d >= %d", i, len(s.nodes))
+	}
+	return s.nodes[i].Stop()
+}
+
 // LighthouseValidatorNode represents a lighthouse validator node.
 type LighthouseValidatorNode struct {
 	e2etypes.ComponentRunner
@@ -81,6 +133,7 @@ type LighthouseValidatorNode struct {
 	validatorNum int
 	index        int
 	offset       int
+	cmd          *exec.Cmd
 }
 
 // NewLighthouseValidatorNode creates and returns a lighthouse validator node.
@@ -155,6 +208,7 @@ func (v *LighthouseValidatorNode) Start(ctx context.Context) error {
 
 	// Mark node as ready.
 	close(v.started)
+	v.cmd = cmd
 
 	return cmd.Wait()
 }
@@ -162,6 +216,18 @@ func (v *LighthouseValidatorNode) Start(ctx context.Context) error {
 // Started checks whether validator node is started and ready to be queried.
 func (v *LighthouseValidatorNode) Started() <-chan struct{} {
 	return v.started
+}
+
+func (v *LighthouseValidatorNode) Pause() error {
+	return v.cmd.Process.Signal(syscall.SIGSTOP)
+}
+
+func (v *LighthouseValidatorNode) Resume() error {
+	return v.cmd.Process.Signal(syscall.SIGCONT)
+}
+
+func (v *LighthouseValidatorNode) Stop() error {
+	return v.cmd.Process.Kill()
 }
 
 type KeystoreGenerator struct {
@@ -197,6 +263,21 @@ func (k *KeystoreGenerator) Start(ctx context.Context) error {
 
 func (k *KeystoreGenerator) Started() <-chan struct{} {
 	return k.started
+}
+
+func (k *KeystoreGenerator) Pause() error {
+	// no-op
+	return nil
+}
+
+func (k *KeystoreGenerator) Resume() error {
+	// no-op
+	return nil
+}
+
+func (k *KeystoreGenerator) Stop() error {
+	// no-op
+	return nil
 }
 
 func setupKeystores(valClientIdx, startIdx, numOfKeys int) (string, error) {

@@ -78,6 +78,22 @@ func (r *testRunner) run() {
 	}
 }
 
+func (r *testRunner) scenarioRunner() {
+	r.comHandler = NewComponentHandler(r.config, r.t)
+	r.comHandler.setup()
+
+	// Run E2E evaluators and tests.
+	r.addEvent(r.scenarioRun)
+
+	if err := r.comHandler.group.Wait(); err != nil && !errors.Is(err, context.Canceled) {
+		// At the end of the main evaluator goroutine all nodes are killed, no need to fail the test.
+		if strings.Contains(err.Error(), "signal: killed") {
+			return
+		}
+		r.t.Fatalf("E2E test ended in error: %v", err)
+	}
+}
+
 func (r *testRunner) waitUntilEpoch(ctx context.Context, e types.Epoch, conn *grpc.ClientConn, deadline time.Time) error {
 	beaconClient := eth.NewBeaconChainClient(conn)
 	ctx, cancel := context.WithDeadline(ctx, deadline)
@@ -339,19 +355,19 @@ func (r *testRunner) defaultEndToEndRun() error {
 	if !config.TestSync {
 		return nil
 	}
-	syncConn, err := r.testBeaconChainSync(ctx, g, conns, tickingStartTime, bootNode.ENR(), eth1Miner.ENR())
+	syncConn, err := r.testBeaconChainSync(r.comHandler.ctx, r.comHandler.group, conns, tickingStartTime, bootNode.ENR(), eth1Miner.ENR())
 	if err != nil {
 		return errors.Wrap(err, "beacon chain sync test failed")
 	}
 	conns = append(conns, syncConn)
-	if err := r.testDoppelGangerProtection(ctx); err != nil {
+	if err := r.testDoppelGangerProtection(r.comHandler.ctx); err != nil {
 		return errors.Wrap(err, "doppel ganger protection check failed")
 	}
 
 	if config.ExtraEpochs > 0 {
 		secondsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
 		dl := time.Now().Add(time.Second * time.Duration(config.ExtraEpochs*secondsPerEpoch))
-		if err := r.waitUntilEpoch(ctx, types.Epoch(config.EpochsToRun+config.ExtraEpochs), conns[0], dl); err != nil {
+		if err := r.waitUntilEpoch(r.comHandler.ctx, types.Epoch(config.EpochsToRun+config.ExtraEpochs), conns[0], dl); err != nil {
 			return errors.Wrap(err, "error while waiting for ExtraEpochs")
 		}
 		syncEvaluators := []e2etypes.Evaluator{ev.FinishedSyncing, ev.AllNodesHaveSameHead}
@@ -364,6 +380,86 @@ func (r *testRunner) defaultEndToEndRun() error {
 	return nil
 }
 
+func (r *testRunner) scenarioRun() error {
+	t, config := r.t, r.config
+	// When everything is done, cancel parent context (will stop all spawned nodes).
+	defer func() {
+		log.Info("All E2E evaluations are finished, cleaning up")
+		r.comHandler.done()
+	}()
+
+	// Wait for all required nodes to start.
+	ctxAllNodesReady, cancel := context.WithTimeout(r.comHandler.ctx, allNodesStartTimeout)
+	defer cancel()
+	if err := helpers.ComponentsStarted(ctxAllNodesReady, r.comHandler.required()); err != nil {
+		return errors.Wrap(err, "components take too long to start")
+	}
+
+	// Since defer unwraps in LIFO order, parent context will be closed only after logs are written.
+	defer helpers.LogOutput(t)
+	if config.UsePprof {
+		defer func() {
+			log.Info("Writing output pprof files")
+			for i := 0; i < e2e.TestParams.BeaconNodeCount; i++ {
+				assert.NoError(t, helpers.WritePprofFiles(e2e.TestParams.LogPath, i))
+			}
+		}()
+	}
+
+	// Blocking, wait period varies depending on number of validators.
+	r.waitForChainStart()
+
+	// Create GRPC connection to beacon nodes.
+	conns, closeConns, err := helpers.NewLocalConnections(r.comHandler.ctx, e2e.TestParams.BeaconNodeCount)
+	require.NoError(t, err, "Cannot create local connections")
+	defer closeConns()
+
+	// Calculate genesis time.
+	nodeClient := eth.NewNodeClient(conns[0])
+	genesis, err := nodeClient.GetGenesis(context.Background(), &emptypb.Empty{})
+	require.NoError(t, err)
+	tickingStartTime := helpers.EpochTickerStartTime(genesis)
+
+	// Run assigned evaluators.
+	secondsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
+	ticker := helpers.NewEpochTicker(tickingStartTime, secondsPerEpoch)
+	for currentEpoch := range ticker.C() {
+		if currentEpoch == 9 {
+			require.NoError(t, r.comHandler.beaconNodes.PauseAtIndex(0))
+			require.NoError(t, r.comHandler.validatorNodes.PauseAtIndex(1))
+		}
+		if currentEpoch == 10 {
+			require.NoError(t, r.comHandler.beaconNodes.ResumeAtIndex(0))
+			require.NoError(t, r.comHandler.validatorNodes.ResumeAtIndex(1))
+		}
+		wg := new(sync.WaitGroup)
+		for _, eval := range config.Evaluators {
+			// Fix reference to evaluator as it will be running
+			// in a separate goroutine.
+			evaluator := eval
+			// Only run if the policy says so.
+			if !evaluator.Policy(types.Epoch(currentEpoch)) {
+				continue
+			}
+			wg.Add(1)
+			go t.Run(fmt.Sprintf(evaluator.Name, currentEpoch), func(t *testing.T) {
+				err := evaluator.Evaluation(conns...)
+				assert.NoError(t, err, "Evaluation failed for epoch %d: %v", currentEpoch, err)
+				wg.Done()
+			})
+		}
+		wg.Wait()
+
+		if t.Failed() || currentEpoch >= config.EpochsToRun-1 {
+			ticker.Done()
+			if t.Failed() {
+				return errors.New("test failed")
+			}
+			break
+		}
+	}
+	return nil
+}
 func (r *testRunner) addEvent(ev func() error) {
 	r.comHandler.group.Go(ev)
 }

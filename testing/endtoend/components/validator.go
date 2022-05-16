@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path"
 	"strings"
+	"syscall"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -35,12 +36,14 @@ const depositGasLimit = 4000000
 
 var _ e2etypes.ComponentRunner = (*ValidatorNode)(nil)
 var _ e2etypes.ComponentRunner = (*ValidatorNodeSet)(nil)
+var _ e2etypes.MultipleComponentRunners = (*ValidatorNodeSet)(nil)
 
 // ValidatorNodeSet represents set of validator nodes.
 type ValidatorNodeSet struct {
 	e2etypes.ComponentRunner
 	config  *e2etypes.E2EConfig
 	started chan struct{}
+	nodes   []e2etypes.ComponentRunner
 }
 
 // NewValidatorNodeSet creates and returns a set of validator nodes.
@@ -67,6 +70,7 @@ func (s *ValidatorNodeSet) Start(ctx context.Context) error {
 	for i := 0; i < prysmBeaconNodeNum; i++ {
 		nodes[i] = NewValidatorNode(s.config, validatorsPerNode, i, validatorsPerNode*i)
 	}
+	s.nodes = nodes
 
 	// Wait for all nodes to finish their job (blocking).
 	// Once nodes are ready passed in handler function will be called.
@@ -81,6 +85,54 @@ func (s *ValidatorNodeSet) Started() <-chan struct{} {
 	return s.started
 }
 
+func (s *ValidatorNodeSet) Pause() error {
+	for _, n := range s.nodes {
+		if err := n.Pause(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *ValidatorNodeSet) Resume() error {
+	for _, n := range s.nodes {
+		if err := n.Resume(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *ValidatorNodeSet) Stop() error {
+	for _, n := range s.nodes {
+		if err := n.Stop(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *ValidatorNodeSet) PauseAtIndex(i int) error {
+	if i >= len(s.nodes) {
+		return errors.Errorf("provided index exceeds slice size: %d >= %d", i, len(s.nodes))
+	}
+	return s.nodes[i].Pause()
+}
+
+func (s *ValidatorNodeSet) ResumeAtIndex(i int) error {
+	if i >= len(s.nodes) {
+		return errors.Errorf("provided index exceeds slice size: %d >= %d", i, len(s.nodes))
+	}
+	return s.nodes[i].Resume()
+}
+
+func (s *ValidatorNodeSet) StopAtIndex(i int) error {
+	if i >= len(s.nodes) {
+		return errors.Errorf("provided index exceeds slice size: %d >= %d", i, len(s.nodes))
+	}
+	return s.nodes[i].Stop()
+}
+
 // ValidatorNode represents a validator node.
 type ValidatorNode struct {
 	e2etypes.ComponentRunner
@@ -89,6 +141,7 @@ type ValidatorNode struct {
 	validatorNum int
 	index        int
 	offset       int
+	cmd          *exec.Cmd
 }
 
 // NewValidatorNode creates and returns a validator node.
@@ -204,6 +257,7 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 
 	// Mark node as ready.
 	close(v.started)
+	v.cmd = cmd
 
 	return cmd.Wait()
 }
@@ -211,6 +265,18 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 // Started checks whether validator node is started and ready to be queried.
 func (v *ValidatorNode) Started() <-chan struct{} {
 	return v.started
+}
+
+func (v *ValidatorNode) Pause() error {
+	return v.cmd.Process.Signal(syscall.SIGSTOP)
+}
+
+func (v *ValidatorNode) Resume() error {
+	return v.cmd.Process.Signal(syscall.SIGCONT)
+}
+
+func (v *ValidatorNode) Stop() error {
+	return v.cmd.Process.Kill()
 }
 
 // SendAndMineDeposits sends the requested amount of deposits and mines the chain after to ensure the deposits are seen.

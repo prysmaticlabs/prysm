@@ -26,11 +26,11 @@ type componentHandler struct {
 	web3Signer               e2etypes.ComponentRunner
 	bootnode                 e2etypes.ComponentRunner
 	eth1Miner                e2etypes.ComponentRunner
-	eth1Nodes                e2etypes.ComponentRunner
-	beaconNodes              e2etypes.ComponentRunner
-	validatorNodes           e2etypes.ComponentRunner
-	lighthouseBeaconNodes    e2etypes.ComponentRunner
-	lighthouseValidatorNodes e2etypes.ComponentRunner
+	eth1Nodes                e2etypes.MultipleComponentRunners
+	beaconNodes              e2etypes.MultipleComponentRunners
+	validatorNodes           e2etypes.MultipleComponentRunners
+	lighthouseBeaconNodes    e2etypes.MultipleComponentRunners
+	lighthouseValidatorNodes e2etypes.MultipleComponentRunners
 }
 
 func NewComponentHandler(cfg *e2etypes.E2EConfig, t *testing.T) *componentHandler {
@@ -45,7 +45,8 @@ func (c *componentHandler) setup() {
 
 	minGenesisActiveCount := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
 	multiClientActive := e2e.TestParams.LighthouseBeaconNodeCount > 0
-	var keyGen, lighthouseValidatorNodes e2etypes.ComponentRunner
+	var keyGen e2etypes.ComponentRunner
+	var lighthouseValidatorNodes e2etypes.MultipleComponentRunners
 	var lighthouseNodes *components.LighthouseBeaconNodeSet
 
 	c.ctx, c.done = context.WithCancel(context.Background())
