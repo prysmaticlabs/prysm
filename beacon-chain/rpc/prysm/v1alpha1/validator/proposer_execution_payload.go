@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -121,18 +120,20 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 
 	feeRecipient := params.BeaconConfig().DefaultFeeRecipient
 	recipient, err := vs.BeaconDB.FeeRecipientByValidatorID(ctx, vIdx)
-	burnAddr := bytesutil.PadTo([]byte{}, fieldparams.FeeRecipientLength)
 	switch err == nil {
 	case true:
 		feeRecipient = recipient
 	case errors.As(err, kv.ErrNotFoundFeeRecipient):
 		// If fee recipient is not found in DB and not set from beacon node CLI,
 		// use the burn address.
-		if bytes.Equal(feeRecipient.Bytes(), burnAddr) {
+		if feeRecipient.String() == fieldparams.EthBurnAddressHex {
 			logrus.WithFields(logrus.Fields{
 				"validatorIndex": vIdx,
-				"burnAddress":    common.BytesToAddress(burnAddr).Hex(),
-			}).Error("Fee recipient not set. Using burn address")
+				"burnAddress":    fieldparams.EthBurnAddressHex,
+			}).Warn("Fee recipient is currently using the burn address, " +
+				"you will not be rewarded transaction fees on this setting. " +
+				"Please set a different eth address as the fee recipient. " +
+				"Please refer to our documentation for instructions")
 		}
 	default:
 		return nil, errors.Wrap(err, "could not get fee recipient in db")

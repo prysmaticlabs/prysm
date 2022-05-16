@@ -770,7 +770,7 @@ func Test_GetPayloadAttribute(t *testing.T) {
 	require.Equal(t, true, hasPayload)
 	require.Equal(t, suggestedVid, vId)
 	require.Equal(t, fieldparams.EthBurnAddressHex, common.BytesToAddress(attr.SuggestedFeeRecipient).String())
-	require.LogsContain(t, hook, "Fee recipient not set. Using burn address")
+	require.LogsContain(t, hook, "Fee recipient is currently using the burn address")
 
 	// Cache hit, advance state, has fee recipient
 	suggestedAddr := common.HexToAddress("123")
