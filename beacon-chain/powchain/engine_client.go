@@ -81,8 +81,6 @@ func (s *Service) NewPayload(ctx context.Context, payload *pb.ExecutionPayload) 
 	switch result.Status {
 	case pb.PayloadStatus_INVALID_BLOCK_HASH:
 		return nil, fmt.Errorf("could not validate block hash: %v", result.ValidationError)
-	case pb.PayloadStatus_INVALID_TERMINAL_BLOCK:
-		return nil, fmt.Errorf("could not satisfy terminal block condition: %v", result.ValidationError)
 	case pb.PayloadStatus_ACCEPTED, pb.PayloadStatus_SYNCING:
 		return nil, ErrAcceptedSyncingPayloadStatus
 	case pb.PayloadStatus_INVALID:
@@ -119,8 +117,6 @@ func (s *Service) ForkchoiceUpdated(
 	}
 	resp := result.Status
 	switch resp.Status {
-	case pb.PayloadStatus_INVALID_TERMINAL_BLOCK:
-		return nil, nil, fmt.Errorf("could not satisfy terminal block condition: %v", resp.ValidationError)
 	case pb.PayloadStatus_SYNCING:
 		return nil, nil, ErrAcceptedSyncingPayloadStatus
 	case pb.PayloadStatus_INVALID:
