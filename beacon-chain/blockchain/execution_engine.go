@@ -235,13 +235,9 @@ func (s *Service) optimisticCandidateBlock(ctx context.Context, blk interfaces.B
 	if blk.Slot()+params.BeaconConfig().SafeSlotsToImportOptimistically <= s.CurrentSlot() {
 		return nil
 	}
-
-	parent, err := s.cfg.BeaconDB.Block(ctx, bytesutil.ToBytes32(blk.ParentRoot()))
+	parent, err := s.getBlock(ctx, bytesutil.ToBytes32(blk.ParentRoot()))
 	if err != nil {
 		return err
-	}
-	if parent == nil || parent.IsNil() {
-		return errNilParentInDB
 	}
 	parentIsExecutionBlock, err := blocks.IsExecutionBlock(parent.Block().Body())
 	if err != nil {
