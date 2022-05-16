@@ -12,6 +12,11 @@ var (
 		Name:  "prater",
 		Usage: "Run Prysm configured for the Prater test network",
 	}
+	// BopstenTestnet flag for the multiclient Ethereum consensus testnet.
+	BopstenTestnet = &cli.BoolFlag{
+		Name:  "bopsten",
+		Usage: "Run Prysm configured for the Ropsten beacon chain test network",
+	}
 	// Mainnet flag for easier tooling, no-op
 	Mainnet = &cli.BoolFlag{
 		Value: true,
@@ -128,6 +133,7 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	enableExternalSlasherProtectionFlag,
 	disableAttestingHistoryDBCache,
 	PraterTestnet,
+	BopstenTestnet,
 	Mainnet,
 	dynamicKeyReloadDebounceInterval,
 	attestTimely,
@@ -146,6 +152,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	writeSSZStateTransitionsFlag,
 	disableGRPCConnectionLogging,
 	PraterTestnet,
+	BopstenTestnet,
 	Mainnet,
 	enablePeerScorer,
 	enableLargerGossipHistory,

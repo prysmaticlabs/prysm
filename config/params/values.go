@@ -14,6 +14,7 @@ const (
 	MainnetName         = "mainnet"
 	MinimalName         = "minimal"
 	PraterName          = "prater"
+	BopstenName         = "bopsten"
 )
 
 // KnownConfigs provides an index of all known BeaconChainConfig values.
