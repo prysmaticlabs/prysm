@@ -303,6 +303,48 @@ func (bs *Server) SubmitBlindedBlock(ctx context.Context, req *ethpbv2.SignedBli
 	return &emptypb.Empty{}, nil
 }
 
+// SubmitBlindedBlockSSZ instructs the beacon node to use the components of the `SignedBlindedBeaconBlock` to construct
+// and publish a `SignedBeaconBlock` by swapping out the `transactions_root` for the corresponding full list of `transactions`.
+// The beacon node should broadcast a newly constructed `SignedBeaconBlock` to the beacon network,
+// to be included in the beacon chain. The beacon node is not required to validate the signed
+// `BeaconBlock`, and a successful response (20X) only indicates that the broadcast has been
+// successful. The beacon node is expected to integrate the new block into its state, and
+// therefore validate the block internally, however blocks which fail the validation are still
+// broadcast but a different status code is returned (202).
+//
+// The provided block must be SSZ-serialized.
+func (bs *Server) SubmitBlindedBlockSSZ(ctx context.Context, req *ethpbv2.SSZContainer) (*emptypb.Empty, error) {
+	ctx, span := trace.StartSpan(ctx, "beacon.SubmitBlindedBlockSSZ")
+	defer span.End()
+
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not read eth-consensus-version header")
+	}
+	ver := md.Get("eth-consensus-version")
+	if len(ver) == 0 {
+		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not read eth-consensus-version header")
+	}
+	schedule := forks.NewOrderedSchedule(params.BeaconConfig())
+	forkVer, err := schedule.VersionForName(ver[0])
+	if err != nil {
+		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not determine fork version: %v", err)
+	}
+	unmarshaler, err := detect.FromForkVersion(forkVer)
+	if err != nil {
+		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not create unmarshaler: %v", err)
+	}
+	block, err := unmarshaler.UnmarshalBlindedBeaconBlock(req.Data)
+	if err != nil {
+		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not unmarshal request data into block: %v", err)
+	}
+	root, err := block.Block().HashTreeRoot()
+	if err != nil {
+		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not compute block's hash tree root: %v", err)
+	}
+	return &emptypb.Empty{}, bs.submitBlock(ctx, root, block)
+}
+
 // GetBlock retrieves block details for given block ID.
 func (bs *Server) GetBlock(ctx context.Context, req *ethpbv1.BlockRequest) (*ethpbv1.BlockResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon.GetBlock")
