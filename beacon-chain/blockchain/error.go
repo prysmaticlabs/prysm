@@ -27,11 +27,19 @@ type invalidBlockError interface {
 	InvalidBlock() bool
 }
 
+// InvalidBlock returns true for `invalidBlock`.
 func (e invalidBlock) InvalidBlock() bool {
 	return true
 }
 
+// IsInvalidBlock returns true if the error has `invalidBlock`.
 func IsInvalidBlock(e error) bool {
 	d, ok := e.(invalidBlockError)
+	if !ok {
+		uw := errors.Unwrap(e)
+		if uw != nil {
+			return IsInvalidBlock(uw)
+		}
+	}
 	return ok && d.InvalidBlock()
 }
