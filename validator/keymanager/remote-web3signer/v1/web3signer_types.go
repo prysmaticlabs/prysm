@@ -272,7 +272,7 @@ type BeaconBlockBodyAltair struct {
 	SyncAggregate     *SyncAggregate         `json:"sync_aggregate"`
 }
 
-// BeaconBlockBellatrixBlockV2 a sub property of BlockV2BellatrixSignRequest.
+// BeaconBlockBellatrixBlockV2 a field of BlockV2BellatrixSignRequest.
 type BeaconBlockBellatrixBlockV2 struct {
 	Version     string             `json:"version"`
 	BlockHeader *BeaconBlockHeader `json:"block_header"`
