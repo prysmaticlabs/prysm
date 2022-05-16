@@ -655,7 +655,6 @@ func TestServer_SubmitBlockSSZ_OK(t *testing.T) {
 	t.Run("Bellatrix", func(t *testing.T) {
 		// INFO: This code block can be removed once Bellatrix
 		// fork epoch is set to a value other than math.MaxUint64
-		params.SetupTestConfigCleanup(t)
 		cfg := params.BeaconConfig()
 		cfg.BellatrixForkEpoch = cfg.AltairForkEpoch + 1000
 		cfg.ForkVersionSchedule[bytesutil.ToBytes4(cfg.BellatrixForkVersion)] = cfg.AltairForkEpoch + 1000
