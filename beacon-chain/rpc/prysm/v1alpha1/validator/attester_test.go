@@ -178,9 +178,10 @@ func TestGetAttestationData_Optimistic(t *testing.T) {
 	params.OverrideBeaconConfig(cfg)
 
 	as := &Server{
-		SyncChecker: &mockSync.Sync{},
-		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
-		HeadFetcher: &mock.ChainService{Optimistic: true},
+		SyncChecker:           &mockSync.Sync{},
+		TimeFetcher:           &mock.ChainService{Genesis: time.Now()},
+		HeadFetcher:           &mock.ChainService{},
+		OptimisticModeFetcher: &mock.ChainService{Optimistic: true},
 	}
 	_, err := as.GetAttestationData(context.Background(), &ethpb.AttestationDataRequest{})
 	s, ok := status.FromError(err)
@@ -191,10 +192,11 @@ func TestGetAttestationData_Optimistic(t *testing.T) {
 	beaconState, err := util.NewBeaconState()
 	require.NoError(t, err)
 	as = &Server{
-		SyncChecker:      &mockSync.Sync{},
-		TimeFetcher:      &mock.ChainService{Genesis: time.Now()},
-		HeadFetcher:      &mock.ChainService{Optimistic: false, State: beaconState},
-		AttestationCache: cache.NewAttestationCache(),
+		SyncChecker:           &mockSync.Sync{},
+		TimeFetcher:           &mock.ChainService{Genesis: time.Now()},
+		HeadFetcher:           &mock.ChainService{Optimistic: false, State: beaconState},
+		OptimisticModeFetcher: &mock.ChainService{Optimistic: false},
+		AttestationCache:      cache.NewAttestationCache(),
 	}
 	_, err = as.GetAttestationData(context.Background(), &ethpb.AttestationDataRequest{})
 	require.NoError(t, err)

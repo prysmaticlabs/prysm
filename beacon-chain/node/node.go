@@ -804,6 +804,7 @@ func (b *BeaconNode) registerRPCService() error {
 		GenesisTimeFetcher:      chainService,
 		GenesisFetcher:          chainService,
 		BlockBuilder:            b.fetchBuilderService(),
+		OptimisticModeFetcher:   chainService,
 		AttestationsPool:        b.attestationPool,
 		ExitPool:                b.exitPool,
 		SlashingsPool:           b.slashingsPool,

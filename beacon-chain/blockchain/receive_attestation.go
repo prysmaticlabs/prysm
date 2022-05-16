@@ -176,19 +176,13 @@ func (s *Service) UpdateHead(ctx context.Context) error {
 
 // This calls notify Forkchoice Update in the event that the head has changed
 func (s *Service) notifyEngineIfChangedHead(ctx context.Context, newHeadRoot [32]byte) {
-	if s.headRoot() == newHeadRoot {
+	if newHeadRoot == [32]byte{} || s.headRoot() == newHeadRoot {
 		return
 	}
 
 	if !s.hasBlockInInitSyncOrDB(ctx, newHeadRoot) {
 		log.Debug("New head does not exist in DB. Do nothing")
 		return // We don't have the block, don't notify the engine and update head.
-	}
-
-	finalized := s.store.FinalizedCheckpt()
-	if finalized == nil {
-		log.WithError(errNilFinalizedInStore).Error("could not get finalized checkpoint")
-		return
 	}
 
 	newHeadBlock, err := s.getBlock(ctx, newHeadRoot)
@@ -202,11 +196,9 @@ func (s *Service) notifyEngineIfChangedHead(ctx context.Context, newHeadRoot [32
 		return
 	}
 	arg := &notifyForkchoiceUpdateArg{
-		headState:     headState,
-		headRoot:      newHeadRoot,
-		headBlock:     newHeadBlock.Block(),
-		finalizedRoot: bytesutil.ToBytes32(finalized.Root),
-		justifiedRoot: bytesutil.ToBytes32(s.store.JustifiedCheckpt().Root),
+		headState: headState,
+		headRoot:  newHeadRoot,
+		headBlock: newHeadBlock.Block(),
 	}
 	_, err = s.notifyForkchoiceUpdate(s.ctx, arg)
 	if err != nil {
