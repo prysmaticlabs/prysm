@@ -602,7 +602,7 @@ func TestServer_SubmitBlockSSZ_OK(t *testing.T) {
 			Data: blockSsz,
 		}
 		md := metadata.MD{}
-		md.Set("Eth-Consensus-Version", "phase0")
+		md.Set(versionHeader, "phase0")
 		sszCtx := metadata.NewIncomingContext(ctx, md)
 		_, err = beaconChainServer.SubmitBlockSSZ(sszCtx, blockReq)
 		assert.NoError(t, err, "Could not propose block correctly")
@@ -646,7 +646,7 @@ func TestServer_SubmitBlockSSZ_OK(t *testing.T) {
 			Data: blockSsz,
 		}
 		md := metadata.MD{}
-		md.Set("Eth-Consensus-Version", "altair")
+		md.Set(versionHeader, "altair")
 		sszCtx := metadata.NewIncomingContext(ctx, md)
 		_, err = beaconChainServer.SubmitBlockSSZ(sszCtx, blockReq)
 		assert.NoError(t, err, "Could not propose block correctly")
@@ -698,7 +698,7 @@ func TestServer_SubmitBlockSSZ_OK(t *testing.T) {
 			Data: blockSsz,
 		}
 		md := metadata.MD{}
-		md.Set("Eth-Consensus-Version", "bellatrix")
+		md.Set(versionHeader, "bellatrix")
 		sszCtx := metadata.NewIncomingContext(ctx, md)
 		_, err = beaconChainServer.SubmitBlockSSZ(sszCtx, blockReq)
 		assert.NoError(t, err, "Could not propose block correctly")
@@ -740,11 +740,11 @@ func TestServer_SubmitBlindedBlockSSZ_OK(t *testing.T) {
 		require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
 		blockSsz, err := req.MarshalSSZ()
 		require.NoError(t, err)
-		blockReq := &ethpbv2.SignedBeaconBlockSSZContainer{
+		blockReq := &ethpbv2.SSZContainer{
 			Data: blockSsz,
 		}
 		md := metadata.MD{}
-		md.Set("Eth-Consensus-Version", "phase0")
+		md.Set(versionHeader, "phase0")
 		sszCtx := metadata.NewIncomingContext(ctx, md)
 		_, err = beaconChainServer.SubmitBlindedBlockSSZ(sszCtx, blockReq)
 		assert.NoError(t, err, "Could not propose block correctly")
@@ -784,11 +784,11 @@ func TestServer_SubmitBlindedBlockSSZ_OK(t *testing.T) {
 		require.NoError(t, beaconDB.SaveBlock(ctx, wrapped))
 		blockSsz, err := req.MarshalSSZ()
 		require.NoError(t, err)
-		blockReq := &ethpbv2.SignedBeaconBlockSSZContainer{
+		blockReq := &ethpbv2.SSZContainer{
 			Data: blockSsz,
 		}
 		md := metadata.MD{}
-		md.Set("Eth-Consensus-Version", "altair")
+		md.Set(versionHeader, "altair")
 		sszCtx := metadata.NewIncomingContext(ctx, md)
 		_, err = beaconChainServer.SubmitBlindedBlockSSZ(sszCtx, blockReq)
 		assert.NoError(t, err, "Could not propose block correctly")
@@ -836,11 +836,11 @@ func TestServer_SubmitBlindedBlockSSZ_OK(t *testing.T) {
 		require.NoError(t, beaconDB.SaveBlock(ctx, wrapped))
 		blockSsz, err := req.MarshalSSZ()
 		require.NoError(t, err)
-		blockReq := &ethpbv2.SignedBeaconBlockSSZContainer{
+		blockReq := &ethpbv2.SSZContainer{
 			Data: blockSsz,
 		}
 		md := metadata.MD{}
-		md.Set("Eth-Consensus-Version", "bellatrix")
+		md.Set(versionHeader, "bellatrix")
 		sszCtx := metadata.NewIncomingContext(ctx, md)
 		_, err = beaconChainServer.SubmitBlindedBlockSSZ(sszCtx, blockReq)
 		assert.NoError(t, err, "Could not propose block correctly")
