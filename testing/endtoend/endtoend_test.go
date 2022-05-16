@@ -371,7 +371,7 @@ func (r *testRunner) testDepositsAndTx(ctx context.Context, g *errgroup.Group,
 	/// using a shallow copy so I don't mess up something else by changing web3signer setting
 	shallowCopyConfig := r.config
 	minGenesisActiveCount := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
-	/// prysm with web3signer doesn't support deposits right now ///
+	// prysm with web3signer doesn't support deposits right now ///
 	shallowCopyConfig.UseWeb3RemoteSigner = false
 	////////////////////////////////////////////////////////////////
 	depositCheckValidator := components.NewValidatorNode(shallowCopyConfig, int(e2e.DepositCount), e2e.TestParams.BeaconNodeCount, minGenesisActiveCount)
