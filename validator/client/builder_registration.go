@@ -15,9 +15,8 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-// ProposeBuilderValidatorRegistration performs a build exit on a validator.
-// The exit is signed by the validator before being sent to the beacon node for broadcasting.
-func ProposeBuilderValidatorRegistration(
+// SubmitBuilderValidatorRegistration submits builder validator registration
+func SubmitBuilderValidatorRegistration(
 	ctx context.Context,
 	validatorClient ethpb.BeaconNodeValidatorClient,
 	nodeClient ethpb.NodeClient,
@@ -35,9 +34,17 @@ func ProposeBuilderValidatorRegistration(
 	secs := int64(ts.Second()) - genesisResponse.GenesisTime.Seconds
 	currentSlot := types.Slot(uint64(secs) / params.BeaconConfig().SecondsPerSlot)
 
-	_, err = signBuilderValidatorRegistration(ctx, currentSlot, validatorClient, signer, reg)
+	sig, err := signBuilderValidatorRegistration(ctx, currentSlot, validatorClient, signer, reg)
 	if err != nil {
 		return errors.Wrap(err, "failed to sign builder validator registration obj")
+	}
+
+	signedReg := &ethpb.SignedValidatorRegistrationV1{
+		Message:   reg,
+		Signature: sig,
+	}
+	if _, err := validatorClient.SubmitValidatorRegistration(ctx, signedReg); err != nil {
+		return errors.Wrap(err, "could not submit signed registration to beacon node")
 	}
 
 	return nil
