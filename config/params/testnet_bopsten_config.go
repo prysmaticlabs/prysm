@@ -4,8 +4,8 @@ import (
 	eth1Params "github.com/ethereum/go-ethereum/params"
 )
 
-// UseBopstenNetworkConfig uses the Ropsten beacon chain(Bopsten) specific network config.
-func UseBopstenNetworkConfig() {
+// UseRopstenNetworkConfig uses the Ropsten beacon chain specific network config.
+func UseRopstenNetworkConfig() {
 	cfg := BeaconNetworkConfig().Copy()
 	cfg.ContractDeploymentBlock = 12269949
 	cfg.BootstrapNodes = []string{
@@ -14,17 +14,17 @@ func UseBopstenNetworkConfig() {
 	OverrideBeaconNetworkConfig(cfg)
 }
 
-// UseBopstenConfig sets the main beacon chain config for Ropsten beacon chain.
-func UseBopstenConfig() {
-	beaconConfig = BopstenConfig()
+// UseRopstenConfig sets the main beacon chain config for Ropsten beacon chain.
+func UseRopstenConfig() {
+	beaconConfig = RopstenConfig()
 }
 
-// BopstenConfig defines the config for the Robsten beacon chain testnet.
-func BopstenConfig() *BeaconChainConfig {
+// RopstenConfig defines the config for the Ropsten beacon chain testnet.
+func RopstenConfig() *BeaconChainConfig {
 	cfg := MainnetConfig().Copy()
 	cfg.MinGenesisTime = 1653922800
 	cfg.GenesisDelay = 300
-	cfg.ConfigName = BopstenName
+	cfg.ConfigName = RopstenName
 	cfg.GenesisForkVersion = []byte{0x80, 0x00, 0x00, 0x69}
 	cfg.SecondsPerETH1Block = 14
 	cfg.DepositChainID = eth1Params.RopstenChainConfig.ChainID.Uint64()

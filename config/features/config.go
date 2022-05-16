@@ -115,10 +115,10 @@ func configureTestnet(ctx *cli.Context) {
 		log.Warn("Running on the Prater Testnet")
 		params.UsePraterConfig()
 		params.UsePraterNetworkConfig()
-	} else if ctx.Bool(BopstenTestnet.Name) {
+	} else if ctx.Bool(RopstenTestnet.Name) {
 		log.Warn("Running on the Ropsten Beacon Chain Testnet")
-		params.UseBopstenConfig()
-		params.UseBopstenNetworkConfig()
+		params.UseRopstenConfig()
+		params.UseRopstenNetworkConfig()
 	} else {
 		log.Warn("Running on Ethereum Consensus Mainnet")
 		params.UseMainnetConfig()
