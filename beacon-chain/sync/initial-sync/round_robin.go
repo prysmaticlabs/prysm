@@ -142,15 +142,15 @@ func (s *Service) processFetchedDataRegSync(
 
 	blockReceiver := s.cfg.Chain.ReceiveBlock
 	invalidBlocks := 0
-	parentDoesNotExistBlocks := make([]int, 0, len(data.blocks))
-	for i, blk := range data.blocks {
+	blksWithoutParentCount := 0
+	for _, blk := range data.blocks {
 		if err := s.processBlock(ctx, genesis, blk, blockReceiver); err != nil {
 			switch {
 			case errors.Is(err, errBlockAlreadyProcessed):
 				log.WithError(err).Debug("Block is not processed")
 				invalidBlocks++
 			case errors.Is(err, errParentDoesNotExist):
-				parentDoesNotExistBlocks = append(parentDoesNotExistBlocks, i)
+				blksWithoutParentCount++
 				invalidBlocks++
 			default:
 				log.WithError(err).Warn("Block is not processed")
@@ -158,11 +158,11 @@ func (s *Service) processFetchedDataRegSync(
 			continue
 		}
 	}
-	if len(parentDoesNotExistBlocks) > 0 {
+	if blksWithoutParentCount > 0 {
 		log.WithFields(logrus.Fields{
 			"missingParent": fmt.Sprintf("%#x", data.blocks[0].Block().ParentRoot()),
 			"firstSlot":     data.blocks[0].Block().Slot(),
-			"lastSlot":      data.blocks[len(data.blocks)-1].Block().Slot(),
+			"lastSlot":      data.blocks[blksWithoutParentCount-1].Block().Slot(),
 		}).Debug("Could not process batch blocks due to missing parent")
 	}
 	// Add more visible logging if all blocks cannot be processed.
