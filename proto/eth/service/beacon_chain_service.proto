@@ -212,7 +212,7 @@ service BeaconChain {
   }
 
   // GetBlockSSZV2 returns the SSZ-serialized version of block details for given block id.
-  rpc GetBlockSSZV2(v2.BlockRequestV2) returns (v2.BlockSSZResponseV2) {
+  rpc GetBlockSSZV2(v2.BlockRequestV2) returns (v2.SSZContainer) {
     option (google.api.http) = {
       get: "/internal/eth/v2/beacon/blocks/{block_id}/ssz"
     };
