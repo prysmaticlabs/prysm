@@ -35,8 +35,7 @@ func NewWeakSubjectivityVerifier(wsc *ethpb.Checkpoint, db weakSubjectivityDB) (
 	if wsc == nil || len(wsc.Root) == 0 || wsc.Epoch == 0 {
 		log.Info(
 			"No checkpoint for syncing provided, node will begin syncing from genesis. Checkpoint Sync is an optional feature that allows your node to sync from a more recent checkpoint, " + 
-			"which enhances the security of your local beacon node and the broader network. See https://docs.prylabs.network/docs/next/prysm-usage/checkpoint-sync/ to learn how to configure Checkpoint Sync."
-		)
+			"which enhances the security of your local beacon node and the broader network. See https://docs.prylabs.network/docs/next/prysm-usage/checkpoint-sync/ to learn how to configure Checkpoint Sync.")
 		return &WeakSubjectivityVerifier{
 			enabled: false,
 		}, nil
