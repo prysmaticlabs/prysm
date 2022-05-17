@@ -21,8 +21,9 @@ import (
 
 const (
 	getExecHeaderPath       = "/eth/v1/builder/header/{{.Slot}}/{{.ParentHash}}/{{.Pubkey}}"
-	postRegisterValidatorPath = "/eth/v1/builder/validators"
 	getStatus                 = "/eth/v1/builder/status"
+	postBlindedBeaconBlockPath = "/eth/v1/builder/blinded_blocks"
+	postRegisterValidatorPath = "/eth/v1/builder/validators"
 )
 
 var ErrMalformedHostname = errors.New("hostname must include port, separated by one colon, like example.com:3500")
@@ -155,7 +156,7 @@ func (c *Client) GetHeader(ctx context.Context, slot types.Slot, parentHash [32]
 // RegisterValidator encodes the SignedValidatorRegistrationV1 message to json (including hex-encoding the byte
 // fields with 0x prefixes) and posts to the builder validator registration endpoint.
 func (c *Client) RegisterValidator(ctx context.Context, svr *ethpb.SignedValidatorRegistrationV1) error {
-	v := SignedValidatorRegistration{SignedValidatorRegistrationV1: svr}
+	v := &SignedValidatorRegistration{SignedValidatorRegistrationV1: svr}
 	body, err := json.Marshal(v)
 	if err != nil {
 		return errors.Wrap(err, "error encoding the SignedValidatorRegistration value body in RegisterValidator")
@@ -164,9 +165,23 @@ func (c *Client) RegisterValidator(ctx context.Context, svr *ethpb.SignedValidat
 	return err
 }
 
-// POST /eth/v1/builder/blinded_blocks
-func (c *Client) SubmitBlindedBlock(context.Context, *ethpb.SignedBlindedBeaconBlockBellatrix) (*v1.ExecutionPayload, error) {
-	panic("implement me")
+// SubmitBlindedBlock calls the builder API endpoint that binds the validator to the builder and submits the block.
+// The response is the full ExecutionPayload used to create the blinded block.
+func (c *Client) SubmitBlindedBlock(ctx context.Context, sb *ethpb.SignedBlindedBeaconBlockBellatrix) (*v1.ExecutionPayload, error) {
+	v := &SignedBlindedBeaconBlockBellatrix{SignedBlindedBeaconBlockBellatrix: sb}
+	body, err := json.Marshal(v)
+	if err != nil {
+		return nil, errors.Wrap(err, "error encoding the SignedBlindedBeaconBlockBellatrix value body in SubmitBlindedBlock")
+	}
+	rb, err := c.do(ctx, http.MethodPost, postBlindedBeaconBlockPath, bytes.NewBuffer(body))
+	if err != nil {
+		return nil, errors.Wrap(err, "error posting the SignedBlindedBeaconBlockBellatrix to the builder api")
+	}
+	ep := &ExecPayloadResponse{}
+	if err := json.Unmarshal(rb, ep); err != nil {
+		return nil, errors.Wrap(err, "error unmarshaling the builder SubmitBlindedBlock response")
+	}
+	return ep.ToProto()
 }
 
 // Status asks the remote builder server for a health check. A response of 200 with an empty body is the success/healthy

@@ -11,7 +11,6 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//consensus-types/primitives:go_default_library",
-        "//encoding/bytesutil:go_default_library",
         "//proto/engine/v1:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "@com_github_ethereum_go_ethereum//common/hexutil:go_default_library",
@@ -22,10 +21,19 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["types_test.go"],
+    srcs = [
+        "client_test.go",
+        "types_test.go",
+    ],
     embed = [":go_default_library"],
     deps = [
+        "//config/fieldparams:go_default_library",
+        "//consensus-types/primitives:go_default_library",
+        "//encoding/bytesutil:go_default_library",
+        "//proto/engine/v1:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//testing/require:go_default_library",
+        "@com_github_ethereum_go_ethereum//common/hexutil:go_default_library",
+        "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
     ],
 )
