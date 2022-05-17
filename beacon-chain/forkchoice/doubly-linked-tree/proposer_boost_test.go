@@ -111,7 +111,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, newRoot, headRoot, "Incorrect head for justified epoch at slot 3")
 
-		// Insert a second block at slot 3 into the tree and boost its score.
+		// Insert a second block at slot 4 into the tree and boost its score.
 		//         0
 		//         |
 		//         1
@@ -119,7 +119,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		//         2
 		//        / \
 		//       3   4 <- HEAD
-		slot = types.Slot(3)
+		slot = types.Slot(4)
 		newRoot = indexToHash(4)
 		require.NoError(t,
 			f.InsertOptimisticBlock(
@@ -133,7 +133,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 			),
 		)
 		f.ProcessAttestation(ctx, []uint64{3}, newRoot, fEpoch)
-		clockSlot := types.Slot(3)
+		clockSlot := types.Slot(4)
 		args := &forkchoicetypes.ProposerBoostRootArgs{
 			BlockRoot:       newRoot,
 			BlockSlot:       slot,
@@ -176,8 +176,10 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		require.Equal(t, node1.weight, uint64(54))
 		node2 := f.store.nodeByRoot[indexToHash(2)]
 		require.Equal(t, node2.weight, uint64(44))
-		node3 := f.store.nodeByRoot[indexToHash(4)]
-		require.Equal(t, node3.weight, uint64(24))
+		node3 := f.store.nodeByRoot[indexToHash(3)]
+		require.Equal(t, node3.weight, uint64(10))
+		node4 := f.store.nodeByRoot[indexToHash(4)]
+		require.Equal(t, node4.weight, uint64(24))
 	})
 	t.Run("vanilla ex ante attack", func(t *testing.T) {
 		f := setup(jEpoch, fEpoch)
