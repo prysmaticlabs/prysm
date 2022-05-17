@@ -24,7 +24,7 @@ const defaultPruneThreshold = 256
 var lastHeadRoot [32]byte
 
 // New initializes a new fork choice store.
-func New(justifiedEpoch, finalizedEpoch types.Epoch, finalizedRoot [32]byte) *ForkChoice {
+func New(justifiedEpoch, finalizedEpoch types.Epoch) *ForkChoice {
 	s := &Store{
 		justifiedEpoch:    justifiedEpoch,
 		finalizedEpoch:    finalizedEpoch,
@@ -67,7 +67,7 @@ func (f *ForkChoice) Head(
 	}
 	f.votes = newVotes
 
-	if err := f.store.applyWeightChanges(ctx, f.store.justifiedEpoch, f.store.finalizedEpoch, newBalances, deltas); err != nil {
+	if err := f.store.applyWeightChanges(ctx, newBalances, deltas); err != nil {
 		return [32]byte{}, errors.Wrap(err, "Could not apply score changes")
 	}
 	f.balances = newBalances
@@ -368,7 +368,7 @@ func (s *Store) insert(ctx context.Context,
 // back propagate the nodes' delta to its parents' delta. After scoring changes,
 // the best child is then updated along with the best descendant.
 func (s *Store) applyWeightChanges(
-	ctx context.Context, justifiedEpoch, finalizedEpoch types.Epoch, newBalances []uint64, delta []int,
+	ctx context.Context, newBalances []uint64, delta []int,
 ) error {
 	_, span := trace.StartSpan(ctx, "protoArrayForkChoice.applyWeightChanges")
 	defer span.End()

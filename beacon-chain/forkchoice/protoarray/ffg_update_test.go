@@ -186,7 +186,7 @@ func TestFFGUpdates_TwoBranches(t *testing.T) {
 }
 
 func setup(justifiedEpoch, finalizedEpoch types.Epoch) *ForkChoice {
-	f := New(justifiedEpoch, finalizedEpoch, params.BeaconConfig().ZeroHash)
+	f := New(justifiedEpoch, finalizedEpoch)
 	f.store.nodesIndices[params.BeaconConfig().ZeroHash] = 0
 	f.store.nodes = append(f.store.nodes, &Node{
 		slot:           0,
