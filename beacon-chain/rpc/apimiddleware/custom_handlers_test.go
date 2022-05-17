@@ -70,7 +70,7 @@ func TestPrepareSSZRequestForProxying(t *testing.T) {
 	var body bytes.Buffer
 	request := httptest.NewRequest("GET", "http://foo.example", &body)
 
-	errJson := prepareSSZRequestForProxying(middleware, endpoint, request, "/ssz")
+	errJson := prepareSSZRequestForProxying(middleware, endpoint, request)
 	require.Equal(t, true, errJson == nil)
 	assert.Equal(t, "/internal/ssz", request.URL.Path)
 }
