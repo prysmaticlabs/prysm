@@ -21,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	testingDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
@@ -72,6 +73,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				WithChainService(chainService),
 				WithStateNotifier(chainService.StateNotifier()),
 				WithOperationNotifier(chainService.OperationNotifier()),
+				WithSyncCommsPool(synccommittee.NewPool()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
 				s.cfg.stateGen = stategen.New(db)
@@ -925,6 +927,7 @@ func TestValidateSyncContributionAndProof(t *testing.T) {
 		WithChainService(chainService),
 		WithStateNotifier(chainService.StateNotifier()),
 		WithOperationNotifier(chainService.OperationNotifier()),
+		WithSyncCommsPool(synccommittee.NewPool()),
 	)
 	go s.verifierRoutine()
 	s.cfg.stateGen = stategen.New(db)
