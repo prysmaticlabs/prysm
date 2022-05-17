@@ -160,23 +160,23 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		//
 		// (A: 30) -> (B: 20) -> (C: 10)
 		//
-		// The boost adds 14 to the weight, so if C is boosted, we would have
+		// The boost adds 8 to the weight, so if C is boosted, we would have
 		//
-		// (A: 44) -> (B: 34) -> (C: 24)
+		// (A: 38) -> (B: 28) -> (C: 18)
 		//
 		// In this case, we have a small fork:
 		//
-		// (A: 54) -> (B: 44) -> (C: 34)
-		//                   \_->(D: 24)
+		// (A: 48) -> (B: 38) -> (C: 28)
+		//                   \_->(D: 18)
 		//
 		// So B has its own weight, 10, and the sum of both C and D. That's why we see weight 54 in the
-		// middle instead of the normal progression of (44 -> 34 -> 24).
+		// middle instead of the normal progression of (48 -> 34 -> 24).
 		node1 := f.store.nodeByRoot[indexToHash(1)]
-		require.Equal(t, node1.weight, uint64(54))
+		require.Equal(t, node1.weight, uint64(48))
 		node2 := f.store.nodeByRoot[indexToHash(2)]
-		require.Equal(t, node2.weight, uint64(44))
+		require.Equal(t, node2.weight, uint64(38))
 		node3 := f.store.nodeByRoot[indexToHash(4)]
-		require.Equal(t, node3.weight, uint64(24))
+		require.Equal(t, node3.weight, uint64(18))
 	})
 	t.Run("vanilla ex ante attack", func(t *testing.T) {
 		f := setup(jEpoch, fEpoch)
@@ -524,9 +524,9 @@ func TestForkChoice_computeProposerBoostScore(t *testing.T) {
 		// With a committee size of num validators (64) / slots per epoch (32) == 2.
 		// we then have a committee weight of avg balance * committee size = 10 * 2 = 20.
 		// The score then becomes 10 * PROPOSER_SCORE_BOOST // 100, which is
-		// 20 * 70 / 100 = 14.
+		// 20 * 40 / 100 = 8.
 		score, err := computeProposerBoostScore(validatorBalances)
 		require.NoError(t, err)
-		require.Equal(t, uint64(14), score)
+		require.Equal(t, uint64(8), score)
 	})
 }

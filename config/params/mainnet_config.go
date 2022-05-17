@@ -117,7 +117,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	SafeSlotsToUpdateJustified:       8,
 
 	// Fork choice algorithm constants.
-	ProposerScoreBoost: 33,
+	ProposerScoreBoost: 40,
 	IntervalsPerSlot:   3,
 
 	// Ethereum PoW parameters.
