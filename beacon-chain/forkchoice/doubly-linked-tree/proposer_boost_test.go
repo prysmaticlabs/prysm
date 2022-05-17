@@ -51,7 +51,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 				slot,
 				newRoot,
 				headRoot,
-				params.BeaconConfig().ZeroHash,
+				zeroHash,
 				jEpoch,
 				fEpoch,
 			),
@@ -75,7 +75,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 				slot,
 				newRoot,
 				headRoot,
-				params.BeaconConfig().ZeroHash,
+				zeroHash,
 				jEpoch,
 				fEpoch,
 			),
@@ -101,7 +101,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 				slot,
 				newRoot,
 				headRoot,
-				params.BeaconConfig().ZeroHash,
+				zeroHash,
 				jEpoch,
 				fEpoch,
 			),
@@ -126,8 +126,8 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 				ctx,
 				slot,
 				newRoot,
-				headRoot,
-				params.BeaconConfig().ZeroHash,
+				indexToHash(2),
+				zeroHash,
 				jEpoch,
 				fEpoch,
 			),
@@ -140,6 +140,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 			CurrentSlot:     clockSlot,
 			SecondsIntoSlot: 0,
 		}
+
 		require.NoError(t, f.BoostProposerRoot(ctx, args))
 		headRoot, err = f.Head(ctx, jEpoch, zeroHash, balances, fEpoch)
 		require.NoError(t, err)
@@ -166,11 +167,11 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		//
 		// In this case, we have a small fork:
 		//
-		// (A: 54) -> (B: 44) -> (C: 34)
+		// (A: 54) -> (B: 44) -> (C: 10)
 		//                   \_->(D: 24)
 		//
 		// So B has its own weight, 10, and the sum of both C and D. That's why we see weight 54 in the
-		// middle instead of the normal progression of (44 -> 34 -> 24).
+		// middle instead of the normal progression of (54 -> 44 -> 24).
 		node1 := f.store.nodeByRoot[indexToHash(1)]
 		require.Equal(t, node1.weight, uint64(54))
 		node2 := f.store.nodeByRoot[indexToHash(2)]

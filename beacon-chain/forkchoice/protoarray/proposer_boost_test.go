@@ -51,7 +51,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 				slot,
 				newRoot,
 				headRoot,
-				params.BeaconConfig().ZeroHash,
+				zeroHash,
 				jEpoch,
 				fEpoch,
 			),
@@ -75,7 +75,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 				slot,
 				newRoot,
 				headRoot,
-				params.BeaconConfig().ZeroHash,
+				zeroHash,
 				jEpoch,
 				fEpoch,
 			),
@@ -101,7 +101,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 				slot,
 				newRoot,
 				headRoot,
-				params.BeaconConfig().ZeroHash,
+				zeroHash,
 				jEpoch,
 				fEpoch,
 			),
@@ -126,8 +126,8 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 				ctx,
 				slot,
 				newRoot,
-				headRoot,
-				params.BeaconConfig().ZeroHash,
+				indexToHash(2),
+				zeroHash,
 				jEpoch,
 				fEpoch,
 			),
@@ -166,11 +166,11 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		//
 		// In this case, we have a small fork:
 		//
-		// (A: 54) -> (B: 44) -> (C: 24)
-		//				    \_->(D: 10)
+		// (A: 54) -> (B: 44) -> (C: 10)
+		//				    \_->(D: 24)
 		//
 		// So B has its own weight, 10, and the sum of both C and D. That's why we see weight 54 in the
-		// middle instead of the normal progression of (44 -> 34 -> 24).
+		// middle instead of the normal progression of (54 -> 44 -> 24).
 		require.Equal(t, f.store.nodes[1].weight, uint64(54))
 		require.Equal(t, f.store.nodes[2].weight, uint64(44))
 		require.Equal(t, f.store.nodes[3].weight, uint64(34))
