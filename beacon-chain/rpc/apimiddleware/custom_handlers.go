@@ -22,14 +22,12 @@ const (
 )
 
 type sszConfig struct {
-	sszPath      string
 	fileName     string
 	responseJson sszResponse
 }
 
 func handleGetBeaconStateSSZ(m *apimiddleware.ApiProxyMiddleware, endpoint apimiddleware.Endpoint, w http.ResponseWriter, req *http.Request) (handled bool) {
 	config := sszConfig{
-		sszPath:      "/eth/v1/debug/beacon/states/{state_id}/ssz",
 		fileName:     "beacon_state.ssz",
 		responseJson: &sszResponseJson{},
 	}
@@ -38,7 +36,6 @@ func handleGetBeaconStateSSZ(m *apimiddleware.ApiProxyMiddleware, endpoint apimi
 
 func handleGetBeaconBlockSSZ(m *apimiddleware.ApiProxyMiddleware, endpoint apimiddleware.Endpoint, w http.ResponseWriter, req *http.Request) (handled bool) {
 	config := sszConfig{
-		sszPath:      "/eth/v1/beacon/blocks/{block_id}/ssz",
 		fileName:     "beacon_block.ssz",
 		responseJson: &sszResponseJson{},
 	}
@@ -47,7 +44,6 @@ func handleGetBeaconBlockSSZ(m *apimiddleware.ApiProxyMiddleware, endpoint apimi
 
 func handleGetBeaconStateSSZV2(m *apimiddleware.ApiProxyMiddleware, endpoint apimiddleware.Endpoint, w http.ResponseWriter, req *http.Request) (handled bool) {
 	config := sszConfig{
-		sszPath:      "/eth/v2/debug/beacon/states/{state_id}/ssz",
 		fileName:     "beacon_state.ssz",
 		responseJson: &versionedSSZResponseJson{},
 	}
@@ -56,7 +52,6 @@ func handleGetBeaconStateSSZV2(m *apimiddleware.ApiProxyMiddleware, endpoint api
 
 func handleGetBeaconBlockSSZV2(m *apimiddleware.ApiProxyMiddleware, endpoint apimiddleware.Endpoint, w http.ResponseWriter, req *http.Request) (handled bool) {
 	config := sszConfig{
-		sszPath:      "/eth/v2/beacon/blocks/{block_id}/ssz",
 		fileName:     "beacon_block.ssz",
 		responseJson: &versionedSSZResponseJson{},
 	}
@@ -64,10 +59,7 @@ func handleGetBeaconBlockSSZV2(m *apimiddleware.ApiProxyMiddleware, endpoint api
 }
 
 func handleSubmitBlockSSZ(m *apimiddleware.ApiProxyMiddleware, endpoint apimiddleware.Endpoint, w http.ResponseWriter, req *http.Request) (handled bool) {
-	config := sszConfig{
-		sszPath: "/eth/v1/beacon/blocks/ssz",
-	}
-	return handlePostSSZ(m, endpoint, w, req, config)
+	return handlePostSSZ(m, endpoint, w, req, sszConfig{})
 }
 
 func handleSubmitBlindedBlockSSZ(
@@ -76,10 +68,28 @@ func handleSubmitBlindedBlockSSZ(
 	w http.ResponseWriter,
 	req *http.Request,
 ) (handled bool) {
+	return handlePostSSZ(m, endpoint, w, req, sszConfig{})
+}
+
+func handleProduceBlockSSZ(m *apimiddleware.ApiProxyMiddleware, endpoint apimiddleware.Endpoint, w http.ResponseWriter, req *http.Request) (handled bool) {
 	config := sszConfig{
-		sszPath: "/eth/v1/beacon/blinded_blocks/ssz",
+		fileName:     "produce_beacon_block.ssz",
+		responseJson: &versionedSSZResponseJson{},
 	}
-	return handlePostSSZ(m, endpoint, w, req, config)
+	return handleGetSSZ(m, endpoint, w, req, config)
+}
+
+func handleProduceBlindedBlockSSZ(
+	m *apimiddleware.ApiProxyMiddleware,
+	endpoint apimiddleware.Endpoint,
+	w http.ResponseWriter,
+	req *http.Request,
+) (handled bool) {
+	config := sszConfig{
+		fileName:     "produce_blinded_beacon_block.ssz",
+		responseJson: &versionedSSZResponseJson{},
+	}
+	return handleGetSSZ(m, endpoint, w, req, config)
 }
 
 func handleGetSSZ(
@@ -93,7 +103,7 @@ func handleGetSSZ(
 		return false
 	}
 
-	if errJson := prepareSSZRequestForProxying(m, endpoint, req, config.sszPath); errJson != nil {
+	if errJson := prepareSSZRequestForProxying(m, endpoint, req); errJson != nil {
 		apimiddleware.WriteError(w, errJson, nil)
 		return true
 	}
@@ -147,7 +157,7 @@ func handlePostSSZ(
 		return false
 	}
 
-	if errJson := prepareSSZRequestForProxying(m, endpoint, req, config.sszPath); errJson != nil {
+	if errJson := prepareSSZRequestForProxying(m, endpoint, req); errJson != nil {
 		apimiddleware.WriteError(w, errJson, nil)
 		return true
 	}
@@ -207,20 +217,18 @@ func sszPosted(req *http.Request) bool {
 	return ct[0] == "application/octet-stream"
 }
 
-func prepareSSZRequestForProxying(
-	m *apimiddleware.ApiProxyMiddleware,
-	endpoint apimiddleware.Endpoint,
-	req *http.Request, sszPath string,
-) apimiddleware.ErrorJson {
+func prepareSSZRequestForProxying(m *apimiddleware.ApiProxyMiddleware, endpoint apimiddleware.Endpoint, req *http.Request) apimiddleware.ErrorJson {
 	req.URL.Scheme = "http"
 	req.URL.Host = m.GatewayAddress
 	req.RequestURI = ""
-	req.URL.Path = sszPath
-	if errJson := apimiddleware.HandleURLParameters(endpoint.Path, req, []string{}); errJson != nil {
+	if errJson := apimiddleware.HandleURLParameters(endpoint.Path, req, endpoint.RequestURLLiterals); errJson != nil {
 		return errJson
 	}
-	// We have to add the prefix after handling parameters because adding the prefix changes URL segment indexing.
-	req.URL.Path = "/internal" + req.URL.Path
+	if errJson := apimiddleware.HandleQueryParameters(req, endpoint.RequestQueryParams); errJson != nil {
+		return errJson
+	}
+	// We have to add new segments after handling parameters because it changes URL segment indexing.
+	req.URL.Path = "/internal" + req.URL.Path + "/ssz"
 	return nil
 }
 
@@ -274,7 +282,7 @@ func writeSSZResponseHeaderAndBody(grpcResp *http.Response, w http.ResponseWrite
 	w.Header().Set("Content-Length", strconv.Itoa(len(respSsz)))
 	w.Header().Set("Content-Type", "application/octet-stream")
 	w.Header().Set("Content-Disposition", "attachment; filename="+fileName)
-	w.Header().Set("Eth-Consensus-Version", respVersion)
+	w.Header().Set(versionHeader, respVersion)
 	if statusCodeHeader != "" {
 		code, err := strconv.Atoi(statusCodeHeader)
 		if err != nil {
