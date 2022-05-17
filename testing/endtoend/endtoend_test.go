@@ -447,6 +447,21 @@ func (r *testRunner) singleNodeOffline(epoch uint64) bool {
 	return false
 }
 
+func (r *testRunner) eeOffline(epoch uint64) bool {
+	switch epoch {
+	case 9:
+		require.NoError(r.t, r.comHandler.eth1Miner.Pause())
+		return true
+	case 10:
+		require.NoError(r.t, r.comHandler.eth1Miner.Resume())
+		return true
+	case 11, 12:
+		// Allow 2 epochs for the network to finalize again.
+		return true
+	}
+	return false
+}
+
 // All Epochs are valid.
 func defaultInterceptor(_ uint64) bool {
 	return false
