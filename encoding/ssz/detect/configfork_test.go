@@ -277,14 +277,17 @@ func TestUnmarshalBlock(t *testing.T) {
 }
 
 func TestUnmarshalBlindedBlock(t *testing.T) {
-	bc, cleanup := hackBellatrixMaxuint()
-	defer cleanup()
-	require.Equal(t, types.Epoch(math.MaxUint32), params.KnownConfigs[params.MainnetName]().BellatrixForkEpoch)
-	genv := bytesutil.ToBytes4(bc.GenesisForkVersion)
-	altairv := bytesutil.ToBytes4(bc.AltairForkVersion)
-	bellav := bytesutil.ToBytes4(bc.BellatrixForkVersion)
-	altairS, err := slots.EpochStart(bc.AltairForkEpoch)
-	bellaS, err := slots.EpochStart(bc.BellatrixForkEpoch)
+	undo, err := hackBellatrixMaxuint()
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, undo())
+	}()
+	require.Equal(t, types.Epoch(math.MaxUint32), params.BeaconConfig().BellatrixForkEpoch)
+	genv := bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion)
+	altairv := bytesutil.ToBytes4(params.BeaconConfig().AltairForkVersion)
+	bellav := bytesutil.ToBytes4(params.BeaconConfig().BellatrixForkVersion)
+	altairS, err := slots.EpochStart(params.BeaconConfig().AltairForkEpoch)
+	bellaS, err := slots.EpochStart(params.BeaconConfig().BellatrixForkEpoch)
 	require.NoError(t, err)
 	cases := []struct {
 		b       func(*testing.T, types.Slot) interfaces.SignedBeaconBlock
