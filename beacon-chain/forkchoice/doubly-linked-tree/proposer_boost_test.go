@@ -118,7 +118,8 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		//         |
 		//         2
 		//        / \
-		//       3   4 <- HEAD
+		//       3   |
+		//           4  <- HEAD
 		slot = types.Slot(4)
 		newRoot = indexToHash(4)
 		require.NoError(t,
@@ -180,6 +181,14 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		require.Equal(t, node3.weight, uint64(10))
 		node4 := f.store.nodeByRoot[indexToHash(4)]
 		require.Equal(t, node4.weight, uint64(24))
+
+		// Regression: process attestations for C, check that it
+		// becomes head, we need two attestations to have C.weight = 30 > 24 = D.weight
+		f.ProcessAttestation(ctx, []uint64{4, 5}, indexToHash(3), fEpoch)
+		headRoot, err = f.Head(ctx, jEpoch, zeroHash, balances, fEpoch)
+		require.NoError(t, err)
+		assert.Equal(t, indexToHash(3), headRoot, "Incorrect head for justified epoch at slot 4")
+
 	})
 	t.Run("vanilla ex ante attack", func(t *testing.T) {
 		f := setup(jEpoch, fEpoch)
