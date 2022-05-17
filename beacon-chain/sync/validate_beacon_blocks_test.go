@@ -528,7 +528,7 @@ func TestValidateBeaconBlockPubSub_Syncing(t *testing.T) {
 	assert.Equal(t, res, pubsub.ValidationIgnore, "block is ignored until fully synced")
 }
 
-func TestValidateBeaconBlockPubSub_AcceptBlocksFromNearFuture(t *testing.T) {
+func TestValidateBeaconBlockPubSub_IgnoreAndQueueBlocksFromNearFuture(t *testing.T) {
 	db := dbtest.SetupDB(t)
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
@@ -590,9 +590,8 @@ func TestValidateBeaconBlockPubSub_AcceptBlocksFromNearFuture(t *testing.T) {
 		},
 	}
 	res, err := r.validateBeaconBlockPubSub(ctx, "", m)
-	_ = err
-	result := res == pubsub.ValidationIgnore
-	assert.Equal(t, true, result)
+	require.ErrorContains(t, "early block, with current slot", err)
+	assert.Equal(t, res, pubsub.ValidationIgnore, "early block should be ignored and queued")
 
 	// check if the block is inserted in the Queue
 	assert.Equal(t, true, len(r.pendingBlocksInCache(msg.Block.Slot)) == 1)
