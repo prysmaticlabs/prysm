@@ -300,7 +300,7 @@ func GetBlockV2BellatrixSignRequest(request *validatorpb.SignRequest, genesisVal
 		}
 
 		if blockV3Bellatrix == nil {
-			return nil, errors.New("GetBlockV2BellatrixSignRequest - invalid sign request: blockV3Bellatrix is nil")
+			return nil, errors.New("invalid sign request: blockV3Bellatrix is nil")
 		}
 		beaconBlock, err := wrapper.WrappedBeaconBlock(blockV3Bellatrix.BlockV3)
 		if err != nil {
