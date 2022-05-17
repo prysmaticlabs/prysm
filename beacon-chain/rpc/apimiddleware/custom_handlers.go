@@ -295,7 +295,7 @@ func writeSSZResponseHeaderAndBody(grpcResp *http.Response, w http.ResponseWrite
 	w.Header().Set("Content-Length", strconv.Itoa(len(respSsz)))
 	w.Header().Set("Content-Type", "application/octet-stream")
 	w.Header().Set("Content-Disposition", "attachment; filename="+fileName)
-	w.Header().Set("Eth-Consensus-Version", respVersion)
+	w.Header().Set(versionHeader, respVersion)
 	if statusCodeHeader != "" {
 		code, err := strconv.Atoi(statusCodeHeader)
 		if err != nil {

@@ -143,7 +143,7 @@ func TestWriteSSZResponseHeaderAndBody(t *testing.T) {
 		require.Equal(t, true, ok, "header not found")
 		require.Equal(t, 1, len(v), "wrong number of header values")
 		assert.Equal(t, "attachment; filename=test.ssz", v[0])
-		v, ok = writer.Header()["Eth-Consensus-Version"]
+		v, ok = writer.Header()[versionHeader]
 		require.Equal(t, true, ok, "header not found")
 		require.Equal(t, 1, len(v), "wrong number of header values")
 		assert.Equal(t, "version", v[0])
