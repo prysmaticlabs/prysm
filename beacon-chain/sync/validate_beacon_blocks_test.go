@@ -1388,3 +1388,18 @@ func Test_validateBeaconBlockProcessingWhenParentIsOptimistic(t *testing.T) {
 	result := res == pubsub.ValidationAccept
 	assert.Equal(t, true, result)
 }
+
+func Test_getBlockFields(t *testing.T) {
+	hook := logTest.NewGlobal()
+
+	// Nil
+	log.WithFields(getBlockFields(nil)).Info("nil block")
+	// Good block
+	b := util.NewBeaconBlockBellatrix()
+	wb, err := wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	log.WithFields(getBlockFields(wb)).Info("bad block")
+
+	require.LogsContain(t, hook, "nil block")
+	require.LogsContain(t, hook, "bad block")
+}
