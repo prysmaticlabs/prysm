@@ -5,8 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	v1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"io"
 	"net"
 	"net/http"
@@ -14,16 +12,19 @@ import (
 	"text/template"
 	"time"
 
+	v1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	log "github.com/sirupsen/logrus"
 )
 
 const (
-	getExecHeaderPath       = "/eth/v1/builder/header/{{.Slot}}/{{.ParentHash}}/{{.Pubkey}}"
-	getStatus                 = "/eth/v1/builder/status"
+	getExecHeaderPath          = "/eth/v1/builder/header/{{.Slot}}/{{.ParentHash}}/{{.Pubkey}}"
+	getStatus                  = "/eth/v1/builder/status"
 	postBlindedBeaconBlockPath = "/eth/v1/builder/blinded_blocks"
-	postRegisterValidatorPath = "/eth/v1/builder/validators"
+	postRegisterValidatorPath  = "/eth/v1/builder/validators"
 )
 
 var ErrMalformedHostname = errors.New("hostname must include port, separated by one colon, like example.com:3500")
@@ -118,15 +119,16 @@ func (c *Client) do(ctx context.Context, method string, path string, body io.Rea
 }
 
 var execHeaderTemplate = template.Must(template.New("").Parse(getExecHeaderPath))
+
 func execHeaderPath(slot types.Slot, parentHash [32]byte, pubkey [48]byte) (string, error) {
-	v := struct{
-		Slot types.Slot
+	v := struct {
+		Slot       types.Slot
 		ParentHash string
-		Pubkey string
+		Pubkey     string
 	}{
-		Slot: slot,
+		Slot:       slot,
 		ParentHash: fmt.Sprintf("%#x", parentHash),
-		Pubkey: fmt.Sprintf("%#x", pubkey),
+		Pubkey:     fmt.Sprintf("%#x", pubkey),
 	}
 	b := bytes.NewBuffer(nil)
 	err := execHeaderTemplate.Execute(b, v)
@@ -146,6 +148,7 @@ func (c *Client) GetHeader(ctx context.Context, slot types.Slot, parentHash [32]
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println(hb)
 	hr := &ExecHeaderResponse{}
 	if err := json.Unmarshal(hb, hr); err != nil {
 		return nil, errors.Wrapf(err, "error unmarshaling the builder GetHeader response, using slot=%d, parentHash=%#x, pubkey=%#x", slot, parentHash, pubkey)
