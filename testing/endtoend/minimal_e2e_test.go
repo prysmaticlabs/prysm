@@ -19,7 +19,29 @@ func TestEndToEnd_MinimalConfig(t *testing.T) {
 }
 
 func TestEndToEnd_MinimalConfig_ScenarioRun(t *testing.T) {
-	e2eMinimal(t, false, 3).scenarioRunner()
+	runner := e2eMinimal(t, false, 0)
+
+	runner.config.Evaluators = []types.Evaluator{
+		ev.PeersConnect,
+		ev.HealthzCheck,
+		ev.MetricsCheck,
+		ev.ValidatorsParticipatingAtEpoch(2),
+		ev.FinalizationOccurs(3),
+		ev.PeersCheck,
+		ev.VerifyBlockGraffiti,
+		ev.ProposeVoluntaryExit,
+		ev.ValidatorHasExited,
+		ev.ColdStateCheckpoint,
+		ev.AltairForkTransition,
+		ev.BellatrixForkTransition,
+		ev.APIMiddlewareVerifyIntegrity,
+		ev.APIGatewayV1Alpha1VerifyIntegrity,
+		ev.FinishedSyncing,
+		ev.AllNodesHaveSameHead,
+		ev.ValidatorSyncParticipation,
+	}
+	runner.config.EvalInterceptor = runner.singleNodeOffline
+	runner.scenarioRunner()
 }
 
 func TestEndToEnd_MinimalConfig_Web3Signer(t *testing.T) {
@@ -92,6 +114,7 @@ func e2eMinimal(t *testing.T, useWeb3RemoteSigner bool, extraEpochs uint64) *tes
 		UseWeb3RemoteSigner: useWeb3RemoteSigner,
 		TracingSinkEndpoint: tracingEndpoint,
 		Evaluators:          evals,
+		EvalInterceptor:     defaultInterceptor,
 		Seed:                int64(seed),
 		ExtraEpochs:         extraEpochs,
 	}

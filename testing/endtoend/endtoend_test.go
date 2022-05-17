@@ -132,6 +132,9 @@ func (r *testRunner) runEvaluators(conns []*grpc.ClientConn, tickingStartTime ti
 	secondsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
 	ticker := helpers.NewEpochTicker(tickingStartTime, secondsPerEpoch)
 	for currentEpoch := range ticker.C() {
+		if config.EvalInterceptor(currentEpoch) {
+			continue
+		}
 		wg := new(sync.WaitGroup)
 		for _, eval := range config.Evaluators {
 			// Fix reference to evaluator as it will be running
@@ -421,45 +424,30 @@ func (r *testRunner) scenarioRun() error {
 	tickingStartTime := helpers.EpochTickerStartTime(genesis)
 
 	// Run assigned evaluators.
-	secondsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
-	ticker := helpers.NewEpochTicker(tickingStartTime, secondsPerEpoch)
-	for currentEpoch := range ticker.C() {
-		if currentEpoch == 9 {
-			require.NoError(t, r.comHandler.beaconNodes.PauseAtIndex(0))
-			require.NoError(t, r.comHandler.validatorNodes.PauseAtIndex(1))
-		}
-		if currentEpoch == 10 {
-			require.NoError(t, r.comHandler.beaconNodes.ResumeAtIndex(0))
-			require.NoError(t, r.comHandler.validatorNodes.ResumeAtIndex(1))
-		}
-		wg := new(sync.WaitGroup)
-		for _, eval := range config.Evaluators {
-			// Fix reference to evaluator as it will be running
-			// in a separate goroutine.
-			evaluator := eval
-			// Only run if the policy says so.
-			if !evaluator.Policy(types.Epoch(currentEpoch)) {
-				continue
-			}
-			wg.Add(1)
-			go t.Run(fmt.Sprintf(evaluator.Name, currentEpoch), func(t *testing.T) {
-				err := evaluator.Evaluation(conns...)
-				assert.NoError(t, err, "Evaluation failed for epoch %d: %v", currentEpoch, err)
-				wg.Done()
-			})
-		}
-		wg.Wait()
-
-		if t.Failed() || currentEpoch >= config.EpochsToRun-1 {
-			ticker.Done()
-			if t.Failed() {
-				return errors.New("test failed")
-			}
-			break
-		}
-	}
-	return nil
+	return r.runEvaluators(conns, tickingStartTime)
 }
 func (r *testRunner) addEvent(ev func() error) {
 	r.comHandler.group.Go(ev)
+}
+
+func (r *testRunner) singleNodeOffline(epoch uint64) bool {
+	switch epoch {
+	case 9:
+		require.NoError(r.t, r.comHandler.beaconNodes.PauseAtIndex(0))
+		require.NoError(r.t, r.comHandler.validatorNodes.PauseAtIndex(0))
+		return true
+	case 10:
+		require.NoError(r.t, r.comHandler.beaconNodes.ResumeAtIndex(0))
+		require.NoError(r.t, r.comHandler.validatorNodes.ResumeAtIndex(0))
+		return true
+	case 11, 12:
+		// Allow 2 epochs for the network to finalize again.
+		return true
+	}
+	return false
+}
+
+// All Epochs are valid.
+func defaultInterceptor(_ uint64) bool {
+	return false
 }

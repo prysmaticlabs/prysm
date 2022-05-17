@@ -23,6 +23,7 @@ type E2EConfig struct {
 	Seed                    int64
 	TracingSinkEndpoint     string
 	Evaluators              []Evaluator
+	EvalInterceptor         func(uint64) bool
 	BeaconFlags             []string
 	ValidatorFlags          []string
 	PeerIDs                 []string

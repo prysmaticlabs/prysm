@@ -84,6 +84,7 @@ func e2eMainnet(t *testing.T, usePrysmSh, useMultiClient bool) {
 		UsePprof:                !longRunning,
 		TracingSinkEndpoint:     tracingEndpoint,
 		Evaluators:              evals,
+		EvalInterceptor:         defaultInterceptor,
 		Seed:                    int64(seed),
 	}
 
