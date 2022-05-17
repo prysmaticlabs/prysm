@@ -84,7 +84,7 @@ func (ds *Server) GetBeaconStateV2(ctx context.Context, req *ethpbv2.StateReques
 			ExecutionOptimistic: isOptimistic,
 		}, nil
 	case version.Altair:
-		altairState, ok := beaconSt.(state.BeaconStateAltair)
+		altairState, ok := beaconSt.(state.BeaconState)
 		if !ok {
 			return nil, status.Error(codes.Internal, "Altair state type assertion failed")
 		}
@@ -100,7 +100,7 @@ func (ds *Server) GetBeaconStateV2(ctx context.Context, req *ethpbv2.StateReques
 			ExecutionOptimistic: isOptimistic,
 		}, nil
 	case version.Bellatrix:
-		bellatrixState, ok := beaconSt.(state.BeaconStateBellatrix)
+		bellatrixState, ok := beaconSt.(state.BeaconState)
 		if !ok {
 			return nil, status.Error(codes.Internal, "Bellatrix state type assertion failed")
 		}

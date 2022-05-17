@@ -15,7 +15,7 @@ import (
 )
 
 func generateSyncAggregate(bState state.BeaconState, privs []bls.SecretKey, parentRoot [32]byte) (*ethpb.SyncAggregate, error) {
-	st, ok := bState.(state.BeaconStateAltair)
+	st, ok := bState.(state.BeaconState)
 	if !ok || bState.Version() == version.Phase0 {
 		return nil, errors.Errorf("state cannot be asserted to altair state")
 	}
