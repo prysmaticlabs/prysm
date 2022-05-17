@@ -28,7 +28,6 @@ func New(justifiedEpoch, finalizedEpoch types.Epoch, finalizedRoot [32]byte) *Fo
 	s := &Store{
 		justifiedEpoch:    justifiedEpoch,
 		finalizedEpoch:    finalizedEpoch,
-		finalizedRoot:     finalizedRoot,
 		proposerBoostRoot: [32]byte{},
 		nodes:             make([]*Node, 0),
 		nodesIndices:      make(map[[32]byte]uint64),
@@ -47,10 +46,8 @@ func New(justifiedEpoch, finalizedEpoch types.Epoch, finalizedRoot [32]byte) *Fo
 // It firsts computes validator's balance changes then recalculates block tree from leaves to root.
 func (f *ForkChoice) Head(
 	ctx context.Context,
-	justifiedEpoch types.Epoch,
 	justifiedRoot [32]byte,
 	justifiedStateBalances []uint64,
-	finalizedEpoch types.Epoch,
 ) ([32]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.Head")
 	defer span.End()
@@ -70,7 +67,7 @@ func (f *ForkChoice) Head(
 	}
 	f.votes = newVotes
 
-	if err := f.store.applyWeightChanges(ctx, justifiedEpoch, finalizedEpoch, newBalances, deltas); err != nil {
+	if err := f.store.applyWeightChanges(ctx, f.store.justifiedEpoch, f.store.finalizedEpoch, newBalances, deltas); err != nil {
 		return [32]byte{}, errors.Wrap(err, "Could not apply score changes")
 	}
 	f.balances = newBalances
@@ -379,12 +376,6 @@ func (s *Store) applyWeightChanges(
 	// The length of the nodes can not be different than length of the delta.
 	if len(s.nodes) != len(delta) {
 		return errInvalidDeltaLength
-	}
-
-	// Update the justified / finalized epochs in store if necessary.
-	if s.justifiedEpoch != justifiedEpoch || s.finalizedEpoch != finalizedEpoch {
-		s.justifiedEpoch = justifiedEpoch
-		s.finalizedEpoch = finalizedEpoch
 	}
 
 	// Proposer score defaults to 0.
@@ -790,4 +781,14 @@ func (f *ForkChoice) InsertSlashedIndex(ctx context.Context, index types.Validat
 		}
 		nodeIndex = node.parent
 	}
+}
+
+// UpdateCheckpoints sets the justified and finalized epoch to the given ones
+func (f *ForkChoice) UpdateCheckpoints(jc, fc *pbrpc.Checkpoint) error {
+	if jc == nil || fc == nil {
+		return errInvalidNilCheckpoint
+	}
+	f.store.justifiedEpoch = jc.Epoch
+	f.store.finalizedEpoch = fc.Epoch
+	return nil
 }

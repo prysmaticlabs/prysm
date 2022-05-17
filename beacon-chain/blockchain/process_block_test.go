@@ -268,8 +268,7 @@ func TestStore_OnBlock_ProposerBoostEarly(t *testing.T) {
 		SecondsIntoSlot: 0,
 	}
 	require.NoError(t, service.cfg.ForkChoiceStore.BoostProposerRoot(ctx, args))
-	_, err = service.cfg.ForkChoiceStore.Head(ctx, 0,
-		params.BeaconConfig().ZeroHash, []uint64{}, 0)
+	_, err = service.cfg.ForkChoiceStore.Head(ctx, params.BeaconConfig().ZeroHash, []uint64{})
 	require.ErrorContains(t, "could not apply proposer boost score: invalid proposer boost root", err)
 }
 

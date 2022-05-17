@@ -42,10 +42,8 @@ func (f *ForkChoice) NodeCount() int {
 // It firsts computes validator's balance changes then recalculates block tree from leaves to root.
 func (f *ForkChoice) Head(
 	ctx context.Context,
-	justifiedEpoch types.Epoch,
 	justifiedRoot [32]byte,
 	justifiedStateBalances []uint64,
-	finalizedEpoch types.Epoch,
 ) ([32]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.Head")
 	defer span.End()
@@ -57,8 +55,6 @@ func (f *ForkChoice) Head(
 	// Using the write lock here because `applyWeightChanges` that gets called subsequently requires a write operation.
 	f.store.nodesLock.Lock()
 	defer f.store.nodesLock.Unlock()
-
-	f.store.updateCheckpoints(justifiedEpoch, finalizedEpoch)
 
 	if err := f.updateBalances(justifiedStateBalances); err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not update balances")
@@ -72,7 +68,7 @@ func (f *ForkChoice) Head(
 		return [32]byte{}, errors.Wrap(err, "could not apply weight changes")
 	}
 
-	if err := f.store.treeRootNode.updateBestDescendant(ctx, justifiedEpoch, finalizedEpoch); err != nil {
+	if err := f.store.treeRootNode.updateBestDescendant(ctx, f.store.justifiedEpoch, f.store.finalizedEpoch); err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not update best descendant")
 	}
 
@@ -361,4 +357,14 @@ func (f *ForkChoice) InsertSlashedIndex(_ context.Context, index types.Validator
 	} else {
 		node.balance -= f.balances[index]
 	}
+}
+
+// UpdateCheckpoints sets the justified and finalized epoch to the given ones
+func (f *ForkChoice) UpdateCheckpoints(jc, fc *pbrpc.Checkpoint) error {
+	if jc == nil || fc == nil {
+		return errInvalidNilCheckpoint
+	}
+	f.store.justifiedEpoch = jc.Epoch
+	f.store.finalizedEpoch = fc.Epoch
+	return nil
 }

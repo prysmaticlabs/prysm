@@ -69,6 +69,9 @@ func (s *Service) NewSlot(ctx context.Context, slot types.Slot) error {
 				return err
 			}
 			s.store.SetJustifiedCheckptAndPayloadHash(bj, h)
+			if err := s.cfg.ForkChoiceStore.UpdateCheckpoints(bj, f); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

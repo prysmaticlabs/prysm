@@ -6,6 +6,7 @@ import (
 	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -22,7 +23,7 @@ type ForkChoicer interface {
 
 // HeadRetriever retrieves head root and optimistic info of the current chain.
 type HeadRetriever interface {
-	Head(context.Context, types.Epoch, [32]byte, []uint64, types.Epoch) ([32]byte, error)
+	Head(context.Context, [32]byte, []uint64) ([32]byte, error)
 	Tips() ([][32]byte, []types.Slot)
 	IsOptimistic(root [32]byte) (bool, error)
 }
@@ -73,4 +74,5 @@ type Getter interface {
 type Setter interface {
 	SetOptimisticToValid(context.Context, [fieldparams.RootLength]byte) error
 	SetOptimisticToInvalid(context.Context, [fieldparams.RootLength]byte, [fieldparams.RootLength]byte, [fieldparams.RootLength]byte) ([][32]byte, error)
+	UpdateCheckpoints(*ethpb.Checkpoint, *ethpb.Checkpoint) error
 }

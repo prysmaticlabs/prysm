@@ -602,7 +602,7 @@ func TestVerifyFinalizedConsistency_IsCanonical(t *testing.T) {
 	require.NoError(t, service.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx, b32.Block.Slot, r32, [32]byte{}, params.BeaconConfig().ZeroHash, 0, 0))
 	require.NoError(t, service.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx, b33.Block.Slot, r33, r32, params.BeaconConfig().ZeroHash, 0, 0))
 
-	_, err = service.cfg.ForkChoiceStore.Head(ctx, 0, r32, []uint64{}, 0)
+	_, err = service.cfg.ForkChoiceStore.Head(ctx, r32, []uint64{})
 	require.NoError(t, err)
 	err = service.VerifyFinalizedConsistency(context.Background(), r33[:])
 	require.NoError(t, err)

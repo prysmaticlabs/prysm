@@ -100,7 +100,7 @@ func (s *Service) updateHead(ctx context.Context, balances []uint64) ([32]byte, 
 		}
 	}
 
-	return s.cfg.ForkChoiceStore.Head(ctx, j.Epoch, headStartRoot, balances, f.Epoch)
+	return s.cfg.ForkChoiceStore.Head(ctx, headStartRoot, balances)
 }
 
 // This saves head info to the local service cache, it also saves the
