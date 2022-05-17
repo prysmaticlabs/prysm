@@ -8,6 +8,7 @@ import (
 	testtmpl "github.com/prysmaticlabs/prysm/beacon-chain/state/testing"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestBeaconState_SlotDataRace(t *testing.T) {
@@ -51,28 +52,28 @@ func TestNilState_NoPanic(t *testing.T) {
 	_ = st.BalancesLength()
 	_ = st.RandaoMixes()
 	_, err = st.RandaoMixAtIndex(0)
-	_ = err
+	require.ErrorIs(t, ErrNilInnerState, err)
 	_ = st.RandaoMixesLength()
 	_ = st.Slashings()
 	_, err = st.CurrentEpochParticipation()
-	_ = err
+	require.ErrorIs(t, ErrNilInnerState, err)
 	_, err = st.PreviousEpochParticipation()
-	_ = err
+	require.ErrorIs(t, ErrNilInnerState, err)
 	_ = st.JustificationBits()
 	_ = err
 	_ = st.PreviousJustifiedCheckpoint()
 	_ = st.CurrentJustifiedCheckpoint()
 	_ = st.FinalizedCheckpoint()
 	_, err = st.CurrentEpochParticipation()
-	_ = err
+	require.ErrorIs(t, ErrNilInnerState, err)
 	_, err = st.PreviousEpochParticipation()
-	_ = err
+	require.ErrorIs(t, ErrNilInnerState, err)
 	_, err = st.InactivityScores()
 	_ = err
 	_, err = st.CurrentSyncCommittee()
-	_ = err
+	require.ErrorIs(t, ErrNilInnerState, err)
 	_, err = st.NextSyncCommittee()
-	_ = err
+	require.ErrorIs(t, ErrNilInnerState, err)
 }
 
 func TestBeaconState_MatchCurrentJustifiedCheckpt(t *testing.T) {
