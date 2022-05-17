@@ -54,6 +54,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"google.golang.org/protobuf/encoding/protojson"
+	"gopkg.in/yaml.v2"
 )
 
 // ValidatorClient defines an instance of an Ethereum validator that manages
@@ -785,26 +786,37 @@ func unmarshalFromFile(ctx context.Context, from string, to interface{}) error {
 	}
 	cleanpath := filepath.Clean(from)
 	fileExtension := filepath.Ext(cleanpath)
-	if fileExtension != ".json" {
-		return errors.Errorf("unsupported file extension %s , (ex. '.json')", fileExtension)
+	if fileExtension != ".json" && fileExtension != ".yaml" {
+		return errors.Errorf("unsupported file extension %s , (ex. '.json','.yaml')", fileExtension)
 	}
-	jsonFile, jsonerr := os.Open(cleanpath)
-	if jsonerr != nil {
-		return errors.Wrap(jsonerr, "failed to open json file")
+
+	file, err := os.Open(cleanpath)
+	if err != nil {
+		return errors.Wrap(err, "failed to open file")
 	}
 	// defer the closing of our jsonFile so that we can parse it later on
-	defer func(jsonFile *os.File) {
-		err := jsonFile.Close()
+	defer func(file *os.File) {
+		err := file.Close()
 		if err != nil {
-			log.WithError(err).Error("failed to close json file")
+			log.WithError(err).Error("failed to close file")
 		}
-	}(jsonFile)
-	byteValue, readerror := io.ReadAll(jsonFile)
-	if readerror != nil {
-		return errors.Wrap(readerror, "failed to read json file")
+	}(file)
+
+	byteValue, err := io.ReadAll(file)
+	if err != nil {
+		return errors.Wrap(err, "failed to read file")
 	}
-	if unmarshalerr := json.Unmarshal(byteValue, &to); unmarshalerr != nil {
-		return errors.Wrap(unmarshalerr, "failed to unmarshal json file")
+
+	switch fileExtension {
+	case ".json":
+		if unmarshalerr := json.Unmarshal(byteValue, &to); unmarshalerr != nil {
+			return errors.Wrap(unmarshalerr, "failed to unmarshal json file")
+		}
+	case ".yaml":
+		if unmarshalerr := yaml.Unmarshal(byteValue, &to); unmarshalerr != nil {
+			return errors.Wrap(unmarshalerr, "failed to unmarshal yaml file")
+		}
 	}
+
 	return nil
 }

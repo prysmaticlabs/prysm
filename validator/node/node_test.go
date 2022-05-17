@@ -191,8 +191,8 @@ func newWeb3SignerCli(t *testing.T, baseUrl string, publicKeysOrURL string) *cli
 }
 
 type test struct {
-	Foo string `json:"foo"`
-	Bar int    `json:"bar"`
+	Foo string `json:"foo" yaml:"foo"`
+	Bar int    `json:"bar" yaml:"bar"`
 }
 
 func TestUnmarshalFromFile(t *testing.T) {
@@ -212,6 +212,18 @@ func TestUnmarshalFromFile(t *testing.T) {
 			name: "Happy Path File",
 			args: args{
 				File: "./testdata/test-unmarshal-good.json",
+				To:   &test{},
+			},
+			want: &test{
+				Foo: "foo",
+				Bar: 1,
+			},
+			wantErr: false,
+		},
+		{
+			name: "Happy Path File Yaml",
+			args: args{
+				File: "./testdata/test-unmarshal-good.yaml",
 				To:   &test{},
 			},
 			want: &test{

@@ -343,6 +343,13 @@ var (
 		Usage: "Sets ALL validators' mapping to a suggested an eth address to receive gas fees when proposing a block. Overrides the --fee-recipient-config-file flag if set",
 		Value: field_params.EthBurnAddressHex,
 	}
+
+	// SuggestedBuilderFeeRecipientFlag defines the address of the fee recipient for custom builders.
+	SuggestedBuilderFeeRecipientFlag = &cli.StringFlag{
+		Name:  "suggested-builder-fee-recipient",
+		Usage: "Sets ALL validators' mapping to a suggested an eth address to receive gas fees when proposing a block for custom builders.",
+		Value: field_params.EthBurnAddressHex,
+	}
 )
 
 // DefaultValidatorDir returns OS-specific default validator directory.

@@ -9,14 +9,14 @@ import (
 // ProposeConfig is the map of validator address to fee recipient options all in hex format.
 // DefaultConfig is the default fee recipient address for all validators unless otherwise specified in the propose config.required.
 type FeeRecipientFileConfig struct {
-	ProposeConfig map[string]*FeeRecipientFileOptions `json:"proposer_config"`
-	DefaultConfig *FeeRecipientFileOptions            `json:"default_config"`
+	ProposeConfig map[string]*FeeRecipientFileOptions `json:"proposer_config" yaml:"proposer_config"`
+	DefaultConfig *FeeRecipientFileOptions            `json:"default_config" yaml:"default_config"`
 }
 
 // FeeRecipientFileOptions is the struct representation of the JSON config file set in the validator through the CLI.
 // FeeRecipient is set to an eth address in hex string format with 0x prefix.
 type FeeRecipientFileOptions struct {
-	FeeRecipient string `json:"fee_recipient"`
+	FeeRecipient string `json:"fee_recipient" yaml:"fee_recipient"`
 }
 
 // FeeRecipientConfig is a Prysm internal representation of the fee recipient config on the validator client.
