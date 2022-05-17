@@ -70,6 +70,27 @@ func handleSubmitBlockSSZ(m *apimiddleware.ApiProxyMiddleware, endpoint apimiddl
 	return handlePostSSZ(m, endpoint, w, req, config)
 }
 
+func handleProduceBlockSSZ(m *apimiddleware.ApiProxyMiddleware, endpoint apimiddleware.Endpoint, w http.ResponseWriter, req *http.Request) (handled bool) {
+	config := sszConfig{
+		sszPath:  "/eth/v2/validator/blocks/{slot}/ssz",
+		fileName: "produce_beacon_block.ssz",
+	}
+	return handleGetSSZ(m, endpoint, w, req, config)
+}
+
+func handleProduceBlindedBlockSSZ(
+	m *apimiddleware.ApiProxyMiddleware,
+	endpoint apimiddleware.Endpoint,
+	w http.ResponseWriter,
+	req *http.Request,
+) (handled bool) {
+	config := sszConfig{
+		sszPath:  "/eth/v2/validator/blinded_blocks/{slot}/ssz",
+		fileName: "produce_blinded_beacon_block.ssz",
+	}
+	return handleGetSSZ(m, endpoint, w, req, config)
+}
+
 func handleGetSSZ(
 	m *apimiddleware.ApiProxyMiddleware,
 	endpoint apimiddleware.Endpoint,
