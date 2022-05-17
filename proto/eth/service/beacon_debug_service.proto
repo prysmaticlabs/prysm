@@ -22,6 +22,7 @@ import "google/protobuf/empty.proto";
 import "proto/eth/v1/beacon_chain.proto";
 import "proto/eth/v1/beacon_state.proto";
 import "proto/eth/v2/beacon_state.proto";
+import "proto/eth/v2/ssz.proto";
 
 option csharp_namespace = "Ethereum.Eth.Service";
 option go_package = "github.com/prysmaticlabs/prysm/proto/eth/service";
@@ -44,7 +45,7 @@ service BeaconDebug {
   }
 
   // GetBeaconStateSSZ returns the SSZ-serialized version of the full BeaconState object for given stateId.
-  rpc GetBeaconStateSSZ(v1.StateRequest) returns (v1.BeaconStateSSZResponse) {
+  rpc GetBeaconStateSSZ(v1.StateRequest) returns (v2.SSZContainer) {
     option (google.api.http) = {
       get: "/internal/eth/v1/debug/beacon/states/{state_id}/ssz"
     };
@@ -58,7 +59,7 @@ service BeaconDebug {
   }
 
   // GetBeaconStateSSZV2 returns the SSZ-serialized version of the full BeaconState object for given stateId.
-  rpc GetBeaconStateSSZV2(v2.StateRequestV2) returns (v2.BeaconStateSSZResponseV2) {
+  rpc GetBeaconStateSSZV2(v2.StateRequestV2) returns (v2.SSZContainer) {
     option (google.api.http) = {
       get: "/internal/eth/v2/debug/beacon/states/{state_id}/ssz"
     };

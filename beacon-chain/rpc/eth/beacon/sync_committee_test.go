@@ -162,6 +162,7 @@ func TestListSyncCommittees(t *testing.T) {
 	require.NoError(t, err)
 	db := dbTest.SetupDB(t)
 
+	chainService := &mock.ChainService{}
 	s := &Server{
 		GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
 			Genesis: time.Now(),
@@ -169,8 +170,9 @@ func TestListSyncCommittees(t *testing.T) {
 		StateFetcher: &testutil.MockFetcher{
 			BeaconState: st,
 		},
-		HeadFetcher: &mock.ChainService{},
-		BeaconDB:    db,
+		HeadFetcher:           chainService,
+		OptimisticModeFetcher: chainService,
+		BeaconDB:              db,
 	}
 	req := &ethpbv2.StateSyncCommitteesRequest{StateId: stRoot[:]}
 	resp, err := s.ListSyncCommittees(ctx, req)
@@ -205,6 +207,7 @@ func TestListSyncCommittees(t *testing.T) {
 		require.NoError(t, db.SaveBlock(ctx, wsb))
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
+		chainService := &mock.ChainService{Optimistic: true}
 		s := &Server{
 			GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
 				Genesis: time.Now(),
@@ -212,8 +215,9 @@ func TestListSyncCommittees(t *testing.T) {
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: st,
 			},
-			HeadFetcher: &mock.ChainService{Optimistic: true},
-			BeaconDB:    db,
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			BeaconDB:              db,
 		}
 		resp, err := s.ListSyncCommittees(ctx, req)
 		require.NoError(t, err)
@@ -261,6 +265,7 @@ func TestListSyncCommitteesFuture(t *testing.T) {
 	}))
 	db := dbTest.SetupDB(t)
 
+	chainService := &mock.ChainService{}
 	s := &Server{
 		GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
 			Genesis: time.Now(),
@@ -268,8 +273,9 @@ func TestListSyncCommitteesFuture(t *testing.T) {
 		StateFetcher: &futureSyncMockFetcher{
 			BeaconState: st,
 		},
-		HeadFetcher: &mock.ChainService{},
-		BeaconDB:    db,
+		HeadFetcher:           chainService,
+		OptimisticModeFetcher: chainService,
+		BeaconDB:              db,
 	}
 	req := &ethpbv2.StateSyncCommitteesRequest{}
 	epoch := 2 * params.BeaconConfig().EpochsPerSyncCommitteePeriod

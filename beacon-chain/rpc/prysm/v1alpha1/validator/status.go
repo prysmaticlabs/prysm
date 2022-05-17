@@ -255,7 +255,7 @@ func (vs *Server) optimisticStatus(ctx context.Context) error {
 	if slots.ToEpoch(vs.TimeFetcher.CurrentSlot()) < params.BeaconConfig().BellatrixForkEpoch {
 		return nil
 	}
-	optimistic, err := vs.HeadFetcher.IsOptimistic(ctx)
+	optimistic, err := vs.OptimisticModeFetcher.IsOptimistic(ctx)
 	if err != nil {
 		return status.Errorf(codes.Internal, "Could not determine if the node is a optimistic node: %v", err)
 	}
