@@ -4,6 +4,8 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/pkg/errors"
+	"io/fs"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -199,74 +201,77 @@ func TestUnmarshalFromFile(t *testing.T) {
 	ctx := context.Background()
 	type args struct {
 		File string
-		To   interface{}
+		To  *test
 	}
+	var pathError *fs.PathError
 	tests := []struct {
 		name        string
 		args        args
-		want        interface{}
+		want        *test
 		urlResponse string
-		wantErr     bool
+		err error
 	}{
 		{
 			name: "Happy Path File",
 			args: args{
-				File: "./testdata/test-unmarshal-good.json",
+				File: "testdata/test-unmarshal-good.json",
 				To:   &test{},
 			},
 			want: &test{
 				Foo: "foo",
 				Bar: 1,
 			},
-			wantErr: false,
 		},
 		{
 			name: "Happy Path File Yaml",
 			args: args{
-				File: "./testdata/test-unmarshal-good.yaml",
+				File: "testdata/test-unmarshal-good.yaml",
 				To:   &test{},
 			},
 			want: &test{
 				Foo: "foo",
 				Bar: 1,
 			},
-			wantErr: false,
 		},
 		{
 			name: "Bad File Path, not json",
 			args: args{
-				File: "./jsontools.go",
+				File: "jsontools.go",
 				To:   &test{},
 			},
 			want:    &test{},
-			wantErr: true,
+			err: pathError,
 		},
 		{
 			name: "Bad File Path",
 			args: args{
-				File: "./testdata/test-unmarshal-bad.json",
+				File: "testdata/test-unmarshal-bad.json",
 				To:   &test{},
 			},
 			want:    &test{},
-			wantErr: true,
+			err: pathError,
 		},
 		{
 			name: "Bad File Path, not found",
 			args: args{
-				File: "./test-notfound.json",
+				File: "test-notfound.json",
 				To:   &test{},
 			},
 			want:    &test{},
-			wantErr: true,
+			err: pathError,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := unmarshalFromFile(ctx, tt.args.File, tt.args.To); (err != nil) != tt.wantErr {
-				t.Errorf(" error = %v, wantErr %v", err, tt.wantErr)
+			to := tt.args.To
+			err := unmarshalFromFile(ctx, tt.args.File, to)
+			if tt.err != nil {
+				require.Equal(t, true, errors.As(err, &tt.err))
 				return
+			} else {
+				require.NoError(t, err)
 			}
-			require.DeepEqual(t, tt.want, tt.args.To)
+			require.DeepEqual(t, tt.want, to)
 		})
 	}
 }

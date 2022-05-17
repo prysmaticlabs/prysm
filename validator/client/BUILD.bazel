@@ -6,6 +6,7 @@ go_library(
         "aggregate.go",
         "attest.go",
         "attest_protect.go",
+        "builder_registration.go",
         "key_reload.go",
         "log.go",
         "metrics.go",
