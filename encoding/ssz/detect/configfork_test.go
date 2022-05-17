@@ -16,13 +16,12 @@ import (
 	"github.com/prysmaticlabs/prysm/time/slots"
 
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	v1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestSlotFromBlock(t *testing.T) {
-	b := testBlockGenesis()
+	b := util.NewBeaconBlock()
 	var slot types.Slot = 3
 	b.Block.Slot = slot
 	bb, err := b.MarshalSSZ()
@@ -31,7 +30,7 @@ func TestSlotFromBlock(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, slot, sfb)
 
-	ba := testBlockAltair()
+	ba := util.NewBeaconBlockAltair()
 	ba.Block.Slot = slot
 	bab, err := ba.MarshalSSZ()
 	require.NoError(t, err)
@@ -39,7 +38,7 @@ func TestSlotFromBlock(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, slot, sfba)
 
-	bm := testBlockBellatrix()
+	bm := util.NewBeaconBlockBellatrix()
 	bm.Block.Slot = slot
 	bmb, err := ba.MarshalSSZ()
 	require.NoError(t, err)
@@ -277,125 +276,123 @@ func TestUnmarshalBlock(t *testing.T) {
 	}
 }
 
+func TestUnmarshalBlindedBlock(t *testing.T) {
+	bc, cleanup := hackBellatrixMaxuint()
+	defer cleanup()
+	require.Equal(t, types.Epoch(math.MaxUint32), params.KnownConfigs[params.MainnetName]().BellatrixForkEpoch)
+	genv := bytesutil.ToBytes4(bc.GenesisForkVersion)
+	altairv := bytesutil.ToBytes4(bc.AltairForkVersion)
+	bellav := bytesutil.ToBytes4(bc.BellatrixForkVersion)
+	altairS, err := slots.EpochStart(bc.AltairForkEpoch)
+	bellaS, err := slots.EpochStart(bc.BellatrixForkEpoch)
+	require.NoError(t, err)
+	cases := []struct {
+		b       func(*testing.T, types.Slot) interfaces.SignedBeaconBlock
+		name    string
+		version [4]byte
+		slot    types.Slot
+		err     error
+	}{
+		{
+			name:    "genesis - slot 0",
+			b:       signedTestBlockGenesis,
+			version: genv,
+		},
+		{
+			name:    "last slot of phase 0",
+			b:       signedTestBlockGenesis,
+			version: genv,
+			slot:    altairS - 1,
+		},
+		{
+			name:    "first slot of altair",
+			b:       signedTestBlockAltair,
+			version: altairv,
+			slot:    altairS,
+		},
+		{
+			name:    "last slot of altair",
+			b:       signedTestBlockAltair,
+			version: altairv,
+			slot:    bellaS - 1,
+		},
+		{
+			name:    "first slot of bellatrix",
+			b:       signedTestBlindedBlockBellatrix,
+			version: bellav,
+			slot:    bellaS,
+		},
+		{
+			name:    "bellatrix block in altair slot",
+			b:       signedTestBlindedBlockBellatrix,
+			version: bellav,
+			slot:    bellaS - 1,
+			err:     errBlockForkMismatch,
+		},
+		{
+			name:    "genesis block in altair slot",
+			b:       signedTestBlockGenesis,
+			version: genv,
+			slot:    bellaS - 1,
+			err:     errBlockForkMismatch,
+		},
+		{
+			name:    "altair block in genesis slot",
+			b:       signedTestBlockAltair,
+			version: altairv,
+			err:     errBlockForkMismatch,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			b := c.b(t, c.slot)
+			marshaled, err := b.MarshalSSZ()
+			require.NoError(t, err)
+			cf, err := FromForkVersion(c.version)
+			require.NoError(t, err)
+			bcf, err := cf.UnmarshalBlindedBeaconBlock(marshaled)
+			if c.err != nil {
+				require.ErrorIs(t, err, c.err)
+				return
+			}
+			require.NoError(t, err)
+			expected, err := b.Block().HashTreeRoot()
+			require.NoError(t, err)
+			actual, err := bcf.Block().HashTreeRoot()
+			require.NoError(t, err)
+			require.Equal(t, expected, actual)
+		})
+	}
+}
+
 func signedTestBlockGenesis(t *testing.T, slot types.Slot) interfaces.SignedBeaconBlock {
-	b := testBlockGenesis()
+	b := util.NewBeaconBlock()
 	b.Block.Slot = slot
 	s, err := wrapper.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)
 	return s
-}
-
-func testBlockGenesis() *ethpb.SignedBeaconBlock {
-	return &ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			ProposerIndex: types.ValidatorIndex(0),
-			ParentRoot:    make([]byte, 32),
-			StateRoot:     make([]byte, 32),
-			Body: &ethpb.BeaconBlockBody{
-				RandaoReveal:      make([]byte, 96),
-				Graffiti:          make([]byte, 32),
-				ProposerSlashings: []*ethpb.ProposerSlashing{},
-				AttesterSlashings: []*ethpb.AttesterSlashing{},
-				Attestations:      []*ethpb.Attestation{},
-				Deposits:          []*ethpb.Deposit{},
-				VoluntaryExits:    []*ethpb.SignedVoluntaryExit{},
-				Eth1Data: &ethpb.Eth1Data{
-					DepositRoot:  make([]byte, 32),
-					DepositCount: 0,
-					BlockHash:    make([]byte, 32),
-				},
-			},
-		},
-		Signature: make([]byte, 96),
-	}
 }
 
 func signedTestBlockAltair(t *testing.T, slot types.Slot) interfaces.SignedBeaconBlock {
-	b := testBlockAltair()
+	b := util.NewBeaconBlockAltair()
 	b.Block.Slot = slot
 	s, err := wrapper.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)
 	return s
-}
-
-func testBlockAltair() *ethpb.SignedBeaconBlockAltair {
-	return &ethpb.SignedBeaconBlockAltair{
-		Block: &ethpb.BeaconBlockAltair{
-			ProposerIndex: types.ValidatorIndex(0),
-			ParentRoot:    make([]byte, 32),
-			StateRoot:     make([]byte, 32),
-			Body: &ethpb.BeaconBlockBodyAltair{
-				RandaoReveal: make([]byte, 96),
-				Eth1Data: &ethpb.Eth1Data{
-					DepositRoot:  make([]byte, 32),
-					DepositCount: 0,
-					BlockHash:    make([]byte, 32),
-				},
-				Graffiti:          make([]byte, 32),
-				ProposerSlashings: []*ethpb.ProposerSlashing{},
-				AttesterSlashings: []*ethpb.AttesterSlashing{},
-				Attestations:      []*ethpb.Attestation{},
-				Deposits:          []*ethpb.Deposit{},
-				VoluntaryExits:    []*ethpb.SignedVoluntaryExit{},
-				SyncAggregate: &ethpb.SyncAggregate{
-					SyncCommitteeBits:      make([]byte, 64),
-					SyncCommitteeSignature: make([]byte, 96),
-				},
-			},
-		},
-		Signature: make([]byte, 96),
-	}
 }
 
 func signedTestBlockBellatrix(t *testing.T, slot types.Slot) interfaces.SignedBeaconBlock {
-	b := testBlockBellatrix()
+	b := util.NewBeaconBlockBellatrix()
 	b.Block.Slot = slot
 	s, err := wrapper.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)
 	return s
 }
 
-func testBlockBellatrix() *ethpb.SignedBeaconBlockBellatrix {
-	return &ethpb.SignedBeaconBlockBellatrix{
-		Block: &ethpb.BeaconBlockBellatrix{
-			ProposerIndex: types.ValidatorIndex(0),
-			ParentRoot:    make([]byte, 32),
-			StateRoot:     make([]byte, 32),
-			Body: &ethpb.BeaconBlockBodyBellatrix{
-				RandaoReveal: make([]byte, 96),
-				Eth1Data: &ethpb.Eth1Data{
-					DepositRoot:  make([]byte, 32),
-					DepositCount: 0,
-					BlockHash:    make([]byte, 32),
-				},
-				Graffiti:          make([]byte, 32),
-				ProposerSlashings: []*ethpb.ProposerSlashing{},
-				AttesterSlashings: []*ethpb.AttesterSlashing{},
-				Attestations:      []*ethpb.Attestation{},
-				Deposits:          []*ethpb.Deposit{},
-				VoluntaryExits:    []*ethpb.SignedVoluntaryExit{},
-				SyncAggregate: &ethpb.SyncAggregate{
-					SyncCommitteeBits:      make([]byte, 64),
-					SyncCommitteeSignature: make([]byte, 96),
-				},
-				ExecutionPayload: &v1.ExecutionPayload{
-					ParentHash:    make([]byte, 32),
-					FeeRecipient:  make([]byte, 20),
-					StateRoot:     make([]byte, 32),
-					ReceiptsRoot:  make([]byte, 32),
-					LogsBloom:     make([]byte, 256),
-					BlockNumber:   0,
-					GasLimit:      0,
-					GasUsed:       0,
-					Timestamp:     0,
-					ExtraData:     make([]byte, 32),
-					BaseFeePerGas: make([]byte, 32),
-					BlockHash:     make([]byte, 32),
-					Transactions:  make([][]byte, 0),
-					PrevRandao:    make([]byte, 32),
-				},
-			},
-		},
-		Signature: make([]byte, 96),
-	}
+func signedTestBlindedBlockBellatrix(t *testing.T, slot types.Slot) interfaces.SignedBeaconBlock {
+	b := util.NewBlindedBeaconBlockBellatrix()
+	b.Block.Slot = slot
+	s, err := wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	return s
 }

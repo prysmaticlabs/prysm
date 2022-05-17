@@ -45,6 +45,7 @@ func TestV1Alpha1SignedContributionAndProofToV2(t *testing.T) {
 	assert.DeepEqual(t, bitfield.NewBitvector128(), contrib.AggregationBits)
 	assert.DeepEqual(t, signature, contrib.Signature)
 }
+
 func Test_V1Alpha1BeaconBlockAltairToV2(t *testing.T) {
 	alphaBlock := util.HydrateBeaconBlockAltair(&ethpbalpha.BeaconBlockAltair{})
 	alphaBlock.Slot = slot
