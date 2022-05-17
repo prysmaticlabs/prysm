@@ -368,7 +368,6 @@ func (r *testRunner) runEvaluators(conns []*grpc.ClientConn, tickingStartTime ti
 func (r *testRunner) testDepositsAndTx(ctx context.Context, g *errgroup.Group,
 	keystorePath string, requiredNodes []e2etypes.ComponentRunner) {
 
-	/// using a shallow copy so I don't mess up something else by changing web3signer setting
 	shallowCopyConfig := *r.config
 	minGenesisActiveCount := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
 	// prysm with web3signer doesn't support deposits right now ///
