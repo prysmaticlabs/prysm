@@ -524,9 +524,8 @@ func TestValidateBeaconBlockPubSub_Syncing(t *testing.T) {
 		},
 	}
 	res, err := r.validateBeaconBlockPubSub(ctx, "", m)
-	_ = err
-	result := res == pubsub.ValidationAccept
-	assert.Equal(t, false, result)
+	assert.NoError(t, err)
+	assert.Equal(t, res, pubsub.ValidationIgnore, "block is ignored until fully synced")
 }
 
 func TestValidateBeaconBlockPubSub_AcceptBlocksFromNearFuture(t *testing.T) {
