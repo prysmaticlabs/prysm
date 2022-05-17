@@ -781,22 +781,22 @@ func unmarshalFromURL(ctx context.Context, from string, to interface{}) error {
 }
 
 func unmarshalFromFile(ctx context.Context, from string, to interface{}) error {
-	b, err := os.ReadFile(from)
+	if ctx == nil {
+		return errors.New("node: nil context passed to unmarshalFromFile")
+	}
+	cleanpath := filepath.Clean(from)
+	fileExtension := filepath.Ext(cleanpath)
+	if fileExtension != ".json" && fileExtension != ".yaml" {
+		return errors.Errorf("unsupported file extension %s , (ex. '.json','.yaml')", fileExtension)
+	}
+
+	b, err := os.ReadFile(cleanpath)
 	if err != nil {
 		return errors.Wrap(err, "failed to open file")
 	}
 
-	switch filepath.Ext(from) {
-	case ".json":
-		if err := json.Unmarshal(b, to); err != nil {
-			return errors.Wrap(err, "failed to unmarshal json file")
-		}
-	case ".yml", ".yaml":
-		if err := yaml.Unmarshal(b, to); err != nil {
-			return errors.Wrap(err, "failed to unmarshal yaml file")
-		}
-	default:
-		return errors.Errorf("unsupported file extension %s , (ex. '.json','.yaml')", filepath.Ext(from))
+	if err := yaml.Unmarshal(b, to); err != nil {
+		return errors.Wrap(err, "failed to unmarshal yaml file")
 	}
 
 	return nil
