@@ -34,6 +34,14 @@ var (
 		Name: "remote_web3signer_block_v2_sign_requests_total",
 		Help: "Total number of block v2 sign requests",
 	})
+	blockV3SignRequestsTotal = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "remote_web3signer_block_v3_sign_requests_total",
+		Help: "Total number of block v3 sign requests",
+	})
+	blindedblockV3SignRequestsTotal = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "remote_web3signer_blinded_block_v3_sign_requests_total",
+		Help: "Total number of blinded block v3 sign requests",
+	})
 	randaoRevealSignRequestsTotal = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "remote_web3signer_randao_reveal_sign_requests_total",
 		Help: "Total number of randao reveal sign requests",

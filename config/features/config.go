@@ -116,6 +116,13 @@ func configureTestnet(ctx *cli.Context) error {
 		if err := params.SetActive(params.PraterConfig().Copy()); err != nil {
 			return err
 		}
+		params.UsePraterNetworkConfig()
+	} else if ctx.Bool(RopstenTestnet.Name) {
+		log.Warn("Running on the Ropsten Beacon Chain Testnet")
+		if err := params.SetActive(params.RopstenConfig().Copy()); err != nil {
+			return err
+		}
+		params.UseRopstenNetworkConfig()
 	} else {
 		log.Warn("Running on Ethereum Consensus Mainnet")
 		if err := params.SetActive(params.MainnetConfig().Copy()); err != nil {

@@ -35,6 +35,7 @@ var Commands = &cli.Command{
 				flags.SkipMnemonic25thWordCheckFlag,
 				features.Mainnet,
 				features.PraterTestnet,
+				features.RopstenTestnet,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
@@ -66,6 +67,7 @@ var Commands = &cli.Command{
 				flags.RemoteSignerCACertPathFlag,
 				features.Mainnet,
 				features.PraterTestnet,
+				features.RopstenTestnet,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
@@ -96,6 +98,7 @@ var Commands = &cli.Command{
 				flags.SkipMnemonic25thWordCheckFlag,
 				features.Mainnet,
 				features.PraterTestnet,
+				features.RopstenTestnet,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {

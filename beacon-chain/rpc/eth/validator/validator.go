@@ -348,6 +348,76 @@ func (vs *Server) ProduceBlockV2(ctx context.Context, req *ethpbv1.ProduceBlockR
 	return nil, status.Error(codes.InvalidArgument, "Unsupported block type")
 }
 
+// ProduceBlockV2SSZ requests the beacon node to produce a valid unsigned beacon block, which can then be signed by a proposer and submitted.
+//
+// The produced block is in SSZ form.
+func (vs *Server) ProduceBlockV2SSZ(ctx context.Context, req *ethpbv1.ProduceBlockRequest) (*ethpbv2.SSZContainer, error) {
+	_, span := trace.StartSpan(ctx, "validator.ProduceBlockV2SSZ")
+	defer span.End()
+
+	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher); err != nil {
+		// We simply return the error because it's already a gRPC error.
+		return nil, err
+	}
+
+	v1alpha1req := &ethpbalpha.BlockRequest{
+		Slot:         req.Slot,
+		RandaoReveal: req.RandaoReveal,
+		Graffiti:     req.Graffiti,
+	}
+	v1alpha1resp, err := vs.V1Alpha1Server.GetBeaconBlock(ctx, v1alpha1req)
+	if err != nil {
+		// We simply return err because it's already of a gRPC error type.
+		return nil, err
+	}
+	phase0Block, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Phase0)
+	if ok {
+		block, err := migration.V1Alpha1ToV1Block(phase0Block.Phase0)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
+		}
+		sszBlock, err := block.MarshalSSZ()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not marshal block into SSZ format: %v", err)
+		}
+		return &ethpbv2.SSZContainer{
+			Version: ethpbv2.Version_PHASE0,
+			Data:    sszBlock,
+		}, nil
+	}
+	altairBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Altair)
+	if ok {
+		block, err := migration.V1Alpha1BeaconBlockAltairToV2(altairBlock.Altair)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
+		}
+		sszBlock, err := block.MarshalSSZ()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not marshal block into SSZ format: %v", err)
+		}
+		return &ethpbv2.SSZContainer{
+			Version: ethpbv2.Version_ALTAIR,
+			Data:    sszBlock,
+		}, nil
+	}
+	bellatrixBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Bellatrix)
+	if ok {
+		block, err := migration.V1Alpha1BeaconBlockBellatrixToV2(bellatrixBlock.Bellatrix)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
+		}
+		sszBlock, err := block.MarshalSSZ()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not marshal block into SSZ format: %v", err)
+		}
+		return &ethpbv2.SSZContainer{
+			Version: ethpbv2.Version_BELLATRIX,
+			Data:    sszBlock,
+		}, nil
+	}
+	return nil, status.Error(codes.InvalidArgument, "Unsupported block type")
+}
+
 // ProduceBlindedBlock requests the beacon node to produce a valid unsigned blinded beacon block,
 // which can then be signed by a proposer and submitted.
 //
@@ -408,6 +478,79 @@ func (vs *Server) ProduceBlindedBlock(ctx context.Context, req *ethpbv1.ProduceB
 			Data: &ethpbv2.BlindedBeaconBlockContainer{
 				Block: &ethpbv2.BlindedBeaconBlockContainer_BellatrixBlock{BellatrixBlock: block},
 			},
+		}, nil
+	}
+	return nil, status.Error(codes.InvalidArgument, "Unsupported block type")
+}
+
+// ProduceBlindedBlockSSZ requests the beacon node to produce a valid unsigned blinded beacon block,
+// which can then be signed by a proposer and submitted.
+//
+// The produced block is in SSZ form.
+//
+// Pre-Bellatrix, this endpoint will return a regular block.
+func (vs *Server) ProduceBlindedBlockSSZ(ctx context.Context, req *ethpbv1.ProduceBlockRequest) (*ethpbv2.SSZContainer, error) {
+	ctx, span := trace.StartSpan(ctx, "validator.ProduceBlindedBlockSSZ")
+	defer span.End()
+
+	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher); err != nil {
+		// We simply return the error because it's already a gRPC error.
+		return nil, err
+	}
+
+	v1alpha1req := &ethpbalpha.BlockRequest{
+		Slot:         req.Slot,
+		RandaoReveal: req.RandaoReveal,
+		Graffiti:     req.Graffiti,
+	}
+	v1alpha1resp, err := vs.V1Alpha1Server.GetBeaconBlock(ctx, v1alpha1req)
+	if err != nil {
+		// We simply return err because it's already of a gRPC error type.
+		return nil, err
+	}
+	phase0Block, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Phase0)
+	if ok {
+		block, err := migration.V1Alpha1ToV1Block(phase0Block.Phase0)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
+		}
+		sszBlock, err := block.MarshalSSZ()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not marshal block into SSZ format: %v", err)
+		}
+		return &ethpbv2.SSZContainer{
+			Version: ethpbv2.Version_PHASE0,
+			Data:    sszBlock,
+		}, nil
+	}
+	altairBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Altair)
+	if ok {
+		block, err := migration.V1Alpha1BeaconBlockAltairToV2(altairBlock.Altair)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
+		}
+		sszBlock, err := block.MarshalSSZ()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not marshal block into SSZ format: %v", err)
+		}
+		return &ethpbv2.SSZContainer{
+			Version: ethpbv2.Version_ALTAIR,
+			Data:    sszBlock,
+		}, nil
+	}
+	bellatrixBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Bellatrix)
+	if ok {
+		block, err := migration.V1Alpha1BeaconBlockBellatrixToV2Blinded(bellatrixBlock.Bellatrix)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
+		}
+		sszBlock, err := block.MarshalSSZ()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not marshal block into SSZ format: %v", err)
+		}
+		return &ethpbv2.SSZContainer{
+			Version: ethpbv2.Version_BELLATRIX,
+			Data:    sszBlock,
 		}, nil
 	}
 	return nil, status.Error(codes.InvalidArgument, "Unsupported block type")

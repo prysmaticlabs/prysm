@@ -29,19 +29,23 @@ var Commands = &cli.Command{
 				flags.DeletePublicKeysFlag,
 				features.Mainnet,
 				features.PraterTestnet,
+				features.RopstenTestnet,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
 				if err := cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags); err != nil {
 					return err
 				}
-				return tos.VerifyTosAcceptedOrPrompt(cliCtx)
-			},
-			Action: func(cliCtx *cli.Context) error {
+				if err := tos.VerifyTosAcceptedOrPrompt(cliCtx); err != nil {
+					return err
+				}
 				if err := features.ConfigureValidator(cliCtx); err != nil {
 					return err
 				}
-				if err := accounts.DeleteAccountCli(cliCtx); err != nil {
+				return nil
+			},
+			Action: func(cliCtx *cli.Context) error {
+				if err := accountsDelete(cliCtx); err != nil {
 					log.Fatalf("Could not delete account: %v", err)
 				}
 				return nil
@@ -64,6 +68,7 @@ var Commands = &cli.Command{
 				flags.GrpcRetryDelayFlag,
 				features.Mainnet,
 				features.PraterTestnet,
+				features.RopstenTestnet,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
@@ -99,6 +104,7 @@ var Commands = &cli.Command{
 				flags.BackupPasswordFile,
 				features.Mainnet,
 				features.PraterTestnet,
+				features.RopstenTestnet,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
@@ -128,6 +134,7 @@ var Commands = &cli.Command{
 				flags.ImportPrivateKeyFileFlag,
 				features.Mainnet,
 				features.PraterTestnet,
+				features.RopstenTestnet,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
@@ -163,6 +170,7 @@ var Commands = &cli.Command{
 				flags.ExitAllFlag,
 				features.Mainnet,
 				features.PraterTestnet,
+				features.RopstenTestnet,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
