@@ -5,8 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	v1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"io"
 	"net"
 	"net/http"
@@ -14,16 +12,19 @@ import (
 	"text/template"
 	"time"
 
+	v1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	log "github.com/sirupsen/logrus"
 )
 
 const (
-	getExecHeaderPath       = "/eth/v1/builder/header/{{.Slot}}/{{.ParentHash}}/{{.Pubkey}}"
-	getStatus                 = "/eth/v1/builder/status"
+	getExecHeaderPath          = "/eth/v1/builder/header/{{.Slot}}/{{.ParentHash}}/{{.Pubkey}}"
+	getStatus                  = "/eth/v1/builder/status"
 	postBlindedBeaconBlockPath = "/eth/v1/builder/blinded_blocks"
-	postRegisterValidatorPath = "/eth/v1/builder/validators"
+	postRegisterValidatorPath  = "/eth/v1/builder/validators"
 )
 
 var ErrMalformedHostname = errors.New("hostname must include port, separated by one colon, like example.com:3500")
@@ -83,13 +84,7 @@ func (c *Client) NodeURL() string {
 
 type reqOption func(*http.Request)
 
-func withSSZEncoding() reqOption {
-	return func(req *http.Request) {
-		req.Header.Set("Accept", "application/octet-stream")
-	}
-}
-
-// do is a generic, opinionated GET function to reduce boilerplate amongst the getters in this package.
+// do is a generic, opinionated GET function to reduce boilerplate amongst the getters in this packageapi/client/builder/types.go.
 func (c *Client) do(ctx context.Context, method string, path string, body io.Reader, opts ...reqOption) ([]byte, error) {
 	u := c.baseURL.ResolveReference(&url.URL{Path: path})
 	log.Printf("requesting %s", u.String())
@@ -118,15 +113,16 @@ func (c *Client) do(ctx context.Context, method string, path string, body io.Rea
 }
 
 var execHeaderTemplate = template.Must(template.New("").Parse(getExecHeaderPath))
+
 func execHeaderPath(slot types.Slot, parentHash [32]byte, pubkey [48]byte) (string, error) {
-	v := struct{
-		Slot types.Slot
+	v := struct {
+		Slot       types.Slot
 		ParentHash string
-		Pubkey string
+		Pubkey     string
 	}{
-		Slot: slot,
+		Slot:       slot,
 		ParentHash: fmt.Sprintf("%#x", parentHash),
-		Pubkey: fmt.Sprintf("%#x", pubkey),
+		Pubkey:     fmt.Sprintf("%#x", pubkey),
 	}
 	b := bytes.NewBuffer(nil)
 	err := execHeaderTemplate.Execute(b, v)
