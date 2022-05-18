@@ -988,13 +988,14 @@ func TestValidateBeaconBlockPubSub_InvalidParentBlock(t *testing.T) {
 	assert.Equal(t, res, pubsub.ValidationIgnore, "block with invalid parent should be ignored")
 }
 
-func TestValidateBeaconBlockPubSub_RejectEvilBlocksFromFuture(t *testing.T) {
+func TestValidateBeaconBlockPubSub_RejectBlocksFromBadParent(t *testing.T) {
 	db := dbtest.SetupDB(t)
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 
 	beaconState, privKeys := util.DeterministicGenesisState(t, 100)
 	parentBlock := util.NewBeaconBlock()
+	parentBlock.Block.ParentRoot = bytesutil.PadTo([]byte("foo"), 32)
 	wsb, err := wrapper.WrappedSignedBeaconBlock(parentBlock)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, wsb))
@@ -1050,6 +1051,7 @@ func TestValidateBeaconBlockPubSub_RejectEvilBlocksFromFuture(t *testing.T) {
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 	}
+	r.setBadBlock(ctx, bytesutil.ToBytes32(msg.Block.ParentRoot))
 
 	buf := new(bytes.Buffer)
 	_, err = p.Encoding().EncodeGossip(buf, msg)
@@ -1065,8 +1067,8 @@ func TestValidateBeaconBlockPubSub_RejectEvilBlocksFromFuture(t *testing.T) {
 		},
 	}
 	res, err := r.validateBeaconBlockPubSub(ctx, "", m)
-	assert.NoError(t, err)
-	assert.Equal(t, res, pubsub.ValidationIgnore, "block from the future should be ignored")
+	assert.ErrorContains(t, "invalid parent", err)
+	assert.Equal(t, res, pubsub.ValidationReject)
 }
 
 func TestService_setBadBlock_DoesntSetWithContextErr(t *testing.T) {
