@@ -240,10 +240,7 @@ func (r *testRunner) run() {
 			return errors.New("chain cannot start")
 		}
 
-		if !r.config.UseWeb3RemoteSigner {
-			// web3signer doesn't support deposits at the time.
-			r.testDepositsAndTx(ctx, g, eth1Miner.KeystorePath(), []e2etypes.ComponentRunner{beaconNodes})
-		}
+		r.testDepositsAndTx(ctx, g, eth1Miner.KeystorePath(), []e2etypes.ComponentRunner{beaconNodes})
 
 		// Create GRPC connection to beacon nodes.
 		conns, closeConns, err := helpers.NewLocalConnections(ctx, e2e.TestParams.BeaconNodeCount)
@@ -371,6 +368,8 @@ func (r *testRunner) runEvaluators(conns []*grpc.ClientConn, tickingStartTime ti
 func (r *testRunner) testDepositsAndTx(ctx context.Context, g *errgroup.Group,
 	keystorePath string, requiredNodes []e2etypes.ComponentRunner) {
 	minGenesisActiveCount := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
+	// prysm web3signer doesn't support deposits
+	r.config.UseWeb3RemoteSigner = false
 	depositCheckValidator := components.NewValidatorNode(r.config, int(e2e.DepositCount), e2e.TestParams.BeaconNodeCount, minGenesisActiveCount)
 	g.Go(func() error {
 		if err := helpers.ComponentsStarted(ctx, requiredNodes); err != nil {
