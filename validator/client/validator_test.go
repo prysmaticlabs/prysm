@@ -1718,7 +1718,7 @@ func TestValidator_UdpateFeeRecipient(t *testing.T) {
 			pubkeys, err := km.FetchValidatingPublicKeys(ctx)
 			require.NoError(t, err)
 			if tt.feeRecipientMap != nil {
-				feeRecipients, err := v.feeRecipients(ctx, pubkeys)
+				feeRecipients, err := v.buildValidatorRequests(ctx, pubkeys)
 				require.NoError(t, err)
 				for _, recipient := range feeRecipients {
 					require.Equal(t, strings.ToLower(tt.feeRecipientMap[recipient.ValidatorIndex]), strings.ToLower(hexutil.Encode(recipient.FeeRecipient)))

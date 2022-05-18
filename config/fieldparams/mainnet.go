@@ -24,5 +24,5 @@ const (
 	LogsBloomLength                 = 256                                          // LogsBloomLength defines the byte length of a logs bloom.
 	VersionLength                   = 4                                            // VersionLength defines the byte length of a fork version number.
 	EthBurnAddressHex               = "0x0000000000000000000000000000000000000000" // EthBurnAddressHex defines the hex encoded address of the eth1.0 burn contract.
-	DefaultBuilderGasLimit          = 30000000                                     // BuilderGasLimit is the default gas limit sent to the Builder API if not provided by the user.
+	DefaultBuilderGasLimit          = uint64(30000000)                             // BuilderGasLimit is the default gas limit sent to the Builder API if not provided by the user.
 )
