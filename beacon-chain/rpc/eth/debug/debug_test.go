@@ -157,6 +157,7 @@ func TestGetBeaconStateSSZV2(t *testing.T) {
 		assert.NotNil(t, resp)
 
 		assert.DeepEqual(t, sszState, resp.Data)
+		assert.Equal(t, ethpbv2.Version_PHASE0, resp.Version)
 	})
 	t.Run("Altair", func(t *testing.T) {
 		fakeState, _ := util.DeterministicGenesisStateAltair(t, 1)
@@ -175,6 +176,7 @@ func TestGetBeaconStateSSZV2(t *testing.T) {
 		assert.NotNil(t, resp)
 
 		assert.DeepEqual(t, sszState, resp.Data)
+		assert.Equal(t, ethpbv2.Version_ALTAIR, resp.Version)
 	})
 	t.Run("Bellatrix", func(t *testing.T) {
 		fakeState, _ := util.DeterministicGenesisStateBellatrix(t, 1)
@@ -193,6 +195,7 @@ func TestGetBeaconStateSSZV2(t *testing.T) {
 		assert.NotNil(t, resp)
 
 		assert.DeepEqual(t, sszState, resp.Data)
+		assert.Equal(t, ethpbv2.Version_BELLATRIX, resp.Version)
 	})
 }
 

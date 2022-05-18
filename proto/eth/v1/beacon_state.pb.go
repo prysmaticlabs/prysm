@@ -578,53 +578,6 @@ func (x *BeaconStateResponse) GetData() *BeaconState {
 	return nil
 }
 
-type BeaconStateSSZResponse struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Data []byte `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
-}
-
-func (x *BeaconStateSSZResponse) Reset() {
-	*x = BeaconStateSSZResponse{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_eth_v1_beacon_state_proto_msgTypes[7]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *BeaconStateSSZResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*BeaconStateSSZResponse) ProtoMessage() {}
-
-func (x *BeaconStateSSZResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_eth_v1_beacon_state_proto_msgTypes[7]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use BeaconStateSSZResponse.ProtoReflect.Descriptor instead.
-func (*BeaconStateSSZResponse) Descriptor() ([]byte, []int) {
-	return file_proto_eth_v1_beacon_state_proto_rawDescGZIP(), []int{7}
-}
-
-func (x *BeaconStateSSZResponse) GetData() []byte {
-	if x != nil {
-		return x.Data
-	}
-	return nil
-}
-
 var File_proto_eth_v1_beacon_state_proto protoreflect.FileDescriptor
 
 var file_proto_eth_v1_beacon_state_proto_rawDesc = []byte{
@@ -809,18 +762,16 @@ var file_proto_eth_v1_beacon_state_proto_rawDesc = []byte{
 	0x61, 0x74, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x30, 0x0a, 0x04, 0x64,
 	0x61, 0x74, 0x61, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1c, 0x2e, 0x65, 0x74, 0x68, 0x65,
 	0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x31, 0x2e, 0x42, 0x65, 0x61, 0x63,
-	0x6f, 0x6e, 0x53, 0x74, 0x61, 0x74, 0x65, 0x52, 0x04, 0x64, 0x61, 0x74, 0x61, 0x22, 0x2c, 0x0a,
-	0x16, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x53, 0x74, 0x61, 0x74, 0x65, 0x53, 0x53, 0x5a, 0x52,
-	0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x12, 0x0a, 0x04, 0x64, 0x61, 0x74, 0x61, 0x18,
-	0x01, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x04, 0x64, 0x61, 0x74, 0x61, 0x42, 0x7a, 0x0a, 0x13, 0x6f,
-	0x72, 0x67, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e,
-	0x76, 0x31, 0x42, 0x10, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x53, 0x74, 0x61, 0x74, 0x65, 0x50,
-	0x72, 0x6f, 0x74, 0x6f, 0x50, 0x01, 0x5a, 0x2b, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63,
-	0x6f, 0x6d, 0x2f, 0x70, 0x72, 0x79, 0x73, 0x6d, 0x61, 0x74, 0x69, 0x63, 0x6c, 0x61, 0x62, 0x73,
-	0x2f, 0x70, 0x72, 0x79, 0x73, 0x6d, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2f, 0x65, 0x74, 0x68,
-	0x2f, 0x76, 0x31, 0xaa, 0x02, 0x0f, 0x45, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x45,
-	0x74, 0x68, 0x2e, 0x56, 0x31, 0xca, 0x02, 0x0f, 0x45, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d,
-	0x5c, 0x45, 0x74, 0x68, 0x5c, 0x76, 0x31, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x6f, 0x6e, 0x53, 0x74, 0x61, 0x74, 0x65, 0x52, 0x04, 0x64, 0x61, 0x74, 0x61, 0x42, 0x7a, 0x0a,
+	0x13, 0x6f, 0x72, 0x67, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74,
+	0x68, 0x2e, 0x76, 0x31, 0x42, 0x10, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x53, 0x74, 0x61, 0x74,
+	0x65, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x50, 0x01, 0x5a, 0x2b, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62,
+	0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x70, 0x72, 0x79, 0x73, 0x6d, 0x61, 0x74, 0x69, 0x63, 0x6c, 0x61,
+	0x62, 0x73, 0x2f, 0x70, 0x72, 0x79, 0x73, 0x6d, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2f, 0x65,
+	0x74, 0x68, 0x2f, 0x76, 0x31, 0xaa, 0x02, 0x0f, 0x45, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d,
+	0x2e, 0x45, 0x74, 0x68, 0x2e, 0x56, 0x31, 0xca, 0x02, 0x0f, 0x45, 0x74, 0x68, 0x65, 0x72, 0x65,
+	0x75, 0x6d, 0x5c, 0x45, 0x74, 0x68, 0x5c, 0x76, 0x31, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f,
+	0x33,
 }
 
 var (
@@ -835,7 +786,7 @@ func file_proto_eth_v1_beacon_state_proto_rawDescGZIP() []byte {
 	return file_proto_eth_v1_beacon_state_proto_rawDescData
 }
 
-var file_proto_eth_v1_beacon_state_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_proto_eth_v1_beacon_state_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_proto_eth_v1_beacon_state_proto_goTypes = []interface{}{
 	(*BeaconState)(nil),             // 0: ethereum.eth.v1.BeaconState
 	(*PendingAttestation)(nil),      // 1: ethereum.eth.v1.PendingAttestation
@@ -844,25 +795,24 @@ var file_proto_eth_v1_beacon_state_proto_goTypes = []interface{}{
 	(*ForkChoiceHeadsResponse)(nil), // 4: ethereum.eth.v1.ForkChoiceHeadsResponse
 	(*ForkChoiceHead)(nil),          // 5: ethereum.eth.v1.ForkChoiceHead
 	(*BeaconStateResponse)(nil),     // 6: ethereum.eth.v1.BeaconStateResponse
-	(*BeaconStateSSZResponse)(nil),  // 7: ethereum.eth.v1.BeaconStateSSZResponse
-	(*BeaconBlockHeader)(nil),       // 8: ethereum.eth.v1.BeaconBlockHeader
-	(*Eth1Data)(nil),                // 9: ethereum.eth.v1.Eth1Data
-	(*Validator)(nil),               // 10: ethereum.eth.v1.Validator
-	(*Checkpoint)(nil),              // 11: ethereum.eth.v1.Checkpoint
-	(*AttestationData)(nil),         // 12: ethereum.eth.v1.AttestationData
+	(*BeaconBlockHeader)(nil),       // 7: ethereum.eth.v1.BeaconBlockHeader
+	(*Eth1Data)(nil),                // 8: ethereum.eth.v1.Eth1Data
+	(*Validator)(nil),               // 9: ethereum.eth.v1.Validator
+	(*Checkpoint)(nil),              // 10: ethereum.eth.v1.Checkpoint
+	(*AttestationData)(nil),         // 11: ethereum.eth.v1.AttestationData
 }
 var file_proto_eth_v1_beacon_state_proto_depIdxs = []int32{
 	3,  // 0: ethereum.eth.v1.BeaconState.fork:type_name -> ethereum.eth.v1.Fork
-	8,  // 1: ethereum.eth.v1.BeaconState.latest_block_header:type_name -> ethereum.eth.v1.BeaconBlockHeader
-	9,  // 2: ethereum.eth.v1.BeaconState.eth1_data:type_name -> ethereum.eth.v1.Eth1Data
-	9,  // 3: ethereum.eth.v1.BeaconState.eth1_data_votes:type_name -> ethereum.eth.v1.Eth1Data
-	10, // 4: ethereum.eth.v1.BeaconState.validators:type_name -> ethereum.eth.v1.Validator
+	7,  // 1: ethereum.eth.v1.BeaconState.latest_block_header:type_name -> ethereum.eth.v1.BeaconBlockHeader
+	8,  // 2: ethereum.eth.v1.BeaconState.eth1_data:type_name -> ethereum.eth.v1.Eth1Data
+	8,  // 3: ethereum.eth.v1.BeaconState.eth1_data_votes:type_name -> ethereum.eth.v1.Eth1Data
+	9,  // 4: ethereum.eth.v1.BeaconState.validators:type_name -> ethereum.eth.v1.Validator
 	1,  // 5: ethereum.eth.v1.BeaconState.previous_epoch_attestations:type_name -> ethereum.eth.v1.PendingAttestation
 	1,  // 6: ethereum.eth.v1.BeaconState.current_epoch_attestations:type_name -> ethereum.eth.v1.PendingAttestation
-	11, // 7: ethereum.eth.v1.BeaconState.previous_justified_checkpoint:type_name -> ethereum.eth.v1.Checkpoint
-	11, // 8: ethereum.eth.v1.BeaconState.current_justified_checkpoint:type_name -> ethereum.eth.v1.Checkpoint
-	11, // 9: ethereum.eth.v1.BeaconState.finalized_checkpoint:type_name -> ethereum.eth.v1.Checkpoint
-	12, // 10: ethereum.eth.v1.PendingAttestation.data:type_name -> ethereum.eth.v1.AttestationData
+	10, // 7: ethereum.eth.v1.BeaconState.previous_justified_checkpoint:type_name -> ethereum.eth.v1.Checkpoint
+	10, // 8: ethereum.eth.v1.BeaconState.current_justified_checkpoint:type_name -> ethereum.eth.v1.Checkpoint
+	10, // 9: ethereum.eth.v1.BeaconState.finalized_checkpoint:type_name -> ethereum.eth.v1.Checkpoint
+	11, // 10: ethereum.eth.v1.PendingAttestation.data:type_name -> ethereum.eth.v1.AttestationData
 	5,  // 11: ethereum.eth.v1.ForkChoiceHeadsResponse.data:type_name -> ethereum.eth.v1.ForkChoiceHead
 	0,  // 12: ethereum.eth.v1.BeaconStateResponse.data:type_name -> ethereum.eth.v1.BeaconState
 	13, // [13:13] is the sub-list for method output_type
@@ -965,18 +915,6 @@ func file_proto_eth_v1_beacon_state_proto_init() {
 				return nil
 			}
 		}
-		file_proto_eth_v1_beacon_state_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*BeaconStateSSZResponse); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -984,7 +922,7 @@ func file_proto_eth_v1_beacon_state_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_proto_eth_v1_beacon_state_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   8,
+			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
