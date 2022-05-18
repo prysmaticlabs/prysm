@@ -291,7 +291,7 @@ func (r *testRunner) testDoppelGangerProtection(ctx context.Context) error {
 }
 
 func (r *testRunner) defaultEndToEndRun() error {
-	t, config := r.t, r.config
+	t, config, ctx, g := r.t, r.config, r.comHandler.ctx, r.comHandler.group
 	// When everything is done, cancel parent context (will stop all spawned nodes).
 	defer func() {
 		log.Info("All E2E evaluations are finished, cleaning up")
@@ -299,7 +299,7 @@ func (r *testRunner) defaultEndToEndRun() error {
 	}()
 
 	// Wait for all required nodes to start.
-	ctxAllNodesReady, cancel := context.WithTimeout(r.comHandler.ctx, allNodesStartTimeout)
+	ctxAllNodesReady, cancel := context.WithTimeout(ctx, allNodesStartTimeout)
 	defer cancel()
 	if err := helpers.ComponentsStarted(ctxAllNodesReady, r.comHandler.required()); err != nil {
 		return errors.Wrap(err, "components take too long to start")
@@ -336,10 +336,10 @@ func (r *testRunner) defaultEndToEndRun() error {
 		return errors.New("incorrect component type")
 	}
 
-	r.testDepositsAndTx(r.comHandler.ctx, r.comHandler.group, eth1Miner.KeystorePath(), []e2etypes.ComponentRunner{beaconNodes})
+	r.testDepositsAndTx(ctx, g, eth1Miner.KeystorePath(), []e2etypes.ComponentRunner{beaconNodes})
 
 	// Create GRPC connection to beacon nodes.
-	conns, closeConns, err := helpers.NewLocalConnections(r.comHandler.ctx, e2e.TestParams.BeaconNodeCount)
+	conns, closeConns, err := helpers.NewLocalConnections(ctx, e2e.TestParams.BeaconNodeCount)
 	require.NoError(t, err, "Cannot create local connections")
 	defer closeConns()
 
@@ -358,19 +358,19 @@ func (r *testRunner) defaultEndToEndRun() error {
 	if !config.TestSync {
 		return nil
 	}
-	syncConn, err := r.testBeaconChainSync(r.comHandler.ctx, r.comHandler.group, conns, tickingStartTime, bootNode.ENR(), eth1Miner.ENR())
+	syncConn, err := r.testBeaconChainSync(ctx, g, conns, tickingStartTime, bootNode.ENR(), eth1Miner.ENR())
 	if err != nil {
 		return errors.Wrap(err, "beacon chain sync test failed")
 	}
 	conns = append(conns, syncConn)
-	if err := r.testDoppelGangerProtection(r.comHandler.ctx); err != nil {
+	if err := r.testDoppelGangerProtection(ctx); err != nil {
 		return errors.Wrap(err, "doppel ganger protection check failed")
 	}
 
 	if config.ExtraEpochs > 0 {
 		secondsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
 		dl := time.Now().Add(time.Second * time.Duration(config.ExtraEpochs*secondsPerEpoch))
-		if err := r.waitUntilEpoch(r.comHandler.ctx, types.Epoch(config.EpochsToRun+config.ExtraEpochs), conns[0], dl); err != nil {
+		if err := r.waitUntilEpoch(ctx, types.Epoch(config.EpochsToRun+config.ExtraEpochs), conns[0], dl); err != nil {
 			return errors.Wrap(err, "error while waiting for ExtraEpochs")
 		}
 		syncEvaluators := []e2etypes.Evaluator{ev.FinishedSyncing, ev.AllNodesHaveSameHead}
@@ -384,7 +384,7 @@ func (r *testRunner) defaultEndToEndRun() error {
 }
 
 func (r *testRunner) scenarioRun() error {
-	t, config := r.t, r.config
+	t, config, ctx := r.t, r.config, r.comHandler.ctx
 	// When everything is done, cancel parent context (will stop all spawned nodes).
 	defer func() {
 		log.Info("All E2E evaluations are finished, cleaning up")
@@ -392,7 +392,7 @@ func (r *testRunner) scenarioRun() error {
 	}()
 
 	// Wait for all required nodes to start.
-	ctxAllNodesReady, cancel := context.WithTimeout(r.comHandler.ctx, allNodesStartTimeout)
+	ctxAllNodesReady, cancel := context.WithTimeout(ctx, allNodesStartTimeout)
 	defer cancel()
 	if err := helpers.ComponentsStarted(ctxAllNodesReady, r.comHandler.required()); err != nil {
 		return errors.Wrap(err, "components take too long to start")
@@ -413,7 +413,7 @@ func (r *testRunner) scenarioRun() error {
 	r.waitForChainStart()
 
 	// Create GRPC connection to beacon nodes.
-	conns, closeConns, err := helpers.NewLocalConnections(r.comHandler.ctx, e2e.TestParams.BeaconNodeCount)
+	conns, closeConns, err := helpers.NewLocalConnections(ctx, e2e.TestParams.BeaconNodeCount)
 	require.NoError(t, err, "Cannot create local connections")
 	defer closeConns()
 
@@ -447,6 +447,27 @@ func (r *testRunner) singleNodeOffline(epoch uint64) bool {
 	return false
 }
 
+func (r *testRunner) singleNodeOfflineMulticlient(epoch uint64) bool {
+	switch epoch {
+	case 9:
+		require.NoError(r.t, r.comHandler.beaconNodes.PauseAtIndex(0))
+		require.NoError(r.t, r.comHandler.validatorNodes.PauseAtIndex(0))
+		require.NoError(r.t, r.comHandler.lighthouseBeaconNodes.PauseAtIndex(0))
+		require.NoError(r.t, r.comHandler.lighthouseValidatorNodes.PauseAtIndex(0))
+		return true
+	case 10:
+		require.NoError(r.t, r.comHandler.beaconNodes.ResumeAtIndex(0))
+		require.NoError(r.t, r.comHandler.validatorNodes.ResumeAtIndex(0))
+		require.NoError(r.t, r.comHandler.lighthouseBeaconNodes.ResumeAtIndex(0))
+		require.NoError(r.t, r.comHandler.lighthouseValidatorNodes.ResumeAtIndex(0))
+		return true
+	case 11, 12:
+		// Allow 2 epochs for the network to finalize again.
+		return true
+	}
+	return false
+}
+
 func (r *testRunner) eeOffline(epoch uint64) bool {
 	switch epoch {
 	case 9:
@@ -454,6 +475,23 @@ func (r *testRunner) eeOffline(epoch uint64) bool {
 		return true
 	case 10:
 		require.NoError(r.t, r.comHandler.eth1Miner.Resume())
+		return true
+	case 11, 12:
+		// Allow 2 epochs for the network to finalize again.
+		return true
+	}
+	return false
+}
+
+func (r *testRunner) allValidatorsOffline(epoch uint64) bool {
+	switch epoch {
+	case 9:
+		require.NoError(r.t, r.comHandler.validatorNodes.PauseAtIndex(0))
+		require.NoError(r.t, r.comHandler.validatorNodes.PauseAtIndex(1))
+		return true
+	case 10:
+		require.NoError(r.t, r.comHandler.validatorNodes.ResumeAtIndex(0))
+		require.NoError(r.t, r.comHandler.validatorNodes.ResumeAtIndex(1))
 		return true
 	case 11, 12:
 		// Allow 2 epochs for the network to finalize again.
