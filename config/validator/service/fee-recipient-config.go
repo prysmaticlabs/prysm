@@ -17,6 +17,7 @@ type FeeRecipientFileConfig struct {
 // FeeRecipient is set to an eth address in hex string format with 0x prefix.
 type FeeRecipientFileOptions struct {
 	FeeRecipient string `json:"fee_recipient" yaml:"fee_recipient"`
+	GasLimit     uint64 `json:"builder_fee_recipient_override" yaml:"builder_fee_recipient_override"`
 }
 
 // FeeRecipientConfig is a Prysm internal representation of the fee recipient config on the validator client.

@@ -974,6 +974,7 @@ func (v *validator) UpdateFeeRecipient(ctx context.Context, km keymanager.IKeyma
 		return err
 	}
 	log.Infoln("Successfully prepared beacon proposer with fee recipient to validator index mapping.")
+
 	return nil
 }
 
