@@ -15,41 +15,18 @@ import (
 
 // ValidateSync checks whether the node is currently syncing and returns an error if it is.
 // It also appends syncing info to gRPC headers.
-func ValidateSync(ctx context.Context, syncChecker sync.Checker, headFetcher blockchain.HeadFetcher, timeFetcher blockchain.TimeFetcher) error {
+func ValidateSync(ctx context.Context, syncChecker sync.Checker, headFetcher blockchain.HeadFetcher, timeFetcher blockchain.TimeFetcher, optimisticModeFetcher blockchain.OptimisticModeFetcher) error {
 	if !syncChecker.Syncing() {
 		return nil
 	}
 	headSlot := headFetcher.HeadSlot()
-
-	syncDetailsContainer := &syncDetailsContainer{
-		SyncDetails: &syncDetailsJson{
-			HeadSlot:     strconv.FormatUint(uint64(headSlot), 10),
-			SyncDistance: strconv.FormatUint(uint64(timeFetcher.CurrentSlot()-headSlot), 10),
-			IsSyncing:    true,
-		},
-	}
-	err := grpc.AppendCustomErrorHeader(ctx, syncDetailsContainer)
-	if err != nil {
-		return status.Errorf(
-			codes.Internal,
-			"Syncing to latest head, not ready to respond. Could not prepare sync details: %v",
-			err,
-		)
-	}
-	return status.Error(codes.Unavailable, "Syncing to latest head, not ready to respond")
-}
-
-func ValidateSyncWithOptimisticCheck(ctx context.Context, syncChecker sync.Checker, headFetcher blockchain.HeadFetcher, timeFetcher blockchain.TimeFetcher, optimisticModeFetcher blockchain.OptimisticModeFetcher) error {
-	if !syncChecker.Syncing() {
-		return nil
-	}
-	headSlot := headFetcher.HeadSlot()
+	isOptimistic := false
 
 	headState, err := headFetcher.HeadState(ctx)
 	if err != nil {
 		return status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
-	isOptimistic, err := IsOptimistic(ctx, headState, optimisticModeFetcher) // opModeFetcher comes from param
+	isOptimistic, err = IsOptimistic(ctx, headState, optimisticModeFetcher) // opModeFetcher comes from param
 	if err != nil {
 		return status.Errorf(codes.Internal, "Could not check optimistic status: %v", err)
 	}
@@ -62,6 +39,7 @@ func ValidateSyncWithOptimisticCheck(ctx context.Context, syncChecker sync.Check
 			IsOptimistic: isOptimistic,
 		},
 	}
+
 	err = grpc.AppendCustomErrorHeader(ctx, syncDetailsContainer)
 	if err != nil {
 		return status.Errorf(
