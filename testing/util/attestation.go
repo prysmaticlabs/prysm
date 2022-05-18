@@ -78,7 +78,7 @@ func GenerateAttestations(
 			if err != nil {
 				return nil, err
 			}
-			headState = state.BeaconState(genState)
+			headState = genState
 		case version.Altair:
 			pbState, err := v2.ProtobufBeaconState(bState.CloneInnerState())
 			if err != nil {
