@@ -240,7 +240,10 @@ func (r *testRunner) run() {
 			return errors.New("chain cannot start")
 		}
 
-		r.testDepositsAndTx(ctx, g, eth1Miner.KeystorePath(), []e2etypes.ComponentRunner{beaconNodes})
+		if !r.config.UseWeb3RemoteSigner {
+			// web3signer doesn't support deposits at the time.
+			r.testDepositsAndTx(ctx, g, eth1Miner.KeystorePath(), []e2etypes.ComponentRunner{beaconNodes})
+		}
 
 		// Create GRPC connection to beacon nodes.
 		conns, closeConns, err := helpers.NewLocalConnections(ctx, e2e.TestParams.BeaconNodeCount)
@@ -367,18 +370,14 @@ func (r *testRunner) runEvaluators(conns []*grpc.ClientConn, tickingStartTime ti
 // testDepositsAndTx runs tests when config.TestDeposits is enabled.
 func (r *testRunner) testDepositsAndTx(ctx context.Context, g *errgroup.Group,
 	keystorePath string, requiredNodes []e2etypes.ComponentRunner) {
-
-	shallowCopyConfig := *r.config
 	minGenesisActiveCount := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
-	// prysm with web3signer doesn't support deposits right now ///
-	shallowCopyConfig.UseWeb3RemoteSigner = false
-	depositCheckValidator := components.NewValidatorNode(&shallowCopyConfig, int(e2e.DepositCount), e2e.TestParams.BeaconNodeCount, minGenesisActiveCount)
+	depositCheckValidator := components.NewValidatorNode(r.config, int(e2e.DepositCount), e2e.TestParams.BeaconNodeCount, minGenesisActiveCount)
 	g.Go(func() error {
 		if err := helpers.ComponentsStarted(ctx, requiredNodes); err != nil {
 			return fmt.Errorf("deposit check validator node requires beacon nodes to run: %w", err)
 		}
 		go func() {
-			if shallowCopyConfig.TestDeposits {
+			if r.config.TestDeposits {
 				log.Info("Running deposit tests")
 				err := components.SendAndMineDeposits(keystorePath, int(e2e.DepositCount), minGenesisActiveCount, false /* partial */)
 				if err != nil {
@@ -387,7 +386,7 @@ func (r *testRunner) testDepositsAndTx(ctx context.Context, g *errgroup.Group,
 			}
 			r.testTxGeneration(ctx, g, keystorePath, []e2etypes.ComponentRunner{})
 		}()
-		if shallowCopyConfig.TestDeposits {
+		if r.config.TestDeposits {
 			return depositCheckValidator.Start(ctx)
 		}
 		return nil

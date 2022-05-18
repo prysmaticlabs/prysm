@@ -48,11 +48,8 @@ func e2eMinimal(t *testing.T, useWeb3RemoteSigner bool, extraEpochs uint64) {
 		ev.ValidatorsAreActive,
 		ev.ValidatorsParticipatingAtEpoch(2),
 		ev.FinalizationOccurs(3),
-		ev.PeersCheck,
-		ev.ProcessesDepositsInBlocks,
 		ev.VerifyBlockGraffiti,
-		ev.ActivatesDepositedValidators,
-		ev.DepositedValidatorsAreActive,
+		ev.PeersCheck,
 		ev.ProposeVoluntaryExit,
 		ev.ValidatorHasExited,
 		ev.ValidatorsVoteWithTheMajority,
@@ -65,6 +62,15 @@ func e2eMinimal(t *testing.T, useWeb3RemoteSigner bool, extraEpochs uint64) {
 		ev.AllNodesHaveSameHead,
 		ev.ValidatorSyncParticipation,
 		//ev.TransactionsPresent, TODO: Renable Transaction evaluator once it tx pool issues are fixed.
+	}
+	depositEvals := []types.Evaluator{
+		ev.ProcessesDepositsInBlocks,
+		ev.ActivatesDepositedValidators,
+		ev.DepositedValidatorsAreActive,
+	}
+	if !useWeb3RemoteSigner {
+		// web3signer doesn't currently support deposits
+		evals = append(evals, depositEvals...)
 	}
 	testConfig := &types.E2EConfig{
 		BeaconFlags: []string{
