@@ -196,6 +196,7 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 		}
 	}
 	log.WithField("elapsed", time.Since(start)).Warn("Finished responding to blocks by range request")
+	rpcBlocksByRangeResponseLatency.Observe(float64(time.Since(start).Milliseconds()))
 	// Return error in the event we have an invalid parent.
 	return err
 }

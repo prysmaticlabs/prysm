@@ -307,6 +307,10 @@ func (s *Service) ExecutionBlockByHash(ctx context.Context, hash common.Hash) (*
 func (s *Service) ExecutionBlockByHashWithTxs(ctx context.Context, hash common.Hash) (*pb.ExecutionBlockWithTxs, error) {
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.ExecutionBlockByHash")
 	defer span.End()
+	start := time.Now()
+	defer func() {
+		executionBlockByHashWithTxsLatency.Observe(float64(time.Since(start).Milliseconds()))
+	}()
 
 	result := &pb.ExecutionBlockWithTxs{}
 	err := s.rpcClient.CallContext(ctx, result, ExecutionBlockByHashMethod, hash, true /* no full transaction objects */)
@@ -324,6 +328,11 @@ func (s *Service) ReconstructFullBellatrixBlock(
 		blinded.Block.Body.ExecutionPayloadHeader == nil {
 		return nil, errors.New("nil blinded beacon block")
 	}
+	start := time.Now()
+	defer func() {
+		executionPayloadReconstructionLatency.Observe(float64(time.Since(start).Milliseconds()))
+		reconstructedExecutionPayloadCount.Add(1)
+	}()
 	header := blinded.Block.Body.ExecutionPayloadHeader
 	executionBlockHash := common.BytesToHash(header.BlockHash)
 	executionBlock, err := s.ExecutionBlockByHashWithTxs(ctx, executionBlockHash)
