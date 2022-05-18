@@ -42,6 +42,14 @@ type BlockV2AltairSignRequest struct {
 	BeaconBlock *BeaconBlockAltairBlockV2 `json:"beacon_block" validate:"required"`
 }
 
+// BlockV2BellatrixSignRequest is a request object for web3signer sign api for supporting Bellatrix fork.
+type BlockV2BellatrixSignRequest struct {
+	Type        string                       `json:"type" validate:"required"`
+	ForkInfo    *ForkInfo                    `json:"fork_info" validate:"required"`
+	SigningRoot string                       `json:"signingRoot"`
+	BeaconBlock *BeaconBlockBellatrixBlockV2 `json:"beacon_block" validate:"required"`
+}
+
 // BlockV2SignRequest is a request object for web3signer sign api.
 type BlockV2SignRequest struct {
 	Type        string              `json:"type" validate:"required"`
@@ -262,6 +270,12 @@ type BeaconBlockBodyAltair struct {
 	Deposits          []*Deposit             `json:"deposits"`
 	VoluntaryExits    []*SignedVoluntaryExit `json:"voluntary_exits"`
 	SyncAggregate     *SyncAggregate         `json:"sync_aggregate"`
+}
+
+// BeaconBlockBellatrixBlockV2 a field of BlockV2BellatrixSignRequest.
+type BeaconBlockBellatrixBlockV2 struct {
+	Version     string             `json:"version"`
+	BlockHeader *BeaconBlockHeader `json:"block_header"`
 }
 
 // SyncAggregate is a sub property of BeaconBlockBodyAltair.

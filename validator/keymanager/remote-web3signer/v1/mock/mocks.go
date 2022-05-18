@@ -8,6 +8,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/testing/util"
 	v1 "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/v1"
 )
 
@@ -326,6 +327,24 @@ func GetMockSignRequest(t string) *validatorpb.SignRequest {
 			},
 			SigningSlot: 0,
 		}
+	case "BLOCK_V2_BELLATRIX":
+		return &validatorpb.SignRequest{
+			PublicKey:       make([]byte, fieldparams.BLSPubkeyLength),
+			SigningRoot:     make([]byte, fieldparams.RootLength),
+			SignatureDomain: make([]byte, 4),
+			Object: &validatorpb.SignRequest_BlockV3{
+				BlockV3: util.HydrateBeaconBlockBellatrix(&eth.BeaconBlockBellatrix{}),
+			},
+		}
+	case "BLOCK_V2_BLINDED_BELLATRIX":
+		return &validatorpb.SignRequest{
+			PublicKey:       make([]byte, fieldparams.BLSPubkeyLength),
+			SigningRoot:     make([]byte, fieldparams.RootLength),
+			SignatureDomain: make([]byte, 4),
+			Object: &validatorpb.SignRequest_BlindedBlockV3{
+				BlindedBlockV3: util.HydrateBlindedBeaconBlockBellatrix(&eth.BlindedBeaconBlockBellatrix{}),
+			},
+		}
 	case "RANDAO_REVEAL":
 		return &validatorpb.SignRequest{
 			PublicKey:       make([]byte, fieldparams.BLSPubkeyLength),
@@ -457,6 +476,24 @@ func MockBlockV2AltairSignRequest() *v1.BlockV2AltairSignRequest {
 		BeaconBlock: &v1.BeaconBlockAltairBlockV2{
 			Version: "ALTAIR",
 			Block:   MockBeaconBlockAltair(),
+		},
+	}
+}
+
+func MockBlockV2BellatrixSignRequest(bodyRoot string) *v1.BlockV2BellatrixSignRequest {
+	return &v1.BlockV2BellatrixSignRequest{
+		Type:        "BLOCK_V2",
+		ForkInfo:    MockForkInfo(),
+		SigningRoot: hexutil.Encode(make([]byte, fieldparams.RootLength)),
+		BeaconBlock: &v1.BeaconBlockBellatrixBlockV2{
+			Version: "BELLATRIX",
+			BlockHeader: &v1.BeaconBlockHeader{
+				Slot:          "0",
+				ProposerIndex: "0",
+				ParentRoot:    hexutil.Encode(make([]byte, fieldparams.RootLength)),
+				StateRoot:     hexutil.Encode(make([]byte, fieldparams.RootLength)),
+				BodyRoot:      bodyRoot,
+			},
 		},
 	}
 }
