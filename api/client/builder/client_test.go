@@ -29,6 +29,9 @@ func TestClient_Status(t *testing.T) {
 	hc := &http.Client{
 		Transport: roundtrip(func(r *http.Request) (*http.Response, error) {
 			defer func() {
+				if r.Body == nil {
+					return
+				}
 				require.NoError(t, r.Body.Close())
 			}()
 			require.Equal(t, statusPath, r.URL.Path)
@@ -47,6 +50,9 @@ func TestClient_Status(t *testing.T) {
 	hc = &http.Client{
 		Transport: roundtrip(func(r *http.Request) (*http.Response, error) {
 			defer func() {
+				if r.Body == nil {
+					return
+				}
 				require.NoError(t, r.Body.Close())
 			}()
 			require.Equal(t, statusPath, r.URL.Path)

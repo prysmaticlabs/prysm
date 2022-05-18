@@ -76,8 +76,6 @@ var testExampleHeaderResponse = `{
 func TestExecutionHeaderResponseUnmarshal(t *testing.T) {
 	hr := &ExecHeaderResponse{}
 	require.NoError(t, json.Unmarshal([]byte(testExampleHeaderResponse), hr))
-	bidValue, err := hr.Data.Message.Value.MarshalText()
-	require.NoError(t, err)
 	cases := []struct {
 		expected string
 		actual   string
@@ -95,7 +93,7 @@ func TestExecutionHeaderResponseUnmarshal(t *testing.T) {
 		},
 		{
 			expected: "1",
-			actual:   string(bidValue),
+			actual:   hr.Data.Message.Value.String(),
 			name:     "ExecHeaderResponse.Value",
 		},
 		{
@@ -201,6 +199,9 @@ func TestExecutionHeaderResponseToProto(t *testing.T) {
 	require.NoError(t, err)
 	txRoot, err := hexutil.Decode("0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2")
 	require.NoError(t, err)
+	value := big.NewInt(0)
+	value, ok := value.SetString("1", 10)
+	require.Equal(t, true, ok)
 	expected := &eth.SignedBuilderBid{
 		Message: &eth.BuilderBid{
 			Header: &eth.ExecutionPayloadHeader{
@@ -221,7 +222,7 @@ func TestExecutionHeaderResponseToProto(t *testing.T) {
 				TransactionsRoot: txRoot,
 			},
 			// TODO assumes weird byte slice field
-			Value:  []byte(strconv.FormatUint(uint64(1), 10)),
+			Value:  value.Bytes(),
 			Pubkey: pubkey,
 		},
 		Signature: signature,
