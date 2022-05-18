@@ -4,9 +4,9 @@ import (
 	"flag"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/urfave/cli/v2"
 )
 
