@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -117,7 +118,18 @@ func configureExecutionSetting(cliCtx *cli.Context) error {
 	if !common.IsHexAddress(ha) {
 		return fmt.Errorf("%s is not a valid fee recipient address", ha)
 	}
-	c.DefaultFeeRecipient = common.HexToAddress(ha)
+	mixedcaseAddress, err := common.NewMixedcaseAddressFromString(ha)
+	if err != nil {
+		return errors.Wrapf(err, "could not decode fee recipient %s", ha)
+	}
+	checksumAddress := common.HexToAddress(ha)
+	if !mixedcaseAddress.ValidChecksum() {
+		log.Warnf("Fee recipient %s is not a checksum Ethereum address. "+
+			"The checksummed address is %s and will be used as the fee recipient. "+
+			"We recommend using a mixed-case address (checksum) "+
+			"to prevent spelling mistakes in your fee recipient Ethereum address", ha, checksumAddress.Hex())
+	}
+	c.DefaultFeeRecipient = checksumAddress
 	params.OverrideBeaconConfig(c)
 	return nil
 }

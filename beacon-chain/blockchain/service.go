@@ -50,21 +50,22 @@ const headSyncMinEpochsAfterCheckpoint = 128
 // Service represents a service that handles the internal
 // logic of managing the full PoS beacon chain.
 type Service struct {
-	cfg                   *config
-	ctx                   context.Context
-	cancel                context.CancelFunc
-	genesisTime           time.Time
-	head                  *head
-	headLock              sync.RWMutex
-	originBlockRoot       [32]byte // genesis root, or weak subjectivity checkpoint root, depending on how the node is initialized
-	nextEpochBoundarySlot types.Slot
-	boundaryRoots         [][32]byte
-	checkpointStateCache  *cache.CheckpointStateCache
-	initSyncBlocks        map[[32]byte]interfaces.SignedBeaconBlock
-	initSyncBlocksLock    sync.RWMutex
-	justifiedBalances     *stateBalanceCache
-	wsVerifier            *WeakSubjectivityVerifier
-	store                 *store.Store
+	cfg                     *config
+	ctx                     context.Context
+	cancel                  context.CancelFunc
+	genesisTime             time.Time
+	head                    *head
+	headLock                sync.RWMutex
+	originBlockRoot         [32]byte // genesis root, or weak subjectivity checkpoint root, depending on how the node is initialized
+	nextEpochBoundarySlot   types.Slot
+	boundaryRoots           [][32]byte
+	checkpointStateCache    *cache.CheckpointStateCache
+	initSyncBlocks          map[[32]byte]interfaces.SignedBeaconBlock
+	initSyncBlocksLock      sync.RWMutex
+	justifiedBalances       *stateBalanceCache
+	wsVerifier              *WeakSubjectivityVerifier
+	store                   *store.Store
+	processAttestationsLock sync.Mutex
 }
 
 // config options for the service.
@@ -143,6 +144,7 @@ func (s *Service) Stop() error {
 	defer s.cancel()
 
 	if s.cfg.StateGen != nil && s.head != nil && s.head.state != nil {
+		// Save the last finalized state so that starting up in the following run will be much faster.
 		if err := s.cfg.StateGen.ForceCheckpoint(s.ctx, s.head.state.FinalizedCheckpoint().Root); err != nil {
 			return err
 		}
@@ -199,12 +201,9 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 		forkChoicer = protoarray.New(justified.Epoch, finalized.Epoch, fRoot)
 	}
 	s.cfg.ForkChoiceStore = forkChoicer
-	fb, err := s.cfg.BeaconDB.Block(s.ctx, s.ensureRootNotZeros(fRoot))
+	fb, err := s.getBlock(s.ctx, s.ensureRootNotZeros(fRoot))
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized checkpoint block")
-	}
-	if fb == nil || fb.IsNil() {
-		return errNilFinalizedInStore
 	}
 	payloadHash, err := getBlockPayloadHash(fb.Block())
 	if err != nil {
@@ -337,14 +336,13 @@ func (s *Service) initializeHeadFromDB(ctx context.Context) error {
 				finalizedState.Slot(), flags.HeadSync.Name)
 		}
 	}
-
-	finalizedBlock, err := s.cfg.BeaconDB.Block(ctx, finalizedRoot)
-	if err != nil {
-		return errors.Wrap(err, "could not get finalized block from db")
+	if finalizedState == nil || finalizedState.IsNil() {
+		return errors.New("finalized state can't be nil")
 	}
 
-	if finalizedState == nil || finalizedState.IsNil() || finalizedBlock == nil || finalizedBlock.IsNil() {
-		return errors.New("finalized state and block can't be nil")
+	finalizedBlock, err := s.getBlock(ctx, finalizedRoot)
+	if err != nil {
+		return errors.Wrap(err, "could not get finalized block")
 	}
 	s.setHead(finalizedRoot, finalizedBlock, finalizedState)
 

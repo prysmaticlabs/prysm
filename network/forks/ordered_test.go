@@ -35,7 +35,7 @@ func TestOrderedConfigSchedule(t *testing.T) {
 		})
 	}
 
-	bc := testForkVersionScheduleBCC()
+	bc := testForkVersionBCC()
 	ofs := NewOrderedSchedule(bc)
 	for i := range ofs {
 		if ofs[i].Epoch != types.Epoch(math.Pow(2, float64(i))) {
@@ -45,7 +45,7 @@ func TestOrderedConfigSchedule(t *testing.T) {
 }
 
 func TestVersionForEpoch(t *testing.T) {
-	bc := testForkVersionScheduleBCC()
+	bc := testForkVersionBCC()
 	ofs := NewOrderedSchedule(bc)
 	testCases := []struct {
 		name    string
@@ -92,7 +92,45 @@ func TestVersionForEpoch(t *testing.T) {
 	}
 }
 
-func testForkVersionScheduleBCC() *params.BeaconChainConfig {
+func TestVersionForName(t *testing.T) {
+	bc := testForkVersionBCC()
+	ofs := NewOrderedSchedule(bc)
+	testCases := []struct {
+		testName    string
+		version     [4]byte
+		versionName string
+		err         error
+	}{
+		{
+			testName:    "found",
+			version:     [4]byte{2, 1, 2, 3},
+			versionName: "third",
+		},
+		{
+			testName:    "found lowercase",
+			version:     [4]byte{4, 1, 2, 3},
+			versionName: "FiFtH",
+		},
+		{
+			testName:    "not found",
+			versionName: "nonexistent",
+			err:         ErrVersionNotFound,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.testName, func(t *testing.T) {
+			v, err := ofs.VersionForName(tc.versionName)
+			if tc.err == nil {
+				require.NoError(t, err)
+			} else {
+				require.ErrorIs(t, err, tc.err)
+			}
+			require.Equal(t, tc.version, v)
+		})
+	}
+}
+
+func testForkVersionBCC() *params.BeaconChainConfig {
 	return &params.BeaconChainConfig{
 		ForkVersionSchedule: map[[4]byte]types.Epoch{
 			{1, 1, 2, 3}: types.Epoch(2),
@@ -101,11 +139,18 @@ func testForkVersionScheduleBCC() *params.BeaconChainConfig {
 			{3, 1, 2, 3}: types.Epoch(8),
 			{2, 1, 2, 3}: types.Epoch(4),
 		},
+		ForkVersionNames: map[[4]byte]string{
+			{1, 1, 2, 3}: "second",
+			{0, 1, 2, 3}: "first",
+			{4, 1, 2, 3}: "fifth",
+			{3, 1, 2, 3}: "fourth",
+			{2, 1, 2, 3}: "third",
+		},
 	}
 }
 
 func TestPrevious(t *testing.T) {
-	cfg := testForkVersionScheduleBCC()
+	cfg := testForkVersionBCC()
 	os := NewOrderedSchedule(cfg)
 	unreal := [4]byte{255, 255, 255, 255}
 	_, err := os.Previous(unreal)

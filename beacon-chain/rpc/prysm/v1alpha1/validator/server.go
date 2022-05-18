@@ -43,6 +43,7 @@ type Server struct {
 	AttestationCache       *cache.AttestationCache
 	ProposerSlotIndexCache *cache.ProposerPayloadIDsCache
 	HeadFetcher            blockchain.HeadFetcher
+	HeadUpdater            blockchain.HeadUpdater
 	ForkFetcher            blockchain.ForkFetcher
 	FinalizationFetcher    blockchain.FinalizationFetcher
 	TimeFetcher            blockchain.TimeFetcher
@@ -50,6 +51,7 @@ type Server struct {
 	DepositFetcher         depositcache.DepositFetcher
 	ChainStartFetcher      powchain.ChainStartFetcher
 	Eth1InfoFetcher        powchain.ChainInfoFetcher
+	OptimisticModeFetcher  blockchain.OptimisticModeFetcher
 	SyncChecker            sync.Checker
 	StateNotifier          statefeed.Notifier
 	BlockNotifier          blockfeed.Notifier

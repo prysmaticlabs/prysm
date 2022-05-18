@@ -31,6 +31,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
+	"github.com/prysmaticlabs/prysm/container/trie"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -86,9 +87,11 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 	bState, _ := util.DeterministicGenesisState(t, 10)
 	pbState, err := v1.ProtobufBeaconState(bState.InnerStateUnsafe())
 	require.NoError(t, err)
+	mockTrie, err := trie.NewTrie(0)
+	require.NoError(t, err)
 	err = beaconDB.SavePowchainData(ctx, &ethpb.ETH1ChainData{
 		BeaconState: pbState,
-		Trie:        &ethpb.SparseMerkleTrie{},
+		Trie:        mockTrie.ToProto(),
 		CurrentEth1Data: &ethpb.LatestETH1Data{
 			BlockHash: make([]byte, 32),
 		},
@@ -221,7 +224,8 @@ func TestChainService_InitializeBeaconChain(t *testing.T) {
 	require.NoError(t, err)
 	trie, _, err := util.DepositTrieFromDeposits(deposits)
 	require.NoError(t, err)
-	hashTreeRoot := trie.HashTreeRoot()
+	hashTreeRoot, err := trie.HashTreeRoot()
+	require.NoError(t, err)
 	genState, err := transition.EmptyGenesisState()
 	require.NoError(t, err)
 	err = genState.SetEth1Data(&ethpb.Eth1Data{
@@ -500,7 +504,7 @@ func TestHasBlock_ForkChoiceAndDB_ProtoArray(t *testing.T) {
 		cfg:   &config{ForkChoiceStore: protoarray.New(0, 0, [32]byte{}), BeaconDB: beaconDB},
 		store: &store.Store{},
 	}
-	s.store.SetFinalizedCheckpt(&ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]})
+	s.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]}, [32]byte{})
 	b := util.NewBeaconBlock()
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -521,7 +525,7 @@ func TestHasBlock_ForkChoiceAndDB_DoublyLinkedTree(t *testing.T) {
 		cfg:   &config{ForkChoiceStore: doublylinkedtree.New(0, 0), BeaconDB: beaconDB},
 		store: &store.Store{},
 	}
-	s.store.SetFinalizedCheckpt(&ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]})
+	s.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]}, [32]byte{})
 	b := util.NewBeaconBlock()
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -594,7 +598,7 @@ func BenchmarkHasBlockForkChoiceStore_ProtoArray(b *testing.B) {
 		cfg:   &config{ForkChoiceStore: protoarray.New(0, 0, [32]byte{}), BeaconDB: beaconDB},
 		store: &store.Store{},
 	}
-	s.store.SetFinalizedCheckpt(&ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]})
+	s.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]}, [32]byte{})
 	blk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{}}}
 	r, err := blk.Block.HashTreeRoot()
 	require.NoError(b, err)
@@ -617,7 +621,7 @@ func BenchmarkHasBlockForkChoiceStore_DoublyLinkedTree(b *testing.B) {
 		cfg:   &config{ForkChoiceStore: doublylinkedtree.New(0, 0), BeaconDB: beaconDB},
 		store: &store.Store{},
 	}
-	s.store.SetFinalizedCheckpt(&ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]})
+	s.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]}, [32]byte{})
 	blk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{}}}
 	r, err := blk.Block.HashTreeRoot()
 	require.NoError(b, err)
