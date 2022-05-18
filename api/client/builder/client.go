@@ -84,13 +84,7 @@ func (c *Client) NodeURL() string {
 
 type reqOption func(*http.Request)
 
-func withSSZEncoding() reqOption {
-	return func(req *http.Request) {
-		req.Header.Set("Accept", "application/octet-stream")
-	}
-}
-
-// do is a generic, opinionated GET function to reduce boilerplate amongst the getters in this package.
+// do is a generic, opinionated GET function to reduce boilerplate amongst the getters in this packageapi/client/builder/types.go.
 func (c *Client) do(ctx context.Context, method string, path string, body io.Reader, opts ...reqOption) ([]byte, error) {
 	u := c.baseURL.ResolveReference(&url.URL{Path: path})
 	log.Printf("requesting %s", u.String())

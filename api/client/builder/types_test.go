@@ -3,13 +3,15 @@ package builder
 import (
 	"encoding/json"
 	"fmt"
+	"math/big"
+	"strconv"
+	"testing"
+
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/go-bitfield"
 	v1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
-	"strconv"
-	"testing"
 )
 
 func ezDecode(t *testing.T, s string) []byte {
@@ -20,7 +22,7 @@ func ezDecode(t *testing.T, s string) []byte {
 
 func TestSignedValidatorRegistration_MarshalJSON(t *testing.T) {
 	svr := &eth.SignedValidatorRegistrationV1{
-		Message:   &eth.ValidatorRegistrationV1{
+		Message: &eth.ValidatorRegistrationV1{
 			FeeRecipient: make([]byte, 20),
 			GasLimit:     0,
 			Timestamp:    0,
@@ -31,10 +33,10 @@ func TestSignedValidatorRegistration_MarshalJSON(t *testing.T) {
 	je, err := json.Marshal(&SignedValidatorRegistration{SignedValidatorRegistrationV1: svr})
 	require.NoError(t, err)
 	// decode with a struct w/ plain strings so we can check the string encoding of the hex fields
-	un := struct{
+	un := struct {
 		Message struct {
 			FeeRecipient string `json:"fee_recipient"`
-			Pubkey string `json:"pubkey"`
+			Pubkey       string `json:"pubkey"`
 		} `json:"message"`
 		Signature string `json:"signature"`
 	}{}
@@ -74,95 +76,95 @@ var testExampleHeaderResponse = `{
 func TestExecutionHeaderResponseUnmarshal(t *testing.T) {
 	hr := &ExecHeaderResponse{}
 	require.NoError(t, json.Unmarshal([]byte(testExampleHeaderResponse), hr))
-	cases := []struct{
+	cases := []struct {
 		expected string
-		actual string
-		name string
+		actual   string
+		name     string
 	}{
 		{
 			expected: "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
-			actual: fmt.Sprintf("%#x", hr.Data.Signature),
-			name: "Signature",
+			actual:   fmt.Sprintf("%#x", hr.Data.Signature),
+			name:     "Signature",
 		},
 		{
 			expected: "0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a",
-			actual: fmt.Sprintf("%#x", hr.Data.Message.Pubkey),
-			name: "ExecHeaderResponse.Pubkey",
+			actual:   fmt.Sprintf("%#x", hr.Data.Message.Pubkey),
+			name:     "ExecHeaderResponse.Pubkey",
 		},
 		{
 			expected: "1",
-			actual: fmt.Sprintf("%d", hr.Data.Message.Value),
-			name: "ExecHeaderResponse.Value",
+			actual:   hr.Data.Message.Value.String(),
+			name:     "ExecHeaderResponse.Value",
 		},
 		{
 			expected: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-			actual: fmt.Sprintf("%#x", hr.Data.Message.Header.ParentHash),
-			name: "ExecHeaderResponse.ExecutionPayloadHeader.ParentHash",
+			actual:   fmt.Sprintf("%#x", hr.Data.Message.Header.ParentHash),
+			name:     "ExecHeaderResponse.ExecutionPayloadHeader.ParentHash",
 		},
 		{
 			expected: "0xabcf8e0d4e9587369b2301d0790347320302cc09",
-			actual: fmt.Sprintf("%#x", hr.Data.Message.Header.FeeRecipient),
-			name: "ExecHeaderResponse.ExecutionPayloadHeader.FeeRecipient",
+			actual:   fmt.Sprintf("%#x", hr.Data.Message.Header.FeeRecipient),
+			name:     "ExecHeaderResponse.ExecutionPayloadHeader.FeeRecipient",
 		},
 		{
 			expected: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-			actual: fmt.Sprintf("%#x", hr.Data.Message.Header.StateRoot),
-			name: "ExecHeaderResponse.ExecutionPayloadHeader.StateRoot",
+			actual:   fmt.Sprintf("%#x", hr.Data.Message.Header.StateRoot),
+			name:     "ExecHeaderResponse.ExecutionPayloadHeader.StateRoot",
 		},
 		{
 			expected: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-			actual: fmt.Sprintf("%#x", hr.Data.Message.Header.ReceiptsRoot),
-			name: "ExecHeaderResponse.ExecutionPayloadHeader.ReceiptsRoot",
+			actual:   fmt.Sprintf("%#x", hr.Data.Message.Header.ReceiptsRoot),
+			name:     "ExecHeaderResponse.ExecutionPayloadHeader.ReceiptsRoot",
 		},
 		{
 			expected: "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-			actual: fmt.Sprintf("%#x", hr.Data.Message.Header.LogsBloom),
-			name: "ExecHeaderResponse.ExecutionPayloadHeader.LogsBloom",
+			actual:   fmt.Sprintf("%#x", hr.Data.Message.Header.LogsBloom),
+			name:     "ExecHeaderResponse.ExecutionPayloadHeader.LogsBloom",
 		},
 		{
 			expected: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-			actual: fmt.Sprintf("%#x", hr.Data.Message.Header.PrevRandao),
-			name: "ExecHeaderResponse.ExecutionPayloadHeader.PrevRandao",
+			actual:   fmt.Sprintf("%#x", hr.Data.Message.Header.PrevRandao),
+			name:     "ExecHeaderResponse.ExecutionPayloadHeader.PrevRandao",
 		},
 		{
 			expected: "1",
-			actual: fmt.Sprintf("%d", hr.Data.Message.Header.BlockNumber),
-			name: "ExecHeaderResponse.ExecutionPayloadHeader.BlockNumber",
+			actual:   fmt.Sprintf("%d", hr.Data.Message.Header.BlockNumber),
+			name:     "ExecHeaderResponse.ExecutionPayloadHeader.BlockNumber",
 		},
 		{
 			expected: "1",
-			actual: fmt.Sprintf("%d", hr.Data.Message.Header.GasLimit),
-			name: "ExecHeaderResponse.ExecutionPayloadHeader.GasLimit",
+			actual:   fmt.Sprintf("%d", hr.Data.Message.Header.GasLimit),
+			name:     "ExecHeaderResponse.ExecutionPayloadHeader.GasLimit",
 		},
 		{
 			expected: "1",
-			actual: fmt.Sprintf("%d", hr.Data.Message.Header.GasUsed),
-			name: "ExecHeaderResponse.ExecutionPayloadHeader.GasUsed",
+			actual:   fmt.Sprintf("%d", hr.Data.Message.Header.GasUsed),
+			name:     "ExecHeaderResponse.ExecutionPayloadHeader.GasUsed",
 		},
 		{
 			expected: "1",
-			actual: fmt.Sprintf("%d", hr.Data.Message.Header.Timestamp),
-			name: "ExecHeaderResponse.ExecutionPayloadHeader.Timestamp",
+			actual:   fmt.Sprintf("%d", hr.Data.Message.Header.Timestamp),
+			name:     "ExecHeaderResponse.ExecutionPayloadHeader.Timestamp",
 		},
 		{
 			expected: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-			actual: fmt.Sprintf("%#x", hr.Data.Message.Header.ExtraData),
-			name: "ExecHeaderResponse.ExecutionPayloadHeader.ExtraData",
+			actual:   fmt.Sprintf("%#x", hr.Data.Message.Header.ExtraData),
+			name:     "ExecHeaderResponse.ExecutionPayloadHeader.ExtraData",
 		},
 		{
 			expected: "1",
-			actual: fmt.Sprintf("%d", hr.Data.Message.Header.BaseFeePerGas),
-			name: "ExecHeaderResponse.ExecutionPayloadHeader.BaseFeePerGas",
+			actual:   fmt.Sprintf("%d", hr.Data.Message.Header.BaseFeePerGas),
+			name:     "ExecHeaderResponse.ExecutionPayloadHeader.BaseFeePerGas",
 		},
 		{
 			expected: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-			actual: fmt.Sprintf("%#x", hr.Data.Message.Header.BlockHash),
-			name: "ExecHeaderResponse.ExecutionPayloadHeader.BlockHash",
+			actual:   fmt.Sprintf("%#x", hr.Data.Message.Header.BlockHash),
+			name:     "ExecHeaderResponse.ExecutionPayloadHeader.BlockHash",
 		},
 		{
 			expected: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-			actual: fmt.Sprintf("%#x", hr.Data.Message.Header.TransactionsRoot),
-			name: "ExecHeaderResponse.ExecutionPayloadHeader.TransactionsRoot",
+			actual:   fmt.Sprintf("%#x", hr.Data.Message.Header.TransactionsRoot),
+			name:     "ExecHeaderResponse.ExecutionPayloadHeader.TransactionsRoot",
 		},
 	}
 	for _, c := range cases {
@@ -197,27 +199,30 @@ func TestExecutionHeaderResponseToProto(t *testing.T) {
 	require.NoError(t, err)
 	txRoot, err := hexutil.Decode("0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2")
 	require.NoError(t, err)
+	value := big.NewInt(0)
+	value, ok := value.SetString("1", 10)
+	require.Equal(t, true, ok)
 	expected := &eth.SignedBuilderBid{
-		Message:   &eth.BuilderBid{
+		Message: &eth.BuilderBid{
 			Header: &eth.ExecutionPayloadHeader{
-				ParentHash:       parentHash,
-				FeeRecipient:     feeRecipient,
-				StateRoot:        stateRoot,
-				ReceiptsRoot:     receiptsRoot,
-				LogsBloom:        logsBloom,
-				PrevRandao:       prevRandao,
-				BlockNumber:      1,
-				GasLimit:         1,
-				GasUsed:          1,
-				Timestamp:        1,
-				ExtraData:        extraData,
+				ParentHash:   parentHash,
+				FeeRecipient: feeRecipient,
+				StateRoot:    stateRoot,
+				ReceiptsRoot: receiptsRoot,
+				LogsBloom:    logsBloom,
+				PrevRandao:   prevRandao,
+				BlockNumber:  1,
+				GasLimit:     1,
+				GasUsed:      1,
+				Timestamp:    1,
+				ExtraData:    extraData,
 				// TODO assumes weird byte slice field
 				BaseFeePerGas:    []byte(strconv.FormatUint(uint64(1), 10)),
 				BlockHash:        blockHash,
 				TransactionsRoot: txRoot,
 			},
 			// TODO assumes weird byte slice field
-			Value:  []byte(strconv.FormatUint(uint64(1), 10)),
+			Value:  value.Bytes(),
 			Pubkey: pubkey,
 		},
 		Signature: signature,
@@ -250,75 +255,75 @@ var testExampleExecutionPayload = `{
 func TestExecutionPayloadResponseUnmarshal(t *testing.T) {
 	epr := &ExecPayloadResponse{}
 	require.NoError(t, json.Unmarshal([]byte(testExampleExecutionPayload), epr))
-	cases := []struct{
+	cases := []struct {
 		expected string
-		actual string
-		name string
+		actual   string
+		name     string
 	}{
 		{
 			expected: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-			actual: fmt.Sprintf("%#x", epr.Data.ParentHash),
-			name: "ExecPayloadResponse.ExecutionPayload.ParentHash",
+			actual:   fmt.Sprintf("%#x", epr.Data.ParentHash),
+			name:     "ExecPayloadResponse.ExecutionPayload.ParentHash",
 		},
 		{
 			expected: "0xabcf8e0d4e9587369b2301d0790347320302cc09",
-			actual: fmt.Sprintf("%#x", epr.Data.FeeRecipient),
-			name: "ExecPayloadResponse.ExecutionPayload.FeeRecipient",
+			actual:   fmt.Sprintf("%#x", epr.Data.FeeRecipient),
+			name:     "ExecPayloadResponse.ExecutionPayload.FeeRecipient",
 		},
 		{
 			expected: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-			actual: fmt.Sprintf("%#x", epr.Data.StateRoot),
-			name: "ExecPayloadResponse.ExecutionPayload.StateRoot",
+			actual:   fmt.Sprintf("%#x", epr.Data.StateRoot),
+			name:     "ExecPayloadResponse.ExecutionPayload.StateRoot",
 		},
 		{
 			expected: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-			actual: fmt.Sprintf("%#x", epr.Data.ReceiptsRoot),
-			name: "ExecPayloadResponse.ExecutionPayload.ReceiptsRoot",
+			actual:   fmt.Sprintf("%#x", epr.Data.ReceiptsRoot),
+			name:     "ExecPayloadResponse.ExecutionPayload.ReceiptsRoot",
 		},
 		{
 			expected: "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-			actual: fmt.Sprintf("%#x", epr.Data.LogsBloom),
-			name: "ExecPayloadResponse.ExecutionPayload.LogsBloom",
+			actual:   fmt.Sprintf("%#x", epr.Data.LogsBloom),
+			name:     "ExecPayloadResponse.ExecutionPayload.LogsBloom",
 		},
 		{
 			expected: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-			actual: fmt.Sprintf("%#x", epr.Data.PrevRandao),
-			name: "ExecPayloadResponse.ExecutionPayload.PrevRandao",
+			actual:   fmt.Sprintf("%#x", epr.Data.PrevRandao),
+			name:     "ExecPayloadResponse.ExecutionPayload.PrevRandao",
 		},
 		{
 			expected: "1",
-			actual: fmt.Sprintf("%d", epr.Data.BlockNumber),
-			name: "ExecPayloadResponse.ExecutionPayload.BlockNumber",
+			actual:   fmt.Sprintf("%d", epr.Data.BlockNumber),
+			name:     "ExecPayloadResponse.ExecutionPayload.BlockNumber",
 		},
 		{
 			expected: "1",
-			actual: fmt.Sprintf("%d", epr.Data.GasLimit),
-			name: "ExecPayloadResponse.ExecutionPayload.GasLimit",
+			actual:   fmt.Sprintf("%d", epr.Data.GasLimit),
+			name:     "ExecPayloadResponse.ExecutionPayload.GasLimit",
 		},
 		{
 			expected: "1",
-			actual: fmt.Sprintf("%d", epr.Data.GasUsed),
-			name: "ExecPayloadResponse.ExecutionPayload.GasUsed",
+			actual:   fmt.Sprintf("%d", epr.Data.GasUsed),
+			name:     "ExecPayloadResponse.ExecutionPayload.GasUsed",
 		},
 		{
 			expected: "1",
-			actual: fmt.Sprintf("%d", epr.Data.Timestamp),
-			name: "ExecPayloadResponse.ExecutionPayload.Timestamp",
+			actual:   fmt.Sprintf("%d", epr.Data.Timestamp),
+			name:     "ExecPayloadResponse.ExecutionPayload.Timestamp",
 		},
 		{
 			expected: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-			actual: fmt.Sprintf("%#x", epr.Data.ExtraData),
-			name: "ExecPayloadResponse.ExecutionPayload.ExtraData",
+			actual:   fmt.Sprintf("%#x", epr.Data.ExtraData),
+			name:     "ExecPayloadResponse.ExecutionPayload.ExtraData",
 		},
 		{
 			expected: "1",
-			actual: fmt.Sprintf("%d", epr.Data.BaseFeePerGas),
-			name: "ExecPayloadResponse.ExecutionPayload.BaseFeePerGas",
+			actual:   fmt.Sprintf("%d", epr.Data.BaseFeePerGas),
+			name:     "ExecPayloadResponse.ExecutionPayload.BaseFeePerGas",
 		},
 		{
 			expected: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-			actual: fmt.Sprintf("%#x", epr.Data.BlockHash),
-			name: "ExecPayloadResponse.ExecutionPayload.BlockHash",
+			actual:   fmt.Sprintf("%#x", epr.Data.BlockHash),
+			name:     "ExecPayloadResponse.ExecutionPayload.BlockHash",
 		},
 	}
 	for _, c := range cases {
@@ -356,171 +361,25 @@ func TestExecutionPayloadResponseToProto(t *testing.T) {
 	require.NoError(t, err)
 	txList := [][]byte{tx}
 
-	expected :=  &v1.ExecutionPayload{
-		ParentHash:       parentHash,
-		FeeRecipient:     feeRecipient,
-		StateRoot:        stateRoot,
-		ReceiptsRoot:     receiptsRoot,
-		LogsBloom:        logsBloom,
-		PrevRandao:       prevRandao,
-		BlockNumber:      1,
-		GasLimit:         1,
-		GasUsed:          1,
-		Timestamp:        1,
-		ExtraData:        extraData,
+	expected := &v1.ExecutionPayload{
+		ParentHash:   parentHash,
+		FeeRecipient: feeRecipient,
+		StateRoot:    stateRoot,
+		ReceiptsRoot: receiptsRoot,
+		LogsBloom:    logsBloom,
+		PrevRandao:   prevRandao,
+		BlockNumber:  1,
+		GasLimit:     1,
+		GasUsed:      1,
+		Timestamp:    1,
+		ExtraData:    extraData,
 		// TODO assumes weird byte slice field
-		BaseFeePerGas:    []byte(strconv.FormatUint(uint64(1), 10)),
-		BlockHash:        blockHash,
-		Transactions:     txList,
+		BaseFeePerGas: []byte(strconv.FormatUint(uint64(1), 10)),
+		BlockHash:     blockHash,
+		Transactions:  txList,
 	}
 	require.DeepEqual(t, expected, p)
 }
-
-var testExampleSignedBlindedBeaconBlock = `{
-  "message": {
-    "slot": "1",
-    "proposer_index": "1",
-    "parent_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-    "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-    "body": {
-      "randao_reveal": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
-      "eth1_data": {
-        "deposit_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "deposit_count": "1",
-        "block_hash": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-      },
-      "graffiti": "0xdeadbeefc0ffee",
-      "proposer_slashings": [
-        {
-          "signed_header_1": {
-            "message": {
-              "slot": "1",
-              "proposer_index": "1",
-              "parent_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "body_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-            },
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-          },
-          "signed_header_2": {
-            "message": {
-              "slot": "1",
-              "proposer_index": "1",
-              "parent_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "body_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-            },
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-          }
-        }
-      ],
-      "attester_slashings": [
-        {
-          "attestation_1": {
-            "attesting_indices": [
-              "1"
-            ],
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
-            "data": {
-              "slot": "1",
-              "index": "1",
-              "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "source": {
-                "epoch": "1",
-                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-              },
-              "target": {
-                "epoch": "1",
-                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-              }
-            }
-          },
-          "attestation_2": {
-            "attesting_indices": [
-              "1"
-            ],
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
-            "data": {
-              "slot": "1",
-              "index": "1",
-              "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "source": {
-                "epoch": "1",
-                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-              },
-              "target": {
-                "epoch": "1",
-                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-              }
-            }
-          }
-        }
-      ],
-      "attestations": [
-        {
-          "aggregation_bits": "0x01",
-          "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
-          "data": {
-            "slot": "1",
-            "index": "1",
-            "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "source": {
-              "epoch": "1",
-              "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-            },
-            "target": {
-              "epoch": "1",
-              "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-            }
-          }
-        }
-      ],
-      "deposits": [
-        {
-          "proof": [
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-          ],
-          "data": {
-            "pubkey": "0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a",
-            "withdrawal_credentials": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "amount": "1",
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-          }
-        }
-      ],
-      "voluntary_exits": [
-        {
-          "message": {
-            "epoch": "1",
-            "validator_index": "1"
-          },
-          "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-        }
-      ],
-      "sync_aggregate": {
-        "sync_committee_bits": "0x01",
-        "sync_committee_signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-      },
-      "execution_payload_header": {
-        "parent_hash": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "fee_recipient": "0xabcf8e0d4e9587369b2301d0790347320302cc09",
-        "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "receipts_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "logs_bloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-        "prev_randao": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "block_number": "1",
-        "gas_limit": "1",
-        "gas_used": "1",
-        "timestamp": "1",
-        "extra_data": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "base_fee_per_gas": "1",
-        "block_hash": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "transactions_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-      }
-    }
-  },
-  "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-}`
 
 func TestEth1DataMarshal(t *testing.T) {
 	ed := &Eth1Data{
@@ -540,7 +399,7 @@ func TestSyncAggregate_MarshalJSON(t *testing.T) {
 	sa := &SyncAggregate{
 		&eth.SyncAggregate{
 			SyncCommitteeSignature: make([]byte, 48),
-			SyncCommitteeBits: bitfield.Bitvector512{0x01},
+			SyncCommitteeBits:      bitfield.Bitvector512{0x01},
 		},
 	}
 	b, err := json.Marshal(sa)
@@ -570,7 +429,7 @@ func TestDeposit_MarshalJSON(t *testing.T) {
 func TestVoluntaryExit(t *testing.T) {
 	ve := &SignedVoluntaryExit{
 		SignedVoluntaryExit: &eth.SignedVoluntaryExit{
-			Exit:      &eth.VoluntaryExit{
+			Exit: &eth.VoluntaryExit{
 				Epoch:          1,
 				ValidatorIndex: 1,
 			},
@@ -587,17 +446,17 @@ func TestAttestationMarshal(t *testing.T) {
 	a := &Attestation{
 		Attestation: &eth.Attestation{
 			AggregationBits: bitfield.Bitlist{0x01},
-			Data:            &eth.AttestationData{
-				Slot: 1,
-				CommitteeIndex: 1,
+			Data: &eth.AttestationData{
+				Slot:            1,
+				CommitteeIndex:  1,
 				BeaconBlockRoot: ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
 				Source: &eth.Checkpoint{
 					Epoch: 1,
-					Root: ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+					Root:  ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
 				},
 				Target: &eth.Checkpoint{
 					Epoch: 1,
-					Root: ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+					Root:  ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
 				},
 			},
 			Signature: ezDecode(t, "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"),
@@ -614,35 +473,35 @@ func TestAttesterSlashing_MarshalJSON(t *testing.T) {
 		AttesterSlashing: &eth.AttesterSlashing{
 			Attestation_1: &eth.IndexedAttestation{
 				AttestingIndices: []uint64{1},
-				Signature: ezDecode(t, "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"),
+				Signature:        ezDecode(t, "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"),
 				Data: &eth.AttestationData{
-					Slot: 1,
-					CommitteeIndex: 1,
+					Slot:            1,
+					CommitteeIndex:  1,
 					BeaconBlockRoot: ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
 					Source: &eth.Checkpoint{
 						Epoch: 1,
-						Root: ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+						Root:  ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
 					},
 					Target: &eth.Checkpoint{
 						Epoch: 1,
-						Root: ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+						Root:  ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
 					},
 				},
 			},
 			Attestation_2: &eth.IndexedAttestation{
 				AttestingIndices: []uint64{1},
-				Signature: ezDecode(t, "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"),
+				Signature:        ezDecode(t, "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"),
 				Data: &eth.AttestationData{
-					Slot: 1,
-					CommitteeIndex: 1,
+					Slot:            1,
+					CommitteeIndex:  1,
 					BeaconBlockRoot: ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
 					Source: &eth.Checkpoint{
 						Epoch: 1,
-						Root: ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+						Root:  ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
 					},
 					Target: &eth.Checkpoint{
 						Epoch: 1,
-						Root: ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+						Root:  ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
 					},
 				},
 			},
@@ -657,7 +516,7 @@ func TestAttesterSlashing_MarshalJSON(t *testing.T) {
 func TestProposerSlashings(t *testing.T) {
 	ps := &ProposerSlashing{&eth.ProposerSlashing{
 		Header_1: &eth.SignedBeaconBlockHeader{
-			Header:    &eth.BeaconBlockHeader{
+			Header: &eth.BeaconBlockHeader{
 				Slot:          1,
 				ProposerIndex: 1,
 				ParentRoot:    ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
@@ -667,7 +526,7 @@ func TestProposerSlashings(t *testing.T) {
 			Signature: ezDecode(t, "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"),
 		},
 		Header_2: &eth.SignedBeaconBlockHeader{
-			Header:    &eth.BeaconBlockHeader{
+			Header: &eth.BeaconBlockHeader{
 				Slot:          1,
 				ProposerIndex: 1,
 				ParentRoot:    ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
@@ -687,19 +546,19 @@ func TestExecutionPayloadHeader_MarshalJSON(t *testing.T) {
 	bfpg := []byte(strconv.FormatUint(1, 10))
 	h := &ExecutionPayloadHeader{
 		ExecutionPayloadHeader: &eth.ExecutionPayloadHeader{
-			ParentHash: ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-			FeeRecipient: ezDecode(t, "0xabcf8e0d4e9587369b2301d0790347320302cc09"),
-			StateRoot: ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-			ReceiptsRoot: ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-			LogsBloom: ezDecode(t, "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
-			PrevRandao: ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-			BlockNumber: 1,
-			GasLimit: 1,
-			GasUsed: 1,
-			Timestamp: 1,
-			ExtraData: ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-			BaseFeePerGas: bfpg,
-			BlockHash: ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+			ParentHash:       ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+			FeeRecipient:     ezDecode(t, "0xabcf8e0d4e9587369b2301d0790347320302cc09"),
+			StateRoot:        ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+			ReceiptsRoot:     ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+			LogsBloom:        ezDecode(t, "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
+			PrevRandao:       ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+			BlockNumber:      1,
+			GasLimit:         1,
+			GasUsed:          1,
+			Timestamp:        1,
+			ExtraData:        ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+			BaseFeePerGas:    bfpg,
+			BlockHash:        ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
 			TransactionsRoot: ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
 		},
 	}
@@ -707,4 +566,56 @@ func TestExecutionPayloadHeader_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 	expected := `{"parent_hash":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","fee_recipient":"0xabcf8e0d4e9587369b2301d0790347320302cc09","state_root":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","receipts_root":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","logs_bloom":"0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000","prev_randao":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","block_number":"1","gas_limit":"1","gas_used":"1","timestamp":"1","extra_data":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","base_fee_per_gas":"1","block_hash":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","transactions_root":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"}`
 	require.Equal(t, expected, string(b))
+}
+
+var testBuilderBid = `{
+    "version":"bellatrix",
+	"data":{
+		"message":{
+			"header":{
+				"parent_hash":"0xa0513a503d5bd6e89a144c3268e5b7e9da9dbf63df125a360e3950a7d0d67131",
+				"fee_recipient":"0xdfb434922631787e43725c6b926e989875125751",
+				"state_root":"0xca3149fa9e37db08d1cd49c9061db1002ef1cd58db2210f2115c8c989b2bdf45",
+				"receipts_root":"0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
+				"logs_bloom":"0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+				"prev_randao":"0xc2fa210081542a87f334b7b14a2da3275e4b281dd77b007bcfcb10e34c42052e",
+				"block_number":"1",
+				"gas_limit":"10000000",
+				"gas_used":"0",
+				"timestamp":"4660",
+				"extra_data":"0x",
+				"base_fee_per_gas":"7",
+				"block_hash":"0x10746fa06c248e7eacd4ff8ad8b48a826c227387ee31a6aa5eb4d83ddad34f07",
+				"transactions_root":"0x7ffe241ea60187fdb0187bfa22de35d1f9bed7ab061d9401fd47e34a54fbede1"
+			},
+			"value":"452312848583266388373324160190187140051835877600158453279131187530910662656",
+			"pubkey":"0x8645866c95cbc2e08bc77ccad473540eddf4a1f51a2a8edc8d7a673824218f7f68fe565f1ab38dadd5c855b45bbcec95"
+		},
+		"signature":"0x9183ebc1edf9c3ab2bbd7abdc3b59c6b249d6647b5289a97eea36d9d61c47f12e283f64d928b1e7f5b8a5182b714fa921954678ea28ca574f5f232b2f78cf8900915a2993b396e3471e0655291fec143a300d41408f66478c8208e0f9be851dc"
+	}
+}`
+
+func TestBuilderBidUnmarshalUint256(t *testing.T) {
+	base10 := "452312848583266388373324160190187140051835877600158453279131187530910662656"
+	var expectedValue big.Int
+	require.NoError(t, expectedValue.UnmarshalText([]byte(base10)))
+	r := &ExecHeaderResponse{}
+	require.NoError(t, json.Unmarshal([]byte(testBuilderBid), r))
+	//require.Equal(t, expectedValue, r.Data.Message.Value)
+	marshaled := r.Data.Message.Value.String()
+	require.Equal(t, base10, marshaled)
+	require.Equal(t, 0, expectedValue.Cmp(r.Data.Message.Value.Int))
+}
+
+func TestMathBigUnmarshal(t *testing.T) {
+	base10 := "452312848583266388373324160190187140051835877600158453279131187530910662656"
+	var expectedValue big.Int
+	require.NoError(t, expectedValue.UnmarshalText([]byte(base10)))
+	marshaled, err := expectedValue.MarshalText()
+	require.NoError(t, err)
+	require.Equal(t, base10, string(marshaled))
+
+	var u256 Uint256
+	require.NoError(t, u256.UnmarshalText([]byte("452312848583266388373324160190187140051835877600158453279131187530910662656")))
+	t.Logf("%v", u256.Bytes())
 }
