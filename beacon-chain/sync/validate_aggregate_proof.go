@@ -7,6 +7,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
@@ -91,16 +92,12 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 		return pubsub.ValidationIgnore, err
 	}
 
-	has, err := s.cfg.attPool.HasAggregatedAttestation(m.Message.Aggregate)
+	// Verify this is the first aggregate received from the aggregator with index and slot.
+	seen, err := s.hasSeenAggregationBits(m.Message.Aggregate.Data, m.Message.Aggregate.AggregationBits)
 	if err != nil {
 		return pubsub.ValidationIgnore, err
 	}
-	if has {
-		return pubsub.ValidationIgnore, err
-	}
-
-	// Verify this is the first aggregate received from the aggregator with index and slot.
-	if s.hasSeenAggregatorIndexEpoch(m.Message.Aggregate.Data.Target.Epoch, m.Message.AggregatorIndex) {
+	if seen {
 		return pubsub.ValidationIgnore, nil
 	}
 	// Check that the block being voted on isn't invalid.
@@ -111,7 +108,7 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 	}
 
 	// Verify aggregate attestation has not already been seen via aggregate gossip, within a block, or through the creation locally.
-	seen, err := s.cfg.attPool.HasAggregatedAttestation(m.Message.Aggregate)
+	seen, err = s.cfg.attPool.HasAggregatedAttestation(m.Message.Aggregate)
 	if err != nil {
 		tracing.AnnotateError(span, err)
 		return pubsub.ValidationIgnore, err
@@ -128,7 +125,9 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 		return validationRes, err
 	}
 
-	s.setAggregatorIndexEpochSeen(m.Message.Aggregate.Data.Target.Epoch, m.Message.AggregatorIndex)
+	if err := s.setAggregationBits(m.Message.Aggregate.Data, m.Message.Aggregate.AggregationBits); err != nil {
+		return pubsub.ValidationIgnore, err
+	}
 
 	msg.ValidatorData = m
 
@@ -221,21 +220,61 @@ func (s *Service) validateBlockInAttestation(ctx context.Context, satt *ethpb.Si
 	return true
 }
 
-// Returns true if the node has received aggregate for the aggregator with index and target epoch.
-func (s *Service) hasSeenAggregatorIndexEpoch(epoch types.Epoch, aggregatorIndex types.ValidatorIndex) bool {
+// Returns true if the node has received aggregate with the same data and superset aggregated bits.
+func (s *Service) hasSeenAggregationBits(data *ethpb.AttestationData, bits bitfield.Bitlist) (bool, error) {
 	s.seenAggregatedAttestationLock.RLock()
 	defer s.seenAggregatedAttestationLock.RUnlock()
-	b := append(bytesutil.Bytes32(uint64(epoch)), bytesutil.Bytes32(uint64(aggregatorIndex))...)
-	_, seen := s.seenAggregatedAttestationCache.Get(string(b))
-	return seen
+	if len(bits) == 0 {
+		return false, nil
+	}
+
+	r, err := data.HashTreeRoot()
+	if err != nil {
+		return false, err
+	}
+	v, seen := s.seenAggregatedAttestationCache.Get(string(r[:]))
+	if !seen {
+		return false, nil
+	}
+	bs, ok := v.([]bitfield.Bitlist)
+	if !ok {
+		return false, errors.New("could not convert to bitlist")
+	}
+	for _, b := range bs {
+		if b == nil {
+			return false, errors.New("nil bits")
+		}
+		contains, err := b.Contains(bits)
+		if err != nil {
+			return false, err
+		}
+		if contains {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
-// Set aggregate's aggregator index target epoch as seen.
-func (s *Service) setAggregatorIndexEpochSeen(epoch types.Epoch, aggregatorIndex types.ValidatorIndex) {
+// Set aggregate's data and aggregated bits.
+func (s *Service) setAggregationBits(data *ethpb.AttestationData, bits bitfield.Bitlist) error {
 	s.seenAggregatedAttestationLock.Lock()
 	defer s.seenAggregatedAttestationLock.Unlock()
-	b := append(bytesutil.Bytes32(uint64(epoch)), bytesutil.Bytes32(uint64(aggregatorIndex))...)
-	s.seenAggregatedAttestationCache.Add(string(b), true)
+
+	r, err := data.HashTreeRoot()
+	if err != nil {
+		return err
+	}
+	v, seen := s.seenAggregatedAttestationCache.Get(string(r[:]))
+	if !seen {
+		s.seenAggregatedAttestationCache.Add(string(r[:]), []bitfield.Bitlist{bits})
+		return nil
+	}
+	bs, ok := v.([]bitfield.Bitlist)
+	if !ok {
+		return errors.New("could not convert to bitlist")
+	}
+	s.seenAggregatedAttestationCache.Add(string(r[:]), append(bs, bits))
+	return nil
 }
 
 // This validates the aggregator's index in state is within the beacon committee.

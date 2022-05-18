@@ -21,7 +21,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	testingDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
@@ -73,7 +72,6 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				WithChainService(chainService),
 				WithStateNotifier(chainService.StateNotifier()),
 				WithOperationNotifier(chainService.OperationNotifier()),
-				WithSyncCommsPool(synccommittee.NewPool()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
 				s.cfg.stateGen = stategen.New(db)
@@ -267,7 +265,6 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				WithChainService(chainService),
 				WithStateNotifier(chainService.StateNotifier()),
 				WithOperationNotifier(chainService.OperationNotifier()),
-				WithSyncCommsPool(synccommittee.NewPool()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
 				s.cfg.stateGen = stategen.New(db)
@@ -312,7 +309,6 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				WithChainService(chainService),
 				WithStateNotifier(chainService.StateNotifier()),
 				WithOperationNotifier(chainService.OperationNotifier()),
-				WithSyncCommsPool(synccommittee.NewPool()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
 				s.cfg.stateGen = stategen.New(db)
@@ -375,7 +371,6 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				WithChainService(chainService),
 				WithStateNotifier(chainService.StateNotifier()),
 				WithOperationNotifier(chainService.OperationNotifier()),
-				WithSyncCommsPool(synccommittee.NewPool()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
 				s.cfg.stateGen = stategen.New(db)
@@ -441,7 +436,6 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				WithChainService(chainService),
 				WithStateNotifier(chainService.StateNotifier()),
 				WithOperationNotifier(chainService.OperationNotifier()),
-				WithSyncCommsPool(synccommittee.NewPool()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
 				s.cfg.stateGen = stategen.New(db)
@@ -522,7 +516,6 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				WithChainService(chainService),
 				WithStateNotifier(chainService.StateNotifier()),
 				WithOperationNotifier(chainService.OperationNotifier()),
-				WithSyncCommsPool(synccommittee.NewPool()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
 				s.cfg.stateGen = stategen.New(db)
@@ -689,7 +682,6 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				WithChainService(chainService),
 				WithStateNotifier(chainService.StateNotifier()),
 				WithOperationNotifier(chainService.OperationNotifier()),
-				WithSyncCommsPool(synccommittee.NewPool()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
 				s.cfg.stateGen = stategen.New(db)
@@ -786,7 +778,6 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				WithChainService(chainService),
 				WithStateNotifier(chainService.StateNotifier()),
 				WithOperationNotifier(chainService.OperationNotifier()),
-				WithSyncCommsPool(synccommittee.NewPool()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
 				s.cfg.stateGen = stategen.New(db)
@@ -934,7 +925,6 @@ func TestValidateSyncContributionAndProof(t *testing.T) {
 		WithChainService(chainService),
 		WithStateNotifier(chainService.StateNotifier()),
 		WithOperationNotifier(chainService.OperationNotifier()),
-		WithSyncCommsPool(synccommittee.NewPool()),
 	)
 	go s.verifierRoutine()
 	s.cfg.stateGen = stategen.New(db)
@@ -1104,4 +1094,67 @@ func syncSelectionProofSigningRoot(st state.BeaconState, slot types.Slot, comIdx
 	}
 	selectionData := &ethpb.SyncAggregatorSelectionData{Slot: slot, SubcommitteeIndex: uint64(comIdx)}
 	return signing.ComputeSigningRoot(selectionData, dom)
+}
+
+func TestService_setSyncContributionIndexSlotSeen(t *testing.T) {
+	chainService := &mockChain.ChainService{
+		Genesis:        time.Now(),
+		ValidatorsRoot: [32]byte{'A'},
+	}
+	s := NewService(context.Background(), WithP2P(mockp2p.NewTestP2P(t)), WithStateNotifier(chainService.StateNotifier()))
+	s.initCaches()
+
+	// Empty cache
+	b0 := bitfield.NewBitvector128()
+	b0.SetBitAt(0, true)
+	has, err := s.hasSeenSyncContributionBits(0, []byte{}, 0, b0)
+	require.NoError(t, err)
+	require.Equal(t, false, has)
+
+	// Cache with entries but same key
+	require.NoError(t, s.setSyncContributionBits(0, []byte{}, 0, b0))
+	has, err = s.hasSeenSyncContributionBits(0, []byte{}, 0, b0)
+	require.NoError(t, err)
+	require.Equal(t, true, has)
+	b1 := bitfield.NewBitvector128()
+	b1.SetBitAt(1, true)
+	has, err = s.hasSeenSyncContributionBits(0, []byte{}, 0, b1)
+	require.NoError(t, err)
+	require.Equal(t, false, has)
+	b2 := bitfield.NewBitvector128()
+	b2.SetBitAt(1, true)
+	b2.SetBitAt(2, true)
+	has, err = s.hasSeenSyncContributionBits(0, []byte{}, 0, b2)
+	require.NoError(t, err)
+	require.Equal(t, false, has)
+	b2.SetBitAt(0, true)
+	has, err = s.hasSeenSyncContributionBits(0, []byte{}, 0, b2)
+	require.NoError(t, err)
+	require.Equal(t, true, has)
+
+	// Cache with entries but different key
+	has, err = s.hasSeenSyncContributionBits(1, []byte{'a'}, 2, b0)
+	require.NoError(t, err)
+	require.Equal(t, false, has)
+	require.NoError(t, s.setSyncContributionBits(1, []byte{'a'}, 2, b2))
+	has, err = s.hasSeenSyncContributionBits(1, []byte{'a'}, 2, b0)
+	require.NoError(t, err)
+	require.Equal(t, true, has)
+	has, err = s.hasSeenSyncContributionBits(1, []byte{'a'}, 2, b1)
+	require.NoError(t, err)
+	require.Equal(t, true, has)
+	has, err = s.hasSeenSyncContributionBits(1, []byte{'a'}, 2, b2)
+	require.NoError(t, err)
+	require.Equal(t, true, has)
+
+	// Check invariant with the keys
+	has, err = s.hasSeenSyncContributionBits(2, []byte{'a'}, 2, b0)
+	require.NoError(t, err)
+	require.Equal(t, false, has)
+	has, err = s.hasSeenSyncContributionBits(1, []byte{'b'}, 2, b0)
+	require.NoError(t, err)
+	require.Equal(t, false, has)
+	has, err = s.hasSeenSyncContributionBits(1, []byte{'a'}, 3, b0)
+	require.NoError(t, err)
+	require.Equal(t, false, has)
 }

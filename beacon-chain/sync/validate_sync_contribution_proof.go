@@ -6,6 +6,7 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
@@ -88,7 +89,11 @@ func (s *Service) validateSyncContributionAndProof(ctx context.Context, pid peer
 		return result, err
 	}
 
-	s.setSyncContributionIndexSlotSeen(m.Message.Contribution.Slot, m.Message.AggregatorIndex, types.CommitteeIndex(m.Message.Contribution.SubcommitteeIndex))
+	con := m.Message.Contribution
+	if err := s.setSyncContributionBits(con.Slot, con.BlockRoot, con.SubcommitteeIndex, con.AggregationBits); err != nil {
+		return pubsub.ValidationIgnore, err
+	}
+	s.setSyncContributionIndexSlotSeen(con.Slot, m.Message.AggregatorIndex, types.CommitteeIndex(con.SubcommitteeIndex))
 
 	msg.ValidatorData = m
 
@@ -149,14 +154,15 @@ func rejectEmptyContribution(m *ethpb.SignedContributionAndProof) validationFn {
 
 func (s *Service) ignoreSeenSyncContribution(m *ethpb.SignedContributionAndProof) validationFn {
 	return func(ctx context.Context) (pubsub.ValidationResult, error) {
-		seen := s.hasSeenSyncContributionIndexSlot(m.Message.Contribution.Slot, m.Message.AggregatorIndex, types.CommitteeIndex(m.Message.Contribution.SubcommitteeIndex))
-		if seen {
-			return pubsub.ValidationIgnore, nil
-		}
-		seen, err := s.cfg.syncCommsPool.HasSyncCommitteeContribution(m.Message.Contribution)
+		c := m.Message.Contribution
+		seen, err := s.hasSeenSyncContributionBits(c.Slot, c.BlockRoot, c.SubcommitteeIndex, c.AggregationBits)
 		if err != nil {
 			return pubsub.ValidationIgnore, err
 		}
+		if seen {
+			return pubsub.ValidationIgnore, nil
+		}
+		seen = s.hasSeenSyncContributionIndexSlot(c.Slot, m.Message.AggregatorIndex, types.CommitteeIndex(c.SubcommitteeIndex))
 		if seen {
 			return pubsub.ValidationIgnore, nil
 		}
@@ -333,6 +339,54 @@ func (s *Service) setSyncContributionIndexSlotSeen(slot types.Slot, aggregatorIn
 	b := append(bytesutil.Bytes32(uint64(aggregatorIndex)), bytesutil.Bytes32(uint64(slot))...)
 	b = append(b, bytesutil.Bytes32(uint64(subComIdx))...)
 	s.seenSyncContributionCache.Add(string(b), true)
+}
+
+// Set sync contribution's slot, root, committee index and bits.
+func (s *Service) setSyncContributionBits(slot types.Slot, root []byte, subComIdx uint64, bits bitfield.Bitvector128) error {
+	s.syncContributionBitsOverlapLock.Lock()
+	defer s.syncContributionBitsOverlapLock.Unlock()
+	b := append(root, bytesutil.Bytes32(uint64(slot))...)
+	b = append(b, bytesutil.Bytes32(subComIdx)...)
+	v, ok := s.syncContributionBitsOverlapCache.Get(string(b))
+	if !ok {
+		s.syncContributionBitsOverlapCache.Add(string(b), []bitfield.Bitvector128{bits})
+		return nil
+	}
+	bitsList, ok := v.([]bitfield.Bitvector128)
+	if !ok {
+		return errors.New("could not covert cached value to []bitfield.Bitvector128")
+	}
+	s.syncContributionBitsOverlapCache.Add(string(b), append(bitsList, bits))
+	return nil
+}
+
+// Check sync contribution bits don't have an overlap with one's in cache.
+func (s *Service) hasSeenSyncContributionBits(slot types.Slot, root []byte, subComIdx uint64, bits bitfield.Bitvector128) (bool, error) {
+	s.syncContributionBitsOverlapLock.RLock()
+	defer s.syncContributionBitsOverlapLock.RUnlock()
+	b := append(root, bytesutil.Bytes32(uint64(slot))...)
+	b = append(b, bytesutil.Bytes32(subComIdx)...)
+	v, ok := s.syncContributionBitsOverlapCache.Get(string(b))
+	if !ok {
+		return false, nil
+	}
+	bitsList, ok := v.([]bitfield.Bitvector128)
+	if !ok {
+		return false, errors.New("could not covert cached value to []bitfield.Bitvector128")
+	}
+	for _, bs := range bitsList {
+		if bs == nil {
+			return false, errors.New("nil bitfield")
+		}
+		overlaps, err := bs.Overlaps(bits)
+		if err != nil {
+			return false, err
+		}
+		if overlaps {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // verifySyncSelectionData verifies that the provided sync contribution has a valid
