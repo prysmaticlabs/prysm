@@ -3,7 +3,7 @@ package v3
 // CurrentEpochParticipation corresponding to participation bits on the beacon chain.
 func (b *BeaconState) CurrentEpochParticipation() ([]byte, error) {
 	if !b.hasInnerState() {
-		return nil, nil
+		return nil, ErrNilInnerState
 	}
 	if b.state.CurrentEpochParticipation == nil {
 		return nil, nil
@@ -18,7 +18,7 @@ func (b *BeaconState) CurrentEpochParticipation() ([]byte, error) {
 // PreviousEpochParticipation corresponding to participation bits on the beacon chain.
 func (b *BeaconState) PreviousEpochParticipation() ([]byte, error) {
 	if !b.hasInnerState() {
-		return nil, nil
+		return nil, ErrNilInnerState
 	}
 	if b.state.PreviousEpochParticipation == nil {
 		return nil, nil

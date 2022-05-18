@@ -9,6 +9,7 @@ go_library(
     ],
     importpath = "github.com/prysmaticlabs/prysm/validator/keymanager/remote",
     visibility = [
+        "//cmd/validator:__subpackages__",
         "//validator:__pkg__",
         "//validator:__subpackages__",
     ],
