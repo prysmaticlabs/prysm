@@ -216,6 +216,9 @@ func writeKeystoreKeys(ctx context.Context, keystorePath string, numKeys uint64)
 	if err != nil {
 		return err
 	}
+	for i, p := range pub {
+		log.Infof("web3signer file added %s, key index %v", hexutil.Encode(p.Marshal()), i)
+	}
 	for i, pk := range priv {
 		if ctx.Err() != nil {
 			return ctx.Err()
