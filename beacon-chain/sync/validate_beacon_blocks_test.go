@@ -741,6 +741,9 @@ func TestValidateBeaconBlockPubSub_SeenProposerSlot(t *testing.T) {
 	_, err = p.Encoding().EncodeGossip(buf, msg)
 	require.NoError(t, err)
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(msg)]
+	digest, err := r.currentForkDigest()
+	assert.NoError(t, err)
+	topic = r.addDigestToTopic(topic, digest)
 	m := &pubsub.Message{
 		Message: &pubsubpb.Message{
 			Data:  buf.Bytes(),
@@ -750,9 +753,8 @@ func TestValidateBeaconBlockPubSub_SeenProposerSlot(t *testing.T) {
 	r.setSeenBlockIndexSlot(msg.Block.Slot, msg.Block.ProposerIndex)
 	time.Sleep(10 * time.Millisecond) // Wait for cached value to pass through buffers.
 	res, err := r.validateBeaconBlockPubSub(ctx, "", m)
-	_ = err
-	result := res == pubsub.ValidationAccept
-	assert.Equal(t, false, result)
+	assert.NoError(t, err)
+	assert.Equal(t, res, pubsub.ValidationIgnore, "seen proposer block should be ignored")
 }
 
 func TestValidateBeaconBlockPubSub_FilterByFinalizedEpoch(t *testing.T) {
