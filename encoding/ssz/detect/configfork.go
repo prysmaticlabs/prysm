@@ -145,18 +145,8 @@ func (cf *VersionedUnmarshaler) UnmarshalBeaconBlock(marshaled []byte) (interfac
 	if err != nil {
 		return nil, err
 	}
-
-	// heuristic to make sure block is from the same version as the VersionedUnmarshaler.
-	// Look up the version for the epoch that the block is from, then ensure that it matches the Version in the
-	// VersionedUnmarshaler.
-	epoch := slots.ToEpoch(slot)
-	fs := forks.NewOrderedSchedule(cf.Config)
-	ver, err := fs.VersionForEpoch(epoch)
-	if err != nil {
+	if err := cf.validateVersion(slot); err != nil {
 		return nil, err
-	}
-	if ver != cf.Version {
-		return nil, errors.Wrapf(errBlockForkMismatch, "slot=%d, epoch=%d, version=%#x", slot, epoch, ver)
 	}
 
 	var blk ssz.Unmarshaler
@@ -176,4 +166,51 @@ func (cf *VersionedUnmarshaler) UnmarshalBeaconBlock(marshaled []byte) (interfac
 		return nil, errors.Wrap(err, "failed to unmarshal SignedBeaconBlock in UnmarshalSSZ")
 	}
 	return wrapper.WrappedSignedBeaconBlock(blk)
+}
+
+// UnmarshalBlindedBeaconBlock uses internal knowledge in the VersionedUnmarshaler to pick the right concrete blinded SignedBeaconBlock type,
+// then Unmarshal()s the type and returns an instance of block.SignedBeaconBlock if successful.
+// For Phase0 and Altair it works exactly line UnmarshalBeaconBlock.
+func (cf *VersionedUnmarshaler) UnmarshalBlindedBeaconBlock(marshaled []byte) (interfaces.SignedBeaconBlock, error) {
+	slot, err := slotFromBlock(marshaled)
+	if err != nil {
+		return nil, err
+	}
+	if err := cf.validateVersion(slot); err != nil {
+		return nil, err
+	}
+
+	var blk ssz.Unmarshaler
+	switch cf.Fork {
+	case version.Phase0:
+		blk = &ethpb.SignedBeaconBlock{}
+	case version.Altair:
+		blk = &ethpb.SignedBeaconBlockAltair{}
+	case version.Bellatrix:
+		blk = &ethpb.SignedBlindedBeaconBlockBellatrix{}
+	default:
+		forkName := version.String(cf.Fork)
+		return nil, fmt.Errorf("unable to initialize BeaconBlock for fork version=%s at slot=%d", forkName, slot)
+	}
+	err = blk.UnmarshalSSZ(marshaled)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal SignedBeaconBlock in UnmarshalSSZ")
+	}
+	return wrapper.WrappedSignedBeaconBlock(blk)
+}
+
+// Heuristic to make sure block is from the same version as the VersionedUnmarshaler.
+// Look up the version for the epoch that the block is from, then ensure that it matches the Version in the
+// VersionedUnmarshaler.
+func (cf *VersionedUnmarshaler) validateVersion(slot types.Slot) error {
+	epoch := slots.ToEpoch(slot)
+	fs := forks.NewOrderedSchedule(cf.Config)
+	ver, err := fs.VersionForEpoch(epoch)
+	if err != nil {
+		return err
+	}
+	if ver != cf.Version {
+		return errors.Wrapf(errBlockForkMismatch, "slot=%d, epoch=%d, version=%#x", slot, epoch, ver)
+	}
+	return nil
 }
