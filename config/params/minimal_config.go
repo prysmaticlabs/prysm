@@ -6,11 +6,6 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 )
 
-// UseMinimalConfig for beacon chain services.
-func UseMinimalConfig() {
-	OverrideBeaconConfig(MinimalSpecConfig())
-}
-
 // MinimalSpecConfig retrieves the minimal config used in spec tests.
 func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig := mainnetBeaconConfig.Copy()

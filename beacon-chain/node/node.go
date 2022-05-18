@@ -121,17 +121,29 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 	if err := features.ConfigureBeaconChain(cliCtx); err != nil {
 		return nil, err
 	}
-	cmd.ConfigureBeaconChain(cliCtx)
+	if err := cmd.ConfigureBeaconChain(cliCtx); err != nil {
+		return nil, err
+	}
 	flags.ConfigureGlobalFlags(cliCtx)
 	if err := configureChainConfig(cliCtx); err != nil {
 		return nil, err
 	}
-	configureHistoricalSlasher(cliCtx)
-	configureSafeSlotsToImportOptimistically(cliCtx)
-	configureSlotsPerArchivedPoint(cliCtx)
-	configureEth1Config(cliCtx)
+	if err := configureHistoricalSlasher(cliCtx); err != nil {
+		return nil, err
+	}
+	if err := configureSafeSlotsToImportOptimistically(cliCtx); err != nil {
+		return nil, err
+	}
+	if err := configureSlotsPerArchivedPoint(cliCtx); err != nil {
+		return nil, err
+	}
+	if err := configureEth1Config(cliCtx); err != nil {
+		return nil, err
+	}
 	configureNetwork(cliCtx)
-	configureInteropConfig(cliCtx)
+	if err := configureInteropConfig(cliCtx); err != nil {
+		return nil, err
+	}
 	if err := configureExecutionSetting(cliCtx); err != nil {
 		return nil, err
 	}

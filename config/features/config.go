@@ -116,7 +116,6 @@ func configureTestnet(ctx *cli.Context) error {
 		if err := params.Registry.SetActive(params.PraterConfig().Copy()); err != nil {
 			return err
 		}
-		params.UsePraterNetworkConfig()
 	} else {
 		log.Warn("Running on Ethereum Consensus Mainnet")
 		if err := params.Registry.SetActive(params.MainnetConfig().Copy()); err != nil {

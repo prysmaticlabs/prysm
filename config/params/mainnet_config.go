@@ -16,11 +16,6 @@ func MainnetConfig() *BeaconChainConfig {
 	return mainnetBeaconConfig
 }
 
-// UseMainnetConfig for beacon chain services.
-func UseMainnetConfig() {
-	OverrideBeaconConfig(MainnetConfig().Copy())
-}
-
 const (
 	// Genesis Fork Epoch for the mainnet config.
 	genesisForkEpoch = 0

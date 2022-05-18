@@ -5,20 +5,6 @@ const (
 	bellatrixE2EForkEpoch = 8 //nolint:deadcode
 )
 
-// UseE2EConfig for beacon chain services.
-func UseE2EConfig() {
-	OverrideBeaconConfig(E2ETestConfig().Copy())
-	cfg := BeaconNetworkConfig().Copy()
-	OverrideBeaconNetworkConfig(cfg)
-}
-
-// UseE2EMainnetConfig for beacon chain services.
-func UseE2EMainnetConfig() {
-	OverrideBeaconConfig(E2EMainnetTestConfig())
-	cfg := BeaconNetworkConfig().Copy()
-	OverrideBeaconNetworkConfig(cfg)
-}
-
 // E2ETestConfig retrieves the configurations made specifically for E2E testing.
 //
 // WARNING: This config is only for testing, it is not meant for use outside of E2E.

@@ -107,7 +107,9 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 	if err := features.ConfigureValidator(cliCtx); err != nil {
 		return nil, err
 	}
-	cmd.ConfigureValidator(cliCtx)
+	if err := cmd.ConfigureValidator(cliCtx); err != nil {
+		return nil, err
+	}
 
 	if cliCtx.IsSet(cmd.ChainConfigFileFlag.Name) {
 		chainConfigFileName := cliCtx.String(cmd.ChainConfigFileFlag.Name)
