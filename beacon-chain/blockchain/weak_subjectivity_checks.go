@@ -30,10 +30,11 @@ type WeakSubjectivityVerifier struct {
 	db       weakSubjectivityDB
 }
 
-// NewWeakSubjectivityVerifier validates a checkpoint, and if valid, uses it to initialize a weak subjectivity verifier
+// NewWeakSubjectivityVerifier validates a checkpoint, and if valid, uses it to initialize a weak subjectivity verifier.
 func NewWeakSubjectivityVerifier(wsc *ethpb.Checkpoint, db weakSubjectivityDB) (*WeakSubjectivityVerifier, error) {
 	if wsc == nil || len(wsc.Root) == 0 || wsc.Epoch == 0 {
-		log.Warn("No valid weak subjectivity checkpoint specified, running without weak subjectivity verification")
+		log.Info("No checkpoint for syncing provided, node will begin syncing from genesis. Checkpoint Sync is an optional feature that allows your node to sync from a more recent checkpoint, " +
+			"which enhances the security of your local beacon node and the broader network. See https://docs.prylabs.network/docs/next/prysm-usage/checkpoint-sync/ to learn how to configure Checkpoint Sync.")
 		return &WeakSubjectivityVerifier{
 			enabled: false,
 		}, nil
@@ -58,7 +59,6 @@ func (v *WeakSubjectivityVerifier) VerifyWeakSubjectivity(ctx context.Context, f
 	if v.verified || !v.enabled {
 		return nil
 	}
-
 	// Two conditions are described in the specs:
 	// IF epoch_number > store.finalized_checkpoint.epoch,
 	// then ASSERT during block sync that block with root block_root
@@ -92,6 +92,5 @@ func (v *WeakSubjectivityVerifier) VerifyWeakSubjectivity(ctx context.Context, f
 			return nil
 		}
 	}
-
 	return errors.Wrap(errWSBlockNotFoundInEpoch, fmt.Sprintf("root=%#x, epoch=%d", v.root, v.epoch))
 }
