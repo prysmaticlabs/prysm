@@ -33,7 +33,7 @@ func (s *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) 
 	}
 
 	if err := s.cfg.chain.ReceiveBlock(ctx, signed, root); err != nil {
-		if !errors.Is(err, powchain.ErrHTTPTimeout) && !errors.Is(blockchain.ErrUndefinedExecutionEngineError, err) {
+		if !errors.Is(err, powchain.ErrHTTPTimeout) && !errors.Is(err, blockchain.ErrUndefinedExecutionEngineError) {
 			interop.WriteBlockToDisk(signed, true /*failed*/)
 			s.setBadBlock(ctx, root)
 		}
