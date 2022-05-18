@@ -960,7 +960,7 @@ func (v *validator) UpdateFeeRecipient(ctx context.Context, km keymanager.IKeyma
 	if err != nil {
 		return err
 	}
-	feeRecipients, err := v.feeRecipients(ctx, pubkeys)
+	feeRecipients, registerValidatorRequest, err := v.feeRecipients(ctx, pubkeys)
 	if err != nil {
 		return err
 	}
@@ -974,11 +974,13 @@ func (v *validator) UpdateFeeRecipient(ctx context.Context, km keymanager.IKeyma
 		return err
 	}
 	log.Infoln("Successfully prepared beacon proposer with fee recipient to validator index mapping.")
+	if err := SubmitBuilderValidatorRegistration(ctx, v.validatorClient, v.node, km.Sign, registerValidatorRequest); err != nil {
 
+	}
 	return nil
 }
 
-func (v *validator) feeRecipients(ctx context.Context, pubkeys [][fieldparams.BLSPubkeyLength]byte) ([]*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer, error) {
+func (v *validator) feeRecipients(ctx context.Context, pubkeys [][fieldparams.BLSPubkeyLength]byte) ([]*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer, *ethpb.ValidatorRegistrationV1, error) {
 	var validatorToFeeRecipientArray []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer
 	// need to check for pubkey to validator index mappings
 	for _, key := range pubkeys {
@@ -988,7 +990,7 @@ func (v *validator) feeRecipients(ctx context.Context, pubkeys [][fieldparams.BL
 		if !found {
 			ind, foundIndex, err := v.cacheValidatorPubkeyHexToValidatorIndex(ctx, key)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			if !foundIndex {
 				//if still not found, skip this validator
@@ -1015,7 +1017,7 @@ func (v *validator) feeRecipients(ctx context.Context, pubkeys [][fieldparams.BL
 			FeeRecipient:   feeRecipient[:],
 		})
 	}
-	return validatorToFeeRecipientArray, nil
+	return validatorToFeeRecipientArray, nil, nil
 }
 
 func (v *validator) cacheValidatorPubkeyHexToValidatorIndex(ctx context.Context, pubkey [fieldparams.BLSPubkeyLength]byte) (types.ValidatorIndex, bool, error) {
