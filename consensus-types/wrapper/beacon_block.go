@@ -1,15 +1,18 @@
 package wrapper
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
 
 	"github.com/pkg/errors"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -158,6 +161,20 @@ func BuildSignedBeaconBlockFromExecutionPayload(
 		return nil, errors.New("cannot build a blinded beacon block for Phase 0 or Altair fork versions")
 	default:
 		b := tp.Block()
+		// Initialize payload to empty values to ensure hash tree root works as expected.
+		if isEmptyPayload(payload) {
+			payload = &enginev1.ExecutionPayload{
+				ParentHash:    make([]byte, fieldparams.RootLength),
+				FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
+				StateRoot:     make([]byte, fieldparams.RootLength),
+				ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+				LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
+				PrevRandao:    make([]byte, fieldparams.RootLength),
+				BaseFeePerGas: make([]byte, fieldparams.RootLength),
+				BlockHash:     make([]byte, fieldparams.RootLength),
+			}
+			log.Error("GOT EMPTY PAYLOAD")
+		}
 		payloadRoot, err := payload.HashTreeRoot()
 		if err != nil {
 			if err := json.NewEncoder(os.Stdout).Encode(payload); err != nil {
@@ -284,4 +301,53 @@ func UnwrapGenericSignedBeaconBlock(gb *eth.GenericSignedBeaconBlock) (interface
 	default:
 		return nil, errors.Wrapf(ErrUnsupportedSignedBeaconBlock, "unable to wrap block of type %T", gb)
 	}
+}
+
+func isEmptyPayload(p *enginev1.ExecutionPayload) bool {
+	if p == nil {
+		return true
+	}
+	if !bytes.Equal(p.ParentHash, make([]byte, fieldparams.RootLength)) {
+		return false
+	}
+	if !bytes.Equal(p.FeeRecipient, make([]byte, fieldparams.FeeRecipientLength)) {
+		return false
+	}
+	if !bytes.Equal(p.StateRoot, make([]byte, fieldparams.RootLength)) {
+		return false
+	}
+	if !bytes.Equal(p.ReceiptsRoot, make([]byte, fieldparams.RootLength)) {
+		return false
+	}
+	if !bytes.Equal(p.LogsBloom, make([]byte, fieldparams.LogsBloomLength)) {
+		return false
+	}
+	if !bytes.Equal(p.PrevRandao, make([]byte, fieldparams.RootLength)) {
+		return false
+	}
+	if !bytes.Equal(p.BaseFeePerGas, make([]byte, fieldparams.RootLength)) {
+		return false
+	}
+	if !bytes.Equal(p.BlockHash, make([]byte, fieldparams.RootLength)) {
+		return false
+	}
+	if len(p.Transactions) != 0 {
+		return false
+	}
+	if len(p.ExtraData) != 0 {
+		return false
+	}
+	if p.BlockNumber != 0 {
+		return false
+	}
+	if p.GasLimit != 0 {
+		return false
+	}
+	if p.GasUsed != 0 {
+		return false
+	}
+	if p.Timestamp != 0 {
+		return false
+	}
+	return true
 }
