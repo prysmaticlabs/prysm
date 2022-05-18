@@ -945,8 +945,3 @@ type syncDetailsJson struct {
 	IsSyncing    bool   `json:"is_syncing"`
 	IsOptimistic bool   `json:"is_optimistic"`
 }
-
-// SyncDetailsContainer is a wrapper for SyncDetails.
-type syncDetailsContainer struct {
-	SyncDetails *syncDetailsJson `json:"sync_details"`
-}
