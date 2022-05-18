@@ -70,7 +70,7 @@ func TestPrepareSSZRequestForProxying(t *testing.T) {
 	var body bytes.Buffer
 	request := httptest.NewRequest("GET", "http://foo.example", &body)
 
-	errJson := prepareSSZRequestForProxying(middleware, endpoint, request, "/ssz")
+	errJson := prepareSSZRequestForProxying(middleware, endpoint, request)
 	require.Equal(t, true, errJson == nil)
 	assert.Equal(t, "/internal/ssz", request.URL.Path)
 }
@@ -143,7 +143,7 @@ func TestWriteSSZResponseHeaderAndBody(t *testing.T) {
 		require.Equal(t, true, ok, "header not found")
 		require.Equal(t, 1, len(v), "wrong number of header values")
 		assert.Equal(t, "attachment; filename=test.ssz", v[0])
-		v, ok = writer.Header()["Eth-Consensus-Version"]
+		v, ok = writer.Header()[versionHeader]
 		require.Equal(t, true, ok, "header not found")
 		require.Equal(t, 1, len(v), "wrong number of header values")
 		assert.Equal(t, "version", v[0])
