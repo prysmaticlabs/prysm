@@ -18,6 +18,12 @@ var (
 	errNotOptimisticCandidate = errors.New("block is not suitable for optimistic sync")
 )
 
+// An invalid block is the block that fails state transition based on the core protocol rules.
+// The beacon node shall not be accepting and builder blocks that branch off of the invalid block.
+// Some examples of invalid blocks are:
+// The block violates state transition rules.
+// The block is deemed invalid according to execution layer client.
+// The block violates certain fork choice rules (before finalized slot, not finalized ancestor)
 type invalidBlock struct {
 	error
 }
