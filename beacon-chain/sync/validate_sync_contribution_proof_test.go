@@ -1107,54 +1107,106 @@ func TestService_setSyncContributionIndexSlotSeen(t *testing.T) {
 	// Empty cache
 	b0 := bitfield.NewBitvector128()
 	b0.SetBitAt(0, true)
-	has, err := s.hasSeenSyncContributionBits(0, []byte{}, 0, b0)
+	has, err := s.hasSeenSyncContributionBits(&ethpb.SyncCommitteeContribution{
+		AggregationBits: b0,
+	})
 	require.NoError(t, err)
 	require.Equal(t, false, has)
 
 	// Cache with entries but same key
-	require.NoError(t, s.setSyncContributionBits(0, []byte{}, 0, b0))
-	has, err = s.hasSeenSyncContributionBits(0, []byte{}, 0, b0)
+	require.NoError(t, s.setSyncContributionBits(&ethpb.SyncCommitteeContribution{
+		AggregationBits: b0,
+	}))
+	has, err = s.hasSeenSyncContributionBits(&ethpb.SyncCommitteeContribution{
+		AggregationBits: b0,
+	})
 	require.NoError(t, err)
 	require.Equal(t, true, has)
 	b1 := bitfield.NewBitvector128()
 	b1.SetBitAt(1, true)
-	has, err = s.hasSeenSyncContributionBits(0, []byte{}, 0, b1)
+	has, err = s.hasSeenSyncContributionBits(&ethpb.SyncCommitteeContribution{
+		AggregationBits: b1,
+	})
 	require.NoError(t, err)
 	require.Equal(t, false, has)
 	b2 := bitfield.NewBitvector128()
 	b2.SetBitAt(1, true)
 	b2.SetBitAt(2, true)
-	has, err = s.hasSeenSyncContributionBits(0, []byte{}, 0, b2)
+	has, err = s.hasSeenSyncContributionBits(&ethpb.SyncCommitteeContribution{
+		AggregationBits: b2,
+	})
 	require.NoError(t, err)
 	require.Equal(t, false, has)
 	b2.SetBitAt(0, true)
-	has, err = s.hasSeenSyncContributionBits(0, []byte{}, 0, b2)
+	has, err = s.hasSeenSyncContributionBits(&ethpb.SyncCommitteeContribution{
+		AggregationBits: b2,
+	})
 	require.NoError(t, err)
 	require.Equal(t, true, has)
 
 	// Cache with entries but different key
-	has, err = s.hasSeenSyncContributionBits(1, []byte{'a'}, 2, b0)
+	has, err = s.hasSeenSyncContributionBits(&ethpb.SyncCommitteeContribution{
+		Slot:              1,
+		SubcommitteeIndex: 2,
+		BlockRoot:         []byte{'A'},
+		AggregationBits:   b0,
+	})
 	require.NoError(t, err)
 	require.Equal(t, false, has)
-	require.NoError(t, s.setSyncContributionBits(1, []byte{'a'}, 2, b2))
-	has, err = s.hasSeenSyncContributionBits(1, []byte{'a'}, 2, b0)
+	require.NoError(t, s.setSyncContributionBits(&ethpb.SyncCommitteeContribution{
+		Slot:              1,
+		SubcommitteeIndex: 2,
+		BlockRoot:         []byte{'A'},
+		AggregationBits:   b2,
+	}))
+	has, err = s.hasSeenSyncContributionBits(&ethpb.SyncCommitteeContribution{
+		Slot:              1,
+		SubcommitteeIndex: 2,
+		BlockRoot:         []byte{'A'},
+		AggregationBits:   b0,
+	})
 	require.NoError(t, err)
 	require.Equal(t, true, has)
-	has, err = s.hasSeenSyncContributionBits(1, []byte{'a'}, 2, b1)
+	has, err = s.hasSeenSyncContributionBits(&ethpb.SyncCommitteeContribution{
+		Slot:              1,
+		SubcommitteeIndex: 2,
+		BlockRoot:         []byte{'A'},
+		AggregationBits:   b1,
+	})
 	require.NoError(t, err)
 	require.Equal(t, true, has)
-	has, err = s.hasSeenSyncContributionBits(1, []byte{'a'}, 2, b2)
+	has, err = s.hasSeenSyncContributionBits(&ethpb.SyncCommitteeContribution{
+		Slot:              1,
+		SubcommitteeIndex: 2,
+		BlockRoot:         []byte{'A'},
+		AggregationBits:   b2,
+	})
 	require.NoError(t, err)
 	require.Equal(t, true, has)
 
 	// Check invariant with the keys
-	has, err = s.hasSeenSyncContributionBits(2, []byte{'a'}, 2, b0)
+	has, err = s.hasSeenSyncContributionBits(&ethpb.SyncCommitteeContribution{
+		Slot:              2,
+		SubcommitteeIndex: 2,
+		BlockRoot:         []byte{'A'},
+		AggregationBits:   b0,
+	})
 	require.NoError(t, err)
 	require.Equal(t, false, has)
-	has, err = s.hasSeenSyncContributionBits(1, []byte{'b'}, 2, b0)
+	has, err = s.hasSeenSyncContributionBits(&ethpb.SyncCommitteeContribution{
+		Slot:              1,
+		SubcommitteeIndex: 2,
+		BlockRoot:         []byte{'B'},
+		AggregationBits:   b0,
+	})
 	require.NoError(t, err)
 	require.Equal(t, false, has)
-	has, err = s.hasSeenSyncContributionBits(1, []byte{'a'}, 3, b0)
+	has, err = s.hasSeenSyncContributionBits(&ethpb.SyncCommitteeContribution{
+		Slot:              1,
+		SubcommitteeIndex: 3,
+		BlockRoot:         []byte{'A'},
+		AggregationBits:   b0,
+	})
 	require.NoError(t, err)
 	require.Equal(t, false, has)
 }

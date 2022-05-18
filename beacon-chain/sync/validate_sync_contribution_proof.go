@@ -6,7 +6,6 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
-	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
@@ -90,7 +89,7 @@ func (s *Service) validateSyncContributionAndProof(ctx context.Context, pid peer
 	}
 
 	con := m.Message.Contribution
-	if err := s.setSyncContributionBits(con.Slot, con.BlockRoot, con.SubcommitteeIndex, con.AggregationBits); err != nil {
+	if err := s.setSyncContributionBits(con); err != nil {
 		return pubsub.ValidationIgnore, err
 	}
 	s.setSyncContributionIndexSlotSeen(con.Slot, m.Message.AggregatorIndex, types.CommitteeIndex(con.SubcommitteeIndex))
@@ -155,7 +154,7 @@ func rejectEmptyContribution(m *ethpb.SignedContributionAndProof) validationFn {
 func (s *Service) ignoreSeenSyncContribution(m *ethpb.SignedContributionAndProof) validationFn {
 	return func(ctx context.Context) (pubsub.ValidationResult, error) {
 		c := m.Message.Contribution
-		seen, err := s.hasSeenSyncContributionBits(c.Slot, c.BlockRoot, c.SubcommitteeIndex, c.AggregationBits)
+		seen, err := s.hasSeenSyncContributionBits(c)
 		if err != nil {
 			return pubsub.ValidationIgnore, err
 		}
@@ -342,43 +341,44 @@ func (s *Service) setSyncContributionIndexSlotSeen(slot types.Slot, aggregatorIn
 }
 
 // Set sync contribution's slot, root, committee index and bits.
-func (s *Service) setSyncContributionBits(slot types.Slot, root []byte, subComIdx uint64, bits bitfield.Bitvector128) error {
+func (s *Service) setSyncContributionBits(c *ethpb.SyncCommitteeContribution) error {
 	s.syncContributionBitsOverlapLock.Lock()
 	defer s.syncContributionBitsOverlapLock.Unlock()
-	b := append(root, bytesutil.Bytes32(uint64(slot))...)
-	b = append(b, bytesutil.Bytes32(subComIdx)...)
+	b := append(c.BlockRoot, bytesutil.Bytes32(uint64(c.Slot))...)
+	b = append(b, bytesutil.Bytes32(c.SubcommitteeIndex)...)
 	v, ok := s.syncContributionBitsOverlapCache.Get(string(b))
 	if !ok {
-		s.syncContributionBitsOverlapCache.Add(string(b), []bitfield.Bitvector128{bits})
+		s.syncContributionBitsOverlapCache.Add(string(b), [][]byte{c.AggregationBits.Bytes()})
 		return nil
 	}
-	bitsList, ok := v.([]bitfield.Bitvector128)
+	bitsList, ok := v.([][]byte)
 	if !ok {
-		return errors.New("could not covert cached value to []bitfield.Bitvector128")
+		return errors.New("could not covert cached value to []bitfield.Bitvector")
 	}
-	s.syncContributionBitsOverlapCache.Add(string(b), append(bitsList, bits))
+	s.syncContributionBitsOverlapCache.Add(string(b), append(bitsList, c.AggregationBits.Bytes()))
 	return nil
 }
 
 // Check sync contribution bits don't have an overlap with one's in cache.
-func (s *Service) hasSeenSyncContributionBits(slot types.Slot, root []byte, subComIdx uint64, bits bitfield.Bitvector128) (bool, error) {
+func (s *Service) hasSeenSyncContributionBits(c *ethpb.SyncCommitteeContribution) (bool, error) {
 	s.syncContributionBitsOverlapLock.RLock()
 	defer s.syncContributionBitsOverlapLock.RUnlock()
-	b := append(root, bytesutil.Bytes32(uint64(slot))...)
-	b = append(b, bytesutil.Bytes32(subComIdx)...)
+	b := append(c.BlockRoot, bytesutil.Bytes32(uint64(c.Slot))...)
+	b = append(b, bytesutil.Bytes32(c.SubcommitteeIndex)...)
 	v, ok := s.syncContributionBitsOverlapCache.Get(string(b))
 	if !ok {
 		return false, nil
 	}
-	bitsList, ok := v.([]bitfield.Bitvector128)
+	bitsList, ok := v.([][]byte)
 	if !ok {
 		return false, errors.New("could not covert cached value to []bitfield.Bitvector128")
 	}
-	for _, bs := range bitsList {
-		if bs == nil {
+	for _, b := range bitsList {
+		if b == nil {
 			return false, errors.New("nil bitfield")
 		}
-		overlaps, err := bs.Overlaps(bits)
+		bs := ethpb.ConvertSyncContributionBitVector(b)
+		overlaps, err := bs.Overlaps(c.AggregationBits)
 		if err != nil {
 			return false, err
 		}
