@@ -178,7 +178,7 @@ func (r *testRunner) run() {
 			comps = append(comps, web3RemoteSigner)
 		}
 		if err := helpers.ComponentsStarted(ctx, comps); err != nil {
-			return errors.Wrap(err, "validator nodes require beacon nodes to run")
+			return errors.Wrap(err, "validator nodes require components to run")
 		}
 		if err := validatorNodes.Start(ctx); err != nil {
 			return errors.Wrap(err, "failed to start validator nodes")
@@ -368,6 +368,8 @@ func (r *testRunner) runEvaluators(conns []*grpc.ClientConn, tickingStartTime ti
 func (r *testRunner) testDepositsAndTx(ctx context.Context, g *errgroup.Group,
 	keystorePath string, requiredNodes []e2etypes.ComponentRunner) {
 	minGenesisActiveCount := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
+	// prysm web3signer doesn't support deposits
+	r.config.UseWeb3RemoteSigner = false
 	depositCheckValidator := components.NewValidatorNode(r.config, int(e2e.DepositCount), e2e.TestParams.BeaconNodeCount, minGenesisActiveCount)
 	g.Go(func() error {
 		if err := helpers.ComponentsStarted(ctx, requiredNodes); err != nil {
