@@ -254,6 +254,9 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		// The maliciously withheld block has one vote.
 		votes := []uint64{1}
 		f.ProcessAttestation(ctx, votes, maliciouslyWithheldBlock, fEpoch)
+		// The honest block has one vote.
+		votes = []uint64{2}
+		f.ProcessAttestation(ctx, votes, honestBlock, fEpoch)
 
 		// Ensure the head is STILL C, the honest block, as the honest block had proposer boost.
 		r, err = f.Head(ctx, jEpoch, zeroHash, balances, fEpoch)
@@ -421,12 +424,14 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 			),
 		)
 
-		// D cannot win without a boost.
+		// D cannot win without a boost and some votes
 		r, err = f.Head(ctx, jEpoch, zeroHash, balances, fEpoch)
 		require.NoError(t, err)
 		assert.Equal(t, c, r, "Expected C to remain the head")
 
 		// Block D receives the boost.
+		votes = []uint64{2}
+		f.ProcessAttestation(ctx, votes, d, fEpoch)
 		args = &forkchoicetypes.ProposerBoostRootArgs{
 			BlockRoot:       d,
 			BlockSlot:       dSlot,
