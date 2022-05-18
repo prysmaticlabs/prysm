@@ -258,12 +258,17 @@ func MainnetTestConfig() *BeaconChainConfig {
 // so that
 func FillTestVersions(c *BeaconChainConfig, b byte) {
 	c.GenesisForkVersion = make([]byte, fieldparams.VersionLength)
-	c.GenesisForkVersion[0] = 0
+	c.AltairForkVersion = make([]byte, fieldparams.VersionLength)
+	c.BellatrixForkVersion = make([]byte, fieldparams.VersionLength)
+	c.ShardingForkVersion = make([]byte, fieldparams.VersionLength)
+
 	c.GenesisForkVersion[fieldparams.VersionLength-1] = b
-	c.AltairForkVersion[0] = 1
 	c.AltairForkVersion[fieldparams.VersionLength-1] = b
-	c.BellatrixForkVersion[0] = 2
 	c.BellatrixForkVersion[fieldparams.VersionLength-1] = b
-	c.ShardingForkVersion[0] = 3
 	c.ShardingForkVersion[fieldparams.VersionLength-1] = b
+
+	c.GenesisForkVersion[0] = 0
+	c.AltairForkVersion[0] = 1
+	c.BellatrixForkVersion[0] = 2
+	c.ShardingForkVersion[0] = 3
 }
