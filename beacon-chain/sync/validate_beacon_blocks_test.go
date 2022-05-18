@@ -975,6 +975,12 @@ func TestValidateBeaconBlockPubSub_InvalidParentBlock(t *testing.T) {
 			Topic: &topic,
 		},
 	}
+	chainService = &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(2*params.BeaconConfig().SecondsPerSlot), 0),
+		State: beaconState,
+		FinalizedCheckPoint: &ethpb.Checkpoint{
+			Epoch: 0,
+		}}
+	r.cfg.chain = chainService
 
 	res, err = r.validateBeaconBlockPubSub(ctx, "", m)
 	require.ErrorContains(t, "unknown parent for block", err)
