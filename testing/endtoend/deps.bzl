@@ -6,11 +6,10 @@ lighthouse_archive_name = "lighthouse-%s-x86_64-unknown-linux-gnu-portable.tar.g
 def e2e_deps():
     http_archive(
         name = "web3signer",
-        # Built from commit 17d253b which has important unreleased changes.
-        urls = ["https://prysmaticlabs.com/uploads/web3signer-17d253b.tar.gz"],
-        sha256 = "bf450a59a0845c1ce8100b3192c7fec021b565efe8b1ab46bed9f71cb994a6d7",
+        urls = ["https://artifacts.consensys.net/public/web3signer/raw/names/web3signer.tar.gz/versions/22.5.0/web3signer-22.5.0.tar.gz"],
+        sha256 = "3a954f5302e424b34acb4bb024f275caf722d8b116c639617f7a2e0f9c9ddc78",
         build_file = "@prysm//testing/endtoend:web3signer.BUILD",
-        strip_prefix = "web3signer-develop",
+        strip_prefix = "web3signer-22.5.0",
     )
 
     http_archive(
