@@ -34,19 +34,3 @@ type SingleIndexedVerificationFailure struct {
 	Index   int    `json:"index"`
 	Message string `json:"message"`
 }
-
-// SyncDetails contain details about sync status.
-// TODO: Duplicated in structs.go
-// QUESTION: Why are these structs PascalCased, but those in structs.go are camelCased?
-// QUESTION: Possible to eliminate duplication by either importing structs.go here, or importing error_handling_structs into structs.go?
-type SyncDetails struct {
-	HeadSlot     string `json:"head_slot"`
-	SyncDistance string `json:"sync_distance"`
-	IsSyncing    bool   `json:"is_syncing"`
-	IsOptimistic bool   `json:"is_optimistic"`
-}
-
-// SyncDetailsContainer is a wrapper for SyncDetails.
-type SyncDetailsContainer struct {
-	SyncDetails *SyncDetails `json:"sync_details"`
-}

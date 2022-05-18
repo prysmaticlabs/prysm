@@ -15,33 +15,24 @@ import (
 
 // ValidateSync checks whether the node is currently syncing and returns an error if it is.
 // It also appends syncing info to gRPC headers.
-func ValidateSync(ctx context.Context, syncChecker sync.Checker, headFetcher blockchain.HeadFetcher, timeFetcher blockchain.TimeFetcher) error {
+func ValidateSync(ctx context.Context, syncChecker sync.Checker, headFetcher blockchain.HeadFetcher, timeFetcher blockchain.TimeFetcher, optimisticModeFetcher blockchain.OptimisticModeFetcher) error {
 	if !syncChecker.Syncing() {
 		return nil
 	}
 	headSlot := headFetcher.HeadSlot()
-	// optimisticModeFetcher := TODO
-	// beaconServer := TODO -> ctx.beaconServer?
-	// beaconState, err := beaconServer.StateFetcher.State(ctx)
-	// if err != nil {
-	// 	return status.Errorf(
-	// 		codes.Internal,
-	// 		"Could not fetch state from beacon server: %v",
-	// 		err,
-	// 	)
-	// }
-	isOptimistic, err := IsOptimistic(ctx, nil, nil)
+
+	headState, err := headFetcher.HeadState(ctx)
 	if err != nil {
-		return status.Errorf(
-			codes.Internal,
-			"Error while invoking IsOptimistic: %v",
-			err,
-		)
+		return status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
-	// QUESTION: should we pass beaconState / optimisticModeFetcher into IsOptimistic? If so, why? (TODO: inspect)
-	// QUESTION: how do we pass beaconstate / optimisticModeFetcher into IsOptimistic?
-	syncDetailsContainer := &SyncDetailsContainer{
-		SyncDetails: &SyncDetails{
+	isOptimistic, err := IsOptimistic(ctx, headState, optimisticModeFetcher) // opModeFetcher comes from param
+	if err != nil {
+		return status.Errorf(codes.Internal, "Could not check optimistic status: %v", err)
+	}
+
+	// QUESTION: How do I import the structs from /rpc/apimiddleware/structs.go here without importing the whole middleware package?
+	syncDetailsContainer := &syncDetailsContainer{
+		SyncDetails: &syncDetailsJson{
 			HeadSlot:     strconv.FormatUint(uint64(headSlot), 10),
 			SyncDistance: strconv.FormatUint(uint64(timeFetcher.CurrentSlot()-headSlot), 10),
 			IsSyncing:    true,
@@ -61,9 +52,7 @@ func ValidateSync(ctx context.Context, syncChecker sync.Checker, headFetcher blo
 
 // IsOptimistic checks whether the latest block header of the passed in beacon state is the header of an optimistic block.
 // This is exposed to end-users who interpret `true` as "your Prysm beacon node is optimistically tracking head - your execution node isn't yet fully synced"
-// INFO: https://ethereum.github.io/beacon-APIs/?urls.primaryName=dev#/Node/getSyncingStatus for spec
-// INFO: https://github.com/prysmaticlabs/documentation/pull/429 for a PR to user-facing docs that introduces v1/node/syncing as a way to check beacon node + execution node sync status
-func IsOptimistic(ctx context.Context, st state.BeaconState, optimisticSyncFetcher blockchain.OptimisticModeFetcher) (bool, error) {
+func IsOptimistic(ctx context.Context, st state.BeaconState, optimisticModeFetcher blockchain.OptimisticModeFetcher) (bool, error) {
 	root, err := st.HashTreeRoot(ctx)
 	if err != nil {
 		return false, errors.Wrap(err, "could not get state root")
@@ -74,9 +63,11 @@ func IsOptimistic(ctx context.Context, st state.BeaconState, optimisticSyncFetch
 	if err != nil {
 		return false, errors.Wrap(err, "could not get header root")
 	}
-	isOptimistic, err := optimisticSyncFetcher.IsOptimisticForRoot(ctx, headRoot)
+
+	isOptimistic, err := optimisticModeFetcher.IsOptimisticForRoot(ctx, headRoot)
 	if err != nil {
 		return false, errors.Wrap(err, "could not check if block is optimistic")
 	}
+
 	return isOptimistic, nil
 }

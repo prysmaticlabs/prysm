@@ -934,10 +934,18 @@ type eventErrorJson struct {
 	Message    string `json:"message"`
 }
 
-// TODO: Duplicated in error_handling.go
+// ---------------
+// Sync status checking.
+// ---------------
+
 type syncDetailsJson struct {
 	HeadSlot     string `json:"head_slot"`
 	SyncDistance string `json:"sync_distance"`
 	IsSyncing    bool   `json:"is_syncing"`
 	IsOptimistic bool   `json:"is_optimistic"`
+}
+
+// SyncDetailsContainer is a wrapper for SyncDetails.
+type syncDetailsContainer struct {
+	SyncDetails *syncDetailsJson `json:"sync_details"`
 }
