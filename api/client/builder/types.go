@@ -544,6 +544,7 @@ func (b *BlindedBeaconBlockBodyBellatrix) MarshalJSON() ([]byte, error) {
 		Attestations:           []*Attestation{},
 		Deposits:               []*Deposit{},
 		VoluntaryExits:         []*SignedVoluntaryExit{},
+		SyncAggregates:         &SyncAggregate{b.SyncAggregate},
 		ExecutionPayloadHeader: &ExecutionPayloadHeader{ExecutionPayloadHeader: b.BlindedBeaconBlockBodyBellatrix.ExecutionPayloadHeader},
 	})
 }

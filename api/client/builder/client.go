@@ -142,7 +142,6 @@ func (c *Client) GetHeader(ctx context.Context, slot types.Slot, parentHash [32]
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println(hb)
 	hr := &ExecHeaderResponse{}
 	if err := json.Unmarshal(hb, hr); err != nil {
 		return nil, errors.Wrapf(err, "error unmarshaling the builder GetHeader response, using slot=%d, parentHash=%#x, pubkey=%#x", slot, parentHash, pubkey)
