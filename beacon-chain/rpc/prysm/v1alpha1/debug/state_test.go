@@ -82,10 +82,9 @@ func TestServer_GetBeaconState(t *testing.T) {
 			Slot: slot + 1,
 		},
 	}
-	state := st
 	// since we are requesting a state at a skipped slot, use the same method as stategen
 	// to advance to the pre-state for the subsequent slot
-	state, err = stategen.ReplayProcessSlots(ctx, state, slot+1)
+	state, err := stategen.ReplayProcessSlots(ctx, st, slot+1)
 	require.NoError(t, err)
 	wanted, err = state.MarshalSSZ()
 	require.NoError(t, err)
