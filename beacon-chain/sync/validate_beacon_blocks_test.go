@@ -606,7 +606,7 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromFuture(t *testing.T) {
 	sk, err := bls.SecretKeyFromBytes(b32[:])
 	require.NoError(t, err)
 	msg := util.NewBeaconBlock()
-	msg.Block.Slot = 3
+	msg.Block.Slot = 10
 	msg.Block.ParentRoot = util.Random32Bytes(t)
 	msg.Signature = sk.Sign([]byte("data")).Marshal()
 
@@ -630,6 +630,9 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromFuture(t *testing.T) {
 	_, err = p.Encoding().EncodeGossip(buf, msg)
 	require.NoError(t, err)
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(msg)]
+	digest, err := r.currentForkDigest()
+	assert.NoError(t, err)
+	topic = r.addDigestToTopic(topic, digest)
 	m := &pubsub.Message{
 		Message: &pubsubpb.Message{
 			Data:  buf.Bytes(),
@@ -637,9 +640,8 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromFuture(t *testing.T) {
 		},
 	}
 	res, err := r.validateBeaconBlockPubSub(ctx, "", m)
-	_ = err
-	result := res == pubsub.ValidationAccept
-	assert.Equal(t, false, result)
+	assert.NoError(t, err)
+	assert.Equal(t, res, pubsub.ValidationIgnore, "block from the future should be ignored")
 }
 
 func TestValidateBeaconBlockPubSub_RejectBlocksFromThePast(t *testing.T) {
