@@ -188,6 +188,14 @@ func validatorsSyncParticipation(conns ...*grpc.ClientConn) error {
 		if b.IsNil() {
 			return errors.New("nil block provided")
 		}
+		forkStartSlot, err := slots.EpochStart(helpers.AltairE2EForkEpoch)
+		if err != nil {
+			return err
+		}
+		if forkStartSlot == b.Block().Slot() {
+			// Skip fork slot.
+			continue
+		}
 		expectedParticipation := expectedSyncParticipation
 		switch slots.ToEpoch(b.Block().Slot()) {
 		case helpers.AltairE2EForkEpoch:
