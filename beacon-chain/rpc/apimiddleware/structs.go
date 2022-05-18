@@ -935,9 +935,10 @@ type eventErrorJson struct {
 }
 
 // ---------------
-// Sync status checking.
+// Sync status checking and errors.
 // ---------------
 
+// todo: remove duplication between this and beacon-chain/rpc/eth/helpers/sync.go
 type syncDetailsJson struct {
 	HeadSlot     string `json:"head_slot"`
 	SyncDistance string `json:"sync_distance"`

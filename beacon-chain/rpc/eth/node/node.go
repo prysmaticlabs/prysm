@@ -15,6 +15,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/peerdata"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
+
+	// rpchelpers "github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/proto/migration"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
@@ -266,11 +268,24 @@ func (ns *Server) GetSyncStatus(ctx context.Context, _ *emptypb.Empty) (*ethpb.S
 	defer span.End()
 
 	headSlot := ns.HeadFetcher.HeadSlot()
+
+	//headState, err := ns.HeadFetcher.HeadState(ctx)
+	//if err != nil {
+	//	err = status.Errorf(codes.Internal, "Could not get head state: %v", err)
+	//}
+
+	// TODO: get optimisticModeFetcher here
+	//isOptimistic, err := rpchelpers.IsOptimistic(ctx, headState, nil)
+	//if err != nil {
+	//	err = status.Errorf(codes.Internal, "Could not check optimistic status: %v", err)
+	//}
+
 	return &ethpb.SyncingResponse{
 		Data: &ethpb.SyncInfo{
 			HeadSlot:     headSlot,
 			SyncDistance: ns.GenesisTimeFetcher.CurrentSlot() - headSlot,
 			IsSyncing:    ns.SyncChecker.Syncing(),
+			// TODO: how does this get generated? IsOptimistic: isOptimistic,
 		},
 	}, nil
 }
