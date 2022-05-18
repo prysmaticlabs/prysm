@@ -4,13 +4,14 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/pkg/errors"
 	"io/fs"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -201,7 +202,7 @@ func TestUnmarshalFromFile(t *testing.T) {
 	ctx := context.Background()
 	type args struct {
 		File string
-		To  *test
+		To   *test
 	}
 	var pathError *fs.PathError
 	tests := []struct {
@@ -209,7 +210,7 @@ func TestUnmarshalFromFile(t *testing.T) {
 		args        args
 		want        *test
 		urlResponse string
-		err error
+		err         error
 	}{
 		{
 			name: "Happy Path File",
@@ -239,8 +240,8 @@ func TestUnmarshalFromFile(t *testing.T) {
 				File: "jsontools.go",
 				To:   &test{},
 			},
-			want:    &test{},
-			err: pathError,
+			want: &test{},
+			err:  pathError,
 		},
 		{
 			name: "Bad File Path",
@@ -248,8 +249,8 @@ func TestUnmarshalFromFile(t *testing.T) {
 				File: "testdata/test-unmarshal-bad.json",
 				To:   &test{},
 			},
-			want:    &test{},
-			err: pathError,
+			want: &test{},
+			err:  pathError,
 		},
 		{
 			name: "Bad File Path, not found",
@@ -257,8 +258,8 @@ func TestUnmarshalFromFile(t *testing.T) {
 				File: "test-notfound.json",
 				To:   &test{},
 			},
-			want:    &test{},
-			err: pathError,
+			want: &test{},
+			err:  pathError,
 		},
 	}
 	for _, tt := range tests {
