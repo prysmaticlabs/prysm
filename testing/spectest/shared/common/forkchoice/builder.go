@@ -90,7 +90,11 @@ func (bb *Builder) Check(t testing.TB, c *Check) {
 		return
 	}
 	ctx := context.TODO()
-
+	if c.ProposerBoostRoot != nil {
+		want := fmt.Sprintf("%#x", common.FromHex(*c.ProposerBoostRoot))
+		got := fmt.Sprintf("%#x", bb.service.ForkChoiceStore().ProposerBoost())
+		require.DeepEqual(t, want, got)
+	}
 	require.NoError(t, bb.service.UpdateAndSaveHeadWithBalances(ctx))
 	if c.Head != nil {
 		r, err := bb.service.HeadRoot(ctx)
@@ -119,9 +123,5 @@ func (bb *Builder) Check(t testing.TB, c *Check) {
 		}
 		require.DeepSSZEqual(t, cp, bb.service.FinalizedCheckpt())
 	}
-	if c.ProposerBoostRoot != nil {
-		want := fmt.Sprintf("%#x", common.FromHex(*c.ProposerBoostRoot))
-		got := fmt.Sprintf("%#x", bb.service.ForkChoiceStore().ProposerBoost())
-		require.DeepEqual(t, want, got)
-	}
+
 }
