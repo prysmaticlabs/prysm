@@ -88,7 +88,7 @@ func GenerateAttestations(
 			if err != nil {
 				return nil, err
 			}
-			headState = state.BeaconState(genState)
+			headState = genState
 		default:
 			return nil, errors.New("state type isn't supported")
 		}
