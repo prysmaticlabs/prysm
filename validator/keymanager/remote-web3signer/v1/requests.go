@@ -5,6 +5,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 )
 
@@ -216,6 +218,9 @@ func GetSyncCommitteeMessageSignRequest(request *validatorpb.SignRequest, genesi
 
 // GetSyncCommitteeSelectionProofSignRequest maps the request for signing type SYNC_COMMITTEE_SELECTION_PROOF.
 func GetSyncCommitteeSelectionProofSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot []byte) (*SyncCommitteeSelectionProofSignRequest, error) {
+	if request == nil {
+		return nil, errors.New("nil sign request provided")
+	}
 	syncCommitteeSelectionProof, ok := request.Object.(*validatorpb.SignRequest_SyncAggregatorSelectionData)
 	if !ok {
 		return nil, errors.New("failed to cast request object to sync committee selection proof")
@@ -241,6 +246,9 @@ func GetSyncCommitteeSelectionProofSignRequest(request *validatorpb.SignRequest,
 
 // GetSyncCommitteeContributionAndProofSignRequest maps the request for signing type SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF.
 func GetSyncCommitteeContributionAndProofSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot []byte) (*SyncCommitteeContributionAndProofSignRequest, error) {
+	if request == nil {
+		return nil, errors.New("nil sign request provided")
+	}
 	syncCommitteeContributionAndProof, ok := request.Object.(*validatorpb.SignRequest_ContributionAndProof)
 	if !ok {
 		return nil, errors.New("failed to cast request object to sync committee contribution and proof")
@@ -261,5 +269,68 @@ func GetSyncCommitteeContributionAndProofSignRequest(request *validatorpb.SignRe
 		ForkInfo:             fork,
 		SigningRoot:          hexutil.Encode(request.SigningRoot),
 		ContributionAndProof: contribution,
+	}, nil
+}
+
+// GetBlockV2BellatrixSignRequest maps the request for signing type BLOCK_V2_BELLATRIX.
+// note: web3signer uses blockv2 instead of block v3 for signing type
+func GetBlockV2BellatrixSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot []byte) (*BlockV2BellatrixSignRequest, error) {
+	if request == nil {
+		return nil, errors.New("nil sign request provided")
+	}
+	var b interfaces.BeaconBlock
+	switch request.Object.(type) {
+	case *validatorpb.SignRequest_BlindedBlockV3:
+		blindedBlockV3, ok := request.Object.(*validatorpb.SignRequest_BlindedBlockV3)
+		if !ok {
+			return nil, errors.New("failed to cast request object to blinded block v3")
+		}
+		if blindedBlockV3 == nil {
+			return nil, errors.New("invalid sign request - blindedBlockV3 is nil")
+		}
+		beaconBlock, err := wrapper.WrappedBeaconBlock(blindedBlockV3.BlindedBlockV3)
+		if err != nil {
+			return nil, err
+		}
+		b = beaconBlock
+	case *validatorpb.SignRequest_BlockV3:
+		blockV3Bellatrix, ok := request.Object.(*validatorpb.SignRequest_BlockV3)
+		if !ok {
+			return nil, errors.New("failed to cast request object to block v3 bellatrix")
+		}
+
+		if blockV3Bellatrix == nil {
+			return nil, errors.New("invalid sign request: blockV3Bellatrix is nil")
+		}
+		beaconBlock, err := wrapper.WrappedBeaconBlock(blockV3Bellatrix.BlockV3)
+		if err != nil {
+			return nil, err
+		}
+		b = beaconBlock
+	default:
+		return nil, errors.New("invalid sign request - invalid object type")
+	}
+	fork, err := MapForkInfo(request.SigningSlot, genesisValidatorsRoot)
+	if err != nil {
+		return nil, err
+	}
+	beaconBlockHeader, err := interfaces.BeaconBlockHeaderFromBlockInterface(b)
+	if err != nil {
+		return nil, err
+	}
+	return &BlockV2BellatrixSignRequest{
+		Type:        "BLOCK_V2",
+		ForkInfo:    fork,
+		SigningRoot: hexutil.Encode(request.SigningRoot),
+		BeaconBlock: &BeaconBlockBellatrixBlockV2{
+			Version: "BELLATRIX",
+			BlockHeader: &BeaconBlockHeader{
+				Slot:          fmt.Sprint(beaconBlockHeader.Slot),
+				ProposerIndex: fmt.Sprint(beaconBlockHeader.ProposerIndex),
+				ParentRoot:    hexutil.Encode(beaconBlockHeader.ParentRoot),
+				StateRoot:     hexutil.Encode(beaconBlockHeader.StateRoot),
+				BodyRoot:      hexutil.Encode(beaconBlockHeader.BodyRoot),
+			},
+		},
 	}, nil
 }

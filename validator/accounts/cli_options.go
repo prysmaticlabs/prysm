@@ -1,6 +1,7 @@
 package accounts
 
 import (
+	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"google.golang.org/grpc"
@@ -69,6 +70,29 @@ func WithGRPCHeaders(headers []string) Option {
 func WithBeaconRPCProvider(provider string) Option {
 	return func(acc *AccountsCLIManager) error {
 		acc.beaconRPCProvider = provider
+		return nil
+	}
+}
+
+// WithFilteredPubKeys adds public key strings parsed from CLI.
+func WithFilteredPubKeys(filteredPubKeys []bls.PublicKey) Option {
+	return func(acc *AccountsCLIManager) error {
+		acc.filteredPubKeys = filteredPubKeys
+		return nil
+	}
+}
+
+// WithWalletKeyCount tracks the number of keys in a wallet.
+func WithWalletKeyCount(walletKeyCount int) Option {
+	return func(acc *AccountsCLIManager) error {
+		acc.walletKeyCount = walletKeyCount
+		return nil
+	}
+}
+
+func WithDeletePublicKeys(deletePublicKeys bool) Option {
+	return func(acc *AccountsCLIManager) error {
+		acc.deletePublicKeys = deletePublicKeys
 		return nil
 	}
 }
