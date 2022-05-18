@@ -7,7 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
-func TestRegistry_Add(t *testing.T) {
+func TestConfigset_Add(t *testing.T) {
 	r := newConfigset()
 	name := "devnet"
 	cfg := testConfig(name)
@@ -20,7 +20,7 @@ func TestRegistry_Add(t *testing.T) {
 	require.ErrorIs(t, r.add(cfg), errCollisionFork)
 }
 
-func TestRegistry_ReplaceMainnet(t *testing.T) {
+func TestConfigsetReplaceMainnet(t *testing.T) {
 	r := newConfigset()
 	mainnet := MainnetConfig().Copy()
 	require.NoError(t, r.setActive(mainnet))
@@ -28,7 +28,7 @@ func TestRegistry_ReplaceMainnet(t *testing.T) {
 	require.NoError(t, r.replace(mainnet))
 }
 
-func TestRegistry_Replace(t *testing.T) {
+func TestConfigset_Replace(t *testing.T) {
 	r := newConfigset()
 	mainnet := MainnetConfig().Copy()
 	require.NoError(t, r.add(mainnet))
