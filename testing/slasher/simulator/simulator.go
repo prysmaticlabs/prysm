@@ -125,7 +125,7 @@ func (s *Simulator) Start() {
 	config := params.BeaconConfig().Copy()
 	config.SecondsPerSlot = s.srvConfig.Params.SecondsPerSlot
 	config.SlotsPerEpoch = s.srvConfig.Params.SlotsPerEpoch
-	undo, err := params.Registry.SetActiveWithUndo(config)
+	undo, err := params.SetActiveWithUndo(config)
 	if err != nil {
 		panic(err)
 	}

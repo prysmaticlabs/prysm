@@ -8,8 +8,8 @@ import (
 // restrictions, everything is restored after the test.
 func SetupTestConfigCleanup(t testing.TB) {
 	prevDefaultBeaconConfig := mainnetBeaconConfig.Copy()
-	temp := Registry.GetActive().Copy()
-	undo, err := Registry.SetActiveWithUndo(temp)
+	temp := configs.getActive().Copy()
+	undo, err := SetActiveWithUndo(temp)
 	if err != nil {
 		t.Error(err)
 	}

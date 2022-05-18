@@ -113,12 +113,12 @@ func InitWithReset(c *Flags) func() {
 func configureTestnet(ctx *cli.Context) error {
 	if ctx.Bool(PraterTestnet.Name) {
 		log.Warn("Running on the Prater Testnet")
-		if err := params.Registry.SetActive(params.PraterConfig().Copy()); err != nil {
+		if err := params.SetActive(params.PraterConfig().Copy()); err != nil {
 			return err
 		}
 	} else {
 		log.Warn("Running on Ethereum Consensus Mainnet")
-		if err := params.Registry.SetActive(params.MainnetConfig().Copy()); err != nil {
+		if err := params.SetActive(params.MainnetConfig().Copy()); err != nil {
 			return err
 		}
 	}

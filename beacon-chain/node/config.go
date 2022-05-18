@@ -36,7 +36,7 @@ func configureHistoricalSlasher(cliCtx *cli.Context) error {
 		c := params.BeaconConfig().Copy()
 		// Save a state every 4 epochs.
 		c.SlotsPerArchivedPoint = params.BeaconConfig().SlotsPerEpoch * 4
-		if err := params.Registry.SetActive(c); err != nil {
+		if err := params.SetActive(c); err != nil {
 			return err
 		}
 		cmdConfig := cmd.Get()
@@ -56,7 +56,7 @@ func configureSafeSlotsToImportOptimistically(cliCtx *cli.Context) error {
 	if cliCtx.IsSet(flags.SafeSlotsToImportOptimistically.Name) {
 		c := params.BeaconConfig().Copy()
 		c.SafeSlotsToImportOptimistically = types.Slot(cliCtx.Int(flags.SafeSlotsToImportOptimistically.Name))
-		if err := params.Registry.SetActive(c); err != nil {
+		if err := params.SetActive(c); err != nil {
 			return err
 		}
 	}
@@ -67,7 +67,7 @@ func configureSlotsPerArchivedPoint(cliCtx *cli.Context) error {
 	if cliCtx.IsSet(flags.SlotsPerArchivedPoint.Name) {
 		c := params.BeaconConfig().Copy()
 		c.SlotsPerArchivedPoint = types.Slot(cliCtx.Int(flags.SlotsPerArchivedPoint.Name))
-		if err := params.Registry.SetActive(c); err != nil {
+		if err := params.SetActive(c); err != nil {
 			return err
 		}
 	}
@@ -78,19 +78,19 @@ func configureEth1Config(cliCtx *cli.Context) error {
 	c := params.BeaconConfig().Copy()
 	if cliCtx.IsSet(flags.ChainID.Name) {
 		c.DepositChainID = cliCtx.Uint64(flags.ChainID.Name)
-		if err := params.Registry.SetActive(c); err != nil {
+		if err := params.SetActive(c); err != nil {
 			return err
 		}
 	}
 	if cliCtx.IsSet(flags.NetworkID.Name) {
 		c.DepositNetworkID = cliCtx.Uint64(flags.NetworkID.Name)
-		if err := params.Registry.SetActive(c); err != nil {
+		if err := params.SetActive(c); err != nil {
 			return err
 		}
 	}
 	if cliCtx.IsSet(flags.DepositContractFlag.Name) {
 		c.DepositContractAddress = cliCtx.String(flags.DepositContractFlag.Name)
-		if err := params.Registry.SetActive(c); err != nil {
+		if err := params.SetActive(c); err != nil {
 			return err
 		}
 	}
@@ -117,7 +117,7 @@ func configureInteropConfig(cliCtx *cli.Context) error {
 	votesIsSet := cliCtx.IsSet(flags.InteropMockEth1DataVotesFlag.Name)
 
 	if genStateIsSet || genTimeIsSet || numValsIsSet || votesIsSet {
-		if err := params.Registry.SetActive(params.InteropConfig().Copy()); err != nil {
+		if err := params.SetActive(params.InteropConfig().Copy()); err != nil {
 			return err
 		}
 	}

@@ -12,9 +12,9 @@ import (
 )
 
 func TestFieldParametersValues(t *testing.T) {
-	min, err := params.Registry.GetByName(params.MainnetName)
+	min, err := params.ByName(params.MainnetName)
 	require.NoError(t, err)
-	undo, err := params.Registry.SetActiveWithUndo(min)
+	undo, err := params.SetActiveWithUndo(min)
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, undo())

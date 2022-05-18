@@ -180,7 +180,7 @@ func hackBellatrixMaxuint() (func() error, error) {
 	// breaking conformance, adding a special case to the conformance unit test, or patch it here.
 	bc := params.MainnetConfig().Copy()
 	bc.BellatrixForkEpoch = math.MaxUint32
-	undo, err := params.Registry.SetActiveWithUndo(bc)
+	undo, err := params.SetActiveWithUndo(bc)
 	return undo, err
 }
 

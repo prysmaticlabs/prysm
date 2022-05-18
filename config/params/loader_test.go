@@ -147,7 +147,7 @@ func TestLoadConfigFile(t *testing.T) {
 	})
 
 	t.Run("e2e", func(t *testing.T) {
-		e2e, err := params.Registry.GetByName(params.EndToEndName)
+		e2e, err := params.ByName(params.EndToEndName)
 		require.NoError(t, err)
 		configFile := "testdata/e2e_config.yaml"
 		e2ef, err := params.UnmarshalConfigFile(configFile, nil)
@@ -167,9 +167,9 @@ func TestLoadConfigFile_OverwriteCorrectly(t *testing.T) {
 	require.NoError(t, err)
 
 	// set active config to mainnet, so that we can confirm LoadChainConfigFile overrides it
-	mainnet, err := params.Registry.GetByName(params.MainnetName)
+	mainnet, err := params.ByName(params.MainnetName)
 	require.NoError(t, err)
-	undo, err := params.Registry.SetActiveWithUndo(mainnet)
+	undo, err := params.SetActiveWithUndo(mainnet)
 	require.NoError(t, err)
 	defer func() {
 		err := undo()

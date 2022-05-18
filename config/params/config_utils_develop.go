@@ -15,7 +15,7 @@ var cfgrw sync.RWMutex
 func BeaconConfig() *BeaconChainConfig {
 	cfgrw.RLock()
 	defer cfgrw.RUnlock()
-	return Registry.GetActive()
+	return configs.getActive()
 }
 
 // OverrideBeaconConfig by replacing the config. The preferred pattern is to
@@ -25,7 +25,7 @@ func BeaconConfig() *BeaconChainConfig {
 func OverrideBeaconConfig(c *BeaconChainConfig) {
 	cfgrw.Lock()
 	defer cfgrw.Unlock()
-	Registry.active = c
+	configs.active = c
 }
 
 // Copy returns a copy of the config object.

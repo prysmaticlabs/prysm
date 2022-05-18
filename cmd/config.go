@@ -71,7 +71,7 @@ func newConfig(ctx *cli.Context) (*Flags, error) {
 	if ctx.Bool(MinimalConfigFlag.Name) {
 		log.Warn("Using minimal config")
 		cfg.MinimalConfig = true
-		if err := params.Registry.SetActive(params.MinimalSpecConfig()); err != nil {
+		if err := params.SetActive(params.MinimalSpecConfig()); err != nil {
 			return nil, err
 		}
 	}
@@ -79,11 +79,11 @@ func newConfig(ctx *cli.Context) (*Flags, error) {
 		log.Warn("Using end-to-end testing config")
 		switch fieldparams.Preset {
 		case "mainnet":
-			if err := params.Registry.SetActive(params.E2EMainnetTestConfig()); err != nil {
+			if err := params.SetActive(params.E2EMainnetTestConfig()); err != nil {
 				return nil, err
 			}
 		case "minimal":
-			if err := params.Registry.SetActive(params.E2ETestConfig().Copy()); err != nil {
+			if err := params.SetActive(params.E2ETestConfig().Copy()); err != nil {
 				return nil, err
 			}
 		default:

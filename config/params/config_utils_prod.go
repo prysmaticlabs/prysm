@@ -9,7 +9,7 @@ import (
 
 // BeaconConfig retrieves beacon chain config.
 func BeaconConfig() *BeaconChainConfig {
-	return Registry.GetActive()
+	return configs.getActive()
 }
 
 // OverrideBeaconConfig by replacing the config. The preferred pattern is to
@@ -17,7 +17,7 @@ func BeaconConfig() *BeaconChainConfig {
 // OverrideBeaconConfig(c). Any subsequent calls to params.BeaconConfig() will
 // return this new configuration.
 func OverrideBeaconConfig(c *BeaconChainConfig) {
-	Registry.active = c
+	configs.active = c
 }
 
 // Copy returns a copy of the config object.

@@ -101,7 +101,7 @@ func SetBenchmarkConfig() (func(), error) {
 	c.MinValidatorWithdrawabilityDelay = 0
 	c.TargetCommitteeSize = committeeSize
 	c.MaxAttestations = maxAtts
-	undo, err := params.Registry.SetActiveWithUndo(c)
+	undo, err := params.SetActiveWithUndo(c)
 	return func() {
 		if err := undo(); err != nil {
 			panic(err)

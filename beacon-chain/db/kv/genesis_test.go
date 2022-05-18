@@ -58,12 +58,12 @@ func TestLoadGenesisFromFile(t *testing.T) {
 	// finally, revert all this at the end of the test.
 
 	// first get the real mainnet out of the way by overwriting it schedule.
-	cfg, err := params.Registry.GetByName(params.MainnetName)
+	cfg, err := params.ByName(params.MainnetName)
 	require.NoError(t, err)
 	cfg = cfg.Copy()
 	reversioned := cfg.Copy()
 	params.FillTestVersions(reversioned, 127)
-	undo, err := params.Registry.SetActiveWithUndo(reversioned)
+	undo, err := params.SetActiveWithUndo(reversioned)
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, undo())
@@ -71,7 +71,7 @@ func TestLoadGenesisFromFile(t *testing.T) {
 
 	// then set up a new config, which uses the real mainnet schedule, and activate it
 	cfg.ConfigName = "genesis-test"
-	undo2, err := params.Registry.SetActiveWithUndo(cfg)
+	undo2, err := params.SetActiveWithUndo(cfg)
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, undo2())
@@ -114,7 +114,7 @@ func TestEnsureEmbeddedGenesis(t *testing.T) {
 	// Embedded Genesis works with Mainnet config
 	cfg := params.MainnetConfig().Copy()
 	cfg.SecondsPerSlot = 1
-	undo, err := params.Registry.SetActiveWithUndo(cfg)
+	undo, err := params.SetActiveWithUndo(cfg)
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, undo())

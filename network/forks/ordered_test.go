@@ -11,7 +11,7 @@ import (
 
 func TestOrderedConfigSchedule(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	for _, cfg := range params.Registry.All() {
+	for _, cfg := range params.All() {
 		t.Run(cfg.ConfigName, func(t *testing.T) {
 			prevVersion := [4]byte{0, 0, 0, 0}
 			// epoch 0 is genesis, and it's a uint so can't make it -1

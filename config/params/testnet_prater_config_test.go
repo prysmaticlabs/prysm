@@ -9,7 +9,7 @@ import (
 
 func TestPraterConfigMatchesUpstreamYaml(t *testing.T) {
 	presetFPs := presetsFilePath(t, "mainnet")
-	mn, err := params.Registry.GetByName(params.MainnetName)
+	mn, err := params.ByName(params.MainnetName)
 	require.NoError(t, err)
 	cfg := mn.Copy()
 	for _, fp := range presetFPs {

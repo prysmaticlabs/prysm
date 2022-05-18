@@ -52,15 +52,15 @@ func main() {
 		return
 	}
 	if *useMainnetConfig {
-		if err := params.Registry.SetActive(params.MainnetConfig().Copy()); err != nil {
+		if err := params.SetActive(params.MainnetConfig().Copy()); err != nil {
 			log.Fatalf("unable to set minimal config active, err=%s", err.Error())
 		}
 	} else {
-		cfg, err := params.Registry.GetByName(*configName)
+		cfg, err := params.ByName(*configName)
 		if err != nil {
 			log.Fatalf("unable to find config using name %s, err=%s", *configName, err.Error())
 		}
-		if err := params.Registry.SetActive(cfg.Copy()); err != nil {
+		if err := params.SetActive(cfg.Copy()); err != nil {
 			log.Fatalf("unable to set minimal config active, err=%s", err.Error())
 		}
 	}

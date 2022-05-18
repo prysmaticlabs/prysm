@@ -79,7 +79,7 @@ func LoadChainConfigFile(path string, conf *BeaconChainConfig) error {
 	if err != nil {
 		return err
 	}
-	return Registry.SetActive(c)
+	return SetActive(c)
 }
 
 // ReplaceHexStringWithYAMLFormat will replace hex strings that the yaml parser will understand.
