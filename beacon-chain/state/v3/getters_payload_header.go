@@ -7,7 +7,7 @@ import (
 // LatestExecutionPayloadHeader of the beacon state.
 func (b *BeaconState) LatestExecutionPayloadHeader() (*ethpb.ExecutionPayloadHeader, error) {
 	if !b.hasInnerState() {
-		return nil, nil
+		return nil, ErrNilInnerState
 	}
 	if b.state.LatestExecutionPayloadHeader == nil {
 		return nil, nil

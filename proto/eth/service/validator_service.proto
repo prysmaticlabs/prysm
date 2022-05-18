@@ -102,6 +102,20 @@ service BeaconValidator {
     option (google.api.http) = { get: "/internal/eth/v2/validator/blocks/{slot}" };
   }
 
+  // ProduceBlockV2 requests the beacon node to produce a valid unsigned beacon block,
+  // which can then be signed by a proposer and submitted.
+  //
+  // The produced block is in SSZ form.
+  //
+  // HTTP response usage:
+  //  - 200: Successful response
+  //  - 400: Invalid block production request
+  //  - 500: Beacon node internal error
+  //  - 503: Beacon node is currently syncing, try again later
+  rpc ProduceBlockV2SSZ(v1.ProduceBlockRequest) returns (v2.SSZContainer) {
+    option (google.api.http) = { get: "/internal/eth/v2/validator/blocks/{slot}/ssz" };
+  }
+
   // ProduceBlindedBlock requests the beacon node to produce a valid unsigned blinded beacon block,
   // which can then be signed by a proposer and submitted.
   //
@@ -116,6 +130,24 @@ service BeaconValidator {
   //  - 503: Beacon node is currently syncing, try again later
   rpc ProduceBlindedBlock(v1.ProduceBlockRequest) returns (v2.ProduceBlindedBlockResponse) {
     option (google.api.http) = { get: "/internal/eth/v1/validator/blinded_blocks/{slot}" };
+  }
+
+  // ProduceBlindedBlock requests the beacon node to produce a valid unsigned blinded beacon block,
+  // which can then be signed by a proposer and submitted.
+  //
+  // The produced block is in SSZ form.
+  //
+  // Metadata in the response indicates the type of block produced, and the supported types of block
+  // will be added to as forks progress.
+  //
+  // Pre-Bellatrix, this endpoint will return a regular block.
+  // HTTP response usage:
+  //  - 200: Successful response
+  //  - 400: Invalid block production request
+  //  - 500: Beacon node internal error
+  //  - 503: Beacon node is currently syncing, try again later
+  rpc ProduceBlindedBlockSSZ(v1.ProduceBlockRequest) returns (v2.SSZContainer) {
+    option (google.api.http) = { get: "/internal/eth/v1/validator/blinded_blocks/{slot}/ssz" };
   }
 
   // PrepareBeaconProposer submits fee recipient information to be used when preparing block
