@@ -355,7 +355,6 @@ func (vs *Server) ProduceBlockV2SSZ(ctx context.Context, req *ethpbv1.ProduceBlo
 	_, span := trace.StartSpan(ctx, "validator.ProduceBlockV2SSZ")
 	defer span.End()
 
-	// TODO: get optimisticModeFetcher here
 	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
 		// We simply return the error because it's already a gRPC error.
 		return nil, err

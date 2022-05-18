@@ -45,7 +45,6 @@ type Server struct {
 	CollectedAttestationsBuffer chan []*ethpb.Attestation
 	StateGen                    stategen.StateManager
 	SyncChecker                 sync.Checker
-	OptimisticModeFetcher       blockchain.OptimisticModeFetcher
 	ReplayerBuilder             stategen.ReplayerBuilder
 	HeadUpdater                 blockchain.HeadUpdater
 }
