@@ -38,7 +38,9 @@ var Commands = &cli.Command{
 				return tos.VerifyTosAcceptedOrPrompt(cliCtx)
 			},
 			Action: func(cliCtx *cli.Context) error {
-				features.ConfigureValidator(cliCtx)
+				if err := features.ConfigureValidator(cliCtx); err != nil {
+					return err
+				}
 				if err := accounts.DeleteAccountCli(cliCtx); err != nil {
 					log.Fatalf("Could not delete account: %v", err)
 				}
@@ -71,7 +73,9 @@ var Commands = &cli.Command{
 				if err := tos.VerifyTosAcceptedOrPrompt(cliCtx); err != nil {
 					return err
 				}
-				features.ConfigureValidator(cliCtx)
+				if err := features.ConfigureValidator(cliCtx); err != nil {
+					return err
+				}
 				return nil
 			},
 			Action: func(cliCtx *cli.Context) error {
@@ -104,7 +108,9 @@ var Commands = &cli.Command{
 				return tos.VerifyTosAcceptedOrPrompt(cliCtx)
 			},
 			Action: func(cliCtx *cli.Context) error {
-				features.ConfigureValidator(cliCtx)
+				if err := features.ConfigureValidator(cliCtx); err != nil {
+					return err
+				}
 				if err := accounts.BackupAccountsCli(cliCtx); err != nil {
 					log.Fatalf("Could not backup accounts: %v", err)
 				}
@@ -131,7 +137,9 @@ var Commands = &cli.Command{
 				return tos.VerifyTosAcceptedOrPrompt(cliCtx)
 			},
 			Action: func(cliCtx *cli.Context) error {
-				features.ConfigureValidator(cliCtx)
+				if err := features.ConfigureValidator(cliCtx); err != nil {
+					return err
+				}
 				if err := accounts.ImportAccountsCli(cliCtx); err != nil {
 					log.Fatalf("Could not import accounts: %v", err)
 				}
@@ -164,7 +172,9 @@ var Commands = &cli.Command{
 				return tos.VerifyTosAcceptedOrPrompt(cliCtx)
 			},
 			Action: func(cliCtx *cli.Context) error {
-				features.ConfigureValidator(cliCtx)
+				if err := features.ConfigureValidator(cliCtx); err != nil {
+					return err
+				}
 				if err := accounts.ExitAccountsCli(cliCtx, os.Stdin); err != nil {
 					log.Fatalf("Could not perform voluntary exit: %v", err)
 				}

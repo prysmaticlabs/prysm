@@ -110,15 +110,20 @@ func InitWithReset(c *Flags) func() {
 }
 
 // configureTestnet sets the config according to specified testnet flag
-func configureTestnet(ctx *cli.Context) {
+func configureTestnet(ctx *cli.Context) error {
 	if ctx.Bool(PraterTestnet.Name) {
 		log.Warn("Running on the Prater Testnet")
-		params.OverrideBeaconConfig(params.PraterConfig().Copy())
+		if err := params.Registry.SetActive(params.PraterConfig().Copy()); err != nil {
+			return err
+		}
 		params.UsePraterNetworkConfig()
 	} else {
 		log.Warn("Running on Ethereum Consensus Mainnet")
-		params.OverrideBeaconConfig(params.MainnetConfig().Copy())
+		if err := params.Registry.SetActive(params.MainnetConfig().Copy()); err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 // ConfigureBeaconChain sets the global config based
@@ -129,7 +134,9 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 	if ctx.Bool(devModeFlag.Name) {
 		enableDevModeFlags(ctx)
 	}
-	configureTestnet(ctx)
+	if err := configureTestnet(ctx); err != nil {
+		return err
+	}
 
 	if ctx.Bool(writeSSZStateTransitionsFlag.Name) {
 		logEnabled(writeSSZStateTransitionsFlag)
@@ -191,10 +198,12 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 
 // ConfigureValidator sets the global config based
 // on what flags are enabled for the validator client.
-func ConfigureValidator(ctx *cli.Context) {
+func ConfigureValidator(ctx *cli.Context) error {
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
-	configureTestnet(ctx)
+	if err := configureTestnet(ctx); err != nil {
+		return err
+	}
 	if ctx.Bool(enableExternalSlasherProtectionFlag.Name) {
 		log.Fatal(
 			"Remote slashing protection has currently been disabled in Prysm due to safety concerns. " +
@@ -223,6 +232,7 @@ func ConfigureValidator(ctx *cli.Context) {
 	}
 	cfg.KeystoreImportDebounceInterval = ctx.Duration(dynamicKeyReloadDebounceInterval.Name)
 	Init(cfg)
+	return nil
 }
 
 // enableDevModeFlags switches development mode features on.

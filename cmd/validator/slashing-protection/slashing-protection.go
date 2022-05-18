@@ -32,7 +32,9 @@ var Commands = &cli.Command{
 				return tos.VerifyTosAcceptedOrPrompt(cliCtx)
 			},
 			Action: func(cliCtx *cli.Context) error {
-				features.ConfigureValidator(cliCtx)
+				if err := features.ConfigureValidator(cliCtx); err != nil {
+					return err
+				}
 				if err := exportSlashingProtectionJSON(cliCtx); err != nil {
 					logrus.Fatalf("Could not export slashing protection file: %v", err)
 				}
@@ -56,7 +58,9 @@ var Commands = &cli.Command{
 				return tos.VerifyTosAcceptedOrPrompt(cliCtx)
 			},
 			Action: func(cliCtx *cli.Context) error {
-				features.ConfigureValidator(cliCtx)
+				if err := features.ConfigureValidator(cliCtx); err != nil {
+					return err
+				}
 				err := importSlashingProtectionJSON(cliCtx)
 				if err != nil {
 					logrus.Fatalf("Could not import slashing protection cli: %v", err)

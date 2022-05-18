@@ -92,7 +92,7 @@ func PreGenFullBlock() (*ethpb.SignedBeaconBlock, error) {
 
 // SetBenchmarkConfig changes the beacon config to match the requested amount of
 // attestations set to AttestationsPerEpoch.
-func SetBenchmarkConfig() {
+func SetBenchmarkConfig() (func(), error) {
 	maxAtts := AttestationsPerEpoch
 	slotsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch)
 	committeeSize := (ValidatorCount / slotsPerEpoch) / (maxAtts / slotsPerEpoch)
@@ -101,5 +101,10 @@ func SetBenchmarkConfig() {
 	c.MinValidatorWithdrawabilityDelay = 0
 	c.TargetCommitteeSize = committeeSize
 	c.MaxAttestations = maxAtts
-	params.OverrideBeaconConfig(c)
+	undo, err := params.Registry.SetActiveWithUndo(c)
+	return func() {
+		if err := undo(); err != nil {
+			panic(err)
+		}
+	}, err
 }

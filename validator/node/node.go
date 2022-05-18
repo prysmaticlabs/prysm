@@ -104,7 +104,9 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 		stop:              make(chan struct{}),
 	}
 
-	features.ConfigureValidator(cliCtx)
+	if err := features.ConfigureValidator(cliCtx); err != nil {
+		return nil, err
+	}
 	cmd.ConfigureValidator(cliCtx)
 
 	if cliCtx.IsSet(cmd.ChainConfigFileFlag.Name) {
