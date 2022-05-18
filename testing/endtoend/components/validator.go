@@ -85,6 +85,7 @@ func (s *ValidatorNodeSet) Started() <-chan struct{} {
 	return s.started
 }
 
+// Pause pauses the component and its underlying process.
 func (s *ValidatorNodeSet) Pause() error {
 	for _, n := range s.nodes {
 		if err := n.Pause(); err != nil {
@@ -94,6 +95,7 @@ func (s *ValidatorNodeSet) Pause() error {
 	return nil
 }
 
+// Resume resumes the component and its underlying process.
 func (s *ValidatorNodeSet) Resume() error {
 	for _, n := range s.nodes {
 		if err := n.Resume(); err != nil {
@@ -103,6 +105,7 @@ func (s *ValidatorNodeSet) Resume() error {
 	return nil
 }
 
+// Stop stops the component and its underlying process.
 func (s *ValidatorNodeSet) Stop() error {
 	for _, n := range s.nodes {
 		if err := n.Stop(); err != nil {
@@ -112,6 +115,7 @@ func (s *ValidatorNodeSet) Stop() error {
 	return nil
 }
 
+// PauseAtIndex pauses the component and its underlying process at the desired index.
 func (s *ValidatorNodeSet) PauseAtIndex(i int) error {
 	if i >= len(s.nodes) {
 		return errors.Errorf("provided index exceeds slice size: %d >= %d", i, len(s.nodes))
@@ -119,6 +123,7 @@ func (s *ValidatorNodeSet) PauseAtIndex(i int) error {
 	return s.nodes[i].Pause()
 }
 
+// ResumeAtIndex resumes the component and its underlying process at the desired index.
 func (s *ValidatorNodeSet) ResumeAtIndex(i int) error {
 	if i >= len(s.nodes) {
 		return errors.Errorf("provided index exceeds slice size: %d >= %d", i, len(s.nodes))
@@ -126,6 +131,7 @@ func (s *ValidatorNodeSet) ResumeAtIndex(i int) error {
 	return s.nodes[i].Resume()
 }
 
+// StopAtIndex stops the component and its underlying process at the desired index.
 func (s *ValidatorNodeSet) StopAtIndex(i int) error {
 	if i >= len(s.nodes) {
 		return errors.Errorf("provided index exceeds slice size: %d >= %d", i, len(s.nodes))
@@ -267,14 +273,17 @@ func (v *ValidatorNode) Started() <-chan struct{} {
 	return v.started
 }
 
+// Pause pauses the component and its underlying process.
 func (v *ValidatorNode) Pause() error {
 	return v.cmd.Process.Signal(syscall.SIGSTOP)
 }
 
+// Resume resumes the component and its underlying process.
 func (v *ValidatorNode) Resume() error {
 	return v.cmd.Process.Signal(syscall.SIGCONT)
 }
 
+// Stop stops the component and its underlying process.
 func (v *ValidatorNode) Stop() error {
 	return v.cmd.Process.Kill()
 }

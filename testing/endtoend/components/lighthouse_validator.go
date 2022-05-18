@@ -77,6 +77,7 @@ func (s *LighthouseValidatorNodeSet) Started() <-chan struct{} {
 	return s.started
 }
 
+// Pause pauses the component and its underlying process.
 func (s *LighthouseValidatorNodeSet) Pause() error {
 	for _, n := range s.nodes {
 		if err := n.Pause(); err != nil {
@@ -86,6 +87,7 @@ func (s *LighthouseValidatorNodeSet) Pause() error {
 	return nil
 }
 
+// Resume resumes the component and its underlying process.
 func (s *LighthouseValidatorNodeSet) Resume() error {
 	for _, n := range s.nodes {
 		if err := n.Resume(); err != nil {
@@ -95,6 +97,7 @@ func (s *LighthouseValidatorNodeSet) Resume() error {
 	return nil
 }
 
+// Stop stops the component and its underlying process.
 func (s *LighthouseValidatorNodeSet) Stop() error {
 	for _, n := range s.nodes {
 		if err := n.Stop(); err != nil {
@@ -104,6 +107,7 @@ func (s *LighthouseValidatorNodeSet) Stop() error {
 	return nil
 }
 
+// PauseAtIndex pauses the component and its underlying process at the desired index.
 func (s *LighthouseValidatorNodeSet) PauseAtIndex(i int) error {
 	if i >= len(s.nodes) {
 		return errors.Errorf("provided index exceeds slice size: %d >= %d", i, len(s.nodes))
@@ -111,6 +115,7 @@ func (s *LighthouseValidatorNodeSet) PauseAtIndex(i int) error {
 	return s.nodes[i].Pause()
 }
 
+// ResumeAtIndex resumes the component and its underlying process at the desired index.
 func (s *LighthouseValidatorNodeSet) ResumeAtIndex(i int) error {
 	if i >= len(s.nodes) {
 		return errors.Errorf("provided index exceeds slice size: %d >= %d", i, len(s.nodes))
@@ -118,6 +123,7 @@ func (s *LighthouseValidatorNodeSet) ResumeAtIndex(i int) error {
 	return s.nodes[i].Resume()
 }
 
+// StopAtIndex stops the component and its underlying process at the desired index.
 func (s *LighthouseValidatorNodeSet) StopAtIndex(i int) error {
 	if i >= len(s.nodes) {
 		return errors.Errorf("provided index exceeds slice size: %d >= %d", i, len(s.nodes))
@@ -218,14 +224,17 @@ func (v *LighthouseValidatorNode) Started() <-chan struct{} {
 	return v.started
 }
 
+// Pause pauses the component and its underlying process.
 func (v *LighthouseValidatorNode) Pause() error {
 	return v.cmd.Process.Signal(syscall.SIGSTOP)
 }
 
+// Resume resumes the component and its underlying process.
 func (v *LighthouseValidatorNode) Resume() error {
 	return v.cmd.Process.Signal(syscall.SIGCONT)
 }
 
+// Stop stops the component and its underlying process.
 func (v *LighthouseValidatorNode) Stop() error {
 	return v.cmd.Process.Kill()
 }
@@ -265,16 +274,19 @@ func (k *KeystoreGenerator) Started() <-chan struct{} {
 	return k.started
 }
 
+// Pause pauses the component and its underlying process.
 func (k *KeystoreGenerator) Pause() error {
 	// no-op
 	return nil
 }
 
+// Resume resumes the component and its underlying process.
 func (k *KeystoreGenerator) Resume() error {
 	// no-op
 	return nil
 }
 
+// Stop stops the component and its underlying process.
 func (k *KeystoreGenerator) Stop() error {
 	// no-op
 	return nil

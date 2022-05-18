@@ -86,14 +86,17 @@ func (node *BootNode) Started() <-chan struct{} {
 	return node.started
 }
 
+// Pause pauses the component and its underlying process.
 func (node *BootNode) Pause() error {
 	return node.cmd.Process.Signal(syscall.SIGSTOP)
 }
 
+// Resume resumes the component and its underlying process.
 func (node *BootNode) Resume() error {
 	return node.cmd.Process.Signal(syscall.SIGCONT)
 }
 
+// Stop stops the component and its underlying process.
 func (node *BootNode) Stop() error {
 	return node.cmd.Process.Kill()
 }

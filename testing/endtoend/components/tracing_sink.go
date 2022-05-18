@@ -58,14 +58,17 @@ func (ts *TracingSink) Started() <-chan struct{} {
 	return ts.started
 }
 
+// Pause pauses the component and its underlying process.
 func (ts *TracingSink) Pause() error {
 	return nil
 }
 
+// Resume resumes the component and its underlying process.
 func (ts *TracingSink) Resume() error {
 	return nil
 }
 
+// Stop stops the component and its underlying process.
 func (ts *TracingSink) Stop() error {
 	ts.cancel()
 	return nil

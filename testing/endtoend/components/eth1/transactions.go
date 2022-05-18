@@ -124,14 +124,17 @@ func SendTransaction(client *rpc.Client, key *ecdsa.PrivateKey, f *filler.Filler
 	return g.Wait()
 }
 
+// Pause pauses the component and its underlying process.
 func (t *TransactionGenerator) Pause() error {
 	return nil
 }
 
+// Resume resumes the component and its underlying process.
 func (t *TransactionGenerator) Resume() error {
 	return nil
 }
 
+// Stop stops the component and its underlying process.
 func (t *TransactionGenerator) Stop() error {
 	t.cancel()
 	return nil

@@ -73,6 +73,7 @@ func (s *LighthouseBeaconNodeSet) Started() <-chan struct{} {
 	return s.started
 }
 
+// Pause pauses the component and its underlying process.
 func (s *LighthouseBeaconNodeSet) Pause() error {
 	for _, n := range s.nodes {
 		if err := n.Pause(); err != nil {
@@ -82,6 +83,7 @@ func (s *LighthouseBeaconNodeSet) Pause() error {
 	return nil
 }
 
+// Resume resumes the component and its underlying process.
 func (s *LighthouseBeaconNodeSet) Resume() error {
 	for _, n := range s.nodes {
 		if err := n.Resume(); err != nil {
@@ -91,6 +93,7 @@ func (s *LighthouseBeaconNodeSet) Resume() error {
 	return nil
 }
 
+// Stop stops the component and its underlying process.
 func (s *LighthouseBeaconNodeSet) Stop() error {
 	for _, n := range s.nodes {
 		if err := n.Stop(); err != nil {
@@ -100,6 +103,7 @@ func (s *LighthouseBeaconNodeSet) Stop() error {
 	return nil
 }
 
+// PauseAtIndex pauses the component and its underlying process at the desired index.
 func (s *LighthouseBeaconNodeSet) PauseAtIndex(i int) error {
 	if i >= len(s.nodes) {
 		return errors.Errorf("provided index exceeds slice size: %d >= %d", i, len(s.nodes))
@@ -107,6 +111,7 @@ func (s *LighthouseBeaconNodeSet) PauseAtIndex(i int) error {
 	return s.nodes[i].Pause()
 }
 
+// ResumeAtIndex resumes the component and its underlying process at the desired index.
 func (s *LighthouseBeaconNodeSet) ResumeAtIndex(i int) error {
 	if i >= len(s.nodes) {
 		return errors.Errorf("provided index exceeds slice size: %d >= %d", i, len(s.nodes))
@@ -114,6 +119,7 @@ func (s *LighthouseBeaconNodeSet) ResumeAtIndex(i int) error {
 	return s.nodes[i].Resume()
 }
 
+// StopAtIndex stops the component and its underlying process at the desired index.
 func (s *LighthouseBeaconNodeSet) StopAtIndex(i int) error {
 	if i >= len(s.nodes) {
 		return errors.Errorf("provided index exceeds slice size: %d >= %d", i, len(s.nodes))
@@ -227,14 +233,17 @@ func (node *LighthouseBeaconNode) Started() <-chan struct{} {
 	return node.started
 }
 
+// Pause pauses the component and its underlying process.
 func (node *LighthouseBeaconNode) Pause() error {
 	return node.cmd.Process.Signal(syscall.SIGSTOP)
 }
 
+// Resume resumes the component and its underlying process.
 func (node *LighthouseBeaconNode) Resume() error {
 	return node.cmd.Process.Signal(syscall.SIGCONT)
 }
 
+// Stop stops the component and its underlying process.
 func (node *LighthouseBeaconNode) Stop() error {
 	return node.cmd.Process.Kill()
 }

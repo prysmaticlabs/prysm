@@ -131,14 +131,17 @@ func (w *Web3RemoteSigner) Started() <-chan struct{} {
 	return w.started
 }
 
+// Pause pauses the component and its underlying process.
 func (w *Web3RemoteSigner) Pause() error {
 	return w.cmd.Process.Signal(syscall.SIGSTOP)
 }
 
+// Resume resumes the component and its underlying process.
 func (w *Web3RemoteSigner) Resume() error {
 	return w.cmd.Process.Signal(syscall.SIGCONT)
 }
 
+// Stop stops the component and its underlying process.
 func (w *Web3RemoteSigner) Stop() error {
 	return w.cmd.Process.Kill()
 }
