@@ -117,9 +117,7 @@ func configureInteropConfig(cliCtx *cli.Context) error {
 	votesIsSet := cliCtx.IsSet(flags.InteropMockEth1DataVotesFlag.Name)
 
 	if genStateIsSet || genTimeIsSet || numValsIsSet || votesIsSet {
-		bCfg := params.BeaconConfig().Copy()
-		bCfg.ConfigName = "interop"
-		if err := params.Registry.SetActive(bCfg); err != nil {
+		if err := params.Registry.SetActive(params.InteropConfig().Copy()); err != nil {
 			return err
 		}
 	}

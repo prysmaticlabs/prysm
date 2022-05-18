@@ -145,6 +145,7 @@ func init() {
 		MinimalSpecConfig(),
 		E2ETestConfig(),
 		E2EMainnetTestConfig(),
+		InteropConfig(),
 	}
 	Registry = NewRegistry(defaults...)
 	// ensure that main net is always present and active by default
