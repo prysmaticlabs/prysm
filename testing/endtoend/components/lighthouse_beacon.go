@@ -137,7 +137,7 @@ type LighthouseBeaconNode struct {
 	cmd     *exec.Cmd
 }
 
-// NewBeaconNode creates and returns a beacon node.
+// NewLighthouseBeaconNode creates and returns a lighthouse beacon node.
 func NewLighthouseBeaconNode(config *e2etypes.E2EConfig, index int, enr string) *LighthouseBeaconNode {
 	return &LighthouseBeaconNode{
 		config:  config,

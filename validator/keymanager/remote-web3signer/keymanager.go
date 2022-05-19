@@ -20,7 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	remote_utils "github.com/prysmaticlabs/prysm/validator/keymanager/remote-utils"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/internal"
-	v1 "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/v1"
+	web3signerv1 "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/v1"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -113,7 +113,7 @@ func getSignRequestJson(ctx context.Context, validator *validator.Validate, requ
 	}
 	switch request.Object.(type) {
 	case *validatorpb.SignRequest_Block:
-		bockSignRequest, err := v1.GetBlockSignRequest(request, genesisValidatorsRoot)
+		bockSignRequest, err := web3signerv1.GetBlockSignRequest(request, genesisValidatorsRoot)
 		if err != nil {
 			return nil, err
 		}
@@ -123,7 +123,7 @@ func getSignRequestJson(ctx context.Context, validator *validator.Validate, requ
 		blockSignRequestsTotal.Inc()
 		return json.Marshal(bockSignRequest)
 	case *validatorpb.SignRequest_AttestationData:
-		attestationSignRequest, err := v1.GetAttestationSignRequest(request, genesisValidatorsRoot)
+		attestationSignRequest, err := web3signerv1.GetAttestationSignRequest(request, genesisValidatorsRoot)
 		if err != nil {
 			return nil, err
 		}
@@ -133,7 +133,7 @@ func getSignRequestJson(ctx context.Context, validator *validator.Validate, requ
 		attestationSignRequestsTotal.Inc()
 		return json.Marshal(attestationSignRequest)
 	case *validatorpb.SignRequest_AggregateAttestationAndProof:
-		aggregateAndProofSignRequest, err := v1.GetAggregateAndProofSignRequest(request, genesisValidatorsRoot)
+		aggregateAndProofSignRequest, err := web3signerv1.GetAggregateAndProofSignRequest(request, genesisValidatorsRoot)
 		if err != nil {
 			return nil, err
 		}
@@ -143,7 +143,7 @@ func getSignRequestJson(ctx context.Context, validator *validator.Validate, requ
 		aggregateAndProofSignRequestsTotal.Inc()
 		return json.Marshal(aggregateAndProofSignRequest)
 	case *validatorpb.SignRequest_Slot:
-		aggregationSlotSignRequest, err := v1.GetAggregationSlotSignRequest(request, genesisValidatorsRoot)
+		aggregationSlotSignRequest, err := web3signerv1.GetAggregationSlotSignRequest(request, genesisValidatorsRoot)
 		if err != nil {
 			return nil, err
 		}
@@ -153,22 +153,35 @@ func getSignRequestJson(ctx context.Context, validator *validator.Validate, requ
 		aggregationSlotSignRequestsTotal.Inc()
 		return json.Marshal(aggregationSlotSignRequest)
 	case *validatorpb.SignRequest_BlockV2:
-		blocv2AltairSignRequest, err := v1.GetBlockV2AltairSignRequest(request, genesisValidatorsRoot)
+		blockv2AltairSignRequest, err := web3signerv1.GetBlockV2AltairSignRequest(request, genesisValidatorsRoot)
 		if err != nil {
 			return nil, err
 		}
-		if err = validator.StructCtx(ctx, blocv2AltairSignRequest); err != nil {
+		if err = validator.StructCtx(ctx, blockv2AltairSignRequest); err != nil {
 			return nil, err
 		}
 		blockV2SignRequestsTotal.Inc()
-		return json.Marshal(blocv2AltairSignRequest)
-	// TODO(#10053): Need to add support for merge blocks.
-
-	/*
-		case *validatorpb.SignRequest_BlockV3:
-		return "BLOCK_V3", nil
-	*/
-
+		return json.Marshal(blockv2AltairSignRequest)
+	case *validatorpb.SignRequest_BlockV3:
+		blockv2BellatrixSignRequest, err := web3signerv1.GetBlockV2BellatrixSignRequest(request, genesisValidatorsRoot)
+		if err != nil {
+			return nil, err
+		}
+		if err = validator.StructCtx(ctx, blockv2BellatrixSignRequest); err != nil {
+			return nil, err
+		}
+		blockV3SignRequestsTotal.Inc()
+		return json.Marshal(blockv2BellatrixSignRequest)
+	case *validatorpb.SignRequest_BlindedBlockV3:
+		blindedBlockv2SignRequest, err := web3signerv1.GetBlockV2BellatrixSignRequest(request, genesisValidatorsRoot)
+		if err != nil {
+			return nil, err
+		}
+		if err = validator.StructCtx(ctx, blindedBlockv2SignRequest); err != nil {
+			return nil, err
+		}
+		blindedblockV3SignRequestsTotal.Inc()
+		return json.Marshal(blindedBlockv2SignRequest)
 	// We do not support "DEPOSIT" type.
 	/*
 		case *validatorpb.:
@@ -176,7 +189,7 @@ func getSignRequestJson(ctx context.Context, validator *validator.Validate, requ
 	*/
 
 	case *validatorpb.SignRequest_Epoch:
-		randaoRevealSignRequest, err := v1.GetRandaoRevealSignRequest(request, genesisValidatorsRoot)
+		randaoRevealSignRequest, err := web3signerv1.GetRandaoRevealSignRequest(request, genesisValidatorsRoot)
 		if err != nil {
 			return nil, err
 		}
@@ -186,7 +199,7 @@ func getSignRequestJson(ctx context.Context, validator *validator.Validate, requ
 		randaoRevealSignRequestsTotal.Inc()
 		return json.Marshal(randaoRevealSignRequest)
 	case *validatorpb.SignRequest_Exit:
-		voluntaryExitRequest, err := v1.GetVoluntaryExitSignRequest(request, genesisValidatorsRoot)
+		voluntaryExitRequest, err := web3signerv1.GetVoluntaryExitSignRequest(request, genesisValidatorsRoot)
 		if err != nil {
 			return nil, err
 		}
@@ -196,7 +209,7 @@ func getSignRequestJson(ctx context.Context, validator *validator.Validate, requ
 		voluntaryExitSignRequestsTotal.Inc()
 		return json.Marshal(voluntaryExitRequest)
 	case *validatorpb.SignRequest_SyncMessageBlockRoot:
-		syncCommitteeMessageRequest, err := v1.GetSyncCommitteeMessageSignRequest(request, genesisValidatorsRoot)
+		syncCommitteeMessageRequest, err := web3signerv1.GetSyncCommitteeMessageSignRequest(request, genesisValidatorsRoot)
 		if err != nil {
 			return nil, err
 		}
@@ -206,7 +219,7 @@ func getSignRequestJson(ctx context.Context, validator *validator.Validate, requ
 		syncCommitteeMessageSignRequestsTotal.Inc()
 		return json.Marshal(syncCommitteeMessageRequest)
 	case *validatorpb.SignRequest_SyncAggregatorSelectionData:
-		syncCommitteeSelectionProofRequest, err := v1.GetSyncCommitteeSelectionProofSignRequest(request, genesisValidatorsRoot)
+		syncCommitteeSelectionProofRequest, err := web3signerv1.GetSyncCommitteeSelectionProofSignRequest(request, genesisValidatorsRoot)
 		if err != nil {
 			return nil, err
 		}
@@ -216,7 +229,7 @@ func getSignRequestJson(ctx context.Context, validator *validator.Validate, requ
 		syncCommitteeSelectionProofSignRequestsTotal.Inc()
 		return json.Marshal(syncCommitteeSelectionProofRequest)
 	case *validatorpb.SignRequest_ContributionAndProof:
-		contributionAndProofRequest, err := v1.GetSyncCommitteeContributionAndProofSignRequest(request, genesisValidatorsRoot)
+		contributionAndProofRequest, err := web3signerv1.GetSyncCommitteeContributionAndProofSignRequest(request, genesisValidatorsRoot)
 		if err != nil {
 			return nil, err
 		}
