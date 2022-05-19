@@ -19,7 +19,7 @@ var (
 )
 
 // An invalid block is the block that fails state transition based on the core protocol rules.
-// The beacon node shall not be accepting and builder blocks that branch off of the invalid block.
+// The beacon node shall not be accepting nor building blocks that branch off from an invalid block.
 // Some examples of invalid blocks are:
 // The block violates state transition rules.
 // The block is deemed invalid according to execution layer client.
