@@ -40,12 +40,12 @@ func (e invalidBlock) InvalidBlock() bool {
 
 // IsInvalidBlock returns true if the error has `invalidBlock`.
 func IsInvalidBlock(e error) bool {
+        if e == nil {
+            return false
+        }
 	d, ok := e.(invalidBlockError)
 	if !ok {
-		uw := errors.Unwrap(e)
-		if uw != nil {
-			return IsInvalidBlock(uw)
-		}
+	    return IsInvalidBlock(errors.Unwrap(e))
 	}
-	return ok && d.InvalidBlock()
+	return d.InvalidBlock()
 }
