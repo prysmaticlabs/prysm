@@ -4,11 +4,14 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"time"
 
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/api/client/builder"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/network"
 	v1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
@@ -45,6 +48,25 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 	}
 	c, err := builder.NewClient(s.cfg.builderEndpoint.Url)
 	if err != nil {
+		return nil, err
+	}
+	sk, err := bls.RandKey()
+	if err != nil {
+		return nil, err
+	}
+
+	reg := &ethpb.ValidatorRegistrationV1{
+		FeeRecipient: params.BeaconConfig().DefaultFeeRecipient.Bytes(),
+		GasLimit:     100000000,
+		Timestamp:    uint64(time.Now().Unix()),
+		Pubkey:       sk.PublicKey().Marshal(),
+	}
+	sig := sk.Sign(reg.Pubkey)
+
+	if err := c.RegisterValidator(ctx, &ethpb.SignedValidatorRegistrationV1{
+		Message:   reg,
+		Signature: sig.Marshal(),
+	}); err != nil {
 		return nil, err
 	}
 
