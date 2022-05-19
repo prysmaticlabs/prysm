@@ -134,7 +134,7 @@ func (f *FieldTrie) RecomputeTrie(indices []uint64, elements interface{}) ([32]b
 		}
 		// We remove the duplicates here in order to prevent
 		// duplicated insertions into the trie.
-		newIndices := []uint64{}
+		var newIndices []uint64
 		indexExists := make(map[uint64]bool)
 		newRoots := make([][32]byte, 0, len(fieldRoots)/iNumOfElems)
 		for i, idx := range indices {
