@@ -95,7 +95,7 @@ type validator struct {
 	graffiti                           []byte
 	voteStats                          voteStats
 	Web3SignerConfig                   *remote_web3signer.SetupConfig
-	feeRecipientConfig                 *validator_service_config.FeeRecipientConfig
+	feeRecipientConfig                 *validator_service_config.ValidatorProposerSettings
 	walletIntializedChannel            chan *wallet.Wallet
 }
 
@@ -1006,12 +1006,14 @@ func (v *validator) buildValidatorRequests(ctx context.Context, pubkeys [][field
 		}
 		if v.feeRecipientConfig.DefaultConfig != nil {
 			feeRecipient = v.feeRecipientConfig.DefaultConfig.FeeRecipient
+			gasLimit = v.feeRecipientConfig.DefaultConfig.GasLimit
 		}
 		if v.feeRecipientConfig.ProposeConfig != nil {
 			option, ok := v.feeRecipientConfig.ProposeConfig[key]
 			if ok && option != nil {
 				// override the default if a proposeconfig is set
 				feeRecipient = option.FeeRecipient
+				gasLimit = option.GasLimit
 			}
 		}
 		if hexutil.Encode(feeRecipient.Bytes()) == fieldparams.EthBurnAddressHex {

@@ -5,29 +5,31 @@ import (
 	field_params "github.com/prysmaticlabs/prysm/config/fieldparams"
 )
 
-// FeeRecipientFileConfig is the struct representation of the JSON config file set in the validator through the CLI.
+// ValidatorProposerSettingsConfig is the struct representation of the JSON or YAML payload set in the validator through the CLI.
 // ProposeConfig is the map of validator address to fee recipient options all in hex format.
 // DefaultConfig is the default fee recipient address for all validators unless otherwise specified in the propose config.required.
-type FeeRecipientFileConfig struct {
-	ProposeConfig map[string]*FeeRecipientFileOptions `json:"proposer_config" yaml:"proposer_config"`
-	DefaultConfig *FeeRecipientFileOptions            `json:"default_config" yaml:"default_config"`
+type ValidatorProposerSettingsConfig struct {
+	ProposeConfig map[string]*ValidatorProposerOptionsConfig `json:"proposer_config" yaml:"proposer_config"`
+	DefaultConfig *ValidatorProposerOptionsConfig            `json:"default_config" yaml:"default_config"`
 }
 
-// FeeRecipientFileOptions is the struct representation of the JSON config file set in the validator through the CLI.
+// ValidatorProposerOptionsConfig is the struct representation of the JSON config file set in the validator through the CLI.
 // FeeRecipient is set to an eth address in hex string format with 0x prefix.
-type FeeRecipientFileOptions struct {
+// GasLimit is a number set to help the network decide on the maximum gas in each block.
+type ValidatorProposerOptionsConfig struct {
 	FeeRecipient string `json:"fee_recipient" yaml:"fee_recipient"`
-	GasLimit     uint64 `json:"builder_fee_recipient_override" yaml:"builder_fee_recipient_override"`
+	GasLimit     uint64 `json:"gas_limit,omitempty" yaml:"gas_limit,omitempty"`
 }
 
-// FeeRecipientConfig is a Prysm internal representation of the fee recipient config on the validator client.
-// FeeRecipientFileConfig maps to FeeRecipientConfig on import through the CLI.
-type FeeRecipientConfig struct {
-	ProposeConfig map[[field_params.BLSPubkeyLength]byte]*FeeRecipientOptions
-	DefaultConfig *FeeRecipientOptions
+// ValidatorProposerSettings is a Prysm internal representation of the fee recipient config on the validator client.
+// ValidatorProposerSettingsConfig maps to ValidatorProposerSettings on import through the CLI.
+type ValidatorProposerSettings struct {
+	ProposeConfig map[[field_params.BLSPubkeyLength]byte]*ValidatorProposerOptions
+	DefaultConfig *ValidatorProposerOptions
 }
 
-// FeeRecipientOptions is a Prysm internal representation of the FeeRecipientFileOptions on the validator client in bytes format instead of hex.
-type FeeRecipientOptions struct {
+// ValidatorProposerOptions is a Prysm internal representation of the ValidatorProposerOptionsConfig on the validator client in bytes format instead of hex.
+type ValidatorProposerOptions struct {
 	FeeRecipient common.Address
+	GasLimit     uint64
 }

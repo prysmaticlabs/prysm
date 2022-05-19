@@ -70,7 +70,7 @@ type ValidatorService struct {
 	grpcHeaders           []string
 	graffiti              []byte
 	Web3SignerConfig      *remote_web3signer.SetupConfig
-	feeRecipientConfig    *validator_service_config.FeeRecipientConfig
+	feeRecipientConfig    *validator_service_config.ValidatorProposerSettings
 }
 
 // Config for the validator service.
@@ -94,7 +94,7 @@ type Config struct {
 	GraffitiFlag               string
 	Endpoint                   string
 	Web3SignerConfig           *remote_web3signer.SetupConfig
-	FeeRecipientConfig         *validator_service_config.FeeRecipientConfig
+	FeeRecipientConfig         *validator_service_config.ValidatorProposerSettings
 }
 
 // NewValidatorService creates a new validator service for the service

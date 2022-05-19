@@ -327,27 +327,36 @@ var (
 	// FeeRecipientConfigFileFlag defines the path or URL to a file with proposer config.
 	FeeRecipientConfigFileFlag = &cli.StringFlag{
 		Name:  "fee-recipient-config-file",
-		Usage: "Set path to a JSON file containing validator mappings to ETH addresses for receiving transaction fees when proposing blocks (i.e. --fee-recipient-config-file=/path/to/proposer.json). File format found in docs",
+		Usage: "DEPRECATED, please use validator-proposer-settings-file",
 		Value: "",
 	}
 	// FeeRecipientConfigURLFlag defines the path or URL to a file with proposer config.
 	FeeRecipientConfigURLFlag = &cli.StringFlag{
 		Name:  "fee-recipient-config-url",
-		Usage: "Set URL to a REST endpoint containing validator mappings to ETH addresses for receiving transaction fees when proposing blocks (i.e. --fee-recipient-config-url=https://example.com/api/getConfig). File format found in docs",
+		Usage: "DEPRECATED, please use validator-proposer-settings-url",
+		Value: "",
+	}
+
+	// ValidatorProposerSettingsFlag defines the path or URL to a file with proposer config.
+	ValidatorProposerSettingsFlag = &cli.StringFlag{
+		Name:  "validator-proposer-settings-file",
+		Usage: "Set path to a YAML or JSON file containing validator settings used when proposing blocks such as (fee recipient and gas limit) (i.e. --validator-proposer-settings-file=/path/to/proposer.json). File format found in docs",
+		Value: "",
+	}
+	// ValidatorProposerSettingsURLFlag defines the path or URL to a file with proposer config.
+	ValidatorProposerSettingsURLFlag = &cli.StringFlag{
+		Name:  "validator-proposer-settings-url",
+		Usage: "Set URL to a REST endpoint containing validator settings used when proposing blocks such as (fee recipient) (i.e. --validator-proposer-settings-file-url=https://example.com/api/getConfig). File format found in docs",
 		Value: "",
 	}
 
 	// SuggestedFeeRecipientFlag defines the address of the fee recipient.
 	SuggestedFeeRecipientFlag = &cli.StringFlag{
-		Name:  "suggested-fee-recipient",
-		Usage: "Sets ALL validators' mapping to a suggested an eth address to receive gas fees when proposing a block. Overrides the --fee-recipient-config-file flag if set",
-		Value: field_params.EthBurnAddressHex,
-	}
-
-	// SuggestedBuilderFeeRecipientFlag defines the address of the fee recipient for custom builders.
-	SuggestedBuilderFeeRecipientFlag = &cli.StringFlag{
-		Name:  "suggested-builder-fee-recipient",
-		Usage: "Sets ALL validators' mapping to a suggested an eth address to receive gas fees when proposing a block for custom builders.",
+		Name: "suggested-fee-recipient",
+		Usage: "Sets ALL validators' mapping to a suggested an eth address to receive gas fees when proposing a block." +
+			" This setting is used for both the prepare_beacon_proposer api as well as the register_validator api." +
+			" For additional setting overrides use the --" + ValidatorProposerSettingsFlag.Name + " or --" + ValidatorProposerSettingsURLFlag.Name + " Flags. " +
+			" Overrides the --fee-recipient-config-file flag if set",
 		Value: field_params.EthBurnAddressHex,
 	}
 )
