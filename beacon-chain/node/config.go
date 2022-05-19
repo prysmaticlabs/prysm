@@ -111,6 +111,10 @@ func configureNetwork(cliCtx *cli.Context) {
 }
 
 func configureInteropConfig(cliCtx *cli.Context) error {
+	// an explicit chain config was specified, don't mess with it
+	if cliCtx.IsSet(cmd.ChainConfigFileFlag.Name) {
+		return nil
+	}
 	genStateIsSet := cliCtx.IsSet(flags.InteropGenesisStateFlag.Name)
 	genTimeIsSet := cliCtx.IsSet(flags.InteropGenesisTimeFlag.Name)
 	numValsIsSet := cliCtx.IsSet(flags.InteropNumValidatorsFlag.Name)
