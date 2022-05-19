@@ -97,7 +97,7 @@ func (r *configset) replace(cfg *BeaconChainConfig) error {
 	if err := r.add(cfg); err != nil {
 		return err
 	}
-	if r.active.ConfigName == name {
+	if r.active != nil && r.active.ConfigName == name {
 		r.active = cfg
 	}
 	return nil
