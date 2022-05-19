@@ -10,7 +10,7 @@ var _ fssz.HashRoot = (HistoricalRoots)([][32]byte{})
 var _ fssz.Marshaler = (*HistoricalRoots)(nil)
 var _ fssz.Unmarshaler = (*HistoricalRoots)(nil)
 
-// Byte32 represents a 32 bytes HistoricalRoots object in Ethereum beacon chain consensus.
+// HistoricalRoots represents a 32 bytes HistoricalRoots object in Ethereum beacon chain consensus.
 type HistoricalRoots [][32]byte
 
 // HashTreeRoot returns calculated hash root.

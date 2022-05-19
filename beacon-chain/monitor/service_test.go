@@ -130,7 +130,7 @@ func TestUpdateSyncCommitteeTrackedVals(t *testing.T) {
 
 func TestNewService(t *testing.T) {
 	config := &ValidatorMonitorConfig{}
-	tracked := []types.ValidatorIndex{}
+	var tracked []types.ValidatorIndex
 	ctx := context.Background()
 	_, err := NewService(ctx, config, tracked)
 	require.NoError(t, err)

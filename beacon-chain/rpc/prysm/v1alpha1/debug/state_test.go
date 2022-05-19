@@ -7,7 +7,6 @@ import (
 
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	mockstategen "github.com/prysmaticlabs/prysm/beacon-chain/state/stategen/mock"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
@@ -83,10 +82,9 @@ func TestServer_GetBeaconState(t *testing.T) {
 			Slot: slot + 1,
 		},
 	}
-	state := state.BeaconState(st)
 	// since we are requesting a state at a skipped slot, use the same method as stategen
 	// to advance to the pre-state for the subsequent slot
-	state, err = stategen.ReplayProcessSlots(ctx, state, slot+1)
+	state, err := stategen.ReplayProcessSlots(ctx, st, slot+1)
 	require.NoError(t, err)
 	wanted, err = state.MarshalSSZ()
 	require.NoError(t, err)

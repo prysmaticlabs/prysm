@@ -4,7 +4,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 )
 
-// NewDepositContractcallFromBoundContract creates a new instance of DepositContractCaller, bound to
+// NewDepositContractCallerFromBoundContract creates a new instance of DepositContractCaller, bound to
 // a specific deployed contract.
 func NewDepositContractCallerFromBoundContract(contract *bind.BoundContract) DepositContractCaller {
 	return DepositContractCaller{contract: contract}
