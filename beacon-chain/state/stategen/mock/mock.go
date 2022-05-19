@@ -23,7 +23,7 @@ func NewMockService() *MockStateManager {
 	}
 }
 
-// StateByRootIfCachedNoCopy
+// StateByRootIfCachedNoCopy --
 func (_ *MockStateManager) StateByRootIfCachedNoCopy(_ [32]byte) state.BeaconState {
 	panic("implement me")
 }
