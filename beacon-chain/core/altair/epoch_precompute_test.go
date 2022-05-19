@@ -88,12 +88,13 @@ func TestInitializeEpochValidators_BadState(t *testing.T) {
 	_, _, err = InitializePrecomputeValidators(context.Background(), s)
 	require.ErrorContains(t, "num of validators is different than num of inactivity scores", err)
 }
+
 func TestUnrealizedCheckpoints(t *testing.T) {
 	s, err := testState()
 	require.NoError(t, err)
 	_, _, err = InitializePrecomputeValidators(context.Background(), s)
 	require.NoError(t, err)
-	jc, fc, err := UnrealizedCheckpoints(context.Background(), s)
+	jc, fc, err := UnrealizedCheckpoints(s)
 	require.NoError(t, err)
 	require.Equal(t, 0, jc)
 	require.Equal(t, 0, fc)
