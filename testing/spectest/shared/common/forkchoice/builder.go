@@ -17,6 +17,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/sirupsen/logrus"
 )
 
 type Builder struct {
@@ -35,6 +36,8 @@ func NewBuilder(t testing.TB, initialState state.BeaconState, initialBlock inter
 		execMock: execMock,
 	}
 }
+
+var log = logrus.WithField("prefix", "forkchoice-protoarray")
 
 // Tick resets the genesis time to now()-tick and adjusts the slot to the appropriate value.
 func (bb *Builder) Tick(t testing.TB, tick int64) {
@@ -90,11 +93,6 @@ func (bb *Builder) Check(t testing.TB, c *Check) {
 		return
 	}
 	ctx := context.TODO()
-	if c.ProposerBoostRoot != nil {
-		want := fmt.Sprintf("%#x", common.FromHex(*c.ProposerBoostRoot))
-		got := fmt.Sprintf("%#x", bb.service.ForkChoiceStore().ProposerBoost())
-		require.DeepEqual(t, want, got)
-	}
 	require.NoError(t, bb.service.UpdateAndSaveHeadWithBalances(ctx))
 	if c.Head != nil {
 		r, err := bb.service.HeadRoot(ctx)
@@ -122,6 +120,11 @@ func (bb *Builder) Check(t testing.TB, c *Check) {
 			Root:  common.FromHex(c.FinalizedCheckPoint.Root),
 		}
 		require.DeepSSZEqual(t, cp, bb.service.FinalizedCheckpt())
+	}
+	if c.ProposerBoostRoot != nil {
+		want := fmt.Sprintf("%#x", common.FromHex(*c.ProposerBoostRoot))
+		got := fmt.Sprintf("%#x", bb.service.ForkChoiceStore().ProposerBoost())
+		require.DeepEqual(t, want, got)
 	}
 
 }

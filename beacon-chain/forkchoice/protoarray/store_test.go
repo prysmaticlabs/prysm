@@ -817,7 +817,8 @@ func TestStore_UpdateCheckpoints(t *testing.T) {
 	fr := [32]byte{'f'}
 	jc := &ethpb.Checkpoint{Root: jr[:], Epoch: 3}
 	fc := &ethpb.Checkpoint{Root: fr[:], Epoch: 2}
-	require.NoError(t, f.UpdateCheckpoints(jc, fc))
+	require.NoError(t, f.UpdateJustifiedCheckpoint(jc))
+	require.NoError(t, f.UpdateFinalizedCheckpoint(fc))
 	require.Equal(t, f.store.justifiedEpoch, jc.Epoch)
 	require.Equal(t, f.store.finalizedEpoch, fc.Epoch)
 }

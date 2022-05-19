@@ -55,7 +55,6 @@ func (f *ForkChoice) Head(
 	defer f.votesLock.Unlock()
 
 	calledHeadCount.Inc()
-
 	newBalances := justifiedStateBalances
 
 	// Using the write lock here because `updateCanonicalNodes` that gets called subsequently requires a write operation.
@@ -783,12 +782,20 @@ func (f *ForkChoice) InsertSlashedIndex(ctx context.Context, index types.Validat
 	}
 }
 
-// UpdateCheckpoints sets the justified and finalized epoch to the given ones
-func (f *ForkChoice) UpdateCheckpoints(jc, fc *pbrpc.Checkpoint) error {
-	if jc == nil || fc == nil {
+// UpdateJustifiedCheckpoint sets the justified epoch to the given one
+func (f *ForkChoice) UpdateJustifiedCheckpoint(jc *pbrpc.Checkpoint) error {
+	if jc == nil {
 		return errInvalidNilCheckpoint
 	}
 	f.store.justifiedEpoch = jc.Epoch
+	return nil
+}
+
+// UpdateFinalizedCheckpoint sets the finalized epoch to the given one
+func (f *ForkChoice) UpdateFinalizedCheckpoint(fc *pbrpc.Checkpoint) error {
+	if fc == nil {
+		return errInvalidNilCheckpoint
+	}
 	f.store.finalizedEpoch = fc.Epoch
 	return nil
 }

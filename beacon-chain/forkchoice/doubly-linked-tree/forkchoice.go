@@ -358,12 +358,20 @@ func (f *ForkChoice) InsertSlashedIndex(_ context.Context, index types.Validator
 	}
 }
 
-// UpdateCheckpoints sets the justified and finalized epoch to the given ones
-func (f *ForkChoice) UpdateCheckpoints(jc, fc *pbrpc.Checkpoint) error {
-	if jc == nil || fc == nil {
+// UpdateJustifiedCheckpoint sets the justified epoch to the given one
+func (f *ForkChoice) UpdateJustifiedCheckpoint(jc *pbrpc.Checkpoint) error {
+	if jc == nil {
 		return errInvalidNilCheckpoint
 	}
 	f.store.justifiedEpoch = jc.Epoch
+	return nil
+}
+
+// UpdateFinalizedCheckpoint sets the finalized epoch to the given one
+func (f *ForkChoice) UpdateFinalizedCheckpoint(fc *pbrpc.Checkpoint) error {
+	if fc == nil {
+		return errInvalidNilCheckpoint
+	}
 	f.store.finalizedEpoch = fc.Epoch
 	return nil
 }

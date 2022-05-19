@@ -31,15 +31,7 @@ func (s *Service) UpdateAndSaveHeadWithBalances(ctx context.Context) error {
 	if jp == nil {
 		return errors.New("no justified checkpoint")
 	}
-	if slots.IsEpochStart(s.HeadSlot()) {
-		fp := s.store.FinalizedCheckpt()
-		if fp == nil {
-			return errors.New("no finalized checkpoint")
-		}
-		if err := s.cfg.ForkChoiceStore.UpdateCheckpoints(jp, fp); err != nil {
-			return err
-		}
-	}
+
 	balances, err := s.justifiedBalances.get(ctx, bytesutil.ToBytes32(jp.Root))
 	if err != nil {
 		msg := fmt.Sprintf("could not read balances for state w/ justified checkpoint %#x", jp.Root)
