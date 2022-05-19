@@ -188,18 +188,19 @@ func validatorsSyncParticipation(conns ...*grpc.ClientConn) error {
 		if b.IsNil() {
 			return errors.New("nil block provided")
 		}
-		forkSlot, err := slots.EpochStart(helpers.AltairE2EForkEpoch)
+		forkStartSlot, err := slots.EpochStart(helpers.AltairE2EForkEpoch)
 		if err != nil {
 			return err
 		}
-		nexForkSlot, err := slots.EpochStart(helpers.BellatrixE2EForkEpoch)
-		if err != nil {
-			return err
-		}
-		switch b.Block().Slot() {
-		case forkSlot, forkSlot + 1, nexForkSlot:
-			// Skip evaluation of the slot.
+		if forkStartSlot == b.Block().Slot() {
+			// Skip fork slot.
 			continue
+		}
+		expectedParticipation := expectedSyncParticipation
+		switch slots.ToEpoch(b.Block().Slot()) {
+		case helpers.AltairE2EForkEpoch:
+			// Drop expected sync participation figure.
+			expectedParticipation = 0.90
 		default:
 			// no-op
 		}
@@ -207,7 +208,7 @@ func validatorsSyncParticipation(conns ...*grpc.ClientConn) error {
 		if err != nil {
 			return err
 		}
-		threshold := uint64(float64(syncAgg.SyncCommitteeBits.Len()) * expectedSyncParticipation)
+		threshold := uint64(float64(syncAgg.SyncCommitteeBits.Len()) * expectedParticipation)
 		if syncAgg.SyncCommitteeBits.Count() < threshold {
 			return errors.Errorf("In block of slot %d ,the aggregate bitvector with length of %d only got a count of %d", b.Block().Slot(), threshold, syncAgg.SyncCommitteeBits.Count())
 		}
