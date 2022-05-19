@@ -79,10 +79,7 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 							log.WithError(err).Debug("Could not save aggregate attestation")
 							continue
 						}
-						if err := s.setAggregationBits(att.Aggregate.Data, att.Aggregate.AggregationBits); err != nil {
-							log.WithError(err).Debug("Could not set")
-							continue
-						}
+						s.setAggregatorIndexEpochSeen(att.Aggregate.Data.Target.Epoch, att.AggregatorIndex)
 
 						// Broadcasting the signed attestation again once a node is able to process it.
 						if err := s.cfg.p2p.Broadcast(ctx, signedAtt); err != nil {

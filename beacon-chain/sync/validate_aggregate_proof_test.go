@@ -9,7 +9,6 @@ import (
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
-	_ "github.com/patrickmn/go-cache"
 	"github.com/prysmaticlabs/go-bitfield"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -740,56 +739,4 @@ func TestValidateAggregateAndProof_Optimistic(t *testing.T) {
 	assert.NoError(t, err)
 	valid := res == pubsub.ValidationIgnore
 	assert.Equal(t, true, valid, "Validation should have ignored the message")
-}
-
-func TestService_setAggregationBits(t *testing.T) {
-	chainService := &mock.ChainService{
-		Genesis:        time.Now(),
-		ValidatorsRoot: [32]byte{'A'},
-	}
-	s := NewService(context.Background(), WithP2P(p2ptest.NewTestP2P(t)), WithStateNotifier(chainService.StateNotifier()))
-	s.initCaches()
-
-	// Empty cache
-	d := util.HydrateAttestationData(&ethpb.AttestationData{})
-	has, err := s.hasSeenAggregationBits(d, []byte{})
-	require.NoError(t, err)
-	require.Equal(t, false, has)
-
-	// Cache with entries but same key
-	require.NoError(t, s.setAggregationBits(d, []byte{5}))
-	has, err = s.hasSeenAggregationBits(d, []byte{5})
-	require.NoError(t, err)
-	require.Equal(t, true, has)
-	has, err = s.hasSeenAggregationBits(d, []byte{6})
-	require.NoError(t, err)
-	require.Equal(t, false, has)
-	has, err = s.hasSeenAggregationBits(d, []byte{7})
-	require.NoError(t, err)
-	require.Equal(t, false, has)
-
-	require.NoError(t, s.setAggregationBits(d, []byte{7}))
-	has, err = s.hasSeenAggregationBits(d, []byte{6})
-	require.NoError(t, err)
-	require.Equal(t, true, has)
-
-	// Cache with entries but different key
-	d = util.HydrateAttestationData(&ethpb.AttestationData{Slot: 1})
-	has, err = s.hasSeenAggregationBits(d, []byte{})
-	require.NoError(t, err)
-	require.Equal(t, false, has)
-	require.NoError(t, s.setAggregationBits(d, []byte{9}))
-	has, err = s.hasSeenAggregationBits(d, []byte{9})
-	require.NoError(t, err)
-	require.Equal(t, true, has)
-	has, err = s.hasSeenAggregationBits(d, []byte{0x0A})
-	require.NoError(t, err)
-	require.Equal(t, false, has)
-	has, err = s.hasSeenAggregationBits(d, []byte{0x0B})
-	require.NoError(t, err)
-	require.Equal(t, false, has)
-	require.NoError(t, s.setAggregationBits(d, []byte{0x0B}))
-	has, err = s.hasSeenAggregationBits(d, []byte{0x0A})
-	require.NoError(t, err)
-	require.Equal(t, true, has)
 }
