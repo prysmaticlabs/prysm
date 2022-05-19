@@ -359,54 +359,10 @@ func UnrealizedCheckpoints(ctx context.Context, st state.BeaconStateAltair) (*et
 	if st == nil || st.IsNil() {
 		return nil, nil, errNilState
 	}
-	currentEpoch := time.CurrentEpoch(st)
-	activeBalance := uint64(0)
-	currentTarget := uint64(0)
-	prevTarget := uint64(0)
 
-	cp, err := st.CurrentEpochParticipation() // TODO: Use read only
+	activeBalance, prevTarget, currentTarget, err := st.UnrealizedCheckpointBalances()
 	if err != nil {
 		return nil, nil, err
-	}
-
-	pp, err := st.PreviousEpochParticipation()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	cfg := params.BeaconConfig()
-	targetIdx := cfg.TimelyTargetFlagIndex
-
-	if err := st.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
-		if helpers.IsActiveValidatorUsingTrie(val, currentEpoch) && !val.Slashed() {
-			activeBalance, err = math.Add64(activeBalance, val.EffectiveBalance())
-			if err != nil {
-				return err
-			}
-			has, err := HasValidatorFlag(cp[idx], targetIdx)
-			if err != nil {
-				return err
-			}
-			if has {
-				currentTarget, err = math.Add64(currentTarget, val.EffectiveBalance())
-				if err != nil {
-					return err
-				}
-			}
-			has, err = HasValidatorFlag(pp[idx], targetIdx)
-			if err != nil {
-				return err
-			}
-			if has {
-				prevTarget, err = math.Add64(prevTarget, val.EffectiveBalance())
-				if err != nil {
-					return err
-				}
-			}
-		}
-		return nil
-	}); err != nil {
-		return nil, nil, errors.Wrap(err, "could not read every validator")
 	}
 
 	justification := precompute.ProcessJustificationBits(st, activeBalance, prevTarget, currentTarget)
