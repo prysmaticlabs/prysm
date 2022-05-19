@@ -17,7 +17,6 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/time/slots"
-	"github.com/sirupsen/logrus"
 )
 
 type Builder struct {
@@ -36,8 +35,6 @@ func NewBuilder(t testing.TB, initialState state.BeaconState, initialBlock inter
 		execMock: execMock,
 	}
 }
-
-var log = logrus.WithField("prefix", "forkchoice-protoarray")
 
 // Tick resets the genesis time to now()-tick and adjusts the slot to the appropriate value.
 func (bb *Builder) Tick(t testing.TB, tick int64) {
