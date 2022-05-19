@@ -14,7 +14,7 @@ import (
 )
 
 func TestEndToEnd_MinimalConfig(t *testing.T) {
-	e2eMinimal(t, false, 3)
+	e2eMinimal(t, false, 0)
 }
 
 func TestEndToEnd_MinimalConfig_Web3Signer(t *testing.T) {
@@ -27,7 +27,7 @@ func e2eMinimal(t *testing.T, useWeb3RemoteSigner bool, extraEpochs uint64) {
 
 	// Run for 12 epochs if not in long-running to confirm long-running has no issues.
 	var err error
-	epochsToRun := 10
+	epochsToRun := 12
 	epochStr, longRunning := os.LookupEnv("E2E_EPOCHS")
 	if longRunning {
 		epochsToRun, err = strconv.Atoi(epochStr)
