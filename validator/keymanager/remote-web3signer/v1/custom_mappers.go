@@ -170,12 +170,12 @@ func MapProposerSlashing(slashing *ethpb.ProposerSlashing) (*ProposerSlashing, e
 		return nil, errors.Wrap(err, "could not map signed header 2")
 	}
 	return &ProposerSlashing{
-		SignedHeader_1: signedHeader1,
-		SignedHeader_2: signedHeader2,
+		Signedheader1: signedHeader1,
+		Signedheader2: signedHeader2,
 	}, nil
 }
 
-// MapAttesterSlashing maps the eth2.AttesterSlashing proto to the Web3Signer spec.
+// MapSignedBeaconBlockHeader maps the eth2.AttesterSlashing proto to the Web3Signer spec.
 func MapSignedBeaconBlockHeader(signedHeader *ethpb.SignedBeaconBlockHeader) (*SignedBeaconBlockHeader, error) {
 	if signedHeader == nil {
 		return nil, fmt.Errorf("signed beacon block header is nil")
@@ -217,8 +217,8 @@ func MapAttesterSlashing(slashing *ethpb.AttesterSlashing) (*AttesterSlashing, e
 		return nil, errors.Wrap(err, "could not map attestation 2")
 	}
 	return &AttesterSlashing{
-		Attestation_1: attestation1,
-		Attestation_2: attestation2,
+		Attestation1: attestation1,
+		Attestation2: attestation2,
 	}, nil
 }
 
