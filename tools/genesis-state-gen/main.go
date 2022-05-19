@@ -53,7 +53,7 @@ func main() {
 	}
 	if *useMainnetConfig {
 		if err := params.SetActive(params.MainnetConfig().Copy()); err != nil {
-			log.Fatalf("unable to set minimal config active, err=%s", err.Error())
+			log.Fatalf("unable to set mainnet config active, err=%s", err.Error())
 		}
 	} else {
 		cfg, err := params.ByName(*configName)
@@ -61,7 +61,7 @@ func main() {
 			log.Fatalf("unable to find config using name %s, err=%s", *configName, err.Error())
 		}
 		if err := params.SetActive(cfg.Copy()); err != nil {
-			log.Fatalf("unable to set minimal config active, err=%s", err.Error())
+			log.Fatalf("unable to set %s config active, err=%s", cfg.ConfigName, err.Error())
 		}
 	}
 	var genesisState *ethpb.BeaconState
