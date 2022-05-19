@@ -57,7 +57,7 @@ func (s *Service) validateMergeBlock(ctx context.Context, b interfaces.SignedBea
 	}
 	_, mergeBlockParentTD, err := s.getBlkParentHashAndTD(ctx, mergeBlockParentHash)
 	if err != nil {
-		return invalidBlock{errors.Wrap(err, "could not get merge parent block total difficulty")}
+		return errors.Wrap(err, "could not get merge parent block total difficulty")
 	}
 	valid, err := validateTerminalBlockDifficulties(mergeBlockTD, mergeBlockParentTD)
 	if err != nil {

@@ -698,9 +698,6 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 		err = service.optimisticCandidateBlock(ctx, tt.blk)
 		if tt.err != nil {
 			require.Equal(t, tt.err.Error(), err.Error())
-			if err == errNotOptimisticCandidate {
-				require.Equal(t, true, IsInvalidBlock(err))
-			}
 		} else {
 			require.NoError(t, err)
 		}

@@ -247,7 +247,7 @@ func (s *Service) optimisticCandidateBlock(ctx context.Context, blk interfaces.B
 		return nil
 	}
 
-	return invalidBlock{errNotOptimisticCandidate}
+	return errNotOptimisticCandidate
 }
 
 // getPayloadAttributes returns the payload attributes for the given state and slot.
