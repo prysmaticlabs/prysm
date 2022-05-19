@@ -215,7 +215,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 			return err
 		}
 		s.store.SetJustifiedCheckptAndPayloadHash(postState.CurrentJustifiedCheckpoint(), h)
-		// Update Forkchoice finalized checkpoint
+		// Update Forkchoice checkpoints
 		if err := s.cfg.ForkChoiceStore.UpdateJustifiedCheckpoint(psj); err != nil {
 			return err
 		}
