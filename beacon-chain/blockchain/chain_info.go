@@ -32,8 +32,9 @@ type ChainInfoFetcher interface {
 }
 
 // HeadUpdater defines a common interface for methods in blockchain service
-// which allow to update the head info
+// which allow to update the head info and update propose boost score and justified check point via on_tick.
 type HeadUpdater interface {
+	NewSlot(ctx context.Context, slot types.Slot) error
 	UpdateHead(context.Context) error
 }
 

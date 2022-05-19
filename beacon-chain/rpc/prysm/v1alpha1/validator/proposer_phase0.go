@@ -82,6 +82,9 @@ func (vs *Server) buildPhase0BlockData(ctx context.Context, req *ethpb.BlockRequ
 		return nil, fmt.Errorf("syncing to latest head, not ready to respond")
 	}
 
+	if err := vs.HeadUpdater.NewSlot(ctx, req.Slot); err != nil {
+		log.WithError(err).Error("Could not update propose boost score")
+	}
 	if err := vs.HeadUpdater.UpdateHead(ctx); err != nil {
 		log.WithError(err).Error("Could not process attestations and update head")
 	}

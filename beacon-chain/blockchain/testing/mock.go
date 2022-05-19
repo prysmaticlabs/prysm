@@ -456,3 +456,8 @@ func (s *ChainService) UpdateHead(_ context.Context) error { return nil }
 
 // ReceiveAttesterSlashing mocks the same method in the chain service.
 func (s *ChainService) ReceiveAttesterSlashing(context.Context, *ethpb.AttesterSlashing) {}
+
+// NewSlot mocks the same method in the chain service.
+func (s *ChainService) NewSlot(context.Context, types.Slot) error {
+	return nil
+}
