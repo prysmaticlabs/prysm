@@ -46,10 +46,8 @@ const (
 type StateOrBlockId string
 
 const (
-	IdFinalized StateOrBlockId = "finalized"
-	IdGenesis   StateOrBlockId = "genesis"
-	IdHead      StateOrBlockId = "head"
-	IdJustified StateOrBlockId = "justified"
+	IdGenesis StateOrBlockId = "genesis"
+	IdHead    StateOrBlockId = "head"
 )
 
 var ErrMalformedHostname = errors.New("hostname must include port, separated by one colon, like example.com:3500")
@@ -60,7 +58,7 @@ func IdFromRoot(r [32]byte) StateOrBlockId {
 	return StateOrBlockId(fmt.Sprintf("%#x", r))
 }
 
-// IdFromRoot encodes a Slot in the format expected by the API in places where a slot can be used to identify
+// IdFromSlot encodes a Slot in the format expected by the API in places where a slot can be used to identify
 // a BeaconState or SignedBeaconBlock.
 func IdFromSlot(s types.Slot) StateOrBlockId {
 	return StateOrBlockId(strconv.FormatUint(uint64(s), 10))

@@ -2835,50 +2835,50 @@ func TestGetAggregateAttestation(t *testing.T) {
 		},
 		Signature: sig1,
 	}
-	root2_1 := bytesutil.PadTo([]byte("root2_1"), 32)
-	sig2_1 := bytesutil.PadTo([]byte("sig2_1"), fieldparams.BLSSignatureLength)
-	attSlot2_1 := &ethpbalpha.Attestation{
+	root21 := bytesutil.PadTo([]byte("root2_1"), 32)
+	sig21 := bytesutil.PadTo([]byte("sig2_1"), fieldparams.BLSSignatureLength)
+	attslot21 := &ethpbalpha.Attestation{
 		AggregationBits: []byte{0, 1, 1},
 		Data: &ethpbalpha.AttestationData{
 			Slot:            2,
 			CommitteeIndex:  2,
-			BeaconBlockRoot: root2_1,
+			BeaconBlockRoot: root21,
 			Source: &ethpbalpha.Checkpoint{
 				Epoch: 1,
-				Root:  root2_1,
+				Root:  root21,
 			},
 			Target: &ethpbalpha.Checkpoint{
 				Epoch: 1,
-				Root:  root2_1,
+				Root:  root21,
 			},
 		},
-		Signature: sig2_1,
+		Signature: sig21,
 	}
-	root2_2 := bytesutil.PadTo([]byte("root2_2"), 32)
-	sig2_2 := bytesutil.PadTo([]byte("sig2_2"), fieldparams.BLSSignatureLength)
-	attSlot2_2 := &ethpbalpha.Attestation{
+	root22 := bytesutil.PadTo([]byte("root2_2"), 32)
+	sig22 := bytesutil.PadTo([]byte("sig2_2"), fieldparams.BLSSignatureLength)
+	attslot22 := &ethpbalpha.Attestation{
 		AggregationBits: []byte{0, 1, 1, 1},
 		Data: &ethpbalpha.AttestationData{
 			Slot:            2,
 			CommitteeIndex:  3,
-			BeaconBlockRoot: root2_2,
+			BeaconBlockRoot: root22,
 			Source: &ethpbalpha.Checkpoint{
 				Epoch: 1,
-				Root:  root2_2,
+				Root:  root22,
 			},
 			Target: &ethpbalpha.Checkpoint{
 				Epoch: 1,
-				Root:  root2_2,
+				Root:  root22,
 			},
 		},
-		Signature: sig2_2,
+		Signature: sig22,
 	}
 	vs := &Server{
-		AttestationsPool: &mock.PoolMock{AggregatedAtts: []*ethpbalpha.Attestation{attSlot1, attSlot2_1, attSlot2_2}},
+		AttestationsPool: &mock.PoolMock{AggregatedAtts: []*ethpbalpha.Attestation{attSlot1, attslot21, attslot22}},
 	}
 
 	t.Run("OK", func(t *testing.T) {
-		reqRoot, err := attSlot2_2.Data.HashTreeRoot()
+		reqRoot, err := attslot22.Data.HashTreeRoot()
 		require.NoError(t, err)
 		req := &ethpbv1.AggregateAttestationRequest{
 			AttestationDataRoot: reqRoot[:],
@@ -2889,16 +2889,16 @@ func TestGetAggregateAttestation(t *testing.T) {
 		require.NotNil(t, att)
 		require.NotNil(t, att.Data)
 		assert.DeepEqual(t, bitfield.Bitlist{0, 1, 1, 1}, att.Data.AggregationBits)
-		assert.DeepEqual(t, sig2_2, att.Data.Signature)
+		assert.DeepEqual(t, sig22, att.Data.Signature)
 		assert.Equal(t, types.Slot(2), att.Data.Data.Slot)
 		assert.Equal(t, types.CommitteeIndex(3), att.Data.Data.Index)
-		assert.DeepEqual(t, root2_2, att.Data.Data.BeaconBlockRoot)
+		assert.DeepEqual(t, root22, att.Data.Data.BeaconBlockRoot)
 		require.NotNil(t, att.Data.Data.Source)
 		assert.Equal(t, types.Epoch(1), att.Data.Data.Source.Epoch)
-		assert.DeepEqual(t, root2_2, att.Data.Data.Source.Root)
+		assert.DeepEqual(t, root22, att.Data.Data.Source.Root)
 		require.NotNil(t, att.Data.Data.Target)
 		assert.Equal(t, types.Epoch(1), att.Data.Data.Target.Epoch)
-		assert.DeepEqual(t, root2_2, att.Data.Data.Target.Root)
+		assert.DeepEqual(t, root22, att.Data.Data.Target.Root)
 	})
 
 	t.Run("No matching attestation", func(t *testing.T) {
