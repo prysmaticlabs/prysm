@@ -633,7 +633,7 @@ func MockBeaconBlockAltair() *v1.BeaconBlockAltair {
 			Graffiti: hexutil.Encode(make([]byte, 32)),
 			ProposerSlashings: []*v1.ProposerSlashing{
 				{
-					SignedHeader_1: &v1.SignedBeaconBlockHeader{
+					Signedheader1: &v1.SignedBeaconBlockHeader{
 						Message: &v1.BeaconBlockHeader{
 							Slot:          "0",
 							ProposerIndex: "0",
@@ -643,7 +643,7 @@ func MockBeaconBlockAltair() *v1.BeaconBlockAltair {
 						},
 						Signature: hexutil.Encode(make([]byte, fieldparams.BLSSignatureLength)),
 					},
-					SignedHeader_2: &v1.SignedBeaconBlockHeader{
+					Signedheader2: &v1.SignedBeaconBlockHeader{
 						Message: &v1.BeaconBlockHeader{
 							Slot:          "0",
 							ProposerIndex: "0",
@@ -657,8 +657,8 @@ func MockBeaconBlockAltair() *v1.BeaconBlockAltair {
 			},
 			AttesterSlashings: []*v1.AttesterSlashing{
 				{
-					Attestation_1: MockIndexedAttestation(),
-					Attestation_2: MockIndexedAttestation(),
+					Attestation1: MockIndexedAttestation(),
+					Attestation2: MockIndexedAttestation(),
 				},
 			},
 			Attestations: []*v1.Attestation{
@@ -703,7 +703,7 @@ func MockBeaconBlockBody() *v1.BeaconBlockBody {
 		Graffiti: hexutil.Encode(make([]byte, 32)),
 		ProposerSlashings: []*v1.ProposerSlashing{
 			{
-				SignedHeader_1: &v1.SignedBeaconBlockHeader{
+				Signedheader1: &v1.SignedBeaconBlockHeader{
 					Message: &v1.BeaconBlockHeader{
 						Slot:          "0",
 						ProposerIndex: "0",
@@ -713,7 +713,7 @@ func MockBeaconBlockBody() *v1.BeaconBlockBody {
 					},
 					Signature: hexutil.Encode(make([]byte, fieldparams.BLSSignatureLength)),
 				},
-				SignedHeader_2: &v1.SignedBeaconBlockHeader{
+				Signedheader2: &v1.SignedBeaconBlockHeader{
 					Message: &v1.BeaconBlockHeader{
 						Slot:          "0",
 						ProposerIndex: "0",
@@ -727,8 +727,8 @@ func MockBeaconBlockBody() *v1.BeaconBlockBody {
 		},
 		AttesterSlashings: []*v1.AttesterSlashing{
 			{
-				Attestation_1: MockIndexedAttestation(),
-				Attestation_2: MockIndexedAttestation(),
+				Attestation1: MockIndexedAttestation(),
+				Attestation2: MockIndexedAttestation(),
 			},
 		},
 		Attestations: []*v1.Attestation{
