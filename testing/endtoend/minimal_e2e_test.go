@@ -14,7 +14,7 @@ import (
 )
 
 func TestEndToEnd_MinimalConfig(t *testing.T) {
-	e2eMinimal(t, false, 0)
+	e2eMinimal(t, false, 3)
 }
 
 func TestEndToEnd_MinimalConfig_Web3Signer(t *testing.T) {
