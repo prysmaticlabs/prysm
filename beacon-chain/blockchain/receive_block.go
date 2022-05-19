@@ -59,6 +59,10 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.SignedBeaco
 	}
 
 	// Reports on block and fork choice metrics.
+	justified := s.store.FinalizedCheckpt()
+	if justified == nil {
+		return errNilJustifiedInStore
+	}
 	finalized := s.store.FinalizedCheckpt()
 	if finalized == nil {
 		return errNilFinalizedInStore
@@ -66,7 +70,7 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.SignedBeaco
 	reportSlotMetrics(blockCopy.Block().Slot(), s.HeadSlot(), s.CurrentSlot(), finalized)
 
 	// Log block sync status.
-	if err := logBlockSyncStatus(blockCopy.Block(), blockRoot, finalized, receivedTime, uint64(s.genesisTime.Unix())); err != nil {
+	if err := logBlockSyncStatus(blockCopy.Block(), blockRoot, justified, finalized, receivedTime, uint64(s.genesisTime.Unix())); err != nil {
 		return err
 	}
 	// Log state transition data.
