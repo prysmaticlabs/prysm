@@ -129,7 +129,7 @@ func configureExecutionSetting(cliCtx *cli.Context) error {
 		return nil
 	}
 
-	c := params.BeaconConfig()
+	c := params.BeaconConfig().Copy()
 	ha := cliCtx.String(flags.SuggestedFeeRecipient.Name)
 	if !common.IsHexAddress(ha) {
 		return fmt.Errorf("%s is not a valid fee recipient address", ha)
@@ -146,6 +146,5 @@ func configureExecutionSetting(cliCtx *cli.Context) error {
 			"to prevent spelling mistakes in your fee recipient Ethereum address", ha, checksumAddress.Hex())
 	}
 	c.DefaultFeeRecipient = checksumAddress
-	params.OverrideBeaconConfig(c)
-	return nil
+	return params.SetActive(c)
 }
