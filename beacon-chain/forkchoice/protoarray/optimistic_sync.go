@@ -24,6 +24,7 @@ func (f *ForkChoice) IsOptimistic(root [32]byte) (bool, error) {
 
 // SetOptimisticToValid is called with the root of a block that was returned as
 // VALID by the EL.
+//
 // WARNING: This method returns an error if the root is not found in forkchoice
 func (f *ForkChoice) SetOptimisticToValid(ctx context.Context, root [32]byte) error {
 	f.store.nodesLock.Lock()

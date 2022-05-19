@@ -178,7 +178,7 @@ func (r *testRunner) run() {
 			comps = append(comps, web3RemoteSigner)
 		}
 		if err := helpers.ComponentsStarted(ctx, comps); err != nil {
-			return errors.Wrap(err, "validator nodes require beacon nodes to run")
+			return errors.Wrap(err, "validator nodes require components to run")
 		}
 		if err := validatorNodes.Start(ctx); err != nil {
 			return errors.Wrap(err, "failed to start validator nodes")
@@ -272,9 +272,7 @@ func (r *testRunner) run() {
 		}
 
 		if config.ExtraEpochs > 0 {
-			secondsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
-			dl := time.Now().Add(time.Second * time.Duration(config.ExtraEpochs*secondsPerEpoch))
-			if err := r.waitUntilEpoch(ctx, types.Epoch(config.EpochsToRun+config.ExtraEpochs), conns[0], dl); err != nil {
+			if err := r.waitExtra(ctx, types.Epoch(config.EpochsToRun+config.ExtraEpochs), conns[0], types.Epoch(config.ExtraEpochs)); err != nil {
 				return errors.Wrap(err, "error while waiting for ExtraEpochs")
 			}
 			syncEvaluators := []e2etypes.Evaluator{ev.FinishedSyncing, ev.AllNodesHaveSameHead}
@@ -297,9 +295,12 @@ func (r *testRunner) run() {
 	}
 }
 
-func (r *testRunner) waitUntilEpoch(ctx context.Context, e types.Epoch, conn *grpc.ClientConn, deadline time.Time) error {
+func (r *testRunner) waitExtra(ctx context.Context, e types.Epoch, conn *grpc.ClientConn, extra types.Epoch) error {
+	spe := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
+	dl := time.Now().Add(time.Second * time.Duration(uint64(extra)*spe))
+
 	beaconClient := eth.NewBeaconChainClient(conn)
-	ctx, cancel := context.WithDeadline(ctx, deadline)
+	ctx, cancel := context.WithDeadline(ctx, dl)
 	defer cancel()
 	for {
 		select {
@@ -308,9 +309,15 @@ func (r *testRunner) waitUntilEpoch(ctx context.Context, e types.Epoch, conn *gr
 		default:
 			chainHead, err := beaconClient.GetChainHead(ctx, &emptypb.Empty{})
 			if err != nil {
-				return err
+				log.Warnf("while querying connection %s for chain head got error=%s", conn.Target(), err.Error())
 			}
-			if chainHead.HeadEpoch >= e {
+			if chainHead.HeadEpoch > e {
+				// no need to wait, other nodes should be caught up
+				return nil
+			}
+			if chainHead.HeadEpoch == e {
+				// wait until halfway into the epoch to give other nodes time to catch up
+				time.Sleep(time.Second * time.Duration(spe/2))
 				return nil
 			}
 		}
@@ -368,6 +375,8 @@ func (r *testRunner) runEvaluators(conns []*grpc.ClientConn, tickingStartTime ti
 func (r *testRunner) testDepositsAndTx(ctx context.Context, g *errgroup.Group,
 	keystorePath string, requiredNodes []e2etypes.ComponentRunner) {
 	minGenesisActiveCount := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
+	// prysm web3signer doesn't support deposits
+	r.config.UseWeb3RemoteSigner = false
 	depositCheckValidator := components.NewValidatorNode(r.config, int(e2e.DepositCount), e2e.TestParams.BeaconNodeCount, minGenesisActiveCount)
 	g.Go(func() error {
 		if err := helpers.ComponentsStarted(ctx, requiredNodes); err != nil {

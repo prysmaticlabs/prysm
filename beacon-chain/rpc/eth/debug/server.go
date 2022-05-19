@@ -12,7 +12,8 @@ import (
 // Server defines a server implementation of the gRPC Beacon Chain service,
 // providing RPC endpoints to access data relevant to the Ethereum Beacon Chain.
 type Server struct {
-	BeaconDB     db.ReadOnlyDatabase
-	HeadFetcher  blockchain.HeadFetcher
-	StateFetcher statefetcher.Fetcher
+	BeaconDB              db.ReadOnlyDatabase
+	HeadFetcher           blockchain.HeadFetcher
+	StateFetcher          statefetcher.Fetcher
+	OptimisticModeFetcher blockchain.OptimisticModeFetcher
 }

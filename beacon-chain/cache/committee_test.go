@@ -110,7 +110,7 @@ func TestCommitteeCache_CanRotate(t *testing.T) {
 	sort.Slice(k, func(i, j int) bool {
 		return k[i].(string) < k[j].(string)
 	})
-	wanted := end - int(maxCommitteesCacheSize)
+	wanted := end - maxCommitteesCacheSize
 	s := bytesutil.ToBytes32([]byte(strconv.Itoa(wanted)))
 	assert.Equal(t, key(s), k[0], "incorrect key received for slot 190")
 
