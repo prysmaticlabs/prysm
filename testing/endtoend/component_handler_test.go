@@ -165,7 +165,7 @@ func (c *componentHandler) setup() {
 			comps = append(comps, web3RemoteSigner)
 		}
 		if err := helpers.ComponentsStarted(ctx, comps); err != nil {
-			return errors.Wrap(err, "validator nodes require beacon nodes to run")
+			return errors.Wrap(err, "validator nodes require components to run")
 		}
 		if err := validatorNodes.Start(ctx); err != nil {
 			return errors.Wrap(err, "failed to start validator nodes")

@@ -26,10 +26,6 @@ func e2eMinimal(t *testing.T, useWeb3RemoteSigner bool, extraEpochs uint64) *tes
 		epochsToRun, err = strconv.Atoi(epochStr)
 		require.NoError(t, err)
 	}
-	// TODO(#10053): Web3signer does not support bellatrix yet.
-	if useWeb3RemoteSigner {
-		epochsToRun = helpers.BellatrixE2EForkEpoch - 1
-	}
 	seed := 0
 	seedStr, isValid := os.LookupEnv("E2E_SEED")
 	if isValid {
@@ -45,13 +41,13 @@ func e2eMinimal(t *testing.T, useWeb3RemoteSigner bool, extraEpochs uint64) *tes
 		ev.ValidatorsAreActive,
 		ev.ValidatorsParticipatingAtEpoch(2),
 		ev.FinalizationOccurs(3),
-		ev.PeersCheck,
-		ev.ProcessesDepositsInBlocks,
 		ev.VerifyBlockGraffiti,
-		ev.ActivatesDepositedValidators,
-		ev.DepositedValidatorsAreActive,
+		ev.PeersCheck,
 		ev.ProposeVoluntaryExit,
 		ev.ValidatorHasExited,
+		ev.ProcessesDepositsInBlocks,
+		ev.ActivatesDepositedValidators,
+		ev.DepositedValidatorsAreActive,
 		ev.ValidatorsVoteWithTheMajority,
 		ev.ColdStateCheckpoint,
 		ev.AltairForkTransition,
