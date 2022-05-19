@@ -66,6 +66,7 @@ type Service struct {
 	wsVerifier              *WeakSubjectivityVerifier
 	store                   *store.Store
 	processAttestationsLock sync.Mutex
+	newSlotLock             sync.Mutex
 }
 
 // config options for the service.

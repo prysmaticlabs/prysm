@@ -30,6 +30,8 @@ import (
 //        if ancestor_at_finalized_slot == store.finalized_checkpoint.root:
 //            store.justified_checkpoint = store.best_justified_checkpoint
 func (s *Service) NewSlot(ctx context.Context, slot types.Slot) error {
+	s.newSlotLock.Lock()
+	defer s.newSlotLock.Unlock()
 
 	// Reset proposer boost root in fork choice.
 	if err := s.cfg.ForkChoiceStore.ResetBoostedProposerRoot(ctx); err != nil {
