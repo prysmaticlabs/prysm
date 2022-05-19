@@ -185,7 +185,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		// Regression: process attestations for C, check that it
 		// becomes head, we need two attestations to have C.weight = 30 > 24 = D.weight
 		f.ProcessAttestation(ctx, []uint64{4, 5}, indexToHash(3), fEpoch)
-		headRoot, err = f.Head(ctx, jEpoch, zeroHash, balances, fEpoch)
+		headRoot, err = f.Head(ctx, zeroHash, balances)
 		require.NoError(t, err)
 		assert.Equal(t, indexToHash(3), headRoot, "Incorrect head for justified epoch at slot 4")
 
