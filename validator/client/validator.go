@@ -980,6 +980,7 @@ func (v *validator) UpdateValidatorProposerSettings(ctx context.Context, km keym
 			return errors.Wrap(err, fmt.Sprintf("failed to register validator for custom builder for %s", hexutil.Encode(request.Pubkey)))
 		}
 	}
+	log.Infoln("Successfully submitted builder validator registration settings for custom builders.")
 	return nil
 }
 
