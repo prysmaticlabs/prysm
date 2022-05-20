@@ -23,7 +23,7 @@ type ValidatorRegistration struct {
 func (r *SignedValidatorRegistration) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		Message   *ValidatorRegistration `json:"message,omitempty"`
-		Signature hexSlice               `json:"signature,omitempty"`
+		Signature hexutil.Bytes               `json:"signature,omitempty"`
 	}{
 		Message:   &ValidatorRegistration{r.Message},
 		Signature: r.SignedValidatorRegistrationV1.Signature,
@@ -32,10 +32,10 @@ func (r *SignedValidatorRegistration) MarshalJSON() ([]byte, error) {
 
 func (r *ValidatorRegistration) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
-		FeeRecipient hexSlice `json:"fee_recipient,omitempty"`
+		FeeRecipient hexutil.Bytes `json:"fee_recipient,omitempty"`
 		GasLimit     string   `json:"gas_limit,omitempty"`
 		Timestamp    string   `json:"timestamp,omitempty"`
-		Pubkey       hexSlice `json:"pubkey,omitempty"`
+		Pubkey       hexutil.Bytes `json:"pubkey,omitempty"`
 		*eth.ValidatorRegistrationV1
 	}{
 		FeeRecipient:            r.FeeRecipient,
@@ -44,21 +44,6 @@ func (r *ValidatorRegistration) MarshalJSON() ([]byte, error) {
 		Pubkey:                  r.Pubkey,
 		ValidatorRegistrationV1: r.ValidatorRegistrationV1,
 	})
-}
-
-type hexSlice []byte
-
-func (hs hexSlice) MarshalText() ([]byte, error) {
-	return []byte(fmt.Sprintf("%#x", hs)), nil
-}
-
-func (hs *hexSlice) UnmarshalText(t []byte) error {
-	decoded, err := hexutil.Decode(string(t))
-	if err != nil {
-		return errors.Wrapf(err, "error unmarshaling text value %s", string(t))
-	}
-	*hs = decoded
-	return nil
 }
 
 type Uint256 struct {
@@ -110,7 +95,7 @@ func (s Uint64String) MarshalText() ([]byte, error) {
 type ExecHeaderResponse struct {
 	Version string `json:"version,omitempty"`
 	Data    struct {
-		Signature hexSlice    `json:"signature,omitempty"`
+		Signature hexutil.Bytes    `json:"signature,omitempty"`
 		Message   *BuilderBid `json:"message,omitempty"`
 	} `json:"data,omitempty"`
 }
@@ -162,24 +147,24 @@ func (h *ExecutionPayloadHeader) ToProto() (*eth.ExecutionPayloadHeader, error) 
 type BuilderBid struct {
 	Header *ExecutionPayloadHeader `json:"header,omitempty"`
 	Value  Uint256                 `json:"value,omitempty"`
-	Pubkey hexSlice                `json:"pubkey,omitempty"`
+	Pubkey hexutil.Bytes                `json:"pubkey,omitempty"`
 }
 
 type ExecutionPayloadHeader struct {
-	ParentHash       hexSlice     `json:"parent_hash,omitempty"`
-	FeeRecipient     hexSlice     `json:"fee_recipient,omitempty"`
-	StateRoot        hexSlice     `json:"state_root,omitempty"`
-	ReceiptsRoot     hexSlice     `json:"receipts_root,omitempty"`
-	LogsBloom        hexSlice     `json:"logs_bloom,omitempty"`
-	PrevRandao       hexSlice     `json:"prev_randao,omitempty"`
+	ParentHash       hexutil.Bytes     `json:"parent_hash,omitempty"`
+	FeeRecipient     hexutil.Bytes     `json:"fee_recipient,omitempty"`
+	StateRoot        hexutil.Bytes     `json:"state_root,omitempty"`
+	ReceiptsRoot     hexutil.Bytes     `json:"receipts_root,omitempty"`
+	LogsBloom        hexutil.Bytes     `json:"logs_bloom,omitempty"`
+	PrevRandao       hexutil.Bytes     `json:"prev_randao,omitempty"`
 	BlockNumber      Uint64String `json:"block_number,omitempty"`
 	GasLimit         Uint64String `json:"gas_limit,omitempty"`
 	GasUsed          Uint64String `json:"gas_used,omitempty"`
 	Timestamp        Uint64String `json:"timestamp,omitempty"`
-	ExtraData        hexSlice     `json:"extra_data,omitempty"`
+	ExtraData        hexutil.Bytes     `json:"extra_data,omitempty"`
 	BaseFeePerGas    Uint64String `json:"base_fee_per_gas,omitempty"`
-	BlockHash        hexSlice     `json:"block_hash,omitempty"`
-	TransactionsRoot hexSlice     `json:"transactions_root,omitempty"`
+	BlockHash        hexutil.Bytes     `json:"block_hash,omitempty"`
+	TransactionsRoot hexutil.Bytes     `json:"transactions_root,omitempty"`
 	*eth.ExecutionPayloadHeader
 }
 
@@ -214,20 +199,20 @@ type ExecPayloadResponse struct {
 }
 
 type ExecutionPayload struct {
-	ParentHash    hexSlice     `json:"parent_hash,omitempty"`
-	FeeRecipient  hexSlice     `json:"fee_recipient,omitempty"`
-	StateRoot     hexSlice     `json:"state_root,omitempty"`
-	ReceiptsRoot  hexSlice     `json:"receipts_root,omitempty"`
-	LogsBloom     hexSlice     `json:"logs_bloom,omitempty"`
-	PrevRandao    hexSlice     `json:"prev_randao,omitempty"`
+	ParentHash    hexutil.Bytes     `json:"parent_hash,omitempty"`
+	FeeRecipient  hexutil.Bytes     `json:"fee_recipient,omitempty"`
+	StateRoot     hexutil.Bytes     `json:"state_root,omitempty"`
+	ReceiptsRoot  hexutil.Bytes     `json:"receipts_root,omitempty"`
+	LogsBloom     hexutil.Bytes     `json:"logs_bloom,omitempty"`
+	PrevRandao    hexutil.Bytes     `json:"prev_randao,omitempty"`
 	BlockNumber   Uint64String `json:"block_number,omitempty"`
 	GasLimit      Uint64String `json:"gas_limit,omitempty"`
 	GasUsed       Uint64String `json:"gas_used,omitempty"`
 	Timestamp     Uint64String `json:"timestamp,omitempty"`
-	ExtraData     hexSlice     `json:"extra_data,omitempty"`
+	ExtraData     hexutil.Bytes     `json:"extra_data,omitempty"`
 	BaseFeePerGas Uint64String `json:"base_fee_per_gas,omitempty"`
-	BlockHash     hexSlice     `json:"block_hash,omitempty"`
-	Transactions  []hexSlice   `json:"transactions,omitempty"`
+	BlockHash     hexutil.Bytes     `json:"block_hash,omitempty"`
+	Transactions  []hexutil.Bytes   `json:"transactions,omitempty"`
 }
 
 func (r *ExecPayloadResponse) ToProto() (*v1.ExecutionPayload, error) {
@@ -274,7 +259,7 @@ type BlindedBeaconBlockBodyBellatrix struct {
 func (r *SignedBlindedBeaconBlockBellatrix) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		Message   *BlindedBeaconBlockBellatrix `json:"message,omitempty"`
-		Signature hexSlice                     `json:"signature,omitempty"`
+		Signature hexutil.Bytes                     `json:"signature,omitempty"`
 	}{
 		Message:   &BlindedBeaconBlockBellatrix{r.SignedBlindedBeaconBlockBellatrix.Block},
 		Signature: r.SignedBlindedBeaconBlockBellatrix.Signature,
@@ -285,8 +270,8 @@ func (b *BlindedBeaconBlockBellatrix) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		Slot          string                           `json:"slot"`
 		ProposerIndex string                           `json:"proposer_index,omitempty"`
-		ParentRoot    hexSlice                         `json:"parent_root,omitempty"`
-		StateRoot     hexSlice                         `json:"state_root,omitempty"`
+		ParentRoot    hexutil.Bytes                         `json:"parent_root,omitempty"`
+		StateRoot     hexutil.Bytes                         `json:"state_root,omitempty"`
 		Body          *BlindedBeaconBlockBodyBellatrix `json:"body,omitempty"`
 	}{
 		Slot:          fmt.Sprintf("%d", b.Slot),
@@ -318,7 +303,7 @@ type SignedBeaconBlockHeader struct {
 func (h *SignedBeaconBlockHeader) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		Header    *BeaconBlockHeader `json:"message,omitempty"`
-		Signature hexSlice           `json:"signature,omitempty"`
+		Signature hexutil.Bytes           `json:"signature,omitempty"`
 	}{
 		Header:    &BeaconBlockHeader{h.SignedBeaconBlockHeader.Header},
 		Signature: h.SignedBeaconBlockHeader.Signature,
@@ -333,9 +318,9 @@ func (h *BeaconBlockHeader) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		Slot          string   `json:"slot,omitempty"`
 		ProposerIndex string   `json:"proposer_index,omitempty"`
-		ParentRoot    hexSlice `json:"parent_root,omitempty"`
-		StateRoot     hexSlice `json:"state_root,omitempty"`
-		BodyRoot      hexSlice `json:"body_root,omitempty"`
+		ParentRoot    hexutil.Bytes `json:"parent_root,omitempty"`
+		StateRoot     hexutil.Bytes `json:"state_root,omitempty"`
+		BodyRoot      hexutil.Bytes `json:"body_root,omitempty"`
 	}{
 		Slot:          fmt.Sprintf("%d", h.BeaconBlockHeader.Slot),
 		ProposerIndex: fmt.Sprintf("%d", h.BeaconBlockHeader.ProposerIndex),
@@ -357,7 +342,7 @@ func (a *IndexedAttestation) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		AttestingIndices []string `json:"attesting_indices,omitempty"`
 		Data             *AttestationData
-		Signature        hexSlice `json:"signature,omitempty"`
+		Signature        hexutil.Bytes `json:"signature,omitempty"`
 	}{
 		AttestingIndices: indices,
 		Data:             &AttestationData{a.IndexedAttestation.Data},
@@ -386,7 +371,7 @@ type Checkpoint struct {
 func (c *Checkpoint) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		Epoch string   `json:"epoch,omitempty"`
-		Root  hexSlice `json:"root,omitempty"`
+		Root  hexutil.Bytes `json:"root,omitempty"`
 	}{
 		Epoch: fmt.Sprintf("%d", c.Checkpoint.Epoch),
 		Root:  c.Checkpoint.Root,
@@ -401,7 +386,7 @@ func (a *AttestationData) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		Slot            string      `json:"slot,omitempty"`
 		Index           string      `json:"index,omitempty"`
-		BeaconBlockRoot hexSlice    `json:"beacon_block_root,omitempty"`
+		BeaconBlockRoot hexutil.Bytes    `json:"beacon_block_root,omitempty"`
 		Source          *Checkpoint `json:"source,omitempty"`
 		Target          *Checkpoint `json:"target,omitempty"`
 	}{
@@ -419,11 +404,11 @@ type Attestation struct {
 
 func (a *Attestation) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
-		AggregationBits hexSlice         `json:"aggregation_bits,omitempty"`
+		AggregationBits hexutil.Bytes         `json:"aggregation_bits,omitempty"`
 		Data            *AttestationData `json:"data,omitempty"`
-		Signature       hexSlice         `json:"signature,omitempty" ssz-size:"96"`
+		Signature       hexutil.Bytes         `json:"signature,omitempty" ssz-size:"96"`
 	}{
-		AggregationBits: hexSlice(a.Attestation.AggregationBits),
+		AggregationBits: hexutil.Bytes(a.Attestation.AggregationBits),
 		Data:            &AttestationData{a.Attestation.Data},
 		Signature:       a.Attestation.Signature,
 	})
@@ -435,10 +420,10 @@ type DepositData struct {
 
 func (d *DepositData) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
-		PublicKey             hexSlice `json:"pubkey,omitempty"`
-		WithdrawalCredentials hexSlice `json:"withdrawal_credentials,omitempty"`
+		PublicKey             hexutil.Bytes `json:"pubkey,omitempty"`
+		WithdrawalCredentials hexutil.Bytes `json:"withdrawal_credentials,omitempty"`
 		Amount                string   `json:"amount,omitempty"`
-		Signature             hexSlice `json:"signature,omitempty"`
+		Signature             hexutil.Bytes `json:"signature,omitempty"`
 	}{
 		PublicKey:             d.PublicKey,
 		WithdrawalCredentials: d.WithdrawalCredentials,
@@ -452,12 +437,12 @@ type Deposit struct {
 }
 
 func (d *Deposit) MarshalJSON() ([]byte, error) {
-	proof := make([]hexSlice, len(d.Proof))
+	proof := make([]hexutil.Bytes, len(d.Proof))
 	for i := range d.Proof {
 		proof[i] = d.Proof[i]
 	}
 	return json.Marshal(struct {
-		Proof []hexSlice   `json:"proof"`
+		Proof []hexutil.Bytes   `json:"proof"`
 		Data  *DepositData `json:"data"`
 	}{
 		Proof: proof,
@@ -472,7 +457,7 @@ type SignedVoluntaryExit struct {
 func (sve *SignedVoluntaryExit) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		Message   *VoluntaryExit `json:"message,omitempty"`
-		Signature hexSlice       `json:"signature,omitempty"`
+		Signature hexutil.Bytes       `json:"signature,omitempty"`
 	}{
 		Signature: sve.SignedVoluntaryExit.Signature,
 		Message:   &VoluntaryExit{sve.SignedVoluntaryExit.Exit},
@@ -499,10 +484,10 @@ type SyncAggregate struct {
 
 func (s *SyncAggregate) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
-		SyncCommitteeBits      hexSlice `json:"sync_committee_bits,omitempty"`
-		SyncCommitteeSignature hexSlice `json:"sync_committee_signature,omitempty"`
+		SyncCommitteeBits      hexutil.Bytes `json:"sync_committee_bits,omitempty"`
+		SyncCommitteeSignature hexutil.Bytes `json:"sync_committee_signature,omitempty"`
 	}{
-		SyncCommitteeBits:      hexSlice(s.SyncAggregate.SyncCommitteeBits),
+		SyncCommitteeBits:      hexutil.Bytes(s.SyncAggregate.SyncCommitteeBits),
 		SyncCommitteeSignature: s.SyncAggregate.SyncCommitteeSignature,
 	})
 }
@@ -513,9 +498,9 @@ type Eth1Data struct {
 
 func (e *Eth1Data) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
-		DepositRoot  hexSlice `json:"deposit_root,omitempty"`
+		DepositRoot  hexutil.Bytes `json:"deposit_root,omitempty"`
 		DepositCount string   `json:"deposit_count,omitempty"`
-		BlockHash    hexSlice `json:"block_hash,omitempty"`
+		BlockHash    hexutil.Bytes `json:"block_hash,omitempty"`
 	}{
 		DepositRoot:  e.DepositRoot,
 		DepositCount: fmt.Sprintf("%d", e.DepositCount),
@@ -525,9 +510,9 @@ func (e *Eth1Data) MarshalJSON() ([]byte, error) {
 
 func (b *BlindedBeaconBlockBodyBellatrix) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
-		RandaoReveal           hexSlice                `json:"randao_reveal,omitempty"`
+		RandaoReveal           hexutil.Bytes                `json:"randao_reveal,omitempty"`
 		Eth1Data               *Eth1Data               `json:"eth1_data,omitempty"`
-		Graffiti               hexSlice                `json:"graffiti,omitempty"`
+		Graffiti               hexutil.Bytes                `json:"graffiti,omitempty"`
 		ProposerSlashings      []*ProposerSlashing     `json:"proposer_slashings,omitempty"`
 		AttesterSlashings      []*AttesterSlashing     `json:"attester_slashings,omitempty"`
 		Attestations           []*Attestation          `json:"attestations,omitempty"`
