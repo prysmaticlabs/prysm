@@ -8,6 +8,14 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
+func TestBuildSignedBeaconBlockFromExecutionPayload(t *testing.T) {
+	t.Skip()
+}
+
+func TestWrapSignedBlindedBeaconBlock(t *testing.T) {
+	t.Skip()
+}
+
 func TestWrappedSignedBeaconBlock(t *testing.T) {
 	tests := []struct {
 		name    string
