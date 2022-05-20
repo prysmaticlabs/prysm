@@ -151,8 +151,8 @@ func TestClient_GetHeader(t *testing.T) {
 	expectedTxRoot := ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2")
 	require.Equal(t, true, bytes.Equal(expectedTxRoot, h.Message.Header.TransactionsRoot))
 	require.Equal(t, uint64(1), h.Message.Header.GasUsed)
-	bfpg := stringToUint256("452312848583266388373324160190187140051835877600158453279131187530910662656")
-	require.Equal(t, fmt.Sprintf("%#x", bfpg.SSZBytes()), fmt.Sprintf("%#x", h.Message.Header.BaseFeePerGas))
+	value := stringToUint256("652312848583266388373324160190187140051835877600158453279131187530910662656")
+	require.Equal(t, fmt.Sprintf("%#x", value.SSZBytes()), fmt.Sprintf("%#x", h.Message.Value))
 }
 
 func TestSubmitBlindedBlock(t *testing.T) {
@@ -175,6 +175,9 @@ func TestSubmitBlindedBlock(t *testing.T) {
 	ep, err := c.SubmitBlindedBlock(ctx, sbbb)
 	require.NoError(t, err)
 	require.Equal(t, true, bytes.Equal(ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"), ep.ParentHash))
+	bfpg := stringToUint256("452312848583266388373324160190187140051835877600158453279131187530910662656")
+	require.Equal(t, fmt.Sprintf("%#x", bfpg.SSZBytes()), fmt.Sprintf("%#x", ep.BaseFeePerGas))
+	require.Equal(t, uint64(1), ep.GasLimit)
 }
 
 func testSignedBlindedBeaconBlockBellatrix(t *testing.T) *eth.SignedBlindedBeaconBlockBellatrix {

@@ -241,7 +241,7 @@ var testExampleExecutionPayload = `{
     "gas_used": "1",
     "timestamp": "1",
     "extra_data": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-    "base_fee_per_gas": "1",
+    "base_fee_per_gas": "452312848583266388373324160190187140051835877600158453279131187530910662656",
     "block_hash": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
     "transactions": [
       "0x02f878831469668303f51d843b9ac9f9843b9aca0082520894c93269b73096998db66be0441e836d873535cb9c8894a19041886f000080c001a031cc29234036afbf9a1fb9476b463367cb1f957ac0b919b69bbc798436e604aaa018c4e9c3914eb27aadd0b91e10b18655739fcf8c1fc398763a9f1beecb8ddc86"
@@ -313,7 +313,7 @@ func TestExecutionPayloadResponseUnmarshal(t *testing.T) {
 			name:     "ExecPayloadResponse.ExecutionPayload.ExtraData",
 		},
 		{
-			expected: "1",
+			expected: "452312848583266388373324160190187140051835877600158453279131187530910662656",
 			actual:   fmt.Sprintf("%d", epr.Data.BaseFeePerGas),
 			name:     "ExecPayloadResponse.ExecutionPayload.BaseFeePerGas",
 		},
@@ -358,6 +358,7 @@ func TestExecutionPayloadResponseToProto(t *testing.T) {
 	require.NoError(t, err)
 	txList := [][]byte{tx}
 
+	bfpg := stringToUint256("452312848583266388373324160190187140051835877600158453279131187530910662656")
 	expected := &v1.ExecutionPayload{
 		ParentHash:    parentHash,
 		FeeRecipient:  feeRecipient,
@@ -370,7 +371,7 @@ func TestExecutionPayloadResponseToProto(t *testing.T) {
 		GasUsed:       1,
 		Timestamp:     1,
 		ExtraData:     extraData,
-		BaseFeePerGas: uint64ToUint256(1).SSZBytes(),
+		BaseFeePerGas: bfpg.SSZBytes(),
 		BlockHash:     blockHash,
 		Transactions:  txList,
 	}
