@@ -37,7 +37,7 @@ func TestGetSyncMessageBlockRoot_OK(t *testing.T) {
 
 func TestGetSyncMessageBlockRoot_Optimistic(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	cfg := params.BeaconConfig()
+	cfg := params.BeaconConfig().Copy()
 	cfg.BellatrixForkEpoch = 0
 	params.OverrideBeaconConfig(cfg)
 

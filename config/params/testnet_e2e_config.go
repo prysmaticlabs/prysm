@@ -5,22 +5,6 @@ const (
 	bellatrixE2EForkEpoch = 8 //nolint:deadcode
 )
 
-// UseE2EConfig for beacon chain services.
-func UseE2EConfig() {
-	beaconConfig = E2ETestConfig()
-
-	cfg := BeaconNetworkConfig().Copy()
-	OverrideBeaconNetworkConfig(cfg)
-}
-
-// UseE2EMainnetConfig for beacon chain services.
-func UseE2EMainnetConfig() {
-	beaconConfig = E2EMainnetTestConfig()
-
-	cfg := BeaconNetworkConfig().Copy()
-	OverrideBeaconNetworkConfig(cfg)
-}
-
 // E2ETestConfig retrieves the configurations made specifically for E2E testing.
 //
 // WARNING: This config is only for testing, it is not meant for use outside of E2E.
@@ -91,7 +75,7 @@ func E2EMainnetTestConfig() *BeaconChainConfig {
 	e2eConfig.TerminalTotalDifficulty = "616"
 
 	// Prysm constants.
-	e2eConfig.ConfigName = EndToEndName
+	e2eConfig.ConfigName = EndToEndMainnetName
 	e2eConfig.GenesisForkVersion = []byte{0, 0, 0, 254}
 	e2eConfig.AltairForkVersion = []byte{1, 0, 0, 254}
 	e2eConfig.BellatrixForkVersion = []byte{2, 0, 0, 254}

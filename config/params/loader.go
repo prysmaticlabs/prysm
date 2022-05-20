@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/math"
 	log "github.com/sirupsen/logrus"
@@ -24,12 +25,10 @@ func isMinimal(lines []string) bool {
 	return false
 }
 
-// LoadChainConfigFile load, convert hex values into valid param yaml format,
-// unmarshal , and apply beacon chain config file.
-func LoadChainConfigFile(chainConfigFileName string, conf *BeaconChainConfig) {
-	yamlFile, err := os.ReadFile(chainConfigFileName) // #nosec G304
+func UnmarshalConfigFile(path string, conf *BeaconChainConfig) (*BeaconChainConfig, error) {
+	yamlFile, err := os.ReadFile(path) // #nosec G304
 	if err != nil {
-		log.WithError(err).Fatal("Failed to read chain config file.")
+		return nil, errors.Wrap(err, "Failed to read chain config file.")
 	}
 	// To track if config name is defined inside config file.
 	hasConfigName := false
@@ -59,19 +58,28 @@ func LoadChainConfigFile(chainConfigFileName string, conf *BeaconChainConfig) {
 	yamlFile = []byte(strings.Join(lines, "\n"))
 	if err := yaml.UnmarshalStrict(yamlFile, conf); err != nil {
 		if _, ok := err.(*yaml.TypeError); !ok {
-			log.WithError(err).Fatal("Failed to parse chain config yaml file.")
+			return nil, errors.Wrap(err, "Failed to parse chain config yaml file.")
 		} else {
 			log.WithError(err).Error("There were some issues parsing the config from a yaml file")
 		}
 	}
 	if !hasConfigName {
-		conf.ConfigName = "devnet"
+		conf.ConfigName = DevnetName
 	}
 	// recompute SqrRootSlotsPerEpoch constant to handle non-standard values of SlotsPerEpoch
 	conf.SqrRootSlotsPerEpoch = types.Slot(math.IntegerSquareRoot(uint64(conf.SlotsPerEpoch)))
 	log.Debugf("Config file values: %+v", conf)
-	conf.InitializeForkSchedule()
-	OverrideBeaconConfig(conf)
+	return conf, nil
+}
+
+// LoadChainConfigFile load, convert hex values into valid param yaml format,
+// unmarshal , and apply beacon chain config file.
+func LoadChainConfigFile(path string, conf *BeaconChainConfig) error {
+	c, err := UnmarshalConfigFile(path, conf)
+	if err != nil {
+		return err
+	}
+	return SetActive(c)
 }
 
 // ReplaceHexStringWithYAMLFormat will replace hex strings that the yaml parser will understand.

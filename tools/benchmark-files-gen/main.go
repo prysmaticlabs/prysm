@@ -51,6 +51,11 @@ func main() {
 		log.Fatal(err)
 	}
 
+	undo, err := benchmark.SetBenchmarkConfig()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer undo()
 	log.Printf("Output dir is: %s", *outputDir)
 	log.Println("Generating genesis state")
 	// Generating this for the 2 following states.
@@ -84,7 +89,6 @@ func generateGenesisBeaconState() error {
 }
 
 func generateMarshalledFullStateAndBlock() error {
-	benchmark.SetBenchmarkConfig()
 	beaconState, err := genesisBeaconState()
 	if err != nil {
 		return err
@@ -184,7 +188,6 @@ func generateMarshalledFullStateAndBlock() error {
 }
 
 func generate2FullEpochState() error {
-	benchmark.SetBenchmarkConfig()
 	beaconState, err := genesisBeaconState()
 	if err != nil {
 		return err

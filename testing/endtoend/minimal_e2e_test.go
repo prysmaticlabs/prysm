@@ -22,7 +22,9 @@ func TestEndToEnd_MinimalConfig_Web3Signer(t *testing.T) {
 }
 
 func e2eMinimal(t *testing.T, useWeb3RemoteSigner bool, extraEpochs uint64) {
-	params.UseE2EConfig()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.E2ETestConfig().Copy())
+
 	require.NoError(t, e2eParams.Init(e2eParams.StandardBeaconCount))
 
 	// Run for 12 epochs if not in long-running to confirm long-running has no issues.
