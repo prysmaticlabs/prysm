@@ -709,8 +709,19 @@ func TestRoundTripProtoUint256(t *testing.T) {
 	m, err := json.Marshal(hm)
 	require.NoError(t, err)
 	hu := &ExecutionPayloadHeader{}
+	require.Equal(t, "", string(m))
 	require.NoError(t, json.Unmarshal(m, hu))
 	hp, err := hu.ToProto()
 	require.NoError(t, err)
 	require.DeepEqual(t, h.BaseFeePerGas, hp.BaseFeePerGas)
+}
+
+func TestExecutionPayloadHeaderRoundtrip(t *testing.T) {
+	expected, err := os.ReadFile("testdata/execution-payload.json")
+	require.NoError(t, err)
+	hu := &ExecutionPayloadHeader{}
+	require.NoError(t, json.Unmarshal(expected, hu))
+	m, err := json.Marshal(hu)
+	require.NoError(t, err)
+	require.DeepEqual(t, string(expected[0:len(expected)-1]), string(m))
 }

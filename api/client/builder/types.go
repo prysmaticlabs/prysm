@@ -212,6 +212,19 @@ func (h *ExecutionPayloadHeader) MarshalJSON() ([]byte, error) {
 	})
 }
 
+func (h *ExecutionPayloadHeader) UnmarshalJSON(b []byte) (error) {
+	type UnmarshalCaller ExecutionPayloadHeader
+	uc := &UnmarshalCaller{}
+	if err := json.Unmarshal(b, uc); err != nil {
+		return err
+	}
+	ep := ExecutionPayloadHeader(*uc)
+	*h = ep
+	var err error
+	h.ExecutionPayloadHeader, err = h.ToProto()
+	return err
+}
+
 type ExecPayloadResponse struct {
 	Version string           `json:"version,omitempty"`
 	Data    ExecutionPayload `json:"data,omitempty"`
