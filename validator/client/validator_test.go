@@ -14,6 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
+	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
@@ -39,6 +40,7 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func init() {
@@ -371,7 +373,7 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 		keyManager:             km,
 		genesisTime:            1,
 		pubkeyToValidatorIndex: map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex{pubKey: 1},
-		feeRecipientConfig: &validator_service_config.ValidatorProposerSettings{
+		validatorProposerSettings: &validator_service_config.ValidatorProposerSettings{
 			ProposeConfig: nil,
 			DefaultConfig: &validator_service_config.ValidatorProposerOptions{
 				FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
@@ -415,7 +417,7 @@ func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 		keyManager:             km,
 		genesisTime:            1,
 		pubkeyToValidatorIndex: map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex{pubKey: 1},
-		feeRecipientConfig: &validator_service_config.ValidatorProposerSettings{
+		validatorProposerSettings: &validator_service_config.ValidatorProposerSettings{
 			ProposeConfig: nil,
 			DefaultConfig: &validator_service_config.ValidatorProposerOptions{
 				FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
@@ -1458,7 +1460,11 @@ func TestValidator_UdpateFeeRecipient(t *testing.T) {
 	ctx := context.Background()
 	db := dbTest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
 	client := mock2.NewMockBeaconNodeValidatorClient(ctrl)
+	nodeClient := mock2.NewMockNodeClient(ctrl)
 	defaultFeeHex := "0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"
+	byteValueAddress, err := hexutil.Decode("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9")
+	require.NoError(t, err)
+
 	tests := []struct {
 		name                 string
 		validatorSetter      func(t *testing.T) *validator
@@ -1472,6 +1478,7 @@ func TestValidator_UdpateFeeRecipient(t *testing.T) {
 
 				v := validator{
 					validatorClient:        client,
+					node:                   nodeClient,
 					db:                     db,
 					pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
 					useWeb:                 false,
@@ -1489,10 +1496,11 @@ func TestValidator_UdpateFeeRecipient(t *testing.T) {
 				require.NoError(t, err)
 				keys, err := km.FetchValidatingPublicKeys(ctx)
 				require.NoError(t, err)
-				v.feeRecipientConfig = &validator_service_config.ValidatorProposerSettings{
+				v.validatorProposerSettings = &validator_service_config.ValidatorProposerSettings{
 					ProposeConfig: nil,
 					DefaultConfig: &validator_service_config.ValidatorProposerOptions{
 						FeeRecipient: common.HexToAddress(defaultFeeHex),
+						GasLimit:     fieldparams.DefaultBuilderGasLimit,
 					},
 				}
 				client.EXPECT().ValidatorIndex(
@@ -1501,11 +1509,35 @@ func TestValidator_UdpateFeeRecipient(t *testing.T) {
 				).Return(&ethpb.ValidatorIndexResponse{
 					Index: 1,
 				}, nil)
+				nodeClient.EXPECT().GetGenesis(
+					gomock.Any(),
+					&emptypb.Empty{},
+				).Return(
+					&ethpb.Genesis{GenesisTime: timestamppb.Now()}, nil)
+
+				client.EXPECT().DomainData(
+					gomock.Any(),
+					gomock.Any(),
+				).Return(
+					&ethpb.DomainResponse{
+						SignatureDomain: make([]byte, 32),
+					},
+					nil)
+				client.EXPECT().SubmitValidatorRegistration(
+					gomock.Any(),
+					gomock.Any(),
+				).Return(&empty.Empty{}, nil)
 
 				return &v
 			},
 			feeRecipientMap: map[types.ValidatorIndex]string{
 				1: defaultFeeHex,
+			},
+			mockExpectedRequests: []ethpb.ValidatorRegistrationV1{
+				{
+					FeeRecipient: byteValueAddress,
+					GasLimit:     fieldparams.DefaultBuilderGasLimit,
+				},
 			},
 		},
 		{
@@ -1543,7 +1575,7 @@ func TestValidator_UdpateFeeRecipient(t *testing.T) {
 				}
 				err := v.WaitForKeymanagerInitialization(ctx)
 				require.NoError(t, err)
-				v.feeRecipientConfig = &validator_service_config.ValidatorProposerSettings{
+				v.validatorProposerSettings = &validator_service_config.ValidatorProposerSettings{
 					ProposeConfig: nil,
 					DefaultConfig: &validator_service_config.ValidatorProposerOptions{
 						FeeRecipient: common.HexToAddress(defaultFeeHex),
@@ -1601,7 +1633,7 @@ func TestValidator_UdpateFeeRecipient(t *testing.T) {
 				config[keys[0]] = &validator_service_config.ValidatorProposerOptions{
 					FeeRecipient: common.HexToAddress("0x055Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
 				}
-				v.feeRecipientConfig = &validator_service_config.ValidatorProposerSettings{
+				v.validatorProposerSettings = &validator_service_config.ValidatorProposerSettings{
 					ProposeConfig: config,
 					DefaultConfig: &validator_service_config.ValidatorProposerOptions{
 						FeeRecipient: common.HexToAddress(defaultFeeHex),
@@ -1644,7 +1676,7 @@ func TestValidator_UdpateFeeRecipient(t *testing.T) {
 				config[keys[0]] = &validator_service_config.ValidatorProposerOptions{
 					FeeRecipient: common.Address{},
 				}
-				v.feeRecipientConfig = &validator_service_config.ValidatorProposerSettings{
+				v.validatorProposerSettings = &validator_service_config.ValidatorProposerSettings{
 					ProposeConfig: config,
 					DefaultConfig: &validator_service_config.ValidatorProposerOptions{
 						FeeRecipient: common.HexToAddress(defaultFeeHex),
@@ -1682,7 +1714,7 @@ func TestValidator_UdpateFeeRecipient(t *testing.T) {
 				config[keys[0]] = &validator_service_config.ValidatorProposerOptions{
 					FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
 				}
-				v.feeRecipientConfig = &validator_service_config.ValidatorProposerSettings{
+				v.validatorProposerSettings = &validator_service_config.ValidatorProposerSettings{
 					ProposeConfig: config,
 					DefaultConfig: &validator_service_config.ValidatorProposerOptions{
 						FeeRecipient: common.HexToAddress(defaultFeeHex),
@@ -1725,17 +1757,15 @@ func TestValidator_UdpateFeeRecipient(t *testing.T) {
 					require.Equal(t, strings.ToLower(tt.feeRecipientMap[recipient.ValidatorIndex]), strings.ToLower(hexutil.Encode(recipient.FeeRecipient)))
 				}
 				require.Equal(t, len(tt.feeRecipientMap), len(feeRecipients))
-				for i, request := range registerValidatorRequests {
+				for i, request := range tt.mockExpectedRequests {
 					require.Equal(t, tt.mockExpectedRequests[i].GasLimit, request.GasLimit)
 					require.Equal(t, hexutil.Encode(tt.mockExpectedRequests[i].FeeRecipient), hexutil.Encode(request.FeeRecipient))
-					require.Equal(t, hexutil.Encode(tt.mockExpectedRequests[i].Pubkey), hexutil.Encode(request.Pubkey))
 				}
+				require.Equal(t, len(tt.mockExpectedRequests), len(registerValidatorRequests))
 			}
-
 			if err := v.UpdateFeeRecipient(ctx, km); tt.err != "" {
 				assert.ErrorContains(t, tt.err, err)
 			}
-
 		})
 	}
 }

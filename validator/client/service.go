@@ -206,7 +206,7 @@ func (v *ValidatorService) Start() {
 		eipImportBlacklistedPublicKeys: slashablePublicKeys,
 		logDutyCountDown:               v.logDutyCountDown,
 		Web3SignerConfig:               v.Web3SignerConfig,
-		feeRecipientConfig:             v.feeRecipientConfig,
+		validatorProposerSettings:      v.feeRecipientConfig,
 		walletIntializedChannel:        make(chan *wallet.Wallet, 1),
 	}
 	// To resolve a race condition at startup due to the interface

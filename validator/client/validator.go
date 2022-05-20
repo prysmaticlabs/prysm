@@ -95,7 +95,7 @@ type validator struct {
 	graffiti                           []byte
 	voteStats                          voteStats
 	Web3SignerConfig                   *remote_web3signer.SetupConfig
-	feeRecipientConfig                 *validator_service_config.ValidatorProposerSettings
+	validatorProposerSettings          *validator_service_config.ValidatorProposerSettings
 	walletIntializedChannel            chan *wallet.Wallet
 }
 
@@ -941,7 +941,7 @@ func (v *validator) logDuties(slot types.Slot, duties []*ethpb.DutiesResponse_Du
 // UpdateFeeRecipient calls the prepareBeaconProposer RPC to set the fee recipient.
 func (v *validator) UpdateFeeRecipient(ctx context.Context, km keymanager.IKeymanager) error {
 	// only used after Bellatrix
-	if v.feeRecipientConfig == nil {
+	if v.validatorProposerSettings == nil {
 		e := params.BeaconConfig().BellatrixForkEpoch
 		if e != math.MaxUint64 && slots.ToEpoch(slots.CurrentSlot(v.genesisTime)) < e {
 			log.Warn("After the Ethereum merge, you will need to specify the Ethereum addresses which will receive transaction fee rewards from proposing blocks. " +
@@ -1004,12 +1004,12 @@ func (v *validator) buildValidatorRequests(ctx context.Context, pubkeys [][field
 			validatorIndex = ind
 			v.pubkeyToValidatorIndex[key] = validatorIndex
 		}
-		if v.feeRecipientConfig.DefaultConfig != nil {
-			feeRecipient = v.feeRecipientConfig.DefaultConfig.FeeRecipient
-			gasLimit = v.feeRecipientConfig.DefaultConfig.GasLimit
+		if v.validatorProposerSettings.DefaultConfig != nil {
+			feeRecipient = v.validatorProposerSettings.DefaultConfig.FeeRecipient
+			gasLimit = v.validatorProposerSettings.DefaultConfig.GasLimit
 		}
-		if v.feeRecipientConfig.ProposeConfig != nil {
-			option, ok := v.feeRecipientConfig.ProposeConfig[key]
+		if v.validatorProposerSettings.ProposeConfig != nil {
+			option, ok := v.validatorProposerSettings.ProposeConfig[key]
 			if ok && option != nil {
 				// override the default if a proposeconfig is set
 				feeRecipient = option.FeeRecipient
