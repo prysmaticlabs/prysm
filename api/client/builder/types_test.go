@@ -701,3 +701,16 @@ func TestRoundTripUint256(t *testing.T) {
 	require.Equal(t, true, bytes.Equal(u.SSZBytes(), uu.SSZBytes()))
 	require.Equal(t, vs, uu.String())
 }
+
+func TestRoundTripProtoUint256(t *testing.T) {
+	h := pbExecutionPayloadHeader(t)
+	h.BaseFeePerGas = []byte{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31}
+	hm := &ExecutionPayloadHeader{ExecutionPayloadHeader: h}
+	m, err := json.Marshal(hm)
+	require.NoError(t, err)
+	hu := &ExecutionPayloadHeader{}
+	require.NoError(t, json.Unmarshal(m, hu))
+	hp, err := hu.ToProto()
+	require.NoError(t, err)
+	require.DeepEqual(t, h.BaseFeePerGas, hp.BaseFeePerGas)
+}
