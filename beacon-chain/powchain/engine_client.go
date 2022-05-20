@@ -320,8 +320,12 @@ func handleRPCError(err error) error {
 		return ErrInvalidParams
 	case -32603:
 		return ErrInternal
-	case -32001:
+	case -38001:
 		return ErrUnknownPayload
+	case -38002:
+		return ErrInvalidForkchoiceState
+	case -38003:
+		return ErrInvalidPayloadAttributes
 	case -32000:
 		// Only -32000 status codes are data errors in the RPC specification.
 		errWithData, ok := err.(rpc.DataError)
