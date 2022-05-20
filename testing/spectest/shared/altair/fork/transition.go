@@ -34,6 +34,7 @@ type ForkConfig struct {
 
 // RunForkTransitionTest is a helper function that runs Altair's transition core tests.
 func RunForkTransitionTest(t *testing.T, config string) {
+	params.SetupTestConfigCleanup(t)
 	require.NoError(t, utils.SetConfig(t, config))
 
 	testFolders, testsFolderPath := utils.TestFolders(t, config, "altair", "transition/core/pyspec_tests")
@@ -93,7 +94,7 @@ func RunForkTransitionTest(t *testing.T, config string) {
 			beaconState, err := v1.InitializeFromProto(beaconStateBase)
 			require.NoError(t, err)
 
-			bc := params.BeaconConfig()
+			bc := params.BeaconConfig().Copy()
 			bc.AltairForkEpoch = types.Epoch(config.ForkEpoch)
 			params.OverrideBeaconConfig(bc)
 

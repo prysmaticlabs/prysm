@@ -488,7 +488,7 @@ func TestServer_getPowBlockHashAtTerminalTotalDifficulty(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg := params.BeaconConfig()
+			cfg := params.BeaconConfig().Copy()
 			cfg.TerminalTotalDifficulty = tt.paramsTd
 			params.OverrideBeaconConfig(cfg)
 			var m map[[32]byte]*pb.ExecutionBlock
