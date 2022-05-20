@@ -7,7 +7,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/store"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	doublylinkedtree "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -109,44 +108,4 @@ func TestService_newSlot(t *testing.T) {
 			require.DeepNotSSZEqual(t, service.store.BestJustifiedCheckpt(), service.store.JustifiedCheckpt())
 		}
 	}
-}
-
-func TestNewSlot_DontUpdateForkchoiceJustification(t *testing.T) {
-	beaconDB := testDB.SetupDB(t)
-	fcs := doublylinkedtree.New(0, 0)
-	opts := []Option{
-		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
-		WithForkChoiceStore(fcs),
-	}
-	ctx := context.Background()
-
-	genesisStateRoot := [32]byte{}
-	genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
-	wsb, err := wrapper.WrappedSignedBeaconBlock(genesis)
-	require.NoError(t, err)
-	assert.NoError(t, beaconDB.SaveBlock(ctx, wsb))
-	jr, err := genesis.Block.HashTreeRoot()
-	require.NoError(t, err)
-
-	require.NoError(t, fcs.InsertOptimisticBlock(ctx, 0, [32]byte{}, [32]byte{}, [32]byte{}, 0, 0))
-	require.NoError(t, fcs.InsertOptimisticBlock(ctx, 32, [32]byte{'a'}, [32]byte{}, [32]byte{}, 0, 0))
-	require.NoError(t, fcs.InsertOptimisticBlock(ctx, 64, jr, [32]byte{'a'}, [32]byte{}, 0, 0))
-	gcp := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:], Epoch: 0}
-	service, err := NewService(ctx, opts...)
-	require.NoError(t, err)
-	s := store.New(gcp, gcp)
-
-	bcp := &ethpb.Checkpoint{Root: jr[:], Epoch: 2}
-	s.SetBestJustifiedCheckpt(bcp)
-	service.store = s
-
-	headRoot, err := fcs.Head(ctx, jr, []uint64{})
-	require.NoError(t, err)
-	require.Equal(t, jr, headRoot)
-
-	require.NoError(t, service.NewSlot(ctx, types.Slot(64)))
-	headRoot, err = fcs.Head(ctx, jr, []uint64{})
-	require.NoError(t, err)
-	require.Equal(t, jr, headRoot)
 }
