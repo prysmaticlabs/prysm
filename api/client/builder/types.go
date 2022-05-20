@@ -23,7 +23,7 @@ type ValidatorRegistration struct {
 func (r *SignedValidatorRegistration) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		Message   *ValidatorRegistration `json:"message,omitempty"`
-		Signature hexutil.Bytes               `json:"signature,omitempty"`
+		Signature hexutil.Bytes          `json:"signature,omitempty"`
 	}{
 		Message:   &ValidatorRegistration{r.Message},
 		Signature: r.SignedValidatorRegistrationV1.Signature,
@@ -33,16 +33,14 @@ func (r *SignedValidatorRegistration) MarshalJSON() ([]byte, error) {
 func (r *ValidatorRegistration) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		FeeRecipient hexutil.Bytes `json:"fee_recipient,omitempty"`
-		GasLimit     string   `json:"gas_limit,omitempty"`
-		Timestamp    string   `json:"timestamp,omitempty"`
+		GasLimit     string        `json:"gas_limit,omitempty"`
+		Timestamp    string        `json:"timestamp,omitempty"`
 		Pubkey       hexutil.Bytes `json:"pubkey,omitempty"`
-		*eth.ValidatorRegistrationV1
 	}{
-		FeeRecipient:            r.FeeRecipient,
-		GasLimit:                fmt.Sprintf("%d", r.GasLimit),
-		Timestamp:               fmt.Sprintf("%d", r.Timestamp),
-		Pubkey:                  r.Pubkey,
-		ValidatorRegistrationV1: r.ValidatorRegistrationV1,
+		FeeRecipient: r.FeeRecipient,
+		GasLimit:     fmt.Sprintf("%d", r.GasLimit),
+		Timestamp:    fmt.Sprintf("%d", r.Timestamp),
+		Pubkey:       r.Pubkey,
 	})
 }
 
@@ -76,8 +74,18 @@ func (s *Uint256) UnmarshalText(t []byte) error {
 	return nil
 }
 
+func (s Uint256) MarshalJSON() ([]byte, error) {
+	t, err := s.MarshalText()
+	if err != nil {
+		return nil, err
+	}
+	t = append([]byte{'"'}, t...)
+	t = append(t, '"')
+	return t, nil
+}
+
 func (s Uint256) MarshalText() ([]byte, error) {
-	return s.Bytes(), nil
+	return []byte(s.String()), nil
 }
 
 type Uint64String uint64
@@ -95,8 +103,8 @@ func (s Uint64String) MarshalText() ([]byte, error) {
 type ExecHeaderResponse struct {
 	Version string `json:"version,omitempty"`
 	Data    struct {
-		Signature hexutil.Bytes    `json:"signature,omitempty"`
-		Message   *BuilderBid `json:"message,omitempty"`
+		Signature hexutil.Bytes `json:"signature,omitempty"`
+		Message   *BuilderBid   `json:"message,omitempty"`
 	} `json:"data,omitempty"`
 }
 
@@ -124,8 +132,6 @@ func (bb *BuilderBid) ToProto() (*eth.BuilderBid, error) {
 }
 
 func (h *ExecutionPayloadHeader) ToProto() (*eth.ExecutionPayloadHeader, error) {
-	// TODO: it looks like BaseFeePerGas should probably be a uint
-	baseFeeHack := []byte(strconv.FormatUint(uint64(h.BaseFeePerGas), 10))
 	return &eth.ExecutionPayloadHeader{
 		ParentHash:       h.ParentHash,
 		FeeRecipient:     h.FeeRecipient,
@@ -138,7 +144,7 @@ func (h *ExecutionPayloadHeader) ToProto() (*eth.ExecutionPayloadHeader, error) 
 		GasUsed:          uint64(h.GasUsed),
 		Timestamp:        uint64(h.Timestamp),
 		ExtraData:        h.ExtraData,
-		BaseFeePerGas:    baseFeeHack,
+		BaseFeePerGas:    h.BaseFeePerGas.Bytes(),
 		BlockHash:        h.BlockHash,
 		TransactionsRoot: h.TransactionsRoot,
 	}, nil
@@ -147,33 +153,30 @@ func (h *ExecutionPayloadHeader) ToProto() (*eth.ExecutionPayloadHeader, error) 
 type BuilderBid struct {
 	Header *ExecutionPayloadHeader `json:"header,omitempty"`
 	Value  Uint256                 `json:"value,omitempty"`
-	Pubkey hexutil.Bytes                `json:"pubkey,omitempty"`
+	Pubkey hexutil.Bytes           `json:"pubkey,omitempty"`
 }
 
 type ExecutionPayloadHeader struct {
-	ParentHash       hexutil.Bytes     `json:"parent_hash,omitempty"`
-	FeeRecipient     hexutil.Bytes     `json:"fee_recipient,omitempty"`
-	StateRoot        hexutil.Bytes     `json:"state_root,omitempty"`
-	ReceiptsRoot     hexutil.Bytes     `json:"receipts_root,omitempty"`
-	LogsBloom        hexutil.Bytes     `json:"logs_bloom,omitempty"`
-	PrevRandao       hexutil.Bytes     `json:"prev_randao,omitempty"`
-	BlockNumber      Uint64String `json:"block_number,omitempty"`
-	GasLimit         Uint64String `json:"gas_limit,omitempty"`
-	GasUsed          Uint64String `json:"gas_used,omitempty"`
-	Timestamp        Uint64String `json:"timestamp,omitempty"`
-	ExtraData        hexutil.Bytes     `json:"extra_data,omitempty"`
-	BaseFeePerGas    Uint64String `json:"base_fee_per_gas,omitempty"`
-	BlockHash        hexutil.Bytes     `json:"block_hash,omitempty"`
-	TransactionsRoot hexutil.Bytes     `json:"transactions_root,omitempty"`
+	ParentHash       hexutil.Bytes `json:"parent_hash,omitempty"`
+	FeeRecipient     hexutil.Bytes `json:"fee_recipient,omitempty"`
+	StateRoot        hexutil.Bytes `json:"state_root,omitempty"`
+	ReceiptsRoot     hexutil.Bytes `json:"receipts_root,omitempty"`
+	LogsBloom        hexutil.Bytes `json:"logs_bloom,omitempty"`
+	PrevRandao       hexutil.Bytes `json:"prev_randao,omitempty"`
+	BlockNumber      Uint64String  `json:"block_number,omitempty"`
+	GasLimit         Uint64String  `json:"gas_limit,omitempty"`
+	GasUsed          Uint64String  `json:"gas_used,omitempty"`
+	Timestamp        Uint64String  `json:"timestamp,omitempty"`
+	ExtraData        hexutil.Bytes `json:"extra_data,omitempty"`
+	BaseFeePerGas    Uint256       `json:"base_fee_per_gas,omitempty"`
+	BlockHash        hexutil.Bytes `json:"block_hash,omitempty"`
+	TransactionsRoot hexutil.Bytes `json:"transactions_root,omitempty"`
 	*eth.ExecutionPayloadHeader
 }
 
 func (h *ExecutionPayloadHeader) MarshalJSON() ([]byte, error) {
-	// TODO check this encoding and confirm bounds of values
-	bfpg, err := strconv.ParseUint(string(h.ExecutionPayloadHeader.BaseFeePerGas), 10, 64)
-	if err != nil {
-		return nil, err
-	}
+	bi := new(big.Int)
+	bfpg := Uint256{Int: bi.SetBytes(h.ExecutionPayloadHeader.BaseFeePerGas)}
 	type MarshalCaller ExecutionPayloadHeader
 	return json.Marshal(&MarshalCaller{
 		ParentHash:       h.ExecutionPayloadHeader.ParentHash,
@@ -187,7 +190,7 @@ func (h *ExecutionPayloadHeader) MarshalJSON() ([]byte, error) {
 		GasUsed:          Uint64String(h.ExecutionPayloadHeader.GasUsed),
 		Timestamp:        Uint64String(h.ExecutionPayloadHeader.Timestamp),
 		ExtraData:        h.ExecutionPayloadHeader.ExtraData,
-		BaseFeePerGas:    Uint64String(bfpg),
+		BaseFeePerGas:    bfpg,
 		BlockHash:        h.ExecutionPayloadHeader.BlockHash,
 		TransactionsRoot: h.ExecutionPayloadHeader.TransactionsRoot,
 	})
@@ -199,20 +202,20 @@ type ExecPayloadResponse struct {
 }
 
 type ExecutionPayload struct {
-	ParentHash    hexutil.Bytes     `json:"parent_hash,omitempty"`
-	FeeRecipient  hexutil.Bytes     `json:"fee_recipient,omitempty"`
-	StateRoot     hexutil.Bytes     `json:"state_root,omitempty"`
-	ReceiptsRoot  hexutil.Bytes     `json:"receipts_root,omitempty"`
-	LogsBloom     hexutil.Bytes     `json:"logs_bloom,omitempty"`
-	PrevRandao    hexutil.Bytes     `json:"prev_randao,omitempty"`
-	BlockNumber   Uint64String `json:"block_number,omitempty"`
-	GasLimit      Uint64String `json:"gas_limit,omitempty"`
-	GasUsed       Uint64String `json:"gas_used,omitempty"`
-	Timestamp     Uint64String `json:"timestamp,omitempty"`
-	ExtraData     hexutil.Bytes     `json:"extra_data,omitempty"`
-	BaseFeePerGas Uint64String `json:"base_fee_per_gas,omitempty"`
-	BlockHash     hexutil.Bytes     `json:"block_hash,omitempty"`
-	Transactions  []hexutil.Bytes   `json:"transactions,omitempty"`
+	ParentHash    hexutil.Bytes   `json:"parent_hash,omitempty"`
+	FeeRecipient  hexutil.Bytes   `json:"fee_recipient,omitempty"`
+	StateRoot     hexutil.Bytes   `json:"state_root,omitempty"`
+	ReceiptsRoot  hexutil.Bytes   `json:"receipts_root,omitempty"`
+	LogsBloom     hexutil.Bytes   `json:"logs_bloom,omitempty"`
+	PrevRandao    hexutil.Bytes   `json:"prev_randao,omitempty"`
+	BlockNumber   Uint64String    `json:"block_number,omitempty"`
+	GasLimit      Uint64String    `json:"gas_limit,omitempty"`
+	GasUsed       Uint64String    `json:"gas_used,omitempty"`
+	Timestamp     Uint64String    `json:"timestamp,omitempty"`
+	ExtraData     hexutil.Bytes   `json:"extra_data,omitempty"`
+	BaseFeePerGas Uint256         `json:"base_fee_per_gas,omitempty"`
+	BlockHash     hexutil.Bytes   `json:"block_hash,omitempty"`
+	Transactions  []hexutil.Bytes `json:"transactions,omitempty"`
 }
 
 func (r *ExecPayloadResponse) ToProto() (*v1.ExecutionPayload, error) {
@@ -220,8 +223,6 @@ func (r *ExecPayloadResponse) ToProto() (*v1.ExecutionPayload, error) {
 }
 
 func (p *ExecutionPayload) ToProto() (*v1.ExecutionPayload, error) {
-	// TODO: it looks like BaseFeePerGas should probably be a uint
-	baseFeeHack := []byte(strconv.FormatUint(uint64(p.BaseFeePerGas), 10))
 	txs := make([][]byte, len(p.Transactions))
 	for i := range p.Transactions {
 		txs[i] = p.Transactions[i]
@@ -238,7 +239,7 @@ func (p *ExecutionPayload) ToProto() (*v1.ExecutionPayload, error) {
 		GasUsed:       uint64(p.GasUsed),
 		Timestamp:     uint64(p.Timestamp),
 		ExtraData:     p.ExtraData,
-		BaseFeePerGas: baseFeeHack,
+		BaseFeePerGas: p.BaseFeePerGas.Bytes(),
 		BlockHash:     p.BlockHash,
 		Transactions:  txs,
 	}, nil
@@ -259,7 +260,7 @@ type BlindedBeaconBlockBodyBellatrix struct {
 func (r *SignedBlindedBeaconBlockBellatrix) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		Message   *BlindedBeaconBlockBellatrix `json:"message,omitempty"`
-		Signature hexutil.Bytes                     `json:"signature,omitempty"`
+		Signature hexutil.Bytes                `json:"signature,omitempty"`
 	}{
 		Message:   &BlindedBeaconBlockBellatrix{r.SignedBlindedBeaconBlockBellatrix.Block},
 		Signature: r.SignedBlindedBeaconBlockBellatrix.Signature,
@@ -270,8 +271,8 @@ func (b *BlindedBeaconBlockBellatrix) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		Slot          string                           `json:"slot"`
 		ProposerIndex string                           `json:"proposer_index,omitempty"`
-		ParentRoot    hexutil.Bytes                         `json:"parent_root,omitempty"`
-		StateRoot     hexutil.Bytes                         `json:"state_root,omitempty"`
+		ParentRoot    hexutil.Bytes                    `json:"parent_root,omitempty"`
+		StateRoot     hexutil.Bytes                    `json:"state_root,omitempty"`
 		Body          *BlindedBeaconBlockBodyBellatrix `json:"body,omitempty"`
 	}{
 		Slot:          fmt.Sprintf("%d", b.Slot),
@@ -303,7 +304,7 @@ type SignedBeaconBlockHeader struct {
 func (h *SignedBeaconBlockHeader) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		Header    *BeaconBlockHeader `json:"message,omitempty"`
-		Signature hexutil.Bytes           `json:"signature,omitempty"`
+		Signature hexutil.Bytes      `json:"signature,omitempty"`
 	}{
 		Header:    &BeaconBlockHeader{h.SignedBeaconBlockHeader.Header},
 		Signature: h.SignedBeaconBlockHeader.Signature,
@@ -316,8 +317,8 @@ type BeaconBlockHeader struct {
 
 func (h *BeaconBlockHeader) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
-		Slot          string   `json:"slot,omitempty"`
-		ProposerIndex string   `json:"proposer_index,omitempty"`
+		Slot          string        `json:"slot,omitempty"`
+		ProposerIndex string        `json:"proposer_index,omitempty"`
 		ParentRoot    hexutil.Bytes `json:"parent_root,omitempty"`
 		StateRoot     hexutil.Bytes `json:"state_root,omitempty"`
 		BodyRoot      hexutil.Bytes `json:"body_root,omitempty"`
@@ -370,7 +371,7 @@ type Checkpoint struct {
 
 func (c *Checkpoint) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
-		Epoch string   `json:"epoch,omitempty"`
+		Epoch string        `json:"epoch,omitempty"`
 		Root  hexutil.Bytes `json:"root,omitempty"`
 	}{
 		Epoch: fmt.Sprintf("%d", c.Checkpoint.Epoch),
@@ -384,11 +385,11 @@ type AttestationData struct {
 
 func (a *AttestationData) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
-		Slot            string      `json:"slot,omitempty"`
-		Index           string      `json:"index,omitempty"`
-		BeaconBlockRoot hexutil.Bytes    `json:"beacon_block_root,omitempty"`
-		Source          *Checkpoint `json:"source,omitempty"`
-		Target          *Checkpoint `json:"target,omitempty"`
+		Slot            string        `json:"slot,omitempty"`
+		Index           string        `json:"index,omitempty"`
+		BeaconBlockRoot hexutil.Bytes `json:"beacon_block_root,omitempty"`
+		Source          *Checkpoint   `json:"source,omitempty"`
+		Target          *Checkpoint   `json:"target,omitempty"`
 	}{
 		Slot:            fmt.Sprintf("%d", a.AttestationData.Slot),
 		Index:           fmt.Sprintf("%d", a.AttestationData.CommitteeIndex),
@@ -404,9 +405,9 @@ type Attestation struct {
 
 func (a *Attestation) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
-		AggregationBits hexutil.Bytes         `json:"aggregation_bits,omitempty"`
+		AggregationBits hexutil.Bytes    `json:"aggregation_bits,omitempty"`
 		Data            *AttestationData `json:"data,omitempty"`
-		Signature       hexutil.Bytes         `json:"signature,omitempty" ssz-size:"96"`
+		Signature       hexutil.Bytes    `json:"signature,omitempty" ssz-size:"96"`
 	}{
 		AggregationBits: hexutil.Bytes(a.Attestation.AggregationBits),
 		Data:            &AttestationData{a.Attestation.Data},
@@ -422,7 +423,7 @@ func (d *DepositData) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		PublicKey             hexutil.Bytes `json:"pubkey,omitempty"`
 		WithdrawalCredentials hexutil.Bytes `json:"withdrawal_credentials,omitempty"`
-		Amount                string   `json:"amount,omitempty"`
+		Amount                string        `json:"amount,omitempty"`
 		Signature             hexutil.Bytes `json:"signature,omitempty"`
 	}{
 		PublicKey:             d.PublicKey,
@@ -442,8 +443,8 @@ func (d *Deposit) MarshalJSON() ([]byte, error) {
 		proof[i] = d.Proof[i]
 	}
 	return json.Marshal(struct {
-		Proof []hexutil.Bytes   `json:"proof"`
-		Data  *DepositData `json:"data"`
+		Proof []hexutil.Bytes `json:"proof"`
+		Data  *DepositData    `json:"data"`
 	}{
 		Proof: proof,
 		Data:  &DepositData{Deposit_Data: d.Deposit.Data},
@@ -457,7 +458,7 @@ type SignedVoluntaryExit struct {
 func (sve *SignedVoluntaryExit) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		Message   *VoluntaryExit `json:"message,omitempty"`
-		Signature hexutil.Bytes       `json:"signature,omitempty"`
+		Signature hexutil.Bytes  `json:"signature,omitempty"`
 	}{
 		Signature: sve.SignedVoluntaryExit.Signature,
 		Message:   &VoluntaryExit{sve.SignedVoluntaryExit.Exit},
@@ -499,7 +500,7 @@ type Eth1Data struct {
 func (e *Eth1Data) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		DepositRoot  hexutil.Bytes `json:"deposit_root,omitempty"`
-		DepositCount string   `json:"deposit_count,omitempty"`
+		DepositCount string        `json:"deposit_count,omitempty"`
 		BlockHash    hexutil.Bytes `json:"block_hash,omitempty"`
 	}{
 		DepositRoot:  e.DepositRoot,
@@ -510,9 +511,9 @@ func (e *Eth1Data) MarshalJSON() ([]byte, error) {
 
 func (b *BlindedBeaconBlockBodyBellatrix) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
-		RandaoReveal           hexutil.Bytes                `json:"randao_reveal,omitempty"`
+		RandaoReveal           hexutil.Bytes           `json:"randao_reveal,omitempty"`
 		Eth1Data               *Eth1Data               `json:"eth1_data,omitempty"`
-		Graffiti               hexutil.Bytes                `json:"graffiti,omitempty"`
+		Graffiti               hexutil.Bytes           `json:"graffiti,omitempty"`
 		ProposerSlashings      []*ProposerSlashing     `json:"proposer_slashings,omitempty"`
 		AttesterSlashings      []*AttesterSlashing     `json:"attester_slashings,omitempty"`
 		Attestations           []*Attestation          `json:"attestations,omitempty"`

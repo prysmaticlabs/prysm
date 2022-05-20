@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
-	"strconv"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -202,26 +201,27 @@ func TestExecutionHeaderResponseToProto(t *testing.T) {
 	value := big.NewInt(0)
 	value, ok := value.SetString("1", 10)
 	require.Equal(t, true, ok)
+
+	bi := new(big.Int)
+	bfpg := Uint256{Int: bi.SetUint64(1)}
 	expected := &eth.SignedBuilderBid{
 		Message: &eth.BuilderBid{
 			Header: &eth.ExecutionPayloadHeader{
-				ParentHash:   parentHash,
-				FeeRecipient: feeRecipient,
-				StateRoot:    stateRoot,
-				ReceiptsRoot: receiptsRoot,
-				LogsBloom:    logsBloom,
-				PrevRandao:   prevRandao,
-				BlockNumber:  1,
-				GasLimit:     1,
-				GasUsed:      1,
-				Timestamp:    1,
-				ExtraData:    extraData,
-				// TODO assumes weird byte slice field
-				BaseFeePerGas:    []byte(strconv.FormatUint(uint64(1), 10)),
+				ParentHash:       parentHash,
+				FeeRecipient:     feeRecipient,
+				StateRoot:        stateRoot,
+				ReceiptsRoot:     receiptsRoot,
+				LogsBloom:        logsBloom,
+				PrevRandao:       prevRandao,
+				BlockNumber:      1,
+				GasLimit:         1,
+				GasUsed:          1,
+				Timestamp:        1,
+				ExtraData:        extraData,
+				BaseFeePerGas:    bfpg.Bytes(),
 				BlockHash:        blockHash,
 				TransactionsRoot: txRoot,
 			},
-			// TODO assumes weird byte slice field
 			Value:  value.Bytes(),
 			Pubkey: pubkey,
 		},
@@ -361,20 +361,21 @@ func TestExecutionPayloadResponseToProto(t *testing.T) {
 	require.NoError(t, err)
 	txList := [][]byte{tx}
 
+	bi := new(big.Int)
+	bfpg := Uint256{Int: bi.SetUint64(1)}
 	expected := &v1.ExecutionPayload{
-		ParentHash:   parentHash,
-		FeeRecipient: feeRecipient,
-		StateRoot:    stateRoot,
-		ReceiptsRoot: receiptsRoot,
-		LogsBloom:    logsBloom,
-		PrevRandao:   prevRandao,
-		BlockNumber:  1,
-		GasLimit:     1,
-		GasUsed:      1,
-		Timestamp:    1,
-		ExtraData:    extraData,
-		// TODO assumes weird byte slice field
-		BaseFeePerGas: []byte(strconv.FormatUint(uint64(1), 10)),
+		ParentHash:    parentHash,
+		FeeRecipient:  feeRecipient,
+		StateRoot:     stateRoot,
+		ReceiptsRoot:  receiptsRoot,
+		LogsBloom:     logsBloom,
+		PrevRandao:    prevRandao,
+		BlockNumber:   1,
+		GasLimit:      1,
+		GasUsed:       1,
+		Timestamp:     1,
+		ExtraData:     extraData,
+		BaseFeePerGas: bfpg.Bytes(),
 		BlockHash:     blockHash,
 		Transactions:  txList,
 	}
@@ -543,7 +544,8 @@ func TestProposerSlashings(t *testing.T) {
 }
 
 func TestExecutionPayloadHeader_MarshalJSON(t *testing.T) {
-	bfpg := []byte(strconv.FormatUint(1, 10))
+	bi := new(big.Int)
+	bfpg := Uint256{Int: bi.SetUint64(1)}
 	h := &ExecutionPayloadHeader{
 		ExecutionPayloadHeader: &eth.ExecutionPayloadHeader{
 			ParentHash:       ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
@@ -557,7 +559,7 @@ func TestExecutionPayloadHeader_MarshalJSON(t *testing.T) {
 			GasUsed:          1,
 			Timestamp:        1,
 			ExtraData:        ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-			BaseFeePerGas:    bfpg,
+			BaseFeePerGas:    bfpg.Bytes(),
 			BlockHash:        ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
 			TransactionsRoot: ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
 		},
