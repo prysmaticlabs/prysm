@@ -44,7 +44,7 @@ func TestAggregateVerify(t *testing.T) {
 func TestAggregateVerify_CompressedSignatures(t *testing.T) {
 	pubkeys := make([]common.PublicKey, 0, 100)
 	sigs := make([]common.Signature, 0, 100)
-	sigBytes := [][]byte{}
+	var sigBytes [][]byte
 	var msgs [][32]byte
 	for i := 0; i < 100; i++ {
 		msg := [32]byte{'h', 'e', 'l', 'l', 'o', byte(i)}

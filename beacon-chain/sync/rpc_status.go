@@ -131,10 +131,14 @@ func (s *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 	if err != nil {
 		return err
 	}
+	cp, err := s.cfg.chain.FinalizedCheckpt()
+	if err != nil {
+		return err
+	}
 	resp := &pb.Status{
 		ForkDigest:     forkDigest[:],
-		FinalizedRoot:  s.cfg.chain.FinalizedCheckpt().Root,
-		FinalizedEpoch: s.cfg.chain.FinalizedCheckpt().Epoch,
+		FinalizedRoot:  cp.Root,
+		FinalizedEpoch: cp.Epoch,
 		HeadRoot:       headRoot,
 		HeadSlot:       s.cfg.chain.HeadSlot(),
 	}
@@ -260,10 +264,14 @@ func (s *Service) respondWithStatus(ctx context.Context, stream network.Stream) 
 	if err != nil {
 		return err
 	}
+	cp, err := s.cfg.chain.FinalizedCheckpt()
+	if err != nil {
+		return err
+	}
 	resp := &pb.Status{
 		ForkDigest:     forkDigest[:],
-		FinalizedRoot:  s.cfg.chain.FinalizedCheckpt().Root,
-		FinalizedEpoch: s.cfg.chain.FinalizedCheckpt().Epoch,
+		FinalizedRoot:  cp.Root,
+		FinalizedEpoch: cp.Epoch,
 		HeadRoot:       headRoot,
 		HeadSlot:       s.cfg.chain.HeadSlot(),
 	}
@@ -284,7 +292,11 @@ func (s *Service) validateStatusMessage(ctx context.Context, msg *pb.Status) err
 		return p2ptypes.ErrWrongForkDigestVersion
 	}
 	genesis := s.cfg.chain.GenesisTime()
-	finalizedEpoch := s.cfg.chain.FinalizedCheckpt().Epoch
+	cp, err := s.cfg.chain.FinalizedCheckpt()
+	if err != nil {
+		return err
+	}
+	finalizedEpoch := cp.Epoch
 	maxEpoch := slots.EpochsSinceGenesis(genesis)
 	// It would take a minimum of 2 epochs to finalize a
 	// previous epoch
