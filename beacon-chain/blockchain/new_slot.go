@@ -68,12 +68,6 @@ func (s *Service) NewSlot(ctx context.Context, slot types.Slot) error {
 				return err
 			}
 			s.store.SetJustifiedCheckptAndPayloadHash(bj, h)
-			if err := s.cfg.ForkChoiceStore.UpdateJustifiedCheckpoint(bj); err != nil {
-				return err
-			}
-			if err := s.cfg.ForkChoiceStore.UpdateFinalizedCheckpoint(f); err != nil {
-				return err
-			}
 		}
 	}
 	return nil
