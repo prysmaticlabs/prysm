@@ -17,6 +17,7 @@ import (
 )
 
 func TestMsgID_HashesCorrectly(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	genesisValidatorsRoot := bytesutil.PadTo([]byte{'A'}, 32)
 	d, err := forks.CreateForkDigest(time.Now(), genesisValidatorsRoot)
 	assert.NoError(t, err)
@@ -36,6 +37,7 @@ func TestMsgID_HashesCorrectly(t *testing.T) {
 }
 
 func TestMessageIDFunction_HashesCorrectlyAltair(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	genesisValidatorsRoot := bytesutil.PadTo([]byte{'A'}, 32)
 	d, err := signing.ComputeForkDigest(params.BeaconConfig().AltairForkVersion, genesisValidatorsRoot)
 	assert.NoError(t, err)
@@ -65,6 +67,7 @@ func TestMessageIDFunction_HashesCorrectlyAltair(t *testing.T) {
 }
 
 func TestMessageIDFunction_HashesCorrectlyBellatrix(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	genesisValidatorsRoot := bytesutil.PadTo([]byte{'A'}, 32)
 	d, err := signing.ComputeForkDigest(params.BeaconConfig().BellatrixForkVersion, genesisValidatorsRoot)
 	assert.NoError(t, err)
@@ -94,6 +97,7 @@ func TestMessageIDFunction_HashesCorrectlyBellatrix(t *testing.T) {
 }
 
 func TestMsgID_WithNilTopic(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	msg := &pubsubpb.Message{
 		Data:  make([]byte, 32),
 		Topic: nil,

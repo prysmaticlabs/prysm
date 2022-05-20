@@ -24,7 +24,7 @@ func TestInitializeDataMaps(t *testing.T) {
 		{
 			name: "fork version changes",
 			action: func() {
-				cfg := params.BeaconConfig()
+				cfg := params.BeaconConfig().Copy()
 				cfg.GenesisForkVersion = []byte{0x01, 0x02, 0x00, 0x00}
 				params.OverrideBeaconConfig(cfg)
 			},
@@ -33,7 +33,7 @@ func TestInitializeDataMaps(t *testing.T) {
 		{
 			name: "fork version changes with reset",
 			action: func() {
-				cfg := params.BeaconConfig()
+				cfg := params.BeaconConfig().Copy()
 				cfg.GenesisForkVersion = []byte{0x01, 0x02, 0x00, 0x00}
 				params.OverrideBeaconConfig(cfg)
 				InitializeDataMaps()

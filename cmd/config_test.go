@@ -6,6 +6,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/urfave/cli/v2"
 )
 
@@ -37,7 +38,7 @@ func TestConfigureBeaconConfig(t *testing.T) {
 	set := flag.NewFlagSet("test", 0)
 	set.Bool(MinimalConfigFlag.Name, true, "test")
 	context := cli.NewContext(&app, set, nil)
-	ConfigureBeaconChain(context)
+	require.NoError(t, ConfigureBeaconChain(context))
 	c := Get()
 	assert.Equal(t, true, c.MinimalConfig)
 }

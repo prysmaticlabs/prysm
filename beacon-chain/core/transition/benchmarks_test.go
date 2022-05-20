@@ -20,7 +20,9 @@ import (
 var runAmount = 25
 
 func BenchmarkExecuteStateTransition_FullBlock(b *testing.B) {
-	benchmark.SetBenchmarkConfig()
+	undo, err := benchmark.SetBenchmarkConfig()
+	require.NoError(b, err)
+	defer undo()
 	beaconState, err := benchmark.PreGenState1Epoch()
 	require.NoError(b, err)
 	cleanStates := clonedStates(beaconState)
@@ -37,7 +39,9 @@ func BenchmarkExecuteStateTransition_FullBlock(b *testing.B) {
 }
 
 func BenchmarkExecuteStateTransition_WithCache(b *testing.B) {
-	benchmark.SetBenchmarkConfig()
+	undo, err := benchmark.SetBenchmarkConfig()
+	require.NoError(b, err)
+	defer undo()
 
 	beaconState, err := benchmark.PreGenState1Epoch()
 	require.NoError(b, err)
@@ -67,7 +71,9 @@ func BenchmarkExecuteStateTransition_WithCache(b *testing.B) {
 }
 
 func BenchmarkProcessEpoch_2FullEpochs(b *testing.B) {
-	benchmark.SetBenchmarkConfig()
+	undo, err := benchmark.SetBenchmarkConfig()
+	require.NoError(b, err)
+	defer undo()
 	beaconState, err := benchmark.PreGenstateFullEpochs()
 	require.NoError(b, err)
 
