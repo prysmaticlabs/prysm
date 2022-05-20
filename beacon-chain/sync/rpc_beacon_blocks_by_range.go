@@ -164,7 +164,8 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 		if err := helpers.BeaconBlockIsNil(b); err != nil {
 			continue
 		}
-		if b.Block().IsBlinded() {
+		blockToWrite := b
+		if blockToWrite.Block().IsBlinded() {
 			log.Warn("RECONSTRUCTING FULL BLOCK DURING BLOCKS BY RANGE REQUEST")
 			blindedBellatrix, err := b.PbBlindedBellatrixBlock()
 			if err != nil {
@@ -180,19 +181,13 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 				return err
 			}
 			log.WithField("elapsed", time.Since(st)).Warnf("Reconstructing block with slot %d", fullBlock.Block().Slot())
-			if chunkErr := s.chunkBlockWriter(stream, fullBlock); chunkErr != nil {
-				log.WithError(chunkErr).Error("Could not send a chunked response")
-				s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
-				tracing.AnnotateError(span, chunkErr)
-				return chunkErr
-			}
-		} else {
-			if chunkErr := s.chunkBlockWriter(stream, b); chunkErr != nil {
-				log.WithError(chunkErr).Debug("Could not send a chunked response")
-				s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
-				tracing.AnnotateError(span, chunkErr)
-				return chunkErr
-			}
+			blockToWrite = fullBlock
+		}
+		if chunkErr := s.chunkBlockWriter(stream, blockToWrite); chunkErr != nil {
+			log.WithError(chunkErr).Error("Could not send a chunked response")
+			s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
+			tracing.AnnotateError(span, chunkErr)
+			return chunkErr
 		}
 	}
 	log.WithField("elapsed", time.Since(start)).Warn("Finished responding to blocks by range request")

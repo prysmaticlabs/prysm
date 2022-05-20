@@ -70,6 +70,11 @@ func (e *EngineClient) ExecutionBlockByHash(_ context.Context, h common.Hash) (*
 	return b, e.ErrExecBlockByHash
 }
 
+// ExecutionBlockByHashWithTxs --
+func (e *EngineClient) ExecutionBlockByHashWithTxs(ctx context.Context, hash common.Hash) (*pb.ExecutionBlockWithTxs, error) {
+	return nil, errors.New("unimplemented")
+}
+
 // GetTerminalBlockHash --
 func (e *EngineClient) GetTerminalBlockHash(ctx context.Context) ([]byte, bool, error) {
 	ttd := new(big.Int)

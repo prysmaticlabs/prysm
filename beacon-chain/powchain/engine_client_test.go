@@ -26,6 +26,7 @@ import (
 
 var (
 	_ = EngineCaller(&Service{})
+	_ = ExecutionPayloadReconstructor(&Service{})
 	_ = EngineCaller(&mocks.EngineClient{})
 )
 
