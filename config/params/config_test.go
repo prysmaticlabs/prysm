@@ -34,6 +34,7 @@ func TestConfig_OverrideBeaconConfigTestTeardown(t *testing.T) {
 }
 
 func TestConfig_DataRace(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	for i := 0; i < 10; i++ {
 		go func() {
 			cfg := params.BeaconConfig()

@@ -4,7 +4,7 @@ import (
 	"math/big"
 )
 
-// MockGenesisTimeFetcher is a fake implementation of the powchain.ChainInfoFetcher
+// MockPOWChainInfoFetcher is a fake implementation of the powchain.ChainInfoFetcher
 type MockPOWChainInfoFetcher struct {
 	CurrEndpoint string
 	CurrError    error
@@ -12,11 +12,11 @@ type MockPOWChainInfoFetcher struct {
 	Errors       []error
 }
 
-func (m *MockPOWChainInfoFetcher) Eth2GenesisPowchainInfo() (uint64, *big.Int) {
+func (*MockPOWChainInfoFetcher) Eth2GenesisPowchainInfo() (uint64, *big.Int) {
 	return uint64(0), &big.Int{}
 }
 
-func (m *MockPOWChainInfoFetcher) IsConnectedToETH1() bool {
+func (*MockPOWChainInfoFetcher) IsConnectedToETH1() bool {
 	return true
 }
 

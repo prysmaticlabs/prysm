@@ -104,12 +104,18 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 		stop:              make(chan struct{}),
 	}
 
-	features.ConfigureValidator(cliCtx)
-	cmd.ConfigureValidator(cliCtx)
+	if err := features.ConfigureValidator(cliCtx); err != nil {
+		return nil, err
+	}
+	if err := cmd.ConfigureValidator(cliCtx); err != nil {
+		return nil, err
+	}
 
 	if cliCtx.IsSet(cmd.ChainConfigFileFlag.Name) {
 		chainConfigFileName := cliCtx.String(cmd.ChainConfigFileFlag.Name)
-		params.LoadChainConfigFile(chainConfigFileName, nil)
+		if err := params.LoadChainConfigFile(chainConfigFileName, nil); err != nil {
+			return nil, err
+		}
 	}
 
 	// If the --web flag is enabled to administer the validator
@@ -124,14 +130,6 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 		}
 		return validatorClient, nil
 	}
-
-	if cliCtx.IsSet(cmd.ChainConfigFileFlag.Name) {
-		chainConfigFileName := cliCtx.String(cmd.ChainConfigFileFlag.Name)
-		params.LoadChainConfigFile(chainConfigFileName, nil)
-	}
-
-	// Initializes any forks here.
-	params.BeaconConfig().InitializeForkSchedule()
 
 	if err := validatorClient.initializeFromCLI(cliCtx); err != nil {
 		return nil, err
@@ -539,8 +537,19 @@ func feeRecipientConfig(cliCtx *cli.Context) (*validatorServiceConfig.FeeRecipie
 			if !common.IsHexAddress(option.FeeRecipient) {
 				return nil, errors.New("fee recipient is not a valid eth1 address")
 			}
+			mixedcaseAddress, err := common.NewMixedcaseAddressFromString(option.FeeRecipient)
+			if err != nil {
+				return nil, errors.Wrapf(err, "could not decode fee recipient %s", option.FeeRecipient)
+			}
+			checksumAddress := common.BytesToAddress(feebytes)
+			if !mixedcaseAddress.ValidChecksum() {
+				log.Warnf("Fee recipient %s is not a checksum Ethereum address. "+
+					"The checksummed address is %s and will be used as the fee recipient. "+
+					"We recommend using a mixed-case address (checksum) "+
+					"to prevent spelling mistakes in your fee recipient Ethereum address", option.FeeRecipient, checksumAddress.Hex())
+			}
 			frConfig.ProposeConfig[bytesutil.ToBytes48(decodedKey)] = &validatorServiceConfig.FeeRecipientOptions{
-				FeeRecipient: common.BytesToAddress(feebytes),
+				FeeRecipient: checksumAddress,
 			}
 		}
 	}

@@ -97,12 +97,9 @@ func (s *Service) VerifyFinalizedBlkDescendant(ctx context.Context, root [32]byt
 		return errNilFinalizedInStore
 	}
 	fRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(finalized.Root))
-	finalizedBlkSigned, err := s.cfg.BeaconDB.Block(ctx, fRoot)
+	finalizedBlkSigned, err := s.getBlock(ctx, fRoot)
 	if err != nil {
 		return err
-	}
-	if finalizedBlkSigned == nil || finalizedBlkSigned.IsNil() || finalizedBlkSigned.Block().IsNil() {
-		return errors.New("nil finalized block")
 	}
 	finalizedBlk := finalizedBlkSigned.Block()
 	bFinalizedRoot, err := s.ancestor(ctx, root[:], finalizedBlk.Slot())
@@ -208,7 +205,11 @@ func (s *Service) updateJustified(ctx context.Context, state state.ReadOnlyBeaco
 			return errNilJustifiedInStore
 		}
 		s.store.SetPrevJustifiedCheckpt(justified)
-		s.store.SetJustifiedCheckpt(cpt)
+		h, err := s.getPayloadHash(ctx, cpt.Root)
+		if err != nil {
+			return err
+		}
+		s.store.SetJustifiedCheckptAndPayloadHash(cpt, h)
 	}
 
 	return nil
@@ -227,7 +228,11 @@ func (s *Service) updateJustifiedInitSync(ctx context.Context, cp *ethpb.Checkpo
 	if err := s.cfg.BeaconDB.SaveJustifiedCheckpoint(ctx, cp); err != nil {
 		return err
 	}
-	s.store.SetJustifiedCheckpt(cp)
+	h, err := s.getPayloadHash(ctx, cp.Root)
+	if err != nil {
+		return err
+	}
+	s.store.SetJustifiedCheckptAndPayloadHash(cp, h)
 
 	return nil
 }
@@ -350,7 +355,7 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk interfa
 	higherThanFinalized := slot > fSlot
 	// As long as parent node is not in fork choice store, and parent node is in DB.
 	for !s.cfg.ForkChoiceStore.HasNode(parentRoot) && s.cfg.BeaconDB.HasBlock(ctx, parentRoot) && higherThanFinalized {
-		b, err := s.cfg.BeaconDB.Block(ctx, parentRoot)
+		b, err := s.getBlock(ctx, parentRoot)
 		if err != nil {
 			return err
 		}

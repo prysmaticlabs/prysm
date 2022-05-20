@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"syscall"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
@@ -21,6 +22,7 @@ type BootNode struct {
 	e2etypes.ComponentRunner
 	started chan struct{}
 	enr     string
+	cmd     *exec.Cmd
 }
 
 // NewBootNode creates and returns boot node.
@@ -74,6 +76,7 @@ func (node *BootNode) Start(ctx context.Context) error {
 
 	// Mark node as ready.
 	close(node.started)
+	node.cmd = cmd
 
 	return cmd.Wait()
 }
@@ -81,6 +84,21 @@ func (node *BootNode) Start(ctx context.Context) error {
 // Started checks whether a boot node is started and ready to be queried.
 func (node *BootNode) Started() <-chan struct{} {
 	return node.started
+}
+
+// Pause pauses the component and its underlying process.
+func (node *BootNode) Pause() error {
+	return node.cmd.Process.Signal(syscall.SIGSTOP)
+}
+
+// Resume resumes the component and its underlying process.
+func (node *BootNode) Resume() error {
+	return node.cmd.Process.Signal(syscall.SIGCONT)
+}
+
+// Stop stops the component and its underlying process.
+func (node *BootNode) Stop() error {
+	return node.cmd.Process.Kill()
 }
 
 func enrFromLogFile(name string) (string, error) {

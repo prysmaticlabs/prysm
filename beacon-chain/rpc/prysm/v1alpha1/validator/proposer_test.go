@@ -72,6 +72,7 @@ func TestProposer_GetBlock_OK(t *testing.T) {
 		HeadFetcher:       &mock.ChainService{State: beaconState, Root: parentRoot[:]},
 		SyncChecker:       &mockSync.Sync{IsSyncing: false},
 		BlockReceiver:     &mock.ChainService{},
+		HeadUpdater:       &mock.ChainService{},
 		ChainStartFetcher: &mockPOW.POWChain{},
 		Eth1InfoFetcher:   &mockPOW.POWChain{},
 		Eth1BlockFetcher:  &mockPOW.POWChain{},
@@ -158,6 +159,7 @@ func TestProposer_GetBlock_AddsUnaggregatedAtts(t *testing.T) {
 		ChainStartFetcher: &mockPOW.POWChain{},
 		Eth1InfoFetcher:   &mockPOW.POWChain{},
 		Eth1BlockFetcher:  &mockPOW.POWChain{},
+		HeadUpdater:       &mock.ChainService{},
 		MockEth1Votes:     true,
 		SlashingsPool:     slashings.NewPool(),
 		AttPool:           attestations.NewPool(),
@@ -2105,6 +2107,7 @@ func TestProposer_GetBeaconBlock_PreForkEpoch(t *testing.T) {
 		HeadFetcher:       &mock.ChainService{State: beaconState, Root: parentRoot[:]},
 		SyncChecker:       &mockSync.Sync{IsSyncing: false},
 		BlockReceiver:     &mock.ChainService{},
+		HeadUpdater:       &mock.ChainService{},
 		ChainStartFetcher: &mockPOW.POWChain{},
 		Eth1InfoFetcher:   &mockPOW.POWChain{},
 		Eth1BlockFetcher:  &mockPOW.POWChain{},
@@ -2217,6 +2220,7 @@ func TestProposer_GetBeaconBlock_PostForkEpoch(t *testing.T) {
 		HeadFetcher:       &mock.ChainService{State: beaconState, Root: parentRoot[:]},
 		SyncChecker:       &mockSync.Sync{IsSyncing: false},
 		BlockReceiver:     &mock.ChainService{},
+		HeadUpdater:       &mock.ChainService{},
 		ChainStartFetcher: &mockPOW.POWChain{},
 		Eth1InfoFetcher:   &mockPOW.POWChain{},
 		Eth1BlockFetcher:  &mockPOW.POWChain{},
@@ -2370,6 +2374,7 @@ func TestProposer_GetBeaconBlock_BellatrixEpoch(t *testing.T) {
 		TimeFetcher:       &mock.ChainService{Genesis: time.Now()},
 		SyncChecker:       &mockSync.Sync{IsSyncing: false},
 		BlockReceiver:     &mock.ChainService{},
+		HeadUpdater:       &mock.ChainService{},
 		ChainStartFetcher: &mockPOW.POWChain{},
 		Eth1InfoFetcher:   &mockPOW.POWChain{},
 		Eth1BlockFetcher:  c,
@@ -2408,7 +2413,7 @@ func TestProposer_GetBeaconBlock_BellatrixEpoch(t *testing.T) {
 	assert.DeepEqual(t, randaoReveal, bellatrixBlk.Bellatrix.Body.RandaoReveal, "Expected block to have correct randao reveal")
 	assert.DeepEqual(t, req.Graffiti, bellatrixBlk.Bellatrix.Body.Graffiti, "Expected block to have correct Graffiti")
 
-	require.LogsContain(t, hook, "Fee recipient not set. Using burn address")
+	require.LogsContain(t, hook, "Fee recipient is currently using the burn address")
 	require.DeepEqual(t, payload, bellatrixBlk.Bellatrix.Body.ExecutionPayload) // Payload should equal.
 
 	// Operator sets default fee recipient to not be burned through beacon node cli.
@@ -2419,7 +2424,7 @@ func TestProposer_GetBeaconBlock_BellatrixEpoch(t *testing.T) {
 	params.OverrideBeaconConfig(cfg)
 	_, err = proposerServer.GetBeaconBlock(ctx, req)
 	require.NoError(t, err)
-	require.LogsDoNotContain(t, newHook, "Fee recipient not set. Using burn address")
+	require.LogsDoNotContain(t, newHook, "Fee recipient is currently using the burn address")
 }
 
 func TestProposer_GetBeaconBlock_Optimistic(t *testing.T) {
@@ -2432,7 +2437,7 @@ func TestProposer_GetBeaconBlock_Optimistic(t *testing.T) {
 	bellatrixSlot, err := slots.EpochStart(params.BeaconConfig().BellatrixForkEpoch)
 	require.NoError(t, err)
 
-	proposerServer := &Server{HeadFetcher: &mock.ChainService{Optimistic: true}, TimeFetcher: &mock.ChainService{}}
+	proposerServer := &Server{OptimisticModeFetcher: &mock.ChainService{Optimistic: true}, TimeFetcher: &mock.ChainService{}}
 	req := &ethpb.BlockRequest{
 		Slot: bellatrixSlot + 1,
 	}
@@ -2580,7 +2585,7 @@ func setupGetBlock(bm *testing.B) (*Server, state.BeaconState, []bls.SecretKey) 
 	ctx := context.Background()
 
 	params.SetupTestConfigCleanup(bm)
-	params.OverrideBeaconConfig(params.MainnetConfig())
+	params.OverrideBeaconConfig(params.MainnetConfig().Copy())
 	beaconState, privKeys := util.DeterministicGenesisState(bm, 64)
 
 	stateRoot, err := beaconState.HashTreeRoot(ctx)

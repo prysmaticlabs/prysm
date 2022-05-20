@@ -236,7 +236,7 @@ func TestValidatorStatus_Pending(t *testing.T) {
 func TestValidatorStatus_Active(t *testing.T) {
 	// This test breaks if it doesnt use mainnet config
 	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MainnetConfig())
+	params.OverrideBeaconConfig(params.MainnetConfig().Copy())
 	ctx := context.Background()
 
 	pubKey := pubKey(1)
@@ -439,7 +439,7 @@ func TestValidatorStatus_Exited(t *testing.T) {
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MainnetConfig())
+	params.OverrideBeaconConfig(params.MainnetConfig().Copy())
 	state, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, state.SetSlot(slot))
@@ -603,23 +603,23 @@ func TestActivationStatus_OK(t *testing.T) {
 }
 
 func TestOptimisticStatus(t *testing.T) {
-	server := &Server{HeadFetcher: &mockChain.ChainService{}, TimeFetcher: &mockChain.ChainService{}}
+	params.SetupTestConfigCleanup(t)
+	server := &Server{OptimisticModeFetcher: &mockChain.ChainService{}, TimeFetcher: &mockChain.ChainService{}}
 	err := server.optimisticStatus(context.Background())
 	require.NoError(t, err)
 
-	params.SetupTestConfigCleanup(t)
-	cfg := params.BeaconConfig()
+	cfg := params.BeaconConfig().Copy()
 	cfg.BellatrixForkEpoch = 2
 	params.OverrideBeaconConfig(cfg)
 
-	server = &Server{HeadFetcher: &mockChain.ChainService{Optimistic: true}, TimeFetcher: &mockChain.ChainService{}}
+	server = &Server{OptimisticModeFetcher: &mockChain.ChainService{Optimistic: true}, TimeFetcher: &mockChain.ChainService{}}
 	err = server.optimisticStatus(context.Background())
 	s, ok := status.FromError(err)
 	require.Equal(t, true, ok)
 	require.DeepEqual(t, codes.Unavailable, s.Code())
 	require.ErrorContains(t, errOptimisticMode.Error(), err)
 
-	server = &Server{HeadFetcher: &mockChain.ChainService{Optimistic: false}, TimeFetcher: &mockChain.ChainService{}}
+	server = &Server{OptimisticModeFetcher: &mockChain.ChainService{Optimistic: false}, TimeFetcher: &mockChain.ChainService{}}
 	err = server.optimisticStatus(context.Background())
 	require.NoError(t, err)
 }

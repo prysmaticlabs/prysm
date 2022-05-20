@@ -29,17 +29,23 @@ var Commands = &cli.Command{
 				flags.DeletePublicKeysFlag,
 				features.Mainnet,
 				features.PraterTestnet,
+				features.RopstenTestnet,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
 				if err := cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags); err != nil {
 					return err
 				}
-				return tos.VerifyTosAcceptedOrPrompt(cliCtx)
+				if err := tos.VerifyTosAcceptedOrPrompt(cliCtx); err != nil {
+					return err
+				}
+				if err := features.ConfigureValidator(cliCtx); err != nil {
+					return err
+				}
+				return nil
 			},
 			Action: func(cliCtx *cli.Context) error {
-				features.ConfigureValidator(cliCtx)
-				if err := accounts.DeleteAccountCli(cliCtx); err != nil {
+				if err := accountsDelete(cliCtx); err != nil {
 					log.Fatalf("Could not delete account: %v", err)
 				}
 				return nil
@@ -62,6 +68,7 @@ var Commands = &cli.Command{
 				flags.GrpcRetryDelayFlag,
 				features.Mainnet,
 				features.PraterTestnet,
+				features.RopstenTestnet,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
@@ -71,7 +78,9 @@ var Commands = &cli.Command{
 				if err := tos.VerifyTosAcceptedOrPrompt(cliCtx); err != nil {
 					return err
 				}
-				features.ConfigureValidator(cliCtx)
+				if err := features.ConfigureValidator(cliCtx); err != nil {
+					return err
+				}
 				return nil
 			},
 			Action: func(cliCtx *cli.Context) error {
@@ -95,6 +104,7 @@ var Commands = &cli.Command{
 				flags.BackupPasswordFile,
 				features.Mainnet,
 				features.PraterTestnet,
+				features.RopstenTestnet,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
@@ -104,7 +114,9 @@ var Commands = &cli.Command{
 				return tos.VerifyTosAcceptedOrPrompt(cliCtx)
 			},
 			Action: func(cliCtx *cli.Context) error {
-				features.ConfigureValidator(cliCtx)
+				if err := features.ConfigureValidator(cliCtx); err != nil {
+					return err
+				}
 				if err := accounts.BackupAccountsCli(cliCtx); err != nil {
 					log.Fatalf("Could not backup accounts: %v", err)
 				}
@@ -122,6 +134,7 @@ var Commands = &cli.Command{
 				flags.ImportPrivateKeyFileFlag,
 				features.Mainnet,
 				features.PraterTestnet,
+				features.RopstenTestnet,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
@@ -131,7 +144,9 @@ var Commands = &cli.Command{
 				return tos.VerifyTosAcceptedOrPrompt(cliCtx)
 			},
 			Action: func(cliCtx *cli.Context) error {
-				features.ConfigureValidator(cliCtx)
+				if err := features.ConfigureValidator(cliCtx); err != nil {
+					return err
+				}
 				if err := accounts.ImportAccountsCli(cliCtx); err != nil {
 					log.Fatalf("Could not import accounts: %v", err)
 				}
@@ -155,6 +170,7 @@ var Commands = &cli.Command{
 				flags.ExitAllFlag,
 				features.Mainnet,
 				features.PraterTestnet,
+				features.RopstenTestnet,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
@@ -164,7 +180,9 @@ var Commands = &cli.Command{
 				return tos.VerifyTosAcceptedOrPrompt(cliCtx)
 			},
 			Action: func(cliCtx *cli.Context) error {
-				features.ConfigureValidator(cliCtx)
+				if err := features.ConfigureValidator(cliCtx); err != nil {
+					return err
+				}
 				if err := accounts.ExitAccountsCli(cliCtx, os.Stdin); err != nil {
 					log.Fatalf("Could not perform voluntary exit: %v", err)
 				}

@@ -173,14 +173,15 @@ func TestGetAttestationData_SyncNotReady(t *testing.T) {
 
 func TestGetAttestationData_Optimistic(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	cfg := params.BeaconConfig()
+	cfg := params.BeaconConfig().Copy()
 	cfg.BellatrixForkEpoch = 0
 	params.OverrideBeaconConfig(cfg)
 
 	as := &Server{
-		SyncChecker: &mockSync.Sync{},
-		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
-		HeadFetcher: &mock.ChainService{Optimistic: true},
+		SyncChecker:           &mockSync.Sync{},
+		TimeFetcher:           &mock.ChainService{Genesis: time.Now()},
+		HeadFetcher:           &mock.ChainService{},
+		OptimisticModeFetcher: &mock.ChainService{Optimistic: true},
 	}
 	_, err := as.GetAttestationData(context.Background(), &ethpb.AttestationDataRequest{})
 	s, ok := status.FromError(err)
@@ -191,10 +192,11 @@ func TestGetAttestationData_Optimistic(t *testing.T) {
 	beaconState, err := util.NewBeaconState()
 	require.NoError(t, err)
 	as = &Server{
-		SyncChecker:      &mockSync.Sync{},
-		TimeFetcher:      &mock.ChainService{Genesis: time.Now()},
-		HeadFetcher:      &mock.ChainService{Optimistic: false, State: beaconState},
-		AttestationCache: cache.NewAttestationCache(),
+		SyncChecker:           &mockSync.Sync{},
+		TimeFetcher:           &mock.ChainService{Genesis: time.Now()},
+		HeadFetcher:           &mock.ChainService{Optimistic: false, State: beaconState},
+		OptimisticModeFetcher: &mock.ChainService{Optimistic: false},
+		AttestationCache:      cache.NewAttestationCache(),
 	}
 	_, err = as.GetAttestationData(context.Background(), &ethpb.AttestationDataRequest{})
 	require.NoError(t, err)
@@ -212,7 +214,7 @@ func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
 
 	// Ensure HistoricalRootsLimit matches scenario
 	params.SetupTestConfigCleanup(t)
-	cfg := params.MainnetConfig()
+	cfg := params.MainnetConfig().Copy()
 	cfg.HistoricalRootsLimit = 8192
 	params.OverrideBeaconConfig(cfg)
 
