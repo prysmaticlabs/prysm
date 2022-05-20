@@ -1,6 +1,7 @@
 package builder
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -690,4 +691,13 @@ func TestMarshalBlindedBeaconBlockBodyBellatrix(t *testing.T) {
 	// -1 end slice index on expected is to get rid of trailing newline
 	// if you update this fixture and this test breaks, you probably removed the trailing newline
 	require.Equal(t, string(expected[0:len(expected)-1]), string(m))
+}
+
+func TestRoundTripUint256(t *testing.T) {
+	vs := "452312848583266388373324160190187140051835877600158453279131187530910662656"
+	u := stringToUint256(vs)
+	sb := u.SSZBytes()
+	uu := sszBytesToUint256(sb)
+	require.Equal(t, true, bytes.Equal(u.SSZBytes(), uu.SSZBytes()))
+	require.Equal(t, vs, uu.String())
 }
