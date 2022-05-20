@@ -39,10 +39,46 @@ func WithTimeout(timeout time.Duration) ClientOpt {
 	}
 }
 
+type observer interface {
+	observe(r http.Request) error
+}
+
+func WithObserver(m observer) ClientOpt {
+	return func(c *Client) {
+		c.mw = append(c.mw, m)
+	}
+}
+
+type requestLogger struct{}
+
+func (l *requestLogger) observe(r http.Request) (e error) {
+	b := bytes.NewBuffer(nil)
+	t := io.TeeReader(r.Body, b)
+	defer func() {
+		if r.Body != nil {
+			e = r.Body.Close()
+		}
+	}()
+	body, err := io.ReadAll(t)
+	if err != nil {
+		return err
+	}
+	r.Body = io.NopCloser(b)
+	log.WithFields(log.Fields{
+		"body-base64": string(body),
+		"url":         r.URL.String(),
+	}).Info("builder http request")
+
+	return nil
+}
+
+var _ observer = &requestLogger{}
+
 // Client provides a collection of helper methods for calling Builder API endpoints.
 type Client struct {
 	hc      *http.Client
 	baseURL *url.URL
+	mw      []observer
 }
 
 // NewClient constructs a new client with the provided options (ex WithTimeout).
