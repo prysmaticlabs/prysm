@@ -24,6 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/io/logs"
 	"github.com/prysmaticlabs/prysm/monitoring/journald"
 	"github.com/prysmaticlabs/prysm/runtime/debug"
+	"github.com/prysmaticlabs/prysm/runtime/fdlimits"
 	_ "github.com/prysmaticlabs/prysm/runtime/maxprocs"
 	"github.com/prysmaticlabs/prysm/runtime/tos"
 	"github.com/prysmaticlabs/prysm/runtime/version"
@@ -191,6 +192,9 @@ func main() {
 		}
 		runtime.GOMAXPROCS(runtime.NumCPU())
 		if err := debug.Setup(ctx); err != nil {
+			return err
+		}
+		if err := fdlimits.SetMaxFdLimits(); err != nil {
 			return err
 		}
 		return cmd.ValidateNoArgs(ctx)

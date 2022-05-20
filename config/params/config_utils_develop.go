@@ -9,14 +9,13 @@ import (
 	"github.com/mohae/deepcopy"
 )
 
-var beaconConfig = MainnetConfig()
-var beaconConfigLock sync.RWMutex
+var cfgrw sync.RWMutex
 
 // BeaconConfig retrieves beacon chain config.
 func BeaconConfig() *BeaconChainConfig {
-	beaconConfigLock.RLock()
-	defer beaconConfigLock.RUnlock()
-	return beaconConfig
+	cfgrw.RLock()
+	defer cfgrw.RUnlock()
+	return configs.getActive()
 }
 
 // OverrideBeaconConfig by replacing the config. The preferred pattern is to
@@ -24,18 +23,18 @@ func BeaconConfig() *BeaconChainConfig {
 // OverrideBeaconConfig(c). Any subsequent calls to params.BeaconConfig() will
 // return this new configuration.
 func OverrideBeaconConfig(c *BeaconChainConfig) {
-	beaconConfigLock.Lock()
-	defer beaconConfigLock.Unlock()
-	beaconConfig = c
+	cfgrw.Lock()
+	defer cfgrw.Unlock()
+	configs.active = c
 }
 
 // Copy returns a copy of the config object.
 func (b *BeaconChainConfig) Copy() *BeaconChainConfig {
-	beaconConfigLock.RLock()
-	defer beaconConfigLock.RUnlock()
+	cfgrw.RLock()
+	defer cfgrw.RUnlock()
 	config, ok := deepcopy.Copy(*b).(BeaconChainConfig)
 	if !ok {
-		config = *beaconConfig
+		panic("somehow deepcopy produced a BeaconChainConfig that is not of the same type as the original")
 	}
 	return &config
 }
