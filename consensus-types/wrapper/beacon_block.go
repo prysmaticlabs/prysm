@@ -6,7 +6,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
@@ -40,7 +39,10 @@ var (
 	// ErrUnsupportedBlindedBellatrixBlock is returned when accessing a blinded bellatrix block from unsupported method.
 	ErrUnsupportedBlindedBellatrixBlock = errors.New("unsupported blinded bellatrix block")
 	// ErrNilObjectWrapped is returned in a constructor when the underlying object is nil.
-	ErrNilObjectWrapped = errors.New("attempted to wrap nil object")
+	ErrNilObjectWrapped     = errors.New("attempted to wrap nil object")
+	ErrNilSignedBeaconBlock = errors.New("signed beacon block can't be nil")
+	ErrNilBeaconBlock       = errors.New("beacon block can't be nil")
+	ErrNilBeaconBlockBody   = errors.New("beacon block body can't be nil")
 )
 
 // WrappedSignedBeaconBlock will wrap a signed beacon block to conform to the
@@ -155,7 +157,7 @@ func BuildSignedBeaconBlock(blk interfaces.BeaconBlock, signature []byte) (inter
 func BuildSignedBeaconBlockFromExecutionPayload(
 	blk interfaces.SignedBeaconBlock, payload *enginev1.ExecutionPayload,
 ) (interfaces.SignedBeaconBlock, error) {
-	if err := helpers.BeaconBlockIsNil(blk); err != nil {
+	if err := BeaconBlockIsNil(blk); err != nil {
 		return nil, err
 	}
 	b := blk.Block()
@@ -226,7 +228,7 @@ func BuildSignedBeaconBlockFromExecutionPayload(
 
 // WrapSignedBlindedBeaconBlock converts a signed beacon block into a blinded format.
 func WrapSignedBlindedBeaconBlock(blk interfaces.SignedBeaconBlock) (interfaces.SignedBeaconBlock, error) {
-	if err := helpers.BeaconBlockIsNil(blk); err != nil {
+	if err := BeaconBlockIsNil(blk); err != nil {
 		return nil, err
 	}
 	b := blk.Block()
@@ -335,4 +337,20 @@ func isEmptyPayload(p *enginev1.ExecutionPayload) bool {
 		return false
 	}
 	return true
+}
+
+// BeaconBlockIsNil checks if any composite field of input signed beacon block is nil.
+// Access to these nil fields will result in run time panic,
+// it is recommended to run these checks as first line of defense.
+func BeaconBlockIsNil(b interfaces.SignedBeaconBlock) error {
+	if b == nil || b.IsNil() {
+		return ErrNilSignedBeaconBlock
+	}
+	if b.Block().IsNil() {
+		return ErrNilBeaconBlock
+	}
+	if b.Block().Body().IsNil() {
+		return ErrNilBeaconBlockBody
+	}
+	return nil
 }
