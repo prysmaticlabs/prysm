@@ -103,21 +103,27 @@ func (bb *Builder) Check(t testing.TB, c *Check) {
 			Epoch: types.Epoch(c.JustifiedCheckPoint.Epoch),
 			Root:  common.FromHex(c.JustifiedCheckPoint.Root),
 		}
-		require.DeepEqual(t, cp, bb.service.CurrentJustifiedCheckpt())
+		got, err := bb.service.CurrentJustifiedCheckpt()
+		require.NoError(t, err)
+		require.DeepEqual(t, cp, got)
 	}
 	if c.BestJustifiedCheckPoint != nil {
 		cp := &ethpb.Checkpoint{
 			Epoch: types.Epoch(c.BestJustifiedCheckPoint.Epoch),
 			Root:  common.FromHex(c.BestJustifiedCheckPoint.Root),
 		}
-		require.DeepEqual(t, cp, bb.service.BestJustifiedCheckpt())
+		got, err := bb.service.BestJustifiedCheckpt()
+		require.NoError(t, err)
+		require.DeepEqual(t, cp, got)
 	}
 	if c.FinalizedCheckPoint != nil {
 		cp := &ethpb.Checkpoint{
 			Epoch: types.Epoch(c.FinalizedCheckPoint.Epoch),
 			Root:  common.FromHex(c.FinalizedCheckPoint.Root),
 		}
-		require.DeepSSZEqual(t, cp, bb.service.FinalizedCheckpt())
+		got, err := bb.service.FinalizedCheckpt()
+		require.NoError(t, err)
+		require.DeepSSZEqual(t, cp, got)
 	}
 	if c.ProposerBoostRoot != nil {
 		want := fmt.Sprintf("%#x", common.FromHex(*c.ProposerBoostRoot))

@@ -10,48 +10,63 @@ import (
 func Test_store_PrevJustifiedCheckpt(t *testing.T) {
 	s := &Store{}
 	var cp *ethpb.Checkpoint
-	require.Equal(t, cp, s.PrevJustifiedCheckpt())
+	_, err := s.PrevJustifiedCheckpt()
+	require.ErrorIs(t, ErrNilCheckpoint, err)
 	cp = &ethpb.Checkpoint{Epoch: 1, Root: []byte{'a'}}
 	s.SetPrevJustifiedCheckpt(cp)
-	require.Equal(t, cp, s.PrevJustifiedCheckpt())
+	got, err := s.PrevJustifiedCheckpt()
+	require.NoError(t, err)
+	require.Equal(t, cp, got)
 }
 
 func Test_store_BestJustifiedCheckpt(t *testing.T) {
 	s := &Store{}
 	var cp *ethpb.Checkpoint
-	require.Equal(t, cp, s.BestJustifiedCheckpt())
+	_, err := s.BestJustifiedCheckpt()
+	require.ErrorIs(t, ErrNilCheckpoint, err)
 	cp = &ethpb.Checkpoint{Epoch: 1, Root: []byte{'a'}}
 	s.SetBestJustifiedCheckpt(cp)
-	require.Equal(t, cp, s.BestJustifiedCheckpt())
+	got, err := s.BestJustifiedCheckpt()
+	require.NoError(t, err)
+	require.Equal(t, cp, got)
 }
 
 func Test_store_JustifiedCheckpt(t *testing.T) {
 	s := &Store{}
 	var cp *ethpb.Checkpoint
-	require.Equal(t, cp, s.JustifiedCheckpt())
+	_, err := s.JustifiedCheckpt()
+	require.ErrorIs(t, ErrNilCheckpoint, err)
 	cp = &ethpb.Checkpoint{Epoch: 1, Root: []byte{'a'}}
 	h := [32]byte{'b'}
 	s.SetJustifiedCheckptAndPayloadHash(cp, h)
-	require.Equal(t, cp, s.JustifiedCheckpt())
+	got, err := s.JustifiedCheckpt()
+	require.NoError(t, err)
+	require.Equal(t, cp, got)
 	require.Equal(t, h, s.JustifiedPayloadBlockHash())
 }
 
 func Test_store_FinalizedCheckpt(t *testing.T) {
 	s := &Store{}
 	var cp *ethpb.Checkpoint
-	require.Equal(t, cp, s.FinalizedCheckpt())
+	_, err := s.FinalizedCheckpt()
+	require.ErrorIs(t, ErrNilCheckpoint, err)
 	cp = &ethpb.Checkpoint{Epoch: 1, Root: []byte{'a'}}
 	h := [32]byte{'b'}
 	s.SetFinalizedCheckptAndPayloadHash(cp, h)
-	require.Equal(t, cp, s.FinalizedCheckpt())
+	got, err := s.FinalizedCheckpt()
+	require.NoError(t, err)
+	require.Equal(t, cp, got)
 	require.Equal(t, h, s.FinalizedPayloadBlockHash())
 }
 
 func Test_store_PrevFinalizedCheckpt(t *testing.T) {
 	s := &Store{}
 	var cp *ethpb.Checkpoint
-	require.Equal(t, cp, s.PrevFinalizedCheckpt())
+	_, err := s.PrevFinalizedCheckpt()
+	require.ErrorIs(t, ErrNilCheckpoint, err)
 	cp = &ethpb.Checkpoint{Epoch: 1, Root: []byte{'a'}}
 	s.SetPrevFinalizedCheckpt(cp)
-	require.Equal(t, cp, s.PrevFinalizedCheckpt())
+	got, err := s.PrevFinalizedCheckpt()
+	require.NoError(t, err)
+	require.Equal(t, cp, got)
 }
