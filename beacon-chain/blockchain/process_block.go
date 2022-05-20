@@ -615,11 +615,11 @@ func getBlockPayloadHash(blk interfaces.BeaconBlock) ([32]byte, error) {
 	case errors.Is(err, wrapper.ErrUnsupportedField):
 		payloadHeader, err := blk.Body().ExecutionPayloadHeader()
 		if err != nil {
-			return blockHashFromPayload, nil
+			return blockHashFromPayload, err
 		}
 		blockHashFromPayload = bytesutil.ToBytes32(payloadHeader.BlockHash)
 	case err != nil:
-		return blockHashFromPayload, nil
+		return blockHashFromPayload, err
 	default:
 		blockHashFromPayload = bytesutil.ToBytes32(payload.BlockHash)
 	}
