@@ -27,7 +27,7 @@ const (
 	postRegisterValidatorPath  = "/eth/v1/builder/validators"
 )
 
-var ErrMalformedHostname = errors.New("hostname must include port, separated by one colon, like example.com:3500")
+var errMalformedHostname = errors.New("hostname must include port, separated by one colon, like example.com:3500")
 
 // ClientOpt is a functional option for the Client type (http.Client wrapper)
 type ClientOpt func(*Client)
@@ -39,7 +39,7 @@ func WithTimeout(timeout time.Duration) ClientOpt {
 	}
 }
 
-// Client provides a collection of helper methods for calling the Eth Beacon Node API endpoints.
+// Client provides a collection of helper methods for calling Builder API endpoints.
 type Client struct {
 	hc      *http.Client
 	baseURL *url.URL
@@ -72,9 +72,9 @@ func urlForHost(h string) (*url.URL, error) {
 	// try to parse as host:port
 	host, port, err := net.SplitHostPort(h)
 	if err != nil {
-		return nil, ErrMalformedHostname
+		return nil, errMalformedHostname
 	}
-	return &url.URL{Host: fmt.Sprintf("%s:%s", host, port), Scheme: "http"}, nil
+	return &url.URL{Host: net.JoinHostPort(host, port), Scheme: "http"}, nil
 }
 
 // NodeURL returns a human-readable string representation of the beacon node base url.

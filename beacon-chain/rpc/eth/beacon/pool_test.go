@@ -703,7 +703,7 @@ func TestSubmitVoluntaryExit_InvalidExit(t *testing.T) {
 func TestServer_SubmitAttestations_Ok(t *testing.T) {
 	ctx := context.Background()
 	params.SetupTestConfigCleanup(t)
-	c := params.BeaconConfig()
+	c := params.BeaconConfig().Copy()
 	// Required for correct committee size calculation.
 	c.SlotsPerEpoch = 1
 	params.OverrideBeaconConfig(c)
@@ -809,7 +809,7 @@ func TestServer_SubmitAttestations_ValidAttestationSubmitted(t *testing.T) {
 	ctx := grpc.NewContextWithServerTransportStream(context.Background(), &runtime.ServerTransportStream{})
 
 	params.SetupTestConfigCleanup(t)
-	c := params.BeaconConfig()
+	c := params.BeaconConfig().Copy()
 	// Required for correct committee size calculation.
 	c.SlotsPerEpoch = 1
 	params.OverrideBeaconConfig(c)
@@ -909,7 +909,7 @@ func TestServer_SubmitAttestations_InvalidAttestationGRPCHeader(t *testing.T) {
 	ctx := grpc.NewContextWithServerTransportStream(context.Background(), &runtime.ServerTransportStream{})
 
 	params.SetupTestConfigCleanup(t)
-	c := params.BeaconConfig()
+	c := params.BeaconConfig().Copy()
 	// Required for correct committee size calculation.
 	c.SlotsPerEpoch = 1
 	params.OverrideBeaconConfig(c)

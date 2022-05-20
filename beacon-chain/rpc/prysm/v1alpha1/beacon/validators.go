@@ -540,10 +540,13 @@ func (bs *Server) GetValidatorParticipation(
 	default:
 		return nil, status.Errorf(codes.Internal, "Invalid state type retrieved with a version of %d", beaconState.Version())
 	}
-
+	cp, err := bs.FinalizationFetcher.FinalizedCheckpt()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get finalized checkpoint: %v", err)
+	}
 	p := &ethpb.ValidatorParticipationResponse{
 		Epoch:     requestedEpoch,
-		Finalized: requestedEpoch <= bs.FinalizationFetcher.FinalizedCheckpt().Epoch,
+		Finalized: requestedEpoch <= cp.Epoch,
 		Participation: &ethpb.ValidatorParticipation{
 			// TODO(7130): Remove these three deprecated fields.
 			GlobalParticipationRate:          float32(b.PrevEpochTargetAttested) / float32(b.ActivePrevEpoch),

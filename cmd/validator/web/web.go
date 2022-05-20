@@ -33,7 +33,9 @@ var Commands = &cli.Command{
 				return tos.VerifyTosAcceptedOrPrompt(cliCtx)
 			},
 			Action: func(cliCtx *cli.Context) error {
-				features.ConfigureValidator(cliCtx)
+				if err := features.ConfigureValidator(cliCtx); err != nil {
+					return err
+				}
 				walletDirPath := cliCtx.String(flags.WalletDirFlag.Name)
 				if walletDirPath == "" {
 					log.Fatal("--wallet-dir not specified")

@@ -236,7 +236,7 @@ func TestValidatorStatus_Pending(t *testing.T) {
 func TestValidatorStatus_Active(t *testing.T) {
 	// This test breaks if it doesnt use mainnet config
 	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MainnetConfig())
+	params.OverrideBeaconConfig(params.MainnetConfig().Copy())
 	ctx := context.Background()
 
 	pubKey := pubKey(1)
@@ -439,7 +439,7 @@ func TestValidatorStatus_Exited(t *testing.T) {
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MainnetConfig())
+	params.OverrideBeaconConfig(params.MainnetConfig().Copy())
 	state, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, state.SetSlot(slot))
@@ -603,12 +603,12 @@ func TestActivationStatus_OK(t *testing.T) {
 }
 
 func TestOptimisticStatus(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	server := &Server{OptimisticModeFetcher: &mockChain.ChainService{}, TimeFetcher: &mockChain.ChainService{}}
 	err := server.optimisticStatus(context.Background())
 	require.NoError(t, err)
 
-	params.SetupTestConfigCleanup(t)
-	cfg := params.BeaconConfig()
+	cfg := params.BeaconConfig().Copy()
 	cfg.BellatrixForkEpoch = 2
 	params.OverrideBeaconConfig(cfg)
 

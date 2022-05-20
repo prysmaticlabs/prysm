@@ -8,7 +8,6 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
@@ -132,7 +131,11 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		return pubsub.ValidationIgnore, nil
 	}
 
-	startSlot, err := slots.EpochStart(s.cfg.chain.FinalizedCheckpt().Epoch)
+	cp, err := s.cfg.chain.FinalizedCheckpt()
+	if err != nil {
+		return pubsub.ValidationIgnore, nil
+	}
+	startSlot, err := slots.EpochStart(cp.Epoch)
 	if err != nil {
 		log.WithError(err).WithFields(getBlockFields(blk)).Debug("Ignored block: could not calculate epoch start slot")
 		return pubsub.ValidationIgnore, nil
@@ -168,7 +171,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		}
 		s.pendingQueueLock.Unlock()
 		err := errors.Errorf("unknown parent for block with slot %d and parent root %#x", blk.Block().Slot(), blk.Block().ParentRoot())
-		log.WithError(err).WithFields(getBlockFields(blk)).Debug("Could not process early block")
+		log.WithError(err).WithFields(getBlockFields(blk)).Debug("Could not identify parent for block")
 		return pubsub.ValidationIgnore, err
 	}
 
@@ -241,7 +244,7 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk interfaces.Signed
 	}
 
 	if err = s.validateBellatrixBeaconBlock(ctx, parentState, blk.Block()); err != nil {
-		if errors.Is(err, ErrOptimisticParent) || errors.Is(blockchain.ErrUndefinedExecutionEngineError, err) {
+		if errors.Is(err, ErrOptimisticParent) {
 			return err
 		}
 		// for other kinds of errors, set this block as a bad block.
