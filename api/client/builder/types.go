@@ -58,7 +58,7 @@ func stringToUint256(s string) Uint256 {
 // sszBytesToUint256 creates a Uint256 from a ssz-style (little-endian byte slice) representation.
 func sszBytesToUint256(b []byte) Uint256 {
 	bi := new(big.Int)
-	return Uint256{Int: bi.SetBytes(bytesutil.ReverseByteOrder(b))}
+	return Uint256{Int: bi.SetBytes((b))}
 }
 
 // SSZBytes creates an ssz-style (little-endian byte slice) representation of the Uint256

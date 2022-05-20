@@ -3,6 +3,7 @@ package builder
 import (
 	"context"
 	"encoding/hex"
+	"math/big"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/api/client/builder"
@@ -24,9 +25,20 @@ func TestMergeMockRoundtrip(t *testing.T) {
 	require.NoError(t, err)
 	t.Log(header.Message.Value)
 
-	st, keys := util.DeterministicGenesisState(t, 64)
-	b, err := util.GenerateFullBlock(st, keys, util.DefaultBlockGenConfig(), 1)
+	st, keys := util.DeterministicGenesisState(t, 1024)
+	b, err := util.GenerateFullBlock(st, keys, util.DefaultBlockGenConfig(), 2)
 	require.NoError(t, err)
+
+	bb := big.NewInt(1770307273)
+	header.Message.Header.BaseFeePerGas = bb.Bytes()
+
+	t.Log(len(b.Block.Body.Attestations))
+	t.Log(len(b.Block.Body.Deposits))
+	t.Log(len(b.Block.Body.VoluntaryExits))
+	t.Log(len(b.Block.Body.ProposerSlashings))
+	t.Log(len(b.Block.Body.AttesterSlashings))
+	t.Log(b.Block.Body.AttesterSlashings[0].Attestation_1.AttestingIndices)
+	t.Log(header.Message.Header.BaseFeePerGas)
 
 	sb := HydrateSignedBlindedBeaconBlockBellatrix(&ethpb.SignedBlindedBeaconBlockBellatrix{
 		Signature: keys[0].Sign([]byte("hello")).Marshal(),
@@ -36,12 +48,12 @@ func TestMergeMockRoundtrip(t *testing.T) {
 			StateRoot:     b.Block.StateRoot,
 			ProposerIndex: b.Block.ProposerIndex,
 			Body: &ethpb.BlindedBeaconBlockBodyBellatrix{
-				Attestations:           b.Block.Body.Attestations,
-				RandaoReveal:           b.Block.Body.RandaoReveal,
-				Deposits:               b.Block.Body.Deposits,
-				VoluntaryExits:         b.Block.Body.VoluntaryExits,
-				ProposerSlashings:      b.Block.Body.ProposerSlashings,
-				AttesterSlashings:      b.Block.Body.AttesterSlashings,
+				Attestations:      b.Block.Body.Attestations,
+				RandaoReveal:      b.Block.Body.RandaoReveal,
+				Deposits:          b.Block.Body.Deposits,
+				VoluntaryExits:    b.Block.Body.VoluntaryExits,
+				ProposerSlashings: b.Block.Body.ProposerSlashings,
+				//AttesterSlashings:      b.Block.Body.AttesterSlashings,
 				Graffiti:               b.Block.Body.Graffiti,
 				ExecutionPayloadHeader: header.Message.Header,
 			},
