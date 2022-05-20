@@ -574,7 +574,10 @@ func (bs *Server) GetBlockRoot(ctx context.Context, req *ethpbv1.BlockRequest) (
 			return nil, status.Errorf(codes.NotFound, "No head root was found")
 		}
 	case "finalized":
-		finalized := bs.ChainInfoFetcher.FinalizedCheckpt()
+		finalized, err := bs.ChainInfoFetcher.FinalizedCheckpt()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not retrieve finalized checkpoint: %v", err)
+		}
 		root = finalized.Root
 	case "genesis":
 		blk, err := bs.BeaconDB.GenesisBlock(ctx)
@@ -725,7 +728,10 @@ func (bs *Server) blockFromBlockID(ctx context.Context, blockId []byte) (interfa
 			return nil, errors.Wrap(err, "could not retrieve head block")
 		}
 	case "finalized":
-		finalized := bs.ChainInfoFetcher.FinalizedCheckpt()
+		finalized, err := bs.ChainInfoFetcher.FinalizedCheckpt()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not retrieve finalized checkpoint")
+		}
 		finalizedRoot := bytesutil.ToBytes32(finalized.Root)
 		blk, err = bs.BeaconDB.Block(ctx, finalizedRoot)
 		if err != nil {
