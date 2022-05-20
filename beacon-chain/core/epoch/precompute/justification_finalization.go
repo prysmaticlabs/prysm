@@ -150,6 +150,9 @@ func ComputeCheckpoints(state state.BeaconState, newBits bitfield.Bitvector4) (*
 	}
 
 	// Process finalization according to Ethereum Beacon Chain specification.
+	if len(newBits) == 0 {
+		return justifiedCheckpoint, finalizedCheckpoint, nil
+	}
 	justification := newBits.Bytes()[0]
 
 	// 2nd/3rd/4th (0b1110) most recent epochs are justified, the 2nd using the 4th as source.
