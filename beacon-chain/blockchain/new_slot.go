@@ -42,17 +42,17 @@ func (s *Service) NewSlot(ctx context.Context, slot types.Slot) error {
 	}
 
 	// Update store.justified_checkpoint if a better checkpoint on the store.finalized_checkpoint chain
-	bj := s.store.BestJustifiedCheckpt()
-	if bj == nil {
-		return errNilBestJustifiedInStore
+	bj, err := s.store.BestJustifiedCheckpt()
+	if err != nil {
+		return errors.Wrap(err, "could not get best justified checkpoint")
 	}
-	j := s.store.JustifiedCheckpt()
-	if j == nil {
-		return errNilJustifiedInStore
+	j, err := s.store.JustifiedCheckpt()
+	if err != nil {
+		return errors.Wrap(err, "could not get justified checkpoint")
 	}
-	f := s.store.FinalizedCheckpt()
-	if f == nil {
-		return errNilFinalizedInStore
+	f, err := s.store.FinalizedCheckpt()
+	if err != nil {
+		return errors.Wrap(err, "could not get finalized checkpoint")
 	}
 	if bj.Epoch > j.Epoch {
 		finalizedSlot, err := slots.EpochStart(f.Epoch)

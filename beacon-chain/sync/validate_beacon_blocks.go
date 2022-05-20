@@ -131,7 +131,11 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		return pubsub.ValidationIgnore, nil
 	}
 
-	startSlot, err := slots.EpochStart(s.cfg.chain.FinalizedCheckpt().Epoch)
+	cp, err := s.cfg.chain.FinalizedCheckpt()
+	if err != nil {
+		return pubsub.ValidationIgnore, nil
+	}
+	startSlot, err := slots.EpochStart(cp.Epoch)
 	if err != nil {
 		log.WithError(err).WithFields(getBlockFields(blk)).Debug("Ignored block: could not calculate epoch start slot")
 		return pubsub.ValidationIgnore, nil
