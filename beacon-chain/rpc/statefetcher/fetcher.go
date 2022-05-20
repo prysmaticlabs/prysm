@@ -116,13 +116,19 @@ func (p *StateProvider) State(ctx context.Context, stateId []byte) (state.Beacon
 			return nil, errors.Wrap(err, "could not get genesis state")
 		}
 	case "finalized":
-		checkpoint := p.ChainInfoFetcher.FinalizedCheckpt()
+		checkpoint, err := p.ChainInfoFetcher.FinalizedCheckpt()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get finalized checkpoint")
+		}
 		s, err = p.StateGenService.StateByRoot(ctx, bytesutil.ToBytes32(checkpoint.Root))
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get finalized state")
 		}
 	case "justified":
-		checkpoint := p.ChainInfoFetcher.CurrentJustifiedCheckpt()
+		checkpoint, err := p.ChainInfoFetcher.CurrentJustifiedCheckpt()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get justified checkpoint")
+		}
 		s, err = p.StateGenService.StateByRoot(ctx, bytesutil.ToBytes32(checkpoint.Root))
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get justified state")
