@@ -25,14 +25,14 @@ func TestSlot_Casting(t *testing.T) {
 			t.Errorf("Unequal: %v = %v", types.Slot(x1), slot)
 		}
 
-		var x2 float64 = 42.2
+		var x2 = 42.2
 		if types.Slot(x2) != slot {
 			t.Errorf("Unequal: %v = %v", types.Slot(x2), slot)
 		}
 	})
 
 	t.Run("int", func(t *testing.T) {
-		var x int = 42
+		var x = 42
 		if types.Slot(x) != slot {
 			t.Errorf("Unequal: %v = %v", types.Slot(x), slot)
 		}

@@ -20,14 +20,14 @@ func TestValidatorIndex_Casting(t *testing.T) {
 			t.Errorf("Unequal: %v = %v", ValidatorIndex(x1), valIdx)
 		}
 
-		var x2 float64 = 42.2
+		var x2 = 42.2
 		if ValidatorIndex(x2) != valIdx {
 			t.Errorf("Unequal: %v = %v", ValidatorIndex(x2), valIdx)
 		}
 	})
 
 	t.Run("int", func(t *testing.T) {
-		var x int = 42
+		var x = 42
 		if ValidatorIndex(x) != valIdx {
 			t.Errorf("Unequal: %v = %v", ValidatorIndex(x), valIdx)
 		}

@@ -25,7 +25,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
@@ -46,7 +45,7 @@ func TestValidateBeaconBlockPubSub_InvalidSignature(t *testing.T) {
 	db := dbtest.SetupDB(t)
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
-	beaconState, _ := util.DeterministicGenesisState(t, 100)
+	beaconState, privKeys := util.DeterministicGenesisState(t, 100)
 	parentBlock := util.NewBeaconBlock()
 	wsb, err := wrapper.WrappedSignedBeaconBlock(parentBlock)
 	require.NoError(t, err)
@@ -63,14 +62,18 @@ func TestValidateBeaconBlockPubSub_InvalidSignature(t *testing.T) {
 	msg.Block.ParentRoot = bRoot[:]
 	msg.Block.Slot = 1
 	msg.Block.ProposerIndex = proposerIdx
-	msg.Signature = bytesutil.PadTo([]byte("fake"), fieldparams.BLSSignatureLength)
+	badPrivKeyIdx := proposerIdx + 1 // We generate a valid signature from a wrong private key which fails to verify
+	msg.Signature, err = signing.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[badPrivKeyIdx])
+	require.NoError(t, err)
 
 	stateGen := stategen.New(db)
 	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
 		FinalizedCheckPoint: &ethpb.Checkpoint{
 			Epoch: 0,
 			Root:  make([]byte, 32),
-		}}
+		},
+		DB: db,
+	}
 	r := &Service{
 		cfg: &config{
 			beaconDB:      db,
@@ -88,6 +91,9 @@ func TestValidateBeaconBlockPubSub_InvalidSignature(t *testing.T) {
 	_, err = p.Encoding().EncodeGossip(buf, msg)
 	require.NoError(t, err)
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(msg)]
+	digest, err := r.currentForkDigest()
+	assert.NoError(t, err)
+	topic = r.addDigestToTopic(topic, digest)
 	m := &pubsub.Message{
 		Message: &pubsubpb.Message{
 			Data:  buf.Bytes(),
@@ -95,7 +101,7 @@ func TestValidateBeaconBlockPubSub_InvalidSignature(t *testing.T) {
 		},
 	}
 	res, err := r.validateBeaconBlockPubSub(ctx, "", m)
-	assert.NotNil(t, err)
+	require.ErrorIs(t, err, signing.ErrSigFailedToVerify)
 	result := res == pubsub.ValidationReject
 	assert.Equal(t, true, result)
 }
@@ -130,6 +136,9 @@ func TestValidateBeaconBlockPubSub_BlockAlreadyPresentInDB(t *testing.T) {
 	require.NoError(t, err)
 
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(msg)]
+	digest, err := r.currentForkDigest()
+	assert.NoError(t, err)
+	topic = r.addDigestToTopic(topic, digest)
 	m := &pubsub.Message{
 		Message: &pubsubpb.Message{
 			Data:  buf.Bytes(),
@@ -137,9 +146,8 @@ func TestValidateBeaconBlockPubSub_BlockAlreadyPresentInDB(t *testing.T) {
 		},
 	}
 	res, err := r.validateBeaconBlockPubSub(ctx, "", m)
-	_ = err
-	result := res == pubsub.ValidationAccept
-	assert.Equal(t, false, result)
+	assert.NoError(t, err)
+	assert.Equal(t, res, pubsub.ValidationIgnore, "block present in DB should be ignored")
 }
 
 func TestValidateBeaconBlockPubSub_CanRecoverStateSummary(t *testing.T) {
@@ -516,12 +524,11 @@ func TestValidateBeaconBlockPubSub_Syncing(t *testing.T) {
 		},
 	}
 	res, err := r.validateBeaconBlockPubSub(ctx, "", m)
-	_ = err
-	result := res == pubsub.ValidationAccept
-	assert.Equal(t, false, result)
+	assert.NoError(t, err)
+	assert.Equal(t, res, pubsub.ValidationIgnore, "block is ignored until fully synced")
 }
 
-func TestValidateBeaconBlockPubSub_AcceptBlocksFromNearFuture(t *testing.T) {
+func TestValidateBeaconBlockPubSub_IgnoreAndQueueBlocksFromNearFuture(t *testing.T) {
 	db := dbtest.SetupDB(t)
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
@@ -583,9 +590,8 @@ func TestValidateBeaconBlockPubSub_AcceptBlocksFromNearFuture(t *testing.T) {
 		},
 	}
 	res, err := r.validateBeaconBlockPubSub(ctx, "", m)
-	_ = err
-	result := res == pubsub.ValidationIgnore
-	assert.Equal(t, true, result)
+	require.ErrorContains(t, "early block, with current slot", err)
+	assert.Equal(t, res, pubsub.ValidationIgnore, "early block should be ignored and queued")
 
 	// check if the block is inserted in the Queue
 	assert.Equal(t, true, len(r.pendingBlocksInCache(msg.Block.Slot)) == 1)
@@ -600,7 +606,7 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromFuture(t *testing.T) {
 	sk, err := bls.SecretKeyFromBytes(b32[:])
 	require.NoError(t, err)
 	msg := util.NewBeaconBlock()
-	msg.Block.Slot = 3
+	msg.Block.Slot = 10
 	msg.Block.ParentRoot = util.Random32Bytes(t)
 	msg.Signature = sk.Sign([]byte("data")).Marshal()
 
@@ -624,6 +630,9 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromFuture(t *testing.T) {
 	_, err = p.Encoding().EncodeGossip(buf, msg)
 	require.NoError(t, err)
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(msg)]
+	digest, err := r.currentForkDigest()
+	assert.NoError(t, err)
+	topic = r.addDigestToTopic(topic, digest)
 	m := &pubsub.Message{
 		Message: &pubsubpb.Message{
 			Data:  buf.Bytes(),
@@ -631,9 +640,8 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromFuture(t *testing.T) {
 		},
 	}
 	res, err := r.validateBeaconBlockPubSub(ctx, "", m)
-	_ = err
-	result := res == pubsub.ValidationAccept
-	assert.Equal(t, false, result)
+	assert.NoError(t, err)
+	assert.Equal(t, res, pubsub.ValidationIgnore, "block from the future should be ignored")
 }
 
 func TestValidateBeaconBlockPubSub_RejectBlocksFromThePast(t *testing.T) {
@@ -672,6 +680,9 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromThePast(t *testing.T) {
 	_, err = p.Encoding().EncodeGossip(buf, msg)
 	require.NoError(t, err)
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(msg)]
+	digest, err := r.currentForkDigest()
+	assert.NoError(t, err)
+	topic = r.addDigestToTopic(topic, digest)
 	m := &pubsub.Message{
 		Message: &pubsubpb.Message{
 			Data:  buf.Bytes(),
@@ -679,9 +690,8 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromThePast(t *testing.T) {
 		},
 	}
 	res, err := r.validateBeaconBlockPubSub(ctx, "", m)
-	_ = err
-	result := res == pubsub.ValidationAccept
-	assert.Equal(t, false, result)
+	require.ErrorContains(t, "greater or equal to block slot", err)
+	assert.Equal(t, res, pubsub.ValidationIgnore, "block from the past should be ignored")
 }
 
 func TestValidateBeaconBlockPubSub_SeenProposerSlot(t *testing.T) {
@@ -731,6 +741,9 @@ func TestValidateBeaconBlockPubSub_SeenProposerSlot(t *testing.T) {
 	_, err = p.Encoding().EncodeGossip(buf, msg)
 	require.NoError(t, err)
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(msg)]
+	digest, err := r.currentForkDigest()
+	assert.NoError(t, err)
+	topic = r.addDigestToTopic(topic, digest)
 	m := &pubsub.Message{
 		Message: &pubsubpb.Message{
 			Data:  buf.Bytes(),
@@ -740,9 +753,8 @@ func TestValidateBeaconBlockPubSub_SeenProposerSlot(t *testing.T) {
 	r.setSeenBlockIndexSlot(msg.Block.Slot, msg.Block.ProposerIndex)
 	time.Sleep(10 * time.Millisecond) // Wait for cached value to pass through buffers.
 	res, err := r.validateBeaconBlockPubSub(ctx, "", m)
-	_ = err
-	result := res == pubsub.ValidationAccept
-	assert.Equal(t, false, result)
+	assert.NoError(t, err)
+	assert.Equal(t, res, pubsub.ValidationIgnore, "seen proposer block should be ignored")
 }
 
 func TestValidateBeaconBlockPubSub_FilterByFinalizedEpoch(t *testing.T) {
@@ -932,6 +944,9 @@ func TestValidateBeaconBlockPubSub_InvalidParentBlock(t *testing.T) {
 	_, err = p.Encoding().EncodeGossip(buf, msg)
 	require.NoError(t, err)
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(msg)]
+	digest, err := r.currentForkDigest()
+	assert.NoError(t, err)
+	topic = r.addDigestToTopic(topic, digest)
 	m := &pubsub.Message{
 		Message: &pubsubpb.Message{
 			Data:  buf.Bytes(),
@@ -939,9 +954,8 @@ func TestValidateBeaconBlockPubSub_InvalidParentBlock(t *testing.T) {
 		},
 	}
 	res, err := r.validateBeaconBlockPubSub(ctx, "", m)
-	_ = err
-	result := res == pubsub.ValidationAccept
-	assert.Equal(t, false, result)
+	require.ErrorContains(t, "unknown parent for block", err)
+	assert.Equal(t, res, pubsub.ValidationIgnore, "block with invalid parent should be ignored")
 
 	require.NoError(t, copied.SetSlot(2))
 	proposerIdx, err = helpers.BeaconProposerIndex(ctx, copied)
@@ -961,21 +975,27 @@ func TestValidateBeaconBlockPubSub_InvalidParentBlock(t *testing.T) {
 			Topic: &topic,
 		},
 	}
+	chainService = &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(2*params.BeaconConfig().SecondsPerSlot), 0),
+		State: beaconState,
+		FinalizedCheckPoint: &ethpb.Checkpoint{
+			Epoch: 0,
+		}}
+	r.cfg.chain = chainService
 
 	res, err = r.validateBeaconBlockPubSub(ctx, "", m)
-	_ = err
-	result = res == pubsub.ValidationAccept
+	require.ErrorContains(t, "unknown parent for block", err)
 	// Expect block with bad parent to fail too
-	assert.Equal(t, false, result)
+	assert.Equal(t, res, pubsub.ValidationIgnore, "block with invalid parent should be ignored")
 }
 
-func TestValidateBeaconBlockPubSub_RejectEvilBlocksFromFuture(t *testing.T) {
+func TestValidateBeaconBlockPubSub_RejectBlocksFromBadParent(t *testing.T) {
 	db := dbtest.SetupDB(t)
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 
 	beaconState, privKeys := util.DeterministicGenesisState(t, 100)
 	parentBlock := util.NewBeaconBlock()
+	parentBlock.Block.ParentRoot = bytesutil.PadTo([]byte("foo"), 32)
 	wsb, err := wrapper.WrappedSignedBeaconBlock(parentBlock)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, wsb))
@@ -1031,11 +1051,15 @@ func TestValidateBeaconBlockPubSub_RejectEvilBlocksFromFuture(t *testing.T) {
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
 	}
+	r.setBadBlock(ctx, bytesutil.ToBytes32(msg.Block.ParentRoot))
 
 	buf := new(bytes.Buffer)
 	_, err = p.Encoding().EncodeGossip(buf, msg)
 	require.NoError(t, err)
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(msg)]
+	digest, err := r.currentForkDigest()
+	assert.NoError(t, err)
+	topic = r.addDigestToTopic(topic, digest)
 	m := &pubsub.Message{
 		Message: &pubsubpb.Message{
 			Data:  buf.Bytes(),
@@ -1043,9 +1067,8 @@ func TestValidateBeaconBlockPubSub_RejectEvilBlocksFromFuture(t *testing.T) {
 		},
 	}
 	res, err := r.validateBeaconBlockPubSub(ctx, "", m)
-	_ = err
-	result := res == pubsub.ValidationAccept
-	assert.Equal(t, false, result)
+	assert.ErrorContains(t, "invalid parent", err)
+	assert.Equal(t, res, pubsub.ValidationReject)
 }
 
 func TestService_setBadBlock_DoesntSetWithContextErr(t *testing.T) {
