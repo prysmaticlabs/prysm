@@ -36,6 +36,7 @@ func TestEndToEnd_Slasher_MinimalConfig(t *testing.T) {
 			ev.InjectDoubleVoteOnEpoch(2),
 			ev.InjectDoubleBlockOnEpoch(2),
 		},
+		EvalInterceptor:     defaultInterceptor,
 		TracingSinkEndpoint: tracingEndpoint,
 	}
 
