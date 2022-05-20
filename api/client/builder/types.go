@@ -6,9 +6,9 @@ import (
 	"math/big"
 	"strconv"
 
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	v1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
@@ -149,7 +149,7 @@ func (bb *BuilderBid) ToProto() (*eth.BuilderBid, error) {
 	}
 	return &eth.BuilderBid{
 		Header: header,
-		Value:  bb.Value.Bytes(),
+		Value:  bb.Value.SSZBytes(),
 		Pubkey: bb.Pubkey,
 	}, nil
 }
@@ -167,7 +167,7 @@ func (h *ExecutionPayloadHeader) ToProto() (*eth.ExecutionPayloadHeader, error) 
 		GasUsed:          uint64(h.GasUsed),
 		Timestamp:        uint64(h.Timestamp),
 		ExtraData:        h.ExtraData,
-		BaseFeePerGas:    h.BaseFeePerGas.Bytes(),
+		BaseFeePerGas:    h.BaseFeePerGas.SSZBytes(),
 		BlockHash:        h.BlockHash,
 		TransactionsRoot: h.TransactionsRoot,
 	}, nil
@@ -260,7 +260,7 @@ func (p *ExecutionPayload) ToProto() (*v1.ExecutionPayload, error) {
 		GasUsed:       uint64(p.GasUsed),
 		Timestamp:     uint64(p.Timestamp),
 		ExtraData:     p.ExtraData,
-		BaseFeePerGas: p.BaseFeePerGas.Bytes(),
+		BaseFeePerGas: p.BaseFeePerGas.SSZBytes(),
 		BlockHash:     p.BlockHash,
 		Transactions:  txs,
 	}, nil

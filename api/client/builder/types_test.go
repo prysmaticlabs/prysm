@@ -61,11 +61,11 @@ var testExampleHeaderResponse = `{
         "gas_used": "1",
         "timestamp": "1",
         "extra_data": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "base_fee_per_gas": "1",
+        "base_fee_per_gas": "452312848583266388373324160190187140051835877600158453279131187530910662656",
         "block_hash": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
         "transactions_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
       },
-      "value": "1",
+      "value": "652312848583266388373324160190187140051835877600158453279131187530910662656",
       "pubkey": "0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a"
     },
     "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
@@ -91,7 +91,7 @@ func TestExecutionHeaderResponseUnmarshal(t *testing.T) {
 			name:     "ExecHeaderResponse.Pubkey",
 		},
 		{
-			expected: "1",
+			expected: "652312848583266388373324160190187140051835877600158453279131187530910662656",
 			actual:   hr.Data.Message.Value.String(),
 			name:     "ExecHeaderResponse.Value",
 		},
@@ -151,7 +151,7 @@ func TestExecutionHeaderResponseUnmarshal(t *testing.T) {
 			name:     "ExecHeaderResponse.ExecutionPayloadHeader.ExtraData",
 		},
 		{
-			expected: "1",
+			expected: "452312848583266388373324160190187140051835877600158453279131187530910662656",
 			actual:   fmt.Sprintf("%d", hr.Data.Message.Header.BaseFeePerGas),
 			name:     "ExecHeaderResponse.ExecutionPayloadHeader.BaseFeePerGas",
 		},
@@ -172,6 +172,8 @@ func TestExecutionHeaderResponseUnmarshal(t *testing.T) {
 }
 
 func TestExecutionHeaderResponseToProto(t *testing.T) {
+	bfpg := stringToUint256("452312848583266388373324160190187140051835877600158453279131187530910662656")
+	v := stringToUint256("652312848583266388373324160190187140051835877600158453279131187530910662656")
 	hr := &ExecHeaderResponse{}
 	require.NoError(t, json.Unmarshal([]byte(testExampleHeaderResponse), hr))
 	p, err := hr.ToProto()
@@ -213,11 +215,11 @@ func TestExecutionHeaderResponseToProto(t *testing.T) {
 				GasUsed:          1,
 				Timestamp:        1,
 				ExtraData:        extraData,
-				BaseFeePerGas:    uint64ToUint256(1).SSZBytes(),
+				BaseFeePerGas:    bfpg.SSZBytes(),
 				BlockHash:        blockHash,
 				TransactionsRoot: txRoot,
 			},
-			Value:  uint64ToUint256(1).SSZBytes(),
+			Value:  v.SSZBytes(),
 			Pubkey: pubkey,
 		},
 		Signature: signature,
