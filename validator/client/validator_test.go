@@ -1565,6 +1565,7 @@ func TestValidator_UdpateFeeRecipient(t *testing.T) {
 
 				v := validator{
 					validatorClient:        client,
+					node:                   nodeClient,
 					db:                     db,
 					pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
 					useWeb:                 false,
@@ -1591,10 +1592,34 @@ func TestValidator_UdpateFeeRecipient(t *testing.T) {
 				).Return(&ethpb.ValidatorIndexResponse{
 					Index: 1,
 				}, nil)
+				nodeClient.EXPECT().GetGenesis(
+					gomock.Any(),
+					&emptypb.Empty{},
+				).Return(
+					&ethpb.Genesis{GenesisTime: timestamppb.Now()}, nil)
+
+				client.EXPECT().DomainData(
+					gomock.Any(),
+					gomock.Any(),
+				).Return(
+					&ethpb.DomainResponse{
+						SignatureDomain: make([]byte, 32),
+					},
+					nil)
+				client.EXPECT().SubmitValidatorRegistration(
+					gomock.Any(),
+					gomock.Any(),
+				).Return(&empty.Empty{}, nil)
 				return &v
 			},
 			feeRecipientMap: map[types.ValidatorIndex]string{
 				1: defaultFeeHex,
+			},
+			mockExpectedRequests: []ethpb.ValidatorRegistrationV1{
+				{
+					FeeRecipient: byteValueAddress,
+					GasLimit:     fieldparams.DefaultBuilderGasLimit,
+				},
 			},
 		},
 		{
@@ -1603,6 +1628,7 @@ func TestValidator_UdpateFeeRecipient(t *testing.T) {
 
 				v := validator{
 					validatorClient:        client,
+					node:                   nodeClient,
 					db:                     db,
 					pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
 					useWeb:                 false,
@@ -1632,18 +1658,49 @@ func TestValidator_UdpateFeeRecipient(t *testing.T) {
 				}, nil)
 				config[keys[0]] = &validator_service_config.ValidatorProposerOptions{
 					FeeRecipient: common.HexToAddress("0x055Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
+					GasLimit:     uint64(40000000),
 				}
 				v.validatorProposerSettings = &validator_service_config.ValidatorProposerSettings{
 					ProposeConfig: config,
 					DefaultConfig: &validator_service_config.ValidatorProposerOptions{
 						FeeRecipient: common.HexToAddress(defaultFeeHex),
+						GasLimit:     uint64(35000000),
 					},
 				}
+				nodeClient.EXPECT().GetGenesis(
+					gomock.Any(),
+					&emptypb.Empty{},
+				).Times(2).Return(
+					&ethpb.Genesis{GenesisTime: timestamppb.Now()}, nil)
+
+				client.EXPECT().DomainData(
+					gomock.Any(),
+					gomock.Any(),
+				).Times(2).Return(
+					&ethpb.DomainResponse{
+						SignatureDomain: make([]byte, 32),
+					},
+					nil)
+				client.EXPECT().SubmitValidatorRegistration(
+					gomock.Any(),
+					gomock.Any(),
+				).Times(2).Return(&empty.Empty{}, nil)
 				return &v
 			},
 			feeRecipientMap: map[types.ValidatorIndex]string{
 				1: "0x055Fb65722E7b2455043BFEBf6177F1D2e9738D9",
 				2: defaultFeeHex,
+			},
+			mockExpectedRequests: []ethpb.ValidatorRegistrationV1{
+
+				{
+					FeeRecipient: common.HexToAddress("0x055Fb65722E7b2455043BFEBf6177F1D2e9738D9").Bytes(),
+					GasLimit:     uint64(40000000),
+				},
+				{
+					FeeRecipient: byteValueAddress,
+					GasLimit:     uint64(35000000),
+				},
 			},
 		},
 		{
@@ -1652,6 +1709,7 @@ func TestValidator_UdpateFeeRecipient(t *testing.T) {
 
 				v := validator{
 					validatorClient:        client,
+					node:                   nodeClient,
 					db:                     db,
 					pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
 					useWeb:                 false,
@@ -1682,7 +1740,24 @@ func TestValidator_UdpateFeeRecipient(t *testing.T) {
 						FeeRecipient: common.HexToAddress(defaultFeeHex),
 					},
 				}
+				nodeClient.EXPECT().GetGenesis(
+					gomock.Any(),
+					&emptypb.Empty{},
+				).Return(
+					&ethpb.Genesis{GenesisTime: timestamppb.Now()}, nil)
 
+				client.EXPECT().DomainData(
+					gomock.Any(),
+					gomock.Any(),
+				).Return(
+					&ethpb.DomainResponse{
+						SignatureDomain: make([]byte, 32),
+					},
+					nil)
+				client.EXPECT().SubmitValidatorRegistration(
+					gomock.Any(),
+					gomock.Any(),
+				).Return(&empty.Empty{}, nil)
 				return &v
 			},
 		},
@@ -1763,7 +1838,7 @@ func TestValidator_UdpateFeeRecipient(t *testing.T) {
 				}
 				require.Equal(t, len(tt.mockExpectedRequests), len(registerValidatorRequests))
 			}
-			if err := v.UpdateFeeRecipient(ctx, km); tt.err != "" {
+			if err := v.UpdateValidatorProposerSettings(ctx, km); tt.err != "" {
 				assert.ErrorContains(t, tt.err, err)
 			}
 		})

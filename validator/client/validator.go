@@ -938,8 +938,8 @@ func (v *validator) logDuties(slot types.Slot, duties []*ethpb.DutiesResponse_Du
 	}
 }
 
-// UpdateFeeRecipient calls the prepareBeaconProposer RPC to set the fee recipient.
-func (v *validator) UpdateFeeRecipient(ctx context.Context, km keymanager.IKeymanager) error {
+// UpdateValidatorProposerSettings calls the prepareBeaconProposer RPC to set the fee recipient and also the register validator API if using a custom builder.
+func (v *validator) UpdateValidatorProposerSettings(ctx context.Context, km keymanager.IKeymanager) error {
 	// only used after Bellatrix
 	if v.validatorProposerSettings == nil {
 		e := params.BeaconConfig().BellatrixForkEpoch

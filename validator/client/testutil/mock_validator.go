@@ -248,7 +248,7 @@ func (_ *FakeValidator) SubmitSignedContributionAndProof(_ context.Context, _ ty
 }
 
 // UpdateFeeRecipient for mocking
-func (_ *FakeValidator) UpdateFeeRecipient(_ context.Context, _ keymanager.IKeymanager) error {
+func (_ *FakeValidator) UpdateValidatorProposerSettings(_ context.Context, _ keymanager.IKeymanager) error {
 	return nil
 }
 
