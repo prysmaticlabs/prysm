@@ -252,7 +252,7 @@ func TestFollowBlock_OK(t *testing.T) {
 	// simulated backend sets eth1 block
 	// time as 10 seconds
 	params.SetupTestConfigCleanup(t)
-	conf := params.BeaconConfig()
+	conf := params.BeaconConfig().Copy()
 	conf.SecondsPerETH1Block = 10
 	params.OverrideBeaconConfig(conf)
 
@@ -340,7 +340,7 @@ func TestLogTillGenesis_OK(t *testing.T) {
 	}()
 
 	params.SetupTestConfigCleanup(t)
-	cfg := params.BeaconConfig()
+	cfg := params.BeaconConfig().Copy()
 	cfg.Eth1FollowDistance = 5
 	params.OverrideBeaconConfig(cfg)
 
@@ -506,7 +506,7 @@ func TestNewService_EarliestVotingBlock(t *testing.T) {
 	// simulated backend sets eth1 block
 	// time as 10 seconds
 	params.SetupTestConfigCleanup(t)
-	conf := params.BeaconConfig()
+	conf := params.BeaconConfig().Copy()
 	conf.SecondsPerETH1Block = 10
 	conf.Eth1FollowDistance = 50
 	params.OverrideBeaconConfig(conf)

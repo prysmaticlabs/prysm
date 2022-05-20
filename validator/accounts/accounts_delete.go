@@ -12,7 +12,7 @@ import (
 	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
 )
 
-// Deletes the accounts that the user requests to be deleted from the wallet.
+// Delete the accounts that the user requests to be deleted from the wallet.
 func (acm *AccountsCLIManager) Delete(ctx context.Context) error {
 	rawPublicKeys := make([][]byte, len(acm.filteredPubKeys))
 	formattedPubKeys := make([]string, len(acm.filteredPubKeys))
