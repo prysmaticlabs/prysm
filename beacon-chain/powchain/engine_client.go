@@ -298,7 +298,7 @@ func (s *Service) ExecutionBlockByHash(ctx context.Context, hash common.Hash) (*
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.ExecutionBlockByHash")
 	defer span.End()
 	result := &pb.ExecutionBlock{}
-	err := s.rpcClient.CallContext(ctx, result, ExecutionBlockByHashMethod, hash, true /* no full transaction objects */)
+	err := s.rpcClient.CallContext(ctx, result, ExecutionBlockByHashMethod, hash, false /* no full transaction objects */)
 	return result, handleRPCError(err)
 }
 
@@ -313,7 +313,7 @@ func (s *Service) ExecutionBlockByHashWithTxs(ctx context.Context, hash common.H
 	}()
 
 	result := &pb.ExecutionBlockWithTxs{}
-	err := s.rpcClient.CallContext(ctx, result, ExecutionBlockByHashMethod, hash, true /* no full transaction objects */)
+	err := s.rpcClient.CallContext(ctx, result, ExecutionBlockByHashMethod, hash, true /* full transaction objects */)
 	return result, handleRPCError(err)
 }
 

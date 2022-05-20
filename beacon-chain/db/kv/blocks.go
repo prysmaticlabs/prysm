@@ -718,19 +718,21 @@ func unmarshalBlock(_ context.Context, enc []byte) (interfaces.SignedBeaconBlock
 // marshal versioned beacon block from struct type down to bytes.
 func marshalBlock(_ context.Context, blk interfaces.SignedBeaconBlock) ([]byte, error) {
 	var encodedBlock []byte
+	var blindedBlock interfaces.SignedBeaconBlock
 	var err error
-	// If the version is pre-bellatrix, we encode the block as is.
-	if blk.Version() == version.Altair || blk.Version() == version.Phase0 {
+	// If the block supports blinding of execution payloads, we wrap as
+	// a signed, blinded beacon block and then marshal to bytes. Otherwise,
+	// We just marshal the block as it is.
+	blindedBlock, err = wrapper.WrapSignedBlindedBeaconBlock(blk)
+	switch {
+	case errors.Is(err, wrapper.ErrUnsupportedSignedBeaconBlock):
 		encodedBlock, err = blk.MarshalSSZ()
 		if err != nil {
 			return nil, err
 		}
-	} else {
-		// Else, we only store signed, blinded beacon blocks in the database.
-		blindedBlock, err := wrapper.WrapSignedBlindedBeaconBlock(blk)
-		if err != nil {
-			return nil, err
-		}
+	case err != nil:
+		return nil, err
+	default:
 		encodedBlock, err = blindedBlock.MarshalSSZ()
 		if err != nil {
 			return nil, err
