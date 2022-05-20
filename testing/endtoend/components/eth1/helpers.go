@@ -24,6 +24,7 @@ const staticFilesPath = "/testing/endtoend/static-files/eth1"
 const timeGapPerMiningTX = 250 * time.Millisecond
 
 var _ e2etypes.ComponentRunner = (*NodeSet)(nil)
+var _ e2etypes.MultipleComponentRunners = (*NodeSet)(nil)
 var _ e2etypes.ComponentRunner = (*Miner)(nil)
 var _ e2etypes.ComponentRunner = (*Node)(nil)
 

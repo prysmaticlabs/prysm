@@ -4,15 +4,16 @@ package components
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"path"
 	"strconv"
 	"strings"
+	"syscall"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
+	"github.com/pkg/errors"
 	cmdshared "github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/config/features"
@@ -24,12 +25,14 @@ import (
 
 var _ e2etypes.ComponentRunner = (*BeaconNode)(nil)
 var _ e2etypes.ComponentRunner = (*BeaconNodeSet)(nil)
+var _ e2etypes.MultipleComponentRunners = (*BeaconNodeSet)(nil)
 var _ e2etypes.BeaconNodeSet = (*BeaconNodeSet)(nil)
 
 // BeaconNodeSet represents set of beacon nodes.
 type BeaconNodeSet struct {
 	e2etypes.ComponentRunner
 	config  *e2etypes.E2EConfig
+	nodes   []e2etypes.ComponentRunner
 	enr     string
 	ids     []string
 	started chan struct{}
@@ -59,6 +62,7 @@ func (s *BeaconNodeSet) Start(ctx context.Context) error {
 	for i := 0; i < e2e.TestParams.BeaconNodeCount; i++ {
 		nodes[i] = NewBeaconNode(s.config, i, s.enr)
 	}
+	s.nodes = nodes
 
 	// Wait for all nodes to finish their job (blocking).
 	// Once nodes are ready passed in handler function will be called.
@@ -79,6 +83,60 @@ func (s *BeaconNodeSet) Started() <-chan struct{} {
 	return s.started
 }
 
+// Pause pauses the component and its underlying process.
+func (s *BeaconNodeSet) Pause() error {
+	for _, n := range s.nodes {
+		if err := n.Pause(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// Resume resumes the component and its underlying process.
+func (s *BeaconNodeSet) Resume() error {
+	for _, n := range s.nodes {
+		if err := n.Resume(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// Stop stops the component and its underlying process.
+func (s *BeaconNodeSet) Stop() error {
+	for _, n := range s.nodes {
+		if err := n.Stop(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// PauseAtIndex pauses the component and its underlying process at the desired index.
+func (s *BeaconNodeSet) PauseAtIndex(i int) error {
+	if i >= len(s.nodes) {
+		return errors.Errorf("provided index exceeds slice size: %d >= %d", i, len(s.nodes))
+	}
+	return s.nodes[i].Pause()
+}
+
+// ResumeAtIndex resumes the component and its underlying process at the desired index.
+func (s *BeaconNodeSet) ResumeAtIndex(i int) error {
+	if i >= len(s.nodes) {
+		return errors.Errorf("provided index exceeds slice size: %d >= %d", i, len(s.nodes))
+	}
+	return s.nodes[i].Resume()
+}
+
+// StopAtIndex stops the component and its underlying process at the desired index.
+func (s *BeaconNodeSet) StopAtIndex(i int) error {
+	if i >= len(s.nodes) {
+		return errors.Errorf("provided index exceeds slice size: %d >= %d", i, len(s.nodes))
+	}
+	return s.nodes[i].Stop()
+}
+
 // BeaconNode represents beacon node.
 type BeaconNode struct {
 	e2etypes.ComponentRunner
@@ -87,6 +145,7 @@ type BeaconNode struct {
 	index   int
 	enr     string
 	peerID  string
+	cmd     *exec.Cmd
 }
 
 // NewBeaconNode creates and returns a beacon node.
@@ -196,10 +255,26 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 	// Mark node as ready.
 	close(node.started)
 
+	node.cmd = cmd
 	return cmd.Wait()
 }
 
 // Started checks whether beacon node is started and ready to be queried.
 func (node *BeaconNode) Started() <-chan struct{} {
 	return node.started
+}
+
+// Pause pauses the component and its underlying process.
+func (node *BeaconNode) Pause() error {
+	return node.cmd.Process.Signal(syscall.SIGSTOP)
+}
+
+// Resume resumes the component and its underlying process.
+func (node *BeaconNode) Resume() error {
+	return node.cmd.Process.Signal(syscall.SIGCONT)
+}
+
+// Stop stops the component and its underlying process.
+func (node *BeaconNode) Stop() error {
+	return node.cmd.Process.Kill()
 }

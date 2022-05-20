@@ -56,7 +56,7 @@ var ErrForkNotFound = errors.New("version found in fork schedule but can't be ma
 // FromForkVersion uses a lookup table to resolve a Version (from a beacon node api for instance, or obtained by peeking at
 // the bytes of a marshaled BeaconState) to a VersionedUnmarshaler.
 func FromForkVersion(cv [fieldparams.VersionLength]byte) (*VersionedUnmarshaler, error) {
-	cfg, err := params.ConfigForVersion(cv)
+	cfg, err := params.ByVersion(cv)
 	if err != nil {
 		return nil, err
 	}

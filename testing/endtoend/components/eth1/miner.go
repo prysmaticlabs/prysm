@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
@@ -33,6 +34,7 @@ type Miner struct {
 	bootstrapEnr string
 	enr          string
 	keystorePath string
+	cmd          *exec.Cmd
 }
 
 // NewMiner creates and returns an ETH1 node miner.
@@ -227,12 +229,28 @@ func (m *Miner) Start(ctx context.Context) error {
 	// Mark node as ready.
 	close(m.started)
 
+	m.cmd = runCmd
 	return runCmd.Wait()
 }
 
 // Started checks whether ETH1 node is started and ready to be queried.
 func (m *Miner) Started() <-chan struct{} {
 	return m.started
+}
+
+// Pause pauses the component and its underlying process.
+func (m *Miner) Pause() error {
+	return m.cmd.Process.Signal(syscall.SIGSTOP)
+}
+
+// Resume resumes the component and its underlying process.
+func (m *Miner) Resume() error {
+	return m.cmd.Process.Signal(syscall.SIGCONT)
+}
+
+// Stop kills the component and its underlying process.
+func (m *Miner) Stop() error {
+	return m.cmd.Process.Kill()
 }
 
 func enodeFromLogFile(name string) (string, error) {

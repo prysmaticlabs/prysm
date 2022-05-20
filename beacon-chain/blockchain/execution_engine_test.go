@@ -387,12 +387,13 @@ func Test_NotifyNewPayload(t *testing.T) {
 	require.NoError(t, fcs.InsertOptimisticBlock(ctx, 1, r, [32]byte{}, params.BeaconConfig().ZeroHash, 0, 0))
 
 	tests := []struct {
-		name           string
 		postState      state.BeaconState
+		invalidBlock   bool
 		isValidPayload bool
 		blk            interfaces.SignedBeaconBlock
 		newPayloadErr  error
 		errString      string
+		name           string
 	}{
 		{
 			name:           "phase 0 post state",
@@ -424,6 +425,7 @@ func Test_NotifyNewPayload(t *testing.T) {
 			newPayloadErr:  powchain.ErrInvalidPayloadStatus,
 			errString:      ErrInvalidPayload.Error(),
 			isValidPayload: false,
+			invalidBlock:   true,
 		},
 		{
 			name:           "altair pre state, altair block",
@@ -535,9 +537,13 @@ func Test_NotifyNewPayload(t *testing.T) {
 			isValidPayload, err := service.notifyNewPayload(ctx, postVersion, postHeader, tt.blk)
 			if tt.errString != "" {
 				require.ErrorContains(t, tt.errString, err)
+				if tt.invalidBlock {
+					require.Equal(t, true, IsInvalidBlock(err))
+				}
 			} else {
 				require.NoError(t, err)
 				require.Equal(t, tt.isValidPayload, isValidPayload)
+				require.Equal(t, false, IsInvalidBlock(err))
 			}
 		})
 	}
@@ -690,7 +696,11 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 		require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrappedParentBlock))
 
 		err = service.optimisticCandidateBlock(ctx, tt.blk)
-		require.Equal(t, tt.err, err)
+		if tt.err != nil {
+			require.Equal(t, tt.err.Error(), err.Error())
+		} else {
+			require.NoError(t, err)
+		}
 	}
 }
 
