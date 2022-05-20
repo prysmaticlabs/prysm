@@ -22,6 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/network/forks"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -81,6 +82,7 @@ func createHost(t *testing.T, port int) (host.Host, *ecdsa.PrivateKey, net.IP) {
 }
 
 func TestService_Stop_SetsStartedToFalse(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	s, err := NewService(context.Background(), &Config{StateNotifier: &mock.MockStateNotifier{}})
 	require.NoError(t, err)
 	s.started = true
@@ -90,12 +92,14 @@ func TestService_Stop_SetsStartedToFalse(t *testing.T) {
 }
 
 func TestService_Stop_DontPanicIfDv5ListenerIsNotInited(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	s, err := NewService(context.Background(), &Config{StateNotifier: &mock.MockStateNotifier{}})
 	require.NoError(t, err)
 	assert.NoError(t, s.Stop())
 }
 
 func TestService_Start_OnlyStartsOnce(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	hook := logTest.NewGlobal()
 
 	cfg := &Config{
@@ -131,12 +135,14 @@ func TestService_Start_OnlyStartsOnce(t *testing.T) {
 }
 
 func TestService_Status_NotRunning(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	s := &Service{started: false}
 	s.dv5Listener = &mockListener{}
 	assert.ErrorContains(t, "not running", s.Status(), "Status returned wrong error")
 }
 
 func TestService_Status_NoGenesisTimeSet(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	s := &Service{started: true}
 	s.dv5Listener = &mockListener{}
 	assert.ErrorContains(t, "no genesis time set", s.Status(), "Status returned wrong error")
@@ -147,6 +153,7 @@ func TestService_Status_NoGenesisTimeSet(t *testing.T) {
 }
 
 func TestListenForNewNodes(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	// Setup bootnode.
 	notifier := &mock.MockStateNotifier{}
 	cfg := &Config{StateNotifier: notifier}
@@ -241,6 +248,7 @@ func TestListenForNewNodes(t *testing.T) {
 }
 
 func TestPeer_Disconnect(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	h1, _, _ := createHost(t, 5000)
 	defer func() {
 		if err := h1.Close(); err != nil {
@@ -271,6 +279,7 @@ func TestPeer_Disconnect(t *testing.T) {
 }
 
 func TestService_JoinLeaveTopic(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 	s, err := NewService(ctx, &Config{StateNotifier: &mock.MockStateNotifier{}})
@@ -329,6 +338,7 @@ func initializeStateWithForkDigest(ctx context.Context, t *testing.T, ef *event.
 }
 
 func TestService_connectWithPeer(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	tests := []struct {
 		name    string
 		peers   *peers.Status

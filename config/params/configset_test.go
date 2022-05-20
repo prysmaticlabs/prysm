@@ -1,42 +1,78 @@
-package params_test
+package params
 
 import (
-	"path"
-	"path/filepath"
 	"testing"
 
-	"github.com/bazelbuild/rules_go/go/tools/bazel"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/io/file"
-	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
-func testnetConfigFilePath(t *testing.T, network string) string {
-	filepath, err := bazel.Runfile("external/eth2_networks")
+func TestConfigset_Add(t *testing.T) {
+	r := newConfigset()
+	name := "devnet"
+	cfg := testConfig(name)
+	require.NoError(t, r.add(cfg))
+	c, err := r.byName(name)
 	require.NoError(t, err)
-	configFilePath := path.Join(filepath, "shared", network, "config.yaml")
-	return configFilePath
+	compareConfigs(t, cfg, c)
+	require.ErrorIs(t, r.add(cfg), errCollisionName)
+	cfg.ConfigName = "test"
+	require.ErrorIs(t, r.add(cfg), errCollisionFork)
 }
 
-func TestE2EConfigParity(t *testing.T) {
-	params.SetupTestConfigCleanup(t)
-	testDir := bazel.TestTmpDir()
-	yamlDir := filepath.Join(testDir, "config.yaml")
-
-	testCfg := params.E2EMainnetTestConfig()
-	yamlObj := params.E2EMainnetConfigYaml()
-	assert.NoError(t, file.WriteFile(yamlDir, yamlObj))
-
-	require.NoError(t, params.LoadChainConfigFile(yamlDir, params.MainnetConfig().Copy()))
-
-	// compareConfigs makes it easier to figure out exactly what changed
-	compareConfigs(t, params.BeaconConfig(), testCfg)
-	// failsafe in case compareConfigs is not updated when new fields are added
-	require.DeepEqual(t, params.BeaconConfig(), testCfg)
+func TestConfigsetReplaceMainnet(t *testing.T) {
+	r := newConfigset()
+	mainnet := MainnetConfig().Copy()
+	require.NoError(t, r.setActive(mainnet))
+	FillTestVersions(mainnet, 128)
+	require.NoError(t, r.replace(mainnet))
 }
 
-func compareConfigs(t *testing.T, expected, actual *params.BeaconChainConfig) {
+func TestConfigset_Replace(t *testing.T) {
+	r := newConfigset()
+	mainnet := MainnetConfig().Copy()
+	require.NoError(t, r.add(mainnet))
+	require.NoError(t, r.setActive(mainnet))
+	require.ErrorIs(t, r.add(mainnet), errCollisionName)
+	c, err := r.byName(MainnetName)
+	require.NoError(t, err)
+	fail := c.Copy()
+	fail.ConfigName = "test"
+	require.ErrorIs(t, r.replace(fail), errCollisionFork)
+
+	o := c.Copy()
+	FillTestVersions(o, 128)
+	o.ConfigName = MainnetName
+	require.NoError(t, r.replace(o))
+	// mainnet is replaced, we shouldn't be able to find its fork version anymore
+	_, err = r.byVersion(bytesutil.ToBytes4(mainnet.GenesisForkVersion))
+	require.ErrorIs(t, err, errConfigNotFound)
+	undo := o.Copy()
+	FillTestVersions(undo, 127)
+	undoFunc, err := r.replaceWithUndo(undo)
+	require.NoError(t, err)
+	u, err := r.byName(undo.ConfigName)
+	require.NoError(t, err)
+	require.Equal(t, undo, u)
+	u, err = r.byVersion(bytesutil.ToBytes4(undo.GenesisForkVersion))
+	require.NoError(t, err)
+	require.Equal(t, undo, u)
+	_, err = r.byVersion(bytesutil.ToBytes4(o.GenesisForkVersion))
+	require.ErrorIs(t, err, errConfigNotFound)
+	require.NoError(t, undoFunc())
+	// replaced config restored by undoFunc, lookup should now succeed
+	_, err = r.byVersion(bytesutil.ToBytes4(o.GenesisForkVersion))
+	require.NoError(t, err)
+}
+
+func testConfig(name string) *BeaconChainConfig {
+	c := MainnetConfig().Copy()
+	FillTestVersions(c, 127)
+	c.ConfigName = name
+	return c
+}
+
+func compareConfigs(t *testing.T, expected, actual *BeaconChainConfig) {
 	require.DeepEqual(t, expected.GenesisEpoch, actual.GenesisEpoch)
 	require.DeepEqual(t, expected.FarFutureEpoch, actual.FarFutureEpoch)
 	require.DeepEqual(t, expected.FarFutureSlot, actual.FarFutureSlot)

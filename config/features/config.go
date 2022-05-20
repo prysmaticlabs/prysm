@@ -110,30 +110,39 @@ func InitWithReset(c *Flags) func() {
 }
 
 // configureTestnet sets the config according to specified testnet flag
-func configureTestnet(ctx *cli.Context) {
+func configureTestnet(ctx *cli.Context) error {
 	if ctx.Bool(PraterTestnet.Name) {
 		log.Warn("Running on the Prater Testnet")
-		params.UsePraterConfig()
+		if err := params.SetActive(params.PraterConfig().Copy()); err != nil {
+			return err
+		}
 		params.UsePraterNetworkConfig()
 	} else if ctx.Bool(RopstenTestnet.Name) {
 		log.Warn("Running on the Ropsten Beacon Chain Testnet")
-		params.UseRopstenConfig()
+		if err := params.SetActive(params.RopstenConfig().Copy()); err != nil {
+			return err
+		}
 		params.UseRopstenNetworkConfig()
 	} else {
 		log.Warn("Running on Ethereum Consensus Mainnet")
-		params.UseMainnetConfig()
+		if err := params.SetActive(params.MainnetConfig().Copy()); err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 // ConfigureBeaconChain sets the global config based
 // on what flags are enabled for the beacon-chain client.
-func ConfigureBeaconChain(ctx *cli.Context) {
+func ConfigureBeaconChain(ctx *cli.Context) error {
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
 	if ctx.Bool(devModeFlag.Name) {
 		enableDevModeFlags(ctx)
 	}
-	configureTestnet(ctx)
+	if err := configureTestnet(ctx); err != nil {
+		return err
+	}
 
 	if ctx.Bool(writeSSZStateTransitionsFlag.Name) {
 		logEnabled(writeSSZStateTransitionsFlag)
@@ -190,14 +199,17 @@ func ConfigureBeaconChain(ctx *cli.Context) {
 		cfg.EnableBatchGossipAggregation = true
 	}
 	Init(cfg)
+	return nil
 }
 
 // ConfigureValidator sets the global config based
 // on what flags are enabled for the validator client.
-func ConfigureValidator(ctx *cli.Context) {
+func ConfigureValidator(ctx *cli.Context) error {
 	complainOnDeprecatedFlags(ctx)
 	cfg := &Flags{}
-	configureTestnet(ctx)
+	if err := configureTestnet(ctx); err != nil {
+		return err
+	}
 	if ctx.Bool(enableExternalSlasherProtectionFlag.Name) {
 		log.Fatal(
 			"Remote slashing protection has currently been disabled in Prysm due to safety concerns. " +
@@ -226,6 +238,7 @@ func ConfigureValidator(ctx *cli.Context) {
 	}
 	cfg.KeystoreImportDebounceInterval = ctx.Duration(dynamicKeyReloadDebounceInterval.Name)
 	Init(cfg)
+	return nil
 }
 
 // enableDevModeFlags switches development mode features on.
