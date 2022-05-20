@@ -59,7 +59,7 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.SignedBeaco
 	}
 
 	// Reports on block and fork choice metrics.
-	justified := s.store.FinalizedCheckpt()
+	justified := s.store.JustifiedCheckpoint()
 	if justified == nil {
 		return errNilJustifiedInStore
 	}
