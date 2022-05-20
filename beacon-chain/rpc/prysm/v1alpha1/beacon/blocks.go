@@ -425,17 +425,26 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 		return nil
 	}
 
-	finalizedCheckpoint := bs.FinalizationFetcher.FinalizedCheckpt()
+	finalizedCheckpoint, err := bs.FinalizationFetcher.FinalizedCheckpt()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get finalized checkpoint: %v", err)
+	}
 	if err := validateCP(finalizedCheckpoint, "finalized"); err != nil {
 		return nil, err
 	}
 
-	justifiedCheckpoint := bs.FinalizationFetcher.CurrentJustifiedCheckpt()
+	justifiedCheckpoint, err := bs.FinalizationFetcher.CurrentJustifiedCheckpt()
+	if err != nil {
+		return nil, err
+	}
 	if err := validateCP(justifiedCheckpoint, "justified"); err != nil {
 		return nil, err
 	}
 
-	prevJustifiedCheckpoint := bs.FinalizationFetcher.PreviousJustifiedCheckpt()
+	prevJustifiedCheckpoint, err := bs.FinalizationFetcher.PreviousJustifiedCheckpt()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get previous justified checkpoint: %v", err)
+	}
 	if err := validateCP(prevJustifiedCheckpoint, "prev justified"); err != nil {
 		return nil, err
 	}
