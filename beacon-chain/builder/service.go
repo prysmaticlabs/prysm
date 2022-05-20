@@ -2,18 +2,13 @@ package builder
 
 import (
 	"context"
-	"encoding/hex"
-	"fmt"
 
-	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/api/client/builder"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/network"
 	v1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	log "github.com/sirupsen/logrus"
 )
 
 type BlockBuilder interface {
@@ -43,10 +38,10 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 
 		}
 	}
-	c, err := builder.NewClient(s.cfg.builderEndpoint.Url)
-	if err != nil {
-		return nil, err
-	}
+	//c, err := builder.NewClient("http://localhost:28545")
+	//if err != nil {
+	//	return nil, err
+	//}
 	//sk, err := bls.RandKey()
 	//if err != nil {
 	//	return nil, err
@@ -67,42 +62,40 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 	//	return nil, err
 	//}
 
-	h := "a0513a503d5bd6e89a144c3268e5b7e9da9dbf63df125a360e3950a7d0d67131"
-	data, err := hex.DecodeString(h)
-	if err != nil {
-		panic(err)
-	}
-	b, err := c.GetHeader(ctx, 1, bytesutil.ToBytes32(data), [48]byte{})
-	if err != nil {
-		return nil, err
-	}
-	msg := b.Message
-	header := msg.Header
-	log.WithFields(log.Fields{
-		"bidValue":     bytesutil.BytesToUint64BigEndian(msg.Value),
-		"feeRecipient": fmt.Sprintf("%#x", header.FeeRecipient),
-		"parentHash":   fmt.Sprintf("%#x", header.ParentHash),
-		"txRoot":       fmt.Sprintf("%#x", header.TransactionsRoot),
-		"gasLimit":     header.GasLimit,
-		"gasUsed":      header.GasUsed,
-	}).Info("Received builder bid")
-
-	sb := HydrateSignedBlindedBeaconBlockBellatrix(&ethpb.SignedBlindedBeaconBlockBellatrix{
-		Block: &ethpb.BlindedBeaconBlockBellatrix{
-			Body: &ethpb.BlindedBeaconBlockBodyBellatrix{
-				Attestations: []*ethpb.Attestation{
-					{Signature: []byte{1, 2, 3, 4}},
-				},
-			},
-		},
-	})
-	sb.Block.Body.ExecutionPayloadHeader = header
-	sb.Block.Body.SyncAggregate.SyncCommitteeBits = bitfield.NewBitvector512()
-	if _, err := c.SubmitBlindedBlock(ctx, sb); err != nil {
-		return nil, err
-	}
-
-	log.Fatal("End of test")
+	//h := "a0513a503d5bd6e89a144c3268e5b7e9da9dbf63df125a360e3950a7d0d67131"
+	//data, err := hex.DecodeString(h)
+	//if err != nil {
+	//	panic(err)
+	//}
+	//b, err := c.GetHeader(ctx, 1, bytesutil.ToBytes32(data), [48]byte{})
+	//if err != nil {
+	//	return nil, err
+	//}
+	//msg := b.Message
+	//header := msg.Header
+	//
+	//genesis, keys := util.DeterministicGenesisState(t, 64)
+	//b, err := util.GenerateFullBlock(genesis, keys, util.DefaultBlockGenConfig(), 1)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//sb := HydrateSignedBlindedBeaconBlockBellatrix(&ethpb.SignedBlindedBeaconBlockBellatrix{
+	//	Block: &ethpb.BlindedBeaconBlockBellatrix{
+	//		Body: &ethpb.BlindedBeaconBlockBodyBellatrix{
+	//			Attestations: []*ethpb.Attestation{
+	//				{Signature: []byte{1, 2, 3, 4}},
+	//			},
+	//		},
+	//	},
+	//})
+	//
+	//sb.Block.Body.ExecutionPayloadHeader = header
+	//sb.Block.Body.SyncAggregate.SyncCommitteeBits = bitfield.NewBitvector512()
+	//if _, err := c.SubmitBlindedBlock(ctx, sb); err != nil {
+	//	return nil, err
+	//}
+	//
+	//log.Fatal("End of test")
 
 	return s, nil
 }
