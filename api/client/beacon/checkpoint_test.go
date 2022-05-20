@@ -473,10 +473,10 @@ func TestDownloadFinalizedData(t *testing.T) {
 	require.Equal(t, sr, ushtr)
 
 	expected := &OriginData{
-		sb:  ms,
-		bb:  mb,
-		br:  br,
-		sr:  sr,
+		sb: ms,
+		bb: mb,
+		br: br,
+		sr: sr,
 	}
 	od, err := DownloadFinalizedData(ctx, c)
 	require.NoError(t, err)
