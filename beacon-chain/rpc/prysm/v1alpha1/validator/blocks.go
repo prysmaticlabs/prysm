@@ -91,7 +91,7 @@ func (vs *Server) sendBlocks(stream ethpb.BeaconNodeValidator_StreamBlocksAltair
 	}
 
 	data, ok := blockEvent.Data.(*blockfeed.ReceivedBlockData)
-	if !ok {
+	if !ok || data == nil {
 		// Got bad data over the stream.
 		return nil
 	}
