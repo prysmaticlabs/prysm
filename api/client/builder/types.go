@@ -212,7 +212,7 @@ func (h *ExecutionPayloadHeader) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (h *ExecutionPayloadHeader) UnmarshalJSON(b []byte) (error) {
+func (h *ExecutionPayloadHeader) UnmarshalJSON(b []byte) error {
 	type UnmarshalCaller ExecutionPayloadHeader
 	uc := &UnmarshalCaller{}
 	if err := json.Unmarshal(b, uc); err != nil {
