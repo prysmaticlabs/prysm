@@ -27,9 +27,9 @@ import (
 // UpdateAndSaveHeadWithBalances updates the beacon state head after getting justified balanced from cache.
 // This function is only used in spec-tests, it does save the head after updating it.
 func (s *Service) UpdateAndSaveHeadWithBalances(ctx context.Context) error {
-	cp := s.store.JustifiedCheckpt()
-	if cp == nil {
-		return errors.New("no justified checkpoint")
+	cp, err := s.store.JustifiedCheckpt()
+	if err != nil {
+		return err
 	}
 	balances, err := s.justifiedBalances.get(ctx, bytesutil.ToBytes32(cp.Root))
 	if err != nil {
@@ -66,13 +66,13 @@ func (s *Service) updateHead(ctx context.Context, balances []uint64) ([32]byte, 
 	defer span.End()
 
 	// Get head from the fork choice service.
-	f := s.store.FinalizedCheckpt()
-	if f == nil {
-		return [32]byte{}, errNilFinalizedInStore
+	f, err := s.store.FinalizedCheckpt()
+	if err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not get finalized checkpoint")
 	}
-	j := s.store.JustifiedCheckpt()
-	if j == nil {
-		return [32]byte{}, errNilJustifiedInStore
+	j, err := s.store.JustifiedCheckpt()
+	if err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not get justified checkpoint")
 	}
 	// To get head before the first justified epoch, the fork choice will start with origin root
 	// instead of zero hashes.
