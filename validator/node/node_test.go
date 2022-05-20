@@ -438,6 +438,33 @@ func TestValidatorProposerSettings(t *testing.T) {
 			wantErr: "",
 		},
 		{
+			name: "Happy Path Config YAML file with custom Gas Limit",
+			args: args{
+				validatorProposerSettingsFlagValues: &validatorProposerSettingsFlag{
+					dir:        "./testdata/good-prepare-beacon-proposer-config.yaml",
+					url:        "",
+					defaultfee: "",
+				},
+			},
+			want: func() *validator_service_config.ValidatorProposerSettings {
+				key1, err := hexutil.Decode("0xa057816155ad77931185101128655c0191bd0214c201ca48ed887f6c4c6adf334070efcd75140eada5ac83a92506dd7a")
+				require.NoError(t, err)
+				return &validator_service_config.ValidatorProposerSettings{
+					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validator_service_config.ValidatorProposerOptions{
+						bytesutil.ToBytes48(key1): {
+							FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
+							GasLimit:     uint64(40000000),
+						},
+					},
+					DefaultConfig: &validator_service_config.ValidatorProposerOptions{
+						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
+						GasLimit:     uint64(45000000),
+					},
+				}
+			},
+			wantErr: "",
+		},
+		{
 			name: "Happy Path Suggested Fee File",
 			args: args{
 				validatorProposerSettingsFlagValues: &validatorProposerSettingsFlag{
