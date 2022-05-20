@@ -7,8 +7,6 @@ import (
 	e "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/runtime/version"
 	"go.opencensus.io/trace"
 )
 
@@ -70,22 +68,14 @@ func ProcessEpoch(ctx context.Context, state state.BeaconState) (state.BeaconSta
 	}
 
 	// Modified in Altair and Bellatrix.
-	cfg := params.BeaconConfig()
-	switch state.Version() {
-	case version.Altair:
-		state, err = e.ProcessSlashings(state, cfg.ProportionalSlashingMultiplierAltair)
-		if err != nil {
-			return nil, err
-		}
-	case version.Bellatrix:
-		state, err = e.ProcessSlashings(state, cfg.ProportionalSlashingMultiplierBellatrix)
-		if err != nil {
-			return nil, err
-		}
-	default:
-		return nil, errors.Errorf("invalid state type version: %T", state.Version())
+	proportionalSlashingMultipler, err := state.ProportionalSlashingMultiplier()
+	if err != nil {
+		return nil, err
 	}
-
+	state, err = e.ProcessSlashings(state, proportionalSlashingMultipler)
+	if err != nil {
+		return nil, err
+	}
 	state, err = e.ProcessEth1DataReset(state)
 	if err != nil {
 		return nil, err
