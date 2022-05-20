@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
@@ -28,41 +29,70 @@ func testGenesisDataSaved(t *testing.T, db iface.Database) {
 	ctx := context.Background()
 
 	gb, err := db.GenesisBlock(ctx)
-	assert.NoError(t, err)
-	assert.NotNil(t, gb)
+	require.NoError(t, err)
+	require.NotNil(t, gb)
 
 	gbHTR, err := gb.Block().HashTreeRoot()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	gss, err := db.StateSummary(ctx, gbHTR)
-	assert.NoError(t, err)
-	assert.NotNil(t, gss)
+	require.NoError(t, err)
+	require.NotNil(t, gss)
 
 	head, err := db.HeadBlock(ctx)
-	assert.NoError(t, err)
-	assert.NotNil(t, head)
+	require.NoError(t, err)
+	require.NotNil(t, head)
 
 	headHTR, err := head.Block().HashTreeRoot()
-	assert.NoError(t, err)
-	assert.Equal(t, gbHTR, headHTR, "head block does not match genesis block")
+	require.NoError(t, err)
+	require.Equal(t, gbHTR, headHTR, "head block does not match genesis block")
 }
 
 func TestLoadGenesisFromFile(t *testing.T) {
+	// for this test to work, we need the active config to have these properties:
+	// - fork version schedule that matches mainnnet.genesis.ssz
+	// - name that does not match params.MainnetName - otherwise we'll trigger the codepath that loads the state
+	//   from the compiled binary.
+	// to do that, first we need to rewrite the mainnet fork schedule so it won't conflict with a renamed config that
+	// uses the mainnet fork schedule. construct the differently named mainnet config and set it active.
+	// finally, revert all this at the end of the test.
+
+	// first get the real mainnet out of the way by overwriting it schedule.
+	cfg, err := params.ByName(params.MainnetName)
+	require.NoError(t, err)
+	cfg = cfg.Copy()
+	reversioned := cfg.Copy()
+	params.FillTestVersions(reversioned, 127)
+	undo, err := params.SetActiveWithUndo(reversioned)
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, undo())
+	}()
+
+	// then set up a new config, which uses the real mainnet schedule, and activate it
+	cfg.ConfigName = "genesis-test"
+	undo2, err := params.SetActiveWithUndo(cfg)
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, undo2())
+	}()
+
 	fp := "testdata/mainnet.genesis.ssz"
 	rfp, err := bazel.Runfile(fp)
 	if err == nil {
 		fp = rfp
 	}
 	sb, err := os.ReadFile(fp)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	db := setupDB(t)
-	assert.NoError(t, db.LoadGenesis(context.Background(), sb))
+	require.NoError(t, db.LoadGenesis(context.Background(), sb))
 	testGenesisDataSaved(t, db)
 
 	// Loading the same genesis again should not throw an error
-	assert.NoError(t, err)
-	assert.NoError(t, db.LoadGenesis(context.Background(), sb))
+	require.NoError(t, err)
+	require.NoError(t, db.LoadGenesis(context.Background(), sb))
+	testGenesisDataSaved(t, db)
 }
 
 func TestLoadGenesisFromFile_mismatchedForkVersion(t *testing.T) {
@@ -80,11 +110,15 @@ func TestLoadGenesisFromFile_mismatchedForkVersion(t *testing.T) {
 }
 
 func TestEnsureEmbeddedGenesis(t *testing.T) {
-	// Embedded Genesis works with Mainnet config
 	params.SetupTestConfigCleanup(t)
-	cfg := params.BeaconConfig()
-	cfg.ConfigName = params.MainnetName
-	params.OverrideBeaconConfig(cfg)
+	// Embedded Genesis works with Mainnet config
+	cfg := params.MainnetConfig().Copy()
+	cfg.SecondsPerSlot = 1
+	undo, err := params.SetActiveWithUndo(cfg)
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, undo())
+	}()
 
 	ctx := context.Background()
 	db := setupDB(t)

@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/network/forks"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -21,6 +22,7 @@ import (
 )
 
 func TestService_CanSubscribe(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	currentFork := [4]byte{0x01, 0x02, 0x03, 0x04}
 	validProtocolSuffix := "/" + encoder.ProtocolSuffixSSZSnappy
 	genesisTime := time.Now()
@@ -115,11 +117,13 @@ func TestService_CanSubscribe(t *testing.T) {
 }
 
 func TestService_CanSubscribe_uninitialized(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	s := &Service{}
 	require.Equal(t, false, s.CanSubscribe("foo"))
 }
 
 func Test_scanfcheck(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	type args struct {
 		input  string
 		format string
@@ -191,6 +195,7 @@ func Test_scanfcheck(t *testing.T) {
 }
 
 func TestGossipTopicMapping_scanfcheck_GossipTopicFormattingSanityCheck(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	// scanfcheck only supports integer based substitutions at the moment. Any others will
 	// inaccurately fail validation.
 	for _, topic := range AllTopics() {
@@ -208,6 +213,7 @@ func TestGossipTopicMapping_scanfcheck_GossipTopicFormattingSanityCheck(t *testi
 }
 
 func TestService_FilterIncomingSubscriptions(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	validProtocolSuffix := "/" + encoder.ProtocolSuffixSSZSnappy
 	genesisTime := time.Now()
 	valRoot := [32]byte{}
@@ -328,6 +334,7 @@ func TestService_FilterIncomingSubscriptions(t *testing.T) {
 }
 
 func TestService_MonitorsStateForkUpdates(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 	notifier := &mock.MockStateNotifier{}
