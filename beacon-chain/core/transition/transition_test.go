@@ -579,10 +579,10 @@ func TestProcessSlots_OnlyAltairEpoch(t *testing.T) {
 
 func TestProcessSlots_OnlyBellatrixEpoch(t *testing.T) {
 	transition.SkipSlotCache.Disable()
-	conf := params.BeaconConfig()
+	params.SetupTestConfigCleanup(t)
+	conf := params.BeaconConfig().Copy()
 	conf.BellatrixForkEpoch = 5
 	params.OverrideBeaconConfig(conf)
-	defer params.UseMainnetConfig()
 
 	st, _ := util.DeterministicGenesisStateBellatrix(t, params.BeaconConfig().MaxValidatorsPerCommittee)
 	require.NoError(t, st.SetSlot(params.BeaconConfig().SlotsPerEpoch*6))

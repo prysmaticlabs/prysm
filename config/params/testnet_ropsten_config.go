@@ -17,11 +17,6 @@ func UseRopstenNetworkConfig() {
 	OverrideBeaconNetworkConfig(cfg)
 }
 
-// UseRopstenConfig sets the main beacon chain config for Ropsten beacon chain.
-func UseRopstenConfig() {
-	beaconConfig = RopstenConfig()
-}
-
 // RopstenConfig defines the config for the Ropsten beacon chain testnet.
 func RopstenConfig() *BeaconChainConfig {
 	cfg := MainnetConfig().Copy()

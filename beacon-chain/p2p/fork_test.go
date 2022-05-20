@@ -114,6 +114,7 @@ func TestStartDiscv5_DifferentForkDigests(t *testing.T) {
 }
 
 func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	hook := logTest.NewGlobal()
 	logrus.SetLevel(logrus.TraceLevel)
 	port := 2000
@@ -136,14 +137,13 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 		UDPPort:             uint(port),
 	}
 
-	params.SetupTestConfigCleanup(t)
 	var listeners []*discover.UDPv5
 	for i := 1; i <= 5; i++ {
 		port = 3000 + i
 		cfg.UDPPort = uint(port)
 		ipAddr, pkey := createAddrAndPrivKey(t)
 
-		c := params.BeaconConfig()
+		c := params.BeaconConfig().Copy()
 		nextForkEpoch := types.Epoch(i)
 		c.ForkVersionSchedule[[4]byte{'A', 'B', 'C', 'D'}] = nextForkEpoch
 		params.OverrideBeaconConfig(c)
@@ -209,7 +209,7 @@ func TestStartDiscv5_SameForkDigests_DifferentNextForkData(t *testing.T) {
 
 func TestDiscv5_AddRetrieveForkEntryENR(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	c := params.BeaconConfig()
+	c := params.BeaconConfig().Copy()
 	c.ForkVersionSchedule = map[[4]byte]types.Epoch{
 		bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion): 0,
 		{0, 0, 0, 1}: 1,
@@ -264,7 +264,7 @@ func TestAddForkEntry_Genesis(t *testing.T) {
 	db, err := enode.OpenDB("")
 	require.NoError(t, err)
 
-	bCfg := params.BeaconConfig()
+	bCfg := params.MainnetConfig().Copy()
 	bCfg.ForkVersionSchedule = map[[4]byte]types.Epoch{}
 	bCfg.ForkVersionSchedule[bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion)] = bCfg.GenesisEpoch
 	params.OverrideBeaconConfig(bCfg)

@@ -12,6 +12,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
@@ -128,6 +129,21 @@ func (w *Web3RemoteSigner) Start(ctx context.Context) error {
 
 func (w *Web3RemoteSigner) Started() <-chan struct{} {
 	return w.started
+}
+
+// Pause pauses the component and its underlying process.
+func (w *Web3RemoteSigner) Pause() error {
+	return w.cmd.Process.Signal(syscall.SIGSTOP)
+}
+
+// Resume resumes the component and its underlying process.
+func (w *Web3RemoteSigner) Resume() error {
+	return w.cmd.Process.Signal(syscall.SIGCONT)
+}
+
+// Stop stops the component and its underlying process.
+func (w *Web3RemoteSigner) Stop() error {
+	return w.cmd.Process.Kill()
 }
 
 // monitorStart by polling server until it returns a 200 at /upcheck.
