@@ -51,7 +51,7 @@ func WithObserver(m observer) ClientOpt {
 
 type requestLogger struct{}
 
-func (l *requestLogger) observe(r *http.Request) (e error) {
+func (*requestLogger) observe(r *http.Request) (e error) {
 	b := bytes.NewBuffer(nil)
 	t := io.TeeReader(r.Body, b)
 	defer func() {
