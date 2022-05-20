@@ -161,7 +161,7 @@ func BuildSignedBeaconBlockFromExecutionPayload(
 	payloadHeader, err := b.Body().ExecutionPayloadHeader()
 	switch {
 	case errors.Is(err, ErrUnsupportedField):
-		return nil, errors.New("can only build signed beacon block from blinded format")
+		return nil, errors.Wrap(err, "can only build signed beacon block from blinded format")
 	case err != nil:
 		return nil, errors.Wrap(err, "could not get execution payload header")
 	default:
@@ -176,7 +176,7 @@ func BuildSignedBeaconBlockFromExecutionPayload(
 	}
 	if payloadRoot != payloadHeaderRoot {
 		return nil, fmt.Errorf(
-			"payload root %#x and header root %#x do not match",
+			"payload %#x and header %#x roots do not match",
 			payloadRoot,
 			payloadHeaderRoot,
 		)
