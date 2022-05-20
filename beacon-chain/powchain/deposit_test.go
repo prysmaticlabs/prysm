@@ -26,7 +26,7 @@ const pubKeyErr = "could not convert bytes to public key"
 
 func TestDepositContractAddress_EmptyAddress(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	config := params.BeaconConfig()
+	config := params.BeaconConfig().Copy()
 	config.DepositContractAddress = ""
 	params.OverrideBeaconConfig(config)
 
@@ -36,7 +36,7 @@ func TestDepositContractAddress_EmptyAddress(t *testing.T) {
 
 func TestDepositContractAddress_NotHexAddress(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	config := params.BeaconConfig()
+	config := params.BeaconConfig().Copy()
 	config.DepositContractAddress = "abc?!"
 	params.OverrideBeaconConfig(config)
 

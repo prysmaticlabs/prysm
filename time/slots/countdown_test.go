@@ -13,11 +13,12 @@ import (
 )
 
 func TestCountdownToGenesis(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	logrus.SetLevel(logrus.DebugLevel)
 
 	hook := logTest.NewGlobal()
 	params.SetupTestConfigCleanup(t)
-	config := params.BeaconConfig()
+	config := params.BeaconConfig().Copy()
 	config.GenesisCountdownInterval = time.Millisecond * 500
 	params.OverrideBeaconConfig(config)
 
