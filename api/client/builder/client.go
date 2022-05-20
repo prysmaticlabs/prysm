@@ -40,18 +40,18 @@ func WithTimeout(timeout time.Duration) ClientOpt {
 }
 
 type observer interface {
-	observe(r http.Request) error
+	observe(r *http.Request) error
 }
 
 func WithObserver(m observer) ClientOpt {
 	return func(c *Client) {
-		c.mw = append(c.mw, m)
+		c.obvs = append(c.obvs, m)
 	}
 }
 
 type requestLogger struct{}
 
-func (l *requestLogger) observe(r http.Request) (e error) {
+func (l *requestLogger) observe(r *http.Request) (e error) {
 	b := bytes.NewBuffer(nil)
 	t := io.TeeReader(r.Body, b)
 	defer func() {
@@ -78,7 +78,7 @@ var _ observer = &requestLogger{}
 type Client struct {
 	hc      *http.Client
 	baseURL *url.URL
-	mw      []observer
+	obvs    []observer
 }
 
 // NewClient constructs a new client with the provided options (ex WithTimeout).
@@ -130,6 +130,11 @@ func (c *Client) do(ctx context.Context, method string, path string, body io.Rea
 	}
 	for _, o := range opts {
 		o(req)
+	}
+	for _, o := range c.obvs {
+		if err := o.observe(req); err != nil {
+			return nil, err
+		}
 	}
 	r, err := c.hc.Do(req)
 	if err != nil {
