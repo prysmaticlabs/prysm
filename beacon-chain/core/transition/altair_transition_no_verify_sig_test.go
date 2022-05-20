@@ -229,7 +229,7 @@ func TestProcessEpoch_BadBalanceAltair(t *testing.T) {
 	assert.ErrorContains(t, "addition overflows", err)
 }
 
-func createFullAltairBlockWithOperations(t *testing.T) (state.BeaconStateAltair,
+func createFullAltairBlockWithOperations(t *testing.T) (state.BeaconState,
 	*ethpb.SignedBeaconBlockAltair) {
 	beaconState, privKeys := util.DeterministicGenesisStateAltair(t, 32)
 	sCom, err := altair.NextSyncCommittee(context.Background(), beaconState)
