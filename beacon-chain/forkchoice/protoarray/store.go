@@ -787,6 +787,8 @@ func (f *ForkChoice) UpdateJustifiedCheckpoint(jc *pbrpc.Checkpoint) error {
 	if jc == nil {
 		return errInvalidNilCheckpoint
 	}
+	f.store.nodesLock.Lock()
+	defer f.store.nodesLock.Unlock()
 	f.store.justifiedEpoch = jc.Epoch
 	return nil
 }
@@ -796,6 +798,8 @@ func (f *ForkChoice) UpdateFinalizedCheckpoint(fc *pbrpc.Checkpoint) error {
 	if fc == nil {
 		return errInvalidNilCheckpoint
 	}
+	f.store.nodesLock.Lock()
+	defer f.store.nodesLock.Unlock()
 	f.store.finalizedEpoch = fc.Epoch
 	return nil
 }
