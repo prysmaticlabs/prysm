@@ -74,7 +74,7 @@ func urlForHost(h string) (*url.URL, error) {
 	if err != nil {
 		return nil, errMalformedHostname
 	}
-	return &url.URL{Host: fmt.Sprintf("%s:%s", host, port), Scheme: "http"}, nil
+	return &url.URL{Host: net.JoinHostPort(host, port), Scheme: "http"}, nil
 }
 
 // NodeURL returns a human-readable string representation of the beacon node base url.
