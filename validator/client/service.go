@@ -241,7 +241,7 @@ func (v *ValidatorService) Status() error {
 	return nil
 }
 
-// UseInteropKeys returns the useInteropKeys flag.
+// InteropKeysConfig returns the useInteropKeys flag.
 func (v *ValidatorService) InteropKeysConfig() *local.InteropKeymanagerConfig {
 	return v.interopKeysConfig
 }

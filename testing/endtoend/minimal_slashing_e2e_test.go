@@ -12,7 +12,8 @@ import (
 )
 
 func TestEndToEnd_Slasher_MinimalConfig(t *testing.T) {
-	params.UseE2EConfig()
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.E2ETestConfig().Copy())
 	require.NoError(t, e2eParams.Init(e2eParams.StandardBeaconCount))
 
 	tracingPort := e2eParams.TestParams.Ports.JaegerTracingPort
@@ -35,6 +36,7 @@ func TestEndToEnd_Slasher_MinimalConfig(t *testing.T) {
 			ev.InjectDoubleVoteOnEpoch(2),
 			ev.InjectDoubleBlockOnEpoch(2),
 		},
+		EvalInterceptor:     defaultInterceptor,
 		TracingSinkEndpoint: tracingEndpoint,
 	}
 

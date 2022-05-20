@@ -3,6 +3,7 @@ package eth1
 import (
 	"context"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
 	e2etypes "github.com/prysmaticlabs/prysm/testing/endtoend/types"
@@ -13,6 +14,7 @@ type NodeSet struct {
 	e2etypes.ComponentRunner
 	started chan struct{}
 	enr     string
+	nodes   []e2etypes.ComponentRunner
 }
 
 // NewNodeSet creates and returns a set of Eth1 nodes.
@@ -40,6 +42,7 @@ func (s *NodeSet) Start(ctx context.Context) error {
 		node := NewNode(i+1, s.enr)
 		nodes[i] = node
 	}
+	s.nodes = nodes
 
 	// Wait for all nodes to finish their job (blocking).
 	// Once nodes are ready passed in handler function will be called.
@@ -52,4 +55,58 @@ func (s *NodeSet) Start(ctx context.Context) error {
 // Started checks whether beacon node set is started and all nodes are ready to be queried.
 func (s *NodeSet) Started() <-chan struct{} {
 	return s.started
+}
+
+// Pause pauses the component and its underlying process.
+func (s *NodeSet) Pause() error {
+	for _, n := range s.nodes {
+		if err := n.Pause(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// Resume resumes the component and its underlying process.
+func (s *NodeSet) Resume() error {
+	for _, n := range s.nodes {
+		if err := n.Resume(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// Stop stops the component and its underlying process.
+func (s *NodeSet) Stop() error {
+	for _, n := range s.nodes {
+		if err := n.Stop(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// PauseAtIndex pauses the component and its underlying process at the desired index.
+func (s *NodeSet) PauseAtIndex(i int) error {
+	if i >= len(s.nodes) {
+		return errors.Errorf("provided index exceeds slice size: %d >= %d", i, len(s.nodes))
+	}
+	return s.nodes[i].Pause()
+}
+
+// ResumeAtIndex resumes the component and its underlying process at the desired index.
+func (s *NodeSet) ResumeAtIndex(i int) error {
+	if i >= len(s.nodes) {
+		return errors.Errorf("provided index exceeds slice size: %d >= %d", i, len(s.nodes))
+	}
+	return s.nodes[i].Resume()
+}
+
+// StopAtIndex stops the component and its underlying process at the desired index.
+func (s *NodeSet) StopAtIndex(i int) error {
+	if i >= len(s.nodes) {
+		return errors.Errorf("provided index exceeds slice size: %d >= %d", i, len(s.nodes))
+	}
+	return s.nodes[i].Stop()
 }

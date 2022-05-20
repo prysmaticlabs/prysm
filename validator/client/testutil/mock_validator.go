@@ -62,7 +62,7 @@ func (fv *FakeValidator) Done() {
 	fv.DoneCalled = true
 }
 
-// WaitForWalletInitialization for mocking.
+// WaitForKeymanagerInitialization for mocking.
 func (fv *FakeValidator) WaitForKeymanagerInitialization(_ context.Context) error {
 	fv.WaitForWalletInitializationCalled = true
 	return nil
