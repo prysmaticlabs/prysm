@@ -688,7 +688,17 @@ func Test_handleRPCError(t *testing.T) {
 		{
 			name:             "ErrUnknownPayload",
 			expectedContains: ErrUnknownPayload.Error(),
-			given:            &customError{code: -32001},
+			given:            &customError{code: -38001},
+		},
+		{
+			name:             "ErrInvalidForkchoiceState",
+			expectedContains: ErrInvalidForkchoiceState.Error(),
+			given:            &customError{code: -38002},
+		},
+		{
+			name:             "ErrInvalidPayloadAttributes",
+			expectedContains: ErrInvalidPayloadAttributes.Error(),
+			given:            &customError{code: -38003},
 		},
 		{
 			name:             "ErrServer unexpected no data",
