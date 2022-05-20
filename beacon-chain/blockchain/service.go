@@ -35,6 +35,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
@@ -270,7 +271,7 @@ func (s *Service) originRootFromSavedState(ctx context.Context) ([32]byte, error
 	if err != nil {
 		return originRoot, errors.Wrap(err, "could not get genesis block from db")
 	}
-	if err := helpers.BeaconBlockIsNil(genesisBlock); err != nil {
+	if err := wrapper.BeaconBlockIsNil(genesisBlock); err != nil {
 		return originRoot, err
 	}
 	genesisBlkRoot, err := genesisBlock.Block().HashTreeRoot()
