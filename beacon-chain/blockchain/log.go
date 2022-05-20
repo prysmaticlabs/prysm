@@ -74,7 +74,7 @@ func logBlockSyncStatus(block interfaces.BeaconBlock, blockRoot [32]byte, justif
 			"version":                   version.String(block.Version()),
 			"sinceSlotStartTime":        prysmTime.Now().Sub(startTime),
 			"chainServiceProcessedTime": prysmTime.Now().Sub(receivedTime),
-		}).Debug("Sync new block")
+		}).Debug("Synced new block")
 	} else {
 		log.WithFields(logrus.Fields{
 			"slot":  block.Slot(),
