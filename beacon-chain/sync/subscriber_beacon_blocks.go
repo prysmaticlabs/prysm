@@ -17,7 +17,7 @@ func (s *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) 
 	if err != nil {
 		return err
 	}
-	if err := helpers.BeaconBlockIsNil(signed); err != nil {
+	if err := wrapper.BeaconBlockIsNil(signed); err != nil {
 		return err
 	}
 
