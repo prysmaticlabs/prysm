@@ -54,7 +54,7 @@ type ForkchoiceUpdatedResponse struct {
 // to an execution client's engine API.
 type ExecutionPayloadReconstructor interface {
 	ReconstructFullBellatrixBlock(
-		ctx context.Context, blinded *ethpb.SignedBlindedBeaconBlockBellatrix,
+		ctx context.Context, blindedBlock interfaces.SignedBeaconBlock,
 	) (interfaces.SignedBeaconBlock, error)
 }
 

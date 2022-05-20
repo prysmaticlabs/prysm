@@ -167,14 +167,8 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 		blockToWrite := b
 		if blockToWrite.Block().IsBlinded() {
 			log.Warn("RECONSTRUCTING FULL BLOCK DURING BLOCKS BY RANGE REQUEST")
-			blindedBellatrix, err := b.PbBlindedBellatrixBlock()
-			if err != nil {
-				log.WithError(err).Error("Could not get blinded bellatrix block")
-				s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
-				return err
-			}
 			st := time.Now()
-			fullBlock, err := s.cfg.executionPayloadReconstructor.ReconstructFullBellatrixBlock(ctx, blindedBellatrix)
+			fullBlock, err := s.cfg.executionPayloadReconstructor.ReconstructFullBellatrixBlock(ctx, blockToWrite)
 			if err != nil {
 				log.WithError(err).Error("Could not get reconstruct full bellatrix block from blinded body")
 				s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)

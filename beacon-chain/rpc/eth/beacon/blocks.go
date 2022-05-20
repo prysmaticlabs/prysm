@@ -470,14 +470,8 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 			ExecutionOptimistic: isOptimistic,
 		}, nil
 	}
-	blindedBellatrixBlk, err := blk.PbBlindedBellatrixBlock()
-	if err == nil {
-		if blindedBellatrixBlk == nil {
-			return nil, status.Errorf(codes.Internal, "Nil block")
-		}
-
-		// Use the payload reconstructor...
-		signedFullBlock, err := bs.ExecutionPayloadReconstructor.ReconstructFullBellatrixBlock(ctx, blindedBellatrixBlk)
+	if _, err := blk.PbBlindedBellatrixBlock(); err == nil {
+		signedFullBlock, err := bs.ExecutionPayloadReconstructor.ReconstructFullBellatrixBlock(ctx, blk)
 		if err != nil {
 			return nil, status.Errorf(
 				codes.Internal,
