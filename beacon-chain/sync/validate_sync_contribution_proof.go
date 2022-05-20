@@ -169,16 +169,6 @@ func (s *Service) ignoreSeenSyncContribution(m *ethpb.SignedContributionAndProof
 	}
 }
 
-func (s *Service) ignoreCached(m *ethpb.SignedContributionAndProof) validationFn {
-	return func(ctx context.Context) (pubsub.ValidationResult, error) {
-		seen := s.hasSeenSyncContributionIndexSlot(m.Message.Contribution.Slot, m.Message.AggregatorIndex, types.CommitteeIndex(m.Message.Contribution.SubcommitteeIndex))
-		if seen {
-			return pubsub.ValidationIgnore, nil
-		}
-		return pubsub.ValidationAccept, nil
-	}
-}
-
 func rejectInvalidAggregator(m *ethpb.SignedContributionAndProof) validationFn {
 	return func(ctx context.Context) (pubsub.ValidationResult, error) {
 		// The `contribution_and_proof.selection_proof` selects the validator as an aggregator for the slot.
@@ -355,6 +345,13 @@ func (s *Service) setSyncContributionBits(c *ethpb.SyncCommitteeContribution) er
 	if !ok {
 		return errors.New("could not covert cached value to []bitfield.Bitvector")
 	}
+	has, err := BitListOverlaps(bitsList, c.AggregationBits)
+	if err != nil {
+		return err
+	}
+	if has {
+		return nil
+	}
 	s.syncContributionBitsOverlapCache.Add(string(b), append(bitsList, c.AggregationBits.Bytes()))
 	return nil
 }
@@ -373,12 +370,17 @@ func (s *Service) hasSeenSyncContributionBits(c *ethpb.SyncCommitteeContribution
 	if !ok {
 		return false, errors.New("could not covert cached value to []bitfield.Bitvector128")
 	}
-	for _, b := range bitsList {
-		if b == nil {
+	return BitListOverlaps(bitsList, c.AggregationBits.Bytes())
+}
+
+// BitListOverlaps returns true if there's an overlap between two bitlists.
+func BitListOverlaps(bitLists [][]byte, b []byte) (bool, error) {
+	for _, bitList := range bitLists {
+		if bitList == nil {
 			return false, errors.New("nil bitfield")
 		}
-		bs := ethpb.ConvertSyncContributionBitVector(b)
-		overlaps, err := bs.Overlaps(c.AggregationBits)
+		bl := ethpb.ConvertSyncContributionBitVector(bitList)
+		overlaps, err := bl.Overlaps(ethpb.ConvertSyncContributionBitVector(b))
 		if err != nil {
 			return false, err
 		}

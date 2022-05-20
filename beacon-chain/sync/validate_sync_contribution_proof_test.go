@@ -1144,6 +1144,9 @@ func TestService_setSyncContributionIndexSlotSeen(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, true, has)
 
+	// Make sure set doesn't contain existing overlaps
+	require.Equal(t, 1, s.syncContributionBitsOverlapCache.Len())
+
 	// Cache with entries but different key
 	has, err = s.hasSeenSyncContributionBits(&ethpb.SyncCommitteeContribution{
 		Slot:              1,
