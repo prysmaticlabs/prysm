@@ -320,34 +320,38 @@ func (s *Service) ExecutionBlockByHashWithTxs(ctx context.Context, hash common.H
 // ReconstructFullBellatrixBlock takes in a blinded beacon block and reconstructs
 // a beacon block with a full execution payload via the engine API.
 func (s *Service) ReconstructFullBellatrixBlock(
-	ctx context.Context, blinded *ethpb.SignedBlindedBeaconBlockBellatrix,
+	ctx context.Context, blindedBlock interfaces.SignedBeaconBlock,
 ) (interfaces.SignedBeaconBlock, error) {
-	if blinded == nil ||
-		blinded.Block == nil ||
-		blinded.Block.Body == nil ||
-		blinded.Block.Body.ExecutionPayloadHeader == nil {
-		return nil, errors.New("nil blinded beacon block")
+	if err := wrapper.BeaconBlockIsNil(blindedBlock); err != nil {
+		return nil, errors.Wrap(err, "cannot reconstruct bellatrix block from nil data")
+	}
+	if !blindedBlock.Block().IsBlinded() {
+		return nil, errors.New("can only reconstruct bellatrix block from blinded block format")
 	}
 	start := time.Now()
 	defer func() {
 		executionPayloadReconstructionLatency.Observe(float64(time.Since(start).Milliseconds()))
 		reconstructedExecutionPayloadCount.Add(1)
 	}()
-	header := blinded.Block.Body.ExecutionPayloadHeader
+	header, err := blindedBlock.Block().Body().ExecutionPayloadHeader()
+	if err != nil {
+		return nil, err
+	}
 	executionBlockHash := common.BytesToHash(header.BlockHash)
 	executionBlock, err := s.ExecutionBlockByHashWithTxs(ctx, executionBlockHash)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not fetch execution block with txs by hash %#x", executionBlockHash)
 	}
-	signedBlock, err := wrapper.WrappedSignedBeaconBlock(blinded)
+	payload := fullPayloadFromExecutionBlock(header, executionBlock)
+	fullBlock, err := wrapper.BuildSignedBeaconBlockFromExecutionPayload(blindedBlock, payload)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not wrap signed beacon block")
+		return nil, err
 	}
-	blindedBlockRoot, err := blinded.Block.HashTreeRoot()
+	blindedBlockRoot, err := blindedBlock.Block().HashTreeRoot()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not hash tree root blinded block")
 	}
-	fullBlockRoot, err := signedBlock.Block().HashTreeRoot()
+	fullBlockRoot, err := fullBlock.Block().HashTreeRoot()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not hash tree root full beacon block")
 	}
@@ -360,8 +364,7 @@ func (s *Service) ReconstructFullBellatrixBlock(
 			blindedBlockRoot,
 		)
 	}
-	payload := fullPayloadFromExecutionBlock(header, executionBlock)
-	return wrapper.BuildSignedBeaconBlockFromExecutionPayload(signedBlock, payload)
+	return fullBlock, nil
 }
 
 func fullPayloadFromExecutionBlock(header *ethpb.ExecutionPayloadHeader, block *pb.ExecutionBlockWithTxs) *pb.ExecutionPayload {
