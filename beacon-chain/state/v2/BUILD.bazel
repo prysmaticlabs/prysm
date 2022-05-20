@@ -25,6 +25,7 @@ go_library(
         "setters_state.go",
         "setters_sync_committee.go",
         "setters_validator.go",
+        "spec_parameters.go",
         "state_trie.go",
         "types.go",
     ],
