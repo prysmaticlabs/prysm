@@ -198,12 +198,7 @@ func TestExecutionHeaderResponseToProto(t *testing.T) {
 	require.NoError(t, err)
 	txRoot, err := hexutil.Decode("0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2")
 	require.NoError(t, err)
-	value := big.NewInt(0)
-	value, ok := value.SetString("1", 10)
-	require.Equal(t, true, ok)
 
-	bi := new(big.Int)
-	bfpg := Uint256{Int: bi.SetUint64(1)}
 	expected := &eth.SignedBuilderBid{
 		Message: &eth.BuilderBid{
 			Header: &eth.ExecutionPayloadHeader{
@@ -218,11 +213,11 @@ func TestExecutionHeaderResponseToProto(t *testing.T) {
 				GasUsed:          1,
 				Timestamp:        1,
 				ExtraData:        extraData,
-				BaseFeePerGas:    bfpg.Bytes(),
+				BaseFeePerGas:    uint64ToUint256(1).SSZBytes(),
 				BlockHash:        blockHash,
 				TransactionsRoot: txRoot,
 			},
-			Value:  value.Bytes(),
+			Value:  uint64ToUint256(1).SSZBytes(),
 			Pubkey: pubkey,
 		},
 		Signature: signature,
@@ -361,8 +356,6 @@ func TestExecutionPayloadResponseToProto(t *testing.T) {
 	require.NoError(t, err)
 	txList := [][]byte{tx}
 
-	bi := new(big.Int)
-	bfpg := Uint256{Int: bi.SetUint64(1)}
 	expected := &v1.ExecutionPayload{
 		ParentHash:    parentHash,
 		FeeRecipient:  feeRecipient,
@@ -375,7 +368,7 @@ func TestExecutionPayloadResponseToProto(t *testing.T) {
 		GasUsed:       1,
 		Timestamp:     1,
 		ExtraData:     extraData,
-		BaseFeePerGas: bfpg.Bytes(),
+		BaseFeePerGas: uint64ToUint256(1).SSZBytes(),
 		BlockHash:     blockHash,
 		Transactions:  txList,
 	}
@@ -544,8 +537,7 @@ func TestProposerSlashings(t *testing.T) {
 }
 
 func TestExecutionPayloadHeader_MarshalJSON(t *testing.T) {
-	bi := new(big.Int)
-	bfpg := Uint256{Int: bi.SetUint64(1)}
+	bfpg := stringToUint256("452312848583266388373324160190187140051835877600158453279131187530910662656")
 	h := &ExecutionPayloadHeader{
 		ExecutionPayloadHeader: &eth.ExecutionPayloadHeader{
 			ParentHash:       ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
@@ -559,14 +551,14 @@ func TestExecutionPayloadHeader_MarshalJSON(t *testing.T) {
 			GasUsed:          1,
 			Timestamp:        1,
 			ExtraData:        ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-			BaseFeePerGas:    bfpg.Bytes(),
+			BaseFeePerGas:    bfpg.SSZBytes(),
 			BlockHash:        ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
 			TransactionsRoot: ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
 		},
 	}
 	b, err := json.Marshal(h)
 	require.NoError(t, err)
-	expected := `{"parent_hash":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","fee_recipient":"0xabcf8e0d4e9587369b2301d0790347320302cc09","state_root":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","receipts_root":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","logs_bloom":"0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000","prev_randao":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","block_number":"1","gas_limit":"1","gas_used":"1","timestamp":"1","extra_data":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","base_fee_per_gas":"1","block_hash":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","transactions_root":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"}`
+	expected := `{"parent_hash":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","fee_recipient":"0xabcf8e0d4e9587369b2301d0790347320302cc09","state_root":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","receipts_root":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","logs_bloom":"0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000","prev_randao":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","block_number":"1","gas_limit":"1","gas_used":"1","timestamp":"1","extra_data":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","base_fee_per_gas":"452312848583266388373324160190187140051835877600158453279131187530910662656","block_hash":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","transactions_root":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"}`
 	require.Equal(t, expected, string(b))
 }
 
@@ -619,5 +611,20 @@ func TestMathBigUnmarshal(t *testing.T) {
 
 	var u256 Uint256
 	require.NoError(t, u256.UnmarshalText([]byte("452312848583266388373324160190187140051835877600158453279131187530910662656")))
-	t.Logf("%v", u256.Bytes())
+}
+
+func TestUint256Unmarshal(t *testing.T) {
+	base10 := "452312848583266388373324160190187140051835877600158453279131187530910662656"
+	bi := new(big.Int)
+	bi, ok := bi.SetString(base10, 10)
+	require.Equal(t, true, ok)
+	s := struct {
+		BigNumber Uint256 `json:"big_number"`
+	}{
+		BigNumber: Uint256{Int: bi},
+	}
+	m, err := json.Marshal(s)
+	require.NoError(t, err)
+	expected := `{"big_number":"452312848583266388373324160190187140051835877600158453279131187530910662656"}`
+	require.Equal(t, expected, string(m))
 }

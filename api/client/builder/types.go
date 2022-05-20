@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"strconv"
 
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	v1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
@@ -46,6 +47,28 @@ func (r *ValidatorRegistration) MarshalJSON() ([]byte, error) {
 
 type Uint256 struct {
 	*big.Int
+}
+
+func stringToUint256(s string) Uint256 {
+	bi := new(big.Int)
+	bi.SetString(s, 10)
+	return Uint256{Int: bi}
+}
+
+func uint64ToUint256(u uint64) Uint256 {
+	bi := new(big.Int)
+	return Uint256{Int: bi.SetUint64(u)}
+}
+
+// sszBytesToUint256 creates a Uint256 from a ssz-style (little-endian byte slice) representation.
+func sszBytesToUint256(b []byte) Uint256 {
+	bi := new(big.Int)
+	return Uint256{Int: bi.SetBytes(bytesutil.ReverseByteOrder(b))}
+}
+
+// SSZBytes creates an ssz-style (little-endian byte slice) representation of the Uint256
+func (s Uint256) SSZBytes() []byte {
+	return bytesutil.ReverseByteOrder(s.Int.Bytes())
 }
 
 var errUnmarshalUint256Failed = errors.New("unable to UnmarshalText into a Uint256 value")
@@ -175,8 +198,6 @@ type ExecutionPayloadHeader struct {
 }
 
 func (h *ExecutionPayloadHeader) MarshalJSON() ([]byte, error) {
-	bi := new(big.Int)
-	bfpg := Uint256{Int: bi.SetBytes(h.ExecutionPayloadHeader.BaseFeePerGas)}
 	type MarshalCaller ExecutionPayloadHeader
 	return json.Marshal(&MarshalCaller{
 		ParentHash:       h.ExecutionPayloadHeader.ParentHash,
@@ -190,7 +211,7 @@ func (h *ExecutionPayloadHeader) MarshalJSON() ([]byte, error) {
 		GasUsed:          Uint64String(h.ExecutionPayloadHeader.GasUsed),
 		Timestamp:        Uint64String(h.ExecutionPayloadHeader.Timestamp),
 		ExtraData:        h.ExecutionPayloadHeader.ExtraData,
-		BaseFeePerGas:    bfpg,
+		BaseFeePerGas:    sszBytesToUint256(h.ExecutionPayloadHeader.BaseFeePerGas),
 		BlockHash:        h.ExecutionPayloadHeader.BlockHash,
 		TransactionsRoot: h.ExecutionPayloadHeader.TransactionsRoot,
 	})
