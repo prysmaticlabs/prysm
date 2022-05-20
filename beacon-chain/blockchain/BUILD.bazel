@@ -110,6 +110,7 @@ go_test(
         "log_test.go",
         "metrics_test.go",
         "mock_test.go",
+        "new_slot_test.go",
         "pow_block_test.go",
         "process_attestation_test.go",
         "process_block_test.go",
