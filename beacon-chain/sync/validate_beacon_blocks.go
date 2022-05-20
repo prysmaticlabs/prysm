@@ -8,7 +8,6 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
@@ -241,7 +240,7 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk interfaces.Signed
 	}
 
 	if err = s.validateBellatrixBeaconBlock(ctx, parentState, blk.Block()); err != nil {
-		if errors.Is(err, ErrOptimisticParent) || errors.Is(blockchain.ErrUndefinedExecutionEngineError, err) {
+		if errors.Is(err, ErrOptimisticParent) {
 			return err
 		}
 		// for other kinds of errors, set this block as a bad block.
