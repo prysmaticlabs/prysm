@@ -321,3 +321,24 @@ func testSignedBlindedBeaconBlockBellatrix(t *testing.T) *eth.SignedBlindedBeaco
 		Signature: ezDecode(t, "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"),
 	}
 }
+
+func TestRequestLogger(t *testing.T) {
+	wo := WithObserver(&requestLogger{})
+	c, err := NewClient("localhost:3500", wo)
+	require.NoError(t, err)
+
+	ctx := context.Background()
+	hc := &http.Client{
+		Transport: roundtrip(func(r *http.Request) (*http.Response, error) {
+			require.Equal(t, getStatus, r.URL.Path)
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(bytes.NewBufferString(testExampleExecutionPayload)),
+				Request:    r.Clone(ctx),
+			}, nil
+		}),
+	}
+	c.hc = hc
+	err = c.Status(ctx)
+	require.NoError(t, err)
+}
