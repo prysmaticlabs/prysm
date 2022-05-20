@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"os"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -378,13 +379,17 @@ func TestExecutionPayloadResponseToProto(t *testing.T) {
 	require.DeepEqual(t, expected, p)
 }
 
+func pbEth1Data(t *testing.T) *eth.Eth1Data {
+	return &eth.Eth1Data{
+		DepositRoot:  make([]byte, 32),
+		DepositCount: 23,
+		BlockHash:    make([]byte, 32),
+	}
+}
+
 func TestEth1DataMarshal(t *testing.T) {
 	ed := &Eth1Data{
-		Eth1Data: &eth.Eth1Data{
-			DepositRoot:  make([]byte, 32),
-			DepositCount: 23,
-			BlockHash:    make([]byte, 32),
-		},
+		Eth1Data: pbEth1Data(t),
 	}
 	b, err := json.Marshal(ed)
 	require.NoError(t, err)
@@ -392,30 +397,36 @@ func TestEth1DataMarshal(t *testing.T) {
 	require.Equal(t, expected, string(b))
 }
 
-func TestSyncAggregate_MarshalJSON(t *testing.T) {
-	sa := &SyncAggregate{
-		&eth.SyncAggregate{
-			SyncCommitteeSignature: make([]byte, 48),
-			SyncCommitteeBits:      bitfield.Bitvector512{0x01},
-		},
+func pbSyncAggregate() *eth.SyncAggregate {
+	return &eth.SyncAggregate{
+		SyncCommitteeSignature: make([]byte, 48),
+		SyncCommitteeBits:      bitfield.Bitvector512{0x01},
 	}
+}
+
+func TestSyncAggregate_MarshalJSON(t *testing.T) {
+	sa := &SyncAggregate{pbSyncAggregate()}
 	b, err := json.Marshal(sa)
 	require.NoError(t, err)
 	expected := `{"sync_committee_bits":"0x01","sync_committee_signature":"0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"}`
 	require.Equal(t, expected, string(b))
 }
 
+func pbDeposit(t *testing.T) *eth.Deposit {
+	return &eth.Deposit{
+		Proof: [][]byte{ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2")},
+		Data: &eth.Deposit_Data{
+			PublicKey:             ezDecode(t, "0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a"),
+			WithdrawalCredentials: ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+			Amount:                1,
+			Signature:             ezDecode(t, "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"),
+		},
+	}
+}
+
 func TestDeposit_MarshalJSON(t *testing.T) {
 	d := &Deposit{
-		Deposit: &eth.Deposit{
-			Proof: [][]byte{ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2")},
-			Data: &eth.Deposit_Data{
-				PublicKey:             ezDecode(t, "0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a"),
-				WithdrawalCredentials: ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-				Amount:                1,
-				Signature:             ezDecode(t, "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"),
-			},
-		},
+		Deposit: pbDeposit(t),
 	}
 	b, err := json.Marshal(d)
 	require.NoError(t, err)
@@ -423,15 +434,19 @@ func TestDeposit_MarshalJSON(t *testing.T) {
 	require.Equal(t, expected, string(b))
 }
 
+func pbSignedVoluntaryExit(t *testing.T) *eth.SignedVoluntaryExit {
+	return &eth.SignedVoluntaryExit{
+		Exit: &eth.VoluntaryExit{
+			Epoch:          1,
+			ValidatorIndex: 1,
+		},
+		Signature: ezDecode(t, "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"),
+	}
+}
+
 func TestVoluntaryExit(t *testing.T) {
 	ve := &SignedVoluntaryExit{
-		SignedVoluntaryExit: &eth.SignedVoluntaryExit{
-			Exit: &eth.VoluntaryExit{
-				Epoch:          1,
-				ValidatorIndex: 1,
-			},
-			Signature: ezDecode(t, "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"),
-		},
+		SignedVoluntaryExit: pbSignedVoluntaryExit(t),
 	}
 	b, err := json.Marshal(ve)
 	require.NoError(t, err)
@@ -439,10 +454,41 @@ func TestVoluntaryExit(t *testing.T) {
 	require.Equal(t, expected, string(b))
 }
 
+func pbAttestation(t *testing.T) *eth.Attestation {
+	return &eth.Attestation{
+		AggregationBits: bitfield.Bitlist{0x01},
+		Data: &eth.AttestationData{
+			Slot:            1,
+			CommitteeIndex:  1,
+			BeaconBlockRoot: ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+			Source: &eth.Checkpoint{
+				Epoch: 1,
+				Root:  ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+			},
+			Target: &eth.Checkpoint{
+				Epoch: 1,
+				Root:  ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+			},
+		},
+		Signature: ezDecode(t, "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"),
+	}
+}
+
 func TestAttestationMarshal(t *testing.T) {
 	a := &Attestation{
-		Attestation: &eth.Attestation{
-			AggregationBits: bitfield.Bitlist{0x01},
+		Attestation: pbAttestation(t),
+	}
+	b, err := json.Marshal(a)
+	require.NoError(t, err)
+	expected := `{"aggregation_bits":"0x01","data":{"slot":"1","index":"1","beacon_block_root":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","source":{"epoch":"1","root":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"},"target":{"epoch":"1","root":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"}},"signature":"0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"}`
+	require.Equal(t, expected, string(b))
+}
+
+func pbAttesterSlashing(t *testing.T) *eth.AttesterSlashing {
+	return &eth.AttesterSlashing{
+		Attestation_1: &eth.IndexedAttestation{
+			AttestingIndices: []uint64{1},
+			Signature:        ezDecode(t, "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"),
 			Data: &eth.AttestationData{
 				Slot:            1,
 				CommitteeIndex:  1,
@@ -456,62 +502,39 @@ func TestAttestationMarshal(t *testing.T) {
 					Root:  ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
 				},
 			},
-			Signature: ezDecode(t, "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"),
+		},
+		Attestation_2: &eth.IndexedAttestation{
+			AttestingIndices: []uint64{1},
+			Signature:        ezDecode(t, "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"),
+			Data: &eth.AttestationData{
+				Slot:            1,
+				CommitteeIndex:  1,
+				BeaconBlockRoot: ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+				Source: &eth.Checkpoint{
+					Epoch: 1,
+					Root:  ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+				},
+				Target: &eth.Checkpoint{
+					Epoch: 1,
+					Root:  ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+				},
+			},
 		},
 	}
-	b, err := json.Marshal(a)
-	require.NoError(t, err)
-	expected := `{"aggregation_bits":"0x01","data":{"slot":"1","index":"1","beacon_block_root":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","source":{"epoch":"1","root":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"},"target":{"epoch":"1","root":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"}},"signature":"0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"}`
-	require.Equal(t, expected, string(b))
 }
 
 func TestAttesterSlashing_MarshalJSON(t *testing.T) {
 	as := &AttesterSlashing{
-		AttesterSlashing: &eth.AttesterSlashing{
-			Attestation_1: &eth.IndexedAttestation{
-				AttestingIndices: []uint64{1},
-				Signature:        ezDecode(t, "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"),
-				Data: &eth.AttestationData{
-					Slot:            1,
-					CommitteeIndex:  1,
-					BeaconBlockRoot: ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-					Source: &eth.Checkpoint{
-						Epoch: 1,
-						Root:  ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-					},
-					Target: &eth.Checkpoint{
-						Epoch: 1,
-						Root:  ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-					},
-				},
-			},
-			Attestation_2: &eth.IndexedAttestation{
-				AttestingIndices: []uint64{1},
-				Signature:        ezDecode(t, "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"),
-				Data: &eth.AttestationData{
-					Slot:            1,
-					CommitteeIndex:  1,
-					BeaconBlockRoot: ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-					Source: &eth.Checkpoint{
-						Epoch: 1,
-						Root:  ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-					},
-					Target: &eth.Checkpoint{
-						Epoch: 1,
-						Root:  ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-					},
-				},
-			},
-		},
+		AttesterSlashing: pbAttesterSlashing(t),
 	}
 	b, err := json.Marshal(as)
 	require.NoError(t, err)
-	expected := `{"attestation_1":{"attesting_indices":["1"],"Data":{"slot":"1","index":"1","beacon_block_root":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","source":{"epoch":"1","root":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"},"target":{"epoch":"1","root":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"}},"signature":"0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"},"attestation_2":{"attesting_indices":["1"],"Data":{"slot":"1","index":"1","beacon_block_root":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","source":{"epoch":"1","root":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"},"target":{"epoch":"1","root":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"}},"signature":"0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"}}`
+	expected := `{"attestation_1":{"attesting_indices":["1"],"data":{"slot":"1","index":"1","beacon_block_root":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","source":{"epoch":"1","root":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"},"target":{"epoch":"1","root":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"}},"signature":"0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"},"attestation_2":{"attesting_indices":["1"],"data":{"slot":"1","index":"1","beacon_block_root":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","source":{"epoch":"1","root":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"},"target":{"epoch":"1","root":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"}},"signature":"0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"}}`
 	require.Equal(t, expected, string(b))
 }
 
-func TestProposerSlashings(t *testing.T) {
-	ps := &ProposerSlashing{&eth.ProposerSlashing{
+func pbProposerSlashing(t *testing.T) *eth.ProposerSlashing {
+	return &eth.ProposerSlashing{
 		Header_1: &eth.SignedBeaconBlockHeader{
 			Header: &eth.BeaconBlockHeader{
 				Slot:          1,
@@ -532,32 +555,40 @@ func TestProposerSlashings(t *testing.T) {
 			},
 			Signature: ezDecode(t, "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"),
 		},
-	}}
+	}
+}
+
+func TestProposerSlashings(t *testing.T) {
+	ps := &ProposerSlashing{ProposerSlashing: pbProposerSlashing(t)}
 	b, err := json.Marshal(ps)
 	require.NoError(t, err)
 	expected := `{"signed_header_1":{"message":{"slot":"1","proposer_index":"1","parent_root":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","state_root":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","body_root":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"},"signature":"0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"},"signed_header_2":{"message":{"slot":"1","proposer_index":"1","parent_root":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","state_root":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","body_root":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"},"signature":"0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"}}`
 	require.Equal(t, expected, string(b))
 }
 
-func TestExecutionPayloadHeader_MarshalJSON(t *testing.T) {
+func pbExecutionPayloadHeader(t *testing.T) *eth.ExecutionPayloadHeader {
 	bfpg := stringToUint256("452312848583266388373324160190187140051835877600158453279131187530910662656")
+	return &eth.ExecutionPayloadHeader{
+		ParentHash:       ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+		FeeRecipient:     ezDecode(t, "0xabcf8e0d4e9587369b2301d0790347320302cc09"),
+		StateRoot:        ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+		ReceiptsRoot:     ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+		LogsBloom:        ezDecode(t, "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
+		PrevRandao:       ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+		BlockNumber:      1,
+		GasLimit:         1,
+		GasUsed:          1,
+		Timestamp:        1,
+		ExtraData:        ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+		BaseFeePerGas:    bfpg.SSZBytes(),
+		BlockHash:        ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+		TransactionsRoot: ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+	}
+}
+
+func TestExecutionPayloadHeader_MarshalJSON(t *testing.T) {
 	h := &ExecutionPayloadHeader{
-		ExecutionPayloadHeader: &eth.ExecutionPayloadHeader{
-			ParentHash:       ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-			FeeRecipient:     ezDecode(t, "0xabcf8e0d4e9587369b2301d0790347320302cc09"),
-			StateRoot:        ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-			ReceiptsRoot:     ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-			LogsBloom:        ezDecode(t, "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
-			PrevRandao:       ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-			BlockNumber:      1,
-			GasLimit:         1,
-			GasUsed:          1,
-			Timestamp:        1,
-			ExtraData:        ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-			BaseFeePerGas:    bfpg.SSZBytes(),
-			BlockHash:        ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-			TransactionsRoot: ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-		},
+		ExecutionPayloadHeader: pbExecutionPayloadHeader(t),
 	}
 	b, err := json.Marshal(h)
 	require.NoError(t, err)
@@ -630,4 +661,33 @@ func TestUint256Unmarshal(t *testing.T) {
 	require.NoError(t, err)
 	expected := `{"big_number":"452312848583266388373324160190187140051835877600158453279131187530910662656"}`
 	require.Equal(t, expected, string(m))
+}
+
+func TestMarshalBlindedBeaconBlockBodyBellatrix(t *testing.T) {
+	expected, err := os.ReadFile("testdata/blinded-block.json")
+	require.NoError(t, err)
+	b := &BlindedBeaconBlockBellatrix{BlindedBeaconBlockBellatrix: &eth.BlindedBeaconBlockBellatrix{
+		Slot:          1,
+		ProposerIndex: 1,
+		ParentRoot:    ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+		StateRoot:     ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+		Body: &eth.BlindedBeaconBlockBodyBellatrix{
+			RandaoReveal:           ezDecode(t, "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"),
+			Eth1Data:               pbEth1Data(t),
+			Graffiti:               ezDecode(t, "0xdeadbeefc0ffee"),
+			ProposerSlashings:      []*eth.ProposerSlashing{pbProposerSlashing(t)},
+			AttesterSlashings:      []*eth.AttesterSlashing{pbAttesterSlashing(t)},
+			Attestations:           []*eth.Attestation{pbAttestation(t)},
+			Deposits:               []*eth.Deposit{pbDeposit(t)},
+			VoluntaryExits:         []*eth.SignedVoluntaryExit{pbSignedVoluntaryExit(t)},
+			SyncAggregate:          pbSyncAggregate(),
+			ExecutionPayloadHeader: pbExecutionPayloadHeader(t),
+		},
+	}}
+	m, err := json.Marshal(b)
+	require.NoError(t, err)
+	// string error output is easier to deal with
+	// -1 end slice index on expected is to get rid of trailing newline
+	// if you update this fixture and this test breaks, you probably removed the trailing newline
+	require.Equal(t, string(expected[0:len(expected)-1]), string(m))
 }

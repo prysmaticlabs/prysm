@@ -55,11 +55,6 @@ func stringToUint256(s string) Uint256 {
 	return Uint256{Int: bi}
 }
 
-func uint64ToUint256(u uint64) Uint256 {
-	bi := new(big.Int)
-	return Uint256{Int: bi.SetUint64(u)}
-}
-
 // sszBytesToUint256 creates a Uint256 from a ssz-style (little-endian byte slice) representation.
 func sszBytesToUint256(b []byte) Uint256 {
 	bi := new(big.Int)
@@ -362,9 +357,9 @@ func (a *IndexedAttestation) MarshalJSON() ([]byte, error) {
 		indices[i] = fmt.Sprintf("%d", a.AttestingIndices[i])
 	}
 	return json.Marshal(struct {
-		AttestingIndices []string `json:"attesting_indices,omitempty"`
-		Data             *AttestationData
-		Signature        hexutil.Bytes `json:"signature,omitempty"`
+		AttestingIndices []string         `json:"attesting_indices,omitempty"`
+		Data             *AttestationData `json:"data,omitempty"`
+		Signature        hexutil.Bytes    `json:"signature,omitempty"`
 	}{
 		AttestingIndices: indices,
 		Data:             &AttestationData{a.IndexedAttestation.Data},
@@ -531,6 +526,26 @@ func (e *Eth1Data) MarshalJSON() ([]byte, error) {
 }
 
 func (b *BlindedBeaconBlockBodyBellatrix) MarshalJSON() ([]byte, error) {
+	sve := make([]*SignedVoluntaryExit, len(b.BlindedBeaconBlockBodyBellatrix.VoluntaryExits))
+	for i := range b.BlindedBeaconBlockBodyBellatrix.VoluntaryExits {
+		sve[i] = &SignedVoluntaryExit{SignedVoluntaryExit: b.BlindedBeaconBlockBodyBellatrix.VoluntaryExits[i]}
+	}
+	deps := make([]*Deposit, len(b.BlindedBeaconBlockBodyBellatrix.Deposits))
+	for i := range b.BlindedBeaconBlockBodyBellatrix.Deposits {
+		deps[i] = &Deposit{Deposit: b.BlindedBeaconBlockBodyBellatrix.Deposits[i]}
+	}
+	atts := make([]*Attestation, len(b.BlindedBeaconBlockBodyBellatrix.Attestations))
+	for i := range b.BlindedBeaconBlockBodyBellatrix.Attestations {
+		atts[i] = &Attestation{Attestation: b.BlindedBeaconBlockBodyBellatrix.Attestations[i]}
+	}
+	atsl := make([]*AttesterSlashing, len(b.BlindedBeaconBlockBodyBellatrix.AttesterSlashings))
+	for i := range b.BlindedBeaconBlockBodyBellatrix.AttesterSlashings {
+		atsl[i] = &AttesterSlashing{AttesterSlashing: b.BlindedBeaconBlockBodyBellatrix.AttesterSlashings[i]}
+	}
+	pros := make([]*ProposerSlashing, len(b.BlindedBeaconBlockBodyBellatrix.ProposerSlashings))
+	for i := range b.BlindedBeaconBlockBodyBellatrix.ProposerSlashings {
+		pros[i] = &ProposerSlashing{ProposerSlashing: b.BlindedBeaconBlockBodyBellatrix.ProposerSlashings[i]}
+	}
 	return json.Marshal(struct {
 		RandaoReveal           hexutil.Bytes           `json:"randao_reveal,omitempty"`
 		Eth1Data               *Eth1Data               `json:"eth1_data,omitempty"`
@@ -540,17 +555,18 @@ func (b *BlindedBeaconBlockBodyBellatrix) MarshalJSON() ([]byte, error) {
 		Attestations           []*Attestation          `json:"attestations,omitempty"`
 		Deposits               []*Deposit              `json:"deposits,omitempty"`
 		VoluntaryExits         []*SignedVoluntaryExit  `json:"voluntary_exits,omitempty"`
-		SyncAggregates         *SyncAggregate          `json:"sync_aggregate,omitempty"`
+		SyncAggregate          *SyncAggregate          `json:"sync_aggregate,omitempty"`
 		ExecutionPayloadHeader *ExecutionPayloadHeader `json:"execution_payload_header,omitempty"`
 	}{
 		RandaoReveal:           b.RandaoReveal,
 		Eth1Data:               &Eth1Data{b.BlindedBeaconBlockBodyBellatrix.Eth1Data},
 		Graffiti:               b.BlindedBeaconBlockBodyBellatrix.Graffiti,
-		ProposerSlashings:      []*ProposerSlashing{},
-		AttesterSlashings:      []*AttesterSlashing{},
-		Attestations:           []*Attestation{},
-		Deposits:               []*Deposit{},
-		VoluntaryExits:         []*SignedVoluntaryExit{},
+		ProposerSlashings:      pros,
+		AttesterSlashings:      atsl,
+		Attestations:           atts,
+		Deposits:               deps,
+		VoluntaryExits:         sve,
+		SyncAggregate:          &SyncAggregate{b.BlindedBeaconBlockBodyBellatrix.SyncAggregate},
 		ExecutionPayloadHeader: &ExecutionPayloadHeader{ExecutionPayloadHeader: b.BlindedBeaconBlockBodyBellatrix.ExecutionPayloadHeader},
 	})
 }
