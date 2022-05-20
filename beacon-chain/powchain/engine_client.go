@@ -339,22 +339,6 @@ func (s *Service) ReconstructFullBellatrixBlock(
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not fetch execution block with txs by hash %#x", executionBlockHash)
 	}
-	payload := &pb.ExecutionPayload{
-		ParentHash:    header.ParentHash,
-		FeeRecipient:  header.FeeRecipient,
-		StateRoot:     header.StateRoot,
-		ReceiptsRoot:  header.ReceiptsRoot,
-		LogsBloom:     header.LogsBloom,
-		PrevRandao:    header.PrevRandao,
-		BlockNumber:   header.BlockNumber,
-		GasLimit:      header.GasLimit,
-		GasUsed:       header.GasUsed,
-		Timestamp:     header.Timestamp,
-		ExtraData:     header.ExtraData,
-		BaseFeePerGas: header.BaseFeePerGas,
-		BlockHash:     executionBlock.Hash,
-		Transactions:  executionBlock.Transactions,
-	}
 	signedBlock, err := wrapper.WrappedSignedBeaconBlock(blinded)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not wrap signed beacon block")
@@ -376,7 +360,27 @@ func (s *Service) ReconstructFullBellatrixBlock(
 			blindedBlockRoot,
 		)
 	}
+	payload := fullPayloadFromExecutionBlock(header, executionBlock)
 	return wrapper.BuildSignedBeaconBlockFromExecutionPayload(signedBlock, payload)
+}
+
+func fullPayloadFromExecutionBlock(header *ethpb.ExecutionPayloadHeader, block *pb.ExecutionBlockWithTxs) *pb.ExecutionPayload {
+	return &pb.ExecutionPayload{
+		ParentHash:    header.ParentHash,
+		FeeRecipient:  header.FeeRecipient,
+		StateRoot:     header.StateRoot,
+		ReceiptsRoot:  header.ReceiptsRoot,
+		LogsBloom:     header.LogsBloom,
+		PrevRandao:    header.PrevRandao,
+		BlockNumber:   header.BlockNumber,
+		GasLimit:      header.GasLimit,
+		GasUsed:       header.GasUsed,
+		Timestamp:     header.Timestamp,
+		ExtraData:     header.ExtraData,
+		BaseFeePerGas: header.BaseFeePerGas,
+		BlockHash:     block.Hash,
+		Transactions:  block.Transactions,
+	}
 }
 
 // Handles errors received from the RPC server according to the specification.

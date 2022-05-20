@@ -7,9 +7,9 @@ import (
 	"os"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/encoding/ssz"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	log "github.com/sirupsen/logrus"
@@ -201,7 +201,7 @@ func BuildSignedBeaconBlockFromExecutionPayload(
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get sync aggregate from block body")
 		}
-		blindedBlock := &eth.SignedBeaconBlockBellatrix{
+		bellatrixFullBlock := &eth.SignedBeaconBlockBellatrix{
 			Block: &eth.BeaconBlockBellatrix{
 				Slot:          b.Slot(),
 				ProposerIndex: b.ProposerIndex(),
@@ -222,7 +222,7 @@ func BuildSignedBeaconBlockFromExecutionPayload(
 			},
 			Signature: blk.Signature(),
 		}
-		return wrappedBellatrixSignedBeaconBlock(blindedBlock)
+		return wrappedBellatrixSignedBeaconBlock(bellatrixFullBlock)
 	}
 }
 
@@ -241,7 +241,7 @@ func WrapSignedBlindedBeaconBlock(blk interfaces.SignedBeaconBlock) (interfaces.
 		if err != nil {
 			return nil, err
 		}
-		txsRoot, err := ssz.TransactionsRoot(payload.Transactions)
+		header, err := blocks.PayloadToHeader(payload)
 		if err != nil {
 			return nil, err
 		}
@@ -252,31 +252,16 @@ func WrapSignedBlindedBeaconBlock(blk interfaces.SignedBeaconBlock) (interfaces.
 				ParentRoot:    b.ParentRoot(),
 				StateRoot:     b.StateRoot(),
 				Body: &eth.BlindedBeaconBlockBodyBellatrix{
-					RandaoReveal:      b.Body().RandaoReveal(),
-					Eth1Data:          b.Body().Eth1Data(),
-					Graffiti:          b.Body().Graffiti(),
-					ProposerSlashings: b.Body().ProposerSlashings(),
-					AttesterSlashings: b.Body().AttesterSlashings(),
-					Attestations:      b.Body().Attestations(),
-					Deposits:          b.Body().Deposits(),
-					VoluntaryExits:    b.Body().VoluntaryExits(),
-					SyncAggregate:     syncAgg,
-					ExecutionPayloadHeader: &eth.ExecutionPayloadHeader{
-						ParentHash:       payload.ParentHash,
-						FeeRecipient:     payload.FeeRecipient,
-						StateRoot:        payload.StateRoot,
-						ReceiptsRoot:     payload.ReceiptsRoot,
-						LogsBloom:        payload.LogsBloom,
-						PrevRandao:       payload.PrevRandao,
-						BlockNumber:      payload.BlockNumber,
-						GasLimit:         payload.GasLimit,
-						GasUsed:          payload.GasUsed,
-						Timestamp:        payload.Timestamp,
-						ExtraData:        payload.ExtraData,
-						BaseFeePerGas:    payload.BaseFeePerGas,
-						BlockHash:        payload.BlockHash,
-						TransactionsRoot: txsRoot[:],
-					},
+					RandaoReveal:           b.Body().RandaoReveal(),
+					Eth1Data:               b.Body().Eth1Data(),
+					Graffiti:               b.Body().Graffiti(),
+					ProposerSlashings:      b.Body().ProposerSlashings(),
+					AttesterSlashings:      b.Body().AttesterSlashings(),
+					Attestations:           b.Body().Attestations(),
+					Deposits:               b.Body().Deposits(),
+					VoluntaryExits:         b.Body().VoluntaryExits(),
+					SyncAggregate:          syncAgg,
+					ExecutionPayloadHeader: header,
 				},
 			},
 			Signature: blk.Signature(),
