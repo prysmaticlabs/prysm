@@ -46,10 +46,10 @@ func ProcessAttestationsNoVerifySignature(
 // method is used to validate attestations whose signatures have already been verified or will be verified later.
 func ProcessAttestationNoVerifySignature(
 	ctx context.Context,
-	beaconState state.BeaconStateAltair,
+	beaconState state.BeaconState,
 	att *ethpb.Attestation,
 	totalBalance uint64,
-) (state.BeaconStateAltair, error) {
+) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "altair.ProcessAttestationNoVerifySignature")
 	defer span.End()
 
@@ -262,7 +262,7 @@ func RewardProposer(ctx context.Context, beaconState state.BeaconState, proposer
 //        participation_flag_indices.append(TIMELY_HEAD_FLAG_INDEX)
 //
 //    return participation_flag_indices
-func AttestationParticipationFlagIndices(beaconState state.BeaconStateAltair, data *ethpb.AttestationData, delay types.Slot) (map[uint8]bool, error) {
+func AttestationParticipationFlagIndices(beaconState state.BeaconState, data *ethpb.AttestationData, delay types.Slot) (map[uint8]bool, error) {
 	currEpoch := time.CurrentEpoch(beaconState)
 	var justifiedCheckpt *ethpb.Checkpoint
 	if data.Target.Epoch == currEpoch {

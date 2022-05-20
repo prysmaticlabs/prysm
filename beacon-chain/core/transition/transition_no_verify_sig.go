@@ -371,7 +371,7 @@ func altairOperations(
 // This calls phase 0 block operations.
 func phase0Operations(
 	ctx context.Context,
-	state state.BeaconStateAltair,
+	state state.BeaconState,
 	signedBeaconBlock interfaces.SignedBeaconBlock) (state.BeaconState, error) {
 	state, err := b.ProcessProposerSlashings(ctx, state, signedBeaconBlock.Block().Body().ProposerSlashings(), v.SlashValidator)
 	if err != nil {

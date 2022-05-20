@@ -54,7 +54,7 @@ func ValidateNilSyncContribution(s *ethpb.SignedContributionAndProof) error {
 //    pubkeys = [state.validators[index].pubkey for index in indices]
 //    aggregate_pubkey = bls.AggregatePKs(pubkeys)
 //    return SyncCommittee(pubkeys=pubkeys, aggregate_pubkey=aggregate_pubkey)
-func NextSyncCommittee(ctx context.Context, s state.BeaconStateAltair) (*ethpb.SyncCommittee, error) {
+func NextSyncCommittee(ctx context.Context, s state.BeaconState) (*ethpb.SyncCommittee, error) {
 	indices, err := NextSyncCommitteeIndices(ctx, s)
 	if err != nil {
 		return nil, err
@@ -98,7 +98,7 @@ func NextSyncCommittee(ctx context.Context, s state.BeaconStateAltair) (*ethpb.S
 //            sync_committee_indices.append(candidate_index)
 //        i += 1
 //    return sync_committee_indices
-func NextSyncCommitteeIndices(ctx context.Context, s state.BeaconStateAltair) ([]types.ValidatorIndex, error) {
+func NextSyncCommitteeIndices(ctx context.Context, s state.BeaconState) ([]types.ValidatorIndex, error) {
 	epoch := coreTime.NextEpoch(s)
 	indices, err := helpers.ActiveValidatorIndices(ctx, s, epoch)
 	if err != nil {

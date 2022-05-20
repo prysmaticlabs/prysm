@@ -108,7 +108,7 @@ func RunForkTransitionTest(t *testing.T, config string) {
 				beaconState, ok = st.(*v1.BeaconState)
 				require.Equal(t, true, ok)
 			}
-			altairState := state.BeaconStateAltair(beaconState)
+			altairState := state.BeaconState(beaconState)
 			for _, b := range postforkBlocks {
 				wsb, err := wrapper.WrappedSignedBeaconBlock(b)
 				require.NoError(t, err)
