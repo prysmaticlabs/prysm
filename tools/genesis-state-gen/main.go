@@ -39,6 +39,7 @@ var (
 	sszOutputFile    = flag.String("output-ssz", "", "Output filename of the SSZ marshaling of the generated genesis state")
 	yamlOutputFile   = flag.String("output-yaml", "", "Output filename of the YAML marshaling of the generated genesis state")
 	jsonOutputFile   = flag.String("output-json", "", "Output filename of the JSON marshaling of the generated genesis state")
+	configName       = flag.String("config-name", params.MinimalName, "ConfigName for the BeaconChainConfig that will be used for interop, inc GenesisForkVersion of generated genesis state")
 )
 
 func main() {
@@ -50,8 +51,18 @@ func main() {
 		log.Println("Expected --output-ssz, --output-yaml, or --output-json to have been provided, received nil")
 		return
 	}
-	if !*useMainnetConfig {
-		params.OverrideBeaconConfig(params.MinimalSpecConfig())
+	if *useMainnetConfig {
+		if err := params.SetActive(params.MainnetConfig().Copy()); err != nil {
+			log.Fatalf("unable to set mainnet config active, err=%s", err.Error())
+		}
+	} else {
+		cfg, err := params.ByName(*configName)
+		if err != nil {
+			log.Fatalf("unable to find config using name %s, err=%s", *configName, err.Error())
+		}
+		if err := params.SetActive(cfg.Copy()); err != nil {
+			log.Fatalf("unable to set %s config active, err=%s", cfg.ConfigName, err.Error())
+		}
 	}
 	var genesisState *ethpb.BeaconState
 	var err error

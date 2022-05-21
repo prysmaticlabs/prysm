@@ -15,8 +15,12 @@ var (
 	ErrInternal = errors.New("internal JSON-RPC error")
 	// ErrServer corresponds to JSON-RPC code -32000.
 	ErrServer = errors.New("client error while processing request")
-	// ErrUnknownPayload corresponds to JSON-RPC code -32001.
+	// ErrUnknownPayload corresponds to JSON-RPC code -38001.
 	ErrUnknownPayload = errors.New("payload does not exist or is not available")
+	// ErrInvalidForkchoiceState corresponds to JSON-RPC code -38002.
+	ErrInvalidForkchoiceState = errors.New("invalid forkchoice state")
+	// ErrInvalidPayloadAttributes corresponds to JSON-RPC code -38003.
+	ErrInvalidPayloadAttributes = errors.New("payload attributes are invalid / inconsistent")
 	// ErrUnknownPayloadStatus when the payload status is unknown.
 	ErrUnknownPayloadStatus = errors.New("unknown payload status")
 	// ErrConfigMismatch when the execution node's terminal total difficulty or

@@ -23,6 +23,7 @@ go_library(
         "setters_randao.go",
         "setters_state.go",
         "setters_validator.go",
+        "spec_parameters.go",
         "state_trie.go",
         "types.go",
         "unsupported_getters.go",

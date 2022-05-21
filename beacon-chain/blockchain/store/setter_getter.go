@@ -1,26 +1,42 @@
 package store
 
-import ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+import (
+	"github.com/pkg/errors"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+)
+
+var (
+	ErrNilCheckpoint = errors.New("nil checkpoint")
+)
 
 // PrevJustifiedCheckpt returns the previous justified checkpoint in the Store.
-func (s *Store) PrevJustifiedCheckpt() *ethpb.Checkpoint {
+func (s *Store) PrevJustifiedCheckpt() (*ethpb.Checkpoint, error) {
 	s.RLock()
 	defer s.RUnlock()
-	return s.prevJustifiedCheckpt
+	if s.prevJustifiedCheckpt == nil {
+		return nil, ErrNilCheckpoint
+	}
+	return s.prevJustifiedCheckpt, nil
 }
 
 // BestJustifiedCheckpt returns the best justified checkpoint in the Store.
-func (s *Store) BestJustifiedCheckpt() *ethpb.Checkpoint {
+func (s *Store) BestJustifiedCheckpt() (*ethpb.Checkpoint, error) {
 	s.RLock()
 	defer s.RUnlock()
-	return s.bestJustifiedCheckpt
+	if s.bestJustifiedCheckpt == nil {
+		return nil, ErrNilCheckpoint
+	}
+	return s.bestJustifiedCheckpt, nil
 }
 
 // JustifiedCheckpt returns the justified checkpoint in the Store.
-func (s *Store) JustifiedCheckpt() *ethpb.Checkpoint {
+func (s *Store) JustifiedCheckpt() (*ethpb.Checkpoint, error) {
 	s.RLock()
 	defer s.RUnlock()
-	return s.justifiedCheckpt
+	if s.justifiedCheckpt == nil {
+		return nil, ErrNilCheckpoint
+	}
+	return s.justifiedCheckpt, nil
 }
 
 // JustifiedPayloadBlockHash returns the justified payload block hash reflecting justified check point.
@@ -31,17 +47,23 @@ func (s *Store) JustifiedPayloadBlockHash() [32]byte {
 }
 
 // PrevFinalizedCheckpt returns the previous finalized checkpoint in the Store.
-func (s *Store) PrevFinalizedCheckpt() *ethpb.Checkpoint {
+func (s *Store) PrevFinalizedCheckpt() (*ethpb.Checkpoint, error) {
 	s.RLock()
 	defer s.RUnlock()
-	return s.prevFinalizedCheckpt
+	if s.prevFinalizedCheckpt == nil {
+		return nil, ErrNilCheckpoint
+	}
+	return s.prevFinalizedCheckpt, nil
 }
 
 // FinalizedCheckpt returns the finalized checkpoint in the Store.
-func (s *Store) FinalizedCheckpt() *ethpb.Checkpoint {
+func (s *Store) FinalizedCheckpt() (*ethpb.Checkpoint, error) {
 	s.RLock()
 	defer s.RUnlock()
-	return s.finalizedCheckpt
+	if s.finalizedCheckpt == nil {
+		return nil, ErrNilCheckpoint
+	}
+	return s.finalizedCheckpt, nil
 }
 
 // FinalizedPayloadBlockHash returns the finalized payload block hash reflecting finalized check point.

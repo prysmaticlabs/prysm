@@ -27,6 +27,7 @@ import (
 // the Prysm repository to replay requests to a jaeger collector endpoint. This
 // can then be used to visualize the spans themselves in the jaeger UI.
 type TracingSink struct {
+	cancel   context.CancelFunc
 	started  chan struct{}
 	endpoint string
 	server   *http.Server
@@ -45,6 +46,8 @@ func (ts *TracingSink) Start(ctx context.Context) error {
 	if ts.endpoint == "" {
 		return errors.New("empty endpoint provided")
 	}
+	ctx, cancelF := context.WithCancel(ctx)
+	ts.cancel = cancelF
 	go ts.initializeSink(ctx)
 	close(ts.started)
 	return nil
@@ -53,6 +56,22 @@ func (ts *TracingSink) Start(ctx context.Context) error {
 // Started checks whether a tracing sink is started and ready to be queried.
 func (ts *TracingSink) Started() <-chan struct{} {
 	return ts.started
+}
+
+// Pause pauses the component and its underlying process.
+func (ts *TracingSink) Pause() error {
+	return nil
+}
+
+// Resume resumes the component and its underlying process.
+func (ts *TracingSink) Resume() error {
+	return nil
+}
+
+// Stop stops the component and its underlying process.
+func (ts *TracingSink) Stop() error {
+	ts.cancel()
+	return nil
 }
 
 // Initialize an http handler that writes all requests to a file.

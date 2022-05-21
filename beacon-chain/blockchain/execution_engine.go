@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -168,20 +169,20 @@ func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
 	if blocks.IsPreBellatrixVersion(postStateVersion) {
 		return true, nil
 	}
-	if err := helpers.BeaconBlockIsNil(blk); err != nil {
+	if err := wrapper.BeaconBlockIsNil(blk); err != nil {
 		return false, err
 	}
 	body := blk.Block().Body()
 	enabled, err := blocks.IsExecutionEnabledUsingHeader(postStateHeader, body)
 	if err != nil {
-		return false, errors.Wrap(err, "could not determine if execution is enabled")
+		return false, errors.Wrap(invalidBlock{err}, "could not determine if execution is enabled")
 	}
 	if !enabled {
 		return true, nil
 	}
 	payload, err := body.ExecutionPayload()
 	if err != nil {
-		return false, errors.Wrap(err, "could not get execution payload")
+		return false, errors.Wrap(invalidBlock{err}, "could not get execution payload")
 	}
 	lastValidHash, err := s.cfg.ExecutionEngineCaller.NewPayload(ctx, payload)
 	switch err {
@@ -213,7 +214,7 @@ func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
 			"blockRoot":    fmt.Sprintf("%#x", root),
 			"invalidCount": len(invalidRoots),
 		}).Warn("Pruned invalid blocks")
-		return false, ErrInvalidPayload
+		return false, invalidBlock{ErrInvalidPayload}
 	default:
 		return false, errors.WithMessage(ErrUndefinedExecutionEngineError, err.Error())
 	}
@@ -235,13 +236,9 @@ func (s *Service) optimisticCandidateBlock(ctx context.Context, blk interfaces.B
 	if blk.Slot()+params.BeaconConfig().SafeSlotsToImportOptimistically <= s.CurrentSlot() {
 		return nil
 	}
-
-	parent, err := s.cfg.BeaconDB.Block(ctx, bytesutil.ToBytes32(blk.ParentRoot()))
+	parent, err := s.getBlock(ctx, bytesutil.ToBytes32(blk.ParentRoot()))
 	if err != nil {
 		return err
-	}
-	if parent == nil || parent.IsNil() {
-		return errNilParentInDB
 	}
 	parentIsExecutionBlock, err := blocks.IsExecutionBlock(parent.Block().Body())
 	if err != nil {
@@ -282,7 +279,10 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 			logrus.WithFields(logrus.Fields{
 				"validatorIndex": proposerID,
 				"burnAddress":    fieldparams.EthBurnAddressHex,
-			}).Error("Fee recipient not set. Using burn address")
+			}).Warn("Fee recipient is currently using the burn address, " +
+				"you will not be rewarded transaction fees on this setting. " +
+				"Please set a different eth address as the fee recipient. " +
+				"Please refer to our documentation for instructions")
 		}
 	case err != nil:
 		return false, nil, 0, errors.Wrap(err, "could not get fee recipient in db")

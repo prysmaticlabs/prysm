@@ -31,6 +31,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
+	"github.com/prysmaticlabs/prysm/container/trie"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -86,9 +87,11 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 	bState, _ := util.DeterministicGenesisState(t, 10)
 	pbState, err := v1.ProtobufBeaconState(bState.InnerStateUnsafe())
 	require.NoError(t, err)
+	mockTrie, err := trie.NewTrie(0)
+	require.NoError(t, err)
 	err = beaconDB.SavePowchainData(ctx, &ethpb.ETH1ChainData{
 		BeaconState: pbState,
-		Trie:        &ethpb.SparseMerkleTrie{},
+		Trie:        mockTrie.ToProto(),
 		CurrentEth1Data: &ethpb.LatestETH1Data{
 			BlockHash: make([]byte, 32),
 		},
@@ -274,8 +277,12 @@ func TestChainService_CorrectGenesisRoots(t *testing.T) {
 	// Test the start function.
 	chainService.Start()
 
-	require.DeepEqual(t, blkRoot[:], chainService.store.FinalizedCheckpt().Root, "Finalize Checkpoint root is incorrect")
-	require.DeepEqual(t, params.BeaconConfig().ZeroHash[:], chainService.store.JustifiedCheckpt().Root, "Justified Checkpoint root is incorrect")
+	cp, err := chainService.store.FinalizedCheckpt()
+	require.NoError(t, err)
+	require.DeepEqual(t, blkRoot[:], cp.Root, "Finalize Checkpoint root is incorrect")
+	cp, err = chainService.store.JustifiedCheckpt()
+	require.NoError(t, err)
+	require.DeepEqual(t, params.BeaconConfig().ZeroHash[:], cp.Root, "Justified Checkpoint root is incorrect")
 
 	require.NoError(t, chainService.Stop(), "Unable to stop chain service")
 

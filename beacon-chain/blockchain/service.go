@@ -35,6 +35,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
@@ -201,12 +202,9 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 		forkChoicer = protoarray.New(justified.Epoch, finalized.Epoch, fRoot)
 	}
 	s.cfg.ForkChoiceStore = forkChoicer
-	fb, err := s.cfg.BeaconDB.Block(s.ctx, s.ensureRootNotZeros(fRoot))
+	fb, err := s.getBlock(s.ctx, s.ensureRootNotZeros(fRoot))
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized checkpoint block")
-	}
-	if fb == nil || fb.IsNil() {
-		return errNilFinalizedInStore
 	}
 	payloadHash, err := getBlockPayloadHash(fb.Block())
 	if err != nil {
@@ -273,7 +271,7 @@ func (s *Service) originRootFromSavedState(ctx context.Context) ([32]byte, error
 	if err != nil {
 		return originRoot, errors.Wrap(err, "could not get genesis block from db")
 	}
-	if err := helpers.BeaconBlockIsNil(genesisBlock); err != nil {
+	if err := wrapper.BeaconBlockIsNil(genesisBlock); err != nil {
 		return originRoot, err
 	}
 	genesisBlkRoot, err := genesisBlock.Block().HashTreeRoot()
@@ -339,14 +337,13 @@ func (s *Service) initializeHeadFromDB(ctx context.Context) error {
 				finalizedState.Slot(), flags.HeadSync.Name)
 		}
 	}
-
-	finalizedBlock, err := s.cfg.BeaconDB.Block(ctx, finalizedRoot)
-	if err != nil {
-		return errors.Wrap(err, "could not get finalized block from db")
+	if finalizedState == nil || finalizedState.IsNil() {
+		return errors.New("finalized state can't be nil")
 	}
 
-	if finalizedState == nil || finalizedState.IsNil() || finalizedBlock == nil || finalizedBlock.IsNil() {
-		return errors.New("finalized state and block can't be nil")
+	finalizedBlock, err := s.getBlock(ctx, finalizedRoot)
+	if err != nil {
+		return errors.Wrap(err, "could not get finalized block")
 	}
 	s.setHead(finalizedRoot, finalizedBlock, finalizedState)
 

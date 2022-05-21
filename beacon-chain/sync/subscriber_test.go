@@ -115,6 +115,11 @@ func TestSubscribe_UnsubscribeTopic(t *testing.T) {
 }
 
 func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.MainnetConfig().Copy()
+	cfg.SecondsPerSlot = 1
+	params.OverrideBeaconConfig(cfg)
+
 	p2pService := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 	d := db.SetupDB(t)
@@ -138,8 +143,6 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 	topic := "/eth2/%x/attester_slashing"
 	var wg sync.WaitGroup
 	wg.Add(1)
-	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MainnetConfig())
 	var err error
 	p2pService.Digest, err = r.currentForkDigest()
 	require.NoError(t, err)
@@ -437,6 +440,11 @@ func Test_wrapAndReportValidation(t *testing.T) {
 }
 
 func TestFilterSubnetPeers(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.MainnetConfig().Copy()
+	cfg.SecondsPerSlot = 1
+	params.OverrideBeaconConfig(cfg)
+
 	gFlags := new(flags.GlobalFlags)
 	gFlags.MinimumPeersPerSubnet = 4
 	flags.Init(gFlags)
@@ -504,6 +512,11 @@ func TestFilterSubnetPeers(t *testing.T) {
 }
 
 func TestSubscribeWithSyncSubnets_StaticOK(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.MainnetTestConfig().Copy()
+	cfg.SecondsPerSlot = 1
+	params.OverrideBeaconConfig(cfg)
+
 	p := p2ptest.NewTestP2P(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	currSlot := types.Slot(100)
@@ -530,11 +543,12 @@ func TestSubscribeWithSyncSubnets_StaticOK(t *testing.T) {
 }
 
 func TestSubscribeWithSyncSubnets_DynamicOK(t *testing.T) {
-	p := p2ptest.NewTestP2P(t)
 	params.SetupTestConfigCleanup(t)
-	cfg := params.BeaconConfig()
+	cfg := params.MainnetConfig().Copy()
 	cfg.SecondsPerSlot = 1
 	params.OverrideBeaconConfig(cfg)
+
+	p := p2ptest.NewTestP2P(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	currSlot := types.Slot(100)
 	r := Service{
@@ -611,9 +625,9 @@ func TestSubscribeWithSyncSubnets_StaticSwitchFork(t *testing.T) {
 }
 
 func TestSubscribeWithSyncSubnets_DynamicSwitchFork(t *testing.T) {
-	p := p2ptest.NewTestP2P(t)
 	params.SetupTestConfigCleanup(t)
-	cfg := params.BeaconConfig()
+	p := p2ptest.NewTestP2P(t)
+	cfg := params.BeaconConfig().Copy()
 	cfg.AltairForkEpoch = 1
 	cfg.SecondsPerSlot = 1
 	cfg.SlotsPerEpoch = 4
