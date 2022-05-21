@@ -139,6 +139,7 @@ func main() {
 	app.Version = version.Version()
 	app.Commands = []*cli.Command{
 		dbcommands.Commands,
+		jwt.Commands,
 	}
 
 	app.Flags = appFlags
