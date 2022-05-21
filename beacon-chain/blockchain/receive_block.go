@@ -59,12 +59,12 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.SignedBeaco
 	}
 
 	// Reports on block and fork choice metrics.
-	justified := s.store.JustifiedCheckpt()
-	if justified == nil {
-		return errNilJustifiedInStore
+	justified, err := s.store.JustifiedCheckpt()
+	if err != nil {
+		return err
 	}
-	finalized := s.store.FinalizedCheckpt()
-	if finalized == nil {
+	finalized, err := s.store.FinalizedCheckpt()
+	if err != nil {
 		return errNilFinalizedInStore
 	}
 	reportSlotMetrics(blockCopy.Block().Slot(), s.HeadSlot(), s.CurrentSlot(), finalized)
