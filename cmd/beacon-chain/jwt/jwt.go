@@ -27,7 +27,7 @@ var Commands = &cli.Command{
 			Before:      tos.VerifyTosAcceptedOrPrompt,
 			Action: func(cliCtx *cli.Context) error {
 				if err := generateHttpSecretInFile(); err != nil {
-					log.Fatalf("Could not generate secret: %v", err)
+					log.Printf("Could not generate secret: %v", err)
 				}
 				return nil
 			},

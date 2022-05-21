@@ -180,7 +180,7 @@ func main() {
 		logFileName := ctx.String(cmd.LogFileName.Name)
 		if logFileName != "" {
 			if err := logs.ConfigurePersistentLogging(logFileName); err != nil {
-				log.WithError(err).Error("Failed to configuring logging to disk.")
+				fmt.Print("Failed to configuring logging to disk.")
 			}
 		}
 		if err := cmd.ExpandSingleEndpointIfFile(ctx, flags.HTTPWeb3ProviderFlag); err != nil {
@@ -204,13 +204,13 @@ func main() {
 
 	defer func() {
 		if x := recover(); x != nil {
-			log.Errorf("Runtime panic: %v\n%v", x, string(runtimeDebug.Stack()))
+			fmt.Printf("Runtime panic: %v\n%v", x, string(runtimeDebug.Stack()))
 			panic(x)
 		}
 	}()
 
 	if err := app.Run(os.Args); err != nil {
-		log.Error(err.Error())
+		fmt.Print(err.Error())
 	}
 }
 
