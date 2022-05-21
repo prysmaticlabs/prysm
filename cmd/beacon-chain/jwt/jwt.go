@@ -36,7 +36,7 @@ var Commands = &cli.Command{
 }
 
 func generateHttpSecretInFile() error {
-	f, err := os.Create("jwtsecret")
+	f, err := os.Create("secret.jwt")
 	if err != nil {
 		return err
 	}

@@ -132,6 +132,7 @@ func init() {
 	appFlags = cmd.WrapFlags(append(appFlags, features.BeaconChainFlags...))
 }
 
+// TODO: Revert the changes I made to log.*
 func main() {
 	app := cli.App{}
 	app.Name = "beacon-chain"
