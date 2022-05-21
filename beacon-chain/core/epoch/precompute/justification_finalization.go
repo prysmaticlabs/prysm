@@ -59,7 +59,7 @@ func ProcessJustificationBits(state state.BeaconState, totalActiveBalance, prevE
 
 // updateJustificationAndFinalization processes justification and finalization during
 // epoch processing. This is where a beacon node can justify and finalize a new epoch.
-func weighJustificationAndFinalization(state state.BeaconStateAltair, newBits bitfield.Bitvector4) (state.BeaconState, error) {
+func weighJustificationAndFinalization(state state.BeaconState, newBits bitfield.Bitvector4) (state.BeaconState, error) {
 	if err := state.SetPreviousJustifiedCheckpoint(state.CurrentJustifiedCheckpoint()); err != nil {
 		return nil, err
 	}

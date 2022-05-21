@@ -350,7 +350,7 @@ func attestationDelta(
 
 // UnrealizedCheckpoints returns the justification and finalization checkpoints of the
 // given state as if it was progressed with empty slots until the next epoch.
-func UnrealizedCheckpoints(st state.BeaconStateAltair) (*ethpb.Checkpoint, *ethpb.Checkpoint, error) {
+func UnrealizedCheckpoints(st state.BeaconState) (*ethpb.Checkpoint, *ethpb.Checkpoint, error) {
 	if st == nil || st.IsNil() {
 		return nil, nil, errNilState
 	}
