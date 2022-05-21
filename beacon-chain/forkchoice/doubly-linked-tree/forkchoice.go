@@ -72,7 +72,7 @@ func (f *ForkChoice) Head(
 		return [32]byte{}, errors.Wrap(err, "could not apply weight changes")
 	}
 
-	if err := f.store.treeRootNode.updateBestDescendant(ctx, justifiedEpoch, finalizedEpoch); err != nil {
+	if err := f.store.treeRootNode.updateBestDescendant(ctx, f.store.justifiedEpoch, f.store.finalizedEpoch); err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not update best descendant")
 	}
 
