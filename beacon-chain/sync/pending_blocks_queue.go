@@ -10,11 +10,11 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/async"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/encoding/ssz/equality"
@@ -210,8 +210,11 @@ func (s *Service) sendBatchRootRequest(ctx context.Context, roots [][32]byte, ra
 	if len(roots) == 0 {
 		return nil
 	}
-
-	_, bestPeers := s.cfg.p2p.Peers().BestFinalized(maxPeerRequest, s.cfg.chain.FinalizedCheckpt().Epoch)
+	cp, err := s.cfg.chain.FinalizedCheckpt()
+	if err != nil {
+		return err
+	}
+	_, bestPeers := s.cfg.p2p.Peers().BestFinalized(maxPeerRequest, cp.Epoch)
 	if len(bestPeers) == 0 {
 		return nil
 	}
@@ -272,7 +275,11 @@ func (s *Service) validatePendingSlots() error {
 	defer s.pendingQueueLock.Unlock()
 	oldBlockRoots := make(map[[32]byte]bool)
 
-	finalizedEpoch := s.cfg.chain.FinalizedCheckpt().Epoch
+	cp, err := s.cfg.chain.FinalizedCheckpt()
+	if err != nil {
+		return err
+	}
+	finalizedEpoch := cp.Epoch
 	if s.slotToPendingBlocks == nil {
 		return errors.New("slotToPendingBlocks cache can't be nil")
 	}
@@ -328,7 +335,7 @@ func (s *Service) deleteBlockFromPendingQueue(slot types.Slot, b interfaces.Sign
 	}
 
 	// Defensive check to ignore nil blocks
-	if err := helpers.BeaconBlockIsNil(b); err != nil {
+	if err := wrapper.BeaconBlockIsNil(b); err != nil {
 		return err
 	}
 
@@ -387,7 +394,7 @@ func (s *Service) pendingBlocksInCache(slot types.Slot) []interfaces.SignedBeaco
 
 // This adds input signed beacon block to slotToPendingBlocks cache.
 func (s *Service) addPendingBlockToCache(b interfaces.SignedBeaconBlock) error {
-	if err := helpers.BeaconBlockIsNil(b); err != nil {
+	if err := wrapper.BeaconBlockIsNil(b); err != nil {
 		return err
 	}
 

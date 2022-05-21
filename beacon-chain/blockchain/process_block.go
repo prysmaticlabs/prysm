@@ -18,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
@@ -92,7 +93,7 @@ var initialSyncBlockCacheSize = uint64(2 * params.BeaconConfig().SlotsPerEpoch)
 func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlock, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.onBlock")
 	defer span.End()
-	if err := helpers.BeaconBlockIsNil(signed); err != nil {
+	if err := wrapper.BeaconBlockIsNil(signed); err != nil {
 		return invalidBlock{err}
 	}
 	b := signed.Block()
@@ -176,9 +177,9 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 	}
 
 	// Update justified check point.
-	justified := s.store.JustifiedCheckpt()
-	if justified == nil {
-		return errNilJustifiedInStore
+	justified, err := s.store.JustifiedCheckpt()
+	if err != nil {
+		return errors.Wrap(err, "could not get justified checkpoint")
 	}
 	currJustifiedEpoch := justified.Epoch
 	psj := postState.CurrentJustifiedCheckpoint()
@@ -192,7 +193,10 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 		}
 	}
 
-	finalized := s.store.FinalizedCheckpt()
+	finalized, err := s.store.FinalizedCheckpt()
+	if err != nil {
+		return errors.Wrap(err, "could not get finalized checkpoint")
+	}
 	if finalized == nil {
 		return errNilFinalizedInStore
 	}
@@ -342,7 +346,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 		return nil, nil, errWrongBlockCount
 	}
 
-	if err := helpers.BeaconBlockIsNil(blks[0]); err != nil {
+	if err := wrapper.BeaconBlockIsNil(blks[0]); err != nil {
 		return nil, nil, invalidBlock{err}
 	}
 	b := blks[0].Block()
@@ -488,9 +492,9 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed interf
 		s.clearInitSyncBlocks()
 	}
 
-	justified := s.store.JustifiedCheckpt()
-	if justified == nil {
-		return errNilJustifiedInStore
+	justified, err := s.store.JustifiedCheckpt()
+	if err != nil {
+		return errors.Wrap(err, "could not get justified checkpoint")
 	}
 	if jCheckpoint.Epoch > justified.Epoch {
 		if err := s.updateJustifiedInitSync(ctx, jCheckpoint); err != nil {
@@ -498,7 +502,10 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed interf
 		}
 	}
 
-	finalized := s.store.FinalizedCheckpt()
+	finalized, err := s.store.FinalizedCheckpt()
+	if err != nil {
+		return errors.Wrap(err, "could not get finalized checkpoint")
+	}
 	if finalized == nil {
 		return errNilFinalizedInStore
 	}

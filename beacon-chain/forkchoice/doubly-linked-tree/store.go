@@ -112,13 +112,15 @@ func (s *Store) insert(ctx context.Context,
 	parent := s.nodeByRoot[parentRoot]
 
 	n := &Node{
-		slot:           slot,
-		root:           root,
-		parent:         parent,
-		justifiedEpoch: justifiedEpoch,
-		finalizedEpoch: finalizedEpoch,
-		optimistic:     true,
-		payloadHash:    payloadHash,
+		slot:                     slot,
+		root:                     root,
+		parent:                   parent,
+		justifiedEpoch:           justifiedEpoch,
+		unrealizedJustifiedEpoch: justifiedEpoch,
+		finalizedEpoch:           finalizedEpoch,
+		unrealizedFinalizedEpoch: finalizedEpoch,
+		optimistic:               true,
+		payloadHash:              payloadHash,
 	}
 
 	s.nodeByPayload[payloadHash] = n

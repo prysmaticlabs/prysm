@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/time/slots"
@@ -67,13 +68,13 @@ func (s *Service) updateHead(ctx context.Context, balances []uint64) ([32]byte, 
 	defer span.End()
 
 	// Get head from the fork choice service.
-	f := s.store.FinalizedCheckpt()
-	if f == nil {
-		return [32]byte{}, errNilFinalizedInStore
+	f, err := s.store.FinalizedCheckpt()
+	if err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not get finalized checkpoint")
 	}
-	j := s.store.JustifiedCheckpt()
-	if j == nil {
-		return [32]byte{}, errNilJustifiedInStore
+	j, err := s.store.JustifiedCheckpt()
+	if err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not get justified checkpoint")
 	}
 	// To get head before the first justified epoch, the fork choice will start with origin root
 	// instead of zero hashes.
@@ -118,7 +119,7 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte, headBlock int
 	if headRoot == bytesutil.ToBytes32(r) {
 		return nil
 	}
-	if err := helpers.BeaconBlockIsNil(headBlock); err != nil {
+	if err := wrapper.BeaconBlockIsNil(headBlock); err != nil {
 		return err
 	}
 	if headState == nil || headState.IsNil() {
@@ -191,7 +192,7 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte, headBlock int
 // root in DB. With the inception of initial-sync-cache-state flag, it uses finalized
 // check point as anchors to resume sync therefore head is no longer needed to be saved on per slot basis.
 func (s *Service) saveHeadNoDB(ctx context.Context, b interfaces.SignedBeaconBlock, r [32]byte, hs state.BeaconState) error {
-	if err := helpers.BeaconBlockIsNil(b); err != nil {
+	if err := wrapper.BeaconBlockIsNil(b); err != nil {
 		return err
 	}
 	cachedHeadRoot, err := s.HeadRoot(ctx)

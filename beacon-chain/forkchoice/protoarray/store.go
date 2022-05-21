@@ -333,15 +333,17 @@ func (s *Store) insert(ctx context.Context,
 	}
 
 	n := &Node{
-		slot:           slot,
-		root:           root,
-		parent:         parentIndex,
-		justifiedEpoch: justifiedEpoch,
-		finalizedEpoch: finalizedEpoch,
-		bestChild:      NonExistentNode,
-		bestDescendant: NonExistentNode,
-		weight:         0,
-		payloadHash:    payloadHash,
+		slot:                     slot,
+		root:                     root,
+		parent:                   parentIndex,
+		justifiedEpoch:           justifiedEpoch,
+		unrealizedJustifiedEpoch: justifiedEpoch,
+		finalizedEpoch:           finalizedEpoch,
+		unrealizedFinalizedEpoch: finalizedEpoch,
+		bestChild:                NonExistentNode,
+		bestDescendant:           NonExistentNode,
+		weight:                   0,
+		payloadHash:              payloadHash,
 	}
 
 	s.nodesIndices[root] = index

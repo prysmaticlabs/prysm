@@ -103,9 +103,17 @@ func TestService_newSlot(t *testing.T) {
 
 		require.NoError(t, service.NewSlot(ctx, test.args.slot))
 		if test.args.shouldEqual {
-			require.DeepSSZEqual(t, service.store.BestJustifiedCheckpt(), service.store.JustifiedCheckpt())
+			bcp, err := service.store.BestJustifiedCheckpt()
+			require.NoError(t, err)
+			cp, err := service.store.JustifiedCheckpt()
+			require.NoError(t, err)
+			require.DeepSSZEqual(t, bcp, cp)
 		} else {
-			require.DeepNotSSZEqual(t, service.store.BestJustifiedCheckpt(), service.store.JustifiedCheckpt())
+			bcp, err := service.store.BestJustifiedCheckpt()
+			require.NoError(t, err)
+			cp, err := service.store.JustifiedCheckpt()
+			require.NoError(t, err)
+			require.DeepNotSSZEqual(t, bcp, cp)
 		}
 	}
 }

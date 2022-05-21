@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/store"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
@@ -25,12 +26,6 @@ import (
 var _ ChainInfoFetcher = (*Service)(nil)
 var _ TimeFetcher = (*Service)(nil)
 var _ ForkFetcher = (*Service)(nil)
-
-func TestFinalizedCheckpt_Nil(t *testing.T) {
-	beaconDB := testDB.SetupDB(t)
-	c := setupBeaconChain(t, beaconDB)
-	assert.DeepEqual(t, params.BeaconConfig().ZeroHash[:], c.FinalizedCheckpt().Root, "Incorrect pre chain start value")
-}
 
 func TestHeadRoot_Nil(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
@@ -53,7 +48,9 @@ func TestFinalizedCheckpt_CanRetrieve(t *testing.T) {
 	c := setupBeaconChain(t, beaconDB)
 	c.store.SetFinalizedCheckptAndPayloadHash(cp, [32]byte{'a'})
 
-	assert.Equal(t, cp.Epoch, c.FinalizedCheckpt().Epoch, "Unexpected finalized epoch")
+	cp, err := c.FinalizedCheckpt()
+	require.NoError(t, err)
+	assert.Equal(t, cp.Epoch, cp.Epoch, "Unexpected finalized epoch")
 }
 
 func TestFinalizedCheckpt_GenesisRootOk(t *testing.T) {
@@ -64,17 +61,22 @@ func TestFinalizedCheckpt_GenesisRootOk(t *testing.T) {
 	c := setupBeaconChain(t, beaconDB)
 	c.store.SetFinalizedCheckptAndPayloadHash(cp, [32]byte{'a'})
 	c.originBlockRoot = genesisRoot
-	assert.DeepEqual(t, c.originBlockRoot[:], c.FinalizedCheckpt().Root)
+	cp, err := c.FinalizedCheckpt()
+	require.NoError(t, err)
+	assert.DeepEqual(t, c.originBlockRoot[:], cp.Root)
 }
 
 func TestCurrentJustifiedCheckpt_CanRetrieve(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 
 	c := setupBeaconChain(t, beaconDB)
-	assert.Equal(t, params.BeaconConfig().ZeroHash, bytesutil.ToBytes32(c.CurrentJustifiedCheckpt().Root), "Unexpected justified epoch")
+	_, err := c.CurrentJustifiedCheckpt()
+	require.ErrorIs(t, err, store.ErrNilCheckpoint)
 	cp := &ethpb.Checkpoint{Epoch: 6, Root: bytesutil.PadTo([]byte("foo"), 32)}
 	c.store.SetJustifiedCheckptAndPayloadHash(cp, [32]byte{})
-	assert.Equal(t, cp.Epoch, c.CurrentJustifiedCheckpt().Epoch, "Unexpected justified epoch")
+	jp, err := c.CurrentJustifiedCheckpt()
+	require.NoError(t, err)
+	assert.Equal(t, cp.Epoch, jp.Epoch, "Unexpected justified epoch")
 }
 
 func TestJustifiedCheckpt_GenesisRootOk(t *testing.T) {
@@ -85,7 +87,9 @@ func TestJustifiedCheckpt_GenesisRootOk(t *testing.T) {
 	cp := &ethpb.Checkpoint{Root: genesisRoot[:]}
 	c.store.SetJustifiedCheckptAndPayloadHash(cp, [32]byte{})
 	c.originBlockRoot = genesisRoot
-	assert.DeepEqual(t, c.originBlockRoot[:], c.CurrentJustifiedCheckpt().Root)
+	cp, err := c.CurrentJustifiedCheckpt()
+	require.NoError(t, err)
+	assert.DeepEqual(t, c.originBlockRoot[:], cp.Root)
 }
 
 func TestPreviousJustifiedCheckpt_CanRetrieve(t *testing.T) {
@@ -93,9 +97,12 @@ func TestPreviousJustifiedCheckpt_CanRetrieve(t *testing.T) {
 
 	cp := &ethpb.Checkpoint{Epoch: 7, Root: bytesutil.PadTo([]byte("foo"), 32)}
 	c := setupBeaconChain(t, beaconDB)
-	assert.Equal(t, params.BeaconConfig().ZeroHash, bytesutil.ToBytes32(c.CurrentJustifiedCheckpt().Root), "Unexpected justified epoch")
+	_, err := c.PreviousJustifiedCheckpt()
+	require.ErrorIs(t, err, store.ErrNilCheckpoint)
 	c.store.SetPrevJustifiedCheckpt(cp)
-	assert.Equal(t, cp.Epoch, c.PreviousJustifiedCheckpt().Epoch, "Unexpected previous justified epoch")
+	pcp, err := c.PreviousJustifiedCheckpt()
+	require.NoError(t, err)
+	assert.Equal(t, cp.Epoch, pcp.Epoch, "Unexpected previous justified epoch")
 }
 
 func TestPrevJustifiedCheckpt_GenesisRootOk(t *testing.T) {
@@ -106,7 +113,9 @@ func TestPrevJustifiedCheckpt_GenesisRootOk(t *testing.T) {
 	c := setupBeaconChain(t, beaconDB)
 	c.store.SetPrevJustifiedCheckpt(cp)
 	c.originBlockRoot = genesisRoot
-	assert.DeepEqual(t, c.originBlockRoot[:], c.PreviousJustifiedCheckpt().Root)
+	pcp, err := c.PreviousJustifiedCheckpt()
+	require.NoError(t, err)
+	assert.DeepEqual(t, c.originBlockRoot[:], pcp.Root)
 }
 
 func TestHeadSlot_CanRetrieve(t *testing.T) {

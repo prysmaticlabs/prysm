@@ -210,12 +210,12 @@ func Test_migrateStateValidators(t *testing.T) {
 func Test_migrateAltairStateValidators(t *testing.T) {
 	tests := []struct {
 		name  string
-		setup func(t *testing.T, dbStore *Store, state state.BeaconStateAltair, vals []*v1alpha1.Validator)
-		eval  func(t *testing.T, dbStore *Store, state state.BeaconStateAltair, vals []*v1alpha1.Validator)
+		setup func(t *testing.T, dbStore *Store, state state.BeaconState, vals []*v1alpha1.Validator)
+		eval  func(t *testing.T, dbStore *Store, state state.BeaconState, vals []*v1alpha1.Validator)
 	}{
 		{
 			name: "migrates validators and adds them to new buckets",
-			setup: func(t *testing.T, dbStore *Store, state state.BeaconStateAltair, vals []*v1alpha1.Validator) {
+			setup: func(t *testing.T, dbStore *Store, state state.BeaconState, vals []*v1alpha1.Validator) {
 				// create some new buckets that should be present for this migration
 				err := dbStore.db.Update(func(tx *bbolt.Tx) error {
 					_, err := tx.CreateBucketIfNotExists(stateValidatorsBucket)
@@ -226,7 +226,7 @@ func Test_migrateAltairStateValidators(t *testing.T) {
 				})
 				assert.NoError(t, err)
 			},
-			eval: func(t *testing.T, dbStore *Store, state state.BeaconStateAltair, vals []*v1alpha1.Validator) {
+			eval: func(t *testing.T, dbStore *Store, state state.BeaconState, vals []*v1alpha1.Validator) {
 				// check whether the new buckets are present
 				err := dbStore.db.View(func(tx *bbolt.Tx) error {
 					valBkt := tx.Bucket(stateValidatorsBucket)
