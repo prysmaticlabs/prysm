@@ -36,16 +36,18 @@ type Store struct {
 // Node defines the individual block which includes its block parent, ancestor and how much weight accounted for it.
 // This is used as an array based stateful DAG for efficient fork choice look up.
 type Node struct {
-	slot           types.Slot                   // slot of the block converted to the node.
-	root           [fieldparams.RootLength]byte // root of the block converted to the node.
-	payloadHash    [fieldparams.RootLength]byte // payloadHash of the block converted to the node.
-	parent         uint64                       // parent index of this node.
-	justifiedEpoch types.Epoch                  // justifiedEpoch of this node.
-	finalizedEpoch types.Epoch                  // finalizedEpoch of this node.
-	weight         uint64                       // weight of this node.
-	bestChild      uint64                       // bestChild index of this node.
-	bestDescendant uint64                       // bestDescendant of this node.
-	status         status                       // optimistic status of this node
+	slot                     types.Slot                   // slot of the block converted to the node.
+	root                     [fieldparams.RootLength]byte // root of the block converted to the node.
+	payloadHash              [fieldparams.RootLength]byte // payloadHash of the block converted to the node.
+	parent                   uint64                       // parent index of this node.
+	justifiedEpoch           types.Epoch                  // justifiedEpoch of this node.
+	unrealizedJustifiedEpoch types.Epoch                  // the epoch that would be justified if the block would be advanced to the next epoch.
+	finalizedEpoch           types.Epoch                  // finalizedEpoch of this node.
+	unrealizedFinalizedEpoch types.Epoch                  // the epoch that would be finalized if the block would be advanced to the next epoch.
+	weight                   uint64                       // weight of this node.
+	bestChild                uint64                       // bestChild index of this node.
+	bestDescendant           uint64                       // bestDescendant of this node.
+	status                   status                       // optimistic status of this node
 }
 
 // enum used as optimistic status of a node
