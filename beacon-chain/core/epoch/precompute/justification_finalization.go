@@ -60,12 +60,12 @@ func ProcessJustificationBits(state state.BeaconState, totalActiveBalance, prevE
 // updateJustificationAndFinalization processes justification and finalization during
 // epoch processing. This is where a beacon node can justify and finalize a new epoch.
 func weighJustificationAndFinalization(state state.BeaconState, newBits bitfield.Bitvector4) (state.BeaconState, error) {
-	if err := state.SetPreviousJustifiedCheckpoint(state.CurrentJustifiedCheckpoint()); err != nil {
+	jc, fc, err := ComputeCheckpoints(state, newBits)
+	if err != nil {
 		return nil, err
 	}
 
-	jc, fc, err := ComputeCheckpoints(state, newBits)
-	if err != nil {
+	if err := state.SetPreviousJustifiedCheckpoint(state.CurrentJustifiedCheckpoint()); err != nil {
 		return nil, err
 	}
 
@@ -135,7 +135,7 @@ func ComputeCheckpoints(state state.BeaconState, newBits bitfield.Bitvector4) (*
 	if newBits.BitAt(0) {
 		blockRoot, err := helpers.BlockRoot(state, currentEpoch)
 		if err != nil {
-			return nil, nil, errors.Wrapf(err, "could not get block root for current epoch %d", prevEpoch)
+			return nil, nil, errors.Wrapf(err, "could not get block root for current epoch %d", currentEpoch)
 		}
 		justifiedCheckpoint.Epoch = currentEpoch
 		justifiedCheckpoint.Root = blockRoot
@@ -151,7 +151,8 @@ func ComputeCheckpoints(state state.BeaconState, newBits bitfield.Bitvector4) (*
 
 	// Process finalization according to Ethereum Beacon Chain specification.
 	if len(newBits) == 0 {
-		return justifiedCheckpoint, finalizedCheckpoint, nil
+		finalizedCheckpoint = state.FinalizedCheckpoint()
+		return oldCurrJustifiedCheckpoint, finalizedCheckpoint, nil
 	}
 	justification := newBits.Bytes()[0]
 
