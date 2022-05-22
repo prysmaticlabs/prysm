@@ -86,6 +86,7 @@ go_test(
         "getters_attestation_test.go",
         "getters_block_test.go",
         "getters_checkpoint_test.go",
+        "getters_participation_test.go",
         "getters_test.go",
         "getters_validator_test.go",
         "hasher_test.go",

@@ -67,6 +67,7 @@ go_test(
         "deprecated_setters_test.go",
         "getters_block_test.go",
         "getters_checkpoint_test.go",
+        "getters_participation_test.go",
         "getters_test.go",
         "getters_validator_test.go",
         "proofs_test.go",
