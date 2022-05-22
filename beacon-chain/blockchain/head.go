@@ -28,13 +28,14 @@ import (
 // UpdateAndSaveHeadWithBalances updates the beacon state head after getting justified balanced from cache.
 // This function is only used in spec-tests, it does save the head after updating it.
 func (s *Service) UpdateAndSaveHeadWithBalances(ctx context.Context) error {
-	cp, err := s.store.JustifiedCheckpt()
+	jp, err := s.store.JustifiedCheckpt()
 	if err != nil {
 		return err
 	}
-	balances, err := s.justifiedBalances.get(ctx, bytesutil.ToBytes32(cp.Root))
+
+	balances, err := s.justifiedBalances.get(ctx, bytesutil.ToBytes32(jp.Root))
 	if err != nil {
-		msg := fmt.Sprintf("could not read balances for state w/ justified checkpoint %#x", cp.Root)
+		msg := fmt.Sprintf("could not read balances for state w/ justified checkpoint %#x", jp.Root)
 		return errors.Wrap(err, msg)
 	}
 	headRoot, err := s.updateHead(ctx, balances)
@@ -94,14 +95,14 @@ func (s *Service) updateHead(ctx context.Context, balances []uint64) ([32]byte, 
 		if features.Get().EnableForkChoiceDoublyLinkedTree {
 			s.cfg.ForkChoiceStore = doublylinkedtree.New(j.Epoch, f.Epoch)
 		} else {
-			s.cfg.ForkChoiceStore = protoarray.New(j.Epoch, f.Epoch, bytesutil.ToBytes32(f.Root))
+			s.cfg.ForkChoiceStore = protoarray.New(j.Epoch, f.Epoch)
 		}
 		if err := s.insertBlockToForkChoiceStore(ctx, jb.Block(), headStartRoot, f, j); err != nil {
 			return [32]byte{}, err
 		}
 	}
 
-	return s.cfg.ForkChoiceStore.Head(ctx, j.Epoch, headStartRoot, balances, f.Epoch)
+	return s.cfg.ForkChoiceStore.Head(ctx, headStartRoot, balances)
 }
 
 // This saves head info to the local service cache, it also saves the

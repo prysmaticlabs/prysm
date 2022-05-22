@@ -11,8 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 )
 
-var errNilStateFromStategen = errors.New("justified state can't be nil")
-
 type stateBalanceCache struct {
 	sync.Mutex
 	balances []uint64
