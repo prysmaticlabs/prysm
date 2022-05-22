@@ -128,8 +128,8 @@ func ComputeCheckpoints(state state.BeaconState, newBits bitfield.Bitvector4) (*
 	oldPrevJustifiedCheckpoint := state.PreviousJustifiedCheckpoint()
 	oldCurrJustifiedCheckpoint := state.CurrentJustifiedCheckpoint()
 
-	justifiedCheckpoint := &ethpb.Checkpoint{}
-	finalizedCheckpoint := &ethpb.Checkpoint{}
+	justifiedCheckpoint := oldCurrJustifiedCheckpoint
+	finalizedCheckpoint := state.FinalizedCheckpoint()
 
 	// If 2/3 or more of the total balance attested in the current epoch.
 	if newBits.BitAt(0) {
@@ -151,8 +151,7 @@ func ComputeCheckpoints(state state.BeaconState, newBits bitfield.Bitvector4) (*
 
 	// Process finalization according to Ethereum Beacon Chain specification.
 	if len(newBits) == 0 {
-		finalizedCheckpoint = state.FinalizedCheckpoint()
-		return oldCurrJustifiedCheckpoint, finalizedCheckpoint, nil
+		return justifiedCheckpoint, finalizedCheckpoint, nil
 	}
 	justification := newBits.Bytes()[0]
 
