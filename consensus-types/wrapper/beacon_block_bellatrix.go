@@ -108,6 +108,11 @@ func (bellatrixSignedBeaconBlock) PbAltairBlock() (*eth.SignedBeaconBlockAltair,
 	return nil, ErrUnsupportedAltairBlock
 }
 
+// PbEip4844Block is a stub.
+func (bellatrixSignedBeaconBlock) PbEip4844Block() (*eth.SignedBeaconBlockWithBlobKZGs, error) {
+	return nil, ErrUnsupportedEip4844Block
+}
+
 // Version of the underlying protobuf object.
 func (bellatrixSignedBeaconBlock) Version() int {
 	return version.Bellatrix
@@ -315,5 +320,10 @@ func (w bellatrixBeaconBlockBody) ExecutionPayload() (*enginev1.ExecutionPayload
 
 // ExecutionPayloadHeader is a stub.
 func (w bellatrixBeaconBlockBody) ExecutionPayloadHeader() (*eth.ExecutionPayloadHeader, error) {
+	return nil, errors.Wrapf(ErrUnsupportedField, "ExecutionPayloadHeader for %T", w)
+}
+
+// BlobKzgs is a stub.
+func (w bellatrixBeaconBlockBody) BlobKzgs() ([][]byte, error) {
 	return nil, errors.Wrapf(ErrUnsupportedField, "ExecutionPayloadHeader for %T", w)
 }

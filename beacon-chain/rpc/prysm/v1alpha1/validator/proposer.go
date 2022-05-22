@@ -50,19 +50,26 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 			return nil, status.Errorf(codes.Internal, "Could not fetch Altair beacon block: %v", err)
 		}
 		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Altair{Altair: blk}}, nil
-	}
+	} else if slots.ToEpoch(req.Slot) < params.BeaconConfig().Eip4844ForkEpoch {
+		// An optimistic validator MUST NOT produce a block (i.e., sign across the DOMAIN_BEACON_PROPOSER domain).
+		if err := vs.optimisticStatus(ctx); err != nil {
+			return nil, err
+		}
+		blk, err := vs.getBellatrixBeaconBlock(ctx, req)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not fetch Bellatrix beacon block: %v", err)
 
-	// An optimistic validator MUST NOT produce a block (i.e., sign across the DOMAIN_BEACON_PROPOSER domain).
+		}
+		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Bellatrix{Bellatrix: blk}}, nil
+	}
 	if err := vs.optimisticStatus(ctx); err != nil {
 		return nil, err
 	}
-
-	blk, err := vs.getBellatrixBeaconBlock(ctx, req)
+	blk, sideCar, err := vs.getEip4844BeaconBlock(ctx, req)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not fetch Bellatrix beacon block: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not fetch EIP-4844 beacon block: %v", err)
 	}
-
-	return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Bellatrix{Bellatrix: blk}}, nil
+	return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Eip4844{Eip4844: &ethpb.BeaconBlockWithBlobKZGsAndBlobsSidecar{Block: blk, Sidecar: sideCar}}}, nil
 }
 
 // GetBlock is called by a proposer during its assigned slot to request a block to sign

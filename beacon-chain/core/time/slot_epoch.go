@@ -70,6 +70,12 @@ func CanUpgradeToBellatrix(slot types.Slot) bool {
 	return epochStart && bellatrixEpoch
 }
 
+func CanUpgradeToEip4844(slot types.Slot) bool {
+	epochStart := slots.IsEpochStart(slot)
+	e := slots.ToEpoch(slot) == params.BeaconConfig().Eip4844ForkEpoch
+	return epochStart && e
+}
+
 // CanProcessEpoch checks the eligibility to process epoch.
 // The epoch can be processed at the end of the last slot of every epoch.
 //

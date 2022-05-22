@@ -164,7 +164,7 @@ func ProcessBlockNoVerifyAnySig(
 		return nil, nil, err
 	}
 
-	if state.Version() != signed.Block().Version() {
+	if state.Version() != signed.Block().Version() && signed.Block().Version() != version.Eip4844 {
 		return nil, nil, fmt.Errorf("state and block are different version. %d != %d", state.Version(), signed.Block().Version())
 	}
 
@@ -238,7 +238,7 @@ func ProcessOperationsNoVerifyAttsSigs(
 		if err != nil {
 			return nil, err
 		}
-	case version.Altair, version.Bellatrix:
+	case version.Altair, version.Bellatrix, version.Eip4844:
 		state, err = altairOperations(ctx, state, signedBeaconBlock)
 		if err != nil {
 			return nil, err

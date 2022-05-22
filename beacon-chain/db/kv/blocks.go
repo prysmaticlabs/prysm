@@ -727,6 +727,8 @@ func marshalBlock(_ context.Context, blk interfaces.SignedBeaconBlock) ([]byte, 
 		return nil, err
 	}
 	switch blk.Version() {
+	case version.Eip4844:
+		return snappy.Encode(nil, append(eip4844Key, obj...)), nil
 	case version.BellatrixBlind:
 		return snappy.Encode(nil, append(bellatrixBlindKey, obj...)), nil
 	case version.Bellatrix:

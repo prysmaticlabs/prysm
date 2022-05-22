@@ -113,6 +113,11 @@ func (altairSignedBeaconBlock) PbBlindedBellatrixBlock() (*eth.SignedBlindedBeac
 	return nil, ErrUnsupportedBlindedBellatrixBlock
 }
 
+// PbEip4844Block is a stub.
+func (altairSignedBeaconBlock) PbEip4844Block() (*eth.SignedBeaconBlockWithBlobKZGs, error) {
+	return nil, ErrUnsupportedEip4844Block
+}
+
 // Version of the underlying protobuf object.
 func (altairSignedBeaconBlock) Version() int {
 	return version.Altair
@@ -320,5 +325,10 @@ func (w altairBeaconBlockBody) ExecutionPayload() (*enginev1.ExecutionPayload, e
 
 // ExecutionPayloadHeader is a stub.
 func (w altairBeaconBlockBody) ExecutionPayloadHeader() (*eth.ExecutionPayloadHeader, error) {
+	return nil, errors.Wrapf(ErrUnsupportedField, "ExecutionPayloadHeader for %T", w)
+}
+
+// BlobKzgs is a stub.
+func (w altairBeaconBlockBody) BlobKzgs() ([][]byte, error) {
 	return nil, errors.Wrapf(ErrUnsupportedField, "ExecutionPayloadHeader for %T", w)
 }

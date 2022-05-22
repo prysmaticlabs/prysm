@@ -35,14 +35,14 @@ func logStateTransitionData(b interfaces.BeaconBlock) error {
 	if len(b.Body().VoluntaryExits()) > 0 {
 		log = log.WithField("voluntaryExits", len(b.Body().VoluntaryExits()))
 	}
-	if b.Version() == version.Altair || b.Version() == version.Bellatrix {
+	if b.Version() == version.Altair || b.Version() == version.Bellatrix || b.Version() == version.Eip4844 {
 		agg, err := b.Body().SyncAggregate()
 		if err != nil {
 			return err
 		}
 		log = log.WithField("syncBitsCount", agg.SyncCommitteeBits.Count())
 	}
-	if b.Version() == version.Bellatrix {
+	if b.Version() == version.Bellatrix || b.Version() == version.Eip4844 {
 		p, err := b.Body().ExecutionPayload()
 		if err != nil {
 			return err

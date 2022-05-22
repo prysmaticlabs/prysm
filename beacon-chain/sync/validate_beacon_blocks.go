@@ -21,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
@@ -269,7 +270,7 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk interfaces.Signed
 //          node verification of the block.body.execution_payload).
 func (s *Service) validateBellatrixBeaconBlock(ctx context.Context, parentState state.BeaconState, blk interfaces.BeaconBlock) error {
 	// Error if block and state are not the same version
-	if parentState.Version() != blk.Version() {
+	if parentState.Version() != blk.Version() && blk.Version() != version.Eip4844 {
 		return errors.New("block and state are not the same version")
 	}
 

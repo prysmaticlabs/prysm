@@ -62,6 +62,7 @@ var BlockCacheSize = int64(1 << 21)
 // summary, it can be read in https://github.com/prysmaticlabs/prysm/issues/8274.
 var blockedBuckets = [][]byte{
 	blocksBucket,
+	blobsBucket,
 	stateSummaryBucket,
 	blockParentRootIndicesBucket,
 	blockSlotIndicesBucket,

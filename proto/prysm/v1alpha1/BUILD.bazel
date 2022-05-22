@@ -107,6 +107,14 @@ ssz_gen_marshal(
         "SignedBlindedBeaconBlockBellatrix",
         "BlindedBeaconBlockBellatrix",
         "BlindedBeaconBlockBodyBellatrix",
+        "SignedBeaconBlockWithBlobKZGs",
+        "BeaconBlockWithBlobKZGs",
+        "BeaconBlockBodyWithBlobKZGs",
+        "BeaconBlockAndBlobs",
+        "SignedBeaconBlockAndBlobs",
+        "Blob",
+        "BlobsSidecar",
+        "SignedBlobsSidecar",
     ],
 )
 

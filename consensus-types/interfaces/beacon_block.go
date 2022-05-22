@@ -22,6 +22,7 @@ type SignedBeaconBlock interface {
 	PbAltairBlock() (*ethpb.SignedBeaconBlockAltair, error)
 	PbBellatrixBlock() (*ethpb.SignedBeaconBlockBellatrix, error)
 	PbBlindedBellatrixBlock() (*ethpb.SignedBlindedBeaconBlockBellatrix, error)
+	PbEip4844Block() (*ethpb.SignedBeaconBlockWithBlobKZGs, error)
 	ssz.Marshaler
 	ssz.Unmarshaler
 	Version() int
@@ -64,4 +65,5 @@ type BeaconBlockBody interface {
 	Proto() proto.Message
 	ExecutionPayload() (*enginev1.ExecutionPayload, error)
 	ExecutionPayloadHeader() (*ethpb.ExecutionPayloadHeader, error)
+	BlobKzgs() ([][]byte, error)
 }

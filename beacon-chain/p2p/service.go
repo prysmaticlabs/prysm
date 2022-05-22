@@ -501,7 +501,7 @@ func (s *Service) isInitialized() bool {
 func (s *Service) increaseMaxMessageSizesForBellatrix() {
 	currentSlot := slots.Since(s.genesisTime)
 	currentEpoch := slots.ToEpoch(currentSlot)
-	if currentEpoch >= params.BeaconConfig().BellatrixForkEpoch {
+	if currentEpoch >= params.BeaconConfig().BellatrixForkEpoch || currentEpoch >= params.BeaconConfig().Eip4844ForkEpoch {
 		encoder.SetMaxGossipSizeForBellatrix()
 		encoder.SetMaxChunkSizeForBellatrix()
 	}

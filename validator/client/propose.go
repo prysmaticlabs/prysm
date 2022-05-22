@@ -146,7 +146,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [f
 		trace.Int64Attribute("numAttestations", int64(len(blk.Block().Body().Attestations()))),
 	)
 
-	if blk.Version() == version.Bellatrix {
+	if blk.Version() == version.Bellatrix || blk.Version() == version.Eip4844 {
 		p, err := blk.Block().Body().ExecutionPayload()
 		if err != nil {
 			log.WithError(err).Error("Failed to get execution payload")
@@ -354,4 +354,33 @@ func (v *validator) getGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubk
 	}
 
 	return []byte{}, nil
+}
+
+// Sign block with proposer domain and private key.
+// Returns the signature, block signing root, and any error.
+func (v *validator) signBlob(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, epoch types.Epoch, slot types.Slot, sideCar *ethpb.BlobsSidecar) ([]byte, [32]byte, error) {
+	domain, err := v.domainData(ctx, epoch, params.BeaconConfig().DomainBlobsSidecar[:])
+	if err != nil {
+		return nil, [32]byte{}, errors.Wrap(err, domainDataErr)
+	}
+	if domain == nil {
+		return nil, [32]byte{}, errors.New(domainDataErr)
+	}
+
+	root, err := signing.ComputeSigningRoot(sideCar, domain.SignatureDomain)
+	if err != nil {
+		return nil, [32]byte{}, errors.Wrap(err, signingRootErr)
+	}
+	sig, err := v.keyManager.Sign(ctx, &validatorpb.SignRequest{
+		PublicKey:       pubKey[:],
+		SigningRoot:     root[:],
+		SignatureDomain: domain.SignatureDomain,
+		Object: &validatorpb.SignRequest_Blob{
+			Blob: sideCar,
+		},
+	})
+	if err != nil {
+		return nil, [32]byte{}, errors.Wrap(err, "could not sign block proposal")
+	}
+	return sig.Marshal(), root, nil
 }

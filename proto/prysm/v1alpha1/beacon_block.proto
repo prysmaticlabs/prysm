@@ -39,6 +39,9 @@ message GenericSignedBeaconBlock {
 
         // Representing a signed, post-Bellatrix fork blinded beacon block.
         SignedBlindedBeaconBlockBellatrix blinded_bellatrix = 4;
+
+        // Representing a signed, eip4844 compatible fork beacon block and blob.
+        SignedBeaconBlockWithBlobKZGsAndBlobsSidecar eip4844 = 5;
     }
 }
 
@@ -55,6 +58,9 @@ message GenericBeaconBlock {
 
         // Representing a post-Bellatrix fork blinded beacon block.
         BlindedBeaconBlockBellatrix blinded_bellatrix = 4;
+
+        // Representing an eip4844 fork beacon block and blob.
+        BeaconBlockWithBlobKZGsAndBlobsSidecar eip4844 = 5;
     }
 }
 
@@ -438,4 +444,52 @@ message ExecutionPayloadHeader {
     bytes base_fee_per_gas = 12 [(ethereum.eth.ext.ssz_size) = "32"];
     bytes block_hash = 13 [(ethereum.eth.ext.ssz_size) = "32"];
     bytes transactions_root = 14 [(ethereum.eth.ext.ssz_size) = "32"];
+}
+
+message SignedBeaconBlockWithBlobKZGs {
+    BeaconBlockWithBlobKZGs block = 1;
+    bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
+}
+
+message BeaconBlockWithBlobKZGs {
+    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"];
+    uint64 proposer_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.ValidatorIndex"];
+    bytes parent_root = 3 [(ethereum.eth.ext.ssz_size) = "32"];
+    bytes state_root = 4 [(ethereum.eth.ext.ssz_size) = "32"];
+    BeaconBlockBodyWithBlobKZGs body = 5;
+}
+
+message BeaconBlockBodyWithBlobKZGs {
+    bytes randao_reveal = 1 [(ethereum.eth.ext.ssz_size) = "96"];
+    Eth1Data eth1_data = 2;
+    bytes graffiti = 3 [(ethereum.eth.ext.ssz_size) = "32"];
+    repeated ProposerSlashing proposer_slashings = 4 [(ethereum.eth.ext.ssz_max) = "16"];
+    repeated AttesterSlashing attester_slashings = 5 [(ethereum.eth.ext.ssz_max) = "2"];
+    repeated Attestation attestations = 6 [(ethereum.eth.ext.ssz_max) = "128"];
+    repeated Deposit deposits = 7 [(ethereum.eth.ext.ssz_max) = "16"];
+    repeated SignedVoluntaryExit voluntary_exits = 8 [(ethereum.eth.ext.ssz_max) = "16"];
+    SyncAggregate sync_aggregate = 9;
+    ethereum.engine.v1.ExecutionPayload execution_payload = 10;
+    repeated bytes blob_kzgs = 11 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max)  = "16"];
+}
+
+message BlobsSidecar {
+    bytes beacon_block_root = 1 [(ethereum.eth.ext.ssz_size) = "32"];
+    uint64 beacon_block_slot = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"];
+    repeated ethereum.engine.v1.Blob blobs = 3 [(ethereum.eth.ext.ssz_max)  = "16"];
+}
+
+message SignedBlobsSidecar {
+    BlobsSidecar message = 1;
+    bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
+}
+
+message BeaconBlockWithBlobKZGsAndBlobsSidecar {
+    BeaconBlockWithBlobKZGs block = 1;
+    BlobsSidecar sidecar = 2;
+}
+
+message SignedBeaconBlockWithBlobKZGsAndBlobsSidecar {
+    SignedBeaconBlockWithBlobKZGs block = 1;
+    SignedBlobsSidecar sidecar = 2;
 }

@@ -23,6 +23,7 @@ const (
 	mainnetAltairForkEpoch = 74240 // Oct 27, 2021, 10:56:23am UTC
 	// Placeholder for the merge epoch until it is decided
 	mainnetBellatrixForkEpoch = math.MaxUint64
+	mainnetEip4844ForkEpoch   = math.MaxUint64
 )
 
 var mainnetNetworkConfig = &NetworkConfig{
@@ -165,6 +166,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	DomainSyncCommittee:               bytesutil.ToBytes4(bytesutil.Bytes4(7)),
 	DomainSyncCommitteeSelectionProof: bytesutil.ToBytes4(bytesutil.Bytes4(8)),
 	DomainContributionAndProof:        bytesutil.ToBytes4(bytesutil.Bytes4(9)),
+	DomainBlobsSidecar:                bytesutil.ToBytes4(bytesutil.Bytes4(10)),
 
 	// Prysm constants.
 	GweiPerEth:                     1000000000,
@@ -202,6 +204,8 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	BellatrixForkEpoch:   mainnetBellatrixForkEpoch,
 	ShardingForkVersion:  []byte{3, 0, 0, 0},
 	ShardingForkEpoch:    math.MaxUint64,
+	Eip4844ForkVersion:   []byte{4, 0, 0, 0},
+	Eip4844ForkEpoch:     math.MaxUint64,
 
 	// New values introduced in Altair hard fork 1.
 	// Participation flag indices.

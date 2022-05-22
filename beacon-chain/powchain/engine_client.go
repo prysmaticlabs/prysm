@@ -33,6 +33,8 @@ const (
 	ExecutionBlockByHashMethod = "eth_getBlockByHash"
 	// ExecutionBlockByNumberMethod request string for JSON-RPC.
 	ExecutionBlockByNumberMethod = "eth_getBlockByNumber"
+	// BlobsBundleMethod request string for JSON-RPC.
+	BlobsBundleMethod = "getBlobsBundleV1"
 	// Defines the seconds to wait before timing out engine endpoints with block execution semantics (newPayload, forkchoiceUpdated).
 	payloadAndForkchoiceUpdatedTimeout = 8 * time.Second
 	// Defines the seconds before timing out engine endpoints with non-block execution semantics.
@@ -59,6 +61,7 @@ type EngineCaller interface {
 	) error
 	ExecutionBlockByHash(ctx context.Context, hash common.Hash) (*pb.ExecutionBlock, error)
 	GetTerminalBlockHash(ctx context.Context) ([]byte, bool, error)
+	GetBlobsBundle(ctx context.Context, payloadId [8]byte) (*pb.BlobsBundle, error)
 }
 
 // NewPayload calls the engine_newPayloadV1 method via JSON-RPC.
@@ -287,6 +290,16 @@ func (s *Service) ExecutionBlockByHash(ctx context.Context, hash common.Hash) (*
 
 	result := &pb.ExecutionBlock{}
 	err := s.rpcClient.CallContext(ctx, result, ExecutionBlockByHashMethod, hash, false /* no full transaction objects */)
+	return result, handleRPCError(err)
+}
+
+// GetBlobsBundle calls the getBlobsBundleV1 method via JSON-RPC.
+func (s *Service) GetBlobsBundle(ctx context.Context, payloadId [8]byte) (*pb.BlobsBundle, error) {
+	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.GetBlobsBundle")
+	defer span.End()
+
+	result := &pb.BlobsBundle{}
+	err := s.rpcClient.CallContext(ctx, result, BlobsBundleMethod, pb.PayloadIDBytes(payloadId))
 	return result, handleRPCError(err)
 }
 

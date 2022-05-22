@@ -14,6 +14,7 @@ type BlockMutator struct {
 	Phase0    func(beaconBlock *eth.SignedBeaconBlock)
 	Altair    func(beaconBlock *eth.SignedBeaconBlockAltair)
 	Bellatrix func(beaconBlock *eth.SignedBeaconBlockBellatrix)
+	Eip4844   func(beaconBlock *eth.SignedBeaconBlockWithBlobKZGs)
 }
 
 func (m BlockMutator) Apply(b interfaces.SignedBeaconBlock) error {
@@ -39,6 +40,12 @@ func (m BlockMutator) Apply(b interfaces.SignedBeaconBlock) error {
 		}
 		m.Bellatrix(bb)
 		return nil
+	case version.Eip4844:
+		bb, err := b.PbEip4844Block()
+		if err != nil {
+			return err
+		}
+		m.Eip4844(bb)
 	}
 	msg := fmt.Sprintf("version %d = %s", b.Version(), version.String(b.Version()))
 	return errors.Wrap(ErrUnsupportedSignedBeaconBlock, msg)

@@ -84,3 +84,15 @@ func UpgradeToBellatrix(ctx context.Context, state state.BeaconState) (state.Bea
 
 	return v3.InitializeFromProtoUnsafe(s)
 }
+
+// UpgradeToEip4844 updates inputs a generic state to return the version Eip4844 state.
+func UpgradeToEip4844(ctx context.Context, state state.BeaconState) (state.BeaconState, error) {
+	if err := state.SetFork(&ethpb.Fork{
+		PreviousVersion: state.Fork().CurrentVersion,
+		CurrentVersion:  params.BeaconConfig().Eip4844ForkVersion,
+		Epoch:           time.CurrentEpoch(state),
+	}); err != nil {
+		return nil, err
+	}
+	return state, nil
+}
