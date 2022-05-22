@@ -90,14 +90,41 @@ func TestInitializeEpochValidators_BadState(t *testing.T) {
 }
 
 func TestUnrealizedCheckpoints(t *testing.T) {
-	s, err := testState()
+	validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount)
+	balances := make([]uint64, params.BeaconConfig().MinGenesisActiveValidatorCount)
+	for i := 0; i < len(validators); i++ {
+		validators[i] = &ethpb.Validator{
+			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
+			EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
+		}
+		balances[i] = params.BeaconConfig().MaxEffectiveBalance
+	}
+	pr := [32]byte{'p'}
+	cr := [32]byte{'c'}
+	jcp := &ethpb.Checkpoint{Root: cr[:], Epoch: 2}
+	fcp := &ethpb.Checkpoint{Root: pr[:], Epoch: 1}
+	base := &ethpb.BeaconStateAltair{
+		Slot:        2,
+		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+
+		Validators:                  validators,
+		CurrentEpochParticipation:   make([]byte, params.BeaconConfig().MinGenesisActiveValidatorCount),
+		PreviousEpochParticipation:  make([]byte, params.BeaconConfig().MinGenesisActiveValidatorCount),
+		InactivityScores:            make([]uint64, params.BeaconConfig().MinGenesisActiveValidatorCount),
+		Balances:                    balances,
+		PreviousJustifiedCheckpoint: &ethpb.Checkpoint{Root: pr[:], Epoch: 1},
+		CurrentJustifiedCheckpoint:  jcp,
+		FinalizedCheckpoint:         fcp,
+	}
+	state, err := stateAltair.InitializeFromProto(base)
 	require.NoError(t, err)
-	_, _, err = InitializePrecomputeValidators(context.Background(), s)
+
+	_, _, err = InitializePrecomputeValidators(context.Background(), state)
 	require.NoError(t, err)
-	jc, fc, err := UnrealizedCheckpoints(s)
+	jc, fc, err := UnrealizedCheckpoints(state)
 	require.NoError(t, err)
-	require.Equal(t, (*ethpb.Checkpoint)(nil), jc)
-	require.Equal(t, (*ethpb.Checkpoint)(nil), fc)
+	require.DeepEqual(t, jcp, jc)
+	require.DeepEqual(t, fcp, fc)
 }
 
 func TestProcessEpochParticipation(t *testing.T) {
