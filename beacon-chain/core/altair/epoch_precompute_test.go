@@ -96,8 +96,8 @@ func TestUnrealizedCheckpoints(t *testing.T) {
 	require.NoError(t, err)
 	jc, fc, err := UnrealizedCheckpoints(s)
 	require.NoError(t, err)
-	require.Equal(t, types.Epoch(0), jc.Epoch)
-	require.Equal(t, types.Epoch(0), fc.Epoch)
+	require.Equal(t, (*ethpb.Checkpoint)(nil), jc)
+	require.Equal(t, (*ethpb.Checkpoint)(nil), fc)
 }
 
 func TestProcessEpochParticipation(t *testing.T) {
