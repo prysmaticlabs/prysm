@@ -43,6 +43,10 @@ func (b *BeaconState) PreviousEpochParticipation() ([]byte, error) {
 // current epoch and target attested in previous epoch. This function is used to
 // compute the "unrealized justification" that a synced Beacon Block will have.
 func (b *BeaconState) UnrealizedCheckpointBalances() (uint64, uint64, uint64, error) {
+	if b.version == version.Phase0 {
+		return 0, 0, 0, errNotSupported("UnrealizedCheckpointBalances", b.version)
+	}
+
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
