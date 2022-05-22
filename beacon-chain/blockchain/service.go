@@ -199,7 +199,7 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 	if features.Get().EnableForkChoiceDoublyLinkedTree {
 		forkChoicer = doublylinkedtree.New(justified.Epoch, finalized.Epoch)
 	} else {
-		forkChoicer = protoarray.New(justified.Epoch, finalized.Epoch, fRoot)
+		forkChoicer = protoarray.New(justified.Epoch, finalized.Epoch)
 	}
 	s.cfg.ForkChoiceStore = forkChoicer
 	fb, err := s.getBlock(s.ctx, s.ensureRootNotZeros(fRoot))
