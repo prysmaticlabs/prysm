@@ -3,15 +3,26 @@ package blockchain
 import "github.com/pkg/errors"
 
 var (
+	// ErrInvalidPayload is returned when the payload is invalid
+	ErrInvalidPayload = errors.New("recevied an INVALID payload from execution engine")
+	// ErrUndefinedExecutionEngineError is returned when the execution engine returns an error that is not defined
+	ErrUndefinedExecutionEngineError = errors.New("received an undefined ee error")
 	// errNilFinalizedInStore is returned when a nil finalized checkpt is returned from store.
 	errNilFinalizedInStore = errors.New("nil finalized checkpoint returned from store")
 	// errInvalidNilSummary is returned when a nil summary is returned from the DB.
 	errInvalidNilSummary = errors.New("nil summary returned from the DB")
-	// errWrongBlockCount is returned when the wrong number of blocks or
-	// block roots is used
+	// errWrongBlockCount is returned when the wrong number of blocks or block roots is used
 	errWrongBlockCount = errors.New("wrong number of blocks or block roots")
 	// block is not a valid optimistic candidate block
 	errNotOptimisticCandidate = errors.New("block is not suitable for optimistic sync")
+	// errBlockNotFoundInCacheOrDB is returned when a block is not found in the cache or DB.
+	errBlockNotFoundInCacheOrDB = errors.New("block not found in cache or db")
+	// errNilStateFromStategen is returned when a nil state is returned from the state generator.
+	errNilStateFromStategen = errors.New("justified state can't be nil")
+	// errWSBlockNotFound is returned when a block is not found in the WS cache or DB.
+	errWSBlockNotFound = errors.New("weak subjectivity root not found in db")
+	// errWSBlockNotFoundInEpoch is returned when a block is not found in the WS cache or DB within epoch.
+	errWSBlockNotFoundInEpoch = errors.New("weak subjectivity root not found in db within epoch")
 )
 
 // An invalid block is the block that fails state transition based on the core protocol rules.
