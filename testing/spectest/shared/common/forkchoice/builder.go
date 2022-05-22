@@ -90,7 +90,6 @@ func (bb *Builder) Check(t testing.TB, c *Check) {
 		return
 	}
 	ctx := context.TODO()
-
 	require.NoError(t, bb.service.UpdateAndSaveHeadWithBalances(ctx))
 	if c.Head != nil {
 		r, err := bb.service.HeadRoot(ctx)
@@ -130,4 +129,5 @@ func (bb *Builder) Check(t testing.TB, c *Check) {
 		got := fmt.Sprintf("%#x", bb.service.ForkChoiceStore().ProposerBoost())
 		require.DeepEqual(t, want, got)
 	}
+
 }
