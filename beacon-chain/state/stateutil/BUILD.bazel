@@ -15,6 +15,7 @@ go_library(
         "state_hasher.go",
         "sync_committee.root.go",
         "trie_helpers.go",
+        "unrealized_justification.go",
         "validator_map_handler.go",
         "validator_root.go",
     ],
