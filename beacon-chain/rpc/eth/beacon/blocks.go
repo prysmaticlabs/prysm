@@ -574,14 +574,17 @@ func (bs *Server) GetBlockRoot(ctx context.Context, req *ethpbv1.BlockRequest) (
 			return nil, status.Errorf(codes.NotFound, "No head root was found")
 		}
 	case "finalized":
-		finalized := bs.ChainInfoFetcher.FinalizedCheckpt()
+		finalized, err := bs.ChainInfoFetcher.FinalizedCheckpt()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not retrieve finalized checkpoint: %v", err)
+		}
 		root = finalized.Root
 	case "genesis":
 		blk, err := bs.BeaconDB.GenesisBlock(ctx)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not retrieve blocks for genesis slot: %v", err)
 		}
-		if err := helpers.BeaconBlockIsNil(blk); err != nil {
+		if err := wrapper.BeaconBlockIsNil(blk); err != nil {
 			return nil, status.Errorf(codes.NotFound, "Could not find genesis block: %v", err)
 		}
 		blkRoot, err := blk.Block().HashTreeRoot()
@@ -595,7 +598,7 @@ func (bs *Server) GetBlockRoot(ctx context.Context, req *ethpbv1.BlockRequest) (
 			if err != nil {
 				return nil, status.Errorf(codes.Internal, "Could not retrieve block for block root %#x: %v", req.BlockId, err)
 			}
-			if err := helpers.BeaconBlockIsNil(blk); err != nil {
+			if err := wrapper.BeaconBlockIsNil(blk); err != nil {
 				return nil, status.Errorf(codes.NotFound, "Could not find block: %v", err)
 			}
 			root = req.BlockId
@@ -725,7 +728,10 @@ func (bs *Server) blockFromBlockID(ctx context.Context, blockId []byte) (interfa
 			return nil, errors.Wrap(err, "could not retrieve head block")
 		}
 	case "finalized":
-		finalized := bs.ChainInfoFetcher.FinalizedCheckpt()
+		finalized, err := bs.ChainInfoFetcher.FinalizedCheckpt()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not retrieve finalized checkpoint")
+		}
 		finalizedRoot := bytesutil.ToBytes32(finalized.Root)
 		blk, err = bs.BeaconDB.Block(ctx, finalizedRoot)
 		if err != nil {
@@ -787,7 +793,7 @@ func handleGetBlockError(blk interfaces.SignedBeaconBlock, err error) error {
 	if err != nil {
 		return status.Errorf(codes.Internal, "Could not get block from block ID: %v", err)
 	}
-	if err := helpers.BeaconBlockIsNil(blk); err != nil {
+	if err := wrapper.BeaconBlockIsNil(blk); err != nil {
 		return status.Errorf(codes.NotFound, "Could not find requested block: %v", err)
 	}
 	return nil

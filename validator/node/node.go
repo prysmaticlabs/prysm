@@ -104,12 +104,18 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 		stop:              make(chan struct{}),
 	}
 
-	features.ConfigureValidator(cliCtx)
-	cmd.ConfigureValidator(cliCtx)
+	if err := features.ConfigureValidator(cliCtx); err != nil {
+		return nil, err
+	}
+	if err := cmd.ConfigureValidator(cliCtx); err != nil {
+		return nil, err
+	}
 
 	if cliCtx.IsSet(cmd.ChainConfigFileFlag.Name) {
 		chainConfigFileName := cliCtx.String(cmd.ChainConfigFileFlag.Name)
-		params.LoadChainConfigFile(chainConfigFileName, nil)
+		if err := params.LoadChainConfigFile(chainConfigFileName, nil); err != nil {
+			return nil, err
+		}
 	}
 
 	// If the --web flag is enabled to administer the validator
@@ -124,14 +130,6 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 		}
 		return validatorClient, nil
 	}
-
-	if cliCtx.IsSet(cmd.ChainConfigFileFlag.Name) {
-		chainConfigFileName := cliCtx.String(cmd.ChainConfigFileFlag.Name)
-		params.LoadChainConfigFile(chainConfigFileName, nil)
-	}
-
-	// Initializes any forks here.
-	params.BeaconConfig().InitializeForkSchedule()
 
 	if err := validatorClient.initializeFromCLI(cliCtx); err != nil {
 		return nil, err

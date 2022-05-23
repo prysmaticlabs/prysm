@@ -69,7 +69,7 @@ func BackupAccountsCli(cliCtx *cli.Context) error {
 
 	// Allow the user to interactively select the accounts to backup or optionally
 	// provide them via cli flags as a string of comma-separated, hex strings.
-	filteredPubKeys, err := filterPublicKeysFromUserInput(
+	filteredPubKeys, err := FilterPublicKeysFromUserInput(
 		cliCtx,
 		flags.BackupPublicKeysFlag,
 		pubKeys,

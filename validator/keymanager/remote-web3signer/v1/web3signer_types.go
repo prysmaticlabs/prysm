@@ -10,7 +10,7 @@ type AggregationSlotSignRequest struct {
 	AggregationSlot *AggregationSlot `json:"aggregation_slot" validate:"required"`
 }
 
-// AggregationSlotSignRequest is a request object for web3signer sign api.
+// AggregateAndProofSignRequest is a request object for web3signer sign api.
 type AggregateAndProofSignRequest struct {
 	Type              string             `json:"type" validate:"required"`
 	ForkInfo          *ForkInfo          `json:"fork_info" validate:"required"`
@@ -40,6 +40,14 @@ type BlockV2AltairSignRequest struct {
 	ForkInfo    *ForkInfo                 `json:"fork_info" validate:"required"`
 	SigningRoot string                    `json:"signingRoot"`
 	BeaconBlock *BeaconBlockAltairBlockV2 `json:"beacon_block" validate:"required"`
+}
+
+// BlockV2BellatrixSignRequest is a request object for web3signer sign api for supporting Bellatrix fork.
+type BlockV2BellatrixSignRequest struct {
+	Type        string                       `json:"type" validate:"required"`
+	ForkInfo    *ForkInfo                    `json:"fork_info" validate:"required"`
+	SigningRoot string                       `json:"signingRoot"`
+	BeaconBlock *BeaconBlockBellatrixBlockV2 `json:"beacon_block" validate:"required"`
 }
 
 // BlockV2SignRequest is a request object for web3signer sign api.
@@ -175,9 +183,9 @@ type Eth1Data struct {
 // ProposerSlashing a sub property of BeaconBlockBody.
 type ProposerSlashing struct {
 	// Prysm uses Header_1 but web3signer uses signed_header_1.
-	SignedHeader_1 *SignedBeaconBlockHeader `json:"signed_header_1"`
+	Signedheader1 *SignedBeaconBlockHeader `json:"signed_header_1"`
 	// Prysm uses Header_2 but web3signer uses signed_header_2.
-	SignedHeader_2 *SignedBeaconBlockHeader `json:"signed_header_2"`
+	Signedheader2 *SignedBeaconBlockHeader `json:"signed_header_2"`
 }
 
 // SignedBeaconBlockHeader is a sub property of ProposerSlashing.
@@ -197,8 +205,8 @@ type BeaconBlockHeader struct {
 
 // AttesterSlashing a sub property of BeaconBlockBody.
 type AttesterSlashing struct {
-	Attestation_1 *IndexedAttestation `json:"attestation_1"`
-	Attestation_2 *IndexedAttestation `json:"attestation_2"`
+	Attestation1 *IndexedAttestation `json:"attestation_1"`
+	Attestation2 *IndexedAttestation `json:"attestation_2"`
 }
 
 // IndexedAttestation a sub property of AttesterSlashing.
@@ -262,6 +270,12 @@ type BeaconBlockBodyAltair struct {
 	Deposits          []*Deposit             `json:"deposits"`
 	VoluntaryExits    []*SignedVoluntaryExit `json:"voluntary_exits"`
 	SyncAggregate     *SyncAggregate         `json:"sync_aggregate"`
+}
+
+// BeaconBlockBellatrixBlockV2 a field of BlockV2BellatrixSignRequest.
+type BeaconBlockBellatrixBlockV2 struct {
+	Version     string             `json:"version"`
+	BlockHeader *BeaconBlockHeader `json:"block_header"`
 }
 
 // SyncAggregate is a sub property of BeaconBlockBodyAltair.

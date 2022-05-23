@@ -3,17 +3,19 @@ package builder
 import (
 	"bytes"
 	"context"
+	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"strconv"
+	"testing"
+
 	"github.com/prysmaticlabs/go-bitfield"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
-	"io"
-	"net/http"
-	"net/url"
-	"strconv"
-	"testing"
 )
 
 type roundtrip func(*http.Request) (*http.Response, error)
@@ -28,36 +30,42 @@ func TestClient_Status(t *testing.T) {
 	hc := &http.Client{
 		Transport: roundtrip(func(r *http.Request) (*http.Response, error) {
 			defer func() {
+				if r.Body == nil {
+					return
+				}
 				require.NoError(t, r.Body.Close())
 			}()
 			require.Equal(t, statusPath, r.URL.Path)
 			return &http.Response{
 				StatusCode: http.StatusOK,
-				Body: io.NopCloser(bytes.NewBuffer(nil)),
-				Request: r.Clone(ctx),
+				Body:       io.NopCloser(bytes.NewBuffer(nil)),
+				Request:    r.Clone(ctx),
 			}, nil
 		}),
 	}
 	c := &Client{
-		hc: hc,
+		hc:      hc,
 		baseURL: &url.URL{Host: "localhost:3500", Scheme: "http"},
 	}
 	require.NoError(t, c.Status(ctx))
 	hc = &http.Client{
 		Transport: roundtrip(func(r *http.Request) (*http.Response, error) {
 			defer func() {
+				if r.Body == nil {
+					return
+				}
 				require.NoError(t, r.Body.Close())
 			}()
 			require.Equal(t, statusPath, r.URL.Path)
 			return &http.Response{
 				StatusCode: http.StatusInternalServerError,
-				Body: io.NopCloser(bytes.NewBuffer(nil)),
-				Request: r.Clone(ctx),
+				Body:       io.NopCloser(bytes.NewBuffer(nil)),
+				Request:    r.Clone(ctx),
 			}, nil
 		}),
 	}
 	c = &Client{
-		hc: hc,
+		hc:      hc,
 		baseURL: &url.URL{Host: "localhost:3500", Scheme: "http"},
 	}
 	require.ErrorIs(t, c.Status(ctx), ErrNotOK)
@@ -79,13 +87,13 @@ func TestClient_RegisterValidator(t *testing.T) {
 			require.Equal(t, http.MethodPost, r.Method)
 			return &http.Response{
 				StatusCode: http.StatusOK,
-				Body: io.NopCloser(bytes.NewBuffer(nil)),
-				Request: r.Clone(ctx),
+				Body:       io.NopCloser(bytes.NewBuffer(nil)),
+				Request:    r.Clone(ctx),
 			}, nil
 		}),
 	}
 	c := &Client{
-		hc: hc,
+		hc:      hc,
 		baseURL: &url.URL{Host: "localhost:3500", Scheme: "http"},
 	}
 	reg := &eth.SignedValidatorRegistrationV1{
@@ -107,13 +115,13 @@ func TestClient_GetHeader(t *testing.T) {
 			require.Equal(t, expectedPath, r.URL.Path)
 			return &http.Response{
 				StatusCode: http.StatusInternalServerError,
-				Body: io.NopCloser(bytes.NewBuffer(nil)),
-				Request: r.Clone(ctx),
+				Body:       io.NopCloser(bytes.NewBuffer(nil)),
+				Request:    r.Clone(ctx),
 			}, nil
 		}),
 	}
 	c := &Client{
-		hc: hc,
+		hc:      hc,
 		baseURL: &url.URL{Host: "localhost:3500", Scheme: "http"},
 	}
 	var slot types.Slot = 23
@@ -127,13 +135,13 @@ func TestClient_GetHeader(t *testing.T) {
 			require.Equal(t, expectedPath, r.URL.Path)
 			return &http.Response{
 				StatusCode: http.StatusOK,
-				Body: io.NopCloser(bytes.NewBufferString(testExampleHeaderResponse)),
-				Request: r.Clone(ctx),
+				Body:       io.NopCloser(bytes.NewBufferString(testExampleHeaderResponse)),
+				Request:    r.Clone(ctx),
 			}, nil
 		}),
 	}
 	c = &Client{
-		hc: hc,
+		hc:      hc,
 		baseURL: &url.URL{Host: "localhost:3500", Scheme: "http"},
 	}
 	h, err := c.GetHeader(ctx, slot, bytesutil.ToBytes32(parentHash), bytesutil.ToBytes48(pubkey))
@@ -142,6 +150,9 @@ func TestClient_GetHeader(t *testing.T) {
 	require.Equal(t, true, bytes.Equal(expectedSig, h.Signature))
 	expectedTxRoot := ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2")
 	require.Equal(t, true, bytes.Equal(expectedTxRoot, h.Message.Header.TransactionsRoot))
+	require.Equal(t, uint64(1), h.Message.Header.GasUsed)
+	value := stringToUint256("652312848583266388373324160190187140051835877600158453279131187530910662656")
+	require.Equal(t, fmt.Sprintf("%#x", value.SSZBytes()), fmt.Sprintf("%#x", h.Message.Value))
 }
 
 func TestSubmitBlindedBlock(t *testing.T) {
@@ -151,40 +162,43 @@ func TestSubmitBlindedBlock(t *testing.T) {
 			require.Equal(t, postBlindedBeaconBlockPath, r.URL.Path)
 			return &http.Response{
 				StatusCode: http.StatusOK,
-				Body: io.NopCloser(bytes.NewBufferString(testExampleExecutionPayload)),
-				Request: r.Clone(ctx),
+				Body:       io.NopCloser(bytes.NewBufferString(testExampleExecutionPayload)),
+				Request:    r.Clone(ctx),
 			}, nil
 		}),
 	}
 	c := &Client{
-		hc: hc,
+		hc:      hc,
 		baseURL: &url.URL{Host: "localhost:3500", Scheme: "http"},
 	}
 	sbbb := testSignedBlindedBeaconBlockBellatrix(t)
 	ep, err := c.SubmitBlindedBlock(ctx, sbbb)
 	require.NoError(t, err)
 	require.Equal(t, true, bytes.Equal(ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"), ep.ParentHash))
+	bfpg := stringToUint256("452312848583266388373324160190187140051835877600158453279131187530910662656")
+	require.Equal(t, fmt.Sprintf("%#x", bfpg.SSZBytes()), fmt.Sprintf("%#x", ep.BaseFeePerGas))
+	require.Equal(t, uint64(1), ep.GasLimit)
 }
 
 func testSignedBlindedBeaconBlockBellatrix(t *testing.T) *eth.SignedBlindedBeaconBlockBellatrix {
 	return &eth.SignedBlindedBeaconBlockBellatrix{
-		Block:     &eth.BlindedBeaconBlockBellatrix{
+		Block: &eth.BlindedBeaconBlockBellatrix{
 			Slot:          1,
 			ProposerIndex: 1,
 			ParentRoot:    ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
 			StateRoot:     ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-			Body:          &eth.BlindedBeaconBlockBodyBellatrix{
-				RandaoReveal:           ezDecode(t, "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"),
-				Eth1Data:               &eth.Eth1Data{
+			Body: &eth.BlindedBeaconBlockBodyBellatrix{
+				RandaoReveal: ezDecode(t, "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"),
+				Eth1Data: &eth.Eth1Data{
 					DepositRoot:  ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
 					DepositCount: 1,
 					BlockHash:    ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
 				},
-				Graffiti:               ezDecode(t, "0xdeadbeefc0ffee"),
-				ProposerSlashings:      []*eth.ProposerSlashing{
+				Graffiti: ezDecode(t, "0xdeadbeefc0ffee"),
+				ProposerSlashings: []*eth.ProposerSlashing{
 					{
 						Header_1: &eth.SignedBeaconBlockHeader{
-							Header:    &eth.BeaconBlockHeader{
+							Header: &eth.BeaconBlockHeader{
 								Slot:          1,
 								ProposerIndex: 1,
 								ParentRoot:    ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
@@ -194,7 +208,7 @@ func testSignedBlindedBeaconBlockBellatrix(t *testing.T) *eth.SignedBlindedBeaco
 							Signature: ezDecode(t, "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"),
 						},
 						Header_2: &eth.SignedBeaconBlockHeader{
-							Header:    &eth.BeaconBlockHeader{
+							Header: &eth.BeaconBlockHeader{
 								Slot:          1,
 								ProposerIndex: 1,
 								ParentRoot:    ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
@@ -205,56 +219,56 @@ func testSignedBlindedBeaconBlockBellatrix(t *testing.T) *eth.SignedBlindedBeaco
 						},
 					},
 				},
-				AttesterSlashings:      []*eth.AttesterSlashing{
+				AttesterSlashings: []*eth.AttesterSlashing{
 					{
 						Attestation_1: &eth.IndexedAttestation{
 							AttestingIndices: []uint64{1},
-							Data:             &eth.AttestationData{
+							Data: &eth.AttestationData{
 								Slot:            1,
 								CommitteeIndex:  1,
 								BeaconBlockRoot: ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-								Source:          &eth.Checkpoint{
+								Source: &eth.Checkpoint{
 									Epoch: 1,
 									Root:  ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
 								},
-								Target:          &eth.Checkpoint{
+								Target: &eth.Checkpoint{
 									Epoch: 1,
 									Root:  ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
 								},
 							},
-							Signature:       ezDecode(t, "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"),
+							Signature: ezDecode(t, "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"),
 						},
 						Attestation_2: &eth.IndexedAttestation{
 							AttestingIndices: []uint64{1},
-							Data:             &eth.AttestationData{
+							Data: &eth.AttestationData{
 								Slot:            1,
 								CommitteeIndex:  1,
 								BeaconBlockRoot: ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-								Source:          &eth.Checkpoint{
+								Source: &eth.Checkpoint{
 									Epoch: 1,
 									Root:  ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
 								},
-								Target:          &eth.Checkpoint{
+								Target: &eth.Checkpoint{
 									Epoch: 1,
 									Root:  ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
 								},
 							},
-							Signature:       ezDecode(t, "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"),
+							Signature: ezDecode(t, "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"),
 						},
 					},
 				},
-				Attestations:           []*eth.Attestation{
+				Attestations: []*eth.Attestation{
 					{
 						AggregationBits: bitfield.Bitlist{0x01},
 						Data: &eth.AttestationData{
 							Slot:            1,
 							CommitteeIndex:  1,
 							BeaconBlockRoot: ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-							Source:          &eth.Checkpoint{
+							Source: &eth.Checkpoint{
 								Epoch: 1,
 								Root:  ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
 							},
-							Target:          &eth.Checkpoint{
+							Target: &eth.Checkpoint{
 								Epoch: 1,
 								Root:  ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
 							},
@@ -262,7 +276,7 @@ func testSignedBlindedBeaconBlockBellatrix(t *testing.T) *eth.SignedBlindedBeaco
 						Signature: ezDecode(t, "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"),
 					},
 				},
-				Deposits:               []*eth.Deposit{
+				Deposits: []*eth.Deposit{
 					{
 						Proof: [][]byte{ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2")},
 						Data: &eth.Deposit_Data{
@@ -273,37 +287,58 @@ func testSignedBlindedBeaconBlockBellatrix(t *testing.T) *eth.SignedBlindedBeaco
 						},
 					},
 				},
-				VoluntaryExits:         []*eth.SignedVoluntaryExit{
+				VoluntaryExits: []*eth.SignedVoluntaryExit{
 					{
-						Exit:      &eth.VoluntaryExit{
+						Exit: &eth.VoluntaryExit{
 							Epoch:          1,
 							ValidatorIndex: 1,
 						},
 						Signature: ezDecode(t, "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"),
 					},
 				},
-				SyncAggregate:          &eth.SyncAggregate{
+				SyncAggregate: &eth.SyncAggregate{
 					SyncCommitteeSignature: make([]byte, 48),
-					SyncCommitteeBits: bitfield.Bitvector512{0x01},
+					SyncCommitteeBits:      bitfield.Bitvector512{0x01},
 				},
 				ExecutionPayloadHeader: &eth.ExecutionPayloadHeader{
-					ParentHash: ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-					FeeRecipient: ezDecode(t, "0xabcf8e0d4e9587369b2301d0790347320302cc09"),
-					StateRoot: ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-					ReceiptsRoot: ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-					LogsBloom: ezDecode(t, "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
-					PrevRandao: ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-					BlockNumber: 1,
-					GasLimit: 1,
-					GasUsed: 1,
-					Timestamp: 1,
-					ExtraData: ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-					BaseFeePerGas: []byte(strconv.FormatUint(1, 10)),
-					BlockHash: ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+					ParentHash:       ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+					FeeRecipient:     ezDecode(t, "0xabcf8e0d4e9587369b2301d0790347320302cc09"),
+					StateRoot:        ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+					ReceiptsRoot:     ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+					LogsBloom:        ezDecode(t, "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
+					PrevRandao:       ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+					BlockNumber:      1,
+					GasLimit:         1,
+					GasUsed:          1,
+					Timestamp:        1,
+					ExtraData:        ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+					BaseFeePerGas:    []byte(strconv.FormatUint(1, 10)),
+					BlockHash:        ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
 					TransactionsRoot: ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
 				},
 			},
 		},
 		Signature: ezDecode(t, "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"),
 	}
+}
+
+func TestRequestLogger(t *testing.T) {
+	wo := WithObserver(&requestLogger{})
+	c, err := NewClient("localhost:3500", wo)
+	require.NoError(t, err)
+
+	ctx := context.Background()
+	hc := &http.Client{
+		Transport: roundtrip(func(r *http.Request) (*http.Response, error) {
+			require.Equal(t, getStatus, r.URL.Path)
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(bytes.NewBufferString(testExampleExecutionPayload)),
+				Request:    r.Clone(ctx),
+			}, nil
+		}),
+	}
+	c.hc = hc
+	err = c.Status(ctx)
+	require.NoError(t, err)
 }

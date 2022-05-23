@@ -5,8 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	v1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"io"
 	"net"
 	"net/http"
@@ -14,19 +12,22 @@ import (
 	"text/template"
 	"time"
 
+	v1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	log "github.com/sirupsen/logrus"
 )
 
 const (
-	getExecHeaderPath       = "/eth/v1/builder/header/{{.Slot}}/{{.ParentHash}}/{{.Pubkey}}"
-	getStatus                 = "/eth/v1/builder/status"
+	getExecHeaderPath          = "/eth/v1/builder/header/{{.Slot}}/{{.ParentHash}}/{{.Pubkey}}"
+	getStatus                  = "/eth/v1/builder/status"
 	postBlindedBeaconBlockPath = "/eth/v1/builder/blinded_blocks"
-	postRegisterValidatorPath = "/eth/v1/builder/validators"
+	postRegisterValidatorPath  = "/eth/v1/builder/validators"
 )
 
-var ErrMalformedHostname = errors.New("hostname must include port, separated by one colon, like example.com:3500")
+var errMalformedHostname = errors.New("hostname must include port, separated by one colon, like example.com:3500")
 
 // ClientOpt is a functional option for the Client type (http.Client wrapper)
 type ClientOpt func(*Client)
@@ -38,10 +39,53 @@ func WithTimeout(timeout time.Duration) ClientOpt {
 	}
 }
 
-// Client provides a collection of helper methods for calling the Eth Beacon Node API endpoints.
+type observer interface {
+	observe(r *http.Request) error
+}
+
+func WithObserver(m observer) ClientOpt {
+	return func(c *Client) {
+		c.obvs = append(c.obvs, m)
+	}
+}
+
+type requestLogger struct{}
+
+func (*requestLogger) observe(r *http.Request) (e error) {
+	b := bytes.NewBuffer(nil)
+	if r.Body == nil {
+		log.WithFields(log.Fields{
+			"body-base64": "(nil value)",
+			"url":         r.URL.String(),
+		}).Info("builder http request")
+		return nil
+	}
+	t := io.TeeReader(r.Body, b)
+	defer func() {
+		if r.Body != nil {
+			e = r.Body.Close()
+		}
+	}()
+	body, err := io.ReadAll(t)
+	if err != nil {
+		return err
+	}
+	r.Body = io.NopCloser(b)
+	log.WithFields(log.Fields{
+		"body-base64": string(body),
+		"url":         r.URL.String(),
+	}).Info("builder http request")
+
+	return nil
+}
+
+var _ observer = &requestLogger{}
+
+// Client provides a collection of helper methods for calling Builder API endpoints.
 type Client struct {
 	hc      *http.Client
 	baseURL *url.URL
+	obvs    []observer
 }
 
 // NewClient constructs a new client with the provided options (ex WithTimeout).
@@ -71,9 +115,9 @@ func urlForHost(h string) (*url.URL, error) {
 	// try to parse as host:port
 	host, port, err := net.SplitHostPort(h)
 	if err != nil {
-		return nil, ErrMalformedHostname
+		return nil, errMalformedHostname
 	}
-	return &url.URL{Host: fmt.Sprintf("%s:%s", host, port), Scheme: "http"}, nil
+	return &url.URL{Host: net.JoinHostPort(host, port), Scheme: "http"}, nil
 }
 
 // NodeURL returns a human-readable string representation of the beacon node base url.
@@ -83,13 +127,7 @@ func (c *Client) NodeURL() string {
 
 type reqOption func(*http.Request)
 
-func withSSZEncoding() reqOption {
-	return func(req *http.Request) {
-		req.Header.Set("Accept", "application/octet-stream")
-	}
-}
-
-// do is a generic, opinionated GET function to reduce boilerplate amongst the getters in this package.
+// do is a generic, opinionated GET function to reduce boilerplate amongst the getters in this packageapi/client/builder/types.go.
 func (c *Client) do(ctx context.Context, method string, path string, body io.Reader, opts ...reqOption) ([]byte, error) {
 	u := c.baseURL.ResolveReference(&url.URL{Path: path})
 	log.Printf("requesting %s", u.String())
@@ -99,6 +137,11 @@ func (c *Client) do(ctx context.Context, method string, path string, body io.Rea
 	}
 	for _, o := range opts {
 		o(req)
+	}
+	for _, o := range c.obvs {
+		if err := o.observe(req); err != nil {
+			return nil, err
+		}
 	}
 	r, err := c.hc.Do(req)
 	if err != nil {
@@ -118,15 +161,16 @@ func (c *Client) do(ctx context.Context, method string, path string, body io.Rea
 }
 
 var execHeaderTemplate = template.Must(template.New("").Parse(getExecHeaderPath))
+
 func execHeaderPath(slot types.Slot, parentHash [32]byte, pubkey [48]byte) (string, error) {
-	v := struct{
-		Slot types.Slot
+	v := struct {
+		Slot       types.Slot
 		ParentHash string
-		Pubkey string
+		Pubkey     string
 	}{
-		Slot: slot,
+		Slot:       slot,
 		ParentHash: fmt.Sprintf("%#x", parentHash),
-		Pubkey: fmt.Sprintf("%#x", pubkey),
+		Pubkey:     fmt.Sprintf("%#x", pubkey),
 	}
 	b := bytes.NewBuffer(nil)
 	err := execHeaderTemplate.Execute(b, v)

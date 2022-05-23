@@ -109,7 +109,7 @@ func Test_validateMergeBlock(t *testing.T) {
 
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-	fcs := protoarray.New(0, 0, [32]byte{'a'})
+	fcs := protoarray.New(0, 0)
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),
@@ -144,13 +144,15 @@ func Test_validateMergeBlock(t *testing.T) {
 
 	cfg.TerminalTotalDifficulty = "1"
 	params.OverrideBeaconConfig(cfg)
-	require.ErrorContains(t, "invalid TTD, configTTD: 1, currentTTD: 2, parentTTD: 1", service.validateMergeBlock(ctx, b))
+	err = service.validateMergeBlock(ctx, b)
+	require.ErrorContains(t, "invalid TTD, configTTD: 1, currentTTD: 2, parentTTD: 1", err)
+	require.Equal(t, true, IsInvalidBlock(err))
 }
 
 func Test_getBlkParentHashAndTD(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-	fcs := protoarray.New(0, 0, [32]byte{'a'})
+	fcs := protoarray.New(0, 0)
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),

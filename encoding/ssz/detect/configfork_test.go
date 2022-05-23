@@ -48,8 +48,12 @@ func TestSlotFromBlock(t *testing.T) {
 }
 
 func TestByState(t *testing.T) {
-	bc, cleanup := hackBellatrixMaxuint()
-	defer cleanup()
+	undo, err := hackBellatrixMaxuint()
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, undo())
+	}()
+	bc := params.BeaconConfig()
 	altairSlot, err := slots.EpochStart(bc.AltairForkEpoch)
 	bellaSlot, err := slots.EpochStart(bc.BellatrixForkEpoch)
 	require.NoError(t, err)
@@ -112,8 +116,12 @@ func stateForVersion(v int) (state.BeaconState, error) {
 
 func TestUnmarshalState(t *testing.T) {
 	ctx := context.Background()
-	bc, cleanup := hackBellatrixMaxuint()
-	defer cleanup()
+	undo, err := hackBellatrixMaxuint()
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, undo())
+	}()
+	bc := params.BeaconConfig()
 	altairSlot, err := slots.EpochStart(bc.AltairForkEpoch)
 	bellaSlot, err := slots.EpochStart(bc.BellatrixForkEpoch)
 	require.NoError(t, err)
@@ -165,37 +173,29 @@ func TestUnmarshalState(t *testing.T) {
 	}
 }
 
-func hackBellatrixMaxuint() (*params.BeaconChainConfig, func()) {
+func hackBellatrixMaxuint() (func() error, error) {
 	// We monkey patch the config to use a smaller value for the bellatrix fork epoch.
 	// Upstream configs use MaxUint64, which leads to a multiplication overflow when converting epoch->slot.
 	// Unfortunately we have unit tests that assert our config matches the upstream config, so we have to choose between
 	// breaking conformance, adding a special case to the conformance unit test, or patch it here.
-	previous := params.BeaconConfig()
 	bc := params.MainnetConfig().Copy()
 	bc.BellatrixForkEpoch = math.MaxUint32
-	bc.InitializeForkSchedule()
-	params.OverrideBeaconConfig(bc)
-	// override the param used for mainnet with the patched version
-	params.KnownConfigs[params.MainnetName] = func() *params.BeaconChainConfig {
-		return bc
-	}
-	return bc, func() {
-		// put the previous BeaconChainConfig back in place at the end of the test
-		params.OverrideBeaconConfig(previous)
-		// restore the normal MainnetConfig func in the KnownConfigs mapping
-		params.KnownConfigs[params.MainnetName] = params.MainnetConfig
-	}
+	undo, err := params.SetActiveWithUndo(bc)
+	return undo, err
 }
 
 func TestUnmarshalBlock(t *testing.T) {
-	bc, cleanup := hackBellatrixMaxuint()
-	defer cleanup()
-	require.Equal(t, types.Epoch(math.MaxUint32), params.KnownConfigs[params.MainnetName]().BellatrixForkEpoch)
-	genv := bytesutil.ToBytes4(bc.GenesisForkVersion)
-	altairv := bytesutil.ToBytes4(bc.AltairForkVersion)
-	bellav := bytesutil.ToBytes4(bc.BellatrixForkVersion)
-	altairS, err := slots.EpochStart(bc.AltairForkEpoch)
-	bellaS, err := slots.EpochStart(bc.BellatrixForkEpoch)
+	undo, err := hackBellatrixMaxuint()
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, undo())
+	}()
+	require.Equal(t, types.Epoch(math.MaxUint32), params.BeaconConfig().BellatrixForkEpoch)
+	genv := bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion)
+	altairv := bytesutil.ToBytes4(params.BeaconConfig().AltairForkVersion)
+	bellav := bytesutil.ToBytes4(params.BeaconConfig().BellatrixForkVersion)
+	altairS, err := slots.EpochStart(params.BeaconConfig().AltairForkEpoch)
+	bellaS, err := slots.EpochStart(params.BeaconConfig().BellatrixForkEpoch)
 	require.NoError(t, err)
 	cases := []struct {
 		b       func(*testing.T, types.Slot) interfaces.SignedBeaconBlock
@@ -277,14 +277,17 @@ func TestUnmarshalBlock(t *testing.T) {
 }
 
 func TestUnmarshalBlindedBlock(t *testing.T) {
-	bc, cleanup := hackBellatrixMaxuint()
-	defer cleanup()
-	require.Equal(t, types.Epoch(math.MaxUint32), params.KnownConfigs[params.MainnetName]().BellatrixForkEpoch)
-	genv := bytesutil.ToBytes4(bc.GenesisForkVersion)
-	altairv := bytesutil.ToBytes4(bc.AltairForkVersion)
-	bellav := bytesutil.ToBytes4(bc.BellatrixForkVersion)
-	altairS, err := slots.EpochStart(bc.AltairForkEpoch)
-	bellaS, err := slots.EpochStart(bc.BellatrixForkEpoch)
+	undo, err := hackBellatrixMaxuint()
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, undo())
+	}()
+	require.Equal(t, types.Epoch(math.MaxUint32), params.BeaconConfig().BellatrixForkEpoch)
+	genv := bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion)
+	altairv := bytesutil.ToBytes4(params.BeaconConfig().AltairForkVersion)
+	bellav := bytesutil.ToBytes4(params.BeaconConfig().BellatrixForkVersion)
+	altairS, err := slots.EpochStart(params.BeaconConfig().AltairForkEpoch)
+	bellaS, err := slots.EpochStart(params.BeaconConfig().BellatrixForkEpoch)
 	require.NoError(t, err)
 	cases := []struct {
 		b       func(*testing.T, types.Slot) interfaces.SignedBeaconBlock
