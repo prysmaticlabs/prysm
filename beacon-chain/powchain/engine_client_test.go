@@ -18,9 +18,12 @@ import (
 	mocks "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/forks/bellatrix"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -533,6 +536,71 @@ func Test_tDStringToUint256(t *testing.T) {
 	_, err = tDStringToUint256("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF" +
 		"FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")
 	require.ErrorContains(t, "hex number > 256 bits", err)
+}
+
+func TestReconstructFullBellatrixBlock(t *testing.T) {
+	ctx := context.Background()
+	t.Run("nil block", func(t *testing.T) {
+		service := &Service{}
+
+		_, err := service.ReconstructFullBellatrixBlock(ctx, nil)
+		require.ErrorContains(t, "nil data", err)
+	})
+	t.Run("only blinded block", func(t *testing.T) {
+		want := "can only reconstruct block from blinded block format"
+		service := &Service{}
+		bellatrixBlock := util.NewBeaconBlockBellatrix()
+		wrapped, err := wrapper.WrappedSignedBeaconBlock(bellatrixBlock)
+		require.NoError(t, err)
+		_, err = service.ReconstructFullBellatrixBlock(ctx, wrapped)
+		require.ErrorContains(t, want, err)
+	})
+	t.Run("properly reconstructs block with correct payload", func(t *testing.T) {
+		fix := fixtures()
+		payload, ok := fix["ExecutionPayload"].(*pb.ExecutionPayload)
+		require.Equal(t, true, ok)
+
+		execBlock, ok := fix["ExecutionBlock"].(*pb.ExecutionBlock)
+		require.Equal(t, true, ok)
+		require.NotNil(t, execBlock)
+
+		header, err := bellatrix.PayloadToHeader(payload)
+		require.NoError(t, err)
+
+		wantPayload := fullPayloadFromExecutionBlock(header, &pb.ExecutionBlockWithTxs{ExecutionBlock: *execBlock})
+
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			defer func() {
+				require.NoError(t, r.Body.Close())
+			}()
+			respJSON := map[string]interface{}{
+				"jsonrpc": "2.0",
+				"id":      1,
+				"result":  execBlock,
+			}
+			require.NoError(t, json.NewEncoder(w).Encode(respJSON))
+		}))
+		defer srv.Close()
+
+		rpcClient, err := rpc.DialHTTP(srv.URL)
+		require.NoError(t, err)
+		defer rpcClient.Close()
+
+		service := &Service{}
+		service.rpcClient = rpcClient
+		blindedBlock := util.NewBlindedBeaconBlockBellatrix()
+
+		blindedBlock.Block.Body.ExecutionPayloadHeader = header
+		wrapped, err := wrapper.WrappedSignedBeaconBlock(blindedBlock)
+		require.NoError(t, err)
+		reconstructed, err := service.ReconstructFullBellatrixBlock(ctx, wrapped)
+		require.NoError(t, err)
+
+		got, err := reconstructed.Block().Body().ExecutionPayload()
+		require.NoError(t, err)
+		require.DeepEqual(t, wantPayload, got)
+	})
 }
 
 func TestExchangeTransitionConfiguration(t *testing.T) {

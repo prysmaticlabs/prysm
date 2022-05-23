@@ -326,7 +326,7 @@ func (s *Service) ReconstructFullBellatrixBlock(
 		return nil, errors.Wrap(err, "cannot reconstruct bellatrix block from nil data")
 	}
 	if !blindedBlock.Block().IsBlinded() {
-		return nil, errors.New("can only reconstruct bellatrix block from blinded block format")
+		return nil, errors.New("can only reconstruct block from blinded block format")
 	}
 	start := time.Now()
 	defer func() {
@@ -343,28 +343,7 @@ func (s *Service) ReconstructFullBellatrixBlock(
 		return nil, errors.Wrapf(err, "could not fetch execution block with txs by hash %#x", executionBlockHash)
 	}
 	payload := fullPayloadFromExecutionBlock(header, executionBlock)
-	fullBlock, err := wrapper.BuildSignedBeaconBlockFromExecutionPayload(blindedBlock, payload)
-	if err != nil {
-		return nil, err
-	}
-	blindedBlockRoot, err := blindedBlock.Block().HashTreeRoot()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not hash tree root blinded block")
-	}
-	fullBlockRoot, err := fullBlock.Block().HashTreeRoot()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not hash tree root full beacon block")
-	}
-	// Check the root matches after the reconstruction for extra safety.
-	if fullBlockRoot != blindedBlockRoot {
-		return nil, fmt.Errorf(
-			"failed to safely reconstruct full execution payload, as beacon block root %#x "+
-				"does not match blinded beacon block root %#x",
-			fullBlockRoot,
-			blindedBlockRoot,
-		)
-	}
-	return fullBlock, nil
+	return wrapper.BuildSignedBeaconBlockFromExecutionPayload(blindedBlock, payload)
 }
 
 func fullPayloadFromExecutionBlock(header *ethpb.ExecutionPayloadHeader, block *pb.ExecutionBlockWithTxs) *pb.ExecutionPayload {
