@@ -53,6 +53,13 @@ type requestLogger struct{}
 
 func (*requestLogger) observe(r *http.Request) (e error) {
 	b := bytes.NewBuffer(nil)
+	if r.Body == nil {
+		log.WithFields(log.Fields{
+			"body-base64": "(nil value)",
+			"url":         r.URL.String(),
+		}).Info("builder http request")
+		return nil
+	}
 	t := io.TeeReader(r.Body, b)
 	defer func() {
 		if r.Body != nil {
