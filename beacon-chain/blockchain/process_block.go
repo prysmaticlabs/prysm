@@ -543,9 +543,13 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState state.Beaco
 			return err
 		}
 	} else if postState.Slot() >= s.nextEpochBoundarySlot {
+		s.headLock.RLock()
 		if err := reportEpochMetrics(ctx, postState, s.head.state); err != nil {
+			s.headLock.RUnlock()
 			return err
 		}
+		s.headLock.RUnlock()
+
 		var err error
 		s.nextEpochBoundarySlot, err = slots.EpochStart(coreTime.NextEpoch(postState))
 		if err != nil {
