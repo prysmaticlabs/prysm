@@ -16,22 +16,16 @@ var log = logrus.WithField("prefix", "jwt")
 
 // Commands for interacting with jwt tokens that support the beacon node.
 var Commands = &cli.Command{
-	Name:     "jwt",
-	Category: "jwt",
-	Usage:    "defines commands for interacting with jwt tokens that support the beacon node",
-	Subcommands: []*cli.Command{
-		{
-			Name:        "generate-jwt-secret",
-			Description: `creates a random 32 byte hex string in a plaintext file within the root /prysm directory`,
-			Flags:       cmd.WrapFlags([]cli.Flag{}),
-			Before:      tos.VerifyTosAcceptedOrPrompt,
-			Action: func(cliCtx *cli.Context) error {
-				if err := generateHttpSecretInFile(); err != nil {
-					log.Printf("Could not generate secret: %v", err)
-				}
-				return nil
-			},
-		},
+	Name:        "generate-jwt-secret",
+	Usage:       "creates a random 32 byte hex string in a jwt.secret plaintext file within the root /prysm directory",
+	Description: `creates a random 32 byte hex string in a jwt.secret plaintext file within the root /prysm directory`,
+	Flags:       cmd.WrapFlags([]cli.Flag{}),
+	Before:      tos.VerifyTosAcceptedOrPrompt,
+	Action: func(cliCtx *cli.Context) error {
+		if err := generateHttpSecretInFile(); err != nil {
+			log.Printf("Could not generate secret: %v", err)
+		}
+		return nil
 	},
 }
 
