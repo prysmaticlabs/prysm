@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
@@ -563,6 +564,13 @@ func TestReconstructFullBellatrixBlock(t *testing.T) {
 		execBlock, ok := fix["ExecutionBlock"].(*pb.ExecutionBlock)
 		require.Equal(t, true, ok)
 		require.NotNil(t, execBlock)
+		tx := types.NewTransaction(
+			0,
+			common.HexToAddress("095e7baea6a6c7c4c2dfeb977efac326af552d87"),
+			big.NewInt(0), 0, big.NewInt(0),
+			nil,
+		)
+		txs := []*types.Transaction{tx}
 
 		header, err := bellatrix.PayloadToHeader(payload)
 		require.NoError(t, err)
@@ -577,7 +585,7 @@ func TestReconstructFullBellatrixBlock(t *testing.T) {
 			respJSON := map[string]interface{}{
 				"jsonrpc": "2.0",
 				"id":      1,
-				"result":  execBlock,
+				"result":  execBlockWithTxs,
 			}
 			require.NoError(t, json.NewEncoder(w).Encode(respJSON))
 		}))
