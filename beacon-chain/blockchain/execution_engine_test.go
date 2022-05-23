@@ -43,7 +43,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveBlock(ctx, altairBlk))
 	require.NoError(t, beaconDB.SaveBlock(ctx, bellatrixBlk))
-	fcs := protoarray.New(0, 0, [32]byte{'a'})
+	fcs := protoarray.New(0, 0)
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),
@@ -305,7 +305,7 @@ func Test_NotifyForkchoiceUpdateRecursive(t *testing.T) {
 	fcs.ProcessAttestation(ctx, []uint64{0}, brd, 1)
 	fcs.ProcessAttestation(ctx, []uint64{1}, brf, 1)
 	fcs.ProcessAttestation(ctx, []uint64{2}, brg, 1)
-	headRoot, err := fcs.Head(ctx, 0, bra, []uint64{50, 100, 200}, 0)
+	headRoot, err := fcs.Head(ctx, bra, []uint64{50, 100, 200})
 	require.NoError(t, err)
 	require.Equal(t, brg, headRoot)
 
@@ -326,7 +326,7 @@ func Test_NotifyForkchoiceUpdateRecursive(t *testing.T) {
 	_, err = service.notifyForkchoiceUpdate(ctx, a)
 	require.ErrorIs(t, ErrInvalidPayload, err)
 	// Ensure Head is D
-	headRoot, err = fcs.Head(ctx, 0, bra, service.justifiedBalances.balances, 0)
+	headRoot, err = fcs.Head(ctx, bra, service.justifiedBalances.balances)
 	require.NoError(t, err)
 	require.Equal(t, brd, headRoot)
 
@@ -343,7 +343,7 @@ func Test_NotifyNewPayload(t *testing.T) {
 
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-	fcs := protoarray.New(0, 0, [32]byte{'a'})
+	fcs := protoarray.New(0, 0)
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),
@@ -555,7 +555,7 @@ func Test_NotifyNewPayload_SetOptimisticToValid(t *testing.T) {
 	params.OverrideBeaconConfig(cfg)
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-	fcs := protoarray.New(0, 0, [32]byte{'a'})
+	fcs := protoarray.New(0, 0)
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),
@@ -598,7 +598,7 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-	fcs := protoarray.New(0, 0, [32]byte{'a'})
+	fcs := protoarray.New(0, 0)
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),
@@ -800,7 +800,7 @@ func Test_UpdateLastValidatedCheckpoint(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 	stateGen := stategen.New(beaconDB)
-	fcs := protoarray.New(0, 0, [32]byte{})
+	fcs := protoarray.New(0, 0)
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stateGen),
@@ -897,7 +897,7 @@ func TestService_removeInvalidBlockAndState(t *testing.T) {
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),
-		WithForkChoiceStore(protoarray.New(0, 0, [32]byte{})),
+		WithForkChoiceStore(protoarray.New(0, 0)),
 	}
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
@@ -953,7 +953,7 @@ func TestService_getPayloadHash(t *testing.T) {
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),
-		WithForkChoiceStore(protoarray.New(0, 0, [32]byte{})),
+		WithForkChoiceStore(protoarray.New(0, 0)),
 	}
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)

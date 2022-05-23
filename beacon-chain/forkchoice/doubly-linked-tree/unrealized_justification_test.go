@@ -1,12 +1,13 @@
 package doublylinkedtree
 
 import (
+	"context"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
-	"golang.org/x/net/context"
 )
 
 func TestStore_SetUnrealizedEpochs(t *testing.T) {
@@ -61,13 +62,15 @@ func TestStore_LongFork(t *testing.T) {
 
 	// Add an attestation to c, it is head
 	f.ProcessAttestation(ctx, []uint64{0}, [32]byte{'c'}, 1)
-	headRoot, err := f.Head(ctx, 1, [32]byte{}, []uint64{100}, 1)
+	headRoot, err := f.Head(ctx, [32]byte{}, []uint64{100})
 	require.NoError(t, err)
 	require.Equal(t, [32]byte{'c'}, headRoot)
 
 	// D is head even though its weight is lower.
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 103, [32]byte{'d'}, [32]byte{'b'}, [32]byte{'D'}, 2, 1))
-	headRoot, err = f.Head(ctx, 2, [32]byte{}, []uint64{100}, 1)
+	hr := [32]byte{'d'}
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 103, hr, [32]byte{'b'}, [32]byte{'D'}, 2, 1))
+	require.NoError(t, f.UpdateJustifiedCheckpoint(&ethpb.Checkpoint{Epoch: 2, Root: hr[:]}))
+	headRoot, err = f.Head(ctx, [32]byte{}, []uint64{100})
 	require.NoError(t, err)
 	require.Equal(t, [32]byte{'d'}, headRoot)
 	require.Equal(t, uint64(0), f.store.nodeByRoot[[32]byte{'d'}].weight)
@@ -75,7 +78,7 @@ func TestStore_LongFork(t *testing.T) {
 
 	// Update unrealized justification, c becomes head
 	f.UpdateUnrealizedCheckpoints()
-	headRoot, err = f.Head(ctx, 2, [32]byte{}, []uint64{100}, 1)
+	headRoot, err = f.Head(ctx, [32]byte{}, []uint64{100})
 	require.NoError(t, err)
 	require.Equal(t, [32]byte{'c'}, headRoot)
 }
@@ -118,14 +121,16 @@ func TestStore_NoDeadLock(t *testing.T) {
 
 	// Epoch 3
 	// Current Head is H
-	headRoot, err := f.Head(ctx, 0, [32]byte{}, []uint64{100}, 0)
+	headRoot, err := f.Head(ctx, [32]byte{}, []uint64{100})
 	require.NoError(t, err)
 	require.Equal(t, [32]byte{'h'}, headRoot)
 	require.Equal(t, types.Epoch(0), f.JustifiedEpoch())
 
 	// Insert Block I, it becomes Head
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 108, [32]byte{'i'}, [32]byte{'f'}, [32]byte{'I'}, 1, 0))
-	headRoot, err = f.Head(ctx, 1, [32]byte{}, []uint64{100}, 0)
+	hr := [32]byte{'i'}
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 108, hr, [32]byte{'f'}, [32]byte{'I'}, 1, 0))
+	require.NoError(t, f.UpdateJustifiedCheckpoint(&ethpb.Checkpoint{Epoch: 1, Root: hr[:]}))
+	headRoot, err = f.Head(ctx, [32]byte{}, []uint64{100})
 	require.NoError(t, err)
 	require.Equal(t, [32]byte{'i'}, headRoot)
 	require.Equal(t, types.Epoch(1), f.JustifiedEpoch())
@@ -133,7 +138,7 @@ func TestStore_NoDeadLock(t *testing.T) {
 
 	// Realized Justified checkpoints, H becomes head
 	f.UpdateUnrealizedCheckpoints()
-	headRoot, err = f.Head(ctx, 1, [32]byte{}, []uint64{100}, 0)
+	headRoot, err = f.Head(ctx, [32]byte{}, []uint64{100})
 	require.NoError(t, err)
 	require.Equal(t, [32]byte{'h'}, headRoot)
 	require.Equal(t, types.Epoch(2), f.JustifiedEpoch())
@@ -168,7 +173,7 @@ func TestStore_ForkNextEpoch(t *testing.T) {
 
 	// Insert an attestation to H, H is head
 	f.ProcessAttestation(ctx, []uint64{0}, [32]byte{'h'}, 1)
-	headRoot, err := f.Head(ctx, 0, [32]byte{}, []uint64{100}, 0)
+	headRoot, err := f.Head(ctx, [32]byte{}, []uint64{100})
 	require.NoError(t, err)
 	require.Equal(t, [32]byte{'h'}, headRoot)
 	require.Equal(t, types.Epoch(0), f.JustifiedEpoch())
@@ -177,7 +182,7 @@ func TestStore_ForkNextEpoch(t *testing.T) {
 	require.NoError(t, f.InsertOptimisticBlock(ctx, 103, [32]byte{'d'}, [32]byte{'c'}, [32]byte{'D'}, 0, 0))
 	require.NoError(t, f.store.setUnrealizedJustifiedEpoch([32]byte{'d'}, 1))
 	f.UpdateUnrealizedCheckpoints()
-	headRoot, err = f.Head(ctx, 0, [32]byte{}, []uint64{100}, 0)
+	headRoot, err = f.Head(ctx, [32]byte{}, []uint64{100})
 	require.NoError(t, err)
 	require.Equal(t, [32]byte{'d'}, headRoot)
 	require.Equal(t, types.Epoch(1), f.JustifiedEpoch())

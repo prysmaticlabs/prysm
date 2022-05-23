@@ -15,7 +15,7 @@ func TestFFGUpdates_OneBranch(t *testing.T) {
 	f := setup(0, 0)
 
 	// The head should always start at the finalized block.
-	r, err := f.Head(context.Background(), 0, params.BeaconConfig().ZeroHash, balances, 0)
+	r, err := f.Head(context.Background(), params.BeaconConfig().ZeroHash, balances)
 	require.NoError(t, err)
 	assert.Equal(t, params.BeaconConfig().ZeroHash, r, "Incorrect head with genesis")
 
@@ -39,7 +39,7 @@ func TestFFGUpdates_OneBranch(t *testing.T) {
 	//            2
 	//            |
 	//            3 <- head
-	r, err = f.Head(context.Background(), 0, params.BeaconConfig().ZeroHash, balances, 0)
+	r, err = f.Head(context.Background(), params.BeaconConfig().ZeroHash, balances)
 	require.NoError(t, err)
 	assert.Equal(t, indexToHash(3), r, "Incorrect head for with justified epoch at 0")
 
@@ -51,7 +51,8 @@ func TestFFGUpdates_OneBranch(t *testing.T) {
 	//            2 <- head
 	//            |
 	//            3
-	r, err = f.Head(context.Background(), 1, indexToHash(2), balances, 0)
+	f.store.justifiedEpoch = 1
+	r, err = f.Head(context.Background(), indexToHash(2), balances)
 	require.NoError(t, err)
 	assert.Equal(t, indexToHash(2), r, "Incorrect head with justified epoch at 1")
 
@@ -63,7 +64,8 @@ func TestFFGUpdates_OneBranch(t *testing.T) {
 	//            2 <- start
 	//            |
 	//            3 <- head
-	r, err = f.Head(context.Background(), 2, indexToHash(3), balances, 1)
+	f.store.justifiedEpoch = 2
+	r, err = f.Head(context.Background(), indexToHash(3), balances)
 	require.NoError(t, err)
 	assert.Equal(t, indexToHash(3), r, "Incorrect head with justified epoch at 2")
 }
@@ -72,7 +74,7 @@ func TestFFGUpdates_TwoBranches(t *testing.T) {
 	balances := []uint64{1, 1}
 	f := setup(0, 0)
 
-	r, err := f.Head(context.Background(), 0, params.BeaconConfig().ZeroHash, balances, 0)
+	r, err := f.Head(context.Background(), params.BeaconConfig().ZeroHash, balances)
 	require.NoError(t, err)
 	assert.Equal(t, params.BeaconConfig().ZeroHash, r, "Incorrect head with genesis")
 
@@ -113,7 +115,7 @@ func TestFFGUpdates_TwoBranches(t *testing.T) {
 	//         7   8
 	//         |   |
 	//         9  10 <-- head
-	r, err = f.Head(context.Background(), 0, params.BeaconConfig().ZeroHash, balances, 0)
+	r, err = f.Head(context.Background(), params.BeaconConfig().ZeroHash, balances)
 	require.NoError(t, err)
 	assert.Equal(t, indexToHash(10), r, "Incorrect head with justified epoch at 0")
 
@@ -143,7 +145,7 @@ func TestFFGUpdates_TwoBranches(t *testing.T) {
 	//         7   8
 	//         |   |
 	// head -> 9  10
-	r, err = f.Head(context.Background(), 0, params.BeaconConfig().ZeroHash, balances, 0)
+	r, err = f.Head(context.Background(), params.BeaconConfig().ZeroHash, balances)
 	require.NoError(t, err)
 	assert.Equal(t, indexToHash(9), r, "Incorrect head with justified epoch at 0")
 
@@ -173,17 +175,18 @@ func TestFFGUpdates_TwoBranches(t *testing.T) {
 	//         7   8
 	//         |   |
 	//         9  10 <-- head
-	r, err = f.Head(context.Background(), 0, params.BeaconConfig().ZeroHash, balances, 0)
+	r, err = f.Head(context.Background(), params.BeaconConfig().ZeroHash, balances)
 	require.NoError(t, err)
 	assert.Equal(t, indexToHash(10), r, "Incorrect head with justified epoch at 0")
 
-	r, err = f.Head(context.Background(), 1, indexToHash(1), balances, 0)
+	f.store.justifiedEpoch = 1
+	r, err = f.Head(context.Background(), indexToHash(1), balances)
 	require.NoError(t, err)
 	assert.Equal(t, indexToHash(7), r, "Incorrect head with justified epoch at 0")
 }
 
 func setup(justifiedEpoch, finalizedEpoch types.Epoch) *ForkChoice {
-	f := New(justifiedEpoch, finalizedEpoch, params.BeaconConfig().ZeroHash)
+	f := New(justifiedEpoch, finalizedEpoch)
 	f.store.nodesIndices[params.BeaconConfig().ZeroHash] = 0
 	f.store.nodes = append(f.store.nodes, &Node{
 		slot:           0,

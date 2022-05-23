@@ -121,15 +121,6 @@ func TestStore_Insert(t *testing.T) {
 	assert.Equal(t, indexToHash(100), child.root, "Incorrect root")
 }
 
-func TestStore_updateCheckpoints(t *testing.T) {
-	f := setup(0, 0)
-	s := f.store
-
-	s.updateCheckpoints(1, 1)
-	assert.Equal(t, types.Epoch(1), s.justifiedEpoch, "Did not update justified epoch")
-	assert.Equal(t, types.Epoch(1), s.finalizedEpoch, "Did not update finalized epoch")
-}
-
 func TestStore_Prune_LessThanThreshold(t *testing.T) {
 	// Define 100 nodes in store.
 	numOfNodes := uint64(100)
