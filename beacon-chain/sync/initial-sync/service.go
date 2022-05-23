@@ -173,7 +173,12 @@ func (s *Service) waitForMinimumPeers() {
 		required = flags.Get().MinimumSyncPeers
 	}
 	for {
-		_, peers := s.cfg.P2P.Peers().BestNonFinalized(flags.Get().MinimumSyncPeers, s.cfg.Chain.FinalizedCheckpt().Epoch)
+		cp, err := s.cfg.Chain.FinalizedCheckpt()
+		if err != nil {
+			log.WithError(err).Error("Could not retrieve finalized checkpoint")
+			return
+		}
+		_, peers := s.cfg.P2P.Peers().BestNonFinalized(flags.Get().MinimumSyncPeers, cp.Epoch)
 		if len(peers) >= required {
 			break
 		}

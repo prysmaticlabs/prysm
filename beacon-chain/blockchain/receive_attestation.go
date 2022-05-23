@@ -71,9 +71,9 @@ func (s *Service) VerifyFinalizedConsistency(ctx context.Context, root []byte) e
 		return nil
 	}
 
-	f := s.FinalizedCheckpt()
-	if f == nil {
-		return errNilFinalizedInStore
+	f, err := s.FinalizedCheckpt()
+	if err != nil {
+		return err
 	}
 	ss, err := slots.EpochStart(f.Epoch)
 	if err != nil {
@@ -152,9 +152,9 @@ func (s *Service) UpdateHead(ctx context.Context) error {
 
 	s.processAttestations(ctx)
 
-	justified := s.store.JustifiedCheckpt()
-	if justified == nil {
-		return errNilJustifiedInStore
+	justified, err := s.store.JustifiedCheckpt()
+	if err != nil {
+		return err
 	}
 	balances, err := s.justifiedBalances.get(ctx, bytesutil.ToBytes32(justified.Root))
 	if err != nil {

@@ -5,12 +5,12 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"go.opencensus.io/trace"
 )
@@ -94,7 +94,7 @@ func (c *CanonicalHistory) BlockForSlot(ctx context.Context, target types.Slot) 
 // performing null/validity checks, and using CanonicalChecker to only pick canonical blocks.
 func (c *CanonicalHistory) bestForSlot(ctx context.Context, hbs []interfaces.SignedBeaconBlock) ([32]byte, interfaces.SignedBeaconBlock, error) {
 	for _, b := range hbs {
-		if helpers.BeaconBlockIsNil(b) != nil {
+		if wrapper.BeaconBlockIsNil(b) != nil {
 			continue
 		}
 		root, err := b.Block().HashTreeRoot()
@@ -188,7 +188,7 @@ func (c *CanonicalHistory) ancestorChain(ctx context.Context, tail interfaces.Si
 			msg := fmt.Sprintf("db error when retrieving parent of block at slot=%d by root=%#x", b.Slot(), b.ParentRoot())
 			return nil, nil, errors.Wrap(err, msg)
 		}
-		if helpers.BeaconBlockIsNil(parent) != nil {
+		if wrapper.BeaconBlockIsNil(parent) != nil {
 			msg := fmt.Sprintf("unable to retrieve parent of block at slot=%d by root=%#x", b.Slot(), b.ParentRoot())
 			return nil, nil, errors.Wrap(db.ErrNotFound, msg)
 		}

@@ -27,6 +27,7 @@ type TransactionGenerator struct {
 	keystore string
 	seed     int64
 	started  chan struct{}
+	cancel   context.CancelFunc
 }
 
 func NewTransactionGenerator(keystore string, seed int64) *TransactionGenerator {
@@ -34,6 +35,10 @@ func NewTransactionGenerator(keystore string, seed int64) *TransactionGenerator 
 }
 
 func (t *TransactionGenerator) Start(ctx context.Context) error {
+	// Wrap context with a cancel func
+	ctx, ccl := context.WithCancel(ctx)
+	t.cancel = ccl
+
 	client, err := rpc.DialHTTP(fmt.Sprintf("http://127.0.0.1:%d", e2e.TestParams.Ports.Eth1RPCPort))
 	if err != nil {
 		return err
@@ -117,4 +122,20 @@ func SendTransaction(client *rpc.Client, key *ecdsa.PrivateKey, f *filler.Filler
 
 	}
 	return g.Wait()
+}
+
+// Pause pauses the component and its underlying process.
+func (t *TransactionGenerator) Pause() error {
+	return nil
+}
+
+// Resume resumes the component and its underlying process.
+func (t *TransactionGenerator) Resume() error {
+	return nil
+}
+
+// Stop stops the component and its underlying process.
+func (t *TransactionGenerator) Stop() error {
+	t.cancel()
+	return nil
 }

@@ -864,7 +864,7 @@ func TestProduceBlockV2(t *testing.T) {
 		ctx := context.Background()
 
 		params.SetupTestConfigCleanup(t)
-		bc := params.BeaconConfig()
+		bc := params.BeaconConfig().Copy()
 		bc.AltairForkEpoch = types.Epoch(0)
 		params.OverrideBeaconConfig(bc)
 
@@ -1006,7 +1006,7 @@ func TestProduceBlockV2(t *testing.T) {
 		ctx := context.Background()
 
 		params.SetupTestConfigCleanup(t)
-		bc := params.BeaconConfig()
+		bc := params.BeaconConfig().Copy()
 		bc.AltairForkEpoch = types.Epoch(0)
 		bc.BellatrixForkEpoch = types.Epoch(1)
 		params.OverrideBeaconConfig(bc)
@@ -1852,7 +1852,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 		ctx := context.Background()
 
 		params.SetupTestConfigCleanup(t)
-		bc := params.BeaconConfig()
+		bc := params.BeaconConfig().Copy()
 		bc.AltairForkEpoch = types.Epoch(0)
 		params.OverrideBeaconConfig(bc)
 
@@ -1995,7 +1995,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 		ctx := context.Background()
 
 		params.SetupTestConfigCleanup(t)
-		bc := params.BeaconConfig()
+		bc := params.BeaconConfig().Copy()
 		bc.AltairForkEpoch = types.Epoch(0)
 		bc.BellatrixForkEpoch = types.Epoch(1)
 		params.OverrideBeaconConfig(bc)
