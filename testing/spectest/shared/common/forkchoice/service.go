@@ -17,7 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
@@ -53,7 +52,7 @@ func startChainService(t testing.TB, st state.BeaconState, block interfaces.Sign
 		blockchain.WithFinalizedStateAtStartUp(st),
 		blockchain.WithDatabase(db),
 		blockchain.WithAttestationService(attPool),
-		blockchain.WithForkChoiceStore(protoarray.New(0, 0, params.BeaconConfig().ZeroHash)),
+		blockchain.WithForkChoiceStore(protoarray.New(0, 0)),
 		blockchain.WithStateGen(stategen.New(db)),
 		blockchain.WithStateNotifier(&mock.MockStateNotifier{}),
 		blockchain.WithAttestationPool(attestations.NewPool()),

@@ -7,11 +7,11 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/async"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/time/slots"
@@ -80,7 +80,7 @@ func (s *Service) verifyBeaconBlock(ctx context.Context, data *ethpb.Attestation
 	if err != nil {
 		return err
 	}
-	if err := helpers.BeaconBlockIsNil(b); err != nil {
+	if err := wrapper.BeaconBlockIsNil(b); err != nil {
 		return err
 	}
 	if b.Block().Slot() > data.Slot {

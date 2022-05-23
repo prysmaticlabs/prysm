@@ -250,8 +250,8 @@ func V1Alpha1BeaconBlockBellatrixToV2Blinded(v1alpha1Block *ethpbalpha.BeaconBlo
 	return v2Block, nil
 }
 
-// BeaconStateAltairToProto converts a state.BeaconStateAltair object to its protobuf equivalent.
-func BeaconStateAltairToProto(altairState state.BeaconStateAltair) (*ethpbv2.BeaconStateV2, error) {
+// BeaconStateAltairToProto converts a state.BeaconState object to its protobuf equivalent.
+func BeaconStateAltairToProto(altairState state.BeaconState) (*ethpbv2.BeaconStateV2, error) {
 	sourceFork := altairState.Fork()
 	sourceLatestBlockHeader := altairState.LatestBlockHeader()
 	sourceEth1Data := altairState.Eth1Data()
@@ -364,8 +364,8 @@ func BeaconStateAltairToProto(altairState state.BeaconStateAltair) (*ethpbv2.Bea
 	return result, nil
 }
 
-// BeaconStateBellatrixToProto converts a state.BeaconStateBellatrix object to its protobuf equivalent.
-func BeaconStateBellatrixToProto(st state.BeaconStateBellatrix) (*ethpbv2.BeaconStateBellatrix, error) {
+// BeaconStateBellatrixToProto converts a state.BeaconState object to its protobuf equivalent.
+func BeaconStateBellatrixToProto(st state.BeaconState) (*ethpbv2.BeaconStateBellatrix, error) {
 	sourceFork := st.Fork()
 	sourceLatestBlockHeader := st.LatestBlockHeader()
 	sourceEth1Data := st.Eth1Data()

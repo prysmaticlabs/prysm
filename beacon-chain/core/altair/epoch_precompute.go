@@ -10,12 +10,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/math"
-	"github.com/prysmaticlabs/prysm/runtime/version"
 	"go.opencensus.io/trace"
 )
 
 // InitializePrecomputeValidators precomputes individual validator for its attested balances and the total sum of validators attested balances of the epoch.
-func InitializePrecomputeValidators(ctx context.Context, beaconState state.BeaconStateAltair) ([]*precompute.Validator, *precompute.Balance, error) {
+func InitializePrecomputeValidators(ctx context.Context, beaconState state.BeaconState) ([]*precompute.Validator, *precompute.Balance, error) {
 	_, span := trace.StartSpan(ctx, "altair.InitializePrecomputeValidators")
 	defer span.End()
 	vals := make([]*precompute.Validator, beaconState.NumValidators())
@@ -209,10 +208,10 @@ func ProcessEpochParticipation(
 // ProcessRewardsAndPenaltiesPrecompute processes the rewards and penalties of individual validator.
 // This is an optimized version by passing in precomputed validator attesting records and and total epoch balances.
 func ProcessRewardsAndPenaltiesPrecompute(
-	beaconState state.BeaconStateAltair,
+	beaconState state.BeaconState,
 	bal *precompute.Balance,
 	vals []*precompute.Validator,
-) (state.BeaconStateAltair, error) {
+) (state.BeaconState, error) {
 	// Don't process rewards and penalties in genesis epoch.
 	cfg := params.BeaconConfig()
 	if time.CurrentEpoch(beaconState) == cfg.GenesisEpoch {
@@ -268,16 +267,12 @@ func AttestationsDelta(beaconState state.BeaconState, bal *precompute.Balance, v
 	leak := helpers.IsInInactivityLeak(prevEpoch, finalizedEpoch)
 
 	// Modified in Altair and Bellatrix.
-	var inactivityDenominator uint64
 	bias := cfg.InactivityScoreBias
-	switch beaconState.Version() {
-	case version.Altair:
-		inactivityDenominator = bias * cfg.InactivityPenaltyQuotientAltair
-	case version.Bellatrix:
-		inactivityDenominator = bias * cfg.InactivityPenaltyQuotientBellatrix
-	default:
-		return nil, nil, errors.Errorf("invalid state type version: %T", beaconState.Version())
+	inactivityPenaltyQuotient, err := beaconState.InactivityPenaltyQuotient()
+	if err != nil {
+		return nil, nil, err
 	}
+	inactivityDenominator := bias * inactivityPenaltyQuotient
 
 	for i, v := range vals {
 		rewards[i], penalties[i], err = attestationDelta(bal, v, baseRewardMultiplier, inactivityDenominator, leak)
