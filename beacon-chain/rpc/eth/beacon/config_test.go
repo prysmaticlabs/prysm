@@ -338,7 +338,7 @@ func TestGetSpec(t *testing.T) {
 		case "INACTIVITY_PENALTY_QUOTIENT_BELLATRIX":
 			assert.Equal(t, "16777216", v)
 		case "PROPOSER_SCORE_BOOST":
-			assert.Equal(t, "70", v)
+			assert.Equal(t, "40", v)
 		case "INTERVALS_PER_SLOT":
 			assert.Equal(t, "3", v)
 		case "SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY":
