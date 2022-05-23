@@ -145,16 +145,6 @@ func (s *Store) insert(ctx context.Context,
 	return nil
 }
 
-// updateCheckpoints Update the justified / finalized epochs in store if necessary.
-func (s *Store) updateCheckpoints(justifiedEpoch, finalizedEpoch types.Epoch) {
-	if s.justifiedEpoch < justifiedEpoch {
-		s.justifiedEpoch = justifiedEpoch
-	}
-	if s.finalizedEpoch < finalizedEpoch {
-		s.finalizedEpoch = finalizedEpoch
-	}
-}
-
 // pruneFinalizedNodeByRootMap prunes the `nodeByRoot` map
 // starting from `node` down to the finalized Node or to a leaf of the Fork
 // choice store. This method assumes a lock on nodesLock.

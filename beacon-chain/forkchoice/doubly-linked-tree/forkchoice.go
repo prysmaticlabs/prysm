@@ -42,10 +42,8 @@ func (f *ForkChoice) NodeCount() int {
 // It firsts computes validator's balance changes then recalculates block tree from leaves to root.
 func (f *ForkChoice) Head(
 	ctx context.Context,
-	justifiedEpoch types.Epoch,
 	justifiedRoot [32]byte,
 	justifiedStateBalances []uint64,
-	finalizedEpoch types.Epoch,
 ) ([32]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.Head")
 	defer span.End()
@@ -57,8 +55,6 @@ func (f *ForkChoice) Head(
 	// Using the write lock here because `applyWeightChanges` that gets called subsequently requires a write operation.
 	f.store.nodesLock.Lock()
 	defer f.store.nodesLock.Unlock()
-
-	f.store.updateCheckpoints(justifiedEpoch, finalizedEpoch)
 
 	if err := f.updateBalances(justifiedStateBalances); err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not update balances")
@@ -75,7 +71,6 @@ func (f *ForkChoice) Head(
 	if err := f.store.treeRootNode.updateBestDescendant(ctx, f.store.justifiedEpoch, f.store.finalizedEpoch); err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not update best descendant")
 	}
-
 	return f.store.head(ctx, justifiedRoot)
 }
 
@@ -361,4 +356,26 @@ func (f *ForkChoice) InsertSlashedIndex(_ context.Context, index types.Validator
 	} else {
 		node.balance -= f.balances[index]
 	}
+}
+
+// UpdateJustifiedCheckpoint sets the justified epoch to the given one
+func (f *ForkChoice) UpdateJustifiedCheckpoint(jc *pbrpc.Checkpoint) error {
+	if jc == nil {
+		return errInvalidNilCheckpoint
+	}
+	f.store.nodesLock.Lock()
+	defer f.store.nodesLock.Unlock()
+	f.store.justifiedEpoch = jc.Epoch
+	return nil
+}
+
+// UpdateFinalizedCheckpoint sets the finalized epoch to the given one
+func (f *ForkChoice) UpdateFinalizedCheckpoint(fc *pbrpc.Checkpoint) error {
+	if fc == nil {
+		return errInvalidNilCheckpoint
+	}
+	f.store.nodesLock.Lock()
+	defer f.store.nodesLock.Unlock()
+	f.store.finalizedEpoch = fc.Epoch
+	return nil
 }
