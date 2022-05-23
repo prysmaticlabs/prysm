@@ -23,11 +23,11 @@ var Commands = &cli.Command{
 	Usage:       "creates a random 32 byte hex string in a plaintext file to be used for authenticating JSON-RPC requests. If no --output-file flag is defined, the file will be created in the current working directory",
 	Description: `creates a random 32 byte hex string in a plaintext file to be used for authenticating JSON-RPC requests. If no --output-file flag is defined, the file will be created in the current working directory`,
 	Flags: cmd.WrapFlags([]cli.Flag{
-		cmd.JwtOutputFile,
+		cmd.JwtOutputFileFlag,
 	}),
 	Before: tos.VerifyTosAcceptedOrPrompt,
 	Action: func(cliCtx *cli.Context) error {
-		specifiedFilePath := cliCtx.String(cmd.JwtOutputFile.Name)
+		specifiedFilePath := cliCtx.String(cmd.JwtOutputFileFlag.Name)
 		if err := generateHttpSecretInFile(specifiedFilePath); err != nil {
 			log.Printf("Could not generate secret: %v", err)
 		}
