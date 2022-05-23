@@ -97,7 +97,7 @@ func Run(t *testing.T, config string, fork int) {
 						require.NoError(t, err)
 						slashing := &ethpb.AttesterSlashing{}
 						require.NoError(t, slashing.UnmarshalSSZ(slashingSSZ), "Failed to unmarshal")
-						builder.AttesterSlashing(t, slashing)
+						builder.AttesterSlashing(slashing)
 					}
 					if step.Attestation != nil {
 						attFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), fmt.Sprint(*step.Attestation, ".ssz_snappy"))
