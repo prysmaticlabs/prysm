@@ -138,7 +138,7 @@ func buildGenesisBeaconState(genesisTime uint64, preState state.BeaconState, eth
 
 		Fork: &ethpb.Fork{
 			PreviousVersion: params.BeaconConfig().GenesisForkVersion,
-			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
+			CurrentVersion:  params.BeaconConfig().AltairForkVersion,
 			Epoch:           0,
 		},
 
