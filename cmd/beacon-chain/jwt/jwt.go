@@ -74,9 +74,11 @@ func generateRandom32ByteHexString() (string, error) {
 		return "", err
 	}
 
-	encoded := hexutil.Encode(blocks)[:66]
+	// TODO: Remove these before merging after unit + confirming IRL
 
-	sliced := encoded[2:66] // remove 0x
+	//encoded := hexutil.Encode(blocks)[:66]
 
-	return sliced, nil
+	//sliced := encoded[2:66] // remove 0x
+
+	return hexutil.Encode(blocks), nil
 }
