@@ -146,14 +146,16 @@ func (s *Service) Stop() error {
 
 	// lock before accessing s.head, s.head.state, s.head.state.FinalizedCheckpoint().Root
 	s.headLock.RLock()
-	if s.cfg.StateGen != nil && s.head != nil && s.head.state != nil {
+	head := s.head
+	headState := s.head.state
+	headStateFinalizedRoot := s.head.state.FinalizedCheckpoint().Root
+	s.headLock.RUnlock()
+	if s.cfg.StateGen != nil && head != nil && headState != nil {
 		// Save the last finalized state so that starting up in the following run will be much faster.
-		if err := s.cfg.StateGen.ForceCheckpoint(s.ctx, s.head.state.FinalizedCheckpoint().Root); err != nil {
-			s.headLock.RUnlock()
+		if err := s.cfg.StateGen.ForceCheckpoint(s.ctx, headStateFinalizedRoot); err != nil {
 			return err
 		}
 	}
-	s.headLock.RUnlock()
 
 	// Save initial sync cached blocks to the DB before stop.
 	return s.cfg.BeaconDB.SaveBlocks(s.ctx, s.getInitSyncBlocks())
