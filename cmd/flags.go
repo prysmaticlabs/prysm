@@ -258,7 +258,7 @@ var (
 	// JwtOutputFileFlag specifies the JWT file path that gets generated into when invoked by generate-jwt-secret.
 	JwtOutputFileFlag = &cli.StringFlag{
 		Name:  "output-file",
-		Usage: "Target file path of auto-generated JWT file",
+		Usage: "Target file path for outputting a generated JWT secret to be used for JSON-RPC authentication",
 	}
 )
 
