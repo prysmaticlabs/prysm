@@ -709,7 +709,6 @@ func TestRoundTripProtoUint256(t *testing.T) {
 	m, err := json.Marshal(hm)
 	require.NoError(t, err)
 	hu := &ExecutionPayloadHeader{}
-	require.Equal(t, "", string(m))
 	require.NoError(t, json.Unmarshal(m, hu))
 	hp, err := hu.ToProto()
 	require.NoError(t, err)
