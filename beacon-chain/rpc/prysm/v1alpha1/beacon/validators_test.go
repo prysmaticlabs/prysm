@@ -1028,6 +1028,7 @@ func TestServer_ListValidators_DefaultPageSize(t *testing.T) {
 }
 
 func TestServer_ListValidators_FromOldEpoch(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	transition.SkipSlotCache.Disable()
 

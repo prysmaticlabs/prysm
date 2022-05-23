@@ -28,6 +28,7 @@ go_library(
         "//io/logs:go_default_library",
         "//monitoring/journald:go_default_library",
         "//runtime/debug:go_default_library",
+        "//runtime/fdlimits:go_default_library",
         "//runtime/maxprocs:go_default_library",
         "//runtime/tos:go_default_library",
         "//runtime/version:go_default_library",

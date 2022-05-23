@@ -4,10 +4,12 @@ import (
 	"testing"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 )
 
 func TestOverlayParameters(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	pms := pubsubGossipParam()
 	assert.Equal(t, gossipSubD, pms.D, "gossipSubD")
 	assert.Equal(t, gossipSubDlo, pms.Dlo, "gossipSubDlo")
@@ -15,6 +17,7 @@ func TestOverlayParameters(t *testing.T) {
 }
 
 func TestGossipParameters(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	setPubSubParameters()
 	pms := pubsubGossipParam()
 	assert.Equal(t, gossipSubMcacheLen, pms.HistoryLength, "gossipSubMcacheLen")
@@ -23,6 +26,7 @@ func TestGossipParameters(t *testing.T) {
 }
 
 func TestFanoutParameters(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	pms := pubsubGossipParam()
 	if pms.FanoutTTL != gossipSubFanoutTTL {
 		t.Errorf("gossipSubFanoutTTL, wanted: %d, got: %d", gossipSubFanoutTTL, pms.FanoutTTL)
@@ -30,6 +34,7 @@ func TestFanoutParameters(t *testing.T) {
 }
 
 func TestHeartbeatParameters(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	pms := pubsubGossipParam()
 	if pms.HeartbeatInterval != gossipSubHeartbeatInterval {
 		t.Errorf("gossipSubHeartbeatInterval, wanted: %d, got: %d", gossipSubHeartbeatInterval, pms.HeartbeatInterval)
@@ -37,6 +42,7 @@ func TestHeartbeatParameters(t *testing.T) {
 }
 
 func TestMiscParameters(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	setPubSubParameters()
 	assert.Equal(t, randomSubD, pubsub.RandomSubD, "randomSubD")
 }

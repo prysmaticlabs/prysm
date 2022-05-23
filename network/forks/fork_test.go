@@ -15,6 +15,8 @@ import (
 
 func TestFork(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig().Copy()
+
 	tests := []struct {
 		name        string
 		targetEpoch types.Epoch
@@ -32,7 +34,7 @@ func TestFork(t *testing.T) {
 			},
 			wantErr: false,
 			setConfg: func() {
-				cfg := params.BeaconConfig()
+				cfg = cfg.Copy()
 				cfg.GenesisForkVersion = []byte{'A', 'B', 'C', 'D'}
 				cfg.ForkVersionSchedule = map[[4]byte]types.Epoch{}
 				params.OverrideBeaconConfig(cfg)
@@ -48,7 +50,7 @@ func TestFork(t *testing.T) {
 			},
 			wantErr: false,
 			setConfg: func() {
-				cfg := params.BeaconConfig()
+				cfg = cfg.Copy()
 				cfg.GenesisForkVersion = []byte{'A', 'B', 'C', 'D'}
 				cfg.ForkVersionSchedule = map[[4]byte]types.Epoch{
 					{'A', 'B', 'C', 'D'}: 0,
@@ -66,7 +68,7 @@ func TestFork(t *testing.T) {
 			},
 			wantErr: false,
 			setConfg: func() {
-				cfg := params.BeaconConfig()
+				cfg = cfg.Copy()
 				cfg.GenesisForkVersion = []byte{'A', 'B', 'C', 'D'}
 				cfg.AltairForkVersion = []byte{'A', 'B', 'C', 'F'}
 				cfg.ForkVersionSchedule = map[[4]byte]types.Epoch{
@@ -86,7 +88,7 @@ func TestFork(t *testing.T) {
 			},
 			wantErr: false,
 			setConfg: func() {
-				cfg := params.BeaconConfig()
+				cfg = cfg.Copy()
 				cfg.GenesisForkVersion = []byte{'A', 'B', 'C', 'D'}
 				cfg.AltairForkVersion = []byte{'A', 'B', 'C', 'F'}
 				cfg.ForkVersionSchedule = map[[4]byte]types.Epoch{
@@ -107,7 +109,7 @@ func TestFork(t *testing.T) {
 			},
 			wantErr: false,
 			setConfg: func() {
-				cfg := params.BeaconConfig()
+				cfg = cfg.Copy()
 				cfg.GenesisForkVersion = []byte{'A', 'B', 'C', 'D'}
 				cfg.AltairForkVersion = []byte{'A', 'B', 'C', 'F'}
 				cfg.ForkVersionSchedule = map[[4]byte]types.Epoch{
@@ -128,7 +130,7 @@ func TestFork(t *testing.T) {
 			},
 			wantErr: false,
 			setConfg: func() {
-				cfg := params.BeaconConfig()
+				cfg = cfg.Copy()
 				cfg.GenesisForkVersion = []byte{'A', 'B', 'C', 'D'}
 				cfg.ForkVersionSchedule = map[[4]byte]types.Epoch{
 					{'A', 'B', 'C', 'D'}: 0,
@@ -148,7 +150,7 @@ func TestFork(t *testing.T) {
 			},
 			wantErr: false,
 			setConfg: func() {
-				cfg := params.BeaconConfig()
+				cfg = cfg.Copy()
 				cfg.GenesisForkVersion = []byte{'A', 'B', 'C', 'D'}
 				cfg.ForkVersionSchedule = map[[4]byte]types.Epoch{
 					{'A', 'B', 'C', 'D'}: 0,
@@ -176,13 +178,16 @@ func TestFork(t *testing.T) {
 
 func TestRetrieveForkDataFromDigest(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	cfg := params.BeaconConfig()
+	cfg := params.BeaconConfig().Copy()
 	cfg.GenesisForkVersion = []byte{'A', 'B', 'C', 'D'}
-	cfg.ForkVersionSchedule = map[[4]byte]types.Epoch{
-		{'A', 'B', 'C', 'D'}: 0,
-		{'A', 'B', 'C', 'F'}: 10,
-		{'A', 'B', 'C', 'Z'}: 100,
-	}
+	cfg.GenesisEpoch = 0
+	cfg.AltairForkVersion = []byte{'A', 'B', 'C', 'F'}
+	cfg.AltairForkEpoch = 10
+	cfg.BellatrixForkVersion = []byte{'A', 'B', 'C', 'Z'}
+	cfg.BellatrixForkEpoch = 100
+	cfg.ShardingForkVersion = []byte{'A', 'B', 'C', 'Y'}
+	cfg.ShardingForkEpoch = 1000
+	cfg.InitializeForkSchedule()
 	params.OverrideBeaconConfig(cfg)
 	genValRoot := [32]byte{'A', 'B', 'C', 'D'}
 	digest, err := signing.ComputeForkDigest([]byte{'A', 'B', 'C', 'F'}, genValRoot[:])
@@ -204,13 +209,14 @@ func TestRetrieveForkDataFromDigest(t *testing.T) {
 
 func TestIsForkNextEpoch(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	cfg := params.BeaconConfig()
+	cfg := params.BeaconConfig().Copy()
 	cfg.GenesisForkVersion = []byte{'A', 'B', 'C', 'D'}
 	cfg.ForkVersionSchedule = map[[4]byte]types.Epoch{
 		{'A', 'B', 'C', 'D'}: 0,
 		{'A', 'B', 'C', 'F'}: 10,
 		{'A', 'B', 'C', 'Z'}: 100,
 	}
+	params.OverrideBeaconConfig(cfg)
 	genTimeCreator := func(epoch types.Epoch) time.Time {
 		return time.Now().Add(-time.Duration(uint64(params.BeaconConfig().SlotsPerEpoch)*uint64(epoch)*params.BeaconConfig().SecondsPerSlot) * time.Second)
 	}
@@ -246,6 +252,7 @@ func TestIsForkNextEpoch(t *testing.T) {
 
 func TestNextForkData(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig().Copy()
 	tests := []struct {
 		name              string
 		setConfg          func()
@@ -259,7 +266,7 @@ func TestNextForkData(t *testing.T) {
 			wantedForkVerison: [4]byte{'A', 'B', 'C', 'D'},
 			wantedEpoch:       math.MaxUint64,
 			setConfg: func() {
-				cfg := params.BeaconConfig()
+				cfg = cfg.Copy()
 				cfg.GenesisForkVersion = []byte{'A', 'B', 'C', 'D'}
 				cfg.ForkVersionSchedule = map[[4]byte]types.Epoch{
 					{'A', 'B', 'C', 'D'}: 0,
@@ -273,7 +280,7 @@ func TestNextForkData(t *testing.T) {
 			wantedForkVerison: [4]byte{'A', 'B', 'C', 'F'},
 			wantedEpoch:       10,
 			setConfg: func() {
-				cfg := params.BeaconConfig()
+				cfg = cfg.Copy()
 				cfg.GenesisForkVersion = []byte{'A', 'B', 'C', 'D'}
 				cfg.AltairForkVersion = []byte{'A', 'B', 'C', 'F'}
 				cfg.ForkVersionSchedule = map[[4]byte]types.Epoch{
@@ -289,7 +296,7 @@ func TestNextForkData(t *testing.T) {
 			wantedForkVerison: [4]byte{'A', 'B', 'C', 'F'},
 			wantedEpoch:       math.MaxUint64,
 			setConfg: func() {
-				cfg := params.BeaconConfig()
+				cfg = cfg.Copy()
 				cfg.GenesisForkVersion = []byte{'A', 'B', 'C', 'D'}
 				cfg.AltairForkVersion = []byte{'A', 'B', 'C', 'F'}
 				cfg.ForkVersionSchedule = map[[4]byte]types.Epoch{
@@ -306,7 +313,7 @@ func TestNextForkData(t *testing.T) {
 			wantedForkVerison: [4]byte{'A', 'B', 'C', 'F'},
 			wantedEpoch:       math.MaxUint64,
 			setConfg: func() {
-				cfg := params.BeaconConfig()
+				cfg = cfg.Copy()
 				cfg.GenesisForkVersion = []byte{'A', 'B', 'C', 'D'}
 				cfg.AltairForkVersion = []byte{'A', 'B', 'C', 'F'}
 				cfg.ForkVersionSchedule = map[[4]byte]types.Epoch{
@@ -323,7 +330,7 @@ func TestNextForkData(t *testing.T) {
 			wantedForkVerison: [4]byte{'A', 'B', 'C', 'F'},
 			wantedEpoch:       10,
 			setConfg: func() {
-				cfg := params.BeaconConfig()
+				cfg = cfg.Copy()
 				cfg.GenesisForkVersion = []byte{'A', 'B', 'C', 'D'}
 				cfg.ForkVersionSchedule = map[[4]byte]types.Epoch{
 					{'A', 'B', 'C', 'D'}: 0,
@@ -339,7 +346,7 @@ func TestNextForkData(t *testing.T) {
 			wantedForkVerison: [4]byte{'A', 'B', 'C', 'Z'},
 			wantedEpoch:       100,
 			setConfg: func() {
-				cfg := params.BeaconConfig()
+				cfg = cfg.Copy()
 				cfg.GenesisForkVersion = []byte{'A', 'B', 'C', 'D'}
 				cfg.ForkVersionSchedule = map[[4]byte]types.Epoch{
 					{'A', 'B', 'C', 'D'}: 0,
@@ -355,7 +362,7 @@ func TestNextForkData(t *testing.T) {
 			wantedForkVerison: [4]byte{'A', 'B', 'C', 'Z'},
 			wantedEpoch:       math.MaxUint64,
 			setConfg: func() {
-				cfg := params.BeaconConfig()
+				cfg = cfg.Copy()
 				cfg.GenesisForkVersion = []byte{'A', 'B', 'C', 'D'}
 				cfg.ForkVersionSchedule = map[[4]byte]types.Epoch{
 					{'A', 'B', 'C', 'D'}: 0,

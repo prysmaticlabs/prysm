@@ -374,7 +374,7 @@ func handleBalanceSlice(val, indices []uint64, convertAll bool) ([][32]byte, err
 		if err != nil {
 			return nil, err
 		}
-		roots := [][32]byte{}
+		var roots [][32]byte
 		for _, idx := range indices {
 			// We split the indexes into their relevant groups. Balances
 			// are compressed according to 4 values -> 1 chunk.

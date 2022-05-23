@@ -70,7 +70,9 @@ func (s *Service) pollConnectionStatus(ctx context.Context) {
 				continue
 			}
 			// Close previous client, if connection was successful.
-			currClient.Close()
+			if currClient != nil {
+				currClient.Close()
+			}
 			log.Infof("Connected to new endpoint: %s", logs.MaskCredentialsLogging(s.cfg.currHttpEndpoint.Url))
 			return
 		case <-s.ctx.Done():
@@ -92,7 +94,9 @@ func (s *Service) retryExecutionClientConnection(ctx context.Context, err error)
 		return
 	}
 	// Close previous client, if connection was successful.
-	currClient.Close()
+	if currClient != nil {
+		currClient.Close()
+	}
 	// Reset run error in the event of a successful connection.
 	s.runError = nil
 }
@@ -114,7 +118,9 @@ func (s *Service) checkDefaultEndpoint(ctx context.Context) {
 		return
 	}
 	// Close previous client, if connection was successful.
-	currClient.Close()
+	if currClient != nil {
+		currClient.Close()
+	}
 	s.updateCurrHttpEndpoint(primaryEndpoint)
 }
 
