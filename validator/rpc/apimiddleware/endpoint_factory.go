@@ -18,6 +18,7 @@ func (*ValidatorEndpointFactory) Paths() []string {
 	return []string{
 		"/eth/v1/keystores",
 		"/eth/v1/remotekeys",
+		"/eth/v1/validator/{pubkey}/feerecipient",
 	}
 }
 

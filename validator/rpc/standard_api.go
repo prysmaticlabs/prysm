@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/protobuf/ptypes/empty"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -381,4 +382,21 @@ func groupDeleteRemoteKeysErrors(req *ethpbservice.DeleteRemoteKeysRequest, erro
 		}
 	}
 	return statuses
+}
+
+// ListFeeRecipientByPubkey returns the public key to eth address mapping object to the end user.
+func (s *Server) ListFeeRecipientByPubkey(ctx context.Context, req *ethpbservice.GetFeeRecipientByPubkeyRequest) (*ethpbservice.GetFeeRecipientByPubkeyResponse, error) {
+	log.Info("Pubkey" + hexutil.Encode(req.Pubkey))
+	return &ethpbservice.GetFeeRecipientByPubkeyResponse{
+		Data: &ethpbservice.GetFeeRecipientByPubkeyResponse_FeeRecipient{
+			Pubkey:     make([]byte, fieldparams.BLSPubkeyLength),
+			Ethaddress: make([]byte, fieldparams.FeeRecipientLength),
+		},
+	}, nil
+}
+
+// SetFeeRecipientByPubkey updates the eth address mapped to the public key.
+func (s *Server) SetFeeRecipientByPubkey(ctx context.Context, req *ethpbservice.SetFeeRecipientByPubkeyRequest) (*empty.Empty, error) {
+	log.Info("set Eth address" + hexutil.Encode(req.Ethaddress))
+	return &empty.Empty{}, nil
 }

@@ -72,15 +72,10 @@ type feeRecipientJson struct {
 	Ethaddress string `json:"ethaddress" hex:"true"`
 }
 
-type getFeeRecipientByPubkeyRequestJson struct {
-	Pubkey string `json:"pubkey" hex:"true"`
-}
-
 type getFeeRecipientByPubkeyResponseJson struct {
 	Data feeRecipientJson `json:"data"`
 }
 
 type setFeeRecipientByPubkeyRequestJson struct {
-	Pubkey     string `json:"pubkey" hex:"true"`
 	Ethaddress string `json:"ethaddress" hex:"true"`
 }
