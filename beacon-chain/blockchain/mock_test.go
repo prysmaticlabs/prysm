@@ -13,7 +13,7 @@ import (
 
 func testServiceOptsWithDB(t *testing.T) []Option {
 	beaconDB := testDB.SetupDB(t)
-	fcs := protoarray.New(0, 0, [32]byte{'a'})
+	fcs := protoarray.New(0, 0)
 	return []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),
