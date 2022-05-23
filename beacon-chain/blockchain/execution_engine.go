@@ -25,11 +25,6 @@ import (
 	"go.opencensus.io/trace"
 )
 
-var (
-	ErrInvalidPayload                = errors.New("recevied an INVALID payload from execution engine")
-	ErrUndefinedExecutionEngineError = errors.New("received an undefined ee error")
-)
-
 // notifyForkchoiceUpdateArg is the argument for the forkchoice update notification `notifyForkchoiceUpdate`.
 type notifyForkchoiceUpdateArg struct {
 	headState state.BeaconState

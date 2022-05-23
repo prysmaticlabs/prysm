@@ -214,6 +214,10 @@ func (s *Service) updateJustified(ctx context.Context, state state.ReadOnlyBeaco
 			return err
 		}
 		s.store.SetJustifiedCheckptAndPayloadHash(cpt, h)
+		// Update forkchoice's justified checkpoint
+		if err := s.cfg.ForkChoiceStore.UpdateJustifiedCheckpoint(cpt); err != nil {
+			return err
+		}
 	}
 
 	return nil

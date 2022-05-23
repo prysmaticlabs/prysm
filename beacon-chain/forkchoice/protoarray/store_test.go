@@ -7,6 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
@@ -132,17 +133,8 @@ func TestStore_ApplyScoreChanges_InvalidDeltaLength(t *testing.T) {
 	s := &Store{}
 
 	// This will fail because node indices has length of 0, and delta list has a length of 1.
-	err := s.applyWeightChanges(context.Background(), 0, 0, []uint64{}, []int{1})
+	err := s.applyWeightChanges(context.Background(), []uint64{}, []int{1})
 	assert.ErrorContains(t, errInvalidDeltaLength.Error(), err)
-}
-
-func TestStore_ApplyScoreChanges_UpdateEpochs(t *testing.T) {
-	s := &Store{}
-
-	// The justified and finalized epochs in Store should be updated to 1 and 1 given the following input.
-	require.NoError(t, s.applyWeightChanges(context.Background(), 1, 1, []uint64{}, []int{}))
-	assert.Equal(t, types.Epoch(1), s.justifiedEpoch, "Did not update justified epoch")
-	assert.Equal(t, types.Epoch(1), s.finalizedEpoch, "Did not update finalized epoch")
 }
 
 func TestStore_ApplyScoreChanges_UpdateWeightsPositiveDelta(t *testing.T) {
@@ -154,7 +146,7 @@ func TestStore_ApplyScoreChanges_UpdateWeightsPositiveDelta(t *testing.T) {
 
 	// Each node gets one unique vote. The weight should look like 103 <- 102 <- 101 because
 	// they get propagated back.
-	require.NoError(t, s.applyWeightChanges(context.Background(), 0, 0, []uint64{}, []int{1, 1, 1}))
+	require.NoError(t, s.applyWeightChanges(context.Background(), []uint64{}, []int{1, 1, 1}))
 	assert.Equal(t, uint64(103), s.nodes[0].weight)
 	assert.Equal(t, uint64(102), s.nodes[1].weight)
 	assert.Equal(t, uint64(101), s.nodes[2].weight)
@@ -169,7 +161,7 @@ func TestStore_ApplyScoreChanges_UpdateWeightsNegativeDelta(t *testing.T) {
 
 	// Each node gets one unique vote which contributes to negative delta.
 	// The weight should look like 97 <- 98 <- 99 because they get propagated back.
-	require.NoError(t, s.applyWeightChanges(context.Background(), 0, 0, []uint64{}, []int{-1, -1, -1}))
+	require.NoError(t, s.applyWeightChanges(context.Background(), []uint64{}, []int{-1, -1, -1}))
 	assert.Equal(t, uint64(97), s.nodes[0].weight)
 	assert.Equal(t, uint64(98), s.nodes[1].weight)
 	assert.Equal(t, uint64(99), s.nodes[2].weight)
@@ -183,7 +175,7 @@ func TestStore_ApplyScoreChanges_UpdateWeightsMixedDelta(t *testing.T) {
 		{parent: 1, root: [32]byte{'A'}, weight: 100}}}
 
 	// Each node gets one mixed vote. The weight should look like 100 <- 200 <- 250.
-	require.NoError(t, s.applyWeightChanges(context.Background(), 0, 0, []uint64{}, []int{-100, -50, 150}))
+	require.NoError(t, s.applyWeightChanges(context.Background(), []uint64{}, []int{-100, -50, 150}))
 	assert.Equal(t, uint64(100), s.nodes[0].weight)
 	assert.Equal(t, uint64(200), s.nodes[1].weight)
 	assert.Equal(t, uint64(250), s.nodes[2].weight)
@@ -779,27 +771,27 @@ func TestStore_RemoveEquivocating(t *testing.T) {
 	f := setup(1, 1)
 	// Insert a block it will be head
 	require.NoError(t, f.InsertOptimisticBlock(ctx, 1, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 1, 1))
-	head, err := f.Head(ctx, 1, params.BeaconConfig().ZeroHash, []uint64{}, 1)
+	head, err := f.Head(ctx, params.BeaconConfig().ZeroHash, []uint64{})
 	require.NoError(t, err)
 	require.Equal(t, [32]byte{'a'}, head)
 
 	// Insert two extra blocks
 	require.NoError(t, f.InsertOptimisticBlock(ctx, 2, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'B'}, 1, 1))
 	require.NoError(t, f.InsertOptimisticBlock(ctx, 3, [32]byte{'c'}, [32]byte{'a'}, [32]byte{'C'}, 1, 1))
-	head, err = f.Head(ctx, 1, params.BeaconConfig().ZeroHash, []uint64{}, 1)
+	head, err = f.Head(ctx, params.BeaconConfig().ZeroHash, []uint64{})
 	require.NoError(t, err)
 	require.Equal(t, [32]byte{'c'}, head)
 
 	// Insert two attestations for block b, it becomes head
 	f.ProcessAttestation(ctx, []uint64{1, 2}, [32]byte{'b'}, 1)
 	f.ProcessAttestation(ctx, []uint64{3}, [32]byte{'c'}, 1)
-	head, err = f.Head(ctx, 1, params.BeaconConfig().ZeroHash, []uint64{100, 200, 200, 300}, 1)
+	head, err = f.Head(ctx, params.BeaconConfig().ZeroHash, []uint64{100, 200, 200, 300})
 	require.NoError(t, err)
 	require.Equal(t, [32]byte{'b'}, head)
 
 	// Process b's slashing, c is now head
 	f.InsertSlashedIndex(ctx, 1)
-	head, err = f.Head(ctx, 1, params.BeaconConfig().ZeroHash, []uint64{100, 200, 200, 300}, 1)
+	head, err = f.Head(ctx, params.BeaconConfig().ZeroHash, []uint64{100, 200, 200, 300})
 	require.NoError(t, err)
 	require.Equal(t, [32]byte{'c'}, head)
 	require.Equal(t, uint64(200), f.store.nodes[2].weight)
@@ -807,7 +799,7 @@ func TestStore_RemoveEquivocating(t *testing.T) {
 
 	// Process the same slashing again, should be a noop
 	f.InsertSlashedIndex(ctx, 1)
-	head, err = f.Head(ctx, 1, params.BeaconConfig().ZeroHash, []uint64{100, 200, 200, 300}, 1)
+	head, err = f.Head(ctx, params.BeaconConfig().ZeroHash, []uint64{100, 200, 200, 300})
 	require.NoError(t, err)
 	require.Equal(t, [32]byte{'c'}, head)
 	require.Equal(t, uint64(200), f.store.nodes[2].weight)
@@ -817,4 +809,16 @@ func TestStore_RemoveEquivocating(t *testing.T) {
 	f.InsertSlashedIndex(ctx, types.ValidatorIndex(len(f.balances)))
 	f.InsertSlashedIndex(ctx, types.ValidatorIndex(len(f.votes)))
 	require.Equal(t, true, len(f.store.slashedIndices) > 0)
+}
+
+func TestStore_UpdateCheckpoints(t *testing.T) {
+	f := setup(1, 1)
+	jr := [32]byte{'j'}
+	fr := [32]byte{'f'}
+	jc := &ethpb.Checkpoint{Root: jr[:], Epoch: 3}
+	fc := &ethpb.Checkpoint{Root: fr[:], Epoch: 2}
+	require.NoError(t, f.UpdateJustifiedCheckpoint(jc))
+	require.NoError(t, f.UpdateFinalizedCheckpoint(fc))
+	require.Equal(t, f.store.justifiedEpoch, jc.Epoch)
+	require.Equal(t, f.store.finalizedEpoch, fc.Epoch)
 }

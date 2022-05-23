@@ -26,7 +26,7 @@ import (
 )
 
 // DeterministicGenesisStateAltair returns a genesis state in hard fork 1 format made using the deterministic deposits.
-func DeterministicGenesisStateAltair(t testing.TB, numValidators uint64) (state.BeaconStateAltair, []bls.SecretKey) {
+func DeterministicGenesisStateAltair(t testing.TB, numValidators uint64) (state.BeaconState, []bls.SecretKey) {
 	deposits, privKeys, err := DeterministicDepositsAndKeys(numValidators)
 	if err != nil {
 		t.Fatal(errors.Wrapf(err, "failed to get %d deposits", numValidators))
@@ -44,7 +44,7 @@ func DeterministicGenesisStateAltair(t testing.TB, numValidators uint64) (state.
 }
 
 // GenesisBeaconState returns the genesis beacon state.
-func GenesisBeaconState(ctx context.Context, deposits []*ethpb.Deposit, genesisTime uint64, eth1Data *ethpb.Eth1Data) (state.BeaconStateAltair, error) {
+func GenesisBeaconState(ctx context.Context, deposits []*ethpb.Deposit, genesisTime uint64, eth1Data *ethpb.Eth1Data) (state.BeaconState, error) {
 	st, err := emptyGenesisState()
 	if err != nil {
 		return nil, err
@@ -67,9 +67,9 @@ func GenesisBeaconState(ctx context.Context, deposits []*ethpb.Deposit, genesisT
 // processPreGenesisDeposits processes a deposit for the beacon state Altair before chain start.
 func processPreGenesisDeposits(
 	ctx context.Context,
-	beaconState state.BeaconStateAltair,
+	beaconState state.BeaconState,
 	deposits []*ethpb.Deposit,
-) (state.BeaconStateAltair, error) {
+) (state.BeaconState, error) {
 	var err error
 	beaconState, err = altair.ProcessDeposits(ctx, beaconState, deposits)
 	if err != nil {
@@ -82,7 +82,7 @@ func processPreGenesisDeposits(
 	return beaconState, nil
 }
 
-func buildGenesisBeaconState(genesisTime uint64, preState state.BeaconStateAltair, eth1Data *ethpb.Eth1Data) (state.BeaconStateAltair, error) {
+func buildGenesisBeaconState(genesisTime uint64, preState state.BeaconState, eth1Data *ethpb.Eth1Data) (state.BeaconState, error) {
 	if eth1Data == nil {
 		return nil, errors.New("no eth1data provided for genesis state")
 	}
@@ -216,7 +216,7 @@ func buildGenesisBeaconState(genesisTime uint64, preState state.BeaconStateAltai
 	return stateAltair.InitializeFromProto(st)
 }
 
-func emptyGenesisState() (state.BeaconStateAltair, error) {
+func emptyGenesisState() (state.BeaconState, error) {
 	st := &ethpb.BeaconStateAltair{
 		// Misc fields.
 		Slot: 0,
@@ -273,7 +273,7 @@ func NewBeaconBlockAltair() *ethpb.SignedBeaconBlockAltair {
 
 // BlockSignatureAltair calculates the post-state root of the block and returns the signature.
 func BlockSignatureAltair(
-	bState state.BeaconStateAltair,
+	bState state.BeaconState,
 	block *ethpb.BeaconBlockAltair,
 	privKeys []bls.SecretKey,
 ) (bls.Signature, error) {

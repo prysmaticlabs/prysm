@@ -348,7 +348,7 @@ func (b *BeaconNode) startForkChoice() {
 	if features.Get().EnableForkChoiceDoublyLinkedTree {
 		b.forkChoiceStore = doublylinkedtree.New(0, 0)
 	} else {
-		b.forkChoiceStore = protoarray.New(0, 0, params.BeaconConfig().ZeroHash)
+		b.forkChoiceStore = protoarray.New(0, 0)
 	}
 }
 
