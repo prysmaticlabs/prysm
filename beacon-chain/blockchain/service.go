@@ -229,8 +229,9 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 			return errors.Wrap(err, "could not set finalized block as validated")
 		}
 	}
-
+	s.headLock.RLock()
 	h := s.headBlock().Block()
+	s.headLock.RUnlock()
 	if h.Slot() > fSlot {
 		log.WithFields(logrus.Fields{
 			"startSlot": fSlot,
