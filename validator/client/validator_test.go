@@ -1827,7 +1827,7 @@ func TestValidator_UpdateValidatorProposerSettings(t *testing.T) {
 			pubkeys, err := km.FetchValidatingPublicKeys(ctx)
 			require.NoError(t, err)
 			if tt.feeRecipientMap != nil {
-				feeRecipients, registerValidatorRequests, err := v.buildValidatorRequests(ctx, pubkeys)
+				feeRecipients, registerValidatorRequests, err := v.buildValidatorProposerSettingsRequests(ctx, pubkeys)
 				require.NoError(t, err)
 				for _, recipient := range feeRecipients {
 					require.Equal(t, strings.ToLower(tt.feeRecipientMap[recipient.ValidatorIndex]), strings.ToLower(hexutil.Encode(recipient.FeeRecipient)))

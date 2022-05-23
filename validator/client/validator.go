@@ -960,7 +960,7 @@ func (v *validator) UpdateValidatorProposerSettings(ctx context.Context, km keym
 	if err != nil {
 		return err
 	}
-	feeRecipients, registerValidatorRequests, err := v.buildValidatorRequests(ctx, pubkeys)
+	feeRecipients, registerValidatorRequests, err := v.buildValidatorProposerSettingsRequests(ctx, pubkeys)
 	if err != nil {
 		return err
 	}
@@ -984,7 +984,7 @@ func (v *validator) UpdateValidatorProposerSettings(ctx context.Context, km keym
 	return nil
 }
 
-func (v *validator) buildValidatorRequests(ctx context.Context, pubkeys [][fieldparams.BLSPubkeyLength]byte) ([]*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer, []*ethpb.ValidatorRegistrationV1, error) {
+func (v *validator) buildValidatorProposerSettingsRequests(ctx context.Context, pubkeys [][fieldparams.BLSPubkeyLength]byte) ([]*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer, []*ethpb.ValidatorRegistrationV1, error) {
 	var validatorToFeeRecipients []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer
 	var registerValidatorRequests []*ethpb.ValidatorRegistrationV1
 	// need to check for pubkey to validator index mappings
