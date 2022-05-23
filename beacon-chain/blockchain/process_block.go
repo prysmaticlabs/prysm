@@ -18,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
@@ -92,8 +93,8 @@ var initialSyncBlockCacheSize = uint64(2 * params.BeaconConfig().SlotsPerEpoch)
 func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlock, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.onBlock")
 	defer span.End()
-	if err := helpers.BeaconBlockIsNil(signed); err != nil {
-		return err
+	if err := wrapper.BeaconBlockIsNil(signed); err != nil {
+		return invalidBlock{err}
 	}
 	b := signed.Block()
 
@@ -108,7 +109,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 	}
 	postState, err := transition.ExecuteStateTransition(ctx, preState, signed)
 	if err != nil {
-		return err
+		return invalidBlock{err}
 	}
 	postStateVersion, postStateHeader, err := getStateVersionAndPayload(postState)
 	if err != nil {
@@ -176,37 +177,55 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 	}
 
 	// Update justified check point.
-	justified := s.store.JustifiedCheckpt()
-	if justified == nil {
-		return errNilJustifiedInStore
+	justified, err := s.store.JustifiedCheckpt()
+	if err != nil {
+		return errors.Wrap(err, "could not get justified checkpoint")
 	}
 	currJustifiedEpoch := justified.Epoch
-	if postState.CurrentJustifiedCheckpoint().Epoch > currJustifiedEpoch {
+	psj := postState.CurrentJustifiedCheckpoint()
+	if psj == nil {
+		return errNilJustifiedCheckpoint
+	}
+
+	if psj.Epoch > currJustifiedEpoch {
 		if err := s.updateJustified(ctx, postState); err != nil {
 			return err
 		}
 	}
 
-	finalized := s.store.FinalizedCheckpt()
+	finalized, err := s.store.FinalizedCheckpt()
+	if err != nil {
+		return errors.Wrap(err, "could not get finalized checkpoint")
+	}
 	if finalized == nil {
 		return errNilFinalizedInStore
 	}
-	newFinalized := postState.FinalizedCheckpointEpoch() > finalized.Epoch
+	psf := postState.FinalizedCheckpoint()
+	if psf == nil {
+		return errNilFinalizedCheckpoint
+	}
+
+	newFinalized := psf.Epoch > finalized.Epoch
 	if newFinalized {
 		s.store.SetPrevFinalizedCheckpt(finalized)
-		cp := postState.FinalizedCheckpoint()
-		h, err := s.getPayloadHash(ctx, cp.Root)
+		h, err := s.getPayloadHash(ctx, psf.Root)
 		if err != nil {
 			return err
 		}
-		s.store.SetFinalizedCheckptAndPayloadHash(cp, h)
+		s.store.SetFinalizedCheckptAndPayloadHash(psf, h)
 		s.store.SetPrevJustifiedCheckpt(justified)
-		cp = postState.CurrentJustifiedCheckpoint()
-		h, err = s.getPayloadHash(ctx, cp.Root)
+		h, err = s.getPayloadHash(ctx, psj.Root)
 		if err != nil {
 			return err
 		}
 		s.store.SetJustifiedCheckptAndPayloadHash(postState.CurrentJustifiedCheckpoint(), h)
+		// Update Forkchoice checkpoints
+		if err := s.cfg.ForkChoiceStore.UpdateJustifiedCheckpoint(psj); err != nil {
+			return err
+		}
+		if err := s.cfg.ForkChoiceStore.UpdateFinalizedCheckpoint(psf); err != nil {
+			return err
+		}
 	}
 
 	balances, err := s.justifiedBalances.get(ctx, bytesutil.ToBytes32(justified.Root))
@@ -327,8 +346,8 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 		return nil, nil, errWrongBlockCount
 	}
 
-	if err := helpers.BeaconBlockIsNil(blks[0]); err != nil {
-		return nil, nil, err
+	if err := wrapper.BeaconBlockIsNil(blks[0]); err != nil {
+		return nil, nil, invalidBlock{err}
 	}
 	b := blks[0].Block()
 
@@ -371,7 +390,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 
 		set, preState, err = transition.ExecuteStateTransitionNoVerifyAnySig(ctx, preState, b)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, invalidBlock{err}
 		}
 		// Save potential boundary states.
 		if slots.IsEpochStart(preState.Slot()) {
@@ -392,7 +411,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 	}
 	verify, err := sigSet.Verify()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, invalidBlock{err}
 	}
 	if !verify {
 		return nil, nil, errors.New("batch block signature verification failed")
@@ -473,9 +492,9 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed interf
 		s.clearInitSyncBlocks()
 	}
 
-	justified := s.store.JustifiedCheckpt()
-	if justified == nil {
-		return errNilJustifiedInStore
+	justified, err := s.store.JustifiedCheckpt()
+	if err != nil {
+		return errors.Wrap(err, "could not get justified checkpoint")
 	}
 	if jCheckpoint.Epoch > justified.Epoch {
 		if err := s.updateJustifiedInitSync(ctx, jCheckpoint); err != nil {
@@ -483,7 +502,10 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed interf
 		}
 	}
 
-	finalized := s.store.FinalizedCheckpt()
+	finalized, err := s.store.FinalizedCheckpt()
+	if err != nil {
+		return errors.Wrap(err, "could not get finalized checkpoint")
+	}
 	if finalized == nil {
 		return errNilFinalizedInStore
 	}
@@ -664,7 +686,7 @@ func (s *Service) validateMergeTransitionBlock(ctx context.Context, stateVersion
 	// Skip validation if block has an empty payload.
 	payload, err := blk.Block().Body().ExecutionPayload()
 	if err != nil {
-		return err
+		return invalidBlock{err}
 	}
 	if blocks.IsEmptyPayload(payload) {
 		return nil

@@ -44,7 +44,7 @@ import (
 //            increase_balance(state, get_beacon_proposer_index(state), proposer_reward)
 //        else:
 //            decrease_balance(state, participant_index, participant_reward)
-func ProcessSyncAggregate(ctx context.Context, s state.BeaconStateAltair, sync *ethpb.SyncAggregate) (state.BeaconStateAltair, error) {
+func ProcessSyncAggregate(ctx context.Context, s state.BeaconState, sync *ethpb.SyncAggregate) (state.BeaconState, error) {
 	votedKeys, votedIndices, didntVoteIndices, err := FilterSyncCommitteeVotes(s, sync)
 	if err != nil {
 		return nil, err
@@ -58,7 +58,7 @@ func ProcessSyncAggregate(ctx context.Context, s state.BeaconStateAltair, sync *
 }
 
 // FilterSyncCommitteeVotes filters the validator public keys and indices for the ones that voted and didn't vote.
-func FilterSyncCommitteeVotes(s state.BeaconStateAltair, sync *ethpb.SyncAggregate) (
+func FilterSyncCommitteeVotes(s state.BeaconState, sync *ethpb.SyncAggregate) (
 	votedKeys []bls.PublicKey,
 	votedIndices []types.ValidatorIndex,
 	didntVoteIndices []types.ValidatorIndex,
@@ -100,7 +100,7 @@ func FilterSyncCommitteeVotes(s state.BeaconStateAltair, sync *ethpb.SyncAggrega
 }
 
 // VerifySyncCommitteeSig verifies sync committee signature `syncSig` is valid with respect to public keys `syncKeys`.
-func VerifySyncCommitteeSig(s state.BeaconStateAltair, syncKeys []bls.PublicKey, syncSig []byte) error {
+func VerifySyncCommitteeSig(s state.BeaconState, syncKeys []bls.PublicKey, syncSig []byte) error {
 	ps := slots.PrevSlot(s.Slot())
 	d, err := signing.Domain(s.Fork(), slots.ToEpoch(ps), params.BeaconConfig().DomainSyncCommittee, s.GenesisValidatorsRoot())
 	if err != nil {
@@ -126,7 +126,7 @@ func VerifySyncCommitteeSig(s state.BeaconStateAltair, syncKeys []bls.PublicKey,
 }
 
 // ApplySyncRewardsPenalties applies rewards and penalties for proposer and sync committee participants.
-func ApplySyncRewardsPenalties(ctx context.Context, s state.BeaconStateAltair, votedIndices, didntVoteIndices []types.ValidatorIndex) (state.BeaconStateAltair, error) {
+func ApplySyncRewardsPenalties(ctx context.Context, s state.BeaconState, votedIndices, didntVoteIndices []types.ValidatorIndex) (state.BeaconState, error) {
 	activeBalance, err := helpers.TotalActiveBalance(s)
 	if err != nil {
 		return nil, err

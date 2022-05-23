@@ -27,7 +27,7 @@ import (
 //    process_historical_roots_update(state)
 //    process_participation_flag_updates(state)  # [New in Altair]
 //    process_sync_committee_updates(state)  # [New in Altair]
-func ProcessEpoch(ctx context.Context, state state.BeaconState) (state.BeaconStateAltair, error) {
+func ProcessEpoch(ctx context.Context, state state.BeaconState) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "altair.ProcessEpoch")
 	defer span.End()
 
