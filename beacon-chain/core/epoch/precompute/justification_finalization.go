@@ -40,8 +40,7 @@ func ProcessJustificationAndFinalizationPreCompute(state state.BeaconState, pBal
 	return weighJustificationAndFinalization(state, newBits)
 }
 
-// ProcessJustificationBits processes the justification bits during epoch
-// processing.
+// ProcessJustificationBits processes the justification bits during epoch processing.
 func ProcessJustificationBits(state state.BeaconState, totalActiveBalance, prevEpochTargetBalance, currEpochTargetBalance uint64) bitfield.Bitvector4 {
 	newBits := state.JustificationBits()
 	newBits.Shift(1)
