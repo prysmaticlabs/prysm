@@ -9,6 +9,20 @@ import (
 	"google.golang.org/grpc"
 )
 
+type E2EConfigOpt func(*E2EConfig)
+
+func WithExtraEpochs(extra uint64) E2EConfigOpt {
+	return func(cfg *E2EConfig) {
+		cfg.ExtraEpochs = extra
+	}
+}
+
+func WithRemoteSigner() E2EConfigOpt {
+	return func(cfg *E2EConfig) {
+		cfg.UseWeb3RemoteSigner = true
+	}
+}
+
 // E2EConfig defines the struct for all configurations needed for E2E testing.
 type E2EConfig struct {
 	TestSync                bool
