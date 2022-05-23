@@ -113,7 +113,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	SafeSlotsToUpdateJustified:       8,
 
 	// Fork choice algorithm constants.
-	ProposerScoreBoost: 70,
+	ProposerScoreBoost: 40,
 	IntervalsPerSlot:   3,
 
 	// Ethereum PoW parameters.
@@ -200,7 +200,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	AltairForkEpoch:      mainnetAltairForkEpoch,
 	BellatrixForkVersion: []byte{2, 0, 0, 0},
 	BellatrixForkEpoch:   mainnetBellatrixForkEpoch,
-	ShardingForkVersion:  []byte{3, 0, 0, 0},
+	ShardingForkVersion:  []byte{4, 0, 0, 0},
 	ShardingForkEpoch:    math.MaxUint64,
 
 	// New values introduced in Altair hard fork 1.
