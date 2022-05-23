@@ -260,7 +260,11 @@ message GetFeeRecipientByPubkeyRequest {
 }
 
 message GetFeeRecipientByPubkeyResponse {
-  bytes fee_recipient = 1;
+  message FeeRecipient {
+    bytes pubkey = 1;
+    bytes ethaddress = 2;
+  }
+  FeeRecipient fee_recipient = 1;
 }
 
 message SetFeeRecipientByPubkeyRequest {
