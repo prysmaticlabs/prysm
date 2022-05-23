@@ -13,9 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
-var errWSBlockNotFound = errors.New("weak subjectivity root not found in db")
-var errWSBlockNotFoundInEpoch = errors.New("weak subjectivity root not found in db within epoch")
-
 type weakSubjectivityDB interface {
 	HasBlock(ctx context.Context, blockRoot [32]byte) bool
 	BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][32]byte, error)

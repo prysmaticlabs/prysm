@@ -7,7 +7,6 @@ import (
 
 	"github.com/golang/snappy"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/genesis"
 	state_native "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native"
@@ -664,7 +663,7 @@ func (s *Store) slotByBlockRoot(ctx context.Context, tx *bolt.Tx, blockRoot []by
 		if err != nil {
 			return 0, err
 		}
-		if err := helpers.BeaconBlockIsNil(wsb); err != nil {
+		if err := wrapper.BeaconBlockIsNil(wsb); err != nil {
 			return 0, err
 		}
 		return b.Block.Slot, nil
