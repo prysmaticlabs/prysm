@@ -3,11 +3,11 @@ package jwt
 import (
 	"errors"
 	"fmt"
-	"os"
 
 	"path/filepath"
 
 	"github.com/prysmaticlabs/prysm/crypto/rand"
+	"github.com/prysmaticlabs/prysm/io/file"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/cmd"
@@ -20,33 +20,34 @@ var log = logrus.WithField("prefix", "jwt")
 
 var Commands = &cli.Command{
 	Name:        "generate-jwt-secret",
-	Usage:       "creates a random 32 byte hex string in a jwt.secret plaintext file within the root /prysm directory",
-	Description: `creates a random 32 byte hex string in a jwt.secret plaintext file within the root /prysm directory`,
-	Flags:       cmd.WrapFlags([]cli.Flag{}),
-	Before:      tos.VerifyTosAcceptedOrPrompt,
+	Usage:       "creates a random 32 byte hex string in a plaintext file to be used for authenticating JSON-RPC requests. If no --output-file flag is defined, the file will be created in the current working directory",
+	Description: `creates a random 32 byte hex string in a plaintext file to be used for authenticating JSON-RPC requests. If no --output-file flag is defined, the file will be created in the current working directory`,
+	Flags: cmd.WrapFlags([]cli.Flag{
+		cmd.JwtOutputFile,
+	}),
+	Before: tos.VerifyTosAcceptedOrPrompt,
 	Action: func(cliCtx *cli.Context) error {
-		if err := generateHttpSecretInFile(); err != nil {
+		specifiedFilePath := cliCtx.String(cmd.JwtOutputFile.Name)
+		if err := generateHttpSecretInFile(specifiedFilePath); err != nil {
 			log.Printf("Could not generate secret: %v", err)
 		}
 		return nil
 	},
 }
 
-func generateHttpSecretInFile() error {
+func generateHttpSecretInFile(specifiedFilePath string) error {
 	jwtFileName := "secret.jwt"
-	f, err := os.Create(jwtFileName)
-	if err != nil {
-		return err
+	if len(specifiedFilePath) > 0 {
+		jwtFileName = specifiedFilePath
 	}
-
-	defer f.Close()
 
 	secret, err := generateRandom32ByteHexString()
 	if err != nil {
 		return err
 	}
 
-	_, err = f.WriteString(secret)
+	// decided to convert to string then back to bytes for easy debugging
+	err = file.WriteFile(jwtFileName, []byte(secret))
 	if err != nil {
 		return err
 	}

@@ -255,6 +255,11 @@ var (
 		Usage: "Specifies the timeout value for API requests in seconds",
 		Value: 120,
 	}
+	// JwtOutputFile specifies the JWT file path that gets generated into when invoked by generate-jwt-secret.
+	JwtOutputFile = &cli.StringFlag{
+		Name:  "output-file",
+		Usage: "Target file path of auto-generated JWT file",
+	}
 )
 
 // LoadFlagsFromConfig sets flags values from config file if ConfigFileFlag is set.
