@@ -7,6 +7,7 @@ package validators
 import (
 	"context"
 
+	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
@@ -72,9 +73,10 @@ func InitiateValidatorExit(ctx context.Context, s state.BeaconState, idx types.V
 	exitQueueChurn := uint64(0)
 	err = s.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
 		if val.ExitEpoch() == exitQueueEpoch {
-			exitQueueEpoch, err = exitQueueEpoch.SafeAdd(1)
-			if err != nil {
-				return err
+			overflows := false
+			exitQueueChurn, overflows = math.SafeAdd(exitQueueChurn, 1)
+			if overflows {
+				return errors.New("exit queue churn overflows")
 			}
 		}
 		return nil
