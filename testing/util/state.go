@@ -119,7 +119,7 @@ func NewBeaconState(options ...NewBeaconStateOption) (state.BeaconState, error) 
 }
 
 // NewBeaconStateAltair creates a beacon state with minimum marshalable fields.
-func NewBeaconStateAltair(options ...func(state *ethpb.BeaconStateAltair) error) (state.BeaconStateAltair, error) {
+func NewBeaconStateAltair(options ...func(state *ethpb.BeaconStateAltair) error) (state.BeaconState, error) {
 	pubkeys := make([][]byte, 512)
 	for i := range pubkeys {
 		pubkeys[i] = make([]byte, 48)
@@ -174,7 +174,7 @@ func NewBeaconStateAltair(options ...func(state *ethpb.BeaconStateAltair) error)
 }
 
 // NewBeaconStateBellatrix creates a beacon state with minimum marshalable fields.
-func NewBeaconStateBellatrix(options ...func(state *ethpb.BeaconStateBellatrix) error) (state.BeaconStateBellatrix, error) {
+func NewBeaconStateBellatrix(options ...func(state *ethpb.BeaconStateBellatrix) error) (state.BeaconState, error) {
 	pubkeys := make([][]byte, 512)
 	for i := range pubkeys {
 		pubkeys[i] = make([]byte, 48)
