@@ -63,7 +63,6 @@ func generateHttpSecretInFile(specifiedFilePath string) error {
 }
 
 func generateRandom32ByteHexString() (string, error) {
-
 	blocks := make([]byte, 32)
 	randGen := rand.NewGenerator()
 	blocksLength, err := randGen.Read(blocks)
