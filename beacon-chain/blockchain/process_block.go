@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/consensus-types/forks/bellatrix"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
@@ -93,7 +94,7 @@ var initialSyncBlockCacheSize = uint64(2 * params.BeaconConfig().SlotsPerEpoch)
 func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlock, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.onBlock")
 	defer span.End()
-	if err := helpers.BeaconBlockIsNil(signed); err != nil {
+	if err := wrapper.BeaconBlockIsNil(signed); err != nil {
 		return invalidBlock{err}
 	}
 	b := signed.Block()
@@ -182,7 +183,12 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 		return errors.Wrap(err, "could not get justified checkpoint")
 	}
 	currJustifiedEpoch := justified.Epoch
-	if postState.CurrentJustifiedCheckpoint().Epoch > currJustifiedEpoch {
+	psj := postState.CurrentJustifiedCheckpoint()
+	if psj == nil {
+		return errNilJustifiedCheckpoint
+	}
+
+	if psj.Epoch > currJustifiedEpoch {
 		if err := s.updateJustified(ctx, postState); err != nil {
 			return err
 		}
@@ -195,22 +201,32 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 	if finalized == nil {
 		return errNilFinalizedInStore
 	}
-	newFinalized := postState.FinalizedCheckpointEpoch() > finalized.Epoch
+	psf := postState.FinalizedCheckpoint()
+	if psf == nil {
+		return errNilFinalizedCheckpoint
+	}
+
+	newFinalized := psf.Epoch > finalized.Epoch
 	if newFinalized {
 		s.store.SetPrevFinalizedCheckpt(finalized)
-		cp := postState.FinalizedCheckpoint()
-		h, err := s.getPayloadHash(ctx, cp.Root)
+		h, err := s.getPayloadHash(ctx, psf.Root)
 		if err != nil {
 			return err
 		}
-		s.store.SetFinalizedCheckptAndPayloadHash(cp, h)
+		s.store.SetFinalizedCheckptAndPayloadHash(psf, h)
 		s.store.SetPrevJustifiedCheckpt(justified)
-		cp = postState.CurrentJustifiedCheckpoint()
-		h, err = s.getPayloadHash(ctx, cp.Root)
+		h, err = s.getPayloadHash(ctx, psj.Root)
 		if err != nil {
 			return err
 		}
 		s.store.SetJustifiedCheckptAndPayloadHash(postState.CurrentJustifiedCheckpoint(), h)
+		// Update Forkchoice checkpoints
+		if err := s.cfg.ForkChoiceStore.UpdateJustifiedCheckpoint(psj); err != nil {
+			return err
+		}
+		if err := s.cfg.ForkChoiceStore.UpdateFinalizedCheckpoint(psf); err != nil {
+			return err
+		}
 	}
 
 	balances, err := s.justifiedBalances.get(ctx, bytesutil.ToBytes32(justified.Root))
@@ -331,7 +347,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 		return nil, nil, errWrongBlockCount
 	}
 
-	if err := helpers.BeaconBlockIsNil(blks[0]); err != nil {
+	if err := wrapper.BeaconBlockIsNil(blks[0]); err != nil {
 		return nil, nil, invalidBlock{err}
 	}
 	b := blks[0].Block()

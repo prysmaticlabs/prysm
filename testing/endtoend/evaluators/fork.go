@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	coreHelper "github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	wrapperv2 "github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
@@ -61,7 +60,7 @@ func altairForkOccurs(conns ...*grpc.ClientConn) error {
 	if err != nil {
 		return err
 	}
-	if err := coreHelper.BeaconBlockIsNil(blk); err != nil {
+	if err := wrapperv2.BeaconBlockIsNil(blk); err != nil {
 		return err
 	}
 	if blk.Block().Slot() < fSlot {
@@ -106,7 +105,7 @@ func bellatrixForkOccurs(conns ...*grpc.ClientConn) error {
 	if err != nil {
 		return err
 	}
-	if err := coreHelper.BeaconBlockIsNil(blk); err != nil {
+	if err := wrapperv2.BeaconBlockIsNil(blk); err != nil {
 		return err
 	}
 	if blk.Block().Slot() < fSlot {

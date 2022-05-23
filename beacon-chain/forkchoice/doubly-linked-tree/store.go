@@ -112,13 +112,15 @@ func (s *Store) insert(ctx context.Context,
 	parent := s.nodeByRoot[parentRoot]
 
 	n := &Node{
-		slot:           slot,
-		root:           root,
-		parent:         parent,
-		justifiedEpoch: justifiedEpoch,
-		finalizedEpoch: finalizedEpoch,
-		optimistic:     true,
-		payloadHash:    payloadHash,
+		slot:                     slot,
+		root:                     root,
+		parent:                   parent,
+		justifiedEpoch:           justifiedEpoch,
+		unrealizedJustifiedEpoch: justifiedEpoch,
+		finalizedEpoch:           finalizedEpoch,
+		unrealizedFinalizedEpoch: finalizedEpoch,
+		optimistic:               true,
+		payloadHash:              payloadHash,
 	}
 
 	s.nodeByPayload[payloadHash] = n
@@ -141,12 +143,6 @@ func (s *Store) insert(ctx context.Context,
 	nodeCount.Set(float64(len(s.nodeByRoot)))
 
 	return nil
-}
-
-// updateCheckpoints Update the justified / finalized epochs in store if necessary.
-func (s *Store) updateCheckpoints(justifiedEpoch, finalizedEpoch types.Epoch) {
-	s.justifiedEpoch = justifiedEpoch
-	s.finalizedEpoch = finalizedEpoch
 }
 
 // pruneFinalizedNodeByRootMap prunes the `nodeByRoot` map

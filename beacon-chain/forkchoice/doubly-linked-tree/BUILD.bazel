@@ -12,6 +12,7 @@ go_library(
         "proposer_boost.go",
         "store.go",
         "types.go",
+        "unrealized_justification.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/doubly-linked-tree",
     visibility = [
@@ -43,6 +44,7 @@ go_test(
         "optimistic_sync_test.go",
         "proposer_boost_test.go",
         "store_test.go",
+        "unrealized_justification_test.go",
         "vote_test.go",
     ],
     embed = [":go_default_library"],
@@ -52,6 +54,7 @@ go_test(
         "//consensus-types/primitives:go_default_library",
         "//crypto/hash:go_default_library",
         "//encoding/bytesutil:go_default_library",
+        "//proto/prysm/v1alpha1:go_default_library",
         "//testing/assert:go_default_library",
         "//testing/require:go_default_library",
     ],
