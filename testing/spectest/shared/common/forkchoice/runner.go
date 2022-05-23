@@ -90,6 +90,15 @@ func Run(t *testing.T, config string, fork int) {
 							builder.ValidBlock(t, beaconBlock)
 						}
 					}
+					if step.AttesterSlashing != nil {
+						slashingFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), fmt.Sprint(*step.AttesterSlashing, ".ssz_snappy"))
+						require.NoError(t, err)
+						slashingSSZ, err := snappy.Decode(nil /* dst */, slashingFile)
+						require.NoError(t, err)
+						slashing := &ethpb.AttesterSlashing{}
+						require.NoError(t, slashing.UnmarshalSSZ(slashingSSZ), "Failed to unmarshal")
+						builder.AttesterSlashing(t, slashing)
+					}
 					if step.Attestation != nil {
 						attFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), fmt.Sprint(*step.Attestation, ".ssz_snappy"))
 						require.NoError(t, err)
