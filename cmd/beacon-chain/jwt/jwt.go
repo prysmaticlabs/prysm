@@ -1,11 +1,15 @@
 package jwt
 
 import (
-	"encoding/hex"
-	"math/rand"
+	"errors"
+	"fmt"
 	"os"
-	"time"
 
+	"path/filepath"
+
+	"github.com/prysmaticlabs/prysm/crypto/rand"
+
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/runtime/tos"
 	"github.com/sirupsen/logrus"
@@ -14,7 +18,6 @@ import (
 
 var log = logrus.WithField("prefix", "jwt")
 
-// Commands for interacting with jwt tokens that support the beacon node.
 var Commands = &cli.Command{
 	Name:        "generate-jwt-secret",
 	Usage:       "creates a random 32 byte hex string in a jwt.secret plaintext file within the root /prysm directory",
@@ -30,7 +33,8 @@ var Commands = &cli.Command{
 }
 
 func generateHttpSecretInFile() error {
-	f, err := os.Create("secret.jwt")
+	jwtFileName := "secret.jwt"
+	f, err := os.Create(jwtFileName)
 	if err != nil {
 		return err
 	}
@@ -47,17 +51,31 @@ func generateHttpSecretInFile() error {
 		return err
 	}
 
+	jwtPath, err := filepath.Abs(jwtFileName)
+	if err == nil {
+		fmt.Println("JWT token file path:", jwtPath)
+	} else {
+		return err
+	}
+
 	return nil
 }
 
 func generateRandom32ByteHexString() (string, error) {
-	b := make([]byte, 32)
 
-	src := rand.New(rand.NewSource(time.Now().UnixNano()))
+	blocks := make([]byte, 32)
+	randGen := rand.NewGenerator()
+	blocksLength, err := randGen.Read(blocks)
 
-	if _, err := src.Read(b); err != nil {
-		return "", err // <- todo: this seems wrong, but I don't want to deal with pointers... recommended pattern?
+	if err != nil {
+		return "", errors.New("rand: unexpected length")
+	} else if blocksLength <= 0 {
+		return "", err
 	}
 
-	return hex.EncodeToString(b)[:64], nil
+	encoded := hexutil.Encode(blocks)[:66]
+
+	sliced := encoded[2:66] // remove 0x
+
+	return sliced, nil
 }
