@@ -75,7 +75,6 @@ func generateRandom32ByteHexString() (string, error) {
 	}
 
 	encoded := hexutil.Encode(blocks)[:66]
-
 	sliced := encoded[2:66] // remove 0x
 
 	return sliced, nil
