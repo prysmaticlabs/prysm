@@ -31,7 +31,7 @@ func generateAuthSecretInFile(c *cli.Context) error {
 	if len(specifiedFilePath) > 0 {
 		fileName = specifiedFilePath
 	}
-	secret, err := generateRandom32ByteHexString()
+	secret, err := generateRandomHexString()
 	if err != nil {
 		return err
 	}
@@ -48,7 +48,7 @@ func generateAuthSecretInFile(c *cli.Context) error {
 	return file.WriteFile(fileName, []byte(secret))
 }
 
-func generateRandom32ByteHexString() (string, error) {
+func generateRandomHexString() (string, error) {
 	secret := make([]byte, 32)
 	randGen := rand.NewGenerator()
 	n, err := randGen.Read(secret)
