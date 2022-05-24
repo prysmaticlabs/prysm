@@ -154,8 +154,8 @@ func (s *Service) Stop() error {
 			return err
 		}
 	} else {
-	s.headLock.RUnlock()
-        }
+		s.headLock.RUnlock()
+	}
 	// Save initial sync cached blocks to the DB before stop.
 	return s.cfg.BeaconDB.SaveBlocks(s.ctx, s.getInitSyncBlocks())
 }
