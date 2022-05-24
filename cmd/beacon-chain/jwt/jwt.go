@@ -2,13 +2,13 @@ package jwt
 
 import (
 	"errors"
-	"fmt"
 	"path/filepath"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
 	"github.com/prysmaticlabs/prysm/io/file"
+	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
 
@@ -49,7 +49,7 @@ func generateAuthSecretInFile(c *cli.Context) error {
 	if err := file.WriteFile(fileName, []byte(secret)); err != nil {
 		return err
 	}
-	fmt.Printf("Successfully wrote JSON-RPC authentication secret to file %s\n", fileName)
+	logrus.Infof("Successfully wrote JSON-RPC authentication secret to file %s\n", fileName)
 	return nil
 }
 
