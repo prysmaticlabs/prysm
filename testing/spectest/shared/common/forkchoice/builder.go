@@ -84,6 +84,12 @@ func (bb *Builder) Attestation(t testing.TB, a *ethpb.Attestation) {
 	require.NoError(t, bb.service.OnAttestation(context.TODO(), a))
 }
 
+// AttesterSlashing receives an attester slashing and feeds it to forkchoice.
+func (bb *Builder) AttesterSlashing(s *ethpb.AttesterSlashing) {
+	slashings := []*ethpb.AttesterSlashing{s}
+	bb.service.InsertSlashingsToForkChoiceStore(context.TODO(), slashings)
+}
+
 // Check evaluates the fork choice results and compares them to the expected values.
 func (bb *Builder) Check(t testing.TB, c *Check) {
 	if c == nil {

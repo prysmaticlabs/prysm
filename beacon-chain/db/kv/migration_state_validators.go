@@ -7,10 +7,11 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/snappy"
-	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/encoding/ssz/detect"
 	"github.com/prysmaticlabs/prysm/monitoring/progress"
 	v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/schollz/progressbar/v3"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -83,104 +84,10 @@ func migrateStateValidators(ctx context.Context, db *bolt.DB) error {
 	// prepare the progress bar with the total count of the keys to migrate
 	bar := progress.InitializeProgressBar(len(keys), "Migrating state validators to new schema.")
 
-	batchNo := 0
 	for batchIndex := 0; batchIndex < len(keys); batchIndex += batchSize {
-		if err := db.Update(func(tx *bolt.Tx) error {
-			//create the source and destination buckets
-			stateBkt := tx.Bucket(stateBucket)
-			if stateBkt == nil {
-				return nil
-			}
-			valBkt := tx.Bucket(stateValidatorsBucket)
-			if valBkt == nil {
-				return nil
-			}
-			indexBkt := tx.Bucket(blockRootValidatorHashesBucket)
-			if indexBkt == nil {
-				return nil
-			}
-
-			// migrate the key values for this batch
-			cursor := stateBkt.Cursor()
-			count := 0
-			index := batchIndex
-			for _, v := cursor.Seek(keys[index]); count < batchSize && index < len(keys); _, v = cursor.Next() {
-				enc, err := snappy.Decode(nil, v)
-				if err != nil {
-					return err
-				}
-				switch {
-				case hasAltairKey(enc):
-					protoState := &v1alpha1.BeaconStateAltair{}
-					if err := protoState.UnmarshalSSZ(enc[len(altairKey):]); err != nil {
-						return errors.Wrap(err, "failed to unmarshal encoding for altair")
-					}
-					// no validators in state to migrate
-					if len(protoState.Validators) == 0 {
-						return fmt.Errorf("no validator entries in state key 0x%s", hexutil.Encode(keys[index]))
-					}
-					validatorKeys, insertErr := insertValidatorHashes(ctx, protoState.Validators, valBkt)
-					if insertErr != nil {
-						return insertErr
-					}
-					// add the validator entry keys for a given block root.
-					compValidatorKeys := snappy.Encode(nil, validatorKeys)
-					idxErr := indexBkt.Put(keys[index], compValidatorKeys)
-					if idxErr != nil {
-						return idxErr
-					}
-					// zero the validator entries in BeaconState object .
-					protoState.Validators = make([]*v1alpha1.Validator, 0)
-					rawObj, err := protoState.MarshalSSZ()
-					if err != nil {
-						return err
-					}
-					stateBytes := snappy.Encode(nil, append(altairKey, rawObj...))
-					if stateErr := stateBkt.Put(keys[index], stateBytes); stateErr != nil {
-						return stateErr
-					}
-				default:
-					protoState := &v1alpha1.BeaconState{}
-					if err := protoState.UnmarshalSSZ(enc); err != nil {
-						return errors.Wrap(err, "failed to unmarshal encoding for phase0")
-					}
-					// no validators in state to migrate
-					if len(protoState.Validators) == 0 {
-						return fmt.Errorf("no validator entries in state key 0x%s", hexutil.Encode(keys[index]))
-					}
-					validatorKeys, insertErr := insertValidatorHashes(ctx, protoState.Validators, valBkt)
-					if insertErr != nil {
-						return insertErr
-					}
-					// add the validator entry keys for a given block root.
-					compValidatorKeys := snappy.Encode(nil, validatorKeys)
-					idxErr := indexBkt.Put(keys[index], compValidatorKeys)
-					if idxErr != nil {
-						return idxErr
-					}
-					// zero the validator entries in BeaconState object .
-					protoState.Validators = make([]*v1alpha1.Validator, 0)
-					stateBytes, err := encode(ctx, protoState)
-					if err != nil {
-						return err
-					}
-					if stateErr := stateBkt.Put(keys[index], stateBytes); stateErr != nil {
-						return stateErr
-					}
-				}
-				count++
-				index++
-
-				if barErr := bar.Add(1); barErr != nil {
-					return barErr
-				}
-			}
-
-			return nil
-		}); err != nil {
+		if err := db.Update(performValidatorStateMigration(ctx, bar, batchIndex, keys)); err != nil {
 			return err
 		}
-		batchNo++
 	}
 
 	// set the migration entry to done
@@ -195,6 +102,87 @@ func migrateStateValidators(ctx context.Context, db *bolt.DB) error {
 	}
 	log.Infof("migration done for bucket %s.", stateBucket)
 	return nil
+}
+
+func performValidatorStateMigration(ctx context.Context, bar *progressbar.ProgressBar, batchIndex int, keys [][]byte) func(tx *bolt.Tx) error {
+	return func(tx *bolt.Tx) error {
+		//create the source and destination buckets
+		stateBkt := tx.Bucket(stateBucket)
+		if stateBkt == nil {
+			return nil
+		}
+		valBkt := tx.Bucket(stateValidatorsBucket)
+		if valBkt == nil {
+			return nil
+		}
+		indexBkt := tx.Bucket(blockRootValidatorHashesBucket)
+		if indexBkt == nil {
+			return nil
+		}
+
+		// migrate the key values for this batch
+		cursor := stateBkt.Cursor()
+		count := 0
+		index := batchIndex
+		for _, v := cursor.Seek(keys[index]); count < batchSize && index < len(keys); _, v = cursor.Next() {
+			enc, err := snappy.Decode(nil, v)
+			if err != nil {
+				return err
+			}
+			item := enc
+			if hasAltairKey(item) {
+				item = item[len(altairKey):]
+			}
+			detector, err := detect.FromState(item)
+			if err != nil {
+				return err
+			}
+			beaconState, err := detector.UnmarshalBeaconState(item)
+			if err != nil {
+				return err
+			}
+			// no validators in state to migrate
+			if beaconState.NumValidators() == 0 {
+				return fmt.Errorf("no validator entries in state key 0x%s", hexutil.Encode(keys[index]))
+			}
+			vals := beaconState.Validators()
+			validatorKeys, insertErr := insertValidatorHashes(ctx, vals, valBkt)
+			if insertErr != nil {
+				return insertErr
+			}
+			// add the validator entry keys for a given block root.
+			compValidatorKeys := snappy.Encode(nil, validatorKeys)
+			idxErr := indexBkt.Put(keys[index], compValidatorKeys)
+			if idxErr != nil {
+				return idxErr
+			}
+			// zero the validator entries in BeaconState object .
+			if err := beaconState.SetValidators(make([]*v1alpha1.Validator, 0)); err != nil {
+				return err
+			}
+			rawObj, err := beaconState.MarshalSSZ()
+			if err != nil {
+				return err
+			}
+			var stateBytes []byte
+			if hasAltairKey(enc) {
+				stateBytes = snappy.Encode(nil, append(altairKey, rawObj...))
+			} else {
+				stateBytes = snappy.Encode(nil, rawObj)
+			}
+			if stateErr := stateBkt.Put(keys[index], stateBytes); stateErr != nil {
+				return stateErr
+			}
+			count++
+			index++
+
+			if barErr := bar.Add(1); barErr != nil {
+				return barErr
+			}
+		}
+
+		return nil
+	}
 }
 
 func stateBucketKeys(stateBucket *bolt.Bucket) ([][]byte, error) {
