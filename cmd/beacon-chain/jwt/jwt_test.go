@@ -27,7 +27,7 @@ func Test_generateJWTSecret(t *testing.T) {
 		set := flag.NewFlagSet("test", 0)
 
 		cliCtx := cli.NewContext(&app, set, nil)
-		err := generateHttpSecretInFile(cliCtx)
+		err := generateAuthSecretInFile(cliCtx)
 		require.NoError(t, err)
 
 		fileInfo, err := os.Stat(secretFileName)
@@ -53,7 +53,7 @@ func Test_generateJWTSecret(t *testing.T) {
 		require.NoError(t, set.Set(cmd.JwtOutputFileFlag.Name, customOutput))
 
 		cliCtx := cli.NewContext(&app, set, nil)
-		err := generateHttpSecretInFile(cliCtx)
+		err := generateAuthSecretInFile(cliCtx)
 		require.NoError(t, err)
 
 		fileInfo, err := os.Stat(customOutput)
