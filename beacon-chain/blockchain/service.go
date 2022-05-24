@@ -188,9 +188,15 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 	if err != nil {
 		return errors.Wrap(err, "could not get justified checkpoint")
 	}
+	if justified == nil {
+		return errNilJustifiedCheckpoint
+	}
 	finalized, err := s.cfg.BeaconDB.FinalizedCheckpoint(s.ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized checkpoint")
+	}
+	if finalized == nil {
+		return errNilFinalizedCheckpoint
 	}
 	s.store = store.New(justified, finalized)
 

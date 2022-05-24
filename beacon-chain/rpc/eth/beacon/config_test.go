@@ -123,6 +123,9 @@ func TestGetSpec(t *testing.T) {
 	var daap [4]byte
 	copy(daap[:], []byte{'0', '0', '0', '7'})
 	config.DomainAggregateAndProof = daap
+	var dam [4]byte
+	copy(dam[:], []byte{'1', '0', '0', '0'})
+	config.DomainApplicationMask = dam
 
 	params.OverrideBeaconConfig(config)
 
@@ -130,7 +133,7 @@ func TestGetSpec(t *testing.T) {
 	resp, err := server.GetSpec(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 
-	assert.Equal(t, 98, len(resp.Data))
+	assert.Equal(t, 99, len(resp.Data))
 	for k, v := range resp.Data {
 		switch k {
 		case "CONFIG_NAME":
@@ -315,6 +318,8 @@ func TestGetSpec(t *testing.T) {
 			assert.Equal(t, "0x30303036", v)
 		case "DOMAIN_AGGREGATE_AND_PROOF":
 			assert.Equal(t, "0x30303037", v)
+		case "DOMAIN_APPLICATION_MASK":
+			assert.Equal(t, "0x31303030", v)
 		case "DOMAIN_SYNC_COMMITTEE":
 			assert.Equal(t, "0x07000000", v)
 		case "DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF":
