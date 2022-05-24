@@ -1,6 +1,7 @@
 package stateutil
 
 import (
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/math"
@@ -12,6 +13,9 @@ func UnrealizedCheckpointBalances(cp, pp []byte, validators []*ethpb.Validator, 
 	activeBalance := uint64(0)
 	currentTarget := uint64(0)
 	prevTarget := uint64(0)
+	if len(cp) < len(validators) || len(pp) < len(validators) {
+		return 0, 0, 0, errors.New("participation does not match validator set")
+	}
 
 	var err error
 	for i, v := range validators {
