@@ -26,6 +26,7 @@ type EngineClient struct {
 	ErrForkchoiceUpdated    error
 	ErrNewPayload           error
 	BlockByHashMap          map[[32]byte]*pb.ExecutionBlock
+	BlockWithTxsByHashMap   map[[32]byte]*pb.ExecutionBlockWithTxs
 	TerminalBlockHash       []byte
 	TerminalBlockHashExists bool
 	OverrideValidHash       [32]byte
@@ -71,8 +72,12 @@ func (e *EngineClient) ExecutionBlockByHash(_ context.Context, h common.Hash) (*
 }
 
 // ExecutionBlockByHashWithTxs --
-func (e *EngineClient) ExecutionBlockByHashWithTxs(ctx context.Context, hash common.Hash) (*pb.ExecutionBlockWithTxs, error) {
-	return nil, errors.New("unimplemented")
+func (e *EngineClient) ExecutionBlockByHashWithTxs(_ context.Context, h common.Hash) (*pb.ExecutionBlockWithTxs, error) {
+	b, ok := e.BlockWithTxsByHashMap[h]
+	if !ok {
+		return nil, errors.New("block not found")
+	}
+	return b, e.ErrExecBlockByHash
 }
 
 // GetTerminalBlockHash --

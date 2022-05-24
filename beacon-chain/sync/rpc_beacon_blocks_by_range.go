@@ -166,7 +166,6 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 		}
 		blockToWrite := b
 		if blockToWrite.Block().IsBlinded() {
-			log.Warn("RECONSTRUCTING FULL BLOCK DURING BLOCKS BY RANGE REQUEST")
 			st := time.Now()
 			fullBlock, err := s.cfg.executionPayloadReconstructor.ReconstructFullBellatrixBlock(ctx, blockToWrite)
 			if err != nil {
