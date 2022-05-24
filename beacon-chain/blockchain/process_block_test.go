@@ -1965,7 +1965,7 @@ func TestService_insertSlashingsToForkChoiceStore(t *testing.T) {
 	b.Block.Body.AttesterSlashings = slashings
 	wb, err := wrapper.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)
-	service.insertSlashingsToForkChoiceStore(ctx, wb.Block().Body().AttesterSlashings())
+	service.InsertSlashingsToForkChoiceStore(ctx, wb.Block().Body().AttesterSlashings())
 }
 
 func TestOnBlock_ProcessBlocksParallel(t *testing.T) {
