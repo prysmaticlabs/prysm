@@ -8,6 +8,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/golang/mock/gomock"
+	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	validator_service_config "github.com/prysmaticlabs/prysm/config/validator/service"
@@ -27,6 +28,8 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/tyler-smith/go-bip39"
 	util "github.com/wealdtech/go-eth2-util"
+	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func TestWaitActivation_ContextCanceled(t *testing.T) {
@@ -149,6 +152,7 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+	nodeClient := mock.NewMockNodeClient(ctrl)
 	privKey, err := bls.RandKey()
 	require.NoError(t, err)
 	pubKey := [fieldparams.BLSPubkeyLength]byte{}
@@ -160,6 +164,7 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 	}
 	v := validator{
 		validatorClient:        client,
+		node:                   nodeClient,
 		keyManager:             km,
 		genesisTime:            1,
 		pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
@@ -184,6 +189,24 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 		resp,
 		nil,
 	)
+	nodeClient.EXPECT().GetGenesis(
+		gomock.Any(),
+		&emptypb.Empty{},
+	).Return(
+		&ethpb.Genesis{GenesisTime: timestamppb.Now()}, nil)
+
+	client.EXPECT().DomainData(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(
+		&ethpb.DomainResponse{
+			SignatureDomain: make([]byte, 32),
+		},
+		nil)
+	client.EXPECT().SubmitValidatorRegistration(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(&empty.Empty{}, nil)
 	assert.NoError(t, v.WaitForActivation(context.Background(), nil), "Could not wait for activation")
 	assert.LogsContain(t, hook, "Validator activated")
 }
