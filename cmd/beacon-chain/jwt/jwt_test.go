@@ -30,16 +30,8 @@ func Test_generateJWTSecret(t *testing.T) {
 		err := generateAuthSecretInFile(cliCtx)
 		require.NoError(t, err)
 
-		fileInfo, err := os.Stat(secretFileName)
-		require.NoError(t, err)
-		require.Equal(t, true, fileInfo != nil)
-
 		// We check the file has the contents we expect.
-		enc, err := file.ReadFileAsBytes(secretFileName)
-		require.NoError(t, err)
-		decoded, err := hexutil.Decode(string(enc))
-		require.NoError(t, err)
-		require.Equal(t, 32, len(decoded))
+		checkAuthFileIntegrity(t, secretFileName)
 	})
 	t.Run("should create proper file in specified folder", func(t *testing.T) {
 		customOutput := filepath.Join("data", "item.txt")
@@ -56,15 +48,19 @@ func Test_generateJWTSecret(t *testing.T) {
 		err := generateAuthSecretInFile(cliCtx)
 		require.NoError(t, err)
 
-		fileInfo, err := os.Stat(customOutput)
-		require.NoError(t, err)
-		require.Equal(t, true, fileInfo != nil)
-
 		// We check the file has the contents we expect.
-		enc, err := file.ReadFileAsBytes(customOutput)
-		require.NoError(t, err)
-		decoded, err := hexutil.Decode(string(enc))
-		require.NoError(t, err)
-		require.Equal(t, 32, len(decoded))
+		checkAuthFileIntegrity(t, customOutput)
 	})
+}
+
+func checkAuthFileIntegrity(t testing.TB, fPath string) {
+	fileInfo, err := os.Stat(fPath)
+	require.NoError(t, err)
+	require.Equal(t, true, fileInfo != nil)
+
+	enc, err := file.ReadFileAsBytes(fPath)
+	require.NoError(t, err)
+	decoded, err := hexutil.Decode(string(enc))
+	require.NoError(t, err)
+	require.Equal(t, 32, len(decoded))
 }
