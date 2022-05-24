@@ -20,9 +20,9 @@ func Test_generateJWTSecret(t *testing.T) {
 
 	t.Run("command should create file", func(t *testing.T) {
 		// DEBT: This "magic string" should exist in a config file that tests + other code read from
-		jwtFileName := "secret.jwt"
+		jwtFileName := "jwt.hex"
 
-		// INFO: By default, the token is created within the root `prysm` directory -> /prysm/secret.jwt
+		// INFO: By default, the token is created within the root `prysm` directory -> /prysm/jwt.hex
 		//       Because tests are executed within the jwt package directory, we can emulate default conditions by targeting /prysm/.
 		//       This will need to be updated if we change the folder structure, and this test can be hardened by ensuring the working directory is /prysm/.
 		jwtFileName = "../../../" + jwtFileName
