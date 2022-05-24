@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/holiman/uint256"
@@ -561,9 +562,7 @@ func TestReconstructFullBellatrixBlock(t *testing.T) {
 		payload, ok := fix["ExecutionPayload"].(*pb.ExecutionPayload)
 		require.Equal(t, true, ok)
 
-		execBlock, ok := fix["ExecutionBlock"].(*pb.ExecutionBlock)
-		require.Equal(t, true, ok)
-		require.NotNil(t, execBlock)
+		jsonPayload := make(map[string]interface{})
 		tx := types.NewTransaction(
 			0,
 			common.HexToAddress("095e7baea6a6c7c4c2dfeb977efac326af552d87"),
@@ -571,11 +570,22 @@ func TestReconstructFullBellatrixBlock(t *testing.T) {
 			nil,
 		)
 		txs := []*types.Transaction{tx}
+		encodedBinaryTxs := make([][]byte, 1)
+		var err error
+		encodedBinaryTxs[0], err = txs[0].MarshalBinary()
+		require.NoError(t, err)
+		payload.Transactions = encodedBinaryTxs
+		jsonPayload["transactions"] = txs
+		num := big.NewInt(1)
+		encodedNum := hexutil.EncodeBig(num)
+		jsonPayload["hash"] = hexutil.Encode(payload.BlockHash)
+		jsonPayload["number"] = encodedNum
+		jsonPayload["difficulty"] = encodedNum
+		jsonPayload["size"] = encodedNum
+		jsonPayload["baseFeePerGas"] = encodedNum
 
 		header, err := bellatrix.PayloadToHeader(payload)
 		require.NoError(t, err)
-
-		wantPayload := fullPayloadFromExecutionBlock(header, &pb.ExecutionBlockWithTxs{ExecutionBlock: *execBlock})
 
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
@@ -585,7 +595,7 @@ func TestReconstructFullBellatrixBlock(t *testing.T) {
 			respJSON := map[string]interface{}{
 				"jsonrpc": "2.0",
 				"id":      1,
-				"result":  execBlockWithTxs,
+				"result":  jsonPayload,
 			}
 			require.NoError(t, json.NewEncoder(w).Encode(respJSON))
 		}))
@@ -607,7 +617,7 @@ func TestReconstructFullBellatrixBlock(t *testing.T) {
 
 		got, err := reconstructed.Block().Body().ExecutionPayload()
 		require.NoError(t, err)
-		require.DeepEqual(t, wantPayload, got)
+		require.DeepEqual(t, payload, got)
 	})
 }
 

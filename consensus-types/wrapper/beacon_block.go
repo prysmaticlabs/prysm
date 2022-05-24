@@ -1,9 +1,7 @@
 package wrapper
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/consensus-types/forks/bellatrix"
@@ -177,8 +175,6 @@ func BuildSignedBeaconBlockFromExecutionPayload(
 		return nil, errors.Wrap(err, "could not hash tree root payload header")
 	}
 	if payloadRoot != payloadHeaderRoot {
-		json.NewEncoder(os.Stdout).Encode(payload)
-		json.NewEncoder(os.Stdout).Encode(payloadHeader)
 		return nil, fmt.Errorf(
 			"payload %#x and header %#x roots do not match",
 			payloadRoot,
