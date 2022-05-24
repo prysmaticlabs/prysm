@@ -64,7 +64,6 @@ func generateHttpSecretInFile(specifiedFilePath string) error {
 }
 
 func generateRandom32ByteHexString() (string, error) {
-
 	blocks := make([]byte, 32)
 	randGen := rand.NewGenerator()
 	blocksLength, err := randGen.Read(blocks)
@@ -74,12 +73,6 @@ func generateRandom32ByteHexString() (string, error) {
 	} else if blocksLength <= 0 {
 		return "", err
 	}
-
-	// TODO: Remove these before merging after unit + confirming IRL
-
-	//encoded := hexutil.Encode(blocks)[:66]
-
-	//sliced := encoded[2:66] // remove 0x
 
 	return hexutil.Encode(blocks), nil
 }
