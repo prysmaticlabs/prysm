@@ -18,6 +18,17 @@ func Test_generateJWTSecret(t *testing.T) {
 		generateJwtCommand := Commands
 		require.Equal(t, true, generateJwtCommand.Name == "generate-auth-secret")
 	})
+	t.Run("junk file path fails", func(t *testing.T) {
+		junk := "/adj$7@&  9a."
+		app := cli.App{}
+		set := flag.NewFlagSet("test", 0)
+		set.String(cmd.JwtOutputFileFlag.Name, junk, "")
+		require.NoError(t, set.Set(cmd.JwtOutputFileFlag.Name, junk))
+
+		cliCtx := cli.NewContext(&app, set, nil)
+		err := generateAuthSecretInFile(cliCtx)
+		require.ErrorContains(t, "is not a valid file path", err)
+	})
 	t.Run("should create proper file in current directory", func(t *testing.T) {
 		require.NoError(t, os.RemoveAll(secretFileName))
 		t.Cleanup(func() {
@@ -35,6 +46,24 @@ func Test_generateJWTSecret(t *testing.T) {
 	})
 	t.Run("should create proper file in specified folder", func(t *testing.T) {
 		customOutput := filepath.Join("data", "item.txt")
+		require.NoError(t, os.RemoveAll(filepath.Dir(customOutput)))
+		t.Cleanup(func() {
+			require.NoError(t, os.RemoveAll(filepath.Dir(customOutput)))
+		})
+		app := cli.App{}
+		set := flag.NewFlagSet("test", 0)
+		set.String(cmd.JwtOutputFileFlag.Name, customOutput, "")
+		require.NoError(t, set.Set(cmd.JwtOutputFileFlag.Name, customOutput))
+
+		cliCtx := cli.NewContext(&app, set, nil)
+		err := generateAuthSecretInFile(cliCtx)
+		require.NoError(t, err)
+
+		// We check the file has the contents we expect.
+		checkAuthFileIntegrity(t, customOutput)
+	})
+	t.Run("creates proper file in nested specified folder", func(t *testing.T) {
+		customOutput := filepath.Join("data", "nest", "nested", "item.txt")
 		require.NoError(t, os.RemoveAll(filepath.Dir(customOutput)))
 		t.Cleanup(func() {
 			require.NoError(t, os.RemoveAll(filepath.Dir(customOutput)))

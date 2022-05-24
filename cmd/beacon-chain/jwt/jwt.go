@@ -2,6 +2,7 @@ package jwt
 
 import (
 	"errors"
+	"fmt"
 	"path/filepath"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -32,7 +33,8 @@ func generateAuthSecretInFile(c *cli.Context) error {
 	if len(specifiedFilePath) > 0 {
 		fileName = specifiedFilePath
 	}
-	secret, err := generateRandomHexString()
+	var err error
+	fileName, err = file.ExpandPath(fileName)
 	if err != nil {
 		return err
 	}
@@ -46,10 +48,21 @@ func generateAuthSecretInFile(c *cli.Context) error {
 			return err
 		}
 	}
+	isValidPath, err := file.IsValidFilePath(fileName)
+	if err != nil {
+		return err
+	}
+	if !isValidPath {
+		return fmt.Errorf("%s is not a valid file path", fileName)
+	}
+	secret, err := generateRandomHexString()
+	if err != nil {
+		return err
+	}
 	if err := file.WriteFile(fileName, []byte(secret)); err != nil {
 		return err
 	}
-	logrus.Infof("Successfully wrote JSON-RPC authentication secret to file %s\n", fileName)
+	logrus.Infof("Successfully wrote JSON-RPC authentication secret to file %s", fileName)
 	return nil
 }
 
