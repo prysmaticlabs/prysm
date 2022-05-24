@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/math"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"go.opencensus.io/trace"
 )
 
@@ -346,20 +345,4 @@ func attestationDelta(
 	}
 
 	return reward, penalty, nil
-}
-
-// UnrealizedCheckpoints returns the justification and finalization checkpoints of the
-// given state as if it was progressed with empty slots until the next epoch.
-func UnrealizedCheckpoints(st state.BeaconState) (*ethpb.Checkpoint, *ethpb.Checkpoint, error) {
-	if st == nil || st.IsNil() {
-		return nil, nil, errNilState
-	}
-
-	activeBalance, prevTarget, currentTarget, err := st.UnrealizedCheckpointBalances()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	justification := precompute.ProcessJustificationBits(st, activeBalance, prevTarget, currentTarget)
-	return precompute.ComputeCheckpoints(st, justification)
 }
