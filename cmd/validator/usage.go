@@ -112,7 +112,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.FeeRecipientConfigFileFlag,
 			flags.FeeRecipientConfigURLFlag,
 			flags.ValidatorProposerSettingsFlag,
-			flags.ValidatorProposerSettingsFlag,
+			flags.ValidatorProposerSettingsURLFlag,
 			flags.SuggestedFeeRecipientFlag,
 		},
 	},
