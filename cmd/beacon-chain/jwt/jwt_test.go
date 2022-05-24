@@ -19,7 +19,7 @@ func Test_generateJWTSecret(t *testing.T) {
 		require.Equal(t, true, generateJwtCommand.Name == "generate-auth-secret")
 	})
 	t.Run("junk file path fails", func(t *testing.T) {
-		junk := "/adj$7@&  9a."
+		junk := "/adj$7@&  9a.\""
 		app := cli.App{}
 		set := flag.NewFlagSet("test", 0)
 		set.String(cmd.JwtOutputFileFlag.Name, junk, "")
