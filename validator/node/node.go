@@ -426,7 +426,7 @@ func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
 		GraffitiStruct:             gStruct,
 		LogDutyCountDown:           c.cliCtx.Bool(flags.EnableDutyCountDown.Name),
 		Web3SignerConfig:           wsc,
-		FeeRecipientConfig:         bpc,
+		ValidatorProposerSettings:  bpc,
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not initialize validator service")
