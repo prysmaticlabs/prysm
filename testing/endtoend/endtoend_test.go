@@ -7,6 +7,13 @@ package endtoend
 import (
 	"context"
 	"fmt"
+	"os"
+	"path"
+	"strings"
+	"sync"
+	"testing"
+	"time"
+
 	"github.com/prysmaticlabs/prysm/api/client/beacon"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/io/file"
@@ -14,12 +21,6 @@ import (
 	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"os"
-	"path"
-	"strings"
-	"sync"
-	"testing"
-	"time"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"

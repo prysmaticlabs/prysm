@@ -1,8 +1,9 @@
 package endtoend
 
 import (
-	"github.com/prysmaticlabs/prysm/testing/endtoend/types"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/testing/endtoend/types"
 )
 
 func TestEndToEnd_MinimalConfig(t *testing.T) {
