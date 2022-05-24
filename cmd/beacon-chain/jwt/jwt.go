@@ -36,6 +36,7 @@ var Commands = &cli.Command{
 }
 
 func generateHttpSecretInFile(specifiedFilePath string) error {
+	// DEBT: this "magic string" should exist in a config file that tests + other code read from
 	jwtFileName := "secret.jwt"
 	if len(specifiedFilePath) > 0 {
 		jwtFileName = specifiedFilePath
