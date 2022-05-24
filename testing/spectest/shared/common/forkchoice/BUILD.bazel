@@ -17,6 +17,7 @@ go_library(
         "//beacon-chain/cache:go_default_library",
         "//beacon-chain/cache/depositcache:go_default_library",
         "//beacon-chain/core/time:go_default_library",
+        "//beacon-chain/core/transition:go_default_library",
         "//beacon-chain/db/testing:go_default_library",
         "//beacon-chain/forkchoice/protoarray:go_default_library",
         "//beacon-chain/forkchoice/types:go_default_library",
