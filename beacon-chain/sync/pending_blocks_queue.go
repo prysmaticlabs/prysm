@@ -414,6 +414,8 @@ func (s *Service) addPendingBlockToCache(b interfaces.SignedBeaconBlock) error {
 	return nil
 }
 
+// Returns true if the genesis time has been set in chain service.
+// Without the genesis time, the chain does not start.
 func (s *Service) isGenesisTimeSet() bool {
 	return s.cfg.chain.GenesisTime().Unix() != 0
 }
