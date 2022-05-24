@@ -10,6 +10,24 @@ import (
 	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
+var errNilState = errors.New("nil state")
+
+// UnrealizedCheckpoints returns the justification and finalization checkpoints of the
+// given state as if it was progressed with empty slots until the next epoch.
+func UnrealizedCheckpoints(st state.BeaconState) (*ethpb.Checkpoint, *ethpb.Checkpoint, error) {
+	if st == nil || st.IsNil() {
+		return nil, nil, errNilState
+	}
+
+	activeBalance, prevTarget, currentTarget, err := st.UnrealizedCheckpointBalances()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	justification := processJustificationBits(st, activeBalance, prevTarget, currentTarget)
+	return computeCheckpoints(st, justification)
+}
+
 // ProcessJustificationAndFinalizationPreCompute processes justification and finalization during
 // epoch processing. This is where a beacon node can justify and finalize a new epoch.
 // Note: this is an optimized version by passing in precomputed total and attesting balances.
@@ -35,13 +53,13 @@ func ProcessJustificationAndFinalizationPreCompute(state state.BeaconState, pBal
 		return state, nil
 	}
 
-	newBits := ProcessJustificationBits(state, pBal.ActiveCurrentEpoch, pBal.PrevEpochTargetAttested, pBal.CurrentEpochTargetAttested)
+	newBits := processJustificationBits(state, pBal.ActiveCurrentEpoch, pBal.PrevEpochTargetAttested, pBal.CurrentEpochTargetAttested)
 
 	return weighJustificationAndFinalization(state, newBits)
 }
 
-// ProcessJustificationBits processes the justification bits during epoch processing.
-func ProcessJustificationBits(state state.BeaconState, totalActiveBalance, prevEpochTargetBalance, currEpochTargetBalance uint64) bitfield.Bitvector4 {
+// processJustificationBits processes the justification bits during epoch processing.
+func processJustificationBits(state state.BeaconState, totalActiveBalance, prevEpochTargetBalance, currEpochTargetBalance uint64) bitfield.Bitvector4 {
 	newBits := state.JustificationBits()
 	newBits.Shift(1)
 	// If 2/3 or more of total balance attested in the previous epoch.
@@ -59,7 +77,7 @@ func ProcessJustificationBits(state state.BeaconState, totalActiveBalance, prevE
 // updateJustificationAndFinalization processes justification and finalization during
 // epoch processing. This is where a beacon node can justify and finalize a new epoch.
 func weighJustificationAndFinalization(state state.BeaconState, newBits bitfield.Bitvector4) (state.BeaconState, error) {
-	jc, fc, err := ComputeCheckpoints(state, newBits)
+	jc, fc, err := computeCheckpoints(state, newBits)
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +100,7 @@ func weighJustificationAndFinalization(state state.BeaconState, newBits bitfield
 	return state, nil
 }
 
-// ComputeCheckpoints computes the new Justification and Finalization
+// computeCheckpoints computes the new Justification and Finalization
 // checkpoints at epoch transition
 // Spec pseudocode definition:
 // def weigh_justification_and_finalization(state: BeaconState,
@@ -121,7 +139,7 @@ func weighJustificationAndFinalization(state state.BeaconState, newBits bitfield
 //    # The 1st/2nd most recent epochs are justified, the 1st using the 2nd as source
 //    if all(bits[0:2]) and old_current_justified_checkpoint.epoch + 1 == current_epoch:
 //        state.finalized_checkpoint = old_current_justified_checkpoint
-func ComputeCheckpoints(state state.BeaconState, newBits bitfield.Bitvector4) (*ethpb.Checkpoint, *ethpb.Checkpoint, error) {
+func computeCheckpoints(state state.BeaconState, newBits bitfield.Bitvector4) (*ethpb.Checkpoint, *ethpb.Checkpoint, error) {
 	prevEpoch := time.PrevEpoch(state)
 	currentEpoch := time.CurrentEpoch(state)
 	oldPrevJustifiedCheckpoint := state.PreviousJustifiedCheckpoint()
