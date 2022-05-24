@@ -359,6 +359,7 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	client := mock2.NewMockBeaconNodeValidatorClient(ctrl)
+	nodeClient := mock2.NewMockNodeClient(ctrl)
 	privKey, err := bls.RandKey()
 	require.NoError(t, err)
 	pubKey := [fieldparams.BLSPubkeyLength]byte{}
@@ -371,6 +372,7 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 	v := validator{
 		validatorClient:        client,
 		keyManager:             km,
+		node:                   nodeClient,
 		genesisTime:            1,
 		pubkeyToValidatorIndex: map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex{pubKey: 1},
 		validatorProposerSettings: &validator_service_config.ValidatorProposerSettings{
@@ -394,6 +396,24 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 		resp,
 		nil,
 	)
+	nodeClient.EXPECT().GetGenesis(
+		gomock.Any(),
+		&emptypb.Empty{},
+	).Return(
+		&ethpb.Genesis{GenesisTime: timestamppb.Now()}, nil)
+
+	client.EXPECT().DomainData(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(
+		&ethpb.DomainResponse{
+			SignatureDomain: make([]byte, 32),
+		},
+		nil)
+	client.EXPECT().SubmitValidatorRegistration(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(&empty.Empty{}, nil)
 	require.NoError(t, v.WaitForActivation(ctx, nil), "Could not wait for activation")
 	require.LogsContain(t, hook, "Validator activated")
 }
