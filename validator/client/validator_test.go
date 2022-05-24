@@ -1466,11 +1466,18 @@ func TestValidator_UpdateValidatorProposerSettings(t *testing.T) {
 	byteValueAddress, err := hexutil.Decode("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9")
 	require.NoError(t, err)
 
+	type ExpectedValidatorRegistration struct {
+		FeeRecipient []byte
+		GasLimit     uint64
+		Timestamp    uint64
+		Pubkey       []byte
+	}
+
 	tests := []struct {
 		name                 string
 		validatorSetter      func(t *testing.T) *validator
 		feeRecipientMap      map[types.ValidatorIndex]string
-		mockExpectedRequests []ethpb.ValidatorRegistrationV1
+		mockExpectedRequests []ExpectedValidatorRegistration
 		err                  string
 	}{
 		{
@@ -1534,7 +1541,7 @@ func TestValidator_UpdateValidatorProposerSettings(t *testing.T) {
 			feeRecipientMap: map[types.ValidatorIndex]string{
 				1: defaultFeeHex,
 			},
-			mockExpectedRequests: []ethpb.ValidatorRegistrationV1{
+			mockExpectedRequests: []ExpectedValidatorRegistration{
 				{
 					FeeRecipient: byteValueAddress,
 					GasLimit:     fieldparams.DefaultBuilderGasLimit,
@@ -1616,7 +1623,7 @@ func TestValidator_UpdateValidatorProposerSettings(t *testing.T) {
 			feeRecipientMap: map[types.ValidatorIndex]string{
 				1: defaultFeeHex,
 			},
-			mockExpectedRequests: []ethpb.ValidatorRegistrationV1{
+			mockExpectedRequests: []ExpectedValidatorRegistration{
 				{
 					FeeRecipient: byteValueAddress,
 					GasLimit:     fieldparams.DefaultBuilderGasLimit,
@@ -1692,7 +1699,7 @@ func TestValidator_UpdateValidatorProposerSettings(t *testing.T) {
 				1: "0x055Fb65722E7b2455043BFEBf6177F1D2e9738D9",
 				2: defaultFeeHex,
 			},
-			mockExpectedRequests: []ethpb.ValidatorRegistrationV1{
+			mockExpectedRequests: []ExpectedValidatorRegistration{
 
 				{
 					FeeRecipient: common.HexToAddress("0x055Fb65722E7b2455043BFEBf6177F1D2e9738D9").Bytes(),
