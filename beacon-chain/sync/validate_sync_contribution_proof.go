@@ -334,7 +334,7 @@ func (s *Service) setSyncContributionIndexSlotSeen(slot types.Slot, aggregatorIn
 func (s *Service) setSyncContributionBits(c *ethpb.SyncCommitteeContribution) error {
 	s.syncContributionBitsOverlapLock.Lock()
 	defer s.syncContributionBitsOverlapLock.Unlock()
-	var root []byte
+	root := make([]byte, len(c.BlockRoot))
 	copy(root, c.BlockRoot) // Copying due to how pb unmarshalling is carried out, prevent mutation.
 	b := append(root, bytesutil.Bytes32(uint64(c.Slot))...)
 	b = append(b, bytesutil.Bytes32(c.SubcommitteeIndex)...)
