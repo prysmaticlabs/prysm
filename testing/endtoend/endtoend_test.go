@@ -467,14 +467,10 @@ func (r *testRunner) defaultEndToEndRun() error {
 
 	index := e2e.TestParams.BeaconNodeCount + e2e.TestParams.LighthouseBeaconNodeCount
 	if config.TestSync {
-		// using g.Go to run these methods that start after the main tests so that they can run in parallel
-		g.Go(func() error {
-			return r.testBeaconChainSync(ctx, g, conns, tickingStartTime, bootNode.ENR(), eth1Miner.ENR())
-		})
+		if err := r.testBeaconChainSync(ctx, g, conns, tickingStartTime, bootNode.ENR(), eth1Miner.ENR()); err != nil {
+			return errors.Wrap(err, "beacon chain sync test failed")
+		}
 		index += 1
-	}
-	if err != nil {
-		return errors.Wrap(err, "beacon chain sync test failed")
 	}
 	if err := r.testDoppelGangerProtection(ctx); err != nil {
 		return errors.Wrap(err, "doppel ganger protection check failed")
