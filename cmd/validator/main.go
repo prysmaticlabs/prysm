@@ -78,6 +78,8 @@ var appFlags = []cli.Flag{
 	flags.FeeRecipientConfigFileFlag,
 	flags.FeeRecipientConfigURLFlag,
 	flags.SuggestedFeeRecipientFlag,
+	flags.ValidatorProposerSettingsURLFlag,
+	flags.ValidatorProposerSettingsFlag,
 	////////////////////
 	cmd.DisableMonitoringFlag,
 	cmd.MonitoringHostFlag,
