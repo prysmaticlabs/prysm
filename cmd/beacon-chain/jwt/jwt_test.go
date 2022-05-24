@@ -27,7 +27,11 @@ func Test_generateJWTSecret(t *testing.T) {
 
 		cliCtx := cli.NewContext(&app, set, nil)
 		err := generateAuthSecretInFile(cliCtx)
+		// An error should return
 		require.ErrorContains(t, "is not a valid file path", err)
+		// and the junk file should not exist.
+		_, err = os.Stat(junk)
+		require.ErrorIs(t, err, os.ErrNotExist)
 	})
 	t.Run("should create proper file in current directory", func(t *testing.T) {
 		require.NoError(t, os.RemoveAll(secretFileName))
