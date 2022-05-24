@@ -2,14 +2,12 @@ package jwt
 
 import (
 	"errors"
-	"fmt"
 	"path/filepath"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
 	"github.com/prysmaticlabs/prysm/io/file"
-	"github.com/prysmaticlabs/prysm/runtime/tos"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -27,18 +25,12 @@ var Commands = &cli.Command{
 	Flags: cmd.WrapFlags([]cli.Flag{
 		cmd.JwtOutputFileFlag,
 	}),
-	Before: tos.VerifyTosAcceptedOrPrompt,
-	Action: func(cliCtx *cli.Context) error {
-		specifiedFilePath := cliCtx.String(cmd.JwtOutputFileFlag.Name)
-		if err := generateHttpSecretInFile(specifiedFilePath); err != nil {
-			log.Printf("Could not generate secret: %v", err)
-		}
-		return nil
-	},
+	Action: generateHttpSecretInFile,
 }
 
-func generateHttpSecretInFile(specifiedFilePath string) error {
+func generateHttpSecretInFile(c *cli.Context) error {
 	fileName := secretFileName
+	specifiedFilePath := c.String(cmd.JwtOutputFileFlag.Name)
 	if len(specifiedFilePath) > 0 {
 		fileName = specifiedFilePath
 	}
@@ -46,17 +38,17 @@ func generateHttpSecretInFile(specifiedFilePath string) error {
 	if err != nil {
 		return err
 	}
-	err = file.WriteFile(fileName, []byte(secret))
+	fileDir := filepath.Dir(fileName)
+	exists, err := file.HasDir(fileDir)
 	if err != nil {
 		return err
 	}
-	jwtPath, err := filepath.Abs(fileName)
-	if err == nil {
-		fmt.Println("JWT token file path:", jwtPath)
-	} else {
-		return err
+	if !exists {
+		if err := file.MkdirAll(fileDir); err != nil {
+			return err
+		}
 	}
-	return nil
+	return file.WriteFile(fileName, []byte(secret))
 }
 
 func generateRandom32ByteHexString() (string, error) {
