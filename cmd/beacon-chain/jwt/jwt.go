@@ -16,10 +16,14 @@ import (
 
 var log = logrus.WithField("prefix", "jwt")
 
+const (
+	secretFileName = "jwt.hex"
+)
+
 var Commands = &cli.Command{
-	Name:        "generate-jwt-secret",
-	Usage:       "creates a random 32 byte hex string in a plaintext file to be used for authenticating JSON-RPC requests. If no --output-file flag is defined, the file will be created in the current working directory",
-	Description: `creates a random 32 byte hex string in a plaintext file to be used for authenticating JSON-RPC requests. If no --output-file flag is defined, the file will be created in the current working directory`,
+	Name:        "generate-auth-secret",
+	Usage:       "creates a random, 32 byte hex string in a plaintext file to be used for authenticating JSON-RPC requests. If no --output-file flag is defined, the file will be created in the current working directory",
+	Description: `creates a random, 32 byte hex string in a plaintext file to be used for authenticating JSON-RPC requests. If no --output-file flag is defined, the file will be created in the current working directory`,
 	Flags: cmd.WrapFlags([]cli.Flag{
 		cmd.JwtOutputFileFlag,
 	}),
@@ -34,30 +38,24 @@ var Commands = &cli.Command{
 }
 
 func generateHttpSecretInFile(specifiedFilePath string) error {
-	// DEBT: this "magic string" should exist in a config file that tests + other code read from
-	jwtFileName := "secret.jwt"
+	fileName := secretFileName
 	if len(specifiedFilePath) > 0 {
-		jwtFileName = specifiedFilePath
+		fileName = specifiedFilePath
 	}
-
 	secret, err := generateRandom32ByteHexString()
 	if err != nil {
 		return err
 	}
-
-	// decided to convert to string then back to bytes for easy debugging
-	err = file.WriteFile(jwtFileName, []byte(secret))
+	err = file.WriteFile(fileName, []byte(secret))
 	if err != nil {
 		return err
 	}
-
-	jwtPath, err := filepath.Abs(jwtFileName)
+	jwtPath, err := filepath.Abs(fileName)
 	if err == nil {
 		fmt.Println("JWT token file path:", jwtPath)
 	} else {
 		return err
 	}
-
 	return nil
 }
 
