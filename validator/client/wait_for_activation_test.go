@@ -70,6 +70,7 @@ func TestWaitActivation_StreamSetupFails_AttemptsToReconnect(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+	nodeClient := mock.NewMockNodeClient(ctrl)
 	privKey, err := bls.RandKey()
 	require.NoError(t, err)
 	pubKey := [fieldparams.BLSPubkeyLength]byte{}
@@ -81,6 +82,7 @@ func TestWaitActivation_StreamSetupFails_AttemptsToReconnect(t *testing.T) {
 	}
 	v := validator{
 		validatorClient:        client,
+		node:                   nodeClient,
 		keyManager:             km,
 		pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
 		validatorProposerSettings: &validator_service_config.ValidatorProposerSettings{
@@ -101,6 +103,24 @@ func TestWaitActivation_StreamSetupFails_AttemptsToReconnect(t *testing.T) {
 	resp := generateMockStatusResponse([][]byte{pubKey[:]})
 	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_ACTIVE
 	clientStream.EXPECT().Recv().Return(resp, nil)
+	nodeClient.EXPECT().GetGenesis(
+		gomock.Any(),
+		&emptypb.Empty{},
+	).Return(
+		&ethpb.Genesis{GenesisTime: timestamppb.Now()}, nil)
+
+	client.EXPECT().DomainData(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(
+		&ethpb.DomainResponse{
+			SignatureDomain: make([]byte, 32),
+		},
+		nil)
+	client.EXPECT().SubmitValidatorRegistration(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(&empty.Empty{}, nil)
 	assert.NoError(t, v.WaitForActivation(context.Background(), nil))
 }
 
@@ -108,7 +128,7 @@ func TestWaitForActivation_ReceiveErrorFromStream_AttemptsReconnection(t *testin
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
-
+	nodeClient := mock.NewMockNodeClient(ctrl)
 	privKey, err := bls.RandKey()
 	require.NoError(t, err)
 	pubKey := [fieldparams.BLSPubkeyLength]byte{}
@@ -120,6 +140,7 @@ func TestWaitForActivation_ReceiveErrorFromStream_AttemptsReconnection(t *testin
 	}
 	v := validator{
 		validatorClient:        client,
+		node:                   nodeClient,
 		keyManager:             km,
 		pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
 		validatorProposerSettings: &validator_service_config.ValidatorProposerSettings{
@@ -144,6 +165,24 @@ func TestWaitForActivation_ReceiveErrorFromStream_AttemptsReconnection(t *testin
 		nil,
 		errors.New("fails"),
 	).Return(resp, nil)
+	nodeClient.EXPECT().GetGenesis(
+		gomock.Any(),
+		&emptypb.Empty{},
+	).Return(
+		&ethpb.Genesis{GenesisTime: timestamppb.Now()}, nil)
+
+	client.EXPECT().DomainData(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(
+		&ethpb.DomainResponse{
+			SignatureDomain: make([]byte, 32),
+		},
+		nil)
+	client.EXPECT().SubmitValidatorRegistration(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(&empty.Empty{}, nil)
 	assert.NoError(t, v.WaitForActivation(context.Background(), nil))
 }
 
@@ -215,6 +254,7 @@ func TestWaitForActivation_Exiting(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+	nodeClient := mock.NewMockNodeClient(ctrl)
 	privKey, err := bls.RandKey()
 	require.NoError(t, err)
 	pubKey := [fieldparams.BLSPubkeyLength]byte{}
@@ -226,6 +266,7 @@ func TestWaitForActivation_Exiting(t *testing.T) {
 	}
 	v := validator{
 		validatorClient:        client,
+		node:                   nodeClient,
 		keyManager:             km,
 		genesisTime:            1,
 		pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
@@ -250,6 +291,24 @@ func TestWaitForActivation_Exiting(t *testing.T) {
 		resp,
 		nil,
 	)
+	nodeClient.EXPECT().GetGenesis(
+		gomock.Any(),
+		&emptypb.Empty{},
+	).Return(
+		&ethpb.Genesis{GenesisTime: timestamppb.Now()}, nil)
+
+	client.EXPECT().DomainData(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(
+		&ethpb.DomainResponse{
+			SignatureDomain: make([]byte, 32),
+		},
+		nil)
+	client.EXPECT().SubmitValidatorRegistration(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(&empty.Empty{}, nil)
 	assert.NoError(t, v.WaitForActivation(context.Background(), nil))
 }
 
@@ -264,6 +323,7 @@ func TestWaitForActivation_RefetchKeys(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+	nodeClient := mock.NewMockNodeClient(ctrl)
 	privKey, err := bls.RandKey()
 	require.NoError(t, err)
 	pubKey := [fieldparams.BLSPubkeyLength]byte{}
@@ -276,6 +336,7 @@ func TestWaitForActivation_RefetchKeys(t *testing.T) {
 	}
 	v := validator{
 		validatorClient:        client,
+		node:                   nodeClient,
 		keyManager:             km,
 		genesisTime:            1,
 		pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
@@ -300,6 +361,24 @@ func TestWaitForActivation_RefetchKeys(t *testing.T) {
 		resp,
 		nil,
 	)
+	nodeClient.EXPECT().GetGenesis(
+		gomock.Any(),
+		&emptypb.Empty{},
+	).Return(
+		&ethpb.Genesis{GenesisTime: timestamppb.Now()}, nil)
+
+	client.EXPECT().DomainData(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(
+		&ethpb.DomainResponse{
+			SignatureDomain: make([]byte, 32),
+		},
+		nil)
+	client.EXPECT().SubmitValidatorRegistration(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(&empty.Empty{}, nil)
 	assert.NoError(t, v.waitForActivation(context.Background(), make(chan [][fieldparams.BLSPubkeyLength]byte)), "Could not wait for activation")
 	assert.LogsContain(t, hook, msgNoKeysFetched)
 	assert.LogsContain(t, hook, "Validator activated")
@@ -326,8 +405,10 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 			},
 		}
 		client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+		nodeClient := mock.NewMockNodeClient(ctrl)
 		v := validator{
 			validatorClient:        client,
+			node:                   nodeClient,
 			keyManager:             km,
 			genesisTime:            1,
 			pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
@@ -367,6 +448,24 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 			activeResp,
 			nil,
 		)
+		nodeClient.EXPECT().GetGenesis(
+			gomock.Any(),
+			&emptypb.Empty{},
+		).Times(2).Return(
+			&ethpb.Genesis{GenesisTime: timestamppb.Now()}, nil)
+
+		client.EXPECT().DomainData(
+			gomock.Any(),
+			gomock.Any(),
+		).Times(2).Return(
+			&ethpb.DomainResponse{
+				SignatureDomain: make([]byte, 32),
+			},
+			nil)
+		client.EXPECT().SubmitValidatorRegistration(
+			gomock.Any(),
+			gomock.Any(),
+		).Times(2).Return(&empty.Empty{}, nil)
 
 		go func() {
 			// We add the active key into the keymanager and simulate a key refresh.
@@ -407,8 +506,10 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 		err = km.RecoverAccountsFromMnemonic(ctx, constant.TestMnemonic, "", 1)
 		require.NoError(t, err)
 		client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+		nodeClient := mock.NewMockNodeClient(ctrl)
 		v := validator{
 			validatorClient:        client,
+			node:                   nodeClient,
 			keyManager:             km,
 			genesisTime:            1,
 			pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
@@ -449,6 +550,24 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 			activeResp,
 			nil,
 		)
+		nodeClient.EXPECT().GetGenesis(
+			gomock.Any(),
+			&emptypb.Empty{},
+		).Times(2).Return(
+			&ethpb.Genesis{GenesisTime: timestamppb.Now()}, nil)
+
+		client.EXPECT().DomainData(
+			gomock.Any(),
+			gomock.Any(),
+		).Times(2).Return(
+			&ethpb.DomainResponse{
+				SignatureDomain: make([]byte, 32),
+			},
+			nil)
+		client.EXPECT().SubmitValidatorRegistration(
+			gomock.Any(),
+			gomock.Any(),
+		).Times(2).Return(&empty.Empty{}, nil)
 
 		channel := make(chan [][fieldparams.BLSPubkeyLength]byte)
 		go func() {
@@ -490,13 +609,14 @@ func TestWaitForActivation_RemoteKeymanager(t *testing.T) {
 	t.Run("activated", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		hook := logTest.NewGlobal()
-
+		nodeClient := mock.NewMockNodeClient(ctrl)
 		tickerChan := make(chan types.Slot)
 		ticker := &slotutilmock.MockTicker{
 			Channel: tickerChan,
 		}
 		v := validator{
 			validatorClient:        client,
+			node:                   nodeClient,
 			keyManager:             &km,
 			ticker:                 ticker,
 			pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
@@ -525,7 +645,19 @@ func TestWaitForActivation_RemoteKeymanager(t *testing.T) {
 				PublicKeys: [][]byte{inactiveKey[:], activeKey[:]},
 			},
 		).Return(resp, nil /* err */)
-
+		nodeClient.EXPECT().GetGenesis(
+			gomock.Any(),
+			&emptypb.Empty{},
+		).Return(
+			&ethpb.Genesis{GenesisTime: timestamppb.Now()}, nil)
+		client.EXPECT().DomainData(
+			gomock.Any(),
+			gomock.Any(),
+		).Return(
+			&ethpb.DomainResponse{
+				SignatureDomain: make([]byte, 32),
+			},
+			nil)
 		err := v.waitForActivation(ctx, nil /* accountsChangedChan */)
 		require.NoError(t, err)
 		assert.LogsContain(t, hook, "Waiting for deposit to be observed by beacon node")
@@ -557,13 +689,14 @@ func TestWaitForActivation_RemoteKeymanager(t *testing.T) {
 		hook := logTest.NewGlobal()
 		remoteKm := remotekeymanagermock.NewMock()
 		remoteKm.PublicKeys = [][fieldparams.BLSPubkeyLength]byte{inactiveKey}
-
+		nodeClient := mock.NewMockNodeClient(ctrl)
 		tickerChan := make(chan types.Slot)
 		ticker := &slotutilmock.MockTicker{
 			Channel: tickerChan,
 		}
 		v := validator{
 			validatorClient:        client,
+			node:                   nodeClient,
 			keyManager:             &remoteKm,
 			ticker:                 ticker,
 			pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
@@ -603,6 +736,24 @@ func TestWaitForActivation_RemoteKeymanager(t *testing.T) {
 				PublicKeys: [][]byte{inactiveKey[:], activeKey[:]},
 			},
 		).Return(resp2, nil /* err */)
+		nodeClient.EXPECT().GetGenesis(
+			gomock.Any(),
+			&emptypb.Empty{},
+		).Times(2).Return(
+			&ethpb.Genesis{GenesisTime: timestamppb.Now()}, nil)
+
+		client.EXPECT().DomainData(
+			gomock.Any(),
+			gomock.Any(),
+		).Times(2).Return(
+			&ethpb.DomainResponse{
+				SignatureDomain: make([]byte, 32),
+			},
+			nil)
+		client.EXPECT().SubmitValidatorRegistration(
+			gomock.Any(),
+			gomock.Any(),
+		).Times(2).Return(&empty.Empty{}, nil)
 
 		err := v.waitForActivation(ctx, remoteKm.ReloadPublicKeysChan /* accountsChangedChan */)
 		require.NoError(t, err)
