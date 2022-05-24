@@ -133,6 +133,11 @@ func (vs *Server) PrepareBeaconProposer(
 	return &emptypb.Empty{}, nil
 }
 
+// SubmitValidatorRegistration submits validator registration.
+func (vs *Server) SubmitValidatorRegistration(context.Context, *ethpb.SignedValidatorRegistrationV1) (*emptypb.Empty, error) {
+	return &emptypb.Empty{}, nil
+}
+
 func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.SignedBeaconBlock) (*ethpb.ProposeResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.proposeGenericBeaconBlock")
 	defer span.End()
