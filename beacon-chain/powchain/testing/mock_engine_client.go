@@ -9,27 +9,30 @@ import (
 	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
 )
 
 // EngineClient --
 type EngineClient struct {
-	NewPayloadResp          []byte
-	PayloadIDBytes          *pb.PayloadIDBytes
-	ForkChoiceUpdatedResp   []byte
-	ExecutionPayload        *pb.ExecutionPayload
-	ExecutionBlock          *pb.ExecutionBlock
-	Err                     error
-	ErrLatestExecBlock      error
-	ErrExecBlockByHash      error
-	ErrForkchoiceUpdated    error
-	ErrNewPayload           error
-	BlockByHashMap          map[[32]byte]*pb.ExecutionBlock
-	BlockWithTxsByHashMap   map[[32]byte]*pb.ExecutionBlockWithTxs
-	TerminalBlockHash       []byte
-	TerminalBlockHashExists bool
-	OverrideValidHash       [32]byte
+	NewPayloadResp           []byte
+	PayloadIDBytes           *pb.PayloadIDBytes
+	ForkChoiceUpdatedResp    []byte
+	ExecutionPayload         *pb.ExecutionPayload
+	ExecutionBlock           *pb.ExecutionBlock
+	Err                      error
+	ErrLatestExecBlock       error
+	ErrExecBlockByHash       error
+	ErrForkchoiceUpdated     error
+	ErrNewPayload            error
+	BeaconBlocksByRoot       map[[32]byte]interfaces.SignedBeaconBlock
+	BlockByHashMap           map[[32]byte]*pb.ExecutionBlock
+	BlockWithTxsByHashMap    map[[32]byte]*pb.ExecutionBlockWithTxs
+	NumReconstructedPayloads uint64
+	TerminalBlockHash        []byte
+	TerminalBlockHashExists  bool
+	OverrideValidHash        [32]byte
 }
 
 // NewPayload --
@@ -68,6 +71,21 @@ func (e *EngineClient) ExecutionBlockByHash(_ context.Context, h common.Hash) (*
 	if !ok {
 		return nil, errors.New("block not found")
 	}
+	return b, e.ErrExecBlockByHash
+}
+
+func (e *EngineClient) ReconstructFullBellatrixBlock(
+	ctx context.Context, blindedBlock interfaces.SignedBeaconBlock,
+) (interfaces.SignedBeaconBlock, error) {
+	root, err := blindedBlock.Block().HashTreeRoot()
+	if err != nil {
+		return nil, err
+	}
+	b, ok := e.BeaconBlocksByRoot[root]
+	if !ok {
+		return nil, errors.New("block not found")
+	}
+	e.NumReconstructedPayloads++
 	return b, e.ErrExecBlockByHash
 }
 

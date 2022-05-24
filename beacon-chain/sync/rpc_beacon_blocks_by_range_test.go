@@ -223,7 +223,10 @@ func TestRPCBeaconBlocksByRange_CanReconstructFullPayloadBlocks(t *testing.T) {
 
 	// Populate the database with blocks that would match the request.
 	for i, j := endSlot, req.Count-1; i >= req.StartSlot; i -= types.Slot(req.Step) {
-		blk := util.NewBeaconBlock()
+		blk := util.NewBlindedBeaconBlockBellatrix()
+
+		// Set the block hash of the execution block we want to reconstruct per request.
+		blk.Block.Body.ExecutionPayloadHeader.BlockHash = blockHash[:]
 		blk.Block.Slot = i
 		rt, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
@@ -234,16 +237,18 @@ func TestRPCBeaconBlocksByRange_CanReconstructFullPayloadBlocks(t *testing.T) {
 		j--
 	}
 
-	r := &Service{cfg: &config{
-		p2p:      p1,
-		beaconDB: d,
-		chain:    &chainMock.ChainService{}},
-		rateLimiter: newRateLimiter(p1),
-		executionPayloadReconstructor: &mockPOW.EngineClient{
-			BlockWithTxsByHashMap: map[[32]byte]*enginev1.ExecutionBlockWithTxs{
-				blockHash: executionBlockWithTxs,
-			},
+	mockEngine := &mockPOW.EngineClient{
+		BlockWithTxsByHashMap: map[[32]byte]*enginev1.ExecutionBlockWithTxs{
+			blockHash: executionBlockWithTxs,
 		},
+	}
+	r := &Service{cfg: &config{
+		p2p:                           p1,
+		beaconDB:                      d,
+		chain:                         &chainMock.ChainService{},
+		executionPayloadReconstructor: mockEngine,
+	},
+		rateLimiter: newRateLimiter(p1),
 	}
 
 	pcl := protocol.ID(p2p.RPCBlocksByRangeTopicV1)
@@ -258,7 +263,7 @@ func TestRPCBeaconBlocksByRange_CanReconstructFullPayloadBlocks(t *testing.T) {
 		require.Equal(t, uint64(len(expectedRoots)), req.Count, "Number of roots not expected")
 		for i, j := req.StartSlot, 0; i < req.StartSlot.Add(req.Count*req.Step); i += types.Slot(req.Step) {
 			expectSuccess(t, stream)
-			res := &ethpb.SignedBeaconBlock{}
+			res := &ethpb.SignedBeaconBlockBellatrix{}
 			assert.NoError(t, r.cfg.p2p.Encoding().DecodeWithMaxLength(stream, res))
 			if res.Block.Slot < prevSlot {
 				t.Errorf("Received block is unsorted with slot %d lower than previous slot %d", res.Block.Slot, prevSlot)
@@ -269,6 +274,7 @@ func TestRPCBeaconBlocksByRange_CanReconstructFullPayloadBlocks(t *testing.T) {
 			prevSlot = res.Block.Slot
 			j++
 		}
+		require.Equal(t, 160, mockEngine.NumReconstructedPayloads, "wanted payloads")
 	})
 
 	stream1, err := p1.BHost.NewStream(context.Background(), p2.BHost.ID(), pcl)
