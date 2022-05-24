@@ -2,6 +2,7 @@ package jwt
 
 import (
 	"errors"
+	"fmt"
 	"path/filepath"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -45,7 +46,11 @@ func generateAuthSecretInFile(c *cli.Context) error {
 			return err
 		}
 	}
-	return file.WriteFile(fileName, []byte(secret))
+	if err := file.WriteFile(fileName, []byte(secret)); err != nil {
+		return err
+	}
+	fmt.Printf("Successfully wrote JSON-RPC authentication secret to file %s\n", fileName)
+	return nil
 }
 
 func generateRandomHexString() (string, error) {
