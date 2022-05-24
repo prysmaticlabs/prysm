@@ -144,7 +144,7 @@ func (s *Service) HasBlock(ctx context.Context, root [32]byte) bool {
 
 // ReceiveAttesterSlashing receives an attester slashing and inserts it to forkchoice
 func (s *Service) ReceiveAttesterSlashing(ctx context.Context, slashing *ethpb.AttesterSlashing) {
-	s.insertSlashingsToForkChoiceStore(ctx, []*ethpb.AttesterSlashing{slashing})
+	s.InsertSlashingsToForkChoiceStore(ctx, []*ethpb.AttesterSlashing{slashing})
 }
 
 func (s *Service) handlePostBlockOperations(b interfaces.BeaconBlock) error {
