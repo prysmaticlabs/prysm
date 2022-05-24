@@ -153,9 +153,9 @@ func (s *Service) Stop() error {
 		if err := s.cfg.StateGen.ForceCheckpoint(s.ctx, r); err != nil {
 			return err
 		}
-	}
+	} else {
 	s.headLock.RUnlock()
-
+        }
 	// Save initial sync cached blocks to the DB before stop.
 	return s.cfg.BeaconDB.SaveBlocks(s.ctx, s.getInitSyncBlocks())
 }
