@@ -14,5 +14,5 @@ func TestEndToEnd_MinimalConfig_Web3Signer(t *testing.T) {
 }
 
 func TestEndToEnd_MinimalConfig_CheckpointSync(t *testing.T) {
-	e2eMinimal(t, types.WithExtraEpochs(3)).run()
+	e2eMinimal(t, types.WithExtraEpochs(3), types.WithCheckpointSync()).run()
 }
