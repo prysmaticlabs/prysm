@@ -46,4 +46,4 @@ build:nostamp --nostamp
 build:nostamp --workspace_status_command=./hack/workspace_status_ci.sh
 
 # E2E test config, to add this --config=e2e
-test:e2e --notest_keep_going=false
+test:e2e --test_keep_going=false
