@@ -99,6 +99,17 @@ func TestInitiateValidatorExit_ChurnOverflow(t *testing.T) {
 	assert.Equal(t, wantedEpoch, v.ExitEpoch, "Exit epoch did not cover overflow case")
 }
 
+func TestInitiateValidatorExit_WithdrawalOverflows(t *testing.T) {
+	base := &ethpb.BeaconState{Validators: []*ethpb.Validator{
+		{ExitEpoch: params.BeaconConfig().FarFutureEpoch - 1},
+		{EffectiveBalance: params.BeaconConfig().EjectionBalance, ExitEpoch: params.BeaconConfig().FarFutureEpoch},
+	}}
+	state, err := v1.InitializeFromProto(base)
+	require.NoError(t, err)
+	_, err = InitiateValidatorExit(context.Background(), state, 1)
+	require.ErrorContains(t, "addition overflows", err)
+}
+
 func TestSlashValidator_OK(t *testing.T) {
 	validatorCount := 100
 	registry := make([]*ethpb.Validator, 0, validatorCount)
