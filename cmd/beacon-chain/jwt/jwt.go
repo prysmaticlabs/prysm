@@ -22,10 +22,10 @@ var Commands = &cli.Command{
 	Flags: cmd.WrapFlags([]cli.Flag{
 		cmd.JwtOutputFileFlag,
 	}),
-	Action: generateHttpSecretInFile,
+	Action: generateAuthSecretInFile,
 }
 
-func generateHttpSecretInFile(c *cli.Context) error {
+func generateAuthSecretInFile(c *cli.Context) error {
 	fileName := secretFileName
 	specifiedFilePath := c.String(cmd.JwtOutputFileFlag.Name)
 	if len(specifiedFilePath) > 0 {
@@ -49,15 +49,13 @@ func generateHttpSecretInFile(c *cli.Context) error {
 }
 
 func generateRandom32ByteHexString() (string, error) {
-	blocks := make([]byte, 32)
+	secret := make([]byte, 32)
 	randGen := rand.NewGenerator()
-	blocksLength, err := randGen.Read(blocks)
-
+	n, err := randGen.Read(secret)
 	if err != nil {
 		return "", err
-	} else if blocksLength <= 0 {
+	} else if n <= 0 {
 		return "", errors.New("rand: unexpected length")
 	}
-
-	return hexutil.Encode(blocks), nil
+	return hexutil.Encode(secret), nil
 }
