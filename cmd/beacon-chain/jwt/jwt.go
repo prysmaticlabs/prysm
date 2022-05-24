@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/prysmaticlabs/prysm/crypto/rand"
-	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/cmd"
+	"github.com/prysmaticlabs/prysm/crypto/rand"
+	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/runtime/tos"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -67,9 +67,9 @@ func generateRandom32ByteHexString() (string, error) {
 	blocksLength, err := randGen.Read(blocks)
 
 	if err != nil {
-		return "", errors.New("rand: unexpected length")
-	} else if blocksLength <= 0 {
 		return "", err
+	} else if blocksLength <= 0 {
+		return "", errors.New("rand: unexpected length")
 	}
 
 	return hexutil.Encode(blocks), nil
