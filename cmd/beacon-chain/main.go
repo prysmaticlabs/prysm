@@ -11,7 +11,6 @@ import (
 	gethlog "github.com/ethereum/go-ethereum/log"
 	golog "github.com/ipfs/go-log/v2"
 	joonix "github.com/joonix/log"
-	"github.com/prysmaticlabs/prysm/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/node"
 	"github.com/prysmaticlabs/prysm/cmd"
 	blockchaincmd "github.com/prysmaticlabs/prysm/cmd/beacon-chain/blockchain"
@@ -70,7 +69,6 @@ var appFlags = []cli.Flag{
 	flags.Eth1HeaderReqLimit,
 	flags.MinPeersPerSubnet,
 	flags.SuggestedFeeRecipient,
-	flags.MevBuilderFlag,
 	cmd.EnableBackupWebhookFlag,
 	cmd.BackupWebhookOutputDir,
 	cmd.MinimalConfigFlag,
@@ -250,14 +248,9 @@ func startNode(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	builderFlagOpts, err := builder.FlagOptions(ctx)
-	if err != nil {
-		return err
-	}
 	opts := []node.Option{
 		node.WithBlockchainFlagOptions(blockchainFlagOpts),
 		node.WithPowchainFlagOptions(powchainFlagOpts),
-		node.WithBuilderFlagOptions(builderFlagOpts),
 	}
 
 	optFuncs := []func(*cli.Context) (node.Option, error){
