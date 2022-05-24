@@ -3,12 +3,10 @@ package jwt
 import (
 	"errors"
 	"fmt"
-
 	"path/filepath"
 
 	"github.com/prysmaticlabs/prysm/crypto/rand"
 	"github.com/prysmaticlabs/prysm/io/file"
-
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/runtime/tos"
