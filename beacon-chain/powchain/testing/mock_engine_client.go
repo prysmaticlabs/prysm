@@ -10,29 +10,30 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
 )
 
 // EngineClient --
 type EngineClient struct {
-	NewPayloadResp           []byte
-	PayloadIDBytes           *pb.PayloadIDBytes
-	ForkChoiceUpdatedResp    []byte
-	ExecutionPayload         *pb.ExecutionPayload
-	ExecutionBlock           *pb.ExecutionBlock
-	Err                      error
-	ErrLatestExecBlock       error
-	ErrExecBlockByHash       error
-	ErrForkchoiceUpdated     error
-	ErrNewPayload            error
-	BeaconBlocksByRoot       map[[32]byte]interfaces.SignedBeaconBlock
-	BlockByHashMap           map[[32]byte]*pb.ExecutionBlock
-	BlockWithTxsByHashMap    map[[32]byte]*pb.ExecutionBlockWithTxs
-	NumReconstructedPayloads uint64
-	TerminalBlockHash        []byte
-	TerminalBlockHashExists  bool
-	OverrideValidHash        [32]byte
+	NewPayloadResp              []byte
+	PayloadIDBytes              *pb.PayloadIDBytes
+	ForkChoiceUpdatedResp       []byte
+	ExecutionPayload            *pb.ExecutionPayload
+	ExecutionBlock              *pb.ExecutionBlock
+	Err                         error
+	ErrLatestExecBlock          error
+	ErrExecBlockByHash          error
+	ErrForkchoiceUpdated        error
+	ErrNewPayload               error
+	ExecutionPayloadByBlockHash map[[32]byte]*pb.ExecutionPayload
+	BlockByHashMap              map[[32]byte]*pb.ExecutionBlock
+	BlockWithTxsByHashMap       map[[32]byte]*pb.ExecutionBlockWithTxs
+	NumReconstructedPayloads    uint64
+	TerminalBlockHash           []byte
+	TerminalBlockHashExists     bool
+	OverrideValidHash           [32]byte
 }
 
 // NewPayload --
@@ -77,16 +78,19 @@ func (e *EngineClient) ExecutionBlockByHash(_ context.Context, h common.Hash) (*
 func (e *EngineClient) ReconstructFullBellatrixBlock(
 	ctx context.Context, blindedBlock interfaces.SignedBeaconBlock,
 ) (interfaces.SignedBeaconBlock, error) {
-	root, err := blindedBlock.Block().HashTreeRoot()
+	if !blindedBlock.Block().IsBlinded() {
+		return nil, errors.New("block must be blinded")
+	}
+	header, err := blindedBlock.Block().Body().ExecutionPayloadHeader()
 	if err != nil {
 		return nil, err
 	}
-	b, ok := e.BeaconBlocksByRoot[root]
+	payload, ok := e.ExecutionPayloadByBlockHash[bytesutil.ToBytes32(header.BlockHash)]
 	if !ok {
 		return nil, errors.New("block not found")
 	}
 	e.NumReconstructedPayloads++
-	return b, e.ErrExecBlockByHash
+	return wrapper.BuildSignedBeaconBlockFromExecutionPayload(blindedBlock, payload)
 }
 
 // ExecutionBlockByHashWithTxs --

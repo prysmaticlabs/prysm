@@ -24,6 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/forks/bellatrix"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -174,13 +175,8 @@ func TestRPCBeaconBlocksByRange_CanReconstructFullPayloadBlocks(t *testing.T) {
 	}
 
 	// Start service with 160 as allowed blocks capacity (and almost zero capacity recovery).
-	number := bytesutil.PadTo([]byte("100"), fieldparams.RootLength)
-	hash := bytesutil.PadTo([]byte("hash"), fieldparams.RootLength)
 	parent := bytesutil.PadTo([]byte("parentHash"), fieldparams.RootLength)
-	sha3Uncles := bytesutil.PadTo([]byte("sha3Uncles"), fieldparams.RootLength)
-	miner := bytesutil.PadTo([]byte("miner"), fieldparams.FeeRecipientLength)
 	stateRoot := bytesutil.PadTo([]byte("stateRoot"), fieldparams.RootLength)
-	transactionsRoot := bytesutil.PadTo([]byte("transactionsRoot"), fieldparams.RootLength)
 	receiptsRoot := bytesutil.PadTo([]byte("receiptsRoot"), fieldparams.RootLength)
 	logsBloom := bytesutil.PadTo([]byte("logs"), fieldparams.LogsBloomLength)
 	tx := gethTypes.NewTransaction(
@@ -194,29 +190,25 @@ func TestRPCBeaconBlocksByRange_CanReconstructFullPayloadBlocks(t *testing.T) {
 	var err error
 	encodedBinaryTxs[0], err = txs[0].MarshalBinary()
 	require.NoError(t, err)
-	executionBlock := &enginev1.ExecutionBlock{
-		Number:           number,
-		Hash:             hash,
-		ParentHash:       parent,
-		Sha3Uncles:       sha3Uncles,
-		Miner:            miner,
-		StateRoot:        stateRoot,
-		TransactionsRoot: transactionsRoot,
-		ReceiptsRoot:     receiptsRoot,
-		LogsBloom:        logsBloom,
-		Difficulty:       bytesutil.PadTo([]byte("1"), fieldparams.RootLength),
-		TotalDifficulty:  "2",
-		GasLimit:         3,
-		GasUsed:          4,
-		Timestamp:        5,
-		Size:             bytesutil.PadTo([]byte("6"), fieldparams.RootLength),
-		ExtraData:        bytesutil.PadTo([]byte("extraData"), fieldparams.RootLength),
-		BaseFeePerGas:    bytesutil.PadTo([]byte("baseFeePerGas"), fieldparams.RootLength),
-		Transactions:     encodedBinaryTxs,
-		Uncles:           [][]byte{},
-	}
-	executionBlockWithTxs := &enginev1.ExecutionBlockWithTxs{ExecutionBlock: *executionBlock}
 	blockHash := bytesutil.ToBytes32([]byte("foo"))
+	payload := &enginev1.ExecutionPayload{
+		ParentHash:    parent,
+		FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
+		StateRoot:     stateRoot,
+		ReceiptsRoot:  receiptsRoot,
+		LogsBloom:     logsBloom,
+		PrevRandao:    blockHash[:],
+		BlockNumber:   0,
+		GasLimit:      0,
+		GasUsed:       0,
+		Timestamp:     0,
+		ExtraData:     make([]byte, 0),
+		BlockHash:     blockHash[:],
+		BaseFeePerGas: bytesutil.PadTo([]byte("baseFeePerGas"), fieldparams.RootLength),
+		Transactions:  encodedBinaryTxs,
+	}
+	header, err := bellatrix.PayloadToHeader(payload)
+	require.NoError(t, err)
 
 	endSlot := req.StartSlot.Add(req.Step * (req.Count - 1))
 	expectedRoots := make([][32]byte, req.Count)
@@ -224,9 +216,7 @@ func TestRPCBeaconBlocksByRange_CanReconstructFullPayloadBlocks(t *testing.T) {
 	// Populate the database with blocks that would match the request.
 	for i, j := endSlot, req.Count-1; i >= req.StartSlot; i -= types.Slot(req.Step) {
 		blk := util.NewBlindedBeaconBlockBellatrix()
-
-		// Set the block hash of the execution block we want to reconstruct per request.
-		blk.Block.Body.ExecutionPayloadHeader.BlockHash = blockHash[:]
+		blk.Block.Body.ExecutionPayloadHeader = header
 		blk.Block.Slot = i
 		rt, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
@@ -238,8 +228,8 @@ func TestRPCBeaconBlocksByRange_CanReconstructFullPayloadBlocks(t *testing.T) {
 	}
 
 	mockEngine := &mockPOW.EngineClient{
-		BlockWithTxsByHashMap: map[[32]byte]*enginev1.ExecutionBlockWithTxs{
-			blockHash: executionBlockWithTxs,
+		ExecutionPayloadByBlockHash: map[[32]byte]*enginev1.ExecutionPayload{
+			blockHash: payload,
 		},
 	}
 	r := &Service{cfg: &config{
@@ -274,7 +264,7 @@ func TestRPCBeaconBlocksByRange_CanReconstructFullPayloadBlocks(t *testing.T) {
 			prevSlot = res.Block.Slot
 			j++
 		}
-		require.Equal(t, 160, mockEngine.NumReconstructedPayloads, "wanted payloads")
+		require.Equal(t, uint64(33), mockEngine.NumReconstructedPayloads, "wrong number of reconstructed payloads")
 	})
 
 	stream1, err := p1.BHost.NewStream(context.Background(), p2.BHost.ID(), pcl)
