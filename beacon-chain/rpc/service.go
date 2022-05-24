@@ -14,7 +14,6 @@ import (
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
@@ -91,7 +90,6 @@ type Config struct {
 	POWChainInfoFetcher     powchain.ChainInfoFetcher
 	GenesisTimeFetcher      blockchain.TimeFetcher
 	GenesisFetcher          blockchain.GenesisFetcher
-	BlockBuilder            builder.BlockBuilder
 	EnableDebugRPCEndpoints bool
 	MockEth1Votes           bool
 	AttestationsPool        attestations.Pool
@@ -218,7 +216,6 @@ func (s *Service) Start() {
 		ExecutionEngineCaller:  s.cfg.ExecutionEngineCaller,
 		BeaconDB:               s.cfg.BeaconDB,
 		ProposerSlotIndexCache: s.cfg.ProposerIdsCache,
-		BlockBuilder:           s.cfg.BlockBuilder,
 	}
 	validatorServerV1 := &validator.Server{
 		HeadFetcher:      s.cfg.HeadFetcher,
