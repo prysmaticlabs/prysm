@@ -334,7 +334,9 @@ func (s *Service) setSyncContributionIndexSlotSeen(slot types.Slot, aggregatorIn
 func (s *Service) setSyncContributionBits(c *ethpb.SyncCommitteeContribution) error {
 	s.syncContributionBitsOverlapLock.Lock()
 	defer s.syncContributionBitsOverlapLock.Unlock()
-	b := append(c.BlockRoot, bytesutil.Bytes32(uint64(c.Slot))...)
+	var root []byte
+	copy(root, c.BlockRoot) // Copying due to how pb unmarshalling is carried out, prevent mutation.
+	b := append(root, bytesutil.Bytes32(uint64(c.Slot))...)
 	b = append(b, bytesutil.Bytes32(c.SubcommitteeIndex)...)
 	v, ok := s.syncContributionBitsOverlapCache.Get(string(b))
 	if !ok {
@@ -345,7 +347,7 @@ func (s *Service) setSyncContributionBits(c *ethpb.SyncCommitteeContribution) er
 	if !ok {
 		return errors.New("could not covert cached value to []bitfield.Bitvector")
 	}
-	has, err := BitListOverlaps(bitsList, c.AggregationBits)
+	has, err := bitListOverlaps(bitsList, c.AggregationBits)
 	if err != nil {
 		return err
 	}
@@ -370,17 +372,17 @@ func (s *Service) hasSeenSyncContributionBits(c *ethpb.SyncCommitteeContribution
 	if !ok {
 		return false, errors.New("could not covert cached value to []bitfield.Bitvector128")
 	}
-	return BitListOverlaps(bitsList, c.AggregationBits.Bytes())
+	return bitListOverlaps(bitsList, c.AggregationBits.Bytes())
 }
 
-// BitListOverlaps returns true if there's an overlap between two bitlists.
-func BitListOverlaps(bitLists [][]byte, b []byte) (bool, error) {
+// bitListOverlaps returns true if there's an overlap between two bitlists.
+func bitListOverlaps(bitLists [][]byte, b []byte) (bool, error) {
 	for _, bitList := range bitLists {
 		if bitList == nil {
 			return false, errors.New("nil bitfield")
 		}
-		bl := ethpb.ConvertSyncContributionBitVector(bitList)
-		overlaps, err := bl.Overlaps(ethpb.ConvertSyncContributionBitVector(b))
+		bl := ethpb.ConvertToSyncContributionBitVector(bitList)
+		overlaps, err := bl.Overlaps(ethpb.ConvertToSyncContributionBitVector(b))
 		if err != nil {
 			return false, err
 		}
