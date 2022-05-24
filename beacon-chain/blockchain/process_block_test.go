@@ -47,7 +47,7 @@ func TestStore_OnBlock_ProtoArray(t *testing.T) {
 	ctx := context.Background()
 
 	beaconDB := testDB.SetupDB(t)
-	fcs := protoarray.New(0, 0, [32]byte{'a'})
+	fcs := protoarray.New(0, 0)
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),
@@ -268,8 +268,7 @@ func TestStore_OnBlock_ProposerBoostEarly(t *testing.T) {
 		SecondsIntoSlot: 0,
 	}
 	require.NoError(t, service.cfg.ForkChoiceStore.BoostProposerRoot(ctx, args))
-	_, err = service.cfg.ForkChoiceStore.Head(ctx, 0,
-		params.BeaconConfig().ZeroHash, []uint64{}, 0)
+	_, err = service.cfg.ForkChoiceStore.Head(ctx, params.BeaconConfig().ZeroHash, []uint64{})
 	require.ErrorContains(t, "could not apply proposer boost score: invalid proposer boost root", err)
 }
 
@@ -294,7 +293,7 @@ func TestStore_OnBlockBatch_ProtoArray(t *testing.T) {
 	service.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{Root: gRoot[:]}, [32]byte{'a'})
 	service.store.SetJustifiedCheckptAndPayloadHash(&ethpb.Checkpoint{Root: gRoot[:]}, [32]byte{'b'})
 
-	service.cfg.ForkChoiceStore = protoarray.New(0, 0, [32]byte{})
+	service.cfg.ForkChoiceStore = protoarray.New(0, 0)
 	wsb, err = wrapper.WrappedSignedBeaconBlock(genesis)
 	require.NoError(t, err)
 	service.saveInitSyncBlock(gRoot, wsb)
@@ -504,7 +503,7 @@ func TestShouldUpdateJustified_ReturnFalse_ProtoArray(t *testing.T) {
 	opts := testServiceOptsWithDB(t)
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
-	service.cfg.ForkChoiceStore = protoarray.New(0, 0, [32]byte{})
+	service.cfg.ForkChoiceStore = protoarray.New(0, 0)
 	lastJustifiedBlk := util.NewBeaconBlock()
 	lastJustifiedBlk.Block.ParentRoot = bytesutil.PadTo([]byte{'G'}, 32)
 	lastJustifiedRoot, err := lastJustifiedBlk.Block.HashTreeRoot()
@@ -584,7 +583,7 @@ func TestCachedPreState_CanGetFromStateSummary_ProtoArray(t *testing.T) {
 	gRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err)
 	service.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{Root: gRoot[:]}, [32]byte{})
-	service.cfg.ForkChoiceStore = protoarray.New(0, 0, [32]byte{})
+	service.cfg.ForkChoiceStore = protoarray.New(0, 0)
 	wsb, err = wrapper.WrappedSignedBeaconBlock(genesis)
 	require.NoError(t, err)
 	service.saveInitSyncBlock(gRoot, wsb)
@@ -655,7 +654,7 @@ func TestCachedPreState_CanGetFromDB(t *testing.T) {
 	gRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err)
 	service.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{Root: gRoot[:]}, [32]byte{})
-	service.cfg.ForkChoiceStore = protoarray.New(0, 0, [32]byte{})
+	service.cfg.ForkChoiceStore = protoarray.New(0, 0)
 	wsb, err = wrapper.WrappedSignedBeaconBlock(genesis)
 	require.NoError(t, err)
 	service.saveInitSyncBlock(gRoot, wsb)
@@ -686,7 +685,7 @@ func TestUpdateJustified_CouldUpdateBest(t *testing.T) {
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),
-		WithForkChoiceStore(protoarray.New(0, 0, [32]byte{})),
+		WithForkChoiceStore(protoarray.New(0, 0)),
 	}
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
@@ -709,13 +708,17 @@ func TestUpdateJustified_CouldUpdateBest(t *testing.T) {
 	require.NoError(t, s.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{Epoch: 1, Root: r[:]}))
 	require.NoError(t, service.updateJustified(context.Background(), s))
 
-	assert.Equal(t, s.CurrentJustifiedCheckpoint().Epoch, service.store.BestJustifiedCheckpt().Epoch, "Incorrect justified epoch in service")
+	cp, err := service.store.BestJustifiedCheckpt()
+	require.NoError(t, err)
+	assert.Equal(t, s.CurrentJustifiedCheckpoint().Epoch, cp.Epoch, "Incorrect justified epoch in service")
 
 	// Could not update
 	service.store.SetBestJustifiedCheckpt(&ethpb.Checkpoint{Root: []byte{'A'}, Epoch: 2})
 	require.NoError(t, service.updateJustified(context.Background(), s))
 
-	assert.Equal(t, types.Epoch(2), service.store.BestJustifiedCheckpt().Epoch, "Incorrect justified epoch in service")
+	cp, err = service.store.BestJustifiedCheckpt()
+	require.NoError(t, err)
+	assert.Equal(t, types.Epoch(2), cp.Epoch, "Incorrect justified epoch in service")
 }
 
 func TestFillForkChoiceMissingBlocks_CanSave_ProtoArray(t *testing.T) {
@@ -728,7 +731,7 @@ func TestFillForkChoiceMissingBlocks_CanSave_ProtoArray(t *testing.T) {
 	}
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
-	service.cfg.ForkChoiceStore = protoarray.New(0, 0, [32]byte{'A'})
+	service.cfg.ForkChoiceStore = protoarray.New(0, 0)
 	service.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{Root: make([]byte, 32)}, [32]byte{})
 
 	genesisStateRoot := [32]byte{}
@@ -819,7 +822,7 @@ func TestFillForkChoiceMissingBlocks_RootsMatch_ProtoArray(t *testing.T) {
 	}
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
-	service.cfg.ForkChoiceStore = protoarray.New(0, 0, [32]byte{'A'})
+	service.cfg.ForkChoiceStore = protoarray.New(0, 0)
 	service.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{Root: make([]byte, 32)}, [32]byte{})
 
 	genesisStateRoot := [32]byte{}
@@ -917,7 +920,7 @@ func TestFillForkChoiceMissingBlocks_FilterFinalized_ProtoArray(t *testing.T) {
 	}
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
-	service.cfg.ForkChoiceStore = protoarray.New(0, 0, [32]byte{'A'})
+	service.cfg.ForkChoiceStore = protoarray.New(0, 0)
 	// Set finalized epoch to 1.
 	service.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{Epoch: 1}, [32]byte{})
 
@@ -1141,7 +1144,7 @@ func TestAncestor_HandleSkipSlot(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
-	fcs := protoarray.New(0, 0, [32]byte{'a'})
+	fcs := protoarray.New(0, 0)
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),
@@ -1230,7 +1233,7 @@ func TestAncestor_CanUseDB(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
-	fcs := protoarray.New(0, 0, [32]byte{'a'})
+	fcs := protoarray.New(0, 0)
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),
@@ -1290,7 +1293,7 @@ func TestVerifyBlkDescendant(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	ctx := context.Background()
 
-	fcs := protoarray.New(0, 0, [32]byte{'a'})
+	fcs := protoarray.New(0, 0)
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),
@@ -1318,9 +1321,10 @@ func TestVerifyBlkDescendant(t *testing.T) {
 		finalizedRoot [32]byte
 	}
 	tests := []struct {
-		name      string
-		args      args
-		wantedErr string
+		name             string
+		args             args
+		wantedErr        string
+		invalidBlockRoot bool
 	}{
 		{
 			name: "could not get finalized block in block service cache",
@@ -1343,7 +1347,8 @@ func TestVerifyBlkDescendant(t *testing.T) {
 				finalizedRoot: r1,
 				parentRoot:    r,
 			},
-			wantedErr: "is not a descendant of the current finalized block slot",
+			wantedErr:        "is not a descendant of the current finalized block slot",
+			invalidBlockRoot: true,
 		},
 		{
 			name: "is descendant",
@@ -1360,6 +1365,9 @@ func TestVerifyBlkDescendant(t *testing.T) {
 		err = service.VerifyFinalizedBlkDescendant(ctx, tt.args.parentRoot)
 		if tt.wantedErr != "" {
 			assert.ErrorContains(t, tt.wantedErr, err)
+			if tt.invalidBlockRoot {
+				require.Equal(t, true, IsInvalidBlock(err))
+			}
 		} else if err != nil {
 			assert.NoError(t, err)
 		}
@@ -1389,9 +1397,13 @@ func TestUpdateJustifiedInitSync(t *testing.T) {
 
 	require.NoError(t, service.updateJustifiedInitSync(ctx, newCp))
 
-	assert.DeepSSZEqual(t, currentCp, service.PreviousJustifiedCheckpt(), "Incorrect previous justified checkpoint")
-	assert.DeepSSZEqual(t, newCp, service.CurrentJustifiedCheckpt(), "Incorrect current justified checkpoint in cache")
-	cp, err := service.cfg.BeaconDB.JustifiedCheckpoint(ctx)
+	cp, err := service.PreviousJustifiedCheckpt()
+	require.NoError(t, err)
+	assert.DeepSSZEqual(t, currentCp, cp, "Incorrect previous justified checkpoint")
+	cp, err = service.CurrentJustifiedCheckpt()
+	require.NoError(t, err)
+	assert.DeepSSZEqual(t, newCp, cp, "Incorrect current justified checkpoint in cache")
+	cp, err = service.cfg.BeaconDB.JustifiedCheckpoint(ctx)
 	require.NoError(t, err)
 	assert.DeepSSZEqual(t, newCp, cp, "Incorrect current justified checkpoint in db")
 }
@@ -1426,7 +1438,7 @@ func TestHandleEpochBoundary_UpdateFirstSlot(t *testing.T) {
 func TestOnBlock_CanFinalize(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-	fcs := protoarray.New(0, 0, [32]byte{'a'})
+	fcs := protoarray.New(0, 0)
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 	opts := []Option{
@@ -1459,16 +1471,78 @@ func TestOnBlock_CanFinalize(t *testing.T) {
 		testState, err = service.cfg.StateGen.StateByRoot(ctx, r)
 		require.NoError(t, err)
 	}
-	require.Equal(t, types.Epoch(3), service.CurrentJustifiedCheckpt().Epoch)
-	require.Equal(t, types.Epoch(2), service.FinalizedCheckpt().Epoch)
+	cp, err := service.CurrentJustifiedCheckpt()
+	require.NoError(t, err)
+	require.Equal(t, types.Epoch(3), cp.Epoch)
+	cp, err = service.FinalizedCheckpt()
+	require.NoError(t, err)
+	require.Equal(t, types.Epoch(2), cp.Epoch)
 
 	// The update should persist in DB.
 	j, err := service.cfg.BeaconDB.JustifiedCheckpoint(ctx)
 	require.NoError(t, err)
-	require.Equal(t, j.Epoch, service.CurrentJustifiedCheckpt().Epoch)
+	cp, err = service.CurrentJustifiedCheckpt()
+	require.NoError(t, err)
+	require.Equal(t, j.Epoch, cp.Epoch)
 	f, err := service.cfg.BeaconDB.FinalizedCheckpoint(ctx)
 	require.NoError(t, err)
-	require.Equal(t, f.Epoch, service.FinalizedCheckpt().Epoch)
+	cp, err = service.FinalizedCheckpt()
+	require.NoError(t, err)
+	require.Equal(t, f.Epoch, cp.Epoch)
+}
+
+func TestOnBlock_NilBlock(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+	fcs := protoarray.New(0, 0)
+	depositCache, err := depositcache.New()
+	require.NoError(t, err)
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithStateGen(stategen.New(beaconDB)),
+		WithForkChoiceStore(fcs),
+		WithDepositCache(depositCache),
+	}
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+
+	err = service.onBlock(ctx, nil, [32]byte{})
+	require.Equal(t, true, IsInvalidBlock(err))
+}
+
+func TestOnBlock_InvalidSignature(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+	fcs := protoarray.New(0, 0)
+	depositCache, err := depositcache.New()
+	require.NoError(t, err)
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithStateGen(stategen.New(beaconDB)),
+		WithForkChoiceStore(fcs),
+		WithDepositCache(depositCache),
+		WithStateNotifier(&mock.MockStateNotifier{}),
+	}
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+
+	gs, keys := util.DeterministicGenesisState(t, 32)
+	require.NoError(t, service.saveGenesisData(ctx, gs))
+	gBlk, err := service.cfg.BeaconDB.GenesisBlock(ctx)
+	require.NoError(t, err)
+	gRoot, err := gBlk.Block().HashTreeRoot()
+	require.NoError(t, err)
+	service.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{Root: gRoot[:]}, [32]byte{})
+
+	blk, err := util.GenerateFullBlock(gs, keys, util.DefaultBlockGenConfig(), 1)
+	require.NoError(t, err)
+	blk.Signature = []byte{'a'} // Mutate the signature.
+	r, err := blk.Block.HashTreeRoot()
+	require.NoError(t, err)
+	wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+	require.NoError(t, err)
+	err = service.onBlock(ctx, wsb, r)
+	require.Equal(t, true, IsInvalidBlock(err))
 }
 
 func TestOnBlock_CallNewPayloadAndForkchoiceUpdated(t *testing.T) {
@@ -1480,7 +1554,7 @@ func TestOnBlock_CallNewPayloadAndForkchoiceUpdated(t *testing.T) {
 
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-	fcs := protoarray.New(0, 0, [32]byte{'a'})
+	fcs := protoarray.New(0, 0)
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 	opts := []Option{
@@ -1718,7 +1792,7 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-	fcs := protoarray.New(0, 0, [32]byte{'a'})
+	fcs := protoarray.New(0, 0)
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),
@@ -1846,7 +1920,7 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 func TestService_insertSlashingsToForkChoiceStore(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-	fcs := protoarray.New(0, 0, [32]byte{'a'})
+	fcs := protoarray.New(0, 0)
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),
@@ -1891,13 +1965,13 @@ func TestService_insertSlashingsToForkChoiceStore(t *testing.T) {
 	b.Block.Body.AttesterSlashings = slashings
 	wb, err := wrapper.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)
-	service.insertSlashingsToForkChoiceStore(ctx, wb.Block().Body().AttesterSlashings())
+	service.InsertSlashingsToForkChoiceStore(ctx, wb.Block().Body().AttesterSlashings())
 }
 
 func TestOnBlock_ProcessBlocksParallel(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-	fcs := protoarray.New(0, 0, [32]byte{'a'})
+	fcs := protoarray.New(0, 0)
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 	opts := []Option{
@@ -1969,6 +2043,26 @@ func TestOnBlock_ProcessBlocksParallel(t *testing.T) {
 		require.NoError(t, service.cfg.BeaconDB.DeleteBlock(ctx, r2))
 		require.NoError(t, service.cfg.BeaconDB.DeleteBlock(ctx, r3))
 		require.NoError(t, service.cfg.BeaconDB.DeleteBlock(ctx, r4))
-		service.cfg.ForkChoiceStore = protoarray.New(0, 0, [32]byte{'a'})
+		service.cfg.ForkChoiceStore = protoarray.New(0, 0)
 	}
+}
+
+func Test_verifyBlkFinalizedSlot_invalidBlock(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+
+	fcs := protoarray.New(0, 0)
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithStateGen(stategen.New(beaconDB)),
+		WithForkChoiceStore(fcs),
+	}
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+	service.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{Epoch: 1}, [32]byte{'a'})
+	blk := util.HydrateBeaconBlock(&ethpb.BeaconBlock{Slot: 1})
+	wb, err := wrapper.WrappedBeaconBlock(blk)
+	require.NoError(t, err)
+	err = service.verifyBlkFinalizedSlot(wb)
+	require.Equal(t, true, IsInvalidBlock(err))
 }

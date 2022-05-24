@@ -16,17 +16,13 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
-)
-
-var (
-	ErrInvalidPayload                = errors.New("recevied an INVALID payload from execution engine")
-	ErrUndefinedExecutionEngineError = errors.New("received an undefined ee error")
 )
 
 // notifyForkchoiceUpdateArg is the argument for the forkchoice update notification `notifyForkchoiceUpdate`.
@@ -168,20 +164,20 @@ func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
 	if blocks.IsPreBellatrixVersion(postStateVersion) {
 		return true, nil
 	}
-	if err := helpers.BeaconBlockIsNil(blk); err != nil {
+	if err := wrapper.BeaconBlockIsNil(blk); err != nil {
 		return false, err
 	}
 	body := blk.Block().Body()
 	enabled, err := blocks.IsExecutionEnabledUsingHeader(postStateHeader, body)
 	if err != nil {
-		return false, errors.Wrap(err, "could not determine if execution is enabled")
+		return false, errors.Wrap(invalidBlock{err}, "could not determine if execution is enabled")
 	}
 	if !enabled {
 		return true, nil
 	}
 	payload, err := body.ExecutionPayload()
 	if err != nil {
-		return false, errors.Wrap(err, "could not get execution payload")
+		return false, errors.Wrap(invalidBlock{err}, "could not get execution payload")
 	}
 	lastValidHash, err := s.cfg.ExecutionEngineCaller.NewPayload(ctx, payload)
 	switch err {
@@ -213,7 +209,7 @@ func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
 			"blockRoot":    fmt.Sprintf("%#x", root),
 			"invalidCount": len(invalidRoots),
 		}).Warn("Pruned invalid blocks")
-		return false, ErrInvalidPayload
+		return false, invalidBlock{ErrInvalidPayload}
 	default:
 		return false, errors.WithMessage(ErrUndefinedExecutionEngineError, err.Error())
 	}

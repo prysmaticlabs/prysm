@@ -26,7 +26,7 @@ var (
 // 1. Checks if the public key exists in the sync committee cache
 // 2. If 1 fails, checks if the public key exists in the input current sync committee object
 func IsCurrentPeriodSyncCommittee(
-	st state.BeaconStateAltair, valIdx types.ValidatorIndex,
+	st state.BeaconState, valIdx types.ValidatorIndex,
 ) (bool, error) {
 	root, err := syncPeriodBoundaryRoot(st)
 	if err != nil {
@@ -63,7 +63,7 @@ func IsCurrentPeriodSyncCommittee(
 // 1. Checks if the public key exists in the sync committee cache
 // 2. If 1 fails, checks if the public key exists in the input next sync committee object
 func IsNextPeriodSyncCommittee(
-	st state.BeaconStateAltair, valIdx types.ValidatorIndex,
+	st state.BeaconState, valIdx types.ValidatorIndex,
 ) (bool, error) {
 	root, err := syncPeriodBoundaryRoot(st)
 	if err != nil {
@@ -90,7 +90,7 @@ func IsNextPeriodSyncCommittee(
 // CurrentPeriodSyncSubcommitteeIndices returns the subcommittee indices of the
 // current period sync committee for input validator.
 func CurrentPeriodSyncSubcommitteeIndices(
-	st state.BeaconStateAltair, valIdx types.ValidatorIndex,
+	st state.BeaconState, valIdx types.ValidatorIndex,
 ) ([]types.CommitteeIndex, error) {
 	root, err := syncPeriodBoundaryRoot(st)
 	if err != nil {
@@ -124,7 +124,7 @@ func CurrentPeriodSyncSubcommitteeIndices(
 
 // NextPeriodSyncSubcommitteeIndices returns the subcommittee indices of the next period sync committee for input validator.
 func NextPeriodSyncSubcommitteeIndices(
-	st state.BeaconStateAltair, valIdx types.ValidatorIndex,
+	st state.BeaconState, valIdx types.ValidatorIndex,
 ) ([]types.CommitteeIndex, error) {
 	root, err := syncPeriodBoundaryRoot(st)
 	if err != nil {
@@ -151,7 +151,7 @@ func NextPeriodSyncSubcommitteeIndices(
 // UpdateSyncCommitteeCache updates sync committee cache.
 // It uses `state`'s latest block header root as key. To avoid misuse, it disallows
 // block header with state root zeroed out.
-func UpdateSyncCommitteeCache(st state.BeaconStateAltair) error {
+func UpdateSyncCommitteeCache(st state.BeaconState) error {
 	nextSlot := st.Slot() + 1
 	if nextSlot%params.BeaconConfig().SlotsPerEpoch != 0 {
 		return errors.New("not at the end of the epoch to update cache")
