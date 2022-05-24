@@ -135,6 +135,7 @@ func (vs *Server) PrepareBeaconProposer(
 
 // SubmitValidatorRegistration submits validator registration.
 func (vs *Server) SubmitValidatorRegistration(context.Context, *ethpb.SignedValidatorRegistrationV1) (*emptypb.Empty, error) {
+	//TODO: placeholder for implementation
 	return &emptypb.Empty{}, nil
 }
 
