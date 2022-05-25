@@ -14,7 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
-func e2eMinimal(t *testing.T, useWeb3RemoteSigner bool, extraEpochs uint64) *testRunner {
+func e2eMinimal(t *testing.T, cfgo ...types.E2EConfigOpt) *testRunner {
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.E2ETestConfig().Copy())
 	require.NoError(t, e2eParams.Init(t, e2eParams.StandardBeaconCount))
@@ -74,12 +74,13 @@ func e2eMinimal(t *testing.T, useWeb3RemoteSigner bool, extraEpochs uint64) *tes
 		TestDeposits:        true,
 		UsePrysmShValidator: false,
 		UsePprof:            !longRunning,
-		UseWeb3RemoteSigner: useWeb3RemoteSigner,
 		TracingSinkEndpoint: tracingEndpoint,
 		Evaluators:          evals,
 		EvalInterceptor:     defaultInterceptor,
 		Seed:                int64(seed),
-		ExtraEpochs:         extraEpochs,
+	}
+	for _, o := range cfgo {
+		o(testConfig)
 	}
 
 	return newTestRunner(t, testConfig)
