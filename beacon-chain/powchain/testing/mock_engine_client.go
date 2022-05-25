@@ -76,7 +76,7 @@ func (e *EngineClient) ExecutionBlockByHash(_ context.Context, h common.Hash) (*
 }
 
 func (e *EngineClient) ReconstructFullBellatrixBlock(
-	ctx context.Context, blindedBlock interfaces.SignedBeaconBlock,
+	_ context.Context, blindedBlock interfaces.SignedBeaconBlock,
 ) (interfaces.SignedBeaconBlock, error) {
 	if !blindedBlock.Block().IsBlinded() {
 		return nil, errors.New("block must be blinded")
