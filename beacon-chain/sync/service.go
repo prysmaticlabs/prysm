@@ -132,6 +132,8 @@ type Service struct {
 	seenSyncContributionCache        *lru.Cache
 	badBlockCache                    *lru.Cache
 	badBlockLock                     sync.RWMutex
+	syncContributionBitsOverlapLock  sync.RWMutex
+	syncContributionBitsOverlapCache *lru.Cache
 	signatureChan                    chan *signatureVerifier
 }
 
@@ -221,6 +223,7 @@ func (s *Service) initCaches() {
 	s.seenUnAggregatedAttestationCache = lruwrpr.New(seenUnaggregatedAttSize)
 	s.seenSyncMessageCache = lruwrpr.New(seenSyncMsgSize)
 	s.seenSyncContributionCache = lruwrpr.New(seenSyncContributionSize)
+	s.syncContributionBitsOverlapCache = lruwrpr.New(seenSyncContributionSize)
 	s.seenExitCache = lruwrpr.New(seenExitSize)
 	s.seenAttesterSlashingCache = make(map[uint64]bool)
 	s.seenProposerSlashingCache = lruwrpr.New(seenProposerSlashingSize)
