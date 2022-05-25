@@ -17,7 +17,7 @@ import (
 func e2eMinimal(t *testing.T, useWeb3RemoteSigner bool, extraEpochs uint64) *testRunner {
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.E2ETestConfig().Copy())
-	require.NoError(t, e2eParams.Init(e2eParams.StandardBeaconCount))
+	require.NoError(t, e2eParams.Init(t, e2eParams.StandardBeaconCount))
 
 	// Run for 12 epochs if not in long-running to confirm long-running has no issues.
 	var err error
@@ -89,9 +89,9 @@ func e2eMainnet(t *testing.T, usePrysmSh, useMultiClient bool) *testRunner {
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.E2EMainnetTestConfig())
 	if useMultiClient {
-		require.NoError(t, e2eParams.InitMultiClient(e2eParams.StandardBeaconCount, e2eParams.StandardLighthouseNodeCount))
+		require.NoError(t, e2eParams.InitMultiClient(t, e2eParams.StandardBeaconCount, e2eParams.StandardLighthouseNodeCount))
 	} else {
-		require.NoError(t, e2eParams.Init(e2eParams.StandardBeaconCount))
+		require.NoError(t, e2eParams.Init(t, e2eParams.StandardBeaconCount))
 	}
 	// Run for 10 epochs if not in long-running to confirm long-running has no issues.
 	var err error
