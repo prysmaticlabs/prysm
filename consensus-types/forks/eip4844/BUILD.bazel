@@ -1,0 +1,9 @@
+load("@prysm//tools/go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["tx.go"],
+    importpath = "github.com/prysmaticlabs/prysm/consensus-types/forks/eip4844",
+    visibility = ["//visibility:public"],
+    deps = ["@com_github_ethereum_go_ethereum//core/types:go_default_library"],
+)
