@@ -155,16 +155,17 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	MaxVoluntaryExits:    16,
 
 	// BLS domain values.
-	DomainBeaconProposer:              bytesutil.ToBytes4(bytesutil.Bytes4(0)),
-	DomainBeaconAttester:              bytesutil.ToBytes4(bytesutil.Bytes4(1)),
-	DomainRandao:                      bytesutil.ToBytes4(bytesutil.Bytes4(2)),
-	DomainDeposit:                     bytesutil.ToBytes4(bytesutil.Bytes4(3)),
-	DomainVoluntaryExit:               bytesutil.ToBytes4(bytesutil.Bytes4(4)),
-	DomainSelectionProof:              bytesutil.ToBytes4(bytesutil.Bytes4(5)),
-	DomainAggregateAndProof:           bytesutil.ToBytes4(bytesutil.Bytes4(6)),
-	DomainSyncCommittee:               bytesutil.ToBytes4(bytesutil.Bytes4(7)),
-	DomainSyncCommitteeSelectionProof: bytesutil.ToBytes4(bytesutil.Bytes4(8)),
-	DomainContributionAndProof:        bytesutil.ToBytes4(bytesutil.Bytes4(9)),
+	DomainBeaconProposer:              bytesutil.Uint32ToBytes4(0x00000000),
+	DomainBeaconAttester:              bytesutil.Uint32ToBytes4(0x01000000),
+	DomainRandao:                      bytesutil.Uint32ToBytes4(0x02000000),
+	DomainDeposit:                     bytesutil.Uint32ToBytes4(0x03000000),
+	DomainVoluntaryExit:               bytesutil.Uint32ToBytes4(0x04000000),
+	DomainSelectionProof:              bytesutil.Uint32ToBytes4(0x05000000),
+	DomainAggregateAndProof:           bytesutil.Uint32ToBytes4(0x06000000),
+	DomainSyncCommittee:               bytesutil.Uint32ToBytes4(0x07000000),
+	DomainSyncCommitteeSelectionProof: bytesutil.Uint32ToBytes4(0x08000000),
+	DomainContributionAndProof:        bytesutil.Uint32ToBytes4(0x09000000),
+	DomainApplicationMask:             bytesutil.Uint32ToBytes4(0x00000001),
 
 	// Prysm constants.
 	GweiPerEth:                     1000000000,

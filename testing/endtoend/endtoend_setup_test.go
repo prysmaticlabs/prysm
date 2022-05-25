@@ -165,7 +165,6 @@ func scenarioEvals() []types.Evaluator {
 		ev.MetricsCheck,
 		ev.ValidatorsParticipatingAtEpoch(2),
 		ev.FinalizationOccurs(3),
-		ev.PeersCheck,
 		ev.VerifyBlockGraffiti,
 		ev.ProposeVoluntaryExit,
 		ev.ValidatorHasExited,
@@ -177,5 +176,24 @@ func scenarioEvals() []types.Evaluator {
 		ev.FinishedSyncing,
 		ev.AllNodesHaveSameHead,
 		ev.ValidatorSyncParticipation,
+	}
+}
+
+func scenarioEvalsMulti() []types.Evaluator {
+	return []types.Evaluator{
+		ev.PeersConnect,
+		ev.HealthzCheck,
+		ev.MetricsCheck,
+		ev.ValidatorsParticipatingAtEpoch(2),
+		ev.FinalizationOccurs(3),
+		ev.ProposeVoluntaryExit,
+		ev.ValidatorHasExited,
+		ev.ColdStateCheckpoint,
+		ev.AltairForkTransition,
+		ev.BellatrixForkTransition,
+		ev.APIMiddlewareVerifyIntegrity,
+		ev.APIGatewayV1Alpha1VerifyIntegrity,
+		ev.FinishedSyncing,
+		ev.AllNodesHaveSameHead,
 	}
 }
