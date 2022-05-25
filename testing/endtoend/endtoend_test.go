@@ -471,9 +471,9 @@ func (r *testRunner) defaultEndToEndRun() error {
 			return errors.Wrap(err, "beacon chain sync test failed")
 		}
 		index += 1
-	}
-	if err := r.testDoppelGangerProtection(ctx); err != nil {
-		return errors.Wrap(err, "doppel ganger protection check failed")
+		if err := r.testDoppelGangerProtection(ctx); err != nil {
+			return errors.Wrap(err, "doppel ganger protection check failed")
+		}
 	}
 	if config.TestCheckpointSync {
 		httpEndpoints := helpers.BeaconAPIHostnames(e2e.TestParams.BeaconNodeCount)
