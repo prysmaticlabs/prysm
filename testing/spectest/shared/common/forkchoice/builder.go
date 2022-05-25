@@ -84,13 +84,18 @@ func (bb *Builder) Attestation(t testing.TB, a *ethpb.Attestation) {
 	require.NoError(t, bb.service.OnAttestation(context.TODO(), a))
 }
 
+// AttesterSlashing receives an attester slashing and feeds it to forkchoice.
+func (bb *Builder) AttesterSlashing(s *ethpb.AttesterSlashing) {
+	slashings := []*ethpb.AttesterSlashing{s}
+	bb.service.InsertSlashingsToForkChoiceStore(context.TODO(), slashings)
+}
+
 // Check evaluates the fork choice results and compares them to the expected values.
 func (bb *Builder) Check(t testing.TB, c *Check) {
 	if c == nil {
 		return
 	}
 	ctx := context.TODO()
-
 	require.NoError(t, bb.service.UpdateAndSaveHeadWithBalances(ctx))
 	if c.Head != nil {
 		r, err := bb.service.HeadRoot(ctx)
@@ -130,4 +135,5 @@ func (bb *Builder) Check(t testing.TB, c *Check) {
 		got := fmt.Sprintf("%#x", bb.service.ForkChoiceStore().ProposerBoost())
 		require.DeepEqual(t, want, got)
 	}
+
 }

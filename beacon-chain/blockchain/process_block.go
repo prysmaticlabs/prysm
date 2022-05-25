@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/forks/bellatrix"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
@@ -130,7 +131,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 	if err := s.insertBlockAndAttestationsToForkChoiceStore(ctx, signed.Block(), blockRoot, postState); err != nil {
 		return errors.Wrapf(err, "could not insert block %d to fork choice store", signed.Block().Slot())
 	}
-	s.insertSlashingsToForkChoiceStore(ctx, signed.Block().Body().AttesterSlashings())
+	s.InsertSlashingsToForkChoiceStore(ctx, signed.Block().Body().AttesterSlashings())
 	if isValidPayload {
 		if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, blockRoot); err != nil {
 			return errors.Wrap(err, "could not set optimistic block to valid")
@@ -182,7 +183,12 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 		return errors.Wrap(err, "could not get justified checkpoint")
 	}
 	currJustifiedEpoch := justified.Epoch
-	if postState.CurrentJustifiedCheckpoint().Epoch > currJustifiedEpoch {
+	psj := postState.CurrentJustifiedCheckpoint()
+	if psj == nil {
+		return errNilJustifiedCheckpoint
+	}
+
+	if psj.Epoch > currJustifiedEpoch {
 		if err := s.updateJustified(ctx, postState); err != nil {
 			return err
 		}
@@ -195,22 +201,32 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 	if finalized == nil {
 		return errNilFinalizedInStore
 	}
-	newFinalized := postState.FinalizedCheckpointEpoch() > finalized.Epoch
+	psf := postState.FinalizedCheckpoint()
+	if psf == nil {
+		return errNilFinalizedCheckpoint
+	}
+
+	newFinalized := psf.Epoch > finalized.Epoch
 	if newFinalized {
 		s.store.SetPrevFinalizedCheckpt(finalized)
-		cp := postState.FinalizedCheckpoint()
-		h, err := s.getPayloadHash(ctx, cp.Root)
+		h, err := s.getPayloadHash(ctx, psf.Root)
 		if err != nil {
 			return err
 		}
-		s.store.SetFinalizedCheckptAndPayloadHash(cp, h)
+		s.store.SetFinalizedCheckptAndPayloadHash(psf, h)
 		s.store.SetPrevJustifiedCheckpt(justified)
-		cp = postState.CurrentJustifiedCheckpoint()
-		h, err = s.getPayloadHash(ctx, cp.Root)
+		h, err = s.getPayloadHash(ctx, psj.Root)
 		if err != nil {
 			return err
 		}
 		s.store.SetJustifiedCheckptAndPayloadHash(postState.CurrentJustifiedCheckpoint(), h)
+		// Update Forkchoice checkpoints
+		if err := s.cfg.ForkChoiceStore.UpdateJustifiedCheckpoint(psj); err != nil {
+			return err
+		}
+		if err := s.cfg.ForkChoiceStore.UpdateFinalizedCheckpoint(psf); err != nil {
+			return err
+		}
 	}
 
 	balances, err := s.justifiedBalances.get(ctx, bytesutil.ToBytes32(justified.Root))
@@ -596,7 +612,7 @@ func (s *Service) insertBlockToForkChoiceStore(ctx context.Context, blk interfac
 
 // Inserts attester slashing indices to fork choice store.
 // To call this function, it's caller's responsibility to ensure the slashing object is valid.
-func (s *Service) insertSlashingsToForkChoiceStore(ctx context.Context, slashings []*ethpb.AttesterSlashing) {
+func (s *Service) InsertSlashingsToForkChoiceStore(ctx context.Context, slashings []*ethpb.AttesterSlashing) {
 	for _, slashing := range slashings {
 		indices := blocks.SlashableAttesterIndices(slashing)
 		for _, index := range indices {
@@ -673,7 +689,7 @@ func (s *Service) validateMergeTransitionBlock(ctx context.Context, stateVersion
 	if err != nil {
 		return invalidBlock{err}
 	}
-	if blocks.IsEmptyPayload(payload) {
+	if bellatrix.IsEmptyPayload(payload) {
 		return nil
 	}
 

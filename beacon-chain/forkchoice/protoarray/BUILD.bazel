@@ -55,8 +55,8 @@ go_test(
         "//consensus-types/primitives:go_default_library",
         "//crypto/hash:go_default_library",
         "//encoding/bytesutil:go_default_library",
+        "//proto/prysm/v1alpha1:go_default_library",
         "//testing/assert:go_default_library",
         "//testing/require:go_default_library",
-        "@org_golang_x_net//context:go_default_library",
     ],
 )

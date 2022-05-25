@@ -188,9 +188,15 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 	if err != nil {
 		return errors.Wrap(err, "could not get justified checkpoint")
 	}
+	if justified == nil {
+		return errNilJustifiedCheckpoint
+	}
 	finalized, err := s.cfg.BeaconDB.FinalizedCheckpoint(s.ctx)
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized checkpoint")
+	}
+	if finalized == nil {
+		return errNilFinalizedCheckpoint
 	}
 	s.store = store.New(justified, finalized)
 
@@ -199,7 +205,7 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 	if features.Get().EnableForkChoiceDoublyLinkedTree {
 		forkChoicer = doublylinkedtree.New(justified.Epoch, finalized.Epoch)
 	} else {
-		forkChoicer = protoarray.New(justified.Epoch, finalized.Epoch, fRoot)
+		forkChoicer = protoarray.New(justified.Epoch, finalized.Epoch)
 	}
 	s.cfg.ForkChoiceStore = forkChoicer
 	fb, err := s.getBlock(s.ctx, s.ensureRootNotZeros(fRoot))

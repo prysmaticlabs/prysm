@@ -59,14 +59,18 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.SignedBeaco
 	}
 
 	// Reports on block and fork choice metrics.
+	justified, err := s.store.JustifiedCheckpt()
+	if err != nil {
+		return err
+	}
 	finalized, err := s.store.FinalizedCheckpt()
 	if err != nil {
-		return errors.Wrap(err, "could not get finalized checkpoint")
+		return errNilFinalizedInStore
 	}
 	reportSlotMetrics(blockCopy.Block().Slot(), s.HeadSlot(), s.CurrentSlot(), finalized)
 
 	// Log block sync status.
-	if err := logBlockSyncStatus(blockCopy.Block(), blockRoot, finalized, receivedTime, uint64(s.genesisTime.Unix())); err != nil {
+	if err := logBlockSyncStatus(blockCopy.Block(), blockRoot, justified, finalized, receivedTime, uint64(s.genesisTime.Unix())); err != nil {
 		return err
 	}
 	// Log state transition data.
@@ -140,7 +144,7 @@ func (s *Service) HasBlock(ctx context.Context, root [32]byte) bool {
 
 // ReceiveAttesterSlashing receives an attester slashing and inserts it to forkchoice
 func (s *Service) ReceiveAttesterSlashing(ctx context.Context, slashing *ethpb.AttesterSlashing) {
-	s.insertSlashingsToForkChoiceStore(ctx, []*ethpb.AttesterSlashing{slashing})
+	s.InsertSlashingsToForkChoiceStore(ctx, []*ethpb.AttesterSlashing{slashing})
 }
 
 func (s *Service) handlePostBlockOperations(b interfaces.BeaconBlock) error {
