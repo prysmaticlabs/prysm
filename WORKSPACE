@@ -231,7 +231,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "57120e8e2d5aaec956fc6a25ddc58fae2477f5b3ac7789174cf5ac1106dcc151",
+    sha256 = "9c93f87378aaa6d6fe1c67b396eac2aacc9594af2a83f028cb99c95dea5b81df",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/general.tar.gz" % consensus_spec_version,
 )
 
@@ -247,7 +247,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "aa46676b26c173274ec8ea8756ae3072474b73ef7ccc7414d4026884810d8de2",
+    sha256 = "52f2c52415228cee8a4de5a09abff785f439a77dfef8f03e834e4e16857673c1",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/minimal.tar.gz" % consensus_spec_version,
 )
 
@@ -263,7 +263,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "d7dba93110cf35d9575ce21af6b7c3989f4aba621a9749bc090bca216e0345f7",
+    sha256 = "022dcc0d6de7dd27b337a0d1b945077eaf5ee47000700395a693fc25e12f96df",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/mainnet.tar.gz" % consensus_spec_version,
 )
 

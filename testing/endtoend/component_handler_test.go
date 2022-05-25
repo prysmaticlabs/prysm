@@ -129,6 +129,9 @@ func (c *componentHandler) setup() {
 		return nil
 	})
 
+	if config.TestCheckpointSync {
+		appendDebugEndpoints(config)
+	}
 	// Beacon nodes.
 	beaconNodes := components.NewBeaconNodes(config)
 	g.Go(func() error {
@@ -200,4 +203,12 @@ func (c *componentHandler) required() []e2etypes.ComponentRunner {
 		requiredComponents = append(requiredComponents, []e2etypes.ComponentRunner{c.keygen, c.lighthouseBeaconNodes, c.lighthouseValidatorNodes}...)
 	}
 	return requiredComponents
+}
+
+func appendDebugEndpoints(cfg *e2etypes.E2EConfig) {
+	debug := []string{
+		"--enable-debug-rpc-endpoints",
+		"--grpc-max-msg-size=65568081",
+	}
+	cfg.BeaconFlags = append(cfg.BeaconFlags, debug...)
 }
