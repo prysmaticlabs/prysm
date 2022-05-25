@@ -12,7 +12,7 @@ import (
 )
 
 func TestWeb3RemoteSigner_StartsAndReturnsPublicKeys(t *testing.T) {
-	require.NoError(t, e2eparams.Init(0))
+	require.NoError(t, e2eparams.Init(t, 0))
 
 	wsc := components.NewWeb3RemoteSigner()
 
