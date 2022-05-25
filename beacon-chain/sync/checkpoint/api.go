@@ -27,7 +27,7 @@ func NewAPIInitializer(beaconNodeHost string) (*APIInitializer, error) {
 // Initialize downloads origin state and block for checkpoint sync and initializes database records to
 // prepare the node to begin syncing from that point.
 func (dl *APIInitializer) Initialize(ctx context.Context, d db.Database) error {
-	od, err := beacon.DownloadOriginData(ctx, dl.c)
+	od, err := beacon.DownloadFinalizedData(ctx, dl.c)
 	if err != nil {
 		return errors.Wrap(err, "Error retrieving checkpoint origin state and block")
 	}

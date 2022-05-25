@@ -7,10 +7,12 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -267,6 +269,16 @@ func NewLocalConnections(ctx context.Context, numConns int) ([]*grpc.ClientConn,
 			}
 		}
 	}, nil
+}
+
+// BeaconAPIHostnames constructs a hostname:port string for the
+func BeaconAPIHostnames(numConns int) []string {
+	hostnames := make([]string, 0)
+	for i := 0; i < numConns; i++ {
+		port := e2e.TestParams.Ports.PrysmBeaconNodeGatewayPort + i
+		hostnames = append(hostnames, net.JoinHostPort("127.0.0.1", strconv.Itoa(port)))
+	}
+	return hostnames
 }
 
 // ComponentsStarted checks, sequentially, each provided component, blocks until all of the components are ready.
