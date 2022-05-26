@@ -294,6 +294,8 @@ github.com/elastic/gosigar v0.12.0/go.mod h1:iXRIGg2tLnu7LBdpqzyQfGDEidKCfWcCMS0
 github.com/elastic/gosigar v0.14.2 h1:Dg80n8cr90OZ7x+bAax/QjoW/XqTI11RmA79ZwIm9/4=
 github.com/elastic/gosigar v0.14.2/go.mod h1:iXRIGg2tLnu7LBdpqzyQfGDEidKCfWcCMS0WKyPWoMs=
 github.com/elazarl/goproxy v0.0.0-20180725130230-947c36da3153/go.mod h1:/Zj4wYkgs4iZTTu3o/KG3Itv/qCCa8VVMlb3i9OVuzc=
+github.com/elnormous/contenttype v1.0.3 h1:5DrD4LGO3ohab+jPplwE/LlY9JqmkYdssz4Zu7xl8Cs=
+github.com/elnormous/contenttype v1.0.3/go.mod h1:ngVcyGGU8pnn4QJ5sL4StrNgc/wmXZXy5IQSBuHOFPg=
 github.com/emicklei/dot v0.11.0 h1:Ase39UD9T9fRBOb5ptgpixrxfx8abVzNWZi2+lr53PI=
 github.com/emicklei/dot v0.11.0/go.mod h1:DeV7GvQtIw4h2u73RKBkkFdvVAz0D9fzeJrgPW6gy/s=
 github.com/emicklei/go-restful v0.0.0-20170410110728-ff4f55a20633/go.mod h1:otzb+WCGbkyDHkqmQmT5YD2WR4BBwUdeQoFo8l/7tVs=

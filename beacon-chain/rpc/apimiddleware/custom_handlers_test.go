@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -34,28 +35,40 @@ func (t testSSZResponseJson) SSZData() string {
 func TestSSZRequested(t *testing.T) {
 	t.Run("ssz_requested", func(t *testing.T) {
 		request := httptest.NewRequest("GET", "http://foo.example", nil)
-		request.Header["Accept"] = []string{"application/octet-stream"}
-		result := sszRequested(request)
+		request.Header["Accept"] = []string{octetStreamMediaType}
+		result, err := sszRequested(request)
+		require.NoError(t, err)
 		assert.Equal(t, true, result)
 	})
 
-	t.Run("multiple_content_types", func(t *testing.T) {
+	t.Run("ssz_content_type_preferred", func(t *testing.T) {
 		request := httptest.NewRequest("GET", "http://foo.example", nil)
-		request.Header["Accept"] = []string{"application/json", "application/octet-stream"}
-		result := sszRequested(request)
+		request.Header["Accept"] = []string{fmt.Sprintf("%s;q=0.9,%s", jsonMediaType, octetStreamMediaType)}
+		result, err := sszRequested(request)
+		require.NoError(t, err)
 		assert.Equal(t, true, result)
+	})
+
+	t.Run("other_content_type_preferred", func(t *testing.T) {
+		request := httptest.NewRequest("GET", "http://foo.example", nil)
+		request.Header["Accept"] = []string{fmt.Sprintf("%s,%s;q=0.9", jsonMediaType, octetStreamMediaType)}
+		result, err := sszRequested(request)
+		require.NoError(t, err)
+		assert.Equal(t, false, result)
 	})
 
 	t.Run("no_header", func(t *testing.T) {
 		request := httptest.NewRequest("GET", "http://foo.example", nil)
-		result := sszRequested(request)
+		result, err := sszRequested(request)
+		require.NoError(t, err)
 		assert.Equal(t, false, result)
 	})
 
 	t.Run("other_content_type", func(t *testing.T) {
 		request := httptest.NewRequest("GET", "http://foo.example", nil)
-		request.Header["Accept"] = []string{"application/json"}
-		result := sszRequested(request)
+		request.Header["Accept"] = []string{jsonMediaType}
+		result, err := sszRequested(request)
+		require.NoError(t, err)
 		assert.Equal(t, false, result)
 	})
 }
@@ -82,7 +95,7 @@ func TestPreparePostedSszData(t *testing.T) {
 
 	preparePostedSSZData(request)
 	assert.Equal(t, int64(19), request.ContentLength)
-	assert.Equal(t, "application/json", request.Header.Get("Content-Type"))
+	assert.Equal(t, jsonMediaType, request.Header.Get("Content-Type"))
 }
 
 func TestSerializeMiddlewareResponseIntoSSZ(t *testing.T) {
@@ -138,7 +151,7 @@ func TestWriteSSZResponseHeaderAndBody(t *testing.T) {
 		v, ok = writer.Header()["Content-Type"]
 		require.Equal(t, true, ok, "header not found")
 		require.Equal(t, 1, len(v), "wrong number of header values")
-		assert.Equal(t, "application/octet-stream", v[0])
+		assert.Equal(t, octetStreamMediaType, v[0])
 		v, ok = writer.Header()["Content-Disposition"]
 		require.Equal(t, true, ok, "header not found")
 		require.Equal(t, 1, len(v), "wrong number of header values")

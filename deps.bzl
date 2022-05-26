@@ -896,6 +896,12 @@ def prysm_deps():
         sum = "h1:yUdfgN0XgIJw7foRItutHYUIhlcKzcSf5vDpdhQAKTc=",
         version = "v0.0.0-20180725130230-947c36da3153",
     )
+    go_repository(
+        name = "com_github_elnormous_contenttype",
+        importpath = "github.com/elnormous/contenttype",
+        sum = "h1:5DrD4LGO3ohab+jPplwE/LlY9JqmkYdssz4Zu7xl8Cs=",
+        version = "v1.0.3",
+    )
 
     go_repository(
         name = "com_github_emicklei_dot",
