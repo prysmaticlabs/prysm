@@ -560,6 +560,125 @@ func TestStore_PruneBranched(t *testing.T) {
 	}
 }
 
+func TestStore_CommonAncestor(t *testing.T) {
+	ctx := context.Background()
+	f := setup(0, 0)
+
+	//  /-- b -- d -- e
+	// a
+	//  \-- c -- f
+	//        \-- g
+	//        \ -- h
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 0, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 1, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'B'}, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 2, [32]byte{'c'}, [32]byte{'a'}, [32]byte{'C'}, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 3, [32]byte{'d'}, [32]byte{'b'}, [32]byte{}, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 4, [32]byte{'e'}, [32]byte{'d'}, [32]byte{}, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 5, [32]byte{'f'}, [32]byte{'c'}, [32]byte{}, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 6, [32]byte{'g'}, [32]byte{'c'}, [32]byte{}, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 7, [32]byte{'h'}, [32]byte{'c'}, [32]byte{}, 1, 1))
+	tests := []struct {
+		name     string
+		r1       [32]byte
+		r2       [32]byte
+		wantRoot [32]byte
+	}{
+		{
+			name:     "Common ancestor between c and b is a",
+			r1:       [32]byte{'c'},
+			r2:       [32]byte{'b'},
+			wantRoot: [32]byte{'a'},
+		},
+		{
+			name:     "Common ancestor between c and d is a",
+			r1:       [32]byte{'c'},
+			r2:       [32]byte{'d'},
+			wantRoot: [32]byte{'a'},
+		},
+		{
+			name:     "Common ancestor between c and e is a",
+			r1:       [32]byte{'c'},
+			r2:       [32]byte{'e'},
+			wantRoot: [32]byte{'a'},
+		},
+		{
+			name:     "Common ancestor between g and f is c",
+			r1:       [32]byte{'g'},
+			r2:       [32]byte{'f'},
+			wantRoot: [32]byte{'c'},
+		},
+		{
+			name:     "Common ancestor between f and h is c",
+			r1:       [32]byte{'f'},
+			r2:       [32]byte{'h'},
+			wantRoot: [32]byte{'c'},
+		},
+		{
+			name:     "Common ancestor between g and h is c",
+			r1:       [32]byte{'g'},
+			r2:       [32]byte{'h'},
+			wantRoot: [32]byte{'c'},
+		},
+		{
+			name:     "Common ancestor between b and h is a",
+			r1:       [32]byte{'b'},
+			r2:       [32]byte{'h'},
+			wantRoot: [32]byte{'a'},
+		},
+		{
+			name:     "Common ancestor between e and h is a",
+			r1:       [32]byte{'e'},
+			r2:       [32]byte{'h'},
+			wantRoot: [32]byte{'a'},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			gotRoot, err := f.CommonAncestorRoot(ctx, tc.r1, tc.r2)
+			require.NoError(t, err)
+			require.Equal(t, tc.wantRoot, gotRoot)
+		})
+	}
+
+	// a -- b -- c -- d
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 0, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 1, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'B'}, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 2, [32]byte{'c'}, [32]byte{'b'}, [32]byte{'C'}, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 3, [32]byte{'d'}, [32]byte{'c'}, [32]byte{}, 1, 1))
+	tests = []struct {
+		name     string
+		r1       [32]byte
+		r2       [32]byte
+		wantRoot [32]byte
+	}{
+		{
+			name:     "Common ancestor between a and b is a",
+			r1:       [32]byte{'a'},
+			r2:       [32]byte{'b'},
+			wantRoot: [32]byte{'a'},
+		},
+		{
+			name:     "Common ancestor between b and d is b",
+			r1:       [32]byte{'d'},
+			r2:       [32]byte{'b'},
+			wantRoot: [32]byte{'b'},
+		},
+		{
+			name:     "Common ancestor between d and a is a",
+			r1:       [32]byte{'d'},
+			r2:       [32]byte{'a'},
+			wantRoot: [32]byte{'a'},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			gotRoot, err := f.CommonAncestorRoot(ctx, tc.r1, tc.r2)
+			require.NoError(t, err)
+			require.Equal(t, tc.wantRoot, gotRoot)
+		})
+	}
+}
+
 func TestStore_LeadsToViableHead(t *testing.T) {
 	tests := []struct {
 		n              *Node
