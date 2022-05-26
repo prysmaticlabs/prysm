@@ -7,9 +7,10 @@ import (
 
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/container/slice"
+	"github.com/prysmaticlabs/prysm/crypto/rand"
 )
 
-func TestSubsetUint64(t *testing.T) {
+func TestSubset(t *testing.T) {
 	testCases := []struct {
 		setA []uint64
 		setB []uint64
@@ -23,14 +24,50 @@ func TestSubsetUint64(t *testing.T) {
 		{[]uint64{1, 2, 3, 4, 5}, []uint64{1, 2, 3, 4}, false},
 	}
 	for _, tt := range testCases {
-		result := slice.SubsetUint64(tt.setA, tt.setB)
+		result := slice.Subset[uint64](tt.setA, tt.setB)
 		if result != tt.out {
 			t.Errorf("%v, got %v, want %v", tt.setA, result, tt.out)
 		}
 	}
 }
 
-func TestIntersectionUint64(t *testing.T) {
+func BenchmarkIntersection_Specific(b *testing.B) {
+	b.StopTimer()
+	sets := make([][]int64, 1000)
+	gen := rand.NewGenerator()
+	for i := 0; i < len(sets); i++ {
+		setSize := gen.Intn(100)
+		set := make([]int64, setSize)
+		for j := 0; j < setSize; j++ {
+			set[j] = int64(j)
+		}
+		sets[i] = set
+	}
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		slice.IntersectionInt64(sets...)
+	}
+}
+
+func BenchmarkIntersection_Generic(b *testing.B) {
+	b.StopTimer()
+	sets := make([][]int64, 1000)
+	gen := rand.NewGenerator()
+	for i := 0; i < len(sets); i++ {
+		setSize := gen.Intn(100)
+		set := make([]int64, setSize)
+		for j := 0; j < setSize; j++ {
+			set[j] = int64(j)
+		}
+		sets[i] = set
+	}
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		slice.Intersection[int64](sets...)
+	}
+}
+
+func TestIntersection(t *testing.T) {
 	testCases := []struct {
 		setA []uint64
 		setB []uint64
@@ -57,7 +94,7 @@ func TestIntersectionUint64(t *testing.T) {
 		setA := append([]uint64{}, tt.setA...)
 		setB := append([]uint64{}, tt.setB...)
 		setC := append([]uint64{}, tt.setC...)
-		result := slice.IntersectionUint64(setA, setB, setC)
+		result := slice.Intersection[uint64](setA, setB, setC)
 		sort.Slice(result, func(i, j int) bool {
 			return result[i] < result[j]
 		})

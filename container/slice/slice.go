@@ -4,17 +4,18 @@ import (
 	"strings"
 
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/container/constraints"
 )
 
-// SubsetUint64 returns true if the first array is
-// completely contained in the second array with time
+// Subset returns true if the first slice is
+// completely contained in the second slice with time
 // complexity of approximately o(n).
-func SubsetUint64(a, b []uint64) bool {
+func Subset[T constraints.Ordered](a, b []T) bool {
 	if len(a) > len(b) {
 		return false
 	}
 
-	set := make(map[uint64]uint64, len(b))
+	set := make(map[T]uint64, len(b))
 	for _, v := range b {
 		set[v]++
 	}
@@ -31,19 +32,19 @@ func SubsetUint64(a, b []uint64) bool {
 	return true
 }
 
-// IntersectionUint64 of any number of uint64 slices with time
+// Intersection of any number of slices with time
 // complexity of approximately O(n) leveraging a map to
 // check for element existence off by a constant factor
 // of underlying map efficiency.
-func IntersectionUint64(s ...[]uint64) []uint64 {
+func Intersection[T constraints.Ordered](s ...[]T) []T {
 	if len(s) == 0 {
-		return []uint64{}
+		return []T{}
 	}
 	if len(s) == 1 {
 		return s[0]
 	}
-	intersect := make([]uint64, 0)
-	m := make(map[uint64]int)
+	intersect := make([]T, 0)
+	m := make(map[T]int)
 	for _, k := range s[0] {
 		m[k] = 1
 	}
