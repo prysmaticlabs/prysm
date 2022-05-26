@@ -29,6 +29,7 @@ go_test(
         "field_trie_test.go",
         "helpers_test.go",
     ],
+    data = glob(["testdata/**"]),
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/state/stateutil:go_default_library",
