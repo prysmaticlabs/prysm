@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
@@ -200,6 +201,7 @@ func (f *ForkChoice) CommonAncestorRoot(ctx context.Context, r1 [32]byte, r2 [32
 	ctx, span := trace.StartSpan(ctx, "protoArray.CommonAncestorRoot")
 	defer span.End()
 
+	// Do nothing if the two input roots are the same.
 	if r1 == r2 {
 		return r1, nil
 	}
@@ -223,14 +225,19 @@ func (f *ForkChoice) CommonAncestorRoot(ctx context.Context, r1 [32]byte, r2 [32
 		if ctx.Err() != nil {
 			return [32]byte{}, ctx.Err()
 		}
-		if n1.parent == NonExistentNode || n2.parent == NonExistentNode {
-			return [32]byte{}, ErrUnknownCommonAncestor
-		}
 		if n1.slot > n2.slot {
 			i = n1.parent
+			// Reaches the end of the tree and unable to find common ancestor.
+			if i >= uint64(len(f.store.nodes)) {
+				return [32]byte{}, forkchoice.ErrUnknownCommonAncestor
+			}
 			n1 = f.store.nodes[i]
 		} else {
 			i = n2.parent
+			// Reaches the end of the tree and unable to find common ancestor.
+			if i >= uint64(len(f.store.nodes)) {
+				return [32]byte{}, forkchoice.ErrUnknownCommonAncestor
+			}
 			n2 = f.store.nodes[i]
 		}
 		if n1.root == n2.root {

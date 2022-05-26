@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -710,7 +711,7 @@ func TestStore_CommonAncestor(t *testing.T) {
 	require.NoError(t, f.InsertOptimisticBlock(ctx, 100, [32]byte{'y'}, [32]byte{'z'}, [32]byte{}, 1, 1))
 	// broken link
 	_, err = f.CommonAncestorRoot(ctx, [32]byte{'y'}, [32]byte{'a'})
-	require.ErrorIs(t, err, ErrUnknownCommonAncestor)
+	require.ErrorIs(t, err, forkchoice.ErrUnknownCommonAncestor)
 }
 
 func TestStore_LeadsToViableHead(t *testing.T) {
