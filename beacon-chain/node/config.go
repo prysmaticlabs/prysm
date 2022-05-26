@@ -138,7 +138,7 @@ func configureExecutionSetting(cliCtx *cli.Context) error {
 	if cliCtx.IsSet(flags.TerminalBlockHashOverride.Name) {
 		c := params.BeaconConfig()
 		c.TerminalBlockHash = common.HexToHash(cliCtx.String(flags.TerminalBlockHashOverride.Name))
-		log.WithField("terminal block hash", c.TerminalBlockHash).Warn("Terminal block hash overridden")
+		log.WithField("terminal block hash", c.TerminalBlockHash.Hex()).Warn("Terminal block hash overridden")
 		params.OverrideBeaconConfig(c)
 	}
 	if cliCtx.IsSet(flags.TerminalBlockHashActivationEpochOverride.Name) {
