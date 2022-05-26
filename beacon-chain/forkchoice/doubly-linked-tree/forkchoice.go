@@ -379,3 +379,43 @@ func (f *ForkChoice) UpdateFinalizedCheckpoint(fc *pbrpc.Checkpoint) error {
 	f.store.finalizedEpoch = fc.Epoch
 	return nil
 }
+
+// CommonAncestorRoot returns the common ancestor root between the two block roots r1 and r2.
+func (f *ForkChoice) CommonAncestorRoot(ctx context.Context, r1 [32]byte, r2 [32]byte) ([32]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "doublelinkedtree.CommonAncestorRoot")
+	defer span.End()
+
+	if r1 == r2 {
+		return r1, nil
+	}
+
+	f.store.nodesLock.RLock()
+	defer f.store.nodesLock.RUnlock()
+
+	n1, ok := f.store.nodeByRoot[r1]
+	if !ok {
+		return [32]byte{}, ErrNilNode
+	}
+
+	n2, ok := f.store.nodeByRoot[r2]
+	if !ok {
+		return [32]byte{}, ErrNilNode
+	}
+
+	for {
+		if ctx.Err() != nil {
+			return [32]byte{}, ctx.Err()
+		}
+		if n1.parent == nil || n2.parent == nil {
+			return [32]byte{}, ErrUnknownCommonAncestor
+		}
+		if n1.slot > n2.slot {
+			n1 = n1.parent
+		} else {
+			n2 = n2.parent
+		}
+		if n1.root == n2.root {
+			return n1.root, nil
+		}
+	}
+}

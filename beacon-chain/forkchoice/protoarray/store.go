@@ -197,8 +197,12 @@ func (f *ForkChoice) AncestorRoot(ctx context.Context, root [32]byte, slot types
 
 // CommonAncestorRoot returns the common ancestor root between the two block roots r1 and r2.
 func (f *ForkChoice) CommonAncestorRoot(ctx context.Context, r1 [32]byte, r2 [32]byte) ([32]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "protoArray.AncestorRoot")
+	ctx, span := trace.StartSpan(ctx, "protoArray.CommonAncestorRoot")
 	defer span.End()
+
+	if r1 == r2 {
+		return r1, nil
+	}
 
 	f.store.nodesLock.RLock()
 	defer f.store.nodesLock.RUnlock()
@@ -215,27 +219,24 @@ func (f *ForkChoice) CommonAncestorRoot(ctx context.Context, r1 [32]byte, r2 [32
 	}
 	n2 := f.store.nodes[i]
 
-	seenNode := make(map[[32]byte]bool)
-
-	for n1.parent != NonExistentNode {
+	for {
 		if ctx.Err() != nil {
 			return [32]byte{}, ctx.Err()
 		}
-		seenNode[n1.root] = true
-		n1 = f.store.nodes[n1.parent]
-	}
-
-	for n2.parent != NonExistentNode {
-		if ctx.Err() != nil {
-			return [32]byte{}, ctx.Err()
+		if n1.parent == NonExistentNode || n2.parent == NonExistentNode {
+			return [32]byte{}, ErrUnknownCommonAncestor
 		}
-		if seenNode[n2.root] {
-			return n2.root, nil
+		if n1.slot > n2.slot {
+			i = n1.parent
+			n1 = f.store.nodes[i]
+		} else {
+			i = n2.parent
+			n2 = f.store.nodes[i]
 		}
-		n2 = f.store.nodes[n2.parent]
+		if n1.root == n2.root {
+			return n1.root, nil
+		}
 	}
-
-	return [32]byte{}, errors.New("no common ancestor")
 }
 
 // PruneThreshold of fork choice store.
