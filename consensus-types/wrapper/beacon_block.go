@@ -221,7 +221,7 @@ func WrapSignedBlindedBeaconBlock(blk interfaces.SignedBeaconBlock) (interfaces.
 	payload, err := b.Body().ExecutionPayload()
 	switch {
 	case errors.Is(err, ErrUnsupportedField):
-		return nil, errors.New("execution payload field is not supported for block")
+		return nil, ErrUnsupportedSignedBeaconBlock
 	case err != nil:
 		return nil, errors.Wrap(err, "could not get execution payload")
 	default:
