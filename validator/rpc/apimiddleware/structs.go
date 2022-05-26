@@ -1,7 +1,7 @@
 package apimiddleware
 
 type listKeystoresResponseJson struct {
-	Keystores []*keystoreJson `json:"keystores"`
+	Keystores []*keystoreJson `json:"data"`
 }
 
 type keystoreJson struct {
@@ -16,11 +16,11 @@ type importKeystoresRequestJson struct {
 }
 
 type importKeystoresResponseJson struct {
-	Statuses []*statusJson `json:"statuses"`
+	Statuses []*statusJson `json:"data"`
 }
 
 type deleteKeystoresRequestJson struct {
-	PublicKeys []string `json:"public_keys" hex:"true"`
+	PublicKeys []string `json:"pubkeys" hex:"true"`
 }
 
 type statusJson struct {
@@ -29,6 +29,40 @@ type statusJson struct {
 }
 
 type deleteKeystoresResponseJson struct {
-	Statuses           []*statusJson `json:"statuses"`
+	Statuses           []*statusJson `json:"data"`
 	SlashingProtection string        `json:"slashing_protection"`
+}
+
+//remote keymanager api
+
+type listRemoteKeysResponseJson struct {
+	Keystores []*remoteKeysListJson `json:"data"`
+}
+
+type remoteKeysListJson struct {
+	Pubkey   string `json:"pubkey" hex:"true"`
+	Url      string `json:"url"`
+	Readonly bool   `json:"readonly"`
+}
+
+type remoteKeysJson struct {
+	Pubkey   string `json:"pubkey" hex:"true"`
+	Url      string `json:"url"`
+	Readonly bool   `json:"readonly"`
+}
+
+type importRemoteKeysRequestJson struct {
+	Keystores []*remoteKeysJson `json:"remote_keys"`
+}
+
+type importRemoteKeysResponseJson struct {
+	Statuses []*statusJson `json:"data"`
+}
+
+type deleteRemoteKeysRequestJson struct {
+	PublicKeys []string `json:"pubkeys" hex:"true"`
+}
+
+type deleteRemoteKeysResponseJson struct {
+	Statuses []*statusJson `json:"data"`
 }

@@ -9,9 +9,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 )
 
 // BlockSignatureBellatrix calculates the post-state root of the block and returns the signature.
@@ -21,7 +21,7 @@ func BlockSignatureBellatrix(
 	privKeys []bls.SecretKey,
 ) (bls.Signature, error) {
 	var err error
-	wsb, err := wrapper.WrappedBellatrixSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: block})
+	wsb, err := wrapper.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: block})
 	if err != nil {
 		return nil, err
 	}
@@ -30,7 +30,7 @@ func BlockSignatureBellatrix(
 		return nil, err
 	}
 	block.StateRoot = s[:]
-	domain, err := signing.Domain(bState.Fork(), time.CurrentEpoch(bState), params.BeaconConfig().DomainBeaconProposer, bState.GenesisValidatorRoot())
+	domain, err := signing.Domain(bState.Fork(), time.CurrentEpoch(bState), params.BeaconConfig().DomainBeaconProposer, bState.GenesisValidatorsRoot())
 	if err != nil {
 		return nil, err
 	}

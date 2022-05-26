@@ -3,9 +3,12 @@ package protoarray
 import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/sirupsen/logrus"
 )
 
 var (
+	log = logrus.WithField("prefix", "forkchoice-protoarray")
+
 	headSlotNumber = promauto.NewGauge(
 		prometheus.GaugeOpts{
 			Name: "proto_array_head_slot",

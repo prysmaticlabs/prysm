@@ -2,194 +2,172 @@ package protoarray
 
 import (
 	"context"
-	"fmt"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 )
 
-// This returns the minimum and maximum slot of the synced_tips tree
-func (f *ForkChoice) boundarySyncedTips() (types.Slot, types.Slot) {
-	f.syncedTips.RLock()
-	defer f.syncedTips.RUnlock()
-
-	min := params.BeaconConfig().FarFutureSlot
-	max := types.Slot(0)
-	for _, slot := range f.syncedTips.validatedTips {
-		if slot > max {
-			max = slot
-		}
-		if slot < min {
-			min = slot
-		}
-	}
-	return min, max
-}
-
-// Optimistic returns true if this node is optimistically synced
+// IsOptimistic returns true if this node is optimistically synced
 // A optimistically synced block is synced as usual, but its
 // execution payload is not validated, while the EL is still syncing.
-// WARNING: this function does not check if slot corresponds to the
-//          block with the given root. An incorrect response may be
-//          returned when requesting earlier than finalized epoch due
-//          to pruning of non-canonical branches. A requests for a
-//          combination root/slot of an available block is guaranteed
-//          to yield the correct result. The caller is responsible for
-//          checking the block's availability. A consensus bug could be
-//          a cause of getting this wrong, so think twice before passing
-//          a wrong pair.
-func (f *ForkChoice) Optimistic(ctx context.Context, root [32]byte, slot types.Slot) (bool, error) {
-	if ctx.Err() != nil {
-		return false, ctx.Err()
-	}
-	// If the node is a synced tip, then it's fully validated
-	f.syncedTips.RLock()
-	_, ok := f.syncedTips.validatedTips[root]
-	if ok {
-		return false, nil
-	}
-	f.syncedTips.RUnlock()
-
-	// If the slot is higher than the max synced tip, it's optimistic
-	min, max := f.boundarySyncedTips()
-	if slot > max {
-		return true, nil
-	}
-
-	// If the slot is lower than the min synced tip, it's fully validated
-	if slot <= min {
-		return false, nil
-	}
-
-	// If we reached this point then the block has to be in the Fork Choice
-	// Store!
-	f.store.nodesLock.RLock()
-	index, ok := f.store.nodesIndices[root]
-	if !ok {
-		// This should not happen
-		f.store.nodesLock.RUnlock()
-		return false, fmt.Errorf("invalid root, slot combination, got %#x, %d",
-			bytesutil.Trunc(root[:]), slot)
-	}
-	node := f.store.nodes[index]
-
-	// if the node is a leaf of the Fork Choice tree, then it's
-	// optimistic
-	childIndex := node.BestChild()
-	if childIndex == NonExistentNode {
-		return true, nil
-	}
-
-	// recurse to the child
-	child := f.store.nodes[childIndex]
-	root = child.root
-	slot = child.slot
-	f.store.nodesLock.RUnlock()
-	return f.Optimistic(ctx, root, slot)
-}
-
-// UpdateSyncedTips updates the synced_tips map when the block with the given root becomes VALID
-func (f *ForkChoice) UpdateSyncedTips(ctx context.Context, root [32]byte) error {
+// This function returns an error if the block is not found in the fork choice
+// store
+func (f *ForkChoice) IsOptimistic(root [32]byte) (bool, error) {
 	f.store.nodesLock.RLock()
 	defer f.store.nodesLock.RUnlock()
-	// We can only update if given root is in fork choice
 	index, ok := f.store.nodesIndices[root]
 	if !ok {
-		return errInvalidNodeIndex
+		return false, ErrUnknownNodeRoot
 	}
-
-	// We can only update if root is a leaf in fork choice
 	node := f.store.nodes[index]
-	if node.bestChild != NonExistentNode {
-		return errInvalidBestChildIndex
+	return node.status == syncing, nil
+}
+
+// SetOptimisticToValid is called with the root of a block that was returned as
+// VALID by the EL.
+//
+// WARNING: This method returns an error if the root is not found in forkchoice
+func (f *ForkChoice) SetOptimisticToValid(ctx context.Context, root [32]byte) error {
+	f.store.nodesLock.Lock()
+	defer f.store.nodesLock.Unlock()
+	// We can only update if given root is in Fork Choice
+	index, ok := f.store.nodesIndices[root]
+	if !ok {
+		return ErrUnknownNodeRoot
 	}
 
-	// Stop early if the root is part of validated tips
-	f.syncedTips.Lock()
-	defer f.syncedTips.Unlock()
-	_, ok = f.syncedTips.validatedTips[root]
-	if ok {
-		return nil
-	}
-
-	// Cache root and slot to validated tips
-	f.syncedTips.validatedTips[root] = node.slot
-
-	// Compute the full valid path from the given node to its previous synced tip
-	// This path will now consist of fully validated blocks. Notice that
-	// the previous tip may have been outside the Fork Choice store.
-	// In this case, only one block can be in syncedTips as the whole
-	// Fork Choice would be a descendant of this block.
-	validPath := make(map[uint64]bool)
-	for {
+	for node := f.store.nodes[index]; node.status == syncing; node = f.store.nodes[index] {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
-
-		parentIndex := node.parent
-		if parentIndex == NonExistentNode {
+		node.status = valid
+		index = node.parent
+		if index == NonExistentNode {
 			break
 		}
-		if parentIndex >= uint64(len(f.store.nodes)) {
-			return errInvalidNodeIndex
-		}
-		node = f.store.nodes[parentIndex]
-		_, ok = f.syncedTips.validatedTips[node.root]
-		if ok {
-			break
-		}
-		validPath[parentIndex] = true
 	}
-
-	// Retrieve the list of leaves in the Fork Choice
-	// These are all the nodes that have NonExistentNode as best child.
-	var leaves []uint64
-	for i := uint64(0); i < uint64(len(f.store.nodes)); i++ {
-		if ctx.Err() != nil {
-			return ctx.Err()
-		}
-		node = f.store.nodes[i]
-		if node.bestChild == NonExistentNode {
-			leaves = append(leaves, i)
-		}
-	}
-
-	// For each leaf, recompute the new tip.
-	newTips := make(map[[32]byte]types.Slot)
-	for _, i := range leaves {
-		if ctx.Err() != nil {
-			return ctx.Err()
-		}
-
-		node = f.store.nodes[i]
-		j := i
-		for {
-			// Stop if we reached the previous tip
-			_, ok = f.syncedTips.validatedTips[node.root]
-			if ok {
-				newTips[node.root] = node.slot
-				break
-			}
-
-			// Stop if we reach valid path
-			_, ok = validPath[j]
-			if ok {
-				newTips[node.root] = node.slot
-				break
-			}
-
-			j = node.parent
-			if j == NonExistentNode {
-				break
-			}
-			if j >= uint64(len(f.store.nodes)) {
-				return errInvalidNodeIndex
-			}
-			node = f.store.nodes[j]
-		}
-	}
-
-	f.syncedTips.validatedTips = newTips
 	return nil
+}
+
+// SetOptimisticToInvalid updates the synced_tips map when the block with the given root becomes INVALID.
+// It takes three parameters: the root of the INVALID block, its parent root and the payload Hash
+// of the last valid block
+func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root, parentRoot, payloadHash [32]byte) ([][32]byte, error) {
+	f.store.nodesLock.Lock()
+	defer f.store.nodesLock.Unlock()
+	invalidRoots := make([][32]byte, 0)
+	lastValidIndex, ok := f.store.payloadIndices[payloadHash]
+	if !ok || lastValidIndex == NonExistentNode {
+		return invalidRoots, errInvalidFinalizedNode
+	}
+
+	invalidIndex, ok := f.store.nodesIndices[root]
+	if !ok {
+		invalidIndex, ok = f.store.nodesIndices[parentRoot]
+		if !ok {
+			return invalidRoots, ErrUnknownNodeRoot
+		}
+		// return early if parent is LVH
+		if invalidIndex == lastValidIndex {
+			return invalidRoots, nil
+		}
+	}
+	node := f.store.nodes[invalidIndex]
+
+	// Check if last valid hash is an ancestor of the passed node
+	firstInvalidIndex := node.parent
+	for ; firstInvalidIndex != NonExistentNode && firstInvalidIndex != lastValidIndex; firstInvalidIndex = node.parent {
+		node = f.store.nodes[firstInvalidIndex]
+	}
+
+	// Deal with the case that the last valid payload is in a different fork
+	// This means we are dealing with an EE that does not follow the spec
+	if node.parent != lastValidIndex {
+		node = f.store.nodes[invalidIndex]
+		// return early if invalid node was not imported
+		if node.root == parentRoot {
+			return invalidRoots, nil
+		}
+
+		firstInvalidIndex = invalidIndex
+		lastValidIndex = node.parent
+		if lastValidIndex == NonExistentNode {
+			return invalidRoots, errInvalidFinalizedNode
+		}
+	} else {
+		firstInvalidIndex = f.store.nodesIndices[node.root]
+	}
+
+	// Update the weights of the nodes subtracting the first INVALID node's weight
+	weight := node.weight
+	var validNode *Node
+	for index := lastValidIndex; index != NonExistentNode; index = validNode.parent {
+		validNode = f.store.nodes[index]
+		validNode.weight -= weight
+	}
+
+	// Find the current proposer boost (it should be set to zero if an
+	// INVALID block was boosted)
+	f.store.proposerBoostLock.RLock()
+	boostRoot := f.store.proposerBoostRoot
+	previousBoostRoot := f.store.previousProposerBoostRoot
+	f.store.proposerBoostLock.RUnlock()
+
+	// Remove the invalid roots from our store maps and adjust their weight
+	// to zero
+	boosted := node.root == boostRoot
+	previouslyBoosted := node.root == previousBoostRoot
+
+	invalidIndices := map[uint64]bool{firstInvalidIndex: true}
+	node.status = invalid
+	node.weight = 0
+	delete(f.store.nodesIndices, node.root)
+	delete(f.store.canonicalNodes, node.root)
+	delete(f.store.payloadIndices, node.payloadHash)
+	for index := firstInvalidIndex + 1; index < uint64(len(f.store.nodes)); index++ {
+		invalidNode := f.store.nodes[index]
+		if _, ok := invalidIndices[invalidNode.parent]; !ok {
+			continue
+		}
+		if invalidNode.status == valid {
+			return invalidRoots, errInvalidOptimisticStatus
+		}
+		if !boosted && invalidNode.root == boostRoot {
+			boosted = true
+		}
+		if !previouslyBoosted && invalidNode.root == previousBoostRoot {
+			previouslyBoosted = true
+		}
+		invalidNode.status = invalid
+		invalidIndices[index] = true
+		invalidNode.weight = 0
+		delete(f.store.nodesIndices, invalidNode.root)
+		delete(f.store.canonicalNodes, invalidNode.root)
+		delete(f.store.payloadIndices, invalidNode.payloadHash)
+	}
+	if boosted {
+		if err := f.ResetBoostedProposerRoot(ctx); err != nil {
+			return invalidRoots, err
+		}
+	}
+	if previouslyBoosted {
+		f.store.proposerBoostLock.Lock()
+		f.store.previousProposerBoostRoot = params.BeaconConfig().ZeroHash
+		f.store.previousProposerBoostScore = 0
+		f.store.proposerBoostLock.Unlock()
+	}
+
+	for index := range invalidIndices {
+		invalidRoots = append(invalidRoots, f.store.nodes[index].root)
+	}
+
+	// Update the best child and descendant
+	for i := len(f.store.nodes) - 1; i >= 0; i-- {
+		n := f.store.nodes[i]
+		if n.parent != NonExistentNode {
+			if err := f.store.updateBestChildAndDescendant(n.parent, uint64(i)); err != nil {
+				return invalidRoots, err
+			}
+		}
+	}
+	return invalidRoots, nil
 }

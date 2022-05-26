@@ -19,7 +19,7 @@ go_test(
     deps = [
         ":go_default_library",
         "//config/params:go_default_library",
-        "//testing/assert:go_default_library",
+        "//testing/require:go_default_library",
     ],
 )
 
@@ -30,9 +30,10 @@ go_test(
         "minimal_test.go",
     ],
     eth_network = "minimal",
+    tags = ["minimal"],
     deps = [
         ":go_default_library",
         "//config/params:go_default_library",
-        "//testing/assert:go_default_library",
+        "//testing/require:go_default_library",
     ],
 )

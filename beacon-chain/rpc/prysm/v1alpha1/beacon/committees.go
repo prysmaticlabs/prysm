@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/time/slots"
@@ -74,9 +74,9 @@ func (bs *Server) retrieveCommitteesForEpoch(
 	if err != nil {
 		return nil, nil, err
 	}
-	requestedState, err := bs.StateGen.StateBySlot(ctx, startSlot)
+	requestedState, err := bs.ReplayerBuilder.ReplayerForSlot(startSlot).ReplayBlocks(ctx)
 	if err != nil {
-		return nil, nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
+		return nil, nil, status.Errorf(codes.Internal, "error replaying blocks for state at slot %d: %v", startSlot, err)
 	}
 	seed, err := helpers.Seed(requestedState, epoch, params.BeaconConfig().DomainBeaconAttester)
 	if err != nil {

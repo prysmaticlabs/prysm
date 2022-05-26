@@ -11,7 +11,6 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/async/abool"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
@@ -26,6 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/network/forks"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -115,6 +115,11 @@ func TestSubscribe_UnsubscribeTopic(t *testing.T) {
 }
 
 func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.MainnetConfig().Copy()
+	cfg.SecondsPerSlot = 1
+	params.OverrideBeaconConfig(cfg)
+
 	p2pService := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 	d := db.SetupDB(t)
@@ -138,8 +143,6 @@ func TestSubscribe_ReceivesAttesterSlashing(t *testing.T) {
 	topic := "/eth2/%x/attester_slashing"
 	var wg sync.WaitGroup
 	wg.Add(1)
-	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MainnetConfig())
 	var err error
 	p2pService.Digest, err = r.currentForkDigest()
 	require.NoError(t, err)
@@ -437,6 +440,11 @@ func Test_wrapAndReportValidation(t *testing.T) {
 }
 
 func TestFilterSubnetPeers(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.MainnetConfig().Copy()
+	cfg.SecondsPerSlot = 1
+	params.OverrideBeaconConfig(cfg)
+
 	gFlags := new(flags.GlobalFlags)
 	gFlags.MinimumPeersPerSubnet = 4
 	flags.Init(gFlags)
@@ -504,6 +512,11 @@ func TestFilterSubnetPeers(t *testing.T) {
 }
 
 func TestSubscribeWithSyncSubnets_StaticOK(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.MainnetTestConfig().Copy()
+	cfg.SecondsPerSlot = 1
+	params.OverrideBeaconConfig(cfg)
+
 	p := p2ptest.NewTestP2P(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	currSlot := types.Slot(100)
@@ -530,11 +543,12 @@ func TestSubscribeWithSyncSubnets_StaticOK(t *testing.T) {
 }
 
 func TestSubscribeWithSyncSubnets_DynamicOK(t *testing.T) {
-	p := p2ptest.NewTestP2P(t)
 	params.SetupTestConfigCleanup(t)
-	cfg := params.BeaconConfig()
+	cfg := params.MainnetConfig().Copy()
 	cfg.SecondsPerSlot = 1
 	params.OverrideBeaconConfig(cfg)
+
+	p := p2ptest.NewTestP2P(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	currSlot := types.Slot(100)
 	r := Service{
@@ -597,7 +611,7 @@ func TestSubscribeWithSyncSubnets_StaticSwitchFork(t *testing.T) {
 	}
 	// Empty cache at the end of the test.
 	defer cache.SyncSubnetIDs.EmptyAllCaches()
-	genRoot := r.cfg.chain.GenesisValidatorRoot()
+	genRoot := r.cfg.chain.GenesisValidatorsRoot()
 	digest, err := signing.ComputeForkDigest(params.BeaconConfig().GenesisForkVersion, genRoot[:])
 	assert.NoError(t, err)
 	r.subscribeStaticWithSyncSubnets(p2p.SyncCommitteeSubnetTopicFormat, nil, nil, digest)
@@ -611,9 +625,9 @@ func TestSubscribeWithSyncSubnets_StaticSwitchFork(t *testing.T) {
 }
 
 func TestSubscribeWithSyncSubnets_DynamicSwitchFork(t *testing.T) {
-	p := p2ptest.NewTestP2P(t)
 	params.SetupTestConfigCleanup(t)
-	cfg := params.BeaconConfig()
+	p := p2ptest.NewTestP2P(t)
+	cfg := params.BeaconConfig().Copy()
 	cfg.AltairForkEpoch = 1
 	cfg.SecondsPerSlot = 1
 	cfg.SlotsPerEpoch = 4
@@ -637,7 +651,7 @@ func TestSubscribeWithSyncSubnets_DynamicSwitchFork(t *testing.T) {
 	// Empty cache at the end of the test.
 	defer cache.SyncSubnetIDs.EmptyAllCaches()
 	cache.SyncSubnetIDs.AddSyncCommitteeSubnets([]byte("pubkey"), 0, []uint64{0, 1}, 10*time.Second)
-	genRoot := r.cfg.chain.GenesisValidatorRoot()
+	genRoot := r.cfg.chain.GenesisValidatorsRoot()
 	digest, err := signing.ComputeForkDigest(params.BeaconConfig().GenesisForkVersion, genRoot[:])
 	assert.NoError(t, err)
 

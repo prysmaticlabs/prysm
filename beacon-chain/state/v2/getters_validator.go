@@ -4,10 +4,10 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
@@ -139,7 +139,7 @@ func (b *BeaconState) ValidatorIndexByPubkey(key [fieldparams.BLSPubkeyLength]by
 	numOfVals := len(b.state.Validators)
 
 	idx, ok := b.valMapHandler.Get(key)
-	if ok && numOfVals <= int(idx) {
+	if ok && types.ValidatorIndex(numOfVals) <= idx {
 		return types.ValidatorIndex(0), false
 	}
 	return idx, ok
@@ -175,7 +175,8 @@ func (b *BeaconState) NumValidators() int {
 }
 
 // ReadFromEveryValidator reads values from every validator and applies it to the provided function.
-// Warning: This method is potentially unsafe, as it exposes the actual validator registry.
+//
+// WARNING: This method is potentially unsafe, as it exposes the actual validator registry.
 func (b *BeaconState) ReadFromEveryValidator(f func(idx int, val state.ReadOnlyValidator) error) error {
 	if !b.hasInnerState() {
 		return ErrNilInnerState

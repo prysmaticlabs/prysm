@@ -7,6 +7,10 @@ import (
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 )
 
+//----------------
+// Requests and responses.
+//----------------
+
 // genesisResponseJson is used in /beacon/genesis API endpoint.
 type genesisResponseJson struct {
 	Data *genesisResponse_GenesisJson `json:"data"`
@@ -19,9 +23,24 @@ type genesisResponse_GenesisJson struct {
 	GenesisForkVersion    string `json:"genesis_fork_version" hex:"true"`
 }
 
+// WeakSubjectivityResponse is used to marshal/unmarshal the response for the
+// /eth/v1/beacon/weak_subjectivity endpoint.
+type WeakSubjectivityResponse struct {
+	Data *struct {
+		Checkpoint *checkpointJson `json:"ws_checkpoint"`
+		StateRoot  string          `json:"state_root" hex:"true"`
+	} `json:"data"`
+}
+
+// feeRecipientsRequestJson is used in /validator/prepare_beacon_proposers API endpoint.
+type feeRecipientsRequestJSON struct {
+	Recipients []*feeRecipientJson `json:"recipients"`
+}
+
 // stateRootResponseJson is used in /beacon/states/{state_id}/root API endpoint.
 type stateRootResponseJson struct {
-	Data *stateRootResponse_StateRootJson `json:"data"`
+	Data                *stateRootResponse_StateRootJson `json:"data"`
+	ExecutionOptimistic bool                             `json:"execution_optimistic"`
 }
 
 // stateRootResponse_StateRootJson is used in /beacon/states/{state_id}/root API endpoint.
@@ -31,12 +50,14 @@ type stateRootResponse_StateRootJson struct {
 
 // stateForkResponseJson is used in /beacon/states/{state_id}/fork API endpoint.
 type stateForkResponseJson struct {
-	Data *forkJson `json:"data"`
+	Data                *forkJson `json:"data"`
+	ExecutionOptimistic bool      `json:"execution_optimistic"`
 }
 
 // stateFinalityCheckpointResponseJson is used in /beacon/states/{state_id}/finality_checkpoints API endpoint.
 type stateFinalityCheckpointResponseJson struct {
-	Data *stateFinalityCheckpointResponse_StateFinalityCheckpointJson `json:"data"`
+	Data                *stateFinalityCheckpointResponse_StateFinalityCheckpointJson `json:"data"`
+	ExecutionOptimistic bool                                                         `json:"execution_optimistic"`
 }
 
 // stateFinalityCheckpointResponse_StateFinalityCheckpointJson is used in /beacon/states/{state_id}/finality_checkpoints API endpoint.
@@ -48,37 +69,44 @@ type stateFinalityCheckpointResponse_StateFinalityCheckpointJson struct {
 
 // stateValidatorResponseJson is used in /beacon/states/{state_id}/validators API endpoint.
 type stateValidatorsResponseJson struct {
-	Data []*validatorContainerJson `json:"data"`
+	Data                []*validatorContainerJson `json:"data"`
+	ExecutionOptimistic bool                      `json:"execution_optimistic"`
 }
 
 // stateValidatorResponseJson is used in /beacon/states/{state_id}/validators/{validator_id} API endpoint.
 type stateValidatorResponseJson struct {
-	Data *validatorContainerJson `json:"data"`
+	Data                *validatorContainerJson `json:"data"`
+	ExecutionOptimistic bool                    `json:"execution_optimistic"`
 }
 
 // validatorBalancesResponseJson is used in /beacon/states/{state_id}/validator_balances API endpoint.
 type validatorBalancesResponseJson struct {
-	Data []*validatorBalanceJson `json:"data"`
+	Data                []*validatorBalanceJson `json:"data"`
+	ExecutionOptimistic bool                    `json:"execution_optimistic"`
 }
 
 // stateCommitteesResponseJson is used in /beacon/states/{state_id}/committees API endpoint.
 type stateCommitteesResponseJson struct {
-	Data []*committeeJson `json:"data"`
+	Data                []*committeeJson `json:"data"`
+	ExecutionOptimistic bool             `json:"execution_optimistic"`
 }
 
 // syncCommitteesResponseJson is used in /beacon/states/{state_id}/sync_committees API endpoint.
 type syncCommitteesResponseJson struct {
-	Data *syncCommitteeValidatorsJson `json:"data"`
+	Data                *syncCommitteeValidatorsJson `json:"data"`
+	ExecutionOptimistic bool                         `json:"execution_optimistic"`
 }
 
 // blockHeadersResponseJson is used in /beacon/headers API endpoint.
 type blockHeadersResponseJson struct {
-	Data []*blockHeaderContainerJson `json:"data"`
+	Data                []*blockHeaderContainerJson `json:"data"`
+	ExecutionOptimistic bool                        `json:"execution_optimistic"`
 }
 
 // blockHeaderResponseJson is used in /beacon/headers/{block_id} API endpoint.
 type blockHeaderResponseJson struct {
-	Data *blockHeaderContainerJson `json:"data"`
+	Data                *blockHeaderContainerJson `json:"data"`
+	ExecutionOptimistic bool                      `json:"execution_optimistic"`
 }
 
 // blockResponseJson is used in /beacon/blocks/{block_id} API endpoint.
@@ -88,18 +116,21 @@ type blockResponseJson struct {
 
 // blockV2ResponseJson is used in /v2/beacon/blocks/{block_id} API endpoint.
 type blockV2ResponseJson struct {
-	Version string                            `json:"version" enum:"true"`
-	Data    *signedBeaconBlockContainerV2Json `json:"data"`
+	Version             string                            `json:"version" enum:"true"`
+	Data                *signedBeaconBlockContainerV2Json `json:"data"`
+	ExecutionOptimistic bool                              `json:"execution_optimistic"`
 }
 
 // blockRootResponseJson is used in /beacon/blocks/{block_id}/root API endpoint.
 type blockRootResponseJson struct {
-	Data *blockRootContainerJson `json:"data"`
+	Data                *blockRootContainerJson `json:"data"`
+	ExecutionOptimistic bool                    `json:"execution_optimistic"`
 }
 
 // blockAttestationsResponseJson is used in /beacon/blocks/{block_id}/attestations API endpoint.
 type blockAttestationsResponseJson struct {
-	Data []*attestationJson `json:"data"`
+	Data                []*attestationJson `json:"data"`
+	ExecutionOptimistic bool               `json:"execution_optimistic"`
 }
 
 // attestationsPoolResponseJson is used in /beacon/pool/attestations GET API endpoint.
@@ -177,13 +208,19 @@ type beaconStateResponseJson struct {
 
 // beaconStateV2ResponseJson is used in /v2/debug/beacon/states/{state_id} API endpoint.
 type beaconStateV2ResponseJson struct {
-	Version string                      `json:"version" enum:"true"`
-	Data    *beaconStateContainerV2Json `json:"data"`
+	Version             string                      `json:"version" enum:"true"`
+	Data                *beaconStateContainerV2Json `json:"data"`
+	ExecutionOptimistic bool                        `json:"execution_optimistic"`
 }
 
-// forkChoiceHeadsResponseJson is used in /debug/beacon/heads API endpoint.
+// forkChoiceHeadsResponseJson is used in /v1/debug/beacon/heads API endpoint.
 type forkChoiceHeadsResponseJson struct {
 	Data []*forkChoiceHeadJson `json:"data"`
+}
+
+// v2ForkChoiceHeadsResponseJson is used in /v2/debug/beacon/heads API endpoint.
+type v2ForkChoiceHeadsResponseJson struct {
+	Data []*v2ForkChoiceHeadJson `json:"data"`
 }
 
 // forkScheduleResponseJson is used in /config/fork_schedule API endpoint.
@@ -208,19 +245,22 @@ type dutiesRequestJson struct {
 
 // attesterDutiesResponseJson is used in /validator/duties/attester/{epoch} API endpoint.
 type attesterDutiesResponseJson struct {
-	DependentRoot string              `json:"dependent_root" hex:"true"`
-	Data          []*attesterDutyJson `json:"data"`
+	DependentRoot       string              `json:"dependent_root" hex:"true"`
+	Data                []*attesterDutyJson `json:"data"`
+	ExecutionOptimistic bool                `json:"execution_optimistic"`
 }
 
 // proposerDutiesResponseJson is used in /validator/duties/proposer/{epoch} API endpoint.
 type proposerDutiesResponseJson struct {
-	DependentRoot string              `json:"dependent_root" hex:"true"`
-	Data          []*proposerDutyJson `json:"data"`
+	DependentRoot       string              `json:"dependent_root" hex:"true"`
+	Data                []*proposerDutyJson `json:"data"`
+	ExecutionOptimistic bool                `json:"execution_optimistic"`
 }
 
 // syncCommitteeDutiesResponseJson is used in /validator/duties/sync/{epoch} API endpoint.
 type syncCommitteeDutiesResponseJson struct {
-	Data []*syncCommitteeDuty `json:"data"`
+	Data                []*syncCommitteeDuty `json:"data"`
+	ExecutionOptimistic bool                 `json:"execution_optimistic"`
 }
 
 // produceBlockResponseJson is used in /validator/blocks/{slot} API endpoint.
@@ -232,6 +272,12 @@ type produceBlockResponseJson struct {
 type produceBlockResponseV2Json struct {
 	Version string                      `json:"version"`
 	Data    *beaconBlockContainerV2Json `json:"data"`
+}
+
+// produceBlindedBlockResponseJson is used in /v1/validator/blinded_blocks/{slot} API endpoint.
+type produceBlindedBlockResponseJson struct {
+	Version string                           `json:"version"`
+	Data    *blindedBeaconBlockContainerJson `json:"data"`
 }
 
 // produceAttestationDataResponseJson is used in /validator/attestation_data API endpoint.
@@ -335,6 +381,12 @@ type beaconBlockContainerV2Json struct {
 	BellatrixBlock *beaconBlockBellatrixJson `json:"bellatrix_block"`
 }
 
+type blindedBeaconBlockContainerJson struct {
+	Phase0Block    *beaconBlockJson                 `json:"phase0_block"`
+	AltairBlock    *beaconBlockAltairJson           `json:"altair_block"`
+	BellatrixBlock *blindedBeaconBlockBellatrixJson `json:"bellatrix_block"`
+}
+
 type signedBeaconBlockAltairContainerJson struct {
 	Message   *beaconBlockAltairJson `json:"message"`
 	Signature string                 `json:"signature" hex:"true"`
@@ -343,6 +395,11 @@ type signedBeaconBlockAltairContainerJson struct {
 type signedBeaconBlockBellatrixContainerJson struct {
 	Message   *beaconBlockBellatrixJson `json:"message"`
 	Signature string                    `json:"signature" hex:"true"`
+}
+
+type signedBlindedBeaconBlockBellatrixContainerJson struct {
+	Message   *blindedBeaconBlockBellatrixJson `json:"message"`
+	Signature string                           `json:"signature" hex:"true"`
 }
 
 type beaconBlockAltairJson struct {
@@ -359,6 +416,14 @@ type beaconBlockBellatrixJson struct {
 	ParentRoot    string                        `json:"parent_root" hex:"true"`
 	StateRoot     string                        `json:"state_root" hex:"true"`
 	Body          *beaconBlockBodyBellatrixJson `json:"body"`
+}
+
+type blindedBeaconBlockBellatrixJson struct {
+	Slot          string                               `json:"slot"`
+	ProposerIndex string                               `json:"proposer_index"`
+	ParentRoot    string                               `json:"parent_root" hex:"true"`
+	StateRoot     string                               `json:"state_root" hex:"true"`
+	Body          *blindedBeaconBlockBodyBellatrixJson `json:"body"`
 }
 
 type beaconBlockBodyAltairJson struct {
@@ -386,21 +451,51 @@ type beaconBlockBodyBellatrixJson struct {
 	ExecutionPayload  *executionPayloadJson      `json:"execution_payload"`
 }
 
+type blindedBeaconBlockBodyBellatrixJson struct {
+	RandaoReveal           string                      `json:"randao_reveal" hex:"true"`
+	Eth1Data               *eth1DataJson               `json:"eth1_data"`
+	Graffiti               string                      `json:"graffiti" hex:"true"`
+	ProposerSlashings      []*proposerSlashingJson     `json:"proposer_slashings"`
+	AttesterSlashings      []*attesterSlashingJson     `json:"attester_slashings"`
+	Attestations           []*attestationJson          `json:"attestations"`
+	Deposits               []*depositJson              `json:"deposits"`
+	VoluntaryExits         []*signedVoluntaryExitJson  `json:"voluntary_exits"`
+	SyncAggregate          *syncAggregateJson          `json:"sync_aggregate"`
+	ExecutionPayloadHeader *executionPayloadHeaderJson `json:"execution_payload_header"`
+}
+
 type executionPayloadJson struct {
 	ParentHash    string   `json:"parent_hash" hex:"true"`
-	CoinBase      string   `json:"coinbase" hex:"true"`
+	FeeRecipient  string   `json:"fee_recipient" hex:"true"`
 	StateRoot     string   `json:"state_root" hex:"true"`
-	ReceiptRoot   string   `json:"receipt_root" hex:"true"`
+	ReceiptsRoot  string   `json:"receipts_root" hex:"true"`
 	LogsBloom     string   `json:"logs_bloom" hex:"true"`
-	Random        string   `json:"random" hex:"true"`
+	PrevRandao    string   `json:"prev_randao" hex:"true"`
 	BlockNumber   string   `json:"block_number"`
 	GasLimit      string   `json:"gas_limit"`
 	GasUsed       string   `json:"gas_used"`
 	TimeStamp     string   `json:"timestamp"`
 	ExtraData     string   `json:"extra_data" hex:"true"`
-	BaseFeePerGas string   `json:"base_fee_per_gas" hex:"true"`
+	BaseFeePerGas string   `json:"base_fee_per_gas" uint256:"true"`
 	BlockHash     string   `json:"block_hash" hex:"true"`
 	Transactions  []string `json:"transactions" hex:"true"`
+}
+
+type executionPayloadHeaderJson struct {
+	ParentHash       string `json:"parent_hash" hex:"true"`
+	FeeRecipient     string `json:"fee_recipient" hex:"true"`
+	StateRoot        string `json:"state_root" hex:"true"`
+	ReceiptsRoot     string `json:"receipts_root" hex:"true"`
+	LogsBloom        string `json:"logs_bloom" hex:"true"`
+	PrevRandao       string `json:"prev_randao" hex:"true"`
+	BlockNumber      string `json:"block_number"`
+	GasLimit         string `json:"gas_limit"`
+	GasUsed          string `json:"gas_used"`
+	TimeStamp        string `json:"timestamp"`
+	ExtraData        string `json:"extra_data" hex:"true"`
+	BaseFeePerGas    string `json:"base_fee_per_gas" uint256:"true"`
+	BlockHash        string `json:"block_hash" hex:"true"`
+	TransactionsRoot string `json:"transactions_root" hex:"true"`
 }
 
 type syncAggregateJson struct {
@@ -452,6 +547,11 @@ type indexedAttestationJson struct {
 	AttestingIndices []string             `json:"attesting_indices"`
 	Data             *attestationDataJson `json:"data"`
 	Signature        string               `json:"signature" hex:"true"`
+}
+
+type feeRecipientJson struct {
+	ValidatorIndex uint64 `json:"validator_index"`
+	FeeRecipient   string `json:"fee_recipient" hex:"true"`
 }
 
 type attestationJson struct {
@@ -546,7 +646,7 @@ type beaconStateJson struct {
 	FinalizedCheckpoint         *checkpointJson           `json:"finalized_checkpoint"`
 }
 
-type beaconStateV2Json struct {
+type beaconStateAltairJson struct {
 	GenesisTime                 string                 `json:"genesis_time"`
 	GenesisValidatorsRoot       string                 `json:"genesis_validators_root" hex:"true"`
 	Slot                        string                 `json:"slot"`
@@ -573,9 +673,38 @@ type beaconStateV2Json struct {
 	NextSyncCommittee           *syncCommitteeJson     `json:"next_sync_committee"`
 }
 
+type beaconStateBellatrixJson struct {
+	GenesisTime                  string                      `json:"genesis_time"`
+	GenesisValidatorsRoot        string                      `json:"genesis_validators_root" hex:"true"`
+	Slot                         string                      `json:"slot"`
+	Fork                         *forkJson                   `json:"fork"`
+	LatestBlockHeader            *beaconBlockHeaderJson      `json:"latest_block_header"`
+	BlockRoots                   []string                    `json:"block_roots" hex:"true"`
+	StateRoots                   []string                    `json:"state_roots" hex:"true"`
+	HistoricalRoots              []string                    `json:"historical_roots" hex:"true"`
+	Eth1Data                     *eth1DataJson               `json:"eth1_data"`
+	Eth1DataVotes                []*eth1DataJson             `json:"eth1_data_votes"`
+	Eth1DepositIndex             string                      `json:"eth1_deposit_index"`
+	Validators                   []*validatorJson            `json:"validators"`
+	Balances                     []string                    `json:"balances"`
+	RandaoMixes                  []string                    `json:"randao_mixes" hex:"true"`
+	Slashings                    []string                    `json:"slashings"`
+	PreviousEpochParticipation   EpochParticipation          `json:"previous_epoch_participation"`
+	CurrentEpochParticipation    EpochParticipation          `json:"current_epoch_participation"`
+	JustificationBits            string                      `json:"justification_bits" hex:"true"`
+	PreviousJustifiedCheckpoint  *checkpointJson             `json:"previous_justified_checkpoint"`
+	CurrentJustifiedCheckpoint   *checkpointJson             `json:"current_justified_checkpoint"`
+	FinalizedCheckpoint          *checkpointJson             `json:"finalized_checkpoint"`
+	InactivityScores             []string                    `json:"inactivity_scores"`
+	CurrentSyncCommittee         *syncCommitteeJson          `json:"current_sync_committee"`
+	NextSyncCommittee            *syncCommitteeJson          `json:"next_sync_committee"`
+	LatestExecutionPayloadHeader *executionPayloadHeaderJson `json:"latest_execution_payload_header"`
+}
+
 type beaconStateContainerV2Json struct {
-	Phase0State *beaconStateJson   `json:"phase0_state"`
-	AltairState *beaconStateV2Json `json:"altair_state"`
+	Phase0State    *beaconStateJson          `json:"phase0_state"`
+	AltairState    *beaconStateAltairJson    `json:"altair_state"`
+	BellatrixState *beaconStateBellatrixJson `json:"bellatrix_state"`
 }
 
 type forkJson struct {
@@ -633,6 +762,12 @@ type pendingAttestationJson struct {
 type forkChoiceHeadJson struct {
 	Root string `json:"root" hex:"true"`
 	Slot string `json:"slot"`
+}
+
+type v2ForkChoiceHeadJson struct {
+	Root                string `json:"root" hex:"true"`
+	Slot                string `json:"slot"`
+	ExecutionOptimistic bool   `json:"execution_optimistic"`
 }
 
 type depositContractJson struct {
@@ -702,63 +837,38 @@ type syncCommitteeContributionJson struct {
 // SSZ
 // ---------------
 
-// sszResponseJson is a common abstraction over all SSZ responses.
-type sszResponseJson interface {
+type sszRequestJson struct {
+	Data string `json:"data"`
+}
+
+// sszResponse is a common abstraction over all SSZ responses.
+type sszResponse interface {
 	SSZVersion() string
 	SSZData() string
 }
 
-// blockSSZResponseJson is used in /beacon/blocks/{block_id} API endpoint.
-type blockSSZResponseJson struct {
+type sszResponseJson struct {
 	Data string `json:"data"`
 }
 
-func (ssz *blockSSZResponseJson) SSZData() string {
+func (ssz *sszResponseJson) SSZData() string {
 	return ssz.Data
 }
 
-func (*blockSSZResponseJson) SSZVersion() string {
+func (*sszResponseJson) SSZVersion() string {
 	return strings.ToLower(ethpbv2.Version_PHASE0.String())
 }
 
-// blockSSZResponseV2Json is used in /v2/beacon/blocks/{block_id} API endpoint.
-type blockSSZResponseV2Json struct {
+type versionedSSZResponseJson struct {
 	Version string `json:"version"`
 	Data    string `json:"data"`
 }
 
-func (ssz *blockSSZResponseV2Json) SSZData() string {
+func (ssz *versionedSSZResponseJson) SSZData() string {
 	return ssz.Data
 }
 
-func (ssz *blockSSZResponseV2Json) SSZVersion() string {
-	return ssz.Version
-}
-
-// beaconStateSSZResponseJson is used in /debug/beacon/states/{state_id} API endpoint.
-type beaconStateSSZResponseJson struct {
-	Data string `json:"data"`
-}
-
-func (ssz *beaconStateSSZResponseJson) SSZData() string {
-	return ssz.Data
-}
-
-func (*beaconStateSSZResponseJson) SSZVersion() string {
-	return strings.ToLower(ethpbv2.Version_PHASE0.String())
-}
-
-// beaconStateSSZResponseV2Json is used in /v2/debug/beacon/states/{state_id} API endpoint.
-type beaconStateSSZResponseV2Json struct {
-	Version string `json:"version"`
-	Data    string `json:"data"`
-}
-
-func (ssz *beaconStateSSZResponseV2Json) SSZData() string {
-	return ssz.Data
-}
-
-func (ssz *beaconStateSSZResponseV2Json) SSZVersion() string {
+func (ssz *versionedSSZResponseJson) SSZVersion() string {
 	return ssz.Version
 }
 
@@ -771,13 +881,15 @@ type eventHeadJson struct {
 	Block                     string `json:"block" hex:"true"`
 	State                     string `json:"state" hex:"true"`
 	EpochTransition           bool   `json:"epoch_transition"`
+	ExecutionOptimistic       bool   `json:"execution_optimistic"`
 	PreviousDutyDependentRoot string `json:"previous_duty_dependent_root" hex:"true"`
 	CurrentDutyDependentRoot  string `json:"current_duty_dependent_root" hex:"true"`
 }
 
 type receivedBlockDataJson struct {
-	Slot  string `json:"slot"`
-	Block string `json:"block" hex:"true"`
+	Slot                string `json:"slot"`
+	Block               string `json:"block" hex:"true"`
+	ExecutionOptimistic bool   `json:"execution_optimistic"`
 }
 
 type aggregatedAttReceivedDataJson struct {
@@ -785,19 +897,21 @@ type aggregatedAttReceivedDataJson struct {
 }
 
 type eventFinalizedCheckpointJson struct {
-	Block string `json:"block" hex:"true"`
-	State string `json:"state" hex:"true"`
-	Epoch string `json:"epoch"`
+	Block               string `json:"block" hex:"true"`
+	State               string `json:"state" hex:"true"`
+	Epoch               string `json:"epoch"`
+	ExecutionOptimistic bool   `json:"execution_optimistic"`
 }
 
 type eventChainReorgJson struct {
-	Slot         string `json:"slot"`
-	Depth        string `json:"depth"`
-	OldHeadBlock string `json:"old_head_block" hex:"true"`
-	NewHeadBlock string `json:"old_head_state" hex:"true"`
-	OldHeadState string `json:"new_head_block" hex:"true"`
-	NewHeadState string `json:"new_head_state" hex:"true"`
-	Epoch        string `json:"epoch"`
+	Slot                string `json:"slot"`
+	Depth               string `json:"depth"`
+	OldHeadBlock        string `json:"old_head_block" hex:"true"`
+	NewHeadBlock        string `json:"old_head_state" hex:"true"`
+	OldHeadState        string `json:"new_head_block" hex:"true"`
+	NewHeadState        string `json:"new_head_state" hex:"true"`
+	Epoch               string `json:"epoch"`
+	ExecutionOptimistic bool   `json:"execution_optimistic"`
 }
 
 // ---------------

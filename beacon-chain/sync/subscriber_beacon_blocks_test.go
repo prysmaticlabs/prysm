@@ -2,17 +2,18 @@ package sync
 
 import (
 	"context"
-	"reflect"
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
+	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -66,7 +67,7 @@ func TestService_beaconBlockSubscriber(t *testing.T) {
 					return b
 				}(),
 			},
-			wantedErr: "nil inner state",
+			wantedErr: chainMock.ErrNilState.Error(),
 			check: func(t *testing.T, s *Service) {
 				if s.cfg.attPool.AggregatedAttestationCount() == 0 {
 					t.Error("Expected at least 1 aggregated attestation in the pool")
@@ -112,64 +113,35 @@ func TestService_beaconBlockSubscriber(t *testing.T) {
 	}
 }
 
-func TestBlockFromProto(t *testing.T) {
-	tests := []struct {
-		name       string
-		msgCreator func(t *testing.T) proto.Message
-		want       block.SignedBeaconBlock
-		wantErr    bool
-	}{
-		{
-			name: "invalid type provided",
-			msgCreator: func(t *testing.T) proto.Message {
-				return &ethpb.SignedAggregateAttestationAndProof{}
+func TestService_BeaconBlockSubscribe_ExecutionEngineTimesOut(t *testing.T) {
+	s := &Service{
+		cfg: &config{
+			chain: &chainMock.ChainService{
+				ReceiveBlockMockErr: powchain.ErrHTTPTimeout,
 			},
-			want:    nil,
-			wantErr: true,
 		},
-		{
-			name: "phase 0 type provided",
-			msgCreator: func(t *testing.T) proto.Message {
-				return &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 100}}
-			},
-			want:    wrapper.WrappedPhase0SignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Slot: 100}}),
-			wantErr: false,
-		},
-		{
-			name: "altair type provided",
-			msgCreator: func(t *testing.T) proto.Message {
-				return &ethpb.SignedBeaconBlockAltair{Block: &ethpb.BeaconBlockAltair{Slot: 100}}
-			},
-			want: func() block.SignedBeaconBlock {
-				wsb, err := wrapper.WrappedAltairSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: &ethpb.BeaconBlockAltair{Slot: 100}})
-				require.NoError(t, err)
-				return wsb
-			}(),
-			wantErr: false,
-		},
-		{
-			name: "bellatrix type provided",
-			msgCreator: func(t *testing.T) proto.Message {
-				return &ethpb.SignedBeaconBlockBellatrix{Block: &ethpb.BeaconBlockBellatrix{Slot: 100}}
-			},
-			want: func() block.SignedBeaconBlock {
-				wsb, err := wrapper.WrappedBellatrixSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: &ethpb.BeaconBlockBellatrix{Slot: 100}})
-				require.NoError(t, err)
-				return wsb
-			}(),
-			wantErr: false,
-		},
+		seenBlockCache: lruwrpr.New(10),
+		badBlockCache:  lruwrpr.New(10),
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := blockFromProto(tt.msgCreator(t))
-			if (err != nil) != tt.wantErr {
-				t.Errorf("blockFromProto() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("blockFromProto() got = %v, want %v", got, tt.want)
-			}
-		})
+	require.ErrorIs(t, powchain.ErrHTTPTimeout, s.beaconBlockSubscriber(context.Background(), util.NewBeaconBlock()))
+	require.Equal(t, 0, len(s.badBlockCache.Keys()))
+	require.Equal(t, 1, len(s.seenBlockCache.Keys()))
+}
+
+func TestService_BeaconBlockSubscribe_UndefinedEeError(t *testing.T) {
+	msg := "timeout"
+	err := errors.WithMessage(blockchain.ErrUndefinedExecutionEngineError, msg)
+
+	s := &Service{
+		cfg: &config{
+			chain: &chainMock.ChainService{
+				ReceiveBlockMockErr: err,
+			},
+		},
+		seenBlockCache: lruwrpr.New(10),
+		badBlockCache:  lruwrpr.New(10),
 	}
+	require.ErrorIs(t, s.beaconBlockSubscriber(context.Background(), util.NewBeaconBlock()), blockchain.ErrUndefinedExecutionEngineError)
+	require.Equal(t, 0, len(s.badBlockCache.Keys()))
+	require.Equal(t, 1, len(s.seenBlockCache.Keys()))
 }

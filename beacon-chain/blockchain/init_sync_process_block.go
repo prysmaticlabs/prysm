@@ -1,11 +1,15 @@
 package blockchain
 
 import (
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	"context"
+
+	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 )
 
 // This saves a beacon block to the initial sync blocks cache.
-func (s *Service) saveInitSyncBlock(r [32]byte, b block.SignedBeaconBlock) {
+func (s *Service) saveInitSyncBlock(r [32]byte, b interfaces.SignedBeaconBlock) {
 	s.initSyncBlocksLock.Lock()
 	defer s.initSyncBlocksLock.Unlock()
 	s.initSyncBlocks[r] = b
@@ -20,22 +24,42 @@ func (s *Service) hasInitSyncBlock(r [32]byte) bool {
 	return ok
 }
 
-// This retrieves a beacon block from the initial sync blocks cache using the root of
-// the block.
-func (s *Service) getInitSyncBlock(r [32]byte) block.SignedBeaconBlock {
+// Returns true if a block for root `r` exists in the initial sync blocks cache or the DB.
+func (s *Service) hasBlockInInitSyncOrDB(ctx context.Context, r [32]byte) bool {
+	if s.hasInitSyncBlock(r) {
+		return true
+	}
+	return s.cfg.BeaconDB.HasBlock(ctx, r)
+}
+
+// Returns block for a given root `r` from either the initial sync blocks cache or the DB.
+// Error is returned if the block is not found in either cache or DB.
+func (s *Service) getBlock(ctx context.Context, r [32]byte) (interfaces.SignedBeaconBlock, error) {
 	s.initSyncBlocksLock.RLock()
-	defer s.initSyncBlocksLock.RUnlock()
-	b := s.initSyncBlocks[r]
-	return b
+
+	// Check cache first because it's faster.
+	b, ok := s.initSyncBlocks[r]
+	s.initSyncBlocksLock.RUnlock()
+	var err error
+	if !ok {
+		b, err = s.cfg.BeaconDB.Block(ctx, r)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not retrieve block from db")
+		}
+	}
+	if err := wrapper.BeaconBlockIsNil(b); err != nil {
+		return nil, errBlockNotFoundInCacheOrDB
+	}
+	return b, nil
 }
 
 // This retrieves all the beacon blocks from the initial sync blocks cache, the returned
 // blocks are unordered.
-func (s *Service) getInitSyncBlocks() []block.SignedBeaconBlock {
+func (s *Service) getInitSyncBlocks() []interfaces.SignedBeaconBlock {
 	s.initSyncBlocksLock.RLock()
 	defer s.initSyncBlocksLock.RUnlock()
 
-	blks := make([]block.SignedBeaconBlock, 0, len(s.initSyncBlocks))
+	blks := make([]interfaces.SignedBeaconBlock, 0, len(s.initSyncBlocks))
 	for _, b := range s.initSyncBlocks {
 		blks = append(blks, b)
 	}
@@ -46,5 +70,5 @@ func (s *Service) getInitSyncBlocks() []block.SignedBeaconBlock {
 func (s *Service) clearInitSyncBlocks() {
 	s.initSyncBlocksLock.Lock()
 	defer s.initSyncBlocksLock.Unlock()
-	s.initSyncBlocks = make(map[[32]byte]block.SignedBeaconBlock)
+	s.initSyncBlocks = make(map[[32]byte]interfaces.SignedBeaconBlock)
 }

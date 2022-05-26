@@ -18,10 +18,10 @@ import (
 	"time"
 
 	"github.com/dustin/go-humanize"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	log "github.com/sirupsen/logrus"
@@ -324,9 +324,9 @@ func printStates(stateC <-chan *modifiedState, doneC chan<- bool) {
 		log.Infof("---- row = %04d, slot = %8d, epoch = %8d, key = %s ----", mst.rowCount, st.Slot(), st.Slot()/params.BeaconConfig().SlotsPerEpoch, hexutils.BytesToHex(mst.key))
 		log.Infof("key                           : %s", hexutils.BytesToHex(mst.key))
 		log.Infof("value                         : compressed size = %s", humanize.Bytes(mst.valueSize))
-		t := time.Unix(int64(st.GenesisTime()), 0)
+		t := time.Unix(int64(st.GenesisTime()), 0) // lint:ignore uintcast -- Genesis time will not exceed int64 in your lifetime.
 		log.Infof("genesis_time                  : %s", t.Format(time.UnixDate))
-		log.Infof("genesis_validators_root       : %s", hexutils.BytesToHex(st.GenesisValidatorRoot()))
+		log.Infof("genesis_validators_root       : %s", hexutils.BytesToHex(st.GenesisValidatorsRoot()))
 		log.Infof("slot                          : %d", st.Slot())
 		log.Infof("fork                          : previous_version = %b,  current_version = %b", st.Fork().PreviousVersion, st.Fork().CurrentVersion)
 		log.Infof("latest_block_header           : sizeSSZ = %s", humanize.Bytes(uint64(st.LatestBlockHeader().SizeSSZ())))
@@ -352,7 +352,8 @@ func printStates(stateC <-chan *modifiedState, doneC chan<- bool) {
 		log.Infof("previous_epoch_attestations   : sizeSSZ = %s, count = %d", humanize.Bytes(size), count)
 		size, count = sizeAndCountGeneric(st.CurrentEpochAttestations())
 		log.Infof("current_epoch_attestations    : sizeSSZ = %s, count = %d", humanize.Bytes(size), count)
-		log.Infof("justification_bits            : size =  %s, count = %d", humanize.Bytes(st.JustificationBits().Len()), st.JustificationBits().Count())
+		justificationBits := st.JustificationBits()
+		log.Infof("justification_bits            : size =  %s, count = %d", humanize.Bytes(justificationBits.Len()), justificationBits.Count())
 		log.Infof("previous_justified_checkpoint : sizeSSZ = %s", humanize.Bytes(uint64(st.PreviousJustifiedCheckpoint().SizeSSZ())))
 		log.Infof("current_justified_checkpoint  : sizeSSZ = %s", humanize.Bytes(uint64(st.CurrentJustifiedCheckpoint().SizeSSZ())))
 		log.Infof("finalized_checkpoint          : sizeSSZ = %s", humanize.Bytes(uint64(st.FinalizedCheckpoint().SizeSSZ())))

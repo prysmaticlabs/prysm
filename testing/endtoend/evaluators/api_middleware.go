@@ -11,7 +11,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/proto/eth/service"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
@@ -238,7 +238,7 @@ func withCompareAttesterDuties(beaconNodeIdx int, conn *grpc.ClientConn) error {
 }
 
 func doMiddlewareJSONGetRequestV1(requestPath string, beaconNodeIdx int, dst interface{}) error {
-	basePath := fmt.Sprintf(v1MiddlewarePathTemplate, params.TestParams.BeaconNodeRPCPort+beaconNodeIdx+40)
+	basePath := fmt.Sprintf(v1MiddlewarePathTemplate, params.TestParams.Ports.PrysmBeaconNodeGatewayPort+beaconNodeIdx)
 	httpResp, err := http.Get(
 		basePath + requestPath,
 	)
@@ -253,7 +253,7 @@ func doMiddlewareJSONPostRequestV1(requestPath string, beaconNodeIdx int, postDa
 	if err != nil {
 		return err
 	}
-	basePath := fmt.Sprintf(v1MiddlewarePathTemplate, params.TestParams.BeaconNodeRPCPort+beaconNodeIdx+40)
+	basePath := fmt.Sprintf(v1MiddlewarePathTemplate, params.TestParams.Ports.PrysmBeaconNodeGatewayPort+beaconNodeIdx)
 	httpResp, err := http.Post(
 		basePath+requestPath,
 		"application/json",

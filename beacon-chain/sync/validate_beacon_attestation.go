@@ -9,7 +9,6 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
@@ -17,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/features"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -40,6 +40,17 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 	if s.cfg.initialSync.Syncing() {
 		return pubsub.ValidationIgnore, nil
 	}
+
+	// We should not attempt to process this message if the node is running in optimistic mode.
+	// We just ignore in p2p so that the peer is not penalized.
+	optimistic, err := s.cfg.chain.IsOptimistic(ctx)
+	if err != nil {
+		return pubsub.ValidationReject, err
+	}
+	if optimistic {
+		return pubsub.ValidationIgnore, nil
+	}
+
 	ctx, span := trace.StartSpan(ctx, "sync.validateCommitteeIndexBeaconAttestation")
 	defer span.End()
 
@@ -136,7 +147,7 @@ func (s *Service) validateCommitteeIndexBeaconAttestation(ctx context.Context, p
 
 	if err := s.cfg.chain.VerifyFinalizedConsistency(ctx, att.Data.BeaconBlockRoot); err != nil {
 		tracing.AnnotateError(span, err)
-		return pubsub.ValidationReject, err
+		return pubsub.ValidationIgnore, err
 	}
 	if err := s.cfg.chain.VerifyLmdFfgConsistency(ctx, att); err != nil {
 		tracing.AnnotateError(span, err)
@@ -218,19 +229,12 @@ func (s *Service) validateUnaggregatedAttWithState(ctx context.Context, a *eth.A
 		return pubsub.ValidationReject, errors.New("attestation bitfield is invalid")
 	}
 
-	if features.Get().EnableBatchVerification {
-		set, err := blocks.AttestationSignatureBatch(ctx, bs, []*eth.Attestation{a})
-		if err != nil {
-			tracing.AnnotateError(span, err)
-			return pubsub.ValidationReject, err
-		}
-		return s.validateWithBatchVerifier(ctx, "attestation", set)
-	}
-	if err := blocks.VerifyAttestationSignature(ctx, bs, a); err != nil {
+	set, err := blocks.AttestationSignatureBatch(ctx, bs, []*eth.Attestation{a})
+	if err != nil {
 		tracing.AnnotateError(span, err)
 		return pubsub.ValidationReject, err
 	}
-	return pubsub.ValidationAccept, nil
+	return s.validateWithBatchVerifier(ctx, "attestation", set)
 }
 
 // Returns true if the attestation was already seen for the participating validator for the slot.
@@ -248,7 +252,7 @@ func (s *Service) setSeenCommitteeIndicesSlot(slot types.Slot, committeeID types
 	s.seenUnAggregatedAttestationLock.Lock()
 	defer s.seenUnAggregatedAttestationLock.Unlock()
 	b := append(bytesutil.Bytes32(uint64(slot)), bytesutil.Bytes32(uint64(committeeID))...)
-	b = append(b, aggregateBits...)
+	b = append(b, bytesutil.SafeCopyBytes(aggregateBits)...)
 	s.seenUnAggregatedAttestationCache.Add(string(b), true)
 }
 
@@ -257,6 +261,5 @@ func (s *Service) setSeenCommitteeIndicesSlot(slot types.Slot, committeeID types
 func (s *Service) hasBlockAndState(ctx context.Context, blockRoot [32]byte) bool {
 	hasStateSummary := s.cfg.beaconDB.HasStateSummary(ctx, blockRoot)
 	hasState := hasStateSummary || s.cfg.beaconDB.HasState(ctx, blockRoot)
-	hasBlock := s.cfg.chain.HasInitSyncBlock(blockRoot) || s.cfg.beaconDB.HasBlock(ctx, blockRoot)
-	return hasState && hasBlock
+	return hasState && s.cfg.chain.HasBlock(ctx, blockRoot)
 }

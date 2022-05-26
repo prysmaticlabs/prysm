@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	eth2types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	grpcutil "github.com/prysmaticlabs/prysm/api/grpc"
 	blockchainmock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
@@ -17,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits/mock"
 	p2pMock "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/config/params"
+	eth2types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
@@ -703,7 +703,7 @@ func TestSubmitVoluntaryExit_InvalidExit(t *testing.T) {
 func TestServer_SubmitAttestations_Ok(t *testing.T) {
 	ctx := context.Background()
 	params.SetupTestConfigCleanup(t)
-	c := params.BeaconConfig()
+	c := params.BeaconConfig().Copy()
 	// Required for correct committee size calculation.
 	c.SlotsPerEpoch = 1
 	params.OverrideBeaconConfig(c)
@@ -809,7 +809,7 @@ func TestServer_SubmitAttestations_ValidAttestationSubmitted(t *testing.T) {
 	ctx := grpc.NewContextWithServerTransportStream(context.Background(), &runtime.ServerTransportStream{})
 
 	params.SetupTestConfigCleanup(t)
-	c := params.BeaconConfig()
+	c := params.BeaconConfig().Copy()
 	// Required for correct committee size calculation.
 	c.SlotsPerEpoch = 1
 	params.OverrideBeaconConfig(c)
@@ -909,7 +909,7 @@ func TestServer_SubmitAttestations_InvalidAttestationGRPCHeader(t *testing.T) {
 	ctx := grpc.NewContextWithServerTransportStream(context.Background(), &runtime.ServerTransportStream{})
 
 	params.SetupTestConfigCleanup(t)
-	c := params.BeaconConfig()
+	c := params.BeaconConfig().Copy()
 	// Required for correct committee size calculation.
 	c.SlotsPerEpoch = 1
 	params.OverrideBeaconConfig(c)

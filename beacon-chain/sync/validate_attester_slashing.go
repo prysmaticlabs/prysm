@@ -26,6 +26,16 @@ func (s *Service) validateAttesterSlashing(ctx context.Context, pid peer.ID, msg
 		return pubsub.ValidationIgnore, nil
 	}
 
+	// We should not attempt to process this message if the node is running in optimistic mode.
+	// We just ignore in p2p so that the peer is not penalized.
+	optimistic, err := s.cfg.chain.IsOptimistic(ctx)
+	if err != nil {
+		return pubsub.ValidationReject, err
+	}
+	if optimistic {
+		return pubsub.ValidationIgnore, nil
+	}
+
 	ctx, span := trace.StartSpan(ctx, "sync.validateAttesterSlashing")
 	defer span.End()
 
@@ -53,6 +63,8 @@ func (s *Service) validateAttesterSlashing(ctx context.Context, pid peer.ID, msg
 	if err := blocks.VerifyAttesterSlashing(ctx, headState, slashing); err != nil {
 		return pubsub.ValidationReject, err
 	}
+
+	s.cfg.chain.ReceiveAttesterSlashing(ctx, slashing)
 
 	msg.ValidatorData = slashing // Used in downstream subscriber
 	return pubsub.ValidationAccept, nil

@@ -3,13 +3,15 @@ package validator
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"sort"
 	"strconv"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
@@ -18,6 +20,7 @@ import (
 	statev1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
@@ -53,6 +56,11 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *ethpbv1.AttesterDu
 	s, err := vs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
+	}
+
+	isOptimistic, err := rpchelpers.IsOptimistic(ctx, s, vs.OptimisticModeFetcher)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
 	}
 
 	s, err = advanceState(ctx, s, req.Epoch, currentEpoch)
@@ -107,8 +115,9 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *ethpbv1.AttesterDu
 	}
 
 	return &ethpbv1.AttesterDutiesResponse{
-		DependentRoot: root,
-		Data:          duties,
+		DependentRoot:       root,
+		Data:                duties,
+		ExecutionOptimistic: isOptimistic,
 	}, nil
 }
 
@@ -131,6 +140,11 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDu
 	s, err := vs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
+	}
+
+	isOptimistic, err := rpchelpers.IsOptimistic(ctx, s, vs.OptimisticModeFetcher)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
 	}
 
 	s, err = advanceState(ctx, s, req.Epoch, currentEpoch)
@@ -169,8 +183,9 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDu
 	}
 
 	return &ethpbv1.ProposerDutiesResponse{
-		DependentRoot: root,
-		Data:          duties,
+		DependentRoot:       root,
+		Data:                duties,
+		ExecutionOptimistic: isOptimistic,
 	}, nil
 }
 
@@ -242,8 +257,15 @@ func (vs *Server) GetSyncCommitteeDuties(ctx context.Context, req *ethpbv2.SyncC
 	} else if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get duties: %v", err)
 	}
+
+	isOptimistic, err := rpchelpers.IsOptimistic(ctx, st, vs.OptimisticModeFetcher)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
+	}
+
 	return &ethpbv2.SyncCommitteeDutiesResponse{
-		Data: duties,
+		Data:                duties,
+		ExecutionOptimistic: isOptimistic,
 	}, nil
 }
 
@@ -252,6 +274,11 @@ func (vs *Server) ProduceBlock(ctx context.Context, req *ethpbv1.ProduceBlockReq
 	ctx, span := trace.StartSpan(ctx, "validator.ProduceBlock")
 	defer span.End()
 
+	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher); err != nil {
+		// We simply return the error because it's already a gRPC error.
+		return nil, err
+	}
+
 	block, err := vs.v1BeaconBlock(ctx, req)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get block: %v", err)
@@ -259,22 +286,14 @@ func (vs *Server) ProduceBlock(ctx context.Context, req *ethpbv1.ProduceBlockReq
 	return &ethpbv1.ProduceBlockResponse{Data: block}, nil
 }
 
+// ProduceBlockV2 requests the beacon node to produce a valid unsigned beacon block, which can then be signed by a proposer and submitted.
 func (vs *Server) ProduceBlockV2(ctx context.Context, req *ethpbv1.ProduceBlockRequest) (*ethpbv2.ProduceBlockResponseV2, error) {
 	_, span := trace.StartSpan(ctx, "validator.ProduceBlockV2")
 	defer span.End()
 
-	epoch := slots.ToEpoch(req.Slot)
-	if epoch < params.BeaconConfig().AltairForkEpoch {
-		block, err := vs.v1BeaconBlock(ctx, req)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
-		}
-		return &ethpbv2.ProduceBlockResponseV2{
-			Version: ethpbv2.Version_PHASE0,
-			Data: &ethpbv2.BeaconBlockContainerV2{
-				Block: &ethpbv2.BeaconBlockContainerV2_Phase0Block{Phase0Block: block},
-			},
-		}, nil
+	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher); err != nil {
+		// We simply return the error because it's already a gRPC error.
+		return nil, err
 	}
 
 	v1alpha1req := &ethpbalpha.BlockRequest{
@@ -287,20 +306,279 @@ func (vs *Server) ProduceBlockV2(ctx context.Context, req *ethpbv1.ProduceBlockR
 		// We simply return err because it's already of a gRPC error type.
 		return nil, err
 	}
+	phase0Block, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Phase0)
+	if ok {
+		block, err := migration.V1Alpha1ToV1Block(phase0Block.Phase0)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
+		}
+		return &ethpbv2.ProduceBlockResponseV2{
+			Version: ethpbv2.Version_PHASE0,
+			Data: &ethpbv2.BeaconBlockContainerV2{
+				Block: &ethpbv2.BeaconBlockContainerV2_Phase0Block{Phase0Block: block},
+			},
+		}, nil
+	}
 	altairBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Altair)
-	if !ok {
-		return nil, status.Errorf(codes.Internal, "Could not get Altair block: %v", err)
+	if ok {
+		block, err := migration.V1Alpha1BeaconBlockAltairToV2(altairBlock.Altair)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
+		}
+		return &ethpbv2.ProduceBlockResponseV2{
+			Version: ethpbv2.Version_ALTAIR,
+			Data: &ethpbv2.BeaconBlockContainerV2{
+				Block: &ethpbv2.BeaconBlockContainerV2_AltairBlock{AltairBlock: block},
+			},
+		}, nil
 	}
-	block, err := migration.V1Alpha1BeaconBlockAltairToV2(altairBlock.Altair)
+	bellatrixBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Bellatrix)
+	if ok {
+		block, err := migration.V1Alpha1BeaconBlockBellatrixToV2(bellatrixBlock.Bellatrix)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
+		}
+		return &ethpbv2.ProduceBlockResponseV2{
+			Version: ethpbv2.Version_BELLATRIX,
+			Data: &ethpbv2.BeaconBlockContainerV2{
+				Block: &ethpbv2.BeaconBlockContainerV2_BellatrixBlock{BellatrixBlock: block},
+			},
+		}, nil
+	}
+	return nil, status.Error(codes.InvalidArgument, "Unsupported block type")
+}
+
+// ProduceBlockV2SSZ requests the beacon node to produce a valid unsigned beacon block, which can then be signed by a proposer and submitted.
+//
+// The produced block is in SSZ form.
+func (vs *Server) ProduceBlockV2SSZ(ctx context.Context, req *ethpbv1.ProduceBlockRequest) (*ethpbv2.SSZContainer, error) {
+	_, span := trace.StartSpan(ctx, "validator.ProduceBlockV2SSZ")
+	defer span.End()
+
+	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher); err != nil {
+		// We simply return the error because it's already a gRPC error.
+		return nil, err
+	}
+
+	v1alpha1req := &ethpbalpha.BlockRequest{
+		Slot:         req.Slot,
+		RandaoReveal: req.RandaoReveal,
+		Graffiti:     req.Graffiti,
+	}
+	v1alpha1resp, err := vs.V1Alpha1Server.GetBeaconBlock(ctx, v1alpha1req)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
+		// We simply return err because it's already of a gRPC error type.
+		return nil, err
 	}
-	return &ethpbv2.ProduceBlockResponseV2{
-		Version: ethpbv2.Version_ALTAIR,
-		Data: &ethpbv2.BeaconBlockContainerV2{
-			Block: &ethpbv2.BeaconBlockContainerV2_AltairBlock{AltairBlock: block},
-		},
-	}, nil
+	phase0Block, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Phase0)
+	if ok {
+		block, err := migration.V1Alpha1ToV1Block(phase0Block.Phase0)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
+		}
+		sszBlock, err := block.MarshalSSZ()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not marshal block into SSZ format: %v", err)
+		}
+		return &ethpbv2.SSZContainer{
+			Version: ethpbv2.Version_PHASE0,
+			Data:    sszBlock,
+		}, nil
+	}
+	altairBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Altair)
+	if ok {
+		block, err := migration.V1Alpha1BeaconBlockAltairToV2(altairBlock.Altair)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
+		}
+		sszBlock, err := block.MarshalSSZ()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not marshal block into SSZ format: %v", err)
+		}
+		return &ethpbv2.SSZContainer{
+			Version: ethpbv2.Version_ALTAIR,
+			Data:    sszBlock,
+		}, nil
+	}
+	bellatrixBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Bellatrix)
+	if ok {
+		block, err := migration.V1Alpha1BeaconBlockBellatrixToV2(bellatrixBlock.Bellatrix)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
+		}
+		sszBlock, err := block.MarshalSSZ()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not marshal block into SSZ format: %v", err)
+		}
+		return &ethpbv2.SSZContainer{
+			Version: ethpbv2.Version_BELLATRIX,
+			Data:    sszBlock,
+		}, nil
+	}
+	return nil, status.Error(codes.InvalidArgument, "Unsupported block type")
+}
+
+// ProduceBlindedBlock requests the beacon node to produce a valid unsigned blinded beacon block,
+// which can then be signed by a proposer and submitted.
+//
+// Pre-Bellatrix, this endpoint will return a regular block.
+func (vs *Server) ProduceBlindedBlock(ctx context.Context, req *ethpbv1.ProduceBlockRequest) (*ethpbv2.ProduceBlindedBlockResponse, error) {
+	ctx, span := trace.StartSpan(ctx, "validator.ProduceBlindedBlock")
+	defer span.End()
+
+	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher); err != nil {
+		// We simply return the error because it's already a gRPC error.
+		return nil, err
+	}
+
+	v1alpha1req := &ethpbalpha.BlockRequest{
+		Slot:         req.Slot,
+		RandaoReveal: req.RandaoReveal,
+		Graffiti:     req.Graffiti,
+	}
+	v1alpha1resp, err := vs.V1Alpha1Server.GetBeaconBlock(ctx, v1alpha1req)
+	if err != nil {
+		// We simply return err because it's already of a gRPC error type.
+		return nil, err
+	}
+	phase0Block, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Phase0)
+	if ok {
+		block, err := migration.V1Alpha1ToV1Block(phase0Block.Phase0)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
+		}
+		return &ethpbv2.ProduceBlindedBlockResponse{
+			Version: ethpbv2.Version_PHASE0,
+			Data: &ethpbv2.BlindedBeaconBlockContainer{
+				Block: &ethpbv2.BlindedBeaconBlockContainer_Phase0Block{Phase0Block: block},
+			},
+		}, nil
+	}
+	altairBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Altair)
+	if ok {
+		block, err := migration.V1Alpha1BeaconBlockAltairToV2(altairBlock.Altair)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
+		}
+		return &ethpbv2.ProduceBlindedBlockResponse{
+			Version: ethpbv2.Version_ALTAIR,
+			Data: &ethpbv2.BlindedBeaconBlockContainer{
+				Block: &ethpbv2.BlindedBeaconBlockContainer_AltairBlock{AltairBlock: block},
+			},
+		}, nil
+	}
+	bellatrixBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Bellatrix)
+	if ok {
+		block, err := migration.V1Alpha1BeaconBlockBellatrixToV2Blinded(bellatrixBlock.Bellatrix)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
+		}
+		return &ethpbv2.ProduceBlindedBlockResponse{
+			Version: ethpbv2.Version_BELLATRIX,
+			Data: &ethpbv2.BlindedBeaconBlockContainer{
+				Block: &ethpbv2.BlindedBeaconBlockContainer_BellatrixBlock{BellatrixBlock: block},
+			},
+		}, nil
+	}
+	return nil, status.Error(codes.InvalidArgument, "Unsupported block type")
+}
+
+// ProduceBlindedBlockSSZ requests the beacon node to produce a valid unsigned blinded beacon block,
+// which can then be signed by a proposer and submitted.
+//
+// The produced block is in SSZ form.
+//
+// Pre-Bellatrix, this endpoint will return a regular block.
+func (vs *Server) ProduceBlindedBlockSSZ(ctx context.Context, req *ethpbv1.ProduceBlockRequest) (*ethpbv2.SSZContainer, error) {
+	ctx, span := trace.StartSpan(ctx, "validator.ProduceBlindedBlockSSZ")
+	defer span.End()
+
+	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher); err != nil {
+		// We simply return the error because it's already a gRPC error.
+		return nil, err
+	}
+
+	v1alpha1req := &ethpbalpha.BlockRequest{
+		Slot:         req.Slot,
+		RandaoReveal: req.RandaoReveal,
+		Graffiti:     req.Graffiti,
+	}
+	v1alpha1resp, err := vs.V1Alpha1Server.GetBeaconBlock(ctx, v1alpha1req)
+	if err != nil {
+		// We simply return err because it's already of a gRPC error type.
+		return nil, err
+	}
+	phase0Block, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Phase0)
+	if ok {
+		block, err := migration.V1Alpha1ToV1Block(phase0Block.Phase0)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
+		}
+		sszBlock, err := block.MarshalSSZ()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not marshal block into SSZ format: %v", err)
+		}
+		return &ethpbv2.SSZContainer{
+			Version: ethpbv2.Version_PHASE0,
+			Data:    sszBlock,
+		}, nil
+	}
+	altairBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Altair)
+	if ok {
+		block, err := migration.V1Alpha1BeaconBlockAltairToV2(altairBlock.Altair)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
+		}
+		sszBlock, err := block.MarshalSSZ()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not marshal block into SSZ format: %v", err)
+		}
+		return &ethpbv2.SSZContainer{
+			Version: ethpbv2.Version_ALTAIR,
+			Data:    sszBlock,
+		}, nil
+	}
+	bellatrixBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Bellatrix)
+	if ok {
+		block, err := migration.V1Alpha1BeaconBlockBellatrixToV2Blinded(bellatrixBlock.Bellatrix)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
+		}
+		sszBlock, err := block.MarshalSSZ()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not marshal block into SSZ format: %v", err)
+		}
+		return &ethpbv2.SSZContainer{
+			Version: ethpbv2.Version_BELLATRIX,
+			Data:    sszBlock,
+		}, nil
+	}
+	return nil, status.Error(codes.InvalidArgument, "Unsupported block type")
+}
+
+// PrepareBeaconProposer caches and updates the fee recipient for the given proposer.
+func (vs *Server) PrepareBeaconProposer(
+	ctx context.Context, request *ethpbv1.PrepareBeaconProposerRequest,
+) (*emptypb.Empty, error) {
+	_, span := trace.StartSpan(ctx, "validator.PrepareBeaconProposer")
+	defer span.End()
+	var feeRecipients []common.Address
+	var validatorIndices []types.ValidatorIndex
+	for _, recipientContainer := range request.Recipients {
+		recipient := hexutil.Encode(recipientContainer.FeeRecipient)
+		if !common.IsHexAddress(recipient) {
+			return nil, status.Errorf(codes.InvalidArgument, fmt.Sprintf("Invalid fee recipient address: %v", recipient))
+		}
+		feeRecipients = append(feeRecipients, common.BytesToAddress(recipientContainer.FeeRecipient))
+		validatorIndices = append(validatorIndices, recipientContainer.ValidatorIndex)
+	}
+	if err := vs.V1Alpha1Server.BeaconDB.SaveFeeRecipientsByValidatorIDs(ctx, validatorIndices, feeRecipients); err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not save fee recipients: %v", err)
+	}
+	log.WithFields(log.Fields{
+		"validatorIndices": validatorIndices,
+	}).Info("Updated fee recipient addresses for validator indices")
+	return &emptypb.Empty{}, nil
 }
 
 // ProduceAttestationData requests that the beacon node produces attestation data for
@@ -345,7 +623,7 @@ func (vs *Server) GetAggregateAttestation(ctx context.Context, req *ethpbv1.Aggr
 	}
 
 	if bestMatchingAtt == nil {
-		return nil, status.Error(codes.InvalidArgument, "No matching attestation found")
+		return nil, status.Error(codes.NotFound, "No matching attestation found")
 	}
 	return &ethpbv1.AggregateAttestationResponse{
 		Data: migration.V1Alpha1AttestationToV1(bestMatchingAtt),
@@ -561,6 +839,9 @@ func (vs *Server) ProduceSyncCommitteeContribution(
 	msgs, err := vs.SyncCommitteePool.SyncCommitteeMessages(req.Slot)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get sync subcommittee messages: %v", err)
+	}
+	if msgs == nil {
+		return nil, status.Errorf(codes.NotFound, "No subcommittee messages found")
 	}
 	aggregatedSig, bits, err := vs.V1Alpha1Server.AggregatedSigAndAggregationBits(ctx, msgs, req.Slot, req.SubcommitteeIndex, req.BeaconBlockRoot)
 	if err != nil {

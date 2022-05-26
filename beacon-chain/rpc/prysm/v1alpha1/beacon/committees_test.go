@@ -3,6 +3,7 @@ package beacon
 import (
 	"context"
 	"encoding/binary"
+	"math"
 	"testing"
 	"time"
 
@@ -11,10 +12,11 @@ import (
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	mockstategen "github.com/prysmaticlabs/prysm/beacon-chain/state/stategen/mock"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -42,11 +44,15 @@ func TestServer_ListBeaconCommittees_CurrentEpoch(t *testing.T) {
 		StateGen:           stategen.New(db),
 	}
 	b := util.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, wsb))
 	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
 	require.NoError(t, db.SaveState(ctx, headState, gRoot))
+
+	bs.ReplayerBuilder = mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(headState))
 
 	activeIndices, err := helpers.ActiveValidatorIndices(ctx, headState, 0)
 	require.NoError(t, err)
@@ -69,6 +75,12 @@ func TestServer_ListBeaconCommittees_CurrentEpoch(t *testing.T) {
 	}
 }
 
+func addDefaultReplayerBuilder(s *Server, h stategen.HistoryAccessor) {
+	cc := &mockstategen.MockCanonicalChecker{Is: true, Err: nil}
+	cs := &mockstategen.MockCurrentSlotter{Slot: math.MaxUint64 - 1}
+	s.ReplayerBuilder = stategen.NewCanonicalHistory(h, cc, cs)
+}
+
 func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
@@ -87,12 +99,13 @@ func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 	require.NoError(t, headState.SetRandaoMixes(mixes))
 	require.NoError(t, headState.SetSlot(params.BeaconConfig().SlotsPerEpoch))
 
-	b := util.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))
-	gRoot, err := b.Block.HashTreeRoot()
+	b, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+	require.NoError(t, wrapper.SetBlockSlot(b, headState.Slot()))
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, b))
+	gRoot, err := b.Block().HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveState(ctx, headState, gRoot))
-	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
 
 	offset := int64(headState.Slot().Mul(params.BeaconConfig().SecondsPerSlot))
 	m := &mock.ChainService{
@@ -104,6 +117,7 @@ func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 		GenesisTimeFetcher: m,
 		StateGen:           stategen.New(db),
 	}
+	addDefaultReplayerBuilder(bs, db)
 
 	activeIndices, err := helpers.ActiveValidatorIndices(ctx, headState, 1)
 	require.NoError(t, err)
@@ -159,7 +173,9 @@ func TestRetrieveCommitteesForRoot(t *testing.T) {
 		StateGen:           stategen.New(db),
 	}
 	b := util.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, wsb))
 	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))

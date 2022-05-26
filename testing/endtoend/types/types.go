@@ -5,22 +5,50 @@ package types
 import (
 	"context"
 
-	types "github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"google.golang.org/grpc"
 )
 
+type E2EConfigOpt func(*E2EConfig)
+
+func WithExtraEpochs(extra uint64) E2EConfigOpt {
+	return func(cfg *E2EConfig) {
+		cfg.ExtraEpochs = extra
+	}
+}
+
+func WithRemoteSigner() E2EConfigOpt {
+	return func(cfg *E2EConfig) {
+		cfg.UseWeb3RemoteSigner = true
+	}
+}
+
+func WithCheckpointSync() E2EConfigOpt {
+	return func(cfg *E2EConfig) {
+		cfg.TestCheckpointSync = true
+	}
+}
+
 // E2EConfig defines the struct for all configurations needed for E2E testing.
 type E2EConfig struct {
-	TestSync            bool
-	UsePrysmShValidator bool
-	UsePprof            bool
-	UseWeb3RemoteSigner bool
-	TestDeposits        bool
-	EpochsToRun         uint64
-	TracingSinkEndpoint string
-	Evaluators          []Evaluator
-	BeaconFlags         []string
-	ValidatorFlags      []string
+	TestCheckpointSync      bool
+	TestSync                bool
+	TestFeature             bool
+	UsePrysmShValidator     bool
+	UsePprof                bool
+	UseWeb3RemoteSigner     bool
+	TestDeposits            bool
+	UseFixedPeerIDs         bool
+	UseValidatorCrossClient bool
+	EpochsToRun             uint64
+	Seed                    int64
+	TracingSinkEndpoint     string
+	Evaluators              []Evaluator
+	EvalInterceptor         func(uint64) bool
+	BeaconFlags             []string
+	ValidatorFlags          []string
+	PeerIDs                 []string
+	ExtraEpochs             uint64
 }
 
 // Evaluator defines the structure of the evaluators used to
@@ -37,4 +65,28 @@ type ComponentRunner interface {
 	Start(ctx context.Context) error
 	// Started checks whether an underlying component is started and ready to be queried.
 	Started() <-chan struct{}
+	// Pause pauses a component.
+	Pause() error
+	// Resume resumes a component.
+	Resume() error
+	// Stop stops a component.
+	Stop() error
+}
+
+type MultipleComponentRunners interface {
+	ComponentRunner
+	// PauseAtIndex pauses the grouped component element at the desired index.
+	PauseAtIndex(i int) error
+	// ResumeAtIndex resumes the grouped component element at the desired index.
+	ResumeAtIndex(i int) error
+	// StopAtIndex stops the grouped component element at the desired index.
+	StopAtIndex(i int) error
+}
+
+// BeaconNodeSet defines an interface for an object that fulfills the duties
+// of a group of beacon nodes.
+type BeaconNodeSet interface {
+	ComponentRunner
+	// SetENR provides the relevant bootnode's enr to the beacon nodes.
+	SetENR(enr string)
 }

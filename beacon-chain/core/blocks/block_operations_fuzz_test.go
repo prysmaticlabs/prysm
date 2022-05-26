@@ -5,13 +5,13 @@ import (
 	"testing"
 
 	fuzz "github.com/google/gofuzz"
-	types "github.com/prysmaticlabs/eth2-types"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
@@ -42,7 +42,9 @@ func TestFuzzProcessBlockHeader_10000(t *testing.T) {
 
 		s, err := v1.InitializeFromProtoUnsafe(state)
 		require.NoError(t, err)
-		_, err = ProcessBlockHeader(context.Background(), s, wrapper.WrappedPhase0SignedBeaconBlock(block))
+		wsb, err := wrapper.WrappedSignedBeaconBlock(block)
+		require.NoError(t, err)
+		_, err = ProcessBlockHeader(context.Background(), s, wsb)
 		_ = err
 	}
 }
@@ -74,7 +76,8 @@ func TestFuzzverifyDepositDataSigningRoot_10000(_ *testing.T) {
 func TestFuzzProcessEth1DataInBlock_10000(t *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
 	e := &ethpb.Eth1Data{}
-	state := &v1.BeaconState{}
+	state, err := v1.InitializeFromProtoUnsafe(&ethpb.BeaconState{})
+	require.NoError(t, err)
 	for i := 0; i < 10000; i++ {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(e)
@@ -140,7 +143,9 @@ func TestFuzzProcessRandao_10000(t *testing.T) {
 		fuzzer.Fuzz(b)
 		s, err := v1.InitializeFromProtoUnsafe(state)
 		require.NoError(t, err)
-		r, err := ProcessRandao(context.Background(), s, wrapper.WrappedPhase0SignedBeaconBlock(b))
+		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		require.NoError(t, err)
+		r, err := ProcessRandao(context.Background(), s, wsb)
 		if err != nil && r != nil {
 			t.Fatalf("return value should be nil on err. found: %v on error: %v for state: %v and block: %v", r, err, state, b)
 		}
@@ -259,7 +264,9 @@ func TestFuzzProcessAttestationsNoVerify_10000(t *testing.T) {
 		fuzzer.Fuzz(b)
 		s, err := v1.InitializeFromProtoUnsafe(state)
 		require.NoError(t, err)
-		r, err := ProcessAttestationsNoVerifySignature(ctx, s, wrapper.WrappedPhase0SignedBeaconBlock(b))
+		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		require.NoError(t, err)
+		r, err := ProcessAttestationsNoVerifySignature(ctx, s, wsb)
 		if err != nil && r != nil {
 			t.Fatalf("return value should be nil on err. found: %v on error: %v for state: %v and block: %v", r, err, state, b)
 		}

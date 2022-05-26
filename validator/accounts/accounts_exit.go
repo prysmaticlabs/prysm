@@ -164,7 +164,7 @@ func interact(
 	if !cliCtx.IsSet(flags.ExitAllFlag.Name) {
 		// Allow the user to interactively select the accounts to exit or optionally
 		// provide them via cli flags as a string of comma-separated, hex strings.
-		filteredPubKeys, err := filterPublicKeysFromUserInput(
+		filteredPubKeys, err := FilterPublicKeysFromUserInput(
 			cliCtx,
 			flags.VoluntaryExitPublicKeysFlag,
 			validatingPublicKeys,
@@ -276,9 +276,7 @@ func displayExitInfo(rawExitedKeys [][]byte, trimmedExitedKeys []string) {
 		urlFormattedPubKeys := make([]string, len(rawExitedKeys))
 		for i, key := range rawExitedKeys {
 			var baseUrl string
-			if params.BeaconConfig().ConfigName == params.ConfigNames[params.Pyrmont] {
-				baseUrl = "https://pyrmont.beaconcha.in/validator/"
-			} else if params.BeaconConfig().ConfigName == params.ConfigNames[params.Prater] {
+			if params.BeaconConfig().ConfigName == params.PraterName {
 				baseUrl = "https://prater.beaconcha.in/validator/"
 			} else {
 				baseUrl = "https://beaconcha.in/validator/"

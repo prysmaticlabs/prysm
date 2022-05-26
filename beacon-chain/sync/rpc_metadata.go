@@ -12,11 +12,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/network/forks"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/metadata"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/time/slots"
 )
@@ -106,7 +106,7 @@ func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (metadata
 		s.cfg.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 		return nil, errors.New(errMsg)
 	}
-	valRoot := s.cfg.chain.GenesisValidatorRoot()
+	valRoot := s.cfg.chain.GenesisValidatorsRoot()
 	rpcCtx, err := forks.ForkDigestFromEpoch(slots.ToEpoch(s.cfg.chain.CurrentSlot()), valRoot[:])
 	if err != nil {
 		return nil, err
@@ -143,7 +143,7 @@ func extractMetaDataType(digest []byte, chain blockchain.ChainInfoFetcher) (meta
 	if len(digest) != forkDigestLength {
 		return nil, errors.Errorf("invalid digest returned, wanted a length of %d but received %d", forkDigestLength, len(digest))
 	}
-	vRoot := chain.GenesisValidatorRoot()
+	vRoot := chain.GenesisValidatorsRoot()
 	for k, mdFunc := range types.MetaDataMap {
 		rDigest, err := signing.ComputeForkDigest(k[:], vRoot[:])
 		if err != nil {

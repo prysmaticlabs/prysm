@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"context"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -23,7 +23,7 @@ var previousFinalizedCheckpointKey = []byte("previous-finalized-checkpoint")
 var containerFinalizedButNotCanonical = []byte("recent block needs reindexing to determine canonical")
 
 // The finalized block roots index tracks beacon blocks which are finalized in the canonical chain.
-// The finalized checkpoint contains the the epoch which was finalized and the highest beacon block
+// The finalized checkpoint contains the epoch which was finalized and the highest beacon block
 // root where block.slot <= start_slot(epoch). As a result, we cannot index the finalized canonical
 // beacon block chain using the finalized root alone as this would exclude all other blocks in the
 // finalized epoch from being indexed as "final and canonical".
@@ -32,7 +32,7 @@ var containerFinalizedButNotCanonical = []byte("recent block needs reindexing to
 //   - De-index all finalized beacon block roots from previous_finalized_epoch to
 //     new_finalized_epoch. (I.e. delete these roots from the index, to be re-indexed.)
 //   - Build the canonical finalized chain by walking up the ancestry chain from the finalized block
-//     root until a parent is found in the index or the parent is genesis.
+//     root until a parent is found in the index, or the parent is genesis or the origin checkpoint.
 //   - Add all block roots in the database where epoch(block.slot) == checkpoint.epoch.
 //
 // This method ensures that all blocks from the current finalized epoch are considered "final" while
@@ -46,6 +46,7 @@ func (s *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, chec
 	root := checkpoint.Root
 	var previousRoot []byte
 	genesisRoot := tx.Bucket(blocksBucket).Get(genesisBlockRootKey)
+	initCheckpointRoot := tx.Bucket(blocksBucket).Get(originCheckpointBlockRootKey)
 
 	// De-index recent finalized block roots, to be re-indexed.
 	previousFinalizedCheckpoint := &ethpb.Checkpoint{}
@@ -83,7 +84,7 @@ func (s *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, chec
 			tracing.AnnotateError(span, err)
 			return err
 		}
-		if err := helpers.BeaconBlockIsNil(signedBlock); err != nil {
+		if err := wrapper.BeaconBlockIsNil(signedBlock); err != nil {
 			tracing.AnnotateError(span, err)
 			return err
 		}
@@ -102,6 +103,12 @@ func (s *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, chec
 		if err := bkt.Put(root, enc); err != nil {
 			tracing.AnnotateError(span, err)
 			return err
+		}
+
+		// breaking here allows the initial checkpoint root to be correctly inserted,
+		// but stops the loop from trying to search for its parent.
+		if bytes.Equal(root, initCheckpointRoot) {
+			break
 		}
 
 		// Found parent, loop exit condition.
@@ -181,11 +188,11 @@ func (s *Store) IsFinalizedBlock(ctx context.Context, blockRoot [32]byte) bool {
 // FinalizedChildBlock returns the child block of a provided finalized block. If
 // no finalized block or its respective child block exists we return with a nil
 // block.
-func (s *Store) FinalizedChildBlock(ctx context.Context, blockRoot [32]byte) (block.SignedBeaconBlock, error) {
+func (s *Store) FinalizedChildBlock(ctx context.Context, blockRoot [32]byte) (interfaces.SignedBeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.FinalizedChildBlock")
 	defer span.End()
 
-	var blk block.SignedBeaconBlock
+	var blk interfaces.SignedBeaconBlock
 	err := s.db.View(func(tx *bolt.Tx) error {
 		blkBytes := tx.Bucket(finalizedBlockRootsIndexBucket).Get(blockRoot[:])
 		if blkBytes == nil {

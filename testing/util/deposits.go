@@ -75,7 +75,7 @@ func DeterministicDepositsAndKeys(numDeposits uint64) ([]*ethpb.Deposit, []bls.S
 		}
 	}
 
-	depositTrie, _, err := DeterministicDepositTrie(int(numDeposits))
+	depositTrie, _, err := DeterministicDepositTrie(int(numDeposits)) // lint:ignore uintcast
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to create deposit trie")
 	}
@@ -126,6 +126,7 @@ func DepositsWithBalance(balances []uint64) ([]*ethpb.Deposit, *trie.SparseMerkl
 	// Create the new deposits and add them to the trie.
 	for i := uint64(0); i < numDeposits; i++ {
 		balance := params.BeaconConfig().MaxEffectiveBalance
+		// lint:ignore uintcast -- test code
 		if len(balances) == int(numDeposits) {
 			balance = balances[i]
 		}
@@ -140,12 +141,13 @@ func DepositsWithBalance(balances []uint64) ([]*ethpb.Deposit, *trie.SparseMerkl
 			return nil, nil, errors.Wrap(err, "could not tree hash deposit data")
 		}
 
+		// lint:ignore uintcast -- test code
 		if err = sparseTrie.Insert(hashedDeposit[:], int(i)); err != nil {
 			return nil, nil, err
 		}
 	}
 
-	depositTrie, _, err := DepositTrieSubset(sparseTrie, int(numDeposits))
+	depositTrie, _, err := DepositTrieSubset(sparseTrie, int(numDeposits)) // lint:ignore uintcast -- test code
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to create deposit trie")
 	}
@@ -240,7 +242,10 @@ func DeterministicEth1Data(size int) (*ethpb.Eth1Data, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create trie")
 	}
-	root := depositTrie.HashTreeRoot()
+	root, err := depositTrie.HashTreeRoot()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to compute deposit trie root")
+	}
 	eth1Data := &ethpb.Eth1Data{
 		BlockHash:    root[:],
 		DepositRoot:  root[:],
@@ -374,6 +379,7 @@ func DeterministicDepositsAndKeysSameValidator(numDeposits uint64) ([]*ethpb.Dep
 		}
 	}
 
+	// lint:ignore uintcast -- test code
 	depositTrie, _, err := DeterministicDepositTrie(int(numDeposits))
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to create deposit trie")

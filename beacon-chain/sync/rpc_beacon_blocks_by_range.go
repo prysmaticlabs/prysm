@@ -6,15 +6,15 @@ import (
 
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"go.opencensus.io/trace"
 )
 
@@ -60,8 +60,8 @@ func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 	}
 	remainingBucketCapacity := blockLimiter.Remaining(stream.Conn().RemotePeer().String())
 	span.AddAttributes(
-		trace.Int64Attribute("start", int64(startSlot)),
-		trace.Int64Attribute("end", int64(endReqSlot)),
+		trace.Int64Attribute("start", int64(startSlot)), // lint:ignore uintcast -- This conversion is OK for tracing.
+		trace.Int64Attribute("end", int64(endReqSlot)),  // lint:ignore uintcast -- This conversion is OK for tracing.
 		trace.Int64Attribute("step", int64(m.Step)),
 		trace.Int64Attribute("count", int64(m.Count)),
 		trace.StringAttribute("peer", stream.Conn().RemotePeer().Pretty()),
@@ -139,7 +139,7 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 			tracing.AnnotateError(span, err)
 			return err
 		}
-		blks = append([]block.SignedBeaconBlock{genBlock}, blks...)
+		blks = append([]interfaces.SignedBeaconBlock{genBlock}, blks...)
 		roots = append([][32]byte{genRoot}, roots...)
 	}
 	// Filter and sort our retrieved blocks, so that
@@ -207,13 +207,13 @@ func (s *Service) validateRangeRequest(r *pb.BeaconBlocksByRangeRequest) error {
 
 // filters all the provided blocks to ensure they are canonical
 // and are strictly linear.
-func (s *Service) filterBlocks(ctx context.Context, blks []block.SignedBeaconBlock, roots [][32]byte, prevRoot *[32]byte,
-	step uint64, startSlot types.Slot) ([]block.SignedBeaconBlock, error) {
+func (s *Service) filterBlocks(ctx context.Context, blks []interfaces.SignedBeaconBlock, roots [][32]byte, prevRoot *[32]byte,
+	step uint64, startSlot types.Slot) ([]interfaces.SignedBeaconBlock, error) {
 	if len(blks) != len(roots) {
 		return nil, errors.New("input blks and roots are diff lengths")
 	}
 
-	newBlks := make([]block.SignedBeaconBlock, 0, len(blks))
+	newBlks := make([]interfaces.SignedBeaconBlock, 0, len(blks))
 	for i, b := range blks {
 		isCanonical, err := s.cfg.chain.IsCanonical(ctx, roots[i])
 		if err != nil {
@@ -250,7 +250,7 @@ func (s *Service) writeErrorResponseToStream(responseCode byte, reason string, s
 	writeErrorResponseToStream(responseCode, reason, stream, s.cfg.p2p)
 }
 
-func (s *Service) retrieveGenesisBlock(ctx context.Context) (block.SignedBeaconBlock, [32]byte, error) {
+func (s *Service) retrieveGenesisBlock(ctx context.Context) (interfaces.SignedBeaconBlock, [32]byte, error) {
 	genBlock, err := s.cfg.beaconDB.GenesisBlock(ctx)
 	if err != nil {
 		return nil, [32]byte{}, err

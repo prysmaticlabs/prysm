@@ -6,11 +6,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/slashings"
@@ -24,7 +23,7 @@ import (
 // protection in the validator client's database. For more information, see the EIP document here:
 // https://eips.ethereum.org/EIPS/eip-3076.
 func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, r io.Reader) error {
-	encodedJSON, err := ioutil.ReadAll(r)
+	encodedJSON, err := io.ReadAll(r)
 	if err != nil {
 		return errors.Wrap(err, "could not read slashing protection JSON file")
 	}
@@ -157,16 +156,16 @@ func validateMetadata(ctx context.Context, validatorDB db.Database, interchangeJ
 	}
 	dbGvr, err := validatorDB.GenesisValidatorsRoot(ctx)
 	if err != nil {
-		return errors.Wrap(err, "could not retrieve genesis validator root to db")
+		return errors.Wrap(err, "could not retrieve genesis validators root to db")
 	}
 	if dbGvr == nil {
 		if err = validatorDB.SaveGenesisValidatorsRoot(ctx, gvr[:]); err != nil {
-			return errors.Wrap(err, "could not save genesis validator root to db")
+			return errors.Wrap(err, "could not save genesis validators root to db")
 		}
 		return nil
 	}
 	if !bytes.Equal(dbGvr, gvr[:]) {
-		return errors.New("genesis validator root doesnt match the one that is stored in slashing protection db. " +
+		return errors.New("genesis validators root doesnt match the one that is stored in slashing protection db. " +
 			"Please make sure you import the protection data that is relevant to the chain you are on")
 	}
 	return nil

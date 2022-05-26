@@ -7,7 +7,6 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -15,12 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
 )
-
-func TestMain(m *testing.M) {
-	resetCfg := features.InitWithReset(&features.Flags{EnableBalanceTrieComputation: true})
-	defer resetCfg()
-	m.Run()
-}
 
 func TestInitializeFromProto(t *testing.T) {
 	testState, _ := util.DeterministicGenesisState(t, 64)
@@ -175,6 +168,24 @@ func TestBeaconState_HashTreeRoot(t *testing.T) {
 			oldHTR = root[:]
 		})
 	}
+}
+
+func BenchmarkBeaconState(b *testing.B) {
+	testState, _ := util.DeterministicGenesisState(b, 16000)
+	pbState, err := v1.ProtobufBeaconState(testState.InnerStateUnsafe())
+	require.NoError(b, err)
+
+	b.Run("Vectorized SHA256", func(b *testing.B) {
+		st, err := v1.InitializeFromProtoUnsafe(pbState)
+		require.NoError(b, err)
+		_, err = st.HashTreeRoot(context.Background())
+		assert.NoError(b, err)
+	})
+
+	b.Run("Current SHA256", func(b *testing.B) {
+		_, err := pbState.HashTreeRoot()
+		require.NoError(b, err)
+	})
 }
 
 func TestBeaconState_HashTreeRoot_FieldTrie(t *testing.T) {

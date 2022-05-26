@@ -6,12 +6,12 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"time"
 
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/policies"
@@ -55,13 +55,13 @@ var AllNodesHaveSameHead = e2etypes.Evaluator{
 func healthzCheck(conns ...*grpc.ClientConn) error {
 	count := len(conns)
 	for i := 0; i < count; i++ {
-		resp, err := http.Get(fmt.Sprintf("http://localhost:%d/healthz", e2e.TestParams.BeaconNodeMetricsPort+i))
+		resp, err := http.Get(fmt.Sprintf("http://localhost:%d/healthz", e2e.TestParams.Ports.PrysmBeaconNodeMetricsPort+i))
 		if err != nil {
 			// Continue if the connection fails, regular flake.
 			continue
 		}
 		if resp.StatusCode != http.StatusOK {
-			body, err := ioutil.ReadAll(resp.Body)
+			body, err := io.ReadAll(resp.Body)
 			if err != nil {
 				return err
 			}
@@ -74,13 +74,13 @@ func healthzCheck(conns ...*grpc.ClientConn) error {
 	}
 
 	for i := 0; i < count; i++ {
-		resp, err := http.Get(fmt.Sprintf("http://localhost:%d/healthz", e2e.TestParams.ValidatorMetricsPort+i))
+		resp, err := http.Get(fmt.Sprintf("http://localhost:%d/healthz", e2e.TestParams.Ports.ValidatorMetricsPort+i))
 		if err != nil {
 			// Continue if the connection fails, regular flake.
 			continue
 		}
 		if resp.StatusCode != http.StatusOK {
-			body, err := ioutil.ReadAll(resp.Body)
+			body, err := io.ReadAll(resp.Body)
 			if err != nil {
 				return err
 			}
@@ -105,7 +105,7 @@ func peersConnect(conns ...*grpc.ClientConn) error {
 		if err != nil {
 			return err
 		}
-		expectedPeers := len(conns) - 1
+		expectedPeers := len(conns) - 1 + e2e.TestParams.LighthouseBeaconNodeCount
 		if expectedPeers != len(peersResp.Peers) {
 			return fmt.Errorf("unexpected amount of peers, expected %d, received %d", expectedPeers, len(peersResp.Peers))
 		}
@@ -136,7 +136,7 @@ func allNodesHaveSameHead(conns ...*grpc.ClientConn) error {
 		beaconClient := eth.NewBeaconChainClient(conn)
 		chainHead, err := beaconClient.GetChainHead(context.Background(), &emptypb.Empty{})
 		if err != nil {
-			return err
+			return errors.Wrapf(err, "connection number=%d", i)
 		}
 		headEpochs[i] = chainHead.HeadEpoch
 		justifiedRoots[i] = chainHead.JustifiedBlockRoot

@@ -6,15 +6,16 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"go.opencensus.io/trace"
 )
 
@@ -23,9 +24,9 @@ import (
 func ProcessAttestationsNoVerifySignature(
 	ctx context.Context,
 	beaconState state.BeaconState,
-	b block.SignedBeaconBlock,
+	b interfaces.SignedBeaconBlock,
 ) (state.BeaconState, error) {
-	if err := helpers.BeaconBlockIsNil(b); err != nil {
+	if err := wrapper.BeaconBlockIsNil(b); err != nil {
 		return nil, err
 	}
 	body := b.Block().Body()
@@ -46,10 +47,10 @@ func ProcessAttestationsNoVerifySignature(
 // method is used to validate attestations whose signatures have already been verified or will be verified later.
 func ProcessAttestationNoVerifySignature(
 	ctx context.Context,
-	beaconState state.BeaconStateAltair,
+	beaconState state.BeaconState,
 	att *ethpb.Attestation,
 	totalBalance uint64,
-) (state.BeaconStateAltair, error) {
+) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "altair.ProcessAttestationNoVerifySignature")
 	defer span.End()
 
@@ -104,34 +105,30 @@ func SetParticipationAndRewardProposer(
 	targetEpoch types.Epoch,
 	indices []uint64,
 	participatedFlags map[uint8]bool, totalBalance uint64) (state.BeaconState, error) {
-	var epochParticipation []byte
+	var proposerRewardNumerator uint64
 	currentEpoch := time.CurrentEpoch(beaconState)
-	var err error
+	var stateErr error
 	if targetEpoch == currentEpoch {
-		epochParticipation, err = beaconState.CurrentEpochParticipation()
-		if err != nil {
-			return nil, err
-		}
+		stateErr = beaconState.ModifyCurrentParticipationBits(func(val []byte) ([]byte, error) {
+			propRewardNum, epochParticipation, err := EpochParticipation(beaconState, indices, val, participatedFlags, totalBalance)
+			if err != nil {
+				return nil, err
+			}
+			proposerRewardNumerator = propRewardNum
+			return epochParticipation, nil
+		})
 	} else {
-		epochParticipation, err = beaconState.PreviousEpochParticipation()
-		if err != nil {
-			return nil, err
-		}
+		stateErr = beaconState.ModifyPreviousParticipationBits(func(val []byte) ([]byte, error) {
+			propRewardNum, epochParticipation, err := EpochParticipation(beaconState, indices, val, participatedFlags, totalBalance)
+			if err != nil {
+				return nil, err
+			}
+			proposerRewardNumerator = propRewardNum
+			return epochParticipation, nil
+		})
 	}
-
-	proposerRewardNumerator, epochParticipation, err := EpochParticipation(beaconState, indices, epochParticipation, participatedFlags, totalBalance)
-	if err != nil {
-		return nil, err
-	}
-
-	if targetEpoch == currentEpoch {
-		if err := beaconState.SetCurrentParticipationBits(epochParticipation); err != nil {
-			return nil, err
-		}
-	} else {
-		if err := beaconState.SetPreviousParticipationBits(epochParticipation); err != nil {
-			return nil, err
-		}
+	if stateErr != nil {
+		return nil, stateErr
 	}
 
 	if err := RewardProposer(ctx, beaconState, proposerRewardNumerator); err != nil {
@@ -266,7 +263,7 @@ func RewardProposer(ctx context.Context, beaconState state.BeaconState, proposer
 //        participation_flag_indices.append(TIMELY_HEAD_FLAG_INDEX)
 //
 //    return participation_flag_indices
-func AttestationParticipationFlagIndices(beaconState state.BeaconStateAltair, data *ethpb.AttestationData, delay types.Slot) (map[uint8]bool, error) {
+func AttestationParticipationFlagIndices(beaconState state.BeaconState, data *ethpb.AttestationData, delay types.Slot) (map[uint8]bool, error) {
 	currEpoch := time.CurrentEpoch(beaconState)
 	var justifiedCheckpt *ethpb.Checkpoint
 	if data.Target.Epoch == currEpoch {

@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/prysmaticlabs/prysm/validator/client/iface"
@@ -83,14 +83,7 @@ func run(ctx context.Context, v iface.Validator) {
 		if err != nil {
 			log.Fatalf("Could not wait for validator activation: %v", err)
 		}
-		err = v.CheckDoppelGanger(ctx)
-		if isConnectionError(err) {
-			log.Warnf("Could not wait for checking doppelganger: %v", err)
-			continue
-		}
-		if err != nil {
-			log.Fatalf("Could not succeed with doppelganger check: %v", err)
-		}
+
 		headSlot, err = v.CanonicalHeadSlot(ctx)
 		if isConnectionError(err) {
 			log.Warnf("Could not get current canonical head slot: %v", err)
@@ -98,6 +91,14 @@ func run(ctx context.Context, v iface.Validator) {
 		}
 		if err != nil {
 			log.Fatalf("Could not get current canonical head slot: %v", err)
+		}
+		err = v.CheckDoppelGanger(ctx)
+		if isConnectionError(err) {
+			log.Warnf("Could not wait for checking doppelganger: %v", err)
+			continue
+		}
+		if err != nil {
+			log.Fatalf("Could not succeed with doppelganger check: %v", err)
 		}
 		break
 	}
@@ -114,6 +115,11 @@ func run(ctx context.Context, v iface.Validator) {
 		log.Fatalf("Could not get keymanager: %v", err)
 	}
 	sub := km.SubscribeAccountChanges(accountsChangedChan)
+
+	// Set properties on the beacon node like the fee recipient for validators that are being used & active.
+	if err := v.UpdateFeeRecipient(ctx, km); err != nil {
+		log.Fatalf("PreparedBeaconProposer Failed: %v", err) // allow fatal. skipcq
+	}
 	for {
 		slotCtx, cancel := context.WithCancel(ctx)
 		ctx, span := trace.StartSpan(ctx, "validator.processSlot")
@@ -145,7 +151,7 @@ func run(ctx context.Context, v iface.Validator) {
 				}
 			}
 		case slot := <-v.NextSlot():
-			span.AddAttributes(trace.Int64Attribute("slot", int64(slot)))
+			span.AddAttributes(trace.Int64Attribute("slot", int64(slot))) // lint:ignore uintcast -- This conversion is OK for tracing.
 
 			remoteKm, ok := km.(remote.RemoteKeymanager)
 			if ok {

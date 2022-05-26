@@ -8,7 +8,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
+	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -19,8 +20,10 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	remote_utils "github.com/prysmaticlabs/prysm/validator/keymanager/remote-utils"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )
@@ -95,7 +98,7 @@ func NewKeymanager(_ context.Context, cfg *SetupConfig) (*Keymanager, error) {
 		// Load the CA for the server certificate if present.
 		cp := x509.NewCertPool()
 		if cfg.Opts.RemoteCertificate.CACertPath != "" {
-			serverCA, err := ioutil.ReadFile(cfg.Opts.RemoteCertificate.CACertPath)
+			serverCA, err := os.ReadFile(cfg.Opts.RemoteCertificate.CACertPath)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to obtain server's CA certificate")
 			}
@@ -140,7 +143,7 @@ func NewKeymanager(_ context.Context, cfg *SetupConfig) (*Keymanager, error) {
 // UnmarshalOptionsFile attempts to JSON unmarshal a keymanager
 // options file into a struct.
 func UnmarshalOptionsFile(r io.ReadCloser) (*KeymanagerOpts, error) {
-	enc, err := ioutil.ReadAll(r)
+	enc, err := io.ReadAll(r)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not read config")
 	}
@@ -266,4 +269,46 @@ func (km *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (b
 // are imported into the keymanager while the validator process is running.
 func (km *Keymanager) SubscribeAccountChanges(pubKeysChan chan [][fieldparams.BLSPubkeyLength]byte) event.Subscription {
 	return km.accountsChangedFeed.Subscribe(pubKeysChan)
+}
+
+// ExtractKeystores is not supported for the remote keymanager type.
+func (*Keymanager) ExtractKeystores(
+	ctx context.Context, publicKeys []bls.PublicKey, password string,
+) ([]*keymanager.Keystore, error) {
+	return nil, errors.New("extracting keys not supported for a remote keymanager")
+}
+
+// DeleteKeystores is not supported for the remote keymanager type.
+func (*Keymanager) DeleteKeystores(context.Context, [][]byte) ([]*ethpbservice.DeletedKeystoreStatus, error) {
+	return nil, errors.New("Wrong wallet type: web3-signer. Only Imported or Derived wallets can delete accounts")
+}
+
+func (km *Keymanager) ListKeymanagerAccounts(ctx context.Context, cfg keymanager.ListKeymanagerAccountConfig) error {
+	return ListKeymanagerAccountsImpl(ctx, cfg, km, km.KeymanagerOpts())
+}
+
+func ListKeymanagerAccountsImpl(ctx context.Context, cfg keymanager.ListKeymanagerAccountConfig, km keymanager.IKeymanager, opts *KeymanagerOpts) error {
+	au := aurora.NewAurora(true)
+	fmt.Printf("(keymanager kind) %s\n", au.BrightGreen("remote signer").Bold())
+	fmt.Printf(
+		"(configuration file path) %s\n",
+		au.BrightGreen(filepath.Join(cfg.WalletAccountsDir, cfg.KeymanagerConfigFileName)).Bold(),
+	)
+	fmt.Println(" ")
+	fmt.Printf("%s\n", au.BrightGreen("Configuration options").Bold())
+	fmt.Println(opts)
+	validatingPubKeys, err := km.FetchValidatingPublicKeys(ctx)
+	if err != nil {
+		return errors.Wrap(err, "could not fetch validating public keys")
+	}
+	if len(validatingPubKeys) == 1 {
+		fmt.Print("Showing 1 validator account\n")
+	} else if len(validatingPubKeys) == 0 {
+		fmt.Print("No accounts found\n")
+		return nil
+	} else {
+		fmt.Printf("Showing %d validator accounts\n", len(validatingPubKeys))
+	}
+	remote_utils.DisplayRemotePublicKeys(validatingPubKeys)
+	return nil
 }

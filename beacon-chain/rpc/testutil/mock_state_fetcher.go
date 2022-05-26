@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 )
 
 // MockFetcher is a fake implementation of statefetcher.Fetcher.
@@ -20,4 +21,8 @@ func (m *MockFetcher) State(context.Context, []byte) (state.BeaconState, error) 
 // StateRoot --
 func (m *MockFetcher) StateRoot(context.Context, []byte) ([]byte, error) {
 	return m.BeaconStateRoot, nil
+}
+
+func (m *MockFetcher) StateBySlot(context.Context, types.Slot) (state.BeaconState, error) {
+	return m.BeaconState, nil
 }

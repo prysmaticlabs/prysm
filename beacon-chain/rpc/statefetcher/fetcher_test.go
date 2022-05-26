@@ -7,15 +7,17 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	types "github.com/prysmaticlabs/eth2-types"
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockstategen "github.com/prysmaticlabs/prysm/beacon-chain/state/stategen/mock"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -48,14 +50,16 @@ func TestGetState(t *testing.T) {
 
 	t.Run("genesis", func(t *testing.T) {
 		params.SetupTestConfigCleanup(t)
-		cfg := params.BeaconConfig()
+		cfg := params.BeaconConfig().Copy()
 		cfg.ConfigName = "test"
 		params.OverrideBeaconConfig(cfg)
 
 		db := testDB.SetupDB(t)
 		b := util.NewBeaconBlock()
 		b.Block.StateRoot = bytesutil.PadTo([]byte("foo"), 32)
-		require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))
+		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		require.NoError(t, err)
+		require.NoError(t, db.SaveBlock(ctx, wsb))
 		r, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
 
@@ -71,8 +75,12 @@ func TestGetState(t *testing.T) {
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, r))
 		require.NoError(t, db.SaveState(ctx, bs, r))
 
+		cc := &mockstategen.MockCanonicalChecker{Is: true}
+		cs := &mockstategen.MockCurrentSlotter{Slot: bs.Slot() + 1}
+		ch := stategen.NewCanonicalHistory(db, cc, cs)
 		p := StateProvider{
-			BeaconDB: db,
+			BeaconDB:        db,
+			ReplayerBuilder: ch,
 		}
 
 		s, err := p.State(ctx, []byte("genesis"))
@@ -151,12 +159,14 @@ func TestGetState(t *testing.T) {
 	})
 
 	t.Run("slot", func(t *testing.T) {
-		stateGen := mockstategen.NewMockService()
-		stateGen.StatesBySlot[headSlot] = newBeaconState
-
 		p := StateProvider{
 			GenesisTimeFetcher: &chainMock.ChainService{Slot: &headSlot},
-			StateGenService:    stateGen,
+			ChainInfoFetcher: &chainMock.ChainService{
+				CanonicalRoots: map[[32]byte]bool{
+					bytesutil.ToBytes32(newBeaconState.LatestBlockHeader().ParentRoot): true,
+				},
+			},
+			ReplayerBuilder: mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(newBeaconState)),
 		}
 
 		s, err := p.State(ctx, []byte(strconv.FormatUint(uint64(headSlot), 10)))
@@ -166,14 +176,16 @@ func TestGetState(t *testing.T) {
 		assert.Equal(t, stateRoot, sRoot)
 	})
 
+	rb := mockstategen.NewMockReplayerBuilder(mockstategen.WithStateError(1, stategen.ErrFutureSlotRequested))
 	t.Run("slot_too_big", func(t *testing.T) {
 		p := StateProvider{
 			GenesisTimeFetcher: &chainMock.ChainService{
 				Genesis: time.Now(),
 			},
+			ReplayerBuilder: rb,
 		}
 		_, err := p.State(ctx, []byte(strconv.FormatUint(1, 10)))
-		assert.ErrorContains(t, "slot cannot be in the future", err)
+		assert.ErrorContains(t, "cannot replay to future slots", err)
 	})
 
 	t.Run("invalid_state", func(t *testing.T) {
@@ -199,10 +211,12 @@ func TestGetStateRoot(t *testing.T) {
 	t.Run("head", func(t *testing.T) {
 		b := util.NewBeaconBlock()
 		b.Block.StateRoot = stateRoot[:]
+		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		require.NoError(t, err)
 		p := StateProvider{
 			ChainInfoFetcher: &chainMock.ChainService{
 				State: newBeaconState,
-				Block: wrapper.WrappedPhase0SignedBeaconBlock(b),
+				Block: wsb,
 			},
 		}
 
@@ -214,7 +228,9 @@ func TestGetStateRoot(t *testing.T) {
 	t.Run("genesis", func(t *testing.T) {
 		db := testDB.SetupDB(t)
 		b := util.NewBeaconBlock()
-		require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))
+		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		require.NoError(t, err)
+		require.NoError(t, db.SaveBlock(ctx, wsb))
 		r, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
 
@@ -253,7 +269,9 @@ func TestGetStateRoot(t *testing.T) {
 			Root:  root[:],
 		}
 		// a valid chain is required to save finalized checkpoint.
-		require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(blk)))
+		wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+		require.NoError(t, err)
+		require.NoError(t, db.SaveBlock(ctx, wsb))
 		st, err := util.NewBeaconState()
 		require.NoError(t, err)
 		require.NoError(t, st.SetSlot(1))
@@ -284,7 +302,9 @@ func TestGetStateRoot(t *testing.T) {
 			Root:  root[:],
 		}
 		// a valid chain is required to save finalized checkpoint.
-		require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(blk)))
+		wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+		require.NoError(t, err)
+		require.NoError(t, db.SaveBlock(ctx, wsb))
 		st, err := util.NewBeaconState()
 		require.NoError(t, err)
 		require.NoError(t, st.SetSlot(1))
@@ -333,7 +353,9 @@ func TestGetStateRoot(t *testing.T) {
 		blk.Block.Slot = 40
 		root, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
-		require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(blk)))
+		wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+		require.NoError(t, err)
+		require.NoError(t, db.SaveBlock(ctx, wsb))
 		st, err := util.NewBeaconState()
 		require.NoError(t, err)
 		require.NoError(t, st.SetSlot(1))

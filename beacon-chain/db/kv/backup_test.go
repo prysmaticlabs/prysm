@@ -2,13 +2,12 @@ package kv
 
 import (
 	"context"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
 
-	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
 )
@@ -21,7 +20,9 @@ func TestStore_Backup(t *testing.T) {
 	head := util.NewBeaconBlock()
 	head.Block.Slot = 5000
 
-	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(head)))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(head)
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, wsb))
 	root, err := head.Block.HashTreeRoot()
 	require.NoError(t, err)
 	st, err := util.NewBeaconState()
@@ -32,7 +33,7 @@ func TestStore_Backup(t *testing.T) {
 	require.NoError(t, db.Backup(ctx, "", false))
 
 	backupsPath := filepath.Join(db.databasePath, backupsDirectoryName)
-	files, err := ioutil.ReadDir(backupsPath)
+	files, err := os.ReadDir(backupsPath)
 	require.NoError(t, err)
 	require.NotEqual(t, 0, len(files), "No backups created")
 	require.NoError(t, db.Close(), "Failed to close database")
@@ -61,7 +62,9 @@ func TestStore_BackupMultipleBuckets(t *testing.T) {
 	for i := startSlot; i < 5200; i++ {
 		head := util.NewBeaconBlock()
 		head.Block.Slot = i
-		require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(head)))
+		wsb, err := wrapper.WrappedSignedBeaconBlock(head)
+		require.NoError(t, err)
+		require.NoError(t, db.SaveBlock(ctx, wsb))
 		root, err := head.Block.HashTreeRoot()
 		require.NoError(t, err)
 		st, err := util.NewBeaconState()
@@ -74,7 +77,7 @@ func TestStore_BackupMultipleBuckets(t *testing.T) {
 	require.NoError(t, db.Backup(ctx, "", false))
 
 	backupsPath := filepath.Join(db.databasePath, backupsDirectoryName)
-	files, err := ioutil.ReadDir(backupsPath)
+	files, err := os.ReadDir(backupsPath)
 	require.NoError(t, err)
 	require.NotEqual(t, 0, len(files), "No backups created")
 	require.NoError(t, db.Close(), "Failed to close database")

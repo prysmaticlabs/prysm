@@ -11,13 +11,13 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"google.golang.org/grpc/codes"
@@ -28,7 +28,7 @@ import (
 // blockContainer represents an instance of
 // block along with its relevant metadata.
 type blockContainer struct {
-	blk         block.SignedBeaconBlock
+	blk         interfaces.SignedBeaconBlock
 	root        [32]byte
 	isCanonical bool
 }
@@ -114,7 +114,7 @@ func convertFromV1Containers(ctrs []blockContainer) ([]*ethpb.BeaconBlockContain
 	return protoCtrs, nil
 }
 
-func convertToBlockContainer(blk block.SignedBeaconBlock, root [32]byte, isCanonical bool) (*ethpb.BeaconBlockContainer, error) {
+func convertToBlockContainer(blk interfaces.SignedBeaconBlock, root [32]byte, isCanonical bool) (*ethpb.BeaconBlockContainer, error) {
 	ctr := &ethpb.BeaconBlockContainer{
 		BlockRoot: root[:],
 		Canonical: isCanonical,
@@ -133,6 +133,14 @@ func convertToBlockContainer(blk block.SignedBeaconBlock, root [32]byte, isCanon
 			return nil, err
 		}
 		ctr.Block = &ethpb.BeaconBlockContainer_AltairBlock{AltairBlock: rBlk}
+	case version.Bellatrix:
+		rBlk, err := blk.PbBellatrixBlock()
+		if err != nil {
+			return nil, err
+		}
+		ctr.Block = &ethpb.BeaconBlockContainer_BellatrixBlock{BellatrixBlock: rBlk}
+	default:
+		return nil, errors.Errorf("block type is not recognized: %d", blk.Version())
 	}
 	return ctr, nil
 }
@@ -242,7 +250,7 @@ func (bs *Server) listBlocksForGenesis(ctx context.Context, _ *ethpb.ListBlocksR
 	if err != nil {
 		return nil, 0, strconv.Itoa(0), status.Errorf(codes.Internal, "Could not retrieve blocks for genesis slot: %v", err)
 	}
-	if err := helpers.BeaconBlockIsNil(genBlk); err != nil {
+	if err := wrapper.BeaconBlockIsNil(genBlk); err != nil {
 		return []blockContainer{}, 0, strconv.Itoa(0), status.Errorf(codes.NotFound, "Could not find genesis block: %v", err)
 	}
 	root, err := genBlk.Block().HashTreeRoot()
@@ -385,7 +393,7 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get head block")
 	}
-	if err := helpers.BeaconBlockIsNil(headBlock); err != nil {
+	if err := wrapper.BeaconBlockIsNil(headBlock); err != nil {
 		return nil, status.Errorf(codes.NotFound, "Head block of chain was nil: %v", err)
 	}
 	headBlockRoot, err := headBlock.Block().HashTreeRoot()
@@ -393,46 +401,52 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 		return nil, status.Errorf(codes.Internal, "Could not get head block root: %v", err)
 	}
 
-	isGenesis := func(cp *ethpb.Checkpoint) bool {
-		return bytesutil.ToBytes32(cp.Root) == params.BeaconConfig().ZeroHash && cp.Epoch == 0
-	}
-	// Retrieve genesis block in the event we have genesis checkpoints.
-	genBlock, err := bs.BeaconDB.GenesisBlock(ctx)
-	if err != nil || genBlock == nil || genBlock.IsNil() || genBlock.Block().IsNil() {
-		return nil, status.Error(codes.Internal, "Could not get genesis block")
+	validGenesis := false
+	validateCP := func(cp *ethpb.Checkpoint, name string) error {
+		if bytesutil.ToBytes32(cp.Root) == params.BeaconConfig().ZeroHash && cp.Epoch == 0 {
+			if validGenesis {
+				return nil
+			}
+			// Retrieve genesis block in the event we have genesis checkpoints.
+			genBlock, err := bs.BeaconDB.GenesisBlock(ctx)
+			if err != nil || wrapper.BeaconBlockIsNil(genBlock) != nil {
+				return status.Error(codes.Internal, "Could not get genesis block")
+			}
+			validGenesis = true
+			return nil
+		}
+		b, err := bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(cp.Root))
+		if err != nil {
+			return status.Errorf(codes.Internal, "Could not get %s block: %v", name, err)
+		}
+		if err := wrapper.BeaconBlockIsNil(b); err != nil {
+			return status.Errorf(codes.Internal, "Could not get %s block: %v", name, err)
+		}
+		return nil
 	}
 
-	finalizedCheckpoint := bs.FinalizationFetcher.FinalizedCheckpt()
-	if !isGenesis(finalizedCheckpoint) {
-		b, err := bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(finalizedCheckpoint.Root))
-		if err != nil {
-			return nil, status.Error(codes.Internal, "Could not get finalized block")
-		}
-		if err := helpers.BeaconBlockIsNil(b); err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get finalized block: %v", err)
-		}
+	finalizedCheckpoint, err := bs.FinalizationFetcher.FinalizedCheckpt()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get finalized checkpoint: %v", err)
+	}
+	if err := validateCP(finalizedCheckpoint, "finalized"); err != nil {
+		return nil, err
 	}
 
-	justifiedCheckpoint := bs.FinalizationFetcher.CurrentJustifiedCheckpt()
-	if !isGenesis(justifiedCheckpoint) {
-		b, err := bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(justifiedCheckpoint.Root))
-		if err != nil {
-			return nil, status.Error(codes.Internal, "Could not get justified block")
-		}
-		if err := helpers.BeaconBlockIsNil(b); err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get justified block: %v", err)
-		}
+	justifiedCheckpoint, err := bs.FinalizationFetcher.CurrentJustifiedCheckpt()
+	if err != nil {
+		return nil, err
+	}
+	if err := validateCP(justifiedCheckpoint, "justified"); err != nil {
+		return nil, err
 	}
 
-	prevJustifiedCheckpoint := bs.FinalizationFetcher.PreviousJustifiedCheckpt()
-	if !isGenesis(prevJustifiedCheckpoint) {
-		b, err := bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(prevJustifiedCheckpoint.Root))
-		if err != nil {
-			return nil, status.Error(codes.Internal, "Could not get prev justified block")
-		}
-		if err := helpers.BeaconBlockIsNil(b); err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get prev justified block: %v", err)
-		}
+	prevJustifiedCheckpoint, err := bs.FinalizationFetcher.PreviousJustifiedCheckpt()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get previous justified checkpoint: %v", err)
+	}
+	if err := validateCP(prevJustifiedCheckpoint, "prev justified"); err != nil {
+		return nil, err
 	}
 
 	fSlot, err := slots.EpochStart(finalizedCheckpoint.Epoch)
@@ -460,40 +474,5 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 		PreviousJustifiedSlot:      pjSlot,
 		PreviousJustifiedEpoch:     prevJustifiedCheckpoint.Epoch,
 		PreviousJustifiedBlockRoot: prevJustifiedCheckpoint.Root,
-	}, nil
-}
-
-// GetWeakSubjectivityCheckpoint retrieves weak subjectivity state root, block root, and epoch.
-func (bs *Server) GetWeakSubjectivityCheckpoint(ctx context.Context, _ *emptypb.Empty) (*ethpb.WeakSubjectivityCheckpoint, error) {
-	hs, err := bs.HeadFetcher.HeadState(ctx)
-	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not get head state")
-	}
-	wsEpoch, err := helpers.LatestWeakSubjectivityEpoch(ctx, hs)
-	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not get weak subjectivity epoch")
-	}
-	wsSlot, err := slots.EpochStart(wsEpoch)
-	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not get weak subjectivity slot")
-	}
-
-	wsState, err := bs.StateGen.StateBySlot(ctx, wsSlot)
-	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not get weak subjectivity state")
-	}
-	stateRoot, err := wsState.HashTreeRoot(ctx)
-	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not get weak subjectivity state root")
-	}
-	blkRoot, err := wsState.LatestBlockHeader().HashTreeRoot()
-	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not get weak subjectivity block root")
-	}
-
-	return &ethpb.WeakSubjectivityCheckpoint{
-		BlockRoot: blkRoot[:],
-		StateRoot: stateRoot[:],
-		Epoch:     wsEpoch,
 	}, nil
 }

@@ -28,6 +28,7 @@ func (_ *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/beacon/headers",
 		"/eth/v1/beacon/headers/{block_id}",
 		"/eth/v1/beacon/blocks",
+		"/eth/v1/beacon/blinded_blocks",
 		"/eth/v1/beacon/blocks/{block_id}",
 		"/eth/v2/beacon/blocks/{block_id}",
 		"/eth/v1/beacon/blocks/{block_id}/root",
@@ -37,6 +38,7 @@ func (_ *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/beacon/pool/proposer_slashings",
 		"/eth/v1/beacon/pool/voluntary_exits",
 		"/eth/v1/beacon/pool/sync_committees",
+		"/eth/v1/beacon/weak_subjectivity",
 		"/eth/v1/node/identity",
 		"/eth/v1/node/peers",
 		"/eth/v1/node/peers/{peer_id}",
@@ -47,6 +49,7 @@ func (_ *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/debug/beacon/states/{state_id}",
 		"/eth/v2/debug/beacon/states/{state_id}",
 		"/eth/v1/debug/beacon/heads",
+		"/eth/v2/debug/beacon/heads",
 		"/eth/v1/config/fork_schedule",
 		"/eth/v1/config/deposit_contract",
 		"/eth/v1/config/spec",
@@ -56,6 +59,7 @@ func (_ *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/validator/duties/sync/{epoch}",
 		"/eth/v1/validator/blocks/{slot}",
 		"/eth/v2/validator/blocks/{slot}",
+		"/eth/v1/validator/blinded_blocks/{slot}",
 		"/eth/v1/validator/attestation_data",
 		"/eth/v1/validator/aggregate_attestation",
 		"/eth/v1/validator/beacon_committee_subscriptions",
@@ -63,6 +67,7 @@ func (_ *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/validator/aggregate_and_proofs",
 		"/eth/v1/validator/sync_committee_contribution",
 		"/eth/v1/validator/contribution_and_proofs",
+		"/eth/v1/validator/prepare_beacon_proposer",
 	}
 }
 
@@ -105,6 +110,13 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 			OnPreDeserializeRequestBodyIntoContainer:  setInitialPublishBlockPostRequest,
 			OnPostDeserializeRequestBodyIntoContainer: preparePublishedBlock,
 		}
+		endpoint.CustomHandlers = []apimiddleware.CustomHandler{handleSubmitBlockSSZ}
+	case "/eth/v1/beacon/blinded_blocks":
+		endpoint.Hooks = apimiddleware.HookCollection{
+			OnPreDeserializeRequestBodyIntoContainer:  setInitialPublishBlindedBlockPostRequest,
+			OnPostDeserializeRequestBodyIntoContainer: preparePublishedBlindedBlock,
+		}
+		endpoint.CustomHandlers = []apimiddleware.CustomHandler{handleSubmitBlindedBlockSSZ}
 	case "/eth/v1/beacon/blocks/{block_id}":
 		endpoint.GetResponse = &blockResponseJson{}
 		endpoint.CustomHandlers = []apimiddleware.CustomHandler{handleGetBeaconBlockSSZ}
@@ -141,6 +153,8 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 		endpoint.Hooks = apimiddleware.HookCollection{
 			OnPreDeserializeRequestBodyIntoContainer: wrapSyncCommitteeSignaturesArray,
 		}
+	case "/eth/v1/beacon/weak_subjectivity":
+		endpoint.GetResponse = &WeakSubjectivityResponse{}
 	case "/eth/v1/node/identity":
 		endpoint.GetResponse = &identityResponseJson{}
 	case "/eth/v1/node/peers":
@@ -168,6 +182,8 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 		endpoint.CustomHandlers = []apimiddleware.CustomHandler{handleGetBeaconStateSSZV2}
 	case "/eth/v1/debug/beacon/heads":
 		endpoint.GetResponse = &forkChoiceHeadsResponseJson{}
+	case "/eth/v2/debug/beacon/heads":
+		endpoint.GetResponse = &v2ForkChoiceHeadsResponseJson{}
 	case "/eth/v1/config/fork_schedule":
 		endpoint.GetResponse = &forkScheduleResponseJson{}
 	case "/eth/v1/config/deposit_contract":
@@ -207,6 +223,15 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 		endpoint.Hooks = apimiddleware.HookCollection{
 			OnPreSerializeMiddlewareResponseIntoJson: serializeProducedV2Block,
 		}
+		endpoint.CustomHandlers = []apimiddleware.CustomHandler{handleProduceBlockSSZ}
+	case "/eth/v1/validator/blinded_blocks/{slot}":
+		endpoint.GetResponse = &produceBlindedBlockResponseJson{}
+		endpoint.RequestURLLiterals = []string{"slot"}
+		endpoint.RequestQueryParams = []apimiddleware.QueryParam{{Name: "randao_reveal", Hex: true}, {Name: "graffiti", Hex: true}}
+		endpoint.Hooks = apimiddleware.HookCollection{
+			OnPreSerializeMiddlewareResponseIntoJson: serializeProducedBlindedBlock,
+		}
+		endpoint.CustomHandlers = []apimiddleware.CustomHandler{handleProduceBlindedBlockSSZ}
 	case "/eth/v1/validator/attestation_data":
 		endpoint.GetResponse = &produceAttestationDataResponseJson{}
 		endpoint.RequestQueryParams = []apimiddleware.QueryParam{{Name: "slot"}, {Name: "committee_index"}}
@@ -237,6 +262,11 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 		endpoint.PostRequest = &submitContributionAndProofsRequestJson{}
 		endpoint.Hooks = apimiddleware.HookCollection{
 			OnPreDeserializeRequestBodyIntoContainer: wrapSignedContributionAndProofsArray,
+		}
+	case "/eth/v1/validator/prepare_beacon_proposer":
+		endpoint.PostRequest = &feeRecipientsRequestJSON{}
+		endpoint.Hooks = apimiddleware.HookCollection{
+			OnPreDeserializeRequestBodyIntoContainer: wrapFeeRecipientsArray,
 		}
 	default:
 		return nil, errors.New("invalid path")

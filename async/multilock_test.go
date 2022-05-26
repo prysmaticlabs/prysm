@@ -110,9 +110,8 @@ func TestLockUnlock_CleansUnused(t *testing.T) {
 		lock := NewMultilock("dog", "cat", "owl")
 		lock.Lock()
 		assert.Equal(t, 3, len(locks.list))
-		defer lock.Unlock()
+		lock.Unlock()
 
-		<-time.After(100 * time.Millisecond)
 		wg.Done()
 	}()
 	wg.Wait()

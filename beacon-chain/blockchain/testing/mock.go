@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -18,47 +17,56 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
+	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/sirupsen/logrus"
 )
 
+var ErrNilState = errors.New("nil state")
+
 // ChainService defines the mock interface for testing
 type ChainService struct {
-	State                       state.BeaconState
-	Root                        []byte
-	Block                       block.SignedBeaconBlock
+	Optimistic                  bool
+	ValidAttestation            bool
+	ValidatorsRoot              [32]byte
+	PublicKey                   [fieldparams.BLSPubkeyLength]byte
 	FinalizedCheckPoint         *ethpb.Checkpoint
 	CurrentJustifiedCheckPoint  *ethpb.Checkpoint
 	PreviousJustifiedCheckPoint *ethpb.Checkpoint
-	BlocksReceived              []block.SignedBeaconBlock
+	Slot                        *types.Slot // Pointer because 0 is a useful value, so checking against it can be incorrect.
 	Balance                     *precompute.Balance
-	Genesis                     time.Time
-	ValidatorsRoot              [32]byte
 	CanonicalRoots              map[[32]byte]bool
 	Fork                        *ethpb.Fork
 	ETH1Data                    *ethpb.Eth1Data
+	InitSyncBlockRoots          map[[32]byte]bool
 	DB                          db.Database
+	State                       state.BeaconState
+	Block                       interfaces.SignedBeaconBlock
+	VerifyBlkDescendantErr      error
 	stateNotifier               statefeed.Notifier
+	BlocksReceived              []interfaces.SignedBeaconBlock
+	SyncCommitteeIndices        []types.CommitteeIndex
 	blockNotifier               blockfeed.Notifier
 	opNotifier                  opfeed.Notifier
-	ValidAttestation            bool
-	ForkChoiceStore             *protoarray.Store
-	VerifyBlkDescendantErr      error
-	Slot                        *types.Slot // Pointer because 0 is a useful value, so checking against it can be incorrect.
-	SyncCommitteeIndices        []types.CommitteeIndex
+	Root                        []byte
 	SyncCommitteeDomain         []byte
 	SyncSelectionProofDomain    []byte
 	SyncContributionProofDomain []byte
-	PublicKey                   [fieldparams.BLSPubkeyLength]byte
 	SyncCommitteePubkeys        [][]byte
-	InitSyncBlockRoots          map[[32]byte]bool
+	Genesis                     time.Time
+	ForkChoiceStore             forkchoice.ForkChoicer
+	ReceiveBlockMockErr         error
+}
+
+// ForkChoicer mocks the same method in the chain service
+func (s *ChainService) ForkChoicer() forkchoice.ForkChoicer {
+	return s.ForkChoiceStore
 }
 
 // StateNotifier mocks the same method in the chain service.
@@ -157,9 +165,9 @@ func (mon *MockOperationNotifier) OperationFeed() *event.Feed {
 }
 
 // ReceiveBlockInitialSync mocks ReceiveBlockInitialSync method in chain service.
-func (s *ChainService) ReceiveBlockInitialSync(ctx context.Context, block block.SignedBeaconBlock, _ [32]byte) error {
+func (s *ChainService) ReceiveBlockInitialSync(ctx context.Context, block interfaces.SignedBeaconBlock, _ [32]byte) error {
 	if s.State == nil {
-		s.State = &v1.BeaconState{}
+		return ErrNilState
 	}
 	if !bytes.Equal(s.Root, block.Block().ParentRoot()) {
 		return errors.Errorf("wanted %#x but got %#x", s.Root, block.Block().ParentRoot())
@@ -184,38 +192,41 @@ func (s *ChainService) ReceiveBlockInitialSync(ctx context.Context, block block.
 }
 
 // ReceiveBlockBatch processes blocks in batches from initial-sync.
-func (s *ChainService) ReceiveBlockBatch(ctx context.Context, blks []block.SignedBeaconBlock, _ [][32]byte) error {
+func (s *ChainService) ReceiveBlockBatch(ctx context.Context, blks []interfaces.SignedBeaconBlock, _ [][32]byte) error {
 	if s.State == nil {
-		s.State = &v1.BeaconState{}
+		return ErrNilState
 	}
-	for _, block := range blks {
-		if !bytes.Equal(s.Root, block.Block().ParentRoot()) {
-			return errors.Errorf("wanted %#x but got %#x", s.Root, block.Block().ParentRoot())
+	for _, b := range blks {
+		if !bytes.Equal(s.Root, b.Block().ParentRoot()) {
+			return errors.Errorf("wanted %#x but got %#x", s.Root, b.Block().ParentRoot())
 		}
-		if err := s.State.SetSlot(block.Block().Slot()); err != nil {
+		if err := s.State.SetSlot(b.Block().Slot()); err != nil {
 			return err
 		}
-		s.BlocksReceived = append(s.BlocksReceived, block)
-		signingRoot, err := block.Block().HashTreeRoot()
+		s.BlocksReceived = append(s.BlocksReceived, b)
+		signingRoot, err := b.Block().HashTreeRoot()
 		if err != nil {
 			return err
 		}
 		if s.DB != nil {
-			if err := s.DB.SaveBlock(ctx, block); err != nil {
+			if err := s.DB.SaveBlock(ctx, b); err != nil {
 				return err
 			}
-			logrus.Infof("Saved block with root: %#x at slot %d", signingRoot, block.Block().Slot())
+			logrus.Infof("Saved block with root: %#x at slot %d", signingRoot, b.Block().Slot())
 		}
 		s.Root = signingRoot[:]
-		s.Block = block
+		s.Block = b
 	}
 	return nil
 }
 
 // ReceiveBlock mocks ReceiveBlock method in chain service.
-func (s *ChainService) ReceiveBlock(ctx context.Context, block block.SignedBeaconBlock, _ [32]byte) error {
+func (s *ChainService) ReceiveBlock(ctx context.Context, block interfaces.SignedBeaconBlock, _ [32]byte) error {
+	if s.ReceiveBlockMockErr != nil {
+		return s.ReceiveBlockMockErr
+	}
 	if s.State == nil {
-		s.State = &v1.BeaconState{}
+		return ErrNilState
 	}
 	if !bytes.Equal(s.Root, block.Block().ParentRoot()) {
 		return errors.Errorf("wanted %#x but got %#x", s.Root, block.Block().ParentRoot())
@@ -256,7 +267,7 @@ func (s *ChainService) HeadRoot(_ context.Context) ([]byte, error) {
 }
 
 // HeadBlock mocks HeadBlock method in chain service.
-func (s *ChainService) HeadBlock(context.Context) (block.SignedBeaconBlock, error) {
+func (s *ChainService) HeadBlock(context.Context) (interfaces.SignedBeaconBlock, error) {
 	return s.Block, nil
 }
 
@@ -271,27 +282,22 @@ func (s *ChainService) CurrentFork() *ethpb.Fork {
 }
 
 // FinalizedCheckpt mocks FinalizedCheckpt method in chain service.
-func (s *ChainService) FinalizedCheckpt() *ethpb.Checkpoint {
-	return s.FinalizedCheckPoint
+func (s *ChainService) FinalizedCheckpt() (*ethpb.Checkpoint, error) {
+	return s.FinalizedCheckPoint, nil
 }
 
 // CurrentJustifiedCheckpt mocks CurrentJustifiedCheckpt method in chain service.
-func (s *ChainService) CurrentJustifiedCheckpt() *ethpb.Checkpoint {
-	return s.CurrentJustifiedCheckPoint
+func (s *ChainService) CurrentJustifiedCheckpt() (*ethpb.Checkpoint, error) {
+	return s.CurrentJustifiedCheckPoint, nil
 }
 
 // PreviousJustifiedCheckpt mocks PreviousJustifiedCheckpt method in chain service.
-func (s *ChainService) PreviousJustifiedCheckpt() *ethpb.Checkpoint {
-	return s.PreviousJustifiedCheckPoint
+func (s *ChainService) PreviousJustifiedCheckpt() (*ethpb.Checkpoint, error) {
+	return s.PreviousJustifiedCheckPoint, nil
 }
 
 // ReceiveAttestation mocks ReceiveAttestation method in chain service.
 func (_ *ChainService) ReceiveAttestation(_ context.Context, _ *ethpb.Attestation) error {
-	return nil
-}
-
-// ReceiveAttestationNoPubsub mocks ReceiveAttestationNoPubsub method in chain service.
-func (_ *ChainService) ReceiveAttestationNoPubsub(context.Context, *ethpb.Attestation) error {
 	return nil
 }
 
@@ -308,19 +314,9 @@ func (s *ChainService) HeadValidatorsIndices(ctx context.Context, epoch types.Ep
 	return helpers.ActiveValidatorIndices(ctx, s.State, epoch)
 }
 
-// HeadSeed mocks the same method in the chain service.
-func (s *ChainService) HeadSeed(_ context.Context, epoch types.Epoch) ([32]byte, error) {
-	return helpers.Seed(s.State, epoch, params.BeaconConfig().DomainBeaconAttester)
-}
-
 // HeadETH1Data provides the current ETH1Data of the head state.
 func (s *ChainService) HeadETH1Data() *ethpb.Eth1Data {
 	return s.ETH1Data
-}
-
-// ProtoArrayStore mocks the same method in the chain service.
-func (s *ChainService) ProtoArrayStore() *protoarray.Store {
-	return s.ForkChoiceStore
 }
 
 // GenesisTime mocks the same method in the chain service.
@@ -328,8 +324,8 @@ func (s *ChainService) GenesisTime() time.Time {
 	return s.Genesis
 }
 
-// GenesisValidatorRoot mocks the same method in the chain service.
-func (s *ChainService) GenesisValidatorRoot() [32]byte {
+// GenesisValidatorsRoot mocks the same method in the chain service.
+func (s *ChainService) GenesisValidatorsRoot() [32]byte {
 	return s.ValidatorsRoot
 }
 
@@ -361,21 +357,27 @@ func (s *ChainService) IsCanonical(_ context.Context, r [32]byte) (bool, error) 
 	return true, nil
 }
 
-// HasInitSyncBlock mocks the same method in the chain service.
-func (s *ChainService) HasInitSyncBlock(rt [32]byte) bool {
+// HasBlock mocks the same method in the chain service.
+func (s *ChainService) HasBlock(ctx context.Context, rt [32]byte) bool {
+	if s.DB == nil {
+		return false
+	}
+	if s.DB.HasBlock(ctx, rt) {
+		return true
+	}
 	if s.InitSyncBlockRoots == nil {
 		return false
 	}
 	return s.InitSyncBlockRoots[rt]
 }
 
-// HeadGenesisValidatorRoot mocks HeadGenesisValidatorRoot method in chain service.
-func (_ *ChainService) HeadGenesisValidatorRoot() [32]byte {
+// HeadGenesisValidatorsRoot mocks HeadGenesisValidatorsRoot method in chain service.
+func (_ *ChainService) HeadGenesisValidatorsRoot() [32]byte {
 	return [32]byte{}
 }
 
-// VerifyBlkDescendant mocks VerifyBlkDescendant and always returns nil.
-func (s *ChainService) VerifyBlkDescendant(_ context.Context, _ [32]byte) error {
+// VerifyFinalizedBlkDescendant mocks VerifyBlkDescendant and always returns nil.
+func (s *ChainService) VerifyFinalizedBlkDescendant(_ context.Context, _ [32]byte) error {
 	return s.VerifyBlkDescendantErr
 }
 
@@ -415,7 +417,7 @@ func (s *ChainService) HeadValidatorIndexToPublicKey(_ context.Context, _ types.
 }
 
 // HeadSyncCommitteeIndices mocks HeadSyncCommitteeIndices and always return `HeadNextSyncCommitteeIndices`.
-func (s *ChainService) HeadSyncCommitteeIndices(_ context.Context, index types.ValidatorIndex, slot types.Slot) ([]types.CommitteeIndex, error) {
+func (s *ChainService) HeadSyncCommitteeIndices(_ context.Context, _ types.ValidatorIndex, _ types.Slot) ([]types.CommitteeIndex, error) {
 	return s.SyncCommitteeIndices, nil
 }
 
@@ -438,3 +440,19 @@ func (s *ChainService) HeadSyncSelectionProofDomain(_ context.Context, _ types.S
 func (s *ChainService) HeadSyncContributionProofDomain(_ context.Context, _ types.Slot) ([]byte, error) {
 	return s.SyncContributionProofDomain, nil
 }
+
+// IsOptimistic mocks the same method in the chain service.
+func (s *ChainService) IsOptimistic(_ context.Context) (bool, error) {
+	return s.Optimistic, nil
+}
+
+// IsOptimisticForRoot mocks the same method in the chain service.
+func (s *ChainService) IsOptimisticForRoot(_ context.Context, _ [32]byte) (bool, error) {
+	return s.Optimistic, nil
+}
+
+// UpdateHead mocks the same method in the chain service.
+func (s *ChainService) UpdateHead(_ context.Context) error { return nil }
+
+// ReceiveAttesterSlashing mocks the same method in the chain service.
+func (s *ChainService) ReceiveAttesterSlashing(context.Context, *ethpb.AttesterSlashing) {}

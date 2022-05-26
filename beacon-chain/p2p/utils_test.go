@@ -6,6 +6,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/p2p/enode"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -14,6 +15,7 @@ import (
 // Test `verifyConnectivity` function by trying to connect to google.com (successfully)
 // and then by connecting to an unreachable IP and ensuring that a log is emitted
 func TestVerifyConnectivity(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	hook := logTest.NewGlobal()
 	cases := []struct {
 		address              string
@@ -39,6 +41,7 @@ func TestVerifyConnectivity(t *testing.T) {
 }
 
 func TestSerializeENR(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	t.Run("Ok", func(t *testing.T) {
 		key, err := crypto.GenerateKey()
 		require.NoError(t, err)

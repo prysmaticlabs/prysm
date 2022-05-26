@@ -3,7 +3,7 @@ package accounts
 import (
 	"context"
 	"flag"
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -33,7 +33,7 @@ const (
 
 func init() {
 	logrus.SetLevel(logrus.DebugLevel)
-	logrus.SetOutput(ioutil.Discard)
+	logrus.SetOutput(io.Discard)
 }
 
 type testWalletConfig struct {
@@ -105,7 +105,7 @@ func setupWalletAndPasswordsDir(t testing.TB) (string, string, string) {
 	passwordFileDir := filepath.Join(t.TempDir(), "passwordFile")
 	require.NoError(t, os.MkdirAll(passwordFileDir, params.BeaconIoConfig().ReadWriteExecutePermissions))
 	passwordFilePath := filepath.Join(passwordFileDir, passwordFileName)
-	require.NoError(t, ioutil.WriteFile(passwordFilePath, []byte(password), os.ModePerm))
+	require.NoError(t, os.WriteFile(passwordFilePath, []byte(password), os.ModePerm))
 	return walletDir, passwordsDir, passwordFilePath
 }
 
@@ -269,4 +269,62 @@ func TestCreateWallet_Remote(t *testing.T) {
 
 	// We assert the created configuration was as desired.
 	assert.DeepEqual(t, wantCfg, cfg)
+}
+
+func TestInputKeymanagerKind(t *testing.T) {
+	tests := []struct {
+		name    string
+		args    string
+		want    keymanager.Kind
+		wantErr bool
+	}{
+		{
+			name:    "local returns local kind",
+			args:    "local",
+			want:    keymanager.Local,
+			wantErr: false,
+		},
+		{
+			name:    "direct returns local kind",
+			args:    "direct",
+			want:    keymanager.Local,
+			wantErr: false,
+		},
+		{
+			name:    "imported returns local kind",
+			args:    "imported",
+			want:    keymanager.Local,
+			wantErr: false,
+		},
+		{
+			name:    "derived returns derived kind",
+			args:    "derived",
+			want:    keymanager.Derived,
+			wantErr: false,
+		},
+		{
+			name:    "remote returns remote kind",
+			args:    "remote",
+			want:    keymanager.Remote,
+			wantErr: false,
+		},
+		{
+			name:    "REMOTE (capitalized) returns remote kind",
+			args:    "REMOTE",
+			want:    keymanager.Remote,
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			app := cli.App{}
+			set := flag.NewFlagSet("test", 0)
+			set.String(flags.KeymanagerKindFlag.Name, tt.args, "")
+			assert.NoError(t, set.Set(flags.KeymanagerKindFlag.Name, tt.args))
+			cliCtx := cli.NewContext(&app, set, nil)
+			got, err := inputKeymanagerKind(cliCtx)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.want.String(), got.String())
+		})
+	}
 }

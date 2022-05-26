@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"net/http/httptest"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
@@ -16,7 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/container/trie"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
@@ -56,11 +57,6 @@ func (m *POWChain) Eth2GenesisPowchainInfo() (uint64, *big.Int) {
 		blk = big.NewInt(GenesisTime)
 	}
 	return uint64(GenesisTime), blk
-}
-
-// DepositTrie --
-func (_ *POWChain) DepositTrie() *trie.SparseMerkleTrie {
-	return &trie.SparseMerkleTrie{}
 }
 
 // BlockExists --
@@ -107,17 +103,6 @@ func (m *POWChain) BlockByTimestamp(_ context.Context, time uint64) (*types.Head
 	return &types.HeaderInfo{Number: chosenNumber, Time: chosenTime}, nil
 }
 
-// DepositRoot --
-func (_ *POWChain) DepositRoot() [32]byte {
-	root := []byte("depositroot")
-	return bytesutil.ToBytes32(root)
-}
-
-// ChainStartDeposits --
-func (_ *POWChain) ChainStartDeposits() []*ethpb.Deposit {
-	return []*ethpb.Deposit{}
-}
-
 // ChainStartEth1Data --
 func (m *POWChain) ChainStartEth1Data() *ethpb.Eth1Data {
 	return m.Eth1Data
@@ -159,6 +144,12 @@ type RPCClient struct {
 	Backend *backends.SimulatedBackend
 }
 
+func (_ *RPCClient) Close() {}
+
+func (*RPCClient) CallContext(_ context.Context, _ interface{}, _ string, _ ...interface{}) error {
+	return nil
+}
+
 // BatchCall --
 func (r *RPCClient) BatchCall(b []rpc.BatchElem) error {
 	if r.Backend == nil {
@@ -188,7 +179,27 @@ func (m *POWChain) InsertBlock(height int, time uint64, hash []byte) *POWChain {
 	return m
 }
 
-// BlockExistsWithCache --
-func (m *POWChain) BlockExistsWithCache(ctx context.Context, hash common.Hash) (bool, *big.Int, error) {
-	return m.BlockExists(ctx, hash)
+func SetupRPCServer() (*rpc.Server, string, error) {
+	srv := rpc.NewServer()
+	if err := srv.RegisterName("eth", &testETHRPC{}); err != nil {
+		return nil, "", err
+	}
+	if err := srv.RegisterName("net", &testETHRPC{}); err != nil {
+		return nil, "", err
+	}
+	hs := httptest.NewUnstartedServer(srv)
+	hs.Start()
+	return srv, hs.URL, nil
+}
+
+type testETHRPC struct{}
+
+func (*testETHRPC) NoArgsRets() {}
+
+func (*testETHRPC) ChainId(_ context.Context) *hexutil.Big {
+	return (*hexutil.Big)(big.NewInt(int64(params.BeaconConfig().DepositChainID)))
+}
+
+func (*testETHRPC) Version(_ context.Context) string {
+	return fmt.Sprintf("%d", params.BeaconConfig().DepositNetworkID)
 }

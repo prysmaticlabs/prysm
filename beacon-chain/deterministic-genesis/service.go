@@ -5,16 +5,16 @@ package interopcoldstart
 
 import (
 	"context"
-	"io/ioutil"
 	"math/big"
+	"os"
 	"time"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime"
 	"github.com/prysmaticlabs/prysm/runtime/interop"
@@ -47,17 +47,21 @@ type Config struct {
 // into the beacon chain database and running services at start up. This service should not be used in production
 // as it does not have any value other than ease of use for testing purposes.
 func NewService(ctx context.Context, cfg *Config) *Service {
-	log.Warn("Saving generated genesis state in database for interop testing")
 	ctx, cancel := context.WithCancel(ctx)
 
-	s := &Service{
+	return &Service{
 		cfg:    cfg,
 		ctx:    ctx,
 		cancel: cancel,
 	}
+}
+
+// Start initializes the genesis state from configured flags.
+func (s *Service) Start() {
+	log.Warn("Saving generated genesis state in database for interop testing")
 
 	if s.cfg.GenesisPath != "" {
-		data, err := ioutil.ReadFile(s.cfg.GenesisPath)
+		data, err := os.ReadFile(s.cfg.GenesisPath)
 		if err != nil {
 			log.Fatalf("Could not read pre-loaded state: %v", err)
 		}
@@ -69,14 +73,14 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		if err != nil {
 			log.Fatalf("Could not get state trie: %v", err)
 		}
-		if err := s.saveGenesisState(ctx, genesisTrie); err != nil {
+		if err := s.saveGenesisState(s.ctx, genesisTrie); err != nil {
 			log.Fatalf("Could not save interop genesis state %v", err)
 		}
-		return s
+		return
 	}
 
 	// Save genesis state in db
-	genesisState, _, err := interop.GenerateGenesisState(ctx, s.cfg.GenesisTime, s.cfg.NumValidators)
+	genesisState, _, err := interop.GenerateGenesisState(s.ctx, s.cfg.GenesisTime, s.cfg.NumValidators)
 	if err != nil {
 		log.Fatalf("Could not generate interop genesis state: %v", err)
 	}
@@ -92,17 +96,11 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 	if err != nil {
 		log.Fatalf("Could not hash tree root genesis state: %v", err)
 	}
-	go slots.CountdownToGenesis(ctx, time.Unix(int64(s.cfg.GenesisTime), 0), s.cfg.NumValidators, gRoot)
+	go slots.CountdownToGenesis(s.ctx, time.Unix(int64(s.cfg.GenesisTime), 0), s.cfg.NumValidators, gRoot)
 
-	if err := s.saveGenesisState(ctx, genesisTrie); err != nil {
+	if err := s.saveGenesisState(s.ctx, genesisTrie); err != nil {
 		log.Fatalf("Could not save interop genesis state %v", err)
 	}
-
-	return s
-}
-
-// Start initializes the genesis state from configured flags.
-func (_ *Service) Start() {
 }
 
 // Stop does nothing.
@@ -120,11 +118,6 @@ func (_ *Service) AllDeposits(_ context.Context, _ *big.Int) []*ethpb.Deposit {
 	return []*ethpb.Deposit{}
 }
 
-// ChainStartDeposits mocks out the powchain functionality for interop.
-func (s *Service) ChainStartDeposits() []*ethpb.Deposit {
-	return s.chainStartDeposits
-}
-
 // ChainStartEth1Data mocks out the powchain functionality for interop.
 func (_ *Service) ChainStartEth1Data() *ethpb.Eth1Data {
 	return &ethpb.Eth1Data{}
@@ -132,7 +125,11 @@ func (_ *Service) ChainStartEth1Data() *ethpb.Eth1Data {
 
 // PreGenesisState returns an empty beacon state.
 func (_ *Service) PreGenesisState() state.BeaconState {
-	return &v1.BeaconState{}
+	s, err := v1.InitializeFromProto(&ethpb.BeaconState{})
+	if err != nil {
+		panic("could not initialize state")
+	}
+	return s
 }
 
 // ClearPreGenesisData --
@@ -156,7 +153,7 @@ func (_ *Service) FinalizedDeposits(_ context.Context) *depositcache.FinalizedDe
 }
 
 // NonFinalizedDeposits mocks out the deposit cache functionality for interop.
-func (_ *Service) NonFinalizedDeposits(_ context.Context, _ *big.Int) []*ethpb.Deposit {
+func (_ *Service) NonFinalizedDeposits(_ context.Context, _ int64, _ *big.Int) []*ethpb.Deposit {
 	return []*ethpb.Deposit{}
 }
 

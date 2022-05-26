@@ -22,19 +22,13 @@ func UsePraterNetworkConfig() {
 	OverrideBeaconNetworkConfig(cfg)
 }
 
-// UsePraterConfig sets the main beacon chain
-// config for Prater.
-func UsePraterConfig() {
-	beaconConfig = PraterConfig()
-}
-
 // PraterConfig defines the config for the
 // Prater testnet.
 func PraterConfig() *BeaconChainConfig {
 	cfg := MainnetConfig().Copy()
 	cfg.MinGenesisTime = 1614588812
 	cfg.GenesisDelay = 1919188
-	cfg.ConfigName = ConfigNames[Prater]
+	cfg.ConfigName = PraterName
 	cfg.GenesisForkVersion = []byte{0x00, 0x00, 0x10, 0x20}
 	cfg.SecondsPerETH1Block = 14
 	cfg.DepositChainID = eth1Params.GoerliChainConfig.ChainID.Uint64()
@@ -43,7 +37,8 @@ func PraterConfig() *BeaconChainConfig {
 	cfg.AltairForkVersion = []byte{0x1, 0x0, 0x10, 0x20}
 	cfg.ShardingForkVersion = []byte{0x3, 0x0, 0x10, 0x20}
 	cfg.BellatrixForkVersion = []byte{0x2, 0x0, 0x10, 0x20}
-	cfg.TransitionTotalDifficulty = 4294967296
+	cfg.TerminalTotalDifficulty = "4294967296"
 	cfg.DepositContractAddress = "0xff50ed3d0ec03aC01D4C79aAd74928BFF48a7b2b"
+	cfg.InitializeForkSchedule()
 	return cfg
 }

@@ -3,7 +3,6 @@ package encoder
 import (
 	"fmt"
 	"io"
-	"math"
 	"sync"
 
 	fastssz "github.com/ferranbt/fastssz"
@@ -11,6 +10,7 @@ import (
 	"github.com/golang/snappy"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/math"
 )
 
 var _ NetworkEncoding = (*SszNetworkEncoder)(nil)
@@ -145,11 +145,11 @@ func (_ SszNetworkEncoder) ProtocolSuffix() string {
 // MaxLength specifies the maximum possible length of an encoded
 // chunk of data.
 func (_ SszNetworkEncoder) MaxLength(length uint64) (int, error) {
-	// Defensive check to prevent potential issues when casting to int64.
-	if length > math.MaxInt64 {
-		return 0, errors.Errorf("invalid length provided: %d", length)
+	il, err := math.Int(length)
+	if err != nil {
+		return 0, errors.Wrap(err, "invalid length provided")
 	}
-	maxLen := snappy.MaxEncodedLen(int(length))
+	maxLen := snappy.MaxEncodedLen(il)
 	if maxLen < 0 {
 		return 0, errors.Errorf("max encoded length is negative: %d", maxLen)
 	}

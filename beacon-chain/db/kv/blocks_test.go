@@ -4,12 +4,15 @@ import (
 	"context"
 	"testing"
 
-	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -18,41 +21,69 @@ import (
 
 var blockTests = []struct {
 	name     string
-	newBlock func(types.Slot, []byte) (block.SignedBeaconBlock, error)
+	newBlock func(types.Slot, []byte) (interfaces.SignedBeaconBlock, error)
 }{
 	{
 		name: "phase0",
-		newBlock: func(slot types.Slot, root []byte) (block.SignedBeaconBlock, error) {
+		newBlock: func(slot types.Slot, root []byte) (interfaces.SignedBeaconBlock, error) {
 			b := util.NewBeaconBlock()
 			b.Block.Slot = slot
 			if root != nil {
 				b.Block.ParentRoot = root
 			}
-			return wrapper.WrappedPhase0SignedBeaconBlock(b), nil
+			return wrapper.WrappedSignedBeaconBlock(b)
 		},
 	},
 	{
 		name: "altair",
-		newBlock: func(slot types.Slot, root []byte) (block.SignedBeaconBlock, error) {
+		newBlock: func(slot types.Slot, root []byte) (interfaces.SignedBeaconBlock, error) {
 			b := util.NewBeaconBlockAltair()
 			b.Block.Slot = slot
 			if root != nil {
 				b.Block.ParentRoot = root
 			}
-			return wrapper.WrappedAltairSignedBeaconBlock(b)
+			return wrapper.WrappedSignedBeaconBlock(b)
 		},
 	},
 	{
 		name: "bellatrix",
-		newBlock: func(slot types.Slot, root []byte) (block.SignedBeaconBlock, error) {
+		newBlock: func(slot types.Slot, root []byte) (interfaces.SignedBeaconBlock, error) {
 			b := util.NewBeaconBlockBellatrix()
 			b.Block.Slot = slot
 			if root != nil {
 				b.Block.ParentRoot = root
 			}
-			return wrapper.WrappedBellatrixSignedBeaconBlock(b)
+			return wrapper.WrappedSignedBeaconBlock(b)
 		},
 	},
+	{
+		name: "bellatrix blind",
+		newBlock: func(slot types.Slot, root []byte) (interfaces.SignedBeaconBlock, error) {
+			b := util.NewBlindedBeaconBlockBellatrix()
+			b.Block.Slot = slot
+			if root != nil {
+				b.Block.ParentRoot = root
+			}
+			return wrapper.WrappedSignedBeaconBlock(b)
+		},
+	},
+}
+
+func TestStore_SaveBackfillBlockRoot(t *testing.T) {
+	db := setupDB(t)
+	ctx := context.Background()
+
+	_, err := db.BackfillBlockRoot(ctx)
+	require.ErrorIs(t, err, ErrNotFoundBackfillBlockRoot)
+
+	expected := [32]byte{}
+	copy(expected[:], []byte{0x23})
+	err = db.SaveBackfillBlockRoot(ctx, expected)
+	require.NoError(t, err)
+	actual, err := db.BackfillBlockRoot(ctx)
+	require.NoError(t, err)
+	require.Equal(t, expected, actual)
+
 }
 
 func TestStore_SaveBlock_NoDuplicates(t *testing.T) {
@@ -118,7 +149,7 @@ func TestStore_BlocksHandleZeroCase(t *testing.T) {
 			db := setupDB(t)
 			ctx := context.Background()
 			numBlocks := 10
-			totalBlocks := make([]block.SignedBeaconBlock, numBlocks)
+			totalBlocks := make([]interfaces.SignedBeaconBlock, numBlocks)
 			for i := 0; i < len(totalBlocks); i++ {
 				b, err := tt.newBlock(types.Slot(i), bytesutil.PadTo([]byte("parent"), 32))
 				require.NoError(t, err)
@@ -141,7 +172,7 @@ func TestStore_BlocksHandleInvalidEndSlot(t *testing.T) {
 			db := setupDB(t)
 			ctx := context.Background()
 			numBlocks := 10
-			totalBlocks := make([]block.SignedBeaconBlock, numBlocks)
+			totalBlocks := make([]interfaces.SignedBeaconBlock, numBlocks)
 			// Save blocks from slot 1 onwards.
 			for i := 0; i < len(totalBlocks); i++ {
 				b, err := tt.newBlock(types.Slot(i+1), bytesutil.PadTo([]byte("parent"), 32))
@@ -163,6 +194,93 @@ func TestStore_BlocksHandleInvalidEndSlot(t *testing.T) {
 	}
 }
 
+func TestStore_DeleteBlock(t *testing.T) {
+	slotsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch)
+	db := setupDB(t)
+	ctx := context.Background()
+
+	require.NoError(t, db.SaveGenesisBlockRoot(ctx, genesisBlockRoot))
+	blks := makeBlocks(t, 0, slotsPerEpoch*4, genesisBlockRoot)
+	require.NoError(t, db.SaveBlocks(ctx, blks))
+	ss := make([]*ethpb.StateSummary, len(blks))
+	for i, blk := range blks {
+		r, err := blk.Block().HashTreeRoot()
+		require.NoError(t, err)
+		ss[i] = &ethpb.StateSummary{
+			Slot: blk.Block().Slot(),
+			Root: r[:],
+		}
+	}
+	require.NoError(t, db.SaveStateSummaries(ctx, ss))
+
+	root, err := blks[slotsPerEpoch].Block().HashTreeRoot()
+	require.NoError(t, err)
+	cp := &ethpb.Checkpoint{
+		Epoch: 1,
+		Root:  root[:],
+	}
+	st, err := util.NewBeaconState()
+	require.NoError(t, err)
+	require.NoError(t, db.SaveState(ctx, st, root))
+	require.NoError(t, db.SaveFinalizedCheckpoint(ctx, cp))
+
+	root2, err := blks[4*slotsPerEpoch-2].Block().HashTreeRoot()
+	require.NoError(t, err)
+	b, err := db.Block(ctx, root2)
+	require.NoError(t, err)
+	require.NotNil(t, b)
+	require.NoError(t, db.DeleteBlock(ctx, root2))
+	st, err = db.State(ctx, root2)
+	require.NoError(t, err)
+	require.Equal(t, st, nil)
+
+	b, err = db.Block(ctx, root2)
+	require.NoError(t, err)
+	require.Equal(t, b, nil)
+	require.Equal(t, false, db.HasStateSummary(ctx, root2))
+
+	require.ErrorIs(t, db.DeleteBlock(ctx, root), ErrDeleteJustifiedAndFinalized)
+}
+
+func TestStore_DeleteJustifiedBlock(t *testing.T) {
+	db := setupDB(t)
+	ctx := context.Background()
+	b := util.NewBeaconBlock()
+	b.Block.Slot = 1
+	root, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	cp := &ethpb.Checkpoint{
+		Root: root[:],
+	}
+	st, err := util.NewBeaconState()
+	require.NoError(t, err)
+	blk, err := wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, blk))
+	require.NoError(t, db.SaveState(ctx, st, root))
+	require.NoError(t, db.SaveJustifiedCheckpoint(ctx, cp))
+	require.ErrorIs(t, db.DeleteBlock(ctx, root), ErrDeleteJustifiedAndFinalized)
+}
+
+func TestStore_DeleteFinalizedBlock(t *testing.T) {
+	db := setupDB(t)
+	ctx := context.Background()
+	b := util.NewBeaconBlock()
+	root, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	cp := &ethpb.Checkpoint{
+		Root: root[:],
+	}
+	st, err := util.NewBeaconState()
+	require.NoError(t, err)
+	blk, err := wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, blk))
+	require.NoError(t, db.SaveState(ctx, st, root))
+	require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
+	require.NoError(t, db.SaveFinalizedCheckpoint(ctx, cp))
+	require.ErrorIs(t, db.DeleteBlock(ctx, root), ErrDeleteJustifiedAndFinalized)
+}
 func TestStore_GenesisBlock(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
@@ -171,7 +289,9 @@ func TestStore_GenesisBlock(t *testing.T) {
 	blockRoot, err := genesisBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, blockRoot))
-	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(genesisBlock)))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(genesisBlock)
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, wsb))
 	retrievedBlock, err := db.GenesisBlock(ctx)
 	require.NoError(t, err)
 	assert.Equal(t, true, proto.Equal(genesisBlock, retrievedBlock.Proto()), "Wanted: %v, received: %v", genesisBlock, retrievedBlock)
@@ -213,7 +333,7 @@ func TestStore_Blocks_FiltersCorrectly(t *testing.T) {
 			require.NoError(t, err)
 			b8, err := tt.newBlock(types.Slot(8), bytesutil.PadTo([]byte("parent4"), 32))
 			require.NoError(t, err)
-			blocks := []block.SignedBeaconBlock{
+			blocks := []interfaces.SignedBeaconBlock{
 				b4,
 				b5,
 				b6,
@@ -317,7 +437,7 @@ func TestStore_Blocks_Retrieve_SlotRange(t *testing.T) {
 	for _, tt := range blockTests {
 		t.Run(tt.name, func(t *testing.T) {
 			db := setupDB(t)
-			totalBlocks := make([]block.SignedBeaconBlock, 500)
+			totalBlocks := make([]interfaces.SignedBeaconBlock, 500)
 			for i := 0; i < 500; i++ {
 				b, err := tt.newBlock(types.Slot(i), bytesutil.PadTo([]byte("parent"), 32))
 				require.NoError(t, err)
@@ -337,7 +457,7 @@ func TestStore_Blocks_Retrieve_Epoch(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			db := setupDB(t)
 			slots := params.BeaconConfig().SlotsPerEpoch.Mul(7)
-			totalBlocks := make([]block.SignedBeaconBlock, slots)
+			totalBlocks := make([]interfaces.SignedBeaconBlock, slots)
 			for i := types.Slot(0); i < slots; i++ {
 				b, err := tt.newBlock(i, bytesutil.PadTo([]byte("parent"), 32))
 				require.NoError(t, err)
@@ -361,7 +481,7 @@ func TestStore_Blocks_Retrieve_SlotRangeWithStep(t *testing.T) {
 	for _, tt := range blockTests {
 		t.Run(tt.name, func(t *testing.T) {
 			db := setupDB(t)
-			totalBlocks := make([]block.SignedBeaconBlock, 500)
+			totalBlocks := make([]interfaces.SignedBeaconBlock, 500)
 			for i := 0; i < 500; i++ {
 				b, err := tt.newBlock(types.Slot(i), bytesutil.PadTo([]byte("parent"), 32))
 				require.NoError(t, err)
@@ -448,7 +568,7 @@ func TestStore_SaveBlocks_HasCachedBlocks(t *testing.T) {
 			db := setupDB(t)
 			ctx := context.Background()
 
-			b := make([]block.SignedBeaconBlock, 500)
+			b := make([]interfaces.SignedBeaconBlock, 500)
 			for i := 0; i < 500; i++ {
 				blk, err := tt.newBlock(types.Slot(i), bytesutil.PadTo([]byte("parent"), 32))
 				require.NoError(t, err)
@@ -472,7 +592,7 @@ func TestStore_SaveBlocks_HasRootsMatched(t *testing.T) {
 			db := setupDB(t)
 			ctx := context.Background()
 
-			b := make([]block.SignedBeaconBlock, 500)
+			b := make([]interfaces.SignedBeaconBlock, 500)
 			for i := 0; i < 500; i++ {
 				blk, err := tt.newBlock(types.Slot(i), bytesutil.PadTo([]byte("parent"), 32))
 				require.NoError(t, err)
@@ -549,4 +669,28 @@ func TestStore_BlocksBySlot_BlockRootsBySlot(t *testing.T) {
 			assert.Equal(t, true, hasBlockRoots, "Expected no block roots")
 		})
 	}
+}
+
+func TestStore_FeeRecipientByValidatorID(t *testing.T) {
+	db := setupDB(t)
+	ctx := context.Background()
+	ids := []types.ValidatorIndex{0, 0, 0}
+	feeRecipients := []common.Address{{}, {}, {}, {}}
+	require.ErrorContains(t, "validatorIDs and feeRecipients must be the same length", db.SaveFeeRecipientsByValidatorIDs(ctx, ids, feeRecipients))
+
+	ids = []types.ValidatorIndex{0, 1, 2}
+	feeRecipients = []common.Address{{'a'}, {'b'}, {'c'}}
+	require.NoError(t, db.SaveFeeRecipientsByValidatorIDs(ctx, ids, feeRecipients))
+	f, err := db.FeeRecipientByValidatorID(ctx, 0)
+	require.NoError(t, err)
+	require.Equal(t, common.Address{'a'}, f)
+	f, err = db.FeeRecipientByValidatorID(ctx, 1)
+	require.NoError(t, err)
+	require.Equal(t, common.Address{'b'}, f)
+	f, err = db.FeeRecipientByValidatorID(ctx, 2)
+	require.NoError(t, err)
+	require.Equal(t, common.Address{'c'}, f)
+	_, err = db.FeeRecipientByValidatorID(ctx, 3)
+	want := errors.Wrap(ErrNotFoundFeeRecipient, "validator id 3")
+	require.Equal(t, want.Error(), err.Error())
 }

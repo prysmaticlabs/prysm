@@ -8,16 +8,17 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/async"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/encoding/ssz"
+	"github.com/prysmaticlabs/prysm/encoding/ssz/equality"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 	"github.com/trailofbits/go-mutexasserts"
@@ -69,7 +70,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 		}
 
 		ctx, span := trace.StartSpan(ctx, "processPendingBlocks.InnerLoop")
-		span.AddAttributes(trace.Int64Attribute("slot", int64(slot)))
+		span.AddAttributes(trace.Int64Attribute("slot", int64(slot))) // lint:ignore uintcast -- This conversion is OK for tracing.
 
 		s.pendingQueueLock.RLock()
 		bs := s.pendingBlocksInCache(slot)
@@ -151,20 +152,25 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 				continue
 			}
 
-			if err := s.validateBeaconBlock(ctx, b, blkRoot); err != nil {
+			err = s.validateBeaconBlock(ctx, b, blkRoot)
+			switch {
+			case errors.Is(ErrOptimisticParent, err): // Ok to continue process block with parent that is an optimistic candidate.
+			case err != nil:
 				log.Debugf("Could not validate block from slot %d: %v", b.Block().Slot(), err)
 				s.setBadBlock(ctx, blkRoot)
 				tracing.AnnotateError(span, err)
-				// In the next iteration of the queue, this block will be removed from
-				// the pending queue as it has been marked as a 'bad' block.
 				span.End()
 				continue
+			default:
 			}
 
 			if err := s.cfg.chain.ReceiveBlock(ctx, b, blkRoot); err != nil {
+				if blockchain.IsInvalidBlock(err) {
+					tracing.AnnotateError(span, err)
+					s.setBadBlock(ctx, blkRoot)
+				}
 				log.Debugf("Could not process block from slot %d: %v", b.Block().Slot(), err)
-				s.setBadBlock(ctx, blkRoot)
-				tracing.AnnotateError(span, err)
+
 				// In the next iteration of the queue, this block will be removed from
 				// the pending queue as it has been marked as a 'bad' block.
 				span.End()
@@ -204,8 +210,11 @@ func (s *Service) sendBatchRootRequest(ctx context.Context, roots [][32]byte, ra
 	if len(roots) == 0 {
 		return nil
 	}
-
-	_, bestPeers := s.cfg.p2p.Peers().BestFinalized(maxPeerRequest, s.cfg.chain.FinalizedCheckpt().Epoch)
+	cp, err := s.cfg.chain.FinalizedCheckpt()
+	if err != nil {
+		return err
+	}
+	_, bestPeers := s.cfg.p2p.Peers().BestFinalized(maxPeerRequest, cp.Epoch)
 	if len(bestPeers) == 0 {
 		return nil
 	}
@@ -266,7 +275,11 @@ func (s *Service) validatePendingSlots() error {
 	defer s.pendingQueueLock.Unlock()
 	oldBlockRoots := make(map[[32]byte]bool)
 
-	finalizedEpoch := s.cfg.chain.FinalizedCheckpt().Epoch
+	cp, err := s.cfg.chain.FinalizedCheckpt()
+	if err != nil {
+		return err
+	}
+	finalizedEpoch := cp.Epoch
 	if s.slotToPendingBlocks == nil {
 		return errors.New("slotToPendingBlocks cache can't be nil")
 	}
@@ -313,7 +326,7 @@ func (s *Service) clearPendingSlots() {
 
 // Delete block from the list from the pending queue using the slot as key.
 // Note: this helper is not thread safe.
-func (s *Service) deleteBlockFromPendingQueue(slot types.Slot, b block.SignedBeaconBlock, r [32]byte) error {
+func (s *Service) deleteBlockFromPendingQueue(slot types.Slot, b interfaces.SignedBeaconBlock, r [32]byte) error {
 	mutexasserts.AssertRWMutexLocked(&s.pendingQueueLock)
 
 	blks := s.pendingBlocksInCache(slot)
@@ -322,13 +335,13 @@ func (s *Service) deleteBlockFromPendingQueue(slot types.Slot, b block.SignedBea
 	}
 
 	// Defensive check to ignore nil blocks
-	if err := helpers.BeaconBlockIsNil(b); err != nil {
+	if err := wrapper.BeaconBlockIsNil(b); err != nil {
 		return err
 	}
 
-	newBlks := make([]block.SignedBeaconBlock, 0, len(blks))
+	newBlks := make([]interfaces.SignedBeaconBlock, 0, len(blks))
 	for _, blk := range blks {
-		if ssz.DeepEqual(blk.Proto(), b.Proto()) {
+		if equality.DeepEqual(blk.Proto(), b.Proto()) {
 			continue
 		}
 		newBlks = append(newBlks, blk)
@@ -350,7 +363,7 @@ func (s *Service) deleteBlockFromPendingQueue(slot types.Slot, b block.SignedBea
 
 // Insert block to the list in the pending queue using the slot as key.
 // Note: this helper is not thread safe.
-func (s *Service) insertBlockToPendingQueue(_ types.Slot, b block.SignedBeaconBlock, r [32]byte) error {
+func (s *Service) insertBlockToPendingQueue(_ types.Slot, b interfaces.SignedBeaconBlock, r [32]byte) error {
 	mutexasserts.AssertRWMutexLocked(&s.pendingQueueLock)
 
 	if s.seenPendingBlocks[r] {
@@ -366,22 +379,22 @@ func (s *Service) insertBlockToPendingQueue(_ types.Slot, b block.SignedBeaconBl
 }
 
 // This returns signed beacon blocks given input key from slotToPendingBlocks.
-func (s *Service) pendingBlocksInCache(slot types.Slot) []block.SignedBeaconBlock {
+func (s *Service) pendingBlocksInCache(slot types.Slot) []interfaces.SignedBeaconBlock {
 	k := slotToCacheKey(slot)
 	value, ok := s.slotToPendingBlocks.Get(k)
 	if !ok {
-		return []block.SignedBeaconBlock{}
+		return []interfaces.SignedBeaconBlock{}
 	}
-	blks, ok := value.([]block.SignedBeaconBlock)
+	blks, ok := value.([]interfaces.SignedBeaconBlock)
 	if !ok {
-		return []block.SignedBeaconBlock{}
+		return []interfaces.SignedBeaconBlock{}
 	}
 	return blks
 }
 
 // This adds input signed beacon block to slotToPendingBlocks cache.
-func (s *Service) addPendingBlockToCache(b block.SignedBeaconBlock) error {
-	if err := helpers.BeaconBlockIsNil(b); err != nil {
+func (s *Service) addPendingBlockToCache(b interfaces.SignedBeaconBlock) error {
+	if err := wrapper.BeaconBlockIsNil(b); err != nil {
 		return err
 	}
 

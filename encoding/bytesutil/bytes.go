@@ -8,8 +8,8 @@ import (
 	"regexp"
 
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 )
 
 var hexRegex = regexp.MustCompile("^0x[0-9a-fA-F]+$")
@@ -190,7 +190,7 @@ func ToLowInt64(x []byte) int64 {
 	}
 	// Use the first 8 bytes.
 	x = x[:8]
-	return int64(binary.LittleEndian.Uint64(x))
+	return int64(binary.LittleEndian.Uint64(x)) // lint:ignore uintcast -- A negative number might be the expected result.
 }
 
 // SafeCopyRootAtIndex takes a copy of an 32-byte slice in a slice of byte slices. Returns error if index out of range.
@@ -339,6 +339,14 @@ func HighestBitIndexAt(b []byte, index int) (int, error) {
 	return 0, nil
 }
 
+// Uint32ToBytes4 is a convenience method for converting uint32 to a fix
+// sized 4 byte array in big endian order. Returns 4 byte array.
+func Uint32ToBytes4(i uint32) [4]byte {
+	buf := make([]byte, 4)
+	binary.BigEndian.PutUint32(buf, i)
+	return ToBytes4(buf)
+}
+
 // Uint64ToBytesLittleEndian conversion.
 func Uint64ToBytesLittleEndian(i uint64) []byte {
 	buf := make([]byte, 8)
@@ -406,7 +414,17 @@ func ReverseByteOrder(input []byte) []byte {
 	return b
 }
 
-// NonZeroRoot returns whether or not a root is of proper length and non-zero hash.
-func NonZeroRoot(root []byte) bool {
-	return len(root) == fieldparams.RootLength && string(make([]byte, fieldparams.RootLength)) != string(root)
+// ZeroRoot returns whether or not a root is of proper length and non-zero hash.
+func ZeroRoot(root []byte) bool {
+	return string(make([]byte, fieldparams.RootLength)) == string(root)
+}
+
+// IsRoot checks whether the byte array is a root.
+func IsRoot(root []byte) bool {
+	return len(root) == fieldparams.RootLength
+}
+
+// IsValidRoot checks whether the byte array is a valid root.
+func IsValidRoot(root []byte) bool {
+	return IsRoot(root) && !ZeroRoot(root)
 }

@@ -15,11 +15,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -92,7 +92,7 @@ func TestExecuteBellatrixStateTransitionNoVerify_FullProcess(t *testing.T) {
 		SyncCommitteeSignature: aggregatedSig,
 	}
 	block.Block.Body.SyncAggregate = syncAggregate
-	wsb, err := wrapper.WrappedBellatrixSignedBeaconBlock(block)
+	wsb, err := wrapper.WrappedSignedBeaconBlock(block)
 	require.NoError(t, err)
 	stateRoot, err := transition.CalculateStateRoot(context.Background(), beaconState, wsb)
 	require.NoError(t, err)
@@ -103,7 +103,7 @@ func TestExecuteBellatrixStateTransitionNoVerify_FullProcess(t *testing.T) {
 	require.NoError(t, err)
 	block.Signature = sig.Marshal()
 
-	wsb, err = wrapper.WrappedBellatrixSignedBeaconBlock(block)
+	wsb, err = wrapper.WrappedSignedBeaconBlock(block)
 	require.NoError(t, err)
 	set, _, err := transition.ExecuteStateTransitionNoVerifyAnySig(context.Background(), beaconState, wsb)
 	require.NoError(t, err)
@@ -180,7 +180,7 @@ func TestExecuteBellatrixStateTransitionNoVerifySignature_CouldNotVerifyStateRoo
 	}
 	block.Block.Body.SyncAggregate = syncAggregate
 
-	wsb, err := wrapper.WrappedBellatrixSignedBeaconBlock(block)
+	wsb, err := wrapper.WrappedSignedBeaconBlock(block)
 	require.NoError(t, err)
 	stateRoot, err := transition.CalculateStateRoot(context.Background(), beaconState, wsb)
 	require.NoError(t, err)
@@ -192,7 +192,7 @@ func TestExecuteBellatrixStateTransitionNoVerifySignature_CouldNotVerifyStateRoo
 	block.Signature = sig.Marshal()
 
 	block.Block.StateRoot = bytesutil.PadTo([]byte{'a'}, 32)
-	wsb, err = wrapper.WrappedBellatrixSignedBeaconBlock(block)
+	wsb, err = wrapper.WrappedSignedBeaconBlock(block)
 	require.NoError(t, err)
 	_, _, err = transition.ExecuteStateTransitionNoVerifyAnySig(context.Background(), beaconState, wsb)
 	require.ErrorContains(t, "could not validate state root", err)
@@ -244,8 +244,8 @@ func createFullBellatrixBlockWithOperations(t *testing.T) (state.BeaconState,
 					StateRoot:     make([]byte, fieldparams.RootLength),
 					ReceiptsRoot:  make([]byte, fieldparams.RootLength),
 					LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
-					Random:        make([]byte, fieldparams.RootLength),
-					BaseFeePerGas: make([]byte, fieldparams.RootLength),
+					PrevRandao:    make([]byte, fieldparams.RootLength),
+					BaseFeePerGas: bytesutil.PadTo([]byte{1, 2, 3, 4}, fieldparams.RootLength),
 					BlockHash:     make([]byte, fieldparams.RootLength),
 					Transactions:  make([][]byte, 0),
 					ExtraData:     make([]byte, 0),

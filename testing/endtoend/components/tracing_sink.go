@@ -9,7 +9,9 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
 )
@@ -25,6 +27,7 @@ import (
 // the Prysm repository to replay requests to a jaeger collector endpoint. This
 // can then be used to visualize the spans themselves in the jaeger UI.
 type TracingSink struct {
+	cancel   context.CancelFunc
 	started  chan struct{}
 	endpoint string
 	server   *http.Server
@@ -39,8 +42,13 @@ func NewTracingSink(endpoint string) *TracingSink {
 }
 
 // Start the tracing sink.
-func (ts *TracingSink) Start(_ context.Context) error {
-	go ts.initializeSink()
+func (ts *TracingSink) Start(ctx context.Context) error {
+	if ts.endpoint == "" {
+		return errors.New("empty endpoint provided")
+	}
+	ctx, cancelF := context.WithCancel(ctx)
+	ts.cancel = cancelF
+	go ts.initializeSink(ctx)
 	close(ts.started)
 	return nil
 }
@@ -50,8 +58,24 @@ func (ts *TracingSink) Started() <-chan struct{} {
 	return ts.started
 }
 
+// Pause pauses the component and its underlying process.
+func (ts *TracingSink) Pause() error {
+	return nil
+}
+
+// Resume resumes the component and its underlying process.
+func (ts *TracingSink) Resume() error {
+	return nil
+}
+
+// Stop stops the component and its underlying process.
+func (ts *TracingSink) Stop() error {
+	ts.cancel()
+	return nil
+}
+
 // Initialize an http handler that writes all requests to a file.
-func (ts *TracingSink) initializeSink() {
+func (ts *TracingSink) initializeSink(ctx context.Context) {
 	mux := &http.ServeMux{}
 	ts.server = &http.Server{
 		Addr:    ts.endpoint,
@@ -72,6 +96,9 @@ func (ts *TracingSink) initializeSink() {
 		if err := stdOutFile.Close(); err != nil {
 			log.WithError(err).Error("Could not close stdout file")
 		}
+		if err := ts.server.Close(); err != nil {
+			log.WithError(err).Error("Could not close http server")
+		}
 	}
 	mux.HandleFunc("/", func(_ http.ResponseWriter, r *http.Request) {
 		if err := captureRequest(stdOutFile, r); err != nil {
@@ -82,9 +109,20 @@ func (ts *TracingSink) initializeSink() {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
-		<-sigs
-		cleanup()
-		os.Exit(0)
+		for {
+			select {
+			case <-ctx.Done():
+				cleanup()
+				return
+			case <-sigs:
+				cleanup()
+				return
+			default:
+				// Sleep for 100ms and do nothing while waiting for
+				// cancellation.
+				time.Sleep(100 * time.Millisecond)
+			}
+		}
 	}()
 	if err := ts.server.ListenAndServe(); err != http.ErrServerClosed {
 		log.WithError(err).Error("Failed to serve http")

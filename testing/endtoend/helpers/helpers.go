@@ -7,11 +7,12 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
+	"net"
 	"net/http"
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -27,13 +28,14 @@ import (
 )
 
 const (
-	maxPollingWaitTime  = 60 * time.Second // A minute so timing out doesn't take very long.
-	filePollingInterval = 500 * time.Millisecond
-	memoryHeapFileName  = "node_heap_%d.pb.gz"
-	cpuProfileFileName  = "node_cpu_profile_%d.pb.gz"
-	fileBufferSize      = 64 * 1024
-	maxFileBufferSize   = 1024 * 1024
-	AltairE2EForkEpoch  = 6
+	maxPollingWaitTime    = 60 * time.Second // A minute so timing out doesn't take very long.
+	filePollingInterval   = 500 * time.Millisecond
+	memoryHeapFileName    = "node_heap_%d.pb.gz"
+	cpuProfileFileName    = "node_cpu_profile_%d.pb.gz"
+	fileBufferSize        = 64 * 1024
+	maxFileBufferSize     = 1024 * 1024
+	AltairE2EForkEpoch    = 6
+	BellatrixE2EForkEpoch = 8
 )
 
 // Graffiti is a list of sample graffiti strings.
@@ -69,7 +71,7 @@ func WaitForTextInFile(file *os.File, text string) error {
 	for {
 		select {
 		case <-ctx.Done():
-			contents, err := ioutil.ReadAll(file)
+			contents, err := io.ReadAll(file)
 			if err != nil {
 				return err
 			}
@@ -95,16 +97,63 @@ func WaitForTextInFile(file *os.File, text string) error {
 	}
 }
 
+// FindFollowingTextInFile checks a file every polling interval for the  following text requested.
+func FindFollowingTextInFile(file *os.File, text string) (string, error) {
+	d := time.Now().Add(maxPollingWaitTime)
+	ctx, cancel := context.WithDeadline(context.Background(), d)
+	defer cancel()
+
+	// Use a ticker with a deadline to poll a given file.
+	ticker := time.NewTicker(filePollingInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			contents, err := io.ReadAll(file)
+			if err != nil {
+				return "", err
+			}
+			return "", fmt.Errorf("could not find requested text \"%s\" in logs:\n%s", text, contents)
+		case <-ticker.C:
+			fileScanner := bufio.NewScanner(file)
+			buf := make([]byte, 0, fileBufferSize)
+			fileScanner.Buffer(buf, maxFileBufferSize)
+			for fileScanner.Scan() {
+				scanned := fileScanner.Text()
+				if strings.Contains(scanned, text) {
+					lastIdx := strings.LastIndex(scanned, text)
+					truncatedIdx := lastIdx + len(text)
+					if len(scanned) <= truncatedIdx {
+						return "", fmt.Errorf("truncated index is larger than the size of whole scanned line")
+					}
+					splitObjs := strings.Split(scanned[truncatedIdx:], " ")
+					if len(splitObjs) == 0 {
+						return "", fmt.Errorf("0 split substrings retrieved")
+					}
+					return splitObjs[0], nil
+				}
+			}
+			if err := fileScanner.Err(); err != nil {
+				return "", err
+			}
+			_, err := file.Seek(0, io.SeekStart)
+			if err != nil {
+				return "", err
+			}
+		}
+	}
+}
+
 // GraffitiYamlFile outputs graffiti YAML file into a testing directory.
 func GraffitiYamlFile(testDir string) (string, error) {
 	b := []byte(`default: "Rice"
-random: 
+random:
   - "Sushi"
   - "Ramen"
   - "Takoyaki"
 `)
 	f := filepath.Join(testDir, "graffiti.yaml")
-	if err := ioutil.WriteFile(f, b, os.ModePerm); err != nil {
+	if err := os.WriteFile(f, b, os.ModePerm); err != nil {
 		return "", err
 	}
 	return f, nil
@@ -153,12 +202,12 @@ func LogErrorOutput(t *testing.T, file io.Reader, title string, index int) {
 
 // WritePprofFiles writes the memory heap and cpu profile files to the test path.
 func WritePprofFiles(testDir string, index int) error {
-	url := fmt.Sprintf("http://127.0.0.1:%d/debug/pprof/heap", e2e.TestParams.BeaconNodeRPCPort+50+index)
+	url := fmt.Sprintf("http://127.0.0.1:%d/debug/pprof/heap", e2e.TestParams.Ports.PrysmBeaconNodePprofPort+index)
 	filePath := filepath.Join(testDir, fmt.Sprintf(memoryHeapFileName, index))
 	if err := writeURLRespAtPath(url, filePath); err != nil {
 		return err
 	}
-	url = fmt.Sprintf("http://127.0.0.1:%d/debug/pprof/profile", e2e.TestParams.BeaconNodeRPCPort+50+index)
+	url = fmt.Sprintf("http://127.0.0.1:%d/debug/pprof/profile", e2e.TestParams.Ports.PrysmBeaconNodePprofPort+index)
 	filePath = filepath.Join(testDir, fmt.Sprintf(cpuProfileFileName, index))
 	return writeURLRespAtPath(url, filePath)
 }
@@ -174,7 +223,7 @@ func writeURLRespAtPath(url, fp string) error {
 		}
 	}()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
@@ -207,7 +256,7 @@ func NewLocalConnection(ctx context.Context, port int) (*grpc.ClientConn, error)
 func NewLocalConnections(ctx context.Context, numConns int) ([]*grpc.ClientConn, func(), error) {
 	conns := make([]*grpc.ClientConn, numConns)
 	for i := 0; i < len(conns); i++ {
-		conn, err := NewLocalConnection(ctx, e2e.TestParams.BeaconNodeRPCPort+i)
+		conn, err := NewLocalConnection(ctx, e2e.TestParams.Ports.PrysmBeaconNodeRPCPort+i)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -220,6 +269,16 @@ func NewLocalConnections(ctx context.Context, numConns int) ([]*grpc.ClientConn,
 			}
 		}
 	}, nil
+}
+
+// BeaconAPIHostnames constructs a hostname:port string for the
+func BeaconAPIHostnames(numConns int) []string {
+	hostnames := make([]string, 0)
+	for i := 0; i < numConns; i++ {
+		port := e2e.TestParams.Ports.PrysmBeaconNodeGatewayPort + i
+		hostnames = append(hostnames, net.JoinHostPort("127.0.0.1", strconv.Itoa(port)))
+	}
+	return hostnames
 }
 
 // ComponentsStarted checks, sequentially, each provided component, blocks until all of the components are ready.

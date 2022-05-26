@@ -3,7 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -20,10 +20,7 @@ type sampleRPCRequest struct {
 }
 
 func Test_parseAndCaptureRequest(t *testing.T) {
-	tmpFile := filepath.Join(os.TempDir(), "faketest.log")
-	t.Cleanup(func() {
-		require.NoError(t, os.RemoveAll(tmpFile))
-	})
+	tmpFile := filepath.Join(t.TempDir(), "faketest.log")
 	body := &sampleRPCRequest{
 		Name:      "eth2",
 		ETHMethod: "eth2_produceBlock",
@@ -52,7 +49,7 @@ func Test_parseAndCaptureRequest(t *testing.T) {
 
 	f, err = os.Open(tmpFile)
 	require.NoError(t, err)
-	fileContents, err := ioutil.ReadAll(f)
+	fileContents, err := io.ReadAll(f)
 	require.NoError(t, err)
 
 	receivedContent := map[string]interface{}{}

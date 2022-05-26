@@ -45,17 +45,17 @@ import (
 )
 
 var (
-	debug                = flag.Bool("debug", false, "Enable debug logging")
-	logFileName          = flag.String("log-file", "", "Specify log filename, relative or absolute")
-	privateKey           = flag.String("private", "", "Private key to use for peer ID")
-	discv5port           = flag.Int("discv5-port", 4000, "Port to listen for discv5 connections")
-	metricsPort          = flag.Int("metrics-port", 5000, "Port to listen for connections")
-	externalIP           = flag.String("external-ip", "", "External IP for the bootnode")
-	forkVersion          = flag.String("fork-version", "", "Fork Version that the bootnode uses")
-	genesisValidatorRoot = flag.String("genesis-root", "", "Genesis Validator Root the beacon node uses")
-	seedNode             = flag.String("seed-node", "", "External node to connect to")
-	log                  = logrus.WithField("prefix", "bootnode")
-	discv5PeersCount     = promauto.NewGauge(prometheus.GaugeOpts{
+	debug                 = flag.Bool("debug", false, "Enable debug logging")
+	logFileName           = flag.String("log-file", "", "Specify log filename, relative or absolute")
+	privateKey            = flag.String("private", "", "Private key to use for peer ID")
+	discv5port            = flag.Int("discv5-port", 4000, "Port to listen for discv5 connections")
+	metricsPort           = flag.Int("metrics-port", 5000, "Port to listen for connections")
+	externalIP            = flag.String("external-ip", "", "External IP for the bootnode")
+	forkVersion           = flag.String("fork-version", "", "Fork Version that the bootnode uses")
+	genesisValidatorsRoot = flag.String("genesis-root", "", "Genesis Validators Root the beacon node uses")
+	seedNode              = flag.String("seed-node", "", "External node to connect to")
+	log                   = logrus.WithField("prefix", "bootnode")
+	discv5PeersCount      = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "bootstrap_node_discv5_peers",
 		Help: "The current number of discv5 peers of the bootstrap node",
 	})
@@ -202,10 +202,10 @@ func createLocalNode(privKey *ecdsa.PrivateKey, ipAddr net.IP, port int) (*enode
 		}
 	}
 	genRoot := params.BeaconConfig().ZeroHash
-	if *genesisValidatorRoot != "" {
-		retRoot, err := hex.DecodeString(*genesisValidatorRoot)
+	if *genesisValidatorsRoot != "" {
+		retRoot, err := hex.DecodeString(*genesisValidatorsRoot)
 		if err != nil {
-			return nil, errors.Wrap(err, "Could not retrieve genesis validator root")
+			return nil, errors.Wrap(err, "Could not retrieve genesis validators root")
 		}
 		if len(retRoot) != 32 {
 			return nil, errors.Errorf("Invalid root size, expected 32 but got %d", len(retRoot))

@@ -1,0 +1,15 @@
+load("@prysm//tools/go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["format.go"],
+    importpath = "github.com/prysmaticlabs/prysm/validator/keymanager/remote-utils",
+    visibility = [
+        "//validator:__pkg__",
+        "//validator:__subpackages__",
+    ],
+    deps = [
+        "//validator/accounts/petnames:go_default_library",
+        "@com_github_logrusorgru_aurora//:go_default_library",
+    ],
+)

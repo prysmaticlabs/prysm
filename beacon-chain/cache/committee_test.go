@@ -1,3 +1,6 @@
+//go:build !fuzz
+// +build !fuzz
+
 package cache
 
 import (
@@ -7,8 +10,8 @@ import (
 	"strconv"
 	"testing"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -102,12 +105,12 @@ func TestCommitteeCache_CanRotate(t *testing.T) {
 	}
 
 	k := cache.CommitteeCache.Keys()
-	assert.Equal(t, maxCommitteesCacheSize, uint64(len(k)))
+	assert.Equal(t, maxCommitteesCacheSize, len(k))
 
 	sort.Slice(k, func(i, j int) bool {
 		return k[i].(string) < k[j].(string)
 	})
-	wanted := end - int(maxCommitteesCacheSize)
+	wanted := end - maxCommitteesCacheSize
 	s := bytesutil.ToBytes32([]byte(strconv.Itoa(wanted)))
 	assert.Equal(t, key(s), k[0], "incorrect key received for slot 190")
 

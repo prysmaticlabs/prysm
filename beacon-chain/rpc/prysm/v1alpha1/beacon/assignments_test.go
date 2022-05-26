@@ -7,15 +7,16 @@ import (
 	"strconv"
 	"testing"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	mockstategen "github.com/prysmaticlabs/prysm/beacon-chain/state/stategen/mock"
 	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -24,13 +25,13 @@ import (
 )
 
 func TestServer_ListAssignments_CannotRequestFutureEpoch(t *testing.T) {
-
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 	bs := &Server{
 		BeaconDB:           db,
 		GenesisTimeFetcher: &mock.ChainService{},
 	}
+	addDefaultReplayerBuilder(bs, db)
 
 	wanted := errNoEpochInfoError
 	_, err := bs.ListValidatorAssignments(
@@ -45,14 +46,15 @@ func TestServer_ListAssignments_CannotRequestFutureEpoch(t *testing.T) {
 }
 
 func TestServer_ListAssignments_NoResults(t *testing.T) {
-
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 	st, err := util.NewBeaconState()
 	require.NoError(t, err)
 
 	b := util.NewBeaconBlock()
-	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, wsb))
 	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
@@ -62,6 +64,7 @@ func TestServer_ListAssignments_NoResults(t *testing.T) {
 		BeaconDB:           db,
 		GenesisTimeFetcher: &mock.ChainService{},
 		StateGen:           stategen.New(db),
+		ReplayerBuilder:    mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(st)),
 	}
 	wanted := &ethpb.ValidatorAssignments{
 		Assignments:   make([]*ethpb.ValidatorAssignments_CommitteeAssignment, 0),
@@ -101,8 +104,8 @@ func TestServer_ListAssignments_Pagination_InputOutOfRange(t *testing.T) {
 		})
 	}
 
-	blk := util.NewBeaconBlock().Block
-	blockRoot, err := blk.HashTreeRoot()
+	blk := util.NewBeaconBlock()
+	blockRoot, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
 
 	s, err := util.NewBeaconState()
@@ -123,6 +126,7 @@ func TestServer_ListAssignments_Pagination_InputOutOfRange(t *testing.T) {
 		},
 		GenesisTimeFetcher: &mock.ChainService{},
 		StateGen:           stategen.New(db),
+		ReplayerBuilder:    mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(s)),
 	}
 
 	wanted := fmt.Sprintf("page start %d >= list %d", 500, count)
@@ -176,8 +180,8 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_NoArchive(t *testing.
 		}
 	}
 
-	blk := util.NewBeaconBlock().Block
-	blockRoot, err := blk.HashTreeRoot()
+	b := util.NewBeaconBlock()
+	blockRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 
 	s, err := util.NewBeaconState()
@@ -198,6 +202,7 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_NoArchive(t *testing.
 		},
 		GenesisTimeFetcher: &mock.ChainService{},
 		StateGen:           stategen.New(db),
+		ReplayerBuilder:    mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(s)),
 	}
 
 	res, err := bs.ListValidatorAssignments(context.Background(), &ethpb.ListValidatorAssignmentsRequest{
@@ -246,8 +251,8 @@ func TestServer_ListAssignments_FilterPubkeysIndices_NoPagination(t *testing.T) 
 		validators = append(validators, val)
 	}
 
-	blk := util.NewBeaconBlock().Block
-	blockRoot, err := blk.HashTreeRoot()
+	b := util.NewBeaconBlock()
+	blockRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	s, err := util.NewBeaconState()
 	require.NoError(t, err)
@@ -264,6 +269,7 @@ func TestServer_ListAssignments_FilterPubkeysIndices_NoPagination(t *testing.T) 
 		},
 		GenesisTimeFetcher: &mock.ChainService{},
 		StateGen:           stategen.New(db),
+		ReplayerBuilder:    mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(s)),
 	}
 
 	pubKey1 := make([]byte, params.BeaconConfig().BLSPubkeyLength)
@@ -315,13 +321,16 @@ func TestServer_ListAssignments_CanFilterPubkeysIndices_WithPagination(t *testin
 		validators = append(validators, val)
 	}
 
-	blk := util.NewBeaconBlock().Block
-	blockRoot, err := blk.HashTreeRoot()
+	b := util.NewBeaconBlock()
+	blockRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	s, err := util.NewBeaconState()
 	require.NoError(t, err)
+	w, err := wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
 	require.NoError(t, s.SetValidators(validators))
 	require.NoError(t, db.SaveState(ctx, s, blockRoot))
+	require.NoError(t, db.SaveBlock(ctx, w))
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, blockRoot))
 
 	bs := &Server{
@@ -334,6 +343,8 @@ func TestServer_ListAssignments_CanFilterPubkeysIndices_WithPagination(t *testin
 		GenesisTimeFetcher: &mock.ChainService{},
 		StateGen:           stategen.New(db),
 	}
+
+	addDefaultReplayerBuilder(bs, db)
 
 	req := &ethpb.ListValidatorAssignmentsRequest{Indices: []types.ValidatorIndex{1, 2, 3, 4, 5, 6}, PageSize: 2, PageToken: "1"}
 	res, err := bs.ListValidatorAssignments(context.Background(), req)

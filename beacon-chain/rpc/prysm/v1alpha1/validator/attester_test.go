@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -17,15 +16,18 @@ import (
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"github.com/prysmaticlabs/prysm/time/slots"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -169,6 +171,37 @@ func TestGetAttestationData_SyncNotReady(t *testing.T) {
 	assert.ErrorContains(t, "Syncing to latest head", err)
 }
 
+func TestGetAttestationData_Optimistic(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig().Copy()
+	cfg.BellatrixForkEpoch = 0
+	params.OverrideBeaconConfig(cfg)
+
+	as := &Server{
+		SyncChecker:           &mockSync.Sync{},
+		TimeFetcher:           &mock.ChainService{Genesis: time.Now()},
+		HeadFetcher:           &mock.ChainService{},
+		OptimisticModeFetcher: &mock.ChainService{Optimistic: true},
+	}
+	_, err := as.GetAttestationData(context.Background(), &ethpb.AttestationDataRequest{})
+	s, ok := status.FromError(err)
+	require.Equal(t, true, ok)
+	require.DeepEqual(t, codes.Unavailable, s.Code())
+	require.ErrorContains(t, errOptimisticMode.Error(), err)
+
+	beaconState, err := util.NewBeaconState()
+	require.NoError(t, err)
+	as = &Server{
+		SyncChecker:           &mockSync.Sync{},
+		TimeFetcher:           &mock.ChainService{Genesis: time.Now()},
+		HeadFetcher:           &mock.ChainService{Optimistic: false, State: beaconState},
+		OptimisticModeFetcher: &mock.ChainService{Optimistic: false},
+		AttestationCache:      cache.NewAttestationCache(),
+	}
+	_, err = as.GetAttestationData(context.Background(), &ethpb.AttestationDataRequest{})
+	require.NoError(t, err)
+}
+
 func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
 	// Scenario:
 	//
@@ -181,7 +214,7 @@ func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
 
 	// Ensure HistoricalRootsLimit matches scenario
 	params.SetupTestConfigCleanup(t)
-	cfg := params.MainnetConfig()
+	cfg := params.MainnetConfig().Copy()
 	cfg.HistoricalRootsLimit = 8192
 	params.OverrideBeaconConfig(cfg)
 
@@ -317,6 +350,7 @@ func TestServer_GetAttestationData_InvalidRequestSlot(t *testing.T) {
 	offset := int64(slot.Mul(params.BeaconConfig().SecondsPerSlot))
 	attesterServer := &Server{
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
+		HeadFetcher: &mock.ChainService{},
 		TimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
 	}
 
@@ -348,7 +382,9 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 	require.NoError(t, err, "Could not hash beacon block")
 	blockRoot2, err := block2.HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(block2)))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(block2)
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, wsb))
 	justifiedRoot, err := justifiedBlock.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root for justified block")
 	targetRoot, err := targetBlock.Block.HashTreeRoot()
@@ -393,7 +429,9 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 		StateGen:            stategen.New(db),
 	}
 	require.NoError(t, db.SaveState(ctx, beaconState, blockRoot))
-	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(block)))
+	wsb, err = wrapper.WrappedSignedBeaconBlock(block)
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, wsb))
 	require.NoError(t, db.SaveHeadBlockRoot(ctx, blockRoot))
 
 	req := &ethpb.AttestationDataRequest{

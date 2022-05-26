@@ -225,7 +225,7 @@ func verifyDeposit(beaconState state.ReadOnlyBeaconState, deposit *ethpb.Deposit
 	if ok := trie.VerifyMerkleProofWithDepth(
 		receiptRoot,
 		leaf[:],
-		int(beaconState.Eth1DepositIndex()),
+		beaconState.Eth1DepositIndex(),
 		deposit.Proof,
 		params.BeaconConfig().DepositContractTreeDepth,
 	); !ok {

@@ -4,13 +4,13 @@ import (
 	"context"
 	"testing"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -63,7 +63,9 @@ func TestStore_IsFinalizedBlockGenesis(t *testing.T) {
 	blk.Block.Slot = 0
 	root, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(blk)))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, wsb))
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 	assert.Equal(t, true, db.IsFinalizedBlock(ctx, root), "Finalized genesis block doesn't exist in db")
 }
@@ -138,7 +140,7 @@ func TestStore_IsFinalizedChildBlock(t *testing.T) {
 	slotsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch)
 	ctx := context.Background()
 
-	eval := func(t testing.TB, ctx context.Context, db *Store, blks []block.SignedBeaconBlock) {
+	eval := func(t testing.TB, ctx context.Context, db *Store, blks []interfaces.SignedBeaconBlock) {
 		require.NoError(t, db.SaveBlocks(ctx, blks))
 		root, err := blks[slotsPerEpoch].Block().HashTreeRoot()
 		require.NoError(t, err)
@@ -189,15 +191,15 @@ func TestStore_IsFinalizedChildBlock(t *testing.T) {
 	})
 }
 
-func sszRootOrDie(t *testing.T, block block.SignedBeaconBlock) []byte {
+func sszRootOrDie(t *testing.T, block interfaces.SignedBeaconBlock) []byte {
 	root, err := block.Block().HashTreeRoot()
 	require.NoError(t, err)
 	return root[:]
 }
 
-func makeBlocks(t *testing.T, i, n uint64, previousRoot [32]byte) []block.SignedBeaconBlock {
+func makeBlocks(t *testing.T, i, n uint64, previousRoot [32]byte) []interfaces.SignedBeaconBlock {
 	blocks := make([]*ethpb.SignedBeaconBlock, n)
-	ifaceBlocks := make([]block.SignedBeaconBlock, n)
+	ifaceBlocks := make([]interfaces.SignedBeaconBlock, n)
 	for j := i; j < n+i; j++ {
 		parentRoot := make([]byte, fieldparams.RootLength)
 		copy(parentRoot, previousRoot[:])
@@ -207,14 +209,15 @@ func makeBlocks(t *testing.T, i, n uint64, previousRoot [32]byte) []block.Signed
 		var err error
 		previousRoot, err = blocks[j-i].Block.HashTreeRoot()
 		require.NoError(t, err)
-		ifaceBlocks[j-i] = wrapper.WrappedPhase0SignedBeaconBlock(blocks[j-i])
+		ifaceBlocks[j-i], err = wrapper.WrappedSignedBeaconBlock(blocks[j-i])
+		require.NoError(t, err)
 	}
 	return ifaceBlocks
 }
 
-func makeBlocksAltair(t *testing.T, startIdx, num uint64, previousRoot [32]byte) []block.SignedBeaconBlock {
+func makeBlocksAltair(t *testing.T, startIdx, num uint64, previousRoot [32]byte) []interfaces.SignedBeaconBlock {
 	blocks := make([]*ethpb.SignedBeaconBlockAltair, num)
-	ifaceBlocks := make([]block.SignedBeaconBlock, num)
+	ifaceBlocks := make([]interfaces.SignedBeaconBlock, num)
 	for j := startIdx; j < num+startIdx; j++ {
 		parentRoot := make([]byte, fieldparams.RootLength)
 		copy(parentRoot, previousRoot[:])
@@ -224,7 +227,7 @@ func makeBlocksAltair(t *testing.T, startIdx, num uint64, previousRoot [32]byte)
 		var err error
 		previousRoot, err = blocks[j-startIdx].Block.HashTreeRoot()
 		require.NoError(t, err)
-		ifaceBlocks[j-startIdx], err = wrapper.WrappedAltairSignedBeaconBlock(blocks[j-startIdx])
+		ifaceBlocks[j-startIdx], err = wrapper.WrappedSignedBeaconBlock(blocks[j-startIdx])
 		require.NoError(t, err)
 	}
 	return ifaceBlocks

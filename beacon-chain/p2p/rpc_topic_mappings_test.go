@@ -5,9 +5,9 @@ import (
 	"strings"
 	"testing"
 
-	eth2types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/config/params"
+	eth2types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -15,6 +15,7 @@ import (
 )
 
 func TestVerifyRPCMappings(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	assert.NoError(t, VerifyTopicMapping(RPCStatusTopicV1, &pb.Status{}), "Failed to verify status rpc topic")
 	assert.NotNil(t, VerifyTopicMapping(RPCStatusTopicV1, new([]byte)), "Incorrect message type verified for status rpc topic")
 
@@ -25,6 +26,7 @@ func TestVerifyRPCMappings(t *testing.T) {
 }
 
 func TestTopicDeconstructor(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	tt := []struct {
 		name          string
 		topic         string
@@ -81,7 +83,7 @@ func TestTopicDeconstructor(t *testing.T) {
 
 func TestTopicFromMessage_CorrectType(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	bCfg := params.BeaconConfig()
+	bCfg := params.BeaconConfig().Copy()
 	forkEpoch := eth2types.Epoch(100)
 	bCfg.AltairForkEpoch = forkEpoch
 	bCfg.ForkVersionSchedule[bytesutil.ToBytes4(bCfg.AltairForkVersion)] = eth2types.Epoch(100)

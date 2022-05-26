@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/progress"
 	"github.com/prysmaticlabs/prysm/validator/db"
 	"github.com/prysmaticlabs/prysm/validator/slashing-protection-history/format"
@@ -27,7 +28,7 @@ func ExportStandardProtectionJSON(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get genesis validators root from DB")
 	}
-	if genesisValidatorsRoot == nil || bytes.Equal(genesisValidatorsRoot, params.BeaconConfig().ZeroHash[:]) {
+	if genesisValidatorsRoot == nil || !bytesutil.IsValidRoot(genesisValidatorsRoot) {
 		return nil, errors.New(
 			"genesis validators root is empty, perhaps you are not connected to your beacon node",
 		)

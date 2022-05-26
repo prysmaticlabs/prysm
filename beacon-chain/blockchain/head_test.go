@@ -6,14 +6,15 @@ import (
 	"testing"
 	"time"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/config/features"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/doubly-linked-tree"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -27,8 +28,10 @@ func TestSaveHead_Same(t *testing.T) {
 
 	r := [32]byte{'A'}
 	service.head = &head{slot: 0, root: r}
-
-	require.NoError(t, service.saveHead(context.Background(), r))
+	b, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+	require.NoError(t, err)
+	st, _ := util.DeterministicGenesisState(t, 1)
+	require.NoError(t, service.saveHead(context.Background(), r, b, st))
 	assert.Equal(t, types.Slot(0), service.headSlot(), "Head did not stay the same")
 	assert.Equal(t, r, service.headRoot(), "Head did not stay the same")
 }
@@ -39,9 +42,10 @@ func TestSaveHead_Different(t *testing.T) {
 	service := setupBeaconChain(t, beaconDB)
 
 	util.NewBeaconBlock()
-	oldBlock := wrapper.WrappedPhase0SignedBeaconBlock(
+	oldBlock, err := wrapper.WrappedSignedBeaconBlock(
 		util.NewBeaconBlock(),
 	)
+	require.NoError(t, err)
 	require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), oldBlock))
 	oldRoot, err := oldBlock.Block().HashTreeRoot()
 	require.NoError(t, err)
@@ -55,7 +59,9 @@ func TestSaveHead_Different(t *testing.T) {
 	newHeadSignedBlock.Block.Slot = 1
 	newHeadBlock := newHeadSignedBlock.Block
 
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(newHeadSignedBlock)))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(newHeadSignedBlock)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), wsb))
 	newRoot, err := newHeadBlock.HashTreeRoot()
 	require.NoError(t, err)
 	headState, err := util.NewBeaconState()
@@ -63,7 +69,7 @@ func TestSaveHead_Different(t *testing.T) {
 	require.NoError(t, headState.SetSlot(1))
 	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(context.Background(), &ethpb.StateSummary{Slot: 1, Root: newRoot[:]}))
 	require.NoError(t, service.cfg.BeaconDB.SaveState(context.Background(), headState, newRoot))
-	require.NoError(t, service.saveHead(context.Background(), newRoot))
+	require.NoError(t, service.saveHead(context.Background(), newRoot, wsb, headState))
 
 	assert.Equal(t, types.Slot(1), service.HeadSlot(), "Head did not change")
 
@@ -80,9 +86,10 @@ func TestSaveHead_Different_Reorg(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	service := setupBeaconChain(t, beaconDB)
 
-	oldBlock := wrapper.WrappedPhase0SignedBeaconBlock(
+	oldBlock, err := wrapper.WrappedSignedBeaconBlock(
 		util.NewBeaconBlock(),
 	)
+	require.NoError(t, err)
 	require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), oldBlock))
 	oldRoot, err := oldBlock.Block().HashTreeRoot()
 	require.NoError(t, err)
@@ -98,7 +105,9 @@ func TestSaveHead_Different_Reorg(t *testing.T) {
 	newHeadSignedBlock.Block.ParentRoot = reorgChainParent[:]
 	newHeadBlock := newHeadSignedBlock.Block
 
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(newHeadSignedBlock)))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(newHeadSignedBlock)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), wsb))
 	newRoot, err := newHeadBlock.HashTreeRoot()
 	require.NoError(t, err)
 	headState, err := util.NewBeaconState()
@@ -106,7 +115,7 @@ func TestSaveHead_Different_Reorg(t *testing.T) {
 	require.NoError(t, headState.SetSlot(1))
 	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(context.Background(), &ethpb.StateSummary{Slot: 1, Root: newRoot[:]}))
 	require.NoError(t, service.cfg.BeaconDB.SaveState(context.Background(), headState, newRoot))
-	require.NoError(t, service.saveHead(context.Background(), newRoot))
+	require.NoError(t, service.saveHead(context.Background(), newRoot, wsb, headState))
 
 	assert.Equal(t, types.Slot(1), service.HeadSlot(), "Head did not change")
 
@@ -139,15 +148,19 @@ func TestUpdateHead_MissingJustifiedRoot(t *testing.T) {
 	service := setupBeaconChain(t, beaconDB)
 
 	b := util.NewBeaconBlock()
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(b)))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), wsb))
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	service.store.SetJustifiedCheckpt(&ethpb.Checkpoint{Root: r[:]})
-	service.store.SetFinalizedCheckpt(&ethpb.Checkpoint{})
+	service.store.SetJustifiedCheckptAndPayloadHash(&ethpb.Checkpoint{Root: r[:]}, [32]byte{'a'})
+	service.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{}, [32]byte{'b'})
 	service.store.SetBestJustifiedCheckpt(&ethpb.Checkpoint{})
-
-	require.NoError(t, service.updateHead(context.Background(), []uint64{}))
+	headRoot, err := service.updateHead(context.Background(), []uint64{})
+	require.NoError(t, err)
+	st, _ := util.DeterministicGenesisState(t, 1)
+	require.NoError(t, service.saveHead(context.Background(), headRoot, wsb, st))
 }
 
 func Test_notifyNewHeadEvent(t *testing.T) {
@@ -162,7 +175,7 @@ func Test_notifyNewHeadEvent(t *testing.T) {
 		}
 		newHeadStateRoot := [32]byte{2}
 		newHeadRoot := [32]byte{3}
-		err := srv.notifyNewHeadEvent(1, bState, newHeadStateRoot[:], newHeadRoot[:])
+		err := srv.notifyNewHeadEvent(context.Background(), 1, bState, newHeadStateRoot[:], newHeadRoot[:])
 		require.NoError(t, err)
 		events := notifier.ReceivedEvents()
 		require.Equal(t, 1, len(events))
@@ -197,7 +210,7 @@ func Test_notifyNewHeadEvent(t *testing.T) {
 
 		newHeadStateRoot := [32]byte{2}
 		newHeadRoot := [32]byte{3}
-		err = srv.notifyNewHeadEvent(epoch2Start, bState, newHeadStateRoot[:], newHeadRoot[:])
+		err = srv.notifyNewHeadEvent(context.Background(), epoch2Start, bState, newHeadStateRoot[:], newHeadRoot[:])
 		require.NoError(t, err)
 		events := notifier.ReceivedEvents()
 		require.Equal(t, 1, len(events))
@@ -217,11 +230,6 @@ func Test_notifyNewHeadEvent(t *testing.T) {
 }
 
 func TestSaveOrphanedAtts(t *testing.T) {
-	resetCfg := features.InitWithReset(&features.Flags{
-		CorrectlyInsertOrphanedAtts: true,
-	})
-	defer resetCfg()
-
 	genesis, keys := util.DeterministicGenesisState(t, 64)
 	b, err := util.GenerateFullBlock(genesis, keys, util.DefaultBlockGenConfig(), 1)
 	assert.NoError(t, err)
@@ -233,7 +241,9 @@ func TestSaveOrphanedAtts(t *testing.T) {
 	service := setupBeaconChain(t, beaconDB)
 	service.genesisTime = time.Now()
 
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
 	require.NoError(t, service.saveOrphanedAtts(ctx, r))
 
 	require.Equal(t, len(b.Block.Body.Attestations), service.cfg.AttPool.AggregatedAttestationCount())
@@ -243,11 +253,6 @@ func TestSaveOrphanedAtts(t *testing.T) {
 }
 
 func TestSaveOrphanedAtts_CanFilter(t *testing.T) {
-	resetCfg := features.InitWithReset(&features.Flags{
-		CorrectlyInsertOrphanedAtts: true,
-	})
-	defer resetCfg()
-
 	genesis, keys := util.DeterministicGenesisState(t, 64)
 	b, err := util.GenerateFullBlock(genesis, keys, util.DefaultBlockGenConfig(), 1)
 	assert.NoError(t, err)
@@ -259,11 +264,53 @@ func TestSaveOrphanedAtts_CanFilter(t *testing.T) {
 	service := setupBeaconChain(t, beaconDB)
 	service.genesisTime = time.Now().Add(time.Duration(-1*int64(params.BeaconConfig().SlotsPerEpoch+1)*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second)
 
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrapper.WrappedPhase0SignedBeaconBlock(b)))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
 	require.NoError(t, service.saveOrphanedAtts(ctx, r))
 
 	require.Equal(t, 0, service.cfg.AttPool.AggregatedAttestationCount())
 	savedAtts := service.cfg.AttPool.AggregatedAttestations()
 	atts := b.Block.Body.Attestations
 	require.DeepNotSSZEqual(t, atts, savedAtts)
+}
+
+func TestUpdateHead_noSavedChanges(t *testing.T) {
+	ctx := context.Background()
+
+	beaconDB := testDB.SetupDB(t)
+	fcs := doublylinkedtree.New(0, 0)
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithStateGen(stategen.New(beaconDB)),
+		WithForkChoiceStore(fcs),
+	}
+
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+
+	bellatrixBlk, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlockBellatrix())
+	require.NoError(t, err)
+	bellatrixBlkRoot, err := bellatrixBlk.Block().HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, beaconDB.SaveBlock(ctx, bellatrixBlk))
+	fcp := &ethpb.Checkpoint{
+		Root:  bellatrixBlkRoot[:],
+		Epoch: 1,
+	}
+	service.store.SetFinalizedCheckptAndPayloadHash(fcp, [32]byte{'a'})
+	service.store.SetJustifiedCheckptAndPayloadHash(fcp, [32]byte{'b'})
+	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, bellatrixBlkRoot))
+
+	bellatrixState, _ := util.DeterministicGenesisStateBellatrix(t, 2)
+	require.NoError(t, beaconDB.SaveState(ctx, bellatrixState, bellatrixBlkRoot))
+	service.cfg.StateGen.SaveFinalizedState(0, bellatrixBlkRoot, bellatrixState)
+
+	headRoot := service.headRoot()
+	require.Equal(t, [32]byte{}, headRoot)
+
+	newRoot, err := service.updateHead(ctx, []uint64{1, 2})
+	require.NoError(t, err)
+	require.NotEqual(t, headRoot, newRoot)
+	require.Equal(t, headRoot, service.headRoot())
 }

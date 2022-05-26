@@ -8,8 +8,10 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/fieldtrie"
+	statenative "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/types"
+	"github.com/prysmaticlabs/prysm/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/container/slice"
@@ -22,13 +24,20 @@ import (
 )
 
 // InitializeFromProto the beacon state from a protobuf representation.
-func InitializeFromProto(st *ethpb.BeaconStateBellatrix) (*BeaconState, error) {
+func InitializeFromProto(st *ethpb.BeaconStateBellatrix) (state.BeaconState, error) {
+	if features.Get().EnableNativeState {
+		return statenative.InitializeFromProtoBellatrix(proto.Clone(st).(*ethpb.BeaconStateBellatrix))
+	}
 	return InitializeFromProtoUnsafe(proto.Clone(st).(*ethpb.BeaconStateBellatrix))
 }
 
 // InitializeFromProtoUnsafe directly uses the beacon state protobuf pointer
 // and sets it as the inner state of the BeaconState type.
-func InitializeFromProtoUnsafe(st *ethpb.BeaconStateBellatrix) (*BeaconState, error) {
+func InitializeFromProtoUnsafe(st *ethpb.BeaconStateBellatrix) (state.BeaconState, error) {
+	if features.Get().EnableNativeState {
+		return statenative.InitializeFromProtoUnsafeBellatrix(st)
+	}
+
 	if st == nil {
 		return nil, errors.New("received nil state")
 	}
@@ -112,7 +121,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 			PreviousJustifiedCheckpoint:  b.previousJustifiedCheckpoint(),
 			CurrentJustifiedCheckpoint:   b.currentJustifiedCheckpoint(),
 			FinalizedCheckpoint:          b.finalizedCheckpoint(),
-			GenesisValidatorsRoot:        b.genesisValidatorRoot(),
+			GenesisValidatorsRoot:        b.genesisValidatorsRoot(),
 			CurrentSyncCommittee:         b.currentSyncCommittee(),
 			NextSyncCommittee:            b.nextSyncCommittee(),
 			LatestExecutionPayloadHeader: b.latestExecutionPayloadHeader(),
@@ -209,6 +218,7 @@ func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
 }
 
 // Initializes the Merkle layers for the beacon state if they are empty.
+//
 // WARNING: Caller must acquire the mutex before using.
 func (b *BeaconState) initializeMerkleLayers(ctx context.Context) error {
 	if len(b.merkleLayers) > 0 {
@@ -225,6 +235,7 @@ func (b *BeaconState) initializeMerkleLayers(ctx context.Context) error {
 }
 
 // Recomputes the Merkle layers for the dirty fields in the state.
+//
 // WARNING: Caller must acquire the mutex before using.
 func (b *BeaconState) recomputeDirtyFields(_ context.Context) error {
 	for field := range b.dirtyFields {
@@ -270,7 +281,7 @@ func (b *BeaconState) rootSelector(field types.FieldIndex) ([32]byte, error) {
 	switch field {
 	case genesisTime:
 		return ssz.Uint64Root(b.state.GenesisTime), nil
-	case genesisValidatorRoot:
+	case genesisValidatorsRoot:
 		return bytesutil.ToBytes32(b.state.GenesisValidatorsRoot), nil
 	case slot:
 		return ssz.Uint64Root(uint64(b.state.Slot)), nil
@@ -286,7 +297,6 @@ func (b *BeaconState) rootSelector(field types.FieldIndex) ([32]byte, error) {
 			if err != nil {
 				return [32]byte{}, err
 			}
-			b.dirtyIndices[field] = []uint64{}
 			delete(b.rebuildTrie, field)
 			return b.stateFieldLeaves[field].TrieRoot()
 		}
@@ -297,7 +307,6 @@ func (b *BeaconState) rootSelector(field types.FieldIndex) ([32]byte, error) {
 			if err != nil {
 				return [32]byte{}, err
 			}
-			b.dirtyIndices[field] = []uint64{}
 			delete(b.rebuildTrie, field)
 			return b.stateFieldLeaves[field].TrieRoot()
 		}
@@ -316,7 +325,6 @@ func (b *BeaconState) rootSelector(field types.FieldIndex) ([32]byte, error) {
 			if err != nil {
 				return [32]byte{}, err
 			}
-			b.dirtyIndices[field] = []uint64{}
 			delete(b.rebuildTrie, field)
 			return b.stateFieldLeaves[field].TrieRoot()
 		}
@@ -327,20 +335,29 @@ func (b *BeaconState) rootSelector(field types.FieldIndex) ([32]byte, error) {
 			if err != nil {
 				return [32]byte{}, err
 			}
-			b.dirtyIndices[validators] = []uint64{}
 			delete(b.rebuildTrie, validators)
 			return b.stateFieldLeaves[field].TrieRoot()
 		}
 		return b.recomputeFieldTrie(validators, b.state.Validators)
 	case balances:
-		return stateutil.Uint64ListRootWithRegistryLimit(b.state.Balances)
+		if b.rebuildTrie[field] {
+			maxBalCap := uint64(fieldparams.ValidatorRegistryLimit)
+			elemSize := uint64(8)
+			balLimit := (maxBalCap*elemSize + 31) / 32
+			err := b.resetFieldTrie(field, b.state.Balances, balLimit)
+			if err != nil {
+				return [32]byte{}, err
+			}
+			delete(b.rebuildTrie, field)
+			return b.stateFieldLeaves[field].TrieRoot()
+		}
+		return b.recomputeFieldTrie(balances, b.state.Balances)
 	case randaoMixes:
 		if b.rebuildTrie[field] {
 			err := b.resetFieldTrie(field, b.state.RandaoMixes, fieldparams.RandaoMixesLength)
 			if err != nil {
 				return [32]byte{}, err
 			}
-			b.dirtyIndices[field] = []uint64{}
 			delete(b.rebuildTrie, field)
 			return b.stateFieldLeaves[field].TrieRoot()
 		}

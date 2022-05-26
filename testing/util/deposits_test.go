@@ -258,6 +258,7 @@ func TestDeterministicGenesisState_100Validators(t *testing.T) {
 	activeValidators, err := helpers.ActiveValidatorCount(context.Background(), beaconState, 0)
 	require.NoError(t, err)
 
+	// lint:ignore uintcast -- test code
 	if len(privKeys) != int(validatorCount) {
 		t.Fatalf("expected amount of private keys %d to match requested amount of validators %d", len(privKeys), validatorCount)
 	}
@@ -275,7 +276,10 @@ func TestDepositTrieFromDeposits(t *testing.T) {
 	depositTrie, _, err := DepositTrieFromDeposits(deposits)
 	require.NoError(t, err)
 
-	root := depositTrie.HashTreeRoot()
+	root, err := depositTrie.HashTreeRoot()
+	if err != nil {
+		t.Fatal(err)
+	}
 	if !bytes.Equal(root[:], eth1Data.DepositRoot) {
 		t.Fatal("expected deposit trie root to equal eth1data deposit root")
 	}

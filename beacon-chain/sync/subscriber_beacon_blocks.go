@@ -3,22 +3,21 @@ package sync
 import (
 	"context"
 
-	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/interop"
 	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"google.golang.org/protobuf/proto"
 )
 
 func (s *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) error {
-	signed, err := blockFromProto(msg)
+	signed, err := wrapper.WrappedSignedBeaconBlock(msg)
 	if err != nil {
 		return err
 	}
-	if err := helpers.BeaconBlockIsNil(signed); err != nil {
+	if err := wrapper.BeaconBlockIsNil(signed); err != nil {
 		return err
 	}
 
@@ -32,8 +31,10 @@ func (s *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) 
 	}
 
 	if err := s.cfg.chain.ReceiveBlock(ctx, signed, root); err != nil {
-		interop.WriteBlockToDisk(signed, true /*failed*/)
-		s.setBadBlock(ctx, root)
+		if blockchain.IsInvalidBlock(err) {
+			interop.WriteBlockToDisk(signed, true /*failed*/)
+			s.setBadBlock(ctx, root)
+		}
 		return err
 	}
 
@@ -63,17 +64,4 @@ func (s *Service) deleteAttsInPool(atts []*ethpb.Attestation) error {
 		}
 	}
 	return nil
-}
-
-func blockFromProto(msg proto.Message) (block.SignedBeaconBlock, error) {
-	switch t := msg.(type) {
-	case *ethpb.SignedBeaconBlock:
-		return wrapper.WrappedPhase0SignedBeaconBlock(t), nil
-	case *ethpb.SignedBeaconBlockAltair:
-		return wrapper.WrappedAltairSignedBeaconBlock(t)
-	case *ethpb.SignedBeaconBlockBellatrix:
-		return wrapper.WrappedBellatrixSignedBeaconBlock(t)
-	default:
-		return nil, errors.Errorf("message has invalid underlying type: %T", msg)
-	}
 }

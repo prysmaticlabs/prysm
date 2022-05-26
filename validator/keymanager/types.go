@@ -3,6 +3,7 @@ package keymanager
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/prysmaticlabs/prysm/async/event"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
@@ -16,6 +17,9 @@ type IKeymanager interface {
 	PublicKeysFetcher
 	Signer
 	KeyChangeSubscriber
+	KeyStoreExtractor
+	AccountLister
+	Deleter
 }
 
 // KeysFetcher for validating private and public keys.
@@ -51,6 +55,32 @@ type KeyChangeSubscriber interface {
 	SubscribeAccountChanges(pubKeysChan chan [][fieldparams.BLSPubkeyLength]byte) event.Subscription
 }
 
+// KeyStoreExtractor allows keys to be extracted from the keymanager.
+type KeyStoreExtractor interface {
+	ExtractKeystores(ctx context.Context, publicKeys []bls.PublicKey, password string) ([]*Keystore, error)
+}
+
+// PublicKeyAdder allows adding public keys to the keymanager.
+type PublicKeyAdder interface {
+	AddPublicKeys(ctx context.Context, publicKeys [][fieldparams.BLSPubkeyLength]byte) ([]*ethpbservice.ImportedRemoteKeysStatus, error)
+}
+
+// PublicKeyDeleter allows deleting public keys set in keymanager.
+type PublicKeyDeleter interface {
+	DeletePublicKeys(ctx context.Context, publicKeys [][fieldparams.BLSPubkeyLength]byte) ([]*ethpbservice.DeletedRemoteKeysStatus, error)
+}
+
+type ListKeymanagerAccountConfig struct {
+	ShowDepositData          bool
+	ShowPrivateKeys          bool
+	WalletAccountsDir        string
+	KeymanagerConfigFileName string
+}
+
+type AccountLister interface {
+	ListKeymanagerAccounts(ctx context.Context, cfg ListKeymanagerAccountConfig) error
+}
+
 // Keystore json file representation as a Go struct.
 type Keystore struct {
 	Crypto  map[string]interface{} `json:"crypto"`
@@ -58,6 +88,7 @@ type Keystore struct {
 	Pubkey  string                 `json:"pubkey"`
 	Version uint                   `json:"version"`
 	Name    string                 `json:"name"`
+	Path    string                 `json:"path"`
 }
 
 // Kind defines an enum for either local, derived, or remote-signing
@@ -85,6 +116,10 @@ func (k Kind) String() string {
 	case Derived:
 		return "derived"
 	case Local:
+		// TODO(#10181) need a safe way to migrate away from using direct.
+		// function is used for directory creation, dangerous to change which may result in multiple directories.
+		// multiple directories will cause the isValid function to fail in wallet.go
+		// and may result in using a unintended wallet.
 		return "direct"
 	case Remote:
 		return "remote"
@@ -97,10 +132,10 @@ func (k Kind) String() string {
 
 // ParseKind from a raw string, returning a keymanager kind.
 func ParseKind(k string) (Kind, error) {
-	switch k {
+	switch strings.ToLower(k) {
 	case "derived":
 		return Derived, nil
-	case "direct":
+	case "direct", "imported", "local":
 		return Local, nil
 	case "remote":
 		return Remote, nil

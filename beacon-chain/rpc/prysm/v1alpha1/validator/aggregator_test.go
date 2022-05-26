@@ -30,7 +30,8 @@ import (
 func TestSubmitAggregateAndProof_Syncing(t *testing.T) {
 	ctx := context.Background()
 
-	s := &v1.BeaconState{}
+	s, err := v1.InitializeFromProtoUnsafe(&ethpb.BeaconState{})
+	require.NoError(t, err)
 
 	aggregatorServer := &Server{
 		HeadFetcher: &mock.ChainService{State: s},
@@ -39,7 +40,7 @@ func TestSubmitAggregateAndProof_Syncing(t *testing.T) {
 
 	req := &ethpb.AggregateSelectionRequest{CommitteeIndex: 1}
 	wanted := "Syncing to latest head, not ready to respond"
-	_, err := aggregatorServer.SubmitAggregateSelectionProof(ctx, req)
+	_, err = aggregatorServer.SubmitAggregateSelectionProof(ctx, req)
 	assert.ErrorContains(t, wanted, err)
 }
 
@@ -54,6 +55,7 @@ func TestSubmitAggregateAndProof_CantFindValidatorIndex(t *testing.T) {
 	server := &Server{
 		HeadFetcher: &mock.ChainService{State: s},
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
+		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
 	}
 
 	priv, err := bls.RandKey()
@@ -81,6 +83,7 @@ func TestSubmitAggregateAndProof_IsAggregatorAndNoAtts(t *testing.T) {
 		HeadFetcher: &mock.ChainService{State: s},
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
 		AttPool:     attestations.NewPool(),
+		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
 	}
 
 	priv, err := bls.RandKey()
@@ -97,7 +100,7 @@ func TestSubmitAggregateAndProof_IsAggregatorAndNoAtts(t *testing.T) {
 
 func TestSubmitAggregateAndProof_UnaggregateOk(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	c := params.MinimalSpecConfig()
+	c := params.MinimalSpecConfig().Copy()
 	c.TargetAggregatorsPerCommittee = 16
 	params.OverrideBeaconConfig(c)
 
@@ -114,6 +117,7 @@ func TestSubmitAggregateAndProof_UnaggregateOk(t *testing.T) {
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
 		AttPool:     attestations.NewPool(),
 		P2P:         &mockp2p.MockBroadcaster{},
+		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
 	}
 
 	priv, err := bls.RandKey()
@@ -131,7 +135,7 @@ func TestSubmitAggregateAndProof_UnaggregateOk(t *testing.T) {
 
 func TestSubmitAggregateAndProof_AggregateOk(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	c := params.MinimalSpecConfig()
+	c := params.MinimalSpecConfig().Copy()
 	c.TargetAggregatorsPerCommittee = 16
 	params.OverrideBeaconConfig(c)
 
@@ -151,6 +155,7 @@ func TestSubmitAggregateAndProof_AggregateOk(t *testing.T) {
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
 		AttPool:     attestations.NewPool(),
 		P2P:         &mockp2p.MockBroadcaster{},
+		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
 	}
 
 	priv, err := bls.RandKey()
@@ -176,7 +181,7 @@ func TestSubmitAggregateAndProof_AggregateOk(t *testing.T) {
 
 func TestSubmitAggregateAndProof_AggregateNotOk(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	c := params.MinimalSpecConfig()
+	c := params.MinimalSpecConfig().Copy()
 	c.TargetAggregatorsPerCommittee = 16
 	params.OverrideBeaconConfig(c)
 
@@ -190,6 +195,7 @@ func TestSubmitAggregateAndProof_AggregateNotOk(t *testing.T) {
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
 		AttPool:     attestations.NewPool(),
 		P2P:         &mockp2p.MockBroadcaster{},
+		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
 	}
 
 	priv, err := bls.RandKey()
@@ -287,7 +293,7 @@ func generateUnaggregatedAtt(state state.ReadOnlyBeaconState, index uint64, priv
 
 func TestSubmitAggregateAndProof_PreferOwnAttestation(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	c := params.MinimalSpecConfig()
+	c := params.MinimalSpecConfig().Copy()
 	c.TargetAggregatorsPerCommittee = 16
 	params.OverrideBeaconConfig(c)
 
@@ -318,6 +324,7 @@ func TestSubmitAggregateAndProof_PreferOwnAttestation(t *testing.T) {
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
 		AttPool:     attestations.NewPool(),
 		P2P:         &mockp2p.MockBroadcaster{},
+		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
 	}
 
 	priv, err := bls.RandKey()
@@ -342,7 +349,7 @@ func TestSubmitAggregateAndProof_PreferOwnAttestation(t *testing.T) {
 
 func TestSubmitAggregateAndProof_SelectsMostBitsWhenOwnAttestationNotPresent(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	c := params.MinimalSpecConfig()
+	c := params.MinimalSpecConfig().Copy()
 	c.TargetAggregatorsPerCommittee = 16
 	params.OverrideBeaconConfig(c)
 
@@ -368,6 +375,7 @@ func TestSubmitAggregateAndProof_SelectsMostBitsWhenOwnAttestationNotPresent(t *
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
 		AttPool:     attestations.NewPool(),
 		P2P:         &mockp2p.MockBroadcaster{},
+		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
 	}
 
 	priv, err := bls.RandKey()

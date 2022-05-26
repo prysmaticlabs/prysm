@@ -70,9 +70,19 @@ func TestPrepareSSZRequestForProxying(t *testing.T) {
 	var body bytes.Buffer
 	request := httptest.NewRequest("GET", "http://foo.example", &body)
 
-	errJson := prepareSSZRequestForProxying(middleware, endpoint, request, "/ssz")
+	errJson := prepareSSZRequestForProxying(middleware, endpoint, request)
 	require.Equal(t, true, errJson == nil)
 	assert.Equal(t, "/internal/ssz", request.URL.Path)
+}
+
+func TestPreparePostedSszData(t *testing.T) {
+	var body bytes.Buffer
+	body.Write([]byte("body"))
+	request := httptest.NewRequest("POST", "http://foo.example", &body)
+
+	preparePostedSSZData(request)
+	assert.Equal(t, int64(19), request.ContentLength)
+	assert.Equal(t, "application/json", request.Header.Get("Content-Type"))
 }
 
 func TestSerializeMiddlewareResponseIntoSSZ(t *testing.T) {
@@ -133,7 +143,7 @@ func TestWriteSSZResponseHeaderAndBody(t *testing.T) {
 		require.Equal(t, true, ok, "header not found")
 		require.Equal(t, 1, len(v), "wrong number of header values")
 		assert.Equal(t, "attachment; filename=test.ssz", v[0])
-		v, ok = writer.Header()["Eth-Consensus-Version"]
+		v, ok = writer.Header()[versionHeader]
 		require.Equal(t, true, ok, "header not found")
 		require.Equal(t, 1, len(v), "wrong number of header values")
 		assert.Equal(t, "version", v[0])
@@ -249,7 +259,7 @@ func TestReceiveEvents_TrailingSpace(t *testing.T) {
 	errJson := receiveEvents(ch, w, req)
 	assert.Equal(t, true, errJson == nil)
 	assert.Equal(t, `event: finalized_checkpoint
-data: {"block":"0x666f6f","state":"0x666f6f","epoch":"1"}
+data: {"block":"0x666f6f","state":"0x666f6f","epoch":"1","execution_optimistic":false}
 
 `, w.Body.String())
 }
@@ -273,5 +283,5 @@ func TestWriteEvent(t *testing.T) {
 	errJson := writeEvent(msg, w, &eventFinalizedCheckpointJson{})
 	require.Equal(t, true, errJson == nil)
 	written := w.Body.String()
-	assert.Equal(t, "event: test_event\ndata: {\"block\":\"0x666f6f\",\"state\":\"0x666f6f\",\"epoch\":\"1\"}\n\n", written)
+	assert.Equal(t, "event: test_event\ndata: {\"block\":\"0x666f6f\",\"state\":\"0x666f6f\",\"epoch\":\"1\",\"execution_optimistic\":false}\n\n", written)
 }

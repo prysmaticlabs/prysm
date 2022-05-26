@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/paulbellamy/ratecounter"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/async/abool"
 	"github.com/prysmaticlabs/prysm/async/event"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
@@ -17,8 +16,9 @@ import (
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -378,7 +378,9 @@ func TestService_Resync(t *testing.T) {
 	}, p.Peers())
 	cache.initializeRootCache(makeSequence(1, 160), t)
 	beaconDB := dbtest.SetupDB(t)
-	err := beaconDB.SaveBlock(context.Background(), wrapper.WrappedPhase0SignedBeaconBlock(util.NewBeaconBlock()))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+	require.NoError(t, err)
+	err = beaconDB.SaveBlock(context.Background(), wsb)
 	require.NoError(t, err)
 	cache.RLock()
 	genesisRoot := cache.rootCache[0]

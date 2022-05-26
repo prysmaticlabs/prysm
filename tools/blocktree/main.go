@@ -16,10 +16,10 @@ import (
 	"strconv"
 
 	"github.com/emicklei/dot"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 )
 
@@ -83,7 +83,7 @@ func main() {
 
 		// Construct label of each node.
 		rStr := hex.EncodeToString(r[:2])
-		label := "slot: " + strconv.Itoa(int(b.Block().Slot())) + "\n root: " + rStr
+		label := "slot: " + strconv.Itoa(int(b.Block().Slot())) + "\n root: " + rStr // lint:ignore uintcast -- this is OK for logging.
 
 		dotN := graph.Node(rStr).Box().Attr("label", label)
 		n := &node{

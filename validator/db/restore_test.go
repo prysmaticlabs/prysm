@@ -3,7 +3,6 @@ package db
 import (
 	"context"
 	"flag"
-	"io/ioutil"
 	"os"
 	"path"
 	"testing"
@@ -47,7 +46,7 @@ func TestRestore(t *testing.T) {
 
 	assert.NoError(t, Restore(cliCtx))
 
-	files, err := ioutil.ReadDir(restoreDir)
+	files, err := os.ReadDir(restoreDir)
 	require.NoError(t, err)
 	assert.Equal(t, 1, len(files))
 	assert.Equal(t, kv.ProtectionDbFileName, files[0].Name())

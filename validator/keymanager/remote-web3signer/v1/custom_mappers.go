@@ -5,7 +5,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/network/forks"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/time/slots"
@@ -108,7 +108,7 @@ func MapBeaconBlockBody(body *ethpb.BeaconBlockBody) (*BeaconBlockBody, error) {
 		RandaoReveal: hexutil.Encode(body.RandaoReveal),
 		Eth1Data: &Eth1Data{
 			DepositRoot:  hexutil.Encode(body.Eth1Data.DepositRoot),
-			DepositCount: fmt.Sprint(0),
+			DepositCount: fmt.Sprint(body.Eth1Data.DepositCount),
 			BlockHash:    hexutil.Encode(body.Eth1Data.BlockHash),
 		},
 		Graffiti:          hexutil.Encode(body.Graffiti),
@@ -170,12 +170,12 @@ func MapProposerSlashing(slashing *ethpb.ProposerSlashing) (*ProposerSlashing, e
 		return nil, errors.Wrap(err, "could not map signed header 2")
 	}
 	return &ProposerSlashing{
-		SignedHeader_1: signedHeader1,
-		SignedHeader_2: signedHeader2,
+		Signedheader1: signedHeader1,
+		Signedheader2: signedHeader2,
 	}, nil
 }
 
-// MapAttesterSlashing maps the eth2.AttesterSlashing proto to the Web3Signer spec.
+// MapSignedBeaconBlockHeader maps the eth2.AttesterSlashing proto to the Web3Signer spec.
 func MapSignedBeaconBlockHeader(signedHeader *ethpb.SignedBeaconBlockHeader) (*SignedBeaconBlockHeader, error) {
 	if signedHeader == nil {
 		return nil, fmt.Errorf("signed beacon block header is nil")
@@ -217,8 +217,8 @@ func MapAttesterSlashing(slashing *ethpb.AttesterSlashing) (*AttesterSlashing, e
 		return nil, errors.Wrap(err, "could not map attestation 2")
 	}
 	return &AttesterSlashing{
-		Attestation_1: attestation1,
-		Attestation_2: attestation2,
+		Attestation1: attestation1,
+		Attestation2: attestation2,
 	}, nil
 }
 

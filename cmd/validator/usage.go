@@ -66,6 +66,7 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.GrpcMaxCallRecvMsgSizeFlag,
 			cmd.AcceptTosFlag,
 			cmd.BoltMMapInitialSizeFlag,
+			cmd.ApiTimeoutFlag,
 		},
 	},
 	{
@@ -108,6 +109,9 @@ var appHelpFlagGroups = []flagGroup{
 			flags.EnableDutyCountDown,
 			flags.Web3SignerURLFlag,
 			flags.Web3SignerPublicValidatorKeysFlag,
+			flags.FeeRecipientConfigFileFlag,
+			flags.FeeRecipientConfigURLFlag,
+			flags.SuggestedFeeRecipientFlag,
 		},
 	},
 	{

@@ -6,17 +6,17 @@ import (
 	"testing"
 
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 )
 
 // RandaoReveal returns a signature of the requested epoch using the beacon proposer private key.
@@ -40,13 +40,16 @@ func BlockSignature(
 	block *ethpb.BeaconBlock,
 	privKeys []bls.SecretKey,
 ) (bls.Signature, error) {
-	var err error
-	s, err := transition.CalculateStateRoot(context.Background(), bState, wrapper.WrappedPhase0SignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: block}))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: block})
+	if err != nil {
+		return nil, errors.Wrap(err, "could not wrap block")
+	}
+	s, err := transition.CalculateStateRoot(context.Background(), bState, wsb)
 	if err != nil {
 		return nil, err
 	}
 	block.StateRoot = s[:]
-	domain, err := signing.Domain(bState.Fork(), time.CurrentEpoch(bState), params.BeaconConfig().DomainBeaconProposer, bState.GenesisValidatorRoot())
+	domain, err := signing.Domain(bState.Fork(), time.CurrentEpoch(bState), params.BeaconConfig().DomainBeaconProposer, bState.GenesisValidatorsRoot())
 	if err != nil {
 		return nil, err
 	}

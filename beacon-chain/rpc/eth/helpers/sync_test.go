@@ -6,10 +6,10 @@ import (
 	"testing"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	types "github.com/prysmaticlabs/eth2-types"
 	grpcutil "github.com/prysmaticlabs/prysm/api/grpc"
 	chainmock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	syncmock "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -49,5 +49,24 @@ func TestValidateSync(t *testing.T) {
 		}
 		err := ValidateSync(ctx, syncChecker, nil, nil)
 		require.NoError(t, err)
+	})
+}
+
+func TestIsOptimistic(t *testing.T) {
+	ctx := context.Background()
+	st, err := util.NewBeaconState()
+	require.NoError(t, err)
+
+	t.Run("optimistic", func(t *testing.T) {
+		mockOptSyncFetcher := &chainmock.ChainService{Optimistic: true}
+		o, err := IsOptimistic(ctx, st, mockOptSyncFetcher)
+		require.NoError(t, err)
+		assert.Equal(t, true, o)
+	})
+	t.Run("not optimistic", func(t *testing.T) {
+		mockOptSyncFetcher := &chainmock.ChainService{Optimistic: false}
+		o, err := IsOptimistic(ctx, st, mockOptSyncFetcher)
+		require.NoError(t, err)
+		assert.Equal(t, false, o)
 	})
 }

@@ -6,8 +6,10 @@ import (
 	"time"
 
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/testutil"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	eth "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -20,7 +22,7 @@ import (
 func TestGetGenesis(t *testing.T) {
 	ctx := context.Background()
 	params.SetupTestConfigCleanup(t)
-	config := params.BeaconConfig()
+	config := params.BeaconConfig().Copy()
 	config.GenesisForkVersion = []byte("genesis")
 	params.OverrideBeaconConfig(config)
 	genesis := time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)
@@ -56,7 +58,7 @@ func TestGetGenesis(t *testing.T) {
 		assert.ErrorContains(t, "Chain genesis info is not yet known", err)
 	})
 
-	t.Run("No genesis validator root", func(t *testing.T) {
+	t.Run("No genesis validators root", func(t *testing.T) {
 		chainService := &chainMock.ChainService{
 			Genesis:        genesis,
 			ValidatorsRoot: [32]byte{},
@@ -76,10 +78,17 @@ func TestGetStateRoot(t *testing.T) {
 	require.NoError(t, err)
 	stateRoot, err := fakeState.HashTreeRoot(ctx)
 	require.NoError(t, err)
+	db := dbTest.SetupDB(t)
+
+	chainService := &chainMock.ChainService{}
 	server := &Server{
 		StateFetcher: &testutil.MockFetcher{
 			BeaconStateRoot: stateRoot[:],
+			BeaconState:     fakeState,
 		},
+		HeadFetcher:           chainService,
+		OptimisticModeFetcher: chainService,
+		BeaconDB:              db,
 	}
 
 	resp, err := server.GetStateRoot(context.Background(), &eth.StateRequest{
@@ -88,9 +97,39 @@ func TestGetStateRoot(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotNil(t, resp)
 	assert.DeepEqual(t, stateRoot[:], resp.Data.Root)
+
+	t.Run("execution optimistic", func(t *testing.T) {
+		parentRoot := [32]byte{'a'}
+		blk := util.NewBeaconBlock()
+		blk.Block.ParentRoot = parentRoot[:]
+		root, err := blk.Block.HashTreeRoot()
+		require.NoError(t, err)
+		wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+		require.NoError(t, err)
+		require.NoError(t, db.SaveBlock(ctx, wsb))
+		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
+
+		chainService := &chainMock.ChainService{Optimistic: true}
+		server := &Server{
+			StateFetcher: &testutil.MockFetcher{
+				BeaconStateRoot: stateRoot[:],
+				BeaconState:     fakeState,
+			},
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			BeaconDB:              db,
+		}
+		resp, err := server.GetStateRoot(context.Background(), &eth.StateRequest{
+			StateId: make([]byte, 0),
+		})
+		require.NoError(t, err)
+		assert.NotNil(t, resp)
+		assert.DeepEqual(t, true, resp.ExecutionOptimistic)
+	})
 }
 
 func TestGetStateFork(t *testing.T) {
+	ctx := context.Background()
 	fillFork := func(state *ethpb.BeaconState) error {
 		state.Fork = &ethpb.Fork{
 			PreviousVersion: []byte("prev"),
@@ -101,13 +140,19 @@ func TestGetStateFork(t *testing.T) {
 	}
 	fakeState, err := util.NewBeaconState(fillFork)
 	require.NoError(t, err)
+	db := dbTest.SetupDB(t)
+
+	chainService := &chainMock.ChainService{}
 	server := &Server{
 		StateFetcher: &testutil.MockFetcher{
 			BeaconState: fakeState,
 		},
+		HeadFetcher:           chainService,
+		OptimisticModeFetcher: chainService,
+		BeaconDB:              db,
 	}
 
-	resp, err := server.GetStateFork(context.Background(), &eth.StateRequest{
+	resp, err := server.GetStateFork(ctx, &eth.StateRequest{
 		StateId: make([]byte, 0),
 	})
 	require.NoError(t, err)
@@ -116,9 +161,38 @@ func TestGetStateFork(t *testing.T) {
 	assert.Equal(t, expectedFork.Epoch, resp.Data.Epoch)
 	assert.DeepEqual(t, expectedFork.CurrentVersion, resp.Data.CurrentVersion)
 	assert.DeepEqual(t, expectedFork.PreviousVersion, resp.Data.PreviousVersion)
+
+	t.Run("execution optimistic", func(t *testing.T) {
+		parentRoot := [32]byte{'a'}
+		blk := util.NewBeaconBlock()
+		blk.Block.ParentRoot = parentRoot[:]
+		root, err := blk.Block.HashTreeRoot()
+		require.NoError(t, err)
+		wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+		require.NoError(t, err)
+		require.NoError(t, db.SaveBlock(ctx, wsb))
+		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
+
+		chainService := &chainMock.ChainService{Optimistic: true}
+		server := &Server{
+			StateFetcher: &testutil.MockFetcher{
+				BeaconState: fakeState,
+			},
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			BeaconDB:              db,
+		}
+		resp, err := server.GetStateFork(context.Background(), &eth.StateRequest{
+			StateId: make([]byte, 0),
+		})
+		require.NoError(t, err)
+		assert.NotNil(t, resp)
+		assert.DeepEqual(t, true, resp.ExecutionOptimistic)
+	})
 }
 
 func TestGetFinalityCheckpoints(t *testing.T) {
+	ctx := context.Background()
 	fillCheckpoints := func(state *ethpb.BeaconState) error {
 		state.PreviousJustifiedCheckpoint = &ethpb.Checkpoint{
 			Root:  bytesutil.PadTo([]byte("previous"), 32),
@@ -136,13 +210,19 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 	}
 	fakeState, err := util.NewBeaconState(fillCheckpoints)
 	require.NoError(t, err)
+	db := dbTest.SetupDB(t)
+
+	chainService := &chainMock.ChainService{}
 	server := &Server{
 		StateFetcher: &testutil.MockFetcher{
 			BeaconState: fakeState,
 		},
+		HeadFetcher:           chainService,
+		OptimisticModeFetcher: chainService,
+		BeaconDB:              db,
 	}
 
-	resp, err := server.GetFinalityCheckpoints(context.Background(), &eth.StateRequest{
+	resp, err := server.GetFinalityCheckpoints(ctx, &eth.StateRequest{
 		StateId: make([]byte, 0),
 	})
 	require.NoError(t, err)
@@ -153,4 +233,32 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 	assert.DeepEqual(t, fakeState.CurrentJustifiedCheckpoint().Root, resp.Data.CurrentJustified.Root)
 	assert.Equal(t, fakeState.PreviousJustifiedCheckpoint().Epoch, resp.Data.PreviousJustified.Epoch)
 	assert.DeepEqual(t, fakeState.PreviousJustifiedCheckpoint().Root, resp.Data.PreviousJustified.Root)
+
+	t.Run("execution optimistic", func(t *testing.T) {
+		parentRoot := [32]byte{'a'}
+		blk := util.NewBeaconBlock()
+		blk.Block.ParentRoot = parentRoot[:]
+		root, err := blk.Block.HashTreeRoot()
+		require.NoError(t, err)
+		wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+		require.NoError(t, err)
+		require.NoError(t, db.SaveBlock(ctx, wsb))
+		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
+
+		chainService := &chainMock.ChainService{Optimistic: true}
+		server := &Server{
+			StateFetcher: &testutil.MockFetcher{
+				BeaconState: fakeState,
+			},
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			BeaconDB:              db,
+		}
+		resp, err := server.GetFinalityCheckpoints(context.Background(), &eth.StateRequest{
+			StateId: make([]byte, 0),
+		})
+		require.NoError(t, err)
+		assert.NotNil(t, resp)
+		assert.DeepEqual(t, true, resp.ExecutionOptimistic)
+	})
 }

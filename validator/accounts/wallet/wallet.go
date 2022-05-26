@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -311,7 +310,7 @@ func (w *Wallet) InitializeKeymanager(ctx context.Context, cfg iface.InitKeymana
 		}
 		// TODO(9883): future work needs to address how initialize keymanager is called for web3signer.
 		// an error may be thrown for genesis validators root for some InitializeKeymanager calls.
-		if !bytesutil.NonZeroRoot(config.GenesisValidatorsRoot) {
+		if !bytesutil.IsValidRoot(config.GenesisValidatorsRoot) {
 			return nil, errors.New("web3signer requires a genesis validators root value")
 		}
 		km, err = remote_web3signer.NewKeymanager(ctx, config)
@@ -367,7 +366,7 @@ func (w *Wallet) ReadFileAtPath(_ context.Context, filePath, fileName string) ([
 	if len(matches) == 0 {
 		return []byte{}, fmt.Errorf("no files found in path: %s", fullPath)
 	}
-	rawData, err := ioutil.ReadFile(matches[0])
+	rawData, err := os.ReadFile(matches[0])
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not read path: %s", filePath)
 	}

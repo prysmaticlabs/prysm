@@ -8,13 +8,14 @@ import (
 	"errors"
 	"sync"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/sync/backfill"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"go.opencensus.io/trace"
 )
 
@@ -26,19 +27,19 @@ type StateManager interface {
 	Resume(ctx context.Context, fState state.BeaconState) (state.BeaconState, error)
 	SaveFinalizedState(fSlot types.Slot, fRoot [32]byte, fState state.BeaconState)
 	MigrateToCold(ctx context.Context, fRoot [32]byte) error
-	ReplayBlocks(ctx context.Context, state state.BeaconState, signed []block.SignedBeaconBlock, targetSlot types.Slot) (state.BeaconState, error)
-	LoadBlocks(ctx context.Context, startSlot, endSlot types.Slot, endBlockRoot [32]byte) ([]block.SignedBeaconBlock, error)
+	ReplayBlocks(ctx context.Context, state state.BeaconState, signed []interfaces.SignedBeaconBlock, targetSlot types.Slot) (state.BeaconState, error)
+	LoadBlocks(ctx context.Context, startSlot, endSlot types.Slot, endBlockRoot [32]byte) ([]interfaces.SignedBeaconBlock, error)
 	HasState(ctx context.Context, blockRoot [32]byte) (bool, error)
 	HasStateInCache(ctx context.Context, blockRoot [32]byte) (bool, error)
 	StateByRoot(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error)
 	StateByRootIfCachedNoCopy(blockRoot [32]byte) state.BeaconState
 	StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error)
-	StateBySlot(ctx context.Context, slot types.Slot) (state.BeaconState, error)
 	RecoverStateSummary(ctx context.Context, blockRoot [32]byte) (*ethpb.StateSummary, error)
-	SaveState(ctx context.Context, root [32]byte, st state.BeaconState) error
+	SaveState(ctx context.Context, blockRoot [32]byte, st state.BeaconState) error
 	ForceCheckpoint(ctx context.Context, root []byte) error
 	EnableSaveHotStateToDB(_ context.Context)
 	DisableSaveHotStateToDB(ctx context.Context) error
+	DeleteStateFromCaches(ctx context.Context, blockRoot [32]byte) error
 }
 
 // State is a concrete implementation of StateManager.
@@ -49,16 +50,17 @@ type State struct {
 	finalizedInfo           *finalizedInfo
 	epochBoundaryStateCache *epochBoundaryState
 	saveHotStateDB          *saveHotStateDbConfig
+	backfillStatus          *backfill.Status
 }
 
 // This tracks the config in the event of long non-finality,
 // how often does the node save hot states to db? what are
 // the saved hot states in db?... etc
 type saveHotStateDbConfig struct {
-	enabled         bool
-	lock            sync.Mutex
-	duration        types.Slot
-	savedStateRoots [][32]byte
+	enabled                 bool
+	lock                    sync.Mutex
+	duration                types.Slot
+	blockRootsOfSavedStates [][32]byte
 }
 
 // This tracks the finalized point. It's also the point where slot and the block root of
@@ -70,9 +72,18 @@ type finalizedInfo struct {
 	lock  sync.RWMutex
 }
 
+// StateGenOption is a functional option for controlling the initialization of a *State value
+type StateGenOption func(*State)
+
+func WithBackfillStatus(bfs *backfill.Status) StateGenOption {
+	return func(sg *State) {
+		sg.backfillStatus = bfs
+	}
+}
+
 // New returns a new state management object.
-func New(beaconDB db.NoHeadAccessDatabase) *State {
-	return &State{
+func New(beaconDB db.NoHeadAccessDatabase, opts ...StateGenOption) *State {
+	s := &State{
 		beaconDB:                beaconDB,
 		hotStateCache:           newHotStateCache(),
 		finalizedInfo:           &finalizedInfo{slot: 0, root: params.BeaconConfig().ZeroHash},
@@ -82,9 +93,14 @@ func New(beaconDB db.NoHeadAccessDatabase) *State {
 			duration: defaultHotStateDBInterval,
 		},
 	}
+	for _, o := range opts {
+		o(s)
+	}
+
+	return s
 }
 
-// Resume resumes a new state management object from previously saved finalized check point in DB.
+// Resume resumes a new state management object from previously saved finalized checkpoint in DB.
 func (s *State) Resume(ctx context.Context, fState state.BeaconState) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.Resume")
 	defer span.End()

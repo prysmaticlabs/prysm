@@ -363,6 +363,11 @@ func TestWrapSignedContributionAndProofsArray(t *testing.T) {
 }
 
 func TestSetInitialPublishBlockPostRequest(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig().Copy()
+	cfg.BellatrixForkEpoch = params.BeaconConfig().AltairForkEpoch + 1
+	params.OverrideBeaconConfig(cfg)
+
 	endpoint := &apimiddleware.Endpoint{}
 	s := struct {
 		Message struct {
@@ -397,6 +402,21 @@ func TestSetInitialPublishBlockPostRequest(t *testing.T) {
 		assert.Equal(t, apimiddleware.RunDefault(true), runDefault)
 		assert.Equal(t, reflect.TypeOf(signedBeaconBlockAltairContainerJson{}).Name(), reflect.Indirect(reflect.ValueOf(endpoint.PostRequest)).Type().Name())
 	})
+	t.Run("Bellatrix", func(t *testing.T) {
+		slot, err := slots.EpochStart(params.BeaconConfig().BellatrixForkEpoch)
+		require.NoError(t, err)
+		s.Message = struct{ Slot string }{Slot: strconv.FormatUint(uint64(slot), 10)}
+		j, err := json.Marshal(s)
+		require.NoError(t, err)
+		var body bytes.Buffer
+		_, err = body.Write(j)
+		require.NoError(t, err)
+		request := httptest.NewRequest("POST", "http://foo.example", &body)
+		runDefault, errJson := setInitialPublishBlockPostRequest(endpoint, nil, request)
+		require.Equal(t, true, errJson == nil)
+		assert.Equal(t, apimiddleware.RunDefault(true), runDefault)
+		assert.Equal(t, reflect.TypeOf(signedBeaconBlockBellatrixContainerJson{}).Name(), reflect.Indirect(reflect.ValueOf(endpoint.PostRequest)).Type().Name())
+	})
 }
 
 func TestPreparePublishedBlock(t *testing.T) {
@@ -425,6 +445,126 @@ func TestPreparePublishedBlock(t *testing.T) {
 		errJson := preparePublishedBlock(endpoint, nil, nil)
 		require.Equal(t, true, errJson == nil)
 		_, ok := endpoint.PostRequest.(*altairPublishBlockRequestJson)
+		assert.Equal(t, true, ok)
+	})
+
+	t.Run("Bellatrix", func(t *testing.T) {
+		endpoint := &apimiddleware.Endpoint{
+			PostRequest: &signedBeaconBlockBellatrixContainerJson{
+				Message: &beaconBlockBellatrixJson{
+					Body: &beaconBlockBodyBellatrixJson{},
+				},
+			},
+		}
+		errJson := preparePublishedBlock(endpoint, nil, nil)
+		require.Equal(t, true, errJson == nil)
+		_, ok := endpoint.PostRequest.(*bellatrixPublishBlockRequestJson)
+		assert.Equal(t, true, ok)
+	})
+
+	t.Run("unsupported block type", func(t *testing.T) {
+		errJson := preparePublishedBlock(&apimiddleware.Endpoint{}, nil, nil)
+		assert.Equal(t, true, strings.Contains(errJson.Msg(), "unsupported block type"))
+	})
+}
+
+func TestSetInitialPublishBlindedBlockPostRequest(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig().Copy()
+	cfg.BellatrixForkEpoch = params.BeaconConfig().AltairForkEpoch + 1
+	params.OverrideBeaconConfig(cfg)
+
+	endpoint := &apimiddleware.Endpoint{}
+	s := struct {
+		Message struct {
+			Slot string
+		}
+	}{}
+	t.Run("Phase 0", func(t *testing.T) {
+		s.Message = struct{ Slot string }{Slot: "0"}
+		j, err := json.Marshal(s)
+		require.NoError(t, err)
+		var body bytes.Buffer
+		_, err = body.Write(j)
+		require.NoError(t, err)
+		request := httptest.NewRequest("POST", "http://foo.example", &body)
+		runDefault, errJson := setInitialPublishBlindedBlockPostRequest(endpoint, nil, request)
+		require.Equal(t, true, errJson == nil)
+		assert.Equal(t, apimiddleware.RunDefault(true), runDefault)
+		assert.Equal(t, reflect.TypeOf(signedBeaconBlockContainerJson{}).Name(), reflect.Indirect(reflect.ValueOf(endpoint.PostRequest)).Type().Name())
+	})
+	t.Run("Altair", func(t *testing.T) {
+		slot, err := slots.EpochStart(params.BeaconConfig().AltairForkEpoch)
+		require.NoError(t, err)
+		s.Message = struct{ Slot string }{Slot: strconv.FormatUint(uint64(slot), 10)}
+		j, err := json.Marshal(s)
+		require.NoError(t, err)
+		var body bytes.Buffer
+		_, err = body.Write(j)
+		require.NoError(t, err)
+		request := httptest.NewRequest("POST", "http://foo.example", &body)
+		runDefault, errJson := setInitialPublishBlindedBlockPostRequest(endpoint, nil, request)
+		require.Equal(t, true, errJson == nil)
+		assert.Equal(t, apimiddleware.RunDefault(true), runDefault)
+		assert.Equal(t, reflect.TypeOf(signedBeaconBlockAltairContainerJson{}).Name(), reflect.Indirect(reflect.ValueOf(endpoint.PostRequest)).Type().Name())
+	})
+	t.Run("Bellatrix", func(t *testing.T) {
+		slot, err := slots.EpochStart(params.BeaconConfig().BellatrixForkEpoch)
+		require.NoError(t, err)
+		s.Message = struct{ Slot string }{Slot: strconv.FormatUint(uint64(slot), 10)}
+		j, err := json.Marshal(s)
+		require.NoError(t, err)
+		var body bytes.Buffer
+		_, err = body.Write(j)
+		require.NoError(t, err)
+		request := httptest.NewRequest("POST", "http://foo.example", &body)
+		runDefault, errJson := setInitialPublishBlindedBlockPostRequest(endpoint, nil, request)
+		require.Equal(t, true, errJson == nil)
+		assert.Equal(t, apimiddleware.RunDefault(true), runDefault)
+		assert.Equal(t, reflect.TypeOf(signedBlindedBeaconBlockBellatrixContainerJson{}).Name(), reflect.Indirect(reflect.ValueOf(endpoint.PostRequest)).Type().Name())
+	})
+}
+
+func TestPreparePublishedBlindedBlock(t *testing.T) {
+	t.Run("Phase 0", func(t *testing.T) {
+		endpoint := &apimiddleware.Endpoint{
+			PostRequest: &signedBeaconBlockContainerJson{
+				Message: &beaconBlockJson{
+					Body: &beaconBlockBodyJson{},
+				},
+			},
+		}
+		errJson := preparePublishedBlindedBlock(endpoint, nil, nil)
+		require.Equal(t, true, errJson == nil)
+		_, ok := endpoint.PostRequest.(*phase0PublishBlockRequestJson)
+		assert.Equal(t, true, ok)
+	})
+
+	t.Run("Altair", func(t *testing.T) {
+		endpoint := &apimiddleware.Endpoint{
+			PostRequest: &signedBeaconBlockAltairContainerJson{
+				Message: &beaconBlockAltairJson{
+					Body: &beaconBlockBodyAltairJson{},
+				},
+			},
+		}
+		errJson := preparePublishedBlindedBlock(endpoint, nil, nil)
+		require.Equal(t, true, errJson == nil)
+		_, ok := endpoint.PostRequest.(*altairPublishBlockRequestJson)
+		assert.Equal(t, true, ok)
+	})
+
+	t.Run("Bellatrix", func(t *testing.T) {
+		endpoint := &apimiddleware.Endpoint{
+			PostRequest: &signedBlindedBeaconBlockBellatrixContainerJson{
+				Message: &blindedBeaconBlockBellatrixJson{
+					Body: &blindedBeaconBlockBodyBellatrixJson{},
+				},
+			},
+		}
+		errJson := preparePublishedBlindedBlock(endpoint, nil, nil)
+		require.Equal(t, true, errJson == nil)
+		_, ok := endpoint.PostRequest.(*bellatrixPublishBlindedBlockRequestJson)
 		assert.Equal(t, true, ok)
 	})
 
@@ -471,8 +611,7 @@ func TestSerializeV2Block(t *testing.T) {
 					StateRoot:     "root",
 					Body:          &beaconBlockBodyJson{},
 				},
-				AltairBlock: nil,
-				Signature:   "sig",
+				Signature: "sig",
 			},
 		}
 		runDefault, j, errJson := serializeV2Block(response)
@@ -495,7 +634,6 @@ func TestSerializeV2Block(t *testing.T) {
 		response := &blockV2ResponseJson{
 			Version: ethpbv2.Version_ALTAIR.String(),
 			Data: &signedBeaconBlockContainerV2Json{
-				Phase0Block: nil,
 				AltairBlock: &beaconBlockAltairJson{
 					Slot:          "1",
 					ProposerIndex: "1",
@@ -511,6 +649,36 @@ func TestSerializeV2Block(t *testing.T) {
 		require.Equal(t, apimiddleware.RunDefault(false), runDefault)
 		require.NotNil(t, j)
 		resp := &altairBlockResponseJson{}
+		require.NoError(t, json.Unmarshal(j, resp))
+		require.NotNil(t, resp.Data)
+		require.NotNil(t, resp.Data.Message)
+		beaconBlock := resp.Data.Message
+		assert.Equal(t, "1", beaconBlock.Slot)
+		assert.Equal(t, "1", beaconBlock.ProposerIndex)
+		assert.Equal(t, "root", beaconBlock.ParentRoot)
+		assert.Equal(t, "root", beaconBlock.StateRoot)
+		require.NotNil(t, beaconBlock.Body)
+	})
+
+	t.Run("Bellatrix", func(t *testing.T) {
+		response := &blockV2ResponseJson{
+			Version: ethpbv2.Version_BELLATRIX.String(),
+			Data: &signedBeaconBlockContainerV2Json{
+				BellatrixBlock: &beaconBlockBellatrixJson{
+					Slot:          "1",
+					ProposerIndex: "1",
+					ParentRoot:    "root",
+					StateRoot:     "root",
+					Body:          &beaconBlockBodyBellatrixJson{},
+				},
+				Signature: "sig",
+			},
+		}
+		runDefault, j, errJson := serializeV2Block(response)
+		require.Equal(t, nil, errJson)
+		require.Equal(t, apimiddleware.RunDefault(false), runDefault)
+		require.NotNil(t, j)
+		resp := &bellatrixBlockResponseJson{}
 		require.NoError(t, json.Unmarshal(j, resp))
 		require.NotNil(t, resp.Data)
 		require.NotNil(t, resp.Data.Message)
@@ -564,7 +732,7 @@ func TestSerializeV2State(t *testing.T) {
 			Version: ethpbv2.Version_ALTAIR.String(),
 			Data: &beaconStateContainerV2Json{
 				Phase0State: nil,
-				AltairState: &beaconStateV2Json{},
+				AltairState: &beaconStateAltairJson{},
 			},
 		}
 		runDefault, j, errJson := serializeV2State(response)
@@ -572,6 +740,21 @@ func TestSerializeV2State(t *testing.T) {
 		require.Equal(t, apimiddleware.RunDefault(false), runDefault)
 		require.NotNil(t, j)
 		require.NoError(t, json.Unmarshal(j, &altairStateResponseJson{}))
+	})
+
+	t.Run("Bellatrix", func(t *testing.T) {
+		response := &beaconStateV2ResponseJson{
+			Version: ethpbv2.Version_BELLATRIX.String(),
+			Data: &beaconStateContainerV2Json{
+				Phase0State:    nil,
+				BellatrixState: &beaconStateBellatrixJson{},
+			},
+		}
+		runDefault, j, errJson := serializeV2State(response)
+		require.Equal(t, nil, errJson)
+		require.Equal(t, apimiddleware.RunDefault(false), runDefault)
+		require.NotNil(t, j)
+		require.NoError(t, json.Unmarshal(j, &bellatrixStateResponseJson{}))
 	})
 
 	t.Run("incorrect response type", func(t *testing.T) {
@@ -594,7 +777,7 @@ func TestSerializeV2State(t *testing.T) {
 	})
 }
 
-func TestSerializeProduceV2Block(t *testing.T) {
+func TestSerializeProducedV2Block(t *testing.T) {
 	t.Run("Phase 0", func(t *testing.T) {
 		response := &produceBlockResponseV2Json{
 			Version: ethpbv2.Version_PHASE0.String(),
@@ -606,7 +789,6 @@ func TestSerializeProduceV2Block(t *testing.T) {
 					StateRoot:     "root",
 					Body:          &beaconBlockBodyJson{},
 				},
-				AltairBlock: nil,
 			},
 		}
 		runDefault, j, errJson := serializeProducedV2Block(response)
@@ -629,7 +811,6 @@ func TestSerializeProduceV2Block(t *testing.T) {
 		response := &produceBlockResponseV2Json{
 			Version: ethpbv2.Version_ALTAIR.String(),
 			Data: &beaconBlockContainerV2Json{
-				Phase0Block: nil,
 				AltairBlock: &beaconBlockAltairJson{
 					Slot:          "1",
 					ProposerIndex: "1",
@@ -644,6 +825,145 @@ func TestSerializeProduceV2Block(t *testing.T) {
 		require.Equal(t, apimiddleware.RunDefault(false), runDefault)
 		require.NotNil(t, j)
 		resp := &altairProduceBlockResponseJson{}
+		require.NoError(t, json.Unmarshal(j, resp))
+		require.NotNil(t, resp.Data)
+		require.NotNil(t, resp.Data)
+		beaconBlock := resp.Data
+		assert.Equal(t, "1", beaconBlock.Slot)
+		assert.Equal(t, "1", beaconBlock.ProposerIndex)
+		assert.Equal(t, "root", beaconBlock.ParentRoot)
+		assert.Equal(t, "root", beaconBlock.StateRoot)
+		require.NotNil(t, beaconBlock.Body)
+	})
+
+	t.Run("Bellatrix", func(t *testing.T) {
+		response := &produceBlockResponseV2Json{
+			Version: ethpbv2.Version_BELLATRIX.String(),
+			Data: &beaconBlockContainerV2Json{
+				BellatrixBlock: &beaconBlockBellatrixJson{
+					Slot:          "1",
+					ProposerIndex: "1",
+					ParentRoot:    "root",
+					StateRoot:     "root",
+					Body:          &beaconBlockBodyBellatrixJson{},
+				},
+			},
+		}
+		runDefault, j, errJson := serializeProducedV2Block(response)
+		require.Equal(t, nil, errJson)
+		require.Equal(t, apimiddleware.RunDefault(false), runDefault)
+		require.NotNil(t, j)
+		resp := &bellatrixProduceBlockResponseJson{}
+		require.NoError(t, json.Unmarshal(j, resp))
+		require.NotNil(t, resp.Data)
+		require.NotNil(t, resp.Data)
+		beaconBlock := resp.Data
+		assert.Equal(t, "1", beaconBlock.Slot)
+		assert.Equal(t, "1", beaconBlock.ProposerIndex)
+		assert.Equal(t, "root", beaconBlock.ParentRoot)
+		assert.Equal(t, "root", beaconBlock.StateRoot)
+		require.NotNil(t, beaconBlock.Body)
+	})
+
+	t.Run("incorrect response type", func(t *testing.T) {
+		response := &types.Empty{}
+		runDefault, j, errJson := serializeProducedV2Block(response)
+		require.Equal(t, apimiddleware.RunDefault(false), runDefault)
+		require.Equal(t, 0, len(j))
+		require.NotNil(t, errJson)
+		assert.Equal(t, true, strings.Contains(errJson.Msg(), "container is not of the correct type"))
+	})
+
+	t.Run("unsupported block version", func(t *testing.T) {
+		response := &produceBlockResponseV2Json{
+			Version: "unsupported",
+		}
+		runDefault, j, errJson := serializeProducedV2Block(response)
+		require.Equal(t, apimiddleware.RunDefault(false), runDefault)
+		require.Equal(t, 0, len(j))
+		require.NotNil(t, errJson)
+		assert.Equal(t, true, strings.Contains(errJson.Msg(), "unsupported block version"))
+	})
+}
+
+func TestSerializeProduceBlindedBlock(t *testing.T) {
+	t.Run("Phase 0", func(t *testing.T) {
+		response := &produceBlindedBlockResponseJson{
+			Version: ethpbv2.Version_PHASE0.String(),
+			Data: &blindedBeaconBlockContainerJson{
+				Phase0Block: &beaconBlockJson{
+					Slot:          "1",
+					ProposerIndex: "1",
+					ParentRoot:    "root",
+					StateRoot:     "root",
+					Body:          &beaconBlockBodyJson{},
+				},
+				AltairBlock: nil,
+			},
+		}
+		runDefault, j, errJson := serializeProducedBlindedBlock(response)
+		require.Equal(t, nil, errJson)
+		require.Equal(t, apimiddleware.RunDefault(false), runDefault)
+		require.NotNil(t, j)
+		resp := &phase0ProduceBlockResponseJson{}
+		require.NoError(t, json.Unmarshal(j, resp))
+		require.NotNil(t, resp.Data)
+		require.NotNil(t, resp.Data)
+		beaconBlock := resp.Data
+		assert.Equal(t, "1", beaconBlock.Slot)
+		assert.Equal(t, "1", beaconBlock.ProposerIndex)
+		assert.Equal(t, "root", beaconBlock.ParentRoot)
+		assert.Equal(t, "root", beaconBlock.StateRoot)
+		require.NotNil(t, beaconBlock.Body)
+	})
+
+	t.Run("Altair", func(t *testing.T) {
+		response := &produceBlindedBlockResponseJson{
+			Version: ethpbv2.Version_ALTAIR.String(),
+			Data: &blindedBeaconBlockContainerJson{
+				AltairBlock: &beaconBlockAltairJson{
+					Slot:          "1",
+					ProposerIndex: "1",
+					ParentRoot:    "root",
+					StateRoot:     "root",
+					Body:          &beaconBlockBodyAltairJson{},
+				},
+			},
+		}
+		runDefault, j, errJson := serializeProducedBlindedBlock(response)
+		require.Equal(t, nil, errJson)
+		require.Equal(t, apimiddleware.RunDefault(false), runDefault)
+		require.NotNil(t, j)
+		resp := &altairProduceBlockResponseJson{}
+		require.NoError(t, json.Unmarshal(j, resp))
+		require.NotNil(t, resp.Data)
+		require.NotNil(t, resp.Data)
+		beaconBlock := resp.Data
+		assert.Equal(t, "1", beaconBlock.Slot)
+		assert.Equal(t, "1", beaconBlock.ProposerIndex)
+		assert.Equal(t, "root", beaconBlock.ParentRoot)
+		assert.Equal(t, "root", beaconBlock.StateRoot)
+		require.NotNil(t, beaconBlock.Body)
+	})
+
+	t.Run("Bellatrix", func(t *testing.T) {
+		response := &produceBlindedBlockResponseJson{
+			Version: ethpbv2.Version_BELLATRIX.String(),
+			Data: &blindedBeaconBlockContainerJson{
+				BellatrixBlock: &blindedBeaconBlockBellatrixJson{
+					Slot:          "1",
+					ProposerIndex: "1",
+					ParentRoot:    "root",
+					StateRoot:     "root",
+					Body:          &blindedBeaconBlockBodyBellatrixJson{},
+				},
+			},
+		}
+		runDefault, j, errJson := serializeProducedBlindedBlock(response)
+		require.Equal(t, nil, errJson)
+		require.Equal(t, apimiddleware.RunDefault(false), runDefault)
+		require.NotNil(t, j)
+		resp := &bellatrixProduceBlindedBlockResponseJson{}
 		require.NoError(t, json.Unmarshal(j, resp))
 		require.NotNil(t, resp.Data)
 		require.NotNil(t, resp.Data)

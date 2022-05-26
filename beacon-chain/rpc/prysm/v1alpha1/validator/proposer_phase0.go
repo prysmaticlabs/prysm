@@ -4,16 +4,17 @@ import (
 	"context"
 	"fmt"
 
-	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/interop"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"go.opencensus.io/trace"
 )
 
@@ -59,14 +60,14 @@ func (vs *Server) getPhase0BeaconBlock(ctx context.Context, req *ethpb.BlockRequ
 	}
 
 	// Compute state root with the newly constructed block.
-	stateRoot, err = vs.computeStateRoot(
-		ctx, wrapper.WrappedPhase0SignedBeaconBlock(
-			&ethpb.SignedBeaconBlock{Block: blk, Signature: make([]byte, 96)},
-		),
-	)
+	wsb, err := wrapper.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: blk, Signature: make([]byte, 96)})
 	if err != nil {
-		interop.WriteBlockToDisk(wrapper.WrappedPhase0SignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: blk}), true /*failed*/)
-		return nil, fmt.Errorf("could not compute state root: %v", err)
+		return nil, err
+	}
+	stateRoot, err = vs.computeStateRoot(ctx, wsb)
+	if err != nil {
+		interop.WriteBlockToDisk(wsb, true /*failed*/)
+		return nil, errors.Wrap(err, "could not compute state root")
 	}
 	blk.StateRoot = stateRoot
 	return blk, nil
@@ -79,6 +80,10 @@ func (vs *Server) buildPhase0BlockData(ctx context.Context, req *ethpb.BlockRequ
 
 	if vs.SyncChecker.Syncing() {
 		return nil, fmt.Errorf("syncing to latest head, not ready to respond")
+	}
+
+	if err := vs.HeadUpdater.UpdateHead(ctx); err != nil {
+		log.WithError(err).Error("Could not process attestations and update head")
 	}
 
 	// Retrieve the parent block as the current head of the canonical chain.
@@ -144,7 +149,7 @@ func (vs *Server) buildPhase0BlockData(ctx context.Context, req *ethpb.BlockRequ
 			log.WithError(err).Warn("Proposer: invalid exit")
 			continue
 		}
-		if err := blocks.VerifyExitAndSignature(val, head.Slot(), head.Fork(), exit, head.GenesisValidatorRoot()); err != nil {
+		if err := blocks.VerifyExitAndSignature(val, head.Slot(), head.Fork(), exit, head.GenesisValidatorsRoot()); err != nil {
 			log.WithError(err).Warn("Proposer: invalid exit")
 			continue
 		}

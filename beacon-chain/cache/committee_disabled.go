@@ -1,3 +1,4 @@
+//go:build fuzz
 // +build fuzz
 
 // This file is used in fuzzer builds to bypass global committee caches.
@@ -6,7 +7,7 @@ package cache
 import (
 	"context"
 
-	types "github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 )
 
 // FakeCommitteeCache is a struct with 1 queue for looking up shuffled indices list by seed.

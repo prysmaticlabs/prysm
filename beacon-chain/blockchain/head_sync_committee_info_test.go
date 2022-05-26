@@ -4,12 +4,12 @@ import (
 	"context"
 	"testing"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
 	"github.com/prysmaticlabs/prysm/time/slots"
@@ -122,7 +122,7 @@ func TestService_HeadSyncCommitteeDomain(t *testing.T) {
 	c := &Service{}
 	c.head = &head{state: s}
 
-	wanted, err := signing.Domain(s.Fork(), slots.ToEpoch(s.Slot()), params.BeaconConfig().DomainSyncCommittee, s.GenesisValidatorRoot())
+	wanted, err := signing.Domain(s.Fork(), slots.ToEpoch(s.Slot()), params.BeaconConfig().DomainSyncCommittee, s.GenesisValidatorsRoot())
 	require.NoError(t, err)
 
 	d, err := c.HeadSyncCommitteeDomain(context.Background(), 0)
@@ -136,7 +136,7 @@ func TestService_HeadSyncContributionProofDomain(t *testing.T) {
 	c := &Service{}
 	c.head = &head{state: s}
 
-	wanted, err := signing.Domain(s.Fork(), slots.ToEpoch(s.Slot()), params.BeaconConfig().DomainContributionAndProof, s.GenesisValidatorRoot())
+	wanted, err := signing.Domain(s.Fork(), slots.ToEpoch(s.Slot()), params.BeaconConfig().DomainContributionAndProof, s.GenesisValidatorsRoot())
 	require.NoError(t, err)
 
 	d, err := c.HeadSyncContributionProofDomain(context.Background(), 0)
@@ -150,7 +150,7 @@ func TestService_HeadSyncSelectionProofDomain(t *testing.T) {
 	c := &Service{}
 	c.head = &head{state: s}
 
-	wanted, err := signing.Domain(s.Fork(), slots.ToEpoch(s.Slot()), params.BeaconConfig().DomainSyncCommitteeSelectionProof, s.GenesisValidatorRoot())
+	wanted, err := signing.Domain(s.Fork(), slots.ToEpoch(s.Slot()), params.BeaconConfig().DomainSyncCommitteeSelectionProof, s.GenesisValidatorsRoot())
 	require.NoError(t, err)
 
 	d, err := c.HeadSyncSelectionProofDomain(context.Background(), 0)

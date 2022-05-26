@@ -25,13 +25,21 @@ const (
 	CompressedArray
 )
 
+// BeaconStateField represents a field of the beacon state.
+type BeaconStateField interface {
+	String(stateVersion int) string
+	RealPosition() int
+	ElemsInChunk() (uint64, error)
+	Native() bool
+}
+
 // String returns the name of the field index.
 func (f FieldIndex) String(stateVersion int) string {
 	switch f {
 	case GenesisTime:
 		return "genesisTime"
-	case GenesisValidatorRoot:
-		return "genesisValidatorRoot"
+	case GenesisValidatorsRoot:
+		return "genesisValidatorsRoot"
 	case Slot:
 		return "slot"
 	case Fork:
@@ -89,6 +97,12 @@ func (f FieldIndex) String(stateVersion int) string {
 	}
 }
 
+// RealPosition denotes the position of the field in the beacon state.
+// The value might differ for different state versions.
+func (f FieldIndex) RealPosition() int {
+	return int(f)
+}
+
 // ElemsInChunk returns the number of elements in the chunk (number of
 // elements that are able to be packed).
 func (f FieldIndex) ElemsInChunk() (uint64, error) {
@@ -100,6 +114,10 @@ func (f FieldIndex) ElemsInChunk() (uint64, error) {
 	}
 }
 
+func (FieldIndex) Native() bool {
+	return false
+}
+
 // Below we define a set of useful enum values for the field
 // indices of the beacon state. For example, genesisTime is the
 // 0th field of the beacon state. This is helpful when we are
@@ -108,7 +126,7 @@ func (f FieldIndex) ElemsInChunk() (uint64, error) {
 // to the v1 state.
 const (
 	GenesisTime FieldIndex = iota
-	GenesisValidatorRoot
+	GenesisValidatorsRoot
 	Slot
 	Fork
 	LatestBlockHeader

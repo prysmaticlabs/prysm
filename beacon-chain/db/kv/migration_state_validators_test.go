@@ -6,9 +6,11 @@ import (
 	"testing"
 
 	"github.com/golang/snappy"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/config/params"
 	v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -19,12 +21,12 @@ import (
 func Test_migrateStateValidators(t *testing.T) {
 	tests := []struct {
 		name  string
-		setup func(t *testing.T, dbStore *Store, state *v1.BeaconState, vals []*v1alpha1.Validator)
-		eval  func(t *testing.T, dbStore *Store, state *v1.BeaconState, vals []*v1alpha1.Validator)
+		setup func(t *testing.T, dbStore *Store, state state.BeaconState, vals []*v1alpha1.Validator)
+		eval  func(t *testing.T, dbStore *Store, state state.BeaconState, vals []*v1alpha1.Validator)
 	}{
 		{
 			name: "only runs once",
-			setup: func(t *testing.T, dbStore *Store, state *v1.BeaconState, vals []*v1alpha1.Validator) {
+			setup: func(t *testing.T, dbStore *Store, state state.BeaconState, vals []*v1alpha1.Validator) {
 				// create some new buckets that should be present for this migration
 				err := dbStore.db.Update(func(tx *bbolt.Tx) error {
 					_, err := tx.CreateBucketIfNotExists(stateValidatorsBucket)
@@ -35,7 +37,7 @@ func Test_migrateStateValidators(t *testing.T) {
 				})
 				assert.NoError(t, err)
 			},
-			eval: func(t *testing.T, dbStore *Store, state *v1.BeaconState, vals []*v1alpha1.Validator) {
+			eval: func(t *testing.T, dbStore *Store, state state.BeaconState, vals []*v1alpha1.Validator) {
 				// check if the migration is completed, per migration table.
 				err := dbStore.db.View(func(tx *bbolt.Tx) error {
 					migrationCompleteOrNot := tx.Bucket(migrationsBucket).Get(migrationStateValidatorsKey)
@@ -47,7 +49,7 @@ func Test_migrateStateValidators(t *testing.T) {
 		},
 		{
 			name: "once migrated, always enable flag",
-			setup: func(t *testing.T, dbStore *Store, state *v1.BeaconState, vals []*v1alpha1.Validator) {
+			setup: func(t *testing.T, dbStore *Store, state state.BeaconState, vals []*v1alpha1.Validator) {
 				// create some new buckets that should be present for this migration
 				err := dbStore.db.Update(func(tx *bbolt.Tx) error {
 					_, err := tx.CreateBucketIfNotExists(stateValidatorsBucket)
@@ -58,7 +60,7 @@ func Test_migrateStateValidators(t *testing.T) {
 				})
 				assert.NoError(t, err)
 			},
-			eval: func(t *testing.T, dbStore *Store, state *v1.BeaconState, vals []*v1alpha1.Validator) {
+			eval: func(t *testing.T, dbStore *Store, state state.BeaconState, vals []*v1alpha1.Validator) {
 				// disable the flag and see if the code mandates that flag.
 				resetCfg := features.InitWithReset(&features.Flags{
 					EnableHistoricalSpaceRepresentation: false,
@@ -111,7 +113,7 @@ func Test_migrateStateValidators(t *testing.T) {
 		},
 		{
 			name: "migrates validators and adds them to new buckets",
-			setup: func(t *testing.T, dbStore *Store, state *v1.BeaconState, vals []*v1alpha1.Validator) {
+			setup: func(t *testing.T, dbStore *Store, state state.BeaconState, vals []*v1alpha1.Validator) {
 				// create some new buckets that should be present for this migration
 				err := dbStore.db.Update(func(tx *bbolt.Tx) error {
 					_, err := tx.CreateBucketIfNotExists(stateValidatorsBucket)
@@ -122,7 +124,7 @@ func Test_migrateStateValidators(t *testing.T) {
 				})
 				assert.NoError(t, err)
 			},
-			eval: func(t *testing.T, dbStore *Store, state *v1.BeaconState, vals []*v1alpha1.Validator) {
+			eval: func(t *testing.T, dbStore *Store, state state.BeaconState, vals []*v1alpha1.Validator) {
 				// check whether the new buckets are present
 				err := dbStore.db.View(func(tx *bbolt.Tx) error {
 					valBkt := tx.Bucket(stateValidatorsBucket)
@@ -209,12 +211,12 @@ func Test_migrateStateValidators(t *testing.T) {
 func Test_migrateAltairStateValidators(t *testing.T) {
 	tests := []struct {
 		name  string
-		setup func(t *testing.T, dbStore *Store, state *v2.BeaconState, vals []*v1alpha1.Validator)
-		eval  func(t *testing.T, dbStore *Store, state *v2.BeaconState, vals []*v1alpha1.Validator)
+		setup func(t *testing.T, dbStore *Store, state state.BeaconState, vals []*v1alpha1.Validator)
+		eval  func(t *testing.T, dbStore *Store, state state.BeaconState, vals []*v1alpha1.Validator)
 	}{
 		{
 			name: "migrates validators and adds them to new buckets",
-			setup: func(t *testing.T, dbStore *Store, state *v2.BeaconState, vals []*v1alpha1.Validator) {
+			setup: func(t *testing.T, dbStore *Store, state state.BeaconState, vals []*v1alpha1.Validator) {
 				// create some new buckets that should be present for this migration
 				err := dbStore.db.Update(func(tx *bbolt.Tx) error {
 					_, err := tx.CreateBucketIfNotExists(stateValidatorsBucket)
@@ -225,7 +227,7 @@ func Test_migrateAltairStateValidators(t *testing.T) {
 				})
 				assert.NoError(t, err)
 			},
-			eval: func(t *testing.T, dbStore *Store, state *v2.BeaconState, vals []*v1alpha1.Validator) {
+			eval: func(t *testing.T, dbStore *Store, state state.BeaconState, vals []*v1alpha1.Validator) {
 				// check whether the new buckets are present
 				err := dbStore.db.View(func(tx *bbolt.Tx) error {
 					valBkt := tx.Bucket(stateValidatorsBucket)
@@ -290,6 +292,12 @@ func Test_migrateAltairStateValidators(t *testing.T) {
 			vals := validators(10)
 			blockRoot := [32]byte{'A'}
 			st, _ := util.DeterministicGenesisStateAltair(t, 20)
+			err := st.SetFork(&v1alpha1.Fork{
+				PreviousVersion: params.BeaconConfig().GenesisForkVersion,
+				CurrentVersion:  params.BeaconConfig().AltairForkVersion,
+				Epoch:           0,
+			})
+			require.NoError(t, err)
 			assert.NoError(t, st.SetSlot(100))
 			assert.NoError(t, st.SetValidators(vals))
 			assert.NoError(t, dbStore.SaveState(context.Background(), st, blockRoot))
@@ -300,9 +308,9 @@ func Test_migrateAltairStateValidators(t *testing.T) {
 			})
 			defer resetCfg()
 
-			tt.setup(t, dbStore, st.(*v2.BeaconState), vals)
+			tt.setup(t, dbStore, st, vals)
 			assert.NoError(t, migrateStateValidators(context.Background(), dbStore.db), "migrateArchivedIndex(tx) error")
-			tt.eval(t, dbStore, st.(*v2.BeaconState), vals)
+			tt.eval(t, dbStore, st, vals)
 		})
 	}
 }
