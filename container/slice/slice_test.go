@@ -24,6 +24,27 @@ func TestSubset(t *testing.T) {
 		{[]uint64{1, 2, 3, 4, 5}, []uint64{1, 2, 3, 4}, false},
 	}
 	for _, tt := range testCases {
+		result := slice.SubsetUint64(tt.setA, tt.setB)
+		if result != tt.out {
+			t.Errorf("%v, got %v, want %v", tt.setA, result, tt.out)
+		}
+	}
+}
+
+func TestSubset_Generic(t *testing.T) {
+	testCases := []struct {
+		setA []uint64
+		setB []uint64
+		out  bool
+	}{
+		{[]uint64{1}, []uint64{1, 2, 3, 4}, true},
+		{[]uint64{1, 2, 3, 4}, []uint64{1, 2, 3, 4}, true},
+		{[]uint64{1, 1}, []uint64{1, 2, 3, 4}, false},
+		{[]uint64{}, []uint64{1}, true},
+		{[]uint64{1}, []uint64{}, false},
+		{[]uint64{1, 2, 3, 4, 5}, []uint64{1, 2, 3, 4}, false},
+	}
+	for _, tt := range testCases {
 		result := slice.Subset[uint64](tt.setA, tt.setB)
 		if result != tt.out {
 			t.Errorf("%v, got %v, want %v", tt.setA, result, tt.out)
@@ -31,43 +52,53 @@ func TestSubset(t *testing.T) {
 	}
 }
 
-func BenchmarkIntersection_Specific(b *testing.B) {
-	b.StopTimer()
-	sets := make([][]int64, 1000)
-	gen := rand.NewGenerator()
-	for i := 0; i < len(sets); i++ {
-		setSize := gen.Intn(100)
-		set := make([]int64, setSize)
-		for j := 0; j < setSize; j++ {
-			set[j] = int64(j)
-		}
-		sets[i] = set
-	}
-	b.StartTimer()
-	for i := 0; i < b.N; i++ {
-		slice.IntersectionInt64(sets...)
-	}
-}
-
-func BenchmarkIntersection_Generic(b *testing.B) {
-	b.StopTimer()
-	sets := make([][]int64, 1000)
-	gen := rand.NewGenerator()
-	for i := 0; i < len(sets); i++ {
-		setSize := gen.Intn(100)
-		set := make([]int64, setSize)
-		for j := 0; j < setSize; j++ {
-			set[j] = int64(j)
-		}
-		sets[i] = set
-	}
-	b.StartTimer()
-	for i := 0; i < b.N; i++ {
-		slice.Intersection[int64](sets...)
-	}
-}
-
 func TestIntersection(t *testing.T) {
+	testCases := []struct {
+		setA []uint64
+		setB []uint64
+		setC []uint64
+		out  []uint64
+	}{
+		{[]uint64{2, 3, 5}, []uint64{3}, []uint64{3}, []uint64{3}},
+		{[]uint64{2, 3, 5}, []uint64{3, 5}, []uint64{5}, []uint64{5}},
+		{[]uint64{2, 3, 5}, []uint64{3, 5}, []uint64{3, 5}, []uint64{3, 5}},
+		{[]uint64{2, 3, 5}, []uint64{5, 3, 2}, []uint64{3, 2, 5}, []uint64{2, 3, 5}},
+		{[]uint64{3, 2, 5}, []uint64{5, 3, 2}, []uint64{3, 2, 5}, []uint64{2, 3, 5}},
+		{[]uint64{3, 3, 5}, []uint64{5, 3, 2}, []uint64{3, 2, 5}, []uint64{3, 5}},
+		{[]uint64{2, 3, 5}, []uint64{2, 3, 5}, []uint64{2, 3, 5}, []uint64{2, 3, 5}},
+		{[]uint64{2, 3, 5}, []uint64{}, []uint64{}, []uint64{}},
+		{[]uint64{2, 3, 5}, []uint64{2, 3, 5}, []uint64{}, []uint64{}},
+		{[]uint64{2, 3}, []uint64{2, 3, 5}, []uint64{5}, []uint64{}},
+		{[]uint64{2, 2, 2}, []uint64{2, 2, 2}, []uint64{}, []uint64{}},
+		{[]uint64{}, []uint64{2, 3, 5}, []uint64{}, []uint64{}},
+		{[]uint64{}, []uint64{}, []uint64{}, []uint64{}},
+		{[]uint64{1}, []uint64{1}, []uint64{}, []uint64{}},
+		{[]uint64{1, 1, 1}, []uint64{1, 1}, []uint64{1, 2, 3}, []uint64{1}},
+	}
+	for _, tt := range testCases {
+		setA := append([]uint64{}, tt.setA...)
+		setB := append([]uint64{}, tt.setB...)
+		setC := append([]uint64{}, tt.setC...)
+		result := slice.IntersectionUint64(setA, setB, setC)
+		sort.Slice(result, func(i, j int) bool {
+			return result[i] < result[j]
+		})
+		if !reflect.DeepEqual(result, tt.out) {
+			t.Errorf("got %d, want %d", result, tt.out)
+		}
+		if !reflect.DeepEqual(setA, tt.setA) {
+			t.Errorf("slice modified, got %v, want %v", setA, tt.setA)
+		}
+		if !reflect.DeepEqual(setB, tt.setB) {
+			t.Errorf("slice modified, got %v, want %v", setB, tt.setB)
+		}
+		if !reflect.DeepEqual(setC, tt.setC) {
+			t.Errorf("slice modified, got %v, want %v", setC, tt.setC)
+		}
+	}
+}
+
+func TestIntersection_Generic(t *testing.T) {
 	testCases := []struct {
 		setA []uint64
 		setB []uint64
@@ -113,7 +144,7 @@ func TestIntersection(t *testing.T) {
 	}
 }
 
-func TestIsSortedUint64(t *testing.T) {
+func TestIsSorted(t *testing.T) {
 	testCases := []struct {
 		setA []uint64
 		out  bool
@@ -125,6 +156,24 @@ func TestIsSortedUint64(t *testing.T) {
 	}
 	for _, tt := range testCases {
 		result := slice.IsUint64Sorted(tt.setA)
+		if result != tt.out {
+			t.Errorf("got %v, want %v", result, tt.out)
+		}
+	}
+}
+
+func TestIsSorted_Generic(t *testing.T) {
+	testCases := []struct {
+		setA []uint64
+		out  bool
+	}{
+		{[]uint64{1, 2, 3}, true},
+		{[]uint64{3, 1, 3}, false},
+		{[]uint64{1}, true},
+		{[]uint64{}, true},
+	}
+	for _, tt := range testCases {
+		result := slice.IsSorted[uint64](tt.setA)
 		if result != tt.out {
 			t.Errorf("got %v, want %v", result, tt.out)
 		}
@@ -242,6 +291,39 @@ func TestUnionInt64(t *testing.T) {
 	}
 }
 
+func TestUnion_Generic(t *testing.T) {
+	testCases := []struct {
+		setA []uint64
+		setB []uint64
+		out  []uint64
+	}{
+		{[]uint64{2, 3, 5}, []uint64{4, 6}, []uint64{2, 3, 5, 4, 6}},
+		{[]uint64{2, 3, 5}, []uint64{3, 5}, []uint64{2, 3, 5}},
+		{[]uint64{2, 3, 5}, []uint64{2, 3, 5}, []uint64{2, 3, 5}},
+		{[]uint64{2, 3, 5}, []uint64{}, []uint64{2, 3, 5}},
+		{[]uint64{}, []uint64{2, 3, 5}, []uint64{2, 3, 5}},
+		{[]uint64{}, []uint64{}, []uint64{}},
+		{[]uint64{1}, []uint64{1}, []uint64{1}},
+	}
+	for _, tt := range testCases {
+		result := slice.Union[uint64](tt.setA, tt.setB)
+		if !reflect.DeepEqual(result, tt.out) {
+			t.Errorf("got %d, want %d", result, tt.out)
+		}
+
+	}
+	items := [][]uint64{
+		{3, 4, 5},
+		{6, 7, 8},
+		{9, 10, 11},
+	}
+	variadicResult := slice.Union[uint64](items...)
+	want := []uint64{3, 4, 5, 6, 7, 8, 9, 10, 11}
+	if !reflect.DeepEqual(want, variadicResult) {
+		t.Errorf("Received %v, wanted %v", variadicResult, want)
+	}
+}
+
 func TestCleanUint64(t *testing.T) {
 	testCases := []struct {
 		in  []uint64
@@ -256,6 +338,26 @@ func TestCleanUint64(t *testing.T) {
 	}
 	for _, tt := range testCases {
 		result := slice.SetUint64(tt.in)
+		if !reflect.DeepEqual(result, tt.out) {
+			t.Errorf("got %d, want %d", result, tt.out)
+		}
+	}
+}
+
+func TestUniq_Generic(t *testing.T) {
+	testCases := []struct {
+		in  []uint64
+		out []uint64
+	}{
+		{[]uint64{2, 4, 4, 6, 6}, []uint64{2, 4, 6}},
+		{[]uint64{3, 5, 5}, []uint64{3, 5}},
+		{[]uint64{2, 2, 2}, []uint64{2}},
+		{[]uint64{1, 4, 5, 9, 9}, []uint64{1, 4, 5, 9}},
+		{[]uint64{}, []uint64{}},
+		{[]uint64{1}, []uint64{1}},
+	}
+	for _, tt := range testCases {
+		result := slice.Uniq[uint64](tt.in)
 		if !reflect.DeepEqual(result, tt.out) {
 			t.Errorf("got %d, want %d", result, tt.out)
 		}
@@ -278,6 +380,28 @@ func TestNotUint64(t *testing.T) {
 	}
 	for _, tt := range testCases {
 		result := slice.NotUint64(tt.setA, tt.setB)
+		if !reflect.DeepEqual(result, tt.out) {
+			t.Errorf("got %d, want %d", result, tt.out)
+		}
+	}
+}
+
+func TestNotIn_Generic(t *testing.T) {
+	testCases := []struct {
+		setA []uint64
+		setB []uint64
+		out  []uint64
+	}{
+		{[]uint64{4, 6}, []uint64{2, 3, 5, 4, 6}, []uint64{2, 3, 5}},
+		{[]uint64{3, 5}, []uint64{2, 3, 5}, []uint64{2}},
+		{[]uint64{2, 3, 5}, []uint64{2, 3, 5}, []uint64{}},
+		{[]uint64{2}, []uint64{2, 3, 5}, []uint64{3, 5}},
+		{[]uint64{}, []uint64{2, 3, 5}, []uint64{2, 3, 5}},
+		{[]uint64{}, []uint64{}, []uint64{}},
+		{[]uint64{1}, []uint64{1}, []uint64{}},
+	}
+	for _, tt := range testCases {
+		result := slice.NotIn[uint64](tt.setA, tt.setB)
 		if !reflect.DeepEqual(result, tt.out) {
 			t.Errorf("got %d, want %d", result, tt.out)
 		}
@@ -339,6 +463,26 @@ func TestIsInInt64(t *testing.T) {
 	}
 	for _, tt := range testCases {
 		result := slice.IsInInt64(tt.a, tt.b)
+		if result != tt.result {
+			t.Errorf("IsIn(%d, %v)=%v, wanted: %v",
+				tt.a, tt.b, result, tt.result)
+		}
+	}
+}
+
+func TestIsIn_Generic(t *testing.T) {
+	testCases := []struct {
+		a      uint64
+		b      []uint64
+		result bool
+	}{
+		{0, []uint64{}, false},
+		{0, []uint64{0}, true},
+		{4, []uint64{2, 3, 5, 4, 6}, true},
+		{100, []uint64{2, 3, 5, 4, 6}, false},
+	}
+	for _, tt := range testCases {
+		result := slice.IsIn[uint64](tt.a, tt.b)
 		if result != tt.result {
 			t.Errorf("IsIn(%d, %v)=%v, wanted: %v",
 				tt.a, tt.b, result, tt.result)
@@ -623,4 +767,82 @@ func TestIsInSlots(t *testing.T) {
 				tt.a, tt.b, result, tt.result)
 		}
 	}
+}
+
+func BenchmarkIntersection_Specific(b *testing.B) {
+	b.StopTimer()
+	sets := setupSlices()
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		slice.IntersectionUint64(sets...)
+	}
+}
+
+func BenchmarkIntersection_Generic(b *testing.B) {
+	b.StopTimer()
+	sets := setupSlices()
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		slice.Intersection[uint64](sets...)
+	}
+}
+
+func BenchmarkUnion_Specific(b *testing.B) {
+	b.StopTimer()
+	sets := setupSlices()
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		slice.UnionUint64(sets...)
+	}
+}
+
+func BenchmarkUnion_Generic(b *testing.B) {
+	b.StopTimer()
+	sets := setupSlices()
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		slice.Union[uint64](sets...)
+	}
+}
+
+func BenchmarkUniq_Specific(b *testing.B) {
+	b.StopTimer()
+	input := make([]uint64, 0, 1000)
+	gen := rand.NewGenerator()
+	for i := 0; i < 1000; i++ {
+		n := gen.Uint64()
+		input = append(input, n, n)
+	}
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		slice.SetUint64(input)
+	}
+}
+
+func BenchmarkUniq_Generic(b *testing.B) {
+	b.StopTimer()
+	input := make([]uint64, 0, 1000)
+	gen := rand.NewGenerator()
+	for i := 0; i < 1000; i++ {
+		n := gen.Uint64()
+		input = append(input, n, n)
+	}
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		slice.Uniq[uint64](input)
+	}
+}
+
+func setupSlices() [][]uint64 {
+	sets := make([][]uint64, 1000)
+	gen := rand.NewGenerator()
+	for i := 0; i < len(sets); i++ {
+		setSize := gen.Intn(100)
+		set := make([]uint64, setSize)
+		for j := 0; j < setSize; j++ {
+			set[j] = uint64(j)
+		}
+		sets[i] = set
+	}
+	return sets
 }
