@@ -10,6 +10,11 @@ import (
 	pmath "github.com/prysmaticlabs/prysm/math"
 )
 
+var (
+	ErrInvalidFieldTrie = errors.New("invalid field trie")
+	ErrEmptyFieldTrie   = errors.New("empty field trie")
+)
+
 // FieldTrie is the representation of the representative
 // trie of the particular field.
 type FieldTrie struct {
@@ -188,6 +193,12 @@ func (f *FieldTrie) CopyTrie() *FieldTrie {
 
 // TrieRoot returns the corresponding root of the trie.
 func (f *FieldTrie) TrieRoot() ([32]byte, error) {
+	if f.Empty() {
+		return [32]byte{}, ErrEmptyFieldTrie
+	}
+	if len(f.fieldLayers[len(f.fieldLayers)-1]) == 0 {
+		return [32]byte{}, ErrInvalidFieldTrie
+	}
 	switch f.dataType {
 	case types.BasicArray:
 		return *f.fieldLayers[len(f.fieldLayers)-1][0], nil
