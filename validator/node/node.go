@@ -473,7 +473,7 @@ func web3SignerConfig(cliCtx *cli.Context) (*remote_web3signer.SetupConfig, erro
 func feeRecipientConfig(cliCtx *cli.Context) (*validatorServiceConfig.FeeRecipientConfig, error) {
 	var fileConfig *validatorServiceConfig.FeeRecipientFileConfig
 	if cliCtx.IsSet(flags.FeeRecipientConfigFileFlag.Name) && cliCtx.IsSet(flags.FeeRecipientConfigURLFlag.Name) {
-		return nil, errors.New("cannot specify both --validators-proposer-fileConfig-dir and --validators-proposer-fileConfig-url")
+		return nil, fmt.Errorf("cannot specify both --%s and --%s", flags.FeeRecipientConfigFileFlag.Name, flags.FeeRecipientConfigURLFlag.Name)
 	}
 	if cliCtx.IsSet(flags.FeeRecipientConfigFileFlag.Name) {
 		if err := unmarshalFromFile(cliCtx.Context, cliCtx.String(flags.FeeRecipientConfigFileFlag.Name), &fileConfig); err != nil {
