@@ -129,6 +129,22 @@ func configureInteropConfig(cliCtx *cli.Context) error {
 }
 
 func configureExecutionSetting(cliCtx *cli.Context) error {
+	if cliCtx.IsSet(flags.TerminalTotalDifficultyOverride.Name) {
+		c := params.BeaconConfig()
+		c.TerminalTotalDifficulty = cliCtx.String(flags.TerminalTotalDifficultyOverride.Name)
+		params.OverrideBeaconConfig(c)
+	}
+	if cliCtx.IsSet(flags.TerminalBlockHashOverride.Name) {
+		c := params.BeaconConfig()
+		c.TerminalBlockHash = common.HexToHash(cliCtx.String(flags.TerminalBlockHashOverride.Name))
+		params.OverrideBeaconConfig(c)
+	}
+	if cliCtx.IsSet(flags.TerminalBlockHashActivationEpochOverride.Name) {
+		c := params.BeaconConfig()
+		c.TerminalBlockHashActivationEpoch = types.Epoch(cliCtx.Uint64(flags.TerminalBlockHashActivationEpochOverride.Name))
+		params.OverrideBeaconConfig(c)
+	}
+
 	if !cliCtx.IsSet(flags.SuggestedFeeRecipient.Name) {
 		return nil
 	}
