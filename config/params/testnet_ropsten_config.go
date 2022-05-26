@@ -32,7 +32,7 @@ func RopstenConfig() *BeaconChainConfig {
 	cfg.AltairForkVersion = []byte{0x80, 0x00, 0x00, 0x70}
 	cfg.BellatrixForkEpoch = 750
 	cfg.BellatrixForkVersion = []byte{0x80, 0x00, 0x00, 0x71}
-	cfg.TerminalTotalDifficulty = "43531756765713534"
+	cfg.TerminalTotalDifficulty = "100000000000000000000000"
 	cfg.DepositContractAddress = "0x6f22fFbC56eFF051aECF839396DD1eD9aD6BBA9D"
 	cfg.InitializeForkSchedule()
 	return cfg
