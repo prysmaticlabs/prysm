@@ -340,7 +340,7 @@ func (s *Service) ReconstructFullBellatrixBlock(
 	executionBlockHash := common.BytesToHash(header.BlockHash)
 	executionBlock, err := s.ExecutionBlockByHashWithTxs(ctx, executionBlockHash)
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not fetch execution block with txs by hash %#x", executionBlockHash)
+		return nil, fmt.Errorf("could not fetch execution block with txs by hash %#x: %v", executionBlockHash, err)
 	}
 	payload := fullPayloadFromExecutionBlock(header, executionBlock)
 	return wrapper.BuildSignedBeaconBlockFromExecutionPayload(blindedBlock, payload)
