@@ -1,6 +1,6 @@
 package blockchain
 
-var MergeAsciiArt = 
+var mergeAsciiArt = 
 `                                                                                                                                                  	                                                                                                                                                      
 		                                                                                                                                                      
 		                                 +?$$$$$$?*;                         ;*?$$$$?*;                         +!$$$$$$?!;                                   
