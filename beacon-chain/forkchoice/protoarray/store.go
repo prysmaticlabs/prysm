@@ -206,41 +206,37 @@ func (f *ForkChoice) CommonAncestorRoot(ctx context.Context, r1 [32]byte, r2 [32
 		return r1, nil
 	}
 
-	f.store.nodesLock.RLock()
-	defer f.store.nodesLock.RUnlock()
-
-	i, ok := f.store.nodesIndices[r1]
-	if !ok || i >= uint64(len(f.store.nodes)) {
+	i1, ok := f.store.nodesIndices[r1]
+	if !ok || i1 >= uint64(len(f.store.nodes)) {
 		return [32]byte{}, errInvalidNodeIndex
 	}
-	n1 := f.store.nodes[i]
 
-	i, ok = f.store.nodesIndices[r2]
-	if !ok || i >= uint64(len(f.store.nodes)) {
+	i2, ok := f.store.nodesIndices[r2]
+	if !ok || i2 >= uint64(len(f.store.nodes)) {
 		return [32]byte{}, errInvalidNodeIndex
 	}
-	n2 := f.store.nodes[i]
 
 	for {
 		if ctx.Err() != nil {
 			return [32]byte{}, ctx.Err()
 		}
-		if n1.slot > n2.slot {
-			i = n1.parent
+		if i1 > i2 {
+			n1 := f.store.nodes[i1]
+			i1 = n1.parent
 			// Reaches the end of the tree and unable to find common ancestor.
-			if i >= uint64(len(f.store.nodes)) {
+			if i1 >= uint64(len(f.store.nodes)) {
 				return [32]byte{}, forkchoice.ErrUnknownCommonAncestor
 			}
-			n1 = f.store.nodes[i]
 		} else {
-			i = n2.parent
+			n2 := f.store.nodes[i2]
+			i2 = n2.parent
 			// Reaches the end of the tree and unable to find common ancestor.
-			if i >= uint64(len(f.store.nodes)) {
+			if i2 >= uint64(len(f.store.nodes)) {
 				return [32]byte{}, forkchoice.ErrUnknownCommonAncestor
 			}
-			n2 = f.store.nodes[i]
 		}
-		if n1.root == n2.root {
+		if i1 == i2 {
+			n1 := f.store.nodes[i1]
 			return n1.root, nil
 		}
 	}
