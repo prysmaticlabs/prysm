@@ -10,10 +10,10 @@ import (
 var errNilBlock = errors.New("received nil beacon block")
 var errNilBody = errors.New("received nil beacon block body")
 
-const incorrectBlockType = "incorrect beacon block type"
-const incorrectBodyType = "incorrect beacon block body type"
+const incorrectBlockVersion = "incorrect beacon block version"
+const incorrectBodyVersion = "incorrect beacon block body version"
 
-func InitSignedBlockFromProtoPhase0(pb *eth.SignedBeaconBlock) (*SingedBeaconBlock, error) {
+func InitSignedBlockFromProtoPhase0(pb *eth.SignedBeaconBlock) (*SignedBeaconBlock, error) {
 	if pb == nil {
 		return nil, errNilBlock
 	}
@@ -23,16 +23,16 @@ func InitSignedBlockFromProtoPhase0(pb *eth.SignedBeaconBlock) (*SingedBeaconBlo
 	if err != nil {
 		return nil, err
 	}
-	b := &SingedBeaconBlock{
+	b := &SignedBeaconBlock{
 		version:   version.Phase0,
 		blinded:   false,
-		Block:     block,
-		Signature: pb.Signature,
+		block:     block,
+		signature: pb.Signature,
 	}
 	return b, nil
 }
 
-func InitSignedBlockFromProtoAltair(pb *eth.SignedBeaconBlockAltair) (*SingedBeaconBlock, error) {
+func InitSignedBlockFromProtoAltair(pb *eth.SignedBeaconBlockAltair) (*SignedBeaconBlock, error) {
 	if pb == nil {
 		return nil, errNilBlock
 	}
@@ -42,16 +42,16 @@ func InitSignedBlockFromProtoAltair(pb *eth.SignedBeaconBlockAltair) (*SingedBea
 	if err != nil {
 		return nil, err
 	}
-	b := &SingedBeaconBlock{
+	b := &SignedBeaconBlock{
 		version:   version.Altair,
 		blinded:   false,
-		Block:     block,
-		Signature: pb.Signature,
+		block:     block,
+		signature: pb.Signature,
 	}
 	return b, nil
 }
 
-func InitSignedBlockFromProtoBellatrix(pb *eth.SignedBeaconBlockBellatrix) (*SingedBeaconBlock, error) {
+func InitSignedBlockFromProtoBellatrix(pb *eth.SignedBeaconBlockBellatrix) (*SignedBeaconBlock, error) {
 	if pb == nil {
 		return nil, errNilBlock
 	}
@@ -61,16 +61,16 @@ func InitSignedBlockFromProtoBellatrix(pb *eth.SignedBeaconBlockBellatrix) (*Sin
 	if err != nil {
 		return nil, err
 	}
-	b := &SingedBeaconBlock{
+	b := &SignedBeaconBlock{
 		version:   version.Bellatrix,
 		blinded:   false,
-		Block:     block,
-		Signature: pb.Signature,
+		block:     block,
+		signature: pb.Signature,
 	}
 	return b, nil
 }
 
-func InitBlindedSignedBlockFromProtoBellatrix(pb *eth.SignedBlindedBeaconBlockBellatrix) (*SingedBeaconBlock, error) {
+func InitBlindedSignedBlockFromProtoBellatrix(pb *eth.SignedBlindedBeaconBlockBellatrix) (*SignedBeaconBlock, error) {
 	if pb == nil {
 		return nil, errNilBlock
 	}
@@ -80,11 +80,11 @@ func InitBlindedSignedBlockFromProtoBellatrix(pb *eth.SignedBlindedBeaconBlockBe
 	if err != nil {
 		return nil, err
 	}
-	b := &SingedBeaconBlock{
+	b := &SignedBeaconBlock{
 		version:   version.Bellatrix,
 		blinded:   true,
-		Block:     block,
-		Signature: pb.Signature,
+		block:     block,
+		signature: pb.Signature,
 	}
 	return b, nil
 }
@@ -103,11 +103,11 @@ func InitBlockFromProtoPhase0(pb *eth.BeaconBlock) (*BeaconBlock, error) {
 	b := &BeaconBlock{
 		version:       version.Phase0,
 		blinded:       false,
-		Slot:          pb.Slot,
-		ProposerIndex: pb.ProposerIndex,
-		ParentRoot:    pb.ParentRoot,
-		StateRoot:     pb.StateRoot,
-		Body:          body,
+		slot:          pb.Slot,
+		proposerIndex: pb.ProposerIndex,
+		parentRoot:    pb.ParentRoot,
+		stateRoot:     pb.StateRoot,
+		body:          body,
 	}
 	return b, nil
 }
@@ -125,11 +125,11 @@ func InitBlockFromProtoAltair(pb *eth.BeaconBlockAltair) (*BeaconBlock, error) {
 	b := &BeaconBlock{
 		version:       version.Altair,
 		blinded:       false,
-		Slot:          pb.Slot,
-		ProposerIndex: pb.ProposerIndex,
-		ParentRoot:    pb.ParentRoot,
-		StateRoot:     pb.StateRoot,
-		Body:          body,
+		slot:          pb.Slot,
+		proposerIndex: pb.ProposerIndex,
+		parentRoot:    pb.ParentRoot,
+		stateRoot:     pb.StateRoot,
+		body:          body,
 	}
 	return b, nil
 }
@@ -147,11 +147,11 @@ func InitBlockFromProtoBellatrix(pb *eth.BeaconBlockBellatrix) (*BeaconBlock, er
 	b := &BeaconBlock{
 		version:       version.Bellatrix,
 		blinded:       false,
-		Slot:          pb.Slot,
-		ProposerIndex: pb.ProposerIndex,
-		ParentRoot:    pb.ParentRoot,
-		StateRoot:     pb.StateRoot,
-		Body:          body,
+		slot:          pb.Slot,
+		proposerIndex: pb.ProposerIndex,
+		parentRoot:    pb.ParentRoot,
+		stateRoot:     pb.StateRoot,
+		body:          body,
 	}
 	return b, nil
 }
@@ -169,11 +169,11 @@ func InitBlindedBlockFromProtoBellatrix(pb *eth.BlindedBeaconBlockBellatrix) (*B
 	b := &BeaconBlock{
 		version:       version.Bellatrix,
 		blinded:       true,
-		Slot:          pb.Slot,
-		ProposerIndex: pb.ProposerIndex,
-		ParentRoot:    pb.ParentRoot,
-		StateRoot:     pb.StateRoot,
-		Body:          body,
+		slot:          pb.Slot,
+		proposerIndex: pb.ProposerIndex,
+		parentRoot:    pb.ParentRoot,
+		stateRoot:     pb.StateRoot,
+		body:          body,
 	}
 	return b, nil
 }
@@ -187,14 +187,14 @@ func InitBlockBodyFromProtoPhase0(pb *eth.BeaconBlockBody) (*BeaconBlockBody, er
 	b := &BeaconBlockBody{
 		version:           version.Phase0,
 		blinded:           false,
-		RandaoReveal:      pb.RandaoReveal,
-		Eth1Data:          pb.Eth1Data,
-		Graffiti:          pb.Graffiti,
-		ProposerSlashings: pb.ProposerSlashings,
-		AttesterSlashings: pb.AttesterSlashings,
-		Attestations:      pb.Attestations,
-		Deposits:          pb.Deposits,
-		VoluntaryExits:    pb.VoluntaryExits,
+		randaoReveal:      pb.RandaoReveal,
+		eth1Data:          pb.Eth1Data,
+		graffiti:          pb.Graffiti,
+		proposerSlashings: pb.ProposerSlashings,
+		attesterSlashings: pb.AttesterSlashings,
+		attestations:      pb.Attestations,
+		deposits:          pb.Deposits,
+		voluntaryExits:    pb.VoluntaryExits,
 	}
 	return b, nil
 }
@@ -208,15 +208,15 @@ func InitBlockBodyFromProtoAltair(pb *eth.BeaconBlockBodyAltair) (*BeaconBlockBo
 	b := &BeaconBlockBody{
 		version:           version.Altair,
 		blinded:           false,
-		RandaoReveal:      pb.RandaoReveal,
-		Eth1Data:          pb.Eth1Data,
-		Graffiti:          pb.Graffiti,
-		ProposerSlashings: pb.ProposerSlashings,
-		AttesterSlashings: pb.AttesterSlashings,
-		Attestations:      pb.Attestations,
-		Deposits:          pb.Deposits,
-		VoluntaryExits:    pb.VoluntaryExits,
-		SyncAggregate:     pb.SyncAggregate,
+		randaoReveal:      pb.RandaoReveal,
+		eth1Data:          pb.Eth1Data,
+		graffiti:          pb.Graffiti,
+		proposerSlashings: pb.ProposerSlashings,
+		attesterSlashings: pb.AttesterSlashings,
+		attestations:      pb.Attestations,
+		deposits:          pb.Deposits,
+		voluntaryExits:    pb.VoluntaryExits,
+		syncAggregate:     pb.SyncAggregate,
 	}
 	return b, nil
 }
@@ -230,16 +230,16 @@ func InitBlockBodyFromProtoBellatrix(pb *eth.BeaconBlockBodyBellatrix) (*BeaconB
 	b := &BeaconBlockBody{
 		version:           version.Bellatrix,
 		blinded:           false,
-		RandaoReveal:      pb.RandaoReveal,
-		Eth1Data:          pb.Eth1Data,
-		Graffiti:          pb.Graffiti,
-		ProposerSlashings: pb.ProposerSlashings,
-		AttesterSlashings: pb.AttesterSlashings,
-		Attestations:      pb.Attestations,
-		Deposits:          pb.Deposits,
-		VoluntaryExits:    pb.VoluntaryExits,
-		SyncAggregate:     pb.SyncAggregate,
-		ExecutionPayload:  pb.ExecutionPayload,
+		randaoReveal:      pb.RandaoReveal,
+		eth1Data:          pb.Eth1Data,
+		graffiti:          pb.Graffiti,
+		proposerSlashings: pb.ProposerSlashings,
+		attesterSlashings: pb.AttesterSlashings,
+		attestations:      pb.Attestations,
+		deposits:          pb.Deposits,
+		voluntaryExits:    pb.VoluntaryExits,
+		syncAggregate:     pb.SyncAggregate,
+		executionPayload:  pb.ExecutionPayload,
 	}
 	return b, nil
 }
@@ -253,26 +253,26 @@ func InitBlindedBlockBodyFromProtoBellatrix(pb *eth.BlindedBeaconBlockBodyBellat
 	b := &BeaconBlockBody{
 		version:                version.Bellatrix,
 		blinded:                true,
-		RandaoReveal:           pb.RandaoReveal,
-		Eth1Data:               pb.Eth1Data,
-		Graffiti:               pb.Graffiti,
-		ProposerSlashings:      pb.ProposerSlashings,
-		AttesterSlashings:      pb.AttesterSlashings,
-		Attestations:           pb.Attestations,
-		Deposits:               pb.Deposits,
-		VoluntaryExits:         pb.VoluntaryExits,
-		SyncAggregate:          pb.SyncAggregate,
-		ExecutionPayloadHeader: pb.ExecutionPayloadHeader,
+		randaoReveal:           pb.RandaoReveal,
+		eth1Data:               pb.Eth1Data,
+		graffiti:               pb.Graffiti,
+		proposerSlashings:      pb.ProposerSlashings,
+		attesterSlashings:      pb.AttesterSlashings,
+		attestations:           pb.Attestations,
+		deposits:               pb.Deposits,
+		voluntaryExits:         pb.VoluntaryExits,
+		syncAggregate:          pb.SyncAggregate,
+		executionPayloadHeader: pb.ExecutionPayloadHeader,
 	}
 	return b, nil
 }
 
-func (b *SingedBeaconBlock) ToProto() (proto.Message, error) {
+func (b *SignedBeaconBlock) Proto() (proto.Message, error) {
 	if b == nil {
 		return nil, nil
 	}
 
-	blockMessage, err := b.Block.ToProto()
+	blockMessage, err := b.block.Proto()
 	if err != nil {
 		return nil, err
 	}
@@ -281,51 +281,51 @@ func (b *SingedBeaconBlock) ToProto() (proto.Message, error) {
 	case version.Phase0:
 		block, ok := blockMessage.(*eth.BeaconBlock)
 		if !ok {
-			return nil, errors.Wrap(err, incorrectBlockType)
+			return nil, errors.Wrap(err, incorrectBlockVersion)
 		}
 		return &eth.SignedBeaconBlock{
 			Block:     block,
-			Signature: b.Signature,
+			Signature: b.signature,
 		}, nil
 	case version.Altair:
 		block, ok := blockMessage.(*eth.BeaconBlockAltair)
 		if !ok {
-			return nil, errors.Wrap(err, incorrectBlockType)
+			return nil, errors.Wrap(err, incorrectBlockVersion)
 		}
 		return &eth.SignedBeaconBlockAltair{
 			Block:     block,
-			Signature: b.Signature,
+			Signature: b.signature,
 		}, nil
 	case version.Bellatrix:
 		if b.blinded {
 			block, ok := blockMessage.(*eth.BlindedBeaconBlockBellatrix)
 			if !ok {
-				return nil, errors.Wrap(err, incorrectBlockType)
+				return nil, errors.Wrap(err, incorrectBlockVersion)
 			}
 			return &eth.SignedBlindedBeaconBlockBellatrix{
 				Block:     block,
-				Signature: b.Signature,
+				Signature: b.signature,
 			}, nil
 		}
 		block, ok := blockMessage.(*eth.BeaconBlockBellatrix)
 		if !ok {
-			return nil, errors.Wrap(err, incorrectBlockType)
+			return nil, errors.Wrap(err, incorrectBlockVersion)
 		}
 		return &eth.SignedBeaconBlockBellatrix{
 			Block:     block,
-			Signature: b.Signature,
+			Signature: b.signature,
 		}, nil
 	default:
 		return nil, errors.New("unsupported signed beacon block version")
 	}
 }
 
-func (b *BeaconBlock) ToProto() (proto.Message, error) {
+func (b *BeaconBlock) Proto() (proto.Message, error) {
 	if b == nil {
 		return nil, nil
 	}
 
-	bodyMessage, err := b.Body.ToProto()
+	bodyMessage, err := b.body.Proto()
 	if err != nil {
 		return nil, err
 	}
@@ -334,50 +334,50 @@ func (b *BeaconBlock) ToProto() (proto.Message, error) {
 	case version.Phase0:
 		body, ok := bodyMessage.(*eth.BeaconBlockBody)
 		if !ok {
-			return nil, errors.Wrap(err, incorrectBodyType)
+			return nil, errors.Wrap(err, incorrectBodyVersion)
 		}
 		return &eth.BeaconBlock{
-			Slot:          b.Slot,
-			ProposerIndex: b.ProposerIndex,
-			ParentRoot:    b.ParentRoot,
-			StateRoot:     b.StateRoot,
+			Slot:          b.slot,
+			ProposerIndex: b.proposerIndex,
+			ParentRoot:    b.parentRoot,
+			StateRoot:     b.stateRoot,
 			Body:          body,
 		}, nil
 	case version.Altair:
 		body, ok := bodyMessage.(*eth.BeaconBlockBodyAltair)
 		if !ok {
-			return nil, errors.Wrap(err, incorrectBodyType)
+			return nil, errors.Wrap(err, incorrectBodyVersion)
 		}
 		return &eth.BeaconBlockAltair{
-			Slot:          b.Slot,
-			ProposerIndex: b.ProposerIndex,
-			ParentRoot:    b.ParentRoot,
-			StateRoot:     b.StateRoot,
+			Slot:          b.slot,
+			ProposerIndex: b.proposerIndex,
+			ParentRoot:    b.parentRoot,
+			StateRoot:     b.stateRoot,
 			Body:          body,
 		}, nil
 	case version.Bellatrix:
 		if b.blinded {
 			body, ok := bodyMessage.(*eth.BlindedBeaconBlockBodyBellatrix)
 			if !ok {
-				return nil, errors.Wrap(err, incorrectBodyType)
+				return nil, errors.Wrap(err, incorrectBodyVersion)
 			}
 			return &eth.BlindedBeaconBlockBellatrix{
-				Slot:          b.Slot,
-				ProposerIndex: b.ProposerIndex,
-				ParentRoot:    b.ParentRoot,
-				StateRoot:     b.StateRoot,
+				Slot:          b.slot,
+				ProposerIndex: b.proposerIndex,
+				ParentRoot:    b.parentRoot,
+				StateRoot:     b.stateRoot,
 				Body:          body,
 			}, nil
 		}
 		body, ok := bodyMessage.(*eth.BeaconBlockBodyBellatrix)
 		if !ok {
-			return nil, errors.Wrap(err, incorrectBodyType)
+			return nil, errors.Wrap(err, incorrectBodyVersion)
 		}
 		return &eth.BeaconBlockBellatrix{
-			Slot:          b.Slot,
-			ProposerIndex: b.ProposerIndex,
-			ParentRoot:    b.ParentRoot,
-			StateRoot:     b.StateRoot,
+			Slot:          b.slot,
+			ProposerIndex: b.proposerIndex,
+			ParentRoot:    b.parentRoot,
+			StateRoot:     b.stateRoot,
 			Body:          body,
 		}, nil
 	default:
@@ -385,7 +385,7 @@ func (b *BeaconBlock) ToProto() (proto.Message, error) {
 	}
 }
 
-func (b *BeaconBlockBody) ToProto() (proto.Message, error) {
+func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 	if b == nil {
 		return nil, nil
 	}
@@ -393,53 +393,53 @@ func (b *BeaconBlockBody) ToProto() (proto.Message, error) {
 	switch b.version {
 	case version.Phase0:
 		return &eth.BeaconBlockBody{
-			RandaoReveal:      b.RandaoReveal,
-			Eth1Data:          b.Eth1Data,
-			Graffiti:          b.Graffiti,
-			ProposerSlashings: b.ProposerSlashings,
-			AttesterSlashings: b.AttesterSlashings,
-			Attestations:      b.Attestations,
-			Deposits:          b.Deposits,
-			VoluntaryExits:    b.VoluntaryExits,
+			RandaoReveal:      b.randaoReveal,
+			Eth1Data:          b.eth1Data,
+			Graffiti:          b.graffiti,
+			ProposerSlashings: b.proposerSlashings,
+			AttesterSlashings: b.attesterSlashings,
+			Attestations:      b.attestations,
+			Deposits:          b.deposits,
+			VoluntaryExits:    b.voluntaryExits,
 		}, nil
 	case version.Altair:
 		return &eth.BeaconBlockBodyAltair{
-			RandaoReveal:      b.RandaoReveal,
-			Eth1Data:          b.Eth1Data,
-			Graffiti:          b.Graffiti,
-			ProposerSlashings: b.ProposerSlashings,
-			AttesterSlashings: b.AttesterSlashings,
-			Attestations:      b.Attestations,
-			Deposits:          b.Deposits,
-			VoluntaryExits:    b.VoluntaryExits,
-			SyncAggregate:     b.SyncAggregate,
+			RandaoReveal:      b.randaoReveal,
+			Eth1Data:          b.eth1Data,
+			Graffiti:          b.graffiti,
+			ProposerSlashings: b.proposerSlashings,
+			AttesterSlashings: b.attesterSlashings,
+			Attestations:      b.attestations,
+			Deposits:          b.deposits,
+			VoluntaryExits:    b.voluntaryExits,
+			SyncAggregate:     b.syncAggregate,
 		}, nil
 	case version.Bellatrix:
 		if b.blinded {
 			return &eth.BlindedBeaconBlockBodyBellatrix{
-				RandaoReveal:           b.RandaoReveal,
-				Eth1Data:               b.Eth1Data,
-				Graffiti:               b.Graffiti,
-				ProposerSlashings:      b.ProposerSlashings,
-				AttesterSlashings:      b.AttesterSlashings,
-				Attestations:           b.Attestations,
-				Deposits:               b.Deposits,
-				VoluntaryExits:         b.VoluntaryExits,
-				SyncAggregate:          b.SyncAggregate,
-				ExecutionPayloadHeader: b.ExecutionPayloadHeader,
+				RandaoReveal:           b.randaoReveal,
+				Eth1Data:               b.eth1Data,
+				Graffiti:               b.graffiti,
+				ProposerSlashings:      b.proposerSlashings,
+				AttesterSlashings:      b.attesterSlashings,
+				Attestations:           b.attestations,
+				Deposits:               b.deposits,
+				VoluntaryExits:         b.voluntaryExits,
+				SyncAggregate:          b.syncAggregate,
+				ExecutionPayloadHeader: b.executionPayloadHeader,
 			}, nil
 		}
 		return &eth.BeaconBlockBodyBellatrix{
-			RandaoReveal:      b.RandaoReveal,
-			Eth1Data:          b.Eth1Data,
-			Graffiti:          b.Graffiti,
-			ProposerSlashings: b.ProposerSlashings,
-			AttesterSlashings: b.AttesterSlashings,
-			Attestations:      b.Attestations,
-			Deposits:          b.Deposits,
-			VoluntaryExits:    b.VoluntaryExits,
-			SyncAggregate:     b.SyncAggregate,
-			ExecutionPayload:  b.ExecutionPayload,
+			RandaoReveal:      b.randaoReveal,
+			Eth1Data:          b.eth1Data,
+			Graffiti:          b.graffiti,
+			ProposerSlashings: b.proposerSlashings,
+			AttesterSlashings: b.attesterSlashings,
+			Attestations:      b.attestations,
+			Deposits:          b.deposits,
+			VoluntaryExits:    b.voluntaryExits,
+			SyncAggregate:     b.syncAggregate,
+			ExecutionPayload:  b.executionPayload,
 		}, nil
 	default:
 		return nil, errors.New("unsupported beacon block body version")

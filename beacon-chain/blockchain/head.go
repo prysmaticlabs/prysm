@@ -203,38 +203,52 @@ func (s *Service) saveHeadNoDB(ctx context.Context, b interfaces.SignedBeaconBlo
 		return nil
 	}
 
-	s.setHeadInitialSync(r, b.Copy(), hs)
+	cp, err := b.Copy()
+	if err != nil {
+		return errors.Wrap(err, "could not copy beacon block")
+	}
+	s.setHeadInitialSync(r, cp, hs)
 	return nil
 }
 
 // This sets head view object which is used to track the head slot, root, block and state.
-func (s *Service) setHead(root [32]byte, block interfaces.SignedBeaconBlock, state state.BeaconState) {
+func (s *Service) setHead(root [32]byte, block interfaces.SignedBeaconBlock, state state.BeaconState) error {
 	s.headLock.Lock()
 	defer s.headLock.Unlock()
 
 	// This does a full copy of the block and state.
+	blockCp, err := block.Copy()
+	if err != nil {
+		return errors.Wrap(err, "could not copy beacon block")
+	}
 	s.head = &head{
 		slot:  block.Block().Slot(),
 		root:  root,
-		block: block.Copy(),
+		block: blockCp,
 		state: state.Copy(),
 	}
+	return nil
 }
 
 // This sets head view object which is used to track the head slot, root, block and state. The method
 // assumes that state being passed into the method will not be modified by any other alternate
 // caller which holds the state's reference.
-func (s *Service) setHeadInitialSync(root [32]byte, block interfaces.SignedBeaconBlock, state state.BeaconState) {
+func (s *Service) setHeadInitialSync(root [32]byte, block interfaces.SignedBeaconBlock, state state.BeaconState) error {
 	s.headLock.Lock()
 	defer s.headLock.Unlock()
 
 	// This does a full copy of the block only.
+	blockCp, err := block.Copy()
+	if err != nil {
+		return errors.Wrap(err, "could not copy beacon block")
+	}
 	s.head = &head{
 		slot:  block.Block().Slot(),
 		root:  root,
-		block: block.Copy(),
+		block: blockCp,
 		state: state,
 	}
+	return nil
 }
 
 // This returns the head slot.
@@ -257,7 +271,7 @@ func (s *Service) headRoot() [32]byte {
 // This returns the head block.
 // It does a full copy on head block for immutability.
 // This is a lock free version.
-func (s *Service) headBlock() interfaces.SignedBeaconBlock {
+func (s *Service) headBlock() (interfaces.SignedBeaconBlock, error) {
 	return s.head.block.Copy()
 }
 

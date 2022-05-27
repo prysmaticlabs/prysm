@@ -15,7 +15,7 @@ type SignedBeaconBlock interface {
 	Block() BeaconBlock
 	Signature() []byte
 	IsNil() bool
-	Copy() SignedBeaconBlock
+	Copy() (SignedBeaconBlock, error)
 	Proto() proto.Message
 	PbGenericBlock() (*ethpb.GenericSignedBeaconBlock, error)
 	PbPhase0Block() (*ethpb.SignedBeaconBlock, error)
@@ -39,12 +39,12 @@ type BeaconBlock interface {
 	IsNil() bool
 	IsBlinded() bool
 	HashTreeRoot() ([32]byte, error)
-	Proto() proto.Message
+	Proto() (proto.Message, error)
 	ssz.Marshaler
 	ssz.Unmarshaler
 	ssz.HashRoot
 	Version() int
-	AsSignRequestObject() validatorpb.SignRequestObject
+	AsSignRequestObject() (validatorpb.SignRequestObject, error)
 }
 
 // BeaconBlockBody describes the method set employed by an object
@@ -61,7 +61,7 @@ type BeaconBlockBody interface {
 	SyncAggregate() (*ethpb.SyncAggregate, error)
 	IsNil() bool
 	HashTreeRoot() ([32]byte, error)
-	Proto() proto.Message
+	Proto() (proto.Message, error)
 	ExecutionPayload() (*enginev1.ExecutionPayload, error)
 	ExecutionPayloadHeader() (*ethpb.ExecutionPayloadHeader, error)
 }

@@ -257,11 +257,15 @@ func (v *validator) signBlock(ctx context.Context, pubKey [fieldparams.BLSPubkey
 	if err != nil {
 		return nil, [32]byte{}, errors.Wrap(err, signingRootErr)
 	}
+	obj, err := b.AsSignRequestObject()
+	if err != nil {
+		return nil, [32]byte{}, err
+	}
 	sig, err := v.keyManager.Sign(ctx, &validatorpb.SignRequest{
 		PublicKey:       pubKey[:],
 		SigningRoot:     blockRoot[:],
 		SignatureDomain: domain.SignatureDomain,
-		Object:          b.AsSignRequestObject(),
+		Object:          obj,
 		SigningSlot:     slot,
 	})
 	if err != nil {
