@@ -29,9 +29,9 @@ func Test_generateJWTSecret(t *testing.T) {
 		err := generateAuthSecretInFile(cliCtx)
 		// An error should return
 		require.ErrorContains(t, "is not a valid file path", err)
-		// and the junk file should not exist.
+		// when feeding junk, the call to os.Stat should fail
 		_, err = os.Stat(junk)
-		require.ErrorIs(t, err, os.ErrNotExist)
+		require.Equal(t, true, err != nil)
 	})
 	t.Run("should create proper file in current directory", func(t *testing.T) {
 		require.NoError(t, os.RemoveAll(secretFileName))
@@ -39,8 +39,8 @@ func Test_generateJWTSecret(t *testing.T) {
 			require.NoError(t, os.RemoveAll(secretFileName))
 		})
 		app := cli.App{}
+		// TODO: improve the developer experience of this NewFlagSet call, the intent of this isn't clear to me, and it probably won't be clear to others. meta: these comments are intentional ways to identify debt and todos so we can reduce risk/cost and improve clarity. before deleting, maybe we can align on how to track these todos?
 		set := flag.NewFlagSet("test", 0)
-
 		cliCtx := cli.NewContext(&app, set, nil)
 		err := generateAuthSecretInFile(cliCtx)
 		require.NoError(t, err)
