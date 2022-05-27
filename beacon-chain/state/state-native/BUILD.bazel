@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "doc.go",
+        "error.go",
         "getters_attestation.go",
         "getters_block.go",
         "getters_checkpoint.go",
@@ -54,6 +55,7 @@ go_library(
         "//tools/pcli:__pkg__",
     ],
     deps = [
+        "//beacon-chain/core/time:go_default_library",
         "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/fieldtrie:go_default_library",
         "//beacon-chain/state/state-native/custom-types:go_default_library",
@@ -83,6 +85,7 @@ go_test(
         "getters_attestation_test.go",
         "getters_block_test.go",
         "getters_checkpoint_test.go",
+        "getters_participation_test.go",
         "getters_test.go",
         "getters_validator_test.go",
         "hasher_test.go",
