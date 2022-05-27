@@ -5,7 +5,6 @@ import (
 	"math"
 	"testing"
 
-	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
@@ -88,130 +87,6 @@ func TestInitializeEpochValidators_BadState(t *testing.T) {
 	require.NoError(t, err)
 	_, _, err = InitializePrecomputeValidators(context.Background(), s)
 	require.ErrorContains(t, "num of validators is different than num of inactivity scores", err)
-}
-
-func TestUnrealizedCheckpoints(t *testing.T) {
-	validators := make([]*ethpb.Validator, params.BeaconConfig().MinGenesisActiveValidatorCount)
-	balances := make([]uint64, len(validators))
-	for i := 0; i < len(validators); i++ {
-		validators[i] = &ethpb.Validator{
-			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
-			EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
-		}
-		balances[i] = params.BeaconConfig().MaxEffectiveBalance
-	}
-	pjr := [32]byte{'p'}
-	cjr := [32]byte{'c'}
-	je := types.Epoch(3)
-	fe := types.Epoch(2)
-	pjcp := &ethpb.Checkpoint{Root: pjr[:], Epoch: fe}
-	cjcp := &ethpb.Checkpoint{Root: cjr[:], Epoch: je}
-	fcp := &ethpb.Checkpoint{Root: pjr[:], Epoch: fe}
-	tests := []struct {
-		name                                 string
-		slot                                 types.Slot
-		prevVals, currVals                   int
-		expectedJustified, expectedFinalized types.Epoch // The expected unrealized checkpoint epochs
-	}{
-		{
-			"Not enough votes, keep previous justification",
-			129,
-			len(validators) / 3,
-			len(validators) / 3,
-			je,
-			fe,
-		},
-		{
-			"Not enough votes, keep previous justification, N+2",
-			161,
-			len(validators) / 3,
-			len(validators) / 3,
-			je,
-			fe,
-		},
-		{
-			"Enough to justify previous epoch but not current",
-			129,
-			2*len(validators)/3 + 3,
-			len(validators) / 3,
-			je,
-			fe,
-		},
-		{
-			"Enough to justify previous epoch but not current, N+2",
-			161,
-			2*len(validators)/3 + 3,
-			len(validators) / 3,
-			je + 1,
-			fe,
-		},
-		{
-			"Enough to justify current epoch",
-			129,
-			len(validators) / 3,
-			2*len(validators)/3 + 3,
-			je + 1,
-			fe,
-		},
-		{
-			"Enough to justify current epoch, but not previous",
-			161,
-			len(validators) / 3,
-			2*len(validators)/3 + 3,
-			je + 2,
-			fe,
-		},
-		{
-			"Enough to justify current and previous",
-			161,
-			2*len(validators)/3 + 3,
-			2*len(validators)/3 + 3,
-			je + 2,
-			fe,
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			base := &ethpb.BeaconStateAltair{
-				RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-
-				Validators:                  validators,
-				Slot:                        test.slot,
-				CurrentEpochParticipation:   make([]byte, params.BeaconConfig().MinGenesisActiveValidatorCount),
-				PreviousEpochParticipation:  make([]byte, params.BeaconConfig().MinGenesisActiveValidatorCount),
-				Balances:                    balances,
-				PreviousJustifiedCheckpoint: pjcp,
-				CurrentJustifiedCheckpoint:  cjcp,
-				FinalizedCheckpoint:         fcp,
-				InactivityScores:            make([]uint64, len(validators)),
-				JustificationBits:           make(bitfield.Bitvector4, 1),
-			}
-			for i := 0; i < test.prevVals; i++ {
-				base.PreviousEpochParticipation[i] = 0xFF
-			}
-			for i := 0; i < test.currVals; i++ {
-				base.CurrentEpochParticipation[i] = 0xFF
-			}
-			if test.slot > 130 {
-				base.JustificationBits.SetBitAt(2, true)
-				base.JustificationBits.SetBitAt(3, true)
-			} else {
-				base.JustificationBits.SetBitAt(1, true)
-				base.JustificationBits.SetBitAt(2, true)
-			}
-
-			state, err := stateAltair.InitializeFromProto(base)
-			require.NoError(t, err)
-
-			_, _, err = InitializePrecomputeValidators(context.Background(), state)
-			require.NoError(t, err)
-
-			jc, fc, err := UnrealizedCheckpoints(state)
-			require.NoError(t, err)
-			require.DeepEqual(t, test.expectedJustified, jc.Epoch)
-			require.DeepEqual(t, test.expectedFinalized, fc.Epoch)
-		})
-	}
 }
 
 func TestProcessEpochParticipation(t *testing.T) {
