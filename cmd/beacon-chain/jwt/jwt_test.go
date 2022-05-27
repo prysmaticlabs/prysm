@@ -67,22 +67,25 @@ func Test_generateJWTSecret(t *testing.T) {
 		checkAuthFileIntegrity(t, customOutput)
 	})
 	t.Run("creates proper file in nested specified folder", func(t *testing.T) {
-		customOutput := filepath.Join("data", "nest", "nested", "item.txt")
-		require.NoError(t, os.RemoveAll(filepath.Dir(customOutput)))
+		rootDirectory := "data"
+		customOutputPath := filepath.Join(rootDirectory, "nest", "nested", "item.txt")
+		require.NoError(t, os.RemoveAll(filepath.Dir(customOutputPath)))
 		t.Cleanup(func() {
-			require.NoError(t, os.RemoveAll(filepath.Dir(customOutput)))
+			require.NoError(t, os.RemoveAll(rootDirectory))
+			_, err := os.Stat(customOutputPath)
+			require.Equal(t, true, err != nil)
 		})
 		app := cli.App{}
 		set := flag.NewFlagSet("test", 0)
-		set.String(cmd.JwtOutputFileFlag.Name, customOutput, "")
-		require.NoError(t, set.Set(cmd.JwtOutputFileFlag.Name, customOutput))
+		set.String(cmd.JwtOutputFileFlag.Name, customOutputPath, "")
+		require.NoError(t, set.Set(cmd.JwtOutputFileFlag.Name, customOutputPath))
 
 		cliCtx := cli.NewContext(&app, set, nil)
 		err := generateAuthSecretInFile(cliCtx)
 		require.NoError(t, err)
 
 		// We check the file has the contents we expect.
-		checkAuthFileIntegrity(t, customOutput)
+		checkAuthFileIntegrity(t, customOutputPath)
 	})
 }
 
