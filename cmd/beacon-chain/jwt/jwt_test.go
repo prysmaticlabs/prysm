@@ -3,53 +3,97 @@ package jwt
 import (
 	"flag"
 	"os"
+	"path/filepath"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/prysmaticlabs/prysm/cmd"
+	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/urfave/cli/v2"
 )
 
 func Test_generateJWTSecret(t *testing.T) {
-
-	// INFO: This was created as a simple test that I could use to verify that tests are working
-	//       can remove if useless
 	t.Run("command should be available", func(t *testing.T) {
 		generateJwtCommand := Commands
-		require.Equal(t, true, generateJwtCommand.Name == "generate-jwt-secret")
+		require.Equal(t, true, generateJwtCommand.Name == "generate-auth-secret")
 	})
-
-	t.Run("command should create file", func(t *testing.T) {
-		// DEBT: This "magic string" should exist in a config file that tests + other code read from
-		jwtFileName := "jwt.hex"
-
-		// INFO: By default, the token is created within the root `prysm` directory -> /prysm/jwt.hex
-		//       Because tests are executed within the jwt package directory, we can emulate default conditions by targeting /prysm/.
-		//       This will need to be updated if we change the folder structure, and this test can be hardened by ensuring the working directory is /prysm/.
-		jwtFileName = "../../../" + jwtFileName
-
-		// INFO: We're testing to ensure that the file gets created, so first we need to ensure that the file doesn't exist.
-		//       If it does exist, we delete it and ensure it's deleted.
-		// INFO: The Stat() function returns an object that contains file information. If the file doesn’t exist, Stat() returns an error object.
-		fileInfo, err := os.Stat(jwtFileName)
-		if fileInfo != nil || err == nil {
-			require.NoError(t, os.Remove(jwtFileName))
-			fileInfo, err = os.Stat(jwtFileName)
-			require.Equal(t, true, fileInfo == nil)
-			require.Equal(t, true, err != nil)
-		}
-
-		// then we create the stuff we need to run the command that creates the file
-		generateJwtCommand := Commands
+	t.Run("junk file path fails", func(t *testing.T) {
+		junk := "/adj$7@&  9a.\""
 		app := cli.App{}
-		set := flag.NewFlagSet("test", 0) // <- not sure what this is or why it's needed, but without it, I get a panic. Possible to update the description and/or pattern to make the intent of this clearer to new devs like me?
-		context := cli.NewContext(&app, set, nil)
-		err = generateJwtCommand.Run(context) // <- hanging here, never hit breakpoint at :56
-		require.NoError(t, err)
-		fileInfo, err = os.Stat(jwtFileName)
-		require.NoError(t, err)
-		require.Equal(t, true, fileInfo != nil)
+		set := flag.NewFlagSet("test", 0)
+		set.String(cmd.JwtOutputFileFlag.Name, junk, "")
+		require.NoError(t, set.Set(cmd.JwtOutputFileFlag.Name, junk))
 
+		cliCtx := cli.NewContext(&app, set, nil)
+		err := generateAuthSecretInFile(cliCtx)
+		// An error should return
+		require.ErrorContains(t, "is not a valid file path", err)
+		// and the junk file should not exist.
+		_, err = os.Stat(junk)
+		require.ErrorIs(t, err, os.ErrNotExist)
 	})
+	t.Run("should create proper file in current directory", func(t *testing.T) {
+		require.NoError(t, os.RemoveAll(secretFileName))
+		t.Cleanup(func() {
+			require.NoError(t, os.RemoveAll(secretFileName))
+		})
+		app := cli.App{}
+		set := flag.NewFlagSet("test", 0)
 
-	// TODO: // ensure length is what we expect: https://github.com/ethereum/execution-apis/issues/162
+		cliCtx := cli.NewContext(&app, set, nil)
+		err := generateAuthSecretInFile(cliCtx)
+		require.NoError(t, err)
+
+		// We check the file has the contents we expect.
+		checkAuthFileIntegrity(t, secretFileName)
+	})
+	t.Run("should create proper file in specified folder", func(t *testing.T) {
+		customOutput := filepath.Join("data", "item.txt")
+		require.NoError(t, os.RemoveAll(filepath.Dir(customOutput)))
+		t.Cleanup(func() {
+			require.NoError(t, os.RemoveAll(filepath.Dir(customOutput)))
+		})
+		app := cli.App{}
+		set := flag.NewFlagSet("test", 0)
+		set.String(cmd.JwtOutputFileFlag.Name, customOutput, "")
+		require.NoError(t, set.Set(cmd.JwtOutputFileFlag.Name, customOutput))
+
+		cliCtx := cli.NewContext(&app, set, nil)
+		err := generateAuthSecretInFile(cliCtx)
+		require.NoError(t, err)
+
+		// We check the file has the contents we expect.
+		checkAuthFileIntegrity(t, customOutput)
+	})
+	t.Run("creates proper file in nested specified folder", func(t *testing.T) {
+		customOutput := filepath.Join("data", "nest", "nested", "item.txt")
+		require.NoError(t, os.RemoveAll(filepath.Dir(customOutput)))
+		t.Cleanup(func() {
+			require.NoError(t, os.RemoveAll(filepath.Dir(customOutput)))
+		})
+		app := cli.App{}
+		set := flag.NewFlagSet("test", 0)
+		set.String(cmd.JwtOutputFileFlag.Name, customOutput, "")
+		require.NoError(t, set.Set(cmd.JwtOutputFileFlag.Name, customOutput))
+
+		cliCtx := cli.NewContext(&app, set, nil)
+		err := generateAuthSecretInFile(cliCtx)
+		require.NoError(t, err)
+
+		// We check the file has the contents we expect.
+		checkAuthFileIntegrity(t, customOutput)
+	})
+}
+
+func checkAuthFileIntegrity(t testing.TB, fPath string) {
+	fileInfo, err := os.Stat(fPath)
+	require.NoError(t, err)
+	require.Equal(t, true, fileInfo != nil)
+
+	enc, err := file.ReadFileAsBytes(fPath)
+	require.NoError(t, err)
+	decoded, err := hexutil.Decode(string(enc))
+	require.NoError(t, err)
+	require.Equal(t, 32, len(decoded))
 }

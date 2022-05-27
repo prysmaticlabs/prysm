@@ -3,7 +3,7 @@ package endtoend
 import "testing"
 
 func TestEndToEnd_ScenarioRun_BeaconOffline(t *testing.T) {
-	runner := e2eMinimal(t, false, 0)
+	runner := e2eMinimal(t)
 
 	runner.config.Evaluators = scenarioEvals()
 	runner.config.EvalInterceptor = runner.singleNodeOffline
@@ -11,7 +11,7 @@ func TestEndToEnd_ScenarioRun_BeaconOffline(t *testing.T) {
 }
 
 func TestEndToEnd_ScenarioRun_AllvalidatorsOffline(t *testing.T) {
-	runner := e2eMinimal(t, false, 0)
+	runner := e2eMinimal(t)
 
 	runner.config.Evaluators = scenarioEvals()
 	runner.config.EvalInterceptor = runner.allValidatorsOffline
@@ -20,7 +20,7 @@ func TestEndToEnd_ScenarioRun_AllvalidatorsOffline(t *testing.T) {
 
 func TestEndToEnd_ScenarioRun_EEOffline(t *testing.T) {
 	t.Skip("TODO(#10242) Prysm is current unable to handle an offline e2e")
-	runner := e2eMinimal(t, false, 0)
+	runner := e2eMinimal(t)
 
 	runner.config.Evaluators = scenarioEvals()
 	runner.config.EvalInterceptor = runner.eeOffline

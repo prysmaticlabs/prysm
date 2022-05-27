@@ -14,10 +14,10 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
-func e2eMinimal(t *testing.T, useWeb3RemoteSigner bool, extraEpochs uint64) *testRunner {
+func e2eMinimal(t *testing.T, cfgo ...types.E2EConfigOpt) *testRunner {
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.E2ETestConfig().Copy())
-	require.NoError(t, e2eParams.Init(e2eParams.StandardBeaconCount))
+	require.NoError(t, e2eParams.Init(t, e2eParams.StandardBeaconCount))
 
 	// Run for 12 epochs if not in long-running to confirm long-running has no issues.
 	var err error
@@ -74,12 +74,13 @@ func e2eMinimal(t *testing.T, useWeb3RemoteSigner bool, extraEpochs uint64) *tes
 		TestDeposits:        true,
 		UsePrysmShValidator: false,
 		UsePprof:            !longRunning,
-		UseWeb3RemoteSigner: useWeb3RemoteSigner,
 		TracingSinkEndpoint: tracingEndpoint,
 		Evaluators:          evals,
 		EvalInterceptor:     defaultInterceptor,
 		Seed:                int64(seed),
-		ExtraEpochs:         extraEpochs,
+	}
+	for _, o := range cfgo {
+		o(testConfig)
 	}
 
 	return newTestRunner(t, testConfig)
@@ -89,9 +90,9 @@ func e2eMainnet(t *testing.T, usePrysmSh, useMultiClient bool) *testRunner {
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.E2EMainnetTestConfig())
 	if useMultiClient {
-		require.NoError(t, e2eParams.InitMultiClient(e2eParams.StandardBeaconCount, e2eParams.StandardLighthouseNodeCount))
+		require.NoError(t, e2eParams.InitMultiClient(t, e2eParams.StandardBeaconCount, e2eParams.StandardLighthouseNodeCount))
 	} else {
-		require.NoError(t, e2eParams.Init(e2eParams.StandardBeaconCount))
+		require.NoError(t, e2eParams.Init(t, e2eParams.StandardBeaconCount))
 	}
 	// Run for 10 epochs if not in long-running to confirm long-running has no issues.
 	var err error
@@ -165,7 +166,6 @@ func scenarioEvals() []types.Evaluator {
 		ev.MetricsCheck,
 		ev.ValidatorsParticipatingAtEpoch(2),
 		ev.FinalizationOccurs(3),
-		ev.PeersCheck,
 		ev.VerifyBlockGraffiti,
 		ev.ProposeVoluntaryExit,
 		ev.ValidatorHasExited,
@@ -177,5 +177,24 @@ func scenarioEvals() []types.Evaluator {
 		ev.FinishedSyncing,
 		ev.AllNodesHaveSameHead,
 		ev.ValidatorSyncParticipation,
+	}
+}
+
+func scenarioEvalsMulti() []types.Evaluator {
+	return []types.Evaluator{
+		ev.PeersConnect,
+		ev.HealthzCheck,
+		ev.MetricsCheck,
+		ev.ValidatorsParticipatingAtEpoch(2),
+		ev.FinalizationOccurs(3),
+		ev.ProposeVoluntaryExit,
+		ev.ValidatorHasExited,
+		ev.ColdStateCheckpoint,
+		ev.AltairForkTransition,
+		ev.BellatrixForkTransition,
+		ev.APIMiddlewareVerifyIntegrity,
+		ev.APIGatewayV1Alpha1VerifyIntegrity,
+		ev.FinishedSyncing,
+		ev.AllNodesHaveSameHead,
 	}
 }

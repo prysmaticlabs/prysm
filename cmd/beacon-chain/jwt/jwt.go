@@ -9,68 +9,71 @@ import (
 	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
 	"github.com/prysmaticlabs/prysm/io/file"
-	"github.com/prysmaticlabs/prysm/runtime/tos"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
 
-var log = logrus.WithField("prefix", "jwt")
+const (
+	secretFileName = "jwt.hex"
+)
 
 var Commands = &cli.Command{
-	Name:        "generate-jwt-secret",
-	Usage:       "creates a random 32 byte hex string in a plaintext file to be used for authenticating JSON-RPC requests. If no --output-file flag is defined, the file will be created in the current working directory",
-	Description: `creates a random 32 byte hex string in a plaintext file to be used for authenticating JSON-RPC requests. If no --output-file flag is defined, the file will be created in the current working directory`,
+	Name:        "generate-auth-secret",
+	Usage:       "creates a random, 32 byte hex string in a plaintext file to be used for authenticating JSON-RPC requests. If no --output-file flag is defined, the file will be created in the current working directory",
+	Description: `creates a random, 32 byte hex string in a plaintext file to be used for authenticating JSON-RPC requests. If no --output-file flag is defined, the file will be created in the current working directory`,
 	Flags: cmd.WrapFlags([]cli.Flag{
 		cmd.JwtOutputFileFlag,
 	}),
-	Before: tos.VerifyTosAcceptedOrPrompt,
-	Action: func(cliCtx *cli.Context) error {
-		specifiedFilePath := cliCtx.String(cmd.JwtOutputFileFlag.Name)
-		if err := generateHttpSecretInFile(specifiedFilePath); err != nil {
-			log.Printf("Could not generate secret: %v", err)
-		}
-		return nil
-	},
+	Action: generateAuthSecretInFile,
 }
 
-func generateHttpSecretInFile(specifiedFilePath string) error {
-	// DEBT: this "magic string" should exist in a config file that tests + other code read from
-	jwtFileName := "secret.jwt"
+func generateAuthSecretInFile(c *cli.Context) error {
+	fileName := secretFileName
+	specifiedFilePath := c.String(cmd.JwtOutputFileFlag.Name)
 	if len(specifiedFilePath) > 0 {
-		jwtFileName = specifiedFilePath
+		fileName = specifiedFilePath
 	}
-
-	secret, err := generateRandom32ByteHexString()
+	var err error
+	fileName, err = file.ExpandPath(fileName)
 	if err != nil {
 		return err
 	}
-
-	// decided to convert to string then back to bytes for easy debugging
-	err = file.WriteFile(jwtFileName, []byte(secret))
+	fileDir := filepath.Dir(fileName)
+	exists, err := file.HasDir(fileDir)
 	if err != nil {
 		return err
 	}
-
-	jwtPath, err := filepath.Abs(jwtFileName)
-	if err == nil {
-		fmt.Println("JWT token file path:", jwtPath)
-	} else {
+	if !exists {
+		if err := file.MkdirAll(fileDir); err != nil {
+			return err
+		}
+	}
+	isValidPath, err := file.IsValidFilePath(fileName)
+	if err != nil {
 		return err
 	}
-
+	if !isValidPath {
+		return fmt.Errorf("%s is not a valid file path", fileName)
+	}
+	secret, err := generateRandomHexString()
+	if err != nil {
+		return err
+	}
+	if err := file.WriteFile(fileName, []byte(secret)); err != nil {
+		return err
+	}
+	logrus.Infof("Successfully wrote JSON-RPC authentication secret to file %s", fileName)
 	return nil
 }
 
-func generateRandom32ByteHexString() (string, error) {
-	blocks := make([]byte, 32)
+func generateRandomHexString() (string, error) {
+	secret := make([]byte, 32)
 	randGen := rand.NewGenerator()
-	blocksLength, err := randGen.Read(blocks)
-
+	n, err := randGen.Read(secret)
 	if err != nil {
 		return "", err
-	} else if blocksLength <= 0 {
+	} else if n <= 0 {
 		return "", errors.New("rand: unexpected length")
 	}
-
-	return hexutil.Encode(blocks), nil
+	return hexutil.Encode(secret), nil
 }

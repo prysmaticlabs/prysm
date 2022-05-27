@@ -118,7 +118,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 	}
 	isValidPayload, err := s.notifyNewPayload(ctx, postStateVersion, postStateHeader, signed)
 	if err != nil {
-		return errors.Wrap(err, "could not verify new payload")
+		return fmt.Errorf("could not verify new payload: %v", err)
 	}
 	if isValidPayload {
 		if err := s.validateMergeTransitionBlock(ctx, preStateVersion, preStateHeader, signed); err != nil {
