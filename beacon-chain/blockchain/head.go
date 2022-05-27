@@ -133,10 +133,12 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte, headBlock int
 	}
 
 	// A chain re-org occurred, so we fire an event notifying the rest of the services.
-	headSlot := s.HeadSlot()
-	newHeadSlot := headBlock.Block().Slot()
+	s.headLock.RLock()
 	oldHeadRoot := s.headRoot()
 	oldStateRoot := s.headBlock().Block().StateRoot()
+	s.headLock.RUnlock()
+	headSlot := s.HeadSlot()
+	newHeadSlot := headBlock.Block().Slot()
 	newStateRoot := headBlock.Block().StateRoot()
 	if bytesutil.ToBytes32(headBlock.Block().ParentRoot()) != bytesutil.ToBytes32(r) {
 		log.WithFields(logrus.Fields{
