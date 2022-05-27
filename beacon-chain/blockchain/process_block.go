@@ -118,7 +118,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 	}
 	isValidPayload, err := s.notifyNewPayload(ctx, postStateVersion, postStateHeader, signed)
 	if err != nil {
-		return errors.Wrap(err, "could not verify new payload")
+		return fmt.Errorf("could not verify new payload: %v", err)
 	}
 	if isValidPayload {
 		if err := s.validateMergeTransitionBlock(ctx, preStateVersion, preStateHeader, signed); err != nil {
@@ -544,9 +544,13 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState state.Beaco
 			return err
 		}
 	} else if postState.Slot() >= s.nextEpochBoundarySlot {
-		if err := reportEpochMetrics(ctx, postState, s.head.state); err != nil {
+		s.headLock.RLock()
+		st := s.head.state
+		s.headLock.RUnlock()
+		if err := reportEpochMetrics(ctx, postState, st); err != nil {
 			return err
 		}
+
 		var err error
 		s.nextEpochBoundarySlot, err = slots.EpochStart(coreTime.NextEpoch(postState))
 		if err != nil {
