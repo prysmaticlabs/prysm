@@ -77,7 +77,9 @@ func (s *Service) validateMergeBlock(ctx context.Context, b interfaces.SignedBea
 		"mergeBlockTotalDifficulty":       mergeBlockTD,
 		"mergeBlockParentTotalDifficulty": mergeBlockParentTD,
 	}).Info("Validated terminal block")
-
+	
+	log.Info(MergeAsciiArt)
+	
 	return nil
 }
 
