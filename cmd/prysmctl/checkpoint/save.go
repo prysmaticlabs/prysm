@@ -17,7 +17,7 @@ var saveFlags = struct {
 
 var saveCmd = &cli.Command{
 	Name:   "save",
-	Usage:  "Query for the current weak subjectivity period epoch, then download the corresponding state and block. To be used for checkpoint sync.",
+	Usage:  "Save the latest finalized header and the most recent block it integrates. To be used for checkpoint sync.",
 	Action: cliActionSave,
 	Flags: []cli.Flag{
 		&cli.StringFlag{
@@ -50,7 +50,7 @@ func cliActionSave(_ *cli.Context) error {
 		return err
 	}
 
-	od, err := beacon.DownloadOriginData(ctx, client)
+	od, err := beacon.DownloadFinalizedData(ctx, client)
 	if err != nil {
 		return err
 	}

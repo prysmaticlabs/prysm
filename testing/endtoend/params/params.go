@@ -6,11 +6,14 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"strconv"
+	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/prysmaticlabs/prysm/io/file"
 )
 
 // params struct defines the parameters needed for running E2E tests to properly handle test sharding.
@@ -105,11 +108,15 @@ const (
 )
 
 // Init initializes the E2E config, properly handling test sharding.
-func Init(beaconNodeCount int) error {
+func Init(t *testing.T, beaconNodeCount int) error {
 	testPath := bazel.TestTmpDir()
 	logPath, ok := os.LookupEnv("TEST_UNDECLARED_OUTPUTS_DIR")
 	if !ok {
 		return errors.New("expected TEST_UNDECLARED_OUTPUTS_DIR to be defined")
+	}
+	logPath = path.Join(logPath, t.Name())
+	if err := file.MkdirAll(logPath); err != nil {
+		return err
 	}
 	testTotalShardsStr, ok := os.LookupEnv("TEST_TOTAL_SHARDS")
 	if !ok {
@@ -146,11 +153,15 @@ func Init(beaconNodeCount int) error {
 }
 
 // InitMultiClient initializes the multiclient E2E config, properly handling test sharding.
-func InitMultiClient(beaconNodeCount int, lighthouseNodeCount int) error {
+func InitMultiClient(t *testing.T, beaconNodeCount int, lighthouseNodeCount int) error {
 	testPath := bazel.TestTmpDir()
 	logPath, ok := os.LookupEnv("TEST_UNDECLARED_OUTPUTS_DIR")
 	if !ok {
 		return errors.New("expected TEST_UNDECLARED_OUTPUTS_DIR to be defined")
+	}
+	logPath = path.Join(logPath, t.Name())
+	if err := file.MkdirAll(logPath); err != nil {
+		return err
 	}
 	testTotalShardsStr, ok := os.LookupEnv("TEST_TOTAL_SHARDS")
 	if !ok {
