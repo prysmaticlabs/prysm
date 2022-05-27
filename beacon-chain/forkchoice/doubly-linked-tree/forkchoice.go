@@ -395,11 +395,11 @@ func (f *ForkChoice) CommonAncestorRoot(ctx context.Context, r1 [32]byte, r2 [32
 	defer f.store.nodesLock.RUnlock()
 
 	n1, ok := f.store.nodeByRoot[r1]
-	if !ok {
+	if !ok || n1 == nil {
 		return [32]byte{}, ErrNilNode
 	}
 	n2, ok := f.store.nodeByRoot[r2]
-	if !ok {
+	if !ok || n2 == nil {
 		return [32]byte{}, ErrNilNode
 	}
 
@@ -420,7 +420,7 @@ func (f *ForkChoice) CommonAncestorRoot(ctx context.Context, r1 [32]byte, r2 [32
 				return [32]byte{}, forkchoice.ErrUnknownCommonAncestor
 			}
 		}
-		if n1.root == n2.root {
+		if n1 == n2 {
 			return n1.root, nil
 		}
 	}
