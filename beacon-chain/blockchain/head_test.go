@@ -276,7 +276,7 @@ func TestSaveOrphanedAtts_NoCommonAncestor(t *testing.T) {
 	for _, blk := range []*ethpb.SignedBeaconBlock{blkG, blk1, blk2, blk3, blk4} {
 		r, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
-		service.ForkChoicer().InsertOptimisticBlock(ctx, blk.Block.Slot, r, bytesutil.ToBytes32(blk.Block.ParentRoot), [32]byte{}, 0, 0)
+		require.NoError(t, service.ForkChoicer().InsertOptimisticBlock(ctx, blk.Block.Slot, r, bytesutil.ToBytes32(blk.Block.ParentRoot), [32]byte{}, 0, 0))
 		b, err := wrapper.WrappedSignedBeaconBlock(blk)
 		require.NoError(t, err)
 		require.NoError(t, beaconDB.SaveBlock(ctx, b))
