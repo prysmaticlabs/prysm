@@ -376,6 +376,10 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk interfa
 		higherThanFinalized = slot > fSlot
 	}
 
+	if len(pendingRoots) > 0 && pendingRoots[len(pendingRoots)-1] != bytesutil.ToBytes32(finalized.Root) {
+		return errNotDescendantOfFinalized
+	}
+
 	// Insert parent nodes to fork choice store in reverse order.
 	// Lower slots should be at the end of the list.
 	for i := len(pendingNodes) - 1; i >= 0; i-- {

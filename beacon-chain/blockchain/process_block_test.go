@@ -730,7 +730,6 @@ func TestFillForkChoiceMissingBlocks_CanSave_ProtoArray(t *testing.T) {
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 	service.cfg.ForkChoiceStore = protoarray.New(0, 0)
-	service.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{Root: make([]byte, 32)}, [32]byte{})
 
 	genesisStateRoot := [32]byte{}
 	genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
@@ -753,12 +752,15 @@ func TestFillForkChoiceMissingBlocks_CanSave_ProtoArray(t *testing.T) {
 	wsb, err = wrapper.WrappedSignedBeaconBlock(blk)
 	require.NoError(t, err)
 
+	service.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{Root: roots[0]}, [32]byte{})
 	err = service.fillInForkChoiceMissingBlocks(
 		context.Background(), wsb.Block(), beaconState.FinalizedCheckpoint(), beaconState.CurrentJustifiedCheckpoint())
 	require.NoError(t, err)
 
 	// 5 nodes from the block tree 1. B0 - B3 - B4 - B6 - B8
 	assert.Equal(t, 5, service.cfg.ForkChoiceStore.NodeCount(), "Miss match nodes")
+	assert.Equal(t, true, service.cfg.ForkChoiceStore.HasNode(bytesutil.ToBytes32(roots[0])), "Didn't save node")
+	assert.Equal(t, true, service.cfg.ForkChoiceStore.HasNode(bytesutil.ToBytes32(roots[3])), "Didn't save node")
 	assert.Equal(t, true, service.cfg.ForkChoiceStore.HasNode(bytesutil.ToBytes32(roots[4])), "Didn't save node")
 	assert.Equal(t, true, service.cfg.ForkChoiceStore.HasNode(bytesutil.ToBytes32(roots[6])), "Didn't save node")
 	assert.Equal(t, true, service.cfg.ForkChoiceStore.HasNode(bytesutil.ToBytes32(roots[8])), "Didn't save node")
@@ -775,7 +777,6 @@ func TestFillForkChoiceMissingBlocks_CanSave_DoublyLinkedTree(t *testing.T) {
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 	service.cfg.ForkChoiceStore = doublylinkedtree.New(0, 0)
-	service.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{Root: make([]byte, 32)}, [32]byte{})
 
 	genesisStateRoot := [32]byte{}
 	genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
@@ -799,12 +800,15 @@ func TestFillForkChoiceMissingBlocks_CanSave_DoublyLinkedTree(t *testing.T) {
 	wsb, err = wrapper.WrappedSignedBeaconBlock(blk)
 	require.NoError(t, err)
 
+	service.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{Root: roots[0]}, [32]byte{})
 	err = service.fillInForkChoiceMissingBlocks(
 		context.Background(), wsb.Block(), beaconState.FinalizedCheckpoint(), beaconState.CurrentJustifiedCheckpoint())
 	require.NoError(t, err)
 
 	// 5 nodes from the block tree 1. B0 - B3 - B4 - B6 - B8
 	assert.Equal(t, 5, service.cfg.ForkChoiceStore.NodeCount(), "Miss match nodes")
+	assert.Equal(t, true, service.cfg.ForkChoiceStore.HasNode(bytesutil.ToBytes32(roots[0])), "Didn't save node")
+	assert.Equal(t, true, service.cfg.ForkChoiceStore.HasNode(bytesutil.ToBytes32(roots[3])), "Didn't save node")
 	assert.Equal(t, true, service.cfg.ForkChoiceStore.HasNode(bytesutil.ToBytes32(roots[4])), "Didn't save node")
 	assert.Equal(t, true, service.cfg.ForkChoiceStore.HasNode(bytesutil.ToBytes32(roots[6])), "Didn't save node")
 	assert.Equal(t, true, service.cfg.ForkChoiceStore.HasNode(bytesutil.ToBytes32(roots[8])), "Didn't save node")
@@ -821,7 +825,6 @@ func TestFillForkChoiceMissingBlocks_RootsMatch_ProtoArray(t *testing.T) {
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 	service.cfg.ForkChoiceStore = protoarray.New(0, 0)
-	service.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{Root: make([]byte, 32)}, [32]byte{})
 
 	genesisStateRoot := [32]byte{}
 	genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
@@ -845,6 +848,7 @@ func TestFillForkChoiceMissingBlocks_RootsMatch_ProtoArray(t *testing.T) {
 	wsb, err = wrapper.WrappedSignedBeaconBlock(blk)
 	require.NoError(t, err)
 
+	service.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{Root: roots[0]}, [32]byte{})
 	err = service.fillInForkChoiceMissingBlocks(
 		context.Background(), wsb.Block(), beaconState.FinalizedCheckpoint(), beaconState.CurrentJustifiedCheckpoint())
 	require.NoError(t, err)
@@ -870,7 +874,6 @@ func TestFillForkChoiceMissingBlocks_RootsMatch_DoublyLinkedTree(t *testing.T) {
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 	service.cfg.ForkChoiceStore = doublylinkedtree.New(0, 0)
-	service.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{Root: make([]byte, 32)}, [32]byte{})
 
 	genesisStateRoot := [32]byte{}
 	genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
@@ -894,6 +897,7 @@ func TestFillForkChoiceMissingBlocks_RootsMatch_DoublyLinkedTree(t *testing.T) {
 	wsb, err = wrapper.WrappedSignedBeaconBlock(blk)
 	require.NoError(t, err)
 
+	service.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{Root: roots[0]}, [32]byte{})
 	err = service.fillInForkChoiceMissingBlocks(
 		context.Background(), wsb.Block(), beaconState.FinalizedCheckpoint(), beaconState.CurrentJustifiedCheckpoint())
 	require.NoError(t, err)
@@ -919,8 +923,6 @@ func TestFillForkChoiceMissingBlocks_FilterFinalized_ProtoArray(t *testing.T) {
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 	service.cfg.ForkChoiceStore = protoarray.New(0, 0)
-	// Set finalized epoch to 1.
-	service.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{Epoch: 1}, [32]byte{})
 
 	genesisStateRoot := [32]byte{}
 	genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
@@ -958,6 +960,8 @@ func TestFillForkChoiceMissingBlocks_FilterFinalized_ProtoArray(t *testing.T) {
 	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
 
 	beaconState, _ := util.DeterministicGenesisState(t, 32)
+	// Set finalized epoch to 1.
+	service.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{Epoch: 1, Root: r63[:]}, [32]byte{})
 	err = service.fillInForkChoiceMissingBlocks(
 		context.Background(), wsb.Block(), beaconState.FinalizedCheckpoint(), beaconState.CurrentJustifiedCheckpoint())
 	require.NoError(t, err)
@@ -980,8 +984,6 @@ func TestFillForkChoiceMissingBlocks_FilterFinalized_DoublyLinkedTree(t *testing
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 	service.cfg.ForkChoiceStore = doublylinkedtree.New(0, 0)
-	// Set finalized epoch to 1.
-	service.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{Epoch: 1}, [32]byte{})
 
 	genesisStateRoot := [32]byte{}
 	genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
@@ -1019,6 +1021,9 @@ func TestFillForkChoiceMissingBlocks_FilterFinalized_DoublyLinkedTree(t *testing
 	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
 
 	beaconState, _ := util.DeterministicGenesisState(t, 32)
+
+	// Set finalized epoch to 1.
+	service.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{Epoch: 1, Root: r63[:]}, [32]byte{})
 	err = service.fillInForkChoiceMissingBlocks(
 		context.Background(), wsb.Block(), beaconState.FinalizedCheckpoint(), beaconState.CurrentJustifiedCheckpoint())
 	require.NoError(t, err)
@@ -1030,11 +1035,50 @@ func TestFillForkChoiceMissingBlocks_FilterFinalized_DoublyLinkedTree(t *testing
 	assert.Equal(t, true, service.cfg.ForkChoiceStore.HasNode(r63), "Didn't save node")
 }
 
+func TestFillForkChoiceMissingBlocks_FinalizedSibling_DoublyLinkedTree(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithStateGen(stategen.New(beaconDB)),
+	}
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+	service.cfg.ForkChoiceStore = doublylinkedtree.New(0, 0)
+
+	genesisStateRoot := [32]byte{}
+	genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
+	wsb, err := wrapper.WrappedSignedBeaconBlock(genesis)
+	require.NoError(t, err)
+	require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
+	validGenesisRoot, err := genesis.Block.HashTreeRoot()
+	require.NoError(t, err)
+	st, err := util.NewBeaconState()
+	require.NoError(t, err)
+
+	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, st.Copy(), validGenesisRoot))
+	roots, err := blockTree1(t, beaconDB, validGenesisRoot[:])
+	require.NoError(t, err)
+
+	beaconState, _ := util.DeterministicGenesisState(t, 32)
+	blk := util.NewBeaconBlock()
+	blk.Block.Slot = 9
+	blk.Block.ParentRoot = roots[8]
+
+	wsb, err = wrapper.WrappedSignedBeaconBlock(blk)
+	require.NoError(t, err)
+
+	service.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{Root: roots[1]}, [32]byte{})
+	err = service.fillInForkChoiceMissingBlocks(
+		context.Background(), wsb.Block(), beaconState.FinalizedCheckpoint(), beaconState.CurrentJustifiedCheckpoint())
+	require.ErrorIs(t, errNotDescendantOfFinalized, err)
+}
+
 // blockTree1 constructs the following tree:
 //    /- B1
 // B0           /- B5 - B7
 //    \- B3 - B4 - B6 - B8
-// (B1, and B3 are all from the same slots)
 func blockTree1(t *testing.T, beaconDB db.Database, genesisRoot []byte) ([][]byte, error) {
 	genesisRoot = bytesutil.PadTo(genesisRoot, 32)
 	b0 := util.NewBeaconBlock()
