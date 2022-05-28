@@ -15,6 +15,11 @@ func (*BeaconState) PreviousEpochParticipation() ([]byte, error) {
 	return nil, errors.New("PreviousEpochParticipation is not supported for phase 0 beacon state")
 }
 
+// UnrealizedCheckpointBalances is not supported for phase 0 beacon state.
+func (*BeaconState) UnrealizedCheckpointBalances() (uint64, uint64, uint64, error) {
+	return 0, 0, 0, errors.New("UnrealizedCheckpointBalances is not supported for phase0 beacon state")
+}
+
 // InactivityScores is not supported for phase 0 beacon state.
 func (*BeaconState) InactivityScores() ([]uint64, error) {
 	return nil, errors.New("InactivityScores is not supported for phase 0 beacon state")

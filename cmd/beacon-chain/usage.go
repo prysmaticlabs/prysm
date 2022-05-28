@@ -137,6 +137,9 @@ var appHelpFlagGroups = []flagGroup{
 		Name: "merge",
 		Flags: []cli.Flag{
 			flags.SuggestedFeeRecipient,
+			flags.TerminalTotalDifficultyOverride,
+			flags.TerminalBlockHashOverride,
+			flags.TerminalBlockHashActivationEpochOverride,
 		},
 	},
 	{
