@@ -108,7 +108,7 @@ func (f *ForkChoice) ProcessAttestation(ctx context.Context, validatorIndices []
 }
 
 // InsertOptimisticBlock processes a new block by inserting it to the fork choice store.
-func (f *ForkChoice) InsertOptimisticBlock(ctx context.Context, state state.BeaconState) error {
+func (f *ForkChoice) InsertOptimisticBlock(ctx context.Context, state state.ReadOnlyBeaconState) error {
 	ctx, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.InsertOptimisticBlock")
 	defer span.End()
 

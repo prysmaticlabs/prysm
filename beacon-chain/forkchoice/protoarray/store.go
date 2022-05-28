@@ -120,7 +120,7 @@ func (f *ForkChoice) ProposerBoost() [fieldparams.RootLength]byte {
 }
 
 // InsertOptimisticBlock processes a new block by inserting it to the fork choice store.
-func (f *ForkChoice) InsertOptimisticBlock(ctx context.Context, state state.BeaconState) error {
+func (f *ForkChoice) InsertOptimisticBlock(ctx context.Context, state state.ReadOnlyBeaconState) error {
 	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.InsertOptimisticBlock")
 	defer span.End()
 
