@@ -915,3 +915,8 @@ func (mr *MockBeaconNodeValidator_StreamDutiesClientMockRecorder) Trailer() *gom
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Trailer", reflect.TypeOf((*MockBeaconNodeValidator_StreamDutiesClient)(nil).Trailer))
 }
+
+// SubmitValidatorRegistration mocks base method
+func (m *MockBeaconNodeValidatorClient) SubmitValidatorRegistration(ctx context.Context, in *eth.SignedValidatorRegistrationV1, opts ...grpc.CallOption) (*empty.Empty, error) {
+	return nil, nil
+}
