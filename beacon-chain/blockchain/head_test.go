@@ -52,6 +52,8 @@ func TestSaveHead_Different(t *testing.T) {
 	require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), oldBlock))
 	oldRoot, err := oldBlock.Block().HashTreeRoot()
 	require.NoError(t, err)
+	require.NoError(t, service.cfg.ForkChoiceStore.InsertOptimisticBlock(
+		ctx, oldBlock.Block().Slot(), oldRoot, bytesutil.ToBytes32(oldBlock.Block().ParentRoot()), [32]byte{}, 0, 0))
 	service.head = &head{
 		slot:  0,
 		root:  oldRoot,
@@ -67,6 +69,8 @@ func TestSaveHead_Different(t *testing.T) {
 	require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), wsb))
 	newRoot, err := newHeadBlock.HashTreeRoot()
 	require.NoError(t, err)
+	require.NoError(t, service.cfg.ForkChoiceStore.InsertOptimisticBlock(
+		ctx, wsb.Block().Slot(), newRoot, bytesutil.ToBytes32(wsb.Block().ParentRoot()), [32]byte{}, 0, 0))
 	headState, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, headState.SetSlot(1))
@@ -96,6 +100,8 @@ func TestSaveHead_Different_Reorg(t *testing.T) {
 	require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), oldBlock))
 	oldRoot, err := oldBlock.Block().HashTreeRoot()
 	require.NoError(t, err)
+	require.NoError(t, service.cfg.ForkChoiceStore.InsertOptimisticBlock(
+		ctx, oldBlock.Block().Slot(), oldRoot, bytesutil.ToBytes32(oldBlock.Block().ParentRoot()), [32]byte{}, 0, 0))
 	service.head = &head{
 		slot:  0,
 		root:  oldRoot,
@@ -113,6 +119,8 @@ func TestSaveHead_Different_Reorg(t *testing.T) {
 	require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), wsb))
 	newRoot, err := newHeadBlock.HashTreeRoot()
 	require.NoError(t, err)
+	require.NoError(t, service.cfg.ForkChoiceStore.InsertOptimisticBlock(
+		ctx, wsb.Block().Slot(), newRoot, bytesutil.ToBytes32(wsb.Block().ParentRoot()), [32]byte{}, 0, 0))
 	headState, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, headState.SetSlot(1))
