@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "deprecated_getters.go",
         "deprecated_setters.go",
+        "error.go",
         "field_roots.go",
         "getters_block.go",
         "getters_checkpoint.go",
@@ -32,6 +33,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state/v2",
     visibility = ["//visibility:public"],
     deps = [
+        "//beacon-chain/core/time:go_default_library",
         "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/fieldtrie:go_default_library",
         "//beacon-chain/state/state-native:go_default_library",
@@ -62,6 +64,7 @@ go_test(
         "deprecated_setters_test.go",
         "getters_block_test.go",
         "getters_checkpoint_test.go",
+        "getters_participation_test.go",
         "getters_test.go",
         "getters_validator_test.go",
         "proofs_test.go",

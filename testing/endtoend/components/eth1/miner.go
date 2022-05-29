@@ -151,11 +151,10 @@ func (m *Miner) Start(ctx context.Context) error {
 	}
 
 	runCmd := exec.CommandContext(ctx, binaryPath, args...) // #nosec G204 -- Safe
-	file, err := helpers.DeleteAndCreateFile(e2e.TestParams.LogPath, "eth1_miner.log")
+	file, err := os.Create(path.Join(e2e.TestParams.LogPath, "eth1_miner.log"))
 	if err != nil {
 		return err
 	}
-	runCmd.Stdout = file
 	runCmd.Stderr = file
 	log.Infof("Starting eth1 miner with flags: %s", strings.Join(args[2:], " "))
 
