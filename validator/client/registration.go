@@ -15,15 +15,15 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-// SubmitBuilderValidatorRegistration signs validator registration object and submits it to the beacon node.
-func SubmitBuilderValidatorRegistration(
+// SubmitValidatorRegistration signs validator registration object and submits it to the beacon node.
+func SubmitValidatorRegistration(
 	ctx context.Context,
 	validatorClient ethpb.BeaconNodeValidatorClient,
 	nodeClient ethpb.NodeClient,
 	signer signingFunc,
 	reg *ethpb.ValidatorRegistrationV1,
 ) error {
-	ctx, span := trace.StartSpan(ctx, "validator.ProposeBuilderValidatorRegistration")
+	ctx, span := trace.StartSpan(ctx, "validator.SubmitBuilderValidatorRegistration")
 	defer span.End()
 
 	genesisResponse, err := nodeClient.GetGenesis(ctx, &emptypb.Empty{})
@@ -34,7 +34,7 @@ func SubmitBuilderValidatorRegistration(
 	secs := int64(ts.Second()) - genesisResponse.GenesisTime.Seconds
 	currentSlot := types.Slot(uint64(secs) / params.BeaconConfig().SecondsPerSlot)
 
-	sig, err := signBuilderValidatorRegistration(ctx, currentSlot, validatorClient, signer, reg)
+	sig, err := signValidatorRegistration(ctx, currentSlot, validatorClient, signer, reg)
 	if err != nil {
 		return errors.Wrap(err, "failed to sign builder validator registration obj")
 	}
@@ -51,7 +51,7 @@ func SubmitBuilderValidatorRegistration(
 }
 
 // Sings validator registration obj with the proposer domain and private key.
-func signBuilderValidatorRegistration(
+func signValidatorRegistration(
 	ctx context.Context,
 	slot types.Slot,
 	validatorClient ethpb.BeaconNodeValidatorClient,

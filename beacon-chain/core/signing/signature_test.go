@@ -30,7 +30,7 @@ func TestVerifyRegistrationSignature(t *testing.T) {
 	require.NoError(t, err)
 	sReg := &ethpb.SignedValidatorRegistrationV1{
 		Message:   reg,
-		Signature: sig[:],
+		Signature: sig,
 	}
 	f := st.Fork()
 	g := st.GenesisValidatorsRoot()
@@ -38,4 +38,7 @@ func TestVerifyRegistrationSignature(t *testing.T) {
 
 	sReg.Signature = []byte("bad")
 	require.ErrorIs(t, signing.VerifyRegistrationSignature(e, f, sReg, g), signing.ErrSigFailedToVerify)
+
+	sReg.Message = nil
+	require.ErrorIs(t, signing.VerifyRegistrationSignature(e, f, sReg, g), signing.ErrNilRegistration)
 }

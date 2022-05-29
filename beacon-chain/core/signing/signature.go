@@ -3,9 +3,11 @@ package signing
 import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
+
+var ErrNilRegistration = errors.New("nil signed registration")
 
 // VerifyRegistrationSignature verifies the signature of a validator's registration.
 func VerifyRegistrationSignature(
@@ -15,7 +17,7 @@ func VerifyRegistrationSignature(
 	genesisRoot []byte,
 ) error {
 	if sr == nil || sr.Message == nil {
-		return errors.New("nil signed registration")
+		return ErrNilRegistration
 	}
 
 	d := params.BeaconConfig().DomainApplicationBuilder
