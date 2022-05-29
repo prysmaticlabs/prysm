@@ -138,6 +138,7 @@ go_test(
         "scenario",
     ],
     deps = common_deps,
+    flaky = True,
 )
 
 go_test(
