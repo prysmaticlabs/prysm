@@ -386,7 +386,7 @@ func TestUpdateCommitteeCache_CanUpdate(t *testing.T) {
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
 	require.NoError(t, err)
-	require.NoError(t, UpdateCommitteeCache(state, time.CurrentEpoch(state)))
+	require.NoError(t, UpdateCommitteeCache(ctx, time.CurrentEpoch(state), state))
 
 	epoch := types.Epoch(1)
 	idx := types.CommitteeIndex(1)
