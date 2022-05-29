@@ -377,7 +377,7 @@ func (s *Service) saveOrphanedAtts(ctx context.Context, orphanedRoot [32]byte, n
 		}
 		// If the block is an epoch older, break out of the loop since we can't include atts anyway.
 		// This prevents stuck within this for loop longer than necessary.
-		if orphanedBlk.Block().Slot()+params.BeaconConfig().SlotsPerEpoch < s.CurrentSlot() {
+		if orphanedBlk.Block().Slot()+params.BeaconConfig().SlotsPerEpoch <= s.CurrentSlot() {
 			break
 		}
 		for _, a := range orphanedBlk.Block().Body().Attestations() {
