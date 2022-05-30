@@ -144,13 +144,18 @@ func (s *Service) Start() {
 func (s *Service) Stop() error {
 	defer s.cancel()
 
+	// lock before accessing s.head, s.head.state, s.head.state.FinalizedCheckpoint().Root
+	s.headLock.RLock()
 	if s.cfg.StateGen != nil && s.head != nil && s.head.state != nil {
+		r := s.head.state.FinalizedCheckpoint().Root
+		s.headLock.RUnlock()
 		// Save the last finalized state so that starting up in the following run will be much faster.
-		if err := s.cfg.StateGen.ForceCheckpoint(s.ctx, s.head.state.FinalizedCheckpoint().Root); err != nil {
+		if err := s.cfg.StateGen.ForceCheckpoint(s.ctx, r); err != nil {
 			return err
 		}
+	} else {
+		s.headLock.RUnlock()
 	}
-
 	// Save initial sync cached blocks to the DB before stop.
 	return s.cfg.BeaconDB.SaveBlocks(s.ctx, s.getInitSyncBlocks())
 }
@@ -231,8 +236,9 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 			return errors.Wrap(err, "could not set finalized block as validated")
 		}
 	}
-
+	s.headLock.RLock()
 	h := s.headBlock().Block()
+	s.headLock.RUnlock()
 	if h.Slot() > fSlot {
 		log.WithFields(logrus.Fields{
 			"startSlot": fSlot,
