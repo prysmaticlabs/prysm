@@ -295,13 +295,19 @@ func TestService_ChainHeads_ProtoArray(t *testing.T) {
 	require.DeepEqual(t, []types.Slot{102, 103, 104}, slots)
 }
 
+//
+//  A <- B <- C
+//   \    \
+//    \    ---------- E
+//     ---------- D
+
 func TestService_ChainHeads_DoublyLinkedTree(t *testing.T) {
 	ctx := context.Background()
 	c := &Service{cfg: &config{ForkChoiceStore: doublylinkedtree.New(0, 0)}}
 	require.NoError(t, c.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx, 100, [32]byte{'a'}, [32]byte{}, params.BeaconConfig().ZeroHash, 0, 0))
 	require.NoError(t, c.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, params.BeaconConfig().ZeroHash, 0, 0))
 	require.NoError(t, c.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx, 102, [32]byte{'c'}, [32]byte{'b'}, params.BeaconConfig().ZeroHash, 0, 0))
-	require.NoError(t, c.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx, 103, [32]byte{'d'}, [32]byte{}, params.BeaconConfig().ZeroHash, 0, 0))
+	require.NoError(t, c.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx, 103, [32]byte{'d'}, [32]byte{'a'}, params.BeaconConfig().ZeroHash, 0, 0))
 	require.NoError(t, c.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx, 104, [32]byte{'e'}, [32]byte{'b'}, params.BeaconConfig().ZeroHash, 0, 0))
 
 	roots, slots := c.ChainHeads()
