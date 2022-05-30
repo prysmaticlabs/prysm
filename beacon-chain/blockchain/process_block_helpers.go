@@ -347,7 +347,7 @@ func (s *Service) ancestorByDB(ctx context.Context, r [32]byte, slot types.Slot)
 // This is useful for block tree visualizer and additional vote accounting.
 func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk interfaces.BeaconBlock,
 	fCheckpoint, jCheckpoint *ethpb.Checkpoint) error {
-	pendingNodes := make([]*forkchoicetypes.BlockAndCheckpoint, 0)
+	pendingNodes := make([]*forkchoicetypes.BlockAndCheckpoints, 0)
 
 	// Fork choice only matters from last finalized slot.
 	finalized, err := s.store.FinalizedCheckpt()
@@ -358,7 +358,7 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk interfa
 	if err != nil {
 		return err
 	}
-	pendingNodes = append(pendingNodes, &forkchoicetypes.BlockAndCheckpoint{Block: blk,
+	pendingNodes = append(pendingNodes, &forkchoicetypes.BlockAndCheckpoints{Block: blk,
 		JustifiedEpoch: jCheckpoint.Epoch, FinalizedEpoch: fCheckpoint.Epoch})
 	// As long as parent node is not in fork choice store, and parent node is in DB.
 	root := bytesutil.ToBytes32(blk.ParentRoot())
@@ -371,7 +371,7 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk interfa
 			break
 		}
 		root = bytesutil.ToBytes32(b.Block().ParentRoot())
-		args := &forkchoicetypes.BlockAndCheckpoint{Block: b.Block(),
+		args := &forkchoicetypes.BlockAndCheckpoints{Block: b.Block(),
 			JustifiedEpoch: jCheckpoint.Epoch,
 			FinalizedEpoch: fCheckpoint.Epoch}
 		pendingNodes = append(pendingNodes, args)

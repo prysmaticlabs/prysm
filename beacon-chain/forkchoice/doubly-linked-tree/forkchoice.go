@@ -433,7 +433,7 @@ func (f *ForkChoice) CommonAncestorRoot(ctx context.Context, r1 [32]byte, r2 [32
 // blocks **except** the first one. All blocks are assumed to be a strict chain
 // where blocks[i].Parent = blocks[i+1]. Also we assume that the parent of the
 // last block in this list is already included in forkchoice store.
-func (f *ForkChoice) InsertOptimisticChain(ctx context.Context, chain []*forkchoicetypes.BlockAndCheckpoint) error {
+func (f *ForkChoice) InsertOptimisticChain(ctx context.Context, chain []*forkchoicetypes.BlockAndCheckpoints) error {
 	if len(chain) == 0 {
 		return nil
 	}

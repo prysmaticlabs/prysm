@@ -13,8 +13,8 @@ type ProposerBoostRootArgs struct {
 	SecondsIntoSlot uint64
 }
 
-// BlockAndCheckpoint to call the InsertOptimisticChain function
-type BlockAndCheckpoint struct {
+// BlockAndCheckpoints to call the InsertOptimisticChain function
+type BlockAndCheckpoints struct {
 	Block          interfaces.BeaconBlock
 	JustifiedEpoch types.Epoch
 	FinalizedEpoch types.Epoch
