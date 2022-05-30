@@ -20,6 +20,7 @@ go_library(
         "//testing/spectest:__subpackages__",
     ],
     deps = [
+        "//beacon-chain/forkchoice:go_default_library",
         "//beacon-chain/forkchoice/types:go_default_library",
         "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",
@@ -49,6 +50,7 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
+        "//beacon-chain/forkchoice:go_default_library",
         "//beacon-chain/forkchoice/types:go_default_library",
         "//config/params:go_default_library",
         "//consensus-types/primitives:go_default_library",
