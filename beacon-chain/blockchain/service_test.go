@@ -27,7 +27,6 @@ import (
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
@@ -383,98 +382,6 @@ func TestChainService_InitializeChainInfo_SetHeadAtGenesis(t *testing.T) {
 	assert.DeepSSZEqual(t, headState.InnerStateUnsafe(), s.InnerStateUnsafe(), "Head state incorrect")
 	assert.Equal(t, genesisRoot, c.originBlockRoot, "Genesis block root incorrect")
 	assert.DeepEqual(t, headBlock, c.head.block.Proto())
-}
-
-func TestChainService_InitializeChainInfo_HeadSync(t *testing.T) {
-	resetFlags := flags.Get()
-	flags.Init(&flags.GlobalFlags{
-		HeadSync: true,
-	})
-	defer func() {
-		flags.Init(resetFlags)
-	}()
-
-	hook := logTest.NewGlobal()
-	finalizedSlot := params.BeaconConfig().SlotsPerEpoch*2 + 1
-	beaconDB := testDB.SetupDB(t)
-	ctx := context.Background()
-
-	genesisBlock := util.NewBeaconBlock()
-	genesisRoot, err := genesisBlock.Block.HashTreeRoot()
-	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, genesisRoot))
-	wsb, err := wrapper.WrappedSignedBeaconBlock(genesisBlock)
-	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
-
-	finalizedBlock := util.NewBeaconBlock()
-	finalizedBlock.Block.Slot = finalizedSlot
-	finalizedBlock.Block.ParentRoot = genesisRoot[:]
-	finalizedRoot, err := finalizedBlock.Block.HashTreeRoot()
-	require.NoError(t, err)
-	wsb, err = wrapper.WrappedSignedBeaconBlock(finalizedBlock)
-	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
-
-	// Set head slot close to the finalization point, no head sync is triggered.
-	headBlock := util.NewBeaconBlock()
-	headBlock.Block.Slot = finalizedSlot + params.BeaconConfig().SlotsPerEpoch*5
-	headBlock.Block.ParentRoot = finalizedRoot[:]
-	headRoot, err := headBlock.Block.HashTreeRoot()
-	require.NoError(t, err)
-	wsb, err = wrapper.WrappedSignedBeaconBlock(headBlock)
-	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
-
-	headState, err := util.NewBeaconState()
-	require.NoError(t, err)
-	require.NoError(t, headState.SetSlot(headBlock.Block.Slot))
-	require.NoError(t, headState.SetGenesisValidatorsRoot(params.BeaconConfig().ZeroHash[:]))
-	require.NoError(t, beaconDB.SaveState(ctx, headState, headRoot))
-	require.NoError(t, beaconDB.SaveState(ctx, headState, finalizedRoot))
-	require.NoError(t, beaconDB.SaveHeadBlockRoot(ctx, headRoot))
-	require.NoError(t, beaconDB.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{
-		Epoch: slots.ToEpoch(finalizedBlock.Block.Slot),
-		Root:  finalizedRoot[:],
-	}))
-
-	attSrv, err := attestations.NewService(ctx, &attestations.Config{})
-	require.NoError(t, err)
-	stateGen := stategen.New(beaconDB)
-	c, err := NewService(ctx, WithDatabase(beaconDB), WithStateGen(stateGen), WithAttestationService(attSrv), WithStateNotifier(&mock.MockStateNotifier{}), WithFinalizedStateAtStartUp(headState))
-	require.NoError(t, err)
-	require.NoError(t, c.StartFromSavedState(headState))
-	s, err := c.HeadState(ctx)
-	require.NoError(t, err)
-	assert.DeepSSZEqual(t, headState.InnerStateUnsafe(), s.InnerStateUnsafe(), "Head state incorrect")
-	assert.Equal(t, genesisRoot, c.originBlockRoot, "Genesis block root incorrect")
-	// Since head sync is not triggered, chain is initialized to the last finalization checkpoint.
-	assert.DeepEqual(t, finalizedBlock, c.head.block.Proto())
-	assert.LogsContain(t, hook, "resetting head from the checkpoint ('--head-sync' flag is ignored)")
-	assert.LogsDoNotContain(t, hook, "Regenerating state from the last checkpoint at slot")
-
-	// Set head slot far beyond the finalization point, head sync should be triggered.
-	headBlock = util.NewBeaconBlock()
-	headBlock.Block.Slot = finalizedSlot + params.BeaconConfig().SlotsPerEpoch*headSyncMinEpochsAfterCheckpoint
-	headBlock.Block.ParentRoot = finalizedRoot[:]
-	headRoot, err = headBlock.Block.HashTreeRoot()
-	require.NoError(t, err)
-	wsb, err = wrapper.WrappedSignedBeaconBlock(headBlock)
-	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
-	require.NoError(t, beaconDB.SaveState(ctx, headState, headRoot))
-	require.NoError(t, beaconDB.SaveHeadBlockRoot(ctx, headRoot))
-
-	hook.Reset()
-	require.NoError(t, c.initializeHeadFromDB(ctx))
-	s, err = c.HeadState(ctx)
-	require.NoError(t, err)
-	assert.DeepSSZEqual(t, headState.InnerStateUnsafe(), s.InnerStateUnsafe(), "Head state incorrect")
-	assert.Equal(t, genesisRoot, c.originBlockRoot, "Genesis block root incorrect")
-	// Head slot is far beyond the latest finalized checkpoint, head sync is triggered.
-	assert.DeepEqual(t, headBlock, c.head.block.Proto())
-	assert.LogsContain(t, hook, "Regenerating state from the last checkpoint at slot 225")
-	assert.LogsDoNotContain(t, hook, "resetting head from the checkpoint ('--head-sync' flag is ignored)")
 }
 
 func TestChainService_SaveHeadNoDB(t *testing.T) {
