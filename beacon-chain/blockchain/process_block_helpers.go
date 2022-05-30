@@ -376,7 +376,10 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk interfa
 			FinalizedEpoch: fCheckpoint.Epoch}
 		pendingNodes = append(pendingNodes, args)
 	}
-	if len(pendingNodes) > 1 && root != bytesutil.ToBytes32(finalized.Root) {
+	if len(pendingNodes) == 1 {
+		return nil
+	}
+	if root != bytesutil.ToBytes32(finalized.Root) {
 		return errNotDescendantOfFinalized
 	}
 	return s.cfg.ForkChoiceStore.InsertOptimisticChain(ctx, pendingNodes)
