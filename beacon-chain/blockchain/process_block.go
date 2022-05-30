@@ -604,7 +604,7 @@ func (s *Service) insertBlockToForkChoiceStore(ctx context.Context, blk interfac
 	}
 	// Feed in block to fork choice store.
 
-	payloadHash, err := getBlockPayloadHash(blk)
+	payloadHash, err := blocks.GetBlockPayloadHash(blk)
 	if err != nil {
 		return err
 	}
@@ -623,18 +623,6 @@ func (s *Service) InsertSlashingsToForkChoiceStore(ctx context.Context, slashing
 			s.ForkChoicer().InsertSlashedIndex(ctx, types.ValidatorIndex(index))
 		}
 	}
-}
-
-func getBlockPayloadHash(blk interfaces.BeaconBlock) ([32]byte, error) {
-	payloadHash := [32]byte{}
-	if blocks.IsPreBellatrixVersion(blk.Version()) {
-		return payloadHash, nil
-	}
-	payload, err := blk.Body().ExecutionPayload()
-	if err != nil {
-		return payloadHash, err
-	}
-	return bytesutil.ToBytes32(payload.BlockHash), nil
 }
 
 // This saves post state info to DB or cache. This also saves post state info to fork choice store.
