@@ -134,3 +134,20 @@ func TestCommitteeCacheOutOfRange(t *testing.T) {
 	_, err = cache.Committee(context.Background(), 0, seed, math.MaxUint64) // Overflow!
 	require.NotNil(t, err, "Did not fail as expected")
 }
+
+func TestCommitteeCache_DoesNothingWhenCancelledContext(t *testing.T) {
+	cache := NewCommitteesCache()
+
+	item := &Committees{Seed: [32]byte{'A'}, SortedIndices: []types.ValidatorIndex{1, 2, 3, 4, 5, 6}}
+	count, err := cache.ActiveIndicesCount(context.Background(), item.Seed)
+	require.NoError(t, err)
+	assert.Equal(t, 0, count, "Expected active count not to exist in empty cache")
+
+	cancelled, cancel := context.WithCancel(context.Background())
+	cancel()
+	require.ErrorIs(t, cache.AddCommitteeShuffledList(cancelled, item), context.Canceled)
+
+	count, err = cache.ActiveIndicesCount(context.Background(), item.Seed)
+	require.NoError(t, err)
+	assert.Equal(t, 0, count)
+}
