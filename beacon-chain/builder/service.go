@@ -11,6 +11,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
+// BlockBuilder defines the interface for interacting with the block builder
 type BlockBuilder interface {
 	SubmitBlindedBlock(ctx context.Context, block *ethpb.SignedBlindedBeaconBlockBellatrix) (*v1.ExecutionPayload, error)
 	GetHeader(ctx context.Context, slot types.Slot, parentHash [32]byte, pubKey [48]byte) (*ethpb.SignedBuilderBid, error)
@@ -27,7 +28,6 @@ type config struct {
 type Service struct {
 	cfg *config
 	c   *builder.Client
-	err error
 }
 
 // NewService instantiates a new service.
@@ -49,29 +49,29 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 }
 
 // Start initializes the service.
-func (s *Service) Start() {}
+func (*Service) Start() {}
 
 // Stop halts the service.
-func (s *Service) Stop() error {
+func (*Service) Stop() error {
 	return nil
 }
 
 // SubmitBlindedBlock is currently a stub.
-func (s *Service) SubmitBlindedBlock(context.Context, *ethpb.SignedBlindedBeaconBlockBellatrix) (*v1.ExecutionPayload, error) {
+func (*Service) SubmitBlindedBlock(context.Context, *ethpb.SignedBlindedBeaconBlockBellatrix) (*v1.ExecutionPayload, error) {
 	return nil, errors.New("not implemented")
 }
 
 // GetHeader is currently a stub.
-func (s *Service) GetHeader(context.Context, types.Slot, [32]byte, [48]byte) (*ethpb.SignedBuilderBid, error) {
+func (*Service) GetHeader(context.Context, types.Slot, [32]byte, [48]byte) (*ethpb.SignedBuilderBid, error) {
 	return nil, errors.New("not implemented")
 }
 
 // Status is currently a stub.
-func (s *Service) Status() error {
+func (*Service) Status() error {
 	return errors.New("not implemented")
 }
 
 // RegisterValidator is currently a stub.
-func (s *Service) RegisterValidator(context.Context, *ethpb.SignedValidatorRegistrationV1) error {
+func (*Service) RegisterValidator(context.Context, *ethpb.SignedValidatorRegistrationV1) error {
 	return errors.New("not implemented")
 }
