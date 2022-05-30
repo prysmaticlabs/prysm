@@ -373,7 +373,7 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk interfa
 		pendingRoots = append(pendingRoots, copiedRoot)
 		root = bytesutil.ToBytes32(b.Block().ParentRoot())
 	}
-	if len(pendingRoots) > 0 && root != bytesutil.ToBytes32(finalized.Root) {
+	if len(pendingRoots) > 0 && root != s.ensureRootNotZeros(bytesutil.ToBytes32(finalized.Root)) {
 		return errNotDescendantOfFinalized
 	}
 
