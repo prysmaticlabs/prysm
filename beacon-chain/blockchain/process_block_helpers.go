@@ -349,8 +349,6 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk interfa
 	pendingNodes := make([]interfaces.BeaconBlock, 0)
 	pendingRoots := make([][32]byte, 0)
 
-	parentRoot := bytesutil.ToBytes32(blk.ParentRoot())
-	slot := blk.Slot()
 	// Fork choice only matters from last finalized slot.
 	finalized, err := s.store.FinalizedCheckpt()
 	if err != nil {
@@ -360,20 +358,23 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk interfa
 	if err != nil {
 		return err
 	}
-	higherThanFinalized := slot > fSlot
 	// As long as parent node is not in fork choice store, and parent node is in DB.
-	for !s.cfg.ForkChoiceStore.HasNode(parentRoot) && s.cfg.BeaconDB.HasBlock(ctx, parentRoot) && higherThanFinalized {
-		b, err := s.getBlock(ctx, parentRoot)
+	root := bytesutil.ToBytes32(blk.ParentRoot())
+	for !s.cfg.ForkChoiceStore.HasNode(root) && s.cfg.BeaconDB.HasBlock(ctx, root) {
+		b, err := s.getBlock(ctx, root)
 		if err != nil {
 			return err
 		}
-
+		if b.Block().Slot() <= fSlot {
+			break
+		}
 		pendingNodes = append(pendingNodes, b.Block())
-		copiedRoot := parentRoot
+		copiedRoot := root
 		pendingRoots = append(pendingRoots, copiedRoot)
-		parentRoot = bytesutil.ToBytes32(b.Block().ParentRoot())
-		slot = b.Block().Slot()
-		higherThanFinalized = slot > fSlot
+		root = bytesutil.ToBytes32(b.Block().ParentRoot())
+	}
+	if len(pendingRoots) > 0 && root != bytesutil.ToBytes32(finalized.Root) {
+		return errNotDescendantOfFinalized
 	}
 
 	// Insert parent nodes to fork choice store in reverse order.
