@@ -6,13 +6,16 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 func TestForkChoice_UpdateBalancesPositiveChange(t *testing.T) {
@@ -254,156 +257,189 @@ func TestStore_UpdateCheckpoints(t *testing.T) {
 }
 
 func TestStore_CommonAncestor(t *testing.T) {
-	{
-		ctx := context.Background()
-		f := setup(0, 0)
+	ctx := context.Background()
+	f := setup(0, 0)
 
-		//  /-- b -- d -- e
-		// a
-		//  \-- c -- f
-		//        \-- g
-		//        \ -- h -- i -- j
-		require.NoError(t, f.InsertOptimisticBlock(ctx, 0, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 1, 1))
-		require.NoError(t, f.InsertOptimisticBlock(ctx, 1, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'B'}, 1, 1))
-		require.NoError(t, f.InsertOptimisticBlock(ctx, 2, [32]byte{'c'}, [32]byte{'a'}, [32]byte{'C'}, 1, 1))
-		require.NoError(t, f.InsertOptimisticBlock(ctx, 3, [32]byte{'d'}, [32]byte{'b'}, [32]byte{}, 1, 1))
-		require.NoError(t, f.InsertOptimisticBlock(ctx, 4, [32]byte{'e'}, [32]byte{'d'}, [32]byte{}, 1, 1))
-		require.NoError(t, f.InsertOptimisticBlock(ctx, 5, [32]byte{'f'}, [32]byte{'c'}, [32]byte{}, 1, 1))
-		require.NoError(t, f.InsertOptimisticBlock(ctx, 6, [32]byte{'g'}, [32]byte{'c'}, [32]byte{}, 1, 1))
-		require.NoError(t, f.InsertOptimisticBlock(ctx, 7, [32]byte{'h'}, [32]byte{'c'}, [32]byte{}, 1, 1))
-		require.NoError(t, f.InsertOptimisticBlock(ctx, 8, [32]byte{'i'}, [32]byte{'h'}, [32]byte{}, 1, 1))
-		require.NoError(t, f.InsertOptimisticBlock(ctx, 9, [32]byte{'j'}, [32]byte{'i'}, [32]byte{}, 1, 1))
+	//  /-- b -- d -- e
+	// a
+	//  \-- c -- f
+	//        \-- g
+	//        \ -- h -- i -- j
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 0, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 1, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'B'}, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 2, [32]byte{'c'}, [32]byte{'a'}, [32]byte{'C'}, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 3, [32]byte{'d'}, [32]byte{'b'}, [32]byte{}, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 4, [32]byte{'e'}, [32]byte{'d'}, [32]byte{}, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 5, [32]byte{'f'}, [32]byte{'c'}, [32]byte{}, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 6, [32]byte{'g'}, [32]byte{'c'}, [32]byte{}, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 7, [32]byte{'h'}, [32]byte{'c'}, [32]byte{}, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 8, [32]byte{'i'}, [32]byte{'h'}, [32]byte{}, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 9, [32]byte{'j'}, [32]byte{'i'}, [32]byte{}, 1, 1))
 
-		tests := []struct {
-			name     string
-			r1       [32]byte
-			r2       [32]byte
-			wantRoot [32]byte
-		}{
-			{
-				name:     "Common ancestor between c and b is a",
-				r1:       [32]byte{'c'},
-				r2:       [32]byte{'b'},
-				wantRoot: [32]byte{'a'},
-			},
-			{
-				name:     "Common ancestor between c and d is a",
-				r1:       [32]byte{'c'},
-				r2:       [32]byte{'d'},
-				wantRoot: [32]byte{'a'},
-			},
-			{
-				name:     "Common ancestor between c and e is a",
-				r1:       [32]byte{'c'},
-				r2:       [32]byte{'e'},
-				wantRoot: [32]byte{'a'},
-			},
-			{
-				name:     "Common ancestor between g and f is c",
-				r1:       [32]byte{'g'},
-				r2:       [32]byte{'f'},
-				wantRoot: [32]byte{'c'},
-			},
-			{
-				name:     "Common ancestor between f and h is c",
-				r1:       [32]byte{'f'},
-				r2:       [32]byte{'h'},
-				wantRoot: [32]byte{'c'},
-			},
-			{
-				name:     "Common ancestor between g and h is c",
-				r1:       [32]byte{'g'},
-				r2:       [32]byte{'h'},
-				wantRoot: [32]byte{'c'},
-			},
-			{
-				name:     "Common ancestor between b and h is a",
-				r1:       [32]byte{'b'},
-				r2:       [32]byte{'h'},
-				wantRoot: [32]byte{'a'},
-			},
-			{
-				name:     "Common ancestor between e and h is a",
-				r1:       [32]byte{'e'},
-				r2:       [32]byte{'h'},
-				wantRoot: [32]byte{'a'},
-			},
-			{
-				name:     "Common ancestor between i and f is c",
-				r1:       [32]byte{'i'},
-				r2:       [32]byte{'f'},
-				wantRoot: [32]byte{'c'},
-			},
-			{
-				name:     "Common ancestor between e and h is a",
-				r1:       [32]byte{'j'},
-				r2:       [32]byte{'g'},
-				wantRoot: [32]byte{'c'},
-			},
-		}
-		for _, tc := range tests {
-			t.Run(tc.name, func(t *testing.T) {
-				gotRoot, err := f.CommonAncestorRoot(ctx, tc.r1, tc.r2)
-				require.NoError(t, err)
-				require.Equal(t, tc.wantRoot, gotRoot)
-			})
-		}
-
-		// a -- b -- c -- d
-		f = setup(0, 0)
-		require.NoError(t, f.InsertOptimisticBlock(ctx, 0, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 1, 1))
-		require.NoError(t, f.InsertOptimisticBlock(ctx, 1, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'B'}, 1, 1))
-		require.NoError(t, f.InsertOptimisticBlock(ctx, 2, [32]byte{'c'}, [32]byte{'b'}, [32]byte{'C'}, 1, 1))
-		require.NoError(t, f.InsertOptimisticBlock(ctx, 3, [32]byte{'d'}, [32]byte{'c'}, [32]byte{}, 1, 1))
-		tests = []struct {
-			name     string
-			r1       [32]byte
-			r2       [32]byte
-			wantRoot [32]byte
-		}{
-			{
-				name:     "Common ancestor between a and b is a",
-				r1:       [32]byte{'a'},
-				r2:       [32]byte{'b'},
-				wantRoot: [32]byte{'a'},
-			},
-			{
-				name:     "Common ancestor between b and d is b",
-				r1:       [32]byte{'d'},
-				r2:       [32]byte{'b'},
-				wantRoot: [32]byte{'b'},
-			},
-			{
-				name:     "Common ancestor between d and a is a",
-				r1:       [32]byte{'d'},
-				r2:       [32]byte{'a'},
-				wantRoot: [32]byte{'a'},
-			},
-		}
-		for _, tc := range tests {
-			t.Run(tc.name, func(t *testing.T) {
-				gotRoot, err := f.CommonAncestorRoot(ctx, tc.r1, tc.r2)
-				require.NoError(t, err)
-				require.Equal(t, tc.wantRoot, gotRoot)
-			})
-		}
-
-		// Equal inputs should return the same root.
-		r, err := f.CommonAncestorRoot(ctx, [32]byte{'b'}, [32]byte{'b'})
-		require.NoError(t, err)
-		require.Equal(t, [32]byte{'b'}, r)
-		// Requesting finalized root (last node) should return the same root.
-		r, err = f.CommonAncestorRoot(ctx, [32]byte{'a'}, [32]byte{'a'})
-		require.NoError(t, err)
-		require.Equal(t, [32]byte{'a'}, r)
-		// Requesting unknown root
-		_, err = f.CommonAncestorRoot(ctx, [32]byte{'a'}, [32]byte{'z'})
-		require.ErrorIs(t, err, ErrNilNode)
-		_, err = f.CommonAncestorRoot(ctx, [32]byte{'z'}, [32]byte{'a'})
-		require.ErrorIs(t, err, ErrNilNode)
-		require.NoError(t, f.InsertOptimisticBlock(ctx, 100, [32]byte{'y'}, [32]byte{'z'}, [32]byte{}, 1, 1))
-		// broken link
-		_, err = f.CommonAncestorRoot(ctx, [32]byte{'y'}, [32]byte{'a'})
-		require.ErrorIs(t, err, forkchoice.ErrUnknownCommonAncestor)
+	tests := []struct {
+		name     string
+		r1       [32]byte
+		r2       [32]byte
+		wantRoot [32]byte
+	}{
+		{
+			name:     "Common ancestor between c and b is a",
+			r1:       [32]byte{'c'},
+			r2:       [32]byte{'b'},
+			wantRoot: [32]byte{'a'},
+		},
+		{
+			name:     "Common ancestor between c and d is a",
+			r1:       [32]byte{'c'},
+			r2:       [32]byte{'d'},
+			wantRoot: [32]byte{'a'},
+		},
+		{
+			name:     "Common ancestor between c and e is a",
+			r1:       [32]byte{'c'},
+			r2:       [32]byte{'e'},
+			wantRoot: [32]byte{'a'},
+		},
+		{
+			name:     "Common ancestor between g and f is c",
+			r1:       [32]byte{'g'},
+			r2:       [32]byte{'f'},
+			wantRoot: [32]byte{'c'},
+		},
+		{
+			name:     "Common ancestor between f and h is c",
+			r1:       [32]byte{'f'},
+			r2:       [32]byte{'h'},
+			wantRoot: [32]byte{'c'},
+		},
+		{
+			name:     "Common ancestor between g and h is c",
+			r1:       [32]byte{'g'},
+			r2:       [32]byte{'h'},
+			wantRoot: [32]byte{'c'},
+		},
+		{
+			name:     "Common ancestor between b and h is a",
+			r1:       [32]byte{'b'},
+			r2:       [32]byte{'h'},
+			wantRoot: [32]byte{'a'},
+		},
+		{
+			name:     "Common ancestor between e and h is a",
+			r1:       [32]byte{'e'},
+			r2:       [32]byte{'h'},
+			wantRoot: [32]byte{'a'},
+		},
+		{
+			name:     "Common ancestor between i and f is c",
+			r1:       [32]byte{'i'},
+			r2:       [32]byte{'f'},
+			wantRoot: [32]byte{'c'},
+		},
+		{
+			name:     "Common ancestor between e and h is a",
+			r1:       [32]byte{'j'},
+			r2:       [32]byte{'g'},
+			wantRoot: [32]byte{'c'},
+		},
 	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			gotRoot, err := f.CommonAncestorRoot(ctx, tc.r1, tc.r2)
+			require.NoError(t, err)
+			require.Equal(t, tc.wantRoot, gotRoot)
+		})
+	}
+
+	// a -- b -- c -- d
+	f = setup(0, 0)
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 0, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 1, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'B'}, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 2, [32]byte{'c'}, [32]byte{'b'}, [32]byte{'C'}, 1, 1))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 3, [32]byte{'d'}, [32]byte{'c'}, [32]byte{}, 1, 1))
+	tests = []struct {
+		name     string
+		r1       [32]byte
+		r2       [32]byte
+		wantRoot [32]byte
+	}{
+		{
+			name:     "Common ancestor between a and b is a",
+			r1:       [32]byte{'a'},
+			r2:       [32]byte{'b'},
+			wantRoot: [32]byte{'a'},
+		},
+		{
+			name:     "Common ancestor between b and d is b",
+			r1:       [32]byte{'d'},
+			r2:       [32]byte{'b'},
+			wantRoot: [32]byte{'b'},
+		},
+		{
+			name:     "Common ancestor between d and a is a",
+			r1:       [32]byte{'d'},
+			r2:       [32]byte{'a'},
+			wantRoot: [32]byte{'a'},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			gotRoot, err := f.CommonAncestorRoot(ctx, tc.r1, tc.r2)
+			require.NoError(t, err)
+			require.Equal(t, tc.wantRoot, gotRoot)
+		})
+	}
+
+	// Equal inputs should return the same root.
+	r, err := f.CommonAncestorRoot(ctx, [32]byte{'b'}, [32]byte{'b'})
+	require.NoError(t, err)
+	require.Equal(t, [32]byte{'b'}, r)
+	// Requesting finalized root (last node) should return the same root.
+	r, err = f.CommonAncestorRoot(ctx, [32]byte{'a'}, [32]byte{'a'})
+	require.NoError(t, err)
+	require.Equal(t, [32]byte{'a'}, r)
+	// Requesting unknown root
+	_, err = f.CommonAncestorRoot(ctx, [32]byte{'a'}, [32]byte{'z'})
+	require.ErrorIs(t, err, ErrNilNode)
+	_, err = f.CommonAncestorRoot(ctx, [32]byte{'z'}, [32]byte{'a'})
+	require.ErrorIs(t, err, ErrNilNode)
+	require.NoError(t, f.InsertOptimisticBlock(ctx, 100, [32]byte{'y'}, [32]byte{'z'}, [32]byte{}, 1, 1))
+	// broken link
+	_, err = f.CommonAncestorRoot(ctx, [32]byte{'y'}, [32]byte{'a'})
+	require.ErrorIs(t, err, forkchoice.ErrUnknownCommonAncestor)
+}
+
+func TestStore_InsertOptimisticChain(t *testing.T) {
+	f := setup(1, 1)
+	blks := make([]*forkchoicetypes.BlockAndCheckpoints, 0)
+	blk := util.NewBeaconBlock()
+	blk.Block.Slot = 1
+	pr := [32]byte{}
+	blk.Block.ParentRoot = pr[:]
+	root, err := blk.Block.HashTreeRoot()
+	require.NoError(t, err)
+	wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+	require.NoError(t, err)
+	blks = append(blks, &forkchoicetypes.BlockAndCheckpoints{Block: wsb.Block(), JustifiedEpoch: 1,
+		FinalizedEpoch: 1})
+	for i := uint64(2); i < 11; i++ {
+		blk := util.NewBeaconBlock()
+		blk.Block.Slot = types.Slot(i)
+		copiedRoot := root
+		blk.Block.ParentRoot = copiedRoot[:]
+		wsb, err = wrapper.WrappedSignedBeaconBlock(blk)
+		require.NoError(t, err)
+		blks = append(blks, &forkchoicetypes.BlockAndCheckpoints{Block: wsb.Block(), JustifiedEpoch: 1,
+			FinalizedEpoch: 1})
+		root, err = blk.Block.HashTreeRoot()
+		require.NoError(t, err)
+	}
+	args := make([]*forkchoicetypes.BlockAndCheckpoints, 10)
+	for i := 0; i < len(blks); i++ {
+		args[i] = blks[10-i-1]
+	}
+	require.NoError(t, f.InsertOptimisticChain(context.Background(), args))
+
+	f = setup(1, 1)
+	require.NoError(t, f.InsertOptimisticChain(context.Background(), args[2:]))
 }
