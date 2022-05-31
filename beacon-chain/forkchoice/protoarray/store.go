@@ -6,7 +6,9 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
@@ -850,5 +852,28 @@ func (f *ForkChoice) UpdateFinalizedCheckpoint(fc *pbrpc.Checkpoint) error {
 	f.store.nodesLock.Lock()
 	defer f.store.nodesLock.Unlock()
 	f.store.finalizedEpoch = fc.Epoch
+	return nil
+}
+
+// InsertOptimisticChain inserts all nodes corresponding to blocks in the slice
+// `blocks`. It includes all blocks **except** the first one.
+func (f *ForkChoice) InsertOptimisticChain(ctx context.Context, chain []*forkchoicetypes.BlockAndCheckpoints) error {
+	if len(chain) == 0 {
+		return nil
+	}
+	for i := len(chain) - 1; i > 0; i-- {
+		b := chain[i].Block
+		r := bytesutil.ToBytes32(chain[i-1].Block.ParentRoot())
+		parentRoot := bytesutil.ToBytes32(b.ParentRoot())
+		payloadHash, err := blocks.GetBlockPayloadHash(b)
+		if err != nil {
+			return err
+		}
+		if err := f.store.insert(ctx,
+			b.Slot(), r, parentRoot, payloadHash,
+			chain[i].JustifiedEpoch, chain[i].FinalizedEpoch); err != nil {
+			return err
+		}
+	}
 	return nil
 }
