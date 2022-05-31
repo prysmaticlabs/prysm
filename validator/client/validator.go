@@ -67,6 +67,7 @@ type validator struct {
 	domainDataLock                     sync.Mutex
 	attLogsLock                        sync.Mutex
 	aggregatedSlotCommitteeIDCacheLock sync.Mutex
+	highestValidSlotLock               sync.Mutex
 	prevBalanceLock                    sync.RWMutex
 	slashableKeysLock                  sync.RWMutex
 	eipImportBlacklistedPublicKeys     map[[fieldparams.BLSPubkeyLength]byte]bool
@@ -357,9 +358,11 @@ func (v *validator) ReceiveBlocks(ctx context.Context, connectionErrorChannel ch
 			log.Error("Received nil block")
 			continue
 		}
+		v.highestValidSlotLock.Lock()
 		if blk.Block().Slot() > v.highestValidSlot {
 			v.highestValidSlot = blk.Block().Slot()
 		}
+		v.highestValidSlotLock.Unlock()
 		v.blockFeed.Send(blk)
 	}
 }

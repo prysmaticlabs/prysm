@@ -129,6 +129,25 @@ func configureInteropConfig(cliCtx *cli.Context) error {
 }
 
 func configureExecutionSetting(cliCtx *cli.Context) error {
+	if cliCtx.IsSet(flags.TerminalTotalDifficultyOverride.Name) {
+		c := params.BeaconConfig()
+		c.TerminalTotalDifficulty = cliCtx.String(flags.TerminalTotalDifficultyOverride.Name)
+		log.WithField("terminal block difficult", c.TerminalTotalDifficulty).Warn("Terminal block difficult overridden")
+		params.OverrideBeaconConfig(c)
+	}
+	if cliCtx.IsSet(flags.TerminalBlockHashOverride.Name) {
+		c := params.BeaconConfig()
+		c.TerminalBlockHash = common.HexToHash(cliCtx.String(flags.TerminalBlockHashOverride.Name))
+		log.WithField("terminal block hash", c.TerminalBlockHash.Hex()).Warn("Terminal block hash overridden")
+		params.OverrideBeaconConfig(c)
+	}
+	if cliCtx.IsSet(flags.TerminalBlockHashActivationEpochOverride.Name) {
+		c := params.BeaconConfig()
+		c.TerminalBlockHashActivationEpoch = types.Epoch(cliCtx.Uint64(flags.TerminalBlockHashActivationEpochOverride.Name))
+		log.WithField("terminal block hash activation epoch", c.TerminalBlockHashActivationEpoch).Warn("Terminal block hash activation epoch overridden")
+		params.OverrideBeaconConfig(c)
+	}
+
 	if !cliCtx.IsSet(flags.SuggestedFeeRecipient.Name) {
 		return nil
 	}

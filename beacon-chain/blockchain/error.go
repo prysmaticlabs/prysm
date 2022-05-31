@@ -27,6 +27,8 @@ var (
 	errWSBlockNotFound = errors.New("weak subjectivity root not found in db")
 	// errWSBlockNotFoundInEpoch is returned when a block is not found in the WS cache or DB within epoch.
 	errWSBlockNotFoundInEpoch = errors.New("weak subjectivity root not found in db within epoch")
+	// errNotDescendantOfFinalized is returned when a block is not a descendant of the finalized checkpoint
+	errNotDescendantOfFinalized = invalidBlock{errors.New("not descendant of finalized checkpoint")}
 )
 
 // An invalid block is the block that fails state transition based on the core protocol rules.

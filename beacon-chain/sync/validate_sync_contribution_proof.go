@@ -88,7 +88,11 @@ func (s *Service) validateSyncContributionAndProof(ctx context.Context, pid peer
 		return result, err
 	}
 
-	s.setSyncContributionIndexSlotSeen(m.Message.Contribution.Slot, m.Message.AggregatorIndex, types.CommitteeIndex(m.Message.Contribution.SubcommitteeIndex))
+	con := m.Message.Contribution
+	if err := s.setSyncContributionBits(con); err != nil {
+		return pubsub.ValidationIgnore, err
+	}
+	s.setSyncContributionIndexSlotSeen(con.Slot, m.Message.AggregatorIndex, types.CommitteeIndex(con.SubcommitteeIndex))
 
 	msg.ValidatorData = m
 
@@ -149,7 +153,15 @@ func rejectEmptyContribution(m *ethpb.SignedContributionAndProof) validationFn {
 
 func (s *Service) ignoreSeenSyncContribution(m *ethpb.SignedContributionAndProof) validationFn {
 	return func(ctx context.Context) (pubsub.ValidationResult, error) {
-		seen := s.hasSeenSyncContributionIndexSlot(m.Message.Contribution.Slot, m.Message.AggregatorIndex, types.CommitteeIndex(m.Message.Contribution.SubcommitteeIndex))
+		c := m.Message.Contribution
+		seen, err := s.hasSeenSyncContributionBits(c)
+		if err != nil {
+			return pubsub.ValidationIgnore, err
+		}
+		if seen {
+			return pubsub.ValidationIgnore, nil
+		}
+		seen = s.hasSeenSyncContributionIndexSlot(c.Slot, m.Message.AggregatorIndex, types.CommitteeIndex(c.SubcommitteeIndex))
 		if seen {
 			return pubsub.ValidationIgnore, nil
 		}
@@ -316,6 +328,68 @@ func (s *Service) setSyncContributionIndexSlotSeen(slot types.Slot, aggregatorIn
 	b := append(bytesutil.Bytes32(uint64(aggregatorIndex)), bytesutil.Bytes32(uint64(slot))...)
 	b = append(b, bytesutil.Bytes32(uint64(subComIdx))...)
 	s.seenSyncContributionCache.Add(string(b), true)
+}
+
+// Set sync contribution's slot, root, committee index and bits.
+func (s *Service) setSyncContributionBits(c *ethpb.SyncCommitteeContribution) error {
+	s.syncContributionBitsOverlapLock.Lock()
+	defer s.syncContributionBitsOverlapLock.Unlock()
+	// Copying due to how pb unmarshalling is carried out, prevent mutation.
+	b := append(bytesutil.SafeCopyBytes(c.BlockRoot), bytesutil.Bytes32(uint64(c.Slot))...)
+	b = append(b, bytesutil.Bytes32(c.SubcommitteeIndex)...)
+	v, ok := s.syncContributionBitsOverlapCache.Get(string(b))
+	if !ok {
+		s.syncContributionBitsOverlapCache.Add(string(b), [][]byte{c.AggregationBits.Bytes()})
+		return nil
+	}
+	bitsList, ok := v.([][]byte)
+	if !ok {
+		return errors.New("could not covert cached value to []bitfield.Bitvector")
+	}
+	has, err := bitListOverlaps(bitsList, c.AggregationBits)
+	if err != nil {
+		return err
+	}
+	if has {
+		return nil
+	}
+	s.syncContributionBitsOverlapCache.Add(string(b), append(bitsList, c.AggregationBits.Bytes()))
+	return nil
+}
+
+// Check sync contribution bits don't have an overlap with one's in cache.
+func (s *Service) hasSeenSyncContributionBits(c *ethpb.SyncCommitteeContribution) (bool, error) {
+	s.syncContributionBitsOverlapLock.RLock()
+	defer s.syncContributionBitsOverlapLock.RUnlock()
+	b := append(c.BlockRoot, bytesutil.Bytes32(uint64(c.Slot))...)
+	b = append(b, bytesutil.Bytes32(c.SubcommitteeIndex)...)
+	v, ok := s.syncContributionBitsOverlapCache.Get(string(b))
+	if !ok {
+		return false, nil
+	}
+	bitsList, ok := v.([][]byte)
+	if !ok {
+		return false, errors.New("could not covert cached value to []bitfield.Bitvector128")
+	}
+	return bitListOverlaps(bitsList, c.AggregationBits.Bytes())
+}
+
+// bitListOverlaps returns true if there's an overlap between two bitlists.
+func bitListOverlaps(bitLists [][]byte, b []byte) (bool, error) {
+	for _, bitList := range bitLists {
+		if bitList == nil {
+			return false, errors.New("nil bitfield")
+		}
+		bl := ethpb.ConvertToSyncContributionBitVector(bitList)
+		overlaps, err := bl.Overlaps(ethpb.ConvertToSyncContributionBitVector(b))
+		if err != nil {
+			return false, err
+		}
+		if overlaps {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // verifySyncSelectionData verifies that the provided sync contribution has a valid

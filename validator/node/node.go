@@ -475,7 +475,7 @@ func validatorProposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.Val
 	var fileConfig *validatorServiceConfig.ValidatorProposerSettingsConfig
 	//TODO: remove when fully deprecated
 	if cliCtx.IsSet(flags.FeeRecipientConfigFileFlag.Name) && cliCtx.IsSet(flags.FeeRecipientConfigURLFlag.Name) {
-		return nil, errors.New("cannot specify both " + flags.FeeRecipientConfigFileFlag.Name + " and " + flags.FeeRecipientConfigURLFlag.Name)
+		return nil, fmt.Errorf("cannot specify both --%s and --%s", flags.FeeRecipientConfigFileFlag.Name, flags.FeeRecipientConfigURLFlag.Name)
 	}
 
 	if cliCtx.IsSet(flags.ValidatorProposerSettingsFlag.Name) && cliCtx.IsSet(flags.ValidatorProposerSettingsURLFlag.Name) {
