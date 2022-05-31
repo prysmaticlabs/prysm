@@ -103,9 +103,12 @@ func (c *CommitteeCache) Committee(ctx context.Context, slot types.Slot, seed [3
 
 // AddCommitteeShuffledList adds Committee shuffled list object to the cache. T
 // his method also trims the least recently list if the cache size has ready the max cache size limit.
-func (c *CommitteeCache) AddCommitteeShuffledList(committees *Committees) error {
+func (c *CommitteeCache) AddCommitteeShuffledList(ctx context.Context, committees *Committees) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	key, err := committeeKeyFn(committees)
 	if err != nil {
 		return err

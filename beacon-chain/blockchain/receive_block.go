@@ -89,8 +89,7 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []interfaces.Sig
 	defer span.End()
 
 	// Apply state transition on the incoming newly received block batches, one by one.
-	_, _, err := s.onBlockBatch(ctx, blocks, blkRoots)
-	if err != nil {
+	if err := s.onBlockBatch(ctx, blocks, blkRoots); err != nil {
 		err := errors.Wrap(err, "could not process block in batch")
 		tracing.AnnotateError(span, err)
 		return err
