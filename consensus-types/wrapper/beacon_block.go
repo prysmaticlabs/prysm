@@ -115,27 +115,31 @@ func WrappedBeaconBlockBody(i interface{}) (interfaces.BeaconBlockBody, error) {
 // given beacon block an the appropriate signature. This method may be used to easily create a
 // signed beacon block.
 func BuildSignedBeaconBlock(blk interfaces.BeaconBlock, signature []byte) (interfaces.SignedBeaconBlock, error) {
+	pb, err := blk.Proto()
+	if err != nil {
+		return nil, err
+	}
 	switch b := blk.(type) {
 	case Phase0BeaconBlock:
-		pb, ok := b.Proto().(*eth.BeaconBlock)
+		pb, ok := pb.(*eth.BeaconBlock)
 		if !ok {
 			return nil, errors.New("unable to access inner phase0 proto")
 		}
 		return WrappedSignedBeaconBlock(&eth.SignedBeaconBlock{Block: pb, Signature: signature})
 	case altairBeaconBlock:
-		pb, ok := b.Proto().(*eth.BeaconBlockAltair)
+		pb, ok := pb.(*eth.BeaconBlockAltair)
 		if !ok {
 			return nil, errors.New("unable to access inner altair proto")
 		}
 		return WrappedSignedBeaconBlock(&eth.SignedBeaconBlockAltair{Block: pb, Signature: signature})
 	case bellatrixBeaconBlock:
-		pb, ok := b.Proto().(*eth.BeaconBlockBellatrix)
+		pb, ok := pb.(*eth.BeaconBlockBellatrix)
 		if !ok {
 			return nil, errors.New("unable to access inner bellatrix proto")
 		}
 		return WrappedSignedBeaconBlock(&eth.SignedBeaconBlockBellatrix{Block: pb, Signature: signature})
 	case blindedBeaconBlockBellatrix:
-		pb, ok := b.Proto().(*eth.BlindedBeaconBlockBellatrix)
+		pb, ok := pb.(*eth.BlindedBeaconBlockBellatrix)
 		if !ok {
 			return nil, errors.New("unable to access inner bellatrix proto")
 		}

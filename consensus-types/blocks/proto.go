@@ -7,12 +7,6 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-var errNilBlock = errors.New("received nil beacon block")
-var errNilBody = errors.New("received nil beacon block body")
-
-const incorrectBlockVersion = "incorrect beacon block version"
-const incorrectBodyVersion = "incorrect beacon block body version"
-
 func InitSignedBlockFromProtoPhase0(pb *eth.SignedBeaconBlock) (*SignedBeaconBlock, error) {
 	if pb == nil {
 		return nil, errNilBlock

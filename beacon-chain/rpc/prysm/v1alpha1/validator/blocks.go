@@ -54,23 +54,27 @@ func sendVerifiedBlocks(stream ethpb.BeaconNodeValidator_StreamBlocksAltairServe
 		return nil
 	}
 	b := &ethpb.StreamBlocksResponse{}
+	pb, err := data.SignedBlock.Proto()
+	if err != nil {
+		return status.Errorf(codes.Internal, "Could not prepare block: %v", err)
+	}
 	switch data.SignedBlock.Version() {
 	case version.Phase0:
-		phBlk, ok := data.SignedBlock.Proto().(*ethpb.SignedBeaconBlock)
+		phBlk, ok := pb.(*ethpb.SignedBeaconBlock)
 		if !ok {
 			log.Warn("Mismatch between version and block type, was expecting SignedBeaconBlock")
 			return nil
 		}
 		b.Block = &ethpb.StreamBlocksResponse_Phase0Block{Phase0Block: phBlk}
 	case version.Altair:
-		phBlk, ok := data.SignedBlock.Proto().(*ethpb.SignedBeaconBlockAltair)
+		phBlk, ok := pb.(*ethpb.SignedBeaconBlockAltair)
 		if !ok {
 			log.Warn("Mismatch between version and block type, was expecting SignedBeaconBlockAltair")
 			return nil
 		}
 		b.Block = &ethpb.StreamBlocksResponse_AltairBlock{AltairBlock: phBlk}
 	case version.Bellatrix:
-		phBlk, ok := data.SignedBlock.Proto().(*ethpb.SignedBeaconBlockBellatrix)
+		phBlk, ok := pb.(*ethpb.SignedBeaconBlockBellatrix)
 		if !ok {
 			log.Warn("Mismatch between version and block type, was expecting SignedBeaconBlockBellatrix")
 			return nil
@@ -111,7 +115,11 @@ func (vs *Server) sendBlocks(stream ethpb.BeaconNodeValidator_StreamBlocksAltair
 		return nil
 	}
 	b := &ethpb.StreamBlocksResponse{}
-	switch p := data.SignedBlock.Proto().(type) {
+	pb, err := data.SignedBlock.Proto()
+	if err != nil {
+		return status.Errorf(codes.Internal, "Could not prepare block: %v", err)
+	}
+	switch p := pb.(type) {
 	case *ethpb.SignedBeaconBlock:
 		b.Block = &ethpb.StreamBlocksResponse_Phase0Block{Phase0Block: p}
 	case *ethpb.SignedBeaconBlockAltair:

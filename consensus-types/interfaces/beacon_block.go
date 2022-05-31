@@ -16,7 +16,7 @@ type SignedBeaconBlock interface {
 	Signature() []byte
 	IsNil() bool
 	Copy() (SignedBeaconBlock, error)
-	Proto() proto.Message
+	Proto() (proto.Message, error)
 	PbGenericBlock() (*ethpb.GenericSignedBeaconBlock, error)
 	PbPhase0Block() (*ethpb.SignedBeaconBlock, error)
 	PbAltairBlock() (*ethpb.SignedBeaconBlockAltair, error)

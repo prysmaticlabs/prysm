@@ -180,7 +180,11 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			s.setSeenBlockIndexSlot(b.Block().Slot(), b.Block().ProposerIndex())
 
 			// Broadcasting the block again once a node is able to process it.
-			if err := s.cfg.p2p.Broadcast(ctx, b.Proto()); err != nil {
+			pb, err := b.Proto()
+			if err != nil {
+				return errors.Wrap(err, "could not convert block to proto")
+			}
+			if err := s.cfg.p2p.Broadcast(ctx, pb); err != nil {
 				log.WithError(err).Debug("Could not broadcast block")
 			}
 
@@ -340,8 +344,16 @@ func (s *Service) deleteBlockFromPendingQueue(slot types.Slot, b interfaces.Sign
 	}
 
 	newBlks := make([]interfaces.SignedBeaconBlock, 0, len(blks))
+	bPb, err := b.Proto()
+	if err != nil {
+		return errors.Wrap(err, "could not convert block to proto")
+	}
 	for _, blk := range blks {
-		if equality.DeepEqual(blk.Proto(), b.Proto()) {
+		blkPb, err := blk.Proto()
+		if err != nil {
+			return errors.Wrap(err, "could not convert block to proto")
+		}
+		if equality.DeepEqual(blkPb, bPb) {
 			continue
 		}
 		newBlks = append(newBlks, blk)

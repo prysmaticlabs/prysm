@@ -885,7 +885,11 @@ func (bs *Server) submitBlock(ctx context.Context, blockRoot [fieldparams.RootLe
 	}()
 
 	// Broadcast the new block to the network.
-	if err := bs.Broadcaster.Broadcast(ctx, block.Proto()); err != nil {
+	pb, err := block.Proto()
+	if err != nil {
+		return status.Errorf(codes.Internal, "Could not prepare block: %v", err)
+	}
+	if err := bs.Broadcaster.Broadcast(ctx, pb); err != nil {
 		return status.Errorf(codes.Internal, "Could not broadcast block: %v", err)
 	}
 
