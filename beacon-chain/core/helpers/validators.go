@@ -126,7 +126,7 @@ func ActiveValidatorIndices(ctx context.Context, s state.ReadOnlyBeaconState, ep
 		return nil, err
 	}
 
-	if err := UpdateCommitteeCache(s, epoch); err != nil {
+	if err := UpdateCommitteeCache(ctx, s, epoch); err != nil {
 		return nil, errors.Wrap(err, "could not update committee cache")
 	}
 
@@ -175,7 +175,7 @@ func ActiveValidatorCount(ctx context.Context, s state.ReadOnlyBeaconState, epoc
 		return 0, err
 	}
 
-	if err := UpdateCommitteeCache(s, epoch); err != nil {
+	if err := UpdateCommitteeCache(ctx, s, epoch); err != nil {
 		return 0, errors.Wrap(err, "could not update committee cache")
 	}
 
