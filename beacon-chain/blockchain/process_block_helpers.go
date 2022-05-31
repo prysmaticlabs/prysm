@@ -7,6 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
@@ -346,8 +347,7 @@ func (s *Service) ancestorByDB(ctx context.Context, r [32]byte, slot types.Slot)
 // This is useful for block tree visualizer and additional vote accounting.
 func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk interfaces.BeaconBlock,
 	fCheckpoint, jCheckpoint *ethpb.Checkpoint) error {
-	pendingNodes := make([]interfaces.BeaconBlock, 0)
-	pendingRoots := make([][32]byte, 0)
+	pendingNodes := make([]*forkchoicetypes.BlockAndCheckpoints, 0)
 
 	// Fork choice only matters from last finalized slot.
 	finalized, err := s.store.FinalizedCheckpt()
@@ -358,6 +358,8 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk interfa
 	if err != nil {
 		return err
 	}
+	pendingNodes = append(pendingNodes, &forkchoicetypes.BlockAndCheckpoints{Block: blk,
+		JustifiedEpoch: jCheckpoint.Epoch, FinalizedEpoch: fCheckpoint.Epoch})
 	// As long as parent node is not in fork choice store, and parent node is in DB.
 	root := bytesutil.ToBytes32(blk.ParentRoot())
 	for !s.cfg.ForkChoiceStore.HasNode(root) && s.cfg.BeaconDB.HasBlock(ctx, root) {
@@ -368,32 +370,19 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk interfa
 		if b.Block().Slot() <= fSlot {
 			break
 		}
-		pendingNodes = append(pendingNodes, b.Block())
-		copiedRoot := root
-		pendingRoots = append(pendingRoots, copiedRoot)
 		root = bytesutil.ToBytes32(b.Block().ParentRoot())
+		args := &forkchoicetypes.BlockAndCheckpoints{Block: b.Block(),
+			JustifiedEpoch: jCheckpoint.Epoch,
+			FinalizedEpoch: fCheckpoint.Epoch}
+		pendingNodes = append(pendingNodes, args)
 	}
-	if len(pendingRoots) > 0 && root != s.ensureRootNotZeros(bytesutil.ToBytes32(finalized.Root)) {
+	if len(pendingNodes) == 1 {
+		return nil
+	}
+	if root != s.ensureRootNotZeros(bytesutil.ToBytes32(finalized.Root)) {
 		return errNotDescendantOfFinalized
 	}
-
-	// Insert parent nodes to fork choice store in reverse order.
-	// Lower slots should be at the end of the list.
-	for i := len(pendingNodes) - 1; i >= 0; i-- {
-		b := pendingNodes[i]
-		r := pendingRoots[i]
-		payloadHash, err := getBlockPayloadHash(blk)
-		if err != nil {
-			return err
-		}
-		if err := s.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx,
-			b.Slot(), r, bytesutil.ToBytes32(b.ParentRoot()), payloadHash,
-			jCheckpoint.Epoch,
-			fCheckpoint.Epoch); err != nil {
-			return errors.Wrap(err, "could not process block for proto array fork choice")
-		}
-	}
-	return nil
+	return s.cfg.ForkChoiceStore.InsertOptimisticChain(ctx, pendingNodes)
 }
 
 // inserts finalized deposits into our finalized deposit trie.

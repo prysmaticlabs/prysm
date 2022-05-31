@@ -37,6 +37,7 @@ type BlockProcessor interface {
 		justifiedEpoch types.Epoch,
 		finalizedEpoch types.Epoch,
 	) error
+	InsertOptimisticChain(context.Context, []*forkchoicetypes.BlockAndCheckpoints) error
 }
 
 // AttestationProcessor processes the attestation that's used for accounting fork choice.
