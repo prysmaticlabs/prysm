@@ -100,6 +100,11 @@ func TestWaitActivation_StreamSetupFails_AttemptsToReconnect(t *testing.T) {
 			PublicKeys: [][]byte{pubKey[:]},
 		},
 	).Return(clientStream, errors.New("failed stream")).Return(clientStream, nil)
+	client.EXPECT().PrepareBeaconProposer(gomock.Any(), &ethpb.PrepareBeaconProposerRequest{
+		Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
+			{FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9").Bytes(), ValidatorIndex: 1},
+		},
+	}).Return(nil, nil)
 	resp := generateMockStatusResponse([][]byte{pubKey[:]})
 	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_ACTIVE
 	clientStream.EXPECT().Recv().Return(resp, nil)
@@ -158,6 +163,11 @@ func TestWaitForActivation_ReceiveErrorFromStream_AttemptsReconnection(t *testin
 			PublicKeys: [][]byte{pubKey[:]},
 		},
 	).Return(clientStream, nil)
+	client.EXPECT().PrepareBeaconProposer(gomock.Any(), &ethpb.PrepareBeaconProposerRequest{
+		Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
+			{FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9").Bytes(), ValidatorIndex: 1},
+		},
+	}).Return(nil, nil)
 	// A stream fails the first time, but succeeds the second time.
 	resp := generateMockStatusResponse([][]byte{pubKey[:]})
 	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_ACTIVE
@@ -246,6 +256,11 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 		gomock.Any(),
 		gomock.Any(),
 	).Return(&empty.Empty{}, nil)
+	client.EXPECT().PrepareBeaconProposer(gomock.Any(), &ethpb.PrepareBeaconProposerRequest{
+		Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
+			{FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9").Bytes(), ValidatorIndex: 1},
+		},
+	}).Return(nil, nil)
 	assert.NoError(t, v.WaitForActivation(context.Background(), nil), "Could not wait for activation")
 	assert.LogsContain(t, hook, "Validator activated")
 }
@@ -309,6 +324,11 @@ func TestWaitForActivation_Exiting(t *testing.T) {
 		gomock.Any(),
 		gomock.Any(),
 	).Return(&empty.Empty{}, nil)
+	client.EXPECT().PrepareBeaconProposer(gomock.Any(), &ethpb.PrepareBeaconProposerRequest{
+		Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
+			{FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9").Bytes(), ValidatorIndex: 1},
+		},
+	}).Return(nil, nil)
 	assert.NoError(t, v.WaitForActivation(context.Background(), nil))
 }
 
@@ -360,7 +380,6 @@ func TestWaitForActivation_RefetchKeys(t *testing.T) {
 	clientStream.EXPECT().Recv().Return(
 		resp,
 		nil,
-	)
 	nodeClient.EXPECT().GetGenesis(
 		gomock.Any(),
 		&emptypb.Empty{},
@@ -379,6 +398,11 @@ func TestWaitForActivation_RefetchKeys(t *testing.T) {
 		gomock.Any(),
 		gomock.Any(),
 	).Return(&empty.Empty{}, nil)
+	client.EXPECT().PrepareBeaconProposer(gomock.Any(), &ethpb.PrepareBeaconProposerRequest{
+		Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
+			{FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9").Bytes(), ValidatorIndex: 1},
+		},
+	}).Return(nil, nil)
 	assert.NoError(t, v.waitForActivation(context.Background(), make(chan [][fieldparams.BLSPubkeyLength]byte)), "Could not wait for activation")
 	assert.LogsContain(t, hook, msgNoKeysFetched)
 	assert.LogsContain(t, hook, "Validator activated")
@@ -433,6 +457,12 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 			inactiveResp,
 			nil,
 		).AnyTimes()
+		client.EXPECT().PrepareBeaconProposer(gomock.Any(), &ethpb.PrepareBeaconProposerRequest{
+			Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
+				{FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9").Bytes(), ValidatorIndex: 1},
+				{FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9").Bytes(), ValidatorIndex: 1},
+			},
+		}).Return(nil, nil)
 
 		activeResp := generateMockStatusResponse([][]byte{inactivePubKey[:], activePubKey[:]})
 		activeResp.Statuses[0].Status.Status = ethpb.ValidatorStatus_UNKNOWN_STATUS
@@ -535,6 +565,12 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 			inactiveResp,
 			nil,
 		).AnyTimes()
+		client.EXPECT().PrepareBeaconProposer(gomock.Any(), &ethpb.PrepareBeaconProposerRequest{
+			Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
+				{FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9").Bytes(), ValidatorIndex: 1},
+				{FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9").Bytes(), ValidatorIndex: 1},
+			},
+		}).Return(nil, nil)
 
 		activeResp := generateMockStatusResponse([][]byte{inactivePubKey[:], activePubKey[:]})
 		activeResp.Statuses[0].Status.Status = ethpb.ValidatorStatus_UNKNOWN_STATUS
@@ -658,6 +694,13 @@ func TestWaitForActivation_RemoteKeymanager(t *testing.T) {
 				SignatureDomain: make([]byte, 32),
 			},
 			nil)
+		client.EXPECT().PrepareBeaconProposer(gomock.Any(), &ethpb.PrepareBeaconProposerRequest{
+			Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
+				{FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9").Bytes(), ValidatorIndex: 2},
+				{FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9").Bytes(), ValidatorIndex: 1},
+			},
+		}).Return(nil, nil)
+
 		err := v.waitForActivation(ctx, nil /* accountsChangedChan */)
 		require.NoError(t, err)
 		assert.LogsContain(t, hook, "Waiting for deposit to be observed by beacon node")
@@ -754,6 +797,12 @@ func TestWaitForActivation_RemoteKeymanager(t *testing.T) {
 			gomock.Any(),
 			gomock.Any(),
 		).Times(2).Return(&empty.Empty{}, nil)
+		client.EXPECT().PrepareBeaconProposer(gomock.Any(), &ethpb.PrepareBeaconProposerRequest{
+			Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
+				{FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9").Bytes(), ValidatorIndex: 2},
+				{FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9").Bytes(), ValidatorIndex: 1},
+			},
+		}).Return(nil, nil)
 
 		err := v.waitForActivation(ctx, remoteKm.ReloadPublicKeysChan /* accountsChangedChan */)
 		require.NoError(t, err)

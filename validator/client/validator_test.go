@@ -396,6 +396,7 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 		resp,
 		nil,
 	)
+
 	nodeClient.EXPECT().GetGenesis(
 		gomock.Any(),
 		&emptypb.Empty{},
@@ -414,6 +415,13 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 		gomock.Any(),
 		gomock.Any(),
 	).Return(&empty.Empty{}, nil)
+
+	client.EXPECT().PrepareBeaconProposer(gomock.Any(), &ethpb.PrepareBeaconProposerRequest{
+		Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
+			{FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A").Bytes(), ValidatorIndex: 1},
+		},
+	}).Return(nil, nil)
+
 	require.NoError(t, v.WaitForActivation(ctx, nil), "Could not wait for activation")
 	require.LogsContain(t, hook, "Validator activated")
 }
@@ -478,6 +486,11 @@ func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 		gomock.Any(),
 		gomock.Any(),
 	).Return(&empty.Empty{}, nil)
+	client.EXPECT().PrepareBeaconProposer(gomock.Any(), &ethpb.PrepareBeaconProposerRequest{
+		Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
+			{FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A").Bytes(), ValidatorIndex: 1},
+		},
+	}).Return(nil, nil)
 	assert.NoError(t, v.WaitForActivation(context.Background(), nil), "Could not wait for activation")
 }
 
@@ -1574,7 +1587,11 @@ func TestValidator_UpdateValidatorProposerSettings(t *testing.T) {
 					gomock.Any(),
 					gomock.Any(),
 				).Return(&empty.Empty{}, nil)
-
+				client.EXPECT().PrepareBeaconProposer(gomock.Any(), &ethpb.PrepareBeaconProposerRequest{
+					Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
+						{FeeRecipient: common.HexToAddress(defaultFeeHex).Bytes(), ValidatorIndex: 1},
+					},
+				}).Return(nil, nil)
 				return &v
 			},
 			feeRecipientMap: map[types.ValidatorIndex]string{
@@ -1657,6 +1674,11 @@ func TestValidator_UpdateValidatorProposerSettings(t *testing.T) {
 					gomock.Any(),
 					gomock.Any(),
 				).Return(&empty.Empty{}, nil)
+				client.EXPECT().PrepareBeaconProposer(gomock.Any(), &ethpb.PrepareBeaconProposerRequest{
+					Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
+						{FeeRecipient: common.HexToAddress(defaultFeeHex).Bytes(), ValidatorIndex: 1},
+					},
+				}).Return(nil, nil)
 				return &v
 			},
 			feeRecipientMap: map[types.ValidatorIndex]string{
@@ -1703,7 +1725,13 @@ func TestValidator_UpdateValidatorProposerSettings(t *testing.T) {
 				).Return(&ethpb.ValidatorIndexResponse{
 					Index: 2,
 				}, nil)
-				config[keys[0]] = &validator_service_config.ValidatorProposerOptions{
+				client.EXPECT().PrepareBeaconProposer(gomock.Any(), &ethpb.PrepareBeaconProposerRequest{
+					Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
+						{FeeRecipient: common.HexToAddress("0x055Fb65722E7b2455043BFEBf6177F1D2e9738D9").Bytes(), ValidatorIndex: 1},
+						{FeeRecipient: common.HexToAddress(defaultFeeHex).Bytes(), ValidatorIndex: 2},
+					},
+				}).Return(nil, nil)
+				config[keys[0]] = &validator_service_config.FeeRecipientOptions{
 					FeeRecipient: common.HexToAddress("0x055Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
 					GasLimit:     uint64(40000000),
 				}
@@ -1778,7 +1806,12 @@ func TestValidator_UpdateValidatorProposerSettings(t *testing.T) {
 				).Return(&ethpb.ValidatorIndexResponse{
 					Index: 1,
 				}, nil)
-				config[keys[0]] = &validator_service_config.ValidatorProposerOptions{
+				client.EXPECT().PrepareBeaconProposer(gomock.Any(), &ethpb.PrepareBeaconProposerRequest{
+					Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
+						{FeeRecipient: common.HexToAddress("0x0").Bytes(), ValidatorIndex: 1},
+					},
+				}).Return(nil, nil)
+				config[keys[0]] = &validator_service_config.FeeRecipientOptions{
 					FeeRecipient: common.Address{},
 				}
 				v.validatorProposerSettings = &validator_service_config.ValidatorProposerSettings{
