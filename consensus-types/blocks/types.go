@@ -17,6 +17,7 @@ var errNilBlock = errors.New("received nil beacon block")
 var errNilBody = errors.New("received nil beacon block body")
 var errIncorrectBlockVersion = errors.New(incorrectBlockVersion)
 var errIncorrectBodyVersion = errors.New(incorrectBodyVersion)
+var errCloningFailed = errors.New("cloning proto message failed")
 
 type BeaconBlockBody struct {
 	version           int
