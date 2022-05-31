@@ -45,7 +45,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		//         1 <- HEAD
 		slot := types.Slot(1)
 		newRoot := indexToHash(1)
-		state, err := setupInsertParameters(
+		state, blkRoot, err := setupInsertParameters(
 			ctx,
 			slot,
 			newRoot,
@@ -56,7 +56,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		)
 		require.NoError(t, err)
 		require.NoError(t, err)
-		require.NoError(t, f.InsertOptimisticBlock(ctx, state))
+		require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
 		f.ProcessAttestation(ctx, []uint64{0}, newRoot, fEpoch)
 		headRoot, err = f.Head(ctx, zeroHash, balances)
 		require.NoError(t, err)
@@ -70,7 +70,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		//         2 <- HEAD
 		slot = types.Slot(2)
 		newRoot = indexToHash(2)
-		state, err = setupInsertParameters(
+		state, blkRoot, err = setupInsertParameters(
 			ctx,
 			slot,
 			newRoot,
@@ -80,7 +80,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 			fEpoch,
 		)
 		require.NoError(t, err)
-		require.NoError(t, f.InsertOptimisticBlock(ctx, state))
+		require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
 		f.ProcessAttestation(ctx, []uint64{1}, newRoot, fEpoch)
 		headRoot, err = f.Head(ctx, zeroHash, balances)
 		require.NoError(t, err)
@@ -96,7 +96,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		//         3 <- HEAD
 		slot = types.Slot(3)
 		newRoot = indexToHash(3)
-		state, err = setupInsertParameters(
+		state, blkRoot, err = setupInsertParameters(
 			ctx,
 			slot,
 			newRoot,
@@ -106,7 +106,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 			fEpoch,
 		)
 		require.NoError(t, err)
-		require.NoError(t, f.InsertOptimisticBlock(ctx, state))
+		require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
 		f.ProcessAttestation(ctx, []uint64{2}, newRoot, fEpoch)
 		headRoot, err = f.Head(ctx, zeroHash, balances)
 		require.NoError(t, err)
@@ -123,7 +123,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		//           4  <- HEAD
 		slot = types.Slot(4)
 		newRoot = indexToHash(4)
-		state, err = setupInsertParameters(
+		state, blkRoot, err = setupInsertParameters(
 			ctx,
 			slot,
 			newRoot,
@@ -133,7 +133,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 			fEpoch,
 		)
 		require.NoError(t, err)
-		require.NoError(t, f.InsertOptimisticBlock(ctx, state))
+		require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
 		f.ProcessAttestation(ctx, []uint64{3}, newRoot, fEpoch)
 		clockSlot := types.Slot(4)
 		args := &forkchoicetypes.ProposerBoostRootArgs{
@@ -209,7 +209,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		//             C <- Slot 2 HEAD
 		honestBlockSlot := types.Slot(2)
 		honestBlock := indexToHash(2)
-		state, err := setupInsertParameters(
+		state, blkRoot, err := setupInsertParameters(
 			ctx,
 			honestBlockSlot,
 			honestBlock,
@@ -219,14 +219,14 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 			fEpoch,
 		)
 		require.NoError(t, err)
-		require.NoError(t, f.InsertOptimisticBlock(ctx, state))
+		require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
 		r, err = f.Head(ctx, zeroHash, balances)
 		require.NoError(t, err)
 		assert.Equal(t, honestBlock, r, "Incorrect head for justified epoch at slot 2")
 
 		maliciouslyWithheldBlockSlot := types.Slot(1)
 		maliciouslyWithheldBlock := indexToHash(1)
-		state, err = setupInsertParameters(
+		state, blkRoot, err = setupInsertParameters(
 			ctx,
 			maliciouslyWithheldBlockSlot,
 			maliciouslyWithheldBlock,
@@ -236,7 +236,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 			fEpoch,
 		)
 		require.NoError(t, err)
-		require.NoError(t, f.InsertOptimisticBlock(ctx, state))
+		require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
 
 		// Ensure the head is C, the honest block.
 		r, err = f.Head(ctx, zeroHash, balances)
@@ -282,7 +282,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		//             C <- Slot 2 HEAD
 		honestBlockSlot := types.Slot(2)
 		honestBlock := indexToHash(2)
-		state, err := setupInsertParameters(
+		state, blkRoot, err := setupInsertParameters(
 			ctx,
 			honestBlockSlot,
 			honestBlock,
@@ -292,7 +292,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 			fEpoch,
 		)
 		require.NoError(t, err)
-		require.NoError(t, f.InsertOptimisticBlock(ctx, state))
+		require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
 
 		// Ensure C is the head.
 		r, err = f.Head(ctx, zeroHash, balances)
@@ -301,7 +301,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 
 		maliciouslyWithheldBlockSlot := types.Slot(1)
 		maliciouslyWithheldBlock := indexToHash(1)
-		state, err = setupInsertParameters(
+		state, blkRoot, err = setupInsertParameters(
 			ctx,
 			maliciouslyWithheldBlockSlot,
 			maliciouslyWithheldBlock,
@@ -311,7 +311,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 			fEpoch,
 		)
 		require.NoError(t, err)
-		require.NoError(t, f.InsertOptimisticBlock(ctx, state))
+		require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
 
 		// Ensure C is still the head after the malicious proposer reveals their block.
 		r, err = f.Head(ctx, zeroHash, balances)
@@ -361,7 +361,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 
 		cSlot := types.Slot(2)
 		c := indexToHash(2)
-		state, err := setupInsertParameters(
+		state, blkRoot, err := setupInsertParameters(
 			ctx,
 			cSlot,
 			c,
@@ -371,7 +371,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 			fEpoch,
 		)
 		require.NoError(t, err)
-		require.NoError(t, f.InsertOptimisticBlock(ctx, state))
+		require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
 
 		// Ensure C is the head.
 		r, err = f.Head(ctx, zeroHash, balances)
@@ -389,7 +389,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 
 		bSlot := types.Slot(1)
 		b := indexToHash(1)
-		state, err = setupInsertParameters(
+		state, blkRoot, err = setupInsertParameters(
 			ctx,
 			bSlot,
 			b,
@@ -399,7 +399,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 			fEpoch,
 		)
 		require.NoError(t, err)
-		require.NoError(t, f.InsertOptimisticBlock(ctx, state))
+		require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
 
 		// Ensure C is still the head.
 		r, err = f.Head(ctx, zeroHash, balances)
@@ -413,7 +413,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		// A block D, building on B, is received at slot N+3. It should not be able to win without boosting.
 		dSlot := types.Slot(3)
 		d := indexToHash(3)
-		state, err = setupInsertParameters(
+		state, blkRoot, err = setupInsertParameters(
 			ctx,
 			dSlot,
 			d,
@@ -423,7 +423,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 			fEpoch,
 		)
 		require.NoError(t, err)
-		require.NoError(t, f.InsertOptimisticBlock(ctx, state))
+		require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
 
 		// D cannot win without a boost.
 		r, err = f.Head(ctx, zeroHash, balances)

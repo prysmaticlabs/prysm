@@ -108,13 +108,11 @@ func (f *ForkChoice) ProcessAttestation(ctx context.Context, validatorIndices []
 }
 
 // InsertOptimisticBlock processes a new block by inserting it to the fork choice store.
-func (f *ForkChoice) InsertOptimisticBlock(ctx context.Context, state state.ReadOnlyBeaconState) error {
+func (f *ForkChoice) InsertOptimisticBlock(ctx context.Context, state state.ReadOnlyBeaconState, root [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.InsertOptimisticBlock")
 	defer span.End()
 
 	slot := state.Slot()
-	brs := state.BlockRoots()
-	blockRoot := bytesutil.ToBytes32(brs[len(brs)-1])
 	bh := state.LatestBlockHeader()
 	if bh == nil {
 		return errNilBlockHeader
@@ -135,14 +133,12 @@ func (f *ForkChoice) InsertOptimisticBlock(ctx context.Context, state state.Read
 		return errInvalidNilCheckpoint
 	}
 	justifiedEpoch := jc.Epoch
-
 	fc := state.FinalizedCheckpoint()
 	if fc == nil {
 		return errInvalidNilCheckpoint
 	}
 	finalizedEpoch := fc.Epoch
-
-	return f.store.insert(ctx, slot, blockRoot, parentRoot, payloadHash, justifiedEpoch, finalizedEpoch)
+	return f.store.insert(ctx, slot, root, parentRoot, payloadHash, justifiedEpoch, finalizedEpoch)
 }
 
 // Prune prunes the fork choice store with the new finalized root. The store is only pruned if the input

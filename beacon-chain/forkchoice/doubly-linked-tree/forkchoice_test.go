@@ -30,7 +30,7 @@ func setupInsertParameters(
 	payloadHash [32]byte,
 	justifiedEpoch types.Epoch,
 	finalizedEpoch types.Epoch,
-) (state.BeaconState, error) {
+) (state.BeaconState, [32]byte, error) {
 	blockHeader := &ethpb.BeaconBlockHeader{
 		ParentRoot: parentRoot[:],
 	}
@@ -50,29 +50,28 @@ func setupInsertParameters(
 	base := &ethpb.BeaconStateBellatrix{
 		Slot:                         slot,
 		RandaoMixes:                  make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
-		BlockRoots:                   make([][]byte, 1),
 		CurrentJustifiedCheckpoint:   justifiedCheckpoint,
 		FinalizedCheckpoint:          finalizedCheckpoint,
 		LatestExecutionPayloadHeader: executionHeader,
 		LatestBlockHeader:            blockHeader,
 	}
 
-	base.BlockRoots[0] = append(base.BlockRoots[0], blockRoot[:]...)
-	return v3.InitializeFromProto(base)
+	st, err := v3.InitializeFromProto(base)
+	return st, blockRoot, err
 }
 
 func TestForkChoice_UpdateBalancesPositiveChange(t *testing.T) {
 	f := setup(0, 0)
 	ctx := context.Background()
-	state, err := setupInsertParameters(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 0, 0)
+	state, blkRoot, err := setupInsertParameters(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 0, 0)
 	require.NoError(t, err)
-	require.NoError(t, f.InsertOptimisticBlock(ctx, state))
-	state, err = setupInsertParameters(ctx, 2, indexToHash(2), indexToHash(1), params.BeaconConfig().ZeroHash, 0, 0)
+	require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
+	state, blkRoot, err = setupInsertParameters(ctx, 2, indexToHash(2), indexToHash(1), params.BeaconConfig().ZeroHash, 0, 0)
 	require.NoError(t, err)
-	require.NoError(t, f.InsertOptimisticBlock(ctx, state))
-	state, err = setupInsertParameters(ctx, 3, indexToHash(3), indexToHash(2), params.BeaconConfig().ZeroHash, 0, 0)
+	require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
+	state, blkRoot, err = setupInsertParameters(ctx, 3, indexToHash(3), indexToHash(2), params.BeaconConfig().ZeroHash, 0, 0)
 	require.NoError(t, err)
-	require.NoError(t, f.InsertOptimisticBlock(ctx, state))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
 
 	f.votes = []Vote{
 		{indexToHash(1), indexToHash(1), 0},
@@ -92,15 +91,15 @@ func TestForkChoice_UpdateBalancesPositiveChange(t *testing.T) {
 func TestForkChoice_UpdateBalancesNegativeChange(t *testing.T) {
 	f := setup(0, 0)
 	ctx := context.Background()
-	state, err := setupInsertParameters(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 0, 0)
+	state, blkRoot, err := setupInsertParameters(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 0, 0)
 	require.NoError(t, err)
-	require.NoError(t, f.InsertOptimisticBlock(ctx, state))
-	state, err = setupInsertParameters(ctx, 2, indexToHash(2), indexToHash(1), params.BeaconConfig().ZeroHash, 0, 0)
+	require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
+	state, blkRoot, err = setupInsertParameters(ctx, 2, indexToHash(2), indexToHash(1), params.BeaconConfig().ZeroHash, 0, 0)
 	require.NoError(t, err)
-	require.NoError(t, f.InsertOptimisticBlock(ctx, state))
-	state, err = setupInsertParameters(ctx, 3, indexToHash(3), indexToHash(2), params.BeaconConfig().ZeroHash, 0, 0)
+	require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
+	state, blkRoot, err = setupInsertParameters(ctx, 3, indexToHash(3), indexToHash(2), params.BeaconConfig().ZeroHash, 0, 0)
 	require.NoError(t, err)
-	require.NoError(t, f.InsertOptimisticBlock(ctx, state))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
 	s := f.store
 	s.nodeByRoot[indexToHash(1)].balance = 100
 	s.nodeByRoot[indexToHash(2)].balance = 100
@@ -122,15 +121,15 @@ func TestForkChoice_UpdateBalancesNegativeChange(t *testing.T) {
 func TestForkChoice_UpdateBalancesUnderflow(t *testing.T) {
 	f := setup(0, 0)
 	ctx := context.Background()
-	state, err := setupInsertParameters(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 0, 0)
+	state, blkRoot, err := setupInsertParameters(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 0, 0)
 	require.NoError(t, err)
-	require.NoError(t, f.InsertOptimisticBlock(ctx, state))
-	state, err = setupInsertParameters(ctx, 2, indexToHash(2), indexToHash(1), params.BeaconConfig().ZeroHash, 0, 0)
+	require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
+	state, blkRoot, err = setupInsertParameters(ctx, 2, indexToHash(2), indexToHash(1), params.BeaconConfig().ZeroHash, 0, 0)
 	require.NoError(t, err)
-	require.NoError(t, f.InsertOptimisticBlock(ctx, state))
-	state, err = setupInsertParameters(ctx, 3, indexToHash(3), indexToHash(2), params.BeaconConfig().ZeroHash, 0, 0)
+	require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
+	state, blkRoot, err = setupInsertParameters(ctx, 3, indexToHash(3), indexToHash(2), params.BeaconConfig().ZeroHash, 0, 0)
 	require.NoError(t, err)
-	require.NoError(t, f.InsertOptimisticBlock(ctx, state))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
 	s := f.store
 	s.nodeByRoot[indexToHash(1)].balance = 100
 	s.nodeByRoot[indexToHash(2)].balance = 100
@@ -152,24 +151,24 @@ func TestForkChoice_UpdateBalancesUnderflow(t *testing.T) {
 func TestForkChoice_IsCanonical(t *testing.T) {
 	f := setup(1, 1)
 	ctx := context.Background()
-	state, err := setupInsertParameters(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 1, 1)
+	state, blkRoot, err := setupInsertParameters(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 1, 1)
 	require.NoError(t, err)
-	require.NoError(t, f.InsertOptimisticBlock(ctx, state))
-	state, err = setupInsertParameters(ctx, 2, indexToHash(2), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 1, 1)
+	require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
+	state, blkRoot, err = setupInsertParameters(ctx, 2, indexToHash(2), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 1, 1)
 	require.NoError(t, err)
-	require.NoError(t, f.InsertOptimisticBlock(ctx, state))
-	state, err = setupInsertParameters(ctx, 3, indexToHash(3), indexToHash(1), params.BeaconConfig().ZeroHash, 1, 1)
+	require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
+	state, blkRoot, err = setupInsertParameters(ctx, 3, indexToHash(3), indexToHash(1), params.BeaconConfig().ZeroHash, 1, 1)
 	require.NoError(t, err)
-	require.NoError(t, f.InsertOptimisticBlock(ctx, state))
-	state, err = setupInsertParameters(ctx, 4, indexToHash(4), indexToHash(2), params.BeaconConfig().ZeroHash, 1, 1)
+	require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
+	state, blkRoot, err = setupInsertParameters(ctx, 4, indexToHash(4), indexToHash(2), params.BeaconConfig().ZeroHash, 1, 1)
 	require.NoError(t, err)
-	require.NoError(t, f.InsertOptimisticBlock(ctx, state))
-	state, err = setupInsertParameters(ctx, 5, indexToHash(5), indexToHash(4), params.BeaconConfig().ZeroHash, 1, 1)
+	require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
+	state, blkRoot, err = setupInsertParameters(ctx, 5, indexToHash(5), indexToHash(4), params.BeaconConfig().ZeroHash, 1, 1)
 	require.NoError(t, err)
-	require.NoError(t, f.InsertOptimisticBlock(ctx, state))
-	state, err = setupInsertParameters(ctx, 6, indexToHash(6), indexToHash(5), params.BeaconConfig().ZeroHash, 1, 1)
+	require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
+	state, blkRoot, err = setupInsertParameters(ctx, 6, indexToHash(6), indexToHash(5), params.BeaconConfig().ZeroHash, 1, 1)
 	require.NoError(t, err)
-	require.NoError(t, f.InsertOptimisticBlock(ctx, state))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
 
 	require.Equal(t, true, f.IsCanonical(params.BeaconConfig().ZeroHash))
 	require.Equal(t, false, f.IsCanonical(indexToHash(1)))
@@ -183,24 +182,24 @@ func TestForkChoice_IsCanonical(t *testing.T) {
 func TestForkChoice_IsCanonicalReorg(t *testing.T) {
 	f := setup(1, 1)
 	ctx := context.Background()
-	state, err := setupInsertParameters(ctx, 1, [32]byte{'1'}, params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 1, 1)
+	state, blkRoot, err := setupInsertParameters(ctx, 1, [32]byte{'1'}, params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 1, 1)
 	require.NoError(t, err)
-	require.NoError(t, f.InsertOptimisticBlock(ctx, state))
-	state, err = setupInsertParameters(ctx, 2, [32]byte{'2'}, params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 1, 1)
+	require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
+	state, blkRoot, err = setupInsertParameters(ctx, 2, [32]byte{'2'}, params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 1, 1)
 	require.NoError(t, err)
-	require.NoError(t, f.InsertOptimisticBlock(ctx, state))
-	state, err = setupInsertParameters(ctx, 3, [32]byte{'3'}, [32]byte{'1'}, params.BeaconConfig().ZeroHash, 1, 1)
+	require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
+	state, blkRoot, err = setupInsertParameters(ctx, 3, [32]byte{'3'}, [32]byte{'1'}, params.BeaconConfig().ZeroHash, 1, 1)
 	require.NoError(t, err)
-	require.NoError(t, f.InsertOptimisticBlock(ctx, state))
-	state, err = setupInsertParameters(ctx, 4, [32]byte{'4'}, [32]byte{'2'}, params.BeaconConfig().ZeroHash, 1, 1)
+	require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
+	state, blkRoot, err = setupInsertParameters(ctx, 4, [32]byte{'4'}, [32]byte{'2'}, params.BeaconConfig().ZeroHash, 1, 1)
 	require.NoError(t, err)
-	require.NoError(t, f.InsertOptimisticBlock(ctx, state))
-	state, err = setupInsertParameters(ctx, 5, [32]byte{'5'}, [32]byte{'4'}, params.BeaconConfig().ZeroHash, 1, 1)
+	require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
+	state, blkRoot, err = setupInsertParameters(ctx, 5, [32]byte{'5'}, [32]byte{'4'}, params.BeaconConfig().ZeroHash, 1, 1)
 	require.NoError(t, err)
-	require.NoError(t, f.InsertOptimisticBlock(ctx, state))
-	state, err = setupInsertParameters(ctx, 6, [32]byte{'6'}, [32]byte{'5'}, params.BeaconConfig().ZeroHash, 1, 1)
+	require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
+	state, blkRoot, err = setupInsertParameters(ctx, 6, [32]byte{'6'}, [32]byte{'5'}, params.BeaconConfig().ZeroHash, 1, 1)
 	require.NoError(t, err)
-	require.NoError(t, f.InsertOptimisticBlock(ctx, state))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
 
 	f.store.nodesLock.Lock()
 	f.store.nodeByRoot[[32]byte{'3'}].balance = 10
@@ -229,15 +228,15 @@ func TestForkChoice_IsCanonicalReorg(t *testing.T) {
 func TestForkChoice_AncestorRoot(t *testing.T) {
 	f := setup(1, 1)
 	ctx := context.Background()
-	state, err := setupInsertParameters(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 1, 1)
+	state, blkRoot, err := setupInsertParameters(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 1, 1)
 	require.NoError(t, err)
-	require.NoError(t, f.InsertOptimisticBlock(ctx, state))
-	state, err = setupInsertParameters(ctx, 2, indexToHash(2), indexToHash(1), params.BeaconConfig().ZeroHash, 1, 1)
+	require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
+	state, blkRoot, err = setupInsertParameters(ctx, 2, indexToHash(2), indexToHash(1), params.BeaconConfig().ZeroHash, 1, 1)
 	require.NoError(t, err)
-	require.NoError(t, f.InsertOptimisticBlock(ctx, state))
-	state, err = setupInsertParameters(ctx, 5, indexToHash(3), indexToHash(2), params.BeaconConfig().ZeroHash, 1, 1)
+	require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
+	state, blkRoot, err = setupInsertParameters(ctx, 5, indexToHash(3), indexToHash(2), params.BeaconConfig().ZeroHash, 1, 1)
 	require.NoError(t, err)
-	require.NoError(t, f.InsertOptimisticBlock(ctx, state))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
 	f.store.treeRootNode = f.store.nodeByRoot[indexToHash(1)]
 	f.store.treeRootNode.parent = nil
 
@@ -261,12 +260,12 @@ func TestForkChoice_AncestorRoot(t *testing.T) {
 func TestForkChoice_AncestorEqualSlot(t *testing.T) {
 	f := setup(1, 1)
 	ctx := context.Background()
-	state, err := setupInsertParameters(ctx, 100, [32]byte{'1'}, params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 1, 1)
+	state, blkRoot, err := setupInsertParameters(ctx, 100, [32]byte{'1'}, params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 1, 1)
 	require.NoError(t, err)
-	require.NoError(t, f.InsertOptimisticBlock(ctx, state))
-	state, err = setupInsertParameters(ctx, 101, [32]byte{'3'}, [32]byte{'1'}, params.BeaconConfig().ZeroHash, 1, 1)
+	require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
+	state, blkRoot, err = setupInsertParameters(ctx, 101, [32]byte{'3'}, [32]byte{'1'}, params.BeaconConfig().ZeroHash, 1, 1)
 	require.NoError(t, err)
-	require.NoError(t, f.InsertOptimisticBlock(ctx, state))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
 
 	r, err := f.AncestorRoot(ctx, [32]byte{'3'}, 100)
 	require.NoError(t, err)
@@ -277,12 +276,12 @@ func TestForkChoice_AncestorEqualSlot(t *testing.T) {
 func TestForkChoice_AncestorLowerSlot(t *testing.T) {
 	f := setup(1, 1)
 	ctx := context.Background()
-	state, err := setupInsertParameters(ctx, 100, [32]byte{'1'}, params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 1, 1)
+	state, blkRoot, err := setupInsertParameters(ctx, 100, [32]byte{'1'}, params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 1, 1)
 	require.NoError(t, err)
-	require.NoError(t, f.InsertOptimisticBlock(ctx, state))
-	state, err = setupInsertParameters(ctx, 200, [32]byte{'3'}, [32]byte{'1'}, params.BeaconConfig().ZeroHash, 1, 1)
+	require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
+	state, blkRoot, err = setupInsertParameters(ctx, 200, [32]byte{'3'}, [32]byte{'1'}, params.BeaconConfig().ZeroHash, 1, 1)
 	require.NoError(t, err)
-	require.NoError(t, f.InsertOptimisticBlock(ctx, state))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
 
 	r, err := f.AncestorRoot(ctx, [32]byte{'3'}, 150)
 	require.NoError(t, err)
@@ -294,20 +293,20 @@ func TestForkChoice_RemoveEquivocating(t *testing.T) {
 	ctx := context.Background()
 	f := setup(1, 1)
 	// Insert a block it will be head
-	state, err := setupInsertParameters(ctx, 1, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 1, 1)
+	state, blkRoot, err := setupInsertParameters(ctx, 1, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 1, 1)
 	require.NoError(t, err)
-	require.NoError(t, f.InsertOptimisticBlock(ctx, state))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
 	head, err := f.Head(ctx, params.BeaconConfig().ZeroHash, []uint64{})
 	require.NoError(t, err)
 	require.Equal(t, [32]byte{'a'}, head)
 
 	// Insert two extra blocks
-	state, err = setupInsertParameters(ctx, 2, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'B'}, 1, 1)
+	state, blkRoot, err = setupInsertParameters(ctx, 2, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'B'}, 1, 1)
 	require.NoError(t, err)
-	require.NoError(t, f.InsertOptimisticBlock(ctx, state))
-	state, err = setupInsertParameters(ctx, 3, [32]byte{'c'}, [32]byte{'a'}, [32]byte{'C'}, 1, 1)
+	require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
+	state, blkRoot, err = setupInsertParameters(ctx, 3, [32]byte{'c'}, [32]byte{'a'}, [32]byte{'C'}, 1, 1)
 	require.NoError(t, err)
-	require.NoError(t, f.InsertOptimisticBlock(ctx, state))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
 	head, err = f.Head(ctx, params.BeaconConfig().ZeroHash, []uint64{})
 	require.NoError(t, err)
 	require.Equal(t, [32]byte{'c'}, head)
@@ -370,36 +369,36 @@ func TestStore_CommonAncestor(t *testing.T) {
 	//  \-- c -- f
 	//        \-- g
 	//        \ -- h -- i -- j
-	state, err := setupInsertParameters(ctx, 0, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 1, 1)
+	state, blkRoot, err := setupInsertParameters(ctx, 0, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 1, 1)
 	require.NoError(t, err)
-	require.NoError(t, f.InsertOptimisticBlock(ctx, state))
-	state, err = setupInsertParameters(ctx, 1, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'B'}, 1, 1)
+	require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
+	state, blkRoot, err = setupInsertParameters(ctx, 1, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'B'}, 1, 1)
 	require.NoError(t, err)
-	require.NoError(t, f.InsertOptimisticBlock(ctx, state))
-	state, err = setupInsertParameters(ctx, 2, [32]byte{'c'}, [32]byte{'a'}, [32]byte{'C'}, 1, 1)
+	require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
+	state, blkRoot, err = setupInsertParameters(ctx, 2, [32]byte{'c'}, [32]byte{'a'}, [32]byte{'C'}, 1, 1)
 	require.NoError(t, err)
-	require.NoError(t, f.InsertOptimisticBlock(ctx, state))
-	state, err = setupInsertParameters(ctx, 3, [32]byte{'d'}, [32]byte{'b'}, [32]byte{}, 1, 1)
+	require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
+	state, blkRoot, err = setupInsertParameters(ctx, 3, [32]byte{'d'}, [32]byte{'b'}, [32]byte{}, 1, 1)
 	require.NoError(t, err)
-	require.NoError(t, f.InsertOptimisticBlock(ctx, state))
-	state, err = setupInsertParameters(ctx, 4, [32]byte{'e'}, [32]byte{'d'}, [32]byte{}, 1, 1)
+	require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
+	state, blkRoot, err = setupInsertParameters(ctx, 4, [32]byte{'e'}, [32]byte{'d'}, [32]byte{}, 1, 1)
 	require.NoError(t, err)
-	require.NoError(t, f.InsertOptimisticBlock(ctx, state))
-	state, err = setupInsertParameters(ctx, 5, [32]byte{'f'}, [32]byte{'c'}, [32]byte{}, 1, 1)
+	require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
+	state, blkRoot, err = setupInsertParameters(ctx, 5, [32]byte{'f'}, [32]byte{'c'}, [32]byte{}, 1, 1)
 	require.NoError(t, err)
-	require.NoError(t, f.InsertOptimisticBlock(ctx, state))
-	state, err = setupInsertParameters(ctx, 6, [32]byte{'g'}, [32]byte{'c'}, [32]byte{}, 1, 1)
+	require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
+	state, blkRoot, err = setupInsertParameters(ctx, 6, [32]byte{'g'}, [32]byte{'c'}, [32]byte{}, 1, 1)
 	require.NoError(t, err)
-	require.NoError(t, f.InsertOptimisticBlock(ctx, state))
-	state, err = setupInsertParameters(ctx, 7, [32]byte{'h'}, [32]byte{'c'}, [32]byte{}, 1, 1)
+	require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
+	state, blkRoot, err = setupInsertParameters(ctx, 7, [32]byte{'h'}, [32]byte{'c'}, [32]byte{}, 1, 1)
 	require.NoError(t, err)
-	require.NoError(t, f.InsertOptimisticBlock(ctx, state))
-	state, err = setupInsertParameters(ctx, 8, [32]byte{'i'}, [32]byte{'h'}, [32]byte{}, 1, 1)
+	require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
+	state, blkRoot, err = setupInsertParameters(ctx, 8, [32]byte{'i'}, [32]byte{'h'}, [32]byte{}, 1, 1)
 	require.NoError(t, err)
-	require.NoError(t, f.InsertOptimisticBlock(ctx, state))
-	state, err = setupInsertParameters(ctx, 9, [32]byte{'j'}, [32]byte{'i'}, [32]byte{}, 1, 1)
+	require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
+	state, blkRoot, err = setupInsertParameters(ctx, 9, [32]byte{'j'}, [32]byte{'i'}, [32]byte{}, 1, 1)
 	require.NoError(t, err)
-	require.NoError(t, f.InsertOptimisticBlock(ctx, state))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
 
 	tests := []struct {
 		name     string
@@ -478,18 +477,18 @@ func TestStore_CommonAncestor(t *testing.T) {
 
 	// a -- b -- c -- d
 	f = setup(0, 0)
-	state, err = setupInsertParameters(ctx, 0, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 1, 1)
+	state, blkRoot, err = setupInsertParameters(ctx, 0, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 1, 1)
 	require.NoError(t, err)
-	require.NoError(t, f.InsertOptimisticBlock(ctx, state))
-	state, err = setupInsertParameters(ctx, 1, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'B'}, 1, 1)
+	require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
+	state, blkRoot, err = setupInsertParameters(ctx, 1, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'B'}, 1, 1)
 	require.NoError(t, err)
-	require.NoError(t, f.InsertOptimisticBlock(ctx, state))
-	state, err = setupInsertParameters(ctx, 2, [32]byte{'c'}, [32]byte{'b'}, [32]byte{'C'}, 1, 1)
+	require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
+	state, blkRoot, err = setupInsertParameters(ctx, 2, [32]byte{'c'}, [32]byte{'b'}, [32]byte{'C'}, 1, 1)
 	require.NoError(t, err)
-	require.NoError(t, f.InsertOptimisticBlock(ctx, state))
-	state, err = setupInsertParameters(ctx, 3, [32]byte{'d'}, [32]byte{'c'}, [32]byte{}, 1, 1)
+	require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
+	state, blkRoot, err = setupInsertParameters(ctx, 3, [32]byte{'d'}, [32]byte{'c'}, [32]byte{}, 1, 1)
 	require.NoError(t, err)
-	require.NoError(t, f.InsertOptimisticBlock(ctx, state))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
 	tests = []struct {
 		name     string
 		r1       [32]byte
@@ -536,9 +535,9 @@ func TestStore_CommonAncestor(t *testing.T) {
 	require.ErrorIs(t, err, ErrNilNode)
 	_, err = f.CommonAncestorRoot(ctx, [32]byte{'z'}, [32]byte{'a'})
 	require.ErrorIs(t, err, ErrNilNode)
-	state, err = setupInsertParameters(ctx, 100, [32]byte{'y'}, [32]byte{'z'}, [32]byte{}, 1, 1)
+	state, blkRoot, err = setupInsertParameters(ctx, 100, [32]byte{'y'}, [32]byte{'z'}, [32]byte{}, 1, 1)
 	require.NoError(t, err)
-	require.NoError(t, f.InsertOptimisticBlock(ctx, state))
+	require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
 	// broken link
 	_, err = f.CommonAncestorRoot(ctx, [32]byte{'y'}, [32]byte{'a'})
 	require.ErrorIs(t, err, forkchoice.ErrUnknownCommonAncestor)

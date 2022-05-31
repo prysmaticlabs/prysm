@@ -30,7 +30,7 @@ type HeadRetriever interface {
 
 // BlockProcessor processes the block that's used for accounting fork choice.
 type BlockProcessor interface {
-	InsertOptimisticBlock(context.Context, state.ReadOnlyBeaconState) error
+	InsertOptimisticBlock(context.Context, state.ReadOnlyBeaconState, [32]byte) error
 	InsertOptimisticChain(context.Context, []*forkchoicetypes.BlockAndCheckpoints) error
 }
 
