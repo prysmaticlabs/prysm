@@ -68,8 +68,6 @@ func logBlockSyncStatus(block interfaces.BeaconBlock, blockRoot [32]byte, justif
 			"epoch":                     slots.ToEpoch(block.Slot()),
 			"justifiedEpoch":            justified.Epoch,
 			"justifiedRoot":             fmt.Sprintf("0x%s...", hex.EncodeToString(justified.Root)[:8]),
-			"finalizedEpoch":            finalized.Epoch,
-			"finalizedRoot":             fmt.Sprintf("0x%s...", hex.EncodeToString(finalized.Root)[:8]),
 			"parentRoot":                fmt.Sprintf("0x%s...", hex.EncodeToString(block.ParentRoot())[:8]),
 			"version":                   version.String(block.Version()),
 			"sinceSlotStartTime":        prysmTime.Now().Sub(startTime),
@@ -77,9 +75,11 @@ func logBlockSyncStatus(block interfaces.BeaconBlock, blockRoot [32]byte, justif
 		}).Debug("Synced new block")
 	} else {
 		log.WithFields(logrus.Fields{
-			"slot":  block.Slot(),
-			"block": fmt.Sprintf("0x%s...", hex.EncodeToString(blockRoot[:])[:8]),
-			"epoch": slots.ToEpoch(block.Slot()),
+			"slot":           block.Slot(),
+			"block":          fmt.Sprintf("0x%s...", hex.EncodeToString(blockRoot[:])[:8]),
+			"epoch":          slots.ToEpoch(block.Slot()),
+			"finalizedEpoch": finalized.Epoch,
+			"finalizedRoot":  fmt.Sprintf("0x%s...", hex.EncodeToString(finalized.Root)[:8]),
 		}).Info("Synced new block")
 	}
 	return nil
