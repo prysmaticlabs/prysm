@@ -1,6 +1,7 @@
 package types
 
 import (
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 )
 
@@ -10,4 +11,11 @@ type ProposerBoostRootArgs struct {
 	BlockSlot       types.Slot
 	CurrentSlot     types.Slot
 	SecondsIntoSlot uint64
+}
+
+// BlockAndCheckpoints to call the InsertOptimisticChain function
+type BlockAndCheckpoints struct {
+	Block          interfaces.BeaconBlock
+	JustifiedEpoch types.Epoch
+	FinalizedEpoch types.Epoch
 }
