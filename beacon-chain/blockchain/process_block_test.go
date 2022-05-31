@@ -1271,9 +1271,9 @@ func TestAncestor_CanUseForkchoice(t *testing.T) {
 		beaconBlock.Block.ParentRoot = bytesutil.PadTo(b.Block.ParentRoot, 32)
 		r, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
-		state, err := setupInsertParameters(context.Background(), b.Block.Slot, r, bytesutil.ToBytes32(b.Block.ParentRoot), params.BeaconConfig().ZeroHash, 0, 0)
+		state, blkRoot, err := setupInsertParameters(context.Background(), b.Block.Slot, r, bytesutil.ToBytes32(b.Block.ParentRoot), params.BeaconConfig().ZeroHash, 0, 0)
 		require.NoError(t, err)
-		require.NoError(t, service.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx, state))
+		require.NoError(t, service.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx, state, blkRoot))
 	}
 
 	r, err := service.ancestor(context.Background(), r200[:], 150)
@@ -1320,9 +1320,9 @@ func TestAncestor_CanUseDB(t *testing.T) {
 		require.NoError(t, beaconDB.SaveBlock(context.Background(), wsb)) // Saves blocks to DB.
 	}
 
-	state, err := setupInsertParameters(context.Background(), 200, r200, r200, params.BeaconConfig().ZeroHash, 0, 0)
+	state, blkRoot, err := setupInsertParameters(context.Background(), 200, r200, r200, params.BeaconConfig().ZeroHash, 0, 0)
 	require.NoError(t, err)
-	require.NoError(t, service.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx, state))
+	require.NoError(t, service.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx, state, blkRoot))
 
 	r, err := service.ancestor(context.Background(), r200[:], 150)
 	require.NoError(t, err)
