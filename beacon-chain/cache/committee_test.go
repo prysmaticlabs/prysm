@@ -50,7 +50,7 @@ func TestCommitteeCache_CommitteesByEpoch(t *testing.T) {
 	if indices != nil {
 		t.Error("Expected committee not to exist in empty cache")
 	}
-	require.NoError(t, cache.AddCommitteeShuffledList(item))
+	require.NoError(t, cache.AddCommitteeShuffledList(context.Background(), item))
 
 	wantedIndex := types.CommitteeIndex(0)
 	indices, err = cache.Committee(context.Background(), slot, item.Seed, wantedIndex)
@@ -70,7 +70,7 @@ func TestCommitteeCache_ActiveIndices(t *testing.T) {
 		t.Error("Expected committee not to exist in empty cache")
 	}
 
-	require.NoError(t, cache.AddCommitteeShuffledList(item))
+	require.NoError(t, cache.AddCommitteeShuffledList(context.Background(), item))
 
 	indices, err = cache.ActiveIndices(context.Background(), item.Seed)
 	require.NoError(t, err)
@@ -85,7 +85,7 @@ func TestCommitteeCache_ActiveCount(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 0, count, "Expected active count not to exist in empty cache")
 
-	require.NoError(t, cache.AddCommitteeShuffledList(item))
+	require.NoError(t, cache.AddCommitteeShuffledList(context.Background(), item))
 
 	count, err = cache.ActiveIndicesCount(context.Background(), item.Seed)
 	require.NoError(t, err)
@@ -101,7 +101,7 @@ func TestCommitteeCache_CanRotate(t *testing.T) {
 	for i := start; i < end; i++ {
 		s := []byte(strconv.Itoa(i))
 		item := &Committees{Seed: bytesutil.ToBytes32(s)}
-		require.NoError(t, cache.AddCommitteeShuffledList(item))
+		require.NoError(t, cache.AddCommitteeShuffledList(context.Background(), item))
 	}
 
 	k := cache.CommitteeCache.Keys()
@@ -133,4 +133,21 @@ func TestCommitteeCacheOutOfRange(t *testing.T) {
 
 	_, err = cache.Committee(context.Background(), 0, seed, math.MaxUint64) // Overflow!
 	require.NotNil(t, err, "Did not fail as expected")
+}
+
+func TestCommitteeCache_DoesNothingWhenCancelledContext(t *testing.T) {
+	cache := NewCommitteesCache()
+
+	item := &Committees{Seed: [32]byte{'A'}, SortedIndices: []types.ValidatorIndex{1, 2, 3, 4, 5, 6}}
+	count, err := cache.ActiveIndicesCount(context.Background(), item.Seed)
+	require.NoError(t, err)
+	assert.Equal(t, 0, count, "Expected active count not to exist in empty cache")
+
+	cancelled, cancel := context.WithCancel(context.Background())
+	cancel()
+	require.ErrorIs(t, cache.AddCommitteeShuffledList(cancelled, item), context.Canceled)
+
+	count, err = cache.ActiveIndicesCount(context.Background(), item.Seed)
+	require.NoError(t, err)
+	assert.Equal(t, 0, count)
 }
