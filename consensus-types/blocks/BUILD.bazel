@@ -7,6 +7,7 @@ go_library(
         "mutator.go",
         "proto.go",
         "types.go",
+        "wrapper.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/consensus-types/blocks",
     visibility = ["//visibility:public"],
