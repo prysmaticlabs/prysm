@@ -136,7 +136,11 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte, headBlock int
 	headSlot := s.HeadSlot()
 	newHeadSlot := headBlock.Block().Slot()
 	oldHeadRoot := s.headRoot()
-	oldStateRoot := s.headBlock().Block().StateRoot()
+	hb, err := s.headBlock()
+	if err != nil {
+		return errors.Wrap(err, "could not get head block")
+	}
+	oldStateRoot := hb.Block().StateRoot()
 	newStateRoot := headBlock.Block().StateRoot()
 	if bytesutil.ToBytes32(headBlock.Block().ParentRoot()) != bytesutil.ToBytes32(r) {
 		log.WithFields(logrus.Fields{

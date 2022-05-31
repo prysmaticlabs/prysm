@@ -232,7 +232,11 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 		}
 	}
 
-	h := s.headBlock().Block()
+	headBlock, err := s.headBlock()
+	if err != nil {
+		return errors.Wrap(err, "could not get head block")
+	}
+	h := headBlock.Block()
 	if h.Slot() > fSlot {
 		log.WithFields(logrus.Fields{
 			"startSlot": fSlot,
