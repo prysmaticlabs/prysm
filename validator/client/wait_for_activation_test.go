@@ -375,12 +375,6 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 			activeResp,
 			nil,
 		)
-		//client.EXPECT().PrepareBeaconProposer(gomock.Any(), &ethpb.PrepareBeaconProposerRequest{
-		//	Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
-		//		{FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9").Bytes(), ValidatorIndex: 1},
-		//		{FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9").Bytes(), ValidatorIndex: 1},
-		//	},
-		//}).Return(nil, nil)
 
 		go func() {
 			// We add the active key into the keymanager and simulate a key refresh.
