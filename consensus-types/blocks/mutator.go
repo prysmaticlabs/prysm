@@ -7,13 +7,13 @@ import (
 	"github.com/prysmaticlabs/prysm/runtime/version"
 )
 
-type BlockMutator struct {
+type blockMutator struct {
 	Phase0    func(beaconBlock *eth.SignedBeaconBlock)
 	Altair    func(beaconBlock *eth.SignedBeaconBlockAltair)
 	Bellatrix func(beaconBlock *eth.SignedBeaconBlockBellatrix)
 }
 
-func (m BlockMutator) Apply(b interfaces.SignedBeaconBlock) error {
+func (m blockMutator) apply(b interfaces.SignedBeaconBlock) error {
 	switch b.Version() {
 	case version.Phase0:
 		bb, err := b.PbPhase0Block()
@@ -42,33 +42,33 @@ func (m BlockMutator) Apply(b interfaces.SignedBeaconBlock) error {
 }
 
 func SetBlockStateRoot(b interfaces.SignedBeaconBlock, sr [32]byte) error {
-	return BlockMutator{
+	return blockMutator{
 		Phase0:    func(bb *eth.SignedBeaconBlock) { bb.Block.StateRoot = sr[:] },
 		Altair:    func(bb *eth.SignedBeaconBlockAltair) { bb.Block.StateRoot = sr[:] },
 		Bellatrix: func(bb *eth.SignedBeaconBlockBellatrix) { bb.Block.StateRoot = sr[:] },
-	}.Apply(b)
+	}.apply(b)
 }
 
 func SetBlockParentRoot(b interfaces.SignedBeaconBlock, pr [32]byte) error {
-	return BlockMutator{
+	return blockMutator{
 		Phase0:    func(bb *eth.SignedBeaconBlock) { bb.Block.ParentRoot = pr[:] },
 		Altair:    func(bb *eth.SignedBeaconBlockAltair) { bb.Block.ParentRoot = pr[:] },
 		Bellatrix: func(bb *eth.SignedBeaconBlockBellatrix) { bb.Block.ParentRoot = pr[:] },
-	}.Apply(b)
+	}.apply(b)
 }
 
 func SetBlockSlot(b interfaces.SignedBeaconBlock, s types.Slot) error {
-	return BlockMutator{
+	return blockMutator{
 		Phase0:    func(bb *eth.SignedBeaconBlock) { bb.Block.Slot = s },
 		Altair:    func(bb *eth.SignedBeaconBlockAltair) { bb.Block.Slot = s },
 		Bellatrix: func(bb *eth.SignedBeaconBlockBellatrix) { bb.Block.Slot = s },
-	}.Apply(b)
+	}.apply(b)
 }
 
 func SetProposerIndex(b interfaces.SignedBeaconBlock, idx types.ValidatorIndex) error {
-	return BlockMutator{
+	return blockMutator{
 		Phase0:    func(bb *eth.SignedBeaconBlock) { bb.Block.ProposerIndex = idx },
 		Altair:    func(bb *eth.SignedBeaconBlockAltair) { bb.Block.ProposerIndex = idx },
 		Bellatrix: func(bb *eth.SignedBeaconBlockBellatrix) { bb.Block.ProposerIndex = idx },
-	}.Apply(b)
+	}.apply(b)
 }
