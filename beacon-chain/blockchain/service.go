@@ -339,7 +339,9 @@ func (s *Service) initializeHeadFromDB(ctx context.Context) error {
 			if err != nil {
 				return errors.Wrap(err, "could not retrieve head state")
 			}
-			s.setHead(headRoot, headBlock, headState)
+			if err := s.setHead(headRoot, headBlock, headState); err != nil {
+				return errors.Wrap(err, "could not set head")
+			}
 			return nil
 		} else {
 			log.Warnf("Finalized checkpoint at slot %d is too close to the current head slot, "+
@@ -355,9 +357,7 @@ func (s *Service) initializeHeadFromDB(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized block")
 	}
-	s.setHead(finalizedRoot, finalizedBlock, finalizedState)
-
-	return nil
+	return s.setHead(finalizedRoot, finalizedBlock, finalizedState)
 }
 
 func (s *Service) startFromPOWChain() error {
@@ -499,8 +499,7 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState state.Beacon
 		log.Fatalf("Could not set optimistic status of genesis block to false: %v", err)
 	}
 
-	s.setHead(genesisBlkRoot, genesisBlk, genesisState)
-	return nil
+	return s.setHead(genesisBlkRoot, genesisBlk, genesisState)
 }
 
 // This returns true if block has been processed before. Two ways to verify the block has been processed:

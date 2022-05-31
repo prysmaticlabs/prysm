@@ -174,7 +174,9 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte, headBlock int
 	}
 
 	// Cache the new head info.
-	s.setHead(headRoot, headBlock, headState)
+	if err := s.setHead(headRoot, headBlock, headState); err != nil {
+		return errors.Wrap(err, "could not set head")
+	}
 
 	// Save the new head root to DB.
 	if err := s.cfg.BeaconDB.SaveHeadBlockRoot(ctx, headRoot); err != nil {
@@ -211,7 +213,9 @@ func (s *Service) saveHeadNoDB(ctx context.Context, b interfaces.SignedBeaconBlo
 	if err != nil {
 		return errors.Wrap(err, "could not copy beacon block")
 	}
-	s.setHeadInitialSync(r, cp, hs)
+	if err := s.setHeadInitialSync(r, cp, hs); err != nil {
+		return errors.Wrap(err, "could not set head")
+	}
 	return nil
 }
 
