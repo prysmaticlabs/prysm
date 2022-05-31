@@ -237,8 +237,9 @@ func TestService_ProcessAttestationsAndUpdateHead(t *testing.T) {
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wb))
-	require.NoError(t, service.cfg.ForkChoiceStore.InsertOptimisticBlock(
-		ctx, wb.Block().Slot(), r, bytesutil.ToBytes32(wb.Block().ParentRoot()), [32]byte{}, 0, 0))
+	state, err = setupInsertParameters(ctx, wb.Block().Slot(), r, bytesutil.ToBytes32(wb.Block().ParentRoot()), [32]byte{}, 0, 0)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx, state))
 	service.head.root = r // Old head
 	require.Equal(t, 1, len(service.cfg.AttPool.ForkchoiceAttestations()))
 	require.NoError(t, err, service.UpdateHead(ctx))
