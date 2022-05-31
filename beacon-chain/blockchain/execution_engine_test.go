@@ -51,7 +51,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 		WithProposerIdsCache(cache.NewProposerPayloadIDsCache()),
 	}
 	service, err := NewService(ctx, opts...)
-	st, _ := util.DeterministicGenesisState(t, 1)
+	st, _ := util.DeterministicGenesisState(t, 10)
 	service.head = &head{
 		state: st,
 	}
@@ -59,7 +59,10 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 	state, err := setupInsertParameters(ctx, 0, [32]byte{}, [32]byte{}, params.BeaconConfig().ZeroHash, 0, 0)
 	require.NoError(t, err)
 	require.NoError(t, fcs.InsertOptimisticBlock(ctx, state))
-	state, err = setupInsertParameters(ctx, 1, [32]byte{'a'}, [32]byte{}, params.BeaconConfig().ZeroHash, 0, 0)
+	state, err = setupInsertParameters(ctx, 1, altairBlkRoot, [32]byte{}, params.BeaconConfig().ZeroHash, 0, 0)
+	require.NoError(t, err)
+	require.NoError(t, fcs.InsertOptimisticBlock(ctx, state))
+	state, err = setupInsertParameters(ctx, 2, bellatrixBlkRoot, altairBlkRoot, params.BeaconConfig().ZeroHash, 0, 0)
 	require.NoError(t, err)
 	require.NoError(t, fcs.InsertOptimisticBlock(ctx, state))
 
@@ -189,7 +192,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 				headRoot:  tt.headRoot,
 				headBlock: tt.blk,
 			}
-			_, err := service.notifyForkchoiceUpdate(ctx, arg)
+			_, err = service.notifyForkchoiceUpdate(ctx, arg)
 			if tt.errString != "" {
 				require.ErrorContains(t, tt.errString, err)
 			} else {

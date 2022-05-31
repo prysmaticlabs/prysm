@@ -418,6 +418,11 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 		return errors.New("batch block signature verification failed")
 	}
 
+	// Fill in missing blocks
+	if err := s.fillInForkChoiceMissingBlocks(ctx, blks[0].Block(), fCheckpoints[0], jCheckpoints[0]); err != nil {
+		return err
+	}
+
 	// blocks have been verified, add them to forkchoice and call the engine
 	for i, b := range blks {
 		isValidPayload, err := s.notifyNewPayload(ctx,
@@ -433,7 +438,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 			}
 		}
 
-		if err := s.insertBlockToForkChoiceStore(ctx, b.Block(), blockRoots[i], fCheckpoints[i], jCheckpoints[i]); err != nil {
+		if err := s.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx, preState); err != nil {
 			return err
 		}
 		if isValidPayload {

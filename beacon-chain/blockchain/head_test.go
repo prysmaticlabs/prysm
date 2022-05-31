@@ -168,14 +168,14 @@ func TestUpdateHead_MissingJustifiedRoot(t *testing.T) {
 	require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), wsb))
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
+	state, _ := util.DeterministicGenesisState(t, 1)
+	require.NoError(t, service.cfg.BeaconDB.SaveState(context.Background(), state, r))
 
 	service.store.SetJustifiedCheckptAndPayloadHash(&ethpb.Checkpoint{Root: r[:]}, [32]byte{'a'})
 	service.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{}, [32]byte{'b'})
 	service.store.SetBestJustifiedCheckpt(&ethpb.Checkpoint{})
-	headRoot, err := service.updateHead(context.Background(), []uint64{})
-	require.NoError(t, err)
-	st, _ := util.DeterministicGenesisState(t, 1)
-	require.NoError(t, service.saveHead(context.Background(), headRoot, wsb, st))
+	_, err = service.updateHead(context.Background(), []uint64{})
+	require.ErrorContains(t, "unknown justified root", err)
 }
 
 func Test_notifyNewHeadEvent(t *testing.T) {
@@ -641,6 +641,9 @@ func TestUpdateHead_noSavedChanges(t *testing.T) {
 	headRoot := service.headRoot()
 	require.Equal(t, [32]byte{}, headRoot)
 
+	st, err := setupInsertParameters(ctx, 0, bellatrixBlkRoot, [32]byte{}, [32]byte{}, 0, 0)
+	require.NoError(t, err)
+	require.NoError(t, fcs.InsertOptimisticBlock(ctx, st))
 	newRoot, err := service.updateHead(ctx, []uint64{1, 2})
 	require.NoError(t, err)
 	require.NotEqual(t, headRoot, newRoot)
