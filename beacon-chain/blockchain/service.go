@@ -451,7 +451,7 @@ func (s *Service) initializeBeaconChain(
 	s.cfg.ChainStartFetcher.ClearPreGenesisData()
 
 	// Update committee shuffled indices for genesis epoch.
-	if err := helpers.UpdateCommitteeCache(genesisState, 0 /* genesis epoch */); err != nil {
+	if err := helpers.UpdateCommitteeCache(ctx, genesisState, 0); err != nil {
 		return nil, err
 	}
 	if err := helpers.UpdateProposerIndicesInCache(ctx, genesisState); err != nil {
