@@ -320,6 +320,13 @@ service BeaconNodeValidator {
             get: "/eth/v1alpha1/validator/blocks/stream"
         };
     }
+
+    rpc SubmitValidatorRegistration(SignedValidatorRegistrationV1) returns (google.protobuf.Empty) {
+        option (google.api.http) = {
+            post: "/eth/v1alpha1/validator/registration"
+            body: "*"
+        };
+    }
 }
 
 // SyncMessageBlockRootResponse for beacon chain validator to retrieve and

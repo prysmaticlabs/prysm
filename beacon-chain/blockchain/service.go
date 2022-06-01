@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/store"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -33,7 +34,7 @@ import (
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
+	consensusblocks "github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -144,13 +145,18 @@ func (s *Service) Start() {
 func (s *Service) Stop() error {
 	defer s.cancel()
 
+	// lock before accessing s.head, s.head.state, s.head.state.FinalizedCheckpoint().Root
+	s.headLock.RLock()
 	if s.cfg.StateGen != nil && s.head != nil && s.head.state != nil {
+		r := s.head.state.FinalizedCheckpoint().Root
+		s.headLock.RUnlock()
 		// Save the last finalized state so that starting up in the following run will be much faster.
-		if err := s.cfg.StateGen.ForceCheckpoint(s.ctx, s.head.state.FinalizedCheckpoint().Root); err != nil {
+		if err := s.cfg.StateGen.ForceCheckpoint(s.ctx, r); err != nil {
 			return err
 		}
+	} else {
+		s.headLock.RUnlock()
 	}
-
 	// Save initial sync cached blocks to the DB before stop.
 	return s.cfg.BeaconDB.SaveBlocks(s.ctx, s.getInitSyncBlocks())
 }
@@ -212,7 +218,7 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized checkpoint block")
 	}
-	payloadHash, err := getBlockPayloadHash(fb.Block())
+	payloadHash, err := blocks.GetBlockPayloadHash(fb.Block())
 	if err != nil {
 		return errors.Wrap(err, "could not get execution payload hash")
 	}
@@ -231,12 +237,13 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 			return errors.Wrap(err, "could not set finalized block as validated")
 		}
 	}
-
+	s.headLock.RLock()
 	headBlock, err := s.headBlock()
 	if err != nil {
 		return errors.Wrap(err, "could not get head block")
 	}
 	h := headBlock.Block()
+	s.headLock.RUnlock()
 	if h.Slot() > fSlot {
 		log.WithFields(logrus.Fields{
 			"startSlot": fSlot,
@@ -281,7 +288,7 @@ func (s *Service) originRootFromSavedState(ctx context.Context) ([32]byte, error
 	if err != nil {
 		return originRoot, errors.Wrap(err, "could not get genesis block from db")
 	}
-	if err := blocks.BeaconBlockIsNil(genesisBlock); err != nil {
+	if err := consensusblocks.BeaconBlockIsNil(genesisBlock); err != nil {
 		return originRoot, err
 	}
 	genesisBlkRoot, err := genesisBlock.Block().HashTreeRoot()
@@ -449,7 +456,7 @@ func (s *Service) initializeBeaconChain(
 	s.cfg.ChainStartFetcher.ClearPreGenesisData()
 
 	// Update committee shuffled indices for genesis epoch.
-	if err := helpers.UpdateCommitteeCache(genesisState, 0 /* genesis epoch */); err != nil {
+	if err := helpers.UpdateCommitteeCache(ctx, genesisState, 0); err != nil {
 		return nil, err
 	}
 	if err := helpers.UpdateProposerIndicesInCache(ctx, genesisState); err != nil {
@@ -482,7 +489,7 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState state.Beacon
 	genesisCheckpoint := genesisState.FinalizedCheckpoint()
 	s.store = store.New(genesisCheckpoint, genesisCheckpoint)
 
-	payloadHash, err := getBlockPayloadHash(genesisBlk.Block())
+	payloadHash, err := blocks.GetBlockPayloadHash(genesisBlk.Block())
 	if err != nil {
 		return err
 	}

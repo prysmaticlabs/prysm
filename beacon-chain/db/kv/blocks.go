@@ -403,33 +403,51 @@ func (s *Store) HighestSlotBlocksBelow(ctx context.Context, slot types.Slot) ([]
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HighestSlotBlocksBelow")
 	defer span.End()
 
-	var best []byte
-	if err := s.db.View(func(tx *bolt.Tx) error {
+	var root [32]byte
+	sk := bytesutil.Uint64ToBytesBigEndian(uint64(slot))
+	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blockSlotIndicesBucket)
-		// Iterate through the index, which is in byte sorted order.
 		c := bkt.Cursor()
-		for s, root := c.First(); s != nil; s, root = c.Next() {
+		// The documentation for Seek says:
+		// "If the key does not exist then the next key is used. If no keys follow, a nil key is returned."
+		sl, r := c.Seek(sk)
+		// So if there are slots in the index higher than the requested slot, sl will be equal to the key that is
+		// one higher than the value we want. If the slot argument is higher than the highest value in the index,
+		// we'll get a nil value for `sl`. In that case we'll go backwards from Cursor.Last().
+		if sl == nil {
+			sl, r = c.Last()
+		}
+		for {
 			if ctx.Err() != nil {
 				return ctx.Err()
 			}
-			key := bytesutil.BytesToSlotBigEndian(s)
-			if root == nil {
-				continue
-			}
-			if key >= slot {
+			// termination condition: when .Prev() rewinds past the beginning off the collection, key will be nil.
+			// breaking without setting `root` means `root` will be the zero value, so this function will return
+			// the genesis block.
+			if sl == nil {
 				break
 			}
-			best = root
+			if r == nil {
+				continue
+			}
+			bs := bytesutil.BytesToSlotBigEndian(sl)
+			// Iterating through the index using .Prev will move from higher to lower, so the first key we find behind
+			// the requested slot must be the highest block below that slot.
+			if slot > bs {
+				root = bytesutil.ToBytes32(r)
+				break
+			}
+			sl, r = c.Prev()
 		}
 		return nil
-	}); err != nil {
+	})
+	if err != nil {
 		return nil, err
 	}
 
 	var blk interfaces.SignedBeaconBlock
-	var err error
-	if best != nil {
-		blk, err = s.Block(ctx, bytesutil.ToBytes32(best))
+	if root != params.BeaconConfig().ZeroHash {
+		blk, err = s.Block(ctx, root)
 		if err != nil {
 			return nil, err
 		}
@@ -440,7 +458,6 @@ func (s *Store) HighestSlotBlocksBelow(ctx context.Context, slot types.Slot) ([]
 			return nil, err
 		}
 	}
-
 	return []interfaces.SignedBeaconBlock{blk}, nil
 }
 

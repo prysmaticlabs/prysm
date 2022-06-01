@@ -118,7 +118,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 	}
 	isValidPayload, err := s.notifyNewPayload(ctx, postStateVersion, postStateHeader, signed)
 	if err != nil {
-		return errors.Wrap(err, "could not verify new payload")
+		return fmt.Errorf("could not verify new payload: %v", err)
 	}
 	if isValidPayload {
 		if err := s.validateMergeTransitionBlock(ctx, preStateVersion, preStateHeader, signed); err != nil {
@@ -335,33 +335,33 @@ func getStateVersionAndPayload(st state.BeaconState) (int, *ethpb.ExecutionPaylo
 }
 
 func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeaconBlock,
-	blockRoots [][32]byte) ([]*ethpb.Checkpoint, []*ethpb.Checkpoint, error) {
+	blockRoots [][32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.onBlockBatch")
 	defer span.End()
 
 	if len(blks) == 0 || len(blockRoots) == 0 {
-		return nil, nil, errors.New("no blocks provided")
+		return errors.New("no blocks provided")
 	}
 
 	if len(blks) != len(blockRoots) {
-		return nil, nil, errWrongBlockCount
+		return errWrongBlockCount
 	}
 
 	if err := consensusblocks.BeaconBlockIsNil(blks[0]); err != nil {
-		return nil, nil, invalidBlock{err}
+		return invalidBlock{err}
 	}
 	b := blks[0].Block()
 
 	// Retrieve incoming block's pre state.
 	if err := s.verifyBlkPreState(ctx, b); err != nil {
-		return nil, nil, err
+		return err
 	}
 	preState, err := s.cfg.StateGen.StateByRootInitialSync(ctx, bytesutil.ToBytes32(b.ParentRoot()))
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
 	if preState == nil || preState.IsNil() {
-		return nil, nil, fmt.Errorf("nil pre state for slot %d", b.Slot())
+		return fmt.Errorf("nil pre state for slot %d", b.Slot())
 	}
 
 	jCheckpoints := make([]*ethpb.Checkpoint, len(blks))
@@ -382,7 +382,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 	for i, b := range blks {
 		v, h, err := getStateVersionAndPayload(preState)
 		if err != nil {
-			return nil, nil, err
+			return err
 		}
 		preVersionAndHeaders[i] = &versionAndHeader{
 			version: v,
@@ -391,7 +391,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 
 		set, preState, err = transition.ExecuteStateTransitionNoVerifyAnySig(ctx, preState, b)
 		if err != nil {
-			return nil, nil, invalidBlock{err}
+			return invalidBlock{err}
 		}
 		// Save potential boundary states.
 		if slots.IsEpochStart(preState.Slot()) {
@@ -402,7 +402,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 
 		v, h, err = getStateVersionAndPayload(preState)
 		if err != nil {
-			return nil, nil, err
+			return err
 		}
 		postVersionAndHeaders[i] = &versionAndHeader{
 			version: v,
@@ -412,10 +412,10 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 	}
 	verify, err := sigSet.Verify()
 	if err != nil {
-		return nil, nil, invalidBlock{err}
+		return invalidBlock{err}
 	}
 	if !verify {
-		return nil, nil, errors.New("batch block signature verification failed")
+		return errors.New("batch block signature verification failed")
 	}
 
 	// blocks have been verified, add them to forkchoice and call the engine
@@ -424,40 +424,40 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 			postVersionAndHeaders[i].version,
 			postVersionAndHeaders[i].header, b)
 		if err != nil {
-			return nil, nil, err
+			return err
 		}
 		if isValidPayload {
 			if err := s.validateMergeTransitionBlock(ctx, preVersionAndHeaders[i].version,
 				preVersionAndHeaders[i].header, b); err != nil {
-				return nil, nil, err
+				return err
 			}
 		}
 
 		if err := s.insertBlockToForkChoiceStore(ctx, b.Block(), blockRoots[i], fCheckpoints[i], jCheckpoints[i]); err != nil {
-			return nil, nil, err
+			return err
 		}
 		if isValidPayload {
 			if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, blockRoots[i]); err != nil {
-				return nil, nil, errors.Wrap(err, "could not set optimistic block to valid")
+				return errors.Wrap(err, "could not set optimistic block to valid")
 			}
 		}
 		s.saveInitSyncBlock(blockRoots[i], b)
 		if err = s.handleBlockAfterBatchVerify(ctx, b, blockRoots[i], fCheckpoints[i], jCheckpoints[i]); err != nil {
 			tracing.AnnotateError(span, err)
-			return nil, nil, err
+			return err
 		}
 	}
 
 	for r, st := range boundaries {
 		if err := s.cfg.StateGen.SaveState(ctx, r, st); err != nil {
-			return nil, nil, err
+			return err
 		}
 	}
 	// Also saves the last post state which to be used as pre state for the next batch.
 	lastB := blks[len(blks)-1]
 	lastBR := blockRoots[len(blockRoots)-1]
 	if err := s.cfg.StateGen.SaveState(ctx, lastBR, preState); err != nil {
-		return nil, nil, err
+		return err
 	}
 	arg := &notifyForkchoiceUpdateArg{
 		headState: preState,
@@ -465,12 +465,9 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 		headBlock: lastB.Block(),
 	}
 	if _, err := s.notifyForkchoiceUpdate(ctx, arg); err != nil {
-		return nil, nil, err
+		return err
 	}
-	if err := s.saveHeadNoDB(ctx, lastB, lastBR, preState); err != nil {
-		return nil, nil, err
-	}
-	return fCheckpoints, jCheckpoints, nil
+	return s.saveHeadNoDB(ctx, lastB, lastBR, preState)
 }
 
 // handles a block after the block's batch has been verified, where we can save blocks
@@ -521,6 +518,9 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed interf
 			return err
 		}
 		s.store.SetFinalizedCheckptAndPayloadHash(fCheckpoint, h)
+		if err := s.cfg.ForkChoiceStore.Prune(ctx, bytesutil.ToBytes32(fCheckpoint.Root)); err != nil {
+			return errors.Wrap(err, "could not prune proto array fork choice nodes")
+		}
 	}
 	return nil
 }
@@ -537,16 +537,20 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState state.Beaco
 			return err
 		}
 		// Update caches for the next epoch at epoch boundary slot - 1.
-		if err := helpers.UpdateCommitteeCache(copied, coreTime.CurrentEpoch(copied)); err != nil {
+		if err := helpers.UpdateCommitteeCache(ctx, copied, coreTime.CurrentEpoch(copied)); err != nil {
 			return err
 		}
 		if err := helpers.UpdateProposerIndicesInCache(ctx, copied); err != nil {
 			return err
 		}
 	} else if postState.Slot() >= s.nextEpochBoundarySlot {
-		if err := reportEpochMetrics(ctx, postState, s.head.state); err != nil {
+		s.headLock.RLock()
+		st := s.head.state
+		s.headLock.RUnlock()
+		if err := reportEpochMetrics(ctx, postState, st); err != nil {
 			return err
 		}
+
 		var err error
 		s.nextEpochBoundarySlot, err = slots.EpochStart(coreTime.NextEpoch(postState))
 		if err != nil {
@@ -555,7 +559,7 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState state.Beaco
 
 		// Update caches at epoch boundary slot.
 		// The following updates have short cut to return nil cheaply if fulfilled during boundary slot - 1.
-		if err := helpers.UpdateCommitteeCache(postState, coreTime.CurrentEpoch(postState)); err != nil {
+		if err := helpers.UpdateCommitteeCache(ctx, postState, coreTime.CurrentEpoch(postState)); err != nil {
 			return err
 		}
 		if err := helpers.UpdateProposerIndicesInCache(ctx, postState); err != nil {
@@ -600,7 +604,7 @@ func (s *Service) insertBlockToForkChoiceStore(ctx context.Context, blk interfac
 	}
 	// Feed in block to fork choice store.
 
-	payloadHash, err := getBlockPayloadHash(blk)
+	payloadHash, err := blocks.GetBlockPayloadHash(blk)
 	if err != nil {
 		return err
 	}
@@ -619,18 +623,6 @@ func (s *Service) InsertSlashingsToForkChoiceStore(ctx context.Context, slashing
 			s.ForkChoicer().InsertSlashedIndex(ctx, types.ValidatorIndex(index))
 		}
 	}
-}
-
-func getBlockPayloadHash(blk interfaces.BeaconBlock) ([32]byte, error) {
-	payloadHash := [32]byte{}
-	if blocks.IsPreBellatrixVersion(blk.Version()) {
-		return payloadHash, nil
-	}
-	payload, err := blk.Body().ExecutionPayload()
-	if err != nil {
-		return payloadHash, err
-	}
-	return bytesutil.ToBytes32(payload.BlockHash), nil
 }
 
 // This saves post state info to DB or cache. This also saves post state info to fork choice store.
