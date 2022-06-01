@@ -1731,7 +1731,7 @@ func TestValidator_UpdateValidatorProposerSettings(t *testing.T) {
 						{FeeRecipient: common.HexToAddress(defaultFeeHex).Bytes(), ValidatorIndex: 2},
 					},
 				}).Return(nil, nil)
-				config[keys[0]] = &validator_service_config.ValidatorProposerSettings{
+				config[keys[0]] = &validator_service_config.ValidatorProposerOptions{
 					FeeRecipient: common.HexToAddress("0x055Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
 					GasLimit:     uint64(40000000),
 				}
@@ -1811,7 +1811,7 @@ func TestValidator_UpdateValidatorProposerSettings(t *testing.T) {
 						{FeeRecipient: common.HexToAddress("0x0").Bytes(), ValidatorIndex: 1},
 					},
 				}).Return(nil, nil)
-				config[keys[0]] = &validator_service_config.ValidatorProposerSettings{
+				config[keys[0]] = &validator_service_config.ValidatorProposerOptions{
 					FeeRecipient: common.Address{},
 				}
 				v.validatorProposerSettings = &validator_service_config.ValidatorProposerSettings{
