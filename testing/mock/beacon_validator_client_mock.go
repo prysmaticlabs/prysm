@@ -112,25 +112,6 @@ func (m *MockBeaconNodeValidatorClient) GetBeaconBlock(arg0 context.Context, arg
 	return ret0, ret1
 }
 
-//SubmitValidatorRegistration mocks base method.
-func (m *MockBeaconNodeValidatorClient) SubmitValidatorRegistration(arg0 context.Context, arg1 *eth.SignedValidatorRegistrationV1, arg2 ...grpc.CallOption) (*empty.Empty, error) {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{arg0, arg1}
-	for _, a := range arg2 {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "SubmitValidatorRegistration", varargs...)
-	ret1, _ := ret[1].(error)
-	return &empty.Empty{}, ret1
-}
-
-//SubmitValidatorRegistration indicates an expected call of SubmitValidatorRegistration
-func (mr *MockBeaconNodeValidatorClientMockRecorder) SubmitValidatorRegistration(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubmitValidatorRegistration", reflect.TypeOf((*MockBeaconNodeValidatorClient)(nil).SubmitValidatorRegistration), varargs...)
-}
-
 // GetBeaconBlock indicates an expected call of GetBeaconBlock
 func (mr *MockBeaconNodeValidatorClientMockRecorder) GetBeaconBlock(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
