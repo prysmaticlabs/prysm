@@ -22,7 +22,6 @@ var errCloningFailed = errors.New("cloning proto message failed")
 // BeaconBlockBody is the main beacon block body structure. It can represent any block type.
 type BeaconBlockBody struct {
 	version           int
-	blinded           bool
 	randaoReveal      []byte
 	eth1Data          *eth.Eth1Data
 	graffiti          []byte
@@ -40,7 +39,6 @@ type BeaconBlockBody struct {
 // BeaconBlock is the main beacon block structure. It can represent any block type.
 type BeaconBlock struct {
 	version       int
-	blinded       bool
 	slot          types.Slot
 	proposerIndex types.ValidatorIndex
 	parentRoot    []byte
@@ -51,7 +49,6 @@ type BeaconBlock struct {
 // SignedBeaconBlock is the main signed beacon block structure. It can represent any block type.
 type SignedBeaconBlock struct {
 	version   int
-	blinded   bool
 	block     *BeaconBlock
 	signature []byte
 }

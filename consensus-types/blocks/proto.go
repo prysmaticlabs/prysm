@@ -38,21 +38,20 @@ func (b *SignedBeaconBlock) Proto() (proto.Message, error) {
 			Signature: b.signature,
 		}, nil
 	case version.Bellatrix:
-		if b.blinded {
-			block, ok := blockMessage.(*eth.BlindedBeaconBlockBellatrix)
-			if !ok {
-				return nil, errors.Wrap(err, incorrectBlockVersion)
-			}
-			return &eth.SignedBlindedBeaconBlockBellatrix{
-				Block:     block,
-				Signature: b.signature,
-			}, nil
-		}
 		block, ok := blockMessage.(*eth.BeaconBlockBellatrix)
 		if !ok {
 			return nil, errors.Wrap(err, incorrectBlockVersion)
 		}
 		return &eth.SignedBeaconBlockBellatrix{
+			Block:     block,
+			Signature: b.signature,
+		}, nil
+	case version.BellatrixBlind:
+		block, ok := blockMessage.(*eth.BlindedBeaconBlockBellatrix)
+		if !ok {
+			return nil, errors.Wrap(err, incorrectBlockVersion)
+		}
+		return &eth.SignedBlindedBeaconBlockBellatrix{
 			Block:     block,
 			Signature: b.signature,
 		}, nil
@@ -98,24 +97,23 @@ func (b *BeaconBlock) Proto() (proto.Message, error) {
 			Body:          body,
 		}, nil
 	case version.Bellatrix:
-		if b.blinded {
-			body, ok := bodyMessage.(*eth.BlindedBeaconBlockBodyBellatrix)
-			if !ok {
-				return nil, errors.Wrap(err, incorrectBodyVersion)
-			}
-			return &eth.BlindedBeaconBlockBellatrix{
-				Slot:          b.slot,
-				ProposerIndex: b.proposerIndex,
-				ParentRoot:    b.parentRoot,
-				StateRoot:     b.stateRoot,
-				Body:          body,
-			}, nil
-		}
 		body, ok := bodyMessage.(*eth.BeaconBlockBodyBellatrix)
 		if !ok {
 			return nil, errors.Wrap(err, incorrectBodyVersion)
 		}
 		return &eth.BeaconBlockBellatrix{
+			Slot:          b.slot,
+			ProposerIndex: b.proposerIndex,
+			ParentRoot:    b.parentRoot,
+			StateRoot:     b.stateRoot,
+			Body:          body,
+		}, nil
+	case version.BellatrixBlind:
+		body, ok := bodyMessage.(*eth.BlindedBeaconBlockBodyBellatrix)
+		if !ok {
+			return nil, errors.Wrap(err, incorrectBodyVersion)
+		}
+		return &eth.BlindedBeaconBlockBellatrix{
 			Slot:          b.slot,
 			ProposerIndex: b.proposerIndex,
 			ParentRoot:    b.parentRoot,
@@ -158,20 +156,6 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 			SyncAggregate:     b.syncAggregate,
 		}, nil
 	case version.Bellatrix:
-		if b.blinded {
-			return &eth.BlindedBeaconBlockBodyBellatrix{
-				RandaoReveal:           b.randaoReveal,
-				Eth1Data:               b.eth1Data,
-				Graffiti:               b.graffiti,
-				ProposerSlashings:      b.proposerSlashings,
-				AttesterSlashings:      b.attesterSlashings,
-				Attestations:           b.attestations,
-				Deposits:               b.deposits,
-				VoluntaryExits:         b.voluntaryExits,
-				SyncAggregate:          b.syncAggregate,
-				ExecutionPayloadHeader: b.executionPayloadHeader,
-			}, nil
-		}
 		return &eth.BeaconBlockBodyBellatrix{
 			RandaoReveal:      b.randaoReveal,
 			Eth1Data:          b.eth1Data,
@@ -183,6 +167,19 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 			VoluntaryExits:    b.voluntaryExits,
 			SyncAggregate:     b.syncAggregate,
 			ExecutionPayload:  b.executionPayload,
+		}, nil
+	case version.BellatrixBlind:
+		return &eth.BlindedBeaconBlockBodyBellatrix{
+			RandaoReveal:           b.randaoReveal,
+			Eth1Data:               b.eth1Data,
+			Graffiti:               b.graffiti,
+			ProposerSlashings:      b.proposerSlashings,
+			AttesterSlashings:      b.attesterSlashings,
+			Attestations:           b.attestations,
+			Deposits:               b.deposits,
+			VoluntaryExits:         b.voluntaryExits,
+			SyncAggregate:          b.syncAggregate,
+			ExecutionPayloadHeader: b.executionPayloadHeader,
 		}, nil
 	default:
 		return nil, errors.New("unsupported beacon block body version")
@@ -204,7 +201,6 @@ func initSignedBlockFromProtoPhase0(pb *eth.SignedBeaconBlock) (*SignedBeaconBlo
 	}
 	b := &SignedBeaconBlock{
 		version:   version.Phase0,
-		blinded:   false,
 		block:     block,
 		signature: pb.Signature,
 	}
@@ -226,7 +222,6 @@ func initSignedBlockFromProtoAltair(pb *eth.SignedBeaconBlockAltair) (*SignedBea
 	}
 	b := &SignedBeaconBlock{
 		version:   version.Altair,
-		blinded:   false,
 		block:     block,
 		signature: pb.Signature,
 	}
@@ -248,7 +243,6 @@ func initSignedBlockFromProtoBellatrix(pb *eth.SignedBeaconBlockBellatrix) (*Sig
 	}
 	b := &SignedBeaconBlock{
 		version:   version.Bellatrix,
-		blinded:   false,
 		block:     block,
 		signature: pb.Signature,
 	}
@@ -269,8 +263,7 @@ func initBlindedSignedBlockFromProtoBellatrix(pb *eth.SignedBlindedBeaconBlockBe
 		return nil, err
 	}
 	b := &SignedBeaconBlock{
-		version:   version.Bellatrix,
-		blinded:   true,
+		version:   version.BellatrixBlind,
 		block:     block,
 		signature: pb.Signature,
 	}
@@ -292,7 +285,6 @@ func initBlockFromProtoPhase0(pb *eth.BeaconBlock) (*BeaconBlock, error) {
 	}
 	b := &BeaconBlock{
 		version:       version.Phase0,
-		blinded:       false,
 		slot:          pb.Slot,
 		proposerIndex: pb.ProposerIndex,
 		parentRoot:    pb.ParentRoot,
@@ -317,7 +309,6 @@ func initBlockFromProtoAltair(pb *eth.BeaconBlockAltair) (*BeaconBlock, error) {
 	}
 	b := &BeaconBlock{
 		version:       version.Altair,
-		blinded:       false,
 		slot:          pb.Slot,
 		proposerIndex: pb.ProposerIndex,
 		parentRoot:    pb.ParentRoot,
@@ -342,7 +333,6 @@ func initBlockFromProtoBellatrix(pb *eth.BeaconBlockBellatrix) (*BeaconBlock, er
 	}
 	b := &BeaconBlock{
 		version:       version.Bellatrix,
-		blinded:       false,
 		slot:          pb.Slot,
 		proposerIndex: pb.ProposerIndex,
 		parentRoot:    pb.ParentRoot,
@@ -366,8 +356,7 @@ func initBlindedBlockFromProtoBellatrix(pb *eth.BlindedBeaconBlockBellatrix) (*B
 		return nil, err
 	}
 	b := &BeaconBlock{
-		version:       version.Bellatrix,
-		blinded:       true,
+		version:       version.BellatrixBlind,
 		slot:          pb.Slot,
 		proposerIndex: pb.ProposerIndex,
 		parentRoot:    pb.ParentRoot,
@@ -388,7 +377,6 @@ func initBlockBodyFromProtoPhase0(pb *eth.BeaconBlockBody) (*BeaconBlockBody, er
 	}
 	b := &BeaconBlockBody{
 		version:           version.Phase0,
-		blinded:           false,
 		randaoReveal:      pb.RandaoReveal,
 		eth1Data:          pb.Eth1Data,
 		graffiti:          pb.Graffiti,
@@ -412,7 +400,6 @@ func initBlockBodyFromProtoAltair(pb *eth.BeaconBlockBodyAltair) (*BeaconBlockBo
 	}
 	b := &BeaconBlockBody{
 		version:           version.Altair,
-		blinded:           false,
 		randaoReveal:      pb.RandaoReveal,
 		eth1Data:          pb.Eth1Data,
 		graffiti:          pb.Graffiti,
@@ -437,7 +424,6 @@ func initBlockBodyFromProtoBellatrix(pb *eth.BeaconBlockBodyBellatrix) (*BeaconB
 	}
 	b := &BeaconBlockBody{
 		version:           version.Bellatrix,
-		blinded:           false,
 		randaoReveal:      pb.RandaoReveal,
 		eth1Data:          pb.Eth1Data,
 		graffiti:          pb.Graffiti,
@@ -462,8 +448,7 @@ func initBlindedBlockBodyFromProtoBellatrix(pb *eth.BlindedBeaconBlockBodyBellat
 		return nil, errCloningFailed
 	}
 	b := &BeaconBlockBody{
-		version:                version.Bellatrix,
-		blinded:                true,
+		version:                version.BellatrixBlind,
 		randaoReveal:           pb.RandaoReveal,
 		eth1Data:               pb.Eth1Data,
 		graffiti:               pb.Graffiti,
