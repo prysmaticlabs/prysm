@@ -684,16 +684,20 @@ func TestWaitForActivation_RemoteKeymanager(t *testing.T) {
 		nodeClient.EXPECT().GetGenesis(
 			gomock.Any(),
 			&emptypb.Empty{},
-		).Return(
+		).Times(2).Return(
 			&ethpb.Genesis{GenesisTime: timestamppb.Now()}, nil)
 		client.EXPECT().DomainData(
 			gomock.Any(),
 			gomock.Any(),
-		).Return(
+		).Times(2).Return(
 			&ethpb.DomainResponse{
 				SignatureDomain: make([]byte, 32),
 			},
 			nil)
+		client.EXPECT().SubmitValidatorRegistration(
+			gomock.Any(),
+			gomock.Any(),
+		).Times(2).Return(&empty.Empty{}, nil)
 		client.EXPECT().PrepareBeaconProposer(gomock.Any(), &ethpb.PrepareBeaconProposerRequest{
 			Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
 				{FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9").Bytes(), ValidatorIndex: 2},

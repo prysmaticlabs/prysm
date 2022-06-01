@@ -5,10 +5,14 @@ import (
 	"errors"
 
 	"github.com/prysmaticlabs/prysm/async/event"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 )
 
@@ -33,8 +37,16 @@ func (m *MockKeymanager) FetchValidatingPublicKeys(context.Context) ([][fieldpar
 }
 
 // Sign --
-func (*MockKeymanager) Sign(context.Context, *validatorpb.SignRequest) (bls.Signature, error) {
-	panic("implement me")
+func (*MockKeymanager) Sign(_ context.Context, s *validatorpb.SignRequest) (bls.Signature, error) {
+	key,err := bls.RandKey()
+	if err != nil {
+		return nil, err
+	}
+	st, _ := util.DeterministicGenesisState(nil, 1)
+	d := params.BeaconConfig().DomainApplicationBuilder
+	e := slots.ToEpoch(st.Slot())
+	byteValue, err :=  signing.ComputeDomainAndSign(st, e, s.SigningSlot,  d, key)
+	return bls.SignatureFromBytes(byteValue)
 }
 
 // SubscribeAccountChanges --
