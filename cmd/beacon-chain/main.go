@@ -70,6 +70,9 @@ var appFlags = []cli.Flag{
 	flags.Eth1HeaderReqLimit,
 	flags.MinPeersPerSubnet,
 	flags.SuggestedFeeRecipient,
+	flags.TerminalTotalDifficultyOverride,
+	flags.TerminalBlockHashOverride,
+	flags.TerminalBlockHashActivationEpochOverride,
 	cmd.EnableBackupWebhookFlag,
 	cmd.BackupWebhookOutputDir,
 	cmd.MinimalConfigFlag,
@@ -132,6 +135,7 @@ func init() {
 	appFlags = cmd.WrapFlags(append(appFlags, features.BeaconChainFlags...))
 }
 
+// TODO: Revert the changes I made to log.*
 func main() {
 	app := cli.App{}
 	app.Name = "beacon-chain"
@@ -180,7 +184,7 @@ func main() {
 		logFileName := ctx.String(cmd.LogFileName.Name)
 		if logFileName != "" {
 			if err := logs.ConfigurePersistentLogging(logFileName); err != nil {
-				log.WithError(err).Error("Failed to configuring logging to disk.")
+				fmt.Print("Failed to configuring logging to disk.")
 			}
 		}
 		if err := cmd.ExpandSingleEndpointIfFile(ctx, flags.HTTPWeb3ProviderFlag); err != nil {
@@ -204,13 +208,13 @@ func main() {
 
 	defer func() {
 		if x := recover(); x != nil {
-			log.Errorf("Runtime panic: %v\n%v", x, string(runtimeDebug.Stack()))
+			fmt.Printf("Runtime panic: %v\n%v", x, string(runtimeDebug.Stack()))
 			panic(x)
 		}
 	}()
 
 	if err := app.Run(os.Args); err != nil {
-		log.Error(err.Error())
+		fmt.Print(err.Error())
 	}
 }
 
