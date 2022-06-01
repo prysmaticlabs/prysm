@@ -3,21 +3,19 @@ load("@prysm//tools/go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = [
-        "options.go",
+        "option.go",
         "service.go",
-        "verify.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/builder",
     visibility = ["//visibility:public"],
     deps = [
-        "//beacon-chain/core/signing:go_default_library",
+        "//api/client/builder:go_default_library",
         "//cmd/beacon-chain/flags:go_default_library",
         "//consensus-types/primitives:go_default_library",
         "//network:go_default_library",
         "//network/authorization:go_default_library",
         "//proto/engine/v1:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
-        "//time/slots:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_urfave_cli_v2//:go_default_library",
     ],

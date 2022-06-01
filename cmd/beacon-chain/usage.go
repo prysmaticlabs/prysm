@@ -126,7 +126,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.WeakSubjectivityCheckpoint,
 			flags.Eth1HeaderReqLimit,
 			flags.MinPeersPerSubnet,
-			flags.MevBuilderFlag,
+			flags.MevRelayEndpoint,
 			checkpoint.BlockPath,
 			checkpoint.StatePath,
 			checkpoint.RemoteURL,
@@ -138,6 +138,9 @@ var appHelpFlagGroups = []flagGroup{
 		Name: "merge",
 		Flags: []cli.Flag{
 			flags.SuggestedFeeRecipient,
+			flags.TerminalTotalDifficultyOverride,
+			flags.TerminalBlockHashOverride,
+			flags.TerminalBlockHashActivationEpochOverride,
 		},
 	},
 	{

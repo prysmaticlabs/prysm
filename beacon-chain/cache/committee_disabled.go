@@ -27,7 +27,7 @@ func (c *FakeCommitteeCache) Committee(ctx context.Context, slot types.Slot, see
 
 // AddCommitteeShuffledList adds Committee shuffled list object to the cache. T
 // his method also trims the least recently list if the cache size has ready the max cache size limit.
-func (c *FakeCommitteeCache) AddCommitteeShuffledList(committees *Committees) error {
+func (c *FakeCommitteeCache) AddCommitteeShuffledList(ctx context.Context, committees *Committees) error {
 	return nil
 }
 

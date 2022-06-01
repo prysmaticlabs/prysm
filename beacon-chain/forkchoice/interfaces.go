@@ -37,6 +37,7 @@ type BlockProcessor interface {
 		justifiedEpoch types.Epoch,
 		finalizedEpoch types.Epoch,
 	) error
+	InsertOptimisticChain(context.Context, []*forkchoicetypes.BlockAndCheckpoints) error
 }
 
 // AttestationProcessor processes the attestation that's used for accounting fork choice.
@@ -62,6 +63,7 @@ type Getter interface {
 	ProposerBoost() [fieldparams.RootLength]byte
 	HasParent(root [32]byte) bool
 	AncestorRoot(ctx context.Context, root [32]byte, slot types.Slot) ([]byte, error)
+	CommonAncestorRoot(ctx context.Context, root1 [32]byte, root2 [32]byte) ([32]byte, error)
 	IsCanonical(root [32]byte) bool
 	FinalizedEpoch() types.Epoch
 	JustifiedEpoch() types.Epoch
