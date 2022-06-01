@@ -24,9 +24,8 @@ var (
 	errNilBeaconBlockBody   = errors.New("beacon block body can't be nil")
 )
 
-// WrappedSignedBeaconBlock will wrap a signed beacon block to conform to the
-// signed beacon block interface.
-func WrappedSignedBeaconBlock(i interface{}) (interfaces.SignedBeaconBlock, error) {
+// NewSignedBeaconBlock creates a signed beacon block from a protobuf signed beacon block.
+func NewSignedBeaconBlock(i interface{}) (interfaces.SignedBeaconBlock, error) {
 	switch b := i.(type) {
 	case *eth.GenericSignedBeaconBlock_Phase0:
 		return InitSignedBlockFromProtoPhase0(b.Phase0)
@@ -51,9 +50,8 @@ func WrappedSignedBeaconBlock(i interface{}) (interfaces.SignedBeaconBlock, erro
 	}
 }
 
-// WrappedBeaconBlock will wrap a beacon block to conform to the
-// beacon block interface.
-func WrappedBeaconBlock(i interface{}) (interfaces.BeaconBlock, error) {
+// NewBeaconBlock creates a beacon block from a protobuf beacon block.
+func NewBeaconBlock(i interface{}) (interfaces.BeaconBlock, error) {
 	switch b := i.(type) {
 	case *eth.GenericBeaconBlock_Phase0:
 		return InitBlockFromProtoPhase0(b.Phase0)
@@ -78,9 +76,8 @@ func WrappedBeaconBlock(i interface{}) (interfaces.BeaconBlock, error) {
 	}
 }
 
-// WrappedBeaconBlockBody will wrap a beacon block body to conform to the
-// beacon block interface.
-func WrappedBeaconBlockBody(i interface{}) (interfaces.BeaconBlockBody, error) {
+// NewBeaconBlockBody creates a beacon block body from a protobuf beacon block body.
+func NewBeaconBlockBody(i interface{}) (interfaces.BeaconBlockBody, error) {
 	switch b := i.(type) {
 	case *eth.BeaconBlockBody:
 		return InitBlockBodyFromProtoPhase0(b)
@@ -98,7 +95,7 @@ func WrappedBeaconBlockBody(i interface{}) (interfaces.BeaconBlockBody, error) {
 }
 
 // BuildSignedBeaconBlock assembles a block.SignedBeaconBlock interface compatible struct from a
-// given beacon block an the appropriate signature. This method may be used to easily create a
+// given beacon block and the appropriate signature. This method may be used to easily create a
 // signed beacon block.
 func BuildSignedBeaconBlock(blk interfaces.BeaconBlock, signature []byte) (interfaces.SignedBeaconBlock, error) {
 	pb, err := blk.Proto()
@@ -111,43 +108,45 @@ func BuildSignedBeaconBlock(blk interfaces.BeaconBlock, signature []byte) (inter
 		if !ok {
 			return nil, errors.New("unable to access inner phase0 proto")
 		}
-		return WrappedSignedBeaconBlock(&eth.SignedBeaconBlock{Block: pb, Signature: signature})
+		return NewSignedBeaconBlock(&eth.SignedBeaconBlock{Block: pb, Signature: signature})
 	case version.Altair:
 		pb, ok := pb.(*eth.BeaconBlockAltair)
 		if !ok {
 			return nil, errors.New("unable to access inner altair proto")
 		}
-		return WrappedSignedBeaconBlock(&eth.SignedBeaconBlockAltair{Block: pb, Signature: signature})
+		return NewSignedBeaconBlock(&eth.SignedBeaconBlockAltair{Block: pb, Signature: signature})
 	case version.Bellatrix:
 		pb, ok := pb.(*eth.BeaconBlockBellatrix)
 		if !ok {
 			return nil, errors.New("unable to access inner bellatrix proto")
 		}
-		return WrappedSignedBeaconBlock(&eth.SignedBeaconBlockBellatrix{Block: pb, Signature: signature})
+		return NewSignedBeaconBlock(&eth.SignedBeaconBlockBellatrix{Block: pb, Signature: signature})
 	case version.BellatrixBlind:
 		pb, ok := pb.(*eth.BlindedBeaconBlockBellatrix)
 		if !ok {
 			return nil, errors.New("unable to access inner bellatrix proto")
 		}
-		return WrappedSignedBeaconBlock(&eth.SignedBlindedBeaconBlockBellatrix{Block: pb, Signature: signature})
+		return NewSignedBeaconBlock(&eth.SignedBlindedBeaconBlockBellatrix{Block: pb, Signature: signature})
 	default:
 		return nil, errUnsupportedBeaconBlockBody
 	}
 }
 
-func UnwrapGenericSignedBeaconBlock(gb *eth.GenericSignedBeaconBlock) (interfaces.SignedBeaconBlock, error) {
+// NewSignedBeaconBlockFromGeneric creates a signed beacon block
+// from a protobuf generic signed beacon block.
+func NewSignedBeaconBlockFromGeneric(gb *eth.GenericSignedBeaconBlock) (interfaces.SignedBeaconBlock, error) {
 	if gb == nil {
 		return nil, errNilObjectWrapped
 	}
 	switch bb := gb.Block.(type) {
 	case *eth.GenericSignedBeaconBlock_Phase0:
-		return WrappedSignedBeaconBlock(bb.Phase0)
+		return NewSignedBeaconBlock(bb.Phase0)
 	case *eth.GenericSignedBeaconBlock_Altair:
-		return WrappedSignedBeaconBlock(bb.Altair)
+		return NewSignedBeaconBlock(bb.Altair)
 	case *eth.GenericSignedBeaconBlock_Bellatrix:
-		return WrappedSignedBeaconBlock(bb.Bellatrix)
+		return NewSignedBeaconBlock(bb.Bellatrix)
 	case *eth.GenericSignedBeaconBlock_BlindedBellatrix:
-		return WrappedSignedBeaconBlock(bb.BlindedBellatrix)
+		return NewSignedBeaconBlock(bb.BlindedBellatrix)
 	default:
 		return nil, errors.Wrapf(errUnsupportedSignedBeaconBlock, "unable to wrap block of type %T", gb)
 	}

@@ -165,7 +165,7 @@ func (cf *VersionedUnmarshaler) UnmarshalBeaconBlock(marshaled []byte) (interfac
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal SignedBeaconBlock in UnmarshalSSZ")
 	}
-	return blocks.WrappedSignedBeaconBlock(blk)
+	return blocks.NewSignedBeaconBlock(blk)
 }
 
 // UnmarshalBlindedBeaconBlock uses internal knowledge in the VersionedUnmarshaler to pick the right concrete blinded SignedBeaconBlock type,
@@ -196,7 +196,7 @@ func (cf *VersionedUnmarshaler) UnmarshalBlindedBeaconBlock(marshaled []byte) (i
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal SignedBeaconBlock in UnmarshalSSZ")
 	}
-	return blocks.WrappedSignedBeaconBlock(blk)
+	return blocks.NewSignedBeaconBlock(blk)
 }
 
 // Heuristic to make sure block is from the same version as the VersionedUnmarshaler.

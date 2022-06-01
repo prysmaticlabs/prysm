@@ -26,7 +26,7 @@ func (s *Store) SaveGenesisData(ctx context.Context, genesisState state.BeaconSt
 	if err != nil {
 		return errors.Wrap(err, "could not get genesis block root")
 	}
-	wsb, err := consensusblocks.WrappedSignedBeaconBlock(genesisBlk)
+	wsb, err := consensusblocks.NewSignedBeaconBlock(genesisBlk)
 	if err != nil {
 		return errors.Wrap(err, "could not wrap genesis block")
 	}

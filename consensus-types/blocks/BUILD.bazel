@@ -3,11 +3,11 @@ load("@prysm//tools/go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = [
+        "factory.go",
         "getters.go",
         "mutator.go",
         "proto.go",
         "types.go",
-        "wrapper.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/consensus-types/blocks",
     visibility = ["//visibility:public"],

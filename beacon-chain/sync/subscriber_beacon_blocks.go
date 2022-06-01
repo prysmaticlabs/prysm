@@ -13,7 +13,7 @@ import (
 )
 
 func (s *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) error {
-	signed, err := blocks.WrappedSignedBeaconBlock(msg)
+	signed, err := blocks.NewSignedBeaconBlock(msg)
 	if err != nil {
 		return err
 	}

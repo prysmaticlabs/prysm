@@ -805,7 +805,7 @@ func (bs *Server) submitPhase0Block(ctx context.Context, phase0Blk *ethpbv1.Beac
 	if err != nil {
 		return status.Errorf(codes.InvalidArgument, "Could not convert block to v1 block")
 	}
-	wrappedPhase0Blk, err := blocks.WrappedSignedBeaconBlock(v1alpha1Blk)
+	wrappedPhase0Blk, err := blocks.NewSignedBeaconBlock(v1alpha1Blk)
 	if err != nil {
 		return status.Errorf(codes.InvalidArgument, "Could not prepare block")
 	}
@@ -822,7 +822,7 @@ func (bs *Server) submitAltairBlock(ctx context.Context, altairBlk *ethpbv2.Beac
 	if err != nil {
 		return status.Errorf(codes.InvalidArgument, "Could not convert block to v1 block")
 	}
-	wrappedAltairBlk, err := blocks.WrappedSignedBeaconBlock(v1alpha1Blk)
+	wrappedAltairBlk, err := blocks.NewSignedBeaconBlock(v1alpha1Blk)
 	if err != nil {
 		return status.Errorf(codes.InvalidArgument, "Could not prepare block")
 	}
@@ -840,7 +840,7 @@ func (bs *Server) submitBellatrixBlock(ctx context.Context, bellatrixBlk *ethpbv
 	if err != nil {
 		return status.Errorf(codes.InvalidArgument, "Could not convert block to v1 block")
 	}
-	wrappedBellatrixBlk, err := blocks.WrappedSignedBeaconBlock(v1alpha1Blk)
+	wrappedBellatrixBlk, err := blocks.NewSignedBeaconBlock(v1alpha1Blk)
 	if err != nil {
 		return status.Errorf(codes.InvalidArgument, "Could not prepare block")
 	}
@@ -861,7 +861,7 @@ func (bs *Server) submitBlindedBellatrixBlock(ctx context.Context, blindedBellat
 	if err != nil {
 		return status.Errorf(codes.Internal, "Could not get blinded block: %v", err)
 	}
-	wrappedBellatrixSignedBlk, err := blocks.WrappedSignedBeaconBlock(v1alpha1SignedBlk)
+	wrappedBellatrixSignedBlk, err := blocks.NewSignedBeaconBlock(v1alpha1SignedBlk)
 	if err != nil {
 		return status.Errorf(codes.Internal, "Could not get blinded block: %v", err)
 	}

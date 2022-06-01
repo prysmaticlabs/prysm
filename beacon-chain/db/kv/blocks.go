@@ -717,7 +717,7 @@ func unmarshalBlock(_ context.Context, enc []byte) (interfaces.SignedBeaconBlock
 			return nil, err
 		}
 	}
-	return blocks.WrappedSignedBeaconBlock(rawBlock)
+	return blocks.NewSignedBeaconBlock(rawBlock)
 }
 
 // marshal versioned beacon block from struct type down to bytes.
