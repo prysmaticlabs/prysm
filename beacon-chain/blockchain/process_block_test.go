@@ -305,7 +305,7 @@ func TestStore_OnBlockBatch_ProtoArray(t *testing.T) {
 	var blks []interfaces.SignedBeaconBlock
 	var blkRoots [][32]byte
 	var firstState state.BeaconState
-	for i := 1; i < 10; i++ {
+	for i := 1; i < 97; i++ {
 		b, err := util.GenerateFullBlock(bState, keys, util.DefaultBlockGenConfig(), types.Slot(i))
 		require.NoError(t, err)
 		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
@@ -335,6 +335,11 @@ func TestStore_OnBlockBatch_ProtoArray(t *testing.T) {
 	require.ErrorIs(t, errWrongBlockCount, err)
 	err = service.onBlockBatch(ctx, blks[1:], blkRoots[1:])
 	require.NoError(t, err)
+	jcp, err := service.store.JustifiedCheckpt()
+	require.NoError(t, err)
+	jroot := bytesutil.ToBytes32(jcp.Root)
+	require.Equal(t, blkRoots[63], jroot)
+	require.Equal(t, types.Epoch(2), service.cfg.ForkChoiceStore.JustifiedEpoch())
 }
 
 func TestStore_OnBlockBatch_DoublyLinkedTree(t *testing.T) {
@@ -370,7 +375,7 @@ func TestStore_OnBlockBatch_DoublyLinkedTree(t *testing.T) {
 	var blks []interfaces.SignedBeaconBlock
 	var blkRoots [][32]byte
 	var firstState state.BeaconState
-	for i := 1; i < 10; i++ {
+	for i := 1; i < 97; i++ {
 		b, err := util.GenerateFullBlock(bState, keys, util.DefaultBlockGenConfig(), types.Slot(i))
 		require.NoError(t, err)
 		wsb, err = wrapper.WrappedSignedBeaconBlock(b)
@@ -400,6 +405,11 @@ func TestStore_OnBlockBatch_DoublyLinkedTree(t *testing.T) {
 	require.ErrorIs(t, errWrongBlockCount, err)
 	err = service.onBlockBatch(ctx, blks[1:], blkRoots[1:])
 	require.NoError(t, err)
+	jcp, err := service.store.JustifiedCheckpt()
+	require.NoError(t, err)
+	jroot := bytesutil.ToBytes32(jcp.Root)
+	require.Equal(t, blkRoots[63], jroot)
+	require.Equal(t, types.Epoch(2), service.cfg.ForkChoiceStore.JustifiedEpoch())
 }
 
 func TestStore_OnBlockBatch_NotifyNewPayload(t *testing.T) {
