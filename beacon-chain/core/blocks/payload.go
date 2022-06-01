@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/consensus-types/forks/bellatrix"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
@@ -270,4 +271,17 @@ func ProcessPayloadHeader(st state.BeaconState, header *ethpb.ExecutionPayloadHe
 		return nil, err
 	}
 	return st, nil
+}
+
+// GetBlockPayloadHash returns the hash of the execution payload of the block
+func GetBlockPayloadHash(blk interfaces.BeaconBlock) ([32]byte, error) {
+	payloadHash := [32]byte{}
+	if IsPreBellatrixVersion(blk.Version()) {
+		return payloadHash, nil
+	}
+	payload, err := blk.Body().ExecutionPayload()
+	if err != nil {
+		return payloadHash, err
+	}
+	return bytesutil.ToBytes32(payload.BlockHash), nil
 }

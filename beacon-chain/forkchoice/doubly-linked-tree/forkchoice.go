@@ -5,7 +5,9 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
@@ -424,4 +426,30 @@ func (f *ForkChoice) CommonAncestorRoot(ctx context.Context, r1 [32]byte, r2 [32
 			return n1.root, nil
 		}
 	}
+}
+
+// InsertOptimisticChain inserts all nodes corresponding to blocks in the slice
+// `blocks`. This slice must be ordered from parent to child. It includes all
+// blocks **except** the first one. All blocks are assumed to be a strict chain
+// where blocks[i].Parent = blocks[i+1]. Also we assume that the parent of the
+// last block in this list is already included in forkchoice store.
+func (f *ForkChoice) InsertOptimisticChain(ctx context.Context, chain []*forkchoicetypes.BlockAndCheckpoints) error {
+	if len(chain) == 0 {
+		return nil
+	}
+	for i := len(chain) - 1; i > 0; i-- {
+		b := chain[i].Block
+		r := bytesutil.ToBytes32(chain[i-1].Block.ParentRoot())
+		parentRoot := bytesutil.ToBytes32(b.ParentRoot())
+		payloadHash, err := blocks.GetBlockPayloadHash(b)
+		if err != nil {
+			return err
+		}
+		if err := f.store.insert(ctx,
+			b.Slot(), r, parentRoot, payloadHash,
+			chain[i].JustifiedEpoch, chain[i].FinalizedEpoch); err != nil {
+			return err
+		}
+	}
+	return nil
 }

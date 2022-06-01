@@ -89,10 +89,10 @@ jobs:
         # Use blst tag to allow go and bazel builds for blst.
         run: go build -v ./...
 
-        # fuzz and blst_disabled leverage go tag based stubs at compile time.
-        # Building with these tags should be checked and enforced at pre-submit.
-      - name: Build for fuzzing
-        run: go build -tags=fuzz,blst_disabled ./... 
+        # fuzz leverage go tag based stubs at compile time.
+        # Building and testing with these tags should be checked and enforced at pre-submit.
+      - name: Test for fuzzing
+        run: go test  -tags=fuzz,develop ./...  -test.run=^Fuzz
 
 # Tests run via Bazel for now...
 #      - name: Test
