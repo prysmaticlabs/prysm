@@ -229,11 +229,16 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 		}
 	}
 
+	justified, err = s.store.JustifiedCheckpt()
+	if err != nil {
+		return errors.Wrap(err, "could not get justified checkpoint")
+	}
 	balances, err := s.justifiedBalances.get(ctx, bytesutil.ToBytes32(justified.Root))
 	if err != nil {
 		msg := fmt.Sprintf("could not read balances for state w/ justified checkpoint %#x", justified.Root)
 		return errors.Wrap(err, msg)
 	}
+
 	headRoot, err := s.updateHead(ctx, balances)
 	if err != nil {
 		log.WithError(err).Warn("Could not update head")
