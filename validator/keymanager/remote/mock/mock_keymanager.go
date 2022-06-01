@@ -46,6 +46,9 @@ func (*MockKeymanager) Sign(_ context.Context, s *validatorpb.SignRequest) (bls.
 	d := params.BeaconConfig().DomainApplicationBuilder
 	e := slots.ToEpoch(st.Slot())
 	byteValue, err :=  signing.ComputeDomainAndSign(st, e, s.SigningSlot,  d, key)
+	if err != nil {
+		return nil, err
+	}
 	return bls.SignatureFromBytes(byteValue)
 }
 
