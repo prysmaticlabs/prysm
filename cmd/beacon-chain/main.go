@@ -11,7 +11,6 @@ import (
 	gethlog "github.com/ethereum/go-ethereum/log"
 	golog "github.com/ipfs/go-log/v2"
 	joonix "github.com/joonix/log"
-	"github.com/prysmaticlabs/prysm/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/node"
 	"github.com/prysmaticlabs/prysm/cmd"
 	blockchaincmd "github.com/prysmaticlabs/prysm/cmd/beacon-chain/blockchain"
@@ -71,10 +70,6 @@ var appFlags = []cli.Flag{
 	flags.Eth1HeaderReqLimit,
 	flags.MinPeersPerSubnet,
 	flags.SuggestedFeeRecipient,
-	flags.TerminalTotalDifficultyOverride,
-	flags.TerminalBlockHashOverride,
-	flags.TerminalBlockHashActivationEpochOverride,
-	flags.MevRelayEndpoint,
 	cmd.EnableBackupWebhookFlag,
 	cmd.BackupWebhookOutputDir,
 	cmd.MinimalConfigFlag,
@@ -137,7 +132,6 @@ func init() {
 	appFlags = cmd.WrapFlags(append(appFlags, features.BeaconChainFlags...))
 }
 
-// TODO: Revert the changes I made to log.*
 func main() {
 	app := cli.App{}
 	app.Name = "beacon-chain"
@@ -186,7 +180,7 @@ func main() {
 		logFileName := ctx.String(cmd.LogFileName.Name)
 		if logFileName != "" {
 			if err := logs.ConfigurePersistentLogging(logFileName); err != nil {
-				fmt.Print("Failed to configuring logging to disk.")
+				log.WithError(err).Error("Failed to configuring logging to disk.")
 			}
 		}
 		if err := cmd.ExpandSingleEndpointIfFile(ctx, flags.HTTPWeb3ProviderFlag); err != nil {
@@ -210,13 +204,13 @@ func main() {
 
 	defer func() {
 		if x := recover(); x != nil {
-			fmt.Printf("Runtime panic: %v\n%v", x, string(runtimeDebug.Stack()))
+			log.Errorf("Runtime panic: %v\n%v", x, string(runtimeDebug.Stack()))
 			panic(x)
 		}
 	}()
 
 	if err := app.Run(os.Args); err != nil {
-		fmt.Print(err.Error())
+		log.Error(err.Error())
 	}
 }
 
@@ -256,14 +250,9 @@ func startNode(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	builderFlagOpts, err := builder.FlagOptions(ctx)
-	if err != nil {
-		return err
-	}
 	opts := []node.Option{
 		node.WithBlockchainFlagOptions(blockchainFlagOpts),
 		node.WithPowchainFlagOptions(powchainFlagOpts),
-		node.WithBuilderFlagOptions(builderFlagOpts),
 	}
 
 	optFuncs := []func(*cli.Context) (node.Option, error){
