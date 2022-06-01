@@ -379,7 +379,7 @@ func TestWaitForActivation_RefetchKeys(t *testing.T) {
 	).Return(clientStream, nil)
 	clientStream.EXPECT().Recv().Return(
 		resp,
-		nil,
+		nil)
 	nodeClient.EXPECT().GetGenesis(
 		gomock.Any(),
 		&emptypb.Empty{},
