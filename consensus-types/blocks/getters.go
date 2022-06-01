@@ -41,17 +41,17 @@ func (b *SignedBeaconBlock) Copy() (interfaces.SignedBeaconBlock, error) {
 	switch b.version {
 	case version.Phase0:
 		cp := eth.CopySignedBeaconBlock(pb.(*eth.SignedBeaconBlock))
-		return InitSignedBlockFromProtoPhase0(cp)
+		return initSignedBlockFromProtoPhase0(cp)
 	case version.Altair:
 		cp := eth.CopySignedBeaconBlockAltair(pb.(*eth.SignedBeaconBlockAltair))
-		return InitSignedBlockFromProtoAltair(cp)
+		return initSignedBlockFromProtoAltair(cp)
 	case version.Bellatrix:
 		if b.blinded {
 			cp := eth.CopySignedBlindedBeaconBlockBellatrix(pb.(*eth.SignedBlindedBeaconBlockBellatrix))
-			return InitBlindedSignedBlockFromProtoBellatrix(cp)
+			return initBlindedSignedBlockFromProtoBellatrix(cp)
 		}
 		cp := eth.CopySignedBeaconBlockBellatrix(pb.(*eth.SignedBeaconBlockBellatrix))
-		return InitSignedBlockFromProtoBellatrix(cp)
+		return initSignedBlockFromProtoBellatrix(cp)
 	default:
 		return nil, errIncorrectBlockVersion
 	}

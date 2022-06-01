@@ -28,21 +28,21 @@ var (
 func NewSignedBeaconBlock(i interface{}) (interfaces.SignedBeaconBlock, error) {
 	switch b := i.(type) {
 	case *eth.GenericSignedBeaconBlock_Phase0:
-		return InitSignedBlockFromProtoPhase0(b.Phase0)
+		return initSignedBlockFromProtoPhase0(b.Phase0)
 	case *eth.SignedBeaconBlock:
-		return InitSignedBlockFromProtoPhase0(b)
+		return initSignedBlockFromProtoPhase0(b)
 	case *eth.GenericSignedBeaconBlock_Altair:
-		return InitSignedBlockFromProtoAltair(b.Altair)
+		return initSignedBlockFromProtoAltair(b.Altair)
 	case *eth.SignedBeaconBlockAltair:
-		return InitSignedBlockFromProtoAltair(b)
+		return initSignedBlockFromProtoAltair(b)
 	case *eth.GenericSignedBeaconBlock_Bellatrix:
-		return InitSignedBlockFromProtoBellatrix(b.Bellatrix)
+		return initSignedBlockFromProtoBellatrix(b.Bellatrix)
 	case *eth.SignedBeaconBlockBellatrix:
-		return InitSignedBlockFromProtoBellatrix(b)
+		return initSignedBlockFromProtoBellatrix(b)
 	case *eth.GenericSignedBeaconBlock_BlindedBellatrix:
-		return InitBlindedSignedBlockFromProtoBellatrix(b.BlindedBellatrix)
+		return initBlindedSignedBlockFromProtoBellatrix(b.BlindedBellatrix)
 	case *eth.SignedBlindedBeaconBlockBellatrix:
-		return InitBlindedSignedBlockFromProtoBellatrix(b)
+		return initBlindedSignedBlockFromProtoBellatrix(b)
 	case nil:
 		return nil, errNilObjectWrapped
 	default:
@@ -54,21 +54,21 @@ func NewSignedBeaconBlock(i interface{}) (interfaces.SignedBeaconBlock, error) {
 func NewBeaconBlock(i interface{}) (interfaces.BeaconBlock, error) {
 	switch b := i.(type) {
 	case *eth.GenericBeaconBlock_Phase0:
-		return InitBlockFromProtoPhase0(b.Phase0)
+		return initBlockFromProtoPhase0(b.Phase0)
 	case *eth.BeaconBlock:
-		return InitBlockFromProtoPhase0(b)
+		return initBlockFromProtoPhase0(b)
 	case *eth.GenericBeaconBlock_Altair:
-		return InitBlockFromProtoAltair(b.Altair)
+		return initBlockFromProtoAltair(b.Altair)
 	case *eth.BeaconBlockAltair:
-		return InitBlockFromProtoAltair(b)
+		return initBlockFromProtoAltair(b)
 	case *eth.GenericBeaconBlock_Bellatrix:
-		return InitBlockFromProtoBellatrix(b.Bellatrix)
+		return initBlockFromProtoBellatrix(b.Bellatrix)
 	case *eth.BeaconBlockBellatrix:
-		return InitBlockFromProtoBellatrix(b)
+		return initBlockFromProtoBellatrix(b)
 	case *eth.GenericBeaconBlock_BlindedBellatrix:
-		return InitBlindedBlockFromProtoBellatrix(b.BlindedBellatrix)
+		return initBlindedBlockFromProtoBellatrix(b.BlindedBellatrix)
 	case *eth.BlindedBeaconBlockBellatrix:
-		return InitBlindedBlockFromProtoBellatrix(b)
+		return initBlindedBlockFromProtoBellatrix(b)
 	case nil:
 		return nil, errNilObjectWrapped
 	default:
@@ -80,13 +80,13 @@ func NewBeaconBlock(i interface{}) (interfaces.BeaconBlock, error) {
 func NewBeaconBlockBody(i interface{}) (interfaces.BeaconBlockBody, error) {
 	switch b := i.(type) {
 	case *eth.BeaconBlockBody:
-		return InitBlockBodyFromProtoPhase0(b)
+		return initBlockBodyFromProtoPhase0(b)
 	case *eth.BeaconBlockBodyAltair:
-		return InitBlockBodyFromProtoAltair(b)
+		return initBlockBodyFromProtoAltair(b)
 	case *eth.BeaconBlockBodyBellatrix:
-		return InitBlockBodyFromProtoBellatrix(b)
+		return initBlockBodyFromProtoBellatrix(b)
 	case *eth.BlindedBeaconBlockBodyBellatrix:
-		return InitBlindedBlockBodyFromProtoBellatrix(b)
+		return initBlindedBlockBodyFromProtoBellatrix(b)
 	case nil:
 		return nil, errNilObjectWrapped
 	default:

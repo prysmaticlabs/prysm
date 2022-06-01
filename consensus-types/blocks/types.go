@@ -19,6 +19,7 @@ var errIncorrectBlockVersion = errors.New(incorrectBlockVersion)
 var errIncorrectBodyVersion = errors.New(incorrectBodyVersion)
 var errCloningFailed = errors.New("cloning proto message failed")
 
+// BeaconBlockBody is the main beacon block body structure. It can represent any block type.
 type BeaconBlockBody struct {
 	version           int
 	blinded           bool
@@ -36,6 +37,7 @@ type BeaconBlockBody struct {
 	executionPayloadHeader *eth.ExecutionPayloadHeader
 }
 
+// BeaconBlock is the main beacon block structure. It can represent any block type.
 type BeaconBlock struct {
 	version       int
 	blinded       bool
@@ -46,6 +48,7 @@ type BeaconBlock struct {
 	body          *BeaconBlockBody
 }
 
+// SignedBeaconBlock is the main signed beacon block structure. It can represent any block type.
 type SignedBeaconBlock struct {
 	version   int
 	blinded   bool
