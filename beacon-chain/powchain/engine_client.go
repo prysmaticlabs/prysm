@@ -307,7 +307,7 @@ func handleRPCError(err error) error {
 				"here https://docs.prylabs.network/docs/execution-node/authentication")
 			return fmt.Errorf("could not authenticate connection to execution client: %v", err)
 		}
-		return fmt.Errorf("got an unexpected error in JSON-RPC response: %v", err)
+		return errors.Wrapf(err, "got an unexpected error in JSON-RPC response")
 	}
 	switch e.ErrorCode() {
 	case -32700:
@@ -330,7 +330,7 @@ func handleRPCError(err error) error {
 		// Only -32000 status codes are data errors in the RPC specification.
 		errWithData, ok := err.(rpc.DataError)
 		if !ok {
-			return fmt.Errorf("got an unexpected error in JSON-RPC response: %v", err)
+			return errors.Wrapf(err, "got an unexpected error in JSON-RPC response")
 		}
 		return errors.Wrapf(ErrServer, "%v", errWithData.ErrorData())
 	default:
