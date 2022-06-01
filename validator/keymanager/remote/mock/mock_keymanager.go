@@ -38,14 +38,14 @@ func (m *MockKeymanager) FetchValidatingPublicKeys(context.Context) ([][fieldpar
 
 // Sign --
 func (*MockKeymanager) Sign(_ context.Context, s *validatorpb.SignRequest) (bls.Signature, error) {
-	key,err := bls.RandKey()
+	key, err := bls.RandKey()
 	if err != nil {
 		return nil, err
 	}
 	st, _ := util.DeterministicGenesisState(nil, 1)
 	d := params.BeaconConfig().DomainApplicationBuilder
 	e := slots.ToEpoch(st.Slot())
-	byteValue, err :=  signing.ComputeDomainAndSign(st, e, s.SigningSlot,  d, key)
+	byteValue, err := signing.ComputeDomainAndSign(st, e, s.SigningSlot, d, key)
 	if err != nil {
 		return nil, err
 	}
