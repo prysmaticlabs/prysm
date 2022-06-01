@@ -2,6 +2,7 @@ package node
 
 import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 )
 
@@ -20,6 +21,14 @@ func WithBlockchainFlagOptions(opts []blockchain.Option) Option {
 func WithPowchainFlagOptions(opts []powchain.Option) Option {
 	return func(bn *BeaconNode) error {
 		bn.serviceFlagOpts.powchainFlagOpts = opts
+		return nil
+	}
+}
+
+// WithBuilderFlagOptions includes functional options for the builder service related to CLI flags.
+func WithBuilderFlagOptions(opts []builder.Option) Option {
+	return func(bn *BeaconNode) error {
+		bn.serviceFlagOpts.builderOpts = opts
 		return nil
 	}
 }
