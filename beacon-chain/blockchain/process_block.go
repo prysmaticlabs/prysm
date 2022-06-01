@@ -423,9 +423,11 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 		return err
 	}
 
-	// blocks have been verified, add them to forkchoice and call the engine
+	// blocks have been verified, save them and call the engine
+	pendingNodes := make([]*forkchoicetypes.BlockAndCheckpoints, len(blks))
+	var isValidPayload bool
 	for i, b := range blks {
-		isValidPayload, err := s.notifyNewPayload(ctx,
+		isValidPayload, err = s.notifyNewPayload(ctx,
 			postVersionAndHeaders[i].version,
 			postVersionAndHeaders[i].header, b)
 		if err != nil {
@@ -437,19 +439,29 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 				return err
 			}
 		}
-
-		if err := s.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx, preState, blockRoots[i]); err != nil {
-			return err
-		}
-		if isValidPayload {
-			if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, blockRoots[i]); err != nil {
-				return errors.Wrap(err, "could not set optimistic block to valid")
-			}
-		}
+		args := &forkchoicetypes.BlockAndCheckpoints{Block: b.Block(),
+			JustifiedEpoch: jCheckpoints[i].Epoch,
+			FinalizedEpoch: fCheckpoints[i].Epoch}
+		pendingNodes[len(blks)-i-1] = args
 		s.saveInitSyncBlock(blockRoots[i], b)
 		if err = s.handleBlockAfterBatchVerify(ctx, b, blockRoots[i], fCheckpoints[i], jCheckpoints[i]); err != nil {
 			tracing.AnnotateError(span, err)
 			return err
+		}
+	}
+	// Insert all nodes but the last one to forkchoice
+	if err := s.cfg.ForkChoiceStore.InsertOptimisticChain(ctx, pendingNodes); err != nil {
+		return err
+	}
+	// Insert the last block to forkchoice
+	lastBlkRoot := blockRoots[len(blks)-1]
+	if err := s.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx, preState, lastBlkRoot); err != nil {
+		return err
+	}
+	// Set their optimistic status
+	if isValidPayload {
+		if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, lastBlkRoot); err != nil {
+			return errors.Wrap(err, "could not set optimistic block to valid")
 		}
 	}
 
