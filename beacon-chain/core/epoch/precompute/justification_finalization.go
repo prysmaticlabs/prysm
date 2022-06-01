@@ -6,6 +6,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/time/slots"
 )
@@ -44,7 +45,7 @@ func UnrealizedCheckpoints(st state.BeaconState) (*ethpb.Checkpoint, *ethpb.Chec
 //    previous_target_balance = get_attesting_balance(state, previous_attestations)
 //    current_target_balance = get_attesting_balance(state, current_attestations)
 //    weigh_justification_and_finalization(state, total_active_balance, previous_target_balance, current_target_balance)
-func ProcessJustificationAndFinalizationPreCompute(state state.BeaconState, pBal *Balance) (state.BeaconState, error) {
+func ProcessJustificationAndFinalizationPreCompute(state state.BeaconState, pBal *types.Balance) (state.BeaconState, error) {
 	canProcessSlot, err := slots.EpochStart(2 /*epoch*/)
 	if err != nil {
 		return nil, err

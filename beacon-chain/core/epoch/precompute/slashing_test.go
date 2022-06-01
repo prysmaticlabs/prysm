@@ -7,6 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -21,7 +22,7 @@ func TestProcessSlashingsPrecompute_NotSlashedWithSlashedTrue(t *testing.T) {
 		Slashings:  []uint64{0, 1e9},
 	})
 	require.NoError(t, err)
-	pBal := &precompute.Balance{ActiveCurrentEpoch: params.BeaconConfig().MaxEffectiveBalance}
+	pBal := &types.Balance{ActiveCurrentEpoch: params.BeaconConfig().MaxEffectiveBalance}
 	require.NoError(t, precompute.ProcessSlashingsPrecompute(s, pBal))
 
 	wanted := params.BeaconConfig().MaxEffectiveBalance
@@ -36,7 +37,7 @@ func TestProcessSlashingsPrecompute_NotSlashedWithSlashedFalse(t *testing.T) {
 		Slashings:  []uint64{0, 1e9},
 	})
 	require.NoError(t, err)
-	pBal := &precompute.Balance{ActiveCurrentEpoch: params.BeaconConfig().MaxEffectiveBalance}
+	pBal := &types.Balance{ActiveCurrentEpoch: params.BeaconConfig().MaxEffectiveBalance}
 	require.NoError(t, precompute.ProcessSlashingsPrecompute(s, pBal))
 
 	wanted := params.BeaconConfig().MaxEffectiveBalance
@@ -120,7 +121,7 @@ func TestProcessSlashingsPrecompute_SlashedLess(t *testing.T) {
 				}
 				ab += b
 			}
-			pBal := &precompute.Balance{ActiveCurrentEpoch: ab}
+			pBal := &types.Balance{ActiveCurrentEpoch: ab}
 
 			original := proto.Clone(tt.state)
 			state, err := v1.InitializeFromProto(tt.state)

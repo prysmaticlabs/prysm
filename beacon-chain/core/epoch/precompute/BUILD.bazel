@@ -8,7 +8,6 @@ go_library(
         "new.go",
         "reward_penalty.go",
         "slashing.go",
-        "type.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute",
     visibility = [

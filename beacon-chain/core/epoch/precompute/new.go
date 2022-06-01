@@ -11,18 +11,19 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"go.opencensus.io/trace"
 )
 
 // New gets called at the beginning of process epoch cycle to return
 // pre computed instances of validators attesting records and total
 // balances attested in an epoch.
-func New(ctx context.Context, s state.BeaconState) ([]*Validator, *Balance, error) {
+func New(ctx context.Context, s state.BeaconState) ([]*types.Validator, *types.Balance, error) {
 	_, span := trace.StartSpan(ctx, "precomputeEpoch.New")
 	defer span.End()
 
-	pValidators := make([]*Validator, s.NumValidators())
-	pBal := &Balance{}
+	pValidators := make([]*types.Validator, s.NumValidators())
+	pBal := &types.Balance{}
 
 	currentEpoch := time.CurrentEpoch(s)
 	prevEpoch := time.PrevEpoch(s)
@@ -30,7 +31,7 @@ func New(ctx context.Context, s state.BeaconState) ([]*Validator, *Balance, erro
 	if err := s.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
 		// Was validator withdrawable or slashed
 		withdrawable := prevEpoch+1 >= val.WithdrawableEpoch()
-		pVal := &Validator{
+		pVal := &types.Validator{
 			IsSlashed:                    val.Slashed(),
 			IsWithdrawableCurrentEpoch:   withdrawable,
 			CurrentEpochEffectiveBalance: val.EffectiveBalance(),

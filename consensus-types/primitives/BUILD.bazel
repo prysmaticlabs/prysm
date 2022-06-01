@@ -9,6 +9,7 @@ go_library(
         "slot.go",
         "sszbytes.go",
         "sszuint64.go",
+        "type.go",
         "validator.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/consensus-types/primitives",

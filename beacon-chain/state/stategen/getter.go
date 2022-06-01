@@ -157,9 +157,10 @@ func (s *State) loadStateByRoot(ctx context.Context, blockRoot [32]byte) (state.
 	ctx, span := trace.StartSpan(ctx, "stateGen.loadStateByRoot")
 	defer span.End()
 
+	val := ctx.Value("migrate")
 	// First, it checks if the state exists in hot state cache.
 	cachedState := s.hotStateCache.get(blockRoot)
-	if cachedState != nil && !cachedState.IsNil() {
+	if cachedState != nil && !cachedState.IsNil() && val == nil {
 		return cachedState, nil
 	}
 
@@ -168,7 +169,7 @@ func (s *State) loadStateByRoot(ctx context.Context, blockRoot [32]byte) (state.
 	if err != nil {
 		return nil, err
 	}
-	if ok {
+	if ok && val == nil {
 		return cachedInfo.state, nil
 	}
 
@@ -222,6 +223,7 @@ func (s *State) LastAncestorState(ctx context.Context, blockRoot [32]byte) (stat
 	if s.isFinalizedRoot(blockRoot) && s.finalizedState() != nil {
 		return s.finalizedState(), nil
 	}
+	val := ctx.Value("migrate")
 
 	b, err := s.beaconDB.Block(ctx, blockRoot)
 	if err != nil {
@@ -248,7 +250,7 @@ func (s *State) LastAncestorState(ctx context.Context, blockRoot [32]byte) (stat
 			return nil, errors.Wrapf(ErrNoDataForSlot, "slot %d not in db due to checkpoint sync", ps)
 		}
 		// Does the state exist in the hot state cache.
-		if s.hotStateCache.has(parentRoot) {
+		if s.hotStateCache.has(parentRoot) && val == nil {
 			return s.hotStateCache.get(parentRoot), nil
 		}
 
@@ -262,7 +264,7 @@ func (s *State) LastAncestorState(ctx context.Context, blockRoot [32]byte) (stat
 		if err != nil {
 			return nil, err
 		}
-		if ok {
+		if ok && val == nil {
 			return cachedInfo.state, nil
 		}
 

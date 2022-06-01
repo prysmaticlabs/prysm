@@ -516,8 +516,8 @@ func (bs *Server) GetValidatorParticipation(
 	if err != nil {
 		return nil, status.Error(codes.Internal, fmt.Sprintf("error replaying blocks for state at slot %d: %v", endSlot, err))
 	}
-	var v []*precompute.Validator
-	var b *precompute.Balance
+	var v []*types.Validator
+	var b *types.Balance
 	switch beaconState.Version() {
 	case version.Phase0:
 		v, b, err = precompute.New(ctx, beaconState)
@@ -680,7 +680,7 @@ func (bs *Server) GetValidatorPerformance(
 			return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", currSlot, err)
 		}
 	}
-	var validatorSummary []*precompute.Validator
+	var validatorSummary []*types.Validator
 	switch headState.Version() {
 	case version.Phase0:
 		vp, bp, err := precompute.New(ctx, headState)
@@ -862,8 +862,8 @@ func (bs *Server) GetIndividualVotes(
 		return filteredIndices[i] < filteredIndices[j]
 	})
 
-	var v []*precompute.Validator
-	var bal *precompute.Balance
+	var v []*types.Validator
+	var bal *types.Balance
 	switch st.Version() {
 	case version.Phase0:
 		v, bal, err = precompute.New(ctx, st)

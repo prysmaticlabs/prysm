@@ -10,7 +10,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/async/event"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
@@ -40,7 +39,7 @@ type ChainService struct {
 	CurrentJustifiedCheckPoint  *ethpb.Checkpoint
 	PreviousJustifiedCheckPoint *ethpb.Checkpoint
 	Slot                        *types.Slot // Pointer because 0 is a useful value, so checking against it can be incorrect.
-	Balance                     *precompute.Balance
+	Balance                     *types.Balance
 	CanonicalRoots              map[[32]byte]bool
 	Fork                        *ethpb.Fork
 	ETH1Data                    *ethpb.Eth1Data
@@ -338,7 +337,7 @@ func (s *ChainService) CurrentSlot() types.Slot {
 }
 
 // Participation mocks the same method in the chain service.
-func (s *ChainService) Participation(_ uint64) *precompute.Balance {
+func (s *ChainService) Participation(_ uint64) *types.Balance {
 	return s.Balance
 }
 

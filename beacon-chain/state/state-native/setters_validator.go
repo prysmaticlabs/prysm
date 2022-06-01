@@ -1,7 +1,10 @@
 package state_native
 
 import (
+	"context"
+
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/core"
 	nativetypes "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
@@ -239,4 +242,27 @@ func (b *BeaconState) SetInactivityScores(val []uint64) error {
 	b.inactivityScores = val
 	b.markFieldAsDirty(nativetypes.InactivityScores)
 	return nil
+}
+
+func (b *BeaconState) ProcessInactivityScores(ctx context.Context,
+	currentEpoch, previousEpoch, finalizedEpoch types.Epoch, vals []*types.Validator) ([]*types.Validator, error) {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+	if b.version == version.Phase0 {
+		return nil, errNotSupported("ProcessInactivityScores", b.version)
+	}
+	scores := b.inactivityScores
+	if b.sharedFieldReferences[nativetypes.InactivityScores].Refs() > 1 {
+		scores = b.inactivityScoresVal()
+		b.sharedFieldReferences[nativetypes.InactivityScores].MinusRef()
+		b.sharedFieldReferences[nativetypes.InactivityScores] = stateutil.NewRef(1)
+	}
+	var err error
+	scores, vals, err = core.ProcessInactivityScores(ctx, scores, currentEpoch, previousEpoch, finalizedEpoch, vals)
+	if err != nil {
+		return nil, err
+	}
+	b.inactivityScores = scores
+	b.markFieldAsDirty(nativetypes.InactivityScores)
+	return vals, err
 }

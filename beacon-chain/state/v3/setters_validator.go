@@ -1,7 +1,10 @@
 package v3
 
 import (
+	"context"
+
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/core"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -262,4 +265,27 @@ func (b *BeaconState) SetInactivityScores(val []uint64) error {
 	b.state.InactivityScores = val
 	b.markFieldAsDirty(inactivityScores)
 	return nil
+}
+
+func (b *BeaconState) ProcessInactivityScores(ctx context.Context,
+	currentEpoch, previousEpoch, finalizedEpoch types.Epoch, vals []*types.Validator) ([]*types.Validator, error) {
+	if !b.hasInnerState() {
+		return nil, ErrNilInnerState
+	}
+	b.lock.Lock()
+	defer b.lock.Unlock()
+	scores := b.state.InactivityScores
+	if b.sharedFieldReferences[inactivityScores].Refs() > 1 {
+		scores = b.inactivityScores()
+		b.sharedFieldReferences[inactivityScores].MinusRef()
+		b.sharedFieldReferences[inactivityScores] = stateutil.NewRef(1)
+	}
+	var err error
+	scores, vals, err = core.ProcessInactivityScores(ctx, scores, currentEpoch, previousEpoch, finalizedEpoch, vals)
+	if err != nil {
+		return nil, err
+	}
+	b.state.InactivityScores = scores
+	b.markFieldAsDirty(inactivityScores)
+	return vals, err
 }

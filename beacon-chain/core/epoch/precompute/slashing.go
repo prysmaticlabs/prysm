@@ -12,7 +12,7 @@ import (
 
 // ProcessSlashingsPrecompute processes the slashed validators during epoch processing.
 // This is an optimized version by passing in precomputed total epoch balances.
-func ProcessSlashingsPrecompute(s state.BeaconState, pBal *Balance) error {
+func ProcessSlashingsPrecompute(s state.BeaconState, pBal *types.Balance) error {
 	currentEpoch := time.CurrentEpoch(s)
 	exitLength := params.BeaconConfig().EpochsPerSlashingsVector
 

@@ -1,6 +1,4 @@
-package precompute
-
-import types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+package types
 
 // Validator stores the pre computation of individual validator's attesting records these records
 // consist of attestation votes, block inclusion record. Pre computing and storing such record
@@ -30,11 +28,11 @@ type Validator struct {
 	// CurrentEpochEffectiveBalance is how much effective balance this validator has current epoch.
 	CurrentEpochEffectiveBalance uint64
 	// InclusionSlot is the slot of when the attestation gets included in the chain.
-	InclusionSlot types.Slot
+	InclusionSlot Slot
 	// InclusionDistance is the distance between the assigned slot and this validator's attestation was included in block.
-	InclusionDistance types.Slot
+	InclusionDistance Slot
 	// ProposerIndex is the index of proposer at slot where this validator's attestation was included.
-	ProposerIndex types.ValidatorIndex
+	ProposerIndex ValidatorIndex
 	// BeforeEpochTransitionBalance is the validator balance prior to epoch transition.
 	BeforeEpochTransitionBalance uint64
 	// AfterEpochTransitionBalance is the validator balance after epoch transition.

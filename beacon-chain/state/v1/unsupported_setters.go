@@ -1,7 +1,10 @@
 package v1
 
 import (
+	"context"
+
 	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -58,4 +61,9 @@ func (*BeaconState) SetInactivityScores(_ []uint64) error {
 // SetLatestExecutionPayloadHeader is not supported for phase 0 beacon state.
 func (*BeaconState) SetLatestExecutionPayloadHeader(val *ethpb.ExecutionPayloadHeader) error {
 	return errors.New("SetLatestExecutionPayloadHeader is not supported for phase 0 beacon state")
+}
+
+func (b *BeaconState) ProcessInactivityScores(ctx context.Context,
+	currentEpoch, previousEpoch, finalizedEpoch types.Epoch, vals []*types.Validator) ([]*types.Validator, error) {
+	return nil, errors.New("ProcessInactivityScores is not supported for phase 0 beacon state")
 }

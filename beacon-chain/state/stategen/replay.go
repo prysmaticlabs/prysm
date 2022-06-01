@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
+	"github.com/prysmaticlabs/prysm/crypto/rand"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	"github.com/prysmaticlabs/prysm/runtime/version"
@@ -41,6 +42,11 @@ func (_ *State) ReplayBlocks(
 		"endSlot":   targetSlot,
 		"diff":      targetSlot - state.Slot(),
 	}).Debug("Replaying state")
+	val := ctx.Value("migrate")
+	if val != nil {
+		log.Debug("Migrating state and replaying blocks")
+	}
+	gen := rand.NewDeterministicGenerator()
 	// The input block list is sorted in decreasing slots order.
 	if len(signed) > 0 {
 		for i := len(signed) - 1; i >= 0; i-- {
@@ -53,6 +59,10 @@ func (_ *State) ReplayBlocks(
 			// A node shouldn't process the block if the block slot is lower than the state slot.
 			if state.Slot() >= signed[i].Block().Slot() {
 				continue
+			}
+			if val != nil {
+				nm := gen.Int63n(5500)
+				time.Sleep(time.Duration(nm) * time.Millisecond)
 			}
 			state, err = executeStateTransitionStateGen(ctx, state, signed[i])
 			if err != nil {
@@ -143,9 +153,6 @@ func executeStateTransitionStateGen(
 	state state.BeaconState,
 	signed interfaces.SignedBeaconBlock,
 ) (state.BeaconState, error) {
-	if ctx.Err() != nil {
-		return nil, ctx.Err()
-	}
 	if err := wrapper.BeaconBlockIsNil(signed); err != nil {
 		return nil, err
 	}

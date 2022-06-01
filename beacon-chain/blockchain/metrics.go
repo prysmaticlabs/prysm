@@ -259,8 +259,8 @@ func reportEpochMetrics(ctx context.Context, postState, headState state.BeaconSt
 	currentEth1DataDepositCount.Set(float64(postState.Eth1Data().DepositCount))
 	processedDepositsCount.Set(float64(postState.Eth1DepositIndex() + 1))
 
-	var b *precompute.Balance
-	var v []*precompute.Validator
+	var b *types.Balance
+	var v []*types.Validator
 	var err error
 	switch headState.Version() {
 	case version.Phase0:

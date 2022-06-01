@@ -22,13 +22,13 @@ import (
 func ProcessAttestations(
 	ctx context.Context,
 	state state.ReadOnlyBeaconState,
-	vp []*Validator,
-	pBal *Balance,
-) ([]*Validator, *Balance, error) {
+	vp []*types.Validator,
+	pBal *types.Balance,
+) ([]*types.Validator, *types.Balance, error) {
 	ctx, span := trace.StartSpan(ctx, "precomputeEpoch.ProcessAttestations")
 	defer span.End()
 
-	v := &Validator{}
+	v := &types.Validator{}
 	var err error
 
 	prevAtt, err := state.PreviousEpochAttestations()
@@ -141,7 +141,7 @@ func SameHead(state state.ReadOnlyBeaconState, a *ethpb.PendingAttestation) (boo
 }
 
 // UpdateValidator updates pre computed validator store.
-func UpdateValidator(vp []*Validator, record *Validator, indices []uint64, a *ethpb.PendingAttestation, aSlot types.Slot) []*Validator {
+func UpdateValidator(vp []*types.Validator, record *types.Validator, indices []uint64, a *ethpb.PendingAttestation, aSlot types.Slot) []*types.Validator {
 	inclusionSlot := aSlot + a.InclusionDelay
 
 	for _, i := range indices {
@@ -171,7 +171,7 @@ func UpdateValidator(vp []*Validator, record *Validator, indices []uint64, a *et
 }
 
 // UpdateBalance updates pre computed balance store.
-func UpdateBalance(vp []*Validator, bBal *Balance, stateVersion int) *Balance {
+func UpdateBalance(vp []*types.Validator, bBal *types.Balance, stateVersion int) *types.Balance {
 	for _, v := range vp {
 		if !v.IsSlashed {
 			if v.IsCurrentEpochAttester {
@@ -200,7 +200,7 @@ func UpdateBalance(vp []*Validator, bBal *Balance, stateVersion int) *Balance {
 
 // EnsureBalancesLowerBound ensures all the balances such as active current epoch, active previous epoch and more
 // have EffectiveBalanceIncrement(1 eth) as a lower bound.
-func EnsureBalancesLowerBound(bBal *Balance) *Balance {
+func EnsureBalancesLowerBound(bBal *types.Balance) *types.Balance {
 	ebi := params.BeaconConfig().EffectiveBalanceIncrement
 	if ebi > bBal.ActiveCurrentEpoch {
 		bBal.ActiveCurrentEpoch = ebi

@@ -3,7 +3,6 @@ package stategen
 import (
 	"context"
 	"encoding/hex"
-	"fmt"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -39,11 +38,10 @@ func (s *State) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 		}
 
 		if slot%s.slotsPerArchivedPoint == 0 && slot != 0 {
-			cached, exists, err := s.epochBoundaryStateCache.getBySlot(slot)
-			if err != nil {
-				return fmt.Errorf("could not get epoch boundary state for slot %d", slot)
+			cached, exists := &rootStateInfo{}, false
+			if s.slotsPerArchivedPoint == 10000 {
+				exists = true
 			}
-
 			var aRoot [32]byte
 			var aState state.BeaconState
 
@@ -72,6 +70,7 @@ func (s *State) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 				// There's no need to generate the state if the state already exists in the DB.
 				// We can skip saving the state.
 				if !s.beaconDB.HasState(ctx, aRoot) {
+					ctx = context.WithValue(ctx, "migrate", "yes")
 					aState, err = s.StateByRoot(ctx, missingRoot)
 					if err != nil {
 						return err

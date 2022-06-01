@@ -7,6 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -31,33 +32,33 @@ func TestNew(t *testing.T) {
 	e := params.BeaconConfig().FarFutureSlot
 	v, b, err := precompute.New(context.Background(), s)
 	require.NoError(t, err)
-	assert.DeepEqual(t, &precompute.Validator{
+	assert.DeepEqual(t, &types.Validator{
 		IsSlashed:                    true,
 		CurrentEpochEffectiveBalance: 100,
 		InclusionDistance:            e,
 		InclusionSlot:                e,
 	}, v[0], "Incorrect validator 0 status")
-	assert.DeepEqual(t, &precompute.Validator{
+	assert.DeepEqual(t, &types.Validator{
 		IsWithdrawableCurrentEpoch:   true,
 		CurrentEpochEffectiveBalance: 100,
 		InclusionDistance:            e,
 		InclusionSlot:                e,
 	}, v[1], "Incorrect validator 1 status")
-	assert.DeepEqual(t, &precompute.Validator{
+	assert.DeepEqual(t, &types.Validator{
 		IsActiveCurrentEpoch:         true,
 		IsActivePrevEpoch:            true,
 		CurrentEpochEffectiveBalance: 100,
 		InclusionDistance:            e,
 		InclusionSlot:                e,
 	}, v[2], "Incorrect validator 2 status")
-	assert.DeepEqual(t, &precompute.Validator{
+	assert.DeepEqual(t, &types.Validator{
 		IsActivePrevEpoch:            true,
 		CurrentEpochEffectiveBalance: 100,
 		InclusionDistance:            e,
 		InclusionSlot:                e,
 	}, v[3], "Incorrect validator 3 status")
 
-	wantedBalances := &precompute.Balance{
+	wantedBalances := &types.Balance{
 		ActiveCurrentEpoch: 100,
 		ActivePrevEpoch:    200,
 	}

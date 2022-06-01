@@ -73,6 +73,7 @@ type WriteOnlyBeaconState interface {
 	WriteOnlyBalances
 	WriteOnlyCheckpoint
 	WriteOnlyAttestations
+	CoreProcessors
 	SetGenesisTime(val uint64) error
 	SetGenesisValidatorsRoot(val []byte) error
 	SetSlot(val types.Slot) error
@@ -234,4 +235,10 @@ type FutureForkStub interface {
 	ModifyPreviousParticipationBits(func(val []byte) ([]byte, error)) error
 	NextSyncCommittee() (*ethpb.SyncCommittee, error)
 	SetNextSyncCommittee(val *ethpb.SyncCommittee) error
+}
+
+type CoreProcessors interface {
+	ProcessInactivityScores(ctx context.Context,
+		currentEpoch, previousEpoch, finalizedEpoch types.Epoch,
+		vals []*types.Validator) ([]*types.Validator, error)
 }

@@ -43,7 +43,7 @@ func TestProcessJustificationAndFinalizationPreCompute_ConsecutiveEpochs(t *test
 	state, err := v1.InitializeFromProto(base)
 	require.NoError(t, err)
 	attestedBalance := 4 * uint64(e) * 3 / 2
-	b := &precompute.Balance{PrevEpochTargetAttested: attestedBalance}
+	b := &types.Balance{PrevEpochTargetAttested: attestedBalance}
 	newState, err := precompute.ProcessJustificationAndFinalizationPreCompute(state, b)
 	require.NoError(t, err)
 	rt := [32]byte{byte(64)}
@@ -80,7 +80,7 @@ func TestProcessJustificationAndFinalizationPreCompute_JustifyCurrentEpoch(t *te
 	state, err := v1.InitializeFromProto(base)
 	require.NoError(t, err)
 	attestedBalance := 4 * uint64(e) * 3 / 2
-	b := &precompute.Balance{PrevEpochTargetAttested: attestedBalance}
+	b := &types.Balance{PrevEpochTargetAttested: attestedBalance}
 	newState, err := precompute.ProcessJustificationAndFinalizationPreCompute(state, b)
 	require.NoError(t, err)
 	rt := [32]byte{byte(64)}
@@ -116,7 +116,7 @@ func TestProcessJustificationAndFinalizationPreCompute_JustifyPrevEpoch(t *testi
 	state, err := v1.InitializeFromProto(base)
 	require.NoError(t, err)
 	attestedBalance := 4 * uint64(e) * 3 / 2
-	b := &precompute.Balance{PrevEpochTargetAttested: attestedBalance}
+	b := &types.Balance{PrevEpochTargetAttested: attestedBalance}
 	newState, err := precompute.ProcessJustificationAndFinalizationPreCompute(state, b)
 	require.NoError(t, err)
 	rt := [32]byte{byte(64)}
