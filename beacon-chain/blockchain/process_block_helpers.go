@@ -242,8 +242,7 @@ func (s *Service) updateJustifiedInitSync(ctx context.Context, cp *ethpb.Checkpo
 		return err
 	}
 	s.store.SetJustifiedCheckptAndPayloadHash(cp, h)
-
-	return nil
+	return s.cfg.ForkChoiceStore.UpdateJustifiedCheckpoint(cp)
 }
 
 func (s *Service) updateFinalized(ctx context.Context, cp *ethpb.Checkpoint) error {
