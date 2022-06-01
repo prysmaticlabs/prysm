@@ -166,6 +166,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	DomainSyncCommitteeSelectionProof: bytesutil.Uint32ToBytes4(0x08000000),
 	DomainContributionAndProof:        bytesutil.Uint32ToBytes4(0x09000000),
 	DomainApplicationMask:             bytesutil.Uint32ToBytes4(0x00000001),
+	DomainApplicationBuilder:          bytesutil.Uint32ToBytes4(0x00000001),
 
 	// Prysm constants.
 	GweiPerEth:                     1000000000,
