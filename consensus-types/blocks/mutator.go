@@ -41,6 +41,7 @@ func (m blockMutator) apply(b interfaces.SignedBeaconBlock) error {
 	}
 }
 
+// SetBlockStateRoot modifies the block's state root.
 func SetBlockStateRoot(b interfaces.SignedBeaconBlock, sr [32]byte) error {
 	return blockMutator{
 		Phase0:    func(bb *eth.SignedBeaconBlock) { bb.Block.StateRoot = sr[:] },
@@ -49,6 +50,7 @@ func SetBlockStateRoot(b interfaces.SignedBeaconBlock, sr [32]byte) error {
 	}.apply(b)
 }
 
+// SetBlockParentRoot modifies the block's parent root.
 func SetBlockParentRoot(b interfaces.SignedBeaconBlock, pr [32]byte) error {
 	return blockMutator{
 		Phase0:    func(bb *eth.SignedBeaconBlock) { bb.Block.ParentRoot = pr[:] },
@@ -57,6 +59,7 @@ func SetBlockParentRoot(b interfaces.SignedBeaconBlock, pr [32]byte) error {
 	}.apply(b)
 }
 
+// SetBlockSlot modifies the block's slot.
 func SetBlockSlot(b interfaces.SignedBeaconBlock, s types.Slot) error {
 	return blockMutator{
 		Phase0:    func(bb *eth.SignedBeaconBlock) { bb.Block.Slot = s },
@@ -65,6 +68,7 @@ func SetBlockSlot(b interfaces.SignedBeaconBlock, s types.Slot) error {
 	}.apply(b)
 }
 
+// SetProposerIndex modifies the block's proposer index.
 func SetProposerIndex(b interfaces.SignedBeaconBlock, idx types.ValidatorIndex) error {
 	return blockMutator{
 		Phase0:    func(bb *eth.SignedBeaconBlock) { bb.Block.ProposerIndex = idx },
