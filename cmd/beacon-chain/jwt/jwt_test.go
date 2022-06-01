@@ -19,7 +19,7 @@ func Test_generateJWTSecret(t *testing.T) {
 		require.Equal(t, true, generateJwtCommand.Name == "generate-auth-secret")
 	})
 	// We're getting this from buildkite -> Successfully wrote JSON-RPC authentication secret to file /adj@&  9a.\""
-	// Not sure that this os-dependent quirkiness should block pushing to develop so we can unblock our quickstart revision...
+	// this test feels like premature optimization, not confident that we should block on this
 	//t.Run("junk file path fails", func(t *testing.T) {
 	//	junk := "/adj$7@&  9a.\""
 	//	app := cli.App{}
