@@ -212,7 +212,7 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 		forkChoicer = protoarray.New(justified.Epoch, finalized.Epoch)
 	}
 	s.cfg.ForkChoiceStore = forkChoicer
-	st, err := s.cfg.StateGen.StateByRoot(s.ctx, s.ensureRootNotZeros(fRoot))
+	st, err := s.cfg.StateGen.StateByRoot(s.ctx, fRoot)
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized checkpoint state")
 	}
