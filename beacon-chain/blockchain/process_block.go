@@ -451,16 +451,16 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 	}
 	// Insert all nodes but the last one to forkchoice
 	if err := s.cfg.ForkChoiceStore.InsertOptimisticChain(ctx, pendingNodes); err != nil {
-		return err
+		return errors.Wrap(err, "could not insert batch to forkchoice")
 	}
 	// Insert the last block to forkchoice
-	lastBlkRoot := blockRoots[len(blks)-1]
-	if err := s.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx, preState, lastBlkRoot); err != nil {
+	lastBR := blockRoots[len(blks)-1]
+	if err := s.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx, preState, lastBR); err != nil {
 		return err
 	}
 	// Set their optimistic status
 	if isValidPayload {
-		if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, lastBlkRoot); err != nil {
+		if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, lastBR); err != nil {
 			return errors.Wrap(err, "could not set optimistic block to valid")
 		}
 	}
@@ -472,7 +472,6 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 	}
 	// Also saves the last post state which to be used as pre state for the next batch.
 	lastB := blks[len(blks)-1]
-	lastBR := blockRoots[len(blockRoots)-1]
 	if err := s.cfg.StateGen.SaveState(ctx, lastBR, preState); err != nil {
 		return err
 	}

@@ -23,7 +23,7 @@ func TestVotes_CanFindHead(t *testing.T) {
 	//         0
 	//        /
 	//       2 <- head
-	state, blkRoot, err := setupInsertParameters(context.Background(), 0, indexToHash(2), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 1, 1)
+	state, blkRoot, err := prepareForkchoiceState(context.Background(), 0, indexToHash(2), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 1, 1)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
 
@@ -35,7 +35,7 @@ func TestVotes_CanFindHead(t *testing.T) {
 	//            0
 	//           / \
 	//  head -> 2  1
-	state, blkRoot, err = setupInsertParameters(context.Background(), 0, indexToHash(1), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 1, 1)
+	state, blkRoot, err = prepareForkchoiceState(context.Background(), 0, indexToHash(1), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 1, 1)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
 
@@ -67,7 +67,7 @@ func TestVotes_CanFindHead(t *testing.T) {
 	//  head -> 2  1
 	//             |
 	//             3
-	state, blkRoot, err = setupInsertParameters(context.Background(), 0, indexToHash(3), indexToHash(1), params.BeaconConfig().ZeroHash, 1, 1)
+	state, blkRoot, err = prepareForkchoiceState(context.Background(), 0, indexToHash(3), indexToHash(1), params.BeaconConfig().ZeroHash, 1, 1)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
 
@@ -105,7 +105,7 @@ func TestVotes_CanFindHead(t *testing.T) {
 	//             3
 	//             |
 	//             4 <- head
-	state, blkRoot, err = setupInsertParameters(context.Background(), 0, indexToHash(4), indexToHash(3), params.BeaconConfig().ZeroHash, 1, 1)
+	state, blkRoot, err = prepareForkchoiceState(context.Background(), 0, indexToHash(4), indexToHash(3), params.BeaconConfig().ZeroHash, 1, 1)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
 
@@ -123,7 +123,7 @@ func TestVotes_CanFindHead(t *testing.T) {
 	//             4 <- head
 	//            /
 	//           5 <- justified epoch = 2
-	state, blkRoot, err = setupInsertParameters(context.Background(), 0, indexToHash(5), indexToHash(4), params.BeaconConfig().ZeroHash, 2, 2)
+	state, blkRoot, err = prepareForkchoiceState(context.Background(), 0, indexToHash(5), indexToHash(4), params.BeaconConfig().ZeroHash, 2, 2)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
 
@@ -141,7 +141,7 @@ func TestVotes_CanFindHead(t *testing.T) {
 	//             4 <- head
 	//            / \
 	//           5  6 <- justified epoch = 0
-	state, blkRoot, err = setupInsertParameters(context.Background(), 0, indexToHash(6), indexToHash(4), params.BeaconConfig().ZeroHash, 1, 1)
+	state, blkRoot, err = prepareForkchoiceState(context.Background(), 0, indexToHash(6), indexToHash(4), params.BeaconConfig().ZeroHash, 1, 1)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
 
@@ -155,7 +155,7 @@ func TestVotes_CanFindHead(t *testing.T) {
 	//             4
 	//            / \
 	// 2 votes-> 5  6
-	state, blkRoot, err = setupInsertParameters(context.Background(), 0, indexToHash(6), indexToHash(4), params.BeaconConfig().ZeroHash, 1, 1)
+	state, blkRoot, err = prepareForkchoiceState(context.Background(), 0, indexToHash(6), indexToHash(4), params.BeaconConfig().ZeroHash, 1, 1)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
 
@@ -178,13 +178,13 @@ func TestVotes_CanFindHead(t *testing.T) {
 	//           8
 	//           |
 	//           9
-	state, blkRoot, err = setupInsertParameters(context.Background(), 0, indexToHash(7), indexToHash(5), params.BeaconConfig().ZeroHash, 2, 2)
+	state, blkRoot, err = prepareForkchoiceState(context.Background(), 0, indexToHash(7), indexToHash(5), params.BeaconConfig().ZeroHash, 2, 2)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
-	state, blkRoot, err = setupInsertParameters(context.Background(), 0, indexToHash(8), indexToHash(7), params.BeaconConfig().ZeroHash, 2, 2)
+	state, blkRoot, err = prepareForkchoiceState(context.Background(), 0, indexToHash(8), indexToHash(7), params.BeaconConfig().ZeroHash, 2, 2)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
-	state, blkRoot, err = setupInsertParameters(context.Background(), 0, indexToHash(9), indexToHash(8), params.BeaconConfig().ZeroHash, 2, 2)
+	state, blkRoot, err = prepareForkchoiceState(context.Background(), 0, indexToHash(9), indexToHash(8), params.BeaconConfig().ZeroHash, 2, 2)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
 
@@ -233,7 +233,7 @@ func TestVotes_CanFindHead(t *testing.T) {
 	//           / \
 	// 2 votes->9  10
 	f.ProcessAttestation(context.Background(), []uint64{0, 1}, indexToHash(9), 5)
-	state, blkRoot, err = setupInsertParameters(context.Background(), 0, indexToHash(10), indexToHash(8), params.BeaconConfig().ZeroHash, 2, 2)
+	state, blkRoot, err = prepareForkchoiceState(context.Background(), 0, indexToHash(10), indexToHash(8), params.BeaconConfig().ZeroHash, 2, 2)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
 
@@ -314,7 +314,7 @@ func TestVotes_CanFindHead(t *testing.T) {
 	//        9  10
 	//        |
 	// head-> 11
-	state, blkRoot, err = setupInsertParameters(context.Background(), 0, indexToHash(11), indexToHash(9), params.BeaconConfig().ZeroHash, 2, 2)
+	state, blkRoot, err = prepareForkchoiceState(context.Background(), 0, indexToHash(11), indexToHash(9), params.BeaconConfig().ZeroHash, 2, 2)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
 

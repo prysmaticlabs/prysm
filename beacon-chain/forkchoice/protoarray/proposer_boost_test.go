@@ -45,7 +45,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		//         1 <- HEAD
 		slot := types.Slot(1)
 		newRoot := indexToHash(1)
-		state, blkRoot, err := setupInsertParameters(
+		state, blkRoot, err := prepareForkchoiceState(
 			ctx,
 			slot,
 			newRoot,
@@ -69,7 +69,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		//         2 <- HEAD
 		slot = types.Slot(2)
 		newRoot = indexToHash(2)
-		state, blkRoot, err = setupInsertParameters(
+		state, blkRoot, err = prepareForkchoiceState(
 			ctx,
 			slot,
 			newRoot,
@@ -95,7 +95,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		//         3 <- HEAD
 		slot = types.Slot(3)
 		newRoot = indexToHash(3)
-		state, blkRoot, err = setupInsertParameters(
+		state, blkRoot, err = prepareForkchoiceState(
 			ctx,
 			slot,
 			newRoot,
@@ -122,7 +122,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		//           4 <- HEAD
 		slot = types.Slot(4)
 		newRoot = indexToHash(4)
-		state, blkRoot, err = setupInsertParameters(
+		state, blkRoot, err = prepareForkchoiceState(
 			ctx,
 			slot,
 			newRoot,
@@ -202,7 +202,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		//             C <- Slot 2 HEAD
 		honestBlockSlot := types.Slot(2)
 		honestBlock := indexToHash(2)
-		state, blkRoot, err := setupInsertParameters(
+		state, blkRoot, err := prepareForkchoiceState(
 			ctx,
 			honestBlockSlot,
 			honestBlock,
@@ -219,7 +219,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 
 		maliciouslyWithheldBlockSlot := types.Slot(1)
 		maliciouslyWithheldBlock := indexToHash(1)
-		state, blkRoot, err = setupInsertParameters(
+		state, blkRoot, err = prepareForkchoiceState(
 			ctx,
 			maliciouslyWithheldBlockSlot,
 			maliciouslyWithheldBlock,
@@ -275,7 +275,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		//             C <- Slot 2 HEAD
 		honestBlockSlot := types.Slot(2)
 		honestBlock := indexToHash(2)
-		state, blkRoot, err := setupInsertParameters(
+		state, blkRoot, err := prepareForkchoiceState(
 			ctx,
 			honestBlockSlot,
 			honestBlock,
@@ -294,7 +294,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 
 		maliciouslyWithheldBlockSlot := types.Slot(1)
 		maliciouslyWithheldBlock := indexToHash(1)
-		state, blkRoot, err = setupInsertParameters(
+		state, blkRoot, err = prepareForkchoiceState(
 			ctx,
 			maliciouslyWithheldBlockSlot,
 			maliciouslyWithheldBlock,
@@ -354,7 +354,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 
 		cSlot := types.Slot(2)
 		c := indexToHash(2)
-		state, blkRoot, err := setupInsertParameters(
+		state, blkRoot, err := prepareForkchoiceState(
 			ctx,
 			cSlot,
 			c,
@@ -382,7 +382,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 
 		bSlot := types.Slot(1)
 		b := indexToHash(1)
-		state, blkRoot, err = setupInsertParameters(
+		state, blkRoot, err = prepareForkchoiceState(
 			ctx,
 			bSlot,
 			b,
@@ -406,7 +406,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		// A block D, building on B, is received at slot N+3. It should not be able to win without boosting.
 		dSlot := types.Slot(3)
 		d := indexToHash(3)
-		state, blkRoot, err = setupInsertParameters(
+		state, blkRoot, err = prepareForkchoiceState(
 			ctx,
 			dSlot,
 			d,

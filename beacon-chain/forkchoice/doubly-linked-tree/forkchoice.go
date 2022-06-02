@@ -452,8 +452,9 @@ func (f *ForkChoice) CommonAncestorRoot(ctx context.Context, r1 [32]byte, r2 [32
 }
 
 // InsertOptimisticChain inserts all nodes corresponding to blocks in the slice
-// `blocks`. This slice must be ordered from parent to child. It includes all
-// blocks **except** the first one. All blocks are assumed to be a strict chain
+// `blocks`. This slice must be ordered from child to parent. It includes all
+// blocks **except** the first one (that is the one with the highest slot
+// number). All blocks are assumed to be a strict chain
 // where blocks[i].Parent = blocks[i+1]. Also we assume that the parent of the
 // last block in this list is already included in forkchoice store.
 func (f *ForkChoice) InsertOptimisticChain(ctx context.Context, chain []*forkchoicetypes.BlockAndCheckpoints) error {
