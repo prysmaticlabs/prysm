@@ -507,7 +507,7 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 			ProposeConfig: nil,
 			DefaultConfig: &validatorServiceConfig.ProposerOptionsConfig{
 				FeeRecipient: suggestedFee,
-				GasLimit:     fieldparams.DefaultBuilderGasLimit,
+				GasLimit:     params.BeaconConfig().DefaultBuilderGasLimit,
 			},
 		}
 	}
@@ -577,8 +577,8 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 }
 
 func reviewGasLimit(gasLimit uint64) uint64 {
-	if gasLimit == 0 || gasLimit == fieldparams.DefaultBuilderGasLimit {
-		return fieldparams.DefaultBuilderGasLimit
+	if gasLimit == 0 || gasLimit == params.BeaconConfig().DefaultBuilderGasLimit {
+		return params.BeaconConfig().DefaultBuilderGasLimit
 	}
 	//TODO: add in warning for ranges
 	return gasLimit

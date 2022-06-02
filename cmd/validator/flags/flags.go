@@ -7,7 +7,7 @@ import (
 	"runtime"
 	"time"
 
-	field_params "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/urfave/cli/v2"
 )
@@ -356,7 +356,7 @@ var (
 		Usage: "Sets ALL validators' mapping to a suggested an eth address to receive gas fees when proposing a block." +
 			" This setting is used for both the prepare_beacon_proposer api as well as the register_validator api." +
 			" For additional setting overrides use the --" + ProposerSettingsFlag.Name + " or --" + ProposerSettingsURLFlag.Name + " Flags. ",
-		Value: field_params.EthBurnAddressHex,
+		Value: params.BeaconConfig().EthBurnAddressHex,
 	}
 )
 
