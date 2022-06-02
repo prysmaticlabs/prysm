@@ -1029,7 +1029,6 @@ func (v *validator) buildProposerSettingsRequests(ctx context.Context, pubkeys [
 				FeeRecipient:   feeRecipient[:],
 			})
 		}
-		//TODO: look at caching these values
 		registerValidatorRequests = append(registerValidatorRequests, &ethpb.ValidatorRegistrationV1{
 			FeeRecipient: feeRecipient[:],
 			GasLimit:     gasLimit,
