@@ -518,6 +518,9 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed interf
 			return err
 		}
 		s.store.SetFinalizedCheckptAndPayloadHash(fCheckpoint, h)
+		if err := s.cfg.ForkChoiceStore.UpdateFinalizedCheckpoint(fCheckpoint); err != nil {
+			return err
+		}
 		if err := s.cfg.ForkChoiceStore.Prune(ctx, bytesutil.ToBytes32(fCheckpoint.Root)); err != nil {
 			return errors.Wrap(err, "could not prune proto array fork choice nodes")
 		}
