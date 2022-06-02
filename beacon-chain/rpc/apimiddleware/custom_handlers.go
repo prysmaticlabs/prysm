@@ -7,10 +7,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 
-	"github.com/elnormous/contenttype"
 	"github.com/prysmaticlabs/prysm/api/gateway/apimiddleware"
 	"github.com/prysmaticlabs/prysm/api/grpc"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/events"
@@ -202,15 +202,52 @@ func handlePostSSZ(
 }
 
 func sszRequested(req *http.Request) (bool, error) {
-	acceptableTypes := []contenttype.MediaType{
-		contenttype.NewMediaType(jsonMediaType),
-		contenttype.NewMediaType(octetStreamMediaType),
+	accept, ok := req.Header["Accept"]
+	if !ok {
+		return false, nil
 	}
-	accepted, _, err := contenttype.GetAcceptableMediaType(req, acceptableTypes)
+	if len(accept) == 0 {
+		return false, nil
+	}
+	types := strings.Split(accept[0], ",")
+	// match a number with optional decimals
+	regex, err := regexp.Compile("q=\\d(\\.\\d)?")
 	if err != nil {
 		return false, err
 	}
-	return strings.Contains(accepted.String(), octetStreamMediaType), nil
+	currentType, currentPriority := "", 1.0
+	for _, t := range types {
+		values := strings.Split(t, ";")
+		name := values[0]
+		if name != jsonMediaType && name != octetStreamMediaType {
+			continue
+		}
+		// no params specified
+		if len(values) == 1 {
+			if currentType == "" {
+				currentType = name
+				continue
+			}
+			priority := 1.0
+			if priority > currentPriority {
+				currentType, currentPriority = name, priority
+			}
+			continue
+		}
+		params := values[1]
+		match := regex.Find([]byte(params))
+		if match != nil {
+			priority, err := strconv.ParseFloat(strings.Split(string(match), "=")[1], 32)
+			if err != nil {
+				return false, err
+			}
+			if priority > currentPriority {
+				currentType, currentPriority = name, priority
+			}
+		}
+	}
+
+	return currentType == octetStreamMediaType, nil
 }
 
 func sszPosted(req *http.Request) bool {

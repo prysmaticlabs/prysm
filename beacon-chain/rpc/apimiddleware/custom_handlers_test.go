@@ -41,7 +41,23 @@ func TestSSZRequested(t *testing.T) {
 		assert.Equal(t, true, result)
 	})
 
-	t.Run("ssz_content_type_preferred", func(t *testing.T) {
+	t.Run("ssz_content_type_first", func(t *testing.T) {
+		request := httptest.NewRequest("GET", "http://foo.example", nil)
+		request.Header["Accept"] = []string{fmt.Sprintf("%s,%s", octetStreamMediaType, jsonMediaType)}
+		result, err := sszRequested(request)
+		require.NoError(t, err)
+		assert.Equal(t, true, result)
+	})
+
+	t.Run("ssz_content_type_preferred_1", func(t *testing.T) {
+		request := httptest.NewRequest("GET", "http://foo.example", nil)
+		request.Header["Accept"] = []string{fmt.Sprintf("%s;q=0.9,%s", jsonMediaType, octetStreamMediaType)}
+		result, err := sszRequested(request)
+		require.NoError(t, err)
+		assert.Equal(t, true, result)
+	})
+
+	t.Run("ssz_content_type_preferred_2", func(t *testing.T) {
 		request := httptest.NewRequest("GET", "http://foo.example", nil)
 		request.Header["Accept"] = []string{fmt.Sprintf("%s;q=0.9,%s", jsonMediaType, octetStreamMediaType)}
 		result, err := sszRequested(request)
@@ -57,6 +73,14 @@ func TestSSZRequested(t *testing.T) {
 		assert.Equal(t, false, result)
 	})
 
+	t.Run("other_params", func(t *testing.T) {
+		request := httptest.NewRequest("GET", "http://foo.example", nil)
+		request.Header["Accept"] = []string{fmt.Sprintf("%s,%s;q=0.9,otherparam=xyz", jsonMediaType, octetStreamMediaType)}
+		result, err := sszRequested(request)
+		require.NoError(t, err)
+		assert.Equal(t, false, result)
+	})
+
 	t.Run("no_header", func(t *testing.T) {
 		request := httptest.NewRequest("GET", "http://foo.example", nil)
 		result, err := sszRequested(request)
@@ -64,9 +88,33 @@ func TestSSZRequested(t *testing.T) {
 		assert.Equal(t, false, result)
 	})
 
+	t.Run("empty_header", func(t *testing.T) {
+		request := httptest.NewRequest("GET", "http://foo.example", nil)
+		request.Header["Accept"] = []string{}
+		result, err := sszRequested(request)
+		require.NoError(t, err)
+		assert.Equal(t, false, result)
+	})
+
+	t.Run("empty_header_value", func(t *testing.T) {
+		request := httptest.NewRequest("GET", "http://foo.example", nil)
+		request.Header["Accept"] = []string{""}
+		result, err := sszRequested(request)
+		require.NoError(t, err)
+		assert.Equal(t, false, result)
+	})
+
 	t.Run("other_content_type", func(t *testing.T) {
 		request := httptest.NewRequest("GET", "http://foo.example", nil)
-		request.Header["Accept"] = []string{jsonMediaType}
+		request.Header["Accept"] = []string{"application/other"}
+		result, err := sszRequested(request)
+		require.NoError(t, err)
+		assert.Equal(t, false, result)
+	})
+
+	t.Run("garbage", func(t *testing.T) {
+		request := httptest.NewRequest("GET", "http://foo.example", nil)
+		request.Header["Accept"] = []string{"This is Sparta!!!"}
 		result, err := sszRequested(request)
 		require.NoError(t, err)
 		assert.Equal(t, false, result)
