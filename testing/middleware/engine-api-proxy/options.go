@@ -2,6 +2,7 @@ package proxy
 
 import (
 	"net/url"
+	"os"
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -51,6 +52,18 @@ func WithDestinationAddress(addr string) Option {
 func WithLogger(l *logrus.Logger) Option {
 	return func(p *Proxy) error {
 		p.cfg.logger = l
+		return nil
+	}
+}
+
+// WithLogFile specifies a log file to write
+// the proxies output to.
+func WithLogFile(f *os.File) Option {
+	return func(p *Proxy) error {
+		if p.cfg.logger == nil {
+			return errors.New("nil logger provided")
+		}
+		p.cfg.logger.SetOutput(f)
 		return nil
 	}
 }

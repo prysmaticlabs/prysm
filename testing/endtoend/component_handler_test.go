@@ -26,6 +26,7 @@ type componentHandler struct {
 	web3Signer               e2etypes.ComponentRunner
 	bootnode                 e2etypes.ComponentRunner
 	eth1Miner                e2etypes.ComponentRunner
+	eth1Proxy                e2etypes.ComponentRunner
 	eth1Nodes                e2etypes.MultipleComponentRunners
 	beaconNodes              e2etypes.MultipleComponentRunners
 	validatorNodes           e2etypes.MultipleComponentRunners
@@ -132,10 +133,23 @@ func (c *componentHandler) setup() {
 	if config.TestCheckpointSync {
 		appendDebugEndpoints(config)
 	}
+	// Proxies
+	proxies := eth1.NewProxySet()
+	g.Go(func() error {
+		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Nodes}); err != nil {
+			return errors.Wrap(err, "beacon nodes require ETH1 and boot node to run")
+		}
+		if err := proxies.Start(ctx); err != nil {
+			return errors.Wrap(err, "failed to start proxies")
+		}
+		return nil
+	})
+	c.eth1Proxy = proxies
+
 	// Beacon nodes.
 	beaconNodes := components.NewBeaconNodes(config)
 	g.Go(func() error {
-		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Nodes, bootNode}); err != nil {
+		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Nodes, proxies, bootNode}); err != nil {
 			return errors.Wrap(err, "beacon nodes require ETH1 and boot node to run")
 		}
 		beaconNodes.SetENR(bootNode.ENR())
@@ -149,7 +163,7 @@ func (c *componentHandler) setup() {
 	if multiClientActive {
 		lighthouseNodes = components.NewLighthouseBeaconNodes(config)
 		g.Go(func() error {
-			if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Nodes, bootNode, beaconNodes}); err != nil {
+			if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Nodes, proxies, bootNode, beaconNodes}); err != nil {
 				return errors.Wrap(err, "lighthouse beacon nodes require ETH1 and boot node to run")
 			}
 			lighthouseNodes.SetENR(bootNode.ENR())
@@ -197,7 +211,7 @@ func (c *componentHandler) setup() {
 func (c *componentHandler) required() []e2etypes.ComponentRunner {
 	multiClientActive := e2e.TestParams.LighthouseBeaconNodeCount > 0
 	requiredComponents := []e2etypes.ComponentRunner{
-		c.tracingSink, c.eth1Nodes, c.bootnode, c.beaconNodes, c.validatorNodes,
+		c.tracingSink, c.eth1Nodes, c.bootnode, c.beaconNodes, c.validatorNodes, c.eth1Proxy,
 	}
 	if multiClientActive {
 		requiredComponents = append(requiredComponents, []e2etypes.ComponentRunner{c.keygen, c.lighthouseBeaconNodes, c.lighthouseValidatorNodes}...)
