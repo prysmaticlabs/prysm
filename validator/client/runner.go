@@ -118,7 +118,7 @@ func run(ctx context.Context, v iface.Validator) {
 
 	// Set properties on the beacon node like the fee recipient for validators that are being used & active.
 	if err := v.UpdateProposerSettings(ctx, km); err != nil {
-		log.Fatalf("PreparedBeaconProposer Failed: %v", err) // allow fatal. skipcq
+		log.Fatalf("Failed to update proposer settings: %v", err) // allow fatal. skipcq
 	}
 	for {
 		slotCtx, cancel := context.WithCancel(ctx)
@@ -187,6 +187,12 @@ func run(ctx context.Context, v iface.Validator) {
 			// Start fetching domain data for the next epoch.
 			if slots.IsEpochEnd(slot) {
 				go v.UpdateDomainDataCaches(ctx, slot+1)
+				go func() {
+					// set proposer settings for next epoch.
+					if err := v.UpdateProposerSettings(ctx, km); err != nil {
+						log.Warnf("Failed to update proposer settings: %v", err)
+					}
+				}()
 			}
 
 			var wg sync.WaitGroup
