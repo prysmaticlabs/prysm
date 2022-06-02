@@ -410,22 +410,22 @@ func (s *Store) HighestSlotBlocksBelow(ctx context.Context, slot types.Slot) ([]
 		c := bkt.Cursor()
 		// The documentation for Seek says:
 		// "If the key does not exist then the next key is used. If no keys follow, a nil key is returned."
-		sl, r := c.Seek(sk)
-		// So if there are slots in the index higher than the requested slot, sl will be equal to the key that is
-		// one higher than the value we want. If the slot argument is higher than the highest value in the index,
-		// we'll get a nil value for `sl`. In that case we'll go backwards from Cursor.Last().
-		if sl == nil {
-			sl, r = c.Last()
+		seekPast := func(ic *bolt.Cursor, k []byte) ([]byte, []byte) {
+			ik, iv := ic.Seek(k)
+			// So if there are slots in the index higher than the requested slot, sl will be equal to the key that is
+			// one higher than the value we want. If the slot argument is higher than the highest value in the index,
+			// we'll get a nil value for `sl`. In that case we'll go backwards from Cursor.Last().
+			if ik == nil {
+				return ic.Last()
+			}
+			return ik, iv
 		}
-		for {
+		// re loop condition: when .Prev() rewinds past the beginning off the collection, the loop will terminate,
+		// because `sl` will be nil. If we don't find a value for `root` before iteration ends,
+		// `root` will be the zero value, in which case this function will return the genesis block.
+		for sl, r := seekPast(c, sk); sl != nil; sl, r = c.Prev() {
 			if ctx.Err() != nil {
 				return ctx.Err()
-			}
-			// termination condition: when .Prev() rewinds past the beginning off the collection, key will be nil.
-			// breaking without setting `root` means `root` will be the zero value, so this function will return
-			// the genesis block.
-			if sl == nil {
-				break
 			}
 			if r == nil {
 				continue
@@ -437,7 +437,6 @@ func (s *Store) HighestSlotBlocksBelow(ctx context.Context, slot types.Slot) ([]
 				root = bytesutil.ToBytes32(r)
 				break
 			}
-			sl, r = c.Prev()
 		}
 		return nil
 	})
