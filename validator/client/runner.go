@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/prysmaticlabs/prysm/validator/client/iface"
+	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
@@ -152,15 +153,7 @@ func run(ctx context.Context, v iface.Validator) {
 			}
 		case slot := <-v.NextSlot():
 			span.AddAttributes(trace.Int64Attribute("slot", int64(slot))) // lint:ignore uintcast -- This conversion is OK for tracing.
-
-			remoteKm, ok := km.(remote.RemoteKeymanager)
-			if ok {
-				_, err := remoteKm.ReloadPublicKeys(ctx)
-				if err != nil {
-					log.WithError(err).Error(msgCouldNotFetchKeys)
-				}
-			}
-
+			reloadRemoteKeys(ctx, km)
 			allExited, err := v.AllValidatorsAreExited(ctx)
 			if err != nil {
 				log.WithError(err).Error("Could not check if validators are exited")
@@ -193,6 +186,7 @@ func run(ctx context.Context, v iface.Validator) {
 						log.Warnf("Failed to update proposer settings: %v", err)
 					}
 				}()
+
 			}
 
 			var wg sync.WaitGroup
@@ -248,6 +242,16 @@ func run(ctx context.Context, v iface.Validator) {
 					log.WithError(err).Error("Could not report next count down")
 				}
 			}()
+		}
+	}
+}
+
+func reloadRemoteKeys(ctx context.Context, km keymanager.IKeymanager) {
+	remoteKm, ok := km.(remote.RemoteKeymanager)
+	if ok {
+		_, err := remoteKm.ReloadPublicKeys(ctx)
+		if err != nil {
+			log.WithError(err).Error(msgCouldNotFetchKeys)
 		}
 	}
 }
