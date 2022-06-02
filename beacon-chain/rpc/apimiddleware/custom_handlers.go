@@ -24,6 +24,9 @@ const (
 	octetStreamMediaType = "application/octet-stream"
 )
 
+// match a number with optional decimals
+var priorityRegex = regexp.MustCompile(`q=(\d+(?:\.\d+)?)`)
+
 type sszConfig struct {
 	fileName     string
 	responseJson sszResponse
@@ -202,20 +205,12 @@ func handlePostSSZ(
 }
 
 func sszRequested(req *http.Request) (bool, error) {
-	accept, ok := req.Header["Accept"]
-	if !ok {
-		return false, nil
-	}
+	accept := req.Header.Values("Accept")
 	if len(accept) == 0 {
 		return false, nil
 	}
 	types := strings.Split(accept[0], ",")
-	// match a number with optional decimals
-	regex, err := regexp.Compile(`q=\d(\.\d)?`)
-	if err != nil {
-		return false, err
-	}
-	currentType, currentPriority := "", 1.0
+	currentType, currentPriority := "", 0.0
 	for _, t := range types {
 		values := strings.Split(t, ";")
 		name := values[0]
@@ -224,10 +219,6 @@ func sszRequested(req *http.Request) (bool, error) {
 		}
 		// no params specified
 		if len(values) == 1 {
-			if currentType == "" {
-				currentType = name
-				continue
-			}
 			priority := 1.0
 			if priority > currentPriority {
 				currentType, currentPriority = name, priority
@@ -235,15 +226,16 @@ func sszRequested(req *http.Request) (bool, error) {
 			continue
 		}
 		params := values[1]
-		match := regex.Find([]byte(params))
-		if match != nil {
-			priority, err := strconv.ParseFloat(strings.Split(string(match), "=")[1], 32)
-			if err != nil {
-				return false, err
-			}
-			if priority > currentPriority {
-				currentType, currentPriority = name, priority
-			}
+		match := priorityRegex.FindAllStringSubmatch(params, 1)
+		if len(match) != 1 {
+			continue
+		}
+		priority, err := strconv.ParseFloat(match[0][1], 32)
+		if err != nil {
+			return false, err
+		}
+		if priority > currentPriority {
+			currentType, currentPriority = name, priority
 		}
 	}
 

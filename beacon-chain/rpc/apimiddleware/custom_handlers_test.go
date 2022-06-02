@@ -65,6 +65,14 @@ func TestSSZRequested(t *testing.T) {
 		assert.Equal(t, true, result)
 	})
 
+	t.Run("ssz_content_type_preferred_3", func(t *testing.T) {
+		request := httptest.NewRequest("GET", "http://foo.example", nil)
+		request.Header["Accept"] = []string{fmt.Sprintf("%s;q=0.95,%s;q=0.9", octetStreamMediaType, jsonMediaType)}
+		result, err := sszRequested(request)
+		require.NoError(t, err)
+		assert.Equal(t, true, result)
+	})
+
 	t.Run("other_content_type_preferred", func(t *testing.T) {
 		request := httptest.NewRequest("GET", "http://foo.example", nil)
 		request.Header["Accept"] = []string{fmt.Sprintf("%s,%s;q=0.9", jsonMediaType, octetStreamMediaType)}
