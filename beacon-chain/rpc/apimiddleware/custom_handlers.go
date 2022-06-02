@@ -211,7 +211,7 @@ func sszRequested(req *http.Request) (bool, error) {
 	}
 	types := strings.Split(accept[0], ",")
 	// match a number with optional decimals
-	regex, err := regexp.Compile("q=\\d(\\.\\d)?")
+	regex, err := regexp.Compile(`q=\d(\.\d)?`)
 	if err != nil {
 		return false, err
 	}
