@@ -41,7 +41,7 @@ func Test_generateJWTSecret(t *testing.T) {
 			require.NoError(t, os.RemoveAll(secretFileName))
 		})
 		app := cli.App{}
-		// TODO: improve the developer experience of this NewFlagSet call, the intent of this isn't clear to me, and it probably won't be clear to others. meta: these comments are intentional ways to identify debt and todos so we can reduce risk/cost and improve clarity. before deleting, maybe we can align on how to track these todos?
+		// TODO: improve the developer experience of this NewFlagSet call, the intent of this isn't clear to me, and it might not be clear to others...
 		set := flag.NewFlagSet("test", 0)
 		cliCtx := cli.NewContext(&app, set, nil)
 		err := generateAuthSecretInFile(cliCtx)
