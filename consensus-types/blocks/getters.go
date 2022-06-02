@@ -85,6 +85,30 @@ func (b *SignedBeaconBlock) PbGenericBlock() (*eth.GenericSignedBeaconBlock, err
 
 }
 
+// PbPhase0Block returns the underlying protobuf object.
+func (b *SignedBeaconBlock) PbPhase0Block() (*eth.SignedBeaconBlock, error) {
+	if b.version != version.Phase0 {
+		return nil, errNotSupported("PbPhase0Block", b.version)
+	}
+	pb, err := b.Proto()
+	if err != nil {
+		return nil, err
+	}
+	return pb.(*eth.SignedBeaconBlock), nil
+}
+
+// PbAltairBlock returns the underlying protobuf object.
+func (b *SignedBeaconBlock) PbAltairBlock() (*eth.SignedBeaconBlockAltair, error) {
+	if b.version != version.Altair {
+		return nil, errNotSupported("PbAltairBlock", b.version)
+	}
+	pb, err := b.Proto()
+	if err != nil {
+		return nil, err
+	}
+	return pb.(*eth.SignedBeaconBlockAltair), nil
+}
+
 // PbBellatrixBlock returns the underlying protobuf object.
 func (b *SignedBeaconBlock) PbBellatrixBlock() (*eth.SignedBeaconBlockBellatrix, error) {
 	if b.version != version.Bellatrix {
@@ -107,30 +131,6 @@ func (b *SignedBeaconBlock) PbBlindedBellatrixBlock() (*eth.SignedBlindedBeaconB
 		return nil, err
 	}
 	return pb.(*eth.SignedBlindedBeaconBlockBellatrix), nil
-}
-
-// PbPhase0Block returns the underlying protobuf object.
-func (b *SignedBeaconBlock) PbPhase0Block() (*eth.SignedBeaconBlock, error) {
-	if b.version != version.Phase0 {
-		return nil, errNotSupported("PbPhase0Block", b.version)
-	}
-	pb, err := b.Proto()
-	if err != nil {
-		return nil, err
-	}
-	return pb.(*eth.SignedBeaconBlock), nil
-}
-
-// PbAltairBlock returns the underlying protobuf object.
-func (b *SignedBeaconBlock) PbAltairBlock() (*eth.SignedBeaconBlockAltair, error) {
-	if b.version != version.BellatrixBlind {
-		return nil, errNotSupported("PbAltairBlock", b.version)
-	}
-	pb, err := b.Proto()
-	if err != nil {
-		return nil, err
-	}
-	return pb.(*eth.SignedBeaconBlockAltair), nil
 }
 
 // Version of the underlying protobuf object.
@@ -225,18 +225,62 @@ func (b *SignedBeaconBlock) UnmarshalSSZ(buf []byte) error {
 	if err != nil {
 		return err
 	}
+
+	var newBlock *SignedBeaconBlock
 	switch b.version {
 	case version.Phase0:
-		return pb.(*eth.SignedBeaconBlock).UnmarshalSSZ(buf)
+		unmarshalled, ok := pb.(*eth.SignedBeaconBlock)
+		if !ok {
+			return errAssertionFailed
+		}
+		if err := unmarshalled.UnmarshalSSZ(buf); err != nil {
+			return err
+		}
+		newBlock, err = initSignedBlockFromProtoPhase0(unmarshalled)
+		if err != nil {
+			return err
+		}
 	case version.Altair:
-		return pb.(*eth.SignedBeaconBlockAltair).UnmarshalSSZ(buf)
+		unmarshalled, ok := pb.(*eth.SignedBeaconBlockAltair)
+		if !ok {
+			return errAssertionFailed
+		}
+		if err := unmarshalled.UnmarshalSSZ(buf); err != nil {
+			return err
+		}
+		newBlock, err = initSignedBlockFromProtoAltair(unmarshalled)
+		if err != nil {
+			return err
+		}
 	case version.Bellatrix:
-		return pb.(*eth.SignedBeaconBlockBellatrix).UnmarshalSSZ(buf)
+		unmarshalled, ok := pb.(*eth.SignedBeaconBlockBellatrix)
+		if !ok {
+			return errAssertionFailed
+		}
+		if err := unmarshalled.UnmarshalSSZ(buf); err != nil {
+			return err
+		}
+		newBlock, err = initSignedBlockFromProtoBellatrix(unmarshalled)
+		if err != nil {
+			return err
+		}
 	case version.BellatrixBlind:
-		return pb.(*eth.SignedBlindedBeaconBlockBellatrix).UnmarshalSSZ(buf)
+		unmarshalled, ok := pb.(*eth.SignedBlindedBeaconBlockBellatrix)
+		if !ok {
+			return errAssertionFailed
+		}
+		if err := unmarshalled.UnmarshalSSZ(buf); err != nil {
+			return err
+		}
+		newBlock, err = initBlindedSignedBlockFromProtoBellatrix(unmarshalled)
+		if err != nil {
+			return err
+		}
 	default:
 		return errIncorrectBlockVersion
 	}
+	*b = *newBlock
+	return nil
 }
 
 // Slot returns the respective slot of the block.
@@ -395,18 +439,62 @@ func (b *BeaconBlock) UnmarshalSSZ(buf []byte) error {
 	if err != nil {
 		return err
 	}
+
+	var newBlock *BeaconBlock
 	switch b.version {
 	case version.Phase0:
-		return pb.(*eth.BeaconBlock).UnmarshalSSZ(buf)
+		unmarshalled, ok := pb.(*eth.BeaconBlock)
+		if !ok {
+			return errAssertionFailed
+		}
+		if err := unmarshalled.UnmarshalSSZ(buf); err != nil {
+			return err
+		}
+		newBlock, err = initBlockFromProtoPhase0(unmarshalled)
+		if err != nil {
+			return err
+		}
 	case version.Altair:
-		return pb.(*eth.BeaconBlockAltair).UnmarshalSSZ(buf)
+		unmarshalled, ok := pb.(*eth.BeaconBlockAltair)
+		if !ok {
+			return errAssertionFailed
+		}
+		if err := unmarshalled.UnmarshalSSZ(buf); err != nil {
+			return err
+		}
+		newBlock, err = initBlockFromProtoAltair(unmarshalled)
+		if err != nil {
+			return err
+		}
 	case version.Bellatrix:
-		return pb.(*eth.BeaconBlockBellatrix).UnmarshalSSZ(buf)
+		unmarshalled, ok := pb.(*eth.BeaconBlockBellatrix)
+		if !ok {
+			return errAssertionFailed
+		}
+		if err := unmarshalled.UnmarshalSSZ(buf); err != nil {
+			return err
+		}
+		newBlock, err = initBlockFromProtoBellatrix(unmarshalled)
+		if err != nil {
+			return err
+		}
 	case version.BellatrixBlind:
-		return pb.(*eth.BlindedBeaconBlockBellatrix).UnmarshalSSZ(buf)
+		unmarshalled, ok := pb.(*eth.BlindedBeaconBlockBellatrix)
+		if !ok {
+			return errAssertionFailed
+		}
+		if err := unmarshalled.UnmarshalSSZ(buf); err != nil {
+			return err
+		}
+		newBlock, err = initBlindedBlockFromProtoBellatrix(unmarshalled)
+		if err != nil {
+			return err
+		}
 	default:
 		return errIncorrectBlockVersion
 	}
+	*b = *newBlock
+	return nil
 }
 
 // AsSignRequestObject returns the underlying sign request object.
