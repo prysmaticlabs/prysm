@@ -399,7 +399,7 @@ func (s *Store) SaveBackfillBlockRoot(ctx context.Context, blockRoot [32]byte) e
 }
 
 // HighestSlotBlocksBelow returns the block with the highest slot below the input slot from the db.
-func (s *Store) HighestSlotBlocksBelow(ctx context.Context, slot types.Slot) ([]interfaces.SignedBeaconBlock, error) {
+func (s *Store) HighestSlotBlocksBelow(ctx context.Context, slot types.Slot) (interfaces.SignedBeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HighestSlotBlocksBelow")
 	defer span.End()
 
@@ -457,7 +457,7 @@ func (s *Store) HighestSlotBlocksBelow(ctx context.Context, slot types.Slot) ([]
 			return nil, err
 		}
 	}
-	return []interfaces.SignedBeaconBlock{blk}, nil
+	return blk, nil
 }
 
 // FeeRecipientByValidatorID returns the fee recipient for a validator id.

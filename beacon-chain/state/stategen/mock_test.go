@@ -81,7 +81,7 @@ type mockHistory struct {
 	states                         map[[32]byte]state.BeaconState
 	hiddenStates                   map[[32]byte]state.BeaconState
 	current                        types.Slot
-	overrideHighestSlotBlocksBelow func(context.Context, types.Slot) ([]interfaces.SignedBeaconBlock, error)
+	overrideHighestSlotBlocksBelow func(context.Context, types.Slot) (interfaces.SignedBeaconBlock, error)
 }
 
 type slotList []types.Slot
@@ -100,7 +100,7 @@ func (m slotList) Swap(i, j int) {
 
 var errFallThroughOverride = errors.New("override yielding control back to real HighestSlotBlocksBelow")
 
-func (m *mockHistory) HighestSlotBlocksBelow(_ context.Context, slot types.Slot) ([]interfaces.SignedBeaconBlock, error) {
+func (m *mockHistory) HighestSlotBlocksBelow(_ context.Context, slot types.Slot) (interfaces.SignedBeaconBlock, error) {
 	if m.overrideHighestSlotBlocksBelow != nil {
 		s, err := m.overrideHighestSlotBlocksBelow(context.Background(), slot)
 		if !errors.Is(err, errFallThroughOverride) {
@@ -115,10 +115,10 @@ func (m *mockHistory) HighestSlotBlocksBelow(_ context.Context, slot types.Slot)
 	}
 	for _, s := range m.slotIndex {
 		if s < slot {
-			return []interfaces.SignedBeaconBlock{m.blocks[m.slotMap[s]]}, nil
+			return m.blocks[m.slotMap[s]], nil
 		}
 	}
-	return []interfaces.SignedBeaconBlock{}, nil
+	return nil, nil
 }
 
 var errGenesisBlockNotFound = errors.New("canonical genesis block not found in db")
