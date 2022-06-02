@@ -10,6 +10,9 @@ import (
 	"github.com/prysmaticlabs/prysm/runtime/version"
 )
 
+// ErrUnsupportedGetter is returned when a getter access is not supported for a specific beacon block version.
+var ErrUnsupportedGetter = errors.New("unsupported getter")
+
 const incorrectBlockVersion = "incorrect beacon block version"
 const incorrectBodyVersion = "incorrect beacon block body version"
 
@@ -55,5 +58,5 @@ type SignedBeaconBlock struct {
 }
 
 func errNotSupported(funcName string, ver int) error {
-	return fmt.Errorf("%s is not supported for %s", funcName, version.String(ver))
+	return errors.Wrap(ErrUnsupportedGetter, fmt.Sprintf("%s is not supported for %s", funcName, version.String(ver)))
 }
