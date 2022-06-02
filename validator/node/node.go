@@ -578,7 +578,7 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 
 func reviewGasLimit(gasLimit uint64) uint64 {
 	// sets gas limit to default if not defined or set to 0
-	if gasLimit == 0 || gasLimit == params.BeaconConfig().DefaultBuilderGasLimit {
+	if gasLimit == 0 {
 		return params.BeaconConfig().DefaultBuilderGasLimit
 	}
 	//TODO(10810): add in warning for ranges
@@ -810,11 +810,6 @@ func unmarshalFromFile(ctx context.Context, from string, to interface{}) error {
 		return errors.New("node: nil context passed to unmarshalFromFile")
 	}
 	cleanpath := filepath.Clean(from)
-	fileExtension := filepath.Ext(cleanpath)
-	if fileExtension != ".json" && fileExtension != ".yaml" {
-		return errors.Errorf("unsupported file extension %s , (ex. '.json','.yaml')", fileExtension)
-	}
-
 	b, err := os.ReadFile(cleanpath)
 	if err != nil {
 		return errors.Wrap(err, "failed to open file")
