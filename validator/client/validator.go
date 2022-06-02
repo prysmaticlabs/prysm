@@ -979,7 +979,7 @@ func (v *validator) UpdateProposerSettings(ctx context.Context, km keymanager.IK
 	log.Infoln("Successfully prepared beacon proposer with fee recipient to validator index mapping.")
 	for _, request := range registerValidatorRequests {
 		// calls beacon API but used for custom builders
-		if err := SubmitBuilderValidatorRegistration(ctx, v.validatorClient, v.node, km.Sign, request); err != nil {
+		if err := SubmitValidatorRegistration(ctx, v.validatorClient, v.node, km.Sign, request); err != nil {
 			return errors.Wrap(err, fmt.Sprintf("failed to register validator for custom builder for %s", hexutil.Encode(request.Pubkey)))
 		}
 	}
