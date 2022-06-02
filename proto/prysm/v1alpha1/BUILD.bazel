@@ -108,6 +108,7 @@ ssz_gen_marshal(
         "BlindedBeaconBlockBellatrix",
         "BlindedBeaconBlockBodyBellatrix",
         "SignedValidatorRegistrationV1",
+        "ValidatorRegistrationV1",
     ],
 )
 
