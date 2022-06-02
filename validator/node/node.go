@@ -402,7 +402,7 @@ func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
 		return err
 	}
 
-	bpc, err := validatorProposerSettings(c.cliCtx)
+	bpc, err := proposerSettings(c.cliCtx)
 	if err != nil {
 		return err
 	}
@@ -426,7 +426,7 @@ func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
 		GraffitiStruct:             gStruct,
 		LogDutyCountDown:           c.cliCtx.Bool(flags.EnableDutyCountDown.Name),
 		Web3SignerConfig:           wsc,
-		ValidatorProposerSettings:  bpc,
+		ProposerSettings:           bpc,
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not initialize validator service")
@@ -471,15 +471,15 @@ func web3SignerConfig(cliCtx *cli.Context) (*remote_web3signer.SetupConfig, erro
 	return web3signerConfig, nil
 }
 
-func validatorProposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ValidatorProposerSettings, error) {
-	var fileConfig *validatorServiceConfig.ValidatorProposerSettingsConfig
+func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSettings, error) {
+	var fileConfig *validatorServiceConfig.ProposerSettingsConfig
 	//TODO: remove when fully deprecated
 	if cliCtx.IsSet(flags.FeeRecipientConfigFileFlag.Name) && cliCtx.IsSet(flags.FeeRecipientConfigURLFlag.Name) {
 		return nil, fmt.Errorf("cannot specify both --%s and --%s", flags.FeeRecipientConfigFileFlag.Name, flags.FeeRecipientConfigURLFlag.Name)
 	}
 
-	if cliCtx.IsSet(flags.ValidatorProposerSettingsFlag.Name) && cliCtx.IsSet(flags.ValidatorProposerSettingsURLFlag.Name) {
-		return nil, errors.New("cannot specify both " + flags.ValidatorProposerSettingsFlag.Name + " and " + flags.ValidatorProposerSettingsURLFlag.Name)
+	if cliCtx.IsSet(flags.ProposerSettingsFlag.Name) && cliCtx.IsSet(flags.ProposerSettingsURLFlag.Name) {
+		return nil, errors.New("cannot specify both " + flags.ProposerSettingsFlag.Name + " and " + flags.ProposerSettingsURLFlag.Name)
 	}
 
 	if cliCtx.IsSet(flags.FeeRecipientConfigFileFlag.Name) {
@@ -490,22 +490,22 @@ func validatorProposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.Val
 		return nil, errors.New(flags.FeeRecipientConfigURLFlag.Usage)
 	}
 
-	if cliCtx.IsSet(flags.ValidatorProposerSettingsFlag.Name) {
-		if err := unmarshalFromFile(cliCtx.Context, cliCtx.String(flags.ValidatorProposerSettingsFlag.Name), &fileConfig); err != nil {
+	if cliCtx.IsSet(flags.ProposerSettingsFlag.Name) {
+		if err := unmarshalFromFile(cliCtx.Context, cliCtx.String(flags.ProposerSettingsFlag.Name), &fileConfig); err != nil {
 			return nil, err
 		}
 	}
-	if cliCtx.IsSet(flags.ValidatorProposerSettingsURLFlag.Name) {
-		if err := unmarshalFromURL(cliCtx.Context, cliCtx.String(flags.ValidatorProposerSettingsURLFlag.Name), &fileConfig); err != nil {
+	if cliCtx.IsSet(flags.ProposerSettingsURLFlag.Name) {
+		if err := unmarshalFromURL(cliCtx.Context, cliCtx.String(flags.ProposerSettingsURLFlag.Name), &fileConfig); err != nil {
 			return nil, err
 		}
 	}
 	// override the default fileConfig with the fileConfig from the command line
 	if cliCtx.IsSet(flags.SuggestedFeeRecipientFlag.Name) {
 		suggestedFee := cliCtx.String(flags.SuggestedFeeRecipientFlag.Name)
-		fileConfig = &validatorServiceConfig.ValidatorProposerSettingsConfig{
+		fileConfig = &validatorServiceConfig.ProposerSettingsConfig{
 			ProposeConfig: nil,
-			DefaultConfig: &validatorServiceConfig.ValidatorProposerOptionsConfig{
+			DefaultConfig: &validatorServiceConfig.ProposerOptionsConfig{
 				FeeRecipient: suggestedFee,
 				GasLimit:     fieldparams.DefaultBuilderGasLimit,
 			},
@@ -516,7 +516,7 @@ func validatorProposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.Val
 		return nil, nil
 	}
 	//convert file config to proposer config for internal use
-	vpSettings := &validatorServiceConfig.ValidatorProposerSettings{}
+	vpSettings := &validatorServiceConfig.ProposerSettings{}
 
 	// default fileConfig is mandatory
 	if fileConfig.DefaultConfig == nil {
@@ -530,13 +530,13 @@ func validatorProposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.Val
 		return nil, errors.New("default fileConfig fee recipient is not a valid eth1 address")
 	}
 
-	vpSettings.DefaultConfig = &validatorServiceConfig.ValidatorProposerOptions{
+	vpSettings.DefaultConfig = &validatorServiceConfig.ProposerOptions{
 		FeeRecipient: common.BytesToAddress(bytes),
 		GasLimit:     reviewGasLimit(fileConfig.DefaultConfig.GasLimit),
 	}
 
 	if fileConfig.ProposeConfig != nil {
-		vpSettings.ProposeConfig = make(map[[fieldparams.BLSPubkeyLength]byte]*validatorServiceConfig.ValidatorProposerOptions)
+		vpSettings.ProposeConfig = make(map[[fieldparams.BLSPubkeyLength]byte]*validatorServiceConfig.ProposerOptions)
 		for key, option := range fileConfig.ProposeConfig {
 			decodedKey, err := hexutil.Decode(key)
 			if err != nil {
@@ -566,7 +566,7 @@ func validatorProposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.Val
 					"We recommend using a mixed-case address (checksum) "+
 					"to prevent spelling mistakes in your fee recipient Ethereum address", option.FeeRecipient, checksumAddress.Hex())
 			}
-			vpSettings.ProposeConfig[bytesutil.ToBytes48(decodedKey)] = &validatorServiceConfig.ValidatorProposerOptions{
+			vpSettings.ProposeConfig[bytesutil.ToBytes48(decodedKey)] = &validatorServiceConfig.ProposerOptions{
 				FeeRecipient: checksumAddress,
 				GasLimit:     reviewGasLimit(option.GasLimit),
 			}

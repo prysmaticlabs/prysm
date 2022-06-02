@@ -180,7 +180,7 @@ func (_ MockValidator) CheckDoppelGanger(_ context.Context) error {
 }
 
 // UpdateFeeRecipient for mocking
-func (_ MockValidator) UpdateValidatorProposerSettings(_ context.Context, _ keymanager.IKeymanager) error {
+func (_ MockValidator) UpdateProposerSettings(_ context.Context, _ keymanager.IKeymanager) error {
 	panic("implement me")
 }
 

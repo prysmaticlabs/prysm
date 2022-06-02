@@ -330,21 +330,21 @@ func TestUnmarshalFromURL(t *testing.T) {
 	}
 }
 
-func TestValidatorProposerSettings(t *testing.T) {
+func TestProposerSettings(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	type validatorProposerSettingsFlag struct {
+	type proposerSettingsFlag struct {
 		dir        string
 		url        string
 		defaultfee string
 	}
 	type args struct {
-		validatorProposerSettingsFlagValues *validatorProposerSettingsFlag
+		proposerSettingsFlagValues *proposerSettingsFlag
 	}
 	tests := []struct {
 		name        string
 		args        args
-		want        func() *validator_service_config.ValidatorProposerSettings
+		want        func() *validator_service_config.ProposerSettings
 		urlResponse string
 		wantErr     string
 		wantLog     string
@@ -352,23 +352,23 @@ func TestValidatorProposerSettings(t *testing.T) {
 		{
 			name: "Happy Path Config file File, bad checksum",
 			args: args{
-				validatorProposerSettingsFlagValues: &validatorProposerSettingsFlag{
+				proposerSettingsFlagValues: &proposerSettingsFlag{
 					dir:        "./testdata/good-prepare-beacon-proposer-config-badchecksum.json",
 					url:        "",
 					defaultfee: "",
 				},
 			},
-			want: func() *validator_service_config.ValidatorProposerSettings {
+			want: func() *validator_service_config.ProposerSettings {
 				key1, err := hexutil.Decode("0xa057816155ad77931185101128655c0191bd0214c201ca48ed887f6c4c6adf334070efcd75140eada5ac83a92506dd7a")
 				require.NoError(t, err)
-				return &validator_service_config.ValidatorProposerSettings{
-					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validator_service_config.ValidatorProposerOptions{
+				return &validator_service_config.ProposerSettings{
+					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validator_service_config.ProposerOptions{
 						bytesutil.ToBytes48(key1): {
 							FeeRecipient: common.HexToAddress("0xae967917c465db8578ca9024c205720b1a3651A9"),
 							GasLimit:     fieldparams.DefaultBuilderGasLimit,
 						},
 					},
-					DefaultConfig: &validator_service_config.ValidatorProposerOptions{
+					DefaultConfig: &validator_service_config.ProposerOptions{
 						FeeRecipient: common.HexToAddress("0xae967917c465db8578ca9024c205720b1a3651A9"),
 						GasLimit:     fieldparams.DefaultBuilderGasLimit,
 					},
@@ -380,19 +380,19 @@ func TestValidatorProposerSettings(t *testing.T) {
 		{
 			name: "Happy Path Config file File multiple fee recipients",
 			args: args{
-				validatorProposerSettingsFlagValues: &validatorProposerSettingsFlag{
+				proposerSettingsFlagValues: &proposerSettingsFlag{
 					dir:        "./testdata/good-prepare-beacon-proposer-config-multiple.json",
 					url:        "",
 					defaultfee: "",
 				},
 			},
-			want: func() *validator_service_config.ValidatorProposerSettings {
+			want: func() *validator_service_config.ProposerSettings {
 				key1, err := hexutil.Decode("0xa057816155ad77931185101128655c0191bd0214c201ca48ed887f6c4c6adf334070efcd75140eada5ac83a92506dd7a")
 				require.NoError(t, err)
 				key2, err := hexutil.Decode("0xb057816155ad77931185101128655c0191bd0214c201ca48ed887f6c4c6adf334070efcd75140eada5ac83a92506dd7b")
 				require.NoError(t, err)
-				return &validator_service_config.ValidatorProposerSettings{
-					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validator_service_config.ValidatorProposerOptions{
+				return &validator_service_config.ProposerSettings{
+					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validator_service_config.ProposerOptions{
 						bytesutil.ToBytes48(key1): {
 							FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
 							GasLimit:     fieldparams.DefaultBuilderGasLimit,
@@ -402,7 +402,7 @@ func TestValidatorProposerSettings(t *testing.T) {
 							GasLimit:     fieldparams.DefaultBuilderGasLimit,
 						},
 					},
-					DefaultConfig: &validator_service_config.ValidatorProposerOptions{
+					DefaultConfig: &validator_service_config.ProposerOptions{
 						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
 						GasLimit:     fieldparams.DefaultBuilderGasLimit,
 					},
@@ -413,23 +413,23 @@ func TestValidatorProposerSettings(t *testing.T) {
 		{
 			name: "Happy Path Config URL File",
 			args: args{
-				validatorProposerSettingsFlagValues: &validatorProposerSettingsFlag{
+				proposerSettingsFlagValues: &proposerSettingsFlag{
 					dir:        "",
 					url:        "./testdata/good-prepare-beacon-proposer-config.json",
 					defaultfee: "",
 				},
 			},
-			want: func() *validator_service_config.ValidatorProposerSettings {
+			want: func() *validator_service_config.ProposerSettings {
 				key1, err := hexutil.Decode("0xa057816155ad77931185101128655c0191bd0214c201ca48ed887f6c4c6adf334070efcd75140eada5ac83a92506dd7a")
 				require.NoError(t, err)
-				return &validator_service_config.ValidatorProposerSettings{
-					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validator_service_config.ValidatorProposerOptions{
+				return &validator_service_config.ProposerSettings{
+					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validator_service_config.ProposerOptions{
 						bytesutil.ToBytes48(key1): {
 							FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
 							GasLimit:     fieldparams.DefaultBuilderGasLimit,
 						},
 					},
-					DefaultConfig: &validator_service_config.ValidatorProposerOptions{
+					DefaultConfig: &validator_service_config.ProposerOptions{
 						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
 						GasLimit:     fieldparams.DefaultBuilderGasLimit,
 					},
@@ -440,23 +440,23 @@ func TestValidatorProposerSettings(t *testing.T) {
 		{
 			name: "Happy Path Config YAML file with custom Gas Limit",
 			args: args{
-				validatorProposerSettingsFlagValues: &validatorProposerSettingsFlag{
+				proposerSettingsFlagValues: &proposerSettingsFlag{
 					dir:        "./testdata/good-prepare-beacon-proposer-config.yaml",
 					url:        "",
 					defaultfee: "",
 				},
 			},
-			want: func() *validator_service_config.ValidatorProposerSettings {
+			want: func() *validator_service_config.ProposerSettings {
 				key1, err := hexutil.Decode("0xa057816155ad77931185101128655c0191bd0214c201ca48ed887f6c4c6adf334070efcd75140eada5ac83a92506dd7a")
 				require.NoError(t, err)
-				return &validator_service_config.ValidatorProposerSettings{
-					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validator_service_config.ValidatorProposerOptions{
+				return &validator_service_config.ProposerSettings{
+					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validator_service_config.ProposerOptions{
 						bytesutil.ToBytes48(key1): {
 							FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
 							GasLimit:     uint64(40000000),
 						},
 					},
-					DefaultConfig: &validator_service_config.ValidatorProposerOptions{
+					DefaultConfig: &validator_service_config.ProposerOptions{
 						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
 						GasLimit:     uint64(45000000),
 					},
@@ -467,16 +467,16 @@ func TestValidatorProposerSettings(t *testing.T) {
 		{
 			name: "Happy Path Suggested Fee File",
 			args: args{
-				validatorProposerSettingsFlagValues: &validatorProposerSettingsFlag{
+				proposerSettingsFlagValues: &proposerSettingsFlag{
 					dir:        "",
 					url:        "",
 					defaultfee: "0x6e35733c5af9B61374A128e6F85f553aF09ff89A",
 				},
 			},
-			want: func() *validator_service_config.ValidatorProposerSettings {
-				return &validator_service_config.ValidatorProposerSettings{
+			want: func() *validator_service_config.ProposerSettings {
+				return &validator_service_config.ProposerSettings{
 					ProposeConfig: nil,
-					DefaultConfig: &validator_service_config.ValidatorProposerOptions{
+					DefaultConfig: &validator_service_config.ProposerOptions{
 						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
 						GasLimit:     fieldparams.DefaultBuilderGasLimit,
 					},
@@ -487,16 +487,16 @@ func TestValidatorProposerSettings(t *testing.T) {
 		{
 			name: "Suggested Fee Override Config",
 			args: args{
-				validatorProposerSettingsFlagValues: &validatorProposerSettingsFlag{
+				proposerSettingsFlagValues: &proposerSettingsFlag{
 					dir:        "./testdata/good-prepare-beacon-proposer-config.json",
 					url:        "",
 					defaultfee: "0x6e35733c5af9B61374A128e6F85f553aF09ff89B",
 				},
 			},
-			want: func() *validator_service_config.ValidatorProposerSettings {
-				return &validator_service_config.ValidatorProposerSettings{
+			want: func() *validator_service_config.ProposerSettings {
+				return &validator_service_config.ProposerSettings{
 					ProposeConfig: nil,
-					DefaultConfig: &validator_service_config.ValidatorProposerOptions{
+					DefaultConfig: &validator_service_config.ProposerOptions{
 						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89B"),
 						GasLimit:     fieldparams.DefaultBuilderGasLimit,
 					},
@@ -507,13 +507,13 @@ func TestValidatorProposerSettings(t *testing.T) {
 		{
 			name: "No flags set means empty config",
 			args: args{
-				validatorProposerSettingsFlagValues: &validatorProposerSettingsFlag{
+				proposerSettingsFlagValues: &proposerSettingsFlag{
 					dir:        "",
 					url:        "",
 					defaultfee: "",
 				},
 			},
-			want: func() *validator_service_config.ValidatorProposerSettings {
+			want: func() *validator_service_config.ProposerSettings {
 				return nil
 			},
 			wantErr: "",
@@ -521,14 +521,14 @@ func TestValidatorProposerSettings(t *testing.T) {
 		{
 			name: "Both URL and Dir flags used resulting in error",
 			args: args{
-				validatorProposerSettingsFlagValues: &validatorProposerSettingsFlag{
+				proposerSettingsFlagValues: &proposerSettingsFlag{
 					dir:        "./testdata/good-prepare-beacon-proposer-config.json",
 					url:        "./testdata/good-prepare-beacon-proposer-config.json",
 					defaultfee: "",
 				},
 			},
-			want: func() *validator_service_config.ValidatorProposerSettings {
-				return &validator_service_config.ValidatorProposerSettings{}
+			want: func() *validator_service_config.ProposerSettings {
+				return &validator_service_config.ProposerSettings{}
 			},
 			wantErr: "cannot specify both",
 		},
@@ -537,12 +537,12 @@ func TestValidatorProposerSettings(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			app := cli.App{}
 			set := flag.NewFlagSet("test", 0)
-			if tt.args.validatorProposerSettingsFlagValues.dir != "" {
-				set.String(flags.ValidatorProposerSettingsFlag.Name, tt.args.validatorProposerSettingsFlagValues.dir, "")
-				require.NoError(t, set.Set(flags.ValidatorProposerSettingsFlag.Name, tt.args.validatorProposerSettingsFlagValues.dir))
+			if tt.args.proposerSettingsFlagValues.dir != "" {
+				set.String(flags.ProposerSettingsFlag.Name, tt.args.proposerSettingsFlagValues.dir, "")
+				require.NoError(t, set.Set(flags.ProposerSettingsFlag.Name, tt.args.proposerSettingsFlagValues.dir))
 			}
-			if tt.args.validatorProposerSettingsFlagValues.url != "" {
-				content, err := os.ReadFile(tt.args.validatorProposerSettingsFlagValues.url)
+			if tt.args.proposerSettingsFlagValues.url != "" {
+				content, err := os.ReadFile(tt.args.proposerSettingsFlagValues.url)
 				require.NoError(t, err)
 				srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					w.WriteHeader(200)
@@ -552,15 +552,15 @@ func TestValidatorProposerSettings(t *testing.T) {
 				}))
 				defer srv.Close()
 
-				set.String(flags.ValidatorProposerSettingsURLFlag.Name, tt.args.validatorProposerSettingsFlagValues.url, "")
-				require.NoError(t, set.Set(flags.ValidatorProposerSettingsURLFlag.Name, srv.URL))
+				set.String(flags.ProposerSettingsURLFlag.Name, tt.args.proposerSettingsFlagValues.url, "")
+				require.NoError(t, set.Set(flags.ProposerSettingsURLFlag.Name, srv.URL))
 			}
-			if tt.args.validatorProposerSettingsFlagValues.defaultfee != "" {
-				set.String(flags.SuggestedFeeRecipientFlag.Name, tt.args.validatorProposerSettingsFlagValues.defaultfee, "")
-				require.NoError(t, set.Set(flags.SuggestedFeeRecipientFlag.Name, tt.args.validatorProposerSettingsFlagValues.defaultfee))
+			if tt.args.proposerSettingsFlagValues.defaultfee != "" {
+				set.String(flags.SuggestedFeeRecipientFlag.Name, tt.args.proposerSettingsFlagValues.defaultfee, "")
+				require.NoError(t, set.Set(flags.SuggestedFeeRecipientFlag.Name, tt.args.proposerSettingsFlagValues.defaultfee))
 			}
 			cliCtx := cli.NewContext(&app, set, nil)
-			got, err := validatorProposerSettings(cliCtx)
+			got, err := proposerSettings(cliCtx)
 			if tt.wantErr != "" {
 				require.ErrorContains(t, tt.wantErr, err)
 				return

@@ -327,26 +327,26 @@ var (
 	// FeeRecipientConfigFileFlag defines the path or URL to a file with proposer config.
 	FeeRecipientConfigFileFlag = &cli.StringFlag{
 		Name:  "fee-recipient-config-file",
-		Usage: "DEPRECATED, please use validator-proposer-settings-file",
+		Usage: "DEPRECATED, please use proposer-settings-file",
 		Value: "",
 	}
 	// FeeRecipientConfigURLFlag defines the path or URL to a file with proposer config.
 	FeeRecipientConfigURLFlag = &cli.StringFlag{
 		Name:  "fee-recipient-config-url",
-		Usage: "DEPRECATED, please use validator-proposer-settings-url",
+		Usage: "DEPRECATED, please use proposer-settings-url",
 		Value: "",
 	}
 
-	// ValidatorProposerSettingsFlag defines the path or URL to a file with proposer config.
-	ValidatorProposerSettingsFlag = &cli.StringFlag{
-		Name:  "validator-proposer-settings-file",
-		Usage: "Set path to a YAML or JSON file containing validator settings used when proposing blocks such as (fee recipient and gas limit) (i.e. --validator-proposer-settings-file=/path/to/proposer.json). File format found in docs",
+	// ProposerSettingsFlag defines the path or URL to a file with proposer config.
+	ProposerSettingsFlag = &cli.StringFlag{
+		Name:  "proposer-settings-file",
+		Usage: "Set path to a YAML or JSON file containing validator settings used when proposing blocks such as (fee recipient and gas limit) (i.e. --proposer-settings-file=/path/to/proposer.json). File format found in docs",
 		Value: "",
 	}
-	// ValidatorProposerSettingsURLFlag defines the path or URL to a file with proposer config.
-	ValidatorProposerSettingsURLFlag = &cli.StringFlag{
-		Name:  "validator-proposer-settings-url",
-		Usage: "Set URL to a REST endpoint containing validator settings used when proposing blocks such as (fee recipient) (i.e. --validator-proposer-settings-file-url=https://example.com/api/getConfig). File format found in docs",
+	// ProposerSettingsURLFlag defines the path or URL to a file with proposer config.
+	ProposerSettingsURLFlag = &cli.StringFlag{
+		Name:  "proposer-settings-url",
+		Usage: "Set URL to a REST endpoint containing validator settings used when proposing blocks such as (fee recipient) (i.e. --proposer-settings-url=https://example.com/api/getConfig). File format found in docs",
 		Value: "",
 	}
 
@@ -355,8 +355,7 @@ var (
 		Name: "suggested-fee-recipient",
 		Usage: "Sets ALL validators' mapping to a suggested an eth address to receive gas fees when proposing a block." +
 			" This setting is used for both the prepare_beacon_proposer api as well as the register_validator api." +
-			" For additional setting overrides use the --" + ValidatorProposerSettingsFlag.Name + " or --" + ValidatorProposerSettingsURLFlag.Name + " Flags. " +
-			" Overrides the --fee-recipient-config-file flag if set",
+			" For additional setting overrides use the --" + ProposerSettingsFlag.Name + " or --" + ProposerSettingsURLFlag.Name + " Flags. ",
 		Value: field_params.EthBurnAddressHex,
 	}
 )

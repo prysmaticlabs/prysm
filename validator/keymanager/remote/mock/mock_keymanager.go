@@ -7,8 +7,8 @@ import (
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -43,9 +43,8 @@ func (*MockKeymanager) Sign(_ context.Context, s *validatorpb.SignRequest) (bls.
 		return nil, err
 	}
 	st, _ := util.DeterministicGenesisState(nil, 1)
-	d := params.BeaconConfig().DomainApplicationBuilder
 	e := slots.ToEpoch(st.Slot())
-	byteValue, err := signing.ComputeDomainAndSign(st, e, s.SigningSlot, d, key)
+	byteValue, err := signing.ComputeDomainAndSign(st, e, s.SigningSlot, bytesutil.ToBytes4(s.SignatureDomain), key)
 	if err != nil {
 		return nil, err
 	}

@@ -96,7 +96,7 @@ type validator struct {
 	graffiti                           []byte
 	voteStats                          voteStats
 	Web3SignerConfig                   *remote_web3signer.SetupConfig
-	validatorProposerSettings          *validator_service_config.ValidatorProposerSettings
+	ProposerSettings                   *validator_service_config.ProposerSettings
 	walletIntializedChannel            chan *wallet.Wallet
 }
 
@@ -941,10 +941,10 @@ func (v *validator) logDuties(slot types.Slot, duties []*ethpb.DutiesResponse_Du
 	}
 }
 
-// UpdateValidatorProposerSettings calls the prepareBeaconProposer RPC to set the fee recipient and also the register validator API if using a custom builder.
-func (v *validator) UpdateValidatorProposerSettings(ctx context.Context, km keymanager.IKeymanager) error {
+// UpdateProposerSettings calls the prepareBeaconProposer RPC to set the fee recipient and also the register validator API if using a custom builder.
+func (v *validator) UpdateProposerSettings(ctx context.Context, km keymanager.IKeymanager) error {
 	// only used after Bellatrix
-	if v.validatorProposerSettings == nil {
+	if v.ProposerSettings == nil {
 		e := params.BeaconConfig().BellatrixForkEpoch
 		if e != math.MaxUint64 && slots.ToEpoch(slots.CurrentSlot(v.genesisTime)) < e {
 			log.Warn("After the Ethereum merge, you will need to specify the Ethereum addresses which will receive transaction fee rewards from proposing blocks. " +
@@ -963,7 +963,7 @@ func (v *validator) UpdateValidatorProposerSettings(ctx context.Context, km keym
 	if err != nil {
 		return err
 	}
-	feeRecipients, registerValidatorRequests, err := v.buildValidatorProposerSettingsRequests(ctx, pubkeys)
+	feeRecipients, registerValidatorRequests, err := v.buildProposerSettingsRequests(ctx, pubkeys)
 	if err != nil {
 		return err
 	}
@@ -987,7 +987,7 @@ func (v *validator) UpdateValidatorProposerSettings(ctx context.Context, km keym
 	return nil
 }
 
-func (v *validator) buildValidatorProposerSettingsRequests(ctx context.Context, pubkeys [][fieldparams.BLSPubkeyLength]byte) ([]*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer, []*ethpb.ValidatorRegistrationV1, error) {
+func (v *validator) buildProposerSettingsRequests(ctx context.Context, pubkeys [][fieldparams.BLSPubkeyLength]byte) ([]*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer, []*ethpb.ValidatorRegistrationV1, error) {
 	var validatorToFeeRecipients []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer
 	var registerValidatorRequests []*ethpb.ValidatorRegistrationV1
 	// need to check for pubkey to validator index mappings
@@ -1008,12 +1008,12 @@ func (v *validator) buildValidatorProposerSettingsRequests(ctx context.Context, 
 			validatorIndex = ind
 			v.pubkeyToValidatorIndex[key] = validatorIndex
 		}
-		if v.validatorProposerSettings.DefaultConfig != nil {
-			feeRecipient = v.validatorProposerSettings.DefaultConfig.FeeRecipient
-			gasLimit = v.validatorProposerSettings.DefaultConfig.GasLimit
+		if v.ProposerSettings.DefaultConfig != nil {
+			feeRecipient = v.ProposerSettings.DefaultConfig.FeeRecipient
+			gasLimit = v.ProposerSettings.DefaultConfig.GasLimit
 		}
-		if v.validatorProposerSettings.ProposeConfig != nil {
-			option, ok := v.validatorProposerSettings.ProposeConfig[key]
+		if v.ProposerSettings.ProposeConfig != nil {
+			option, ok := v.ProposerSettings.ProposeConfig[key]
 			if ok && option != nil {
 				// override the default if a proposeconfig is set
 				feeRecipient = option.FeeRecipient
