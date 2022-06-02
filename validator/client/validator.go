@@ -993,8 +993,8 @@ func (v *validator) buildProposerSettingsRequests(ctx context.Context, pubkeys [
 	// need to check for pubkey to validator index mappings
 	for _, key := range pubkeys {
 		skipAppendToFeeRecipientArray := false
-		feeRecipient := common.HexToAddress(fieldparams.EthBurnAddressHex)
-		gasLimit := fieldparams.DefaultBuilderGasLimit
+		feeRecipient := common.HexToAddress(params.BeaconConfig().EthBurnAddressHex)
+		gasLimit := params.BeaconConfig().DefaultBuilderGasLimit
 		validatorIndex, found := v.pubkeyToValidatorIndex[key]
 		// ignore updating fee recipient if validator index is not found
 		if !found {
@@ -1020,7 +1020,7 @@ func (v *validator) buildProposerSettingsRequests(ctx context.Context, pubkeys [
 				gasLimit = option.GasLimit
 			}
 		}
-		if hexutil.Encode(feeRecipient.Bytes()) == fieldparams.EthBurnAddressHex {
+		if hexutil.Encode(feeRecipient.Bytes()) == params.BeaconConfig().EthBurnAddressHex {
 			log.Warnln("Fee recipient is set to the burn address. You will not be rewarded transaction fees on this setting. Please set a different fee recipient.")
 		}
 		if !skipAppendToFeeRecipientArray {
