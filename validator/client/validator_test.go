@@ -1560,7 +1560,7 @@ func TestValidator_UpdateProposerSettings(t *testing.T) {
 					ProposeConfig: nil,
 					DefaultConfig: &validator_service_config.ProposerOptions{
 						FeeRecipient: common.HexToAddress(defaultFeeHex),
-						GasLimit:     fieldparams.DefaultBuilderGasLimit,
+						GasLimit:     params.BeaconConfig().DefaultBuilderGasLimit,
 					},
 				}
 				client.EXPECT().ValidatorIndex(
@@ -1600,7 +1600,7 @@ func TestValidator_UpdateProposerSettings(t *testing.T) {
 			mockExpectedRequests: []ExpectedValidatorRegistration{
 				{
 					FeeRecipient: byteValueAddress,
-					GasLimit:     fieldparams.DefaultBuilderGasLimit,
+					GasLimit:     params.BeaconConfig().DefaultBuilderGasLimit,
 				},
 			},
 		},
@@ -1687,7 +1687,7 @@ func TestValidator_UpdateProposerSettings(t *testing.T) {
 			mockExpectedRequests: []ExpectedValidatorRegistration{
 				{
 					FeeRecipient: byteValueAddress,
-					GasLimit:     fieldparams.DefaultBuilderGasLimit,
+					GasLimit:     params.BeaconConfig().DefaultBuilderGasLimit,
 				},
 			},
 		},
