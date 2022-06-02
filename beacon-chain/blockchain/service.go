@@ -40,6 +40,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -229,6 +230,19 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 			return errors.Wrap(err, "could not set finalized block as validated")
 		}
 	}
+	s.headLock.RLock()
+	h := s.headBlock().Block()
+	s.headLock.RUnlock()
+	if h.Slot() > st.Slot() {
+		log.WithFields(logrus.Fields{
+			"startSlot": st.Slot(),
+			"endSlot":   h.Slot(),
+		}).Info("Loading blocks to fork choice store, this may take a while.")
+		if err := s.fillInForkChoiceMissingBlocks(s.ctx, h, finalized, justified); err != nil {
+			return errors.Wrap(err, "could not fill in fork choice store missing blocks")
+		}
+	}
+
 	// not attempting to save initial sync blocks here, because there shouldn't be any until
 	// after the statefeed.Initialized event is fired (below)
 	if err := s.wsVerifier.VerifyWeakSubjectivity(s.ctx, finalized.Epoch); err != nil {
