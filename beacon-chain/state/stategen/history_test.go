@@ -154,7 +154,7 @@ func TestCanonicalBlockForSlotHappy(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			b, err := hist.HighestSlotBlocksBelow(ctx, c.slot+1)
+			b, err := hist.HighestBlockBelowSlot(ctx, c.slot+1)
 			require.NoError(t, err)
 			r, err := b.Block().HashTreeRoot()
 			require.NoError(t, err)
@@ -177,7 +177,7 @@ func TestCanonicalBlockForSlotNonHappy(t *testing.T) {
 	hist := newMockHistory(t, specs, end+1)
 
 	slotOrderObserved := make([]types.Slot, 0)
-	derp := errors.New("HighestSlotBlocksBelow don't work")
+	derp := errors.New("HighestBlockBelowSlot don't work")
 	// since only the end block and genesis are canonical, once the slot drops below
 	// end, we should always get genesis
 	cases := []struct {
@@ -190,14 +190,14 @@ func TestCanonicalBlockForSlotNonHappy(t *testing.T) {
 		root              [32]byte
 	}{
 		{
-			name: "HighestSlotBlocksBelow not called for genesis",
+			name: "HighestBlockBelowSlot not called for genesis",
 			overrideHighest: func(_ context.Context, _ types.Slot) (interfaces.SignedBeaconBlock, error) {
 				return nil, derp
 			},
 			root: hist.slotMap[0],
 		},
 		{
-			name: "wrapped error from HighestSlotBlocksBelow returned",
+			name: "wrapped error from HighestBlockBelowSlot returned",
 			err:  derp,
 			overrideHighest: func(_ context.Context, _ types.Slot) (interfaces.SignedBeaconBlock, error) {
 				return nil, derp
@@ -205,7 +205,7 @@ func TestCanonicalBlockForSlotNonHappy(t *testing.T) {
 			slot: end,
 		},
 		{
-			name:  "HighestSlotBlocksBelow no canonical",
+			name:  "HighestBlockBelowSlot no canonical",
 			err:   ErrNoCanonicalBlockForSlot,
 			canon: &mockCanonicalChecker{is: false},
 			slot:  end,
@@ -220,7 +220,7 @@ func TestCanonicalBlockForSlotNonHappy(t *testing.T) {
 			}},
 			overrideHighest: func(_ context.Context, s types.Slot) (interfaces.SignedBeaconBlock, error) {
 				slotOrderObserved = append(slotOrderObserved, s)
-				// this allows the mock HighestSlotBlocksBelow to continue to execute now that we've recorded
+				// this allows the mock HighestBlockBelowSlot to continue to execute now that we've recorded
 				// the slot in our channel
 				return nil, errFallThroughOverride
 			},
@@ -238,7 +238,7 @@ func TestCanonicalBlockForSlotNonHappy(t *testing.T) {
 			}},
 			overrideHighest: func(_ context.Context, s types.Slot) (interfaces.SignedBeaconBlock, error) {
 				slotOrderObserved = append(slotOrderObserved, s)
-				// this allows the mock HighestSlotBlocksBelow to continue to execute now that we've recorded
+				// this allows the mock HighestBlockBelowSlot to continue to execute now that we've recorded
 				// the slot in our channel
 				return nil, errFallThroughOverride
 			},
@@ -254,7 +254,7 @@ func TestCanonicalBlockForSlotNonHappy(t *testing.T) {
 				canon = c.canon
 			}
 			ch := &CanonicalHistory{h: hist, cc: canon, cs: hist}
-			hist.overrideHighestSlotBlocksBelow = c.overrideHighest
+			hist.overrideHighestBlockBelowSlot = c.overrideHighest
 			r, _, err := ch.BlockForSlot(ctx, c.slot)
 			if c.err == nil {
 				require.NoError(t, err)
@@ -262,7 +262,7 @@ func TestCanonicalBlockForSlotNonHappy(t *testing.T) {
 				require.ErrorIs(t, err, c.err)
 			}
 			if len(c.slotOrderExpected) > 0 {
-				require.Equal(t, len(c.slotOrderExpected), len(slotOrderObserved), "HighestSlotBlocksBelow not called the expected number of times")
+				require.Equal(t, len(c.slotOrderExpected), len(slotOrderObserved), "HighestBlockBelowSlot not called the expected number of times")
 				for i := range c.slotOrderExpected {
 					require.Equal(t, c.slotOrderExpected[i], slotOrderObserved[i])
 				}

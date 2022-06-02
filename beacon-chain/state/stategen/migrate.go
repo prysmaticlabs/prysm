@@ -55,7 +55,7 @@ func (s *State) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 				aRoot = cached.root
 				aState = cached.state
 			} else {
-				blk, err := s.beaconDB.HighestSlotBlocksBelow(ctx, slot)
+				blk, err := s.beaconDB.HighestBlockBelowSlot(ctx, slot)
 				if err != nil {
 					return err
 				}

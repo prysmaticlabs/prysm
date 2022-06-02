@@ -55,7 +55,7 @@ func (c *CanonicalHistory) BlockForSlot(ctx context.Context, target types.Slot) 
 		if ctx.Err() != nil {
 			return [32]byte{}, nil, errors.Wrap(ctx.Err(), "context canceled during canonicalBlockForSlot")
 		}
-		b, err := c.h.HighestSlotBlocksBelow(ctx, target+1)
+		b, err := c.h.HighestBlockBelowSlot(ctx, target+1)
 		if err != nil {
 			return [32]byte{}, nil, errors.Wrap(err, fmt.Sprintf("error finding highest block w/ slot <= %d", target))
 		}
