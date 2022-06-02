@@ -350,6 +350,21 @@ func (mr *MockBeaconNodeValidatorServerMockRecorder) SubmitSyncMessage(arg0, arg
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubmitSyncMessage", reflect.TypeOf((*MockBeaconNodeValidatorServer)(nil).SubmitSyncMessage), arg0, arg1)
 }
 
+// SubmitValidatorRegistration mocks base method.
+func (m *MockBeaconNodeValidatorServer) SubmitValidatorRegistration(arg0 context.Context, arg1 *eth.SignedValidatorRegistrationV1) (*emptypb.Empty, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SubmitValidatorRegistration", arg0, arg1)
+	ret0, _ := ret[0].(*emptypb.Empty)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SubmitValidatorRegistration indicates an expected call of SubmitValidatorRegistration.
+func (mr *MockBeaconNodeValidatorServerMockRecorder) SubmitValidatorRegistration(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubmitValidatorRegistration", reflect.TypeOf((*MockBeaconNodeValidatorServer)(nil).SubmitValidatorRegistration), arg0, arg1)
+}
+
 // SubscribeCommitteeSubnets mocks base method.
 func (m *MockBeaconNodeValidatorServer) SubscribeCommitteeSubnets(arg0 context.Context, arg1 *eth.CommitteeSubnetsSubscribeRequest) (*emptypb.Empty, error) {
 	m.ctrl.T.Helper()
