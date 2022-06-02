@@ -377,7 +377,7 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 		pubkeyToValidatorIndex: map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex{pubKey: 1},
 		ProposerSettings: &validator_service_config.ProposerSettings{
 			ProposeConfig: nil,
-			DefaultConfig: &validator_service_config.ProposerOptions{
+			DefaultConfig: &validator_service_config.ProposerOption{
 				FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
 			},
 		},
@@ -448,7 +448,7 @@ func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 		pubkeyToValidatorIndex: map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex{pubKey: 1},
 		ProposerSettings: &validator_service_config.ProposerSettings{
 			ProposeConfig: nil,
-			DefaultConfig: &validator_service_config.ProposerOptions{
+			DefaultConfig: &validator_service_config.ProposerOption{
 				FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
 			},
 		},
@@ -1558,7 +1558,7 @@ func TestValidator_UpdateProposerSettings(t *testing.T) {
 				require.NoError(t, err)
 				v.ProposerSettings = &validator_service_config.ProposerSettings{
 					ProposeConfig: nil,
-					DefaultConfig: &validator_service_config.ProposerOptions{
+					DefaultConfig: &validator_service_config.ProposerOption{
 						FeeRecipient: common.HexToAddress(defaultFeeHex),
 						GasLimit:     params.BeaconConfig().DefaultBuilderGasLimit,
 					},
@@ -1642,7 +1642,7 @@ func TestValidator_UpdateProposerSettings(t *testing.T) {
 				require.NoError(t, err)
 				v.ProposerSettings = &validator_service_config.ProposerSettings{
 					ProposeConfig: nil,
-					DefaultConfig: &validator_service_config.ProposerOptions{
+					DefaultConfig: &validator_service_config.ProposerOption{
 						FeeRecipient: common.HexToAddress(defaultFeeHex),
 					},
 				}
@@ -1708,7 +1708,7 @@ func TestValidator_UpdateProposerSettings(t *testing.T) {
 				}
 				err := v.WaitForKeymanagerInitialization(ctx)
 				require.NoError(t, err)
-				config := make(map[[fieldparams.BLSPubkeyLength]byte]*validator_service_config.ProposerOptions)
+				config := make(map[[fieldparams.BLSPubkeyLength]byte]*validator_service_config.ProposerOption)
 				km, err := v.Keymanager()
 				require.NoError(t, err)
 				keys, err := km.FetchValidatingPublicKeys(ctx)
@@ -1731,13 +1731,13 @@ func TestValidator_UpdateProposerSettings(t *testing.T) {
 						{FeeRecipient: common.HexToAddress(defaultFeeHex).Bytes(), ValidatorIndex: 2},
 					},
 				}).Return(nil, nil)
-				config[keys[0]] = &validator_service_config.ProposerOptions{
+				config[keys[0]] = &validator_service_config.ProposerOption{
 					FeeRecipient: common.HexToAddress("0x055Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
 					GasLimit:     uint64(40000000),
 				}
 				v.ProposerSettings = &validator_service_config.ProposerSettings{
 					ProposeConfig: config,
-					DefaultConfig: &validator_service_config.ProposerOptions{
+					DefaultConfig: &validator_service_config.ProposerOption{
 						FeeRecipient: common.HexToAddress(defaultFeeHex),
 						GasLimit:     uint64(35000000),
 					},
@@ -1795,7 +1795,7 @@ func TestValidator_UpdateProposerSettings(t *testing.T) {
 				}
 				err := v.WaitForKeymanagerInitialization(ctx)
 				require.NoError(t, err)
-				config := make(map[[fieldparams.BLSPubkeyLength]byte]*validator_service_config.ProposerOptions)
+				config := make(map[[fieldparams.BLSPubkeyLength]byte]*validator_service_config.ProposerOption)
 				km, err := v.Keymanager()
 				require.NoError(t, err)
 				keys, err := km.FetchValidatingPublicKeys(ctx)
@@ -1811,12 +1811,12 @@ func TestValidator_UpdateProposerSettings(t *testing.T) {
 						{FeeRecipient: common.HexToAddress("0x0").Bytes(), ValidatorIndex: 1},
 					},
 				}).Return(nil, nil)
-				config[keys[0]] = &validator_service_config.ProposerOptions{
+				config[keys[0]] = &validator_service_config.ProposerOption{
 					FeeRecipient: common.Address{},
 				}
 				v.ProposerSettings = &validator_service_config.ProposerSettings{
 					ProposeConfig: config,
-					DefaultConfig: &validator_service_config.ProposerOptions{
+					DefaultConfig: &validator_service_config.ProposerOption{
 						FeeRecipient: common.HexToAddress(defaultFeeHex),
 					},
 				}
@@ -1857,7 +1857,7 @@ func TestValidator_UpdateProposerSettings(t *testing.T) {
 				}
 				err := v.WaitForKeymanagerInitialization(ctx)
 				require.NoError(t, err)
-				config := make(map[[fieldparams.BLSPubkeyLength]byte]*validator_service_config.ProposerOptions)
+				config := make(map[[fieldparams.BLSPubkeyLength]byte]*validator_service_config.ProposerOption)
 				km, err := v.Keymanager()
 				require.NoError(t, err)
 				keys, err := km.FetchValidatingPublicKeys(ctx)
@@ -1866,12 +1866,12 @@ func TestValidator_UpdateProposerSettings(t *testing.T) {
 					ctx, // ctx
 					&ethpb.ValidatorIndexRequest{PublicKey: keys[0][:]},
 				).Return(nil, errors.New("Could not find validator index for public key"))
-				config[keys[0]] = &validator_service_config.ProposerOptions{
+				config[keys[0]] = &validator_service_config.ProposerOption{
 					FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
 				}
 				v.ProposerSettings = &validator_service_config.ProposerSettings{
 					ProposeConfig: config,
-					DefaultConfig: &validator_service_config.ProposerOptions{
+					DefaultConfig: &validator_service_config.ProposerOption{
 						FeeRecipient: common.HexToAddress(defaultFeeHex),
 					},
 				}

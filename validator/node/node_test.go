@@ -363,13 +363,13 @@ func TestProposerSettings(t *testing.T) {
 				key1, err := hexutil.Decode("0xa057816155ad77931185101128655c0191bd0214c201ca48ed887f6c4c6adf334070efcd75140eada5ac83a92506dd7a")
 				require.NoError(t, err)
 				return &validator_service_config.ProposerSettings{
-					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validator_service_config.ProposerOptions{
+					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validator_service_config.ProposerOption{
 						bytesutil.ToBytes48(key1): {
 							FeeRecipient: common.HexToAddress("0xae967917c465db8578ca9024c205720b1a3651A9"),
 							GasLimit:     params.BeaconConfig().DefaultBuilderGasLimit,
 						},
 					},
-					DefaultConfig: &validator_service_config.ProposerOptions{
+					DefaultConfig: &validator_service_config.ProposerOption{
 						FeeRecipient: common.HexToAddress("0xae967917c465db8578ca9024c205720b1a3651A9"),
 						GasLimit:     params.BeaconConfig().DefaultBuilderGasLimit,
 					},
@@ -393,7 +393,7 @@ func TestProposerSettings(t *testing.T) {
 				key2, err := hexutil.Decode("0xb057816155ad77931185101128655c0191bd0214c201ca48ed887f6c4c6adf334070efcd75140eada5ac83a92506dd7b")
 				require.NoError(t, err)
 				return &validator_service_config.ProposerSettings{
-					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validator_service_config.ProposerOptions{
+					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validator_service_config.ProposerOption{
 						bytesutil.ToBytes48(key1): {
 							FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
 							GasLimit:     params.BeaconConfig().DefaultBuilderGasLimit,
@@ -403,7 +403,7 @@ func TestProposerSettings(t *testing.T) {
 							GasLimit:     params.BeaconConfig().DefaultBuilderGasLimit,
 						},
 					},
-					DefaultConfig: &validator_service_config.ProposerOptions{
+					DefaultConfig: &validator_service_config.ProposerOption{
 						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
 						GasLimit:     params.BeaconConfig().DefaultBuilderGasLimit,
 					},
@@ -424,13 +424,13 @@ func TestProposerSettings(t *testing.T) {
 				key1, err := hexutil.Decode("0xa057816155ad77931185101128655c0191bd0214c201ca48ed887f6c4c6adf334070efcd75140eada5ac83a92506dd7a")
 				require.NoError(t, err)
 				return &validator_service_config.ProposerSettings{
-					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validator_service_config.ProposerOptions{
+					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validator_service_config.ProposerOption{
 						bytesutil.ToBytes48(key1): {
 							FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
 							GasLimit:     params.BeaconConfig().DefaultBuilderGasLimit,
 						},
 					},
-					DefaultConfig: &validator_service_config.ProposerOptions{
+					DefaultConfig: &validator_service_config.ProposerOption{
 						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
 						GasLimit:     params.BeaconConfig().DefaultBuilderGasLimit,
 					},
@@ -451,13 +451,13 @@ func TestProposerSettings(t *testing.T) {
 				key1, err := hexutil.Decode("0xa057816155ad77931185101128655c0191bd0214c201ca48ed887f6c4c6adf334070efcd75140eada5ac83a92506dd7a")
 				require.NoError(t, err)
 				return &validator_service_config.ProposerSettings{
-					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validator_service_config.ProposerOptions{
+					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validator_service_config.ProposerOption{
 						bytesutil.ToBytes48(key1): {
 							FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
 							GasLimit:     uint64(40000000),
 						},
 					},
-					DefaultConfig: &validator_service_config.ProposerOptions{
+					DefaultConfig: &validator_service_config.ProposerOption{
 						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
 						GasLimit:     uint64(45000000),
 					},
@@ -477,7 +477,7 @@ func TestProposerSettings(t *testing.T) {
 			want: func() *validator_service_config.ProposerSettings {
 				return &validator_service_config.ProposerSettings{
 					ProposeConfig: nil,
-					DefaultConfig: &validator_service_config.ProposerOptions{
+					DefaultConfig: &validator_service_config.ProposerOption{
 						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
 						GasLimit:     params.BeaconConfig().DefaultBuilderGasLimit,
 					},
@@ -497,7 +497,7 @@ func TestProposerSettings(t *testing.T) {
 			want: func() *validator_service_config.ProposerSettings {
 				return &validator_service_config.ProposerSettings{
 					ProposeConfig: nil,
-					DefaultConfig: &validator_service_config.ProposerOptions{
+					DefaultConfig: &validator_service_config.ProposerOption{
 						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89B"),
 						GasLimit:     params.BeaconConfig().DefaultBuilderGasLimit,
 					},

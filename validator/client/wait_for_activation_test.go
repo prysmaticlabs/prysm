@@ -87,7 +87,7 @@ func TestWaitActivation_StreamSetupFails_AttemptsToReconnect(t *testing.T) {
 		pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
 		ProposerSettings: &validator_service_config.ProposerSettings{
 			ProposeConfig: nil,
-			DefaultConfig: &validator_service_config.ProposerOptions{
+			DefaultConfig: &validator_service_config.ProposerOption{
 				FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
 			},
 		},
@@ -150,7 +150,7 @@ func TestWaitForActivation_ReceiveErrorFromStream_AttemptsReconnection(t *testin
 		pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
 		ProposerSettings: &validator_service_config.ProposerSettings{
 			ProposeConfig: nil,
-			DefaultConfig: &validator_service_config.ProposerOptions{
+			DefaultConfig: &validator_service_config.ProposerOption{
 				FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
 			},
 		},
@@ -219,7 +219,7 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 		pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
 		ProposerSettings: &validator_service_config.ProposerSettings{
 			ProposeConfig: nil,
-			DefaultConfig: &validator_service_config.ProposerOptions{
+			DefaultConfig: &validator_service_config.ProposerOption{
 				FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
 			},
 		},
@@ -287,7 +287,7 @@ func TestWaitForActivation_Exiting(t *testing.T) {
 		pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
 		ProposerSettings: &validator_service_config.ProposerSettings{
 			ProposeConfig: nil,
-			DefaultConfig: &validator_service_config.ProposerOptions{
+			DefaultConfig: &validator_service_config.ProposerOption{
 				FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
 			},
 		},
@@ -362,7 +362,7 @@ func TestWaitForActivation_RefetchKeys(t *testing.T) {
 		pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
 		ProposerSettings: &validator_service_config.ProposerSettings{
 			ProposeConfig: nil,
-			DefaultConfig: &validator_service_config.ProposerOptions{
+			DefaultConfig: &validator_service_config.ProposerOption{
 				FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
 			},
 		},
@@ -438,7 +438,7 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 			pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
 			ProposerSettings: &validator_service_config.ProposerSettings{
 				ProposeConfig: nil,
-				DefaultConfig: &validator_service_config.ProposerOptions{
+				DefaultConfig: &validator_service_config.ProposerOption{
 					FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
 				},
 			},
@@ -545,7 +545,7 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 			pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
 			ProposerSettings: &validator_service_config.ProposerSettings{
 				ProposeConfig: nil,
-				DefaultConfig: &validator_service_config.ProposerOptions{
+				DefaultConfig: &validator_service_config.ProposerOption{
 					FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
 				},
 			},
@@ -658,7 +658,7 @@ func TestWaitForActivation_RemoteKeymanager(t *testing.T) {
 			pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
 			ProposerSettings: &validator_service_config.ProposerSettings{
 				ProposeConfig: nil,
-				DefaultConfig: &validator_service_config.ProposerOptions{
+				DefaultConfig: &validator_service_config.ProposerOption{
 					FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
 				},
 			},
@@ -749,7 +749,7 @@ func TestWaitForActivation_RemoteKeymanager(t *testing.T) {
 			pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
 			ProposerSettings: &validator_service_config.ProposerSettings{
 				ProposeConfig: nil,
-				DefaultConfig: &validator_service_config.ProposerOptions{
+				DefaultConfig: &validator_service_config.ProposerOption{
 					FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
 				},
 			},

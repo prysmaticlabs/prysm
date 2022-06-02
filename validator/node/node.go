@@ -472,8 +472,8 @@ func web3SignerConfig(cliCtx *cli.Context) (*remote_web3signer.SetupConfig, erro
 }
 
 func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSettings, error) {
-	var fileConfig *validatorServiceConfig.ProposerSettingsConfig
-	//TODO: remove when fully deprecated
+	var fileConfig *validatorServiceConfig.ProposerSettingsPayload
+	//TODO(10809): remove when fully deprecated
 	if cliCtx.IsSet(flags.FeeRecipientConfigFileFlag.Name) && cliCtx.IsSet(flags.FeeRecipientConfigURLFlag.Name) {
 		return nil, fmt.Errorf("cannot specify both --%s and --%s", flags.FeeRecipientConfigFileFlag.Name, flags.FeeRecipientConfigURLFlag.Name)
 	}
@@ -503,9 +503,9 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 	// override the default fileConfig with the fileConfig from the command line
 	if cliCtx.IsSet(flags.SuggestedFeeRecipientFlag.Name) {
 		suggestedFee := cliCtx.String(flags.SuggestedFeeRecipientFlag.Name)
-		fileConfig = &validatorServiceConfig.ProposerSettingsConfig{
+		fileConfig = &validatorServiceConfig.ProposerSettingsPayload{
 			ProposeConfig: nil,
-			DefaultConfig: &validatorServiceConfig.ProposerOptionsConfig{
+			DefaultConfig: &validatorServiceConfig.ProposerOptionPayload{
 				FeeRecipient: suggestedFee,
 				GasLimit:     params.BeaconConfig().DefaultBuilderGasLimit,
 			},
@@ -530,13 +530,13 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 		return nil, errors.New("default fileConfig fee recipient is not a valid eth1 address")
 	}
 
-	vpSettings.DefaultConfig = &validatorServiceConfig.ProposerOptions{
+	vpSettings.DefaultConfig = &validatorServiceConfig.ProposerOption{
 		FeeRecipient: common.BytesToAddress(bytes),
 		GasLimit:     reviewGasLimit(fileConfig.DefaultConfig.GasLimit),
 	}
 
 	if fileConfig.ProposeConfig != nil {
-		vpSettings.ProposeConfig = make(map[[fieldparams.BLSPubkeyLength]byte]*validatorServiceConfig.ProposerOptions)
+		vpSettings.ProposeConfig = make(map[[fieldparams.BLSPubkeyLength]byte]*validatorServiceConfig.ProposerOption)
 		for key, option := range fileConfig.ProposeConfig {
 			decodedKey, err := hexutil.Decode(key)
 			if err != nil {
@@ -566,7 +566,7 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 					"We recommend using a mixed-case address (checksum) "+
 					"to prevent spelling mistakes in your fee recipient Ethereum address", option.FeeRecipient, checksumAddress.Hex())
 			}
-			vpSettings.ProposeConfig[bytesutil.ToBytes48(decodedKey)] = &validatorServiceConfig.ProposerOptions{
+			vpSettings.ProposeConfig[bytesutil.ToBytes48(decodedKey)] = &validatorServiceConfig.ProposerOption{
 				FeeRecipient: checksumAddress,
 				GasLimit:     reviewGasLimit(option.GasLimit),
 			}
@@ -577,10 +577,11 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 }
 
 func reviewGasLimit(gasLimit uint64) uint64 {
+	// sets gas limit to default if not defined or set to 0
 	if gasLimit == 0 || gasLimit == params.BeaconConfig().DefaultBuilderGasLimit {
 		return params.BeaconConfig().DefaultBuilderGasLimit
 	}
-	//TODO: add in warning for ranges
+	//TODO(10810): add in warning for ranges
 	return gasLimit
 }
 
