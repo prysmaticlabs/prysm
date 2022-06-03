@@ -364,6 +364,11 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 		return fmt.Errorf("nil pre state for slot %d", b.Slot())
 	}
 
+	// Fill in missing blocks
+	if err := s.fillInForkChoiceMissingBlocks(ctx, blks[0].Block(), preState.CurrentJustifiedCheckpoint(), preState.FinalizedCheckpoint()); err != nil {
+		return errors.Wrap(err, "could not fill in missing blocks to forkchoice")
+	}
+
 	jCheckpoints := make([]*ethpb.Checkpoint, len(blks))
 	fCheckpoints := make([]*ethpb.Checkpoint, len(blks))
 	sigSet := &bls.SignatureBatch{
@@ -416,11 +421,6 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 	}
 	if !verify {
 		return errors.New("batch block signature verification failed")
-	}
-
-	// Fill in missing blocks
-	if err := s.fillInForkChoiceMissingBlocks(ctx, blks[0].Block(), fCheckpoints[0], jCheckpoints[0]); err != nil {
-		return err
 	}
 
 	// blocks have been verified, save them and call the engine
