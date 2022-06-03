@@ -150,7 +150,7 @@ func (bs *Server) ListBlockHeaders(ctx context.Context, req *ethpbv1.BlockHeader
 		if req.Slot != nil {
 			slot = *req.Slot
 		}
-		_, blks, err = bs.BeaconDB.BlocksBySlot(ctx, slot)
+		blks, err = bs.BeaconDB.BlocksBySlot(ctx, slot)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not retrieve blocks for slot %d: %v", req.Slot, err)
 		}
@@ -754,7 +754,7 @@ func (bs *Server) blockFromBlockID(ctx context.Context, blockId []byte) (interfa
 				e := newBlockIdParseError(err)
 				return nil, &e
 			}
-			_, blks, err := bs.BeaconDB.BlocksBySlot(ctx, types.Slot(slot))
+			blks, err := bs.BeaconDB.BlocksBySlot(ctx, types.Slot(slot))
 			if err != nil {
 				return nil, errors.Wrapf(err, "could not retrieve blocks for slot %d", slot)
 			}

@@ -638,22 +638,21 @@ func TestStore_BlocksBySlot_BlockRootsBySlot(t *testing.T) {
 			r3, err := b3.Block().HashTreeRoot()
 			require.NoError(t, err)
 
-			hasBlocks, retrievedBlocks, err := db.BlocksBySlot(ctx, 1)
+			retrievedBlocks, err := db.BlocksBySlot(ctx, 1)
 			require.NoError(t, err)
 			assert.Equal(t, 0, len(retrievedBlocks), "Unexpected number of blocks received, expected none")
-			assert.Equal(t, false, hasBlocks, "Expected no blocks")
-			hasBlocks, retrievedBlocks, err = db.BlocksBySlot(ctx, 20)
+			retrievedBlocks, err = db.BlocksBySlot(ctx, 20)
 			require.NoError(t, err)
 			assert.Equal(t, true, proto.Equal(b1.Proto(), retrievedBlocks[0].Proto()), "Wanted: %v, received: %v", b1, retrievedBlocks[0])
-			assert.Equal(t, true, hasBlocks, "Expected to have blocks")
-			hasBlocks, retrievedBlocks, err = db.BlocksBySlot(ctx, 100)
+			assert.Equal(t, true, len(retrievedBlocks) > 0, "Expected to have blocks")
+			retrievedBlocks, err = db.BlocksBySlot(ctx, 100)
 			require.NoError(t, err)
 			if len(retrievedBlocks) != 2 {
 				t.Fatalf("Expected 2 blocks, received %d blocks", len(retrievedBlocks))
 			}
 			assert.Equal(t, true, proto.Equal(b2.Proto(), retrievedBlocks[0].Proto()), "Wanted: %v, received: %v", b2, retrievedBlocks[0])
 			assert.Equal(t, true, proto.Equal(b3.Proto(), retrievedBlocks[1].Proto()), "Wanted: %v, received: %v", b3, retrievedBlocks[1])
-			assert.Equal(t, true, hasBlocks, "Expected to have blocks")
+			assert.Equal(t, true, len(retrievedBlocks) > 0, "Expected to have blocks")
 
 			hasBlockRoots, retrievedBlockRoots, err := db.BlockRootsBySlot(ctx, 1)
 			require.NoError(t, err)

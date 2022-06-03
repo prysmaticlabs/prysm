@@ -185,17 +185,19 @@ func (s *Store) HasBlock(ctx context.Context, blockRoot [32]byte) bool {
 }
 
 // BlocksBySlot retrieves a list of beacon blocks and its respective roots by slot.
-func (s *Store) BlocksBySlot(ctx context.Context, slot types.Slot) (bool, []interfaces.SignedBeaconBlock, error) {
+func (s *Store) BlocksBySlot(ctx context.Context, slot types.Slot) ([]interfaces.SignedBeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.BlocksBySlot")
 	defer span.End()
-	blocks := make([]interfaces.SignedBeaconBlock, 0)
 
+	blocks := make([]interfaces.SignedBeaconBlock, 0)
 	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
-
-		keys := blockRootsBySlot(ctx, tx, slot)
-		for i := 0; i < len(keys); i++ {
-			encoded := bkt.Get(keys[i])
+		roots, err := blockRootsBySlot(ctx, tx, slot)
+		if err != nil {
+			return errors.Wrap(err, "could not retrieve blocks by slot")
+		}
+		for _, r := range roots {
+			encoded := bkt.Get(r[:])
 			blk, err := unmarshalBlock(ctx, encoded)
 			if err != nil {
 				return err
@@ -204,7 +206,7 @@ func (s *Store) BlocksBySlot(ctx context.Context, slot types.Slot) (bool, []inte
 		}
 		return nil
 	})
-	return len(blocks) > 0, blocks, err
+	return blocks, err
 }
 
 // BlockRootsBySlot retrieves a list of beacon block roots by slot
@@ -213,11 +215,9 @@ func (s *Store) BlockRootsBySlot(ctx context.Context, slot types.Slot) (bool, []
 	defer span.End()
 	blockRoots := make([][32]byte, 0)
 	err := s.db.View(func(tx *bolt.Tx) error {
-		keys := blockRootsBySlot(ctx, tx, slot)
-		for i := 0; i < len(keys); i++ {
-			blockRoots = append(blockRoots, bytesutil.ToBytes32(keys[i]))
-		}
-		return nil
+		var err error
+		blockRoots, err = blockRootsBySlot(ctx, tx, slot)
+		return err
 	})
 	if err != nil {
 		return false, nil, errors.Wrap(err, "could not retrieve block roots by slot")
@@ -681,21 +681,22 @@ func blockRootsBySlotRange(
 }
 
 // blockRootsBySlot retrieves the block roots by slot
-func blockRootsBySlot(ctx context.Context, tx *bolt.Tx, slot types.Slot) [][]byte {
+func blockRootsBySlot(ctx context.Context, tx *bolt.Tx, slot types.Slot) ([][32]byte, error) {
 	_, span := trace.StartSpan(ctx, "BeaconDB.blockRootsBySlot")
 	defer span.End()
 
-	roots := make([][]byte, 0)
 	bkt := tx.Bucket(blockSlotIndicesBucket)
 	key := bytesutil.SlotToBytesBigEndian(slot)
 	c := bkt.Cursor()
 	k, v := c.Seek(key)
 	if k != nil && bytes.Equal(k, key) {
-		for i := 0; i < len(v); i += 32 {
-			roots = append(roots, v[i:i+32])
+		r, err := splitRoots(v)
+		if err != nil {
+			return nil, errors.Wrapf(err, "corrupt value in block slot index for slot=%d", slot)
 		}
+		return r, nil
 	}
-	return roots
+	return [][32]byte{}, nil
 }
 
 // createBlockIndicesFromBlock takes in a beacon block and returns
