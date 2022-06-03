@@ -170,7 +170,12 @@ func (p *Proxy) interceptIfNeeded(requestBytes []byte, w http.ResponseWriter) (h
 
 // Create a new proxy request to the execution client.
 func (p *Proxy) proxyRequest(requestBytes []byte, w http.ResponseWriter, r *http.Request) {
-	p.cfg.logger.Infof("Forwarding %s request to %s", r.Method, p.cfg.destinationUrl.String())
+	jreq, err := unmarshalRPCObject(requestBytes)
+	if err != nil {
+		p.cfg.logger.WithError(err).Error("Could not unmarshal request")
+		return
+	}
+	p.cfg.logger.Infof("Forwarding %s request for method %s to %s", r.Method, jreq.Method, p.cfg.destinationUrl.String())
 	proxyReq, err := http.NewRequest(r.Method, p.cfg.destinationUrl.String(), r.Body)
 	if err != nil {
 		p.cfg.logger.WithError(err).Error("Could create new request")
@@ -194,7 +199,7 @@ func (p *Proxy) proxyRequest(requestBytes []byte, w http.ResponseWriter, r *http
 		p.cfg.logger.WithError(err).Error("Could not forward request to destination server")
 		return
 	}
-	p.cfg.logger.Infof("Received response for %s from %s", r.Method, p.cfg.destinationUrl.String())
+	p.cfg.logger.Infof("Received response for %s request with method %s from %s", r.Method, jreq.Method, p.cfg.destinationUrl.String())
 
 	defer func() {
 		if err = proxyRes.Body.Close(); err != nil {
