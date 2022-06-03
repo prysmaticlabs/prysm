@@ -200,7 +200,7 @@ func (f *ForkChoice) IsOptimistic(root [32]byte) (bool, error) {
 
 	node, ok := f.store.nodeByRoot[root]
 	if !ok || node == nil {
-		return false, ErrNilNode
+		return false, errors.Wrap(ErrNilNode, "could not determine optimistic status")
 	}
 
 	return node.optimistic, nil
@@ -216,7 +216,7 @@ func (f *ForkChoice) AncestorRoot(ctx context.Context, root [32]byte, slot types
 
 	node, ok := f.store.nodeByRoot[root]
 	if !ok || node == nil {
-		return nil, ErrNilNode
+		return nil, errors.Wrap(ErrNilNode, "could not determine ancestor root")
 	}
 
 	n := node
@@ -228,7 +228,7 @@ func (f *ForkChoice) AncestorRoot(ctx context.Context, root [32]byte, slot types
 	}
 
 	if n == nil {
-		return nil, ErrNilNode
+		return nil, errors.Wrap(ErrNilNode, "could not determine ancestor root")
 	}
 
 	return n.root[:], nil
@@ -267,7 +267,7 @@ func (f *ForkChoice) updateBalances(newBalances []uint64) error {
 			if ok && vote.nextRoot != params.BeaconConfig().ZeroHash {
 				// Protection against nil node
 				if nextNode == nil {
-					return ErrNilNode
+					return errors.Wrap(ErrNilNode, "could not update balances")
 				}
 				nextNode.balance += newBalance
 			}
@@ -276,7 +276,7 @@ func (f *ForkChoice) updateBalances(newBalances []uint64) error {
 			if ok && vote.currentRoot != params.BeaconConfig().ZeroHash {
 				// Protection against nil node
 				if currentNode == nil {
-					return ErrNilNode
+					return errors.Wrap(ErrNilNode, "could not update balances")
 				}
 				if currentNode.balance < oldBalance {
 					f.store.proposerBoostLock.RLock()
@@ -321,7 +321,7 @@ func (f *ForkChoice) SetOptimisticToValid(ctx context.Context, root [fieldparams
 	defer f.store.nodesLock.Unlock()
 	node, ok := f.store.nodeByRoot[root]
 	if !ok || node == nil {
-		return ErrNilNode
+		return errors.Wrap(ErrNilNode, "could not set node to valid")
 	}
 	return node.setNodeAndParentValidated(ctx)
 }
@@ -421,11 +421,11 @@ func (f *ForkChoice) CommonAncestorRoot(ctx context.Context, r1 [32]byte, r2 [32
 
 	n1, ok := f.store.nodeByRoot[r1]
 	if !ok || n1 == nil {
-		return [32]byte{}, ErrNilNode
+		return [32]byte{}, errors.Wrap(ErrNilNode, "could not determine common ancestor root")
 	}
 	n2, ok := f.store.nodeByRoot[r2]
 	if !ok || n2 == nil {
-		return [32]byte{}, ErrNilNode
+		return [32]byte{}, errors.Wrap(ErrNilNode, "could not determine common ancestor root")
 	}
 
 	for {
