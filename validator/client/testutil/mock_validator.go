@@ -248,8 +248,8 @@ func (fv *FakeValidator) HandleKeyReload(_ context.Context, newKeys [][fieldpara
 func (_ *FakeValidator) SubmitSignedContributionAndProof(_ context.Context, _ types.Slot, _ [fieldparams.BLSPubkeyLength]byte) {
 }
 
-// UpdateProposerSettings for mocking
-func (_ *FakeValidator) UpdateProposerSettings(_ context.Context, _ keymanager.IKeymanager) error {
+// PushProposerSettings for mocking
+func (_ *FakeValidator) PushProposerSettings(_ context.Context, _ keymanager.IKeymanager) error {
 	log.Infoln("Mock updated proposer settings")
 	return nil
 }

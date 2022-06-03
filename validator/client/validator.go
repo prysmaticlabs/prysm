@@ -941,8 +941,8 @@ func (v *validator) logDuties(slot types.Slot, duties []*ethpb.DutiesResponse_Du
 	}
 }
 
-// UpdateProposerSettings calls the prepareBeaconProposer RPC to set the fee recipient and also the register validator API if using a custom builder.
-func (v *validator) UpdateProposerSettings(ctx context.Context, km keymanager.IKeymanager) error {
+// PushProposerSettings calls the prepareBeaconProposer RPC to set the fee recipient and also the register validator API if using a custom builder.
+func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKeymanager) error {
 	// only used after Bellatrix
 	if v.ProposerSettings == nil {
 		e := params.BeaconConfig().BellatrixForkEpoch
@@ -956,6 +956,9 @@ func (v *validator) UpdateProposerSettings(ctx context.Context, km keymanager.IK
 		}
 		return nil
 	}
+	deadline := v.SlotDeadline(slots.RoundUpToNearestEpoch(slots.CurrentSlot(v.genesisTime)))
+	ctx, cancel := context.WithDeadline(ctx, deadline)
+	defer cancel()
 	if km == nil {
 		return errors.New("keymanager is nil when calling PrepareBeaconProposer")
 	}
@@ -980,7 +983,8 @@ func (v *validator) UpdateProposerSettings(ctx context.Context, km keymanager.IK
 	for _, request := range registerValidatorRequests {
 		// calls beacon API but used for custom builders
 		if err := SubmitValidatorRegistration(ctx, v.validatorClient, v.node, km.Sign, request); err != nil {
-			return errors.Wrap(err, fmt.Sprintf("failed to register validator for custom builder for %s", hexutil.Encode(request.Pubkey)))
+			// log the error and keep going
+			log.Warnf("failed to register validator for custom builder for %s, error: %v ", hexutil.Encode(request.Pubkey), err)
 		}
 	}
 	log.Infoln("Successfully submitted builder validator registration settings for custom builders.")

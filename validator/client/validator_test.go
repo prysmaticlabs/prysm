@@ -1508,7 +1508,7 @@ func TestValidator_WaitForKeymanagerInitialization_Interop(t *testing.T) {
 	require.NotNil(t, km)
 }
 
-func TestValidator_UpdateProposerSettings(t *testing.T) {
+func TestValidator_PushProposerSettings(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	ctx := context.Background()
 	db := dbTest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
@@ -1801,7 +1801,7 @@ func TestValidator_UpdateProposerSettings(t *testing.T) {
 				keys, err := km.FetchValidatingPublicKeys(ctx)
 				require.NoError(t, err)
 				client.EXPECT().ValidatorIndex(
-					ctx, // ctx
+					gomock.Any(), // ctx
 					&ethpb.ValidatorIndexRequest{PublicKey: keys[0][:]},
 				).Return(&ethpb.ValidatorIndexResponse{
 					Index: 1,
@@ -1863,7 +1863,7 @@ func TestValidator_UpdateProposerSettings(t *testing.T) {
 				keys, err := km.FetchValidatingPublicKeys(ctx)
 				require.NoError(t, err)
 				client.EXPECT().ValidatorIndex(
-					ctx, // ctx
+					gomock.Any(), // ctx
 					&ethpb.ValidatorIndexRequest{PublicKey: keys[0][:]},
 				).Return(nil, errors.New("Could not find validator index for public key"))
 				config[keys[0]] = &validator_service_config.ProposerOption{
@@ -1918,7 +1918,7 @@ func TestValidator_UpdateProposerSettings(t *testing.T) {
 				}
 				require.Equal(t, len(tt.mockExpectedRequests), len(registerValidatorRequests))
 			}
-			if err := v.UpdateProposerSettings(ctx, km); tt.err != "" {
+			if err := v.PushProposerSettings(ctx, km); tt.err != "" {
 				assert.ErrorContains(t, tt.err, err)
 			}
 		})

@@ -116,9 +116,8 @@ func run(ctx context.Context, v iface.Validator) {
 		log.Fatalf("Could not get keymanager: %v", err)
 	}
 	sub := km.SubscribeAccountChanges(accountsChangedChan)
-
 	// Set properties on the beacon node like the fee recipient for validators that are being used & active.
-	if err := v.UpdateProposerSettings(ctx, km); err != nil {
+	if err := v.PushProposerSettings(ctx, km); err != nil {
 		log.Fatalf("Failed to update proposer settings: %v", err) // allow fatal. skipcq
 	}
 	for {
@@ -182,7 +181,7 @@ func run(ctx context.Context, v iface.Validator) {
 				go v.UpdateDomainDataCaches(ctx, slot+1)
 				go func() {
 					// set proposer settings for next epoch.
-					if err := v.UpdateProposerSettings(ctx, km); err != nil {
+					if err := v.PushProposerSettings(ctx, km); err != nil {
 						log.Warnf("Failed to update proposer settings: %v", err)
 					}
 				}()
