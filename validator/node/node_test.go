@@ -4,14 +4,12 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"io/fs"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
 
-	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/params"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -194,143 +192,6 @@ func newWeb3SignerCli(t *testing.T, baseUrl string, publicKeysOrURL string) *cli
 	return cli.NewContext(&app, set, nil)
 }
 
-type test struct {
-	Foo string `json:"foo" yaml:"foo"`
-	Bar int    `json:"bar" yaml:"bar"`
-}
-
-func TestUnmarshalFromFile(t *testing.T) {
-	ctx := context.Background()
-	type args struct {
-		File string
-		To   *test
-	}
-	var pathError *fs.PathError
-	tests := []struct {
-		name        string
-		args        args
-		want        *test
-		urlResponse string
-		err         error
-	}{
-		{
-			name: "Happy Path File",
-			args: args{
-				File: "testdata/test-unmarshal-good.json",
-				To:   &test{},
-			},
-			want: &test{
-				Foo: "foo",
-				Bar: 1,
-			},
-		},
-		{
-			name: "Happy Path File Yaml",
-			args: args{
-				File: "testdata/test-unmarshal-good.yaml",
-				To:   &test{},
-			},
-			want: &test{
-				Foo: "foo",
-				Bar: 1,
-			},
-		},
-		{
-			name: "Bad File Path, not json",
-			args: args{
-				File: "jsontools.go",
-				To:   &test{},
-			},
-			want: &test{},
-			err:  pathError,
-		},
-		{
-			name: "Bad File Path",
-			args: args{
-				File: "testdata/test-unmarshal-bad.json",
-				To:   &test{},
-			},
-			want: &test{},
-			err:  pathError,
-		},
-		{
-			name: "Bad File Path, not found",
-			args: args{
-				File: "test-notfound.json",
-				To:   &test{},
-			},
-			want: &test{},
-			err:  pathError,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			to := tt.args.To
-			err := unmarshalFromFile(ctx, tt.args.File, to)
-			if tt.err != nil {
-				require.Equal(t, true, errors.As(err, &tt.err))
-				return
-			} else {
-				require.NoError(t, err)
-			}
-			require.DeepEqual(t, tt.want, to)
-		})
-	}
-}
-
-func TestUnmarshalFromURL(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(200)
-		w.Header().Set("Content-Type", "application/json")
-		_, err := fmt.Fprintf(w, `{ "foo": "foo", "bar": 1}`)
-		require.NoError(t, err)
-	}))
-	defer srv.Close()
-	ctx := context.Background()
-	type args struct {
-		URL string
-		To  interface{}
-	}
-	tests := []struct {
-		name        string
-		args        args
-		want        interface{}
-		urlResponse string
-		wantErr     bool
-	}{
-		{
-			name: "Happy Path URL",
-			args: args{
-				URL: srv.URL,
-				To:  &test{},
-			},
-			want: &test{
-				Foo: "foo",
-				Bar: 1,
-			},
-			wantErr: false,
-		},
-		{
-			name: "Bad URL",
-			args: args{
-				URL: "sadjflksdjflksadjflkdj",
-				To:  &test{},
-			},
-			want:    &test{},
-			wantErr: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if err := unmarshalFromURL(ctx, tt.args.URL, tt.args.To); (err != nil) != tt.wantErr {
-				t.Errorf(" error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			require.DeepEqual(t, tt.want, tt.args.To)
-		})
-	}
-}
-
 func TestProposerSettings(t *testing.T) {
 	hook := logTest.NewGlobal()
 
@@ -339,6 +200,7 @@ func TestProposerSettings(t *testing.T) {
 		url        string
 		defaultfee string
 	}
+
 	type args struct {
 		proposerSettingsFlagValues *proposerSettingsFlag
 	}
@@ -518,6 +380,20 @@ func TestProposerSettings(t *testing.T) {
 				return nil
 			},
 			wantErr: "",
+		},
+		{
+			name: "Bad File Path",
+			args: args{
+				proposerSettingsFlagValues: &proposerSettingsFlag{
+					dir:        "./testdata/bad-prepare-beacon-proposer-config.json",
+					url:        "",
+					defaultfee: "",
+				},
+			},
+			want: func() *validator_service_config.ProposerSettings {
+				return nil
+			},
+			wantErr: "failed to unmarshal yaml file",
 		},
 		{
 			name: "Both URL and Dir flags used resulting in error",
