@@ -456,7 +456,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 	// Insert the last block to forkchoice
 	lastBR := blockRoots[len(blks)-1]
 	if err := s.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx, preState, lastBR); err != nil {
-		return err
+		return errors.Wrap(err, "could not insert last block in batch to forkchoice")
 	}
 	// Set their optimistic status
 	if isValidPayload {
