@@ -74,14 +74,14 @@ type mockHistorySpec struct {
 }
 
 type mockHistory struct {
-	blocks                        map[[32]byte]interfaces.SignedBeaconBlock
-	slotMap                       map[types.Slot][32]byte
-	slotIndex                     slotList
-	canonical                     map[[32]byte]bool
-	states                        map[[32]byte]state.BeaconState
-	hiddenStates                  map[[32]byte]state.BeaconState
-	current                       types.Slot
-	overrideHighestBlockBelowSlot func(context.Context, types.Slot) (interfaces.SignedBeaconBlock, error)
+	blocks                         map[[32]byte]interfaces.SignedBeaconBlock
+	slotMap                        map[types.Slot][32]byte
+	slotIndex                      slotList
+	canonical                      map[[32]byte]bool
+	states                         map[[32]byte]state.BeaconState
+	hiddenStates                   map[[32]byte]state.BeaconState
+	current                        types.Slot
+	overrideHighestSlotBlocksBelow func(context.Context, types.Slot) ([]interfaces.SignedBeaconBlock, error)
 }
 
 type slotList []types.Slot
@@ -98,11 +98,11 @@ func (m slotList) Swap(i, j int) {
 	m[i], m[j] = m[j], m[i]
 }
 
-var errFallThroughOverride = errors.New("override yielding control back to real HighestBlockBelowSlot")
+var errFallThroughOverride = errors.New("override yielding control back to real HighestSlotBlocksBelow")
 
-func (m *mockHistory) HighestBlockBelowSlot(_ context.Context, slot types.Slot) (interfaces.SignedBeaconBlock, error) {
-	if m.overrideHighestBlockBelowSlot != nil {
-		s, err := m.overrideHighestBlockBelowSlot(context.Background(), slot)
+func (m *mockHistory) HighestSlotBlocksBelow(_ context.Context, slot types.Slot) ([]interfaces.SignedBeaconBlock, error) {
+	if m.overrideHighestSlotBlocksBelow != nil {
+		s, err := m.overrideHighestSlotBlocksBelow(context.Background(), slot)
 		if !errors.Is(err, errFallThroughOverride) {
 			return s, err
 		}
@@ -115,10 +115,10 @@ func (m *mockHistory) HighestBlockBelowSlot(_ context.Context, slot types.Slot) 
 	}
 	for _, s := range m.slotIndex {
 		if s < slot {
-			return m.blocks[m.slotMap[s]], nil
+			return []interfaces.SignedBeaconBlock{m.blocks[m.slotMap[s]]}, nil
 		}
 	}
-	return nil, nil
+	return []interfaces.SignedBeaconBlock{}, nil
 }
 
 var errGenesisBlockNotFound = errors.New("canonical genesis block not found in db")
