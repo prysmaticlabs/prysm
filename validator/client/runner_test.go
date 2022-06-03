@@ -247,11 +247,11 @@ func TestKeyReload_RemoteKeymanager(t *testing.T) {
 	assert.Equal(t, true, km.ReloadPublicKeysCalled)
 }
 
-func TestUpdateProposerSettingsAt_EpochEnd(t *testing.T) {
+func TestUpdateProposerSettingsAt_EpochStart(t *testing.T) {
 	v := &testutil.FakeValidator{Km: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
 	ctx, cancel := context.WithCancel(context.Background())
 	hook := logTest.NewGlobal()
-	slot := params.BeaconConfig().SlotsPerEpoch - 1
+	slot := params.BeaconConfig().SlotsPerEpoch
 	ticker := make(chan types.Slot)
 	v.NextSlotRet = ticker
 	go func() {

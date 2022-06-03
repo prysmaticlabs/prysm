@@ -176,16 +176,18 @@ func run(ctx context.Context, v iface.Validator) {
 				continue
 			}
 
-			// Start fetching domain data for the next epoch.
-			if slots.IsEpochEnd(slot) {
-				go v.UpdateDomainDataCaches(ctx, slot+1)
+			if slots.IsEpochStart(slot) {
 				go func() {
-					// set proposer settings for next epoch.
+					//deadline set for next epoch rounded up
 					if err := v.PushProposerSettings(ctx, km); err != nil {
 						log.Warnf("Failed to update proposer settings: %v", err)
 					}
 				}()
+			}
 
+			// Start fetching domain data for the next epoch.
+			if slots.IsEpochEnd(slot) {
+				go v.UpdateDomainDataCaches(ctx, slot+1)
 			}
 
 			var wg sync.WaitGroup
