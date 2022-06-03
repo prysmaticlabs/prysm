@@ -173,7 +173,8 @@ func (p *Proxy) proxyRequest(requestBytes []byte, w http.ResponseWriter, r *http
 	jreq, err := unmarshalRPCObject(requestBytes)
 	if err != nil {
 		p.cfg.logger.WithError(err).Error("Could not unmarshal request")
-		return
+		// Continue and mark it as unknown.
+		jreq = &jsonRPCObject{Method: "unknown"}
 	}
 	p.cfg.logger.Infof("Forwarding %s request for method %s to %s", r.Method, jreq.Method, p.cfg.destinationUrl.String())
 	proxyReq, err := http.NewRequest(r.Method, p.cfg.destinationUrl.String(), r.Body)
