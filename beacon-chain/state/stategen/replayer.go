@@ -27,7 +27,7 @@ const (
 
 // HistoryAccessor describes the minimum set of database methods needed to support the ReplayerBuilder.
 type HistoryAccessor interface {
-	HighestBlockBelowSlot(ctx context.Context, slot types.Slot) (interfaces.SignedBeaconBlock, error)
+	HighestSlotBlocksBelow(ctx context.Context, slot types.Slot) ([]interfaces.SignedBeaconBlock, error)
 	GenesisBlock(ctx context.Context) (interfaces.SignedBeaconBlock, error)
 	Block(ctx context.Context, blockRoot [32]byte) (interfaces.SignedBeaconBlock, error)
 	StateOrError(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error)
