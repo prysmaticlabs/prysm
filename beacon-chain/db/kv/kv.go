@@ -192,6 +192,7 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 			migrationsBucket,
 
 			feeRecipientBucket,
+			registrationBucket,
 		)
 	}); err != nil {
 		log.WithField("elapsed", time.Since(start)).Error("Failed to update db and create buckets")
