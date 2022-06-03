@@ -354,7 +354,7 @@ var (
 	SuggestedFeeRecipientFlag = &cli.StringFlag{
 		Name: "suggested-fee-recipient",
 		Usage: "Sets ALL validators' mapping to a suggested an eth address to receive gas fees when proposing a block." +
-			" This setting is used for both the prepare_beacon_proposer api as well as the register_validator api." +
+			" note that this is only a suggestion when integrating with a Builder API, which may choose to specify a different fee recipient as payment for the blocks it builds." +
 			" For additional setting overrides use the --" + ProposerSettingsFlag.Name + " or --" + ProposerSettingsURLFlag.Name + " Flags. ",
 		Value: params.BeaconConfig().EthBurnAddressHex,
 	}
