@@ -517,18 +517,18 @@ func TestStore_SaveBlock_CanGetHighestAt(t *testing.T) {
 			require.NoError(t, db.SaveBlock(ctx, block2))
 			require.NoError(t, db.SaveBlock(ctx, block3))
 
-			highestAt, err := db.HighestBlockBelowSlot(ctx, 2)
+			highestAt, err := db.HighestSlotBlocksBelow(ctx, 2)
 			require.NoError(t, err)
-			assert.NotNil(t, highestAt, "Got empty highest block")
-			assert.Equal(t, true, proto.Equal(block1.Proto(), highestAt.Proto()), "Wanted: %v, received: %v", block1, highestAt)
-			highestAt, err = db.HighestBlockBelowSlot(ctx, 11)
+			assert.Equal(t, false, len(highestAt) <= 0, "Got empty highest at slice")
+			assert.Equal(t, true, proto.Equal(block1.Proto(), highestAt[0].Proto()), "Wanted: %v, received: %v", block1, highestAt[0])
+			highestAt, err = db.HighestSlotBlocksBelow(ctx, 11)
 			require.NoError(t, err)
-			assert.NotNil(t, highestAt, "Got empty highest block")
-			assert.Equal(t, true, proto.Equal(block2.Proto(), highestAt.Proto()), "Wanted: %v, received: %v", block2, highestAt)
-			highestAt, err = db.HighestBlockBelowSlot(ctx, 101)
+			assert.Equal(t, false, len(highestAt) <= 0, "Got empty highest at slice")
+			assert.Equal(t, true, proto.Equal(block2.Proto(), highestAt[0].Proto()), "Wanted: %v, received: %v", block2, highestAt[0])
+			highestAt, err = db.HighestSlotBlocksBelow(ctx, 101)
 			require.NoError(t, err)
-			assert.NotNil(t, highestAt, "Got empty highest block")
-			assert.Equal(t, true, proto.Equal(block3.Proto(), highestAt.Proto()), "Wanted: %v, received: %v", block3, highestAt)
+			assert.Equal(t, false, len(highestAt) <= 0, "Got empty highest at slice")
+			assert.Equal(t, true, proto.Equal(block3.Proto(), highestAt[0].Proto()), "Wanted: %v, received: %v", block3, highestAt[0])
 		})
 	}
 }
@@ -549,15 +549,15 @@ func TestStore_GenesisBlock_CanGetHighestAt(t *testing.T) {
 			require.NoError(t, err)
 			require.NoError(t, db.SaveBlock(ctx, block1))
 
-			highestAt, err := db.HighestBlockBelowSlot(ctx, 2)
+			highestAt, err := db.HighestSlotBlocksBelow(ctx, 2)
 			require.NoError(t, err)
-			assert.Equal(t, true, proto.Equal(block1.Proto(), highestAt.Proto()), "Wanted: %v, received: %v", block1, highestAt)
-			highestAt, err = db.HighestBlockBelowSlot(ctx, 1)
+			assert.Equal(t, true, proto.Equal(block1.Proto(), highestAt[0].Proto()), "Wanted: %v, received: %v", block1, highestAt[0])
+			highestAt, err = db.HighestSlotBlocksBelow(ctx, 1)
 			require.NoError(t, err)
-			assert.Equal(t, true, proto.Equal(genesisBlock.Proto(), highestAt.Proto()), "Wanted: %v, received: %v", genesisBlock, highestAt)
-			highestAt, err = db.HighestBlockBelowSlot(ctx, 0)
+			assert.Equal(t, true, proto.Equal(genesisBlock.Proto(), highestAt[0].Proto()), "Wanted: %v, received: %v", genesisBlock, highestAt[0])
+			highestAt, err = db.HighestSlotBlocksBelow(ctx, 0)
 			require.NoError(t, err)
-			assert.Equal(t, true, proto.Equal(genesisBlock.Proto(), highestAt.Proto()), "Wanted: %v, received: %v", genesisBlock, highestAt)
+			assert.Equal(t, true, proto.Equal(genesisBlock.Proto(), highestAt[0].Proto()), "Wanted: %v, received: %v", genesisBlock, highestAt[0])
 		})
 	}
 }
@@ -691,6 +691,80 @@ func TestStore_FeeRecipientByValidatorID(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, common.Address{'c'}, f)
 	_, err = db.FeeRecipientByValidatorID(ctx, 3)
+	want := errors.Wrap(ErrNotFoundFeeRecipient, "validator id 3")
+	require.Equal(t, want.Error(), err.Error())
+
+	regs := []*ethpb.ValidatorRegistrationV1{
+		{
+			FeeRecipient: bytesutil.PadTo([]byte("a"), 20),
+			GasLimit:     1,
+			Timestamp:    2,
+			Pubkey:       bytesutil.PadTo([]byte("b"), 48),
+		}}
+	require.NoError(t, db.SaveRegistrationsByValidatorIDs(ctx, []types.ValidatorIndex{3}, regs))
+	f, err = db.FeeRecipientByValidatorID(ctx, 3)
+	require.NoError(t, err)
+	require.Equal(t, common.Address{'a'}, f)
+
+	_, err = db.FeeRecipientByValidatorID(ctx, 4)
+	want = errors.Wrap(ErrNotFoundFeeRecipient, "validator id 4")
+	require.Equal(t, want.Error(), err.Error())
+}
+
+func TestStore_RegistrationsByValidatorID(t *testing.T) {
+	db := setupDB(t)
+	ctx := context.Background()
+	ids := []types.ValidatorIndex{0, 0, 0}
+	regs := []*ethpb.ValidatorRegistrationV1{{}, {}, {}, {}}
+	require.ErrorContains(t, "ids and registrations must be the same length", db.SaveRegistrationsByValidatorIDs(ctx, ids, regs))
+
+	ids = []types.ValidatorIndex{0, 1, 2}
+	regs = []*ethpb.ValidatorRegistrationV1{
+		{
+			FeeRecipient: bytesutil.PadTo([]byte("a"), 20),
+			GasLimit:     1,
+			Timestamp:    2,
+			Pubkey:       bytesutil.PadTo([]byte("b"), 48),
+		},
+		{
+			FeeRecipient: bytesutil.PadTo([]byte("c"), 20),
+			GasLimit:     3,
+			Timestamp:    4,
+			Pubkey:       bytesutil.PadTo([]byte("d"), 48),
+		},
+		{
+			FeeRecipient: bytesutil.PadTo([]byte("e"), 20),
+			GasLimit:     5,
+			Timestamp:    6,
+			Pubkey:       bytesutil.PadTo([]byte("f"), 48),
+		},
+	}
+	require.NoError(t, db.SaveRegistrationsByValidatorIDs(ctx, ids, regs))
+	f, err := db.RegistrationByValidatorID(ctx, 0)
+	require.NoError(t, err)
+	require.DeepEqual(t, &ethpb.ValidatorRegistrationV1{
+		FeeRecipient: bytesutil.PadTo([]byte("a"), 20),
+		GasLimit:     1,
+		Timestamp:    2,
+		Pubkey:       bytesutil.PadTo([]byte("b"), 48),
+	}, f)
+	f, err = db.RegistrationByValidatorID(ctx, 1)
+	require.NoError(t, err)
+	require.DeepEqual(t, &ethpb.ValidatorRegistrationV1{
+		FeeRecipient: bytesutil.PadTo([]byte("c"), 20),
+		GasLimit:     3,
+		Timestamp:    4,
+		Pubkey:       bytesutil.PadTo([]byte("d"), 48),
+	}, f)
+	f, err = db.RegistrationByValidatorID(ctx, 2)
+	require.NoError(t, err)
+	require.DeepEqual(t, &ethpb.ValidatorRegistrationV1{
+		FeeRecipient: bytesutil.PadTo([]byte("e"), 20),
+		GasLimit:     5,
+		Timestamp:    6,
+		Pubkey:       bytesutil.PadTo([]byte("f"), 48),
+	}, f)
+	_, err = db.RegistrationByValidatorID(ctx, 3)
 	want := errors.Wrap(ErrNotFoundFeeRecipient, "validator id 3")
 	require.Equal(t, want.Error(), err.Error())
 }
