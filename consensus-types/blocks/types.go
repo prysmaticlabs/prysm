@@ -10,18 +10,21 @@ import (
 	"github.com/prysmaticlabs/prysm/runtime/version"
 )
 
-// ErrUnsupportedGetter is returned when a getter access is not supported for a specific beacon block version.
-var ErrUnsupportedGetter = errors.New("unsupported getter")
+const (
+	incorrectBlockVersion = "incorrect beacon block version"
+	incorrectBodyVersion  = "incorrect beacon block body version"
+)
 
-const incorrectBlockVersion = "incorrect beacon block version"
-const incorrectBodyVersion = "incorrect beacon block body version"
-
-var errNilBlock = errors.New("received nil beacon block")
-var errNilBody = errors.New("received nil beacon block body")
-var errIncorrectBlockVersion = errors.New(incorrectBlockVersion)
-var errIncorrectBodyVersion = errors.New(incorrectBodyVersion)
-var errCloningFailed = errors.New("cloning proto message failed")
-var errAssertionFailed = errors.New("type assertion failed")
+var (
+	// ErrUnsupportedGetter is returned when a getter access is not supported for a specific beacon block version.
+	ErrUnsupportedGetter     = errors.New("unsupported getter")
+	errNilBlock              = errors.New("received nil beacon block")
+	errNilBody               = errors.New("received nil beacon block body")
+	errIncorrectBlockVersion = errors.New(incorrectBlockVersion)
+	errIncorrectBodyVersion  = errors.New(incorrectBodyVersion)
+	errCloningFailed         = errors.New("cloning proto message failed")
+	errAssertionFailed       = errors.New("type assertion failed")
+)
 
 // BeaconBlockBody is the main beacon block body structure. It can represent any block type.
 type BeaconBlockBody struct {

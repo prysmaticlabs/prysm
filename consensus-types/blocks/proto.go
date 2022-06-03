@@ -10,7 +10,7 @@ import (
 // Proto returns the underlying protobuf signed beacon block.
 func (b *SignedBeaconBlock) Proto() (proto.Message, error) {
 	if b == nil {
-		return nil, nil
+		return nil, errNilBlock
 	}
 
 	blockMessage, err := b.block.Proto()
@@ -63,7 +63,7 @@ func (b *SignedBeaconBlock) Proto() (proto.Message, error) {
 // Proto returns the underlying protobuf beacon block.
 func (b *BeaconBlock) Proto() (proto.Message, error) {
 	if b == nil {
-		return nil, nil
+		return nil, errNilBlock
 	}
 
 	bodyMessage, err := b.body.Proto()
@@ -128,7 +128,7 @@ func (b *BeaconBlock) Proto() (proto.Message, error) {
 // Proto returns the underlying protobuf beacon block body.
 func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 	if b == nil {
-		return nil, nil
+		return nil, errNilBody
 	}
 
 	switch b.version {

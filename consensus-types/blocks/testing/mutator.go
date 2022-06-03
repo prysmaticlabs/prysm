@@ -1,6 +1,7 @@
-package blocks
+package testing
 
 import (
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -37,7 +38,7 @@ func (m blockMutator) apply(b interfaces.SignedBeaconBlock) error {
 		m.Bellatrix(bb)
 		return nil
 	default:
-		return errIncorrectBlockVersion
+		return blocks.ErrUnsupportedSignedBeaconBlock
 	}
 }
 
