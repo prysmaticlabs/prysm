@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -17,9 +18,14 @@ import (
 )
 
 const (
-	versionHeader     = "Eth-Consensus-Version"
-	grpcVersionHeader = "Grpc-metadata-Eth-Consensus-Version"
+	versionHeader        = "Eth-Consensus-Version"
+	grpcVersionHeader    = "Grpc-metadata-Eth-Consensus-Version"
+	jsonMediaType        = "application/json"
+	octetStreamMediaType = "application/octet-stream"
 )
+
+// match a number with optional decimals
+var priorityRegex = regexp.MustCompile(`q=(\d+(?:\.\d+)?)`)
 
 type sszConfig struct {
 	fileName     string
@@ -99,7 +105,12 @@ func handleGetSSZ(
 	req *http.Request,
 	config sszConfig,
 ) (handled bool) {
-	if !sszRequested(req) {
+	ssz, err := sszRequested(req)
+	if err != nil {
+		apimiddleware.WriteError(w, apimiddleware.InternalServerError(err), nil)
+		return true
+	}
+	if !ssz {
 		return false
 	}
 
@@ -193,17 +204,42 @@ func handlePostSSZ(
 	return true
 }
 
-func sszRequested(req *http.Request) bool {
-	accept, ok := req.Header["Accept"]
-	if !ok {
-		return false
+func sszRequested(req *http.Request) (bool, error) {
+	accept := req.Header.Values("Accept")
+	if len(accept) == 0 {
+		return false, nil
 	}
-	for _, v := range accept {
-		if v == "application/octet-stream" {
-			return true
+	types := strings.Split(accept[0], ",")
+	currentType, currentPriority := "", 0.0
+	for _, t := range types {
+		values := strings.Split(t, ";")
+		name := values[0]
+		if name != jsonMediaType && name != octetStreamMediaType {
+			continue
+		}
+		// no params specified
+		if len(values) == 1 {
+			priority := 1.0
+			if priority > currentPriority {
+				currentType, currentPriority = name, priority
+			}
+			continue
+		}
+		params := values[1]
+		match := priorityRegex.FindAllStringSubmatch(params, 1)
+		if len(match) != 1 {
+			continue
+		}
+		priority, err := strconv.ParseFloat(match[0][1], 32)
+		if err != nil {
+			return false, err
+		}
+		if priority > currentPriority {
+			currentType, currentPriority = name, priority
 		}
 	}
-	return false
+
+	return currentType == octetStreamMediaType, nil
 }
 
 func sszPosted(req *http.Request) bool {
@@ -214,7 +250,7 @@ func sszPosted(req *http.Request) bool {
 	if len(ct) != 1 {
 		return false
 	}
-	return ct[0] == "application/octet-stream"
+	return ct[0] == octetStreamMediaType
 }
 
 func prepareSSZRequestForProxying(m *apimiddleware.ApiProxyMiddleware, endpoint apimiddleware.Endpoint, req *http.Request) apimiddleware.ErrorJson {
@@ -252,7 +288,7 @@ func preparePostedSSZData(req *http.Request) apimiddleware.ErrorJson {
 	}
 	req.Body = io.NopCloser(bytes.NewBuffer(data))
 	req.ContentLength = int64(len(data))
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Type", jsonMediaType)
 	return nil
 }
 
@@ -280,7 +316,7 @@ func writeSSZResponseHeaderAndBody(grpcResp *http.Response, w http.ResponseWrite
 		}
 	}
 	w.Header().Set("Content-Length", strconv.Itoa(len(respSsz)))
-	w.Header().Set("Content-Type", "application/octet-stream")
+	w.Header().Set("Content-Type", octetStreamMediaType)
 	w.Header().Set("Content-Disposition", "attachment; filename="+fileName)
 	w.Header().Set(versionHeader, respVersion)
 	if statusCodeHeader != "" {
