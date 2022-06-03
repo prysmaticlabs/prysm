@@ -16,6 +16,7 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/network"
 	"github.com/sirupsen/logrus"
 )
 
@@ -128,6 +129,7 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (p *Proxy) AddRequestInterceptor(rpcMethodName string, response interface{}, trigger func() bool) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
+	p.cfg.logger.Infof("Adding in interceptor for method %s", rpcMethodName)
 	p.interceptors[rpcMethodName] = &interceptorConfig{
 		response,
 		trigger,
@@ -168,6 +170,7 @@ func (p *Proxy) interceptIfNeeded(requestBytes []byte, w http.ResponseWriter) (h
 
 // Create a new proxy request to the execution client.
 func (p *Proxy) proxyRequest(requestBytes []byte, w http.ResponseWriter, r *http.Request) {
+	p.cfg.logger.Infof("Forwarding %s request to %s", r.Method, p.cfg.destinationUrl.String())
 	proxyReq, err := http.NewRequest(r.Method, p.cfg.destinationUrl.String(), r.Body)
 	if err != nil {
 		p.cfg.logger.WithError(err).Error("Could create new request")
@@ -183,11 +186,16 @@ func (p *Proxy) proxyRequest(requestBytes []byte, w http.ResponseWriter, r *http
 	proxyReq.Header.Set("Content-Type", "application/json")
 
 	client := &http.Client{}
+	if p.cfg.secret != "" {
+		client = network.NewHttpClientWithSecret(p.cfg.secret)
+	}
 	proxyRes, err := client.Do(proxyReq)
 	if err != nil {
 		p.cfg.logger.WithError(err).Error("Could not forward request to destination server")
 		return
 	}
+	p.cfg.logger.Infof("Received response for %s from %s", r.Method, p.cfg.destinationUrl.String())
+
 	defer func() {
 		if err = proxyRes.Body.Close(); err != nil {
 			p.cfg.logger.WithError(err).Error("Could not do close proxy response body")

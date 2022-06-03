@@ -2,12 +2,15 @@ package eth1
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"path"
 	"strconv"
+	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
 	e2etypes "github.com/prysmaticlabs/prysm/testing/endtoend/types"
@@ -129,11 +132,21 @@ func (node *Proxy) Start(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	jwtPath := path.Join(e2e.TestParams.TestPath, "eth1data/"+strconv.Itoa(node.index)+"/")
+	if node.index == 0 {
+		jwtPath = path.Join(e2e.TestParams.TestPath, "eth1data/miner/")
+	}
+	jwtPath = path.Join(jwtPath, "geth/jwtsecret")
+	secret, err := parseJWTSecretFromFile(jwtPath)
+	if err != nil {
+		return err
+	}
 	opts := []proxy.Option{
 		proxy.WithDestinationAddress(fmt.Sprintf("http://127.0.0.1:%d", e2e.TestParams.Ports.Eth1AuthRPCPort+node.index)),
 		proxy.WithPort(e2e.TestParams.Ports.Eth1ProxyPort + node.index),
 		proxy.WithLogger(log.New()),
 		proxy.WithLogFile(file),
+		proxy.WithJwtSecret(string(secret)),
 	}
 	nProxy, err := proxy.New(opts...)
 	if err != nil {
@@ -170,4 +183,23 @@ func (node *Proxy) Resume() error {
 func (node *Proxy) Stop() error {
 	node.cancel()
 	return nil
+}
+
+func parseJWTSecretFromFile(jwtSecretFile string) ([]byte, error) {
+	enc, err := file.ReadFileAsBytes(jwtSecretFile)
+	if err != nil {
+		return nil, err
+	}
+	strData := strings.TrimSpace(string(enc))
+	if len(strData) == 0 {
+		return nil, fmt.Errorf("provided JWT secret in file %s cannot be empty", jwtSecretFile)
+	}
+	secret, err := hex.DecodeString(strings.TrimPrefix(strData, "0x"))
+	if err != nil {
+		return nil, err
+	}
+	if len(secret) < 32 {
+		return nil, errors.New("provided JWT secret should be a hex string of at least 32 bytes")
+	}
+	return secret, nil
 }

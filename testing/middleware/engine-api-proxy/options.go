@@ -13,6 +13,7 @@ type config struct {
 	proxyHost      string
 	destinationUrl *url.URL
 	logger         *logrus.Logger
+	secret         string
 }
 
 type Option func(p *Proxy) error
@@ -64,6 +65,15 @@ func WithLogFile(f *os.File) Option {
 			return errors.New("nil logger provided")
 		}
 		p.cfg.logger.SetOutput(f)
+		return nil
+	}
+}
+
+// WithJwtSecret adds in support for jwt authenticated
+// connections for our proxy.
+func WithJwtSecret(secret string) Option {
+	return func(p *Proxy) error {
+		p.cfg.secret = secret
 		return nil
 	}
 }
