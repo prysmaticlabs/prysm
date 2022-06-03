@@ -30,7 +30,7 @@ type ReadOnlyDatabase interface {
 	GenesisBlockRoot(ctx context.Context) ([32]byte, error)
 	IsFinalizedBlock(ctx context.Context, blockRoot [32]byte) bool
 	FinalizedChildBlock(ctx context.Context, blockRoot [32]byte) (interfaces.SignedBeaconBlock, error)
-	HighestSlotBlocksBelow(ctx context.Context, slot types.Slot) ([]interfaces.SignedBeaconBlock, error)
+	HighestBlockBelowSlot(ctx context.Context, slot types.Slot) (interfaces.SignedBeaconBlock, error)
 	// State related methods.
 	State(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error)
 	StateOrError(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error)
