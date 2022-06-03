@@ -70,6 +70,8 @@ func isSSZStorageFormat(obj interface{}) bool {
 		return true
 	case *ethpb.VoluntaryExit:
 		return true
+	case *ethpb.ValidatorRegistrationV1:
+		return true
 	default:
 		return false
 	}
