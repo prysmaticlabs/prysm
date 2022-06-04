@@ -200,7 +200,7 @@ func (f *ForkChoice) IsOptimistic(root [32]byte) (bool, error) {
 
 	node, ok := f.store.nodeByRoot[root]
 	if !ok || node == nil {
-		return false, errors.Wrap(ErrNilNode, "could not determine optimistic status")
+		return true, ErrNilNode
 	}
 
 	return node.optimistic, nil
