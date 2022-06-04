@@ -887,7 +887,7 @@ func TestService_FollowBlock(t *testing.T) {
 	h, err := s.followedBlockHeight(context.Background())
 	assert.NoError(t, err)
 	// With a much higher blocktime, the follow height is respectively shortened.
-	assert.Equal(t, 2283, h)
+	assert.Equal(t, uint64(2283), h)
 }
 
 type slowRPCClient struct {
