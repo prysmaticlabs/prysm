@@ -281,7 +281,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 		}
 		fRoot := bytesutil.ToBytes32(postState.FinalizedCheckpoint().Root)
 		if err := s.cfg.ForkChoiceStore.Prune(ctx, fRoot); err != nil {
-			return errors.Wrap(err, "could not prune proto array fork choice nodes")
+			return errors.Wrap(err, "could not prune fork choice nodes")
 		}
 		isOptimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(fRoot)
 		if err != nil {
@@ -458,6 +458,11 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 	if err := s.cfg.ForkChoiceStore.InsertNode(ctx, preState, lastBR); err != nil {
 		return errors.Wrap(err, "could not insert last block in batch to forkchoice")
 	}
+	// Prune forkchoice store
+	if err := s.cfg.ForkChoiceStore.Prune(ctx, s.ensureRootNotZeros(bytesutil.ToBytes32(fCheckpoints[len(blks)-1].Root))); err != nil {
+		return errors.Wrap(err, "could not prune fork choice nodes")
+	}
+
 	// Set their optimistic status
 	if isValidPayload {
 		if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, lastBR); err != nil {
@@ -536,9 +541,6 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed interf
 		s.store.SetFinalizedCheckptAndPayloadHash(fCheckpoint, h)
 		if err := s.cfg.ForkChoiceStore.UpdateFinalizedCheckpoint(fCheckpoint); err != nil {
 			return err
-		}
-		if err := s.cfg.ForkChoiceStore.Prune(ctx, bytesutil.ToBytes32(fCheckpoint.Root)); err != nil {
-			return errors.Wrap(err, "could not prune proto array fork choice nodes")
 		}
 	}
 	return nil
