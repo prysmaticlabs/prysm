@@ -895,7 +895,7 @@ func (f *ForkChoice) InsertOptimisticChain(ctx context.Context, chain []*forkcho
 		}
 		if err := f.store.insert(ctx,
 			b.Slot(), r, parentRoot, payloadHash,
-			chain[i].JustifiedEpoch, chain[i].FinalizedEpoch); err != nil {
+			chain[i].JustifiedCheckpoint, chain[i].FinalizedCheckpoint); err != nil {
 			return err
 		}
 	}

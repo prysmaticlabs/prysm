@@ -441,8 +441,8 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 			}
 		}
 		args := &forkchoicetypes.BlockAndCheckpoints{Block: b.Block(),
-			JustifiedEpoch: jCheckpoints[i].Epoch,
-			FinalizedEpoch: fCheckpoints[i].Epoch}
+			JustifiedCheckpoint: jCheckpoints[i].Epoch,
+			FinalizedCheckpoint: fCheckpoints[i].Epoch}
 		pendingNodes[len(blks)-i-1] = args
 		s.saveInitSyncBlock(blockRoots[i], b)
 		if err = s.handleBlockAfterBatchVerify(ctx, b, blockRoots[i], fCheckpoints[i], jCheckpoints[i]); err != nil {

@@ -1051,8 +1051,8 @@ func TestStore_InsertOptimisticChain(t *testing.T) {
 	require.NoError(t, err)
 	wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
 	require.NoError(t, err)
-	blks = append(blks, &forkchoicetypes.BlockAndCheckpoints{Block: wsb.Block(), JustifiedEpoch: 1,
-		FinalizedEpoch: 1})
+	blks = append(blks, &forkchoicetypes.BlockAndCheckpoints{Block: wsb.Block(), JustifiedCheckpoint: 1,
+		FinalizedCheckpoint: 1})
 	for i := uint64(2); i < 11; i++ {
 		blk := util.NewBeaconBlock()
 		blk.Block.Slot = types.Slot(i)
@@ -1060,8 +1060,8 @@ func TestStore_InsertOptimisticChain(t *testing.T) {
 		blk.Block.ParentRoot = copiedRoot[:]
 		wsb, err = wrapper.WrappedSignedBeaconBlock(blk)
 		require.NoError(t, err)
-		blks = append(blks, &forkchoicetypes.BlockAndCheckpoints{Block: wsb.Block(), JustifiedEpoch: 1,
-			FinalizedEpoch: 1})
+		blks = append(blks, &forkchoicetypes.BlockAndCheckpoints{Block: wsb.Block(), JustifiedCheckpoint: 1,
+			FinalizedCheckpoint: 1})
 		root, err = blk.Block.HashTreeRoot()
 		require.NoError(t, err)
 	}

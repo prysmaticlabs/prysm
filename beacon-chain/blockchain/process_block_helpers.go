@@ -360,7 +360,7 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk interfa
 		return err
 	}
 	pendingNodes = append(pendingNodes, &forkchoicetypes.BlockAndCheckpoints{Block: blk,
-		JustifiedEpoch: jCheckpoint.Epoch, FinalizedEpoch: fCheckpoint.Epoch})
+		JustifiedCheckpoint: jCheckpoint.Epoch, FinalizedCheckpoint: fCheckpoint.Epoch})
 	// As long as parent node is not in fork choice store, and parent node is in DB.
 	root := bytesutil.ToBytes32(blk.ParentRoot())
 	for !s.cfg.ForkChoiceStore.HasNode(root) && s.cfg.BeaconDB.HasBlock(ctx, root) {
@@ -373,8 +373,8 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk interfa
 		}
 		root = bytesutil.ToBytes32(b.Block().ParentRoot())
 		args := &forkchoicetypes.BlockAndCheckpoints{Block: b.Block(),
-			JustifiedEpoch: jCheckpoint.Epoch,
-			FinalizedEpoch: fCheckpoint.Epoch}
+			JustifiedCheckpoint: jCheckpoint.Epoch,
+			FinalizedCheckpoint: fCheckpoint.Epoch}
 		pendingNodes = append(pendingNodes, args)
 	}
 	if len(pendingNodes) == 1 {
