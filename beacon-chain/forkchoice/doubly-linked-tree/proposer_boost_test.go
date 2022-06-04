@@ -56,7 +56,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		)
 		require.NoError(t, err)
 		require.NoError(t, err)
-		require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
+		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 		f.ProcessAttestation(ctx, []uint64{0}, newRoot, fEpoch)
 		headRoot, err = f.Head(ctx, zeroHash, balances)
 		require.NoError(t, err)
@@ -80,7 +80,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 			fEpoch,
 		)
 		require.NoError(t, err)
-		require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
+		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 		f.ProcessAttestation(ctx, []uint64{1}, newRoot, fEpoch)
 		headRoot, err = f.Head(ctx, zeroHash, balances)
 		require.NoError(t, err)
@@ -106,7 +106,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 			fEpoch,
 		)
 		require.NoError(t, err)
-		require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
+		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 		f.ProcessAttestation(ctx, []uint64{2}, newRoot, fEpoch)
 		headRoot, err = f.Head(ctx, zeroHash, balances)
 		require.NoError(t, err)
@@ -133,7 +133,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 			fEpoch,
 		)
 		require.NoError(t, err)
-		require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
+		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 		f.ProcessAttestation(ctx, []uint64{3}, newRoot, fEpoch)
 		clockSlot := types.Slot(4)
 		args := &forkchoicetypes.ProposerBoostRootArgs{
@@ -219,7 +219,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 			fEpoch,
 		)
 		require.NoError(t, err)
-		require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
+		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 		r, err = f.Head(ctx, zeroHash, balances)
 		require.NoError(t, err)
 		assert.Equal(t, honestBlock, r, "Incorrect head for justified epoch at slot 2")
@@ -236,7 +236,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 			fEpoch,
 		)
 		require.NoError(t, err)
-		require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
+		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 
 		// Ensure the head is C, the honest block.
 		r, err = f.Head(ctx, zeroHash, balances)
@@ -292,7 +292,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 			fEpoch,
 		)
 		require.NoError(t, err)
-		require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
+		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 
 		// Ensure C is the head.
 		r, err = f.Head(ctx, zeroHash, balances)
@@ -311,7 +311,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 			fEpoch,
 		)
 		require.NoError(t, err)
-		require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
+		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 
 		// Ensure C is still the head after the malicious proposer reveals their block.
 		r, err = f.Head(ctx, zeroHash, balances)
@@ -371,7 +371,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 			fEpoch,
 		)
 		require.NoError(t, err)
-		require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
+		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 
 		// Ensure C is the head.
 		r, err = f.Head(ctx, zeroHash, balances)
@@ -399,7 +399,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 			fEpoch,
 		)
 		require.NoError(t, err)
-		require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
+		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 
 		// Ensure C is still the head.
 		r, err = f.Head(ctx, zeroHash, balances)
@@ -423,7 +423,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 			fEpoch,
 		)
 		require.NoError(t, err)
-		require.NoError(t, f.InsertOptimisticBlock(ctx, state, blkRoot))
+		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 
 		// D cannot win without a boost.
 		r, err = f.Head(ctx, zeroHash, balances)

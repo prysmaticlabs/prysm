@@ -270,7 +270,7 @@ func TestStore_OnAttestation_Ok_ProtoArray(t *testing.T) {
 	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, copied, tRoot))
 	state, blkRoot, err := prepareForkchoiceState(ctx, 0, tRoot, tRoot, params.BeaconConfig().ZeroHash, 1, 1)
 	require.NoError(t, err)
-	require.NoError(t, service.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx, state, blkRoot))
+	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
 	require.NoError(t, service.OnAttestation(ctx, att[0]))
 }
 
@@ -298,7 +298,7 @@ func TestStore_OnAttestation_Ok_DoublyLinkedTree(t *testing.T) {
 	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, copied, tRoot))
 	state, blkRoot, err := prepareForkchoiceState(ctx, 0, tRoot, tRoot, params.BeaconConfig().ZeroHash, 1, 1)
 	require.NoError(t, err)
-	require.NoError(t, service.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx, state, blkRoot))
+	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
 	require.NoError(t, service.OnAttestation(ctx, att[0]))
 }
 
@@ -605,10 +605,10 @@ func TestVerifyFinalizedConsistency_IsCanonical(t *testing.T) {
 
 	state, blkRoot, err := prepareForkchoiceState(ctx, b32.Block.Slot, r32, [32]byte{}, params.BeaconConfig().ZeroHash, 0, 0)
 	require.NoError(t, err)
-	require.NoError(t, service.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx, state, blkRoot))
+	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
 	state, blkRoot, err = prepareForkchoiceState(ctx, b33.Block.Slot, r33, r32, params.BeaconConfig().ZeroHash, 0, 0)
 	require.NoError(t, err)
-	require.NoError(t, service.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx, state, blkRoot))
+	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
 
 	_, err = service.cfg.ForkChoiceStore.Head(ctx, r32, []uint64{})
 	require.NoError(t, err)

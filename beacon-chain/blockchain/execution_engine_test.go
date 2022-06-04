@@ -58,13 +58,13 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 	require.NoError(t, err)
 	state, blkRoot, err := prepareForkchoiceState(ctx, 0, [32]byte{}, [32]byte{}, params.BeaconConfig().ZeroHash, 0, 0)
 	require.NoError(t, err)
-	require.NoError(t, fcs.InsertOptimisticBlock(ctx, state, blkRoot))
+	require.NoError(t, fcs.InsertNode(ctx, state, blkRoot))
 	state, blkRoot, err = prepareForkchoiceState(ctx, 1, altairBlkRoot, [32]byte{}, params.BeaconConfig().ZeroHash, 0, 0)
 	require.NoError(t, err)
-	require.NoError(t, fcs.InsertOptimisticBlock(ctx, state, blkRoot))
+	require.NoError(t, fcs.InsertNode(ctx, state, blkRoot))
 	state, blkRoot, err = prepareForkchoiceState(ctx, 2, bellatrixBlkRoot, altairBlkRoot, params.BeaconConfig().ZeroHash, 0, 0)
 	require.NoError(t, err)
-	require.NoError(t, fcs.InsertOptimisticBlock(ctx, state, blkRoot))
+	require.NoError(t, fcs.InsertNode(ctx, state, blkRoot))
 
 	tests := []struct {
 		name             string
@@ -301,25 +301,25 @@ func Test_NotifyForkchoiceUpdateRecursive(t *testing.T) {
 	require.NoError(t, err)
 	state, blkRoot, err := prepareForkchoiceState(ctx, 1, bra, [32]byte{}, [32]byte{'A'}, 0, 0)
 	require.NoError(t, err)
-	require.NoError(t, fcs.InsertOptimisticBlock(ctx, state, blkRoot))
+	require.NoError(t, fcs.InsertNode(ctx, state, blkRoot))
 	state, blkRoot, err = prepareForkchoiceState(ctx, 2, brb, bra, [32]byte{'B'}, 0, 0)
 	require.NoError(t, err)
-	require.NoError(t, fcs.InsertOptimisticBlock(ctx, state, blkRoot))
+	require.NoError(t, fcs.InsertNode(ctx, state, blkRoot))
 	state, blkRoot, err = prepareForkchoiceState(ctx, 3, brc, brb, [32]byte{'C'}, 0, 0)
 	require.NoError(t, err)
-	require.NoError(t, fcs.InsertOptimisticBlock(ctx, state, blkRoot))
+	require.NoError(t, fcs.InsertNode(ctx, state, blkRoot))
 	state, blkRoot, err = prepareForkchoiceState(ctx, 4, brd, brc, [32]byte{'D'}, 0, 0)
 	require.NoError(t, err)
-	require.NoError(t, fcs.InsertOptimisticBlock(ctx, state, blkRoot))
+	require.NoError(t, fcs.InsertNode(ctx, state, blkRoot))
 	state, blkRoot, err = prepareForkchoiceState(ctx, 5, bre, brb, [32]byte{'E'}, 0, 0)
 	require.NoError(t, err)
-	require.NoError(t, fcs.InsertOptimisticBlock(ctx, state, blkRoot))
+	require.NoError(t, fcs.InsertNode(ctx, state, blkRoot))
 	state, blkRoot, err = prepareForkchoiceState(ctx, 6, brf, bre, [32]byte{'F'}, 0, 0)
 	require.NoError(t, err)
-	require.NoError(t, fcs.InsertOptimisticBlock(ctx, state, blkRoot))
+	require.NoError(t, fcs.InsertNode(ctx, state, blkRoot))
 	state, blkRoot, err = prepareForkchoiceState(ctx, 7, brg, bre, [32]byte{'G'}, 0, 0)
 	require.NoError(t, err)
-	require.NoError(t, fcs.InsertOptimisticBlock(ctx, state, blkRoot))
+	require.NoError(t, fcs.InsertNode(ctx, state, blkRoot))
 
 	// Insert Attestations to D, F and G so that they have higher weight than D
 	// Ensure G is head
@@ -406,10 +406,10 @@ func Test_NotifyNewPayload(t *testing.T) {
 	require.NoError(t, err)
 	state, blkRoot, err := prepareForkchoiceState(ctx, 0, [32]byte{}, [32]byte{}, params.BeaconConfig().ZeroHash, 0, 0)
 	require.NoError(t, err)
-	require.NoError(t, fcs.InsertOptimisticBlock(ctx, state, blkRoot))
+	require.NoError(t, fcs.InsertNode(ctx, state, blkRoot))
 	state, blkRoot, err = prepareForkchoiceState(ctx, 1, r, [32]byte{}, params.BeaconConfig().ZeroHash, 0, 0)
 	require.NoError(t, err)
-	require.NoError(t, fcs.InsertOptimisticBlock(ctx, state, blkRoot))
+	require.NoError(t, fcs.InsertNode(ctx, state, blkRoot))
 
 	tests := []struct {
 		postState      bstate.BeaconState
@@ -558,7 +558,7 @@ func Test_NotifyNewPayload(t *testing.T) {
 			root := [32]byte{'a'}
 			state, blkRoot, err := prepareForkchoiceState(ctx, 0, root, root, params.BeaconConfig().ZeroHash, 0, 0)
 			require.NoError(t, err)
-			require.NoError(t, service.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx, state, blkRoot))
+			require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
 			postVersion, postHeader, err := getStateVersionAndPayload(tt.postState)
 			require.NoError(t, err)
 			isValidPayload, err := service.notifyNewPayload(ctx, postVersion, postHeader, tt.blk)
@@ -845,7 +845,7 @@ func Test_UpdateLastValidatedCheckpoint(t *testing.T) {
 	assert.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, genesisRoot))
 	state, blkRoot, err := prepareForkchoiceState(ctx, 0, genesisRoot, params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 0, 0)
 	require.NoError(t, err)
-	require.NoError(t, fcs.InsertOptimisticBlock(ctx, state, blkRoot))
+	require.NoError(t, fcs.InsertNode(ctx, state, blkRoot))
 	genesisSummary := &ethpb.StateSummary{
 		Root: genesisStateRoot[:],
 		Slot: 0,
@@ -878,7 +878,7 @@ func Test_UpdateLastValidatedCheckpoint(t *testing.T) {
 	require.NoError(t, beaconDB.SaveStateSummary(ctx, opStateSummary))
 	state, blkRoot, err = prepareForkchoiceState(ctx, 320, opRoot, genesisRoot, params.BeaconConfig().ZeroHash, 10, 10)
 	require.NoError(t, err)
-	require.NoError(t, fcs.InsertOptimisticBlock(ctx, state, blkRoot))
+	require.NoError(t, fcs.InsertNode(ctx, state, blkRoot))
 	assert.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, opRoot))
 	require.NoError(t, service.updateFinalized(ctx, opCheckpoint))
 	cp, err := service.cfg.BeaconDB.LastValidatedCheckpoint(ctx)
@@ -907,7 +907,7 @@ func Test_UpdateLastValidatedCheckpoint(t *testing.T) {
 	require.NoError(t, beaconDB.SaveStateSummary(ctx, validSummary))
 	state, blkRoot, err = prepareForkchoiceState(ctx, 640, validRoot, params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 20, 20)
 	require.NoError(t, err)
-	require.NoError(t, fcs.InsertOptimisticBlock(ctx, state, blkRoot))
+	require.NoError(t, fcs.InsertNode(ctx, state, blkRoot))
 	require.NoError(t, fcs.SetOptimisticToValid(ctx, validRoot))
 	assert.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, validRoot))
 	require.NoError(t, service.updateFinalized(ctx, validCheckpoint))

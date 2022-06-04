@@ -119,9 +119,9 @@ func (f *ForkChoice) ProposerBoost() [fieldparams.RootLength]byte {
 	return f.store.proposerBoost()
 }
 
-// InsertOptimisticBlock processes a new block by inserting it to the fork choice store.
-func (f *ForkChoice) InsertOptimisticBlock(ctx context.Context, state state.ReadOnlyBeaconState, root [32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.InsertOptimisticBlock")
+// InsertNode processes a new block by inserting it to the fork choice store.
+func (f *ForkChoice) InsertNode(ctx context.Context, state state.ReadOnlyBeaconState, root [32]byte) error {
+	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.InsertNode")
 	defer span.End()
 
 	slot := state.Slot()

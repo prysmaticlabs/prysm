@@ -216,7 +216,7 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized checkpoint state")
 	}
-	if err := forkChoicer.InsertOptimisticBlock(s.ctx, st, fRoot); err != nil {
+	if err := forkChoicer.InsertNode(s.ctx, st, fRoot); err != nil {
 		return errors.Wrap(err, "could not insert finalized block to forkchoice")
 	}
 
@@ -464,7 +464,7 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState state.Beacon
 	genesisCheckpoint := genesisState.FinalizedCheckpoint()
 	s.store = store.New(genesisCheckpoint, genesisCheckpoint)
 
-	if err := s.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx, genesisState, genesisBlkRoot); err != nil {
+	if err := s.cfg.ForkChoiceStore.InsertNode(ctx, genesisState, genesisBlkRoot); err != nil {
 		log.Fatalf("Could not process genesis block for fork choice: %v", err)
 	}
 	if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, genesisBlkRoot); err != nil {

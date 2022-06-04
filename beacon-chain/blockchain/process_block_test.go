@@ -1283,7 +1283,7 @@ func TestAncestor_CanUseForkchoice(t *testing.T) {
 		require.NoError(t, err)
 		state, blkRoot, err := prepareForkchoiceState(context.Background(), b.Block.Slot, r, bytesutil.ToBytes32(b.Block.ParentRoot), params.BeaconConfig().ZeroHash, 0, 0)
 		require.NoError(t, err)
-		require.NoError(t, service.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx, state, blkRoot))
+		require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
 	}
 
 	r, err := service.ancestor(context.Background(), r200[:], 150)
@@ -1332,7 +1332,7 @@ func TestAncestor_CanUseDB(t *testing.T) {
 
 	state, blkRoot, err := prepareForkchoiceState(context.Background(), 200, r200, r200, params.BeaconConfig().ZeroHash, 0, 0)
 	require.NoError(t, err)
-	require.NoError(t, service.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx, state, blkRoot))
+	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
 
 	r, err := service.ancestor(context.Background(), r200[:], 150)
 	require.NoError(t, err)
