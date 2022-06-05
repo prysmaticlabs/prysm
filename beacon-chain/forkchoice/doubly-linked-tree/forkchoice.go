@@ -22,11 +22,13 @@ import (
 // New initializes a new fork choice store.
 func New() *ForkChoice {
 	s := &Store{
-		proposerBoostRoot: [32]byte{},
-		nodeByRoot:        make(map[[fieldparams.RootLength]byte]*Node),
-		nodeByPayload:     make(map[[fieldparams.RootLength]byte]*Node),
-		slashedIndices:    make(map[types.ValidatorIndex]bool),
-		pruneThreshold:    defaultPruneThreshold,
+		justifiedCheckpoint: &forkchoicetypes.Checkpoint{},
+		finalizedCheckpoint: &forkchoicetypes.Checkpoint{},
+		proposerBoostRoot:   [32]byte{},
+		nodeByRoot:          make(map[[fieldparams.RootLength]byte]*Node),
+		nodeByPayload:       make(map[[fieldparams.RootLength]byte]*Node),
+		slashedIndices:      make(map[types.ValidatorIndex]bool),
+		pruneThreshold:      defaultPruneThreshold,
 	}
 
 	b := make([]uint64, 0)

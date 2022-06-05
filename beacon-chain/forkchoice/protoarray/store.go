@@ -31,13 +31,15 @@ var lastHeadRoot [32]byte
 // New initializes a new fork choice store.
 func New() *ForkChoice {
 	s := &Store{
-		proposerBoostRoot: [32]byte{},
-		nodes:             make([]*Node, 0),
-		nodesIndices:      make(map[[32]byte]uint64),
-		payloadIndices:    make(map[[32]byte]uint64),
-		canonicalNodes:    make(map[[32]byte]bool),
-		slashedIndices:    make(map[types.ValidatorIndex]bool),
-		pruneThreshold:    defaultPruneThreshold,
+		justifiedCheckpoint: &forkchoicetypes.Checkpoint{},
+		finalizedCheckpoint: &forkchoicetypes.Checkpoint{},
+		proposerBoostRoot:   [32]byte{},
+		nodes:               make([]*Node, 0),
+		nodesIndices:        make(map[[32]byte]uint64),
+		payloadIndices:      make(map[[32]byte]uint64),
+		canonicalNodes:      make(map[[32]byte]bool),
+		slashedIndices:      make(map[types.ValidatorIndex]bool),
+		pruneThreshold:      defaultPruneThreshold,
 	}
 
 	b := make([]uint64, 0)

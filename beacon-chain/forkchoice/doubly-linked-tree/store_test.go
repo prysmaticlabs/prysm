@@ -92,7 +92,7 @@ func TestStore_Head_Itself(t *testing.T) {
 
 	// Since the justified node does not have a best descendant so the best node
 	// is itself.
-	f.store.bestJustifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: 0, Root: indexToHash(1)}
+	f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: 0, Root: indexToHash(1)}
 	h, err := f.store.head(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, indexToHash(1), h)
@@ -113,7 +113,7 @@ func TestStore_Head_BestDescendant(t *testing.T) {
 	state, blkRoot, err = prepareForkchoiceState(context.Background(), 4, indexToHash(4), indexToHash(2), params.BeaconConfig().ZeroHash, 0, 0)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
-	f.store.bestJustifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: 0, Root: indexToHash(1)}
+	f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: 0, Root: indexToHash(1)}
 	h, err := f.store.head(context.Background())
 	require.NoError(t, err)
 	require.Equal(t, h, indexToHash(4))

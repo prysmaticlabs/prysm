@@ -222,10 +222,12 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 		}
 		s.store.SetJustifiedCheckptAndPayloadHash(postState.CurrentJustifiedCheckpoint(), h)
 		// Update Forkchoice checkpoints
-		if err := s.cfg.ForkChoiceStore.UpdateJustifiedCheckpoint(psj); err != nil {
+		if err := s.cfg.ForkChoiceStore.UpdateJustifiedCheckpoint(&forkchoicetypes.Checkpoint{
+			Epoch: psj.Epoch, Root: bytesutil.ToBytes32(psj.Root)}); err != nil {
 			return err
 		}
-		if err := s.cfg.ForkChoiceStore.UpdateFinalizedCheckpoint(psf); err != nil {
+		if err := s.cfg.ForkChoiceStore.UpdateFinalizedCheckpoint(&forkchoicetypes.Checkpoint{
+			Epoch: psf.Epoch, Root: bytesutil.ToBytes32(psf.Root)}); err != nil {
 			return err
 		}
 	}
@@ -441,8 +443,8 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 			}
 		}
 		args := &forkchoicetypes.BlockAndCheckpoints{Block: b.Block(),
-			JustifiedCheckpoint: jCheckpoints[i].Epoch,
-			FinalizedCheckpoint: fCheckpoints[i].Epoch}
+			JustifiedCheckpoint: jCheckpoints[i],
+			FinalizedCheckpoint: fCheckpoints[i]}
 		pendingNodes[len(blks)-i-1] = args
 		s.saveInitSyncBlock(blockRoots[i], b)
 		if err = s.handleBlockAfterBatchVerify(ctx, b, blockRoots[i], fCheckpoints[i], jCheckpoints[i]); err != nil {
@@ -540,7 +542,8 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed interf
 			return err
 		}
 		s.store.SetFinalizedCheckptAndPayloadHash(fCheckpoint, h)
-		if err := s.cfg.ForkChoiceStore.UpdateFinalizedCheckpoint(fCheckpoint); err != nil {
+		if err := s.cfg.ForkChoiceStore.UpdateFinalizedCheckpoint(&forkchoicetypes.Checkpoint{
+			Epoch: fCheckpoint.Epoch, Root: bytesutil.ToBytes32(fCheckpoint.Root)}); err != nil {
 			return err
 		}
 	}
