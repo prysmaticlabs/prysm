@@ -399,13 +399,12 @@ func (s *Store) SaveBackfillBlockRoot(ctx context.Context, blockRoot [32]byte) e
 }
 
 // HighestSlotBlocksBelow returns the block with the highest slot below the input slot from the db.
-func (s *Store) HighestSlotBlocksBelow(ctx context.Context, slot types.Slot) ([]interfaces.SignedBeaconBlock, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.HighestSlotBlocksBelow")
+func (s *Store) HighestRootsBelowSlot(ctx context.Context, slot types.Slot) (fs types.Slot, roots [][32]byte, err error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.HighestRootsBelowSlot")
 	defer span.End()
 
-	var root [32]byte
 	sk := bytesutil.Uint64ToBytesBigEndian(uint64(slot))
-	err := s.db.View(func(tx *bolt.Tx) error {
+	err = s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blockSlotIndicesBucket)
 		c := bkt.Cursor()
 		// The documentation for Seek says:
@@ -430,34 +429,28 @@ func (s *Store) HighestSlotBlocksBelow(ctx context.Context, slot types.Slot) ([]
 			if r == nil {
 				continue
 			}
-			bs := bytesutil.BytesToSlotBigEndian(sl)
+			fs := bytesutil.BytesToSlotBigEndian(sl)
 			// Iterating through the index using .Prev will move from higher to lower, so the first key we find behind
 			// the requested slot must be the highest block below that slot.
-			if slot > bs {
-				root = bytesutil.ToBytes32(r)
+			if slot > fs {
+				roots, err = splitRoots(r)
+				if err != nil {
+					return errors.Wrapf(err, "error parsing packed roots %#x", r)
+				}
 				break
 			}
 		}
 		return nil
 	})
 	if err != nil {
-		return nil, err
+		return 0, nil, err
+	}
+	if len(roots) == 0 || (len(roots) == 1 && roots[0] == params.BeaconConfig().ZeroHash) {
+		gr, err := s.GenesisBlockRoot(ctx)
+		return 0, [][32]byte{gr}, err
 	}
 
-	var blk interfaces.SignedBeaconBlock
-	if root != params.BeaconConfig().ZeroHash {
-		blk, err = s.Block(ctx, root)
-		if err != nil {
-			return nil, err
-		}
-	}
-	if blk == nil || blk.IsNil() {
-		blk, err = s.GenesisBlock(ctx)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return []interfaces.SignedBeaconBlock{blk}, nil
+	return fs, roots, nil
 }
 
 // FeeRecipientByValidatorID returns the fee recipient for a validator id.

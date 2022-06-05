@@ -517,18 +517,32 @@ func TestStore_SaveBlock_CanGetHighestAt(t *testing.T) {
 			require.NoError(t, db.SaveBlock(ctx, block2))
 			require.NoError(t, db.SaveBlock(ctx, block3))
 
-			highestAt, err := db.HighestSlotBlocksBelow(ctx, 2)
+			_, roots, err := db.HighestRootsBelowSlot(ctx, 2)
 			require.NoError(t, err)
-			assert.Equal(t, false, len(highestAt) <= 0, "Got empty highest at slice")
-			assert.Equal(t, true, proto.Equal(block1.Proto(), highestAt[0].Proto()), "Wanted: %v, received: %v", block1, highestAt[0])
-			highestAt, err = db.HighestSlotBlocksBelow(ctx, 11)
+			assert.Equal(t, false, len(roots) <= 0, "Got empty highest at slice")
+			require.Equal(t, 1, len(roots))
+			root := roots[0]
+			b, err := db.Block(ctx, root)
 			require.NoError(t, err)
-			assert.Equal(t, false, len(highestAt) <= 0, "Got empty highest at slice")
-			assert.Equal(t, true, proto.Equal(block2.Proto(), highestAt[0].Proto()), "Wanted: %v, received: %v", block2, highestAt[0])
-			highestAt, err = db.HighestSlotBlocksBelow(ctx, 101)
+			assert.Equal(t, true, proto.Equal(block1.Proto(), b.Proto()), "Wanted: %v, received: %v", block1, b)
+
+			_, roots, err = db.HighestRootsBelowSlot(ctx, 11)
 			require.NoError(t, err)
-			assert.Equal(t, false, len(highestAt) <= 0, "Got empty highest at slice")
-			assert.Equal(t, true, proto.Equal(block3.Proto(), highestAt[0].Proto()), "Wanted: %v, received: %v", block3, highestAt[0])
+			assert.Equal(t, false, len(roots) <= 0, "Got empty highest at slice")
+			require.Equal(t, 1, len(roots))
+			root = roots[0]
+			b, err = db.Block(ctx, root)
+			require.NoError(t, err)
+			assert.Equal(t, true, proto.Equal(block2.Proto(), b.Proto()), "Wanted: %v, received: %v", block2, b)
+
+			_, roots, err = db.HighestRootsBelowSlot(ctx, 101)
+			require.NoError(t, err)
+			assert.Equal(t, false, len(roots) <= 0, "Got empty highest at slice")
+			require.Equal(t, 1, len(roots))
+			root = roots[0]
+			b, err = db.Block(ctx, root)
+			require.NoError(t, err)
+			assert.Equal(t, true, proto.Equal(block3.Proto(), b.Proto()), "Wanted: %v, received: %v", block3, b)
 		})
 	}
 }
@@ -549,15 +563,29 @@ func TestStore_GenesisBlock_CanGetHighestAt(t *testing.T) {
 			require.NoError(t, err)
 			require.NoError(t, db.SaveBlock(ctx, block1))
 
-			highestAt, err := db.HighestSlotBlocksBelow(ctx, 2)
+			_, roots, err := db.HighestRootsBelowSlot(ctx, 2)
 			require.NoError(t, err)
-			assert.Equal(t, true, proto.Equal(block1.Proto(), highestAt[0].Proto()), "Wanted: %v, received: %v", block1, highestAt[0])
-			highestAt, err = db.HighestSlotBlocksBelow(ctx, 1)
+			require.Equal(t, 1, len(roots))
+			root := roots[0]
+			b, err := db.Block(ctx, root)
 			require.NoError(t, err)
-			assert.Equal(t, true, proto.Equal(genesisBlock.Proto(), highestAt[0].Proto()), "Wanted: %v, received: %v", genesisBlock, highestAt[0])
-			highestAt, err = db.HighestSlotBlocksBelow(ctx, 0)
+			assert.Equal(t, true, proto.Equal(block1.Proto(), b.Proto()), "Wanted: %v, received: %v", block1, b)
+
+			_, roots, err = db.HighestRootsBelowSlot(ctx, 1)
 			require.NoError(t, err)
-			assert.Equal(t, true, proto.Equal(genesisBlock.Proto(), highestAt[0].Proto()), "Wanted: %v, received: %v", genesisBlock, highestAt[0])
+			require.Equal(t, 1, len(roots))
+			root = roots[0]
+			b, err = db.Block(ctx, root)
+			require.NoError(t, err)
+			assert.Equal(t, true, proto.Equal(genesisBlock.Proto(), b.Proto()), "Wanted: %v, received: %v", genesisBlock, b)
+
+			_, roots, err = db.HighestRootsBelowSlot(ctx, 0)
+			require.NoError(t, err)
+			require.Equal(t, 1, len(roots))
+			root = roots[0]
+			b, err = db.Block(ctx, root)
+			require.NoError(t, err)
+			assert.Equal(t, true, proto.Equal(genesisBlock.Proto(), b.Proto()), "Wanted: %v, received: %v", genesisBlock, b)
 		})
 	}
 }
