@@ -282,7 +282,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 		}
 		fRoot := bytesutil.ToBytes32(postState.FinalizedCheckpoint().Root)
 		if err := s.cfg.ForkChoiceStore.Prune(ctx, fRoot); err != nil {
-			return errors.Wrap(err, "could not prune proto array fork choice nodes")
+			return errors.Wrap(err, "could not prune fork choice nodes")
 		}
 		isOptimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(fRoot)
 		if err != nil {
@@ -365,6 +365,11 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 		return fmt.Errorf("nil pre state for slot %d", b.Slot())
 	}
 
+	// Fill in missing blocks
+	if err := s.fillInForkChoiceMissingBlocks(ctx, blks[0].Block(), preState.CurrentJustifiedCheckpoint(), preState.FinalizedCheckpoint()); err != nil {
+		return errors.Wrap(err, "could not fill in missing blocks to forkchoice")
+	}
+
 	jCheckpoints := make([]*ethpb.Checkpoint, len(blks))
 	fCheckpoints := make([]*ethpb.Checkpoint, len(blks))
 	sigSet := &bls.SignatureBatch{
@@ -419,9 +424,11 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 		return errors.New("batch block signature verification failed")
 	}
 
-	// blocks have been verified, add them to forkchoice and call the engine
+	// blocks have been verified, save them and call the engine
+	pendingNodes := make([]*forkchoicetypes.BlockAndCheckpoints, len(blks))
+	var isValidPayload bool
 	for i, b := range blks {
-		isValidPayload, err := s.notifyNewPayload(ctx,
+		isValidPayload, err = s.notifyNewPayload(ctx,
 			postVersionAndHeaders[i].version,
 			postVersionAndHeaders[i].header, b)
 		if err != nil {
@@ -433,19 +440,34 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 				return err
 			}
 		}
-
-		if err := s.insertBlockToForkChoiceStore(ctx, b.Block(), blockRoots[i], fCheckpoints[i], jCheckpoints[i]); err != nil {
-			return err
-		}
-		if isValidPayload {
-			if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, blockRoots[i]); err != nil {
-				return errors.Wrap(err, "could not set optimistic block to valid")
-			}
-		}
+		args := &forkchoicetypes.BlockAndCheckpoints{Block: b.Block(),
+			JustifiedEpoch: jCheckpoints[i].Epoch,
+			FinalizedEpoch: fCheckpoints[i].Epoch}
+		pendingNodes[len(blks)-i-1] = args
 		s.saveInitSyncBlock(blockRoots[i], b)
 		if err = s.handleBlockAfterBatchVerify(ctx, b, blockRoots[i], fCheckpoints[i], jCheckpoints[i]); err != nil {
 			tracing.AnnotateError(span, err)
 			return err
+		}
+	}
+	// Insert all nodes but the last one to forkchoice
+	if err := s.cfg.ForkChoiceStore.InsertOptimisticChain(ctx, pendingNodes); err != nil {
+		return errors.Wrap(err, "could not insert batch to forkchoice")
+	}
+	// Insert the last block to forkchoice
+	lastBR := blockRoots[len(blks)-1]
+	if err := s.cfg.ForkChoiceStore.InsertNode(ctx, preState, lastBR); err != nil {
+		return errors.Wrap(err, "could not insert last block in batch to forkchoice")
+	}
+	// Prune forkchoice store
+	if err := s.cfg.ForkChoiceStore.Prune(ctx, s.ensureRootNotZeros(bytesutil.ToBytes32(fCheckpoints[len(blks)-1].Root))); err != nil {
+		return errors.Wrap(err, "could not prune fork choice nodes")
+	}
+
+	// Set their optimistic status
+	if isValidPayload {
+		if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, lastBR); err != nil {
+			return errors.Wrap(err, "could not set optimistic block to valid")
 		}
 	}
 
@@ -456,7 +478,6 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 	}
 	// Also saves the last post state which to be used as pre state for the next batch.
 	lastB := blks[len(blks)-1]
-	lastBR := blockRoots[len(blockRoots)-1]
 	if err := s.cfg.StateGen.SaveState(ctx, lastBR, preState); err != nil {
 		return err
 	}
@@ -522,9 +543,6 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed interf
 		if err := s.cfg.ForkChoiceStore.UpdateFinalizedCheckpoint(fCheckpoint); err != nil {
 			return err
 		}
-		if err := s.cfg.ForkChoiceStore.Prune(ctx, bytesutil.ToBytes32(fCheckpoint.Root)); err != nil {
-			return errors.Wrap(err, "could not prune proto array fork choice nodes")
-		}
 	}
 	return nil
 }
@@ -576,14 +594,13 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState state.Beaco
 
 // This feeds in the block and block's attestations to fork choice store. It's allows fork choice store
 // to gain information on the most current chain.
-func (s *Service) insertBlockAndAttestationsToForkChoiceStore(ctx context.Context, blk interfaces.BeaconBlock, root [32]byte,
-	st state.BeaconState) error {
+func (s *Service) insertBlockAndAttestationsToForkChoiceStore(ctx context.Context, blk interfaces.BeaconBlock, root [32]byte, st state.BeaconState) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.insertBlockAndAttestationsToForkChoiceStore")
 	defer span.End()
 
 	fCheckpoint := st.FinalizedCheckpoint()
 	jCheckpoint := st.CurrentJustifiedCheckpoint()
-	if err := s.insertBlockToForkChoiceStore(ctx, blk, root, fCheckpoint, jCheckpoint); err != nil {
+	if err := s.insertBlockToForkChoiceStore(ctx, blk, root, st, fCheckpoint, jCheckpoint); err != nil {
 		return err
 	}
 	// Feed in block's attestations to fork choice store.
@@ -601,21 +618,11 @@ func (s *Service) insertBlockAndAttestationsToForkChoiceStore(ctx context.Contex
 	return nil
 }
 
-func (s *Service) insertBlockToForkChoiceStore(ctx context.Context, blk interfaces.BeaconBlock,
-	root [32]byte, fCheckpoint, jCheckpoint *ethpb.Checkpoint) error {
+func (s *Service) insertBlockToForkChoiceStore(ctx context.Context, blk interfaces.BeaconBlock, root [32]byte, st state.BeaconState, fCheckpoint, jCheckpoint *ethpb.Checkpoint) error {
 	if err := s.fillInForkChoiceMissingBlocks(ctx, blk, fCheckpoint, jCheckpoint); err != nil {
 		return err
 	}
-	// Feed in block to fork choice store.
-
-	payloadHash, err := blocks.GetBlockPayloadHash(blk)
-	if err != nil {
-		return err
-	}
-	return s.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx,
-		blk.Slot(), root, bytesutil.ToBytes32(blk.ParentRoot()), payloadHash,
-		jCheckpoint.Epoch,
-		fCheckpoint.Epoch)
+	return s.cfg.ForkChoiceStore.InsertNode(ctx, st, root)
 }
 
 // Inserts attester slashing indices to fork choice store.

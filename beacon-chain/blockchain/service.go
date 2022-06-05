@@ -15,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/store"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -41,7 +40,6 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"github.com/prysmaticlabs/prysm/time/slots"
-	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -215,17 +213,11 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 		forkChoicer = protoarray.New(justified.Epoch, finalized.Epoch)
 	}
 	s.cfg.ForkChoiceStore = forkChoicer
-	fb, err := s.getBlock(s.ctx, s.ensureRootNotZeros(fRoot))
+	st, err := s.cfg.StateGen.StateByRoot(s.ctx, fRoot)
 	if err != nil {
-		return errors.Wrap(err, "could not get finalized checkpoint block")
+		return errors.Wrap(err, "could not get finalized checkpoint state")
 	}
-	payloadHash, err := blocks.GetBlockPayloadHash(fb.Block())
-	if err != nil {
-		return errors.Wrap(err, "could not get execution payload hash")
-	}
-	fSlot := fb.Block().Slot()
-	if err := forkChoicer.InsertOptimisticBlock(s.ctx, fSlot, fRoot, params.BeaconConfig().ZeroHash,
-		payloadHash, justified.Epoch, finalized.Epoch); err != nil {
+	if err := forkChoicer.InsertNode(s.ctx, st, fRoot); err != nil {
 		return errors.Wrap(err, "could not insert finalized block to forkchoice")
 	}
 
@@ -238,19 +230,6 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 			return errors.Wrap(err, "could not set finalized block as validated")
 		}
 	}
-	s.headLock.RLock()
-	h := s.headBlock().Block()
-	s.headLock.RUnlock()
-	if h.Slot() > fSlot {
-		log.WithFields(logrus.Fields{
-			"startSlot": fSlot,
-			"endSlot":   h.Slot(),
-		}).Info("Loading blocks to fork choice store, this may take a while.")
-		if err := s.fillInForkChoiceMissingBlocks(s.ctx, h, finalized, justified); err != nil {
-			return errors.Wrap(err, "could not fill in fork choice store missing blocks")
-		}
-	}
-
 	// not attempting to save initial sync blocks here, because there shouldn't be any until
 	// after the statefeed.Initialized event is fired (below)
 	if err := s.wsVerifier.VerifyWeakSubjectivity(s.ctx, finalized.Epoch); err != nil {
@@ -486,17 +465,7 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState state.Beacon
 	genesisCheckpoint := genesisState.FinalizedCheckpoint()
 	s.store = store.New(genesisCheckpoint, genesisCheckpoint)
 
-	payloadHash, err := blocks.GetBlockPayloadHash(genesisBlk.Block())
-	if err != nil {
-		return err
-	}
-	if err := s.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx,
-		genesisBlk.Block().Slot(),
-		genesisBlkRoot,
-		params.BeaconConfig().ZeroHash,
-		payloadHash,
-		genesisCheckpoint.Epoch,
-		genesisCheckpoint.Epoch); err != nil {
+	if err := s.cfg.ForkChoiceStore.InsertNode(ctx, genesisState, genesisBlkRoot); err != nil {
 		log.Fatalf("Could not process genesis block for fork choice: %v", err)
 	}
 	if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, genesisBlkRoot); err != nil {
