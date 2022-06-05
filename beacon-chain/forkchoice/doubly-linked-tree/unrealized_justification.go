@@ -1,6 +1,9 @@
 package doublylinkedtree
 
-import types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+import (
+	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+)
 
 func (s *Store) setUnrealizedJustifiedEpoch(root [32]byte, epoch types.Epoch) error {
 	s.nodesLock.Lock()
@@ -8,7 +11,7 @@ func (s *Store) setUnrealizedJustifiedEpoch(root [32]byte, epoch types.Epoch) er
 
 	node, ok := s.nodeByRoot[root]
 	if !ok || node == nil {
-		return ErrNilNode
+		return errors.Wrap(ErrNilNode, "could not set unrealized justified epoch")
 	}
 	if epoch < node.unrealizedJustifiedEpoch {
 		return errInvalidUnrealizedJustifiedEpoch
@@ -23,7 +26,7 @@ func (s *Store) setUnrealizedFinalizedEpoch(root [32]byte, epoch types.Epoch) er
 
 	node, ok := s.nodeByRoot[root]
 	if !ok || node == nil {
-		return ErrNilNode
+		return errors.Wrap(ErrNilNode, "could not set unrealized finalized epoch")
 	}
 	if epoch < node.unrealizedFinalizedEpoch {
 		return errInvalidUnrealizedFinalizedEpoch

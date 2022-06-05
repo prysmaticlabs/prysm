@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "domain.go",
+        "signature.go",
         "signing_root.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/signing",
@@ -24,6 +25,7 @@ go_test(
     name = "go_default_test",
     srcs = [
         "domain_test.go",
+        "signature_test.go",
         "signing_root_test.go",
     ],
     embed = [":go_default_library"],
@@ -40,6 +42,7 @@ go_test(
         "//testing/assert:go_default_library",
         "//testing/require:go_default_library",
         "//testing/util:go_default_library",
+        "//time/slots:go_default_library",
         "@com_github_google_gofuzz//:go_default_library",
     ],
 )
