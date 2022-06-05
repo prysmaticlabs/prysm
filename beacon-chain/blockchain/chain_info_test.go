@@ -358,7 +358,10 @@ func TestService_ChainHeads_ProtoArray(t *testing.T) {
 func TestService_ChainHeads_DoublyLinkedTree(t *testing.T) {
 	ctx := context.Background()
 	c := &Service{cfg: &config{ForkChoiceStore: doublylinkedtree.New(0, 0)}}
-	state, blkRoot, err := prepareForkchoiceState(ctx, 100, [32]byte{'a'}, [32]byte{}, params.BeaconConfig().ZeroHash, 0, 0)
+	state, blkRoot, err := prepareForkchoiceState(ctx, 0, [32]byte{}, [32]byte{}, params.BeaconConfig().ZeroHash, 0, 0)
+	require.NoError(t, err)
+	require.NoError(t, c.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 100, [32]byte{'a'}, [32]byte{}, params.BeaconConfig().ZeroHash, 0, 0)
 	require.NoError(t, err)
 	require.NoError(t, c.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
 	state, blkRoot, err = prepareForkchoiceState(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, params.BeaconConfig().ZeroHash, 0, 0)
