@@ -350,12 +350,7 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk interfa
 	fCheckpoint, jCheckpoint *ethpb.Checkpoint) error {
 	pendingNodes := make([]*forkchoicetypes.BlockAndCheckpoints, 0)
 
-	// Fork choice only matters from last finalized slot.
-	finalized, err := s.store.FinalizedCheckpt()
-	if err != nil {
-		return err
-	}
-	fSlot, err := slots.EpochStart(finalized.Epoch)
+	fSlot, err := slots.EpochStart(fCheckpoint.Epoch)
 	if err != nil {
 		return err
 	}
@@ -380,7 +375,7 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk interfa
 	if len(pendingNodes) == 1 {
 		return nil
 	}
-	if root != s.ensureRootNotZeros(bytesutil.ToBytes32(finalized.Root)) {
+	if root != s.ensureRootNotZeros(bytesutil.ToBytes32(fCheckpoint.Root)) {
 		return errNotDescendantOfFinalized
 	}
 	return s.cfg.ForkChoiceStore.InsertOptimisticChain(ctx, pendingNodes)
