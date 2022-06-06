@@ -435,6 +435,8 @@ func (f *ForkChoice) CommonAncestorRoot(ctx context.Context, r1 [32]byte, r2 [32
 		if n1.slot > n2.slot {
 			n1 = n1.parent
 			// Reaches the end of the tree and unable to find common ancestor.
+			// This should not happen at runtime as the finalized
+			// node has to be a common ancestor
 			if n1 == nil {
 				return [32]byte{}, forkchoice.ErrUnknownCommonAncestor
 			}

@@ -206,7 +206,7 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 	s.store = store.New(justified, finalized)
 
 	var forkChoicer f.ForkChoicer
-	fRoot := bytesutil.ToBytes32(finalized.Root)
+	fRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(finalized.Root))
 	if features.Get().EnableForkChoiceDoublyLinkedTree {
 		forkChoicer = doublylinkedtree.New(justified.Epoch, finalized.Epoch)
 	} else {
