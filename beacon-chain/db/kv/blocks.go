@@ -441,7 +441,7 @@ func (s *Store) HighestRootsBelowSlot(ctx context.Context, slot types.Slot) (fs 
 				if err != nil {
 					return errors.Wrapf(err, "error parsing packed roots %#x", r)
 				}
-				return err
+				return nil
 			}
 		}
 		return nil
