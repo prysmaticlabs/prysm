@@ -990,7 +990,7 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 		}
 	}
 	if failedRegistrationCount != 0 {
-		return errors.Errorf("Register validator requests failed %v times out of %v requests", failedRegistrationCount, len(registerValidatorRequests))
+		return errors.Errorf("Register validator requests failed %d times out of %d requests", failedRegistrationCount, len(registerValidatorRequests))
 	}
 	log.Infoln("Successfully submitted builder validator registration settings for custom builders.")
 	return nil
