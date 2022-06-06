@@ -460,8 +460,10 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 		return errors.Wrap(err, "could not insert last block in batch to forkchoice")
 	}
 	// Prune forkchoice store
-	if err := s.cfg.ForkChoiceStore.Prune(ctx, s.ensureRootNotZeros(bytesutil.ToBytes32(fCheckpoints[len(blks)-1].Root))); err != nil {
-		return errors.Wrap(err, "could not prune fork choice nodes")
+	if fCheckpoints[len(blks)-1].Epoch > s.cfg.ForkChoiceStore.FinalizedEpoch() {
+		if err := s.cfg.ForkChoiceStore.Prune(ctx, s.ensureRootNotZeros(bytesutil.ToBytes32(fCheckpoints[len(blks)-1].Root))); err != nil {
+			return errors.Wrap(err, "could not prune fork choice nodes")
+		}
 	}
 
 	// Set their optimistic status
