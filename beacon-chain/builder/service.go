@@ -109,9 +109,9 @@ func (s *Service) RegisterValidator(ctx context.Context, reg *ethpb.SignedValida
 		registerValidatorLatency.Observe(float64(time.Since(start).Milliseconds()))
 	}()
 
-	idx, ok := s.cfg.headFetcher.HeadPublicKeyToValidatorIndex(bytesutil.ToBytes48(reg.Message.Pubkey))
-	if !ok {
-		return errors.Errorf("could not find validator index for pubkey %#x", reg.Message.Pubkey)
+	idx, exists := s.cfg.headFetcher.HeadPublicKeyToValidatorIndex(bytesutil.ToBytes48(reg.Message.Pubkey))
+	if !exists {
+		return nil // If the pubkey is not found, it is not a validator. Do nothing.
 	}
 	if err := s.c.RegisterValidator(ctx, reg); err != nil {
 		return errors.Wrap(err, "could not register validator")
