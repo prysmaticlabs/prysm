@@ -111,7 +111,7 @@ func (m *MockBeaconNodeValidatorClient) GetBeaconBlock(arg0 context.Context, arg
 	return ret0, ret1
 }
 
-// GetBeaconBlock indicates an expected call of GetBeaconBlock.
+// GetBeaconBlock indicates an expected call of GetBeaconBlock
 func (mr *MockBeaconNodeValidatorClientMockRecorder) GetBeaconBlock(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
