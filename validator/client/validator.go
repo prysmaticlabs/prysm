@@ -980,12 +980,18 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 		return err
 	}
 	log.Infoln("Successfully prepared beacon proposer with fee recipient to validator index mapping.")
+	failedRegistrationPubkeys := make([]string, 0)
 	for _, request := range registerValidatorRequests {
 		// calls beacon API but used for custom builders
 		if err := SubmitValidatorRegistration(ctx, v.validatorClient, v.node, km.Sign, request); err != nil {
 			// log the error and keep going
-			log.Warnf("failed to register validator for custom builder for %s, error: %v ", hexutil.Encode(request.Pubkey), err)
+			hexKey := hexutil.Encode(request.Pubkey)
+			failedRegistrationPubkeys = append(failedRegistrationPubkeys, hexKey)
+			log.Warnf("failed to register validator for custom builder for %s, error: %v ", hexKey, err)
 		}
+	}
+	if len(failedRegistrationPubkeys) != 0 {
+		return errors.Errorf("Register Validator requests failed for the following publickeys: %v", failedRegistrationPubkeys)
 	}
 	log.Infoln("Successfully submitted builder validator registration settings for custom builders.")
 	return nil

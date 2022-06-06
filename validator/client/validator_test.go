@@ -1897,6 +1897,70 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 				return &v
 			},
 		},
+		{
+			name: "register validator batch failed ",
+			validatorSetter: func(t *testing.T) *validator {
+
+				v := validator{
+					validatorClient:        client,
+					node:                   nodeClient,
+					db:                     db,
+					pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
+					useWeb:                 false,
+					interopKeysConfig: &local.InteropKeymanagerConfig{
+						NumValidatorKeys: 1,
+						Offset:           1,
+					},
+				}
+				err := v.WaitForKeymanagerInitialization(ctx)
+				require.NoError(t, err)
+				config := make(map[[fieldparams.BLSPubkeyLength]byte]*validator_service_config.ProposerOption)
+				km, err := v.Keymanager()
+				require.NoError(t, err)
+				keys, err := km.FetchValidatingPublicKeys(ctx)
+				require.NoError(t, err)
+				client.EXPECT().ValidatorIndex(
+					gomock.Any(), // ctx
+					&ethpb.ValidatorIndexRequest{PublicKey: keys[0][:]},
+				).Return(&ethpb.ValidatorIndexResponse{
+					Index: 1,
+				}, nil)
+				client.EXPECT().PrepareBeaconProposer(gomock.Any(), &ethpb.PrepareBeaconProposerRequest{
+					Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
+						{FeeRecipient: common.HexToAddress("0x0").Bytes(), ValidatorIndex: 1},
+					},
+				}).Return(nil, nil)
+				config[keys[0]] = &validator_service_config.ProposerOption{
+					FeeRecipient: common.Address{},
+				}
+				v.ProposerSettings = &validator_service_config.ProposerSettings{
+					ProposeConfig: config,
+					DefaultConfig: &validator_service_config.ProposerOption{
+						FeeRecipient: common.HexToAddress(defaultFeeHex),
+					},
+				}
+				nodeClient.EXPECT().GetGenesis(
+					gomock.Any(),
+					&emptypb.Empty{},
+				).Return(
+					&ethpb.Genesis{GenesisTime: timestamppb.Now()}, nil)
+
+				client.EXPECT().DomainData(
+					gomock.Any(),
+					gomock.Any(),
+				).Return(
+					&ethpb.DomainResponse{
+						SignatureDomain: make([]byte, 32),
+					},
+					nil)
+				client.EXPECT().SubmitValidatorRegistration(
+					gomock.Any(),
+					gomock.Any(),
+				).Return(&empty.Empty{}, errors.New("request failed"))
+				return &v
+			},
+			err: "Register Validator requests failed",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
