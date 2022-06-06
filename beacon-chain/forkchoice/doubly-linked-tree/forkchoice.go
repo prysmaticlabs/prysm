@@ -8,11 +8,13 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -105,17 +107,38 @@ func (f *ForkChoice) ProcessAttestation(ctx context.Context, validatorIndices []
 	processedAttestationCount.Inc()
 }
 
-// InsertOptimisticBlock processes a new block by inserting it to the fork choice store.
-func (f *ForkChoice) InsertOptimisticBlock(
-	ctx context.Context,
-	slot types.Slot,
-	blockRoot, parentRoot, payloadHash [fieldparams.RootLength]byte,
-	justifiedEpoch, finalizedEpoch types.Epoch,
-) error {
-	ctx, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.InsertOptimisticBlock")
+// InsertNode processes a new block by inserting it to the fork choice store.
+func (f *ForkChoice) InsertNode(ctx context.Context, state state.ReadOnlyBeaconState, root [32]byte) error {
+	ctx, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.InsertNode")
 	defer span.End()
 
-	return f.store.insert(ctx, slot, blockRoot, parentRoot, payloadHash, justifiedEpoch, finalizedEpoch)
+	slot := state.Slot()
+	bh := state.LatestBlockHeader()
+	if bh == nil {
+		return errNilBlockHeader
+	}
+	parentRoot := bytesutil.ToBytes32(bh.ParentRoot)
+	payloadHash := [32]byte{}
+	if state.Version() >= version.Bellatrix {
+		ph, err := state.LatestExecutionPayloadHeader()
+		if err != nil {
+			return err
+		}
+		if ph != nil {
+			copy(payloadHash[:], ph.BlockHash)
+		}
+	}
+	jc := state.CurrentJustifiedCheckpoint()
+	if jc == nil {
+		return errInvalidNilCheckpoint
+	}
+	justifiedEpoch := jc.Epoch
+	fc := state.FinalizedCheckpoint()
+	if fc == nil {
+		return errInvalidNilCheckpoint
+	}
+	finalizedEpoch := fc.Epoch
+	return f.store.insert(ctx, slot, root, parentRoot, payloadHash, justifiedEpoch, finalizedEpoch)
 }
 
 // Prune prunes the fork choice store with the new finalized root. The store is only pruned if the input
@@ -177,7 +200,7 @@ func (f *ForkChoice) IsOptimistic(root [32]byte) (bool, error) {
 
 	node, ok := f.store.nodeByRoot[root]
 	if !ok || node == nil {
-		return false, ErrNilNode
+		return true, ErrNilNode
 	}
 
 	return node.optimistic, nil
@@ -193,7 +216,7 @@ func (f *ForkChoice) AncestorRoot(ctx context.Context, root [32]byte, slot types
 
 	node, ok := f.store.nodeByRoot[root]
 	if !ok || node == nil {
-		return nil, ErrNilNode
+		return nil, errors.Wrap(ErrNilNode, "could not determine ancestor root")
 	}
 
 	n := node
@@ -205,7 +228,7 @@ func (f *ForkChoice) AncestorRoot(ctx context.Context, root [32]byte, slot types
 	}
 
 	if n == nil {
-		return nil, ErrNilNode
+		return nil, errors.Wrap(ErrNilNode, "could not determine ancestor root")
 	}
 
 	return n.root[:], nil
@@ -244,7 +267,7 @@ func (f *ForkChoice) updateBalances(newBalances []uint64) error {
 			if ok && vote.nextRoot != params.BeaconConfig().ZeroHash {
 				// Protection against nil node
 				if nextNode == nil {
-					return ErrNilNode
+					return errors.Wrap(ErrNilNode, "could not update balances")
 				}
 				nextNode.balance += newBalance
 			}
@@ -253,7 +276,7 @@ func (f *ForkChoice) updateBalances(newBalances []uint64) error {
 			if ok && vote.currentRoot != params.BeaconConfig().ZeroHash {
 				// Protection against nil node
 				if currentNode == nil {
-					return ErrNilNode
+					return errors.Wrap(ErrNilNode, "could not update balances")
 				}
 				if currentNode.balance < oldBalance {
 					f.store.proposerBoostLock.RLock()
@@ -298,7 +321,7 @@ func (f *ForkChoice) SetOptimisticToValid(ctx context.Context, root [fieldparams
 	defer f.store.nodesLock.Unlock()
 	node, ok := f.store.nodeByRoot[root]
 	if !ok || node == nil {
-		return ErrNilNode
+		return errors.Wrap(ErrNilNode, "could not set node to valid")
 	}
 	return node.setNodeAndParentValidated(ctx)
 }
@@ -398,11 +421,11 @@ func (f *ForkChoice) CommonAncestorRoot(ctx context.Context, r1 [32]byte, r2 [32
 
 	n1, ok := f.store.nodeByRoot[r1]
 	if !ok || n1 == nil {
-		return [32]byte{}, ErrNilNode
+		return [32]byte{}, errors.Wrap(ErrNilNode, "could not determine common ancestor root")
 	}
 	n2, ok := f.store.nodeByRoot[r2]
 	if !ok || n2 == nil {
-		return [32]byte{}, ErrNilNode
+		return [32]byte{}, errors.Wrap(ErrNilNode, "could not determine common ancestor root")
 	}
 
 	for {
@@ -429,8 +452,9 @@ func (f *ForkChoice) CommonAncestorRoot(ctx context.Context, r1 [32]byte, r2 [32
 }
 
 // InsertOptimisticChain inserts all nodes corresponding to blocks in the slice
-// `blocks`. This slice must be ordered from parent to child. It includes all
-// blocks **except** the first one. All blocks are assumed to be a strict chain
+// `blocks`. This slice must be ordered from child to parent. It includes all
+// blocks **except** the first one (that is the one with the highest slot
+// number). All blocks are assumed to be a strict chain
 // where blocks[i].Parent = blocks[i+1]. Also we assume that the parent of the
 // last block in this list is already included in forkchoice store.
 func (f *ForkChoice) InsertOptimisticChain(ctx context.Context, chain []*forkchoicetypes.BlockAndCheckpoints) error {
