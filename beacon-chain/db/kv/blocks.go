@@ -398,7 +398,11 @@ func (s *Store) SaveBackfillBlockRoot(ctx context.Context, blockRoot [32]byte) e
 	})
 }
 
-// HighestSlotBlocksBelow returns the block with the highest slot below the input slot from the db.
+// HighestRootsBelowSlot returns roots from the database slot index from the highest slot below the input slot.
+// The slot value at the beginning of the return list is the slot where the roots were found. This is helpful so that
+// calling code can make decisions based on the slot without resolving the blocks to discover their slot (for instance
+// checking which root is canonical in fork choice, which operates purely on roots,
+// then if no canonical block is found, continuing to search through lower slots).
 func (s *Store) HighestRootsBelowSlot(ctx context.Context, slot types.Slot) (fs types.Slot, roots [][32]byte, err error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HighestRootsBelowSlot")
 	defer span.End()
