@@ -16,7 +16,7 @@ func (f *ForkChoice) IsOptimistic(root [32]byte) (bool, error) {
 	defer f.store.nodesLock.RUnlock()
 	index, ok := f.store.nodesIndices[root]
 	if !ok {
-		return false, ErrUnknownNodeRoot
+		return true, ErrUnknownNodeRoot
 	}
 	node := f.store.nodes[index]
 	return node.status == syncing, nil

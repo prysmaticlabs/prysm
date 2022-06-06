@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/golang/snappy"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
@@ -19,6 +20,10 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/spectest/utils"
 	"github.com/prysmaticlabs/prysm/testing/util"
 )
+
+func init() {
+	transition.SkipSlotCache.Disable()
+}
 
 // Run executes "forkchoice" test.
 func Run(t *testing.T, config string, fork int) {
@@ -89,6 +94,15 @@ func Run(t *testing.T, config string, fork int) {
 						} else {
 							builder.ValidBlock(t, beaconBlock)
 						}
+					}
+					if step.AttesterSlashing != nil {
+						slashingFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), fmt.Sprint(*step.AttesterSlashing, ".ssz_snappy"))
+						require.NoError(t, err)
+						slashingSSZ, err := snappy.Decode(nil /* dst */, slashingFile)
+						require.NoError(t, err)
+						slashing := &ethpb.AttesterSlashing{}
+						require.NoError(t, slashing.UnmarshalSSZ(slashingSSZ), "Failed to unmarshal")
+						builder.AttesterSlashing(slashing)
 					}
 					if step.Attestation != nil {
 						attFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), fmt.Sprint(*step.Attestation, ".ssz_snappy"))

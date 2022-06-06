@@ -113,7 +113,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	SafeSlotsToUpdateJustified:       8,
 
 	// Fork choice algorithm constants.
-	ProposerScoreBoost: 70,
+	ProposerScoreBoost: 40,
 	IntervalsPerSlot:   3,
 
 	// Ethereum PoW parameters.
@@ -155,16 +155,18 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	MaxVoluntaryExits:    16,
 
 	// BLS domain values.
-	DomainBeaconProposer:              bytesutil.ToBytes4(bytesutil.Bytes4(0)),
-	DomainBeaconAttester:              bytesutil.ToBytes4(bytesutil.Bytes4(1)),
-	DomainRandao:                      bytesutil.ToBytes4(bytesutil.Bytes4(2)),
-	DomainDeposit:                     bytesutil.ToBytes4(bytesutil.Bytes4(3)),
-	DomainVoluntaryExit:               bytesutil.ToBytes4(bytesutil.Bytes4(4)),
-	DomainSelectionProof:              bytesutil.ToBytes4(bytesutil.Bytes4(5)),
-	DomainAggregateAndProof:           bytesutil.ToBytes4(bytesutil.Bytes4(6)),
-	DomainSyncCommittee:               bytesutil.ToBytes4(bytesutil.Bytes4(7)),
-	DomainSyncCommitteeSelectionProof: bytesutil.ToBytes4(bytesutil.Bytes4(8)),
-	DomainContributionAndProof:        bytesutil.ToBytes4(bytesutil.Bytes4(9)),
+	DomainBeaconProposer:              bytesutil.Uint32ToBytes4(0x00000000),
+	DomainBeaconAttester:              bytesutil.Uint32ToBytes4(0x01000000),
+	DomainRandao:                      bytesutil.Uint32ToBytes4(0x02000000),
+	DomainDeposit:                     bytesutil.Uint32ToBytes4(0x03000000),
+	DomainVoluntaryExit:               bytesutil.Uint32ToBytes4(0x04000000),
+	DomainSelectionProof:              bytesutil.Uint32ToBytes4(0x05000000),
+	DomainAggregateAndProof:           bytesutil.Uint32ToBytes4(0x06000000),
+	DomainSyncCommittee:               bytesutil.Uint32ToBytes4(0x07000000),
+	DomainSyncCommitteeSelectionProof: bytesutil.Uint32ToBytes4(0x08000000),
+	DomainContributionAndProof:        bytesutil.Uint32ToBytes4(0x09000000),
+	DomainApplicationMask:             bytesutil.Uint32ToBytes4(0x00000001),
+	DomainApplicationBuilder:          bytesutil.Uint32ToBytes4(0x00000001),
 
 	// Prysm constants.
 	GweiPerEth:                     1000000000,
@@ -200,7 +202,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	AltairForkEpoch:      mainnetAltairForkEpoch,
 	BellatrixForkVersion: []byte{2, 0, 0, 0},
 	BellatrixForkEpoch:   mainnetBellatrixForkEpoch,
-	ShardingForkVersion:  []byte{3, 0, 0, 0},
+	ShardingForkVersion:  []byte{4, 0, 0, 0},
 	ShardingForkEpoch:    math.MaxUint64,
 
 	// New values introduced in Altair hard fork 1.
@@ -242,6 +244,8 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	TerminalBlockHashActivationEpoch: 18446744073709551615,
 	TerminalBlockHash:                [32]byte{},
 	TerminalTotalDifficulty:          "115792089237316195423570985008687907853269984665640564039457584007913129638912",
+	EthBurnAddressHex:                "0x0000000000000000000000000000000000000000",
+	DefaultBuilderGasLimit:           uint64(30000000),
 }
 
 // MainnetTestConfig provides a version of the mainnet config that has a different name

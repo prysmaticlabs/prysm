@@ -4,6 +4,7 @@ import (
 	"context"
 
 	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -29,14 +30,8 @@ type HeadRetriever interface {
 
 // BlockProcessor processes the block that's used for accounting fork choice.
 type BlockProcessor interface {
-	InsertOptimisticBlock(ctx context.Context,
-		slot types.Slot,
-		root [32]byte,
-		parentRoot [32]byte,
-		payloadHash [32]byte,
-		justifiedEpoch types.Epoch,
-		finalizedEpoch types.Epoch,
-	) error
+	InsertNode(context.Context, state.ReadOnlyBeaconState, [32]byte) error
+	InsertOptimisticChain(context.Context, []*forkchoicetypes.BlockAndCheckpoints) error
 }
 
 // AttestationProcessor processes the attestation that's used for accounting fork choice.
@@ -62,6 +57,7 @@ type Getter interface {
 	ProposerBoost() [fieldparams.RootLength]byte
 	HasParent(root [32]byte) bool
 	AncestorRoot(ctx context.Context, root [32]byte, slot types.Slot) ([]byte, error)
+	CommonAncestorRoot(ctx context.Context, root1 [32]byte, root2 [32]byte) ([32]byte, error)
 	IsCanonical(root [32]byte) bool
 	FinalizedEpoch() types.Epoch
 	JustifiedEpoch() types.Epoch
