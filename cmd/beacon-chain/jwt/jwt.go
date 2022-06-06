@@ -2,7 +2,6 @@ package jwt
 
 import (
 	"errors"
-	"fmt"
 	"path/filepath"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -47,13 +46,6 @@ func generateAuthSecretInFile(c *cli.Context) error {
 		if err := file.MkdirAll(fileDir); err != nil {
 			return err
 		}
-	}
-	isValidPath, err := file.IsValidFilePath(fileName)
-	if err != nil {
-		return err
-	}
-	if !isValidPath {
-		return fmt.Errorf("%s is not a valid file path", fileName)
 	}
 	secret, err := generateRandomHexString()
 	if err != nil {

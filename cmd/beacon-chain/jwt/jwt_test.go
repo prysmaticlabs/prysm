@@ -18,30 +18,12 @@ func Test_generateJWTSecret(t *testing.T) {
 		generateJwtCommand := Commands
 		require.Equal(t, true, generateJwtCommand.Name == "generate-auth-secret")
 	})
-	// We're getting this from buildkite -> Successfully wrote JSON-RPC authentication secret to file /adj@&  9a.\""
-	// this test feels like premature optimization, not confident that we should block on this
-	//t.Run("junk file path fails", func(t *testing.T) {
-	//	junk := "/adj$7@&  9a.\""
-	//	app := cli.App{}
-	//	set := flag.NewFlagSet("test", 0)
-	//	set.String(cmd.JwtOutputFileFlag.Name, junk, "")
-	//	require.NoError(t, set.Set(cmd.JwtOutputFileFlag.Name, junk))
-	//
-	//	cliCtx := cli.NewContext(&app, set, nil)
-	//	err := generateAuthSecretInFile(cliCtx)
-	//	// An error should return
-	//	require.ErrorContains(t, "is not a valid file path", err)
-	//	// when feeding junk, the call to os.Stat should fail
-	//	_, err = os.Stat(junk)
-	//	require.Equal(t, true, err != nil)
-	//})
 	t.Run("should create proper file in current directory", func(t *testing.T) {
 		require.NoError(t, os.RemoveAll(secretFileName))
 		t.Cleanup(func() {
 			require.NoError(t, os.RemoveAll(secretFileName))
 		})
 		app := cli.App{}
-		// TODO: improve the developer experience of this NewFlagSet call, the intent of this isn't clear to me, and it might not be clear to others...
 		set := flag.NewFlagSet("test", 0)
 		cliCtx := cli.NewContext(&app, set, nil)
 		err := generateAuthSecretInFile(cliCtx)

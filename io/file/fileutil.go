@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/user"
 	"path"
@@ -17,24 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	log "github.com/sirupsen/logrus"
 )
-
-// IsValidFilePath checks if a provided file path is valid in the OS.
-func IsValidFilePath(fp string) (bool, error) {
-	// Check if file already exists
-	if _, err := os.Stat(fp); err == nil {
-		return true, nil
-	}
-	// Attempt to create it
-	var d []byte
-	if err := ioutil.WriteFile(fp, d, params.BeaconIoConfig().ReadWritePermissions); err == nil {
-		// and delete it.
-		if err := os.Remove(fp); err != nil {
-			return false, err
-		}
-		return true, nil
-	}
-	return false, nil
-}
 
 // ExpandPath given a string which may be a relative path.
 // 1. replace tilde with users home dir
