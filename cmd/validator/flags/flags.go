@@ -340,7 +340,7 @@ var (
 	// SuggestedFeeRecipientFlag defines the address of the fee recipient.
 	SuggestedFeeRecipientFlag = &cli.StringFlag{
 		Name:  "suggested-fee-recipient",
-		Usage: "Sets ALL validators' mapping to a suggested an eth address to receive gas fees when proposing a block. Overrides the --fee-recipient-config-file flag if set",
+		Usage: "Sets ALL validators' mapping to a suggested an eth address to receive gas fees when proposing a block. This is a fall back setting and will be overridden by other flags that update the proposer settings. ",
 		Value: field_params.EthBurnAddressHex,
 	}
 )
