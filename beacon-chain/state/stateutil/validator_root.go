@@ -4,10 +4,12 @@ import (
 	"encoding/binary"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/types"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
+	pmath "github.com/prysmaticlabs/prysm/math"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -64,13 +66,7 @@ func ValidatorFieldRoots(hasher ssz.HashFn, validator *ethpb.Validator) ([][32]b
 // a list of uint64 and mixed with registry limit.
 func Uint64ListRootWithRegistryLimit(balances []uint64) ([32]byte, error) {
 	hasher := hash.CustomSHA256Hasher()
-	balancesMarshaling := make([][]byte, 0, len(balances))
-	for i := 0; i < len(balances); i++ {
-		balanceBuf := make([]byte, 8)
-		binary.LittleEndian.PutUint64(balanceBuf, balances[i])
-		balancesMarshaling = append(balancesMarshaling, balanceBuf)
-	}
-	balancesChunks, err := ssz.PackByChunk(balancesMarshaling)
+	balancesChunks, err := PackUint64IntoChunks(balances)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not pack balances into chunks")
 	}
@@ -86,4 +82,41 @@ func Uint64ListRootWithRegistryLimit(balances []uint64) ([32]byte, error) {
 	balancesLengthRoot := make([]byte, 32)
 	binary.LittleEndian.PutUint64(balancesLengthRoot, uint64(len(balances)))
 	return ssz.MixInLength(balancesRootsRoot, balancesLengthRoot), nil
+}
+
+// PackUint64IntoChunks packs a list of uint64 values into 32 byte roots.
+func PackUint64IntoChunks(vals []uint64) ([][32]byte, error) {
+	// Initialize how many uint64 values we can pack
+	// into a single chunk(32 bytes).
+	numOfElems, err := types.Balances.ElemsInChunk()
+	if err != nil {
+		return nil, err
+	}
+	iNumOfElems, err := pmath.Int(numOfElems)
+	if err != nil {
+		return nil, err
+	}
+	// Determine total number of chunks to be
+	// allocated to provided list of unsigned
+	// 64-bit integers.
+	numOfChunks := len(vals) / iNumOfElems
+	if len(vals)%iNumOfElems != 0 {
+		numOfChunks++
+	}
+	balanceChunks := make([][32]byte, numOfChunks)
+	for idx, b := range vals {
+		// In order to determine how to pack in the uint64 value by index into
+		// our balance chunk list we need to determine a few things.
+		// 1) The chunk which the particular uint64 value corresponds to.
+		// 2) The position of the value in the chunk itself.
+		//
+		// Once we have determined these 2 values we can simply find the correct
+		// section of contiguous bytes to insert the value in the chunk.
+		chunkIdx := idx / iNumOfElems
+		idxInChunk := idx % iNumOfElems
+		sizeOfElem := 32 / iNumOfElems
+		chunkPos := idxInChunk * sizeOfElem
+		binary.LittleEndian.PutUint64(balanceChunks[chunkIdx][chunkPos:chunkPos+sizeOfElem], b)
+	}
+	return balanceChunks, nil
 }
