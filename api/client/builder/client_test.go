@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -98,7 +98,7 @@ func TestClient_RegisterValidator(t *testing.T) {
 	}
 	reg := &eth.SignedValidatorRegistrationV1{
 		Message: &eth.ValidatorRegistrationV1{
-			FeeRecipient: ezDecode(t, fieldparams.EthBurnAddressHex),
+			FeeRecipient: ezDecode(t, params.BeaconConfig().EthBurnAddressHex),
 			GasLimit:     23,
 			Timestamp:    42,
 			Pubkey:       ezDecode(t, "0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a"),
