@@ -481,15 +481,17 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 	if cliCtx.IsSet(flags.ProposerSettingsFlag.Name) && cliCtx.IsSet(flags.ProposerSettingsURLFlag.Name) {
 		return nil, errors.New("cannot specify both " + flags.ProposerSettingsFlag.Name + " and " + flags.ProposerSettingsURLFlag.Name)
 	}
-  
-  // is overridden by file and URL flags
+
+	// is overridden by file and URL flags
 	if cliCtx.IsSet(flags.SuggestedFeeRecipientFlag.Name) {
 		suggestedFee := cliCtx.String(flags.SuggestedFeeRecipientFlag.Name)
-		fileConfig = &validatorServiceConfig.FeeRecipientFileConfig{
+		fileConfig = &validatorServiceConfig.ProposerSettingsPayload{
 			ProposeConfig: nil,
-			DefaultConfig: &validatorServiceConfig.FeeRecipientFileOptions{
+			DefaultConfig: &validatorServiceConfig.ProposerOptionPayload{
 				FeeRecipient: suggestedFee,
+				GasLimit:     params.BeaconConfig().DefaultBuilderGasLimit,
 			},
+		}
 	}
 
 	if cliCtx.IsSet(flags.FeeRecipientConfigFileFlag.Name) {
