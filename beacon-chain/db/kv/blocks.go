@@ -433,7 +433,7 @@ func (s *Store) HighestRootsBelowSlot(ctx context.Context, slot types.Slot) (fs 
 			if r == nil {
 				continue
 			}
-			fs := bytesutil.BytesToSlotBigEndian(sl)
+			fs = bytesutil.BytesToSlotBigEndian(sl)
 			// Iterating through the index using .Prev will move from higher to lower, so the first key we find behind
 			// the requested slot must be the highest block below that slot.
 			if slot > fs {
@@ -441,7 +441,7 @@ func (s *Store) HighestRootsBelowSlot(ctx context.Context, slot types.Slot) (fs 
 				if err != nil {
 					return errors.Wrapf(err, "error parsing packed roots %#x", r)
 				}
-				break
+				return err
 			}
 		}
 		return nil
