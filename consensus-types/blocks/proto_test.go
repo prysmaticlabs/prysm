@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
-type bodyFields struct {
+type fields struct {
 	b20               []byte
 	b32               []byte
 	b48               []byte
@@ -28,11 +28,257 @@ type bodyFields struct {
 }
 
 func Test_SignedBeaconBlock_Proto(t *testing.T) {
+	f := getFields()
 
+	t.Run("Phase0", func(t *testing.T) {
+		expectedBlock := &eth.SignedBeaconBlock{
+			Block: &eth.BeaconBlock{
+				Slot:          128,
+				ProposerIndex: 128,
+				ParentRoot:    f.b32,
+				StateRoot:     f.b32,
+				Body:          bodyPbPhase0(),
+			},
+			Signature: f.b96,
+		}
+		block := &SignedBeaconBlock{
+			version: version.Phase0,
+			block: &BeaconBlock{
+				version:       version.Phase0,
+				slot:          128,
+				proposerIndex: 128,
+				parentRoot:    f.b32,
+				stateRoot:     f.b32,
+				body:          bodyPhase0(),
+			},
+			signature: f.b96,
+		}
+
+		result, err := block.Proto()
+		require.NoError(t, err)
+		resultBlock, ok := result.(*eth.SignedBeaconBlock)
+		require.Equal(t, true, ok)
+		resultHTR, err := resultBlock.HashTreeRoot()
+		require.NoError(t, err)
+		expectedHTR, err := expectedBlock.HashTreeRoot()
+		require.NoError(t, err)
+		assert.DeepEqual(t, expectedHTR, resultHTR)
+	})
+	t.Run("Altair", func(t *testing.T) {
+		expectedBlock := &eth.SignedBeaconBlockAltair{
+			Block: &eth.BeaconBlockAltair{
+				Slot:          128,
+				ProposerIndex: 128,
+				ParentRoot:    f.b32,
+				StateRoot:     f.b32,
+				Body:          bodyPbAltair(),
+			},
+			Signature: f.b96,
+		}
+		block := &SignedBeaconBlock{
+			version: version.Altair,
+			block: &BeaconBlock{
+				version:       version.Altair,
+				slot:          128,
+				proposerIndex: 128,
+				parentRoot:    f.b32,
+				stateRoot:     f.b32,
+				body:          bodyAltair(),
+			},
+			signature: f.b96,
+		}
+
+		result, err := block.Proto()
+		require.NoError(t, err)
+		resultBlock, ok := result.(*eth.SignedBeaconBlockAltair)
+		require.Equal(t, true, ok)
+		resultHTR, err := resultBlock.HashTreeRoot()
+		require.NoError(t, err)
+		expectedHTR, err := expectedBlock.HashTreeRoot()
+		require.NoError(t, err)
+		assert.DeepEqual(t, expectedHTR, resultHTR)
+	})
+	t.Run("Bellatrix", func(t *testing.T) {
+		expectedBlock := &eth.SignedBeaconBlockBellatrix{
+			Block: &eth.BeaconBlockBellatrix{
+				Slot:          128,
+				ProposerIndex: 128,
+				ParentRoot:    f.b32,
+				StateRoot:     f.b32,
+				Body:          bodyPbBellatrix(),
+			},
+			Signature: f.b96,
+		}
+		block := &SignedBeaconBlock{
+			version: version.Bellatrix,
+			block: &BeaconBlock{
+				version:       version.Bellatrix,
+				slot:          128,
+				proposerIndex: 128,
+				parentRoot:    f.b32,
+				stateRoot:     f.b32,
+				body:          bodyBellatrix(),
+			},
+			signature: f.b96,
+		}
+
+		result, err := block.Proto()
+		require.NoError(t, err)
+		resultBlock, ok := result.(*eth.SignedBeaconBlockBellatrix)
+		require.Equal(t, true, ok)
+		resultHTR, err := resultBlock.HashTreeRoot()
+		require.NoError(t, err)
+		expectedHTR, err := expectedBlock.HashTreeRoot()
+		require.NoError(t, err)
+		assert.DeepEqual(t, expectedHTR, resultHTR)
+	})
+	t.Run("BellatrixBlind", func(t *testing.T) {
+		expectedBlock := &eth.SignedBlindedBeaconBlockBellatrix{
+			Block: &eth.BlindedBeaconBlockBellatrix{
+				Slot:          128,
+				ProposerIndex: 128,
+				ParentRoot:    f.b32,
+				StateRoot:     f.b32,
+				Body:          bodyPbBlindedBellatrix(),
+			},
+			Signature: f.b96,
+		}
+		block := &SignedBeaconBlock{
+			version: version.BellatrixBlind,
+			block: &BeaconBlock{
+				version:       version.BellatrixBlind,
+				slot:          128,
+				proposerIndex: 128,
+				parentRoot:    f.b32,
+				stateRoot:     f.b32,
+				body:          bodyBlindedBellatrix(),
+			},
+			signature: f.b96,
+		}
+
+		result, err := block.Proto()
+		require.NoError(t, err)
+		resultBlock, ok := result.(*eth.SignedBlindedBeaconBlockBellatrix)
+		require.Equal(t, true, ok)
+		resultHTR, err := resultBlock.HashTreeRoot()
+		require.NoError(t, err)
+		expectedHTR, err := expectedBlock.HashTreeRoot()
+		require.NoError(t, err)
+		assert.DeepEqual(t, expectedHTR, resultHTR)
+	})
 }
 
 func Test_BeaconBlock_Proto(t *testing.T) {
+	f := getFields()
 
+	t.Run("Phase0", func(t *testing.T) {
+		expectedBlock := &eth.BeaconBlock{
+			Slot:          128,
+			ProposerIndex: 128,
+			ParentRoot:    f.b32,
+			StateRoot:     f.b32,
+			Body:          bodyPbPhase0(),
+		}
+		block := &BeaconBlock{
+			version:       version.Phase0,
+			slot:          128,
+			proposerIndex: 128,
+			parentRoot:    f.b32,
+			stateRoot:     f.b32,
+			body:          bodyPhase0(),
+		}
+
+		result, err := block.Proto()
+		require.NoError(t, err)
+		resultBlock, ok := result.(*eth.BeaconBlock)
+		require.Equal(t, true, ok)
+		resultHTR, err := resultBlock.HashTreeRoot()
+		require.NoError(t, err)
+		expectedHTR, err := expectedBlock.HashTreeRoot()
+		require.NoError(t, err)
+		assert.DeepEqual(t, expectedHTR, resultHTR)
+	})
+	t.Run("Altair", func(t *testing.T) {
+		expectedBlock := &eth.BeaconBlockAltair{
+			Slot:          128,
+			ProposerIndex: 128,
+			ParentRoot:    f.b32,
+			StateRoot:     f.b32,
+			Body:          bodyPbAltair(),
+		}
+		block := &BeaconBlock{
+			version:       version.Altair,
+			slot:          128,
+			proposerIndex: 128,
+			parentRoot:    f.b32,
+			stateRoot:     f.b32,
+			body:          bodyAltair(),
+		}
+
+		result, err := block.Proto()
+		require.NoError(t, err)
+		resultBlock, ok := result.(*eth.BeaconBlockAltair)
+		require.Equal(t, true, ok)
+		resultHTR, err := resultBlock.HashTreeRoot()
+		require.NoError(t, err)
+		expectedHTR, err := expectedBlock.HashTreeRoot()
+		require.NoError(t, err)
+		assert.DeepEqual(t, expectedHTR, resultHTR)
+	})
+	t.Run("Bellatrix", func(t *testing.T) {
+		expectedBlock := &eth.BeaconBlockBellatrix{
+			Slot:          128,
+			ProposerIndex: 128,
+			ParentRoot:    f.b32,
+			StateRoot:     f.b32,
+			Body:          bodyPbBellatrix(),
+		}
+		block := &BeaconBlock{
+			version:       version.Bellatrix,
+			slot:          128,
+			proposerIndex: 128,
+			parentRoot:    f.b32,
+			stateRoot:     f.b32,
+			body:          bodyBellatrix(),
+		}
+
+		result, err := block.Proto()
+		require.NoError(t, err)
+		resultBlock, ok := result.(*eth.BeaconBlockBellatrix)
+		require.Equal(t, true, ok)
+		resultHTR, err := resultBlock.HashTreeRoot()
+		require.NoError(t, err)
+		expectedHTR, err := expectedBlock.HashTreeRoot()
+		require.NoError(t, err)
+		assert.DeepEqual(t, expectedHTR, resultHTR)
+	})
+	t.Run("BellatrixBlind", func(t *testing.T) {
+		expectedBlock := &eth.BlindedBeaconBlockBellatrix{
+			Slot:          128,
+			ProposerIndex: 128,
+			ParentRoot:    f.b32,
+			StateRoot:     f.b32,
+			Body:          bodyPbBlindedBellatrix(),
+		}
+		block := &BeaconBlock{
+			version:       version.BellatrixBlind,
+			slot:          128,
+			proposerIndex: 128,
+			parentRoot:    f.b32,
+			stateRoot:     f.b32,
+			body:          bodyBlindedBellatrix(),
+		}
+
+		result, err := block.Proto()
+		require.NoError(t, err)
+		resultBlock, ok := result.(*eth.BlindedBeaconBlockBellatrix)
+		require.Equal(t, true, ok)
+		resultHTR, err := resultBlock.HashTreeRoot()
+		require.NoError(t, err)
+		expectedHTR, err := expectedBlock.HashTreeRoot()
+		require.NoError(t, err)
+		assert.DeepEqual(t, expectedHTR, resultHTR)
+	})
 }
 
 func Test_BeaconBlockBody_Proto(t *testing.T) {
@@ -92,164 +338,164 @@ func Test_BeaconBlockBody_Proto(t *testing.T) {
 }
 
 func bodyPbPhase0() *eth.BeaconBlockBody {
-	fields := getBodyFields()
+	f := getFields()
 	return &eth.BeaconBlockBody{
-		RandaoReveal: fields.b96,
+		RandaoReveal: f.b96,
 		Eth1Data: &eth.Eth1Data{
-			DepositRoot:  fields.b32,
+			DepositRoot:  f.b32,
 			DepositCount: 128,
-			BlockHash:    fields.b32,
+			BlockHash:    f.b32,
 		},
-		Graffiti:          fields.b32,
-		ProposerSlashings: fields.proposerSlashings,
-		AttesterSlashings: fields.attesterSlashings,
-		Attestations:      fields.atts,
-		Deposits:          fields.deposits,
-		VoluntaryExits:    fields.voluntaryExits,
+		Graffiti:          f.b32,
+		ProposerSlashings: f.proposerSlashings,
+		AttesterSlashings: f.attesterSlashings,
+		Attestations:      f.atts,
+		Deposits:          f.deposits,
+		VoluntaryExits:    f.voluntaryExits,
 	}
 }
 
 func bodyPbAltair() *eth.BeaconBlockBodyAltair {
-	fields := getBodyFields()
+	f := getFields()
 	return &eth.BeaconBlockBodyAltair{
-		RandaoReveal: fields.b96,
+		RandaoReveal: f.b96,
 		Eth1Data: &eth.Eth1Data{
-			DepositRoot:  fields.b32,
+			DepositRoot:  f.b32,
 			DepositCount: 128,
-			BlockHash:    fields.b32,
+			BlockHash:    f.b32,
 		},
-		Graffiti:          fields.b32,
-		ProposerSlashings: fields.proposerSlashings,
-		AttesterSlashings: fields.attesterSlashings,
-		Attestations:      fields.atts,
-		Deposits:          fields.deposits,
-		VoluntaryExits:    fields.voluntaryExits,
-		SyncAggregate:     fields.syncAggregate,
+		Graffiti:          f.b32,
+		ProposerSlashings: f.proposerSlashings,
+		AttesterSlashings: f.attesterSlashings,
+		Attestations:      f.atts,
+		Deposits:          f.deposits,
+		VoluntaryExits:    f.voluntaryExits,
+		SyncAggregate:     f.syncAggregate,
 	}
 }
 
 func bodyPbBellatrix() *eth.BeaconBlockBodyBellatrix {
-	fields := getBodyFields()
+	f := getFields()
 	return &eth.BeaconBlockBodyBellatrix{
-		RandaoReveal: fields.b96,
+		RandaoReveal: f.b96,
 		Eth1Data: &eth.Eth1Data{
-			DepositRoot:  fields.b32,
+			DepositRoot:  f.b32,
 			DepositCount: 128,
-			BlockHash:    fields.b32,
+			BlockHash:    f.b32,
 		},
-		Graffiti:          fields.b32,
-		ProposerSlashings: fields.proposerSlashings,
-		AttesterSlashings: fields.attesterSlashings,
-		Attestations:      fields.atts,
-		Deposits:          fields.deposits,
-		VoluntaryExits:    fields.voluntaryExits,
-		SyncAggregate:     fields.syncAggregate,
-		ExecutionPayload:  fields.execPayload,
+		Graffiti:          f.b32,
+		ProposerSlashings: f.proposerSlashings,
+		AttesterSlashings: f.attesterSlashings,
+		Attestations:      f.atts,
+		Deposits:          f.deposits,
+		VoluntaryExits:    f.voluntaryExits,
+		SyncAggregate:     f.syncAggregate,
+		ExecutionPayload:  f.execPayload,
 	}
 }
 
 func bodyPbBlindedBellatrix() *eth.BlindedBeaconBlockBodyBellatrix {
-	fields := getBodyFields()
+	f := getFields()
 	return &eth.BlindedBeaconBlockBodyBellatrix{
-		RandaoReveal: fields.b96,
+		RandaoReveal: f.b96,
 		Eth1Data: &eth.Eth1Data{
-			DepositRoot:  fields.b32,
+			DepositRoot:  f.b32,
 			DepositCount: 128,
-			BlockHash:    fields.b32,
+			BlockHash:    f.b32,
 		},
-		Graffiti:               fields.b32,
-		ProposerSlashings:      fields.proposerSlashings,
-		AttesterSlashings:      fields.attesterSlashings,
-		Attestations:           fields.atts,
-		Deposits:               fields.deposits,
-		VoluntaryExits:         fields.voluntaryExits,
-		SyncAggregate:          fields.syncAggregate,
-		ExecutionPayloadHeader: fields.execPayloadHeader,
+		Graffiti:               f.b32,
+		ProposerSlashings:      f.proposerSlashings,
+		AttesterSlashings:      f.attesterSlashings,
+		Attestations:           f.atts,
+		Deposits:               f.deposits,
+		VoluntaryExits:         f.voluntaryExits,
+		SyncAggregate:          f.syncAggregate,
+		ExecutionPayloadHeader: f.execPayloadHeader,
 	}
 }
 
 func bodyPhase0() *BeaconBlockBody {
-	fields := getBodyFields()
+	f := getFields()
 	return &BeaconBlockBody{
 		version:      version.Phase0,
-		randaoReveal: fields.b96,
+		randaoReveal: f.b96,
 		eth1Data: &eth.Eth1Data{
-			DepositRoot:  fields.b32,
+			DepositRoot:  f.b32,
 			DepositCount: 128,
-			BlockHash:    fields.b32,
+			BlockHash:    f.b32,
 		},
-		graffiti:          fields.b32,
-		proposerSlashings: fields.proposerSlashings,
-		attesterSlashings: fields.attesterSlashings,
-		attestations:      fields.atts,
-		deposits:          fields.deposits,
-		voluntaryExits:    fields.voluntaryExits,
+		graffiti:          f.b32,
+		proposerSlashings: f.proposerSlashings,
+		attesterSlashings: f.attesterSlashings,
+		attestations:      f.atts,
+		deposits:          f.deposits,
+		voluntaryExits:    f.voluntaryExits,
 	}
 }
 
 func bodyAltair() *BeaconBlockBody {
-	fields := getBodyFields()
+	f := getFields()
 	return &BeaconBlockBody{
 		version:      version.Altair,
-		randaoReveal: fields.b96,
+		randaoReveal: f.b96,
 		eth1Data: &eth.Eth1Data{
-			DepositRoot:  fields.b32,
+			DepositRoot:  f.b32,
 			DepositCount: 128,
-			BlockHash:    fields.b32,
+			BlockHash:    f.b32,
 		},
-		graffiti:          fields.b32,
-		proposerSlashings: fields.proposerSlashings,
-		attesterSlashings: fields.attesterSlashings,
-		attestations:      fields.atts,
-		deposits:          fields.deposits,
-		voluntaryExits:    fields.voluntaryExits,
-		syncAggregate:     fields.syncAggregate,
+		graffiti:          f.b32,
+		proposerSlashings: f.proposerSlashings,
+		attesterSlashings: f.attesterSlashings,
+		attestations:      f.atts,
+		deposits:          f.deposits,
+		voluntaryExits:    f.voluntaryExits,
+		syncAggregate:     f.syncAggregate,
 	}
 }
 
 func bodyBellatrix() *BeaconBlockBody {
-	fields := getBodyFields()
+	f := getFields()
 	return &BeaconBlockBody{
 		version:      version.Bellatrix,
-		randaoReveal: fields.b96,
+		randaoReveal: f.b96,
 		eth1Data: &eth.Eth1Data{
-			DepositRoot:  fields.b32,
+			DepositRoot:  f.b32,
 			DepositCount: 128,
-			BlockHash:    fields.b32,
+			BlockHash:    f.b32,
 		},
-		graffiti:          fields.b32,
-		proposerSlashings: fields.proposerSlashings,
-		attesterSlashings: fields.attesterSlashings,
-		attestations:      fields.atts,
-		deposits:          fields.deposits,
-		voluntaryExits:    fields.voluntaryExits,
-		syncAggregate:     fields.syncAggregate,
-		executionPayload:  fields.execPayload,
+		graffiti:          f.b32,
+		proposerSlashings: f.proposerSlashings,
+		attesterSlashings: f.attesterSlashings,
+		attestations:      f.atts,
+		deposits:          f.deposits,
+		voluntaryExits:    f.voluntaryExits,
+		syncAggregate:     f.syncAggregate,
+		executionPayload:  f.execPayload,
 	}
 }
 
 func bodyBlindedBellatrix() *BeaconBlockBody {
-	fields := getBodyFields()
+	f := getFields()
 	return &BeaconBlockBody{
 		version:      version.BellatrixBlind,
-		randaoReveal: fields.b96,
+		randaoReveal: f.b96,
 		eth1Data: &eth.Eth1Data{
-			DepositRoot:  fields.b32,
+			DepositRoot:  f.b32,
 			DepositCount: 128,
-			BlockHash:    fields.b32,
+			BlockHash:    f.b32,
 		},
-		graffiti:               fields.b32,
-		proposerSlashings:      fields.proposerSlashings,
-		attesterSlashings:      fields.attesterSlashings,
-		attestations:           fields.atts,
-		deposits:               fields.deposits,
-		voluntaryExits:         fields.voluntaryExits,
-		syncAggregate:          fields.syncAggregate,
-		executionPayloadHeader: fields.execPayloadHeader,
+		graffiti:               f.b32,
+		proposerSlashings:      f.proposerSlashings,
+		attesterSlashings:      f.attesterSlashings,
+		attestations:           f.atts,
+		deposits:               f.deposits,
+		voluntaryExits:         f.voluntaryExits,
+		syncAggregate:          f.syncAggregate,
+		executionPayloadHeader: f.execPayloadHeader,
 	}
 }
 
-func getBodyFields() bodyFields {
+func getFields() fields {
 	b20 := make([]byte, 20)
 	b32 := make([]byte, 32)
 	b48 := make([]byte, 48)
@@ -403,7 +649,7 @@ func getBodyFields() bodyFields {
 		TransactionsRoot: b32,
 	}
 
-	return bodyFields{
+	return fields{
 		b20:               b20,
 		b32:               b32,
 		b48:               b48,
