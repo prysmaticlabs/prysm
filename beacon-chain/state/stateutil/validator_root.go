@@ -99,10 +99,10 @@ func PackUint64IntoChunks(vals []uint64) ([][32]byte, error) {
 	if len(vals)%numOfElems != 0 {
 		numOfChunks++
 	}
-	balanceChunks := make([][32]byte, numOfChunks)
+	chunkList := make([][32]byte, numOfChunks)
 	for idx, b := range vals {
 		// In order to determine how to pack in the uint64 value by index into
-		// our balance chunk list we need to determine a few things.
+		// our chunk list we need to determine a few things.
 		// 1) The chunk which the particular uint64 value corresponds to.
 		// 2) The position of the value in the chunk itself.
 		//
@@ -111,7 +111,7 @@ func PackUint64IntoChunks(vals []uint64) ([][32]byte, error) {
 		chunkIdx := idx / numOfElems
 		idxInChunk := idx % numOfElems
 		chunkPos := idxInChunk * sizeOfElem
-		binary.LittleEndian.PutUint64(balanceChunks[chunkIdx][chunkPos:chunkPos+sizeOfElem], b)
+		binary.LittleEndian.PutUint64(chunkList[chunkIdx][chunkPos:chunkPos+sizeOfElem], b)
 	}
-	return balanceChunks, nil
+	return chunkList, nil
 }
