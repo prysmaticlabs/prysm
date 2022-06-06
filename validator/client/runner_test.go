@@ -8,6 +8,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/async/event"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -244,4 +245,21 @@ func TestKeyReload_RemoteKeymanager(t *testing.T) {
 	}()
 	run(ctx, v)
 	assert.Equal(t, true, km.ReloadPublicKeysCalled)
+}
+
+func TestUpdateProposerSettingsAt_EpochStart(t *testing.T) {
+	v := &testutil.FakeValidator{Km: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
+	ctx, cancel := context.WithCancel(context.Background())
+	hook := logTest.NewGlobal()
+	slot := params.BeaconConfig().SlotsPerEpoch
+	ticker := make(chan types.Slot)
+	v.NextSlotRet = ticker
+	go func() {
+		ticker <- slot
+
+		cancel()
+	}()
+
+	run(ctx, v)
+	assert.LogsContain(t, hook, "updated proposer settings")
 }
