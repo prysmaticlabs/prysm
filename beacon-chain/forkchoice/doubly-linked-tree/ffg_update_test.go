@@ -13,6 +13,7 @@ import (
 func TestFFGUpdates_OneBranch(t *testing.T) {
 	balances := []uint64{1, 1}
 	f := setup(0, 0)
+	ctx := context.Background()
 
 	// The head should always start at the finalized block.
 	r, err := f.Head(context.Background(), params.BeaconConfig().ZeroHash, balances)
@@ -27,9 +28,15 @@ func TestFFGUpdates_OneBranch(t *testing.T) {
 	//            2 <- justified: 1, finalized: 0
 	//            |
 	//            3 <- justified: 2, finalized: 1
-	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 1, indexToHash(1), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 0, 0))
-	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 2, indexToHash(2), indexToHash(1), params.BeaconConfig().ZeroHash, 1, 0))
-	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 3, indexToHash(3), indexToHash(2), params.BeaconConfig().ZeroHash, 2, 1))
+	state, blkRoot, err := prepareForkchoiceState(context.Background(), 1, indexToHash(1), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 0, 0)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(context.Background(), 2, indexToHash(2), indexToHash(1), params.BeaconConfig().ZeroHash, 1, 0)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(context.Background(), 3, indexToHash(3), indexToHash(2), params.BeaconConfig().ZeroHash, 2, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 
 	// With starting justified epoch at 0, the head should be 3:
 	//            0 <- start
@@ -73,6 +80,7 @@ func TestFFGUpdates_OneBranch(t *testing.T) {
 func TestFFGUpdates_TwoBranches(t *testing.T) {
 	balances := []uint64{1, 1}
 	f := setup(0, 0)
+	ctx := context.Background()
 
 	r, err := f.Head(context.Background(), params.BeaconConfig().ZeroHash, balances)
 	require.NoError(t, err)
@@ -91,17 +99,37 @@ func TestFFGUpdates_TwoBranches(t *testing.T) {
 	//                              |   |
 	//  justified: 2, finalized: 0 -> 9  10 <- justified: 2, finalized: 0
 	// Left branch.
-	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 1, indexToHash(1), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 0, 0))
-	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 2, indexToHash(3), indexToHash(1), params.BeaconConfig().ZeroHash, 1, 0))
-	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 3, indexToHash(5), indexToHash(3), params.BeaconConfig().ZeroHash, 1, 0))
-	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 4, indexToHash(7), indexToHash(5), params.BeaconConfig().ZeroHash, 1, 0))
-	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 4, indexToHash(9), indexToHash(7), params.BeaconConfig().ZeroHash, 2, 0))
+	state, blkRoot, err := prepareForkchoiceState(context.Background(), 1, indexToHash(1), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 0, 0)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(context.Background(), 2, indexToHash(3), indexToHash(1), params.BeaconConfig().ZeroHash, 1, 0)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(context.Background(), 3, indexToHash(5), indexToHash(3), params.BeaconConfig().ZeroHash, 1, 0)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(context.Background(), 4, indexToHash(7), indexToHash(5), params.BeaconConfig().ZeroHash, 1, 0)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(context.Background(), 4, indexToHash(9), indexToHash(7), params.BeaconConfig().ZeroHash, 2, 0)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 	// Right branch.
-	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 1, indexToHash(2), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 0, 0))
-	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 2, indexToHash(4), indexToHash(2), params.BeaconConfig().ZeroHash, 0, 0))
-	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 3, indexToHash(6), indexToHash(4), params.BeaconConfig().ZeroHash, 0, 0))
-	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 4, indexToHash(8), indexToHash(6), params.BeaconConfig().ZeroHash, 1, 0))
-	require.NoError(t, f.InsertOptimisticBlock(context.Background(), 4, indexToHash(10), indexToHash(8), params.BeaconConfig().ZeroHash, 2, 0))
+	state, blkRoot, err = prepareForkchoiceState(context.Background(), 1, indexToHash(2), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 0, 0)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(context.Background(), 2, indexToHash(4), indexToHash(2), params.BeaconConfig().ZeroHash, 0, 0)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(context.Background(), 3, indexToHash(6), indexToHash(4), params.BeaconConfig().ZeroHash, 0, 0)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(context.Background(), 4, indexToHash(8), indexToHash(6), params.BeaconConfig().ZeroHash, 1, 0)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(context.Background(), 4, indexToHash(10), indexToHash(8), params.BeaconConfig().ZeroHash, 2, 0)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 
 	// With start at 0, the head should be 10:
 	//           0  <-- start
@@ -188,7 +216,11 @@ func TestFFGUpdates_TwoBranches(t *testing.T) {
 func setup(justifiedEpoch, finalizedEpoch types.Epoch) *ForkChoice {
 	ctx := context.Background()
 	f := New(justifiedEpoch, finalizedEpoch)
-	err := f.InsertOptimisticBlock(ctx, 0, params.BeaconConfig().ZeroHash, [32]byte{}, params.BeaconConfig().ZeroHash, justifiedEpoch, finalizedEpoch)
+	state, blkRoot, err := prepareForkchoiceState(ctx, 0, params.BeaconConfig().ZeroHash, [32]byte{}, params.BeaconConfig().ZeroHash, justifiedEpoch, finalizedEpoch)
+	if err != nil {
+		return nil
+	}
+	err = f.InsertNode(ctx, state, blkRoot)
 	if err != nil {
 		return nil
 	}
