@@ -125,17 +125,18 @@ func (s *Store) insert(ctx context.Context,
 
 	s.nodeByPayload[payloadHash] = n
 	s.nodeByRoot[root] = n
-	if parent != nil {
+	if parent == nil {
+		if s.treeRootNode == nil {
+			s.treeRootNode = n
+			s.headNode = n
+		} else {
+			return errInvalidParentRoot
+		}
+	} else {
 		parent.children = append(parent.children, n)
 		if err := s.treeRootNode.updateBestDescendant(ctx, s.justifiedEpoch, s.finalizedEpoch); err != nil {
 			return err
 		}
-	}
-
-	// Set the node as root if the store was empty
-	if s.treeRootNode == nil {
-		s.treeRootNode = n
-		s.headNode = n
 	}
 
 	// Update metrics.
