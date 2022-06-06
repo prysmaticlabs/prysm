@@ -481,6 +481,16 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 	if cliCtx.IsSet(flags.ProposerSettingsFlag.Name) && cliCtx.IsSet(flags.ProposerSettingsURLFlag.Name) {
 		return nil, errors.New("cannot specify both " + flags.ProposerSettingsFlag.Name + " and " + flags.ProposerSettingsURLFlag.Name)
 	}
+  
+  // is overridden by file and URL flags
+	if cliCtx.IsSet(flags.SuggestedFeeRecipientFlag.Name) {
+		suggestedFee := cliCtx.String(flags.SuggestedFeeRecipientFlag.Name)
+		fileConfig = &validatorServiceConfig.FeeRecipientFileConfig{
+			ProposeConfig: nil,
+			DefaultConfig: &validatorServiceConfig.FeeRecipientFileOptions{
+				FeeRecipient: suggestedFee,
+			},
+	}
 
 	if cliCtx.IsSet(flags.FeeRecipientConfigFileFlag.Name) {
 		return nil, errors.New(flags.FeeRecipientConfigFileFlag.Usage)
@@ -500,17 +510,7 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 			return nil, err
 		}
 	}
-	// override the default fileConfig with the fileConfig from the command line
-	if cliCtx.IsSet(flags.SuggestedFeeRecipientFlag.Name) {
-		suggestedFee := cliCtx.String(flags.SuggestedFeeRecipientFlag.Name)
-		fileConfig = &validatorServiceConfig.ProposerSettingsPayload{
-			ProposeConfig: nil,
-			DefaultConfig: &validatorServiceConfig.ProposerOptionPayload{
-				FeeRecipient: suggestedFee,
-				GasLimit:     params.BeaconConfig().DefaultBuilderGasLimit,
-			},
-		}
-	}
+
 	// nothing is set, so just return nil
 	if fileConfig == nil {
 		return nil, nil
