@@ -105,7 +105,6 @@ func (v *validator) waitForActivation(ctx context.Context, accountsChangedChan <
 				if ctx.Err() == context.Canceled {
 					return errors.Wrap(ctx.Err(), "context canceled, not waiting for activation anymore")
 				}
-
 				validatingKeys, err = remoteKm.ReloadPublicKeys(ctx)
 				if err != nil {
 					return errors.Wrap(err, msgCouldNotFetchKeys)
@@ -133,7 +132,7 @@ func (v *validator) waitForActivation(ctx context.Context, accountsChangedChan <
 				if valActivated {
 					logActiveValidatorStatus(statuses)
 					// Set properties on the beacon node like the fee recipient for validators that are being used & active.
-					if err := v.UpdateFeeRecipient(ctx, remoteKm); err != nil {
+					if err := v.PushProposerSettings(ctx, remoteKm); err != nil {
 						return err
 					}
 				} else {
@@ -180,8 +179,9 @@ func (v *validator) waitForActivation(ctx context.Context, accountsChangedChan <
 				valActivated := v.checkAndLogValidatorStatus(statuses)
 				if valActivated {
 					logActiveValidatorStatus(statuses)
+
 					// Set properties on the beacon node like the fee recipient for validators that are being used & active.
-					if err := v.UpdateFeeRecipient(ctx, v.keyManager); err != nil {
+					if err := v.PushProposerSettings(ctx, v.keyManager); err != nil {
 						return err
 					}
 				} else {
