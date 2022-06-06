@@ -79,10 +79,7 @@ func (s *Service) updateHead(ctx context.Context, balances []uint64) ([32]byte, 
 	}
 	// To get head before the first justified epoch, the fork choice will start with origin root
 	// instead of zero hashes.
-	headStartRoot := bytesutil.ToBytes32(j.Root)
-	if headStartRoot == params.BeaconConfig().ZeroHash {
-		headStartRoot = s.originBlockRoot
-	}
+	headStartRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(j.Root))
 
 	// In order to process head, fork choice store requires justified info.
 	// If the fork choice store is missing justified block info, a node should
@@ -93,12 +90,16 @@ func (s *Service) updateHead(ctx context.Context, balances []uint64) ([32]byte, 
 		if err != nil {
 			return [32]byte{}, err
 		}
+		st, err := s.cfg.StateGen.StateByRoot(ctx, s.ensureRootNotZeros(headStartRoot))
+		if err != nil {
+			return [32]byte{}, err
+		}
 		if features.Get().EnableForkChoiceDoublyLinkedTree {
 			s.cfg.ForkChoiceStore = doublylinkedtree.New(j.Epoch, f.Epoch)
 		} else {
 			s.cfg.ForkChoiceStore = protoarray.New(j.Epoch, f.Epoch)
 		}
-		if err := s.insertBlockToForkChoiceStore(ctx, jb.Block(), headStartRoot, f, j); err != nil {
+		if err := s.insertBlockToForkChoiceStore(ctx, jb.Block(), headStartRoot, st, f, j); err != nil {
 			return [32]byte{}, err
 		}
 	}
