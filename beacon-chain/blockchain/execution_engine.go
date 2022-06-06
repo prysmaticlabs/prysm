@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
@@ -270,10 +269,10 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 	recipient, err := s.cfg.BeaconDB.FeeRecipientByValidatorID(ctx, proposerID)
 	switch {
 	case errors.Is(err, kv.ErrNotFoundFeeRecipient):
-		if feeRecipient.String() == fieldparams.EthBurnAddressHex {
+		if feeRecipient.String() == params.BeaconConfig().EthBurnAddressHex {
 			logrus.WithFields(logrus.Fields{
 				"validatorIndex": proposerID,
-				"burnAddress":    fieldparams.EthBurnAddressHex,
+				"burnAddress":    params.BeaconConfig().EthBurnAddressHex,
 			}).Warn("Fee recipient is currently using the burn address, " +
 				"you will not be rewarded transaction fees on this setting. " +
 				"Please set a different eth address as the fee recipient. " +
