@@ -1959,7 +1959,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 				).Return(&empty.Empty{}, errors.New("request failed"))
 				return &v
 			},
-			err: "Register Validator requests failed",
+			err: "Register validator requests failed",
 		},
 	}
 	for _, tt := range tests {
