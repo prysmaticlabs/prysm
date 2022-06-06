@@ -475,6 +475,17 @@ func feeRecipientConfig(cliCtx *cli.Context) (*validatorServiceConfig.FeeRecipie
 	if cliCtx.IsSet(flags.FeeRecipientConfigFileFlag.Name) && cliCtx.IsSet(flags.FeeRecipientConfigURLFlag.Name) {
 		return nil, fmt.Errorf("cannot specify both --%s and --%s", flags.FeeRecipientConfigFileFlag.Name, flags.FeeRecipientConfigURLFlag.Name)
 	}
+	// is overridden by file and URL flags
+	if cliCtx.IsSet(flags.SuggestedFeeRecipientFlag.Name) {
+		suggestedFee := cliCtx.String(flags.SuggestedFeeRecipientFlag.Name)
+		fileConfig = &validatorServiceConfig.FeeRecipientFileConfig{
+			ProposeConfig: nil,
+			DefaultConfig: &validatorServiceConfig.FeeRecipientFileOptions{
+				FeeRecipient: suggestedFee,
+			},
+		}
+	}
+
 	if cliCtx.IsSet(flags.FeeRecipientConfigFileFlag.Name) {
 		if err := unmarshalFromFile(cliCtx.Context, cliCtx.String(flags.FeeRecipientConfigFileFlag.Name), &fileConfig); err != nil {
 			return nil, err
@@ -485,16 +496,7 @@ func feeRecipientConfig(cliCtx *cli.Context) (*validatorServiceConfig.FeeRecipie
 			return nil, err
 		}
 	}
-	// override the default fileConfig with the fileConfig from the command line
-	if cliCtx.IsSet(flags.SuggestedFeeRecipientFlag.Name) {
-		suggestedFee := cliCtx.String(flags.SuggestedFeeRecipientFlag.Name)
-		fileConfig = &validatorServiceConfig.FeeRecipientFileConfig{
-			ProposeConfig: nil,
-			DefaultConfig: &validatorServiceConfig.FeeRecipientFileOptions{
-				FeeRecipient: suggestedFee,
-			},
-		}
-	}
+
 	// nothing is set, so just return nil
 	if fileConfig == nil {
 		return nil, nil
