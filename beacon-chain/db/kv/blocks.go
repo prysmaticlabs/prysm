@@ -403,33 +403,50 @@ func (s *Store) HighestSlotBlocksBelow(ctx context.Context, slot types.Slot) ([]
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HighestSlotBlocksBelow")
 	defer span.End()
 
-	var best []byte
-	if err := s.db.View(func(tx *bolt.Tx) error {
+	var root [32]byte
+	sk := bytesutil.Uint64ToBytesBigEndian(uint64(slot))
+	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blockSlotIndicesBucket)
-		// Iterate through the index, which is in byte sorted order.
 		c := bkt.Cursor()
-		for s, root := c.First(); s != nil; s, root = c.Next() {
+		// The documentation for Seek says:
+		// "If the key does not exist then the next key is used. If no keys follow, a nil key is returned."
+		seekPast := func(ic *bolt.Cursor, k []byte) ([]byte, []byte) {
+			ik, iv := ic.Seek(k)
+			// So if there are slots in the index higher than the requested slot, sl will be equal to the key that is
+			// one higher than the value we want. If the slot argument is higher than the highest value in the index,
+			// we'll get a nil value for `sl`. In that case we'll go backwards from Cursor.Last().
+			if ik == nil {
+				return ic.Last()
+			}
+			return ik, iv
+		}
+		// re loop condition: when .Prev() rewinds past the beginning off the collection, the loop will terminate,
+		// because `sl` will be nil. If we don't find a value for `root` before iteration ends,
+		// `root` will be the zero value, in which case this function will return the genesis block.
+		for sl, r := seekPast(c, sk); sl != nil; sl, r = c.Prev() {
 			if ctx.Err() != nil {
 				return ctx.Err()
 			}
-			key := bytesutil.BytesToSlotBigEndian(s)
-			if root == nil {
+			if r == nil {
 				continue
 			}
-			if key >= slot {
+			bs := bytesutil.BytesToSlotBigEndian(sl)
+			// Iterating through the index using .Prev will move from higher to lower, so the first key we find behind
+			// the requested slot must be the highest block below that slot.
+			if slot > bs {
+				root = bytesutil.ToBytes32(r)
 				break
 			}
-			best = root
 		}
 		return nil
-	}); err != nil {
+	})
+	if err != nil {
 		return nil, err
 	}
 
 	var blk interfaces.SignedBeaconBlock
-	var err error
-	if best != nil {
-		blk, err = s.Block(ctx, bytesutil.ToBytes32(best))
+	if root != params.BeaconConfig().ZeroHash {
+		blk, err = s.Block(ctx, root)
 		if err != nil {
 			return nil, err
 		}
@@ -440,7 +457,6 @@ func (s *Store) HighestSlotBlocksBelow(ctx context.Context, slot types.Slot) ([]
 			return nil, err
 		}
 	}
-
 	return []interfaces.SignedBeaconBlock{blk}, nil
 }
 
@@ -453,8 +469,20 @@ func (s *Store) FeeRecipientByValidatorID(ctx context.Context, id types.Validato
 	err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(feeRecipientBucket)
 		addr = bkt.Get(bytesutil.Uint64ToBytesBigEndian(uint64(id)))
+		// IF the fee recipient is not found in the standard fee recipient bucket, then
+		// check the registration bucket. The fee recipient may be there.
+		// This is to resolve imcompatility until we fully migrate to the registration bucket.
 		if addr == nil {
-			return errors.Wrapf(ErrNotFoundFeeRecipient, "validator id %d", id)
+			bkt = tx.Bucket(registrationBucket)
+			enc := bkt.Get(bytesutil.Uint64ToBytesBigEndian(uint64(id)))
+			if enc == nil {
+				return errors.Wrapf(ErrNotFoundFeeRecipient, "validator id %d", id)
+			}
+			reg := &ethpb.ValidatorRegistrationV1{}
+			if err := decode(ctx, enc, reg); err != nil {
+				return err
+			}
+			addr = reg.FeeRecipient
 		}
 		return nil
 	})
@@ -475,6 +503,48 @@ func (s *Store) SaveFeeRecipientsByValidatorIDs(ctx context.Context, ids []types
 		bkt := tx.Bucket(feeRecipientBucket)
 		for i, id := range ids {
 			if err := bkt.Put(bytesutil.Uint64ToBytesBigEndian(uint64(id)), feeRecipients[i].Bytes()); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+// RegistrationByValidatorID returns the validator registration object for a validator id.
+// `ErrNotFoundFeeRecipient` is returned if the validator id is not found.
+func (s *Store) RegistrationByValidatorID(ctx context.Context, id types.ValidatorIndex) (*ethpb.ValidatorRegistrationV1, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.RegistrationByValidatorID")
+	defer span.End()
+	reg := &ethpb.ValidatorRegistrationV1{}
+	err := s.db.View(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(registrationBucket)
+		enc := bkt.Get(bytesutil.Uint64ToBytesBigEndian(uint64(id)))
+		if enc == nil {
+			return errors.Wrapf(ErrNotFoundFeeRecipient, "validator id %d", id)
+		}
+		return decode(ctx, enc, reg)
+	})
+	return reg, err
+}
+
+// SaveRegistrationsByValidatorIDs saves the validator registrations for validator ids.
+// Error is returned if `ids` and `registrations` are not the same length.
+func (s *Store) SaveRegistrationsByValidatorIDs(ctx context.Context, ids []types.ValidatorIndex, regs []*ethpb.ValidatorRegistrationV1) error {
+	_, span := trace.StartSpan(ctx, "BeaconDB.SaveRegistrationsByValidatorIDs")
+	defer span.End()
+
+	if len(ids) != len(regs) {
+		return errors.New("ids and registrations must be the same length")
+	}
+
+	return s.db.Update(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(registrationBucket)
+		for i, id := range ids {
+			enc, err := encode(ctx, regs[i])
+			if err != nil {
+				return err
+			}
+			if err := bkt.Put(bytesutil.Uint64ToBytesBigEndian(uint64(id)), enc); err != nil {
 				return err
 			}
 		}

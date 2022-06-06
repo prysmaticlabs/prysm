@@ -72,6 +72,7 @@ go_test(
         "requires-network",
     ],
     deps = common_deps,
+    flaky = True,
 )
 
 go_test(
@@ -104,6 +105,7 @@ go_test(
         "requires-network",
     ],
     deps = common_deps,
+    flaky = True,
 )
 
 go_test(
@@ -136,6 +138,7 @@ go_test(
         "scenario",
     ],
     deps = common_deps,
+    flaky = True,
 )
 
 go_test(
@@ -168,4 +171,5 @@ go_test(
         "scenario",
     ],
     deps = common_deps,
+    flaky = True,
 )
