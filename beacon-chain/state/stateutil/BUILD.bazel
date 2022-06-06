@@ -33,7 +33,6 @@ go_library(
     ],
     deps = [
         "//beacon-chain/core/transition/stateutils:go_default_library",
-        "//beacon-chain/state/types:go_default_library",
         "//config/features:go_default_library",
         "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",

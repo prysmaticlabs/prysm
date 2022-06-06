@@ -4,12 +4,10 @@ import (
 	"encoding/binary"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/types"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
-	pmath "github.com/prysmaticlabs/prysm/math"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -87,20 +85,18 @@ func Uint64ListRootWithRegistryLimit(balances []uint64) ([32]byte, error) {
 // PackUint64IntoChunks packs a list of uint64 values into 32 byte roots.
 func PackUint64IntoChunks(vals []uint64) ([][32]byte, error) {
 	// Initialize how many uint64 values we can pack
-	// into a single chunk(32 bytes).
-	numOfElems, err := types.Balances.ElemsInChunk()
-	if err != nil {
-		return nil, err
-	}
-	iNumOfElems, err := pmath.Int(numOfElems)
-	if err != nil {
-		return nil, err
-	}
+	// into a single chunk(32 bytes). Each uint64 value
+	// would take up 8 bytes.
+	numOfElems := 4
+	sizeOfElem := 32 / numOfElems
 	// Determine total number of chunks to be
 	// allocated to provided list of unsigned
 	// 64-bit integers.
-	numOfChunks := len(vals) / iNumOfElems
-	if len(vals)%iNumOfElems != 0 {
+	numOfChunks := len(vals) / numOfElems
+	// Add an extra chunk if the list size
+	// is not a perfect multiple of the number
+	// of elements.
+	if len(vals)%numOfElems != 0 {
 		numOfChunks++
 	}
 	balanceChunks := make([][32]byte, numOfChunks)
@@ -112,9 +108,8 @@ func PackUint64IntoChunks(vals []uint64) ([][32]byte, error) {
 		//
 		// Once we have determined these 2 values we can simply find the correct
 		// section of contiguous bytes to insert the value in the chunk.
-		chunkIdx := idx / iNumOfElems
-		idxInChunk := idx % iNumOfElems
-		sizeOfElem := 32 / iNumOfElems
+		chunkIdx := idx / numOfElems
+		idxInChunk := idx % numOfElems
 		chunkPos := idxInChunk * sizeOfElem
 		binary.LittleEndian.PutUint64(balanceChunks[chunkIdx][chunkPos:chunkPos+sizeOfElem], b)
 	}
