@@ -11,6 +11,22 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
+type bodyFields struct {
+	b20               []byte
+	b32               []byte
+	b48               []byte
+	b96               []byte
+	b256              []byte
+	deposits          []*eth.Deposit
+	atts              []*eth.Attestation
+	proposerSlashings []*eth.ProposerSlashing
+	attesterSlashings []*eth.AttesterSlashing
+	voluntaryExits    []*eth.SignedVoluntaryExit
+	syncAggregate     *eth.SyncAggregate
+	execPayload       *enginev1.ExecutionPayload
+	execPayloadHeader *eth.ExecutionPayloadHeader
+}
+
 func Test_SignedBeaconBlock_Proto(t *testing.T) {
 
 }
@@ -20,6 +36,220 @@ func Test_BeaconBlock_Proto(t *testing.T) {
 }
 
 func Test_BeaconBlockBody_Proto(t *testing.T) {
+	t.Run("Phase0", func(t *testing.T) {
+		expectedBody := bodyPbPhase0()
+		body := bodyPhase0()
+
+		result, err := body.Proto()
+		require.NoError(t, err)
+		resultBlock, ok := result.(*eth.BeaconBlockBody)
+		require.Equal(t, true, ok)
+		resultHTR, err := resultBlock.HashTreeRoot()
+		require.NoError(t, err)
+		expectedHTR, err := expectedBody.HashTreeRoot()
+		require.NoError(t, err)
+		assert.DeepEqual(t, expectedHTR, resultHTR)
+	})
+	t.Run("Altair", func(t *testing.T) {
+		expectedBody := bodyPbAltair()
+		body := bodyAltair()
+		result, err := body.Proto()
+		require.NoError(t, err)
+		resultBlock, ok := result.(*eth.BeaconBlockBodyAltair)
+		require.Equal(t, true, ok)
+		resultHTR, err := resultBlock.HashTreeRoot()
+		require.NoError(t, err)
+		expectedHTR, err := expectedBody.HashTreeRoot()
+		require.NoError(t, err)
+		assert.DeepEqual(t, expectedHTR, resultHTR)
+	})
+	t.Run("Bellatrix", func(t *testing.T) {
+		expectedBody := bodyPbBellatrix()
+		body := bodyBellatrix()
+		result, err := body.Proto()
+		require.NoError(t, err)
+		resultBlock, ok := result.(*eth.BeaconBlockBodyBellatrix)
+		require.Equal(t, true, ok)
+		resultHTR, err := resultBlock.HashTreeRoot()
+		require.NoError(t, err)
+		expectedHTR, err := expectedBody.HashTreeRoot()
+		require.NoError(t, err)
+		assert.DeepEqual(t, expectedHTR, resultHTR)
+	})
+	t.Run("BellatrixBlind", func(t *testing.T) {
+		expectedBody := bodyPbBlindedBellatrix()
+		body := bodyBlindedBellatrix()
+		result, err := body.Proto()
+		require.NoError(t, err)
+		resultBlock, ok := result.(*eth.BlindedBeaconBlockBodyBellatrix)
+		require.Equal(t, true, ok)
+		resultHTR, err := resultBlock.HashTreeRoot()
+		require.NoError(t, err)
+		expectedHTR, err := expectedBody.HashTreeRoot()
+		require.NoError(t, err)
+		assert.DeepEqual(t, expectedHTR, resultHTR)
+	})
+}
+
+func bodyPbPhase0() *eth.BeaconBlockBody {
+	fields := getBodyFields()
+	return &eth.BeaconBlockBody{
+		RandaoReveal: fields.b96,
+		Eth1Data: &eth.Eth1Data{
+			DepositRoot:  fields.b32,
+			DepositCount: 128,
+			BlockHash:    fields.b32,
+		},
+		Graffiti:          fields.b32,
+		ProposerSlashings: fields.proposerSlashings,
+		AttesterSlashings: fields.attesterSlashings,
+		Attestations:      fields.atts,
+		Deposits:          fields.deposits,
+		VoluntaryExits:    fields.voluntaryExits,
+	}
+}
+
+func bodyPbAltair() *eth.BeaconBlockBodyAltair {
+	fields := getBodyFields()
+	return &eth.BeaconBlockBodyAltair{
+		RandaoReveal: fields.b96,
+		Eth1Data: &eth.Eth1Data{
+			DepositRoot:  fields.b32,
+			DepositCount: 128,
+			BlockHash:    fields.b32,
+		},
+		Graffiti:          fields.b32,
+		ProposerSlashings: fields.proposerSlashings,
+		AttesterSlashings: fields.attesterSlashings,
+		Attestations:      fields.atts,
+		Deposits:          fields.deposits,
+		VoluntaryExits:    fields.voluntaryExits,
+		SyncAggregate:     fields.syncAggregate,
+	}
+}
+
+func bodyPbBellatrix() *eth.BeaconBlockBodyBellatrix {
+	fields := getBodyFields()
+	return &eth.BeaconBlockBodyBellatrix{
+		RandaoReveal: fields.b96,
+		Eth1Data: &eth.Eth1Data{
+			DepositRoot:  fields.b32,
+			DepositCount: 128,
+			BlockHash:    fields.b32,
+		},
+		Graffiti:          fields.b32,
+		ProposerSlashings: fields.proposerSlashings,
+		AttesterSlashings: fields.attesterSlashings,
+		Attestations:      fields.atts,
+		Deposits:          fields.deposits,
+		VoluntaryExits:    fields.voluntaryExits,
+		SyncAggregate:     fields.syncAggregate,
+		ExecutionPayload:  fields.execPayload,
+	}
+}
+
+func bodyPbBlindedBellatrix() *eth.BlindedBeaconBlockBodyBellatrix {
+	fields := getBodyFields()
+	return &eth.BlindedBeaconBlockBodyBellatrix{
+		RandaoReveal: fields.b96,
+		Eth1Data: &eth.Eth1Data{
+			DepositRoot:  fields.b32,
+			DepositCount: 128,
+			BlockHash:    fields.b32,
+		},
+		Graffiti:               fields.b32,
+		ProposerSlashings:      fields.proposerSlashings,
+		AttesterSlashings:      fields.attesterSlashings,
+		Attestations:           fields.atts,
+		Deposits:               fields.deposits,
+		VoluntaryExits:         fields.voluntaryExits,
+		SyncAggregate:          fields.syncAggregate,
+		ExecutionPayloadHeader: fields.execPayloadHeader,
+	}
+}
+
+func bodyPhase0() *BeaconBlockBody {
+	fields := getBodyFields()
+	return &BeaconBlockBody{
+		version:      version.Phase0,
+		randaoReveal: fields.b96,
+		eth1Data: &eth.Eth1Data{
+			DepositRoot:  fields.b32,
+			DepositCount: 128,
+			BlockHash:    fields.b32,
+		},
+		graffiti:          fields.b32,
+		proposerSlashings: fields.proposerSlashings,
+		attesterSlashings: fields.attesterSlashings,
+		attestations:      fields.atts,
+		deposits:          fields.deposits,
+		voluntaryExits:    fields.voluntaryExits,
+	}
+}
+
+func bodyAltair() *BeaconBlockBody {
+	fields := getBodyFields()
+	return &BeaconBlockBody{
+		version:      version.Altair,
+		randaoReveal: fields.b96,
+		eth1Data: &eth.Eth1Data{
+			DepositRoot:  fields.b32,
+			DepositCount: 128,
+			BlockHash:    fields.b32,
+		},
+		graffiti:          fields.b32,
+		proposerSlashings: fields.proposerSlashings,
+		attesterSlashings: fields.attesterSlashings,
+		attestations:      fields.atts,
+		deposits:          fields.deposits,
+		voluntaryExits:    fields.voluntaryExits,
+		syncAggregate:     fields.syncAggregate,
+	}
+}
+
+func bodyBellatrix() *BeaconBlockBody {
+	fields := getBodyFields()
+	return &BeaconBlockBody{
+		version:      version.Bellatrix,
+		randaoReveal: fields.b96,
+		eth1Data: &eth.Eth1Data{
+			DepositRoot:  fields.b32,
+			DepositCount: 128,
+			BlockHash:    fields.b32,
+		},
+		graffiti:          fields.b32,
+		proposerSlashings: fields.proposerSlashings,
+		attesterSlashings: fields.attesterSlashings,
+		attestations:      fields.atts,
+		deposits:          fields.deposits,
+		voluntaryExits:    fields.voluntaryExits,
+		syncAggregate:     fields.syncAggregate,
+		executionPayload:  fields.execPayload,
+	}
+}
+
+func bodyBlindedBellatrix() *BeaconBlockBody {
+	fields := getBodyFields()
+	return &BeaconBlockBody{
+		version:      version.BellatrixBlind,
+		randaoReveal: fields.b96,
+		eth1Data: &eth.Eth1Data{
+			DepositRoot:  fields.b32,
+			DepositCount: 128,
+			BlockHash:    fields.b32,
+		},
+		graffiti:               fields.b32,
+		proposerSlashings:      fields.proposerSlashings,
+		attesterSlashings:      fields.attesterSlashings,
+		attestations:           fields.atts,
+		deposits:               fields.deposits,
+		voluntaryExits:         fields.voluntaryExits,
+		syncAggregate:          fields.syncAggregate,
+		executionPayloadHeader: fields.execPayloadHeader,
+	}
+}
+
+func getBodyFields() bodyFields {
 	b20 := make([]byte, 20)
 	b32 := make([]byte, 32)
 	b48 := make([]byte, 48)
@@ -136,7 +366,7 @@ func Test_BeaconBlockBody_Proto(t *testing.T) {
 		SyncCommitteeBits:      syncCommitteeBits,
 		SyncCommitteeSignature: b96,
 	}
-	executionPayload := &enginev1.ExecutionPayload{
+	execPayload := &enginev1.ExecutionPayload{
 		ParentHash:    b32,
 		FeeRecipient:  b20,
 		StateRoot:     b32,
@@ -156,7 +386,7 @@ func Test_BeaconBlockBody_Proto(t *testing.T) {
 			[]byte("transaction8"),
 		},
 	}
-	executionPayloadHeader := &eth.ExecutionPayloadHeader{
+	execPayloadHeader := &eth.ExecutionPayloadHeader{
 		ParentHash:       b32,
 		FeeRecipient:     b20,
 		StateRoot:        b32,
@@ -173,175 +403,19 @@ func Test_BeaconBlockBody_Proto(t *testing.T) {
 		TransactionsRoot: b32,
 	}
 
-	t.Run("Phase0", func(t *testing.T) {
-		expectedBody := &eth.BeaconBlockBody{
-			RandaoReveal: b96,
-			Eth1Data: &eth.Eth1Data{
-				DepositRoot:  b32,
-				DepositCount: 128,
-				BlockHash:    b32,
-			},
-			Graffiti:          b32,
-			ProposerSlashings: []*eth.ProposerSlashing{proposerSlashing},
-			AttesterSlashings: []*eth.AttesterSlashing{attesterSlashing},
-			Attestations:      atts,
-			Deposits:          deposits,
-			VoluntaryExits:    []*eth.SignedVoluntaryExit{voluntaryExit},
-		}
-		body := &BeaconBlockBody{
-			version:      version.Phase0,
-			randaoReveal: b96,
-			eth1Data: &eth.Eth1Data{
-				DepositRoot:  b32,
-				DepositCount: 128,
-				BlockHash:    b32,
-			},
-			graffiti:          b32,
-			proposerSlashings: []*eth.ProposerSlashing{proposerSlashing},
-			attesterSlashings: []*eth.AttesterSlashing{attesterSlashing},
-			attestations:      atts,
-			deposits:          deposits,
-			voluntaryExits:    []*eth.SignedVoluntaryExit{voluntaryExit},
-		}
-
-		result, err := body.Proto()
-		require.NoError(t, err)
-		resultBlock, ok := result.(*eth.BeaconBlockBody)
-		require.Equal(t, true, ok)
-		resultHTR, err := resultBlock.HashTreeRoot()
-		require.NoError(t, err)
-		expectedHTR, err := expectedBody.HashTreeRoot()
-		require.NoError(t, err)
-		assert.DeepEqual(t, expectedHTR, resultHTR)
-	})
-	t.Run("Altair", func(t *testing.T) {
-		expectedBody := &eth.BeaconBlockBodyAltair{
-			RandaoReveal: b96,
-			Eth1Data: &eth.Eth1Data{
-				DepositRoot:  b32,
-				DepositCount: 128,
-				BlockHash:    b32,
-			},
-			Graffiti:          b32,
-			ProposerSlashings: []*eth.ProposerSlashing{proposerSlashing},
-			AttesterSlashings: []*eth.AttesterSlashing{attesterSlashing},
-			Attestations:      atts,
-			Deposits:          deposits,
-			VoluntaryExits:    []*eth.SignedVoluntaryExit{voluntaryExit},
-			SyncAggregate:     syncAggregate,
-		}
-		body := &BeaconBlockBody{
-			version:      version.Altair,
-			randaoReveal: b96,
-			eth1Data: &eth.Eth1Data{
-				DepositRoot:  b32,
-				DepositCount: 128,
-				BlockHash:    b32,
-			},
-			graffiti:          b32,
-			proposerSlashings: []*eth.ProposerSlashing{proposerSlashing},
-			attesterSlashings: []*eth.AttesterSlashing{attesterSlashing},
-			attestations:      atts,
-			deposits:          deposits,
-			voluntaryExits:    []*eth.SignedVoluntaryExit{voluntaryExit},
-			syncAggregate:     syncAggregate,
-		}
-		result, err := body.Proto()
-		require.NoError(t, err)
-		resultBlock, ok := result.(*eth.BeaconBlockBodyAltair)
-		require.Equal(t, true, ok)
-		resultHTR, err := resultBlock.HashTreeRoot()
-		require.NoError(t, err)
-		expectedHTR, err := expectedBody.HashTreeRoot()
-		require.NoError(t, err)
-		assert.DeepEqual(t, expectedHTR, resultHTR)
-	})
-	t.Run("Bellatrix", func(t *testing.T) {
-		expectedBody := &eth.BeaconBlockBodyBellatrix{
-			RandaoReveal: b96,
-			Eth1Data: &eth.Eth1Data{
-				DepositRoot:  b32,
-				DepositCount: 128,
-				BlockHash:    b32,
-			},
-			Graffiti:          b32,
-			ProposerSlashings: []*eth.ProposerSlashing{proposerSlashing},
-			AttesterSlashings: []*eth.AttesterSlashing{attesterSlashing},
-			Attestations:      atts,
-			Deposits:          deposits,
-			VoluntaryExits:    []*eth.SignedVoluntaryExit{voluntaryExit},
-			SyncAggregate:     syncAggregate,
-			ExecutionPayload:  executionPayload,
-		}
-		body := &BeaconBlockBody{
-			version:      version.Bellatrix,
-			randaoReveal: b96,
-			eth1Data: &eth.Eth1Data{
-				DepositRoot:  b32,
-				DepositCount: 128,
-				BlockHash:    b32,
-			},
-			graffiti:          b32,
-			proposerSlashings: []*eth.ProposerSlashing{proposerSlashing},
-			attesterSlashings: []*eth.AttesterSlashing{attesterSlashing},
-			attestations:      atts,
-			deposits:          deposits,
-			voluntaryExits:    []*eth.SignedVoluntaryExit{voluntaryExit},
-			syncAggregate:     syncAggregate,
-			executionPayload:  executionPayload,
-		}
-		result, err := body.Proto()
-		require.NoError(t, err)
-		resultBlock, ok := result.(*eth.BeaconBlockBodyBellatrix)
-		require.Equal(t, true, ok)
-		resultHTR, err := resultBlock.HashTreeRoot()
-		require.NoError(t, err)
-		expectedHTR, err := expectedBody.HashTreeRoot()
-		require.NoError(t, err)
-		assert.DeepEqual(t, expectedHTR, resultHTR)
-	})
-	t.Run("BellatrixBlind", func(t *testing.T) {
-		expectedBody := &eth.BlindedBeaconBlockBodyBellatrix{
-			RandaoReveal: b96,
-			Eth1Data: &eth.Eth1Data{
-				DepositRoot:  b32,
-				DepositCount: 128,
-				BlockHash:    b32,
-			},
-			Graffiti:               b32,
-			ProposerSlashings:      []*eth.ProposerSlashing{proposerSlashing},
-			AttesterSlashings:      []*eth.AttesterSlashing{attesterSlashing},
-			Attestations:           atts,
-			Deposits:               deposits,
-			VoluntaryExits:         []*eth.SignedVoluntaryExit{voluntaryExit},
-			SyncAggregate:          syncAggregate,
-			ExecutionPayloadHeader: executionPayloadHeader,
-		}
-		body := &BeaconBlockBody{
-			version:      version.BellatrixBlind,
-			randaoReveal: b96,
-			eth1Data: &eth.Eth1Data{
-				DepositRoot:  b32,
-				DepositCount: 128,
-				BlockHash:    b32,
-			},
-			graffiti:               b32,
-			proposerSlashings:      []*eth.ProposerSlashing{proposerSlashing},
-			attesterSlashings:      []*eth.AttesterSlashing{attesterSlashing},
-			attestations:           atts,
-			deposits:               deposits,
-			voluntaryExits:         []*eth.SignedVoluntaryExit{voluntaryExit},
-			syncAggregate:          syncAggregate,
-			executionPayloadHeader: executionPayloadHeader,
-		}
-		result, err := body.Proto()
-		require.NoError(t, err)
-		resultBlock, ok := result.(*eth.BlindedBeaconBlockBodyBellatrix)
-		require.Equal(t, true, ok)
-		resultHTR, err := resultBlock.HashTreeRoot()
-		require.NoError(t, err)
-		expectedHTR, err := expectedBody.HashTreeRoot()
-		require.NoError(t, err)
-		assert.DeepEqual(t, expectedHTR, resultHTR)
-	})
+	return bodyFields{
+		b20:               b20,
+		b32:               b32,
+		b48:               b48,
+		b96:               b96,
+		b256:              b256,
+		deposits:          deposits,
+		atts:              atts,
+		proposerSlashings: []*eth.ProposerSlashing{proposerSlashing},
+		attesterSlashings: []*eth.AttesterSlashing{attesterSlashing},
+		voluntaryExits:    []*eth.SignedVoluntaryExit{voluntaryExit},
+		syncAggregate:     syncAggregate,
+		execPayload:       execPayload,
+		execPayloadHeader: execPayloadHeader,
+	}
 }
