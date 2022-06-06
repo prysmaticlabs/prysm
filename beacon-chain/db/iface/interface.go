@@ -86,6 +86,7 @@ type NoHeadAccessDatabase interface {
 	RunMigrations(ctx context.Context) error
 	// Fee reicipients operations.
 	SaveFeeRecipientsByValidatorIDs(ctx context.Context, ids []types.ValidatorIndex, addrs []common.Address) error
+	SaveRegistrationsByValidatorIDs(ctx context.Context, ids []types.ValidatorIndex, regs []*ethpb.ValidatorRegistrationV1) error
 
 	CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint types.Slot) error
 }
