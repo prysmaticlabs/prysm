@@ -113,7 +113,7 @@ func (vs *Server) CheckDoppelGanger(ctx context.Context, req *ethpb.DoppelGanger
 
 	// Return early if we are in phase0.
 	if headState.Version() == version.Phase0 {
-		log.Info("Skipping goppelganger check for Phase 0")
+		log.Info("Skipping doppelganger check for Phase 0")
 
 		resp := &ethpb.DoppelGangerResponse{
 			Responses: []*ethpb.DoppelGangerResponse_ValidatorResponse{},
