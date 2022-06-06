@@ -535,9 +535,17 @@ func TestStore_CommonAncestor(t *testing.T) {
 	require.ErrorIs(t, err, ErrNilNode)
 	_, err = f.CommonAncestorRoot(ctx, [32]byte{'z'}, [32]byte{'a'})
 	require.ErrorIs(t, err, ErrNilNode)
-	state, blkRoot, err = prepareForkchoiceState(ctx, 100, [32]byte{'y'}, [32]byte{'z'}, [32]byte{}, 1, 1)
-	require.NoError(t, err)
-	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	n := &Node{
+		slot:                     100,
+		root:                     [32]byte{'y'},
+		justifiedEpoch:           1,
+		unrealizedJustifiedEpoch: 1,
+		finalizedEpoch:           1,
+		unrealizedFinalizedEpoch: 1,
+		optimistic:               true,
+	}
+
+	f.store.nodeByRoot[[32]byte{'y'}] = n
 	// broken link
 	_, err = f.CommonAncestorRoot(ctx, [32]byte{'y'}, [32]byte{'a'})
 	require.ErrorIs(t, err, forkchoice.ErrUnknownCommonAncestor)
