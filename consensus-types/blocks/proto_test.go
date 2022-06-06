@@ -337,6 +337,210 @@ func Test_BeaconBlockBody_Proto(t *testing.T) {
 	})
 }
 
+func Test_initSignedBlockFromProtoPhase0(t *testing.T) {
+	f := getFields()
+	expectedBlock := &eth.SignedBeaconBlock{
+		Block: &eth.BeaconBlock{
+			Slot:          128,
+			ProposerIndex: 128,
+			ParentRoot:    f.b32,
+			StateRoot:     f.b32,
+			Body:          bodyPbPhase0(),
+		},
+		Signature: f.b96,
+	}
+	resultBlock, err := initSignedBlockFromProtoPhase0(expectedBlock)
+	require.NoError(t, err)
+	resultHTR, err := resultBlock.block.HashTreeRoot()
+	require.NoError(t, err)
+	expectedHTR, err := expectedBlock.Block.HashTreeRoot()
+	require.NoError(t, err)
+	assert.DeepEqual(t, expectedHTR, resultHTR)
+	assert.DeepEqual(t, expectedBlock.Signature, resultBlock.signature)
+}
+
+func Test_initSignedBlockFromProtoAltair(t *testing.T) {
+	f := getFields()
+	expectedBlock := &eth.SignedBeaconBlockAltair{
+		Block: &eth.BeaconBlockAltair{
+			Slot:          128,
+			ProposerIndex: 128,
+			ParentRoot:    f.b32,
+			StateRoot:     f.b32,
+			Body:          bodyPbAltair(),
+		},
+		Signature: f.b96,
+	}
+	resultBlock, err := initSignedBlockFromProtoAltair(expectedBlock)
+	require.NoError(t, err)
+	resultHTR, err := resultBlock.block.HashTreeRoot()
+	require.NoError(t, err)
+	expectedHTR, err := expectedBlock.Block.HashTreeRoot()
+	require.NoError(t, err)
+	assert.DeepEqual(t, expectedHTR, resultHTR)
+	assert.DeepEqual(t, expectedBlock.Signature, resultBlock.signature)
+}
+
+func Test_initSignedBlockFromProtoBellatrix(t *testing.T) {
+	f := getFields()
+	expectedBlock := &eth.SignedBeaconBlockBellatrix{
+		Block: &eth.BeaconBlockBellatrix{
+			Slot:          128,
+			ProposerIndex: 128,
+			ParentRoot:    f.b32,
+			StateRoot:     f.b32,
+			Body:          bodyPbBellatrix(),
+		},
+		Signature: f.b96,
+	}
+	resultBlock, err := initSignedBlockFromProtoBellatrix(expectedBlock)
+	require.NoError(t, err)
+	resultHTR, err := resultBlock.block.HashTreeRoot()
+	require.NoError(t, err)
+	expectedHTR, err := expectedBlock.Block.HashTreeRoot()
+	require.NoError(t, err)
+	assert.DeepEqual(t, expectedHTR, resultHTR)
+	assert.DeepEqual(t, expectedBlock.Signature, resultBlock.signature)
+}
+
+func Test_initBlindedSignedBlockFromProtoBellatrix(t *testing.T) {
+	f := getFields()
+	expectedBlock := &eth.SignedBlindedBeaconBlockBellatrix{
+		Block: &eth.BlindedBeaconBlockBellatrix{
+			Slot:          128,
+			ProposerIndex: 128,
+			ParentRoot:    f.b32,
+			StateRoot:     f.b32,
+			Body:          bodyPbBlindedBellatrix(),
+		},
+		Signature: f.b96,
+	}
+	resultBlock, err := initBlindedSignedBlockFromProtoBellatrix(expectedBlock)
+	require.NoError(t, err)
+	resultHTR, err := resultBlock.block.HashTreeRoot()
+	require.NoError(t, err)
+	expectedHTR, err := expectedBlock.Block.HashTreeRoot()
+	require.NoError(t, err)
+	assert.DeepEqual(t, expectedHTR, resultHTR)
+	assert.DeepEqual(t, expectedBlock.Signature, resultBlock.signature)
+}
+
+func Test_initBlockFromProtoPhase0(t *testing.T) {
+	f := getFields()
+	expectedBlock := &eth.BeaconBlock{
+		Slot:          128,
+		ProposerIndex: 128,
+		ParentRoot:    f.b32,
+		StateRoot:     f.b32,
+		Body:          bodyPbPhase0(),
+	}
+	resultBlock, err := initBlockFromProtoPhase0(expectedBlock)
+	require.NoError(t, err)
+	resultHTR, err := resultBlock.HashTreeRoot()
+	require.NoError(t, err)
+	expectedHTR, err := expectedBlock.HashTreeRoot()
+	require.NoError(t, err)
+	assert.DeepEqual(t, expectedHTR, resultHTR)
+}
+
+func Test_initBlockFromProtoAltair(t *testing.T) {
+	f := getFields()
+	expectedBlock := &eth.BeaconBlockAltair{
+		Slot:          128,
+		ProposerIndex: 128,
+		ParentRoot:    f.b32,
+		StateRoot:     f.b32,
+		Body:          bodyPbAltair(),
+	}
+	resultBlock, err := initBlockFromProtoAltair(expectedBlock)
+	require.NoError(t, err)
+	resultHTR, err := resultBlock.HashTreeRoot()
+	require.NoError(t, err)
+	expectedHTR, err := expectedBlock.HashTreeRoot()
+	require.NoError(t, err)
+	assert.DeepEqual(t, expectedHTR, resultHTR)
+}
+
+func Test_initBlockFromProtoBellatrix(t *testing.T) {
+	f := getFields()
+	expectedBlock := &eth.BeaconBlockBellatrix{
+		Slot:          128,
+		ProposerIndex: 128,
+		ParentRoot:    f.b32,
+		StateRoot:     f.b32,
+		Body:          bodyPbBellatrix(),
+	}
+	resultBlock, err := initBlockFromProtoBellatrix(expectedBlock)
+	require.NoError(t, err)
+	resultHTR, err := resultBlock.HashTreeRoot()
+	require.NoError(t, err)
+	expectedHTR, err := expectedBlock.HashTreeRoot()
+	require.NoError(t, err)
+	assert.DeepEqual(t, expectedHTR, resultHTR)
+}
+
+func Test_initBlockFromProtoBlindedBellatrix(t *testing.T) {
+	f := getFields()
+	expectedBlock := &eth.BlindedBeaconBlockBellatrix{
+		Slot:          128,
+		ProposerIndex: 128,
+		ParentRoot:    f.b32,
+		StateRoot:     f.b32,
+		Body:          bodyPbBlindedBellatrix(),
+	}
+	resultBlock, err := initBlindedBlockFromProtoBellatrix(expectedBlock)
+	require.NoError(t, err)
+	resultHTR, err := resultBlock.HashTreeRoot()
+	require.NoError(t, err)
+	expectedHTR, err := expectedBlock.HashTreeRoot()
+	require.NoError(t, err)
+	assert.DeepEqual(t, expectedHTR, resultHTR)
+}
+
+func Test_initBlockBodyFromProtoPhase0(t *testing.T) {
+	expectedBody := bodyPbPhase0()
+	resultBody, err := initBlockBodyFromProtoPhase0(expectedBody)
+	require.NoError(t, err)
+	resultHTR, err := resultBody.HashTreeRoot()
+	require.NoError(t, err)
+	expectedHTR, err := expectedBody.HashTreeRoot()
+	require.NoError(t, err)
+	assert.DeepEqual(t, expectedHTR, resultHTR)
+}
+
+func Test_initBlockBodyFromProtoAltair(t *testing.T) {
+	expectedBody := bodyPbAltair()
+	resultBody, err := initBlockBodyFromProtoAltair(expectedBody)
+	require.NoError(t, err)
+	resultHTR, err := resultBody.HashTreeRoot()
+	require.NoError(t, err)
+	expectedHTR, err := expectedBody.HashTreeRoot()
+	require.NoError(t, err)
+	assert.DeepEqual(t, expectedHTR, resultHTR)
+}
+
+func Test_initBlockBodyFromProtoBellatrix(t *testing.T) {
+	expectedBody := bodyPbBellatrix()
+	resultBody, err := initBlockBodyFromProtoBellatrix(expectedBody)
+	require.NoError(t, err)
+	resultHTR, err := resultBody.HashTreeRoot()
+	require.NoError(t, err)
+	expectedHTR, err := expectedBody.HashTreeRoot()
+	require.NoError(t, err)
+	assert.DeepEqual(t, expectedHTR, resultHTR)
+}
+
+func Test_initBlockBodyFromProtoBlindedBellatrix(t *testing.T) {
+	expectedBody := bodyPbBlindedBellatrix()
+	resultBody, err := initBlindedBlockBodyFromProtoBellatrix(expectedBody)
+	require.NoError(t, err)
+	resultHTR, err := resultBody.HashTreeRoot()
+	require.NoError(t, err)
+	expectedHTR, err := expectedBody.HashTreeRoot()
+	require.NoError(t, err)
+	assert.DeepEqual(t, expectedHTR, resultHTR)
+}
+
 func bodyPbPhase0() *eth.BeaconBlockBody {
 	f := getFields()
 	return &eth.BeaconBlockBody{
