@@ -122,6 +122,7 @@ func configureTestnet(ctx *cli.Context) error {
 		if err := params.SetActive(params.RopstenConfig().Copy()); err != nil {
 			return err
 		}
+		enableDevModeFlags(ctx)
 		params.UseRopstenNetworkConfig()
 	} else {
 		log.Warn("Running on Ethereum Consensus Mainnet")
