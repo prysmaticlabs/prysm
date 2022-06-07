@@ -53,7 +53,7 @@ func BenchmarkExecuteStateTransition_WithCache(b *testing.B) {
 	// some attestations in block are from previous epoch
 	currentSlot := beaconState.Slot()
 	require.NoError(b, beaconState.SetSlot(beaconState.Slot()-params.BeaconConfig().SlotsPerEpoch))
-	require.NoError(b, helpers.UpdateCommitteeCache(beaconState, time.CurrentEpoch(beaconState)))
+	require.NoError(b, helpers.UpdateCommitteeCache(context.Background(), beaconState, time.CurrentEpoch(beaconState)))
 	require.NoError(b, beaconState.SetSlot(currentSlot))
 	// Run the state transition once to populate the cache.
 	wsb, err := wrapper.WrappedSignedBeaconBlock(block)
@@ -81,7 +81,7 @@ func BenchmarkProcessEpoch_2FullEpochs(b *testing.B) {
 	// some attestations in block are from previous epoch
 	currentSlot := beaconState.Slot()
 	require.NoError(b, beaconState.SetSlot(beaconState.Slot()-params.BeaconConfig().SlotsPerEpoch))
-	require.NoError(b, helpers.UpdateCommitteeCache(beaconState, time.CurrentEpoch(beaconState)))
+	require.NoError(b, helpers.UpdateCommitteeCache(context.Background(), beaconState, time.CurrentEpoch(beaconState)))
 	require.NoError(b, beaconState.SetSlot(currentSlot))
 
 	b.ResetTimer()
