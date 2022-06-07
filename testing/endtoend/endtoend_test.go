@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/api/client/beacon"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/io/file"
+	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/proto/eth/service"
 	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	"google.golang.org/grpc/codes"
@@ -622,6 +623,36 @@ func (r *testRunner) allValidatorsOffline(epoch uint64) bool {
 	case 10:
 		require.NoError(r.t, r.comHandler.validatorNodes.ResumeAtIndex(0))
 		require.NoError(r.t, r.comHandler.validatorNodes.ResumeAtIndex(1))
+		return true
+	case 11, 12:
+		// Allow 2 epochs for the network to finalize again.
+		return true
+	}
+	return false
+}
+
+func (r *testRunner) optimisticSync(epoch uint64) bool {
+	switch epoch {
+	case 9:
+		component, err := r.comHandler.eth1Proxy.ComponentAtIndex(0)
+		require.NoError(r.t, err)
+		component.(e2etypes.EngineProxy).AddRequestInterceptor("engine_newPayloadV1", func() interface{} {
+			return &enginev1.PayloadStatus{
+				Status: enginev1.PayloadStatus_SYNCING,
+			}
+		}, func() bool {
+			return true
+		})
+		return true
+	case 10:
+		// Disable Interceptor
+		component, err := r.comHandler.eth1Proxy.ComponentAtIndex(0)
+		require.NoError(r.t, err)
+		component.(e2etypes.EngineProxy).AddRequestInterceptor("engine_newPayloadV1", func() interface{} {
+			return nil
+		}, func() bool {
+			return false
+		})
 		return true
 	case 11, 12:
 		// Allow 2 epochs for the network to finalize again.

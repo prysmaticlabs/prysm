@@ -75,12 +75,24 @@ type ComponentRunner interface {
 
 type MultipleComponentRunners interface {
 	ComponentRunner
+	// ComponentAtIndex returns the component at index
+	ComponentAtIndex(i int) (ComponentRunner, error)
 	// PauseAtIndex pauses the grouped component element at the desired index.
 	PauseAtIndex(i int) error
 	// ResumeAtIndex resumes the grouped component element at the desired index.
 	ResumeAtIndex(i int) error
 	// StopAtIndex stops the grouped component element at the desired index.
 	StopAtIndex(i int) error
+}
+
+type EngineProxy interface {
+	ComponentRunner
+	// AddRequestInterceptor adds in a json-rpc request interceptor.
+	AddRequestInterceptor(rpcMethodName string, responseGen func() interface{}, trigger func() bool)
+	// RemoveRequestInterceptor removes the request interceptor for the provided method.
+	RemoveRequestInterceptor(rpcMethodName string)
+	// ReleaseBackedUpRequests releases backed up http requests.
+	ReleaseBackedUpRequests(rpcMethodName string)
 }
 
 // BeaconNodeSet defines an interface for an object that fulfills the duties
