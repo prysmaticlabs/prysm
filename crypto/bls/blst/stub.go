@@ -1,4 +1,4 @@
-//go:build blst_disabled || fuzz
+//go:build blst_disabled
 package blst
 
 import (
