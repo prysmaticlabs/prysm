@@ -14,8 +14,10 @@ import (
 	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/crypto/rand"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -27,6 +29,8 @@ const (
 	ForkchoiceUpdatedMethod = "engine_forkchoiceUpdatedV1"
 	// GetPayloadMethod v1 request string for JSON-RPC.
 	GetPayloadMethod = "engine_getPayloadV1"
+	// GetBlobsMethod v1 request string for JSON-RPC.
+	GetBlobsMethod = "engine_getBlobsV1"
 	// ExchangeTransitionConfigurationMethod v1 request string for JSON-RPC.
 	ExchangeTransitionConfigurationMethod = "engine_exchangeTransitionConfigurationV1"
 	// ExecutionBlockByHashMethod request string for JSON-RPC.
@@ -59,6 +63,7 @@ type EngineCaller interface {
 	) error
 	ExecutionBlockByHash(ctx context.Context, hash common.Hash) (*pb.ExecutionBlock, error)
 	GetTerminalBlockHash(ctx context.Context) ([]byte, bool, error)
+	GetBlobs(ctx context.Context, payloadId [8]byte) ([]*ethpb.Blob, error)
 }
 
 // NewPayload calls the engine_newPayloadV1 method via JSON-RPC.
@@ -288,6 +293,22 @@ func (s *Service) ExecutionBlockByHash(ctx context.Context, hash common.Hash) (*
 	result := &pb.ExecutionBlock{}
 	err := s.rpcClient.CallContext(ctx, result, ExecutionBlockByHashMethod, hash, false /* no full transaction objects */)
 	return result, handleRPCError(err)
+}
+
+// GetBlobs calls the engine_getBlobsV1 method via JSON-RPC.
+func (c *Service) GetBlobs(_ context.Context, _ [8]byte) ([]*ethpb.Blob, error) {
+	// TODO(inphi): remove fakes
+	blobBytes := make([][]byte, 4096)
+	gen := rand.NewGenerator()
+	for i := 0; i < len(blobBytes); i++ {
+		item := make([]byte, 48)
+		_, err := gen.Read(item)
+		if err != nil {
+			return nil, err
+		}
+		blobBytes[i] = item
+	}
+	return []*ethpb.Blob{{Blob: blobBytes}}, nil
 }
 
 // Handles errors received from the RPC server according to the specification.

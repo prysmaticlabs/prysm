@@ -58,6 +58,10 @@ func WrappedSignedBeaconBlock(i interface{}) (interfaces.SignedBeaconBlock, erro
 		return wrappedBellatrixSignedBlindedBeaconBlock(b.BlindedBellatrix)
 	case *eth.SignedBlindedBeaconBlockBellatrix:
 		return wrappedBellatrixSignedBlindedBeaconBlock(b)
+	case *eth.GenericSignedBeaconBlock_Eip4844:
+		return wrappedEip4844SignedBeaconBlock(b.Eip4844)
+	case *eth.SignedBeaconBlockWithBlobKZGs:
+		return wrappedEip4844SignedBeaconBlock(b)
 	case nil:
 		return nil, ErrNilObjectWrapped
 	default:
@@ -85,6 +89,10 @@ func WrappedBeaconBlock(i interface{}) (interfaces.BeaconBlock, error) {
 		return wrappedBellatrixBlindedBeaconBlock(b.BlindedBellatrix)
 	case *eth.BlindedBeaconBlockBellatrix:
 		return wrappedBellatrixBlindedBeaconBlock(b)
+	case *eth.GenericBeaconBlock_Eip4844:
+		return wrappedEip4844BeaconBlock(b.Eip4844)
+	case *eth.BeaconBlockWithBlobKZGs:
+		return wrappedEip4844BeaconBlock(b)
 	case nil:
 		return nil, ErrNilObjectWrapped
 	default:
@@ -104,6 +112,8 @@ func WrappedBeaconBlockBody(i interface{}) (interfaces.BeaconBlockBody, error) {
 		return wrappedBellatrixBeaconBlockBody(b)
 	case *eth.BlindedBeaconBlockBodyBellatrix:
 		return wrappedBellatrixBlindedBeaconBlockBody(b)
+	case *eth.BeaconBlockBodyWithBlobKZGs:
+		return wrappedEip4844BeaconBlockBody(b)
 	case nil:
 		return nil, ErrNilObjectWrapped
 	default:
@@ -140,6 +150,12 @@ func BuildSignedBeaconBlock(blk interfaces.BeaconBlock, signature []byte) (inter
 			return nil, errors.New("unable to access inner bellatrix proto")
 		}
 		return WrappedSignedBeaconBlock(&eth.SignedBlindedBeaconBlockBellatrix{Block: pb, Signature: signature})
+	case eip4844BeaconBlock:
+		pb, ok := b.Proto().(*eth.BeaconBlockWithBlobKZGs)
+		if !ok {
+			return nil, errors.New("unable to access innner eip4844 proto")
+		}
+		return WrappedSignedBeaconBlock(&eth.SignedBeaconBlockWithBlobKZGs{Block: pb, Signature: signature})
 	default:
 		return nil, errors.Wrapf(ErrUnsupportedBeaconBlock, "unable to wrap block of type %T", b)
 	}
@@ -158,6 +174,8 @@ func UnwrapGenericSignedBeaconBlock(gb *eth.GenericSignedBeaconBlock) (interface
 		return WrappedSignedBeaconBlock(bb.Bellatrix)
 	case *eth.GenericSignedBeaconBlock_BlindedBellatrix:
 		return WrappedSignedBeaconBlock(bb.BlindedBellatrix)
+	case *eth.GenericSignedBeaconBlock_Eip4844:
+		return WrappedSignedBeaconBlock(bb.Eip4844)
 	default:
 		return nil, errors.Wrapf(ErrUnsupportedSignedBeaconBlock, "unable to wrap block of type %T", gb)
 	}

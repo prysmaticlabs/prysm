@@ -5,6 +5,7 @@ const (
 	Altair
 	Bellatrix
 	BellatrixBlind
+	EIP4844
 )
 
 func String(version int) string {
@@ -17,6 +18,8 @@ func String(version int) string {
 		return "bellatrix"
 	case BellatrixBlind:
 		return "bellatrix-blind"
+	case EIP4844:
+		return "eip4844"
 	default:
 		return "unknown version"
 	}

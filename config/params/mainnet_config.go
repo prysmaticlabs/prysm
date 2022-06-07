@@ -23,6 +23,7 @@ const (
 	mainnetAltairForkEpoch = 74240 // Oct 27, 2021, 10:56:23am UTC
 	// Placeholder for the merge epoch until it is decided
 	mainnetBellatrixForkEpoch = math.MaxUint64
+	mainnetEip4844ForkEpoch   = math.MaxUint64
 )
 
 var mainnetNetworkConfig = &NetworkConfig{
@@ -204,6 +205,8 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	BellatrixForkEpoch:   mainnetBellatrixForkEpoch,
 	ShardingForkVersion:  []byte{4, 0, 0, 0},
 	ShardingForkEpoch:    math.MaxUint64,
+	Eip4844ForkVersion:   []byte{8, 0, 0, 0},
+	Eip4844ForkEpoch:     math.MaxUint64,
 
 	// New values introduced in Altair hard fork 1.
 	// Participation flag indices.

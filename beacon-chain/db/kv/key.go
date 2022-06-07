@@ -23,3 +23,10 @@ func hasBellatrixBlindKey(enc []byte) bool {
 	}
 	return bytes.Equal(enc[:len(bellatrixBlindKey)], bellatrixBlindKey)
 }
+
+func hasMiniDankKey(enc []byte) bool {
+	if len(miniDankKey) >= len(enc) {
+		return false
+	}
+	return bytes.Equal(enc[:len(miniDankKey)], miniDankKey)
+}

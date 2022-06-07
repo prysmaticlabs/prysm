@@ -52,6 +52,13 @@ func WriteBlockChunk(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher
 			return err
 		}
 		obtainedCtx = digest[:]
+	case version.EIP4844:
+		valRoot := chain.GenesisValidatorsRoot()
+		digest, err := forks.ForkDigestFromEpoch(params.BeaconConfig().Eip4844ForkEpoch, valRoot[:])
+		if err != nil {
+			return err
+		}
+		obtainedCtx = digest[:]
 	}
 
 	if err := writeContextToStream(obtainedCtx, stream, chain); err != nil {
