@@ -13,7 +13,6 @@ import (
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -244,7 +243,7 @@ func TestForkChoice_AncestorRoot(t *testing.T) {
 
 	r, err := f.AncestorRoot(ctx, indexToHash(3), 6)
 	assert.NoError(t, err)
-	assert.Equal(t, bytesutil.ToBytes32(r), indexToHash(3))
+	assert.Equal(t, r, indexToHash(3))
 
 	_, err = f.AncestorRoot(ctx, indexToHash(3), 0)
 	assert.ErrorContains(t, ErrNilNode.Error(), err)
@@ -252,11 +251,11 @@ func TestForkChoice_AncestorRoot(t *testing.T) {
 	root, err := f.AncestorRoot(ctx, indexToHash(3), 5)
 	require.NoError(t, err)
 	hash3 := indexToHash(3)
-	require.DeepEqual(t, hash3[:], root)
+	require.DeepEqual(t, hash3, root)
 	root, err = f.AncestorRoot(ctx, indexToHash(3), 1)
 	require.NoError(t, err)
 	hash1 := indexToHash(1)
-	require.DeepEqual(t, hash1[:], root)
+	require.DeepEqual(t, hash1, root)
 }
 
 func TestForkChoice_AncestorEqualSlot(t *testing.T) {
@@ -271,8 +270,7 @@ func TestForkChoice_AncestorEqualSlot(t *testing.T) {
 
 	r, err := f.AncestorRoot(ctx, [32]byte{'3'}, 100)
 	require.NoError(t, err)
-	root := bytesutil.ToBytes32(r)
-	require.Equal(t, root, [32]byte{'1'})
+	require.Equal(t, r, [32]byte{'1'})
 }
 
 func TestForkChoice_AncestorLowerSlot(t *testing.T) {
@@ -287,8 +285,7 @@ func TestForkChoice_AncestorLowerSlot(t *testing.T) {
 
 	r, err := f.AncestorRoot(ctx, [32]byte{'3'}, 150)
 	require.NoError(t, err)
-	root := bytesutil.ToBytes32(r)
-	require.Equal(t, root, [32]byte{'1'})
+	require.Equal(t, r, [32]byte{'1'})
 }
 
 func TestForkChoice_RemoveEquivocating(t *testing.T) {

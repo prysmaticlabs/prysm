@@ -15,8 +15,9 @@ import (
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	pmath "github.com/prysmaticlabs/prysm/math"
-	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -146,7 +147,51 @@ func (f *ForkChoice) InsertNode(ctx context.Context, state state.ReadOnlyBeaconS
 		return errInvalidNilCheckpoint
 	}
 	finalizedEpoch := fc.Epoch
-	return f.store.insert(ctx, slot, root, parentRoot, payloadHash, justifiedEpoch, finalizedEpoch)
+	err := f.store.insert(ctx, slot, root, parentRoot, payloadHash, justifiedEpoch, finalizedEpoch)
+	if err != nil {
+		return err
+	}
+	return f.updateCheckpoints(ctx, jc, fc)
+}
+
+// updateCheckpoints update the checkpoints when inserting a new node.
+func (f *ForkChoice) updateCheckpoints(ctx context.Context, jc, fc *ethpb.Checkpoint) error {
+	f.store.checkpointsLock.Lock()
+	defer f.store.checkpointsLock.Unlock()
+	if jc.Epoch > f.store.justifiedCheckpoint.Epoch {
+		bj := f.store.bestJustifiedCheckpoint
+		if bj == nil || jc.Epoch > bj.Epoch {
+			f.store.bestJustifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch,
+				Root: bytesutil.ToBytes32(jc.Root)}
+		}
+		currentSlot := slots.CurrentSlot(f.store.genesisTime)
+		if slots.SinceEpochStarts(currentSlot) < params.BeaconConfig().SafeSlotsToUpdateJustified {
+			f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch,
+				Root: bytesutil.ToBytes32(jc.Root)}
+		} else {
+			jSlot, err := slots.EpochStart(jc.Epoch)
+			if err != nil {
+				return err
+			}
+			jcRoot := bytesutil.ToBytes32(jc.Root)
+			root, err := f.AncestorRoot(ctx, jcRoot, jSlot)
+			if err != nil {
+				return err
+			}
+			if root == f.store.justifiedCheckpoint.Root {
+				f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch,
+					Root: jcRoot}
+			}
+		}
+	}
+	// Update finalization
+	if fc.Epoch > f.store.finalizedCheckpoint.Epoch {
+		f.store.finalizedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: fc.Epoch,
+			Root: bytesutil.ToBytes32(fc.Root)}
+		f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch,
+			Root: bytesutil.ToBytes32(jc.Root)}
+	}
+	return nil
 }
 
 // Prune prunes the fork choice store with the new finalized root. The store is only pruned if the input
@@ -188,7 +233,7 @@ func (f *ForkChoice) IsCanonical(root [32]byte) bool {
 }
 
 // AncestorRoot returns the ancestor root of input block root at a given slot.
-func (f *ForkChoice) AncestorRoot(ctx context.Context, root [32]byte, slot types.Slot) ([]byte, error) {
+func (f *ForkChoice) AncestorRoot(ctx context.Context, root [32]byte, slot types.Slot) ([32]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "protoArray.AncestorRoot")
 	defer span.End()
 
@@ -197,25 +242,25 @@ func (f *ForkChoice) AncestorRoot(ctx context.Context, root [32]byte, slot types
 
 	i, ok := f.store.nodesIndices[root]
 	if !ok {
-		return nil, errors.New("node does not exist")
+		return [32]byte{}, errors.New("node does not exist")
 	}
 	if i >= uint64(len(f.store.nodes)) {
-		return nil, errors.New("node index out of range")
+		return [32]byte{}, errors.New("node index out of range")
 	}
 
 	for f.store.nodes[i].slot > slot {
 		if ctx.Err() != nil {
-			return nil, ctx.Err()
+			return [32]byte{}, ctx.Err()
 		}
 
 		i = f.store.nodes[i].parent
 
 		if i >= uint64(len(f.store.nodes)) {
-			return nil, errors.New("node index out of range")
+			return [32]byte{}, errors.New("node index out of range")
 		}
 	}
 
-	return f.store.nodes[i].root[:], nil
+	return f.store.nodes[i].root, nil
 }
 
 // CommonAncestorRoot returns the common ancestor root between the two block roots r1 and r2.
@@ -776,10 +821,10 @@ func (f *ForkChoice) Tips() ([][32]byte, []types.Slot) {
 	return headsRoots, headsSlots
 }
 
-func (f *ForkChoice) ForkChoiceNodes() []*pbrpc.ForkChoiceNode {
+func (f *ForkChoice) ForkChoiceNodes() []*ethpb.ForkChoiceNode {
 	f.store.nodesLock.RLock()
 	defer f.store.nodesLock.RUnlock()
-	ret := make([]*pbrpc.ForkChoiceNode, len(f.store.nodes))
+	ret := make([]*ethpb.ForkChoiceNode, len(f.store.nodes))
 	var parentRoot [32]byte
 	for i, node := range f.store.nodes {
 		root := node.Root()
@@ -799,7 +844,7 @@ func (f *ForkChoice) ForkChoiceNodes() []*pbrpc.ForkChoiceNode {
 			bestDescendantRoot = bestDescendantNode.Root()
 		}
 
-		ret[i] = &pbrpc.ForkChoiceNode{
+		ret[i] = &ethpb.ForkChoiceNode{
 			Slot:           node.Slot(),
 			Root:           root[:],
 			Parent:         parentRoot[:],
@@ -869,6 +914,10 @@ func (f *ForkChoice) UpdateJustifiedCheckpoint(jc *forkchoicetypes.Checkpoint) e
 	f.store.checkpointsLock.Lock()
 	defer f.store.checkpointsLock.Unlock()
 	f.store.justifiedCheckpoint = jc
+	bj := f.store.bestJustifiedCheckpoint
+	if bj == nil || jc.Epoch > bj.Epoch {
+		f.store.bestJustifiedCheckpoint = jc
+	}
 	return nil
 }
 
@@ -904,4 +953,9 @@ func (f *ForkChoice) InsertOptimisticChain(ctx context.Context, chain []*forkcho
 		}
 	}
 	return nil
+}
+
+// sets the genesisTime tracked by forkchoice
+func (f *ForkChoice) SetGenesisTime(genesisTime uint64) {
+	f.store.genesisTime = genesisTime
 }

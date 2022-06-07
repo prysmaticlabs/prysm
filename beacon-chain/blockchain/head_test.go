@@ -174,7 +174,7 @@ func TestUpdateHead_MissingJustifiedRoot(t *testing.T) {
 	service.store.SetJustifiedCheckptAndPayloadHash(&ethpb.Checkpoint{Root: r[:]}, [32]byte{'a'})
 	service.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{}, [32]byte{'b'})
 	service.store.SetBestJustifiedCheckpt(&ethpb.Checkpoint{})
-	_, err = service.updateHead(context.Background(), []uint64{})
+	_, err = service.cfg.ForkChoiceStore.Head(context.Background(), []uint64{})
 	require.NoError(t, err)
 }
 
@@ -644,7 +644,7 @@ func TestUpdateHead_noSavedChanges(t *testing.T) {
 	st, blkRoot, err := prepareForkchoiceState(ctx, 0, bellatrixBlkRoot, [32]byte{}, [32]byte{}, 0, 0)
 	require.NoError(t, err)
 	require.NoError(t, fcs.InsertNode(ctx, st, blkRoot))
-	newRoot, err := service.updateHead(ctx, []uint64{1, 2})
+	newRoot, err := service.cfg.ForkChoiceStore.Head(ctx, []uint64{1, 2})
 	require.NoError(t, err)
 	require.NotEqual(t, headRoot, newRoot)
 	require.Equal(t, headRoot, service.headRoot())

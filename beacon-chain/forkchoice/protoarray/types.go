@@ -20,6 +20,7 @@ type ForkChoice struct {
 type Store struct {
 	pruneThreshold             uint64                                  // do not prune tree unless threshold is reached.
 	justifiedCheckpoint        *forkchoicetypes.Checkpoint             // latest justified checkpoint in store.
+	bestJustifiedCheckpoint    *forkchoicetypes.Checkpoint             // best justified checkpoint in store.
 	finalizedCheckpoint        *forkchoicetypes.Checkpoint             // latest finalized checkpoint in store.
 	proposerBoostRoot          [fieldparams.RootLength]byte            // latest block root that was boosted after being received in a timely manner.
 	previousProposerBoostRoot  [fieldparams.RootLength]byte            // previous block root that was boosted after being received in a timely manner.
@@ -32,6 +33,7 @@ type Store struct {
 	nodesLock                  sync.RWMutex
 	proposerBoostLock          sync.RWMutex
 	checkpointsLock            sync.RWMutex
+	genesisTime                uint64
 }
 
 // Node defines the individual block which includes its block parent, ancestor and how much weight accounted for it.
