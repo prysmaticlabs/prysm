@@ -23,7 +23,6 @@ var (
 	errIncorrectBlockVersion = errors.New(incorrectBlockVersion)
 	errIncorrectBodyVersion  = errors.New(incorrectBodyVersion)
 	errCloningFailed         = errors.New("cloning proto message failed")
-	errAssertionFailed       = errors.New("type assertion failed")
 )
 
 // BeaconBlockBody is the main beacon block body structure. It can represent any block type.
