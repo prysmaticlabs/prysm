@@ -263,6 +263,13 @@ func (r *testRunner) testCheckpointSync(ctx context.Context, g *errgroup.Group, 
 	if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{ethNode}); err != nil {
 		return fmt.Errorf("sync beacon node not ready: %w", err)
 	}
+	proxyNode := eth1.NewProxy(i)
+	g.Go(func() error {
+		return proxyNode.Start(ctx)
+	})
+	if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{proxyNode}); err != nil {
+		return fmt.Errorf("sync beacon node not ready: %w", err)
+	}
 
 	client, err := beacon.NewClient(bnAPI)
 	if err != nil {
@@ -321,6 +328,13 @@ func (r *testRunner) testBeaconChainSync(ctx context.Context, g *errgroup.Group,
 		return ethNode.Start(ctx)
 	})
 	if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{ethNode}); err != nil {
+		return fmt.Errorf("sync beacon node not ready: %w", err)
+	}
+	proxyNode := eth1.NewProxy(index)
+	g.Go(func() error {
+		return proxyNode.Start(ctx)
+	})
+	if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{proxyNode}); err != nil {
 		return fmt.Errorf("sync beacon node not ready: %w", err)
 	}
 	syncBeaconNode := components.NewBeaconNode(config, index, bootnodeEnr)
