@@ -362,7 +362,7 @@ func TestStore_OnBlockBatch_PruneOK(t *testing.T) {
 	gRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	service.cfg.ForkChoiceStore = protoarray.New(0, 0)
+	service.cfg.ForkChoiceStore = protoarray.New()
 	wsb, err = wrapper.WrappedSignedBeaconBlock(genesis)
 	require.NoError(t, err)
 	service.saveInitSyncBlock(gRoot, wsb)
