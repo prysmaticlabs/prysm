@@ -5,7 +5,6 @@ package flags
 import (
 	"strings"
 
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/urfave/cli/v2"
 )
@@ -215,7 +214,7 @@ var (
 	SuggestedFeeRecipient = &cli.StringFlag{
 		Name:  "suggested-fee-recipient",
 		Usage: "Post bellatrix, this address will receive the transaction fees produced by any blocks from this node. Default to junk whilst bellatrix is in development state. Validator client can override this value through the preparebeaconproposer api.",
-		Value: fieldparams.EthBurnAddressHex,
+		Value: params.BeaconConfig().EthBurnAddressHex,
 	}
 	// TerminalTotalDifficultyOverride specifies the total difficulty to manual overrides the `TERMINAL_TOTAL_DIFFICULTY` parameter.
 	TerminalTotalDifficultyOverride = &cli.StringFlag{
