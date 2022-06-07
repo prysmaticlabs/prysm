@@ -47,39 +47,39 @@ func TestBestForSlot(t *testing.T) {
 		cc     CanonicalChecker
 	}{
 		{
-			name:   "empty list",
-			err:    ErrNoCanonicalBlockForSlot,
+			name:  "empty list",
+			err:   ErrNoCanonicalBlockForSlot,
 			roots: [][32]byte{},
 		},
 		{
-			name:   "IsCanonical fail",
+			name:  "IsCanonical fail",
 			roots: [][32]byte{goodHTR, betterHTR},
-			cc:     &mockCanonicalChecker{is: true, err: derp},
-			err:    derp,
+			cc:    &mockCanonicalChecker{is: true, err: derp},
+			err:   derp,
 		},
 		{
-			name:   "all non-canonical",
-			err:    ErrNoCanonicalBlockForSlot,
+			name:  "all non-canonical",
+			err:   ErrNoCanonicalBlockForSlot,
 			roots: [][32]byte{goodHTR, betterHTR},
-			cc:     &mockCanonicalChecker{is: false},
+			cc:    &mockCanonicalChecker{is: false},
 		},
 		{
-			name:   "one canonical",
-			cc:     &mockCanonicalChecker{is: true},
-			root:   goodHTR,
-			roots:  [][32]byte{goodHTR},
+			name:  "one canonical",
+			cc:    &mockCanonicalChecker{is: true},
+			root:  goodHTR,
+			roots: [][32]byte{goodHTR},
 		},
 		{
-			name:   "all canonical",
-			cc:     &mockCanonicalChecker{is: true},
-			root:   betterHTR,
-			roots:  [][32]byte{betterHTR, goodHTR},
+			name:  "all canonical",
+			cc:    &mockCanonicalChecker{is: true},
+			root:  betterHTR,
+			roots: [][32]byte{betterHTR, goodHTR},
 		},
 		{
-			name:   "first wins",
-			cc:     &mockCanonicalChecker{is: true},
-			root:   goodHTR,
-			roots:  [][32]byte{goodHTR, betterHTR},
+			name:  "first wins",
+			cc:    &mockCanonicalChecker{is: true},
+			root:  goodHTR,
+			roots: [][32]byte{goodHTR, betterHTR},
 		},
 	}
 	for _, c := range cases {
@@ -194,7 +194,7 @@ func TestCanonicalBlockForSlotNonHappy(t *testing.T) {
 			name:  "HighestRootsBelowSlot no canonical",
 			canon: &mockCanonicalChecker{is: false},
 			slot:  end,
-			root: genesis,
+			root:  genesis,
 		},
 		{
 			name: "slot ordering correct - only genesis canonical",

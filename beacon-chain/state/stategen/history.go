@@ -73,7 +73,7 @@ func (c *CanonicalHistory) BlockRootForSlot(ctx context.Context, target types.Sl
 		// we found a block, but it wasn't considered canonical - keep looking
 		if errors.Is(err, ErrNoCanonicalBlockForSlot) {
 			// break once we've seen slot 0 (and prevent underflow)
-			if  slot == params.BeaconConfig().GenesisSlot {
+			if slot == params.BeaconConfig().GenesisSlot {
 				break
 			}
 			slotAbove = slot

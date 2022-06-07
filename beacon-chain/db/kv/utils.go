@@ -3,6 +3,7 @@ package kv
 import (
 	"bytes"
 	"context"
+
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	bolt "go.etcd.io/bbolt"

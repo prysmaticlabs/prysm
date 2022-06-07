@@ -173,8 +173,8 @@ func TestSplitRoots(t *testing.T) {
 			expect: bt[0:5],
 		},
 		{
-			name: "single",
-			b: testPack([][32]byte{bt[0]}),
+			name:   "single",
+			b:      testPack([][32]byte{bt[0]}),
 			expect: [][32]byte{bt[0]},
 		},
 		{
