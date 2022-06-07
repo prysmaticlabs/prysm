@@ -128,19 +128,3 @@ func BuildSignedBeaconBlock(blk interfaces.BeaconBlock, signature []byte) (*Sign
 		return nil, errUnsupportedBeaconBlock
 	}
 }
-
-// BeaconBlockIsNil checks if any composite field of input signed beacon block is nil.
-// Access to these nil fields will result in run time panic,
-// it is recommended to run these checks as first line of defense.
-func BeaconBlockIsNil(b interfaces.SignedBeaconBlock) error {
-	if b == nil || b.IsNil() {
-		return errNilSignedBeaconBlock
-	}
-	if b.Block().IsNil() {
-		return errNilBeaconBlock
-	}
-	if b.Block().Body().IsNil() {
-		return errNilBeaconBlockBody
-	}
-	return nil
-}

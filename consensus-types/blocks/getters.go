@@ -3,12 +3,29 @@ package blocks
 import (
 	ssz "github.com/ferranbt/fastssz"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 )
+
+// BeaconBlockIsNil checks if any composite field of input signed beacon block is nil.
+// Access to these nil fields will result in run time panic,
+// it is recommended to run these checks as first line of defense.
+func BeaconBlockIsNil(b interfaces.SignedBeaconBlock) error {
+	if b == nil || b.IsNil() {
+		return errNilSignedBeaconBlock
+	}
+	if b.Block().IsNil() {
+		return errNilBeaconBlock
+	}
+	if b.Block().Body().IsNil() {
+		return errNilBeaconBlockBody
+	}
+	return nil
+}
 
 // Signature returns the respective block signature.
 func (b *SignedBeaconBlock) Signature() []byte {
@@ -211,61 +228,47 @@ func (b *SignedBeaconBlock) SizeSSZ() int {
 	}
 }
 
-// UnmarshalSSZ unmarshals the signed beacon block from its relevant ssz
-// form.
+// UnmarshalSSZ unmarshals the signed beacon block from its relevant ssz form.
 func (b *SignedBeaconBlock) UnmarshalSSZ(buf []byte) error {
-	pb, err := b.Proto()
-	if err != nil {
-		return err
-	}
-
 	var newBlock *SignedBeaconBlock
 	switch b.version {
 	case version.Phase0:
-		unmarshalled, ok := pb.(*eth.SignedBeaconBlock)
-		if !ok {
-			return errAssertionFailed
-		}
-		if err := unmarshalled.UnmarshalSSZ(buf); err != nil {
+		pb := &eth.SignedBeaconBlock{}
+		if err := pb.UnmarshalSSZ(buf); err != nil {
 			return err
 		}
-		newBlock, err = initSignedBlockFromProtoPhase0(unmarshalled)
+		var err error
+		newBlock, err = initSignedBlockFromProtoPhase0(pb)
 		if err != nil {
 			return err
 		}
 	case version.Altair:
-		unmarshalled, ok := pb.(*eth.SignedBeaconBlockAltair)
-		if !ok {
-			return errAssertionFailed
-		}
-		if err := unmarshalled.UnmarshalSSZ(buf); err != nil {
+		pb := &eth.SignedBeaconBlockAltair{}
+		if err := pb.UnmarshalSSZ(buf); err != nil {
 			return err
 		}
-		newBlock, err = initSignedBlockFromProtoAltair(unmarshalled)
+		var err error
+		newBlock, err = initSignedBlockFromProtoAltair(pb)
 		if err != nil {
 			return err
 		}
 	case version.Bellatrix:
-		unmarshalled, ok := pb.(*eth.SignedBeaconBlockBellatrix)
-		if !ok {
-			return errAssertionFailed
-		}
-		if err := unmarshalled.UnmarshalSSZ(buf); err != nil {
+		pb := &eth.SignedBeaconBlockBellatrix{}
+		if err := pb.UnmarshalSSZ(buf); err != nil {
 			return err
 		}
-		newBlock, err = initSignedBlockFromProtoBellatrix(unmarshalled)
+		var err error
+		newBlock, err = initSignedBlockFromProtoBellatrix(pb)
 		if err != nil {
 			return err
 		}
 	case version.BellatrixBlind:
-		unmarshalled, ok := pb.(*eth.SignedBlindedBeaconBlockBellatrix)
-		if !ok {
-			return errAssertionFailed
-		}
-		if err := unmarshalled.UnmarshalSSZ(buf); err != nil {
+		pb := &eth.SignedBlindedBeaconBlockBellatrix{}
+		if err := pb.UnmarshalSSZ(buf); err != nil {
 			return err
 		}
-		newBlock, err = initBlindedSignedBlockFromProtoBellatrix(unmarshalled)
+		var err error
+		newBlock, err = initBlindedSignedBlockFromProtoBellatrix(pb)
 		if err != nil {
 			return err
 		}
@@ -425,61 +428,47 @@ func (b *BeaconBlock) SizeSSZ() int {
 	}
 }
 
-// UnmarshalSSZ unmarshals the beacon block from its relevant ssz
-// form.
+// UnmarshalSSZ unmarshals the beacon block from its relevant ssz form.
 func (b *BeaconBlock) UnmarshalSSZ(buf []byte) error {
-	pb, err := b.Proto()
-	if err != nil {
-		return err
-	}
-
 	var newBlock *BeaconBlock
 	switch b.version {
 	case version.Phase0:
-		unmarshalled, ok := pb.(*eth.BeaconBlock)
-		if !ok {
-			return errAssertionFailed
-		}
-		if err := unmarshalled.UnmarshalSSZ(buf); err != nil {
+		pb := &eth.BeaconBlock{}
+		if err := pb.UnmarshalSSZ(buf); err != nil {
 			return err
 		}
-		newBlock, err = initBlockFromProtoPhase0(unmarshalled)
+		var err error
+		newBlock, err = initBlockFromProtoPhase0(pb)
 		if err != nil {
 			return err
 		}
 	case version.Altair:
-		unmarshalled, ok := pb.(*eth.BeaconBlockAltair)
-		if !ok {
-			return errAssertionFailed
-		}
-		if err := unmarshalled.UnmarshalSSZ(buf); err != nil {
+		pb := &eth.BeaconBlockAltair{}
+		if err := pb.UnmarshalSSZ(buf); err != nil {
 			return err
 		}
-		newBlock, err = initBlockFromProtoAltair(unmarshalled)
+		var err error
+		newBlock, err = initBlockFromProtoAltair(pb)
 		if err != nil {
 			return err
 		}
 	case version.Bellatrix:
-		unmarshalled, ok := pb.(*eth.BeaconBlockBellatrix)
-		if !ok {
-			return errAssertionFailed
-		}
-		if err := unmarshalled.UnmarshalSSZ(buf); err != nil {
+		pb := &eth.BeaconBlockBellatrix{}
+		if err := pb.UnmarshalSSZ(buf); err != nil {
 			return err
 		}
-		newBlock, err = initBlockFromProtoBellatrix(unmarshalled)
+		var err error
+		newBlock, err = initBlockFromProtoBellatrix(pb)
 		if err != nil {
 			return err
 		}
 	case version.BellatrixBlind:
-		unmarshalled, ok := pb.(*eth.BlindedBeaconBlockBellatrix)
-		if !ok {
-			return errAssertionFailed
-		}
-		if err := unmarshalled.UnmarshalSSZ(buf); err != nil {
+		pb := &eth.BlindedBeaconBlockBellatrix{}
+		if err := pb.UnmarshalSSZ(buf); err != nil {
 			return err
 		}
-		newBlock, err = initBlindedBlockFromProtoBellatrix(unmarshalled)
+		var err error
+		newBlock, err = initBlindedBlockFromProtoBellatrix(pb)
 		if err != nil {
 			return err
 		}
@@ -565,7 +554,7 @@ func (b *BeaconBlockBody) SyncAggregate() (*eth.SyncAggregate, error) {
 
 // ExecutionPayload returns the execution payload of the block body.
 func (b *BeaconBlockBody) ExecutionPayload() (*enginev1.ExecutionPayload, error) {
-	if b.version == version.Phase0 || b.version == version.Altair {
+	if b.version == version.Phase0 || b.version == version.Altair || b.version == version.BellatrixBlind {
 		return nil, errNotSupported("ExecutionPayload", b.version)
 	}
 	return b.executionPayload, nil
@@ -573,7 +562,7 @@ func (b *BeaconBlockBody) ExecutionPayload() (*enginev1.ExecutionPayload, error)
 
 // ExecutionPayloadHeader returns the execution payload header of the block body.
 func (b *BeaconBlockBody) ExecutionPayloadHeader() (*eth.ExecutionPayloadHeader, error) {
-	if b.version == version.Phase0 || b.version == version.Altair {
+	if b.version == version.Phase0 || b.version == version.Altair || b.version == version.Bellatrix {
 		return nil, errNotSupported("ExecutionPayloadHeader", b.version)
 	}
 	return b.executionPayloadHeader, nil
