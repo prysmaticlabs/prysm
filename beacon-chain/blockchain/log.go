@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/math"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
@@ -87,12 +88,16 @@ func logPayload(block interfaces.BeaconBlock) error {
 	if err != nil {
 		return err
 	}
+	gasUtilized, err := math.Div64(payload.GasUsed, payload.GasLimit)
+	if err != nil {
+		return err
+	}
 
 	log.WithFields(logrus.Fields{
 		"blockHash":   fmt.Sprintf("%#x", bytesutil.Trunc(payload.BlockHash)),
 		"parentHash":  fmt.Sprintf("%#x", bytesutil.Trunc(payload.ParentHash)),
 		"blockNumber": payload.BlockNumber,
-		"gasUtilized": payload.GasUsed,
+		"gasUtilized": gasUtilized,
 	}).Debug("Synced new payload")
 	return nil
 }
