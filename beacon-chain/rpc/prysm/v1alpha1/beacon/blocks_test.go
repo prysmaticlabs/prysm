@@ -531,8 +531,9 @@ func TestServer_GetChainHead(t *testing.T) {
 	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)
 	bs := &Server{
-		BeaconDB:    db,
-		HeadFetcher: &chainMock.ChainService{Block: wsb, State: s},
+		BeaconDB:              db,
+		HeadFetcher:           &chainMock.ChainService{Block: wsb, State: s},
+		OptimisticModeFetcher: &chainMock.ChainService{},
 		FinalizationFetcher: &chainMock.ChainService{
 			FinalizedCheckPoint:         s.FinalizedCheckpoint(),
 			CurrentJustifiedCheckPoint:  s.CurrentJustifiedCheckpoint(),
@@ -550,6 +551,7 @@ func TestServer_GetChainHead(t *testing.T) {
 	assert.DeepEqual(t, pjRoot[:], head.PreviousJustifiedBlockRoot, "Unexpected PreviousJustifiedBlockRoot")
 	assert.DeepEqual(t, jRoot[:], head.JustifiedBlockRoot, "Unexpected JustifiedBlockRoot")
 	assert.DeepEqual(t, fRoot[:], head.FinalizedBlockRoot, "Unexpected FinalizedBlockRoot")
+	assert.Equal(t, false, head.OptimisticStatus)
 }
 
 func TestServer_StreamChainHead_ContextCanceled(t *testing.T) {

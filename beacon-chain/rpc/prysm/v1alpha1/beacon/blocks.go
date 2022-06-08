@@ -393,6 +393,10 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get head block")
 	}
+	optimisticStatus, err := bs.OptimisticModeFetcher.IsOptimistic(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not get optimistic status")
+	}
 	if err := wrapper.BeaconBlockIsNil(headBlock); err != nil {
 		return nil, status.Errorf(codes.NotFound, "Head block of chain was nil: %v", err)
 	}
@@ -474,5 +478,6 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 		PreviousJustifiedSlot:      pjSlot,
 		PreviousJustifiedEpoch:     prevJustifiedCheckpoint.Epoch,
 		PreviousJustifiedBlockRoot: prevJustifiedCheckpoint.Root,
+		OptimisticStatus:           optimisticStatus,
 	}, nil
 }
