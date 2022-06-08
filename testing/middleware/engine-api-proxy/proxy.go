@@ -57,7 +57,8 @@ func New(opts ...Option) (*Proxy, error) {
 			proxyPort: defaultProxyPort,
 			logger:    logrus.New(),
 		},
-		interceptors: make(map[string]*interceptorConfig),
+		interceptors:     make(map[string]*interceptorConfig),
+		backedUpRequests: map[string][]*http.Request{},
 	}
 	for _, o := range opts {
 		if err := o(p); err != nil {

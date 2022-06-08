@@ -150,26 +150,10 @@ func (r *testRunner) runEvaluators(conns []*grpc.ClientConn, tickingStartTime ti
 	secondsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
 	ticker := helpers.NewEpochTicker(tickingStartTime, secondsPerEpoch)
 	for currentEpoch := range ticker.C() {
-		if config.EvalInterceptor(currentEpoch) {
+		if config.EvalInterceptor(currentEpoch, conns) {
 			continue
 		}
-		wg := new(sync.WaitGroup)
-		for _, eval := range config.Evaluators {
-			// Fix reference to evaluator as it will be running
-			// in a separate goroutine.
-			evaluator := eval
-			// Only run if the policy says so.
-			if !evaluator.Policy(types.Epoch(currentEpoch)) {
-				continue
-			}
-			wg.Add(1)
-			go t.Run(fmt.Sprintf(evaluator.Name, currentEpoch), func(t *testing.T) {
-				err := evaluator.Evaluation(conns...)
-				assert.NoError(t, err, "Evaluation failed for epoch %d: %v", currentEpoch, err)
-				wg.Done()
-			})
-		}
-		wg.Wait()
+		r.executeProvidedEvaluators(currentEpoch, conns, config.Evaluators)
 
 		if t.Failed() || currentEpoch >= config.EpochsToRun-1 {
 			ticker.Done()
@@ -561,7 +545,27 @@ func (r *testRunner) addEvent(ev func() error) {
 	r.comHandler.group.Go(ev)
 }
 
-func (r *testRunner) singleNodeOffline(epoch uint64) bool {
+func (r *testRunner) executeProvidedEvaluators(currentEpoch uint64, conns []*grpc.ClientConn, evals []e2etypes.Evaluator) {
+	wg := new(sync.WaitGroup)
+	for _, eval := range evals {
+		// Fix reference to evaluator as it will be running
+		// in a separate goroutine.
+		evaluator := eval
+		// Only run if the policy says so.
+		if !evaluator.Policy(types.Epoch(currentEpoch)) {
+			continue
+		}
+		wg.Add(1)
+		go r.t.Run(fmt.Sprintf(evaluator.Name, currentEpoch), func(t *testing.T) {
+			err := evaluator.Evaluation(conns...)
+			assert.NoError(t, err, "Evaluation failed for epoch %d: %v", currentEpoch, err)
+			wg.Done()
+		})
+	}
+	wg.Wait()
+}
+
+func (r *testRunner) singleNodeOffline(epoch uint64, _ []*grpc.ClientConn) bool {
 	switch epoch {
 	case 9:
 		require.NoError(r.t, r.comHandler.beaconNodes.PauseAtIndex(0))
@@ -578,7 +582,7 @@ func (r *testRunner) singleNodeOffline(epoch uint64) bool {
 	return false
 }
 
-func (r *testRunner) singleNodeOfflineMulticlient(epoch uint64) bool {
+func (r *testRunner) singleNodeOfflineMulticlient(epoch uint64, _ []*grpc.ClientConn) bool {
 	switch epoch {
 	case 9:
 		require.NoError(r.t, r.comHandler.beaconNodes.PauseAtIndex(0))
@@ -599,7 +603,7 @@ func (r *testRunner) singleNodeOfflineMulticlient(epoch uint64) bool {
 	return false
 }
 
-func (r *testRunner) eeOffline(epoch uint64) bool {
+func (r *testRunner) eeOffline(epoch uint64, _ []*grpc.ClientConn) bool {
 	switch epoch {
 	case 9:
 		require.NoError(r.t, r.comHandler.eth1Miner.Pause())
@@ -614,7 +618,7 @@ func (r *testRunner) eeOffline(epoch uint64) bool {
 	return false
 }
 
-func (r *testRunner) allValidatorsOffline(epoch uint64) bool {
+func (r *testRunner) allValidatorsOffline(epoch uint64, _ []*grpc.ClientConn) bool {
 	switch epoch {
 	case 9:
 		require.NoError(r.t, r.comHandler.validatorNodes.PauseAtIndex(0))
@@ -631,7 +635,7 @@ func (r *testRunner) allValidatorsOffline(epoch uint64) bool {
 	return false
 }
 
-func (r *testRunner) optimisticSync(epoch uint64) bool {
+func (r *testRunner) optimisticSync(epoch uint64, conns []*grpc.ClientConn) bool {
 	switch epoch {
 	case 9:
 		component, err := r.comHandler.eth1Proxy.ComponentAtIndex(0)
@@ -645,14 +649,17 @@ func (r *testRunner) optimisticSync(epoch uint64) bool {
 		})
 		return true
 	case 10:
+		r.executeProvidedEvaluators(epoch, []*grpc.ClientConn{conns[0]}, []e2etypes.Evaluator{
+			ev.OptimisticSyncEnabled,
+		})
 		// Disable Interceptor
 		component, err := r.comHandler.eth1Proxy.ComponentAtIndex(0)
 		require.NoError(r.t, err)
-		component.(e2etypes.EngineProxy).AddRequestInterceptor("engine_newPayloadV1", func() interface{} {
-			return nil
-		}, func() bool {
-			return false
-		})
+		engineProxy, ok := component.(e2etypes.EngineProxy)
+		require.Equal(r.t, true, ok)
+		engineProxy.RemoveRequestInterceptor("engine_newPayloadV1")
+		engineProxy.ReleaseBackedUpRequests("engine_newPayloadV1")
+
 		return true
 	case 11, 12:
 		// Allow 2 epochs for the network to finalize again.
@@ -662,6 +669,6 @@ func (r *testRunner) optimisticSync(epoch uint64) bool {
 }
 
 // All Epochs are valid.
-func defaultInterceptor(_ uint64) bool {
+func defaultInterceptor(_ uint64, _ []*grpc.ClientConn) bool {
 	return false
 }
