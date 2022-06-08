@@ -55,24 +55,20 @@ func (s *State) MigrateToCold(ctx context.Context, fRoot [32]byte) error {
 				aRoot = cached.root
 				aState = cached.state
 			} else {
-				blks, err := s.beaconDB.HighestSlotBlocksBelow(ctx, slot)
+				_, roots, err := s.beaconDB.HighestRootsBelowSlot(ctx, slot)
 				if err != nil {
 					return err
 				}
 				// Given the block has been finalized, the db should not have more than one block in a given slot.
 				// We should error out when this happens.
-				if len(blks) != 1 {
+				if len(roots) != 1 {
 					return errUnknownBlock
 				}
-				missingRoot, err := blks[0].Block().HashTreeRoot()
-				if err != nil {
-					return err
-				}
-				aRoot = missingRoot
+				aRoot = roots[0]
 				// There's no need to generate the state if the state already exists in the DB.
 				// We can skip saving the state.
 				if !s.beaconDB.HasState(ctx, aRoot) {
-					aState, err = s.StateByRoot(ctx, missingRoot)
+					aState, err = s.StateByRoot(ctx, aRoot)
 					if err != nil {
 						return err
 					}

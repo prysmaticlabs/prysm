@@ -90,9 +90,26 @@ func WithWalletKeyCount(walletKeyCount int) Option {
 	}
 }
 
+// WithDeletePublicKeys indicates whether to delete the public keys.
 func WithDeletePublicKeys(deletePublicKeys bool) Option {
 	return func(acc *AccountsCLIManager) error {
 		acc.deletePublicKeys = deletePublicKeys
+		return nil
+	}
+}
+
+// WithBackupDir specifies the directory backups are written to.
+func WithBackupsDir(backupsDir string) Option {
+	return func(acc *AccountsCLIManager) error {
+		acc.backupsDir = backupsDir
+		return nil
+	}
+}
+
+// WithBackupPassword specifies the password for backups.
+func WithBackupsPassword(backupsPassword string) Option {
+	return func(acc *AccountsCLIManager) error {
+		acc.backupsPassword = backupsPassword
 		return nil
 	}
 }

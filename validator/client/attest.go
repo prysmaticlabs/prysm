@@ -254,9 +254,12 @@ func (v *validator) waitOneThirdOrValidBlock(ctx context.Context, slot types.Slo
 	defer span.End()
 
 	// Don't need to wait if requested slot is the same as highest valid slot.
+	v.highestValidSlotLock.Lock()
 	if slot <= v.highestValidSlot {
+		v.highestValidSlotLock.Unlock()
 		return
 	}
+	v.highestValidSlotLock.Unlock()
 
 	delay := slots.DivideSlotBy(3 /* a third of the slot duration */)
 	startTime := slots.StartTime(v.genesisTime, slot)

@@ -47,7 +47,7 @@ func InitializePrecomputeValidators(ctx context.Context, beaconState state.Beaco
 				return err
 			}
 		}
-		// Set validator's active status for preivous epoch.
+		// Set validator's active status for previous epoch.
 		if helpers.IsActiveValidatorUsingTrie(val, prevEpoch) {
 			v.IsActivePrevEpoch = true
 			bal.ActivePrevEpoch, err = math.Add64(bal.ActivePrevEpoch, val.EffectiveBalance())

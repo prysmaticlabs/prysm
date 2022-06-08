@@ -20,6 +20,7 @@ import (
 	apigateway "github.com/prysmaticlabs/prysm/api/gateway"
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -76,6 +77,7 @@ const debugGrpcMaxMsgSize = 1 << 27
 type serviceFlagOpts struct {
 	blockchainFlagOpts []blockchain.Option
 	powchainFlagOpts   []powchain.Option
+	builderOpts        []builder.Option
 }
 
 // BeaconNode defines a struct that handles the services running a random beacon chain

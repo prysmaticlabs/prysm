@@ -35,7 +35,7 @@ type mocks struct {
 	validatorClient *mock.MockBeaconNodeValidatorClient
 	nodeClient      *mock.MockNodeClient
 	slasherClient   *mock.MockSlasherClient
-	signExitFunc    func(context.Context, *validatorpb.SignRequest) (bls.Signature, error)
+	signfunc        func(context.Context, *validatorpb.SignRequest) (bls.Signature, error)
 }
 
 type mockSignature struct{}
@@ -74,7 +74,7 @@ func setupWithKey(t *testing.T, validatorKey bls.SecretKey) (*validator, *mocks,
 		validatorClient: mock.NewMockBeaconNodeValidatorClient(ctrl),
 		nodeClient:      mock.NewMockNodeClient(ctrl),
 		slasherClient:   mock.NewMockSlasherClient(ctrl),
-		signExitFunc: func(ctx context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
+		signfunc: func(ctx context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
 			return mockSignature{}, nil
 		},
 	}
@@ -610,7 +610,7 @@ func TestProposeExit_ValidatorIndexFailed(t *testing.T) {
 		context.Background(),
 		m.validatorClient,
 		m.nodeClient,
-		m.signExitFunc,
+		m.signfunc,
 		validatorKey.PublicKey().Marshal(),
 	)
 	assert.NotNil(t, err)
@@ -634,7 +634,7 @@ func TestProposeExit_GetGenesisFailed(t *testing.T) {
 		context.Background(),
 		m.validatorClient,
 		m.nodeClient,
-		m.signExitFunc,
+		m.signfunc,
 		validatorKey.PublicKey().Marshal(),
 	)
 	assert.NotNil(t, err)
@@ -667,7 +667,7 @@ func TestProposeExit_DomainDataFailed(t *testing.T) {
 		context.Background(),
 		m.validatorClient,
 		m.nodeClient,
-		m.signExitFunc,
+		m.signfunc,
 		validatorKey.PublicKey().Marshal(),
 	)
 	assert.NotNil(t, err)
@@ -701,7 +701,7 @@ func TestProposeExit_DomainDataIsNil(t *testing.T) {
 		context.Background(),
 		m.validatorClient,
 		m.nodeClient,
-		m.signExitFunc,
+		m.signfunc,
 		validatorKey.PublicKey().Marshal(),
 	)
 	assert.NotNil(t, err)
@@ -738,7 +738,7 @@ func TestProposeBlock_ProposeExitFailed(t *testing.T) {
 		context.Background(),
 		m.validatorClient,
 		m.nodeClient,
-		m.signExitFunc,
+		m.signfunc,
 		validatorKey.PublicKey().Marshal(),
 	)
 	assert.NotNil(t, err)
@@ -775,7 +775,7 @@ func TestProposeExit_BroadcastsBlock(t *testing.T) {
 		context.Background(),
 		m.validatorClient,
 		m.nodeClient,
-		m.signExitFunc,
+		m.signfunc,
 		validatorKey.PublicKey().Marshal(),
 	))
 }

@@ -111,6 +111,7 @@ type BeaconChainConfig struct {
 	DomainSyncCommitteeSelectionProof [4]byte `yaml:"DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF" spec:"true"` // DomainSelectionProof defines the BLS signature domain for sync committee selection proof.
 	DomainContributionAndProof        [4]byte `yaml:"DOMAIN_CONTRIBUTION_AND_PROOF" spec:"true"`         // DomainAggregateAndProof defines the BLS signature domain for contribution and proof.
 	DomainApplicationMask             [4]byte `yaml:"DOMAIN_APPLICATION_MASK" spec:"true"`               // DomainApplicationMask defines the BLS signature domain for application mask.
+	DomainApplicationBuilder          [4]byte // DomainApplicationBuilder defines the BLS signature domain for application builder.
 
 	// Prysm constants.
 	GweiPerEth                     uint64        // GweiPerEth is the amount of gwei corresponding to 1 eth.
@@ -191,6 +192,8 @@ type BeaconChainConfig struct {
 	TerminalBlockHashActivationEpoch types.Epoch    `yaml:"TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH" spec:"true"` // TerminalBlockHashActivationEpoch of beacon chain.
 	TerminalTotalDifficulty          string         `yaml:"TERMINAL_TOTAL_DIFFICULTY" spec:"true"`            // TerminalTotalDifficulty is part of the experimental Bellatrix spec. This value is type is currently TBD.
 	DefaultFeeRecipient              common.Address // DefaultFeeRecipient where the transaction fee goes to.
+	EthBurnAddressHex                string         // EthBurnAddressHex is the constant eth address written in hex format to burn fees in that network. the default is 0x0
+	DefaultBuilderGasLimit           uint64         // DefaultBuilderGasLimit is the default used to set the gaslimit for the Builder APIs, typically at around 30M wei.
 }
 
 // InitializeForkSchedule initializes the schedules forks baked into the config.

@@ -550,7 +550,7 @@ type indexedAttestationJson struct {
 }
 
 type feeRecipientJson struct {
-	ValidatorIndex uint64 `json:"validator_index"`
+	ValidatorIndex string `json:"validator_index"`
 	FeeRecipient   string `json:"fee_recipient" hex:"true"`
 }
 

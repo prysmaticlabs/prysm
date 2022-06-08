@@ -98,11 +98,10 @@ func (node *Node) Start(ctx context.Context) error {
 		args = append(args, []string{"--syncmode=full"}...)
 	}
 	runCmd := exec.CommandContext(ctx, binaryPath, args...) // #nosec G204 -- Safe
-	file, err := helpers.DeleteAndCreateFile(e2e.TestParams.LogPath, "eth1_"+strconv.Itoa(node.index)+".log")
+	file, err := os.Create(path.Join(e2e.TestParams.LogPath, "eth1_"+strconv.Itoa(node.index)+".log"))
 	if err != nil {
 		return err
 	}
-	runCmd.Stdout = file
 	runCmd.Stderr = file
 	log.Infof("Starting eth1 node %d with flags: %s", node.index, strings.Join(args[2:], " "))
 

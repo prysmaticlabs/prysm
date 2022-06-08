@@ -209,11 +209,11 @@ func (bs *Server) listBlocksForRoot(ctx context.Context, _ *ethpb.ListBlocksRequ
 
 // listBlocksForSlot retrieves all blocks for the provided slot.
 func (bs *Server) listBlocksForSlot(ctx context.Context, req *ethpb.ListBlocksRequest, q *ethpb.ListBlocksRequest_Slot) ([]blockContainer, int, string, error) {
-	hasBlocks, blks, err := bs.BeaconDB.BlocksBySlot(ctx, q.Slot)
+	blks, err := bs.BeaconDB.BlocksBySlot(ctx, q.Slot)
 	if err != nil {
 		return nil, 0, strconv.Itoa(0), status.Errorf(codes.Internal, "Could not retrieve blocks for slot %d: %v", q.Slot, err)
 	}
-	if !hasBlocks {
+	if len(blks) == 0 {
 		return []blockContainer{}, 0, strconv.Itoa(0), nil
 	}
 

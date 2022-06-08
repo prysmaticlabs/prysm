@@ -70,7 +70,7 @@ type ValidatorService struct {
 	grpcHeaders           []string
 	graffiti              []byte
 	Web3SignerConfig      *remote_web3signer.SetupConfig
-	feeRecipientConfig    *validator_service_config.FeeRecipientConfig
+	proposerSettings      *validator_service_config.ProposerSettings
 }
 
 // Config for the validator service.
@@ -94,7 +94,7 @@ type Config struct {
 	GraffitiFlag               string
 	Endpoint                   string
 	Web3SignerConfig           *remote_web3signer.SetupConfig
-	FeeRecipientConfig         *validator_service_config.FeeRecipientConfig
+	ProposerSettings           *validator_service_config.ProposerSettings
 }
 
 // NewValidatorService creates a new validator service for the service
@@ -123,7 +123,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		graffitiStruct:        cfg.GraffitiStruct,
 		logDutyCountDown:      cfg.LogDutyCountDown,
 		Web3SignerConfig:      cfg.Web3SignerConfig,
-		feeRecipientConfig:    cfg.FeeRecipientConfig,
+		proposerSettings:      cfg.ProposerSettings,
 	}
 
 	dialOpts := ConstructDialOptions(
@@ -206,7 +206,7 @@ func (v *ValidatorService) Start() {
 		eipImportBlacklistedPublicKeys: slashablePublicKeys,
 		logDutyCountDown:               v.logDutyCountDown,
 		Web3SignerConfig:               v.Web3SignerConfig,
-		feeRecipientConfig:             v.feeRecipientConfig,
+		ProposerSettings:               v.proposerSettings,
 		walletIntializedChannel:        make(chan *wallet.Wallet, 1),
 	}
 	// To resolve a race condition at startup due to the interface
