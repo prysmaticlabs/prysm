@@ -642,7 +642,8 @@ func (r *testRunner) optimisticSync(epoch uint64, conns []*grpc.ClientConn) bool
 		require.NoError(r.t, err)
 		component.(e2etypes.EngineProxy).AddRequestInterceptor("engine_newPayloadV1", func() interface{} {
 			return &enginev1.PayloadStatus{
-				Status: enginev1.PayloadStatus_SYNCING,
+				Status:          enginev1.PayloadStatus_SYNCING,
+				LatestValidHash: make([]byte, 32),
 			}
 		}, func() bool {
 			return true
@@ -676,7 +677,8 @@ func (r *testRunner) optimisticSyncMulticlient(epoch uint64, conns []*grpc.Clien
 		require.NoError(r.t, err)
 		component.(e2etypes.EngineProxy).AddRequestInterceptor("engine_newPayloadV1", func() interface{} {
 			return &enginev1.PayloadStatus{
-				Status: enginev1.PayloadStatus_SYNCING,
+				Status:          enginev1.PayloadStatus_SYNCING,
+				LatestValidHash: make([]byte, 32),
 			}
 		}, func() bool {
 			return true
@@ -686,7 +688,8 @@ func (r *testRunner) optimisticSyncMulticlient(epoch uint64, conns []*grpc.Clien
 		require.NoError(r.t, err)
 		component.(e2etypes.EngineProxy).AddRequestInterceptor("engine_newPayloadV1", func() interface{} {
 			return &enginev1.PayloadStatus{
-				Status: enginev1.PayloadStatus_SYNCING,
+				Status:          enginev1.PayloadStatus_SYNCING,
+				LatestValidHash: make([]byte, 32),
 			}
 		}, func() bool {
 			return true

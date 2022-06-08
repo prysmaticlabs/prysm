@@ -116,7 +116,9 @@ func TestProxy_CustomInterceptors(t *testing.T) {
 		// RPC method to intercept.
 		proxy.AddRequestInterceptor(
 			method,
-			&syncingResponse{Syncing: false}, // Custom response.
+			func() interface{} {
+				return &syncingResponse{Syncing: false}
+			}, // Custom response.
 			func() bool {
 				return true // Always intercept with a custom response.
 			},
@@ -164,7 +166,9 @@ func TestProxy_CustomInterceptors(t *testing.T) {
 		method := "engine_newPayloadV1"
 
 		// RPC method to intercept.
-		wantInterceptedResponse := &engineResponse{BlockHash: common.BytesToHash([]byte("bar"))}
+		wantInterceptedResponse := func() interface{} {
+			return &engineResponse{BlockHash: common.BytesToHash([]byte("bar"))}
+		}
 		conditional := false
 		proxy.AddRequestInterceptor(
 			method,
@@ -230,7 +234,9 @@ func TestProxy_CustomInterceptors(t *testing.T) {
 		method := "engine_newPayloadV1"
 
 		// RPC method to intercept.
-		wantInterceptedResponse := &engineResponse{BlockHash: common.BytesToHash([]byte("bar"))}
+		wantInterceptedResponse := func() interface{} {
+			return &engineResponse{BlockHash: common.BytesToHash([]byte("bar"))}
+		}
 		proxy.AddRequestInterceptor(
 			method,
 			wantInterceptedResponse,
