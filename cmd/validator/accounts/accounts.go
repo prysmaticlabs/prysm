@@ -39,10 +39,7 @@ var Commands = &cli.Command{
 				if err := tos.VerifyTosAcceptedOrPrompt(cliCtx); err != nil {
 					return err
 				}
-				if err := features.ConfigureValidator(cliCtx); err != nil {
-					return err
-				}
-				return nil
+				return features.ConfigureValidator(cliCtx)
 			},
 			Action: func(cliCtx *cli.Context) error {
 				if err := accountsDelete(cliCtx); err != nil {
@@ -78,10 +75,7 @@ var Commands = &cli.Command{
 				if err := tos.VerifyTosAcceptedOrPrompt(cliCtx); err != nil {
 					return err
 				}
-				if err := features.ConfigureValidator(cliCtx); err != nil {
-					return err
-				}
-				return nil
+				return features.ConfigureValidator(cliCtx)
 			},
 			Action: func(cliCtx *cli.Context) error {
 				if err := accountsList(cliCtx); err != nil {
@@ -114,10 +108,7 @@ var Commands = &cli.Command{
 				if err := tos.VerifyTosAcceptedOrPrompt(cliCtx); err != nil {
 					return err
 				}
-				if err := features.ConfigureValidator(cliCtx); err != nil {
-					return err
-				}
-				return nil
+				return features.ConfigureValidator(cliCtx)
 			},
 			Action: func(cliCtx *cli.Context) error {
 				if err := accountsBackup(cliCtx); err != nil {
@@ -183,10 +174,7 @@ var Commands = &cli.Command{
 				if err := tos.VerifyTosAcceptedOrPrompt(cliCtx); err != nil {
 					return err
 				}
-				if err := features.ConfigureValidator(cliCtx); err != nil {
-					return err
-				}
-				return nil
+				return features.ConfigureValidator(cliCtx)
 			},
 			Action: func(cliCtx *cli.Context) error {
 				if err := accountsExit(cliCtx, os.Stdin); err != nil {

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -32,7 +31,7 @@ type PerformExitCfg struct {
 const ExitPassphrase = "Exit my validator"
 
 // Exit performs a voluntary exit on one or more accounts.
-func (acm *AccountsCLIManager) Exit(ctx context.Context, r io.Reader) error {
+func (acm *AccountsCLIManager) Exit(ctx context.Context) error {
 	// User decided to cancel the voluntary exit.
 	if acm.rawPubKeys == nil && acm.formattedPubKeys == nil {
 		return nil

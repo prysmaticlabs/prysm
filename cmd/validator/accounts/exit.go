@@ -53,5 +53,5 @@ func accountsExit(c *cli.Context, r io.Reader) error {
 	if err != nil {
 		return err
 	}
-	return acc.Exit(c.Context, r)
+	return acc.Exit(c.Context)
 }
