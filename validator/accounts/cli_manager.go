@@ -37,6 +37,8 @@ type AccountsCLIManager struct {
 	beaconRPCProvider    string
 	filteredPubKeys      []bls.PublicKey
 	walletKeyCount       int
+	backupsDir           string
+	backupsPassword      string
 }
 
 func (acm *AccountsCLIManager) prepareBeaconClients(ctx context.Context) (*ethpb.BeaconNodeValidatorClient, *ethpb.NodeClient, error) {
