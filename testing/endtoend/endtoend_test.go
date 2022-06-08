@@ -219,13 +219,9 @@ func (r *testRunner) testTxGeneration(ctx context.Context, g *errgroup.Group, ke
 	})
 }
 
-func (r *testRunner) waitForMatchingHead(ctx context.Context, check, ref *grpc.ClientConn) error {
-	// sleep hack copied from testBeaconChainSync
-	// Sleep a second for every 4 blocks that need to be synced for the newly started node.
-	secondsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
-	extraSecondsToSync := (r.config.EpochsToRun) * secondsPerEpoch
-	deadline := time.Now().Add(time.Second * time.Duration(extraSecondsToSync))
-	dctx, cancel := context.WithDeadline(ctx, deadline)
+func (r *testRunner) waitForMatchingHead(ctx context.Context, timeout time.Duration, check, ref *grpc.ClientConn) error {
+	start := time.Now()
+	dctx, cancel := context.WithDeadline(ctx, start.Add(timeout))
 	defer cancel()
 	checkClient := service.NewBeaconChainClient(check)
 	refClient := service.NewBeaconChainClient(ref)
@@ -233,7 +229,8 @@ func (r *testRunner) waitForMatchingHead(ctx context.Context, check, ref *grpc.C
 		select {
 		case <-dctx.Done():
 			// deadline ensures that the test eventually exits when beacon node fails to sync in a resonable timeframe
-			return fmt.Errorf("deadline exceeded waiting for known good block to appear in checkpoint-synced node")
+			elapsed := time.Since(start)
+			return fmt.Errorf("deadline exceeded after %s waiting for known good block to appear in checkpoint-synced node", elapsed)
 		default:
 			cResp, err := checkClient.GetBlockRoot(ctx, &v1.BlockRequest{BlockId: []byte("head")})
 			if err != nil {
@@ -256,6 +253,7 @@ func (r *testRunner) waitForMatchingHead(ctx context.Context, check, ref *grpc.C
 }
 
 func (r *testRunner) testCheckpointSync(ctx context.Context, g *errgroup.Group, i int, conns []*grpc.ClientConn, bnAPI, enr, minerEnr string) error {
+	matchTimeout := 3 * time.Minute
 	ethNode := eth1.NewNode(i, minerEnr)
 	g.Go(func() error {
 		return ethNode.Start(ctx)
@@ -304,7 +302,7 @@ func (r *testRunner) testCheckpointSync(ctx context.Context, g *errgroup.Group, 
 
 	// this is so that the syncEvaluators checks can run on the checkpoint sync'd node
 	conns = append(conns, c)
-	err = r.waitForMatchingHead(ctx, c, conns[0])
+	err = r.waitForMatchingHead(ctx, matchTimeout, c, conns[0])
 	if err != nil {
 		return err
 	}
