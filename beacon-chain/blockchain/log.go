@@ -80,3 +80,29 @@ func logBlockSyncStatus(block interfaces.BeaconBlock, blockRoot [32]byte, justif
 	}).Info("Synced new block")
 	return nil
 }
+
+// logs block payload related data every slot.
+func logBlockPayloadData(block interfaces.BeaconBlock) error {
+	level := log.Logger.GetLevel()
+	payload, err := block.Body().ExecutionPayload()
+	if err != nil {
+		return err
+	}
+
+	log = log.WithField("slot", block.Slot())
+	if level >= logrus.DebugLevel {
+		log = log.WithField("slotInEpoch", block.Slot()%params.BeaconConfig().SlotsPerEpoch)
+		log = log.WithField("parentRoot", fmt.Sprintf("0x%s...", hex.EncodeToString(block.ParentRoot())[:8]))
+		log = log.WithField("version", version.String(block.Version()))
+		log = log.WithField("blockHash", fmt.Sprintf("%#x", bytesutil.Trunc(payload.BlockHash)))
+		log = log.WithField("blockNumber", payload.BlockNumber)
+		log = log.WithField("gasUtilized", payload.GasUsed)
+	}
+
+	log.WithFields(logrus.Fields{
+		"blockHash":   fmt.Sprintf("%#x", bytesutil.Trunc(payload.BlockHash)),
+		"blockNumber": payload.BlockNumber,
+		"gasUtilized": payload.GasUsed,
+	}).Info("Synced new payload")
+	return nil
+}
