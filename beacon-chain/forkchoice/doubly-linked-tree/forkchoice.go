@@ -72,7 +72,9 @@ func (f *ForkChoice) Head(
 		return [32]byte{}, errors.Wrap(err, "could not apply weight changes")
 	}
 
-	if err := f.store.treeRootNode.updateBestDescendant(ctx, f.store.justifiedCheckpoint.Epoch, f.store.finalizedCheckpoint.Epoch); err != nil {
+	jc := f.JustifiedCheckpoint()
+	fc := f.FinalizedCheckpoint()
+	if err := f.store.treeRootNode.updateBestDescendant(ctx, jc.Epoch, fc.Epoch); err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not update best descendant")
 	}
 	return f.store.head(ctx)
@@ -327,11 +329,15 @@ func (f *ForkChoice) SetOptimisticToValid(ctx context.Context, root [fieldparams
 
 // JustifiedCheckpoint of fork choice store.
 func (f *ForkChoice) JustifiedCheckpoint() *forkchoicetypes.Checkpoint {
+	f.store.checkpointsLock.RLock()
+	defer f.store.checkpointsLock.RUnlock()
 	return f.store.justifiedCheckpoint
 }
 
 // FinalizedCheckpoint of fork choice store.
 func (f *ForkChoice) FinalizedCheckpoint() *forkchoicetypes.Checkpoint {
+	f.store.checkpointsLock.RLock()
+	defer f.store.checkpointsLock.RUnlock()
 	return f.store.finalizedCheckpoint
 }
 

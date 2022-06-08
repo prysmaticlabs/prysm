@@ -271,11 +271,15 @@ func (s *Store) PruneThreshold() uint64 {
 
 // JustifiedCheckpoint of fork choice store.
 func (f *ForkChoice) JustifiedCheckpoint() *forkchoicetypes.Checkpoint {
+	f.store.checkpointsLock.RLock()
+	defer f.store.checkpointsLock.RUnlock()
 	return f.store.justifiedCheckpoint
 }
 
 // FinalizedCheckpoint of fork choice store.
 func (f *ForkChoice) FinalizedCheckpoint() *forkchoicetypes.Checkpoint {
+	f.store.checkpointsLock.RLock()
+	defer f.store.checkpointsLock.RUnlock()
 	return f.store.finalizedCheckpoint
 }
 
@@ -301,7 +305,7 @@ func (s *Store) head(ctx context.Context) ([32]byte, error) {
 	if !ok {
 		return [32]byte{}, errUnknownJustifiedRoot
 	}
-	if justifiedIndex > uint64(len(s.nodes)) {
+	if justifiedIndex >= uint64(len(s.nodes)) {
 		return [32]byte{}, errInvalidJustifiedIndex
 	}
 	justifiedNode := s.nodes[justifiedIndex]
@@ -741,6 +745,8 @@ func (s *Store) leadsToViableHead(node *Node) (bool, error) {
 // Any node with diff finalized or justified epoch than the ones in fork choice store
 // should not be viable to head.
 func (s *Store) viableForHead(node *Node) bool {
+	s.checkpointsLock.RLock()
+	defer s.checkpointsLock.RUnlock()
 	// `node` is viable if its justified epoch and finalized epoch are the same as the one in `Store`.
 	// It's also viable if we are in genesis epoch.
 	justified := s.justifiedCheckpoint.Epoch == node.justifiedEpoch || s.justifiedCheckpoint.Epoch == 0
