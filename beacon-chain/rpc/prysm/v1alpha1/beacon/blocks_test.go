@@ -426,6 +426,7 @@ func TestServer_GetChainHead_NoGenesis(t *testing.T) {
 				FinalizedCheckPoint:         s.FinalizedCheckpoint(),
 				CurrentJustifiedCheckPoint:  s.CurrentJustifiedCheckpoint(),
 				PreviousJustifiedCheckPoint: s.PreviousJustifiedCheckpoint()},
+			OptimisticModeFetcher: &chainMock.ChainService{},
 		}
 		_, err = bs.GetChainHead(context.Background(), nil)
 		require.ErrorContains(t, "Could not get genesis block", err)
@@ -461,6 +462,7 @@ func TestServer_GetChainHead_NoFinalizedBlock(t *testing.T) {
 			FinalizedCheckPoint:         s.FinalizedCheckpoint(),
 			CurrentJustifiedCheckPoint:  s.CurrentJustifiedCheckpoint(),
 			PreviousJustifiedCheckPoint: s.PreviousJustifiedCheckpoint()},
+		OptimisticModeFetcher: &chainMock.ChainService{},
 	}
 
 	_, err = bs.GetChainHead(context.Background(), nil)
@@ -469,7 +471,8 @@ func TestServer_GetChainHead_NoFinalizedBlock(t *testing.T) {
 
 func TestServer_GetChainHead_NoHeadBlock(t *testing.T) {
 	bs := &Server{
-		HeadFetcher: &chainMock.ChainService{Block: nil},
+		HeadFetcher:           &chainMock.ChainService{Block: nil},
+		OptimisticModeFetcher: &chainMock.ChainService{},
 	}
 	_, err := bs.GetChainHead(context.Background(), nil)
 	assert.ErrorContains(t, "Head block of chain was nil", err)
@@ -647,6 +650,7 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 			FinalizedCheckPoint:         s.FinalizedCheckpoint(),
 			CurrentJustifiedCheckPoint:  s.CurrentJustifiedCheckpoint(),
 			PreviousJustifiedCheckPoint: s.PreviousJustifiedCheckpoint()},
+		OptimisticModeFetcher: &chainMock.ChainService{},
 	}
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
