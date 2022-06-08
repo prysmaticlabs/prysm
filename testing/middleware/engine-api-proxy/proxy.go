@@ -112,7 +112,7 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		p.cfg.logger.WithError(err).Error("Could not parse request")
 		return
 	}
-	// Check if we need to intercept the request with a custom responseGen.
+	// Check if we need to intercept the request with a custom response.
 	hasIntercepted, err := p.interceptIfNeeded(requestBytes, w, r)
 	if err != nil {
 		p.cfg.logger.WithError(err).Error("Could not intercept request")
@@ -125,7 +125,7 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	p.proxyRequest(requestBytes, w, r)
 }
 
-// AddRequestInterceptor for a desired json-rpc method by specifying a custom responseGen
+// AddRequestInterceptor for a desired json-rpc method by specifying a custom response
 // and a function that checks if the interceptor should be triggered.
 func (p *Proxy) AddRequestInterceptor(rpcMethodName string, response func() interface{}, trigger func() bool) {
 	p.lock.Lock()
@@ -169,7 +169,7 @@ func (p *Proxy) ReleaseBackedUpRequests(rpcMethodName string) {
 }
 
 // Checks if there is a custom interceptor hook on the request, check if it can be
-// triggered, and then write the custom responseGen to the writer.
+// triggered, and then write the custom response to the writer.
 func (p *Proxy) interceptIfNeeded(requestBytes []byte, w http.ResponseWriter, r *http.Request) (hasIntercepted bool, err error) {
 	if !isEngineAPICall(requestBytes) {
 		return
