@@ -6,6 +6,7 @@ go_library(
         "accounts.go",
         "backup.go",
         "delete.go",
+        "exit.go",
         "list.go",
         "wallet_utils.go",
     ],
