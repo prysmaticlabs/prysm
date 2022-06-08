@@ -668,6 +668,58 @@ func (r *testRunner) optimisticSync(epoch uint64, conns []*grpc.ClientConn) bool
 	return false
 }
 
+func (r *testRunner) optimisticSyncMulticlient(epoch uint64, conns []*grpc.ClientConn) bool {
+	switch epoch {
+	case 9:
+		// Set it for prysm beacon node.
+		component, err := r.comHandler.eth1Proxy.ComponentAtIndex(0)
+		require.NoError(r.t, err)
+		component.(e2etypes.EngineProxy).AddRequestInterceptor("engine_newPayloadV1", func() interface{} {
+			return &enginev1.PayloadStatus{
+				Status: enginev1.PayloadStatus_SYNCING,
+			}
+		}, func() bool {
+			return true
+		})
+		// Set it for lighthouse beacon node.
+		component, err = r.comHandler.eth1Proxy.ComponentAtIndex(2)
+		require.NoError(r.t, err)
+		component.(e2etypes.EngineProxy).AddRequestInterceptor("engine_newPayloadV1", func() interface{} {
+			return &enginev1.PayloadStatus{
+				Status: enginev1.PayloadStatus_SYNCING,
+			}
+		}, func() bool {
+			return true
+		})
+		return true
+	case 10:
+		r.executeProvidedEvaluators(epoch, []*grpc.ClientConn{conns[0]}, []e2etypes.Evaluator{
+			ev.OptimisticSyncEnabled,
+		})
+		// Disable Interceptor
+		component, err := r.comHandler.eth1Proxy.ComponentAtIndex(0)
+		require.NoError(r.t, err)
+		engineProxy, ok := component.(e2etypes.EngineProxy)
+		require.Equal(r.t, true, ok)
+		engineProxy.RemoveRequestInterceptor("engine_newPayloadV1")
+		engineProxy.ReleaseBackedUpRequests("engine_newPayloadV1")
+
+		// Remove for lighthouse too
+		component, err = r.comHandler.eth1Proxy.ComponentAtIndex(2)
+		require.NoError(r.t, err)
+		engineProxy, ok = component.(e2etypes.EngineProxy)
+		require.Equal(r.t, true, ok)
+		engineProxy.RemoveRequestInterceptor("engine_newPayloadV1")
+		engineProxy.ReleaseBackedUpRequests("engine_newPayloadV1")
+
+		return true
+	case 11, 12:
+		// Allow 2 epochs for the network to finalize again.
+		return true
+	}
+	return false
+}
+
 // All Epochs are valid.
 func defaultInterceptor(_ uint64, _ []*grpc.ClientConn) bool {
 	return false
