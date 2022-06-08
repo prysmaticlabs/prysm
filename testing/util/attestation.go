@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"math"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
@@ -16,6 +15,7 @@ import (
 	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
 	attv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
@@ -78,7 +78,7 @@ func GenerateAttestations(
 			if err != nil {
 				return nil, err
 			}
-			headState = state.BeaconState(genState)
+			headState = genState
 		case version.Altair:
 			pbState, err := v2.ProtobufBeaconState(bState.CloneInnerState())
 			if err != nil {
@@ -88,7 +88,7 @@ func GenerateAttestations(
 			if err != nil {
 				return nil, err
 			}
-			headState = state.BeaconState(genState)
+			headState = genState
 		default:
 			return nil, errors.New("state type isn't supported")
 		}

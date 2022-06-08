@@ -33,7 +33,7 @@ message StreamEventsRequest {
 
 message EventHead {
   // Slot of the new chain head.
-  uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
+  uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"];
 
   // Block root of the new chain head.
   bytes block = 2 [(ethereum.eth.ext.ssz_size) = "32"];
@@ -56,7 +56,7 @@ message EventHead {
 
 message EventBlock {
   // The slot of the observed block.
-  uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
+  uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"];
 
   // The root of the observed block.
   bytes block = 2 [(ethereum.eth.ext.ssz_size) = "32"];
@@ -67,7 +67,7 @@ message EventBlock {
 
 message EventChainReorg {
   // The slot of the observed reorg.
-  uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Slot"];
+  uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"];
 
   // Depth of the reorg in slots.
   uint64 depth = 2;
@@ -85,7 +85,7 @@ message EventChainReorg {
   bytes new_head_state = 6 [(ethereum.eth.ext.ssz_size) = "32"];
 
   // Epoch of the observed reorg.
-  uint64 epoch = 7 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Epoch"];
+  uint64 epoch = 7 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch"];
 
   // Information about optimistic sync.
   bool execution_optimistic = 8;
@@ -99,7 +99,7 @@ message EventFinalizedCheckpoint {
   bytes state = 2 [(ethereum.eth.ext.ssz_size) = "32"];
 
   // Epoch the checkpoint references.
-  uint64 epoch = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/eth2-types.Epoch"];
+  uint64 epoch = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch"];
 
   // Information about optimistic sync.
   bool execution_optimistic = 4;

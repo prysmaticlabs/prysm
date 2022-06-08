@@ -12,7 +12,9 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
@@ -79,7 +81,8 @@ func (g *goodNotifier) StateFeed() *event.Feed {
 }
 
 type goodFetcher struct {
-	backend *backends.SimulatedBackend
+	backend     *backends.SimulatedBackend
+	blockNumMap map[uint64]*gethTypes.Header
 }
 
 func (_ *goodFetcher) Close() {}
@@ -102,11 +105,14 @@ func (g *goodFetcher) HeaderByHash(_ context.Context, hash common.Hash) (*gethTy
 }
 
 func (g *goodFetcher) HeaderByNumber(_ context.Context, number *big.Int) (*gethTypes.Header, error) {
-	if g.backend == nil {
+	if g.backend == nil && g.blockNumMap == nil {
 		return &gethTypes.Header{
 			Number: big.NewInt(15),
 			Time:   150,
 		}, nil
+	}
+	if g.blockNumMap != nil {
+		return g.blockNumMap[number.Uint64()], nil
 	}
 	var header *gethTypes.Header
 	if number == nil {
@@ -250,7 +256,7 @@ func TestFollowBlock_OK(t *testing.T) {
 	// simulated backend sets eth1 block
 	// time as 10 seconds
 	params.SetupTestConfigCleanup(t)
-	conf := params.BeaconConfig()
+	conf := params.BeaconConfig().Copy()
 	conf.SecondsPerETH1Block = 10
 	params.OverrideBeaconConfig(conf)
 
@@ -265,7 +271,7 @@ func TestFollowBlock_OK(t *testing.T) {
 	web3Service.latestEth1Data.BlockHeight = testAcc.Backend.Blockchain().CurrentBlock().NumberU64()
 	web3Service.latestEth1Data.BlockTime = testAcc.Backend.Blockchain().CurrentBlock().Time()
 
-	h, err := web3Service.followBlockHeight(context.Background())
+	h, err := web3Service.followedBlockHeight(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, baseHeight, h, "Unexpected block height")
 	numToForward := uint64(2)
@@ -278,7 +284,7 @@ func TestFollowBlock_OK(t *testing.T) {
 	web3Service.latestEth1Data.BlockHeight = testAcc.Backend.Blockchain().CurrentBlock().NumberU64()
 	web3Service.latestEth1Data.BlockTime = testAcc.Backend.Blockchain().CurrentBlock().Time()
 
-	h, err = web3Service.followBlockHeight(context.Background())
+	h, err = web3Service.followedBlockHeight(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, expectedHeight, h, "Unexpected block height")
 }
@@ -338,7 +344,7 @@ func TestLogTillGenesis_OK(t *testing.T) {
 	}()
 
 	params.SetupTestConfigCleanup(t)
-	cfg := params.BeaconConfig()
+	cfg := params.BeaconConfig().Copy()
 	cfg.Eth1FollowDistance = 5
 	params.OverrideBeaconConfig(cfg)
 
@@ -504,7 +510,7 @@ func TestNewService_EarliestVotingBlock(t *testing.T) {
 	// simulated backend sets eth1 block
 	// time as 10 seconds
 	params.SetupTestConfigCleanup(t)
-	conf := params.BeaconConfig()
+	conf := params.BeaconConfig().Copy()
 	conf.SecondsPerETH1Block = 10
 	conf.Eth1FollowDistance = 50
 	params.OverrideBeaconConfig(conf)
@@ -842,4 +848,73 @@ func TestETH1Endpoints(t *testing.T) {
 
 	// Check endpoints are all present.
 	assert.DeepSSZEqual(t, endpoints, s1.ETH1Endpoints(), "Unexpected http endpoint slice")
+}
+
+func TestService_CacheBlockHeaders(t *testing.T) {
+	rClient := &slowRPCClient{limit: 1000}
+	s := &Service{
+		cfg:         &config{eth1HeaderReqLimit: 1000},
+		rpcClient:   rClient,
+		headerCache: newHeaderCache(),
+	}
+	assert.NoError(t, s.cacheBlockHeaders(1, 1000))
+	assert.Equal(t, 1, rClient.numOfCalls)
+	// Reset Num of Calls
+	rClient.numOfCalls = 0
+
+	assert.NoError(t, s.cacheBlockHeaders(1000, 3000))
+	// 1000 - 2000 would be 1001 headers which is higher than our request limit, it
+	// is then reduced to 500 and tried again.
+	assert.Equal(t, 5, rClient.numOfCalls)
+}
+
+func TestService_FollowBlock(t *testing.T) {
+	followTime := params.BeaconConfig().Eth1FollowDistance * params.BeaconConfig().SecondsPerETH1Block
+	followTime += 10000
+	bMap := make(map[uint64]*gethTypes.Header)
+	for i := uint64(3000); i > 0; i-- {
+		bMap[i] = &gethTypes.Header{
+			Number: big.NewInt(int64(i)),
+			Time:   followTime + (i * 40),
+		}
+	}
+	s := &Service{
+		cfg:             &config{eth1HeaderReqLimit: 1000},
+		eth1DataFetcher: &goodFetcher{blockNumMap: bMap},
+		headerCache:     newHeaderCache(),
+		latestEth1Data:  &ethpb.LatestETH1Data{BlockTime: (3000 * 40) + followTime, BlockHeight: 3000},
+	}
+	h, err := s.followedBlockHeight(context.Background())
+	assert.NoError(t, err)
+	// With a much higher blocktime, the follow height is respectively shortened.
+	assert.Equal(t, uint64(2283), h)
+}
+
+type slowRPCClient struct {
+	limit      int
+	numOfCalls int
+}
+
+func (s *slowRPCClient) Close() {
+	panic("implement me")
+}
+
+func (s *slowRPCClient) BatchCall(b []rpc.BatchElem) error {
+	s.numOfCalls++
+	if len(b) > s.limit {
+		return errTimedOut
+	}
+	for _, e := range b {
+		num, err := hexutil.DecodeBig(e.Args[0].(string))
+		if err != nil {
+			return err
+		}
+		h := &gethTypes.Header{Number: num}
+		*e.Result.(*gethTypes.Header) = *h
+	}
+	return nil
+}
+
+func (s *slowRPCClient) CallContext(ctx context.Context, result interface{}, method string, args ...interface{}) error {
+	panic("implement me")
 }

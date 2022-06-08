@@ -8,8 +8,8 @@ import (
 	"regexp"
 
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 )
 
 var hexRegex = regexp.MustCompile("^0x[0-9a-fA-F]+$")
@@ -337,6 +337,14 @@ func HighestBitIndexAt(b []byte, index int) (int, error) {
 	}
 
 	return 0, nil
+}
+
+// Uint32ToBytes4 is a convenience method for converting uint32 to a fix
+// sized 4 byte array in big endian order. Returns 4 byte array.
+func Uint32ToBytes4(i uint32) [4]byte {
+	buf := make([]byte, 4)
+	binary.BigEndian.PutUint32(buf, i)
+	return ToBytes4(buf)
 }
 
 // Uint64ToBytesLittleEndian conversion.

@@ -5,9 +5,9 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	v1 "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/v1"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/v1/mock"
@@ -195,8 +195,8 @@ func TestMapAttesterSlashing(t *testing.T) {
 				},
 			},
 			want: &v1.AttesterSlashing{
-				Attestation_1: mock.MockIndexedAttestation(),
-				Attestation_2: mock.MockIndexedAttestation(),
+				Attestation1: mock.MockIndexedAttestation(),
+				Attestation2: mock.MockIndexedAttestation(),
 			},
 			wantErr: false,
 		},
@@ -208,8 +208,8 @@ func TestMapAttesterSlashing(t *testing.T) {
 				t.Errorf("MapAttesterSlashing() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got.Attestation_1, tt.want.Attestation_1) {
-				t.Errorf("MapAttesterSlashing() got = %v, want %v", got.Attestation_1, tt.want.Attestation_1)
+			if !reflect.DeepEqual(got.Attestation1, tt.want.Attestation1) {
+				t.Errorf("MapAttesterSlashing() got = %v, want %v", got.Attestation1, tt.want.Attestation1)
 			}
 		})
 	}

@@ -4,14 +4,14 @@ import (
 	"context"
 	"testing"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	blockchainmock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/testutil"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -44,8 +44,9 @@ func TestGetBeaconStateV2(t *testing.T) {
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: fakeState,
 			},
-			HeadFetcher: &blockchainmock.ChainService{},
-			BeaconDB:    db,
+			HeadFetcher:           &blockchainmock.ChainService{},
+			OptimisticModeFetcher: &blockchainmock.ChainService{},
+			BeaconDB:              db,
 		}
 		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.StateRequestV2{
 			StateId: make([]byte, 0),
@@ -60,8 +61,9 @@ func TestGetBeaconStateV2(t *testing.T) {
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: fakeState,
 			},
-			HeadFetcher: &blockchainmock.ChainService{},
-			BeaconDB:    db,
+			HeadFetcher:           &blockchainmock.ChainService{},
+			OptimisticModeFetcher: &blockchainmock.ChainService{},
+			BeaconDB:              db,
 		}
 		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.StateRequestV2{
 			StateId: make([]byte, 0),
@@ -76,8 +78,9 @@ func TestGetBeaconStateV2(t *testing.T) {
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: fakeState,
 			},
-			HeadFetcher: &blockchainmock.ChainService{},
-			BeaconDB:    db,
+			HeadFetcher:           &blockchainmock.ChainService{},
+			OptimisticModeFetcher: &blockchainmock.ChainService{},
+			BeaconDB:              db,
 		}
 		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.StateRequestV2{
 			StateId: make([]byte, 0),
@@ -102,8 +105,9 @@ func TestGetBeaconStateV2(t *testing.T) {
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: fakeState,
 			},
-			HeadFetcher: &blockchainmock.ChainService{Optimistic: true},
-			BeaconDB:    db,
+			HeadFetcher:           &blockchainmock.ChainService{},
+			OptimisticModeFetcher: &blockchainmock.ChainService{Optimistic: true},
+			BeaconDB:              db,
 		}
 		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.StateRequestV2{
 			StateId: make([]byte, 0),
@@ -153,6 +157,7 @@ func TestGetBeaconStateSSZV2(t *testing.T) {
 		assert.NotNil(t, resp)
 
 		assert.DeepEqual(t, sszState, resp.Data)
+		assert.Equal(t, ethpbv2.Version_PHASE0, resp.Version)
 	})
 	t.Run("Altair", func(t *testing.T) {
 		fakeState, _ := util.DeterministicGenesisStateAltair(t, 1)
@@ -171,6 +176,7 @@ func TestGetBeaconStateSSZV2(t *testing.T) {
 		assert.NotNil(t, resp)
 
 		assert.DeepEqual(t, sszState, resp.Data)
+		assert.Equal(t, ethpbv2.Version_ALTAIR, resp.Version)
 	})
 	t.Run("Bellatrix", func(t *testing.T) {
 		fakeState, _ := util.DeterministicGenesisStateBellatrix(t, 1)
@@ -189,6 +195,7 @@ func TestGetBeaconStateSSZV2(t *testing.T) {
 		assert.NotNil(t, resp)
 
 		assert.DeepEqual(t, sszState, resp.Data)
+		assert.Equal(t, ethpbv2.Version_BELLATRIX, resp.Version)
 	})
 }
 
@@ -238,8 +245,10 @@ func TestListForkChoiceHeadsV2(t *testing.T) {
 		Root: bytesutil.ToBytes32(bytesutil.PadTo([]byte("bar"), 32)),
 	}}
 
+	chainService := &blockchainmock.ChainService{}
 	server := &Server{
-		HeadFetcher: &blockchainmock.ChainService{},
+		HeadFetcher:           chainService,
+		OptimisticModeFetcher: chainService,
 	}
 	resp, err := server.ListForkChoiceHeadsV2(ctx, &emptypb.Empty{})
 	require.NoError(t, err)
@@ -257,8 +266,10 @@ func TestListForkChoiceHeadsV2(t *testing.T) {
 	}
 
 	t.Run("optimistic head", func(t *testing.T) {
+		chainService := &blockchainmock.ChainService{Optimistic: true}
 		server := &Server{
-			HeadFetcher: &blockchainmock.ChainService{Optimistic: true},
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
 		}
 		resp, err := server.ListForkChoiceHeadsV2(ctx, &emptypb.Empty{})
 		require.NoError(t, err)

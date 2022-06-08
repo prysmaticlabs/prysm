@@ -12,7 +12,6 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsub_pb "github.com/libp2p/go-libp2p-pubsub/pb"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
@@ -30,10 +29,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -926,6 +926,7 @@ func TestValidateSyncContributionAndProof(t *testing.T) {
 		WithStateNotifier(chainService.StateNotifier()),
 		WithOperationNotifier(chainService.OperationNotifier()),
 	)
+	go s.verifierRoutine()
 	s.cfg.stateGen = stategen.New(db)
 	msg.Message.Contribution.BlockRoot = headRoot[:]
 	s.cfg.beaconDB = db
@@ -1093,4 +1094,122 @@ func syncSelectionProofSigningRoot(st state.BeaconState, slot types.Slot, comIdx
 	}
 	selectionData := &ethpb.SyncAggregatorSelectionData{Slot: slot, SubcommitteeIndex: uint64(comIdx)}
 	return signing.ComputeSigningRoot(selectionData, dom)
+}
+
+func TestService_setSyncContributionIndexSlotSeen(t *testing.T) {
+	chainService := &mockChain.ChainService{
+		Genesis:        time.Now(),
+		ValidatorsRoot: [32]byte{'A'},
+	}
+	s := NewService(context.Background(), WithP2P(mockp2p.NewTestP2P(t)), WithStateNotifier(chainService.StateNotifier()))
+	s.initCaches()
+
+	// Empty cache
+	b0 := bitfield.NewBitvector128()
+	b0.SetBitAt(0, true)
+	has, err := s.hasSeenSyncContributionBits(&ethpb.SyncCommitteeContribution{
+		AggregationBits: b0,
+	})
+	require.NoError(t, err)
+	require.Equal(t, false, has)
+
+	// Cache with entries but same key
+	require.NoError(t, s.setSyncContributionBits(&ethpb.SyncCommitteeContribution{
+		AggregationBits: b0,
+	}))
+	has, err = s.hasSeenSyncContributionBits(&ethpb.SyncCommitteeContribution{
+		AggregationBits: b0,
+	})
+	require.NoError(t, err)
+	require.Equal(t, true, has)
+	b1 := bitfield.NewBitvector128()
+	b1.SetBitAt(1, true)
+	has, err = s.hasSeenSyncContributionBits(&ethpb.SyncCommitteeContribution{
+		AggregationBits: b1,
+	})
+	require.NoError(t, err)
+	require.Equal(t, false, has)
+	b2 := bitfield.NewBitvector128()
+	b2.SetBitAt(1, true)
+	b2.SetBitAt(2, true)
+	has, err = s.hasSeenSyncContributionBits(&ethpb.SyncCommitteeContribution{
+		AggregationBits: b2,
+	})
+	require.NoError(t, err)
+	require.Equal(t, false, has)
+	b2.SetBitAt(0, true)
+	has, err = s.hasSeenSyncContributionBits(&ethpb.SyncCommitteeContribution{
+		AggregationBits: b2,
+	})
+	require.NoError(t, err)
+	require.Equal(t, true, has)
+
+	// Make sure set doesn't contain existing overlaps
+	require.Equal(t, 1, s.syncContributionBitsOverlapCache.Len())
+
+	// Cache with entries but different key
+	has, err = s.hasSeenSyncContributionBits(&ethpb.SyncCommitteeContribution{
+		Slot:              1,
+		SubcommitteeIndex: 2,
+		BlockRoot:         []byte{'A'},
+		AggregationBits:   b0,
+	})
+	require.NoError(t, err)
+	require.Equal(t, false, has)
+	require.NoError(t, s.setSyncContributionBits(&ethpb.SyncCommitteeContribution{
+		Slot:              1,
+		SubcommitteeIndex: 2,
+		BlockRoot:         []byte{'A'},
+		AggregationBits:   b2,
+	}))
+	has, err = s.hasSeenSyncContributionBits(&ethpb.SyncCommitteeContribution{
+		Slot:              1,
+		SubcommitteeIndex: 2,
+		BlockRoot:         []byte{'A'},
+		AggregationBits:   b0,
+	})
+	require.NoError(t, err)
+	require.Equal(t, true, has)
+	has, err = s.hasSeenSyncContributionBits(&ethpb.SyncCommitteeContribution{
+		Slot:              1,
+		SubcommitteeIndex: 2,
+		BlockRoot:         []byte{'A'},
+		AggregationBits:   b1,
+	})
+	require.NoError(t, err)
+	require.Equal(t, true, has)
+	has, err = s.hasSeenSyncContributionBits(&ethpb.SyncCommitteeContribution{
+		Slot:              1,
+		SubcommitteeIndex: 2,
+		BlockRoot:         []byte{'A'},
+		AggregationBits:   b2,
+	})
+	require.NoError(t, err)
+	require.Equal(t, true, has)
+
+	// Check invariant with the keys
+	has, err = s.hasSeenSyncContributionBits(&ethpb.SyncCommitteeContribution{
+		Slot:              2,
+		SubcommitteeIndex: 2,
+		BlockRoot:         []byte{'A'},
+		AggregationBits:   b0,
+	})
+	require.NoError(t, err)
+	require.Equal(t, false, has)
+	has, err = s.hasSeenSyncContributionBits(&ethpb.SyncCommitteeContribution{
+		Slot:              1,
+		SubcommitteeIndex: 2,
+		BlockRoot:         []byte{'B'},
+		AggregationBits:   b0,
+	})
+	require.NoError(t, err)
+	require.Equal(t, false, has)
+	has, err = s.hasSeenSyncContributionBits(&ethpb.SyncCommitteeContribution{
+		Slot:              1,
+		SubcommitteeIndex: 3,
+		BlockRoot:         []byte{'A'},
+		AggregationBits:   b0,
+	})
+	require.NoError(t, err)
+	require.Equal(t, false, has)
 }

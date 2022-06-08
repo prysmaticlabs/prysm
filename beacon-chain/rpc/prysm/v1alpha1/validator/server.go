@@ -43,6 +43,7 @@ type Server struct {
 	AttestationCache       *cache.AttestationCache
 	ProposerSlotIndexCache *cache.ProposerPayloadIDsCache
 	HeadFetcher            blockchain.HeadFetcher
+	HeadUpdater            blockchain.HeadUpdater
 	ForkFetcher            blockchain.ForkFetcher
 	FinalizationFetcher    blockchain.FinalizationFetcher
 	TimeFetcher            blockchain.TimeFetcher
@@ -50,6 +51,7 @@ type Server struct {
 	DepositFetcher         depositcache.DepositFetcher
 	ChainStartFetcher      powchain.ChainStartFetcher
 	Eth1InfoFetcher        powchain.ChainInfoFetcher
+	OptimisticModeFetcher  blockchain.OptimisticModeFetcher
 	SyncChecker            sync.Checker
 	StateNotifier          statefeed.Notifier
 	BlockNotifier          blockfeed.Notifier
@@ -140,20 +142,6 @@ func (vs *Server) DomainData(_ context.Context, request *ethpb.DomainRequest) (*
 	return &ethpb.DomainResponse{
 		SignatureDomain: dv,
 	}, nil
-}
-
-// CanonicalHead of the current beacon chain. This method is requested on-demand
-// by a validator when it is their time to propose or attest.
-func (vs *Server) CanonicalHead(ctx context.Context, _ *emptypb.Empty) (*ethpb.SignedBeaconBlock, error) {
-	headBlk, err := vs.HeadFetcher.HeadBlock(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get head block: %v", err)
-	}
-	b, err := headBlk.PbPhase0Block()
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get head block: %v", err)
-	}
-	return b, nil
 }
 
 // WaitForChainStart queries the logs of the Deposit Contract in order to verify the beacon chain

@@ -1,7 +1,7 @@
 package protoarray
 
 import (
-	types "github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 )
 
 // Slot of the fork choice node.

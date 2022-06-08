@@ -8,7 +8,6 @@ import (
 	"path"
 
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
@@ -16,9 +15,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/io/file"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/runtime/interop"
 	"github.com/prysmaticlabs/prysm/testing/benchmark"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -51,6 +51,11 @@ func main() {
 		log.Fatal(err)
 	}
 
+	undo, err := benchmark.SetBenchmarkConfig()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer undo()
 	log.Printf("Output dir is: %s", *outputDir)
 	log.Println("Generating genesis state")
 	// Generating this for the 2 following states.
@@ -84,7 +89,6 @@ func generateGenesisBeaconState() error {
 }
 
 func generateMarshalledFullStateAndBlock() error {
-	benchmark.SetBenchmarkConfig()
 	beaconState, err := genesisBeaconState()
 	if err != nil {
 		return err
@@ -184,7 +188,6 @@ func generateMarshalledFullStateAndBlock() error {
 }
 
 func generate2FullEpochState() error {
-	benchmark.SetBenchmarkConfig()
 	beaconState, err := genesisBeaconState()
 	if err != nil {
 		return err

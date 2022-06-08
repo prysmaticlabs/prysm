@@ -4,11 +4,16 @@ import (
 	"context"
 	"testing"
 
-	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 func TestStore_PruneThreshold(t *testing.T) {
@@ -132,17 +137,8 @@ func TestStore_ApplyScoreChanges_InvalidDeltaLength(t *testing.T) {
 	s := &Store{}
 
 	// This will fail because node indices has length of 0, and delta list has a length of 1.
-	err := s.applyWeightChanges(context.Background(), 0, 0, []uint64{}, []int{1})
+	err := s.applyWeightChanges(context.Background(), []uint64{}, []int{1})
 	assert.ErrorContains(t, errInvalidDeltaLength.Error(), err)
-}
-
-func TestStore_ApplyScoreChanges_UpdateEpochs(t *testing.T) {
-	s := &Store{}
-
-	// The justified and finalized epochs in Store should be updated to 1 and 1 given the following input.
-	require.NoError(t, s.applyWeightChanges(context.Background(), 1, 1, []uint64{}, []int{}))
-	assert.Equal(t, types.Epoch(1), s.justifiedEpoch, "Did not update justified epoch")
-	assert.Equal(t, types.Epoch(1), s.finalizedEpoch, "Did not update finalized epoch")
 }
 
 func TestStore_ApplyScoreChanges_UpdateWeightsPositiveDelta(t *testing.T) {
@@ -154,7 +150,7 @@ func TestStore_ApplyScoreChanges_UpdateWeightsPositiveDelta(t *testing.T) {
 
 	// Each node gets one unique vote. The weight should look like 103 <- 102 <- 101 because
 	// they get propagated back.
-	require.NoError(t, s.applyWeightChanges(context.Background(), 0, 0, []uint64{}, []int{1, 1, 1}))
+	require.NoError(t, s.applyWeightChanges(context.Background(), []uint64{}, []int{1, 1, 1}))
 	assert.Equal(t, uint64(103), s.nodes[0].weight)
 	assert.Equal(t, uint64(102), s.nodes[1].weight)
 	assert.Equal(t, uint64(101), s.nodes[2].weight)
@@ -169,7 +165,7 @@ func TestStore_ApplyScoreChanges_UpdateWeightsNegativeDelta(t *testing.T) {
 
 	// Each node gets one unique vote which contributes to negative delta.
 	// The weight should look like 97 <- 98 <- 99 because they get propagated back.
-	require.NoError(t, s.applyWeightChanges(context.Background(), 0, 0, []uint64{}, []int{-1, -1, -1}))
+	require.NoError(t, s.applyWeightChanges(context.Background(), []uint64{}, []int{-1, -1, -1}))
 	assert.Equal(t, uint64(97), s.nodes[0].weight)
 	assert.Equal(t, uint64(98), s.nodes[1].weight)
 	assert.Equal(t, uint64(99), s.nodes[2].weight)
@@ -183,7 +179,7 @@ func TestStore_ApplyScoreChanges_UpdateWeightsMixedDelta(t *testing.T) {
 		{parent: 1, root: [32]byte{'A'}, weight: 100}}}
 
 	// Each node gets one mixed vote. The weight should look like 100 <- 200 <- 250.
-	require.NoError(t, s.applyWeightChanges(context.Background(), 0, 0, []uint64{}, []int{-100, -50, 150}))
+	require.NoError(t, s.applyWeightChanges(context.Background(), []uint64{}, []int{-100, -50, 150}))
 	assert.Equal(t, uint64(100), s.nodes[0].weight)
 	assert.Equal(t, uint64(200), s.nodes[1].weight)
 	assert.Equal(t, uint64(250), s.nodes[2].weight)
@@ -541,18 +537,42 @@ func TestStore_PruneBranched(t *testing.T) {
 
 	for _, tc := range tests {
 		f := setup(1, 1)
-		require.NoError(t, f.InsertOptimisticBlock(ctx, 100, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 1, 1))
-		require.NoError(t, f.InsertOptimisticBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'B'}, 1, 1))
-		require.NoError(t, f.InsertOptimisticBlock(ctx, 102, [32]byte{'c'}, [32]byte{'b'}, [32]byte{'C'}, 1, 1))
-		require.NoError(t, f.InsertOptimisticBlock(ctx, 102, [32]byte{'j'}, [32]byte{'b'}, [32]byte{'J'}, 1, 1))
-		require.NoError(t, f.InsertOptimisticBlock(ctx, 103, [32]byte{'d'}, [32]byte{'c'}, [32]byte{'D'}, 1, 1))
-		require.NoError(t, f.InsertOptimisticBlock(ctx, 104, [32]byte{'e'}, [32]byte{'d'}, [32]byte{'E'}, 1, 1))
-		require.NoError(t, f.InsertOptimisticBlock(ctx, 104, [32]byte{'g'}, [32]byte{'d'}, [32]byte{'G'}, 1, 1))
-		require.NoError(t, f.InsertOptimisticBlock(ctx, 105, [32]byte{'f'}, [32]byte{'e'}, [32]byte{'F'}, 1, 1))
-		require.NoError(t, f.InsertOptimisticBlock(ctx, 105, [32]byte{'h'}, [32]byte{'g'}, [32]byte{'H'}, 1, 1))
-		require.NoError(t, f.InsertOptimisticBlock(ctx, 105, [32]byte{'k'}, [32]byte{'g'}, [32]byte{'K'}, 1, 1))
-		require.NoError(t, f.InsertOptimisticBlock(ctx, 106, [32]byte{'i'}, [32]byte{'h'}, [32]byte{'I'}, 1, 1))
-		require.NoError(t, f.InsertOptimisticBlock(ctx, 106, [32]byte{'l'}, [32]byte{'k'}, [32]byte{'L'}, 1, 1))
+		state, blkRoot, err := prepareForkchoiceState(ctx, 100, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 1, 1)
+		require.NoError(t, err)
+		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+		state, blkRoot, err = prepareForkchoiceState(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'B'}, 1, 1)
+		require.NoError(t, err)
+		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+		state, blkRoot, err = prepareForkchoiceState(ctx, 102, [32]byte{'c'}, [32]byte{'b'}, [32]byte{'C'}, 1, 1)
+		require.NoError(t, err)
+		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+		state, blkRoot, err = prepareForkchoiceState(ctx, 102, [32]byte{'j'}, [32]byte{'b'}, [32]byte{'J'}, 1, 1)
+		require.NoError(t, err)
+		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+		state, blkRoot, err = prepareForkchoiceState(ctx, 103, [32]byte{'d'}, [32]byte{'c'}, [32]byte{'D'}, 1, 1)
+		require.NoError(t, err)
+		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+		state, blkRoot, err = prepareForkchoiceState(ctx, 104, [32]byte{'e'}, [32]byte{'d'}, [32]byte{'E'}, 1, 1)
+		require.NoError(t, err)
+		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+		state, blkRoot, err = prepareForkchoiceState(ctx, 104, [32]byte{'g'}, [32]byte{'d'}, [32]byte{'G'}, 1, 1)
+		require.NoError(t, err)
+		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+		state, blkRoot, err = prepareForkchoiceState(ctx, 105, [32]byte{'f'}, [32]byte{'e'}, [32]byte{'F'}, 1, 1)
+		require.NoError(t, err)
+		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+		state, blkRoot, err = prepareForkchoiceState(ctx, 105, [32]byte{'h'}, [32]byte{'g'}, [32]byte{'H'}, 1, 1)
+		require.NoError(t, err)
+		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+		state, blkRoot, err = prepareForkchoiceState(ctx, 105, [32]byte{'k'}, [32]byte{'g'}, [32]byte{'K'}, 1, 1)
+		require.NoError(t, err)
+		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+		state, blkRoot, err = prepareForkchoiceState(ctx, 106, [32]byte{'i'}, [32]byte{'h'}, [32]byte{'I'}, 1, 1)
+		require.NoError(t, err)
+		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+		state, blkRoot, err = prepareForkchoiceState(ctx, 106, [32]byte{'l'}, [32]byte{'k'}, [32]byte{'L'}, 1, 1)
+		require.NoError(t, err)
+		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 		f.store.pruneThreshold = 0
 		require.NoError(t, f.store.updateCanonicalNodes(ctx, [32]byte{'f'}))
 		require.Equal(t, true, f.IsCanonical([32]byte{'a'}))
@@ -566,6 +586,189 @@ func TestStore_PruneBranched(t *testing.T) {
 		_, ok := f.store.payloadIndices[tc.nonExistentPayload]
 		require.Equal(t, false, ok)
 	}
+}
+
+func TestStore_CommonAncestor(t *testing.T) {
+	ctx := context.Background()
+	f := setup(0, 0)
+
+	//  /-- b -- d -- e
+	// a
+	//  \-- c -- f
+	//        \-- g
+	//        \ -- h -- i -- j
+	state, blkRoot, err := prepareForkchoiceState(ctx, 0, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 1, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'B'}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 2, [32]byte{'c'}, [32]byte{'a'}, [32]byte{'C'}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 3, [32]byte{'d'}, [32]byte{'b'}, [32]byte{}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 4, [32]byte{'e'}, [32]byte{'d'}, [32]byte{}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 5, [32]byte{'f'}, [32]byte{'c'}, [32]byte{}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 6, [32]byte{'g'}, [32]byte{'c'}, [32]byte{}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 7, [32]byte{'h'}, [32]byte{'c'}, [32]byte{}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 8, [32]byte{'i'}, [32]byte{'h'}, [32]byte{}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 9, [32]byte{'j'}, [32]byte{'i'}, [32]byte{}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+
+	tests := []struct {
+		name     string
+		r1       [32]byte
+		r2       [32]byte
+		wantRoot [32]byte
+	}{
+		{
+			name:     "Common ancestor between c and b is a",
+			r1:       [32]byte{'c'},
+			r2:       [32]byte{'b'},
+			wantRoot: [32]byte{'a'},
+		},
+		{
+			name:     "Common ancestor between c and d is a",
+			r1:       [32]byte{'c'},
+			r2:       [32]byte{'d'},
+			wantRoot: [32]byte{'a'},
+		},
+		{
+			name:     "Common ancestor between c and e is a",
+			r1:       [32]byte{'c'},
+			r2:       [32]byte{'e'},
+			wantRoot: [32]byte{'a'},
+		},
+		{
+			name:     "Common ancestor between g and f is c",
+			r1:       [32]byte{'g'},
+			r2:       [32]byte{'f'},
+			wantRoot: [32]byte{'c'},
+		},
+		{
+			name:     "Common ancestor between f and h is c",
+			r1:       [32]byte{'f'},
+			r2:       [32]byte{'h'},
+			wantRoot: [32]byte{'c'},
+		},
+		{
+			name:     "Common ancestor between g and h is c",
+			r1:       [32]byte{'g'},
+			r2:       [32]byte{'h'},
+			wantRoot: [32]byte{'c'},
+		},
+		{
+			name:     "Common ancestor between b and h is a",
+			r1:       [32]byte{'b'},
+			r2:       [32]byte{'h'},
+			wantRoot: [32]byte{'a'},
+		},
+		{
+			name:     "Common ancestor between e and h is a",
+			r1:       [32]byte{'e'},
+			r2:       [32]byte{'h'},
+			wantRoot: [32]byte{'a'},
+		},
+		{
+			name:     "Common ancestor between i and f is c",
+			r1:       [32]byte{'i'},
+			r2:       [32]byte{'f'},
+			wantRoot: [32]byte{'c'},
+		},
+		{
+			name:     "Common ancestor between e and h is a",
+			r1:       [32]byte{'j'},
+			r2:       [32]byte{'g'},
+			wantRoot: [32]byte{'c'},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			gotRoot, err := f.CommonAncestorRoot(ctx, tc.r1, tc.r2)
+			require.NoError(t, err)
+			require.Equal(t, tc.wantRoot, gotRoot)
+		})
+	}
+
+	// a -- b -- c -- d
+	f = setup(0, 0)
+	state, blkRoot, err = prepareForkchoiceState(ctx, 0, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 1, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'B'}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 2, [32]byte{'c'}, [32]byte{'b'}, [32]byte{'C'}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 3, [32]byte{'d'}, [32]byte{'c'}, [32]byte{}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	tests = []struct {
+		name     string
+		r1       [32]byte
+		r2       [32]byte
+		wantRoot [32]byte
+	}{
+		{
+			name:     "Common ancestor between a and b is a",
+			r1:       [32]byte{'a'},
+			r2:       [32]byte{'b'},
+			wantRoot: [32]byte{'a'},
+		},
+		{
+			name:     "Common ancestor between b and d is b",
+			r1:       [32]byte{'d'},
+			r2:       [32]byte{'b'},
+			wantRoot: [32]byte{'b'},
+		},
+		{
+			name:     "Common ancestor between d and a is a",
+			r1:       [32]byte{'d'},
+			r2:       [32]byte{'a'},
+			wantRoot: [32]byte{'a'},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			gotRoot, err := f.CommonAncestorRoot(ctx, tc.r1, tc.r2)
+			require.NoError(t, err)
+			require.Equal(t, tc.wantRoot, gotRoot)
+		})
+	}
+
+	// Equal inputs should return the same root.
+	r, err := f.CommonAncestorRoot(ctx, [32]byte{'b'}, [32]byte{'b'})
+	require.NoError(t, err)
+	require.Equal(t, [32]byte{'b'}, r)
+	// Requesting finalized root (last node) should return the same root.
+	r, err = f.CommonAncestorRoot(ctx, [32]byte{'a'}, [32]byte{'a'})
+	require.NoError(t, err)
+	require.Equal(t, [32]byte{'a'}, r)
+	// Requesting unknown root
+	_, err = f.CommonAncestorRoot(ctx, [32]byte{'a'}, [32]byte{'z'})
+	require.ErrorIs(t, err, errInvalidNodeIndex)
+	_, err = f.CommonAncestorRoot(ctx, [32]byte{'z'}, [32]byte{'a'})
+	require.ErrorIs(t, err, errInvalidNodeIndex)
+	state, blkRoot, err = prepareForkchoiceState(ctx, 100, [32]byte{'y'}, [32]byte{'z'}, [32]byte{}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	// broken link
+	_, err = f.CommonAncestorRoot(ctx, [32]byte{'y'}, [32]byte{'a'})
+	require.ErrorIs(t, err, forkchoice.ErrUnknownCommonAncestor)
 }
 
 func TestStore_LeadsToViableHead(t *testing.T) {
@@ -772,4 +975,102 @@ func TestStore_UpdateCanonicalNodes_RemoveOldCanonical(t *testing.T) {
 	require.Equal(t, true, f.IsCanonical([32]byte{'e'}))
 	_, ok := f.store.canonicalNodes[[32]byte{'c'}]
 	require.Equal(t, false, ok)
+}
+
+func TestStore_RemoveEquivocating(t *testing.T) {
+	ctx := context.Background()
+	f := setup(1, 1)
+	// Insert a block it will be head
+	state, blkRoot, err := prepareForkchoiceState(ctx, 1, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	head, err := f.Head(ctx, params.BeaconConfig().ZeroHash, []uint64{})
+	require.NoError(t, err)
+	require.Equal(t, [32]byte{'a'}, head)
+
+	// Insert two extra blocks
+	state, blkRoot, err = prepareForkchoiceState(ctx, 2, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'B'}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 3, [32]byte{'c'}, [32]byte{'a'}, [32]byte{'C'}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	head, err = f.Head(ctx, params.BeaconConfig().ZeroHash, []uint64{})
+	require.NoError(t, err)
+	require.Equal(t, [32]byte{'c'}, head)
+
+	// Insert two attestations for block b, it becomes head
+	f.ProcessAttestation(ctx, []uint64{1, 2}, [32]byte{'b'}, 1)
+	f.ProcessAttestation(ctx, []uint64{3}, [32]byte{'c'}, 1)
+	head, err = f.Head(ctx, params.BeaconConfig().ZeroHash, []uint64{100, 200, 200, 300})
+	require.NoError(t, err)
+	require.Equal(t, [32]byte{'b'}, head)
+
+	// Process b's slashing, c is now head
+	f.InsertSlashedIndex(ctx, 1)
+	head, err = f.Head(ctx, params.BeaconConfig().ZeroHash, []uint64{100, 200, 200, 300})
+	require.NoError(t, err)
+	require.Equal(t, [32]byte{'c'}, head)
+	require.Equal(t, uint64(200), f.store.nodes[2].weight)
+	require.Equal(t, uint64(300), f.store.nodes[3].weight)
+
+	// Process the same slashing again, should be a noop
+	f.InsertSlashedIndex(ctx, 1)
+	head, err = f.Head(ctx, params.BeaconConfig().ZeroHash, []uint64{100, 200, 200, 300})
+	require.NoError(t, err)
+	require.Equal(t, [32]byte{'c'}, head)
+	require.Equal(t, uint64(200), f.store.nodes[2].weight)
+	require.Equal(t, uint64(300), f.store.nodes[3].weight)
+
+	// Process index where index == vote length. Should not panic.
+	f.InsertSlashedIndex(ctx, types.ValidatorIndex(len(f.balances)))
+	f.InsertSlashedIndex(ctx, types.ValidatorIndex(len(f.votes)))
+	require.Equal(t, true, len(f.store.slashedIndices) > 0)
+}
+
+func TestStore_UpdateCheckpoints(t *testing.T) {
+	f := setup(1, 1)
+	jr := [32]byte{'j'}
+	fr := [32]byte{'f'}
+	jc := &ethpb.Checkpoint{Root: jr[:], Epoch: 3}
+	fc := &ethpb.Checkpoint{Root: fr[:], Epoch: 2}
+	require.NoError(t, f.UpdateJustifiedCheckpoint(jc))
+	require.NoError(t, f.UpdateFinalizedCheckpoint(fc))
+	require.Equal(t, f.store.justifiedEpoch, jc.Epoch)
+	require.Equal(t, f.store.finalizedEpoch, fc.Epoch)
+}
+
+func TestStore_InsertOptimisticChain(t *testing.T) {
+	f := setup(1, 1)
+	blks := make([]*forkchoicetypes.BlockAndCheckpoints, 0)
+	blk := util.NewBeaconBlock()
+	blk.Block.Slot = 1
+	pr := [32]byte{}
+	blk.Block.ParentRoot = pr[:]
+	root, err := blk.Block.HashTreeRoot()
+	require.NoError(t, err)
+	wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+	require.NoError(t, err)
+	blks = append(blks, &forkchoicetypes.BlockAndCheckpoints{Block: wsb.Block(), JustifiedEpoch: 1,
+		FinalizedEpoch: 1})
+	for i := uint64(2); i < 11; i++ {
+		blk := util.NewBeaconBlock()
+		blk.Block.Slot = types.Slot(i)
+		copiedRoot := root
+		blk.Block.ParentRoot = copiedRoot[:]
+		wsb, err = wrapper.WrappedSignedBeaconBlock(blk)
+		require.NoError(t, err)
+		blks = append(blks, &forkchoicetypes.BlockAndCheckpoints{Block: wsb.Block(), JustifiedEpoch: 1,
+			FinalizedEpoch: 1})
+		root, err = blk.Block.HashTreeRoot()
+		require.NoError(t, err)
+	}
+	args := make([]*forkchoicetypes.BlockAndCheckpoints, 10)
+	for i := 0; i < len(blks); i++ {
+		args[i] = blks[10-i-1]
+	}
+	require.NoError(t, f.InsertOptimisticChain(context.Background(), args))
+
+	f = setup(1, 1)
+	require.NoError(t, f.InsertOptimisticChain(context.Background(), args[2:]))
 }

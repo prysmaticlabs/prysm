@@ -3,10 +3,10 @@ package mock
 import (
 	"context"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 )
 
 // MockStateManager is a fake implementation of StateManager.
@@ -23,7 +23,7 @@ func NewMockService() *MockStateManager {
 	}
 }
 
-// StateByRootIfCachedNoCopy
+// StateByRootIfCachedNoCopy --
 func (_ *MockStateManager) StateByRootIfCachedNoCopy(_ [32]byte) state.BeaconState {
 	panic("implement me")
 }
@@ -47,7 +47,7 @@ func (_ *MockStateManager) MigrateToCold(_ context.Context, _ [32]byte) error {
 func (_ *MockStateManager) ReplayBlocks(
 	_ context.Context,
 	_ state.BeaconState,
-	_ []block.SignedBeaconBlock,
+	_ []interfaces.SignedBeaconBlock,
 	_ types.Slot,
 ) (state.BeaconState, error) {
 	panic("implement me")
@@ -58,7 +58,7 @@ func (_ *MockStateManager) LoadBlocks(
 	_ context.Context,
 	_, _ types.Slot,
 	_ [32]byte,
-) ([]block.SignedBeaconBlock, error) {
+) ([]interfaces.SignedBeaconBlock, error) {
 	panic("implement me")
 }
 

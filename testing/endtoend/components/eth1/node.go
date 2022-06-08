@@ -8,6 +8,7 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"syscall"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/pkg/errors"
@@ -23,6 +24,7 @@ type Node struct {
 	started chan struct{}
 	index   int
 	enr     string
+	cmd     *exec.Cmd
 }
 
 // NewNode creates and returns ETH1 node.
@@ -88,6 +90,7 @@ func (node *Node) Start(ctx context.Context) error {
 		"--ws.origins=\"*\"",
 		"--ipcdisable",
 		"--verbosity=4",
+		"--txpool.locals=0x878705ba3f8bc32fcf7f4caa1a35e72af65cf766",
 	}
 	// If we are testing sync, geth needs to be run via full sync as snap sync does not
 	// work in our setup.
@@ -95,11 +98,10 @@ func (node *Node) Start(ctx context.Context) error {
 		args = append(args, []string{"--syncmode=full"}...)
 	}
 	runCmd := exec.CommandContext(ctx, binaryPath, args...) // #nosec G204 -- Safe
-	file, err := helpers.DeleteAndCreateFile(e2e.TestParams.LogPath, "eth1_"+strconv.Itoa(node.index)+".log")
+	file, err := os.Create(path.Join(e2e.TestParams.LogPath, "eth1_"+strconv.Itoa(node.index)+".log"))
 	if err != nil {
 		return err
 	}
-	runCmd.Stdout = file
 	runCmd.Stderr = file
 	log.Infof("Starting eth1 node %d with flags: %s", node.index, strings.Join(args[2:], " "))
 
@@ -112,6 +114,7 @@ func (node *Node) Start(ctx context.Context) error {
 
 	// Mark node as ready.
 	close(node.started)
+	node.cmd = runCmd
 
 	return runCmd.Wait()
 }
@@ -119,4 +122,19 @@ func (node *Node) Start(ctx context.Context) error {
 // Started checks whether ETH1 node is started and ready to be queried.
 func (node *Node) Started() <-chan struct{} {
 	return node.started
+}
+
+// Pause pauses the component and its underlying process.
+func (node *Node) Pause() error {
+	return node.cmd.Process.Signal(syscall.SIGSTOP)
+}
+
+// Resume resumes the component and its underlying process.
+func (node *Node) Resume() error {
+	return node.cmd.Process.Signal(syscall.SIGCONT)
+}
+
+// Stop kills the component and its underlying process.
+func (node *Node) Stop() error {
+	return node.cmd.Process.Kill()
 }

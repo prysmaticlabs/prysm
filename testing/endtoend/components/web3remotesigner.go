@@ -10,7 +10,9 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
@@ -18,6 +20,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/runtime/interop"
 	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
 	e2etypes "github.com/prysmaticlabs/prysm/testing/endtoend/types"
@@ -37,16 +40,14 @@ type rawKeyFile struct {
 }
 
 type Web3RemoteSigner struct {
-	ctx            context.Context
-	started        chan struct{}
-	configFilePath string
-	cmd            *exec.Cmd
+	ctx     context.Context
+	started chan struct{}
+	cmd     *exec.Cmd
 }
 
-func NewWeb3RemoteSigner(configFilePath string) *Web3RemoteSigner {
+func NewWeb3RemoteSigner() *Web3RemoteSigner {
 	return &Web3RemoteSigner{
-		started:        make(chan struct{}, 1),
-		configFilePath: configFilePath,
+		started: make(chan struct{}, 1),
 	}
 }
 
@@ -69,10 +70,15 @@ func (w *Web3RemoteSigner) Start(ctx context.Context) error {
 		return err
 	}
 
+	testDir, err := w.createTestnetDir()
+	if err != nil {
+		return err
+	}
+
 	network := "minimal"
-	if len(w.configFilePath) > 0 {
+	if len(testDir) > 0 {
 		// A file path to yaml config file is acceptable network argument.
-		network = w.configFilePath
+		network = testDir
 	}
 
 	args := []string{
@@ -123,6 +129,21 @@ func (w *Web3RemoteSigner) Start(ctx context.Context) error {
 
 func (w *Web3RemoteSigner) Started() <-chan struct{} {
 	return w.started
+}
+
+// Pause pauses the component and its underlying process.
+func (w *Web3RemoteSigner) Pause() error {
+	return w.cmd.Process.Signal(syscall.SIGSTOP)
+}
+
+// Resume resumes the component and its underlying process.
+func (w *Web3RemoteSigner) Resume() error {
+	return w.cmd.Process.Signal(syscall.SIGCONT)
+}
+
+// Stop stops the component and its underlying process.
+func (w *Web3RemoteSigner) Stop() error {
+	return w.cmd.Process.Kill()
 }
 
 // monitorStart by polling server until it returns a 200 at /upcheck.
@@ -211,6 +232,9 @@ func writeKeystoreKeys(ctx context.Context, keystorePath string, numKeys uint64)
 	if err != nil {
 		return err
 	}
+	for i, p := range pub {
+		log.Infof("web3signer file added %s, key index %v", hexutil.Encode(p.Marshal()), i)
+	}
 	for i, pk := range priv {
 		if ctx.Err() != nil {
 			return ctx.Err()
@@ -230,4 +254,22 @@ func writeKeystoreKeys(ctx context.Context, keystorePath string, numKeys uint64)
 	}
 
 	return nil
+}
+
+func (w *Web3RemoteSigner) createTestnetDir() (string, error) {
+	testNetDir := e2e.TestParams.TestPath + "/web3signer-testnet"
+	configPath := filepath.Join(testNetDir, "config.yaml")
+	rawYaml := params.E2ETestConfigYaml()
+	// Add in deposit contract in yaml
+	depContractStr := fmt.Sprintf("\nDEPOSIT_CONTRACT_ADDRESS: %#x", e2e.TestParams.ContractAddress)
+	rawYaml = append(rawYaml, []byte(depContractStr)...)
+
+	if err := file.MkdirAll(testNetDir); err != nil {
+		return "", err
+	}
+	if err := file.WriteFile(configPath, rawYaml); err != nil {
+		return "", err
+	}
+
+	return configPath, nil
 }

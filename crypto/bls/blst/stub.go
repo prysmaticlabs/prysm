@@ -1,5 +1,5 @@
-//go:build blst_disabled || fuzz
-// +build blst_disabled fuzz
+//go:build blst_disabled
+// +build blst_disabled
 
 package blst
 
@@ -56,6 +56,11 @@ func (p PublicKey) IsInfinite() bool {
 	panic(err)
 }
 
+// Equals -- stub
+func (p PublicKey) Equals(_ common.PublicKey) bool {
+	panic(err)
+}
+
 // Signature -- stub
 type Signature struct{}
 
@@ -104,6 +109,11 @@ func SignatureFromBytes(_ []byte) (Signature, error) {
 	panic(err)
 }
 
+// MultipleSignaturesFromBytes -- stub
+func MultipleSignaturesFromBytes(multiSigs [][]byte) ([]common.Signature, error) {
+	panic(err)
+}
+
 // AggregatePublicKeys -- stub
 func AggregatePublicKeys(_ [][]byte) (PublicKey, error) {
 	panic(err)
@@ -111,6 +121,16 @@ func AggregatePublicKeys(_ [][]byte) (PublicKey, error) {
 
 // AggregateSignatures -- stub
 func AggregateSignatures(_ []common.Signature) common.Signature {
+	panic(err)
+}
+
+// AggregateMultiplePubkeys -- stub
+func AggregateMultiplePubkeys(pubs []common.PublicKey) common.PublicKey {
+	panic(err)
+}
+
+// AggregateCompressedSignatures -- stub
+func AggregateCompressedSignatures(multiSigs [][]byte) (common.Signature, error) {
 	panic(err)
 }
 

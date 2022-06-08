@@ -6,12 +6,17 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	pmath "github.com/prysmaticlabs/prysm/math"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -24,16 +29,16 @@ const defaultPruneThreshold = 256
 var lastHeadRoot [32]byte
 
 // New initializes a new fork choice store.
-func New(justifiedEpoch, finalizedEpoch types.Epoch, finalizedRoot [32]byte) *ForkChoice {
+func New(justifiedEpoch, finalizedEpoch types.Epoch) *ForkChoice {
 	s := &Store{
 		justifiedEpoch:    justifiedEpoch,
 		finalizedEpoch:    finalizedEpoch,
-		finalizedRoot:     finalizedRoot,
 		proposerBoostRoot: [32]byte{},
 		nodes:             make([]*Node, 0),
 		nodesIndices:      make(map[[32]byte]uint64),
 		payloadIndices:    make(map[[32]byte]uint64),
 		canonicalNodes:    make(map[[32]byte]bool),
+		slashedIndices:    make(map[types.ValidatorIndex]bool),
 		pruneThreshold:    defaultPruneThreshold,
 	}
 
@@ -46,10 +51,8 @@ func New(justifiedEpoch, finalizedEpoch types.Epoch, finalizedRoot [32]byte) *Fo
 // It firsts computes validator's balance changes then recalculates block tree from leaves to root.
 func (f *ForkChoice) Head(
 	ctx context.Context,
-	justifiedEpoch types.Epoch,
 	justifiedRoot [32]byte,
 	justifiedStateBalances []uint64,
-	finalizedEpoch types.Epoch,
 ) ([32]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.Head")
 	defer span.End()
@@ -57,19 +60,18 @@ func (f *ForkChoice) Head(
 	defer f.votesLock.Unlock()
 
 	calledHeadCount.Inc()
-
 	newBalances := justifiedStateBalances
 
 	// Using the write lock here because `updateCanonicalNodes` that gets called subsequently requires a write operation.
 	f.store.nodesLock.Lock()
 	defer f.store.nodesLock.Unlock()
-	deltas, newVotes, err := computeDeltas(ctx, f.store.nodesIndices, f.votes, f.balances, newBalances)
+	deltas, newVotes, err := computeDeltas(ctx, f.store.nodesIndices, f.votes, f.balances, newBalances, f.store.slashedIndices)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "Could not compute deltas")
 	}
 	f.votes = newVotes
 
-	if err := f.store.applyWeightChanges(ctx, justifiedEpoch, finalizedEpoch, newBalances, deltas); err != nil {
+	if err := f.store.applyWeightChanges(ctx, newBalances, deltas); err != nil {
 		return [32]byte{}, errors.Wrap(err, "Could not apply score changes")
 	}
 	f.balances = newBalances
@@ -117,16 +119,38 @@ func (f *ForkChoice) ProposerBoost() [fieldparams.RootLength]byte {
 	return f.store.proposerBoost()
 }
 
-// InsertOptimisticBlock processes a new block by inserting it to the fork choice store.
-func (f *ForkChoice) InsertOptimisticBlock(
-	ctx context.Context,
-	slot types.Slot,
-	blockRoot, parentRoot, payloadHash [32]byte,
-	justifiedEpoch, finalizedEpoch types.Epoch) error {
-	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.InsertOptimisticBlock")
+// InsertNode processes a new block by inserting it to the fork choice store.
+func (f *ForkChoice) InsertNode(ctx context.Context, state state.ReadOnlyBeaconState, root [32]byte) error {
+	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.InsertNode")
 	defer span.End()
 
-	return f.store.insert(ctx, slot, blockRoot, parentRoot, payloadHash, justifiedEpoch, finalizedEpoch)
+	slot := state.Slot()
+	bh := state.LatestBlockHeader()
+	if bh == nil {
+		return errNilBlockHeader
+	}
+	parentRoot := bytesutil.ToBytes32(bh.ParentRoot)
+	payloadHash := [32]byte{}
+	if state.Version() >= version.Bellatrix {
+		ph, err := state.LatestExecutionPayloadHeader()
+		if err != nil {
+			return err
+		}
+		if ph != nil {
+			copy(payloadHash[:], ph.BlockHash)
+		}
+	}
+	jc := state.CurrentJustifiedCheckpoint()
+	if jc == nil {
+		return errInvalidNilCheckpoint
+	}
+	justifiedEpoch := jc.Epoch
+	fc := state.FinalizedCheckpoint()
+	if fc == nil {
+		return errInvalidNilCheckpoint
+	}
+	finalizedEpoch := fc.Epoch
+	return f.store.insert(ctx, slot, root, parentRoot, payloadHash, justifiedEpoch, finalizedEpoch)
 }
 
 // Prune prunes the fork choice store with the new finalized root. The store is only pruned if the input
@@ -196,6 +220,52 @@ func (f *ForkChoice) AncestorRoot(ctx context.Context, root [32]byte, slot types
 	}
 
 	return f.store.nodes[i].root[:], nil
+}
+
+// CommonAncestorRoot returns the common ancestor root between the two block roots r1 and r2.
+func (f *ForkChoice) CommonAncestorRoot(ctx context.Context, r1 [32]byte, r2 [32]byte) ([32]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "protoArray.CommonAncestorRoot")
+	defer span.End()
+
+	// Do nothing if the two input roots are the same.
+	if r1 == r2 {
+		return r1, nil
+	}
+
+	i1, ok := f.store.nodesIndices[r1]
+	if !ok || i1 >= uint64(len(f.store.nodes)) {
+		return [32]byte{}, errInvalidNodeIndex
+	}
+
+	i2, ok := f.store.nodesIndices[r2]
+	if !ok || i2 >= uint64(len(f.store.nodes)) {
+		return [32]byte{}, errInvalidNodeIndex
+	}
+
+	for {
+		if ctx.Err() != nil {
+			return [32]byte{}, ctx.Err()
+		}
+		if i1 > i2 {
+			n1 := f.store.nodes[i1]
+			i1 = n1.parent
+			// Reaches the end of the tree and unable to find common ancestor.
+			if i1 >= uint64(len(f.store.nodes)) {
+				return [32]byte{}, forkchoice.ErrUnknownCommonAncestor
+			}
+		} else {
+			n2 := f.store.nodes[i2]
+			i2 = n2.parent
+			// Reaches the end of the tree and unable to find common ancestor.
+			if i2 >= uint64(len(f.store.nodes)) {
+				return [32]byte{}, forkchoice.ErrUnknownCommonAncestor
+			}
+		}
+		if i1 == i2 {
+			n1 := f.store.nodes[i1]
+			return n1.root, nil
+		}
+	}
 }
 
 // PruneThreshold of fork choice store.
@@ -336,15 +406,17 @@ func (s *Store) insert(ctx context.Context,
 	}
 
 	n := &Node{
-		slot:           slot,
-		root:           root,
-		parent:         parentIndex,
-		justifiedEpoch: justifiedEpoch,
-		finalizedEpoch: finalizedEpoch,
-		bestChild:      NonExistentNode,
-		bestDescendant: NonExistentNode,
-		weight:         0,
-		payloadHash:    payloadHash,
+		slot:                     slot,
+		root:                     root,
+		parent:                   parentIndex,
+		justifiedEpoch:           justifiedEpoch,
+		unrealizedJustifiedEpoch: justifiedEpoch,
+		finalizedEpoch:           finalizedEpoch,
+		unrealizedFinalizedEpoch: finalizedEpoch,
+		bestChild:                NonExistentNode,
+		bestDescendant:           NonExistentNode,
+		weight:                   0,
+		payloadHash:              payloadHash,
 	}
 
 	s.nodesIndices[root] = index
@@ -370,7 +442,7 @@ func (s *Store) insert(ctx context.Context,
 // back propagate the nodes' delta to its parents' delta. After scoring changes,
 // the best child is then updated along with the best descendant.
 func (s *Store) applyWeightChanges(
-	ctx context.Context, justifiedEpoch, finalizedEpoch types.Epoch, newBalances []uint64, delta []int,
+	ctx context.Context, newBalances []uint64, delta []int,
 ) error {
 	_, span := trace.StartSpan(ctx, "protoArrayForkChoice.applyWeightChanges")
 	defer span.End()
@@ -378,12 +450,6 @@ func (s *Store) applyWeightChanges(
 	// The length of the nodes can not be different than length of the delta.
 	if len(s.nodes) != len(delta) {
 		return errInvalidDeltaLength
-	}
-
-	// Update the justified / finalized epochs in store if necessary.
-	if s.justifiedEpoch != justifiedEpoch || s.finalizedEpoch != finalizedEpoch {
-		s.justifiedEpoch = justifiedEpoch
-		s.finalizedEpoch = finalizedEpoch
 	}
 
 	// Proposer score defaults to 0.
@@ -740,4 +806,98 @@ func (f *ForkChoice) ForkChoiceNodes() []*pbrpc.ForkChoiceNode {
 		}
 	}
 	return ret
+}
+
+// InsertSlashedIndex adds the given slashed validator index to the
+// store-tracked list. Votes from these validators are not accounted for
+// in forkchoice.
+func (f *ForkChoice) InsertSlashedIndex(ctx context.Context, index types.ValidatorIndex) {
+	f.store.nodesLock.Lock()
+	defer f.store.nodesLock.Unlock()
+	// return early if the index was already included:
+	if f.store.slashedIndices[index] {
+		return
+	}
+	f.store.slashedIndices[index] = true
+
+	// Subtract last vote from this equivocating validator
+	f.votesLock.RLock()
+	defer f.votesLock.RUnlock()
+
+	if index >= types.ValidatorIndex(len(f.balances)) {
+		return
+	}
+
+	if index >= types.ValidatorIndex(len(f.votes)) {
+		return
+	}
+
+	nodeIndex, ok := f.store.nodesIndices[f.votes[index].currentRoot]
+	if !ok {
+		return
+	}
+
+	var node *Node
+	for nodeIndex != NonExistentNode {
+		if ctx.Err() != nil {
+			return
+		}
+
+		node = f.store.nodes[nodeIndex]
+		if node == nil {
+			return
+		}
+
+		if node.weight < f.balances[index] {
+			node.weight = 0
+		} else {
+			node.weight -= f.balances[index]
+		}
+		nodeIndex = node.parent
+	}
+}
+
+// UpdateJustifiedCheckpoint sets the justified epoch to the given one
+func (f *ForkChoice) UpdateJustifiedCheckpoint(jc *pbrpc.Checkpoint) error {
+	if jc == nil {
+		return errInvalidNilCheckpoint
+	}
+	f.store.nodesLock.Lock()
+	defer f.store.nodesLock.Unlock()
+	f.store.justifiedEpoch = jc.Epoch
+	return nil
+}
+
+// UpdateFinalizedCheckpoint sets the finalized epoch to the given one
+func (f *ForkChoice) UpdateFinalizedCheckpoint(fc *pbrpc.Checkpoint) error {
+	if fc == nil {
+		return errInvalidNilCheckpoint
+	}
+	f.store.nodesLock.Lock()
+	defer f.store.nodesLock.Unlock()
+	f.store.finalizedEpoch = fc.Epoch
+	return nil
+}
+
+// InsertOptimisticChain inserts all nodes corresponding to blocks in the slice
+// `blocks`. It includes all blocks **except** the first one.
+func (f *ForkChoice) InsertOptimisticChain(ctx context.Context, chain []*forkchoicetypes.BlockAndCheckpoints) error {
+	if len(chain) == 0 {
+		return nil
+	}
+	for i := len(chain) - 1; i > 0; i-- {
+		b := chain[i].Block
+		r := bytesutil.ToBytes32(chain[i-1].Block.ParentRoot())
+		parentRoot := bytesutil.ToBytes32(b.ParentRoot())
+		payloadHash, err := blocks.GetBlockPayloadHash(b)
+		if err != nil {
+			return err
+		}
+		if err := f.store.insert(ctx,
+			b.Slot(), r, parentRoot, payloadHash,
+			chain[i].JustifiedEpoch, chain[i].FinalizedEpoch); err != nil {
+			return err
+		}
+	}
+	return nil
 }

@@ -3,10 +3,11 @@ package forkchoice
 import (
 	"context"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
 // ForkChoicer represents the full fork choice interface composed of all the sub-interfaces.
@@ -22,26 +23,21 @@ type ForkChoicer interface {
 
 // HeadRetriever retrieves head root and optimistic info of the current chain.
 type HeadRetriever interface {
-	Head(context.Context, types.Epoch, [32]byte, []uint64, types.Epoch) ([32]byte, error)
+	Head(context.Context, [32]byte, []uint64) ([32]byte, error)
 	Tips() ([][32]byte, []types.Slot)
 	IsOptimistic(root [32]byte) (bool, error)
 }
 
 // BlockProcessor processes the block that's used for accounting fork choice.
 type BlockProcessor interface {
-	InsertOptimisticBlock(ctx context.Context,
-		slot types.Slot,
-		root [32]byte,
-		parentRoot [32]byte,
-		payloadHash [32]byte,
-		justifiedEpoch types.Epoch,
-		finalizedEpoch types.Epoch,
-	) error
+	InsertNode(context.Context, state.ReadOnlyBeaconState, [32]byte) error
+	InsertOptimisticChain(context.Context, []*forkchoicetypes.BlockAndCheckpoints) error
 }
 
 // AttestationProcessor processes the attestation that's used for accounting fork choice.
 type AttestationProcessor interface {
 	ProcessAttestation(context.Context, []uint64, [32]byte, types.Epoch)
+	InsertSlashedIndex(context.Context, types.ValidatorIndex)
 }
 
 // Pruner prunes the fork choice upon new finalization. This is used to keep fork choice sane.
@@ -61,15 +57,18 @@ type Getter interface {
 	ProposerBoost() [fieldparams.RootLength]byte
 	HasParent(root [32]byte) bool
 	AncestorRoot(ctx context.Context, root [32]byte, slot types.Slot) ([]byte, error)
+	CommonAncestorRoot(ctx context.Context, root1 [32]byte, root2 [32]byte) ([32]byte, error)
 	IsCanonical(root [32]byte) bool
 	FinalizedEpoch() types.Epoch
 	JustifiedEpoch() types.Epoch
-	ForkChoiceNodes() []*pbrpc.ForkChoiceNode
+	ForkChoiceNodes() []*ethpb.ForkChoiceNode
 	NodeCount() int
 }
 
 // Setter allows to set forkchoice information
 type Setter interface {
 	SetOptimisticToValid(context.Context, [fieldparams.RootLength]byte) error
-	SetOptimisticToInvalid(context.Context, [fieldparams.RootLength]byte, [fieldparams.RootLength]byte) ([][32]byte, error)
+	SetOptimisticToInvalid(context.Context, [fieldparams.RootLength]byte, [fieldparams.RootLength]byte, [fieldparams.RootLength]byte) ([][32]byte, error)
+	UpdateJustifiedCheckpoint(*ethpb.Checkpoint) error
+	UpdateFinalizedCheckpoint(*ethpb.Checkpoint) error
 }

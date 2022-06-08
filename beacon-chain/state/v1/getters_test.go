@@ -56,13 +56,15 @@ func TestNilState_NoPanic(t *testing.T) {
 	_ = st.RandaoMixesLength()
 	_ = st.Slashings()
 	_, err = st.PreviousEpochAttestations()
-	require.NoError(t, err)
+	require.ErrorIs(t, ErrNilInnerState, err)
 	_, err = st.CurrentEpochAttestations()
-	require.NoError(t, err)
+	require.ErrorIs(t, ErrNilInnerState, err)
 	_ = st.JustificationBits()
 	_ = st.PreviousJustifiedCheckpoint()
 	_ = st.CurrentJustifiedCheckpoint()
 	_ = st.FinalizedCheckpoint()
+	_, _, _, err = st.UnrealizedCheckpointBalances()
+	_ = err
 }
 
 func TestBeaconState_MatchCurrentJustifiedCheckpt(t *testing.T) {

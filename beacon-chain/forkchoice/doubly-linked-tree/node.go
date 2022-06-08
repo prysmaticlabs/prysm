@@ -4,8 +4,9 @@ import (
 	"bytes"
 	"context"
 
-	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -55,7 +56,7 @@ func (n *Node) updateBestDescendant(ctx context.Context, justifiedEpoch, finaliz
 	hasViableDescendant := false
 	for _, child := range n.children {
 		if child == nil {
-			return ErrNilNode
+			return errors.Wrap(ErrNilNode, "could not update best descendant")
 		}
 		if err := child.updateBestDescendant(ctx, justifiedEpoch, finalizedEpoch); err != nil {
 			return err

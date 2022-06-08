@@ -5,13 +5,13 @@ import (
 	"testing"
 	"time"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/async/abool"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/network/forks"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 )
@@ -62,7 +62,7 @@ func TestService_CheckForNextEpochFork(t *testing.T) {
 					Genesis:        time.Now().Add(-4 * oneEpoch()),
 					ValidatorsRoot: [32]byte{'A'},
 				}
-				bCfg := params.BeaconConfig()
+				bCfg := params.BeaconConfig().Copy()
 				bCfg.AltairForkEpoch = 5
 				params.OverrideBeaconConfig(bCfg)
 				params.BeaconConfig().InitializeForkSchedule()
@@ -105,7 +105,7 @@ func TestService_CheckForNextEpochFork(t *testing.T) {
 					Genesis:        time.Now().Add(-4 * oneEpoch()),
 					ValidatorsRoot: [32]byte{'A'},
 				}
-				bCfg := params.BeaconConfig()
+				bCfg := params.BeaconConfig().Copy()
 				bCfg.AltairForkEpoch = 3
 				bCfg.BellatrixForkEpoch = 5
 				params.OverrideBeaconConfig(bCfg)
@@ -207,7 +207,7 @@ func TestService_CheckForPreviousEpochFork(t *testing.T) {
 					Genesis:        time.Now().Add(-4 * oneEpoch()),
 					ValidatorsRoot: [32]byte{'A'},
 				}
-				bCfg := params.BeaconConfig()
+				bCfg := params.BeaconConfig().Copy()
 				bCfg.AltairForkEpoch = 3
 				params.OverrideBeaconConfig(bCfg)
 				params.BeaconConfig().InitializeForkSchedule()
@@ -281,7 +281,7 @@ func TestService_CheckForPreviousEpochFork(t *testing.T) {
 					Genesis:        time.Now().Add(-4 * oneEpoch()),
 					ValidatorsRoot: [32]byte{'A'},
 				}
-				bCfg := params.BeaconConfig()
+				bCfg := params.BeaconConfig().Copy()
 				bCfg.AltairForkEpoch = 1
 				bCfg.BellatrixForkEpoch = 3
 				params.OverrideBeaconConfig(bCfg)

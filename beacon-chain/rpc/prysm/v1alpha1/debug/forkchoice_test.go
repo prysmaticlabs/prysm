@@ -12,8 +12,8 @@ import (
 )
 
 func TestServer_GetForkChoice_ProtoArray(t *testing.T) {
-	store := protoarray.New(0, 0, [32]byte{'a'})
-	bs := &Server{HeadFetcher: &mock.ChainService{ForkChoiceStore: store}}
+	store := protoarray.New(0, 0)
+	bs := &Server{ForkFetcher: &mock.ChainService{ForkChoiceStore: store}}
 	res, err := bs.GetForkChoice(context.Background(), &empty.Empty{})
 	require.NoError(t, err)
 	assert.Equal(t, store.JustifiedEpoch(), res.JustifiedEpoch, "Did not get wanted justified epoch")

@@ -4,11 +4,10 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/testing/require"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
@@ -16,6 +15,7 @@ import (
 	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -23,7 +23,7 @@ import (
 // It fills state and block roots with hex representations of natural numbers starting with 0.
 // Example: 16 becomes 0x00...0f.
 func FillRootsNaturalOpt(state *ethpb.BeaconState) error {
-	roots, err := prepareRoots()
+	roots, err := PrepareRoots(int(params.BeaconConfig().SlotsPerHistoricalRoot))
 	if err != nil {
 		return err
 	}
@@ -36,7 +36,7 @@ func FillRootsNaturalOpt(state *ethpb.BeaconState) error {
 // It fills state and block roots with hex representations of natural numbers starting with 0.
 // Example: 16 becomes 0x00...0f.
 func FillRootsNaturalOptAltair(state *ethpb.BeaconStateAltair) error {
-	roots, err := prepareRoots()
+	roots, err := PrepareRoots(int(params.BeaconConfig().SlotsPerHistoricalRoot))
 	if err != nil {
 		return err
 	}
@@ -49,7 +49,7 @@ func FillRootsNaturalOptAltair(state *ethpb.BeaconStateAltair) error {
 // It fills state and block roots with hex representations of natural numbers starting with 0.
 // Example: 16 becomes 0x00...0f.
 func FillRootsNaturalOptBellatrix(state *ethpb.BeaconStateBellatrix) error {
-	roots, err := prepareRoots()
+	roots, err := PrepareRoots(int(params.BeaconConfig().SlotsPerHistoricalRoot))
 	if err != nil {
 		return err
 	}
@@ -65,7 +65,7 @@ func WithStateSlot(slot types.Slot) NewBeaconStateOption {
 	}
 }
 
-func WithLatestHeaderFromBlock(t *testing.T, b block.SignedBeaconBlock) NewBeaconStateOption {
+func WithLatestHeaderFromBlock(t *testing.T, b interfaces.SignedBeaconBlock) NewBeaconStateOption {
 	return func(st *ethpb.BeaconState) error {
 		sh, err := b.Header()
 		require.NoError(t, err)
@@ -119,7 +119,7 @@ func NewBeaconState(options ...NewBeaconStateOption) (state.BeaconState, error) 
 }
 
 // NewBeaconStateAltair creates a beacon state with minimum marshalable fields.
-func NewBeaconStateAltair(options ...func(state *ethpb.BeaconStateAltair) error) (state.BeaconStateAltair, error) {
+func NewBeaconStateAltair(options ...func(state *ethpb.BeaconStateAltair) error) (state.BeaconState, error) {
 	pubkeys := make([][]byte, 512)
 	for i := range pubkeys {
 		pubkeys[i] = make([]byte, 48)
@@ -174,7 +174,7 @@ func NewBeaconStateAltair(options ...func(state *ethpb.BeaconStateAltair) error)
 }
 
 // NewBeaconStateBellatrix creates a beacon state with minimum marshalable fields.
-func NewBeaconStateBellatrix(options ...func(state *ethpb.BeaconStateBellatrix) error) (state.BeaconStateBellatrix, error) {
+func NewBeaconStateBellatrix(options ...func(state *ethpb.BeaconStateBellatrix) error) (state.BeaconState, error) {
 	pubkeys := make([][]byte, 512)
 	for i := range pubkeys {
 		pubkeys[i] = make([]byte, 48)
@@ -250,10 +250,11 @@ func filledByteSlice2D(length, innerLen uint64) [][]byte {
 	return b
 }
 
-func prepareRoots() ([][]byte, error) {
-	rootsLen := params.MainnetConfig().SlotsPerHistoricalRoot
-	roots := make([][]byte, rootsLen)
-	for i := types.Slot(0); i < rootsLen; i++ {
+// PrepareRoots returns a list of roots with hex representations of natural numbers starting with 0.
+// Example: 16 becomes 0x00...0f.
+func PrepareRoots(size int) ([][]byte, error) {
+	roots := make([][]byte, size)
+	for i := 0; i < size; i++ {
 		roots[i] = make([]byte, fieldparams.RootLength)
 	}
 	for j := 0; j < len(roots); j++ {

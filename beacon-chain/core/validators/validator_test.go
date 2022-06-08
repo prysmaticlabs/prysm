@@ -4,11 +4,11 @@ import (
 	"context"
 	"testing"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -97,6 +97,17 @@ func TestInitiateValidatorExit_ChurnOverflow(t *testing.T) {
 	v, err = newState.ValidatorAtIndex(idx)
 	require.NoError(t, err)
 	assert.Equal(t, wantedEpoch, v.ExitEpoch, "Exit epoch did not cover overflow case")
+}
+
+func TestInitiateValidatorExit_WithdrawalOverflows(t *testing.T) {
+	base := &ethpb.BeaconState{Validators: []*ethpb.Validator{
+		{ExitEpoch: params.BeaconConfig().FarFutureEpoch - 1},
+		{EffectiveBalance: params.BeaconConfig().EjectionBalance, ExitEpoch: params.BeaconConfig().FarFutureEpoch},
+	}}
+	state, err := v1.InitializeFromProto(base)
+	require.NoError(t, err)
+	_, err = InitiateValidatorExit(context.Background(), state, 1)
+	require.ErrorContains(t, "addition overflows", err)
 }
 
 func TestSlashValidator_OK(t *testing.T) {

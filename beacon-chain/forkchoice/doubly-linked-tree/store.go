@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"go.opencensus.io/trace"
 )
 
@@ -112,28 +112,31 @@ func (s *Store) insert(ctx context.Context,
 	parent := s.nodeByRoot[parentRoot]
 
 	n := &Node{
-		slot:           slot,
-		root:           root,
-		parent:         parent,
-		justifiedEpoch: justifiedEpoch,
-		finalizedEpoch: finalizedEpoch,
-		optimistic:     true,
-		payloadHash:    payloadHash,
+		slot:                     slot,
+		root:                     root,
+		parent:                   parent,
+		justifiedEpoch:           justifiedEpoch,
+		unrealizedJustifiedEpoch: justifiedEpoch,
+		finalizedEpoch:           finalizedEpoch,
+		unrealizedFinalizedEpoch: finalizedEpoch,
+		optimistic:               true,
+		payloadHash:              payloadHash,
 	}
 
 	s.nodeByPayload[payloadHash] = n
 	s.nodeByRoot[root] = n
-	if parent != nil {
+	if parent == nil {
+		if s.treeRootNode == nil {
+			s.treeRootNode = n
+			s.headNode = n
+		} else {
+			return errInvalidParentRoot
+		}
+	} else {
 		parent.children = append(parent.children, n)
 		if err := s.treeRootNode.updateBestDescendant(ctx, s.justifiedEpoch, s.finalizedEpoch); err != nil {
 			return err
 		}
-	}
-
-	// Set the node as root if the store was empty
-	if s.treeRootNode == nil {
-		s.treeRootNode = n
-		s.headNode = n
 	}
 
 	// Update metrics.
@@ -141,12 +144,6 @@ func (s *Store) insert(ctx context.Context,
 	nodeCount.Set(float64(len(s.nodeByRoot)))
 
 	return nil
-}
-
-// updateCheckpoints Update the justified / finalized epochs in store if necessary.
-func (s *Store) updateCheckpoints(justifiedEpoch, finalizedEpoch types.Epoch) {
-	s.justifiedEpoch = justifiedEpoch
-	s.finalizedEpoch = finalizedEpoch
 }
 
 // pruneFinalizedNodeByRootMap prunes the `nodeByRoot` map

@@ -10,13 +10,18 @@ import (
 	pmath "github.com/prysmaticlabs/prysm/math"
 )
 
+var (
+	ErrInvalidFieldTrie = errors.New("invalid field trie")
+	ErrEmptyFieldTrie   = errors.New("empty field trie")
+)
+
 // FieldTrie is the representation of the representative
 // trie of the particular field.
 type FieldTrie struct {
 	*sync.RWMutex
 	reference   *stateutil.Reference
 	fieldLayers [][]*[32]byte
-	field       types.FieldIndex
+	field       types.BeaconStateField
 	dataType    types.DataType
 	length      uint64
 	numOfElems  int
@@ -25,7 +30,7 @@ type FieldTrie struct {
 // NewFieldTrie is the constructor for the field trie data structure. It creates the corresponding
 // trie according to the given parameters. Depending on whether the field is a basic/composite array
 // which is either fixed/variable length, it will appropriately determine the trie.
-func NewFieldTrie(field types.FieldIndex, dataType types.DataType, elements interface{}, length uint64) (*FieldTrie, error) {
+func NewFieldTrie(field types.BeaconStateField, dataType types.DataType, elements interface{}, length uint64) (*FieldTrie, error) {
 	if elements == nil {
 		return &FieldTrie{
 			field:      field,
@@ -36,10 +41,19 @@ func NewFieldTrie(field types.FieldIndex, dataType types.DataType, elements inte
 			numOfElems: 0,
 		}, nil
 	}
-	fieldRoots, err := fieldConverters(field, []uint64{}, elements, true)
+
+	var fieldRoots [][32]byte
+	var err error
+	if field.Native() {
+		fieldRoots, err = fieldConvertersNative(field, []uint64{}, elements, true)
+	} else {
+		fieldRoots, err = fieldConverters(field, []uint64{}, elements, true)
+	}
+
 	if err != nil {
 		return nil, err
 	}
+
 	if err := validateElements(field, dataType, elements, length); err != nil {
 		return nil, err
 	}
@@ -84,10 +98,18 @@ func (f *FieldTrie) RecomputeTrie(indices []uint64, elements interface{}) ([32]b
 	if len(indices) == 0 {
 		return f.TrieRoot()
 	}
-	fieldRoots, err := fieldConverters(f.field, indices, elements, false)
+
+	var fieldRoots [][32]byte
+	var err error
+	if f.field.Native() {
+		fieldRoots, err = fieldConvertersNative(f.field, indices, elements, false)
+	} else {
+		fieldRoots, err = fieldConverters(f.field, indices, elements, false)
+	}
 	if err != nil {
 		return [32]byte{}, err
 	}
+
 	if err := f.validateIndices(indices); err != nil {
 		return [32]byte{}, err
 	}
@@ -117,7 +139,7 @@ func (f *FieldTrie) RecomputeTrie(indices []uint64, elements interface{}) ([32]b
 		}
 		// We remove the duplicates here in order to prevent
 		// duplicated insertions into the trie.
-		newIndices := []uint64{}
+		var newIndices []uint64
 		indexExists := make(map[uint64]bool)
 		newRoots := make([][32]byte, 0, len(fieldRoots)/iNumOfElems)
 		for i, idx := range indices {
@@ -171,6 +193,12 @@ func (f *FieldTrie) CopyTrie() *FieldTrie {
 
 // TrieRoot returns the corresponding root of the trie.
 func (f *FieldTrie) TrieRoot() ([32]byte, error) {
+	if f.Empty() {
+		return [32]byte{}, ErrEmptyFieldTrie
+	}
+	if len(f.fieldLayers[len(f.fieldLayers)-1]) == 0 {
+		return [32]byte{}, ErrInvalidFieldTrie
+	}
 	switch f.dataType {
 	case types.BasicArray:
 		return *f.fieldLayers[len(f.fieldLayers)-1][0], nil
