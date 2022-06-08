@@ -111,13 +111,16 @@ var Commands = &cli.Command{
 				if err := cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags); err != nil {
 					return err
 				}
-				return tos.VerifyTosAcceptedOrPrompt(cliCtx)
-			},
-			Action: func(cliCtx *cli.Context) error {
+				if err := tos.VerifyTosAcceptedOrPrompt(cliCtx); err != nil {
+					return err
+				}
 				if err := features.ConfigureValidator(cliCtx); err != nil {
 					return err
 				}
-				if err := accounts.BackupAccountsCli(cliCtx); err != nil {
+				return nil
+			},
+			Action: func(cliCtx *cli.Context) error {
+				if err := accountsBackup(cliCtx); err != nil {
 					log.Fatalf("Could not backup accounts: %v", err)
 				}
 				return nil

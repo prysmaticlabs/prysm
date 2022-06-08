@@ -81,7 +81,7 @@ type mockHistory struct {
 	states                         map[[32]byte]state.BeaconState
 	hiddenStates                   map[[32]byte]state.BeaconState
 	current                        types.Slot
-	overrideHighestSlotBlocksBelow func(context.Context, types.Slot) ([]interfaces.SignedBeaconBlock, error)
+	overrideHighestSlotBlocksBelow func(context.Context, types.Slot) (types.Slot, [][32]byte, error)
 }
 
 type slotList []types.Slot
@@ -98,13 +98,13 @@ func (m slotList) Swap(i, j int) {
 	m[i], m[j] = m[j], m[i]
 }
 
-var errFallThroughOverride = errors.New("override yielding control back to real HighestSlotBlocksBelow")
+var errFallThroughOverride = errors.New("override yielding control back to real HighestRootsBelowSlot")
 
-func (m *mockHistory) HighestSlotBlocksBelow(_ context.Context, slot types.Slot) ([]interfaces.SignedBeaconBlock, error) {
+func (m *mockHistory) HighestRootsBelowSlot(_ context.Context, slot types.Slot) (types.Slot, [][32]byte, error) {
 	if m.overrideHighestSlotBlocksBelow != nil {
-		s, err := m.overrideHighestSlotBlocksBelow(context.Background(), slot)
+		s, r, err := m.overrideHighestSlotBlocksBelow(context.Background(), slot)
 		if !errors.Is(err, errFallThroughOverride) {
-			return s, err
+			return s, r, err
 		}
 	}
 	if len(m.slotIndex) == 0 && len(m.slotMap) > 0 {
@@ -115,20 +115,20 @@ func (m *mockHistory) HighestSlotBlocksBelow(_ context.Context, slot types.Slot)
 	}
 	for _, s := range m.slotIndex {
 		if s < slot {
-			return []interfaces.SignedBeaconBlock{m.blocks[m.slotMap[s]]}, nil
+			return s, [][32]byte{m.slotMap[s]}, nil
 		}
 	}
-	return []interfaces.SignedBeaconBlock{}, nil
+	return 0, [][32]byte{}, nil
 }
 
 var errGenesisBlockNotFound = errors.New("canonical genesis block not found in db")
 
-func (m *mockHistory) GenesisBlock(_ context.Context) (interfaces.SignedBeaconBlock, error) {
+func (m *mockHistory) GenesisBlockRoot(_ context.Context) ([32]byte, error) {
 	genesisRoot, ok := m.slotMap[0]
 	if !ok {
-		return nil, errGenesisBlockNotFound
+		return [32]byte{}, errGenesisBlockNotFound
 	}
-	return m.blocks[genesisRoot], nil
+	return genesisRoot, nil
 }
 
 func (m *mockHistory) Block(_ context.Context, blockRoot [32]byte) (interfaces.SignedBeaconBlock, error) {

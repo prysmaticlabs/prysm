@@ -65,7 +65,6 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
-        "accounts_backup_test.go",
         "accounts_exit_test.go",
         "accounts_import_test.go",
         "accounts_list_test.go",
@@ -84,7 +83,6 @@ go_test(
         "//consensus-types/primitives:go_default_library",
         "//crypto/bls:go_default_library",
         "//encoding/bytesutil:go_default_library",
-        "//io/file:go_default_library",
         "//proto/eth/service:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//proto/prysm/v1alpha1/validator-client:go_default_library",

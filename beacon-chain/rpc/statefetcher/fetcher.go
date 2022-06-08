@@ -292,11 +292,11 @@ func (p *StateProvider) stateRootBySlot(ctx context.Context, slot types.Slot) ([
 	if slot > currentSlot {
 		return nil, errors.New("slot cannot be in the future")
 	}
-	found, blks, err := p.BeaconDB.BlocksBySlot(ctx, slot)
+	blks, err := p.BeaconDB.BlocksBySlot(ctx, slot)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get blocks")
 	}
-	if !found {
+	if len(blks) == 0 {
 		return nil, errors.New("no block exists")
 	}
 	if len(blks) != 1 {
