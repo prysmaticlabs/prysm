@@ -46,73 +46,58 @@ func (c *CanonicalHistory) ReplayerForSlot(target types.Slot) Replayer {
 	return &stateReplayer{chainer: c, method: forSlot, target: target}
 }
 
-func (c *CanonicalHistory) BlockForSlot(ctx context.Context, target types.Slot) ([32]byte, interfaces.SignedBeaconBlock, error) {
-	currentSlot := c.cs.CurrentSlot()
-	if target > currentSlot {
-		return [32]byte{}, nil, errors.Wrap(ErrFutureSlotRequested, fmt.Sprintf("requested=%d, current=%d", target, currentSlot))
+func (c *CanonicalHistory) BlockRootForSlot(ctx context.Context, target types.Slot) ([32]byte, error) {
+	if currentSlot := c.cs.CurrentSlot(); target > currentSlot {
+		return [32]byte{}, errors.Wrap(ErrFutureSlotRequested, fmt.Sprintf("requested=%d, current=%d", target, currentSlot))
 	}
-	for target > 0 {
+
+	slotAbove := target + 1
+	// don't bother searching for candidate roots when we know the target slot is genesis
+	for slotAbove > 1 {
 		if ctx.Err() != nil {
-			return [32]byte{}, nil, errors.Wrap(ctx.Err(), "context canceled during canonicalBlockForSlot")
+			return [32]byte{}, errors.Wrap(ctx.Err(), "context canceled during canonicalBlockForSlot")
 		}
-		hbs, err := c.h.HighestSlotBlocksBelow(ctx, target+1)
+		slot, roots, err := c.h.HighestRootsBelowSlot(ctx, slotAbove)
 		if err != nil {
-			return [32]byte{}, nil, errors.Wrap(err, fmt.Sprintf("error finding highest block w/ slot <= %d", target))
+			return [32]byte{}, errors.Wrap(err, fmt.Sprintf("error finding highest block w/ slot < %d", slotAbove))
 		}
-		if len(hbs) == 0 {
-			return [32]byte{}, nil, errors.Wrap(ErrNoBlocksBelowSlot, fmt.Sprintf("slot=%d", target))
+		if len(roots) == 0 {
+			return [32]byte{}, errors.Wrap(ErrNoBlocksBelowSlot, fmt.Sprintf("slot=%d", slotAbove))
 		}
-		r, b, err := c.bestForSlot(ctx, hbs)
+		r, err := c.bestForSlot(ctx, roots)
 		if err == nil {
 			// we found a valid, canonical block!
-			return r, b, nil
+			return r, nil
 		}
 
 		// we found a block, but it wasn't considered canonical - keep looking
 		if errors.Is(err, ErrNoCanonicalBlockForSlot) {
 			// break once we've seen slot 0 (and prevent underflow)
-			if hbs[0].Block().Slot() == params.BeaconConfig().GenesisSlot {
+			if slot == params.BeaconConfig().GenesisSlot {
 				break
 			}
-			target = hbs[0].Block().Slot() - 1
+			slotAbove = slot
 			continue
 		}
-		return [32]byte{}, nil, err
+		return [32]byte{}, err
 	}
-	b, err := c.h.GenesisBlock(ctx)
-	if err != nil {
-		return [32]byte{}, nil, errors.Wrap(err, "db error while retrieving genesis block")
-	}
-	root, _, err := c.bestForSlot(ctx, []interfaces.SignedBeaconBlock{b})
-	if err != nil {
-		return [32]byte{}, nil, errors.Wrap(err, "problem retrieving genesis block")
-	}
-	return root, b, nil
+
+	return c.h.GenesisBlockRoot(ctx)
 }
 
 // bestForSlot encapsulates several messy realities of the underlying db code, looping through multiple blocks,
 // performing null/validity checks, and using CanonicalChecker to only pick canonical blocks.
-func (c *CanonicalHistory) bestForSlot(ctx context.Context, hbs []interfaces.SignedBeaconBlock) ([32]byte, interfaces.SignedBeaconBlock, error) {
-	for _, b := range hbs {
-		if wrapper.BeaconBlockIsNil(b) != nil {
-			continue
-		}
-		root, err := b.Block().HashTreeRoot()
-		if err != nil {
-			// use this error message to wrap a sentinel error for error type matching
-			wrapped := errors.Wrap(ErrInvalidDBBlock, err.Error())
-			msg := fmt.Sprintf("could not compute hash_tree_root for block at slot=%d", b.Block().Slot())
-			return [32]byte{}, nil, errors.Wrap(wrapped, msg)
-		}
+func (c *CanonicalHistory) bestForSlot(ctx context.Context, roots [][32]byte) ([32]byte, error) {
+	for _, root := range roots {
 		canon, err := c.cc.IsCanonical(ctx, root)
 		if err != nil {
-			return [32]byte{}, nil, errors.Wrap(err, "replayer could not check if block is canonical")
+			return [32]byte{}, errors.Wrap(err, "replayer could not check if block is canonical")
 		}
 		if canon {
-			return root, b, nil
+			return root, nil
 		}
 	}
-	return [32]byte{}, nil, errors.Wrap(ErrNoCanonicalBlockForSlot, "no good block for slot")
+	return [32]byte{}, errors.Wrap(ErrNoCanonicalBlockForSlot, "no good block for slot")
 }
 
 // ChainForSlot creates a value that satisfies the Replayer interface via db queries
@@ -122,9 +107,13 @@ func (c *CanonicalHistory) bestForSlot(ctx context.Context, hbs []interfaces.Sig
 func (c *CanonicalHistory) chainForSlot(ctx context.Context, target types.Slot) (state.BeaconState, []interfaces.SignedBeaconBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "canonicalChainer.chainForSlot")
 	defer span.End()
-	_, b, err := c.BlockForSlot(ctx, target)
+	r, err := c.BlockRootForSlot(ctx, target)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, fmt.Sprintf("unable to find replay data for slot=%d", target))
+		return nil, nil, errors.Wrapf(err, "no canonical block root found below slot=%d", target)
+	}
+	b, err := c.h.Block(ctx, r)
+	if err != nil {
+		return nil, nil, errors.Wrapf(err, "unable to retrieve canonical block for slot, root=%#x", r)
 	}
 	s, descendants, err := c.ancestorChain(ctx, b)
 	if err != nil {
