@@ -109,6 +109,11 @@ func (Phase0SignedBeaconBlock) PbBlindedBellatrixBlock() (*eth.SignedBlindedBeac
 	return nil, ErrUnsupportedBlindedBellatrixBlock
 }
 
+// PbEip4844Block is a stub.
+func (Phase0SignedBeaconBlock) PbEip4844Block() (*eth.SignedBeaconBlockWithBlobKZGs, error) {
+	return nil, ErrUnsupportedEip4844Block
+}
+
 // Version of the underlying protobuf object.
 func (Phase0SignedBeaconBlock) Version() int {
 	return version.Phase0
@@ -309,4 +314,9 @@ func (w Phase0BeaconBlockBody) ExecutionPayload() (*enginev1.ExecutionPayload, e
 // ExecutionPayloadHeader is a stub.
 func (w Phase0BeaconBlockBody) ExecutionPayloadHeader() (*eth.ExecutionPayloadHeader, error) {
 	return nil, errors.Wrapf(ErrUnsupportedField, "ExecutionPayloadHeader for %T", w)
+}
+
+// BlobKzgs is a stub.
+func (w Phase0BeaconBlockBody) BlobKzgs() ([][]byte, error) {
+	return nil, errors.Wrapf(ErrUnsupportedField, "BlobKzgs for %T", w)
 }

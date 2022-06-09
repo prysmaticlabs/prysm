@@ -687,3 +687,84 @@ func (e *ExecutionPayloadHeader) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	hh.Merkleize(indx)
 	return
 }
+
+// MarshalSSZ ssz marshals the Blob object
+func (b *Blob) MarshalSSZ() ([]byte, error) {
+	return ssz.MarshalSSZ(b)
+}
+
+// MarshalSSZTo ssz marshals the Blob object to a target array
+func (b *Blob) MarshalSSZTo(buf []byte) (dst []byte, err error) {
+	dst = buf
+
+	// Field (0) 'Blob'
+	if len(b.Blob) != 4096 {
+		err = ssz.ErrVectorLength
+		return
+	}
+	for ii := 0; ii < 4096; ii++ {
+		if len(b.Blob[ii]) != 32 {
+			err = ssz.ErrBytesLength
+			return
+		}
+		dst = append(dst, b.Blob[ii]...)
+	}
+
+	return
+}
+
+// UnmarshalSSZ ssz unmarshals the Blob object
+func (b *Blob) UnmarshalSSZ(buf []byte) error {
+	var err error
+	size := uint64(len(buf))
+	if size != 131072 {
+		return ssz.ErrSize
+	}
+
+	// Field (0) 'Blob'
+	b.Blob = make([][]byte, 4096)
+	for ii := 0; ii < 4096; ii++ {
+		if cap(b.Blob[ii]) == 0 {
+			b.Blob[ii] = make([]byte, 0, len(buf[0:131072][ii*32:(ii+1)*32]))
+		}
+		b.Blob[ii] = append(b.Blob[ii], buf[0:131072][ii*32:(ii+1)*32]...)
+	}
+
+	return err
+}
+
+// SizeSSZ returns the ssz encoded size in bytes for the Blob object
+func (b *Blob) SizeSSZ() (size int) {
+	size = 131072
+	return
+}
+
+// HashTreeRoot ssz hashes the Blob object
+func (b *Blob) HashTreeRoot() ([32]byte, error) {
+	return ssz.HashWithDefaultHasher(b)
+}
+
+// HashTreeRootWith ssz hashes the Blob object with a hasher
+func (b *Blob) HashTreeRootWith(hh *ssz.Hasher) (err error) {
+	indx := hh.Index()
+
+	// Field (0) 'Blob'
+	{
+		if len(b.Blob) != 4096 {
+			err = ssz.ErrVectorLength
+			return
+		}
+		subIndx := hh.Index()
+		for _, i := range b.Blob {
+			if len(i) != 32 {
+				err = ssz.ErrBytesLength
+				return
+			}
+			hh.Append(i)
+		}
+		hh.Merkleize(subIndx)
+	}
+
+	hh.Merkleize(indx)
+	return
+}

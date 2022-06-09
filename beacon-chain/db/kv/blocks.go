@@ -780,9 +780,9 @@ func unmarshalBlock(_ context.Context, enc []byte) (interfaces.SignedBeaconBlock
 		if err := rawBlock.UnmarshalSSZ(enc[len(bellatrixBlindKey):]); err != nil {
 			return nil, err
 		}
-	case hasMiniDankKey(enc):
+	case hasEip4844Key(enc):
 		rawBlock = &ethpb.SignedBeaconBlockWithBlobKZGs{}
-		if err := rawBlock.UnmarshalSSZ(enc[len(miniDankKey):]); err != nil {
+		if err := rawBlock.UnmarshalSSZ(enc[len(eip4844Key):]); err != nil {
 			return nil, err
 		}
 	default:
@@ -803,7 +803,7 @@ func marshalBlock(_ context.Context, blk interfaces.SignedBeaconBlock) ([]byte, 
 	}
 	switch blk.Version() {
 	case version.EIP4844:
-		return snappy.Encode(nil, append(miniDankKey, obj...)), nil
+		return snappy.Encode(nil, append(eip4844Key, obj...)), nil
 	case version.BellatrixBlind:
 		return snappy.Encode(nil, append(bellatrixBlindKey, obj...)), nil
 	case version.Bellatrix:

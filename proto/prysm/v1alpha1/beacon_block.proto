@@ -512,13 +512,3 @@ message SignedBlobsSidecar {
     BlobsSidecar message = 1;
     bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
 }
-
-message BeaconBlockWithBlobKZGsAndBlobsSidecar {
-    BeaconBlockWithBlobKZGs block = 1;
-    BlobsSidecar sidecar = 2;
-}
-
-message SignedBeaconBlockWithBlobKZGsAndBlobsSidecar {
-    SignedBeaconBlockWithBlobKZGs block = 1;
-    SignedBlobsSidecar sidecar = 2;
-}

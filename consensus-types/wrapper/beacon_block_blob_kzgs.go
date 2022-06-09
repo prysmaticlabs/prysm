@@ -318,3 +318,11 @@ func (w eip4844BeaconBlockBody) ExecutionPayload() (*enginev1.ExecutionPayload, 
 func (w eip4844BeaconBlockBody) ExecutionPayloadHeader() (*eth.ExecutionPayloadHeader, error) {
 	return nil, errors.Wrapf(ErrUnsupportedField, "ExecutionPayloadHeader for %T", w)
 }
+
+// BlobKzgs returns the blob kzgs in the block.
+func (w eip4844BeaconBlockBody) BlobKzgs() ([][]byte, error) {
+	if w.b == nil {
+		return nil, ErrNilObjectWrapped
+	}
+	return w.b.BlobKzgs, nil
+}

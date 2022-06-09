@@ -31,6 +31,8 @@ var (
 	ErrUnsupportedBellatrixBlock = errors.New("unsupported bellatrix block")
 	// ErrUnsupportedBlindedBellatrixBlock is returned when accessing a blinded bellatrix block from unsupported method.
 	ErrUnsupportedBlindedBellatrixBlock = errors.New("unsupported blinded bellatrix block")
+	// ErrUnsupportedEip4844Block is returned when accessing a eip4844 block from a non-eip4844 wrapped block.
+	ErrUnsupportedEip4844Block = errors.New("unsupported eip4844 block")
 	// ErrNilObjectWrapped is returned in a constructor when the underlying object is nil.
 	ErrNilObjectWrapped     = errors.New("attempted to wrap nil object")
 	ErrNilSignedBeaconBlock = errors.New("signed beacon block can't be nil")

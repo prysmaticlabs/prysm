@@ -4,7 +4,10 @@ import (
 	"encoding/json"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/params"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 )
@@ -352,5 +355,58 @@ func (f *ForkchoiceState) UnmarshalJSON(enc []byte) error {
 	f.HeadBlockHash = dec.HeadBlockHash
 	f.SafeBlockHash = dec.SafeBlockHash
 	f.FinalizedBlockHash = dec.FinalizedBlockHash
+	return nil
+}
+
+type blobBundleJSON struct {
+	BlockHash common.Hash                                          `json:"blockHash"`
+	Kzgs      []types.KZGCommitment                                `json:"kzgs"`
+	Blobs     [][params.FieldElementsPerBlob]types.BLSFieldElement `json:"blobs"`
+}
+
+// MarshalJSON --
+func (b *BlobsBundle) MarshalJSON() ([]byte, error) {
+	kzgs := make([]types.KZGCommitment, len(b.Kzgs))
+	for i, kzg := range b.Kzgs {
+		kzgs[i] = bytesutil.ToBytes48(kzg)
+	}
+	blobs := make([][params.FieldElementsPerBlob]types.BLSFieldElement, len(b.Blobs))
+	for _, b1 := range b.Blobs {
+		var blob [params.FieldElementsPerBlob]types.BLSFieldElement
+		for i, b2 := range b1.Blob {
+			blob[i] = bytesutil.ToBytes32(b2)
+		}
+		blobs = append(blobs, blob)
+	}
+
+	return json.Marshal(blobBundleJSON{
+		BlockHash: bytesutil.ToBytes32(b.BlockHash),
+		Kzgs:      kzgs,
+		Blobs:     blobs,
+	})
+}
+
+// UnmarshalJSON --
+func (e *BlobsBundle) UnmarshalJSON(enc []byte) error {
+	dec := blobBundleJSON{}
+	if err := json.Unmarshal(enc, &dec); err != nil {
+		return err
+	}
+	*e = BlobsBundle{}
+	e.BlockHash = bytesutil.PadTo(dec.BlockHash.Bytes(), fieldparams.RootLength)
+	kzgs := make([][]byte, len(dec.Kzgs))
+	for i, kzg := range dec.Kzgs {
+		kzgs[i] = bytesutil.PadTo(kzg[:], fieldparams.BLSPubkeyLength)
+	}
+	e.Kzgs = kzgs
+	blobs := make([]*Blob, len(dec.Blobs))
+	for i, blob := range dec.Blobs {
+		b := &Blob{}
+		for _, fe := range blob {
+			b.Blob = append(b.Blob, fe[:])
+		}
+		blobs[i] = b
+	}
+	e.Blobs = blobs
 	return nil
 }

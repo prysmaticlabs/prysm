@@ -105,7 +105,7 @@ func (cf *VersionedUnmarshaler) UnmarshalBeaconState(marshaled []byte) (s state.
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to init state trie from state, detected fork=%s", forkName)
 		}
-	case version.Bellatrix:
+	case version.Bellatrix, version.EIP4844 /* the beacon state is unchanged in eip4844 */ :
 		st := &ethpb.BeaconStateBellatrix{}
 		err = st.UnmarshalSSZ(marshaled)
 		if err != nil {
@@ -159,6 +159,8 @@ func (cf *VersionedUnmarshaler) UnmarshalBeaconBlock(marshaled []byte) (interfac
 		blk = &ethpb.SignedBeaconBlockAltair{}
 	case version.Bellatrix:
 		blk = &ethpb.SignedBeaconBlockBellatrix{}
+	case version.EIP4844:
+		blk = &ethpb.SignedBeaconBlockWithBlobKZGs{}
 	default:
 		forkName := version.String(cf.Fork)
 		return nil, fmt.Errorf("unable to initialize BeaconBlock for fork version=%s at slot=%d", forkName, slot)
@@ -190,6 +192,8 @@ func (cf *VersionedUnmarshaler) UnmarshalBlindedBeaconBlock(marshaled []byte) (i
 		blk = &ethpb.SignedBeaconBlockAltair{}
 	case version.Bellatrix:
 		blk = &ethpb.SignedBlindedBeaconBlockBellatrix{}
+	case version.EIP4844:
+		blk = &ethpb.SignedBeaconBlockWithBlobKZGs{}
 	default:
 		forkName := version.String(cf.Fork)
 		return nil, fmt.Errorf("unable to initialize BeaconBlock for fork version=%s at slot=%d", forkName, slot)

@@ -61,6 +61,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		}
 		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Bellatrix{Bellatrix: blk}}, nil
 	}
+	// An optimistic validator MUST NOT produce a block (i.e., sign across the DOMAIN_BEACON_PROPOSER domain).
 	if err := vs.optimisticStatus(ctx); err != nil {
 		return nil, err
 	}
@@ -100,7 +101,7 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Could not decode block: %v", err)
 	}
-	return vs.proposeGenericBeaconBlock(ctx, blk)
+	return vs.proposeGenericBeaconBlock(ctx, blk, req.Sidecar)
 }
 
 // ProposeBlock is called by a proposer during its assigned slot to create a block in an attempt
@@ -114,7 +115,7 @@ func (vs *Server) ProposeBlock(ctx context.Context, rBlk *ethpb.SignedBeaconBloc
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Could not decode block: %v", err)
 	}
-	return vs.proposeGenericBeaconBlock(ctx, blk)
+	return vs.proposeGenericBeaconBlock(ctx, blk, nil)
 }
 
 // PrepareBeaconProposer caches and updates the fee recipient for the given proposer.
@@ -142,7 +143,7 @@ func (vs *Server) PrepareBeaconProposer(
 	return &emptypb.Empty{}, nil
 }
 
-func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.SignedBeaconBlock) (*ethpb.ProposeResponse, error) {
+func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.SignedBeaconBlock, sidecar *ethpb.SignedBlobsSidecar) (*ethpb.ProposeResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.proposeGenericBeaconBlock")
 	defer span.End()
 	root, err := blk.Block().HashTreeRoot()
@@ -164,6 +165,14 @@ func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.
 	if err := vs.P2P.Broadcast(ctx, blk.Proto()); err != nil {
 		return nil, fmt.Errorf("could not broadcast block: %v", err)
 	}
+	if sidecar != nil {
+		// TODO(inphi): We may want to broadcast blobs at best-effort.
+		// TODO(inphi): Uncomment this once P2P is working again
+		//if err := vs.P2P.Broadcast(ctx, sidecar); err != nil {
+		//return nil, fmt.Errorf("could not broadcast blobs sidecar: %v", err)
+		//}
+	}
+
 	log.WithFields(logrus.Fields{
 		"blockRoot": hex.EncodeToString(root[:]),
 	}).Debug("Broadcasting block")
