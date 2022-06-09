@@ -7,13 +7,12 @@
 package testing
 
 import (
-	reflect "reflect"
-	sync "sync"
-
 	timestamp "github.com/golang/protobuf/ptypes/timestamp"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	descriptorpb "google.golang.org/protobuf/types/descriptorpb"
+	reflect "reflect"
+	sync "sync"
 )
 
 const (

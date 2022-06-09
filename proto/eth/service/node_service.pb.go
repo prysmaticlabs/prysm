@@ -8,8 +8,6 @@ package service
 
 import (
 	context "context"
-	reflect "reflect"
-
 	_ "github.com/golang/protobuf/protoc-gen-go/descriptor"
 	empty "github.com/golang/protobuf/ptypes/empty"
 	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
@@ -19,6 +17,7 @@ import (
 	status "google.golang.org/grpc/status"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	reflect "reflect"
 )
 
 const (
