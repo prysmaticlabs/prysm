@@ -319,7 +319,7 @@ func (s *Service) saveOrphanedAtts(ctx context.Context, orphanedRoot [32]byte, n
 	case err != nil:
 		return err
 	}
-	for orphanedRoot != [32]byte{} && orphanedRoot != commonAncestorRoot {
+	for orphanedRoot != commonAncestorRoot {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}

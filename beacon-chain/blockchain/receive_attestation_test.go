@@ -225,7 +225,7 @@ func TestService_ProcessAttestationsAndUpdateHead(t *testing.T) {
 	require.NoError(t, err)
 	service.genesisTime = prysmTime.Now().Add(-2 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
 	genesisState, pks := util.DeterministicGenesisState(t, 64)
-	require.NoError(t, genesisState.SetGenesisTime(uint64(prysmTime.Now().Unix())-params.BeaconConfig().SecondsPerSlot))
+	// require.NoError(t, genesisState.SetGenesisTime(uint64(prysmTime.Now().Unix())-params.BeaconConfig().SecondsPerSlot))
 	require.NoError(t, service.saveGenesisData(ctx, genesisState))
 	copied := genesisState.Copy()
 	// Generate a new block for attesters to attest
@@ -251,10 +251,12 @@ func TestService_ProcessAttestationsAndUpdateHead(t *testing.T) {
 	// Insert a new block to forkchoice
 	ojc := &ethpb.Checkpoint{Epoch: 0, Root: service.originBlockRoot[:]}
 	ofc := &ethpb.Checkpoint{Epoch: 0, Root: service.originBlockRoot[:]}
-	b := util.NewBeaconBlock()
-	wb, err := wrapper.WrappedSignedBeaconBlock(b)
+	b, err := util.GenerateFullBlock(genesisState, pks, util.DefaultBlockGenConfig(), 2)
 	require.NoError(t, err)
+	b.Block.ParentRoot = service.originBlockRoot[:]
 	r, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	wb, err := wrapper.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wb))
 	state, blkRoot, err := prepareForkchoiceState(ctx, 2, r, service.originBlockRoot, [32]byte{'b'}, ojc, ofc)

@@ -636,6 +636,10 @@ func TestUpdateHead_noSavedChanges(t *testing.T) {
 
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
+	ojp := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	st, blkRoot, err := prepareForkchoiceState(ctx, 0, [32]byte{}, [32]byte{}, [32]byte{}, ojp, ojp)
+	require.NoError(t, err)
+	require.NoError(t, fcs.InsertNode(ctx, st, blkRoot))
 
 	bellatrixBlk, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlockBellatrix())
 	require.NoError(t, err)
@@ -657,7 +661,7 @@ func TestUpdateHead_noSavedChanges(t *testing.T) {
 	headRoot := service.headRoot()
 	require.Equal(t, [32]byte{}, headRoot)
 
-	st, blkRoot, err := prepareForkchoiceState(ctx, 0, bellatrixBlkRoot, [32]byte{}, [32]byte{}, fcp, fcp)
+	st, blkRoot, err = prepareForkchoiceState(ctx, 0, bellatrixBlkRoot, [32]byte{}, [32]byte{}, fcp, fcp)
 	require.NoError(t, err)
 	require.NoError(t, fcs.InsertNode(ctx, st, blkRoot))
 	newRoot, err := service.cfg.ForkChoiceStore.Head(ctx, []uint64{1, 2})

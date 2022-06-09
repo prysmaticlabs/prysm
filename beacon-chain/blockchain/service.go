@@ -484,16 +484,16 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState state.Beacon
 	// forkchoice
 	jcp := &forkchoicetypes.Checkpoint{Epoch: genesisCheckpoint.Epoch, Root: genesisBlkRoot}
 	if err := s.cfg.ForkChoiceStore.UpdateJustifiedCheckpoint(jcp); err != nil {
-		log.Fatalf("Could not set genesis justified checkpoint")
+		return errors.Wrap(err, "Could not set genesis justified checkpoint")
 	}
 
 	fcp := &forkchoicetypes.Checkpoint{Epoch: genesisCheckpoint.Epoch, Root: genesisBlkRoot}
 	if err := s.cfg.ForkChoiceStore.UpdateFinalizedCheckpoint(fcp); err != nil {
-		log.Fatalf("Could not set genesis finalized checkpoint")
+		return errors.Wrap(err, "Could not set genesis finalized checkpoint")
 	}
 
 	if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, genesisBlkRoot); err != nil {
-		log.Fatalf("Could not set optimistic status of genesis block to false: %v", err)
+		return errors.Wrap(err, "Could not set optimistic status of genesis block to false")
 	}
 	s.cfg.ForkChoiceStore.SetGenesisTime(uint64(s.genesisTime.Unix()))
 
