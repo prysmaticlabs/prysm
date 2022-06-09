@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 
+	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -98,4 +100,17 @@ func deleteValueForIndices(ctx context.Context, indicesByBucket map[string][]byt
 		}
 	}
 	return nil
+}
+
+var errMisalignedRootList = errors.New("incorrectly packed root list, length is not a multiple of 32")
+
+func splitRoots(b []byte) ([][32]byte, error) {
+	rl := make([][32]byte, 0)
+	if len(b)%32 != 0 {
+		return nil, errors.Wrapf(errMisalignedRootList, "root list len=%d", len(b))
+	}
+	for s, f := 0, 32; f <= len(b); s, f = f, f+32 {
+		rl = append(rl, bytesutil.ToBytes32(b[s:f]))
+	}
+	return rl, nil
 }

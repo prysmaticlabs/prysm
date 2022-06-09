@@ -122,6 +122,12 @@ func configureTestnet(ctx *cli.Context) error {
 		if err := params.SetActive(params.RopstenConfig().Copy()); err != nil {
 			return err
 		}
+		if err := ctx.Set(enableVecHTR.Names()[0], "true"); err != nil {
+			log.WithError(err).Debug("error enabling vectorized HTR flag")
+		}
+		if err := ctx.Set(enableForkChoiceDoublyLinkedTree.Names()[0], "true"); err != nil {
+			log.WithError(err).Debug("error enabling doubly linked tree forkchoice flag")
+		}
 		params.UseRopstenNetworkConfig()
 	} else {
 		log.Warn("Running on Ethereum Consensus Mainnet")
