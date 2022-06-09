@@ -1,0 +1,49 @@
+s0 := buf[0:8]              // c.GenesisTime
+s1 := buf[8:40]             // c.GenesisValidatorsRoot
+s2 := buf[40:48]            // c.Slot
+s3 := buf[48:64]            // c.Fork
+s4 := buf[64:176]           // c.LatestBlockHeader
+s5 := buf[176:262320]       // c.BlockRoots
+s6 := buf[262320:524464]    // c.StateRoots
+s8 := buf[524468:524540]    // c.Eth1Data
+s10 := buf[524544:524552]   // c.Eth1DepositIndex
+s13 := buf[524560:2621712]  // c.RandaoMixes
+s14 := buf[2621712:2687248] // c.Slashings
+s17 := buf[2687256:2687257] // c.JustificationBits
+s18 := buf[2687257:2687297] // c.PreviousJustifiedCheckpoint
+s19 := buf[2687297:2687337] // c.CurrentJustifiedCheckpoint
+s20 := buf[2687337:2687377] // c.FinalizedCheckpoint
+
+v7 := ssz.ReadOffset(buf[524464:524468]) // c.HistoricalRoots
+if v7 < 2687377 {
+	return ssz.ErrInvalidVariableOffset
+}
+if v7 > size {
+	return ssz.ErrOffset
+}
+v9 := ssz.ReadOffset(buf[524540:524544]) // c.Eth1DataVotes
+if v9 > size || v9 < v7 {
+	return ssz.ErrOffset
+}
+v11 := ssz.ReadOffset(buf[524552:524556]) // c.Validators
+if v11 > size || v11 < v9 {
+	return ssz.ErrOffset
+}
+v12 := ssz.ReadOffset(buf[524556:524560]) // c.Balances
+if v12 > size || v12 < v11 {
+	return ssz.ErrOffset
+}
+v15 := ssz.ReadOffset(buf[2687248:2687252]) // c.PreviousEpochAttestations
+if v15 > size || v15 < v12 {
+	return ssz.ErrOffset
+}
+v16 := ssz.ReadOffset(buf[2687252:2687256]) // c.CurrentEpochAttestations
+if v16 > size || v16 < v15 {
+	return ssz.ErrOffset
+}
+s7 := buf[v7:v9]    // c.HistoricalRoots
+s9 := buf[v9:v11]   // c.Eth1DataVotes
+s11 := buf[v11:v12] // c.Validators
+s12 := buf[v12:v15] // c.Balances
+s15 := buf[v15:v16] // c.PreviousEpochAttestations
+s16 := buf[v16:]    // c.CurrentEpochAttestations

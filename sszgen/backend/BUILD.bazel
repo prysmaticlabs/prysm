@@ -1,0 +1,46 @@
+load("@prysm//tools/go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "bool.go",
+        "byte.go",
+        "caster.go",
+        "container.go",
+        "genhtr.go",
+        "genmarshal.go",
+        "gensize.go",
+        "genunmarshal.go",
+        "list.go",
+        "overlay.go",
+        "pointer.go",
+        "render.go",
+        "uint.go",
+        "union.go",
+        "vector.go",
+        "visitor.go",
+    ],
+    importpath = "github.com/prysmaticlabs/prysm/sszgen/backend",
+    visibility = ["//visibility:public"],
+    deps = ["//sszgen/types:go_default_library"],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = [
+        "container_test.go",
+        "genhtr_test.go",
+        "genmarshal_test.go",
+        "gensize_test.go",
+        "genunmarshal_test.go",
+        "render_test.go",
+    ],
+    data = glob(["testdata/**"]),
+    embed = [":go_default_library"],
+    # dummy importpath to unbreak debugging
+    importpath = "github.com/prysmaticlabs/prysm/sszgen/backend/tests-dummy",
+    deps = [
+        "//shared/testutil/require:go_default_library",
+        "//sszgen/types:go_default_library",
+    ],
+)

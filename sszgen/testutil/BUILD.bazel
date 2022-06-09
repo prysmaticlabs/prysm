@@ -1,0 +1,22 @@
+load("@prysm//tools/go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["render.go"],
+    importpath = "github.com/prysmaticlabs/prysm/sszgen/testutil",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//sszgen/types:go_default_library",
+        "@com_github_dave_jennifer//jen:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["render_test.go"],
+    embed = [":go_default_library"],
+    deps = [
+        "//shared/testutil/require:go_default_library",
+        "//sszgen/types:go_default_library",
+    ],
+)

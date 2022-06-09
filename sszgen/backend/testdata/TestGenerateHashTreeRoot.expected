@@ -1,0 +1,14 @@
+// HashTreeRoot ssz hashes the BeaconState object
+func (c *BeaconState) XXHashTreeRoot() ([32]byte, error) {
+	hh := ssz.DefaultHasherPool.Get()
+	if err := b.HashTreeRootWith(hh); err != nil {
+		ssz.DefaultHasherPool.Put(hh)
+		return [32]byte{}, err
+	}
+	root, err := hh.HashRoot()
+	ssz.DefaultHasherPool.Put(hh)
+	return root, err
+}
+
+func (c *BeaconState) XXHashTreeRootWith(hh *ssz.Hasher) (err error) {
+}

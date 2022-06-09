@@ -1,0 +1,9 @@
+load("@prysm//tools/go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["examplevars.go"],
+    importpath = "github.com/prysmaticlabs/prysm/sszgen/testutil/testdata",
+    visibility = ["//visibility:public"],
+    deps = ["//sszgen/types:go_default_library"],
+)

@@ -165,6 +165,7 @@ go_library(
         "sync_committee_mainnet.go",
         "sync_committee_minimal.go",  # keep
         ":ssz_generated_files",  # keep
+	"methodical.ssz.go",
     ],
     embed = [
         ":go_grpc_gateway_library",

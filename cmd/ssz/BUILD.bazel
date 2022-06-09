@@ -1,0 +1,31 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary")
+load("@prysm//tools/go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "benchmark.go",
+        "generate.go",
+        "ir.go",
+        "main.go",
+    ],
+    importpath = "github.com/prysmaticlabs/prysm/cmd/ssz",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//proto/beacon/p2p/v1:go_default_library",
+        "//proto/eth/v1:go_default_library",
+        "//proto/eth/v1alpha1:go_default_library",
+        "//sszgen:go_default_library",
+        "//sszgen/backend:go_default_library",
+        "//sszgen/testutil:go_default_library",
+        "@com_github_ferranbt_fastssz//:go_default_library",
+        "@com_github_golang_snappy//:go_default_library",
+        "@com_github_urfave_cli_v2//:go_default_library",
+    ],
+)
+
+go_binary(
+    name = "ssz",
+    embed = [":go_default_library"],
+    visibility = ["//visibility:public"],
+)

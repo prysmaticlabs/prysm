@@ -1,0 +1,32 @@
+load("@prysm//tools/go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "indexer.go",
+        "parser.go",
+        "representer.go",
+        "tagparse.go",
+    ],
+    importpath = "github.com/prysmaticlabs/prysm/sszgen",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//sszgen/types:go_default_library",
+        "@org_golang_x_tools//go/packages:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = [
+        "indexer_test.go",
+        "parser_test.go",
+        "representer_test.go",
+        "tagparse_test.go",
+    ],
+    embed = [":go_default_library"],
+    deps = [
+        "//shared/testutil/require:go_default_library",
+        "//sszgen/types:go_default_library",
+    ],
+)

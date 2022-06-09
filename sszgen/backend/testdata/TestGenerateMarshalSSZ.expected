@@ -1,0 +1,231 @@
+func (c *BeaconState) XXMarshalSSZ() ([]byte, error) {
+	buf := make([]byte, c.XXSizeSSZ())
+	return c.XXMarshalSSZTo(buf[:0])
+}
+
+func (c *BeaconState) XXMarshalSSZTo(dst []byte) ([]byte, error) {
+	var err error
+	offset := 2687377
+
+	// Field 0: GenesisTime
+	dst = ssz.MarshalUint64(dst, c.GenesisTime)
+
+	// Field 1: GenesisValidatorsRoot
+	if len(c.GenesisValidatorsRoot) != 32 {
+		return nil, ssz.ErrBytesLength
+	}
+	dst = append(dst, c.GenesisValidatorsRoot...)
+
+	// Field 2: Slot
+	dst = ssz.MarshalUint64(dst, uint64(c.Slot))
+
+	// Field 3: Fork
+	if c.Fork == nil {
+		c.Fork = new(prysmaticlabs_prysm_proto_beacon_p2p_v1.Fork)
+	}
+	if dst, err = c.Fork.XXMarshalSSZTo(dst); err != nil {
+		return nil, err
+	}
+
+	// Field 4: LatestBlockHeader
+	if c.LatestBlockHeader == nil {
+		c.LatestBlockHeader = new(prysmaticlabs_prysm_proto_eth_v1alpha1.BeaconBlockHeader)
+	}
+	if dst, err = c.LatestBlockHeader.XXMarshalSSZTo(dst); err != nil {
+		return nil, err
+	}
+
+	// Field 5: BlockRoots
+	if len(c.BlockRoots) != 8192 {
+		return nil, ssz.ErrBytesLength
+	}
+	for _, o := range c.BlockRoots {
+		if len(o) != 32 {
+			return nil, ssz.ErrBytesLength
+		}
+		dst = append(dst, o...)
+	}
+
+	// Field 6: StateRoots
+	if len(c.StateRoots) != 8192 {
+		return nil, ssz.ErrBytesLength
+	}
+	for _, o := range c.StateRoots {
+		if len(o) != 32 {
+			return nil, ssz.ErrBytesLength
+		}
+		dst = append(dst, o...)
+	}
+
+	// Field 7: HistoricalRoots
+	dst = ssz.WriteOffset(dst, offset)
+	offset += len(c.HistoricalRoots) * 32
+
+	// Field 8: Eth1Data
+	if c.Eth1Data == nil {
+		c.Eth1Data = new(prysmaticlabs_prysm_proto_eth_v1alpha1.Eth1Data)
+	}
+	if dst, err = c.Eth1Data.XXMarshalSSZTo(dst); err != nil {
+		return nil, err
+	}
+
+	// Field 9: Eth1DataVotes
+	dst = ssz.WriteOffset(dst, offset)
+	offset += len(c.Eth1DataVotes) * 72
+
+	// Field 10: Eth1DepositIndex
+	dst = ssz.MarshalUint64(dst, c.Eth1DepositIndex)
+
+	// Field 11: Validators
+	dst = ssz.WriteOffset(dst, offset)
+	offset += len(c.Validators) * 121
+
+	// Field 12: Balances
+	dst = ssz.WriteOffset(dst, offset)
+	offset += len(c.Balances) * 8
+
+	// Field 13: RandaoMixes
+	if len(c.RandaoMixes) != 65536 {
+		return nil, ssz.ErrBytesLength
+	}
+	for _, o := range c.RandaoMixes {
+		if len(o) != 32 {
+			return nil, ssz.ErrBytesLength
+		}
+		dst = append(dst, o...)
+	}
+
+	// Field 14: Slashings
+	if len(c.Slashings) != 8192 {
+		return nil, ssz.ErrBytesLength
+	}
+	for _, o := range c.Slashings {
+		dst = ssz.MarshalUint64(dst, o)
+	}
+
+	// Field 15: PreviousEpochAttestations
+	dst = ssz.WriteOffset(dst, offset)
+	offset += func() int {
+		s := 0
+		for _, o := range c.PreviousEpochAttestations {
+			s += 4
+			s += o.SizeSSZ()
+		}
+		return s
+	}()
+
+	// Field 16: CurrentEpochAttestations
+	dst = ssz.WriteOffset(dst, offset)
+	offset += func() int {
+		s := 0
+		for _, o := range c.CurrentEpochAttestations {
+			s += 4
+			s += o.SizeSSZ()
+		}
+		return s
+	}()
+
+	// Field 17: JustificationBits
+	if len([]byte(c.JustificationBits)) != 1 {
+		return nil, ssz.ErrBytesLength
+	}
+	dst = append(dst, []byte(c.JustificationBits)...)
+
+	// Field 18: PreviousJustifiedCheckpoint
+	if c.PreviousJustifiedCheckpoint == nil {
+		c.PreviousJustifiedCheckpoint = new(prysmaticlabs_prysm_proto_eth_v1alpha1.Checkpoint)
+	}
+	if dst, err = c.PreviousJustifiedCheckpoint.XXMarshalSSZTo(dst); err != nil {
+		return nil, err
+	}
+
+	// Field 19: CurrentJustifiedCheckpoint
+	if c.CurrentJustifiedCheckpoint == nil {
+		c.CurrentJustifiedCheckpoint = new(prysmaticlabs_prysm_proto_eth_v1alpha1.Checkpoint)
+	}
+	if dst, err = c.CurrentJustifiedCheckpoint.XXMarshalSSZTo(dst); err != nil {
+		return nil, err
+	}
+
+	// Field 20: FinalizedCheckpoint
+	if c.FinalizedCheckpoint == nil {
+		c.FinalizedCheckpoint = new(prysmaticlabs_prysm_proto_eth_v1alpha1.Checkpoint)
+	}
+	if dst, err = c.FinalizedCheckpoint.XXMarshalSSZTo(dst); err != nil {
+		return nil, err
+	}
+
+	// Field 7: HistoricalRoots
+	if len(c.HistoricalRoots) > 16777216 {
+		return nil, ssz.ErrListTooBig
+	}
+	for _, o := range c.HistoricalRoots {
+		if len(o) != 32 {
+			return nil, ssz.ErrBytesLength
+		}
+		dst = append(dst, o...)
+	}
+
+	// Field 9: Eth1DataVotes
+	if len(c.Eth1DataVotes) > 2048 {
+		return nil, ssz.ErrListTooBig
+	}
+	for _, o := range c.Eth1DataVotes {
+		if dst, err = o.XXMarshalSSZTo(dst); err != nil {
+			return nil, err
+		}
+	}
+
+	// Field 11: Validators
+	if len(c.Validators) > 1099511627776 {
+		return nil, ssz.ErrListTooBig
+	}
+	for _, o := range c.Validators {
+		if dst, err = o.XXMarshalSSZTo(dst); err != nil {
+			return nil, err
+		}
+	}
+
+	// Field 12: Balances
+	if len(c.Balances) > 1099511627776 {
+		return nil, ssz.ErrListTooBig
+	}
+	for _, o := range c.Balances {
+		dst = ssz.MarshalUint64(dst, o)
+	}
+
+	// Field 15: PreviousEpochAttestations
+	if len(c.PreviousEpochAttestations) > 4096 {
+		return nil, ssz.ErrListTooBig
+	}
+	{
+		offset = 4 * len(c.PreviousEpochAttestations)
+		for _, o := range c.PreviousEpochAttestations {
+			dst = ssz.WriteOffset(dst, offset)
+			offset += o.SizeSSZ()
+		}
+	}
+	for _, o := range c.PreviousEpochAttestations {
+		if dst, err = o.XXMarshalSSZTo(dst); err != nil {
+			return nil, err
+		}
+	}
+
+	// Field 16: CurrentEpochAttestations
+	if len(c.CurrentEpochAttestations) > 4096 {
+		return nil, ssz.ErrListTooBig
+	}
+	{
+		offset = 4 * len(c.CurrentEpochAttestations)
+		for _, o := range c.CurrentEpochAttestations {
+			dst = ssz.WriteOffset(dst, offset)
+			offset += o.SizeSSZ()
+		}
+	}
+	for _, o := range c.CurrentEpochAttestations {
+		if dst, err = o.XXMarshalSSZTo(dst); err != nil {
+			return nil, err
+		}
+	}
+	return dst, err
+}

@@ -1,0 +1,24 @@
+func (c *BeaconState) XXSizeSSZ() int {
+	size := 2687377
+	size += len(c.HistoricalRoots) * 32
+	size += len(c.Eth1DataVotes) * 72
+	size += len(c.Validators) * 121
+	size += len(c.Balances) * 8
+	size += func() int {
+		s := 0
+		for _, o := range c.PreviousEpochAttestations {
+			s += 4
+			s += o.SizeSSZ()
+		}
+		return s
+	}()
+	size += func() int {
+		s := 0
+		for _, o := range c.CurrentEpochAttestations {
+			s += 4
+			s += o.SizeSSZ()
+		}
+		return s
+	}()
+	return size
+}
