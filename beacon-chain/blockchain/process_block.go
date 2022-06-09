@@ -317,15 +317,15 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 	return s.handleEpochBoundary(ctx, postState)
 }
 
-func getStateVersionAndPayload(st state.BeaconState) (int, *ethpb.ExecutionPayloadHeader, error) {
+func getStateVersionAndPayload(st state.BeaconState) (version.ForkVersion, *ethpb.ExecutionPayloadHeader, error) {
 	if st == nil {
 		return 0, nil, errors.New("nil state")
 	}
 	var preStateHeader *ethpb.ExecutionPayloadHeader
 	var err error
 	preStateVersion := st.Version()
-	switch preStateVersion {
-	case version.Phase0, version.Altair:
+	switch {
+	case preStateVersion.IsPreBellatrix():
 	default:
 		preStateHeader, err = st.LatestExecutionPayloadHeader()
 		if err != nil {
@@ -378,7 +378,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 		Messages:   [][32]byte{},
 	}
 	type versionAndHeader struct {
-		version int
+		version version.ForkVersion
 		header  *ethpb.ExecutionPayloadHeader
 	}
 	preVersionAndHeaders := make([]*versionAndHeader, len(blks))
@@ -684,9 +684,9 @@ func (s *Service) pruneCanonicalAttsFromPool(ctx context.Context, r [32]byte, b 
 }
 
 // validateMergeTransitionBlock validates the merge transition block.
-func (s *Service) validateMergeTransitionBlock(ctx context.Context, stateVersion int, stateHeader *ethpb.ExecutionPayloadHeader, blk interfaces.SignedBeaconBlock) error {
+func (s *Service) validateMergeTransitionBlock(ctx context.Context, stateVersion version.ForkVersion, stateHeader *ethpb.ExecutionPayloadHeader, blk interfaces.SignedBeaconBlock) error {
 	// Skip validation if block is older than Bellatrix.
-	if blocks.IsPreBellatrixVersion(blk.Block().Version()) {
+	if blk.Block().Version().IsPreBellatrix() {
 		return nil
 	}
 
@@ -701,7 +701,7 @@ func (s *Service) validateMergeTransitionBlock(ctx context.Context, stateVersion
 
 	// Handle case where pre-state is Altair but block contains payload.
 	// To reach here, the block must have contained a valid payload.
-	if blocks.IsPreBellatrixVersion(stateVersion) {
+	if stateVersion.IsPreBellatrix() {
 		return s.validateMergeBlock(ctx, blk)
 	}
 

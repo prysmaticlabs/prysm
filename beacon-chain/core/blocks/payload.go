@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
@@ -33,7 +32,7 @@ func IsMergeTransitionComplete(st state.BeaconState) (bool, error) {
 	if st == nil {
 		return false, errors.New("nil state")
 	}
-	if IsPreBellatrixVersion(st.Version()) {
+	if st.Version().IsPreBellatrix() {
 		return false, nil
 	}
 	h, err := st.LatestExecutionPayloadHeader()
@@ -86,7 +85,7 @@ func IsExecutionEnabled(st state.BeaconState, body interfaces.BeaconBlockBody) (
 	if st == nil || body == nil {
 		return false, errors.New("nil state or block body")
 	}
-	if IsPreBellatrixVersion(st.Version()) {
+	if st.Version().IsPreBellatrix() {
 		return false, nil
 	}
 	header, err := st.LatestExecutionPayloadHeader()
@@ -103,11 +102,6 @@ func IsExecutionEnabledUsingHeader(header *ethpb.ExecutionPayloadHeader, body in
 		return true, nil
 	}
 	return IsExecutionBlock(body)
-}
-
-// IsPreBellatrixVersion returns true if input version is before bellatrix fork.
-func IsPreBellatrixVersion(v int) bool {
-	return v < version.Bellatrix
 }
 
 // ValidatePayloadWhenMergeCompletes validates if payload is valid versus input beacon state.
@@ -276,7 +270,7 @@ func ProcessPayloadHeader(st state.BeaconState, header *ethpb.ExecutionPayloadHe
 // GetBlockPayloadHash returns the hash of the execution payload of the block
 func GetBlockPayloadHash(blk interfaces.BeaconBlock) ([32]byte, error) {
 	payloadHash := [32]byte{}
-	if IsPreBellatrixVersion(blk.Version()) {
+	if blk.Version().IsPreBellatrix() {
 		return payloadHash, nil
 	}
 	payload, err := blk.Body().ExecutionPayload()

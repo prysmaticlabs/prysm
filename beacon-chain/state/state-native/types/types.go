@@ -2,6 +2,7 @@ package types
 
 import (
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 )
 
 // FieldIndex represents the relevant field position in the
@@ -9,7 +10,7 @@ import (
 type FieldIndex int
 
 // String returns the name of the field index.
-func (f FieldIndex) String(_ int) string {
+func (f FieldIndex) String(_ version.ForkVersion) string {
 	switch f {
 	case GenesisTime:
 		return "genesisTime"

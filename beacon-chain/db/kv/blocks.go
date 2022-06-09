@@ -17,7 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/container/slice"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
@@ -794,14 +793,14 @@ func marshalBlock(_ context.Context, blk interfaces.SignedBeaconBlock) ([]byte, 
 	if err != nil {
 		return nil, err
 	}
-	switch blk.Version() {
-	case version.BellatrixBlind:
+	switch {
+	case blk.Version().IsBlindedBlockCompatible():
 		return snappy.Encode(nil, append(bellatrixBlindKey, obj...)), nil
-	case version.Bellatrix:
+	case blk.Version().IsBellatrixCompatible():
 		return snappy.Encode(nil, append(bellatrixKey, obj...)), nil
-	case version.Altair:
+	case blk.Version().IsAltairCompatible():
 		return snappy.Encode(nil, append(altairKey, obj...)), nil
-	case version.Phase0:
+	case blk.Version().IsPhase0Compatible():
 		return snappy.Encode(nil, obj), nil
 	default:
 		return nil, errors.New("Unknown block version")

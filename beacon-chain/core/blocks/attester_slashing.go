@@ -13,7 +13,6 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/slashings"
-	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
@@ -79,11 +78,11 @@ func ProcessAttesterSlashing(
 			cfg := params.BeaconConfig()
 			var slashingQuotient uint64
 			switch {
-			case beaconState.Version() == version.Phase0:
+			case beaconState.Version().IsPhase0Compatible():
 				slashingQuotient = cfg.MinSlashingPenaltyQuotient
-			case beaconState.Version() == version.Altair:
+			case beaconState.Version().IsAltairCompatible():
 				slashingQuotient = cfg.MinSlashingPenaltyQuotientAltair
-			case beaconState.Version() == version.Bellatrix:
+			case beaconState.Version().IsBellatrixCompatible():
 				slashingQuotient = cfg.MinSlashingPenaltyQuotientBellatrix
 			default:
 				return nil, errors.New("unknown state version")

@@ -40,7 +40,7 @@ func (m BlockMutator) Apply(b interfaces.SignedBeaconBlock) error {
 		m.Bellatrix(bb)
 		return nil
 	}
-	msg := fmt.Sprintf("version %d = %s", b.Version(), version.String(b.Version()))
+	msg := fmt.Sprintf("version %d = %s", b.Version(), b.Version().String())
 	return errors.Wrap(ErrUnsupportedSignedBeaconBlock, msg)
 }
 

@@ -3,12 +3,11 @@ package state_native
 import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
-	"github.com/prysmaticlabs/prysm/runtime/version"
 )
 
 // CurrentEpochParticipation corresponding to participation bits on the beacon chain.
 func (b *BeaconState) CurrentEpochParticipation() ([]byte, error) {
-	if b.version == version.Phase0 {
+	if !b.version.IsParticipationBitsCompatible() {
 		return nil, errNotSupported("CurrentEpochParticipation", b.version)
 	}
 
@@ -24,7 +23,7 @@ func (b *BeaconState) CurrentEpochParticipation() ([]byte, error) {
 
 // PreviousEpochParticipation corresponding to participation bits on the beacon chain.
 func (b *BeaconState) PreviousEpochParticipation() ([]byte, error) {
-	if b.version == version.Phase0 {
+	if !b.version.IsParticipationBitsCompatible() {
 		return nil, errNotSupported("PreviousEpochParticipation", b.version)
 	}
 
@@ -42,7 +41,7 @@ func (b *BeaconState) PreviousEpochParticipation() ([]byte, error) {
 // current epoch and target attested in previous epoch. This function is used to
 // compute the "unrealized justification" that a synced Beacon Block will have.
 func (b *BeaconState) UnrealizedCheckpointBalances() (uint64, uint64, uint64, error) {
-	if b.version == version.Phase0 {
+	if !b.version.IsParticipationBitsCompatible() {
 		return 0, 0, 0, errNotSupported("UnrealizedCheckpointBalances", b.version)
 	}
 

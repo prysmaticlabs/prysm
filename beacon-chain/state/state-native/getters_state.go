@@ -17,8 +17,8 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 
 	gvrCopy := b.genesisValidatorsRoot
 
-	switch b.version {
-	case version.Phase0:
+	switch {
+	case b.version.IsPhase0Compatible():
 		return &ethpb.BeaconState{
 			GenesisTime:                 b.genesisTime,
 			GenesisValidatorsRoot:       gvrCopy[:],
@@ -42,7 +42,7 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 			CurrentJustifiedCheckpoint:  b.currentJustifiedCheckpoint,
 			FinalizedCheckpoint:         b.finalizedCheckpoint,
 		}
-	case version.Altair:
+	case b.version.IsAltairCompatible():
 		return &ethpb.BeaconStateAltair{
 			GenesisTime:                 b.genesisTime,
 			GenesisValidatorsRoot:       gvrCopy[:],
@@ -69,7 +69,7 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 			CurrentSyncCommittee:        b.currentSyncCommittee,
 			NextSyncCommittee:           b.nextSyncCommittee,
 		}
-	case version.Bellatrix:
+	case b.version.IsBellatrixCompatible():
 		return &ethpb.BeaconStateBellatrix{
 			GenesisTime:                  b.genesisTime,
 			GenesisValidatorsRoot:        gvrCopy[:],

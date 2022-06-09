@@ -13,12 +13,13 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	eth2types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 )
 
 // BeaconState defines a struct containing utilities for the Ethereum Beacon Chain state, defining
 // getters and setters for its respective values and helpful functions such as HashTreeRoot().
 type BeaconState struct {
-	version                      int
+	version                      version.ForkVersion
 	genesisTime                  uint64                        `ssz-gen:"true"`
 	genesisValidatorsRoot        customtypes.Byte32            `ssz-gen:"true" ssz-size:"32"`
 	slot                         eth2types.Slot                `ssz-gen:"true"`

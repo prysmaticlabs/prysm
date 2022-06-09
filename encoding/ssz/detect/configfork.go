@@ -28,7 +28,7 @@ import (
 type VersionedUnmarshaler struct {
 	Config *params.BeaconChainConfig
 	// Fork aligns with the fork names in config/params/values.go
-	Fork int
+	Fork version.ForkVersion
 	// Version corresponds to the Version type defined in the beacon-chain spec, aka a "fork version number":
 	// https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/beacon-chain.md#custom-types
 	Version [fieldparams.VersionLength]byte
@@ -60,7 +60,7 @@ func FromForkVersion(cv [fieldparams.VersionLength]byte) (*VersionedUnmarshaler,
 	if err != nil {
 		return nil, err
 	}
-	var fork int
+	var fork version.ForkVersion
 	switch cv {
 	case bytesutil.ToBytes4(cfg.GenesisForkVersion):
 		fork = version.Phase0
@@ -81,9 +81,10 @@ func FromForkVersion(cv [fieldparams.VersionLength]byte) (*VersionedUnmarshaler,
 // UnmarshalBeaconState uses internal knowledge in the VersionedUnmarshaler to pick the right concrete BeaconState type,
 // then Unmarshal()s the type and returns an instance of state.BeaconState if successful.
 func (cf *VersionedUnmarshaler) UnmarshalBeaconState(marshaled []byte) (s state.BeaconState, err error) {
-	forkName := version.String(cf.Fork)
-	switch fork := cf.Fork; fork {
-	case version.Phase0:
+	forkName := cf.Fork.String()
+	fork := cf.Fork
+	switch {
+	case fork.IsPhase0Compatible():
 		st := &ethpb.BeaconState{}
 		err = st.UnmarshalSSZ(marshaled)
 		if err != nil {
@@ -93,7 +94,7 @@ func (cf *VersionedUnmarshaler) UnmarshalBeaconState(marshaled []byte) (s state.
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to init state trie from state, detected fork=%s", forkName)
 		}
-	case version.Altair:
+	case fork.IsAltairCompatible():
 		st := &ethpb.BeaconStateAltair{}
 		err = st.UnmarshalSSZ(marshaled)
 		if err != nil {
@@ -103,7 +104,7 @@ func (cf *VersionedUnmarshaler) UnmarshalBeaconState(marshaled []byte) (s state.
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to init state trie from state, detected fork=%s", forkName)
 		}
-	case version.Bellatrix:
+	case fork.IsBellatrixCompatible():
 		st := &ethpb.BeaconStateBellatrix{}
 		err = st.UnmarshalSSZ(marshaled)
 		if err != nil {
@@ -158,7 +159,7 @@ func (cf *VersionedUnmarshaler) UnmarshalBeaconBlock(marshaled []byte) (interfac
 	case version.Bellatrix:
 		blk = &ethpb.SignedBeaconBlockBellatrix{}
 	default:
-		forkName := version.String(cf.Fork)
+		forkName := cf.Fork.String()
 		return nil, fmt.Errorf("unable to initialize BeaconBlock for fork version=%s at slot=%d", forkName, slot)
 	}
 	err = blk.UnmarshalSSZ(marshaled)
@@ -189,7 +190,7 @@ func (cf *VersionedUnmarshaler) UnmarshalBlindedBeaconBlock(marshaled []byte) (i
 	case version.Bellatrix:
 		blk = &ethpb.SignedBlindedBeaconBlockBellatrix{}
 	default:
-		forkName := version.String(cf.Fork)
+		forkName := cf.Fork.String()
 		return nil, fmt.Errorf("unable to initialize BeaconBlock for fork version=%s at slot=%d", forkName, slot)
 	}
 	err = blk.UnmarshalSSZ(marshaled)

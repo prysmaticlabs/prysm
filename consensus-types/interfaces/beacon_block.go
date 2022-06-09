@@ -6,6 +6,7 @@ import (
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -24,7 +25,7 @@ type SignedBeaconBlock interface {
 	PbBlindedBellatrixBlock() (*ethpb.SignedBlindedBeaconBlockBellatrix, error)
 	ssz.Marshaler
 	ssz.Unmarshaler
-	Version() int
+	Version() version.ForkVersion
 	Header() (*ethpb.SignedBeaconBlockHeader, error)
 }
 
@@ -43,7 +44,7 @@ type BeaconBlock interface {
 	ssz.Marshaler
 	ssz.Unmarshaler
 	ssz.HashRoot
-	Version() int
+	Version() version.ForkVersion
 	AsSignRequestObject() validatorpb.SignRequestObject
 }
 

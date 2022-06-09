@@ -12,7 +12,6 @@ import (
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/ssz/detect"
 	"github.com/prysmaticlabs/prysm/io/file"
-	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/mod/semver"
@@ -56,7 +55,7 @@ func (o *OriginData) BlockBytes() []byte {
 }
 
 func fname(prefix string, vu *detect.VersionedUnmarshaler, slot types.Slot, root [32]byte) string {
-	return fmt.Sprintf("%s_%s_%s_%d-%#x.ssz", prefix, vu.Config.ConfigName, version.String(vu.Fork), slot, root)
+	return fmt.Sprintf("%s_%s_%s_%d-%#x.ssz", prefix, vu.Config.ConfigName, vu.Fork.String(), slot, root)
 }
 
 // DownloadFinalizedData downloads the most recently finalized state, and the block most recently applied to that state.
@@ -70,7 +69,7 @@ func DownloadFinalizedData(ctx context.Context, client *Client) (*OriginData, er
 	if err != nil {
 		return nil, errors.Wrap(err, "error detecting chain config for finalized state")
 	}
-	log.Printf("detected supported config in remote finalized state, name=%s, fork=%s", vu.Config.ConfigName, version.String(vu.Fork))
+	log.Printf("detected supported config in remote finalized state, name=%s, fork=%s", vu.Config.ConfigName, vu.Fork.String())
 	s, err := vu.UnmarshalBeaconState(sb)
 	if err != nil {
 		return nil, errors.Wrap(err, "error unmarshaling finalized state to correct version")
@@ -194,7 +193,7 @@ func computeBackwardsCompatible(ctx context.Context, client *Client) (*WeakSubje
 	if err != nil {
 		return nil, errors.Wrap(err, "error detecting chain config for beacon state")
 	}
-	log.Printf("detected supported config in checkpoint state, name=%s, fork=%s", vu.Config.ConfigName, version.String(vu.Fork))
+	log.Printf("detected supported config in checkpoint state, name=%s, fork=%s", vu.Config.ConfigName, vu.Fork.String())
 
 	s, err := vu.UnmarshalBeaconState(sb)
 	if err != nil {
@@ -245,7 +244,7 @@ func getWeakSubjectivityEpochFromHead(ctx context.Context, client *Client) (type
 	if err != nil {
 		return 0, errors.Wrap(err, "error detecting chain config for beacon state")
 	}
-	log.Printf("detected supported config in remote head state, name=%s, fork=%s", vu.Config.ConfigName, version.String(vu.Fork))
+	log.Printf("detected supported config in remote head state, name=%s, fork=%s", vu.Config.ConfigName, vu.Fork.String())
 	headState, err := vu.UnmarshalBeaconState(headBytes)
 	if err != nil {
 		return 0, errors.Wrap(err, "error unmarshaling state to correct version")

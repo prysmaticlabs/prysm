@@ -109,7 +109,7 @@ func (signedBlindedBeaconBlockBellatrix) PbAltairBlock() (*eth.SignedBeaconBlock
 }
 
 // Version of the underlying protobuf object.
-func (signedBlindedBeaconBlockBellatrix) Version() int {
+func (signedBlindedBeaconBlockBellatrix) Version() version.ForkVersion {
 	return version.BellatrixBlind
 }
 
@@ -222,7 +222,7 @@ func (w blindedBeaconBlockBellatrix) Proto() proto.Message {
 }
 
 // Version of the underlying protobuf object.
-func (blindedBeaconBlockBellatrix) Version() int {
+func (blindedBeaconBlockBellatrix) Version() version.ForkVersion {
 	return version.BellatrixBlind
 }
 

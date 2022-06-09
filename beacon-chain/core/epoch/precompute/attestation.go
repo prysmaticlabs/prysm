@@ -171,7 +171,7 @@ func UpdateValidator(vp []*Validator, record *Validator, indices []uint64, a *et
 }
 
 // UpdateBalance updates pre computed balance store.
-func UpdateBalance(vp []*Validator, bBal *Balance, stateVersion int) *Balance {
+func UpdateBalance(vp []*Validator, bBal *Balance, stateVersion version.ForkVersion) *Balance {
 	for _, v := range vp {
 		if !v.IsSlashed {
 			if v.IsCurrentEpochAttester {
@@ -180,10 +180,10 @@ func UpdateBalance(vp []*Validator, bBal *Balance, stateVersion int) *Balance {
 			if v.IsCurrentEpochTargetAttester {
 				bBal.CurrentEpochTargetAttested += v.CurrentEpochEffectiveBalance
 			}
-			if stateVersion == version.Phase0 && v.IsPrevEpochAttester {
+			if stateVersion.IsPhase0Compatible() && v.IsPrevEpochAttester {
 				bBal.PrevEpochAttested += v.CurrentEpochEffectiveBalance
 			}
-			if (stateVersion == version.Altair || stateVersion == version.Bellatrix) && v.IsPrevEpochSourceAttester {
+			if stateVersion.IsHigherOrEqualToAltair() && v.IsPrevEpochSourceAttester {
 				bBal.PrevEpochAttested += v.CurrentEpochEffectiveBalance
 			}
 			if v.IsPrevEpochTargetAttester {

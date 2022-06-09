@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"google.golang.org/protobuf/proto"
 )
@@ -77,11 +76,11 @@ func ProcessProposerSlashing(
 	cfg := params.BeaconConfig()
 	var slashingQuotient uint64
 	switch {
-	case beaconState.Version() == version.Phase0:
+	case beaconState.Version().IsPhase0Compatible():
 		slashingQuotient = cfg.MinSlashingPenaltyQuotient
-	case beaconState.Version() == version.Altair:
+	case beaconState.Version().IsAltairCompatible():
 		slashingQuotient = cfg.MinSlashingPenaltyQuotientAltair
-	case beaconState.Version() == version.Bellatrix:
+	case beaconState.Version().IsBellatrixCompatible():
 		slashingQuotient = cfg.MinSlashingPenaltyQuotientBellatrix
 	default:
 		return nil, errors.New("unknown state version")

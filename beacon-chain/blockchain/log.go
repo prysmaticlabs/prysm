@@ -67,7 +67,7 @@ func logBlockSyncStatus(block interfaces.BeaconBlock, blockRoot [32]byte, justif
 		log = log.WithField("justifiedEpoch", justified.Epoch)
 		log = log.WithField("justifiedRoot", fmt.Sprintf("0x%s...", hex.EncodeToString(justified.Root)[:8]))
 		log = log.WithField("parentRoot", fmt.Sprintf("0x%s...", hex.EncodeToString(block.ParentRoot())[:8]))
-		log = log.WithField("version", version.String(block.Version()))
+		log = log.WithField("version", block.Version().String())
 		log = log.WithField("sinceSlotStartTime", prysmTime.Now().Sub(startTime))
 		log = log.WithField("chainServiceProcessedTime", prysmTime.Now().Sub(receivedTime))
 	}

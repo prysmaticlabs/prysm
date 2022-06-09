@@ -31,6 +31,6 @@ func init() {
 // to its corresponding data type.
 var fieldMap map[nativetypes.FieldIndex]types.DataType
 
-func errNotSupported(funcName string, ver int) error {
-	return fmt.Errorf("%s is not supported for %s", funcName, version.String(ver))
+func errNotSupported(funcName string, ver version.ForkVersion) error {
+	return fmt.Errorf("%s is not supported for %s", funcName, ver.String())
 }

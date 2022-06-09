@@ -211,7 +211,7 @@ func ReplayProcessSlots(ctx context.Context, state state.BeaconState, slot types
 					return nil, errors.Wrap(err, "could not process epoch")
 				}
 			default:
-				return nil, fmt.Errorf("unsupported beacon state version: %s", version.String(state.Version()))
+				return nil, fmt.Errorf("unsupported beacon state version: %s", state.Version().String())
 			}
 		}
 		if err := state.SetSlot(state.Slot() + 1); err != nil {

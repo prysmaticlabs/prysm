@@ -63,7 +63,7 @@ func (b *BeaconState) genesisValidatorsRoot() []byte {
 // Version of the beacon state. This method
 // is strictly meant to be used without a lock
 // internally.
-func (_ *BeaconState) Version() int {
+func (_ *BeaconState) Version() version.ForkVersion {
 	return version.Bellatrix
 }
 

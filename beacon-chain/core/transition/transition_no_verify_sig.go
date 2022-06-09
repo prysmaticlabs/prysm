@@ -15,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
-	"github.com/prysmaticlabs/prysm/runtime/version"
 	"go.opencensus.io/trace"
 )
 
@@ -232,13 +231,13 @@ func ProcessOperationsNoVerifyAttsSigs(
 	}
 
 	var err error
-	switch signedBeaconBlock.Version() {
-	case version.Phase0:
+	switch {
+	case signedBeaconBlock.Version().IsPhase0Compatible():
 		state, err = phase0Operations(ctx, state, signedBeaconBlock)
 		if err != nil {
 			return nil, err
 		}
-	case version.Altair, version.Bellatrix:
+	case signedBeaconBlock.Version().IsHigherOrEqualToAltair():
 		state, err = altairOperations(ctx, state, signedBeaconBlock)
 		if err != nil {
 			return nil, err
@@ -329,7 +328,7 @@ func ProcessBlockForStateRoot(
 		return nil, errors.Wrap(err, "could not process block operation")
 	}
 
-	if signed.Block().Version() == version.Phase0 {
+	if signed.Block().Version().IsPhase0Compatible() {
 		return state, nil
 	}
 

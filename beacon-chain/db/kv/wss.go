@@ -9,7 +9,6 @@ import (
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/ssz/detect"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/runtime/version"
 )
 
 // SaveOrigin loads an ssz serialized Block & BeaconState from an io.Reader
@@ -38,7 +37,7 @@ func (s *Store) SaveOrigin(ctx context.Context, serState, serBlock []byte) error
 		return fmt.Errorf("config mismatch, beacon node configured to connect to %s, detected state is for %s", params.BeaconConfig().ConfigName, cf.Config.ConfigName)
 	}
 
-	log.Infof("detected supported config for state & block version, config name=%s, fork name=%s", cf.Config.ConfigName, version.String(cf.Fork))
+	log.Infof("detected supported config for state & block version, config name=%s, fork name=%s", cf.Config.ConfigName, cf.Fork.String())
 	state, err := cf.UnmarshalBeaconState(serState)
 	if err != nil {
 		return errors.Wrap(err, "failed to initialize origin state w/ bytes + config+fork")

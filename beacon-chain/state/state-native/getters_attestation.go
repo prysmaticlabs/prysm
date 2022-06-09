@@ -2,12 +2,11 @@ package state_native
 
 import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/runtime/version"
 )
 
 // PreviousEpochAttestations corresponding to blocks on the beacon chain.
 func (b *BeaconState) PreviousEpochAttestations() ([]*ethpb.PendingAttestation, error) {
-	if b.version != version.Phase0 {
+	if !b.version.IsPhase0Compatible() {
 		return nil, errNotSupported("PreviousEpochAttestations", b.version)
 	}
 
@@ -29,7 +28,7 @@ func (b *BeaconState) previousEpochAttestationsVal() []*ethpb.PendingAttestation
 
 // CurrentEpochAttestations corresponding to blocks on the beacon chain.
 func (b *BeaconState) CurrentEpochAttestations() ([]*ethpb.PendingAttestation, error) {
-	if b.version != version.Phase0 {
+	if !b.version.IsPhase0Compatible() {
 		return nil, errNotSupported("CurrentEpochAttestations", b.version)
 	}
 

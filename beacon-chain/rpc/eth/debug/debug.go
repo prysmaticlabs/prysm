@@ -7,7 +7,6 @@ import (
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/proto/migration"
-	"github.com/prysmaticlabs/prysm/runtime/version"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -24,7 +23,7 @@ func (ds *Server) GetBeaconState(ctx context.Context, req *ethpbv1.StateRequest)
 		return nil, helpers.PrepareStateFetchGRPCError(err)
 	}
 
-	if beaconSt.Version() != version.Phase0 {
+	if beaconSt.Version().IsHigherOrEqualToAltair() {
 		return nil, status.Error(codes.Internal, "State has incorrect type")
 	}
 	protoSt, err := migration.BeaconStateToProto(beaconSt)
@@ -69,8 +68,8 @@ func (ds *Server) GetBeaconStateV2(ctx context.Context, req *ethpbv2.StateReques
 		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
 	}
 
-	switch beaconSt.Version() {
-	case version.Phase0:
+	switch {
+	case beaconSt.Version().IsAltairCompatible():
 		protoSt, err := migration.BeaconStateToProto(beaconSt)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not convert state to proto: %v", err)
@@ -82,7 +81,7 @@ func (ds *Server) GetBeaconStateV2(ctx context.Context, req *ethpbv2.StateReques
 			},
 			ExecutionOptimistic: isOptimistic,
 		}, nil
-	case version.Altair:
+	case beaconSt.Version().IsAltairCompatible():
 		protoState, err := migration.BeaconStateAltairToProto(beaconSt)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not convert state to proto: %v", err)
@@ -94,7 +93,7 @@ func (ds *Server) GetBeaconStateV2(ctx context.Context, req *ethpbv2.StateReques
 			},
 			ExecutionOptimistic: isOptimistic,
 		}, nil
-	case version.Bellatrix:
+	case beaconSt.Version().IsBellatrixCompatible():
 		protoState, err := migration.BeaconStateBellatrixToProto(beaconSt)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not convert state to proto: %v", err)
@@ -126,12 +125,12 @@ func (ds *Server) GetBeaconStateSSZV2(ctx context.Context, req *ethpbv2.StateReq
 		return nil, status.Errorf(codes.Internal, "Could not marshal state into SSZ: %v", err)
 	}
 	var ver ethpbv2.Version
-	switch st.Version() {
-	case version.Phase0:
+	switch {
+	case st.Version().IsPhase0Compatible():
 		ver = ethpbv2.Version_PHASE0
-	case version.Altair:
+	case st.Version().IsAltairCompatible():
 		ver = ethpbv2.Version_ALTAIR
-	case version.Bellatrix:
+	case st.Version().IsBellatrixCompatible():
 		ver = ethpbv2.Version_BELLATRIX
 	default:
 		return nil, status.Error(codes.Internal, "Unsupported state version")

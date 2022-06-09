@@ -4,6 +4,7 @@ import (
 	ssz "github.com/ferranbt/fastssz"
 	"github.com/prysmaticlabs/go-bitfield"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 )
 
 // Metadata returns the interface of a p2p metadata type.
@@ -17,5 +18,5 @@ type Metadata interface {
 	ssz.Unmarshaler
 	MetadataObjV0() *pb.MetaDataV0
 	MetadataObjV1() *pb.MetaDataV1
-	Version() int
+	Version() version.ForkVersion
 }

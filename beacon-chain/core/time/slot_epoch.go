@@ -4,7 +4,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
@@ -48,7 +47,7 @@ func NextEpoch(state state.ReadOnlyBeaconState) types.Epoch {
 
 // HigherEqualThanAltairVersionAndEpoch returns if the input state `s` has a higher version number than Altair state and input epoch `e` is higher equal than fork epoch.
 func HigherEqualThanAltairVersionAndEpoch(s state.BeaconState, e types.Epoch) bool {
-	return s.Version() >= version.Altair && e >= params.BeaconConfig().AltairForkEpoch
+	return s.Version().IsHigherOrEqualToAltair() && e >= params.BeaconConfig().AltairForkEpoch
 }
 
 // CanUpgradeToAltair returns true if the input `slot` can upgrade to Altair.

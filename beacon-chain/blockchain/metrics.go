@@ -14,7 +14,6 @@ import (
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/runtime/version"
 )
 
 var (
@@ -266,8 +265,8 @@ func reportEpochMetrics(ctx context.Context, postState, headState state.BeaconSt
 	var b *precompute.Balance
 	var v []*precompute.Validator
 	var err error
-	switch headState.Version() {
-	case version.Phase0:
+	switch {
+	case headState.Version().IsPhase0Compatible():
 		// Validator participation should be viewed on the canonical chain.
 		v, b, err = precompute.New(ctx, headState)
 		if err != nil {
@@ -277,7 +276,7 @@ func reportEpochMetrics(ctx context.Context, postState, headState state.BeaconSt
 		if err != nil {
 			return err
 		}
-	case version.Altair, version.Bellatrix:
+	case headState.Version().IsParticipationBitsCompatible():
 		v, b, err = altair.InitializePrecomputeValidators(ctx, headState)
 		if err != nil {
 			return err

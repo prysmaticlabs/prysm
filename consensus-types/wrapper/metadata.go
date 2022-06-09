@@ -79,7 +79,7 @@ func (_ MetadataV0) MetadataObjV1() *pb.MetaDataV1 {
 }
 
 // Version returns the fork version of the underlying object.
-func (_ MetadataV0) Version() int {
+func (_ MetadataV0) Version() version.ForkVersion {
 	return version.Phase0
 }
 
@@ -154,6 +154,6 @@ func (m MetadataV1) MetadataObjV1() *pb.MetaDataV1 {
 }
 
 // Version returns the fork version of the underlying object.
-func (_ MetadataV1) Version() int {
+func (_ MetadataV1) Version() version.ForkVersion {
 	return version.Altair
 }

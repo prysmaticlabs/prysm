@@ -3,6 +3,7 @@ package state_native
 import (
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 )
 
 // GenesisTime of the beacon state as a uint64.
@@ -24,7 +25,7 @@ func (b *BeaconState) GenesisValidatorsRoot() []byte {
 // Version of the beacon state. This method
 // is strictly meant to be used without a lock
 // internally.
-func (b *BeaconState) Version() int {
+func (b *BeaconState) Version() version.ForkVersion {
 	return b.version
 }
 

@@ -27,14 +27,14 @@ const (
 
 // BeaconStateField represents a field of the beacon state.
 type BeaconStateField interface {
-	String(stateVersion int) string
+	String(stateVersion version.ForkVersion) string
 	RealPosition() int
 	ElemsInChunk() (uint64, error)
 	Native() bool
 }
 
 // String returns the name of the field index.
-func (f FieldIndex) String(stateVersion int) string {
+func (f FieldIndex) String(stateVersion version.ForkVersion) string {
 	switch f {
 	case GenesisTime:
 		return "genesisTime"
@@ -67,12 +67,12 @@ func (f FieldIndex) String(stateVersion int) string {
 	case Slashings:
 		return "slashings"
 	case PreviousEpochAttestations:
-		if version.Altair == stateVersion || version.Bellatrix == stateVersion {
+		if stateVersion.IsParticipationBitsCompatible() {
 			return "previousEpochParticipationBits"
 		}
 		return "previousEpochAttestations"
 	case CurrentEpochAttestations:
-		if version.Altair == stateVersion || version.Bellatrix == stateVersion {
+		if stateVersion.IsParticipationBitsCompatible() {
 			return "currentEpochParticipationBits"
 		}
 		return "currentEpochAttestations"

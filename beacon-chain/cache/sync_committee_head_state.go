@@ -32,7 +32,7 @@ func (c *SyncCommitteeHeadStateCache) Put(slot types.Slot, st state.BeaconState)
 		return ErrNilValueProvided
 	}
 
-	if st.Version() == version.Phase0 {
+	if st.Version().IsPhase0Compatible() {
 		return ErrIncorrectType
 	}
 
