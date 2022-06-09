@@ -62,6 +62,7 @@ go_proto_compiler(
     deps = [
         "@com_github_grpc_ecosystem_grpc_gateway_v2//runtime:go_default_library",
         "@com_github_grpc_ecosystem_grpc_gateway_v2//utilities:go_default_library",
+        "@com_github_grpc_ecosystem_grpc_gateway_v2//protoc-gen-grpc-gateway:go_default_library",
         "@org_golang_google_grpc//:go_default_library",
         "@org_golang_google_grpc//codes:go_default_library",
         "@org_golang_google_grpc//grpclog:go_default_library",
@@ -75,7 +76,6 @@ go_proto_library(
     name = "go_grpc_gateway_library",
     compilers = [
         "allow_delete_body_gateway_compiler",
-        "@com_github_grpc_ecosystem_grpc_gateway_v2//protoc-gen-grpc-gateway:go_gen_grpc_gateway",
     ],
     embed = [":go_proto"],
     importpath = "github.com/prysmaticlabs/prysm/proto/eth/service",
