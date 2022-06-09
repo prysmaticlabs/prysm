@@ -18,7 +18,7 @@ package ethereum.eth.service;
 import "google/api/annotations.proto";
 import "google/protobuf/descriptor.proto";
 import "google/protobuf/empty.proto";
-import "grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2/options/openapiv2.proto";
+import "protoc_gen_openapiv2/options/openapiv2.proto";
 
 option csharp_namespace = "Ethereum.Eth.Service";
 option go_package = "github.com/prysmaticlabs/prysm/proto/eth/service";
