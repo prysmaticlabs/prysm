@@ -37,71 +37,9 @@ func run(ctx context.Context, v iface.Validator) {
 	cleanup := v.Done
 	defer cleanup()
 
-	ticker := time.NewTicker(backOffPeriod)
-	defer ticker.Stop()
-
-	var headSlot types.Slot
-	firstTime := true
-	for {
-		if !firstTime {
-			if ctx.Err() != nil {
-				log.Info("Context canceled, stopping validator")
-				return // Exit if context is canceled.
-			}
-			<-ticker.C
-		} else {
-			firstTime = false
-		}
-		err := v.WaitForChainStart(ctx)
-		if isConnectionError(err) {
-			log.Warnf("Could not determine if beacon chain started: %v", err)
-			continue
-		}
-		if err != nil {
-			log.Fatalf("Could not determine if beacon chain started: %v", err)
-		}
-
-		err = v.WaitForKeymanagerInitialization(ctx)
-		if err != nil {
-			// log.Fatalf will prevent defer from being called
-			cleanup()
-			log.Fatalf("Wallet is not ready: %v", err)
-		}
-
-		err = v.WaitForSync(ctx)
-		if isConnectionError(err) {
-			log.Warnf("Could not determine if beacon chain started: %v", err)
-			continue
-		}
-		if err != nil {
-			log.Fatalf("Could not determine if beacon node synced: %v", err)
-		}
-		err = v.WaitForActivation(ctx, nil /* accountsChangedChan */)
-		if isConnectionError(err) {
-			log.Warnf("Could not wait for validator activation: %v", err)
-			continue
-		}
-		if err != nil {
-			log.Fatalf("Could not wait for validator activation: %v", err)
-		}
-
-		headSlot, err = v.CanonicalHeadSlot(ctx)
-		if isConnectionError(err) {
-			log.Warnf("Could not get current canonical head slot: %v", err)
-			continue
-		}
-		if err != nil {
-			log.Fatalf("Could not get current canonical head slot: %v", err)
-		}
-		err = v.CheckDoppelGanger(ctx)
-		if isConnectionError(err) {
-			log.Warnf("Could not wait for checking doppelganger: %v", err)
-			continue
-		}
-		if err != nil {
-			log.Fatalf("Could not succeed with doppelganger check: %v", err)
-		}
-		break
+	headSlot, err := waitForActivation(ctx, v)
+	if err != nil {
+		return // Exit if context is canceled.
 	}
 
 	connectionErrorChannel := make(chan error, 1)
@@ -255,6 +193,76 @@ func reloadRemoteKeys(ctx context.Context, km keymanager.IKeymanager) {
 			log.WithError(err).Error(msgCouldNotFetchKeys)
 		}
 	}
+}
+
+func waitForActivation(ctx context.Context, v iface.Validator) (types.Slot, error) {
+	ticker := time.NewTicker(backOffPeriod)
+	defer ticker.Stop()
+
+	var headSlot types.Slot
+	firstTime := true
+	for {
+		if !firstTime {
+			if ctx.Err() != nil {
+				log.Info("Context canceled, stopping validator")
+				return headSlot, errors.New("context canceled")
+			}
+			<-ticker.C
+		} else {
+			firstTime = false
+		}
+		err := v.WaitForChainStart(ctx)
+		if isConnectionError(err) {
+			log.Warnf("Could not determine if beacon chain started: %v", err)
+			continue
+		}
+		if err != nil {
+			log.Fatalf("Could not determine if beacon chain started: %v", err)
+		}
+
+		err = v.WaitForKeymanagerInitialization(ctx)
+		if err != nil {
+			// log.Fatalf will prevent defer from being called
+			v.Done()
+			log.Fatalf("Wallet is not ready: %v", err)
+		}
+
+		err = v.WaitForSync(ctx)
+		if isConnectionError(err) {
+			log.Warnf("Could not determine if beacon chain started: %v", err)
+			continue
+		}
+		if err != nil {
+			log.Fatalf("Could not determine if beacon node synced: %v", err)
+		}
+		err = v.WaitForActivation(ctx, nil /* accountsChangedChan */)
+		if isConnectionError(err) {
+			log.Warnf("Could not wait for validator activation: %v", err)
+			continue
+		}
+		if err != nil {
+			log.Fatalf("Could not wait for validator activation: %v", err)
+		}
+
+		headSlot, err = v.CanonicalHeadSlot(ctx)
+		if isConnectionError(err) {
+			log.Warnf("Could not get current canonical head slot: %v", err)
+			continue
+		}
+		if err != nil {
+			log.Fatalf("Could not get current canonical head slot: %v", err)
+		}
+		err = v.CheckDoppelGanger(ctx)
+		if isConnectionError(err) {
+			log.Warnf("Could not wait for checking doppelganger: %v", err)
+			continue
+		}
+		if err != nil {
+			log.Fatalf("Could not succeed with doppelganger check: %v", err)
+		}
+		break
+	}
+	return headSlot, nil
 }
 
 func isConnectionError(err error) bool {
