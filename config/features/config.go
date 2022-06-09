@@ -132,7 +132,7 @@ func configureTestnet(ctx *cli.Context) error {
 		params.UseRopstenNetworkConfig()
 	} else {
 		if ctx.IsSet(cmd.ChainConfigFileFlag.Name) {
-			log.Warn("Running on Ethereum network with chainconfig")
+			log.Warn("Running on custom Ethereum network specified in a chain configuration yaml file")
 		} else {
 			log.Warn("Running on Ethereum Mainnet")
 		}
