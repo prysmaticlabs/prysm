@@ -52,7 +52,7 @@ func startChainService(t testing.TB, st state.BeaconState, block interfaces.Sign
 		blockchain.WithFinalizedStateAtStartUp(st),
 		blockchain.WithDatabase(db),
 		blockchain.WithAttestationService(attPool),
-		blockchain.WithForkChoiceStore(protoarray.New(0, 0)),
+		blockchain.WithForkChoiceStore(protoarray.New()),
 		blockchain.WithStateGen(stategen.New(db)),
 		blockchain.WithStateNotifier(&mock.MockStateNotifier{}),
 		blockchain.WithAttestationPool(attestations.NewPool()),

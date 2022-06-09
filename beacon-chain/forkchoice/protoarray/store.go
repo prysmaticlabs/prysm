@@ -29,17 +29,17 @@ const defaultPruneThreshold = 256
 var lastHeadRoot [32]byte
 
 // New initializes a new fork choice store.
-func New(justifiedEpoch, finalizedEpoch types.Epoch) *ForkChoice {
+func New() *ForkChoice {
 	s := &Store{
-		justifiedEpoch:    justifiedEpoch,
-		finalizedEpoch:    finalizedEpoch,
-		proposerBoostRoot: [32]byte{},
-		nodes:             make([]*Node, 0),
-		nodesIndices:      make(map[[32]byte]uint64),
-		payloadIndices:    make(map[[32]byte]uint64),
-		canonicalNodes:    make(map[[32]byte]bool),
-		slashedIndices:    make(map[types.ValidatorIndex]bool),
-		pruneThreshold:    defaultPruneThreshold,
+		justifiedCheckpoint: &forkchoicetypes.Checkpoint{},
+		finalizedCheckpoint: &forkchoicetypes.Checkpoint{},
+		proposerBoostRoot:   [32]byte{},
+		nodes:               make([]*Node, 0),
+		nodesIndices:        make(map[[32]byte]uint64),
+		payloadIndices:      make(map[[32]byte]uint64),
+		canonicalNodes:      make(map[[32]byte]bool),
+		slashedIndices:      make(map[types.ValidatorIndex]bool),
+		pruneThreshold:      defaultPruneThreshold,
 	}
 
 	b := make([]uint64, 0)
@@ -49,11 +49,7 @@ func New(justifiedEpoch, finalizedEpoch types.Epoch) *ForkChoice {
 
 // Head returns the head root from fork choice store.
 // It firsts computes validator's balance changes then recalculates block tree from leaves to root.
-func (f *ForkChoice) Head(
-	ctx context.Context,
-	justifiedRoot [32]byte,
-	justifiedStateBalances []uint64,
-) ([32]byte, error) {
+func (f *ForkChoice) Head(ctx context.Context, justifiedStateBalances []uint64) ([32]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.Head")
 	defer span.End()
 	f.votesLock.Lock()
@@ -76,7 +72,7 @@ func (f *ForkChoice) Head(
 	}
 	f.balances = newBalances
 
-	return f.store.head(ctx, justifiedRoot)
+	return f.store.head(ctx)
 }
 
 // ProcessAttestation processes attestation for vote accounting, it iterates around validator indices
@@ -273,14 +269,18 @@ func (s *Store) PruneThreshold() uint64 {
 	return s.pruneThreshold
 }
 
-// JustifiedEpoch of fork choice store.
-func (f *ForkChoice) JustifiedEpoch() types.Epoch {
-	return f.store.justifiedEpoch
+// JustifiedCheckpoint of fork choice store.
+func (f *ForkChoice) JustifiedCheckpoint() *forkchoicetypes.Checkpoint {
+	f.store.checkpointsLock.RLock()
+	defer f.store.checkpointsLock.RUnlock()
+	return f.store.justifiedCheckpoint
 }
 
-// FinalizedEpoch of fork choice store.
-func (f *ForkChoice) FinalizedEpoch() types.Epoch {
-	return f.store.finalizedEpoch
+// FinalizedCheckpoint of fork choice store.
+func (f *ForkChoice) FinalizedCheckpoint() *forkchoicetypes.Checkpoint {
+	f.store.checkpointsLock.RLock()
+	defer f.store.checkpointsLock.RUnlock()
+	return f.store.finalizedCheckpoint
 }
 
 // proposerBoost of fork choice store.
@@ -291,20 +291,23 @@ func (s *Store) proposerBoost() [fieldparams.RootLength]byte {
 }
 
 // head starts from justified root and then follows the best descendant links
-// to find the best block for head.
-func (s *Store) head(ctx context.Context, justifiedRoot [32]byte) ([32]byte, error) {
+// to find the best block for head. It assumes the caller has a lock on nodes.
+func (s *Store) head(ctx context.Context) ([32]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.head")
 	defer span.End()
 
 	// Justified index has to be valid in node indices map, and can not be out of bound.
-	justifiedIndex, ok := s.nodesIndices[justifiedRoot]
+	if s.justifiedCheckpoint == nil {
+		return [32]byte{}, errInvalidNilCheckpoint
+	}
+
+	justifiedIndex, ok := s.nodesIndices[s.justifiedCheckpoint.Root]
 	if !ok {
 		return [32]byte{}, errUnknownJustifiedRoot
 	}
 	if justifiedIndex >= uint64(len(s.nodes)) {
 		return [32]byte{}, errInvalidJustifiedIndex
 	}
-
 	justifiedNode := s.nodes[justifiedIndex]
 	bestDescendantIndex := justifiedNode.bestDescendant
 	// If the justified node doesn't have a best descendant,
@@ -315,12 +318,11 @@ func (s *Store) head(ctx context.Context, justifiedRoot [32]byte) ([32]byte, err
 	if bestDescendantIndex >= uint64(len(s.nodes)) {
 		return [32]byte{}, errInvalidBestDescendantIndex
 	}
-
 	bestNode := s.nodes[bestDescendantIndex]
 
 	if !s.viableForHead(bestNode) {
 		return [32]byte{}, fmt.Errorf("head at slot %d with weight %d is not eligible, finalizedEpoch %d != %d, justifiedEpoch %d != %d",
-			bestNode.slot, bestNode.weight/10e9, bestNode.finalizedEpoch, s.finalizedEpoch, bestNode.justifiedEpoch, s.justifiedEpoch)
+			bestNode.slot, bestNode.weight/10e9, bestNode.finalizedEpoch, s.finalizedCheckpoint.Epoch, bestNode.justifiedEpoch, s.justifiedCheckpoint.Epoch)
 	}
 
 	// Update metrics.
@@ -743,10 +745,12 @@ func (s *Store) leadsToViableHead(node *Node) (bool, error) {
 // Any node with diff finalized or justified epoch than the ones in fork choice store
 // should not be viable to head.
 func (s *Store) viableForHead(node *Node) bool {
+	s.checkpointsLock.RLock()
+	defer s.checkpointsLock.RUnlock()
 	// `node` is viable if its justified epoch and finalized epoch are the same as the one in `Store`.
 	// It's also viable if we are in genesis epoch.
-	justified := s.justifiedEpoch == node.justifiedEpoch || s.justifiedEpoch == 0
-	finalized := s.finalizedEpoch == node.finalizedEpoch || s.finalizedEpoch == 0
+	justified := s.justifiedCheckpoint.Epoch == node.justifiedEpoch || s.justifiedCheckpoint.Epoch == 0
+	finalized := s.finalizedCheckpoint.Epoch == node.finalizedEpoch || s.finalizedCheckpoint.Epoch == 0
 
 	return justified && finalized
 }
@@ -857,25 +861,25 @@ func (f *ForkChoice) InsertSlashedIndex(ctx context.Context, index types.Validat
 	}
 }
 
-// UpdateJustifiedCheckpoint sets the justified epoch to the given one
-func (f *ForkChoice) UpdateJustifiedCheckpoint(jc *pbrpc.Checkpoint) error {
+// UpdateJustifiedCheckpoint sets the justified checkpoint to the given one
+func (f *ForkChoice) UpdateJustifiedCheckpoint(jc *forkchoicetypes.Checkpoint) error {
 	if jc == nil {
 		return errInvalidNilCheckpoint
 	}
-	f.store.nodesLock.Lock()
-	defer f.store.nodesLock.Unlock()
-	f.store.justifiedEpoch = jc.Epoch
+	f.store.checkpointsLock.Lock()
+	defer f.store.checkpointsLock.Unlock()
+	f.store.justifiedCheckpoint = jc
 	return nil
 }
 
-// UpdateFinalizedCheckpoint sets the finalized epoch to the given one
-func (f *ForkChoice) UpdateFinalizedCheckpoint(fc *pbrpc.Checkpoint) error {
+// UpdateFinalizedCheckpoint sets the finalized checkpoint to the given one
+func (f *ForkChoice) UpdateFinalizedCheckpoint(fc *forkchoicetypes.Checkpoint) error {
 	if fc == nil {
 		return errInvalidNilCheckpoint
 	}
-	f.store.nodesLock.Lock()
-	defer f.store.nodesLock.Unlock()
-	f.store.finalizedEpoch = fc.Epoch
+	f.store.checkpointsLock.Lock()
+	defer f.store.checkpointsLock.Unlock()
+	f.store.finalizedCheckpoint = fc
 	return nil
 }
 
@@ -895,7 +899,7 @@ func (f *ForkChoice) InsertOptimisticChain(ctx context.Context, chain []*forkcho
 		}
 		if err := f.store.insert(ctx,
 			b.Slot(), r, parentRoot, payloadHash,
-			chain[i].JustifiedEpoch, chain[i].FinalizedEpoch); err != nil {
+			chain[i].JustifiedCheckpoint.Epoch, chain[i].FinalizedCheckpoint.Epoch); err != nil {
 			return err
 		}
 	}

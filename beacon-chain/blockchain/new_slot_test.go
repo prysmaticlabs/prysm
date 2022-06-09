@@ -20,7 +20,7 @@ import (
 
 func TestService_newSlot(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
-	fcs := protoarray.New(0, 0)
+	fcs := protoarray.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),
