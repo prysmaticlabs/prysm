@@ -48,6 +48,7 @@ func (s *Service) getBlock(ctx context.Context, r [32]byte) (interfaces.SignedBe
 		}
 	}
 	if err := wrapper.BeaconBlockIsNil(b); err != nil {
+		log.Infof("Pingoleon %v", r)
 		return nil, errBlockNotFoundInCacheOrDB
 	}
 	return b, nil

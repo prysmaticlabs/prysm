@@ -479,6 +479,19 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState state.Beacon
 	if err := s.cfg.ForkChoiceStore.InsertNode(ctx, genesisState, genesisBlkRoot); err != nil {
 		log.Fatalf("Could not process genesis block for fork choice: %v", err)
 	}
+
+	// Set the right genesis block root as a checkpoint at genesis for
+	// forkchoice
+	jcp := &forkchoicetypes.Checkpoint{Epoch: genesisCheckpoint.Epoch, Root: genesisBlkRoot}
+	if err := s.cfg.ForkChoiceStore.UpdateJustifiedCheckpoint(jcp); err != nil {
+		log.Fatalf("Could not set genesis justified checkpoint")
+	}
+
+	fcp := &forkchoicetypes.Checkpoint{Epoch: genesisCheckpoint.Epoch, Root: genesisBlkRoot}
+	if err := s.cfg.ForkChoiceStore.UpdateFinalizedCheckpoint(fcp); err != nil {
+		log.Fatalf("Could not set genesis finalized checkpoint")
+	}
+
 	if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, genesisBlkRoot); err != nil {
 		log.Fatalf("Could not set optimistic status of genesis block to false: %v", err)
 	}

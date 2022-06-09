@@ -1341,13 +1341,15 @@ func TestAncestor_CanUseForkchoice(t *testing.T) {
 	b200.Block.ParentRoot = r100[:]
 	r200, err := b200.Block.HashTreeRoot()
 	require.NoError(t, err)
+	ojc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	ofc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	for _, b := range []*ethpb.SignedBeaconBlock{b1, b100, b200} {
 		beaconBlock := util.NewBeaconBlock()
 		beaconBlock.Block.Slot = b.Block.Slot
 		beaconBlock.Block.ParentRoot = bytesutil.PadTo(b.Block.ParentRoot, 32)
 		r, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
-		state, blkRoot, err := prepareForkchoiceState(context.Background(), b.Block.Slot, r, bytesutil.ToBytes32(b.Block.ParentRoot), params.BeaconConfig().ZeroHash, 0, 0)
+		state, blkRoot, err := prepareForkchoiceState(context.Background(), b.Block.Slot, r, bytesutil.ToBytes32(b.Block.ParentRoot), params.BeaconConfig().ZeroHash, ojc, ofc)
 		require.NoError(t, err)
 		require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
 	}
@@ -1387,6 +1389,8 @@ func TestAncestor_CanUseDB(t *testing.T) {
 	b200.Block.ParentRoot = r100[:]
 	r200, err := b200.Block.HashTreeRoot()
 	require.NoError(t, err)
+	ojc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	ofc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	for _, b := range []*ethpb.SignedBeaconBlock{b1, b100, b200} {
 		beaconBlock := util.NewBeaconBlock()
 		beaconBlock.Block.Slot = b.Block.Slot
@@ -1396,7 +1400,7 @@ func TestAncestor_CanUseDB(t *testing.T) {
 		require.NoError(t, beaconDB.SaveBlock(context.Background(), wsb)) // Saves blocks to DB.
 	}
 
-	state, blkRoot, err := prepareForkchoiceState(context.Background(), 200, r200, r200, params.BeaconConfig().ZeroHash, 0, 0)
+	state, blkRoot, err := prepareForkchoiceState(context.Background(), 200, r200, r200, params.BeaconConfig().ZeroHash, ojc, ofc)
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
 
