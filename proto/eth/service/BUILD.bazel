@@ -20,18 +20,13 @@ proto_library(
         "//proto/eth/ext:proto",
         "//proto/eth/v1:proto",
         "//proto/eth/v2:proto",
+        "//protoc-gen-openapiv2/options",
         "@com_google_protobuf//:descriptor_proto",
         "@com_google_protobuf//:empty_proto",
         "@com_google_protobuf//:timestamp_proto",
         "@go_googleapis//google/api:annotations_proto",
         "@com_github_grpc_ecosystem_grpc_gateway_v2//proto/gateway:event_source_proto",
-        "@com_github_grpc_ecosystem_grpc_gateway_v2//protoc-gen-openapiv2/options:options_proto",
     ],
-)
-
-protoc_gen_openapiv2(
-    name = "openapiv2",
-    proto = ":proto",
 )
 
 go_proto_library(
@@ -44,13 +39,13 @@ go_proto_library(
         "//proto/eth/ext:go_default_library",
         "//proto/eth/v1:go_default_library",
         "//proto/eth/v2:go_default_library",
+        "//protoc-gen-openapiv2/options",
         "@io_bazel_rules_go//proto/wkt:descriptor_go_proto",
         "@io_bazel_rules_go//proto/wkt:empty_go_proto",
         "//consensus-types/primitives:go_default_library",
         "@go_googleapis//google/api:annotations_go_proto",
         "@com_github_golang_protobuf//proto:go_default_library",
         "@com_github_grpc_ecosystem_grpc_gateway_v2//proto/gateway:go_default_library",
-        "@com_github_grpc_ecosystem_grpc_gateway_v2//protoc-gen-openapiv2/options:options_go_proto",
     ],
 )
 
@@ -73,7 +68,6 @@ go_proto_compiler(
         "@org_golang_google_grpc//metadata:go_default_library",
         "@org_golang_google_grpc//status:go_default_library",
         "@org_golang_google_protobuf//proto:go_default_library",
-        "@com_github_grpc_ecosystem_grpc_gateway_v2//protoc-gen-openapiv2/options:options_go_proto",
     ],
 )
 
@@ -88,6 +82,7 @@ go_proto_library(
     visibility = ["//proto:__subpackages__"],
     deps = [
         "//proto/eth/ext:go_default_library",
+        "//protoc-gen-openapiv2/options",
         "@io_bazel_rules_go//proto/wkt:empty_go_proto",
         "@com_github_grpc_ecosystem_grpc_gateway_v2//protoc-gen-openapiv2/options:options_go_proto",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
