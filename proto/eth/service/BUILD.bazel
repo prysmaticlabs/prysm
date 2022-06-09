@@ -2,6 +2,7 @@ load("@rules_proto//proto:defs.bzl", "proto_library")
 load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
 load("@prysm//tools/go:def.bzl", "go_library")
 load("@io_bazel_rules_go//proto:compiler.bzl", "go_proto_compiler")
+load("@com_github_grpc_ecosystem_grpc_gateway_v2//protoc-gen-openapiv2:defs.bzl", "protoc_gen_openapiv2")
 
 # gazelle:ignore
 proto_library(
@@ -74,6 +75,7 @@ go_proto_library(
     name = "go_grpc_gateway_library",
     compilers = [
         "allow_delete_body_gateway_compiler",
+        "@com_github_grpc_ecosystem_grpc_gateway_v2//protoc-gen-grpc-gateway:go_gen_grpc_gateway",
     ],
     embed = [":go_proto"],
     importpath = "github.com/prysmaticlabs/prysm/proto/eth/service",
