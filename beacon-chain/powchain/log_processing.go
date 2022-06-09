@@ -286,27 +286,12 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 		currentBlockNum = deploymentBlock
 	}
 	// To store all blocks.
-	headersMap := make(map[uint64]*gethTypes.Header)
 	rawLogCount, err := s.depositContractCaller.GetDepositCount(&bind.CallOpts{})
 	if err != nil {
 		return err
 	}
 	logCount := binary.LittleEndian.Uint64(rawLogCount)
 
-	// Batch request the desired headers and store them in a
-	// map for quick access.
-	requestHeaders := func(startBlk uint64, endBlk uint64) error {
-		headers, err := s.batchRequestHeaders(startBlk, endBlk)
-		if err != nil {
-			return err
-		}
-		for _, h := range headers {
-			if h != nil && h.Number != nil {
-				headersMap[h.Number.Uint64()] = h
-			}
-		}
-		return nil
-	}
 	latestFollowHeight, err := s.followedBlockHeight(ctx)
 	if err != nil {
 		return err
@@ -316,76 +301,8 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 	additiveFactor := uint64(float64(batchSize) * additiveFactorMultiplier)
 
 	for currentBlockNum < latestFollowHeight {
-		start := currentBlockNum
-		end := currentBlockNum + batchSize
-		// Appropriately bound the request, as we do not
-		// want request blocks beyond the current follow distance.
-		if end > latestFollowHeight {
-			end = latestFollowHeight
-		}
-		query := ethereum.FilterQuery{
-			Addresses: []common.Address{
-				s.cfg.depositContractAddr,
-			},
-			FromBlock: big.NewInt(0).SetUint64(start),
-			ToBlock:   big.NewInt(0).SetUint64(end),
-		}
-		remainingLogs := logCount - uint64(s.lastReceivedMerkleIndex+1)
-		// only change the end block if the remaining logs are below the required log limit.
-		// reset our query and end block in this case.
-		withinLimit := remainingLogs < depositLogRequestLimit
-		aboveFollowHeight := end >= latestFollowHeight
-		if withinLimit && aboveFollowHeight {
-			query.ToBlock = big.NewInt(0).SetUint64(latestFollowHeight)
-			end = latestFollowHeight
-		}
-		logs, err := s.httpLogger.FilterLogs(ctx, query)
-		if err != nil {
-			if tooMuchDataRequestedError(err) {
-				if batchSize == 0 {
-					return errors.New("batch size is zero")
-				}
-
-				// multiplicative decrease
-				batchSize /= multiplicativeDecreaseDivisor
-				continue
-			}
+		if err = s.processBlockInBatch(ctx, &currentBlockNum, latestFollowHeight, &batchSize, additiveFactor, logCount); err != nil {
 			return err
-		}
-		// Only request headers before chainstart to correctly determine
-		// genesis.
-		if !s.chainStartData.Chainstarted {
-			if err := requestHeaders(start, end); err != nil {
-				return err
-			}
-		}
-
-		for _, filterLog := range logs {
-			if filterLog.BlockNumber > currentBlockNum {
-				if err := s.checkHeaderRange(ctx, currentBlockNum, filterLog.BlockNumber-1, headersMap, requestHeaders); err != nil {
-					return err
-				}
-				// set new block number after checking for chainstart for previous block.
-				s.latestEth1DataLock.Lock()
-				s.latestEth1Data.LastRequestedBlock = currentBlockNum
-				s.latestEth1DataLock.Unlock()
-				currentBlockNum = filterLog.BlockNumber
-			}
-			if err := s.ProcessLog(ctx, filterLog); err != nil {
-				return err
-			}
-		}
-		if err := s.checkHeaderRange(ctx, currentBlockNum, end, headersMap, requestHeaders); err != nil {
-			return err
-		}
-		currentBlockNum = end
-
-		if batchSize < s.cfg.eth1HeaderReqLimit {
-			// update the batchSize with additive increase
-			batchSize += additiveFactor
-			if batchSize > s.cfg.eth1HeaderReqLimit {
-				batchSize = s.cfg.eth1HeaderReqLimit
-			}
 		}
 	}
 
@@ -420,6 +337,97 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 	}
 	if fState != nil && !fState.IsNil() && fState.Eth1DepositIndex() > 0 {
 		s.cfg.depositCache.PrunePendingDeposits(ctx, int64(fState.Eth1DepositIndex())) // lint:ignore uintcast -- Deposit index should not exceed int64 in your lifetime.
+	}
+	return nil
+}
+
+func (s *Service) processBlockInBatch(ctx context.Context, currentBlockNum *uint64, latestFollowHeight uint64, batchSize *uint64, additiveFactor uint64, logCount uint64) error {
+	// Batch request the desired headers and store them in a
+	// map for quick access.
+	headersMap := make(map[uint64]*gethTypes.Header)
+	requestHeaders := func(startBlk uint64, endBlk uint64) error {
+		headers, err := s.batchRequestHeaders(startBlk, endBlk)
+		if err != nil {
+			return err
+		}
+		for _, h := range headers {
+			if h != nil && h.Number != nil {
+				headersMap[h.Number.Uint64()] = h
+			}
+		}
+		return nil
+	}
+
+	start := *currentBlockNum
+	end := *currentBlockNum + *batchSize
+	// Appropriately bound the request, as we do not
+	// want request blocks beyond the current follow distance.
+	if end > latestFollowHeight {
+		end = latestFollowHeight
+	}
+	query := ethereum.FilterQuery{
+		Addresses: []common.Address{
+			s.cfg.depositContractAddr,
+		},
+		FromBlock: big.NewInt(0).SetUint64(start),
+		ToBlock:   big.NewInt(0).SetUint64(end),
+	}
+	remainingLogs := logCount - uint64(s.lastReceivedMerkleIndex+1)
+	// only change the end block if the remaining logs are below the required log limit.
+	// reset our query and end block in this case.
+	withinLimit := remainingLogs < depositLogRequestLimit
+	aboveFollowHeight := end >= latestFollowHeight
+	if withinLimit && aboveFollowHeight {
+		query.ToBlock = big.NewInt(0).SetUint64(latestFollowHeight)
+		end = latestFollowHeight
+	}
+	logs, err := s.httpLogger.FilterLogs(ctx, query)
+	if err != nil {
+		if tooMuchDataRequestedError(err) {
+			if *batchSize == 0 {
+				return errors.New("batch size is zero")
+			}
+
+			// multiplicative decrease
+			*batchSize /= multiplicativeDecreaseDivisor
+			return nil
+		}
+		return err
+	}
+	// Only request headers before chainstart to correctly determine
+	// genesis.
+	if !s.chainStartData.Chainstarted {
+		if err := requestHeaders(start, end); err != nil {
+			return err
+		}
+	}
+
+	for _, filterLog := range logs {
+		if filterLog.BlockNumber > *currentBlockNum {
+			if err := s.checkHeaderRange(ctx, *currentBlockNum, filterLog.BlockNumber-1, headersMap, requestHeaders); err != nil {
+				return err
+			}
+			// set new block number after checking for chainstart for previous block.
+			s.latestEth1DataLock.Lock()
+			s.latestEth1Data.LastRequestedBlock = *currentBlockNum
+			s.latestEth1DataLock.Unlock()
+			*currentBlockNum = filterLog.BlockNumber
+		}
+		if err := s.ProcessLog(ctx, filterLog); err != nil {
+			return err
+		}
+	}
+	if err := s.checkHeaderRange(ctx, *currentBlockNum, end, headersMap, requestHeaders); err != nil {
+		return err
+	}
+	*currentBlockNum = end
+
+	if *batchSize < s.cfg.eth1HeaderReqLimit {
+		// update the batchSize with additive increase
+		*batchSize += additiveFactor
+		if *batchSize > s.cfg.eth1HeaderReqLimit {
+			*batchSize = s.cfg.eth1HeaderReqLimit
+		}
 	}
 	return nil
 }
