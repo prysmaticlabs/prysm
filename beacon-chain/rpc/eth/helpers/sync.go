@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"bytes"
 	"context"
 	"strconv"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -40,12 +42,15 @@ func ValidateSync(ctx context.Context, syncChecker sync.Checker, headFetcher blo
 
 // IsOptimistic checks whether the latest block header of the passed in beacon state is the header of an optimistic block.
 func IsOptimistic(ctx context.Context, st state.BeaconState, optimisticSyncFetcher blockchain.OptimisticModeFetcher) (bool, error) {
-	root, err := st.HashTreeRoot(ctx)
-	if err != nil {
-		return false, errors.Wrap(err, "could not get state root")
-	}
 	header := st.LatestBlockHeader()
-	header.StateRoot = root[:]
+	// This happens when the block at the state's slot is not missing.
+	if bytes.Equal(header.StateRoot, params.BeaconConfig().ZeroHash[:]) {
+		root, err := st.HashTreeRoot(ctx)
+		if err != nil {
+			return false, errors.Wrap(err, "could not get state root")
+		}
+		header.StateRoot = root[:]
+	}
 	headRoot, err := header.HashTreeRoot()
 	if err != nil {
 		return false, errors.Wrap(err, "could not get header root")

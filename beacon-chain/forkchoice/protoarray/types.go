@@ -3,6 +3,7 @@ package protoarray
 import (
 	"sync"
 
+	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 )
@@ -18,8 +19,8 @@ type ForkChoice struct {
 // Store defines the fork choice store which includes block nodes and the last view of checkpoint information.
 type Store struct {
 	pruneThreshold             uint64                                  // do not prune tree unless threshold is reached.
-	justifiedEpoch             types.Epoch                             // latest justified epoch in store.
-	finalizedEpoch             types.Epoch                             // latest finalized epoch in store.
+	justifiedCheckpoint        *forkchoicetypes.Checkpoint             // latest justified checkpoint in store.
+	finalizedCheckpoint        *forkchoicetypes.Checkpoint             // latest finalized checkpoint in store.
 	proposerBoostRoot          [fieldparams.RootLength]byte            // latest block root that was boosted after being received in a timely manner.
 	previousProposerBoostRoot  [fieldparams.RootLength]byte            // previous block root that was boosted after being received in a timely manner.
 	previousProposerBoostScore uint64                                  // previous proposer boosted root score.
@@ -30,6 +31,7 @@ type Store struct {
 	slashedIndices             map[types.ValidatorIndex]bool           // The list of equivocating validators
 	nodesLock                  sync.RWMutex
 	proposerBoostLock          sync.RWMutex
+	checkpointsLock            sync.RWMutex
 }
 
 // Node defines the individual block which includes its block parent, ancestor and how much weight accounted for it.
