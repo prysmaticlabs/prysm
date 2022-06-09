@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
@@ -52,7 +53,7 @@ func TestBackupAccounts_Noninteractive_Derived(t *testing.T) {
 		backupPasswordFile: backupPasswordFile,
 		backupDir:          backupDir,
 	})
-	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
+	w, err := accounts.CreateWalletWithKeymanager(cliCtx.Context, &accounts.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
 			KeymanagerKind: keymanager.Derived,
@@ -93,10 +94,10 @@ func TestBackupAccounts_Noninteractive_Derived(t *testing.T) {
 	})
 
 	// Next, we attempt to backup the accounts.
-	require.NoError(t, BackupAccountsCli(cliCtx))
+	require.NoError(t, accountsBackup(cliCtx))
 
 	// We check a backup.zip file was created at the output path.
-	zipFilePath := filepath.Join(backupDir, archiveFilename)
+	zipFilePath := filepath.Join(backupDir, accounts.ArchiveFilename)
 	assert.DeepEqual(t, true, file.FileExists(zipFilePath))
 
 	// We attempt to unzip the file and verify the keystores do match our accounts.
@@ -169,7 +170,7 @@ func TestBackupAccounts_Noninteractive_Imported(t *testing.T) {
 		backupPasswordFile: backupPasswordFile,
 		backupDir:          backupDir,
 	})
-	_, err = CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
+	_, err = accounts.CreateWalletWithKeymanager(cliCtx.Context, &accounts.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
 			KeymanagerKind: keymanager.Local,
@@ -180,13 +181,13 @@ func TestBackupAccounts_Noninteractive_Imported(t *testing.T) {
 
 	// We attempt to import accounts we wrote to the keys directory
 	// into our newly created wallet.
-	require.NoError(t, ImportAccountsCli(cliCtx))
+	require.NoError(t, accounts.ImportAccountsCli(cliCtx))
 
 	// Next, we attempt to backup the accounts.
-	require.NoError(t, BackupAccountsCli(cliCtx))
+	require.NoError(t, accountsBackup(cliCtx))
 
 	// We check a backup.zip file was created at the output path.
-	zipFilePath := filepath.Join(backupDir, archiveFilename)
+	zipFilePath := filepath.Join(backupDir, accounts.ArchiveFilename)
 	assert.DeepEqual(t, true, file.FileExists(zipFilePath))
 
 	// We attempt to unzip the file and verify the keystores do match our accounts.
