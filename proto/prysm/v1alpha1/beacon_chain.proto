@@ -474,6 +474,9 @@ message ChainHead {
 
     // Previous 32 byte justified block root.
     bytes previous_justified_block_root = 12 [(ethereum.eth.ext.ssz_size) = "32"];
+
+    // Optimistic status of the current head
+    bool optimistic_status = 13;
 }
 
 message ListCommitteesRequest {
