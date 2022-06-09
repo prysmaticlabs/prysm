@@ -29,6 +29,11 @@ proto_library(
     ],
 )
 
+protoc_gen_openapiv2(
+    name = "openapiv2",
+    proto = ":proto_library",
+)
+
 go_proto_library(
     name = "go_proto",
     compilers = ["@com_github_prysmaticlabs_protoc_gen_go_cast//:go_cast_grpc",],
