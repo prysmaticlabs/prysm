@@ -22,7 +22,6 @@ var (
 	errNilBody               = errors.New("received nil beacon block body")
 	errIncorrectBlockVersion = errors.New(incorrectBlockVersion)
 	errIncorrectBodyVersion  = errors.New(incorrectBodyVersion)
-	errCloningFailed         = errors.New("cloning proto message failed")
 )
 
 // BeaconBlockBody is the main beacon block body structure. It can represent any block type.

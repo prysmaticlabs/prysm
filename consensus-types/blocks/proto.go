@@ -191,10 +191,6 @@ func initSignedBlockFromProtoPhase0(pb *eth.SignedBeaconBlock) (*SignedBeaconBlo
 		return nil, errNilBlock
 	}
 
-	pb, ok := proto.Clone(pb).(*eth.SignedBeaconBlock)
-	if !ok {
-		return nil, errCloningFailed
-	}
 	block, err := initBlockFromProtoPhase0(pb.Block)
 	if err != nil {
 		return nil, err
@@ -212,10 +208,6 @@ func initSignedBlockFromProtoAltair(pb *eth.SignedBeaconBlockAltair) (*SignedBea
 		return nil, errNilBlock
 	}
 
-	pb, ok := proto.Clone(pb).(*eth.SignedBeaconBlockAltair)
-	if !ok {
-		return nil, errCloningFailed
-	}
 	block, err := initBlockFromProtoAltair(pb.Block)
 	if err != nil {
 		return nil, err
@@ -233,10 +225,6 @@ func initSignedBlockFromProtoBellatrix(pb *eth.SignedBeaconBlockBellatrix) (*Sig
 		return nil, errNilBlock
 	}
 
-	pb, ok := proto.Clone(pb).(*eth.SignedBeaconBlockBellatrix)
-	if !ok {
-		return nil, errCloningFailed
-	}
 	block, err := initBlockFromProtoBellatrix(pb.Block)
 	if err != nil {
 		return nil, err
@@ -254,10 +242,6 @@ func initBlindedSignedBlockFromProtoBellatrix(pb *eth.SignedBlindedBeaconBlockBe
 		return nil, errNilBlock
 	}
 
-	pb, ok := proto.Clone(pb).(*eth.SignedBlindedBeaconBlockBellatrix)
-	if !ok {
-		return nil, errCloningFailed
-	}
 	block, err := initBlindedBlockFromProtoBellatrix(pb.Block)
 	if err != nil {
 		return nil, err
@@ -275,10 +259,6 @@ func initBlockFromProtoPhase0(pb *eth.BeaconBlock) (*BeaconBlock, error) {
 		return nil, errNilBlock
 	}
 
-	pb, ok := proto.Clone(pb).(*eth.BeaconBlock)
-	if !ok {
-		return nil, errCloningFailed
-	}
 	body, err := initBlockBodyFromProtoPhase0(pb.Body)
 	if err != nil {
 		return nil, err
@@ -299,10 +279,6 @@ func initBlockFromProtoAltair(pb *eth.BeaconBlockAltair) (*BeaconBlock, error) {
 		return nil, errNilBlock
 	}
 
-	pb, ok := proto.Clone(pb).(*eth.BeaconBlockAltair)
-	if !ok {
-		return nil, errCloningFailed
-	}
 	body, err := initBlockBodyFromProtoAltair(pb.Body)
 	if err != nil {
 		return nil, err
@@ -323,10 +299,6 @@ func initBlockFromProtoBellatrix(pb *eth.BeaconBlockBellatrix) (*BeaconBlock, er
 		return nil, errNilBlock
 	}
 
-	pb, ok := proto.Clone(pb).(*eth.BeaconBlockBellatrix)
-	if !ok {
-		return nil, errCloningFailed
-	}
 	body, err := initBlockBodyFromProtoBellatrix(pb.Body)
 	if err != nil {
 		return nil, err
@@ -347,10 +319,6 @@ func initBlindedBlockFromProtoBellatrix(pb *eth.BlindedBeaconBlockBellatrix) (*B
 		return nil, errNilBlock
 	}
 
-	pb, ok := proto.Clone(pb).(*eth.BlindedBeaconBlockBellatrix)
-	if !ok {
-		return nil, errCloningFailed
-	}
 	body, err := initBlindedBlockBodyFromProtoBellatrix(pb.Body)
 	if err != nil {
 		return nil, err
@@ -371,10 +339,6 @@ func initBlockBodyFromProtoPhase0(pb *eth.BeaconBlockBody) (*BeaconBlockBody, er
 		return nil, errNilBody
 	}
 
-	pb, ok := proto.Clone(pb).(*eth.BeaconBlockBody)
-	if !ok {
-		return nil, errCloningFailed
-	}
 	b := &BeaconBlockBody{
 		version:           version.Phase0,
 		randaoReveal:      pb.RandaoReveal,
@@ -394,10 +358,6 @@ func initBlockBodyFromProtoAltair(pb *eth.BeaconBlockBodyAltair) (*BeaconBlockBo
 		return nil, errNilBody
 	}
 
-	pb, ok := proto.Clone(pb).(*eth.BeaconBlockBodyAltair)
-	if !ok {
-		return nil, errCloningFailed
-	}
 	b := &BeaconBlockBody{
 		version:           version.Altair,
 		randaoReveal:      pb.RandaoReveal,
@@ -418,10 +378,6 @@ func initBlockBodyFromProtoBellatrix(pb *eth.BeaconBlockBodyBellatrix) (*BeaconB
 		return nil, errNilBody
 	}
 
-	pb, ok := proto.Clone(pb).(*eth.BeaconBlockBodyBellatrix)
-	if !ok {
-		return nil, errCloningFailed
-	}
 	b := &BeaconBlockBody{
 		version:           version.Bellatrix,
 		randaoReveal:      pb.RandaoReveal,
@@ -442,11 +398,7 @@ func initBlindedBlockBodyFromProtoBellatrix(pb *eth.BlindedBeaconBlockBodyBellat
 	if pb == nil {
 		return nil, errNilBody
 	}
-
-	pb, ok := proto.Clone(pb).(*eth.BlindedBeaconBlockBodyBellatrix)
-	if !ok {
-		return nil, errCloningFailed
-	}
+	
 	b := &BeaconBlockBody{
 		version:                version.BellatrixBlind,
 		randaoReveal:           pb.RandaoReveal,
