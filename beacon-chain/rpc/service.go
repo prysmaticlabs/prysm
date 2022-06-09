@@ -268,6 +268,7 @@ func (s *Service) Start() {
 		AttestationsPool:            s.cfg.AttestationsPool,
 		SlashingsPool:               s.cfg.SlashingsPool,
 		HeadUpdater:                 s.cfg.HeadUpdater,
+		OptimisticModeFetcher:       s.cfg.OptimisticModeFetcher,
 		HeadFetcher:                 s.cfg.HeadFetcher,
 		FinalizationFetcher:         s.cfg.FinalizationFetcher,
 		CanonicalFetcher:            s.cfg.CanonicalFetcher,
