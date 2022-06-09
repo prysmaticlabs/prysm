@@ -12,12 +12,12 @@ import (
 )
 
 func (vs *Server) getEip4844BeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BeaconBlockWithBlobKZGs, *ethpb.BlobsSidecar, error) {
-	bellatrixBlk, err := vs.getBellatrixBeaconBlock(ctx, req)
+	bellatrixBlk, payloadID, err := vs.buildBellatrixBeaconBlock(ctx, req)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not get bellatrix block")
 	}
 
-	blobs, err := vs.ExecutionEngineCaller.GetBlobsBundle(ctx, [8]byte{})
+	blobs, err := vs.ExecutionEngineCaller.GetBlobsBundle(ctx, payloadID)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not get blobs")
 	}

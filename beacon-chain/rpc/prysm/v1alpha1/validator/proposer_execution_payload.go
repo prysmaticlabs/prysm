@@ -39,75 +39,76 @@ var (
 
 // This returns the execution payload of a given slot. The function has full awareness of pre and post merge.
 // The payload is computed given the respected time of merge.
-func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx types.ValidatorIndex) (*enginev1.ExecutionPayload, error) {
+func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx types.ValidatorIndex) (*enginev1.ExecutionPayload, enginev1.PayloadIDBytes, error) {
 	proposerID, payloadId, ok := vs.ProposerSlotIndexCache.GetProposerPayloadIDs(slot)
 	if ok && proposerID == vIdx && payloadId != [8]byte{} { // Payload ID is cache hit. Return the cached payload ID.
 		var pid [8]byte
 		copy(pid[:], payloadId[:])
 		payloadIDCacheHit.Inc()
-		return vs.ExecutionEngineCaller.GetPayload(ctx, pid)
+		payload, err := vs.ExecutionEngineCaller.GetPayload(ctx, pid)
+		return payload, payloadId, err
 	}
 	payloadIDCacheMiss.Inc()
 
 	st, err := vs.HeadFetcher.HeadState(ctx)
 	if err != nil {
-		return nil, err
+		return nil, enginev1.PayloadIDBytes{}, err
 	}
 	st, err = transition.ProcessSlotsIfPossible(ctx, st, slot)
 	if err != nil {
-		return nil, err
+		return nil, enginev1.PayloadIDBytes{}, err
 	}
 
 	var parentHash []byte
 	var hasTerminalBlock bool
 	mergeComplete, err := blocks.IsMergeTransitionComplete(st)
 	if err != nil {
-		return nil, err
+		return nil, enginev1.PayloadIDBytes{}, err
 	}
 
 	if mergeComplete {
 		header, err := st.LatestExecutionPayloadHeader()
 		if err != nil {
-			return nil, err
+			return nil, enginev1.PayloadIDBytes{}, err
 		}
 		parentHash = header.BlockHash
 	} else {
 		if activationEpochNotReached(slot) {
-			return emptyPayload(), nil
+			return emptyPayload(), enginev1.PayloadIDBytes{}, nil
 		}
 		parentHash, hasTerminalBlock, err = vs.getTerminalBlockHashIfExists(ctx)
 		if err != nil {
-			return nil, err
+			return nil, enginev1.PayloadIDBytes{}, err
 		}
 		if !hasTerminalBlock {
-			return emptyPayload(), nil
+			return emptyPayload(), enginev1.PayloadIDBytes{}, nil
 		}
 	}
 
 	t, err := slots.ToTime(st.GenesisTime(), slot)
 	if err != nil {
-		return nil, err
+		return nil, enginev1.PayloadIDBytes{}, err
 	}
 	random, err := helpers.RandaoMix(st, time.CurrentEpoch(st))
 	if err != nil {
-		return nil, err
+		return nil, enginev1.PayloadIDBytes{}, err
 	}
 	finalizedBlockHash := params.BeaconConfig().ZeroHash[:]
 	finalizedRoot := bytesutil.ToBytes32(st.FinalizedCheckpoint().Root)
 	if finalizedRoot != [32]byte{} { // finalized root could be zeros before the first finalized block.
 		finalizedBlock, err := vs.BeaconDB.Block(ctx, bytesutil.ToBytes32(st.FinalizedCheckpoint().Root))
 		if err != nil {
-			return nil, err
+			return nil, enginev1.PayloadIDBytes{}, err
 		}
 		if err := wrapper.BeaconBlockIsNil(finalizedBlock); err != nil {
-			return nil, err
+			return nil, enginev1.PayloadIDBytes{}, err
 		}
 		switch finalizedBlock.Version() {
 		case version.Phase0, version.Altair: // Blocks before Bellatrix don't have execution payloads. Use zeros as the hash.
 		default:
 			finalizedPayload, err := finalizedBlock.Block().Body().ExecutionPayload()
 			if err != nil {
-				return nil, err
+				return nil, enginev1.PayloadIDBytes{}, err
 			}
 			finalizedBlockHash = finalizedPayload.BlockHash
 		}
@@ -136,7 +137,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 				"Please refer to our documentation for instructions")
 		}
 	default:
-		return nil, errors.Wrap(err, "could not get fee recipient in db")
+		return nil, enginev1.PayloadIDBytes{}, errors.Wrap(err, "could not get fee recipient in db")
 	}
 	p := &enginev1.PayloadAttributes{
 		Timestamp:             uint64(t.Unix()),
@@ -145,14 +146,14 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 	}
 	payloadID, _, err := vs.ExecutionEngineCaller.ForkchoiceUpdated(ctx, f, p)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not prepare payload")
+		return nil, enginev1.PayloadIDBytes{}, errors.Wrap(err, "could not prepare payload")
 	}
 	if payloadID == nil {
-		return nil, errors.New("nil payload id")
+		return nil, enginev1.PayloadIDBytes{}, errors.New("nil payload id")
 	}
 	payload, err := vs.ExecutionEngineCaller.GetPayload(ctx, *payloadID)
 	if err != nil {
-		return nil, err
+		return nil, enginev1.PayloadIDBytes{}, err
 	}
 	// Warn if the fee recipient is not the value we expect.
 	if payload != nil && !bytes.Equal(payload.FeeRecipient, feeRecipient[:]) {
@@ -162,7 +163,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 		}).Warn("Fee recipient address from execution client is not what was expected. " +
 			"It is possible someone has compromised your client to try and take your transaction fees")
 	}
-	return payload, nil
+	return payload, *payloadID, nil
 }
 
 // This returns the valid terminal block hash with an existence bool value.
