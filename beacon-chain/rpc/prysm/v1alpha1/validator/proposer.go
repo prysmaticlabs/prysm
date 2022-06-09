@@ -64,11 +64,14 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	if err := vs.optimisticStatus(ctx); err != nil {
 		return nil, err
 	}
-	blk, err := vs.getEip4844BeaconBlock(ctx, req)
+	blk, sideCar, err := vs.getEip4844BeaconBlock(ctx, req)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not fetch eip4844 beacon block: %v", err)
 	}
-	return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Eip4844{Eip4844: blk}}, nil
+	return &ethpb.GenericBeaconBlock{
+		Block:   &ethpb.GenericBeaconBlock_Eip4844{Eip4844: blk},
+		Sidecar: sideCar,
+	}, nil
 }
 
 // GetBlock is called by a proposer during its assigned slot to request a block to sign

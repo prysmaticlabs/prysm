@@ -43,6 +43,9 @@ message GenericSignedBeaconBlock {
         // Representing a signed, eip4844 compatible fork beacon block.
         SignedBeaconBlockWithBlobKZGs eip4844 = 5;
     }
+
+    // Representing an eip4844 fork signed blobs sidecar.
+    SignedBlobsSidecar sidecar = 6;
 }
 
 message GenericBeaconBlock {
@@ -62,6 +65,9 @@ message GenericBeaconBlock {
         // Representing a post-eip4844 fork beacon block.
         BeaconBlockWithBlobKZGs eip4844 = 5;
     }
+
+    // Representing an eip4844 fork blobs sidecar.
+    BlobsSidecar sidecar = 6;
 }
 
 // The Ethereum consensus beacon block. The message does not contain a validator signature.
@@ -498,10 +504,21 @@ message BeaconBlockBodyWithBlobKZGs {
 
 message BlobsSidecar {
     bytes beacon_block_root = 1 [(ethereum.eth.ext.ssz_size) = "32"];
-    uint64 beacon_block_slot = 2;
-    repeated Blob blobs = 3 [(ethereum.eth.ext.ssz_max)  = "16777216"];
+    uint64 beacon_block_slot = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"];
+    repeated ethereum.engine.v1.Blob blobs = 3 [(ethereum.eth.ext.ssz_max)  = "16"];
 }
 
-message Blob {
-    repeated bytes blob = 1 [(ethereum.eth.ext.ssz_size) = "4096,32"];
+message SignedBlobsSidecar {
+    BlobsSidecar message = 1;
+    bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
+}
+
+message BeaconBlockWithBlobKZGsAndBlobsSidecar {
+    BeaconBlockWithBlobKZGs block = 1;
+    BlobsSidecar sidecar = 2;
+}
+
+message SignedBeaconBlockWithBlobKZGsAndBlobsSidecar {
+    SignedBeaconBlockWithBlobKZGs block = 1;
+    SignedBlobsSidecar sidecar = 2;
 }
