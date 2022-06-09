@@ -59,7 +59,9 @@ func run(ctx context.Context, v iface.Validator) {
 		log.Fatalf("Failed to update proposer settings: %v", err) // allow fatal. skipcq
 	}
 	for {
-		slotCtx, cancel := context.WithCancel(ctx)
+		var slotCtx context.Context
+		var cancel context.CancelFunc
+		slotCtx, cancel = context.WithCancel(ctx)
 		ctx, span := trace.StartSpan(ctx, "validator.processSlot")
 
 		select {
@@ -136,51 +138,7 @@ func run(ctx context.Context, v iface.Validator) {
 				span.End()
 				continue
 			}
-			for pubKey, roles := range allRoles {
-				wg.Add(len(roles))
-				for _, role := range roles {
-					go func(role iface.ValidatorRole, pubKey [fieldparams.BLSPubkeyLength]byte) {
-						defer wg.Done()
-						switch role {
-						case iface.RoleAttester:
-							v.SubmitAttestation(slotCtx, slot, pubKey)
-						case iface.RoleProposer:
-							v.ProposeBlock(slotCtx, slot, pubKey)
-						case iface.RoleAggregator:
-							v.SubmitAggregateAndProof(slotCtx, slot, pubKey)
-						case iface.RoleSyncCommittee:
-							v.SubmitSyncCommitteeMessage(slotCtx, slot, pubKey)
-						case iface.RoleSyncCommitteeAggregator:
-							v.SubmitSignedContributionAndProof(slotCtx, slot, pubKey)
-						case iface.RoleUnknown:
-							log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:]))).Trace("No active roles, doing nothing")
-						default:
-							log.Warnf("Unhandled role %v", role)
-						}
-					}(role, pubKey)
-				}
-			}
-
-			// Wait for all processes to complete, then report span complete.
-			go func() {
-				wg.Wait()
-				defer span.End()
-				defer func() {
-					if err := recover(); err != nil { // catch any panic in logging
-						log.WithField("err", err).
-							Error("Panic occurred when logging validator report. This" +
-								" should never happen! Please file a report at github.com/prysmaticlabs/prysm/issues/new")
-					}
-				}()
-				// Log this client performance in the previous epoch
-				v.LogAttestationsSubmitted()
-				if err := v.LogValidatorGainsAndLosses(slotCtx, slot); err != nil {
-					log.WithError(err).Error("Could not report validator's rewards/penalties")
-				}
-				if err := v.LogNextDutyTimeLeft(slot); err != nil {
-					log.WithError(err).Error("Could not report next count down")
-				}
-			}()
+			performRoles(allRoles, v, slot, slotCtx, &wg, span)
 		}
 	}
 }
@@ -263,6 +221,54 @@ func waitForActivation(ctx context.Context, v iface.Validator) (types.Slot, erro
 		break
 	}
 	return headSlot, nil
+}
+
+func performRoles(allRoles map[[48]byte][]iface.ValidatorRole, v iface.Validator, slot types.Slot, slotCtx context.Context, wg *sync.WaitGroup, span *trace.Span) {
+	for pubKey, roles := range allRoles {
+		wg.Add(len(roles))
+		for _, role := range roles {
+			go func(role iface.ValidatorRole, pubKey [fieldparams.BLSPubkeyLength]byte) {
+				defer wg.Done()
+				switch role {
+				case iface.RoleAttester:
+					v.SubmitAttestation(slotCtx, slot, pubKey)
+				case iface.RoleProposer:
+					v.ProposeBlock(slotCtx, slot, pubKey)
+				case iface.RoleAggregator:
+					v.SubmitAggregateAndProof(slotCtx, slot, pubKey)
+				case iface.RoleSyncCommittee:
+					v.SubmitSyncCommitteeMessage(slotCtx, slot, pubKey)
+				case iface.RoleSyncCommitteeAggregator:
+					v.SubmitSignedContributionAndProof(slotCtx, slot, pubKey)
+				case iface.RoleUnknown:
+					log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:]))).Trace("No active roles, doing nothing")
+				default:
+					log.Warnf("Unhandled role %v", role)
+				}
+			}(role, pubKey)
+		}
+	}
+
+	// Wait for all processes to complete, then report span complete.
+	go func() {
+		wg.Wait()
+		defer span.End()
+		defer func() {
+			if err := recover(); err != nil { // catch any panic in logging
+				log.WithField("err", err).
+					Error("Panic occurred when logging validator report. This" +
+						" should never happen! Please file a report at github.com/prysmaticlabs/prysm/issues/new")
+			}
+		}()
+		// Log this client performance in the previous epoch
+		v.LogAttestationsSubmitted()
+		if err := v.LogValidatorGainsAndLosses(slotCtx, slot); err != nil {
+			log.WithError(err).Error("Could not report validator's rewards/penalties")
+		}
+		if err := v.LogNextDutyTimeLeft(slot); err != nil {
+			log.WithError(err).Error("Could not report next count down")
+		}
+	}()
 }
 
 func isConnectionError(err error) bool {
