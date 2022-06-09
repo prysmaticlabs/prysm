@@ -5,7 +5,9 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
@@ -68,7 +70,8 @@ func (s *Service) NewSlot(ctx context.Context, slot types.Slot) error {
 				return err
 			}
 			s.store.SetJustifiedCheckptAndPayloadHash(bj, h)
-			if err := s.cfg.ForkChoiceStore.UpdateJustifiedCheckpoint(bj); err != nil {
+			if err := s.cfg.ForkChoiceStore.UpdateJustifiedCheckpoint(&forkchoicetypes.Checkpoint{
+				Epoch: bj.Epoch, Root: bytesutil.ToBytes32(bj.Root)}); err != nil {
 				return err
 			}
 		}

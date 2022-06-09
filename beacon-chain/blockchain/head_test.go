@@ -174,10 +174,8 @@ func TestUpdateHead_MissingJustifiedRoot(t *testing.T) {
 	service.store.SetJustifiedCheckptAndPayloadHash(&ethpb.Checkpoint{Root: r[:]}, [32]byte{'a'})
 	service.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{}, [32]byte{'b'})
 	service.store.SetBestJustifiedCheckpt(&ethpb.Checkpoint{})
-	headRoot, err := service.updateHead(context.Background(), []uint64{})
+	_, err = service.updateHead(context.Background(), []uint64{})
 	require.NoError(t, err)
-	st, _ := util.DeterministicGenesisState(t, 1)
-	require.NoError(t, service.saveHead(context.Background(), headRoot, wsb, st))
 }
 
 func Test_notifyNewHeadEvent(t *testing.T) {
@@ -613,7 +611,7 @@ func TestUpdateHead_noSavedChanges(t *testing.T) {
 	ctx := context.Background()
 
 	beaconDB := testDB.SetupDB(t)
-	fcs := doublylinkedtree.New(0, 0)
+	fcs := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),
@@ -630,7 +628,7 @@ func TestUpdateHead_noSavedChanges(t *testing.T) {
 	require.NoError(t, beaconDB.SaveBlock(ctx, bellatrixBlk))
 	fcp := &ethpb.Checkpoint{
 		Root:  bellatrixBlkRoot[:],
-		Epoch: 1,
+		Epoch: 0,
 	}
 	service.store.SetFinalizedCheckptAndPayloadHash(fcp, [32]byte{'a'})
 	service.store.SetJustifiedCheckptAndPayloadHash(fcp, [32]byte{'b'})
