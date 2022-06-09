@@ -62,7 +62,7 @@ func (vs *Server) getEip4844BeaconBlock(ctx context.Context, req *ethpb.BlockReq
 	}
 	sideCar := &ethpb.BlobsSidecar{
 		BeaconBlockRoot: r[:],
-		BeaconBlockSlot: bellatrixBlk.Slot,
+		BeaconBlockSlot: blk.Slot,
 		Blobs:           blobs.Blobs,
 	}
 

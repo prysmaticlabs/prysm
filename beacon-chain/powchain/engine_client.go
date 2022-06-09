@@ -298,6 +298,10 @@ func (s *Service) GetBlobsBundle(ctx context.Context, payloadId [8]byte) (*pb.Bl
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.GetBlobsBundle")
 	defer span.End()
 
+	// TODO(inphi): use a more suitable timeout for blobs
+	d := time.Now().Add(defaultEngineTimeout)
+	ctx, cancel := context.WithDeadline(ctx, d)
+	defer cancel()
 	result := &pb.BlobsBundle{}
 	err := s.rpcClient.CallContext(ctx, result, GetBlobsBundleMethod, pb.PayloadIDBytes(payloadId))
 	return result, handleRPCError(err)
