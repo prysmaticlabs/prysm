@@ -23,6 +23,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -130,7 +131,11 @@ func configureTestnet(ctx *cli.Context) error {
 		}
 		params.UseRopstenNetworkConfig()
 	} else {
-		log.Warn("Running on Ethereum Consensus Mainnet")
+		if ctx.IsSet(cmd.ChainConfigFileFlag.Name) {
+			log.Warn("Running on custom Ethereum network specified in a chain configuration yaml file")
+		} else {
+			log.Warn("Running on Ethereum Mainnet")
+		}
 		if err := params.SetActive(params.MainnetConfig().Copy()); err != nil {
 			return err
 		}
