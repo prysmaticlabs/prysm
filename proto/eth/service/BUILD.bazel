@@ -31,7 +31,7 @@ proto_library(
 
 protoc_gen_openapiv2(
     name = "openapiv2",
-    proto = ":proto_library",
+    proto = ":proto",
 )
 
 go_proto_library(
