@@ -150,6 +150,9 @@ func (b *SignedBeaconBlock) Version() int {
 
 // Header converts the underlying protobuf object from blinded block to header format.
 func (b *SignedBeaconBlock) Header() (*eth.SignedBeaconBlockHeader, error) {
+	if b.IsNil() || b.block.IsNil() {
+		return nil, errNilBlock
+	}
 	root, err := b.block.body.HashTreeRoot()
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not hash block body")
@@ -163,7 +166,7 @@ func (b *SignedBeaconBlock) Header() (*eth.SignedBeaconBlockHeader, error) {
 			StateRoot:     b.block.stateRoot,
 			BodyRoot:      root[:],
 		},
-		Signature: b.Signature(),
+		Signature: b.signature,
 	}, nil
 }
 
@@ -209,22 +212,22 @@ func (b *SignedBeaconBlock) MarshalSSZTo(dst []byte) ([]byte, error) {
 }
 
 // SizeSSZ returns the size of the serialized signed block
-func (b *SignedBeaconBlock) SizeSSZ() int {
+func (b *SignedBeaconBlock) SizeSSZ() (int, error) {
 	pb, err := b.Proto()
 	if err != nil {
-		panic(err)
+		return 0, err
 	}
 	switch b.version {
 	case version.Phase0:
-		return pb.(*eth.SignedBeaconBlock).SizeSSZ()
+		return pb.(*eth.SignedBeaconBlock).SizeSSZ(), nil
 	case version.Altair:
-		return pb.(*eth.SignedBeaconBlockAltair).SizeSSZ()
+		return pb.(*eth.SignedBeaconBlockAltair).SizeSSZ(), nil
 	case version.Bellatrix:
-		return pb.(*eth.SignedBeaconBlockBellatrix).SizeSSZ()
+		return pb.(*eth.SignedBeaconBlockBellatrix).SizeSSZ(), nil
 	case version.BellatrixBlind:
-		return pb.(*eth.SignedBlindedBeaconBlockBellatrix).SizeSSZ()
+		return pb.(*eth.SignedBlindedBeaconBlockBellatrix).SizeSSZ(), nil
 	default:
-		panic(incorrectBlockVersion)
+		return 0, errIncorrectBlockVersion
 	}
 }
 
@@ -409,22 +412,22 @@ func (b *BeaconBlock) MarshalSSZTo(dst []byte) ([]byte, error) {
 }
 
 // SizeSSZ returns the size of the serialized block.
-func (b *BeaconBlock) SizeSSZ() int {
+func (b *BeaconBlock) SizeSSZ() (int, error) {
 	pb, err := b.Proto()
 	if err != nil {
-		panic(err)
+		return 0, err
 	}
 	switch b.version {
 	case version.Phase0:
-		return pb.(*eth.BeaconBlock).SizeSSZ()
+		return pb.(*eth.BeaconBlock).SizeSSZ(), nil
 	case version.Altair:
-		return pb.(*eth.BeaconBlockAltair).SizeSSZ()
+		return pb.(*eth.BeaconBlockAltair).SizeSSZ(), nil
 	case version.Bellatrix:
-		return pb.(*eth.BeaconBlockBellatrix).SizeSSZ()
+		return pb.(*eth.BeaconBlockBellatrix).SizeSSZ(), nil
 	case version.BellatrixBlind:
-		return pb.(*eth.BlindedBeaconBlockBellatrix).SizeSSZ()
+		return pb.(*eth.BlindedBeaconBlockBellatrix).SizeSSZ(), nil
 	default:
-		panic(incorrectBlockVersion)
+		return 0, errIncorrectBlockVersion
 	}
 }
 
@@ -554,7 +557,7 @@ func (b *BeaconBlockBody) SyncAggregate() (*eth.SyncAggregate, error) {
 
 // ExecutionPayload returns the execution payload of the block body.
 func (b *BeaconBlockBody) ExecutionPayload() (*enginev1.ExecutionPayload, error) {
-	if b.version == version.Phase0 || b.version == version.Altair || b.version == version.BellatrixBlind {
+	if b.version != version.Bellatrix {
 		return nil, errNotSupported("ExecutionPayload", b.version)
 	}
 	return b.executionPayload, nil
@@ -562,7 +565,7 @@ func (b *BeaconBlockBody) ExecutionPayload() (*enginev1.ExecutionPayload, error)
 
 // ExecutionPayloadHeader returns the execution payload header of the block body.
 func (b *BeaconBlockBody) ExecutionPayloadHeader() (*eth.ExecutionPayloadHeader, error) {
-	if b.version == version.Phase0 || b.version == version.Altair || b.version == version.Bellatrix {
+	if b.version != version.BellatrixBlind {
 		return nil, errNotSupported("ExecutionPayloadHeader", b.version)
 	}
 	return b.executionPayloadHeader, nil
