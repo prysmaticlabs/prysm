@@ -13,7 +13,6 @@ proto_library(
         "node_service.proto",
         "validator_service.proto",
         "key_management.proto",
-        ":options_proto_files",
     ],
     visibility = ["//visibility:public"],
     deps = [
