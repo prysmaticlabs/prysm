@@ -96,11 +96,11 @@ func TestExitAccountsCli_OK(t *testing.T) {
 	require.NotNil(t, formattedPubKeys)
 
 	cfg := accounts.PerformExitCfg{
-		mockValidatorClient,
-		mockNodeClient,
-		keymanager,
-		rawPubKeys,
-		formattedPubKeys,
+		ValidatorClient:  mockValidatorClient,
+		NodeClient:       mockNodeClient,
+		Keymanager:       keymanager,
+		RawPubKeys:       rawPubKeys,
+		FormattedPubKeys: formattedPubKeys,
 	}
 	rawExitedKeys, formattedExitedKeys, err := accounts.PerformVoluntaryExit(cliCtx.Context, cfg)
 	require.NoError(t, err)
@@ -196,11 +196,11 @@ func TestExitAccountsCli_OK_AllPublicKeys(t *testing.T) {
 	require.NotNil(t, formattedPubKeys)
 
 	cfg := accounts.PerformExitCfg{
-		mockValidatorClient,
-		mockNodeClient,
-		keymanager,
-		rawPubKeys,
-		formattedPubKeys,
+		ValidatorClient:  mockValidatorClient,
+		NodeClient:       mockNodeClient,
+		Keymanager:       keymanager,
+		RawPubKeys:       rawPubKeys,
+		FormattedPubKeys: formattedPubKeys,
 	}
 	rawExitedKeys, formattedExitedKeys, err := accounts.PerformVoluntaryExit(cliCtx.Context, cfg)
 	require.NoError(t, err)
