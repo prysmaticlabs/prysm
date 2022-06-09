@@ -68,6 +68,8 @@ func FromForkVersion(cv [fieldparams.VersionLength]byte) (*VersionedUnmarshaler,
 		fork = version.Altair
 	case bytesutil.ToBytes4(cfg.BellatrixForkVersion):
 		fork = version.Bellatrix
+	case bytesutil.ToBytes4(cfg.Eip4844ForkVersion):
+		fork = version.EIP4844
 	default:
 		return nil, errors.Wrapf(ErrForkNotFound, "version=%#x", cv)
 	}

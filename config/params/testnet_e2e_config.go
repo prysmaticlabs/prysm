@@ -3,6 +3,7 @@ package params
 const (
 	altairE2EForkEpoch    = 6
 	bellatrixE2EForkEpoch = 8 //nolint:deadcode
+	eip4844E2EForkEpoch   = 10
 )
 
 // E2ETestConfig retrieves the configurations made specifically for E2E testing.
@@ -33,6 +34,7 @@ func E2ETestConfig() *BeaconChainConfig {
 	// Fork Parameters.
 	e2eConfig.AltairForkEpoch = altairE2EForkEpoch
 	e2eConfig.BellatrixForkEpoch = bellatrixE2EForkEpoch
+	e2eConfig.Eip4844ForkEpoch = eip4844E2EForkEpoch
 
 	// Terminal Total Difficulty.
 	e2eConfig.TerminalTotalDifficulty = "616"
@@ -42,7 +44,8 @@ func E2ETestConfig() *BeaconChainConfig {
 	e2eConfig.GenesisForkVersion = []byte{0, 0, 0, 253}
 	e2eConfig.AltairForkVersion = []byte{1, 0, 0, 253}
 	e2eConfig.BellatrixForkVersion = []byte{2, 0, 0, 253}
-	e2eConfig.ShardingForkVersion = []byte{3, 0, 0, 253}
+	e2eConfig.Eip4844ForkVersion = []byte{3, 0, 0, 253}
+	e2eConfig.ShardingForkVersion = []byte{4, 0, 0, 253}
 
 	e2eConfig.InitializeForkSchedule()
 	return e2eConfig
@@ -70,6 +73,7 @@ func E2EMainnetTestConfig() *BeaconChainConfig {
 	// Altair Fork Parameters.
 	e2eConfig.AltairForkEpoch = altairE2EForkEpoch
 	e2eConfig.BellatrixForkEpoch = bellatrixE2EForkEpoch
+	e2eConfig.Eip4844ForkEpoch = eip4844E2EForkEpoch
 
 	// Terminal Total Difficulty.
 	e2eConfig.TerminalTotalDifficulty = "616"
@@ -79,7 +83,8 @@ func E2EMainnetTestConfig() *BeaconChainConfig {
 	e2eConfig.GenesisForkVersion = []byte{0, 0, 0, 254}
 	e2eConfig.AltairForkVersion = []byte{1, 0, 0, 254}
 	e2eConfig.BellatrixForkVersion = []byte{2, 0, 0, 254}
-	e2eConfig.ShardingForkVersion = []byte{3, 0, 0, 254}
+	e2eConfig.Eip4844ForkVersion = []byte{3, 0, 0, 254}
+	e2eConfig.ShardingForkVersion = []byte{4, 0, 0, 254}
 
 	e2eConfig.InitializeForkSchedule()
 	return e2eConfig
