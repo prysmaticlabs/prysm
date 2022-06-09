@@ -398,7 +398,7 @@ func initBlindedBlockBodyFromProtoBellatrix(pb *eth.BlindedBeaconBlockBodyBellat
 	if pb == nil {
 		return nil, errNilBody
 	}
-	
+
 	b := &BeaconBlockBody{
 		version:                version.BellatrixBlind,
 		randaoReveal:           pb.RandaoReveal,
