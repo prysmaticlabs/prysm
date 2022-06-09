@@ -34,8 +34,12 @@ func Test_SignedBeaconBlock_IsNil(t *testing.T) {
 		sb := &SignedBeaconBlock{}
 		assert.Equal(t, true, sb.IsNil())
 	})
-	t.Run("not nil", func(t *testing.T) {
+	t.Run("nil body", func(t *testing.T) {
 		sb := &SignedBeaconBlock{block: &BeaconBlock{}}
+		assert.Equal(t, true, sb.IsNil())
+	})
+	t.Run("not nil", func(t *testing.T) {
+		sb := &SignedBeaconBlock{block: &BeaconBlock{body: &BeaconBlockBody{}}}
 		assert.Equal(t, false, sb.IsNil())
 	})
 }
