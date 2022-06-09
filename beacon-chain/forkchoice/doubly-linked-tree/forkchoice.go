@@ -3,9 +3,12 @@ package doublylinkedtree
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -109,7 +112,7 @@ func (f *ForkChoice) ProcessAttestation(ctx context.Context, validatorIndices []
 }
 
 // InsertNode processes a new block by inserting it to the fork choice store.
-func (f *ForkChoice) InsertNode(ctx context.Context, state state.ReadOnlyBeaconState, root [32]byte) error {
+func (f *ForkChoice) InsertNode(ctx context.Context, state state.BeaconState, root [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.InsertNode")
 	defer span.End()
 
@@ -139,6 +142,32 @@ func (f *ForkChoice) InsertNode(ctx context.Context, state state.ReadOnlyBeaconS
 		return errInvalidNilCheckpoint
 	}
 	finalizedEpoch := fc.Epoch
+	go func() {
+		// compute unrealized checkpoints at N+2
+		start := time.Now()
+
+		stCopy := state.Copy()
+		copyTime := time.Since(start)
+		nextStart := stCopy.Slot() + params.BeaconConfig().SlotsPerEpoch
+		nextStart = nextStart - nextStart%params.BeaconConfig().SlotsPerEpoch
+
+		stCopy, err := transition.ProcessSlots(ctx, stCopy, nextStart)
+		_ = err
+		transitionTime := time.Since(start)
+		ujc, ufc, err := precompute.UnrealizedCheckpoints(stCopy)
+		_ = err
+		elapsed := time.Since(start)
+		log.WithFields(logrus.Fields{
+			"copyTime":                copyTime,
+			"epochTransTime":          transitionTime - copyTime,
+			"unrealizedJustTime":      elapsed - transitionTime,
+			"totalElapsed":            elapsed,
+			"CurrentJustification":    jc.Epoch,
+			"UnrealizedJustification": ujc.Epoch,
+			"UnrealizedFinalization":  ufc.Epoch,
+		}).Info("Pulled block to N+2")
+	}()
+
 	return f.store.insert(ctx, slot, root, parentRoot, payloadHash, justifiedEpoch, finalizedEpoch)
 }
 

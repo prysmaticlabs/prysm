@@ -116,7 +116,7 @@ func (f *ForkChoice) ProposerBoost() [fieldparams.RootLength]byte {
 }
 
 // InsertNode processes a new block by inserting it to the fork choice store.
-func (f *ForkChoice) InsertNode(ctx context.Context, state state.ReadOnlyBeaconState, root [32]byte) error {
+func (f *ForkChoice) InsertNode(ctx context.Context, state state.BeaconState, root [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.InsertNode")
 	defer span.End()
 
