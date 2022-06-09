@@ -152,6 +152,15 @@ service KeyManagement {
       post: "/internal/eth/v1/validator/{pubkey}/feerecipient",
       body: "*"
     };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      responses: {
+        key: "204"
+        value: {
+          description: "Successfully removed the mapping, or there was no mapping to remove for a key that the server is managing."
+          schema: {}
+        }
+      }
+    };
   }
 }
 

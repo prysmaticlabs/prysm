@@ -678,6 +678,7 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 		gwruntime.WithMarshalerOption(
 			"text/event-stream", &gwruntime.EventSourceJSONPb{},
 		),
+		gwruntime.WithForwardResponseOption(gateway.HttpResponseModifier),
 	)
 	muxHandler := func(apiMware *apimiddleware.ApiProxyMiddleware, h http.HandlerFunc, w http.ResponseWriter, req *http.Request) {
 		// The validator gateway handler requires this special logic as it serves two kinds of APIs, namely
