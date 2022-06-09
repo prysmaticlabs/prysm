@@ -39,7 +39,7 @@ func (b *SignedBeaconBlock) Block() *BeaconBlock {
 
 // IsNil checks if the underlying beacon block is nil.
 func (b *SignedBeaconBlock) IsNil() bool {
-	return b == nil || b.block == nil
+	return b == nil || b.block.IsNil()
 }
 
 // Copy performs a deep copy of the signed beacon block object.
@@ -150,7 +150,7 @@ func (b *SignedBeaconBlock) Version() int {
 
 // Header converts the underlying protobuf object from blinded block to header format.
 func (b *SignedBeaconBlock) Header() (*eth.SignedBeaconBlockHeader, error) {
-	if b.IsNil() || b.block.IsNil() {
+	if b.IsNil() {
 		return nil, errNilBlock
 	}
 	root, err := b.block.body.HashTreeRoot()
