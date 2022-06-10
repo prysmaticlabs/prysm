@@ -3,29 +3,12 @@ package blocks
 import (
 	"testing"
 
-	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util/tgenerator"
 )
-
-type fields struct {
-	b20               []byte
-	b32               []byte
-	b48               []byte
-	b96               []byte
-	b256              []byte
-	deposits          []*eth.Deposit
-	atts              []*eth.Attestation
-	proposerSlashings []*eth.ProposerSlashing
-	attesterSlashings []*eth.AttesterSlashing
-	voluntaryExits    []*eth.SignedVoluntaryExit
-	syncAggregate     *eth.SyncAggregate
-	execPayload       *enginev1.ExecutionPayload
-	execPayloadHeader *eth.ExecutionPayloadHeader
-}
 
 func Test_SignedBeaconBlock_Proto(t *testing.T) {
 	f := tgenerator.GetBlockFields()
