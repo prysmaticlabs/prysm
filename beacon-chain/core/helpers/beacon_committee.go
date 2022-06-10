@@ -9,12 +9,12 @@ import (
 	"sort"
 
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/container/slice"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -175,9 +175,7 @@ func CommitteeAssignments(
 		return nil, nil, err
 	}
 	proposerIndexToSlots := make(map[types.ValidatorIndex][]types.Slot, params.BeaconConfig().SlotsPerEpoch)
-	// Proposal epochs do not have a look ahead, so we skip them over here.
-	validProposalEpoch := epoch < nextEpoch
-	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch && validProposalEpoch; slot++ {
+	for slot := startSlot; slot < startSlot+params.BeaconConfig().SlotsPerEpoch; slot++ {
 		// Skip proposer assignment for genesis slot.
 		if slot == 0 {
 			continue
@@ -190,6 +188,15 @@ func CommitteeAssignments(
 			return nil, nil, errors.Wrapf(err, "could not check proposer at slot %d", state.Slot())
 		}
 		proposerIndexToSlots[i] = append(proposerIndexToSlots[i], slot)
+	}
+
+	// If previous proposer indices computation is outside if current proposal epoch range,
+	// we need to reset state slot back to start slot so that we can compute the correct committees.
+	currentProposalEpoch := epoch < nextEpoch
+	if !currentProposalEpoch {
+		if err := state.SetSlot(state.Slot() - params.BeaconConfig().SlotsPerEpoch); err != nil {
+			return nil, nil, err
+		}
 	}
 
 	activeValidatorIndices, err := ActiveValidatorIndices(ctx, state, epoch)
@@ -278,7 +285,7 @@ func ShuffledIndices(s state.ReadOnlyBeaconState, epoch types.Epoch) ([]types.Va
 
 // UpdateCommitteeCache gets called at the beginning of every epoch to cache the committee shuffled indices
 // list with committee index and epoch number. It caches the shuffled indices for current epoch and next epoch.
-func UpdateCommitteeCache(state state.ReadOnlyBeaconState, epoch types.Epoch) error {
+func UpdateCommitteeCache(ctx context.Context, state state.ReadOnlyBeaconState, epoch types.Epoch) error {
 	for _, e := range []types.Epoch{epoch, epoch + 1} {
 		seed, err := Seed(state, e, params.BeaconConfig().DomainBeaconAttester)
 		if err != nil {
@@ -304,7 +311,7 @@ func UpdateCommitteeCache(state state.ReadOnlyBeaconState, epoch types.Epoch) er
 			return sortedIndices[i] < sortedIndices[j]
 		})
 
-		if err := committeeCache.AddCommitteeShuffledList(&cache.Committees{
+		if err := committeeCache.AddCommitteeShuffledList(ctx, &cache.Committees{
 			ShuffledIndices: shuffledIndices,
 			CommitteeCount:  uint64(params.BeaconConfig().SlotsPerEpoch.Mul(count)),
 			Seed:            seed,
@@ -367,6 +374,7 @@ func ClearCache() {
 	committeeCache = cache.NewCommitteesCache()
 	proposerIndicesCache = cache.NewProposerIndicesCache()
 	syncCommitteeCache = cache.NewSyncCommittee()
+	balanceCache = cache.NewEffectiveBalanceCache()
 }
 
 // computeCommittee returns the requested shuffled committee out of the total committees using

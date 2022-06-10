@@ -4,13 +4,13 @@ import (
 	"context"
 	"testing"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -163,6 +163,35 @@ func TestStateByRoot_HotStateCached(t *testing.T) {
 	loadedState, err := service.StateByRoot(ctx, r)
 	require.NoError(t, err)
 	require.DeepSSZEqual(t, loadedState.InnerStateUnsafe(), beaconState.InnerStateUnsafe())
+}
+
+func TestDeleteStateFromCaches(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+
+	service := New(beaconDB)
+	beaconState, _ := util.DeterministicGenesisState(t, 32)
+	r := [32]byte{'A'}
+
+	require.Equal(t, false, service.hotStateCache.has(r))
+	_, has, err := service.epochBoundaryStateCache.getByBlockRoot(r)
+	require.NoError(t, err)
+	require.Equal(t, false, has)
+
+	service.hotStateCache.put(r, beaconState)
+	require.NoError(t, service.epochBoundaryStateCache.put(r, beaconState))
+
+	require.Equal(t, true, service.hotStateCache.has(r))
+	_, has, err = service.epochBoundaryStateCache.getByBlockRoot(r)
+	require.NoError(t, err)
+	require.Equal(t, true, has)
+
+	require.NoError(t, service.DeleteStateFromCaches(ctx, r))
+
+	require.Equal(t, false, service.hotStateCache.has(r))
+	_, has, err = service.epochBoundaryStateCache.getByBlockRoot(r)
+	require.NoError(t, err)
+	require.Equal(t, false, has)
 }
 
 func TestStateByRoot_StateByRootInitialSync(t *testing.T) {

@@ -10,12 +10,12 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 )
@@ -37,8 +37,8 @@ import (
 //    assert pow_parent is not None
 //    # Check if `pow_block` is a valid terminal PoW block
 //    assert is_valid_terminal_pow_block(pow_block, pow_parent)
-func (s *Service) validateMergeBlock(ctx context.Context, b block.SignedBeaconBlock) error {
-	if err := helpers.BeaconBlockIsNil(b); err != nil {
+func (s *Service) validateMergeBlock(ctx context.Context, b interfaces.SignedBeaconBlock) error {
+	if err := wrapper.BeaconBlockIsNil(b); err != nil {
 		return err
 	}
 	payload, err := b.Block().Body().ExecutionPayload()
@@ -64,8 +64,9 @@ func (s *Service) validateMergeBlock(ctx context.Context, b block.SignedBeaconBl
 		return err
 	}
 	if !valid {
-		return fmt.Errorf("invalid TTD, configTTD: %s, currentTTD: %s, parentTTD: %s",
+		err := fmt.Errorf("invalid TTD, configTTD: %s, currentTTD: %s, parentTTD: %s",
 			params.BeaconConfig().TerminalTotalDifficulty, mergeBlockTD, mergeBlockParentTD)
+		return invalidBlock{err}
 	}
 
 	log.WithFields(logrus.Fields{

@@ -11,15 +11,15 @@ import (
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
 	grpcutil "github.com/prysmaticlabs/prysm/api/grpc"
 	"github.com/prysmaticlabs/prysm/async/event"
 	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	validator_service_config "github.com/prysmaticlabs/prysm/config/validator/service"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/client/iface"
 	"github.com/prysmaticlabs/prysm/validator/db"
@@ -69,8 +69,8 @@ type ValidatorService struct {
 	db                    db.Database
 	grpcHeaders           []string
 	graffiti              []byte
-	web3SignerConfig      *remote_web3signer.SetupConfig
-	feeRecipientConfig    *validator_service_config.FeeRecipientConfig
+	Web3SignerConfig      *remote_web3signer.SetupConfig
+	proposerSettings      *validator_service_config.ProposerSettings
 }
 
 // Config for the validator service.
@@ -94,14 +94,14 @@ type Config struct {
 	GraffitiFlag               string
 	Endpoint                   string
 	Web3SignerConfig           *remote_web3signer.SetupConfig
-	FeeRecipientConfig         *validator_service_config.FeeRecipientConfig
+	ProposerSettings           *validator_service_config.ProposerSettings
 }
 
 // NewValidatorService creates a new validator service for the service
 // registry.
 func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, error) {
 	ctx, cancel := context.WithCancel(ctx)
-	return &ValidatorService{
+	s := &ValidatorService{
 		ctx:                   ctx,
 		cancel:                cancel,
 		endpoint:              cfg.Endpoint,
@@ -122,36 +122,37 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		interopKeysConfig:     cfg.InteropKeysConfig,
 		graffitiStruct:        cfg.GraffitiStruct,
 		logDutyCountDown:      cfg.LogDutyCountDown,
-		web3SignerConfig:      cfg.Web3SignerConfig,
-		feeRecipientConfig:    cfg.FeeRecipientConfig,
-	}, nil
+		Web3SignerConfig:      cfg.Web3SignerConfig,
+		proposerSettings:      cfg.ProposerSettings,
+	}
+
+	dialOpts := ConstructDialOptions(
+		s.maxCallRecvMsgSize,
+		s.withCert,
+		s.grpcRetries,
+		s.grpcRetryDelay,
+	)
+	if dialOpts == nil {
+		return s, nil
+	}
+
+	s.ctx = grpcutil.AppendHeaders(ctx, s.grpcHeaders)
+
+	conn, err := grpc.DialContext(ctx, s.endpoint, dialOpts...)
+	if err != nil {
+		return s, err
+	}
+	if s.withCert != "" {
+		log.Info("Established secure gRPC connection")
+	}
+	s.conn = conn
+
+	return s, nil
 }
 
 // Start the validator service. Launches the main go routine for the validator
 // client.
 func (v *ValidatorService) Start() {
-	dialOpts := ConstructDialOptions(
-		v.maxCallRecvMsgSize,
-		v.withCert,
-		v.grpcRetries,
-		v.grpcRetryDelay,
-	)
-	if dialOpts == nil {
-		return
-	}
-
-	v.ctx = grpcutil.AppendHeaders(v.ctx, v.grpcHeaders)
-
-	conn, err := grpc.DialContext(v.ctx, v.endpoint, dialOpts...)
-	if err != nil {
-		log.Errorf("Could not dial endpoint: %s, %v", v.endpoint, err)
-		return
-	}
-	if v.withCert != "" {
-		log.Info("Established secure gRPC connection")
-	}
-
-	v.conn = conn
 	cache, err := ristretto.NewCache(&ristretto.Config{
 		NumCounters: 1920, // number of keys to track.
 		MaxCost:     192,  // maximum cost of cache, 1 item = 1 cost.
@@ -204,8 +205,8 @@ func (v *ValidatorService) Start() {
 		graffitiOrderedIndex:           graffitiOrderedIndex,
 		eipImportBlacklistedPublicKeys: slashablePublicKeys,
 		logDutyCountDown:               v.logDutyCountDown,
-		Web3SignerConfig:               v.web3SignerConfig,
-		feeRecipientConfig:             v.feeRecipientConfig,
+		Web3SignerConfig:               v.Web3SignerConfig,
+		ProposerSettings:               v.proposerSettings,
 		walletIntializedChannel:        make(chan *wallet.Wallet, 1),
 	}
 	// To resolve a race condition at startup due to the interface
@@ -213,7 +214,7 @@ func (v *ValidatorService) Start() {
 	// the inner type of the feed before hand. So that
 	// during future accesses, there will be no panics here
 	// from type incompatibility.
-	tempChan := make(chan block.SignedBeaconBlock)
+	tempChan := make(chan interfaces.SignedBeaconBlock)
 	sub := valStruct.blockFeed.Subscribe(tempChan)
 	sub.Unsubscribe()
 	close(tempChan)
@@ -240,7 +241,7 @@ func (v *ValidatorService) Status() error {
 	return nil
 }
 
-// UseInteropKeys returns the useInteropKeys flag.
+// InteropKeysConfig returns the useInteropKeys flag.
 func (v *ValidatorService) InteropKeysConfig() *local.InteropKeymanagerConfig {
 	return v.interopKeysConfig
 }

@@ -3,8 +3,8 @@ package p2p
 import (
 	"reflect"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"google.golang.org/protobuf/proto"
 )
@@ -54,7 +54,9 @@ func init() {
 	for k, v := range gossipTopicMappings {
 		GossipTypeMapping[reflect.TypeOf(v)] = k
 	}
-	// Specially handle Altair Objects.
+	// Specially handle Altair objects.
 	GossipTypeMapping[reflect.TypeOf(&ethpb.SignedBeaconBlockAltair{})] = BlockSubnetTopicFormat
+	// Specially handle Bellatrix objects.
 	GossipTypeMapping[reflect.TypeOf(&ethpb.SignedBeaconBlockBellatrix{})] = BlockSubnetTopicFormat
+	GossipTypeMapping[reflect.TypeOf(&ethpb.SignedBlindedBeaconBlockBellatrix{})] = BlockSubnetTopicFormat
 }

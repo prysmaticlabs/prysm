@@ -5,24 +5,9 @@ const (
 	bellatrixE2EForkEpoch = 8 //nolint:deadcode
 )
 
-// UseE2EConfig for beacon chain services.
-func UseE2EConfig() {
-	beaconConfig = E2ETestConfig()
-
-	cfg := BeaconNetworkConfig().Copy()
-	OverrideBeaconNetworkConfig(cfg)
-}
-
-// UseE2EMainnetConfig for beacon chain services.
-func UseE2EMainnetConfig() {
-	beaconConfig = E2EMainnetTestConfig()
-
-	cfg := BeaconNetworkConfig().Copy()
-	OverrideBeaconNetworkConfig(cfg)
-}
-
 // E2ETestConfig retrieves the configurations made specifically for E2E testing.
-// Warning: This config is only for testing, it is not meant for use outside of E2E.
+//
+// WARNING: This config is only for testing, it is not meant for use outside of E2E.
 func E2ETestConfig() *BeaconChainConfig {
 	e2eConfig := MinimalSpecConfig()
 
@@ -36,7 +21,7 @@ func E2ETestConfig() *BeaconChainConfig {
 	e2eConfig.SlotsPerEpoch = 6
 	e2eConfig.SqrRootSlotsPerEpoch = 2
 	e2eConfig.SecondsPerETH1Block = 2
-	e2eConfig.Eth1FollowDistance = 4
+	e2eConfig.Eth1FollowDistance = 8
 	e2eConfig.EpochsPerEth1VotingPeriod = 2
 	e2eConfig.ShardCommitteePeriod = 4
 	e2eConfig.MaxSeedLookahead = 1
@@ -45,11 +30,15 @@ func E2ETestConfig() *BeaconChainConfig {
 	e2eConfig.DepositChainID = 1337   // Chain ID of eth1 dev net.
 	e2eConfig.DepositNetworkID = 1337 // Network ID of eth1 dev net.
 
-	// Altair Fork Parameters.
+	// Fork Parameters.
 	e2eConfig.AltairForkEpoch = altairE2EForkEpoch
+	e2eConfig.BellatrixForkEpoch = bellatrixE2EForkEpoch
+
+	// Terminal Total Difficulty.
+	e2eConfig.TerminalTotalDifficulty = "616"
 
 	// Prysm constants.
-	e2eConfig.ConfigName = ConfigNames[EndToEnd]
+	e2eConfig.ConfigName = EndToEndName
 	e2eConfig.GenesisForkVersion = []byte{0, 0, 0, 253}
 	e2eConfig.AltairForkVersion = []byte{1, 0, 0, 253}
 	e2eConfig.BellatrixForkVersion = []byte{2, 0, 0, 253}
@@ -71,7 +60,7 @@ func E2EMainnetTestConfig() *BeaconChainConfig {
 	e2eConfig.SecondsPerSlot = 6
 	e2eConfig.SqrRootSlotsPerEpoch = 5
 	e2eConfig.SecondsPerETH1Block = 2
-	e2eConfig.Eth1FollowDistance = 4
+	e2eConfig.Eth1FollowDistance = 8
 	e2eConfig.ShardCommitteePeriod = 4
 
 	// PoW parameters.
@@ -80,9 +69,13 @@ func E2EMainnetTestConfig() *BeaconChainConfig {
 
 	// Altair Fork Parameters.
 	e2eConfig.AltairForkEpoch = altairE2EForkEpoch
+	e2eConfig.BellatrixForkEpoch = bellatrixE2EForkEpoch
+
+	// Terminal Total Difficulty.
+	e2eConfig.TerminalTotalDifficulty = "616"
 
 	// Prysm constants.
-	e2eConfig.ConfigName = ConfigNames[EndToEnd]
+	e2eConfig.ConfigName = EndToEndMainnetName
 	e2eConfig.GenesisForkVersion = []byte{0, 0, 0, 254}
 	e2eConfig.AltairForkVersion = []byte{1, 0, 0, 254}
 	e2eConfig.BellatrixForkVersion = []byte{2, 0, 0, 254}
@@ -95,4 +88,9 @@ func E2EMainnetTestConfig() *BeaconChainConfig {
 // E2EMainnetConfigYaml returns the e2e config in yaml format.
 func E2EMainnetConfigYaml() []byte {
 	return ConfigToYaml(E2EMainnetTestConfig())
+}
+
+// E2ETestConfigYaml returns the e2e config in yaml format.
+func E2ETestConfigYaml() []byte {
+	return ConfigToYaml(E2ETestConfig())
 }

@@ -7,14 +7,14 @@ import (
 	"testing"
 	"time"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -368,7 +368,7 @@ func TestStore_StatesBatchDelete(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 	numBlocks := 100
-	totalBlocks := make([]block.SignedBeaconBlock, numBlocks)
+	totalBlocks := make([]interfaces.SignedBeaconBlock, numBlocks)
 	blockRoots := make([][32]byte, 0)
 	evenBlockRoots := make([][32]byte, 0)
 	for i := 0; i < len(totalBlocks); i++ {
@@ -412,7 +412,7 @@ func TestStore_DeleteGenesisState(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, st.SetSlot(100))
 	require.NoError(t, db.SaveState(ctx, st, genesisBlockRoot))
-	wantedErr := "cannot delete genesis, finalized, or head state"
+	wantedErr := "cannot delete finalized block or state"
 	assert.ErrorContains(t, wantedErr, db.DeleteState(ctx, genesisBlockRoot))
 }
 
@@ -440,7 +440,7 @@ func TestStore_DeleteFinalizedState(t *testing.T) {
 	require.NoError(t, db.SaveState(ctx, finalizedState, finalizedBlockRoot))
 	finalizedCheckpoint := &ethpb.Checkpoint{Root: finalizedBlockRoot[:]}
 	require.NoError(t, db.SaveFinalizedCheckpoint(ctx, finalizedCheckpoint))
-	wantedErr := "cannot delete genesis, finalized, or head state"
+	wantedErr := "cannot delete finalized block or state"
 	assert.ErrorContains(t, wantedErr, db.DeleteState(ctx, finalizedBlockRoot))
 }
 
@@ -465,8 +465,7 @@ func TestStore_DeleteHeadState(t *testing.T) {
 	require.NoError(t, st.SetSlot(100))
 	require.NoError(t, db.SaveState(ctx, st, headBlockRoot))
 	require.NoError(t, db.SaveHeadBlockRoot(ctx, headBlockRoot))
-	wantedErr := "cannot delete genesis, finalized, or head state"
-	assert.ErrorContains(t, wantedErr, db.DeleteState(ctx, headBlockRoot))
+	require.NoError(t, db.DeleteState(ctx, headBlockRoot)) // Ok to delete head state if it's optimistic.
 }
 
 func TestStore_SaveDeleteState_CanGetHighestBelow(t *testing.T) {

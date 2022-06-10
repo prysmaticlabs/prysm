@@ -65,7 +65,12 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		counter:      ratecounter.NewRateCounter(counterSeconds * time.Second),
 		genesisChan:  make(chan time.Time),
 	}
+
+	// The reason why we have this goroutine in the constructor is to avoid a race condition
+	// between services' Start method and the initialization event.
+	// See https://github.com/prysmaticlabs/prysm/issues/10602 for details.
 	go s.waitForStateInitialization()
+
 	return s
 }
 
@@ -168,7 +173,12 @@ func (s *Service) waitForMinimumPeers() {
 		required = flags.Get().MinimumSyncPeers
 	}
 	for {
-		_, peers := s.cfg.P2P.Peers().BestNonFinalized(flags.Get().MinimumSyncPeers, s.cfg.Chain.FinalizedCheckpt().Epoch)
+		cp, err := s.cfg.Chain.FinalizedCheckpt()
+		if err != nil {
+			log.WithError(err).Error("Could not retrieve finalized checkpoint")
+			return
+		}
+		_, peers := s.cfg.P2P.Peers().BestNonFinalized(flags.Get().MinimumSyncPeers, cp.Epoch)
 		if len(peers) >= required {
 			break
 		}

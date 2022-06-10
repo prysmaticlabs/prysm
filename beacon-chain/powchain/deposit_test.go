@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"testing"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	testing2 "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/container/trie"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -25,7 +26,7 @@ const pubKeyErr = "could not convert bytes to public key"
 
 func TestDepositContractAddress_EmptyAddress(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	config := params.BeaconConfig()
+	config := params.BeaconConfig().Copy()
 	config.DepositContractAddress = ""
 	params.OverrideBeaconConfig(config)
 
@@ -35,7 +36,7 @@ func TestDepositContractAddress_EmptyAddress(t *testing.T) {
 
 func TestDepositContractAddress_NotHexAddress(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	config := params.BeaconConfig()
+	config := params.BeaconConfig().Copy()
 	config.DepositContractAddress = "abc?!"
 	params.OverrideBeaconConfig(config)
 
@@ -52,6 +53,11 @@ func TestDepositContractAddress_OK(t *testing.T) {
 
 func TestProcessDeposit_OK(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
+	server, endpoint, err := testing2.SetupRPCServer()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		server.Stop()
+	})
 	web3Service, err := NewService(context.Background(),
 		WithHttpEndpoints([]string{endpoint}),
 		WithDatabase(beaconDB),
@@ -76,6 +82,11 @@ func TestProcessDeposit_OK(t *testing.T) {
 
 func TestProcessDeposit_InvalidMerkleBranch(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
+	server, endpoint, err := testing2.SetupRPCServer()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		server.Stop()
+	})
 	web3Service, err := NewService(context.Background(),
 		WithHttpEndpoints([]string{endpoint}),
 		WithDatabase(beaconDB),
@@ -102,6 +113,11 @@ func TestProcessDeposit_InvalidMerkleBranch(t *testing.T) {
 func TestProcessDeposit_InvalidPublicKey(t *testing.T) {
 	hook := logTest.NewGlobal()
 	beaconDB := testDB.SetupDB(t)
+	server, endpoint, err := testing2.SetupRPCServer()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		server.Stop()
+	})
 	web3Service, err := NewService(context.Background(),
 		WithHttpEndpoints([]string{endpoint}),
 		WithDatabase(beaconDB),
@@ -122,7 +138,8 @@ func TestProcessDeposit_InvalidPublicKey(t *testing.T) {
 	deposits[0].Proof, err = trie.MerkleProof(0)
 	require.NoError(t, err)
 
-	root := trie.HashTreeRoot()
+	root, err := trie.HashTreeRoot()
+	require.NoError(t, err)
 
 	eth1Data := &ethpb.Eth1Data{
 		DepositCount: 1,
@@ -138,6 +155,11 @@ func TestProcessDeposit_InvalidPublicKey(t *testing.T) {
 func TestProcessDeposit_InvalidSignature(t *testing.T) {
 	hook := logTest.NewGlobal()
 	beaconDB := testDB.SetupDB(t)
+	server, endpoint, err := testing2.SetupRPCServer()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		server.Stop()
+	})
 	web3Service, err := NewService(context.Background(),
 		WithHttpEndpoints([]string{endpoint}),
 		WithDatabase(beaconDB),
@@ -157,7 +179,8 @@ func TestProcessDeposit_InvalidSignature(t *testing.T) {
 	trie, err := trie.GenerateTrieFromItems([][]byte{leaf[:]}, params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err)
 
-	root := trie.HashTreeRoot()
+	root, err := trie.HashTreeRoot()
+	require.NoError(t, err)
 
 	eth1Data := &ethpb.Eth1Data{
 		DepositCount: 1,
@@ -173,6 +196,11 @@ func TestProcessDeposit_InvalidSignature(t *testing.T) {
 func TestProcessDeposit_UnableToVerify(t *testing.T) {
 	hook := logTest.NewGlobal()
 	beaconDB := testDB.SetupDB(t)
+	server, endpoint, err := testing2.SetupRPCServer()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		server.Stop()
+	})
 	web3Service, err := NewService(context.Background(),
 		WithHttpEndpoints([]string{endpoint}),
 		WithDatabase(beaconDB),
@@ -187,7 +215,8 @@ func TestProcessDeposit_UnableToVerify(t *testing.T) {
 
 	trie, _, err := util.DepositTrieFromDeposits(deposits)
 	require.NoError(t, err)
-	root := trie.HashTreeRoot()
+	root, err := trie.HashTreeRoot()
+	require.NoError(t, err)
 	eth1Data := &ethpb.Eth1Data{
 		DepositCount: 1,
 		DepositRoot:  root[:],
@@ -205,6 +234,11 @@ func TestProcessDeposit_UnableToVerify(t *testing.T) {
 
 func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
+	server, endpoint, err := testing2.SetupRPCServer()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		server.Stop()
+	})
 	web3Service, err := NewService(context.Background(),
 		WithHttpEndpoints([]string{endpoint}),
 		WithDatabase(beaconDB),
@@ -234,7 +268,8 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 
 	trie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err)
-	root := trie.HashTreeRoot()
+	root, err := trie.HashTreeRoot()
+	require.NoError(t, err)
 	eth1Data := &ethpb.Eth1Data{
 		DepositCount: 1,
 		DepositRoot:  root[:],
@@ -250,7 +285,8 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 	for i := 0; i < int(factor-1); i++ {
 		assert.NoError(t, trie.Insert(dataRoot[:], i))
 
-		trieRoot := trie.HashTreeRoot()
+		trieRoot, err := trie.HashTreeRoot()
+		require.NoError(t, err)
 		eth1Data.DepositRoot = trieRoot[:]
 		eth1Data.DepositCount = uint64(i + 1)
 
@@ -267,6 +303,11 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 
 func TestProcessDeposit_AllDepositedSuccessfully(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
+	server, endpoint, err := testing2.SetupRPCServer()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		server.Stop()
+	})
 	web3Service, err := NewService(context.Background(),
 		WithHttpEndpoints([]string{endpoint}),
 		WithDatabase(beaconDB),

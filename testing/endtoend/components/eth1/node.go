@@ -8,6 +8,7 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"syscall"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/pkg/errors"
@@ -23,6 +24,7 @@ type Node struct {
 	started chan struct{}
 	index   int
 	enr     string
+	cmd     *exec.Cmd
 }
 
 // NewNode creates and returns ETH1 node.
@@ -72,27 +74,34 @@ func (node *Node) Start(ctx context.Context) error {
 		fmt.Sprintf("--datadir=%s", eth1Path),
 		fmt.Sprintf("--http.port=%d", e2e.TestParams.Ports.Eth1RPCPort+node.index),
 		fmt.Sprintf("--ws.port=%d", e2e.TestParams.Ports.Eth1WSPort+node.index),
+		fmt.Sprintf("--authrpc.port=%d", e2e.TestParams.Ports.Eth1AuthRPCPort+node.index),
 		fmt.Sprintf("--bootnodes=%s", node.enr),
 		fmt.Sprintf("--port=%d", e2e.TestParams.Ports.Eth1Port+node.index),
 		fmt.Sprintf("--networkid=%d", NetworkId),
 		"--http",
+		"--http.api=engine,net,eth",
 		"--http.addr=127.0.0.1",
 		"--http.corsdomain=\"*\"",
 		"--http.vhosts=\"*\"",
 		"--rpc.allow-unprotected-txs",
 		"--ws",
+		"--ws.api=net,eth,engine",
 		"--ws.addr=127.0.0.1",
 		"--ws.origins=\"*\"",
 		"--ipcdisable",
 		"--verbosity=4",
+		"--txpool.locals=0x878705ba3f8bc32fcf7f4caa1a35e72af65cf766",
 	}
-
+	// If we are testing sync, geth needs to be run via full sync as snap sync does not
+	// work in our setup.
+	if node.index == e2e.TestParams.BeaconNodeCount+e2e.TestParams.LighthouseBeaconNodeCount {
+		args = append(args, []string{"--syncmode=full"}...)
+	}
 	runCmd := exec.CommandContext(ctx, binaryPath, args...) // #nosec G204 -- Safe
-	file, err := helpers.DeleteAndCreateFile(e2e.TestParams.LogPath, "eth1_"+strconv.Itoa(node.index)+".log")
+	file, err := os.Create(path.Join(e2e.TestParams.LogPath, "eth1_"+strconv.Itoa(node.index)+".log"))
 	if err != nil {
 		return err
 	}
-	runCmd.Stdout = file
 	runCmd.Stderr = file
 	log.Infof("Starting eth1 node %d with flags: %s", node.index, strings.Join(args[2:], " "))
 
@@ -105,6 +114,7 @@ func (node *Node) Start(ctx context.Context) error {
 
 	// Mark node as ready.
 	close(node.started)
+	node.cmd = runCmd
 
 	return runCmd.Wait()
 }
@@ -112,4 +122,19 @@ func (node *Node) Start(ctx context.Context) error {
 // Started checks whether ETH1 node is started and ready to be queried.
 func (node *Node) Started() <-chan struct{} {
 	return node.started
+}
+
+// Pause pauses the component and its underlying process.
+func (node *Node) Pause() error {
+	return node.cmd.Process.Signal(syscall.SIGSTOP)
+}
+
+// Resume resumes the component and its underlying process.
+func (node *Node) Resume() error {
+	return node.cmd.Process.Signal(syscall.SIGCONT)
+}
+
+// Stop kills the component and its underlying process.
+func (node *Node) Stop() error {
+	return node.cmd.Process.Kill()
 }

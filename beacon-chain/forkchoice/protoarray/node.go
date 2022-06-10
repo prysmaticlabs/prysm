@@ -1,7 +1,7 @@
 package protoarray
 
 import (
-	types "github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 )
 
 // Slot of the fork choice node.
@@ -42,9 +42,4 @@ func (n *Node) BestChild() uint64 {
 // BestDescendant of the fork choice node.
 func (n *Node) BestDescendant() uint64 {
 	return n.bestDescendant
-}
-
-// Graffiti of the fork choice node.
-func (n *Node) Graffiti() [32]byte {
-	return n.graffiti
 }

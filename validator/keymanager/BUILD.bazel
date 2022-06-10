@@ -8,6 +8,7 @@ go_library(
     ],
     importpath = "github.com/prysmaticlabs/prysm/validator/keymanager",
     visibility = [
+        "//cmd:__subpackages__",
         "//testing/endtoend/components:__subpackages__",
         "//tools:__subpackages__",
         "//validator:__pkg__",
@@ -32,5 +33,6 @@ go_test(
         "//validator/keymanager/derived:go_default_library",
         "//validator/keymanager/local:go_default_library",
         "//validator/keymanager/remote:go_default_library",
+        "//validator/keymanager/remote-web3signer:go_default_library",
     ],
 )

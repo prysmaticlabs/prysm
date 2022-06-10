@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -20,6 +20,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	remote_utils "github.com/prysmaticlabs/prysm/validator/keymanager/remote-utils"
@@ -97,7 +98,7 @@ func NewKeymanager(_ context.Context, cfg *SetupConfig) (*Keymanager, error) {
 		// Load the CA for the server certificate if present.
 		cp := x509.NewCertPool()
 		if cfg.Opts.RemoteCertificate.CACertPath != "" {
-			serverCA, err := ioutil.ReadFile(cfg.Opts.RemoteCertificate.CACertPath)
+			serverCA, err := os.ReadFile(cfg.Opts.RemoteCertificate.CACertPath)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to obtain server's CA certificate")
 			}
@@ -142,7 +143,7 @@ func NewKeymanager(_ context.Context, cfg *SetupConfig) (*Keymanager, error) {
 // UnmarshalOptionsFile attempts to JSON unmarshal a keymanager
 // options file into a struct.
 func UnmarshalOptionsFile(r io.ReadCloser) (*KeymanagerOpts, error) {
-	enc, err := ioutil.ReadAll(r)
+	enc, err := io.ReadAll(r)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not read config")
 	}
@@ -275,6 +276,11 @@ func (*Keymanager) ExtractKeystores(
 	ctx context.Context, publicKeys []bls.PublicKey, password string,
 ) ([]*keymanager.Keystore, error) {
 	return nil, errors.New("extracting keys not supported for a remote keymanager")
+}
+
+// DeleteKeystores is not supported for the remote keymanager type.
+func (*Keymanager) DeleteKeystores(context.Context, [][]byte) ([]*ethpbservice.DeletedKeystoreStatus, error) {
+	return nil, errors.New("Wrong wallet type: web3-signer. Only Imported or Derived wallets can delete accounts")
 }
 
 func (km *Keymanager) ListKeymanagerAccounts(ctx context.Context, cfg keymanager.ListKeymanagerAccountConfig) error {

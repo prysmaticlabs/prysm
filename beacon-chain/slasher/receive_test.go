@@ -4,12 +4,12 @@ import (
 	"context"
 	"testing"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/async/event"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	params2 "github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -127,7 +127,7 @@ func TestService_pruneSlasherDataWithinSlidingWindow_ProposalsPruned(t *testing.
 
 	// Override beacon config to 1 slot per epoch for easier testing.
 	params2.SetupTestConfigCleanup(t)
-	config := params2.BeaconConfig()
+	config := params2.BeaconConfig().Copy()
 	config.SlotsPerEpoch = 1
 	params2.OverrideBeaconConfig(config)
 

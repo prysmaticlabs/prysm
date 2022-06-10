@@ -4,7 +4,7 @@ package benchmark
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -45,7 +45,7 @@ func PreGenState1Epoch() (state.BeaconState, error) {
 	if err != nil {
 		return nil, err
 	}
-	beaconBytes, err := ioutil.ReadFile(path) // #nosec G304
+	beaconBytes, err := os.ReadFile(path) // #nosec G304
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +62,7 @@ func PreGenstateFullEpochs() (state.BeaconState, error) {
 	if err != nil {
 		return nil, err
 	}
-	beaconBytes, err := ioutil.ReadFile(path) // #nosec G304
+	beaconBytes, err := os.ReadFile(path) // #nosec G304
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +79,7 @@ func PreGenFullBlock() (*ethpb.SignedBeaconBlock, error) {
 	if err != nil {
 		return nil, err
 	}
-	blockBytes, err := ioutil.ReadFile(path) // #nosec G304
+	blockBytes, err := os.ReadFile(path) // #nosec G304
 	if err != nil {
 		return nil, err
 	}
@@ -92,14 +92,19 @@ func PreGenFullBlock() (*ethpb.SignedBeaconBlock, error) {
 
 // SetBenchmarkConfig changes the beacon config to match the requested amount of
 // attestations set to AttestationsPerEpoch.
-func SetBenchmarkConfig() {
+func SetBenchmarkConfig() (func(), error) {
 	maxAtts := AttestationsPerEpoch
 	slotsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch)
 	committeeSize := (ValidatorCount / slotsPerEpoch) / (maxAtts / slotsPerEpoch)
-	c := params.BeaconConfig()
+	c := params.BeaconConfig().Copy()
 	c.ShardCommitteePeriod = 0
 	c.MinValidatorWithdrawabilityDelay = 0
 	c.TargetCommitteeSize = committeeSize
 	c.MaxAttestations = maxAtts
-	params.OverrideBeaconConfig(c)
+	undo, err := params.SetActiveWithUndo(c)
+	return func() {
+		if err := undo(); err != nil {
+			panic(err)
+		}
+	}, err
 }

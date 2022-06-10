@@ -6,11 +6,14 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"strconv"
+	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/prysmaticlabs/prysm/io/file"
 )
 
 // params struct defines the parameters needed for running E2E tests to properly handle test sharding.
@@ -29,7 +32,9 @@ type ports struct {
 	BootNodeMetricsPort             int
 	Eth1Port                        int
 	Eth1RPCPort                     int
+	Eth1AuthRPCPort                 int
 	Eth1WSPort                      int
+	Eth1ProxyPort                   int
 	PrysmBeaconNodeRPCPort          int
 	PrysmBeaconNodeUDPPort          int
 	PrysmBeaconNodeTCPPort          int
@@ -68,6 +73,12 @@ var StandardLighthouseNodeCount = 2
 // DepositCount is the amount of deposits E2E makes on a separate validator client.
 var DepositCount = uint64(64)
 
+// NumOfExecEngineTxs is the number of transaction sent to the execution engine.
+var NumOfExecEngineTxs = uint64(200)
+
+// ExpectedExecEngineTxsThreshold is the portion of execution engine transactions we expect to find in blocks.
+var ExpectedExecEngineTxsThreshold = 0.5
+
 // Base port values.
 const (
 	portSpan = 50
@@ -75,9 +86,11 @@ const (
 	BootNodePort        = 2150
 	BootNodeMetricsPort = BootNodePort + portSpan
 
-	Eth1Port    = 3150
-	Eth1RPCPort = Eth1Port + portSpan
-	Eth1WSPort  = Eth1Port + 2*portSpan
+	Eth1Port        = 3150
+	Eth1RPCPort     = Eth1Port + portSpan
+	Eth1WSPort      = Eth1Port + 2*portSpan
+	Eth1AuthRPCPort = Eth1Port + 3*portSpan
+	Eth1ProxyPort   = Eth1Port + 4*portSpan
 
 	PrysmBeaconNodeRPCPort     = 4150
 	PrysmBeaconNodeUDPPort     = PrysmBeaconNodeRPCPort + portSpan
@@ -97,11 +110,15 @@ const (
 )
 
 // Init initializes the E2E config, properly handling test sharding.
-func Init(beaconNodeCount int) error {
+func Init(t *testing.T, beaconNodeCount int) error {
 	testPath := bazel.TestTmpDir()
 	logPath, ok := os.LookupEnv("TEST_UNDECLARED_OUTPUTS_DIR")
 	if !ok {
 		return errors.New("expected TEST_UNDECLARED_OUTPUTS_DIR to be defined")
+	}
+	logPath = path.Join(logPath, t.Name())
+	if err := file.MkdirAll(logPath); err != nil {
+		return err
 	}
 	testTotalShardsStr, ok := os.LookupEnv("TEST_TOTAL_SHARDS")
 	if !ok {
@@ -138,11 +155,15 @@ func Init(beaconNodeCount int) error {
 }
 
 // InitMultiClient initializes the multiclient E2E config, properly handling test sharding.
-func InitMultiClient(beaconNodeCount int, lighthouseNodeCount int) error {
+func InitMultiClient(t *testing.T, beaconNodeCount int, lighthouseNodeCount int) error {
 	testPath := bazel.TestTmpDir()
 	logPath, ok := os.LookupEnv("TEST_UNDECLARED_OUTPUTS_DIR")
 	if !ok {
 		return errors.New("expected TEST_UNDECLARED_OUTPUTS_DIR to be defined")
+	}
+	logPath = path.Join(logPath, t.Name())
+	if err := file.MkdirAll(logPath); err != nil {
+		return err
 	}
 	testTotalShardsStr, ok := os.LookupEnv("TEST_TOTAL_SHARDS")
 	if !ok {
@@ -221,6 +242,14 @@ func initializeStandardPorts(shardCount, shardIndex int, ports *ports, existingR
 	if err != nil {
 		return err
 	}
+	eth1AuthPort, err := port(Eth1AuthRPCPort, shardCount, shardIndex, existingRegistrations)
+	if err != nil {
+		return err
+	}
+	eth1ProxyPort, err := port(Eth1ProxyPort, shardCount, shardIndex, existingRegistrations)
+	if err != nil {
+		return err
+	}
 	beaconNodeRPCPort, err := port(PrysmBeaconNodeRPCPort, shardCount, shardIndex, existingRegistrations)
 	if err != nil {
 		return err
@@ -261,7 +290,9 @@ func initializeStandardPorts(shardCount, shardIndex int, ports *ports, existingR
 	ports.BootNodeMetricsPort = bootnodeMetricsPort
 	ports.Eth1Port = eth1Port
 	ports.Eth1RPCPort = eth1RPCPort
+	ports.Eth1AuthRPCPort = eth1AuthPort
 	ports.Eth1WSPort = eth1WSPort
+	ports.Eth1ProxyPort = eth1ProxyPort
 	ports.PrysmBeaconNodeRPCPort = beaconNodeRPCPort
 	ports.PrysmBeaconNodeUDPPort = beaconNodeUDPPort
 	ports.PrysmBeaconNodeTCPPort = beaconNodeTCPPort

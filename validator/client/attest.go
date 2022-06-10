@@ -8,18 +8,18 @@ import (
 	"strings"
 	"time"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/async"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"github.com/prysmaticlabs/prysm/time/slots"
@@ -254,9 +254,12 @@ func (v *validator) waitOneThirdOrValidBlock(ctx context.Context, slot types.Slo
 	defer span.End()
 
 	// Don't need to wait if requested slot is the same as highest valid slot.
+	v.highestValidSlotLock.Lock()
 	if slot <= v.highestValidSlot {
+		v.highestValidSlotLock.Unlock()
 		return
 	}
+	v.highestValidSlotLock.Unlock()
 
 	delay := slots.DivideSlotBy(3 /* a third of the slot duration */)
 	startTime := slots.StartTime(v.genesisTime, slot)
@@ -268,7 +271,7 @@ func (v *validator) waitOneThirdOrValidBlock(ctx context.Context, slot types.Slo
 	t := time.NewTimer(wait)
 	defer t.Stop()
 
-	bChannel := make(chan block.SignedBeaconBlock, 1)
+	bChannel := make(chan interfaces.SignedBeaconBlock, 1)
 	sub := v.blockFeed.Subscribe(bChannel)
 	defer sub.Unsubscribe()
 

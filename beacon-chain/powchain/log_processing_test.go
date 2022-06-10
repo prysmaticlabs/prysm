@@ -34,6 +34,11 @@ func TestProcessDepositLog_OK(t *testing.T) {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
+	server, endpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		server.Stop()
+	})
 	web3Service, err := NewService(context.Background(),
 		WithHttpEndpoints([]string{endpoint}),
 		WithDepositContractAddress(testAcc.ContractAddr),
@@ -97,6 +102,11 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
+	server, endpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		server.Stop()
+	})
 
 	web3Service, err := NewService(context.Background(),
 		WithHttpEndpoints([]string{endpoint}),
@@ -154,6 +164,11 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB := testDB.SetupDB(t)
+	server, endpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		server.Stop()
+	})
 	web3Service, err := NewService(context.Background(),
 		WithHttpEndpoints([]string{endpoint}),
 		WithDepositContractAddress(testAcc.ContractAddr),
@@ -203,6 +218,11 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
+	server, endpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		server.Stop()
+	})
 
 	web3Service, err := NewService(context.Background(),
 		WithHttpEndpoints([]string{endpoint}),
@@ -216,7 +236,7 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 	require.NoError(t, err)
 
 	params.SetupTestConfigCleanup(t)
-	bConfig := params.MinimalSpecConfig()
+	bConfig := params.MinimalSpecConfig().Copy()
 	bConfig.MinGenesisTime = 0
 	params.OverrideBeaconConfig(bConfig)
 
@@ -264,7 +284,7 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 
 func TestProcessETH2GenesisLog(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	cfg := params.BeaconConfig()
+	cfg := params.BeaconConfig().Copy()
 	cfg.GenesisDelay = 0
 	params.OverrideBeaconConfig(cfg)
 	hook := logTest.NewGlobal()
@@ -274,6 +294,11 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
+	server, endpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		server.Stop()
+	})
 	web3Service, err := NewService(context.Background(),
 		WithHttpEndpoints([]string{endpoint}),
 		WithDepositContractAddress(testAcc.ContractAddr),
@@ -285,7 +310,7 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 	web3Service.depositContractCaller, err = contracts.NewDepositContractCaller(testAcc.ContractAddr, testAcc.Backend)
 	require.NoError(t, err)
 	params.SetupTestConfigCleanup(t)
-	bConfig := params.MinimalSpecConfig()
+	bConfig := params.MinimalSpecConfig().Copy()
 	bConfig.MinGenesisTime = 0
 	params.OverrideBeaconConfig(bConfig)
 
@@ -353,12 +378,18 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 }
 
 func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	hook := logTest.NewGlobal()
 	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	kvStore := testDB.SetupDB(t)
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
+	server, endpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		server.Stop()
+	})
 
 	web3Service, err := NewService(context.Background(),
 		WithHttpEndpoints([]string{endpoint}),
@@ -376,8 +407,7 @@ func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
 	web3Service.latestEth1Data.LastRequestedBlock = 0
 	web3Service.latestEth1Data.BlockHeight = testAcc.Backend.Blockchain().CurrentBlock().NumberU64()
 	web3Service.latestEth1Data.BlockTime = testAcc.Backend.Blockchain().CurrentBlock().Time()
-	params.SetupTestConfigCleanup(t)
-	bConfig := params.MinimalSpecConfig()
+	bConfig := params.MinimalSpecConfig().Copy()
 	bConfig.MinGenesisTime = 0
 	bConfig.SecondsPerETH1Block = 10
 	params.OverrideBeaconConfig(bConfig)
@@ -446,12 +476,18 @@ func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
 }
 
 func TestProcessETH2GenesisLog_LargePeriodOfNoLogs(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	hook := logTest.NewGlobal()
 	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	kvStore := testDB.SetupDB(t)
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
+	server, endpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		server.Stop()
+	})
 
 	web3Service, err := NewService(context.Background(),
 		WithHttpEndpoints([]string{endpoint}),
@@ -469,8 +505,7 @@ func TestProcessETH2GenesisLog_LargePeriodOfNoLogs(t *testing.T) {
 	web3Service.latestEth1Data.LastRequestedBlock = 0
 	web3Service.latestEth1Data.BlockHeight = testAcc.Backend.Blockchain().CurrentBlock().NumberU64()
 	web3Service.latestEth1Data.BlockTime = testAcc.Backend.Blockchain().CurrentBlock().Time()
-	params.SetupTestConfigCleanup(t)
-	bConfig := params.MinimalSpecConfig()
+	bConfig := params.MinimalSpecConfig().Copy()
 	bConfig.SecondsPerETH1Block = 10
 	params.OverrideBeaconConfig(bConfig)
 	nConfig := params.BeaconNetworkConfig()
@@ -517,7 +552,7 @@ func TestProcessETH2GenesisLog_LargePeriodOfNoLogs(t *testing.T) {
 
 	// Set the genesis time 500 blocks ahead of the last
 	// deposit log.
-	bConfig = params.MinimalSpecConfig()
+	bConfig = params.MinimalSpecConfig().Copy()
 	bConfig.MinGenesisTime = wantedGenesisTime - 10
 	params.OverrideBeaconConfig(bConfig)
 
@@ -554,13 +589,18 @@ func TestCheckForChainstart_NoValidator(t *testing.T) {
 	require.NoError(t, err, "Unable to set up simulated backend")
 	beaconDB := testDB.SetupDB(t)
 	s := newPowchainService(t, testAcc, beaconDB)
-	s.checkForChainstart(context.Background(), [32]byte{}, nil, 0)
+	s.processChainStartIfReady(context.Background(), [32]byte{}, nil, 0)
 	require.LogsDoNotContain(t, hook, "Could not determine active validator count from pre genesis state")
 }
 
 func newPowchainService(t *testing.T, eth1Backend *mock.TestAccount, beaconDB db.Database) *Service {
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
+	server, endpoint, err := mockPOW.SetupRPCServer()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		server.Stop()
+	})
 	web3Service, err := NewService(context.Background(),
 		WithHttpEndpoints([]string{endpoint}),
 		WithDepositContractAddress(eth1Backend.ContractAddr),
@@ -576,7 +616,7 @@ func newPowchainService(t *testing.T, eth1Backend *mock.TestAccount, beaconDB db
 	web3Service.eth1DataFetcher = &goodFetcher{backend: eth1Backend.Backend}
 	web3Service.httpLogger = &goodLogger{backend: eth1Backend.Backend}
 	params.SetupTestConfigCleanup(t)
-	bConfig := params.MinimalSpecConfig()
+	bConfig := params.MinimalSpecConfig().Copy()
 	bConfig.MinGenesisTime = 0
 	params.OverrideBeaconConfig(bConfig)
 	return web3Service

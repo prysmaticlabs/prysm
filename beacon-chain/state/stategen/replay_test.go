@@ -8,10 +8,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -43,7 +43,7 @@ func TestReplayBlocks_AllSkipSlots(t *testing.T) {
 
 	service := New(beaconDB)
 	targetSlot := params.BeaconConfig().SlotsPerEpoch - 1
-	newState, err := service.ReplayBlocks(context.Background(), beaconState, []block.SignedBeaconBlock{}, targetSlot)
+	newState, err := service.ReplayBlocks(context.Background(), beaconState, []interfaces.SignedBeaconBlock{}, targetSlot)
 	require.NoError(t, err)
 	assert.Equal(t, targetSlot, newState.Slot(), "Did not advance slots")
 }
@@ -72,7 +72,7 @@ func TestReplayBlocks_SameSlot(t *testing.T) {
 
 	service := New(beaconDB)
 	targetSlot := beaconState.Slot()
-	newState, err := service.ReplayBlocks(context.Background(), beaconState, []block.SignedBeaconBlock{}, targetSlot)
+	newState, err := service.ReplayBlocks(context.Background(), beaconState, []interfaces.SignedBeaconBlock{}, targetSlot)
 	require.NoError(t, err)
 	assert.Equal(t, targetSlot, newState.Slot(), "Did not advance slots")
 }
@@ -106,14 +106,14 @@ func TestReplayBlocks_LowerSlotBlock(t *testing.T) {
 	b.Block.Slot = beaconState.Slot() - 1
 	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)
-	newState, err := service.ReplayBlocks(context.Background(), beaconState, []block.SignedBeaconBlock{wsb}, targetSlot)
+	newState, err := service.ReplayBlocks(context.Background(), beaconState, []interfaces.SignedBeaconBlock{wsb}, targetSlot)
 	require.NoError(t, err)
 	assert.Equal(t, targetSlot, newState.Slot(), "Did not advance slots")
 }
 
 func TestReplayBlocks_ThroughForkBoundary(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	bCfg := params.BeaconConfig()
+	bCfg := params.BeaconConfig().Copy()
 	bCfg.AltairForkEpoch = 1
 	bCfg.ForkVersionSchedule[bytesutil.ToBytes4(bCfg.AltairForkVersion)] = 1
 	params.OverrideBeaconConfig(bCfg)
@@ -132,7 +132,7 @@ func TestReplayBlocks_ThroughForkBoundary(t *testing.T) {
 
 	service := New(testDB.SetupDB(t))
 	targetSlot := params.BeaconConfig().SlotsPerEpoch
-	newState, err := service.ReplayBlocks(context.Background(), beaconState, []block.SignedBeaconBlock{}, targetSlot)
+	newState, err := service.ReplayBlocks(context.Background(), beaconState, []interfaces.SignedBeaconBlock{}, targetSlot)
 	require.NoError(t, err)
 
 	// Verify state is version Altair.
@@ -141,7 +141,7 @@ func TestReplayBlocks_ThroughForkBoundary(t *testing.T) {
 
 func TestReplayBlocks_ThroughBellatrixForkBoundary(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	bCfg := params.BeaconConfig()
+	bCfg := params.BeaconConfig().Copy()
 	bCfg.AltairForkEpoch = 1
 	bCfg.ForkVersionSchedule[bytesutil.ToBytes4(bCfg.AltairForkVersion)] = 1
 	bCfg.BellatrixForkEpoch = 2
@@ -162,7 +162,7 @@ func TestReplayBlocks_ThroughBellatrixForkBoundary(t *testing.T) {
 
 	service := New(testDB.SetupDB(t))
 	targetSlot := params.BeaconConfig().SlotsPerEpoch * 2
-	newState, err := service.ReplayBlocks(context.Background(), beaconState, []block.SignedBeaconBlock{}, targetSlot)
+	newState, err := service.ReplayBlocks(context.Background(), beaconState, []interfaces.SignedBeaconBlock{}, targetSlot)
 	require.NoError(t, err)
 
 	// Verify state is version Altair.

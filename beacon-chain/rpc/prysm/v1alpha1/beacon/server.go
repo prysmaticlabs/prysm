@@ -46,4 +46,6 @@ type Server struct {
 	StateGen                    stategen.StateManager
 	SyncChecker                 sync.Checker
 	ReplayerBuilder             stategen.ReplayerBuilder
+	HeadUpdater                 blockchain.HeadUpdater
+	OptimisticModeFetcher       blockchain.OptimisticModeFetcher
 }

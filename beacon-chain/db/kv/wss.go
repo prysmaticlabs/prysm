@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/ssz/detect"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
@@ -77,6 +77,12 @@ func (s *Store) SaveOrigin(ctx context.Context, serState, serBlock []byte) error
 		return errors.Wrap(err, "could not save head block root")
 	}
 
+	// save origin block root in a special key, to be used when the canonical
+	// origin (start of chain, ie alternative to genesis) block or state is needed
+	if err = s.SaveOriginCheckpointBlockRoot(ctx, blockRoot); err != nil {
+		return errors.Wrap(err, "could not save origin block root")
+	}
+
 	// rebuild the checkpoint from the block
 	// use it to mark the block as justified and finalized
 	slotEpoch, err := wblk.Block().Slot().SafeDivSlot(params.BeaconConfig().SlotsPerEpoch)
@@ -92,12 +98,6 @@ func (s *Store) SaveOrigin(ctx context.Context, serState, serBlock []byte) error
 	}
 	if err = s.SaveFinalizedCheckpoint(ctx, chkpt); err != nil {
 		return errors.Wrap(err, "could not mark checkpoint sync block as finalized")
-	}
-
-	// save origin block root in a special key, to be used when the canonical
-	// origin (start of chain, ie alternative to genesis) block or state is needed
-	if err = s.SaveOriginCheckpointBlockRoot(ctx, blockRoot); err != nil {
-		return errors.Wrap(err, "could not save origin block root")
 	}
 
 	return nil

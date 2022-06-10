@@ -6,14 +6,13 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
@@ -89,7 +88,11 @@ func (s *Service) validateSyncContributionAndProof(ctx context.Context, pid peer
 		return result, err
 	}
 
-	s.setSyncContributionIndexSlotSeen(m.Message.Contribution.Slot, m.Message.AggregatorIndex, types.CommitteeIndex(m.Message.Contribution.SubcommitteeIndex))
+	con := m.Message.Contribution
+	if err := s.setSyncContributionBits(con); err != nil {
+		return pubsub.ValidationIgnore, err
+	}
+	s.setSyncContributionIndexSlotSeen(con.Slot, m.Message.AggregatorIndex, types.CommitteeIndex(con.SubcommitteeIndex))
 
 	msg.ValidatorData = m
 
@@ -150,7 +153,15 @@ func rejectEmptyContribution(m *ethpb.SignedContributionAndProof) validationFn {
 
 func (s *Service) ignoreSeenSyncContribution(m *ethpb.SignedContributionAndProof) validationFn {
 	return func(ctx context.Context) (pubsub.ValidationResult, error) {
-		seen := s.hasSeenSyncContributionIndexSlot(m.Message.Contribution.Slot, m.Message.AggregatorIndex, types.CommitteeIndex(m.Message.Contribution.SubcommitteeIndex))
+		c := m.Message.Contribution
+		seen, err := s.hasSeenSyncContributionBits(c)
+		if err != nil {
+			return pubsub.ValidationIgnore, err
+		}
+		if seen {
+			return pubsub.ValidationIgnore, nil
+		}
+		seen = s.hasSeenSyncContributionIndexSlot(c.Slot, m.Message.AggregatorIndex, types.CommitteeIndex(c.SubcommitteeIndex))
 		if seen {
 			return pubsub.ValidationIgnore, nil
 		}
@@ -224,30 +235,22 @@ func (s *Service) rejectInvalidContributionSignature(m *ethpb.SignedContribution
 		if err != nil {
 			return pubsub.ValidationIgnore, err
 		}
-		if features.Get().EnableBatchVerification {
-			publicKey, err := bls.PublicKeyFromBytes(pubkey[:])
-			if err != nil {
-				tracing.AnnotateError(span, err)
-				return pubsub.ValidationReject, err
-			}
-			root, err := signing.ComputeSigningRoot(m.Message, d)
-			if err != nil {
-				tracing.AnnotateError(span, err)
-				return pubsub.ValidationReject, err
-			}
-			set := &bls.SignatureBatch{
-				Messages:   [][32]byte{root},
-				PublicKeys: []bls.PublicKey{publicKey},
-				Signatures: [][]byte{m.Signature},
-			}
-			return s.validateWithBatchVerifier(ctx, "sync contribution signature", set)
-		}
-
-		if err := signing.VerifySigningRoot(m.Message, pubkey[:], m.Signature, d); err != nil {
+		publicKey, err := bls.PublicKeyFromBytes(pubkey[:])
+		if err != nil {
 			tracing.AnnotateError(span, err)
 			return pubsub.ValidationReject, err
 		}
-		return pubsub.ValidationAccept, nil
+		root, err := signing.ComputeSigningRoot(m.Message, d)
+		if err != nil {
+			tracing.AnnotateError(span, err)
+			return pubsub.ValidationReject, err
+		}
+		set := &bls.SignatureBatch{
+			Messages:   [][32]byte{root},
+			PublicKeys: []bls.PublicKey{publicKey},
+			Signatures: [][]byte{m.Signature},
+		}
+		return s.validateWithBatchVerifier(ctx, "sync contribution signature", set)
 	}
 }
 
@@ -293,29 +296,17 @@ func (s *Service) rejectInvalidSyncAggregateSignature(m *ethpb.SignedContributio
 		}
 		// Aggregate pubkeys separately again to allow
 		// for signature sets to be created for batch verification.
-		if features.Get().EnableBatchVerification {
-			aggKey, err := bls.AggregatePublicKeys(activeRawPubkeys)
-			if err != nil {
-				tracing.AnnotateError(span, err)
-				return pubsub.ValidationIgnore, err
-			}
-			set := &bls.SignatureBatch{
-				Messages:   [][32]byte{sigRoot},
-				PublicKeys: []bls.PublicKey{aggKey},
-				Signatures: [][]byte{m.Message.Contribution.Signature},
-			}
-			return s.validateWithBatchVerifier(ctx, "sync contribution aggregate signature", set)
-		}
-		sig, err := bls.SignatureFromBytes(m.Message.Contribution.Signature)
+		aggKey, err := bls.AggregatePublicKeys(activeRawPubkeys)
 		if err != nil {
 			tracing.AnnotateError(span, err)
-			return pubsub.ValidationReject, err
+			return pubsub.ValidationIgnore, err
 		}
-		verified := sig.Eth2FastAggregateVerify(activePubkeys, sigRoot)
-		if !verified {
-			return pubsub.ValidationReject, errors.New("verification failed")
+		set := &bls.SignatureBatch{
+			Messages:   [][32]byte{sigRoot},
+			PublicKeys: []bls.PublicKey{aggKey},
+			Signatures: [][]byte{m.Message.Contribution.Signature},
 		}
-		return pubsub.ValidationAccept, nil
+		return s.validateWithBatchVerifier(ctx, "sync contribution aggregate signature", set)
 	}
 }
 
@@ -339,6 +330,68 @@ func (s *Service) setSyncContributionIndexSlotSeen(slot types.Slot, aggregatorIn
 	s.seenSyncContributionCache.Add(string(b), true)
 }
 
+// Set sync contribution's slot, root, committee index and bits.
+func (s *Service) setSyncContributionBits(c *ethpb.SyncCommitteeContribution) error {
+	s.syncContributionBitsOverlapLock.Lock()
+	defer s.syncContributionBitsOverlapLock.Unlock()
+	// Copying due to how pb unmarshalling is carried out, prevent mutation.
+	b := append(bytesutil.SafeCopyBytes(c.BlockRoot), bytesutil.Bytes32(uint64(c.Slot))...)
+	b = append(b, bytesutil.Bytes32(c.SubcommitteeIndex)...)
+	v, ok := s.syncContributionBitsOverlapCache.Get(string(b))
+	if !ok {
+		s.syncContributionBitsOverlapCache.Add(string(b), [][]byte{c.AggregationBits.Bytes()})
+		return nil
+	}
+	bitsList, ok := v.([][]byte)
+	if !ok {
+		return errors.New("could not covert cached value to []bitfield.Bitvector")
+	}
+	has, err := bitListOverlaps(bitsList, c.AggregationBits)
+	if err != nil {
+		return err
+	}
+	if has {
+		return nil
+	}
+	s.syncContributionBitsOverlapCache.Add(string(b), append(bitsList, c.AggregationBits.Bytes()))
+	return nil
+}
+
+// Check sync contribution bits don't have an overlap with one's in cache.
+func (s *Service) hasSeenSyncContributionBits(c *ethpb.SyncCommitteeContribution) (bool, error) {
+	s.syncContributionBitsOverlapLock.RLock()
+	defer s.syncContributionBitsOverlapLock.RUnlock()
+	b := append(c.BlockRoot, bytesutil.Bytes32(uint64(c.Slot))...)
+	b = append(b, bytesutil.Bytes32(c.SubcommitteeIndex)...)
+	v, ok := s.syncContributionBitsOverlapCache.Get(string(b))
+	if !ok {
+		return false, nil
+	}
+	bitsList, ok := v.([][]byte)
+	if !ok {
+		return false, errors.New("could not covert cached value to []bitfield.Bitvector128")
+	}
+	return bitListOverlaps(bitsList, c.AggregationBits.Bytes())
+}
+
+// bitListOverlaps returns true if there's an overlap between two bitlists.
+func bitListOverlaps(bitLists [][]byte, b []byte) (bool, error) {
+	for _, bitList := range bitLists {
+		if bitList == nil {
+			return false, errors.New("nil bitfield")
+		}
+		bl := ethpb.ConvertToSyncContributionBitVector(bitList)
+		overlaps, err := bl.Overlaps(ethpb.ConvertToSyncContributionBitVector(b))
+		if err != nil {
+			return false, err
+		}
+		if overlaps {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 // verifySyncSelectionData verifies that the provided sync contribution has a valid
 // selection proof.
 func (s *Service) verifySyncSelectionData(ctx context.Context, m *ethpb.ContributionAndProof) error {
@@ -351,28 +404,25 @@ func (s *Service) verifySyncSelectionData(ctx context.Context, m *ethpb.Contribu
 	if err != nil {
 		return err
 	}
-	if features.Get().EnableBatchVerification {
-		publicKey, err := bls.PublicKeyFromBytes(pubkey[:])
-		if err != nil {
-			return err
-		}
-		root, err := signing.ComputeSigningRoot(selectionData, domain)
-		if err != nil {
-			return err
-		}
-		set := &bls.SignatureBatch{
-			Messages:   [][32]byte{root},
-			PublicKeys: []bls.PublicKey{publicKey},
-			Signatures: [][]byte{m.SelectionProof},
-		}
-		valid, err := s.validateWithBatchVerifier(ctx, "sync contribution selection signature", set)
-		if err != nil {
-			return err
-		}
-		if valid != pubsub.ValidationAccept {
-			return errors.New("invalid sync selection proof provided")
-		}
-		return nil
+	publicKey, err := bls.PublicKeyFromBytes(pubkey[:])
+	if err != nil {
+		return err
 	}
-	return signing.VerifySigningRoot(selectionData, pubkey[:], m.SelectionProof, domain)
+	root, err := signing.ComputeSigningRoot(selectionData, domain)
+	if err != nil {
+		return err
+	}
+	set := &bls.SignatureBatch{
+		Messages:   [][32]byte{root},
+		PublicKeys: []bls.PublicKey{publicKey},
+		Signatures: [][]byte{m.SelectionProof},
+	}
+	valid, err := s.validateWithBatchVerifier(ctx, "sync contribution selection signature", set)
+	if err != nil {
+		return err
+	}
+	if valid != pubsub.ValidationAccept {
+		return errors.New("invalid sync selection proof provided")
+	}
+	return nil
 }

@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	types "github.com/prysmaticlabs/eth2-types"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 )
 
@@ -110,6 +110,8 @@ type BeaconChainConfig struct {
 	DomainSyncCommittee               [4]byte `yaml:"DOMAIN_SYNC_COMMITTEE" spec:"true"`                 // DomainVoluntaryExit defines the BLS signature domain for sync committee.
 	DomainSyncCommitteeSelectionProof [4]byte `yaml:"DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF" spec:"true"` // DomainSelectionProof defines the BLS signature domain for sync committee selection proof.
 	DomainContributionAndProof        [4]byte `yaml:"DOMAIN_CONTRIBUTION_AND_PROOF" spec:"true"`         // DomainAggregateAndProof defines the BLS signature domain for contribution and proof.
+	DomainApplicationMask             [4]byte `yaml:"DOMAIN_APPLICATION_MASK" spec:"true"`               // DomainApplicationMask defines the BLS signature domain for application mask.
+	DomainApplicationBuilder          [4]byte // DomainApplicationBuilder defines the BLS signature domain for application builder.
 
 	// Prysm constants.
 	GweiPerEth                     uint64        // GweiPerEth is the amount of gwei corresponding to 1 eth.
@@ -144,6 +146,7 @@ type BeaconChainConfig struct {
 	ShardingForkVersion  []byte                                          `yaml:"SHARDING_FORK_VERSION" spec:"true"`  // ShardingForkVersion is used to represent the fork version for sharding.
 	ShardingForkEpoch    types.Epoch                                     `yaml:"SHARDING_FORK_EPOCH" spec:"true"`    // ShardingForkEpoch is used to represent the assigned fork epoch for sharding.
 	ForkVersionSchedule  map[[fieldparams.VersionLength]byte]types.Epoch // Schedule of fork epochs by version.
+	ForkVersionNames     map[[fieldparams.VersionLength]byte]string      // Human-readable names of fork versions.
 
 	// Weak subjectivity values.
 	SafetyDecay uint64 // SafetyDecay is defined as the loss in the 1/3 consensus safety margin of the casper FFG mechanism.
@@ -189,12 +192,15 @@ type BeaconChainConfig struct {
 	TerminalBlockHashActivationEpoch types.Epoch    `yaml:"TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH" spec:"true"` // TerminalBlockHashActivationEpoch of beacon chain.
 	TerminalTotalDifficulty          string         `yaml:"TERMINAL_TOTAL_DIFFICULTY" spec:"true"`            // TerminalTotalDifficulty is part of the experimental Bellatrix spec. This value is type is currently TBD.
 	DefaultFeeRecipient              common.Address // DefaultFeeRecipient where the transaction fee goes to.
+	EthBurnAddressHex                string         // EthBurnAddressHex is the constant eth address written in hex format to burn fees in that network. the default is 0x0
+	DefaultBuilderGasLimit           uint64         // DefaultBuilderGasLimit is the default used to set the gaslimit for the Builder APIs, typically at around 30M wei.
 }
 
 // InitializeForkSchedule initializes the schedules forks baked into the config.
 func (b *BeaconChainConfig) InitializeForkSchedule() {
 	// Reset Fork Version Schedule.
 	b.ForkVersionSchedule = configForkSchedule(b)
+	b.ForkVersionNames = configForkNames(b)
 }
 
 func configForkSchedule(b *BeaconChainConfig) map[[fieldparams.VersionLength]byte]types.Epoch {
@@ -206,4 +212,15 @@ func configForkSchedule(b *BeaconChainConfig) map[[fieldparams.VersionLength]byt
 	// Set Bellatrix fork data.
 	fvs[bytesutil.ToBytes4(b.BellatrixForkVersion)] = b.BellatrixForkEpoch
 	return fvs
+}
+
+func configForkNames(b *BeaconChainConfig) map[[fieldparams.VersionLength]byte]string {
+	fvn := map[[fieldparams.VersionLength]byte]string{}
+	// Set Genesis fork data.
+	fvn[bytesutil.ToBytes4(b.GenesisForkVersion)] = "phase0"
+	// Set Altair fork data.
+	fvn[bytesutil.ToBytes4(b.AltairForkVersion)] = "altair"
+	// Set Bellatrix fork data.
+	fvn[bytesutil.ToBytes4(b.BellatrixForkVersion)] = "bellatrix"
+	return fvn
 }

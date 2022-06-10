@@ -7,7 +7,6 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
 	"path"
@@ -18,11 +17,11 @@ import (
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/network"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/metadata"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/proto"
 )
@@ -89,7 +88,7 @@ func privKey(cfg *Config) (*ecdsa.PrivateKey, error) {
 
 // Retrieves a p2p networking private key from a file path.
 func privKeyFromFile(path string) (*ecdsa.PrivateKey, error) {
-	src, err := ioutil.ReadFile(path) // #nosec G304
+	src, err := os.ReadFile(path) // #nosec G304
 	if err != nil {
 		log.WithError(err).Error("Error reading private key from file")
 		return nil, err
@@ -135,7 +134,7 @@ func metaDataFromConfig(cfg *Config) (metadata.Metadata, error) {
 	if defaultMetadataExist && metaDataPath == "" {
 		metaDataPath = defaultKeyPath
 	}
-	src, err := ioutil.ReadFile(metaDataPath) // #nosec G304
+	src, err := os.ReadFile(metaDataPath) // #nosec G304
 	if err != nil {
 		log.WithError(err).Error("Error reading metadata from file")
 		return nil, err

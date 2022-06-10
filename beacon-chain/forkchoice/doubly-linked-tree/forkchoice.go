@@ -2,23 +2,33 @@ package doublylinkedtree
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
-	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/runtime/version"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
 // New initializes a new fork choice store.
-func New(justifiedEpoch, finalizedEpoch types.Epoch) *ForkChoice {
+func New() *ForkChoice {
 	s := &Store{
-		justifiedEpoch:    justifiedEpoch,
-		finalizedEpoch:    finalizedEpoch,
-		proposerBoostRoot: [32]byte{},
-		nodeByRoot:        make(map[[fieldparams.RootLength]byte]*Node),
-		pruneThreshold:    defaultPruneThreshold,
+		justifiedCheckpoint: &forkchoicetypes.Checkpoint{},
+		finalizedCheckpoint: &forkchoicetypes.Checkpoint{},
+		proposerBoostRoot:   [32]byte{},
+		nodeByRoot:          make(map[[fieldparams.RootLength]byte]*Node),
+		nodeByPayload:       make(map[[fieldparams.RootLength]byte]*Node),
+		slashedIndices:      make(map[types.ValidatorIndex]bool),
+		pruneThreshold:      defaultPruneThreshold,
 	}
 
 	b := make([]uint64, 0)
@@ -37,10 +47,7 @@ func (f *ForkChoice) NodeCount() int {
 // It firsts computes validator's balance changes then recalculates block tree from leaves to root.
 func (f *ForkChoice) Head(
 	ctx context.Context,
-	justifiedEpoch types.Epoch,
-	justifiedRoot [32]byte,
 	justifiedStateBalances []uint64,
-	finalizedEpoch types.Epoch,
 ) ([32]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.Head")
 	defer span.End()
@@ -52,8 +59,6 @@ func (f *ForkChoice) Head(
 	// Using the write lock here because `applyWeightChanges` that gets called subsequently requires a write operation.
 	f.store.nodesLock.Lock()
 	defer f.store.nodesLock.Unlock()
-
-	f.store.updateCheckpoints(justifiedEpoch, finalizedEpoch)
 
 	if err := f.updateBalances(justifiedStateBalances); err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not update balances")
@@ -67,11 +72,12 @@ func (f *ForkChoice) Head(
 		return [32]byte{}, errors.Wrap(err, "could not apply weight changes")
 	}
 
-	if err := f.store.treeRootNode.updateBestDescendant(ctx, justifiedEpoch, finalizedEpoch); err != nil {
+	jc := f.JustifiedCheckpoint()
+	fc := f.FinalizedCheckpoint()
+	if err := f.store.treeRootNode.updateBestDescendant(ctx, jc.Epoch, fc.Epoch); err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not update best descendant")
 	}
-
-	return f.store.head(ctx, justifiedRoot)
+	return f.store.head(ctx)
 }
 
 // ProcessAttestation processes attestation for vote accounting, it iterates around validator indices
@@ -102,17 +108,38 @@ func (f *ForkChoice) ProcessAttestation(ctx context.Context, validatorIndices []
 	processedAttestationCount.Inc()
 }
 
-// InsertOptimisticBlock processes a new block by inserting it to the fork choice store.
-func (f *ForkChoice) InsertOptimisticBlock(
-	ctx context.Context,
-	slot types.Slot,
-	blockRoot, parentRoot, payloadHash [fieldparams.RootLength]byte,
-	justifiedEpoch, finalizedEpoch types.Epoch,
-) error {
-	ctx, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.InsertOptimisticBlock")
+// InsertNode processes a new block by inserting it to the fork choice store.
+func (f *ForkChoice) InsertNode(ctx context.Context, state state.ReadOnlyBeaconState, root [32]byte) error {
+	ctx, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.InsertNode")
 	defer span.End()
 
-	return f.store.insert(ctx, slot, blockRoot, parentRoot, payloadHash, justifiedEpoch, finalizedEpoch)
+	slot := state.Slot()
+	bh := state.LatestBlockHeader()
+	if bh == nil {
+		return errNilBlockHeader
+	}
+	parentRoot := bytesutil.ToBytes32(bh.ParentRoot)
+	payloadHash := [32]byte{}
+	if state.Version() >= version.Bellatrix {
+		ph, err := state.LatestExecutionPayloadHeader()
+		if err != nil {
+			return err
+		}
+		if ph != nil {
+			copy(payloadHash[:], ph.BlockHash)
+		}
+	}
+	jc := state.CurrentJustifiedCheckpoint()
+	if jc == nil {
+		return errInvalidNilCheckpoint
+	}
+	justifiedEpoch := jc.Epoch
+	fc := state.FinalizedCheckpoint()
+	if fc == nil {
+		return errInvalidNilCheckpoint
+	}
+	finalizedEpoch := fc.Epoch
+	return f.store.insert(ctx, slot, root, parentRoot, payloadHash, justifiedEpoch, finalizedEpoch)
 }
 
 // Prune prunes the fork choice store with the new finalized root. The store is only pruned if the input
@@ -168,13 +195,13 @@ func (f *ForkChoice) IsCanonical(root [32]byte) bool {
 }
 
 // IsOptimistic returns true if the given root has been optimistically synced.
-func (f *ForkChoice) IsOptimistic(_ context.Context, root [32]byte) (bool, error) {
+func (f *ForkChoice) IsOptimistic(root [32]byte) (bool, error) {
 	f.store.nodesLock.RLock()
 	defer f.store.nodesLock.RUnlock()
 
 	node, ok := f.store.nodeByRoot[root]
 	if !ok || node == nil {
-		return false, ErrNilNode
+		return true, ErrNilNode
 	}
 
 	return node.optimistic, nil
@@ -190,7 +217,7 @@ func (f *ForkChoice) AncestorRoot(ctx context.Context, root [32]byte, slot types
 
 	node, ok := f.store.nodeByRoot[root]
 	if !ok || node == nil {
-		return nil, ErrNilNode
+		return nil, errors.Wrap(ErrNilNode, "could not determine ancestor root")
 	}
 
 	n := node
@@ -202,7 +229,7 @@ func (f *ForkChoice) AncestorRoot(ctx context.Context, root [32]byte, slot types
 	}
 
 	if n == nil {
-		return nil, ErrNilNode
+		return nil, errors.Wrap(ErrNilNode, "could not determine ancestor root")
 	}
 
 	return n.root[:], nil
@@ -212,6 +239,10 @@ func (f *ForkChoice) AncestorRoot(ctx context.Context, root [32]byte, slot types
 // validators' latest votes.
 func (f *ForkChoice) updateBalances(newBalances []uint64) error {
 	for index, vote := range f.votes {
+		// Skip if validator has been slashed
+		if f.store.slashedIndices[types.ValidatorIndex(index)] {
+			continue
+		}
 		// Skip if validator has never voted for current root and next root (i.e. if the
 		// votes are zero hash aka genesis block), there's nothing to compute.
 		if vote.currentRoot == params.BeaconConfig().ZeroHash && vote.nextRoot == params.BeaconConfig().ZeroHash {
@@ -237,7 +268,7 @@ func (f *ForkChoice) updateBalances(newBalances []uint64) error {
 			if ok && vote.nextRoot != params.BeaconConfig().ZeroHash {
 				// Protection against nil node
 				if nextNode == nil {
-					return ErrNilNode
+					return errors.Wrap(ErrNilNode, "could not update balances")
 				}
 				nextNode.balance += newBalance
 			}
@@ -246,12 +277,24 @@ func (f *ForkChoice) updateBalances(newBalances []uint64) error {
 			if ok && vote.currentRoot != params.BeaconConfig().ZeroHash {
 				// Protection against nil node
 				if currentNode == nil {
-					return ErrNilNode
+					return errors.Wrap(ErrNilNode, "could not update balances")
 				}
 				if currentNode.balance < oldBalance {
-					return errInvalidBalance
+					f.store.proposerBoostLock.RLock()
+					log.WithFields(logrus.Fields{
+						"nodeRoot":                   fmt.Sprintf("%#x", bytesutil.Trunc(vote.currentRoot[:])),
+						"oldBalance":                 oldBalance,
+						"nodeBalance":                currentNode.balance,
+						"nodeWeight":                 currentNode.weight,
+						"proposerBoostRoot":          fmt.Sprintf("%#x", bytesutil.Trunc(f.store.proposerBoostRoot[:])),
+						"previousProposerBoostRoot":  fmt.Sprintf("%#x", bytesutil.Trunc(f.store.previousProposerBoostRoot[:])),
+						"previousProposerBoostScore": f.store.previousProposerBoostScore,
+					}).Warning("node with invalid balance, setting it to zero")
+					f.store.proposerBoostLock.RUnlock()
+					currentNode.balance = 0
+				} else {
+					currentNode.balance -= oldBalance
 				}
-				currentNode.balance -= oldBalance
 			}
 		}
 
@@ -279,29 +322,165 @@ func (f *ForkChoice) SetOptimisticToValid(ctx context.Context, root [fieldparams
 	defer f.store.nodesLock.Unlock()
 	node, ok := f.store.nodeByRoot[root]
 	if !ok || node == nil {
-		return ErrNilNode
+		return errors.Wrap(ErrNilNode, "could not set node to valid")
 	}
 	return node.setNodeAndParentValidated(ctx)
 }
 
-// JustifiedEpoch of fork choice store.
-func (f *ForkChoice) JustifiedEpoch() types.Epoch {
-	return f.store.justifiedEpoch
+// JustifiedCheckpoint of fork choice store.
+func (f *ForkChoice) JustifiedCheckpoint() *forkchoicetypes.Checkpoint {
+	f.store.checkpointsLock.RLock()
+	defer f.store.checkpointsLock.RUnlock()
+	return f.store.justifiedCheckpoint
 }
 
-// FinalizedEpoch of fork choice store.
-func (f *ForkChoice) FinalizedEpoch() types.Epoch {
-	return f.store.finalizedEpoch
+// FinalizedCheckpoint of fork choice store.
+func (f *ForkChoice) FinalizedCheckpoint() *forkchoicetypes.Checkpoint {
+	f.store.checkpointsLock.RLock()
+	defer f.store.checkpointsLock.RUnlock()
+	return f.store.finalizedCheckpoint
 }
 
-func (f *ForkChoice) ForkChoiceNodes() []*pbrpc.ForkChoiceNode {
+func (f *ForkChoice) ForkChoiceNodes() []*ethpb.ForkChoiceNode {
 	f.store.nodesLock.RLock()
 	defer f.store.nodesLock.RUnlock()
-	ret := make([]*pbrpc.ForkChoiceNode, len(f.store.nodeByRoot))
+	ret := make([]*ethpb.ForkChoiceNode, len(f.store.nodeByRoot))
 	return f.store.treeRootNode.rpcNodes(ret)
 }
 
 // SetOptimisticToInvalid removes a block with an invalid execution payload from fork choice store
-func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root [fieldparams.RootLength]byte) ([][32]byte, error) {
-	return f.store.removeNode(ctx, root)
+func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root, parentRoot, payloadHash [fieldparams.RootLength]byte) ([][32]byte, error) {
+	return f.store.setOptimisticToInvalid(ctx, root, parentRoot, payloadHash)
+}
+
+// InsertSlashedIndex adds the given slashed validator index to the
+// store-tracked list. Votes from these validators are not accounted for
+// in forkchoice.
+func (f *ForkChoice) InsertSlashedIndex(_ context.Context, index types.ValidatorIndex) {
+	f.store.nodesLock.Lock()
+	defer f.store.nodesLock.Unlock()
+	// return early if the index was already included:
+	if f.store.slashedIndices[index] {
+		return
+	}
+	f.store.slashedIndices[index] = true
+
+	// Subtract last vote from this equivocating validator
+	f.votesLock.RLock()
+	defer f.votesLock.RUnlock()
+
+	if index >= types.ValidatorIndex(len(f.balances)) {
+		return
+	}
+
+	if index >= types.ValidatorIndex(len(f.votes)) {
+		return
+	}
+
+	node, ok := f.store.nodeByRoot[f.votes[index].currentRoot]
+	if !ok || node == nil {
+		return
+	}
+
+	if node.balance < f.balances[index] {
+		node.balance = 0
+	} else {
+		node.balance -= f.balances[index]
+	}
+}
+
+// UpdateJustifiedCheckpoint sets the justified checkpoint to the given one
+func (f *ForkChoice) UpdateJustifiedCheckpoint(jc *forkchoicetypes.Checkpoint) error {
+	if jc == nil {
+		return errInvalidNilCheckpoint
+	}
+	f.store.checkpointsLock.Lock()
+	defer f.store.checkpointsLock.Unlock()
+	f.store.justifiedCheckpoint = jc
+	return nil
+}
+
+// UpdateFinalizedCheckpoint sets the finalized checkpoint to the given one
+func (f *ForkChoice) UpdateFinalizedCheckpoint(fc *forkchoicetypes.Checkpoint) error {
+	if fc == nil {
+		return errInvalidNilCheckpoint
+	}
+	f.store.checkpointsLock.Lock()
+	defer f.store.checkpointsLock.Unlock()
+	f.store.finalizedCheckpoint = fc
+	return nil
+}
+
+// CommonAncestorRoot returns the common ancestor root between the two block roots r1 and r2.
+func (f *ForkChoice) CommonAncestorRoot(ctx context.Context, r1 [32]byte, r2 [32]byte) ([32]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "doublelinkedtree.CommonAncestorRoot")
+	defer span.End()
+
+	// Do nothing if the input roots are the same.
+	if r1 == r2 {
+		return r1, nil
+	}
+
+	f.store.nodesLock.RLock()
+	defer f.store.nodesLock.RUnlock()
+
+	n1, ok := f.store.nodeByRoot[r1]
+	if !ok || n1 == nil {
+		return [32]byte{}, errors.Wrap(ErrNilNode, "could not determine common ancestor root")
+	}
+	n2, ok := f.store.nodeByRoot[r2]
+	if !ok || n2 == nil {
+		return [32]byte{}, errors.Wrap(ErrNilNode, "could not determine common ancestor root")
+	}
+
+	for {
+		if ctx.Err() != nil {
+			return [32]byte{}, ctx.Err()
+		}
+		if n1.slot > n2.slot {
+			n1 = n1.parent
+			// Reaches the end of the tree and unable to find common ancestor.
+			// This should not happen at runtime as the finalized
+			// node has to be a common ancestor
+			if n1 == nil {
+				return [32]byte{}, forkchoice.ErrUnknownCommonAncestor
+			}
+		} else {
+			n2 = n2.parent
+			// Reaches the end of the tree and unable to find common ancestor.
+			if n2 == nil {
+				return [32]byte{}, forkchoice.ErrUnknownCommonAncestor
+			}
+		}
+		if n1 == n2 {
+			return n1.root, nil
+		}
+	}
+}
+
+// InsertOptimisticChain inserts all nodes corresponding to blocks in the slice
+// `blocks`. This slice must be ordered from child to parent. It includes all
+// blocks **except** the first one (that is the one with the highest slot
+// number). All blocks are assumed to be a strict chain
+// where blocks[i].Parent = blocks[i+1]. Also we assume that the parent of the
+// last block in this list is already included in forkchoice store.
+func (f *ForkChoice) InsertOptimisticChain(ctx context.Context, chain []*forkchoicetypes.BlockAndCheckpoints) error {
+	if len(chain) == 0 {
+		return nil
+	}
+	for i := len(chain) - 1; i > 0; i-- {
+		b := chain[i].Block
+		r := bytesutil.ToBytes32(chain[i-1].Block.ParentRoot())
+		parentRoot := bytesutil.ToBytes32(b.ParentRoot())
+		payloadHash, err := blocks.GetBlockPayloadHash(b)
+		if err != nil {
+			return err
+		}
+		if err := f.store.insert(ctx,
+			b.Slot(), r, parentRoot, payloadHash,
+			chain[i].JustifiedCheckpoint.Epoch, chain[i].FinalizedCheckpoint.Epoch); err != nil {
+			return err
+		}
+	}
+	return nil
 }

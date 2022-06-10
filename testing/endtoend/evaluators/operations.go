@@ -7,14 +7,14 @@ import (
 	"math"
 
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/eth2-types"
 	corehelpers "github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/policies"
@@ -372,6 +372,10 @@ func validatorsVoteWithTheMajority(conns ...*grpc.ClientConn) error {
 			b := blk.GetAltairBlock().Block
 			slot = b.Slot
 			vote = b.Body.Eth1Data.BlockHash
+		case *ethpb.BeaconBlockContainer_BellatrixBlock:
+			b := blk.GetBellatrixBlock().Block
+			slot = b.Slot
+			vote = b.Body.Eth1Data.BlockHash
 		default:
 			return errors.New("block neither phase0 nor altair")
 		}
@@ -405,12 +409,15 @@ func validatorsVoteWithTheMajority(conns ...*grpc.ClientConn) error {
 
 var expectedEth1DataVote []byte
 
-func convertToBlockInterface(obj *ethpb.BeaconBlockContainer) (block.SignedBeaconBlock, error) {
+func convertToBlockInterface(obj *ethpb.BeaconBlockContainer) (interfaces.SignedBeaconBlock, error) {
 	if obj.GetPhase0Block() != nil {
 		return wrapper.WrappedSignedBeaconBlock(obj.GetPhase0Block())
 	}
 	if obj.GetAltairBlock() != nil {
 		return wrapper.WrappedSignedBeaconBlock(obj.GetAltairBlock())
+	}
+	if obj.GetBellatrixBlock() != nil {
+		return wrapper.WrappedSignedBeaconBlock(obj.GetBellatrixBlock())
 	}
 	if obj.GetBellatrixBlock() != nil {
 		return wrapper.WrappedSignedBeaconBlock(obj.GetBellatrixBlock())

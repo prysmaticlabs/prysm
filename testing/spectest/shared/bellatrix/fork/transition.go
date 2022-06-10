@@ -6,15 +6,15 @@ import (
 	"testing"
 
 	"github.com/golang/snappy"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/spectest/utils"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -29,6 +29,7 @@ type ForkConfig struct {
 
 // RunForkTransitionTest is a helper function that runs bellatrix's transition core tests.
 func RunForkTransitionTest(t *testing.T, config string) {
+	params.SetupTestConfigCleanup(t)
 	require.NoError(t, utils.SetConfig(t, config))
 
 	testFolders, testsFolderPath := utils.TestFolders(t, config, "bellatrix", "transition/core/pyspec_tests")
@@ -87,7 +88,7 @@ func RunForkTransitionTest(t *testing.T, config string) {
 			beaconState, err := v2.InitializeFromProto(beaconStateBase)
 			require.NoError(t, err)
 
-			bc := params.BeaconConfig()
+			bc := params.BeaconConfig().Copy()
 			bc.BellatrixForkEpoch = types.Epoch(config.ForkEpoch)
 			params.OverrideBeaconConfig(bc)
 

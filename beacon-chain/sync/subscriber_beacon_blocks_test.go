@@ -4,11 +4,15 @@ import (
 	"context"
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
+	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -107,4 +111,37 @@ func TestService_beaconBlockSubscriber(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestService_BeaconBlockSubscribe_ExecutionEngineTimesOut(t *testing.T) {
+	s := &Service{
+		cfg: &config{
+			chain: &chainMock.ChainService{
+				ReceiveBlockMockErr: powchain.ErrHTTPTimeout,
+			},
+		},
+		seenBlockCache: lruwrpr.New(10),
+		badBlockCache:  lruwrpr.New(10),
+	}
+	require.ErrorIs(t, powchain.ErrHTTPTimeout, s.beaconBlockSubscriber(context.Background(), util.NewBeaconBlock()))
+	require.Equal(t, 0, len(s.badBlockCache.Keys()))
+	require.Equal(t, 1, len(s.seenBlockCache.Keys()))
+}
+
+func TestService_BeaconBlockSubscribe_UndefinedEeError(t *testing.T) {
+	msg := "timeout"
+	err := errors.WithMessage(blockchain.ErrUndefinedExecutionEngineError, msg)
+
+	s := &Service{
+		cfg: &config{
+			chain: &chainMock.ChainService{
+				ReceiveBlockMockErr: err,
+			},
+		},
+		seenBlockCache: lruwrpr.New(10),
+		badBlockCache:  lruwrpr.New(10),
+	}
+	require.ErrorIs(t, s.beaconBlockSubscriber(context.Background(), util.NewBeaconBlock()), blockchain.ErrUndefinedExecutionEngineError)
+	require.Equal(t, 0, len(s.badBlockCache.Keys()))
+	require.Equal(t, 1, len(s.seenBlockCache.Keys()))
 }

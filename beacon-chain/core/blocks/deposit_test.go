@@ -4,12 +4,12 @@ import (
 	"context"
 	"testing"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/container/trie"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -173,7 +173,8 @@ func TestProcessDeposits_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T)
 		},
 	}
 	balances := []uint64{0, 50}
-	root := depositTrie.HashTreeRoot()
+	root, err := depositTrie.HashTreeRoot()
+	require.NoError(t, err)
 	beaconState, err := v1.InitializeFromProto(&ethpb.BeaconState{
 		Validators: registry,
 		Balances:   balances,
@@ -233,7 +234,8 @@ func TestProcessDeposit_SkipsInvalidDeposit(t *testing.T) {
 	dep[0].Data.Signature = make([]byte, 96)
 	trie, _, err := util.DepositTrieFromDeposits(dep)
 	require.NoError(t, err)
-	root := trie.HashTreeRoot()
+	root, err := trie.HashTreeRoot()
+	require.NoError(t, err)
 	eth1Data := &ethpb.Eth1Data{
 		DepositRoot:  root[:],
 		DepositCount: 1,
@@ -289,7 +291,9 @@ func TestPreGenesisDeposits_SkipInvalidDeposit(t *testing.T) {
 		require.NoError(t, err)
 		dep[i].Proof = proof
 	}
-	root := trie.HashTreeRoot()
+	root, err := trie.HashTreeRoot()
+	require.NoError(t, err)
+
 	eth1Data := &ethpb.Eth1Data{
 		DepositRoot:  root[:],
 		DepositCount: 1,
@@ -376,7 +380,9 @@ func TestProcessDeposit_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T) 
 		},
 	}
 	balances := []uint64{0, 50}
-	root := depositTrie.HashTreeRoot()
+	root, err := depositTrie.HashTreeRoot()
+	require.NoError(t, err)
+
 	beaconState, err := v1.InitializeFromProto(&ethpb.BeaconState{
 		Validators: registry,
 		Balances:   balances,

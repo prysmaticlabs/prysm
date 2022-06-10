@@ -4,14 +4,15 @@ import (
 	"reflect"
 	"testing"
 
-	eth2types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/config/params"
+	eth2types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 )
 
 func TestMappingHasNoDuplicates(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	m := make(map[reflect.Type]bool)
 	for _, v := range gossipTopicMappings {
 		if _, ok := m[reflect.TypeOf(v)]; ok {
@@ -23,7 +24,7 @@ func TestMappingHasNoDuplicates(t *testing.T) {
 
 func TestGossipTopicMappings_CorrectBlockType(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	bCfg := params.BeaconConfig()
+	bCfg := params.BeaconConfig().Copy()
 	altairForkEpoch := eth2types.Epoch(100)
 	BellatrixForkEpoch := eth2types.Epoch(200)
 

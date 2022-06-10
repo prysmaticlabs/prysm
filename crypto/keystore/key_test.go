@@ -2,7 +2,7 @@ package keystore
 
 import (
 	"bytes"
-	"io/ioutil"
+	"os"
 	"path"
 	"testing"
 
@@ -65,7 +65,7 @@ func TestWriteFile(t *testing.T) {
 	err := writeKeyFile(tempDir, testKeystore)
 	require.NoError(t, err)
 
-	keystore, err := ioutil.ReadFile(tempDir)
+	keystore, err := os.ReadFile(tempDir)
 	require.NoError(t, err)
 	require.Equal(t, true, bytes.Equal(keystore, testKeystore))
 }

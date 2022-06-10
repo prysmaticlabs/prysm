@@ -4,8 +4,9 @@ import (
 	"bytes"
 	"context"
 
-	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -55,7 +56,7 @@ func (n *Node) updateBestDescendant(ctx context.Context, justifiedEpoch, finaliz
 	hasViableDescendant := false
 	for _, child := range n.children {
 		if child == nil {
-			return ErrNilNode
+			return errors.Wrap(ErrNilNode, "could not update best descendant")
 		}
 		if err := child.updateBestDescendant(ctx, justifiedEpoch, finalizedEpoch); err != nil {
 			return err
@@ -109,7 +110,7 @@ func (n *Node) leadsToViableHead(justifiedEpoch, finalizedEpoch types.Epoch) boo
 	return n.bestDescendant.viableForHead(justifiedEpoch, finalizedEpoch)
 }
 
-// setNodeAndParentValidated sets the current node and the parent as validated (i.e. non-optimistic).
+// setNodeAndParentValidated sets the current node and all the ancestors as validated (i.e. non-optimistic).
 func (n *Node) setNodeAndParentValidated(ctx context.Context) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
@@ -120,7 +121,6 @@ func (n *Node) setNodeAndParentValidated(ctx context.Context) error {
 	}
 
 	n.optimistic = false
-	validatedCount.Inc()
 	return n.parent.setNodeAndParentValidated(ctx)
 }
 

@@ -4,8 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"math"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -13,14 +14,16 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
-	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	validator_service_config "github.com/prysmaticlabs/prysm/config/validator/service"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -37,11 +40,12 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func init() {
 	logrus.SetLevel(logrus.DebugLevel)
-	logrus.SetOutput(ioutil.Discard)
+	logrus.SetOutput(io.Discard)
 }
 
 var _ iface.Validator = (*validator)(nil)
@@ -113,6 +117,11 @@ func (*mockKeymanager) ExtractKeystores(
 func (*mockKeymanager) ListKeymanagerAccounts(
 	context.Context, keymanager.ListKeymanagerAccountConfig) error {
 	return nil
+}
+
+func (*mockKeymanager) DeleteKeystores(context.Context, [][]byte,
+) ([]*ethpbservice.DeletedKeystoreStatus, error) {
+	return nil, nil
 }
 
 func generateMockStatusResponse(pubkeys [][]byte) *ethpb.ValidatorActivationResponse {
@@ -350,6 +359,7 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	client := mock2.NewMockBeaconNodeValidatorClient(ctrl)
+	nodeClient := mock2.NewMockNodeClient(ctrl)
 	privKey, err := bls.RandKey()
 	require.NoError(t, err)
 	pubKey := [fieldparams.BLSPubkeyLength]byte{}
@@ -362,11 +372,12 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 	v := validator{
 		validatorClient:        client,
 		keyManager:             km,
+		node:                   nodeClient,
 		genesisTime:            1,
 		pubkeyToValidatorIndex: map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex{pubKey: 1},
-		feeRecipientConfig: &validator_service_config.FeeRecipientConfig{
+		ProposerSettings: &validator_service_config.ProposerSettings{
 			ProposeConfig: nil,
-			DefaultConfig: &validator_service_config.FeeRecipientOptions{
+			DefaultConfig: &validator_service_config.ProposerOption{
 				FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
 			},
 		},
@@ -385,6 +396,32 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 		resp,
 		nil,
 	)
+
+	nodeClient.EXPECT().GetGenesis(
+		gomock.Any(),
+		&emptypb.Empty{},
+	).Return(
+		&ethpb.Genesis{GenesisTime: timestamppb.Now()}, nil)
+
+	client.EXPECT().DomainData(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(
+		&ethpb.DomainResponse{
+			SignatureDomain: make([]byte, 32),
+		},
+		nil)
+	client.EXPECT().SubmitValidatorRegistration(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(&empty.Empty{}, nil)
+
+	client.EXPECT().PrepareBeaconProposer(gomock.Any(), &ethpb.PrepareBeaconProposerRequest{
+		Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
+			{FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A").Bytes(), ValidatorIndex: 1},
+		},
+	}).Return(nil, nil)
+
 	require.NoError(t, v.WaitForActivation(ctx, nil), "Could not wait for activation")
 	require.LogsContain(t, hook, "Validator activated")
 }
@@ -393,7 +430,7 @@ func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	client := mock2.NewMockBeaconNodeValidatorClient(ctrl)
-
+	nodeClient := mock2.NewMockNodeClient(ctrl)
 	privKey, err := bls.RandKey()
 	require.NoError(t, err)
 	pubKey := [fieldparams.BLSPubkeyLength]byte{}
@@ -405,12 +442,13 @@ func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 	}
 	v := validator{
 		validatorClient:        client,
+		node:                   nodeClient,
 		keyManager:             km,
 		genesisTime:            1,
 		pubkeyToValidatorIndex: map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex{pubKey: 1},
-		feeRecipientConfig: &validator_service_config.FeeRecipientConfig{
+		ProposerSettings: &validator_service_config.ProposerSettings{
 			ProposeConfig: nil,
-			DefaultConfig: &validator_service_config.FeeRecipientOptions{
+			DefaultConfig: &validator_service_config.ProposerOption{
 				FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
 			},
 		},
@@ -430,6 +468,29 @@ func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 		resp,
 		nil,
 	)
+	nodeClient.EXPECT().GetGenesis(
+		gomock.Any(),
+		&emptypb.Empty{},
+	).Return(
+		&ethpb.Genesis{GenesisTime: timestamppb.Now()}, nil)
+
+	client.EXPECT().DomainData(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(
+		&ethpb.DomainResponse{
+			SignatureDomain: make([]byte, 32),
+		},
+		nil)
+	client.EXPECT().SubmitValidatorRegistration(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(&empty.Empty{}, nil)
+	client.EXPECT().PrepareBeaconProposer(gomock.Any(), &ethpb.PrepareBeaconProposerRequest{
+		Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
+			{FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A").Bytes(), ValidatorIndex: 1},
+		},
+	}).Return(nil, nil)
 	assert.NoError(t, v.WaitForActivation(context.Background(), nil), "Could not wait for activation")
 }
 
@@ -1325,6 +1386,7 @@ func createAttestation(source, target types.Epoch) *ethpb.IndexedAttestation {
 }
 
 func TestIsSyncCommitteeAggregator_OK(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	v, m, validatorKey, finish := setup(t)
 	defer finish()
 
@@ -1343,7 +1405,7 @@ func TestIsSyncCommitteeAggregator_OK(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, false, aggregator)
 
-	c := params.BeaconConfig()
+	c := params.BeaconConfig().Copy()
 	c.TargetAggregatorsPerSyncSubcommittee = math.MaxUint64
 	params.OverrideBeaconConfig(c)
 
@@ -1446,15 +1508,29 @@ func TestValidator_WaitForKeymanagerInitialization_Interop(t *testing.T) {
 	require.NotNil(t, km)
 }
 
-func TestValidator_UdpateFeeRecipient(t *testing.T) {
+func TestValidator_PushProposerSettings(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	ctx := context.Background()
 	db := dbTest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
 	client := mock2.NewMockBeaconNodeValidatorClient(ctrl)
+	nodeClient := mock2.NewMockNodeClient(ctrl)
+	defaultFeeHex := "0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"
+	byteValueAddress, err := hexutil.Decode("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9")
+	require.NoError(t, err)
+
+	type ExpectedValidatorRegistration struct {
+		FeeRecipient []byte
+		GasLimit     uint64
+		Timestamp    uint64
+		Pubkey       []byte
+	}
+
 	tests := []struct {
-		name            string
-		validatorSetter func(t *testing.T) *validator
-		err             string
+		name                 string
+		validatorSetter      func(t *testing.T) *validator
+		feeRecipientMap      map[types.ValidatorIndex]string
+		mockExpectedRequests []ExpectedValidatorRegistration
+		err                  string
 	}{
 		{
 			name: " Happy Path",
@@ -1462,6 +1538,7 @@ func TestValidator_UdpateFeeRecipient(t *testing.T) {
 
 				v := validator{
 					validatorClient:        client,
+					node:                   nodeClient,
 					db:                     db,
 					pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
 					useWeb:                 false,
@@ -1469,18 +1546,21 @@ func TestValidator_UdpateFeeRecipient(t *testing.T) {
 						NumValidatorKeys: 1,
 						Offset:           1,
 					},
+					genesisTime: 0,
 				}
-
+				// set bellatrix as current epoch
+				params.BeaconConfig().BellatrixForkEpoch = 0
 				err := v.WaitForKeymanagerInitialization(ctx)
 				require.NoError(t, err)
 				km, err := v.Keymanager()
 				require.NoError(t, err)
 				keys, err := km.FetchValidatingPublicKeys(ctx)
 				require.NoError(t, err)
-				v.feeRecipientConfig = &validator_service_config.FeeRecipientConfig{
+				v.ProposerSettings = &validator_service_config.ProposerSettings{
 					ProposeConfig: nil,
-					DefaultConfig: &validator_service_config.FeeRecipientOptions{
-						FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
+					DefaultConfig: &validator_service_config.ProposerOption{
+						FeeRecipient: common.HexToAddress(defaultFeeHex),
+						GasLimit:     params.BeaconConfig().DefaultBuilderGasLimit,
 					},
 				}
 				client.EXPECT().ValidatorIndex(
@@ -1489,8 +1569,39 @@ func TestValidator_UdpateFeeRecipient(t *testing.T) {
 				).Return(&ethpb.ValidatorIndexResponse{
 					Index: 1,
 				}, nil)
+				nodeClient.EXPECT().GetGenesis(
+					gomock.Any(),
+					&emptypb.Empty{},
+				).Return(
+					&ethpb.Genesis{GenesisTime: timestamppb.Now()}, nil)
 
+				client.EXPECT().DomainData(
+					gomock.Any(),
+					gomock.Any(),
+				).Return(
+					&ethpb.DomainResponse{
+						SignatureDomain: make([]byte, 32),
+					},
+					nil)
+				client.EXPECT().SubmitValidatorRegistration(
+					gomock.Any(),
+					gomock.Any(),
+				).Return(&empty.Empty{}, nil)
+				client.EXPECT().PrepareBeaconProposer(gomock.Any(), &ethpb.PrepareBeaconProposerRequest{
+					Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
+						{FeeRecipient: common.HexToAddress(defaultFeeHex).Bytes(), ValidatorIndex: 1},
+					},
+				}).Return(nil, nil)
 				return &v
+			},
+			feeRecipientMap: map[types.ValidatorIndex]string{
+				1: defaultFeeHex,
+			},
+			mockExpectedRequests: []ExpectedValidatorRegistration{
+				{
+					FeeRecipient: byteValueAddress,
+					GasLimit:     params.BeaconConfig().DefaultBuilderGasLimit,
+				},
 			},
 		},
 		{
@@ -1518,6 +1629,7 @@ func TestValidator_UdpateFeeRecipient(t *testing.T) {
 
 				v := validator{
 					validatorClient:        client,
+					node:                   nodeClient,
 					db:                     db,
 					pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
 					useWeb:                 false,
@@ -1528,10 +1640,10 @@ func TestValidator_UdpateFeeRecipient(t *testing.T) {
 				}
 				err := v.WaitForKeymanagerInitialization(ctx)
 				require.NoError(t, err)
-				v.feeRecipientConfig = &validator_service_config.FeeRecipientConfig{
+				v.ProposerSettings = &validator_service_config.ProposerSettings{
 					ProposeConfig: nil,
-					DefaultConfig: &validator_service_config.FeeRecipientOptions{
-						FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
+					DefaultConfig: &validator_service_config.ProposerOption{
+						FeeRecipient: common.HexToAddress(defaultFeeHex),
 					},
 				}
 				km, err := v.Keymanager()
@@ -1544,7 +1656,39 @@ func TestValidator_UdpateFeeRecipient(t *testing.T) {
 				).Return(&ethpb.ValidatorIndexResponse{
 					Index: 1,
 				}, nil)
+				nodeClient.EXPECT().GetGenesis(
+					gomock.Any(),
+					&emptypb.Empty{},
+				).Return(
+					&ethpb.Genesis{GenesisTime: timestamppb.Now()}, nil)
+
+				client.EXPECT().DomainData(
+					gomock.Any(),
+					gomock.Any(),
+				).Return(
+					&ethpb.DomainResponse{
+						SignatureDomain: make([]byte, 32),
+					},
+					nil)
+				client.EXPECT().SubmitValidatorRegistration(
+					gomock.Any(),
+					gomock.Any(),
+				).Return(&empty.Empty{}, nil)
+				client.EXPECT().PrepareBeaconProposer(gomock.Any(), &ethpb.PrepareBeaconProposerRequest{
+					Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
+						{FeeRecipient: common.HexToAddress(defaultFeeHex).Bytes(), ValidatorIndex: 1},
+					},
+				}).Return(nil, nil)
 				return &v
+			},
+			feeRecipientMap: map[types.ValidatorIndex]string{
+				1: defaultFeeHex,
+			},
+			mockExpectedRequests: []ExpectedValidatorRegistration{
+				{
+					FeeRecipient: byteValueAddress,
+					GasLimit:     params.BeaconConfig().DefaultBuilderGasLimit,
+				},
 			},
 		},
 		{
@@ -1553,17 +1697,18 @@ func TestValidator_UdpateFeeRecipient(t *testing.T) {
 
 				v := validator{
 					validatorClient:        client,
+					node:                   nodeClient,
 					db:                     db,
 					pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
 					useWeb:                 false,
 					interopKeysConfig: &local.InteropKeymanagerConfig{
-						NumValidatorKeys: 1,
+						NumValidatorKeys: 2,
 						Offset:           1,
 					},
 				}
 				err := v.WaitForKeymanagerInitialization(ctx)
 				require.NoError(t, err)
-				config := make(map[[fieldparams.BLSPubkeyLength]byte]*validator_service_config.FeeRecipientOptions)
+				config := make(map[[fieldparams.BLSPubkeyLength]byte]*validator_service_config.ProposerOption)
 				km, err := v.Keymanager()
 				require.NoError(t, err)
 				keys, err := km.FetchValidatingPublicKeys(ctx)
@@ -1574,16 +1719,63 @@ func TestValidator_UdpateFeeRecipient(t *testing.T) {
 				).Return(&ethpb.ValidatorIndexResponse{
 					Index: 1,
 				}, nil)
-				config[keys[0]] = &validator_service_config.FeeRecipientOptions{
-					FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
+				client.EXPECT().ValidatorIndex(
+					ctx, // ctx
+					&ethpb.ValidatorIndexRequest{PublicKey: keys[1][:]},
+				).Return(&ethpb.ValidatorIndexResponse{
+					Index: 2,
+				}, nil)
+				client.EXPECT().PrepareBeaconProposer(gomock.Any(), &ethpb.PrepareBeaconProposerRequest{
+					Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
+						{FeeRecipient: common.HexToAddress("0x055Fb65722E7b2455043BFEBf6177F1D2e9738D9").Bytes(), ValidatorIndex: 1},
+						{FeeRecipient: common.HexToAddress(defaultFeeHex).Bytes(), ValidatorIndex: 2},
+					},
+				}).Return(nil, nil)
+				config[keys[0]] = &validator_service_config.ProposerOption{
+					FeeRecipient: common.HexToAddress("0x055Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
+					GasLimit:     uint64(40000000),
 				}
-				v.feeRecipientConfig = &validator_service_config.FeeRecipientConfig{
+				v.ProposerSettings = &validator_service_config.ProposerSettings{
 					ProposeConfig: config,
-					DefaultConfig: &validator_service_config.FeeRecipientOptions{
-						FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
+					DefaultConfig: &validator_service_config.ProposerOption{
+						FeeRecipient: common.HexToAddress(defaultFeeHex),
+						GasLimit:     uint64(35000000),
 					},
 				}
+				nodeClient.EXPECT().GetGenesis(
+					gomock.Any(),
+					&emptypb.Empty{},
+				).Times(2).Return(
+					&ethpb.Genesis{GenesisTime: timestamppb.Now()}, nil)
+
+				client.EXPECT().DomainData(
+					gomock.Any(),
+					gomock.Any(),
+				).Times(2).Return(
+					&ethpb.DomainResponse{
+						SignatureDomain: make([]byte, 32),
+					},
+					nil)
+				client.EXPECT().SubmitValidatorRegistration(
+					gomock.Any(),
+					gomock.Any(),
+				).Times(2).Return(&empty.Empty{}, nil)
 				return &v
+			},
+			feeRecipientMap: map[types.ValidatorIndex]string{
+				1: "0x055Fb65722E7b2455043BFEBf6177F1D2e9738D9",
+				2: defaultFeeHex,
+			},
+			mockExpectedRequests: []ExpectedValidatorRegistration{
+
+				{
+					FeeRecipient: common.HexToAddress("0x055Fb65722E7b2455043BFEBf6177F1D2e9738D9").Bytes(),
+					GasLimit:     uint64(40000000),
+				},
+				{
+					FeeRecipient: byteValueAddress,
+					GasLimit:     uint64(35000000),
+				},
 			},
 		},
 		{
@@ -1592,6 +1784,7 @@ func TestValidator_UdpateFeeRecipient(t *testing.T) {
 
 				v := validator{
 					validatorClient:        client,
+					node:                   nodeClient,
 					db:                     db,
 					pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
 					useWeb:                 false,
@@ -1602,26 +1795,49 @@ func TestValidator_UdpateFeeRecipient(t *testing.T) {
 				}
 				err := v.WaitForKeymanagerInitialization(ctx)
 				require.NoError(t, err)
-				config := make(map[[fieldparams.BLSPubkeyLength]byte]*validator_service_config.FeeRecipientOptions)
+				config := make(map[[fieldparams.BLSPubkeyLength]byte]*validator_service_config.ProposerOption)
 				km, err := v.Keymanager()
 				require.NoError(t, err)
 				keys, err := km.FetchValidatingPublicKeys(ctx)
 				require.NoError(t, err)
 				client.EXPECT().ValidatorIndex(
-					ctx, // ctx
+					gomock.Any(), // ctx
 					&ethpb.ValidatorIndexRequest{PublicKey: keys[0][:]},
 				).Return(&ethpb.ValidatorIndexResponse{
 					Index: 1,
 				}, nil)
-				config[keys[0]] = &validator_service_config.FeeRecipientOptions{
+				client.EXPECT().PrepareBeaconProposer(gomock.Any(), &ethpb.PrepareBeaconProposerRequest{
+					Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
+						{FeeRecipient: common.HexToAddress("0x0").Bytes(), ValidatorIndex: 1},
+					},
+				}).Return(nil, nil)
+				config[keys[0]] = &validator_service_config.ProposerOption{
 					FeeRecipient: common.Address{},
 				}
-				v.feeRecipientConfig = &validator_service_config.FeeRecipientConfig{
+				v.ProposerSettings = &validator_service_config.ProposerSettings{
 					ProposeConfig: config,
-					DefaultConfig: &validator_service_config.FeeRecipientOptions{
-						FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
+					DefaultConfig: &validator_service_config.ProposerOption{
+						FeeRecipient: common.HexToAddress(defaultFeeHex),
 					},
 				}
+				nodeClient.EXPECT().GetGenesis(
+					gomock.Any(),
+					&emptypb.Empty{},
+				).Return(
+					&ethpb.Genesis{GenesisTime: timestamppb.Now()}, nil)
+
+				client.EXPECT().DomainData(
+					gomock.Any(),
+					gomock.Any(),
+				).Return(
+					&ethpb.DomainResponse{
+						SignatureDomain: make([]byte, 32),
+					},
+					nil)
+				client.EXPECT().SubmitValidatorRegistration(
+					gomock.Any(),
+					gomock.Any(),
+				).Return(&empty.Empty{}, nil)
 				return &v
 			},
 		},
@@ -1641,26 +1857,109 @@ func TestValidator_UdpateFeeRecipient(t *testing.T) {
 				}
 				err := v.WaitForKeymanagerInitialization(ctx)
 				require.NoError(t, err)
-				config := make(map[[fieldparams.BLSPubkeyLength]byte]*validator_service_config.FeeRecipientOptions)
+				config := make(map[[fieldparams.BLSPubkeyLength]byte]*validator_service_config.ProposerOption)
 				km, err := v.Keymanager()
 				require.NoError(t, err)
 				keys, err := km.FetchValidatingPublicKeys(ctx)
 				require.NoError(t, err)
 				client.EXPECT().ValidatorIndex(
-					ctx, // ctx
+					gomock.Any(), // ctx
 					&ethpb.ValidatorIndexRequest{PublicKey: keys[0][:]},
 				).Return(nil, errors.New("Could not find validator index for public key"))
-				config[keys[0]] = &validator_service_config.FeeRecipientOptions{
+				config[keys[0]] = &validator_service_config.ProposerOption{
 					FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
 				}
-				v.feeRecipientConfig = &validator_service_config.FeeRecipientConfig{
+				v.ProposerSettings = &validator_service_config.ProposerSettings{
 					ProposeConfig: config,
-					DefaultConfig: &validator_service_config.FeeRecipientOptions{
-						FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
+					DefaultConfig: &validator_service_config.ProposerOption{
+						FeeRecipient: common.HexToAddress(defaultFeeHex),
 					},
 				}
 				return &v
 			},
+		},
+		{
+			name: "Before Bellatrix returns nil",
+			validatorSetter: func(t *testing.T) *validator {
+				v := validator{
+					validatorClient:        client,
+					db:                     db,
+					pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
+					useWeb:                 false,
+					interopKeysConfig: &local.InteropKeymanagerConfig{
+						NumValidatorKeys: 1,
+						Offset:           1,
+					},
+				}
+				err := v.WaitForKeymanagerInitialization(ctx)
+				require.NoError(t, err)
+				params.BeaconConfig().BellatrixForkEpoch = 123456789
+				return &v
+			},
+		},
+		{
+			name: "register validator batch failed ",
+			validatorSetter: func(t *testing.T) *validator {
+
+				v := validator{
+					validatorClient:        client,
+					node:                   nodeClient,
+					db:                     db,
+					pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
+					useWeb:                 false,
+					interopKeysConfig: &local.InteropKeymanagerConfig{
+						NumValidatorKeys: 1,
+						Offset:           1,
+					},
+				}
+				err := v.WaitForKeymanagerInitialization(ctx)
+				require.NoError(t, err)
+				config := make(map[[fieldparams.BLSPubkeyLength]byte]*validator_service_config.ProposerOption)
+				km, err := v.Keymanager()
+				require.NoError(t, err)
+				keys, err := km.FetchValidatingPublicKeys(ctx)
+				require.NoError(t, err)
+				client.EXPECT().ValidatorIndex(
+					gomock.Any(), // ctx
+					&ethpb.ValidatorIndexRequest{PublicKey: keys[0][:]},
+				).Return(&ethpb.ValidatorIndexResponse{
+					Index: 1,
+				}, nil)
+				client.EXPECT().PrepareBeaconProposer(gomock.Any(), &ethpb.PrepareBeaconProposerRequest{
+					Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
+						{FeeRecipient: common.HexToAddress("0x0").Bytes(), ValidatorIndex: 1},
+					},
+				}).Return(nil, nil)
+				config[keys[0]] = &validator_service_config.ProposerOption{
+					FeeRecipient: common.Address{},
+				}
+				v.ProposerSettings = &validator_service_config.ProposerSettings{
+					ProposeConfig: config,
+					DefaultConfig: &validator_service_config.ProposerOption{
+						FeeRecipient: common.HexToAddress(defaultFeeHex),
+					},
+				}
+				nodeClient.EXPECT().GetGenesis(
+					gomock.Any(),
+					&emptypb.Empty{},
+				).Return(
+					&ethpb.Genesis{GenesisTime: timestamppb.Now()}, nil)
+
+				client.EXPECT().DomainData(
+					gomock.Any(),
+					gomock.Any(),
+				).Return(
+					&ethpb.DomainResponse{
+						SignatureDomain: make([]byte, 32),
+					},
+					nil)
+				client.EXPECT().SubmitValidatorRegistration(
+					gomock.Any(),
+					gomock.Any(),
+				).Return(&empty.Empty{}, errors.New("request failed"))
+				return &v
+			},
+			err: "Register validator requests failed",
 		},
 	}
 	for _, tt := range tests {
@@ -1668,7 +1967,22 @@ func TestValidator_UdpateFeeRecipient(t *testing.T) {
 			v := tt.validatorSetter(t)
 			km, err := v.Keymanager()
 			require.NoError(t, err)
-			if err := v.UpdateFeeRecipient(ctx, km); tt.err != "" {
+			pubkeys, err := km.FetchValidatingPublicKeys(ctx)
+			require.NoError(t, err)
+			if tt.feeRecipientMap != nil {
+				feeRecipients, registerValidatorRequests, err := v.buildProposerSettingsRequests(ctx, pubkeys)
+				require.NoError(t, err)
+				for _, recipient := range feeRecipients {
+					require.Equal(t, strings.ToLower(tt.feeRecipientMap[recipient.ValidatorIndex]), strings.ToLower(hexutil.Encode(recipient.FeeRecipient)))
+				}
+				require.Equal(t, len(tt.feeRecipientMap), len(feeRecipients))
+				for i, request := range tt.mockExpectedRequests {
+					require.Equal(t, tt.mockExpectedRequests[i].GasLimit, request.GasLimit)
+					require.Equal(t, hexutil.Encode(tt.mockExpectedRequests[i].FeeRecipient), hexutil.Encode(request.FeeRecipient))
+				}
+				require.Equal(t, len(tt.mockExpectedRequests), len(registerValidatorRequests))
+			}
+			if err := v.PushProposerSettings(ctx, km); tt.err != "" {
 				assert.ErrorContains(t, tt.err, err)
 			}
 		})

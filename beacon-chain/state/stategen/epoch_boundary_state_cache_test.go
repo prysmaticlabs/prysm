@@ -3,7 +3,7 @@ package stategen
 import (
 	"testing"
 
-	types "github.com/prysmaticlabs/eth2-types"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -19,7 +19,7 @@ func TestEpochBoundaryStateCache_BadRootKey(t *testing.T) {
 	assert.ErrorContains(t, errNotRootStateInfo.Error(), err, "Did not get wanted error")
 }
 
-func TestEpochBoundaryStateCache_CanSave(t *testing.T) {
+func TestEpochBoundaryStateCache_CanSaveAndDelete(t *testing.T) {
 	e := newBoundaryStateCache()
 	s, err := util.NewBeaconState()
 	require.NoError(t, err)
@@ -27,12 +27,12 @@ func TestEpochBoundaryStateCache_CanSave(t *testing.T) {
 	r := [32]byte{'a'}
 	require.NoError(t, e.put(r, s))
 
-	got, exists, err := e.getByRoot([32]byte{'b'})
+	got, exists, err := e.getByBlockRoot([32]byte{'b'})
 	require.NoError(t, err)
 	assert.Equal(t, false, exists, "Should not exist")
 	assert.Equal(t, (*rootStateInfo)(nil), got, "Should not exist")
 
-	got, exists, err = e.getByRoot([32]byte{'a'})
+	got, exists, err = e.getByBlockRoot([32]byte{'a'})
 	require.NoError(t, err)
 	assert.Equal(t, true, exists, "Should exist")
 	assert.DeepSSZEqual(t, s.InnerStateUnsafe(), got.state.InnerStateUnsafe(), "Should have the same state")
@@ -46,6 +46,17 @@ func TestEpochBoundaryStateCache_CanSave(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, true, exists, "Should exist")
 	assert.DeepSSZEqual(t, s.InnerStateUnsafe(), got.state.InnerStateUnsafe(), "Should have the same state")
+
+	require.NoError(t, e.delete(r))
+	got, exists, err = e.getByBlockRoot([32]byte{'b'})
+	require.NoError(t, err)
+	assert.Equal(t, false, exists, "Should not exist")
+	assert.Equal(t, (*rootStateInfo)(nil), got, "Should not exist")
+
+	got, exists, err = e.getBySlot(1)
+	require.NoError(t, err)
+	assert.Equal(t, false, exists, "Should not exist")
+	assert.Equal(t, (*rootStateInfo)(nil), got, "Should not exist")
 }
 
 func TestEpochBoundaryStateCache_CanTrim(t *testing.T) {

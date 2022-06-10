@@ -15,10 +15,10 @@ func SetConfig(t testing.TB, config string) error {
 	params.SetupTestConfigCleanup(t)
 	switch config {
 	case "minimal":
-		params.OverrideBeaconConfig(params.MinimalSpecConfig())
+		params.OverrideBeaconConfig(params.MinimalSpecConfig().Copy())
 		return nil
 	case "mainnet":
-		params.OverrideBeaconConfig(params.MainnetConfig())
+		params.OverrideBeaconConfig(params.MainnetConfig().Copy())
 		return nil
 	case "":
 		return errors.New("no config provided")

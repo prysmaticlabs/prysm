@@ -1,20 +1,20 @@
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")  # gazelle:keep
 
-lighthouse_version = "v2.1.2"
+lighthouse_version = "v2.3.0"
 lighthouse_archive_name = "lighthouse-%s-x86_64-unknown-linux-gnu-portable.tar.gz" % lighthouse_version
 
 def e2e_deps():
     http_archive(
         name = "web3signer",
-        urls = ["https://artifacts.consensys.net/public/web3signer/raw/names/web3signer.tar.gz/versions/21.10.5/web3signer-21.10.5.tar.gz"],
-        sha256 = "d122429f6a310bc555d1281e0b3f4e3ac43a7beec5e5dcf0a0d2416a5984f461",
+        urls = ["https://artifacts.consensys.net/public/web3signer/raw/names/web3signer.tar.gz/versions/22.5.0/web3signer-22.5.0.tar.gz"],
+        sha256 = "3a954f5302e424b34acb4bb024f275caf722d8b116c639617f7a2e0f9c9ddc78",
         build_file = "@prysm//testing/endtoend:web3signer.BUILD",
-        strip_prefix = "web3signer-21.10.5",
+        strip_prefix = "web3signer-22.5.0",
     )
 
     http_archive(
         name = "lighthouse",
-        sha256 = "8a83ba0f7c24cc4e5b588e7a09bb4e5a1f919346ccf7000d3409a3690a85b221",
+        sha256 = "6029acd211f269bcf41f86fd72fe540703a167ff96dfd952ff95b1693e3b5495",
         build_file = "@prysm//testing/endtoend:lighthouse.BUILD",
         url = ("https://github.com/sigp/lighthouse/releases/download/%s/" + lighthouse_archive_name) % lighthouse_version,
     )

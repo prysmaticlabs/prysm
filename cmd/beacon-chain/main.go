@@ -11,6 +11,7 @@ import (
 	gethlog "github.com/ethereum/go-ethereum/log"
 	golog "github.com/ipfs/go-log/v2"
 	joonix "github.com/joonix/log"
+	"github.com/prysmaticlabs/prysm/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/node"
 	"github.com/prysmaticlabs/prysm/cmd"
 	blockchaincmd "github.com/prysmaticlabs/prysm/cmd/beacon-chain/blockchain"
@@ -18,11 +19,13 @@ import (
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	powchaincmd "github.com/prysmaticlabs/prysm/cmd/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/sync/checkpoint"
+	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/sync/genesis"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/io/logs"
 	"github.com/prysmaticlabs/prysm/monitoring/journald"
 	"github.com/prysmaticlabs/prysm/runtime/debug"
+	"github.com/prysmaticlabs/prysm/runtime/fdlimits"
 	_ "github.com/prysmaticlabs/prysm/runtime/maxprocs"
 	"github.com/prysmaticlabs/prysm/runtime/tos"
 	"github.com/prysmaticlabs/prysm/runtime/version"
@@ -65,9 +68,12 @@ var appFlags = []cli.Flag{
 	flags.NetworkID,
 	flags.WeakSubjectivityCheckpoint,
 	flags.Eth1HeaderReqLimit,
-	flags.GenesisStatePath,
 	flags.MinPeersPerSubnet,
 	flags.SuggestedFeeRecipient,
+	flags.TerminalTotalDifficultyOverride,
+	flags.TerminalBlockHashOverride,
+	flags.TerminalBlockHashActivationEpochOverride,
+	flags.MevRelayEndpoint,
 	cmd.EnableBackupWebhookFlag,
 	cmd.BackupWebhookOutputDir,
 	cmd.MinimalConfigFlag,
@@ -122,6 +128,8 @@ var appFlags = []cli.Flag{
 	checkpoint.BlockPath,
 	checkpoint.StatePath,
 	checkpoint.RemoteURL,
+	genesis.StatePath,
+	genesis.BeaconAPIURL,
 }
 
 func init() {
@@ -191,6 +199,9 @@ func main() {
 		if err := debug.Setup(ctx); err != nil {
 			return err
 		}
+		if err := fdlimits.SetMaxFdLimits(); err != nil {
+			return err
+		}
 		return cmd.ValidateNoArgs(ctx)
 	}
 
@@ -242,17 +253,30 @@ func startNode(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	opts := []node.Option{
-		node.WithBlockchainFlagOptions(blockchainFlagOpts),
-		node.WithPowchainFlagOptions(powchainFlagOpts),
-	}
-	cptOpts, err := checkpoint.BeaconNodeOptions(ctx)
+	builderFlagOpts, err := builder.FlagOptions(ctx)
 	if err != nil {
 		return err
 	}
-	if cptOpts != nil {
-		opts = append(opts, cptOpts)
+	opts := []node.Option{
+		node.WithBlockchainFlagOptions(blockchainFlagOpts),
+		node.WithPowchainFlagOptions(powchainFlagOpts),
+		node.WithBuilderFlagOptions(builderFlagOpts),
 	}
+
+	optFuncs := []func(*cli.Context) (node.Option, error){
+		genesis.BeaconNodeOptions,
+		checkpoint.BeaconNodeOptions,
+	}
+	for _, of := range optFuncs {
+		ofo, err := of(ctx)
+		if err != nil {
+			return err
+		}
+		if ofo != nil {
+			opts = append(opts, ofo)
+		}
+	}
+
 	beacon, err := node.New(ctx, opts...)
 	if err != nil {
 		return err

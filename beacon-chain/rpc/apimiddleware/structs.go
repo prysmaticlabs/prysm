@@ -7,6 +7,10 @@ import (
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 )
 
+//----------------
+// Requests and responses.
+//----------------
+
 // genesisResponseJson is used in /beacon/genesis API endpoint.
 type genesisResponseJson struct {
 	Data *genesisResponse_GenesisJson `json:"data"`
@@ -270,6 +274,12 @@ type produceBlockResponseV2Json struct {
 	Data    *beaconBlockContainerV2Json `json:"data"`
 }
 
+// produceBlindedBlockResponseJson is used in /v1/validator/blinded_blocks/{slot} API endpoint.
+type produceBlindedBlockResponseJson struct {
+	Version string                           `json:"version"`
+	Data    *blindedBeaconBlockContainerJson `json:"data"`
+}
+
 // produceAttestationDataResponseJson is used in /validator/attestation_data API endpoint.
 type produceAttestationDataResponseJson struct {
 	Data *attestationDataJson `json:"data"`
@@ -371,6 +381,12 @@ type beaconBlockContainerV2Json struct {
 	BellatrixBlock *beaconBlockBellatrixJson `json:"bellatrix_block"`
 }
 
+type blindedBeaconBlockContainerJson struct {
+	Phase0Block    *beaconBlockJson                 `json:"phase0_block"`
+	AltairBlock    *beaconBlockAltairJson           `json:"altair_block"`
+	BellatrixBlock *blindedBeaconBlockBellatrixJson `json:"bellatrix_block"`
+}
+
 type signedBeaconBlockAltairContainerJson struct {
 	Message   *beaconBlockAltairJson `json:"message"`
 	Signature string                 `json:"signature" hex:"true"`
@@ -379,6 +395,11 @@ type signedBeaconBlockAltairContainerJson struct {
 type signedBeaconBlockBellatrixContainerJson struct {
 	Message   *beaconBlockBellatrixJson `json:"message"`
 	Signature string                    `json:"signature" hex:"true"`
+}
+
+type signedBlindedBeaconBlockBellatrixContainerJson struct {
+	Message   *blindedBeaconBlockBellatrixJson `json:"message"`
+	Signature string                           `json:"signature" hex:"true"`
 }
 
 type beaconBlockAltairJson struct {
@@ -395,6 +416,14 @@ type beaconBlockBellatrixJson struct {
 	ParentRoot    string                        `json:"parent_root" hex:"true"`
 	StateRoot     string                        `json:"state_root" hex:"true"`
 	Body          *beaconBlockBodyBellatrixJson `json:"body"`
+}
+
+type blindedBeaconBlockBellatrixJson struct {
+	Slot          string                               `json:"slot"`
+	ProposerIndex string                               `json:"proposer_index"`
+	ParentRoot    string                               `json:"parent_root" hex:"true"`
+	StateRoot     string                               `json:"state_root" hex:"true"`
+	Body          *blindedBeaconBlockBodyBellatrixJson `json:"body"`
 }
 
 type beaconBlockBodyAltairJson struct {
@@ -422,36 +451,49 @@ type beaconBlockBodyBellatrixJson struct {
 	ExecutionPayload  *executionPayloadJson      `json:"execution_payload"`
 }
 
+type blindedBeaconBlockBodyBellatrixJson struct {
+	RandaoReveal           string                      `json:"randao_reveal" hex:"true"`
+	Eth1Data               *eth1DataJson               `json:"eth1_data"`
+	Graffiti               string                      `json:"graffiti" hex:"true"`
+	ProposerSlashings      []*proposerSlashingJson     `json:"proposer_slashings"`
+	AttesterSlashings      []*attesterSlashingJson     `json:"attester_slashings"`
+	Attestations           []*attestationJson          `json:"attestations"`
+	Deposits               []*depositJson              `json:"deposits"`
+	VoluntaryExits         []*signedVoluntaryExitJson  `json:"voluntary_exits"`
+	SyncAggregate          *syncAggregateJson          `json:"sync_aggregate"`
+	ExecutionPayloadHeader *executionPayloadHeaderJson `json:"execution_payload_header"`
+}
+
 type executionPayloadJson struct {
 	ParentHash    string   `json:"parent_hash" hex:"true"`
-	CoinBase      string   `json:"coinbase" hex:"true"`
+	FeeRecipient  string   `json:"fee_recipient" hex:"true"`
 	StateRoot     string   `json:"state_root" hex:"true"`
-	ReceiptRoot   string   `json:"receipt_root" hex:"true"`
+	ReceiptsRoot  string   `json:"receipts_root" hex:"true"`
 	LogsBloom     string   `json:"logs_bloom" hex:"true"`
-	Random        string   `json:"random" hex:"true"`
+	PrevRandao    string   `json:"prev_randao" hex:"true"`
 	BlockNumber   string   `json:"block_number"`
 	GasLimit      string   `json:"gas_limit"`
 	GasUsed       string   `json:"gas_used"`
 	TimeStamp     string   `json:"timestamp"`
 	ExtraData     string   `json:"extra_data" hex:"true"`
-	BaseFeePerGas string   `json:"base_fee_per_gas" hex:"true"`
+	BaseFeePerGas string   `json:"base_fee_per_gas" uint256:"true"`
 	BlockHash     string   `json:"block_hash" hex:"true"`
 	Transactions  []string `json:"transactions" hex:"true"`
 }
 
 type executionPayloadHeaderJson struct {
 	ParentHash       string `json:"parent_hash" hex:"true"`
-	CoinBase         string `json:"coinbase" hex:"true"`
+	FeeRecipient     string `json:"fee_recipient" hex:"true"`
 	StateRoot        string `json:"state_root" hex:"true"`
-	ReceiptRoot      string `json:"receipt_root" hex:"true"`
+	ReceiptsRoot     string `json:"receipts_root" hex:"true"`
 	LogsBloom        string `json:"logs_bloom" hex:"true"`
-	Random           string `json:"random" hex:"true"`
+	PrevRandao       string `json:"prev_randao" hex:"true"`
 	BlockNumber      string `json:"block_number"`
 	GasLimit         string `json:"gas_limit"`
 	GasUsed          string `json:"gas_used"`
 	TimeStamp        string `json:"timestamp"`
 	ExtraData        string `json:"extra_data" hex:"true"`
-	BaseFeePerGas    string `json:"base_fee_per_gas" hex:"true"`
+	BaseFeePerGas    string `json:"base_fee_per_gas" uint256:"true"`
 	BlockHash        string `json:"block_hash" hex:"true"`
 	TransactionsRoot string `json:"transactions_root" hex:"true"`
 }
@@ -508,7 +550,7 @@ type indexedAttestationJson struct {
 }
 
 type feeRecipientJson struct {
-	ValidatorIndex uint64 `json:"validator_index"`
+	ValidatorIndex string `json:"validator_index"`
 	FeeRecipient   string `json:"fee_recipient" hex:"true"`
 }
 
@@ -795,63 +837,38 @@ type syncCommitteeContributionJson struct {
 // SSZ
 // ---------------
 
-// sszResponseJson is a common abstraction over all SSZ responses.
-type sszResponseJson interface {
+type sszRequestJson struct {
+	Data string `json:"data"`
+}
+
+// sszResponse is a common abstraction over all SSZ responses.
+type sszResponse interface {
 	SSZVersion() string
 	SSZData() string
 }
 
-// blockSSZResponseJson is used in /beacon/blocks/{block_id} API endpoint.
-type blockSSZResponseJson struct {
+type sszResponseJson struct {
 	Data string `json:"data"`
 }
 
-func (ssz *blockSSZResponseJson) SSZData() string {
+func (ssz *sszResponseJson) SSZData() string {
 	return ssz.Data
 }
 
-func (*blockSSZResponseJson) SSZVersion() string {
+func (*sszResponseJson) SSZVersion() string {
 	return strings.ToLower(ethpbv2.Version_PHASE0.String())
 }
 
-// blockSSZResponseV2Json is used in /v2/beacon/blocks/{block_id} API endpoint.
-type blockSSZResponseV2Json struct {
+type versionedSSZResponseJson struct {
 	Version string `json:"version"`
 	Data    string `json:"data"`
 }
 
-func (ssz *blockSSZResponseV2Json) SSZData() string {
+func (ssz *versionedSSZResponseJson) SSZData() string {
 	return ssz.Data
 }
 
-func (ssz *blockSSZResponseV2Json) SSZVersion() string {
-	return ssz.Version
-}
-
-// beaconStateSSZResponseJson is used in /debug/beacon/states/{state_id} API endpoint.
-type beaconStateSSZResponseJson struct {
-	Data string `json:"data"`
-}
-
-func (ssz *beaconStateSSZResponseJson) SSZData() string {
-	return ssz.Data
-}
-
-func (*beaconStateSSZResponseJson) SSZVersion() string {
-	return strings.ToLower(ethpbv2.Version_PHASE0.String())
-}
-
-// beaconStateSSZResponseV2Json is used in /v2/debug/beacon/states/{state_id} API endpoint.
-type beaconStateSSZResponseV2Json struct {
-	Version string `json:"version"`
-	Data    string `json:"data"`
-}
-
-func (ssz *beaconStateSSZResponseV2Json) SSZData() string {
-	return ssz.Data
-}
-
-func (ssz *beaconStateSSZResponseV2Json) SSZVersion() string {
+func (ssz *versionedSSZResponseJson) SSZVersion() string {
 	return ssz.Version
 }
 

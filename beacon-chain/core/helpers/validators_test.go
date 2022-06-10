@@ -5,12 +5,12 @@ import (
 	"errors"
 	"testing"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -233,7 +233,7 @@ func TestBeaconProposerIndex_BadState(t *testing.T) {
 	require.NoError(t, state.SetSlot(100))
 	_, err = BeaconProposerIndex(context.Background(), state)
 	require.NoError(t, err)
-	assert.Equal(t, 0, len(proposerIndicesCache.ProposerIndicesCache.ListKeys()))
+	assert.Equal(t, 0, proposerIndicesCache.Len())
 }
 
 func TestComputeProposerIndex_Compatibility(t *testing.T) {
@@ -301,7 +301,7 @@ func TestActiveValidatorCount_Genesis(t *testing.T) {
 	// Preset cache to a bad count.
 	seed, err := Seed(beaconState, 0, params.BeaconConfig().DomainBeaconAttester)
 	require.NoError(t, err)
-	require.NoError(t, committeeCache.AddCommitteeShuffledList(&cache.Committees{Seed: seed, ShuffledIndices: []types.ValidatorIndex{1, 2, 3}}))
+	require.NoError(t, committeeCache.AddCommitteeShuffledList(context.Background(), &cache.Committees{Seed: seed, ShuffledIndices: []types.ValidatorIndex{1, 2, 3}}))
 	validatorCount, err := ActiveValidatorCount(context.Background(), beaconState, time.CurrentEpoch(beaconState))
 	require.NoError(t, err)
 	assert.Equal(t, uint64(c), validatorCount, "Did not get the correct validator count")

@@ -1,31 +1,29 @@
 package forkchoice
 
 import (
-	"context"
 	"fmt"
-	"math/big"
 	"path"
 	"testing"
-	"time"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/golang/snappy"
-	types "github.com/prysmaticlabs/eth2-types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/spectest/utils"
 	"github.com/prysmaticlabs/prysm/testing/util"
 )
+
+func init() {
+	transition.SkipSlotCache.Disable()
+}
 
 // Run executes "forkchoice" test.
 func Run(t *testing.T, config string, fork int) {
@@ -38,7 +36,6 @@ func Run(t *testing.T, config string, fork int) {
 
 		for _, folder := range testFolders {
 			t.Run(folder.Name(), func(t *testing.T) {
-				ctx := context.Background()
 				preStepsFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), "steps.yaml")
 				require.NoError(t, err)
 				var steps []Step
@@ -55,7 +52,7 @@ func Run(t *testing.T, config string, fork int) {
 				require.NoError(t, err)
 
 				var beaconState state.BeaconState
-				var beaconBlock block.SignedBeaconBlock
+				var beaconBlock interfaces.SignedBeaconBlock
 				switch fork {
 				case version.Phase0:
 					beaconState = unmarshalPhase0State(t, preBeaconStateSSZ)
@@ -70,27 +67,18 @@ func Run(t *testing.T, config string, fork int) {
 					t.Fatalf("unknown fork version: %v", fork)
 				}
 
-				execMock := &engineMock{
-					powBlocks: make(map[[32]byte]*ethpb.PowBlock),
-				}
-				service := startChainService(t, beaconState, beaconBlock, execMock)
-				var lastTick int64
+				builder := NewBuilder(t, beaconState, beaconBlock)
+
 				for _, step := range steps {
 					if step.Tick != nil {
-						newTick := int64(*step.Tick)
-						service.SetGenesisTime(time.Unix(time.Now().Unix()-newTick, 0))
-						if newTick > lastTick {
-							slot := uint64(newTick) / params.BeaconConfig().SecondsPerSlot
-							require.NoError(t, service.NewSlot(ctx, types.Slot(slot)))
-							lastTick = newTick
-						}
+						builder.Tick(t, int64(*step.Tick))
 					}
 					if step.Block != nil {
 						blockFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), fmt.Sprint(*step.Block, ".ssz_snappy"))
 						require.NoError(t, err)
 						blockSSZ, err := snappy.Decode(nil /* dst */, blockFile)
 						require.NoError(t, err)
-						var beaconBlock block.SignedBeaconBlock
+						var beaconBlock interfaces.SignedBeaconBlock
 						switch fork {
 						case version.Phase0:
 							beaconBlock = unmarshalSignedPhase0Block(t, blockSSZ)
@@ -101,13 +89,20 @@ func Run(t *testing.T, config string, fork int) {
 						default:
 							t.Fatalf("unknown fork version: %v", fork)
 						}
-						r, err := beaconBlock.Block().HashTreeRoot()
-						require.NoError(t, err)
 						if step.Valid != nil && !*step.Valid {
-							require.Equal(t, true, service.ReceiveBlock(ctx, beaconBlock, r) != nil)
+							builder.InvalidBlock(t, beaconBlock)
 						} else {
-							require.NoError(t, service.ReceiveBlock(ctx, beaconBlock, r))
+							builder.ValidBlock(t, beaconBlock)
 						}
+					}
+					if step.AttesterSlashing != nil {
+						slashingFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), fmt.Sprint(*step.AttesterSlashing, ".ssz_snappy"))
+						require.NoError(t, err)
+						slashingSSZ, err := snappy.Decode(nil /* dst */, slashingFile)
+						require.NoError(t, err)
+						slashing := &ethpb.AttesterSlashing{}
+						require.NoError(t, slashing.UnmarshalSSZ(slashingSSZ), "Failed to unmarshal")
+						builder.AttesterSlashing(slashing)
 					}
 					if step.Attestation != nil {
 						attFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), fmt.Sprint(*step.Attestation, ".ssz_snappy"))
@@ -116,7 +111,7 @@ func Run(t *testing.T, config string, fork int) {
 						require.NoError(t, err)
 						att := &ethpb.Attestation{}
 						require.NoError(t, att.UnmarshalSSZ(attSSZ), "Failed to unmarshal")
-						require.NoError(t, service.OnAttestation(ctx, att))
+						builder.Attestation(t, att)
 					}
 					if step.PowBlock != nil {
 						powBlockFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), fmt.Sprint(*step.PowBlock, ".ssz_snappy"))
@@ -125,47 +120,9 @@ func Run(t *testing.T, config string, fork int) {
 						require.NoError(t, err)
 						pb := &ethpb.PowBlock{}
 						require.NoError(t, pb.UnmarshalSSZ(p), "Failed to unmarshal")
-						execMock.powBlocks[bytesutil.ToBytes32(pb.BlockHash)] = pb
-						tdInBigEndian := bytesutil.ReverseByteOrder(pb.TotalDifficulty)
-						tdBigint := new(big.Int)
-						tdBigint.SetBytes(tdInBigEndian)
+						builder.PoWBlock(t, pb)
 					}
-					if step.Check != nil {
-						require.NoError(t, service.UpdateHeadWithBalances(ctx))
-						c := step.Check
-						if c.Head != nil {
-							r, err := service.HeadRoot(ctx)
-							require.NoError(t, err)
-							require.DeepEqual(t, common.FromHex(c.Head.Root), r)
-							require.Equal(t, types.Slot(c.Head.Slot), service.HeadSlot())
-						}
-						if c.JustifiedCheckPoint != nil {
-							cp := &ethpb.Checkpoint{
-								Epoch: types.Epoch(c.JustifiedCheckPoint.Epoch),
-								Root:  common.FromHex(c.JustifiedCheckPoint.Root),
-							}
-							require.DeepEqual(t, cp, service.CurrentJustifiedCheckpt())
-						}
-						if c.BestJustifiedCheckPoint != nil {
-							cp := &ethpb.Checkpoint{
-								Epoch: types.Epoch(c.BestJustifiedCheckPoint.Epoch),
-								Root:  common.FromHex(c.BestJustifiedCheckPoint.Root),
-							}
-							require.DeepEqual(t, cp, service.BestJustifiedCheckpt())
-						}
-						if c.FinalizedCheckPoint != nil {
-							cp := &ethpb.Checkpoint{
-								Epoch: types.Epoch(c.FinalizedCheckPoint.Epoch),
-								Root:  common.FromHex(c.FinalizedCheckPoint.Root),
-							}
-							require.DeepSSZEqual(t, cp, service.FinalizedCheckpt())
-						}
-						if c.ProposerBoostRoot != nil {
-							want := fmt.Sprintf("%#x", common.FromHex(*c.ProposerBoostRoot))
-							got := fmt.Sprintf("%#x", service.ForkChoiceStore().ProposerBoost())
-							require.DeepEqual(t, want, got)
-						}
-					}
+					builder.Check(t, step.Check)
 				}
 			})
 		}
@@ -180,7 +137,7 @@ func unmarshalPhase0State(t *testing.T, raw []byte) state.BeaconState {
 	return st
 }
 
-func unmarshalPhase0Block(t *testing.T, raw []byte) block.SignedBeaconBlock {
+func unmarshalPhase0Block(t *testing.T, raw []byte) interfaces.SignedBeaconBlock {
 	base := &ethpb.BeaconBlock{}
 	require.NoError(t, base.UnmarshalSSZ(raw))
 	blk, err := wrapper.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: base, Signature: make([]byte, fieldparams.BLSSignatureLength)})
@@ -188,7 +145,7 @@ func unmarshalPhase0Block(t *testing.T, raw []byte) block.SignedBeaconBlock {
 	return blk
 }
 
-func unmarshalSignedPhase0Block(t *testing.T, raw []byte) block.SignedBeaconBlock {
+func unmarshalSignedPhase0Block(t *testing.T, raw []byte) interfaces.SignedBeaconBlock {
 	base := &ethpb.SignedBeaconBlock{}
 	require.NoError(t, base.UnmarshalSSZ(raw))
 	blk, err := wrapper.WrappedSignedBeaconBlock(base)
@@ -204,7 +161,7 @@ func unmarshalAltairState(t *testing.T, raw []byte) state.BeaconState {
 	return st
 }
 
-func unmarshalAltairBlock(t *testing.T, raw []byte) block.SignedBeaconBlock {
+func unmarshalAltairBlock(t *testing.T, raw []byte) interfaces.SignedBeaconBlock {
 	base := &ethpb.BeaconBlockAltair{}
 	require.NoError(t, base.UnmarshalSSZ(raw))
 	blk, err := wrapper.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: base, Signature: make([]byte, fieldparams.BLSSignatureLength)})
@@ -212,7 +169,7 @@ func unmarshalAltairBlock(t *testing.T, raw []byte) block.SignedBeaconBlock {
 	return blk
 }
 
-func unmarshalSignedAltairBlock(t *testing.T, raw []byte) block.SignedBeaconBlock {
+func unmarshalSignedAltairBlock(t *testing.T, raw []byte) interfaces.SignedBeaconBlock {
 	base := &ethpb.SignedBeaconBlockAltair{}
 	require.NoError(t, base.UnmarshalSSZ(raw))
 	blk, err := wrapper.WrappedSignedBeaconBlock(base)
@@ -228,7 +185,7 @@ func unmarshalBellatrixState(t *testing.T, raw []byte) state.BeaconState {
 	return st
 }
 
-func unmarshalBellatrixBlock(t *testing.T, raw []byte) block.SignedBeaconBlock {
+func unmarshalBellatrixBlock(t *testing.T, raw []byte) interfaces.SignedBeaconBlock {
 	base := &ethpb.BeaconBlockBellatrix{}
 	require.NoError(t, base.UnmarshalSSZ(raw))
 	blk, err := wrapper.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: base, Signature: make([]byte, fieldparams.BLSSignatureLength)})
@@ -236,7 +193,7 @@ func unmarshalBellatrixBlock(t *testing.T, raw []byte) block.SignedBeaconBlock {
 	return blk
 }
 
-func unmarshalSignedBellatrixBlock(t *testing.T, raw []byte) block.SignedBeaconBlock {
+func unmarshalSignedBellatrixBlock(t *testing.T, raw []byte) interfaces.SignedBeaconBlock {
 	base := &ethpb.SignedBeaconBlockBellatrix{}
 	require.NoError(t, base.UnmarshalSSZ(raw))
 	blk, err := wrapper.WrappedSignedBeaconBlock(base)

@@ -173,11 +173,7 @@ func (s *Server) DeleteAccounts(
 	if err != nil {
 		return nil, err
 	}
-	if s.wallet.KeymanagerKind() != keymanager.Local && s.wallet.KeymanagerKind() != keymanager.Derived {
-		return nil, status.Error(codes.FailedPrecondition, "Only Imported or Derived wallets can delete accounts")
-	}
-	if err := accounts.DeleteAccount(ctx, &accounts.Config{
-		Wallet:           s.wallet,
+	if err := accounts.DeleteAccount(ctx, &accounts.DeleteConfig{
 		Keymanager:       km,
 		DeletePublicKeys: req.PublicKeysToDelete,
 	}); err != nil {

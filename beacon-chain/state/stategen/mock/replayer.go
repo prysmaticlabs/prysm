@@ -3,9 +3,9 @@ package mock
 import (
 	"context"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 )
 
 func NewMockReplayerBuilder(opt ...MockReplayerBuilderOption) *MockReplayerBuilder {
@@ -39,6 +39,13 @@ func (b *MockReplayerBuilder) SetMockState(s state.BeaconState) {
 		b.forSlot = make(map[types.Slot]*MockReplayer)
 	}
 	b.forSlot[s.Slot()] = &MockReplayer{State: s}
+}
+
+func (b *MockReplayerBuilder) SetMockStateForSlot(s state.BeaconState, slot types.Slot) {
+	if b.forSlot == nil {
+		b.forSlot = make(map[types.Slot]*MockReplayer)
+	}
+	b.forSlot[slot] = &MockReplayer{State: s}
 }
 
 func (b *MockReplayerBuilder) SetMockSlotError(s types.Slot, e error) {

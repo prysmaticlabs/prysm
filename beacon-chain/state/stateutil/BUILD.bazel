@@ -15,6 +15,7 @@ go_library(
         "state_hasher.go",
         "sync_committee.root.go",
         "trie_helpers.go",
+        "unrealized_justification.go",
         "validator_map_handler.go",
         "validator_root.go",
     ],
@@ -35,6 +36,7 @@ go_library(
         "//config/features:go_default_library",
         "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",
+        "//consensus-types/primitives:go_default_library",
         "//container/trie:go_default_library",
         "//crypto/hash:go_default_library",
         "//crypto/hash/htr:go_default_library",
@@ -43,7 +45,6 @@ go_library(
         "//math:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
-        "@com_github_prysmaticlabs_eth2_types//:go_default_library",
         "@io_opencensus_go//trace:go_default_library",
     ],
 )
@@ -57,6 +58,7 @@ go_test(
         "reference_bench_test.go",
         "state_root_test.go",
         "trie_helpers_test.go",
+        "unrealized_justification_test.go",
         "validator_root_test.go",
     ],
     embed = [":go_default_library"],
@@ -65,6 +67,7 @@ go_test(
         "//config/features:go_default_library",
         "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",
+        "//consensus-types/primitives:go_default_library",
         "//crypto/hash:go_default_library",
         "//encoding/bytesutil:go_default_library",
         "//encoding/ssz:go_default_library",
@@ -74,7 +77,6 @@ go_test(
         "//testing/assert:go_default_library",
         "//testing/require:go_default_library",
         "//testing/util:go_default_library",
-        "@com_github_prysmaticlabs_eth2_types//:go_default_library",
     ],
 )
 

@@ -6,11 +6,11 @@ import (
 	"strconv"
 	"testing"
 
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/container/slice"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -232,7 +232,7 @@ func TestCommitteeAssignments_CannotRetrieveFuture(t *testing.T) {
 
 	_, proposerIndxs, err = CommitteeAssignments(context.Background(), state, time.CurrentEpoch(state)+1)
 	require.NoError(t, err)
-	require.Equal(t, 0, len(proposerIndxs), "wanted empty proposer index set")
+	require.NotEqual(t, 0, len(proposerIndxs), "wanted non-zero proposer index set")
 }
 
 func TestCommitteeAssignments_EverySlotHasMin1Proposer(t *testing.T) {
@@ -386,7 +386,7 @@ func TestUpdateCommitteeCache_CanUpdate(t *testing.T) {
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
 	require.NoError(t, err)
-	require.NoError(t, UpdateCommitteeCache(state, time.CurrentEpoch(state)))
+	require.NoError(t, UpdateCommitteeCache(context.Background(), state, time.CurrentEpoch(state)))
 
 	epoch := types.Epoch(1)
 	idx := types.CommitteeIndex(1)

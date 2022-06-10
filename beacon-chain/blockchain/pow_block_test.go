@@ -9,13 +9,14 @@ import (
 	"github.com/holiman/uint256"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
+	mocks "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
@@ -108,7 +109,7 @@ func Test_validateMergeBlock(t *testing.T) {
 
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-	fcs := protoarray.New(0, 0, [32]byte{'a'})
+	fcs := protoarray.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),
@@ -117,13 +118,13 @@ func Test_validateMergeBlock(t *testing.T) {
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 
-	engine := &mockEngineService{blks: map[[32]byte]*enginev1.ExecutionBlock{}}
+	engine := &mocks.EngineClient{BlockByHashMap: map[[32]byte]*enginev1.ExecutionBlock{}}
 	service.cfg.ExecutionEngineCaller = engine
-	engine.blks[[32]byte{'a'}] = &enginev1.ExecutionBlock{
+	engine.BlockByHashMap[[32]byte{'a'}] = &enginev1.ExecutionBlock{
 		ParentHash:      bytesutil.PadTo([]byte{'b'}, fieldparams.RootLength),
 		TotalDifficulty: "0x2",
 	}
-	engine.blks[[32]byte{'b'}] = &enginev1.ExecutionBlock{
+	engine.BlockByHashMap[[32]byte{'b'}] = &enginev1.ExecutionBlock{
 		ParentHash:      bytesutil.PadTo([]byte{'3'}, fieldparams.RootLength),
 		TotalDifficulty: "0x1",
 	}
@@ -143,13 +144,15 @@ func Test_validateMergeBlock(t *testing.T) {
 
 	cfg.TerminalTotalDifficulty = "1"
 	params.OverrideBeaconConfig(cfg)
-	require.ErrorContains(t, "invalid TTD, configTTD: 1, currentTTD: 2, parentTTD: 1", service.validateMergeBlock(ctx, b))
+	err = service.validateMergeBlock(ctx, b)
+	require.ErrorContains(t, "invalid TTD, configTTD: 1, currentTTD: 2, parentTTD: 1", err)
+	require.Equal(t, true, IsInvalidBlock(err))
 }
 
 func Test_getBlkParentHashAndTD(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-	fcs := protoarray.New(0, 0, [32]byte{'a'})
+	fcs := protoarray.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),
@@ -158,12 +161,12 @@ func Test_getBlkParentHashAndTD(t *testing.T) {
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 
-	engine := &mockEngineService{blks: map[[32]byte]*enginev1.ExecutionBlock{}}
+	engine := &mocks.EngineClient{BlockByHashMap: map[[32]byte]*enginev1.ExecutionBlock{}}
 	service.cfg.ExecutionEngineCaller = engine
 	h := [32]byte{'a'}
 	p := [32]byte{'b'}
 	td := "0x1"
-	engine.blks[h] = &enginev1.ExecutionBlock{
+	engine.BlockByHashMap[h] = &enginev1.ExecutionBlock{
 		ParentHash:      p[:],
 		TotalDifficulty: td,
 	}
@@ -175,18 +178,18 @@ func Test_getBlkParentHashAndTD(t *testing.T) {
 	_, _, err = service.getBlkParentHashAndTD(ctx, []byte{'c'})
 	require.ErrorContains(t, "could not get pow block: block not found", err)
 
-	engine.blks[h] = nil
+	engine.BlockByHashMap[h] = nil
 	_, _, err = service.getBlkParentHashAndTD(ctx, h[:])
 	require.ErrorContains(t, "pow block is nil", err)
 
-	engine.blks[h] = &enginev1.ExecutionBlock{
+	engine.BlockByHashMap[h] = &enginev1.ExecutionBlock{
 		ParentHash:      p[:],
 		TotalDifficulty: "1",
 	}
 	_, _, err = service.getBlkParentHashAndTD(ctx, h[:])
 	require.ErrorContains(t, "could not decode merge block total difficulty: hex string without 0x prefix", err)
 
-	engine.blks[h] = &enginev1.ExecutionBlock{
+	engine.BlockByHashMap[h] = &enginev1.ExecutionBlock{
 		ParentHash:      p[:],
 		TotalDifficulty: "0XFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
 	}

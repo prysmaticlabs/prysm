@@ -7,12 +7,14 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/consensus-types/forks/bellatrix"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
 	"github.com/prysmaticlabs/prysm/time/slots"
@@ -60,7 +62,7 @@ func Test_IsMergeComplete(t *testing.T) {
 			name: "has receipt root",
 			payload: func() *ethpb.ExecutionPayloadHeader {
 				h := emptyPayloadHeader()
-				h.ReceiptRoot = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
+				h.ReceiptsRoot = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				return h
 			}(),
 			want: true,
@@ -337,7 +339,7 @@ func Test_IsMergeTransitionBlockUsingPayloadHeader(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			blk := util.NewBeaconBlockBellatrix()
 			blk.Block.Body.ExecutionPayload = tt.payload
-			body, err := wrapper.WrappedBellatrixBeaconBlockBody(blk.Block.Body)
+			body, err := wrapper.WrappedBeaconBlockBody(blk.Block.Body)
 			require.NoError(t, err)
 			got, err := blocks.IsMergeTransitionBlockUsingPreStatePayloadHeader(tt.header, body)
 			require.NoError(t, err)
@@ -373,7 +375,7 @@ func Test_IsExecutionBlock(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			blk := util.NewBeaconBlockBellatrix()
 			blk.Block.Body.ExecutionPayload = tt.payload
-			wrappedBlock, err := wrapper.WrappedBellatrixBeaconBlock(blk.Block)
+			wrappedBlock, err := wrapper.WrappedBeaconBlock(blk.Block)
 			require.NoError(t, err)
 			got, err := blocks.IsExecutionBlock(wrappedBlock.Body())
 			require.NoError(t, err)
@@ -444,7 +446,7 @@ func Test_IsExecutionEnabled(t *testing.T) {
 			require.NoError(t, st.SetLatestExecutionPayloadHeader(tt.header))
 			blk := util.NewBeaconBlockBellatrix()
 			blk.Block.Body.ExecutionPayload = tt.payload
-			body, err := wrapper.WrappedBellatrixBeaconBlockBody(blk.Block.Body)
+			body, err := wrapper.WrappedBeaconBlockBody(blk.Block.Body)
 			require.NoError(t, err)
 			if tt.useAltairSt {
 				st, _ = util.DeterministicGenesisStateAltair(t, 1)
@@ -510,7 +512,7 @@ func Test_IsExecutionEnabledUsingHeader(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			blk := util.NewBeaconBlockBellatrix()
 			blk.Block.Body.ExecutionPayload = tt.payload
-			body, err := wrapper.WrappedBellatrixBeaconBlockBody(blk.Block.Body)
+			body, err := wrapper.WrappedBeaconBlockBody(blk.Block.Body)
 			require.NoError(t, err)
 			got, err := blocks.IsExecutionEnabledUsingHeader(tt.header, body)
 			require.NoError(t, err)
@@ -600,7 +602,7 @@ func Test_ValidatePayload(t *testing.T) {
 		{
 			name:    "incorrect prev randao",
 			payload: emptyPayload(),
-			err:     errors.New("incorrect prev randao"),
+			err:     blocks.ErrInvalidPayloadPrevRandao,
 		},
 		{
 			name: "incorrect timestamp",
@@ -610,7 +612,7 @@ func Test_ValidatePayload(t *testing.T) {
 				h.Timestamp = 1
 				return h
 			}(),
-			err: errors.New("incorrect timestamp"),
+			err: blocks.ErrInvalidPayloadTimeStamp,
 		},
 	}
 	for _, tt := range tests {
@@ -648,7 +650,7 @@ func Test_ProcessPayload(t *testing.T) {
 		{
 			name:    "incorrect prev randao",
 			payload: emptyPayload(),
-			err:     errors.New("incorrect prev randao"),
+			err:     blocks.ErrInvalidPayloadPrevRandao,
 		},
 		{
 			name: "incorrect timestamp",
@@ -658,7 +660,7 @@ func Test_ProcessPayload(t *testing.T) {
 				h.Timestamp = 1
 				return h
 			}(),
-			err: errors.New("incorrect timestamp"),
+			err: blocks.ErrInvalidPayloadTimeStamp,
 		},
 	}
 	for _, tt := range tests {
@@ -668,7 +670,7 @@ func Test_ProcessPayload(t *testing.T) {
 				require.Equal(t, tt.err.Error(), err.Error())
 			} else {
 				require.Equal(t, tt.err, err)
-				want, err := blocks.PayloadToHeader(tt.payload)
+				want, err := bellatrix.PayloadToHeader(tt.payload)
 				require.Equal(t, tt.err, err)
 				got, err := st.LatestExecutionPayloadHeader()
 				require.NoError(t, err)
@@ -678,9 +680,152 @@ func Test_ProcessPayload(t *testing.T) {
 	}
 }
 
+func Test_ProcessPayloadHeader(t *testing.T) {
+	st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
+	random, err := helpers.RandaoMix(st, time.CurrentEpoch(st))
+	require.NoError(t, err)
+	ts, err := slots.ToTime(st.GenesisTime(), st.Slot())
+	require.NoError(t, err)
+	tests := []struct {
+		name   string
+		header *ethpb.ExecutionPayloadHeader
+		err    error
+	}{
+		{
+			name: "process passes",
+			header: func() *ethpb.ExecutionPayloadHeader {
+				h := emptyPayloadHeader()
+				h.PrevRandao = random
+				h.Timestamp = uint64(ts.Unix())
+				return h
+			}(), err: nil,
+		},
+		{
+			name:   "incorrect prev randao",
+			header: emptyPayloadHeader(),
+			err:    blocks.ErrInvalidPayloadPrevRandao,
+		},
+		{
+			name: "incorrect timestamp",
+			header: func() *ethpb.ExecutionPayloadHeader {
+				h := emptyPayloadHeader()
+				h.PrevRandao = random
+				h.Timestamp = 1
+				return h
+			}(),
+			err: blocks.ErrInvalidPayloadTimeStamp,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			st, err := blocks.ProcessPayloadHeader(st, tt.header)
+			if err != nil {
+				require.Equal(t, tt.err.Error(), err.Error())
+			} else {
+				require.Equal(t, tt.err, err)
+				got, err := st.LatestExecutionPayloadHeader()
+				require.NoError(t, err)
+				require.DeepSSZEqual(t, tt.header, got)
+			}
+		})
+	}
+}
+
+func Test_ValidatePayloadHeader(t *testing.T) {
+	st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
+	random, err := helpers.RandaoMix(st, time.CurrentEpoch(st))
+	require.NoError(t, err)
+	ts, err := slots.ToTime(st.GenesisTime(), st.Slot())
+	require.NoError(t, err)
+	tests := []struct {
+		name   string
+		header *ethpb.ExecutionPayloadHeader
+		err    error
+	}{
+		{
+			name: "process passes",
+			header: func() *ethpb.ExecutionPayloadHeader {
+				h := emptyPayloadHeader()
+				h.PrevRandao = random
+				h.Timestamp = uint64(ts.Unix())
+				return h
+			}(), err: nil,
+		},
+		{
+			name:   "incorrect prev randao",
+			header: emptyPayloadHeader(),
+			err:    blocks.ErrInvalidPayloadPrevRandao,
+		},
+		{
+			name: "incorrect timestamp",
+			header: func() *ethpb.ExecutionPayloadHeader {
+				h := emptyPayloadHeader()
+				h.PrevRandao = random
+				h.Timestamp = 1
+				return h
+			}(),
+			err: blocks.ErrInvalidPayloadTimeStamp,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := blocks.ValidatePayloadHeader(st, tt.header)
+			require.Equal(t, tt.err, err)
+		})
+	}
+}
+
+func Test_ValidatePayloadHeaderWhenMergeCompletes(t *testing.T) {
+	st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
+	emptySt := st.Copy()
+	require.NoError(t, st.SetLatestExecutionPayloadHeader(&ethpb.ExecutionPayloadHeader{BlockHash: []byte{'a'}}))
+	tests := []struct {
+		name   string
+		state  state.BeaconState
+		header *ethpb.ExecutionPayloadHeader
+		err    error
+	}{
+		{
+			name: "no merge",
+			header: func() *ethpb.ExecutionPayloadHeader {
+				h := emptyPayloadHeader()
+				return h
+			}(),
+			state: emptySt,
+			err:   nil,
+		},
+		{
+			name: "process passes",
+			header: func() *ethpb.ExecutionPayloadHeader {
+				h := emptyPayloadHeader()
+				h.ParentHash = []byte{'a'}
+				return h
+			}(),
+			state: st,
+			err:   nil,
+		},
+		{
+			name: "invalid block hash",
+			header: func() *ethpb.ExecutionPayloadHeader {
+				h := emptyPayloadHeader()
+				h.ParentHash = []byte{'b'}
+				return h
+			}(),
+			state: st,
+			err:   blocks.ErrInvalidPayloadBlockHash,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := blocks.ValidatePayloadHeaderWhenMergeCompletes(tt.state, tt.header)
+			require.Equal(t, tt.err, err)
+		})
+	}
+}
+
 func Test_PayloadToHeader(t *testing.T) {
 	p := emptyPayload()
-	h, err := blocks.PayloadToHeader(p)
+	h, err := bellatrix.PayloadToHeader(p)
 	require.NoError(t, err)
 	txRoot, err := ssz.TransactionsRoot(p.Transactions)
 	require.NoError(t, err)
@@ -705,7 +850,7 @@ func Test_PayloadToHeader(t *testing.T) {
 	require.DeepSSZEqual(t, h.ParentHash, make([]byte, fieldparams.RootLength))
 	require.DeepSSZEqual(t, h.FeeRecipient, make([]byte, fieldparams.FeeRecipientLength))
 	require.DeepSSZEqual(t, h.StateRoot, make([]byte, fieldparams.RootLength))
-	require.DeepSSZEqual(t, h.ReceiptRoot, make([]byte, fieldparams.RootLength))
+	require.DeepSSZEqual(t, h.ReceiptsRoot, make([]byte, fieldparams.RootLength))
 	require.DeepSSZEqual(t, h.LogsBloom, make([]byte, fieldparams.LogsBloomLength))
 	require.DeepSSZEqual(t, h.PrevRandao, make([]byte, fieldparams.RootLength))
 	require.DeepSSZEqual(t, h.ExtraData, make([]byte, 0))
@@ -733,7 +878,7 @@ func emptyPayloadHeader() *ethpb.ExecutionPayloadHeader {
 		ParentHash:       make([]byte, fieldparams.RootLength),
 		FeeRecipient:     make([]byte, fieldparams.FeeRecipientLength),
 		StateRoot:        make([]byte, fieldparams.RootLength),
-		ReceiptRoot:      make([]byte, fieldparams.RootLength),
+		ReceiptsRoot:     make([]byte, fieldparams.RootLength),
 		LogsBloom:        make([]byte, fieldparams.LogsBloomLength),
 		PrevRandao:       make([]byte, fieldparams.RootLength),
 		BaseFeePerGas:    make([]byte, fieldparams.RootLength),

@@ -3,7 +3,7 @@ package accounts
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"math"
 	"os"
 	"strconv"
@@ -12,11 +12,12 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/google/uuid"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/async/event"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -57,6 +58,10 @@ func (_ *mockRemoteKeymanager) ExtractKeystores(
 
 func (km *mockRemoteKeymanager) ListKeymanagerAccounts(ctx context.Context, cfg keymanager.ListKeymanagerAccountConfig) error {
 	return remote.ListKeymanagerAccountsImpl(ctx, cfg, km, km.opts)
+}
+
+func (*mockRemoteKeymanager) DeleteKeystores(context.Context, [][]byte) ([]*ethpbservice.DeletedKeystoreStatus, error) {
+	return nil, nil
 }
 
 func createRandomKeystore(t testing.TB, password string) *keymanager.Keystore {
@@ -128,7 +133,7 @@ func TestListAccounts_LocalKeymanager(t *testing.T) {
 	)
 
 	require.NoError(t, writer.Close())
-	out, err := ioutil.ReadAll(r)
+	out, err := io.ReadAll(r)
 	require.NoError(t, err)
 	os.Stdout = rescueStdout
 
@@ -272,7 +277,7 @@ func TestListAccounts_DerivedKeymanager(t *testing.T) {
 		keymanager.ListKeymanagerAccountConfig{ShowPrivateKeys: true}))
 
 	require.NoError(t, writer.Close())
-	out, err := ioutil.ReadAll(r)
+	out, err := io.ReadAll(r)
 	require.NoError(t, err)
 	os.Stdout = rescueStdout
 
@@ -420,7 +425,7 @@ func TestListAccounts_RemoteKeymanager(t *testing.T) {
 			}))
 
 	require.NoError(t, writer.Close())
-	out, err := ioutil.ReadAll(r)
+	out, err := io.ReadAll(r)
 	require.NoError(t, err)
 	os.Stdout = rescueStdout
 
@@ -537,7 +542,7 @@ func TestListAccounts_ListValidatorIndices(t *testing.T) {
 	)
 
 	require.NoError(t, writer.Close())
-	out, err := ioutil.ReadAll(r)
+	out, err := io.ReadAll(r)
 	require.NoError(t, err)
 	os.Stdout = rescueStdout
 

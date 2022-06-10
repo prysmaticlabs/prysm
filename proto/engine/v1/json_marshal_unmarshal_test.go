@@ -5,6 +5,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -123,6 +124,7 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		require.DeepEqual(t, [][]byte{[]byte("hi")}, payloadPb.Transactions)
 	})
 	t.Run("execution block", func(t *testing.T) {
+		baseFeePerGas := big.NewInt(1770307273)
 		jsonPayload := &enginev1.ExecutionBlock{
 			Number:           []byte("100"),
 			Hash:             []byte("hash"),
@@ -138,7 +140,7 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 			GasLimit:         3,
 			GasUsed:          4,
 			Timestamp:        5,
-			BaseFeePerGas:    bytesutil.PadTo([]byte{1, 2, 3, 4}, fieldparams.RootLength),
+			BaseFeePerGas:    baseFeePerGas.Bytes(),
 			Size:             []byte("7"),
 			ExtraData:        []byte("extraData"),
 			MixHash:          []byte("mixHash"),
@@ -164,13 +166,20 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		require.DeepEqual(t, uint64(3), payloadPb.GasLimit)
 		require.DeepEqual(t, uint64(4), payloadPb.GasUsed)
 		require.DeepEqual(t, uint64(5), payloadPb.Timestamp)
-		require.DeepEqual(t, bytesutil.PadTo([]byte{1, 2, 3, 4}, fieldparams.RootLength), payloadPb.BaseFeePerGas)
+		require.DeepEqual(t, bytesutil.PadTo(baseFeePerGas.Bytes(), fieldparams.RootLength), payloadPb.BaseFeePerGas)
 		require.DeepEqual(t, []byte("7"), payloadPb.Size)
 		require.DeepEqual(t, []byte("extraData"), payloadPb.ExtraData)
 		require.DeepEqual(t, []byte("mixHash"), payloadPb.MixHash)
 		require.DeepEqual(t, []byte("nonce"), payloadPb.Nonce)
 		require.DeepEqual(t, [][]byte{[]byte("hi")}, payloadPb.Transactions)
 		require.DeepEqual(t, [][]byte{[]byte("bye")}, payloadPb.Uncles)
+	})
+	t.Run("nil execution block", func(t *testing.T) {
+		jsonPayload := (*enginev1.ExecutionBlock)(nil)
+		enc, err := json.Marshal(jsonPayload)
+		require.NoError(t, err)
+		payloadPb := &enginev1.ExecutionBlock{}
+		require.ErrorIs(t, hexutil.ErrEmptyString, json.Unmarshal(enc, payloadPb))
 	})
 }
 

@@ -7,15 +7,15 @@ import (
 )
 
 var (
-	// PyrmontTestnet flag for the multiclient Ethereum consensus testnet.
-	PyrmontTestnet = &cli.BoolFlag{
-		Name:  "pyrmont",
-		Usage: "This defines the flag through which we can run on the Pyrmont Multiclient Testnet",
-	}
 	// PraterTestnet flag for the multiclient Ethereum consensus testnet.
 	PraterTestnet = &cli.BoolFlag{
 		Name:  "prater",
 		Usage: "Run Prysm configured for the Prater test network",
+	}
+	// RopstenTestnet flag for the multiclient Ethereum consensus testnet.
+	RopstenTestnet = &cli.BoolFlag{
+		Name:  "ropsten",
+		Usage: "Run Prysm configured for the Ropsten beacon chain test network",
 	}
 	// Mainnet flag for easier tooling, no-op
 	Mainnet = &cli.BoolFlag{
@@ -80,17 +80,9 @@ var (
 		Name:  "slasher",
 		Usage: "Enables a slasher in the beacon node for detecting slashable offenses",
 	}
-	disableProposerAttsSelectionUsingMaxCover = &cli.BoolFlag{
-		Name:  "disable-proposer-atts-selection-using-max-cover",
-		Usage: "Disable max-cover algorithm when selecting attestations for proposer",
-	}
 	enableSlashingProtectionPruning = &cli.BoolFlag{
 		Name:  "enable-slashing-protection-history-pruning",
 		Usage: "Enables the pruning of the validator client's slashing protection database",
-	}
-	disableOptimizedBalanceUpdate = &cli.BoolFlag{
-		Name:  "disable-optimized-balance-update",
-		Usage: "Disable the optimized method of updating validator balances.",
 	}
 	enableDoppelGangerProtection = &cli.BoolFlag{
 		Name: "enable-doppelganger",
@@ -104,31 +96,10 @@ var (
 			" (Warning): Once enabled, this feature migrates your database in to a new schema and " +
 			"there is no going back. At worst, your entire database might get corrupted.",
 	}
-	disableCorrectlyInsertOrphanedAtts = &cli.BoolFlag{
-		Name: "disable-correctly-insert-orphaned-atts",
-		Usage: "Disable the fix for bug where orphaned attestations don't get reinserted back to mem pool. Which is an improves validator profitability and overall network health," +
-			"see issue #9441 for further detail",
-	}
 	disableCorrectlyPruneCanonicalAtts = &cli.BoolFlag{
 		Name: "disable-correctly-prune-canonical-atts",
 		Usage: "Disable the fix for bug where any block attestations can get incorrectly pruned, which improves validator profitability and overall network health," +
 			"see issue #9443 for further detail",
-	}
-	disableActiveBalanceCache = &cli.BoolFlag{
-		Name:  "disable-active-balance-cache",
-		Usage: "This disables active balance cache, which improves node performance during block processing",
-	}
-	disableGetBlockOptimizations = &cli.BoolFlag{
-		Name:  "disable-get-block-optimizations",
-		Usage: "This disables some optimizations on the GetBlock() function.",
-	}
-	disableBatchGossipVerification = &cli.BoolFlag{
-		Name:  "disable-batch-gossip-verification",
-		Usage: "This enables batch verification of signatures received over gossip.",
-	}
-	disableBalanceTrieComputation = &cli.BoolFlag{
-		Name:  "disable-balance-trie-computation",
-		Usage: "This disables optimized hash tree root operations for our balance field.",
 	}
 	enableNativeState = &cli.BoolFlag{
 		Name:  "enable-native-state",
@@ -142,6 +113,10 @@ var (
 		Name:  "enable-forkchoice-doubly-linked-tree",
 		Usage: "Enables new forkchoice store structure that uses doubly linked trees",
 	}
+	enableGossipBatchAggregation = &cli.BoolFlag{
+		Name:  "enable-gossip-batch-aggregation",
+		Usage: "Enables new methods to further aggregate our gossip batches before verifying them.",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
@@ -149,6 +124,7 @@ var devModeFlags = []cli.Flag{
 	enablePeerScorer,
 	enableVecHTR,
 	enableForkChoiceDoublyLinkedTree,
+	enableGossipBatchAggregation,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -156,8 +132,8 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	writeWalletPasswordOnWebOnboarding,
 	enableExternalSlasherProtectionFlag,
 	disableAttestingHistoryDBCache,
-	PyrmontTestnet,
 	PraterTestnet,
+	RopstenTestnet,
 	Mainnet,
 	dynamicKeyReloadDebounceInterval,
 	attestTimely,
@@ -175,26 +151,20 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	devModeFlag,
 	writeSSZStateTransitionsFlag,
 	disableGRPCConnectionLogging,
-	PyrmontTestnet,
 	PraterTestnet,
+	RopstenTestnet,
 	Mainnet,
 	enablePeerScorer,
 	enableLargerGossipHistory,
 	checkPtInfoCache,
 	disableBroadcastSlashingFlag,
 	enableSlasherFlag,
-	disableProposerAttsSelectionUsingMaxCover,
-	disableOptimizedBalanceUpdate,
 	enableHistoricalSpaceRepresentation,
-	disableCorrectlyInsertOrphanedAtts,
-	disableGetBlockOptimizations,
 	disableCorrectlyPruneCanonicalAtts,
-	disableActiveBalanceCache,
-	disableBatchGossipVerification,
-	disableBalanceTrieComputation,
 	enableNativeState,
 	enableVecHTR,
 	enableForkChoiceDoublyLinkedTree,
+	enableGossipBatchAggregation,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
@@ -202,4 +172,5 @@ var E2EBeaconChainFlags = []string{
 	"--dev",
 	"--use-check-point-cache",
 	"--enable-active-balance-cache",
+	"--enable-native-state",
 }

@@ -8,13 +8,13 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/interop"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"go.opencensus.io/trace"
 )
@@ -43,7 +43,7 @@ import (
 func ExecuteStateTransitionNoVerifyAnySig(
 	ctx context.Context,
 	state state.BeaconState,
-	signed block.SignedBeaconBlock,
+	signed interfaces.SignedBeaconBlock,
 ) (*bls.SignatureBatch, state.BeaconState, error) {
 	if ctx.Err() != nil {
 		return nil, nil, ctx.Err()
@@ -107,7 +107,7 @@ func ExecuteStateTransitionNoVerifyAnySig(
 func CalculateStateRoot(
 	ctx context.Context,
 	state state.BeaconState,
-	signed block.SignedBeaconBlock,
+	signed interfaces.SignedBeaconBlock,
 ) ([32]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.CalculateStateRoot")
 	defer span.End()
@@ -156,11 +156,11 @@ func CalculateStateRoot(
 func ProcessBlockNoVerifyAnySig(
 	ctx context.Context,
 	state state.BeaconState,
-	signed block.SignedBeaconBlock,
+	signed interfaces.SignedBeaconBlock,
 ) (*bls.SignatureBatch, state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessBlockNoVerifyAnySig")
 	defer span.End()
-	if err := helpers.BeaconBlockIsNil(signed); err != nil {
+	if err := wrapper.BeaconBlockIsNil(signed); err != nil {
 		return nil, nil, err
 	}
 
@@ -220,10 +220,10 @@ func ProcessBlockNoVerifyAnySig(
 func ProcessOperationsNoVerifyAttsSigs(
 	ctx context.Context,
 	state state.BeaconState,
-	signedBeaconBlock block.SignedBeaconBlock) (state.BeaconState, error) {
+	signedBeaconBlock interfaces.SignedBeaconBlock) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessOperationsNoVerifyAttsSigs")
 	defer span.End()
-	if err := helpers.BeaconBlockIsNil(signedBeaconBlock); err != nil {
+	if err := wrapper.BeaconBlockIsNil(signedBeaconBlock); err != nil {
 		return nil, err
 	}
 
@@ -265,11 +265,11 @@ func ProcessOperationsNoVerifyAttsSigs(
 func ProcessBlockForStateRoot(
 	ctx context.Context,
 	state state.BeaconState,
-	signed block.SignedBeaconBlock,
+	signed interfaces.SignedBeaconBlock,
 ) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessBlockForStateRoot")
 	defer span.End()
-	if err := helpers.BeaconBlockIsNil(signed); err != nil {
+	if err := wrapper.BeaconBlockIsNil(signed); err != nil {
 		return nil, err
 	}
 
@@ -290,13 +290,24 @@ func ProcessBlockForStateRoot(
 		return nil, errors.Wrap(err, "could not check if execution is enabled")
 	}
 	if enabled {
-		payload, err := blk.Body().ExecutionPayload()
-		if err != nil {
-			return nil, err
-		}
-		state, err = b.ProcessPayload(state, payload)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not process execution payload")
+		if blk.IsBlinded() {
+			header, err := blk.Body().ExecutionPayloadHeader()
+			if err != nil {
+				return nil, err
+			}
+			state, err = b.ProcessPayloadHeader(state, header)
+			if err != nil {
+				return nil, errors.Wrap(err, "could not process execution payload header")
+			}
+		} else {
+			payload, err := blk.Body().ExecutionPayload()
+			if err != nil {
+				return nil, err
+			}
+			state, err = b.ProcessPayload(state, payload)
+			if err != nil {
+				return nil, errors.Wrap(err, "could not process execution payload")
+			}
 		}
 	}
 
@@ -338,7 +349,7 @@ func ProcessBlockForStateRoot(
 func altairOperations(
 	ctx context.Context,
 	state state.BeaconState,
-	signedBeaconBlock block.SignedBeaconBlock) (state.BeaconState, error) {
+	signedBeaconBlock interfaces.SignedBeaconBlock) (state.BeaconState, error) {
 	state, err := b.ProcessProposerSlashings(ctx, state, signedBeaconBlock.Block().Body().ProposerSlashings(), v.SlashValidator)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process altair proposer slashing")
@@ -360,8 +371,8 @@ func altairOperations(
 // This calls phase 0 block operations.
 func phase0Operations(
 	ctx context.Context,
-	state state.BeaconStateAltair,
-	signedBeaconBlock block.SignedBeaconBlock) (state.BeaconState, error) {
+	state state.BeaconState,
+	signedBeaconBlock interfaces.SignedBeaconBlock) (state.BeaconState, error) {
 	state, err := b.ProcessProposerSlashings(ctx, state, signedBeaconBlock.Block().Body().ProposerSlashings(), v.SlashValidator)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process block proposer slashings")

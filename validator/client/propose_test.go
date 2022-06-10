@@ -9,17 +9,17 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
-	types "github.com/prysmaticlabs/eth2-types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/block"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/mock"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -35,7 +35,7 @@ type mocks struct {
 	validatorClient *mock.MockBeaconNodeValidatorClient
 	nodeClient      *mock.MockNodeClient
 	slasherClient   *mock.MockSlasherClient
-	signExitFunc    func(context.Context, *validatorpb.SignRequest) (bls.Signature, error)
+	signfunc        func(context.Context, *validatorpb.SignRequest) (bls.Signature, error)
 }
 
 type mockSignature struct{}
@@ -74,7 +74,7 @@ func setupWithKey(t *testing.T, validatorKey bls.SecretKey) (*validator, *mocks,
 		validatorClient: mock.NewMockBeaconNodeValidatorClient(ctrl),
 		nodeClient:      mock.NewMockNodeClient(ctrl),
 		slasherClient:   mock.NewMockSlasherClient(ctrl),
-		signExitFunc: func(ctx context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
+		signfunc: func(ctx context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
 			return mockSignature{}, nil
 		},
 	}
@@ -143,7 +143,8 @@ func TestProposeBlock_DomainDataIsNil(t *testing.T) {
 }
 
 func TestProposeBlock_RequestBlockFailed(t *testing.T) {
-	cfg := params.BeaconConfig()
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig().Copy()
 	cfg.AltairForkEpoch = 2
 	cfg.BellatrixForkEpoch = 4
 	params.OverrideBeaconConfig(cfg)
@@ -578,7 +579,7 @@ func testProposeBlock(t *testing.T, graffiti []byte) {
 				gomock.Any(), // epoch
 			).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
-			var sentBlock block.SignedBeaconBlock
+			var sentBlock interfaces.SignedBeaconBlock
 			var err error
 
 			m.validatorClient.EXPECT().ProposeBeaconBlock(
@@ -609,7 +610,7 @@ func TestProposeExit_ValidatorIndexFailed(t *testing.T) {
 		context.Background(),
 		m.validatorClient,
 		m.nodeClient,
-		m.signExitFunc,
+		m.signfunc,
 		validatorKey.PublicKey().Marshal(),
 	)
 	assert.NotNil(t, err)
@@ -633,7 +634,7 @@ func TestProposeExit_GetGenesisFailed(t *testing.T) {
 		context.Background(),
 		m.validatorClient,
 		m.nodeClient,
-		m.signExitFunc,
+		m.signfunc,
 		validatorKey.PublicKey().Marshal(),
 	)
 	assert.NotNil(t, err)
@@ -666,7 +667,7 @@ func TestProposeExit_DomainDataFailed(t *testing.T) {
 		context.Background(),
 		m.validatorClient,
 		m.nodeClient,
-		m.signExitFunc,
+		m.signfunc,
 		validatorKey.PublicKey().Marshal(),
 	)
 	assert.NotNil(t, err)
@@ -700,7 +701,7 @@ func TestProposeExit_DomainDataIsNil(t *testing.T) {
 		context.Background(),
 		m.validatorClient,
 		m.nodeClient,
-		m.signExitFunc,
+		m.signfunc,
 		validatorKey.PublicKey().Marshal(),
 	)
 	assert.NotNil(t, err)
@@ -737,7 +738,7 @@ func TestProposeBlock_ProposeExitFailed(t *testing.T) {
 		context.Background(),
 		m.validatorClient,
 		m.nodeClient,
-		m.signExitFunc,
+		m.signfunc,
 		validatorKey.PublicKey().Marshal(),
 	)
 	assert.NotNil(t, err)
@@ -774,7 +775,7 @@ func TestProposeExit_BroadcastsBlock(t *testing.T) {
 		context.Background(),
 		m.validatorClient,
 		m.nodeClient,
-		m.signExitFunc,
+		m.signfunc,
 		validatorKey.PublicKey().Marshal(),
 	))
 }
@@ -802,7 +803,8 @@ func TestSignBlock(t *testing.T) {
 		},
 	}
 	validator.keyManager = km
-	b := wrapper.WrappedPhase0BeaconBlock(blk.Block)
+	b, err := wrapper.WrappedBeaconBlock(blk.Block)
+	require.NoError(t, err)
 	sig, blockRoot, err := validator.signBlock(ctx, pubKey, 0, 0, b)
 	require.NoError(t, err, "%x,%v", sig, err)
 	require.Equal(t, "a049e1dc723e5a8b5bd14f292973572dffd53785ddb337"+
@@ -842,7 +844,7 @@ func TestSignAltairBlock(t *testing.T) {
 		},
 	}
 	validator.keyManager = km
-	wb, err := wrapper.WrappedAltairBeaconBlock(blk.Block)
+	wb, err := wrapper.WrappedBeaconBlock(blk.Block)
 	require.NoError(t, err)
 	sig, blockRoot, err := validator.signBlock(ctx, pubKey, 0, 0, wb)
 	require.NoError(t, err, "%x,%v", sig, err)
@@ -878,7 +880,7 @@ func TestSignBellatrixBlock(t *testing.T) {
 		},
 	}
 	validator.keyManager = km
-	wb, err := wrapper.WrappedBellatrixBeaconBlock(blk.Block)
+	wb, err := wrapper.WrappedBeaconBlock(blk.Block)
 	require.NoError(t, err)
 	sig, blockRoot, err := validator.signBlock(ctx, pubKey, 0, 0, wb)
 	require.NoError(t, err, "%x,%v", sig, err)
