@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -88,7 +89,7 @@ func logPayload(block interfaces.BeaconBlock) error {
 		return err
 	}
 	if payload.GasLimit == 0 {
-		return err
+		return errors.New("gas limit should not be 0")
 	}
 	gasUtilized := float64(payload.GasUsed) / float64(payload.GasLimit)
 
