@@ -4,7 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "crypto.go",
-        "utils.go",
+        "keys.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/crypto/bls/utils",
     visibility = ["//visibility:public"],
