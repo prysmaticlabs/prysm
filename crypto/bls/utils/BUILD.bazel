@@ -26,10 +26,14 @@ go_test(
         "blsprivatekey_test.go",
         "blspublickey_test.go",
         "blssignature_test.go",
+        "crypto_internal_test.go",
+        "crypto_test.go",
     ],
+    embed = [":go_default_library"],
     deps = [
         "@com_github_stretchr_testify//assert:go_default_library",
         "@com_github_stretchr_testify//require:go_default_library",
+        "@com_github_wealdtech_go_bytesutil//:go_default_library",
         "@com_github_wealdtech_go_eth2_types_v2//:go_default_library",
     ],
 )

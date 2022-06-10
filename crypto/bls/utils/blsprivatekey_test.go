@@ -16,7 +16,6 @@ package utils_test
 import (
 	"encoding/hex"
 	"errors"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -33,13 +32,6 @@ func _blsPrivateKey(input string) *e2types.BLSPrivateKey {
 	data, _ := hex.DecodeString(input)
 	res, _ := e2types.BLSPrivateKeyFromBytes(data)
 	return res
-}
-
-func TestMain(m *testing.M) {
-	if err := e2types.InitBLS(); err != nil {
-		os.Exit(1)
-	}
-	os.Exit(m.Run())
 }
 
 func TestBLSPrivateKeyFromBytes(t *testing.T) {

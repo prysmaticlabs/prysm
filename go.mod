@@ -78,6 +78,7 @@ require (
 	github.com/urfave/cli/v2 v2.3.0
 	github.com/uudashr/gocognit v1.0.5
 	github.com/wealdtech/go-bytesutil v1.1.1
+	github.com/wealdtech/go-eth2-types/v2 v2.5.2
 	github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4 v1.1.3
 	github.com/wercker/journalhook v0.0.0-20180428041537-5d0a5ae867b3
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
