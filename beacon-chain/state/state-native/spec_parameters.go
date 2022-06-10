@@ -28,3 +28,15 @@ func (b *BeaconState) InactivityPenaltyQuotient() (uint64, error) {
 	}
 	return 0, errNotSupported("InactivityPenaltyQuotient()", b.version)
 }
+
+func (b *BeaconState) MinSlashingPenaltyQuotient() (uint64, error) {
+	switch b.version {
+	case version.Bellatrix:
+		return params.BeaconConfig().MinSlashingPenaltyQuotientBellatrix, nil
+	case version.Altair:
+		return params.BeaconConfig().MinSlashingPenaltyQuotientAltair, nil
+	case version.Phase0:
+		return params.BeaconConfig().MinSlashingPenaltyQuotient, nil
+	}
+	return 0, errNotSupported("MinSlashingPenaltyQuotient()", b.version)
+}

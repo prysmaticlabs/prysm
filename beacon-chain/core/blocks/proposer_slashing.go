@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"google.golang.org/protobuf/proto"
 )
@@ -75,16 +74,10 @@ func ProcessProposerSlashing(
 		return nil, errors.Wrap(err, "could not verify proposer slashing")
 	}
 	cfg := params.BeaconConfig()
-	var slashingQuotient uint64
-	switch {
-	case beaconState.Version() == version.Phase0:
-		slashingQuotient = cfg.MinSlashingPenaltyQuotient
-	case beaconState.Version() == version.Altair:
-		slashingQuotient = cfg.MinSlashingPenaltyQuotientAltair
-	case beaconState.Version() == version.Bellatrix:
-		slashingQuotient = cfg.MinSlashingPenaltyQuotientBellatrix
-	default:
-		return nil, errors.New("unknown state version")
+
+	slashingQuotient, err := beaconState.MinSlashingPenaltyQuotient()
+	if err != nil {
+		return nil, err
 	}
 	beaconState, err = slashFunc(ctx, beaconState, slashing.Header_1.Header.ProposerIndex, slashingQuotient, cfg.ProposerRewardQuotient)
 	if err != nil {

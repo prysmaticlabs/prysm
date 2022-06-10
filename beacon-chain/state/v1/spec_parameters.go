@@ -9,3 +9,7 @@ func (b *BeaconState) ProportionalSlashingMultiplier() (uint64, error) {
 func (b *BeaconState) InactivityPenaltyQuotient() (uint64, error) {
 	return params.BeaconConfig().InactivityPenaltyQuotient, nil
 }
+
+func (b *BeaconState) MinSlashingPenaltyQuotient() (uint64, error) {
+	return params.BeaconConfig().MinSlashingPenaltyQuotient, nil
+}

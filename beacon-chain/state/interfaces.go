@@ -26,6 +26,7 @@ type BeaconState interface {
 // SpecParametersProvider provides fork-specific configuration parameters as
 // defined in the consensus specification for the beacon chain.
 type SpecParametersProvider interface {
+	MinSlashingPenaltyQuotient() (uint64, error)
 	InactivityPenaltyQuotient() (uint64, error)
 	ProportionalSlashingMultiplier() (uint64, error)
 }
