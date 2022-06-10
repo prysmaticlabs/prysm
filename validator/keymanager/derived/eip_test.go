@@ -8,9 +8,9 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/crypto/bls/utils"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
-	util "github.com/wealdtech/go-eth2-util"
 )
 
 func TestDerivationFromMnemonic(t *testing.T) {
@@ -27,9 +27,9 @@ func TestDerivationFromMnemonic(t *testing.T) {
 	assert.DeepEqual(t, seedBytes, derivedSeed)
 
 	// We derive keys, then check the master SK and the child SK.
-	withdrawalKey, err := util.PrivateKeyFromSeedAndPath(seedBytes, "m")
+	withdrawalKey, err := utils.PrivateKeyFromSeedAndPath(seedBytes, "m")
 	require.NoError(t, err)
-	validatingKey, err := util.PrivateKeyFromSeedAndPath(seedBytes, fmt.Sprintf("m/%d", childIndex))
+	validatingKey, err := utils.PrivateKeyFromSeedAndPath(seedBytes, fmt.Sprintf("m/%d", childIndex))
 	require.NoError(t, err)
 
 	expectedMasterSK, err := secretKeyFromBigNum(masterSK)
@@ -94,9 +94,9 @@ func TestDerivationFromSeed(t *testing.T) {
 			require.NoError(t, err)
 
 			// We derive keys, then check the master SK and the child SK.
-			masterSK, err := util.PrivateKeyFromSeedAndPath(seedBytes, "m")
+			masterSK, err := utils.PrivateKeyFromSeedAndPath(seedBytes, "m")
 			require.NoError(t, err)
-			childSK, err := util.PrivateKeyFromSeedAndPath(seedBytes, fmt.Sprintf("m/%d", tt.fields.childIndex))
+			childSK, err := utils.PrivateKeyFromSeedAndPath(seedBytes, fmt.Sprintf("m/%d", tt.fields.childIndex))
 			require.NoError(t, err)
 
 			expectedMasterSK, err := secretKeyFromBigNum(tt.want.masterSK)

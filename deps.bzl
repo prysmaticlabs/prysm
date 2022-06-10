@@ -3880,12 +3880,6 @@ def prysm_deps():
         sum = "h1:tiA6T88M6XQIbrV5Zz53l1G5HtRERcxQfmET225V4Ls=",
         version = "v2.5.2",
     )
-    go_repository(
-        name = "com_github_wealdtech_go_eth2_util",
-        importpath = "github.com/wealdtech/go-eth2-util",
-        sum = "h1:2INPeOR35x5LdFFpSzyw954WzTD+DFyHe3yKlJnG5As=",
-        version = "v1.6.3",
-    )
 
     go_repository(
         name = "com_github_wealdtech_go_eth2_wallet_encryptor_keystorev4",

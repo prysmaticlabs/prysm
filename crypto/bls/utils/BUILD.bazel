@@ -1,0 +1,17 @@
+load("@prysm//tools/go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "crypto.go",
+        "utils.go",
+    ],
+    importpath = "github.com/prysmaticlabs/prysm/crypto/bls/utils",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_herumi_bls_eth_go_binary//bls:go_default_library",
+        "@com_github_pkg_errors//:go_default_library",
+        "@com_github_wealdtech_go_bytesutil//:go_default_library",
+        "@org_golang_x_crypto//hkdf:go_default_library",
+    ],
+)

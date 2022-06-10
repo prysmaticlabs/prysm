@@ -20,13 +20,13 @@ import (
 	"os"
 	"path"
 
+	"github.com/prysmaticlabs/prysm/crypto/bls/utils"
 	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/local"
 	"github.com/tyler-smith/go-bip39"
-	util "github.com/wealdtech/go-eth2-util"
 )
 
 var (
@@ -99,7 +99,7 @@ func generateKeysFromMnemonicList(mnemonicListFile *bufio.Scanner, keysPerMnemon
 			if i%250 == 0 && i > 0 {
 				log.Printf("%d/%d keys generated\n", i, keysPerMnemonic)
 			}
-			privKey, seedErr := util.PrivateKeyFromSeedAndPath(
+			privKey, seedErr := utils.PrivateKeyFromSeedAndPath(
 				seed, fmt.Sprintf(derived.ValidatingKeyDerivationPathTemplate, i),
 			)
 			if seedErr != nil {

@@ -9,12 +9,12 @@ import (
 	"github.com/prysmaticlabs/prysm/async/event"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/crypto/bls/utils"
 	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/local"
-	util "github.com/wealdtech/go-eth2-util"
 )
 
 const (
@@ -68,7 +68,7 @@ func (km *Keymanager) RecoverAccountsFromMnemonic(
 	privKeys := make([][]byte, numAccounts)
 	pubKeys := make([][]byte, numAccounts)
 	for i := 0; i < numAccounts; i++ {
-		privKey, err := util.PrivateKeyFromSeedAndPath(
+		privKey, err := utils.PrivateKeyFromSeedAndPath(
 			seed, fmt.Sprintf(ValidatingKeyDerivationPathTemplate, i),
 		)
 		if err != nil {

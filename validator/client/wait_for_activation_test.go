@@ -14,6 +14,7 @@ import (
 	validator_service_config "github.com/prysmaticlabs/prysm/config/validator/service"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/crypto/bls/utils"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -27,7 +28,6 @@ import (
 	constant "github.com/prysmaticlabs/prysm/validator/testing"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/tyler-smith/go-bip39"
-	util "github.com/wealdtech/go-eth2-util"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -513,12 +513,12 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 	t.Run("Derived keymanager", func(t *testing.T) {
 		seed := bip39.NewSeed(constant.TestMnemonic, "")
 		inactivePrivKey, err :=
-			util.PrivateKeyFromSeedAndPath(seed, fmt.Sprintf(derived.ValidatingKeyDerivationPathTemplate, 0))
+			utils.PrivateKeyFromSeedAndPath(seed, fmt.Sprintf(derived.ValidatingKeyDerivationPathTemplate, 0))
 		require.NoError(t, err)
 		inactivePubKey := [fieldparams.BLSPubkeyLength]byte{}
 		copy(inactivePubKey[:], inactivePrivKey.PublicKey().Marshal())
 		activePrivKey, err :=
-			util.PrivateKeyFromSeedAndPath(seed, fmt.Sprintf(derived.ValidatingKeyDerivationPathTemplate, 1))
+			utils.PrivateKeyFromSeedAndPath(seed, fmt.Sprintf(derived.ValidatingKeyDerivationPathTemplate, 1))
 		require.NoError(t, err)
 		activePubKey := [fieldparams.BLSPubkeyLength]byte{}
 		copy(activePubKey[:], activePrivKey.PublicKey().Marshal())
