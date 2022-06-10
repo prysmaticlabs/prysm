@@ -10,6 +10,7 @@ import (
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util/tgenerator"
 )
 
 func TestBeaconBlockHeaderFromBlock(t *testing.T) {
@@ -19,20 +20,7 @@ func TestBeaconBlockHeaderFromBlock(t *testing.T) {
 		ProposerIndex: 2,
 		ParentRoot:    bytesutil.PadTo([]byte("parent root"), hashLen),
 		StateRoot:     bytesutil.PadTo([]byte("state root"), hashLen),
-		Body: &eth.BeaconBlockBody{
-			Eth1Data: &eth.Eth1Data{
-				BlockHash:    bytesutil.PadTo([]byte("block hash"), hashLen),
-				DepositRoot:  bytesutil.PadTo([]byte("deposit root"), hashLen),
-				DepositCount: 1,
-			},
-			RandaoReveal:      bytesutil.PadTo([]byte("randao"), fieldparams.BLSSignatureLength),
-			Graffiti:          bytesutil.PadTo([]byte("teehee"), hashLen),
-			ProposerSlashings: []*eth.ProposerSlashing{},
-			AttesterSlashings: []*eth.AttesterSlashing{},
-			Attestations:      []*eth.Attestation{},
-			Deposits:          []*eth.Deposit{},
-			VoluntaryExits:    []*eth.SignedVoluntaryExit{},
-		},
+		Body:          tgenerator.PbBlockBodyPhase0(),
 	}
 	bodyRoot, err := blk.Body.HashTreeRoot()
 	require.NoError(t, err)
@@ -56,20 +44,7 @@ func TestBeaconBlockHeaderFromBlockInterface(t *testing.T) {
 		ProposerIndex: 2,
 		ParentRoot:    bytesutil.PadTo([]byte("parent root"), hashLen),
 		StateRoot:     bytesutil.PadTo([]byte("state root"), hashLen),
-		Body: &eth.BeaconBlockBody{
-			Eth1Data: &eth.Eth1Data{
-				BlockHash:    bytesutil.PadTo([]byte("block hash"), hashLen),
-				DepositRoot:  bytesutil.PadTo([]byte("deposit root"), hashLen),
-				DepositCount: 1,
-			},
-			RandaoReveal:      bytesutil.PadTo([]byte("randao"), fieldparams.BLSSignatureLength),
-			Graffiti:          bytesutil.PadTo([]byte("teehee"), hashLen),
-			ProposerSlashings: []*eth.ProposerSlashing{},
-			AttesterSlashings: []*eth.AttesterSlashing{},
-			Attestations:      []*eth.Attestation{},
-			Deposits:          []*eth.Deposit{},
-			VoluntaryExits:    []*eth.SignedVoluntaryExit{},
-		},
+		Body:          tgenerator.PbBlockBodyPhase0(),
 	}
 	bodyRoot, err := blk.Body.HashTreeRoot()
 	require.NoError(t, err)
@@ -107,20 +82,7 @@ func TestSignedBeaconBlockHeaderFromBlock(t *testing.T) {
 		ProposerIndex: 2,
 		ParentRoot:    bytesutil.PadTo([]byte("parent root"), hashLen),
 		StateRoot:     bytesutil.PadTo([]byte("state root"), hashLen),
-		Body: &eth.BeaconBlockBody{
-			Eth1Data: &eth.Eth1Data{
-				BlockHash:    bytesutil.PadTo([]byte("block hash"), hashLen),
-				DepositRoot:  bytesutil.PadTo([]byte("deposit root"), hashLen),
-				DepositCount: 1,
-			},
-			RandaoReveal:      bytesutil.PadTo([]byte("randao"), fieldparams.BLSSignatureLength),
-			Graffiti:          bytesutil.PadTo([]byte("teehee"), hashLen),
-			ProposerSlashings: []*eth.ProposerSlashing{},
-			AttesterSlashings: []*eth.AttesterSlashing{},
-			Attestations:      []*eth.Attestation{},
-			Deposits:          []*eth.Deposit{},
-			VoluntaryExits:    []*eth.SignedVoluntaryExit{},
-		},
+		Body:          tgenerator.PbBlockBodyPhase0(),
 	},
 		Signature: bytesutil.PadTo([]byte("signature"), fieldparams.BLSSignatureLength),
 	}
@@ -148,20 +110,7 @@ func TestSignedBeaconBlockHeaderFromBlockInterface(t *testing.T) {
 		ProposerIndex: 2,
 		ParentRoot:    bytesutil.PadTo([]byte("parent root"), hashLen),
 		StateRoot:     bytesutil.PadTo([]byte("state root"), hashLen),
-		Body: &eth.BeaconBlockBody{
-			Eth1Data: &eth.Eth1Data{
-				BlockHash:    bytesutil.PadTo([]byte("block hash"), hashLen),
-				DepositRoot:  bytesutil.PadTo([]byte("deposit root"), hashLen),
-				DepositCount: 1,
-			},
-			RandaoReveal:      bytesutil.PadTo([]byte("randao"), fieldparams.BLSSignatureLength),
-			Graffiti:          bytesutil.PadTo([]byte("teehee"), hashLen),
-			ProposerSlashings: []*eth.ProposerSlashing{},
-			AttesterSlashings: []*eth.AttesterSlashing{},
-			Attestations:      []*eth.Attestation{},
-			Deposits:          []*eth.Deposit{},
-			VoluntaryExits:    []*eth.SignedVoluntaryExit{},
-		},
+		Body:          tgenerator.PbBlockBodyPhase0(),
 	},
 		Signature: bytesutil.PadTo([]byte("signature"), fieldparams.BLSSignatureLength),
 	}

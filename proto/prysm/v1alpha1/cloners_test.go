@@ -8,6 +8,7 @@ import (
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/util/tgenerator"
 )
 
 func TestCopyETH1Data(t *testing.T) {
@@ -80,7 +81,7 @@ func TestCopyBeaconBlock(t *testing.T) {
 }
 
 func TestCopyBeaconBlockBody(t *testing.T) {
-	body := genBeaconBlockBody()
+	body := tgenerator.PbBlockBodyPhase0()
 
 	got := v1alpha1.CopyBeaconBlockBody(body)
 	if !reflect.DeepEqual(got, body) {
@@ -456,20 +457,7 @@ func genBeaconBlock() *v1alpha1.BeaconBlock {
 		ProposerIndex: 5,
 		ParentRoot:    bytes(),
 		StateRoot:     bytes(),
-		Body:          genBeaconBlockBody(),
-	}
-}
-
-func genBeaconBlockBody() *v1alpha1.BeaconBlockBody {
-	return &v1alpha1.BeaconBlockBody{
-		RandaoReveal:      bytes(),
-		Eth1Data:          genEth1Data(),
-		Graffiti:          bytes(),
-		ProposerSlashings: genProposerSlashings(5),
-		AttesterSlashings: genAttesterSlashings(5),
-		Attestations:      genAttestations(5),
-		Deposits:          genDeposits(5),
-		VoluntaryExits:    genSignedVoluntaryExits(5),
+		Body:          tgenerator.PbBlockBodyPhase0(),
 	}
 }
 
