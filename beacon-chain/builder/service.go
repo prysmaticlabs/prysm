@@ -22,6 +22,7 @@ type BlockBuilder interface {
 	GetHeader(ctx context.Context, slot types.Slot, parentHash [32]byte, pubKey [48]byte) (*ethpb.SignedBuilderBid, error)
 	Status(ctx context.Context) error
 	RegisterValidator(ctx context.Context, reg *ethpb.SignedValidatorRegistrationV1) error
+	Configured() bool
 }
 
 // config defines a config struct for dependencies into the service.
@@ -61,6 +62,11 @@ func (*Service) Start() {}
 // Stop halts the service.
 func (*Service) Stop() error {
 	return nil
+}
+
+// Configured returns true if the user has input a builder URL.
+func (s *Service) Configured() bool {
+	return s.cfg.builderEndpoint.Url != ""
 }
 
 // SubmitBlindedBlock submits a blinded block to the builder relay network.
