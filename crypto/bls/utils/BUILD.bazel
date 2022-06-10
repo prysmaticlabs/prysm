@@ -1,10 +1,14 @@
-load("@prysm//tools/go:def.bzl", "go_library")
+load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
     srcs = [
+        "blsprivatekey.go",
+        "blspublickey.go",
+        "blssignature.go",
         "crypto.go",
-        "keys.go",
+        "publickey.go",
+        "signature.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/crypto/bls/utils",
     visibility = ["//visibility:public"],
@@ -13,5 +17,19 @@ go_library(
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_wealdtech_go_bytesutil//:go_default_library",
         "@org_golang_x_crypto//hkdf:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = [
+        "blsprivatekey_test.go",
+        "blspublickey_test.go",
+        "blssignature_test.go",
+    ],
+    deps = [
+        "@com_github_stretchr_testify//assert:go_default_library",
+        "@com_github_stretchr_testify//require:go_default_library",
+        "@com_github_wealdtech_go_eth2_types_v2//:go_default_library",
     ],
 )
