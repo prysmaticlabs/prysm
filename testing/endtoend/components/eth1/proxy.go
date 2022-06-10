@@ -110,12 +110,21 @@ func (s *ProxySet) StopAtIndex(i int) error {
 	return s.proxies[i].Stop()
 }
 
+// ComponentAtIndex returns the component at the provided index.
+func (s *ProxySet) ComponentAtIndex(i int) (e2etypes.ComponentRunner, error) {
+	if i >= len(s.proxies) {
+		return nil, errors.Errorf("provided index exceeds slice size: %d >= %d", i, len(s.proxies))
+	}
+	return s.proxies[i], nil
+}
+
 // Proxy represents an engine-api proxy.
 type Proxy struct {
 	e2etypes.ComponentRunner
-	started chan struct{}
-	index   int
-	cancel  func()
+	started     chan struct{}
+	index       int
+	engineProxy *proxy.Proxy
+	cancel      func()
 }
 
 // NewProxy creates and returns an engine-api proxy.
@@ -157,6 +166,7 @@ func (node *Proxy) Start(ctx context.Context) error {
 	// Set cancel into context.
 	ctx, cancel := context.WithCancel(ctx)
 	node.cancel = cancel
+	node.engineProxy = nProxy
 	// Mark node as ready.
 	close(node.started)
 	return nProxy.Start(ctx)
@@ -183,6 +193,22 @@ func (node *Proxy) Resume() error {
 func (node *Proxy) Stop() error {
 	node.cancel()
 	return nil
+}
+
+// AddRequestInterceptor adds in a json-rpc request interceptor.
+func (node *Proxy) AddRequestInterceptor(rpcMethodName string, responseGen func() interface{}, trigger func() bool) {
+	node.engineProxy.AddRequestInterceptor(rpcMethodName, responseGen, trigger)
+}
+
+// RemoveRequestInterceptor removes the request interceptor for the provided method.
+func (node *Proxy) RemoveRequestInterceptor(rpcMethodName string) {
+	node.engineProxy.RemoveRequestInterceptor(rpcMethodName)
+}
+
+// ReleaseBackedUpRequests releases backed up http requests which
+// were previously ignored due to our interceptors.
+func (node *Proxy) ReleaseBackedUpRequests(rpcMethodName string) {
+	node.engineProxy.ReleaseBackedUpRequests(rpcMethodName)
 }
 
 func parseJWTSecretFromFile(jwtSecretFile string) ([]byte, error) {

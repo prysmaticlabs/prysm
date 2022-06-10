@@ -130,7 +130,7 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 		WithAttestationPool(attestations.NewPool()),
 		WithP2PBroadcaster(&mockBroadcaster{}),
 		WithStateNotifier(&mockBeaconNode{}),
-		WithForkChoiceStore(protoarray.New(0, 0)),
+		WithForkChoiceStore(protoarray.New()),
 		WithAttestationService(attService),
 		WithStateGen(stateGen),
 	}
@@ -505,7 +505,7 @@ func TestHasBlock_ForkChoiceAndDB_ProtoArray(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 	s := &Service{
-		cfg:   &config{ForkChoiceStore: protoarray.New(0, 0), BeaconDB: beaconDB},
+		cfg:   &config{ForkChoiceStore: protoarray.New(), BeaconDB: beaconDB},
 		store: &store.Store{},
 	}
 	s.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]}, [32]byte{})
@@ -526,7 +526,7 @@ func TestHasBlock_ForkChoiceAndDB_DoublyLinkedTree(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 	s := &Service{
-		cfg:   &config{ForkChoiceStore: doublylinkedtree.New(0, 0), BeaconDB: beaconDB},
+		cfg:   &config{ForkChoiceStore: doublylinkedtree.New(), BeaconDB: beaconDB},
 		store: &store.Store{},
 	}
 	s.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]}, [32]byte{})
@@ -599,7 +599,7 @@ func BenchmarkHasBlockForkChoiceStore_ProtoArray(b *testing.B) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(b)
 	s := &Service{
-		cfg:   &config{ForkChoiceStore: protoarray.New(0, 0), BeaconDB: beaconDB},
+		cfg:   &config{ForkChoiceStore: protoarray.New(), BeaconDB: beaconDB},
 		store: &store.Store{},
 	}
 	s.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]}, [32]byte{})
@@ -622,7 +622,7 @@ func BenchmarkHasBlockForkChoiceStore_DoublyLinkedTree(b *testing.B) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(b)
 	s := &Service{
-		cfg:   &config{ForkChoiceStore: doublylinkedtree.New(0, 0), BeaconDB: beaconDB},
+		cfg:   &config{ForkChoiceStore: doublylinkedtree.New(), BeaconDB: beaconDB},
 		store: &store.Store{},
 	}
 	s.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]}, [32]byte{})
