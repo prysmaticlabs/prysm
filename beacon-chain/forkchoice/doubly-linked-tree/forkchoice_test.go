@@ -211,7 +211,9 @@ func TestForkChoice_IsCanonicalReorg(t *testing.T) {
 	require.DeepEqual(t, [32]byte{'3'}, f.store.treeRootNode.bestDescendant.root)
 	f.store.nodesLock.Unlock()
 
-	h, err := f.store.head(ctx, [32]byte{'1'})
+	r1 := [32]byte{'1'}
+	f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: 1, Root: r1}
+	h, err := f.store.head(ctx)
 	require.NoError(t, err)
 	require.DeepEqual(t, [32]byte{'3'}, h)
 	require.DeepEqual(t, h, f.store.headNode.root)
@@ -296,7 +298,7 @@ func TestForkChoice_RemoveEquivocating(t *testing.T) {
 	state, blkRoot, err := prepareForkchoiceState(ctx, 1, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 1, 1)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
-	head, err := f.Head(ctx, params.BeaconConfig().ZeroHash, []uint64{})
+	head, err := f.Head(ctx, []uint64{})
 	require.NoError(t, err)
 	require.Equal(t, [32]byte{'a'}, head)
 
@@ -307,21 +309,21 @@ func TestForkChoice_RemoveEquivocating(t *testing.T) {
 	state, blkRoot, err = prepareForkchoiceState(ctx, 3, [32]byte{'c'}, [32]byte{'a'}, [32]byte{'C'}, 1, 1)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
-	head, err = f.Head(ctx, params.BeaconConfig().ZeroHash, []uint64{})
+	head, err = f.Head(ctx, []uint64{})
 	require.NoError(t, err)
 	require.Equal(t, [32]byte{'c'}, head)
 
 	// Insert two attestations for block b, one for c it becomes head
 	f.ProcessAttestation(ctx, []uint64{1, 2}, [32]byte{'b'}, 1)
 	f.ProcessAttestation(ctx, []uint64{3}, [32]byte{'c'}, 1)
-	head, err = f.Head(ctx, params.BeaconConfig().ZeroHash, []uint64{100, 200, 200, 300})
+	head, err = f.Head(ctx, []uint64{100, 200, 200, 300})
 	require.NoError(t, err)
 	require.Equal(t, [32]byte{'b'}, head)
 
 	// Process b's slashing, c is now head
 	f.InsertSlashedIndex(ctx, 1)
 	require.Equal(t, uint64(200), f.store.nodeByRoot[[32]byte{'b'}].balance)
-	head, err = f.Head(ctx, params.BeaconConfig().ZeroHash, []uint64{100, 200, 200, 300})
+	head, err = f.Head(ctx, []uint64{100, 200, 200, 300})
 	require.Equal(t, uint64(200), f.store.nodeByRoot[[32]byte{'b'}].weight)
 	require.Equal(t, uint64(300), f.store.nodeByRoot[[32]byte{'c'}].weight)
 	require.NoError(t, err)
@@ -330,7 +332,7 @@ func TestForkChoice_RemoveEquivocating(t *testing.T) {
 	// Process b's slashing again, should be a noop
 	f.InsertSlashedIndex(ctx, 1)
 	require.Equal(t, uint64(200), f.store.nodeByRoot[[32]byte{'b'}].balance)
-	head, err = f.Head(ctx, params.BeaconConfig().ZeroHash, []uint64{100, 200, 200, 300})
+	head, err = f.Head(ctx, []uint64{100, 200, 200, 300})
 	require.Equal(t, uint64(200), f.store.nodeByRoot[[32]byte{'b'}].weight)
 	require.Equal(t, uint64(300), f.store.nodeByRoot[[32]byte{'c'}].weight)
 	require.NoError(t, err)
@@ -352,12 +354,14 @@ func TestStore_UpdateCheckpoints(t *testing.T) {
 	f := setup(1, 1)
 	jr := [32]byte{'j'}
 	fr := [32]byte{'f'}
-	jc := &ethpb.Checkpoint{Root: jr[:], Epoch: 3}
-	fc := &ethpb.Checkpoint{Root: fr[:], Epoch: 2}
+	jc := &forkchoicetypes.Checkpoint{Root: jr, Epoch: 3}
+	fc := &forkchoicetypes.Checkpoint{Root: fr, Epoch: 2}
 	require.NoError(t, f.UpdateJustifiedCheckpoint(jc))
 	require.NoError(t, f.UpdateFinalizedCheckpoint(fc))
-	require.Equal(t, f.store.justifiedEpoch, jc.Epoch)
-	require.Equal(t, f.store.finalizedEpoch, fc.Epoch)
+	require.Equal(t, f.store.justifiedCheckpoint.Epoch, jc.Epoch)
+	require.Equal(t, f.store.justifiedCheckpoint.Root, jc.Root)
+	require.Equal(t, f.store.finalizedCheckpoint.Epoch, fc.Epoch)
+	require.Equal(t, f.store.finalizedCheckpoint.Root, fc.Root)
 }
 
 func TestStore_CommonAncestor(t *testing.T) {
@@ -562,8 +566,10 @@ func TestStore_InsertOptimisticChain(t *testing.T) {
 	require.NoError(t, err)
 	wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
 	require.NoError(t, err)
-	blks = append(blks, &forkchoicetypes.BlockAndCheckpoints{Block: wsb.Block(), JustifiedEpoch: 1,
-		FinalizedEpoch: 1})
+	blks = append(blks, &forkchoicetypes.BlockAndCheckpoints{Block: wsb.Block(),
+		JustifiedCheckpoint: &ethpb.Checkpoint{Epoch: 1, Root: params.BeaconConfig().ZeroHash[:]},
+		FinalizedCheckpoint: &ethpb.Checkpoint{Epoch: 1, Root: params.BeaconConfig().ZeroHash[:]},
+	})
 	for i := uint64(2); i < 11; i++ {
 		blk := util.NewBeaconBlock()
 		blk.Block.Slot = types.Slot(i)
@@ -571,8 +577,10 @@ func TestStore_InsertOptimisticChain(t *testing.T) {
 		blk.Block.ParentRoot = copiedRoot[:]
 		wsb, err = wrapper.WrappedSignedBeaconBlock(blk)
 		require.NoError(t, err)
-		blks = append(blks, &forkchoicetypes.BlockAndCheckpoints{Block: wsb.Block(), JustifiedEpoch: 1,
-			FinalizedEpoch: 1})
+		blks = append(blks, &forkchoicetypes.BlockAndCheckpoints{Block: wsb.Block(),
+			JustifiedCheckpoint: &ethpb.Checkpoint{Epoch: 1, Root: params.BeaconConfig().ZeroHash[:]},
+			FinalizedCheckpoint: &ethpb.Checkpoint{Epoch: 1, Root: params.BeaconConfig().ZeroHash[:]},
+		})
 		root, err = blk.Block.HashTreeRoot()
 		require.NoError(t, err)
 	}

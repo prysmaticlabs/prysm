@@ -26,7 +26,7 @@ type componentHandler struct {
 	web3Signer               e2etypes.ComponentRunner
 	bootnode                 e2etypes.ComponentRunner
 	eth1Miner                e2etypes.ComponentRunner
-	eth1Proxy                e2etypes.ComponentRunner
+	eth1Proxy                e2etypes.MultipleComponentRunners
 	eth1Nodes                e2etypes.MultipleComponentRunners
 	beaconNodes              e2etypes.MultipleComponentRunners
 	validatorNodes           e2etypes.MultipleComponentRunners

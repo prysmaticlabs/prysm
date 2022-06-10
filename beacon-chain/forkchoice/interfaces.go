@@ -23,7 +23,7 @@ type ForkChoicer interface {
 
 // HeadRetriever retrieves head root and optimistic info of the current chain.
 type HeadRetriever interface {
-	Head(context.Context, [32]byte, []uint64) ([32]byte, error)
+	Head(context.Context, []uint64) ([32]byte, error)
 	Tips() ([][32]byte, []types.Slot)
 	IsOptimistic(root [32]byte) (bool, error)
 }
@@ -59,8 +59,8 @@ type Getter interface {
 	AncestorRoot(ctx context.Context, root [32]byte, slot types.Slot) ([]byte, error)
 	CommonAncestorRoot(ctx context.Context, root1 [32]byte, root2 [32]byte) ([32]byte, error)
 	IsCanonical(root [32]byte) bool
-	FinalizedEpoch() types.Epoch
-	JustifiedEpoch() types.Epoch
+	FinalizedCheckpoint() *forkchoicetypes.Checkpoint
+	JustifiedCheckpoint() *forkchoicetypes.Checkpoint
 	ForkChoiceNodes() []*ethpb.ForkChoiceNode
 	NodeCount() int
 }
@@ -69,6 +69,6 @@ type Getter interface {
 type Setter interface {
 	SetOptimisticToValid(context.Context, [fieldparams.RootLength]byte) error
 	SetOptimisticToInvalid(context.Context, [fieldparams.RootLength]byte, [fieldparams.RootLength]byte, [fieldparams.RootLength]byte) ([][32]byte, error)
-	UpdateJustifiedCheckpoint(*ethpb.Checkpoint) error
-	UpdateFinalizedCheckpoint(*ethpb.Checkpoint) error
+	UpdateJustifiedCheckpoint(*forkchoicetypes.Checkpoint) error
+	UpdateFinalizedCheckpoint(*forkchoicetypes.Checkpoint) error
 }
