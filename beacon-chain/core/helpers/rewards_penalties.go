@@ -80,6 +80,10 @@ func TotalActiveBalance(s state.ReadOnlyBeaconState) (uint64, error) {
 		return 0, err
 	}
 
+	if params.BeaconConfig().EffectiveBalanceIncrement > total {
+		return params.BeaconConfig().EffectiveBalanceIncrement, nil
+	}
+
 	return total, nil
 }
 
