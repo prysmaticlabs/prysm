@@ -10,14 +10,13 @@ import (
 var errInvalidBlobTxType = errors.New("invalid blob tx type")
 var errInvalidVersionHashesVsKzg = errors.New("invalid version hashes vs kzg")
 
-const blobTxType = 5
-
 func TxPeekBlobVersionedHashes(tx []byte) ([][32]byte, error) {
-	if tx[0] != blobTxType {
+	if tx[0] != types.BlobTxType {
 		return nil, errInvalidBlobTxType
 	}
-	offset := 1 + binary.BigEndian.Uint32(tx[1:5])
-	hashesOffset := binary.BigEndian.Uint32(tx[offset+156 : offset+160])
+	// TODO(EIP-4844): bounds checking
+	offset := 1 + binary.LittleEndian.Uint32(tx[1:5])
+	hashesOffset := binary.LittleEndian.Uint32(tx[offset+156 : offset+160])
 	hashes := make([][32]byte, (uint32(len(tx))-hashesOffset)/32)
 	for i := hashesOffset; i < uint32(len(tx)); i += 32 {
 		var hash [32]byte
@@ -30,7 +29,7 @@ func TxPeekBlobVersionedHashes(tx []byte) ([][32]byte, error) {
 func VerifyKzgsAgainstTxs(txs [][]byte, blogKzgs [][48]byte) error {
 	versionedHashes := make([][32]byte, 0)
 	for _, tx := range txs {
-		if tx[0] == blobTxType {
+		if tx[0] == types.BlobTxType {
 			hs, err := TxPeekBlobVersionedHashes(tx)
 			if err != nil {
 				return err

@@ -359,9 +359,9 @@ func (f *ForkchoiceState) UnmarshalJSON(enc []byte) error {
 }
 
 type blobBundleJSON struct {
-	BlockHash common.Hash                                          `json:"blockHash"`
-	Kzgs      []types.KZGCommitment                                `json:"kzgs"`
-	Blobs     [][params.FieldElementsPerBlob]types.BLSFieldElement `json:"blobs"`
+	BlockHash common.Hash           `json:"blockHash"`
+	Kzgs      []types.KZGCommitment `json:"kzgs"`
+	Blobs     []types.Blob          `json:"blobs"`
 }
 
 // MarshalJSON --
@@ -370,7 +370,7 @@ func (b *BlobsBundle) MarshalJSON() ([]byte, error) {
 	for i, kzg := range b.Kzgs {
 		kzgs[i] = bytesutil.ToBytes48(kzg)
 	}
-	blobs := make([][params.FieldElementsPerBlob]types.BLSFieldElement, len(b.Blobs))
+	blobs := make([]types.Blob, len(b.Blobs))
 	for _, b1 := range b.Blobs {
 		var blob [params.FieldElementsPerBlob]types.BLSFieldElement
 		for i, b2 := range b1.Blob {
