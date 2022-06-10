@@ -8,28 +8,77 @@ import (
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
-type fields struct {
-	b20               []byte
-	b32               []byte
-	b48               []byte
-	b96               []byte
-	b256              []byte
-	deposits          []*eth.Deposit
-	atts              []*eth.Attestation
-	proposerSlashings []*eth.ProposerSlashing
-	attesterSlashings []*eth.AttesterSlashing
-	voluntaryExits    []*eth.SignedVoluntaryExit
-	syncAggregate     *eth.SyncAggregate
-	execPayload       *enginev1.ExecutionPayload
-	execPayloadHeader *eth.ExecutionPayloadHeader
+var b20 = make([]byte, 20)
+var b32 = make([]byte, 32)
+var b48 = make([]byte, 48)
+var b96 = make([]byte, 96)
+var b256 = make([]byte, 256)
+
+func init() {
+	_, err := rand.Read(b20)
+	if err != nil {
+		panic(err)
+	}
+	for i := 0; i < 20; i++ {
+		if b20[i] == 0x00 {
+			b20[i] = uint8(rand.Int())
+		}
+	}
+	_, err = rand.Read(b32)
+	if err != nil {
+		panic(err)
+	}
+	for i := 0; i < 32; i++ {
+		if b32[i] == 0x00 {
+			b32[i] = uint8(rand.Int())
+		}
+	}
+	_, err = rand.Read(b48)
+	if err != nil {
+		panic(err)
+	}
+	for i := 0; i < 48; i++ {
+		if b48[i] == 0x00 {
+			b48[i] = uint8(rand.Int())
+		}
+	}
+	_, err = rand.Read(b96)
+	if err != nil {
+		panic(err)
+	}
+	for i := 0; i < 96; i++ {
+		if b96[i] == 0x00 {
+			b96[i] = uint8(rand.Int())
+		}
+	}
+	_, err = rand.Read(b256)
+	if err != nil {
+		panic(err)
+	}
+	for i := 0; i < 256; i++ {
+		if b256[i] == 0x00 {
+			b256[i] = uint8(rand.Int())
+		}
+	}
 }
 
-func getFields() fields {
-	b20 := bytes20()
-	b32 := bytes32()
-	b48 := bytes48()
-	b96 := bytes96()
-	b256 := bytes256()
+type BlockFields struct {
+	B20               []byte
+	B32               []byte
+	B48               []byte
+	B96               []byte
+	B256              []byte
+	Deposits          []*eth.Deposit
+	Atts              []*eth.Attestation
+	ProposerSlashings []*eth.ProposerSlashing
+	AttesterSlashings []*eth.AttesterSlashing
+	VoluntaryExits    []*eth.SignedVoluntaryExit
+	SyncAggregate     *eth.SyncAggregate
+	ExecPayload       *enginev1.ExecutionPayload
+	ExecPayloadHeader *eth.ExecutionPayloadHeader
+}
+
+func GetBlockFields() BlockFields {
 	deposits := make([]*eth.Deposit, 16)
 	for i := range deposits {
 		deposits[i] = &eth.Deposit{}
@@ -173,107 +222,37 @@ func getFields() fields {
 		TransactionsRoot: b32,
 	}
 
-	return fields{
-		b20:               b20,
-		b32:               b32,
-		b48:               b48,
-		b96:               b96,
-		b256:              b256,
-		deposits:          deposits,
-		atts:              atts,
-		proposerSlashings: []*eth.ProposerSlashing{proposerSlashing},
-		attesterSlashings: []*eth.AttesterSlashing{attesterSlashing},
-		voluntaryExits:    []*eth.SignedVoluntaryExit{voluntaryExit},
-		syncAggregate:     syncAggregate,
-		execPayload:       execPayload,
-		execPayloadHeader: execPayloadHeader,
+	return BlockFields{
+		B20:               b20,
+		B32:               b32,
+		B48:               b48,
+		B96:               b96,
+		B256:              b256,
+		Deposits:          deposits,
+		Atts:              atts,
+		ProposerSlashings: []*eth.ProposerSlashing{proposerSlashing},
+		AttesterSlashings: []*eth.AttesterSlashing{attesterSlashing},
+		VoluntaryExits:    []*eth.SignedVoluntaryExit{voluntaryExit},
+		SyncAggregate:     syncAggregate,
+		ExecPayload:       execPayload,
+		ExecPayloadHeader: execPayloadHeader,
 	}
 }
 
 func PbBlockBodyPhase0() *eth.BeaconBlockBody {
-	f := getFields()
+	f := GetBlockFields()
 	return &eth.BeaconBlockBody{
-		RandaoReveal: f.b96,
+		RandaoReveal: f.B96,
 		Eth1Data: &eth.Eth1Data{
-			DepositRoot:  f.b32,
+			DepositRoot:  f.B32,
 			DepositCount: 128,
-			BlockHash:    f.b32,
+			BlockHash:    f.B32,
 		},
-		Graffiti:          f.b32,
-		ProposerSlashings: f.proposerSlashings,
-		AttesterSlashings: f.attesterSlashings,
-		Attestations:      f.atts,
-		Deposits:          f.deposits,
-		VoluntaryExits:    f.voluntaryExits,
+		Graffiti:          f.B32,
+		ProposerSlashings: f.ProposerSlashings,
+		AttesterSlashings: f.AttesterSlashings,
+		Attestations:      f.Atts,
+		Deposits:          f.Deposits,
+		VoluntaryExits:    f.VoluntaryExits,
 	}
-}
-
-func bytes20() []byte {
-	b := make([]byte, 20)
-	_, err := rand.Read(b)
-	if err != nil {
-		panic(err)
-	}
-	for i := 0; i < 20; i++ {
-		if b[i] == 0x00 {
-			b[i] = uint8(rand.Int())
-		}
-	}
-	return b
-}
-
-func bytes32() []byte {
-	b := make([]byte, 32)
-	_, err := rand.Read(b)
-	if err != nil {
-		panic(err)
-	}
-	for i := 0; i < 32; i++ {
-		if b[i] == 0x00 {
-			b[i] = uint8(rand.Int())
-		}
-	}
-	return b
-}
-
-func bytes48() []byte {
-	b := make([]byte, 48)
-	_, err := rand.Read(b)
-	if err != nil {
-		panic(err)
-	}
-	for i := 0; i < 48; i++ {
-		if b[i] == 0x00 {
-			b[i] = uint8(rand.Int())
-		}
-	}
-	return b
-}
-
-func bytes96() []byte {
-	b := make([]byte, 96)
-	_, err := rand.Read(b)
-	if err != nil {
-		panic(err)
-	}
-	for i := 0; i < 96; i++ {
-		if b[i] == 0x00 {
-			b[i] = uint8(rand.Int())
-		}
-	}
-	return b
-}
-
-func bytes256() []byte {
-	b := make([]byte, 256)
-	_, err := rand.Read(b)
-	if err != nil {
-		panic(err)
-	}
-	for i := 0; i < 256; i++ {
-		if b[i] == 0x00 {
-			b[i] = uint8(rand.Int())
-		}
-	}
-	return b
 }
