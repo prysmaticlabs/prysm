@@ -80,11 +80,8 @@ func TotalActiveBalance(s state.ReadOnlyBeaconState) (uint64, error) {
 		return 0, err
 	}
 
-	if params.BeaconConfig().EffectiveBalanceIncrement > total {
-		return params.BeaconConfig().EffectiveBalanceIncrement, nil
-	}
-
-	return total, nil
+	// Spec defines `EffectiveBalanceIncrement` as min to avoid divisions by zero.
+	return mathutil.Max(params.BeaconConfig().EffectiveBalanceIncrement, total), nil
 }
 
 // IncreaseBalance increases validator with the given 'index' balance by 'delta' in Gwei.
