@@ -57,7 +57,7 @@ func TotalActiveBalance(s state.ReadOnlyBeaconState) (uint64, error) {
 	bal, err := balanceCache.Get(s)
 	switch {
 	case err == nil:
-		return mathutil.Max(params.BeaconConfig().EffectiveBalanceIncrement, bal), nil
+		return bal, nil
 	case errors.Is(err, cache.ErrNotFound):
 		// Do nothing if we receive a not found error.
 	default:
@@ -76,12 +76,13 @@ func TotalActiveBalance(s state.ReadOnlyBeaconState) (uint64, error) {
 		return 0, err
 	}
 
+	total = mathutil.Max(params.BeaconConfig().EffectiveBalanceIncrement, total)
 	if err := balanceCache.AddTotalEffectiveBalance(s, total); err != nil {
 		return 0, err
 	}
 
 	// Spec defines `EffectiveBalanceIncrement` as min to avoid divisions by zero.
-	return mathutil.Max(params.BeaconConfig().EffectiveBalanceIncrement, total), nil
+	return total, nil
 }
 
 // IncreaseBalance increases validator with the given 'index' balance by 'delta' in Gwei.
