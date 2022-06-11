@@ -138,7 +138,7 @@ func run(ctx context.Context, v iface.Validator) {
 				span.End()
 				continue
 			}
-			performRoles(allRoles, v, slot, slotCtx, &wg, span)
+			performRoles(slotCtx, allRoles, v, slot, &wg, span)
 		}
 	}
 }
@@ -223,7 +223,7 @@ func waitForActivation(ctx context.Context, v iface.Validator) (types.Slot, erro
 	return headSlot, nil
 }
 
-func performRoles(allRoles map[[48]byte][]iface.ValidatorRole, v iface.Validator, slot types.Slot, slotCtx context.Context, wg *sync.WaitGroup, span *trace.Span) {
+func performRoles(slotCtx context.Context, allRoles map[[48]byte][]iface.ValidatorRole, v iface.Validator, slot types.Slot, wg *sync.WaitGroup, span *trace.Span) {
 	for pubKey, roles := range allRoles {
 		wg.Add(len(roles))
 		for _, role := range roles {
