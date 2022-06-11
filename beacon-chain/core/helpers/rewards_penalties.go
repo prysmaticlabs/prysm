@@ -57,7 +57,7 @@ func TotalActiveBalance(s state.ReadOnlyBeaconState) (uint64, error) {
 	bal, err := balanceCache.Get(s)
 	switch {
 	case err == nil:
-		return bal, nil
+		return mathutil.Max(params.BeaconConfig().EffectiveBalanceIncrement, bal), nil
 	case errors.Is(err, cache.ErrNotFound):
 		// Do nothing if we receive a not found error.
 	default:
