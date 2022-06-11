@@ -131,6 +131,9 @@ func (vs *Server) getBuilderBlock(ctx context.Context, b interfaces.SignedBeacon
 	if b.Version() != version.BellatrixBlind {
 		return b, nil
 	}
+	if !vs.BlockBuilder.Configured() {
+		return b, nil
+	}
 	if err := vs.BlockBuilder.Status(ctx); err != nil {
 		return nil, err
 	}
@@ -161,7 +164,7 @@ func (vs *Server) getBuilderBlock(ctx context.Context, b interfaces.SignedBeacon
 				ExecutionPayloadHeader: h,
 			},
 		},
-		Signature: nil,
+		Signature: b.Signature(),
 	}
 
 	payload, err := vs.BlockBuilder.SubmitBlindedBlock(ctx, sb)
@@ -187,7 +190,7 @@ func (vs *Server) getBuilderBlock(ctx context.Context, b interfaces.SignedBeacon
 				ExecutionPayload:  payload,
 			},
 		},
-		Signature: nil,
+		Signature: sb.Signature,
 	}
 	wb, err := wrapper.WrappedSignedBeaconBlock(bb)
 	if err != nil {
