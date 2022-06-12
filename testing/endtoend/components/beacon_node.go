@@ -137,6 +137,14 @@ func (s *BeaconNodeSet) StopAtIndex(i int) error {
 	return s.nodes[i].Stop()
 }
 
+// ComponentAtIndex returns the component at the provided index.
+func (s *BeaconNodeSet) ComponentAtIndex(i int) (e2etypes.ComponentRunner, error) {
+	if i >= len(s.nodes) {
+		return nil, errors.Errorf("provided index exceeds slice size: %d >= %d", i, len(s.nodes))
+	}
+	return s.nodes[i], nil
+}
+
 // BeaconNode represents beacon node.
 type BeaconNode struct {
 	e2etypes.ComponentRunner

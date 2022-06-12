@@ -34,8 +34,8 @@ type jsonRPCObject struct {
 }
 
 type interceptorConfig struct {
-	response interface{}
-	trigger  func() bool
+	responseGen func() interface{}
+	trigger     func() bool
 }
 
 // Proxy server that sits as a middleware between an Ethereum consensus client and an execution client,
@@ -46,7 +46,7 @@ type Proxy struct {
 	srv              *http.Server
 	lock             sync.RWMutex
 	interceptors     map[string]*interceptorConfig
-	backedUpRequests []*http.Request
+	backedUpRequests map[string][]*http.Request
 }
 
 // New creates a proxy server forwarding requests from a consensus client to an execution client.
@@ -57,7 +57,8 @@ func New(opts ...Option) (*Proxy, error) {
 			proxyPort: defaultProxyPort,
 			logger:    logrus.New(),
 		},
-		interceptors: make(map[string]*interceptorConfig),
+		interceptors:     make(map[string]*interceptorConfig),
+		backedUpRequests: map[string][]*http.Request{},
 	}
 	for _, o := range opts {
 		if err := o(p); err != nil {
@@ -112,7 +113,7 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Check if we need to intercept the request with a custom response.
-	hasIntercepted, err := p.interceptIfNeeded(requestBytes, w)
+	hasIntercepted, err := p.interceptIfNeeded(requestBytes, w, r)
 	if err != nil {
 		p.cfg.logger.WithError(err).Error("Could not intercept request")
 		return
@@ -126,7 +127,7 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // AddRequestInterceptor for a desired json-rpc method by specifying a custom response
 // and a function that checks if the interceptor should be triggered.
-func (p *Proxy) AddRequestInterceptor(rpcMethodName string, response interface{}, trigger func() bool) {
+func (p *Proxy) AddRequestInterceptor(rpcMethodName string, response func() interface{}, trigger func() bool) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	p.cfg.logger.Infof("Adding in interceptor for method %s", rpcMethodName)
@@ -136,9 +137,40 @@ func (p *Proxy) AddRequestInterceptor(rpcMethodName string, response interface{}
 	}
 }
 
+// RemoveRequestInterceptor removes the request interceptor for the provided method.
+func (p *Proxy) RemoveRequestInterceptor(rpcMethodName string) {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	p.cfg.logger.Infof("Removing interceptor for method %s", rpcMethodName)
+	delete(p.interceptors, rpcMethodName)
+}
+
+// ReleaseBackedUpRequests releases backed up http requests which
+// were previously ignored due to our interceptors.
+func (p *Proxy) ReleaseBackedUpRequests(rpcMethodName string) {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	reqs := p.backedUpRequests[rpcMethodName]
+	for _, r := range reqs {
+		p.cfg.logger.Infof("Sending backed up request for method %s", rpcMethodName)
+		rBytes, err := parseRequestBytes(r)
+		if err != nil {
+			p.cfg.logger.Error(err)
+			continue
+		}
+		res, err := p.sendHttpRequest(r, rBytes)
+		if err != nil {
+			p.cfg.logger.Error(err)
+			continue
+		}
+		p.cfg.logger.Infof("Received response %s for backed up request for method %s", http.StatusText(res.StatusCode), rpcMethodName)
+	}
+	delete(p.backedUpRequests, rpcMethodName)
+}
+
 // Checks if there is a custom interceptor hook on the request, check if it can be
 // triggered, and then write the custom response to the writer.
-func (p *Proxy) interceptIfNeeded(requestBytes []byte, w http.ResponseWriter) (hasIntercepted bool, err error) {
+func (p *Proxy) interceptIfNeeded(requestBytes []byte, w http.ResponseWriter, r *http.Request) (hasIntercepted bool, err error) {
 	if !isEngineAPICall(requestBytes) {
 		return
 	}
@@ -159,12 +191,13 @@ func (p *Proxy) interceptIfNeeded(requestBytes []byte, w http.ResponseWriter) (h
 	jResp := &jsonRPCObject{
 		Method: jreq.Method,
 		ID:     jreq.ID,
-		Result: interceptor.response,
+		Result: interceptor.responseGen(),
 	}
 	if err = json.NewEncoder(w).Encode(jResp); err != nil {
 		return
 	}
 	hasIntercepted = true
+	p.backedUpRequests[jreq.Method] = append(p.backedUpRequests[jreq.Method], r)
 	return
 }
 
@@ -177,18 +210,39 @@ func (p *Proxy) proxyRequest(requestBytes []byte, w http.ResponseWriter, r *http
 		jreq = &jsonRPCObject{Method: "unknown"}
 	}
 	p.cfg.logger.Infof("Forwarding %s request for method %s to %s", r.Method, jreq.Method, p.cfg.destinationUrl.String())
-	proxyReq, err := http.NewRequest(r.Method, p.cfg.destinationUrl.String(), r.Body)
+	proxyRes, err := p.sendHttpRequest(r, requestBytes)
 	if err != nil {
 		p.cfg.logger.WithError(err).Error("Could create new request")
 		return
+	}
+	p.cfg.logger.Infof("Received response for %s request with method %s from %s", r.Method, jreq.Method, p.cfg.destinationUrl.String())
+
+	defer func() {
+		if err = proxyRes.Body.Close(); err != nil {
+			p.cfg.logger.WithError(err).Error("Could not do close proxy responseGen body")
+		}
+	}()
+
+	// Pipe the proxy responseGen to the original caller.
+	if _, err = io.Copy(w, proxyRes.Body); err != nil {
+		p.cfg.logger.WithError(err).Error("Could not copy proxy request body")
+		return
+	}
+}
+
+func (p *Proxy) sendHttpRequest(req *http.Request, requestBytes []byte) (*http.Response, error) {
+	proxyReq, err := http.NewRequest(req.Method, p.cfg.destinationUrl.String(), req.Body)
+	if err != nil {
+		p.cfg.logger.WithError(err).Error("Could not create new request")
+		return nil, err
 	}
 
 	// Set the modified request as the proxy request body.
 	proxyReq.Body = ioutil.NopCloser(bytes.NewBuffer(requestBytes))
 
 	// Required proxy headers for forwarding JSON-RPC requests to the execution client.
-	proxyReq.Header.Set("Host", r.Host)
-	proxyReq.Header.Set("X-Forwarded-For", r.RemoteAddr)
+	proxyReq.Header.Set("Host", req.Host)
+	proxyReq.Header.Set("X-Forwarded-For", req.RemoteAddr)
 	proxyReq.Header.Set("Content-Type", "application/json")
 
 	client := &http.Client{}
@@ -198,21 +252,9 @@ func (p *Proxy) proxyRequest(requestBytes []byte, w http.ResponseWriter, r *http
 	proxyRes, err := client.Do(proxyReq)
 	if err != nil {
 		p.cfg.logger.WithError(err).Error("Could not forward request to destination server")
-		return
+		return nil, err
 	}
-	p.cfg.logger.Infof("Received response for %s request with method %s from %s", r.Method, jreq.Method, p.cfg.destinationUrl.String())
-
-	defer func() {
-		if err = proxyRes.Body.Close(); err != nil {
-			p.cfg.logger.WithError(err).Error("Could not do close proxy response body")
-		}
-	}()
-
-	// Pipe the proxy response to the original caller.
-	if _, err = io.Copy(w, proxyRes.Body); err != nil {
-		p.cfg.logger.WithError(err).Error("Could not copy proxy request body")
-		return
-	}
+	return proxyRes, nil
 }
 
 // Peek into the bytes of an HTTP request's body.
