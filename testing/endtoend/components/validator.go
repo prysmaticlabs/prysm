@@ -138,6 +138,14 @@ func (s *ValidatorNodeSet) StopAtIndex(i int) error {
 	return s.nodes[i].Stop()
 }
 
+// ComponentAtIndex returns the component at the provided index.
+func (s *ValidatorNodeSet) ComponentAtIndex(i int) (e2etypes.ComponentRunner, error) {
+	if i >= len(s.nodes) {
+		return nil, errors.Errorf("provided index exceeds slice size: %d >= %d", i, len(s.nodes))
+	}
+	return s.nodes[i], nil
+}
+
 // ValidatorNode represents a validator node.
 type ValidatorNode struct {
 	e2etypes.ComponentRunner

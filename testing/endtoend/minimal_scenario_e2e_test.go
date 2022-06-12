@@ -26,3 +26,11 @@ func TestEndToEnd_ScenarioRun_EEOffline(t *testing.T) {
 	runner.config.EvalInterceptor = runner.eeOffline
 	runner.scenarioRunner()
 }
+
+func TestEndToEnd_ScenarioRun_OptimisticSync(t *testing.T) {
+	runner := e2eMinimal(t)
+
+	runner.config.Evaluators = scenarioEvals()
+	runner.config.EvalInterceptor = runner.optimisticSync
+	runner.scenarioRunner()
+}

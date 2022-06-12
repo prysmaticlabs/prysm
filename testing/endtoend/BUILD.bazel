@@ -19,6 +19,8 @@ common_deps = [
     "//io/file:go_default_library",
     "//proto/eth/service:go_default_library",
     "//proto/eth/v1:go_default_library",
+    "//math:go_default_library",
+    "//proto/engine/v1:go_default_library",
     "//proto/prysm/v1alpha1:go_default_library",
     "//testing/assert:go_default_library",
     "//testing/endtoend/components:go_default_library",
@@ -64,6 +66,7 @@ go_test(
         "@web3signer",
     ],
     eth_network = "minimal",
+    flaky = True,
     shard_count = 2,
     tags = [
         "e2e",
@@ -72,7 +75,6 @@ go_test(
         "requires-network",
     ],
     deps = common_deps,
-    flaky = True,
 )
 
 go_test(
@@ -96,6 +98,7 @@ go_test(
         "@web3signer",
     ],
     eth_network = "mainnet",
+    flaky = True,
     shard_count = 2,
     tags = [
         "e2e",
@@ -105,7 +108,6 @@ go_test(
         "requires-network",
     ],
     deps = common_deps,
-    flaky = True,
 )
 
 go_test(
@@ -129,6 +131,7 @@ go_test(
         "@web3signer",
     ],
     eth_network = "mainnet",
+    flaky = True,
     shard_count = 2,
     tags = [
         "exclusive",
@@ -138,7 +141,6 @@ go_test(
         "scenario",
     ],
     deps = common_deps,
-    flaky = True,
 )
 
 go_test(
@@ -162,6 +164,7 @@ go_test(
         "@web3signer",
     ],
     eth_network = "minimal",
+    flaky = True,
     shard_count = 2,
     tags = [
         "exclusive",
@@ -171,5 +174,4 @@ go_test(
         "scenario",
     ],
     deps = common_deps,
-    flaky = True,
 )

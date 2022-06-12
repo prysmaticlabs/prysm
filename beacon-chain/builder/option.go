@@ -1,6 +1,7 @@
 package builder
 
 import (
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/network"
 	"github.com/prysmaticlabs/prysm/network/authorization"
@@ -22,6 +23,14 @@ func FlagOptions(c *cli.Context) ([]Option, error) {
 func WithBuilderEndpoints(endpoint string) Option {
 	return func(s *Service) error {
 		s.cfg.builderEndpoint = covertEndPoint(endpoint)
+		return nil
+	}
+}
+
+// WithDatabase sets the database for the beacon chain builder service.
+func WithDatabase(database db.HeadAccessDatabase) Option {
+	return func(s *Service) error {
+		s.cfg.beaconDB = database
 		return nil
 	}
 }

@@ -142,5 +142,7 @@ func (s *Service) logTtdStatus(ctx context.Context, ttd *uint256.Int) (bool, err
 		"latestDifficulty":   latestTtd.String(),
 		"terminalDifficulty": ttd.ToBig().String(),
 	}).Info("terminal difficulty has not been reached yet")
+
+	totalTerminalDifficulty.Set(float64(latestTtd.Uint64()))
 	return false, nil
 }

@@ -137,6 +137,14 @@ func (s *BeaconNodeSet) StopAtIndex(i int) error {
 	return s.nodes[i].Stop()
 }
 
+// ComponentAtIndex returns the component at the provided index.
+func (s *BeaconNodeSet) ComponentAtIndex(i int) (e2etypes.ComponentRunner, error) {
+	if i >= len(s.nodes) {
+		return nil, errors.Errorf("provided index exceeds slice size: %d >= %d", i, len(s.nodes))
+	}
+	return s.nodes[i], nil
+}
+
 // BeaconNode represents beacon node.
 type BeaconNode struct {
 	e2etypes.ComponentRunner
@@ -188,7 +196,7 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 		fmt.Sprintf("--%s=%s", cmdshared.LogFileName.Name, stdOutFile.Name()),
 		fmt.Sprintf("--%s=%s", flags.DepositContractFlag.Name, e2e.TestParams.ContractAddress.Hex()),
 		fmt.Sprintf("--%s=%d", flags.RPCPort.Name, e2e.TestParams.Ports.PrysmBeaconNodeRPCPort+index),
-		fmt.Sprintf("--%s=http://127.0.0.1:%d", flags.HTTPWeb3ProviderFlag.Name, e2e.TestParams.Ports.Eth1AuthRPCPort+index),
+		fmt.Sprintf("--%s=http://127.0.0.1:%d", flags.HTTPWeb3ProviderFlag.Name, e2e.TestParams.Ports.Eth1ProxyPort+index),
 		fmt.Sprintf("--%s=%s", flags.ExecutionJWTSecretFlag.Name, jwtPath),
 		fmt.Sprintf("--%s=%d", flags.MinSyncPeers.Name, 1),
 		fmt.Sprintf("--%s=%d", cmdshared.P2PUDPPort.Name, e2e.TestParams.Ports.PrysmBeaconNodeUDPPort+index),
