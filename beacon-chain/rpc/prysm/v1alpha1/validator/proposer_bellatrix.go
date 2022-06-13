@@ -144,7 +144,7 @@ func (vs *Server) buildHeaderBlock(ctx context.Context, b *ethpb.BeaconBlockAlta
 	}
 	stateRoot, err := vs.computeStateRoot(ctx, wsb)
 	if err != nil {
-		return nil, fmt.Errorf("could not compute state root: %v", err)
+		return nil, errors.Wrap(err, "could not compute state root")
 	}
 	blk.StateRoot = stateRoot
 	return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_BlindedBellatrix{BlindedBellatrix: blk}}, nil
