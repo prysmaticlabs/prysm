@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/protolambda/ztyp/codec"
 )
@@ -11,7 +12,7 @@ import (
 var errInvalidBlobTxType = errors.New("invalid blob tx type")
 var errInvalidVersionHashesVsKzg = errors.New("invalid version hashes vs kzg")
 
-func TxPeekBlobVersionedHashes(tx []byte) ([][32]byte, error) {
+func TxPeekBlobVersionedHashes(tx []byte) ([]common.Hash, error) {
 	if tx[0] != types.BlobTxType {
 		return nil, errInvalidBlobTxType
 	}
@@ -19,15 +20,11 @@ func TxPeekBlobVersionedHashes(tx []byte) ([][32]byte, error) {
 	if err := sbt.Deserialize(codec.NewDecodingReader(bytes.NewReader(tx[1:]), uint64(len(tx)-1))); err != nil {
 		return nil, err
 	}
-	hashes := make([][32]byte, len(sbt.Message.BlobVersionedHashes))
-	for i, b := range sbt.Message.BlobVersionedHashes {
-		copy(hashes[i][:], b[:])
-	}
-	return hashes, nil
+	return sbt.Message.BlobVersionedHashes, nil
 }
 
 func VerifyKzgsAgainstTxs(txs [][]byte, blobKzgs [][48]byte) error {
-	versionedHashes := make([][32]byte, 0)
+	versionedHashes := make([]common.Hash, 0)
 	for _, tx := range txs {
 		if tx[0] == types.BlobTxType {
 			hs, err := TxPeekBlobVersionedHashes(tx)
