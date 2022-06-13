@@ -118,7 +118,7 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 	}
 	prereqs.WarnIfPlatformNotSupported(cliCtx.Context)
 	if hasNetworkFlag(cliCtx) && cliCtx.IsSet(cmd.ChainConfigFileFlag.Name) {
-		return nil, errors.New("chain-config-file cannot be passed concurrently with network")
+		return nil, fmt.Errorf("%s cannot be passed concurrently with network flag", cmd.ChainConfigFileFlag.Name)
 	}
 	if err := features.ConfigureBeaconChain(cliCtx); err != nil {
 		return nil, err
