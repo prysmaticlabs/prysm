@@ -12,8 +12,8 @@ import (
 	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/spectest/utils"
@@ -95,7 +95,7 @@ func RunForkTransitionTest(t *testing.T, config string) {
 			ctx := context.Background()
 			var ok bool
 			for _, b := range preforkBlocks {
-				wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+				wsb, err := blocks.NewSignedBeaconBlock(b)
 				require.NoError(t, err)
 				st, err := transition.ExecuteStateTransition(ctx, beaconState, wsb)
 				require.NoError(t, err)
@@ -104,7 +104,7 @@ func RunForkTransitionTest(t *testing.T, config string) {
 			}
 			postState := state.BeaconState(beaconState)
 			for _, b := range postforkBlocks {
-				wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+				wsb, err := blocks.NewSignedBeaconBlock(b)
 				require.NoError(t, err)
 				st, err := transition.ExecuteStateTransition(ctx, postState, wsb)
 				require.NoError(t, err)

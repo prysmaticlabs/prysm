@@ -12,8 +12,8 @@ import (
 	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -140,7 +140,7 @@ func unmarshalPhase0State(t *testing.T, raw []byte) state.BeaconState {
 func unmarshalPhase0Block(t *testing.T, raw []byte) interfaces.SignedBeaconBlock {
 	base := &ethpb.BeaconBlock{}
 	require.NoError(t, base.UnmarshalSSZ(raw))
-	blk, err := wrapper.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: base, Signature: make([]byte, fieldparams.BLSSignatureLength)})
+	blk, err := blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: base, Signature: make([]byte, fieldparams.BLSSignatureLength)})
 	require.NoError(t, err)
 	return blk
 }
@@ -148,7 +148,7 @@ func unmarshalPhase0Block(t *testing.T, raw []byte) interfaces.SignedBeaconBlock
 func unmarshalSignedPhase0Block(t *testing.T, raw []byte) interfaces.SignedBeaconBlock {
 	base := &ethpb.SignedBeaconBlock{}
 	require.NoError(t, base.UnmarshalSSZ(raw))
-	blk, err := wrapper.WrappedSignedBeaconBlock(base)
+	blk, err := blocks.NewSignedBeaconBlock(base)
 	require.NoError(t, err)
 	return blk
 }
@@ -164,7 +164,7 @@ func unmarshalAltairState(t *testing.T, raw []byte) state.BeaconState {
 func unmarshalAltairBlock(t *testing.T, raw []byte) interfaces.SignedBeaconBlock {
 	base := &ethpb.BeaconBlockAltair{}
 	require.NoError(t, base.UnmarshalSSZ(raw))
-	blk, err := wrapper.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: base, Signature: make([]byte, fieldparams.BLSSignatureLength)})
+	blk, err := blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: base, Signature: make([]byte, fieldparams.BLSSignatureLength)})
 	require.NoError(t, err)
 	return blk
 }
@@ -172,7 +172,7 @@ func unmarshalAltairBlock(t *testing.T, raw []byte) interfaces.SignedBeaconBlock
 func unmarshalSignedAltairBlock(t *testing.T, raw []byte) interfaces.SignedBeaconBlock {
 	base := &ethpb.SignedBeaconBlockAltair{}
 	require.NoError(t, base.UnmarshalSSZ(raw))
-	blk, err := wrapper.WrappedSignedBeaconBlock(base)
+	blk, err := blocks.NewSignedBeaconBlock(base)
 	require.NoError(t, err)
 	return blk
 }
@@ -188,7 +188,7 @@ func unmarshalBellatrixState(t *testing.T, raw []byte) state.BeaconState {
 func unmarshalBellatrixBlock(t *testing.T, raw []byte) interfaces.SignedBeaconBlock {
 	base := &ethpb.BeaconBlockBellatrix{}
 	require.NoError(t, base.UnmarshalSSZ(raw))
-	blk, err := wrapper.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: base, Signature: make([]byte, fieldparams.BLSSignatureLength)})
+	blk, err := blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: base, Signature: make([]byte, fieldparams.BLSSignatureLength)})
 	require.NoError(t, err)
 	return blk
 }
@@ -196,7 +196,7 @@ func unmarshalBellatrixBlock(t *testing.T, raw []byte) interfaces.SignedBeaconBl
 func unmarshalSignedBellatrixBlock(t *testing.T, raw []byte) interfaces.SignedBeaconBlock {
 	base := &ethpb.SignedBeaconBlockBellatrix{}
 	require.NoError(t, base.UnmarshalSSZ(raw))
-	blk, err := wrapper.WrappedSignedBeaconBlock(base)
+	blk, err := blocks.NewSignedBeaconBlock(base)
 	require.NoError(t, err)
 	return blk
 }

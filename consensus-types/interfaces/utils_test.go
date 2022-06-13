@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -176,7 +177,7 @@ func TestSignedBeaconBlockHeaderFromBlockInterface(t *testing.T) {
 	},
 		Signature: blk.Signature,
 	}
-	wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+	wsb, err := blocks.NewSignedBeaconBlock(blk)
 	require.NoError(t, err)
 	bh, err := interfaces.SignedBeaconBlockHeaderFromBlockInterface(wsb)
 	require.NoError(t, err)

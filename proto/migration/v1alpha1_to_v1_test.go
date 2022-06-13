@@ -5,8 +5,8 @@ import (
 
 	"github.com/prysmaticlabs/go-bitfield"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -56,7 +56,7 @@ func Test_BlockIfaceToV1BlockHeader(t *testing.T) {
 	alphaBlock.Block.StateRoot = stateRoot
 	alphaBlock.Signature = signature
 
-	wsb, err := wrapper.WrappedSignedBeaconBlock(alphaBlock)
+	wsb, err := blocks.NewSignedBeaconBlock(alphaBlock)
 	require.NoError(t, err)
 	v1Header, err := BlockIfaceToV1BlockHeader(wsb)
 	require.NoError(t, err)
@@ -365,7 +365,7 @@ func Test_BlockInterfaceToV1Block(t *testing.T) {
 	}
 	v1Alpha1Block.Signature = signature
 
-	wsb, err := wrapper.WrappedSignedBeaconBlock(v1Alpha1Block)
+	wsb, err := blocks.NewSignedBeaconBlock(v1Alpha1Block)
 	require.NoError(t, err)
 	v1Block, err := SignedBeaconBlock(wsb)
 	require.NoError(t, err)
