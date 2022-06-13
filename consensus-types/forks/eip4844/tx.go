@@ -1,10 +1,11 @@
 package eip4844
 
 import (
-	"encoding/binary"
+	"bytes"
 	"errors"
 
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/protolambda/ztyp/codec"
 )
 
 var errInvalidBlobTxType = errors.New("invalid blob tx type")
@@ -14,13 +15,14 @@ func TxPeekBlobVersionedHashes(tx []byte) ([][32]byte, error) {
 	if tx[0] != types.BlobTxType {
 		return nil, errInvalidBlobTxType
 	}
-	// TODO(EIP-4844): bounds checking
-	offset := 1 + binary.LittleEndian.Uint32(tx[1:5])
-	hashesOffset := binary.LittleEndian.Uint32(tx[offset+156 : offset+160])
-	hashes := make([][32]byte, (uint32(len(tx))-hashesOffset)/32)
-	for i := hashesOffset; i < uint32(len(tx)); i += 32 {
+	sbt := types.SignedBlobTx{}
+	if err := sbt.Deserialize(codec.NewDecodingReader(bytes.NewReader(tx[1:]), uint64(len(tx)-1))); err != nil {
+		return nil, err
+	}
+	hashes := make([][32]byte, len(sbt.Message.BlobVersionedHashes))
+	for _, b := range sbt.Message.BlobVersionedHashes {
 		var hash [32]byte
-		copy(hash[:], tx[i:i+32])
+		copy(hash[:], b[:])
 		hashes = append(hashes, hash)
 	}
 	return hashes, nil
