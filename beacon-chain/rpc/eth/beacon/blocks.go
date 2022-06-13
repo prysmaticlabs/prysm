@@ -225,6 +225,7 @@ func (bs *Server) SubmitBlock(ctx context.Context, req *ethpbv2.SignedBeaconBloc
 			return nil, err
 		}
 	}
+	// TODO(EIP-4844): submitEip4844Block
 	return &emptypb.Empty{}, nil
 }
 

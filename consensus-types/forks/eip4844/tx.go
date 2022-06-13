@@ -9,8 +9,11 @@ import (
 	"github.com/protolambda/ztyp/codec"
 )
 
-var errInvalidBlobTxType = errors.New("invalid blob tx type")
-var errInvalidVersionHashesVsKzg = errors.New("invalid version hashes vs kzg")
+var (
+	errInvalidBlobTxType             = errors.New("invalid blob tx type")
+	errInvalidVersionHashesVsKzg     = errors.New("invalid version hashes vs kzg")
+	errInvalidNumBlobVersionedHashes = errors.New("invalid number of blob versioned hashes")
+)
 
 func TxPeekBlobVersionedHashes(tx []byte) ([]common.Hash, error) {
 	if tx[0] != types.BlobTxType {
@@ -34,7 +37,9 @@ func VerifyKzgsAgainstTxs(txs [][]byte, blobKzgs [][48]byte) error {
 			versionedHashes = append(versionedHashes, hs...)
 		}
 	}
-	// TODO(inphi): modify validation spec to handle when len(blob_txs) > len(blobKzgs)
+	if len(blobKzgs) != len(versionedHashes) {
+		return errInvalidNumBlobVersionedHashes
+	}
 	for i, kzg := range blobKzgs {
 		h := types.KZGCommitment(kzg).ComputeVersionedHash()
 		if h != versionedHashes[i] {
