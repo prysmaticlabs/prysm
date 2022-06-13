@@ -212,22 +212,27 @@ func (b *SignedBeaconBlock) MarshalSSZTo(dst []byte) ([]byte, error) {
 }
 
 // SizeSSZ returns the size of the serialized signed block
-func (b *SignedBeaconBlock) SizeSSZ() (int, error) {
+//
+// WARNING: This function panics. It is required to change the signature
+// of fastssz's SizeSSZ() interface function to avoid panicking.
+// Changing the signature causes very problematic issues with wealdtech deps.
+// For the time being panicking is preferable.
+func (b *SignedBeaconBlock) SizeSSZ() int {
 	pb, err := b.Proto()
 	if err != nil {
-		return 0, err
+		panic(err)
 	}
 	switch b.version {
 	case version.Phase0:
-		return pb.(*eth.SignedBeaconBlock).SizeSSZ(), nil
+		return pb.(*eth.SignedBeaconBlock).SizeSSZ()
 	case version.Altair:
-		return pb.(*eth.SignedBeaconBlockAltair).SizeSSZ(), nil
+		return pb.(*eth.SignedBeaconBlockAltair).SizeSSZ()
 	case version.Bellatrix:
-		return pb.(*eth.SignedBeaconBlockBellatrix).SizeSSZ(), nil
+		return pb.(*eth.SignedBeaconBlockBellatrix).SizeSSZ()
 	case version.BellatrixBlind:
-		return pb.(*eth.SignedBlindedBeaconBlockBellatrix).SizeSSZ(), nil
+		return pb.(*eth.SignedBlindedBeaconBlockBellatrix).SizeSSZ()
 	default:
-		return 0, errIncorrectBlockVersion
+		panic(incorrectBlockVersion)
 	}
 }
 
@@ -412,22 +417,27 @@ func (b *BeaconBlock) MarshalSSZTo(dst []byte) ([]byte, error) {
 }
 
 // SizeSSZ returns the size of the serialized block.
-func (b *BeaconBlock) SizeSSZ() (int, error) {
+//
+// WARNING: This function panics. It is required to change the signature
+// of fastssz's SizeSSZ() interface function to avoid panicking.
+// Changing the signature causes very problematic issues with wealdtech deps.
+// For the time being panicking is preferable.
+func (b *BeaconBlock) SizeSSZ() int {
 	pb, err := b.Proto()
 	if err != nil {
-		return 0, err
+		panic(err)
 	}
 	switch b.version {
 	case version.Phase0:
-		return pb.(*eth.BeaconBlock).SizeSSZ(), nil
+		return pb.(*eth.BeaconBlock).SizeSSZ()
 	case version.Altair:
-		return pb.(*eth.BeaconBlockAltair).SizeSSZ(), nil
+		return pb.(*eth.BeaconBlockAltair).SizeSSZ()
 	case version.Bellatrix:
-		return pb.(*eth.BeaconBlockBellatrix).SizeSSZ(), nil
+		return pb.(*eth.BeaconBlockBellatrix).SizeSSZ()
 	case version.BellatrixBlind:
-		return pb.(*eth.BlindedBeaconBlockBellatrix).SizeSSZ(), nil
+		return pb.(*eth.BlindedBeaconBlockBellatrix).SizeSSZ()
 	default:
-		return 0, errIncorrectBlockVersion
+		panic(incorrectBodyVersion)
 	}
 }
 
