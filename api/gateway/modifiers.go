@@ -9,10 +9,16 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func HttpResponseModifier(ctx context.Context, w http.ResponseWriter, _ proto.Message) error {
+func HttpResponseModifier(ctx context.Context, w http.ResponseWriter, resp proto.Message) error {
 	md, ok := gwruntime.ServerMetadataFromContext(ctx)
 	if !ok {
 		return nil
+	}
+
+	log.Info("is this working?")
+	log.Infof("%v", resp)
+	for key, value := range md.HeaderMD {
+		log.Infof("key %v, value: %v", key, value)
 	}
 
 	// set http status code

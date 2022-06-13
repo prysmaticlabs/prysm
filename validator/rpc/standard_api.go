@@ -6,16 +6,20 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/protobuf/ptypes/empty"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	validatorServiceConfig "github.com/prysmaticlabs/prysm/config/validator/service"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
 	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection-history"
 	"github.com/prysmaticlabs/prysm/validator/slashing-protection-history/format"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
@@ -386,17 +390,53 @@ func groupDeleteRemoteKeysErrors(req *ethpbservice.DeleteRemoteKeysRequest, erro
 
 // ListFeeRecipientByPubkey returns the public key to eth address mapping object to the end user.
 func (s *Server) ListFeeRecipientByPubkey(ctx context.Context, req *ethpbservice.GetFeeRecipientByPubkeyRequest) (*ethpbservice.GetFeeRecipientByPubkeyResponse, error) {
-	log.Info("Pubkey" + hexutil.Encode(req.Pubkey))
-	return &ethpbservice.GetFeeRecipientByPubkeyResponse{
-		Data: &ethpbservice.GetFeeRecipientByPubkeyResponse_FeeRecipient{
-			Pubkey:     make([]byte, fieldparams.BLSPubkeyLength),
-			Ethaddress: make([]byte, fieldparams.FeeRecipientLength),
-		},
-	}, nil
+	if s.validatorService == nil {
+		return nil, status.Error(codes.FailedPrecondition, "Validator service not ready.")
+	}
+	return nil, nil
 }
 
 // SetFeeRecipientByPubkey updates the eth address mapped to the public key.
 func (s *Server) SetFeeRecipientByPubkey(ctx context.Context, req *ethpbservice.SetFeeRecipientByPubkeyRequest) (*empty.Empty, error) {
-	log.Info("set Eth address" + hexutil.Encode(req.Ethaddress))
+	if s.validatorService == nil {
+		return nil, status.Error(codes.FailedPrecondition, "Validator service not ready.")
+	}
+	validatorKey := req.Pubkey
+	if len(validatorKey) != fieldparams.BLSPubkeyLength {
+		return nil, status.Errorf(
+			codes.InvalidArgument, "%v  is not a bls public key", hexutil.Encode(validatorKey))
+	}
+	defaultOption := validatorServiceConfig.DefaultProposerOption()
+	encoded := hexutil.Encode(req.Ethaddress)
+	if !common.IsHexAddress(encoded) {
+		return nil, status.Errorf(
+			codes.InvalidArgument, "fee recipient is not a valid eth1 address")
+	}
+	pOption := validatorServiceConfig.DefaultProposerOption()
+	pOption.FeeRecipient = common.BytesToAddress(req.Ethaddress)
+	switch {
+	case s.validatorService.ProposerSettings == nil:
+		s.validatorService.ProposerSettings = &validatorServiceConfig.ProposerSettings{
+			ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validatorServiceConfig.ProposerOption{
+				bytesutil.ToBytes48(validatorKey): &pOption,
+			},
+			DefaultConfig: &defaultOption,
+		}
+	case s.validatorService.ProposerSettings.ProposeConfig == nil:
+		s.validatorService.ProposerSettings.ProposeConfig = map[[fieldparams.BLSPubkeyLength]byte]*validatorServiceConfig.ProposerOption{
+			bytesutil.ToBytes48(validatorKey): &pOption,
+		}
+	default:
+		proposerOption, found := s.validatorService.ProposerSettings.ProposeConfig[bytesutil.ToBytes48(validatorKey)]
+		if found {
+			proposerOption.FeeRecipient = common.BytesToAddress(req.Ethaddress)
+		} else {
+			s.validatorService.ProposerSettings.ProposeConfig[bytesutil.ToBytes48(validatorKey)] = &pOption
+		}
+	}
+	// override the 200 success with 202 according to the specs
+	if err := grpc.SetHeader(ctx, metadata.Pairs("x-http-code", "202")); err != nil {
+		return &empty.Empty{}, fmt.Errorf("could not set custom success code header: %w", err)
+	}
 	return &empty.Empty{}, nil
 }

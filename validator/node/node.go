@@ -542,7 +542,7 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 		for key, option := range fileConfig.ProposeConfig {
 			decodedKey, err := hexutil.Decode(key)
 			if err != nil {
-				return nil, errors.Wrapf(err, "could not decode public key for web3signer: %s", key)
+				return nil, errors.Wrapf(err, "could not decode public key: %s", key)
 			}
 			if len(decodedKey) != fieldparams.BLSPubkeyLength {
 				return nil, fmt.Errorf("%v  is not a bls public key", key)
