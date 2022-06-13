@@ -399,20 +399,27 @@ func (s *Server) ListFeeRecipientByPubkey(ctx context.Context, req *ethpbservice
 		return nil, status.Errorf(
 			codes.InvalidArgument, "provided public key in path is not a valid bls public key, please check for correct hex format starting with 0x")
 	}
-	proposerOption, found := s.validatorService.ProposerSettings.ProposeConfig[bytesutil.ToBytes48(validatorKey)]
-	if found {
+	defaultFeeRecipient := params.BeaconConfig().DefaultFeeRecipient.Bytes()
+	if s.validatorService.ProposerSettings == nil {
 		return &ethpbservice.GetFeeRecipientByPubkeyResponse{
 			Data: &ethpbservice.GetFeeRecipientByPubkeyResponse_FeeRecipient{
 				Pubkey:     validatorKey,
-				Ethaddress: proposerOption.FeeRecipient.Bytes(),
+				Ethaddress: defaultFeeRecipient,
 			},
 		}, nil
 	}
-	var defaultFeeRecipient []byte
-	// is validator started with no settings
-	if s.validatorService.ProposerSettings == nil || s.validatorService.ProposerSettings.DefaultConfig == nil {
-		defaultFeeRecipient = params.BeaconConfig().DefaultFeeRecipient.Bytes()
-	} else {
+	if s.validatorService.ProposerSettings.ProposeConfig != nil {
+		proposerOption, found := s.validatorService.ProposerSettings.ProposeConfig[bytesutil.ToBytes48(validatorKey)]
+		if found {
+			return &ethpbservice.GetFeeRecipientByPubkeyResponse{
+				Data: &ethpbservice.GetFeeRecipientByPubkeyResponse_FeeRecipient{
+					Pubkey:     validatorKey,
+					Ethaddress: proposerOption.FeeRecipient.Bytes(),
+				},
+			}, nil
+		}
+	}
+	if s.validatorService.ProposerSettings.DefaultConfig != nil {
 		defaultFeeRecipient = s.validatorService.ProposerSettings.DefaultConfig.FeeRecipient.Bytes()
 	}
 	return &ethpbservice.GetFeeRecipientByPubkeyResponse{

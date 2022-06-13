@@ -73,7 +73,7 @@ type feeRecipientJson struct {
 }
 
 type getFeeRecipientByPubkeyResponseJson struct {
-	Data feeRecipientJson `json:"data"`
+	Data *feeRecipientJson `json:"data"`
 }
 
 type setFeeRecipientByPubkeyRequestJson struct {
