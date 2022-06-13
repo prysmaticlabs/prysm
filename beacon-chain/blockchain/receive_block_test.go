@@ -13,9 +13,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -145,7 +145,7 @@ func TestService_ReceiveBlock(t *testing.T) {
 			s.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{Root: gRoot[:]}, h)
 			root, err := tt.args.block.Block.HashTreeRoot()
 			require.NoError(t, err)
-			wsb, err := wrapper.WrappedSignedBeaconBlock(tt.args.block)
+			wsb, err := blocks.NewSignedBeaconBlock(tt.args.block)
 			require.NoError(t, err)
 			err = s.ReceiveBlock(ctx, wsb, root)
 			if tt.wantedErr != "" {
@@ -188,7 +188,7 @@ func TestService_ReceiveBlockUpdateHead(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
-		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		wsb, err := blocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)
 		require.NoError(t, s.ReceiveBlock(ctx, wsb, root))
 		wg.Done()
@@ -264,7 +264,7 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 			s.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{Root: gRoot[:]}, [32]byte{'a'})
 			root, err := tt.args.block.Block.HashTreeRoot()
 			require.NoError(t, err)
-			wsb, err := wrapper.WrappedSignedBeaconBlock(tt.args.block)
+			wsb, err := blocks.NewSignedBeaconBlock(tt.args.block)
 			require.NoError(t, err)
 			blks := []interfaces.SignedBeaconBlock{wsb}
 			roots := [][32]byte{root}
@@ -288,7 +288,7 @@ func TestService_HasBlock(t *testing.T) {
 	if s.HasBlock(context.Background(), r) {
 		t.Error("Should not have block")
 	}
-	wsb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+	wsb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 	require.NoError(t, err)
 	s.saveInitSyncBlock(r, wsb)
 	if !s.HasBlock(context.Background(), r) {
@@ -296,7 +296,7 @@ func TestService_HasBlock(t *testing.T) {
 	}
 	b := util.NewBeaconBlock()
 	b.Block.Slot = 1
-	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err = blocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
 	r, err = b.Block.HashTreeRoot()
 	require.NoError(t, err)

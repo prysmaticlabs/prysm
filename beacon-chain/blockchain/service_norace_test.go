@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
 	"github.com/sirupsen/logrus"
@@ -22,7 +22,7 @@ func TestChainService_SaveHead_DataRace(t *testing.T) {
 	s := &Service{
 		cfg: &config{BeaconDB: beaconDB},
 	}
-	b, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+	b, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 	st, _ := util.DeterministicGenesisState(t, 1)
 	require.NoError(t, err)
 	go func() {

@@ -14,8 +14,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/proto/migration"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -92,7 +92,7 @@ func TestGetValidator(t *testing.T) {
 		blk.Block.ParentRoot = parentRoot[:]
 		root, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+		wsb, err := blocks.NewSignedBeaconBlock(blk)
 		require.NoError(t, err)
 		require.NoError(t, db.SaveBlock(ctx, wsb))
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
@@ -274,7 +274,7 @@ func TestListValidators(t *testing.T) {
 		blk.Block.ParentRoot = parentRoot[:]
 		root, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+		wsb, err := blocks.NewSignedBeaconBlock(blk)
 		require.NoError(t, err)
 		require.NoError(t, db.SaveBlock(ctx, wsb))
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
@@ -644,7 +644,7 @@ func TestListValidatorBalances(t *testing.T) {
 		blk.Block.ParentRoot = parentRoot[:]
 		root, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+		wsb, err := blocks.NewSignedBeaconBlock(blk)
 		require.NoError(t, err)
 		require.NoError(t, db.SaveBlock(ctx, wsb))
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
@@ -807,7 +807,7 @@ func TestListCommittees(t *testing.T) {
 		blk.Block.ParentRoot = parentRoot[:]
 		root, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+		wsb, err := blocks.NewSignedBeaconBlock(blk)
 		require.NoError(t, err)
 		require.NoError(t, db.SaveBlock(ctx, wsb))
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))

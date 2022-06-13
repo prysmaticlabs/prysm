@@ -14,7 +14,7 @@ import (
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -179,7 +179,7 @@ func TestSyncHandlers_WaitTillSynced(t *testing.T) {
 	require.NoError(t, err)
 
 	// Save block into DB so that validateBeaconBlockPubSub() process gets short cut.
-	wb, err := wrapper.WrappedSignedBeaconBlock(msg)
+	wb, err := blocks.NewSignedBeaconBlock(msg)
 	require.NoError(t, err)
 	require.NoError(t, r.cfg.beaconDB.SaveBlock(ctx, wb))
 

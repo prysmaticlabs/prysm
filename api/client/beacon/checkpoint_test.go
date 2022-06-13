@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -134,7 +135,7 @@ func TestDownloadWeakSubjectivityCheckpoint(t *testing.T) {
 	require.NoError(t, wst.SetFork(fork))
 
 	// set up checkpoint block
-	b, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+	b, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 	require.NoError(t, wrapper.SetBlockParentRoot(b, cfg.ZeroHash))
 	require.NoError(t, wrapper.SetBlockSlot(b, wSlot))
 	require.NoError(t, wrapper.SetProposerIndex(b, 0))
@@ -230,7 +231,7 @@ func TestDownloadBackwardsCompatibleCombined(t *testing.T) {
 	require.NoError(t, wst.SetFork(fork))
 
 	// set up checkpoint block
-	b, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+	b, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 	require.NoError(t, wrapper.SetBlockParentRoot(b, cfg.ZeroHash))
 	require.NoError(t, wrapper.SetBlockSlot(b, wSlot))
 	require.NoError(t, wrapper.SetProposerIndex(b, 0))
@@ -410,7 +411,7 @@ func TestDownloadFinalizedData(t *testing.T) {
 	require.NoError(t, st.SetFork(fork))
 
 	// set up checkpoint block
-	b, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+	b, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 	require.NoError(t, wrapper.SetBlockParentRoot(b, cfg.ZeroHash))
 	require.NoError(t, wrapper.SetBlockSlot(b, slot))
 	require.NoError(t, wrapper.SetProposerIndex(b, 0))

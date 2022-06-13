@@ -8,9 +8,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -31,7 +31,7 @@ var blockTests = []struct {
 			if root != nil {
 				b.Block.ParentRoot = root
 			}
-			return wrapper.WrappedSignedBeaconBlock(b)
+			return blocks.NewSignedBeaconBlock(b)
 		},
 	},
 	{
@@ -42,7 +42,7 @@ var blockTests = []struct {
 			if root != nil {
 				b.Block.ParentRoot = root
 			}
-			return wrapper.WrappedSignedBeaconBlock(b)
+			return blocks.NewSignedBeaconBlock(b)
 		},
 	},
 	{
@@ -53,7 +53,7 @@ var blockTests = []struct {
 			if root != nil {
 				b.Block.ParentRoot = root
 			}
-			return wrapper.WrappedSignedBeaconBlock(b)
+			return blocks.NewSignedBeaconBlock(b)
 		},
 	},
 	{
@@ -64,7 +64,7 @@ var blockTests = []struct {
 			if root != nil {
 				b.Block.ParentRoot = root
 			}
-			return wrapper.WrappedSignedBeaconBlock(b)
+			return blocks.NewSignedBeaconBlock(b)
 		},
 	},
 }
@@ -138,7 +138,11 @@ func TestStore_BlocksCRUD(t *testing.T) {
 			assert.Equal(t, true, db.HasBlock(ctx, blockRoot), "Expected block to exist in the db")
 			retrievedBlock, err = db.Block(ctx, blockRoot)
 			require.NoError(t, err)
-			assert.Equal(t, true, proto.Equal(blk.Proto(), retrievedBlock.Proto()), "Wanted: %v, received: %v", blk, retrievedBlock)
+			blkPb, err := blk.Proto()
+			require.NoError(t, err)
+			retrievedBlockPb, err := retrievedBlock.Proto()
+			require.NoError(t, err)
+			assert.Equal(t, true, proto.Equal(blkPb, retrievedBlockPb), "Wanted: %v, received: %v", blk, retrievedBlock)
 		})
 	}
 }
@@ -254,7 +258,7 @@ func TestStore_DeleteJustifiedBlock(t *testing.T) {
 	}
 	st, err := util.NewBeaconState()
 	require.NoError(t, err)
-	blk, err := wrapper.WrappedSignedBeaconBlock(b)
+	blk, err := blocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, blk))
 	require.NoError(t, db.SaveState(ctx, st, root))
@@ -273,7 +277,7 @@ func TestStore_DeleteFinalizedBlock(t *testing.T) {
 	}
 	st, err := util.NewBeaconState()
 	require.NoError(t, err)
-	blk, err := wrapper.WrappedSignedBeaconBlock(b)
+	blk, err := blocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, blk))
 	require.NoError(t, db.SaveState(ctx, st, root))
@@ -289,12 +293,14 @@ func TestStore_GenesisBlock(t *testing.T) {
 	blockRoot, err := genesisBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, blockRoot))
-	wsb, err := wrapper.WrappedSignedBeaconBlock(genesisBlock)
+	wsb, err := blocks.NewSignedBeaconBlock(genesisBlock)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, wsb))
 	retrievedBlock, err := db.GenesisBlock(ctx)
 	require.NoError(t, err)
-	assert.Equal(t, true, proto.Equal(genesisBlock, retrievedBlock.Proto()), "Wanted: %v, received: %v", genesisBlock, retrievedBlock)
+	retrievedBlockPb, err := retrievedBlock.Proto()
+	require.NoError(t, err)
+	assert.Equal(t, true, proto.Equal(genesisBlock, retrievedBlockPb), "Wanted: %v, received: %v", genesisBlock, retrievedBlock)
 }
 
 func TestStore_BlocksCRUD_NoCache(t *testing.T) {
@@ -314,7 +320,11 @@ func TestStore_BlocksCRUD_NoCache(t *testing.T) {
 			assert.Equal(t, true, db.HasBlock(ctx, blockRoot), "Expected block to exist in the db")
 			retrievedBlock, err = db.Block(ctx, blockRoot)
 			require.NoError(t, err)
-			assert.Equal(t, true, proto.Equal(blk.Proto(), retrievedBlock.Proto()), "Wanted: %v, received: %v", blk, retrievedBlock)
+			blkPb, err := blk.Proto()
+			require.NoError(t, err)
+			retrievedBlockPb, err := retrievedBlock.Proto()
+			require.NoError(t, err)
+			assert.Equal(t, true, proto.Equal(blkPb, retrievedBlockPb), "Wanted: %v, received: %v", blk, retrievedBlock)
 		})
 	}
 }
@@ -524,7 +534,11 @@ func TestStore_SaveBlock_CanGetHighestAt(t *testing.T) {
 			root := roots[0]
 			b, err := db.Block(ctx, root)
 			require.NoError(t, err)
-			assert.Equal(t, true, proto.Equal(block1.Proto(), b.Proto()), "Wanted: %v, received: %v", block1, b)
+			block1Pb, err := block1.Proto()
+			require.NoError(t, err)
+			bPb, err := b.Proto()
+			require.NoError(t, err)
+			assert.Equal(t, true, proto.Equal(block1Pb, bPb), "Wanted: %v, received: %v", block1, b)
 
 			_, roots, err = db.HighestRootsBelowSlot(ctx, 11)
 			require.NoError(t, err)
@@ -533,7 +547,11 @@ func TestStore_SaveBlock_CanGetHighestAt(t *testing.T) {
 			root = roots[0]
 			b, err = db.Block(ctx, root)
 			require.NoError(t, err)
-			assert.Equal(t, true, proto.Equal(block2.Proto(), b.Proto()), "Wanted: %v, received: %v", block2, b)
+			block2Pb, err := block2.Proto()
+			require.NoError(t, err)
+			bPb, err = b.Proto()
+			require.NoError(t, err)
+			assert.Equal(t, true, proto.Equal(block2Pb, bPb), "Wanted: %v, received: %v", block2, b)
 
 			_, roots, err = db.HighestRootsBelowSlot(ctx, 101)
 			require.NoError(t, err)
@@ -542,7 +560,11 @@ func TestStore_SaveBlock_CanGetHighestAt(t *testing.T) {
 			root = roots[0]
 			b, err = db.Block(ctx, root)
 			require.NoError(t, err)
-			assert.Equal(t, true, proto.Equal(block3.Proto(), b.Proto()), "Wanted: %v, received: %v", block3, b)
+			block3Pb, err := block3.Proto()
+			require.NoError(t, err)
+			bPb, err = b.Proto()
+			require.NoError(t, err)
+			assert.Equal(t, true, proto.Equal(block3Pb, bPb), "Wanted: %v, received: %v", block3, b)
 		})
 	}
 }
@@ -569,7 +591,11 @@ func TestStore_GenesisBlock_CanGetHighestAt(t *testing.T) {
 			root := roots[0]
 			b, err := db.Block(ctx, root)
 			require.NoError(t, err)
-			assert.Equal(t, true, proto.Equal(block1.Proto(), b.Proto()), "Wanted: %v, received: %v", block1, b)
+			block1Pb, err := block1.Proto()
+			require.NoError(t, err)
+			bPb, err := b.Proto()
+			require.NoError(t, err)
+			assert.Equal(t, true, proto.Equal(block1Pb, bPb), "Wanted: %v, received: %v", block1, b)
 
 			_, roots, err = db.HighestRootsBelowSlot(ctx, 1)
 			require.NoError(t, err)
@@ -577,7 +603,11 @@ func TestStore_GenesisBlock_CanGetHighestAt(t *testing.T) {
 			root = roots[0]
 			b, err = db.Block(ctx, root)
 			require.NoError(t, err)
-			assert.Equal(t, true, proto.Equal(genesisBlock.Proto(), b.Proto()), "Wanted: %v, received: %v", genesisBlock, b)
+			genesisBlockPb, err := genesisBlock.Proto()
+			require.NoError(t, err)
+			bPb, err = b.Proto()
+			require.NoError(t, err)
+			assert.Equal(t, true, proto.Equal(genesisBlockPb, bPb), "Wanted: %v, received: %v", genesisBlock, b)
 
 			_, roots, err = db.HighestRootsBelowSlot(ctx, 0)
 			require.NoError(t, err)
@@ -585,7 +615,11 @@ func TestStore_GenesisBlock_CanGetHighestAt(t *testing.T) {
 			root = roots[0]
 			b, err = db.Block(ctx, root)
 			require.NoError(t, err)
-			assert.Equal(t, true, proto.Equal(genesisBlock.Proto(), b.Proto()), "Wanted: %v, received: %v", genesisBlock, b)
+			genesisBlockPb, err = genesisBlock.Proto()
+			require.NoError(t, err)
+			bPb, err = b.Proto()
+			require.NoError(t, err)
+			assert.Equal(t, true, proto.Equal(genesisBlockPb, bPb), "Wanted: %v, received: %v", genesisBlock, b)
 		})
 	}
 }
@@ -671,15 +705,27 @@ func TestStore_BlocksBySlot_BlockRootsBySlot(t *testing.T) {
 			assert.Equal(t, 0, len(retrievedBlocks), "Unexpected number of blocks received, expected none")
 			retrievedBlocks, err = db.BlocksBySlot(ctx, 20)
 			require.NoError(t, err)
-			assert.Equal(t, true, proto.Equal(b1.Proto(), retrievedBlocks[0].Proto()), "Wanted: %v, received: %v", b1, retrievedBlocks[0])
+			b1Pb, err := b1.Proto()
+			require.NoError(t, err)
+			retrievedBlocks0Pb, err := retrievedBlocks[0].Proto()
+			require.NoError(t, err)
+			assert.Equal(t, true, proto.Equal(b1Pb, retrievedBlocks0Pb), "Wanted: %v, received: %v", b1, retrievedBlocks[0])
 			assert.Equal(t, true, len(retrievedBlocks) > 0, "Expected to have blocks")
 			retrievedBlocks, err = db.BlocksBySlot(ctx, 100)
 			require.NoError(t, err)
 			if len(retrievedBlocks) != 2 {
 				t.Fatalf("Expected 2 blocks, received %d blocks", len(retrievedBlocks))
 			}
-			assert.Equal(t, true, proto.Equal(b2.Proto(), retrievedBlocks[0].Proto()), "Wanted: %v, received: %v", b2, retrievedBlocks[0])
-			assert.Equal(t, true, proto.Equal(b3.Proto(), retrievedBlocks[1].Proto()), "Wanted: %v, received: %v", b3, retrievedBlocks[1])
+			b2Pb, err := b2.Proto()
+			require.NoError(t, err)
+			retrievedBlocks0Pb, err = retrievedBlocks[0].Proto()
+			require.NoError(t, err)
+			assert.Equal(t, true, proto.Equal(b2Pb, retrievedBlocks0Pb), "Wanted: %v, received: %v", b2, retrievedBlocks[0])
+			b3Pb, err := b3.Proto()
+			require.NoError(t, err)
+			retrievedBlocks1Pb, err := retrievedBlocks[1].Proto()
+			require.NoError(t, err)
+			assert.Equal(t, true, proto.Equal(b3Pb, retrievedBlocks1Pb), "Wanted: %v, received: %v", b3, retrievedBlocks[1])
 			assert.Equal(t, true, len(retrievedBlocks) > 0, "Expected to have blocks")
 
 			hasBlockRoots, retrievedBlockRoots, err := db.BlockRootsBySlot(ctx, 1)

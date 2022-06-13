@@ -10,8 +10,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/config/params"
+	consensusblocks "github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -30,7 +30,7 @@ func TestService_newSlot(t *testing.T) {
 
 	genesisStateRoot := [32]byte{}
 	genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
-	wsb, err := wrapper.WrappedSignedBeaconBlock(genesis)
+	wsb, err := consensusblocks.NewSignedBeaconBlock(genesis)
 	require.NoError(t, err)
 	assert.NoError(t, beaconDB.SaveBlock(ctx, wsb))
 	bj, err := genesis.Block.HashTreeRoot()

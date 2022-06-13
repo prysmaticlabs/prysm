@@ -9,8 +9,8 @@ import (
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	mockstategen "github.com/prysmaticlabs/prysm/beacon-chain/state/stategen/mock"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -32,7 +32,7 @@ func TestServer_GetBeaconState(t *testing.T) {
 	require.NoError(t, st.SetSlot(slot))
 	b := util.NewBeaconBlock()
 	b.Block.Slot = slot
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err := blocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, wsb))
 	gRoot, err := b.Block.HashTreeRoot()

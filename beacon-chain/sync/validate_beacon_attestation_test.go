@@ -21,7 +21,7 @@ import (
 	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -66,7 +66,7 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 
 	blk := util.NewBeaconBlock()
 	blk.Block.Slot = 1
-	wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+	wsb, err := blocks.NewSignedBeaconBlock(blk)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, wsb))
 

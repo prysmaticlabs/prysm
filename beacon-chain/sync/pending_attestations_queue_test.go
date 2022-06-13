@@ -19,8 +19,8 @@ import (
 	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -64,7 +64,7 @@ func TestProcessPendingAtts_HasBlockSaveUnAggregatedAtt(t *testing.T) {
 	beaconState, privKeys := util.DeterministicGenesisState(t, validators)
 
 	sb := util.NewBeaconBlock()
-	wsb, err := wrapper.WrappedSignedBeaconBlock(sb)
+	wsb, err := blocks.NewSignedBeaconBlock(sb)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(context.Background(), wsb))
 	root, err := sb.Block.HashTreeRoot()
@@ -173,7 +173,7 @@ func TestProcessPendingAtts_NoBroadcastWithBadSignature(t *testing.T) {
 	b := util.NewBeaconBlock()
 	r32, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err := blocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
 	require.NoError(t, r.cfg.beaconDB.SaveBlock(context.Background(), wsb))
 	require.NoError(t, r.cfg.beaconDB.SaveState(context.Background(), s, r32))
@@ -261,7 +261,7 @@ func TestProcessPendingAtts_HasBlockSaveAggregatedAtt(t *testing.T) {
 	beaconState, privKeys := util.DeterministicGenesisState(t, validators)
 
 	sb := util.NewBeaconBlock()
-	wsb, err := wrapper.WrappedSignedBeaconBlock(sb)
+	wsb, err := blocks.NewSignedBeaconBlock(sb)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(context.Background(), wsb))
 	root, err := sb.Block.HashTreeRoot()

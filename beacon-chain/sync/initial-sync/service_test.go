@@ -16,8 +16,8 @@ import (
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -378,7 +378,7 @@ func TestService_Resync(t *testing.T) {
 	}, p.Peers())
 	cache.initializeRootCache(makeSequence(1, 160), t)
 	beaconDB := dbtest.SetupDB(t)
-	wsb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+	wsb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 	require.NoError(t, err)
 	err = beaconDB.SaveBlock(context.Background(), wsb)
 	require.NoError(t, err)

@@ -6,7 +6,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
+	consensusblocks "github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -83,7 +83,7 @@ func TestVerifyBlockSignatureUsingCurrentFork(t *testing.T) {
 	assert.NoError(t, err)
 	sig := keys[0].Sign(rt[:]).Marshal()
 	altairBlk.Signature = sig
-	wsb, err := wrapper.WrappedSignedBeaconBlock(altairBlk)
+	wsb, err := consensusblocks.NewSignedBeaconBlock(altairBlk)
 	require.NoError(t, err)
 	assert.NoError(t, blocks.VerifyBlockSignatureUsingCurrentFork(bState, wsb))
 }

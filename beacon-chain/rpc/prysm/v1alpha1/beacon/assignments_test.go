@@ -14,8 +14,8 @@ import (
 	mockstategen "github.com/prysmaticlabs/prysm/beacon-chain/state/stategen/mock"
 	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -52,7 +52,7 @@ func TestServer_ListAssignments_NoResults(t *testing.T) {
 	require.NoError(t, err)
 
 	b := util.NewBeaconBlock()
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err := blocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, wsb))
 	gRoot, err := b.Block.HashTreeRoot()
@@ -326,7 +326,7 @@ func TestServer_ListAssignments_CanFilterPubkeysIndices_WithPagination(t *testin
 	require.NoError(t, err)
 	s, err := util.NewBeaconState()
 	require.NoError(t, err)
-	w, err := wrapper.WrappedSignedBeaconBlock(b)
+	w, err := blocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
 	require.NoError(t, s.SetValidators(validators))
 	require.NoError(t, db.SaveState(ctx, s, blockRoot))

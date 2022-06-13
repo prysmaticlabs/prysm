@@ -21,8 +21,8 @@ import (
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/container/slice"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -82,7 +82,7 @@ func initializeTestServices(t *testing.T, slots []types.Slot, peers []*peerData)
 	genesisRoot := cache.rootCache[0]
 	cache.RUnlock()
 
-	wsb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+	wsb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 	require.NoError(t, err)
 	err = beaconDB.SaveBlock(context.Background(), wsb)
 	require.NoError(t, err)
@@ -221,7 +221,7 @@ func connectPeer(t *testing.T, host *p2pt.TestP2P, datum *peerData, peerStatus *
 
 		mChain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
 		for i := 0; i < len(ret); i++ {
-			wsb, err := wrapper.WrappedSignedBeaconBlock(ret[i])
+			wsb, err := blocks.NewSignedBeaconBlock(ret[i])
 			require.NoError(t, err)
 			assert.NoError(t, beaconsync.WriteBlockChunk(stream, mChain, p.Encoding(), wsb))
 		}
@@ -274,7 +274,7 @@ func extendBlockSequence(t *testing.T, inSeq []*ethpb.SignedBeaconBlock, size in
 
 // connectPeerHavingBlocks connect host with a peer having provided blocks.
 func connectPeerHavingBlocks(
-	t *testing.T, host *p2pt.TestP2P, blocks []*ethpb.SignedBeaconBlock, finalizedSlot types.Slot,
+	t *testing.T, host *p2pt.TestP2P, blks []*ethpb.SignedBeaconBlock, finalizedSlot types.Slot,
 	peerStatus *peers.Status,
 ) peer.ID {
 	p := p2pt.NewTestP2P(t)
@@ -289,11 +289,11 @@ func connectPeerHavingBlocks(
 		assert.NoError(t, p.Encoding().DecodeWithMaxLength(stream, req))
 
 		for i := req.StartSlot; i < req.StartSlot.Add(req.Count*req.Step); i += types.Slot(req.Step) {
-			if uint64(i) >= uint64(len(blocks)) {
+			if uint64(i) >= uint64(len(blks)) {
 				break
 			}
 			chain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
-			wsb, err := wrapper.WrappedSignedBeaconBlock(blocks[i])
+			wsb, err := blocks.NewSignedBeaconBlock(blks[i])
 			require.NoError(t, err)
 			require.NoError(t, beaconsync.WriteBlockChunk(stream, chain, p.Encoding(), wsb))
 		}
@@ -311,7 +311,7 @@ func connectPeerHavingBlocks(
 			return
 		}
 		for _, expectedRoot := range *req {
-			for _, blk := range blocks {
+			for _, blk := range blks {
 				if root, err := blk.Block.HashTreeRoot(); err == nil && expectedRoot == root {
 					log.Printf("Found blocks_by_root: %#x for slot: %v", root, blk.Block.Slot)
 					_, err := stream.Write([]byte{0x00})
@@ -326,7 +326,7 @@ func connectPeerHavingBlocks(
 	p.Connect(host)
 
 	finalizedEpoch := slots.ToEpoch(finalizedSlot)
-	headRoot, err := blocks[len(blocks)-1].Block.HashTreeRoot()
+	headRoot, err := blks[len(blks)-1].Block.HashTreeRoot()
 	require.NoError(t, err)
 
 	peerStatus.Add(new(enr.Record), p.PeerID(), nil, network.DirOutbound)
@@ -336,7 +336,7 @@ func connectPeerHavingBlocks(
 		FinalizedRoot:  []byte(fmt.Sprintf("finalized_root %d", finalizedEpoch)),
 		FinalizedEpoch: finalizedEpoch,
 		HeadRoot:       headRoot[:],
-		HeadSlot:       blocks[len(blocks)-1].Block.Slot,
+		HeadSlot:       blks[len(blks)-1].Block.Slot,
 	})
 
 	return p.PeerID()

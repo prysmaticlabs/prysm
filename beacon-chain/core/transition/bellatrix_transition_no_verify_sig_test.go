@@ -15,7 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
@@ -92,7 +92,7 @@ func TestExecuteBellatrixStateTransitionNoVerify_FullProcess(t *testing.T) {
 		SyncCommitteeSignature: aggregatedSig,
 	}
 	block.Block.Body.SyncAggregate = syncAggregate
-	wsb, err := wrapper.WrappedSignedBeaconBlock(block)
+	wsb, err := blocks.NewSignedBeaconBlock(block)
 	require.NoError(t, err)
 	stateRoot, err := transition.CalculateStateRoot(context.Background(), beaconState, wsb)
 	require.NoError(t, err)
@@ -103,7 +103,7 @@ func TestExecuteBellatrixStateTransitionNoVerify_FullProcess(t *testing.T) {
 	require.NoError(t, err)
 	block.Signature = sig.Marshal()
 
-	wsb, err = wrapper.WrappedSignedBeaconBlock(block)
+	wsb, err = blocks.NewSignedBeaconBlock(block)
 	require.NoError(t, err)
 	set, _, err := transition.ExecuteStateTransitionNoVerifyAnySig(context.Background(), beaconState, wsb)
 	require.NoError(t, err)
@@ -180,7 +180,7 @@ func TestExecuteBellatrixStateTransitionNoVerifySignature_CouldNotVerifyStateRoo
 	}
 	block.Block.Body.SyncAggregate = syncAggregate
 
-	wsb, err := wrapper.WrappedSignedBeaconBlock(block)
+	wsb, err := blocks.NewSignedBeaconBlock(block)
 	require.NoError(t, err)
 	stateRoot, err := transition.CalculateStateRoot(context.Background(), beaconState, wsb)
 	require.NoError(t, err)
@@ -192,7 +192,7 @@ func TestExecuteBellatrixStateTransitionNoVerifySignature_CouldNotVerifyStateRoo
 	block.Signature = sig.Marshal()
 
 	block.Block.StateRoot = bytesutil.PadTo([]byte{'a'}, 32)
-	wsb, err = wrapper.WrappedSignedBeaconBlock(block)
+	wsb, err = blocks.NewSignedBeaconBlock(block)
 	require.NoError(t, err)
 	_, _, err = transition.ExecuteStateTransitionNoVerifyAnySig(context.Background(), beaconState, wsb)
 	require.ErrorContains(t, "could not validate state root", err)

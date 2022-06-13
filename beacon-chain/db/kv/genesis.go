@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	statev1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
+	consensusblocks "github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -26,7 +26,7 @@ func (s *Store) SaveGenesisData(ctx context.Context, genesisState state.BeaconSt
 	if err != nil {
 		return errors.Wrap(err, "could not get genesis block root")
 	}
-	wsb, err := wrapper.WrappedSignedBeaconBlock(genesisBlk)
+	wsb, err := consensusblocks.NewSignedBeaconBlock(genesisBlk)
 	if err != nil {
 		return errors.Wrap(err, "could not wrap genesis block")
 	}

@@ -20,8 +20,8 @@ import (
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -48,7 +48,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerReturnsBlocks(t *testing.T) {
 	for i := req.StartSlot; i < req.StartSlot.Add(req.Step*req.Count); i += types.Slot(req.Step) {
 		blk := util.NewBeaconBlock()
 		blk.Block.Slot = i
-		wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+		wsb, err := blocks.NewSignedBeaconBlock(blk)
 		require.NoError(t, err)
 		require.NoError(t, d.SaveBlock(context.Background(), wsb))
 	}
@@ -111,7 +111,7 @@ func TestRPCBeaconBlocksByRange_ReturnCorrectNumberBack(t *testing.T) {
 			require.NoError(t, err)
 			genRoot = rt
 		}
-		wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+		wsb, err := blocks.NewSignedBeaconBlock(blk)
 		require.NoError(t, err)
 		require.NoError(t, d.SaveBlock(context.Background(), wsb))
 	}
@@ -177,7 +177,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerReturnsSortedBlocks(t *testing.T) {
 		rt, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
 		expectedRoots[j] = rt
-		wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+		wsb, err := blocks.NewSignedBeaconBlock(blk)
 		require.NoError(t, err)
 		require.NoError(t, d.SaveBlock(context.Background(), wsb))
 		j--
@@ -245,7 +245,7 @@ func TestRPCBeaconBlocksByRange_ReturnsGenesisBlock(t *testing.T) {
 		if i == 0 {
 			require.NoError(t, d.SaveGenesisBlockRoot(context.Background(), rt))
 		}
-		wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+		wsb, err := blocks.NewSignedBeaconBlock(blk)
 		require.NoError(t, err)
 		require.NoError(t, d.SaveBlock(context.Background(), wsb))
 		prevRoot = rt
@@ -292,7 +292,7 @@ func TestRPCBeaconBlocksByRange_RPCHandlerRateLimitOverflow(t *testing.T) {
 			if req.Step == 1 {
 				block.Block.ParentRoot = parentRoot[:]
 			}
-			wsb, err := wrapper.WrappedSignedBeaconBlock(block)
+			wsb, err := blocks.NewSignedBeaconBlock(block)
 			require.NoError(t, err)
 			require.NoError(t, d.SaveBlock(context.Background(), wsb))
 			rt, err := block.Block.HashTreeRoot()
@@ -553,7 +553,7 @@ func TestRPCBeaconBlocksByRange_EnforceResponseInvariants(t *testing.T) {
 			block := util.NewBeaconBlock()
 			block.Block.Slot = i
 			block.Block.ParentRoot = parentRoot[:]
-			wsb, err := wrapper.WrappedSignedBeaconBlock(block)
+			wsb, err := blocks.NewSignedBeaconBlock(block)
 			require.NoError(t, err)
 			require.NoError(t, d.SaveBlock(context.Background(), wsb))
 			rt, err := block.Block.HashTreeRoot()
@@ -630,33 +630,33 @@ func TestRPCBeaconBlocksByRange_FilterBlocks(t *testing.T) {
 		previousRoot, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
 
-		wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+		wsb, err := blocks.NewSignedBeaconBlock(blk)
 		require.NoError(t, err)
 		require.NoError(t, d.SaveBlock(context.Background(), wsb))
 		require.NoError(t, d.SaveGenesisBlockRoot(context.Background(), previousRoot))
-		blocks := make([]*ethpb.SignedBeaconBlock, req.Count)
+		blks := make([]*ethpb.SignedBeaconBlock, req.Count)
 		// Populate the database with blocks that would match the request.
 		for i, j := req.StartSlot, 0; i < req.StartSlot.Add(req.Step*req.Count); i += types.Slot(req.Step) {
 			parentRoot := make([]byte, fieldparams.RootLength)
 			copy(parentRoot, previousRoot[:])
-			blocks[j] = util.NewBeaconBlock()
-			blocks[j].Block.Slot = i
-			blocks[j].Block.ParentRoot = parentRoot
+			blks[j] = util.NewBeaconBlock()
+			blks[j].Block.Slot = i
+			blks[j].Block.ParentRoot = parentRoot
 			var err error
-			previousRoot, err = blocks[j].Block.HashTreeRoot()
+			previousRoot, err = blks[j].Block.HashTreeRoot()
 			require.NoError(t, err)
-			wsb, err := wrapper.WrappedSignedBeaconBlock(blocks[j])
+			wsb, err := blocks.NewSignedBeaconBlock(blks[j])
 			require.NoError(t, err)
 			require.NoError(t, d.SaveBlock(context.Background(), wsb))
 			j++
 		}
-		stateSummaries := make([]*ethpb.StateSummary, len(blocks))
+		stateSummaries := make([]*ethpb.StateSummary, len(blks))
 
 		if finalized {
 			if chain.CanonicalRoots == nil {
 				chain.CanonicalRoots = map[[32]byte]bool{}
 			}
-			for i, b := range blocks {
+			for i, b := range blks {
 				bRoot, err := b.Block.HashTreeRoot()
 				require.NoError(t, err)
 				stateSummaries[i] = &ethpb.StateSummary{
@@ -680,36 +680,36 @@ func TestRPCBeaconBlocksByRange_FilterBlocks(t *testing.T) {
 		require.NoError(t, err)
 		genRoot := previousRoot
 
-		wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+		wsb, err := blocks.NewSignedBeaconBlock(blk)
 		require.NoError(t, err)
 		require.NoError(t, d.SaveBlock(context.Background(), wsb))
 		require.NoError(t, d.SaveGenesisBlockRoot(context.Background(), previousRoot))
-		blocks := make([]*ethpb.SignedBeaconBlock, req.Count)
+		blks := make([]*ethpb.SignedBeaconBlock, req.Count)
 		// Populate the database with blocks with non linear roots.
 		for i, j := req.StartSlot, 0; i < req.StartSlot.Add(req.Step*req.Count); i += types.Slot(req.Step) {
 			parentRoot := make([]byte, fieldparams.RootLength)
 			copy(parentRoot, previousRoot[:])
-			blocks[j] = util.NewBeaconBlock()
-			blocks[j].Block.Slot = i
-			blocks[j].Block.ParentRoot = parentRoot
+			blks[j] = util.NewBeaconBlock()
+			blks[j].Block.Slot = i
+			blks[j].Block.ParentRoot = parentRoot
 			// Make the 2nd block have a bad root.
 			if j == int(badBlockNum) {
-				blocks[j].Block.ParentRoot = genRoot[:]
+				blks[j].Block.ParentRoot = genRoot[:]
 			}
 			var err error
-			previousRoot, err = blocks[j].Block.HashTreeRoot()
+			previousRoot, err = blks[j].Block.HashTreeRoot()
 			require.NoError(t, err)
-			wsb, err := wrapper.WrappedSignedBeaconBlock(blocks[j])
+			wsb, err := blocks.NewSignedBeaconBlock(blks[j])
 			require.NoError(t, err)
 			require.NoError(t, d.SaveBlock(context.Background(), wsb))
 			j++
 		}
-		stateSummaries := make([]*ethpb.StateSummary, len(blocks))
+		stateSummaries := make([]*ethpb.StateSummary, len(blks))
 		if finalized {
 			if chain.CanonicalRoots == nil {
 				chain.CanonicalRoots = map[[32]byte]bool{}
 			}
-			for i, b := range blocks {
+			for i, b := range blks {
 				bRoot, err := b.Block.HashTreeRoot()
 				require.NoError(t, err)
 				stateSummaries[i] = &ethpb.StateSummary{

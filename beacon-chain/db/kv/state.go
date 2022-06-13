@@ -15,6 +15,7 @@ import (
 	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -659,7 +660,7 @@ func (s *Store) slotByBlockRoot(ctx context.Context, tx *bolt.Tx, blockRoot []by
 		if err != nil {
 			return 0, err
 		}
-		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		wsb, err := blocks.NewSignedBeaconBlock(b)
 		if err != nil {
 			return 0, err
 		}

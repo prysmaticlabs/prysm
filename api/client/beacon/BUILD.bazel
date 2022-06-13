@@ -40,6 +40,7 @@ go_test(
     deps = [
         "//beacon-chain/state:go_default_library",
         "//config/params:go_default_library",
+        "//consensus-types/blocks:go_default_library",
         "//consensus-types/primitives:go_default_library",
         "//consensus-types/wrapper:go_default_library",
         "//encoding/ssz/detect:go_default_library",
