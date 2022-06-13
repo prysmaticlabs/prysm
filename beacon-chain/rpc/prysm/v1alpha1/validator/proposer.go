@@ -181,6 +181,12 @@ func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.
 		return nil, fmt.Errorf("could not process beacon block: %v", err)
 	}
 
+	if sidecar != nil {
+		if err := vs.BeaconDB.SaveBlobsSidecar(ctx, sidecar.Message); err != nil {
+			return nil, fmt.Errorf("could not save blobs sidecar: %v", err)
+		}
+	}
+
 	return &ethpb.ProposeResponse{
 		BlockRoot: root[:],
 	}, nil
