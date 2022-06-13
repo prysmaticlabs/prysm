@@ -3,16 +3,20 @@ package accounts
 import (
 	"encoding/hex"
 	"fmt"
+	"io"
 	"strconv"
 	"strings"
 
 	"github.com/logrusorgru/aurora"
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/io/prompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/petnames"
+	"github.com/prysmaticlabs/prysm/validator/accounts/userprompt"
 	"github.com/urfave/cli/v2"
 )
 
@@ -130,4 +134,86 @@ func filterPublicKeys(pubKeyStrings []string) ([]bls.PublicKey, error) {
 		filteredPubKeys = append(filteredPubKeys, blsPublicKey)
 	}
 	return filteredPubKeys, nil
+}
+
+// FilterExitAccountsFromUserInput selects which accounts to exit from the CLI.
+func FilterExitAccountsFromUserInput(
+	cliCtx *cli.Context,
+	r io.Reader,
+	validatingPublicKeys [][fieldparams.BLSPubkeyLength]byte,
+) (rawPubKeys [][]byte, formattedPubKeys []string, err error) {
+	if !cliCtx.IsSet(flags.ExitAllFlag.Name) {
+		// Allow the user to interactively select the accounts to exit or optionally
+		// provide them via cli flags as a string of comma-separated, hex strings.
+		filteredPubKeys, err := FilterPublicKeysFromUserInput(
+			cliCtx,
+			flags.VoluntaryExitPublicKeysFlag,
+			validatingPublicKeys,
+			userprompt.SelectAccountsVoluntaryExitPromptText,
+		)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "could not filter public keys for voluntary exit")
+		}
+		rawPubKeys = make([][]byte, len(filteredPubKeys))
+		formattedPubKeys = make([]string, len(filteredPubKeys))
+		for i, pk := range filteredPubKeys {
+			pubKeyBytes := pk.Marshal()
+			rawPubKeys[i] = pubKeyBytes
+			formattedPubKeys[i] = fmt.Sprintf("%#x", bytesutil.Trunc(pubKeyBytes))
+		}
+		allAccountStr := strings.Join(formattedPubKeys, ", ")
+		if !cliCtx.IsSet(flags.VoluntaryExitPublicKeysFlag.Name) {
+			if len(filteredPubKeys) == 1 {
+				promptText := "Are you sure you want to perform a voluntary exit on 1 account? (%s) Y/N"
+				resp, err := prompt.ValidatePrompt(
+					r, fmt.Sprintf(promptText, au.BrightGreen(formattedPubKeys[0])), prompt.ValidateYesOrNo,
+				)
+				if err != nil {
+					return nil, nil, err
+				}
+				if strings.EqualFold(resp, "n") {
+					return nil, nil, nil
+				}
+			} else {
+				promptText := "Are you sure you want to perform a voluntary exit on %d accounts? (%s) Y/N"
+				if len(filteredPubKeys) == len(validatingPublicKeys) {
+					promptText = fmt.Sprintf(
+						"Are you sure you want to perform a voluntary exit on all accounts? Y/N (%s)",
+						au.BrightGreen(allAccountStr))
+				} else {
+					promptText = fmt.Sprintf(promptText, len(filteredPubKeys), au.BrightGreen(allAccountStr))
+				}
+				resp, err := prompt.ValidatePrompt(r, promptText, prompt.ValidateYesOrNo)
+				if err != nil {
+					return nil, nil, err
+				}
+				if strings.EqualFold(resp, "n") {
+					return nil, nil, nil
+				}
+			}
+		}
+	} else {
+		rawPubKeys, formattedPubKeys = prepareAllKeys(validatingPublicKeys)
+		fmt.Printf("About to perform a voluntary exit of %d accounts\n", len(rawPubKeys))
+	}
+
+	promptHeader := au.Red("===============IMPORTANT===============")
+	promptDescription := "Withdrawing funds is not possible in Phase 0 of the system. " +
+		"Please navigate to the following website and make sure you understand the current implications " +
+		"of a voluntary exit before making the final decision:"
+	promptURL := au.Blue("https://docs.prylabs.network/docs/wallet/exiting-a-validator/#withdrawal-delay-warning")
+	promptQuestion := "If you still want to continue with the voluntary exit, please input a phrase found at the end " +
+		"of the page from the above URL"
+	promptText := fmt.Sprintf("%s\n%s\n%s\n%s", promptHeader, promptDescription, promptURL, promptQuestion)
+	resp, err := prompt.ValidatePrompt(r, promptText, func(input string) error {
+		return prompt.ValidatePhrase(input, ExitPassphrase)
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+	if strings.EqualFold(resp, "n") {
+		return nil, nil, nil
+	}
+
+	return rawPubKeys, formattedPubKeys, nil
 }
