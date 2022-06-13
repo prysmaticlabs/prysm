@@ -28,7 +28,7 @@ func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockR
 			if err == nil {
 				return vs.buildHeaderBlock(ctx, altairBlk, h)
 			}
-			log.WithError(err).Warning("Could not construct block using the header from builders, using local EE instead")
+			log.WithError(err).Warning("Could not construct block using the header from builders, using local execution engine instead")
 		}
 		if err != nil {
 			log.WithError(err).Warning("Could not decide builder is ready")
