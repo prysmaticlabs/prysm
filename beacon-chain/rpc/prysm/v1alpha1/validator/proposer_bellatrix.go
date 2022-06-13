@@ -22,11 +22,20 @@ func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockR
 	}
 
 	if vs.BlockBuilder.Configured() {
-		h, err := vs.getPayloadHeader(ctx, req.Slot, altairBlk.ProposerIndex)
-		if err == nil {
-			return vs.buildHeaderBlock(ctx, altairBlk, h)
+		ready, err := vs.readyForBuilder(ctx)
+		if err == nil && ready {
+			h, err := vs.getPayloadHeader(ctx, req.Slot, altairBlk.ProposerIndex)
+			if err == nil {
+				return vs.buildHeaderBlock(ctx, altairBlk, h)
+			}
+			log.WithError(err).Warning("Could not construct block using the header from builders, using local EE instead")
 		}
-		log.WithError(err).Warning("Could not construct block using the header from builders, using local EE instead")
+		if err != nil {
+			log.WithError(err).Warning("Could not decide builder is ready")
+		}
+		if !ready {
+			log.Debug("Can't use builder yet. Using local ee to propose")
+		}
 	}
 
 	payload, err := vs.getExecutionPayload(ctx, req.Slot, altairBlk.ProposerIndex)
@@ -66,6 +75,20 @@ func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockR
 	}
 	blk.StateRoot = stateRoot
 	return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Bellatrix{Bellatrix: blk}}, nil
+}
+
+// readyForBuilder returns true if builder is allowed to be used. Builder is allowed to be use after the
+// first finalized checkpt has been execution-enabled.
+func (vs *Server) readyForBuilder(ctx context.Context) (bool, error) {
+	cp, err := vs.FinalizationFetcher.FinalizedCheckpt()
+	if err != nil {
+		return false, err
+	}
+	b, err := vs.BeaconDB.Block(ctx, bytesutil.ToBytes32(cp.Root))
+	if err != nil {
+		return false, err
+	}
+	return blocks.IsExecutionBlock(b.Block().Body())
 }
 
 func (vs *Server) getPayloadHeader(ctx context.Context, slot types.Slot, idx types.ValidatorIndex) (*ethpb.ExecutionPayloadHeader, error) {

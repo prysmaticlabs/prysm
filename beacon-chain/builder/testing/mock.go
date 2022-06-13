@@ -30,16 +30,16 @@ func (s *MockBuilderService) SubmitBlindedBlock(context.Context, *ethpb.SignedBl
 }
 
 // GetHeader for mocking.
-func (s *MockBuilderService) GetHeader(ctx context.Context, slot types.Slot, parentHash [32]byte, pubKey [48]byte) (*ethpb.SignedBuilderBid, error) {
+func (s *MockBuilderService) GetHeader(context.Context, types.Slot, [32]byte, [48]byte) (*ethpb.SignedBuilderBid, error) {
 	return s.Bid, s.ErrGetHeader
 }
 
 // Status for mocking.
-func (s *MockBuilderService) Status(ctx context.Context) error {
+func (s *MockBuilderService) Status(context.Context) error {
 	return s.ErrStatus
 }
 
 // RegisterValidator for mocking.
-func (s *MockBuilderService) RegisterValidator(ctx context.Context, reg *ethpb.SignedValidatorRegistrationV1) error {
+func (s *MockBuilderService) RegisterValidator(context.Context, *ethpb.SignedValidatorRegistrationV1) error {
 	return s.ErrRegisterValidator
 }
