@@ -34,7 +34,7 @@ func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockR
 			log.WithError(err).Warning("Could not decide builder is ready")
 		}
 		if !ready {
-			log.Debug("Can't use builder yet. Using local ee to propose")
+			log.Debug("Can't use builder yet. Using local execution engine to propose")
 		}
 	}
 
