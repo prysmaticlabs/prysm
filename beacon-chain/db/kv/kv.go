@@ -91,41 +91,9 @@ func KVStoreDatafilePath(dirPath string) string {
 	return path.Join(dirPath, DatabaseFileName)
 }
 
-// NewKVStore initializes a new boltDB key-value store at the directory
-// path specified, creates the kv-buckets based on the schema, and stores
-// an open connection db object as a property of the Store struct.
-func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, error) {
-	hasDir, err := file.HasDir(dirPath)
-	if err != nil {
-		return nil, err
-	}
-	if !hasDir {
-		if err := file.MkdirAll(dirPath); err != nil {
-			return nil, err
-		}
-	}
-	datafile := KVStoreDatafilePath(dirPath)
+func NewKVStoreWithDB(ctx context.Context, bdb *bolt.DB) (*Store, error) {
+	bdb.AllocSize = boltAllocSize
 	start := time.Now()
-	log.Infof("Opening Bolt DB at %s", datafile)
-	boltDB, err := bolt.Open(
-		datafile,
-		params.BeaconIoConfig().ReadWritePermissions,
-		&bolt.Options{
-			Timeout:         1 * time.Second,
-			InitialMmapSize: config.InitialMMapSize,
-		},
-	)
-	if err != nil {
-		log.WithField("elapsed", time.Since(start)).Error("Failed to open Bolt DB")
-		if errors.Is(err, bolt.ErrTimeout) {
-			return nil, errors.New("cannot obtain database lock, database may be in use by another process")
-		}
-		return nil, err
-	}
-	log.WithField("elapsed", time.Since(start)).Info("Opened Bolt DB")
-
-	boltDB.AllocSize = boltAllocSize
-	start = time.Now()
 	log.Infof("Creating block cache...")
 	blockCache, err := ristretto.NewCache(&ristretto.Config{
 		NumCounters: 1000,           // number of keys to track frequency of (1000).
@@ -152,8 +120,8 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 	log.WithField("elapsed", time.Since(start)).Info("Created validator cache")
 
 	kv := &Store{
-		db:                  boltDB,
-		databasePath:        dirPath,
+		db:                  bdb,
+		databasePath:        path.Dir(bdb.Path()),
 		blockCache:          blockCache,
 		validatorEntryCache: validatorCache,
 		stateSummaryCache:   newStateSummaryCache(),
@@ -203,6 +171,41 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 	err = prometheus.Register(createBoltCollector(kv.db))
 
 	return kv, err
+}
+
+// NewKVStore initializes a new boltDB key-value store at the directory
+// path specified, creates the kv-buckets based on the schema, and stores
+// an open connection db object as a property of the Store struct.
+func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, error) {
+	hasDir, err := file.HasDir(dirPath)
+	if err != nil {
+		return nil, err
+	}
+	if !hasDir {
+		if err := file.MkdirAll(dirPath); err != nil {
+			return nil, err
+		}
+	}
+	datafile := KVStoreDatafilePath(dirPath)
+	start := time.Now()
+	log.Infof("Opening Bolt DB at %s", datafile)
+	bdb, err := bolt.Open(
+		datafile,
+		params.BeaconIoConfig().ReadWritePermissions,
+		&bolt.Options{
+			Timeout:         1 * time.Second,
+			InitialMmapSize: config.InitialMMapSize,
+		},
+	)
+	if err != nil {
+		log.WithField("elapsed", time.Since(start)).Error("Failed to open Bolt DB")
+		if errors.Is(err, bolt.ErrTimeout) {
+			return nil, errors.New("cannot obtain database lock, database may be in use by another process")
+		}
+		return nil, err
+	}
+	log.WithField("elapsed", time.Since(start)).Info("Opened Bolt DB")
+	return NewKVStoreWithDB(ctx, bdb)
 }
 
 // ClearDB removes the previously stored database in the data directory.
