@@ -25,7 +25,7 @@ var (
 )
 
 // NewSignedBeaconBlock creates a signed beacon block from a protobuf signed beacon block.
-func NewSignedBeaconBlock(i interface{}) (*SignedBeaconBlock, error) {
+func NewSignedBeaconBlock(i interface{}) (interfaces.SignedBeaconBlock, error) {
 	switch b := i.(type) {
 	case *eth.GenericSignedBeaconBlock_Phase0:
 		return initSignedBlockFromProtoPhase0(b.Phase0)
@@ -51,7 +51,7 @@ func NewSignedBeaconBlock(i interface{}) (*SignedBeaconBlock, error) {
 }
 
 // NewBeaconBlock creates a beacon block from a protobuf beacon block.
-func NewBeaconBlock(i interface{}) (*BeaconBlock, error) {
+func NewBeaconBlock(i interface{}) (interfaces.BeaconBlock, error) {
 	switch b := i.(type) {
 	case *eth.GenericBeaconBlock_Phase0:
 		return initBlockFromProtoPhase0(b.Phase0)
@@ -77,7 +77,7 @@ func NewBeaconBlock(i interface{}) (*BeaconBlock, error) {
 }
 
 // NewBeaconBlockBody creates a beacon block body from a protobuf beacon block body.
-func NewBeaconBlockBody(i interface{}) (*BeaconBlockBody, error) {
+func NewBeaconBlockBody(i interface{}) (interfaces.BeaconBlockBody, error) {
 	switch b := i.(type) {
 	case *eth.BeaconBlockBody:
 		return initBlockBodyFromProtoPhase0(b)
@@ -97,8 +97,12 @@ func NewBeaconBlockBody(i interface{}) (*BeaconBlockBody, error) {
 // BuildSignedBeaconBlock assembles a block.SignedBeaconBlock interface compatible struct from a
 // given beacon block and the appropriate signature. This method may be used to easily create a
 // signed beacon block.
-func BuildSignedBeaconBlock(blk interfaces.BeaconBlock, signature []byte) (*SignedBeaconBlock, error) {
-	pb := blk.Proto()
+func BuildSignedBeaconBlock(blk interfaces.BeaconBlock, signature []byte) (interfaces.SignedBeaconBlock, error) {
+	pb, err := blk.Proto()
+	if err != nil {
+		return nil, err
+	}
+
 	switch blk.Version() {
 	case version.Phase0:
 		pb, ok := pb.(*eth.BeaconBlock)
