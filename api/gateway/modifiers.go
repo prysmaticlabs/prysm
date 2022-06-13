@@ -14,13 +14,6 @@ func HttpResponseModifier(ctx context.Context, w http.ResponseWriter, resp proto
 	if !ok {
 		return nil
 	}
-
-	log.Info("is this working?")
-	log.Infof("%v", resp)
-	for key, value := range md.HeaderMD {
-		log.Infof("key %v, value: %v", key, value)
-	}
-
 	// set http status code
 	if vals := md.HeaderMD.Get("x-http-code"); len(vals) > 0 {
 		code, err := strconv.Atoi(vals[0])

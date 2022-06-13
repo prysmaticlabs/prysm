@@ -390,7 +390,7 @@ func groupDeleteRemoteKeysErrors(req *ethpbservice.DeleteRemoteKeysRequest, erro
 }
 
 // ListFeeRecipientByPubkey returns the public key to eth address mapping object to the end user.
-func (s *Server) ListFeeRecipientByPubkey(ctx context.Context, req *ethpbservice.GetFeeRecipientByPubkeyRequest) (*ethpbservice.GetFeeRecipientByPubkeyResponse, error) {
+func (s *Server) ListFeeRecipientByPubkey(ctx context.Context, req *ethpbservice.ByPubkeyRequest) (*ethpbservice.GetFeeRecipientByPubkeyResponse, error) {
 	if s.validatorService == nil {
 		return nil, status.Error(codes.FailedPrecondition, "Validator service not ready.")
 	}
@@ -471,6 +471,33 @@ func (s *Server) SetFeeRecipientByPubkey(ctx context.Context, req *ethpbservice.
 	}
 	// override the 200 success with 202 according to the specs
 	if err := grpc.SetHeader(ctx, metadata.Pairs("x-http-code", "202")); err != nil {
+		return &empty.Empty{}, fmt.Errorf("could not set custom success code header: %w", err)
+	}
+	return &empty.Empty{}, nil
+}
+
+// DeleteFeeRecipientByPubkey updates the eth address mapped to the public key to the default fee recipient listed
+func (s *Server) DeleteFeeRecipientByPubkey(ctx context.Context, req *ethpbservice.ByPubkeyRequest) (*empty.Empty, error) {
+	if s.validatorService == nil {
+		return nil, status.Error(codes.FailedPrecondition, "Validator service not ready.")
+	}
+	validatorKey := req.Pubkey
+	if len(validatorKey) != fieldparams.BLSPubkeyLength {
+		return nil, status.Errorf(
+			codes.InvalidArgument, "provided public key in path is not a valid bls public key, please check for correct hex format starting with 0x")
+	}
+	defaultFeeRecipient := params.BeaconConfig().DefaultFeeRecipient
+	if s.validatorService.ProposerSettings != nil && s.validatorService.ProposerSettings.DefaultConfig != nil {
+		defaultFeeRecipient = s.validatorService.ProposerSettings.DefaultConfig.FeeRecipient
+	}
+	if s.validatorService.ProposerSettings != nil && s.validatorService.ProposerSettings.ProposeConfig != nil {
+		proposerOption, found := s.validatorService.ProposerSettings.ProposeConfig[bytesutil.ToBytes48(validatorKey)]
+		if found {
+			proposerOption.FeeRecipient = defaultFeeRecipient
+		}
+	}
+	// override the 200 success with 204 according to the specs
+	if err := grpc.SetHeader(ctx, metadata.Pairs("x-http-code", "204")); err != nil {
 		return &empty.Empty{}, fmt.Errorf("could not set custom success code header: %w", err)
 	}
 	return &empty.Empty{}, nil
