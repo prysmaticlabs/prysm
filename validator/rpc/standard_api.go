@@ -397,7 +397,7 @@ func (s *Server) ListFeeRecipientByPubkey(ctx context.Context, req *ethpbservice
 	validatorKey := req.Pubkey
 	if len(validatorKey) != fieldparams.BLSPubkeyLength {
 		return nil, status.Errorf(
-			codes.InvalidArgument, "%v  is not a bls public key", hexutil.Encode(validatorKey))
+			codes.InvalidArgument, "provided public key in path is not a valid bls public key, please check for correct hex format starting with 0x")
 	}
 	proposerOption, found := s.validatorService.ProposerSettings.ProposeConfig[bytesutil.ToBytes48(validatorKey)]
 	if found {
