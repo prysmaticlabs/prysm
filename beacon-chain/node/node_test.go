@@ -10,6 +10,10 @@ import (
 	"testing"
 	"time"
 
+	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/cmd"
+	"github.com/prysmaticlabs/prysm/config/features"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/builder"
 	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
@@ -170,4 +174,46 @@ func TestMonitor_RegisteredCorrectly(t *testing.T) {
 	require.Equal(t, true, mService.TrackedValidators[1])
 	require.Equal(t, true, mService.TrackedValidators[2])
 	require.Equal(t, false, mService.TrackedValidators[100])
+}
+
+func Test_hasNetworkFlag(t *testing.T) {
+	tests := []struct {
+		name         string
+		networkName  string
+		networkValue string
+		want         bool
+	}{
+		{
+			name:         "Prater testnet",
+			networkName:  features.PraterTestnet.Name,
+			networkValue: "prater",
+			want:         true,
+		},
+		{
+			name:         "Mainnet",
+			networkName:  features.Mainnet.Name,
+			networkValue: "mainnet",
+			want:         true,
+		},
+		{
+			name:         "No network flag",
+			networkName:  "",
+			networkValue: "",
+			want:         false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			set := flag.NewFlagSet("test", 0)
+			set.String(tt.networkName, tt.networkValue, tt.name)
+
+			cliCtx := cli.NewContext(&cli.App{}, set, nil)
+			err := cliCtx.Set(tt.networkName, tt.networkValue)
+			require.NoError(t, err)
+
+			if got := hasNetworkFlag(cliCtx); got != tt.want {
+				t.Errorf("hasNetworkFlag() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }
