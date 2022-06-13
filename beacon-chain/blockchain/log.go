@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -84,12 +85,12 @@ func logBlockSyncStatus(block interfaces.BeaconBlock, blockRoot [32]byte, justif
 
 // logs payload related data every slot.
 func logPayload(block interfaces.BeaconBlock) error {
-        isExecutionBlk, err := blocks.IsExecutionBlock(block.Body())
+	isExecutionBlk, err := blocks.IsExecutionBlock(block.Body())
 	if err != nil {
 		return errors.Wrap(err, "could not determine if block is execution block")
 	}
 	if !isExecutionBlk {
-		return nil, nil
+		return nil
 	}
 	payload, err := block.Body().ExecutionPayload()
 	if err != nil {
