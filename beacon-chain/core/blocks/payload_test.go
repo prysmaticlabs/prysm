@@ -11,7 +11,6 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	consensusblocks "github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/forks/bellatrix"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
@@ -340,7 +339,7 @@ func Test_IsMergeTransitionBlockUsingPayloadHeader(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			blk := util.NewBeaconBlockBellatrix()
 			blk.Block.Body.ExecutionPayload = tt.payload
-			body, err := wrapper.WrappedBeaconBlockBody(blk.Block.Body)
+			body, err := consensusblocks.NewBeaconBlockBody(blk.Block.Body)
 			require.NoError(t, err)
 			got, err := blocks.IsMergeTransitionBlockUsingPreStatePayloadHeader(tt.header, body)
 			require.NoError(t, err)
@@ -447,7 +446,7 @@ func Test_IsExecutionEnabled(t *testing.T) {
 			require.NoError(t, st.SetLatestExecutionPayloadHeader(tt.header))
 			blk := util.NewBeaconBlockBellatrix()
 			blk.Block.Body.ExecutionPayload = tt.payload
-			body, err := wrapper.WrappedBeaconBlockBody(blk.Block.Body)
+			body, err := consensusblocks.NewBeaconBlockBody(blk.Block.Body)
 			require.NoError(t, err)
 			if tt.useAltairSt {
 				st, _ = util.DeterministicGenesisStateAltair(t, 1)
@@ -513,7 +512,7 @@ func Test_IsExecutionEnabledUsingHeader(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			blk := util.NewBeaconBlockBellatrix()
 			blk.Block.Body.ExecutionPayload = tt.payload
-			body, err := wrapper.WrappedBeaconBlockBody(blk.Block.Body)
+			body, err := consensusblocks.NewBeaconBlockBody(blk.Block.Body)
 			require.NoError(t, err)
 			got, err := blocks.IsExecutionEnabledUsingHeader(tt.header, body)
 			require.NoError(t, err)
