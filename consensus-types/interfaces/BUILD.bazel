@@ -26,7 +26,6 @@ go_test(
         ":go_default_library",
         "//config/fieldparams:go_default_library",
         "//consensus-types/blocks:go_default_library",
-        "//consensus-types/wrapper:go_default_library",
         "//encoding/bytesutil:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//testing/assert:go_default_library",

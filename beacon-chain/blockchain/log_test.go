@@ -3,8 +3,8 @@ package blockchain
 import (
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -21,7 +21,7 @@ func Test_logStateTransitionData(t *testing.T) {
 			},
 		},
 	}
-	wrappedPayloadBlk, err := wrapper.WrappedBeaconBlock(payloadBlk)
+	wrappedPayloadBlk, err := blocks.NewBeaconBlock(payloadBlk)
 	require.NoError(t, err)
 	tests := []struct {
 		name string
@@ -30,7 +30,7 @@ func Test_logStateTransitionData(t *testing.T) {
 	}{
 		{name: "empty block body",
 			b: func() interfaces.BeaconBlock {
-				wb, err := wrapper.WrappedBeaconBlock(&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{}})
+				wb, err := blocks.NewBeaconBlock(&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{}})
 				require.NoError(t, err)
 				return wb
 			},
@@ -38,7 +38,7 @@ func Test_logStateTransitionData(t *testing.T) {
 		},
 		{name: "has attestation",
 			b: func() interfaces.BeaconBlock {
-				wb, err := wrapper.WrappedBeaconBlock(&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{Attestations: []*ethpb.Attestation{{}}}})
+				wb, err := blocks.NewBeaconBlock(&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{Attestations: []*ethpb.Attestation{{}}}})
 				require.NoError(t, err)
 				return wb
 			},
@@ -46,7 +46,7 @@ func Test_logStateTransitionData(t *testing.T) {
 		},
 		{name: "has deposit",
 			b: func() interfaces.BeaconBlock {
-				wb, err := wrapper.WrappedBeaconBlock(
+				wb, err := blocks.NewBeaconBlock(
 					&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{
 						Attestations: []*ethpb.Attestation{{}},
 						Deposits:     []*ethpb.Deposit{{}}}})
@@ -57,7 +57,7 @@ func Test_logStateTransitionData(t *testing.T) {
 		},
 		{name: "has attester slashing",
 			b: func() interfaces.BeaconBlock {
-				wb, err := wrapper.WrappedBeaconBlock(&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{
+				wb, err := blocks.NewBeaconBlock(&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{
 					AttesterSlashings: []*ethpb.AttesterSlashing{{}}}})
 				require.NoError(t, err)
 				return wb
@@ -66,7 +66,7 @@ func Test_logStateTransitionData(t *testing.T) {
 		},
 		{name: "has proposer slashing",
 			b: func() interfaces.BeaconBlock {
-				wb, err := wrapper.WrappedBeaconBlock(&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{
+				wb, err := blocks.NewBeaconBlock(&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{
 					ProposerSlashings: []*ethpb.ProposerSlashing{{}}}})
 				require.NoError(t, err)
 				return wb
@@ -75,7 +75,7 @@ func Test_logStateTransitionData(t *testing.T) {
 		},
 		{name: "has exit",
 			b: func() interfaces.BeaconBlock {
-				wb, err := wrapper.WrappedBeaconBlock(&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{
+				wb, err := blocks.NewBeaconBlock(&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{
 					VoluntaryExits: []*ethpb.SignedVoluntaryExit{{}}}})
 				require.NoError(t, err)
 				return wb
@@ -84,7 +84,7 @@ func Test_logStateTransitionData(t *testing.T) {
 		},
 		{name: "has everything",
 			b: func() interfaces.BeaconBlock {
-				wb, err := wrapper.WrappedBeaconBlock(&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{
+				wb, err := blocks.NewBeaconBlock(&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{
 					Attestations:      []*ethpb.Attestation{{}},
 					Deposits:          []*ethpb.Deposit{{}},
 					AttesterSlashings: []*ethpb.AttesterSlashing{{}},

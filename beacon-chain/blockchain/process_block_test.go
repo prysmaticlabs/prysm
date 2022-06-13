@@ -31,7 +31,6 @@ import (
 	consensusblocks "github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
@@ -668,7 +667,7 @@ func TestCachedPreState_CanGetFromStateSummary_ProtoArray(t *testing.T) {
 	b.Block.ParentRoot = gRoot[:]
 	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Slot: 1, Root: gRoot[:]}))
 	require.NoError(t, service.cfg.StateGen.SaveState(ctx, gRoot, s))
-	wb, err := wrapper.WrappedBeaconBlock(b.Block)
+	wb, err := consensusblocks.NewBeaconBlock(b.Block)
 	require.NoError(t, err)
 	require.NoError(t, service.verifyBlkPreState(ctx, wb))
 }
@@ -705,7 +704,7 @@ func TestCachedPreState_CanGetFromStateSummary_DoublyLinkedTree(t *testing.T) {
 	b.Block.ParentRoot = gRoot[:]
 	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Slot: 1, Root: gRoot[:]}))
 	require.NoError(t, service.cfg.StateGen.SaveState(ctx, gRoot, s))
-	wb, err := wrapper.WrappedBeaconBlock(b.Block)
+	wb, err := consensusblocks.NewBeaconBlock(b.Block)
 	require.NoError(t, err)
 	require.NoError(t, service.verifyBlkPreState(ctx, wb))
 }
@@ -737,7 +736,7 @@ func TestCachedPreState_CanGetFromDB(t *testing.T) {
 	b := util.NewBeaconBlock()
 	b.Block.Slot = 1
 	service.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{Root: gRoot[:]}, [32]byte{})
-	wb, err := wrapper.WrappedBeaconBlock(b.Block)
+	wb, err := consensusblocks.NewBeaconBlock(b.Block)
 	require.NoError(t, err)
 	err = service.verifyBlkPreState(ctx, wb)
 	wanted := "could not reconstruct parent state"
@@ -2194,7 +2193,7 @@ func Test_verifyBlkFinalizedSlot_invalidBlock(t *testing.T) {
 	require.NoError(t, err)
 	service.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{Epoch: 1}, [32]byte{'a'})
 	blk := util.HydrateBeaconBlock(&ethpb.BeaconBlock{Slot: 1})
-	wb, err := wrapper.WrappedBeaconBlock(blk)
+	wb, err := consensusblocks.NewBeaconBlock(blk)
 	require.NoError(t, err)
 	err = service.verifyBlkFinalizedSlot(wb)
 	require.Equal(t, true, IsInvalidBlock(err))
