@@ -6,30 +6,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/time/slots"
 )
-
-var ErrNilSignedBeaconBlock = errors.New("signed beacon block can't be nil")
-var ErrNilBeaconBlock = errors.New("beacon block can't be nil")
-var ErrNilBeaconBlockBody = errors.New("beacon block body can't be nil")
-
-// BeaconBlockIsNil checks if any composite field of input signed beacon block is nil.
-// Access to these nil fields will result in run time panic,
-// it is recommended to run these checks as first line of defense.
-func BeaconBlockIsNil(b interfaces.SignedBeaconBlock) error {
-	if b == nil || b.IsNil() {
-		return ErrNilSignedBeaconBlock
-	}
-	if b.Block().IsNil() {
-		return ErrNilBeaconBlock
-	}
-	if b.Block().Body().IsNil() {
-		return ErrNilBeaconBlockBody
-	}
-	return nil
-}
 
 // BlockRootAtSlot returns the block root stored in the BeaconState for a recent slot.
 // It returns an error if the requested block root is not within the slot range.

@@ -13,7 +13,7 @@ import (
 
 func testServiceOptsWithDB(t *testing.T) []Option {
 	beaconDB := testDB.SetupDB(t)
-	fcs := protoarray.New(0, 0, [32]byte{'a'})
+	fcs := protoarray.New()
 	return []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),
@@ -21,7 +21,7 @@ func testServiceOptsWithDB(t *testing.T) []Option {
 	}
 }
 
-// warning: only use these opts when you are certain there are no db calls
+// WARNING: only use these opts when you are certain there are no db calls
 // in your code path. this is a lightweight way to satisfy the stategen/beacondb
 // initialization requirements w/o the overhead of db init.
 func testServiceOptsNoDB() []Option {

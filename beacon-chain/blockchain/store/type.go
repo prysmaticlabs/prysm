@@ -17,9 +17,11 @@ import (
 //    best_justified_checkpoint: Checkpoint
 //    proposerBoostRoot: Root
 type Store struct {
-	justifiedCheckpt     *ethpb.Checkpoint
-	finalizedCheckpt     *ethpb.Checkpoint
-	bestJustifiedCheckpt *ethpb.Checkpoint
+	justifiedCheckpt          *ethpb.Checkpoint
+	justifiedPayloadBlockHash [32]byte
+	finalizedCheckpt          *ethpb.Checkpoint
+	finalizedPayloadBlockHash [32]byte
+	bestJustifiedCheckpt      *ethpb.Checkpoint
 	sync.RWMutex
 	// These are not part of the consensus spec, but we do use them to return gRPC API requests.
 	// TODO(10094): Consider removing in v3.

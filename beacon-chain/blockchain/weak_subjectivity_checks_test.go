@@ -79,8 +79,10 @@ func TestService_VerifyWeakSubjectivityRoot(t *testing.T) {
 				store:      &store.Store{},
 				wsVerifier: wv,
 			}
-			s.store.SetFinalizedCheckpt(&ethpb.Checkpoint{Epoch: tt.finalizedEpoch})
-			err = s.wsVerifier.VerifyWeakSubjectivity(context.Background(), s.store.FinalizedCheckpt().Epoch)
+			s.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{Epoch: tt.finalizedEpoch}, [32]byte{})
+			cp, err := s.store.FinalizedCheckpt()
+			require.NoError(t, err)
+			err = s.wsVerifier.VerifyWeakSubjectivity(context.Background(), cp.Epoch)
 			if tt.wantErr == nil {
 				require.NoError(t, err)
 			} else {

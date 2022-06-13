@@ -29,6 +29,7 @@ type ForkConfig struct {
 
 // RunForkTransitionTest is a helper function that runs bellatrix's transition core tests.
 func RunForkTransitionTest(t *testing.T, config string) {
+	params.SetupTestConfigCleanup(t)
 	require.NoError(t, utils.SetConfig(t, config))
 
 	testFolders, testsFolderPath := utils.TestFolders(t, config, "bellatrix", "transition/core/pyspec_tests")
@@ -87,7 +88,7 @@ func RunForkTransitionTest(t *testing.T, config string) {
 			beaconState, err := v2.InitializeFromProto(beaconStateBase)
 			require.NoError(t, err)
 
-			bc := params.BeaconConfig()
+			bc := params.BeaconConfig().Copy()
 			bc.BellatrixForkEpoch = types.Epoch(config.ForkEpoch)
 			params.OverrideBeaconConfig(bc)
 

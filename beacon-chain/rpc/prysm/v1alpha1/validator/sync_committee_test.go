@@ -37,13 +37,14 @@ func TestGetSyncMessageBlockRoot_OK(t *testing.T) {
 
 func TestGetSyncMessageBlockRoot_Optimistic(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	cfg := params.BeaconConfig()
+	cfg := params.BeaconConfig().Copy()
 	cfg.BellatrixForkEpoch = 0
 	params.OverrideBeaconConfig(cfg)
 
 	server := &Server{
-		HeadFetcher: &mock.ChainService{Optimistic: true},
-		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
+		HeadFetcher:           &mock.ChainService{},
+		TimeFetcher:           &mock.ChainService{Genesis: time.Now()},
+		OptimisticModeFetcher: &mock.ChainService{Optimistic: true},
 	}
 	_, err := server.GetSyncMessageBlockRoot(context.Background(), &emptypb.Empty{})
 	s, ok := status.FromError(err)
@@ -52,8 +53,9 @@ func TestGetSyncMessageBlockRoot_Optimistic(t *testing.T) {
 	require.ErrorContains(t, errOptimisticMode.Error(), err)
 
 	server = &Server{
-		HeadFetcher: &mock.ChainService{Optimistic: false},
-		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
+		HeadFetcher:           &mock.ChainService{},
+		TimeFetcher:           &mock.ChainService{Genesis: time.Now()},
+		OptimisticModeFetcher: &mock.ChainService{Optimistic: false},
 	}
 	_, err = server.GetSyncMessageBlockRoot(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)

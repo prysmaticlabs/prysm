@@ -114,14 +114,20 @@ func validatorsParticipating(conns ...*grpc.ClientConn) error {
 
 	partRate := participation.Participation.GlobalParticipationRate
 	expected := float32(expectedParticipation)
+	if participation.Epoch > 0 && participation.Epoch.Sub(1) == helpers.BellatrixE2EForkEpoch {
+		// Reduce Participation requirement to 95% to account for longer EE calls for
+		// the merge block. Target and head will likely be missed for a few validators at
+		// slot 0.
+		expected = 0.95
+	}
 	if partRate < expected {
 		st, err := debugClient.GetBeaconStateV2(context.Background(), &eth.StateRequestV2{StateId: []byte("head")})
 		if err != nil {
 			return errors.Wrap(err, "failed to get beacon state")
 		}
-		missSrcVals := []uint64{}
-		missTgtVals := []uint64{}
-		missHeadVals := []uint64{}
+		var missSrcVals []uint64
+		var missTgtVals []uint64
+		var missHeadVals []uint64
 		switch obj := st.Data.State.(type) {
 		case *eth.BeaconStateContainer_Phase0State:
 		// Do Nothing
@@ -182,18 +188,19 @@ func validatorsSyncParticipation(conns ...*grpc.ClientConn) error {
 		if b.IsNil() {
 			return errors.New("nil block provided")
 		}
-		forkSlot, err := slots.EpochStart(helpers.AltairE2EForkEpoch)
+		forkStartSlot, err := slots.EpochStart(helpers.AltairE2EForkEpoch)
 		if err != nil {
 			return err
 		}
-		nexForkSlot, err := slots.EpochStart(helpers.BellatrixE2EForkEpoch)
-		if err != nil {
-			return err
-		}
-		switch b.Block().Slot() {
-		case forkSlot, forkSlot + 1, nexForkSlot:
-			// Skip evaluation of the slot.
+		if forkStartSlot == b.Block().Slot() {
+			// Skip fork slot.
 			continue
+		}
+		expectedParticipation := expectedSyncParticipation
+		switch slots.ToEpoch(b.Block().Slot()) {
+		case helpers.AltairE2EForkEpoch:
+			// Drop expected sync participation figure.
+			expectedParticipation = 0.90
 		default:
 			// no-op
 		}
@@ -201,7 +208,7 @@ func validatorsSyncParticipation(conns ...*grpc.ClientConn) error {
 		if err != nil {
 			return err
 		}
-		threshold := uint64(float64(syncAgg.SyncCommitteeBits.Len()) * expectedSyncParticipation)
+		threshold := uint64(float64(syncAgg.SyncCommitteeBits.Len()) * expectedParticipation)
 		if syncAgg.SyncCommitteeBits.Count() < threshold {
 			return errors.Errorf("In block of slot %d ,the aggregate bitvector with length of %d only got a count of %d", b.Block().Slot(), threshold, syncAgg.SyncCommitteeBits.Count())
 		}
@@ -267,9 +274,9 @@ func findMissingValidators(participation []byte) ([]uint64, []uint64, []uint64, 
 	sourceFlagIndex := cfg.TimelySourceFlagIndex
 	targetFlagIndex := cfg.TimelyTargetFlagIndex
 	headFlagIndex := cfg.TimelyHeadFlagIndex
-	missingSourceValidators := []uint64{}
-	missingHeadValidators := []uint64{}
-	missingTargetValidators := []uint64{}
+	var missingSourceValidators []uint64
+	var missingHeadValidators []uint64
+	var missingTargetValidators []uint64
 	for i, b := range participation {
 		hasSource, err := altair.HasValidatorFlag(b, sourceFlagIndex)
 		if err != nil {

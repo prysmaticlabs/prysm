@@ -2,6 +2,7 @@ package forks
 
 import (
 	"sort"
+	"strings"
 
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
@@ -13,10 +14,11 @@ import (
 type ForkScheduleEntry struct {
 	Version [fieldparams.VersionLength]byte
 	Epoch   types.Epoch
+	Name    string
 }
 
 // OrderedSchedule provides a type that can be used to sort the fork schedule and find the Version
-// the chain should be at for a given epoch (via VersionForEpoch).
+// the chain should be at for a given epoch (via VersionForEpoch) or name (via VersionForName).
 type OrderedSchedule []ForkScheduleEntry
 
 // Len implements the Len method of sort.Interface
@@ -38,6 +40,17 @@ func (o OrderedSchedule) VersionForEpoch(epoch types.Epoch) ([fieldparams.Versio
 	return [fieldparams.VersionLength]byte{}, errors.Wrapf(ErrVersionNotFound, "no epoch in list <= %d", epoch)
 }
 
+// VersionForName finds the Version corresponding to the lowercase version of the provided name.
+func (o OrderedSchedule) VersionForName(name string) ([fieldparams.VersionLength]byte, error) {
+	lower := strings.ToLower(name)
+	for _, e := range o {
+		if e.Name == lower {
+			return e.Version, nil
+		}
+	}
+	return [4]byte{}, errors.Wrapf(ErrVersionNotFound, "no version with name %s", lower)
+}
+
 func (o OrderedSchedule) Previous(version [fieldparams.VersionLength]byte) ([fieldparams.VersionLength]byte, error) {
 	for i := len(o) - 1; i >= 0; i-- {
 		if o[i].Version == version {
@@ -51,7 +64,7 @@ func (o OrderedSchedule) Previous(version [fieldparams.VersionLength]byte) ([fie
 	return [fieldparams.VersionLength]byte{}, errors.Wrapf(ErrVersionNotFound, "no version in list == %#x", version)
 }
 
-// Converts the ForkVersionSchedule map into a list of Version+Epoch values, ordered by Epoch from lowest to highest.
+// NewOrderedSchedule Converts fork version maps into a list of Version+Epoch+Name values, ordered by Epoch from lowest to highest.
 // See docs for OrderedSchedule for more detail on what you can do with this type.
 func NewOrderedSchedule(b *params.BeaconChainConfig) OrderedSchedule {
 	ofs := make(OrderedSchedule, 0)
@@ -59,6 +72,7 @@ func NewOrderedSchedule(b *params.BeaconChainConfig) OrderedSchedule {
 		fse := ForkScheduleEntry{
 			Version: version,
 			Epoch:   epoch,
+			Name:    b.ForkVersionNames[version],
 		}
 		ofs = append(ofs, fse)
 	}

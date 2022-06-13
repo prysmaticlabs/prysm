@@ -179,8 +179,8 @@ func (_ MockValidator) CheckDoppelGanger(_ context.Context) error {
 	panic("implement me")
 }
 
-// UpdateFeeRecipient for mocking
-func (_ MockValidator) UpdateFeeRecipient(_ context.Context, _ keymanager.IKeymanager) error {
+// PushProposerSettings for mocking
+func (_ MockValidator) PushProposerSettings(_ context.Context, _ keymanager.IKeymanager) error {
 	panic("implement me")
 }
 

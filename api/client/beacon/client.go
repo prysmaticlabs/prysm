@@ -46,10 +46,9 @@ const (
 type StateOrBlockId string
 
 const (
-	IdFinalized StateOrBlockId = "finalized"
 	IdGenesis   StateOrBlockId = "genesis"
 	IdHead      StateOrBlockId = "head"
-	IdJustified StateOrBlockId = "justified"
+	IdFinalized StateOrBlockId = "finalized"
 )
 
 var ErrMalformedHostname = errors.New("hostname must include port, separated by one colon, like example.com:3500")
@@ -60,7 +59,7 @@ func IdFromRoot(r [32]byte) StateOrBlockId {
 	return StateOrBlockId(fmt.Sprintf("%#x", r))
 }
 
-// IdFromRoot encodes a Slot in the format expected by the API in places where a slot can be used to identify
+// IdFromSlot encodes a Slot in the format expected by the API in places where a slot can be used to identify
 // a BeaconState or SignedBeaconBlock.
 func IdFromSlot(s types.Slot) StateOrBlockId {
 	return StateOrBlockId(strconv.FormatUint(uint64(s), 10))
@@ -344,16 +343,6 @@ func (c *Client) GetWeakSubjectivity(ctx context.Context) (*WeakSubjectivityData
 		BlockRoot: bytesutil.ToBytes32(blockRoot),
 		StateRoot: bytesutil.ToBytes32(stateRoot),
 	}, nil
-}
-
-// WeakSubjectivityData represents the state root, block root and epoch of the BeaconState + SignedBeaconBlock
-// that falls at the beginning of the current weak subjectivity period. These values can be used to construct
-// a weak subjectivity checkpoint, or to download a BeaconState+SignedBeaconBlock pair that can be used to bootstrap
-// a new Beacon Node using Checkpoint Sync.
-type WeakSubjectivityData struct {
-	BlockRoot [32]byte
-	StateRoot [32]byte
-	Epoch     types.Epoch
 }
 
 func non200Err(response *http.Response) error {
