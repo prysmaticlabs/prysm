@@ -78,8 +78,9 @@ func (ts *TracingSink) Stop() error {
 func (ts *TracingSink) initializeSink(ctx context.Context) {
 	mux := &http.ServeMux{}
 	ts.server = &http.Server{
-		Addr:    ts.endpoint,
-		Handler: mux,
+		Addr:              ts.endpoint,
+		Handler:           mux,
+		ReadHeaderTimeout: time.Second,
 	}
 	defer func() {
 		if err := ts.server.Close(); err != nil {
