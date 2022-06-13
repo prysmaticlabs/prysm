@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/protobuf/ptypes/empty"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/config/params"
 	validatorServiceConfig "github.com/prysmaticlabs/prysm/config/validator/service"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
@@ -393,7 +394,34 @@ func (s *Server) ListFeeRecipientByPubkey(ctx context.Context, req *ethpbservice
 	if s.validatorService == nil {
 		return nil, status.Error(codes.FailedPrecondition, "Validator service not ready.")
 	}
-	return nil, nil
+	validatorKey := req.Pubkey
+	if len(validatorKey) != fieldparams.BLSPubkeyLength {
+		return nil, status.Errorf(
+			codes.InvalidArgument, "%v  is not a bls public key", hexutil.Encode(validatorKey))
+	}
+	proposerOption, found := s.validatorService.ProposerSettings.ProposeConfig[bytesutil.ToBytes48(validatorKey)]
+	if found {
+		return &ethpbservice.GetFeeRecipientByPubkeyResponse{
+			Data: &ethpbservice.GetFeeRecipientByPubkeyResponse_FeeRecipient{
+				Pubkey:     validatorKey,
+				Ethaddress: proposerOption.FeeRecipient.Bytes(),
+			},
+		}, nil
+	}
+	var defaultFeeRecipient []byte
+	// is validator started with no settings
+	if s.validatorService.ProposerSettings == nil || s.validatorService.ProposerSettings.DefaultConfig == nil {
+		defaultFeeRecipient = params.BeaconConfig().DefaultFeeRecipient.Bytes()
+	} else {
+		defaultFeeRecipient = s.validatorService.ProposerSettings.DefaultConfig.FeeRecipient.Bytes()
+	}
+	return &ethpbservice.GetFeeRecipientByPubkeyResponse{
+		Data: &ethpbservice.GetFeeRecipientByPubkeyResponse_FeeRecipient{
+			Pubkey:     validatorKey,
+			Ethaddress: defaultFeeRecipient,
+		},
+	}, nil
+
 }
 
 // SetFeeRecipientByPubkey updates the eth address mapped to the public key.
@@ -404,7 +432,7 @@ func (s *Server) SetFeeRecipientByPubkey(ctx context.Context, req *ethpbservice.
 	validatorKey := req.Pubkey
 	if len(validatorKey) != fieldparams.BLSPubkeyLength {
 		return nil, status.Errorf(
-			codes.InvalidArgument, "%v  is not a bls public key", hexutil.Encode(validatorKey))
+			codes.InvalidArgument, "provided public key in path is not a valid bls public key, please check for correct hex format starting with 0x")
 	}
 	defaultOption := validatorServiceConfig.DefaultProposerOption()
 	encoded := hexutil.Encode(req.Ethaddress)
