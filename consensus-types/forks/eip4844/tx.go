@@ -20,15 +20,13 @@ func TxPeekBlobVersionedHashes(tx []byte) ([][32]byte, error) {
 		return nil, err
 	}
 	hashes := make([][32]byte, len(sbt.Message.BlobVersionedHashes))
-	for _, b := range sbt.Message.BlobVersionedHashes {
-		var hash [32]byte
-		copy(hash[:], b[:])
-		hashes = append(hashes, hash)
+	for i, b := range sbt.Message.BlobVersionedHashes {
+		copy(hashes[i][:], b[:])
 	}
 	return hashes, nil
 }
 
-func VerifyKzgsAgainstTxs(txs [][]byte, blogKzgs [][48]byte) error {
+func VerifyKzgsAgainstTxs(txs [][]byte, blobKzgs [][48]byte) error {
 	versionedHashes := make([][32]byte, 0)
 	for _, tx := range txs {
 		if tx[0] == types.BlobTxType {
@@ -40,7 +38,7 @@ func VerifyKzgsAgainstTxs(txs [][]byte, blogKzgs [][48]byte) error {
 		}
 	}
 	// TODO(inphi): modify validation spec to handle when len(blob_txs) > len(blobKzgs)
-	for i, kzg := range blogKzgs {
+	for i, kzg := range blobKzgs {
 		h := types.KZGCommitment(kzg).ComputeVersionedHash()
 		if h != versionedHashes[i] {
 			return errInvalidVersionHashesVsKzg
