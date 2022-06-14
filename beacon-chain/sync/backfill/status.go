@@ -4,10 +4,10 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 )
 
 // NewStatus correctly initializes a Status value with the required database value.
@@ -81,7 +81,7 @@ func (s *Status) Reload(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrapf(err, "error retrieving block for origin checkpoint root=%#x", cpRoot)
 	}
-	if err := helpers.BeaconBlockIsNil(cpBlock); err != nil {
+	if err := wrapper.BeaconBlockIsNil(cpBlock); err != nil {
 		return err
 	}
 	s.end = cpBlock.Block().Slot()
@@ -105,7 +105,7 @@ func (s *Status) Reload(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrapf(err, "error retrieving block for backfill root=%#x", bfRoot)
 	}
-	if err := helpers.BeaconBlockIsNil(bfBlock); err != nil {
+	if err := wrapper.BeaconBlockIsNil(bfBlock); err != nil {
 		return err
 	}
 	s.start = bfBlock.Block().Slot()

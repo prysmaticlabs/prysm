@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/proto/migration"
@@ -84,11 +83,7 @@ func (ds *Server) GetBeaconStateV2(ctx context.Context, req *ethpbv2.StateReques
 			ExecutionOptimistic: isOptimistic,
 		}, nil
 	case version.Altair:
-		altairState, ok := beaconSt.(state.BeaconStateAltair)
-		if !ok {
-			return nil, status.Error(codes.Internal, "Altair state type assertion failed")
-		}
-		protoState, err := migration.BeaconStateAltairToProto(altairState)
+		protoState, err := migration.BeaconStateAltairToProto(beaconSt)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not convert state to proto: %v", err)
 		}
@@ -100,11 +95,7 @@ func (ds *Server) GetBeaconStateV2(ctx context.Context, req *ethpbv2.StateReques
 			ExecutionOptimistic: isOptimistic,
 		}, nil
 	case version.Bellatrix:
-		bellatrixState, ok := beaconSt.(state.BeaconStateBellatrix)
-		if !ok {
-			return nil, status.Error(codes.Internal, "Bellatrix state type assertion failed")
-		}
-		protoState, err := migration.BeaconStateBellatrixToProto(bellatrixState)
+		protoState, err := migration.BeaconStateBellatrixToProto(beaconSt)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not convert state to proto: %v", err)
 		}

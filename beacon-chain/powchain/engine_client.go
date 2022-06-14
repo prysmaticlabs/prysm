@@ -296,7 +296,7 @@ func handleRPCError(err error) error {
 		return nil
 	}
 	if isTimeout(err) {
-		return errors.Wrapf(ErrHTTPTimeout, "%s", err)
+		return ErrHTTPTimeout
 	}
 	e, ok := err.(rpc.Error)
 	if !ok {
@@ -307,7 +307,7 @@ func handleRPCError(err error) error {
 				"here https://docs.prylabs.network/docs/execution-node/authentication")
 			return fmt.Errorf("could not authenticate connection to execution client: %v", err)
 		}
-		return errors.Wrap(err, "got an unexpected error")
+		return errors.Wrapf(err, "got an unexpected error in JSON-RPC response")
 	}
 	switch e.ErrorCode() {
 	case -32700:
@@ -320,13 +320,17 @@ func handleRPCError(err error) error {
 		return ErrInvalidParams
 	case -32603:
 		return ErrInternal
-	case -32001:
+	case -38001:
 		return ErrUnknownPayload
+	case -38002:
+		return ErrInvalidForkchoiceState
+	case -38003:
+		return ErrInvalidPayloadAttributes
 	case -32000:
 		// Only -32000 status codes are data errors in the RPC specification.
 		errWithData, ok := err.(rpc.DataError)
 		if !ok {
-			return errors.Wrap(err, "got an unexpected error")
+			return errors.Wrapf(err, "got an unexpected error in JSON-RPC response")
 		}
 		return errors.Wrapf(ErrServer, "%v", errWithData.ErrorData())
 	default:

@@ -13,9 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
-var errWSBlockNotFound = errors.New("weak subjectivity root not found in db")
-var errWSBlockNotFoundInEpoch = errors.New("weak subjectivity root not found in db within epoch")
-
 type weakSubjectivityDB interface {
 	HasBlock(ctx context.Context, blockRoot [32]byte) bool
 	BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][32]byte, error)
@@ -33,8 +30,8 @@ type WeakSubjectivityVerifier struct {
 // NewWeakSubjectivityVerifier validates a checkpoint, and if valid, uses it to initialize a weak subjectivity verifier.
 func NewWeakSubjectivityVerifier(wsc *ethpb.Checkpoint, db weakSubjectivityDB) (*WeakSubjectivityVerifier, error) {
 	if wsc == nil || len(wsc.Root) == 0 || wsc.Epoch == 0 {
-		log.Info("No checkpoint for syncing provided, node will begin syncing from genesis. Checkpoint Sync is an optional feature that allows your node to sync from a more recent checkpoint, " +
-			"which enhances the security of your local beacon node and the broader network. See https://docs.prylabs.network/docs/next/prysm-usage/checkpoint-sync/ to learn how to configure Checkpoint Sync.")
+		log.Info("--weak-subjectivity-checkpoint not provided. Prysm recommends providing a weak subjectivity checkpoint" +
+			"for nodes synced from genesis, or manual verification of block and state roots for checkpoint sync nodes.")
 		return &WeakSubjectivityVerifier{
 			enabled: false,
 		}, nil

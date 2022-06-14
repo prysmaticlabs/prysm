@@ -71,9 +71,9 @@ func (s *Service) VerifyFinalizedConsistency(ctx context.Context, root []byte) e
 		return nil
 	}
 
-	f := s.FinalizedCheckpt()
-	if f == nil {
-		return errNilFinalizedInStore
+	f, err := s.FinalizedCheckpt()
+	if err != nil {
+		return err
 	}
 	ss, err := slots.EpochStart(f.Epoch)
 	if err != nil {
@@ -152,9 +152,9 @@ func (s *Service) UpdateHead(ctx context.Context) error {
 
 	s.processAttestations(ctx)
 
-	justified := s.store.JustifiedCheckpt()
-	if justified == nil {
-		return errNilJustifiedInStore
+	justified, err := s.store.JustifiedCheckpt()
+	if err != nil {
+		return err
 	}
 	balances, err := s.justifiedBalances.get(ctx, bytesutil.ToBytes32(justified.Root))
 	if err != nil {
@@ -164,21 +164,26 @@ func (s *Service) UpdateHead(ctx context.Context) error {
 	if err != nil {
 		log.WithError(err).Warn("Resolving fork due to new attestation")
 	}
+	s.headLock.RLock()
 	if s.headRoot() != newHeadRoot {
 		log.WithFields(logrus.Fields{
 			"oldHeadRoot": fmt.Sprintf("%#x", s.headRoot()),
 			"newHeadRoot": fmt.Sprintf("%#x", newHeadRoot),
 		}).Debug("Head changed due to attestations")
 	}
+	s.headLock.RUnlock()
 	s.notifyEngineIfChangedHead(ctx, newHeadRoot)
 	return nil
 }
 
 // This calls notify Forkchoice Update in the event that the head has changed
 func (s *Service) notifyEngineIfChangedHead(ctx context.Context, newHeadRoot [32]byte) {
+	s.headLock.RLock()
 	if newHeadRoot == [32]byte{} || s.headRoot() == newHeadRoot {
+		s.headLock.RUnlock()
 		return
 	}
+	s.headLock.RUnlock()
 
 	if !s.hasBlockInInitSyncOrDB(ctx, newHeadRoot) {
 		log.Debug("New head does not exist in DB. Do nothing")

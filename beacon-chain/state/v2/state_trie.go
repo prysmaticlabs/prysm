@@ -24,7 +24,7 @@ import (
 )
 
 // InitializeFromProto the beacon state from a protobuf representation.
-func InitializeFromProto(st *ethpb.BeaconStateAltair) (state.BeaconStateAltair, error) {
+func InitializeFromProto(st *ethpb.BeaconStateAltair) (state.BeaconState, error) {
 	if features.Get().EnableNativeState {
 		return statenative.InitializeFromProtoAltair(proto.Clone(st).(*ethpb.BeaconStateAltair))
 	}
@@ -33,7 +33,7 @@ func InitializeFromProto(st *ethpb.BeaconStateAltair) (state.BeaconStateAltair, 
 
 // InitializeFromProtoUnsafe directly uses the beacon state protobuf pointer
 // and sets it as the inner state of the BeaconState type.
-func InitializeFromProtoUnsafe(st *ethpb.BeaconStateAltair) (state.BeaconStateAltair, error) {
+func InitializeFromProtoUnsafe(st *ethpb.BeaconStateAltair) (state.BeaconState, error) {
 	if features.Get().EnableNativeState {
 		return statenative.InitializeFromProtoUnsafeAltair(st)
 	}
@@ -78,6 +78,8 @@ func InitializeFromProtoUnsafe(st *ethpb.BeaconStateAltair) (state.BeaconStateAl
 	b.sharedFieldReferences[historicalRoots] = stateutil.NewRef(1)
 
 	state.StateCount.Inc()
+	// Finalizer runs when dst is being destroyed in garbage collection.
+	runtime.SetFinalizer(b, finalizerCleanup)
 	return b, nil
 }
 
@@ -179,23 +181,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 
 	state.StateCount.Inc()
 	// Finalizer runs when dst is being destroyed in garbage collection.
-	runtime.SetFinalizer(dst, func(b *BeaconState) {
-		for field, v := range b.sharedFieldReferences {
-			v.MinusRef()
-			if b.stateFieldLeaves[field].FieldReference() != nil {
-				b.stateFieldLeaves[field].FieldReference().MinusRef()
-			}
-		}
-		for i := 0; i < fieldCount; i++ {
-			field := types.FieldIndex(i)
-			delete(b.stateFieldLeaves, field)
-			delete(b.dirtyIndices, field)
-			delete(b.dirtyFields, field)
-			delete(b.sharedFieldReferences, field)
-			delete(b.stateFieldLeaves, field)
-		}
-		state.StateCount.Sub(1)
-	})
+	runtime.SetFinalizer(dst, finalizerCleanup)
 
 	return dst
 }
@@ -425,4 +411,23 @@ func (b *BeaconState) resetFieldTrie(index types.FieldIndex, elements interface{
 	b.stateFieldLeaves[index] = fTrie
 	b.dirtyIndices[index] = []uint64{}
 	return nil
+}
+
+func finalizerCleanup(b *BeaconState) {
+	fieldCount := params.BeaconConfig().BeaconStateAltairFieldCount
+	for field, v := range b.sharedFieldReferences {
+		v.MinusRef()
+		if b.stateFieldLeaves[field].FieldReference() != nil {
+			b.stateFieldLeaves[field].FieldReference().MinusRef()
+		}
+	}
+	for i := 0; i < fieldCount; i++ {
+		field := types.FieldIndex(i)
+		delete(b.stateFieldLeaves, field)
+		delete(b.dirtyIndices, field)
+		delete(b.dirtyFields, field)
+		delete(b.sharedFieldReferences, field)
+		delete(b.stateFieldLeaves, field)
+	}
+	state.StateCount.Sub(1)
 }

@@ -62,6 +62,7 @@ type ChainService struct {
 	Genesis                     time.Time
 	ForkChoiceStore             forkchoice.ForkChoicer
 	ReceiveBlockMockErr         error
+	OptimisticCheckRootReceived [32]byte
 }
 
 // ForkChoicer mocks the same method in the chain service
@@ -282,18 +283,18 @@ func (s *ChainService) CurrentFork() *ethpb.Fork {
 }
 
 // FinalizedCheckpt mocks FinalizedCheckpt method in chain service.
-func (s *ChainService) FinalizedCheckpt() *ethpb.Checkpoint {
-	return s.FinalizedCheckPoint
+func (s *ChainService) FinalizedCheckpt() (*ethpb.Checkpoint, error) {
+	return s.FinalizedCheckPoint, nil
 }
 
 // CurrentJustifiedCheckpt mocks CurrentJustifiedCheckpt method in chain service.
-func (s *ChainService) CurrentJustifiedCheckpt() *ethpb.Checkpoint {
-	return s.CurrentJustifiedCheckPoint
+func (s *ChainService) CurrentJustifiedCheckpt() (*ethpb.Checkpoint, error) {
+	return s.CurrentJustifiedCheckPoint, nil
 }
 
 // PreviousJustifiedCheckpt mocks PreviousJustifiedCheckpt method in chain service.
-func (s *ChainService) PreviousJustifiedCheckpt() *ethpb.Checkpoint {
-	return s.PreviousJustifiedCheckPoint
+func (s *ChainService) PreviousJustifiedCheckpt() (*ethpb.Checkpoint, error) {
+	return s.PreviousJustifiedCheckPoint, nil
 }
 
 // ReceiveAttestation mocks ReceiveAttestation method in chain service.
@@ -447,7 +448,8 @@ func (s *ChainService) IsOptimistic(_ context.Context) (bool, error) {
 }
 
 // IsOptimisticForRoot mocks the same method in the chain service.
-func (s *ChainService) IsOptimisticForRoot(_ context.Context, _ [32]byte) (bool, error) {
+func (s *ChainService) IsOptimisticForRoot(_ context.Context, root [32]byte) (bool, error) {
+	s.OptimisticCheckRootReceived = root
 	return s.Optimistic, nil
 }
 

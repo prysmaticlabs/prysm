@@ -14,12 +14,20 @@ import (
 
 // BeaconState has read and write access to beacon state methods.
 type BeaconState interface {
+	SpecParametersProvider
 	ReadOnlyBeaconState
 	WriteOnlyBeaconState
 	Copy() BeaconState
 	HashTreeRoot(ctx context.Context) ([32]byte, error)
 	FutureForkStub
 	StateProver
+}
+
+// SpecParametersProvider provides fork-specific configuration parameters as
+// defined in the consensus specification for the beacon chain.
+type SpecParametersProvider interface {
+	InactivityPenaltyQuotient() (uint64, error)
+	ProportionalSlashingMultiplier() (uint64, error)
 }
 
 // StateProver defines the ability to create Merkle proofs for beacon state fields.
@@ -215,6 +223,7 @@ type FutureForkStub interface {
 	AppendInactivityScore(s uint64) error
 	CurrentEpochParticipation() ([]byte, error)
 	PreviousEpochParticipation() ([]byte, error)
+	UnrealizedCheckpointBalances() (uint64, uint64, uint64, error)
 	InactivityScores() ([]uint64, error)
 	SetInactivityScores(val []uint64) error
 	CurrentSyncCommittee() (*ethpb.SyncCommittee, error)

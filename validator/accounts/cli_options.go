@@ -74,14 +74,6 @@ func WithBeaconRPCProvider(provider string) Option {
 	}
 }
 
-// WithFilteredPubKeys adds public key strings parsed from CLI.
-func WithFilteredPubKeys(filteredPubKeys []bls.PublicKey) Option {
-	return func(acc *AccountsCLIManager) error {
-		acc.filteredPubKeys = filteredPubKeys
-		return nil
-	}
-}
-
 // WithWalletKeyCount tracks the number of keys in a wallet.
 func WithWalletKeyCount(walletKeyCount int) Option {
 	return func(acc *AccountsCLIManager) error {
@@ -90,9 +82,50 @@ func WithWalletKeyCount(walletKeyCount int) Option {
 	}
 }
 
+// WithDeletePublicKeys indicates whether to delete the public keys.
 func WithDeletePublicKeys(deletePublicKeys bool) Option {
 	return func(acc *AccountsCLIManager) error {
 		acc.deletePublicKeys = deletePublicKeys
+		return nil
+	}
+}
+
+// WithBackupDir specifies the directory backups are written to.
+func WithBackupsDir(backupsDir string) Option {
+	return func(acc *AccountsCLIManager) error {
+		acc.backupsDir = backupsDir
+		return nil
+	}
+}
+
+// WithBackupPassword specifies the password for backups.
+func WithBackupsPassword(backupsPassword string) Option {
+	return func(acc *AccountsCLIManager) error {
+		acc.backupsPassword = backupsPassword
+		return nil
+	}
+}
+
+// WithFilteredPubKeys adds public key strings parsed from CLI.
+func WithFilteredPubKeys(filteredPubKeys []bls.PublicKey) Option {
+	return func(acc *AccountsCLIManager) error {
+		acc.filteredPubKeys = filteredPubKeys
+		return nil
+	}
+}
+
+// WithRawPubKeys adds raw public key bytes parsed from CLI.
+func WithRawPubKeys(rawPubKeys [][]byte) Option {
+	return func(acc *AccountsCLIManager) error {
+		acc.rawPubKeys = rawPubKeys
+		return nil
+	}
+}
+
+// WithFormattedPubKeys adds formatted public key strings parsed from CLI.
+func WithFormattedPubKeys(formattedPubKeys []string) Option {
+	return func(acc *AccountsCLIManager) error {
+		acc.formattedPubKeys = formattedPubKeys
 		return nil
 	}
 }

@@ -26,7 +26,7 @@ func TestConfigureHistoricalSlasher(t *testing.T) {
 	set.Bool(flags.HistoricalSlasherNode.Name, true, "")
 	cliCtx := cli.NewContext(&app, set, nil)
 
-	configureHistoricalSlasher(cliCtx)
+	require.NoError(t, configureHistoricalSlasher(cliCtx))
 
 	assert.Equal(t, params.BeaconConfig().SlotsPerEpoch*4, params.BeaconConfig().SlotsPerArchivedPoint)
 	assert.LogsContain(t, hook,
@@ -46,7 +46,7 @@ func TestConfigureSafeSlotsToImportOptimistically(t *testing.T) {
 	require.NoError(t, set.Set(flags.SafeSlotsToImportOptimistically.Name, strconv.Itoa(128)))
 	cliCtx := cli.NewContext(&app, set, nil)
 
-	configureSafeSlotsToImportOptimistically(cliCtx)
+	require.NoError(t, configureSafeSlotsToImportOptimistically(cliCtx))
 
 	assert.Equal(t, types.Slot(128), params.BeaconConfig().SafeSlotsToImportOptimistically)
 }
@@ -60,7 +60,7 @@ func TestConfigureSlotsPerArchivedPoint(t *testing.T) {
 	require.NoError(t, set.Set(flags.SlotsPerArchivedPoint.Name, strconv.Itoa(100)))
 	cliCtx := cli.NewContext(&app, set, nil)
 
-	configureSlotsPerArchivedPoint(cliCtx)
+	require.NoError(t, configureSlotsPerArchivedPoint(cliCtx))
 
 	assert.Equal(t, types.Slot(100), params.BeaconConfig().SlotsPerArchivedPoint)
 }
@@ -78,7 +78,7 @@ func TestConfigureProofOfWork(t *testing.T) {
 	require.NoError(t, set.Set(flags.DepositContractFlag.Name, "deposit-contract"))
 	cliCtx := cli.NewContext(&app, set, nil)
 
-	configureEth1Config(cliCtx)
+	require.NoError(t, configureEth1Config(cliCtx))
 
 	assert.Equal(t, uint64(100), params.BeaconConfig().DepositChainID)
 	assert.Equal(t, uint64(200), params.BeaconConfig().DepositNetworkID)
@@ -92,6 +92,13 @@ func TestConfigureExecutionSetting(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	set.String(flags.SuggestedFeeRecipient.Name, "", "")
+	set.Uint64(flags.TerminalTotalDifficultyOverride.Name, 0, "")
+	set.String(flags.TerminalBlockHashOverride.Name, "", "")
+	set.Uint64(flags.TerminalBlockHashActivationEpochOverride.Name, 0, "")
+
+	require.NoError(t, set.Set(flags.TerminalTotalDifficultyOverride.Name, strconv.Itoa(100)))
+	require.NoError(t, set.Set(flags.TerminalBlockHashOverride.Name, "0xA"))
+	require.NoError(t, set.Set(flags.TerminalBlockHashActivationEpochOverride.Name, strconv.Itoa(200)))
 	require.NoError(t, set.Set(flags.SuggestedFeeRecipient.Name, "0xB"))
 	cliCtx := cli.NewContext(&app, set, nil)
 	err := configureExecutionSetting(cliCtx)
@@ -111,6 +118,10 @@ func TestConfigureExecutionSetting(t *testing.T) {
 	err = configureExecutionSetting(cliCtx)
 	require.NoError(t, err)
 	assert.Equal(t, common.HexToAddress("0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa"), params.BeaconConfig().DefaultFeeRecipient)
+
+	assert.Equal(t, "100", params.BeaconConfig().TerminalTotalDifficulty)
+	assert.Equal(t, common.HexToHash("0xA"), params.BeaconConfig().TerminalBlockHash)
+	assert.Equal(t, types.Epoch(200), params.BeaconConfig().TerminalBlockHashActivationEpoch)
 
 }
 
@@ -198,7 +209,7 @@ func TestConfigureInterop(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			configureInteropConfig(tt.flagSetter())
+			require.NoError(t, configureInteropConfig(tt.flagSetter()))
 			assert.DeepEqual(t, tt.configName, params.BeaconConfig().ConfigName)
 		})
 	}

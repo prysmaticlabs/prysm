@@ -12,8 +12,6 @@ import (
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
@@ -21,7 +19,7 @@ func TestBlockForSlotFuture(t *testing.T) {
 	ch := &CanonicalHistory{
 		cs: &mockCurrentSlotter{Slot: 0},
 	}
-	_, _, err := ch.BlockForSlot(context.Background(), 1)
+	_, err := ch.BlockRootForSlot(context.Background(), 1)
 	require.ErrorIs(t, err, ErrFutureSlotRequested)
 }
 
@@ -34,84 +32,54 @@ func TestChainForSlotFuture(t *testing.T) {
 }
 
 func TestBestForSlot(t *testing.T) {
-	nilBlock, err := wrapper.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlock{})
-	require.NoError(t, err)
-	nilBody, err := wrapper.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{}})
-	require.NoError(t, err)
 	derp := errors.New("fake hash tree root method no hash good")
-	badHTR := &mock.SignedBeaconBlock{BeaconBlock: &mock.BeaconBlock{HtrErr: derp, BeaconBlockBody: &mock.BeaconBlockBody{}}}
 	var goodHTR [32]byte
 	copy(goodHTR[:], []byte{23})
 	var betterHTR [32]byte
 	copy(betterHTR[:], []byte{42})
-	good := &mock.SignedBeaconBlock{BeaconBlock: &mock.BeaconBlock{BeaconBlockBody: &mock.BeaconBlockBody{}, Htr: goodHTR}}
-	better := &mock.SignedBeaconBlock{BeaconBlock: &mock.BeaconBlock{BeaconBlockBody: &mock.BeaconBlockBody{}, Htr: betterHTR}}
 
 	cases := []struct {
 		name   string
 		err    error
 		blocks []interfaces.SignedBeaconBlock
-		best   interfaces.SignedBeaconBlock
+		roots  [][32]byte
 		root   [32]byte
 		cc     CanonicalChecker
 	}{
 		{
-			name:   "empty list",
-			err:    ErrNoCanonicalBlockForSlot,
-			blocks: []interfaces.SignedBeaconBlock{},
+			name:  "empty list",
+			err:   ErrNoCanonicalBlockForSlot,
+			roots: [][32]byte{},
 		},
 		{
-			name:   "empty SignedBeaconBlock",
-			err:    ErrNoCanonicalBlockForSlot,
-			blocks: []interfaces.SignedBeaconBlock{nil},
+			name:  "IsCanonical fail",
+			roots: [][32]byte{goodHTR, betterHTR},
+			cc:    &mockCanonicalChecker{is: true, err: derp},
+			err:   derp,
 		},
 		{
-			name:   "empty BeaconBlock",
-			err:    ErrNoCanonicalBlockForSlot,
-			blocks: []interfaces.SignedBeaconBlock{nilBlock},
+			name:  "all non-canonical",
+			err:   ErrNoCanonicalBlockForSlot,
+			roots: [][32]byte{goodHTR, betterHTR},
+			cc:    &mockCanonicalChecker{is: false},
 		},
 		{
-			name:   "empty BeaconBlockBody",
-			err:    ErrNoCanonicalBlockForSlot,
-			blocks: []interfaces.SignedBeaconBlock{nilBody},
+			name:  "one canonical",
+			cc:    &mockCanonicalChecker{is: true},
+			root:  goodHTR,
+			roots: [][32]byte{goodHTR},
 		},
 		{
-			name:   "bad HTR",
-			err:    ErrInvalidDBBlock,
-			blocks: []interfaces.SignedBeaconBlock{badHTR},
+			name:  "all canonical",
+			cc:    &mockCanonicalChecker{is: true},
+			root:  betterHTR,
+			roots: [][32]byte{betterHTR, goodHTR},
 		},
 		{
-			name:   "IsCanonical fail",
-			blocks: []interfaces.SignedBeaconBlock{good, better},
-			cc:     &mockCanonicalChecker{is: true, err: derp},
-			err:    derp,
-		},
-		{
-			name:   "all non-canonical",
-			err:    ErrNoCanonicalBlockForSlot,
-			blocks: []interfaces.SignedBeaconBlock{good, better},
-			cc:     &mockCanonicalChecker{is: false},
-		},
-		{
-			name:   "one canonical",
-			blocks: []interfaces.SignedBeaconBlock{good},
-			cc:     &mockCanonicalChecker{is: true},
-			root:   goodHTR,
-			best:   good,
-		},
-		{
-			name:   "all canonical",
-			blocks: []interfaces.SignedBeaconBlock{better, good},
-			cc:     &mockCanonicalChecker{is: true},
-			root:   betterHTR,
-			best:   better,
-		},
-		{
-			name:   "first wins",
-			blocks: []interfaces.SignedBeaconBlock{good, better},
-			cc:     &mockCanonicalChecker{is: true},
-			root:   goodHTR,
-			best:   good,
+			name:  "first wins",
+			cc:    &mockCanonicalChecker{is: true},
+			root:  goodHTR,
+			roots: [][32]byte{goodHTR, betterHTR},
 		},
 	}
 	for _, c := range cases {
@@ -121,10 +89,9 @@ func TestBestForSlot(t *testing.T) {
 				chk = c.cc
 			}
 			ch := &CanonicalHistory{cc: chk}
-			r, b, err := ch.bestForSlot(context.Background(), c.blocks)
+			r, err := ch.bestForSlot(context.Background(), c.roots)
 			if c.err == nil {
 				require.NoError(t, err)
-				require.DeepEqual(t, c.best, b)
 				require.Equal(t, c.root, r)
 			} else {
 				require.ErrorIs(t, err, c.err)
@@ -164,13 +131,11 @@ func TestCanonicalBlockForSlotHappy(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			bs, err := hist.HighestSlotBlocksBelow(ctx, c.slot+1)
+			_, rs, err := hist.HighestRootsBelowSlot(ctx, c.slot+1)
 			require.NoError(t, err)
-			require.Equal(t, len(bs), 1)
-			r, err := bs[0].Block().HashTreeRoot()
-			require.NoError(t, err)
-			require.Equal(t, hist.slotMap[c.highest], r)
-			cr, _, err := ch.BlockForSlot(ctx, c.slot)
+			require.Equal(t, len(rs), 1)
+			require.Equal(t, hist.slotMap[c.highest], rs[0])
+			cr, err := ch.BlockRootForSlot(ctx, c.slot)
 			require.NoError(t, err)
 			require.Equal(t, hist.slotMap[c.canon], cr)
 		})
@@ -187,47 +152,49 @@ func TestCanonicalBlockForSlotNonHappy(t *testing.T) {
 	}
 	hist := newMockHistory(t, specs, end+1)
 
+	genesis, err := hist.GenesisBlockRoot(ctx)
+	require.NoError(t, err)
 	slotOrderObserved := make([]types.Slot, 0)
-	derp := errors.New("HighestSlotBlocksBelow don't work")
+	derp := errors.New("HighestRootsBelowSlot don't work")
 	// since only the end block and genesis are canonical, once the slot drops below
 	// end, we should always get genesis
 	cases := []struct {
 		name              string
 		slot              types.Slot
 		canon             CanonicalChecker
-		overrideHighest   func(context.Context, types.Slot) ([]interfaces.SignedBeaconBlock, error)
+		overrideHighest   func(context.Context, types.Slot) (types.Slot, [][32]byte, error)
 		slotOrderExpected []types.Slot
 		err               error
 		root              [32]byte
 	}{
 		{
-			name: "HighestSlotBlocksBelow not called for genesis",
-			overrideHighest: func(_ context.Context, _ types.Slot) ([]interfaces.SignedBeaconBlock, error) {
-				return nil, derp
+			name: "HighestRootsBelowSlot not called for genesis",
+			overrideHighest: func(_ context.Context, _ types.Slot) (types.Slot, [][32]byte, error) {
+				return 0, [][32]byte{}, derp
 			},
 			root: hist.slotMap[0],
 		},
 		{
-			name: "wrapped error from HighestSlotBlocksBelow returned",
+			name: "wrapped error from HighestRootsBelowSlot returned",
 			err:  derp,
-			overrideHighest: func(_ context.Context, _ types.Slot) ([]interfaces.SignedBeaconBlock, error) {
-				return nil, derp
+			overrideHighest: func(_ context.Context, _ types.Slot) (types.Slot, [][32]byte, error) {
+				return 0, [][32]byte{}, derp
 			},
 			slot: end,
 		},
 		{
-			name: "HighestSlotBlocksBelow empty list",
+			name: "HighestRootsBelowSlot empty list",
 			err:  ErrNoBlocksBelowSlot,
-			overrideHighest: func(_ context.Context, _ types.Slot) ([]interfaces.SignedBeaconBlock, error) {
-				return []interfaces.SignedBeaconBlock{}, nil
+			overrideHighest: func(_ context.Context, _ types.Slot) (types.Slot, [][32]byte, error) {
+				return 0, [][32]byte{}, nil
 			},
 			slot: end,
 		},
 		{
-			name:  "HighestSlotBlocksBelow no canonical",
-			err:   ErrNoCanonicalBlockForSlot,
+			name:  "HighestRootsBelowSlot no canonical",
 			canon: &mockCanonicalChecker{is: false},
 			slot:  end,
+			root:  genesis,
 		},
 		{
 			name: "slot ordering correct - only genesis canonical",
@@ -237,11 +204,11 @@ func TestCanonicalBlockForSlotNonHappy(t *testing.T) {
 				}
 				return false, nil
 			}},
-			overrideHighest: func(_ context.Context, s types.Slot) ([]interfaces.SignedBeaconBlock, error) {
+			overrideHighest: func(_ context.Context, s types.Slot) (types.Slot, [][32]byte, error) {
 				slotOrderObserved = append(slotOrderObserved, s)
-				// this allows the mock HighestSlotBlocksBelow to continue to execute now that we've recorded
+				// this allows the mock HighestRootsBelowSlot to continue to execute now that we've recorded
 				// the slot in our channel
-				return nil, errFallThroughOverride
+				return 0, nil, errFallThroughOverride
 			},
 			slotOrderExpected: []types.Slot{156, 155, 150, 100},
 			slot:              end,
@@ -255,11 +222,11 @@ func TestCanonicalBlockForSlotNonHappy(t *testing.T) {
 				}
 				return false, nil
 			}},
-			overrideHighest: func(_ context.Context, s types.Slot) ([]interfaces.SignedBeaconBlock, error) {
+			overrideHighest: func(_ context.Context, s types.Slot) (types.Slot, [][32]byte, error) {
 				slotOrderObserved = append(slotOrderObserved, s)
-				// this allows the mock HighestSlotBlocksBelow to continue to execute now that we've recorded
+				// this allows the mock HighestRootsBelowSlot to continue to execute now that we've recorded
 				// the slot in our channel
-				return nil, errFallThroughOverride
+				return 0, nil, errFallThroughOverride
 			},
 			slotOrderExpected: []types.Slot{156, 155, 150},
 			slot:              end,
@@ -274,14 +241,14 @@ func TestCanonicalBlockForSlotNonHappy(t *testing.T) {
 			}
 			ch := &CanonicalHistory{h: hist, cc: canon, cs: hist}
 			hist.overrideHighestSlotBlocksBelow = c.overrideHighest
-			r, _, err := ch.BlockForSlot(ctx, c.slot)
+			r, err := ch.BlockRootForSlot(ctx, c.slot)
 			if c.err == nil {
 				require.NoError(t, err)
 			} else {
 				require.ErrorIs(t, err, c.err)
 			}
 			if len(c.slotOrderExpected) > 0 {
-				require.Equal(t, len(c.slotOrderExpected), len(slotOrderObserved), "HighestSlotBlocksBelow not called the expected number of times")
+				require.Equal(t, len(c.slotOrderExpected), len(slotOrderObserved), "HighestRootsBelowSlot not called the expected number of times")
 				for i := range c.slotOrderExpected {
 					require.Equal(t, c.slotOrderExpected[i], slotOrderObserved[i])
 				}

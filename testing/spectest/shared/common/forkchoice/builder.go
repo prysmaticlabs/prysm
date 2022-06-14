@@ -84,13 +84,18 @@ func (bb *Builder) Attestation(t testing.TB, a *ethpb.Attestation) {
 	require.NoError(t, bb.service.OnAttestation(context.TODO(), a))
 }
 
+// AttesterSlashing receives an attester slashing and feeds it to forkchoice.
+func (bb *Builder) AttesterSlashing(s *ethpb.AttesterSlashing) {
+	slashings := []*ethpb.AttesterSlashing{s}
+	bb.service.InsertSlashingsToForkChoiceStore(context.TODO(), slashings)
+}
+
 // Check evaluates the fork choice results and compares them to the expected values.
 func (bb *Builder) Check(t testing.TB, c *Check) {
 	if c == nil {
 		return
 	}
 	ctx := context.TODO()
-
 	require.NoError(t, bb.service.UpdateAndSaveHeadWithBalances(ctx))
 	if c.Head != nil {
 		r, err := bb.service.HeadRoot(ctx)
@@ -103,25 +108,32 @@ func (bb *Builder) Check(t testing.TB, c *Check) {
 			Epoch: types.Epoch(c.JustifiedCheckPoint.Epoch),
 			Root:  common.FromHex(c.JustifiedCheckPoint.Root),
 		}
-		require.DeepEqual(t, cp, bb.service.CurrentJustifiedCheckpt())
+		got, err := bb.service.CurrentJustifiedCheckpt()
+		require.NoError(t, err)
+		require.DeepEqual(t, cp, got)
 	}
 	if c.BestJustifiedCheckPoint != nil {
 		cp := &ethpb.Checkpoint{
 			Epoch: types.Epoch(c.BestJustifiedCheckPoint.Epoch),
 			Root:  common.FromHex(c.BestJustifiedCheckPoint.Root),
 		}
-		require.DeepEqual(t, cp, bb.service.BestJustifiedCheckpt())
+		got, err := bb.service.BestJustifiedCheckpt()
+		require.NoError(t, err)
+		require.DeepEqual(t, cp, got)
 	}
 	if c.FinalizedCheckPoint != nil {
 		cp := &ethpb.Checkpoint{
 			Epoch: types.Epoch(c.FinalizedCheckPoint.Epoch),
 			Root:  common.FromHex(c.FinalizedCheckPoint.Root),
 		}
-		require.DeepSSZEqual(t, cp, bb.service.FinalizedCheckpt())
+		got, err := bb.service.FinalizedCheckpt()
+		require.NoError(t, err)
+		require.DeepSSZEqual(t, cp, got)
 	}
 	if c.ProposerBoostRoot != nil {
 		want := fmt.Sprintf("%#x", common.FromHex(*c.ProposerBoostRoot))
 		got := fmt.Sprintf("%#x", bb.service.ForkChoiceStore().ProposerBoost())
 		require.DeepEqual(t, want, got)
 	}
+
 }

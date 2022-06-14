@@ -1527,8 +1527,8 @@ func TestServer_GetBlockSSZ(t *testing.T) {
 		},
 	}
 
-	ok, blocks, err := beaconDB.BlocksBySlot(ctx, 30)
-	require.Equal(t, true, ok)
+	blocks, err := beaconDB.BlocksBySlot(ctx, 30)
+	require.Equal(t, true, len(blocks) > 0)
 	require.NoError(t, err)
 	sszBlock, err := blocks[0].MarshalSSZ()
 	require.NoError(t, err)
@@ -1567,8 +1567,8 @@ func TestServer_GetBlockSSZV2(t *testing.T) {
 			},
 		}
 
-		ok, blocks, err := beaconDB.BlocksBySlot(ctx, 30)
-		require.Equal(t, true, ok)
+		blocks, err := beaconDB.BlocksBySlot(ctx, 30)
+		require.Equal(t, true, len(blocks) > 0)
 		require.NoError(t, err)
 		sszBlock, err := blocks[0].MarshalSSZ()
 		require.NoError(t, err)
@@ -1606,8 +1606,8 @@ func TestServer_GetBlockSSZV2(t *testing.T) {
 			},
 		}
 
-		ok, blocks, err := beaconDB.BlocksBySlot(ctx, 30)
-		require.Equal(t, true, ok)
+		blocks, err := beaconDB.BlocksBySlot(ctx, 30)
+		require.Equal(t, true, len(blocks) > 0)
 		require.NoError(t, err)
 		sszBlock, err := blocks[0].MarshalSSZ()
 		require.NoError(t, err)
@@ -1645,8 +1645,8 @@ func TestServer_GetBlockSSZV2(t *testing.T) {
 			},
 		}
 
-		ok, blocks, err := beaconDB.BlocksBySlot(ctx, 30)
-		require.Equal(t, true, ok)
+		blocks, err := beaconDB.BlocksBySlot(ctx, 30)
+		require.Equal(t, true, len(blocks) > 0)
 		require.NoError(t, err)
 		sszBlock, err := blocks[0].MarshalSSZ()
 		require.NoError(t, err)

@@ -9,14 +9,17 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/time/slots"
@@ -27,13 +30,14 @@ import (
 // UpdateAndSaveHeadWithBalances updates the beacon state head after getting justified balanced from cache.
 // This function is only used in spec-tests, it does save the head after updating it.
 func (s *Service) UpdateAndSaveHeadWithBalances(ctx context.Context) error {
-	cp := s.store.JustifiedCheckpt()
-	if cp == nil {
-		return errors.New("no justified checkpoint")
-	}
-	balances, err := s.justifiedBalances.get(ctx, bytesutil.ToBytes32(cp.Root))
+	jp, err := s.store.JustifiedCheckpt()
 	if err != nil {
-		msg := fmt.Sprintf("could not read balances for state w/ justified checkpoint %#x", cp.Root)
+		return err
+	}
+
+	balances, err := s.justifiedBalances.get(ctx, bytesutil.ToBytes32(jp.Root))
+	if err != nil {
+		msg := fmt.Sprintf("could not read balances for state w/ justified checkpoint %#x", jp.Root)
 		return errors.Wrap(err, msg)
 	}
 	headRoot, err := s.updateHead(ctx, balances)
@@ -66,20 +70,17 @@ func (s *Service) updateHead(ctx context.Context, balances []uint64) ([32]byte, 
 	defer span.End()
 
 	// Get head from the fork choice service.
-	f := s.store.FinalizedCheckpt()
-	if f == nil {
-		return [32]byte{}, errNilFinalizedInStore
+	f, err := s.store.FinalizedCheckpt()
+	if err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not get finalized checkpoint")
 	}
-	j := s.store.JustifiedCheckpt()
-	if j == nil {
-		return [32]byte{}, errNilJustifiedInStore
+	j, err := s.store.JustifiedCheckpt()
+	if err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not get justified checkpoint")
 	}
 	// To get head before the first justified epoch, the fork choice will start with origin root
 	// instead of zero hashes.
-	headStartRoot := bytesutil.ToBytes32(j.Root)
-	if headStartRoot == params.BeaconConfig().ZeroHash {
-		headStartRoot = s.originBlockRoot
-	}
+	headStartRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(j.Root))
 
 	// In order to process head, fork choice store requires justified info.
 	// If the fork choice store is missing justified block info, a node should
@@ -90,34 +91,45 @@ func (s *Service) updateHead(ctx context.Context, balances []uint64) ([32]byte, 
 		if err != nil {
 			return [32]byte{}, err
 		}
-		if features.Get().EnableForkChoiceDoublyLinkedTree {
-			s.cfg.ForkChoiceStore = doublylinkedtree.New(j.Epoch, f.Epoch)
-		} else {
-			s.cfg.ForkChoiceStore = protoarray.New(j.Epoch, f.Epoch, bytesutil.ToBytes32(f.Root))
+		st, err := s.cfg.StateGen.StateByRoot(ctx, s.ensureRootNotZeros(headStartRoot))
+		if err != nil {
+			return [32]byte{}, err
 		}
-		if err := s.insertBlockToForkChoiceStore(ctx, jb.Block(), headStartRoot, f, j); err != nil {
+		if features.Get().EnableForkChoiceDoublyLinkedTree {
+			s.cfg.ForkChoiceStore = doublylinkedtree.New()
+		} else {
+			s.cfg.ForkChoiceStore = protoarray.New()
+		}
+		if err := s.insertBlockToForkChoiceStore(ctx, jb.Block(), headStartRoot, st, f, j); err != nil {
 			return [32]byte{}, err
 		}
 	}
-
-	return s.cfg.ForkChoiceStore.Head(ctx, j.Epoch, headStartRoot, balances, f.Epoch)
+	jc := &forkchoicetypes.Checkpoint{Epoch: j.Epoch, Root: headStartRoot}
+	fc := &forkchoicetypes.Checkpoint{Epoch: f.Epoch, Root: s.ensureRootNotZeros(bytesutil.ToBytes32(f.Root))}
+	if err := s.cfg.ForkChoiceStore.UpdateJustifiedCheckpoint(jc); err != nil {
+		return [32]byte{}, err
+	}
+	if err := s.cfg.ForkChoiceStore.UpdateFinalizedCheckpoint(fc); err != nil {
+		return [32]byte{}, err
+	}
+	return s.cfg.ForkChoiceStore.Head(ctx, balances)
 }
 
 // This saves head info to the local service cache, it also saves the
 // new head root to the DB.
-func (s *Service) saveHead(ctx context.Context, headRoot [32]byte, headBlock interfaces.SignedBeaconBlock, headState state.BeaconState) error {
+func (s *Service) saveHead(ctx context.Context, newHeadRoot [32]byte, headBlock interfaces.SignedBeaconBlock, headState state.BeaconState) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.saveHead")
 	defer span.End()
 
 	// Do nothing if head hasn't changed.
-	r, err := s.HeadRoot(ctx)
+	oldHeadroot, err := s.HeadRoot(ctx)
 	if err != nil {
 		return err
 	}
-	if headRoot == bytesutil.ToBytes32(r) {
+	if newHeadRoot == bytesutil.ToBytes32(oldHeadroot) {
 		return nil
 	}
-	if err := helpers.BeaconBlockIsNil(headBlock); err != nil {
+	if err := wrapper.BeaconBlockIsNil(headBlock); err != nil {
 		return err
 	}
 	if headState == nil || headState.IsNil() {
@@ -126,17 +138,19 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte, headBlock int
 
 	// If the head state is not available, just return nil.
 	// There's nothing to cache
-	if !s.cfg.BeaconDB.HasStateSummary(ctx, headRoot) {
+	if !s.cfg.BeaconDB.HasStateSummary(ctx, newHeadRoot) {
 		return nil
 	}
 
 	// A chain re-org occurred, so we fire an event notifying the rest of the services.
-	headSlot := s.HeadSlot()
-	newHeadSlot := headBlock.Block().Slot()
+	s.headLock.RLock()
 	oldHeadRoot := s.headRoot()
 	oldStateRoot := s.headBlock().Block().StateRoot()
+	s.headLock.RUnlock()
+	headSlot := s.HeadSlot()
+	newHeadSlot := headBlock.Block().Slot()
 	newStateRoot := headBlock.Block().StateRoot()
-	if bytesutil.ToBytes32(headBlock.Block().ParentRoot()) != bytesutil.ToBytes32(r) {
+	if bytesutil.ToBytes32(headBlock.Block().ParentRoot()) != bytesutil.ToBytes32(oldHeadroot) {
 		log.WithFields(logrus.Fields{
 			"newSlot": fmt.Sprintf("%d", newHeadSlot),
 			"oldSlot": fmt.Sprintf("%d", headSlot),
@@ -152,7 +166,7 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte, headBlock int
 				Slot:                newHeadSlot,
 				Depth:               absoluteSlotDifference,
 				OldHeadBlock:        oldHeadRoot[:],
-				NewHeadBlock:        headRoot[:],
+				NewHeadBlock:        newHeadRoot[:],
 				OldHeadState:        oldStateRoot,
 				NewHeadState:        newStateRoot,
 				Epoch:               slots.ToEpoch(newHeadSlot),
@@ -160,25 +174,24 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte, headBlock int
 			},
 		})
 
-		if err := s.saveOrphanedAtts(ctx, bytesutil.ToBytes32(r)); err != nil {
+		if err := s.saveOrphanedAtts(ctx, bytesutil.ToBytes32(oldHeadroot), newHeadRoot); err != nil {
 			return err
 		}
-
 		reorgCount.Inc()
 	}
 
 	// Cache the new head info.
-	s.setHead(headRoot, headBlock, headState)
+	s.setHead(newHeadRoot, headBlock, headState)
 
 	// Save the new head root to DB.
-	if err := s.cfg.BeaconDB.SaveHeadBlockRoot(ctx, headRoot); err != nil {
+	if err := s.cfg.BeaconDB.SaveHeadBlockRoot(ctx, newHeadRoot); err != nil {
 		return errors.Wrap(err, "could not save head root in DB")
 	}
 
 	// Forward an event capturing a new chain head over a common event feed
 	// done in a goroutine to avoid blocking the critical runtime main routine.
 	go func() {
-		if err := s.notifyNewHeadEvent(ctx, newHeadSlot, headState, newStateRoot, headRoot[:]); err != nil {
+		if err := s.notifyNewHeadEvent(ctx, newHeadSlot, headState, newStateRoot, newHeadRoot[:]); err != nil {
 			log.WithError(err).Error("Could not notify event feed of new chain head")
 		}
 	}()
@@ -190,7 +203,7 @@ func (s *Service) saveHead(ctx context.Context, headRoot [32]byte, headBlock int
 // root in DB. With the inception of initial-sync-cache-state flag, it uses finalized
 // check point as anchors to resume sync therefore head is no longer needed to be saved on per slot basis.
 func (s *Service) saveHeadNoDB(ctx context.Context, b interfaces.SignedBeaconBlock, r [32]byte, hs state.BeaconState) error {
-	if err := helpers.BeaconBlockIsNil(b); err != nil {
+	if err := wrapper.BeaconBlockIsNil(b); err != nil {
 		return err
 	}
 	cachedHeadRoot, err := s.HeadRoot(ctx)
@@ -351,35 +364,48 @@ func (s *Service) notifyNewHeadEvent(
 	return nil
 }
 
-// This saves the attestations inside the beacon block with respect to root `orphanedRoot` back into the
-// attestation pool. It also filters out the attestations that is one epoch older as a
-// defense so invalid attestations don't flow into the attestation pool.
-func (s *Service) saveOrphanedAtts(ctx context.Context, orphanedRoot [32]byte) error {
-	orphanedBlk, err := s.getBlock(ctx, orphanedRoot)
-	if err != nil {
+// This saves the attestations between `orphanedRoot` and the common ancestor root that is derived using `newHeadRoot`.
+// It also filters out the attestations that is one epoch older as a defense so invalid attestations don't flow into the attestation pool.
+func (s *Service) saveOrphanedAtts(ctx context.Context, orphanedRoot [32]byte, newHeadRoot [32]byte) error {
+	commonAncestorRoot, err := s.ForkChoicer().CommonAncestorRoot(ctx, newHeadRoot, orphanedRoot)
+	switch {
+	// Exit early if there's no common ancestor as there would be nothing to save.
+	case errors.Is(err, forkchoice.ErrUnknownCommonAncestor):
+		return nil
+	case err != nil:
 		return err
 	}
-
-	if orphanedBlk == nil || orphanedBlk.IsNil() {
-		return errors.New("orphaned block can't be nil")
-	}
-
-	for _, a := range orphanedBlk.Block().Body().Attestations() {
-		// Is the attestation one epoch older.
-		if a.Data.Slot+params.BeaconConfig().SlotsPerEpoch < s.CurrentSlot() {
-			continue
+	for orphanedRoot != commonAncestorRoot {
+		if ctx.Err() != nil {
+			return ctx.Err()
 		}
-		if helpers.IsAggregated(a) {
-			if err := s.cfg.AttPool.SaveAggregatedAttestation(a); err != nil {
-				return err
-			}
-		} else {
-			if err := s.cfg.AttPool.SaveUnaggregatedAttestation(a); err != nil {
-				return err
-			}
-		}
-		saveOrphanedAttCount.Inc()
-	}
 
+		orphanedBlk, err := s.getBlock(ctx, orphanedRoot)
+		if err != nil {
+			return err
+		}
+		// If the block is an epoch older, break out of the loop since we can't include atts anyway.
+		// This prevents stuck within this for loop longer than necessary.
+		if orphanedBlk.Block().Slot()+params.BeaconConfig().SlotsPerEpoch <= s.CurrentSlot() {
+			break
+		}
+		for _, a := range orphanedBlk.Block().Body().Attestations() {
+			// if the attestation is one epoch older, it wouldn't been useful to save it.
+			if a.Data.Slot+params.BeaconConfig().SlotsPerEpoch < s.CurrentSlot() {
+				continue
+			}
+			if helpers.IsAggregated(a) {
+				if err := s.cfg.AttPool.SaveAggregatedAttestation(a); err != nil {
+					return err
+				}
+			} else {
+				if err := s.cfg.AttPool.SaveUnaggregatedAttestation(a); err != nil {
+					return err
+				}
+			}
+			saveOrphanedAttCount.Inc()
+		}
+		orphanedRoot = bytesutil.ToBytes32(orphanedBlk.Block().ParentRoot())
+	}
 	return nil
 }

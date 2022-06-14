@@ -130,7 +130,7 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 		WithAttestationPool(attestations.NewPool()),
 		WithP2PBroadcaster(&mockBroadcaster{}),
 		WithStateNotifier(&mockBeaconNode{}),
-		WithForkChoiceStore(protoarray.New(0, 0, params.BeaconConfig().ZeroHash)),
+		WithForkChoiceStore(protoarray.New()),
 		WithAttestationService(attService),
 		WithStateGen(stateGen),
 	}
@@ -277,8 +277,12 @@ func TestChainService_CorrectGenesisRoots(t *testing.T) {
 	// Test the start function.
 	chainService.Start()
 
-	require.DeepEqual(t, blkRoot[:], chainService.store.FinalizedCheckpt().Root, "Finalize Checkpoint root is incorrect")
-	require.DeepEqual(t, params.BeaconConfig().ZeroHash[:], chainService.store.JustifiedCheckpt().Root, "Justified Checkpoint root is incorrect")
+	cp, err := chainService.store.FinalizedCheckpt()
+	require.NoError(t, err)
+	require.DeepEqual(t, blkRoot[:], cp.Root, "Finalize Checkpoint root is incorrect")
+	cp, err = chainService.store.JustifiedCheckpt()
+	require.NoError(t, err)
+	require.DeepEqual(t, params.BeaconConfig().ZeroHash[:], cp.Root, "Justified Checkpoint root is incorrect")
 
 	require.NoError(t, chainService.Stop(), "Unable to stop chain service")
 
@@ -501,7 +505,7 @@ func TestHasBlock_ForkChoiceAndDB_ProtoArray(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 	s := &Service{
-		cfg:   &config{ForkChoiceStore: protoarray.New(0, 0, [32]byte{}), BeaconDB: beaconDB},
+		cfg:   &config{ForkChoiceStore: protoarray.New(), BeaconDB: beaconDB},
 		store: &store.Store{},
 	}
 	s.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]}, [32]byte{})
@@ -522,7 +526,7 @@ func TestHasBlock_ForkChoiceAndDB_DoublyLinkedTree(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 	s := &Service{
-		cfg:   &config{ForkChoiceStore: doublylinkedtree.New(0, 0), BeaconDB: beaconDB},
+		cfg:   &config{ForkChoiceStore: doublylinkedtree.New(), BeaconDB: beaconDB},
 		store: &store.Store{},
 	}
 	s.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]}, [32]byte{})
@@ -595,7 +599,7 @@ func BenchmarkHasBlockForkChoiceStore_ProtoArray(b *testing.B) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(b)
 	s := &Service{
-		cfg:   &config{ForkChoiceStore: protoarray.New(0, 0, [32]byte{}), BeaconDB: beaconDB},
+		cfg:   &config{ForkChoiceStore: protoarray.New(), BeaconDB: beaconDB},
 		store: &store.Store{},
 	}
 	s.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]}, [32]byte{})
@@ -618,7 +622,7 @@ func BenchmarkHasBlockForkChoiceStore_DoublyLinkedTree(b *testing.B) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(b)
 	s := &Service{
-		cfg:   &config{ForkChoiceStore: doublylinkedtree.New(0, 0), BeaconDB: beaconDB},
+		cfg:   &config{ForkChoiceStore: doublylinkedtree.New(), BeaconDB: beaconDB},
 		store: &store.Store{},
 	}
 	s.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]}, [32]byte{})
