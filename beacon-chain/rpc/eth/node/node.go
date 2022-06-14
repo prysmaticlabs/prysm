@@ -270,12 +270,12 @@ func (ns *Server) GetSyncStatus(ctx context.Context, _ *emptypb.Empty) (*ethpb.S
 
 	headState, err := ns.HeadFetcher.HeadState(ctx)
 	if err != nil {
-		err = status.Errorf(codes.Internal, "Could not get head state: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
 
 	isOptimistic, err := rpchelpers.IsOptimistic(ctx, headState, ns.OptimisticModeFetcher)
 	if err != nil {
-		err = status.Errorf(codes.Internal, "Could not check optimistic status: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not check optimistic status: %v", err)
 	}
 
 	return &ethpb.SyncingResponse{
