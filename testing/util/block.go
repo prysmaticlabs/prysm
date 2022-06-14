@@ -562,6 +562,72 @@ func HydrateV2AltairBeaconBlockBody(b *v2.BeaconBlockBodyAltair) *v2.BeaconBlock
 	return b
 }
 
+// HydrateEIP4844SignedBeaconBloc hydrates a signed beacon block with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateEIP4844SignedBeaconBlock(b *ethpb.SignedBeaconBlockWithBlobKZGs) *ethpb.SignedBeaconBlockWithBlobKZGs {
+	if b.Signature == nil {
+		b.Signature = make([]byte, fieldparams.BLSSignatureLength)
+	}
+	b.Block = HydrateEIP4844BeaconBlock(b.Block)
+	return b
+}
+
+// HydrateEIP4844BeaconBlock hydrates a beacon block with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateEIP4844BeaconBlock(b *ethpb.BeaconBlockWithBlobKZGs) *ethpb.BeaconBlockWithBlobKZGs {
+	if b == nil {
+		b = &ethpb.BeaconBlockWithBlobKZGs{}
+	}
+	if b.ParentRoot == nil {
+		b.ParentRoot = make([]byte, fieldparams.RootLength)
+	}
+	if b.StateRoot == nil {
+		b.StateRoot = make([]byte, fieldparams.RootLength)
+	}
+	b.Body = HydrateEIP4844BeaconBlockBody(b.Body)
+	return b
+}
+
+// HydrateEIP4844BeaconBlockBody hydrates a beacon block body with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateEIP4844BeaconBlockBody(b *ethpb.BeaconBlockBodyWithBlobKZGs) *ethpb.BeaconBlockBodyWithBlobKZGs {
+	if b == nil {
+		b = &ethpb.BeaconBlockBodyWithBlobKZGs{}
+	}
+	if b.RandaoReveal == nil {
+		b.RandaoReveal = make([]byte, fieldparams.BLSSignatureLength)
+	}
+	if b.Graffiti == nil {
+		b.Graffiti = make([]byte, fieldparams.RootLength)
+	}
+	if b.Eth1Data == nil {
+		b.Eth1Data = &ethpb.Eth1Data{
+			DepositRoot: make([]byte, fieldparams.RootLength),
+			BlockHash:   make([]byte, fieldparams.RootLength),
+		}
+	}
+	if b.SyncAggregate == nil {
+		b.SyncAggregate = &ethpb.SyncAggregate{
+			SyncCommitteeBits:      make([]byte, 64),
+			SyncCommitteeSignature: make([]byte, fieldparams.BLSSignatureLength),
+		}
+	}
+	if b.ExecutionPayload == nil {
+		b.ExecutionPayload = &enginev1.ExecutionPayload{
+			ParentHash:    make([]byte, fieldparams.RootLength),
+			FeeRecipient:  make([]byte, 20),
+			StateRoot:     make([]byte, fieldparams.RootLength),
+			ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+			LogsBloom:     make([]byte, 256),
+			PrevRandao:    make([]byte, fieldparams.RootLength),
+			ExtraData:     make([]byte, fieldparams.RootLength),
+			BaseFeePerGas: make([]byte, fieldparams.RootLength),
+			BlockHash:     make([]byte, fieldparams.RootLength),
+		}
+	}
+	return b
+}
+
 // HydrateV2BellatrixSignedBeaconBlock hydrates a signed beacon block with correct field length sizes
 // to comply with fssz marshalling and unmarshalling rules.
 func HydrateV2BellatrixSignedBeaconBlock(b *v2.SignedBeaconBlockBellatrix) *v2.SignedBeaconBlockBellatrix {

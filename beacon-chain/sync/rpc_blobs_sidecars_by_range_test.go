@@ -2,14 +2,17 @@ package sync
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/kevinms/leakybucket-go"
+	"github.com/libp2p/go-libp2p-core/mux"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
@@ -100,4 +103,64 @@ func TestRPCBlobsSidecarsByRange_RPCHandlerReturnsBlobsSidecars(t *testing.T) {
 	if util.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
+}
+
+func TestSendRequest_SendBlobsSidecarsByRangeRequest(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	req := &ethpb.BlobsSidecarsByRangeRequest{
+		StartSlot: 20,
+		Count:     5,
+	}
+
+	db := db.SetupDB(t)
+	knownSidecars := make([]*ethpb.BlobsSidecar, 0)
+	for i := req.StartSlot; i < req.StartSlot.Add(req.Count); i += types.Slot(1) {
+		// Save the blocks that will be used to verify blobs later
+		blk := util.HydrateEIP4844SignedBeaconBlock(new(ethpb.SignedBeaconBlockWithBlobKZGs))
+		blk.Block.Slot = types.Slot(i)
+		wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+		require.NoError(t, err)
+		require.NoError(t, db.SaveBlock(context.Background(), wsb))
+
+		sidecar := newBlobsSidecar()
+		root, err := blk.Block.HashTreeRoot()
+		require.NoError(t, err)
+		sidecar.Message.BeaconBlockRoot = root[:]
+		sidecar.Message.BeaconBlockSlot = blk.Block.Slot
+		knownSidecars = append(knownSidecars, sidecar.Message)
+	}
+
+	blobsProvider := func(p2pProvider p2p.P2P) func(stream network.Stream) {
+		return func(stream network.Stream) {
+			defer func() {
+				assert.NoError(t, stream.Close())
+			}()
+			req := &ethpb.BlobsSidecarsByRangeRequest{}
+			assert.NoError(t, p2pProvider.Encoding().DecodeWithMaxLength(stream, req))
+
+			for i := req.StartSlot; i < req.StartSlot.Add(req.Count); i += types.Slot(1) {
+				chain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
+				idx := i - req.StartSlot
+				sidecar := knownSidecars[idx]
+				err := WriteBlobsSidecarChunk(stream, chain, p2pProvider.Encoding(), sidecar)
+				if err != nil && err.Error() != mux.ErrReset.Error() {
+					require.NoError(t, err)
+				}
+			}
+		}
+	}
+
+	p1 := p2ptest.NewTestP2P(t)
+	p2 := p2ptest.NewTestP2P(t)
+	p1.Connect(p2)
+
+	pcl := fmt.Sprintf("%s/ssz_snappy", p2p.RPCBlobsSidecarsByRangeTopicV1)
+	p2.SetStreamHandler(pcl, blobsProvider(p2))
+
+	chain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
+	sidecars, err := SendBlobsSidecarsByRangeRequest(ctx, db, chain, p1, p2.PeerID(), req)
+	assert.NoError(t, err)
+	assert.Equal(t, req.Count, uint64(len(sidecars)))
 }

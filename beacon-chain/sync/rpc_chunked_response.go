@@ -123,21 +123,13 @@ func ReadChunkedBlobsSidecar(stream libp2pcore.Stream, chain blockchain.ChainInf
 	if err != nil {
 		return nil, err
 	}
-	if len(rpcCtx) != forkDigestLength {
-		return nil, errors.Errorf("invalid digest returned, wanted a length of %d but received %d", forkDigestLength, len(rpcCtx))
+	// blobs sidecars use v1
+	if len(rpcCtx) != 0 {
+		return nil, errors.New("unexpected fork digest in stream")
 	}
-	valRoot := chain.GenesisValidatorsRoot()
-	ctxBytes, err := forks.ForkDigestFromEpoch(params.BeaconConfig().Eip4844ForkEpoch, valRoot[:])
-	if err != nil {
-		return nil, err
-	}
-	if ctxBytes == bytesutil.ToBytes4(rpcCtx) {
-		return nil, errors.New("no valid digest matched")
-	}
-
-	var blobs *pb.BlobsSidecar
-	err = p2p.Encoding().DecodeWithMaxLength(stream, blobs)
-	return blobs, err
+	sidecar := new(pb.BlobsSidecar)
+	err = p2p.Encoding().DecodeWithMaxLength(stream, sidecar)
+	return sidecar, err
 }
 
 // readFirstChunkedBlock reads the first chunked block and applies the appropriate deadlines to
