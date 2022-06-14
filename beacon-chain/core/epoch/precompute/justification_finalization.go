@@ -100,7 +100,7 @@ func weighJustificationAndFinalization(state state.BeaconState, newBits bitfield
 	return state, nil
 }
 
-// ComputeCheckpoints computes the new Justification and Finalization
+// computeCheckpoints computes the new Justification and Finalization
 // checkpoints at epoch transition
 // Spec pseudocode definition:
 // def weigh_justification_and_finalization(state: BeaconState,
