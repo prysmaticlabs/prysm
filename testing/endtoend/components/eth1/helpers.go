@@ -28,7 +28,7 @@ var _ e2etypes.MultipleComponentRunners = (*NodeSet)(nil)
 var _ e2etypes.MultipleComponentRunners = (*ProxySet)(nil)
 var _ e2etypes.ComponentRunner = (*Miner)(nil)
 var _ e2etypes.ComponentRunner = (*Node)(nil)
-var _ e2etypes.ComponentRunner = (*Proxy)(nil)
+var _ e2etypes.EngineProxy = (*Proxy)(nil)
 
 // WaitForBlocks waits for a certain amount of blocks to be mined by the ETH1 chain before returning.
 func WaitForBlocks(web3 *ethclient.Client, keystore *keystore.Key, blocksToWait uint64) error {

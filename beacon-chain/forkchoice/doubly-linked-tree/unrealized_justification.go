@@ -44,11 +44,11 @@ func (f *ForkChoice) UpdateUnrealizedCheckpoints() {
 	for _, node := range f.store.nodeByRoot {
 		node.justifiedEpoch = node.unrealizedJustifiedEpoch
 		node.finalizedEpoch = node.unrealizedFinalizedEpoch
-		if node.justifiedEpoch > f.store.justifiedEpoch {
-			f.store.justifiedEpoch = node.justifiedEpoch
+		if node.justifiedEpoch > f.store.justifiedCheckpoint.Epoch {
+			f.store.justifiedCheckpoint.Epoch = node.justifiedEpoch
 		}
-		if node.finalizedEpoch > f.store.finalizedEpoch {
-			f.store.finalizedEpoch = node.finalizedEpoch
+		if node.finalizedEpoch > f.store.finalizedCheckpoint.Epoch {
+			f.store.finalizedCheckpoint.Epoch = node.finalizedEpoch
 		}
 	}
 }

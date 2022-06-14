@@ -60,12 +60,12 @@ func (s *Store) PruneThreshold() uint64 {
 
 // head starts from justified root and then follows the best descendant links
 // to find the best block for head. This function assumes a lock on s.nodesLock
-func (s *Store) head(ctx context.Context, justifiedRoot [32]byte) ([32]byte, error) {
+func (s *Store) head(ctx context.Context) ([32]byte, error) {
 	_, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.head")
 	defer span.End()
 
 	// JustifiedRoot has to be known
-	justifiedNode, ok := s.nodeByRoot[justifiedRoot]
+	justifiedNode, ok := s.nodeByRoot[s.justifiedCheckpoint.Root]
 	if !ok || justifiedNode == nil {
 		return [32]byte{}, errUnknownJustifiedRoot
 	}
@@ -77,9 +77,9 @@ func (s *Store) head(ctx context.Context, justifiedRoot [32]byte) ([32]byte, err
 		bestDescendant = justifiedNode
 	}
 
-	if !bestDescendant.viableForHead(s.justifiedEpoch, s.finalizedEpoch) {
+	if !bestDescendant.viableForHead(s.justifiedCheckpoint.Epoch, s.finalizedCheckpoint.Epoch) {
 		return [32]byte{}, fmt.Errorf("head at slot %d with weight %d is not eligible, finalizedEpoch %d != %d, justifiedEpoch %d != %d",
-			bestDescendant.slot, bestDescendant.weight/10e9, bestDescendant.finalizedEpoch, s.finalizedEpoch, bestDescendant.justifiedEpoch, s.justifiedEpoch)
+			bestDescendant.slot, bestDescendant.weight/10e9, bestDescendant.finalizedEpoch, s.finalizedCheckpoint.Epoch, bestDescendant.justifiedEpoch, s.justifiedCheckpoint.Epoch)
 	}
 
 	// Update metrics.
@@ -134,7 +134,8 @@ func (s *Store) insert(ctx context.Context,
 		}
 	} else {
 		parent.children = append(parent.children, n)
-		if err := s.treeRootNode.updateBestDescendant(ctx, s.justifiedEpoch, s.finalizedEpoch); err != nil {
+		if err := s.treeRootNode.updateBestDescendant(ctx,
+			s.justifiedCheckpoint.Epoch, s.finalizedCheckpoint.Epoch); err != nil {
 			return err
 		}
 	}

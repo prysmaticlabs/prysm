@@ -218,7 +218,8 @@ func (s *Service) updateJustified(ctx context.Context, state state.ReadOnlyBeaco
 		}
 		s.store.SetJustifiedCheckptAndPayloadHash(cpt, h)
 		// Update forkchoice's justified checkpoint
-		if err := s.cfg.ForkChoiceStore.UpdateJustifiedCheckpoint(cpt); err != nil {
+		if err := s.cfg.ForkChoiceStore.UpdateJustifiedCheckpoint(&forkchoicetypes.Checkpoint{
+			Epoch: cpt.Epoch, Root: bytesutil.ToBytes32(cpt.Root)}); err != nil {
 			return err
 		}
 	}
@@ -244,7 +245,8 @@ func (s *Service) updateJustifiedInitSync(ctx context.Context, cp *ethpb.Checkpo
 		return err
 	}
 	s.store.SetJustifiedCheckptAndPayloadHash(cp, h)
-	return s.cfg.ForkChoiceStore.UpdateJustifiedCheckpoint(cp)
+	return s.cfg.ForkChoiceStore.UpdateJustifiedCheckpoint(&forkchoicetypes.Checkpoint{
+		Epoch: cp.Epoch, Root: bytesutil.ToBytes32(cp.Root)})
 }
 
 func (s *Service) updateFinalized(ctx context.Context, cp *ethpb.Checkpoint) error {
@@ -360,7 +362,7 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk interfa
 		return err
 	}
 	pendingNodes = append(pendingNodes, &forkchoicetypes.BlockAndCheckpoints{Block: blk,
-		JustifiedEpoch: jCheckpoint.Epoch, FinalizedEpoch: fCheckpoint.Epoch})
+		JustifiedCheckpoint: jCheckpoint, FinalizedCheckpoint: fCheckpoint})
 	// As long as parent node is not in fork choice store, and parent node is in DB.
 	root := bytesutil.ToBytes32(blk.ParentRoot())
 	for !s.cfg.ForkChoiceStore.HasNode(root) && s.cfg.BeaconDB.HasBlock(ctx, root) {
@@ -373,8 +375,8 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk interfa
 		}
 		root = bytesutil.ToBytes32(b.Block().ParentRoot())
 		args := &forkchoicetypes.BlockAndCheckpoints{Block: b.Block(),
-			JustifiedEpoch: jCheckpoint.Epoch,
-			FinalizedEpoch: fCheckpoint.Epoch}
+			JustifiedCheckpoint: jCheckpoint,
+			FinalizedCheckpoint: fCheckpoint}
 		pendingNodes = append(pendingNodes, args)
 	}
 	if len(pendingNodes) == 1 {
