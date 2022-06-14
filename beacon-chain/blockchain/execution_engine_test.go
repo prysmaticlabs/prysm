@@ -836,7 +836,7 @@ func Test_UpdateLastValidatedCheckpoint(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 	stateGen := stategen.New(beaconDB)
-	fcs := protoarray.New()
+	fcs := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stateGen),
@@ -854,9 +854,13 @@ func Test_UpdateLastValidatedCheckpoint(t *testing.T) {
 	assert.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, genesisRoot))
 	ojc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	ofc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	fjc := &forkchoicetypes.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash}
+	require.NoError(t, fcs.UpdateJustifiedCheckpoint(fjc))
+	require.NoError(t, fcs.UpdateFinalizedCheckpoint(fjc))
 	state, blkRoot, err := prepareForkchoiceState(ctx, 0, genesisRoot, params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, ojc, ofc)
 	require.NoError(t, err)
 	require.NoError(t, fcs.InsertNode(ctx, state, blkRoot))
+	fcs.SetOriginRoot(genesisRoot)
 	genesisSummary := &ethpb.StateSummary{
 		Root: genesisStateRoot[:],
 		Slot: 0,
@@ -920,7 +924,7 @@ func Test_UpdateLastValidatedCheckpoint(t *testing.T) {
 	require.NoError(t, beaconDB.SaveStateSummary(ctx, validSummary))
 	twentyjc := &ethpb.Checkpoint{Epoch: 20, Root: validRoot[:]}
 	twentyfc := &ethpb.Checkpoint{Epoch: 20, Root: validRoot[:]}
-	state, blkRoot, err = prepareForkchoiceState(ctx, 640, validRoot, params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, twentyjc, twentyfc)
+	state, blkRoot, err = prepareForkchoiceState(ctx, 640, validRoot, genesisRoot, params.BeaconConfig().ZeroHash, twentyjc, twentyfc)
 	require.NoError(t, err)
 	require.NoError(t, fcs.InsertNode(ctx, state, blkRoot))
 	require.NoError(t, fcs.SetOptimisticToValid(ctx, validRoot))

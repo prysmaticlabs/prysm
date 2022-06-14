@@ -72,4 +72,5 @@ type Setter interface {
 	UpdateJustifiedCheckpoint(*forkchoicetypes.Checkpoint) error
 	UpdateFinalizedCheckpoint(*forkchoicetypes.Checkpoint) error
 	SetGenesisTime(uint64)
+	SetOriginRoot([32]byte)
 }

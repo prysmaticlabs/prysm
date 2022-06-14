@@ -161,7 +161,12 @@ func (f *ForkChoice) updateCheckpoints(ctx context.Context, jc, fc *ethpb.Checkp
 			f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch,
 				Root: bytesutil.ToBytes32(jc.Root)}
 		} else {
-			jSlot, err := slots.EpochStart(jc.Epoch)
+			currentJcp := f.store.justifiedCheckpoint
+			currentRoot := currentJcp.Root
+			if currentRoot == params.BeaconConfig().ZeroHash {
+				currentRoot = f.store.originRoot
+			}
+			jSlot, err := slots.EpochStart(currentJcp.Epoch)
 			if err != nil {
 				return err
 			}
@@ -170,7 +175,7 @@ func (f *ForkChoice) updateCheckpoints(ctx context.Context, jc, fc *ethpb.Checkp
 			if err != nil {
 				return err
 			}
-			if root == f.store.justifiedCheckpoint.Root {
+			if root == currentRoot {
 				f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch,
 					Root: jcRoot}
 			}
@@ -441,6 +446,10 @@ func (f *ForkChoice) UpdateJustifiedCheckpoint(jc *forkchoicetypes.Checkpoint) e
 	f.store.checkpointsLock.Lock()
 	defer f.store.checkpointsLock.Unlock()
 	f.store.justifiedCheckpoint = jc
+	bj := f.store.bestJustifiedCheckpoint
+	if bj == nil || jc.Epoch > bj.Epoch {
+		f.store.bestJustifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch, Root: jc.Root}
+	}
 	return nil
 }
 
@@ -532,4 +541,9 @@ func (f *ForkChoice) InsertOptimisticChain(ctx context.Context, chain []*forkcho
 // sets the genesisTime tracked by forkchoice
 func (f *ForkChoice) SetGenesisTime(genesisTime uint64) {
 	f.store.genesisTime = genesisTime
+}
+
+// sets the genesis Block root
+func (f *ForkChoice) SetOriginRoot(root [32]byte) {
+	f.store.originRoot = root
 }

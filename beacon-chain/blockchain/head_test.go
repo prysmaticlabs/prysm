@@ -162,26 +162,6 @@ func TestCacheJustifiedStateBalances_CanCache(t *testing.T) {
 	require.DeepEqual(t, balances, state.Balances(), "Incorrect justified balances")
 }
 
-func TestUpdateHead_MissingJustifiedRoot(t *testing.T) {
-	beaconDB := testDB.SetupDB(t)
-	service := setupBeaconChain(t, beaconDB)
-
-	b := util.NewBeaconBlock()
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
-	require.NoError(t, err)
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), wsb))
-	r, err := b.Block.HashTreeRoot()
-	require.NoError(t, err)
-	state, _ := util.DeterministicGenesisState(t, 1)
-	require.NoError(t, service.cfg.BeaconDB.SaveState(context.Background(), state, r))
-
-	service.store.SetJustifiedCheckptAndPayloadHash(&ethpb.Checkpoint{Root: r[:]}, [32]byte{'a'})
-	service.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{}, [32]byte{'b'})
-	service.store.SetBestJustifiedCheckpt(&ethpb.Checkpoint{})
-	_, err = service.cfg.ForkChoiceStore.Head(context.Background(), []uint64{})
-	require.ErrorContains(t, "unknown justified root", err)
-}
-
 func Test_notifyNewHeadEvent(t *testing.T) {
 	t.Run("genesis_state_root", func(t *testing.T) {
 		bState, _ := util.DeterministicGenesisState(t, 10)

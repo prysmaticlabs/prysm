@@ -248,8 +248,7 @@ func TestService_ProcessAttestationsAndUpdateHead(t *testing.T) {
 	require.Equal(t, true, fcs.HasNode(bytesutil.ToBytes32(atts[0].Data.BeaconBlockRoot)))
 
 	// Insert a new block to forkchoice
-	ojc := &ethpb.Checkpoint{Epoch: 0, Root: service.originBlockRoot[:]}
-	ofc := &ethpb.Checkpoint{Epoch: 0, Root: service.originBlockRoot[:]}
+	ojc := &ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]}
 	b, err := util.GenerateFullBlock(genesisState, pks, util.DefaultBlockGenConfig(), 2)
 	require.NoError(t, err)
 	b.Block.ParentRoot = service.originBlockRoot[:]
@@ -258,7 +257,7 @@ func TestService_ProcessAttestationsAndUpdateHead(t *testing.T) {
 	wb, err := wrapper.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wb))
-	state, blkRoot, err := prepareForkchoiceState(ctx, 2, r, service.originBlockRoot, [32]byte{'b'}, ojc, ofc)
+	state, blkRoot, err := prepareForkchoiceState(ctx, 2, r, service.originBlockRoot, [32]byte{'b'}, ojc, ojc)
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
 	require.Equal(t, 3, fcs.NodeCount())

@@ -69,7 +69,11 @@ func (s *Store) head(ctx context.Context) ([32]byte, error) {
 	// JustifiedRoot has to be known
 	justifiedNode, ok := s.nodeByRoot[s.justifiedCheckpoint.Root]
 	if !ok || justifiedNode == nil {
-		return [32]byte{}, errUnknownJustifiedRoot
+		if s.justifiedCheckpoint.Epoch == params.BeaconConfig().GenesisEpoch {
+			justifiedNode = s.treeRootNode
+		} else {
+			return [32]byte{}, errUnknownJustifiedRoot
+		}
 	}
 
 	// If the justified node doesn't have a best descendant,

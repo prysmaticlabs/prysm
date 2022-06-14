@@ -50,7 +50,7 @@ func TestForkChoice_HasNode(t *testing.T) {
 
 func TestStore_Head_UnknownJustifiedRoot(t *testing.T) {
 	s := &Store{nodesIndices: make(map[[32]byte]uint64)}
-	s.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: 0, Root: [32]byte{'a'}}
+	s.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: 1, Root: [32]byte{'a'}}
 
 	_, err := s.head(context.Background())
 	assert.ErrorContains(t, errUnknownJustifiedRoot.Error(), err)

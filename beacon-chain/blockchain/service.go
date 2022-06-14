@@ -479,7 +479,7 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState state.Beacon
 	if err := s.cfg.ForkChoiceStore.InsertNode(ctx, genesisState, genesisBlkRoot); err != nil {
 		log.Fatalf("Could not process genesis block for fork choice: %v", err)
 	}
-
+	s.cfg.ForkChoiceStore.SetOriginRoot(genesisBlkRoot)
 	// Set genesis as fully validated
 	if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, genesisBlkRoot); err != nil {
 		return errors.Wrap(err, "Could not set optimistic status of genesis block to false")
