@@ -37,6 +37,9 @@ const PingMessageName = "/ping"
 // MetadataMessageName specifies the name for the metadata message topic.
 const MetadataMessageName = "/metadata"
 
+// BlobsSidecarsByRangeMessageName specifies the name for the blobs sidecars by range message topic.
+const BlobsSidecarsByRangeMessageName = "/blobs_sidecars_by_range"
+
 const (
 	// V1 RPC Topics
 	// RPCStatusTopicV1 defines the v1 topic for the status rpc method.
@@ -51,6 +54,8 @@ const (
 	RPCPingTopicV1 = protocolPrefix + PingMessageName + SchemaVersionV1
 	// RPCMetaDataTopicV1 defines the v1 topic for the metadata rpc method.
 	RPCMetaDataTopicV1 = protocolPrefix + MetadataMessageName + SchemaVersionV1
+	// RPCBlobsSidecarsByRangeTopicV1 defines the v1 topic for the blobs sidecars by range rpc method.
+	RPCBlobsSidecarsByRangeTopicV1 = protocolPrefix + BlobsSidecarsByRangeMessageName + SchemaVersionV1
 
 	// V2 RPC Topics
 	// RPCBlocksByRangeTopicV2 defines v2 the topic for the blocks by range rpc method.
@@ -83,6 +88,8 @@ var RPCTopicMappings = map[string]interface{}{
 	// RPC Metadata Message
 	RPCMetaDataTopicV1: new(interface{}),
 	RPCMetaDataTopicV2: new(interface{}),
+	// RPC Blobs Sidecars By Range Message
+	RPCBlobsSidecarsByRangeTopicV1: new(pb.BlobsSidecarsByRangeRequest),
 }
 
 // Maps all registered protocol prefixes.
@@ -93,12 +100,13 @@ var protocolMapping = map[string]bool{
 // Maps all the protocol message names for the different rpc
 // topics.
 var messageMapping = map[string]bool{
-	StatusMessageName:              true,
-	GoodbyeMessageName:             true,
-	BeaconBlocksByRangeMessageName: true,
-	BeaconBlocksByRootsMessageName: true,
-	PingMessageName:                true,
-	MetadataMessageName:            true,
+	StatusMessageName:               true,
+	GoodbyeMessageName:              true,
+	BeaconBlocksByRangeMessageName:  true,
+	BeaconBlocksByRootsMessageName:  true,
+	PingMessageName:                 true,
+	MetadataMessageName:             true,
+	BlobsSidecarsByRangeMessageName: true,
 }
 
 // Maps all the RPC messages which are to updated in altair.

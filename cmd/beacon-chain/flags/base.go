@@ -154,6 +154,18 @@ var (
 		Usage: "The amount of blocks the local peer is bounded to request and respond to in a batch.",
 		Value: 64,
 	}
+	// BlobsTransferRate specifies the bytes/sec transfer rate of requested blobs.
+	BlobsTransferRate = &cli.IntFlag{
+		Name:  "blobs-transfer-rate",
+		Usage: "The bytes/sec transfer rate of requested blobs.",
+		Value: 1 << 20, // 1 MiB
+	}
+	// BlobsTransferRateThresh specifies the maximum bytes per second that can be transferred.
+	BlobsTransferRateThresh = &cli.IntFlag{
+		Name:  "blobs-transfer-rate-thresh",
+		Usage: "The maximum bytes per second that can be transferred.",
+		Value: 1 << 23, // 8 MiB
+	}
 	// BlockBatchLimitBurstFactor specifies the factor by which block batch size may increase.
 	BlockBatchLimitBurstFactor = &cli.IntFlag{
 		Name:  "block-batch-limit-burst-factor",

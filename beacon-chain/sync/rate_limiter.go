@@ -36,6 +36,10 @@ func newRateLimiter(p2pProvider p2p.P2P) *limiter {
 	allowedBlocksPerSecond := float64(flags.Get().BlockBatchLimit)
 	allowedBlocksBurst := int64(flags.Get().BlockBatchLimitBurstFactor * flags.Get().BlockBatchLimit)
 
+	// Initialize blobs sidecar transfer limits.
+	blobsTransferRate := float64(flags.Get().BlobsTransferRate)
+	blobsTransferRateThresh := int64(flags.Get().BlobsTransferRateThresh)
+
 	// Set topic map for all rpc topics.
 	topicMap := make(map[string]*leakybucket.Collector, len(p2p.RPCTopicMappings))
 	// Goodbye Message
@@ -60,6 +64,9 @@ func newRateLimiter(p2pProvider p2p.P2P) *limiter {
 	// BlockByRange requests
 	topicMap[addEncoding(p2p.RPCBlocksByRangeTopicV1)] = blockCollector
 	topicMap[addEncoding(p2p.RPCBlocksByRangeTopicV2)] = blockCollectorV2
+
+	// BlobsSidecarsByRange requests
+	topicMap[addEncoding(p2p.RPCBlobsSidecarsByRangeTopicV1)] = leakybucket.NewCollector(blobsTransferRate, blobsTransferRateThresh, false /* deleteEmptyBucket */)
 
 	// General topic for all rpc requests.
 	topicMap[rpcLimiterTopic] = leakybucket.NewCollector(5, defaultBurstLimit*2, false /* deleteEmptyBuckets */)

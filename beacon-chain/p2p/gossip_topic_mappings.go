@@ -20,6 +20,7 @@ var gossipTopicMappings = map[string]proto.Message{
 	AggregateAndProofSubnetTopicFormat:        &ethpb.SignedAggregateAttestationAndProof{},
 	SyncContributionAndProofSubnetTopicFormat: &ethpb.SignedContributionAndProof{},
 	SyncCommitteeSubnetTopicFormat:            &ethpb.SyncCommitteeMessage{},
+	BlobsSubnetTopicFormat:                    &ethpb.SignedBlobsSidecar{},
 }
 
 // GossipTopicMappings is a function to return the assigned data type
@@ -62,5 +63,6 @@ func init() {
 	// Specially handle Bellatrix objects.
 	GossipTypeMapping[reflect.TypeOf(&ethpb.SignedBeaconBlockBellatrix{})] = BlockSubnetTopicFormat
 	GossipTypeMapping[reflect.TypeOf(&ethpb.SignedBlindedBeaconBlockBellatrix{})] = BlockSubnetTopicFormat
+	// Specially handle EIP4844 objects.
 	GossipTypeMapping[reflect.TypeOf(&ethpb.SignedBeaconBlockWithBlobKZGs{})] = BlockSubnetTopicFormat
 }
