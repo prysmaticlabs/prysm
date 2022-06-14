@@ -74,12 +74,10 @@ func IsOptimistic(ctx context.Context, st state.BeaconState, optimisticModeFetch
 	if err != nil {
 		return false, errors.Wrap(err, "could not get header root")
 	}
-
 	isOptimistic, err := optimisticModeFetcher.IsOptimisticForRoot(ctx, headRoot)
 	if err != nil {
 		return false, errors.Wrap(err, "could not check if block is optimistic")
 	}
-
 	return isOptimistic, nil
 }
 
