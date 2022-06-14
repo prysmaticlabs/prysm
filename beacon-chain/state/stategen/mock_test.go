@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	consensusblocks "github.com/prysmaticlabs/prysm/consensus-types/blocks"
+	consensusblockstest "github.com/prysmaticlabs/prysm/consensus-types/blocks/testing"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
@@ -246,7 +247,7 @@ func newMockHistory(t *testing.T, hist []mockHistorySpec, current types.Slot) *m
 
 		sr, err := s.HashTreeRoot(ctx)
 		require.NoError(t, err)
-		err = wrapper.SetBlockStateRoot(b, sr)
+		err = consensusblockstest.SetBlockStateRoot(b, sr)
 		require.NoError(t, err)
 
 		pr, err = b.Block().HashTreeRoot()

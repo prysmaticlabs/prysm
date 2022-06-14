@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
+	consensusblockstest "github.com/prysmaticlabs/prysm/consensus-types/blocks/testing"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -152,7 +153,7 @@ func TestDownloadWeakSubjectivityCheckpoint(t *testing.T) {
 	wRoot, err := wst.HashTreeRoot(ctx)
 	require.NoError(t, err)
 
-	require.NoError(t, wrapper.SetBlockStateRoot(b, wRoot))
+	require.NoError(t, consensusblockstest.SetBlockStateRoot(b, wRoot))
 	serBlock, err := b.MarshalSSZ()
 	require.NoError(t, err)
 	bRoot, err := b.Block().HashTreeRoot()
@@ -248,7 +249,7 @@ func TestDownloadBackwardsCompatibleCombined(t *testing.T) {
 	wRoot, err := wst.HashTreeRoot(ctx)
 	require.NoError(t, err)
 
-	require.NoError(t, wrapper.SetBlockStateRoot(b, wRoot))
+	require.NoError(t, consensusblockstest.SetBlockStateRoot(b, wRoot))
 	serBlock, err := b.MarshalSSZ()
 	require.NoError(t, err)
 	bRoot, err := b.Block().HashTreeRoot()
@@ -428,7 +429,7 @@ func TestDownloadFinalizedData(t *testing.T) {
 	sr, err := st.HashTreeRoot(ctx)
 	require.NoError(t, err)
 
-	require.NoError(t, wrapper.SetBlockStateRoot(b, sr))
+	require.NoError(t, consensusblockstest.SetBlockStateRoot(b, sr))
 	mb, err := b.MarshalSSZ()
 	require.NoError(t, err)
 	br, err := b.Block().HashTreeRoot()
