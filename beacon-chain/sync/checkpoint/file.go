@@ -3,14 +3,13 @@ package checkpoint
 import (
 	"context"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/config/params"
-	log "github.com/sirupsen/logrus"
 	"os"
-
-	"github.com/prysmaticlabs/prysm/io/file"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/io/file"
+	log "github.com/sirupsen/logrus"
 )
 
 // Initializer describes a type that is able to obtain the checkpoint sync data (BeaconState and SignedBeaconBlock)

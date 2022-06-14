@@ -2,12 +2,12 @@ package checkpoint
 
 import (
 	"context"
-	"github.com/prysmaticlabs/prysm/config/params"
-	log "github.com/sirupsen/logrus"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/api/client/beacon"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/config/params"
+	log "github.com/sirupsen/logrus"
 )
 
 // APIInitializer manages initializing the beacon node using checkpoint sync, retrieving the checkpoint state and root
