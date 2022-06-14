@@ -704,15 +704,15 @@ func TestServer_ListFeeRecipientByPubkey(t *testing.T) {
 			args: &validator_service_config.ProposerSettings{
 				ProposeConfig: map[[48]byte]*validator_service_config.ProposerOption{
 					bytesutil.ToBytes48(byteval): {
-						FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455012BFEBf6177F1D2e9738D6"),
+						FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9"),
 					},
 				},
 				DefaultConfig: &validator_service_config.ProposerOption{
-					FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455012BFEBf6177F1D2e9738D6"),
+					FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9"),
 				},
 			},
 			want: &want{
-				EthAddress: "0x046Fb65722E7b2455012BFEBf6177F1D2e9738D6",
+				EthAddress: "0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9",
 			},
 			wantErr: false,
 		},
@@ -729,7 +729,7 @@ func TestServer_ListFeeRecipientByPubkey(t *testing.T) {
 			}
 			got, err := s.ListFeeRecipientByPubkey(ctx, &ethpbservice.ByPubkeyRequest{Pubkey: byteval})
 			require.NoError(t, err)
-			assert.Equal(t, tt.want.EthAddress, hexutil.Encode(got.Data.Ethaddress))
+			assert.Equal(t, tt.want.EthAddress, common.BytesToAddress(got.Data.Ethaddress).Hex())
 		})
 	}
 }
