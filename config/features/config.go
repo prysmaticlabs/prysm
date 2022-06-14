@@ -163,6 +163,9 @@ func applySepoliaFeatureFlags(ctx *cli.Context) {
 	if err := ctx.Set(enableForkChoiceDoublyLinkedTree.Names()[0], "true"); err != nil {
 		log.WithError(err).Debug("error enabling doubly linked tree forkchoice flag")
 	}
+	if err := ctx.Set(enableNativeState.Names()[0], "true"); err != nil {
+		log.WithError(err).Debug("error enabling native state flag")
+	}
 }
 
 // ConfigureBeaconChain sets the global config based
