@@ -10,6 +10,7 @@ go_library(
         "head_sync_committee_info.go",
         "init_sync_process_block.go",
         "log.go",
+        "merge_ascii_art.go",
         "metrics.go",
         "new_slot.go",
         "options.go",

@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/network"
@@ -72,8 +73,9 @@ func New(opts ...Option) (*Proxy, error) {
 	mux.Handle("/", p)
 	addr := fmt.Sprintf("%s:%d", p.cfg.proxyHost, p.cfg.proxyPort)
 	srv := &http.Server{
-		Handler: mux,
-		Addr:    addr,
+		Handler:           mux,
+		Addr:              addr,
+		ReadHeaderTimeout: time.Second,
 	}
 	p.address = addr
 	p.srv = srv

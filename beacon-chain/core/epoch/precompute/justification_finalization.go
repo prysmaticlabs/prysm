@@ -149,14 +149,14 @@ func computeCheckpoints(state state.BeaconState, newBits bitfield.Bitvector4) (*
 	finalizedCheckpoint := state.FinalizedCheckpoint()
 
 	// If 2/3 or more of the total balance attested in the current epoch.
-	if newBits.BitAt(0) {
+	if newBits.BitAt(0) && currentEpoch >= justifiedCheckpoint.Epoch {
 		blockRoot, err := helpers.BlockRoot(state, currentEpoch)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "could not get block root for current epoch %d", currentEpoch)
 		}
 		justifiedCheckpoint.Epoch = currentEpoch
 		justifiedCheckpoint.Root = blockRoot
-	} else if newBits.BitAt(1) {
+	} else if newBits.BitAt(1) && prevEpoch >= justifiedCheckpoint.Epoch {
 		// If 2/3 or more of total balance attested in the previous epoch.
 		blockRoot, err := helpers.BlockRoot(state, prevEpoch)
 		if err != nil {
