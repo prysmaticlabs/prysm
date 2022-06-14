@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+
 	"github.com/golang/snappy"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
