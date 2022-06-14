@@ -8,9 +8,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -44,7 +44,7 @@ func ProcessBlockHeader(
 	beaconState state.BeaconState,
 	block interfaces.SignedBeaconBlock,
 ) (state.BeaconState, error) {
-	if err := wrapper.BeaconBlockIsNil(block); err != nil {
+	if err := blocks.BeaconBlockIsNil(block); err != nil {
 		return nil, err
 	}
 	bodyRoot, err := block.Block().Body().HashTreeRoot()

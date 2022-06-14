@@ -6,7 +6,7 @@ import (
 	"path"
 
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/io/file"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
@@ -34,7 +34,7 @@ func (s *Store) Backup(ctx context.Context, outputDir string, permissionOverride
 	if err != nil {
 		return err
 	}
-	if err := wrapper.BeaconBlockIsNil(head); err != nil {
+	if err := blocks.BeaconBlockIsNil(head); err != nil {
 		return err
 	}
 	// Ensure the backups directory exists.

@@ -16,9 +16,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
+	consensusblocks "github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
@@ -371,7 +371,7 @@ func isBlockQueueable(genesisTime uint64, slot types.Slot, receivedTime time.Tim
 }
 
 func getBlockFields(b interfaces.SignedBeaconBlock) logrus.Fields {
-	if wrapper.BeaconBlockIsNil(b) != nil {
+	if consensusblocks.BeaconBlockIsNil(b) != nil {
 		return logrus.Fields{}
 	}
 	return logrus.Fields{
