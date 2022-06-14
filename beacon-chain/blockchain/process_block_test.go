@@ -1696,6 +1696,7 @@ func TestOnBlock_CallNewPayloadAndForkchoiceUpdated(t *testing.T) {
 		WithForkChoiceStore(fcs),
 		WithDepositCache(depositCache),
 		WithStateNotifier(&mock.MockStateNotifier{}),
+		WithAttestationPool(attestations.NewPool()),
 	}
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
@@ -1921,6 +1922,7 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 		WithStateGen(stategen.New(beaconDB)),
 		WithForkChoiceStore(fcs),
 		WithProposerIdsCache(cache.NewProposerPayloadIDsCache()),
+		WithAttestationPool(attestations.NewPool()),
 	}
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
@@ -2103,6 +2105,7 @@ func TestOnBlock_ProcessBlocksParallel(t *testing.T) {
 		WithForkChoiceStore(fcs),
 		WithDepositCache(depositCache),
 		WithStateNotifier(&mock.MockStateNotifier{}),
+		WithAttestationPool(attestations.NewPool()),
 	}
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
