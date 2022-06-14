@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -43,6 +44,8 @@ func TestRPCBlobsSidecarsByRange_RPCHandlerReturnsBlobsSidecars(t *testing.T) {
 		Count:     4,
 	}
 
+	var blocks []interfaces.SignedBeaconBlock
+
 	for i := req.StartSlot; i < req.StartSlot.Add(req.Count); i += types.Slot(1) {
 		// save the BeaconBlock to index the slots used to retrieve sidecars
 		blk := util.NewBeaconBlock()
@@ -50,6 +53,7 @@ func TestRPCBlobsSidecarsByRange_RPCHandlerReturnsBlobsSidecars(t *testing.T) {
 		wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
 		require.NoError(t, err)
 		require.NoError(t, d.SaveBlock(context.Background(), wsb))
+		blocks = append(blocks, wsb)
 
 		sidecar := newBlobsSidecar()
 		root, err := blk.Block.HashTreeRoot()
@@ -72,6 +76,13 @@ func TestRPCBlobsSidecarsByRange_RPCHandlerReturnsBlobsSidecars(t *testing.T) {
 			expectSuccess(t, stream)
 			sidecar := new(ethpb.BlobsSidecar)
 			assert.NoError(t, r.cfg.p2p.Encoding().DecodeWithMaxLength(stream, sidecar))
+			assert.Equal(t, i, sidecar.BeaconBlockSlot)
+
+			idx := i - req.StartSlot
+			assert.Equal(t, true, int(idx) < len(blocks))
+			root, err := blocks[idx].Block().HashTreeRoot()
+			assert.NoError(t, err)
+			assert.DeepEqual(t, root[:], sidecar.BeaconBlockRoot)
 		}
 	})
 
