@@ -345,6 +345,19 @@ func (vs *Server) ProduceBlockV2(ctx context.Context, req *ethpbv1.ProduceBlockR
 			},
 		}, nil
 	}
+	eip4844Block, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Eip4844)
+	if ok {
+		block, err := migration.V1Alpha1BeaconBlockEip4844ToV2(eip4844Block.Eip4844)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
+		}
+		return &ethpbv2.ProduceBlockResponseV2{
+			Version: ethpbv2.Version_EIP4844,
+			Data: &ethpbv2.BeaconBlockContainerV2{
+				Block: &ethpbv2.BeaconBlockContainerV2_Eip4844Block{Eip4844Block: block},
+			},
+		}, nil
+	}
 	return nil, status.Error(codes.InvalidArgument, "Unsupported block type")
 }
 
@@ -415,6 +428,21 @@ func (vs *Server) ProduceBlockV2SSZ(ctx context.Context, req *ethpbv1.ProduceBlo
 			Data:    sszBlock,
 		}, nil
 	}
+	eip4844Block, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Eip4844)
+	if ok {
+		block, err := migration.V1Alpha1BeaconBlockEip4844ToV2(eip4844Block.Eip4844)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
+		}
+		sszBlock, err := block.MarshalSSZ()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not marshal block into SSZ format: %v", err)
+		}
+		return &ethpbv2.SSZContainer{
+			Version: ethpbv2.Version_EIP4844,
+			Data:    sszBlock,
+		}, nil
+	}
 	return nil, status.Error(codes.InvalidArgument, "Unsupported block type")
 }
 
@@ -477,6 +505,19 @@ func (vs *Server) ProduceBlindedBlock(ctx context.Context, req *ethpbv1.ProduceB
 			Version: ethpbv2.Version_BELLATRIX,
 			Data: &ethpbv2.BlindedBeaconBlockContainer{
 				Block: &ethpbv2.BlindedBeaconBlockContainer_BellatrixBlock{BellatrixBlock: block},
+			},
+		}, nil
+	}
+	eip4844Block, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Eip4844)
+	if ok {
+		block, err := migration.V1Alpha1BeaconBlockEip4844ToV2Blinded(eip4844Block.Eip4844)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
+		}
+		return &ethpbv2.ProduceBlindedBlockResponse{
+			Version: ethpbv2.Version_EIP4844,
+			Data: &ethpbv2.BlindedBeaconBlockContainer{
+				Block: &ethpbv2.BlindedBeaconBlockContainer_Eip4844Block{Eip4844Block: block},
 			},
 		}, nil
 	}
@@ -550,6 +591,21 @@ func (vs *Server) ProduceBlindedBlockSSZ(ctx context.Context, req *ethpbv1.Produ
 		}
 		return &ethpbv2.SSZContainer{
 			Version: ethpbv2.Version_BELLATRIX,
+			Data:    sszBlock,
+		}, nil
+	}
+	eip4844Block, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Eip4844)
+	if ok {
+		block, err := migration.V1Alpha1BeaconBlockEip4844ToV2Blinded(eip4844Block.Eip4844)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not prepare beacon block: %v", err)
+		}
+		sszBlock, err := block.MarshalSSZ()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not marshal block into SSZ format: %v", err)
+		}
+		return &ethpbv2.SSZContainer{
+			Version: ethpbv2.Version_EIP4844,
 			Data:    sszBlock,
 		}, nil
 	}

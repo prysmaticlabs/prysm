@@ -370,6 +370,9 @@ message StreamBlocksResponse {
 
         // Representing a bellatrix block.
         SignedBeaconBlockBellatrix bellatrix_block = 3;
+
+        // Representing a signed, eip4844 compatible fork beacon block.
+        SignedBeaconBlockWithBlobKZGs eip4844_block = 4;
     }
 }
 

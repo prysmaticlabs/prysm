@@ -434,6 +434,9 @@ message BeaconBlockContainer {
 
         // Representing an bellatrix block.
         SignedBeaconBlockBellatrix bellatrix_block = 5;
+
+        // Representing a signed, eip4844 compatible fork beacon block.
+        SignedBeaconBlockWithBlobKZGs eip4844_block = 6;
     }
 }
 

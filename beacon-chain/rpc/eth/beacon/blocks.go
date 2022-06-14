@@ -476,6 +476,33 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
 
+	eip4844Blk, err := blk.PbEip4844Block()
+	if err == nil {
+		if eip4844Blk == nil {
+			return nil, status.Errorf(codes.Internal, "Nil block")
+		}
+		v2Blk, err := migration.V1Alpha1BeaconBlockEip4844ToV2(eip4844Blk.Block)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
+		}
+		root, err := blk.Block().HashTreeRoot()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get block root: %v", err)
+		}
+		isOptimistic, err := bs.OptimisticModeFetcher.IsOptimisticForRoot(ctx, root)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not check if block is optimistic: %v", err)
+		}
+		return &ethpbv2.BlockResponseV2{
+			Version: ethpbv2.Version_EIP4844,
+			Data: &ethpbv2.SignedBeaconBlockContainerV2{
+				Message:   &ethpbv2.SignedBeaconBlockContainerV2_Eip4844Block{Eip4844Block: v2Blk},
+				Signature: blk.Signature(),
+			},
+			ExecutionOptimistic: isOptimistic,
+		}, nil
+	}
+
 	return nil, status.Errorf(codes.Internal, "Unknown block type %T", blk)
 }
 
@@ -553,6 +580,26 @@ func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2
 	// ErrUnsupportedBellatrixBlock means that we have another block type
 	if !errors.Is(err, wrapper.ErrUnsupportedBellatrixBlock) {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
+	}
+
+	eip4844Blk, err := blk.PbEip4844Block()
+	if err == nil {
+		if eip4844Blk == nil {
+			return nil, status.Errorf(codes.Internal, "Nil block")
+		}
+		v2Blk, err := migration.V1Alpha1BeaconBlockEip4844ToV2(eip4844Blk.Block)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
+		}
+		data := &ethpbv2.SignedBeaconBlockEip4844{
+			Message:   v2Blk,
+			Signature: blk.Signature(),
+		}
+		sszData, err := data.MarshalSSZ()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not marshal block into SSZ: %v", err)
+		}
+		return &ethpbv2.SSZContainer{Version: ethpbv2.Version_EIP4844, Data: sszData}, nil
 	}
 
 	return nil, status.Errorf(codes.Internal, "Unknown block type %T", blk)

@@ -7,9 +7,9 @@
 package eth
 
 import (
+	v11 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	github_com_prysmaticlabs_go_bitfield "github.com/prysmaticlabs/go-bitfield"
 	github_com_prysmaticlabs_prysm_consensus_types_primitives "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	v11 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	_ "github.com/prysmaticlabs/prysm/proto/eth/ext"
 	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
