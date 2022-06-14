@@ -63,6 +63,8 @@ func (s *Store) PruneThreshold() uint64 {
 func (s *Store) head(ctx context.Context) ([32]byte, error) {
 	_, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.head")
 	defer span.End()
+	s.checkpointsLock.RLock()
+	defer s.checkpointsLock.RUnlock()
 
 	// JustifiedRoot has to be known
 	justifiedNode, ok := s.nodeByRoot[s.justifiedCheckpoint.Root]

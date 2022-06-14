@@ -341,6 +341,9 @@ func (s *Store) head(ctx context.Context) ([32]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.head")
 	defer span.End()
 
+	s.checkpointsLock.RLock()
+	defer s.checkpointsLock.RUnlock()
+
 	// Justified index has to be valid in node indices map, and can not be out of bound.
 	if s.justifiedCheckpoint == nil {
 		return [32]byte{}, errInvalidNilCheckpoint
