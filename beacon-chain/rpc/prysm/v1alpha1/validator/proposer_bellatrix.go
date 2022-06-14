@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/interop"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -21,13 +22,17 @@ func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockR
 		return nil, err
 	}
 
+	// Did the user specify block builder
 	if vs.BlockBuilder.Configured() {
+		// Does the protocol allow node to use block builder to construct payload header now
 		ready, err := vs.readyForBuilder(ctx)
 		if err == nil && ready {
+			// Retrieve header from block builder and construct the head block if there's no error.
 			h, err := vs.getPayloadHeader(ctx, req.Slot, altairBlk.ProposerIndex)
 			if err == nil {
 				return vs.buildHeaderBlock(ctx, altairBlk, h)
 			}
+			// If there's an error at retrieving header, default back to using local EE.
 			log.WithError(err).Warning("Could not construct block using the header from builders, using local execution engine instead")
 		}
 		if err != nil {
