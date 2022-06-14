@@ -573,7 +573,7 @@ func (r *testRunner) executeProvidedEvaluators(currentEpoch uint64, conns []*grp
 // After the proxy has been sending `SYNCING` responses to the beacon node, we
 // will test this with our optimistic sync evaluator to ensure everything works
 // as expected.
-func (r *testRunner) multiScenarioMulticlient(epoch uint64, _ []*grpc.ClientConn) bool {
+func (r *testRunner) multiScenarioMulticlient(epoch uint64, conns []*grpc.ClientConn) bool {
 	switch epoch {
 	case 9:
 		require.NoError(r.t, r.comHandler.beaconNodes.PauseAtIndex(0))
@@ -665,7 +665,7 @@ func (r *testRunner) eeOffline(epoch uint64, _ []*grpc.ClientConn) bool {
 // After the proxy has been sending `SYNCING` responses to the beacon node, we
 // will test this with our optimistic sync evaluator to ensure everything works
 // as expected.
-func (r *testRunner) multiScenario(epoch uint64, _ []*grpc.ClientConn) bool {
+func (r *testRunner) multiScenario(epoch uint64, conns []*grpc.ClientConn) bool {
 	switch epoch {
 	case 9:
 		require.NoError(r.t, r.comHandler.beaconNodes.PauseAtIndex(0))
