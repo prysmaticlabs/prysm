@@ -85,7 +85,9 @@ func TestSaveHead_Different(t *testing.T) {
 	cachedRoot, err := service.HeadRoot(context.Background())
 	require.NoError(t, err)
 	assert.DeepEqual(t, cachedRoot, newRoot[:], "Head did not change")
-	pb, err := service.headBlock().Proto()
+	headBlock, err := service.headBlock()
+	require.NoError(t, err)
+	pb, err := headBlock.Proto()
 	require.NoError(t, err)
 	assert.DeepEqual(t, newHeadSignedBlock, pb, "Head did not change")
 	assert.DeepSSZEqual(t, headState.CloneInnerState(), service.headState(ctx).CloneInnerState(), "Head did not change")
@@ -141,7 +143,9 @@ func TestSaveHead_Different_Reorg(t *testing.T) {
 	if !bytes.Equal(cachedRoot, newRoot[:]) {
 		t.Error("Head did not change")
 	}
-	pb, err := service.headBlock().Proto()
+	headBlock, err := service.headBlock()
+	require.NoError(t, err)
+	pb, err := headBlock.Proto()
 	require.NoError(t, err)
 	assert.DeepEqual(t, newHeadSignedBlock, pb, "Head did not change")
 	assert.DeepSSZEqual(t, headState.CloneInnerState(), service.headState(ctx).CloneInnerState(), "Head did not change")

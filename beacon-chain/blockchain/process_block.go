@@ -746,12 +746,17 @@ func (s *Service) fillMissingPayloadIDRoutine(ctx context.Context, stateFeed *ev
 				_, id, has := s.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(s.CurrentSlot() + 1)
 				// There exists proposer for next slot, but we haven't called fcu w/ payload attribute yet.
 				if has && id == [8]byte{} {
-					if _, err := s.notifyForkchoiceUpdate(ctx, &notifyForkchoiceUpdateArg{
-						headState: s.headState(ctx),
-						headRoot:  s.headRoot(),
-						headBlock: s.headBlock().Block(),
-					}); err != nil {
-						log.WithError(err).Error("Could not prepare payload on empty ID")
+					headBlock, err := s.headBlock()
+					if err != nil {
+						log.WithError(err).Error("Could not get head block")
+					} else {
+						if _, err := s.notifyForkchoiceUpdate(ctx, &notifyForkchoiceUpdateArg{
+							headState: s.headState(ctx),
+							headRoot:  s.headRoot(),
+							headBlock: headBlock.Block(),
+						}); err != nil {
+							log.WithError(err).Error("Could not prepare payload on empty ID")
+						}
 					}
 					missedPayloadIDFilledCount.Inc()
 				}

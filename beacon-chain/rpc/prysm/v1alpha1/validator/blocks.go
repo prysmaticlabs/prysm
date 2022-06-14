@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -56,21 +57,33 @@ func sendVerifiedBlocks(stream ethpb.BeaconNodeValidator_StreamBlocksAltairServe
 	b := &ethpb.StreamBlocksResponse{}
 	switch data.SignedBlock.Version() {
 	case version.Phase0:
-		phBlk, ok := data.SignedBlock.Proto().(*ethpb.SignedBeaconBlock)
+		pb, err := data.SignedBlock.Proto()
+		if err != nil {
+			return errors.Wrap(err, "could not get protobuf block")
+		}
+		phBlk, ok := pb.(*ethpb.SignedBeaconBlock)
 		if !ok {
 			log.Warn("Mismatch between version and block type, was expecting SignedBeaconBlock")
 			return nil
 		}
 		b.Block = &ethpb.StreamBlocksResponse_Phase0Block{Phase0Block: phBlk}
 	case version.Altair:
-		phBlk, ok := data.SignedBlock.Proto().(*ethpb.SignedBeaconBlockAltair)
+		pb, err := data.SignedBlock.Proto()
+		if err != nil {
+			return errors.Wrap(err, "could not get protobuf block")
+		}
+		phBlk, ok := pb.(*ethpb.SignedBeaconBlockAltair)
 		if !ok {
 			log.Warn("Mismatch between version and block type, was expecting SignedBeaconBlockAltair")
 			return nil
 		}
 		b.Block = &ethpb.StreamBlocksResponse_AltairBlock{AltairBlock: phBlk}
 	case version.Bellatrix:
-		phBlk, ok := data.SignedBlock.Proto().(*ethpb.SignedBeaconBlockBellatrix)
+		pb, err := data.SignedBlock.Proto()
+		if err != nil {
+			return errors.Wrap(err, "could not get protobuf block")
+		}
+		phBlk, ok := pb.(*ethpb.SignedBeaconBlockBellatrix)
 		if !ok {
 			log.Warn("Mismatch between version and block type, was expecting SignedBeaconBlockBellatrix")
 			return nil
@@ -111,7 +124,11 @@ func (vs *Server) sendBlocks(stream ethpb.BeaconNodeValidator_StreamBlocksAltair
 		return nil
 	}
 	b := &ethpb.StreamBlocksResponse{}
-	switch p := data.SignedBlock.Proto().(type) {
+	pb, err := data.SignedBlock.Proto()
+	if err != nil {
+		return errors.Wrap(err, "could not get protobuf block")
+	}
+	switch p := pb.(type) {
 	case *ethpb.SignedBeaconBlock:
 		b.Block = &ethpb.StreamBlocksResponse_Phase0Block{Phase0Block: p}
 	case *ethpb.SignedBeaconBlockAltair:
