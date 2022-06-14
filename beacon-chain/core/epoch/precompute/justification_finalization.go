@@ -25,7 +25,7 @@ func UnrealizedCheckpoints(st state.BeaconState) (*ethpb.Checkpoint, *ethpb.Chec
 	}
 
 	justification := processJustificationBits(st, activeBalance, prevTarget, currentTarget)
-	return ComputeCheckpoints(st, justification)
+	return computeCheckpoints(st, justification)
 }
 
 // ProcessJustificationAndFinalizationPreCompute processes justification and finalization during
@@ -77,7 +77,7 @@ func processJustificationBits(state state.BeaconState, totalActiveBalance, prevE
 // updateJustificationAndFinalization processes justification and finalization during
 // epoch processing. This is where a beacon node can justify and finalize a new epoch.
 func weighJustificationAndFinalization(state state.BeaconState, newBits bitfield.Bitvector4) (state.BeaconState, error) {
-	jc, fc, err := ComputeCheckpoints(state, newBits)
+	jc, fc, err := computeCheckpoints(state, newBits)
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +100,7 @@ func weighJustificationAndFinalization(state state.BeaconState, newBits bitfield
 	return state, nil
 }
 
-// ComputeCheckpoints computes the new Justification and Finalization
+// computeCheckpoints computes the new Justification and Finalization
 // checkpoints at epoch transition
 // Spec pseudocode definition:
 // def weigh_justification_and_finalization(state: BeaconState,
@@ -139,7 +139,7 @@ func weighJustificationAndFinalization(state state.BeaconState, newBits bitfield
 //    # The 1st/2nd most recent epochs are justified, the 1st using the 2nd as source
 //    if all(bits[0:2]) and old_current_justified_checkpoint.epoch + 1 == current_epoch:
 //        state.finalized_checkpoint = old_current_justified_checkpoint
-func ComputeCheckpoints(state state.BeaconState, newBits bitfield.Bitvector4) (*ethpb.Checkpoint, *ethpb.Checkpoint, error) {
+func computeCheckpoints(state state.BeaconState, newBits bitfield.Bitvector4) (*ethpb.Checkpoint, *ethpb.Checkpoint, error) {
 	prevEpoch := time.PrevEpoch(state)
 	currentEpoch := time.CurrentEpoch(state)
 	oldPrevJustifiedCheckpoint := state.PreviousJustifiedCheckpoint()
