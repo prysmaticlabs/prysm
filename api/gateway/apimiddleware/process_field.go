@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/wealdtech/go-bytesutil"
@@ -97,6 +98,20 @@ func base64ToHexProcessor(v reflect.Value) error {
 		return err
 	}
 	v.SetString(hexutil.Encode(b))
+	return nil
+}
+
+func base64ToChecksumAddressProcessor(v reflect.Value) error {
+	if v.String() == "" {
+		// Empty hex values are represented as "0x".
+		v.SetString("0x")
+		return nil
+	}
+	b, err := base64.StdEncoding.DecodeString(v.String())
+	if err != nil {
+		return err
+	}
+	v.SetString(common.BytesToAddress(b).Hex())
 	return nil
 }
 

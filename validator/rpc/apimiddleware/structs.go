@@ -69,7 +69,7 @@ type deleteRemoteKeysResponseJson struct {
 
 type feeRecipientJson struct {
 	Pubkey     string `json:"pubkey" hex:"true"`
-	Ethaddress string `json:"ethaddress" hex:"true"`
+	Ethaddress string `json:"ethaddress" address:"true"`
 }
 
 type getFeeRecipientByPubkeyResponseJson struct {
