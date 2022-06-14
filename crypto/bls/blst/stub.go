@@ -1,6 +1,4 @@
 //go:build blst_disabled
-// +build blst_disabled
-
 package blst
 
 import (
