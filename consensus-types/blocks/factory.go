@@ -17,8 +17,8 @@ var (
 	// errUnsupportedBeaconBlockBody is returned when the struct type is not a supported beacon block body
 	// type.
 	errUnsupportedBeaconBlockBody = errors.New("unsupported beacon block body")
-	// ErrNilObjectWrapped is returned in a constructor when the underlying object is nil.
-	ErrNilObjectWrapped     = errors.New("attempted to wrap nil object")
+	// ErrNilObject is returned in a constructor when the underlying object is nil.
+	ErrNilObject            = errors.New("received nil object")
 	errNilSignedBeaconBlock = errors.New("signed beacon block can't be nil")
 	errNilBeaconBlock       = errors.New("beacon block can't be nil")
 	errNilBeaconBlockBody   = errors.New("beacon block body can't be nil")
@@ -27,6 +27,8 @@ var (
 // NewSignedBeaconBlock creates a signed beacon block from a protobuf signed beacon block.
 func NewSignedBeaconBlock(i interface{}) (interfaces.SignedBeaconBlock, error) {
 	switch b := i.(type) {
+	case nil:
+		return nil, ErrNilObject
 	case *eth.GenericSignedBeaconBlock_Phase0:
 		return initSignedBlockFromProtoPhase0(b.Phase0)
 	case *eth.SignedBeaconBlock:
@@ -43,8 +45,6 @@ func NewSignedBeaconBlock(i interface{}) (interfaces.SignedBeaconBlock, error) {
 		return initBlindedSignedBlockFromProtoBellatrix(b.BlindedBellatrix)
 	case *eth.SignedBlindedBeaconBlockBellatrix:
 		return initBlindedSignedBlockFromProtoBellatrix(b)
-	case nil:
-		return nil, ErrNilObjectWrapped
 	default:
 		return nil, errors.Wrapf(ErrUnsupportedSignedBeaconBlock, "unable to create block from type %T", i)
 	}
@@ -53,6 +53,8 @@ func NewSignedBeaconBlock(i interface{}) (interfaces.SignedBeaconBlock, error) {
 // NewBeaconBlock creates a beacon block from a protobuf beacon block.
 func NewBeaconBlock(i interface{}) (interfaces.BeaconBlock, error) {
 	switch b := i.(type) {
+	case nil:
+		return nil, ErrNilObject
 	case *eth.GenericBeaconBlock_Phase0:
 		return initBlockFromProtoPhase0(b.Phase0)
 	case *eth.BeaconBlock:
@@ -69,8 +71,6 @@ func NewBeaconBlock(i interface{}) (interfaces.BeaconBlock, error) {
 		return initBlindedBlockFromProtoBellatrix(b.BlindedBellatrix)
 	case *eth.BlindedBeaconBlockBellatrix:
 		return initBlindedBlockFromProtoBellatrix(b)
-	case nil:
-		return nil, ErrNilObjectWrapped
 	default:
 		return nil, errors.Wrapf(errUnsupportedBeaconBlock, "unable to create block from type %T", i)
 	}
@@ -79,6 +79,8 @@ func NewBeaconBlock(i interface{}) (interfaces.BeaconBlock, error) {
 // NewBeaconBlockBody creates a beacon block body from a protobuf beacon block body.
 func NewBeaconBlockBody(i interface{}) (interfaces.BeaconBlockBody, error) {
 	switch b := i.(type) {
+	case nil:
+		return nil, ErrNilObject
 	case *eth.BeaconBlockBody:
 		return initBlockBodyFromProtoPhase0(b)
 	case *eth.BeaconBlockBodyAltair:
@@ -87,8 +89,6 @@ func NewBeaconBlockBody(i interface{}) (interfaces.BeaconBlockBody, error) {
 		return initBlockBodyFromProtoBellatrix(b)
 	case *eth.BlindedBeaconBlockBodyBellatrix:
 		return initBlindedBlockBodyFromProtoBellatrix(b)
-	case nil:
-		return nil, ErrNilObjectWrapped
 	default:
 		return nil, errors.Wrapf(errUnsupportedBeaconBlockBody, "unable to create block body from type %T", i)
 	}

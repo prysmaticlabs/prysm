@@ -11,8 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/runtime/version"
 )
 
-// TODO: Remove IsNil() methods
-
 // BeaconBlockIsNil checks if any composite field of input signed beacon block is nil.
 // Access to these nil fields will result in run time panic,
 // it is recommended to run these checks as first line of defense.
@@ -41,7 +39,7 @@ func (b *SignedBeaconBlock) Block() interfaces.BeaconBlock {
 
 // IsNil checks if the underlying beacon block is nil.
 func (b *SignedBeaconBlock) IsNil() bool {
-	return b.block.IsNil()
+	return b == nil || b.block.IsNil()
 }
 
 // Copy performs a deep copy of the signed beacon block object.
@@ -316,7 +314,7 @@ func (b *BeaconBlock) Body() interfaces.BeaconBlockBody {
 
 // IsNil checks if the beacon block is nil.
 func (b *BeaconBlock) IsNil() bool {
-	return b.Body().IsNil()
+	return b == nil || b.Body().IsNil()
 }
 
 // IsBlinded checks if the beacon block is a blinded block.
@@ -516,7 +514,7 @@ func (b *BeaconBlock) AsSignRequestObject() (validatorpb.SignRequestObject, erro
 
 // IsNil checks if the block body is nil.
 func (b *BeaconBlockBody) IsNil() bool {
-	return false
+	return b == nil
 }
 
 // RandaoReveal returns the randao reveal from the block body.
