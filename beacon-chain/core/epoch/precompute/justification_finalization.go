@@ -25,7 +25,7 @@ func UnrealizedCheckpoints(st state.BeaconState) (*ethpb.Checkpoint, *ethpb.Chec
 	}
 
 	justification := processJustificationBits(st, activeBalance, prevTarget, currentTarget)
-	return ComputeCheckpoints(st, justification)
+	return computeCheckpoints(st, justification)
 }
 
 // ProcessJustificationAndFinalizationPreCompute processes justification and finalization during
@@ -99,8 +99,6 @@ func weighJustificationAndFinalization(state state.BeaconState, newBits bitfield
 	}
 	return state, nil
 }
-
-var ComputeCheckpoints = computeCheckpoints // For test only.
 
 // ComputeCheckpoints computes the new Justification and Finalization
 // checkpoints at epoch transition
