@@ -1,5 +1,4 @@
 //go:build fuzz && go1.18
-// +build fuzz,go1.18
 
 package ssz_test
 
