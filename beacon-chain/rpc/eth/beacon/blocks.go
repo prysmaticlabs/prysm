@@ -17,7 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/encoding/ssz/detect"
 	"github.com/prysmaticlabs/prysm/network/forks"
@@ -421,8 +420,8 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 			ExecutionOptimistic: false,
 		}, nil
 	}
-	// ErrUnsupportedPhase0Block means that we have another block type
-	if !errors.Is(err, wrapper.ErrUnsupportedPhase0Block) {
+	// ErrUnsupportedGetter means that we have another block type
+	if !errors.Is(err, blocks.ErrUnsupportedGetter) {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
 
@@ -444,8 +443,8 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 			ExecutionOptimistic: false,
 		}, nil
 	}
-	// ErrUnsupportedAltairBlock means that we have another block type
-	if !errors.Is(err, wrapper.ErrUnsupportedAltairBlock) {
+	// ErrUnsupportedGetter means that we have another block type
+	if !errors.Is(err, blocks.ErrUnsupportedGetter) {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
 
@@ -475,8 +474,8 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 			ExecutionOptimistic: isOptimistic,
 		}, nil
 	}
-	// ErrUnsupportedBellatrixBlock means that we have another block type
-	if !errors.Is(err, wrapper.ErrUnsupportedBellatrixBlock) {
+	// ErrUnsupportedGetter means that we have another block type
+	if !errors.Is(err, blocks.ErrUnsupportedGetter) {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
 
@@ -506,8 +505,8 @@ func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2
 		}
 		return &ethpbv2.SSZContainer{Version: ethpbv2.Version_PHASE0, Data: sszBlock}, nil
 	}
-	// ErrUnsupportedPhase0Block means that we have another block type
-	if !errors.Is(err, wrapper.ErrUnsupportedPhase0Block) {
+	// ErrUnsupportedGetter means that we have another block type
+	if !errors.Is(err, blocks.ErrUnsupportedGetter) {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
 
@@ -530,8 +529,8 @@ func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2
 		}
 		return &ethpbv2.SSZContainer{Version: ethpbv2.Version_ALTAIR, Data: sszData}, nil
 	}
-	// ErrUnsupportedAltairBlock means that we have another block type
-	if !errors.Is(err, wrapper.ErrUnsupportedAltairBlock) {
+	// ErrUnsupportedGetter means that we have another block type
+	if !errors.Is(err, blocks.ErrUnsupportedGetter) {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
 
@@ -554,8 +553,8 @@ func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2
 		}
 		return &ethpbv2.SSZContainer{Version: ethpbv2.Version_BELLATRIX, Data: sszData}, nil
 	}
-	// ErrUnsupportedBellatrixBlock means that we have another block type
-	if !errors.Is(err, wrapper.ErrUnsupportedBellatrixBlock) {
+	// ErrUnsupportedGetter means that we have another block type
+	if !errors.Is(err, blocks.ErrUnsupportedGetter) {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
 
@@ -662,7 +661,7 @@ func (bs *Server) ListBlockAttestations(ctx context.Context, req *ethpbv1.BlockR
 	}
 
 	_, err = blk.PbPhase0Block()
-	if err != nil && !errors.Is(err, wrapper.ErrUnsupportedPhase0Block) {
+	if err != nil && !errors.Is(err, blocks.ErrUnsupportedGetter) {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
 	if err == nil {
@@ -677,7 +676,7 @@ func (bs *Server) ListBlockAttestations(ctx context.Context, req *ethpbv1.BlockR
 	}
 
 	altairBlk, err := blk.PbAltairBlock()
-	if err != nil && !errors.Is(err, wrapper.ErrUnsupportedAltairBlock) {
+	if err != nil && !errors.Is(err, blocks.ErrUnsupportedGetter) {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
 	if err == nil {
@@ -695,7 +694,7 @@ func (bs *Server) ListBlockAttestations(ctx context.Context, req *ethpbv1.BlockR
 	}
 
 	bellatrixBlock, err := blk.PbBellatrixBlock()
-	if err != nil && !errors.Is(err, wrapper.ErrUnsupportedBellatrixBlock) {
+	if err != nil && !errors.Is(err, blocks.ErrUnsupportedGetter) {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
 	if err == nil {

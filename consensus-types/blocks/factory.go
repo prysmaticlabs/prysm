@@ -18,8 +18,9 @@ var (
 	// type.
 	errUnsupportedBeaconBlockBody = errors.New("unsupported beacon block body")
 	// ErrNilObject is returned in a constructor when the underlying object is nil.
-	ErrNilObject            = errors.New("received nil object")
-	errNilSignedBeaconBlock = errors.New("signed beacon block can't be nil")
+	ErrNilObject = errors.New("received nil object")
+	// ErrNilSignedBeaconBlock is returned when a nil signed beacon block is received.
+	ErrNilSignedBeaconBlock = errors.New("signed beacon block can't be nil")
 	errNilBeaconBlock       = errors.New("beacon block can't be nil")
 	errNilBeaconBlockBody   = errors.New("beacon block body can't be nil")
 )

@@ -7,9 +7,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/forks/bellatrix"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -67,7 +67,7 @@ func IsExecutionBlock(body interfaces.BeaconBlockBody) (bool, error) {
 	}
 	payload, err := body.ExecutionPayload()
 	switch {
-	case errors.Is(err, wrapper.ErrUnsupportedField):
+	case errors.Is(err, blocks.ErrUnsupportedGetter):
 		return false, nil
 	case err != nil:
 		return false, err

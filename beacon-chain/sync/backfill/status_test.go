@@ -235,7 +235,7 @@ func TestReload(t *testing.T) {
 					return nil, nil
 				},
 			},
-			err: wrapper.ErrNilSignedBeaconBlock,
+			err: blocks.ErrNilSignedBeaconBlock,
 		},
 		{
 			name: "origin root found, block error",
@@ -298,7 +298,7 @@ func TestReload(t *testing.T) {
 				},
 				backfillBlockRoot: goodBlockRoot(backfillRoot),
 			},
-			err: wrapper.ErrNilSignedBeaconBlock,
+			err: blocks.ErrNilSignedBeaconBlock,
 		},
 		{
 			name: "origin root found, block found, backfill root found, backfill block random err",
