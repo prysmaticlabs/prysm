@@ -30,7 +30,7 @@ func TestValidateSync(t *testing.T) {
 			Slot:  &headSlot,
 			State: st,
 		}
-		err = ValidateSync(ctx, syncChecker, chainService, chainService)
+		err = ValidateSync(ctx, syncChecker, chainService, chainService, chainService)
 		require.NotNil(t, err)
 		sts, ok := grpc.ServerTransportStreamFromContext(ctx).(*runtime.ServerTransportStream)
 		require.Equal(t, true, ok, "type assertion failed")
@@ -39,7 +39,7 @@ func TestValidateSync(t *testing.T) {
 		require.Equal(t, true, ok, "could not retrieve custom error metadata value")
 		assert.DeepEqual(
 			t,
-			[]string{"{\"sync_details\":{\"head_slot\":\"50\",\"sync_distance\":\"50\",\"is_syncing\":true}}"},
+			[]string{"{\"sync_details\":{\"head_slot\":\"50\",\"sync_distance\":\"50\",\"is_syncing\":true,\"is_optimistic\":false}}"},
 			v,
 		)
 	})
@@ -47,7 +47,15 @@ func TestValidateSync(t *testing.T) {
 		syncChecker := &syncmock.Sync{
 			IsSyncing: false,
 		}
-		err := ValidateSync(ctx, syncChecker, nil, nil)
+		headSlot := types.Slot(100)
+		st, err := util.NewBeaconState()
+		require.NoError(t, err)
+		require.NoError(t, st.SetSlot(50))
+		chainService := &chainmock.ChainService{
+			Slot:  &headSlot,
+			State: st,
+		}
+		err = ValidateSync(ctx, syncChecker, nil, nil, chainService)
 		require.NoError(t, err)
 	})
 }
