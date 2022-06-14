@@ -123,13 +123,15 @@ func configureTestnet(ctx *cli.Context) error {
 		if err := params.SetActive(params.RopstenConfig().Copy()); err != nil {
 			return err
 		}
-		if err := ctx.Set(enableVecHTR.Names()[0], "true"); err != nil {
-			log.WithError(err).Debug("error enabling vectorized HTR flag")
-		}
-		if err := ctx.Set(enableForkChoiceDoublyLinkedTree.Names()[0], "true"); err != nil {
-			log.WithError(err).Debug("error enabling doubly linked tree forkchoice flag")
-		}
+		applyRopstenFeatureFlags(ctx)
 		params.UseRopstenNetworkConfig()
+	} else if ctx.Bool(SepoliaTestnet.Name) {
+		log.Warn("Running on the Sepolia Beacon Chain Testnet")
+		if err := params.SetActive(params.SepoliaConfig().Copy()); err != nil {
+			return err
+		}
+		applySepoliaFeatureFlags(ctx)
+		params.UseSepoliaNetworkConfig()
 	} else {
 		if ctx.IsSet(cmd.ChainConfigFileFlag.Name) {
 			log.Warn("Running on custom Ethereum network specified in a chain configuration yaml file")
@@ -141,6 +143,26 @@ func configureTestnet(ctx *cli.Context) error {
 		}
 	}
 	return nil
+}
+
+// Insert feature flags within the function to be enabled for Ropsten testnet.
+func applyRopstenFeatureFlags(ctx *cli.Context) {
+	if err := ctx.Set(enableVecHTR.Names()[0], "true"); err != nil {
+		log.WithError(err).Debug("error enabling vectorized HTR flag")
+	}
+	if err := ctx.Set(enableForkChoiceDoublyLinkedTree.Names()[0], "true"); err != nil {
+		log.WithError(err).Debug("error enabling doubly linked tree forkchoice flag")
+	}
+}
+
+// Insert feature flags within the function to be enabled for Sepolia testnet.
+func applySepoliaFeatureFlags(ctx *cli.Context) {
+	if err := ctx.Set(enableVecHTR.Names()[0], "true"); err != nil {
+		log.WithError(err).Debug("error enabling vectorized HTR flag")
+	}
+	if err := ctx.Set(enableForkChoiceDoublyLinkedTree.Names()[0], "true"); err != nil {
+		log.WithError(err).Debug("error enabling doubly linked tree forkchoice flag")
+	}
 }
 
 // ConfigureBeaconChain sets the global config based

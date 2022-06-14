@@ -1,5 +1,4 @@
 //go:build !minimal
-// +build !minimal
 
 package state_native
 
