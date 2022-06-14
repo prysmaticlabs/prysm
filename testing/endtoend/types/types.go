@@ -19,7 +19,7 @@ func WithExtraEpochs(extra uint64) E2EConfigOpt {
 
 func WithEpochs(e uint64) E2EConfigOpt {
 	return func(cfg *E2EConfig) {
-		cfg.ExtraEpochs = e
+		cfg.EpochsToRun = e
 	}
 }
 
