@@ -569,7 +569,7 @@ func (r *testRunner) executeProvidedEvaluators(currentEpoch uint64, conns []*grp
 // After 1 epoch we will then attempt to bring it online again.
 //
 //
-// 3) Then we will start testing optimistic sync by engaging our engine proxy.
+// 2) Then we will start testing optimistic sync by engaging our engine proxy.
 // After the proxy has been sending `SYNCING` responses to the beacon node, we
 // will test this with our optimistic sync evaluator to ensure everything works
 // as expected.
