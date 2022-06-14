@@ -17,6 +17,11 @@ var (
 		Name:  "ropsten",
 		Usage: "Run Prysm configured for the Ropsten beacon chain test network",
 	}
+	// SepoliaTestnet flag for the multiclient Ethereum consensus testnet.
+	SepoliaTestnet = &cli.BoolFlag{
+		Name:  "sepolia",
+		Usage: "Run Prysm configured for the Sepolia beacon chain test network",
+	}
 	// Mainnet flag for easier tooling, no-op
 	Mainnet = &cli.BoolFlag{
 		Value: true,
