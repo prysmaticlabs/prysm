@@ -285,7 +285,6 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 	if deploymentBlock > currentBlockNum {
 		currentBlockNum = deploymentBlock
 	}
-	// To store all blocks.
 	rawLogCount, err := s.depositContractCaller.GetDepositCount(&bind.CallOpts{})
 	if err != nil {
 		return err

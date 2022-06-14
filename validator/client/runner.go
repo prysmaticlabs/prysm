@@ -60,8 +60,7 @@ func run(ctx context.Context, v iface.Validator) {
 	}
 	for {
 		var slotCtx context.Context
-		var cancel context.CancelFunc
-		slotCtx, cancel = context.WithCancel(ctx)
+		_, cancel := context.WithCancel(ctx)
 		ctx, span := trace.StartSpan(ctx, "validator.processSlot")
 
 		select {
