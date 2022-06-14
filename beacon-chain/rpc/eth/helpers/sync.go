@@ -15,7 +15,13 @@ import (
 
 // ValidateSync checks whether the node is currently syncing and returns an error if it is.
 // It also appends syncing info to gRPC headers.
-func ValidateSync(ctx context.Context, syncChecker sync.Checker, headFetcher blockchain.HeadFetcher, timeFetcher blockchain.TimeFetcher, optimisticModeFetcher blockchain.OptimisticModeFetcher) error {
+func ValidateSync(
+	ctx context.Context,
+	syncChecker sync.Checker,
+	headFetcher blockchain.HeadFetcher,
+	timeFetcher blockchain.TimeFetcher,
+	optimisticModeFetcher blockchain.OptimisticModeFetcher,
+) error {
 	if !syncChecker.Syncing() {
 		return nil
 	}
@@ -26,13 +32,13 @@ func ValidateSync(ctx context.Context, syncChecker sync.Checker, headFetcher blo
 	if err != nil {
 		return status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
-	isOptimistic, err = IsOptimistic(ctx, headState, optimisticModeFetcher) // opModeFetcher comes from param
+	isOptimistic, err = IsOptimistic(ctx, headState, optimisticModeFetcher)
 	if err != nil {
 		return status.Errorf(codes.Internal, "Could not check optimistic status: %v", err)
 	}
 
 	syncDetailsContainer := &syncDetailsContainer{
-		SyncDetails: &syncDetailsJson{
+		SyncDetails: &SyncDetailsJson{
 			HeadSlot:     strconv.FormatUint(uint64(headSlot), 10),
 			SyncDistance: strconv.FormatUint(uint64(timeFetcher.CurrentSlot()-headSlot), 10),
 			IsSyncing:    true,
@@ -71,7 +77,8 @@ func IsOptimistic(ctx context.Context, st state.BeaconState, optimisticModeFetch
 	return isOptimistic, nil
 }
 
-type syncDetailsJson struct {
+// SyncDetailsJson contains information about node sync status.
+type SyncDetailsJson struct {
 	HeadSlot     string `json:"head_slot"`
 	SyncDistance string `json:"sync_distance"`
 	IsSyncing    bool   `json:"is_syncing"`
@@ -80,5 +87,5 @@ type syncDetailsJson struct {
 
 // SyncDetailsContainer is a wrapper for SyncDetails.
 type syncDetailsContainer struct {
-	SyncDetails *syncDetailsJson `json:"sync_details"`
+	SyncDetails *SyncDetailsJson `json:"sync_details"`
 }

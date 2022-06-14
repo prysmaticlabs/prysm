@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/prysmaticlabs/prysm/api/gateway/apimiddleware"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 )
 
@@ -198,7 +199,7 @@ type versionResponseJson struct {
 
 // syncingResponseJson is used in /node/syncing API endpoint.
 type syncingResponseJson struct {
-	Data *syncDetailsJson `json:"data"`
+	Data *helpers.SyncDetailsJson `json:"data"`
 }
 
 // beaconStateResponseJson is used in /debug/beacon/states/{state_id} API endpoint.
@@ -926,22 +927,10 @@ type singleIndexedVerificationFailureJson struct {
 
 type nodeSyncDetailsErrorJson struct {
 	apimiddleware.DefaultErrorJson
-	SyncDetails syncDetailsJson `json:"sync_details"`
+	SyncDetails helpers.SyncDetailsJson `json:"sync_details"`
 }
 
 type eventErrorJson struct {
 	StatusCode int    `json:"status_code"`
 	Message    string `json:"message"`
-}
-
-// ---------------
-// Sync status checking and errors.
-// ---------------
-
-// todo: remove duplication between this and beacon-chain/rpc/eth/helpers/sync.go
-type syncDetailsJson struct {
-	HeadSlot     string `json:"head_slot"`
-	SyncDistance string `json:"sync_distance"`
-	IsSyncing    bool   `json:"is_syncing"`
-	IsOptimistic bool   `json:"is_optimistic"`
 }
