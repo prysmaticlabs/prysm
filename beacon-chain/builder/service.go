@@ -113,7 +113,7 @@ func (s *Service) RegisterValidator(ctx context.Context, reg *ethpb.SignedValida
 	if !exists {
 		return nil // If the pubkey is not found, it is not a validator. Do nothing.
 	}
-	if err := s.c.RegisterValidator(ctx, reg); err != nil {
+	if err := s.c.RegisterValidator(ctx, []*ethpb.SignedValidatorRegistrationV1{reg}); err != nil {
 		return errors.Wrap(err, "could not register validator")
 	}
 
