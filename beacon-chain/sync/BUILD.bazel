@@ -137,6 +137,7 @@ go_test(
         "rate_limiter_test.go",
         "rpc_beacon_blocks_by_range_test.go",
         "rpc_beacon_blocks_by_root_test.go",
+        "rpc_blobs_sidecars_by_range_test.go",
         "rpc_chunked_response_test.go",
         "rpc_goodbye_test.go",
         "rpc_metadata_test.go",
