@@ -1,7 +1,7 @@
 package builder
 
 import (
-	"context"
+	context "context"
 	"time"
 
 	"github.com/pkg/errors"
@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/network"
 	v1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -20,7 +21,7 @@ import (
 type BlockBuilder interface {
 	SubmitBlindedBlock(ctx context.Context, block *ethpb.SignedBlindedBeaconBlockBellatrix) (*v1.ExecutionPayload, error)
 	GetHeader(ctx context.Context, slot types.Slot, parentHash [32]byte, pubKey [48]byte) (*ethpb.SignedBuilderBid, error)
-	Status(ctx context.Context) error
+	Status() error
 	RegisterValidator(ctx context.Context, reg *ethpb.SignedValidatorRegistrationV1) error
 	Configured() bool
 }
@@ -34,13 +35,20 @@ type config struct {
 
 // Service defines a service that provides a client for interacting with the beacon chain and MEV relay network.
 type Service struct {
-	cfg *config
-	c   *builder.Client
+	cfg    *config
+	c      *builder.Client
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
 // NewService instantiates a new service.
 func NewService(ctx context.Context, opts ...Option) (*Service, error) {
-	s := &Service{}
+	ctx, cancel := context.WithCancel(ctx)
+	s := &Service{
+		ctx:    ctx,
+		cancel: cancel,
+		cfg:    &config{},
+	}
 	for _, opt := range opts {
 		if err := opt(s); err != nil {
 			return nil, err
@@ -52,6 +60,7 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 			return nil, err
 		}
 		s.c = c
+		log.Infof("Builder configured with end point: %s", s.cfg.builderEndpoint.Url)
 	}
 	return s, nil
 }
@@ -94,7 +103,8 @@ func (s *Service) GetHeader(ctx context.Context, slot types.Slot, parentHash [32
 }
 
 // Status retrieves the status of the builder relay network.
-func (s *Service) Status(ctx context.Context) error {
+func (s *Service) Status() error {
+	ctx := context.Background()
 	ctx, span := trace.StartSpan(ctx, "builder.Status")
 	defer span.End()
 	start := time.Now()

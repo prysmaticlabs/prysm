@@ -970,6 +970,7 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 	if err != nil {
 		return err
 	}
+
 	if len(feeRecipients) == 0 {
 		log.Warnf("no valid validator indices were found, prepare beacon proposer request fee recipients array is empty")
 		return nil
@@ -1038,14 +1039,15 @@ func (v *validator) buildProposerSettingsRequests(ctx context.Context, pubkeys [
 				FeeRecipient:   feeRecipient[:],
 			})
 		}
+
 		registerValidatorRequests = append(registerValidatorRequests, &ethpb.ValidatorRegistrationV1{
-			FeeRecipient: feeRecipient[:],
+			FeeRecipient: bytesutil.SafeCopyBytes(feeRecipient[:]),
 			GasLimit:     gasLimit,
 			Timestamp:    uint64(time.Now().UTC().Unix()),
-			Pubkey:       key[:],
+			Pubkey:       bytesutil.SafeCopyBytes(key[:]),
 		})
-
 	}
+
 	return validatorToFeeRecipients, registerValidatorRequests, nil
 }
 

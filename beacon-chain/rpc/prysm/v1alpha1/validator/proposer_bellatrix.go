@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/interop"
 	"github.com/prysmaticlabs/prysm/config/params"
+	coreBlock "github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
@@ -23,7 +24,7 @@ func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockR
 	}
 
 	// Did the user specify block builder
-	if vs.BlockBuilder.Configured() {
+	if vs.BlockBuilder != nil && vs.BlockBuilder.Configured() {
 		// Does the protocol allow node to use block builder to construct payload header now
 		ready, err := vs.readyForBuilder(ctx)
 		if err == nil && ready {
@@ -89,15 +90,21 @@ func (vs *Server) readyForBuilder(ctx context.Context) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+	if bytesutil.ToBytes32(cp.Root) == params.BeaconConfig().ZeroHash {
+		return false, nil
+	}
 	b, err := vs.BeaconDB.Block(ctx, bytesutil.ToBytes32(cp.Root))
 	if err != nil {
+		return false, err
+	}
+	if err := coreBlock.BeaconBlockIsNil(b); err != nil {
 		return false, err
 	}
 	return blocks.IsExecutionBlock(b.Block().Body())
 }
 
 func (vs *Server) getPayloadHeader(ctx context.Context, slot types.Slot, idx types.ValidatorIndex) (*ethpb.ExecutionPayloadHeader, error) {
-	if err := vs.BlockBuilder.Status(ctx); err != nil {
+	if err := vs.BlockBuilder.Status(); err != nil {
 		return nil, err
 	}
 	b, err := vs.HeadFetcher.HeadBlock(ctx)
@@ -162,7 +169,7 @@ func (vs *Server) getBuilderBlock(ctx context.Context, b interfaces.SignedBeacon
 	if !vs.BlockBuilder.Configured() {
 		return b, nil
 	}
-	if err := vs.BlockBuilder.Status(ctx); err != nil {
+	if err := vs.BlockBuilder.Status(); err != nil {
 		return nil, err
 	}
 	agg, err := b.Block().Body().SyncAggregate()

@@ -186,7 +186,6 @@ func (s *Service) Start() {
 	}
 	withCache := stategen.WithCache(stateCache)
 	ch := stategen.NewCanonicalHistory(s.cfg.BeaconDB, s.cfg.ChainInfoFetcher, s.cfg.ChainInfoFetcher, withCache)
-
 	validatorServer := &validatorv1alpha1.Server{
 		Ctx:                    s.ctx,
 		AttestationCache:       cache.NewAttestationCache(),

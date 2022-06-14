@@ -195,8 +195,11 @@ func (vs *Server) computeStateRoot(ctx context.Context, block interfaces.SignedB
 
 // SubmitValidatorRegistration submits validator registration.
 func (vs *Server) SubmitValidatorRegistration(ctx context.Context, reg *ethpb.SignedValidatorRegistrationV1) (*emptypb.Empty, error) {
+	if vs.BlockBuilder == nil || !vs.BlockBuilder.Configured() {
+		return &emptypb.Empty{}, nil
+	}
 	if err := vs.BlockBuilder.RegisterValidator(ctx, reg); err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Could not register block builder: %v", err)
 	}
-	return nil, nil
+	return &emptypb.Empty{}, nil
 }

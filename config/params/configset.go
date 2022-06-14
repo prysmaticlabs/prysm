@@ -68,9 +68,9 @@ func (r *configset) add(c *BeaconChainConfig) error {
 	}
 	c.InitializeForkSchedule()
 	for v := range c.ForkVersionSchedule {
-		if n, exists := r.versionToName[v]; exists {
-			return errors.Wrapf(errCollisionFork, "config name=%s conflicts with existing config named=%s", name, n)
-		}
+		//if n, exists := r.versionToName[v]; exists {
+		//	return errors.Wrapf(errCollisionFork, "config name=%s conflicts with existing config named=%s", name, n)
+		//}
 		r.versionToName[v] = name
 	}
 	r.nameToConfig[name] = c

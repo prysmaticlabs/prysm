@@ -248,6 +248,11 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 		return nil, err
 	}
 
+	log.Debugln("Registering builder service")
+	if err := beacon.registerBuilderService(); err != nil {
+		return nil, err
+	}
+
 	log.Debugln("Registering RPC Service")
 	if err := beacon.registerRPCService(); err != nil {
 		return nil, err
@@ -568,6 +573,14 @@ func (b *BeaconNode) fetchP2P() p2p.P2P {
 	return p
 }
 
+func (b *BeaconNode) fetchBuilderService() *builder.Service {
+	var s *builder.Service
+	if err := b.services.FetchService(&s); err != nil {
+		panic(err)
+	}
+	return s
+}
+
 func (b *BeaconNode) registerAttestationPool() error {
 	s, err := attestations.NewService(b.ctx, &attestations.Config{
 		Pool: b.attestationPool,
@@ -827,6 +840,7 @@ func (b *BeaconNode) registerRPCService() error {
 		MaxMsgSize:              maxMsgSize,
 		ProposerIdsCache:        b.proposerIdsCache,
 		ExecutionEngineCaller:   web3Service,
+		BlockBuilder:            b.fetchBuilderService(),
 	})
 
 	return b.services.RegisterService(rpcService)
@@ -965,6 +979,20 @@ func (b *BeaconNode) registerValidatorMonitorService() error {
 		HeadFetcher:         chainService,
 	}
 	svc, err := monitor.NewService(b.ctx, monitorConfig, tracked)
+	if err != nil {
+		return err
+	}
+	return b.services.RegisterService(svc)
+}
+
+func (b *BeaconNode) registerBuilderService() error {
+	var chainService *blockchain.Service
+	if err := b.services.FetchService(&chainService); err != nil {
+		return err
+	}
+
+	opts := append(b.serviceFlagOpts.builderOpts, builder.WithHeadFetcher(chainService))
+	svc, err := builder.NewService(b.ctx, opts...)
 	if err != nil {
 		return err
 	}
