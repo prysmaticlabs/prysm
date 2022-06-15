@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/prysmaticlabs/prysm/api/gateway/apimiddleware"
+	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 )
 
@@ -198,7 +199,7 @@ type versionResponseJson struct {
 
 // syncingResponseJson is used in /node/syncing API endpoint.
 type syncingResponseJson struct {
-	Data *syncInfoJson `json:"data"`
+	Data *helpers.SyncDetailsJson `json:"data"`
 }
 
 // beaconStateResponseJson is used in /debug/beacon/states/{state_id} API endpoint.
@@ -775,12 +776,6 @@ type depositContractJson struct {
 	Address string `json:"address"`
 }
 
-type syncInfoJson struct {
-	HeadSlot     string `json:"head_slot"`
-	SyncDistance string `json:"sync_distance"`
-	IsSyncing    bool   `json:"is_syncing"`
-}
-
 type attesterDutyJson struct {
 	Pubkey                  string `json:"pubkey" hex:"true"`
 	ValidatorIndex          string `json:"validator_index"`
@@ -932,16 +927,10 @@ type singleIndexedVerificationFailureJson struct {
 
 type nodeSyncDetailsErrorJson struct {
 	apimiddleware.DefaultErrorJson
-	SyncDetails syncDetails `json:"sync_details"`
+	SyncDetails helpers.SyncDetailsJson `json:"sync_details"`
 }
 
 type eventErrorJson struct {
 	StatusCode int    `json:"status_code"`
 	Message    string `json:"message"`
-}
-
-type syncDetails struct {
-	HeadSlot     string `json:"head_slot"`
-	SyncDistance string `json:"sync_distance"`
-	IsSyncing    bool   `json:"is_syncing"`
 }
