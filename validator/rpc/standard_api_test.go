@@ -738,7 +738,7 @@ func TestServer_ListFeeRecipientByPubkey(t *testing.T) {
 			s := &Server{
 				validatorService: vs,
 			}
-			got, err := s.ListFeeRecipientByPubkey(ctx, &ethpbservice.ByPubkeyRequest{Pubkey: byteval})
+			got, err := s.ListFeeRecipientByPubkey(ctx, &ethpbservice.PubkeyRequest{Pubkey: byteval})
 			require.NoError(t, err)
 			assert.Equal(t, tt.want.EthAddress, common.BytesToAddress(got.Data.Ethaddress).Hex())
 		})
@@ -825,7 +825,7 @@ func TestServer_DeleteFeeRecipientByPubkey(t *testing.T) {
 			s := &Server{
 				validatorService: vs,
 			}
-			_, err = s.DeleteFeeRecipientByPubkey(ctx, &ethpbservice.ByPubkeyRequest{Pubkey: byteval})
+			_, err = s.DeleteFeeRecipientByPubkey(ctx, &ethpbservice.PubkeyRequest{Pubkey: byteval})
 			require.NoError(t, err)
 			assert.Equal(t, tt.want.EthAddress, s.validatorService.ProposerSettings.ProposeConfig[bytesutil.ToBytes48(byteval)].FeeRecipient.Hex())
 		})
