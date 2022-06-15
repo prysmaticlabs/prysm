@@ -285,6 +285,8 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 	if deploymentBlock > currentBlockNum {
 		currentBlockNum = deploymentBlock
 	}
+	// To store all blocks.
+	headersMap := make(map[uint64]*gethTypes.Header)
 	rawLogCount, err := s.depositContractCaller.GetDepositCount(&bind.CallOpts{})
 	if err != nil {
 		return err
@@ -300,7 +302,7 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 	additiveFactor := uint64(float64(batchSize) * additiveFactorMultiplier)
 
 	for currentBlockNum < latestFollowHeight {
-		if err = s.processBlockInBatch(ctx, &currentBlockNum, latestFollowHeight, &batchSize, additiveFactor, logCount); err != nil {
+		if err = s.processBlockInBatch(ctx, &currentBlockNum, latestFollowHeight, &batchSize, additiveFactor, logCount, headersMap); err != nil {
 			return err
 		}
 	}
@@ -340,10 +342,9 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 	return nil
 }
 
-func (s *Service) processBlockInBatch(ctx context.Context, currentBlockNum *uint64, latestFollowHeight uint64, batchSize *uint64, additiveFactor uint64, logCount uint64) error {
+func (s *Service) processBlockInBatch(ctx context.Context, currentBlockNum *uint64, latestFollowHeight uint64, batchSize *uint64, additiveFactor uint64, logCount uint64, headersMap map[uint64]*gethTypes.Header) error {
 	// Batch request the desired headers and store them in a
 	// map for quick access.
-	headersMap := make(map[uint64]*gethTypes.Header)
 	requestHeaders := func(startBlk uint64, endBlk uint64) error {
 		headers, err := s.batchRequestHeaders(startBlk, endBlk)
 		if err != nil {
