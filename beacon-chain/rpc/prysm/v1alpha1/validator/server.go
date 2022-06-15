@@ -5,6 +5,7 @@ package validator
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/pkg/errors"
@@ -137,6 +138,10 @@ func (vs *Server) DomainData(_ context.Context, request *ethpb.DomainRequest) (*
 		return nil, err
 	}
 	headGenesisValidatorsRoot := vs.HeadFetcher.HeadGenesisValidatorsRoot()
+	fmt.Println("genesis validator root")
+	fmt.Println(fmt.Sprintf("%#x", headGenesisValidatorsRoot))
+	fmt.Println("bellatrix fork version")
+	fmt.Println(fmt.Sprintf("%#x", params.BeaconConfig().BellatrixForkVersion))
 	dv, err := signing.Domain(fork, request.Epoch, bytesutil.ToBytes4(request.Domain), headGenesisValidatorsRoot[:])
 	if err != nil {
 		return nil, err

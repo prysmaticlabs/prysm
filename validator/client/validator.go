@@ -385,7 +385,7 @@ func (v *validator) checkAndLogValidatorStatus(statuses []*validatorStatus) bool
 		}
 		switch status.status.Status {
 		case ethpb.ValidatorStatus_UNKNOWN_STATUS:
-			log.Info("Waiting for deposit to be observed by beacon node")
+			validatorActivated = true
 		case ethpb.ValidatorStatus_DEPOSITED:
 			if status.status.PositionInActivationQueue != 0 {
 				log.WithField(
@@ -983,7 +983,7 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 	log.Infoln("Successfully prepared beacon proposer with fee recipient to validator index mapping.")
 
 	if err := SubmitValidatorRegistration(ctx, v.validatorClient, v.node, km.Sign, registerValidatorRequests); err != nil {
-		return nil
+		return err
 	}
 	log.Infoln("Successfully submitted builder validator registration settings for custom builders.")
 	return nil

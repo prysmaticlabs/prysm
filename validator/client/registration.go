@@ -62,24 +62,13 @@ func signValidatorRegistration(
 	signer signingFunc,
 	reg *ethpb.ValidatorRegistrationV1,
 ) ([]byte, error) {
-	//req := &ethpb.DomainRequest{
-	//	Epoch:  slots.ToEpoch(slot),
-	//	Domain: params.BeaconConfig().DomainApplicationBuilder[:],
-	//}
 
-	//domain, err := validatorClient.DomainData(ctx, req)
-	//if err != nil {
-	//	return nil, errors.Wrap(err, domainDataErr)
-	//}
-	//if domain == nil {
-	//	return nil, errors.New(domainDataErr)
-	//}
-
-	domain, err := signing.ComputeDomain(params.BeaconConfig().DomainApplicationBuilder, []byte{0}, nil)
+	d, err := signing.ComputeDomain(params.BeaconConfig().DomainApplicationBuilder, nil, nil)
 	if err != nil {
 		return nil, err
 	}
-	r, err := signing.ComputeSigningRoot(reg, domain)
+
+	r, err := signing.ComputeSigningRoot(reg, d)
 	if err != nil {
 		return nil, errors.Wrap(err, signingRootErr)
 	}
@@ -87,7 +76,7 @@ func signValidatorRegistration(
 	sig, err := signer(ctx, &validatorpb.SignRequest{
 		PublicKey:       reg.Pubkey,
 		SigningRoot:     r[:],
-		SignatureDomain: domain,
+		SignatureDomain: d,
 		Object:          &validatorpb.SignRequest_Registration{Registration: reg},
 	})
 	if err != nil {
