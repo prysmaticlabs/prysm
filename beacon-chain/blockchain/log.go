@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -78,5 +80,32 @@ func logBlockSyncStatus(block interfaces.BeaconBlock, blockRoot [32]byte, justif
 		"finalizedEpoch": finalized.Epoch,
 		"finalizedRoot":  fmt.Sprintf("0x%s...", hex.EncodeToString(finalized.Root)[:8]),
 	}).Info("Synced new block")
+	return nil
+}
+
+// logs payload related data every slot.
+func logPayload(block interfaces.BeaconBlock) error {
+	isExecutionBlk, err := blocks.IsExecutionBlock(block.Body())
+	if err != nil {
+		return errors.Wrap(err, "could not determine if block is execution block")
+	}
+	if !isExecutionBlk {
+		return nil
+	}
+	payload, err := block.Body().ExecutionPayload()
+	if err != nil {
+		return err
+	}
+	if payload.GasLimit == 0 {
+		return errors.New("gas limit should not be 0")
+	}
+	gasUtilized := float64(payload.GasUsed) / float64(payload.GasLimit)
+
+	log.WithFields(logrus.Fields{
+		"blockHash":   fmt.Sprintf("%#x", bytesutil.Trunc(payload.BlockHash)),
+		"parentHash":  fmt.Sprintf("%#x", bytesutil.Trunc(payload.ParentHash)),
+		"blockNumber": payload.BlockNumber,
+		"gasUtilized": fmt.Sprintf("%.2f", gasUtilized),
+	}).Debug("Synced new payload")
 	return nil
 }
