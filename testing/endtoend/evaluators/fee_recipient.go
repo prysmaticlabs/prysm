@@ -49,5 +49,20 @@ func feeRecipientIsPresent(conns ...*grpc.ClientConn) error {
 	if !isFeeRecipientPresent {
 		return errors.New("fee recipient is not set")
 	}
+
+	//rpcclient, err := rpc.DialHTTP(fmt.Sprintf("http://127.0.0.1:%d", e2e.TestParams.Ports.Eth1RPCPort))
+	//if err != nil {
+	//	return err
+	//}
+	//defer rpcclient.Close()
+	//web3 := ethclient.NewClient(rpcclient)
+	//ctx := context.Background()
+	//latestBlockNum, _ := web3.BlockNumber(ctx)
+	//account := common.Address{1}
+	//accountBalance, _ := web3.BalanceAt(ctx, account, big.NewInt(int64(latestBlockNum)))
+	//
+	//if accountBalance.Uint64() < prevAccountBalance {
+	//
+	//}
 	return nil
 }
