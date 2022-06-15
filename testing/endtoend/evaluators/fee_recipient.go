@@ -73,11 +73,11 @@ func feeRecipientIsPresent(conns ...*grpc.ClientConn) error {
 		if err != nil {
 			return err
 		}
-		accountBalance, err := web3.BalanceAt(ctx, account, big.NewInt(int64(latestBlockNum)))
+		accountBalance, err := web3.BalanceAt(ctx, account, big.NewInt(0).SetUint64(latestBlockNum))
 		if err != nil {
 			return err
 		}
-		prevAccountBalance, err := web3.BalanceAt(ctx, account, big.NewInt(int64(latestBlockNum)-int64(1)))
+		prevAccountBalance, err := web3.BalanceAt(ctx, account, big.NewInt(0).SetUint64(latestBlockNum-1))
 		if err != nil {
 			return err
 		}
