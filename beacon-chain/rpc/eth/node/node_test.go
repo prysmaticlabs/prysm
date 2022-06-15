@@ -167,20 +167,22 @@ func TestSyncStatus(t *testing.T) {
 	require.NoError(t, err)
 	err = state.SetSlot(100)
 	require.NoError(t, err)
-	chainService := &mock.ChainService{Slot: currentSlot, State: state}
+	chainService := &mock.ChainService{Slot: currentSlot, State: state, Optimistic: true}
 	syncChecker := &syncmock.Sync{}
 	syncChecker.IsSyncing = true
 
 	s := &Server{
-		HeadFetcher:        chainService,
-		GenesisTimeFetcher: chainService,
-		SyncChecker:        syncChecker,
+		HeadFetcher:           chainService,
+		GenesisTimeFetcher:    chainService,
+		OptimisticModeFetcher: chainService,
+		SyncChecker:           syncChecker,
 	}
 	resp, err := s.GetSyncStatus(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 	assert.Equal(t, types.Slot(100), resp.Data.HeadSlot)
 	assert.Equal(t, types.Slot(10), resp.Data.SyncDistance)
 	assert.Equal(t, true, resp.Data.IsSyncing)
+	assert.Equal(t, true, resp.Data.IsOptimistic)
 }
 
 func TestGetPeer(t *testing.T) {
