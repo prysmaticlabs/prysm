@@ -71,11 +71,15 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.SignedBeaco
 
 	// Log block sync status.
 	if err := logBlockSyncStatus(blockCopy.Block(), blockRoot, justified, finalized, receivedTime, uint64(s.genesisTime.Unix())); err != nil {
-		return err
+		log.WithError(err).Error("Unable to log block sync status")
+	}
+	// Log payload data
+	if err := logPayload(blockCopy.Block()); err != nil {
+		log.WithError(err).Error("Unable to log debug block payload data")
 	}
 	// Log state transition data.
 	if err := logStateTransitionData(blockCopy.Block()); err != nil {
-		return err
+		log.WithError(err).Error("Unable to log state transition data")
 	}
 
 	return nil
