@@ -302,7 +302,8 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 	additiveFactor := uint64(float64(batchSize) * additiveFactorMultiplier)
 
 	for currentBlockNum < latestFollowHeight {
-		if err = s.processBlockInBatch(ctx, &currentBlockNum, latestFollowHeight, &batchSize, additiveFactor, logCount, headersMap); err != nil {
+		currentBlockNum, batchSize, err = s.processBlockInBatch(ctx, currentBlockNum, latestFollowHeight, batchSize, additiveFactor, logCount, headersMap)
+		if err != nil {
 			return err
 		}
 	}
@@ -342,7 +343,7 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 	return nil
 }
 
-func (s *Service) processBlockInBatch(ctx context.Context, currentBlockNum *uint64, latestFollowHeight uint64, batchSize *uint64, additiveFactor uint64, logCount uint64, headersMap map[uint64]*gethTypes.Header) error {
+func (s *Service) processBlockInBatch(ctx context.Context, currentBlockNum uint64, latestFollowHeight uint64, batchSize uint64, additiveFactor uint64, logCount uint64, headersMap map[uint64]*gethTypes.Header) (uint64, uint64, error) {
 	// Batch request the desired headers and store them in a
 	// map for quick access.
 	requestHeaders := func(startBlk uint64, endBlk uint64) error {
@@ -358,8 +359,8 @@ func (s *Service) processBlockInBatch(ctx context.Context, currentBlockNum *uint
 		return nil
 	}
 
-	start := *currentBlockNum
-	end := *currentBlockNum + *batchSize
+	start := currentBlockNum
+	end := currentBlockNum + batchSize
 	// Appropriately bound the request, as we do not
 	// want request blocks beyond the current follow distance.
 	if end > latestFollowHeight {
@@ -384,52 +385,52 @@ func (s *Service) processBlockInBatch(ctx context.Context, currentBlockNum *uint
 	logs, err := s.httpLogger.FilterLogs(ctx, query)
 	if err != nil {
 		if tooMuchDataRequestedError(err) {
-			if *batchSize == 0 {
-				return errors.New("batch size is zero")
+			if batchSize == 0 {
+				return 0, 0, errors.New("batch size is zero")
 			}
 
 			// multiplicative decrease
-			*batchSize /= multiplicativeDecreaseDivisor
-			return nil
+			batchSize /= multiplicativeDecreaseDivisor
+			return currentBlockNum, batchSize, nil
 		}
-		return err
+		return 0, 0, err
 	}
 	// Only request headers before chainstart to correctly determine
 	// genesis.
 	if !s.chainStartData.Chainstarted {
 		if err := requestHeaders(start, end); err != nil {
-			return err
+			return 0, 0, err
 		}
 	}
 
 	for _, filterLog := range logs {
-		if filterLog.BlockNumber > *currentBlockNum {
-			if err := s.checkHeaderRange(ctx, *currentBlockNum, filterLog.BlockNumber-1, headersMap, requestHeaders); err != nil {
-				return err
+		if filterLog.BlockNumber > currentBlockNum {
+			if err := s.checkHeaderRange(ctx, currentBlockNum, filterLog.BlockNumber-1, headersMap, requestHeaders); err != nil {
+				return 0, 0, err
 			}
 			// set new block number after checking for chainstart for previous block.
 			s.latestEth1DataLock.Lock()
-			s.latestEth1Data.LastRequestedBlock = *currentBlockNum
+			s.latestEth1Data.LastRequestedBlock = currentBlockNum
 			s.latestEth1DataLock.Unlock()
-			*currentBlockNum = filterLog.BlockNumber
+			currentBlockNum = filterLog.BlockNumber
 		}
 		if err := s.ProcessLog(ctx, filterLog); err != nil {
-			return err
+			return 0, 0, err
 		}
 	}
-	if err := s.checkHeaderRange(ctx, *currentBlockNum, end, headersMap, requestHeaders); err != nil {
-		return err
+	if err := s.checkHeaderRange(ctx, currentBlockNum, end, headersMap, requestHeaders); err != nil {
+		return 0, 0, err
 	}
-	*currentBlockNum = end
+	currentBlockNum = end
 
-	if *batchSize < s.cfg.eth1HeaderReqLimit {
+	if batchSize < s.cfg.eth1HeaderReqLimit {
 		// update the batchSize with additive increase
-		*batchSize += additiveFactor
-		if *batchSize > s.cfg.eth1HeaderReqLimit {
-			*batchSize = s.cfg.eth1HeaderReqLimit
+		batchSize += additiveFactor
+		if batchSize > s.cfg.eth1HeaderReqLimit {
+			batchSize = s.cfg.eth1HeaderReqLimit
 		}
 	}
-	return nil
+	return currentBlockNum, batchSize, nil
 }
 
 // requestBatchedHeadersAndLogs requests and processes all the headers and
