@@ -35,7 +35,7 @@ type ProposerOption struct {
 	GasLimit     uint64
 }
 
-//DefaultProposerOption returns a Proposer Option with defaults filled
+// DefaultProposerOption returns a Proposer Option with defaults filled
 func DefaultProposerOption() ProposerOption {
 	return ProposerOption{
 		FeeRecipient: params.BeaconConfig().DefaultFeeRecipient,
