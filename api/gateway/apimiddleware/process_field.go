@@ -31,26 +31,26 @@ func processField(s interface{}, processors []fieldProcessor) error {
 			sliceElem := t.Field(i).Type.Elem()
 			kind := sliceElem.Kind()
 			// Recursively process slices to struct pointers.
-			if kind == reflect.Ptr && sliceElem.Elem().Kind() == reflect.Struct {
+			switch {
+			case kind == reflect.Ptr && sliceElem.Elem().Kind() == reflect.Struct:
 				for j := 0; j < v.Field(i).Len(); j++ {
 					if err := processField(v.Field(i).Index(j).Interface(), processors); err != nil {
 						return errors.Wrapf(err, "could not process field '%s'", t.Field(i).Name)
 					}
 				}
-			}
 			// Process each string in string slices.
-			if kind == reflect.String {
+			case kind == reflect.String:
 				for _, proc := range processors {
 					_, hasTag := t.Field(i).Tag.Lookup(proc.tag)
-					if hasTag {
-						for j := 0; j < v.Field(i).Len(); j++ {
-							if err := proc.f(v.Field(i).Index(j)); err != nil {
-								return errors.Wrapf(err, "could not process field '%s'", t.Field(i).Name)
-							}
+					if !hasTag {
+						continue
+					}
+					for j := 0; j < v.Field(i).Len(); j++ {
+						if err := proc.f(v.Field(i).Index(j)); err != nil {
+							return errors.Wrapf(err, "could not process field '%s'", t.Field(i).Name)
 						}
 					}
 				}
-
 			}
 		// Recursively process struct pointers.
 		case reflect.Ptr:
