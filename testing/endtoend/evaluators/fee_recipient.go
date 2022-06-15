@@ -2,12 +2,19 @@ package evaluators
 
 import (
 	"context"
+	"fmt"
+	"math/big"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
+	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/policies"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/types"
 	"google.golang.org/grpc"
@@ -32,6 +39,19 @@ func feeRecipientIsPresent(conns ...*grpc.ClientConn) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to list blocks")
 	}
+
+	rpcclient, err := rpc.DialHTTP(fmt.Sprintf("http://127.0.0.1:%d", e2e.TestParams.Ports.Eth1RPCPort))
+	if err != nil {
+		return err
+	}
+	defer rpcclient.Close()
+	web3 := ethclient.NewClient(rpcclient)
+	ctx := context.Background()
+	latestBlockNum, err := web3.BlockNumber(ctx)
+	if err != nil {
+		return err
+	}
+	var account common.Address
 	// check if fee recipient is set
 	isFeeRecipientPresent := false
 	for _, ctr := range blks.BlockContainers {
@@ -40,6 +60,7 @@ func feeRecipientIsPresent(conns ...*grpc.ClientConn) error {
 			fr := ctr.GetBellatrixBlock().Block.Body.ExecutionPayload.FeeRecipient
 			if len(fr) != 0 && hexutil.Encode(fr) != params.BeaconConfig().EthBurnAddressHex {
 				isFeeRecipientPresent = true
+				account = common.BytesToAddress(fr)
 			}
 		}
 		if isFeeRecipientPresent {
@@ -50,19 +71,19 @@ func feeRecipientIsPresent(conns ...*grpc.ClientConn) error {
 		return errors.New("fee recipient is not set")
 	}
 
-	//rpcclient, err := rpc.DialHTTP(fmt.Sprintf("http://127.0.0.1:%d", e2e.TestParams.Ports.Eth1RPCPort))
-	//if err != nil {
-	//	return err
-	//}
-	//defer rpcclient.Close()
-	//web3 := ethclient.NewClient(rpcclient)
-	//ctx := context.Background()
-	//latestBlockNum, _ := web3.BlockNumber(ctx)
-	//account := common.Address{1}
-	//accountBalance, _ := web3.BalanceAt(ctx, account, big.NewInt(int64(latestBlockNum)))
-	//
-	//if accountBalance.Uint64() < prevAccountBalance {
-	//
-	//}
+	if !bytesutil.ZeroRoot(account.Bytes()) {
+		accountBalance, err := web3.BalanceAt(ctx, account, big.NewInt(int64(latestBlockNum)))
+		if err != nil {
+			return err
+		}
+		prevAccountBalance, err := web3.BalanceAt(ctx, account, big.NewInt(int64(latestBlockNum-1)))
+		if err != nil {
+			return err
+		}
+		if accountBalance.Uint64() <= prevAccountBalance.Uint64() {
+			return errors.Errorf("account balance didn't change after applying fee recipient for account: %s", account.Hex())
+		}
+	}
+
 	return nil
 }
