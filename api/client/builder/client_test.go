@@ -73,7 +73,7 @@ func TestClient_Status(t *testing.T) {
 
 func TestClient_RegisterValidator(t *testing.T) {
 	ctx := context.Background()
-	expectedBody := `{"message":{"fee_recipient":"0x0000000000000000000000000000000000000000","gas_limit":"23","timestamp":"42","pubkey":"0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a"}}`
+	expectedBody := `[{"message":{"fee_recipient":"0x0000000000000000000000000000000000000000","gas_limit":"23","timestamp":"42","pubkey":"0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a"}}]`
 	expectedPath := "/eth/v1/builder/validators"
 	hc := &http.Client{
 		Transport: roundtrip(func(r *http.Request) (*http.Response, error) {
@@ -104,7 +104,7 @@ func TestClient_RegisterValidator(t *testing.T) {
 			Pubkey:       ezDecode(t, "0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a"),
 		},
 	}
-	require.NoError(t, c.RegisterValidator(ctx, reg))
+	require.NoError(t, c.RegisterValidator(ctx, []*eth.SignedValidatorRegistrationV1{reg}))
 }
 
 func TestClient_GetHeader(t *testing.T) {

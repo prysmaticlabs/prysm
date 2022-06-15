@@ -28,6 +28,7 @@ const (
 )
 
 var errMalformedHostname = errors.New("hostname must include port, separated by one colon, like example.com:3500")
+var errMalformedRequest = errors.New("required request data are missing")
 
 // ClientOpt is a functional option for the Client type (http.Client wrapper)
 type ClientOpt func(*Client)
@@ -199,9 +200,15 @@ func (c *Client) GetHeader(ctx context.Context, slot types.Slot, parentHash [32]
 
 // RegisterValidator encodes the SignedValidatorRegistrationV1 message to json (including hex-encoding the byte
 // fields with 0x prefixes) and posts to the builder validator registration endpoint.
-func (c *Client) RegisterValidator(ctx context.Context, svr *ethpb.SignedValidatorRegistrationV1) error {
-	v := &SignedValidatorRegistration{SignedValidatorRegistrationV1: svr}
-	body, err := json.Marshal(v)
+func (c *Client) RegisterValidator(ctx context.Context, svr []*ethpb.SignedValidatorRegistrationV1) error {
+	if len(svr) == 0 {
+		return errors.Wrap(errMalformedRequest, "empty validator registration list")
+	}
+	vs := make([]*SignedValidatorRegistration, len(svr))
+	for i := 0; i < len(svr); i++ {
+		vs[i] = &SignedValidatorRegistration{SignedValidatorRegistrationV1: svr[i]}
+	}
+	body, err := json.Marshal(vs)
 	if err != nil {
 		return errors.Wrap(err, "error encoding the SignedValidatorRegistration value body in RegisterValidator")
 	}
