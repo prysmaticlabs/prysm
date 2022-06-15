@@ -392,7 +392,7 @@ func groupDeleteRemoteKeysErrors(req *ethpbservice.DeleteRemoteKeysRequest, erro
 // ListFeeRecipientByPubkey returns the public key to eth address mapping object to the end user.
 func (s *Server) ListFeeRecipientByPubkey(ctx context.Context, req *ethpbservice.ByPubkeyRequest) (*ethpbservice.GetFeeRecipientByPubkeyResponse, error) {
 	if s.validatorService == nil {
-		return nil, status.Error(codes.FailedPrecondition, "Validator service not ready.")
+		return nil, status.Error(codes.FailedPrecondition, "Validator service not ready")
 	}
 	validatorKey := req.Pubkey
 	if len(validatorKey) != fieldparams.BLSPubkeyLength {
