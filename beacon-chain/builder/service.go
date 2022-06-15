@@ -2,6 +2,7 @@ package builder
 
 import (
 	"context"
+	log "github.com/sirupsen/logrus"
 	"time"
 
 	"github.com/pkg/errors"
@@ -101,7 +102,7 @@ func (s *Service) Status(ctx context.Context) error {
 
 // RegisterValidator registers a validator with the builder relay network.
 // It also saves the registration object to the DB.
-func (s *Service) RegisterValidator(ctx context.Context, reg *ethpb.SignedValidatorRegistrationV1) error {
+func (s *Service) RegisterValidator(ctx context.Context, reg []*ethpb.SignedValidatorRegistrationV1) error {
 	ctx, span := trace.StartSpan(ctx, "builder.RegisterValidator")
 	defer span.End()
 	start := time.Now()
@@ -109,13 +110,25 @@ func (s *Service) RegisterValidator(ctx context.Context, reg *ethpb.SignedValida
 		registerValidatorLatency.Observe(float64(time.Since(start).Milliseconds()))
 	}()
 
-	idx, exists := s.cfg.headFetcher.HeadPublicKeyToValidatorIndex(bytesutil.ToBytes48(reg.Message.Pubkey))
-	if !exists {
-		return nil // If the pubkey is not found, it is not a validator. Do nothing.
+	idxs := make([]types.ValidatorIndex, 0)
+	msgs := make([]*ethpb.ValidatorRegistrationV1, 0)
+	valid := make([]*ethpb.SignedValidatorRegistrationV1, 0)
+	for i := 0; i < len(reg); i++ {
+		r := reg[i]
+		nx, exists := s.cfg.headFetcher.HeadPublicKeyToValidatorIndex(bytesutil.ToBytes48(r.Message.Pubkey))
+		if !exists {
+			// we want to allow validators to set up keys that haven't been added to the beaconstate validator list yet,
+			// so we should tolerate keys that do not seem to be valid by skipping past them.
+			log.Warnf("Skipping validator registration for pubkey=%#x - not in current validator set.", r.Message.Pubkey)
+			continue
+		}
+		idxs = append(idxs, nx)
+		msgs = append(msgs, r.Message)
+		valid = append(valid, r)
 	}
-	if err := s.c.RegisterValidator(ctx, []*ethpb.SignedValidatorRegistrationV1{reg}); err != nil {
-		return errors.Wrap(err, "could not register validator")
+	if err := s.c.RegisterValidator(ctx, valid); err != nil {
+		return errors.Wrap(err, "could not register validator(s)")
 	}
 
-	return s.cfg.beaconDB.SaveRegistrationsByValidatorIDs(ctx, []types.ValidatorIndex{idx}, []*ethpb.ValidatorRegistrationV1{reg.Message})
+	return s.cfg.beaconDB.SaveRegistrationsByValidatorIDs(ctx, idxs, msgs)
 }
