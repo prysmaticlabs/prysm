@@ -1000,7 +1000,7 @@ func (v *validator) buildProposerSettingsRequests(ctx context.Context, pubkeys [
 	var validatorToFeeRecipients []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer
 	var registerValidatorRequests []*ethpb.ValidatorRegistrationV1
 	// need to check for pubkey to validator index mappings
-	for _, key := range pubkeys {
+	for i, key := range pubkeys {
 		skipAppendToFeeRecipientArray := false
 		feeRecipient := common.HexToAddress(params.BeaconConfig().EthBurnAddressHex)
 		gasLimit := params.BeaconConfig().DefaultBuilderGasLimit
@@ -1042,7 +1042,7 @@ func (v *validator) buildProposerSettingsRequests(ctx context.Context, pubkeys [
 			FeeRecipient: feeRecipient[:],
 			GasLimit:     gasLimit,
 			Timestamp:    uint64(time.Now().UTC().Unix()),
-			Pubkey:       key[:],
+			Pubkey:       pubkeys[i][:],
 		})
 
 	}
