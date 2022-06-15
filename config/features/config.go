@@ -23,6 +23,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -58,9 +59,6 @@ type Flags struct {
 	EnableSlasher bool // Enable slasher in the beacon node runtime.
 	// EnableSlashingProtectionPruning for the validator client.
 	EnableSlashingProtectionPruning bool
-
-	// Bug fixes related flags.
-	CorrectlyPruneCanonicalAtts bool
 
 	EnableNativeState                bool // EnableNativeState defines whether the beacon state will be represented as a pure Go struct or a Go struct that wraps a proto struct.
 	EnableVectorizedHTR              bool // EnableVectorizedHTR specifies whether the beacon state will use the optimized sha256 routines.
@@ -122,20 +120,49 @@ func configureTestnet(ctx *cli.Context) error {
 		if err := params.SetActive(params.RopstenConfig().Copy()); err != nil {
 			return err
 		}
-		if err := ctx.Set(enableVecHTR.Names()[0], "true"); err != nil {
-			log.WithError(err).Debug("error enabling vectorized HTR flag")
-		}
-		if err := ctx.Set(enableForkChoiceDoublyLinkedTree.Names()[0], "true"); err != nil {
-			log.WithError(err).Debug("error enabling doubly linked tree forkchoice flag")
-		}
+		applyRopstenFeatureFlags(ctx)
 		params.UseRopstenNetworkConfig()
+	} else if ctx.Bool(SepoliaTestnet.Name) {
+		log.Warn("Running on the Sepolia Beacon Chain Testnet")
+		if err := params.SetActive(params.SepoliaConfig().Copy()); err != nil {
+			return err
+		}
+		applySepoliaFeatureFlags(ctx)
+		params.UseSepoliaNetworkConfig()
 	} else {
-		log.Warn("Running on Ethereum Consensus Mainnet")
+		if ctx.IsSet(cmd.ChainConfigFileFlag.Name) {
+			log.Warn("Running on custom Ethereum network specified in a chain configuration yaml file")
+		} else {
+			log.Warn("Running on Ethereum Mainnet")
+		}
 		if err := params.SetActive(params.MainnetConfig().Copy()); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// Insert feature flags within the function to be enabled for Ropsten testnet.
+func applyRopstenFeatureFlags(ctx *cli.Context) {
+	if err := ctx.Set(enableVecHTR.Names()[0], "true"); err != nil {
+		log.WithError(err).Debug("error enabling vectorized HTR flag")
+	}
+	if err := ctx.Set(enableForkChoiceDoublyLinkedTree.Names()[0], "true"); err != nil {
+		log.WithError(err).Debug("error enabling doubly linked tree forkchoice flag")
+	}
+}
+
+// Insert feature flags within the function to be enabled for Sepolia testnet.
+func applySepoliaFeatureFlags(ctx *cli.Context) {
+	if err := ctx.Set(enableVecHTR.Names()[0], "true"); err != nil {
+		log.WithError(err).Debug("error enabling vectorized HTR flag")
+	}
+	if err := ctx.Set(enableForkChoiceDoublyLinkedTree.Names()[0], "true"); err != nil {
+		log.WithError(err).Debug("error enabling doubly linked tree forkchoice flag")
+	}
+	if err := ctx.Set(enableNativeState.Names()[0], "true"); err != nil {
+		log.WithError(err).Debug("error enabling native state flag")
+	}
 }
 
 // ConfigureBeaconChain sets the global config based
@@ -181,11 +208,6 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 	if ctx.Bool(enableHistoricalSpaceRepresentation.Name) {
 		log.WithField(enableHistoricalSpaceRepresentation.Name, enableHistoricalSpaceRepresentation.Usage).Warn(enabledFeatureFlag)
 		cfg.EnableHistoricalSpaceRepresentation = true
-	}
-	cfg.CorrectlyPruneCanonicalAtts = true
-	if ctx.Bool(disableCorrectlyPruneCanonicalAtts.Name) {
-		logDisabled(disableCorrectlyPruneCanonicalAtts)
-		cfg.CorrectlyPruneCanonicalAtts = false
 	}
 	cfg.EnableNativeState = false
 	if ctx.Bool(enableNativeState.Name) {

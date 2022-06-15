@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
@@ -95,16 +96,23 @@ func (s *Service) updateHead(ctx context.Context, balances []uint64) ([32]byte, 
 			return [32]byte{}, err
 		}
 		if features.Get().EnableForkChoiceDoublyLinkedTree {
-			s.cfg.ForkChoiceStore = doublylinkedtree.New(j.Epoch, f.Epoch)
+			s.cfg.ForkChoiceStore = doublylinkedtree.New()
 		} else {
-			s.cfg.ForkChoiceStore = protoarray.New(j.Epoch, f.Epoch)
+			s.cfg.ForkChoiceStore = protoarray.New()
 		}
 		if err := s.insertBlockToForkChoiceStore(ctx, jb.Block(), headStartRoot, st, f, j); err != nil {
 			return [32]byte{}, err
 		}
 	}
-
-	return s.cfg.ForkChoiceStore.Head(ctx, headStartRoot, balances)
+	jc := &forkchoicetypes.Checkpoint{Epoch: j.Epoch, Root: headStartRoot}
+	fc := &forkchoicetypes.Checkpoint{Epoch: f.Epoch, Root: s.ensureRootNotZeros(bytesutil.ToBytes32(f.Root))}
+	if err := s.cfg.ForkChoiceStore.UpdateJustifiedCheckpoint(jc); err != nil {
+		return [32]byte{}, err
+	}
+	if err := s.cfg.ForkChoiceStore.UpdateFinalizedCheckpoint(fc); err != nil {
+		return [32]byte{}, err
+	}
+	return s.cfg.ForkChoiceStore.Head(ctx, balances)
 }
 
 // This saves head info to the local service cache, it also saves the

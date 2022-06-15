@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/api/client/beacon"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/io/file"
+	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/proto/eth/service"
 	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	"google.golang.org/grpc/codes"
@@ -149,26 +150,10 @@ func (r *testRunner) runEvaluators(conns []*grpc.ClientConn, tickingStartTime ti
 	secondsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
 	ticker := helpers.NewEpochTicker(tickingStartTime, secondsPerEpoch)
 	for currentEpoch := range ticker.C() {
-		if config.EvalInterceptor(currentEpoch) {
+		if config.EvalInterceptor(currentEpoch, conns) {
 			continue
 		}
-		wg := new(sync.WaitGroup)
-		for _, eval := range config.Evaluators {
-			// Fix reference to evaluator as it will be running
-			// in a separate goroutine.
-			evaluator := eval
-			// Only run if the policy says so.
-			if !evaluator.Policy(types.Epoch(currentEpoch)) {
-				continue
-			}
-			wg.Add(1)
-			go t.Run(fmt.Sprintf(evaluator.Name, currentEpoch), func(t *testing.T) {
-				err := evaluator.Evaluation(conns...)
-				assert.NoError(t, err, "Evaluation failed for epoch %d: %v", currentEpoch, err)
-				wg.Done()
-			})
-		}
-		wg.Wait()
+		r.executeProvidedEvaluators(currentEpoch, conns, config.Evaluators)
 
 		if t.Failed() || currentEpoch >= config.EpochsToRun-1 {
 			ticker.Done()
@@ -558,24 +543,37 @@ func (r *testRunner) addEvent(ev func() error) {
 	r.comHandler.group.Go(ev)
 }
 
-func (r *testRunner) singleNodeOffline(epoch uint64) bool {
-	switch epoch {
-	case 9:
-		require.NoError(r.t, r.comHandler.beaconNodes.PauseAtIndex(0))
-		require.NoError(r.t, r.comHandler.validatorNodes.PauseAtIndex(0))
-		return true
-	case 10:
-		require.NoError(r.t, r.comHandler.beaconNodes.ResumeAtIndex(0))
-		require.NoError(r.t, r.comHandler.validatorNodes.ResumeAtIndex(0))
-		return true
-	case 11, 12:
-		// Allow 2 epochs for the network to finalize again.
-		return true
+func (r *testRunner) executeProvidedEvaluators(currentEpoch uint64, conns []*grpc.ClientConn, evals []e2etypes.Evaluator) {
+	wg := new(sync.WaitGroup)
+	for _, eval := range evals {
+		// Fix reference to evaluator as it will be running
+		// in a separate goroutine.
+		evaluator := eval
+		// Only run if the policy says so.
+		if !evaluator.Policy(types.Epoch(currentEpoch)) {
+			continue
+		}
+		wg.Add(1)
+		go r.t.Run(fmt.Sprintf(evaluator.Name, currentEpoch), func(t *testing.T) {
+			err := evaluator.Evaluation(conns...)
+			assert.NoError(t, err, "Evaluation failed for epoch %d: %v", currentEpoch, err)
+			wg.Done()
+		})
 	}
-	return false
+	wg.Wait()
 }
 
-func (r *testRunner) singleNodeOfflineMulticlient(epoch uint64) bool {
+// This interceptor will define the multi scenario run for our minimal tests.
+// 1) In the first scenario we will be taking a single prysm node and its validator offline.
+// Along with that we will also take a single lighthouse node and its validator offline.
+// After 1 epoch we will then attempt to bring it online again.
+//
+//
+// 2) Then we will start testing optimistic sync by engaging our engine proxy.
+// After the proxy has been sending `SYNCING` responses to the beacon node, we
+// will test this with our optimistic sync evaluator to ensure everything works
+// as expected.
+func (r *testRunner) multiScenarioMulticlient(epoch uint64, conns []*grpc.ClientConn) bool {
 	switch epoch {
 	case 9:
 		require.NoError(r.t, r.comHandler.beaconNodes.PauseAtIndex(0))
@@ -589,14 +587,59 @@ func (r *testRunner) singleNodeOfflineMulticlient(epoch uint64) bool {
 		require.NoError(r.t, r.comHandler.lighthouseBeaconNodes.ResumeAtIndex(0))
 		require.NoError(r.t, r.comHandler.lighthouseValidatorNodes.ResumeAtIndex(0))
 		return true
-	case 11, 12:
+	case 14:
+		// Set it for prysm beacon node.
+		component, err := r.comHandler.eth1Proxy.ComponentAtIndex(0)
+		require.NoError(r.t, err)
+		component.(e2etypes.EngineProxy).AddRequestInterceptor("engine_newPayloadV1", func() interface{} {
+			return &enginev1.PayloadStatus{
+				Status:          enginev1.PayloadStatus_SYNCING,
+				LatestValidHash: make([]byte, 32),
+			}
+		}, func() bool {
+			return true
+		})
+		// Set it for lighthouse beacon node.
+		component, err = r.comHandler.eth1Proxy.ComponentAtIndex(2)
+		require.NoError(r.t, err)
+		component.(e2etypes.EngineProxy).AddRequestInterceptor("engine_newPayloadV1", func() interface{} {
+			return &enginev1.PayloadStatus{
+				Status:          enginev1.PayloadStatus_SYNCING,
+				LatestValidHash: make([]byte, 32),
+			}
+		}, func() bool {
+			return true
+		})
+		return true
+	case 15:
+		r.executeProvidedEvaluators(epoch, []*grpc.ClientConn{conns[0]}, []e2etypes.Evaluator{
+			ev.OptimisticSyncEnabled,
+		})
+		// Disable Interceptor
+		component, err := r.comHandler.eth1Proxy.ComponentAtIndex(0)
+		require.NoError(r.t, err)
+		engineProxy, ok := component.(e2etypes.EngineProxy)
+		require.Equal(r.t, true, ok)
+		engineProxy.RemoveRequestInterceptor("engine_newPayloadV1")
+		engineProxy.ReleaseBackedUpRequests("engine_newPayloadV1")
+
+		// Remove for lighthouse too
+		component, err = r.comHandler.eth1Proxy.ComponentAtIndex(2)
+		require.NoError(r.t, err)
+		engineProxy, ok = component.(e2etypes.EngineProxy)
+		require.Equal(r.t, true, ok)
+		engineProxy.RemoveRequestInterceptor("engine_newPayloadV1")
+		engineProxy.ReleaseBackedUpRequests("engine_newPayloadV1")
+
+		return true
+	case 11, 12, 16, 17:
 		// Allow 2 epochs for the network to finalize again.
 		return true
 	}
 	return false
 }
 
-func (r *testRunner) eeOffline(epoch uint64) bool {
+func (r *testRunner) eeOffline(epoch uint64, _ []*grpc.ClientConn) bool {
 	switch epoch {
 	case 9:
 		require.NoError(r.t, r.comHandler.eth1Miner.Pause())
@@ -611,17 +654,61 @@ func (r *testRunner) eeOffline(epoch uint64) bool {
 	return false
 }
 
-func (r *testRunner) allValidatorsOffline(epoch uint64) bool {
+// This interceptor will define the multi scenario run for our minimal tests.
+// 1) In the first scenario we will be taking a single node and its validator offline.
+// After 1 epoch we will then attempt to bring it online again.
+//
+// 2) In the second scenario we will be taking all validators offline. After 2
+// epochs we will wait for the network to recover.
+//
+// 3) Then we will start testing optimistic sync by engaging our engine proxy.
+// After the proxy has been sending `SYNCING` responses to the beacon node, we
+// will test this with our optimistic sync evaluator to ensure everything works
+// as expected.
+func (r *testRunner) multiScenario(epoch uint64, conns []*grpc.ClientConn) bool {
 	switch epoch {
 	case 9:
+		require.NoError(r.t, r.comHandler.beaconNodes.PauseAtIndex(0))
+		require.NoError(r.t, r.comHandler.validatorNodes.PauseAtIndex(0))
+		return true
+	case 10:
+		require.NoError(r.t, r.comHandler.beaconNodes.ResumeAtIndex(0))
+		require.NoError(r.t, r.comHandler.validatorNodes.ResumeAtIndex(0))
+		return true
+	case 14:
 		require.NoError(r.t, r.comHandler.validatorNodes.PauseAtIndex(0))
 		require.NoError(r.t, r.comHandler.validatorNodes.PauseAtIndex(1))
 		return true
-	case 10:
+	case 15:
 		require.NoError(r.t, r.comHandler.validatorNodes.ResumeAtIndex(0))
 		require.NoError(r.t, r.comHandler.validatorNodes.ResumeAtIndex(1))
 		return true
-	case 11, 12:
+	case 19:
+		component, err := r.comHandler.eth1Proxy.ComponentAtIndex(0)
+		require.NoError(r.t, err)
+		component.(e2etypes.EngineProxy).AddRequestInterceptor("engine_newPayloadV1", func() interface{} {
+			return &enginev1.PayloadStatus{
+				Status:          enginev1.PayloadStatus_SYNCING,
+				LatestValidHash: make([]byte, 32),
+			}
+		}, func() bool {
+			return true
+		})
+		return true
+	case 20:
+		r.executeProvidedEvaluators(epoch, []*grpc.ClientConn{conns[0]}, []e2etypes.Evaluator{
+			ev.OptimisticSyncEnabled,
+		})
+		// Disable Interceptor
+		component, err := r.comHandler.eth1Proxy.ComponentAtIndex(0)
+		require.NoError(r.t, err)
+		engineProxy, ok := component.(e2etypes.EngineProxy)
+		require.Equal(r.t, true, ok)
+		engineProxy.RemoveRequestInterceptor("engine_newPayloadV1")
+		engineProxy.ReleaseBackedUpRequests("engine_newPayloadV1")
+
+		return true
+	case 11, 12, 16, 17, 21, 22:
 		// Allow 2 epochs for the network to finalize again.
 		return true
 	}
@@ -629,6 +716,6 @@ func (r *testRunner) allValidatorsOffline(epoch uint64) bool {
 }
 
 // All Epochs are valid.
-func defaultInterceptor(_ uint64) bool {
+func defaultInterceptor(_ uint64, _ []*grpc.ClientConn) bool {
 	return false
 }

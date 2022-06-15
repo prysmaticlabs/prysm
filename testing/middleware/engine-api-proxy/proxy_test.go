@@ -116,7 +116,9 @@ func TestProxy_CustomInterceptors(t *testing.T) {
 		// RPC method to intercept.
 		proxy.AddRequestInterceptor(
 			method,
-			&syncingResponse{Syncing: false}, // Custom response.
+			func() interface{} {
+				return &syncingResponse{Syncing: false}
+			}, // Custom response.
 			func() bool {
 				return true // Always intercept with a custom response.
 			},
@@ -164,7 +166,9 @@ func TestProxy_CustomInterceptors(t *testing.T) {
 		method := "engine_newPayloadV1"
 
 		// RPC method to intercept.
-		wantInterceptedResponse := &engineResponse{BlockHash: common.BytesToHash([]byte("bar"))}
+		wantInterceptedResponse := func() interface{} {
+			return &engineResponse{BlockHash: common.BytesToHash([]byte("bar"))}
+		}
 		conditional := false
 		proxy.AddRequestInterceptor(
 			method,
@@ -199,7 +203,7 @@ func TestProxy_CustomInterceptors(t *testing.T) {
 		proxyResult = &engineResponse{}
 		err = rpcClient.CallContext(ctx, proxyResult, method)
 		require.NoError(t, err)
-		require.DeepEqual(t, wantInterceptedResponse, proxyResult)
+		require.DeepEqual(t, wantInterceptedResponse(), proxyResult)
 	})
 	t.Run("triggers interceptor response correctly", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
@@ -230,7 +234,9 @@ func TestProxy_CustomInterceptors(t *testing.T) {
 		method := "engine_newPayloadV1"
 
 		// RPC method to intercept.
-		wantInterceptedResponse := &engineResponse{BlockHash: common.BytesToHash([]byte("bar"))}
+		wantInterceptedResponse := func() interface{} {
+			return &engineResponse{BlockHash: common.BytesToHash([]byte("bar"))}
+		}
 		proxy.AddRequestInterceptor(
 			method,
 			wantInterceptedResponse,
@@ -249,7 +255,7 @@ func TestProxy_CustomInterceptors(t *testing.T) {
 
 		// The interception should work and we should not be getting the destination
 		// response but rather a custom response from the interceptor config.
-		require.DeepEqual(t, wantInterceptedResponse, proxyResult)
+		require.DeepEqual(t, wantInterceptedResponse(), proxyResult)
 	})
 }
 

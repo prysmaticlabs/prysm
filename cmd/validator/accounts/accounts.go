@@ -30,6 +30,7 @@ var Commands = &cli.Command{
 				features.Mainnet,
 				features.PraterTestnet,
 				features.RopstenTestnet,
+				features.SepoliaTestnet,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
@@ -39,10 +40,7 @@ var Commands = &cli.Command{
 				if err := tos.VerifyTosAcceptedOrPrompt(cliCtx); err != nil {
 					return err
 				}
-				if err := features.ConfigureValidator(cliCtx); err != nil {
-					return err
-				}
-				return nil
+				return features.ConfigureValidator(cliCtx)
 			},
 			Action: func(cliCtx *cli.Context) error {
 				if err := accountsDelete(cliCtx); err != nil {
@@ -69,6 +67,7 @@ var Commands = &cli.Command{
 				features.Mainnet,
 				features.PraterTestnet,
 				features.RopstenTestnet,
+				features.SepoliaTestnet,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
@@ -78,10 +77,7 @@ var Commands = &cli.Command{
 				if err := tos.VerifyTosAcceptedOrPrompt(cliCtx); err != nil {
 					return err
 				}
-				if err := features.ConfigureValidator(cliCtx); err != nil {
-					return err
-				}
-				return nil
+				return features.ConfigureValidator(cliCtx)
 			},
 			Action: func(cliCtx *cli.Context) error {
 				if err := accountsList(cliCtx); err != nil {
@@ -105,6 +101,7 @@ var Commands = &cli.Command{
 				features.Mainnet,
 				features.PraterTestnet,
 				features.RopstenTestnet,
+				features.SepoliaTestnet,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
@@ -114,10 +111,7 @@ var Commands = &cli.Command{
 				if err := tos.VerifyTosAcceptedOrPrompt(cliCtx); err != nil {
 					return err
 				}
-				if err := features.ConfigureValidator(cliCtx); err != nil {
-					return err
-				}
-				return nil
+				return features.ConfigureValidator(cliCtx)
 			},
 			Action: func(cliCtx *cli.Context) error {
 				if err := accountsBackup(cliCtx); err != nil {
@@ -138,6 +132,7 @@ var Commands = &cli.Command{
 				features.Mainnet,
 				features.PraterTestnet,
 				features.RopstenTestnet,
+				features.SepoliaTestnet,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
@@ -174,19 +169,20 @@ var Commands = &cli.Command{
 				features.Mainnet,
 				features.PraterTestnet,
 				features.RopstenTestnet,
+				features.SepoliaTestnet,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
 				if err := cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags); err != nil {
 					return err
 				}
-				return tos.VerifyTosAcceptedOrPrompt(cliCtx)
-			},
-			Action: func(cliCtx *cli.Context) error {
-				if err := features.ConfigureValidator(cliCtx); err != nil {
+				if err := tos.VerifyTosAcceptedOrPrompt(cliCtx); err != nil {
 					return err
 				}
-				if err := accounts.ExitAccountsCli(cliCtx, os.Stdin); err != nil {
+				return features.ConfigureValidator(cliCtx)
+			},
+			Action: func(cliCtx *cli.Context) error {
+				if err := accountsExit(cliCtx, os.Stdin); err != nil {
 					log.Fatalf("Could not perform voluntary exit: %v", err)
 				}
 				return nil

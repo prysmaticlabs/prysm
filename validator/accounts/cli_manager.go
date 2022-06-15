@@ -35,10 +35,12 @@ type AccountsCLIManager struct {
 	dialOpts             []grpc.DialOption
 	grpcHeaders          []string
 	beaconRPCProvider    string
-	filteredPubKeys      []bls.PublicKey
 	walletKeyCount       int
 	backupsDir           string
 	backupsPassword      string
+	filteredPubKeys      []bls.PublicKey
+	rawPubKeys           [][]byte
+	formattedPubKeys     []string
 }
 
 func (acm *AccountsCLIManager) prepareBeaconClients(ctx context.Context) (*ethpb.BeaconNodeValidatorClient, *ethpb.NodeClient, error) {

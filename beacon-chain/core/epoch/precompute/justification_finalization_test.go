@@ -250,3 +250,18 @@ func TestUnrealizedCheckpoints(t *testing.T) {
 		})
 	}
 }
+
+func Test_ComputeCheckpoints_CantUpdateToLower(t *testing.T) {
+	st, err := v2.InitializeFromProto(&ethpb.BeaconStateAltair{
+		Slot: params.BeaconConfig().SlotsPerEpoch * 2,
+		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{
+			Epoch: 2,
+		},
+	})
+	require.NoError(t, err)
+	jb := make(bitfield.Bitvector4, 1)
+	jb.SetBitAt(1, true)
+	cp, _, err := precompute.ComputeCheckpoints(st, jb)
+	require.NoError(t, err)
+	require.Equal(t, types.Epoch(2), cp.Epoch)
+}
