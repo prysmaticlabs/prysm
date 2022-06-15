@@ -220,14 +220,15 @@ func (s *Service) Start() {
 		BlockBuilder:           s.cfg.BlockBuilder,
 	}
 	validatorServerV1 := &validator.Server{
-		HeadFetcher:      s.cfg.HeadFetcher,
-		HeadUpdater:      s.cfg.HeadUpdater,
-		TimeFetcher:      s.cfg.GenesisTimeFetcher,
-		SyncChecker:      s.cfg.SyncService,
-		AttestationsPool: s.cfg.AttestationsPool,
-		PeerManager:      s.cfg.PeerManager,
-		Broadcaster:      s.cfg.Broadcaster,
-		V1Alpha1Server:   validatorServer,
+		HeadFetcher:           s.cfg.HeadFetcher,
+		HeadUpdater:           s.cfg.HeadUpdater,
+		TimeFetcher:           s.cfg.GenesisTimeFetcher,
+		SyncChecker:           s.cfg.SyncService,
+		OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
+		AttestationsPool:      s.cfg.AttestationsPool,
+		PeerManager:           s.cfg.PeerManager,
+		Broadcaster:           s.cfg.Broadcaster,
+		V1Alpha1Server:        validatorServer,
 		StateFetcher: &statefetcher.StateProvider{
 			BeaconDB:           s.cfg.BeaconDB,
 			ChainInfoFetcher:   s.cfg.ChainInfoFetcher,
@@ -235,8 +236,7 @@ func (s *Service) Start() {
 			StateGenService:    s.cfg.StateGen,
 			ReplayerBuilder:    ch,
 		},
-		OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
-		SyncCommitteePool:     s.cfg.SyncCommitteeObjectPool,
+		SyncCommitteePool: s.cfg.SyncCommitteeObjectPool,
 	}
 
 	nodeServer := &nodev1alpha1.Server{
@@ -254,14 +254,15 @@ func (s *Service) Start() {
 		BeaconMonitoringPort: s.cfg.BeaconMonitoringPort,
 	}
 	nodeServerV1 := &node.Server{
-		BeaconDB:           s.cfg.BeaconDB,
-		Server:             s.grpcServer,
-		SyncChecker:        s.cfg.SyncService,
-		GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
-		PeersFetcher:       s.cfg.PeersFetcher,
-		PeerManager:        s.cfg.PeerManager,
-		MetadataProvider:   s.cfg.MetadataProvider,
-		HeadFetcher:        s.cfg.HeadFetcher,
+		BeaconDB:              s.cfg.BeaconDB,
+		Server:                s.grpcServer,
+		SyncChecker:           s.cfg.SyncService,
+		OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
+		GenesisTimeFetcher:    s.cfg.GenesisTimeFetcher,
+		PeersFetcher:          s.cfg.PeersFetcher,
+		PeerManager:           s.cfg.PeerManager,
+		MetadataProvider:      s.cfg.MetadataProvider,
+		HeadFetcher:           s.cfg.HeadFetcher,
 	}
 
 	beaconChainServer := &beaconv1alpha1.Server{

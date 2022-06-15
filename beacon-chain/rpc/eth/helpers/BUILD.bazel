@@ -8,7 +8,7 @@ go_library(
         "validator_status.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers",
-    visibility = ["//beacon-chain/rpc/eth:__subpackages__"],
+    visibility = ["//visibility:public"],
     deps = [
         "//api/grpc:go_default_library",
         "//beacon-chain/blockchain:go_default_library",
