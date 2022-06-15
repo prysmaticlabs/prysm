@@ -2,7 +2,6 @@ package builder
 
 import (
 	"context"
-	log "github.com/sirupsen/logrus"
 	"time"
 
 	"github.com/pkg/errors"
@@ -14,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/network"
 	v1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 

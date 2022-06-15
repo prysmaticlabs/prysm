@@ -3,11 +3,11 @@ package bellatrix
 import (
 	"bytes"
 
-	"github.com/prysmaticlabs/prysm/config/fieldparams"
+	field_params "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
-	"github.com/prysmaticlabs/prysm/proto/engine/v1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
+	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
 // PayloadToHeader converts `payload` into execution payload header format.
