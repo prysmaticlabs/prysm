@@ -524,16 +524,14 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 	if fileConfig.DefaultConfig == nil {
 		return nil, errors.New("default fileConfig is required")
 	}
-	bytes, err := hexutil.Decode(fileConfig.DefaultConfig.FeeRecipient)
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not decode fee recipient %s", fileConfig.DefaultConfig.FeeRecipient)
-	}
 	if !common.IsHexAddress(fileConfig.DefaultConfig.FeeRecipient) {
 		return nil, errors.New("default fileConfig fee recipient is not a valid eth1 address")
 	}
-
+	if err := warnNonChecksummedAddress(fileConfig.DefaultConfig.FeeRecipient); err != nil {
+		return nil, err
+	}
 	vpSettings.DefaultConfig = &validatorServiceConfig.ProposerOption{
-		FeeRecipient: common.BytesToAddress(bytes),
+		FeeRecipient: common.HexToAddress(fileConfig.DefaultConfig.FeeRecipient),
 		GasLimit:     reviewGasLimit(fileConfig.DefaultConfig.GasLimit),
 	}
 
@@ -542,7 +540,7 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 		for key, option := range fileConfig.ProposeConfig {
 			decodedKey, err := hexutil.Decode(key)
 			if err != nil {
-				return nil, errors.Wrapf(err, "could not decode public key for web3signer: %s", key)
+				return nil, errors.Wrapf(err, "could not decode public key %s", key)
 			}
 			if len(decodedKey) != fieldparams.BLSPubkeyLength {
 				return nil, fmt.Errorf("%v  is not a bls public key", key)
@@ -550,32 +548,34 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 			if option == nil {
 				return nil, fmt.Errorf("fee recipient is required for proposer %s", key)
 			}
-			feebytes, err := hexutil.Decode(option.FeeRecipient)
-			if err != nil {
-				return nil, errors.Wrapf(err, "could not decode fee recipient %s", option.FeeRecipient)
-			}
 			if !common.IsHexAddress(option.FeeRecipient) {
 				return nil, errors.New("fee recipient is not a valid eth1 address")
 			}
-			mixedcaseAddress, err := common.NewMixedcaseAddressFromString(option.FeeRecipient)
-			if err != nil {
-				return nil, errors.Wrapf(err, "could not decode fee recipient %s", option.FeeRecipient)
-			}
-			checksumAddress := common.BytesToAddress(feebytes)
-			if !mixedcaseAddress.ValidChecksum() {
-				log.Warnf("Fee recipient %s is not a checksum Ethereum address. "+
-					"The checksummed address is %s and will be used as the fee recipient. "+
-					"We recommend using a mixed-case address (checksum) "+
-					"to prevent spelling mistakes in your fee recipient Ethereum address", option.FeeRecipient, checksumAddress.Hex())
+			if err := warnNonChecksummedAddress(option.FeeRecipient); err != nil {
+				return nil, err
 			}
 			vpSettings.ProposeConfig[bytesutil.ToBytes48(decodedKey)] = &validatorServiceConfig.ProposerOption{
-				FeeRecipient: checksumAddress,
+				FeeRecipient: common.HexToAddress(option.FeeRecipient),
 				GasLimit:     reviewGasLimit(option.GasLimit),
 			}
 		}
 	}
 
 	return vpSettings, nil
+}
+
+func warnNonChecksummedAddress(feeRecipient string) error {
+	mixedcaseAddress, err := common.NewMixedcaseAddressFromString(feeRecipient)
+	if err != nil {
+		return errors.Wrapf(err, "could not decode fee recipient %s", feeRecipient)
+	}
+	if !mixedcaseAddress.ValidChecksum() {
+		log.Warnf("Fee recipient %s is not a checksum Ethereum address. "+
+			"The checksummed address is %s and will be used as the fee recipient. "+
+			"We recommend using a mixed-case address (checksum) "+
+			"to prevent spelling mistakes in your fee recipient Ethereum address", feeRecipient, mixedcaseAddress.Address().Hex())
+	}
+	return nil
 }
 
 func reviewGasLimit(gasLimit uint64) uint64 {
