@@ -3,6 +3,7 @@ package protoarray
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
@@ -1112,4 +1113,146 @@ func TestStore_InsertOptimisticChain(t *testing.T) {
 
 	f = setup(1, 1)
 	require.NoError(t, f.InsertOptimisticChain(context.Background(), args[2:]))
+}
+
+func TestForkChoice_UpdateCheckpoints(t *testing.T) {
+	ctx := context.Background()
+	tests := []struct {
+		name                string
+		justified           *forkchoicetypes.Checkpoint
+		bestJustified       *forkchoicetypes.Checkpoint
+		finalized           *forkchoicetypes.Checkpoint
+		newJustified        *forkchoicetypes.Checkpoint
+		newFinalized        *forkchoicetypes.Checkpoint
+		wantedJustified     *forkchoicetypes.Checkpoint
+		wantedBestJustified *forkchoicetypes.Checkpoint
+		wantedFinalized     *forkchoicetypes.Checkpoint
+		currentSlot         types.Slot
+		wantedErr           string
+	}{
+		{
+			name:                "lower than store justified and finalized",
+			justified:           &forkchoicetypes.Checkpoint{Epoch: 2, Root: [32]byte{'j'}},
+			finalized:           &forkchoicetypes.Checkpoint{Epoch: 1, Root: [32]byte{'f'}},
+			bestJustified:       &forkchoicetypes.Checkpoint{Epoch: 2, Root: [32]byte{'j'}},
+			newJustified:        &forkchoicetypes.Checkpoint{Epoch: 1},
+			newFinalized:        &forkchoicetypes.Checkpoint{Epoch: 0},
+			wantedJustified:     &forkchoicetypes.Checkpoint{Epoch: 2, Root: [32]byte{'j'}},
+			wantedBestJustified: &forkchoicetypes.Checkpoint{Epoch: 2, Root: [32]byte{'j'}},
+			wantedFinalized:     &forkchoicetypes.Checkpoint{Epoch: 1, Root: [32]byte{'f'}},
+		},
+		{
+			name:                "higher than store justified, early slot, direct descendant",
+			justified:           &forkchoicetypes.Checkpoint{Epoch: 2, Root: [32]byte{'j'}},
+			bestJustified:       &forkchoicetypes.Checkpoint{Epoch: 2, Root: [32]byte{'j'}},
+			finalized:           &forkchoicetypes.Checkpoint{Epoch: 1, Root: [32]byte{'f'}},
+			newJustified:        &forkchoicetypes.Checkpoint{Epoch: 3, Root: [32]byte{'b'}},
+			newFinalized:        &forkchoicetypes.Checkpoint{Epoch: 1, Root: [32]byte{'g'}},
+			wantedJustified:     &forkchoicetypes.Checkpoint{Epoch: 3, Root: [32]byte{'b'}},
+			wantedBestJustified: &forkchoicetypes.Checkpoint{Epoch: 3, Root: [32]byte{'b'}},
+			wantedFinalized:     &forkchoicetypes.Checkpoint{Epoch: 1, Root: [32]byte{'f'}},
+		},
+		{
+			name:                "higher than store justified, early slot, not a descendant",
+			justified:           &forkchoicetypes.Checkpoint{Epoch: 2, Root: [32]byte{'j'}},
+			bestJustified:       &forkchoicetypes.Checkpoint{Epoch: 2, Root: [32]byte{'j'}},
+			finalized:           &forkchoicetypes.Checkpoint{Epoch: 1, Root: [32]byte{'f'}},
+			newJustified:        &forkchoicetypes.Checkpoint{Epoch: 3, Root: [32]byte{'c'}},
+			newFinalized:        &forkchoicetypes.Checkpoint{Epoch: 1, Root: [32]byte{'g'}},
+			wantedJustified:     &forkchoicetypes.Checkpoint{Epoch: 3, Root: [32]byte{'c'}},
+			wantedBestJustified: &forkchoicetypes.Checkpoint{Epoch: 3, Root: [32]byte{'c'}},
+			wantedFinalized:     &forkchoicetypes.Checkpoint{Epoch: 1, Root: [32]byte{'f'}},
+		},
+		{
+			name:                "higher than store justified, late slot, descendant",
+			justified:           &forkchoicetypes.Checkpoint{Epoch: 2, Root: [32]byte{'j'}},
+			bestJustified:       &forkchoicetypes.Checkpoint{Epoch: 2, Root: [32]byte{'j'}},
+			finalized:           &forkchoicetypes.Checkpoint{Epoch: 1, Root: [32]byte{'f'}},
+			newJustified:        &forkchoicetypes.Checkpoint{Epoch: 3, Root: [32]byte{'b'}},
+			newFinalized:        &forkchoicetypes.Checkpoint{Epoch: 1, Root: [32]byte{'g'}},
+			wantedJustified:     &forkchoicetypes.Checkpoint{Epoch: 3, Root: [32]byte{'b'}},
+			wantedFinalized:     &forkchoicetypes.Checkpoint{Epoch: 1, Root: [32]byte{'f'}},
+			wantedBestJustified: &forkchoicetypes.Checkpoint{Epoch: 3, Root: [32]byte{'b'}},
+			currentSlot:         params.BeaconConfig().SafeSlotsToUpdateJustified.Add(1),
+		},
+		{
+			name:                "higher than store justified, late slot, not descendant",
+			justified:           &forkchoicetypes.Checkpoint{Epoch: 2, Root: [32]byte{'j'}},
+			bestJustified:       &forkchoicetypes.Checkpoint{Epoch: 2, Root: [32]byte{'j'}},
+			finalized:           &forkchoicetypes.Checkpoint{Epoch: 1, Root: [32]byte{'f'}},
+			newJustified:        &forkchoicetypes.Checkpoint{Epoch: 3, Root: [32]byte{'c'}},
+			newFinalized:        &forkchoicetypes.Checkpoint{Epoch: 1, Root: [32]byte{'g'}},
+			wantedJustified:     &forkchoicetypes.Checkpoint{Epoch: 2, Root: [32]byte{'j'}},
+			wantedFinalized:     &forkchoicetypes.Checkpoint{Epoch: 1, Root: [32]byte{'f'}},
+			wantedBestJustified: &forkchoicetypes.Checkpoint{Epoch: 3, Root: [32]byte{'c'}},
+			currentSlot:         params.BeaconConfig().SafeSlotsToUpdateJustified.Add(1),
+		},
+		{
+			name:                "higher than store finalized, late slot, not descendant",
+			justified:           &forkchoicetypes.Checkpoint{Epoch: 2, Root: [32]byte{'j'}},
+			bestJustified:       &forkchoicetypes.Checkpoint{Epoch: 2, Root: [32]byte{'j'}},
+			finalized:           &forkchoicetypes.Checkpoint{Epoch: 1, Root: [32]byte{'f'}},
+			newJustified:        &forkchoicetypes.Checkpoint{Epoch: 3, Root: [32]byte{'c'}},
+			newFinalized:        &forkchoicetypes.Checkpoint{Epoch: 2, Root: [32]byte{'h'}},
+			wantedJustified:     &forkchoicetypes.Checkpoint{Epoch: 3, Root: [32]byte{'c'}},
+			wantedFinalized:     &forkchoicetypes.Checkpoint{Epoch: 2, Root: [32]byte{'h'}},
+			wantedBestJustified: &forkchoicetypes.Checkpoint{Epoch: 3, Root: [32]byte{'c'}},
+			currentSlot:         params.BeaconConfig().SafeSlotsToUpdateJustified.Add(1),
+		},
+		{
+			name:          "Unknown checkpoint root, late slot",
+			justified:     &forkchoicetypes.Checkpoint{Epoch: 2, Root: [32]byte{'j'}},
+			bestJustified: &forkchoicetypes.Checkpoint{Epoch: 2, Root: [32]byte{'j'}},
+			finalized:     &forkchoicetypes.Checkpoint{Epoch: 1, Root: [32]byte{'f'}},
+			newJustified:  &forkchoicetypes.Checkpoint{Epoch: 3, Root: [32]byte{'d'}},
+			newFinalized:  &forkchoicetypes.Checkpoint{Epoch: 1, Root: [32]byte{'h'}},
+			currentSlot:   params.BeaconConfig().SafeSlotsToUpdateJustified.Add(1),
+			wantedErr:     "node does not exist",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fcs := setup(tt.justified.Epoch, tt.finalized.Epoch)
+			fcs.store.justifiedCheckpoint = tt.justified
+			fcs.store.finalizedCheckpoint = tt.finalized
+			fcs.store.bestJustifiedCheckpoint = tt.bestJustified
+			fcs.store.genesisTime = uint64(time.Now().Unix()) - uint64(tt.currentSlot)*params.BeaconConfig().SecondsPerSlot
+
+			state, blkRoot, err := prepareForkchoiceState(ctx, 32, [32]byte{'f'},
+				[32]byte{}, [32]byte{}, tt.finalized.Epoch, tt.finalized.Epoch)
+			require.NoError(t, err)
+			require.NoError(t, fcs.InsertNode(ctx, state, blkRoot))
+			state, blkRoot, err = prepareForkchoiceState(ctx, 64, [32]byte{'j'},
+				[32]byte{'f'}, [32]byte{}, tt.justified.Epoch, tt.finalized.Epoch)
+			require.NoError(t, err)
+			require.NoError(t, fcs.InsertNode(ctx, state, blkRoot))
+			state, blkRoot, err = prepareForkchoiceState(ctx, 96, [32]byte{'b'},
+				[32]byte{'j'}, [32]byte{}, tt.newJustified.Epoch, tt.newFinalized.Epoch)
+			require.NoError(t, err)
+			require.NoError(t, fcs.InsertNode(ctx, state, blkRoot))
+			state, blkRoot, err = prepareForkchoiceState(ctx, 96, [32]byte{'c'},
+				[32]byte{'f'}, [32]byte{}, tt.newJustified.Epoch, tt.newFinalized.Epoch)
+			require.NoError(t, err)
+			require.NoError(t, fcs.InsertNode(ctx, state, blkRoot))
+			// restart justifications cause insertion messed it up
+			fcs.store.justifiedCheckpoint = tt.justified
+			fcs.store.finalizedCheckpoint = tt.finalized
+			fcs.store.bestJustifiedCheckpoint = tt.bestJustified
+
+			jc := &ethpb.Checkpoint{Epoch: tt.newJustified.Epoch, Root: tt.newJustified.Root[:]}
+			fc := &ethpb.Checkpoint{Epoch: tt.newFinalized.Epoch, Root: tt.newFinalized.Root[:]}
+			err = fcs.updateCheckpoints(ctx, jc, fc)
+			if len(tt.wantedErr) > 0 {
+				require.ErrorContains(t, tt.wantedErr, err)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tt.wantedJustified.Epoch, fcs.store.justifiedCheckpoint.Epoch)
+				require.Equal(t, tt.wantedFinalized.Epoch, fcs.store.finalizedCheckpoint.Epoch)
+				require.Equal(t, tt.wantedJustified.Root, fcs.store.justifiedCheckpoint.Root)
+				require.Equal(t, tt.wantedFinalized.Root, fcs.store.finalizedCheckpoint.Root)
+				require.Equal(t, tt.wantedBestJustified.Epoch, fcs.store.bestJustifiedCheckpoint.Epoch)
+				require.Equal(t, tt.wantedBestJustified.Root, fcs.store.bestJustifiedCheckpoint.Root)
+			}
+		})
+	}
 }
