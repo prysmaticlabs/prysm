@@ -60,9 +60,6 @@ type Flags struct {
 	// EnableSlashingProtectionPruning for the validator client.
 	EnableSlashingProtectionPruning bool
 
-	// Bug fixes related flags.
-	CorrectlyPruneCanonicalAtts bool
-
 	EnableNativeState                bool // EnableNativeState defines whether the beacon state will be represented as a pure Go struct or a Go struct that wraps a proto struct.
 	EnableVectorizedHTR              bool // EnableVectorizedHTR specifies whether the beacon state will use the optimized sha256 routines.
 	EnableForkChoiceDoublyLinkedTree bool // EnableForkChoiceDoublyLinkedTree specifies whether fork choice store will use a doubly linked tree.
@@ -163,6 +160,9 @@ func applySepoliaFeatureFlags(ctx *cli.Context) {
 	if err := ctx.Set(enableForkChoiceDoublyLinkedTree.Names()[0], "true"); err != nil {
 		log.WithError(err).Debug("error enabling doubly linked tree forkchoice flag")
 	}
+	if err := ctx.Set(enableNativeState.Names()[0], "true"); err != nil {
+		log.WithError(err).Debug("error enabling native state flag")
+	}
 }
 
 // ConfigureBeaconChain sets the global config based
@@ -208,11 +208,6 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 	if ctx.Bool(enableHistoricalSpaceRepresentation.Name) {
 		log.WithField(enableHistoricalSpaceRepresentation.Name, enableHistoricalSpaceRepresentation.Usage).Warn(enabledFeatureFlag)
 		cfg.EnableHistoricalSpaceRepresentation = true
-	}
-	cfg.CorrectlyPruneCanonicalAtts = true
-	if ctx.Bool(disableCorrectlyPruneCanonicalAtts.Name) {
-		logDisabled(disableCorrectlyPruneCanonicalAtts)
-		cfg.CorrectlyPruneCanonicalAtts = false
 	}
 	cfg.EnableNativeState = false
 	if ctx.Bool(enableNativeState.Name) {
