@@ -134,7 +134,7 @@ service KeyManagement {
   //  - 401: Unauthorized
   //  - 403: Forbidden from accessing the resource
   //  - 500: Validator internal error
-  rpc ListFeeRecipientByPubkey(ByPubkeyRequest) returns (GetFeeRecipientByPubkeyResponse) {
+  rpc ListFeeRecipientByPubkey(PubkeyRequest) returns (GetFeeRecipientByPubkeyResponse) {
     option (google.api.http) = {
       get: "/internal/eth/v1/validator/{pubkey}/feerecipient"
     };
@@ -161,7 +161,7 @@ service KeyManagement {
   //  - 401: Unauthorized
   //  - 403: Forbidden from accessing the resource
   //  - 500: Validator internal error
-  rpc DeleteFeeRecipientByPubkey(ByPubkeyRequest) returns (google.protobuf.Empty) {
+  rpc DeleteFeeRecipientByPubkey(PubkeyRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {
       delete: "/internal/eth/v1/validator/{pubkey}/feerecipient",
       body: "*"
@@ -269,7 +269,7 @@ message DeletedRemoteKeysStatus {
 }
 
 
-message ByPubkeyRequest {
+message PubkeyRequest {
   bytes pubkey = 1;
 }
 
