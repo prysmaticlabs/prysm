@@ -157,7 +157,7 @@ service KeyManagement {
   // DeleteFeeRecipientByPubkey deletes the current settings on the fee recipient and replaces with the default fallback fee recipient.
   //
   // HTTP response status codes:
-  //  - 202: Successful response
+  //  - 204: No Content
   //  - 401: Unauthorized
   //  - 403: Forbidden from accessing the resource
   //  - 500: Validator internal error

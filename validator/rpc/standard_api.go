@@ -395,9 +395,8 @@ func (s *Server) ListFeeRecipientByPubkey(ctx context.Context, req *ethpbservice
 		return nil, status.Error(codes.FailedPrecondition, "Validator service not ready")
 	}
 	validatorKey := req.Pubkey
-	if len(validatorKey) != fieldparams.BLSPubkeyLength {
-		return nil, status.Errorf(
-			codes.InvalidArgument, "provided public key in path is not a valid bls public key, please check for correct hex format starting with 0x")
+	if err := validatePublicKey(validatorKey); err != nil {
+		return nil, err
 	}
 	defaultFeeRecipient := params.BeaconConfig().DefaultFeeRecipient.Bytes()
 	if s.validatorService.ProposerSettings == nil {
@@ -437,9 +436,8 @@ func (s *Server) SetFeeRecipientByPubkey(ctx context.Context, req *ethpbservice.
 		return nil, status.Error(codes.FailedPrecondition, "Validator service not ready.")
 	}
 	validatorKey := req.Pubkey
-	if len(validatorKey) != fieldparams.BLSPubkeyLength {
-		return nil, status.Errorf(
-			codes.InvalidArgument, "provided public key in path is not a valid bls public key, please check for correct hex format starting with 0x")
+	if err := validatePublicKey(validatorKey); err != nil {
+		return nil, err
 	}
 	defaultOption := validatorServiceConfig.DefaultProposerOption()
 	encoded := hexutil.Encode(req.Ethaddress)
@@ -482,9 +480,8 @@ func (s *Server) DeleteFeeRecipientByPubkey(ctx context.Context, req *ethpbservi
 		return nil, status.Error(codes.FailedPrecondition, "Validator service not ready.")
 	}
 	validatorKey := req.Pubkey
-	if len(validatorKey) != fieldparams.BLSPubkeyLength {
-		return nil, status.Errorf(
-			codes.InvalidArgument, "provided public key in path is not a valid bls public key, please check for correct hex format starting with 0x")
+	if err := validatePublicKey(validatorKey); err != nil {
+		return nil, err
 	}
 	defaultFeeRecipient := params.BeaconConfig().DefaultFeeRecipient
 	if s.validatorService.ProposerSettings != nil && s.validatorService.ProposerSettings.DefaultConfig != nil {
@@ -501,4 +498,11 @@ func (s *Server) DeleteFeeRecipientByPubkey(ctx context.Context, req *ethpbservi
 		return &empty.Empty{}, fmt.Errorf("could not set custom success code header: %w", err)
 	}
 	return &empty.Empty{}, nil
+}
+
+func validatePublicKey(pubkey []byte) error {
+	if len(pubkey) != fieldparams.BLSPubkeyLength {
+		return status.Errorf(
+			codes.InvalidArgument, "provided public key in path is not byte length %d and not a valid bls public key", fieldparams.BLSPubkeyLength)
+	}
 }
