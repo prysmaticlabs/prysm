@@ -13,7 +13,7 @@ import (
 
 // SaveBlobsSidecar saves the blobs for a given epoch in the sidecar bucket.
 func (s *Store) SaveBlobsSidecar(ctx context.Context, blob *ethpb.BlobsSidecar) error {
-	_, span := trace.StartSpan(ctx, "BeaconDB.SavBlobsSidecar")
+	_, span := trace.StartSpan(ctx, "BeaconDB.SaveBlobsSidecar")
 	defer span.End()
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blobsBucket)
