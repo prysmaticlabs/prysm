@@ -396,7 +396,7 @@ func (s *Server) ListFeeRecipientByPubkey(ctx context.Context, req *ethpbservice
 	}
 	validatorKey := req.Pubkey
 	if err := validatePublicKey(validatorKey); err != nil {
-		return nil, err
+		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}
 	defaultFeeRecipient := params.BeaconConfig().DefaultFeeRecipient.Bytes()
 	if s.validatorService.ProposerSettings == nil {
@@ -441,7 +441,7 @@ func (s *Server) SetFeeRecipientByPubkey(ctx context.Context, req *ethpbservice.
 	defaultOption := validatorServiceConfig.DefaultProposerOption()
 	encoded := hexutil.Encode(req.Ethaddress)
 	if !common.IsHexAddress(encoded) {
-		return nil, status.Errorf(
+		return nil, status.Error(
 			codes.InvalidArgument, "Fee recipient is not a valid Ethereum address")
 	}
 	pOption := validatorServiceConfig.DefaultProposerOption()
