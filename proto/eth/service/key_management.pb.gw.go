@@ -10,9 +10,6 @@ package service
 
 import (
 	"context"
-	"io"
-	"net/http"
-
 	"github.com/golang/protobuf/ptypes/empty"
 	emptypb "github.com/golang/protobuf/ptypes/empty"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
@@ -24,6 +21,8 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
+	"io"
+	"net/http"
 )
 
 // Suppress "imported and not used" errors
@@ -210,7 +209,7 @@ func local_request_KeyManagement_DeleteRemoteKeys_0(ctx context.Context, marshal
 }
 
 func request_KeyManagement_ListFeeRecipientByPubkey_0(ctx context.Context, marshaler runtime.Marshaler, client KeyManagementClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq ByPubkeyRequest
+	var protoReq PubkeyRequest
 	var metadata runtime.ServerMetadata
 
 	var (
@@ -237,7 +236,7 @@ func request_KeyManagement_ListFeeRecipientByPubkey_0(ctx context.Context, marsh
 }
 
 func local_request_KeyManagement_ListFeeRecipientByPubkey_0(ctx context.Context, marshaler runtime.Marshaler, server KeyManagementServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq ByPubkeyRequest
+	var protoReq PubkeyRequest
 	var metadata runtime.ServerMetadata
 
 	var (
@@ -334,7 +333,7 @@ func local_request_KeyManagement_SetFeeRecipientByPubkey_0(ctx context.Context, 
 }
 
 func request_KeyManagement_DeleteFeeRecipientByPubkey_0(ctx context.Context, marshaler runtime.Marshaler, client KeyManagementClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq ByPubkeyRequest
+	var protoReq PubkeyRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -369,7 +368,7 @@ func request_KeyManagement_DeleteFeeRecipientByPubkey_0(ctx context.Context, mar
 }
 
 func local_request_KeyManagement_DeleteFeeRecipientByPubkey_0(ctx context.Context, marshaler runtime.Marshaler, server KeyManagementServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq ByPubkeyRequest
+	var protoReq PubkeyRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
