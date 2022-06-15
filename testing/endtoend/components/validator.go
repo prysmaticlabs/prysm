@@ -22,7 +22,6 @@ import (
 	"github.com/pkg/errors"
 	cmdshared "github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
-	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	validator_service_config "github.com/prysmaticlabs/prysm/config/validator/service"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit"
@@ -213,7 +212,10 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 	for _, pub := range pubs {
 		ValidatorHexPubKeys = append(ValidatorHexPubKeys, hexutil.Encode(pub.Marshal()))
 	}
-
+	proposerSettingsPathPath, err := createProposerSettingsPath(ValidatorHexPubKeys)
+	if err != nil {
+		return err
+	}
 	args := []string{
 		fmt.Sprintf("--%s=%s/eth2-val-%d", cmdshared.DataDirFlag.Name, e2e.TestParams.TestPath, index),
 		fmt.Sprintf("--%s=%s", cmdshared.LogFileName.Name, file.Name()),
@@ -223,21 +225,11 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 		fmt.Sprintf("--%s=localhost:%d", flags.BeaconRPCProviderFlag.Name, beaconRPCPort),
 		fmt.Sprintf("--%s=%s", flags.GrpcHeadersFlag.Name, "dummy=value,foo=bar"), // Sending random headers shouldn't break anything.
 		fmt.Sprintf("--%s=%s", cmdshared.VerbosityFlag.Name, "debug"),
+		fmt.Sprintf("--%s=%s", flags.ProposerSettingsFlag.Name, proposerSettingsPathPath),
 		"--" + cmdshared.ForceClearDB.Name,
 		"--" + cmdshared.E2EConfigFlag.Name,
 		"--" + cmdshared.AcceptTosFlag.Name,
 	}
-	// Only apply e2e flags to the current branch. New flags may not exist in previous release.
-	if !v.config.UsePrysmShValidator {
-		args = append(args, features.E2EValidatorFlags...)
-		//TODO: Remove this once it is in current release.
-		feeConfigPath, err := createFeeRecipientConfigPath(ValidatorHexPubKeys)
-		if err != nil {
-			return err
-		}
-		args = append(args, fmt.Sprintf("--%s=%s", flags.FeeRecipientConfigFileFlag.Name, feeConfigPath))
-	}
-
 	if v.config.UseWeb3RemoteSigner {
 		args = append(args, fmt.Sprintf("--%s=http://localhost:%d", flags.Web3SignerURLFlag.Name, Web3RemoteSignerPort))
 		// Write the pubkeys as comma seperated hex strings with 0x prefix.
@@ -402,32 +394,32 @@ func sendDeposits(web3 *ethclient.Client, keystoreBytes []byte, num, offset int,
 	return nil
 }
 
-func createFeeRecipientConfigPath(pubkeys []string) (string, error) {
-	testNetDir := e2e.TestParams.TestPath + "/fee-recipient-config"
+func createProposerSettingsPath(pubkeys []string) (string, error) {
+	testNetDir := e2e.TestParams.TestPath + "/proposer-settings"
 	configPath := filepath.Join(testNetDir, "config.json")
 	if len(ValidatorHexPubKeys) == 0 {
 		return "", errors.New("number of validators must be greater than 0")
 	}
-	var feeRecipientConfig validator_service_config.FeeRecipientFileConfig
+	var proposerSettingsPayload validator_service_config.ProposerSettingsPayload
 	if len(ValidatorHexPubKeys) == 1 {
-		feeRecipientConfig = validator_service_config.FeeRecipientFileConfig{
-			DefaultConfig: &validator_service_config.FeeRecipientFileOptions{
+		proposerSettingsPayload = validator_service_config.ProposerSettingsPayload{
+			DefaultConfig: &validator_service_config.ProposerOptionPayload{
 				FeeRecipient: DefaultFeeRecipientAddress,
 			},
 		}
 	} else {
-		config := make(map[string]*validator_service_config.FeeRecipientFileOptions)
-		config[pubkeys[0]] = &validator_service_config.FeeRecipientFileOptions{
+		config := make(map[string]*validator_service_config.ProposerOptionPayload)
+		config[pubkeys[0]] = &validator_service_config.ProposerOptionPayload{
 			FeeRecipient: FeeRecipientAddress,
 		}
-		feeRecipientConfig = validator_service_config.FeeRecipientFileConfig{
+		proposerSettingsPayload = validator_service_config.ProposerSettingsPayload{
 			ProposeConfig: config,
-			DefaultConfig: &validator_service_config.FeeRecipientFileOptions{
+			DefaultConfig: &validator_service_config.ProposerOptionPayload{
 				FeeRecipient: DefaultFeeRecipientAddress,
 			},
 		}
 	}
-	jsonBytes, err := json.Marshal(feeRecipientConfig)
+	jsonBytes, err := json.Marshal(proposerSettingsPayload)
 	if err != nil {
 		return "", err
 	}
