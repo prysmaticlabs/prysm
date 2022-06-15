@@ -17,6 +17,7 @@ import (
 	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/policies"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/types"
+	"github.com/spf13/cast"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -73,7 +74,7 @@ func feeRecipientIsPresent(conns ...*grpc.ClientConn) error {
 		if err != nil {
 			return err
 		}
-		intBlock := int64(latestBlockNum)
+		intBlock := cast.ToInt64(latestBlockNum)
 		accountBalance, err := web3.BalanceAt(ctx, account, big.NewInt(intBlock))
 		if err != nil {
 			return err
