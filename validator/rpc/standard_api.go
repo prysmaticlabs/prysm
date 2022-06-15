@@ -427,7 +427,6 @@ func (s *Server) ListFeeRecipientByPubkey(ctx context.Context, req *ethpbservice
 			Ethaddress: defaultFeeRecipient,
 		},
 	}, nil
-
 }
 
 // SetFeeRecipientByPubkey updates the eth address mapped to the public key.
