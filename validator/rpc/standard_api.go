@@ -505,4 +505,5 @@ func validatePublicKey(pubkey []byte) error {
 		return status.Errorf(
 			codes.InvalidArgument, "provided public key in path is not byte length %d and not a valid bls public key", fieldparams.BLSPubkeyLength)
 	}
+	return nil
 }
