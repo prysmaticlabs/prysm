@@ -468,7 +468,7 @@ func (s *Server) SetFeeRecipientByPubkey(ctx context.Context, req *ethpbservice.
 	}
 	// override the 200 success with 202 according to the specs
 	if err := grpc.SetHeader(ctx, metadata.Pairs("x-http-code", "202")); err != nil {
-		return &empty.Empty{}, status.Errorf(codes.Internal, "Could not set custom success code header: %w", err)
+		return &empty.Empty{}, status.Errorf(codes.Internal, "Could not set custom success code header: %v", err)
 	}
 	return &empty.Empty{}, nil
 }
@@ -494,7 +494,7 @@ func (s *Server) DeleteFeeRecipientByPubkey(ctx context.Context, req *ethpbservi
 	}
 	// override the 200 success with 204 according to the specs
 	if err := grpc.SetHeader(ctx, metadata.Pairs("x-http-code", "204")); err != nil {
-		return &empty.Empty{}, status.Errorf(codes.Internal, "Could not set custom success code header: %w", err)
+		return &empty.Empty{}, status.Errorf(codes.Internal, "Could not set custom success code header: %v", err)
 	}
 	return &empty.Empty{}, nil
 }
