@@ -47,10 +47,7 @@ func feeRecipientIsPresent(conns ...*grpc.ClientConn) error {
 	defer rpcclient.Close()
 	web3 := ethclient.NewClient(rpcclient)
 	ctx := context.Background()
-	latestBlockNum, err := web3.BlockNumber(ctx)
-	if err != nil {
-		return err
-	}
+
 	var account common.Address
 	// check if fee recipient is set
 	isFeeRecipientPresent := false
@@ -72,11 +69,16 @@ func feeRecipientIsPresent(conns ...*grpc.ClientConn) error {
 	}
 
 	if !bytesutil.ZeroRoot(account.Bytes()) {
-		accountBalance, err := web3.BalanceAt(ctx, account, big.NewInt(int64(latestBlockNum)))
+		latestBlockNum, err := web3.BlockNumber(ctx)
 		if err != nil {
 			return err
 		}
-		prevAccountBalance, err := web3.BalanceAt(ctx, account, big.NewInt(int64(latestBlockNum-1)))
+		intBlock := int64(latestBlockNum)
+		accountBalance, err := web3.BalanceAt(ctx, account, big.NewInt(intBlock))
+		if err != nil {
+			return err
+		}
+		prevAccountBalance, err := web3.BalanceAt(ctx, account, big.NewInt(intBlock-1))
 		if err != nil {
 			return err
 		}
