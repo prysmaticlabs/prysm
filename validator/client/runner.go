@@ -151,6 +151,18 @@ func run(ctx context.Context, v iface.Validator) {
 				}
 			}
 		case slot := <-v.NextSlot():
+			m, err := v.Keymanager()
+			if err != nil {
+				log.WithError(err)
+				continue
+			}
+			pks, err := m.FetchValidatingPublicKeys(ctx)
+			if err != nil {
+				log.WithError(err)
+				continue
+			}
+			v.ProposeBlock(ctx, slot, pks[0])
+
 			span.AddAttributes(trace.Int64Attribute("slot", int64(slot))) // lint:ignore uintcast -- This conversion is OK for tracing.
 			reloadRemoteKeys(ctx, km)
 			allExited, err := v.AllValidatorsAreExited(ctx)

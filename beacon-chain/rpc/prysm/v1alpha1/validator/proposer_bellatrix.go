@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/interop"
@@ -118,11 +119,15 @@ func (vs *Server) getPayloadHeader(ctx context.Context, slot types.Slot, idx typ
 	if err != nil {
 		return nil, err
 	}
-	pk, err := vs.HeadFetcher.HeadValidatorIndexToPublicKey(ctx, idx)
+	//pk, err := vs.HeadFetcher.HeadValidatorIndexToPublicKey(ctx, idx)
+	//if err != nil {
+	//	return nil, err
+	//}
+	k, err := hexutil.Decode("0xa99a76ed7796f7be22d5b7e85deeb7c5677e88e511e0b337618f8c4eb61349b4bf2d153f649f7b53359fe8b94a38e44c")
 	if err != nil {
 		return nil, err
 	}
-	bid, err := vs.BlockBuilder.GetHeader(ctx, slot, bytesutil.ToBytes32(h.BlockHash), pk)
+	bid, err := vs.BlockBuilder.GetHeader(ctx, slot, bytesutil.ToBytes32(h.BlockHash), bytesutil.ToBytes48(k))
 	if err != nil {
 		return nil, err
 	}

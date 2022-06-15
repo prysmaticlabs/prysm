@@ -141,10 +141,25 @@ func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.
 		return nil, fmt.Errorf("could not tree hash block: %v", err)
 	}
 
+	r, err := blk.Block().HashTreeRoot()
+	if err != nil {
+		return nil, err
+	}
+	log.Info("Block root with header", fmt.Sprintf("%#x", bytesutil.Trunc(r[:])))
 	blk, err = vs.getBuilderBlock(ctx, blk)
 	if err != nil {
 		return nil, err
 	}
+	r, err = blk.Block().HashTreeRoot()
+	if err != nil {
+		return nil, err
+	}
+	log.Info("block root with payload", fmt.Sprintf("%#x", bytesutil.Trunc(r[:])))
+	payload, err := blk.Block().Body().ExecutionPayload()
+	if err != nil {
+		return nil, err
+	}
+	log.Info("Tx count: ", len(payload.Transactions))
 
 	// Do not block proposal critical path with debug logging or block feed updates.
 	defer func() {
