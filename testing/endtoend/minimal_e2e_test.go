@@ -1,36 +1,21 @@
 package endtoend
 
 import (
-	"fmt"
-	"os"
-	"strconv"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/config/params"
-	ev "github.com/prysmaticlabs/prysm/testing/endtoend/evaluators"
-	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
-	e2eParams "github.com/prysmaticlabs/prysm/testing/endtoend/params"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/types"
-	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
-type testArgs struct {
-	usePrysmSh          bool
-	useWeb3RemoteSigner bool
-}
-
 func TestEndToEnd_MinimalConfig(t *testing.T) {
-	e2eMinimal(t, &testArgs{
-		usePrysmSh:          false,
-		useWeb3RemoteSigner: false,
-	})
+	e2eMinimal(t).run()
 }
 
 func TestEndToEnd_MinimalConfig_Web3Signer(t *testing.T) {
-	e2eMinimal(t, &testArgs{
-		usePrysmSh:          false,
-		useWeb3RemoteSigner: true,
-	})
+	e2eMinimal(t, types.WithRemoteSigner()).run()
+}
+
+func TestEndToEnd_MinimalConfig_CheckpointSync(t *testing.T) {
+	e2eMinimal(t, types.WithCheckpointSync()).run()
 }
 
 func e2eMinimal(t *testing.T, args *testArgs) {
@@ -110,3 +95,4 @@ func e2eMinimal(t *testing.T, args *testArgs) {
 
 	newTestRunner(t, testConfig).run()
 }
+

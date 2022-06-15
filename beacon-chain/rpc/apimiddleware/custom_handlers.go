@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -16,44 +17,83 @@ import (
 	"github.com/r3labs/sse"
 )
 
+const (
+	versionHeader        = "Eth-Consensus-Version"
+	grpcVersionHeader    = "Grpc-metadata-Eth-Consensus-Version"
+	jsonMediaType        = "application/json"
+	octetStreamMediaType = "application/octet-stream"
+)
+
+// match a number with optional decimals
+var priorityRegex = regexp.MustCompile(`q=(\d+(?:\.\d+)?)`)
+
 type sszConfig struct {
-	sszPath      string
 	fileName     string
-	responseJson sszResponseJson
+	responseJson sszResponse
 }
 
 func handleGetBeaconStateSSZ(m *apimiddleware.ApiProxyMiddleware, endpoint apimiddleware.Endpoint, w http.ResponseWriter, req *http.Request) (handled bool) {
 	config := sszConfig{
-		sszPath:      "/eth/v1/debug/beacon/states/{state_id}/ssz",
 		fileName:     "beacon_state.ssz",
-		responseJson: &beaconStateSSZResponseJson{},
+		responseJson: &sszResponseJson{},
 	}
 	return handleGetSSZ(m, endpoint, w, req, config)
 }
 
 func handleGetBeaconBlockSSZ(m *apimiddleware.ApiProxyMiddleware, endpoint apimiddleware.Endpoint, w http.ResponseWriter, req *http.Request) (handled bool) {
 	config := sszConfig{
-		sszPath:      "/eth/v1/beacon/blocks/{block_id}/ssz",
 		fileName:     "beacon_block.ssz",
-		responseJson: &blockSSZResponseJson{},
+		responseJson: &sszResponseJson{},
 	}
 	return handleGetSSZ(m, endpoint, w, req, config)
 }
 
 func handleGetBeaconStateSSZV2(m *apimiddleware.ApiProxyMiddleware, endpoint apimiddleware.Endpoint, w http.ResponseWriter, req *http.Request) (handled bool) {
 	config := sszConfig{
-		sszPath:      "/eth/v2/debug/beacon/states/{state_id}/ssz",
 		fileName:     "beacon_state.ssz",
-		responseJson: &beaconStateSSZResponseV2Json{},
+		responseJson: &versionedSSZResponseJson{},
 	}
 	return handleGetSSZ(m, endpoint, w, req, config)
 }
 
 func handleGetBeaconBlockSSZV2(m *apimiddleware.ApiProxyMiddleware, endpoint apimiddleware.Endpoint, w http.ResponseWriter, req *http.Request) (handled bool) {
 	config := sszConfig{
-		sszPath:      "/eth/v2/beacon/blocks/{block_id}/ssz",
 		fileName:     "beacon_block.ssz",
-		responseJson: &blockSSZResponseV2Json{},
+		responseJson: &versionedSSZResponseJson{},
+	}
+	return handleGetSSZ(m, endpoint, w, req, config)
+}
+
+func handleSubmitBlockSSZ(m *apimiddleware.ApiProxyMiddleware, endpoint apimiddleware.Endpoint, w http.ResponseWriter, req *http.Request) (handled bool) {
+	return handlePostSSZ(m, endpoint, w, req, sszConfig{})
+}
+
+func handleSubmitBlindedBlockSSZ(
+	m *apimiddleware.ApiProxyMiddleware,
+	endpoint apimiddleware.Endpoint,
+	w http.ResponseWriter,
+	req *http.Request,
+) (handled bool) {
+	return handlePostSSZ(m, endpoint, w, req, sszConfig{})
+}
+
+func handleProduceBlockSSZ(m *apimiddleware.ApiProxyMiddleware, endpoint apimiddleware.Endpoint, w http.ResponseWriter, req *http.Request) (handled bool) {
+	config := sszConfig{
+		fileName:     "produce_beacon_block.ssz",
+		responseJson: &versionedSSZResponseJson{},
+	}
+	return handleGetSSZ(m, endpoint, w, req, config)
+}
+
+func handleProduceBlindedBlockSSZ(
+	m *apimiddleware.ApiProxyMiddleware,
+	endpoint apimiddleware.Endpoint,
+	w http.ResponseWriter,
+	req *http.Request,
+) (handled bool) {
+	config := sszConfig{
+		fileName:     "produce_blinded_beacon_block.ssz",
+		responseJson: &versionedSSZResponseJson{},
 	}
 	return handleGetSSZ(m, endpoint, w, req, config)
 }
@@ -65,11 +105,16 @@ func handleGetSSZ(
 	req *http.Request,
 	config sszConfig,
 ) (handled bool) {
-	if !sszRequested(req) {
+	ssz, err := sszRequested(req)
+	if err != nil {
+		apimiddleware.WriteError(w, apimiddleware.InternalServerError(err), nil)
+		return true
+	}
+	if !ssz {
 		return false
 	}
 
-	if errJson := prepareSSZRequestForProxying(m, endpoint, req, config.sszPath); errJson != nil {
+	if errJson := prepareSSZRequestForProxying(m, endpoint, req); errJson != nil {
 		apimiddleware.WriteError(w, errJson, nil)
 		return true
 	}
@@ -112,37 +157,142 @@ func handleGetSSZ(
 	return true
 }
 
-func sszRequested(req *http.Request) bool {
-	accept, ok := req.Header["Accept"]
+func handlePostSSZ(
+	m *apimiddleware.ApiProxyMiddleware,
+	endpoint apimiddleware.Endpoint,
+	w http.ResponseWriter,
+	req *http.Request,
+	config sszConfig,
+) (handled bool) {
+	if !sszPosted(req) {
+		return false
+	}
+
+	if errJson := prepareSSZRequestForProxying(m, endpoint, req); errJson != nil {
+		apimiddleware.WriteError(w, errJson, nil)
+		return true
+	}
+	prepareCustomHeaders(req)
+	if errJson := preparePostedSSZData(req); errJson != nil {
+		apimiddleware.WriteError(w, errJson, nil)
+		return true
+	}
+
+	grpcResponse, errJson := m.ProxyRequest(req)
+	if errJson != nil {
+		apimiddleware.WriteError(w, errJson, nil)
+		return true
+	}
+	grpcResponseBody, errJson := apimiddleware.ReadGrpcResponseBody(grpcResponse.Body)
+	if errJson != nil {
+		apimiddleware.WriteError(w, errJson, nil)
+		return true
+	}
+	respHasError, errJson := apimiddleware.HandleGrpcResponseError(endpoint.Err, grpcResponse, grpcResponseBody, w)
+	if errJson != nil {
+		apimiddleware.WriteError(w, errJson, nil)
+		return
+	}
+	if respHasError {
+		return
+	}
+	if errJson := apimiddleware.Cleanup(grpcResponse.Body); errJson != nil {
+		apimiddleware.WriteError(w, errJson, nil)
+		return true
+	}
+
+	return true
+}
+
+func sszRequested(req *http.Request) (bool, error) {
+	accept := req.Header.Values("Accept")
+	if len(accept) == 0 {
+		return false, nil
+	}
+	types := strings.Split(accept[0], ",")
+	currentType, currentPriority := "", 0.0
+	for _, t := range types {
+		values := strings.Split(t, ";")
+		name := values[0]
+		if name != jsonMediaType && name != octetStreamMediaType {
+			continue
+		}
+		// no params specified
+		if len(values) == 1 {
+			priority := 1.0
+			if priority > currentPriority {
+				currentType, currentPriority = name, priority
+			}
+			continue
+		}
+		params := values[1]
+		match := priorityRegex.FindAllStringSubmatch(params, 1)
+		if len(match) != 1 {
+			continue
+		}
+		priority, err := strconv.ParseFloat(match[0][1], 32)
+		if err != nil {
+			return false, err
+		}
+		if priority > currentPriority {
+			currentType, currentPriority = name, priority
+		}
+	}
+
+	return currentType == octetStreamMediaType, nil
+}
+
+func sszPosted(req *http.Request) bool {
+	ct, ok := req.Header["Content-Type"]
 	if !ok {
 		return false
 	}
-	for _, v := range accept {
-		if v == "application/octet-stream" {
-			return true
-		}
+	if len(ct) != 1 {
+		return false
 	}
-	return false
+	return ct[0] == octetStreamMediaType
 }
 
-func prepareSSZRequestForProxying(
-	m *apimiddleware.ApiProxyMiddleware,
-	endpoint apimiddleware.Endpoint,
-	req *http.Request, sszPath string,
-) apimiddleware.ErrorJson {
+func prepareSSZRequestForProxying(m *apimiddleware.ApiProxyMiddleware, endpoint apimiddleware.Endpoint, req *http.Request) apimiddleware.ErrorJson {
 	req.URL.Scheme = "http"
 	req.URL.Host = m.GatewayAddress
 	req.RequestURI = ""
-	req.URL.Path = sszPath
-	if errJson := apimiddleware.HandleURLParameters(endpoint.Path, req, []string{}); errJson != nil {
+	if errJson := apimiddleware.HandleURLParameters(endpoint.Path, req, endpoint.RequestURLLiterals); errJson != nil {
 		return errJson
 	}
-	// We have to add the prefix after handling parameters because adding the prefix changes URL segment indexing.
-	req.URL.Path = "/internal" + req.URL.Path
+	if errJson := apimiddleware.HandleQueryParameters(req, endpoint.RequestQueryParams); errJson != nil {
+		return errJson
+	}
+	// We have to add new segments after handling parameters because it changes URL segment indexing.
+	req.URL.Path = "/internal" + req.URL.Path + "/ssz"
 	return nil
 }
 
-func serializeMiddlewareResponseIntoSSZ(respJson sszResponseJson) (version string, ssz []byte, errJson apimiddleware.ErrorJson) {
+func prepareCustomHeaders(req *http.Request) {
+	ver := req.Header.Get(versionHeader)
+	if ver != "" {
+		req.Header.Del(versionHeader)
+		req.Header.Add(grpcVersionHeader, ver)
+	}
+}
+
+func preparePostedSSZData(req *http.Request) apimiddleware.ErrorJson {
+	buf, err := io.ReadAll(req.Body)
+	if err != nil {
+		return apimiddleware.InternalServerErrorWithMessage(err, "could not read body")
+	}
+	j := sszRequestJson{Data: base64.StdEncoding.EncodeToString(buf)}
+	data, err := json.Marshal(j)
+	if err != nil {
+		return apimiddleware.InternalServerErrorWithMessage(err, "could not prepare POST data")
+	}
+	req.Body = io.NopCloser(bytes.NewBuffer(data))
+	req.ContentLength = int64(len(data))
+	req.Header.Set("Content-Type", jsonMediaType)
+	return nil
+}
+
+func serializeMiddlewareResponseIntoSSZ(respJson sszResponse) (version string, ssz []byte, errJson apimiddleware.ErrorJson) {
 	// Serialize the SSZ part of the deserialized value.
 	data, err := base64.StdEncoding.DecodeString(respJson.SSZData())
 	if err != nil {
@@ -166,9 +316,9 @@ func writeSSZResponseHeaderAndBody(grpcResp *http.Response, w http.ResponseWrite
 		}
 	}
 	w.Header().Set("Content-Length", strconv.Itoa(len(respSsz)))
-	w.Header().Set("Content-Type", "application/octet-stream")
+	w.Header().Set("Content-Type", octetStreamMediaType)
 	w.Header().Set("Content-Disposition", "attachment; filename="+fileName)
-	w.Header().Set("Eth-Consensus-Version", respVersion)
+	w.Header().Set(versionHeader, respVersion)
 	if statusCodeHeader != "" {
 		code, err := strconv.Atoi(statusCodeHeader)
 		if err != nil {
@@ -186,6 +336,7 @@ func writeSSZResponseHeaderAndBody(grpcResp *http.Response, w http.ResponseWrite
 
 func handleEvents(m *apimiddleware.ApiProxyMiddleware, _ apimiddleware.Endpoint, w http.ResponseWriter, req *http.Request) (handled bool) {
 	sseClient := sse.NewClient("http://" + m.GatewayAddress + "/internal" + req.URL.RequestURI())
+	sseClient.Headers["Grpc-Timeout"] = "0S"
 	eventChan := make(chan *sse.Event)
 
 	// We use grpc-gateway as the server side of events, not the sse library.
@@ -212,8 +363,8 @@ func receiveEvents(eventChan <-chan *sse.Event, w http.ResponseWriter, req *http
 		case msg := <-eventChan:
 			var data interface{}
 
-			// The message's event comes to us with trailing whitespace.  Remove it here for
-			// ease of future procesing.
+			// The message's event comes to us with trailing whitespace. Remove it here for
+			// ease of future processing.
 			msg.Event = bytes.TrimSpace(msg.Event)
 
 			switch string(msg.Event) {

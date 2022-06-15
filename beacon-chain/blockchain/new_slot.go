@@ -5,7 +5,9 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
@@ -30,7 +32,6 @@ import (
 //        if ancestor_at_finalized_slot == store.finalized_checkpoint.root:
 //            store.justified_checkpoint = store.best_justified_checkpoint
 func (s *Service) NewSlot(ctx context.Context, slot types.Slot) error {
-
 	// Reset proposer boost root in fork choice.
 	if err := s.cfg.ForkChoiceStore.ResetBoostedProposerRoot(ctx); err != nil {
 		return errors.Wrap(err, "could not reset boosted proposer root in fork choice")
@@ -42,17 +43,17 @@ func (s *Service) NewSlot(ctx context.Context, slot types.Slot) error {
 	}
 
 	// Update store.justified_checkpoint if a better checkpoint on the store.finalized_checkpoint chain
-	bj := s.store.BestJustifiedCheckpt()
-	if bj == nil {
-		return errNilBestJustifiedInStore
+	bj, err := s.store.BestJustifiedCheckpt()
+	if err != nil {
+		return errors.Wrap(err, "could not get best justified checkpoint")
 	}
-	j := s.store.JustifiedCheckpt()
-	if j == nil {
-		return errNilJustifiedInStore
+	j, err := s.store.JustifiedCheckpt()
+	if err != nil {
+		return errors.Wrap(err, "could not get justified checkpoint")
 	}
-	f := s.store.FinalizedCheckpt()
-	if f == nil {
-		return errNilFinalizedInStore
+	f, err := s.store.FinalizedCheckpt()
+	if err != nil {
+		return errors.Wrap(err, "could not get finalized checkpoint")
 	}
 	if bj.Epoch > j.Epoch {
 		finalizedSlot, err := slots.EpochStart(f.Epoch)
@@ -64,7 +65,15 @@ func (s *Service) NewSlot(ctx context.Context, slot types.Slot) error {
 			return err
 		}
 		if bytes.Equal(r, f.Root) {
-			s.store.SetJustifiedCheckpt(bj)
+			h, err := s.getPayloadHash(ctx, bj.Root)
+			if err != nil {
+				return err
+			}
+			s.store.SetJustifiedCheckptAndPayloadHash(bj, h)
+			if err := s.cfg.ForkChoiceStore.UpdateJustifiedCheckpoint(&forkchoicetypes.Checkpoint{
+				Epoch: bj.Epoch, Root: bytesutil.ToBytes32(bj.Root)}); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

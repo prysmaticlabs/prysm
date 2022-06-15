@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -32,6 +33,10 @@ const (
 	ExecutionBlockByHashMethod = "eth_getBlockByHash"
 	// ExecutionBlockByNumberMethod request string for JSON-RPC.
 	ExecutionBlockByNumberMethod = "eth_getBlockByNumber"
+	// Defines the seconds to wait before timing out engine endpoints with block execution semantics (newPayload, forkchoiceUpdated).
+	payloadAndForkchoiceUpdatedTimeout = 8 * time.Second
+	// Defines the seconds before timing out engine endpoints with non-block execution semantics.
+	defaultEngineTimeout = time.Second
 )
 
 // ForkchoiceUpdatedResponse is the response kind received by the
@@ -64,7 +69,9 @@ func (s *Service) NewPayload(ctx context.Context, payload *pb.ExecutionPayload) 
 	defer func() {
 		newPayloadLatency.Observe(float64(time.Since(start).Milliseconds()))
 	}()
-
+	d := time.Now().Add(payloadAndForkchoiceUpdatedTimeout)
+	ctx, cancel := context.WithDeadline(ctx, d)
+	defer cancel()
 	result := &pb.PayloadStatus{}
 	err := s.rpcClient.CallContext(ctx, result, NewPayloadMethod, payload)
 	if err != nil {
@@ -74,8 +81,6 @@ func (s *Service) NewPayload(ctx context.Context, payload *pb.ExecutionPayload) 
 	switch result.Status {
 	case pb.PayloadStatus_INVALID_BLOCK_HASH:
 		return nil, fmt.Errorf("could not validate block hash: %v", result.ValidationError)
-	case pb.PayloadStatus_INVALID_TERMINAL_BLOCK:
-		return nil, fmt.Errorf("could not satisfy terminal block condition: %v", result.ValidationError)
 	case pb.PayloadStatus_ACCEPTED, pb.PayloadStatus_SYNCING:
 		return nil, ErrAcceptedSyncingPayloadStatus
 	case pb.PayloadStatus_INVALID:
@@ -98,6 +103,9 @@ func (s *Service) ForkchoiceUpdated(
 		forkchoiceUpdatedLatency.Observe(float64(time.Since(start).Milliseconds()))
 	}()
 
+	d := time.Now().Add(payloadAndForkchoiceUpdatedTimeout)
+	ctx, cancel := context.WithDeadline(ctx, d)
+	defer cancel()
 	result := &ForkchoiceUpdatedResponse{}
 	err := s.rpcClient.CallContext(ctx, result, ForkchoiceUpdatedMethod, state, attrs)
 	if err != nil {
@@ -109,8 +117,6 @@ func (s *Service) ForkchoiceUpdated(
 	}
 	resp := result.Status
 	switch resp.Status {
-	case pb.PayloadStatus_INVALID_TERMINAL_BLOCK:
-		return nil, nil, fmt.Errorf("could not satisfy terminal block condition: %v", resp.ValidationError)
 	case pb.PayloadStatus_SYNCING:
 		return nil, nil, ErrAcceptedSyncingPayloadStatus
 	case pb.PayloadStatus_INVALID:
@@ -131,6 +137,9 @@ func (s *Service) GetPayload(ctx context.Context, payloadId [8]byte) (*pb.Execut
 		getPayloadLatency.Observe(float64(time.Since(start).Milliseconds()))
 	}()
 
+	d := time.Now().Add(defaultEngineTimeout)
+	ctx, cancel := context.WithDeadline(ctx, d)
+	defer cancel()
 	result := &pb.ExecutionPayload{}
 	err := s.rpcClient.CallContext(ctx, result, GetPayloadMethod, pb.PayloadIDBytes(payloadId))
 	return result, handleRPCError(err)
@@ -146,10 +155,14 @@ func (s *Service) ExchangeTransitionConfiguration(
 	// We set terminal block number to 0 as the parameter is not set on the consensus layer.
 	zeroBigNum := big.NewInt(0)
 	cfg.TerminalBlockNumber = zeroBigNum.Bytes()
+	d := time.Now().Add(defaultEngineTimeout)
+	ctx, cancel := context.WithDeadline(ctx, d)
+	defer cancel()
 	result := &pb.TransitionConfiguration{}
 	if err := s.rpcClient.CallContext(ctx, result, ExchangeTransitionConfigurationMethod, cfg); err != nil {
 		return handleRPCError(err)
 	}
+
 	// We surface an error to the user if local configuration settings mismatch
 	// according to the response from the execution node.
 	cfgTerminalHash := params.BeaconConfig().TerminalBlockHash[:]
@@ -283,11 +296,18 @@ func handleRPCError(err error) error {
 		return nil
 	}
 	if isTimeout(err) {
-		return errors.Wrapf(ErrHTTPTimeout, "%s", err)
+		return ErrHTTPTimeout
 	}
 	e, ok := err.(rpc.Error)
 	if !ok {
-		return errors.Wrap(err, "got an unexpected error")
+		if strings.Contains(err.Error(), "401 Unauthorized") {
+			log.Error("HTTP authentication to your execution client is not working. Please ensure " +
+				"you are setting a correct value for the --jwt-secret flag in Prysm, or use an IPC connection if on " +
+				"the same machine. Please see our documentation for more information on authenticating connections " +
+				"here https://docs.prylabs.network/docs/execution-node/authentication")
+			return fmt.Errorf("could not authenticate connection to execution client: %v", err)
+		}
+		return errors.Wrapf(err, "got an unexpected error in JSON-RPC response")
 	}
 	switch e.ErrorCode() {
 	case -32700:
@@ -300,13 +320,17 @@ func handleRPCError(err error) error {
 		return ErrInvalidParams
 	case -32603:
 		return ErrInternal
-	case -32001:
+	case -38001:
 		return ErrUnknownPayload
+	case -38002:
+		return ErrInvalidForkchoiceState
+	case -38003:
+		return ErrInvalidPayloadAttributes
 	case -32000:
 		// Only -32000 status codes are data errors in the RPC specification.
 		errWithData, ok := err.(rpc.DataError)
 		if !ok {
-			return errors.Wrap(err, "got an unexpected error")
+			return errors.Wrapf(err, "got an unexpected error in JSON-RPC response")
 		}
 		return errors.Wrapf(ErrServer, "%v", errWithData.ErrorData())
 	default:

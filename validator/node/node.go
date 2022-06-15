@@ -54,6 +54,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"google.golang.org/protobuf/encoding/protojson"
+	"gopkg.in/yaml.v2"
 )
 
 // ValidatorClient defines an instance of an Ethereum validator that manages
@@ -104,12 +105,18 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 		stop:              make(chan struct{}),
 	}
 
-	features.ConfigureValidator(cliCtx)
-	cmd.ConfigureValidator(cliCtx)
+	if err := features.ConfigureValidator(cliCtx); err != nil {
+		return nil, err
+	}
+	if err := cmd.ConfigureValidator(cliCtx); err != nil {
+		return nil, err
+	}
 
 	if cliCtx.IsSet(cmd.ChainConfigFileFlag.Name) {
 		chainConfigFileName := cliCtx.String(cmd.ChainConfigFileFlag.Name)
-		params.LoadChainConfigFile(chainConfigFileName, nil)
+		if err := params.LoadChainConfigFile(chainConfigFileName, nil); err != nil {
+			return nil, err
+		}
 	}
 
 	// If the --web flag is enabled to administer the validator
@@ -124,14 +131,6 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 		}
 		return validatorClient, nil
 	}
-
-	if cliCtx.IsSet(cmd.ChainConfigFileFlag.Name) {
-		chainConfigFileName := cliCtx.String(cmd.ChainConfigFileFlag.Name)
-		params.LoadChainConfigFile(chainConfigFileName, nil)
-	}
-
-	// Initializes any forks here.
-	params.BeaconConfig().InitializeForkSchedule()
 
 	if err := validatorClient.initializeFromCLI(cliCtx); err != nil {
 		return nil, err
@@ -403,7 +402,7 @@ func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
 		return err
 	}
 
-	bpc, err := feeRecipientConfig(c.cliCtx)
+	bpc, err := proposerSettings(c.cliCtx)
 	if err != nil {
 		return err
 	}
@@ -427,7 +426,7 @@ func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
 		GraffitiStruct:             gStruct,
 		LogDutyCountDown:           c.cliCtx.Bool(flags.EnableDutyCountDown.Name),
 		Web3SignerConfig:           wsc,
-		FeeRecipientConfig:         bpc,
+		ProposerSettings:           bpc,
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not initialize validator service")
@@ -472,59 +471,76 @@ func web3SignerConfig(cliCtx *cli.Context) (*remote_web3signer.SetupConfig, erro
 	return web3signerConfig, nil
 }
 
-func feeRecipientConfig(cliCtx *cli.Context) (*validatorServiceConfig.FeeRecipientConfig, error) {
-	var fileConfig *validatorServiceConfig.FeeRecipientFileConfig
+func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSettings, error) {
+	var fileConfig *validatorServiceConfig.ProposerSettingsPayload
+	//TODO(10809): remove when fully deprecated
 	if cliCtx.IsSet(flags.FeeRecipientConfigFileFlag.Name) && cliCtx.IsSet(flags.FeeRecipientConfigURLFlag.Name) {
-		return nil, errors.New("cannot specify both --validators-proposer-fileConfig-dir and --validators-proposer-fileConfig-url")
+		return nil, fmt.Errorf("cannot specify both --%s and --%s", flags.FeeRecipientConfigFileFlag.Name, flags.FeeRecipientConfigURLFlag.Name)
 	}
-	if cliCtx.IsSet(flags.FeeRecipientConfigFileFlag.Name) {
-		if err := unmarshalFromFile(cliCtx.Context, cliCtx.String(flags.FeeRecipientConfigFileFlag.Name), &fileConfig); err != nil {
-			return nil, err
-		}
+
+	if cliCtx.IsSet(flags.ProposerSettingsFlag.Name) && cliCtx.IsSet(flags.ProposerSettingsURLFlag.Name) {
+		return nil, errors.New("cannot specify both " + flags.ProposerSettingsFlag.Name + " and " + flags.ProposerSettingsURLFlag.Name)
 	}
-	if cliCtx.IsSet(flags.FeeRecipientConfigURLFlag.Name) {
-		if err := unmarshalFromURL(cliCtx.Context, cliCtx.String(flags.FeeRecipientConfigURLFlag.Name), &fileConfig); err != nil {
-			return nil, err
-		}
-	}
-	// override the default fileConfig with the fileConfig from the command line
+
+	// is overridden by file and URL flags
 	if cliCtx.IsSet(flags.SuggestedFeeRecipientFlag.Name) {
 		suggestedFee := cliCtx.String(flags.SuggestedFeeRecipientFlag.Name)
-		fileConfig = &validatorServiceConfig.FeeRecipientFileConfig{
+		fileConfig = &validatorServiceConfig.ProposerSettingsPayload{
 			ProposeConfig: nil,
-			DefaultConfig: &validatorServiceConfig.FeeRecipientFileOptions{
+			DefaultConfig: &validatorServiceConfig.ProposerOptionPayload{
 				FeeRecipient: suggestedFee,
+				GasLimit:     params.BeaconConfig().DefaultBuilderGasLimit,
 			},
 		}
 	}
+
+	if cliCtx.IsSet(flags.FeeRecipientConfigFileFlag.Name) {
+		return nil, errors.New(flags.FeeRecipientConfigFileFlag.Usage)
+	}
+
+	if cliCtx.IsSet(flags.FeeRecipientConfigURLFlag.Name) {
+		return nil, errors.New(flags.FeeRecipientConfigURLFlag.Usage)
+	}
+
+	if cliCtx.IsSet(flags.ProposerSettingsFlag.Name) {
+		if err := unmarshalFromFile(cliCtx.Context, cliCtx.String(flags.ProposerSettingsFlag.Name), &fileConfig); err != nil {
+			return nil, err
+		}
+	}
+	if cliCtx.IsSet(flags.ProposerSettingsURLFlag.Name) {
+		if err := unmarshalFromURL(cliCtx.Context, cliCtx.String(flags.ProposerSettingsURLFlag.Name), &fileConfig); err != nil {
+			return nil, err
+		}
+	}
+
 	// nothing is set, so just return nil
 	if fileConfig == nil {
 		return nil, nil
 	}
 	//convert file config to proposer config for internal use
-	frConfig := &validatorServiceConfig.FeeRecipientConfig{}
+	vpSettings := &validatorServiceConfig.ProposerSettings{}
 
 	// default fileConfig is mandatory
 	if fileConfig.DefaultConfig == nil {
 		return nil, errors.New("default fileConfig is required")
 	}
-	bytes, err := hexutil.Decode(fileConfig.DefaultConfig.FeeRecipient)
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not decode fee recipient %s", fileConfig.DefaultConfig.FeeRecipient)
-	}
 	if !common.IsHexAddress(fileConfig.DefaultConfig.FeeRecipient) {
 		return nil, errors.New("default fileConfig fee recipient is not a valid eth1 address")
 	}
-	frConfig.DefaultConfig = &validatorServiceConfig.FeeRecipientOptions{
-		FeeRecipient: common.BytesToAddress(bytes),
+	if err := warnNonChecksummedAddress(fileConfig.DefaultConfig.FeeRecipient); err != nil {
+		return nil, err
+	}
+	vpSettings.DefaultConfig = &validatorServiceConfig.ProposerOption{
+		FeeRecipient: common.HexToAddress(fileConfig.DefaultConfig.FeeRecipient),
+		GasLimit:     reviewGasLimit(fileConfig.DefaultConfig.GasLimit),
 	}
 
 	if fileConfig.ProposeConfig != nil {
-		frConfig.ProposeConfig = make(map[[fieldparams.BLSPubkeyLength]byte]*validatorServiceConfig.FeeRecipientOptions)
+		vpSettings.ProposeConfig = make(map[[fieldparams.BLSPubkeyLength]byte]*validatorServiceConfig.ProposerOption)
 		for key, option := range fileConfig.ProposeConfig {
 			decodedKey, err := hexutil.Decode(key)
 			if err != nil {
-				return nil, errors.Wrapf(err, "could not decode public key for web3signer: %s", key)
+				return nil, errors.Wrapf(err, "could not decode public key %s", key)
 			}
 			if len(decodedKey) != fieldparams.BLSPubkeyLength {
 				return nil, fmt.Errorf("%v  is not a bls public key", key)
@@ -532,20 +548,43 @@ func feeRecipientConfig(cliCtx *cli.Context) (*validatorServiceConfig.FeeRecipie
 			if option == nil {
 				return nil, fmt.Errorf("fee recipient is required for proposer %s", key)
 			}
-			feebytes, err := hexutil.Decode(option.FeeRecipient)
-			if err != nil {
-				return nil, errors.Wrapf(err, "could not decode fee recipient %s", option.FeeRecipient)
-			}
 			if !common.IsHexAddress(option.FeeRecipient) {
 				return nil, errors.New("fee recipient is not a valid eth1 address")
 			}
-			frConfig.ProposeConfig[bytesutil.ToBytes48(decodedKey)] = &validatorServiceConfig.FeeRecipientOptions{
-				FeeRecipient: common.BytesToAddress(feebytes),
+			if err := warnNonChecksummedAddress(option.FeeRecipient); err != nil {
+				return nil, err
+			}
+			vpSettings.ProposeConfig[bytesutil.ToBytes48(decodedKey)] = &validatorServiceConfig.ProposerOption{
+				FeeRecipient: common.HexToAddress(option.FeeRecipient),
+				GasLimit:     reviewGasLimit(option.GasLimit),
 			}
 		}
 	}
 
-	return frConfig, nil
+	return vpSettings, nil
+}
+
+func warnNonChecksummedAddress(feeRecipient string) error {
+	mixedcaseAddress, err := common.NewMixedcaseAddressFromString(feeRecipient)
+	if err != nil {
+		return errors.Wrapf(err, "could not decode fee recipient %s", feeRecipient)
+	}
+	if !mixedcaseAddress.ValidChecksum() {
+		log.Warnf("Fee recipient %s is not a checksum Ethereum address. "+
+			"The checksummed address is %s and will be used as the fee recipient. "+
+			"We recommend using a mixed-case address (checksum) "+
+			"to prevent spelling mistakes in your fee recipient Ethereum address", feeRecipient, mixedcaseAddress.Address().Hex())
+	}
+	return nil
+}
+
+func reviewGasLimit(gasLimit uint64) uint64 {
+	// sets gas limit to default if not defined or set to 0
+	if gasLimit == 0 {
+		return params.BeaconConfig().DefaultBuilderGasLimit
+	}
+	//TODO(10810): add in warning for ranges
+	return gasLimit
 }
 
 func (c *ValidatorClient) registerRPCService(cliCtx *cli.Context) error {
@@ -773,27 +812,14 @@ func unmarshalFromFile(ctx context.Context, from string, to interface{}) error {
 		return errors.New("node: nil context passed to unmarshalFromFile")
 	}
 	cleanpath := filepath.Clean(from)
-	fileExtension := filepath.Ext(cleanpath)
-	if fileExtension != ".json" {
-		return errors.Errorf("unsupported file extension %s , (ex. '.json')", fileExtension)
+	b, err := os.ReadFile(cleanpath)
+	if err != nil {
+		return errors.Wrap(err, "failed to open file")
 	}
-	jsonFile, jsonerr := os.Open(cleanpath)
-	if jsonerr != nil {
-		return errors.Wrap(jsonerr, "failed to open json file")
+
+	if err := yaml.Unmarshal(b, to); err != nil {
+		return errors.Wrap(err, "failed to unmarshal yaml file")
 	}
-	// defer the closing of our jsonFile so that we can parse it later on
-	defer func(jsonFile *os.File) {
-		err := jsonFile.Close()
-		if err != nil {
-			log.WithError(err).Error("failed to close json file")
-		}
-	}(jsonFile)
-	byteValue, readerror := io.ReadAll(jsonFile)
-	if readerror != nil {
-		return errors.Wrap(readerror, "failed to read json file")
-	}
-	if unmarshalerr := json.Unmarshal(byteValue, &to); unmarshalerr != nil {
-		return errors.Wrap(unmarshalerr, "failed to unmarshal json file")
-	}
+
 	return nil
 }

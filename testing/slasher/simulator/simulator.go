@@ -125,8 +125,15 @@ func (s *Simulator) Start() {
 	config := params.BeaconConfig().Copy()
 	config.SecondsPerSlot = s.srvConfig.Params.SecondsPerSlot
 	config.SlotsPerEpoch = s.srvConfig.Params.SlotsPerEpoch
-	params.OverrideBeaconConfig(config)
-	defer params.OverrideBeaconConfig(params.BeaconConfig())
+	undo, err := params.SetActiveWithUndo(config)
+	if err != nil {
+		panic(err)
+	}
+	defer func() {
+		if err := undo(); err != nil {
+			panic(err)
+		}
+	}()
 
 	// Start slasher in the background.
 	go s.slasher.Start()

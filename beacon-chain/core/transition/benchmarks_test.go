@@ -20,7 +20,9 @@ import (
 var runAmount = 25
 
 func BenchmarkExecuteStateTransition_FullBlock(b *testing.B) {
-	benchmark.SetBenchmarkConfig()
+	undo, err := benchmark.SetBenchmarkConfig()
+	require.NoError(b, err)
+	defer undo()
 	beaconState, err := benchmark.PreGenState1Epoch()
 	require.NoError(b, err)
 	cleanStates := clonedStates(beaconState)
@@ -37,7 +39,9 @@ func BenchmarkExecuteStateTransition_FullBlock(b *testing.B) {
 }
 
 func BenchmarkExecuteStateTransition_WithCache(b *testing.B) {
-	benchmark.SetBenchmarkConfig()
+	undo, err := benchmark.SetBenchmarkConfig()
+	require.NoError(b, err)
+	defer undo()
 
 	beaconState, err := benchmark.PreGenState1Epoch()
 	require.NoError(b, err)
@@ -49,7 +53,7 @@ func BenchmarkExecuteStateTransition_WithCache(b *testing.B) {
 	// some attestations in block are from previous epoch
 	currentSlot := beaconState.Slot()
 	require.NoError(b, beaconState.SetSlot(beaconState.Slot()-params.BeaconConfig().SlotsPerEpoch))
-	require.NoError(b, helpers.UpdateCommitteeCache(beaconState, time.CurrentEpoch(beaconState)))
+	require.NoError(b, helpers.UpdateCommitteeCache(context.Background(), beaconState, time.CurrentEpoch(beaconState)))
 	require.NoError(b, beaconState.SetSlot(currentSlot))
 	// Run the state transition once to populate the cache.
 	wsb, err := wrapper.WrappedSignedBeaconBlock(block)
@@ -67,7 +71,9 @@ func BenchmarkExecuteStateTransition_WithCache(b *testing.B) {
 }
 
 func BenchmarkProcessEpoch_2FullEpochs(b *testing.B) {
-	benchmark.SetBenchmarkConfig()
+	undo, err := benchmark.SetBenchmarkConfig()
+	require.NoError(b, err)
+	defer undo()
 	beaconState, err := benchmark.PreGenstateFullEpochs()
 	require.NoError(b, err)
 
@@ -75,7 +81,7 @@ func BenchmarkProcessEpoch_2FullEpochs(b *testing.B) {
 	// some attestations in block are from previous epoch
 	currentSlot := beaconState.Slot()
 	require.NoError(b, beaconState.SetSlot(beaconState.Slot()-params.BeaconConfig().SlotsPerEpoch))
-	require.NoError(b, helpers.UpdateCommitteeCache(beaconState, time.CurrentEpoch(beaconState)))
+	require.NoError(b, helpers.UpdateCommitteeCache(context.Background(), beaconState, time.CurrentEpoch(beaconState)))
 	require.NoError(b, beaconState.SetSlot(currentSlot))
 
 	b.ResetTimer()

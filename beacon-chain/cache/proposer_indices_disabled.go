@@ -1,5 +1,4 @@
 //go:build fuzz
-// +build fuzz
 
 // This file is used in fuzzer builds to bypass proposer indices caches.
 package cache
@@ -29,4 +28,8 @@ func (c *FakeProposerIndicesCache) ProposerIndices(r [32]byte) ([]types.Validato
 // HasProposerIndices returns the proposer indices of a block root seed.
 func (c *FakeProposerIndicesCache) HasProposerIndices(r [32]byte) (bool, error) {
 	return false, nil
+}
+
+func (c *FakeProposerIndicesCache) Len() int {
+	return 0
 }

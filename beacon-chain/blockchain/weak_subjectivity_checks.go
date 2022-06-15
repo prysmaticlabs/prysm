@@ -13,9 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
-var errWSBlockNotFound = errors.New("weak subjectivity root not found in db")
-var errWSBlockNotFoundInEpoch = errors.New("weak subjectivity root not found in db within epoch")
-
 type weakSubjectivityDB interface {
 	HasBlock(ctx context.Context, blockRoot [32]byte) bool
 	BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][32]byte, error)
@@ -30,10 +27,11 @@ type WeakSubjectivityVerifier struct {
 	db       weakSubjectivityDB
 }
 
-// NewWeakSubjectivityVerifier validates a checkpoint, and if valid, uses it to initialize a weak subjectivity verifier
+// NewWeakSubjectivityVerifier validates a checkpoint, and if valid, uses it to initialize a weak subjectivity verifier.
 func NewWeakSubjectivityVerifier(wsc *ethpb.Checkpoint, db weakSubjectivityDB) (*WeakSubjectivityVerifier, error) {
 	if wsc == nil || len(wsc.Root) == 0 || wsc.Epoch == 0 {
-		log.Warn("No valid weak subjectivity checkpoint specified, running without weak subjectivity verification")
+		log.Info("--weak-subjectivity-checkpoint not provided. Prysm recommends providing a weak subjectivity checkpoint" +
+			"for nodes synced from genesis, or manual verification of block and state roots for checkpoint sync nodes.")
 		return &WeakSubjectivityVerifier{
 			enabled: false,
 		}, nil
@@ -58,7 +56,6 @@ func (v *WeakSubjectivityVerifier) VerifyWeakSubjectivity(ctx context.Context, f
 	if v.verified || !v.enabled {
 		return nil
 	}
-
 	// Two conditions are described in the specs:
 	// IF epoch_number > store.finalized_checkpoint.epoch,
 	// then ASSERT during block sync that block with root block_root
@@ -92,6 +89,5 @@ func (v *WeakSubjectivityVerifier) VerifyWeakSubjectivity(ctx context.Context, f
 			return nil
 		}
 	}
-
 	return errors.Wrap(errWSBlockNotFoundInEpoch, fmt.Sprintf("root=%#x, epoch=%d", v.root, v.epoch))
 }

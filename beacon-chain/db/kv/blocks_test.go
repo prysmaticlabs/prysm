@@ -8,7 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/block"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -21,11 +21,11 @@ import (
 
 var blockTests = []struct {
 	name     string
-	newBlock func(types.Slot, []byte) (block.SignedBeaconBlock, error)
+	newBlock func(types.Slot, []byte) (interfaces.SignedBeaconBlock, error)
 }{
 	{
 		name: "phase0",
-		newBlock: func(slot types.Slot, root []byte) (block.SignedBeaconBlock, error) {
+		newBlock: func(slot types.Slot, root []byte) (interfaces.SignedBeaconBlock, error) {
 			b := util.NewBeaconBlock()
 			b.Block.Slot = slot
 			if root != nil {
@@ -36,7 +36,7 @@ var blockTests = []struct {
 	},
 	{
 		name: "altair",
-		newBlock: func(slot types.Slot, root []byte) (block.SignedBeaconBlock, error) {
+		newBlock: func(slot types.Slot, root []byte) (interfaces.SignedBeaconBlock, error) {
 			b := util.NewBeaconBlockAltair()
 			b.Block.Slot = slot
 			if root != nil {
@@ -47,8 +47,19 @@ var blockTests = []struct {
 	},
 	{
 		name: "bellatrix",
-		newBlock: func(slot types.Slot, root []byte) (block.SignedBeaconBlock, error) {
+		newBlock: func(slot types.Slot, root []byte) (interfaces.SignedBeaconBlock, error) {
 			b := util.NewBeaconBlockBellatrix()
+			b.Block.Slot = slot
+			if root != nil {
+				b.Block.ParentRoot = root
+			}
+			return wrapper.WrappedSignedBeaconBlock(b)
+		},
+	},
+	{
+		name: "bellatrix blind",
+		newBlock: func(slot types.Slot, root []byte) (interfaces.SignedBeaconBlock, error) {
+			b := util.NewBlindedBeaconBlockBellatrix()
 			b.Block.Slot = slot
 			if root != nil {
 				b.Block.ParentRoot = root
@@ -138,7 +149,7 @@ func TestStore_BlocksHandleZeroCase(t *testing.T) {
 			db := setupDB(t)
 			ctx := context.Background()
 			numBlocks := 10
-			totalBlocks := make([]block.SignedBeaconBlock, numBlocks)
+			totalBlocks := make([]interfaces.SignedBeaconBlock, numBlocks)
 			for i := 0; i < len(totalBlocks); i++ {
 				b, err := tt.newBlock(types.Slot(i), bytesutil.PadTo([]byte("parent"), 32))
 				require.NoError(t, err)
@@ -161,7 +172,7 @@ func TestStore_BlocksHandleInvalidEndSlot(t *testing.T) {
 			db := setupDB(t)
 			ctx := context.Background()
 			numBlocks := 10
-			totalBlocks := make([]block.SignedBeaconBlock, numBlocks)
+			totalBlocks := make([]interfaces.SignedBeaconBlock, numBlocks)
 			// Save blocks from slot 1 onwards.
 			for i := 0; i < len(totalBlocks); i++ {
 				b, err := tt.newBlock(types.Slot(i+1), bytesutil.PadTo([]byte("parent"), 32))
@@ -322,7 +333,7 @@ func TestStore_Blocks_FiltersCorrectly(t *testing.T) {
 			require.NoError(t, err)
 			b8, err := tt.newBlock(types.Slot(8), bytesutil.PadTo([]byte("parent4"), 32))
 			require.NoError(t, err)
-			blocks := []block.SignedBeaconBlock{
+			blocks := []interfaces.SignedBeaconBlock{
 				b4,
 				b5,
 				b6,
@@ -426,7 +437,7 @@ func TestStore_Blocks_Retrieve_SlotRange(t *testing.T) {
 	for _, tt := range blockTests {
 		t.Run(tt.name, func(t *testing.T) {
 			db := setupDB(t)
-			totalBlocks := make([]block.SignedBeaconBlock, 500)
+			totalBlocks := make([]interfaces.SignedBeaconBlock, 500)
 			for i := 0; i < 500; i++ {
 				b, err := tt.newBlock(types.Slot(i), bytesutil.PadTo([]byte("parent"), 32))
 				require.NoError(t, err)
@@ -446,7 +457,7 @@ func TestStore_Blocks_Retrieve_Epoch(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			db := setupDB(t)
 			slots := params.BeaconConfig().SlotsPerEpoch.Mul(7)
-			totalBlocks := make([]block.SignedBeaconBlock, slots)
+			totalBlocks := make([]interfaces.SignedBeaconBlock, slots)
 			for i := types.Slot(0); i < slots; i++ {
 				b, err := tt.newBlock(i, bytesutil.PadTo([]byte("parent"), 32))
 				require.NoError(t, err)
@@ -470,7 +481,7 @@ func TestStore_Blocks_Retrieve_SlotRangeWithStep(t *testing.T) {
 	for _, tt := range blockTests {
 		t.Run(tt.name, func(t *testing.T) {
 			db := setupDB(t)
-			totalBlocks := make([]block.SignedBeaconBlock, 500)
+			totalBlocks := make([]interfaces.SignedBeaconBlock, 500)
 			for i := 0; i < 500; i++ {
 				b, err := tt.newBlock(types.Slot(i), bytesutil.PadTo([]byte("parent"), 32))
 				require.NoError(t, err)
@@ -506,18 +517,32 @@ func TestStore_SaveBlock_CanGetHighestAt(t *testing.T) {
 			require.NoError(t, db.SaveBlock(ctx, block2))
 			require.NoError(t, db.SaveBlock(ctx, block3))
 
-			highestAt, err := db.HighestSlotBlocksBelow(ctx, 2)
+			_, roots, err := db.HighestRootsBelowSlot(ctx, 2)
 			require.NoError(t, err)
-			assert.Equal(t, false, len(highestAt) <= 0, "Got empty highest at slice")
-			assert.Equal(t, true, proto.Equal(block1.Proto(), highestAt[0].Proto()), "Wanted: %v, received: %v", block1, highestAt[0])
-			highestAt, err = db.HighestSlotBlocksBelow(ctx, 11)
+			assert.Equal(t, false, len(roots) <= 0, "Got empty highest at slice")
+			require.Equal(t, 1, len(roots))
+			root := roots[0]
+			b, err := db.Block(ctx, root)
 			require.NoError(t, err)
-			assert.Equal(t, false, len(highestAt) <= 0, "Got empty highest at slice")
-			assert.Equal(t, true, proto.Equal(block2.Proto(), highestAt[0].Proto()), "Wanted: %v, received: %v", block2, highestAt[0])
-			highestAt, err = db.HighestSlotBlocksBelow(ctx, 101)
+			assert.Equal(t, true, proto.Equal(block1.Proto(), b.Proto()), "Wanted: %v, received: %v", block1, b)
+
+			_, roots, err = db.HighestRootsBelowSlot(ctx, 11)
 			require.NoError(t, err)
-			assert.Equal(t, false, len(highestAt) <= 0, "Got empty highest at slice")
-			assert.Equal(t, true, proto.Equal(block3.Proto(), highestAt[0].Proto()), "Wanted: %v, received: %v", block3, highestAt[0])
+			assert.Equal(t, false, len(roots) <= 0, "Got empty highest at slice")
+			require.Equal(t, 1, len(roots))
+			root = roots[0]
+			b, err = db.Block(ctx, root)
+			require.NoError(t, err)
+			assert.Equal(t, true, proto.Equal(block2.Proto(), b.Proto()), "Wanted: %v, received: %v", block2, b)
+
+			_, roots, err = db.HighestRootsBelowSlot(ctx, 101)
+			require.NoError(t, err)
+			assert.Equal(t, false, len(roots) <= 0, "Got empty highest at slice")
+			require.Equal(t, 1, len(roots))
+			root = roots[0]
+			b, err = db.Block(ctx, root)
+			require.NoError(t, err)
+			assert.Equal(t, true, proto.Equal(block3.Proto(), b.Proto()), "Wanted: %v, received: %v", block3, b)
 		})
 	}
 }
@@ -538,15 +563,29 @@ func TestStore_GenesisBlock_CanGetHighestAt(t *testing.T) {
 			require.NoError(t, err)
 			require.NoError(t, db.SaveBlock(ctx, block1))
 
-			highestAt, err := db.HighestSlotBlocksBelow(ctx, 2)
+			_, roots, err := db.HighestRootsBelowSlot(ctx, 2)
 			require.NoError(t, err)
-			assert.Equal(t, true, proto.Equal(block1.Proto(), highestAt[0].Proto()), "Wanted: %v, received: %v", block1, highestAt[0])
-			highestAt, err = db.HighestSlotBlocksBelow(ctx, 1)
+			require.Equal(t, 1, len(roots))
+			root := roots[0]
+			b, err := db.Block(ctx, root)
 			require.NoError(t, err)
-			assert.Equal(t, true, proto.Equal(genesisBlock.Proto(), highestAt[0].Proto()), "Wanted: %v, received: %v", genesisBlock, highestAt[0])
-			highestAt, err = db.HighestSlotBlocksBelow(ctx, 0)
+			assert.Equal(t, true, proto.Equal(block1.Proto(), b.Proto()), "Wanted: %v, received: %v", block1, b)
+
+			_, roots, err = db.HighestRootsBelowSlot(ctx, 1)
 			require.NoError(t, err)
-			assert.Equal(t, true, proto.Equal(genesisBlock.Proto(), highestAt[0].Proto()), "Wanted: %v, received: %v", genesisBlock, highestAt[0])
+			require.Equal(t, 1, len(roots))
+			root = roots[0]
+			b, err = db.Block(ctx, root)
+			require.NoError(t, err)
+			assert.Equal(t, true, proto.Equal(genesisBlock.Proto(), b.Proto()), "Wanted: %v, received: %v", genesisBlock, b)
+
+			_, roots, err = db.HighestRootsBelowSlot(ctx, 0)
+			require.NoError(t, err)
+			require.Equal(t, 1, len(roots))
+			root = roots[0]
+			b, err = db.Block(ctx, root)
+			require.NoError(t, err)
+			assert.Equal(t, true, proto.Equal(genesisBlock.Proto(), b.Proto()), "Wanted: %v, received: %v", genesisBlock, b)
 		})
 	}
 }
@@ -557,7 +596,7 @@ func TestStore_SaveBlocks_HasCachedBlocks(t *testing.T) {
 			db := setupDB(t)
 			ctx := context.Background()
 
-			b := make([]block.SignedBeaconBlock, 500)
+			b := make([]interfaces.SignedBeaconBlock, 500)
 			for i := 0; i < 500; i++ {
 				blk, err := tt.newBlock(types.Slot(i), bytesutil.PadTo([]byte("parent"), 32))
 				require.NoError(t, err)
@@ -581,7 +620,7 @@ func TestStore_SaveBlocks_HasRootsMatched(t *testing.T) {
 			db := setupDB(t)
 			ctx := context.Background()
 
-			b := make([]block.SignedBeaconBlock, 500)
+			b := make([]interfaces.SignedBeaconBlock, 500)
 			for i := 0; i < 500; i++ {
 				blk, err := tt.newBlock(types.Slot(i), bytesutil.PadTo([]byte("parent"), 32))
 				require.NoError(t, err)
@@ -627,22 +666,21 @@ func TestStore_BlocksBySlot_BlockRootsBySlot(t *testing.T) {
 			r3, err := b3.Block().HashTreeRoot()
 			require.NoError(t, err)
 
-			hasBlocks, retrievedBlocks, err := db.BlocksBySlot(ctx, 1)
+			retrievedBlocks, err := db.BlocksBySlot(ctx, 1)
 			require.NoError(t, err)
 			assert.Equal(t, 0, len(retrievedBlocks), "Unexpected number of blocks received, expected none")
-			assert.Equal(t, false, hasBlocks, "Expected no blocks")
-			hasBlocks, retrievedBlocks, err = db.BlocksBySlot(ctx, 20)
+			retrievedBlocks, err = db.BlocksBySlot(ctx, 20)
 			require.NoError(t, err)
 			assert.Equal(t, true, proto.Equal(b1.Proto(), retrievedBlocks[0].Proto()), "Wanted: %v, received: %v", b1, retrievedBlocks[0])
-			assert.Equal(t, true, hasBlocks, "Expected to have blocks")
-			hasBlocks, retrievedBlocks, err = db.BlocksBySlot(ctx, 100)
+			assert.Equal(t, true, len(retrievedBlocks) > 0, "Expected to have blocks")
+			retrievedBlocks, err = db.BlocksBySlot(ctx, 100)
 			require.NoError(t, err)
 			if len(retrievedBlocks) != 2 {
 				t.Fatalf("Expected 2 blocks, received %d blocks", len(retrievedBlocks))
 			}
 			assert.Equal(t, true, proto.Equal(b2.Proto(), retrievedBlocks[0].Proto()), "Wanted: %v, received: %v", b2, retrievedBlocks[0])
 			assert.Equal(t, true, proto.Equal(b3.Proto(), retrievedBlocks[1].Proto()), "Wanted: %v, received: %v", b3, retrievedBlocks[1])
-			assert.Equal(t, true, hasBlocks, "Expected to have blocks")
+			assert.Equal(t, true, len(retrievedBlocks) > 0, "Expected to have blocks")
 
 			hasBlockRoots, retrievedBlockRoots, err := db.BlockRootsBySlot(ctx, 1)
 			require.NoError(t, err)
@@ -680,6 +718,80 @@ func TestStore_FeeRecipientByValidatorID(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, common.Address{'c'}, f)
 	_, err = db.FeeRecipientByValidatorID(ctx, 3)
+	want := errors.Wrap(ErrNotFoundFeeRecipient, "validator id 3")
+	require.Equal(t, want.Error(), err.Error())
+
+	regs := []*ethpb.ValidatorRegistrationV1{
+		{
+			FeeRecipient: bytesutil.PadTo([]byte("a"), 20),
+			GasLimit:     1,
+			Timestamp:    2,
+			Pubkey:       bytesutil.PadTo([]byte("b"), 48),
+		}}
+	require.NoError(t, db.SaveRegistrationsByValidatorIDs(ctx, []types.ValidatorIndex{3}, regs))
+	f, err = db.FeeRecipientByValidatorID(ctx, 3)
+	require.NoError(t, err)
+	require.Equal(t, common.Address{'a'}, f)
+
+	_, err = db.FeeRecipientByValidatorID(ctx, 4)
+	want = errors.Wrap(ErrNotFoundFeeRecipient, "validator id 4")
+	require.Equal(t, want.Error(), err.Error())
+}
+
+func TestStore_RegistrationsByValidatorID(t *testing.T) {
+	db := setupDB(t)
+	ctx := context.Background()
+	ids := []types.ValidatorIndex{0, 0, 0}
+	regs := []*ethpb.ValidatorRegistrationV1{{}, {}, {}, {}}
+	require.ErrorContains(t, "ids and registrations must be the same length", db.SaveRegistrationsByValidatorIDs(ctx, ids, regs))
+
+	ids = []types.ValidatorIndex{0, 1, 2}
+	regs = []*ethpb.ValidatorRegistrationV1{
+		{
+			FeeRecipient: bytesutil.PadTo([]byte("a"), 20),
+			GasLimit:     1,
+			Timestamp:    2,
+			Pubkey:       bytesutil.PadTo([]byte("b"), 48),
+		},
+		{
+			FeeRecipient: bytesutil.PadTo([]byte("c"), 20),
+			GasLimit:     3,
+			Timestamp:    4,
+			Pubkey:       bytesutil.PadTo([]byte("d"), 48),
+		},
+		{
+			FeeRecipient: bytesutil.PadTo([]byte("e"), 20),
+			GasLimit:     5,
+			Timestamp:    6,
+			Pubkey:       bytesutil.PadTo([]byte("f"), 48),
+		},
+	}
+	require.NoError(t, db.SaveRegistrationsByValidatorIDs(ctx, ids, regs))
+	f, err := db.RegistrationByValidatorID(ctx, 0)
+	require.NoError(t, err)
+	require.DeepEqual(t, &ethpb.ValidatorRegistrationV1{
+		FeeRecipient: bytesutil.PadTo([]byte("a"), 20),
+		GasLimit:     1,
+		Timestamp:    2,
+		Pubkey:       bytesutil.PadTo([]byte("b"), 48),
+	}, f)
+	f, err = db.RegistrationByValidatorID(ctx, 1)
+	require.NoError(t, err)
+	require.DeepEqual(t, &ethpb.ValidatorRegistrationV1{
+		FeeRecipient: bytesutil.PadTo([]byte("c"), 20),
+		GasLimit:     3,
+		Timestamp:    4,
+		Pubkey:       bytesutil.PadTo([]byte("d"), 48),
+	}, f)
+	f, err = db.RegistrationByValidatorID(ctx, 2)
+	require.NoError(t, err)
+	require.DeepEqual(t, &ethpb.ValidatorRegistrationV1{
+		FeeRecipient: bytesutil.PadTo([]byte("e"), 20),
+		GasLimit:     5,
+		Timestamp:    6,
+		Pubkey:       bytesutil.PadTo([]byte("f"), 48),
+	}, f)
+	_, err = db.RegistrationByValidatorID(ctx, 3)
 	want := errors.Wrap(ErrNotFoundFeeRecipient, "validator id 3")
 	require.Equal(t, want.Error(), err.Error())
 }

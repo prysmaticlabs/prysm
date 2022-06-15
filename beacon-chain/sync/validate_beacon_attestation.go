@@ -252,7 +252,7 @@ func (s *Service) setSeenCommitteeIndicesSlot(slot types.Slot, committeeID types
 	s.seenUnAggregatedAttestationLock.Lock()
 	defer s.seenUnAggregatedAttestationLock.Unlock()
 	b := append(bytesutil.Bytes32(uint64(slot)), bytesutil.Bytes32(uint64(committeeID))...)
-	b = append(b, aggregateBits...)
+	b = append(b, bytesutil.SafeCopyBytes(aggregateBits)...)
 	s.seenUnAggregatedAttestationCache.Add(string(b), true)
 }
 
@@ -261,6 +261,5 @@ func (s *Service) setSeenCommitteeIndicesSlot(slot types.Slot, committeeID types
 func (s *Service) hasBlockAndState(ctx context.Context, blockRoot [32]byte) bool {
 	hasStateSummary := s.cfg.beaconDB.HasStateSummary(ctx, blockRoot)
 	hasState := hasStateSummary || s.cfg.beaconDB.HasState(ctx, blockRoot)
-	hasBlock := s.cfg.chain.HasInitSyncBlock(blockRoot) || s.cfg.beaconDB.HasBlock(ctx, blockRoot)
-	return hasState && hasBlock
+	return hasState && s.cfg.chain.HasBlock(ctx, blockRoot)
 }

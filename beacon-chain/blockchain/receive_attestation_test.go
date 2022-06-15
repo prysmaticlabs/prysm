@@ -120,7 +120,9 @@ func TestProcessAttestations_Ok(t *testing.T) {
 	copied, err = transition.ProcessSlots(ctx, copied, 1)
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, copied, tRoot))
-	require.NoError(t, service.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx, 0, tRoot, tRoot, params.BeaconConfig().ZeroHash, 1, 1))
+	state, blkRoot, err := prepareForkchoiceState(ctx, 0, tRoot, tRoot, params.BeaconConfig().ZeroHash, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
 	require.NoError(t, service.cfg.AttPool.SaveForkchoiceAttestations(atts))
 	service.processAttestations(ctx)
 	require.Equal(t, 0, len(service.cfg.AttPool.ForkchoiceAttestations()))
@@ -137,14 +139,14 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 	service.cfg.ProposerSlotIndexCache = cache.NewProposerPayloadIDsCache()
 	service.notifyEngineIfChangedHead(ctx, service.headRoot())
 	hookErr := "could not notify forkchoice update"
-	finalizedErr := "could not get finalized checkpoint"
-	require.LogsDoNotContain(t, hook, finalizedErr)
+	invalidStateErr := "Could not get state from db"
+	require.LogsDoNotContain(t, hook, invalidStateErr)
 	require.LogsDoNotContain(t, hook, hookErr)
 	gb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
 	require.NoError(t, err)
 	service.saveInitSyncBlock([32]byte{'a'}, gb)
 	service.notifyEngineIfChangedHead(ctx, [32]byte{'a'})
-	require.LogsContain(t, hook, finalizedErr)
+	require.LogsContain(t, hook, invalidStateErr)
 
 	hook.Reset()
 	service.head = &head{
@@ -169,9 +171,9 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 		state: st,
 	}
 	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(2, 1, [8]byte{1})
-	service.store.SetFinalizedCheckpt(finalized)
+	service.store.SetFinalizedCheckptAndPayloadHash(finalized, [32]byte{})
 	service.notifyEngineIfChangedHead(ctx, r1)
-	require.LogsDoNotContain(t, hook, finalizedErr)
+	require.LogsDoNotContain(t, hook, invalidStateErr)
 	require.LogsDoNotContain(t, hook, hookErr)
 
 	// Block in DB
@@ -191,12 +193,56 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 		state: st,
 	}
 	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(2, 1, [8]byte{1})
-	service.store.SetFinalizedCheckpt(finalized)
+	service.store.SetFinalizedCheckptAndPayloadHash(finalized, [32]byte{})
 	service.notifyEngineIfChangedHead(ctx, r1)
-	require.LogsDoNotContain(t, hook, finalizedErr)
+	require.LogsDoNotContain(t, hook, invalidStateErr)
 	require.LogsDoNotContain(t, hook, hookErr)
 	vId, payloadID, has := service.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(2)
 	require.Equal(t, true, has)
 	require.Equal(t, types.ValidatorIndex(1), vId)
 	require.Equal(t, [8]byte{1}, payloadID)
+
+	// Test zero headRoot returns immediately.
+	headRoot := service.headRoot()
+	service.notifyEngineIfChangedHead(ctx, [32]byte{})
+	require.Equal(t, service.headRoot(), headRoot)
+}
+
+func TestService_ProcessAttestationsAndUpdateHead(t *testing.T) {
+	ctx := context.Background()
+	opts := testServiceOptsWithDB(t)
+	opts = append(opts, WithAttestationPool(attestations.NewPool()), WithStateNotifier(&mockBeaconNode{}))
+
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+	service.genesisTime = prysmTime.Now().Add(-1 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
+	genesisState, pks := util.DeterministicGenesisState(t, 64)
+	require.NoError(t, genesisState.SetGenesisTime(uint64(prysmTime.Now().Unix())-params.BeaconConfig().SecondsPerSlot))
+	require.NoError(t, service.saveGenesisData(ctx, genesisState))
+	atts, err := util.GenerateAttestations(genesisState, pks, 1, 0, false)
+	require.NoError(t, err)
+	tRoot := bytesutil.ToBytes32(atts[0].Data.Target.Root)
+	copied := genesisState.Copy()
+	copied, err = transition.ProcessSlots(ctx, copied, 1)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, copied, tRoot))
+	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Root: tRoot[:]}))
+	state, blkRoot, err := prepareForkchoiceState(ctx, 0, tRoot, tRoot, params.BeaconConfig().ZeroHash, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
+	require.NoError(t, service.cfg.AttPool.SaveForkchoiceAttestations(atts))
+	b := util.NewBeaconBlock()
+	wb, err := wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	r, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wb))
+	state, blkRoot, err = prepareForkchoiceState(ctx, wb.Block().Slot(), r, bytesutil.ToBytes32(wb.Block().ParentRoot()), [32]byte{}, 0, 0)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
+	service.head.root = r // Old head
+	require.Equal(t, 1, len(service.cfg.AttPool.ForkchoiceAttestations()))
+	require.NoError(t, err, service.UpdateHead(ctx))
+	require.Equal(t, tRoot, service.head.root)                             // Validate head is the new one
+	require.Equal(t, 0, len(service.cfg.AttPool.ForkchoiceAttestations())) // Validate att pool is empty
 }

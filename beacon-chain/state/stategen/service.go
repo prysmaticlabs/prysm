@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync/backfill"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/block"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -27,15 +27,15 @@ type StateManager interface {
 	Resume(ctx context.Context, fState state.BeaconState) (state.BeaconState, error)
 	SaveFinalizedState(fSlot types.Slot, fRoot [32]byte, fState state.BeaconState)
 	MigrateToCold(ctx context.Context, fRoot [32]byte) error
-	ReplayBlocks(ctx context.Context, state state.BeaconState, signed []block.SignedBeaconBlock, targetSlot types.Slot) (state.BeaconState, error)
-	LoadBlocks(ctx context.Context, startSlot, endSlot types.Slot, endBlockRoot [32]byte) ([]block.SignedBeaconBlock, error)
+	ReplayBlocks(ctx context.Context, state state.BeaconState, signed []interfaces.SignedBeaconBlock, targetSlot types.Slot) (state.BeaconState, error)
+	LoadBlocks(ctx context.Context, startSlot, endSlot types.Slot, endBlockRoot [32]byte) ([]interfaces.SignedBeaconBlock, error)
 	HasState(ctx context.Context, blockRoot [32]byte) (bool, error)
 	HasStateInCache(ctx context.Context, blockRoot [32]byte) (bool, error)
 	StateByRoot(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error)
 	StateByRootIfCachedNoCopy(blockRoot [32]byte) state.BeaconState
 	StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error)
 	RecoverStateSummary(ctx context.Context, blockRoot [32]byte) (*ethpb.StateSummary, error)
-	SaveState(ctx context.Context, root [32]byte, st state.BeaconState) error
+	SaveState(ctx context.Context, blockRoot [32]byte, st state.BeaconState) error
 	ForceCheckpoint(ctx context.Context, root []byte) error
 	EnableSaveHotStateToDB(_ context.Context)
 	DisableSaveHotStateToDB(ctx context.Context) error
@@ -57,10 +57,10 @@ type State struct {
 // how often does the node save hot states to db? what are
 // the saved hot states in db?... etc
 type saveHotStateDbConfig struct {
-	enabled         bool
-	lock            sync.Mutex
-	duration        types.Slot
-	savedStateRoots [][32]byte
+	enabled                 bool
+	lock                    sync.Mutex
+	duration                types.Slot
+	blockRootsOfSavedStates [][32]byte
 }
 
 // This tracks the finalized point. It's also the point where slot and the block root of
@@ -100,7 +100,7 @@ func New(beaconDB db.NoHeadAccessDatabase, opts ...StateGenOption) *State {
 	return s
 }
 
-// Resume resumes a new state management object from previously saved finalized check point in DB.
+// Resume resumes a new state management object from previously saved finalized checkpoint in DB.
 func (s *State) Resume(ctx context.Context, fState state.BeaconState) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.Resume")
 	defer span.End()

@@ -1,3 +1,5 @@
+//go:build !fuzz
+
 package cache
 
 import (
@@ -28,7 +30,7 @@ func TestCommitteeCache_FuzzCommitteesByEpoch(t *testing.T) {
 
 	for i := 0; i < 100000; i++ {
 		fuzzer.Fuzz(c)
-		require.NoError(t, cache.AddCommitteeShuffledList(c))
+		require.NoError(t, cache.AddCommitteeShuffledList(context.Background(), c))
 		_, err := cache.Committee(context.Background(), 0, c.Seed, 0)
 		require.NoError(t, err)
 	}
@@ -43,7 +45,7 @@ func TestCommitteeCache_FuzzActiveIndices(t *testing.T) {
 
 	for i := 0; i < 100000; i++ {
 		fuzzer.Fuzz(c)
-		require.NoError(t, cache.AddCommitteeShuffledList(c))
+		require.NoError(t, cache.AddCommitteeShuffledList(context.Background(), c))
 
 		indices, err := cache.ActiveIndices(context.Background(), c.Seed)
 		require.NoError(t, err)

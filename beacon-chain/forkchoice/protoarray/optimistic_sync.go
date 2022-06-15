@@ -16,7 +16,7 @@ func (f *ForkChoice) IsOptimistic(root [32]byte) (bool, error) {
 	defer f.store.nodesLock.RUnlock()
 	index, ok := f.store.nodesIndices[root]
 	if !ok {
-		return false, ErrUnknownNodeRoot
+		return true, ErrUnknownNodeRoot
 	}
 	node := f.store.nodes[index]
 	return node.status == syncing, nil
@@ -24,6 +24,7 @@ func (f *ForkChoice) IsOptimistic(root [32]byte) (bool, error) {
 
 // SetOptimisticToValid is called with the root of a block that was returned as
 // VALID by the EL.
+//
 // WARNING: This method returns an error if the root is not found in forkchoice
 func (f *ForkChoice) SetOptimisticToValid(ctx context.Context, root [32]byte) error {
 	f.store.nodesLock.Lock()

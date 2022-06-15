@@ -4,14 +4,14 @@ import (
 	"context"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/consensus-types/block"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
-func headerFromBlock(b block.SignedBeaconBlock) (*ethpb.BeaconBlockHeader, error) {
+func headerFromBlock(b interfaces.SignedBeaconBlock) (*ethpb.BeaconBlockHeader, error) {
 	bodyRoot, err := b.Block().Body().HashTreeRoot()
 	if err != nil {
 		return nil, err

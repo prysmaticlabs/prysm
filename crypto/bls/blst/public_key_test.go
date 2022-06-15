@@ -1,6 +1,4 @@
 //go:build ((linux && amd64) || (linux && arm64) || (darwin && amd64) || (darwin && arm64) || (windows && amd64)) && !blst_disabled
-// +build linux,amd64 linux,arm64 darwin,amd64 darwin,arm64 windows,amd64
-// +build !blst_disabled
 
 package blst_test
 
@@ -10,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/crypto/bls/blst"
+	"github.com/prysmaticlabs/prysm/crypto/bls/common"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
@@ -76,6 +75,21 @@ func TestPublicKey_Copy(t *testing.T) {
 	pubkeyB.Aggregate(priv2.PublicKey())
 
 	require.DeepEqual(t, pubkeyA.Marshal(), pubkeyBytes, "Pubkey was mutated after copy")
+}
+
+func TestPublicKey_Aggregate(t *testing.T) {
+	priv, err := blst.RandKey()
+	require.NoError(t, err)
+	pubkeyA := priv.PublicKey()
+
+	pubkeyB := pubkeyA.Copy()
+	priv2, err := blst.RandKey()
+	require.NoError(t, err)
+	resKey := pubkeyB.Aggregate(priv2.PublicKey())
+
+	aggKey := blst.AggregateMultiplePubkeys([]common.PublicKey{priv.PublicKey(), priv2.PublicKey()})
+
+	require.DeepEqual(t, resKey.Marshal(), aggKey.Marshal(), "Pubkey does not match up")
 }
 
 func TestPublicKeysEmpty(t *testing.T) {

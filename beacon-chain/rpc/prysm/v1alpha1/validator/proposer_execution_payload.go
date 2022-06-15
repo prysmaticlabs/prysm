@@ -3,6 +3,7 @@ package validator
 import (
 	"bytes"
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
@@ -15,6 +16,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
@@ -97,7 +99,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 		if err != nil {
 			return nil, err
 		}
-		if err := helpers.BeaconBlockIsNil(finalizedBlock); err != nil {
+		if err := wrapper.BeaconBlockIsNil(finalizedBlock); err != nil {
 			return nil, err
 		}
 		switch finalizedBlock.Version() {
@@ -119,18 +121,20 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 
 	feeRecipient := params.BeaconConfig().DefaultFeeRecipient
 	recipient, err := vs.BeaconDB.FeeRecipientByValidatorID(ctx, vIdx)
-	burnAddr := bytesutil.PadTo([]byte{}, fieldparams.FeeRecipientLength)
 	switch err == nil {
 	case true:
 		feeRecipient = recipient
 	case errors.As(err, kv.ErrNotFoundFeeRecipient):
 		// If fee recipient is not found in DB and not set from beacon node CLI,
 		// use the burn address.
-		if bytes.Equal(feeRecipient.Bytes(), burnAddr) {
+		if feeRecipient.String() == params.BeaconConfig().EthBurnAddressHex {
 			logrus.WithFields(logrus.Fields{
 				"validatorIndex": vIdx,
-				"burnAddress":    burnAddr,
-			}).Error("Fee recipient not set. Using burn address")
+				"burnAddress":    params.BeaconConfig().EthBurnAddressHex,
+			}).Warn("Fee recipient is currently using the burn address, " +
+				"you will not be rewarded transaction fees on this setting. " +
+				"Please set a different eth address as the fee recipient. " +
+				"Please refer to our documentation for instructions")
 		}
 	default:
 		return nil, errors.Wrap(err, "could not get fee recipient in db")
@@ -147,7 +151,19 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 	if payloadID == nil {
 		return nil, errors.New("nil payload id")
 	}
-	return vs.ExecutionEngineCaller.GetPayload(ctx, *payloadID)
+	payload, err := vs.ExecutionEngineCaller.GetPayload(ctx, *payloadID)
+	if err != nil {
+		return nil, err
+	}
+	// Warn if the fee recipient is not the value we expect.
+	if payload != nil && !bytes.Equal(payload.FeeRecipient, feeRecipient[:]) {
+		logrus.WithFields(logrus.Fields{
+			"wantedFeeRecipient": fmt.Sprintf("%#x", feeRecipient),
+			"received":           fmt.Sprintf("%#x", payload.FeeRecipient),
+		}).Warn("Fee recipient address from execution client is not what was expected. " +
+			"It is possible someone has compromised your client to try and take your transaction fees")
+	}
+	return payload, nil
 }
 
 // This returns the valid terminal block hash with an existence bool value.

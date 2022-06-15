@@ -10,12 +10,11 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/async"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/block"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/encoding/ssz/equality"
@@ -37,6 +36,10 @@ func (s *Service) processPendingBlocksQueue() {
 	// Prevents multiple queue processing goroutines (invoked by RunEvery) from contending for data.
 	locker := new(sync.Mutex)
 	async.RunEvery(s.ctx, processPendingBlocksPeriod, func() {
+		// Don't process the pending blocks if genesis time has not been set. The chain is not ready.
+		if !s.isGenesisTimeSet() {
+			return
+		}
 		locker.Lock()
 		if err := s.processPendingBlocks(s.ctx); err != nil {
 			log.WithError(err).Debug("Could not process pending blocks")
@@ -156,10 +159,6 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			err = s.validateBeaconBlock(ctx, b, blkRoot)
 			switch {
 			case errors.Is(ErrOptimisticParent, err): // Ok to continue process block with parent that is an optimistic candidate.
-			case errors.Is(blockchain.ErrUndefinedExecutionEngineError, err):
-				// don't mark the block as bad with an undefined EE error.
-				log.Debugf("Could not validate block due to undefined ee error %d: %v", b.Block().Slot(), err)
-				continue
 			case err != nil:
 				log.Debugf("Could not validate block from slot %d: %v", b.Block().Slot(), err)
 				s.setBadBlock(ctx, blkRoot)
@@ -170,11 +169,12 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			}
 
 			if err := s.cfg.chain.ReceiveBlock(ctx, b, blkRoot); err != nil {
-				if !errors.Is(err, powchain.ErrHTTPTimeout) {
-					log.Debugf("Could not process block from slot %d: %v", b.Block().Slot(), err)
+				if blockchain.IsInvalidBlock(err) {
 					tracing.AnnotateError(span, err)
 					s.setBadBlock(ctx, blkRoot)
 				}
+				log.Debugf("Could not process block from slot %d: %v", b.Block().Slot(), err)
+
 				// In the next iteration of the queue, this block will be removed from
 				// the pending queue as it has been marked as a 'bad' block.
 				span.End()
@@ -214,8 +214,11 @@ func (s *Service) sendBatchRootRequest(ctx context.Context, roots [][32]byte, ra
 	if len(roots) == 0 {
 		return nil
 	}
-
-	_, bestPeers := s.cfg.p2p.Peers().BestFinalized(maxPeerRequest, s.cfg.chain.FinalizedCheckpt().Epoch)
+	cp, err := s.cfg.chain.FinalizedCheckpt()
+	if err != nil {
+		return err
+	}
+	_, bestPeers := s.cfg.p2p.Peers().BestFinalized(maxPeerRequest, cp.Epoch)
 	if len(bestPeers) == 0 {
 		return nil
 	}
@@ -276,7 +279,11 @@ func (s *Service) validatePendingSlots() error {
 	defer s.pendingQueueLock.Unlock()
 	oldBlockRoots := make(map[[32]byte]bool)
 
-	finalizedEpoch := s.cfg.chain.FinalizedCheckpt().Epoch
+	cp, err := s.cfg.chain.FinalizedCheckpt()
+	if err != nil {
+		return err
+	}
+	finalizedEpoch := cp.Epoch
 	if s.slotToPendingBlocks == nil {
 		return errors.New("slotToPendingBlocks cache can't be nil")
 	}
@@ -323,7 +330,7 @@ func (s *Service) clearPendingSlots() {
 
 // Delete block from the list from the pending queue using the slot as key.
 // Note: this helper is not thread safe.
-func (s *Service) deleteBlockFromPendingQueue(slot types.Slot, b block.SignedBeaconBlock, r [32]byte) error {
+func (s *Service) deleteBlockFromPendingQueue(slot types.Slot, b interfaces.SignedBeaconBlock, r [32]byte) error {
 	mutexasserts.AssertRWMutexLocked(&s.pendingQueueLock)
 
 	blks := s.pendingBlocksInCache(slot)
@@ -332,11 +339,11 @@ func (s *Service) deleteBlockFromPendingQueue(slot types.Slot, b block.SignedBea
 	}
 
 	// Defensive check to ignore nil blocks
-	if err := helpers.BeaconBlockIsNil(b); err != nil {
+	if err := wrapper.BeaconBlockIsNil(b); err != nil {
 		return err
 	}
 
-	newBlks := make([]block.SignedBeaconBlock, 0, len(blks))
+	newBlks := make([]interfaces.SignedBeaconBlock, 0, len(blks))
 	for _, blk := range blks {
 		if equality.DeepEqual(blk.Proto(), b.Proto()) {
 			continue
@@ -360,7 +367,7 @@ func (s *Service) deleteBlockFromPendingQueue(slot types.Slot, b block.SignedBea
 
 // Insert block to the list in the pending queue using the slot as key.
 // Note: this helper is not thread safe.
-func (s *Service) insertBlockToPendingQueue(_ types.Slot, b block.SignedBeaconBlock, r [32]byte) error {
+func (s *Service) insertBlockToPendingQueue(_ types.Slot, b interfaces.SignedBeaconBlock, r [32]byte) error {
 	mutexasserts.AssertRWMutexLocked(&s.pendingQueueLock)
 
 	if s.seenPendingBlocks[r] {
@@ -376,22 +383,22 @@ func (s *Service) insertBlockToPendingQueue(_ types.Slot, b block.SignedBeaconBl
 }
 
 // This returns signed beacon blocks given input key from slotToPendingBlocks.
-func (s *Service) pendingBlocksInCache(slot types.Slot) []block.SignedBeaconBlock {
+func (s *Service) pendingBlocksInCache(slot types.Slot) []interfaces.SignedBeaconBlock {
 	k := slotToCacheKey(slot)
 	value, ok := s.slotToPendingBlocks.Get(k)
 	if !ok {
-		return []block.SignedBeaconBlock{}
+		return []interfaces.SignedBeaconBlock{}
 	}
-	blks, ok := value.([]block.SignedBeaconBlock)
+	blks, ok := value.([]interfaces.SignedBeaconBlock)
 	if !ok {
-		return []block.SignedBeaconBlock{}
+		return []interfaces.SignedBeaconBlock{}
 	}
 	return blks
 }
 
 // This adds input signed beacon block to slotToPendingBlocks cache.
-func (s *Service) addPendingBlockToCache(b block.SignedBeaconBlock) error {
-	if err := helpers.BeaconBlockIsNil(b); err != nil {
+func (s *Service) addPendingBlockToCache(b interfaces.SignedBeaconBlock) error {
+	if err := wrapper.BeaconBlockIsNil(b); err != nil {
 		return err
 	}
 
@@ -405,6 +412,12 @@ func (s *Service) addPendingBlockToCache(b block.SignedBeaconBlock) error {
 	k := slotToCacheKey(b.Block().Slot())
 	s.slotToPendingBlocks.Set(k, blks, pendingBlockExpTime)
 	return nil
+}
+
+// Returns true if the genesis time has been set in chain service.
+// Without the genesis time, the chain does not start.
+func (s *Service) isGenesisTimeSet() bool {
+	return s.cfg.chain.GenesisTime().Unix() != 0
 }
 
 // This converts input string to slot.

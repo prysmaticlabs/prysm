@@ -26,7 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/cmd"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/block"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -1028,6 +1028,7 @@ func TestServer_ListValidators_DefaultPageSize(t *testing.T) {
 }
 
 func TestServer_ListValidators_FromOldEpoch(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	transition.SkipSlotCache.Disable()
 
@@ -1723,7 +1724,7 @@ func TestServer_GetValidatorParticipation_CurrentAndPrevEpochWithBits(t *testing
 	})
 }
 
-func runGetValidatorParticipationCurrentAndPrevEpoch(t *testing.T, genState state.BeaconState, gb block.SignedBeaconBlock) {
+func runGetValidatorParticipationCurrentAndPrevEpoch(t *testing.T, genState state.BeaconState, gb interfaces.SignedBeaconBlock) {
 	helpers.ClearCache()
 	beaconDB := dbTest.SetupDB(t)
 

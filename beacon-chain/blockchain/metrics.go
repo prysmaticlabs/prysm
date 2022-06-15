@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/block"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -158,6 +158,10 @@ var (
 		Name: "forkchoice_updated_optimistic_node_count",
 		Help: "Count the number of optimistic nodes after forkchoiceUpdated EE call",
 	})
+	missedPayloadIDFilledCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "missed_payload_id_filled_count",
+		Help: "",
+	})
 )
 
 // reportSlotMetrics reports slot related metrics.
@@ -298,7 +302,7 @@ func reportEpochMetrics(ctx context.Context, postState, headState state.BeaconSt
 	return nil
 }
 
-func reportAttestationInclusion(blk block.BeaconBlock) {
+func reportAttestationInclusion(blk interfaces.BeaconBlock) {
 	for _, att := range blk.Body().Attestations() {
 		attestationInclusionDelay.Observe(float64(blk.Slot() - att.Data.Slot))
 	}
