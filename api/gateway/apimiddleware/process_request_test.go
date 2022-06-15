@@ -31,21 +31,25 @@ func defaultRequestContainer() *testRequestContainer {
 }
 
 type testResponseContainer struct {
-	TestString   string
-	TestHex      string `hex:"true"`
-	TestEmptyHex string `hex:"true"`
-	TestUint256  string `uint256:"true"`
-	TestEnum     string `enum:"true"`
-	TestTime     string `time:"true"`
+	TestString       string
+	TestHex          string `hex:"true"`
+	TestEmptyHex     string `hex:"true"`
+	TestAddress      string `address:"true"`
+	TestEmptyAddress string `address:"true"`
+	TestUint256      string `uint256:"true"`
+	TestEnum         string `enum:"true"`
+	TestTime         string `time:"true"`
 }
 
 func defaultResponseContainer() *testResponseContainer {
 	return &testResponseContainer{
-		TestString:   "test string",
-		TestHex:      "Zm9v", // base64 encoding of "foo"
-		TestEmptyHex: "",
-		TestEnum:     "Test Enum",
-		TestTime:     "2006-01-02T15:04:05Z",
+		TestString:       "test string",
+		TestHex:          "Zm9v", // base64 encoding of "foo"
+		TestEmptyHex:     "",
+		TestAddress:      "Zm9v",
+		TestEmptyAddress: "",
+		TestEnum:         "Test Enum",
+		TestTime:         "2006-01-02T15:04:05Z",
 
 		// base64 encoding of 4196 in little-endian
 		TestUint256: "ZBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
@@ -247,6 +251,8 @@ func TestProcessMiddlewareResponseFields(t *testing.T) {
 		require.Equal(t, true, errJson == nil)
 		assert.Equal(t, "0x666f6f", container.TestHex)
 		assert.Equal(t, "0x", container.TestEmptyHex)
+		assert.Equal(t, "0x0000000000000000000000000000000000666F6f", container.TestAddress)
+		assert.Equal(t, "0x", container.TestEmptyAddress)
 		assert.Equal(t, "4196", container.TestUint256)
 		assert.Equal(t, "test enum", container.TestEnum)
 		assert.Equal(t, "1136214245", container.TestTime)
