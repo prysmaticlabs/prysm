@@ -95,4 +95,3 @@ func e2eMinimal(t *testing.T, args *testArgs) {
 
 	newTestRunner(t, testConfig).run()
 }
-
