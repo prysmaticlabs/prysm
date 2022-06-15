@@ -23,7 +23,7 @@ type BlockBuilder interface {
 	SubmitBlindedBlock(ctx context.Context, block *ethpb.SignedBlindedBeaconBlockBellatrix) (*v1.ExecutionPayload, error)
 	GetHeader(ctx context.Context, slot types.Slot, parentHash [32]byte, pubKey [48]byte) (*ethpb.SignedBuilderBid, error)
 	Status() error
-	RegisterValidator(ctx context.Context, reg *ethpb.SignedValidatorRegistrationV1) error
+	RegisterValidator(ctx context.Context, reg []*ethpb.SignedValidatorRegistrationV1) error
 	Configured() bool
 }
 
@@ -142,6 +142,7 @@ func (s *Service) RegisterValidator(ctx context.Context, reg []*ethpb.SignedVali
 		msgs = append(msgs, r.Message)
 		valid = append(valid, r)
 	}
+
 	if err := s.c.RegisterValidator(ctx, valid); err != nil {
 		return errors.Wrap(err, "could not register validator(s)")
 	}

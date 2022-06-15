@@ -2,6 +2,7 @@ package builder
 
 import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/network"
 	"github.com/prysmaticlabs/prysm/network/authorization"
@@ -31,6 +32,14 @@ func WithBuilderEndpoints(endpoint string) Option {
 func WithHeadFetcher(svc *blockchain.Service) Option {
 	return func(s *Service) error {
 		s.cfg.headFetcher = svc
+		return nil
+	}
+}
+
+// WithDatabase for head access.
+func WithDatabase(beaconDB db.HeadAccessDatabase) Option {
+	return func(s *Service) error {
+		s.cfg.beaconDB = beaconDB
 		return nil
 	}
 }

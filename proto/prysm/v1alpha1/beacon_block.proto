@@ -447,6 +447,10 @@ message ValidatorRegistrationV1 {
     bytes pubkey      = 4 [(ethereum.eth.ext.ssz_size) = "48"];
 }
 
+message SignedValidatorRegistrationsV1 {
+    repeated SignedValidatorRegistrationV1 messages = 1;
+}
+
 message SignedValidatorRegistrationV1 {
     ValidatorRegistrationV1 message         = 1 ;
     bytes signature      = 2 [(ethereum.eth.ext.ssz_size) = "96"];
