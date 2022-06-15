@@ -1734,7 +1734,8 @@ func runGetValidatorParticipationCurrentAndPrevEpoch(t *testing.T, genState stat
 
 	gsr, err := genState.HashTreeRoot(ctx)
 	require.NoError(t, err)
-	require.NoError(t, consensusblockstest.SetBlockStateRoot(gb, gsr))
+	gb, err = consensusblockstest.SetBlockStateRoot(gb, gsr)
+	require.NoError(t, err)
 	require.NoError(t, err)
 	gRoot, err := gb.Block().HashTreeRoot()
 	require.NoError(t, err)
