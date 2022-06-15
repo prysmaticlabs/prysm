@@ -357,6 +357,9 @@ func (s *Store) head(ctx context.Context) ([32]byte, error) {
 
 	justifiedIndex, ok := s.nodesIndices[s.justifiedCheckpoint.Root]
 	if !ok {
+		// If the justifiedCheckpoint is from genesis, then the root is
+		// zeroHash. In this case it should be the root of forkchoice
+		// tree.
 		if s.justifiedCheckpoint.Epoch == params.BeaconConfig().GenesisEpoch {
 			justifiedIndex = uint64(0)
 		} else {
@@ -968,12 +971,12 @@ func (f *ForkChoice) InsertOptimisticChain(ctx context.Context, chain []*forkcho
 	return nil
 }
 
-// sets the genesisTime tracked by forkchoice
+// SetGenesisTime sets the genesisTime tracked by forkchoice
 func (f *ForkChoice) SetGenesisTime(genesisTime uint64) {
 	f.store.genesisTime = genesisTime
 }
 
-// sets the genesis Block root
+// SetOriginRoot sets the genesis Block root
 func (f *ForkChoice) SetOriginRoot(root [32]byte) {
 	f.store.originRoot = root
 }

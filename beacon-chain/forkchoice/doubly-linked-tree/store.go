@@ -69,6 +69,9 @@ func (s *Store) head(ctx context.Context) ([32]byte, error) {
 	// JustifiedRoot has to be known
 	justifiedNode, ok := s.nodeByRoot[s.justifiedCheckpoint.Root]
 	if !ok || justifiedNode == nil {
+		// If the justifiedCheckpoint is from genesis, then the root is
+		// zeroHash. In this case it should be the root of forkchoice
+		// tree.
 		if s.justifiedCheckpoint.Epoch == params.BeaconConfig().GenesisEpoch {
 			justifiedNode = s.treeRootNode
 		} else {

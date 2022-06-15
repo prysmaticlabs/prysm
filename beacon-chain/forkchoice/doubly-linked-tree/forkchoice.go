@@ -539,12 +539,12 @@ func (f *ForkChoice) InsertOptimisticChain(ctx context.Context, chain []*forkcho
 	return nil
 }
 
-// sets the genesisTime tracked by forkchoice
+// SetGenesisTime sets the genesisTime tracked by forkchoice
 func (f *ForkChoice) SetGenesisTime(genesisTime uint64) {
 	f.store.genesisTime = genesisTime
 }
 
-// sets the genesis Block root
+// SetOriginRoot sets the genesis Block root
 func (f *ForkChoice) SetOriginRoot(root [32]byte) {
 	f.store.originRoot = root
 }
