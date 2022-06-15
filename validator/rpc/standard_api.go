@@ -442,7 +442,7 @@ func (s *Server) SetFeeRecipientByPubkey(ctx context.Context, req *ethpbservice.
 	encoded := hexutil.Encode(req.Ethaddress)
 	if !common.IsHexAddress(encoded) {
 		return nil, status.Errorf(
-			codes.InvalidArgument, "fee recipient is not a valid Ethereum address")
+			codes.InvalidArgument, "Fee recipient is not a valid Ethereum address")
 	}
 	pOption := validatorServiceConfig.DefaultProposerOption()
 	pOption.FeeRecipient = common.BytesToAddress(req.Ethaddress)
