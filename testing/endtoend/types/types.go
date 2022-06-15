@@ -17,6 +17,12 @@ func WithExtraEpochs(extra uint64) E2EConfigOpt {
 	}
 }
 
+func WithEpochs(e uint64) E2EConfigOpt {
+	return func(cfg *E2EConfig) {
+		cfg.EpochsToRun = e
+	}
+}
+
 func WithRemoteSigner() E2EConfigOpt {
 	return func(cfg *E2EConfig) {
 		cfg.UseWeb3RemoteSigner = true

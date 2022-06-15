@@ -249,13 +249,16 @@ func TestGetAttesterDuties(t *testing.T) {
 }
 
 func TestGetAttesterDuties_SyncNotReady(t *testing.T) {
-	chainService := &mockChain.ChainService{}
+	st, err := util.NewBeaconState()
+	require.NoError(t, err)
+	chainService := &mockChain.ChainService{State: st}
 	vs := &Server{
-		SyncChecker: &mockSync.Sync{IsSyncing: true},
-		HeadFetcher: chainService,
-		TimeFetcher: chainService,
+		SyncChecker:           &mockSync.Sync{IsSyncing: true},
+		HeadFetcher:           chainService,
+		TimeFetcher:           chainService,
+		OptimisticModeFetcher: chainService,
 	}
-	_, err := vs.GetAttesterDuties(context.Background(), &ethpbv1.AttesterDutiesRequest{})
+	_, err = vs.GetAttesterDuties(context.Background(), &ethpbv1.AttesterDutiesRequest{})
 	assert.ErrorContains(t, "Syncing to latest head, not ready to respond", err)
 }
 
@@ -406,13 +409,16 @@ func TestGetProposerDuties(t *testing.T) {
 }
 
 func TestGetProposerDuties_SyncNotReady(t *testing.T) {
-	chainService := &mockChain.ChainService{}
+	st, err := util.NewBeaconState()
+	require.NoError(t, err)
+	chainService := &mockChain.ChainService{State: st}
 	vs := &Server{
-		SyncChecker: &mockSync.Sync{IsSyncing: true},
-		HeadFetcher: chainService,
-		TimeFetcher: chainService,
+		SyncChecker:           &mockSync.Sync{IsSyncing: true},
+		HeadFetcher:           chainService,
+		TimeFetcher:           chainService,
+		OptimisticModeFetcher: chainService,
 	}
-	_, err := vs.GetProposerDuties(context.Background(), &ethpbv1.ProposerDutiesRequest{})
+	_, err = vs.GetProposerDuties(context.Background(), &ethpbv1.ProposerDutiesRequest{})
 	assert.ErrorContains(t, "Syncing to latest head, not ready to respond", err)
 }
 
@@ -631,14 +637,16 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 }
 
 func TestGetSyncCommitteeDuties_SyncNotReady(t *testing.T) {
-	chainService := &mockChain.ChainService{}
+	st, err := util.NewBeaconState()
+	require.NoError(t, err)
+	chainService := &mockChain.ChainService{State: st}
 	vs := &Server{
 		SyncChecker:           &mockSync.Sync{IsSyncing: true},
 		HeadFetcher:           chainService,
 		TimeFetcher:           chainService,
 		OptimisticModeFetcher: chainService,
 	}
-	_, err := vs.GetSyncCommitteeDuties(context.Background(), &ethpbv2.SyncCommitteeDutiesRequest{})
+	_, err = vs.GetSyncCommitteeDuties(context.Background(), &ethpbv2.SyncCommitteeDutiesRequest{})
 	assert.ErrorContains(t, "Syncing to latest head, not ready to respond", err)
 }
 
@@ -751,13 +759,16 @@ func TestProduceBlock(t *testing.T) {
 }
 
 func TestProduceBlock_SyncNotReady(t *testing.T) {
-	chainService := &mockChain.ChainService{}
+	st, err := util.NewBeaconState()
+	require.NoError(t, err)
+	chainService := &mockChain.ChainService{State: st}
 	vs := &Server{
-		SyncChecker: &mockSync.Sync{IsSyncing: true},
-		HeadFetcher: chainService,
-		TimeFetcher: chainService,
+		SyncChecker:           &mockSync.Sync{IsSyncing: true},
+		HeadFetcher:           chainService,
+		TimeFetcher:           chainService,
+		OptimisticModeFetcher: chainService,
 	}
-	_, err := vs.ProduceBlock(context.Background(), &ethpbv1.ProduceBlockRequest{})
+	_, err = vs.ProduceBlock(context.Background(), &ethpbv1.ProduceBlockRequest{})
 	assert.ErrorContains(t, "Syncing to latest head, not ready to respond", err)
 }
 
@@ -1728,24 +1739,30 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 }
 
 func TestProduceBlockV2_SyncNotReady(t *testing.T) {
-	chainService := &mockChain.ChainService{}
+	st, err := util.NewBeaconState()
+	require.NoError(t, err)
+	chainService := &mockChain.ChainService{State: st}
 	vs := &Server{
-		SyncChecker: &mockSync.Sync{IsSyncing: true},
-		HeadFetcher: chainService,
-		TimeFetcher: chainService,
+		SyncChecker:           &mockSync.Sync{IsSyncing: true},
+		HeadFetcher:           chainService,
+		TimeFetcher:           chainService,
+		OptimisticModeFetcher: chainService,
 	}
-	_, err := vs.ProduceBlockV2(context.Background(), &ethpbv1.ProduceBlockRequest{})
+	_, err = vs.ProduceBlockV2(context.Background(), &ethpbv1.ProduceBlockRequest{})
 	assert.ErrorContains(t, "Syncing to latest head, not ready to respond", err)
 }
 
 func TestProduceBlockV2SSZ_SyncNotReady(t *testing.T) {
-	chainService := &mockChain.ChainService{}
+	st, err := util.NewBeaconState()
+	require.NoError(t, err)
+	chainService := &mockChain.ChainService{State: st}
 	vs := &Server{
-		SyncChecker: &mockSync.Sync{IsSyncing: true},
-		HeadFetcher: chainService,
-		TimeFetcher: chainService,
+		SyncChecker:           &mockSync.Sync{IsSyncing: true},
+		HeadFetcher:           chainService,
+		TimeFetcher:           chainService,
+		OptimisticModeFetcher: chainService,
 	}
-	_, err := vs.ProduceBlockV2SSZ(context.Background(), &ethpbv1.ProduceBlockRequest{})
+	_, err = vs.ProduceBlockV2SSZ(context.Background(), &ethpbv1.ProduceBlockRequest{})
 	assert.ErrorContains(t, "Syncing to latest head, not ready to respond", err)
 }
 
@@ -2717,24 +2734,30 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 }
 
 func TestProduceBlindedBlock_SyncNotReady(t *testing.T) {
-	chainService := &mockChain.ChainService{}
+	st, err := util.NewBeaconState()
+	require.NoError(t, err)
+	chainService := &mockChain.ChainService{State: st}
 	vs := &Server{
-		SyncChecker: &mockSync.Sync{IsSyncing: true},
-		HeadFetcher: chainService,
-		TimeFetcher: chainService,
+		SyncChecker:           &mockSync.Sync{IsSyncing: true},
+		HeadFetcher:           chainService,
+		TimeFetcher:           chainService,
+		OptimisticModeFetcher: chainService,
 	}
-	_, err := vs.ProduceBlindedBlock(context.Background(), &ethpbv1.ProduceBlockRequest{})
+	_, err = vs.ProduceBlindedBlock(context.Background(), &ethpbv1.ProduceBlockRequest{})
 	assert.ErrorContains(t, "Syncing to latest head, not ready to respond", err)
 }
 
 func TestProduceBlindedBlockSSZ_SyncNotReady(t *testing.T) {
-	chainService := &mockChain.ChainService{}
+	st, err := util.NewBeaconState()
+	require.NoError(t, err)
+	chainService := &mockChain.ChainService{State: st}
 	vs := &Server{
-		SyncChecker: &mockSync.Sync{IsSyncing: true},
-		HeadFetcher: chainService,
-		TimeFetcher: chainService,
+		SyncChecker:           &mockSync.Sync{IsSyncing: true},
+		HeadFetcher:           chainService,
+		TimeFetcher:           chainService,
+		OptimisticModeFetcher: chainService,
 	}
-	_, err := vs.ProduceBlindedBlockSSZ(context.Background(), &ethpbv1.ProduceBlockRequest{})
+	_, err = vs.ProduceBlindedBlockSSZ(context.Background(), &ethpbv1.ProduceBlockRequest{})
 	assert.ErrorContains(t, "Syncing to latest head, not ready to respond", err)
 }
 
@@ -3100,13 +3123,16 @@ func TestSubmitBeaconCommitteeSubscription(t *testing.T) {
 }
 
 func TestSubmitBeaconCommitteeSubscription_SyncNotReady(t *testing.T) {
-	chainService := &mockChain.ChainService{}
+	st, err := util.NewBeaconState()
+	require.NoError(t, err)
+	chainService := &mockChain.ChainService{State: st}
 	vs := &Server{
-		SyncChecker: &mockSync.Sync{IsSyncing: true},
-		HeadFetcher: chainService,
-		TimeFetcher: chainService,
+		SyncChecker:           &mockSync.Sync{IsSyncing: true},
+		HeadFetcher:           chainService,
+		TimeFetcher:           chainService,
+		OptimisticModeFetcher: chainService,
 	}
-	_, err := vs.SubmitBeaconCommitteeSubscription(context.Background(), &ethpbv1.SubmitBeaconCommitteeSubscriptionsRequest{})
+	_, err = vs.SubmitBeaconCommitteeSubscription(context.Background(), &ethpbv1.SubmitBeaconCommitteeSubscriptionsRequest{})
 	assert.ErrorContains(t, "Syncing to latest head, not ready to respond", err)
 }
 
@@ -3256,13 +3282,16 @@ func TestSubmitSyncCommitteeSubscription(t *testing.T) {
 }
 
 func TestSubmitSyncCommitteeSubscription_SyncNotReady(t *testing.T) {
-	chainService := &mockChain.ChainService{}
+	st, err := util.NewBeaconState()
+	require.NoError(t, err)
+	chainService := &mockChain.ChainService{State: st}
 	vs := &Server{
-		SyncChecker: &mockSync.Sync{IsSyncing: true},
-		HeadFetcher: chainService,
-		TimeFetcher: chainService,
+		SyncChecker:           &mockSync.Sync{IsSyncing: true},
+		HeadFetcher:           chainService,
+		TimeFetcher:           chainService,
+		OptimisticModeFetcher: chainService,
 	}
-	_, err := vs.SubmitSyncCommitteeSubscription(context.Background(), &ethpbv2.SubmitSyncCommitteeSubscriptionsRequest{})
+	_, err = vs.SubmitSyncCommitteeSubscription(context.Background(), &ethpbv2.SubmitSyncCommitteeSubscriptionsRequest{})
 	assert.ErrorContains(t, "Syncing to latest head, not ready to respond", err)
 }
 
