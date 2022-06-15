@@ -58,6 +58,7 @@ func e2eMinimal(t *testing.T, cfgo ...types.E2EConfigOpt) *testRunner {
 		ev.FinishedSyncing,
 		ev.AllNodesHaveSameHead,
 		ev.ValidatorSyncParticipation,
+		ev.FeeRecipientIsPresent,
 		//ev.TransactionsPresent, TODO: Renable Transaction evaluator once it tx pool issues are fixed.
 	}
 	testConfig := &types.E2EConfig{
