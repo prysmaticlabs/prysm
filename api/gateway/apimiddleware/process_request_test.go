@@ -298,7 +298,7 @@ func TestWriteMiddlewareResponseHeadersAndBody(t *testing.T) {
 		v, ok = writer.Header()["Content-Length"]
 		require.Equal(t, true, ok, "header not found")
 		require.Equal(t, 1, len(v), "wrong number of header values")
-		assert.Equal(t, "181", v[0])
+		assert.Equal(t, "224", v[0])
 		assert.Equal(t, 204, writer.Code)
 		assert.DeepEqual(t, responseJson, writer.Body.Bytes())
 	})
