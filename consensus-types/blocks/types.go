@@ -26,6 +26,7 @@ var (
 	// ErrUnsupportedGetter is returned when a getter access is not supported for a specific beacon block version.
 	ErrUnsupportedGetter     = errors.New("unsupported getter")
 	errNilBlock              = errors.New("received nil beacon block")
+	errNilBody               = errors.New("received nil beacon block body")
 	errIncorrectBlockVersion = errors.New(incorrectBlockVersion)
 	errIncorrectBodyVersion  = errors.New(incorrectBodyVersion)
 )

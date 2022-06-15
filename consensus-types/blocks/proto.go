@@ -10,7 +10,7 @@ import (
 // Proto returns the underlying protobuf signed beacon block.
 func (b *SignedBeaconBlock) Proto() (proto.Message, error) {
 	if b == nil {
-		return nil, nil
+		return nil, errNilBlock
 	}
 
 	blockMessage, err := b.block.Proto()
@@ -20,52 +20,36 @@ func (b *SignedBeaconBlock) Proto() (proto.Message, error) {
 
 	switch b.version {
 	case version.Phase0:
-		var block *eth.BeaconBlock
-		if blockMessage != nil {
-			var ok bool
-			block, ok = blockMessage.(*eth.BeaconBlock)
-			if !ok {
-				return nil, errors.Wrap(err, incorrectBlockVersion)
-			}
+		block, ok := blockMessage.(*eth.BeaconBlock)
+		if !ok {
+			return nil, errors.Wrap(err, incorrectBlockVersion)
 		}
 		return &eth.SignedBeaconBlock{
 			Block:     block,
 			Signature: b.signature,
 		}, nil
 	case version.Altair:
-		var block *eth.BeaconBlockAltair
-		if blockMessage != nil {
-			var ok bool
-			block, ok = blockMessage.(*eth.BeaconBlockAltair)
-			if !ok {
-				return nil, errors.Wrap(err, incorrectBlockVersion)
-			}
+		block, ok := blockMessage.(*eth.BeaconBlockAltair)
+		if !ok {
+			return nil, errors.Wrap(err, incorrectBlockVersion)
 		}
 		return &eth.SignedBeaconBlockAltair{
 			Block:     block,
 			Signature: b.signature,
 		}, nil
 	case version.Bellatrix:
-		var block *eth.BeaconBlockBellatrix
-		if blockMessage != nil {
-			var ok bool
-			block, ok = blockMessage.(*eth.BeaconBlockBellatrix)
-			if !ok {
-				return nil, errors.Wrap(err, incorrectBlockVersion)
-			}
+		block, ok := blockMessage.(*eth.BeaconBlockBellatrix)
+		if !ok {
+			return nil, errors.Wrap(err, incorrectBlockVersion)
 		}
 		return &eth.SignedBeaconBlockBellatrix{
 			Block:     block,
 			Signature: b.signature,
 		}, nil
 	case version.BellatrixBlind:
-		var block *eth.BlindedBeaconBlockBellatrix
-		if blockMessage != nil {
-			var ok bool
-			block, ok = blockMessage.(*eth.BlindedBeaconBlockBellatrix)
-			if !ok {
-				return nil, errors.Wrap(err, incorrectBlockVersion)
-			}
+		block, ok := blockMessage.(*eth.BlindedBeaconBlockBellatrix)
+		if !ok {
+			return nil, errors.Wrap(err, incorrectBlockVersion)
 		}
 		return &eth.SignedBlindedBeaconBlockBellatrix{
 			Block:     block,
@@ -79,7 +63,7 @@ func (b *SignedBeaconBlock) Proto() (proto.Message, error) {
 // Proto returns the underlying protobuf beacon block.
 func (b *BeaconBlock) Proto() (proto.Message, error) {
 	if b == nil {
-		return nil, nil
+		return nil, errNilBlock
 	}
 
 	bodyMessage, err := b.body.Proto()
@@ -89,13 +73,9 @@ func (b *BeaconBlock) Proto() (proto.Message, error) {
 
 	switch b.version {
 	case version.Phase0:
-		var body *eth.BeaconBlockBody
-		if bodyMessage != nil {
-			var ok bool
-			body, ok = bodyMessage.(*eth.BeaconBlockBody)
-			if !ok {
-				return nil, errors.Wrap(err, incorrectBodyVersion)
-			}
+		body, ok := bodyMessage.(*eth.BeaconBlockBody)
+		if !ok {
+			return nil, errors.Wrap(err, incorrectBodyVersion)
 		}
 		return &eth.BeaconBlock{
 			Slot:          b.slot,
@@ -105,13 +85,9 @@ func (b *BeaconBlock) Proto() (proto.Message, error) {
 			Body:          body,
 		}, nil
 	case version.Altair:
-		var body *eth.BeaconBlockBodyAltair
-		if bodyMessage != nil {
-			var ok bool
-			body, ok = bodyMessage.(*eth.BeaconBlockBodyAltair)
-			if !ok {
-				return nil, errors.Wrap(err, incorrectBodyVersion)
-			}
+		body, ok := bodyMessage.(*eth.BeaconBlockBodyAltair)
+		if !ok {
+			return nil, errors.Wrap(err, incorrectBodyVersion)
 		}
 		return &eth.BeaconBlockAltair{
 			Slot:          b.slot,
@@ -121,13 +97,9 @@ func (b *BeaconBlock) Proto() (proto.Message, error) {
 			Body:          body,
 		}, nil
 	case version.Bellatrix:
-		var body *eth.BeaconBlockBodyBellatrix
-		if bodyMessage != nil {
-			var ok bool
-			body, ok = bodyMessage.(*eth.BeaconBlockBodyBellatrix)
-			if !ok {
-				return nil, errors.Wrap(err, incorrectBodyVersion)
-			}
+		body, ok := bodyMessage.(*eth.BeaconBlockBodyBellatrix)
+		if !ok {
+			return nil, errors.Wrap(err, incorrectBodyVersion)
 		}
 		return &eth.BeaconBlockBellatrix{
 			Slot:          b.slot,
@@ -137,13 +109,9 @@ func (b *BeaconBlock) Proto() (proto.Message, error) {
 			Body:          body,
 		}, nil
 	case version.BellatrixBlind:
-		var body *eth.BlindedBeaconBlockBodyBellatrix
-		if bodyMessage != nil {
-			var ok bool
-			body, ok = bodyMessage.(*eth.BlindedBeaconBlockBodyBellatrix)
-			if !ok {
-				return nil, errors.Wrap(err, incorrectBodyVersion)
-			}
+		body, ok := bodyMessage.(*eth.BlindedBeaconBlockBodyBellatrix)
+		if !ok {
+			return nil, errors.Wrap(err, incorrectBodyVersion)
 		}
 		return &eth.BlindedBeaconBlockBellatrix{
 			Slot:          b.slot,
@@ -160,7 +128,7 @@ func (b *BeaconBlock) Proto() (proto.Message, error) {
 // Proto returns the underlying protobuf beacon block body.
 func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 	if b == nil {
-		return nil, nil
+		return nil, errNilBody
 	}
 
 	switch b.version {
