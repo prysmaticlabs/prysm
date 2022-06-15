@@ -8,6 +8,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/pkg/errors"
+	"github.com/protolambda/go-kzg/bls"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
@@ -16,11 +17,13 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/forks/eip4844"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
@@ -244,7 +247,7 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk interfaces.Signed
 		return errors.New("incorrect proposer index")
 	}
 
-	if err = s.validateBellatrixBeaconBlock(ctx, parentState, blk.Block()); err != nil {
+	if err = s.validateEIP4844BeaconBlock(ctx, parentState, blk.Block()); err != nil {
 		if errors.Is(err, ErrOptimisticParent) {
 			return err
 		}
@@ -253,6 +256,51 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk interfaces.Signed
 		return err
 	}
 	return nil
+}
+
+// validateEIP4844BeaconBlock validates the block for the EIP-4844 fork.
+// In addition to the spec for validateBellatrixBeaconBlock:
+//  [REJECT] The KZG commitments of the blobs are all correctly encoded compressed BLS G1 Points.
+//   -- i.e. `all(bls.KeyValidate(commitment) for commitment in block.body.blob_kzgs)`
+//  [REJECT] The KZG commitments correspond to the versioned hashes in the transactions list.
+//   -- i.e. `verify_kzgs_against_transactions(block.body.execution_payload.transactions, block.body.blob_kzgs)`
+func (s *Service) validateEIP4844BeaconBlock(ctx context.Context, parentState state.BeaconState, blk interfaces.BeaconBlock) error {
+	if err := s.validateBellatrixBeaconBlock(ctx, parentState, blk); err != nil {
+		return err
+	}
+
+	body := blk.Body()
+	executionEnabled, err := blocks.IsExecutionEnabled(parentState, body)
+	if err != nil {
+		return err
+	}
+	if !executionEnabled {
+		return nil
+	}
+
+	payload, err := body.ExecutionPayload()
+	if err != nil {
+		return err
+	}
+	if payload == nil {
+		return errors.New("execution payload is nil")
+	}
+
+	blobKzgs, err := body.BlobKzgs()
+	if err != nil {
+		return err
+	}
+	blobKzgsInput := make([][48]byte, len(blobKzgs))
+	for i := range blobKzgs {
+		if len(blobKzgs[i]) != 48 {
+			return errors.New("invalid kzg encoding")
+		}
+		if _, err := bls.FromCompressedG1(blobKzgs[i]); err != nil {
+			return errors.Wrap(err, "invalid commitment")
+		}
+		blobKzgsInput[i] = bytesutil.ToBytes48(blobKzgs[i])
+	}
+	return eip4844.VerifyKzgsAgainstTxs(payload.Transactions, blobKzgsInput)
 }
 
 // validateBellatrixBeaconBlock validates the block for the Bellatrix fork.
@@ -268,8 +316,13 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk interfaces.Signed
 //         [IGNORE] The block's parent (defined by block.parent_root) passes all validation (including execution
 //          node verification of the block.body.execution_payload).
 func (s *Service) validateBellatrixBeaconBlock(ctx context.Context, parentState state.BeaconState, blk interfaces.BeaconBlock) error {
-	// Error if block and state are not the same version
-	if parentState.Version() != blk.Version() {
+	sv := parentState.Version()
+	bv := blk.Version()
+	switch {
+	case sv == bv:
+	case sv == version.Bellatrix && bv == version.EIP4844:
+		// The EIP-4844 BeaconState is the same as Bellatrix's
+	default:
 		return errors.New("block and state are not the same version")
 	}
 

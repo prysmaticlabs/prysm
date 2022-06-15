@@ -166,7 +166,13 @@ func ProcessBlockNoVerifyAnySig(
 		return nil, nil, err
 	}
 
-	if state.Version() != signed.Block().Version() && signed.Block().Version() != version.EIP4844 {
+	sv := state.Version()
+	bv := signed.Block().Version()
+	switch {
+	case sv == bv:
+	case sv == version.Bellatrix && bv == version.EIP4844:
+		// The EIP-4844 BeaconState is the same as Bellatrix's
+	default:
 		return nil, nil, fmt.Errorf("state and block are different version. %d != %d", state.Version(), signed.Block().Version())
 	}
 
