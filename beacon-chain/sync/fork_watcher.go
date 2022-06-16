@@ -78,7 +78,7 @@ func (s *Service) registerForUpcomingFork(currEpoch types.Epoch) error {
 				return nil
 			}
 			s.registerSubscribers(nextEpoch, digest)
-			// TODO(inphi): Register new RPC handlers for blob side cars.
+			s.registerRPCHandlersEIP4844()
 		}
 	}
 	return nil

@@ -371,12 +371,12 @@ func (b *BlobsBundle) MarshalJSON() ([]byte, error) {
 		kzgs[i] = bytesutil.ToBytes48(kzg)
 	}
 	blobs := make([]types.Blob, len(b.Blobs))
-	for _, b1 := range b.Blobs {
+	for i, b1 := range b.Blobs {
 		var blob [params.FieldElementsPerBlob]types.BLSFieldElement
-		for i, b2 := range b1.Blob {
-			blob[i] = bytesutil.ToBytes32(b2)
+		for j, b2 := range b1.Blob {
+			blob[j] = bytesutil.ToBytes32(b2)
 		}
-		blobs = append(blobs, blob)
+		blobs[i] = blob
 	}
 
 	return json.Marshal(blobBundleJSON{
@@ -401,11 +401,12 @@ func (e *BlobsBundle) UnmarshalJSON(enc []byte) error {
 	e.Kzgs = kzgs
 	blobs := make([]*Blob, len(dec.Blobs))
 	for i, blob := range dec.Blobs {
-		b := &Blob{}
-		for _, fe := range blob {
-			b.Blob = append(b.Blob, fe[:])
+		blobs[i] = &Blob{
+			Blob: make([][]byte, len(blob)),
 		}
-		blobs[i] = b
+		for j, b := range blob {
+			blobs[i].Blob[j] = bytesutil.SafeCopyBytes(b[:])
+		}
 	}
 	e.Blobs = blobs
 	return nil
