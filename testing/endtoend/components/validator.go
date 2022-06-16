@@ -36,8 +36,8 @@ import (
 )
 
 const depositGasLimit = 4000000
-const FeeRecipientAddress = "0x055Fb65722E7b2455043BFEBf6177F1D2e9738D9"
-const DefaultFeeRecipientAddress = "0x099Fb65722E7b2455043BFEBf6177F1D2e9738D9"
+const FeeRecipientAddress = "0x055FB65722e7B2455043BfeBf6177f1d2e9738d9"
+const DefaultFeeRecipientAddress = "0x099FB65722e7b2455043bfebF6177f1D2E9738d9"
 
 var ValidatorHexPubKeys []string = make([]string, 0)
 var _ e2etypes.ComponentRunner = (*ValidatorNode)(nil)
