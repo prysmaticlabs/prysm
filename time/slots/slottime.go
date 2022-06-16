@@ -164,11 +164,12 @@ func Since(time time.Time) types.Slot {
 // CurrentSlot returns the current slot as determined by the local clock and
 // provided genesis time.
 func CurrentSlot(genesisTimeSec uint64) types.Slot {
-	now := uint64(prysmTime.Now().Unix())
-	if now < genesisTimeSec {
+	now := prysmTime.Now().Unix()
+	genesis := int64(genesisTimeSec) // lint:ignore uintcast -- Genesis timestamp will not exceed int64 in your lifetime.
+	if now < genesis {
 		return 0
 	}
-	return types.Slot((now - genesisTimeSec) / params.BeaconConfig().SecondsPerSlot)
+	return types.Slot(uint64(now-genesis) / params.BeaconConfig().SecondsPerSlot)
 }
 
 // ValidateClock validates a provided slot against the local

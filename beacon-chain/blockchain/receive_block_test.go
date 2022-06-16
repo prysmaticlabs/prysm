@@ -321,6 +321,7 @@ func TestCheckSaveHotStateDB_Disabling(t *testing.T) {
 	hook := logTest.NewGlobal()
 	opts := testServiceOptsWithDB(t)
 	s, err := NewService(context.Background(), opts...)
+	s.genesisTime = time.Now().Add(-320000 * time.Second)
 	require.NoError(t, err)
 	st := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(epochsSinceFinalitySaveHotStateDB))
 	s.genesisTime = time.Now().Add(time.Duration(-1*int64(st)*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second)
