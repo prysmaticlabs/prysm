@@ -56,7 +56,7 @@ type Getter interface {
 	HasNode([32]byte) bool
 	ProposerBoost() [fieldparams.RootLength]byte
 	HasParent(root [32]byte) bool
-	AncestorRoot(ctx context.Context, root [32]byte, slot types.Slot) ([]byte, error)
+	AncestorRoot(ctx context.Context, root [32]byte, slot types.Slot) ([32]byte, error)
 	CommonAncestorRoot(ctx context.Context, root1 [32]byte, root2 [32]byte) ([32]byte, error)
 	IsCanonical(root [32]byte) bool
 	FinalizedCheckpoint() *forkchoicetypes.Checkpoint
@@ -71,4 +71,6 @@ type Setter interface {
 	SetOptimisticToInvalid(context.Context, [fieldparams.RootLength]byte, [fieldparams.RootLength]byte, [fieldparams.RootLength]byte) ([][32]byte, error)
 	UpdateJustifiedCheckpoint(*forkchoicetypes.Checkpoint) error
 	UpdateFinalizedCheckpoint(*forkchoicetypes.Checkpoint) error
+	SetGenesisTime(uint64)
+	SetOriginRoot([32]byte)
 }

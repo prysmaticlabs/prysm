@@ -222,6 +222,7 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 		Root: bytesutil.ToBytes32(finalized.Root)}); err != nil {
 		return errors.Wrap(err, "could not update forkchoice's finalized checkpoint")
 	}
+	forkChoicer.SetGenesisTime(uint64(s.genesisTime.Unix()))
 
 	st, err := s.cfg.StateGen.StateByRoot(s.ctx, fRoot)
 	if err != nil {
@@ -478,9 +479,12 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState state.Beacon
 	if err := s.cfg.ForkChoiceStore.InsertNode(ctx, genesisState, genesisBlkRoot); err != nil {
 		log.Fatalf("Could not process genesis block for fork choice: %v", err)
 	}
+	s.cfg.ForkChoiceStore.SetOriginRoot(genesisBlkRoot)
+	// Set genesis as fully validated
 	if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, genesisBlkRoot); err != nil {
-		log.Fatalf("Could not set optimistic status of genesis block to false: %v", err)
+		return errors.Wrap(err, "Could not set optimistic status of genesis block to false")
 	}
+	s.cfg.ForkChoiceStore.SetGenesisTime(uint64(s.genesisTime.Unix()))
 
 	s.setHead(genesisBlkRoot, genesisBlk, genesisState)
 	return nil

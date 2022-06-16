@@ -90,7 +90,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 				return nil, err
 			}
 
-			r, err := s.updateHead(ctx, s.justifiedBalances.balances)
+			r, err := s.cfg.ForkChoiceStore.Head(ctx, s.justifiedBalances.balances)
 			if err != nil {
 				return nil, err
 			}

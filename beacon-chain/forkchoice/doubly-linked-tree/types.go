@@ -19,6 +19,7 @@ type ForkChoice struct {
 // Store defines the fork choice store which includes block nodes and the last view of checkpoint information.
 type Store struct {
 	justifiedCheckpoint        *forkchoicetypes.Checkpoint            // latest justified epoch in store.
+	bestJustifiedCheckpoint    *forkchoicetypes.Checkpoint            // best justified checkpoint in store.
 	finalizedCheckpoint        *forkchoicetypes.Checkpoint            // latest finalized epoch in store.
 	pruneThreshold             uint64                                 // do not prune tree unless threshold is reached.
 	proposerBoostRoot          [fieldparams.RootLength]byte           // latest block root that was boosted after being received in a timely manner.
@@ -29,9 +30,11 @@ type Store struct {
 	nodeByRoot                 map[[fieldparams.RootLength]byte]*Node // nodes indexed by roots.
 	nodeByPayload              map[[fieldparams.RootLength]byte]*Node // nodes indexed by payload Hash
 	slashedIndices             map[types.ValidatorIndex]bool          // the list of equivocating validator indices
+	originRoot                 [fieldparams.RootLength]byte           // The genesis block root
 	nodesLock                  sync.RWMutex
 	proposerBoostLock          sync.RWMutex
 	checkpointsLock            sync.RWMutex
+	genesisTime                uint64
 }
 
 // Node defines the individual block which includes its block parent, ancestor and how much weight accounted for it.
