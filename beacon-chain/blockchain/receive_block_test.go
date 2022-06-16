@@ -322,6 +322,8 @@ func TestCheckSaveHotStateDB_Disabling(t *testing.T) {
 	opts := testServiceOptsWithDB(t)
 	s, err := NewService(context.Background(), opts...)
 	require.NoError(t, err)
+	st := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(epochsSinceFinalitySaveHotStateDB))
+	s.genesisTime = time.Now().Add(time.Duration(-1*int64(st)*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second)
 	s.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{}, [32]byte{})
 	require.NoError(t, s.checkSaveHotStateDB(context.Background()))
 	s.genesisTime = time.Now()
