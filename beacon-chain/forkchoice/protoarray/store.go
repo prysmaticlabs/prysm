@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -497,6 +498,19 @@ func (s *Store) insert(ctx context.Context,
 	processedBlockCount.Inc()
 	nodeCount.Set(float64(len(s.nodes)))
 
+	// Apply proposer boost
+	timeNow := uint64(time.Now().Unix())
+	if timeNow < s.genesisTime {
+		return nil
+	}
+	secondsIntoSlot := (timeNow - s.genesisTime) % params.BeaconConfig().SecondsPerSlot
+	currentSlot := slots.CurrentSlot(s.genesisTime)
+	boostTreshold := params.BeaconConfig().SecondsPerSlot / params.BeaconConfig().IntervalsPerSlot
+	if currentSlot == slot && secondsIntoSlot < boostTreshold {
+		s.proposerBoostLock.Lock()
+		s.proposerBoostRoot = root
+		s.proposerBoostLock.Unlock()
+	}
 	return nil
 }
 
