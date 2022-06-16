@@ -104,6 +104,8 @@ func ReadGrpcResponseBody(r io.Reader) ([]byte, ErrorJson) {
 }
 
 // HandleGrpcResponseError acts on an error that resulted from a grpc-gateway's response.
+// Whether there was an error is indicated by the bool return value. In case of an error,
+// there is no need to write to the response because it's taken care of by the function.
 func HandleGrpcResponseError(errJson ErrorJson, resp *http.Response, respBody []byte, w http.ResponseWriter) (bool, ErrorJson) {
 	responseHasError := false
 	if err := json.Unmarshal(respBody, errJson); err != nil {
