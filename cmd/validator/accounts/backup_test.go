@@ -181,7 +181,7 @@ func TestBackupAccounts_Noninteractive_Imported(t *testing.T) {
 
 	// We attempt to import accounts we wrote to the keys directory
 	// into our newly created wallet.
-	require.NoError(t, accounts.ImportAccountsCli(cliCtx))
+	require.NoError(t, accountsImport(cliCtx))
 
 	// Next, we attempt to backup the accounts.
 	require.NoError(t, accountsBackup(cliCtx))
