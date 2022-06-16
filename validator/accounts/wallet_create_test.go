@@ -119,7 +119,7 @@ func TestCreateOrOpenWallet(t *testing.T) {
 		walletPasswordFile: walletPasswordFile,
 	})
 	createLocalWallet := func(cliCtx *cli.Context) (*wallet.Wallet, error) {
-		cfg, err := extractWalletCreationConfigFromCli(cliCtx, keymanager.Local)
+		cfg, err := ExtractWalletCreationConfigFromCli(cliCtx, keymanager.Local)
 		if err != nil {
 			return nil, err
 		}
@@ -128,7 +128,7 @@ func TestCreateOrOpenWallet(t *testing.T) {
 			WalletDir:      cfg.WalletCfg.WalletDir,
 			WalletPassword: cfg.WalletCfg.WalletPassword,
 		})
-		if err = createLocalKeymanagerWallet(cliCtx.Context, w); err != nil {
+		if err = CreateLocalKeymanagerWallet(cliCtx.Context, w); err != nil {
 			return nil, errors.Wrap(err, "could not create keymanager")
 		}
 		log.WithField("wallet-path", cfg.WalletCfg.WalletDir).Info(

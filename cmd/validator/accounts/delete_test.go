@@ -83,6 +83,7 @@ type testWalletConfig struct {
 	deletePublicKeys        string
 	keysDir                 string
 	backupDir               string
+	passwordsDir            string
 	walletDir               string
 }
 
@@ -169,7 +170,7 @@ func TestDeleteAccounts_Noninteractive(t *testing.T) {
 	require.NoError(t, err)
 
 	// We attempt to import accounts.
-	require.NoError(t, accounts.ImportAccountsCli(cliCtx))
+	require.NoError(t, accountsImport(cliCtx))
 
 	// We attempt to delete the accounts specified.
 	require.NoError(t, accountsDelete(cliCtx))
