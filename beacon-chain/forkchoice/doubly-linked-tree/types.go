@@ -30,7 +30,7 @@ type Store struct {
 	nodeByRoot                 map[[fieldparams.RootLength]byte]*Node // nodes indexed by roots.
 	nodeByPayload              map[[fieldparams.RootLength]byte]*Node // nodes indexed by payload Hash
 	slashedIndices             map[types.ValidatorIndex]bool          // the list of equivocating validator indices
-	originRoot                 [fieldparams.RootLength]byte           // The genesis Block root
+	originRoot                 [fieldparams.RootLength]byte           // The genesis block root
 	nodesLock                  sync.RWMutex
 	proposerBoostLock          sync.RWMutex
 	checkpointsLock            sync.RWMutex
