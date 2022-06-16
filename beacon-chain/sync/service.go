@@ -51,6 +51,7 @@ const seenExitSize = 100
 const seenProposerSlashingSize = 100
 const badBlockSize = 1000
 const syncMetricsInterval = 10 * time.Second
+const seenBlobsSidecarSize = 1000
 
 var (
 	// Seconds in one epoch.
@@ -134,6 +135,8 @@ type Service struct {
 	badBlockLock                     sync.RWMutex
 	syncContributionBitsOverlapLock  sync.RWMutex
 	syncContributionBitsOverlapCache *lru.Cache
+	seenBlobsSidecarLock             sync.RWMutex
+	seenBlobsSidecarCache            *lru.Cache
 	signatureChan                    chan *signatureVerifier
 }
 
@@ -228,6 +231,7 @@ func (s *Service) initCaches() {
 	s.seenAttesterSlashingCache = make(map[uint64]bool)
 	s.seenProposerSlashingCache = lruwrpr.New(seenProposerSlashingSize)
 	s.badBlockCache = lruwrpr.New(badBlockSize)
+	s.seenBlobsSidecarCache = lruwrpr.New(seenBlobsSidecarSize)
 }
 
 func (s *Service) registerHandlers() {

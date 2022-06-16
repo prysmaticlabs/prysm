@@ -167,10 +167,14 @@ func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.
 	}
 	if sidecar != nil {
 		// TODO(inphi): We may want to broadcast blobs at best-effort.
-		// TODO(inphi): Uncomment this once P2P is working again
-		//if err := vs.P2P.Broadcast(ctx, sidecar); err != nil {
-		//return nil, fmt.Errorf("could not broadcast blobs sidecar: %v", err)
-		//}
+		go func() {
+			// HACK: Broadcast sidecars after a delay to give the network
+			// time to accept the prior beacon block broadcast needed to validate sidecars
+			time.Sleep(time.Second * 3)
+			if err := vs.P2P.Broadcast(ctx, sidecar); err != nil {
+				log.Errorf("could not broadcast blobs sidecar: %v", err)
+			}
+		}()
 	}
 
 	log.WithFields(logrus.Fields{

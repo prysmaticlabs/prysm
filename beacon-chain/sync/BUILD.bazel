@@ -35,6 +35,7 @@ go_library(
         "subscriber_handlers.go",
         "subscriber_sync_committee_message.go",
         "subscriber_sync_contribution_proof.go",
+        "subscriber_blobs_sidecar.go",
         "subscription_topic_handler.go",
         "utils.go",
         "validate_aggregate_proof.go",
@@ -45,6 +46,7 @@ go_library(
         "validate_sync_committee_message.go",
         "validate_sync_contribution_proof.go",
         "validate_voluntary_exit.go",
+        "validate_blobs_sidecar.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/sync",
     visibility = [
