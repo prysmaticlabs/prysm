@@ -286,6 +286,11 @@ func (s *Service) validateEIP4844BeaconBlock(ctx context.Context, parentState st
 		return errors.New("execution payload is nil")
 	}
 
+	switch blk.Version() {
+	case version.Phase0, version.Altair, version.Bellatrix, version.BellatrixBlind:
+		return nil
+	}
+
 	blobKzgs, err := body.BlobKzgs()
 	if err != nil {
 		return err
