@@ -432,7 +432,7 @@ func (s *Server) ListFeeRecipientByPubkey(ctx context.Context, req *ethpbservice
 // SetFeeRecipientByPubkey updates the eth address mapped to the public key.
 func (s *Server) SetFeeRecipientByPubkey(ctx context.Context, req *ethpbservice.SetFeeRecipientByPubkeyRequest) (*empty.Empty, error) {
 	if s.validatorService == nil {
-		return nil, status.Error(codes.FailedPrecondition, "Validator service not ready.")
+		return nil, status.Error(codes.FailedPrecondition, "Validator service not ready")
 	}
 	validatorKey := req.Pubkey
 	if err := validatePublicKey(validatorKey); err != nil {
