@@ -403,14 +403,6 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 	).Return(
 		&ethpb.Genesis{GenesisTime: timestamppb.Now()}, nil)
 
-	client.EXPECT().DomainData(
-		gomock.Any(),
-		gomock.Any(),
-	).Return(
-		&ethpb.DomainResponse{
-			SignatureDomain: make([]byte, 32),
-		},
-		nil)
 	client.EXPECT().SubmitValidatorRegistration(
 		gomock.Any(),
 		gomock.Any(),
@@ -474,14 +466,6 @@ func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 	).Return(
 		&ethpb.Genesis{GenesisTime: timestamppb.Now()}, nil)
 
-	client.EXPECT().DomainData(
-		gomock.Any(),
-		gomock.Any(),
-	).Return(
-		&ethpb.DomainResponse{
-			SignatureDomain: make([]byte, 32),
-		},
-		nil)
 	client.EXPECT().SubmitValidatorRegistration(
 		gomock.Any(),
 		gomock.Any(),
@@ -1588,15 +1572,6 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 					&emptypb.Empty{},
 				).Times(2).Return(
 					&ethpb.Genesis{GenesisTime: timestamppb.Now()}, nil)
-
-				client.EXPECT().DomainData(
-					gomock.Any(),
-					gomock.Any(),
-				).Times(2).Return(
-					&ethpb.DomainResponse{
-						SignatureDomain: make([]byte, 32),
-					},
-					nil)
 				client.EXPECT().SubmitValidatorRegistration(
 					gomock.Any(),
 					gomock.Any(),
@@ -1662,14 +1637,6 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 				).Return(
 					&ethpb.Genesis{GenesisTime: timestamppb.Now()}, nil)
 
-				client.EXPECT().DomainData(
-					gomock.Any(),
-					gomock.Any(),
-				).Return(
-					&ethpb.DomainResponse{
-						SignatureDomain: make([]byte, 32),
-					},
-					nil)
 				client.EXPECT().SubmitValidatorRegistration(
 					gomock.Any(),
 					gomock.Any(),
@@ -1749,14 +1716,6 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 				).Return(
 					&ethpb.Genesis{GenesisTime: timestamppb.Now()}, nil)
 
-				client.EXPECT().DomainData(
-					gomock.Any(),
-					gomock.Any(),
-				).Return(
-					&ethpb.DomainResponse{
-						SignatureDomain: make([]byte, 32),
-					},
-					nil)
 				client.EXPECT().SubmitValidatorRegistration(
 					gomock.Any(),
 					gomock.Any(),
@@ -1826,14 +1785,6 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 				).Return(
 					&ethpb.Genesis{GenesisTime: timestamppb.Now()}, nil)
 
-				client.EXPECT().DomainData(
-					gomock.Any(),
-					gomock.Any(),
-				).Return(
-					&ethpb.DomainResponse{
-						SignatureDomain: make([]byte, 32),
-					},
-					nil)
 				client.EXPECT().SubmitValidatorRegistration(
 					gomock.Any(),
 					gomock.Any(),
@@ -1945,14 +1896,6 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 				).Return(
 					&ethpb.Genesis{GenesisTime: timestamppb.Now()}, nil)
 
-				client.EXPECT().DomainData(
-					gomock.Any(),
-					gomock.Any(),
-				).Return(
-					&ethpb.DomainResponse{
-						SignatureDomain: make([]byte, 32),
-					},
-					nil)
 				client.EXPECT().SubmitValidatorRegistration(
 					gomock.Any(),
 					gomock.Any(),
