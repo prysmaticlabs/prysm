@@ -2,6 +2,7 @@ package bytesutil_test
 
 import (
 	"bytes"
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -579,6 +580,29 @@ func TestIsValidRoot(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got := bytesutil.IsValidRoot(tt.args.root)
 			require.Equal(t, got, tt.want)
+		})
+	}
+}
+
+func TestUint32ToBytes4(t *testing.T) {
+	tests := []struct {
+		value uint32
+		want  [4]byte
+	}{
+		{
+			value: 0x01000000,
+			want:  [4]byte{1, 0, 0, 0},
+		},
+		{
+			value: 0x00000001,
+			want:  [4]byte{0, 0, 0, 1},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(fmt.Sprintf("0x%08x", tt.value), func(t *testing.T) {
+			if got := bytesutil.Uint32ToBytes4(tt.value); !bytes.Equal(got[:], tt.want[:]) {
+				t.Errorf("Uint32ToBytes4() = %v, want %v", got, tt.want)
+			}
 		})
 	}
 }

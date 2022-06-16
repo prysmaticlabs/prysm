@@ -49,7 +49,7 @@ func TestCopySignatureSet(t *testing.T) {
 }
 
 func TestSignatureBatch_RemoveDuplicates(t *testing.T) {
-	keys := []SecretKey{}
+	var keys []SecretKey
 	for i := 0; i < 100; i++ {
 		key, err := RandKey()
 		assert.NoError(t, err)
@@ -73,9 +73,9 @@ func TestSignatureBatch_RemoveDuplicates(t *testing.T) {
 				chosenKeys := keys[:20]
 
 				msg := [32]byte{'r', 'a', 'n', 'd', 'o', 'm'}
-				signatures := [][]byte{}
-				messages := [][32]byte{}
-				pubs := []PublicKey{}
+				var signatures [][]byte
+				var messages [][32]byte
+				var pubs []PublicKey
 				for _, k := range chosenKeys {
 					s := k.Sign(msg[:])
 					signatures = append(signatures, s.Marshal())
@@ -105,9 +105,9 @@ func TestSignatureBatch_RemoveDuplicates(t *testing.T) {
 				msg := [32]byte{'r', 'a', 'n', 'd', 'o', 'm'}
 				msg1 := [32]byte{'r', 'a', 'n', 'd', 'o', 'm', '1'}
 				msg2 := [32]byte{'r', 'a', 'n', 'd', 'o', 'm', '2'}
-				signatures := [][]byte{}
-				messages := [][32]byte{}
-				pubs := []PublicKey{}
+				var signatures [][]byte
+				var messages [][32]byte
+				var pubs []PublicKey
 				for _, k := range chosenKeys[:10] {
 					s := k.Sign(msg[:])
 					signatures = append(signatures, s.Marshal())
@@ -149,9 +149,9 @@ func TestSignatureBatch_RemoveDuplicates(t *testing.T) {
 				msg := [32]byte{'r', 'a', 'n', 'd', 'o', 'm'}
 				msg1 := [32]byte{'r', 'a', 'n', 'd', 'o', 'm', '1'}
 				msg2 := [32]byte{'r', 'a', 'n', 'd', 'o', 'm', '2'}
-				signatures := [][]byte{}
-				messages := [][32]byte{}
-				pubs := []PublicKey{}
+				var signatures [][]byte
+				var messages [][32]byte
+				var pubs []PublicKey
 				for _, k := range chosenKeys[:10] {
 					s := k.Sign(msg[:])
 					signatures = append(signatures, s.Marshal())
@@ -190,9 +190,9 @@ func TestSignatureBatch_RemoveDuplicates(t *testing.T) {
 				msg := [32]byte{'r', 'a', 'n', 'd', 'o', 'm'}
 				msg1 := [32]byte{'r', 'a', 'n', 'd', 'o', 'm', '1'}
 				msg2 := [32]byte{'r', 'a', 'n', 'd', 'o', 'm', '2'}
-				signatures := [][]byte{}
-				messages := [][32]byte{}
-				pubs := []PublicKey{}
+				var signatures [][]byte
+				var messages [][32]byte
+				var pubs []PublicKey
 				for _, k := range chosenKeys[:10] {
 					s := k.Sign(msg[:])
 					signatures = append(signatures, s.Marshal())
@@ -242,9 +242,9 @@ func TestSignatureBatch_RemoveDuplicates(t *testing.T) {
 				msg := [32]byte{'r', 'a', 'n', 'd', 'o', 'm'}
 				msg1 := [32]byte{'r', 'a', 'n', 'd', 'o', 'm', '1'}
 				msg2 := [32]byte{'r', 'a', 'n', 'd', 'o', 'm', '2'}
-				signatures := [][]byte{}
-				messages := [][32]byte{}
-				pubs := []PublicKey{}
+				var signatures [][]byte
+				var messages [][32]byte
+				var pubs []PublicKey
 				for _, k := range chosenKeys[:10] {
 					s := k.Sign(msg[:])
 					signatures = append(signatures, s.Marshal())
@@ -328,7 +328,7 @@ func TestSignatureBatch_RemoveDuplicates(t *testing.T) {
 }
 
 func TestSignatureBatch_AggregateBatch(t *testing.T) {
-	keys := []SecretKey{}
+	var keys []SecretKey
 	for i := 0; i < 100; i++ {
 		key, err := RandKey()
 		assert.NoError(t, err)
@@ -353,9 +353,9 @@ func TestSignatureBatch_AggregateBatch(t *testing.T) {
 				chosenKeys := keys[:20]
 
 				msg := [32]byte{'r', 'a', 'n', 'd', 'o', 'm'}
-				signatures := [][]byte{}
-				messages := [][32]byte{}
-				pubs := []PublicKey{}
+				var signatures [][]byte
+				var messages [][32]byte
+				var pubs []PublicKey
 				for _, k := range chosenKeys {
 					s := k.Sign(msg[:])
 					signatures = append(signatures, s.Marshal())
@@ -383,9 +383,9 @@ func TestSignatureBatch_AggregateBatch(t *testing.T) {
 				chosenKeys := keys[:20]
 
 				msg := [32]byte{'r', 'a', 'n', 'd', 'o', 'm'}
-				signatures := [][]byte{}
-				messages := [][32]byte{}
-				pubs := []PublicKey{}
+				var signatures [][]byte
+				var messages [][32]byte
+				var pubs []PublicKey
 				for _, k := range chosenKeys {
 					s := k.Sign(msg[:])
 					signatures = append(signatures, s.Marshal())
@@ -409,9 +409,9 @@ func TestSignatureBatch_AggregateBatch(t *testing.T) {
 				msg := [32]byte{'r', 'a', 'n', 'd', 'o', 'm'}
 				msg1 := [32]byte{'r', 'a', 'n', 'd', 'o', 'm', '1'}
 				msg2 := [32]byte{'r', 'a', 'n', 'd', 'o', 'm', '2'}
-				signatures := [][]byte{}
-				messages := [][32]byte{}
-				pubs := []PublicKey{}
+				var signatures [][]byte
+				var messages [][32]byte
+				var pubs []PublicKey
 				for _, k := range chosenKeys[:10] {
 					s := k.Sign(msg[:])
 					signatures = append(signatures, s.Marshal())
@@ -459,9 +459,9 @@ func TestSignatureBatch_AggregateBatch(t *testing.T) {
 				msg := [32]byte{'r', 'a', 'n', 'd', 'o', 'm'}
 				msg1 := [32]byte{'r', 'a', 'n', 'd', 'o', 'm', '1'}
 				msg2 := [32]byte{'r', 'a', 'n', 'd', 'o', 'm', '2'}
-				signatures := [][]byte{}
-				messages := [][32]byte{}
-				pubs := []PublicKey{}
+				var signatures [][]byte
+				var messages [][32]byte
+				var pubs []PublicKey
 				for _, k := range chosenKeys[:10] {
 					s := k.Sign(msg[:])
 					signatures = append(signatures, s.Marshal())
@@ -485,7 +485,7 @@ func TestSignatureBatch_AggregateBatch(t *testing.T) {
 				messages[15][31] ^= byte(100)
 				messages[25][31] ^= byte(100)
 
-				newSigs := [][]byte{}
+				var newSigs [][]byte
 				newSigs = append(newSigs, signatures[:5]...)
 				newSigs = append(newSigs, signatures[6:10]...)
 
@@ -504,7 +504,7 @@ func TestSignatureBatch_AggregateBatch(t *testing.T) {
 				aggSig3, err := AggregateCompressedSignatures(newSigs)
 				assert.NoError(t, err)
 
-				newPubs := []PublicKey{}
+				var newPubs []PublicKey
 				newPubs = append(newPubs, pubs[:5]...)
 				newPubs = append(newPubs, pubs[6:10]...)
 

@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 
@@ -235,7 +234,7 @@ func TestReload(t *testing.T) {
 					return nil, nil
 				},
 			},
-			err: helpers.ErrNilSignedBeaconBlock,
+			err: wrapper.ErrNilSignedBeaconBlock,
 		},
 		{
 			name: "origin root found, block error",
@@ -298,7 +297,7 @@ func TestReload(t *testing.T) {
 				},
 				backfillBlockRoot: goodBlockRoot(backfillRoot),
 			},
-			err: helpers.ErrNilSignedBeaconBlock,
+			err: wrapper.ErrNilSignedBeaconBlock,
 		},
 		{
 			name: "origin root found, block found, backfill root found, backfill block random err",

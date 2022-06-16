@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/time"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"go.opencensus.io/trace"
@@ -24,9 +25,14 @@ type BlockReceiver interface {
 	HasBlock(ctx context.Context, root [32]byte) bool
 }
 
-// ReceiveBlock is a function that defines the the operations (minus pubsub)
-// that are performed on blocks that is received from regular sync service. The operations consists of:
-//   1. Validate block, apply state transition and update check points
+// SlashingReceiver interface defines the methods of chain service for receiving validated slashing over the wire.
+type SlashingReceiver interface {
+	ReceiveAttesterSlashing(ctx context.Context, slashings *ethpb.AttesterSlashing)
+}
+
+// ReceiveBlock is a function that defines the operations (minus pubsub)
+// that are performed on a received block. The operations consist of:
+//   1. Validate block, apply state transition and update checkpoints
 //   2. Apply fork choice to the processed block
 //   3. Save latest head info
 func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.SignedBeaconBlock, blockRoot [32]byte) error {
@@ -53,19 +59,27 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.SignedBeaco
 	}
 
 	// Reports on block and fork choice metrics.
-	finalized := s.store.FinalizedCheckpt()
-	if finalized == nil {
+	justified, err := s.store.JustifiedCheckpt()
+	if err != nil {
+		return err
+	}
+	finalized, err := s.store.FinalizedCheckpt()
+	if err != nil {
 		return errNilFinalizedInStore
 	}
 	reportSlotMetrics(blockCopy.Block().Slot(), s.HeadSlot(), s.CurrentSlot(), finalized)
 
 	// Log block sync status.
-	if err := logBlockSyncStatus(blockCopy.Block(), blockRoot, finalized, receivedTime, uint64(s.genesisTime.Unix())); err != nil {
-		return err
+	if err := logBlockSyncStatus(blockCopy.Block(), blockRoot, justified, finalized, receivedTime, uint64(s.genesisTime.Unix())); err != nil {
+		log.WithError(err).Error("Unable to log block sync status")
+	}
+	// Log payload data
+	if err := logPayload(blockCopy.Block()); err != nil {
+		log.WithError(err).Error("Unable to log debug block payload data")
 	}
 	// Log state transition data.
 	if err := logStateTransitionData(blockCopy.Block()); err != nil {
-		return err
+		log.WithError(err).Error("Unable to log state transition data")
 	}
 
 	return nil
@@ -79,8 +93,7 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []interfaces.Sig
 	defer span.End()
 
 	// Apply state transition on the incoming newly received block batches, one by one.
-	fCheckpoints, jCheckpoints, err := s.onBlockBatch(ctx, blocks, blkRoots)
-	if err != nil {
+	if err := s.onBlockBatch(ctx, blocks, blkRoots); err != nil {
 		err := errors.Wrap(err, "could not process block in batch")
 		tracing.AnnotateError(span, err)
 		return err
@@ -88,10 +101,6 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []interfaces.Sig
 
 	for i, b := range blocks {
 		blockCopy := b.Copy()
-		if err = s.handleBlockAfterBatchVerify(ctx, blockCopy, blkRoots[i], fCheckpoints[i], jCheckpoints[i]); err != nil {
-			tracing.AnnotateError(span, err)
-			return err
-		}
 		// Send notification of the processed block to the state feed.
 		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.BlockProcessed,
@@ -104,9 +113,9 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []interfaces.Sig
 		})
 
 		// Reports on blockCopy and fork choice metrics.
-		finalized := s.store.FinalizedCheckpt()
-		if finalized == nil {
-			return errNilFinalizedInStore
+		finalized, err := s.store.FinalizedCheckpt()
+		if err != nil {
+			return errors.Wrap(err, "could not get finalized checkpoint")
 		}
 		reportSlotMetrics(blockCopy.Block().Slot(), s.HeadSlot(), s.CurrentSlot(), finalized)
 	}
@@ -114,7 +123,10 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []interfaces.Sig
 	if err := s.cfg.BeaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
 		return err
 	}
-	finalized := s.store.FinalizedCheckpt()
+	finalized, err := s.store.FinalizedCheckpt()
+	if err != nil {
+		return errors.Wrap(err, "could not get finalized checkpoint")
+	}
 	if finalized == nil {
 		return errNilFinalizedInStore
 	}
@@ -131,6 +143,11 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []interfaces.Sig
 // HasBlock returns true if the block of the input root exists in initial sync blocks cache or DB.
 func (s *Service) HasBlock(ctx context.Context, root [32]byte) bool {
 	return s.hasBlockInInitSyncOrDB(ctx, root)
+}
+
+// ReceiveAttesterSlashing receives an attester slashing and inserts it to forkchoice
+func (s *Service) ReceiveAttesterSlashing(ctx context.Context, slashing *ethpb.AttesterSlashing) {
+	s.InsertSlashingsToForkChoiceStore(ctx, []*ethpb.AttesterSlashing{slashing})
 }
 
 func (s *Service) handlePostBlockOperations(b interfaces.BeaconBlock) error {
@@ -162,7 +179,10 @@ func (s *Service) checkSaveHotStateDB(ctx context.Context) error {
 	currentEpoch := slots.ToEpoch(s.CurrentSlot())
 	// Prevent `sinceFinality` going underflow.
 	var sinceFinality types.Epoch
-	finalized := s.store.FinalizedCheckpt()
+	finalized, err := s.store.FinalizedCheckpt()
+	if err != nil {
+		return err
+	}
 	if finalized == nil {
 		return errNilFinalizedInStore
 	}

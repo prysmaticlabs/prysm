@@ -12,6 +12,16 @@ var (
 		Name:  "prater",
 		Usage: "Run Prysm configured for the Prater test network",
 	}
+	// RopstenTestnet flag for the multiclient Ethereum consensus testnet.
+	RopstenTestnet = &cli.BoolFlag{
+		Name:  "ropsten",
+		Usage: "Run Prysm configured for the Ropsten beacon chain test network",
+	}
+	// SepoliaTestnet flag for the multiclient Ethereum consensus testnet.
+	SepoliaTestnet = &cli.BoolFlag{
+		Name:  "sepolia",
+		Usage: "Run Prysm configured for the Sepolia beacon chain test network",
+	}
 	// Mainnet flag for easier tooling, no-op
 	Mainnet = &cli.BoolFlag{
 		Value: true,
@@ -91,11 +101,6 @@ var (
 			" (Warning): Once enabled, this feature migrates your database in to a new schema and " +
 			"there is no going back. At worst, your entire database might get corrupted.",
 	}
-	disableCorrectlyPruneCanonicalAtts = &cli.BoolFlag{
-		Name: "disable-correctly-prune-canonical-atts",
-		Usage: "Disable the fix for bug where any block attestations can get incorrectly pruned, which improves validator profitability and overall network health," +
-			"see issue #9443 for further detail",
-	}
 	enableNativeState = &cli.BoolFlag{
 		Name:  "enable-native-state",
 		Usage: "Enables representing the beacon state as a pure Go struct.",
@@ -128,6 +133,8 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	enableExternalSlasherProtectionFlag,
 	disableAttestingHistoryDBCache,
 	PraterTestnet,
+	RopstenTestnet,
+	SepoliaTestnet,
 	Mainnet,
 	dynamicKeyReloadDebounceInterval,
 	attestTimely,
@@ -146,6 +153,8 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	writeSSZStateTransitionsFlag,
 	disableGRPCConnectionLogging,
 	PraterTestnet,
+	RopstenTestnet,
+	SepoliaTestnet,
 	Mainnet,
 	enablePeerScorer,
 	enableLargerGossipHistory,
@@ -153,7 +162,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableBroadcastSlashingFlag,
 	enableSlasherFlag,
 	enableHistoricalSpaceRepresentation,
-	disableCorrectlyPruneCanonicalAtts,
 	enableNativeState,
 	enableVecHTR,
 	enableForkChoiceDoublyLinkedTree,
@@ -165,4 +173,5 @@ var E2EBeaconChainFlags = []string{
 	"--dev",
 	"--use-check-point-cache",
 	"--enable-active-balance-cache",
+	"--enable-native-state",
 }

@@ -12,10 +12,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -24,18 +24,21 @@ import (
 	"go.opencensus.io/trace"
 )
 
-var (
-	ErrInvalidPayload                = errors.New("recevied an INVALID payload from execution engine")
-	ErrUndefinedExecutionEngineError = errors.New("received an undefined ee error")
-)
+// notifyForkchoiceUpdateArg is the argument for the forkchoice update notification `notifyForkchoiceUpdate`.
+type notifyForkchoiceUpdateArg struct {
+	headState state.BeaconState
+	headRoot  [32]byte
+	headBlock interfaces.BeaconBlock
+}
 
 // notifyForkchoiceUpdate signals execution engine the fork choice updates. Execution engine should:
 // 1. Re-organizes the execution payload chain and corresponding state to make head_block_hash the head.
 // 2. Applies finality to the execution state: it irreversibly persists the chain of all execution payloads and corresponding state, up to and including finalized_block_hash.
-func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headState state.BeaconState, headBlk interfaces.BeaconBlock, headRoot [32]byte, finalizedRoot [32]byte) (*enginev1.PayloadIDBytes, error) {
+func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkchoiceUpdateArg) (*enginev1.PayloadIDBytes, error) {
 	ctx, span := trace.StartSpan(ctx, "blockChain.notifyForkchoiceUpdate")
 	defer span.End()
 
+	headBlk := arg.headBlock
 	if headBlk == nil || headBlk.IsNil() || headBlk.Body().IsNil() {
 		return nil, errors.New("nil head block")
 	}
@@ -51,29 +54,16 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headState state.Be
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get execution payload")
 	}
-	finalizedBlock, err := s.getBlock(ctx, s.ensureRootNotZeros(finalizedRoot))
-	if err != nil {
-		return nil, err
-	}
-	var finalizedHash []byte
-	if blocks.IsPreBellatrixVersion(finalizedBlock.Block().Version()) {
-		finalizedHash = params.BeaconConfig().ZeroHash[:]
-	} else {
-		payload, err := finalizedBlock.Block().Body().ExecutionPayload()
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get finalized block execution payload")
-		}
-		finalizedHash = payload.BlockHash
-	}
-
+	finalizedHash := s.store.FinalizedPayloadBlockHash()
+	justifiedHash := s.store.JustifiedPayloadBlockHash()
 	fcs := &enginev1.ForkchoiceState{
 		HeadBlockHash:      headPayload.BlockHash,
-		SafeBlockHash:      headPayload.BlockHash,
-		FinalizedBlockHash: finalizedHash,
+		SafeBlockHash:      justifiedHash[:],
+		FinalizedBlockHash: finalizedHash[:],
 	}
 
 	nextSlot := s.CurrentSlot() + 1 // Cache payload ID for next slot proposer.
-	hasAttr, attr, proposerId, err := s.getPayloadAttribute(ctx, headState, nextSlot)
+	hasAttr, attr, proposerId, err := s.getPayloadAttribute(ctx, arg.headState, nextSlot)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get payload attribute")
 	}
@@ -86,10 +76,12 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headState state.Be
 			log.WithFields(logrus.Fields{
 				"headSlot":                  headBlk.Slot(),
 				"headPayloadBlockHash":      fmt.Sprintf("%#x", bytesutil.Trunc(headPayload.BlockHash)),
-				"finalizedPayloadBlockHash": fmt.Sprintf("%#x", bytesutil.Trunc(finalizedHash)),
+				"finalizedPayloadBlockHash": fmt.Sprintf("%#x", bytesutil.Trunc(finalizedHash[:])),
 			}).Info("Called fork choice updated with optimistic block")
 			return payloadID, s.optimisticCandidateBlock(ctx, headBlk)
 		case powchain.ErrInvalidPayloadStatus:
+			newPayloadInvalidNodeCount.Inc()
+			headRoot := arg.headRoot
 			invalidRoots, err := s.ForkChoicer().SetOptimisticToInvalid(ctx, headRoot, bytesutil.ToBytes32(headBlk.ParentRoot()), bytesutil.ToBytes32(lastValidHash))
 			if err != nil {
 				return nil, err
@@ -97,18 +89,41 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headState state.Be
 			if err := s.removeInvalidBlockAndState(ctx, invalidRoots); err != nil {
 				return nil, err
 			}
+
+			r, err := s.updateHead(ctx, s.justifiedBalances.balances)
+			if err != nil {
+				return nil, err
+			}
+			b, err := s.getBlock(ctx, r)
+			if err != nil {
+				return nil, err
+			}
+			st, err := s.cfg.StateGen.StateByRoot(ctx, r)
+			if err != nil {
+				return nil, err
+			}
+			pid, err := s.notifyForkchoiceUpdate(ctx, &notifyForkchoiceUpdateArg{
+				headState: st,
+				headRoot:  r,
+				headBlock: b.Block(),
+			})
+			if err != nil {
+				return nil, err
+			}
+
 			log.WithFields(logrus.Fields{
 				"slot":         headBlk.Slot(),
 				"blockRoot":    fmt.Sprintf("%#x", headRoot),
 				"invalidCount": len(invalidRoots),
 			}).Warn("Pruned invalid blocks")
-			return nil, ErrInvalidPayload
+			return pid, ErrInvalidPayload
+
 		default:
 			return nil, errors.WithMessage(ErrUndefinedExecutionEngineError, err.Error())
 		}
 	}
 	forkchoiceUpdatedValidNodeCount.Inc()
-	if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, headRoot); err != nil {
+	if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, arg.headRoot); err != nil {
 		return nil, errors.Wrap(err, "could not set block to valid")
 	}
 	if hasAttr { // If the forkchoice update call has an attribute, update the proposer payload ID cache.
@@ -117,6 +132,23 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, headState state.Be
 		s.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(nextSlot, proposerId, pId)
 	}
 	return payloadID, nil
+}
+
+// getPayloadHash returns the payload hash given the block root.
+// if the block is before bellatrix fork epoch, it returns the zero hash.
+func (s *Service) getPayloadHash(ctx context.Context, root []byte) ([32]byte, error) {
+	blk, err := s.getBlock(ctx, s.ensureRootNotZeros(bytesutil.ToBytes32(root)))
+	if err != nil {
+		return [32]byte{}, err
+	}
+	if blocks.IsPreBellatrixVersion(blk.Block().Version()) {
+		return params.BeaconConfig().ZeroHash, nil
+	}
+	payload, err := blk.Block().Body().ExecutionPayload()
+	if err != nil {
+		return [32]byte{}, errors.Wrap(err, "could not get execution payload")
+	}
+	return bytesutil.ToBytes32(payload.BlockHash), nil
 }
 
 // notifyForkchoiceUpdate signals execution engine on a new payload.
@@ -131,20 +163,20 @@ func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
 	if blocks.IsPreBellatrixVersion(postStateVersion) {
 		return true, nil
 	}
-	if err := helpers.BeaconBlockIsNil(blk); err != nil {
+	if err := wrapper.BeaconBlockIsNil(blk); err != nil {
 		return false, err
 	}
 	body := blk.Block().Body()
 	enabled, err := blocks.IsExecutionEnabledUsingHeader(postStateHeader, body)
 	if err != nil {
-		return false, errors.Wrap(err, "could not determine if execution is enabled")
+		return false, errors.Wrap(invalidBlock{err}, "could not determine if execution is enabled")
 	}
 	if !enabled {
 		return true, nil
 	}
 	payload, err := body.ExecutionPayload()
 	if err != nil {
-		return false, errors.Wrap(err, "could not get execution payload")
+		return false, errors.Wrap(invalidBlock{err}, "could not get execution payload")
 	}
 	lastValidHash, err := s.cfg.ExecutionEngineCaller.NewPayload(ctx, payload)
 	switch err {
@@ -176,7 +208,7 @@ func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
 			"blockRoot":    fmt.Sprintf("%#x", root),
 			"invalidCount": len(invalidRoots),
 		}).Warn("Pruned invalid blocks")
-		return false, ErrInvalidPayload
+		return false, invalidBlock{ErrInvalidPayload}
 	default:
 		return false, errors.WithMessage(ErrUndefinedExecutionEngineError, err.Error())
 	}
@@ -198,13 +230,9 @@ func (s *Service) optimisticCandidateBlock(ctx context.Context, blk interfaces.B
 	if blk.Slot()+params.BeaconConfig().SafeSlotsToImportOptimistically <= s.CurrentSlot() {
 		return nil
 	}
-
-	parent, err := s.cfg.BeaconDB.Block(ctx, bytesutil.ToBytes32(blk.ParentRoot()))
+	parent, err := s.getBlock(ctx, bytesutil.ToBytes32(blk.ParentRoot()))
 	if err != nil {
 		return err
-	}
-	if parent == nil || parent.IsNil() {
-		return errNilParentInDB
 	}
 	parentIsExecutionBlock, err := blocks.IsExecutionBlock(parent.Block().Body())
 	if err != nil {
@@ -241,11 +269,14 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 	recipient, err := s.cfg.BeaconDB.FeeRecipientByValidatorID(ctx, proposerID)
 	switch {
 	case errors.Is(err, kv.ErrNotFoundFeeRecipient):
-		if feeRecipient.String() == fieldparams.EthBurnAddressHex {
+		if feeRecipient.String() == params.BeaconConfig().EthBurnAddressHex {
 			logrus.WithFields(logrus.Fields{
 				"validatorIndex": proposerID,
-				"burnAddress":    fieldparams.EthBurnAddressHex,
-			}).Error("Fee recipient not set. Using burn address")
+				"burnAddress":    params.BeaconConfig().EthBurnAddressHex,
+			}).Warn("Fee recipient is currently using the burn address, " +
+				"you will not be rewarded transaction fees on this setting. " +
+				"Please set a different eth address as the fee recipient. " +
+				"Please refer to our documentation for instructions")
 		}
 	case err != nil:
 		return false, nil, 0, errors.Wrap(err, "could not get fee recipient in db")

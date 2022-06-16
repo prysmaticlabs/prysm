@@ -13,14 +13,14 @@ func TestCommitteeIndex_Casting(t *testing.T) {
 			t.Errorf("Unequal: %v = %v", CommitteeIndex(x1), committeeIdx)
 		}
 
-		var x2 float64 = 42.2
+		var x2 = 42.2
 		if CommitteeIndex(x2) != committeeIdx {
 			t.Errorf("Unequal: %v = %v", CommitteeIndex(x2), committeeIdx)
 		}
 	})
 
 	t.Run("int", func(t *testing.T) {
-		var x int = 42
+		var x = 42
 		if CommitteeIndex(x) != committeeIdx {
 			t.Errorf("Unequal: %v = %v", CommitteeIndex(x), committeeIdx)
 		}

@@ -1,5 +1,4 @@
 //go:build fuzz
-// +build fuzz
 
 package cache
 
@@ -28,6 +27,6 @@ func (s *FakeSyncCommitteeCache) NextPeriodIndexPosition(root [32]byte, valIdx t
 }
 
 // UpdatePositionsInCommittee -- fake.
-func (s *FakeSyncCommitteeCache) UpdatePositionsInCommittee(syncCommitteeBoundaryRoot [32]byte, state state.BeaconStateAltair) error {
+func (s *FakeSyncCommitteeCache) UpdatePositionsInCommittee(syncCommitteeBoundaryRoot [32]byte, state state.BeaconState) error {
 	return nil
 }

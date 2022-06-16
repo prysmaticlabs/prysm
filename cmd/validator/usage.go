@@ -111,6 +111,8 @@ var appHelpFlagGroups = []flagGroup{
 			flags.Web3SignerPublicValidatorKeysFlag,
 			flags.FeeRecipientConfigFileFlag,
 			flags.FeeRecipientConfigURLFlag,
+			flags.ProposerSettingsFlag,
+			flags.ProposerSettingsURLFlag,
 			flags.SuggestedFeeRecipientFlag,
 		},
 	},

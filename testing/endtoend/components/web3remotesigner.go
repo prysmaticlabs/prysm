@@ -12,6 +12,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
@@ -130,6 +131,21 @@ func (w *Web3RemoteSigner) Started() <-chan struct{} {
 	return w.started
 }
 
+// Pause pauses the component and its underlying process.
+func (w *Web3RemoteSigner) Pause() error {
+	return w.cmd.Process.Signal(syscall.SIGSTOP)
+}
+
+// Resume resumes the component and its underlying process.
+func (w *Web3RemoteSigner) Resume() error {
+	return w.cmd.Process.Signal(syscall.SIGCONT)
+}
+
+// Stop stops the component and its underlying process.
+func (w *Web3RemoteSigner) Stop() error {
+	return w.cmd.Process.Kill()
+}
+
 // monitorStart by polling server until it returns a 200 at /upcheck.
 func (w *Web3RemoteSigner) monitorStart() {
 	client := &http.Client{}
@@ -215,6 +231,9 @@ func writeKeystoreKeys(ctx context.Context, keystorePath string, numKeys uint64)
 	priv, pub, err := interop.DeterministicallyGenerateKeys(0, numKeys)
 	if err != nil {
 		return err
+	}
+	for i, p := range pub {
+		log.Infof("web3signer file added %s, key index %v", hexutil.Encode(p.Marshal()), i)
 	}
 	for i, pk := range priv {
 		if ctx.Err() != nil {

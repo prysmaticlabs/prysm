@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"context"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -23,7 +23,7 @@ var previousFinalizedCheckpointKey = []byte("previous-finalized-checkpoint")
 var containerFinalizedButNotCanonical = []byte("recent block needs reindexing to determine canonical")
 
 // The finalized block roots index tracks beacon blocks which are finalized in the canonical chain.
-// The finalized checkpoint contains the the epoch which was finalized and the highest beacon block
+// The finalized checkpoint contains the epoch which was finalized and the highest beacon block
 // root where block.slot <= start_slot(epoch). As a result, we cannot index the finalized canonical
 // beacon block chain using the finalized root alone as this would exclude all other blocks in the
 // finalized epoch from being indexed as "final and canonical".
@@ -75,7 +75,7 @@ func (s *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, chec
 	// Walk up the ancestry chain until we reach a block root present in the finalized block roots
 	// index bucket or genesis block root.
 	for {
-		if bytes.Equal(root, genesisRoot) || bytes.Equal(root, initCheckpointRoot) {
+		if bytes.Equal(root, genesisRoot) {
 			break
 		}
 
@@ -84,7 +84,7 @@ func (s *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, chec
 			tracing.AnnotateError(span, err)
 			return err
 		}
-		if err := helpers.BeaconBlockIsNil(signedBlock); err != nil {
+		if err := wrapper.BeaconBlockIsNil(signedBlock); err != nil {
 			tracing.AnnotateError(span, err)
 			return err
 		}
@@ -103,6 +103,12 @@ func (s *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, chec
 		if err := bkt.Put(root, enc); err != nil {
 			tracing.AnnotateError(span, err)
 			return err
+		}
+
+		// breaking here allows the initial checkpoint root to be correctly inserted,
+		// but stops the loop from trying to search for its parent.
+		if bytes.Equal(root, initCheckpointRoot) {
+			break
 		}
 
 		// Found parent, loop exit condition.

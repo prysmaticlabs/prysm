@@ -191,7 +191,7 @@ func TestBellatrixBeaconBlock_IsNil(t *testing.T) {
 	assert.Equal(t, false, wb.IsNil())
 }
 
-func TesTBellatrixBeaconBlock_IsBlinded(t *testing.T) {
+func TestBellatrixBeaconBlock_IsBlinded(t *testing.T) {
 	wsb, err := wrapper.WrappedBeaconBlock(&ethpb.BeaconBlockBellatrix{})
 	require.NoError(t, err)
 	require.Equal(t, false, wsb.IsNil())
