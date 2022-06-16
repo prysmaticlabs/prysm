@@ -150,6 +150,10 @@ func ProcessMiddlewareResponseFields(responseContainer interface{}) ErrorJson {
 			f:   base64ToHexProcessor,
 		},
 		{
+			tag: "address",
+			f:   base64ToChecksumAddressProcessor,
+		},
+		{
 			tag: "enum",
 			f:   enumToLowercaseProcessor,
 		},

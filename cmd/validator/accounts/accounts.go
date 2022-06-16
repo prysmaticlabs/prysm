@@ -7,7 +7,6 @@ import (
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/runtime/tos"
-	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -139,13 +138,13 @@ var Commands = &cli.Command{
 				if err := cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags); err != nil {
 					return err
 				}
-				return tos.VerifyTosAcceptedOrPrompt(cliCtx)
-			},
-			Action: func(cliCtx *cli.Context) error {
-				if err := features.ConfigureValidator(cliCtx); err != nil {
+				if err := tos.VerifyTosAcceptedOrPrompt(cliCtx); err != nil {
 					return err
 				}
-				if err := accounts.ImportAccountsCli(cliCtx); err != nil {
+				return features.ConfigureValidator(cliCtx)
+			},
+			Action: func(cliCtx *cli.Context) error {
+				if err := accountsImport(cliCtx); err != nil {
 					log.Fatalf("Could not import accounts: %v", err)
 				}
 				return nil

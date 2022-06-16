@@ -63,7 +63,7 @@ func sszBytesToUint256(b []byte) Uint256 {
 
 // SSZBytes creates an ssz-style (little-endian byte slice) representation of the Uint256
 func (s Uint256) SSZBytes() []byte {
-	return bytesutil.ReverseByteOrder(s.Int.Bytes())
+	return bytesutil.PadTo(bytesutil.ReverseByteOrder(s.Int.Bytes()), 32)
 }
 
 var errUnmarshalUint256Failed = errors.New("unable to UnmarshalText into a Uint256 value")

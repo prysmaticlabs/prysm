@@ -10,8 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
-	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 func TestVerifyRegistrationSignature(t *testing.T) {
@@ -23,22 +21,22 @@ func TestVerifyRegistrationSignature(t *testing.T) {
 		Timestamp:    uint64(time.Now().Unix()),
 		Pubkey:       sk.PublicKey().Marshal(),
 	}
-	st, _ := util.DeterministicGenesisState(t, 1)
 	d := params.BeaconConfig().DomainApplicationBuilder
-	e := slots.ToEpoch(st.Slot())
-	sig, err := signing.ComputeDomainAndSign(st, e, reg, d, sk)
+	domain, err := signing.ComputeDomain(d, nil, nil)
 	require.NoError(t, err)
+	sr, err := signing.ComputeSigningRoot(reg, domain)
+	require.NoError(t, err)
+	sk.Sign(sr[:]).Marshal()
+
 	sReg := &ethpb.SignedValidatorRegistrationV1{
 		Message:   reg,
-		Signature: sig,
+		Signature: sk.Sign(sr[:]).Marshal(),
 	}
-	f := st.Fork()
-	g := st.GenesisValidatorsRoot()
-	require.NoError(t, signing.VerifyRegistrationSignature(e, f, sReg, g))
+	require.NoError(t, signing.VerifyRegistrationSignature(sReg))
 
 	sReg.Signature = []byte("bad")
-	require.ErrorIs(t, signing.VerifyRegistrationSignature(e, f, sReg, g), signing.ErrSigFailedToVerify)
+	require.ErrorIs(t, signing.VerifyRegistrationSignature(sReg), signing.ErrSigFailedToVerify)
 
 	sReg.Message = nil
-	require.ErrorIs(t, signing.VerifyRegistrationSignature(e, f, sReg, g), signing.ErrNilRegistration)
+	require.ErrorIs(t, signing.VerifyRegistrationSignature(sReg), signing.ErrNilRegistration)
 }
