@@ -59,7 +59,7 @@ func feeRecipientIsPresent(conns ...*grpc.ClientConn) error {
 			if len(fr) != 0 && hexutil.Encode(fr) != params.BeaconConfig().EthBurnAddressHex {
 				isFeeRecipientPresent = true
 				account = common.BytesToAddress(fr)
-				log.Infof("fee recipient %s",hexutil.Encode(fr))
+				log.Infof("fee recipient %s", hexutil.Encode(fr))
 			}
 		}
 		if isFeeRecipientPresent {
