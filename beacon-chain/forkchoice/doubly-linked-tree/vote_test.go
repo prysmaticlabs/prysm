@@ -263,9 +263,12 @@ func TestVotes_CanFindHead(t *testing.T) {
 
 	// Verify pruning below the prune threshold does not affect head.
 	f.store.pruneThreshold = 1000
-	require.NoError(t, f.store.prune(context.Background(), indexToHash(5)))
+	prevRoot := f.store.finalizedCheckpoint.Root
+	f.store.finalizedCheckpoint.Root = indexToHash(5)
+	require.NoError(t, f.store.prune(context.Background()))
 	assert.Equal(t, 11, len(f.store.nodeByRoot), "Incorrect nodes length after prune")
 
+	f.store.finalizedCheckpoint.Root = prevRoot
 	r, err = f.Head(context.Background(), balances)
 	require.NoError(t, err)
 	assert.Equal(t, indexToHash(10), r, "Incorrect head for with justified epoch at 3")
@@ -287,10 +290,12 @@ func TestVotes_CanFindHead(t *testing.T) {
 	//         / \
 	//        9  10
 	f.store.pruneThreshold = 1
-	require.NoError(t, f.store.prune(context.Background(), indexToHash(5)))
+	f.store.finalizedCheckpoint.Root = indexToHash(5)
+	require.NoError(t, f.store.prune(context.Background()))
 	assert.Equal(t, 5, len(f.store.nodeByRoot), "Incorrect nodes length after prune")
 	// we pruned artificially the justified root.
 	f.store.justifiedCheckpoint.Root = indexToHash(5)
+	f.store.finalizedCheckpoint.Root = prevRoot
 
 	r, err = f.Head(context.Background(), balances)
 	require.NoError(t, err)
