@@ -79,7 +79,7 @@ func TestForkChoice_HasNode(t *testing.T) {
 func TestStore_Head_UnknownJustifiedRoot(t *testing.T) {
 	f := setup(0, 0)
 
-	f.store.justifiedCheckpoint.Root = [32]byte{'a'}
+	f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: 1, Root: [32]byte{'a'}}
 	_, err := f.store.head(context.Background())
 	assert.ErrorContains(t, errUnknownJustifiedRoot.Error(), err)
 }
