@@ -114,14 +114,6 @@ func TestWaitActivation_StreamSetupFails_AttemptsToReconnect(t *testing.T) {
 	).Return(
 		&ethpb.Genesis{GenesisTime: timestamppb.Now()}, nil)
 
-	client.EXPECT().DomainData(
-		gomock.Any(),
-		gomock.Any(),
-	).Return(
-		&ethpb.DomainResponse{
-			SignatureDomain: make([]byte, 32),
-		},
-		nil)
 	client.EXPECT().SubmitValidatorRegistration(
 		gomock.Any(),
 		gomock.Any(),
@@ -181,14 +173,6 @@ func TestWaitForActivation_ReceiveErrorFromStream_AttemptsReconnection(t *testin
 	).Return(
 		&ethpb.Genesis{GenesisTime: timestamppb.Now()}, nil)
 
-	client.EXPECT().DomainData(
-		gomock.Any(),
-		gomock.Any(),
-	).Return(
-		&ethpb.DomainResponse{
-			SignatureDomain: make([]byte, 32),
-		},
-		nil)
 	client.EXPECT().SubmitValidatorRegistration(
 		gomock.Any(),
 		gomock.Any(),
@@ -244,14 +228,6 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 	).Return(
 		&ethpb.Genesis{GenesisTime: timestamppb.Now()}, nil)
 
-	client.EXPECT().DomainData(
-		gomock.Any(),
-		gomock.Any(),
-	).Return(
-		&ethpb.DomainResponse{
-			SignatureDomain: make([]byte, 32),
-		},
-		nil)
 	client.EXPECT().SubmitValidatorRegistration(
 		gomock.Any(),
 		gomock.Any(),
@@ -312,14 +288,6 @@ func TestWaitForActivation_Exiting(t *testing.T) {
 	).Return(
 		&ethpb.Genesis{GenesisTime: timestamppb.Now()}, nil)
 
-	client.EXPECT().DomainData(
-		gomock.Any(),
-		gomock.Any(),
-	).Return(
-		&ethpb.DomainResponse{
-			SignatureDomain: make([]byte, 32),
-		},
-		nil)
 	client.EXPECT().SubmitValidatorRegistration(
 		gomock.Any(),
 		gomock.Any(),
@@ -386,14 +354,6 @@ func TestWaitForActivation_RefetchKeys(t *testing.T) {
 	).Return(
 		&ethpb.Genesis{GenesisTime: timestamppb.Now()}, nil)
 
-	client.EXPECT().DomainData(
-		gomock.Any(),
-		gomock.Any(),
-	).Return(
-		&ethpb.DomainResponse{
-			SignatureDomain: make([]byte, 32),
-		},
-		nil)
 	client.EXPECT().SubmitValidatorRegistration(
 		gomock.Any(),
 		gomock.Any(),
@@ -484,14 +444,6 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 		).Times(2).Return(
 			&ethpb.Genesis{GenesisTime: timestamppb.Now()}, nil)
 
-		client.EXPECT().DomainData(
-			gomock.Any(),
-			gomock.Any(),
-		).Times(2).Return(
-			&ethpb.DomainResponse{
-				SignatureDomain: make([]byte, 32),
-			},
-			nil)
 		client.EXPECT().SubmitValidatorRegistration(
 			gomock.Any(),
 			gomock.Any(),
@@ -592,14 +544,6 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 		).Times(2).Return(
 			&ethpb.Genesis{GenesisTime: timestamppb.Now()}, nil)
 
-		client.EXPECT().DomainData(
-			gomock.Any(),
-			gomock.Any(),
-		).Times(2).Return(
-			&ethpb.DomainResponse{
-				SignatureDomain: make([]byte, 32),
-			},
-			nil)
 		client.EXPECT().SubmitValidatorRegistration(
 			gomock.Any(),
 			gomock.Any(),
@@ -686,14 +630,6 @@ func TestWaitForActivation_RemoteKeymanager(t *testing.T) {
 			&emptypb.Empty{},
 		).Times(2).Return(
 			&ethpb.Genesis{GenesisTime: timestamppb.Now()}, nil)
-		client.EXPECT().DomainData(
-			gomock.Any(),
-			gomock.Any(),
-		).Times(2).Return(
-			&ethpb.DomainResponse{
-				SignatureDomain: make([]byte, 32),
-			},
-			nil)
 		client.EXPECT().SubmitValidatorRegistration(
 			gomock.Any(),
 			gomock.Any(),
@@ -789,14 +725,6 @@ func TestWaitForActivation_RemoteKeymanager(t *testing.T) {
 		).Times(2).Return(
 			&ethpb.Genesis{GenesisTime: timestamppb.Now()}, nil)
 
-		client.EXPECT().DomainData(
-			gomock.Any(),
-			gomock.Any(),
-		).Times(2).Return(
-			&ethpb.DomainResponse{
-				SignatureDomain: make([]byte, 32),
-			},
-			nil)
 		client.EXPECT().SubmitValidatorRegistration(
 			gomock.Any(),
 			gomock.Any(),
