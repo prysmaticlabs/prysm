@@ -30,7 +30,7 @@ type Store struct {
 	canonicalNodes             map[[fieldparams.RootLength]byte]bool   // the canonical block nodes.
 	payloadIndices             map[[fieldparams.RootLength]byte]uint64 // the payload hash of block node and the index in the list
 	slashedIndices             map[types.ValidatorIndex]bool           // The list of equivocating validators
-	originRoot                 [fieldparams.RootLength]byte            // The genesis Block root
+	originRoot                 [fieldparams.RootLength]byte            // The genesis block root
 	nodesLock                  sync.RWMutex
 	proposerBoostLock          sync.RWMutex
 	checkpointsLock            sync.RWMutex
