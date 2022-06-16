@@ -63,11 +63,20 @@ func (s *Store) PruneThreshold() uint64 {
 func (s *Store) head(ctx context.Context) ([32]byte, error) {
 	_, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.head")
 	defer span.End()
+	s.checkpointsLock.RLock()
+	defer s.checkpointsLock.RUnlock()
 
 	// JustifiedRoot has to be known
 	justifiedNode, ok := s.nodeByRoot[s.justifiedCheckpoint.Root]
 	if !ok || justifiedNode == nil {
-		return [32]byte{}, errUnknownJustifiedRoot
+		// If the justifiedCheckpoint is from genesis, then the root is
+		// zeroHash. In this case it should be the root of forkchoice
+		// tree.
+		if s.justifiedCheckpoint.Epoch == params.BeaconConfig().GenesisEpoch {
+			justifiedNode = s.treeRootNode
+		} else {
+			return [32]byte{}, errUnknownJustifiedRoot
+		}
 	}
 
 	// If the justified node doesn't have a best descendant,
@@ -78,8 +87,8 @@ func (s *Store) head(ctx context.Context) ([32]byte, error) {
 	}
 
 	if !bestDescendant.viableForHead(s.justifiedCheckpoint.Epoch, s.finalizedCheckpoint.Epoch) {
-		return [32]byte{}, fmt.Errorf("head at slot %d with weight %d is not eligible, finalizedEpoch %d != %d, justifiedEpoch %d != %d",
-			bestDescendant.slot, bestDescendant.weight/10e9, bestDescendant.finalizedEpoch, s.finalizedCheckpoint.Epoch, bestDescendant.justifiedEpoch, s.justifiedCheckpoint.Epoch)
+		return [32]byte{}, fmt.Errorf("head at slot %d with weight %d is not eligible, finalizedEpoch, justified Epoch %d, %d != %d, %d",
+			bestDescendant.slot, bestDescendant.weight/10e9, bestDescendant.finalizedEpoch, bestDescendant.justifiedEpoch, s.finalizedCheckpoint.Epoch, s.justifiedCheckpoint.Epoch)
 	}
 
 	// Update metrics.

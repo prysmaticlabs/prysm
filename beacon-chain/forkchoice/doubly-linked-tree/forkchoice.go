@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -22,13 +23,14 @@ import (
 // New initializes a new fork choice store.
 func New() *ForkChoice {
 	s := &Store{
-		justifiedCheckpoint: &forkchoicetypes.Checkpoint{},
-		finalizedCheckpoint: &forkchoicetypes.Checkpoint{},
-		proposerBoostRoot:   [32]byte{},
-		nodeByRoot:          make(map[[fieldparams.RootLength]byte]*Node),
-		nodeByPayload:       make(map[[fieldparams.RootLength]byte]*Node),
-		slashedIndices:      make(map[types.ValidatorIndex]bool),
-		pruneThreshold:      defaultPruneThreshold,
+		justifiedCheckpoint:     &forkchoicetypes.Checkpoint{},
+		bestJustifiedCheckpoint: &forkchoicetypes.Checkpoint{},
+		finalizedCheckpoint:     &forkchoicetypes.Checkpoint{},
+		proposerBoostRoot:       [32]byte{},
+		nodeByRoot:              make(map[[fieldparams.RootLength]byte]*Node),
+		nodeByPayload:           make(map[[fieldparams.RootLength]byte]*Node),
+		slashedIndices:          make(map[types.ValidatorIndex]bool),
+		pruneThreshold:          defaultPruneThreshold,
 	}
 
 	b := make([]uint64, 0)
@@ -139,7 +141,55 @@ func (f *ForkChoice) InsertNode(ctx context.Context, state state.ReadOnlyBeaconS
 		return errInvalidNilCheckpoint
 	}
 	finalizedEpoch := fc.Epoch
-	return f.store.insert(ctx, slot, root, parentRoot, payloadHash, justifiedEpoch, finalizedEpoch)
+	err := f.store.insert(ctx, slot, root, parentRoot, payloadHash, justifiedEpoch, finalizedEpoch)
+	if err != nil {
+		return err
+	}
+	return f.updateCheckpoints(ctx, jc, fc)
+}
+
+// updateCheckpoints update the checkpoints when inserting a new node.
+func (f *ForkChoice) updateCheckpoints(ctx context.Context, jc, fc *ethpb.Checkpoint) error {
+	f.store.checkpointsLock.Lock()
+	defer f.store.checkpointsLock.Unlock()
+	if jc.Epoch > f.store.justifiedCheckpoint.Epoch {
+		if jc.Epoch > f.store.bestJustifiedCheckpoint.Epoch {
+			f.store.bestJustifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch,
+				Root: bytesutil.ToBytes32(jc.Root)}
+		}
+		currentSlot := slots.CurrentSlot(f.store.genesisTime)
+		if slots.SinceEpochStarts(currentSlot) < params.BeaconConfig().SafeSlotsToUpdateJustified {
+			f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch,
+				Root: bytesutil.ToBytes32(jc.Root)}
+		} else {
+			currentJcp := f.store.justifiedCheckpoint
+			currentRoot := currentJcp.Root
+			if currentRoot == params.BeaconConfig().ZeroHash {
+				currentRoot = f.store.originRoot
+			}
+			jSlot, err := slots.EpochStart(currentJcp.Epoch)
+			if err != nil {
+				return err
+			}
+			jcRoot := bytesutil.ToBytes32(jc.Root)
+			root, err := f.AncestorRoot(ctx, jcRoot, jSlot)
+			if err != nil {
+				return err
+			}
+			if root == currentRoot {
+				f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch,
+					Root: jcRoot}
+			}
+		}
+	}
+	// Update finalization
+	if fc.Epoch > f.store.finalizedCheckpoint.Epoch {
+		f.store.finalizedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: fc.Epoch,
+			Root: bytesutil.ToBytes32(fc.Root)}
+		f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch,
+			Root: bytesutil.ToBytes32(jc.Root)}
+	}
+	return nil
 }
 
 // Prune prunes the fork choice store with the new finalized root. The store is only pruned if the input
@@ -208,7 +258,7 @@ func (f *ForkChoice) IsOptimistic(root [32]byte) (bool, error) {
 }
 
 // AncestorRoot returns the ancestor root of input block root at a given slot.
-func (f *ForkChoice) AncestorRoot(ctx context.Context, root [32]byte, slot types.Slot) ([]byte, error) {
+func (f *ForkChoice) AncestorRoot(ctx context.Context, root [32]byte, slot types.Slot) ([32]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "protoArray.AncestorRoot")
 	defer span.End()
 
@@ -217,22 +267,22 @@ func (f *ForkChoice) AncestorRoot(ctx context.Context, root [32]byte, slot types
 
 	node, ok := f.store.nodeByRoot[root]
 	if !ok || node == nil {
-		return nil, errors.Wrap(ErrNilNode, "could not determine ancestor root")
+		return [32]byte{}, errors.Wrap(ErrNilNode, "could not determine ancestor root")
 	}
 
 	n := node
 	for n != nil && n.slot > slot {
 		if ctx.Err() != nil {
-			return nil, ctx.Err()
+			return [32]byte{}, ctx.Err()
 		}
 		n = n.parent
 	}
 
 	if n == nil {
-		return nil, errors.Wrap(ErrNilNode, "could not determine ancestor root")
+		return [32]byte{}, errors.Wrap(ErrNilNode, "could not determine ancestor root")
 	}
 
-	return n.root[:], nil
+	return n.root, nil
 }
 
 // updateBalances updates the balances that directly voted for each block taking into account the
@@ -397,6 +447,10 @@ func (f *ForkChoice) UpdateJustifiedCheckpoint(jc *forkchoicetypes.Checkpoint) e
 	f.store.checkpointsLock.Lock()
 	defer f.store.checkpointsLock.Unlock()
 	f.store.justifiedCheckpoint = jc
+	bj := f.store.bestJustifiedCheckpoint
+	if bj == nil || jc.Epoch > bj.Epoch {
+		f.store.bestJustifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch, Root: jc.Root}
+	}
 	return nil
 }
 
@@ -483,4 +537,14 @@ func (f *ForkChoice) InsertOptimisticChain(ctx context.Context, chain []*forkcho
 		}
 	}
 	return nil
+}
+
+// SetGenesisTime sets the genesisTime tracked by forkchoice
+func (f *ForkChoice) SetGenesisTime(genesisTime uint64) {
+	f.store.genesisTime = genesisTime
+}
+
+// SetOriginRoot sets the genesis block root
+func (f *ForkChoice) SetOriginRoot(root [32]byte) {
+	f.store.originRoot = root
 }

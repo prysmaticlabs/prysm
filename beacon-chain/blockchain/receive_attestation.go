@@ -160,7 +160,7 @@ func (s *Service) UpdateHead(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	newHeadRoot, err := s.updateHead(ctx, balances)
+	newHeadRoot, err := s.cfg.ForkChoiceStore.Head(ctx, balances)
 	if err != nil {
 		log.WithError(err).Warn("Resolving fork due to new attestation")
 	}
