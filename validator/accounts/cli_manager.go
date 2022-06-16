@@ -32,10 +32,15 @@ type AccountsCLIManager struct {
 	showPrivateKeys      bool
 	listValidatorIndices bool
 	deletePublicKeys     bool
+	importPrivateKeys    bool
+	readPasswordFile     bool
 	dialOpts             []grpc.DialOption
 	grpcHeaders          []string
 	beaconRPCProvider    string
 	walletKeyCount       int
+	privateKeyFile       string
+	passwordFilePath     string
+	keysDir              string
 	backupsDir           string
 	backupsPassword      string
 	filteredPubKeys      []bls.PublicKey
