@@ -14,17 +14,13 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/io/prompt"
 	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
-	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
-	"github.com/prysmaticlabs/prysm/validator/accounts/userprompt"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/urfave/cli/v2"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
 
@@ -81,93 +77,31 @@ type ImportAccountsConfig struct {
 // ImportAccountsCli can import external, EIP-2335 compliant keystore.json files as
 // new accounts into the Prysm validator wallet. This uses the CLI to extract
 // values necessary to run the function.
-func ImportAccountsCli(cliCtx *cli.Context) error {
-	w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
-		walletDir, err := userprompt.InputDirectory(cliCtx, userprompt.WalletDirPromptText, flags.WalletDirFlag)
-		if err != nil {
-			return nil, err
-		}
-		exists, err := wallet.Exists(walletDir)
-		if err != nil {
-			return nil, errors.Wrap(err, wallet.CheckExistsErrMsg)
-		}
-		if exists {
-			isValid, err := wallet.IsValid(walletDir)
-			if err != nil {
-				return nil, errors.Wrap(err, wallet.CheckValidityErrMsg)
-			}
-			if !isValid {
-				return nil, errors.New(wallet.InvalidWalletErrMsg)
-			}
-			walletPassword, err := wallet.InputPassword(
-				cliCtx,
-				flags.WalletPasswordFileFlag,
-				wallet.PasswordPromptText,
-				false, /* Do not confirm password */
-				wallet.ValidateExistingPass,
-			)
-			if err != nil {
-				return nil, err
-			}
-			return wallet.OpenWallet(cliCtx.Context, &wallet.Config{
-				WalletDir:      walletDir,
-				WalletPassword: walletPassword,
-			})
-		}
-
-		cfg, err := extractWalletCreationConfigFromCli(cliCtx, keymanager.Local)
-		if err != nil {
-			return nil, err
-		}
-		w := wallet.New(&wallet.Config{
-			KeymanagerKind: cfg.WalletCfg.KeymanagerKind,
-			WalletDir:      cfg.WalletCfg.WalletDir,
-			WalletPassword: cfg.WalletCfg.WalletPassword,
-		})
-		if err = createLocalKeymanagerWallet(cliCtx.Context, w); err != nil {
-			return nil, errors.Wrap(err, "could not create keymanager")
-		}
-		log.WithField("wallet-path", cfg.WalletCfg.WalletDir).Info(
-			"Successfully created new wallet",
-		)
-		return w, nil
-	})
-	if err != nil {
-		return errors.Wrap(err, "could not initialize wallet")
-	}
-
-	km, err := w.InitializeKeymanager(cliCtx.Context, iface.InitKeymanagerConfig{ListenForChanges: false})
-	if err != nil {
-		return err
-	}
-	k, ok := km.(keymanager.Importer)
+func (acm *AccountsCLIManager) Import(ctx context.Context) error {
+	k, ok := acm.keymanager.(keymanager.Importer)
 	if !ok {
 		return errors.New("keymanager cannot import keystores")
 	}
 
 	// Check if the user wishes to import a one-off, private key directly
 	// as an account into the Prysm validator.
-	if cliCtx.IsSet(flags.ImportPrivateKeyFileFlag.Name) {
-		return importPrivateKeyAsAccount(cliCtx, w, k)
+	if acm.importPrivateKeys {
+		return importPrivateKeyAsAccount(ctx, acm.wallet, k, acm.privateKeyFile)
 	}
 
-	keysDir, err := userprompt.InputDirectory(cliCtx, userprompt.ImportKeysDirPromptText, flags.KeysDirFlag)
-	if err != nil {
-		return errors.Wrap(err, "could not parse keys directory")
-	}
 	// Consider that the keysDir might be a path to a specific file and handle accordingly.
-	isDir, err := file.HasDir(keysDir)
+	isDir, err := file.HasDir(acm.keysDir)
 	if err != nil {
 		return errors.Wrap(err, "could not determine if path is a directory")
 	}
 	keystoresImported := make([]*keymanager.Keystore, 0)
 	if isDir {
-		files, err := os.ReadDir(keysDir)
+		files, err := os.ReadDir(acm.keysDir)
 		if err != nil {
 			return errors.Wrap(err, "could not read dir")
 		}
 		if len(files) == 0 {
-			return fmt.Errorf("directory %s has no files, cannot import from it", keysDir)
+			return fmt.Errorf("directory %s has no files, cannot import from it", acm.keysDir)
 		}
 		filesInDir := make([]string, 0)
 		for i := 0; i < len(files); i++ {
@@ -180,7 +114,7 @@ func ImportAccountsCli(cliCtx *cli.Context) error {
 		// specify this value in their filename.
 		sort.Sort(byDerivationPath(filesInDir))
 		for _, name := range filesInDir {
-			keystore, err := readKeystoreFile(cliCtx.Context, filepath.Join(keysDir, name))
+			keystore, err := readKeystoreFile(ctx, filepath.Join(acm.keysDir, name))
 			if err != nil && strings.Contains(err.Error(), "could not decode keystore json") {
 				continue
 			} else if err != nil {
@@ -189,7 +123,7 @@ func ImportAccountsCli(cliCtx *cli.Context) error {
 			keystoresImported = append(keystoresImported, keystore)
 		}
 	} else {
-		keystore, err := readKeystoreFile(cliCtx.Context, keysDir)
+		keystore, err := readKeystoreFile(ctx, acm.keysDir)
 		if err != nil {
 			return errors.Wrap(err, "could not import keystore")
 		}
@@ -197,9 +131,8 @@ func ImportAccountsCli(cliCtx *cli.Context) error {
 	}
 
 	var accountsPassword string
-	if cliCtx.IsSet(flags.AccountPasswordFileFlag.Name) {
-		passwordFilePath := cliCtx.String(flags.AccountPasswordFileFlag.Name)
-		data, err := os.ReadFile(passwordFilePath) // #nosec G304
+	if acm.readPasswordFile {
+		data, err := os.ReadFile(acm.passwordFilePath) // #nosec G304
 		if err != nil {
 			return err
 		}
@@ -213,7 +146,7 @@ func ImportAccountsCli(cliCtx *cli.Context) error {
 		}
 	}
 	fmt.Println("Importing accounts, this may take a while...")
-	statuses, err := ImportAccounts(cliCtx.Context, &ImportAccountsConfig{
+	statuses, err := ImportAccounts(ctx, &ImportAccountsConfig{
 		Importer:        k,
 		Keystores:       keystoresImported,
 		AccountPassword: accountsPassword,
@@ -265,8 +198,7 @@ func ImportAccounts(ctx context.Context, cfg *ImportAccountsConfig) ([]*ethpbser
 
 // Imports a one-off file containing a private key as a hex string into
 // the Prysm validator's accounts.
-func importPrivateKeyAsAccount(cliCtx *cli.Context, wallet *wallet.Wallet, importer keymanager.Importer) error {
-	privKeyFile := cliCtx.String(flags.ImportPrivateKeyFileFlag.Name)
+func importPrivateKeyAsAccount(ctx context.Context, wallet *wallet.Wallet, importer keymanager.Importer, privKeyFile string) error {
 	fullPath, err := file.ExpandPath(privKeyFile)
 	if err != nil {
 		return errors.Wrapf(err, "could not expand file path for %s", privKeyFile)
@@ -297,7 +229,7 @@ func importPrivateKeyAsAccount(cliCtx *cli.Context, wallet *wallet.Wallet, impor
 		return errors.Wrap(err, "could not encrypt private key into a keystore file")
 	}
 	statuses, err := ImportAccounts(
-		cliCtx.Context,
+		ctx,
 		&ImportAccountsConfig{
 			Importer:        importer,
 			AccountPassword: wallet.Password(),

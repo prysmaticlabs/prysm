@@ -19,12 +19,13 @@ var (
 // trie of the particular field.
 type FieldTrie struct {
 	*sync.RWMutex
-	reference   *stateutil.Reference
-	fieldLayers [][]*[32]byte
-	field       types.BeaconStateField
-	dataType    types.DataType
-	length      uint64
-	numOfElems  int
+	reference     *stateutil.Reference
+	fieldLayers   [][]*[32]byte
+	field         types.BeaconStateField
+	dataType      types.DataType
+	length        uint64
+	numOfElems    int
+	isTransferred bool
 }
 
 // NewFieldTrie is the constructor for the field trie data structure. It creates the corresponding
@@ -191,6 +192,43 @@ func (f *FieldTrie) CopyTrie() *FieldTrie {
 	}
 }
 
+// Length return the length of the whole field trie.
+func (f *FieldTrie) Length() uint64 {
+	return f.length
+}
+
+// TransferTrie starts the process of transferring all the
+// trie related data to a new trie. This is done if we
+// know that other states which hold references to this
+// trie will unlikely need it for recomputation. This helps
+// us save on a copy. Any caller of this method will need
+// to take care that this isn't called on an empty trie.
+func (f *FieldTrie) TransferTrie() *FieldTrie {
+	if f.fieldLayers == nil {
+		return &FieldTrie{
+			field:      f.field,
+			dataType:   f.dataType,
+			reference:  stateutil.NewRef(1),
+			RWMutex:    new(sync.RWMutex),
+			length:     f.length,
+			numOfElems: f.numOfElems,
+		}
+	}
+	f.isTransferred = true
+	nTrie := &FieldTrie{
+		fieldLayers: f.fieldLayers,
+		field:       f.field,
+		dataType:    f.dataType,
+		reference:   stateutil.NewRef(1),
+		RWMutex:     new(sync.RWMutex),
+		length:      f.length,
+		numOfElems:  f.numOfElems,
+	}
+	// Zero out field layers here.
+	f.fieldLayers = nil
+	return nTrie
+}
+
 // TrieRoot returns the corresponding root of the trie.
 func (f *FieldTrie) TrieRoot() ([32]byte, error) {
 	if f.Empty() {
@@ -222,7 +260,7 @@ func (f *FieldTrie) FieldReference() *stateutil.Reference {
 // Empty checks whether the underlying field trie is
 // empty or not.
 func (f *FieldTrie) Empty() bool {
-	return f == nil || len(f.fieldLayers) == 0
+	return f == nil || len(f.fieldLayers) == 0 || f.isTransferred
 }
 
 // InsertFieldLayer manually inserts a field layer. This method
