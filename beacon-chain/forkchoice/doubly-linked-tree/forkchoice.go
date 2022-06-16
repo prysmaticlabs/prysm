@@ -544,7 +544,7 @@ func (f *ForkChoice) SetGenesisTime(genesisTime uint64) {
 	f.store.genesisTime = genesisTime
 }
 
-// SetOriginRoot sets the genesis Block root
+// SetOriginRoot sets the genesis block root
 func (f *ForkChoice) SetOriginRoot(root [32]byte) {
 	f.store.originRoot = root
 }
