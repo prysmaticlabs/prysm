@@ -304,6 +304,13 @@ func (s *Store) SaveBlocks(ctx context.Context, blocks []interfaces.SignedBeacon
 			if err := updateValueForIndices(ctx, indicesForBlocks[i], blockRoots[i], tx); err != nil {
 				return errors.Wrap(err, "could not update DB indices")
 			}
+			if _, err := blk.Block().Body().ExecutionPayload(); err == nil {
+				blindedBlock, err := wrapper.WrapSignedBlindedBeaconBlock(blk)
+				if err != nil {
+					return err
+				}
+				blk = blindedBlock
+			}
 			s.blockCache.Set(string(blockRoots[i]), blk, int64(len(encodedBlocks[i])))
 			if err := bkt.Put(blockRoots[i], encodedBlocks[i]); err != nil {
 				return err
