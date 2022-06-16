@@ -17,6 +17,7 @@ import (
 	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/policies"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/types"
+	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -83,6 +84,8 @@ func feeRecipientIsPresent(conns ...*grpc.ClientConn) error {
 		}
 		if accountBalance.Uint64() <= prevAccountBalance.Uint64() {
 			return errors.Errorf("account balance didn't change after applying fee recipient for account: %s", account.Hex())
+		} else {
+			log.Infof("current account balance %v ,increased from previous account balance %v ", accountBalance, prevAccountBalance)
 		}
 	}
 
