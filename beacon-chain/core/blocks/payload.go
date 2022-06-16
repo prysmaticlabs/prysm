@@ -110,6 +110,11 @@ func IsPreBellatrixVersion(v int) bool {
 	return v < version.Bellatrix
 }
 
+// IsPreBellatrixVersion returns true if input version is before bellatrix fork.
+func IsPreEIP4844Version(v int) bool {
+	return v < version.EIP4844
+}
+
 // ValidatePayloadWhenMergeCompletes validates if payload is valid versus input beacon state.
 // These validation steps ONLY apply to post merge.
 //

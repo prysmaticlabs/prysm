@@ -286,8 +286,7 @@ func (s *Service) validateEIP4844BeaconBlock(ctx context.Context, parentState st
 		return errors.New("execution payload is nil")
 	}
 
-	switch blk.Version() {
-	case version.Phase0, version.Altair, version.Bellatrix, version.BellatrixBlind:
+	if blocks.IsPreEIP4844Version(blk.Version()) {
 		return nil
 	}
 
