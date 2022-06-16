@@ -101,9 +101,9 @@ var (
 			" (Warning): Once enabled, this feature migrates your database in to a new schema and " +
 			"there is no going back. At worst, your entire database might get corrupted.",
 	}
-	enableNativeState = &cli.BoolFlag{
-		Name:  "enable-native-state",
-		Usage: "Enables representing the beacon state as a pure Go struct.",
+	disableNativeState = &cli.BoolFlag{
+		Name:  "disable-native-state",
+		Usage: "Disables representing the beacon state as a pure Go struct.",
 	}
 	enableVecHTR = &cli.BoolFlag{
 		Name:  "enable-vectorized-htr",
@@ -162,7 +162,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableBroadcastSlashingFlag,
 	enableSlasherFlag,
 	enableHistoricalSpaceRepresentation,
-	enableNativeState,
+	disableNativeState,
 	enableVecHTR,
 	enableForkChoiceDoublyLinkedTree,
 	enableGossipBatchAggregation,
