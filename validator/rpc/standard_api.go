@@ -476,7 +476,7 @@ func (s *Server) SetFeeRecipientByPubkey(ctx context.Context, req *ethpbservice.
 // DeleteFeeRecipientByPubkey updates the eth address mapped to the public key to the default fee recipient listed
 func (s *Server) DeleteFeeRecipientByPubkey(ctx context.Context, req *ethpbservice.PubkeyRequest) (*empty.Empty, error) {
 	if s.validatorService == nil {
-		return nil, status.Error(codes.FailedPrecondition, "Validator service not ready.")
+		return nil, status.Error(codes.FailedPrecondition, "Validator service not ready")
 	}
 	validatorKey := req.Pubkey
 	if err := validatePublicKey(validatorKey); err != nil {
