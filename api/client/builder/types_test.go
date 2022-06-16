@@ -694,9 +694,10 @@ func TestMarshalBlindedBeaconBlockBodyBellatrix(t *testing.T) {
 }
 
 func TestRoundTripUint256(t *testing.T) {
-	vs := "452312848583266388373324160190187140051835877600158453279131187530910662656"
+	vs := "4523128485832663883733241601901871400518358776001584532791311875309106626"
 	u := stringToUint256(vs)
 	sb := u.SSZBytes()
+	require.Equal(t, 32, len(sb))
 	uu := sszBytesToUint256(sb)
 	require.Equal(t, true, bytes.Equal(u.SSZBytes(), uu.SSZBytes()))
 	require.Equal(t, vs, uu.String())
