@@ -29,6 +29,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/consensus-types/blocks"
+	consensusblockstest "github.com/prysmaticlabs/prysm/consensus-types/blocks/testing"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
@@ -319,6 +320,10 @@ func TestStore_OnBlockBatch_ProtoArray(t *testing.T) {
 		require.NoError(t, err)
 		wsb, err = consensusblocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)
+		if i == 1 {
+			wsb, err = consensusblockstest.SetBlockParentRoot(wsb, gRoot)
+			require.NoError(t, err)
+		}
 		service.saveInitSyncBlock(root, wsb)
 		wsb, err = consensusblocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)
@@ -326,9 +331,8 @@ func TestStore_OnBlockBatch_ProtoArray(t *testing.T) {
 		blkRoots = append(blkRoots, root)
 	}
 
-	rBlock, err := blks[0].PbPhase0Block()
-	assert.NoError(t, err)
-	rBlock.Block.ParentRoot = gRoot[:]
+	blks[0], err = consensusblockstest.SetBlockParentRoot(blks[0], gRoot)
+	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveBlock(context.Background(), blks[0]))
 	require.NoError(t, service.cfg.StateGen.SaveState(ctx, blkRoots[0], firstState))
 	err = service.onBlockBatch(ctx, blks, blkRoots[1:])
@@ -453,6 +457,10 @@ func TestStore_OnBlockBatch_DoublyLinkedTree(t *testing.T) {
 		require.NoError(t, err)
 		wsb, err := consensusblocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)
+		if i == 1 {
+			wsb, err = consensusblockstest.SetBlockParentRoot(wsb, gRoot)
+			require.NoError(t, err)
+		}
 		service.saveInitSyncBlock(root, wsb)
 		wsb, err = consensusblocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)
@@ -460,9 +468,8 @@ func TestStore_OnBlockBatch_DoublyLinkedTree(t *testing.T) {
 		blkRoots = append(blkRoots, root)
 	}
 
-	rBlock, err := blks[0].PbPhase0Block()
-	assert.NoError(t, err)
-	rBlock.Block.ParentRoot = gRoot[:]
+	blks[0], err = consensusblockstest.SetBlockParentRoot(blks[0], gRoot)
+	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveBlock(context.Background(), blks[0]))
 	require.NoError(t, service.cfg.StateGen.SaveState(ctx, blkRoots[0], firstState))
 	err = service.onBlockBatch(ctx, blks, blkRoots[1:])
@@ -517,14 +524,17 @@ func TestStore_OnBlockBatch_NotifyNewPayload(t *testing.T) {
 		}
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
+		if i == 1 {
+			wsb, err = consensusblockstest.SetBlockParentRoot(wsb, gRoot)
+			require.NoError(t, err)
+		}
 		service.saveInitSyncBlock(root, wsb)
 		blks = append(blks, wsb)
 		blkRoots = append(blkRoots, root)
 	}
 
-	rBlock, err := blks[0].PbPhase0Block()
-	assert.NoError(t, err)
-	rBlock.Block.ParentRoot = gRoot[:]
+	blks[0], err = consensusblockstest.SetBlockParentRoot(blks[0], gRoot)
+	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveBlock(context.Background(), blks[0]))
 	require.NoError(t, service.cfg.StateGen.SaveState(ctx, blkRoots[0], firstState))
 	service.originBlockRoot = blkRoots[1]
