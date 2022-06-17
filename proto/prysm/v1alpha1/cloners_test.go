@@ -111,7 +111,7 @@ func TestCopyBeaconBlockAltair(t *testing.T) {
 }
 
 func TestCopyBeaconBlockBodyAltair(t *testing.T) {
-	bb := genBeaconBlockBodyAltair()
+	bb := tgen.PbBlockBodyAltair()
 
 	got := v1alpha1.CopyBeaconBlockBodyAltair(bb)
 	if !reflect.DeepEqual(got, bb) {
@@ -592,27 +592,13 @@ func genSyncAggregate() *v1alpha1.SyncAggregate {
 	}
 }
 
-func genBeaconBlockBodyAltair() *v1alpha1.BeaconBlockBodyAltair {
-	return &v1alpha1.BeaconBlockBodyAltair{
-		RandaoReveal:      bytes(),
-		Eth1Data:          genEth1Data(),
-		Graffiti:          bytes(),
-		ProposerSlashings: genProposerSlashings(5),
-		AttesterSlashings: genAttesterSlashings(5),
-		Attestations:      genAttestations(10),
-		Deposits:          genDeposits(5),
-		VoluntaryExits:    genSignedVoluntaryExits(12),
-		SyncAggregate:     genSyncAggregate(),
-	}
-}
-
 func genBeaconBlockAltair() *v1alpha1.BeaconBlockAltair {
 	return &v1alpha1.BeaconBlockAltair{
 		Slot:          123455,
 		ProposerIndex: 55433,
 		ParentRoot:    bytes(),
 		StateRoot:     bytes(),
-		Body:          genBeaconBlockBodyAltair(),
+		Body:          tgen.PbBlockBodyAltair(),
 	}
 }
 

@@ -11,6 +11,7 @@ import (
 var b20 = make([]byte, 20)
 var b32 = make([]byte, 32)
 var b48 = make([]byte, 48)
+var b64 = make([]byte, 64)
 var b96 = make([]byte, 96)
 var b256 = make([]byte, 256)
 
@@ -42,6 +43,15 @@ func init() {
 			b48[i] = uint8(rand.Int())
 		}
 	}
+	_, err = rand.Read(b64)
+	if err != nil {
+		panic(err)
+	}
+	for i := 0; i < 64; i++ {
+		if b64[i] == 0x00 {
+			b64[i] = uint8(rand.Int())
+		}
+	}
 	_, err = rand.Read(b96)
 	if err != nil {
 		panic(err)
@@ -62,12 +72,17 @@ func init() {
 	}
 }
 
+type byteSlices struct {
+	B20  []byte
+	B32  []byte
+	B48  []byte
+	B64  []byte
+	B96  []byte
+	B256 []byte
+}
+
 type BlockFields struct {
-	B20               []byte
-	B32               []byte
-	B48               []byte
-	B96               []byte
-	B256              []byte
+	byteSlices
 	Deposits          []*eth.Deposit
 	Atts              []*eth.Attestation
 	ProposerSlashings []*eth.ProposerSlashing
@@ -177,12 +192,8 @@ func GetBlockFields() BlockFields {
 		},
 		Signature: b96,
 	}
-	syncCommitteeBits := bitfield.NewBitvector512()
-	syncCommitteeBits.SetBitAt(1, true)
-	syncCommitteeBits.SetBitAt(2, true)
-	syncCommitteeBits.SetBitAt(8, true)
 	syncAggregate := &eth.SyncAggregate{
-		SyncCommitteeBits:      syncCommitteeBits,
+		SyncCommitteeBits:      b64,
 		SyncCommitteeSignature: b96,
 	}
 	execPayload := &enginev1.ExecutionPayload{
@@ -223,11 +234,13 @@ func GetBlockFields() BlockFields {
 	}
 
 	return BlockFields{
-		B20:               b20,
-		B32:               b32,
-		B48:               b48,
-		B96:               b96,
-		B256:              b256,
+		byteSlices: byteSlices{
+			B20:  b20,
+			B32:  b32,
+			B48:  b48,
+			B96:  b96,
+			B256: b256,
+		},
 		Deposits:          deposits,
 		Atts:              atts,
 		ProposerSlashings: []*eth.ProposerSlashing{proposerSlashing},
@@ -254,5 +267,24 @@ func PbBlockBodyPhase0() *eth.BeaconBlockBody {
 		Attestations:      f.Atts,
 		Deposits:          f.Deposits,
 		VoluntaryExits:    f.VoluntaryExits,
+	}
+}
+
+func PbBlockBodyAltair() *eth.BeaconBlockBodyAltair {
+	f := GetBlockFields()
+	return &eth.BeaconBlockBodyAltair{
+		RandaoReveal: f.B96,
+		Eth1Data: &eth.Eth1Data{
+			DepositRoot:  f.B32,
+			DepositCount: 128,
+			BlockHash:    f.B32,
+		},
+		Graffiti:          f.B32,
+		ProposerSlashings: f.ProposerSlashings,
+		AttesterSlashings: f.AttesterSlashings,
+		Attestations:      f.Atts,
+		Deposits:          f.Deposits,
+		VoluntaryExits:    f.VoluntaryExits,
+		SyncAggregate:     f.SyncAggregate,
 	}
 }

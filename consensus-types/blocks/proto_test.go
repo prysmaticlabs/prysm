@@ -54,7 +54,7 @@ func Test_SignedBeaconBlock_Proto(t *testing.T) {
 				ProposerIndex: 128,
 				ParentRoot:    f.B32,
 				StateRoot:     f.B32,
-				Body:          bodyPbAltair(),
+				Body:          tgen.PbBlockBodyAltair(),
 			},
 			Signature: f.B96,
 		}
@@ -187,7 +187,7 @@ func Test_BeaconBlock_Proto(t *testing.T) {
 			ProposerIndex: 128,
 			ParentRoot:    f.B32,
 			StateRoot:     f.B32,
-			Body:          bodyPbAltair(),
+			Body:          tgen.PbBlockBodyAltair(),
 		}
 		block := &BeaconBlock{
 			version:       version.Altair,
@@ -280,7 +280,7 @@ func Test_BeaconBlockBody_Proto(t *testing.T) {
 		assert.DeepEqual(t, expectedHTR, resultHTR)
 	})
 	t.Run("Altair", func(t *testing.T) {
-		expectedBody := bodyPbAltair()
+		expectedBody := tgen.PbBlockBodyAltair()
 		body := bodyAltair()
 		result, err := body.Proto()
 		require.NoError(t, err)
@@ -350,7 +350,7 @@ func Test_initSignedBlockFromProtoAltair(t *testing.T) {
 			ProposerIndex: 128,
 			ParentRoot:    f.B32,
 			StateRoot:     f.B32,
-			Body:          bodyPbAltair(),
+			Body:          tgen.PbBlockBodyAltair(),
 		},
 		Signature: f.B96,
 	}
@@ -433,7 +433,7 @@ func Test_initBlockFromProtoAltair(t *testing.T) {
 		ProposerIndex: 128,
 		ParentRoot:    f.B32,
 		StateRoot:     f.B32,
-		Body:          bodyPbAltair(),
+		Body:          tgen.PbBlockBodyAltair(),
 	}
 	resultBlock, err := initBlockFromProtoAltair(expectedBlock)
 	require.NoError(t, err)
@@ -492,7 +492,7 @@ func Test_initBlockBodyFromProtoPhase0(t *testing.T) {
 }
 
 func Test_initBlockBodyFromProtoAltair(t *testing.T) {
-	expectedBody := bodyPbAltair()
+	expectedBody := tgen.PbBlockBodyAltair()
 	resultBody, err := initBlockBodyFromProtoAltair(expectedBody)
 	require.NoError(t, err)
 	resultHTR, err := resultBody.HashTreeRoot()
@@ -522,25 +522,6 @@ func Test_initBlockBodyFromProtoBlindedBellatrix(t *testing.T) {
 	expectedHTR, err := expectedBody.HashTreeRoot()
 	require.NoError(t, err)
 	assert.DeepEqual(t, expectedHTR, resultHTR)
-}
-
-func bodyPbAltair() *eth.BeaconBlockBodyAltair {
-	f := tgen.GetBlockFields()
-	return &eth.BeaconBlockBodyAltair{
-		RandaoReveal: f.B96,
-		Eth1Data: &eth.Eth1Data{
-			DepositRoot:  f.B32,
-			DepositCount: 128,
-			BlockHash:    f.B32,
-		},
-		Graffiti:          f.B32,
-		ProposerSlashings: f.ProposerSlashings,
-		AttesterSlashings: f.AttesterSlashings,
-		Attestations:      f.Atts,
-		Deposits:          f.Deposits,
-		VoluntaryExits:    f.VoluntaryExits,
-		SyncAggregate:     f.SyncAggregate,
-	}
 }
 
 func bodyPbBellatrix() *eth.BeaconBlockBodyBellatrix {
