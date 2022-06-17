@@ -70,7 +70,7 @@ func TestCopySignedBeaconBlock(t *testing.T) {
 }
 
 func TestCopyBeaconBlock(t *testing.T) {
-	blk := genBeaconBlock()
+	blk := tgen.PbBlockPhase0()
 
 	got := v1alpha1.CopyBeaconBlock(blk)
 	if !reflect.DeepEqual(got, blk) {
@@ -100,7 +100,7 @@ func TestCopySignedBeaconBlockAltair(t *testing.T) {
 }
 
 func TestCopyBeaconBlockAltair(t *testing.T) {
-	b := genBeaconBlockAltair()
+	b := tgen.PbBlockAltair()
 
 	got := v1alpha1.CopyBeaconBlockAltair(b)
 	if !reflect.DeepEqual(got, b) {
@@ -330,7 +330,7 @@ func TestCopySignedBeaconBlockBellatrix(t *testing.T) {
 }
 
 func TestCopyBeaconBlockBellatrix(t *testing.T) {
-	b := genBeaconBlockBellatrix()
+	b := tgen.PbBlockBellatrix()
 
 	got := v1alpha1.CopyBeaconBlockBellatrix(b)
 	if !reflect.DeepEqual(got, b) {
@@ -350,9 +350,9 @@ func TestCopyBeaconBlockBodyBellatrix(t *testing.T) {
 }
 
 func TestCopySignedBlindedBeaconBlockBellatrix(t *testing.T) {
-	sbb := genSignedBeaconBlockBellatrix()
+	sbb := genSignedBlindedBeaconBlockBellatrix()
 
-	got := v1alpha1.CopySignedBeaconBlockBellatrix(sbb)
+	got := v1alpha1.CopySignedBlindedBeaconBlockBellatrix(sbb)
 	if !reflect.DeepEqual(got, sbb) {
 		t.Errorf("CopySignedBeaconBlockBellatrix() = %v, want %v", got, sbb)
 	}
@@ -360,9 +360,9 @@ func TestCopySignedBlindedBeaconBlockBellatrix(t *testing.T) {
 }
 
 func TestCopyBlindedBeaconBlockBellatrix(t *testing.T) {
-	b := genBeaconBlockBellatrix()
+	b := tgen.PbBlindedBlockBellatrix()
 
-	got := v1alpha1.CopyBeaconBlockBellatrix(b)
+	got := v1alpha1.CopyBlindedBeaconBlockBellatrix(b)
 	if !reflect.DeepEqual(got, b) {
 		t.Errorf("CopyBeaconBlockBellatrix() = %v, want %v", got, b)
 	}
@@ -445,18 +445,8 @@ func genPendingAttestation() *v1alpha1.PendingAttestation {
 
 func genSignedBeaconBlock() *v1alpha1.SignedBeaconBlock {
 	return &v1alpha1.SignedBeaconBlock{
-		Block:     genBeaconBlock(),
+		Block:     tgen.PbBlockPhase0(),
 		Signature: bytes(),
-	}
-}
-
-func genBeaconBlock() *v1alpha1.BeaconBlock {
-	return &v1alpha1.BeaconBlock{
-		Slot:          4,
-		ProposerIndex: 5,
-		ParentRoot:    bytes(),
-		StateRoot:     bytes(),
-		Body:          tgen.PbBlockBodyPhase0(),
 	}
 }
 
@@ -591,53 +581,23 @@ func genSyncAggregate() *v1alpha1.SyncAggregate {
 	}
 }
 
-func genBeaconBlockAltair() *v1alpha1.BeaconBlockAltair {
-	return &v1alpha1.BeaconBlockAltair{
-		Slot:          123455,
-		ProposerIndex: 55433,
-		ParentRoot:    bytes(),
-		StateRoot:     bytes(),
-		Body:          tgen.PbBlockBodyAltair(),
-	}
-}
-
 func genSignedBeaconBlockAltair() *v1alpha1.SignedBeaconBlockAltair {
 	return &v1alpha1.SignedBeaconBlockAltair{
-		Block:     genBeaconBlockAltair(),
+		Block:     tgen.PbBlockAltair(),
 		Signature: bytes(),
-	}
-}
-
-func genBeaconBlockBellatrix() *v1alpha1.BeaconBlockBellatrix {
-	return &v1alpha1.BeaconBlockBellatrix{
-		Slot:          123455,
-		ProposerIndex: 55433,
-		ParentRoot:    bytes(),
-		StateRoot:     bytes(),
-		Body:          tgen.PbBlockBodyBellatrix(),
 	}
 }
 
 func genSignedBeaconBlockBellatrix() *v1alpha1.SignedBeaconBlockBellatrix {
 	return &v1alpha1.SignedBeaconBlockBellatrix{
-		Block:     genBeaconBlockBellatrix(),
+		Block:     tgen.PbBlockBellatrix(),
 		Signature: bytes(),
-	}
-}
-
-func genBlindedBeaconBlockBellatrix() *v1alpha1.BlindedBeaconBlockBellatrix {
-	return &v1alpha1.BlindedBeaconBlockBellatrix{
-		Slot:          123455,
-		ProposerIndex: 55433,
-		ParentRoot:    bytes(),
-		StateRoot:     bytes(),
-		Body:          tgen.PbBlindedBlockBodyBellatrix(),
 	}
 }
 
 func genSignedBlindedBeaconBlockBellatrix() *v1alpha1.SignedBlindedBeaconBlockBellatrix {
 	return &v1alpha1.SignedBlindedBeaconBlockBellatrix{
-		Block:     genBlindedBeaconBlockBellatrix(),
+		Block:     tgen.PbBlindedBlockBellatrix(),
 		Signature: bytes(),
 	}
 }

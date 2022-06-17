@@ -252,6 +252,50 @@ func GetBlockFields() BlockFields {
 	}
 }
 
+func PbBlockPhase0() *eth.BeaconBlock {
+	f := GetBlockFields()
+	return &eth.BeaconBlock{
+		Slot:          128,
+		ProposerIndex: 128,
+		ParentRoot:    f.B32,
+		StateRoot:     f.B32,
+		Body:          PbBlockBodyPhase0(),
+	}
+}
+
+func PbBlockAltair() *eth.BeaconBlockAltair {
+	f := GetBlockFields()
+	return &eth.BeaconBlockAltair{
+		Slot:          128,
+		ProposerIndex: 128,
+		ParentRoot:    f.B32,
+		StateRoot:     f.B32,
+		Body:          PbBlockBodyAltair(),
+	}
+}
+
+func PbBlockBellatrix() *eth.BeaconBlockBellatrix {
+	f := GetBlockFields()
+	return &eth.BeaconBlockBellatrix{
+		Slot:          128,
+		ProposerIndex: 128,
+		ParentRoot:    f.B32,
+		StateRoot:     f.B32,
+		Body:          PbBlockBodyBellatrix(),
+	}
+}
+
+func PbBlindedBlockBellatrix() *eth.BlindedBeaconBlockBellatrix {
+	f := GetBlockFields()
+	return &eth.BlindedBeaconBlockBellatrix{
+		Slot:          128,
+		ProposerIndex: 128,
+		ParentRoot:    f.B32,
+		StateRoot:     f.B32,
+		Body:          PbBlindedBlockBodyBellatrix(),
+	}
+}
+
 func PbBlockBodyPhase0() *eth.BeaconBlockBody {
 	f := GetBlockFields()
 	return &eth.BeaconBlockBody{

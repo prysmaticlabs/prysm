@@ -10,18 +10,14 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/util/tgen"
 )
 
+// TODO: Use f to set block fields instead of using magic numbers eg. slot: 128
+
 func Test_SignedBeaconBlock_Proto(t *testing.T) {
 	f := tgen.GetBlockFields()
 
 	t.Run("Phase0", func(t *testing.T) {
 		expectedBlock := &eth.SignedBeaconBlock{
-			Block: &eth.BeaconBlock{
-				Slot:          128,
-				ProposerIndex: 128,
-				ParentRoot:    f.B32,
-				StateRoot:     f.B32,
-				Body:          tgen.PbBlockBodyPhase0(),
-			},
+			Block:     tgen.PbBlockPhase0(),
 			Signature: f.B96,
 		}
 		block := &SignedBeaconBlock{
@@ -49,13 +45,7 @@ func Test_SignedBeaconBlock_Proto(t *testing.T) {
 	})
 	t.Run("Altair", func(t *testing.T) {
 		expectedBlock := &eth.SignedBeaconBlockAltair{
-			Block: &eth.BeaconBlockAltair{
-				Slot:          128,
-				ProposerIndex: 128,
-				ParentRoot:    f.B32,
-				StateRoot:     f.B32,
-				Body:          tgen.PbBlockBodyAltair(),
-			},
+			Block:     tgen.PbBlockAltair(),
 			Signature: f.B96,
 		}
 		block := &SignedBeaconBlock{
@@ -83,13 +73,7 @@ func Test_SignedBeaconBlock_Proto(t *testing.T) {
 	})
 	t.Run("Bellatrix", func(t *testing.T) {
 		expectedBlock := &eth.SignedBeaconBlockBellatrix{
-			Block: &eth.BeaconBlockBellatrix{
-				Slot:          128,
-				ProposerIndex: 128,
-				ParentRoot:    f.B32,
-				StateRoot:     f.B32,
-				Body:          tgen.PbBlockBodyBellatrix(),
-			},
+			Block:     tgen.PbBlockBellatrix(),
 			Signature: f.B96,
 		}
 		block := &SignedBeaconBlock{
@@ -117,13 +101,7 @@ func Test_SignedBeaconBlock_Proto(t *testing.T) {
 	})
 	t.Run("BellatrixBlind", func(t *testing.T) {
 		expectedBlock := &eth.SignedBlindedBeaconBlockBellatrix{
-			Block: &eth.BlindedBeaconBlockBellatrix{
-				Slot:          128,
-				ProposerIndex: 128,
-				ParentRoot:    f.B32,
-				StateRoot:     f.B32,
-				Body:          tgen.PbBlindedBlockBodyBellatrix(),
-			},
+			Block:     tgen.PbBlindedBlockBellatrix(),
 			Signature: f.B96,
 		}
 		block := &SignedBeaconBlock{
@@ -155,13 +133,7 @@ func Test_BeaconBlock_Proto(t *testing.T) {
 	f := tgen.GetBlockFields()
 
 	t.Run("Phase0", func(t *testing.T) {
-		expectedBlock := &eth.BeaconBlock{
-			Slot:          128,
-			ProposerIndex: 128,
-			ParentRoot:    f.B32,
-			StateRoot:     f.B32,
-			Body:          tgen.PbBlockBodyPhase0(),
-		}
+		expectedBlock := tgen.PbBlockPhase0()
 		block := &BeaconBlock{
 			version:       version.Phase0,
 			slot:          128,
@@ -182,13 +154,7 @@ func Test_BeaconBlock_Proto(t *testing.T) {
 		assert.DeepEqual(t, expectedHTR, resultHTR)
 	})
 	t.Run("Altair", func(t *testing.T) {
-		expectedBlock := &eth.BeaconBlockAltair{
-			Slot:          128,
-			ProposerIndex: 128,
-			ParentRoot:    f.B32,
-			StateRoot:     f.B32,
-			Body:          tgen.PbBlockBodyAltair(),
-		}
+		expectedBlock := tgen.PbBlockAltair()
 		block := &BeaconBlock{
 			version:       version.Altair,
 			slot:          128,
@@ -209,13 +175,7 @@ func Test_BeaconBlock_Proto(t *testing.T) {
 		assert.DeepEqual(t, expectedHTR, resultHTR)
 	})
 	t.Run("Bellatrix", func(t *testing.T) {
-		expectedBlock := &eth.BeaconBlockBellatrix{
-			Slot:          128,
-			ProposerIndex: 128,
-			ParentRoot:    f.B32,
-			StateRoot:     f.B32,
-			Body:          tgen.PbBlockBodyBellatrix(),
-		}
+		expectedBlock := tgen.PbBlockBellatrix()
 		block := &BeaconBlock{
 			version:       version.Bellatrix,
 			slot:          128,
@@ -236,13 +196,7 @@ func Test_BeaconBlock_Proto(t *testing.T) {
 		assert.DeepEqual(t, expectedHTR, resultHTR)
 	})
 	t.Run("BellatrixBlind", func(t *testing.T) {
-		expectedBlock := &eth.BlindedBeaconBlockBellatrix{
-			Slot:          128,
-			ProposerIndex: 128,
-			ParentRoot:    f.B32,
-			StateRoot:     f.B32,
-			Body:          tgen.PbBlindedBlockBodyBellatrix(),
-		}
+		expectedBlock := tgen.PbBlindedBlockBellatrix()
 		block := &BeaconBlock{
 			version:       version.BellatrixBlind,
 			slot:          128,
