@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/store"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
@@ -76,12 +75,9 @@ func TestService_VerifyWeakSubjectivityRoot(t *testing.T) {
 			require.NoError(t, err)
 			s := &Service{
 				cfg:        &config{BeaconDB: beaconDB, WeakSubjectivityCheckpt: tt.checkpt},
-				store:      &store.Store{},
 				wsVerifier: wv,
 			}
-			s.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{Epoch: tt.finalizedEpoch}, [32]byte{})
-			cp, err := s.store.FinalizedCheckpt()
-			require.NoError(t, err)
+			cp := s.ForkChoicer().FinalizedCheckpoint()
 			err = s.wsVerifier.VerifyWeakSubjectivity(context.Background(), cp.Epoch)
 			if tt.wantErr == nil {
 				require.NoError(t, err)

@@ -159,6 +159,7 @@ func (f *ForkChoice) updateCheckpoints(ctx context.Context, jc, fc *ethpb.Checkp
 		}
 		currentSlot := slots.CurrentSlot(f.store.genesisTime)
 		if slots.SinceEpochStarts(currentSlot) < params.BeaconConfig().SafeSlotsToUpdateJustified {
+			f.store.prevJustifiedCheckpoint = f.store.justifiedCheckpoint
 			f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch,
 				Root: bytesutil.ToBytes32(jc.Root)}
 		} else {
@@ -177,6 +178,7 @@ func (f *ForkChoice) updateCheckpoints(ctx context.Context, jc, fc *ethpb.Checkp
 				return err
 			}
 			if root == currentRoot {
+				f.store.prevJustifiedCheckpoint = f.store.justifiedCheckpoint
 				f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch,
 					Root: jcRoot}
 			}
@@ -186,6 +188,7 @@ func (f *ForkChoice) updateCheckpoints(ctx context.Context, jc, fc *ethpb.Checkp
 	if fc.Epoch > f.store.finalizedCheckpoint.Epoch {
 		f.store.finalizedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: fc.Epoch,
 			Root: bytesutil.ToBytes32(fc.Root)}
+		f.store.prevJustifiedCheckpoint = f.store.justifiedCheckpoint
 		f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch,
 			Root: bytesutil.ToBytes32(jc.Root)}
 	}
@@ -377,6 +380,20 @@ func (f *ForkChoice) SetOptimisticToValid(ctx context.Context, root [fieldparams
 	return node.setNodeAndParentValidated(ctx)
 }
 
+// BestJustifiedCheckpoint of fork choice store.
+func (f *ForkChoice) BestJustifiedCheckpoint() *forkchoicetypes.Checkpoint {
+	f.store.checkpointsLock.RLock()
+	defer f.store.checkpointsLock.RUnlock()
+	return f.store.bestJustifiedCheckpoint
+}
+
+// PreviousJustifiedCheckpoint of fork choice store.
+func (f *ForkChoice) PreviousJustifiedCheckpoint() *forkchoicetypes.Checkpoint {
+	f.store.checkpointsLock.RLock()
+	defer f.store.checkpointsLock.RUnlock()
+	return f.store.prevJustifiedCheckpoint
+}
+
 // JustifiedCheckpoint of fork choice store.
 func (f *ForkChoice) JustifiedCheckpoint() *forkchoicetypes.Checkpoint {
 	f.store.checkpointsLock.RLock()
@@ -446,6 +463,7 @@ func (f *ForkChoice) UpdateJustifiedCheckpoint(jc *forkchoicetypes.Checkpoint) e
 	}
 	f.store.checkpointsLock.Lock()
 	defer f.store.checkpointsLock.Unlock()
+	f.store.prevJustifiedCheckpoint = f.store.justifiedCheckpoint
 	f.store.justifiedCheckpoint = jc
 	bj := f.store.bestJustifiedCheckpoint
 	if bj == nil || jc.Epoch > bj.Epoch {
@@ -535,6 +553,9 @@ func (f *ForkChoice) InsertOptimisticChain(ctx context.Context, chain []*forkcho
 			chain[i].JustifiedCheckpoint.Epoch, chain[i].FinalizedCheckpoint.Epoch); err != nil {
 			return err
 		}
+		if err := f.updateCheckpoints(ctx, chain[i].JustifiedCheckpoint, chain[i].FinalizedCheckpoint); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -547,4 +568,41 @@ func (f *ForkChoice) SetGenesisTime(genesisTime uint64) {
 // SetOriginRoot sets the genesis block root
 func (f *ForkChoice) SetOriginRoot(root [32]byte) {
 	f.store.originRoot = root
+}
+
+// CachedHeadRoot returns the last cached head root
+func (f *ForkChoice) CachedHeadRoot() [32]byte {
+	f.store.nodesLock.RLock()
+	defer f.store.nodesLock.RUnlock()
+	node := f.store.headNode
+	if node == nil {
+		return [32]byte{}
+	}
+	return f.store.headNode.root
+}
+
+// FinalizedPayloadBlockHash returns the hash of the payload at the finalized checkpoint
+func (f *ForkChoice) FinalizedPayloadBlockHash() [32]byte {
+	f.store.nodesLock.RLock()
+	defer f.store.nodesLock.RUnlock()
+	root := f.FinalizedCheckpoint().Root
+	node := f.store.nodeByRoot[root]
+	if node == nil {
+		// This should not happen
+		return [32]byte{}
+	}
+	return node.payloadHash
+}
+
+// JustifiedPayloadBlockHash returns the hash of the payload at the justified checkpoint
+func (f *ForkChoice) JustifiedPayloadBlockHash() [32]byte {
+	f.store.nodesLock.RLock()
+	defer f.store.nodesLock.RUnlock()
+	root := f.JustifiedCheckpoint().Root
+	node := f.store.nodeByRoot[root]
+	if node == nil {
+		// This should not happen
+		return [32]byte{}
+	}
+	return node.payloadHash
 }

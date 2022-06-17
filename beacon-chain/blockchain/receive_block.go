@@ -59,14 +59,8 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.SignedBeaco
 	}
 
 	// Reports on block and fork choice metrics.
-	justified, err := s.store.JustifiedCheckpt()
-	if err != nil {
-		return err
-	}
-	finalized, err := s.store.FinalizedCheckpt()
-	if err != nil {
-		return errNilFinalizedInStore
-	}
+	justified := s.CurrentJustifiedCheckpt()
+	finalized := s.FinalizedCheckpt()
 	reportSlotMetrics(blockCopy.Block().Slot(), s.HeadSlot(), s.CurrentSlot(), finalized)
 
 	// Log block sync status.
@@ -113,20 +107,14 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []interfaces.Sig
 		})
 
 		// Reports on blockCopy and fork choice metrics.
-		finalized, err := s.store.FinalizedCheckpt()
-		if err != nil {
-			return errors.Wrap(err, "could not get finalized checkpoint")
-		}
+		finalized := s.FinalizedCheckpt()
 		reportSlotMetrics(blockCopy.Block().Slot(), s.HeadSlot(), s.CurrentSlot(), finalized)
 	}
 
 	if err := s.cfg.BeaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
 		return err
 	}
-	finalized, err := s.store.FinalizedCheckpt()
-	if err != nil {
-		return errors.Wrap(err, "could not get finalized checkpoint")
-	}
+	finalized := s.FinalizedCheckpt()
 	if finalized == nil {
 		return errNilFinalizedInStore
 	}
@@ -179,10 +167,7 @@ func (s *Service) checkSaveHotStateDB(ctx context.Context) error {
 	currentEpoch := slots.ToEpoch(s.CurrentSlot())
 	// Prevent `sinceFinality` going underflow.
 	var sinceFinality types.Epoch
-	finalized, err := s.store.FinalizedCheckpt()
-	if err != nil {
-		return err
-	}
+	finalized := s.FinalizedCheckpt()
 	if finalized == nil {
 		return errNilFinalizedInStore
 	}

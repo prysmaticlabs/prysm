@@ -147,7 +147,7 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 	require.LogsDoNotContain(t, hook, hookErr)
 	gb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
 	require.NoError(t, err)
-	service.saveInitSyncBlock([32]byte{'a'}, gb)
+	require.NoError(t, service.saveInitSyncBlock(ctx, [32]byte{'a'}, gb))
 	service.notifyEngineIfChangedHead(ctx, [32]byte{'a'})
 	require.LogsContain(t, hook, invalidStateErr)
 
@@ -164,8 +164,7 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 	require.NoError(t, err)
 	r1, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	service.saveInitSyncBlock(r1, wsb)
-	finalized := &ethpb.Checkpoint{Root: r1[:], Epoch: 0}
+	require.NoError(t, service.saveInitSyncBlock(ctx, r1, wsb))
 	st, _ := util.DeterministicGenesisState(t, 1)
 	service.head = &head{
 		slot:  1,
@@ -174,7 +173,6 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 		state: st,
 	}
 	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(2, 1, [8]byte{1})
-	service.store.SetFinalizedCheckptAndPayloadHash(finalized, [32]byte{})
 	service.notifyEngineIfChangedHead(ctx, r1)
 	require.LogsDoNotContain(t, hook, invalidStateErr)
 	require.LogsDoNotContain(t, hook, hookErr)
@@ -187,7 +185,6 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
 	r1, err = b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	finalized = &ethpb.Checkpoint{Root: r1[:], Epoch: 0}
 	st, _ = util.DeterministicGenesisState(t, 1)
 	service.head = &head{
 		slot:  1,
@@ -196,7 +193,6 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 		state: st,
 	}
 	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(2, 1, [8]byte{1})
-	service.store.SetFinalizedCheckptAndPayloadHash(finalized, [32]byte{})
 	service.notifyEngineIfChangedHead(ctx, r1)
 	require.LogsDoNotContain(t, hook, invalidStateErr)
 	require.LogsDoNotContain(t, hook, hookErr)
