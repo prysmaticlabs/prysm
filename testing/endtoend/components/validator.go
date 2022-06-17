@@ -225,7 +225,6 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 		fmt.Sprintf("--%s=localhost:%d", flags.BeaconRPCProviderFlag.Name, beaconRPCPort),
 		fmt.Sprintf("--%s=%s", flags.GrpcHeadersFlag.Name, "dummy=value,foo=bar"), // Sending random headers shouldn't break anything.
 		fmt.Sprintf("--%s=%s", cmdshared.VerbosityFlag.Name, "debug"),
-		fmt.Sprintf("--%s=%s", flags.ProposerSettingsFlag.Name, proposerSettingsPathPath),
 		"--" + cmdshared.ForceClearDB.Name,
 		"--" + cmdshared.E2EConfigFlag.Name,
 		"--" + cmdshared.AcceptTosFlag.Name,
@@ -247,7 +246,8 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 		// When not using remote key signer, use interop keys.
 		args = append(args,
 			fmt.Sprintf("--%s=%d", flags.InteropNumValidators.Name, validatorNum),
-			fmt.Sprintf("--%s=%d", flags.InteropStartIndex.Name, offset))
+			fmt.Sprintf("--%s=%d", flags.InteropStartIndex.Name, offset),
+			fmt.Sprintf("--%s=%s", flags.ProposerSettingsFlag.Name, proposerSettingsPathPath)) //TODO: web3signer does not support validator registration signing currently, move this when support is there.
 	}
 	args = append(args, config.ValidatorFlags...)
 
