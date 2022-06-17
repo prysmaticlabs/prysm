@@ -341,7 +341,7 @@ func TestCopyBeaconBlockBellatrix(t *testing.T) {
 }
 
 func TestCopyBeaconBlockBodyBellatrix(t *testing.T) {
-	bb := genBeaconBlockBodyBellatrix()
+	bb := tgen.PbBlockBodyBellatrix()
 
 	got := v1alpha1.CopyBeaconBlockBodyBellatrix(bb)
 	if !reflect.DeepEqual(got, bb) {
@@ -371,7 +371,7 @@ func TestCopyBlindedBeaconBlockBellatrix(t *testing.T) {
 }
 
 func TestCopyBlindedBeaconBlockBodyBellatrix(t *testing.T) {
-	bb := genBeaconBlockBodyBellatrix()
+	bb := tgen.PbBlockBodyBellatrix()
 
 	got := v1alpha1.CopyBeaconBlockBodyBellatrix(bb)
 	if !reflect.DeepEqual(got, bb) {
@@ -609,28 +609,13 @@ func genSignedBeaconBlockAltair() *v1alpha1.SignedBeaconBlockAltair {
 	}
 }
 
-func genBeaconBlockBodyBellatrix() *v1alpha1.BeaconBlockBodyBellatrix {
-	return &v1alpha1.BeaconBlockBodyBellatrix{
-		RandaoReveal:      bytes(),
-		Eth1Data:          genEth1Data(),
-		Graffiti:          bytes(),
-		ProposerSlashings: genProposerSlashings(5),
-		AttesterSlashings: genAttesterSlashings(5),
-		Attestations:      genAttestations(10),
-		Deposits:          genDeposits(5),
-		VoluntaryExits:    genSignedVoluntaryExits(12),
-		SyncAggregate:     genSyncAggregate(),
-		ExecutionPayload:  genPayload(),
-	}
-}
-
 func genBeaconBlockBellatrix() *v1alpha1.BeaconBlockBellatrix {
 	return &v1alpha1.BeaconBlockBellatrix{
 		Slot:          123455,
 		ProposerIndex: 55433,
 		ParentRoot:    bytes(),
 		StateRoot:     bytes(),
-		Body:          genBeaconBlockBodyBellatrix(),
+		Body:          tgen.PbBlockBodyBellatrix(),
 	}
 }
 

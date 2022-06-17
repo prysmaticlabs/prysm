@@ -88,7 +88,7 @@ func Test_SignedBeaconBlock_Proto(t *testing.T) {
 				ProposerIndex: 128,
 				ParentRoot:    f.B32,
 				StateRoot:     f.B32,
-				Body:          bodyPbBellatrix(),
+				Body:          tgen.PbBlockBodyBellatrix(),
 			},
 			Signature: f.B96,
 		}
@@ -214,7 +214,7 @@ func Test_BeaconBlock_Proto(t *testing.T) {
 			ProposerIndex: 128,
 			ParentRoot:    f.B32,
 			StateRoot:     f.B32,
-			Body:          bodyPbBellatrix(),
+			Body:          tgen.PbBlockBodyBellatrix(),
 		}
 		block := &BeaconBlock{
 			version:       version.Bellatrix,
@@ -293,7 +293,7 @@ func Test_BeaconBlockBody_Proto(t *testing.T) {
 		assert.DeepEqual(t, expectedHTR, resultHTR)
 	})
 	t.Run("Bellatrix", func(t *testing.T) {
-		expectedBody := bodyPbBellatrix()
+		expectedBody := tgen.PbBlockBodyBellatrix()
 		body := bodyBellatrix()
 		result, err := body.Proto()
 		require.NoError(t, err)
@@ -372,7 +372,7 @@ func Test_initSignedBlockFromProtoBellatrix(t *testing.T) {
 			ProposerIndex: 128,
 			ParentRoot:    f.B32,
 			StateRoot:     f.B32,
-			Body:          bodyPbBellatrix(),
+			Body:          tgen.PbBlockBodyBellatrix(),
 		},
 		Signature: f.B96,
 	}
@@ -451,7 +451,7 @@ func Test_initBlockFromProtoBellatrix(t *testing.T) {
 		ProposerIndex: 128,
 		ParentRoot:    f.B32,
 		StateRoot:     f.B32,
-		Body:          bodyPbBellatrix(),
+		Body:          tgen.PbBlockBodyBellatrix(),
 	}
 	resultBlock, err := initBlockFromProtoBellatrix(expectedBlock)
 	require.NoError(t, err)
@@ -503,7 +503,7 @@ func Test_initBlockBodyFromProtoAltair(t *testing.T) {
 }
 
 func Test_initBlockBodyFromProtoBellatrix(t *testing.T) {
-	expectedBody := bodyPbBellatrix()
+	expectedBody := tgen.PbBlockBodyBellatrix()
 	resultBody, err := initBlockBodyFromProtoBellatrix(expectedBody)
 	require.NoError(t, err)
 	resultHTR, err := resultBody.HashTreeRoot()
@@ -522,26 +522,6 @@ func Test_initBlockBodyFromProtoBlindedBellatrix(t *testing.T) {
 	expectedHTR, err := expectedBody.HashTreeRoot()
 	require.NoError(t, err)
 	assert.DeepEqual(t, expectedHTR, resultHTR)
-}
-
-func bodyPbBellatrix() *eth.BeaconBlockBodyBellatrix {
-	f := tgen.GetBlockFields()
-	return &eth.BeaconBlockBodyBellatrix{
-		RandaoReveal: f.B96,
-		Eth1Data: &eth.Eth1Data{
-			DepositRoot:  f.B32,
-			DepositCount: 128,
-			BlockHash:    f.B32,
-		},
-		Graffiti:          f.B32,
-		ProposerSlashings: f.ProposerSlashings,
-		AttesterSlashings: f.AttesterSlashings,
-		Attestations:      f.Atts,
-		Deposits:          f.Deposits,
-		VoluntaryExits:    f.VoluntaryExits,
-		SyncAggregate:     f.SyncAggregate,
-		ExecutionPayload:  f.ExecPayload,
-	}
 }
 
 func bodyPbBlindedBellatrix() *eth.BlindedBeaconBlockBodyBellatrix {
