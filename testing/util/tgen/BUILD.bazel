@@ -4,7 +4,7 @@ go_library(
     name = "go_default_library",
     testonly = True,
     srcs = ["generator.go"],
-    importpath = "github.com/prysmaticlabs/prysm/testing/util/tgenerator",
+    importpath = "github.com/prysmaticlabs/prysm/testing/util/tgen",
     visibility = ["//visibility:public"],
     deps = [
         "//proto/engine/v1:go_default_library",

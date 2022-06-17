@@ -10,7 +10,7 @@ import (
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util/tgenerator"
+	"github.com/prysmaticlabs/prysm/testing/util/tgen"
 )
 
 func TestBeaconBlockHeaderFromBlock(t *testing.T) {
@@ -20,7 +20,7 @@ func TestBeaconBlockHeaderFromBlock(t *testing.T) {
 		ProposerIndex: 2,
 		ParentRoot:    bytesutil.PadTo([]byte("parent root"), hashLen),
 		StateRoot:     bytesutil.PadTo([]byte("state root"), hashLen),
-		Body:          tgenerator.PbBlockBodyPhase0(),
+		Body:          tgen.PbBlockBodyPhase0(),
 	}
 	bodyRoot, err := blk.Body.HashTreeRoot()
 	require.NoError(t, err)
@@ -44,7 +44,7 @@ func TestBeaconBlockHeaderFromBlockInterface(t *testing.T) {
 		ProposerIndex: 2,
 		ParentRoot:    bytesutil.PadTo([]byte("parent root"), hashLen),
 		StateRoot:     bytesutil.PadTo([]byte("state root"), hashLen),
-		Body:          tgenerator.PbBlockBodyPhase0(),
+		Body:          tgen.PbBlockBodyPhase0(),
 	}
 	bodyRoot, err := blk.Body.HashTreeRoot()
 	require.NoError(t, err)
@@ -82,7 +82,7 @@ func TestSignedBeaconBlockHeaderFromBlock(t *testing.T) {
 		ProposerIndex: 2,
 		ParentRoot:    bytesutil.PadTo([]byte("parent root"), hashLen),
 		StateRoot:     bytesutil.PadTo([]byte("state root"), hashLen),
-		Body:          tgenerator.PbBlockBodyPhase0(),
+		Body:          tgen.PbBlockBodyPhase0(),
 	},
 		Signature: bytesutil.PadTo([]byte("signature"), fieldparams.BLSSignatureLength),
 	}
@@ -110,7 +110,7 @@ func TestSignedBeaconBlockHeaderFromBlockInterface(t *testing.T) {
 		ProposerIndex: 2,
 		ParentRoot:    bytesutil.PadTo([]byte("parent root"), hashLen),
 		StateRoot:     bytesutil.PadTo([]byte("state root"), hashLen),
-		Body:          tgenerator.PbBlockBodyPhase0(),
+		Body:          tgen.PbBlockBodyPhase0(),
 	},
 		Signature: bytesutil.PadTo([]byte("signature"), fieldparams.BLSSignatureLength),
 	}

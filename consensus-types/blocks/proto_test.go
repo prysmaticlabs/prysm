@@ -7,11 +7,11 @@ import (
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util/tgenerator"
+	"github.com/prysmaticlabs/prysm/testing/util/tgen"
 )
 
 func Test_SignedBeaconBlock_Proto(t *testing.T) {
-	f := tgenerator.GetBlockFields()
+	f := tgen.GetBlockFields()
 
 	t.Run("Phase0", func(t *testing.T) {
 		expectedBlock := &eth.SignedBeaconBlock{
@@ -20,7 +20,7 @@ func Test_SignedBeaconBlock_Proto(t *testing.T) {
 				ProposerIndex: 128,
 				ParentRoot:    f.B32,
 				StateRoot:     f.B32,
-				Body:          tgenerator.PbBlockBodyPhase0(),
+				Body:          tgen.PbBlockBodyPhase0(),
 			},
 			Signature: f.B96,
 		}
@@ -152,7 +152,7 @@ func Test_SignedBeaconBlock_Proto(t *testing.T) {
 }
 
 func Test_BeaconBlock_Proto(t *testing.T) {
-	f := tgenerator.GetBlockFields()
+	f := tgen.GetBlockFields()
 
 	t.Run("Phase0", func(t *testing.T) {
 		expectedBlock := &eth.BeaconBlock{
@@ -160,7 +160,7 @@ func Test_BeaconBlock_Proto(t *testing.T) {
 			ProposerIndex: 128,
 			ParentRoot:    f.B32,
 			StateRoot:     f.B32,
-			Body:          tgenerator.PbBlockBodyPhase0(),
+			Body:          tgen.PbBlockBodyPhase0(),
 		}
 		block := &BeaconBlock{
 			version:       version.Phase0,
@@ -266,7 +266,7 @@ func Test_BeaconBlock_Proto(t *testing.T) {
 
 func Test_BeaconBlockBody_Proto(t *testing.T) {
 	t.Run("Phase0", func(t *testing.T) {
-		expectedBody := tgenerator.PbBlockBodyPhase0()
+		expectedBody := tgen.PbBlockBodyPhase0()
 		body := bodyPhase0()
 
 		result, err := body.Proto()
@@ -321,14 +321,14 @@ func Test_BeaconBlockBody_Proto(t *testing.T) {
 }
 
 func Test_initSignedBlockFromProtoPhase0(t *testing.T) {
-	f := tgenerator.GetBlockFields()
+	f := tgen.GetBlockFields()
 	expectedBlock := &eth.SignedBeaconBlock{
 		Block: &eth.BeaconBlock{
 			Slot:          128,
 			ProposerIndex: 128,
 			ParentRoot:    f.B32,
 			StateRoot:     f.B32,
-			Body:          tgenerator.PbBlockBodyPhase0(),
+			Body:          tgen.PbBlockBodyPhase0(),
 		},
 		Signature: f.B96,
 	}
@@ -343,7 +343,7 @@ func Test_initSignedBlockFromProtoPhase0(t *testing.T) {
 }
 
 func Test_initSignedBlockFromProtoAltair(t *testing.T) {
-	f := tgenerator.GetBlockFields()
+	f := tgen.GetBlockFields()
 	expectedBlock := &eth.SignedBeaconBlockAltair{
 		Block: &eth.BeaconBlockAltair{
 			Slot:          128,
@@ -365,7 +365,7 @@ func Test_initSignedBlockFromProtoAltair(t *testing.T) {
 }
 
 func Test_initSignedBlockFromProtoBellatrix(t *testing.T) {
-	f := tgenerator.GetBlockFields()
+	f := tgen.GetBlockFields()
 	expectedBlock := &eth.SignedBeaconBlockBellatrix{
 		Block: &eth.BeaconBlockBellatrix{
 			Slot:          128,
@@ -387,7 +387,7 @@ func Test_initSignedBlockFromProtoBellatrix(t *testing.T) {
 }
 
 func Test_initBlindedSignedBlockFromProtoBellatrix(t *testing.T) {
-	f := tgenerator.GetBlockFields()
+	f := tgen.GetBlockFields()
 	expectedBlock := &eth.SignedBlindedBeaconBlockBellatrix{
 		Block: &eth.BlindedBeaconBlockBellatrix{
 			Slot:          128,
@@ -409,13 +409,13 @@ func Test_initBlindedSignedBlockFromProtoBellatrix(t *testing.T) {
 }
 
 func Test_initBlockFromProtoPhase0(t *testing.T) {
-	f := tgenerator.GetBlockFields()
+	f := tgen.GetBlockFields()
 	expectedBlock := &eth.BeaconBlock{
 		Slot:          128,
 		ProposerIndex: 128,
 		ParentRoot:    f.B32,
 		StateRoot:     f.B32,
-		Body:          tgenerator.PbBlockBodyPhase0(),
+		Body:          tgen.PbBlockBodyPhase0(),
 	}
 	resultBlock, err := initBlockFromProtoPhase0(expectedBlock)
 	require.NoError(t, err)
@@ -427,7 +427,7 @@ func Test_initBlockFromProtoPhase0(t *testing.T) {
 }
 
 func Test_initBlockFromProtoAltair(t *testing.T) {
-	f := tgenerator.GetBlockFields()
+	f := tgen.GetBlockFields()
 	expectedBlock := &eth.BeaconBlockAltair{
 		Slot:          128,
 		ProposerIndex: 128,
@@ -445,7 +445,7 @@ func Test_initBlockFromProtoAltair(t *testing.T) {
 }
 
 func Test_initBlockFromProtoBellatrix(t *testing.T) {
-	f := tgenerator.GetBlockFields()
+	f := tgen.GetBlockFields()
 	expectedBlock := &eth.BeaconBlockBellatrix{
 		Slot:          128,
 		ProposerIndex: 128,
@@ -463,7 +463,7 @@ func Test_initBlockFromProtoBellatrix(t *testing.T) {
 }
 
 func Test_initBlockFromProtoBlindedBellatrix(t *testing.T) {
-	f := tgenerator.GetBlockFields()
+	f := tgen.GetBlockFields()
 	expectedBlock := &eth.BlindedBeaconBlockBellatrix{
 		Slot:          128,
 		ProposerIndex: 128,
@@ -481,7 +481,7 @@ func Test_initBlockFromProtoBlindedBellatrix(t *testing.T) {
 }
 
 func Test_initBlockBodyFromProtoPhase0(t *testing.T) {
-	expectedBody := tgenerator.PbBlockBodyPhase0()
+	expectedBody := tgen.PbBlockBodyPhase0()
 	resultBody, err := initBlockBodyFromProtoPhase0(expectedBody)
 	require.NoError(t, err)
 	resultHTR, err := resultBody.HashTreeRoot()
@@ -525,7 +525,7 @@ func Test_initBlockBodyFromProtoBlindedBellatrix(t *testing.T) {
 }
 
 func bodyPbAltair() *eth.BeaconBlockBodyAltair {
-	f := tgenerator.GetBlockFields()
+	f := tgen.GetBlockFields()
 	return &eth.BeaconBlockBodyAltair{
 		RandaoReveal: f.B96,
 		Eth1Data: &eth.Eth1Data{
@@ -544,7 +544,7 @@ func bodyPbAltair() *eth.BeaconBlockBodyAltair {
 }
 
 func bodyPbBellatrix() *eth.BeaconBlockBodyBellatrix {
-	f := tgenerator.GetBlockFields()
+	f := tgen.GetBlockFields()
 	return &eth.BeaconBlockBodyBellatrix{
 		RandaoReveal: f.B96,
 		Eth1Data: &eth.Eth1Data{
@@ -564,7 +564,7 @@ func bodyPbBellatrix() *eth.BeaconBlockBodyBellatrix {
 }
 
 func bodyPbBlindedBellatrix() *eth.BlindedBeaconBlockBodyBellatrix {
-	f := tgenerator.GetBlockFields()
+	f := tgen.GetBlockFields()
 	return &eth.BlindedBeaconBlockBodyBellatrix{
 		RandaoReveal: f.B96,
 		Eth1Data: &eth.Eth1Data{
@@ -584,7 +584,7 @@ func bodyPbBlindedBellatrix() *eth.BlindedBeaconBlockBodyBellatrix {
 }
 
 func bodyPhase0() *BeaconBlockBody {
-	f := tgenerator.GetBlockFields()
+	f := tgen.GetBlockFields()
 	return &BeaconBlockBody{
 		version:      version.Phase0,
 		randaoReveal: f.B96,
@@ -603,7 +603,7 @@ func bodyPhase0() *BeaconBlockBody {
 }
 
 func bodyAltair() *BeaconBlockBody {
-	f := tgenerator.GetBlockFields()
+	f := tgen.GetBlockFields()
 	return &BeaconBlockBody{
 		version:      version.Altair,
 		randaoReveal: f.B96,
@@ -623,7 +623,7 @@ func bodyAltair() *BeaconBlockBody {
 }
 
 func bodyBellatrix() *BeaconBlockBody {
-	f := tgenerator.GetBlockFields()
+	f := tgen.GetBlockFields()
 	return &BeaconBlockBody{
 		version:      version.Bellatrix,
 		randaoReveal: f.B96,
@@ -644,7 +644,7 @@ func bodyBellatrix() *BeaconBlockBody {
 }
 
 func bodyBlindedBellatrix() *BeaconBlockBody {
-	f := tgenerator.GetBlockFields()
+	f := tgen.GetBlockFields()
 	return &BeaconBlockBody{
 		version:      version.BellatrixBlind,
 		randaoReveal: f.B96,

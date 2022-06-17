@@ -1,4 +1,4 @@
-package tgenerator
+package tgen
 
 import (
 	"math/rand"
