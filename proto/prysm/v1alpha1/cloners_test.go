@@ -5,7 +5,6 @@ import (
 	"reflect"
 	"testing"
 
-	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/util/tgen"
@@ -371,9 +370,9 @@ func TestCopyBlindedBeaconBlockBellatrix(t *testing.T) {
 }
 
 func TestCopyBlindedBeaconBlockBodyBellatrix(t *testing.T) {
-	bb := tgen.PbBlockBodyBellatrix()
+	bb := tgen.PbBlindedBlockBodyBellatrix()
 
-	got := v1alpha1.CopyBeaconBlockBodyBellatrix(bb)
+	got := v1alpha1.CopyBlindedBeaconBlockBodyBellatrix(bb)
 	if !reflect.DeepEqual(got, bb) {
 		t.Errorf("CopyBeaconBlockBodyBellatrix() = %v, want %v", got, bb)
 	}
@@ -626,28 +625,13 @@ func genSignedBeaconBlockBellatrix() *v1alpha1.SignedBeaconBlockBellatrix {
 	}
 }
 
-func genBlindedBeaconBlockBodyBellatrix() *v1alpha1.BlindedBeaconBlockBodyBellatrix {
-	return &v1alpha1.BlindedBeaconBlockBodyBellatrix{
-		RandaoReveal:           bytes(),
-		Eth1Data:               genEth1Data(),
-		Graffiti:               bytes(),
-		ProposerSlashings:      genProposerSlashings(5),
-		AttesterSlashings:      genAttesterSlashings(5),
-		Attestations:           genAttestations(10),
-		Deposits:               genDeposits(5),
-		VoluntaryExits:         genSignedVoluntaryExits(12),
-		SyncAggregate:          genSyncAggregate(),
-		ExecutionPayloadHeader: genPayloadHeader(),
-	}
-}
-
 func genBlindedBeaconBlockBellatrix() *v1alpha1.BlindedBeaconBlockBellatrix {
 	return &v1alpha1.BlindedBeaconBlockBellatrix{
 		Slot:          123455,
 		ProposerIndex: 55433,
 		ParentRoot:    bytes(),
 		StateRoot:     bytes(),
-		Body:          genBlindedBeaconBlockBodyBellatrix(),
+		Body:          tgen.PbBlindedBlockBodyBellatrix(),
 	}
 }
 
@@ -664,25 +648,6 @@ func genSyncCommitteeMessage() *v1alpha1.SyncCommitteeMessage {
 		BlockRoot:      bytes(),
 		ValidatorIndex: 5443,
 		Signature:      bytes(),
-	}
-}
-
-func genPayload() *enginev1.ExecutionPayload {
-	return &enginev1.ExecutionPayload{
-		ParentHash:    bytes(),
-		FeeRecipient:  bytes(),
-		StateRoot:     bytes(),
-		ReceiptsRoot:  bytes(),
-		LogsBloom:     bytes(),
-		PrevRandao:    bytes(),
-		BlockNumber:   1,
-		GasLimit:      2,
-		GasUsed:       3,
-		Timestamp:     4,
-		ExtraData:     bytes(),
-		BaseFeePerGas: bytes(),
-		BlockHash:     bytes(),
-		Transactions:  [][]byte{{'a'}, {'b'}, {'c'}},
 	}
 }
 

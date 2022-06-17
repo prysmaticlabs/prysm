@@ -308,3 +308,23 @@ func PbBlockBodyBellatrix() *eth.BeaconBlockBodyBellatrix {
 		ExecutionPayload:  f.ExecPayload,
 	}
 }
+
+func PbBlindedBlockBodyBellatrix() *eth.BlindedBeaconBlockBodyBellatrix {
+	f := GetBlockFields()
+	return &eth.BlindedBeaconBlockBodyBellatrix{
+		RandaoReveal: f.B96,
+		Eth1Data: &eth.Eth1Data{
+			DepositRoot:  f.B32,
+			DepositCount: 128,
+			BlockHash:    f.B32,
+		},
+		Graffiti:               f.B32,
+		ProposerSlashings:      f.ProposerSlashings,
+		AttesterSlashings:      f.AttesterSlashings,
+		Attestations:           f.Atts,
+		Deposits:               f.Deposits,
+		VoluntaryExits:         f.VoluntaryExits,
+		SyncAggregate:          f.SyncAggregate,
+		ExecutionPayloadHeader: f.ExecPayloadHeader,
+	}
+}
