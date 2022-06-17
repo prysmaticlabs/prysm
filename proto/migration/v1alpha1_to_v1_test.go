@@ -120,17 +120,7 @@ func Test_V1ToV1Alpha1SignedBlock(t *testing.T) {
 }
 
 func Test_V1ToV1Alpha1Block(t *testing.T) {
-	alphaBlock := util.HydrateBeaconBlock(&ethpbalpha.BeaconBlock{})
-	alphaBlock.Slot = slot
-	alphaBlock.ProposerIndex = validatorIndex
-	alphaBlock.ParentRoot = parentRoot
-	alphaBlock.StateRoot = stateRoot
-	alphaBlock.Body.RandaoReveal = randaoReveal
-	alphaBlock.Body.Eth1Data = &ethpbalpha.Eth1Data{
-		DepositRoot:  depositRoot,
-		DepositCount: depositCount,
-		BlockHash:    blockHash,
-	}
+	alphaBlock := tgen.PbBlockPhase0()
 
 	v1Block, err := V1Alpha1ToV1Block(alphaBlock)
 	require.NoError(t, err)
@@ -142,6 +132,7 @@ func Test_V1ToV1Alpha1Block(t *testing.T) {
 }
 
 func Test_V1Alpha1AttSlashingToV1(t *testing.T) {
+	// TODO: Tutaj i w innych miejscach można wykorzystać tgen.GetBlockFields().X
 	alphaAttestation := &ethpbalpha.IndexedAttestation{
 		AttestingIndices: attestingIndices,
 		Data: &ethpbalpha.AttestationData{

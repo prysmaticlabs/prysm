@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/testing/util/tgen"
 )
 
 func TestV1Alpha1SignedContributionAndProofToV2(t *testing.T) {
@@ -47,23 +48,7 @@ func TestV1Alpha1SignedContributionAndProofToV2(t *testing.T) {
 }
 
 func Test_V1Alpha1BeaconBlockAltairToV2(t *testing.T) {
-	alphaBlock := util.HydrateBeaconBlockAltair(&ethpbalpha.BeaconBlockAltair{})
-	alphaBlock.Slot = slot
-	alphaBlock.ProposerIndex = validatorIndex
-	alphaBlock.ParentRoot = parentRoot
-	alphaBlock.StateRoot = stateRoot
-	alphaBlock.Body.RandaoReveal = randaoReveal
-	alphaBlock.Body.Eth1Data = &ethpbalpha.Eth1Data{
-		DepositRoot:  depositRoot,
-		DepositCount: depositCount,
-		BlockHash:    blockHash,
-	}
-	syncCommitteeBits := bitfield.NewBitvector512()
-	syncCommitteeBits.SetBitAt(100, true)
-	alphaBlock.Body.SyncAggregate = &ethpbalpha.SyncAggregate{
-		SyncCommitteeBits:      syncCommitteeBits,
-		SyncCommitteeSignature: signature,
-	}
+	alphaBlock := tgen.PbBlockAltair()
 
 	v2Block, err := V1Alpha1BeaconBlockAltairToV2(alphaBlock)
 	require.NoError(t, err)

@@ -41,10 +41,7 @@ func Test_SignedBeaconBlock_Proto(t *testing.T) {
 		assert.DeepEqual(t, expectedHTR, resultHTR)
 	})
 	t.Run("Altair", func(t *testing.T) {
-		expectedBlock := &eth.SignedBeaconBlockAltair{
-			Block:     tgen.PbBlockAltair(),
-			Signature: f.B96,
-		}
+		expectedBlock := tgen.PbSignedBlockAltair()
 		block := &SignedBeaconBlock{
 			version: version.Altair,
 			block: &BeaconBlock{
@@ -270,6 +267,8 @@ func Test_BeaconBlockBody_Proto(t *testing.T) {
 		assert.DeepEqual(t, expectedHTR, resultHTR)
 	})
 }
+
+// TODO: Use tgen in all init tests
 
 func Test_initSignedBlockFromProtoPhase0(t *testing.T) {
 	f := tgen.GetBlockFields()

@@ -260,6 +260,14 @@ func PbSignedBlockPhase0() *eth.SignedBeaconBlock {
 	}
 }
 
+func PbSignedBlockAltair() *eth.SignedBeaconBlockAltair {
+	f := GetBlockFields()
+	return &eth.SignedBeaconBlockAltair{
+		Block:     PbBlockAltair(),
+		Signature: f.B96,
+	}
+}
+
 func PbBlockPhase0() *eth.BeaconBlock {
 	f := GetBlockFields()
 	return &eth.BeaconBlock{

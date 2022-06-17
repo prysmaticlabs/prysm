@@ -90,7 +90,7 @@ func TestCopyBeaconBlockBody(t *testing.T) {
 }
 
 func TestCopySignedBeaconBlockAltair(t *testing.T) {
-	sbb := genSignedBeaconBlockAltair()
+	sbb := tgen.PbSignedBlockAltair()
 
 	got := v1alpha1.CopySignedBeaconBlockAltair(sbb)
 	if !reflect.DeepEqual(got, sbb) {
@@ -571,13 +571,6 @@ func genSyncAggregate() *v1alpha1.SyncAggregate {
 	return &v1alpha1.SyncAggregate{
 		SyncCommitteeBits:      bytes(),
 		SyncCommitteeSignature: bytes(),
-	}
-}
-
-func genSignedBeaconBlockAltair() *v1alpha1.SignedBeaconBlockAltair {
-	return &v1alpha1.SignedBeaconBlockAltair{
-		Block:     tgen.PbBlockAltair(),
-		Signature: bytes(),
 	}
 }
 
