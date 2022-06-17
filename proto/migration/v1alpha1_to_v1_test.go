@@ -132,7 +132,6 @@ func Test_V1ToV1Alpha1Block(t *testing.T) {
 }
 
 func Test_V1Alpha1AttSlashingToV1(t *testing.T) {
-	// TODO: Tutaj i w innych miejscach można wykorzystać tgen.GetBlockFields().X
 	alphaAttestation := &ethpbalpha.IndexedAttestation{
 		AttestingIndices: attestingIndices,
 		Data: &ethpbalpha.AttestationData{
