@@ -66,10 +66,7 @@ func Test_SignedBeaconBlock_Proto(t *testing.T) {
 		assert.DeepEqual(t, expectedHTR, resultHTR)
 	})
 	t.Run("Bellatrix", func(t *testing.T) {
-		expectedBlock := &eth.SignedBeaconBlockBellatrix{
-			Block:     tgen.PbBlockBellatrix(),
-			Signature: f.B96,
-		}
+		expectedBlock := tgen.PbSignedBlockBellatrix()
 		block := &SignedBeaconBlock{
 			version: version.Bellatrix,
 			block: &BeaconBlock{

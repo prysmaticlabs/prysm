@@ -320,7 +320,7 @@ func TestCopyPayloadHeader(t *testing.T) {
 }
 
 func TestCopySignedBeaconBlockBellatrix(t *testing.T) {
-	sbb := genSignedBeaconBlockBellatrix()
+	sbb := tgen.PbSignedBlockBellatrix()
 
 	got := v1alpha1.CopySignedBeaconBlockBellatrix(sbb)
 	if !reflect.DeepEqual(got, sbb) {
@@ -571,13 +571,6 @@ func genSyncAggregate() *v1alpha1.SyncAggregate {
 	return &v1alpha1.SyncAggregate{
 		SyncCommitteeBits:      bytes(),
 		SyncCommitteeSignature: bytes(),
-	}
-}
-
-func genSignedBeaconBlockBellatrix() *v1alpha1.SignedBeaconBlockBellatrix {
-	return &v1alpha1.SignedBeaconBlockBellatrix{
-		Block:     tgen.PbBlockBellatrix(),
-		Signature: bytes(),
 	}
 }
 

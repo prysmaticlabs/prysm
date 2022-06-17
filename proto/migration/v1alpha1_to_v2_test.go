@@ -179,23 +179,7 @@ func Test_BlindedBellatrixToV1Alpha1SignedBlock(t *testing.T) {
 }
 
 func Test_V1Alpha1BeaconBlockBellatrixToV2(t *testing.T) {
-	alphaBlock := util.HydrateBeaconBlockBellatrix(&ethpbalpha.BeaconBlockBellatrix{})
-	alphaBlock.Slot = slot
-	alphaBlock.ProposerIndex = validatorIndex
-	alphaBlock.ParentRoot = parentRoot
-	alphaBlock.StateRoot = stateRoot
-	alphaBlock.Body.RandaoReveal = randaoReveal
-	alphaBlock.Body.Eth1Data = &ethpbalpha.Eth1Data{
-		DepositRoot:  depositRoot,
-		DepositCount: depositCount,
-		BlockHash:    blockHash,
-	}
-	syncCommitteeBits := bitfield.NewBitvector512()
-	syncCommitteeBits.SetBitAt(100, true)
-	alphaBlock.Body.SyncAggregate = &ethpbalpha.SyncAggregate{
-		SyncCommitteeBits:      syncCommitteeBits,
-		SyncCommitteeSignature: signature,
-	}
+	alphaBlock := tgen.PbBlockBellatrix()
 
 	v2Block, err := V1Alpha1BeaconBlockBellatrixToV2(alphaBlock)
 	require.NoError(t, err)
@@ -207,24 +191,7 @@ func Test_V1Alpha1BeaconBlockBellatrixToV2(t *testing.T) {
 }
 
 func Test_V1Alpha1BeaconBlockBellatrixToV2Blinded(t *testing.T) {
-	alphaBlock := util.HydrateBeaconBlockBellatrix(&ethpbalpha.BeaconBlockBellatrix{})
-	alphaBlock.Slot = slot
-	alphaBlock.ProposerIndex = validatorIndex
-	alphaBlock.ParentRoot = parentRoot
-	alphaBlock.StateRoot = stateRoot
-	alphaBlock.Body.RandaoReveal = randaoReveal
-	alphaBlock.Body.Eth1Data = &ethpbalpha.Eth1Data{
-		DepositRoot:  depositRoot,
-		DepositCount: depositCount,
-		BlockHash:    blockHash,
-	}
-	syncCommitteeBits := bitfield.NewBitvector512()
-	syncCommitteeBits.SetBitAt(100, true)
-	alphaBlock.Body.SyncAggregate = &ethpbalpha.SyncAggregate{
-		SyncCommitteeBits:      syncCommitteeBits,
-		SyncCommitteeSignature: signature,
-	}
-	alphaBlock.Body.ExecutionPayload.Transactions = [][]byte{[]byte("transaction1"), []byte("transaction2")}
+	alphaBlock := tgen.PbBlockBellatrix()
 
 	v2Block, err := V1Alpha1BeaconBlockBellatrixToV2Blinded(alphaBlock)
 	require.NoError(t, err)
