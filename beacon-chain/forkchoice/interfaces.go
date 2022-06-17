@@ -15,7 +15,6 @@ type ForkChoicer interface {
 	HeadRetriever        // to compute head.
 	BlockProcessor       // to track new block for fork choice.
 	AttestationProcessor // to track new attestation for fork choice.
-	Pruner               // to clean old data for fork choice.
 	Getter               // to retrieve fork choice information.
 	Setter               // to set fork choice information.
 	ProposerBooster      // ability to boost timely-proposed block roots.
@@ -38,11 +37,6 @@ type BlockProcessor interface {
 type AttestationProcessor interface {
 	ProcessAttestation(context.Context, []uint64, [32]byte, types.Epoch)
 	InsertSlashedIndex(context.Context, types.ValidatorIndex)
-}
-
-// Pruner prunes the fork choice upon new finalization. This is used to keep fork choice sane.
-type Pruner interface {
-	Prune(context.Context, [32]byte) error
 }
 
 // ProposerBooster is able to boost the proposer's root score during fork choice.
