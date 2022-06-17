@@ -4,6 +4,7 @@ import (
 	"math/rand"
 
 	"github.com/prysmaticlabs/go-bitfield"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
@@ -83,6 +84,8 @@ type byteSlices struct {
 
 type BlockFields struct {
 	byteSlices
+	Slot              types.Slot
+	ProposerIndex     types.ValidatorIndex
 	Deposits          []*eth.Deposit
 	Atts              []*eth.Attestation
 	ProposerSlashings []*eth.ProposerSlashing
@@ -241,6 +244,8 @@ func GetBlockFields() BlockFields {
 			B96:  b96,
 			B256: b256,
 		},
+		Slot:              128,
+		ProposerIndex:     128,
 		Deposits:          deposits,
 		Atts:              atts,
 		ProposerSlashings: []*eth.ProposerSlashing{proposerSlashing},

@@ -10,8 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/util/tgen"
 )
 
-// TODO: Use f to set block fields instead of using magic numbers eg. slot: 128
-
 func Test_SignedBeaconBlock_Proto(t *testing.T) {
 	f := tgen.GetBlockFields()
 
@@ -21,8 +19,8 @@ func Test_SignedBeaconBlock_Proto(t *testing.T) {
 			version: version.Phase0,
 			block: &BeaconBlock{
 				version:       version.Phase0,
-				slot:          128,
-				proposerIndex: 128,
+				slot:          f.Slot,
+				proposerIndex: f.ProposerIndex,
 				parentRoot:    f.B32,
 				stateRoot:     f.B32,
 				body:          bodyPhase0(),
@@ -46,8 +44,8 @@ func Test_SignedBeaconBlock_Proto(t *testing.T) {
 			version: version.Altair,
 			block: &BeaconBlock{
 				version:       version.Altair,
-				slot:          128,
-				proposerIndex: 128,
+				slot:          f.Slot,
+				proposerIndex: f.ProposerIndex,
 				parentRoot:    f.B32,
 				stateRoot:     f.B32,
 				body:          bodyAltair(),
@@ -71,8 +69,8 @@ func Test_SignedBeaconBlock_Proto(t *testing.T) {
 			version: version.Bellatrix,
 			block: &BeaconBlock{
 				version:       version.Bellatrix,
-				slot:          128,
-				proposerIndex: 128,
+				slot:          f.Slot,
+				proposerIndex: f.ProposerIndex,
 				parentRoot:    f.B32,
 				stateRoot:     f.B32,
 				body:          bodyBellatrix(),
@@ -96,8 +94,8 @@ func Test_SignedBeaconBlock_Proto(t *testing.T) {
 			version: version.BellatrixBlind,
 			block: &BeaconBlock{
 				version:       version.BellatrixBlind,
-				slot:          128,
-				proposerIndex: 128,
+				slot:          f.Slot,
+				proposerIndex: f.ProposerIndex,
 				parentRoot:    f.B32,
 				stateRoot:     f.B32,
 				body:          bodyBlindedBellatrix(),
@@ -124,8 +122,8 @@ func Test_BeaconBlock_Proto(t *testing.T) {
 		expectedBlock := tgen.PbBlockPhase0()
 		block := &BeaconBlock{
 			version:       version.Phase0,
-			slot:          128,
-			proposerIndex: 128,
+			slot:          f.Slot,
+			proposerIndex: f.ProposerIndex,
 			parentRoot:    f.B32,
 			stateRoot:     f.B32,
 			body:          bodyPhase0(),
@@ -145,8 +143,8 @@ func Test_BeaconBlock_Proto(t *testing.T) {
 		expectedBlock := tgen.PbBlockAltair()
 		block := &BeaconBlock{
 			version:       version.Altair,
-			slot:          128,
-			proposerIndex: 128,
+			slot:          f.Slot,
+			proposerIndex: f.ProposerIndex,
 			parentRoot:    f.B32,
 			stateRoot:     f.B32,
 			body:          bodyAltair(),
@@ -166,8 +164,8 @@ func Test_BeaconBlock_Proto(t *testing.T) {
 		expectedBlock := tgen.PbBlockBellatrix()
 		block := &BeaconBlock{
 			version:       version.Bellatrix,
-			slot:          128,
-			proposerIndex: 128,
+			slot:          f.Slot,
+			proposerIndex: f.ProposerIndex,
 			parentRoot:    f.B32,
 			stateRoot:     f.B32,
 			body:          bodyBellatrix(),
@@ -187,8 +185,8 @@ func Test_BeaconBlock_Proto(t *testing.T) {
 		expectedBlock := tgen.PbBlindedBlockBellatrix()
 		block := &BeaconBlock{
 			version:       version.BellatrixBlind,
-			slot:          128,
-			proposerIndex: 128,
+			slot:          f.Slot,
+			proposerIndex: f.ProposerIndex,
 			parentRoot:    f.B32,
 			stateRoot:     f.B32,
 			body:          bodyBlindedBellatrix(),
@@ -262,20 +260,8 @@ func Test_BeaconBlockBody_Proto(t *testing.T) {
 	})
 }
 
-// TODO: Use tgen in all init tests
-
 func Test_initSignedBlockFromProtoPhase0(t *testing.T) {
-	f := tgen.GetBlockFields()
-	expectedBlock := &eth.SignedBeaconBlock{
-		Block: &eth.BeaconBlock{
-			Slot:          128,
-			ProposerIndex: 128,
-			ParentRoot:    f.B32,
-			StateRoot:     f.B32,
-			Body:          tgen.PbBlockBodyPhase0(),
-		},
-		Signature: f.B96,
-	}
+	expectedBlock := tgen.PbSignedBlockPhase0()
 	resultBlock, err := initSignedBlockFromProtoPhase0(expectedBlock)
 	require.NoError(t, err)
 	resultHTR, err := resultBlock.block.HashTreeRoot()
@@ -287,17 +273,7 @@ func Test_initSignedBlockFromProtoPhase0(t *testing.T) {
 }
 
 func Test_initSignedBlockFromProtoAltair(t *testing.T) {
-	f := tgen.GetBlockFields()
-	expectedBlock := &eth.SignedBeaconBlockAltair{
-		Block: &eth.BeaconBlockAltair{
-			Slot:          128,
-			ProposerIndex: 128,
-			ParentRoot:    f.B32,
-			StateRoot:     f.B32,
-			Body:          tgen.PbBlockBodyAltair(),
-		},
-		Signature: f.B96,
-	}
+	expectedBlock := tgen.PbSignedBlockAltair()
 	resultBlock, err := initSignedBlockFromProtoAltair(expectedBlock)
 	require.NoError(t, err)
 	resultHTR, err := resultBlock.block.HashTreeRoot()
@@ -309,17 +285,7 @@ func Test_initSignedBlockFromProtoAltair(t *testing.T) {
 }
 
 func Test_initSignedBlockFromProtoBellatrix(t *testing.T) {
-	f := tgen.GetBlockFields()
-	expectedBlock := &eth.SignedBeaconBlockBellatrix{
-		Block: &eth.BeaconBlockBellatrix{
-			Slot:          128,
-			ProposerIndex: 128,
-			ParentRoot:    f.B32,
-			StateRoot:     f.B32,
-			Body:          tgen.PbBlockBodyBellatrix(),
-		},
-		Signature: f.B96,
-	}
+	expectedBlock := tgen.PbSignedBlockBellatrix()
 	resultBlock, err := initSignedBlockFromProtoBellatrix(expectedBlock)
 	require.NoError(t, err)
 	resultHTR, err := resultBlock.block.HashTreeRoot()
@@ -331,17 +297,7 @@ func Test_initSignedBlockFromProtoBellatrix(t *testing.T) {
 }
 
 func Test_initBlindedSignedBlockFromProtoBellatrix(t *testing.T) {
-	f := tgen.GetBlockFields()
-	expectedBlock := &eth.SignedBlindedBeaconBlockBellatrix{
-		Block: &eth.BlindedBeaconBlockBellatrix{
-			Slot:          128,
-			ProposerIndex: 128,
-			ParentRoot:    f.B32,
-			StateRoot:     f.B32,
-			Body:          tgen.PbBlindedBlockBodyBellatrix(),
-		},
-		Signature: f.B96,
-	}
+	expectedBlock := tgen.PbSignedBlindedBlockBellatrix()
 	resultBlock, err := initBlindedSignedBlockFromProtoBellatrix(expectedBlock)
 	require.NoError(t, err)
 	resultHTR, err := resultBlock.block.HashTreeRoot()
@@ -353,14 +309,7 @@ func Test_initBlindedSignedBlockFromProtoBellatrix(t *testing.T) {
 }
 
 func Test_initBlockFromProtoPhase0(t *testing.T) {
-	f := tgen.GetBlockFields()
-	expectedBlock := &eth.BeaconBlock{
-		Slot:          128,
-		ProposerIndex: 128,
-		ParentRoot:    f.B32,
-		StateRoot:     f.B32,
-		Body:          tgen.PbBlockBodyPhase0(),
-	}
+	expectedBlock := tgen.PbBlockPhase0()
 	resultBlock, err := initBlockFromProtoPhase0(expectedBlock)
 	require.NoError(t, err)
 	resultHTR, err := resultBlock.HashTreeRoot()
@@ -371,14 +320,7 @@ func Test_initBlockFromProtoPhase0(t *testing.T) {
 }
 
 func Test_initBlockFromProtoAltair(t *testing.T) {
-	f := tgen.GetBlockFields()
-	expectedBlock := &eth.BeaconBlockAltair{
-		Slot:          128,
-		ProposerIndex: 128,
-		ParentRoot:    f.B32,
-		StateRoot:     f.B32,
-		Body:          tgen.PbBlockBodyAltair(),
-	}
+	expectedBlock := tgen.PbBlockAltair()
 	resultBlock, err := initBlockFromProtoAltair(expectedBlock)
 	require.NoError(t, err)
 	resultHTR, err := resultBlock.HashTreeRoot()
@@ -389,14 +331,7 @@ func Test_initBlockFromProtoAltair(t *testing.T) {
 }
 
 func Test_initBlockFromProtoBellatrix(t *testing.T) {
-	f := tgen.GetBlockFields()
-	expectedBlock := &eth.BeaconBlockBellatrix{
-		Slot:          128,
-		ProposerIndex: 128,
-		ParentRoot:    f.B32,
-		StateRoot:     f.B32,
-		Body:          tgen.PbBlockBodyBellatrix(),
-	}
+	expectedBlock := tgen.PbBlockBellatrix()
 	resultBlock, err := initBlockFromProtoBellatrix(expectedBlock)
 	require.NoError(t, err)
 	resultHTR, err := resultBlock.HashTreeRoot()
@@ -407,14 +342,7 @@ func Test_initBlockFromProtoBellatrix(t *testing.T) {
 }
 
 func Test_initBlockFromProtoBlindedBellatrix(t *testing.T) {
-	f := tgen.GetBlockFields()
-	expectedBlock := &eth.BlindedBeaconBlockBellatrix{
-		Slot:          128,
-		ProposerIndex: 128,
-		ParentRoot:    f.B32,
-		StateRoot:     f.B32,
-		Body:          tgen.PbBlindedBlockBodyBellatrix(),
-	}
+	expectedBlock := tgen.PbBlindedBlockBellatrix()
 	resultBlock, err := initBlindedBlockFromProtoBellatrix(expectedBlock)
 	require.NoError(t, err)
 	resultHTR, err := resultBlock.HashTreeRoot()
