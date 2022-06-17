@@ -8,6 +8,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/testing/util"
 	v1 "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/v1"
 )
 
@@ -326,6 +327,24 @@ func GetMockSignRequest(t string) *validatorpb.SignRequest {
 			},
 			SigningSlot: 0,
 		}
+	case "BLOCK_V2_BELLATRIX":
+		return &validatorpb.SignRequest{
+			PublicKey:       make([]byte, fieldparams.BLSPubkeyLength),
+			SigningRoot:     make([]byte, fieldparams.RootLength),
+			SignatureDomain: make([]byte, 4),
+			Object: &validatorpb.SignRequest_BlockV3{
+				BlockV3: util.HydrateBeaconBlockBellatrix(&eth.BeaconBlockBellatrix{}),
+			},
+		}
+	case "BLOCK_V2_BLINDED_BELLATRIX":
+		return &validatorpb.SignRequest{
+			PublicKey:       make([]byte, fieldparams.BLSPubkeyLength),
+			SigningRoot:     make([]byte, fieldparams.RootLength),
+			SignatureDomain: make([]byte, 4),
+			Object: &validatorpb.SignRequest_BlindedBlockV3{
+				BlindedBlockV3: util.HydrateBlindedBeaconBlockBellatrix(&eth.BlindedBeaconBlockBellatrix{}),
+			},
+		}
 	case "RANDAO_REVEAL":
 		return &validatorpb.SignRequest{
 			PublicKey:       make([]byte, fieldparams.BLSPubkeyLength),
@@ -457,6 +476,24 @@ func MockBlockV2AltairSignRequest() *v1.BlockV2AltairSignRequest {
 		BeaconBlock: &v1.BeaconBlockAltairBlockV2{
 			Version: "ALTAIR",
 			Block:   MockBeaconBlockAltair(),
+		},
+	}
+}
+
+func MockBlockV2BellatrixSignRequest(bodyRoot string) *v1.BlockV2BellatrixSignRequest {
+	return &v1.BlockV2BellatrixSignRequest{
+		Type:        "BLOCK_V2",
+		ForkInfo:    MockForkInfo(),
+		SigningRoot: hexutil.Encode(make([]byte, fieldparams.RootLength)),
+		BeaconBlock: &v1.BeaconBlockBellatrixBlockV2{
+			Version: "BELLATRIX",
+			BlockHeader: &v1.BeaconBlockHeader{
+				Slot:          "0",
+				ProposerIndex: "0",
+				ParentRoot:    hexutil.Encode(make([]byte, fieldparams.RootLength)),
+				StateRoot:     hexutil.Encode(make([]byte, fieldparams.RootLength)),
+				BodyRoot:      bodyRoot,
+			},
 		},
 	}
 }
@@ -596,7 +633,7 @@ func MockBeaconBlockAltair() *v1.BeaconBlockAltair {
 			Graffiti: hexutil.Encode(make([]byte, 32)),
 			ProposerSlashings: []*v1.ProposerSlashing{
 				{
-					SignedHeader_1: &v1.SignedBeaconBlockHeader{
+					Signedheader1: &v1.SignedBeaconBlockHeader{
 						Message: &v1.BeaconBlockHeader{
 							Slot:          "0",
 							ProposerIndex: "0",
@@ -606,7 +643,7 @@ func MockBeaconBlockAltair() *v1.BeaconBlockAltair {
 						},
 						Signature: hexutil.Encode(make([]byte, fieldparams.BLSSignatureLength)),
 					},
-					SignedHeader_2: &v1.SignedBeaconBlockHeader{
+					Signedheader2: &v1.SignedBeaconBlockHeader{
 						Message: &v1.BeaconBlockHeader{
 							Slot:          "0",
 							ProposerIndex: "0",
@@ -620,8 +657,8 @@ func MockBeaconBlockAltair() *v1.BeaconBlockAltair {
 			},
 			AttesterSlashings: []*v1.AttesterSlashing{
 				{
-					Attestation_1: MockIndexedAttestation(),
-					Attestation_2: MockIndexedAttestation(),
+					Attestation1: MockIndexedAttestation(),
+					Attestation2: MockIndexedAttestation(),
 				},
 			},
 			Attestations: []*v1.Attestation{
@@ -666,7 +703,7 @@ func MockBeaconBlockBody() *v1.BeaconBlockBody {
 		Graffiti: hexutil.Encode(make([]byte, 32)),
 		ProposerSlashings: []*v1.ProposerSlashing{
 			{
-				SignedHeader_1: &v1.SignedBeaconBlockHeader{
+				Signedheader1: &v1.SignedBeaconBlockHeader{
 					Message: &v1.BeaconBlockHeader{
 						Slot:          "0",
 						ProposerIndex: "0",
@@ -676,7 +713,7 @@ func MockBeaconBlockBody() *v1.BeaconBlockBody {
 					},
 					Signature: hexutil.Encode(make([]byte, fieldparams.BLSSignatureLength)),
 				},
-				SignedHeader_2: &v1.SignedBeaconBlockHeader{
+				Signedheader2: &v1.SignedBeaconBlockHeader{
 					Message: &v1.BeaconBlockHeader{
 						Slot:          "0",
 						ProposerIndex: "0",
@@ -690,8 +727,8 @@ func MockBeaconBlockBody() *v1.BeaconBlockBody {
 		},
 		AttesterSlashings: []*v1.AttesterSlashing{
 			{
-				Attestation_1: MockIndexedAttestation(),
-				Attestation_2: MockIndexedAttestation(),
+				Attestation1: MockIndexedAttestation(),
+				Attestation2: MockIndexedAttestation(),
 			},
 		},
 		Attestations: []*v1.Attestation{

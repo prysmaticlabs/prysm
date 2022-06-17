@@ -105,8 +105,18 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedDisableCorrectlyPruneCanonicalAtts = &cli.BoolFlag{
+		Name:   "disable-correctly-prune-canonical-atts",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 	deprecatedDisableCorrectlyInsertOrphanedAtts = &cli.BoolFlag{
 		Name:   "disable-correctly-insert-orphaned-atts",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedEnableNativeState = &cli.BoolFlag{
+		Name:   "enable-native-state",
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
@@ -132,4 +142,6 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedDisableBalanceTrieComputation,
 	deprecatedDisableBatchGossipVerification,
 	deprecatedDisableCorrectlyInsertOrphanedAtts,
+	deprecatedDisableCorrectlyPruneCanonicalAtts,
+	deprecatedEnableNativeState,
 }

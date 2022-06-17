@@ -18,7 +18,7 @@ var (
 // State returns a copy of the genesis state from a hardcoded value.
 func State(name string) (state.BeaconState, error) {
 	switch name {
-	case params.ConfigNames[params.Mainnet]:
+	case params.MainnetName:
 		return load(mainnetRawSSZCompressed)
 	default:
 		// No state found.

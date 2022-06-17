@@ -7,6 +7,9 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/doubly-linked-tree"
+	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
@@ -92,17 +95,14 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b interfaces.BeaconBloc
 func (s *Service) VerifyFinalizedBlkDescendant(ctx context.Context, root [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.VerifyFinalizedBlkDescendant")
 	defer span.End()
-	finalized := s.store.FinalizedCheckpt()
-	if finalized == nil {
-		return errNilFinalizedInStore
+	finalized, err := s.store.FinalizedCheckpt()
+	if err != nil {
+		return errors.Wrap(err, "could not get finalized checkpoint")
 	}
 	fRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(finalized.Root))
-	finalizedBlkSigned, err := s.cfg.BeaconDB.Block(ctx, fRoot)
+	finalizedBlkSigned, err := s.getBlock(ctx, fRoot)
 	if err != nil {
 		return err
-	}
-	if finalizedBlkSigned == nil || finalizedBlkSigned.IsNil() || finalizedBlkSigned.Block().IsNil() {
-		return errors.New("nil finalized block")
 	}
 	finalizedBlk := finalizedBlkSigned.Block()
 	bFinalizedRoot, err := s.ancestor(ctx, root[:], finalizedBlk.Slot())
@@ -118,7 +118,7 @@ func (s *Service) VerifyFinalizedBlkDescendant(ctx context.Context, root [32]byt
 			bytesutil.Trunc(root[:]), finalizedBlk.Slot(), bytesutil.Trunc(bFinalizedRoot),
 			bytesutil.Trunc(fRoot[:]))
 		tracing.AnnotateError(span, err)
-		return err
+		return invalidBlock{err}
 	}
 	return nil
 }
@@ -126,16 +126,17 @@ func (s *Service) VerifyFinalizedBlkDescendant(ctx context.Context, root [32]byt
 // verifyBlkFinalizedSlot validates input block is not less than or equal
 // to current finalized slot.
 func (s *Service) verifyBlkFinalizedSlot(b interfaces.BeaconBlock) error {
-	finalized := s.store.FinalizedCheckpt()
-	if finalized == nil {
-		return errNilFinalizedInStore
+	finalized, err := s.store.FinalizedCheckpt()
+	if err != nil {
+		return errors.Wrap(err, "could not get finalized checkpoint")
 	}
 	finalizedSlot, err := slots.EpochStart(finalized.Epoch)
 	if err != nil {
 		return err
 	}
 	if finalizedSlot >= b.Slot() {
-		return fmt.Errorf("block is equal or earlier than finalized block, slot %d < slot %d", b.Slot(), finalizedSlot)
+		err = fmt.Errorf("block is equal or earlier than finalized block, slot %d < slot %d", b.Slot(), finalizedSlot)
+		return invalidBlock{err}
 	}
 	return nil
 }
@@ -168,7 +169,10 @@ func (s *Service) shouldUpdateCurrentJustified(ctx context.Context, newJustified
 	if slots.SinceEpochStarts(s.CurrentSlot()) < params.BeaconConfig().SafeSlotsToUpdateJustified {
 		return true, nil
 	}
-	justified := s.store.JustifiedCheckpt()
+	justified, err := s.store.JustifiedCheckpt()
+	if err != nil {
+		return false, errors.Wrap(err, "could not get justified checkpoint")
+	}
 	jSlot, err := slots.EpochStart(justified.Epoch)
 	if err != nil {
 		return false, err
@@ -190,9 +194,9 @@ func (s *Service) updateJustified(ctx context.Context, state state.ReadOnlyBeaco
 	defer span.End()
 
 	cpt := state.CurrentJustifiedCheckpoint()
-	bestJustified := s.store.BestJustifiedCheckpt()
-	if bestJustified == nil {
-		return errNilBestJustifiedInStore
+	bestJustified, err := s.store.BestJustifiedCheckpt()
+	if err != nil {
+		return errors.Wrap(err, "could not get best justified checkpoint")
 	}
 	if cpt.Epoch > bestJustified.Epoch {
 		s.store.SetBestJustifiedCheckpt(cpt)
@@ -203,14 +207,17 @@ func (s *Service) updateJustified(ctx context.Context, state state.ReadOnlyBeaco
 	}
 
 	if canUpdate {
-		justified := s.store.JustifiedCheckpt()
-		if justified == nil {
-			return errNilJustifiedInStore
+		justified, err := s.store.JustifiedCheckpt()
+		if err != nil {
+			return errors.Wrap(err, "could not get justified checkpoint")
 		}
 		s.store.SetPrevJustifiedCheckpt(justified)
-		s.store.SetJustifiedCheckpt(cpt)
+		h, err := s.getPayloadHash(ctx, cpt.Root)
+		if err != nil {
+			return err
+		}
+		s.store.SetJustifiedCheckptAndPayloadHash(cpt, h)
 	}
-
 	return nil
 }
 
@@ -218,18 +225,22 @@ func (s *Service) updateJustified(ctx context.Context, state state.ReadOnlyBeaco
 // caches justified checkpoint balances for fork choice and save justified checkpoint in DB.
 // This method does not have defense against fork choice bouncing attack, which is why it's only recommend to be used during initial syncing.
 func (s *Service) updateJustifiedInitSync(ctx context.Context, cp *ethpb.Checkpoint) error {
-	justified := s.store.JustifiedCheckpt()
-	if justified == nil {
-		return errNilJustifiedInStore
+	justified, err := s.store.JustifiedCheckpt()
+	if err != nil {
+		return errors.Wrap(err, "could not get justified checkpoint")
 	}
 	s.store.SetPrevJustifiedCheckpt(justified)
 
 	if err := s.cfg.BeaconDB.SaveJustifiedCheckpoint(ctx, cp); err != nil {
 		return err
 	}
-	s.store.SetJustifiedCheckpt(cp)
-
-	return nil
+	h, err := s.getPayloadHash(ctx, cp.Root)
+	if err != nil {
+		return err
+	}
+	s.store.SetJustifiedCheckptAndPayloadHash(cp, h)
+	return s.cfg.ForkChoiceStore.UpdateJustifiedCheckpoint(&forkchoicetypes.Checkpoint{
+		Epoch: cp.Epoch, Root: bytesutil.ToBytes32(cp.Root)})
 }
 
 func (s *Service) updateFinalized(ctx context.Context, cp *ethpb.Checkpoint) error {
@@ -249,7 +260,7 @@ func (s *Service) updateFinalized(ctx context.Context, cp *ethpb.Checkpoint) err
 
 	fRoot := bytesutil.ToBytes32(cp.Root)
 	optimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(fRoot)
-	if err != nil {
+	if err != nil && err != protoarray.ErrUnknownNodeRoot && err != doublylinkedtree.ErrNilNode {
 		return err
 	}
 	if !optimistic {
@@ -304,7 +315,8 @@ func (s *Service) ancestorByForkChoiceStore(ctx context.Context, r [32]byte, slo
 	if !s.cfg.ForkChoiceStore.HasParent(r) {
 		return nil, errors.New("could not find root in fork choice store")
 	}
-	return s.cfg.ForkChoiceStore.AncestorRoot(ctx, r, slot)
+	root, err := s.cfg.ForkChoiceStore.AncestorRoot(ctx, r, slot)
+	return root[:], err
 }
 
 // This retrieves an ancestor root using DB. The look up is recursively looking up DB. Slower than `ancestorByForkChoiceStore`.
@@ -333,53 +345,42 @@ func (s *Service) ancestorByDB(ctx context.Context, r [32]byte, slot types.Slot)
 // This is useful for block tree visualizer and additional vote accounting.
 func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk interfaces.BeaconBlock,
 	fCheckpoint, jCheckpoint *ethpb.Checkpoint) error {
-	pendingNodes := make([]interfaces.BeaconBlock, 0)
-	pendingRoots := make([][32]byte, 0)
+	pendingNodes := make([]*forkchoicetypes.BlockAndCheckpoints, 0)
 
-	parentRoot := bytesutil.ToBytes32(blk.ParentRoot())
-	slot := blk.Slot()
 	// Fork choice only matters from last finalized slot.
-	finalized := s.store.FinalizedCheckpt()
-	if finalized == nil {
-		return errNilFinalizedInStore
+	finalized, err := s.store.FinalizedCheckpt()
+	if err != nil {
+		return err
 	}
 	fSlot, err := slots.EpochStart(finalized.Epoch)
 	if err != nil {
 		return err
 	}
-	higherThanFinalized := slot > fSlot
+	pendingNodes = append(pendingNodes, &forkchoicetypes.BlockAndCheckpoints{Block: blk,
+		JustifiedCheckpoint: jCheckpoint, FinalizedCheckpoint: fCheckpoint})
 	// As long as parent node is not in fork choice store, and parent node is in DB.
-	for !s.cfg.ForkChoiceStore.HasNode(parentRoot) && s.cfg.BeaconDB.HasBlock(ctx, parentRoot) && higherThanFinalized {
-		b, err := s.cfg.BeaconDB.Block(ctx, parentRoot)
+	root := bytesutil.ToBytes32(blk.ParentRoot())
+	for !s.cfg.ForkChoiceStore.HasNode(root) && s.cfg.BeaconDB.HasBlock(ctx, root) {
+		b, err := s.getBlock(ctx, root)
 		if err != nil {
 			return err
 		}
-
-		pendingNodes = append(pendingNodes, b.Block())
-		copiedRoot := parentRoot
-		pendingRoots = append(pendingRoots, copiedRoot)
-		parentRoot = bytesutil.ToBytes32(b.Block().ParentRoot())
-		slot = b.Block().Slot()
-		higherThanFinalized = slot > fSlot
-	}
-
-	// Insert parent nodes to fork choice store in reverse order.
-	// Lower slots should be at the end of the list.
-	for i := len(pendingNodes) - 1; i >= 0; i-- {
-		b := pendingNodes[i]
-		r := pendingRoots[i]
-		payloadHash, err := getBlockPayloadHash(blk)
-		if err != nil {
-			return err
+		if b.Block().Slot() <= fSlot {
+			break
 		}
-		if err := s.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx,
-			b.Slot(), r, bytesutil.ToBytes32(b.ParentRoot()), payloadHash,
-			jCheckpoint.Epoch,
-			fCheckpoint.Epoch); err != nil {
-			return errors.Wrap(err, "could not process block for proto array fork choice")
-		}
+		root = bytesutil.ToBytes32(b.Block().ParentRoot())
+		args := &forkchoicetypes.BlockAndCheckpoints{Block: b.Block(),
+			JustifiedCheckpoint: jCheckpoint,
+			FinalizedCheckpoint: fCheckpoint}
+		pendingNodes = append(pendingNodes, args)
 	}
-	return nil
+	if len(pendingNodes) == 1 {
+		return nil
+	}
+	if root != s.ensureRootNotZeros(bytesutil.ToBytes32(finalized.Root)) {
+		return errNotDescendantOfFinalized
+	}
+	return s.cfg.ForkChoiceStore.InsertOptimisticChain(ctx, pendingNodes)
 }
 
 // inserts finalized deposits into our finalized deposit trie.

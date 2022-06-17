@@ -64,6 +64,8 @@ func (s *Service) validateAttesterSlashing(ctx context.Context, pid peer.ID, msg
 		return pubsub.ValidationReject, err
 	}
 
+	s.cfg.chain.ReceiveAttesterSlashing(ctx, slashing)
+
 	msg.ValidatorData = slashing // Used in downstream subscriber
 	return pubsub.ValidationAccept, nil
 }

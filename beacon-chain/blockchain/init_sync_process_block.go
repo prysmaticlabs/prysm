@@ -4,11 +4,9 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 )
-
-var errBlockNotFoundInCacheOrDB = errors.New("block not found in cache or db")
 
 // This saves a beacon block to the initial sync blocks cache.
 func (s *Service) saveInitSyncBlock(r [32]byte, b interfaces.SignedBeaconBlock) {
@@ -49,7 +47,7 @@ func (s *Service) getBlock(ctx context.Context, r [32]byte) (interfaces.SignedBe
 			return nil, errors.Wrap(err, "could not retrieve block from db")
 		}
 	}
-	if err := helpers.BeaconBlockIsNil(b); err != nil {
+	if err := wrapper.BeaconBlockIsNil(b); err != nil {
 		return nil, errBlockNotFoundInCacheOrDB
 	}
 	return b, nil

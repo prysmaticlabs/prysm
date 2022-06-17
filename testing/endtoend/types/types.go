@@ -9,8 +9,35 @@ import (
 	"google.golang.org/grpc"
 )
 
+type E2EConfigOpt func(*E2EConfig)
+
+func WithExtraEpochs(extra uint64) E2EConfigOpt {
+	return func(cfg *E2EConfig) {
+		cfg.ExtraEpochs = extra
+	}
+}
+
+func WithEpochs(e uint64) E2EConfigOpt {
+	return func(cfg *E2EConfig) {
+		cfg.EpochsToRun = e
+	}
+}
+
+func WithRemoteSigner() E2EConfigOpt {
+	return func(cfg *E2EConfig) {
+		cfg.UseWeb3RemoteSigner = true
+	}
+}
+
+func WithCheckpointSync() E2EConfigOpt {
+	return func(cfg *E2EConfig) {
+		cfg.TestCheckpointSync = true
+	}
+}
+
 // E2EConfig defines the struct for all configurations needed for E2E testing.
 type E2EConfig struct {
+	TestCheckpointSync      bool
 	TestSync                bool
 	TestFeature             bool
 	UsePrysmShValidator     bool
@@ -23,9 +50,11 @@ type E2EConfig struct {
 	Seed                    int64
 	TracingSinkEndpoint     string
 	Evaluators              []Evaluator
+	EvalInterceptor         func(uint64, []*grpc.ClientConn) bool
 	BeaconFlags             []string
 	ValidatorFlags          []string
 	PeerIDs                 []string
+	ExtraEpochs             uint64
 }
 
 // Evaluator defines the structure of the evaluators used to
@@ -42,6 +71,34 @@ type ComponentRunner interface {
 	Start(ctx context.Context) error
 	// Started checks whether an underlying component is started and ready to be queried.
 	Started() <-chan struct{}
+	// Pause pauses a component.
+	Pause() error
+	// Resume resumes a component.
+	Resume() error
+	// Stop stops a component.
+	Stop() error
+}
+
+type MultipleComponentRunners interface {
+	ComponentRunner
+	// ComponentAtIndex returns the component at index
+	ComponentAtIndex(i int) (ComponentRunner, error)
+	// PauseAtIndex pauses the grouped component element at the desired index.
+	PauseAtIndex(i int) error
+	// ResumeAtIndex resumes the grouped component element at the desired index.
+	ResumeAtIndex(i int) error
+	// StopAtIndex stops the grouped component element at the desired index.
+	StopAtIndex(i int) error
+}
+
+type EngineProxy interface {
+	ComponentRunner
+	// AddRequestInterceptor adds in a json-rpc request interceptor.
+	AddRequestInterceptor(rpcMethodName string, responseGen func() interface{}, trigger func() bool)
+	// RemoveRequestInterceptor removes the request interceptor for the provided method.
+	RemoveRequestInterceptor(rpcMethodName string)
+	// ReleaseBackedUpRequests releases backed up http requests.
+	ReleaseBackedUpRequests(rpcMethodName string)
 }
 
 // BeaconNodeSet defines an interface for an object that fulfills the duties

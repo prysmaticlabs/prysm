@@ -1321,7 +1321,9 @@ func TestBlocksQueue_stuckWhenHeadIsSetToOrphanedBlock(t *testing.T) {
 
 	require.NoError(t, queue.start())
 	isProcessedBlock := func(ctx context.Context, blk interfaces.SignedBeaconBlock, blkRoot [32]byte) bool {
-		finalizedSlot, err := slots.EpochStart(mc.FinalizedCheckpt().Epoch)
+		cp, err := mc.FinalizedCheckpt()
+		require.NoError(t, err)
+		finalizedSlot, err := slots.EpochStart(cp.Epoch)
 		if err != nil {
 			return false
 		}

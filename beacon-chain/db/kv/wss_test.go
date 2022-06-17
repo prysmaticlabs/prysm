@@ -12,16 +12,14 @@ import (
 )
 
 func TestSaveOrigin(t *testing.T) {
-	// Embedded Genesis works with Mainnet config
 	params.SetupTestConfigCleanup(t)
-	cfg := params.BeaconConfig()
-	cfg.ConfigName = params.ConfigNames[params.Mainnet]
-	params.OverrideBeaconConfig(cfg)
+	// Embedded Genesis works with Mainnet config
+	params.OverrideBeaconConfig(params.MainnetConfig().Copy())
 
 	ctx := context.Background()
 	db := setupDB(t)
 
-	st, err := genesis.State(params.Mainnet.String())
+	st, err := genesis.State(params.MainnetName)
 	require.NoError(t, err)
 
 	sb, err := st.MarshalSSZ()

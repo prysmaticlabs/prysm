@@ -16,6 +16,68 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
+func TestCreateTrieFromProto_Validation(t *testing.T) {
+	h := hash.Hash([]byte("hi"))
+	genValidLayers := func(num int) []*ethpb.TrieLayer {
+		l := make([]*ethpb.TrieLayer, num)
+		for i := 0; i < num; i++ {
+			l[i] = &ethpb.TrieLayer{
+				Layer: [][]byte{h[:]},
+			}
+		}
+		return l
+	}
+	tests := []struct {
+		trie      *ethpb.SparseMerkleTrie
+		errString string
+	}{
+		{
+			trie: &ethpb.SparseMerkleTrie{
+				Layers: []*ethpb.TrieLayer{},
+				Depth:  0,
+			},
+			errString: "no branches",
+		},
+		{
+			trie: &ethpb.SparseMerkleTrie{
+				Layers: []*ethpb.TrieLayer{
+					{
+						Layer: [][]byte{h[:]},
+					},
+					{
+						Layer: [][]byte{h[:]},
+					},
+					{
+						Layer: [][]byte{},
+					},
+				},
+				Depth: 2,
+			},
+			errString: "invalid branches provided",
+		},
+		{
+			trie: &ethpb.SparseMerkleTrie{
+				Layers: genValidLayers(3),
+				Depth:  12,
+			},
+			errString: "depth is greater than or equal to number of branches",
+		},
+		{
+			trie: &ethpb.SparseMerkleTrie{
+				Layers: genValidLayers(66),
+				Depth:  65,
+			},
+			errString: "depth exceeds 64",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.errString, func(t *testing.T) {
+			_, err := trie.CreateTrieFromProto(tt.trie)
+			require.ErrorContains(t, tt.errString, err)
+		})
+	}
+}
+
 func TestMarshalDepositWithProof(t *testing.T) {
 	items := [][]byte{
 		[]byte("A"),
@@ -52,7 +114,7 @@ func TestMarshalDepositWithProof(t *testing.T) {
 
 func TestMerkleTrie_MerkleProofOutOfRange(t *testing.T) {
 	h := hash.Hash([]byte("hi"))
-	m := trie.CreateTrieFromProto(&ethpb.SparseMerkleTrie{
+	m, err := trie.CreateTrieFromProto(&ethpb.SparseMerkleTrie{
 		Layers: []*ethpb.TrieLayer{
 			{
 				Layer: [][]byte{h[:]},
@@ -61,11 +123,12 @@ func TestMerkleTrie_MerkleProofOutOfRange(t *testing.T) {
 				Layer: [][]byte{h[:]},
 			},
 			{
-				Layer: [][]byte{},
+				Layer: [][]byte{h[:]},
 			},
 		},
-		Depth: 4,
+		Depth: 2,
 	})
+	require.NoError(t, err)
 	if _, err := m.MerkleProof(6); err == nil {
 		t.Error("Expected out of range failure, received nil", err)
 	}
@@ -79,7 +142,9 @@ func TestMerkleTrieRoot_EmptyTrie(t *testing.T) {
 
 	depRoot, err := testAccount.Contract.GetDepositRoot(&bind.CallOpts{})
 	require.NoError(t, err)
-	require.DeepEqual(t, depRoot, trie.HashTreeRoot())
+	root, err := trie.HashTreeRoot()
+	require.NoError(t, err)
+	require.DeepEqual(t, depRoot, root)
 }
 
 func TestGenerateTrieFromItems_NoItemsProvided(t *testing.T) {
@@ -104,7 +169,8 @@ func TestMerkleTrie_VerifyMerkleProofWithDepth(t *testing.T) {
 	proof, err := m.MerkleProof(0)
 	require.NoError(t, err)
 	require.Equal(t, int(params.BeaconConfig().DepositContractTreeDepth)+1, len(proof))
-	root := m.HashTreeRoot()
+	root, err := m.HashTreeRoot()
+	require.NoError(t, err)
 	if ok := trie.VerifyMerkleProofWithDepth(root[:], items[0], 0, proof, params.BeaconConfig().DepositContractTreeDepth); !ok {
 		t.Error("First Merkle proof did not verify")
 	}
@@ -125,12 +191,14 @@ func TestMerkleTrie_VerifyMerkleProof(t *testing.T) {
 		[]byte("G"),
 		[]byte("H"),
 	}
+
 	m, err := trie.GenerateTrieFromItems(items, params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err)
 	proof, err := m.MerkleProof(0)
 	require.NoError(t, err)
 	require.Equal(t, int(params.BeaconConfig().DepositContractTreeDepth)+1, len(proof))
-	root := m.HashTreeRoot()
+	root, err := m.HashTreeRoot()
+	require.NoError(t, err)
 	if ok := trie.VerifyMerkleProof(root[:], items[0], 0, proof); !ok {
 		t.Error("First Merkle proof did not verify")
 	}
@@ -170,14 +238,16 @@ func TestMerkleTrie_VerifyMerkleProof_TrieUpdated(t *testing.T) {
 	require.NoError(t, err)
 	proof, err := m.MerkleProof(0)
 	require.NoError(t, err)
-	root := m.HashTreeRoot()
+	root, err := m.HashTreeRoot()
+	require.NoError(t, err)
 	require.Equal(t, true, trie.VerifyMerkleProofWithDepth(root[:], items[0], 0, proof, depth))
 
 	// Now we update the trie.
 	assert.NoError(t, m.Insert([]byte{5}, 3))
 	proof, err = m.MerkleProof(3)
 	require.NoError(t, err)
-	root = m.HashTreeRoot()
+	root, err = m.HashTreeRoot()
+	require.NoError(t, err)
 	if ok := trie.VerifyMerkleProofWithDepth(root[:], []byte{5}, 3, proof, depth); !ok {
 		t.Error("Second Merkle proof did not verify")
 	}
@@ -200,10 +270,14 @@ func TestRoundtripProto_OK(t *testing.T) {
 	require.NoError(t, err)
 
 	protoTrie := m.ToProto()
-	depositRoot := m.HashTreeRoot()
+	depositRoot, err := m.HashTreeRoot()
+	require.NoError(t, err)
 
-	newTrie := trie.CreateTrieFromProto(protoTrie)
-	require.DeepEqual(t, depositRoot, newTrie.HashTreeRoot())
+	newTrie, err := trie.CreateTrieFromProto(protoTrie)
+	require.NoError(t, err)
+	root, err := newTrie.HashTreeRoot()
+	require.NoError(t, err)
+	require.DeepEqual(t, depositRoot, root)
 
 }
 
@@ -221,8 +295,11 @@ func TestCopy_OK(t *testing.T) {
 	if copiedTrie == source {
 		t.Errorf("Original trie returned.")
 	}
-	copyHash := copiedTrie.HashTreeRoot()
-	require.DeepEqual(t, copyHash, copiedTrie.HashTreeRoot())
+	a, err := copiedTrie.HashTreeRoot()
+	require.NoError(t, err)
+	b, err := source.HashTreeRoot()
+	require.NoError(t, err)
+	require.DeepEqual(t, a, b)
 }
 
 func BenchmarkGenerateTrieFromItems(b *testing.B) {
@@ -296,7 +373,8 @@ func BenchmarkVerifyMerkleProofWithDepth(b *testing.B) {
 	proof, err := m.MerkleProof(2)
 	require.NoError(b, err)
 
-	root := m.HashTreeRoot()
+	root, err := m.HashTreeRoot()
+	require.NoError(b, err)
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
 		if ok := trie.VerifyMerkleProofWithDepth(root[:], items[2], 2, proof, params.BeaconConfig().DepositContractTreeDepth); !ok {

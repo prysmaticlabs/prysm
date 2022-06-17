@@ -23,9 +23,10 @@ import (
 )
 
 func TestServer_activationEpochNotReached(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	require.Equal(t, false, activationEpochNotReached(0))
 
-	cfg := params.BeaconConfig()
+	cfg := params.BeaconConfig().Copy()
 	cfg.TerminalBlockHash = common.BytesToHash(bytesutil.PadTo([]byte{0x01}, 32))
 	cfg.TerminalBlockHashActivationEpoch = 1
 	params.OverrideBeaconConfig(cfg)
@@ -112,7 +113,7 @@ func TestServer_getExecutionPayload(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg := params.BeaconConfig()
+			cfg := params.BeaconConfig().Copy()
 			cfg.TerminalBlockHash = tt.terminalBlockHash
 			cfg.TerminalBlockHashActivationEpoch = tt.activationEpoch
 			params.OverrideBeaconConfig(cfg)
@@ -198,6 +199,7 @@ func TestServer_getExecutionPayload_UnexpectedFeeRecipient(t *testing.T) {
 }
 
 func TestServer_getTerminalBlockHashIfExists(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	tests := []struct {
 		name                  string
 		paramsTerminalHash    []byte
@@ -240,7 +242,7 @@ func TestServer_getTerminalBlockHashIfExists(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg := params.BeaconConfig()
+			cfg := params.BeaconConfig().Copy()
 			cfg.TerminalTotalDifficulty = tt.paramsTd
 			cfg.TerminalBlockHash = common.BytesToHash(tt.paramsTerminalHash)
 			params.OverrideBeaconConfig(cfg)

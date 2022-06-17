@@ -157,13 +157,17 @@ func (f *blocksFetcher) findFork(ctx context.Context, slot types.Slot) (*forkDat
 
 	// The current slot's epoch must be after the finalization epoch,
 	// triggering backtracking on earlier epochs is unnecessary.
-	finalizedEpoch := f.chain.FinalizedCheckpt().Epoch
+	cp, err := f.chain.FinalizedCheckpt()
+	if err != nil {
+		return nil, err
+	}
+	finalizedEpoch := cp.Epoch
 	epoch := slots.ToEpoch(slot)
 	if epoch <= finalizedEpoch {
 		return nil, errors.New("slot is not after the finalized epoch, no backtracking is necessary")
 	}
 	// Update slot to the beginning of the current epoch (preserve original slot for comparison).
-	slot, err := slots.EpochStart(epoch)
+	slot, err = slots.EpochStart(epoch)
 	if err != nil {
 		return nil, err
 	}
@@ -287,8 +291,13 @@ func (f *blocksFetcher) findAncestor(ctx context.Context, pid peer.ID, b interfa
 
 // bestFinalizedSlot returns the highest finalized slot of the majority of connected peers.
 func (f *blocksFetcher) bestFinalizedSlot() types.Slot {
+	cp, err := f.chain.FinalizedCheckpt()
+	if err != nil {
+		log.WithError(err).Error("Failed to get finalized checkpoint")
+		return 0
+	}
 	finalizedEpoch, _ := f.p2p.Peers().BestFinalized(
-		params.BeaconConfig().MaxPeersToSync, f.chain.FinalizedCheckpt().Epoch)
+		params.BeaconConfig().MaxPeersToSync, cp.Epoch)
 	return params.BeaconConfig().SlotsPerEpoch.Mul(uint64(finalizedEpoch))
 }
 
@@ -303,7 +312,12 @@ func (f *blocksFetcher) bestNonFinalizedSlot() types.Slot {
 // epoch. For the latter peers supporting that target epoch are returned as well.
 func (f *blocksFetcher) calculateHeadAndTargetEpochs() (headEpoch, targetEpoch types.Epoch, peers []peer.ID) {
 	if f.mode == modeStopOnFinalizedEpoch {
-		headEpoch = f.chain.FinalizedCheckpt().Epoch
+		cp, err := f.chain.FinalizedCheckpt()
+		if err != nil {
+			log.WithError(err).Error("Failed to get finalized checkpoint")
+			return 0, 0, peers
+		}
+		headEpoch = cp.Epoch
 		targetEpoch, peers = f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, headEpoch)
 	} else {
 		headEpoch = slots.ToEpoch(f.chain.HeadSlot())

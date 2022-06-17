@@ -11,11 +11,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
@@ -209,11 +209,11 @@ func (bs *Server) listBlocksForRoot(ctx context.Context, _ *ethpb.ListBlocksRequ
 
 // listBlocksForSlot retrieves all blocks for the provided slot.
 func (bs *Server) listBlocksForSlot(ctx context.Context, req *ethpb.ListBlocksRequest, q *ethpb.ListBlocksRequest_Slot) ([]blockContainer, int, string, error) {
-	hasBlocks, blks, err := bs.BeaconDB.BlocksBySlot(ctx, q.Slot)
+	blks, err := bs.BeaconDB.BlocksBySlot(ctx, q.Slot)
 	if err != nil {
 		return nil, 0, strconv.Itoa(0), status.Errorf(codes.Internal, "Could not retrieve blocks for slot %d: %v", q.Slot, err)
 	}
-	if !hasBlocks {
+	if len(blks) == 0 {
 		return []blockContainer{}, 0, strconv.Itoa(0), nil
 	}
 
@@ -250,7 +250,7 @@ func (bs *Server) listBlocksForGenesis(ctx context.Context, _ *ethpb.ListBlocksR
 	if err != nil {
 		return nil, 0, strconv.Itoa(0), status.Errorf(codes.Internal, "Could not retrieve blocks for genesis slot: %v", err)
 	}
-	if err := helpers.BeaconBlockIsNil(genBlk); err != nil {
+	if err := wrapper.BeaconBlockIsNil(genBlk); err != nil {
 		return []blockContainer{}, 0, strconv.Itoa(0), status.Errorf(codes.NotFound, "Could not find genesis block: %v", err)
 	}
 	root, err := genBlk.Block().HashTreeRoot()
@@ -393,7 +393,11 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get head block")
 	}
-	if err := helpers.BeaconBlockIsNil(headBlock); err != nil {
+	optimisticStatus, err := bs.OptimisticModeFetcher.IsOptimistic(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not get optimistic status")
+	}
+	if err := wrapper.BeaconBlockIsNil(headBlock); err != nil {
 		return nil, status.Errorf(codes.NotFound, "Head block of chain was nil: %v", err)
 	}
 	headBlockRoot, err := headBlock.Block().HashTreeRoot()
@@ -409,7 +413,7 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 			}
 			// Retrieve genesis block in the event we have genesis checkpoints.
 			genBlock, err := bs.BeaconDB.GenesisBlock(ctx)
-			if err != nil || helpers.BeaconBlockIsNil(genBlock) != nil {
+			if err != nil || wrapper.BeaconBlockIsNil(genBlock) != nil {
 				return status.Error(codes.Internal, "Could not get genesis block")
 			}
 			validGenesis = true
@@ -419,23 +423,32 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 		if err != nil {
 			return status.Errorf(codes.Internal, "Could not get %s block: %v", name, err)
 		}
-		if err := helpers.BeaconBlockIsNil(b); err != nil {
+		if err := wrapper.BeaconBlockIsNil(b); err != nil {
 			return status.Errorf(codes.Internal, "Could not get %s block: %v", name, err)
 		}
 		return nil
 	}
 
-	finalizedCheckpoint := bs.FinalizationFetcher.FinalizedCheckpt()
+	finalizedCheckpoint, err := bs.FinalizationFetcher.FinalizedCheckpt()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get finalized checkpoint: %v", err)
+	}
 	if err := validateCP(finalizedCheckpoint, "finalized"); err != nil {
 		return nil, err
 	}
 
-	justifiedCheckpoint := bs.FinalizationFetcher.CurrentJustifiedCheckpt()
+	justifiedCheckpoint, err := bs.FinalizationFetcher.CurrentJustifiedCheckpt()
+	if err != nil {
+		return nil, err
+	}
 	if err := validateCP(justifiedCheckpoint, "justified"); err != nil {
 		return nil, err
 	}
 
-	prevJustifiedCheckpoint := bs.FinalizationFetcher.PreviousJustifiedCheckpt()
+	prevJustifiedCheckpoint, err := bs.FinalizationFetcher.PreviousJustifiedCheckpt()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get previous justified checkpoint: %v", err)
+	}
 	if err := validateCP(prevJustifiedCheckpoint, "prev justified"); err != nil {
 		return nil, err
 	}
@@ -465,5 +478,6 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 		PreviousJustifiedSlot:      pjSlot,
 		PreviousJustifiedEpoch:     prevJustifiedCheckpoint.Epoch,
 		PreviousJustifiedBlockRoot: prevJustifiedCheckpoint.Root,
+		OptimisticStatus:           optimisticStatus,
 	}, nil
 }

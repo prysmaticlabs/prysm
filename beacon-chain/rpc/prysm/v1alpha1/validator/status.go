@@ -113,7 +113,7 @@ func (vs *Server) CheckDoppelGanger(ctx context.Context, req *ethpb.DoppelGanger
 
 	// Return early if we are in phase0.
 	if headState.Version() == version.Phase0 {
-		log.Info("Skipping goppelganger check for Phase 0")
+		log.Info("Skipping doppelganger check for Phase 0")
 
 		resp := &ethpb.DoppelGangerResponse{
 			Responses: []*ethpb.DoppelGangerResponse_ValidatorResponse{},
@@ -255,7 +255,7 @@ func (vs *Server) optimisticStatus(ctx context.Context) error {
 	if slots.ToEpoch(vs.TimeFetcher.CurrentSlot()) < params.BeaconConfig().BellatrixForkEpoch {
 		return nil
 	}
-	optimistic, err := vs.HeadFetcher.IsOptimistic(ctx)
+	optimistic, err := vs.OptimisticModeFetcher.IsOptimistic(ctx)
 	if err != nil {
 		return status.Errorf(codes.Internal, "Could not determine if the node is a optimistic node: %v", err)
 	}

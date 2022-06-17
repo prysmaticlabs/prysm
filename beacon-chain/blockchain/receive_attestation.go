@@ -71,9 +71,9 @@ func (s *Service) VerifyFinalizedConsistency(ctx context.Context, root []byte) e
 		return nil
 	}
 
-	f := s.FinalizedCheckpt()
-	if f == nil {
-		return errNilFinalizedInStore
+	f, err := s.FinalizedCheckpt()
+	if err != nil {
+		return err
 	}
 	ss, err := slots.EpochStart(f.Epoch)
 	if err != nil {
@@ -128,52 +128,66 @@ func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
 					return
 				}
 
-				// Continue when there's no fork choice attestation, there's nothing to process and update head.
-				// This covers the condition when the node is still initial syncing to the head of the chain.
-				if s.cfg.AttPool.ForkchoiceAttestationCount() == 0 {
-					continue
+				if err := s.UpdateHead(s.ctx); err != nil {
+					log.WithError(err).Error("Could not process attestations and update head")
+					return
 				}
-				s.processAttestations(s.ctx)
-
-				justified := s.store.JustifiedCheckpt()
-				if justified == nil {
-					log.WithError(errNilJustifiedInStore).Error("Could not get justified checkpoint")
-					continue
-				}
-				balances, err := s.justifiedBalances.get(s.ctx, bytesutil.ToBytes32(justified.Root))
-				if err != nil {
-					log.WithError(err).Errorf("Unable to get justified balances for root %v", justified.Root)
-					continue
-				}
-				newHeadRoot, err := s.updateHead(s.ctx, balances)
-				if err != nil {
-					log.WithError(err).Warn("Resolving fork due to new attestation")
-				}
-				s.notifyEngineIfChangedHead(s.ctx, newHeadRoot)
 			}
 		}
 	}()
 }
 
+// UpdateHead updates the canonical head of the chain based on information from fork-choice attestations and votes.
+// It requires no external inputs.
+func (s *Service) UpdateHead(ctx context.Context) error {
+	// Continue when there's no fork choice attestation, there's nothing to process and update head.
+	// This covers the condition when the node is still initial syncing to the head of the chain.
+	if s.cfg.AttPool.ForkchoiceAttestationCount() == 0 {
+		return nil
+	}
+
+	// Only one process can process attestations and update head at a time.
+	s.processAttestationsLock.Lock()
+	defer s.processAttestationsLock.Unlock()
+
+	s.processAttestations(ctx)
+
+	justified, err := s.store.JustifiedCheckpt()
+	if err != nil {
+		return err
+	}
+	balances, err := s.justifiedBalances.get(ctx, bytesutil.ToBytes32(justified.Root))
+	if err != nil {
+		return err
+	}
+	newHeadRoot, err := s.cfg.ForkChoiceStore.Head(ctx, balances)
+	if err != nil {
+		log.WithError(err).Warn("Resolving fork due to new attestation")
+	}
+	s.headLock.RLock()
+	if s.headRoot() != newHeadRoot {
+		log.WithFields(logrus.Fields{
+			"oldHeadRoot": fmt.Sprintf("%#x", s.headRoot()),
+			"newHeadRoot": fmt.Sprintf("%#x", newHeadRoot),
+		}).Debug("Head changed due to attestations")
+	}
+	s.headLock.RUnlock()
+	s.notifyEngineIfChangedHead(ctx, newHeadRoot)
+	return nil
+}
+
 // This calls notify Forkchoice Update in the event that the head has changed
 func (s *Service) notifyEngineIfChangedHead(ctx context.Context, newHeadRoot [32]byte) {
-	if s.headRoot() == newHeadRoot {
+	s.headLock.RLock()
+	if newHeadRoot == [32]byte{} || s.headRoot() == newHeadRoot {
+		s.headLock.RUnlock()
 		return
 	}
-	log.WithFields(logrus.Fields{
-		"oldHeadRoot": fmt.Sprintf("%#x", s.headRoot()),
-		"newHeadRoot": fmt.Sprintf("%#x", newHeadRoot),
-	}).Debug("Head changed due to attestations")
+	s.headLock.RUnlock()
 
 	if !s.hasBlockInInitSyncOrDB(ctx, newHeadRoot) {
 		log.Debug("New head does not exist in DB. Do nothing")
 		return // We don't have the block, don't notify the engine and update head.
-	}
-
-	finalized := s.store.FinalizedCheckpt()
-	if finalized == nil {
-		log.WithError(errNilFinalizedInStore).Error("could not get finalized checkpoint")
-		return
 	}
 
 	newHeadBlock, err := s.getBlock(ctx, newHeadRoot)
@@ -187,11 +201,9 @@ func (s *Service) notifyEngineIfChangedHead(ctx context.Context, newHeadRoot [32
 		return
 	}
 	arg := &notifyForkchoiceUpdateArg{
-		headState:     headState,
-		headRoot:      newHeadRoot,
-		headBlock:     newHeadBlock.Block(),
-		finalizedRoot: bytesutil.ToBytes32(finalized.Root),
-		justifiedRoot: bytesutil.ToBytes32(s.store.JustifiedCheckpt().Root),
+		headState: headState,
+		headRoot:  newHeadRoot,
+		headBlock: newHeadBlock.Block(),
 	}
 	_, err = s.notifyForkchoiceUpdate(s.ctx, arg)
 	if err != nil {

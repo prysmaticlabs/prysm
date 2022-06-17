@@ -2,15 +2,12 @@ package accounts
 
 import (
 	"context"
-	"crypto/rand"
 	"encoding/json"
 	"fmt"
-	"math/big"
 	"os"
 	"path/filepath"
 	"sort"
 	"testing"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -26,111 +23,6 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager/local"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
-
-func TestImport_Noninteractive(t *testing.T) {
-	local.ResetCaches()
-	walletDir, passwordsDir, passwordFilePath := setupWalletAndPasswordsDir(t)
-	keysDir := filepath.Join(t.TempDir(), "keysDir")
-	require.NoError(t, os.MkdirAll(keysDir, os.ModePerm))
-
-	cliCtx := setupWalletCtx(t, &testWalletConfig{
-		walletDir:           walletDir,
-		passwordsDir:        passwordsDir,
-		keysDir:             keysDir,
-		keymanagerKind:      keymanager.Local,
-		walletPasswordFile:  passwordFilePath,
-		accountPasswordFile: passwordFilePath,
-	})
-	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
-		WalletCfg: &wallet.Config{
-			WalletDir:      walletDir,
-			KeymanagerKind: keymanager.Local,
-			WalletPassword: password,
-		},
-	})
-	require.NoError(t, err)
-	keymanager, err := local.NewKeymanager(
-		cliCtx.Context,
-		&local.SetupConfig{
-			Wallet:           w,
-			ListenForChanges: false,
-		},
-	)
-	require.NoError(t, err)
-
-	// Make sure there are no accounts at the start.
-	accounts, err := keymanager.ValidatingAccountNames()
-	require.NoError(t, err)
-	assert.Equal(t, len(accounts), 0)
-
-	// Create 2 keys.
-	createKeystore(t, keysDir)
-	time.Sleep(time.Second)
-	createKeystore(t, keysDir)
-
-	require.NoError(t, ImportAccountsCli(cliCtx))
-
-	w, err = wallet.OpenWallet(cliCtx.Context, &wallet.Config{
-		WalletDir:      walletDir,
-		WalletPassword: password,
-	})
-	require.NoError(t, err)
-	km, err := w.InitializeKeymanager(cliCtx.Context, iface.InitKeymanagerConfig{ListenForChanges: false})
-	require.NoError(t, err)
-	keys, err := km.FetchValidatingPublicKeys(cliCtx.Context)
-	require.NoError(t, err)
-
-	assert.Equal(t, 2, len(keys))
-}
-
-// TestImport_DuplicateKeys is a regression test that ensures correction function if duplicate keys are being imported
-func TestImport_DuplicateKeys(t *testing.T) {
-	local.ResetCaches()
-	walletDir, passwordsDir, passwordFilePath := setupWalletAndPasswordsDir(t)
-	keysDir := filepath.Join(t.TempDir(), "keysDir")
-	require.NoError(t, os.MkdirAll(keysDir, os.ModePerm))
-
-	cliCtx := setupWalletCtx(t, &testWalletConfig{
-		walletDir:           walletDir,
-		passwordsDir:        passwordsDir,
-		keysDir:             keysDir,
-		keymanagerKind:      keymanager.Local,
-		walletPasswordFile:  passwordFilePath,
-		accountPasswordFile: passwordFilePath,
-	})
-	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
-		WalletCfg: &wallet.Config{
-			WalletDir:      walletDir,
-			KeymanagerKind: keymanager.Local,
-			WalletPassword: password,
-		},
-	})
-	require.NoError(t, err)
-
-	// Create a key and then copy it to create a duplicate
-	_, keystorePath := createKeystore(t, keysDir)
-	time.Sleep(time.Second)
-	input, err := os.ReadFile(keystorePath)
-	require.NoError(t, err)
-	keystorePath2 := filepath.Join(keysDir, "copyOfKeystore.json")
-	err = os.WriteFile(keystorePath2, input, os.ModePerm)
-	require.NoError(t, err)
-
-	require.NoError(t, ImportAccountsCli(cliCtx))
-
-	_, err = wallet.OpenWallet(cliCtx.Context, &wallet.Config{
-		WalletDir:      walletDir,
-		WalletPassword: password,
-	})
-	require.NoError(t, err)
-	km, err := w.InitializeKeymanager(cliCtx.Context, iface.InitKeymanagerConfig{ListenForChanges: false})
-	require.NoError(t, err)
-	keys, err := km.FetchValidatingPublicKeys(cliCtx.Context)
-	require.NoError(t, err)
-
-	// There should only be 1 account as the duplicate keystore was ignored
-	assert.Equal(t, 1, len(keys))
-}
 
 func TestImportAccounts_NoPassword(t *testing.T) {
 	local.ResetCaches()
@@ -166,115 +58,6 @@ func TestImportAccounts_NoPassword(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 1, len(resp))
 	require.Equal(t, resp[0].Status, ethpbservice.ImportedKeystoreStatus_ERROR)
-
-}
-
-func TestImport_Noninteractive_RandomName(t *testing.T) {
-	local.ResetCaches()
-	walletDir, passwordsDir, passwordFilePath := setupWalletAndPasswordsDir(t)
-	keysDir := filepath.Join(t.TempDir(), "keysDir")
-	require.NoError(t, os.MkdirAll(keysDir, os.ModePerm))
-
-	cliCtx := setupWalletCtx(t, &testWalletConfig{
-		walletDir:           walletDir,
-		passwordsDir:        passwordsDir,
-		keysDir:             keysDir,
-		keymanagerKind:      keymanager.Local,
-		walletPasswordFile:  passwordFilePath,
-		accountPasswordFile: passwordFilePath,
-	})
-	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
-		WalletCfg: &wallet.Config{
-			WalletDir:      walletDir,
-			KeymanagerKind: keymanager.Local,
-			WalletPassword: password,
-		},
-	})
-	require.NoError(t, err)
-	keymanager, err := local.NewKeymanager(
-		cliCtx.Context,
-		&local.SetupConfig{
-			Wallet:           w,
-			ListenForChanges: false,
-		},
-	)
-	require.NoError(t, err)
-
-	// Make sure there are no accounts at the start.
-	accounts, err := keymanager.ValidatingAccountNames()
-	require.NoError(t, err)
-	assert.Equal(t, len(accounts), 0)
-
-	// Create 2 keys.
-	createRandomNameKeystore(t, keysDir)
-	time.Sleep(time.Second)
-	createRandomNameKeystore(t, keysDir)
-
-	require.NoError(t, ImportAccountsCli(cliCtx))
-
-	w, err = wallet.OpenWallet(cliCtx.Context, &wallet.Config{
-		WalletDir:      walletDir,
-		WalletPassword: password,
-	})
-	require.NoError(t, err)
-	km, err := w.InitializeKeymanager(cliCtx.Context, iface.InitKeymanagerConfig{ListenForChanges: false})
-	require.NoError(t, err)
-	keys, err := km.FetchValidatingPublicKeys(cliCtx.Context)
-	require.NoError(t, err)
-
-	assert.Equal(t, 2, len(keys))
-}
-
-func TestImport_Noninteractive_Filepath(t *testing.T) {
-	local.ResetCaches()
-	walletDir, passwordsDir, passwordFilePath := setupWalletAndPasswordsDir(t)
-	keysDir := filepath.Join(t.TempDir(), "keysDir")
-	require.NoError(t, os.MkdirAll(keysDir, os.ModePerm))
-
-	_, keystorePath := createKeystore(t, keysDir)
-	cliCtx := setupWalletCtx(t, &testWalletConfig{
-		walletDir:           walletDir,
-		passwordsDir:        passwordsDir,
-		keysDir:             keystorePath,
-		keymanagerKind:      keymanager.Local,
-		walletPasswordFile:  passwordFilePath,
-		accountPasswordFile: passwordFilePath,
-	})
-	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
-		WalletCfg: &wallet.Config{
-			WalletDir:      walletDir,
-			KeymanagerKind: keymanager.Local,
-			WalletPassword: password,
-		},
-	})
-	require.NoError(t, err)
-	keymanager, err := local.NewKeymanager(
-		cliCtx.Context,
-		&local.SetupConfig{
-			Wallet:           w,
-			ListenForChanges: false,
-		},
-	)
-	require.NoError(t, err)
-
-	// Make sure there are no accounts at the start.
-	accounts, err := keymanager.ValidatingAccountNames()
-	require.NoError(t, err)
-	assert.Equal(t, len(accounts), 0)
-
-	require.NoError(t, ImportAccountsCli(cliCtx))
-
-	w, err = wallet.OpenWallet(cliCtx.Context, &wallet.Config{
-		WalletDir:      walletDir,
-		WalletPassword: password,
-	})
-	require.NoError(t, err)
-	km, err := w.InitializeKeymanager(cliCtx.Context, iface.InitKeymanagerConfig{ListenForChanges: false})
-	require.NoError(t, err)
-	keys, err := km.FetchValidatingPublicKeys(cliCtx.Context)
-	require.NoError(t, err)
-
-	assert.Equal(t, 1, len(keys))
 }
 
 func TestImport_SortByDerivationPath(t *testing.T) {
@@ -378,7 +161,7 @@ func Test_importPrivateKeyAsAccount(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-	assert.NoError(t, importPrivateKeyAsAccount(cliCtx, wallet, keymanager))
+	assert.NoError(t, importPrivateKeyAsAccount(cliCtx.Context, wallet, keymanager, privKeyFileName))
 
 	// We re-instantiate the keymanager and check we now have 1 public key.
 	keymanager, err = local.NewKeymanager(
@@ -416,32 +199,6 @@ func createKeystore(t *testing.T, path string) (*keymanager.Keystore, string) {
 	// Write the encoded keystore to disk with the timestamp appended
 	createdAt := prysmTime.Now().Unix()
 	fullPath := filepath.Join(path, fmt.Sprintf(local.KeystoreFileNameFormat, createdAt))
-	require.NoError(t, os.WriteFile(fullPath, encoded, os.ModePerm))
-	return keystoreFile, fullPath
-}
-
-// Returns the fullPath to the newly created keystore file.
-func createRandomNameKeystore(t *testing.T, path string) (*keymanager.Keystore, string) {
-	validatingKey, err := bls.RandKey()
-	require.NoError(t, err)
-	encryptor := keystorev4.New()
-	cryptoFields, err := encryptor.Encrypt(validatingKey.Marshal(), password)
-	require.NoError(t, err)
-	id, err := uuid.NewRandom()
-	require.NoError(t, err)
-	keystoreFile := &keymanager.Keystore{
-		Crypto:  cryptoFields,
-		ID:      id.String(),
-		Pubkey:  fmt.Sprintf("%x", validatingKey.PublicKey().Marshal()),
-		Version: encryptor.Version(),
-		Name:    encryptor.Name(),
-	}
-	encoded, err := json.MarshalIndent(keystoreFile, "", "\t")
-	require.NoError(t, err)
-	// Write the encoded keystore to disk with the timestamp appended
-	random, err := rand.Int(rand.Reader, big.NewInt(1000000))
-	require.NoError(t, err)
-	fullPath := filepath.Join(path, fmt.Sprintf("test-%d-keystore", random.Int64()))
 	require.NoError(t, os.WriteFile(fullPath, encoded, os.ModePerm))
 	return keystoreFile, fullPath
 }

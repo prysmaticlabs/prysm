@@ -8,7 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/fieldtrie"
-	statenative "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/v1"
+	statenative "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/types"
 	"github.com/prysmaticlabs/prysm/config/features"
@@ -26,7 +26,7 @@ import (
 // InitializeFromProto the beacon state from a protobuf representation.
 func InitializeFromProto(st *ethpb.BeaconState) (state.BeaconState, error) {
 	if features.Get().EnableNativeState {
-		return statenative.InitializeFromProtoUnsafe(proto.Clone(st).(*ethpb.BeaconState))
+		return statenative.InitializeFromProtoPhase0(proto.Clone(st).(*ethpb.BeaconState))
 	}
 	return InitializeFromProtoUnsafe(proto.Clone(st).(*ethpb.BeaconState))
 }
@@ -35,7 +35,7 @@ func InitializeFromProto(st *ethpb.BeaconState) (state.BeaconState, error) {
 // and sets it as the inner state of the BeaconState type.
 func InitializeFromProtoUnsafe(st *ethpb.BeaconState) (state.BeaconState, error) {
 	if features.Get().EnableNativeState {
-		return statenative.InitializeFromProtoUnsafe(st)
+		return statenative.InitializeFromProtoUnsafePhase0(st)
 	}
 
 	if st == nil {
@@ -77,6 +77,8 @@ func InitializeFromProtoUnsafe(st *ethpb.BeaconState) (state.BeaconState, error)
 	b.sharedFieldReferences[historicalRoots] = stateutil.NewRef(1)
 
 	state.StateCount.Inc()
+	// Finalizer runs when dst is being destroyed in garbage collection.
+	runtime.SetFinalizer(b, finalizerCleanup)
 	return b, nil
 }
 
@@ -174,24 +176,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 
 	state.StateCount.Inc()
 	// Finalizer runs when dst is being destroyed in garbage collection.
-	runtime.SetFinalizer(dst, func(b *BeaconState) {
-		for field, v := range b.sharedFieldReferences {
-			v.MinusRef()
-			if b.stateFieldLeaves[field].FieldReference() != nil {
-				b.stateFieldLeaves[field].FieldReference().MinusRef()
-			}
-
-		}
-		for i := 0; i < fieldCount; i++ {
-			field := types.FieldIndex(i)
-			delete(b.stateFieldLeaves, field)
-			delete(b.dirtyIndices, field)
-			delete(b.dirtyFields, field)
-			delete(b.sharedFieldReferences, field)
-			delete(b.stateFieldLeaves, field)
-		}
-		state.StateCount.Sub(1)
-	})
+	runtime.SetFinalizer(dst, finalizerCleanup)
 	return dst
 }
 
@@ -213,6 +198,7 @@ func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
 }
 
 // Initializes the Merkle layers for the beacon state if they are empty.
+//
 // WARNING: Caller must acquire the mutex before using.
 func (b *BeaconState) initializeMerkleLayers(ctx context.Context) error {
 	if len(b.merkleLayers) > 0 {
@@ -229,6 +215,7 @@ func (b *BeaconState) initializeMerkleLayers(ctx context.Context) error {
 }
 
 // Recomputes the Merkle layers for the dirty fields in the state.
+//
 // WARNING: Caller must acquire the mutex before using.
 func (b *BeaconState) recomputeDirtyFields(ctx context.Context) error {
 	for field := range b.dirtyFields {
@@ -403,17 +390,31 @@ func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) 
 
 func (b *BeaconState) recomputeFieldTrie(index types.FieldIndex, elements interface{}) ([32]byte, error) {
 	fTrie := b.stateFieldLeaves[index]
+	fTrieMutex := fTrie.RWMutex
 	// We can't lock the trie directly because the trie's variable gets reassigned,
 	// and therefore we would call Unlock() on a different object.
-	fTrieMutex := fTrie.RWMutex
-	if fTrie.FieldReference().Refs() > 1 {
-		fTrieMutex.Lock()
+	fTrieMutex.Lock()
+
+	if fTrie.Empty() {
+		err := b.resetFieldTrie(index, elements, fTrie.Length())
+		if err != nil {
+			fTrieMutex.Unlock()
+			return [32]byte{}, err
+		}
+		// Reduce reference count as we are instantiating a new trie.
 		fTrie.FieldReference().MinusRef()
-		newTrie := fTrie.CopyTrie()
+		fTrieMutex.Unlock()
+		return b.stateFieldLeaves[index].TrieRoot()
+	}
+
+	if fTrie.FieldReference().Refs() > 1 {
+		fTrie.FieldReference().MinusRef()
+		newTrie := fTrie.TransferTrie()
 		b.stateFieldLeaves[index] = newTrie
 		fTrie = newTrie
-		fTrieMutex.Unlock()
 	}
+	fTrieMutex.Unlock()
+
 	// remove duplicate indexes
 	b.dirtyIndices[index] = slice.SetUint64(b.dirtyIndices[index])
 	// sort indexes again
@@ -436,4 +437,23 @@ func (b *BeaconState) resetFieldTrie(index types.FieldIndex, elements interface{
 	b.stateFieldLeaves[index] = fTrie
 	b.dirtyIndices[index] = []uint64{}
 	return nil
+}
+
+func finalizerCleanup(b *BeaconState) {
+	fieldCount := params.BeaconConfig().BeaconStateFieldCount
+	for field, v := range b.sharedFieldReferences {
+		v.MinusRef()
+		if b.stateFieldLeaves[field].FieldReference() != nil {
+			b.stateFieldLeaves[field].FieldReference().MinusRef()
+		}
+	}
+	for i := 0; i < fieldCount; i++ {
+		field := types.FieldIndex(i)
+		delete(b.stateFieldLeaves, field)
+		delete(b.dirtyIndices, field)
+		delete(b.dirtyFields, field)
+		delete(b.sharedFieldReferences, field)
+		delete(b.stateFieldLeaves, field)
+	}
+	state.StateCount.Sub(1)
 }

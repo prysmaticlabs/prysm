@@ -187,3 +187,8 @@ func (vs *Server) computeStateRoot(ctx context.Context, block interfaces.SignedB
 	log.WithField("beaconStateRoot", fmt.Sprintf("%#x", root)).Debugf("Computed state root")
 	return root[:], nil
 }
+
+// SubmitValidatorRegistration submits validator registration.
+func (vs *Server) SubmitValidatorRegistration(context.Context, *ethpb.SignedValidatorRegistrationV1) (*emptypb.Empty, error) {
+	return &emptypb.Empty{}, nil
+}

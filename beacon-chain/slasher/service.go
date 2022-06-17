@@ -175,7 +175,6 @@ func (s *Service) waitForChainInitialization() {
 	stateChannel := make(chan *feed.Event, 1)
 	stateSub := s.serviceCfg.StateNotifier.StateFeed().Subscribe(stateChannel)
 	defer stateSub.Unsubscribe()
-	defer close(stateChannel)
 	for {
 		select {
 		case stateEvent := <-stateChannel:

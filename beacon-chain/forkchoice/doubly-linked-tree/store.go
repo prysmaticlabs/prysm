@@ -60,14 +60,23 @@ func (s *Store) PruneThreshold() uint64 {
 
 // head starts from justified root and then follows the best descendant links
 // to find the best block for head. This function assumes a lock on s.nodesLock
-func (s *Store) head(ctx context.Context, justifiedRoot [32]byte) ([32]byte, error) {
+func (s *Store) head(ctx context.Context) ([32]byte, error) {
 	_, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.head")
 	defer span.End()
+	s.checkpointsLock.RLock()
+	defer s.checkpointsLock.RUnlock()
 
 	// JustifiedRoot has to be known
-	justifiedNode, ok := s.nodeByRoot[justifiedRoot]
+	justifiedNode, ok := s.nodeByRoot[s.justifiedCheckpoint.Root]
 	if !ok || justifiedNode == nil {
-		return [32]byte{}, errUnknownJustifiedRoot
+		// If the justifiedCheckpoint is from genesis, then the root is
+		// zeroHash. In this case it should be the root of forkchoice
+		// tree.
+		if s.justifiedCheckpoint.Epoch == params.BeaconConfig().GenesisEpoch {
+			justifiedNode = s.treeRootNode
+		} else {
+			return [32]byte{}, errUnknownJustifiedRoot
+		}
 	}
 
 	// If the justified node doesn't have a best descendant,
@@ -77,9 +86,9 @@ func (s *Store) head(ctx context.Context, justifiedRoot [32]byte) ([32]byte, err
 		bestDescendant = justifiedNode
 	}
 
-	if !bestDescendant.viableForHead(s.justifiedEpoch, s.finalizedEpoch) {
-		return [32]byte{}, fmt.Errorf("head at slot %d with weight %d is not eligible, finalizedEpoch %d != %d, justifiedEpoch %d != %d",
-			bestDescendant.slot, bestDescendant.weight/10e9, bestDescendant.finalizedEpoch, s.finalizedEpoch, bestDescendant.justifiedEpoch, s.justifiedEpoch)
+	if !bestDescendant.viableForHead(s.justifiedCheckpoint.Epoch, s.finalizedCheckpoint.Epoch) {
+		return [32]byte{}, fmt.Errorf("head at slot %d with weight %d is not eligible, finalizedEpoch, justified Epoch %d, %d != %d, %d",
+			bestDescendant.slot, bestDescendant.weight/10e9, bestDescendant.finalizedEpoch, bestDescendant.justifiedEpoch, s.finalizedCheckpoint.Epoch, s.justifiedCheckpoint.Epoch)
 	}
 
 	// Update metrics.
@@ -112,28 +121,32 @@ func (s *Store) insert(ctx context.Context,
 	parent := s.nodeByRoot[parentRoot]
 
 	n := &Node{
-		slot:           slot,
-		root:           root,
-		parent:         parent,
-		justifiedEpoch: justifiedEpoch,
-		finalizedEpoch: finalizedEpoch,
-		optimistic:     true,
-		payloadHash:    payloadHash,
+		slot:                     slot,
+		root:                     root,
+		parent:                   parent,
+		justifiedEpoch:           justifiedEpoch,
+		unrealizedJustifiedEpoch: justifiedEpoch,
+		finalizedEpoch:           finalizedEpoch,
+		unrealizedFinalizedEpoch: finalizedEpoch,
+		optimistic:               true,
+		payloadHash:              payloadHash,
 	}
 
 	s.nodeByPayload[payloadHash] = n
 	s.nodeByRoot[root] = n
-	if parent != nil {
+	if parent == nil {
+		if s.treeRootNode == nil {
+			s.treeRootNode = n
+			s.headNode = n
+		} else {
+			return errInvalidParentRoot
+		}
+	} else {
 		parent.children = append(parent.children, n)
-		if err := s.treeRootNode.updateBestDescendant(ctx, s.justifiedEpoch, s.finalizedEpoch); err != nil {
+		if err := s.treeRootNode.updateBestDescendant(ctx,
+			s.justifiedCheckpoint.Epoch, s.finalizedCheckpoint.Epoch); err != nil {
 			return err
 		}
-	}
-
-	// Set the node as root if the store was empty
-	if s.treeRootNode == nil {
-		s.treeRootNode = n
-		s.headNode = n
 	}
 
 	// Update metrics.
@@ -141,12 +154,6 @@ func (s *Store) insert(ctx context.Context,
 	nodeCount.Set(float64(len(s.nodeByRoot)))
 
 	return nil
-}
-
-// updateCheckpoints Update the justified / finalized epochs in store if necessary.
-func (s *Store) updateCheckpoints(justifiedEpoch, finalizedEpoch types.Epoch) {
-	s.justifiedEpoch = justifiedEpoch
-	s.finalizedEpoch = finalizedEpoch
 }
 
 // pruneFinalizedNodeByRootMap prunes the `nodeByRoot` map

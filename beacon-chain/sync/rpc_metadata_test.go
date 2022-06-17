@@ -141,7 +141,7 @@ func TestMetadataRPCHandler_SendsMetadata(t *testing.T) {
 
 func TestMetadataRPCHandler_SendsMetadataAltair(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	bCfg := params.BeaconConfig()
+	bCfg := params.BeaconConfig().Copy()
 	bCfg.AltairForkEpoch = 5
 	params.OverrideBeaconConfig(bCfg)
 	params.BeaconConfig().InitializeForkSchedule()
