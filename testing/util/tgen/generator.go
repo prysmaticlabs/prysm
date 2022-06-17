@@ -252,6 +252,14 @@ func GetBlockFields() BlockFields {
 	}
 }
 
+func PbSignedBlockPhase0() *eth.SignedBeaconBlock {
+	f := GetBlockFields()
+	return &eth.SignedBeaconBlock{
+		Block:     PbBlockPhase0(),
+		Signature: f.B96,
+	}
+}
+
 func PbBlockPhase0() *eth.BeaconBlock {
 	f := GetBlockFields()
 	return &eth.BeaconBlock{

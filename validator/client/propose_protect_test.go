@@ -14,6 +14,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/testing/util/tgen"
 )
 
 func Test_slashableProposalCheck_PreventsLowerThanMinProposal(t *testing.T) {
@@ -90,13 +91,7 @@ func Test_slashableProposalCheck(t *testing.T) {
 	validator, mocks, validatorKey, finish := setup(t)
 	defer finish()
 
-	blk := util.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
-		Block: &ethpb.BeaconBlock{
-			Slot:          10,
-			ProposerIndex: 0,
-		},
-		Signature: params.BeaconConfig().EmptySignature[:],
-	})
+	blk := tgen.PbSignedBlockPhase0()
 
 	pubKeyBytes := [fieldparams.BLSPubkeyLength]byte{}
 	copy(pubKeyBytes[:], validatorKey.PublicKey().Marshal())

@@ -60,7 +60,7 @@ func TestCopyCheckpoint(t *testing.T) {
 }
 
 func TestCopySignedBeaconBlock(t *testing.T) {
-	blk := genSignedBeaconBlock()
+	blk := tgen.PbSignedBlockPhase0()
 
 	got := v1alpha1.CopySignedBeaconBlock(blk)
 	if !reflect.DeepEqual(got, blk) {
@@ -440,13 +440,6 @@ func genPendingAttestation() *v1alpha1.PendingAttestation {
 		Data:            genAttData(),
 		InclusionDelay:  3,
 		ProposerIndex:   5,
-	}
-}
-
-func genSignedBeaconBlock() *v1alpha1.SignedBeaconBlock {
-	return &v1alpha1.SignedBeaconBlock{
-		Block:     tgen.PbBlockPhase0(),
-		Signature: bytes(),
 	}
 }
 

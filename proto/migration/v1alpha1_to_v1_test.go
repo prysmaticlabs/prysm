@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/testing/util/tgen"
 )
 
 var (
@@ -49,12 +50,7 @@ var (
 )
 
 func Test_BlockIfaceToV1BlockHeader(t *testing.T) {
-	alphaBlock := util.HydrateSignedBeaconBlock(&ethpbalpha.SignedBeaconBlock{})
-	alphaBlock.Block.Slot = slot
-	alphaBlock.Block.ProposerIndex = validatorIndex
-	alphaBlock.Block.ParentRoot = parentRoot
-	alphaBlock.Block.StateRoot = stateRoot
-	alphaBlock.Signature = signature
+	alphaBlock := tgen.PbSignedBlockPhase0()
 
 	wsb, err := wrapper.WrappedSignedBeaconBlock(alphaBlock)
 	require.NoError(t, err)
@@ -63,11 +59,11 @@ func Test_BlockIfaceToV1BlockHeader(t *testing.T) {
 	bodyRoot, err := alphaBlock.Block.Body.HashTreeRoot()
 	require.NoError(t, err)
 	assert.DeepEqual(t, bodyRoot[:], v1Header.Message.BodyRoot)
-	assert.Equal(t, slot, v1Header.Message.Slot)
-	assert.Equal(t, validatorIndex, v1Header.Message.ProposerIndex)
-	assert.DeepEqual(t, parentRoot, v1Header.Message.ParentRoot)
-	assert.DeepEqual(t, stateRoot, v1Header.Message.StateRoot)
-	assert.DeepEqual(t, signature, v1Header.Signature)
+	assert.Equal(t, wsb.Block().Slot(), v1Header.Message.Slot)
+	assert.Equal(t, wsb.Block().ProposerIndex(), v1Header.Message.ProposerIndex)
+	assert.DeepEqual(t, wsb.Block().ParentRoot(), v1Header.Message.ParentRoot)
+	assert.DeepEqual(t, wsb.Block().StateRoot(), v1Header.Message.StateRoot)
+	assert.DeepEqual(t, wsb.Signature(), v1Header.Signature)
 }
 
 func Test_V1Alpha1AggregateAttAndProofToV1(t *testing.T) {
@@ -89,18 +85,7 @@ func Test_V1Alpha1AggregateAttAndProofToV1(t *testing.T) {
 }
 
 func Test_V1Alpha1ToV1SignedBlock(t *testing.T) {
-	alphaBlock := util.HydrateSignedBeaconBlock(&ethpbalpha.SignedBeaconBlock{})
-	alphaBlock.Block.Slot = slot
-	alphaBlock.Block.ProposerIndex = validatorIndex
-	alphaBlock.Block.ParentRoot = parentRoot
-	alphaBlock.Block.StateRoot = stateRoot
-	alphaBlock.Block.Body.RandaoReveal = randaoReveal
-	alphaBlock.Block.Body.Eth1Data = &ethpbalpha.Eth1Data{
-		DepositRoot:  depositRoot,
-		DepositCount: depositCount,
-		BlockHash:    blockHash,
-	}
-	alphaBlock.Signature = signature
+	alphaBlock := tgen.PbSignedBlockPhase0()
 
 	v1Block, err := V1Alpha1ToV1SignedBlock(alphaBlock)
 	require.NoError(t, err)
@@ -352,18 +337,7 @@ func Test_V1AttToV1Alpha1(t *testing.T) {
 }
 
 func Test_BlockInterfaceToV1Block(t *testing.T) {
-	v1Alpha1Block := util.HydrateSignedBeaconBlock(&ethpbalpha.SignedBeaconBlock{})
-	v1Alpha1Block.Block.Slot = slot
-	v1Alpha1Block.Block.ProposerIndex = validatorIndex
-	v1Alpha1Block.Block.ParentRoot = parentRoot
-	v1Alpha1Block.Block.StateRoot = stateRoot
-	v1Alpha1Block.Block.Body.RandaoReveal = randaoReveal
-	v1Alpha1Block.Block.Body.Eth1Data = &ethpbalpha.Eth1Data{
-		DepositRoot:  depositRoot,
-		DepositCount: depositCount,
-		BlockHash:    blockHash,
-	}
-	v1Alpha1Block.Signature = signature
+	v1Alpha1Block := tgen.PbSignedBlockPhase0()
 
 	wsb, err := wrapper.WrappedSignedBeaconBlock(v1Alpha1Block)
 	require.NoError(t, err)

@@ -3,7 +3,6 @@ package interfaces_test
 import (
 	"testing"
 
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -76,16 +75,7 @@ func TestBeaconBlockHeaderFromBlock_NilBlockBody(t *testing.T) {
 }
 
 func TestSignedBeaconBlockHeaderFromBlock(t *testing.T) {
-	hashLen := 32
-	blk := &eth.SignedBeaconBlock{Block: &eth.BeaconBlock{
-		Slot:          200,
-		ProposerIndex: 2,
-		ParentRoot:    bytesutil.PadTo([]byte("parent root"), hashLen),
-		StateRoot:     bytesutil.PadTo([]byte("state root"), hashLen),
-		Body:          tgen.PbBlockBodyPhase0(),
-	},
-		Signature: bytesutil.PadTo([]byte("signature"), fieldparams.BLSSignatureLength),
-	}
+	blk := tgen.PbSignedBlockPhase0()
 	bodyRoot, err := blk.Block.Body.HashTreeRoot()
 	require.NoError(t, err)
 	want := &eth.SignedBeaconBlockHeader{Header: &eth.BeaconBlockHeader{
@@ -104,16 +94,7 @@ func TestSignedBeaconBlockHeaderFromBlock(t *testing.T) {
 }
 
 func TestSignedBeaconBlockHeaderFromBlockInterface(t *testing.T) {
-	hashLen := 32
-	blk := &eth.SignedBeaconBlock{Block: &eth.BeaconBlock{
-		Slot:          200,
-		ProposerIndex: 2,
-		ParentRoot:    bytesutil.PadTo([]byte("parent root"), hashLen),
-		StateRoot:     bytesutil.PadTo([]byte("state root"), hashLen),
-		Body:          tgen.PbBlockBodyPhase0(),
-	},
-		Signature: bytesutil.PadTo([]byte("signature"), fieldparams.BLSSignatureLength),
-	}
+	blk := tgen.PbSignedBlockPhase0()
 	bodyRoot, err := blk.Block.Body.HashTreeRoot()
 	require.NoError(t, err)
 	want := &eth.SignedBeaconBlockHeader{Header: &eth.BeaconBlockHeader{
@@ -133,15 +114,8 @@ func TestSignedBeaconBlockHeaderFromBlockInterface(t *testing.T) {
 }
 
 func TestSignedBeaconBlockHeaderFromBlock_NilBlockBody(t *testing.T) {
-	hashLen := 32
-	blk := &eth.SignedBeaconBlock{Block: &eth.BeaconBlock{
-		Slot:          200,
-		ProposerIndex: 2,
-		ParentRoot:    bytesutil.PadTo([]byte("parent root"), hashLen),
-		StateRoot:     bytesutil.PadTo([]byte("state root"), hashLen),
-	},
-		Signature: bytesutil.PadTo([]byte("signature"), fieldparams.BLSSignatureLength),
-	}
+	blk := tgen.PbSignedBlockPhase0()
+	blk.Block.Body = nil
 	_, err := interfaces.SignedBeaconBlockHeaderFromBlock(blk)
 	require.ErrorContains(t, "nil block", err)
 }

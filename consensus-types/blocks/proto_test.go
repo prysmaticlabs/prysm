@@ -16,10 +16,7 @@ func Test_SignedBeaconBlock_Proto(t *testing.T) {
 	f := tgen.GetBlockFields()
 
 	t.Run("Phase0", func(t *testing.T) {
-		expectedBlock := &eth.SignedBeaconBlock{
-			Block:     tgen.PbBlockPhase0(),
-			Signature: f.B96,
-		}
+		expectedBlock := tgen.PbSignedBlockPhase0()
 		block := &SignedBeaconBlock{
 			version: version.Phase0,
 			block: &BeaconBlock{
