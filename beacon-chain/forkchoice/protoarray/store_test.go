@@ -367,7 +367,9 @@ func TestStore_Prune_LessThanThreshold(t *testing.T) {
 
 	// Finalized root is at index 99 so everything before 99 should be pruned,
 	// but PruneThreshold is at 100 so nothing will be pruned.
-	require.NoError(t, s.prune(context.Background(), indexToHash(99)))
+	fc := &forkchoicetypes.Checkpoint{Epoch: 3, Root: indexToHash(99)}
+	s.finalizedCheckpoint = fc
+	require.NoError(t, s.prune(context.Background()))
 	assert.Equal(t, 100, len(s.nodes), "Incorrect nodes count")
 	assert.Equal(t, 100, len(s.nodesIndices), "Incorrect node indices count")
 }
@@ -406,7 +408,9 @@ func TestStore_Prune_MoreThanThreshold(t *testing.T) {
 	s := &Store{nodes: nodes, nodesIndices: indices, canonicalNodes: map[[32]byte]bool{}, payloadIndices: map[[32]byte]uint64{}}
 
 	// Finalized root is at index 99 so everything before 99 should be pruned.
-	require.NoError(t, s.prune(context.Background(), indexToHash(99)))
+	fc := &forkchoicetypes.Checkpoint{Epoch: 3, Root: indexToHash(99)}
+	s.finalizedCheckpoint = fc
+	require.NoError(t, s.prune(context.Background()))
 	assert.Equal(t, 1, len(s.nodes), "Incorrect nodes count")
 	assert.Equal(t, 1, len(s.nodesIndices), "Incorrect node indices count")
 }
@@ -444,12 +448,15 @@ func TestStore_Prune_MoreThanOnce(t *testing.T) {
 	s := &Store{nodes: nodes, nodesIndices: indices, canonicalNodes: map[[32]byte]bool{}, payloadIndices: map[[32]byte]uint64{}}
 
 	// Finalized root is at index 11 so everything before 11 should be pruned.
-	require.NoError(t, s.prune(context.Background(), indexToHash(10)))
+	fc := &forkchoicetypes.Checkpoint{Epoch: 1, Root: indexToHash(10)}
+	s.finalizedCheckpoint = fc
+	require.NoError(t, s.prune(context.Background()))
 	assert.Equal(t, 90, len(s.nodes), "Incorrect nodes count")
 	assert.Equal(t, 90, len(s.nodesIndices), "Incorrect node indices count")
 
 	// One more time.
-	require.NoError(t, s.prune(context.Background(), indexToHash(20)))
+	s.finalizedCheckpoint.Root = indexToHash(20)
+	require.NoError(t, s.prune(context.Background()))
 	assert.Equal(t, 80, len(s.nodes), "Incorrect nodes count")
 	assert.Equal(t, 80, len(s.nodesIndices), "Incorrect node indices count")
 }
@@ -507,7 +514,9 @@ func TestStore_Prune_NoDanglingBranch(t *testing.T) {
 			[32]byte{'C'}: 2,
 		},
 	}
-	require.NoError(t, s.prune(context.Background(), indexToHash(uint64(1))))
+	fc := &forkchoicetypes.Checkpoint{Epoch: 1, Root: indexToHash(1)}
+	s.finalizedCheckpoint = fc
+	require.NoError(t, s.prune(context.Background()))
 	require.Equal(t, 1, len(s.nodes))
 	require.Equal(t, 1, len(s.nodesIndices))
 	require.Equal(t, 1, len(s.canonicalNodes))
@@ -610,7 +619,8 @@ func TestStore_PruneBranched(t *testing.T) {
 		require.Equal(t, true, f.IsCanonical([32]byte{'a'}))
 		require.Equal(t, true, f.IsCanonical([32]byte{'f'}))
 
-		require.NoError(t, f.Prune(ctx, tc.finalizedRoot))
+		f.store.finalizedCheckpoint.Root = tc.finalizedRoot
+		require.NoError(t, f.store.prune(ctx))
 		require.Equal(t, tc.canonicalCount, len(f.store.canonicalNodes))
 		require.Equal(t, true, f.IsCanonical(tc.wantedCanonical))
 		require.Equal(t, false, f.IsCanonical(tc.wantedNonCanonical))
@@ -1234,6 +1244,11 @@ func TestForkChoice_UpdateCheckpoints(t *testing.T) {
 				[32]byte{'f'}, [32]byte{}, tt.newJustified.Epoch, tt.newFinalized.Epoch)
 			require.NoError(t, err)
 			require.NoError(t, fcs.InsertNode(ctx, state, blkRoot))
+			state, blkRoot, err = prepareForkchoiceState(ctx, 65, [32]byte{'h'},
+				[32]byte{'f'}, [32]byte{}, tt.newFinalized.Epoch, tt.newFinalized.Epoch)
+			require.NoError(t, err)
+			require.NoError(t, fcs.InsertNode(ctx, state, blkRoot))
+			// restart justifications cause insertion messed it up
 			// restart justifications cause insertion messed it up
 			fcs.store.justifiedCheckpoint = tt.justified
 			fcs.store.finalizedCheckpoint = tt.finalized

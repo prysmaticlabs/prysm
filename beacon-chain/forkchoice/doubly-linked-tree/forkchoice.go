@@ -151,7 +151,6 @@ func (f *ForkChoice) InsertNode(ctx context.Context, state state.ReadOnlyBeaconS
 // updateCheckpoints update the checkpoints when inserting a new node.
 func (f *ForkChoice) updateCheckpoints(ctx context.Context, jc, fc *ethpb.Checkpoint) error {
 	f.store.checkpointsLock.Lock()
-	defer f.store.checkpointsLock.Unlock()
 	if jc.Epoch > f.store.justifiedCheckpoint.Epoch {
 		if jc.Epoch > f.store.bestJustifiedCheckpoint.Epoch {
 			f.store.bestJustifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch,
@@ -169,11 +168,13 @@ func (f *ForkChoice) updateCheckpoints(ctx context.Context, jc, fc *ethpb.Checkp
 			}
 			jSlot, err := slots.EpochStart(currentJcp.Epoch)
 			if err != nil {
+				f.store.checkpointsLock.Unlock()
 				return err
 			}
 			jcRoot := bytesutil.ToBytes32(jc.Root)
 			root, err := f.AncestorRoot(ctx, jcRoot, jSlot)
 			if err != nil {
+				f.store.checkpointsLock.Unlock()
 				return err
 			}
 			if root == currentRoot {
@@ -183,19 +184,16 @@ func (f *ForkChoice) updateCheckpoints(ctx context.Context, jc, fc *ethpb.Checkp
 		}
 	}
 	// Update finalization
-	if fc.Epoch > f.store.finalizedCheckpoint.Epoch {
-		f.store.finalizedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: fc.Epoch,
-			Root: bytesutil.ToBytes32(fc.Root)}
-		f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch,
-			Root: bytesutil.ToBytes32(jc.Root)}
+	if fc.Epoch <= f.store.finalizedCheckpoint.Epoch {
+		f.store.checkpointsLock.Unlock()
+		return nil
 	}
-	return nil
-}
-
-// Prune prunes the fork choice store with the new finalized root. The store is only pruned if the input
-// root is different than the current store finalized root, and the number of the store has met prune threshold.
-func (f *ForkChoice) Prune(ctx context.Context, finalizedRoot [32]byte) error {
-	return f.store.prune(ctx, finalizedRoot)
+	f.store.finalizedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: fc.Epoch,
+		Root: bytesutil.ToBytes32(fc.Root)}
+	f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch,
+		Root: bytesutil.ToBytes32(jc.Root)}
+	f.store.checkpointsLock.Unlock()
+	return f.store.prune(ctx)
 }
 
 // HasNode returns true if the node exists in fork choice store,
