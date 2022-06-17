@@ -10,10 +10,7 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
-	doublylinkedtree "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/doubly-linked-tree"
-	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
@@ -39,7 +36,7 @@ func (s *Service) UpdateAndSaveHeadWithBalances(ctx context.Context) error {
 		msg := fmt.Sprintf("could not read balances for state w/ justified checkpoint %#x", jp.Root)
 		return errors.Wrap(err, msg)
 	}
-	headRoot, err := s.updateHead(ctx, balances)
+	headRoot, err := s.cfg.ForkChoiceStore.Head(ctx, balances)
 	if err != nil {
 		return errors.Wrap(err, "could not update head")
 	}
@@ -60,50 +57,6 @@ type head struct {
 	root  [32]byte                     // current head root.
 	block interfaces.SignedBeaconBlock // current head block.
 	state state.BeaconState            // current head state.
-}
-
-// Determined the head from the fork choice service and saves its new data
-// (head root, head block, and head state) to the local service cache.
-func (s *Service) updateHead(ctx context.Context, balances []uint64) ([32]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "blockChain.updateHead")
-	defer span.End()
-
-	// Get head from the fork choice service.
-	f, err := s.store.FinalizedCheckpt()
-	if err != nil {
-		return [32]byte{}, errors.Wrap(err, "could not get finalized checkpoint")
-	}
-	j, err := s.store.JustifiedCheckpt()
-	if err != nil {
-		return [32]byte{}, errors.Wrap(err, "could not get justified checkpoint")
-	}
-	// To get head before the first justified epoch, the fork choice will start with origin root
-	// instead of zero hashes.
-	headStartRoot := bytesutil.ToBytes32(j.Root)
-	if headStartRoot == params.BeaconConfig().ZeroHash {
-		headStartRoot = s.originBlockRoot
-	}
-
-	// In order to process head, fork choice store requires justified info.
-	// If the fork choice store is missing justified block info, a node should
-	// re-initiate fork choice store using the latest justified info.
-	// This recovers a fatal condition and should not happen in run time.
-	if !s.cfg.ForkChoiceStore.HasNode(headStartRoot) {
-		jb, err := s.getBlock(ctx, headStartRoot)
-		if err != nil {
-			return [32]byte{}, err
-		}
-		if features.Get().EnableForkChoiceDoublyLinkedTree {
-			s.cfg.ForkChoiceStore = doublylinkedtree.New(j.Epoch, f.Epoch)
-		} else {
-			s.cfg.ForkChoiceStore = protoarray.New(j.Epoch, f.Epoch)
-		}
-		if err := s.insertBlockToForkChoiceStore(ctx, jb.Block(), headStartRoot, f, j); err != nil {
-			return [32]byte{}, err
-		}
-	}
-
-	return s.cfg.ForkChoiceStore.Head(ctx, headStartRoot, balances)
 }
 
 // This saves head info to the local service cache, it also saves the

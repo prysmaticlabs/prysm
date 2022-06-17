@@ -244,6 +244,8 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	TerminalBlockHashActivationEpoch: 18446744073709551615,
 	TerminalBlockHash:                [32]byte{},
 	TerminalTotalDifficulty:          "115792089237316195423570985008687907853269984665640564039457584007913129638912",
+	EthBurnAddressHex:                "0x0000000000000000000000000000000000000000",
+	DefaultBuilderGasLimit:           uint64(30000000),
 }
 
 // MainnetTestConfig provides a version of the mainnet config that has a different name

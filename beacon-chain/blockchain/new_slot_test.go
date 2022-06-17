@@ -20,7 +20,7 @@ import (
 
 func TestService_newSlot(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
-	fcs := protoarray.New(0, 0)
+	fcs := protoarray.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),
@@ -35,12 +35,24 @@ func TestService_newSlot(t *testing.T) {
 	assert.NoError(t, beaconDB.SaveBlock(ctx, wsb))
 	bj, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err)
+	ojc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	ofc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 
-	require.NoError(t, fcs.InsertOptimisticBlock(ctx, 0, [32]byte{}, [32]byte{}, [32]byte{}, 0, 0))        // genesis
-	require.NoError(t, fcs.InsertOptimisticBlock(ctx, 32, [32]byte{'a'}, [32]byte{}, [32]byte{}, 0, 0))    // finalized
-	require.NoError(t, fcs.InsertOptimisticBlock(ctx, 64, [32]byte{'b'}, [32]byte{'a'}, [32]byte{}, 0, 0)) // justified
-	require.NoError(t, fcs.InsertOptimisticBlock(ctx, 96, bj, [32]byte{'a'}, [32]byte{}, 0, 0))            // best justified
-	require.NoError(t, fcs.InsertOptimisticBlock(ctx, 97, [32]byte{'d'}, [32]byte{}, [32]byte{}, 0, 0))    // bad
+	state, blkRoot, err := prepareForkchoiceState(ctx, 0, [32]byte{}, [32]byte{}, [32]byte{}, ojc, ofc)
+	require.NoError(t, err)
+	require.NoError(t, fcs.InsertNode(ctx, state, blkRoot)) // genesis
+	state, blkRoot, err = prepareForkchoiceState(ctx, 32, [32]byte{'a'}, [32]byte{}, [32]byte{}, ojc, ofc)
+	require.NoError(t, err)
+	require.NoError(t, fcs.InsertNode(ctx, state, blkRoot)) // finalized
+	state, blkRoot, err = prepareForkchoiceState(ctx, 64, [32]byte{'b'}, [32]byte{'a'}, [32]byte{}, ojc, ofc)
+	require.NoError(t, err)
+	require.NoError(t, fcs.InsertNode(ctx, state, blkRoot)) // justified
+	state, blkRoot, err = prepareForkchoiceState(ctx, 96, bj, [32]byte{'a'}, [32]byte{}, ojc, ofc)
+	require.NoError(t, err)
+	require.NoError(t, fcs.InsertNode(ctx, state, blkRoot)) // best justified
+	state, blkRoot, err = prepareForkchoiceState(ctx, 97, [32]byte{'d'}, [32]byte{}, [32]byte{}, ojc, ofc)
+	require.NoError(t, err)
+	require.NoError(t, fcs.InsertNode(ctx, state, blkRoot)) // bad
 
 	type args struct {
 		slot          types.Slot

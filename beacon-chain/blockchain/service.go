@@ -15,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/store"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -24,6 +23,7 @@ import (
 	f "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
@@ -41,7 +41,6 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"github.com/prysmaticlabs/prysm/time/slots"
-	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -139,6 +138,7 @@ func (s *Service) Start() {
 		}
 	}
 	s.spawnProcessAttestationsRoutine(s.cfg.StateNotifier.StateFeed())
+	s.fillMissingPayloadIDRoutine(s.ctx, s.cfg.StateNotifier.StateFeed())
 }
 
 // Stop the blockchain service's main event loop and associated goroutines.
@@ -207,24 +207,28 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 	s.store = store.New(justified, finalized)
 
 	var forkChoicer f.ForkChoicer
-	fRoot := bytesutil.ToBytes32(finalized.Root)
+	fRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(finalized.Root))
 	if features.Get().EnableForkChoiceDoublyLinkedTree {
-		forkChoicer = doublylinkedtree.New(justified.Epoch, finalized.Epoch)
+		forkChoicer = doublylinkedtree.New()
 	} else {
-		forkChoicer = protoarray.New(justified.Epoch, finalized.Epoch)
+		forkChoicer = protoarray.New()
 	}
 	s.cfg.ForkChoiceStore = forkChoicer
-	fb, err := s.getBlock(s.ctx, s.ensureRootNotZeros(fRoot))
-	if err != nil {
-		return errors.Wrap(err, "could not get finalized checkpoint block")
+	if err := forkChoicer.UpdateJustifiedCheckpoint(&forkchoicetypes.Checkpoint{Epoch: justified.Epoch,
+		Root: bytesutil.ToBytes32(justified.Root)}); err != nil {
+		return errors.Wrap(err, "could not update forkchoice's justified checkpoint")
 	}
-	payloadHash, err := blocks.GetBlockPayloadHash(fb.Block())
-	if err != nil {
-		return errors.Wrap(err, "could not get execution payload hash")
+	if err := forkChoicer.UpdateFinalizedCheckpoint(&forkchoicetypes.Checkpoint{Epoch: finalized.Epoch,
+		Root: bytesutil.ToBytes32(finalized.Root)}); err != nil {
+		return errors.Wrap(err, "could not update forkchoice's finalized checkpoint")
 	}
-	fSlot := fb.Block().Slot()
-	if err := forkChoicer.InsertOptimisticBlock(s.ctx, fSlot, fRoot, params.BeaconConfig().ZeroHash,
-		payloadHash, justified.Epoch, finalized.Epoch); err != nil {
+	forkChoicer.SetGenesisTime(uint64(s.genesisTime.Unix()))
+
+	st, err := s.cfg.StateGen.StateByRoot(s.ctx, fRoot)
+	if err != nil {
+		return errors.Wrap(err, "could not get finalized checkpoint state")
+	}
+	if err := forkChoicer.InsertNode(s.ctx, st, fRoot); err != nil {
 		return errors.Wrap(err, "could not insert finalized block to forkchoice")
 	}
 
@@ -237,19 +241,6 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 			return errors.Wrap(err, "could not set finalized block as validated")
 		}
 	}
-	s.headLock.RLock()
-	h := s.headBlock().Block()
-	s.headLock.RUnlock()
-	if h.Slot() > fSlot {
-		log.WithFields(logrus.Fields{
-			"startSlot": fSlot,
-			"endSlot":   h.Slot(),
-		}).Info("Loading blocks to fork choice store, this may take a while.")
-		if err := s.fillInForkChoiceMissingBlocks(s.ctx, h, finalized, justified); err != nil {
-			return errors.Wrap(err, "could not fill in fork choice store missing blocks")
-		}
-	}
-
 	// not attempting to save initial sync blocks here, because there shouldn't be any until
 	// after the statefeed.Initialized event is fired (below)
 	if err := s.wsVerifier.VerifyWeakSubjectivity(s.ctx, finalized.Epoch); err != nil {
@@ -485,22 +476,15 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState state.Beacon
 	genesisCheckpoint := genesisState.FinalizedCheckpoint()
 	s.store = store.New(genesisCheckpoint, genesisCheckpoint)
 
-	payloadHash, err := blocks.GetBlockPayloadHash(genesisBlk.Block())
-	if err != nil {
-		return err
-	}
-	if err := s.cfg.ForkChoiceStore.InsertOptimisticBlock(ctx,
-		genesisBlk.Block().Slot(),
-		genesisBlkRoot,
-		params.BeaconConfig().ZeroHash,
-		payloadHash,
-		genesisCheckpoint.Epoch,
-		genesisCheckpoint.Epoch); err != nil {
+	if err := s.cfg.ForkChoiceStore.InsertNode(ctx, genesisState, genesisBlkRoot); err != nil {
 		log.Fatalf("Could not process genesis block for fork choice: %v", err)
 	}
+	s.cfg.ForkChoiceStore.SetOriginRoot(genesisBlkRoot)
+	// Set genesis as fully validated
 	if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, genesisBlkRoot); err != nil {
-		log.Fatalf("Could not set optimistic status of genesis block to false: %v", err)
+		return errors.Wrap(err, "Could not set optimistic status of genesis block to false")
 	}
+	s.cfg.ForkChoiceStore.SetGenesisTime(uint64(s.genesisTime.Unix()))
 
 	s.setHead(genesisBlkRoot, genesisBlk, genesisState)
 	return nil

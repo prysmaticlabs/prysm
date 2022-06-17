@@ -127,6 +127,14 @@ func (s *LighthouseBeaconNodeSet) StopAtIndex(i int) error {
 	return s.nodes[i].Stop()
 }
 
+// ComponentAtIndex returns the component at the provided index.
+func (s *LighthouseBeaconNodeSet) ComponentAtIndex(i int) (e2etypes.ComponentRunner, error) {
+	if i >= len(s.nodes) {
+		return nil, errors.Errorf("provided index exceeds slice size: %d >= %d", i, len(s.nodes))
+	}
+	return s.nodes[i], nil
+}
+
 // LighthouseBeaconNode represents a lighthouse beacon node.
 type LighthouseBeaconNode struct {
 	e2etypes.ComponentRunner
@@ -176,7 +184,7 @@ func (node *LighthouseBeaconNode) Start(ctx context.Context) error {
 		fmt.Sprintf("--http-port=%d", e2e.TestParams.Ports.LighthouseBeaconNodeHTTPPort+index),
 		fmt.Sprintf("--target-peers=%d", 10),
 		fmt.Sprintf("--eth1-endpoints=http://127.0.0.1:%d", e2e.TestParams.Ports.Eth1RPCPort+prysmNodeCount+index),
-		fmt.Sprintf("--execution-endpoints=http://127.0.0.1:%d", e2e.TestParams.Ports.Eth1AuthRPCPort+prysmNodeCount+index),
+		fmt.Sprintf("--execution-endpoints=http://127.0.0.1:%d", e2e.TestParams.Ports.Eth1ProxyPort+prysmNodeCount+index),
 		fmt.Sprintf("--jwt-secrets=%s", jwtPath),
 		fmt.Sprintf("--boot-nodes=%s", node.enr),
 		fmt.Sprintf("--metrics-port=%d", e2e.TestParams.Ports.LighthouseBeaconNodeMetricsPort+index),

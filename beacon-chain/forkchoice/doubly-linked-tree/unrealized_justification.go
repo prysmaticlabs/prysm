@@ -1,6 +1,9 @@
 package doublylinkedtree
 
-import types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+import (
+	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+)
 
 func (s *Store) setUnrealizedJustifiedEpoch(root [32]byte, epoch types.Epoch) error {
 	s.nodesLock.Lock()
@@ -8,7 +11,7 @@ func (s *Store) setUnrealizedJustifiedEpoch(root [32]byte, epoch types.Epoch) er
 
 	node, ok := s.nodeByRoot[root]
 	if !ok || node == nil {
-		return ErrNilNode
+		return errors.Wrap(ErrNilNode, "could not set unrealized justified epoch")
 	}
 	if epoch < node.unrealizedJustifiedEpoch {
 		return errInvalidUnrealizedJustifiedEpoch
@@ -23,7 +26,7 @@ func (s *Store) setUnrealizedFinalizedEpoch(root [32]byte, epoch types.Epoch) er
 
 	node, ok := s.nodeByRoot[root]
 	if !ok || node == nil {
-		return ErrNilNode
+		return errors.Wrap(ErrNilNode, "could not set unrealized finalized epoch")
 	}
 	if epoch < node.unrealizedFinalizedEpoch {
 		return errInvalidUnrealizedFinalizedEpoch
@@ -41,11 +44,11 @@ func (f *ForkChoice) UpdateUnrealizedCheckpoints() {
 	for _, node := range f.store.nodeByRoot {
 		node.justifiedEpoch = node.unrealizedJustifiedEpoch
 		node.finalizedEpoch = node.unrealizedFinalizedEpoch
-		if node.justifiedEpoch > f.store.justifiedEpoch {
-			f.store.justifiedEpoch = node.justifiedEpoch
+		if node.justifiedEpoch > f.store.justifiedCheckpoint.Epoch {
+			f.store.justifiedCheckpoint.Epoch = node.justifiedEpoch
 		}
-		if node.finalizedEpoch > f.store.finalizedEpoch {
-			f.store.finalizedEpoch = node.finalizedEpoch
+		if node.finalizedEpoch > f.store.finalizedCheckpoint.Epoch {
+			f.store.finalizedCheckpoint.Epoch = node.finalizedEpoch
 		}
 	}
 }

@@ -5,18 +5,24 @@ import (
 
 	"context"
 
+	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestStore_SetUnrealizedEpochs(t *testing.T) {
 	f := setup(1, 1)
 	ctx := context.Background()
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 100, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 1, 1))
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'B'}, 1, 1))
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 102, [32]byte{'c'}, [32]byte{'b'}, [32]byte{'C'}, 1, 1))
+	state, blkRoot, err := prepareForkchoiceState(ctx, 100, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'B'}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 102, [32]byte{'c'}, [32]byte{'b'}, [32]byte{'C'}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 	f.store.nodesLock.RLock()
 	require.Equal(t, types.Epoch(1), f.store.nodes[2].unrealizedJustifiedEpoch)
 	require.Equal(t, types.Epoch(1), f.store.nodes[2].unrealizedFinalizedEpoch)
@@ -35,9 +41,15 @@ func TestStore_SetUnrealizedEpochs(t *testing.T) {
 func TestStore_UpdateUnrealizedCheckpoints(t *testing.T) {
 	f := setup(1, 1)
 	ctx := context.Background()
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 100, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 1, 1))
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'B'}, 1, 1))
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 102, [32]byte{'c'}, [32]byte{'b'}, [32]byte{'C'}, 1, 1))
+	state, blkRoot, err := prepareForkchoiceState(ctx, 100, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'B'}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 102, [32]byte{'c'}, [32]byte{'b'}, [32]byte{'C'}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 
 }
 
@@ -55,31 +67,39 @@ func TestStore_UpdateUnrealizedCheckpoints(t *testing.T) {
 func TestStore_LongFork(t *testing.T) {
 	f := setup(1, 1)
 	ctx := context.Background()
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 100, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 1, 1))
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'B'}, 1, 1))
+	state, blkRoot, err := prepareForkchoiceState(ctx, 100, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'B'}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 	require.NoError(t, f.store.setUnrealizedJustifiedEpoch([32]byte{'b'}, 2))
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 102, [32]byte{'c'}, [32]byte{'b'}, [32]byte{'C'}, 1, 1))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 102, [32]byte{'c'}, [32]byte{'b'}, [32]byte{'C'}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 	require.NoError(t, f.store.setUnrealizedJustifiedEpoch([32]byte{'c'}, 2))
 
 	// Add an attestation to c, it is head
 	f.ProcessAttestation(ctx, []uint64{0}, [32]byte{'c'}, 1)
-	headRoot, err := f.Head(ctx, [32]byte{}, []uint64{100})
+	headRoot, err := f.Head(ctx, []uint64{100})
 	require.NoError(t, err)
 	require.Equal(t, [32]byte{'c'}, headRoot)
 
 	// D is head even though its weight is lower.
-	hr := [32]byte{'d'}
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 103, hr, [32]byte{'b'}, [32]byte{'D'}, 2, 1))
-	require.NoError(t, f.UpdateJustifiedCheckpoint(&ethpb.Checkpoint{Epoch: 2, Root: hr[:]}))
-	headRoot, err = f.Head(ctx, [32]byte{}, []uint64{100})
+	ha := [32]byte{'a'}
+	state, blkRoot, err = prepareForkchoiceState(ctx, 103, [32]byte{'d'}, [32]byte{'b'}, [32]byte{'D'}, 2, 1)
 	require.NoError(t, err)
-	require.Equal(t, hr, headRoot)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	require.NoError(t, f.UpdateJustifiedCheckpoint(&forkchoicetypes.Checkpoint{Epoch: 2, Root: ha}))
+	headRoot, err = f.Head(ctx, []uint64{100})
+	require.NoError(t, err)
+	require.Equal(t, [32]byte{'d'}, headRoot)
 	require.Equal(t, uint64(0), f.store.nodes[4].weight)
 	require.Equal(t, uint64(100), f.store.nodes[3].weight)
 
 	// Update unrealized justification, c becomes head
 	f.UpdateUnrealizedCheckpoints()
-	headRoot, err = f.Head(ctx, [32]byte{}, []uint64{100})
+	headRoot, err = f.Head(ctx, []uint64{100})
 	require.NoError(t, err)
 	require.Equal(t, [32]byte{'c'}, headRoot)
 }
@@ -101,20 +121,36 @@ func TestStore_NoDeadLock(t *testing.T) {
 	ctx := context.Background()
 
 	// Epoch 1 blocks
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 100, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 0, 0))
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'B'}, 0, 0))
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 102, [32]byte{'c'}, [32]byte{'b'}, [32]byte{'C'}, 0, 0))
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 103, [32]byte{'d'}, [32]byte{'c'}, [32]byte{'D'}, 0, 0))
+	state, blkRoot, err := prepareForkchoiceState(ctx, 100, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 0, 0)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'B'}, 0, 0)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 102, [32]byte{'c'}, [32]byte{'b'}, [32]byte{'C'}, 0, 0)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 103, [32]byte{'d'}, [32]byte{'c'}, [32]byte{'D'}, 0, 0)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 
 	// Epoch 2 Blocks
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 104, [32]byte{'e'}, [32]byte{'d'}, [32]byte{'E'}, 0, 0))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 104, [32]byte{'e'}, [32]byte{'d'}, [32]byte{'E'}, 0, 0)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 	require.NoError(t, f.store.setUnrealizedJustifiedEpoch([32]byte{'e'}, 1))
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 105, [32]byte{'f'}, [32]byte{'e'}, [32]byte{'F'}, 0, 0))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 105, [32]byte{'f'}, [32]byte{'e'}, [32]byte{'F'}, 0, 0)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 	require.NoError(t, f.store.setUnrealizedJustifiedEpoch([32]byte{'f'}, 1))
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 106, [32]byte{'g'}, [32]byte{'f'}, [32]byte{'G'}, 0, 0))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 106, [32]byte{'g'}, [32]byte{'f'}, [32]byte{'G'}, 0, 0)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 	require.NoError(t, f.store.setUnrealizedJustifiedEpoch([32]byte{'g'}, 2))
 	require.NoError(t, f.store.setUnrealizedFinalizedEpoch([32]byte{'g'}, 1))
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 107, [32]byte{'h'}, [32]byte{'g'}, [32]byte{'H'}, 0, 0))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 107, [32]byte{'h'}, [32]byte{'g'}, [32]byte{'H'}, 0, 0)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 	require.NoError(t, f.store.setUnrealizedJustifiedEpoch([32]byte{'h'}, 2))
 	require.NoError(t, f.store.setUnrealizedFinalizedEpoch([32]byte{'h'}, 1))
 	// Add an attestation for h
@@ -122,28 +158,31 @@ func TestStore_NoDeadLock(t *testing.T) {
 
 	// Epoch 3
 	// Current Head is H
-	headRoot, err := f.Head(ctx, [32]byte{}, []uint64{100})
+	headRoot, err := f.Head(ctx, []uint64{100})
 	require.NoError(t, err)
 	require.Equal(t, [32]byte{'h'}, headRoot)
-	require.Equal(t, types.Epoch(0), f.JustifiedEpoch())
+	require.Equal(t, types.Epoch(0), f.JustifiedCheckpoint().Epoch)
 
 	// Insert Block I, it becomes Head
 	hr := [32]byte{'i'}
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 108, hr, [32]byte{'f'}, [32]byte{'I'}, 1, 0))
-	require.NoError(t, f.UpdateJustifiedCheckpoint(&ethpb.Checkpoint{Epoch: 1, Root: hr[:]}))
-	headRoot, err = f.Head(ctx, [32]byte{}, []uint64{100})
+	state, blkRoot, err = prepareForkchoiceState(ctx, 108, hr, [32]byte{'f'}, [32]byte{'I'}, 1, 0)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	ha := [32]byte{'a'}
+	require.NoError(t, f.UpdateJustifiedCheckpoint(&forkchoicetypes.Checkpoint{Epoch: 1, Root: ha}))
+	headRoot, err = f.Head(ctx, []uint64{100})
 	require.NoError(t, err)
 	require.Equal(t, hr, headRoot)
-	require.Equal(t, types.Epoch(1), f.JustifiedEpoch())
-	require.Equal(t, types.Epoch(0), f.FinalizedEpoch())
+	require.Equal(t, types.Epoch(1), f.JustifiedCheckpoint().Epoch)
+	require.Equal(t, types.Epoch(0), f.FinalizedCheckpoint().Epoch)
 
 	// Realized Justified checkpoints, H becomes head
 	f.UpdateUnrealizedCheckpoints()
-	headRoot, err = f.Head(ctx, [32]byte{}, []uint64{100})
+	headRoot, err = f.Head(ctx, []uint64{100})
 	require.NoError(t, err)
 	require.Equal(t, [32]byte{'h'}, headRoot)
-	require.Equal(t, types.Epoch(2), f.JustifiedEpoch())
-	require.Equal(t, types.Epoch(1), f.FinalizedEpoch())
+	require.Equal(t, types.Epoch(2), f.JustifiedCheckpoint().Epoch)
+	require.Equal(t, types.Epoch(1), f.FinalizedCheckpoint().Epoch)
 }
 
 //    Epoch  1       |         Epoch 2
@@ -162,31 +201,47 @@ func TestStore_ForkNextEpoch(t *testing.T) {
 	ctx := context.Background()
 
 	// Epoch 1 blocks (D does not arrive)
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 100, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 0, 0))
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'B'}, 0, 0))
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 102, [32]byte{'c'}, [32]byte{'b'}, [32]byte{'C'}, 0, 0))
+	state, blkRoot, err := prepareForkchoiceState(ctx, 100, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 0, 0)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'B'}, 0, 0)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 102, [32]byte{'c'}, [32]byte{'b'}, [32]byte{'C'}, 0, 0)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 
 	// Epoch 2 blocks
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 104, [32]byte{'e'}, [32]byte{'c'}, [32]byte{'E'}, 0, 0))
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 105, [32]byte{'f'}, [32]byte{'e'}, [32]byte{'F'}, 0, 0))
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 106, [32]byte{'g'}, [32]byte{'f'}, [32]byte{'G'}, 0, 0))
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 107, [32]byte{'h'}, [32]byte{'g'}, [32]byte{'H'}, 0, 0))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 104, [32]byte{'e'}, [32]byte{'c'}, [32]byte{'E'}, 0, 0)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 105, [32]byte{'f'}, [32]byte{'e'}, [32]byte{'F'}, 0, 0)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 106, [32]byte{'g'}, [32]byte{'f'}, [32]byte{'G'}, 0, 0)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 107, [32]byte{'h'}, [32]byte{'g'}, [32]byte{'H'}, 0, 0)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 
 	// Insert an attestation to H, H is head
 	f.ProcessAttestation(ctx, []uint64{0}, [32]byte{'h'}, 1)
-	headRoot, err := f.Head(ctx, [32]byte{}, []uint64{100})
+	headRoot, err := f.Head(ctx, []uint64{100})
 	require.NoError(t, err)
 	require.Equal(t, [32]byte{'h'}, headRoot)
-	require.Equal(t, types.Epoch(0), f.JustifiedEpoch())
+	require.Equal(t, types.Epoch(0), f.JustifiedCheckpoint().Epoch)
 
 	// D arrives late, D is head
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 103, [32]byte{'d'}, [32]byte{'c'}, [32]byte{'D'}, 0, 0))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 103, [32]byte{'d'}, [32]byte{'c'}, [32]byte{'D'}, 0, 0)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 	require.NoError(t, f.store.setUnrealizedJustifiedEpoch([32]byte{'d'}, 1))
 	f.UpdateUnrealizedCheckpoints()
-	headRoot, err = f.Head(ctx, [32]byte{}, []uint64{100})
+	headRoot, err = f.Head(ctx, []uint64{100})
 	require.NoError(t, err)
 	require.Equal(t, [32]byte{'d'}, headRoot)
-	require.Equal(t, types.Epoch(1), f.JustifiedEpoch())
+	require.Equal(t, types.Epoch(1), f.JustifiedCheckpoint().Epoch)
 	// nodes[8] = D since it's late!
 	require.Equal(t, uint64(0), f.store.nodes[8].weight)
 	require.Equal(t, uint64(100), f.store.nodes[7].weight)

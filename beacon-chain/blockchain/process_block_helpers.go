@@ -7,6 +7,8 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/doubly-linked-tree"
+	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -215,12 +217,7 @@ func (s *Service) updateJustified(ctx context.Context, state state.ReadOnlyBeaco
 			return err
 		}
 		s.store.SetJustifiedCheckptAndPayloadHash(cpt, h)
-		// Update forkchoice's justified checkpoint
-		if err := s.cfg.ForkChoiceStore.UpdateJustifiedCheckpoint(cpt); err != nil {
-			return err
-		}
 	}
-
 	return nil
 }
 
@@ -242,7 +239,8 @@ func (s *Service) updateJustifiedInitSync(ctx context.Context, cp *ethpb.Checkpo
 		return err
 	}
 	s.store.SetJustifiedCheckptAndPayloadHash(cp, h)
-	return s.cfg.ForkChoiceStore.UpdateJustifiedCheckpoint(cp)
+	return s.cfg.ForkChoiceStore.UpdateJustifiedCheckpoint(&forkchoicetypes.Checkpoint{
+		Epoch: cp.Epoch, Root: bytesutil.ToBytes32(cp.Root)})
 }
 
 func (s *Service) updateFinalized(ctx context.Context, cp *ethpb.Checkpoint) error {
@@ -262,7 +260,7 @@ func (s *Service) updateFinalized(ctx context.Context, cp *ethpb.Checkpoint) err
 
 	fRoot := bytesutil.ToBytes32(cp.Root)
 	optimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(fRoot)
-	if err != nil {
+	if err != nil && err != protoarray.ErrUnknownNodeRoot && err != doublylinkedtree.ErrNilNode {
 		return err
 	}
 	if !optimistic {
@@ -317,7 +315,8 @@ func (s *Service) ancestorByForkChoiceStore(ctx context.Context, r [32]byte, slo
 	if !s.cfg.ForkChoiceStore.HasParent(r) {
 		return nil, errors.New("could not find root in fork choice store")
 	}
-	return s.cfg.ForkChoiceStore.AncestorRoot(ctx, r, slot)
+	root, err := s.cfg.ForkChoiceStore.AncestorRoot(ctx, r, slot)
+	return root[:], err
 }
 
 // This retrieves an ancestor root using DB. The look up is recursively looking up DB. Slower than `ancestorByForkChoiceStore`.
@@ -358,7 +357,7 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk interfa
 		return err
 	}
 	pendingNodes = append(pendingNodes, &forkchoicetypes.BlockAndCheckpoints{Block: blk,
-		JustifiedEpoch: jCheckpoint.Epoch, FinalizedEpoch: fCheckpoint.Epoch})
+		JustifiedCheckpoint: jCheckpoint, FinalizedCheckpoint: fCheckpoint})
 	// As long as parent node is not in fork choice store, and parent node is in DB.
 	root := bytesutil.ToBytes32(blk.ParentRoot())
 	for !s.cfg.ForkChoiceStore.HasNode(root) && s.cfg.BeaconDB.HasBlock(ctx, root) {
@@ -371,8 +370,8 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk interfa
 		}
 		root = bytesutil.ToBytes32(b.Block().ParentRoot())
 		args := &forkchoicetypes.BlockAndCheckpoints{Block: b.Block(),
-			JustifiedEpoch: jCheckpoint.Epoch,
-			FinalizedEpoch: fCheckpoint.Epoch}
+			JustifiedCheckpoint: jCheckpoint,
+			FinalizedCheckpoint: fCheckpoint}
 		pendingNodes = append(pendingNodes, args)
 	}
 	if len(pendingNodes) == 1 {

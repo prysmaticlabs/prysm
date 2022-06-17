@@ -32,11 +32,6 @@ func TestSubmitValidatorRegistration(t *testing.T) {
 		GetGenesis(gomock.Any(), &emptypb.Empty{}).
 		Return(&ethpb.Genesis{GenesisTime: ti}, nil)
 
-	m.validatorClient.EXPECT().DomainData(
-		gomock.Any(), // ctx
-		&ethpb.DomainRequest{Domain: params.BeaconConfig().DomainApplicationBuilder[:]},
-	).Times(1).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
-
 	m.validatorClient.EXPECT().
 		SubmitValidatorRegistration(gomock.Any(), &ethpb.SignedValidatorRegistrationV1{
 			Message:   reg,
@@ -44,31 +39,6 @@ func TestSubmitValidatorRegistration(t *testing.T) {
 		}).
 		Return(nil, nil)
 	require.NoError(t, nil, SubmitValidatorRegistration(ctx, m.validatorClient, m.nodeClient, m.signfunc, reg))
-}
-
-func TestSubmitValidatorRegistration_InvalidDomain(t *testing.T) {
-	_, m, validatorKey, finish := setup(t)
-	defer finish()
-
-	ctx := context.Background()
-	reg := &ethpb.ValidatorRegistrationV1{
-		FeeRecipient: bytesutil.PadTo([]byte("fee"), 20),
-		GasLimit:     123456,
-		Timestamp:    uint64(time.Now().Unix()),
-		Pubkey:       validatorKey.PublicKey().Marshal(),
-	}
-
-	genesisTime := &timestamppb.Timestamp{}
-	m.nodeClient.EXPECT().
-		GetGenesis(gomock.Any(), &emptypb.Empty{}).
-		Return(&ethpb.Genesis{GenesisTime: genesisTime}, nil)
-
-	m.validatorClient.EXPECT().DomainData(
-		gomock.Any(), // ctx
-		&ethpb.DomainRequest{Domain: params.BeaconConfig().DomainApplicationBuilder[:]},
-	).Times(1).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, errors.New(domainDataErr))
-
-	require.ErrorContains(t, domainDataErr, SubmitValidatorRegistration(ctx, m.validatorClient, m.nodeClient, m.signfunc, reg))
 }
 
 func TestSubmitValidatorRegistration_CantSign(t *testing.T) {
@@ -87,11 +57,6 @@ func TestSubmitValidatorRegistration_CantSign(t *testing.T) {
 	m.nodeClient.EXPECT().
 		GetGenesis(gomock.Any(), &emptypb.Empty{}).
 		Return(&ethpb.Genesis{GenesisTime: genesisTime}, nil)
-
-	m.validatorClient.EXPECT().DomainData(
-		gomock.Any(), // ctx
-		&ethpb.DomainRequest{Domain: params.BeaconConfig().DomainApplicationBuilder[:]},
-	).Times(1).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 
 	m.validatorClient.EXPECT().
 		SubmitValidatorRegistration(gomock.Any(), &ethpb.SignedValidatorRegistrationV1{
@@ -113,23 +78,10 @@ func Test_signValidatorRegistration(t *testing.T) {
 		Timestamp:    uint64(time.Now().Unix()),
 		Pubkey:       validatorKey.PublicKey().Marshal(),
 	}
-	m.validatorClient.EXPECT().DomainData(
-		gomock.Any(), // ctx
-		&ethpb.DomainRequest{Domain: params.BeaconConfig().DomainApplicationBuilder[:]},
-	).Times(1).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
 	_, err := signValidatorRegistration(
 		ctx,
 		1,
 		m.validatorClient, m.signfunc, reg)
 	require.NoError(t, err)
 
-	m.validatorClient.EXPECT().DomainData(
-		gomock.Any(), // ctx
-		&ethpb.DomainRequest{Domain: params.BeaconConfig().DomainApplicationBuilder[:]},
-	).Times(1).Return(nil, errors.New(domainDataErr) /*err*/)
-	_, err = signValidatorRegistration(
-		ctx,
-		1,
-		m.validatorClient, m.signfunc, reg)
-	require.ErrorContains(t, domainDataErr, err)
 }

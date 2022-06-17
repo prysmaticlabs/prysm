@@ -3,13 +3,13 @@ package protoarray
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -28,13 +28,13 @@ func TestStore_PruneThreshold(t *testing.T) {
 func TestStore_JustifiedEpoch(t *testing.T) {
 	j := types.Epoch(100)
 	f := setup(j, j)
-	require.Equal(t, j, f.JustifiedEpoch())
+	require.Equal(t, j, f.JustifiedCheckpoint().Epoch)
 }
 
 func TestStore_FinalizedEpoch(t *testing.T) {
 	j := types.Epoch(50)
 	f := setup(j, j)
-	require.Equal(t, j, f.FinalizedEpoch())
+	require.Equal(t, j, f.FinalizedCheckpoint().Epoch)
 }
 
 func TestForkChoice_HasNode(t *testing.T) {
@@ -51,8 +51,9 @@ func TestForkChoice_HasNode(t *testing.T) {
 
 func TestStore_Head_UnknownJustifiedRoot(t *testing.T) {
 	s := &Store{nodesIndices: make(map[[32]byte]uint64)}
+	s.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: 1, Root: [32]byte{'a'}}
 
-	_, err := s.head(context.Background(), [32]byte{})
+	_, err := s.head(context.Background())
 	assert.ErrorContains(t, errUnknownJustifiedRoot.Error(), err)
 }
 
@@ -61,8 +62,9 @@ func TestStore_Head_UnknownJustifiedIndex(t *testing.T) {
 	indices := make(map[[32]byte]uint64)
 	indices[r] = 1
 	s := &Store{nodesIndices: indices}
+	s.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: 0, Root: r}
 
-	_, err := s.head(context.Background(), r)
+	_, err := s.head(context.Background())
 	assert.ErrorContains(t, errInvalidJustifiedIndex.Error(), err)
 }
 
@@ -73,7 +75,9 @@ func TestStore_Head_Itself(t *testing.T) {
 	// Since the justified node does not have a best descendant so the best node
 	// is itself.
 	s := &Store{nodesIndices: indices, nodes: []*Node{{root: r, parent: NonExistentNode, bestDescendant: NonExistentNode}}, canonicalNodes: make(map[[32]byte]bool)}
-	h, err := s.head(context.Background(), r)
+	s.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: 0, Root: r}
+	s.finalizedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: 0, Root: r}
+	h, err := s.head(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, r, h)
 }
@@ -86,7 +90,9 @@ func TestStore_Head_BestDescendant(t *testing.T) {
 	// Since the justified node's best descendant is at index 1, and its root is `best`,
 	// the head should be `best`.
 	s := &Store{nodesIndices: indices, nodes: []*Node{{root: r, bestDescendant: 1, parent: NonExistentNode}, {root: best, parent: 0}}, canonicalNodes: make(map[[32]byte]bool)}
-	h, err := s.head(context.Background(), r)
+	s.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: 0, Root: r}
+	s.finalizedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: 0, Root: r}
+	h, err := s.head(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, best, h)
 }
@@ -99,7 +105,9 @@ func TestStore_Head_ContextCancelled(t *testing.T) {
 
 	s := &Store{nodesIndices: indices, nodes: []*Node{{root: r, parent: NonExistentNode, bestDescendant: 1}, {root: best, parent: 0}}, canonicalNodes: make(map[[32]byte]bool)}
 	cancel()
-	_, err := s.head(ctx, r)
+	s.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: 0, Root: r}
+	s.finalizedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: 0, Root: r}
+	_, err := s.head(ctx)
 	require.ErrorContains(t, "context canceled", err)
 }
 
@@ -123,6 +131,8 @@ func TestStore_Insert_KnownParent(t *testing.T) {
 	p := [32]byte{'B'}
 	s.nodesIndices[p] = 0
 	payloadHash := [32]byte{'c'}
+	s.justifiedCheckpoint = &forkchoicetypes.Checkpoint{}
+	s.finalizedCheckpoint = &forkchoicetypes.Checkpoint{}
 	require.NoError(t, s.insert(context.Background(), 100, [32]byte{'A'}, p, payloadHash, 1, 1))
 	assert.Equal(t, 2, len(s.nodes), "Did not insert block")
 	assert.Equal(t, 2, len(s.nodesIndices), "Did not insert block")
@@ -150,6 +160,8 @@ func TestStore_ApplyScoreChanges_UpdateWeightsPositiveDelta(t *testing.T) {
 
 	// Each node gets one unique vote. The weight should look like 103 <- 102 <- 101 because
 	// they get propagated back.
+	s.justifiedCheckpoint = &forkchoicetypes.Checkpoint{}
+	s.finalizedCheckpoint = &forkchoicetypes.Checkpoint{}
 	require.NoError(t, s.applyWeightChanges(context.Background(), []uint64{}, []int{1, 1, 1}))
 	assert.Equal(t, uint64(103), s.nodes[0].weight)
 	assert.Equal(t, uint64(102), s.nodes[1].weight)
@@ -165,6 +177,8 @@ func TestStore_ApplyScoreChanges_UpdateWeightsNegativeDelta(t *testing.T) {
 
 	// Each node gets one unique vote which contributes to negative delta.
 	// The weight should look like 97 <- 98 <- 99 because they get propagated back.
+	s.justifiedCheckpoint = &forkchoicetypes.Checkpoint{}
+	s.finalizedCheckpoint = &forkchoicetypes.Checkpoint{}
 	require.NoError(t, s.applyWeightChanges(context.Background(), []uint64{}, []int{-1, -1, -1}))
 	assert.Equal(t, uint64(97), s.nodes[0].weight)
 	assert.Equal(t, uint64(98), s.nodes[1].weight)
@@ -179,6 +193,8 @@ func TestStore_ApplyScoreChanges_UpdateWeightsMixedDelta(t *testing.T) {
 		{parent: 1, root: [32]byte{'A'}, weight: 100}}}
 
 	// Each node gets one mixed vote. The weight should look like 100 <- 200 <- 250.
+	s.justifiedCheckpoint = &forkchoicetypes.Checkpoint{}
+	s.finalizedCheckpoint = &forkchoicetypes.Checkpoint{}
 	require.NoError(t, s.applyWeightChanges(context.Background(), []uint64{}, []int{-100, -50, 150}))
 	assert.Equal(t, uint64(100), s.nodes[0].weight)
 	assert.Equal(t, uint64(200), s.nodes[1].weight)
@@ -187,7 +203,9 @@ func TestStore_ApplyScoreChanges_UpdateWeightsMixedDelta(t *testing.T) {
 
 func TestStore_UpdateBestChildAndDescendant_RemoveChild(t *testing.T) {
 	// Make parent's best child equal's to input child index and child is not viable.
-	s := &Store{nodes: []*Node{{bestChild: 1}, {}}, justifiedEpoch: 1, finalizedEpoch: 1}
+	jc := &forkchoicetypes.Checkpoint{Epoch: 1}
+	fc := &forkchoicetypes.Checkpoint{Epoch: 1}
+	s := &Store{nodes: []*Node{{bestChild: 1}, {}}, justifiedCheckpoint: jc, finalizedCheckpoint: fc}
 	require.NoError(t, s.updateBestChildAndDescendant(0, 1))
 
 	// Verify parent's best child and best descendant are `none`.
@@ -198,6 +216,8 @@ func TestStore_UpdateBestChildAndDescendant_RemoveChild(t *testing.T) {
 func TestStore_UpdateBestChildAndDescendant_UpdateDescendant(t *testing.T) {
 	// Make parent's best child equal to child index and child is viable.
 	s := &Store{nodes: []*Node{{bestChild: 1}, {bestDescendant: NonExistentNode}}}
+	s.justifiedCheckpoint = &forkchoicetypes.Checkpoint{}
+	s.finalizedCheckpoint = &forkchoicetypes.Checkpoint{}
 	require.NoError(t, s.updateBestChildAndDescendant(0, 1))
 
 	// Verify parent's best child is the same and best descendant is not set to child index.
@@ -208,9 +228,11 @@ func TestStore_UpdateBestChildAndDescendant_UpdateDescendant(t *testing.T) {
 func TestStore_UpdateBestChildAndDescendant_ChangeChildByViability(t *testing.T) {
 	// Make parent's best child not equal to child index, child leads to viable index and
 	// parent's best child doesn't lead to viable index.
+	jc := &forkchoicetypes.Checkpoint{Epoch: 1}
+	fc := &forkchoicetypes.Checkpoint{Epoch: 1}
 	s := &Store{
-		justifiedEpoch: 1,
-		finalizedEpoch: 1,
+		justifiedCheckpoint: jc,
+		finalizedCheckpoint: fc,
 		nodes: []*Node{{bestChild: 1, justifiedEpoch: 1, finalizedEpoch: 1},
 			{bestDescendant: NonExistentNode},
 			{bestDescendant: NonExistentNode, justifiedEpoch: 1, finalizedEpoch: 1}}}
@@ -224,9 +246,11 @@ func TestStore_UpdateBestChildAndDescendant_ChangeChildByViability(t *testing.T)
 func TestStore_UpdateBestChildAndDescendant_ChangeChildByWeight(t *testing.T) {
 	// Make parent's best child not equal to child index, child leads to viable index and
 	// parents best child leads to viable index but child has more weight than parent's best child.
+	jc := &forkchoicetypes.Checkpoint{Epoch: 1}
+	fc := &forkchoicetypes.Checkpoint{Epoch: 1}
 	s := &Store{
-		justifiedEpoch: 1,
-		finalizedEpoch: 1,
+		justifiedCheckpoint: jc,
+		finalizedCheckpoint: fc,
 		nodes: []*Node{{bestChild: 1, justifiedEpoch: 1, finalizedEpoch: 1},
 			{bestDescendant: NonExistentNode, justifiedEpoch: 1, finalizedEpoch: 1},
 			{bestDescendant: NonExistentNode, justifiedEpoch: 1, finalizedEpoch: 1, weight: 1}}}
@@ -239,9 +263,11 @@ func TestStore_UpdateBestChildAndDescendant_ChangeChildByWeight(t *testing.T) {
 
 func TestStore_UpdateBestChildAndDescendant_ChangeChildAtLeaf(t *testing.T) {
 	// Make parent's best child to none and input child leads to viable index.
+	jc := &forkchoicetypes.Checkpoint{Epoch: 1}
+	fc := &forkchoicetypes.Checkpoint{Epoch: 1}
 	s := &Store{
-		justifiedEpoch: 1,
-		finalizedEpoch: 1,
+		justifiedCheckpoint: jc,
+		finalizedCheckpoint: fc,
 		nodes: []*Node{{bestChild: NonExistentNode, justifiedEpoch: 1, finalizedEpoch: 1},
 			{bestDescendant: NonExistentNode, justifiedEpoch: 1, finalizedEpoch: 1},
 			{bestDescendant: NonExistentNode, justifiedEpoch: 1, finalizedEpoch: 1}}}
@@ -255,9 +281,11 @@ func TestStore_UpdateBestChildAndDescendant_ChangeChildAtLeaf(t *testing.T) {
 func TestStore_UpdateBestChildAndDescendant_NoChangeByViability(t *testing.T) {
 	// Make parent's best child not equal to child index, child leads to not viable index and
 	// parents best child leads to viable index.
+	jc := &forkchoicetypes.Checkpoint{Epoch: 1}
+	fc := &forkchoicetypes.Checkpoint{Epoch: 1}
 	s := &Store{
-		justifiedEpoch: 1,
-		finalizedEpoch: 1,
+		justifiedCheckpoint: jc,
+		finalizedCheckpoint: fc,
 		nodes: []*Node{{bestChild: 1, justifiedEpoch: 1, finalizedEpoch: 1},
 			{bestDescendant: NonExistentNode, justifiedEpoch: 1, finalizedEpoch: 1},
 			{bestDescendant: NonExistentNode}}}
@@ -271,9 +299,11 @@ func TestStore_UpdateBestChildAndDescendant_NoChangeByViability(t *testing.T) {
 func TestStore_UpdateBestChildAndDescendant_NoChangeByWeight(t *testing.T) {
 	// Make parent's best child not equal to child index, child leads to viable index and
 	// parents best child leads to viable index but parent's best child has more weight.
+	jc := &forkchoicetypes.Checkpoint{Epoch: 1}
+	fc := &forkchoicetypes.Checkpoint{Epoch: 1}
 	s := &Store{
-		justifiedEpoch: 1,
-		finalizedEpoch: 1,
+		justifiedCheckpoint: jc,
+		finalizedCheckpoint: fc,
 		nodes: []*Node{{bestChild: 1, justifiedEpoch: 1, finalizedEpoch: 1},
 			{bestDescendant: NonExistentNode, justifiedEpoch: 1, finalizedEpoch: 1, weight: 1},
 			{bestDescendant: NonExistentNode, justifiedEpoch: 1, finalizedEpoch: 1}}}
@@ -286,9 +316,11 @@ func TestStore_UpdateBestChildAndDescendant_NoChangeByWeight(t *testing.T) {
 
 func TestStore_UpdateBestChildAndDescendant_NoChangeAtLeaf(t *testing.T) {
 	// Make parent's best child to none and input child does not lead to viable index.
+	jc := &forkchoicetypes.Checkpoint{Epoch: 1}
+	fc := &forkchoicetypes.Checkpoint{Epoch: 1}
 	s := &Store{
-		justifiedEpoch: 1,
-		finalizedEpoch: 1,
+		justifiedCheckpoint: jc,
+		finalizedCheckpoint: fc,
 		nodes: []*Node{{bestChild: NonExistentNode, justifiedEpoch: 1, finalizedEpoch: 1},
 			{bestDescendant: NonExistentNode, justifiedEpoch: 1, finalizedEpoch: 1},
 			{bestDescendant: NonExistentNode}}}
@@ -537,18 +569,42 @@ func TestStore_PruneBranched(t *testing.T) {
 
 	for _, tc := range tests {
 		f := setup(1, 1)
-		require.NoError(t, f.InsertOptimisticBlock(ctx, 100, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 1, 1))
-		require.NoError(t, f.InsertOptimisticBlock(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'B'}, 1, 1))
-		require.NoError(t, f.InsertOptimisticBlock(ctx, 102, [32]byte{'c'}, [32]byte{'b'}, [32]byte{'C'}, 1, 1))
-		require.NoError(t, f.InsertOptimisticBlock(ctx, 102, [32]byte{'j'}, [32]byte{'b'}, [32]byte{'J'}, 1, 1))
-		require.NoError(t, f.InsertOptimisticBlock(ctx, 103, [32]byte{'d'}, [32]byte{'c'}, [32]byte{'D'}, 1, 1))
-		require.NoError(t, f.InsertOptimisticBlock(ctx, 104, [32]byte{'e'}, [32]byte{'d'}, [32]byte{'E'}, 1, 1))
-		require.NoError(t, f.InsertOptimisticBlock(ctx, 104, [32]byte{'g'}, [32]byte{'d'}, [32]byte{'G'}, 1, 1))
-		require.NoError(t, f.InsertOptimisticBlock(ctx, 105, [32]byte{'f'}, [32]byte{'e'}, [32]byte{'F'}, 1, 1))
-		require.NoError(t, f.InsertOptimisticBlock(ctx, 105, [32]byte{'h'}, [32]byte{'g'}, [32]byte{'H'}, 1, 1))
-		require.NoError(t, f.InsertOptimisticBlock(ctx, 105, [32]byte{'k'}, [32]byte{'g'}, [32]byte{'K'}, 1, 1))
-		require.NoError(t, f.InsertOptimisticBlock(ctx, 106, [32]byte{'i'}, [32]byte{'h'}, [32]byte{'I'}, 1, 1))
-		require.NoError(t, f.InsertOptimisticBlock(ctx, 106, [32]byte{'l'}, [32]byte{'k'}, [32]byte{'L'}, 1, 1))
+		state, blkRoot, err := prepareForkchoiceState(ctx, 100, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 1, 1)
+		require.NoError(t, err)
+		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+		state, blkRoot, err = prepareForkchoiceState(ctx, 101, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'B'}, 1, 1)
+		require.NoError(t, err)
+		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+		state, blkRoot, err = prepareForkchoiceState(ctx, 102, [32]byte{'c'}, [32]byte{'b'}, [32]byte{'C'}, 1, 1)
+		require.NoError(t, err)
+		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+		state, blkRoot, err = prepareForkchoiceState(ctx, 102, [32]byte{'j'}, [32]byte{'b'}, [32]byte{'J'}, 1, 1)
+		require.NoError(t, err)
+		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+		state, blkRoot, err = prepareForkchoiceState(ctx, 103, [32]byte{'d'}, [32]byte{'c'}, [32]byte{'D'}, 1, 1)
+		require.NoError(t, err)
+		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+		state, blkRoot, err = prepareForkchoiceState(ctx, 104, [32]byte{'e'}, [32]byte{'d'}, [32]byte{'E'}, 1, 1)
+		require.NoError(t, err)
+		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+		state, blkRoot, err = prepareForkchoiceState(ctx, 104, [32]byte{'g'}, [32]byte{'d'}, [32]byte{'G'}, 1, 1)
+		require.NoError(t, err)
+		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+		state, blkRoot, err = prepareForkchoiceState(ctx, 105, [32]byte{'f'}, [32]byte{'e'}, [32]byte{'F'}, 1, 1)
+		require.NoError(t, err)
+		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+		state, blkRoot, err = prepareForkchoiceState(ctx, 105, [32]byte{'h'}, [32]byte{'g'}, [32]byte{'H'}, 1, 1)
+		require.NoError(t, err)
+		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+		state, blkRoot, err = prepareForkchoiceState(ctx, 105, [32]byte{'k'}, [32]byte{'g'}, [32]byte{'K'}, 1, 1)
+		require.NoError(t, err)
+		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+		state, blkRoot, err = prepareForkchoiceState(ctx, 106, [32]byte{'i'}, [32]byte{'h'}, [32]byte{'I'}, 1, 1)
+		require.NoError(t, err)
+		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+		state, blkRoot, err = prepareForkchoiceState(ctx, 106, [32]byte{'l'}, [32]byte{'k'}, [32]byte{'L'}, 1, 1)
+		require.NoError(t, err)
+		require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 		f.store.pruneThreshold = 0
 		require.NoError(t, f.store.updateCanonicalNodes(ctx, [32]byte{'f'}))
 		require.Equal(t, true, f.IsCanonical([32]byte{'a'}))
@@ -573,16 +629,36 @@ func TestStore_CommonAncestor(t *testing.T) {
 	//  \-- c -- f
 	//        \-- g
 	//        \ -- h -- i -- j
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 0, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 1, 1))
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 1, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'B'}, 1, 1))
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 2, [32]byte{'c'}, [32]byte{'a'}, [32]byte{'C'}, 1, 1))
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 3, [32]byte{'d'}, [32]byte{'b'}, [32]byte{}, 1, 1))
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 4, [32]byte{'e'}, [32]byte{'d'}, [32]byte{}, 1, 1))
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 5, [32]byte{'f'}, [32]byte{'c'}, [32]byte{}, 1, 1))
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 6, [32]byte{'g'}, [32]byte{'c'}, [32]byte{}, 1, 1))
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 7, [32]byte{'h'}, [32]byte{'c'}, [32]byte{}, 1, 1))
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 8, [32]byte{'i'}, [32]byte{'h'}, [32]byte{}, 1, 1))
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 9, [32]byte{'j'}, [32]byte{'i'}, [32]byte{}, 1, 1))
+	state, blkRoot, err := prepareForkchoiceState(ctx, 0, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 1, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'B'}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 2, [32]byte{'c'}, [32]byte{'a'}, [32]byte{'C'}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 3, [32]byte{'d'}, [32]byte{'b'}, [32]byte{}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 4, [32]byte{'e'}, [32]byte{'d'}, [32]byte{}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 5, [32]byte{'f'}, [32]byte{'c'}, [32]byte{}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 6, [32]byte{'g'}, [32]byte{'c'}, [32]byte{}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 7, [32]byte{'h'}, [32]byte{'c'}, [32]byte{}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 8, [32]byte{'i'}, [32]byte{'h'}, [32]byte{}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 9, [32]byte{'j'}, [32]byte{'i'}, [32]byte{}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 
 	tests := []struct {
 		name     string
@@ -661,10 +737,18 @@ func TestStore_CommonAncestor(t *testing.T) {
 
 	// a -- b -- c -- d
 	f = setup(0, 0)
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 0, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 1, 1))
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 1, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'B'}, 1, 1))
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 2, [32]byte{'c'}, [32]byte{'b'}, [32]byte{'C'}, 1, 1))
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 3, [32]byte{'d'}, [32]byte{'c'}, [32]byte{}, 1, 1))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 0, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 1, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'B'}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 2, [32]byte{'c'}, [32]byte{'b'}, [32]byte{'C'}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 3, [32]byte{'d'}, [32]byte{'c'}, [32]byte{}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 	tests = []struct {
 		name     string
 		r1       [32]byte
@@ -711,7 +795,9 @@ func TestStore_CommonAncestor(t *testing.T) {
 	require.ErrorIs(t, err, errInvalidNodeIndex)
 	_, err = f.CommonAncestorRoot(ctx, [32]byte{'z'}, [32]byte{'a'})
 	require.ErrorIs(t, err, errInvalidNodeIndex)
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 100, [32]byte{'y'}, [32]byte{'z'}, [32]byte{}, 1, 1))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 100, [32]byte{'y'}, [32]byte{'z'}, [32]byte{}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 	// broken link
 	_, err = f.CommonAncestorRoot(ctx, [32]byte{'y'}, [32]byte{'a'})
 	require.ErrorIs(t, err, forkchoice.ErrUnknownCommonAncestor)
@@ -732,10 +818,12 @@ func TestStore_LeadsToViableHead(t *testing.T) {
 		{&Node{finalizedEpoch: 3, justifiedEpoch: 4}, 4, 3, true},
 	}
 	for _, tc := range tests {
+		jc := &forkchoicetypes.Checkpoint{Epoch: tc.justifiedEpoch}
+		fc := &forkchoicetypes.Checkpoint{Epoch: tc.finalizedEpoch}
 		s := &Store{
-			justifiedEpoch: tc.justifiedEpoch,
-			finalizedEpoch: tc.finalizedEpoch,
-			nodes:          []*Node{tc.n},
+			justifiedCheckpoint: jc,
+			finalizedCheckpoint: fc,
+			nodes:               []*Node{tc.n},
 		}
 		got, err := s.leadsToViableHead(tc.n)
 		require.NoError(t, err)
@@ -758,9 +846,11 @@ func TestStore_ViableForHead(t *testing.T) {
 		{&Node{finalizedEpoch: 3, justifiedEpoch: 4}, 4, 3, true},
 	}
 	for _, tc := range tests {
+		jc := &forkchoicetypes.Checkpoint{Epoch: tc.justifiedEpoch}
+		fc := &forkchoicetypes.Checkpoint{Epoch: tc.finalizedEpoch}
 		s := &Store{
-			justifiedEpoch: tc.justifiedEpoch,
-			finalizedEpoch: tc.finalizedEpoch,
+			justifiedCheckpoint: jc,
+			finalizedCheckpoint: fc,
 		}
 		assert.Equal(t, tc.want, s.viableForHead(tc.n))
 	}
@@ -809,10 +899,10 @@ func TestStore_AncestorRoot(t *testing.T) {
 
 	r, err := f.AncestorRoot(ctx, [32]byte{'c'}, 1)
 	require.NoError(t, err)
-	assert.Equal(t, bytesutil.ToBytes32(r), [32]byte{'a'})
+	assert.Equal(t, r, [32]byte{'a'})
 	r, err = f.AncestorRoot(ctx, [32]byte{'c'}, 2)
 	require.NoError(t, err)
-	assert.Equal(t, bytesutil.ToBytes32(r), [32]byte{'b'})
+	assert.Equal(t, r, [32]byte{'b'})
 }
 
 func TestStore_AncestorRootOutOfBound(t *testing.T) {
@@ -927,28 +1017,34 @@ func TestStore_RemoveEquivocating(t *testing.T) {
 	ctx := context.Background()
 	f := setup(1, 1)
 	// Insert a block it will be head
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 1, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 1, 1))
-	head, err := f.Head(ctx, params.BeaconConfig().ZeroHash, []uint64{})
+	state, blkRoot, err := prepareForkchoiceState(ctx, 1, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	head, err := f.Head(ctx, []uint64{})
 	require.NoError(t, err)
 	require.Equal(t, [32]byte{'a'}, head)
 
 	// Insert two extra blocks
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 2, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'B'}, 1, 1))
-	require.NoError(t, f.InsertOptimisticBlock(ctx, 3, [32]byte{'c'}, [32]byte{'a'}, [32]byte{'C'}, 1, 1))
-	head, err = f.Head(ctx, params.BeaconConfig().ZeroHash, []uint64{})
+	state, blkRoot, err = prepareForkchoiceState(ctx, 2, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'B'}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 3, [32]byte{'c'}, [32]byte{'a'}, [32]byte{'C'}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	head, err = f.Head(ctx, []uint64{})
 	require.NoError(t, err)
 	require.Equal(t, [32]byte{'c'}, head)
 
 	// Insert two attestations for block b, it becomes head
 	f.ProcessAttestation(ctx, []uint64{1, 2}, [32]byte{'b'}, 1)
 	f.ProcessAttestation(ctx, []uint64{3}, [32]byte{'c'}, 1)
-	head, err = f.Head(ctx, params.BeaconConfig().ZeroHash, []uint64{100, 200, 200, 300})
+	head, err = f.Head(ctx, []uint64{100, 200, 200, 300})
 	require.NoError(t, err)
 	require.Equal(t, [32]byte{'b'}, head)
 
 	// Process b's slashing, c is now head
 	f.InsertSlashedIndex(ctx, 1)
-	head, err = f.Head(ctx, params.BeaconConfig().ZeroHash, []uint64{100, 200, 200, 300})
+	head, err = f.Head(ctx, []uint64{100, 200, 200, 300})
 	require.NoError(t, err)
 	require.Equal(t, [32]byte{'c'}, head)
 	require.Equal(t, uint64(200), f.store.nodes[2].weight)
@@ -956,7 +1052,7 @@ func TestStore_RemoveEquivocating(t *testing.T) {
 
 	// Process the same slashing again, should be a noop
 	f.InsertSlashedIndex(ctx, 1)
-	head, err = f.Head(ctx, params.BeaconConfig().ZeroHash, []uint64{100, 200, 200, 300})
+	head, err = f.Head(ctx, []uint64{100, 200, 200, 300})
 	require.NoError(t, err)
 	require.Equal(t, [32]byte{'c'}, head)
 	require.Equal(t, uint64(200), f.store.nodes[2].weight)
@@ -972,12 +1068,12 @@ func TestStore_UpdateCheckpoints(t *testing.T) {
 	f := setup(1, 1)
 	jr := [32]byte{'j'}
 	fr := [32]byte{'f'}
-	jc := &ethpb.Checkpoint{Root: jr[:], Epoch: 3}
-	fc := &ethpb.Checkpoint{Root: fr[:], Epoch: 2}
+	jc := &forkchoicetypes.Checkpoint{Root: jr, Epoch: 3}
+	fc := &forkchoicetypes.Checkpoint{Root: fr, Epoch: 2}
 	require.NoError(t, f.UpdateJustifiedCheckpoint(jc))
 	require.NoError(t, f.UpdateFinalizedCheckpoint(fc))
-	require.Equal(t, f.store.justifiedEpoch, jc.Epoch)
-	require.Equal(t, f.store.finalizedEpoch, fc.Epoch)
+	require.Equal(t, f.store.justifiedCheckpoint, jc)
+	require.Equal(t, f.store.finalizedCheckpoint, fc)
 }
 
 func TestStore_InsertOptimisticChain(t *testing.T) {
@@ -991,8 +1087,10 @@ func TestStore_InsertOptimisticChain(t *testing.T) {
 	require.NoError(t, err)
 	wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
 	require.NoError(t, err)
-	blks = append(blks, &forkchoicetypes.BlockAndCheckpoints{Block: wsb.Block(), JustifiedEpoch: 1,
-		FinalizedEpoch: 1})
+	blks = append(blks, &forkchoicetypes.BlockAndCheckpoints{Block: wsb.Block(),
+		JustifiedCheckpoint: &ethpb.Checkpoint{Epoch: 1, Root: params.BeaconConfig().ZeroHash[:]},
+		FinalizedCheckpoint: &ethpb.Checkpoint{Epoch: 1, Root: params.BeaconConfig().ZeroHash[:]},
+	})
 	for i := uint64(2); i < 11; i++ {
 		blk := util.NewBeaconBlock()
 		blk.Block.Slot = types.Slot(i)
@@ -1000,8 +1098,10 @@ func TestStore_InsertOptimisticChain(t *testing.T) {
 		blk.Block.ParentRoot = copiedRoot[:]
 		wsb, err = wrapper.WrappedSignedBeaconBlock(blk)
 		require.NoError(t, err)
-		blks = append(blks, &forkchoicetypes.BlockAndCheckpoints{Block: wsb.Block(), JustifiedEpoch: 1,
-			FinalizedEpoch: 1})
+		blks = append(blks, &forkchoicetypes.BlockAndCheckpoints{Block: wsb.Block(),
+			JustifiedCheckpoint: &ethpb.Checkpoint{Epoch: 1, Root: params.BeaconConfig().ZeroHash[:]},
+			FinalizedCheckpoint: &ethpb.Checkpoint{Epoch: 1, Root: params.BeaconConfig().ZeroHash[:]},
+		})
 		root, err = blk.Block.HashTreeRoot()
 		require.NoError(t, err)
 	}
@@ -1013,4 +1113,146 @@ func TestStore_InsertOptimisticChain(t *testing.T) {
 
 	f = setup(1, 1)
 	require.NoError(t, f.InsertOptimisticChain(context.Background(), args[2:]))
+}
+
+func TestForkChoice_UpdateCheckpoints(t *testing.T) {
+	ctx := context.Background()
+	tests := []struct {
+		name                string
+		justified           *forkchoicetypes.Checkpoint
+		bestJustified       *forkchoicetypes.Checkpoint
+		finalized           *forkchoicetypes.Checkpoint
+		newJustified        *forkchoicetypes.Checkpoint
+		newFinalized        *forkchoicetypes.Checkpoint
+		wantedJustified     *forkchoicetypes.Checkpoint
+		wantedBestJustified *forkchoicetypes.Checkpoint
+		wantedFinalized     *forkchoicetypes.Checkpoint
+		currentSlot         types.Slot
+		wantedErr           string
+	}{
+		{
+			name:                "lower than store justified and finalized",
+			justified:           &forkchoicetypes.Checkpoint{Epoch: 2, Root: [32]byte{'j'}},
+			finalized:           &forkchoicetypes.Checkpoint{Epoch: 1, Root: [32]byte{'f'}},
+			bestJustified:       &forkchoicetypes.Checkpoint{Epoch: 2, Root: [32]byte{'j'}},
+			newJustified:        &forkchoicetypes.Checkpoint{Epoch: 1},
+			newFinalized:        &forkchoicetypes.Checkpoint{Epoch: 0},
+			wantedJustified:     &forkchoicetypes.Checkpoint{Epoch: 2, Root: [32]byte{'j'}},
+			wantedBestJustified: &forkchoicetypes.Checkpoint{Epoch: 2, Root: [32]byte{'j'}},
+			wantedFinalized:     &forkchoicetypes.Checkpoint{Epoch: 1, Root: [32]byte{'f'}},
+		},
+		{
+			name:                "higher than store justified, early slot, direct descendant",
+			justified:           &forkchoicetypes.Checkpoint{Epoch: 2, Root: [32]byte{'j'}},
+			bestJustified:       &forkchoicetypes.Checkpoint{Epoch: 2, Root: [32]byte{'j'}},
+			finalized:           &forkchoicetypes.Checkpoint{Epoch: 1, Root: [32]byte{'f'}},
+			newJustified:        &forkchoicetypes.Checkpoint{Epoch: 3, Root: [32]byte{'b'}},
+			newFinalized:        &forkchoicetypes.Checkpoint{Epoch: 1, Root: [32]byte{'g'}},
+			wantedJustified:     &forkchoicetypes.Checkpoint{Epoch: 3, Root: [32]byte{'b'}},
+			wantedBestJustified: &forkchoicetypes.Checkpoint{Epoch: 3, Root: [32]byte{'b'}},
+			wantedFinalized:     &forkchoicetypes.Checkpoint{Epoch: 1, Root: [32]byte{'f'}},
+		},
+		{
+			name:                "higher than store justified, early slot, not a descendant",
+			justified:           &forkchoicetypes.Checkpoint{Epoch: 2, Root: [32]byte{'j'}},
+			bestJustified:       &forkchoicetypes.Checkpoint{Epoch: 2, Root: [32]byte{'j'}},
+			finalized:           &forkchoicetypes.Checkpoint{Epoch: 1, Root: [32]byte{'f'}},
+			newJustified:        &forkchoicetypes.Checkpoint{Epoch: 3, Root: [32]byte{'c'}},
+			newFinalized:        &forkchoicetypes.Checkpoint{Epoch: 1, Root: [32]byte{'g'}},
+			wantedJustified:     &forkchoicetypes.Checkpoint{Epoch: 3, Root: [32]byte{'c'}},
+			wantedBestJustified: &forkchoicetypes.Checkpoint{Epoch: 3, Root: [32]byte{'c'}},
+			wantedFinalized:     &forkchoicetypes.Checkpoint{Epoch: 1, Root: [32]byte{'f'}},
+		},
+		{
+			name:                "higher than store justified, late slot, descendant",
+			justified:           &forkchoicetypes.Checkpoint{Epoch: 2, Root: [32]byte{'j'}},
+			bestJustified:       &forkchoicetypes.Checkpoint{Epoch: 2, Root: [32]byte{'j'}},
+			finalized:           &forkchoicetypes.Checkpoint{Epoch: 1, Root: [32]byte{'f'}},
+			newJustified:        &forkchoicetypes.Checkpoint{Epoch: 3, Root: [32]byte{'b'}},
+			newFinalized:        &forkchoicetypes.Checkpoint{Epoch: 1, Root: [32]byte{'g'}},
+			wantedJustified:     &forkchoicetypes.Checkpoint{Epoch: 3, Root: [32]byte{'b'}},
+			wantedFinalized:     &forkchoicetypes.Checkpoint{Epoch: 1, Root: [32]byte{'f'}},
+			wantedBestJustified: &forkchoicetypes.Checkpoint{Epoch: 3, Root: [32]byte{'b'}},
+			currentSlot:         params.BeaconConfig().SafeSlotsToUpdateJustified.Add(1),
+		},
+		{
+			name:                "higher than store justified, late slot, not descendant",
+			justified:           &forkchoicetypes.Checkpoint{Epoch: 2, Root: [32]byte{'j'}},
+			bestJustified:       &forkchoicetypes.Checkpoint{Epoch: 2, Root: [32]byte{'j'}},
+			finalized:           &forkchoicetypes.Checkpoint{Epoch: 1, Root: [32]byte{'f'}},
+			newJustified:        &forkchoicetypes.Checkpoint{Epoch: 3, Root: [32]byte{'c'}},
+			newFinalized:        &forkchoicetypes.Checkpoint{Epoch: 1, Root: [32]byte{'g'}},
+			wantedJustified:     &forkchoicetypes.Checkpoint{Epoch: 2, Root: [32]byte{'j'}},
+			wantedFinalized:     &forkchoicetypes.Checkpoint{Epoch: 1, Root: [32]byte{'f'}},
+			wantedBestJustified: &forkchoicetypes.Checkpoint{Epoch: 3, Root: [32]byte{'c'}},
+			currentSlot:         params.BeaconConfig().SafeSlotsToUpdateJustified.Add(1),
+		},
+		{
+			name:                "higher than store finalized, late slot, not descendant",
+			justified:           &forkchoicetypes.Checkpoint{Epoch: 2, Root: [32]byte{'j'}},
+			bestJustified:       &forkchoicetypes.Checkpoint{Epoch: 2, Root: [32]byte{'j'}},
+			finalized:           &forkchoicetypes.Checkpoint{Epoch: 1, Root: [32]byte{'f'}},
+			newJustified:        &forkchoicetypes.Checkpoint{Epoch: 3, Root: [32]byte{'c'}},
+			newFinalized:        &forkchoicetypes.Checkpoint{Epoch: 2, Root: [32]byte{'h'}},
+			wantedJustified:     &forkchoicetypes.Checkpoint{Epoch: 3, Root: [32]byte{'c'}},
+			wantedFinalized:     &forkchoicetypes.Checkpoint{Epoch: 2, Root: [32]byte{'h'}},
+			wantedBestJustified: &forkchoicetypes.Checkpoint{Epoch: 3, Root: [32]byte{'c'}},
+			currentSlot:         params.BeaconConfig().SafeSlotsToUpdateJustified.Add(1),
+		},
+		{
+			name:          "Unknown checkpoint root, late slot",
+			justified:     &forkchoicetypes.Checkpoint{Epoch: 2, Root: [32]byte{'j'}},
+			bestJustified: &forkchoicetypes.Checkpoint{Epoch: 2, Root: [32]byte{'j'}},
+			finalized:     &forkchoicetypes.Checkpoint{Epoch: 1, Root: [32]byte{'f'}},
+			newJustified:  &forkchoicetypes.Checkpoint{Epoch: 3, Root: [32]byte{'d'}},
+			newFinalized:  &forkchoicetypes.Checkpoint{Epoch: 1, Root: [32]byte{'h'}},
+			currentSlot:   params.BeaconConfig().SafeSlotsToUpdateJustified.Add(1),
+			wantedErr:     "node does not exist",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fcs := setup(tt.justified.Epoch, tt.finalized.Epoch)
+			fcs.store.justifiedCheckpoint = tt.justified
+			fcs.store.finalizedCheckpoint = tt.finalized
+			fcs.store.bestJustifiedCheckpoint = tt.bestJustified
+			fcs.store.genesisTime = uint64(time.Now().Unix()) - uint64(tt.currentSlot)*params.BeaconConfig().SecondsPerSlot
+
+			state, blkRoot, err := prepareForkchoiceState(ctx, 32, [32]byte{'f'},
+				[32]byte{}, [32]byte{}, tt.finalized.Epoch, tt.finalized.Epoch)
+			require.NoError(t, err)
+			require.NoError(t, fcs.InsertNode(ctx, state, blkRoot))
+			state, blkRoot, err = prepareForkchoiceState(ctx, 64, [32]byte{'j'},
+				[32]byte{'f'}, [32]byte{}, tt.justified.Epoch, tt.finalized.Epoch)
+			require.NoError(t, err)
+			require.NoError(t, fcs.InsertNode(ctx, state, blkRoot))
+			state, blkRoot, err = prepareForkchoiceState(ctx, 96, [32]byte{'b'},
+				[32]byte{'j'}, [32]byte{}, tt.newJustified.Epoch, tt.newFinalized.Epoch)
+			require.NoError(t, err)
+			require.NoError(t, fcs.InsertNode(ctx, state, blkRoot))
+			state, blkRoot, err = prepareForkchoiceState(ctx, 96, [32]byte{'c'},
+				[32]byte{'f'}, [32]byte{}, tt.newJustified.Epoch, tt.newFinalized.Epoch)
+			require.NoError(t, err)
+			require.NoError(t, fcs.InsertNode(ctx, state, blkRoot))
+			// restart justifications cause insertion messed it up
+			fcs.store.justifiedCheckpoint = tt.justified
+			fcs.store.finalizedCheckpoint = tt.finalized
+			fcs.store.bestJustifiedCheckpoint = tt.bestJustified
+
+			jc := &ethpb.Checkpoint{Epoch: tt.newJustified.Epoch, Root: tt.newJustified.Root[:]}
+			fc := &ethpb.Checkpoint{Epoch: tt.newFinalized.Epoch, Root: tt.newFinalized.Root[:]}
+			err = fcs.updateCheckpoints(ctx, jc, fc)
+			if len(tt.wantedErr) > 0 {
+				require.ErrorContains(t, tt.wantedErr, err)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tt.wantedJustified.Epoch, fcs.store.justifiedCheckpoint.Epoch)
+				require.Equal(t, tt.wantedFinalized.Epoch, fcs.store.finalizedCheckpoint.Epoch)
+				require.Equal(t, tt.wantedJustified.Root, fcs.store.justifiedCheckpoint.Root)
+				require.Equal(t, tt.wantedFinalized.Root, fcs.store.finalizedCheckpoint.Root)
+				require.Equal(t, tt.wantedBestJustified.Epoch, fcs.store.bestJustifiedCheckpoint.Epoch)
+				require.Equal(t, tt.wantedBestJustified.Root, fcs.store.bestJustifiedCheckpoint.Root)
+			}
+		})
+	}
 }

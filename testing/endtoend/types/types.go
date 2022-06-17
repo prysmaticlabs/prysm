@@ -17,6 +17,12 @@ func WithExtraEpochs(extra uint64) E2EConfigOpt {
 	}
 }
 
+func WithEpochs(e uint64) E2EConfigOpt {
+	return func(cfg *E2EConfig) {
+		cfg.EpochsToRun = e
+	}
+}
+
 func WithRemoteSigner() E2EConfigOpt {
 	return func(cfg *E2EConfig) {
 		cfg.UseWeb3RemoteSigner = true
@@ -44,7 +50,7 @@ type E2EConfig struct {
 	Seed                    int64
 	TracingSinkEndpoint     string
 	Evaluators              []Evaluator
-	EvalInterceptor         func(uint64) bool
+	EvalInterceptor         func(uint64, []*grpc.ClientConn) bool
 	BeaconFlags             []string
 	ValidatorFlags          []string
 	PeerIDs                 []string
@@ -75,12 +81,24 @@ type ComponentRunner interface {
 
 type MultipleComponentRunners interface {
 	ComponentRunner
+	// ComponentAtIndex returns the component at index
+	ComponentAtIndex(i int) (ComponentRunner, error)
 	// PauseAtIndex pauses the grouped component element at the desired index.
 	PauseAtIndex(i int) error
 	// ResumeAtIndex resumes the grouped component element at the desired index.
 	ResumeAtIndex(i int) error
 	// StopAtIndex stops the grouped component element at the desired index.
 	StopAtIndex(i int) error
+}
+
+type EngineProxy interface {
+	ComponentRunner
+	// AddRequestInterceptor adds in a json-rpc request interceptor.
+	AddRequestInterceptor(rpcMethodName string, responseGen func() interface{}, trigger func() bool)
+	// RemoveRequestInterceptor removes the request interceptor for the provided method.
+	RemoveRequestInterceptor(rpcMethodName string)
+	// ReleaseBackedUpRequests releases backed up http requests.
+	ReleaseBackedUpRequests(rpcMethodName string)
 }
 
 // BeaconNodeSet defines an interface for an object that fulfills the duties

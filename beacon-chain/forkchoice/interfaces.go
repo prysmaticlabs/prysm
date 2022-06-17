@@ -4,6 +4,7 @@ import (
 	"context"
 
 	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -22,21 +23,14 @@ type ForkChoicer interface {
 
 // HeadRetriever retrieves head root and optimistic info of the current chain.
 type HeadRetriever interface {
-	Head(context.Context, [32]byte, []uint64) ([32]byte, error)
+	Head(context.Context, []uint64) ([32]byte, error)
 	Tips() ([][32]byte, []types.Slot)
 	IsOptimistic(root [32]byte) (bool, error)
 }
 
 // BlockProcessor processes the block that's used for accounting fork choice.
 type BlockProcessor interface {
-	InsertOptimisticBlock(ctx context.Context,
-		slot types.Slot,
-		root [32]byte,
-		parentRoot [32]byte,
-		payloadHash [32]byte,
-		justifiedEpoch types.Epoch,
-		finalizedEpoch types.Epoch,
-	) error
+	InsertNode(context.Context, state.ReadOnlyBeaconState, [32]byte) error
 	InsertOptimisticChain(context.Context, []*forkchoicetypes.BlockAndCheckpoints) error
 }
 
@@ -62,11 +56,11 @@ type Getter interface {
 	HasNode([32]byte) bool
 	ProposerBoost() [fieldparams.RootLength]byte
 	HasParent(root [32]byte) bool
-	AncestorRoot(ctx context.Context, root [32]byte, slot types.Slot) ([]byte, error)
+	AncestorRoot(ctx context.Context, root [32]byte, slot types.Slot) ([32]byte, error)
 	CommonAncestorRoot(ctx context.Context, root1 [32]byte, root2 [32]byte) ([32]byte, error)
 	IsCanonical(root [32]byte) bool
-	FinalizedEpoch() types.Epoch
-	JustifiedEpoch() types.Epoch
+	FinalizedCheckpoint() *forkchoicetypes.Checkpoint
+	JustifiedCheckpoint() *forkchoicetypes.Checkpoint
 	ForkChoiceNodes() []*ethpb.ForkChoiceNode
 	NodeCount() int
 }
@@ -75,6 +69,8 @@ type Getter interface {
 type Setter interface {
 	SetOptimisticToValid(context.Context, [fieldparams.RootLength]byte) error
 	SetOptimisticToInvalid(context.Context, [fieldparams.RootLength]byte, [fieldparams.RootLength]byte, [fieldparams.RootLength]byte) ([][32]byte, error)
-	UpdateJustifiedCheckpoint(*ethpb.Checkpoint) error
-	UpdateFinalizedCheckpoint(*ethpb.Checkpoint) error
+	UpdateJustifiedCheckpoint(*forkchoicetypes.Checkpoint) error
+	UpdateFinalizedCheckpoint(*forkchoicetypes.Checkpoint) error
+	SetGenesisTime(uint64)
+	SetOriginRoot([32]byte)
 }

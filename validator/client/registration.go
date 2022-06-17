@@ -10,7 +10,6 @@ import (
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/time/slots"
 	"go.opencensus.io/trace"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -58,20 +57,18 @@ func signValidatorRegistration(
 	signer signingFunc,
 	reg *ethpb.ValidatorRegistrationV1,
 ) ([]byte, error) {
-	req := &ethpb.DomainRequest{
-		Epoch:  slots.ToEpoch(slot),
-		Domain: params.BeaconConfig().DomainApplicationBuilder[:],
-	}
 
-	domain, err := validatorClient.DomainData(ctx, req)
+	// Per spec, we want the fork version and genesis validator to be nil.
+	// Which is genesis value and zero by default.
+	d, err := signing.ComputeDomain(
+		params.BeaconConfig().DomainApplicationBuilder,
+		nil, /* fork version */
+		nil /* genesis val root */)
 	if err != nil {
-		return nil, errors.Wrap(err, domainDataErr)
-	}
-	if domain == nil {
-		return nil, errors.New(domainDataErr)
+		return nil, err
 	}
 
-	r, err := signing.ComputeSigningRoot(reg, domain.SignatureDomain)
+	r, err := signing.ComputeSigningRoot(reg, d)
 	if err != nil {
 		return nil, errors.Wrap(err, signingRootErr)
 	}
@@ -79,7 +76,7 @@ func signValidatorRegistration(
 	sig, err := signer(ctx, &validatorpb.SignRequest{
 		PublicKey:       reg.Pubkey,
 		SigningRoot:     r[:],
-		SignatureDomain: domain.SignatureDomain,
+		SignatureDomain: d,
 		Object:          &validatorpb.SignRequest_Registration{Registration: reg},
 	})
 	if err != nil {
