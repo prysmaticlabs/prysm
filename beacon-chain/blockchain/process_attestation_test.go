@@ -269,8 +269,8 @@ func TestStore_OnAttestation_Ok_ProtoArray(t *testing.T) {
 	copied, err = transition.ProcessSlots(ctx, copied, 1)
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, copied, tRoot))
-	ojc := &ethpb.Checkpoint{Epoch: 1, Root: params.BeaconConfig().ZeroHash[:]}
-	ofc := &ethpb.Checkpoint{Epoch: 1, Root: params.BeaconConfig().ZeroHash[:]}
+	ojc := &ethpb.Checkpoint{Epoch: 1, Root: tRoot[:]}
+	ofc := &ethpb.Checkpoint{Epoch: 1, Root: tRoot[:]}
 	state, blkRoot, err := prepareForkchoiceState(ctx, 0, tRoot, tRoot, params.BeaconConfig().ZeroHash, ojc, ofc)
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))

@@ -179,12 +179,15 @@ func (s *Store) pruneFinalizedNodeByRootMap(ctx context.Context, node, finalized
 // prune prunes the fork choice store with the new finalized root. The store is only pruned if the input
 // root is different than the current store finalized root, and the number of the store has met prune threshold.
 // This function does not prune for invalid optimistically synced nodes, it deals only with pruning upon finalization
-func (s *Store) prune(ctx context.Context, finalizedRoot [32]byte) error {
+func (s *Store) prune(ctx context.Context) error {
 	_, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.Prune")
 	defer span.End()
 
 	s.nodesLock.Lock()
 	defer s.nodesLock.Unlock()
+	s.checkpointsLock.RLock()
+	finalizedRoot := s.finalizedCheckpoint.Root
+	s.checkpointsLock.RUnlock()
 
 	finalizedNode, ok := s.nodeByRoot[finalizedRoot]
 	if !ok || finalizedNode == nil {
