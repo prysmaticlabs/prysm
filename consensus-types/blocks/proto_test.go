@@ -14,7 +14,7 @@ func Test_SignedBeaconBlock_Proto(t *testing.T) {
 	f := tgen.GetBlockFields()
 
 	t.Run("Phase0", func(t *testing.T) {
-		expectedBlock := tgen.PbSignedBlockPhase0()
+		expectedBlock := tgen.PbSignedBeaconBlockPhase0()
 		block := &SignedBeaconBlock{
 			version: version.Phase0,
 			block: &BeaconBlock{
@@ -39,7 +39,7 @@ func Test_SignedBeaconBlock_Proto(t *testing.T) {
 		assert.DeepEqual(t, expectedHTR, resultHTR)
 	})
 	t.Run("Altair", func(t *testing.T) {
-		expectedBlock := tgen.PbSignedBlockAltair()
+		expectedBlock := tgen.PbSignedBeaconBlockAltair()
 		block := &SignedBeaconBlock{
 			version: version.Altair,
 			block: &BeaconBlock{
@@ -64,7 +64,7 @@ func Test_SignedBeaconBlock_Proto(t *testing.T) {
 		assert.DeepEqual(t, expectedHTR, resultHTR)
 	})
 	t.Run("Bellatrix", func(t *testing.T) {
-		expectedBlock := tgen.PbSignedBlockBellatrix()
+		expectedBlock := tgen.PbSignedBeaconBlockBellatrix()
 		block := &SignedBeaconBlock{
 			version: version.Bellatrix,
 			block: &BeaconBlock{
@@ -89,7 +89,7 @@ func Test_SignedBeaconBlock_Proto(t *testing.T) {
 		assert.DeepEqual(t, expectedHTR, resultHTR)
 	})
 	t.Run("BellatrixBlind", func(t *testing.T) {
-		expectedBlock := tgen.PbSignedBlindedBlockBellatrix()
+		expectedBlock := tgen.PbSignedBlindedBeaconBlockBellatrix()
 		block := &SignedBeaconBlock{
 			version: version.BellatrixBlind,
 			block: &BeaconBlock{
@@ -119,7 +119,7 @@ func Test_BeaconBlock_Proto(t *testing.T) {
 	f := tgen.GetBlockFields()
 
 	t.Run("Phase0", func(t *testing.T) {
-		expectedBlock := tgen.PbBlockPhase0()
+		expectedBlock := tgen.PbBeaconBlockPhase0()
 		block := &BeaconBlock{
 			version:       version.Phase0,
 			slot:          f.Slot,
@@ -140,7 +140,7 @@ func Test_BeaconBlock_Proto(t *testing.T) {
 		assert.DeepEqual(t, expectedHTR, resultHTR)
 	})
 	t.Run("Altair", func(t *testing.T) {
-		expectedBlock := tgen.PbBlockAltair()
+		expectedBlock := tgen.PbBeaconBlockAltair()
 		block := &BeaconBlock{
 			version:       version.Altair,
 			slot:          f.Slot,
@@ -161,7 +161,7 @@ func Test_BeaconBlock_Proto(t *testing.T) {
 		assert.DeepEqual(t, expectedHTR, resultHTR)
 	})
 	t.Run("Bellatrix", func(t *testing.T) {
-		expectedBlock := tgen.PbBlockBellatrix()
+		expectedBlock := tgen.PbBeaconBlockBellatrix()
 		block := &BeaconBlock{
 			version:       version.Bellatrix,
 			slot:          f.Slot,
@@ -182,7 +182,7 @@ func Test_BeaconBlock_Proto(t *testing.T) {
 		assert.DeepEqual(t, expectedHTR, resultHTR)
 	})
 	t.Run("BellatrixBlind", func(t *testing.T) {
-		expectedBlock := tgen.PbBlindedBlockBellatrix()
+		expectedBlock := tgen.PbBlindedBeaconBlockBellatrix()
 		block := &BeaconBlock{
 			version:       version.BellatrixBlind,
 			slot:          f.Slot,
@@ -206,7 +206,7 @@ func Test_BeaconBlock_Proto(t *testing.T) {
 
 func Test_BeaconBlockBody_Proto(t *testing.T) {
 	t.Run("Phase0", func(t *testing.T) {
-		expectedBody := tgen.PbBlockBodyPhase0()
+		expectedBody := tgen.PbBeaconBlockBodyPhase0()
 		body := bodyPhase0()
 
 		result, err := body.Proto()
@@ -220,7 +220,7 @@ func Test_BeaconBlockBody_Proto(t *testing.T) {
 		assert.DeepEqual(t, expectedHTR, resultHTR)
 	})
 	t.Run("Altair", func(t *testing.T) {
-		expectedBody := tgen.PbBlockBodyAltair()
+		expectedBody := tgen.PbBeaconBlockBodyAltair()
 		body := bodyAltair()
 		result, err := body.Proto()
 		require.NoError(t, err)
@@ -233,7 +233,7 @@ func Test_BeaconBlockBody_Proto(t *testing.T) {
 		assert.DeepEqual(t, expectedHTR, resultHTR)
 	})
 	t.Run("Bellatrix", func(t *testing.T) {
-		expectedBody := tgen.PbBlockBodyBellatrix()
+		expectedBody := tgen.PbBeaconBlockBodyBellatrix()
 		body := bodyBellatrix()
 		result, err := body.Proto()
 		require.NoError(t, err)
@@ -246,7 +246,7 @@ func Test_BeaconBlockBody_Proto(t *testing.T) {
 		assert.DeepEqual(t, expectedHTR, resultHTR)
 	})
 	t.Run("BellatrixBlind", func(t *testing.T) {
-		expectedBody := tgen.PbBlindedBlockBodyBellatrix()
+		expectedBody := tgen.PbBlindedBeaconBlockBodyBellatrix()
 		body := bodyBlindedBellatrix()
 		result, err := body.Proto()
 		require.NoError(t, err)
@@ -261,7 +261,7 @@ func Test_BeaconBlockBody_Proto(t *testing.T) {
 }
 
 func Test_initSignedBlockFromProtoPhase0(t *testing.T) {
-	expectedBlock := tgen.PbSignedBlockPhase0()
+	expectedBlock := tgen.PbSignedBeaconBlockPhase0()
 	resultBlock, err := initSignedBlockFromProtoPhase0(expectedBlock)
 	require.NoError(t, err)
 	resultHTR, err := resultBlock.block.HashTreeRoot()
@@ -273,7 +273,7 @@ func Test_initSignedBlockFromProtoPhase0(t *testing.T) {
 }
 
 func Test_initSignedBlockFromProtoAltair(t *testing.T) {
-	expectedBlock := tgen.PbSignedBlockAltair()
+	expectedBlock := tgen.PbSignedBeaconBlockAltair()
 	resultBlock, err := initSignedBlockFromProtoAltair(expectedBlock)
 	require.NoError(t, err)
 	resultHTR, err := resultBlock.block.HashTreeRoot()
@@ -285,7 +285,7 @@ func Test_initSignedBlockFromProtoAltair(t *testing.T) {
 }
 
 func Test_initSignedBlockFromProtoBellatrix(t *testing.T) {
-	expectedBlock := tgen.PbSignedBlockBellatrix()
+	expectedBlock := tgen.PbSignedBeaconBlockBellatrix()
 	resultBlock, err := initSignedBlockFromProtoBellatrix(expectedBlock)
 	require.NoError(t, err)
 	resultHTR, err := resultBlock.block.HashTreeRoot()
@@ -297,7 +297,7 @@ func Test_initSignedBlockFromProtoBellatrix(t *testing.T) {
 }
 
 func Test_initBlindedSignedBlockFromProtoBellatrix(t *testing.T) {
-	expectedBlock := tgen.PbSignedBlindedBlockBellatrix()
+	expectedBlock := tgen.PbSignedBlindedBeaconBlockBellatrix()
 	resultBlock, err := initBlindedSignedBlockFromProtoBellatrix(expectedBlock)
 	require.NoError(t, err)
 	resultHTR, err := resultBlock.block.HashTreeRoot()
@@ -309,7 +309,7 @@ func Test_initBlindedSignedBlockFromProtoBellatrix(t *testing.T) {
 }
 
 func Test_initBlockFromProtoPhase0(t *testing.T) {
-	expectedBlock := tgen.PbBlockPhase0()
+	expectedBlock := tgen.PbBeaconBlockPhase0()
 	resultBlock, err := initBlockFromProtoPhase0(expectedBlock)
 	require.NoError(t, err)
 	resultHTR, err := resultBlock.HashTreeRoot()
@@ -320,7 +320,7 @@ func Test_initBlockFromProtoPhase0(t *testing.T) {
 }
 
 func Test_initBlockFromProtoAltair(t *testing.T) {
-	expectedBlock := tgen.PbBlockAltair()
+	expectedBlock := tgen.PbBeaconBlockAltair()
 	resultBlock, err := initBlockFromProtoAltair(expectedBlock)
 	require.NoError(t, err)
 	resultHTR, err := resultBlock.HashTreeRoot()
@@ -331,7 +331,7 @@ func Test_initBlockFromProtoAltair(t *testing.T) {
 }
 
 func Test_initBlockFromProtoBellatrix(t *testing.T) {
-	expectedBlock := tgen.PbBlockBellatrix()
+	expectedBlock := tgen.PbBeaconBlockBellatrix()
 	resultBlock, err := initBlockFromProtoBellatrix(expectedBlock)
 	require.NoError(t, err)
 	resultHTR, err := resultBlock.HashTreeRoot()
@@ -342,7 +342,7 @@ func Test_initBlockFromProtoBellatrix(t *testing.T) {
 }
 
 func Test_initBlockFromProtoBlindedBellatrix(t *testing.T) {
-	expectedBlock := tgen.PbBlindedBlockBellatrix()
+	expectedBlock := tgen.PbBlindedBeaconBlockBellatrix()
 	resultBlock, err := initBlindedBlockFromProtoBellatrix(expectedBlock)
 	require.NoError(t, err)
 	resultHTR, err := resultBlock.HashTreeRoot()
@@ -353,7 +353,7 @@ func Test_initBlockFromProtoBlindedBellatrix(t *testing.T) {
 }
 
 func Test_initBlockBodyFromProtoPhase0(t *testing.T) {
-	expectedBody := tgen.PbBlockBodyPhase0()
+	expectedBody := tgen.PbBeaconBlockBodyPhase0()
 	resultBody, err := initBlockBodyFromProtoPhase0(expectedBody)
 	require.NoError(t, err)
 	resultHTR, err := resultBody.HashTreeRoot()
@@ -364,7 +364,7 @@ func Test_initBlockBodyFromProtoPhase0(t *testing.T) {
 }
 
 func Test_initBlockBodyFromProtoAltair(t *testing.T) {
-	expectedBody := tgen.PbBlockBodyAltair()
+	expectedBody := tgen.PbBeaconBlockBodyAltair()
 	resultBody, err := initBlockBodyFromProtoAltair(expectedBody)
 	require.NoError(t, err)
 	resultHTR, err := resultBody.HashTreeRoot()
@@ -375,7 +375,7 @@ func Test_initBlockBodyFromProtoAltair(t *testing.T) {
 }
 
 func Test_initBlockBodyFromProtoBellatrix(t *testing.T) {
-	expectedBody := tgen.PbBlockBodyBellatrix()
+	expectedBody := tgen.PbBeaconBlockBodyBellatrix()
 	resultBody, err := initBlockBodyFromProtoBellatrix(expectedBody)
 	require.NoError(t, err)
 	resultHTR, err := resultBody.HashTreeRoot()
@@ -386,7 +386,7 @@ func Test_initBlockBodyFromProtoBellatrix(t *testing.T) {
 }
 
 func Test_initBlockBodyFromProtoBlindedBellatrix(t *testing.T) {
-	expectedBody := tgen.PbBlindedBlockBodyBellatrix()
+	expectedBody := tgen.PbBlindedBeaconBlockBodyBellatrix()
 	resultBody, err := initBlindedBlockBodyFromProtoBellatrix(expectedBody)
 	require.NoError(t, err)
 	resultHTR, err := resultBody.HashTreeRoot()

@@ -48,7 +48,7 @@ func TestV1Alpha1SignedContributionAndProofToV2(t *testing.T) {
 }
 
 func Test_V1Alpha1BeaconBlockAltairToV2(t *testing.T) {
-	alphaBlock := tgen.PbBlockAltair()
+	alphaBlock := tgen.PbBeaconBlockAltair()
 
 	v2Block, err := V1Alpha1BeaconBlockAltairToV2(alphaBlock)
 	require.NoError(t, err)
@@ -179,7 +179,7 @@ func Test_BlindedBellatrixToV1Alpha1SignedBlock(t *testing.T) {
 }
 
 func Test_V1Alpha1BeaconBlockBellatrixToV2(t *testing.T) {
-	alphaBlock := tgen.PbBlockBellatrix()
+	alphaBlock := tgen.PbBeaconBlockBellatrix()
 
 	v2Block, err := V1Alpha1BeaconBlockBellatrixToV2(alphaBlock)
 	require.NoError(t, err)
@@ -191,7 +191,7 @@ func Test_V1Alpha1BeaconBlockBellatrixToV2(t *testing.T) {
 }
 
 func Test_V1Alpha1BeaconBlockBellatrixToV2Blinded(t *testing.T) {
-	alphaBlock := tgen.PbBlockBellatrix()
+	alphaBlock := tgen.PbBeaconBlockBellatrix()
 
 	v2Block, err := V1Alpha1BeaconBlockBellatrixToV2Blinded(alphaBlock)
 	require.NoError(t, err)

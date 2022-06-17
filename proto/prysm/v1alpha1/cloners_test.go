@@ -60,7 +60,7 @@ func TestCopyCheckpoint(t *testing.T) {
 }
 
 func TestCopySignedBeaconBlock(t *testing.T) {
-	blk := tgen.PbSignedBlockPhase0()
+	blk := tgen.PbSignedBeaconBlockPhase0()
 
 	got := v1alpha1.CopySignedBeaconBlock(blk)
 	if !reflect.DeepEqual(got, blk) {
@@ -70,7 +70,7 @@ func TestCopySignedBeaconBlock(t *testing.T) {
 }
 
 func TestCopyBeaconBlock(t *testing.T) {
-	blk := tgen.PbBlockPhase0()
+	blk := tgen.PbBeaconBlockPhase0()
 
 	got := v1alpha1.CopyBeaconBlock(blk)
 	if !reflect.DeepEqual(got, blk) {
@@ -80,7 +80,7 @@ func TestCopyBeaconBlock(t *testing.T) {
 }
 
 func TestCopyBeaconBlockBody(t *testing.T) {
-	body := tgen.PbBlockBodyPhase0()
+	body := tgen.PbBeaconBlockBodyPhase0()
 
 	got := v1alpha1.CopyBeaconBlockBody(body)
 	if !reflect.DeepEqual(got, body) {
@@ -90,7 +90,7 @@ func TestCopyBeaconBlockBody(t *testing.T) {
 }
 
 func TestCopySignedBeaconBlockAltair(t *testing.T) {
-	sbb := tgen.PbSignedBlockAltair()
+	sbb := tgen.PbSignedBeaconBlockAltair()
 
 	got := v1alpha1.CopySignedBeaconBlockAltair(sbb)
 	if !reflect.DeepEqual(got, sbb) {
@@ -100,7 +100,7 @@ func TestCopySignedBeaconBlockAltair(t *testing.T) {
 }
 
 func TestCopyBeaconBlockAltair(t *testing.T) {
-	b := tgen.PbBlockAltair()
+	b := tgen.PbBeaconBlockAltair()
 
 	got := v1alpha1.CopyBeaconBlockAltair(b)
 	if !reflect.DeepEqual(got, b) {
@@ -110,7 +110,7 @@ func TestCopyBeaconBlockAltair(t *testing.T) {
 }
 
 func TestCopyBeaconBlockBodyAltair(t *testing.T) {
-	bb := tgen.PbBlockBodyAltair()
+	bb := tgen.PbBeaconBlockBodyAltair()
 
 	got := v1alpha1.CopyBeaconBlockBodyAltair(bb)
 	if !reflect.DeepEqual(got, bb) {
@@ -320,7 +320,7 @@ func TestCopyPayloadHeader(t *testing.T) {
 }
 
 func TestCopySignedBeaconBlockBellatrix(t *testing.T) {
-	sbb := tgen.PbSignedBlockBellatrix()
+	sbb := tgen.PbSignedBeaconBlockBellatrix()
 
 	got := v1alpha1.CopySignedBeaconBlockBellatrix(sbb)
 	if !reflect.DeepEqual(got, sbb) {
@@ -330,7 +330,7 @@ func TestCopySignedBeaconBlockBellatrix(t *testing.T) {
 }
 
 func TestCopyBeaconBlockBellatrix(t *testing.T) {
-	b := tgen.PbBlockBellatrix()
+	b := tgen.PbBeaconBlockBellatrix()
 
 	got := v1alpha1.CopyBeaconBlockBellatrix(b)
 	if !reflect.DeepEqual(got, b) {
@@ -340,7 +340,7 @@ func TestCopyBeaconBlockBellatrix(t *testing.T) {
 }
 
 func TestCopyBeaconBlockBodyBellatrix(t *testing.T) {
-	bb := tgen.PbBlockBodyBellatrix()
+	bb := tgen.PbBeaconBlockBodyBellatrix()
 
 	got := v1alpha1.CopyBeaconBlockBodyBellatrix(bb)
 	if !reflect.DeepEqual(got, bb) {
@@ -350,7 +350,7 @@ func TestCopyBeaconBlockBodyBellatrix(t *testing.T) {
 }
 
 func TestCopySignedBlindedBeaconBlockBellatrix(t *testing.T) {
-	sbb := tgen.PbSignedBlindedBlockBellatrix()
+	sbb := tgen.PbSignedBlindedBeaconBlockBellatrix()
 
 	got := v1alpha1.CopySignedBlindedBeaconBlockBellatrix(sbb)
 	if !reflect.DeepEqual(got, sbb) {
@@ -360,7 +360,7 @@ func TestCopySignedBlindedBeaconBlockBellatrix(t *testing.T) {
 }
 
 func TestCopyBlindedBeaconBlockBellatrix(t *testing.T) {
-	b := tgen.PbBlindedBlockBellatrix()
+	b := tgen.PbBlindedBeaconBlockBellatrix()
 
 	got := v1alpha1.CopyBlindedBeaconBlockBellatrix(b)
 	if !reflect.DeepEqual(got, b) {
@@ -370,7 +370,7 @@ func TestCopyBlindedBeaconBlockBellatrix(t *testing.T) {
 }
 
 func TestCopyBlindedBeaconBlockBodyBellatrix(t *testing.T) {
-	bb := tgen.PbBlindedBlockBodyBellatrix()
+	bb := tgen.PbBlindedBeaconBlockBodyBellatrix()
 
 	got := v1alpha1.CopyBlindedBeaconBlockBodyBellatrix(bb)
 	if !reflect.DeepEqual(got, bb) {

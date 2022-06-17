@@ -257,83 +257,83 @@ func GetBlockFields() BlockFields {
 	}
 }
 
-func PbSignedBlockPhase0() *eth.SignedBeaconBlock {
+func PbSignedBeaconBlockPhase0() *eth.SignedBeaconBlock {
 	f := GetBlockFields()
 	return &eth.SignedBeaconBlock{
-		Block:     PbBlockPhase0(),
+		Block:     PbBeaconBlockPhase0(),
 		Signature: f.B96,
 	}
 }
 
-func PbSignedBlockAltair() *eth.SignedBeaconBlockAltair {
+func PbSignedBeaconBlockAltair() *eth.SignedBeaconBlockAltair {
 	f := GetBlockFields()
 	return &eth.SignedBeaconBlockAltair{
-		Block:     PbBlockAltair(),
+		Block:     PbBeaconBlockAltair(),
 		Signature: f.B96,
 	}
 }
 
-func PbSignedBlockBellatrix() *eth.SignedBeaconBlockBellatrix {
+func PbSignedBeaconBlockBellatrix() *eth.SignedBeaconBlockBellatrix {
 	f := GetBlockFields()
 	return &eth.SignedBeaconBlockBellatrix{
-		Block:     PbBlockBellatrix(),
+		Block:     PbBeaconBlockBellatrix(),
 		Signature: f.B96,
 	}
 }
 
-func PbSignedBlindedBlockBellatrix() *eth.SignedBlindedBeaconBlockBellatrix {
+func PbSignedBlindedBeaconBlockBellatrix() *eth.SignedBlindedBeaconBlockBellatrix {
 	f := GetBlockFields()
 	return &eth.SignedBlindedBeaconBlockBellatrix{
-		Block:     PbBlindedBlockBellatrix(),
+		Block:     PbBlindedBeaconBlockBellatrix(),
 		Signature: f.B96,
 	}
 }
 
-func PbBlockPhase0() *eth.BeaconBlock {
+func PbBeaconBlockPhase0() *eth.BeaconBlock {
 	f := GetBlockFields()
 	return &eth.BeaconBlock{
 		Slot:          128,
 		ProposerIndex: 128,
 		ParentRoot:    f.B32,
 		StateRoot:     f.B32,
-		Body:          PbBlockBodyPhase0(),
+		Body:          PbBeaconBlockBodyPhase0(),
 	}
 }
 
-func PbBlockAltair() *eth.BeaconBlockAltair {
+func PbBeaconBlockAltair() *eth.BeaconBlockAltair {
 	f := GetBlockFields()
 	return &eth.BeaconBlockAltair{
 		Slot:          128,
 		ProposerIndex: 128,
 		ParentRoot:    f.B32,
 		StateRoot:     f.B32,
-		Body:          PbBlockBodyAltair(),
+		Body:          PbBeaconBlockBodyAltair(),
 	}
 }
 
-func PbBlockBellatrix() *eth.BeaconBlockBellatrix {
+func PbBeaconBlockBellatrix() *eth.BeaconBlockBellatrix {
 	f := GetBlockFields()
 	return &eth.BeaconBlockBellatrix{
 		Slot:          128,
 		ProposerIndex: 128,
 		ParentRoot:    f.B32,
 		StateRoot:     f.B32,
-		Body:          PbBlockBodyBellatrix(),
+		Body:          PbBeaconBlockBodyBellatrix(),
 	}
 }
 
-func PbBlindedBlockBellatrix() *eth.BlindedBeaconBlockBellatrix {
+func PbBlindedBeaconBlockBellatrix() *eth.BlindedBeaconBlockBellatrix {
 	f := GetBlockFields()
 	return &eth.BlindedBeaconBlockBellatrix{
 		Slot:          128,
 		ProposerIndex: 128,
 		ParentRoot:    f.B32,
 		StateRoot:     f.B32,
-		Body:          PbBlindedBlockBodyBellatrix(),
+		Body:          PbBlindedBeaconBlockBodyBellatrix(),
 	}
 }
 
-func PbBlockBodyPhase0() *eth.BeaconBlockBody {
+func PbBeaconBlockBodyPhase0() *eth.BeaconBlockBody {
 	f := GetBlockFields()
 	return &eth.BeaconBlockBody{
 		RandaoReveal: f.B96,
@@ -351,7 +351,7 @@ func PbBlockBodyPhase0() *eth.BeaconBlockBody {
 	}
 }
 
-func PbBlockBodyAltair() *eth.BeaconBlockBodyAltair {
+func PbBeaconBlockBodyAltair() *eth.BeaconBlockBodyAltair {
 	f := GetBlockFields()
 	return &eth.BeaconBlockBodyAltair{
 		RandaoReveal: f.B96,
@@ -370,7 +370,7 @@ func PbBlockBodyAltair() *eth.BeaconBlockBodyAltair {
 	}
 }
 
-func PbBlockBodyBellatrix() *eth.BeaconBlockBodyBellatrix {
+func PbBeaconBlockBodyBellatrix() *eth.BeaconBlockBodyBellatrix {
 	f := GetBlockFields()
 	return &eth.BeaconBlockBodyBellatrix{
 		RandaoReveal: f.B96,
@@ -390,7 +390,7 @@ func PbBlockBodyBellatrix() *eth.BeaconBlockBodyBellatrix {
 	}
 }
 
-func PbBlindedBlockBodyBellatrix() *eth.BlindedBeaconBlockBodyBellatrix {
+func PbBlindedBeaconBlockBodyBellatrix() *eth.BlindedBeaconBlockBodyBellatrix {
 	f := GetBlockFields()
 	return &eth.BlindedBeaconBlockBodyBellatrix{
 		RandaoReveal: f.B96,

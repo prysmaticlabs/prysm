@@ -91,7 +91,7 @@ func Test_slashableProposalCheck(t *testing.T) {
 	validator, mocks, validatorKey, finish := setup(t)
 	defer finish()
 
-	blk := tgen.PbSignedBlockPhase0()
+	blk := tgen.PbSignedBeaconBlockPhase0()
 
 	pubKeyBytes := [fieldparams.BLSPubkeyLength]byte{}
 	copy(pubKeyBytes[:], validatorKey.PublicKey().Marshal())

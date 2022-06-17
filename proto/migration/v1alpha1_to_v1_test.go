@@ -50,7 +50,7 @@ var (
 )
 
 func Test_BlockIfaceToV1BlockHeader(t *testing.T) {
-	alphaBlock := tgen.PbSignedBlockPhase0()
+	alphaBlock := tgen.PbSignedBeaconBlockPhase0()
 
 	wsb, err := wrapper.WrappedSignedBeaconBlock(alphaBlock)
 	require.NoError(t, err)
@@ -85,7 +85,7 @@ func Test_V1Alpha1AggregateAttAndProofToV1(t *testing.T) {
 }
 
 func Test_V1Alpha1ToV1SignedBlock(t *testing.T) {
-	alphaBlock := tgen.PbSignedBlockPhase0()
+	alphaBlock := tgen.PbSignedBeaconBlockPhase0()
 
 	v1Block, err := V1Alpha1ToV1SignedBlock(alphaBlock)
 	require.NoError(t, err)
@@ -120,7 +120,7 @@ func Test_V1ToV1Alpha1SignedBlock(t *testing.T) {
 }
 
 func Test_V1ToV1Alpha1Block(t *testing.T) {
-	alphaBlock := tgen.PbBlockPhase0()
+	alphaBlock := tgen.PbBeaconBlockPhase0()
 
 	v1Block, err := V1Alpha1ToV1Block(alphaBlock)
 	require.NoError(t, err)
@@ -328,7 +328,7 @@ func Test_V1AttToV1Alpha1(t *testing.T) {
 }
 
 func Test_BlockInterfaceToV1Block(t *testing.T) {
-	v1Alpha1Block := tgen.PbSignedBlockPhase0()
+	v1Alpha1Block := tgen.PbSignedBeaconBlockPhase0()
 
 	wsb, err := wrapper.WrappedSignedBeaconBlock(v1Alpha1Block)
 	require.NoError(t, err)
