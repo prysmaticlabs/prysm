@@ -1436,7 +1436,7 @@ func TestVerifyBlkDescendant(t *testing.T) {
 		WithForkChoiceStore(fcs),
 	}
 	b := util.NewBeaconBlock()
-	b.Block.Slot = 1
+	b.Block.Slot = 32
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
@@ -1444,7 +1444,7 @@ func TestVerifyBlkDescendant(t *testing.T) {
 	require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
 
 	b1 := util.NewBeaconBlock()
-	b1.Block.Slot = 1
+	b1.Block.Slot = 32
 	b1.Block.Body.Graffiti = bytesutil.PadTo([]byte{'a'}, 32)
 	r1, err := b1.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -1497,7 +1497,7 @@ func TestVerifyBlkDescendant(t *testing.T) {
 	for _, tt := range tests {
 		service, err := NewService(ctx, opts...)
 		require.NoError(t, err)
-		service.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{Root: tt.args.finalizedRoot[:]}, [32]byte{})
+		service.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{Root: tt.args.finalizedRoot[:], Epoch: 1}, [32]byte{})
 		err = service.VerifyFinalizedBlkDescendant(ctx, tt.args.parentRoot)
 		if tt.wantedErr != "" {
 			assert.ErrorContains(t, tt.wantedErr, err)
