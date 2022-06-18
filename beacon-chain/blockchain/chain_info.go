@@ -132,6 +132,10 @@ func (s *Service) HeadRoot(ctx context.Context) ([]byte, error) {
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
 
+	if s.head != nil && s.head.root != params.BeaconConfig().ZeroHash {
+		return s.head.root[:], nil
+	}
+
 	root := s.ForkChoicer().CachedHeadRoot()
 	if root != params.BeaconConfig().ZeroHash {
 		return root[:], nil

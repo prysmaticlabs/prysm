@@ -97,12 +97,11 @@ func (s *Service) VerifyFinalizedBlkDescendant(ctx context.Context, root [32]byt
 	defer span.End()
 	finalized := s.ForkChoicer().FinalizedCheckpoint()
 	fRoot := s.ensureRootNotZeros(finalized.Root)
-	finalizedBlkSigned, err := s.getBlock(ctx, fRoot)
+	fSlot, err := slots.EpochStart(finalized.Epoch)
 	if err != nil {
 		return err
 	}
-	finalizedBlk := finalizedBlkSigned.Block()
-	bFinalizedRoot, err := s.ancestor(ctx, root[:], finalizedBlk.Slot())
+	bFinalizedRoot, err := s.ancestor(ctx, root[:], fSlot)
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized block root")
 	}
@@ -110,9 +109,9 @@ func (s *Service) VerifyFinalizedBlkDescendant(ctx context.Context, root [32]byt
 		return fmt.Errorf("no finalized block known for block %#x", bytesutil.Trunc(root[:]))
 	}
 
-	if !bytes.Equal(bFinalizedRoot, finalized.Root[:]) {
+	if !bytes.Equal(bFinalizedRoot, fRoot[:]) {
 		err := fmt.Errorf("block %#x is not a descendant of the current finalized block slot %d, %#x != %#x",
-			bytesutil.Trunc(root[:]), finalizedBlk.Slot(), bytesutil.Trunc(bFinalizedRoot),
+			bytesutil.Trunc(root[:]), fSlot, bytesutil.Trunc(bFinalizedRoot),
 			bytesutil.Trunc(fRoot[:]))
 		tracing.AnnotateError(span, err)
 		return invalidBlock{err}

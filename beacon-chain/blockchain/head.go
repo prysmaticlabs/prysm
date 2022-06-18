@@ -63,11 +63,10 @@ func (s *Service) saveHead(ctx context.Context, newHeadRoot [32]byte, headBlock 
 	defer span.End()
 
 	// Do nothing if head hasn't changed.
-	oldHeadroot, err := s.HeadRoot(ctx)
-	if err != nil {
-		return err
-	}
-	if newHeadRoot == bytesutil.ToBytes32(oldHeadroot) {
+	s.headLock.RLock()
+	oldHeadRoot := s.head.root
+	s.headLock.RUnlock()
+	if newHeadRoot == oldHeadRoot {
 		return nil
 	}
 	if err := wrapper.BeaconBlockIsNil(headBlock); err != nil {
@@ -85,13 +84,12 @@ func (s *Service) saveHead(ctx context.Context, newHeadRoot [32]byte, headBlock 
 
 	// A chain re-org occurred, so we fire an event notifying the rest of the services.
 	s.headLock.RLock()
-	oldHeadRoot := s.headRoot()
 	oldStateRoot := s.headBlock().Block().StateRoot()
 	s.headLock.RUnlock()
 	headSlot := s.HeadSlot()
 	newHeadSlot := headBlock.Block().Slot()
 	newStateRoot := headBlock.Block().StateRoot()
-	if bytesutil.ToBytes32(headBlock.Block().ParentRoot()) != bytesutil.ToBytes32(oldHeadroot) {
+	if bytesutil.ToBytes32(headBlock.Block().ParentRoot()) != oldHeadRoot {
 		log.WithFields(logrus.Fields{
 			"newSlot": fmt.Sprintf("%d", newHeadSlot),
 			"oldSlot": fmt.Sprintf("%d", headSlot),
@@ -115,7 +113,7 @@ func (s *Service) saveHead(ctx context.Context, newHeadRoot [32]byte, headBlock 
 			},
 		})
 
-		if err := s.saveOrphanedAtts(ctx, bytesutil.ToBytes32(oldHeadroot), newHeadRoot); err != nil {
+		if err := s.saveOrphanedAtts(ctx, oldHeadRoot, newHeadRoot); err != nil {
 			return err
 		}
 		reorgCount.Inc()

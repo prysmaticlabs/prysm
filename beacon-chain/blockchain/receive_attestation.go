@@ -149,8 +149,8 @@ func (s *Service) UpdateHead(ctx context.Context) error {
 
 	s.processAttestations(ctx)
 
-	justified := s.CurrentJustifiedCheckpt()
-	balances, err := s.justifiedBalances.get(ctx, bytesutil.ToBytes32(justified.Root))
+	justified := s.ForkChoicer().JustifiedCheckpoint()
+	balances, err := s.justifiedBalances.get(ctx, justified.Root)
 	if err != nil {
 		return err
 	}

@@ -499,6 +499,7 @@ func TestVerifyFinalizedConsistency_InconsistentRoot_ProtoArray(t *testing.T) {
 	r32, err := b32.Block.HashTreeRoot()
 	require.NoError(t, err)
 
+	require.NoError(t, service.ForkChoicer().UpdateFinalizedCheckpoint(&forkchoicetypes.Checkpoint{Epoch: 1}))
 	b33 := util.NewBeaconBlock()
 	b33.Block.Slot = 33
 	b33.Block.ParentRoot = r32[:]
@@ -533,6 +534,7 @@ func TestVerifyFinalizedConsistency_InconsistentRoot_DoublyLinkedTree(t *testing
 	r32, err := b32.Block.HashTreeRoot()
 	require.NoError(t, err)
 
+	require.NoError(t, service.ForkChoicer().UpdateFinalizedCheckpoint(&forkchoicetypes.Checkpoint{Epoch: 1}))
 	b33 := util.NewBeaconBlock()
 	b33.Block.Slot = 33
 	b33.Block.ParentRoot = r32[:]
@@ -561,6 +563,7 @@ func TestVerifyFinalizedConsistency_OK(t *testing.T) {
 	r32, err := b32.Block.HashTreeRoot()
 	require.NoError(t, err)
 
+	require.NoError(t, service.ForkChoicer().UpdateFinalizedCheckpoint(&forkchoicetypes.Checkpoint{Epoch: 1, Root: r32}))
 	b33 := util.NewBeaconBlock()
 	b33.Block.Slot = 33
 	b33.Block.ParentRoot = r32[:]

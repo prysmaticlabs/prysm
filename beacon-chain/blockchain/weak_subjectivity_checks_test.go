@@ -6,6 +6,8 @@ import (
 
 	"github.com/pkg/errors"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
@@ -73,10 +75,12 @@ func TestService_VerifyWeakSubjectivityRoot(t *testing.T) {
 			wv, err := NewWeakSubjectivityVerifier(tt.checkpt, beaconDB)
 			require.Equal(t, !tt.disabled, wv.enabled)
 			require.NoError(t, err)
+			fcs := protoarray.New()
 			s := &Service{
-				cfg:        &config{BeaconDB: beaconDB, WeakSubjectivityCheckpt: tt.checkpt},
+				cfg:        &config{BeaconDB: beaconDB, WeakSubjectivityCheckpt: tt.checkpt, ForkChoiceStore: fcs},
 				wsVerifier: wv,
 			}
+			require.NoError(t, fcs.UpdateFinalizedCheckpoint(&forkchoicetypes.Checkpoint{Epoch: tt.finalizedEpoch}))
 			cp := s.ForkChoicer().FinalizedCheckpoint()
 			err = s.wsVerifier.VerifyWeakSubjectivity(context.Background(), cp.Epoch)
 			if tt.wantErr == nil {
