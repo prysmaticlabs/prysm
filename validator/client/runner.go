@@ -59,7 +59,6 @@ func run(ctx context.Context, v iface.Validator) {
 		log.Fatalf("Failed to update proposer settings: %v", err) // allow fatal. skipcq
 	}
 	for {
-		var slotCtx context.Context
 		_, cancel := context.WithCancel(ctx)
 		ctx, span := trace.StartSpan(ctx, "validator.processSlot")
 
@@ -102,7 +101,7 @@ func run(ctx context.Context, v iface.Validator) {
 			}
 
 			deadline := v.SlotDeadline(slot)
-			slotCtx, cancel = context.WithDeadline(ctx, deadline)
+			slotCtx, cancel := context.WithDeadline(ctx, deadline)
 			log := log.WithField("slot", slot)
 			log.WithField("deadline", deadline).Debug("Set deadline for proposals and attestations")
 
