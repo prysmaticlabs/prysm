@@ -4,9 +4,11 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
+	fastssz "github.com/ferranbt/fastssz"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	tracing2 "github.com/prysmaticlabs/prysm/monitoring/tracing"
@@ -170,4 +172,10 @@ func configureExecutionSetting(cliCtx *cli.Context) error {
 	}
 	c.DefaultFeeRecipient = checksumAddress
 	return params.SetActive(c)
+}
+
+func configureFastSSZHashingAlgorithm() {
+	if features.Get().EnableVectorizedHTR {
+		fastssz.EnableVectorizedHTR = true
+	}
 }
