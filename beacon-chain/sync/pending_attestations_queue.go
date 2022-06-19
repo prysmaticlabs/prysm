@@ -62,72 +62,7 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 		s.pendingAttsLock.RUnlock()
 		// has the pending attestation's missing block arrived and the node processed block yet?
 		if s.cfg.beaconDB.HasBlock(ctx, bRoot) && (s.cfg.beaconDB.HasState(ctx, bRoot) || s.cfg.beaconDB.HasStateSummary(ctx, bRoot)) {
-			for _, signedAtt := range attestations {
-				att := signedAtt.Message
-				// The pending attestations can arrive in both aggregated and unaggregated forms,
-				// each from has distinct validation steps.
-				if helpers.IsAggregated(att.Aggregate) {
-					// Save the pending aggregated attestation to the pool if it passes the aggregated
-					// validation steps.
-					valRes, err := s.validateAggregatedAtt(ctx, signedAtt)
-					if err != nil {
-						log.WithError(err).Debug("Pending aggregated attestation failed validation")
-					}
-					aggValid := pubsub.ValidationAccept == valRes
-					if s.validateBlockInAttestation(ctx, signedAtt) && aggValid {
-						if err := s.cfg.attPool.SaveAggregatedAttestation(att.Aggregate); err != nil {
-							log.WithError(err).Debug("Could not save aggregate attestation")
-							continue
-						}
-						s.setAggregatorIndexEpochSeen(att.Aggregate.Data.Target.Epoch, att.AggregatorIndex)
-
-						// Broadcasting the signed attestation again once a node is able to process it.
-						if err := s.cfg.p2p.Broadcast(ctx, signedAtt); err != nil {
-							log.WithError(err).Debug("Could not broadcast")
-						}
-					}
-				} else {
-					// This is an important validation before retrieving attestation pre state to defend against
-					// attestation's target intentionally reference checkpoint that's long ago.
-					// Verify current finalized checkpoint is an ancestor of the block defined by the attestation's beacon block root.
-					if err := s.cfg.chain.VerifyFinalizedConsistency(ctx, att.Aggregate.Data.BeaconBlockRoot); err != nil {
-						log.WithError(err).Debug("Could not verify finalized consistency")
-						continue
-					}
-					if err := s.cfg.chain.VerifyLmdFfgConsistency(ctx, att.Aggregate); err != nil {
-						log.WithError(err).Debug("Could not verify FFG consistency")
-						continue
-					}
-					preState, err := s.cfg.chain.AttestationTargetState(ctx, att.Aggregate.Data.Target)
-					if err != nil {
-						log.WithError(err).Debug("Could not retrieve attestation prestate")
-						continue
-					}
-
-					valid, err := s.validateUnaggregatedAttWithState(ctx, att.Aggregate, preState)
-					if err != nil {
-						log.WithError(err).Debug("Pending unaggregated attestation failed validation")
-						continue
-					}
-					if valid == pubsub.ValidationAccept {
-						if err := s.cfg.attPool.SaveUnaggregatedAttestation(att.Aggregate); err != nil {
-							log.WithError(err).Debug("Could not save unaggregated attestation")
-							continue
-						}
-						s.setSeenCommitteeIndicesSlot(att.Aggregate.Data.Slot, att.Aggregate.Data.CommitteeIndex, att.Aggregate.AggregationBits)
-
-						valCount, err := helpers.ActiveValidatorCount(ctx, preState, slots.ToEpoch(att.Aggregate.Data.Slot))
-						if err != nil {
-							log.WithError(err).Debug("Could not retrieve active validator count")
-							continue
-						}
-						// Broadcasting the signed attestation again once a node is able to process it.
-						if err := s.cfg.p2p.BroadcastAttestation(ctx, helpers.ComputeSubnetForAttestation(valCount, signedAtt.Message.Aggregate), signedAtt.Message.Aggregate); err != nil {
-							log.WithError(err).Debug("Could not broadcast")
-						}
-					}
-				}
-			}
+			s.processAttestations(ctx, attestations)
 			log.WithFields(logrus.Fields{
 				"blockRoot":        hex.EncodeToString(bytesutil.Trunc(bRoot[:])),
 				"pendingAttsCount": len(attestations),
@@ -149,6 +84,75 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 		}
 	}
 	return s.sendBatchRootRequest(ctx, pendingRoots, randGen)
+}
+
+func (s *Service) processAttestations(ctx context.Context, attestations []*ethpb.SignedAggregateAttestationAndProof) {
+	for _, signedAtt := range attestations {
+		att := signedAtt.Message
+		// The pending attestations can arrive in both aggregated and unaggregated forms,
+		// each from has distinct validation steps.
+		if helpers.IsAggregated(att.Aggregate) {
+			// Save the pending aggregated attestation to the pool if it passes the aggregated
+			// validation steps.
+			valRes, err := s.validateAggregatedAtt(ctx, signedAtt)
+			if err != nil {
+				log.WithError(err).Debug("Pending aggregated attestation failed validation")
+			}
+			aggValid := pubsub.ValidationAccept == valRes
+			if s.validateBlockInAttestation(ctx, signedAtt) && aggValid {
+				if err := s.cfg.attPool.SaveAggregatedAttestation(att.Aggregate); err != nil {
+					log.WithError(err).Debug("Could not save aggregate attestation")
+					continue
+				}
+				s.setAggregatorIndexEpochSeen(att.Aggregate.Data.Target.Epoch, att.AggregatorIndex)
+
+				// Broadcasting the signed attestation again once a node is able to process it.
+				if err := s.cfg.p2p.Broadcast(ctx, signedAtt); err != nil {
+					log.WithError(err).Debug("Could not broadcast")
+				}
+			}
+		} else {
+			// This is an important validation before retrieving attestation pre state to defend against
+			// attestation's target intentionally reference checkpoint that's long ago.
+			// Verify current finalized checkpoint is an ancestor of the block defined by the attestation's beacon block root.
+			if err := s.cfg.chain.VerifyFinalizedConsistency(ctx, att.Aggregate.Data.BeaconBlockRoot); err != nil {
+				log.WithError(err).Debug("Could not verify finalized consistency")
+				continue
+			}
+			if err := s.cfg.chain.VerifyLmdFfgConsistency(ctx, att.Aggregate); err != nil {
+				log.WithError(err).Debug("Could not verify FFG consistency")
+				continue
+			}
+			preState, err := s.cfg.chain.AttestationTargetState(ctx, att.Aggregate.Data.Target)
+			if err != nil {
+				log.WithError(err).Debug("Could not retrieve attestation prestate")
+				continue
+			}
+
+			valid, err := s.validateUnaggregatedAttWithState(ctx, att.Aggregate, preState)
+			if err != nil {
+				log.WithError(err).Debug("Pending unaggregated attestation failed validation")
+				continue
+			}
+			if valid == pubsub.ValidationAccept {
+				if err := s.cfg.attPool.SaveUnaggregatedAttestation(att.Aggregate); err != nil {
+					log.WithError(err).Debug("Could not save unaggregated attestation")
+					continue
+				}
+				s.setSeenCommitteeIndicesSlot(att.Aggregate.Data.Slot, att.Aggregate.Data.CommitteeIndex, att.Aggregate.AggregationBits)
+
+				valCount, err := helpers.ActiveValidatorCount(ctx, preState, slots.ToEpoch(att.Aggregate.Data.Slot))
+				if err != nil {
+					log.WithError(err).Debug("Could not retrieve active validator count")
+					continue
+				}
+				// Broadcasting the signed attestation again once a node is able to process it.
+				if err := s.cfg.p2p.BroadcastAttestation(ctx, helpers.ComputeSubnetForAttestation(valCount, signedAtt.Message.Aggregate), signedAtt.Message.Aggregate); err != nil {
+					log.WithError(err).Debug("Could not broadcast")
+				}
+			}
+		}
+	}
 }
 
 // This defines how pending attestations is saved in the map. The key is the
