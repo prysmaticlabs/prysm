@@ -187,17 +187,19 @@ func (f *ForkChoice) updateCheckpoints(ctx context.Context, jc, fc *ethpb.Checkp
 		}
 	}
 	// Update finalization
-	if fc.Epoch > f.store.finalizedCheckpoint.Epoch {
-		f.store.finalizedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: fc.Epoch,
-			Root: bytesutil.ToBytes32(fc.Root)}
+	if fc.Epoch <= f.store.finalizedCheckpoint.Epoch {
+		f.store.checkpointsLock.Unlock()
+		return nil
+	}
+	f.store.finalizedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: fc.Epoch,
+		Root: bytesutil.ToBytes32(fc.Root)}
+	if jc.Epoch > f.store.justifiedCheckpoint.Epoch {
 		f.store.prevJustifiedCheckpoint = f.store.justifiedCheckpoint
 		f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch,
 			Root: bytesutil.ToBytes32(jc.Root)}
-		f.store.checkpointsLock.Unlock()
-		return f.store.prune(ctx)
 	}
 	f.store.checkpointsLock.Unlock()
-	return nil
+	return f.store.prune(ctx)
 }
 
 // HasNode returns true if the node exists in fork choice store,
