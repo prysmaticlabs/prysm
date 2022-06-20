@@ -221,15 +221,6 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 			return err
 		}
 		s.store.SetJustifiedCheckptAndPayloadHash(postState.CurrentJustifiedCheckpoint(), h)
-		// Update Forkchoice checkpoints
-		if err := s.cfg.ForkChoiceStore.UpdateJustifiedCheckpoint(&forkchoicetypes.Checkpoint{
-			Epoch: psj.Epoch, Root: bytesutil.ToBytes32(psj.Root)}); err != nil {
-			return err
-		}
-		if err := s.cfg.ForkChoiceStore.UpdateFinalizedCheckpoint(&forkchoicetypes.Checkpoint{
-			Epoch: psf.Epoch, Root: bytesutil.ToBytes32(psf.Root)}); err != nil {
-			return err
-		}
 	}
 
 	balances, err := s.justifiedBalances.get(ctx, bytesutil.ToBytes32(justified.Root))
@@ -237,7 +228,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 		msg := fmt.Sprintf("could not read balances for state w/ justified checkpoint %#x", justified.Root)
 		return errors.Wrap(err, msg)
 	}
-	headRoot, err := s.updateHead(ctx, balances)
+	headRoot, err := s.cfg.ForkChoiceStore.Head(ctx, balances)
 	if err != nil {
 		log.WithError(err).Warn("Could not update head")
 	}
@@ -283,9 +274,6 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 			return err
 		}
 		fRoot := bytesutil.ToBytes32(postState.FinalizedCheckpoint().Root)
-		if err := s.cfg.ForkChoiceStore.Prune(ctx, fRoot); err != nil {
-			return errors.Wrap(err, "could not prune fork choice nodes")
-		}
 		isOptimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(fRoot)
 		if err != nil {
 			return errors.Wrap(err, "could not check if node is optimistically synced")
@@ -461,14 +449,6 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 	if err := s.cfg.ForkChoiceStore.InsertNode(ctx, preState, lastBR); err != nil {
 		return errors.Wrap(err, "could not insert last block in batch to forkchoice")
 	}
-	// Prune forkchoice store only if the new finalized checkpoint is higher
-	// than the finalized checkpoint in forkchoice store.
-	if fCheckpoints[len(blks)-1].Epoch > s.cfg.ForkChoiceStore.FinalizedCheckpoint().Epoch {
-		if err := s.cfg.ForkChoiceStore.Prune(ctx, s.ensureRootNotZeros(bytesutil.ToBytes32(fCheckpoints[len(blks)-1].Root))); err != nil {
-			return errors.Wrap(err, "could not prune fork choice nodes")
-		}
-	}
-
 	// Set their optimistic status
 	if isValidPayload {
 		if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, lastBR); err != nil {
@@ -659,10 +639,6 @@ func (s *Service) savePostStateInfo(ctx context.Context, r [32]byte, b interface
 // This removes the attestations from the mem pool. It will only remove the attestations if input root `r` is canonical,
 // meaning the block `b` is part of the canonical chain.
 func (s *Service) pruneCanonicalAttsFromPool(ctx context.Context, r [32]byte, b interfaces.SignedBeaconBlock) error {
-	if !features.Get().CorrectlyPruneCanonicalAtts {
-		return nil
-	}
-
 	canonical, err := s.IsCanonical(ctx, r)
 	if err != nil {
 		return err

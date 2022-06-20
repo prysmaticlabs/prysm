@@ -21,11 +21,11 @@ import (
 	doublylinkedtree "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	"github.com/prysmaticlabs/prysm/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
@@ -1341,13 +1341,15 @@ func TestAncestor_CanUseForkchoice(t *testing.T) {
 	b200.Block.ParentRoot = r100[:]
 	r200, err := b200.Block.HashTreeRoot()
 	require.NoError(t, err)
+	ojc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	ofc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	for _, b := range []*ethpb.SignedBeaconBlock{b1, b100, b200} {
 		beaconBlock := util.NewBeaconBlock()
 		beaconBlock.Block.Slot = b.Block.Slot
 		beaconBlock.Block.ParentRoot = bytesutil.PadTo(b.Block.ParentRoot, 32)
 		r, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
-		state, blkRoot, err := prepareForkchoiceState(context.Background(), b.Block.Slot, r, bytesutil.ToBytes32(b.Block.ParentRoot), params.BeaconConfig().ZeroHash, 0, 0)
+		state, blkRoot, err := prepareForkchoiceState(context.Background(), b.Block.Slot, r, bytesutil.ToBytes32(b.Block.ParentRoot), params.BeaconConfig().ZeroHash, ojc, ofc)
 		require.NoError(t, err)
 		require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
 	}
@@ -1387,6 +1389,8 @@ func TestAncestor_CanUseDB(t *testing.T) {
 	b200.Block.ParentRoot = r100[:]
 	r200, err := b200.Block.HashTreeRoot()
 	require.NoError(t, err)
+	ojc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	ofc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	for _, b := range []*ethpb.SignedBeaconBlock{b1, b100, b200} {
 		beaconBlock := util.NewBeaconBlock()
 		beaconBlock.Block.Slot = b.Block.Slot
@@ -1396,7 +1400,7 @@ func TestAncestor_CanUseDB(t *testing.T) {
 		require.NoError(t, beaconDB.SaveBlock(context.Background(), wsb)) // Saves blocks to DB.
 	}
 
-	state, blkRoot, err := prepareForkchoiceState(context.Background(), 200, r200, r200, params.BeaconConfig().ZeroHash, 0, 0)
+	state, blkRoot, err := prepareForkchoiceState(context.Background(), 200, r200, r200, params.BeaconConfig().ZeroHash, ojc, ofc)
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
 
@@ -1579,6 +1583,7 @@ func TestOnBlock_CanFinalize(t *testing.T) {
 		WithForkChoiceStore(fcs),
 		WithDepositCache(depositCache),
 		WithStateNotifier(&mock.MockStateNotifier{}),
+		WithAttestationPool(attestations.NewPool()),
 	}
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
@@ -1695,6 +1700,7 @@ func TestOnBlock_CallNewPayloadAndForkchoiceUpdated(t *testing.T) {
 		WithForkChoiceStore(fcs),
 		WithDepositCache(depositCache),
 		WithStateNotifier(&mock.MockStateNotifier{}),
+		WithAttestationPool(attestations.NewPool()),
 	}
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
@@ -1817,11 +1823,6 @@ func TestInsertFinalizedDeposits_MultipleFinalizedRoutines(t *testing.T) {
 }
 
 func TestRemoveBlockAttestationsInPool_Canonical(t *testing.T) {
-	resetCfg := features.InitWithReset(&features.Flags{
-		CorrectlyPruneCanonicalAtts: true,
-	})
-	defer resetCfg()
-
 	genesis, keys := util.DeterministicGenesisState(t, 64)
 	b, err := util.GenerateFullBlock(genesis, keys, util.DefaultBlockGenConfig(), 1)
 	assert.NoError(t, err)
@@ -1843,11 +1844,6 @@ func TestRemoveBlockAttestationsInPool_Canonical(t *testing.T) {
 }
 
 func TestRemoveBlockAttestationsInPool_NonCanonical(t *testing.T) {
-	resetCfg := features.InitWithReset(&features.Flags{
-		CorrectlyPruneCanonicalAtts: true,
-	})
-	defer resetCfg()
-
 	genesis, keys := util.DeterministicGenesisState(t, 64)
 	b, err := util.GenerateFullBlock(genesis, keys, util.DefaultBlockGenConfig(), 1)
 	assert.NoError(t, err)
@@ -1930,6 +1926,7 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 		WithStateGen(stategen.New(beaconDB)),
 		WithForkChoiceStore(fcs),
 		WithProposerIdsCache(cache.NewProposerPayloadIDsCache()),
+		WithAttestationPool(attestations.NewPool()),
 	}
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
@@ -2112,6 +2109,7 @@ func TestOnBlock_ProcessBlocksParallel(t *testing.T) {
 		WithForkChoiceStore(fcs),
 		WithDepositCache(depositCache),
 		WithStateNotifier(&mock.MockStateNotifier{}),
+		WithAttestationPool(attestations.NewPool()),
 	}
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)

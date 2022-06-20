@@ -59,7 +59,8 @@ func TestFFGUpdates_OneBranch(t *testing.T) {
 	//            2 <- head
 	//            |
 	//            3
-	f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Root: indexToHash(2), Epoch: 1}
+	f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Root: indexToHash(1), Epoch: 1}
+	f.store.finalizedCheckpoint = &forkchoicetypes.Checkpoint{Root: indexToHash(0), Epoch: 0}
 	r, err = f.Head(context.Background(), balances)
 	require.NoError(t, err)
 	assert.Equal(t, indexToHash(2), r, "Incorrect head with justified epoch at 1")
@@ -218,6 +219,7 @@ func setup(justifiedEpoch, finalizedEpoch types.Epoch) *ForkChoice {
 	ctx := context.Background()
 	f := New()
 	f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: justifiedEpoch, Root: params.BeaconConfig().ZeroHash}
+	f.store.bestJustifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: justifiedEpoch, Root: params.BeaconConfig().ZeroHash}
 	f.store.finalizedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: finalizedEpoch, Root: params.BeaconConfig().ZeroHash}
 	state, blkRoot, err := prepareForkchoiceState(ctx, 0, params.BeaconConfig().ZeroHash, [32]byte{}, params.BeaconConfig().ZeroHash, justifiedEpoch, finalizedEpoch)
 	if err != nil {

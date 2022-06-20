@@ -7,6 +7,7 @@ go_library(
         "backup.go",
         "delete.go",
         "exit.go",
+        "import.go",
         "list.go",
         "wallet_utils.go",
     ],
@@ -36,6 +37,7 @@ go_test(
         "backup_test.go",
         "delete_test.go",
         "exit_test.go",
+        "import_test.go",
     ],
     embed = [":go_default_library"],
     deps = [

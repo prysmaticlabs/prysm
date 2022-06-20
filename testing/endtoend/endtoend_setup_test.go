@@ -86,7 +86,7 @@ func e2eMinimal(t *testing.T, cfgo ...types.E2EConfigOpt) *testRunner {
 	return newTestRunner(t, testConfig)
 }
 
-func e2eMainnet(t *testing.T, usePrysmSh, useMultiClient bool) *testRunner {
+func e2eMainnet(t *testing.T, usePrysmSh, useMultiClient bool, cfgo ...types.E2EConfigOpt) *testRunner {
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.E2EMainnetTestConfig())
 	if useMultiClient {
@@ -154,6 +154,9 @@ func e2eMainnet(t *testing.T, usePrysmSh, useMultiClient bool) *testRunner {
 		Evaluators:              evals,
 		EvalInterceptor:         defaultInterceptor,
 		Seed:                    int64(seed),
+	}
+	for _, o := range cfgo {
+		o(testConfig)
 	}
 
 	return newTestRunner(t, testConfig)

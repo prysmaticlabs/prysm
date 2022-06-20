@@ -141,7 +141,6 @@ func (s *Service) RegisterValidator(ctx context.Context, reg []*ethpb.SignedVali
 		msgs = append(msgs, r.Message)
 		valid = append(valid, r)
 	}
-
 	if err := s.c.RegisterValidator(ctx, valid); err != nil {
 		return errors.Wrap(err, "could not register validator(s)")
 	}

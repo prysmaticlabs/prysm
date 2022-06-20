@@ -63,7 +63,12 @@ func signValidatorRegistration(
 	reg *ethpb.ValidatorRegistrationV1,
 ) ([]byte, error) {
 
-	d, err := signing.ComputeDomain(params.BeaconConfig().DomainApplicationBuilder, nil, nil)
+	// Per spec, we want the fork version and genesis validator to be nil.
+	// Which is genesis value and zero by default.
+	d, err := signing.ComputeDomain(
+		params.BeaconConfig().DomainApplicationBuilder,
+		nil, /* fork version */
+		nil /* genesis val root */)
 	if err != nil {
 		return nil, err
 	}

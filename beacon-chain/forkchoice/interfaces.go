@@ -15,7 +15,6 @@ type ForkChoicer interface {
 	HeadRetriever        // to compute head.
 	BlockProcessor       // to track new block for fork choice.
 	AttestationProcessor // to track new attestation for fork choice.
-	Pruner               // to clean old data for fork choice.
 	Getter               // to retrieve fork choice information.
 	Setter               // to set fork choice information.
 	ProposerBooster      // ability to boost timely-proposed block roots.
@@ -40,11 +39,6 @@ type AttestationProcessor interface {
 	InsertSlashedIndex(context.Context, types.ValidatorIndex)
 }
 
-// Pruner prunes the fork choice upon new finalization. This is used to keep fork choice sane.
-type Pruner interface {
-	Prune(context.Context, [32]byte) error
-}
-
 // ProposerBooster is able to boost the proposer's root score during fork choice.
 type ProposerBooster interface {
 	BoostProposerRoot(ctx context.Context, args *forkchoicetypes.ProposerBoostRootArgs) error
@@ -56,7 +50,7 @@ type Getter interface {
 	HasNode([32]byte) bool
 	ProposerBoost() [fieldparams.RootLength]byte
 	HasParent(root [32]byte) bool
-	AncestorRoot(ctx context.Context, root [32]byte, slot types.Slot) ([]byte, error)
+	AncestorRoot(ctx context.Context, root [32]byte, slot types.Slot) ([32]byte, error)
 	CommonAncestorRoot(ctx context.Context, root1 [32]byte, root2 [32]byte) ([32]byte, error)
 	IsCanonical(root [32]byte) bool
 	FinalizedCheckpoint() *forkchoicetypes.Checkpoint
@@ -71,4 +65,6 @@ type Setter interface {
 	SetOptimisticToInvalid(context.Context, [fieldparams.RootLength]byte, [fieldparams.RootLength]byte, [fieldparams.RootLength]byte) ([][32]byte, error)
 	UpdateJustifiedCheckpoint(*forkchoicetypes.Checkpoint) error
 	UpdateFinalizedCheckpoint(*forkchoicetypes.Checkpoint) error
+	SetGenesisTime(uint64)
+	SetOriginRoot([32]byte)
 }

@@ -187,22 +187,8 @@ func (q *blocksQueue) loop() {
 	ticker := time.NewTicker(pollingInterval)
 	defer ticker.Stop()
 	for {
-		// Check highest expected slot when we approach chain's head slot.
-		if q.chain.HeadSlot() >= q.highestExpectedSlot {
-			// By the time initial sync is complete, highest slot may increase, re-check.
-			if q.mode == modeStopOnFinalizedEpoch {
-				if q.highestExpectedSlot < q.blocksFetcher.bestFinalizedSlot() {
-					q.highestExpectedSlot = q.blocksFetcher.bestFinalizedSlot()
-					continue
-				}
-			} else {
-				if q.highestExpectedSlot < q.blocksFetcher.bestNonFinalizedSlot() {
-					q.highestExpectedSlot = q.blocksFetcher.bestNonFinalizedSlot()
-					continue
-				}
-			}
-			log.WithField("slot", q.highestExpectedSlot).Debug("Highest expected slot reached")
-			q.cancel()
+		if waitHighestExpectedSlot(q) {
+			continue
 		}
 
 		log.WithFields(logrus.Fields{
@@ -275,6 +261,27 @@ func (q *blocksQueue) loop() {
 			return
 		}
 	}
+}
+
+func waitHighestExpectedSlot(q *blocksQueue) bool {
+	// Check highest expected slot when we approach chain's head slot.
+	if q.chain.HeadSlot() >= q.highestExpectedSlot {
+		// By the time initial sync is complete, highest slot may increase, re-check.
+		if q.mode == modeStopOnFinalizedEpoch {
+			if q.highestExpectedSlot < q.blocksFetcher.bestFinalizedSlot() {
+				q.highestExpectedSlot = q.blocksFetcher.bestFinalizedSlot()
+				return true
+			}
+		} else {
+			if q.highestExpectedSlot < q.blocksFetcher.bestNonFinalizedSlot() {
+				q.highestExpectedSlot = q.blocksFetcher.bestNonFinalizedSlot()
+				return true
+			}
+		}
+		log.WithField("slot", q.highestExpectedSlot).Debug("Highest expected slot reached")
+		q.cancel()
+	}
+	return false
 }
 
 // onScheduleEvent is an event called on newly arrived epochs. Transforms state to scheduled.
