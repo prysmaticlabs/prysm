@@ -25,6 +25,7 @@ func New() *ForkChoice {
 	s := &Store{
 		justifiedCheckpoint:     &forkchoicetypes.Checkpoint{},
 		bestJustifiedCheckpoint: &forkchoicetypes.Checkpoint{},
+		prevJustifiedCheckpoint: &forkchoicetypes.Checkpoint{},
 		finalizedCheckpoint:     &forkchoicetypes.Checkpoint{},
 		proposerBoostRoot:       [32]byte{},
 		nodeByRoot:              make(map[[fieldparams.RootLength]byte]*Node),
