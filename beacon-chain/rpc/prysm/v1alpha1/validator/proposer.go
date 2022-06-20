@@ -188,7 +188,7 @@ func (vs *Server) computeStateRoot(ctx context.Context, block interfaces.SignedB
 	return root[:], nil
 }
 
-// SubmitValidatorRegistration submits validator registration.
-func (vs *Server) SubmitValidatorRegistration(context.Context, *ethpb.SignedValidatorRegistrationV1) (*emptypb.Empty, error) {
+// SubmitValidatorRegistration submits validator registrations.
+func (vs *Server) SubmitValidatorRegistration(context.Context, *ethpb.SignedValidatorRegistrationsV1) (*emptypb.Empty, error) {
 	return &emptypb.Empty{}, nil
 }
