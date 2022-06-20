@@ -63,8 +63,13 @@ func (s *Service) saveHead(ctx context.Context, newHeadRoot [32]byte, headBlock 
 	defer span.End()
 
 	// Do nothing if head hasn't changed.
+	var oldHeadRoot [32]byte
 	s.headLock.RLock()
-	oldHeadRoot := s.head.root
+	if s.head == nil {
+		oldHeadRoot = s.originBlockRoot
+	} else {
+		oldHeadRoot = s.head.root
+	}
 	s.headLock.RUnlock()
 	if newHeadRoot == oldHeadRoot {
 		return nil
