@@ -101,13 +101,13 @@ func RunForkTransitionTest(t *testing.T, config string) {
 				beaconState, ok = st.(*v2.BeaconState)
 				require.Equal(t, true, ok)
 			}
-			postState := beaconState
+
 			for _, b := range postforkBlocks {
 				wsb, err := wrapper.WrappedSignedBeaconBlock(b)
 				require.NoError(t, err)
-				st, err := transition.ExecuteStateTransition(ctx, postState, wsb)
+				st, err := transition.ExecuteStateTransition(ctx, beaconState, wsb)
 				require.NoError(t, err)
-				postState, ok = st.(*v3.BeaconState)
+				beaconState, ok = st.(*v3.BeaconState)
 				require.Equal(t, true, ok)
 			}
 
@@ -118,7 +118,7 @@ func RunForkTransitionTest(t *testing.T, config string) {
 			postBeaconState := &ethpb.BeaconStateBellatrix{}
 			require.NoError(t, postBeaconState.UnmarshalSSZ(postBeaconStateSSZ), "Failed to unmarshal")
 
-			pbState, err := v3.ProtobufBeaconState(postState.CloneInnerState())
+			pbState, err := v3.ProtobufBeaconState(beaconState.CloneInnerState())
 			require.NoError(t, err)
 			require.DeepSSZEqual(t, pbState, postBeaconState)
 		})

@@ -107,13 +107,12 @@ func RunForkTransitionTest(t *testing.T, config string) {
 				beaconState, ok = st.(*v1.BeaconState)
 				require.Equal(t, true, ok)
 			}
-			altairState := beaconState
 			for _, b := range postforkBlocks {
 				wsb, err := wrapper.WrappedSignedBeaconBlock(b)
 				require.NoError(t, err)
-				st, err := transition.ExecuteStateTransition(ctx, altairState, wsb)
+				st, err := transition.ExecuteStateTransition(ctx, beaconState, wsb)
 				require.NoError(t, err)
-				altairState, ok = st.(*stateAltair.BeaconState)
+				beaconState, ok = st.(*stateAltair.BeaconState)
 				require.Equal(t, true, ok)
 			}
 
@@ -124,7 +123,7 @@ func RunForkTransitionTest(t *testing.T, config string) {
 			postBeaconState := &ethpb.BeaconStateAltair{}
 			require.NoError(t, postBeaconState.UnmarshalSSZ(postBeaconStateSSZ), "Failed to unmarshal")
 
-			pbState, err := stateAltair.ProtobufBeaconState(altairState.CloneInnerState())
+			pbState, err := stateAltair.ProtobufBeaconState(beaconState.CloneInnerState())
 			require.NoError(t, err)
 			if !proto.Equal(pbState, postBeaconState) {
 				t.Fatal("Post state does not match expected")
