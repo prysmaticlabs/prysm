@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	statenative "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -393,4 +394,21 @@ func TestGetStateRoot(t *testing.T) {
 func TestNewStateNotFoundError(t *testing.T) {
 	e := NewStateNotFoundError(100)
 	assert.Equal(t, "state not found in the last 100 state roots", e.message)
+}
+
+func TestStateBySlot_FutureSlot(t *testing.T) {
+	slot := types.Slot(100)
+	p := StateProvider{GenesisTimeFetcher: &chainMock.ChainService{Slot: &slot}}
+	_, err := p.StateBySlot(context.Background(), 101)
+	assert.ErrorContains(t, "requested slot is in the future", err)
+}
+
+func TestStateBySlot_AfterHeadSlot(t *testing.T) {
+	st, err := statenative.InitializeFromProtoPhase0(&ethpb.BeaconState{Slot: 100})
+	require.NoError(t, err)
+	currentSlot := types.Slot(102)
+	mock := &chainMock.ChainService{State: st, Slot: &currentSlot}
+	p := StateProvider{ChainInfoFetcher: mock, GenesisTimeFetcher: mock}
+	_, err = p.StateBySlot(context.Background(), 101)
+	assert.ErrorContains(t, "requested slot number is higher than head slot number", err)
 }
