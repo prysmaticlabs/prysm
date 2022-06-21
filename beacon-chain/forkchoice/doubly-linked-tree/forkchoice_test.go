@@ -711,6 +711,10 @@ func TestForkChoice_UpdateCheckpoints(t *testing.T) {
 				[32]byte{'f'}, [32]byte{}, tt.newJustified.Epoch, tt.newFinalized.Epoch)
 			require.NoError(t, err)
 			require.NoError(t, fcs.InsertNode(ctx, state, blkRoot))
+			state, blkRoot, err = prepareForkchoiceState(ctx, 65, [32]byte{'h'},
+				[32]byte{'f'}, [32]byte{}, tt.newFinalized.Epoch, tt.newFinalized.Epoch)
+			require.NoError(t, err)
+			require.NoError(t, fcs.InsertNode(ctx, state, blkRoot))
 			// restart justifications cause insertion messed it up
 			fcs.store.justifiedCheckpoint = tt.justified
 			fcs.store.finalizedCheckpoint = tt.finalized

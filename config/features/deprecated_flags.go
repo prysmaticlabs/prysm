@@ -115,6 +115,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedEnableNativeState = &cli.BoolFlag{
+		Name:   "enable-native-state",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -138,4 +143,5 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedDisableBatchGossipVerification,
 	deprecatedDisableCorrectlyInsertOrphanedAtts,
 	deprecatedDisableCorrectlyPruneCanonicalAtts,
+	deprecatedEnableNativeState,
 }
