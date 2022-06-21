@@ -1,7 +1,6 @@
 package kv
 
 import (
-	"context"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -34,7 +33,6 @@ func TestSizeChecks(t *testing.T) {
 }
 
 func TestGetLatestEpochWritten(t *testing.T) {
-	ctx := context.Background()
 	ha := newDeprecatedAttestingHistory(0)
 	ha[0] = 28
 	lew, err := ha.getLatestEpochWritten()
@@ -43,7 +41,6 @@ func TestGetLatestEpochWritten(t *testing.T) {
 }
 
 func TestSetLatestEpochWritten(t *testing.T) {
-	ctx := context.Background()
 	ha := newDeprecatedAttestingHistory(0)
 	lew, err := ha.setLatestEpochWritten(2828282828)
 	require.NoError(t, err)
@@ -52,7 +49,6 @@ func TestSetLatestEpochWritten(t *testing.T) {
 }
 
 func TestGetTargetData(t *testing.T) {
-	ctx := context.Background()
 	ha := newDeprecatedAttestingHistory(0)
 	td, err := ha.getTargetData(0)
 	require.NoError(t, err)
@@ -64,7 +60,6 @@ func TestGetTargetData(t *testing.T) {
 }
 
 func TestSetTargetData(t *testing.T) {
-	ctx := context.Background()
 	type testStruct struct {
 		name        string
 		enc         deprecatedEncodedAttestingHistory

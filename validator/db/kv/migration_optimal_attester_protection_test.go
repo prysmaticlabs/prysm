@@ -38,7 +38,6 @@ func Test_migrateOptimalAttesterProtectionUp(t *testing.T) {
 		{
 			name: "populates optimized schema buckets",
 			setup: func(t *testing.T, validatorDB *Store) {
-				ctx := context.Background()
 				pubKey := [fieldparams.BLSPubkeyLength]byte{1}
 				history := newDeprecatedAttestingHistory(0)
 				// Attest all epochs from genesis to 50.
@@ -270,7 +269,6 @@ func Test_migrateOptimalAttesterProtectionDown(t *testing.T) {
 				require.NoError(t, err)
 			},
 			eval: func(t *testing.T, validatorDB *Store) {
-				ctx := context.Background()
 				pubKeys := [][fieldparams.BLSPubkeyLength]byte{{1}, {2}}
 				// Next up, we validate that we have indeed rolled back our data
 				// into the old format for attesting history.
