@@ -88,7 +88,6 @@ go_test(
         "//testing/assert:go_default_library",
         "//testing/mock:go_default_library",
         "//testing/require:go_default_library",
-        "//time:go_default_library",
         "//validator/accounts/iface:go_default_library",
         "//validator/accounts/petnames:go_default_library",
         "//validator/accounts/wallet:go_default_library",
