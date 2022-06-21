@@ -1085,6 +1085,12 @@ def prysm_deps():
         sum = "h1:DBPx88FjZJH3FsICfDAfIfnb7XxKIYVGG6lOPlhENAg=",
         version = "v5.0.0",
     )
+    go_repository(
+        name = "com_github_go_echarts_go_echarts_v2",
+        importpath = "github.com/go-echarts/go-echarts/v2",
+        sum = "h1:Rl6PdkbIwUke48lHwPNIcmIHx8gjWEWW2uipcP7Lh/k=",
+        version = "v2.2.5-0.20220120114451-c13b73ddc21e",
+    )
 
     go_repository(
         name = "com_github_go_errors_errors",
