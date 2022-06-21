@@ -19,6 +19,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	fastssz "github.com/ferranbt/fastssz"
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/api/gateway"
@@ -118,6 +119,8 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 			return nil, err
 		}
 	}
+
+	configureFastSSZHashingAlgorithm()
 
 	// If the --web flag is enabled to administer the validator
 	// client via a web portal, we start the validator client in a different way.
@@ -823,4 +826,10 @@ func unmarshalFromFile(ctx context.Context, from string, to interface{}) error {
 	}
 
 	return nil
+}
+
+func configureFastSSZHashingAlgorithm() {
+	if features.Get().EnableVectorizedHTR {
+		fastssz.EnableVectorizedHTR = true
+	}
 }

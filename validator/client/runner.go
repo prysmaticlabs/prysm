@@ -37,71 +37,9 @@ func run(ctx context.Context, v iface.Validator) {
 	cleanup := v.Done
 	defer cleanup()
 
-	ticker := time.NewTicker(backOffPeriod)
-	defer ticker.Stop()
-
-	var headSlot types.Slot
-	firstTime := true
-	for {
-		if !firstTime {
-			if ctx.Err() != nil {
-				log.Info("Context canceled, stopping validator")
-				return // Exit if context is canceled.
-			}
-			<-ticker.C
-		} else {
-			firstTime = false
-		}
-		err := v.WaitForChainStart(ctx)
-		if isConnectionError(err) {
-			log.Warnf("Could not determine if beacon chain started: %v", err)
-			continue
-		}
-		if err != nil {
-			log.Fatalf("Could not determine if beacon chain started: %v", err)
-		}
-
-		err = v.WaitForKeymanagerInitialization(ctx)
-		if err != nil {
-			// log.Fatalf will prevent defer from being called
-			cleanup()
-			log.Fatalf("Wallet is not ready: %v", err)
-		}
-
-		err = v.WaitForSync(ctx)
-		if isConnectionError(err) {
-			log.Warnf("Could not determine if beacon chain started: %v", err)
-			continue
-		}
-		if err != nil {
-			log.Fatalf("Could not determine if beacon node synced: %v", err)
-		}
-		err = v.WaitForActivation(ctx, nil /* accountsChangedChan */)
-		if isConnectionError(err) {
-			log.Warnf("Could not wait for validator activation: %v", err)
-			continue
-		}
-		if err != nil {
-			log.Fatalf("Could not wait for validator activation: %v", err)
-		}
-
-		headSlot, err = v.CanonicalHeadSlot(ctx)
-		if isConnectionError(err) {
-			log.Warnf("Could not get current canonical head slot: %v", err)
-			continue
-		}
-		if err != nil {
-			log.Fatalf("Could not get current canonical head slot: %v", err)
-		}
-		err = v.CheckDoppelGanger(ctx)
-		if isConnectionError(err) {
-			log.Warnf("Could not wait for checking doppelganger: %v", err)
-			continue
-		}
-		if err != nil {
-			log.Fatalf("Could not succeed with doppelganger check: %v", err)
-		}
-		break
+	headSlot, err := waitForActivation(ctx, v)
+	if err != nil {
+		return // Exit if context is canceled.
 	}
 
 	connectionErrorChannel := make(chan error, 1)
@@ -121,7 +59,7 @@ func run(ctx context.Context, v iface.Validator) {
 		log.Fatalf("Failed to update proposer settings: %v", err) // allow fatal. skipcq
 	}
 	for {
-		slotCtx, cancel := context.WithCancel(ctx)
+		_, cancel := context.WithCancel(ctx)
 		ctx, span := trace.StartSpan(ctx, "validator.processSlot")
 
 		select {
@@ -163,7 +101,7 @@ func run(ctx context.Context, v iface.Validator) {
 			}
 
 			deadline := v.SlotDeadline(slot)
-			slotCtx, cancel = context.WithDeadline(ctx, deadline)
+			slotCtx, cancel := context.WithDeadline(ctx, deadline)
 			log := log.WithField("slot", slot)
 			log.WithField("deadline", deadline).Debug("Set deadline for proposals and attestations")
 
@@ -198,51 +136,7 @@ func run(ctx context.Context, v iface.Validator) {
 				span.End()
 				continue
 			}
-			for pubKey, roles := range allRoles {
-				wg.Add(len(roles))
-				for _, role := range roles {
-					go func(role iface.ValidatorRole, pubKey [fieldparams.BLSPubkeyLength]byte) {
-						defer wg.Done()
-						switch role {
-						case iface.RoleAttester:
-							v.SubmitAttestation(slotCtx, slot, pubKey)
-						case iface.RoleProposer:
-							v.ProposeBlock(slotCtx, slot, pubKey)
-						case iface.RoleAggregator:
-							v.SubmitAggregateAndProof(slotCtx, slot, pubKey)
-						case iface.RoleSyncCommittee:
-							v.SubmitSyncCommitteeMessage(slotCtx, slot, pubKey)
-						case iface.RoleSyncCommitteeAggregator:
-							v.SubmitSignedContributionAndProof(slotCtx, slot, pubKey)
-						case iface.RoleUnknown:
-							log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:]))).Trace("No active roles, doing nothing")
-						default:
-							log.Warnf("Unhandled role %v", role)
-						}
-					}(role, pubKey)
-				}
-			}
-
-			// Wait for all processes to complete, then report span complete.
-			go func() {
-				wg.Wait()
-				defer span.End()
-				defer func() {
-					if err := recover(); err != nil { // catch any panic in logging
-						log.WithField("err", err).
-							Error("Panic occurred when logging validator report. This" +
-								" should never happen! Please file a report at github.com/prysmaticlabs/prysm/issues/new")
-					}
-				}()
-				// Log this client performance in the previous epoch
-				v.LogAttestationsSubmitted()
-				if err := v.LogValidatorGainsAndLosses(slotCtx, slot); err != nil {
-					log.WithError(err).Error("Could not report validator's rewards/penalties")
-				}
-				if err := v.LogNextDutyTimeLeft(slot); err != nil {
-					log.WithError(err).Error("Could not report next count down")
-				}
-			}()
+			performRoles(slotCtx, allRoles, v, slot, &wg, span)
 		}
 	}
 }
@@ -255,6 +149,124 @@ func reloadRemoteKeys(ctx context.Context, km keymanager.IKeymanager) {
 			log.WithError(err).Error(msgCouldNotFetchKeys)
 		}
 	}
+}
+
+func waitForActivation(ctx context.Context, v iface.Validator) (types.Slot, error) {
+	ticker := time.NewTicker(backOffPeriod)
+	defer ticker.Stop()
+
+	var headSlot types.Slot
+	firstTime := true
+	for {
+		if !firstTime {
+			if ctx.Err() != nil {
+				log.Info("Context canceled, stopping validator")
+				return headSlot, errors.New("context canceled")
+			}
+			<-ticker.C
+		} else {
+			firstTime = false
+		}
+		err := v.WaitForChainStart(ctx)
+		if isConnectionError(err) {
+			log.Warnf("Could not determine if beacon chain started: %v", err)
+			continue
+		}
+		if err != nil {
+			log.Fatalf("Could not determine if beacon chain started: %v", err)
+		}
+
+		err = v.WaitForKeymanagerInitialization(ctx)
+		if err != nil {
+			// log.Fatalf will prevent defer from being called
+			v.Done()
+			log.Fatalf("Wallet is not ready: %v", err)
+		}
+
+		err = v.WaitForSync(ctx)
+		if isConnectionError(err) {
+			log.Warnf("Could not determine if beacon chain started: %v", err)
+			continue
+		}
+		if err != nil {
+			log.Fatalf("Could not determine if beacon node synced: %v", err)
+		}
+		err = v.WaitForActivation(ctx, nil /* accountsChangedChan */)
+		if isConnectionError(err) {
+			log.Warnf("Could not wait for validator activation: %v", err)
+			continue
+		}
+		if err != nil {
+			log.Fatalf("Could not wait for validator activation: %v", err)
+		}
+
+		headSlot, err = v.CanonicalHeadSlot(ctx)
+		if isConnectionError(err) {
+			log.Warnf("Could not get current canonical head slot: %v", err)
+			continue
+		}
+		if err != nil {
+			log.Fatalf("Could not get current canonical head slot: %v", err)
+		}
+		err = v.CheckDoppelGanger(ctx)
+		if isConnectionError(err) {
+			log.Warnf("Could not wait for checking doppelganger: %v", err)
+			continue
+		}
+		if err != nil {
+			log.Fatalf("Could not succeed with doppelganger check: %v", err)
+		}
+		break
+	}
+	return headSlot, nil
+}
+
+func performRoles(slotCtx context.Context, allRoles map[[48]byte][]iface.ValidatorRole, v iface.Validator, slot types.Slot, wg *sync.WaitGroup, span *trace.Span) {
+	for pubKey, roles := range allRoles {
+		wg.Add(len(roles))
+		for _, role := range roles {
+			go func(role iface.ValidatorRole, pubKey [fieldparams.BLSPubkeyLength]byte) {
+				defer wg.Done()
+				switch role {
+				case iface.RoleAttester:
+					v.SubmitAttestation(slotCtx, slot, pubKey)
+				case iface.RoleProposer:
+					v.ProposeBlock(slotCtx, slot, pubKey)
+				case iface.RoleAggregator:
+					v.SubmitAggregateAndProof(slotCtx, slot, pubKey)
+				case iface.RoleSyncCommittee:
+					v.SubmitSyncCommitteeMessage(slotCtx, slot, pubKey)
+				case iface.RoleSyncCommitteeAggregator:
+					v.SubmitSignedContributionAndProof(slotCtx, slot, pubKey)
+				case iface.RoleUnknown:
+					log.WithField("pubKey", fmt.Sprintf("%#x", bytesutil.Trunc(pubKey[:]))).Trace("No active roles, doing nothing")
+				default:
+					log.Warnf("Unhandled role %v", role)
+				}
+			}(role, pubKey)
+		}
+	}
+
+	// Wait for all processes to complete, then report span complete.
+	go func() {
+		wg.Wait()
+		defer span.End()
+		defer func() {
+			if err := recover(); err != nil { // catch any panic in logging
+				log.WithField("err", err).
+					Error("Panic occurred when logging validator report. This" +
+						" should never happen! Please file a report at github.com/prysmaticlabs/prysm/issues/new")
+			}
+		}()
+		// Log this client performance in the previous epoch
+		v.LogAttestationsSubmitted()
+		if err := v.LogValidatorGainsAndLosses(slotCtx, slot); err != nil {
+			log.WithError(err).Error("Could not report validator's rewards/penalties")
+		}
+		if err := v.LogNextDutyTimeLeft(slot); err != nil {
+			log.WithError(err).Error("Could not report next count down")
+		}
+	}()
 }
 
 func isConnectionError(err error) bool {
