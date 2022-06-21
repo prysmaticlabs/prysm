@@ -19,10 +19,6 @@ import (
 	"go.opencensus.io/trace"
 )
 
-var ErrNoAncestorForBlock = errors.New("could not find an ancestor state for block")
-var ErrNoCanonicalBlockForSlot = errors.New("none of the blocks found in the db slot index are canonical")
-var ErrInvalidDBBlock = errors.New("invalid block found in database")
-
 // StateIdParseError represents an error scenario where a state ID could not be parsed.
 type StateIdParseError struct {
 	message string
