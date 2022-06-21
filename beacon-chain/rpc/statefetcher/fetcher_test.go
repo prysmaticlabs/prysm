@@ -169,6 +169,7 @@ func TestGetState(t *testing.T) {
 				CanonicalRoots: map[[32]byte]bool{
 					bytesutil.ToBytes32(newBeaconState.LatestBlockHeader().ParentRoot): true,
 				},
+				State: newBeaconState,
 			},
 			ReplayerBuilder: mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(newBeaconState)),
 		}
@@ -178,18 +179,6 @@ func TestGetState(t *testing.T) {
 		sRoot, err := s.HashTreeRoot(ctx)
 		require.NoError(t, err)
 		assert.Equal(t, stateRoot, sRoot)
-	})
-
-	rb := mockstategen.NewMockReplayerBuilder(mockstategen.WithStateError(1, stategen.ErrFutureSlotRequested))
-	t.Run("slot_too_big", func(t *testing.T) {
-		p := StateProvider{
-			GenesisTimeFetcher: &chainMock.ChainService{
-				Genesis: time.Now(),
-			},
-			ReplayerBuilder: rb,
-		}
-		_, err := p.State(ctx, []byte(strconv.FormatUint(1, 10)))
-		assert.ErrorContains(t, "cannot replay to future slots", err)
 	})
 
 	t.Run("invalid_state", func(t *testing.T) {
