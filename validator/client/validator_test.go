@@ -1738,7 +1738,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 			},
 		},
 		{
-			name: " proposer config not nil but fee recipient empty ",
+			name: " proposer config not nil but fee recipient empty",
 			validatorSetter: func(t *testing.T) *validator {
 
 				v := validator{
@@ -1779,16 +1779,6 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 						FeeRecipient: common.HexToAddress(defaultFeeHex),
 					},
 				}
-				nodeClient.EXPECT().GetGenesis(
-					gomock.Any(),
-					&emptypb.Empty{},
-				).Return(
-					&ethpb.Genesis{GenesisTime: timestamppb.Now()}, nil)
-
-				client.EXPECT().SubmitValidatorRegistration(
-					gomock.Any(),
-					gomock.Any(),
-				).Return(&empty.Empty{}, nil)
 				return &v
 			},
 		},
@@ -1816,7 +1806,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 				client.EXPECT().ValidatorIndex(
 					gomock.Any(), // ctx
 					&ethpb.ValidatorIndexRequest{PublicKey: keys[0][:]},
-				).Return(nil, errors.New("Could not find validator index for public key"))
+				).Return(nil, errors.New("could not find validator index for public key"))
 				config[keys[0]] = &validator_service_config.ProposerOption{
 					FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
 				}
@@ -1849,7 +1839,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 			},
 		},
 		{
-			name: "register validator batch failed ",
+			name: "register validator batch failed",
 			validatorSetter: func(t *testing.T) *validator {
 
 				v := validator{
@@ -1902,7 +1892,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 				).Return(&empty.Empty{}, errors.New("request failed"))
 				return &v
 			},
-			err: "Register validator requests failed",
+			err: "could not submit signed registrations to beacon node",
 		},
 	}
 	for _, tt := range tests {
