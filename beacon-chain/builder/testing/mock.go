@@ -40,6 +40,6 @@ func (s *MockBuilderService) Status() error {
 }
 
 // RegisterValidator for mocking.
-func (s *MockBuilderService) RegisterValidator(context.Context, *ethpb.SignedValidatorRegistrationV1) error {
+func (s *MockBuilderService) RegisterValidator(context.Context, []*ethpb.SignedValidatorRegistrationV1) error {
 	return s.ErrRegisterValidator
 }
