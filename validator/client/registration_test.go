@@ -11,8 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
-	"google.golang.org/protobuf/types/known/emptypb"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func TestSubmitValidatorRegistration(t *testing.T) {
@@ -26,11 +24,6 @@ func TestSubmitValidatorRegistration(t *testing.T) {
 		Timestamp:    uint64(time.Now().Unix()),
 		Pubkey:       validatorKey.PublicKey().Marshal(),
 	}
-
-	ti := &timestamppb.Timestamp{}
-	m.nodeClient.EXPECT().
-		GetGenesis(gomock.Any(), &emptypb.Empty{}).
-		Return(&ethpb.Genesis{GenesisTime: ti}, nil)
 
 	m.validatorClient.EXPECT().
 		SubmitValidatorRegistration(gomock.Any(), &ethpb.SignedValidatorRegistrationV1{
@@ -52,11 +45,6 @@ func TestSubmitValidatorRegistration_CantSign(t *testing.T) {
 		Timestamp:    uint64(time.Now().Unix()),
 		Pubkey:       validatorKey.PublicKey().Marshal(),
 	}
-
-	genesisTime := &timestamppb.Timestamp{}
-	m.nodeClient.EXPECT().
-		GetGenesis(gomock.Any(), &emptypb.Empty{}).
-		Return(&ethpb.Genesis{GenesisTime: genesisTime}, nil)
 
 	m.validatorClient.EXPECT().
 		SubmitValidatorRegistration(gomock.Any(), &ethpb.SignedValidatorRegistrationV1{

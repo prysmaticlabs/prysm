@@ -40,7 +40,6 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func init() {
@@ -397,12 +396,6 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 		nil,
 	)
 
-	nodeClient.EXPECT().GetGenesis(
-		gomock.Any(),
-		&emptypb.Empty{},
-	).Return(
-		&ethpb.Genesis{GenesisTime: timestamppb.Now()}, nil)
-
 	client.EXPECT().SubmitValidatorRegistration(
 		gomock.Any(),
 		gomock.Any(),
@@ -460,11 +453,6 @@ func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 		resp,
 		nil,
 	)
-	nodeClient.EXPECT().GetGenesis(
-		gomock.Any(),
-		&emptypb.Empty{},
-	).Return(
-		&ethpb.Genesis{GenesisTime: timestamppb.Now()}, nil)
 
 	client.EXPECT().SubmitValidatorRegistration(
 		gomock.Any(),
@@ -1567,11 +1555,6 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 						GasLimit:     uint64(35000000),
 					},
 				}
-				nodeClient.EXPECT().GetGenesis(
-					gomock.Any(),
-					&emptypb.Empty{},
-				).Times(2).Return(
-					&ethpb.Genesis{GenesisTime: timestamppb.Now()}, nil)
 				client.EXPECT().SubmitValidatorRegistration(
 					gomock.Any(),
 					gomock.Any(),
@@ -1631,11 +1614,6 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 				).Return(&ethpb.ValidatorIndexResponse{
 					Index: 1,
 				}, nil)
-				nodeClient.EXPECT().GetGenesis(
-					gomock.Any(),
-					&emptypb.Empty{},
-				).Return(
-					&ethpb.Genesis{GenesisTime: timestamppb.Now()}, nil)
 
 				client.EXPECT().SubmitValidatorRegistration(
 					gomock.Any(),
@@ -1710,11 +1688,6 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 				).Return(&ethpb.ValidatorIndexResponse{
 					Index: 1,
 				}, nil)
-				nodeClient.EXPECT().GetGenesis(
-					gomock.Any(),
-					&emptypb.Empty{},
-				).Return(
-					&ethpb.Genesis{GenesisTime: timestamppb.Now()}, nil)
 
 				client.EXPECT().SubmitValidatorRegistration(
 					gomock.Any(),
@@ -1779,11 +1752,6 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 						FeeRecipient: common.HexToAddress(defaultFeeHex),
 					},
 				}
-				nodeClient.EXPECT().GetGenesis(
-					gomock.Any(),
-					&emptypb.Empty{},
-				).Return(
-					&ethpb.Genesis{GenesisTime: timestamppb.Now()}, nil)
 
 				client.EXPECT().SubmitValidatorRegistration(
 					gomock.Any(),
@@ -1890,11 +1858,6 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 						FeeRecipient: common.HexToAddress(defaultFeeHex),
 					},
 				}
-				nodeClient.EXPECT().GetGenesis(
-					gomock.Any(),
-					&emptypb.Empty{},
-				).Return(
-					&ethpb.Genesis{GenesisTime: timestamppb.Now()}, nil)
 
 				client.EXPECT().SubmitValidatorRegistration(
 					gomock.Any(),

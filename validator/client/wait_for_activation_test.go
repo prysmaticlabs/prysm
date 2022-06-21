@@ -28,8 +28,6 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/tyler-smith/go-bip39"
 	util "github.com/wealdtech/go-eth2-util"
-	"google.golang.org/protobuf/types/known/emptypb"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func TestWaitActivation_ContextCanceled(t *testing.T) {
@@ -108,11 +106,6 @@ func TestWaitActivation_StreamSetupFails_AttemptsToReconnect(t *testing.T) {
 	resp := generateMockStatusResponse([][]byte{pubKey[:]})
 	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_ACTIVE
 	clientStream.EXPECT().Recv().Return(resp, nil)
-	nodeClient.EXPECT().GetGenesis(
-		gomock.Any(),
-		&emptypb.Empty{},
-	).Return(
-		&ethpb.Genesis{GenesisTime: timestamppb.Now()}, nil)
 
 	client.EXPECT().SubmitValidatorRegistration(
 		gomock.Any(),
@@ -167,11 +160,6 @@ func TestWaitForActivation_ReceiveErrorFromStream_AttemptsReconnection(t *testin
 		nil,
 		errors.New("fails"),
 	).Return(resp, nil)
-	nodeClient.EXPECT().GetGenesis(
-		gomock.Any(),
-		&emptypb.Empty{},
-	).Return(
-		&ethpb.Genesis{GenesisTime: timestamppb.Now()}, nil)
 
 	client.EXPECT().SubmitValidatorRegistration(
 		gomock.Any(),
@@ -222,11 +210,6 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 		resp,
 		nil,
 	)
-	nodeClient.EXPECT().GetGenesis(
-		gomock.Any(),
-		&emptypb.Empty{},
-	).Return(
-		&ethpb.Genesis{GenesisTime: timestamppb.Now()}, nil)
 
 	client.EXPECT().SubmitValidatorRegistration(
 		gomock.Any(),
@@ -282,11 +265,6 @@ func TestWaitForActivation_Exiting(t *testing.T) {
 		resp,
 		nil,
 	)
-	nodeClient.EXPECT().GetGenesis(
-		gomock.Any(),
-		&emptypb.Empty{},
-	).Return(
-		&ethpb.Genesis{GenesisTime: timestamppb.Now()}, nil)
 
 	client.EXPECT().SubmitValidatorRegistration(
 		gomock.Any(),
@@ -348,11 +326,6 @@ func TestWaitForActivation_RefetchKeys(t *testing.T) {
 	clientStream.EXPECT().Recv().Return(
 		resp,
 		nil)
-	nodeClient.EXPECT().GetGenesis(
-		gomock.Any(),
-		&emptypb.Empty{},
-	).Return(
-		&ethpb.Genesis{GenesisTime: timestamppb.Now()}, nil)
 
 	client.EXPECT().SubmitValidatorRegistration(
 		gomock.Any(),
@@ -438,11 +411,6 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 			activeResp,
 			nil,
 		)
-		nodeClient.EXPECT().GetGenesis(
-			gomock.Any(),
-			&emptypb.Empty{},
-		).Times(2).Return(
-			&ethpb.Genesis{GenesisTime: timestamppb.Now()}, nil)
 
 		client.EXPECT().SubmitValidatorRegistration(
 			gomock.Any(),
@@ -538,11 +506,6 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 			activeResp,
 			nil,
 		)
-		nodeClient.EXPECT().GetGenesis(
-			gomock.Any(),
-			&emptypb.Empty{},
-		).Times(2).Return(
-			&ethpb.Genesis{GenesisTime: timestamppb.Now()}, nil)
 
 		client.EXPECT().SubmitValidatorRegistration(
 			gomock.Any(),
@@ -625,11 +588,6 @@ func TestWaitForActivation_RemoteKeymanager(t *testing.T) {
 				PublicKeys: [][]byte{inactiveKey[:], activeKey[:]},
 			},
 		).Return(resp, nil /* err */)
-		nodeClient.EXPECT().GetGenesis(
-			gomock.Any(),
-			&emptypb.Empty{},
-		).Times(2).Return(
-			&ethpb.Genesis{GenesisTime: timestamppb.Now()}, nil)
 		client.EXPECT().SubmitValidatorRegistration(
 			gomock.Any(),
 			gomock.Any(),
@@ -719,11 +677,6 @@ func TestWaitForActivation_RemoteKeymanager(t *testing.T) {
 				PublicKeys: [][]byte{inactiveKey[:], activeKey[:]},
 			},
 		).Return(resp2, nil /* err */)
-		nodeClient.EXPECT().GetGenesis(
-			gomock.Any(),
-			&emptypb.Empty{},
-		).Times(2).Return(
-			&ethpb.Genesis{GenesisTime: timestamppb.Now()}, nil)
 
 		client.EXPECT().SubmitValidatorRegistration(
 			gomock.Any(),
