@@ -9,6 +9,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -69,6 +70,7 @@ type Server struct {
 	ReplayerBuilder        stategen.ReplayerBuilder
 	BeaconDB               db.HeadAccessDatabase
 	ExecutionEngineCaller  powchain.EngineCaller
+	BlockBuilder           builder.BlockBuilder
 }
 
 // WaitForActivation checks if a validator public key exists in the active validator registry of the current
