@@ -100,12 +100,11 @@ func (s *Service) VerifyFinalizedBlkDescendant(ctx context.Context, root [32]byt
 		return errors.Wrap(err, "could not get finalized checkpoint")
 	}
 	fRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(finalized.Root))
-	finalizedBlkSigned, err := s.getBlock(ctx, fRoot)
+	fSlot, err := slots.EpochStart(finalized.Epoch)
 	if err != nil {
 		return err
 	}
-	finalizedBlk := finalizedBlkSigned.Block()
-	bFinalizedRoot, err := s.ancestor(ctx, root[:], finalizedBlk.Slot())
+	bFinalizedRoot, err := s.ancestor(ctx, root[:], fSlot)
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized block root")
 	}
@@ -115,7 +114,7 @@ func (s *Service) VerifyFinalizedBlkDescendant(ctx context.Context, root [32]byt
 
 	if !bytes.Equal(bFinalizedRoot, fRoot[:]) {
 		err := fmt.Errorf("block %#x is not a descendant of the current finalized block slot %d, %#x != %#x",
-			bytesutil.Trunc(root[:]), finalizedBlk.Slot(), bytesutil.Trunc(bFinalizedRoot),
+			bytesutil.Trunc(root[:]), fSlot, bytesutil.Trunc(bFinalizedRoot),
 			bytesutil.Trunc(fRoot[:]))
 		tracing.AnnotateError(span, err)
 		return invalidBlock{err}
@@ -217,13 +216,7 @@ func (s *Service) updateJustified(ctx context.Context, state state.ReadOnlyBeaco
 			return err
 		}
 		s.store.SetJustifiedCheckptAndPayloadHash(cpt, h)
-		// Update forkchoice's justified checkpoint
-		if err := s.cfg.ForkChoiceStore.UpdateJustifiedCheckpoint(&forkchoicetypes.Checkpoint{
-			Epoch: cpt.Epoch, Root: bytesutil.ToBytes32(cpt.Root)}); err != nil {
-			return err
-		}
 	}
-
 	return nil
 }
 
@@ -321,7 +314,8 @@ func (s *Service) ancestorByForkChoiceStore(ctx context.Context, r [32]byte, slo
 	if !s.cfg.ForkChoiceStore.HasParent(r) {
 		return nil, errors.New("could not find root in fork choice store")
 	}
-	return s.cfg.ForkChoiceStore.AncestorRoot(ctx, r, slot)
+	root, err := s.cfg.ForkChoiceStore.AncestorRoot(ctx, r, slot)
+	return root[:], err
 }
 
 // This retrieves an ancestor root using DB. The look up is recursively looking up DB. Slower than `ancestorByForkChoiceStore`.

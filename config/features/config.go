@@ -160,9 +160,6 @@ func applySepoliaFeatureFlags(ctx *cli.Context) {
 	if err := ctx.Set(enableForkChoiceDoublyLinkedTree.Names()[0], "true"); err != nil {
 		log.WithError(err).Debug("error enabling doubly linked tree forkchoice flag")
 	}
-	if err := ctx.Set(enableNativeState.Names()[0], "true"); err != nil {
-		log.WithError(err).Debug("error enabling native state flag")
-	}
 }
 
 // ConfigureBeaconChain sets the global config based
@@ -209,10 +206,10 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		log.WithField(enableHistoricalSpaceRepresentation.Name, enableHistoricalSpaceRepresentation.Usage).Warn(enabledFeatureFlag)
 		cfg.EnableHistoricalSpaceRepresentation = true
 	}
-	cfg.EnableNativeState = false
-	if ctx.Bool(enableNativeState.Name) {
-		logEnabled(enableNativeState)
-		cfg.EnableNativeState = true
+	cfg.EnableNativeState = true
+	if ctx.Bool(disableNativeState.Name) {
+		logDisabled(disableNativeState)
+		cfg.EnableNativeState = false
 	}
 	if ctx.Bool(enableVecHTR.Name) {
 		logEnabled(enableVecHTR)

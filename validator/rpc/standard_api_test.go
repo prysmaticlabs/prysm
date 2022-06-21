@@ -7,14 +7,19 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/google/uuid"
+	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/config/params"
+	validator_service_config "github.com/prysmaticlabs/prysm/config/validator/service"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
@@ -28,6 +33,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/slashing-protection-history/format"
 	mocks "github.com/prysmaticlabs/prysm/validator/testing"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
+	"google.golang.org/grpc"
 )
 
 func TestServer_ListKeystores(t *testing.T) {
@@ -679,4 +685,149 @@ func TestServer_DeleteRemoteKeys(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 0, len(expectedKeys))
 	})
+}
+
+func TestServer_ListFeeRecipientByPubkey(t *testing.T) {
+	ctx := context.Background()
+	byteval, err := hexutil.Decode("0xaf2e7ba294e03438ea819bd4033c6c1bf6b04320ee2075b77273c08d02f8a61bcc303c2c06bd3713cb442072ae591493")
+	require.NoError(t, err)
+
+	type want struct {
+		EthAddress string
+	}
+
+	tests := []struct {
+		name    string
+		args    *validator_service_config.ProposerSettings
+		want    *want
+		wantErr bool
+	}{
+		{
+			name: "Happy Path Test",
+			args: &validator_service_config.ProposerSettings{
+				ProposeConfig: map[[48]byte]*validator_service_config.ProposerOption{
+					bytesutil.ToBytes48(byteval): {
+						FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9"),
+					},
+				},
+				DefaultConfig: &validator_service_config.ProposerOption{
+					FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9"),
+				},
+			},
+			want: &want{
+				EthAddress: "0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9",
+			},
+			wantErr: false,
+		},
+		{
+			name: "empty settings",
+			args: nil,
+			want: &want{
+				EthAddress: params.BeaconConfig().DefaultFeeRecipient.Hex(),
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			vs, err := client.NewValidatorService(ctx, &client.Config{
+				Validator:        &mock.MockValidator{},
+				ProposerSettings: tt.args,
+			})
+			require.NoError(t, err)
+			s := &Server{
+				validatorService: vs,
+			}
+			got, err := s.ListFeeRecipientByPubkey(ctx, &ethpbservice.PubkeyRequest{Pubkey: byteval})
+			require.NoError(t, err)
+			assert.Equal(t, tt.want.EthAddress, common.BytesToAddress(got.Data.Ethaddress).Hex())
+		})
+	}
+}
+func TestServer_SetFeeRecipientByPubkey(t *testing.T) {
+	ctx := grpc.NewContextWithServerTransportStream(context.Background(), &runtime.ServerTransportStream{})
+	byteval, err := hexutil.Decode("0xaf2e7ba294e03438ea819bd4033c6c1bf6b04320ee2075b77273c08d02f8a61bcc303c2c06bd3713cb442072ae591493")
+	require.NoError(t, err)
+	type want struct {
+		EthAddress string
+	}
+	tests := []struct {
+		name             string
+		args             string
+		proposerSettings *validator_service_config.ProposerSettings
+		want             *want
+		wantErr          bool
+	}{
+		{
+			name: "Happy Path Test",
+			args: "0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9",
+			want: &want{
+				EthAddress: "0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9",
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			vs, err := client.NewValidatorService(ctx, &client.Config{
+				Validator:        &mock.MockValidator{},
+				ProposerSettings: tt.proposerSettings,
+			})
+			require.NoError(t, err)
+			s := &Server{
+				validatorService: vs,
+			}
+			_, err = s.SetFeeRecipientByPubkey(ctx, &ethpbservice.SetFeeRecipientByPubkeyRequest{Pubkey: byteval, Ethaddress: common.HexToAddress(tt.args).Bytes()})
+			require.NoError(t, err)
+			assert.Equal(t, tt.want.EthAddress, s.validatorService.ProposerSettings.ProposeConfig[bytesutil.ToBytes48(byteval)].FeeRecipient.Hex())
+		})
+	}
+}
+
+func TestServer_DeleteFeeRecipientByPubkey(t *testing.T) {
+	ctx := grpc.NewContextWithServerTransportStream(context.Background(), &runtime.ServerTransportStream{})
+	byteval, err := hexutil.Decode("0xaf2e7ba294e03438ea819bd4033c6c1bf6b04320ee2075b77273c08d02f8a61bcc303c2c06bd3713cb442072ae591493")
+	require.NoError(t, err)
+	type want struct {
+		EthAddress string
+	}
+	tests := []struct {
+		name             string
+		proposerSettings *validator_service_config.ProposerSettings
+		want             *want
+		wantErr          bool
+	}{
+		{
+			name: "Happy Path Test",
+			proposerSettings: &validator_service_config.ProposerSettings{
+				ProposeConfig: map[[48]byte]*validator_service_config.ProposerOption{
+					bytesutil.ToBytes48(byteval): {
+						FeeRecipient: common.HexToAddress("0x055Fb65722E7b2455012BFEBf6177F1D2e9738D5"),
+					},
+				},
+				DefaultConfig: &validator_service_config.ProposerOption{
+					FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9"),
+				},
+			},
+			want: &want{
+				EthAddress: common.HexToAddress("0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9").Hex(),
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			vs, err := client.NewValidatorService(ctx, &client.Config{
+				Validator:        &mock.MockValidator{},
+				ProposerSettings: tt.proposerSettings,
+			})
+			require.NoError(t, err)
+			s := &Server{
+				validatorService: vs,
+			}
+			_, err = s.DeleteFeeRecipientByPubkey(ctx, &ethpbservice.PubkeyRequest{Pubkey: byteval})
+			require.NoError(t, err)
+			assert.Equal(t, tt.want.EthAddress, s.validatorService.ProposerSettings.ProposeConfig[bytesutil.ToBytes48(byteval)].FeeRecipient.Hex())
+		})
+	}
 }

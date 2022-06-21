@@ -90,6 +90,46 @@ func WithDeletePublicKeys(deletePublicKeys bool) Option {
 	}
 }
 
+// WithReadPasswordFile indicates whether to read the password from a file.
+func WithReadPasswordFile(readPasswordFile bool) Option {
+	return func(acc *AccountsCLIManager) error {
+		acc.readPasswordFile = readPasswordFile
+		return nil
+	}
+}
+
+// WithImportPrivateKeys indicates whether to import private keys as accounts.
+func WithImportPrivateKeys(importPrivateKeys bool) Option {
+	return func(acc *AccountsCLIManager) error {
+		acc.importPrivateKeys = importPrivateKeys
+		return nil
+	}
+}
+
+// WithPrivateKeyFile specifies the private key path.
+func WithPrivateKeyFile(privateKeyFile string) Option {
+	return func(acc *AccountsCLIManager) error {
+		acc.privateKeyFile = privateKeyFile
+		return nil
+	}
+}
+
+// WithKeysDir specifies the directory keys are read from.
+func WithKeysDir(keysDir string) Option {
+	return func(acc *AccountsCLIManager) error {
+		acc.keysDir = keysDir
+		return nil
+	}
+}
+
+// WithPasswordFilePath specifies where the password is stored.
+func WithPasswordFilePath(passwordFilePath string) Option {
+	return func(acc *AccountsCLIManager) error {
+		acc.passwordFilePath = passwordFilePath
+		return nil
+	}
+}
+
 // WithBackupDir specifies the directory backups are written to.
 func WithBackupsDir(backupsDir string) Option {
 	return func(acc *AccountsCLIManager) error {

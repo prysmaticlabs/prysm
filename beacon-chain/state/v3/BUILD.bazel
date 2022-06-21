@@ -73,6 +73,7 @@ go_test(
         "references_test.go",
         "setters_test.go",
         "state_fuzz_test.go",
+        "state_test.go",
         "state_trie_test.go",
     ],
     embed = [":go_default_library"],

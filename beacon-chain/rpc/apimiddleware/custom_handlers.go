@@ -131,10 +131,10 @@ func handleGetSSZ(
 	respHasError, errJson := apimiddleware.HandleGrpcResponseError(endpoint.Err, grpcResponse, grpcResponseBody, w)
 	if errJson != nil {
 		apimiddleware.WriteError(w, errJson, nil)
-		return
+		return true
 	}
 	if respHasError {
-		return
+		return true
 	}
 	if errJson := apimiddleware.DeserializeGrpcResponseBodyIntoContainer(grpcResponseBody, config.responseJson); errJson != nil {
 		apimiddleware.WriteError(w, errJson, nil)
@@ -191,10 +191,10 @@ func handlePostSSZ(
 	respHasError, errJson := apimiddleware.HandleGrpcResponseError(endpoint.Err, grpcResponse, grpcResponseBody, w)
 	if errJson != nil {
 		apimiddleware.WriteError(w, errJson, nil)
-		return
+		return true
 	}
 	if respHasError {
-		return
+		return true
 	}
 	if errJson := apimiddleware.Cleanup(grpcResponse.Body); errJson != nil {
 		apimiddleware.WriteError(w, errJson, nil)
