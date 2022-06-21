@@ -24,7 +24,7 @@ const (
 	ArchiveFilename = "backup.zip"
 )
 
-// BackupAccountsCli allows users to select validator accounts from their wallet
+// Backup allows users to select validator accounts from their wallet
 // and export them as a backup.zip file containing the keys as EIP-2335 compliant
 // keystore.json files, which are compatible with importing in other Ethereum consensus clients.
 func (acm *AccountsCLIManager) Backup(ctx context.Context) error {
