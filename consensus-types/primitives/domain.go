@@ -52,6 +52,6 @@ func (d *Domain) MarshalSSZ() ([]byte, error) {
 }
 
 // SizeSSZ --
-func (d *Domain) SizeSSZ() int {
+func (_ *Domain) SizeSSZ() int {
 	return 32
 }
