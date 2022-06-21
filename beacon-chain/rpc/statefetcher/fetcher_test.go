@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	statenative "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -78,9 +79,12 @@ func TestGetState(t *testing.T) {
 		cc := &mockstategen.MockCanonicalChecker{Is: true}
 		cs := &mockstategen.MockCurrentSlotter{Slot: bs.Slot() + 1}
 		ch := stategen.NewCanonicalHistory(db, cc, cs)
+		currentSlot := types.Slot(0)
 		p := StateProvider{
-			BeaconDB:        db,
-			ReplayerBuilder: ch,
+			BeaconDB:           db,
+			ReplayerBuilder:    ch,
+			GenesisTimeFetcher: &chainMock.ChainService{Slot: &currentSlot},
+			ChainInfoFetcher:   &chainMock.ChainService{State: bs},
 		}
 
 		s, err := p.State(ctx, []byte("genesis"))
@@ -165,6 +169,7 @@ func TestGetState(t *testing.T) {
 				CanonicalRoots: map[[32]byte]bool{
 					bytesutil.ToBytes32(newBeaconState.LatestBlockHeader().ParentRoot): true,
 				},
+				State: newBeaconState,
 			},
 			ReplayerBuilder: mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(newBeaconState)),
 		}
@@ -174,18 +179,6 @@ func TestGetState(t *testing.T) {
 		sRoot, err := s.HashTreeRoot(ctx)
 		require.NoError(t, err)
 		assert.Equal(t, stateRoot, sRoot)
-	})
-
-	rb := mockstategen.NewMockReplayerBuilder(mockstategen.WithStateError(1, stategen.ErrFutureSlotRequested))
-	t.Run("slot_too_big", func(t *testing.T) {
-		p := StateProvider{
-			GenesisTimeFetcher: &chainMock.ChainService{
-				Genesis: time.Now(),
-			},
-			ReplayerBuilder: rb,
-		}
-		_, err := p.State(ctx, []byte(strconv.FormatUint(1, 10)))
-		assert.ErrorContains(t, "cannot replay to future slots", err)
 	})
 
 	t.Run("invalid_state", func(t *testing.T) {
@@ -393,4 +386,21 @@ func TestGetStateRoot(t *testing.T) {
 func TestNewStateNotFoundError(t *testing.T) {
 	e := NewStateNotFoundError(100)
 	assert.Equal(t, "state not found in the last 100 state roots", e.message)
+}
+
+func TestStateBySlot_FutureSlot(t *testing.T) {
+	slot := types.Slot(100)
+	p := StateProvider{GenesisTimeFetcher: &chainMock.ChainService{Slot: &slot}}
+	_, err := p.StateBySlot(context.Background(), 101)
+	assert.ErrorContains(t, "requested slot is in the future", err)
+}
+
+func TestStateBySlot_AfterHeadSlot(t *testing.T) {
+	st, err := statenative.InitializeFromProtoPhase0(&ethpb.BeaconState{Slot: 100})
+	require.NoError(t, err)
+	currentSlot := types.Slot(102)
+	mock := &chainMock.ChainService{State: st, Slot: &currentSlot}
+	p := StateProvider{ChainInfoFetcher: mock, GenesisTimeFetcher: mock}
+	_, err = p.StateBySlot(context.Background(), 101)
+	assert.ErrorContains(t, "requested slot number is higher than head slot number", err)
 }
