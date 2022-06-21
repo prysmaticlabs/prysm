@@ -23,8 +23,8 @@ func RunEffectiveBalanceUpdatesTests(t *testing.T, config string) {
 	}
 }
 
-func processEffectiveBalanceUpdatesWrapper(t *testing.T, state state.BeaconState) (state.BeaconState, error) {
-	state, err := epoch.ProcessEffectiveBalanceUpdates(state)
+func processEffectiveBalanceUpdatesWrapper(t *testing.T, st state.BeaconState) (state.BeaconState, error) {
+	st, err := epoch.ProcessEffectiveBalanceUpdates(st)
 	require.NoError(t, err, "Could not process final updates")
-	return state, nil
+	return st, nil
 }

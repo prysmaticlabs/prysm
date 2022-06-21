@@ -132,13 +132,13 @@ func TestProcessDeposit_InvalidPublicKey(t *testing.T) {
 	leaf, err := deposits[0].Data.HashTreeRoot()
 	require.NoError(t, err, "Could not hash deposit")
 
-	trie, err := trie.GenerateTrieFromItems([][]byte{leaf[:]}, params.BeaconConfig().DepositContractTreeDepth)
+	generatedTrie, err := trie.GenerateTrieFromItems([][]byte{leaf[:]}, params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err)
 
-	deposits[0].Proof, err = trie.MerkleProof(0)
+	deposits[0].Proof, err = generatedTrie.MerkleProof(0)
 	require.NoError(t, err)
 
-	root, err := trie.HashTreeRoot()
+	root, err := generatedTrie.HashTreeRoot()
 	require.NoError(t, err)
 
 	eth1Data := &ethpb.Eth1Data{
@@ -176,10 +176,10 @@ func TestProcessDeposit_InvalidSignature(t *testing.T) {
 	leaf, err := deposits[0].Data.HashTreeRoot()
 	require.NoError(t, err, "Could not hash deposit")
 
-	trie, err := trie.GenerateTrieFromItems([][]byte{leaf[:]}, params.BeaconConfig().DepositContractTreeDepth)
+	generatedTrie, err := trie.GenerateTrieFromItems([][]byte{leaf[:]}, params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err)
 
-	root, err := trie.HashTreeRoot()
+	root, err := generatedTrie.HashTreeRoot()
 	require.NoError(t, err)
 
 	eth1Data := &ethpb.Eth1Data{
@@ -213,15 +213,15 @@ func TestProcessDeposit_UnableToVerify(t *testing.T) {
 	sig := keys[0].Sign([]byte{'F', 'A', 'K', 'E'})
 	deposits[0].Data.Signature = sig.Marshal()
 
-	trie, _, err := util.DepositTrieFromDeposits(deposits)
+	generatedTrie, _, err := util.DepositTrieFromDeposits(deposits)
 	require.NoError(t, err)
-	root, err := trie.HashTreeRoot()
+	root, err := generatedTrie.HashTreeRoot()
 	require.NoError(t, err)
 	eth1Data := &ethpb.Eth1Data{
 		DepositCount: 1,
 		DepositRoot:  root[:],
 	}
-	proof, err := trie.MerkleProof(0)
+	proof, err := generatedTrie.MerkleProof(0)
 	require.NoError(t, err)
 	deposits[0].Proof = proof
 	err = web3Service.processDeposit(context.Background(), eth1Data, deposits[0])
@@ -266,15 +266,15 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 	sig := priv.Sign(signedRoot[:])
 	deposit.Data.Signature = sig.Marshal()
 
-	trie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+	generatedTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err)
-	root, err := trie.HashTreeRoot()
+	root, err := generatedTrie.HashTreeRoot()
 	require.NoError(t, err)
 	eth1Data := &ethpb.Eth1Data{
 		DepositCount: 1,
 		DepositRoot:  root[:],
 	}
-	proof, err := trie.MerkleProof(0)
+	proof, err := generatedTrie.MerkleProof(0)
 	require.NoError(t, err)
 	dataRoot, err := deposit.Data.HashTreeRoot()
 	require.NoError(t, err)
@@ -283,14 +283,14 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 	factor := params.BeaconConfig().MaxEffectiveBalance / params.BeaconConfig().EffectiveBalanceIncrement
 	// deposit till 31e9
 	for i := 0; i < int(factor-1); i++ {
-		assert.NoError(t, trie.Insert(dataRoot[:], i))
+		assert.NoError(t, generatedTrie.Insert(dataRoot[:], i))
 
-		trieRoot, err := trie.HashTreeRoot()
+		trieRoot, err := generatedTrie.HashTreeRoot()
 		require.NoError(t, err)
 		eth1Data.DepositRoot = trieRoot[:]
 		eth1Data.DepositCount = uint64(i + 1)
 
-		deposit.Proof, err = trie.MerkleProof(i)
+		deposit.Proof, err = generatedTrie.MerkleProof(i)
 		require.NoError(t, err)
 		err = web3Service.processDeposit(context.Background(), eth1Data, deposit)
 		require.NoError(t, err, fmt.Sprintf("Could not process deposit at %d", i))

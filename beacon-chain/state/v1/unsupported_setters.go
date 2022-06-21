@@ -41,12 +41,12 @@ func (*BeaconState) SetCurrentParticipationBits(_ []byte) error {
 }
 
 // ModifyPreviousParticipationBits is not supported for phase 0 beacon state.
-func (b *BeaconState) ModifyPreviousParticipationBits(mutator func(val []byte) ([]byte, error)) error {
+func (b *BeaconState) ModifyPreviousParticipationBits(_ func(val []byte) ([]byte, error)) error {
 	return errors.New("ModifyPreviousParticipationBits is not supported for phase 0 beacon state")
 }
 
 // ModifyCurrentParticipationBits is not supported for phase 0 beacon state.
-func (b *BeaconState) ModifyCurrentParticipationBits(mutator func(val []byte) ([]byte, error)) error {
+func (b *BeaconState) ModifyCurrentParticipationBits(_ func(val []byte) ([]byte, error)) error {
 	return errors.New("ModifyCurrentParticipationBits is not supported for phase 0 beacon state")
 }
 
@@ -56,6 +56,6 @@ func (*BeaconState) SetInactivityScores(_ []uint64) error {
 }
 
 // SetLatestExecutionPayloadHeader is not supported for phase 0 beacon state.
-func (*BeaconState) SetLatestExecutionPayloadHeader(val *ethpb.ExecutionPayloadHeader) error {
+func (*BeaconState) SetLatestExecutionPayloadHeader(_ *ethpb.ExecutionPayloadHeader) error {
 	return errors.New("SetLatestExecutionPayloadHeader is not supported for phase 0 beacon state")
 }

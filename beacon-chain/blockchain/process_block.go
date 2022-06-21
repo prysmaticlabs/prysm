@@ -611,7 +611,7 @@ func (s *Service) insertBlockToForkChoiceStore(ctx context.Context, blk interfac
 	return s.cfg.ForkChoiceStore.InsertNode(ctx, st, root)
 }
 
-// Inserts attester slashing indices to fork choice store.
+// InsertSlashingsToForkChoiceStore inserts attester slashing indices to fork choice store.
 // To call this function, it's caller's responsibility to ensure the slashing object is valid.
 func (s *Service) InsertSlashingsToForkChoiceStore(ctx context.Context, slashings []*ethpb.AttesterSlashing) {
 	for _, slashing := range slashings {

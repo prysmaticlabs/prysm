@@ -39,7 +39,7 @@ type Service struct {
 }
 
 // NewService instantiates a new service.
-func NewService(ctx context.Context, opts ...Option) (*Service, error) {
+func NewService(opts ...Option) (*Service, error) {
 	s := &Service{}
 	for _, opt := range opts {
 		if err := opt(s); err != nil {

@@ -476,9 +476,9 @@ func Test_epochUpdateForValidators(t *testing.T) {
 func Test_applyAttestationForValidator_MinSpanChunk(t *testing.T) {
 	ctx := context.Background()
 	slasherDB := dbtest.SetupSlasherDB(t)
-	params := DefaultParams()
+	defaultParams := DefaultParams()
 	srv := &Service{
-		params: params,
+		params: defaultParams,
 		serviceCfg: &ServiceConfig{
 			Database:      slasherDB,
 			StateNotifier: &mock.MockStateNotifier{},
@@ -486,7 +486,7 @@ func Test_applyAttestationForValidator_MinSpanChunk(t *testing.T) {
 		latestEpochWrittenForValidator: map[types.ValidatorIndex]types.Epoch{},
 	}
 	// We initialize an empty chunks slice.
-	chunk := EmptyMinSpanChunksSlice(params)
+	chunk := EmptyMinSpanChunksSlice(defaultParams)
 	chunkIdx := uint64(0)
 	currentEpoch := types.Epoch(3)
 	validatorIdx := types.ValidatorIndex(0)
@@ -537,9 +537,9 @@ func Test_applyAttestationForValidator_MinSpanChunk(t *testing.T) {
 func Test_applyAttestationForValidator_MaxSpanChunk(t *testing.T) {
 	ctx := context.Background()
 	slasherDB := dbtest.SetupSlasherDB(t)
-	params := DefaultParams()
+	defaultParams := DefaultParams()
 	srv := &Service{
-		params: params,
+		params: defaultParams,
 		serviceCfg: &ServiceConfig{
 			Database:      slasherDB,
 			StateNotifier: &mock.MockStateNotifier{},
@@ -547,7 +547,7 @@ func Test_applyAttestationForValidator_MaxSpanChunk(t *testing.T) {
 		latestEpochWrittenForValidator: map[types.ValidatorIndex]types.Epoch{},
 	}
 	// We initialize an empty chunks slice.
-	chunk := EmptyMaxSpanChunksSlice(params)
+	chunk := EmptyMaxSpanChunksSlice(defaultParams)
 	chunkIdx := uint64(0)
 	currentEpoch := types.Epoch(3)
 	validatorIdx := types.ValidatorIndex(0)
@@ -687,7 +687,7 @@ func testLoadChunks(t *testing.T, kind slashertypes.ChunkKind) {
 	ctx := context.Background()
 
 	// Check if the chunk at chunk index already exists in-memory.
-	params := DefaultParams()
+	defaultParams := DefaultParams()
 	s := &Service{
 		params: DefaultParams(),
 		serviceCfg: &ServiceConfig{
@@ -699,9 +699,9 @@ func testLoadChunks(t *testing.T, kind slashertypes.ChunkKind) {
 	// is initialized as an empty chunk.
 	var emptyChunk Chunker
 	if kind == slashertypes.MinSpan {
-		emptyChunk = EmptyMinSpanChunksSlice(params)
+		emptyChunk = EmptyMinSpanChunksSlice(defaultParams)
 	} else {
-		emptyChunk = EmptyMaxSpanChunksSlice(params)
+		emptyChunk = EmptyMaxSpanChunksSlice(defaultParams)
 	}
 	chunkIdx := uint64(2)
 	received, err := s.loadChunks(ctx, &chunkUpdateArgs{
@@ -717,15 +717,15 @@ func testLoadChunks(t *testing.T, kind slashertypes.ChunkKind) {
 	// Save chunks to disk, then load them properly from disk.
 	var existingChunk Chunker
 	if kind == slashertypes.MinSpan {
-		existingChunk = EmptyMinSpanChunksSlice(params)
+		existingChunk = EmptyMinSpanChunksSlice(defaultParams)
 	} else {
-		existingChunk = EmptyMaxSpanChunksSlice(params)
+		existingChunk = EmptyMaxSpanChunksSlice(defaultParams)
 	}
 	validatorIdx := types.ValidatorIndex(0)
 	epochInChunk := types.Epoch(0)
 	targetEpoch := types.Epoch(2)
 	err = setChunkDataAtEpoch(
-		params,
+		defaultParams,
 		existingChunk.Chunk(),
 		validatorIdx,
 		epochInChunk,

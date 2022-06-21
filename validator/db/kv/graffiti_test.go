@@ -50,10 +50,10 @@ func TestStore_GraffitiOrderedIndex_ReadAndWrite(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := db.GraffitiOrderedIndex(ctx, tt.fileHash)
+			got, err := db.GraffitiOrderedIndex(tt.fileHash)
 			require.NoError(t, err)
 			require.DeepEqual(t, tt.want, got)
-			err = db.SaveGraffitiOrderedIndex(ctx, tt.write)
+			err = db.SaveGraffitiOrderedIndex(tt.write)
 			require.NoError(t, err)
 		})
 	}

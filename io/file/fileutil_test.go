@@ -31,11 +31,11 @@ import (
 )
 
 func TestPathExpansion(t *testing.T) {
-	user, err := user.Current()
+	u, err := user.Current()
 	require.NoError(t, err)
 	tests := map[string]string{
 		"/home/someuser/tmp": "/home/someuser/tmp",
-		"~/tmp":              user.HomeDir + "/tmp",
+		"~/tmp":              u.HomeDir + "/tmp",
 		"$DDDXXX/a/b":        "/tmp/a/b",
 		"/a/b/":              "/a/b",
 	}

@@ -38,7 +38,7 @@ func TestSubmitValidatorRegistration(t *testing.T) {
 			Signature: params.BeaconConfig().ZeroHash[:],
 		}).
 		Return(nil, nil)
-	require.NoError(t, nil, SubmitValidatorRegistration(ctx, m.validatorClient, m.nodeClient, m.signfunc, reg))
+	require.NoError(t, nil, SubmitValidatorRegistration(ctx, m.validatorClient, m.signfunc, reg))
 }
 
 func TestSubmitValidatorRegistration_CantSign(t *testing.T) {
@@ -64,7 +64,7 @@ func TestSubmitValidatorRegistration_CantSign(t *testing.T) {
 			Signature: params.BeaconConfig().ZeroHash[:],
 		}).
 		Return(nil, errors.New("could not sign"))
-	require.ErrorContains(t, "could not submit signed registration to beacon node", SubmitValidatorRegistration(ctx, m.validatorClient, m.nodeClient, m.signfunc, reg))
+	require.ErrorContains(t, "could not submit signed registration to beacon node", SubmitValidatorRegistration(ctx, m.validatorClient, m.signfunc, reg))
 }
 
 func Test_signValidatorRegistration(t *testing.T) {
@@ -78,10 +78,7 @@ func Test_signValidatorRegistration(t *testing.T) {
 		Timestamp:    uint64(time.Now().Unix()),
 		Pubkey:       validatorKey.PublicKey().Marshal(),
 	}
-	_, err := signValidatorRegistration(
-		ctx,
-		1,
-		m.validatorClient, m.signfunc, reg)
+	_, err := signValidatorRegistration(ctx, m.signfunc, reg)
 	require.NoError(t, err)
 
 }

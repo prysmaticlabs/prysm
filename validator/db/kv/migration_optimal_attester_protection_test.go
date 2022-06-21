@@ -46,14 +46,14 @@ func Test_migrateOptimalAttesterProtectionUp(t *testing.T) {
 				for i := types.Epoch(1); i <= numEpochs; i++ {
 					var sr [32]byte
 					copy(sr[:], fmt.Sprintf("%d", i))
-					newHist, err := history.setTargetData(ctx, i, &deprecatedHistoryData{
+					newHist, err := history.setTargetData(i, &deprecatedHistoryData{
 						Source:      i - 1,
 						SigningRoot: sr[:],
 					})
 					require.NoError(t, err)
 					history = newHist
 				}
-				newHist, err := history.setLatestEpochWritten(ctx, numEpochs)
+				newHist, err := history.setLatestEpochWritten(numEpochs)
 				require.NoError(t, err)
 
 				err = validatorDB.update(func(tx *bolt.Tx) error {
@@ -105,14 +105,14 @@ func Test_migrateOptimalAttesterProtectionUp(t *testing.T) {
 				for i := types.Epoch(1); i <= numEpochs; i++ {
 					var sr [32]byte
 					copy(sr[:], fmt.Sprintf("%d", i))
-					newHist, err := history.setTargetData(ctx, i, &deprecatedHistoryData{
+					newHist, err := history.setTargetData(i, &deprecatedHistoryData{
 						Source:      i - 1,
 						SigningRoot: sr[:],
 					})
 					require.NoError(t, err)
 					history = newHist
 				}
-				newHist, err := history.setLatestEpochWritten(ctx, numEpochs)
+				newHist, err := history.setLatestEpochWritten(numEpochs)
 				require.NoError(t, err)
 
 				err = validatorDB.update(func(tx *bolt.Tx) error {
@@ -134,12 +134,12 @@ func Test_migrateOptimalAttesterProtectionUp(t *testing.T) {
 				// Write one more entry to the DB with the old format.
 				var sr [32]byte
 				copy(sr[:], fmt.Sprintf("%d", numEpochs+1))
-				newHist, err = newHist.setTargetData(ctx, numEpochs+1, &deprecatedHistoryData{
+				newHist, err = newHist.setTargetData(numEpochs+1, &deprecatedHistoryData{
 					Source:      numEpochs,
 					SigningRoot: sr[:],
 				})
 				require.NoError(t, err)
-				newHist, err = newHist.setLatestEpochWritten(ctx, numEpochs+1)
+				newHist, err = newHist.setLatestEpochWritten(numEpochs + 1)
 				require.NoError(t, err)
 
 				err = validatorDB.update(func(tx *bolt.Tx) error {
@@ -280,7 +280,7 @@ func Test_migrateOptimalAttesterProtectionDown(t *testing.T) {
 						encodedHistoryBytes := bkt.Get(pubKey[:])
 						require.NotNil(t, encodedHistoryBytes)
 						attestingHistory := deprecatedEncodedAttestingHistory(encodedHistoryBytes)
-						highestEpoch, err := attestingHistory.getLatestEpochWritten(ctx)
+						highestEpoch, err := attestingHistory.getLatestEpochWritten()
 						require.NoError(t, err)
 						// Verify the highest epoch written is 50 from the setup stage.
 						require.Equal(t, types.Epoch(50), highestEpoch)

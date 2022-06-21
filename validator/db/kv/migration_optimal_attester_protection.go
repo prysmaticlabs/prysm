@@ -76,14 +76,14 @@ func (s *Store) migrateOptimalAttesterProtectionUp(ctx context.Context) error {
 			// Extract every single source, target, signing root
 			// from the attesting history then insert them into the
 			// respective buckets under the new db schema.
-			latestEpochWritten, err := attestingHistory.getLatestEpochWritten(ctx)
+			latestEpochWritten, err := attestingHistory.getLatestEpochWritten()
 			if err != nil {
 				return err
 			}
 			// For every epoch since genesis up to the highest epoch written, we then
 			// extract historical data and insert it into the new schema.
 			for targetEpoch := types.Epoch(0); targetEpoch <= latestEpochWritten; targetEpoch++ {
-				historicalAtt, err := attestingHistory.getTargetData(ctx, targetEpoch)
+				historicalAtt, err := attestingHistory.getTargetData(targetEpoch)
 				if err != nil {
 					return err
 				}
@@ -183,7 +183,7 @@ func (s *Store) migrateOptimalAttesterProtectionDown(ctx context.Context) error 
 					if sr, ok := signingRootsByTarget[target]; ok {
 						signingRoot = sr
 					}
-					newHist, err := history.setTargetData(ctx, target, &deprecatedHistoryData{
+					newHist, err := history.setTargetData(target, &deprecatedHistoryData{
 						Source:      source,
 						SigningRoot: signingRoot,
 					})
@@ -196,7 +196,7 @@ func (s *Store) migrateOptimalAttesterProtectionDown(ctx context.Context) error 
 					}
 				}
 			}
-			newHist, err := history.setLatestEpochWritten(ctx, maxTargetWritten)
+			newHist, err := history.setLatestEpochWritten(maxTargetWritten)
 			if err != nil {
 				return err
 			}

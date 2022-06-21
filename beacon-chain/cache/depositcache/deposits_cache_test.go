@@ -428,9 +428,9 @@ func TestFinalizedDeposits_DepositsCachedCorrectly(t *testing.T) {
 		require.NoError(t, err, "Could not hash deposit data")
 		deps = append(deps, hash[:])
 	}
-	trie, err := trie.GenerateTrieFromItems(deps, params.BeaconConfig().DepositContractTreeDepth)
+	generatedTrie, err := trie.GenerateTrieFromItems(deps, params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not generate deposit trie")
-	rootA, err := trie.HashTreeRoot()
+	rootA, err := generatedTrie.HashTreeRoot()
 	require.NoError(t, err)
 	rootB, err := cachedDeposits.Deposits.HashTreeRoot()
 	require.NoError(t, err)
@@ -490,9 +490,9 @@ func TestFinalizedDeposits_UtilizesPreviouslyCachedDeposits(t *testing.T) {
 		require.NoError(t, err, "Could not hash deposit data")
 		deps = append(deps, hash[:])
 	}
-	trie, err := trie.GenerateTrieFromItems(deps, params.BeaconConfig().DepositContractTreeDepth)
+	generatedTrie, err := trie.GenerateTrieFromItems(deps, params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not generate deposit trie")
-	rootA, err := trie.HashTreeRoot()
+	rootA, err := generatedTrie.HashTreeRoot()
 	require.NoError(t, err)
 	rootB, err := cachedDeposits.Deposits.HashTreeRoot()
 	require.NoError(t, err)

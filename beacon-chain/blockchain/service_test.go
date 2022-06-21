@@ -222,9 +222,9 @@ func TestChainService_InitializeBeaconChain(t *testing.T) {
 	count := uint64(10)
 	deposits, _, err := util.DeterministicDepositsAndKeys(count)
 	require.NoError(t, err)
-	trie, _, err := util.DepositTrieFromDeposits(deposits)
+	dt, _, err := util.DepositTrieFromDeposits(deposits)
 	require.NoError(t, err)
-	hashTreeRoot, err := trie.HashTreeRoot()
+	hashTreeRoot, err := dt.HashTreeRoot()
 	require.NoError(t, err)
 	genState, err := transition.EmptyGenesisState()
 	require.NoError(t, err)
@@ -509,12 +509,12 @@ func TestHasBlock_ForkChoiceAndDB_ProtoArray(t *testing.T) {
 		store: &store.Store{},
 	}
 	s.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]}, [32]byte{})
-	b := util.NewBeaconBlock()
-	r, err := b.Block.HashTreeRoot()
+	bb := util.NewBeaconBlock()
+	r, err := bb.Block.HashTreeRoot()
 	require.NoError(t, err)
 	beaconState, err := util.NewBeaconState()
 	require.NoError(t, err)
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err := wrapper.WrappedSignedBeaconBlock(bb)
 	require.NoError(t, err)
 	require.NoError(t, s.insertBlockAndAttestationsToForkChoiceStore(ctx, wsb.Block(), r, beaconState))
 
@@ -530,12 +530,12 @@ func TestHasBlock_ForkChoiceAndDB_DoublyLinkedTree(t *testing.T) {
 		store: &store.Store{},
 	}
 	s.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]}, [32]byte{})
-	b := util.NewBeaconBlock()
-	r, err := b.Block.HashTreeRoot()
+	bb := util.NewBeaconBlock()
+	r, err := bb.Block.HashTreeRoot()
 	require.NoError(t, err)
 	beaconState, err := util.NewBeaconState()
 	require.NoError(t, err)
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err := wrapper.WrappedSignedBeaconBlock(bb)
 	require.NoError(t, err)
 	require.NoError(t, s.insertBlockAndAttestationsToForkChoiceStore(ctx, wsb.Block(), r, beaconState))
 
@@ -552,10 +552,10 @@ func TestServiceStop_SaveCachedBlocks(t *testing.T) {
 		cancel:         cancel,
 		initSyncBlocks: make(map[[32]byte]interfaces.SignedBeaconBlock),
 	}
-	b := util.NewBeaconBlock()
-	r, err := b.Block.HashTreeRoot()
+	bb := util.NewBeaconBlock()
+	r, err := bb.Block.HashTreeRoot()
 	require.NoError(t, err)
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err := wrapper.WrappedSignedBeaconBlock(bb)
 	require.NoError(t, err)
 	s.saveInitSyncBlock(r, wsb)
 	require.NoError(t, s.Stop())

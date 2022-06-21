@@ -1,7 +1,6 @@
 package fork
 
 import (
-	"context"
 	"path"
 	"testing"
 
@@ -38,7 +37,7 @@ func RunUpgradeToBellatrix(t *testing.T, config string) {
 			}
 			preState, err := v2.InitializeFromProto(preStateBase)
 			require.NoError(t, err)
-			postState, err := execution.UpgradeToBellatrix(context.Background(), preState)
+			postState, err := execution.UpgradeToBellatrix(preState)
 			require.NoError(t, err)
 			postStateFromFunction, err := v3.ProtobufBeaconState(postState.InnerStateUnsafe())
 			require.NoError(t, err)

@@ -28,12 +28,12 @@ func TestSyncCommitteeIndices_CanGet(t *testing.T) {
 				EffectiveBalance: params.BeaconConfig().MinDepositAmount,
 			}
 		}
-		state, err := stateAltair.InitializeFromProto(&ethpb.BeaconStateAltair{
+		st, err := stateAltair.InitializeFromProto(&ethpb.BeaconStateAltair{
 			Validators:  validators,
 			RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		})
 		require.NoError(t, err)
-		return state
+		return st
 	}
 
 	type args struct {
@@ -103,27 +103,27 @@ func TestSyncCommitteeIndices_DifferentPeriods(t *testing.T) {
 				EffectiveBalance: params.BeaconConfig().MinDepositAmount,
 			}
 		}
-		state, err := stateAltair.InitializeFromProto(&ethpb.BeaconStateAltair{
+		st, err := stateAltair.InitializeFromProto(&ethpb.BeaconStateAltair{
 			Validators:  validators,
 			RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		})
 		require.NoError(t, err)
-		return state
+		return st
 	}
 
-	state := getState(t, params.BeaconConfig().MaxValidatorsPerCommittee)
-	got1, err := altair.NextSyncCommitteeIndices(context.Background(), state)
+	st := getState(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	got1, err := altair.NextSyncCommitteeIndices(context.Background(), st)
 	require.NoError(t, err)
-	require.NoError(t, state.SetSlot(params.BeaconConfig().SlotsPerEpoch))
-	got2, err := altair.NextSyncCommitteeIndices(context.Background(), state)
-	require.NoError(t, err)
-	require.DeepNotEqual(t, got1, got2)
-	require.NoError(t, state.SetSlot(params.BeaconConfig().SlotsPerEpoch*types.Slot(params.BeaconConfig().EpochsPerSyncCommitteePeriod)))
-	got2, err = altair.NextSyncCommitteeIndices(context.Background(), state)
+	require.NoError(t, st.SetSlot(params.BeaconConfig().SlotsPerEpoch))
+	got2, err := altair.NextSyncCommitteeIndices(context.Background(), st)
 	require.NoError(t, err)
 	require.DeepNotEqual(t, got1, got2)
-	require.NoError(t, state.SetSlot(params.BeaconConfig().SlotsPerEpoch*types.Slot(2*params.BeaconConfig().EpochsPerSyncCommitteePeriod)))
-	got2, err = altair.NextSyncCommitteeIndices(context.Background(), state)
+	require.NoError(t, st.SetSlot(params.BeaconConfig().SlotsPerEpoch*types.Slot(params.BeaconConfig().EpochsPerSyncCommitteePeriod)))
+	got2, err = altair.NextSyncCommitteeIndices(context.Background(), st)
+	require.NoError(t, err)
+	require.DeepNotEqual(t, got1, got2)
+	require.NoError(t, st.SetSlot(params.BeaconConfig().SlotsPerEpoch*types.Slot(2*params.BeaconConfig().EpochsPerSyncCommitteePeriod)))
+	got2, err = altair.NextSyncCommitteeIndices(context.Background(), st)
 	require.NoError(t, err)
 	require.DeepNotEqual(t, got1, got2)
 }
@@ -140,12 +140,12 @@ func TestSyncCommittee_CanGet(t *testing.T) {
 				PublicKey:        blsKey.PublicKey().Marshal(),
 			}
 		}
-		state, err := stateAltair.InitializeFromProto(&ethpb.BeaconStateAltair{
+		st, err := stateAltair.InitializeFromProto(&ethpb.BeaconStateAltair{
 			Validators:  validators,
 			RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		})
 		require.NoError(t, err)
-		return state
+		return st
 	}
 
 	type args struct {
@@ -260,8 +260,8 @@ func TestValidateNilSyncContribution(t *testing.T) {
 
 func TestSyncSubCommitteePubkeys_CanGet(t *testing.T) {
 	helpers.ClearCache()
-	state := getState(t, params.BeaconConfig().MaxValidatorsPerCommittee)
-	com, err := altair.NextSyncCommittee(context.Background(), state)
+	st := getState(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	com, err := altair.NextSyncCommittee(context.Background(), st)
 	require.NoError(t, err)
 	sub, err := altair.SyncSubCommitteePubkeys(com, 0)
 	require.NoError(t, err)
@@ -395,10 +395,10 @@ func getState(t *testing.T, count uint64) state.BeaconState {
 			PublicKey:        blsKey.PublicKey().Marshal(),
 		}
 	}
-	state, err := stateAltair.InitializeFromProto(&ethpb.BeaconStateAltair{
+	st, err := stateAltair.InitializeFromProto(&ethpb.BeaconStateAltair{
 		Validators:  validators,
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
 	require.NoError(t, err)
-	return state
+	return st
 }
