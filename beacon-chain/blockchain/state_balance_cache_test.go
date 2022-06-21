@@ -117,7 +117,7 @@ func TestStateBalanceCache(t *testing.T) {
 		balances []uint64
 		name     string
 	}
-	sentinelCacheMiss := errors.New("Cache missed, as expected!")
+	sentinelCacheMiss := errors.New("cache missed, as expected")
 	sentinelBalances := []uint64{1, 2, 3, 4, 5}
 	halfExpiredValidators, halfExpiredBalances := testHalfExpiredValidators()
 	halfQueuedValidators, halfQueuedBalances := testHalfQueuedValidators()
