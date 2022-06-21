@@ -252,7 +252,12 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 		args = append(args,
 			fmt.Sprintf("--%s=%d", flags.InteropNumValidators.Name, validatorNum),
 			fmt.Sprintf("--%s=%d", flags.InteropStartIndex.Name, offset),
-			fmt.Sprintf("--%s=%s", flags.ProposerSettingsFlag.Name, proposerSettingsPathPath)) //TODO: web3signer does not support validator registration signing currently, move this when support is there.
+		)
+	}
+	//TODO: web3signer does not support validator registration signing currently, move this when support is there.
+	//TODO: current version of prysmsh still uses wrong flag name.
+	if !v.config.UsePrysmShValidator && !v.config.UseWeb3RemoteSigner {
+		args = append(args, fmt.Sprintf("--%s=%s", flags.ProposerSettingsFlag.Name, proposerSettingsPathPath))
 	}
 	args = append(args, config.ValidatorFlags...)
 
