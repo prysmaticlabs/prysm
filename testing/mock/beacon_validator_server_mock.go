@@ -351,7 +351,7 @@ func (mr *MockBeaconNodeValidatorServerMockRecorder) SubmitSyncMessage(arg0, arg
 }
 
 // SubmitValidatorRegistration mocks base method.
-func (m *MockBeaconNodeValidatorServer) SubmitValidatorRegistration(arg0 context.Context, arg1 *eth.SignedValidatorRegistrationV1) (*emptypb.Empty, error) {
+func (m *MockBeaconNodeValidatorServer) SubmitValidatorRegistration(arg0 context.Context, arg1 *eth.SignedValidatorRegistrationsV1) (*emptypb.Empty, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SubmitValidatorRegistration", arg0, arg1)
 	ret0, _ := ret[0].(*emptypb.Empty)
