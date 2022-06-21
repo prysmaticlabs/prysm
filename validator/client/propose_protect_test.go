@@ -35,7 +35,7 @@ func Test_slashableProposalCheck_PreventsLowerThanMinProposal(t *testing.T) {
 		Block: &ethpb.BeaconBlock{
 			Slot:          lowestSignedSlot - 1,
 			ProposerIndex: 0,
-			Body: &ethpb.BeaconBlockBody{}
+			Body:          &ethpb.BeaconBlockBody{},
 		},
 		Signature: params.BeaconConfig().EmptySignature[:],
 	}
