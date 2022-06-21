@@ -149,6 +149,7 @@ func TestProcessProposedBlock(t *testing.T) {
 				ProposerIndex: 12,
 				ParentRoot:    bytesutil.PadTo([]byte("hello-world"), 32),
 				StateRoot:     bytesutil.PadTo([]byte("state-world"), 32),
+				Body:          &ethpb.BeaconBlockBody{},
 			},
 			wantedErr: "\"Proposed beacon block was included\" BalanceChange=100000000 BlockRoot=0x68656c6c6f2d NewBalance=32000000000 ParentRoot=0x68656c6c6f2d ProposerIndex=12 Slot=6 Version=0 prefix=monitor",
 		},
@@ -159,6 +160,7 @@ func TestProcessProposedBlock(t *testing.T) {
 				ProposerIndex: 13,
 				ParentRoot:    bytesutil.PadTo([]byte("hello-world"), 32),
 				StateRoot:     bytesutil.PadTo([]byte("state-world"), 32),
+				Body:          &ethpb.BeaconBlockBody{},
 			},
 		},
 	}

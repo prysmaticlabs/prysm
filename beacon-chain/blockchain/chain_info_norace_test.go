@@ -51,7 +51,7 @@ func TestHeadRoot_DataRace(t *testing.T) {
 
 func TestHeadBlock_DataRace(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
-	wsb, err := blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlock{})
+	wsb, err := blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{}}})
 	require.NoError(t, err)
 	s := &Service{
 		cfg:  &config{BeaconDB: beaconDB, StateGen: stategen.New(beaconDB)},

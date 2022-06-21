@@ -42,6 +42,9 @@ func TestFuzzProcessBlockHeader_10000(t *testing.T) {
 
 		s, err := v1.InitializeFromProtoUnsafe(state)
 		require.NoError(t, err)
+		if block.Block == nil || block.Block.Body == nil {
+			continue
+		}
 		wsb, err := blocks.NewSignedBeaconBlock(block)
 		require.NoError(t, err)
 		_, err = ProcessBlockHeader(context.Background(), s, wsb)
@@ -143,6 +146,9 @@ func TestFuzzProcessRandao_10000(t *testing.T) {
 		fuzzer.Fuzz(b)
 		s, err := v1.InitializeFromProtoUnsafe(state)
 		require.NoError(t, err)
+		if b.Block == nil || b.Block.Body == nil {
+			continue
+		}
 		wsb, err := blocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)
 		r, err := ProcessRandao(context.Background(), s, wsb)
@@ -264,6 +270,9 @@ func TestFuzzProcessAttestationsNoVerify_10000(t *testing.T) {
 		fuzzer.Fuzz(b)
 		s, err := v1.InitializeFromProtoUnsafe(state)
 		require.NoError(t, err)
+		if b.Block == nil || b.Block.Body == nil {
+			continue
+		}
 		wsb, err := blocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)
 		r, err := ProcessAttestationsNoVerifySignature(ctx, s, wsb)

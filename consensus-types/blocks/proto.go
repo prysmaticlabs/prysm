@@ -220,7 +220,7 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 
 func initSignedBlockFromProtoPhase0(pb *eth.SignedBeaconBlock) (*SignedBeaconBlock, error) {
 	if pb == nil {
-		return nil, nil
+		return nil, errNilBlock
 	}
 
 	block, err := initBlockFromProtoPhase0(pb.Block)
@@ -237,7 +237,7 @@ func initSignedBlockFromProtoPhase0(pb *eth.SignedBeaconBlock) (*SignedBeaconBlo
 
 func initSignedBlockFromProtoAltair(pb *eth.SignedBeaconBlockAltair) (*SignedBeaconBlock, error) {
 	if pb == nil {
-		return nil, nil
+		return nil, errNilBlock
 	}
 
 	block, err := initBlockFromProtoAltair(pb.Block)
@@ -254,7 +254,7 @@ func initSignedBlockFromProtoAltair(pb *eth.SignedBeaconBlockAltair) (*SignedBea
 
 func initSignedBlockFromProtoBellatrix(pb *eth.SignedBeaconBlockBellatrix) (*SignedBeaconBlock, error) {
 	if pb == nil {
-		return nil, nil
+		return nil, errNilBlock
 	}
 
 	block, err := initBlockFromProtoBellatrix(pb.Block)
@@ -271,7 +271,7 @@ func initSignedBlockFromProtoBellatrix(pb *eth.SignedBeaconBlockBellatrix) (*Sig
 
 func initBlindedSignedBlockFromProtoBellatrix(pb *eth.SignedBlindedBeaconBlockBellatrix) (*SignedBeaconBlock, error) {
 	if pb == nil {
-		return nil, nil
+		return nil, errNilBlock
 	}
 
 	block, err := initBlindedBlockFromProtoBellatrix(pb.Block)
@@ -288,7 +288,7 @@ func initBlindedSignedBlockFromProtoBellatrix(pb *eth.SignedBlindedBeaconBlockBe
 
 func initBlockFromProtoPhase0(pb *eth.BeaconBlock) (*BeaconBlock, error) {
 	if pb == nil {
-		return nil, nil
+		return nil, errNilBlock
 	}
 
 	body, err := initBlockBodyFromProtoPhase0(pb.Body)
@@ -308,7 +308,7 @@ func initBlockFromProtoPhase0(pb *eth.BeaconBlock) (*BeaconBlock, error) {
 
 func initBlockFromProtoAltair(pb *eth.BeaconBlockAltair) (*BeaconBlock, error) {
 	if pb == nil {
-		return nil, nil
+		return nil, errNilBlock
 	}
 
 	body, err := initBlockBodyFromProtoAltair(pb.Body)
@@ -328,7 +328,7 @@ func initBlockFromProtoAltair(pb *eth.BeaconBlockAltair) (*BeaconBlock, error) {
 
 func initBlockFromProtoBellatrix(pb *eth.BeaconBlockBellatrix) (*BeaconBlock, error) {
 	if pb == nil {
-		return nil, nil
+		return nil, errNilBlock
 	}
 
 	body, err := initBlockBodyFromProtoBellatrix(pb.Body)
@@ -348,7 +348,7 @@ func initBlockFromProtoBellatrix(pb *eth.BeaconBlockBellatrix) (*BeaconBlock, er
 
 func initBlindedBlockFromProtoBellatrix(pb *eth.BlindedBeaconBlockBellatrix) (*BeaconBlock, error) {
 	if pb == nil {
-		return nil, nil
+		return nil, errNilBlock
 	}
 
 	body, err := initBlindedBlockBodyFromProtoBellatrix(pb.Body)
@@ -368,7 +368,7 @@ func initBlindedBlockFromProtoBellatrix(pb *eth.BlindedBeaconBlockBellatrix) (*B
 
 func initBlockBodyFromProtoPhase0(pb *eth.BeaconBlockBody) (*BeaconBlockBody, error) {
 	if pb == nil {
-		return nil, nil
+		return nil, errNilBlockBody
 	}
 
 	b := &BeaconBlockBody{
@@ -387,7 +387,7 @@ func initBlockBodyFromProtoPhase0(pb *eth.BeaconBlockBody) (*BeaconBlockBody, er
 
 func initBlockBodyFromProtoAltair(pb *eth.BeaconBlockBodyAltair) (*BeaconBlockBody, error) {
 	if pb == nil {
-		return nil, nil
+		return nil, errNilBlockBody
 	}
 
 	b := &BeaconBlockBody{
@@ -407,7 +407,7 @@ func initBlockBodyFromProtoAltair(pb *eth.BeaconBlockBodyAltair) (*BeaconBlockBo
 
 func initBlockBodyFromProtoBellatrix(pb *eth.BeaconBlockBodyBellatrix) (*BeaconBlockBody, error) {
 	if pb == nil {
-		return nil, nil
+		return nil, errNilBlockBody
 	}
 
 	b := &BeaconBlockBody{
@@ -428,7 +428,7 @@ func initBlockBodyFromProtoBellatrix(pb *eth.BeaconBlockBodyBellatrix) (*BeaconB
 
 func initBlindedBlockBodyFromProtoBellatrix(pb *eth.BlindedBeaconBlockBodyBellatrix) (*BeaconBlockBody, error) {
 	if pb == nil {
-		return nil, nil
+		return nil, errNilBlockBody
 	}
 
 	b := &BeaconBlockBody{

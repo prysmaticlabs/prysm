@@ -34,13 +34,19 @@ func InitializeDataMaps() {
 	// Reset our block map.
 	BlockMap = map[[4]byte]func() (interfaces.SignedBeaconBlock, error){
 		bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion): func() (interfaces.SignedBeaconBlock, error) {
-			return blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlock{})
+			return blocks.NewSignedBeaconBlock(
+				&ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{}}},
+			)
 		},
 		bytesutil.ToBytes4(params.BeaconConfig().AltairForkVersion): func() (interfaces.SignedBeaconBlock, error) {
-			return blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: &ethpb.BeaconBlockAltair{}})
+			return blocks.NewSignedBeaconBlock(
+				&ethpb.SignedBeaconBlockAltair{Block: &ethpb.BeaconBlockAltair{Body: &ethpb.BeaconBlockBodyAltair{}}},
+			)
 		},
 		bytesutil.ToBytes4(params.BeaconConfig().BellatrixForkVersion): func() (interfaces.SignedBeaconBlock, error) {
-			return blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: &ethpb.BeaconBlockBellatrix{}})
+			return blocks.NewSignedBeaconBlock(
+				&ethpb.SignedBeaconBlockBellatrix{Block: &ethpb.BeaconBlockBellatrix{Body: &ethpb.BeaconBlockBodyBellatrix{}}},
+			)
 		},
 	}
 

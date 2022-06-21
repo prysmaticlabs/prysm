@@ -49,6 +49,7 @@ func Test_slashableProposalCheck_PreventsLowerThanMinProposal(t *testing.T) {
 		Block: &ethpb.BeaconBlock{
 			Slot:          lowestSignedSlot,
 			ProposerIndex: 0,
+			Body:          &ethpb.BeaconBlockBody{},
 		},
 		Signature: params.BeaconConfig().EmptySignature[:],
 	}
@@ -70,6 +71,7 @@ func Test_slashableProposalCheck_PreventsLowerThanMinProposal(t *testing.T) {
 		Block: &ethpb.BeaconBlock{
 			Slot:          lowestSignedSlot + 1,
 			ProposerIndex: 0,
+			Body:          &ethpb.BeaconBlockBody{},
 		},
 		Signature: params.BeaconConfig().EmptySignature[:],
 	}
@@ -94,6 +96,7 @@ func Test_slashableProposalCheck(t *testing.T) {
 		Block: &ethpb.BeaconBlock{
 			Slot:          10,
 			ProposerIndex: 0,
+			Body:          &ethpb.BeaconBlockBody{},
 		},
 		Signature: params.BeaconConfig().EmptySignature[:],
 	})

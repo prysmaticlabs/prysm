@@ -25,6 +25,9 @@ func TestFuzzExecuteStateTransition_1000(t *testing.T) {
 	for i := 0; i < 1000; i++ {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(sb)
+		if sb.Block == nil || sb.Block.Body == nil {
+			continue
+		}
 		wsb, err := blocks.NewSignedBeaconBlock(sb)
 		require.NoError(t, err)
 		s, err := ExecuteStateTransition(ctx, state, wsb)
@@ -46,6 +49,9 @@ func TestFuzzCalculateStateRoot_1000(t *testing.T) {
 	for i := 0; i < 1000; i++ {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(sb)
+		if sb.Block == nil || sb.Block.Body == nil {
+			continue
+		}
 		wsb, err := blocks.NewSignedBeaconBlock(sb)
 		require.NoError(t, err)
 		stateRoot, err := CalculateStateRoot(ctx, state, wsb)
@@ -103,6 +109,9 @@ func TestFuzzprocessOperationsNoVerify_1000(t *testing.T) {
 	for i := 0; i < 1000; i++ {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(bb)
+		if bb.Block == nil || bb.Block.Body == nil {
+			continue
+		}
 		wsb, err := blocks.NewSignedBeaconBlock(bb)
 		require.NoError(t, err)
 		s, err := ProcessOperationsNoVerifyAttsSigs(ctx, state, wsb)
@@ -123,6 +132,9 @@ func TestFuzzverifyOperationLengths_10000(t *testing.T) {
 	for i := 0; i < 10000; i++ {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(bb)
+		if bb.Block == nil || bb.Block.Body == nil {
+			continue
+		}
 		wsb, err := blocks.NewSignedBeaconBlock(bb)
 		require.NoError(t, err)
 		_, err = VerifyOperationLengths(context.Background(), state, wsb)
@@ -172,6 +184,9 @@ func TestFuzzProcessBlockForStateRoot_1000(t *testing.T) {
 	for i := 0; i < 1000; i++ {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(sb)
+		if sb.Block == nil || sb.Block.Body == nil {
+			continue
+		}
 		wsb, err := blocks.NewSignedBeaconBlock(sb)
 		require.NoError(t, err)
 		s, err := ProcessBlockForStateRoot(ctx, state, wsb)

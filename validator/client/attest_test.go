@@ -542,7 +542,7 @@ func TestServer_WaitToSlotOneThird_ReceiveBlockSlot(t *testing.T) {
 		time.Sleep(100 * time.Millisecond)
 		wsb, err := blocks.NewSignedBeaconBlock(
 			&ethpb.SignedBeaconBlock{
-				Block: &ethpb.BeaconBlock{Slot: currentSlot},
+				Block: &ethpb.BeaconBlock{Slot: currentSlot, Body: &ethpb.BeaconBlockBody{}},
 			})
 		require.NoError(t, err)
 		v.blockFeed.Send(wsb)
