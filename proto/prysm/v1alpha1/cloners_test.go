@@ -692,13 +692,6 @@ func genBlindedBeaconBlockBellatrix() *v1alpha1.BlindedBeaconBlockBellatrix {
 	}
 }
 
-func genSignedBlindedBeaconBlockBellatrix() *v1alpha1.SignedBlindedBeaconBlockBellatrix {
-	return &v1alpha1.SignedBlindedBeaconBlockBellatrix{
-		Block:     genBlindedBeaconBlockBellatrix(),
-		Signature: bytes(),
-	}
-}
-
 func genSyncCommitteeMessage() *v1alpha1.SyncCommitteeMessage {
 	return &v1alpha1.SyncCommitteeMessage{
 		Slot:           424555,

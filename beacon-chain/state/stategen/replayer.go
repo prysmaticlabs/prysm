@@ -16,7 +16,6 @@ import (
 var ErrFutureSlotRequested = errors.New("cannot replay to future slots")
 var ErrNoCanonicalBlockForSlot = errors.New("none of the blocks found in the db slot index are canonical")
 var ErrNoBlocksBelowSlot = errors.New("no blocks found in db below slot")
-var ErrInvalidDBBlock = errors.New("invalid block found in database")
 var ErrReplayTargetSlotExceeded = errors.New("desired replay slot is less than state's slot")
 
 type retrievalMethod int
