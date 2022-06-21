@@ -203,7 +203,7 @@ func (BeaconBlockBody) ExecutionPayload() (*enginev1.ExecutionPayload, error) {
 	panic("implement me")
 }
 
-func (BeaconBlockBody) ExecutionPayloadHeader() (*eth.ExecutionPayloadHeader, error) {
+func (BeaconBlockBody) ExecutionPayloadHeader() (*enginev1.ExecutionPayloadHeader, error) {
 	panic("implement me")
 }
 
