@@ -22,6 +22,7 @@ import (
 	"github.com/pkg/errors"
 	cmdshared "github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
+	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	validator_service_config "github.com/prysmaticlabs/prysm/config/validator/service"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit"
@@ -228,6 +229,10 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 		"--" + cmdshared.ForceClearDB.Name,
 		"--" + cmdshared.E2EConfigFlag.Name,
 		"--" + cmdshared.AcceptTosFlag.Name,
+	}
+	// Only apply e2e flags to the current branch. New flags may not exist in previous release.
+	if !v.config.UsePrysmShValidator {
+		args = append(args, features.E2EValidatorFlags...)
 	}
 	if v.config.UseWeb3RemoteSigner {
 		args = append(args, fmt.Sprintf("--%s=http://localhost:%d", flags.Web3SignerURLFlag.Name, Web3RemoteSignerPort))
