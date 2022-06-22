@@ -319,6 +319,6 @@ func (w altairBeaconBlockBody) ExecutionPayload() (*enginev1.ExecutionPayload, e
 }
 
 // ExecutionPayloadHeader is a stub.
-func (w altairBeaconBlockBody) ExecutionPayloadHeader() (*eth.ExecutionPayloadHeader, error) {
+func (w altairBeaconBlockBody) ExecutionPayloadHeader() (*enginev1.ExecutionPayloadHeader, error) {
 	return nil, errors.Wrapf(ErrUnsupportedField, "ExecutionPayloadHeader for %T", w)
 }

@@ -1,11 +1,12 @@
 package v3
 
 import (
+	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
 // LatestExecutionPayloadHeader of the beacon state.
-func (b *BeaconState) LatestExecutionPayloadHeader() (*ethpb.ExecutionPayloadHeader, error) {
+func (b *BeaconState) LatestExecutionPayloadHeader() (*enginev1.ExecutionPayloadHeader, error) {
 	if !b.hasInnerState() {
 		return nil, ErrNilInnerState
 	}
@@ -21,7 +22,7 @@ func (b *BeaconState) LatestExecutionPayloadHeader() (*ethpb.ExecutionPayloadHea
 
 // latestExecutionPayloadHeader of the beacon state.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) latestExecutionPayloadHeader() *ethpb.ExecutionPayloadHeader {
+func (b *BeaconState) latestExecutionPayloadHeader() *enginev1.ExecutionPayloadHeader {
 	if !b.hasInnerState() {
 		return nil
 	}

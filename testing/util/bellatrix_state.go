@@ -81,7 +81,7 @@ func emptyGenesisStateBellatrix() (state.BeaconState, error) {
 		Eth1DataVotes:    []*ethpb.Eth1Data{},
 		Eth1DepositIndex: 0,
 
-		LatestExecutionPayloadHeader: &ethpb.ExecutionPayloadHeader{},
+		LatestExecutionPayloadHeader: &enginev1.ExecutionPayloadHeader{},
 	}
 	return v3.InitializeFromProto(st)
 }
@@ -227,7 +227,7 @@ func buildGenesisBeaconStateBellatrix(genesisTime uint64, preState state.BeaconS
 		AggregatePubkey: bytesutil.PadTo([]byte{}, params.BeaconConfig().BLSPubkeyLength),
 	}
 
-	st.LatestExecutionPayloadHeader = &ethpb.ExecutionPayloadHeader{
+	st.LatestExecutionPayloadHeader = &enginev1.ExecutionPayloadHeader{
 		ParentHash:       make([]byte, 32),
 		FeeRecipient:     make([]byte, 20),
 		StateRoot:        make([]byte, 32),
