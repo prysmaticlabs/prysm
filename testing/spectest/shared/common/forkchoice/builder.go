@@ -39,6 +39,7 @@ func NewBuilder(t testing.TB, initialState state.BeaconState, initialBlock inter
 // Tick resets the genesis time to now()-tick and adjusts the slot to the appropriate value.
 func (bb *Builder) Tick(t testing.TB, tick int64) {
 	bb.service.SetGenesisTime(time.Unix(time.Now().Unix()-tick, 0))
+	bb.service.ForkChoicer().SetGenesisTime(uint64(time.Now().Unix() - tick))
 	if tick > bb.lastTick {
 		slot := uint64(tick) / params.BeaconConfig().SecondsPerSlot
 		require.NoError(t, bb.service.NewSlot(context.TODO(), types.Slot(slot)))

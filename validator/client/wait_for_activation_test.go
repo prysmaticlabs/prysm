@@ -415,7 +415,7 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 		client.EXPECT().SubmitValidatorRegistration(
 			gomock.Any(),
 			gomock.Any(),
-		).Times(2).Return(&empty.Empty{}, nil)
+		).Times(1).Return(&empty.Empty{}, nil)
 
 		go func() {
 			// We add the active key into the keymanager and simulate a key refresh.
@@ -510,7 +510,7 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 		client.EXPECT().SubmitValidatorRegistration(
 			gomock.Any(),
 			gomock.Any(),
-		).Times(2).Return(&empty.Empty{}, nil)
+		).Times(1).Return(&empty.Empty{}, nil)
 
 		channel := make(chan [][fieldparams.BLSPubkeyLength]byte)
 		go func() {
@@ -591,7 +591,7 @@ func TestWaitForActivation_RemoteKeymanager(t *testing.T) {
 		client.EXPECT().SubmitValidatorRegistration(
 			gomock.Any(),
 			gomock.Any(),
-		).Times(2).Return(&empty.Empty{}, nil)
+		).Times(1).Return(&empty.Empty{}, nil)
 		client.EXPECT().PrepareBeaconProposer(gomock.Any(), &ethpb.PrepareBeaconProposerRequest{
 			Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
 				{FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9").Bytes(), ValidatorIndex: 2},
@@ -681,7 +681,7 @@ func TestWaitForActivation_RemoteKeymanager(t *testing.T) {
 		client.EXPECT().SubmitValidatorRegistration(
 			gomock.Any(),
 			gomock.Any(),
-		).Times(2).Return(&empty.Empty{}, nil)
+		).Times(1).Return(&empty.Empty{}, nil)
 		client.EXPECT().PrepareBeaconProposer(gomock.Any(), &ethpb.PrepareBeaconProposerRequest{
 			Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
 				{FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9").Bytes(), ValidatorIndex: 2},

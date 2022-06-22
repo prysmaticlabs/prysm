@@ -12,21 +12,36 @@ import (
 )
 
 // SubmitValidatorRegistration signs validator registration object and submits it to the beacon node.
-func SubmitValidatorRegistration(ctx context.Context, validatorClient ethpb.BeaconNodeValidatorClient, signer signingFunc, reg *ethpb.ValidatorRegistrationV1) error {
+func SubmitValidatorRegistration(
+	ctx context.Context,
+	validatorClient ethpb.BeaconNodeValidatorClient,
+	signer signingFunc,
+	regs []*ethpb.ValidatorRegistrationV1,
+) error {
 	ctx, span := trace.StartSpan(ctx, "validator.SubmitBuilderValidatorRegistration")
 	defer span.End()
 
-	sig, err := signValidatorRegistration(ctx, signer, reg)
-	if err != nil {
-		return errors.Wrap(err, "failed to sign builder validator registration obj")
+	if len(regs) == 0 {
+		return nil
 	}
 
-	signedReg := &ethpb.SignedValidatorRegistrationV1{
-		Message:   reg,
-		Signature: sig,
+	signedRegs := make([]*ethpb.SignedValidatorRegistrationV1, len(regs))
+	for i, reg := range regs {
+		sig, err := signValidatorRegistration(ctx, signer, reg)
+		if err != nil {
+			log.WithError(err).Error("failed to sign builder validator registration obj")
+			continue
+		}
+		signedRegs[i] = &ethpb.SignedValidatorRegistrationV1{
+			Message:   reg,
+			Signature: sig,
+		}
 	}
-	if _, err := validatorClient.SubmitValidatorRegistration(ctx, signedReg); err != nil {
-		return errors.Wrap(err, "could not submit signed registration to beacon node")
+
+	if _, err := validatorClient.SubmitValidatorRegistration(ctx, &ethpb.SignedValidatorRegistrationsV1{
+		Messages: signedRegs,
+	}); err != nil {
+		return errors.Wrap(err, "could not submit signed registrations to beacon node")
 	}
 
 	return nil

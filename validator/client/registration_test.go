@@ -18,20 +18,25 @@ func TestSubmitValidatorRegistration(t *testing.T) {
 	defer finish()
 
 	ctx := context.Background()
+	require.NoError(t, nil, SubmitValidatorRegistration(ctx, m.validatorClient, m.signfunc, []*ethpb.ValidatorRegistrationV1{}))
+
 	reg := &ethpb.ValidatorRegistrationV1{
 		FeeRecipient: bytesutil.PadTo([]byte("fee"), 20),
 		GasLimit:     123456,
 		Timestamp:    uint64(time.Now().Unix()),
 		Pubkey:       validatorKey.PublicKey().Marshal(),
 	}
+	regs := []*ethpb.ValidatorRegistrationV1{reg}
 
 	m.validatorClient.EXPECT().
-		SubmitValidatorRegistration(gomock.Any(), &ethpb.SignedValidatorRegistrationV1{
-			Message:   reg,
-			Signature: params.BeaconConfig().ZeroHash[:],
+		SubmitValidatorRegistration(gomock.Any(), &ethpb.SignedValidatorRegistrationsV1{
+			Messages: []*ethpb.SignedValidatorRegistrationV1{
+				{Message: reg,
+					Signature: params.BeaconConfig().ZeroHash[:]},
+			},
 		}).
 		Return(nil, nil)
-	require.NoError(t, nil, SubmitValidatorRegistration(ctx, m.validatorClient, m.signfunc, reg))
+	require.NoError(t, nil, SubmitValidatorRegistration(ctx, m.validatorClient, m.signfunc, regs))
 }
 
 func TestSubmitValidatorRegistration_CantSign(t *testing.T) {
@@ -45,14 +50,17 @@ func TestSubmitValidatorRegistration_CantSign(t *testing.T) {
 		Timestamp:    uint64(time.Now().Unix()),
 		Pubkey:       validatorKey.PublicKey().Marshal(),
 	}
+	regs := []*ethpb.ValidatorRegistrationV1{reg}
 
 	m.validatorClient.EXPECT().
-		SubmitValidatorRegistration(gomock.Any(), &ethpb.SignedValidatorRegistrationV1{
-			Message:   reg,
-			Signature: params.BeaconConfig().ZeroHash[:],
+		SubmitValidatorRegistration(gomock.Any(), &ethpb.SignedValidatorRegistrationsV1{
+			Messages: []*ethpb.SignedValidatorRegistrationV1{
+				{Message: reg,
+					Signature: params.BeaconConfig().ZeroHash[:]},
+			},
 		}).
 		Return(nil, errors.New("could not sign"))
-	require.ErrorContains(t, "could not submit signed registration to beacon node", SubmitValidatorRegistration(ctx, m.validatorClient, m.signfunc, reg))
+	require.ErrorContains(t, "could not sign", SubmitValidatorRegistration(ctx, m.validatorClient, m.signfunc, regs))
 }
 
 func Test_signValidatorRegistration(t *testing.T) {
