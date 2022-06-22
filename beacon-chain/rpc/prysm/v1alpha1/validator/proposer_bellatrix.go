@@ -8,10 +8,12 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/interop"
 	"github.com/prysmaticlabs/prysm/config/params"
+	coreBlock "github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 )
@@ -63,7 +65,7 @@ func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockR
 
 // This function retrieves the payload header given the slot number and the validator index.
 // It's a no-op if the latest head block is not versioned bellatrix.
-func (vs *Server) getPayloadHeader(ctx context.Context, slot types.Slot, idx types.ValidatorIndex) (*ethpb.ExecutionPayloadHeader, error) {
+func (vs *Server) getPayloadHeader(ctx context.Context, slot types.Slot, idx types.ValidatorIndex) (*enginev1.ExecutionPayloadHeader, error) {
 	if err := vs.BlockBuilder.Status(); err != nil {
 		return nil, err
 	}
@@ -90,7 +92,14 @@ func (vs *Server) getPayloadHeader(ctx context.Context, slot types.Slot, idx typ
 }
 
 // This function constructs the builder block given the input altair block and the header. It returns a generic beacon block for signing
-func (vs *Server) buildHeaderBlock(ctx context.Context, b *ethpb.BeaconBlockAltair, h *ethpb.ExecutionPayloadHeader) (*ethpb.GenericBeaconBlock, error) {
+func (vs *Server) buildHeaderBlock(ctx context.Context, b *ethpb.BeaconBlockAltair, h *enginev1.ExecutionPayloadHeader) (*ethpb.GenericBeaconBlock, error) {
+	if b == nil || b.Body == nil {
+		return nil, errors.New("nil block")
+	}
+	if h == nil {
+		return nil, errors.New("nil header")
+	}
+
 	blk := &ethpb.BlindedBeaconBlockBellatrix{
 		Slot:          b.Slot,
 		ProposerIndex: b.ProposerIndex,
@@ -127,6 +136,10 @@ func (vs *Server) buildHeaderBlock(ctx context.Context, b *ethpb.BeaconBlockAlta
 // bellatrix blind block. The output block will contain the full payload. The original header block
 // will be returned the block builder is not configured.
 func (vs *Server) getBuilderBlock(ctx context.Context, b interfaces.SignedBeaconBlock) (interfaces.SignedBeaconBlock, error) {
+	if err := coreBlock.BeaconBlockIsNil(b); err != nil {
+		return nil, err
+	}
+
 	// No-op if the input block is not version blind and bellatrix.
 	if b.Version() != version.BellatrixBlind {
 		return b, nil

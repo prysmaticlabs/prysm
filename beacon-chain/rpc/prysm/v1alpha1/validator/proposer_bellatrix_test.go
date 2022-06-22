@@ -49,7 +49,7 @@ func TestServer_buildHeaderBlock(t *testing.T) {
 	require.NoError(t, err)
 
 	vs := &Server{StateGen: stategen.New(db), BeaconDB: db}
-	h := &ethpb.ExecutionPayloadHeader{
+	h := &v1.ExecutionPayloadHeader{
 		BlockNumber:      123,
 		GasLimit:         456,
 		GasUsed:          789,
@@ -67,6 +67,12 @@ func TestServer_buildHeaderBlock(t *testing.T) {
 	got, err := vs.buildHeaderBlock(ctx, b1.Block, h)
 	require.NoError(t, err)
 	require.DeepEqual(t, h, got.GetBlindedBellatrix().Body.ExecutionPayloadHeader)
+
+	_, err = vs.buildHeaderBlock(ctx, nil, h)
+	require.ErrorContains(t, "nil block", err)
+
+	_, err = vs.buildHeaderBlock(ctx, b1.Block, nil)
+	require.ErrorContains(t, "nil header", err)
 }
 
 func TestServer_getPayloadHeader(t *testing.T) {
@@ -76,7 +82,7 @@ func TestServer_getPayloadHeader(t *testing.T) {
 		mock           *builderTest.MockBuilderService
 		fetcher        *blockchainTest.ChainService
 		err            string
-		returnedHeader *ethpb.ExecutionPayloadHeader
+		returnedHeader *v1.ExecutionPayloadHeader
 	}{
 		{
 			name: "builder is not ready",
@@ -115,7 +121,7 @@ func TestServer_getPayloadHeader(t *testing.T) {
 			mock: &builderTest.MockBuilderService{
 				Bid: &ethpb.SignedBuilderBid{
 					Message: &ethpb.BuilderBid{
-						Header: &ethpb.ExecutionPayloadHeader{
+						Header: &v1.ExecutionPayloadHeader{
 							BlockNumber: 123,
 						},
 					},
@@ -129,7 +135,7 @@ func TestServer_getPayloadHeader(t *testing.T) {
 					return wb
 				}(),
 			},
-			returnedHeader: &ethpb.ExecutionPayloadHeader{
+			returnedHeader: &v1.ExecutionPayloadHeader{
 				BlockNumber: 123,
 			},
 		},
@@ -155,6 +161,11 @@ func TestServer_getBuilderBlock(t *testing.T) {
 		err         string
 		returnedBlk interfaces.SignedBeaconBlock
 	}{
+		{
+			name: "nil block",
+			blk:  nil,
+			err:  "signed beacon block can't be nil",
+		},
 		{
 			name: "old block version",
 			blk: func() interfaces.SignedBeaconBlock {
