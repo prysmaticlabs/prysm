@@ -145,6 +145,21 @@ func (s *Store) insert(ctx context.Context,
 		}
 	} else {
 		parent.children = append(parent.children, n)
+		// Apply proposer boost
+		timeNow := uint64(time.Now().Unix())
+		if timeNow < s.genesisTime {
+			return nil
+		}
+		secondsIntoSlot := (timeNow - s.genesisTime) % params.BeaconConfig().SecondsPerSlot
+		currentSlot := slots.CurrentSlot(s.genesisTime)
+		boostTreshold := params.BeaconConfig().SecondsPerSlot / params.BeaconConfig().IntervalsPerSlot
+		if currentSlot == slot && secondsIntoSlot < boostTreshold {
+			s.proposerBoostLock.Lock()
+			s.proposerBoostRoot = root
+			s.proposerBoostLock.Unlock()
+		}
+
+		// Update best descendants
 		if err := s.treeRootNode.updateBestDescendant(ctx,
 			s.justifiedCheckpoint.Epoch, s.finalizedCheckpoint.Epoch); err != nil {
 			return err
@@ -154,19 +169,6 @@ func (s *Store) insert(ctx context.Context,
 	processedBlockCount.Inc()
 	nodeCount.Set(float64(len(s.nodeByRoot)))
 
-	// Apply proposer boost
-	timeNow := uint64(time.Now().Unix())
-	if timeNow < s.genesisTime {
-		return nil
-	}
-	secondsIntoSlot := (timeNow - s.genesisTime) % params.BeaconConfig().SecondsPerSlot
-	currentSlot := slots.CurrentSlot(s.genesisTime)
-	boostTreshold := params.BeaconConfig().SecondsPerSlot / params.BeaconConfig().IntervalsPerSlot
-	if currentSlot == slot && secondsIntoSlot < boostTreshold {
-		s.proposerBoostLock.Lock()
-		s.proposerBoostRoot = root
-		s.proposerBoostLock.Unlock()
-	}
 	return nil
 }
 

@@ -487,17 +487,6 @@ func (s *Store) insert(ctx context.Context,
 	s.payloadIndices[payloadHash] = index
 	s.nodes = append(s.nodes, n)
 
-	// Update parent with the best child and descendant only if it's available.
-	if n.parent != NonExistentNode {
-		if err := s.updateBestChildAndDescendant(parentIndex, index); err != nil {
-			return err
-		}
-	}
-
-	// Update metrics.
-	processedBlockCount.Inc()
-	nodeCount.Set(float64(len(s.nodes)))
-
 	// Apply proposer boost
 	timeNow := uint64(time.Now().Unix())
 	if timeNow < s.genesisTime {
@@ -511,6 +500,18 @@ func (s *Store) insert(ctx context.Context,
 		s.proposerBoostRoot = root
 		s.proposerBoostLock.Unlock()
 	}
+
+	// Update parent with the best child and descendant only if it's available.
+	if n.parent != NonExistentNode {
+		if err := s.updateBestChildAndDescendant(parentIndex, index); err != nil {
+			return err
+		}
+	}
+
+	// Update metrics.
+	processedBlockCount.Inc()
+	nodeCount.Set(float64(len(s.nodes)))
+
 	return nil
 }
 
