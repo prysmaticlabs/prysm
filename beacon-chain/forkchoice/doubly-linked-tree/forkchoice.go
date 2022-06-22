@@ -584,8 +584,8 @@ func (f *ForkChoice) FinalizedPayloadBlockHash() [32]byte {
 	f.store.nodesLock.RLock()
 	defer f.store.nodesLock.RUnlock()
 	root := f.FinalizedCheckpoint().Root
-	node := f.store.nodeByRoot[root]
-	if node == nil {
+	node, ok := f.store.nodeByRoot[root]
+	if !ok || node == nil {
 		// This should not happen
 		return [32]byte{}
 	}
@@ -597,8 +597,8 @@ func (f *ForkChoice) JustifiedPayloadBlockHash() [32]byte {
 	f.store.nodesLock.RLock()
 	defer f.store.nodesLock.RUnlock()
 	root := f.JustifiedCheckpoint().Root
-	node := f.store.nodeByRoot[root]
-	if node == nil {
+	node, ok := f.store.nodeByRoot[root]
+	if !ok || node == nil {
 		// This should not happen
 		return [32]byte{}
 	}

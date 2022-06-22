@@ -12,8 +12,8 @@ import (
 // the cache keeps in memory (2 epochs worth of blocks) and saves them to DB when it hits this limit.
 func (s *Service) saveInitSyncBlock(ctx context.Context, r [32]byte, b interfaces.SignedBeaconBlock) error {
 	s.initSyncBlocksLock.Lock()
-	numBlocks := len(s.initSyncBlocks)
 	s.initSyncBlocks[r] = b
+	numBlocks := len(s.initSyncBlocks)
 	s.initSyncBlocksLock.Unlock()
 	if uint64(numBlocks) > initialSyncBlockCacheSize {
 		if err := s.cfg.BeaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {

@@ -32,7 +32,7 @@ type Store struct {
 	payloadIndices             map[[fieldparams.RootLength]byte]uint64 // the payload hash of block node and the index in the list
 	slashedIndices             map[types.ValidatorIndex]bool           // The list of equivocating validators
 	originRoot                 [fieldparams.RootLength]byte            // The genesis block root
-	lastHeadRoot               [fieldparams.RootLength]byte            // The genesis block root
+	lastHeadRoot               [fieldparams.RootLength]byte            // The last cached head block root
 	nodesLock                  sync.RWMutex
 	proposerBoostLock          sync.RWMutex
 	checkpointsLock            sync.RWMutex

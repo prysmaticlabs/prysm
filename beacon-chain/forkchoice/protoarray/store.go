@@ -1009,6 +1009,10 @@ func (f *ForkChoice) FinalizedPayloadBlockHash() [32]byte {
 	defer f.store.nodesLock.RUnlock()
 	root := f.FinalizedCheckpoint().Root
 	idx := f.store.nodesIndices[root]
+	if idx >= uint64(len(f.store.nodes)) {
+		// This should not happen
+		return [32]byte{}
+	}
 	node := f.store.nodes[idx]
 	return node.payloadHash
 }
@@ -1019,6 +1023,10 @@ func (f *ForkChoice) JustifiedPayloadBlockHash() [32]byte {
 	defer f.store.nodesLock.RUnlock()
 	root := f.JustifiedCheckpoint().Root
 	idx := f.store.nodesIndices[root]
+	if idx >= uint64(len(f.store.nodes)) {
+		// This should not happen
+		return [32]byte{}
+	}
 	node := f.store.nodes[idx]
 	return node.payloadHash
 }
