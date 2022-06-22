@@ -17,7 +17,7 @@ var log = logrus.WithField("prefix", "cmd-powchain")
 
 // FlagOptions for powchain service flag configurations.
 func FlagOptions(c *cli.Context) ([]powchain.Option, error) {
-	endpoints := parsePowchainEndpoints(c)
+	endpoints := parsePowchainEndpoint(c)
 	jwtSecret, err := parseJWTSecretFromFile(c)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not read JWT secret file for authenticating execution API")
@@ -63,8 +63,8 @@ func parseJWTSecretFromFile(c *cli.Context) ([]byte, error) {
 	return secret, nil
 }
 
-func parsePowchainEndpoints(c *cli.Context) []string {
-	if c.String(flags.HTTPWeb3ProviderFlag.Name) == "" && len(c.StringSlice(flags.FallbackWeb3ProviderFlag.Name)) == 0 {
+func parsePowchainEndpoint(c *cli.Context) string {
+	if c.String(flags.HTTPWeb3ProviderFlag.Name) == "" {
 		log.Error(
 			"No ETH1 node specified to run with the beacon node. " +
 				"Please consider running your own Ethereum proof-of-work node for better uptime, " +
@@ -77,7 +77,5 @@ func parsePowchainEndpoints(c *cli.Context) []string {
 				"validator will be affected and the beacon node will not be able to initialize the genesis state",
 		)
 	}
-	endpoints := []string{c.String(flags.HTTPWeb3ProviderFlag.Name)}
-	endpoints = append(endpoints, c.StringSlice(flags.FallbackWeb3ProviderFlag.Name)...)
-	return endpoints
+	return c.String(flags.HTTPWeb3ProviderFlag.Name)
 }

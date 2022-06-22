@@ -49,12 +49,10 @@ type CommonStats struct {
 // to be present with their zero-value when not supported by a client.
 type BeaconNodeStats struct {
 	// TODO(#8850): add support for this after slasher refactor is merged
-	SlasherActive              bool  `json:"slasher_active"`
-	SyncEth1FallbackConfigured bool  `json:"sync_eth1_fallback_configured"`
-	SyncEth1FallbackConnected  bool  `json:"sync_eth1_fallback_connected"`
-	SyncEth1Connected          bool  `json:"sync_eth1_connected"`
-	SyncEth2Synced             bool  `json:"sync_eth2_synced"`
-	DiskBeaconchainBytesTotal  int64 `json:"disk_beaconchain_bytes_total"`
+	SlasherActive             bool  `json:"slasher_active"`
+	SyncEth1Connected         bool  `json:"sync_eth1_connected"`
+	SyncEth2Synced            bool  `json:"sync_eth2_synced"`
+	DiskBeaconchainBytesTotal int64 `json:"disk_beaconchain_bytes_total"`
 	// N/A -- would require significant network code changes at this time
 	NetworkLibp2pBytesTotalReceive int64 `json:"network_libp2p_bytes_total_receive"`
 	// N/A -- would require significant network code changes at this time

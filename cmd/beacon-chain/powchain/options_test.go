@@ -19,16 +19,10 @@ func TestPowchainCmd(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	set.String(flags.HTTPWeb3ProviderFlag.Name, "primary", "")
-	fallback := cli.StringSlice{}
-	err := fallback.Set("fallback1")
-	require.NoError(t, err)
-	err = fallback.Set("fallback2")
-	require.NoError(t, err)
-	set.Var(&fallback, flags.FallbackWeb3ProviderFlag.Name, "")
 	ctx := cli.NewContext(&app, set, nil)
 
 	endpoints := parsePowchainEndpoints(ctx)
-	assert.DeepEqual(t, []string{"primary", "fallback1", "fallback2"}, endpoints)
+	assert.DeepEqual(t, []string{"primary"}, endpoints)
 }
 
 func Test_parseJWTSecretFromFile(t *testing.T) {
@@ -102,8 +96,6 @@ func TestPowchainPreregistration_EmptyWeb3Provider(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	set.String(flags.HTTPWeb3ProviderFlag.Name, "", "")
-	fallback := cli.StringSlice{}
-	set.Var(&fallback, flags.FallbackWeb3ProviderFlag.Name, "")
 	ctx := cli.NewContext(&app, set, nil)
 	parsePowchainEndpoints(ctx)
 	assert.LogsContain(t, hook, "No ETH1 node specified to run with the beacon node")
