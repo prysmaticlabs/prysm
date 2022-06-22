@@ -94,25 +94,25 @@ type OptimisticModeFetcher interface {
 // FinalizedCheckpt returns the latest finalized checkpoint from chain store.
 func (s *Service) FinalizedCheckpt() *ethpb.Checkpoint {
 	cp := s.ForkChoicer().FinalizedCheckpoint()
-	return &ethpb.Checkpoint{Epoch: cp.Epoch, Root: cp.Root[:]}
+	return &ethpb.Checkpoint{Epoch: cp.Epoch, Root: bytesutil.SafeCopyBytes(cp.Root[:])}
 }
 
 // PreviousJustifiedCheckpt returns the current justified checkpoint from chain store.
 func (s *Service) PreviousJustifiedCheckpt() *ethpb.Checkpoint {
 	cp := s.ForkChoicer().PreviousJustifiedCheckpoint()
-	return &ethpb.Checkpoint{Epoch: cp.Epoch, Root: cp.Root[:]}
+	return &ethpb.Checkpoint{Epoch: cp.Epoch, Root: bytesutil.SafeCopyBytes(cp.Root[:])}
 }
 
 // CurrentJustifiedCheckpt returns the current justified checkpoint from chain store.
 func (s *Service) CurrentJustifiedCheckpt() *ethpb.Checkpoint {
 	cp := s.ForkChoicer().JustifiedCheckpoint()
-	return &ethpb.Checkpoint{Epoch: cp.Epoch, Root: cp.Root[:]}
+	return &ethpb.Checkpoint{Epoch: cp.Epoch, Root: bytesutil.SafeCopyBytes(cp.Root[:])}
 }
 
 // BestJustifiedCheckpt returns the best justified checkpoint from store.
 func (s *Service) BestJustifiedCheckpt() *ethpb.Checkpoint {
 	cp := s.ForkChoicer().BestJustifiedCheckpoint()
-	return &ethpb.Checkpoint{Epoch: cp.Epoch, Root: cp.Root[:]}
+	return &ethpb.Checkpoint{Epoch: cp.Epoch, Root: bytesutil.SafeCopyBytes(cp.Root[:])}
 }
 
 // HeadSlot returns the slot of the head of the chain.
