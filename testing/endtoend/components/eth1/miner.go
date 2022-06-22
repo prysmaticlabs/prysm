@@ -133,7 +133,7 @@ func (m *Miner) Start(ctx context.Context) error {
 		"--mine",
 		fmt.Sprintf("--unlock=%s", EthAddress),
 		"--allow-insecure-unlock",
-		"--txpool.locals=0x878705ba3f8bc32fcf7f4caa1a35e72af65cf766",
+		fmt.Sprintf("--txpool.locals=%s", EthAddress),
 		fmt.Sprintf("--password=%s", eth1Path+"/keystore/"+minerPasswordFile),
 	}
 
