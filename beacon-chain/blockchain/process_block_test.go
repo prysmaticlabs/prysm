@@ -20,7 +20,6 @@ import (
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
-	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -247,29 +246,6 @@ func TestStore_OnBlock_DoublyLinkedTree(t *testing.T) {
 			assert.ErrorContains(t, tt.wantErrString, err)
 		})
 	}
-}
-
-func TestStore_OnBlock_ProposerBoostEarly(t *testing.T) {
-	ctx := context.Background()
-
-	beaconDB := testDB.SetupDB(t)
-	fcs := doublylinkedtree.New()
-	opts := []Option{
-		WithStateGen(stategen.New(beaconDB)),
-		WithForkChoiceStore(fcs),
-	}
-
-	service, err := NewService(ctx, opts...)
-	require.NoError(t, err)
-	args := &forkchoicetypes.ProposerBoostRootArgs{
-		BlockRoot:       [32]byte{'A'},
-		BlockSlot:       types.Slot(0),
-		CurrentSlot:     0,
-		SecondsIntoSlot: 0,
-	}
-	require.NoError(t, service.cfg.ForkChoiceStore.BoostProposerRoot(ctx, args))
-	_, err = service.cfg.ForkChoiceStore.Head(ctx, []uint64{})
-	require.ErrorContains(t, "could not apply proposer boost score: invalid proposer boost root", err)
 }
 
 func TestStore_OnBlockBatch_ProtoArray(t *testing.T) {
@@ -1436,7 +1412,7 @@ func TestVerifyBlkDescendant(t *testing.T) {
 		WithForkChoiceStore(fcs),
 	}
 	b := util.NewBeaconBlock()
-	b.Block.Slot = 1
+	b.Block.Slot = 32
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
@@ -1444,7 +1420,7 @@ func TestVerifyBlkDescendant(t *testing.T) {
 	require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
 
 	b1 := util.NewBeaconBlock()
-	b1.Block.Slot = 1
+	b1.Block.Slot = 32
 	b1.Block.Body.Graffiti = bytesutil.PadTo([]byte{'a'}, 32)
 	r1, err := b1.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -1497,7 +1473,7 @@ func TestVerifyBlkDescendant(t *testing.T) {
 	for _, tt := range tests {
 		service, err := NewService(ctx, opts...)
 		require.NoError(t, err)
-		service.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{Root: tt.args.finalizedRoot[:]}, [32]byte{})
+		service.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{Root: tt.args.finalizedRoot[:], Epoch: 1}, [32]byte{})
 		err = service.VerifyFinalizedBlkDescendant(ctx, tt.args.parentRoot)
 		if tt.wantedErr != "" {
 			assert.ErrorContains(t, tt.wantedErr, err)
@@ -1867,7 +1843,7 @@ func Test_getStateVersionAndPayload(t *testing.T) {
 		name    string
 		st      state.BeaconState
 		version int
-		header  *ethpb.ExecutionPayloadHeader
+		header  *enginev1.ExecutionPayloadHeader
 	}{
 		{
 			name: "phase 0 state",
@@ -1876,7 +1852,7 @@ func Test_getStateVersionAndPayload(t *testing.T) {
 				return s
 			}(),
 			version: version.Phase0,
-			header:  (*ethpb.ExecutionPayloadHeader)(nil),
+			header:  (*enginev1.ExecutionPayloadHeader)(nil),
 		},
 		{
 			name: "altair state",
@@ -1885,19 +1861,19 @@ func Test_getStateVersionAndPayload(t *testing.T) {
 				return s
 			}(),
 			version: version.Altair,
-			header:  (*ethpb.ExecutionPayloadHeader)(nil),
+			header:  (*enginev1.ExecutionPayloadHeader)(nil),
 		},
 		{
 			name: "bellatrix state",
 			st: func() state.BeaconState {
 				s, _ := util.DeterministicGenesisStateBellatrix(t, 1)
-				require.NoError(t, s.SetLatestExecutionPayloadHeader(&ethpb.ExecutionPayloadHeader{
+				require.NoError(t, s.SetLatestExecutionPayloadHeader(&enginev1.ExecutionPayloadHeader{
 					BlockNumber: 1,
 				}))
 				return s
 			}(),
 			version: version.Bellatrix,
-			header: &ethpb.ExecutionPayloadHeader{
+			header: &enginev1.ExecutionPayloadHeader{
 				BlockNumber: 1,
 			},
 		},
@@ -1934,7 +1910,7 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 	tests := []struct {
 		name         string
 		stateVersion int
-		header       *ethpb.ExecutionPayloadHeader
+		header       *enginev1.ExecutionPayloadHeader
 		payload      *enginev1.ExecutionPayload
 		errString    string
 	}{
@@ -1989,7 +1965,7 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 			payload: &enginev1.ExecutionPayload{
 				ParentHash: bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength),
 			},
-			header: &ethpb.ExecutionPayloadHeader{
+			header: &enginev1.ExecutionPayloadHeader{
 				ParentHash:       make([]byte, fieldparams.RootLength),
 				FeeRecipient:     make([]byte, fieldparams.FeeRecipientLength),
 				StateRoot:        make([]byte, fieldparams.RootLength),
@@ -2007,7 +1983,7 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 			payload: &enginev1.ExecutionPayload{
 				ParentHash: bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength),
 			},
-			header: &ethpb.ExecutionPayloadHeader{
+			header: &enginev1.ExecutionPayloadHeader{
 				BlockNumber: 1,
 			},
 		},

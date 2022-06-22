@@ -13,7 +13,7 @@ import (
 func TestListKeystores_JSONisEqual(t *testing.T) {
 	middlewareResponse := &listKeystoresResponseJson{
 		Keystores: []*keystoreJson{
-			&keystoreJson{
+			{
 				ValidatingPubkey: "0x0",
 				DerivationPath:   "m/44'/60'/0'/0/0",
 			},
@@ -22,7 +22,7 @@ func TestListKeystores_JSONisEqual(t *testing.T) {
 
 	protoResponse := &service.ListKeystoresResponse{
 		Data: []*service.ListKeystoresResponse_Keystore{
-			&service.ListKeystoresResponse_Keystore{
+			{
 				ValidatingPubkey: make([]byte, fieldparams.BLSPubkeyLength),
 				DerivationPath:   "m/44'/60'/0'/0/0",
 			},
@@ -53,7 +53,7 @@ func TestImportKeystores_JSONisEqual(t *testing.T) {
 
 	importKeystoresResponse := &importKeystoresResponseJson{
 		Statuses: []*statusJson{
-			&statusJson{
+			{
 				Status:  "Error",
 				Message: "a",
 			},
@@ -62,7 +62,7 @@ func TestImportKeystores_JSONisEqual(t *testing.T) {
 
 	protoImportKeystoresResponse := &service.ImportKeystoresResponse{
 		Data: []*service.ImportedKeystoreStatus{
-			&service.ImportedKeystoreStatus{
+			{
 				Status:  service.ImportedKeystoreStatus_ERROR,
 				Message: "a",
 			},
@@ -82,7 +82,7 @@ func TestDeleteKeystores_JSONisEqual(t *testing.T) {
 	deleteKeystoresRequest := &deleteKeystoresRequestJson{}
 
 	protoDeleteRequest := &service.DeleteKeystoresRequest{
-		Pubkeys: [][]byte{[]byte{}},
+		Pubkeys: [][]byte{{}},
 	}
 
 	requestResp, err := areJsonPropertyNamesEqual(deleteKeystoresRequest, protoDeleteRequest)
@@ -91,7 +91,7 @@ func TestDeleteKeystores_JSONisEqual(t *testing.T) {
 
 	deleteKeystoresResponse := &deleteKeystoresResponseJson{
 		Statuses: []*statusJson{
-			&statusJson{
+			{
 				Status:  "Error",
 				Message: "a",
 			},
@@ -100,7 +100,7 @@ func TestDeleteKeystores_JSONisEqual(t *testing.T) {
 	}
 	protoDeleteResponse := &service.DeleteKeystoresResponse{
 		Data: []*service.DeletedKeystoreStatus{
-			&service.DeletedKeystoreStatus{
+			{
 				Status:  service.DeletedKeystoreStatus_ERROR,
 				Message: "a",
 			},
@@ -121,7 +121,7 @@ func TestDeleteKeystores_JSONisEqual(t *testing.T) {
 func TestListRemoteKeys_JSONisEqual(t *testing.T) {
 	middlewareResponse := &listRemoteKeysResponseJson{
 		Keystores: []*remoteKeysListJson{
-			&remoteKeysListJson{
+			{
 				Pubkey:   "0x0",
 				Url:      "http://localhost:8080",
 				Readonly: true,
@@ -131,7 +131,7 @@ func TestListRemoteKeys_JSONisEqual(t *testing.T) {
 
 	protoResponse := &service.ListRemoteKeysResponse{
 		Data: []*service.ListRemoteKeysResponse_Keystore{
-			&service.ListRemoteKeysResponse_Keystore{
+			{
 				Pubkey:   make([]byte, fieldparams.BLSPubkeyLength),
 				Url:      "http://localhost:8080",
 				Readonly: true,
@@ -153,7 +153,7 @@ func TestImportRemoteKeys_JSONisEqual(t *testing.T) {
 
 	protoImportRequest := &service.ImportRemoteKeysRequest{
 		RemoteKeys: []*service.ImportRemoteKeysRequest_Keystore{
-			&service.ImportRemoteKeysRequest_Keystore{
+			{
 				Pubkey: make([]byte, fieldparams.BLSPubkeyLength),
 				Url:    "http://localhost:8080",
 			},
@@ -166,7 +166,7 @@ func TestImportRemoteKeys_JSONisEqual(t *testing.T) {
 
 	importKeystoresResponse := &importRemoteKeysResponseJson{
 		Statuses: []*statusJson{
-			&statusJson{
+			{
 				Status:  "Error",
 				Message: "a",
 			},
@@ -175,7 +175,7 @@ func TestImportRemoteKeys_JSONisEqual(t *testing.T) {
 
 	protoImportKeystoresResponse := &service.ImportRemoteKeysResponse{
 		Data: []*service.ImportedRemoteKeysStatus{
-			&service.ImportedRemoteKeysStatus{
+			{
 				Status:  service.ImportedRemoteKeysStatus_ERROR,
 				Message: "a",
 			},
@@ -195,7 +195,7 @@ func TestDeleteRemoteKeys_JSONisEqual(t *testing.T) {
 	deleteKeystoresRequest := &deleteRemoteKeysRequestJson{}
 
 	protoDeleteRequest := &service.DeleteRemoteKeysRequest{
-		Pubkeys: [][]byte{[]byte{}},
+		Pubkeys: [][]byte{{}},
 	}
 
 	requestResp, err := areJsonPropertyNamesEqual(deleteKeystoresRequest, protoDeleteRequest)
@@ -204,7 +204,7 @@ func TestDeleteRemoteKeys_JSONisEqual(t *testing.T) {
 
 	deleteKeystoresResponse := &deleteRemoteKeysResponseJson{
 		Statuses: []*statusJson{
-			&statusJson{
+			{
 				Status:  "Error",
 				Message: "a",
 			},
@@ -212,7 +212,7 @@ func TestDeleteRemoteKeys_JSONisEqual(t *testing.T) {
 	}
 	protoDeleteResponse := &service.DeleteRemoteKeysResponse{
 		Data: []*service.DeletedRemoteKeysStatus{
-			&service.DeletedRemoteKeysStatus{
+			{
 				Status:  service.DeletedRemoteKeysStatus_ERROR,
 				Message: "a",
 			},

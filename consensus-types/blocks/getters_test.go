@@ -295,7 +295,7 @@ func Test_BeaconBlockBody_ExecutionPayload(t *testing.T) {
 }
 
 func Test_BeaconBlockBody_ExecutionPayloadHeader(t *testing.T) {
-	eph := &eth.ExecutionPayloadHeader{}
+	eph := &enginev1.ExecutionPayloadHeader{}
 	bb := &BeaconBlockBody{version: version.BellatrixBlind, executionPayloadHeader: eph}
 	result, err := bb.ExecutionPayloadHeader()
 	require.NoError(t, err)
