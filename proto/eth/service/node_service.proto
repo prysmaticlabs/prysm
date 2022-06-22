@@ -33,33 +33,45 @@ option php_namespace = "Ethereum\\Eth\\Service";
 // The beacon chain node API is a set of endpoints to query node information.
 service BeaconNode {
   // GetIdentity retrieves data about the node's network presence.
+  //
+  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Node/getNetworkIdentity
   rpc GetIdentity(google.protobuf.Empty) returns (v1.IdentityResponse) {
     option (google.api.http) = {get: "/internal/eth/v1/node/identity"};
   }
 
   // ListPeers retrieves data about the node's network peers.
+  //
+  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Node/getPeers
   rpc ListPeers(v1.PeersRequest) returns (v1.PeersResponse) {
     option (google.api.http) = {get: "/internal/eth/v1/node/peers"};
   }
 
   // GetPeer retrieves data about the given peer.
+  //
+  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Node/getPeer
   rpc GetPeer(v1.PeerRequest) returns (v1.PeerResponse) {
     option (google.api.http) = {get: "/internal/eth/v1/node/peers/{peer_id}"};
   }
 
   // PeerCount retrieves number of known peers.
+  //
+  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Node/getPeerCount
   rpc PeerCount(google.protobuf.Empty) returns (v1.PeerCountResponse) {
     option (google.api.http) = {get: "/internal/eth/v1/node/peer_count"};
   }
 
   // GetSyncStatus requests the beacon node to describe if it's currently syncing or not, and
   // if it is, what block it is up to.
+  //
+  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Node/getSyncingStatus
   rpc GetSyncStatus(google.protobuf.Empty) returns (v1.SyncingResponse) {
     option (google.api.http) = {get: "/internal/eth/v1/node/syncing"};
   }
 
   // GetVersion requests that the beacon node identify information about its implementation in a
   // format similar to a HTTP User-Agent field.
+  //
+  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Node/getNodeVersion
   rpc GetVersion(google.protobuf.Empty) returns (v1.VersionResponse) {
     option (google.api.http) = {get: "/internal/eth/v1/node/version"};
   }
@@ -72,6 +84,8 @@ service BeaconNode {
   //      description: Node is syncing but can serve incomplete data
   //    "503":
   //      description: Node not initialized or having issues
+  //
+  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Node/getHealth
   rpc GetHealth(google.protobuf.Empty) returns (google.protobuf.Empty) {
     option (google.api.http) = {get: "/internal/eth/v1/node/health"};
   }

@@ -891,7 +891,7 @@ func request_BeaconNodeValidator_StreamBlocksAltair_0(ctx context.Context, marsh
 }
 
 func request_BeaconNodeValidator_SubmitValidatorRegistration_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconNodeValidatorClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq SignedValidatorRegistrationV1
+	var protoReq SignedValidatorRegistrationsV1
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -908,7 +908,7 @@ func request_BeaconNodeValidator_SubmitValidatorRegistration_0(ctx context.Conte
 }
 
 func local_request_BeaconNodeValidator_SubmitValidatorRegistration_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconNodeValidatorServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq SignedValidatorRegistrationV1
+	var protoReq SignedValidatorRegistrationsV1
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)

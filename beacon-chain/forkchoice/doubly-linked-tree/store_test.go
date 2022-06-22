@@ -171,7 +171,8 @@ func TestStore_Prune_LessThanThreshold(t *testing.T) {
 
 	// Finalized root has depth 99 so everything before it should be pruned,
 	// but PruneThreshold is at 100 so nothing will be pruned.
-	require.NoError(t, s.prune(context.Background(), indexToHash(99)))
+	s.finalizedCheckpoint.Root = indexToHash(99)
+	require.NoError(t, s.prune(context.Background()))
 	assert.Equal(t, 100, len(s.nodeByRoot), "Incorrect nodes count")
 }
 
@@ -193,7 +194,8 @@ func TestStore_Prune_MoreThanThreshold(t *testing.T) {
 	s.pruneThreshold = 0
 
 	// Finalized root is at index 99 so everything before 99 should be pruned.
-	require.NoError(t, s.prune(context.Background(), indexToHash(99)))
+	s.finalizedCheckpoint.Root = indexToHash(99)
+	require.NoError(t, s.prune(context.Background()))
 	assert.Equal(t, 1, len(s.nodeByRoot), "Incorrect nodes count")
 }
 
@@ -215,11 +217,13 @@ func TestStore_Prune_MoreThanOnce(t *testing.T) {
 	s.pruneThreshold = 0
 
 	// Finalized root is at index 11 so everything before 11 should be pruned.
-	require.NoError(t, s.prune(context.Background(), indexToHash(10)))
+	s.finalizedCheckpoint.Root = indexToHash(10)
+	require.NoError(t, s.prune(context.Background()))
 	assert.Equal(t, 90, len(s.nodeByRoot), "Incorrect nodes count")
 
 	// One more time.
-	require.NoError(t, s.prune(context.Background(), indexToHash(20)))
+	s.finalizedCheckpoint.Root = indexToHash(20)
+	require.NoError(t, s.prune(context.Background()))
 	assert.Equal(t, 80, len(s.nodeByRoot), "Incorrect nodes count")
 }
 
@@ -242,7 +246,8 @@ func TestStore_Prune_NoDanglingBranch(t *testing.T) {
 	f.store.pruneThreshold = 0
 
 	s := f.store
-	require.NoError(t, s.prune(context.Background(), indexToHash(1)))
+	s.finalizedCheckpoint.Root = indexToHash(1)
+	require.NoError(t, s.prune(context.Background()))
 	require.Equal(t, len(s.nodeByRoot), 1)
 }
 
@@ -324,7 +329,8 @@ func TestStore_PruneMapsNodes(t *testing.T) {
 
 	s := f.store
 	s.pruneThreshold = 0
-	require.NoError(t, s.prune(context.Background(), indexToHash(uint64(1))))
+	s.finalizedCheckpoint.Root = indexToHash(1)
+	require.NoError(t, s.prune(context.Background()))
 	require.Equal(t, len(s.nodeByRoot), 1)
 
 }
