@@ -130,7 +130,6 @@ func (s *Service) HeadSlot() types.Slot {
 // HeadRoot returns the root of the head of the chain.
 func (s *Service) HeadRoot(ctx context.Context) ([]byte, error) {
 	s.headLock.RLock()
-	s.headRoot()
 	defer s.headLock.RUnlock()
 
 	if s.head != nil && s.head.root != params.BeaconConfig().ZeroHash {
