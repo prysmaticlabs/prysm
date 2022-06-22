@@ -213,10 +213,7 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 	for _, pub := range pubs {
 		ValidatorHexPubKeys = append(ValidatorHexPubKeys, hexutil.Encode(pub.Marshal()))
 	}
-	proposerSettingsPathPath, err := createProposerSettingsPath(ValidatorHexPubKeys)
-	if err != nil {
-		return err
-	}
+
 	args := []string{
 		fmt.Sprintf("--%s=%s/eth2-val-%d", cmdshared.DataDirFlag.Name, e2e.TestParams.TestPath, index),
 		fmt.Sprintf("--%s=%s", cmdshared.LogFileName.Name, file.Name()),
@@ -238,15 +235,7 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 		args = append(args, fmt.Sprintf("--%s=http://localhost:%d", flags.Web3SignerURLFlag.Name, Web3RemoteSignerPort))
 		// Write the pubkeys as comma seperated hex strings with 0x prefix.
 		// See: https://docs.teku.consensys.net/en/latest/HowTo/External-Signer/Use-External-Signer/
-		_, pubs, err := interop.DeterministicallyGenerateKeys(uint64(offset), uint64(validatorNum))
-		if err != nil {
-			return err
-		}
-		var hexPubs []string
-		for _, pub := range pubs {
-			hexPubs = append(hexPubs, hexutil.Encode(pub.Marshal()))
-		}
-		args = append(args, fmt.Sprintf("--%s=%s", flags.Web3SignerPublicValidatorKeysFlag.Name, strings.Join(hexPubs, ",")))
+		args = append(args, fmt.Sprintf("--%s=%s", flags.Web3SignerPublicValidatorKeysFlag.Name, strings.Join(ValidatorHexPubKeys, ",")))
 	} else {
 		// When not using remote key signer, use interop keys.
 		args = append(args,
@@ -257,6 +246,10 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 	//TODO: web3signer does not support validator registration signing currently, move this when support is there.
 	//TODO: current version of prysmsh still uses wrong flag name.
 	if !v.config.UsePrysmShValidator && !v.config.UseWeb3RemoteSigner {
+		proposerSettingsPathPath, err := createProposerSettingsPath(ValidatorHexPubKeys)
+		if err != nil {
+			return err
+		}
 		args = append(args, fmt.Sprintf("--%s=%s", flags.ProposerSettingsFlag.Name, proposerSettingsPathPath))
 	}
 	args = append(args, config.ValidatorFlags...)
