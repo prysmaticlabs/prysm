@@ -426,6 +426,7 @@ func TestServer_GetChainHead_NoGenesis(t *testing.T) {
 				FinalizedCheckPoint:         s.FinalizedCheckpoint(),
 				CurrentJustifiedCheckPoint:  s.CurrentJustifiedCheckpoint(),
 				PreviousJustifiedCheckPoint: s.PreviousJustifiedCheckpoint()},
+			OptimisticModeFetcher: &chainMock.ChainService{},
 		}
 		_, err = bs.GetChainHead(context.Background(), nil)
 		require.ErrorContains(t, "Could not get genesis block", err)
@@ -461,6 +462,7 @@ func TestServer_GetChainHead_NoFinalizedBlock(t *testing.T) {
 			FinalizedCheckPoint:         s.FinalizedCheckpoint(),
 			CurrentJustifiedCheckPoint:  s.CurrentJustifiedCheckpoint(),
 			PreviousJustifiedCheckPoint: s.PreviousJustifiedCheckpoint()},
+		OptimisticModeFetcher: &chainMock.ChainService{},
 	}
 
 	_, err = bs.GetChainHead(context.Background(), nil)
@@ -469,7 +471,8 @@ func TestServer_GetChainHead_NoFinalizedBlock(t *testing.T) {
 
 func TestServer_GetChainHead_NoHeadBlock(t *testing.T) {
 	bs := &Server{
-		HeadFetcher: &chainMock.ChainService{Block: nil},
+		HeadFetcher:           &chainMock.ChainService{Block: nil},
+		OptimisticModeFetcher: &chainMock.ChainService{},
 	}
 	_, err := bs.GetChainHead(context.Background(), nil)
 	assert.ErrorContains(t, "Head block of chain was nil", err)
@@ -531,8 +534,9 @@ func TestServer_GetChainHead(t *testing.T) {
 	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)
 	bs := &Server{
-		BeaconDB:    db,
-		HeadFetcher: &chainMock.ChainService{Block: wsb, State: s},
+		BeaconDB:              db,
+		HeadFetcher:           &chainMock.ChainService{Block: wsb, State: s},
+		OptimisticModeFetcher: &chainMock.ChainService{},
 		FinalizationFetcher: &chainMock.ChainService{
 			FinalizedCheckPoint:         s.FinalizedCheckpoint(),
 			CurrentJustifiedCheckPoint:  s.CurrentJustifiedCheckpoint(),
@@ -550,6 +554,7 @@ func TestServer_GetChainHead(t *testing.T) {
 	assert.DeepEqual(t, pjRoot[:], head.PreviousJustifiedBlockRoot, "Unexpected PreviousJustifiedBlockRoot")
 	assert.DeepEqual(t, jRoot[:], head.JustifiedBlockRoot, "Unexpected JustifiedBlockRoot")
 	assert.DeepEqual(t, fRoot[:], head.FinalizedBlockRoot, "Unexpected FinalizedBlockRoot")
+	assert.Equal(t, false, head.OptimisticStatus)
 }
 
 func TestServer_StreamChainHead_ContextCanceled(t *testing.T) {
@@ -645,6 +650,7 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 			FinalizedCheckPoint:         s.FinalizedCheckpoint(),
 			CurrentJustifiedCheckPoint:  s.CurrentJustifiedCheckpoint(),
 			PreviousJustifiedCheckPoint: s.PreviousJustifiedCheckpoint()},
+		OptimisticModeFetcher: &chainMock.ChainService{},
 	}
 	exitRoutine := make(chan bool)
 	ctrl := gomock.NewController(t)
@@ -740,7 +746,8 @@ func TestServer_StreamBlocks_ContextCanceled(t *testing.T) {
 
 func TestServer_StreamBlocks_OnHeadUpdated(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	params.UseMainnetConfig()
+	params.OverrideBeaconConfig(params.MainnetConfig())
+
 	ctx := context.Background()
 	beaconState, privs := util.DeterministicGenesisState(t, 32)
 	b, err := util.GenerateFullBlock(beaconState, privs, util.DefaultBlockGenConfig(), 1)
@@ -778,7 +785,8 @@ func TestServer_StreamBlocks_OnHeadUpdated(t *testing.T) {
 
 func TestServer_StreamBlocksVerified_OnHeadUpdated(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	params.UseMainnetConfig()
+	params.OverrideBeaconConfig(params.MainnetConfig())
+
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 	beaconState, privs := util.DeterministicGenesisState(t, 32)

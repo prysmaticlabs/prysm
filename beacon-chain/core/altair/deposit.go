@@ -13,9 +13,9 @@ import (
 // ProcessDeposits processes validator deposits for beacon state Altair.
 func ProcessDeposits(
 	ctx context.Context,
-	beaconState state.BeaconStateAltair,
+	beaconState state.BeaconState,
 	deposits []*ethpb.Deposit,
-) (state.BeaconStateAltair, error) {
+) (state.BeaconState, error) {
 	batchVerified, err := blocks.BatchVerifyDepositsSignatures(ctx, deposits)
 	if err != nil {
 		return nil, err
@@ -34,7 +34,7 @@ func ProcessDeposits(
 }
 
 // ProcessDeposit processes validator deposit for beacon state Altair.
-func ProcessDeposit(ctx context.Context, beaconState state.BeaconStateAltair, deposit *ethpb.Deposit, verifySignature bool) (state.BeaconStateAltair, error) {
+func ProcessDeposit(ctx context.Context, beaconState state.BeaconState, deposit *ethpb.Deposit, verifySignature bool) (state.BeaconState, error) {
 	beaconState, isNewValidator, err := blocks.ProcessDeposit(beaconState, deposit, verifySignature)
 	if err != nil {
 		return nil, err

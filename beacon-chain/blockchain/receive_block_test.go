@@ -34,7 +34,7 @@ func TestService_ReceiveBlock(t *testing.T) {
 		return blk
 	}
 	params.SetupTestConfigCleanup(t)
-	bc := params.BeaconConfig()
+	bc := params.BeaconConfig().Copy()
 	bc.ShardCommitteePeriod = 0 // Required for voluntary exits test in reasonable time.
 	params.OverrideBeaconConfig(bc)
 
@@ -127,7 +127,7 @@ func TestService_ReceiveBlock(t *testing.T) {
 
 			opts := []Option{
 				WithDatabase(beaconDB),
-				WithForkChoiceStore(protoarray.New(0, 0, genesisBlockRoot)),
+				WithForkChoiceStore(protoarray.New()),
 				WithAttestationPool(attestations.NewPool()),
 				WithExitPool(voluntaryexits.NewPool()),
 				WithStateNotifier(&blockchainTesting.MockStateNotifier{RecordEvents: true}),
@@ -168,7 +168,7 @@ func TestService_ReceiveBlockUpdateHead(t *testing.T) {
 	require.NoError(t, beaconDB.SaveState(ctx, genesis, genesisBlockRoot))
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithForkChoiceStore(protoarray.New(0, 0, genesisBlockRoot)),
+		WithForkChoiceStore(protoarray.New()),
 		WithAttestationPool(attestations.NewPool()),
 		WithExitPool(voluntaryexits.NewPool()),
 		WithStateNotifier(&blockchainTesting.MockStateNotifier{RecordEvents: true}),
@@ -246,11 +246,9 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			beaconDB := testDB.SetupDB(t)
-			genesisBlockRoot, err := genesis.HashTreeRoot(ctx)
-			require.NoError(t, err)
 			opts := []Option{
 				WithDatabase(beaconDB),
-				WithForkChoiceStore(protoarray.New(0, 0, genesisBlockRoot)),
+				WithForkChoiceStore(protoarray.New()),
 				WithStateNotifier(&blockchainTesting.MockStateNotifier{RecordEvents: true}),
 				WithStateGen(stategen.New(beaconDB)),
 			}
@@ -324,6 +322,8 @@ func TestCheckSaveHotStateDB_Disabling(t *testing.T) {
 	opts := testServiceOptsWithDB(t)
 	s, err := NewService(context.Background(), opts...)
 	require.NoError(t, err)
+	st := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(epochsSinceFinalitySaveHotStateDB))
+	s.genesisTime = time.Now().Add(time.Duration(-1*int64(st)*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second)
 	s.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{}, [32]byte{})
 	require.NoError(t, s.checkSaveHotStateDB(context.Background()))
 	s.genesisTime = time.Now()

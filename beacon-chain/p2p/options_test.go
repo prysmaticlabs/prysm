@@ -17,6 +17,7 @@ import (
 )
 
 func TestPrivateKeyLoading(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	file, err := os.CreateTemp(t.TempDir(), "key")
 	require.NoError(t, err)
 	key, _, err := crypto.GenerateSecp256k1Key(rand.Reader)
@@ -44,6 +45,7 @@ func TestPrivateKeyLoading(t *testing.T) {
 }
 
 func TestIPV6Support(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
 	key, err := gethCrypto.GenerateKey()
 	require.NoError(t, err)
 	db, err := enode.OpenDB("")

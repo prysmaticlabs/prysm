@@ -22,12 +22,6 @@ func UsePraterNetworkConfig() {
 	OverrideBeaconNetworkConfig(cfg)
 }
 
-// UsePraterConfig sets the main beacon chain
-// config for Prater.
-func UsePraterConfig() {
-	beaconConfig = PraterConfig()
-}
-
 // PraterConfig defines the config for the
 // Prater testnet.
 func PraterConfig() *BeaconChainConfig {

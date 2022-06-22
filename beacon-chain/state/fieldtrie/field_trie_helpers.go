@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/types"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/encoding/ssz"
 	pmath "github.com/prysmaticlabs/prysm/math"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
@@ -353,17 +352,7 @@ func handlePendingAttestationSlice(val []*ethpb.PendingAttestation, indices []ui
 // handleBalanceSlice returns the root of a slice of validator balances.
 func handleBalanceSlice(val, indices []uint64, convertAll bool) ([][32]byte, error) {
 	if convertAll {
-		balancesMarshaling := make([][]byte, len(val))
-		for i, b := range val {
-			balanceBuf := make([]byte, 8)
-			binary.LittleEndian.PutUint64(balanceBuf, b)
-			balancesMarshaling[i] = balanceBuf
-		}
-		balancesChunks, err := ssz.PackByChunk(balancesMarshaling)
-		if err != nil {
-			return [][32]byte{}, errors.Wrap(err, "could not pack balances into chunks")
-		}
-		return balancesChunks, nil
+		return stateutil.PackUint64IntoChunks(val)
 	}
 	if len(val) > 0 {
 		numOfElems, err := types.Balances.ElemsInChunk()
@@ -374,7 +363,7 @@ func handleBalanceSlice(val, indices []uint64, convertAll bool) ([][32]byte, err
 		if err != nil {
 			return nil, err
 		}
-		roots := [][32]byte{}
+		var roots [][32]byte
 		for _, idx := range indices {
 			// We split the indexes into their relevant groups. Balances
 			// are compressed according to 4 values -> 1 chunk.

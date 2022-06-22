@@ -42,39 +42,53 @@ func InitWithReset(c *Flags) func() {
 
 // ConfigureBeaconChain sets the global config based
 // on what flags are enabled for the beacon-chain client.
-func ConfigureBeaconChain(ctx *cli.Context) {
-	cfg := newConfig(ctx)
+func ConfigureBeaconChain(ctx *cli.Context) error {
+	cfg, err := newConfig(ctx)
+	if err != nil {
+		return err
+	}
 	if ctx.IsSet(RPCMaxPageSizeFlag.Name) {
 		cfg.MaxRPCPageSize = ctx.Int(RPCMaxPageSizeFlag.Name)
 		log.Warnf("Starting beacon chain with max RPC page size of %d", cfg.MaxRPCPageSize)
 	}
 	Init(cfg)
+	return nil
 }
 
 // ConfigureValidator sets the global config based
 // on what flags are enabled for the validator client.
-func ConfigureValidator(ctx *cli.Context) {
-	cfg := newConfig(ctx)
+func ConfigureValidator(ctx *cli.Context) error {
+	cfg, err := newConfig(ctx)
+	if err != nil {
+		return err
+	}
 	Init(cfg)
+	return nil
 }
 
-func newConfig(ctx *cli.Context) *Flags {
+func newConfig(ctx *cli.Context) (*Flags, error) {
 	cfg := Get()
 	if ctx.Bool(MinimalConfigFlag.Name) {
 		log.Warn("Using minimal config")
 		cfg.MinimalConfig = true
-		params.UseMinimalConfig()
+		if err := params.SetActive(params.MinimalSpecConfig().Copy()); err != nil {
+			return nil, err
+		}
 	}
 	if ctx.Bool(E2EConfigFlag.Name) {
 		log.Warn("Using end-to-end testing config")
 		switch fieldparams.Preset {
 		case "mainnet":
-			params.UseE2EMainnetConfig()
+			if err := params.SetActive(params.E2EMainnetTestConfig().Copy()); err != nil {
+				return nil, err
+			}
 		case "minimal":
-			params.UseE2EConfig()
+			if err := params.SetActive(params.E2ETestConfig().Copy()); err != nil {
+				return nil, err
+			}
 		default:
 			log.Fatalf("Unrecognized preset being used: %s", fieldparams.Preset)
 		}
 	}
-	return cfg
+	return cfg, nil
 }

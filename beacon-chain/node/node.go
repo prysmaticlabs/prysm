@@ -20,6 +20,7 @@ import (
 	apigateway "github.com/prysmaticlabs/prysm/api/gateway"
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -76,6 +77,7 @@ const debugGrpcMaxMsgSize = 1 << 27
 type serviceFlagOpts struct {
 	blockchainFlagOpts []blockchain.Option
 	powchainFlagOpts   []powchain.Option
+	builderOpts        []builder.Option
 }
 
 // BeaconNode defines a struct that handles the services running a random beacon chain
@@ -118,19 +120,36 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 		return nil, err
 	}
 	prereqs.WarnIfPlatformNotSupported(cliCtx.Context)
-	features.ConfigureBeaconChain(cliCtx)
-	cmd.ConfigureBeaconChain(cliCtx)
+	if err := features.ConfigureBeaconChain(cliCtx); err != nil {
+		return nil, err
+	}
+	if err := cmd.ConfigureBeaconChain(cliCtx); err != nil {
+		return nil, err
+	}
 	flags.ConfigureGlobalFlags(cliCtx)
-	configureChainConfig(cliCtx)
-	configureHistoricalSlasher(cliCtx)
-	configureSafeSlotsToImportOptimistically(cliCtx)
-	configureSlotsPerArchivedPoint(cliCtx)
-	configureEth1Config(cliCtx)
+	if err := configureChainConfig(cliCtx); err != nil {
+		return nil, err
+	}
+	if err := configureHistoricalSlasher(cliCtx); err != nil {
+		return nil, err
+	}
+	if err := configureSafeSlotsToImportOptimistically(cliCtx); err != nil {
+		return nil, err
+	}
+	if err := configureSlotsPerArchivedPoint(cliCtx); err != nil {
+		return nil, err
+	}
+	if err := configureEth1Config(cliCtx); err != nil {
+		return nil, err
+	}
 	configureNetwork(cliCtx)
-	configureInteropConfig(cliCtx)
+	if err := configureInteropConfig(cliCtx); err != nil {
+		return nil, err
+	}
 	if err := configureExecutionSetting(cliCtx); err != nil {
 		return nil, err
 	}
+	configureFastSSZHashingAlgorithm()
 
 	// Initializes any forks here.
 	params.BeaconConfig().InitializeForkSchedule()
@@ -330,9 +349,9 @@ func (b *BeaconNode) Close() {
 
 func (b *BeaconNode) startForkChoice() {
 	if features.Get().EnableForkChoiceDoublyLinkedTree {
-		b.forkChoiceStore = doublylinkedtree.New(0, 0)
+		b.forkChoiceStore = doublylinkedtree.New()
 	} else {
-		b.forkChoiceStore = protoarray.New(0, 0, params.BeaconConfig().ZeroHash)
+		b.forkChoiceStore = protoarray.New()
 	}
 }
 
@@ -788,6 +807,7 @@ func (b *BeaconNode) registerRPCService() error {
 		AttestationReceiver:     chainService,
 		GenesisTimeFetcher:      chainService,
 		GenesisFetcher:          chainService,
+		OptimisticModeFetcher:   chainService,
 		AttestationsPool:        b.attestationPool,
 		ExitPool:                b.exitPool,
 		SlashingsPool:           b.slashingsPool,

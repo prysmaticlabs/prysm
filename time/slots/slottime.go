@@ -5,10 +5,10 @@ import (
 	"math"
 	"time"
 
-	commonMath "github.com/ethereum/go-ethereum/common/math"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	mathutil "github.com/prysmaticlabs/prysm/math"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
 )
 
@@ -164,12 +164,11 @@ func Since(time time.Time) types.Slot {
 // CurrentSlot returns the current slot as determined by the local clock and
 // provided genesis time.
 func CurrentSlot(genesisTimeSec uint64) types.Slot {
-	now := prysmTime.Now().Unix()
-	genesis := int64(genesisTimeSec) // lint:ignore uintcast -- Genesis timestamp will not exceed int64 in your lifetime.
-	if now < genesis {
+	now := uint64(prysmTime.Now().Unix())
+	if now < genesisTimeSec {
 		return 0
 	}
-	return types.Slot(uint64(now-genesis) / params.BeaconConfig().SecondsPerSlot)
+	return types.Slot((now - genesisTimeSec) / params.BeaconConfig().SecondsPerSlot)
 }
 
 // ValidateClock validates a provided slot against the local
@@ -222,9 +221,9 @@ func SyncCommitteePeriod(e types.Epoch) uint64 {
 // SyncCommitteePeriodStartEpoch returns the start epoch of a sync committee period.
 func SyncCommitteePeriodStartEpoch(e types.Epoch) (types.Epoch, error) {
 	// Overflow is impossible here because of division of `EPOCHS_PER_SYNC_COMMITTEE_PERIOD`.
-	startEpoch, overflow := commonMath.SafeMul(SyncCommitteePeriod(e), uint64(params.BeaconConfig().EpochsPerSyncCommitteePeriod))
-	if overflow {
-		return 0, errors.New("start epoch calculation overflow")
+	startEpoch, err := mathutil.Mul64(SyncCommitteePeriod(e), uint64(params.BeaconConfig().EpochsPerSyncCommitteePeriod))
+	if err != nil {
+		return 0, err
 	}
 	return types.Epoch(startEpoch), nil
 }

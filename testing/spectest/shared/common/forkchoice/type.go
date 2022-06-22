@@ -1,12 +1,13 @@
 package forkchoice
 
 type Step struct {
-	Tick        *int    `json:"tick"`
-	Block       *string `json:"block"`
-	Valid       *bool   `json:"valid"`
-	Attestation *string `json:"attestation"`
-	PowBlock    *string `json:"pow_block"`
-	Check       *Check  `json:"checks"`
+	Tick             *int    `json:"tick"`
+	Block            *string `json:"block"`
+	Valid            *bool   `json:"valid"`
+	Attestation      *string `json:"attestation"`
+	AttesterSlashing *string `json:"attester_slashing"`
+	PowBlock         *string `json:"pow_block"`
+	Check            *Check  `json:"checks"`
 }
 
 type Check struct {

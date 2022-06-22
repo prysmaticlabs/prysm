@@ -10,16 +10,22 @@ import (
 	pmath "github.com/prysmaticlabs/prysm/math"
 )
 
+var (
+	ErrInvalidFieldTrie = errors.New("invalid field trie")
+	ErrEmptyFieldTrie   = errors.New("empty field trie")
+)
+
 // FieldTrie is the representation of the representative
 // trie of the particular field.
 type FieldTrie struct {
 	*sync.RWMutex
-	reference   *stateutil.Reference
-	fieldLayers [][]*[32]byte
-	field       types.BeaconStateField
-	dataType    types.DataType
-	length      uint64
-	numOfElems  int
+	reference     *stateutil.Reference
+	fieldLayers   [][]*[32]byte
+	field         types.BeaconStateField
+	dataType      types.DataType
+	length        uint64
+	numOfElems    int
+	isTransferred bool
 }
 
 // NewFieldTrie is the constructor for the field trie data structure. It creates the corresponding
@@ -134,7 +140,7 @@ func (f *FieldTrie) RecomputeTrie(indices []uint64, elements interface{}) ([32]b
 		}
 		// We remove the duplicates here in order to prevent
 		// duplicated insertions into the trie.
-		newIndices := []uint64{}
+		var newIndices []uint64
 		indexExists := make(map[uint64]bool)
 		newRoots := make([][32]byte, 0, len(fieldRoots)/iNumOfElems)
 		for i, idx := range indices {
@@ -186,8 +192,51 @@ func (f *FieldTrie) CopyTrie() *FieldTrie {
 	}
 }
 
+// Length return the length of the whole field trie.
+func (f *FieldTrie) Length() uint64 {
+	return f.length
+}
+
+// TransferTrie starts the process of transferring all the
+// trie related data to a new trie. This is done if we
+// know that other states which hold references to this
+// trie will unlikely need it for recomputation. This helps
+// us save on a copy. Any caller of this method will need
+// to take care that this isn't called on an empty trie.
+func (f *FieldTrie) TransferTrie() *FieldTrie {
+	if f.fieldLayers == nil {
+		return &FieldTrie{
+			field:      f.field,
+			dataType:   f.dataType,
+			reference:  stateutil.NewRef(1),
+			RWMutex:    new(sync.RWMutex),
+			length:     f.length,
+			numOfElems: f.numOfElems,
+		}
+	}
+	f.isTransferred = true
+	nTrie := &FieldTrie{
+		fieldLayers: f.fieldLayers,
+		field:       f.field,
+		dataType:    f.dataType,
+		reference:   stateutil.NewRef(1),
+		RWMutex:     new(sync.RWMutex),
+		length:      f.length,
+		numOfElems:  f.numOfElems,
+	}
+	// Zero out field layers here.
+	f.fieldLayers = nil
+	return nTrie
+}
+
 // TrieRoot returns the corresponding root of the trie.
 func (f *FieldTrie) TrieRoot() ([32]byte, error) {
+	if f.Empty() {
+		return [32]byte{}, ErrEmptyFieldTrie
+	}
+	if len(f.fieldLayers[len(f.fieldLayers)-1]) == 0 {
+		return [32]byte{}, ErrInvalidFieldTrie
+	}
 	switch f.dataType {
 	case types.BasicArray:
 		return *f.fieldLayers[len(f.fieldLayers)-1][0], nil
@@ -211,7 +260,7 @@ func (f *FieldTrie) FieldReference() *stateutil.Reference {
 // Empty checks whether the underlying field trie is
 // empty or not.
 func (f *FieldTrie) Empty() bool {
-	return f == nil || len(f.fieldLayers) == 0
+	return f == nil || len(f.fieldLayers) == 0 || f.isTransferred
 }
 
 // InsertFieldLayer manually inserts a field layer. This method

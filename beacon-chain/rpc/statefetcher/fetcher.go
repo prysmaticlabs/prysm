@@ -9,19 +9,15 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"go.opencensus.io/trace"
 )
-
-var ErrNoAncestorForBlock = errors.New("could not find an ancestor state for block")
-var ErrNoCanonicalBlockForSlot = errors.New("none of the blocks found in the db slot index are canonical")
-var ErrInvalidDBBlock = errors.New("invalid block found in database")
 
 // StateIdParseError represents an error scenario where a state ID could not be parsed.
 type StateIdParseError struct {
@@ -116,13 +112,19 @@ func (p *StateProvider) State(ctx context.Context, stateId []byte) (state.Beacon
 			return nil, errors.Wrap(err, "could not get genesis state")
 		}
 	case "finalized":
-		checkpoint := p.ChainInfoFetcher.FinalizedCheckpt()
+		checkpoint, err := p.ChainInfoFetcher.FinalizedCheckpt()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get finalized checkpoint")
+		}
 		s, err = p.StateGenService.StateByRoot(ctx, bytesutil.ToBytes32(checkpoint.Root))
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get finalized state")
 		}
 	case "justified":
-		checkpoint := p.ChainInfoFetcher.CurrentJustifiedCheckpt()
+		checkpoint, err := p.ChainInfoFetcher.CurrentJustifiedCheckpt()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get justified checkpoint")
+		}
 		s, err = p.StateGenService.StateByRoot(ctx, bytesutil.ToBytes32(checkpoint.Root))
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get justified state")
@@ -204,6 +206,13 @@ func (p *StateProvider) StateBySlot(ctx context.Context, target types.Slot) (sta
 	ctx, span := trace.StartSpan(ctx, "statefetcher.StateBySlot")
 	defer span.End()
 
+	if target > p.GenesisTimeFetcher.CurrentSlot() {
+		return nil, errors.New("requested slot is in the future")
+	}
+	if target > p.ChainInfoFetcher.HeadSlot() {
+		return nil, errors.New("requested slot number is higher than head slot number")
+	}
+
 	st, err := p.ReplayerBuilder.ReplayerForSlot(target).ReplayBlocks(ctx)
 	if err != nil {
 		msg := fmt.Sprintf("error while replaying history to slot=%d", target)
@@ -217,7 +226,7 @@ func (p *StateProvider) headStateRoot(ctx context.Context) ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get head block")
 	}
-	if err = helpers.BeaconBlockIsNil(b); err != nil {
+	if err = wrapper.BeaconBlockIsNil(b); err != nil {
 		return nil, err
 	}
 	return b.Block().StateRoot(), nil
@@ -228,7 +237,7 @@ func (p *StateProvider) genesisStateRoot(ctx context.Context) ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get genesis block")
 	}
-	if err := helpers.BeaconBlockIsNil(b); err != nil {
+	if err := wrapper.BeaconBlockIsNil(b); err != nil {
 		return nil, err
 	}
 	return b.Block().StateRoot(), nil
@@ -243,7 +252,7 @@ func (p *StateProvider) finalizedStateRoot(ctx context.Context) ([]byte, error) 
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get finalized block")
 	}
-	if err := helpers.BeaconBlockIsNil(b); err != nil {
+	if err := wrapper.BeaconBlockIsNil(b); err != nil {
 		return nil, err
 	}
 	return b.Block().StateRoot(), nil
@@ -258,7 +267,7 @@ func (p *StateProvider) justifiedStateRoot(ctx context.Context) ([]byte, error) 
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get justified block")
 	}
-	if err := helpers.BeaconBlockIsNil(b); err != nil {
+	if err := wrapper.BeaconBlockIsNil(b); err != nil {
 		return nil, err
 	}
 	return b.Block().StateRoot(), nil
@@ -286,11 +295,11 @@ func (p *StateProvider) stateRootBySlot(ctx context.Context, slot types.Slot) ([
 	if slot > currentSlot {
 		return nil, errors.New("slot cannot be in the future")
 	}
-	found, blks, err := p.BeaconDB.BlocksBySlot(ctx, slot)
+	blks, err := p.BeaconDB.BlocksBySlot(ctx, slot)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get blocks")
 	}
-	if !found {
+	if len(blks) == 0 {
 		return nil, errors.New("no block exists")
 	}
 	if len(blks) != 1 {

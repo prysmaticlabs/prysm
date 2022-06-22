@@ -8,7 +8,6 @@ import (
 	"github.com/golang/snappy"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -34,6 +33,7 @@ type ForkConfig struct {
 
 // RunForkTransitionTest is a helper function that runs Altair's transition core tests.
 func RunForkTransitionTest(t *testing.T, config string) {
+	params.SetupTestConfigCleanup(t)
 	require.NoError(t, utils.SetConfig(t, config))
 
 	testFolders, testsFolderPath := utils.TestFolders(t, config, "altair", "transition/core/pyspec_tests")
@@ -93,7 +93,7 @@ func RunForkTransitionTest(t *testing.T, config string) {
 			beaconState, err := v1.InitializeFromProto(beaconStateBase)
 			require.NoError(t, err)
 
-			bc := params.BeaconConfig()
+			bc := params.BeaconConfig().Copy()
 			bc.AltairForkEpoch = types.Epoch(config.ForkEpoch)
 			params.OverrideBeaconConfig(bc)
 
@@ -107,13 +107,12 @@ func RunForkTransitionTest(t *testing.T, config string) {
 				beaconState, ok = st.(*v1.BeaconState)
 				require.Equal(t, true, ok)
 			}
-			altairState := state.BeaconStateAltair(beaconState)
 			for _, b := range postforkBlocks {
 				wsb, err := wrapper.WrappedSignedBeaconBlock(b)
 				require.NoError(t, err)
-				st, err := transition.ExecuteStateTransition(ctx, altairState, wsb)
+				st, err := transition.ExecuteStateTransition(ctx, beaconState, wsb)
 				require.NoError(t, err)
-				altairState, ok = st.(*stateAltair.BeaconState)
+				beaconState, ok = st.(*stateAltair.BeaconState)
 				require.Equal(t, true, ok)
 			}
 
@@ -124,7 +123,7 @@ func RunForkTransitionTest(t *testing.T, config string) {
 			postBeaconState := &ethpb.BeaconStateAltair{}
 			require.NoError(t, postBeaconState.UnmarshalSSZ(postBeaconStateSSZ), "Failed to unmarshal")
 
-			pbState, err := stateAltair.ProtobufBeaconState(altairState.CloneInnerState())
+			pbState, err := stateAltair.ProtobufBeaconState(beaconState.CloneInnerState())
 			require.NoError(t, err)
 			if !proto.Equal(pbState, postBeaconState) {
 				t.Fatal("Post state does not match expected")

@@ -121,8 +121,9 @@ func (g *Gateway) Start() {
 	}
 
 	g.server = &http.Server{
-		Addr:    g.cfg.gatewayAddr,
-		Handler: corsMux,
+		Addr:              g.cfg.gatewayAddr,
+		Handler:           corsMux,
+		ReadHeaderTimeout: time.Second,
 	}
 
 	go func() {

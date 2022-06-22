@@ -8,7 +8,6 @@ import (
 	"github.com/golang/snappy"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -29,6 +28,7 @@ type ForkConfig struct {
 
 // RunForkTransitionTest is a helper function that runs bellatrix's transition core tests.
 func RunForkTransitionTest(t *testing.T, config string) {
+	params.SetupTestConfigCleanup(t)
 	require.NoError(t, utils.SetConfig(t, config))
 
 	testFolders, testsFolderPath := utils.TestFolders(t, config, "bellatrix", "transition/core/pyspec_tests")
@@ -87,7 +87,7 @@ func RunForkTransitionTest(t *testing.T, config string) {
 			beaconState, err := v2.InitializeFromProto(beaconStateBase)
 			require.NoError(t, err)
 
-			bc := params.BeaconConfig()
+			bc := params.BeaconConfig().Copy()
 			bc.BellatrixForkEpoch = types.Epoch(config.ForkEpoch)
 			params.OverrideBeaconConfig(bc)
 
@@ -101,13 +101,13 @@ func RunForkTransitionTest(t *testing.T, config string) {
 				beaconState, ok = st.(*v2.BeaconState)
 				require.Equal(t, true, ok)
 			}
-			postState := state.BeaconState(beaconState)
+
 			for _, b := range postforkBlocks {
 				wsb, err := wrapper.WrappedSignedBeaconBlock(b)
 				require.NoError(t, err)
-				st, err := transition.ExecuteStateTransition(ctx, postState, wsb)
+				st, err := transition.ExecuteStateTransition(ctx, beaconState, wsb)
 				require.NoError(t, err)
-				postState, ok = st.(*v3.BeaconState)
+				beaconState, ok = st.(*v3.BeaconState)
 				require.Equal(t, true, ok)
 			}
 
@@ -118,7 +118,7 @@ func RunForkTransitionTest(t *testing.T, config string) {
 			postBeaconState := &ethpb.BeaconStateBellatrix{}
 			require.NoError(t, postBeaconState.UnmarshalSSZ(postBeaconStateSSZ), "Failed to unmarshal")
 
-			pbState, err := v3.ProtobufBeaconState(postState.CloneInnerState())
+			pbState, err := v3.ProtobufBeaconState(beaconState.CloneInnerState())
 			require.NoError(t, err)
 			require.DeepSSZEqual(t, pbState, postBeaconState)
 		})
