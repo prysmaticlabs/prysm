@@ -140,18 +140,6 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 		}
 	}
 
-	// We add a proposer score boost to fork choice for the block root if applicable, right after
-	// running a successful state transition for the block.
-	secondsIntoSlot := uint64(time.Since(s.genesisTime).Seconds()) % params.BeaconConfig().SecondsPerSlot
-	if err := s.cfg.ForkChoiceStore.BoostProposerRoot(ctx, &forkchoicetypes.ProposerBoostRootArgs{
-		BlockRoot:       blockRoot,
-		BlockSlot:       signed.Block().Slot(),
-		CurrentSlot:     slots.SinceGenesis(s.genesisTime),
-		SecondsIntoSlot: secondsIntoSlot,
-	}); err != nil {
-		return err
-	}
-
 	// If slasher is configured, forward the attestations in the block via
 	// an event feed for processing.
 	if features.Get().EnableSlasher {
