@@ -8,7 +8,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
@@ -16,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 type Builder struct {
@@ -47,19 +45,10 @@ func (bb *Builder) Tick(t testing.TB, tick int64) {
 	}
 }
 
-// block provides the block to forkchoice proposer boost and returns the block root.
+// block returns the block root.
 func (bb *Builder) block(t testing.TB, b interfaces.SignedBeaconBlock) [32]byte {
-	ctx := context.TODO()
 	r, err := b.Block().HashTreeRoot()
 	require.NoError(t, err)
-	slotsSinceGenesis := slots.SinceGenesis(bb.service.GenesisTime())
-	args := &forkchoicetypes.ProposerBoostRootArgs{
-		BlockRoot:       r,
-		BlockSlot:       b.Block().Slot(),
-		CurrentSlot:     slotsSinceGenesis,
-		SecondsIntoSlot: uint64(bb.lastTick) % params.BeaconConfig().SecondsPerSlot,
-	}
-	require.NoError(t, bb.service.ForkChoicer().BoostProposerRoot(ctx, args))
 	return r
 }
 

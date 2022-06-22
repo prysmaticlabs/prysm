@@ -2,6 +2,7 @@ package v2
 
 import (
 	"github.com/pkg/errors"
+	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -21,6 +22,6 @@ func (*BeaconState) RotateAttestations() error {
 }
 
 // SetLatestExecutionPayloadHeader is not supported for hard fork 1 beacon state.
-func (*BeaconState) SetLatestExecutionPayloadHeader(_ *ethpb.ExecutionPayloadHeader) error {
+func (*BeaconState) SetLatestExecutionPayloadHeader(_ *enginev1.ExecutionPayloadHeader) error {
 	return errors.New("SetLatestExecutionPayloadHeader is not supported for hard fork 1 beacon state")
 }
