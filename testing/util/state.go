@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
+	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/testing/require"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -211,7 +212,7 @@ func NewBeaconStateBellatrix(options ...func(state *ethpb.BeaconStateBellatrix) 
 			Pubkeys:         pubkeys,
 			AggregatePubkey: make([]byte, 48),
 		},
-		LatestExecutionPayloadHeader: &ethpb.ExecutionPayloadHeader{
+		LatestExecutionPayloadHeader: &enginev1.ExecutionPayloadHeader{
 			ParentHash:       make([]byte, 32),
 			FeeRecipient:     make([]byte, 20),
 			StateRoot:        make([]byte, 32),
