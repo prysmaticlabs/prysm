@@ -4,35 +4,8 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/config/params"
 )
-
-// BoostProposerRoot sets the block root which should be boosted during
-// the LMD fork choice algorithm calculations. This is meant to reward timely,
-// proposed blocks which occur before a cutoff interval set to
-// SECONDS_PER_SLOT // INTERVALS_PER_SLOT.
-//
-//  time_into_slot = (store.time - store.genesis_time) % SECONDS_PER_SLOT
-//  is_before_attesting_interval = time_into_slot < SECONDS_PER_SLOT // INTERVALS_PER_SLOT
-//  if get_current_slot(store) == block.slot and is_before_attesting_interval:
-//      store.proposer_boost_root = hash_tree_root(block)
-func (f *ForkChoice) BoostProposerRoot(_ context.Context, args *types.ProposerBoostRootArgs) error {
-	if args == nil {
-		return errors.New("nil function args provided to BoostProposerRoot")
-	}
-	secondsPerSlot := params.BeaconConfig().SecondsPerSlot
-	isBeforeAttestingInterval := args.SecondsIntoSlot < secondsPerSlot/params.BeaconConfig().IntervalsPerSlot
-
-	// Only update the boosted proposer root to the incoming block root
-	// if the block is for the current, clock-based slot and the block was timely.
-	if args.CurrentSlot == args.BlockSlot && isBeforeAttestingInterval {
-		f.store.proposerBoostLock.Lock()
-		f.store.proposerBoostRoot = args.BlockRoot
-		f.store.proposerBoostLock.Unlock()
-	}
-	return nil
-}
 
 // ResetBoostedProposerRoot sets the value of the proposer boosted root to zeros.
 func (f *ForkChoice) ResetBoostedProposerRoot(_ context.Context) error {
@@ -64,9 +37,7 @@ func computeProposerBoostScore(validatorBalances []uint64) (score uint64, err er
 		err = errors.New("no active validators")
 		return
 	}
-	avgBalance := totalActiveBalance / numActive
-	committeeSize := numActive / uint64(params.BeaconConfig().SlotsPerEpoch)
-	committeeWeight := committeeSize * avgBalance
+	committeeWeight := totalActiveBalance / uint64(params.BeaconConfig().SlotsPerEpoch)
 	score = (committeeWeight * params.BeaconConfig().ProposerScoreBoost) / 100
 	return
 }
