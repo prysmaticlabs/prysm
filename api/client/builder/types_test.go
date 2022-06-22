@@ -205,7 +205,7 @@ func TestExecutionHeaderResponseToProto(t *testing.T) {
 
 	expected := &eth.SignedBuilderBid{
 		Message: &eth.BuilderBid{
-			Header: &eth.ExecutionPayloadHeader{
+			Header: &v1.ExecutionPayloadHeader{
 				ParentHash:       parentHash,
 				FeeRecipient:     feeRecipient,
 				StateRoot:        stateRoot,
@@ -567,9 +567,9 @@ func TestProposerSlashings(t *testing.T) {
 	require.Equal(t, expected, string(b))
 }
 
-func pbExecutionPayloadHeader(t *testing.T) *eth.ExecutionPayloadHeader {
+func pbExecutionPayloadHeader(t *testing.T) *v1.ExecutionPayloadHeader {
 	bfpg := stringToUint256("452312848583266388373324160190187140051835877600158453279131187530910662656")
-	return &eth.ExecutionPayloadHeader{
+	return &v1.ExecutionPayloadHeader{
 		ParentHash:       ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
 		FeeRecipient:     ezDecode(t, "0xabcf8e0d4e9587369b2301d0790347320302cc09"),
 		StateRoot:        ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),

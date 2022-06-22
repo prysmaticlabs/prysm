@@ -1867,7 +1867,7 @@ func Test_getStateVersionAndPayload(t *testing.T) {
 		name    string
 		st      state.BeaconState
 		version int
-		header  *ethpb.ExecutionPayloadHeader
+		header  *enginev1.ExecutionPayloadHeader
 	}{
 		{
 			name: "phase 0 state",
@@ -1876,7 +1876,7 @@ func Test_getStateVersionAndPayload(t *testing.T) {
 				return s
 			}(),
 			version: version.Phase0,
-			header:  (*ethpb.ExecutionPayloadHeader)(nil),
+			header:  (*enginev1.ExecutionPayloadHeader)(nil),
 		},
 		{
 			name: "altair state",
@@ -1885,19 +1885,19 @@ func Test_getStateVersionAndPayload(t *testing.T) {
 				return s
 			}(),
 			version: version.Altair,
-			header:  (*ethpb.ExecutionPayloadHeader)(nil),
+			header:  (*enginev1.ExecutionPayloadHeader)(nil),
 		},
 		{
 			name: "bellatrix state",
 			st: func() state.BeaconState {
 				s, _ := util.DeterministicGenesisStateBellatrix(t, 1)
-				require.NoError(t, s.SetLatestExecutionPayloadHeader(&ethpb.ExecutionPayloadHeader{
+				require.NoError(t, s.SetLatestExecutionPayloadHeader(&enginev1.ExecutionPayloadHeader{
 					BlockNumber: 1,
 				}))
 				return s
 			}(),
 			version: version.Bellatrix,
-			header: &ethpb.ExecutionPayloadHeader{
+			header: &enginev1.ExecutionPayloadHeader{
 				BlockNumber: 1,
 			},
 		},
@@ -1934,7 +1934,7 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 	tests := []struct {
 		name         string
 		stateVersion int
-		header       *ethpb.ExecutionPayloadHeader
+		header       *enginev1.ExecutionPayloadHeader
 		payload      *enginev1.ExecutionPayload
 		errString    string
 	}{
@@ -1989,7 +1989,7 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 			payload: &enginev1.ExecutionPayload{
 				ParentHash: bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength),
 			},
-			header: &ethpb.ExecutionPayloadHeader{
+			header: &enginev1.ExecutionPayloadHeader{
 				ParentHash:       make([]byte, fieldparams.RootLength),
 				FeeRecipient:     make([]byte, fieldparams.FeeRecipientLength),
 				StateRoot:        make([]byte, fieldparams.RootLength),
@@ -2007,7 +2007,7 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 			payload: &enginev1.ExecutionPayload{
 				ParentHash: bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength),
 			},
-			header: &ethpb.ExecutionPayloadHeader{
+			header: &enginev1.ExecutionPayloadHeader{
 				BlockNumber: 1,
 			},
 		},
