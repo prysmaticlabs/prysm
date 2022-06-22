@@ -12,7 +12,6 @@ import (
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	coreTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
@@ -669,20 +668,8 @@ func TestProduceBlock(t *testing.T) {
 
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
-	beaconState, privKeys := util.DeterministicGenesisState(t, 64)
 
-	stateRoot, err := beaconState.HashTreeRoot(ctx)
-	require.NoError(t, err, "Could not hash genesis state")
-
-	genesis := blocks.NewGenesisBlock(stateRoot[:])
-	wsb, err := wrapper.WrappedSignedBeaconBlock(genesis)
-	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, wsb), "Could not save genesis block")
-
-	parentRoot, err := genesis.Block.HashTreeRoot()
-	require.NoError(t, err, "Could not get signing root")
-	require.NoError(t, db.SaveState(ctx, beaconState, parentRoot), "Could not save genesis state")
-	require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
+	beaconState, parentRoot, privKeys := util.DeterministicGenesisStateWithGenesisBlock(t, ctx, db, 64)
 
 	v1Alpha1Server := &v1alpha1validator.Server{
 		HeadFetcher:       &mockChain.ChainService{State: beaconState, Root: parentRoot[:]},
@@ -777,20 +764,7 @@ func TestProduceBlockV2(t *testing.T) {
 		db := dbutil.SetupDB(t)
 		ctx := context.Background()
 
-		beaconState, privKeys := util.DeterministicGenesisState(t, 64)
-
-		stateRoot, err := beaconState.HashTreeRoot(ctx)
-		require.NoError(t, err, "Could not hash genesis state")
-
-		genesis := blocks.NewGenesisBlock(stateRoot[:])
-		wsb, err := wrapper.WrappedSignedBeaconBlock(genesis)
-		require.NoError(t, err)
-		require.NoError(t, db.SaveBlock(ctx, wsb), "Could not save genesis block")
-
-		parentRoot, err := genesis.Block.HashTreeRoot()
-		require.NoError(t, err, "Could not get signing root")
-		require.NoError(t, db.SaveState(ctx, beaconState, parentRoot), "Could not save genesis state")
-		require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
+		beaconState, parentRoot, privKeys := util.DeterministicGenesisStateWithGenesisBlock(t, ctx, db, 64)
 
 		v1Alpha1Server := &v1alpha1validator.Server{
 			HeadFetcher:       &mockChain.ChainService{State: beaconState, Root: parentRoot[:]},
@@ -1171,20 +1145,7 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 
 		db := dbutil.SetupDB(t)
 
-		bs, privKeys := util.DeterministicGenesisState(t, 2)
-
-		stateRoot, err := bs.HashTreeRoot(ctx)
-		require.NoError(t, err, "Could not hash genesis state")
-
-		genesis := blocks.NewGenesisBlock(stateRoot[:])
-		wsb, err := wrapper.WrappedSignedBeaconBlock(genesis)
-		require.NoError(t, err)
-		require.NoError(t, db.SaveBlock(ctx, wsb), "Could not save genesis block")
-
-		parentRoot, err := genesis.Block.HashTreeRoot()
-		require.NoError(t, err, "Could not get signing root")
-		require.NoError(t, db.SaveState(ctx, bs, parentRoot), "Could not save genesis state")
-		require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
+		bs, parentRoot, privKeys := util.DeterministicGenesisStateWithGenesisBlock(t, ctx, db, 2)
 
 		v1Alpha1Server := &v1alpha1validator.Server{
 			HeadFetcher:       &mockChain.ChainService{State: bs, Root: parentRoot[:]},
@@ -1771,20 +1732,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 		db := dbutil.SetupDB(t)
 		ctx := context.Background()
 
-		beaconState, privKeys := util.DeterministicGenesisState(t, 64)
-
-		stateRoot, err := beaconState.HashTreeRoot(ctx)
-		require.NoError(t, err, "Could not hash genesis state")
-
-		genesis := blocks.NewGenesisBlock(stateRoot[:])
-		wrapped, err := wrapper.WrappedSignedBeaconBlock(genesis)
-		require.NoError(t, err)
-		require.NoError(t, db.SaveBlock(ctx, wrapped), "Could not save genesis block")
-
-		parentRoot, err := genesis.Block.HashTreeRoot()
-		require.NoError(t, err, "Could not get signing root")
-		require.NoError(t, db.SaveState(ctx, beaconState, parentRoot), "Could not save genesis state")
-		require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
+		beaconState, parentRoot, privKeys := util.DeterministicGenesisStateWithGenesisBlock(t, ctx, db, 64)
 
 		v1Alpha1Server := &v1alpha1validator.Server{
 			HeadFetcher:       &mockChain.ChainService{State: beaconState, Root: parentRoot[:]},
@@ -2166,20 +2114,7 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 
 		db := dbutil.SetupDB(t)
 
-		bs, privKeys := util.DeterministicGenesisState(t, 2)
-
-		stateRoot, err := bs.HashTreeRoot(ctx)
-		require.NoError(t, err, "Could not hash genesis state")
-
-		genesis := blocks.NewGenesisBlock(stateRoot[:])
-		wsb, err := wrapper.WrappedSignedBeaconBlock(genesis)
-		require.NoError(t, err)
-		require.NoError(t, db.SaveBlock(ctx, wsb), "Could not save genesis block")
-
-		parentRoot, err := genesis.Block.HashTreeRoot()
-		require.NoError(t, err, "Could not get signing root")
-		require.NoError(t, db.SaveState(ctx, bs, parentRoot), "Could not save genesis state")
-		require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
+		bs, parentRoot, privKeys := util.DeterministicGenesisStateWithGenesisBlock(t, ctx, db, 2)
 
 		v1Alpha1Server := &v1alpha1validator.Server{
 			HeadFetcher:       &mockChain.ChainService{State: bs, Root: parentRoot[:]},
