@@ -40,7 +40,6 @@ const depositGasLimit = 4000000
 const FeeRecipientAddress = "0x055FB65722e7B2455043BfeBf6177f1d2e9738d9"
 const DefaultFeeRecipientAddress = "0x099FB65722e7b2455043bfebF6177f1D2E9738d9"
 
-var ValidatorHexPubKeys []string = make([]string, 0)
 var _ e2etypes.ComponentRunner = (*ValidatorNode)(nil)
 var _ e2etypes.ComponentRunner = (*ValidatorNodeSet)(nil)
 var _ e2etypes.MultipleComponentRunners = (*ValidatorNodeSet)(nil)
@@ -177,6 +176,7 @@ func NewValidatorNode(config *e2etypes.E2EConfig, validatorNum, index, offset in
 
 // Start starts a validator client.
 func (v *ValidatorNode) Start(ctx context.Context) error {
+	validatorHexPubKeys := make([]string, 0)
 	var pkg, target string
 	if v.config.UsePrysmShValidator {
 		pkg = ""
@@ -211,7 +211,7 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 		return err
 	}
 	for _, pub := range pubs {
-		ValidatorHexPubKeys = append(ValidatorHexPubKeys, hexutil.Encode(pub.Marshal()))
+		validatorHexPubKeys = append(validatorHexPubKeys, hexutil.Encode(pub.Marshal()))
 	}
 
 	args := []string{
@@ -235,7 +235,7 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 		args = append(args, fmt.Sprintf("--%s=http://localhost:%d", flags.Web3SignerURLFlag.Name, Web3RemoteSignerPort))
 		// Write the pubkeys as comma seperated hex strings with 0x prefix.
 		// See: https://docs.teku.consensys.net/en/latest/HowTo/External-Signer/Use-External-Signer/
-		args = append(args, fmt.Sprintf("--%s=%s", flags.Web3SignerPublicValidatorKeysFlag.Name, strings.Join(ValidatorHexPubKeys, ",")))
+		args = append(args, fmt.Sprintf("--%s=%s", flags.Web3SignerPublicValidatorKeysFlag.Name, strings.Join(validatorHexPubKeys, ",")))
 	} else {
 		// When not using remote key signer, use interop keys.
 		args = append(args,
@@ -246,7 +246,7 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 	//TODO: web3signer does not support validator registration signing currently, move this when support is there.
 	//TODO: current version of prysmsh still uses wrong flag name.
 	if !v.config.UsePrysmShValidator && !v.config.UseWeb3RemoteSigner {
-		proposerSettingsPathPath, err := createProposerSettingsPath(ValidatorHexPubKeys)
+		proposerSettingsPathPath, err := createProposerSettingsPath(validatorHexPubKeys)
 		if err != nil {
 			return err
 		}
@@ -400,11 +400,11 @@ func sendDeposits(web3 *ethclient.Client, keystoreBytes []byte, num, offset int,
 func createProposerSettingsPath(pubkeys []string) (string, error) {
 	testNetDir := e2e.TestParams.TestPath + "/proposer-settings"
 	configPath := filepath.Join(testNetDir, "config.json")
-	if len(ValidatorHexPubKeys) == 0 {
+	if len(pubkeys) == 0 {
 		return "", errors.New("number of validators must be greater than 0")
 	}
 	var proposerSettingsPayload validator_service_config.ProposerSettingsPayload
-	if len(ValidatorHexPubKeys) == 1 {
+	if len(pubkeys) == 1 {
 		proposerSettingsPayload = validator_service_config.ProposerSettingsPayload{
 			DefaultConfig: &validator_service_config.ProposerOptionPayload{
 				FeeRecipient: DefaultFeeRecipientAddress,
