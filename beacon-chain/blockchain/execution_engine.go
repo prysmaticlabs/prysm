@@ -18,7 +18,6 @@ import (
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -154,7 +153,7 @@ func (s *Service) getPayloadHash(ctx context.Context, root []byte) ([32]byte, er
 // notifyForkchoiceUpdate signals execution engine on a new payload.
 // It returns true if the EL has returned VALID for the block
 func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
-	postStateHeader *ethpb.ExecutionPayloadHeader, blk interfaces.SignedBeaconBlock) (bool, error) {
+	postStateHeader *enginev1.ExecutionPayloadHeader, blk interfaces.SignedBeaconBlock) (bool, error) {
 	ctx, span := trace.StartSpan(ctx, "blockChain.notifyNewPayload")
 	defer span.End()
 

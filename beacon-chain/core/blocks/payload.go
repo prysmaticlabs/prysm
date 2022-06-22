@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/time/slots"
 )
@@ -46,7 +45,7 @@ func IsMergeTransitionComplete(st state.BeaconState) (bool, error) {
 // IsMergeTransitionBlockUsingPreStatePayloadHeader returns true if the input block is the terminal merge block.
 // Terminal merge block must be associated with an empty payload header.
 // This assumes the header `h` is referenced as the parent state for block body `body.
-func IsMergeTransitionBlockUsingPreStatePayloadHeader(h *ethpb.ExecutionPayloadHeader, body interfaces.BeaconBlockBody) (bool, error) {
+func IsMergeTransitionBlockUsingPreStatePayloadHeader(h *enginev1.ExecutionPayloadHeader, body interfaces.BeaconBlockBody) (bool, error) {
 	if h == nil || body == nil {
 		return false, errors.New("nil header or block body")
 	}
@@ -98,7 +97,7 @@ func IsExecutionEnabled(st state.BeaconState, body interfaces.BeaconBlockBody) (
 
 // IsExecutionEnabledUsingHeader returns true if the execution is enabled using post processed payload header and block body.
 // This is an optimized version of IsExecutionEnabled where beacon state is not required as an argument.
-func IsExecutionEnabledUsingHeader(header *ethpb.ExecutionPayloadHeader, body interfaces.BeaconBlockBody) (bool, error) {
+func IsExecutionEnabledUsingHeader(header *enginev1.ExecutionPayloadHeader, body interfaces.BeaconBlockBody) (bool, error) {
 	if !bellatrix.IsEmptyHeader(header) {
 		return true, nil
 	}
@@ -215,7 +214,7 @@ func ProcessPayload(st state.BeaconState, payload *enginev1.ExecutionPayload) (s
 }
 
 // ValidatePayloadHeaderWhenMergeCompletes validates the payload header when the merge completes.
-func ValidatePayloadHeaderWhenMergeCompletes(st state.BeaconState, header *ethpb.ExecutionPayloadHeader) error {
+func ValidatePayloadHeaderWhenMergeCompletes(st state.BeaconState, header *enginev1.ExecutionPayloadHeader) error {
 	// Skip validation if the state is not merge compatible.
 	complete, err := IsMergeTransitionComplete(st)
 	if err != nil {
@@ -236,7 +235,7 @@ func ValidatePayloadHeaderWhenMergeCompletes(st state.BeaconState, header *ethpb
 }
 
 // ValidatePayloadHeader validates the payload header.
-func ValidatePayloadHeader(st state.BeaconState, header *ethpb.ExecutionPayloadHeader) error {
+func ValidatePayloadHeader(st state.BeaconState, header *enginev1.ExecutionPayloadHeader) error {
 	// Validate header's random mix matches with state in current epoch
 	random, err := helpers.RandaoMix(st, time.CurrentEpoch(st))
 	if err != nil {
@@ -258,7 +257,7 @@ func ValidatePayloadHeader(st state.BeaconState, header *ethpb.ExecutionPayloadH
 }
 
 // ProcessPayloadHeader processes the payload header.
-func ProcessPayloadHeader(st state.BeaconState, header *ethpb.ExecutionPayloadHeader) (state.BeaconState, error) {
+func ProcessPayloadHeader(st state.BeaconState, header *enginev1.ExecutionPayloadHeader) (state.BeaconState, error) {
 	if err := ValidatePayloadHeaderWhenMergeCompletes(st, header); err != nil {
 		return nil, err
 	}

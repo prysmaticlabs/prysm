@@ -37,7 +37,7 @@ type BeaconBlockBody struct {
 	voluntaryExits         []*eth.SignedVoluntaryExit
 	syncAggregate          *eth.SyncAggregate
 	executionPayload       *engine.ExecutionPayload
-	executionPayloadHeader *eth.ExecutionPayloadHeader
+	executionPayloadHeader *engine.ExecutionPayloadHeader
 }
 
 // BeaconBlock is the main beacon block structure. It can represent any block type.

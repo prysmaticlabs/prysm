@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	v1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
@@ -300,7 +301,7 @@ func testSignedBlindedBeaconBlockBellatrix(t *testing.T) *eth.SignedBlindedBeaco
 					SyncCommitteeSignature: make([]byte, 48),
 					SyncCommitteeBits:      bitfield.Bitvector512{0x01},
 				},
-				ExecutionPayloadHeader: &eth.ExecutionPayloadHeader{
+				ExecutionPayloadHeader: &v1.ExecutionPayloadHeader{
 					ParentHash:       ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
 					FeeRecipient:     ezDecode(t, "0xabcf8e0d4e9587369b2301d0790347320302cc09"),
 					StateRoot:        ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),

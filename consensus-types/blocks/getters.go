@@ -564,7 +564,7 @@ func (b *BeaconBlockBody) ExecutionPayload() (*enginev1.ExecutionPayload, error)
 }
 
 // ExecutionPayloadHeader returns the execution payload header of the block body.
-func (b *BeaconBlockBody) ExecutionPayloadHeader() (*eth.ExecutionPayloadHeader, error) {
+func (b *BeaconBlockBody) ExecutionPayloadHeader() (*enginev1.ExecutionPayloadHeader, error) {
 	if b.version != version.BellatrixBlind {
 		return nil, errNotSupported("ExecutionPayloadHeader", b.version)
 	}

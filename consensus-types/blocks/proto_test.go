@@ -24,7 +24,7 @@ type fields struct {
 	voluntaryExits    []*eth.SignedVoluntaryExit
 	syncAggregate     *eth.SyncAggregate
 	execPayload       *enginev1.ExecutionPayload
-	execPayloadHeader *eth.ExecutionPayloadHeader
+	execPayloadHeader *enginev1.ExecutionPayloadHeader
 }
 
 func Test_SignedBeaconBlock_Proto(t *testing.T) {
@@ -836,7 +836,7 @@ func getFields() fields {
 			[]byte("transaction8"),
 		},
 	}
-	execPayloadHeader := &eth.ExecutionPayloadHeader{
+	execPayloadHeader := &enginev1.ExecutionPayloadHeader{
 		ParentHash:       b32,
 		FeeRecipient:     b20,
 		StateRoot:        b32,
