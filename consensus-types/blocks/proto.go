@@ -10,7 +10,7 @@ import (
 // Proto converts the signed beacon block to a protobuf object.
 func (b *SignedBeaconBlock) Proto() (proto.Message, error) {
 	if b == nil {
-		return nil, nil
+		return nil, errNilBlock
 	}
 
 	blockMessage, err := b.block.Proto()
