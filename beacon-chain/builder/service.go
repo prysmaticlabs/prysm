@@ -40,7 +40,9 @@ type Service struct {
 
 // NewService instantiates a new service.
 func NewService(ctx context.Context, opts ...Option) (*Service, error) {
-	s := &Service{}
+	s := &Service{
+		cfg: &config{},
+	}
 	for _, opt := range opts {
 		if err := opt(s); err != nil {
 			return nil, err
@@ -89,8 +91,8 @@ func (s *Service) GetHeader(ctx context.Context, slot types.Slot, parentHash [32
 }
 
 // Status retrieves the status of the builder relay network.
-func (s *Service) Status(ctx context.Context) error {
-	ctx, span := trace.StartSpan(ctx, "builder.Status")
+func (s *Service) Status() error {
+	ctx, span := trace.StartSpan(context.Background(), "builder.Status")
 	defer span.End()
 	start := time.Now()
 	defer func() {
