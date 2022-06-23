@@ -392,6 +392,18 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 			tracing.AnnotateError(span, err)
 			return err
 		}
+		if i > 0 && jCheckpoints[i].Epoch > jCheckpoints[i-1].Epoch {
+			if err := s.cfg.BeaconDB.SaveJustifiedCheckpoint(ctx, jCheckpoints[i]); err != nil {
+				tracing.AnnotateError(span, err)
+				return err
+			}
+		}
+		if i > 0 && fCheckpoints[i].Epoch > fCheckpoints[i-1].Epoch {
+			if err := s.cfg.BeaconDB.SaveFinalizedCheckpoint(ctx, fCheckpoints[i]); err != nil {
+				tracing.AnnotateError(span, err)
+				return err
+			}
+		}
 	}
 	// Insert all nodes but the last one to forkchoice
 	if err := s.cfg.ForkChoiceStore.InsertOptimisticChain(ctx, pendingNodes); err != nil {
