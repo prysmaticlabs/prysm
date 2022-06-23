@@ -98,7 +98,7 @@ func (s *Service) GetHeader(ctx context.Context, slot types.Slot, parentHash [32
 
 // Status retrieves the status of the builder relay network.
 func (s *Service) Status() error {
-	ctx, span := trace.StartSpan(s.ctx, "builder.Status")
+	ctx, span := trace.StartSpan(context.Background(), "builder.Status")
 	defer span.End()
 	start := time.Now()
 	defer func() {
