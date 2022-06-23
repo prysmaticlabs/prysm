@@ -40,7 +40,9 @@ type Service struct {
 
 // NewService instantiates a new service.
 func NewService(ctx context.Context, opts ...Option) (*Service, error) {
-	s := &Service{}
+	s := &Service{
+		cfg: &config{},
+	}
 	for _, opt := range opts {
 		if err := opt(s); err != nil {
 			return nil, err
