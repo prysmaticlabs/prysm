@@ -13,7 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	consensusblocks "github.com/prysmaticlabs/prysm/consensus-types/blocks"
-	consensusblockstest "github.com/prysmaticlabs/prysm/consensus-types/blocks/testing"
+	blocktest "github.com/prysmaticlabs/prysm/consensus-types/blocks/testing"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -228,7 +228,7 @@ func newMockHistory(t *testing.T, hist []mockHistorySpec, current types.Slot) *m
 		require.NoError(t, err)
 
 		// set slot to mock history spec value
-		b, err = consensusblockstest.SetBlockSlot(b, spec.slot)
+		b, err = blocktest.SetBlockSlot(b, spec.slot)
 		require.NoError(t, err)
 
 		// set the correct proposer_index in the "proposal" block
@@ -236,11 +236,11 @@ func newMockHistory(t *testing.T, hist []mockHistorySpec, current types.Slot) *m
 		// after process_slots!
 		idx, err := helpers.BeaconProposerIndex(ctx, s)
 		require.NoError(t, err)
-		b, err = consensusblockstest.SetProposerIndex(b, idx)
+		b, err = blocktest.SetProposerIndex(b, idx)
 		require.NoError(t, err)
 
 		// set parent root
-		b, err = consensusblockstest.SetBlockParentRoot(b, pr)
+		b, err = blocktest.SetBlockParentRoot(b, pr)
 		require.NoError(t, err)
 
 		// now do process_block
@@ -249,7 +249,7 @@ func newMockHistory(t *testing.T, hist []mockHistorySpec, current types.Slot) *m
 
 		sr, err := s.HashTreeRoot(ctx)
 		require.NoError(t, err)
-		b, err = consensusblockstest.SetBlockStateRoot(b, sr)
+		b, err = blocktest.SetBlockStateRoot(b, sr)
 		require.NoError(t, err)
 
 		pr, err = b.Block().HashTreeRoot()

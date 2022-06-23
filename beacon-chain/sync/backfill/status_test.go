@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
-	consensusblockstest "github.com/prysmaticlabs/prysm/consensus-types/blocks/testing"
+	blocktest "github.com/prysmaticlabs/prysm/consensus-types/blocks/testing"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 
 	"github.com/pkg/errors"
@@ -148,7 +148,7 @@ func setupTestBlock(slot types.Slot) (interfaces.SignedBeaconBlock, error) {
 	if err != nil {
 		return nil, err
 	}
-	return consensusblockstest.SetBlockSlot(b, slot)
+	return blocktest.SetBlockSlot(b, slot)
 }
 
 func TestReload(t *testing.T) {

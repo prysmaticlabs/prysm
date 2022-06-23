@@ -12,7 +12,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
-	consensusblockstest "github.com/prysmaticlabs/prysm/consensus-types/blocks/testing"
+	blocktest "github.com/prysmaticlabs/prysm/consensus-types/blocks/testing"
 	"github.com/prysmaticlabs/prysm/network/forks"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -136,11 +136,11 @@ func TestDownloadWeakSubjectivityCheckpoint(t *testing.T) {
 	// set up checkpoint block
 	b, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 	require.NoError(t, err)
-	b, err = consensusblockstest.SetBlockParentRoot(b, cfg.ZeroHash)
+	b, err = blocktest.SetBlockParentRoot(b, cfg.ZeroHash)
 	require.NoError(t, err)
-	b, err = consensusblockstest.SetBlockSlot(b, wSlot)
+	b, err = blocktest.SetBlockSlot(b, wSlot)
 	require.NoError(t, err)
-	b, err = consensusblockstest.SetProposerIndex(b, 0)
+	b, err = blocktest.SetProposerIndex(b, 0)
 	require.NoError(t, err)
 
 	// set up state header pointing at checkpoint block - this is how the block is downloaded by root
@@ -155,7 +155,7 @@ func TestDownloadWeakSubjectivityCheckpoint(t *testing.T) {
 	wRoot, err := wst.HashTreeRoot(ctx)
 	require.NoError(t, err)
 
-	b, err = consensusblockstest.SetBlockStateRoot(b, wRoot)
+	b, err = blocktest.SetBlockStateRoot(b, wRoot)
 	require.NoError(t, err)
 	serBlock, err := b.MarshalSSZ()
 	require.NoError(t, err)
@@ -237,11 +237,11 @@ func TestDownloadBackwardsCompatibleCombined(t *testing.T) {
 	// set up checkpoint block
 	b, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 	require.NoError(t, err)
-	b, err = consensusblockstest.SetBlockParentRoot(b, cfg.ZeroHash)
+	b, err = blocktest.SetBlockParentRoot(b, cfg.ZeroHash)
 	require.NoError(t, err)
-	b, err = consensusblockstest.SetBlockSlot(b, wSlot)
+	b, err = blocktest.SetBlockSlot(b, wSlot)
 	require.NoError(t, err)
-	b, err = consensusblockstest.SetProposerIndex(b, 0)
+	b, err = blocktest.SetProposerIndex(b, 0)
 	require.NoError(t, err)
 
 	// set up state header pointing at checkpoint block - this is how the block is downloaded by root
@@ -256,7 +256,7 @@ func TestDownloadBackwardsCompatibleCombined(t *testing.T) {
 	wRoot, err := wst.HashTreeRoot(ctx)
 	require.NoError(t, err)
 
-	b, err = consensusblockstest.SetBlockStateRoot(b, wRoot)
+	b, err = blocktest.SetBlockStateRoot(b, wRoot)
 	require.NoError(t, err)
 	serBlock, err := b.MarshalSSZ()
 	require.NoError(t, err)
@@ -422,11 +422,11 @@ func TestDownloadFinalizedData(t *testing.T) {
 	// set up checkpoint block
 	b, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 	require.NoError(t, err)
-	b, err = consensusblockstest.SetBlockParentRoot(b, cfg.ZeroHash)
+	b, err = blocktest.SetBlockParentRoot(b, cfg.ZeroHash)
 	require.NoError(t, err)
-	b, err = consensusblockstest.SetBlockSlot(b, slot)
+	b, err = blocktest.SetBlockSlot(b, slot)
 	require.NoError(t, err)
-	b, err = consensusblockstest.SetProposerIndex(b, 0)
+	b, err = blocktest.SetProposerIndex(b, 0)
 	require.NoError(t, err)
 
 	// set up state header pointing at checkpoint block - this is how the block is downloaded by root
@@ -441,7 +441,7 @@ func TestDownloadFinalizedData(t *testing.T) {
 	sr, err := st.HashTreeRoot(ctx)
 	require.NoError(t, err)
 
-	b, err = consensusblockstest.SetBlockStateRoot(b, sr)
+	b, err = blocktest.SetBlockStateRoot(b, sr)
 	require.NoError(t, err)
 	mb, err := b.MarshalSSZ()
 	require.NoError(t, err)

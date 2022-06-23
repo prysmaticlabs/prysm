@@ -14,7 +14,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
-	consensusblockstest "github.com/prysmaticlabs/prysm/consensus-types/blocks/testing"
+	blocktest "github.com/prysmaticlabs/prysm/consensus-types/blocks/testing"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
@@ -587,7 +587,7 @@ func testProposeBlock(t *testing.T, graffiti []byte) {
 				gomock.Any(), // ctx
 				gomock.AssignableToTypeOf(&ethpb.GenericSignedBeaconBlock{}),
 			).DoAndReturn(func(ctx context.Context, block *ethpb.GenericSignedBeaconBlock, opts ...grpc.CallOption) (*ethpb.ProposeResponse, error) {
-				sentBlock, err = consensusblockstest.NewSignedBeaconBlockFromGeneric(block)
+				sentBlock, err = blocktest.NewSignedBeaconBlockFromGeneric(block)
 				assert.NoError(t, err, "Unexpected error unwrapping block")
 				return &ethpb.ProposeResponse{BlockRoot: make([]byte, 32)}, nil
 			})
