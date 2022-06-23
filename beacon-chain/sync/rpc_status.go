@@ -132,6 +132,7 @@ func (s *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 		return err
 	}
 	cp := s.cfg.chain.FinalizedCheckpt()
+	log.WithField("FinalizedRoot", cp.Root).Info("Pingoleon finalized checkpoint")
 	resp := &pb.Status{
 		ForkDigest:     forkDigest[:],
 		FinalizedRoot:  cp.Root,
@@ -310,6 +311,7 @@ func (s *Service) validateStatusMessage(ctx context.Context, msg *pb.Status) err
 		return nil
 	}
 	if !s.cfg.beaconDB.IsFinalizedBlock(ctx, bytesutil.ToBytes32(msg.FinalizedRoot)) {
+		log.WithField("finalizedRoot", msg.FinalizedRoot).Info("Pingoleon node has invalid finalized root")
 		return p2ptypes.ErrInvalidFinalizedRoot
 	}
 	blk, err := s.cfg.beaconDB.Block(ctx, bytesutil.ToBytes32(msg.FinalizedRoot))
