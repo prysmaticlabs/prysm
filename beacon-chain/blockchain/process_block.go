@@ -399,7 +399,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 			}
 		}
 		if i > 0 && fCheckpoints[i].Epoch > fCheckpoints[i-1].Epoch {
-			if err := s.cfg.BeaconDB.SaveFinalizedCheckpoint(ctx, fCheckpoints[i]); err != nil {
+			if err := s.updateFinalized(ctx, fCheckpoints[i]); err != nil {
 				tracing.AnnotateError(span, err)
 				return err
 			}
