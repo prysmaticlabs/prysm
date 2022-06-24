@@ -296,11 +296,9 @@ func TestService_HasBlock(t *testing.T) {
 	}
 	b := util.NewBeaconBlock()
 	b.Block.Slot = 1
-	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
-	require.NoError(t, err)
+	util.SaveBlock(t, context.Background(), s.cfg.BeaconDB, b)
 	r, err = b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, s.cfg.BeaconDB.SaveBlock(context.Background(), wsb))
 	require.Equal(t, true, s.HasBlock(context.Background(), r))
 }
 
