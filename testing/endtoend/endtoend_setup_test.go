@@ -40,8 +40,12 @@ func e2eMinimal(t *testing.T, cfgo ...types.E2EConfigOpt) *testRunner {
 		ev.HealthzCheck,
 		ev.MetricsCheck,
 		ev.ValidatorsAreActive,
+		ev.InjectDoubleVoteOnEpoch(2),
+		ev.InjectDoubleBlockOnEpoch(2),
 		ev.ValidatorsParticipatingAtEpoch(2),
 		ev.FinalizationOccurs(3),
+		ev.ValidatorsSlashedAfterEpoch(4),
+		ev.SlashedValidatorsLoseBalanceAfterEpoch(4),
 		ev.VerifyBlockGraffiti,
 		ev.PeersCheck,
 		ev.ProposeVoluntaryExit,
@@ -62,6 +66,7 @@ func e2eMinimal(t *testing.T, cfgo ...types.E2EConfigOpt) *testRunner {
 	}
 	testConfig := &types.E2EConfig{
 		BeaconFlags: []string{
+			"--slasher",
 			fmt.Sprintf("--slots-per-archive-point=%d", params.BeaconConfig().SlotsPerEpoch*16),
 			fmt.Sprintf("--tracing-endpoint=http://%s", tracingEndpoint),
 			"--enable-tracing",
