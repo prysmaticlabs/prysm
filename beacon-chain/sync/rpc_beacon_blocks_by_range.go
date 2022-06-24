@@ -40,7 +40,10 @@ func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 		tracing.AnnotateError(span, err)
 		return err
 	}
-
+	// Only have range requests with a step of 1 being processed.
+	if m.Step > 1 {
+		m.Step = 1
+	}
 	// The initial count for the first batch to be returned back.
 	count := m.Count
 	allowedBlocksPerSecond := uint64(flags.Get().BlockBatchLimit)
@@ -240,7 +243,7 @@ func (s *Service) filterBlocks(ctx context.Context, blks []interfaces.SignedBeac
 			// Set the previous root as the
 			// newly added block's root
 			currRoot := roots[i]
-			prevRoot = &currRoot
+			*prevRoot = currRoot
 		}
 	}
 	return newBlks, nil
