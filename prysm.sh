@@ -131,8 +131,8 @@ function verify() {
     hash shasum 2>/dev/null || {
         checkSum="sha256sum"
         hash sha256sum 2>/dev/null || {
-        echo >&2 "SHA checksum utility not available. Either install one (shasum or sha256sum) or run with PRYSM_ALLOW_UNVERIFIED_BINARIES=1."
-        exit 1
+            echo >&2 "SHA checksum utility not available. Either install one (shasum or sha256sum) or run with PRYSM_ALLOW_UNVERIFIED_BINARIES=1."
+            exit 1
         }
     }
     hash gpg 2>/dev/null || {
