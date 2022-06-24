@@ -421,6 +421,9 @@ func TestFuzzProcessAttestationsNoVerify_10000(t *testing.T) {
 		}
 		s, err := stateAltair.InitializeFromProtoUnsafe(state)
 		require.NoError(t, err)
+		if b.Block == nil || b.Block.Body == nil {
+			continue
+		}
 		wsb, err := blocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)
 		r, err := altair.ProcessAttestationsNoVerifySignature(context.Background(), s, wsb)
