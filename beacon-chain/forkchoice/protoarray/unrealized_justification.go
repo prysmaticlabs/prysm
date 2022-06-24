@@ -56,10 +56,11 @@ func (f *ForkChoice) UpdateUnrealizedCheckpoints() {
 		node.justifiedEpoch = node.unrealizedJustifiedEpoch
 		node.finalizedEpoch = node.unrealizedFinalizedEpoch
 		if node.justifiedEpoch > f.store.justifiedCheckpoint.Epoch {
-			f.store.justifiedCheckpoint.Epoch = node.justifiedEpoch
+			f.store.justifiedCheckpoint = f.store.unrealizedJustifiedCheckpoint
 		}
 		if node.finalizedEpoch > f.store.finalizedCheckpoint.Epoch {
-			f.store.finalizedCheckpoint.Epoch = node.finalizedEpoch
+			f.store.justifiedCheckpoint = f.store.unrealizedJustifiedCheckpoint
+			f.store.finalizedCheckpoint = f.store.unrealizedFinalizedCheckpoint
 		}
 	}
 }

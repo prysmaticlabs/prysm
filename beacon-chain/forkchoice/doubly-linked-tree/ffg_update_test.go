@@ -227,6 +227,7 @@ func setup(justifiedEpoch, finalizedEpoch types.Epoch) *ForkChoice {
 	}
 	err = f.InsertNode(ctx, state, blkRoot)
 	if err != nil {
+		log.Error(err)
 		return nil
 	}
 	return f

@@ -6,6 +6,8 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -23,15 +25,17 @@ import (
 // New initializes a new fork choice store.
 func New() *ForkChoice {
 	s := &Store{
-		justifiedCheckpoint:     &forkchoicetypes.Checkpoint{},
-		bestJustifiedCheckpoint: &forkchoicetypes.Checkpoint{},
-		prevJustifiedCheckpoint: &forkchoicetypes.Checkpoint{},
-		finalizedCheckpoint:     &forkchoicetypes.Checkpoint{},
-		proposerBoostRoot:       [32]byte{},
-		nodeByRoot:              make(map[[fieldparams.RootLength]byte]*Node),
-		nodeByPayload:           make(map[[fieldparams.RootLength]byte]*Node),
-		slashedIndices:          make(map[types.ValidatorIndex]bool),
-		pruneThreshold:          defaultPruneThreshold,
+		justifiedCheckpoint:           &forkchoicetypes.Checkpoint{},
+		bestJustifiedCheckpoint:       &forkchoicetypes.Checkpoint{},
+		unrealizedJustifiedCheckpoint: &forkchoicetypes.Checkpoint{},
+		unrealizedFinalizedCheckpoint: &forkchoicetypes.Checkpoint{},
+		prevJustifiedCheckpoint:       &forkchoicetypes.Checkpoint{},
+		finalizedCheckpoint:           &forkchoicetypes.Checkpoint{},
+		proposerBoostRoot:             [32]byte{},
+		nodeByRoot:                    make(map[[fieldparams.RootLength]byte]*Node),
+		nodeByPayload:                 make(map[[fieldparams.RootLength]byte]*Node),
+		slashedIndices:                make(map[types.ValidatorIndex]bool),
+		pruneThreshold:                defaultPruneThreshold,
 	}
 
 	b := make([]uint64, 0)
@@ -112,7 +116,7 @@ func (f *ForkChoice) ProcessAttestation(ctx context.Context, validatorIndices []
 }
 
 // InsertNode processes a new block by inserting it to the fork choice store.
-func (f *ForkChoice) InsertNode(ctx context.Context, state state.ReadOnlyBeaconState, root [32]byte) error {
+func (f *ForkChoice) InsertNode(ctx context.Context, state state.BeaconState, root [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.InsertNode")
 	defer span.End()
 
@@ -142,9 +146,36 @@ func (f *ForkChoice) InsertNode(ctx context.Context, state state.ReadOnlyBeaconS
 		return errInvalidNilCheckpoint
 	}
 	finalizedEpoch := fc.Epoch
-	err := f.store.insert(ctx, slot, root, parentRoot, payloadHash, justifiedEpoch, finalizedEpoch)
+	node, err := f.store.insert(ctx, slot, root, parentRoot, payloadHash, justifiedEpoch, finalizedEpoch)
 	if err != nil {
 		return err
+	}
+
+	uj, uf, err := precompute.UnrealizedCheckpoints(state)
+	if err != nil {
+		log.WithError(err).Debug("could not compute unrealized checkpoints")
+	} else {
+		node.unrealizedJustifiedEpoch, node.unrealizedFinalizedEpoch = uj.Epoch, uf.Epoch
+		f.store.checkpointsLock.Lock()
+		if uj.Epoch > f.store.unrealizedJustifiedCheckpoint.Epoch {
+			f.store.unrealizedJustifiedCheckpoint = &forkchoicetypes.Checkpoint{
+				Epoch: uj.Epoch, Root: bytesutil.ToBytes32(uj.Root),
+			}
+		}
+		if uf.Epoch > f.store.unrealizedFinalizedCheckpoint.Epoch {
+			f.store.unrealizedJustifiedCheckpoint = &forkchoicetypes.Checkpoint{
+				Epoch: uj.Epoch, Root: bytesutil.ToBytes32(uj.Root),
+			}
+			f.store.unrealizedFinalizedCheckpoint = &forkchoicetypes.Checkpoint{
+				Epoch: uf.Epoch, Root: bytesutil.ToBytes32(uf.Root),
+			}
+		}
+
+		currentSlot := slots.CurrentSlot(f.store.genesisTime)
+		if time.CurrentEpoch(state) < slots.ToEpoch(currentSlot) {
+			jc, fc = uj, uf
+		}
+		f.store.checkpointsLock.Unlock()
 	}
 	return f.updateCheckpoints(ctx, jc, fc)
 }
@@ -546,7 +577,7 @@ func (f *ForkChoice) InsertOptimisticChain(ctx context.Context, chain []*forkcho
 		if err != nil {
 			return err
 		}
-		if err := f.store.insert(ctx,
+		if _, err := f.store.insert(ctx,
 			b.Slot(), r, parentRoot, payloadHash,
 			chain[i].JustifiedCheckpoint.Epoch, chain[i].FinalizedCheckpoint.Epoch); err != nil {
 			return err
