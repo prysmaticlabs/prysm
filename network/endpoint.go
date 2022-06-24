@@ -31,14 +31,7 @@ func (e Endpoint) HttpClient() *http.Client {
 	if e.Auth.Method != authorization.Bearer {
 		return http.DefaultClient
 	}
-	authTransport := &jwtTransport{
-		underlyingTransport: http.DefaultTransport,
-		jwtSecret:           []byte(e.Auth.Value),
-	}
-	return &http.Client{
-		Timeout:   DefaultRPCHTTPTimeout,
-		Transport: authTransport,
-	}
+	return NewHttpClientWithSecret(e.Auth.Value)
 }
 
 // Equals compares two authorization data objects for equality.
@@ -69,4 +62,17 @@ func Method(auth string) authorization.AuthorizationMethod {
 		return authorization.Bearer
 	}
 	return authorization.None
+}
+
+// NewHttpClientWithSecret returns a http client that utilizes
+// jwt authentication.
+func NewHttpClientWithSecret(secret string) *http.Client {
+	authTransport := &jwtTransport{
+		underlyingTransport: http.DefaultTransport,
+		jwtSecret:           []byte(secret),
+	}
+	return &http.Client{
+		Timeout:   DefaultRPCHTTPTimeout,
+		Transport: authTransport,
+	}
 }

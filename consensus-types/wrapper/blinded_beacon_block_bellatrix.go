@@ -320,7 +320,7 @@ func (w blindedBeaconBlockBodyBellatrix) ExecutionPayload() (*enginev1.Execution
 }
 
 // ExecutionPayloadHeader returns the execution payload header of the block body.
-func (w blindedBeaconBlockBodyBellatrix) ExecutionPayloadHeader() (*eth.ExecutionPayloadHeader, error) {
+func (w blindedBeaconBlockBodyBellatrix) ExecutionPayloadHeader() (*enginev1.ExecutionPayloadHeader, error) {
 	return w.b.ExecutionPayloadHeader, nil
 }
 

@@ -1,9 +1,9 @@
 package v3
 
-import ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+import enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 
 // SetLatestExecutionPayloadHeader for the beacon state.
-func (b *BeaconState) SetLatestExecutionPayloadHeader(val *ethpb.ExecutionPayloadHeader) error {
+func (b *BeaconState) SetLatestExecutionPayloadHeader(val *enginev1.ExecutionPayloadHeader) error {
 	if !b.hasInnerState() {
 		return ErrNilInnerState
 	}

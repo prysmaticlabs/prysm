@@ -23,6 +23,7 @@ import (
 	f "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
@@ -206,13 +207,23 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 	s.store = store.New(justified, finalized)
 
 	var forkChoicer f.ForkChoicer
-	fRoot := bytesutil.ToBytes32(finalized.Root)
+	fRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(finalized.Root))
 	if features.Get().EnableForkChoiceDoublyLinkedTree {
-		forkChoicer = doublylinkedtree.New(justified.Epoch, finalized.Epoch)
+		forkChoicer = doublylinkedtree.New()
 	} else {
-		forkChoicer = protoarray.New(justified.Epoch, finalized.Epoch)
+		forkChoicer = protoarray.New()
 	}
 	s.cfg.ForkChoiceStore = forkChoicer
+	if err := forkChoicer.UpdateJustifiedCheckpoint(&forkchoicetypes.Checkpoint{Epoch: justified.Epoch,
+		Root: bytesutil.ToBytes32(justified.Root)}); err != nil {
+		return errors.Wrap(err, "could not update forkchoice's justified checkpoint")
+	}
+	if err := forkChoicer.UpdateFinalizedCheckpoint(&forkchoicetypes.Checkpoint{Epoch: finalized.Epoch,
+		Root: bytesutil.ToBytes32(finalized.Root)}); err != nil {
+		return errors.Wrap(err, "could not update forkchoice's finalized checkpoint")
+	}
+	forkChoicer.SetGenesisTime(uint64(s.genesisTime.Unix()))
+
 	st, err := s.cfg.StateGen.StateByRoot(s.ctx, fRoot)
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized checkpoint state")
@@ -468,9 +479,12 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState state.Beacon
 	if err := s.cfg.ForkChoiceStore.InsertNode(ctx, genesisState, genesisBlkRoot); err != nil {
 		log.Fatalf("Could not process genesis block for fork choice: %v", err)
 	}
+	s.cfg.ForkChoiceStore.SetOriginRoot(genesisBlkRoot)
+	// Set genesis as fully validated
 	if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, genesisBlkRoot); err != nil {
-		log.Fatalf("Could not set optimistic status of genesis block to false: %v", err)
+		return errors.Wrap(err, "Could not set optimistic status of genesis block to false")
 	}
+	s.cfg.ForkChoiceStore.SetGenesisTime(uint64(s.genesisTime.Unix()))
 
 	s.setHead(genesisBlkRoot, genesisBlk, genesisState)
 	return nil

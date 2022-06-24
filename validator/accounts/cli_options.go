@@ -74,14 +74,6 @@ func WithBeaconRPCProvider(provider string) Option {
 	}
 }
 
-// WithFilteredPubKeys adds public key strings parsed from CLI.
-func WithFilteredPubKeys(filteredPubKeys []bls.PublicKey) Option {
-	return func(acc *AccountsCLIManager) error {
-		acc.filteredPubKeys = filteredPubKeys
-		return nil
-	}
-}
-
 // WithWalletKeyCount tracks the number of keys in a wallet.
 func WithWalletKeyCount(walletKeyCount int) Option {
 	return func(acc *AccountsCLIManager) error {
@@ -90,9 +82,90 @@ func WithWalletKeyCount(walletKeyCount int) Option {
 	}
 }
 
+// WithDeletePublicKeys indicates whether to delete the public keys.
 func WithDeletePublicKeys(deletePublicKeys bool) Option {
 	return func(acc *AccountsCLIManager) error {
 		acc.deletePublicKeys = deletePublicKeys
+		return nil
+	}
+}
+
+// WithReadPasswordFile indicates whether to read the password from a file.
+func WithReadPasswordFile(readPasswordFile bool) Option {
+	return func(acc *AccountsCLIManager) error {
+		acc.readPasswordFile = readPasswordFile
+		return nil
+	}
+}
+
+// WithImportPrivateKeys indicates whether to import private keys as accounts.
+func WithImportPrivateKeys(importPrivateKeys bool) Option {
+	return func(acc *AccountsCLIManager) error {
+		acc.importPrivateKeys = importPrivateKeys
+		return nil
+	}
+}
+
+// WithPrivateKeyFile specifies the private key path.
+func WithPrivateKeyFile(privateKeyFile string) Option {
+	return func(acc *AccountsCLIManager) error {
+		acc.privateKeyFile = privateKeyFile
+		return nil
+	}
+}
+
+// WithKeysDir specifies the directory keys are read from.
+func WithKeysDir(keysDir string) Option {
+	return func(acc *AccountsCLIManager) error {
+		acc.keysDir = keysDir
+		return nil
+	}
+}
+
+// WithPasswordFilePath specifies where the password is stored.
+func WithPasswordFilePath(passwordFilePath string) Option {
+	return func(acc *AccountsCLIManager) error {
+		acc.passwordFilePath = passwordFilePath
+		return nil
+	}
+}
+
+// WithBackupDir specifies the directory backups are written to.
+func WithBackupsDir(backupsDir string) Option {
+	return func(acc *AccountsCLIManager) error {
+		acc.backupsDir = backupsDir
+		return nil
+	}
+}
+
+// WithBackupPassword specifies the password for backups.
+func WithBackupsPassword(backupsPassword string) Option {
+	return func(acc *AccountsCLIManager) error {
+		acc.backupsPassword = backupsPassword
+		return nil
+	}
+}
+
+// WithFilteredPubKeys adds public key strings parsed from CLI.
+func WithFilteredPubKeys(filteredPubKeys []bls.PublicKey) Option {
+	return func(acc *AccountsCLIManager) error {
+		acc.filteredPubKeys = filteredPubKeys
+		return nil
+	}
+}
+
+// WithRawPubKeys adds raw public key bytes parsed from CLI.
+func WithRawPubKeys(rawPubKeys [][]byte) Option {
+	return func(acc *AccountsCLIManager) error {
+		acc.rawPubKeys = rawPubKeys
+		return nil
+	}
+}
+
+// WithFormattedPubKeys adds formatted public key strings parsed from CLI.
+func WithFormattedPubKeys(formattedPubKeys []string) Option {
+	return func(acc *AccountsCLIManager) error {
+		acc.formattedPubKeys = formattedPubKeys
 		return nil
 	}
 }

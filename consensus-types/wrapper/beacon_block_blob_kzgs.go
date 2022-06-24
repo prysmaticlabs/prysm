@@ -315,7 +315,7 @@ func (w eip4844BeaconBlockBody) ExecutionPayload() (*enginev1.ExecutionPayload, 
 	return w.b.ExecutionPayload, nil
 }
 
-func (w eip4844BeaconBlockBody) ExecutionPayloadHeader() (*eth.ExecutionPayloadHeader, error) {
+func (w eip4844BeaconBlockBody) ExecutionPayloadHeader() (*enginev1.ExecutionPayloadHeader, error) {
 	return nil, errors.Wrapf(ErrUnsupportedField, "ExecutionPayloadHeader for %T", w)
 }
 

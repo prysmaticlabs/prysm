@@ -64,6 +64,6 @@ type BeaconBlockBody interface {
 	HashTreeRoot() ([32]byte, error)
 	Proto() proto.Message
 	ExecutionPayload() (*enginev1.ExecutionPayload, error)
-	ExecutionPayloadHeader() (*ethpb.ExecutionPayloadHeader, error)
+	ExecutionPayloadHeader() (*enginev1.ExecutionPayloadHeader, error)
 	BlobKzgs() ([][]byte, error)
 }

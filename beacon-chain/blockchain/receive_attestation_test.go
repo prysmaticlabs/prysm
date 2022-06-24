@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
@@ -120,7 +121,9 @@ func TestProcessAttestations_Ok(t *testing.T) {
 	copied, err = transition.ProcessSlots(ctx, copied, 1)
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, copied, tRoot))
-	state, blkRoot, err := prepareForkchoiceState(ctx, 0, tRoot, tRoot, params.BeaconConfig().ZeroHash, 1, 1)
+	ofc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	ojc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	state, blkRoot, err := prepareForkchoiceState(ctx, 0, tRoot, tRoot, params.BeaconConfig().ZeroHash, ojc, ofc)
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
 	require.NoError(t, service.cfg.AttPool.SaveForkchoiceAttestations(atts))
@@ -211,38 +214,58 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 func TestService_ProcessAttestationsAndUpdateHead(t *testing.T) {
 	ctx := context.Background()
 	opts := testServiceOptsWithDB(t)
-	opts = append(opts, WithAttestationPool(attestations.NewPool()), WithStateNotifier(&mockBeaconNode{}))
+	fcs := protoarray.New()
+	opts = append(opts,
+		WithAttestationPool(attestations.NewPool()),
+		WithStateNotifier(&mockBeaconNode{}),
+		WithForkChoiceStore(fcs),
+	)
 
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
-	service.genesisTime = prysmTime.Now().Add(-1 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
+	service.genesisTime = prysmTime.Now().Add(-2 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
 	genesisState, pks := util.DeterministicGenesisState(t, 64)
-	require.NoError(t, genesisState.SetGenesisTime(uint64(prysmTime.Now().Unix())-params.BeaconConfig().SecondsPerSlot))
 	require.NoError(t, service.saveGenesisData(ctx, genesisState))
-	atts, err := util.GenerateAttestations(genesisState, pks, 1, 0, false)
-	require.NoError(t, err)
-	tRoot := bytesutil.ToBytes32(atts[0].Data.Target.Root)
 	copied := genesisState.Copy()
-	copied, err = transition.ProcessSlots(ctx, copied, 1)
+	// Generate a new block for attesters to attest
+	blk, err := util.GenerateFullBlock(copied, pks, util.DefaultBlockGenConfig(), 1)
 	require.NoError(t, err)
-	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, copied, tRoot))
-	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Root: tRoot[:]}))
-	state, blkRoot, err := prepareForkchoiceState(ctx, 0, tRoot, tRoot, params.BeaconConfig().ZeroHash, 1, 1)
+	tRoot, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
+	wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+	require.NoError(t, err)
+	require.NoError(t, service.onBlock(ctx, wsb, tRoot))
+	copied, err = service.cfg.StateGen.StateByRoot(ctx, tRoot)
+	require.NoError(t, err)
+	require.Equal(t, 2, fcs.NodeCount())
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
+
+	// Generate attestatios for this block in Slot 1
+	atts, err := util.GenerateAttestations(copied, pks, 1, 1, false)
+	require.NoError(t, err)
 	require.NoError(t, service.cfg.AttPool.SaveForkchoiceAttestations(atts))
-	b := util.NewBeaconBlock()
-	wb, err := wrapper.WrappedSignedBeaconBlock(b)
+	// Verify the target is in forchoice
+	require.Equal(t, true, fcs.HasNode(bytesutil.ToBytes32(atts[0].Data.BeaconBlockRoot)))
+
+	// Insert a new block to forkchoice
+	ojc := &ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]}
+	b, err := util.GenerateFullBlock(genesisState, pks, util.DefaultBlockGenConfig(), 2)
 	require.NoError(t, err)
+	b.Block.ParentRoot = service.originBlockRoot[:]
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
+	wb, err := wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
 	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wb))
-	state, blkRoot, err = prepareForkchoiceState(ctx, wb.Block().Slot(), r, bytesutil.ToBytes32(wb.Block().ParentRoot()), [32]byte{}, 0, 0)
+	state, blkRoot, err := prepareForkchoiceState(ctx, 2, r, service.originBlockRoot, [32]byte{'b'}, ojc, ojc)
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
+	require.Equal(t, 3, fcs.NodeCount())
 	service.head.root = r // Old head
+
 	require.Equal(t, 1, len(service.cfg.AttPool.ForkchoiceAttestations()))
 	require.NoError(t, err, service.UpdateHead(ctx))
-	require.Equal(t, tRoot, service.head.root)                             // Validate head is the new one
+
 	require.Equal(t, 0, len(service.cfg.AttPool.ForkchoiceAttestations())) // Validate att pool is empty
+	require.Equal(t, tRoot, service.head.root)                             // Validate head is the new one
 }

@@ -1,20 +1,16 @@
 package endtoend
 
-import "testing"
+import (
+	"testing"
 
-func TestEndToEnd_ScenarioRun_BeaconOffline(t *testing.T) {
-	runner := e2eMinimal(t)
+	"github.com/prysmaticlabs/prysm/testing/endtoend/types"
+)
 
-	runner.config.Evaluators = scenarioEvals()
-	runner.config.EvalInterceptor = runner.singleNodeOffline
-	runner.scenarioRunner()
-}
-
-func TestEndToEnd_ScenarioRun_AllvalidatorsOffline(t *testing.T) {
-	runner := e2eMinimal(t)
+func TestEndToEnd_MultiScenarioRun(t *testing.T) {
+	runner := e2eMinimal(t, types.WithEpochs(22))
 
 	runner.config.Evaluators = scenarioEvals()
-	runner.config.EvalInterceptor = runner.allValidatorsOffline
+	runner.config.EvalInterceptor = runner.multiScenario
 	runner.scenarioRunner()
 }
 

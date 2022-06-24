@@ -115,30 +115,7 @@ func (s *Store) migrateOptimalAttesterProtectionUp(ctx context.Context) error {
 // Migrate attester protection from the more optimal format to the old format in the DB.
 func (s *Store) migrateOptimalAttesterProtectionDown(ctx context.Context) error {
 	// First we extract the public keys we are migrating down for.
-	pubKeys := make([][fieldparams.BLSPubkeyLength]byte, 0)
-	err := s.view(func(tx *bolt.Tx) error {
-		mb := tx.Bucket(migrationsBucket)
-		if b := mb.Get(migrationOptimalAttesterProtectionKey); b == nil {
-			// Migration has not occurred, meaning data is already in old format
-			// so no need to perform a down migration.
-			return nil
-		}
-		bkt := tx.Bucket(pubKeysBucket)
-		if bkt == nil {
-			return nil
-		}
-		return bkt.ForEach(func(pubKey, v []byte) error {
-			if pubKey == nil {
-				return nil
-			}
-			pkBucket := bkt.Bucket(pubKey)
-			if pkBucket == nil {
-				return nil
-			}
-			pubKeys = append(pubKeys, bytesutil.ToBytes48(pubKey))
-			return nil
-		})
-	})
+	pubKeys, err := s.extractPubKeysForMigratingDown()
 	if err != nil {
 		return err
 	}
@@ -246,4 +223,35 @@ func (s *Store) migrateOptimalAttesterProtectionDown(ctx context.Context) error 
 		migrationsBkt := tx.Bucket(migrationsBucket)
 		return migrationsBkt.Delete(migrationOptimalAttesterProtectionKey)
 	})
+}
+
+func (s *Store) extractPubKeysForMigratingDown() ([][fieldparams.BLSPubkeyLength]byte, error) {
+	pubKeys := make([][fieldparams.BLSPubkeyLength]byte, 0)
+	err := s.view(func(tx *bolt.Tx) error {
+		mb := tx.Bucket(migrationsBucket)
+		if b := mb.Get(migrationOptimalAttesterProtectionKey); b == nil {
+			// Migration has not occurred, meaning data is already in old format
+			// so no need to perform a down migration.
+			return nil
+		}
+		bkt := tx.Bucket(pubKeysBucket)
+		if bkt == nil {
+			return nil
+		}
+		return bkt.ForEach(func(pubKey, v []byte) error {
+			if pubKey == nil {
+				return nil
+			}
+			pkBucket := bkt.Bucket(pubKey)
+			if pkBucket == nil {
+				return nil
+			}
+			pubKeys = append(pubKeys, bytesutil.ToBytes48(pubKey))
+			return nil
+		})
+	})
+	if err != nil {
+		return nil, err
+	}
+	return pubKeys, nil
 }

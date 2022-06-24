@@ -62,6 +62,8 @@ require (
 	github.com/prometheus/client_golang v1.12.1
 	github.com/prometheus/client_model v0.2.0
 	github.com/prometheus/prom2json v1.3.0
+	github.com/protolambda/go-kzg v0.0.0-20220220065500-36404333406f
+	github.com/protolambda/ztyp v0.2.1
 	github.com/prysmaticlabs/go-bitfield v0.0.0-20210809151128-385d8c5e3fb7
 	github.com/prysmaticlabs/prombbolt v0.0.0-20210126082820-9b7adba6db7c
 	github.com/prysmaticlabs/protoc-gen-go-cast v0.0.0-20211014160335-757fae4f38c6
@@ -219,8 +221,6 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/common v0.32.1 // indirect
 	github.com/prometheus/procfs v0.7.3 // indirect
-	github.com/protolambda/go-kzg v0.0.0-20220220065500-36404333406f // indirect
-	github.com/protolambda/ztyp v0.2.1 // indirect
 	github.com/raulk/clock v1.1.0 // indirect
 	github.com/raulk/go-watchdog v1.2.0 // indirect
 	github.com/rjeczalik/notify v0.9.1 // indirect
@@ -282,7 +282,7 @@ replace github.com/json-iterator/go => github.com/prestonvanloon/go v1.1.7-0.201
 // See https://github.com/prysmaticlabs/grpc-gateway/issues/2
 replace github.com/grpc-ecosystem/grpc-gateway/v2 => github.com/prysmaticlabs/grpc-gateway/v2 v2.3.1-0.20220428175429-ee99f663f83d
 
-replace github.com/ferranbt/fastssz => github.com/prysmaticlabs/fastssz v0.0.0-20220110145812-fafb696cae88
+replace github.com/ferranbt/fastssz => github.com/prysmaticlabs/fastssz v0.0.0-20220602201051-e406b8091121
 
 // For eip-4844 types
 replace github.com/ethereum/go-ethereum => github.com/mdehoog/go-ethereum v1.10.19-0.20220607211042-6d4820c91805

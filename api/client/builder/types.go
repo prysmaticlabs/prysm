@@ -63,7 +63,7 @@ func sszBytesToUint256(b []byte) Uint256 {
 
 // SSZBytes creates an ssz-style (little-endian byte slice) representation of the Uint256
 func (s Uint256) SSZBytes() []byte {
-	return bytesutil.ReverseByteOrder(s.Int.Bytes())
+	return bytesutil.PadTo(bytesutil.ReverseByteOrder(s.Int.Bytes()), 32)
 }
 
 var errUnmarshalUint256Failed = errors.New("unable to UnmarshalText into a Uint256 value")
@@ -149,8 +149,8 @@ func (bb *BuilderBid) ToProto() (*eth.BuilderBid, error) {
 	}, nil
 }
 
-func (h *ExecutionPayloadHeader) ToProto() (*eth.ExecutionPayloadHeader, error) {
-	return &eth.ExecutionPayloadHeader{
+func (h *ExecutionPayloadHeader) ToProto() (*v1.ExecutionPayloadHeader, error) {
+	return &v1.ExecutionPayloadHeader{
 		ParentHash:       h.ParentHash,
 		FeeRecipient:     h.FeeRecipient,
 		StateRoot:        h.StateRoot,
@@ -189,7 +189,7 @@ type ExecutionPayloadHeader struct {
 	BaseFeePerGas    Uint256       `json:"base_fee_per_gas,omitempty"`
 	BlockHash        hexutil.Bytes `json:"block_hash,omitempty"`
 	TransactionsRoot hexutil.Bytes `json:"transactions_root,omitempty"`
-	*eth.ExecutionPayloadHeader
+	*v1.ExecutionPayloadHeader
 }
 
 func (h *ExecutionPayloadHeader) MarshalJSON() ([]byte, error) {

@@ -321,7 +321,7 @@ service BeaconNodeValidator {
         };
     }
 
-    rpc SubmitValidatorRegistration(SignedValidatorRegistrationV1) returns (google.protobuf.Empty) {
+    rpc SubmitValidatorRegistration(SignedValidatorRegistrationsV1) returns (google.protobuf.Empty) {
         option (google.api.http) = {
             post: "/eth/v1alpha1/validator/registration"
             body: "*"

@@ -5,7 +5,6 @@ import (
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
@@ -53,10 +52,9 @@ func (s *Store) BlobsSidecarsBySlot(ctx context.Context, slot types.Slot) (bool,
 
 	var blobsSidecars []*ethpb.BlobsSidecar
 	err := s.db.View(func(tx *bolt.Tx) error {
-		keys := blockRootsBySlot(ctx, tx, slot)
-		blockRoots := make([][32]byte, len(keys))
-		for i := 0; i < len(keys); i++ {
-			blockRoots[i] = bytesutil.ToBytes32(keys[i])
+		blockRoots, err := blockRootsBySlot(ctx, tx, slot)
+		if err != nil {
+			return err
 		}
 
 		for _, blockRoot := range blockRoots {

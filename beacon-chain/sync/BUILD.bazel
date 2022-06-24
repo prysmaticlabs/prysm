@@ -61,6 +61,7 @@ go_library(
         "//beacon-chain/cache:go_default_library",
         "//beacon-chain/core/altair:go_default_library",
         "//beacon-chain/core/blocks:go_default_library",
+        "//beacon-chain/core/blob:go_default_library",
         "//beacon-chain/core/feed:go_default_library",
         "//beacon-chain/core/feed/block:go_default_library",
         "//beacon-chain/core/feed/operation:go_default_library",
@@ -88,6 +89,7 @@ go_library(
         "//consensus-types/interfaces:go_default_library",
         "//consensus-types/primitives:go_default_library",
         "//consensus-types/wrapper:go_default_library",
+        "//consensus-types/forks/eip4844:go_default_library",
         "//container/slice:go_default_library",
         "//crypto/bls:go_default_library",
         "//crypto/rand:go_default_library",
@@ -98,6 +100,7 @@ go_library(
         "//proto/prysm/v1alpha1:go_default_library",
         "//proto/prysm/v1alpha1/attestation:go_default_library",
         "//proto/prysm/v1alpha1/metadata:go_default_library",
+        "//proto/engine/v1:go_default_library",
         "//runtime:go_default_library",
         "//runtime/messagehandler:go_default_library",
         "//runtime/version:go_default_library",
@@ -122,6 +125,7 @@ go_library(
         "@com_github_trailofbits_go_mutexasserts//:go_default_library",
         "@io_opencensus_go//trace:go_default_library",
         "@org_golang_google_protobuf//proto:go_default_library",
+        "@com_github_protolambda_go_kzg//bls:go_default_library",
     ],
 )
 

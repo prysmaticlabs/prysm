@@ -118,7 +118,10 @@ func (s *Service) validateBlobsSidecarSignature(ctx context.Context, blk interfa
 	if err != nil {
 		return pubsub.ValidationReject, err
 	}
-	pKey, err := bls.PublicKeyFromBytes(proposerPubKey[:])
+	pKey, err := bls.PublicKeyFromBytes(proposerPubKey)
+	if err != nil {
+		return pubsub.ValidationReject, err
+	}
 	sigRoot, err := signing.ComputeSigningRoot(blobSigning, domain)
 	if err != nil {
 		return pubsub.ValidationReject, err

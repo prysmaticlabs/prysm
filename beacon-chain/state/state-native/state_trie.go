@@ -199,6 +199,8 @@ func InitializeFromProtoUnsafePhase0(st *ethpb.BeaconState) (state.BeaconState, 
 	b.sharedFieldReferences[nativetypes.CurrentEpochAttestations] = stateutil.NewRef(1)
 
 	state.StateCount.Inc()
+	// Finalizer runs when dst is being destroyed in garbage collection.
+	runtime.SetFinalizer(b, finalizerCleanup)
 	return b, nil
 }
 
@@ -287,6 +289,8 @@ func InitializeFromProtoUnsafeAltair(st *ethpb.BeaconStateAltair) (state.BeaconS
 	b.sharedFieldReferences[nativetypes.InactivityScores] = stateutil.NewRef(1)               // New in Altair.
 
 	state.StateCount.Inc()
+	// Finalizer runs when dst is being destroyed in garbage collection.
+	runtime.SetFinalizer(b, finalizerCleanup)
 	return b, nil
 }
 
@@ -377,6 +381,8 @@ func InitializeFromProtoUnsafeBellatrix(st *ethpb.BeaconStateBellatrix) (state.B
 	b.sharedFieldReferences[nativetypes.LatestExecutionPayloadHeader] = stateutil.NewRef(1) // New in Bellatrix.
 
 	state.StateCount.Inc()
+	// Finalizer runs when dst is being destroyed in garbage collection.
+	runtime.SetFinalizer(b, finalizerCleanup)
 	return b, nil
 }
 
@@ -495,31 +501,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 
 	state.StateCount.Inc()
 	// Finalizer runs when dst is being destroyed in garbage collection.
-	runtime.SetFinalizer(dst, func(b *BeaconState) {
-		for field, v := range b.sharedFieldReferences {
-			v.MinusRef()
-			if b.stateFieldLeaves[field].FieldReference() != nil {
-				b.stateFieldLeaves[field].FieldReference().MinusRef()
-			}
-
-		}
-		for i := range b.dirtyFields {
-			delete(b.dirtyFields, i)
-		}
-		for i := range b.rebuildTrie {
-			delete(b.rebuildTrie, i)
-		}
-		for i := range b.dirtyIndices {
-			delete(b.dirtyIndices, i)
-		}
-		for i := range b.sharedFieldReferences {
-			delete(b.sharedFieldReferences, i)
-		}
-		for i := range b.stateFieldLeaves {
-			delete(b.stateFieldLeaves, i)
-		}
-		state.StateCount.Sub(1)
-	})
+	runtime.SetFinalizer(dst, finalizerCleanup)
 	return dst
 }
 
@@ -758,17 +740,31 @@ func (b *BeaconState) rootSelector(ctx context.Context, field nativetypes.FieldI
 
 func (b *BeaconState) recomputeFieldTrie(index nativetypes.FieldIndex, elements interface{}) ([32]byte, error) {
 	fTrie := b.stateFieldLeaves[index]
+	fTrieMutex := fTrie.RWMutex
 	// We can't lock the trie directly because the trie's variable gets reassigned,
 	// and therefore we would call Unlock() on a different object.
-	fTrieMutex := fTrie.RWMutex
-	if fTrie.FieldReference().Refs() > 1 {
-		fTrieMutex.Lock()
+	fTrieMutex.Lock()
+
+	if fTrie.Empty() {
+		err := b.resetFieldTrie(index, elements, fTrie.Length())
+		if err != nil {
+			fTrieMutex.Unlock()
+			return [32]byte{}, err
+		}
+		// Reduce reference count as we are instantiating a new trie.
 		fTrie.FieldReference().MinusRef()
-		newTrie := fTrie.CopyTrie()
+		fTrieMutex.Unlock()
+		return b.stateFieldLeaves[index].TrieRoot()
+	}
+
+	if fTrie.FieldReference().Refs() > 1 {
+		fTrie.FieldReference().MinusRef()
+		newTrie := fTrie.TransferTrie()
 		b.stateFieldLeaves[index] = newTrie
 		fTrie = newTrie
-		fTrieMutex.Unlock()
 	}
+	fTrieMutex.Unlock()
+
 	// remove duplicate indexes
 	b.dirtyIndices[index] = slice.SetUint64(b.dirtyIndices[index])
 	// sort indexes again
@@ -791,4 +787,30 @@ func (b *BeaconState) resetFieldTrie(index nativetypes.FieldIndex, elements inte
 	b.stateFieldLeaves[index] = fTrie
 	b.dirtyIndices[index] = []uint64{}
 	return nil
+}
+
+func finalizerCleanup(b *BeaconState) {
+	for field, v := range b.sharedFieldReferences {
+		v.MinusRef()
+		if b.stateFieldLeaves[field].FieldReference() != nil {
+			b.stateFieldLeaves[field].FieldReference().MinusRef()
+		}
+
+	}
+	for i := range b.dirtyFields {
+		delete(b.dirtyFields, i)
+	}
+	for i := range b.rebuildTrie {
+		delete(b.rebuildTrie, i)
+	}
+	for i := range b.dirtyIndices {
+		delete(b.dirtyIndices, i)
+	}
+	for i := range b.sharedFieldReferences {
+		delete(b.sharedFieldReferences, i)
+	}
+	for i := range b.stateFieldLeaves {
+		delete(b.stateFieldLeaves, i)
+	}
+	state.StateCount.Sub(1)
 }

@@ -11,7 +11,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blob"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -102,7 +102,7 @@ func (s *Service) blobsSidecarsByRangeRPCHandler(ctx context.Context, msg interf
 }
 
 func SendBlobsSidecarsByRangeRequest(
-	ctx context.Context, db iface.NoHeadAccessDatabase, chain blockchain.ChainInfoFetcher, p2pProvider p2p.P2P, pid peer.ID,
+	ctx context.Context, db db.NoHeadAccessDatabase, chain blockchain.ChainInfoFetcher, p2pProvider p2p.P2P, pid peer.ID,
 	req *pb.BlobsSidecarsByRangeRequest) ([]*pb.BlobsSidecar, error) {
 	topic, err := p2p.TopicFromMessage(p2p.BlobsSidecarsByRangeMessageName, slots.ToEpoch(chain.CurrentSlot()))
 	if err != nil {
@@ -128,7 +128,7 @@ func SendBlobsSidecarsByRangeRequest(
 		if err != nil {
 			return nil, err
 		}
-		if signed == nil {
+		if signed == nil || signed.IsNil() || signed.Block().IsNil() {
 			return nil, fmt.Errorf("unable to find block with block root for slot: %v", blobs.BeaconBlockSlot)
 		}
 		blk, err := signed.PbEip4844Block()

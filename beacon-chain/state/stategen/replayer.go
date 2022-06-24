@@ -16,7 +16,6 @@ import (
 var ErrFutureSlotRequested = errors.New("cannot replay to future slots")
 var ErrNoCanonicalBlockForSlot = errors.New("none of the blocks found in the db slot index are canonical")
 var ErrNoBlocksBelowSlot = errors.New("no blocks found in db below slot")
-var ErrInvalidDBBlock = errors.New("invalid block found in database")
 var ErrReplayTargetSlotExceeded = errors.New("desired replay slot is less than state's slot")
 
 type retrievalMethod int
@@ -27,8 +26,8 @@ const (
 
 // HistoryAccessor describes the minimum set of database methods needed to support the ReplayerBuilder.
 type HistoryAccessor interface {
-	HighestSlotBlocksBelow(ctx context.Context, slot types.Slot) ([]interfaces.SignedBeaconBlock, error)
-	GenesisBlock(ctx context.Context) (interfaces.SignedBeaconBlock, error)
+	HighestRootsBelowSlot(ctx context.Context, slot types.Slot) (types.Slot, [][32]byte, error)
+	GenesisBlockRoot(ctx context.Context) ([32]byte, error)
 	Block(ctx context.Context, blockRoot [32]byte) (interfaces.SignedBeaconBlock, error)
 	StateOrError(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error)
 }

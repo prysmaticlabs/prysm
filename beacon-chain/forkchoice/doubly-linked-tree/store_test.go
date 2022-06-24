@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -22,13 +23,13 @@ func TestStore_PruneThreshold(t *testing.T) {
 func TestStore_JustifiedEpoch(t *testing.T) {
 	j := types.Epoch(100)
 	f := setup(j, j)
-	require.Equal(t, j, f.JustifiedEpoch())
+	require.Equal(t, j, f.JustifiedCheckpoint().Epoch)
 }
 
 func TestStore_FinalizedEpoch(t *testing.T) {
 	j := types.Epoch(50)
 	f := setup(j, j)
-	require.Equal(t, j, f.FinalizedEpoch())
+	require.Equal(t, j, f.FinalizedCheckpoint().Epoch)
 }
 
 func TestStore_NodeCount(t *testing.T) {
@@ -78,7 +79,8 @@ func TestForkChoice_HasNode(t *testing.T) {
 func TestStore_Head_UnknownJustifiedRoot(t *testing.T) {
 	f := setup(0, 0)
 
-	_, err := f.store.head(context.Background(), [32]byte{'a'})
+	f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: 1, Root: [32]byte{'a'}}
+	_, err := f.store.head(context.Background())
 	assert.ErrorContains(t, errUnknownJustifiedRoot.Error(), err)
 }
 
@@ -90,7 +92,8 @@ func TestStore_Head_Itself(t *testing.T) {
 
 	// Since the justified node does not have a best descendant so the best node
 	// is itself.
-	h, err := f.store.head(context.Background(), indexToHash(1))
+	f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: 0, Root: indexToHash(1)}
+	h, err := f.store.head(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, indexToHash(1), h)
 }
@@ -110,7 +113,8 @@ func TestStore_Head_BestDescendant(t *testing.T) {
 	state, blkRoot, err = prepareForkchoiceState(context.Background(), 4, indexToHash(4), indexToHash(2), params.BeaconConfig().ZeroHash, 0, 0)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
-	h, err := f.store.head(context.Background(), indexToHash(1))
+	f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: 0, Root: indexToHash(1)}
+	h, err := f.store.head(context.Background())
 	require.NoError(t, err)
 	require.Equal(t, h, indexToHash(4))
 }
@@ -133,7 +137,9 @@ func TestStore_Insert(t *testing.T) {
 	treeRootNode := &Node{slot: 0, root: indexToHash(0)}
 	nodeByRoot := map[[32]byte]*Node{indexToHash(0): treeRootNode}
 	nodeByPayload := map[[32]byte]*Node{indexToHash(0): treeRootNode}
-	s := &Store{nodeByRoot: nodeByRoot, treeRootNode: treeRootNode, nodeByPayload: nodeByPayload}
+	jc := &forkchoicetypes.Checkpoint{Epoch: 0}
+	fc := &forkchoicetypes.Checkpoint{Epoch: 0}
+	s := &Store{nodeByRoot: nodeByRoot, treeRootNode: treeRootNode, nodeByPayload: nodeByPayload, justifiedCheckpoint: jc, finalizedCheckpoint: fc}
 	payloadHash := [32]byte{'a'}
 	require.NoError(t, s.insert(context.Background(), 100, indexToHash(100), indexToHash(0), payloadHash, 1, 1))
 	assert.Equal(t, 2, len(s.nodeByRoot), "Did not insert block")
@@ -165,7 +171,8 @@ func TestStore_Prune_LessThanThreshold(t *testing.T) {
 
 	// Finalized root has depth 99 so everything before it should be pruned,
 	// but PruneThreshold is at 100 so nothing will be pruned.
-	require.NoError(t, s.prune(context.Background(), indexToHash(99)))
+	s.finalizedCheckpoint.Root = indexToHash(99)
+	require.NoError(t, s.prune(context.Background()))
 	assert.Equal(t, 100, len(s.nodeByRoot), "Incorrect nodes count")
 }
 
@@ -187,7 +194,8 @@ func TestStore_Prune_MoreThanThreshold(t *testing.T) {
 	s.pruneThreshold = 0
 
 	// Finalized root is at index 99 so everything before 99 should be pruned.
-	require.NoError(t, s.prune(context.Background(), indexToHash(99)))
+	s.finalizedCheckpoint.Root = indexToHash(99)
+	require.NoError(t, s.prune(context.Background()))
 	assert.Equal(t, 1, len(s.nodeByRoot), "Incorrect nodes count")
 }
 
@@ -209,11 +217,13 @@ func TestStore_Prune_MoreThanOnce(t *testing.T) {
 	s.pruneThreshold = 0
 
 	// Finalized root is at index 11 so everything before 11 should be pruned.
-	require.NoError(t, s.prune(context.Background(), indexToHash(10)))
+	s.finalizedCheckpoint.Root = indexToHash(10)
+	require.NoError(t, s.prune(context.Background()))
 	assert.Equal(t, 90, len(s.nodeByRoot), "Incorrect nodes count")
 
 	// One more time.
-	require.NoError(t, s.prune(context.Background(), indexToHash(20)))
+	s.finalizedCheckpoint.Root = indexToHash(20)
+	require.NoError(t, s.prune(context.Background()))
 	assert.Equal(t, 80, len(s.nodeByRoot), "Incorrect nodes count")
 }
 
@@ -236,7 +246,8 @@ func TestStore_Prune_NoDanglingBranch(t *testing.T) {
 	f.store.pruneThreshold = 0
 
 	s := f.store
-	require.NoError(t, s.prune(context.Background(), indexToHash(1)))
+	s.finalizedCheckpoint.Root = indexToHash(1)
+	require.NoError(t, s.prune(context.Background()))
 	require.Equal(t, len(s.nodeByRoot), 1)
 }
 
@@ -318,7 +329,8 @@ func TestStore_PruneMapsNodes(t *testing.T) {
 
 	s := f.store
 	s.pruneThreshold = 0
-	require.NoError(t, s.prune(context.Background(), indexToHash(uint64(1))))
+	s.finalizedCheckpoint.Root = indexToHash(1)
+	require.NoError(t, s.prune(context.Background()))
 	require.Equal(t, len(s.nodeByRoot), 1)
 
 }

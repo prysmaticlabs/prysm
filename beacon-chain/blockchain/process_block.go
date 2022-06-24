@@ -24,6 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
+	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
@@ -139,18 +140,6 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 		}
 	}
 
-	// We add a proposer score boost to fork choice for the block root if applicable, right after
-	// running a successful state transition for the block.
-	secondsIntoSlot := uint64(time.Since(s.genesisTime).Seconds()) % params.BeaconConfig().SecondsPerSlot
-	if err := s.cfg.ForkChoiceStore.BoostProposerRoot(ctx, &forkchoicetypes.ProposerBoostRootArgs{
-		BlockRoot:       blockRoot,
-		BlockSlot:       signed.Block().Slot(),
-		CurrentSlot:     slots.SinceGenesis(s.genesisTime),
-		SecondsIntoSlot: secondsIntoSlot,
-	}); err != nil {
-		return err
-	}
-
 	// If slasher is configured, forward the attestations in the block via
 	// an event feed for processing.
 	if features.Get().EnableSlasher {
@@ -221,13 +210,6 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 			return err
 		}
 		s.store.SetJustifiedCheckptAndPayloadHash(postState.CurrentJustifiedCheckpoint(), h)
-		// Update Forkchoice checkpoints
-		if err := s.cfg.ForkChoiceStore.UpdateJustifiedCheckpoint(psj); err != nil {
-			return err
-		}
-		if err := s.cfg.ForkChoiceStore.UpdateFinalizedCheckpoint(psf); err != nil {
-			return err
-		}
 	}
 
 	balances, err := s.justifiedBalances.get(ctx, bytesutil.ToBytes32(justified.Root))
@@ -235,7 +217,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 		msg := fmt.Sprintf("could not read balances for state w/ justified checkpoint %#x", justified.Root)
 		return errors.Wrap(err, msg)
 	}
-	headRoot, err := s.updateHead(ctx, balances)
+	headRoot, err := s.cfg.ForkChoiceStore.Head(ctx, balances)
 	if err != nil {
 		log.WithError(err).Warn("Could not update head")
 	}
@@ -281,9 +263,6 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 			return err
 		}
 		fRoot := bytesutil.ToBytes32(postState.FinalizedCheckpoint().Root)
-		if err := s.cfg.ForkChoiceStore.Prune(ctx, fRoot); err != nil {
-			return errors.Wrap(err, "could not prune fork choice nodes")
-		}
 		isOptimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(fRoot)
 		if err != nil {
 			return errors.Wrap(err, "could not check if node is optimistically synced")
@@ -317,11 +296,11 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 	return s.handleEpochBoundary(ctx, postState)
 }
 
-func getStateVersionAndPayload(st state.BeaconState) (int, *ethpb.ExecutionPayloadHeader, error) {
+func getStateVersionAndPayload(st state.BeaconState) (int, *enginev1.ExecutionPayloadHeader, error) {
 	if st == nil {
 		return 0, nil, errors.New("nil state")
 	}
-	var preStateHeader *ethpb.ExecutionPayloadHeader
+	var preStateHeader *enginev1.ExecutionPayloadHeader
 	var err error
 	preStateVersion := st.Version()
 	switch preStateVersion {
@@ -379,7 +358,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 	}
 	type versionAndHeader struct {
 		version int
-		header  *ethpb.ExecutionPayloadHeader
+		header  *enginev1.ExecutionPayloadHeader
 	}
 	preVersionAndHeaders := make([]*versionAndHeader, len(blks))
 	postVersionAndHeaders := make([]*versionAndHeader, len(blks))
@@ -441,8 +420,8 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 			}
 		}
 		args := &forkchoicetypes.BlockAndCheckpoints{Block: b.Block(),
-			JustifiedEpoch: jCheckpoints[i].Epoch,
-			FinalizedEpoch: fCheckpoints[i].Epoch}
+			JustifiedCheckpoint: jCheckpoints[i],
+			FinalizedCheckpoint: fCheckpoints[i]}
 		pendingNodes[len(blks)-i-1] = args
 		s.saveInitSyncBlock(blockRoots[i], b)
 		if err = s.handleBlockAfterBatchVerify(ctx, b, blockRoots[i], fCheckpoints[i], jCheckpoints[i]); err != nil {
@@ -459,11 +438,6 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 	if err := s.cfg.ForkChoiceStore.InsertNode(ctx, preState, lastBR); err != nil {
 		return errors.Wrap(err, "could not insert last block in batch to forkchoice")
 	}
-	// Prune forkchoice store
-	if err := s.cfg.ForkChoiceStore.Prune(ctx, s.ensureRootNotZeros(bytesutil.ToBytes32(fCheckpoints[len(blks)-1].Root))); err != nil {
-		return errors.Wrap(err, "could not prune fork choice nodes")
-	}
-
 	// Set their optimistic status
 	if isValidPayload {
 		if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, lastBR); err != nil {
@@ -539,7 +513,8 @@ func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed interf
 			return err
 		}
 		s.store.SetFinalizedCheckptAndPayloadHash(fCheckpoint, h)
-		if err := s.cfg.ForkChoiceStore.UpdateFinalizedCheckpoint(fCheckpoint); err != nil {
+		if err := s.cfg.ForkChoiceStore.UpdateFinalizedCheckpoint(&forkchoicetypes.Checkpoint{
+			Epoch: fCheckpoint.Epoch, Root: bytesutil.ToBytes32(fCheckpoint.Root)}); err != nil {
 			return err
 		}
 	}
@@ -624,7 +599,7 @@ func (s *Service) insertBlockToForkChoiceStore(ctx context.Context, blk interfac
 	return s.cfg.ForkChoiceStore.InsertNode(ctx, st, root)
 }
 
-// Inserts attester slashing indices to fork choice store.
+// InsertSlashingsToForkChoiceStore inserts attester slashing indices to fork choice store.
 // To call this function, it's caller's responsibility to ensure the slashing object is valid.
 func (s *Service) InsertSlashingsToForkChoiceStore(ctx context.Context, slashings []*ethpb.AttesterSlashing) {
 	for _, slashing := range slashings {
@@ -652,10 +627,6 @@ func (s *Service) savePostStateInfo(ctx context.Context, r [32]byte, b interface
 // This removes the attestations from the mem pool. It will only remove the attestations if input root `r` is canonical,
 // meaning the block `b` is part of the canonical chain.
 func (s *Service) pruneCanonicalAttsFromPool(ctx context.Context, r [32]byte, b interfaces.SignedBeaconBlock) error {
-	if !features.Get().CorrectlyPruneCanonicalAtts {
-		return nil
-	}
-
 	canonical, err := s.IsCanonical(ctx, r)
 	if err != nil {
 		return err
@@ -680,7 +651,7 @@ func (s *Service) pruneCanonicalAttsFromPool(ctx context.Context, r [32]byte, b 
 }
 
 // validateMergeTransitionBlock validates the merge transition block.
-func (s *Service) validateMergeTransitionBlock(ctx context.Context, stateVersion int, stateHeader *ethpb.ExecutionPayloadHeader, blk interfaces.SignedBeaconBlock) error {
+func (s *Service) validateMergeTransitionBlock(ctx context.Context, stateVersion int, stateHeader *enginev1.ExecutionPayloadHeader, blk interfaces.SignedBeaconBlock) error {
 	// Skip validation if block is older than Bellatrix.
 	if blocks.IsPreBellatrixVersion(blk.Block().Version()) {
 		return nil

@@ -4,10 +4,12 @@ import (
 	"context"
 	"testing"
 
+	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -28,7 +30,7 @@ func prepareForkchoiceState(
 		ParentRoot: parentRoot[:],
 	}
 
-	executionHeader := &ethpb.ExecutionPayloadHeader{
+	executionHeader := &enginev1.ExecutionPayloadHeader{
 		BlockHash: payloadHash[:],
 	}
 
@@ -54,14 +56,13 @@ func prepareForkchoiceState(
 	st, err := v3.InitializeFromProto(base)
 	return st, blockRoot, err
 }
-
 func TestFFGUpdates_OneBranch(t *testing.T) {
 	balances := []uint64{1, 1}
 	f := setup(0, 0)
 	ctx := context.Background()
 
 	// The head should always start at the finalized block.
-	r, err := f.Head(context.Background(), params.BeaconConfig().ZeroHash, balances)
+	r, err := f.Head(context.Background(), balances)
 	require.NoError(t, err)
 	assert.Equal(t, params.BeaconConfig().ZeroHash, r, "Incorrect head with genesis")
 
@@ -91,7 +92,7 @@ func TestFFGUpdates_OneBranch(t *testing.T) {
 	//            2
 	//            |
 	//            3 <- head
-	r, err = f.Head(context.Background(), params.BeaconConfig().ZeroHash, balances)
+	r, err = f.Head(context.Background(), balances)
 	require.NoError(t, err)
 	assert.Equal(t, indexToHash(3), r, "Incorrect head for with justified epoch at 0")
 
@@ -103,8 +104,9 @@ func TestFFGUpdates_OneBranch(t *testing.T) {
 	//            2 <- head
 	//            |
 	//            3
-	f.store.justifiedEpoch = 1
-	r, err = f.Head(context.Background(), indexToHash(2), balances)
+	f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Root: indexToHash(1), Epoch: 1}
+	f.store.finalizedCheckpoint = &forkchoicetypes.Checkpoint{Root: indexToHash(0), Epoch: 0}
+	r, err = f.Head(context.Background(), balances)
 	require.NoError(t, err)
 	assert.Equal(t, indexToHash(2), r, "Incorrect head with justified epoch at 1")
 
@@ -116,8 +118,8 @@ func TestFFGUpdates_OneBranch(t *testing.T) {
 	//            2 <- start
 	//            |
 	//            3 <- head
-	f.store.justifiedEpoch = 2
-	r, err = f.Head(context.Background(), indexToHash(3), balances)
+	f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Root: indexToHash(3), Epoch: 2}
+	r, err = f.Head(context.Background(), balances)
 	require.NoError(t, err)
 	assert.Equal(t, indexToHash(3), r, "Incorrect head with justified epoch at 2")
 }
@@ -127,7 +129,7 @@ func TestFFGUpdates_TwoBranches(t *testing.T) {
 	f := setup(0, 0)
 	ctx := context.Background()
 
-	r, err := f.Head(context.Background(), params.BeaconConfig().ZeroHash, balances)
+	r, err := f.Head(context.Background(), balances)
 	require.NoError(t, err)
 	assert.Equal(t, params.BeaconConfig().ZeroHash, r, "Incorrect head with genesis")
 
@@ -188,7 +190,7 @@ func TestFFGUpdates_TwoBranches(t *testing.T) {
 	//         7   8
 	//         |   |
 	//         9  10 <-- head
-	r, err = f.Head(context.Background(), params.BeaconConfig().ZeroHash, balances)
+	r, err = f.Head(context.Background(), balances)
 	require.NoError(t, err)
 	assert.Equal(t, indexToHash(10), r, "Incorrect head with justified epoch at 0")
 
@@ -218,7 +220,7 @@ func TestFFGUpdates_TwoBranches(t *testing.T) {
 	//         7   8
 	//         |   |
 	// head -> 9  10
-	r, err = f.Head(context.Background(), params.BeaconConfig().ZeroHash, balances)
+	r, err = f.Head(context.Background(), balances)
 	require.NoError(t, err)
 	assert.Equal(t, indexToHash(9), r, "Incorrect head with justified epoch at 0")
 
@@ -248,19 +250,22 @@ func TestFFGUpdates_TwoBranches(t *testing.T) {
 	//         7   8
 	//         |   |
 	//         9  10 <-- head
-	r, err = f.Head(context.Background(), params.BeaconConfig().ZeroHash, balances)
+	r, err = f.Head(context.Background(), balances)
 	require.NoError(t, err)
 	assert.Equal(t, indexToHash(10), r, "Incorrect head with justified epoch at 0")
 
-	f.store.justifiedEpoch = 1
-	r, err = f.Head(context.Background(), indexToHash(1), balances)
+	f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: 1, Root: indexToHash(1)}
+	r, err = f.Head(context.Background(), balances)
 	require.NoError(t, err)
 	assert.Equal(t, indexToHash(7), r, "Incorrect head with justified epoch at 0")
 }
 
 func setup(justifiedEpoch, finalizedEpoch types.Epoch) *ForkChoice {
-	f := New(justifiedEpoch, finalizedEpoch)
+	f := New()
 	f.store.nodesIndices[params.BeaconConfig().ZeroHash] = 0
+	f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: justifiedEpoch, Root: params.BeaconConfig().ZeroHash}
+	f.store.bestJustifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: justifiedEpoch, Root: params.BeaconConfig().ZeroHash}
+	f.store.finalizedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: finalizedEpoch, Root: params.BeaconConfig().ZeroHash}
 	f.store.nodes = append(f.store.nodes, &Node{
 		slot:           0,
 		root:           params.BeaconConfig().ZeroHash,
@@ -271,6 +276,5 @@ func setup(justifiedEpoch, finalizedEpoch types.Epoch) *ForkChoice {
 		bestDescendant: NonExistentNode,
 		weight:         0,
 	})
-
 	return f
 }

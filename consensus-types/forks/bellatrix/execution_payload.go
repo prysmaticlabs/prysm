@@ -3,21 +3,20 @@ package bellatrix
 import (
 	"bytes"
 
-	"github.com/prysmaticlabs/prysm/config/fieldparams"
+	field_params "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
-	"github.com/prysmaticlabs/prysm/proto/engine/v1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 )
 
 // PayloadToHeader converts `payload` into execution payload header format.
-func PayloadToHeader(payload *enginev1.ExecutionPayload) (*eth.ExecutionPayloadHeader, error) {
+func PayloadToHeader(payload *enginev1.ExecutionPayload) (*enginev1.ExecutionPayloadHeader, error) {
 	txRoot, err := ssz.TransactionsRoot(payload.Transactions)
 	if err != nil {
 		return nil, err
 	}
 
-	return &eth.ExecutionPayloadHeader{
+	return &enginev1.ExecutionPayloadHeader{
 		ParentHash:       bytesutil.SafeCopyBytes(payload.ParentHash),
 		FeeRecipient:     bytesutil.SafeCopyBytes(payload.FeeRecipient),
 		StateRoot:        bytesutil.SafeCopyBytes(payload.StateRoot),
@@ -84,7 +83,7 @@ func IsEmptyPayload(p *enginev1.ExecutionPayload) bool {
 	return true
 }
 
-func IsEmptyHeader(h *eth.ExecutionPayloadHeader) bool {
+func IsEmptyHeader(h *enginev1.ExecutionPayloadHeader) bool {
 	if !bytes.Equal(h.ParentHash, make([]byte, field_params.RootLength)) {
 		return false
 	}
