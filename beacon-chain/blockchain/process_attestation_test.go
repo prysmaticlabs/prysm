@@ -14,7 +14,6 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -38,20 +37,16 @@ func TestStore_OnAttestation_ErrorConditions_ProtoArray(t *testing.T) {
 	_, err = blockTree1(t, beaconDB, []byte{'g'})
 	require.NoError(t, err)
 
-	BlkWithOutState := util.NewBeaconBlock()
-	BlkWithOutState.Block.Slot = 0
-	wsb, err := wrapper.WrappedSignedBeaconBlock(BlkWithOutState)
-	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
-	BlkWithOutStateRoot, err := BlkWithOutState.Block.HashTreeRoot()
+	blkWithoutState := util.NewBeaconBlock()
+	blkWithoutState.Block.Slot = 0
+	util.SaveBlock(t, ctx, beaconDB, blkWithoutState)
+	BlkWithOutStateRoot, err := blkWithoutState.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	BlkWithStateBadAtt := util.NewBeaconBlock()
-	BlkWithStateBadAtt.Block.Slot = 1
-	wsb, err = wrapper.WrappedSignedBeaconBlock(BlkWithStateBadAtt)
-	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
-	BlkWithStateBadAttRoot, err := BlkWithStateBadAtt.Block.HashTreeRoot()
+	blkWithStateBadAtt := util.NewBeaconBlock()
+	blkWithStateBadAtt.Block.Slot = 1
+	util.SaveBlock(t, ctx, beaconDB, blkWithStateBadAtt)
+	BlkWithStateBadAttRoot, err := blkWithStateBadAtt.Block.HashTreeRoot()
 	require.NoError(t, err)
 
 	s, err := util.NewBeaconState()
@@ -59,13 +54,11 @@ func TestStore_OnAttestation_ErrorConditions_ProtoArray(t *testing.T) {
 	require.NoError(t, s.SetSlot(100*params.BeaconConfig().SlotsPerEpoch))
 	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, s, BlkWithStateBadAttRoot))
 
-	BlkWithValidState := util.NewBeaconBlock()
-	BlkWithValidState.Block.Slot = 2
-	wsb, err = wrapper.WrappedSignedBeaconBlock(BlkWithValidState)
-	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
+	blkWithValidState := util.NewBeaconBlock()
+	blkWithValidState.Block.Slot = 2
+	util.SaveBlock(t, ctx, beaconDB, blkWithValidState)
 
-	BlkWithValidStateRoot, err := BlkWithValidState.Block.HashTreeRoot()
+	blkWithValidStateRoot, err := blkWithValidState.Block.HashTreeRoot()
 	require.NoError(t, err)
 	s, err = util.NewBeaconState()
 	require.NoError(t, err)
@@ -75,7 +68,7 @@ func TestStore_OnAttestation_ErrorConditions_ProtoArray(t *testing.T) {
 		PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 	})
 	require.NoError(t, err)
-	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, s, BlkWithValidStateRoot))
+	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, s, blkWithValidStateRoot))
 
 	tests := []struct {
 		name      string
@@ -150,20 +143,16 @@ func TestStore_OnAttestation_ErrorConditions_DoublyLinkedTree(t *testing.T) {
 	_, err = blockTree1(t, beaconDB, []byte{'g'})
 	require.NoError(t, err)
 
-	BlkWithOutState := util.NewBeaconBlock()
-	BlkWithOutState.Block.Slot = 0
-	wsb, err := wrapper.WrappedSignedBeaconBlock(BlkWithOutState)
-	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
-	BlkWithOutStateRoot, err := BlkWithOutState.Block.HashTreeRoot()
+	blkWithoutState := util.NewBeaconBlock()
+	blkWithoutState.Block.Slot = 0
+	util.SaveBlock(t, ctx, beaconDB, blkWithoutState)
+	BlkWithOutStateRoot, err := blkWithoutState.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	BlkWithStateBadAtt := util.NewBeaconBlock()
-	BlkWithStateBadAtt.Block.Slot = 1
-	wsb, err = wrapper.WrappedSignedBeaconBlock(BlkWithStateBadAtt)
-	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
-	BlkWithStateBadAttRoot, err := BlkWithStateBadAtt.Block.HashTreeRoot()
+	blkWithStateBadAtt := util.NewBeaconBlock()
+	blkWithStateBadAtt.Block.Slot = 1
+	util.SaveBlock(t, ctx, beaconDB, blkWithStateBadAtt)
+	BlkWithStateBadAttRoot, err := blkWithStateBadAtt.Block.HashTreeRoot()
 	require.NoError(t, err)
 
 	s, err := util.NewBeaconState()
@@ -171,13 +160,11 @@ func TestStore_OnAttestation_ErrorConditions_DoublyLinkedTree(t *testing.T) {
 	require.NoError(t, s.SetSlot(100*params.BeaconConfig().SlotsPerEpoch))
 	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, s, BlkWithStateBadAttRoot))
 
-	BlkWithValidState := util.NewBeaconBlock()
-	BlkWithValidState.Block.Slot = 2
-	wsb, err = wrapper.WrappedSignedBeaconBlock(BlkWithValidState)
-	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
+	blkWithValidState := util.NewBeaconBlock()
+	blkWithValidState.Block.Slot = 2
+	util.SaveBlock(t, ctx, beaconDB, blkWithValidState)
 
-	BlkWithValidStateRoot, err := BlkWithValidState.Block.HashTreeRoot()
+	blkWithValidStateRoot, err := blkWithValidState.Block.HashTreeRoot()
 	require.NoError(t, err)
 	s, err = util.NewBeaconState()
 	require.NoError(t, err)
@@ -187,7 +174,7 @@ func TestStore_OnAttestation_ErrorConditions_DoublyLinkedTree(t *testing.T) {
 		PreviousVersion: params.BeaconConfig().GenesisForkVersion,
 	})
 	require.NoError(t, err)
-	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, s, BlkWithValidStateRoot))
+	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, s, blkWithValidStateRoot))
 
 	tests := []struct {
 		name      string
@@ -459,9 +446,7 @@ func TestVerifyBeaconBlock_futureBlock(t *testing.T) {
 
 	b := util.NewBeaconBlock()
 	b.Block.Slot = 2
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
-	require.NoError(t, err)
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, service.cfg.BeaconDB, b)
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	d := &ethpb.AttestationData{Slot: 1, BeaconBlockRoot: r[:]}
@@ -478,9 +463,7 @@ func TestVerifyBeaconBlock_OK(t *testing.T) {
 
 	b := util.NewBeaconBlock()
 	b.Block.Slot = 2
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
-	require.NoError(t, err)
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, service.cfg.BeaconDB, b)
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	d := &ethpb.AttestationData{Slot: 2, BeaconBlockRoot: r[:]}
@@ -503,9 +486,7 @@ func TestVerifyFinalizedConsistency_InconsistentRoot_ProtoArray(t *testing.T) {
 
 	b32 := util.NewBeaconBlock()
 	b32.Block.Slot = 32
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b32)
-	require.NoError(t, err)
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, service.cfg.BeaconDB, b32)
 	r32, err := b32.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -513,9 +494,7 @@ func TestVerifyFinalizedConsistency_InconsistentRoot_ProtoArray(t *testing.T) {
 	b33 := util.NewBeaconBlock()
 	b33.Block.Slot = 33
 	b33.Block.ParentRoot = r32[:]
-	wsb, err = wrapper.WrappedSignedBeaconBlock(b33)
-	require.NoError(t, err)
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, service.cfg.BeaconDB, b33)
 	r33, err := b33.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -538,9 +517,7 @@ func TestVerifyFinalizedConsistency_InconsistentRoot_DoublyLinkedTree(t *testing
 
 	b32 := util.NewBeaconBlock()
 	b32.Block.Slot = 32
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b32)
-	require.NoError(t, err)
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, service.cfg.BeaconDB, b32)
 	r32, err := b32.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -548,9 +525,7 @@ func TestVerifyFinalizedConsistency_InconsistentRoot_DoublyLinkedTree(t *testing
 	b33 := util.NewBeaconBlock()
 	b33.Block.Slot = 33
 	b33.Block.ParentRoot = r32[:]
-	wsb, err = wrapper.WrappedSignedBeaconBlock(b33)
-	require.NoError(t, err)
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, service.cfg.BeaconDB, b33)
 	r33, err := b33.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -567,9 +542,7 @@ func TestVerifyFinalizedConsistency_OK(t *testing.T) {
 
 	b32 := util.NewBeaconBlock()
 	b32.Block.Slot = 32
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b32)
-	require.NoError(t, err)
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, service.cfg.BeaconDB, b32)
 	r32, err := b32.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -578,9 +551,7 @@ func TestVerifyFinalizedConsistency_OK(t *testing.T) {
 	b33 := util.NewBeaconBlock()
 	b33.Block.Slot = 33
 	b33.Block.ParentRoot = r32[:]
-	wsb, err = wrapper.WrappedSignedBeaconBlock(b33)
-	require.NoError(t, err)
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, service.cfg.BeaconDB, b33)
 	r33, err := b33.Block.HashTreeRoot()
 	require.NoError(t, err)
 
