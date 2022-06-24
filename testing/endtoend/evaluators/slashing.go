@@ -3,6 +3,7 @@ package evaluators
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
@@ -57,6 +58,7 @@ var SlashedValidatorsLoseBalanceAfterEpoch = func(n types.Epoch) e2eTypes.Evalua
 	}
 }
 
+var slashedIndicesLock sync.RWMutex
 var slashedIndices []uint64
 
 func validatorsSlashed(conns ...*grpc.ClientConn) error {
@@ -68,6 +70,8 @@ func validatorsSlashed(conns ...*grpc.ClientConn) error {
 	if err != nil {
 		return err
 	}
+	slashedIndicesLock.RLock()
+	defer slashedIndicesLock.RUnlock()
 	if len(changes.SlashedIndices) != len(slashedIndices) {
 		return fmt.Errorf("expected %d indices to be slashed, received %d", len(slashedIndices), len(changes.SlashedIndices))
 	}
@@ -79,7 +83,9 @@ func validatorsLoseBalance(conns ...*grpc.ClientConn) error {
 	ctx := context.Background()
 	client := eth.NewBeaconChainClient(conn)
 
-	for i, slashedIndex := range slashedIndices {
+	slashedIndicesLock.RLock()
+	defer slashedIndicesLock.RUnlock()
+	for _, slashedIndex := range slashedIndices {
 		req := &eth.GetValidatorRequest{
 			QueryFilter: &eth.GetValidatorRequest_Index{
 				Index: types.ValidatorIndex(slashedIndex),
@@ -95,7 +101,7 @@ func validatorsLoseBalance(conns ...*grpc.ClientConn) error {
 		if valResp.EffectiveBalance >= slashedBal {
 			return fmt.Errorf(
 				"expected slashed validator %d to balance less than %d, received %d",
-				i,
+				slashedIndex,
 				slashedBal,
 				valResp.EffectiveBalance,
 			)
@@ -167,6 +173,8 @@ func insertDoubleAttestationIntoPool(conns ...*grpc.ClientConn) error {
 		return errors.Wrap(err, "could not compute signing root")
 	}
 
+	slashedIndicesLock.Lock()
+	defer slashedIndicesLock.Unlock()
 	valsToSlash := uint64(2)
 	for i := uint64(0); i < valsToSlash && i < uint64(len(committee)); i++ {
 		if len(slice.IntersectionUint64(slashedIndices, []uint64{uint64(committee[i])})) > 0 {
@@ -285,6 +293,8 @@ func proposeDoubleBlock(conns ...*grpc.ClientConn) error {
 	if _, err = valClient.ProposeBlock(ctx, signedBlk); err == nil {
 		return errors.New("expected block to fail processing")
 	}
+	slashedIndicesLock.Lock()
 	slashedIndices = append(slashedIndices, uint64(proposerIndex))
+	slashedIndicesLock.Unlock()
 	return nil
 }

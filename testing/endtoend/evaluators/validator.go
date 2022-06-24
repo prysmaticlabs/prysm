@@ -71,8 +71,20 @@ func validatorsAreActive(conns ...*grpc.ClientConn) error {
 	effBalanceLowCount := 0
 	exitEpochWrongCount := 0
 	withdrawEpochWrongCount := 0
+
+	validatorSlashedSoFar := make(map[ethtypes.ValidatorIndex]bool)
+	slashedIndicesLock.RLock()
+	for _, valIdx := range slashedIndices {
+		validatorSlashedSoFar[ethtypes.ValidatorIndex(valIdx)] = true
+	}
+	slashedIndicesLock.RUnlock()
 	for _, item := range validators.ValidatorList {
+		// Ignore exited validators in the computation.
 		if valExited && item.Index == exitedIndex {
+			continue
+		}
+		// Ignore slashed validators in the computation.
+		if validatorSlashedSoFar[item.Index] {
 			continue
 		}
 		if item.Validator.EffectiveBalance < params.BeaconConfig().MaxEffectiveBalance {
