@@ -47,7 +47,7 @@ func TestServer_getExecutionPayload(t *testing.T) {
 	}))
 
 	transitionSt, _ := util.DeterministicGenesisStateBellatrix(t, 1)
-	require.NoError(t, transitionSt.SetLatestExecutionPayloadHeader(&ethpb.ExecutionPayloadHeader{BlockNumber: 1}))
+	require.NoError(t, transitionSt.SetLatestExecutionPayloadHeader(&pb.ExecutionPayloadHeader{BlockNumber: 1}))
 	b2pb := util.NewBeaconBlockBellatrix()
 	b2r, err := b2pb.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -148,7 +148,7 @@ func TestServer_getExecutionPayload_UnexpectedFeeRecipient(t *testing.T) {
 	}))
 
 	transitionSt, _ := util.DeterministicGenesisStateBellatrix(t, 1)
-	require.NoError(t, transitionSt.SetLatestExecutionPayloadHeader(&ethpb.ExecutionPayloadHeader{BlockNumber: 1}))
+	require.NoError(t, transitionSt.SetLatestExecutionPayloadHeader(&pb.ExecutionPayloadHeader{BlockNumber: 1}))
 	b2pb := util.NewBeaconBlockBellatrix()
 	b2r, err := b2pb.Block.HashTreeRoot()
 	require.NoError(t, err)

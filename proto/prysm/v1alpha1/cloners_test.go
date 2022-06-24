@@ -720,8 +720,8 @@ func genPayload() *enginev1.ExecutionPayload {
 	}
 }
 
-func genPayloadHeader() *v1alpha1.ExecutionPayloadHeader {
-	return &v1alpha1.ExecutionPayloadHeader{
+func genPayloadHeader() *enginev1.ExecutionPayloadHeader {
+	return &enginev1.ExecutionPayloadHeader{
 		ParentHash:       bytes(),
 		FeeRecipient:     bytes(),
 		StateRoot:        bytes(),

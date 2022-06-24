@@ -314,6 +314,6 @@ func (w bellatrixBeaconBlockBody) ExecutionPayload() (*enginev1.ExecutionPayload
 }
 
 // ExecutionPayloadHeader is a stub.
-func (w bellatrixBeaconBlockBody) ExecutionPayloadHeader() (*eth.ExecutionPayloadHeader, error) {
+func (w bellatrixBeaconBlockBody) ExecutionPayloadHeader() (*enginev1.ExecutionPayloadHeader, error) {
 	return nil, errors.Wrapf(ErrUnsupportedField, "ExecutionPayloadHeader for %T", w)
 }

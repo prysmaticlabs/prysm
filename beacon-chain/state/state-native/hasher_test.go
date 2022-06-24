@@ -11,6 +11,7 @@ import (
 	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -325,7 +326,7 @@ func syncCommittee(prefix string) *ethpb.SyncCommittee {
 	}
 }
 
-func executionPayloadHeader() *ethpb.ExecutionPayloadHeader {
+func executionPayloadHeader() *enginev1.ExecutionPayloadHeader {
 	ph := bytesutil.ToBytes32([]byte("parent"))
 	fr := bytesutil.PadTo([]byte("fee"), 20)
 	sr := bytesutil.ToBytes32([]byte("state"))
@@ -336,7 +337,7 @@ func executionPayloadHeader() *ethpb.ExecutionPayloadHeader {
 	bf := bytesutil.ToBytes32([]byte("base"))
 	bh := bytesutil.ToBytes32([]byte("block"))
 	tr := bytesutil.ToBytes32([]byte("transactions"))
-	return &ethpb.ExecutionPayloadHeader{
+	return &enginev1.ExecutionPayloadHeader{
 		ParentHash:       ph[:],
 		FeeRecipient:     fr,
 		StateRoot:        sr[:],

@@ -307,6 +307,6 @@ func (w Phase0BeaconBlockBody) ExecutionPayload() (*enginev1.ExecutionPayload, e
 }
 
 // ExecutionPayloadHeader is a stub.
-func (w Phase0BeaconBlockBody) ExecutionPayloadHeader() (*eth.ExecutionPayloadHeader, error) {
+func (w Phase0BeaconBlockBody) ExecutionPayloadHeader() (*enginev1.ExecutionPayloadHeader, error) {
 	return nil, errors.Wrapf(ErrUnsupportedField, "ExecutionPayloadHeader for %T", w)
 }
