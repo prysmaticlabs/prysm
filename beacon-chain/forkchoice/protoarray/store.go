@@ -177,8 +177,29 @@ func (f *ForkChoice) InsertNode(ctx context.Context, state state.BeaconState, ro
 		}
 
 		currentSlot := slots.CurrentSlot(f.store.genesisTime)
+		log.WithFields(logrus.Fields{
+			"nodeJRoot":    fmt.Sprintf("%#x", bytesutil.Trunc(jc.Root)),
+			"nodeFRoot":    fmt.Sprintf("%#x", bytesutil.Trunc(fc.Root)),
+			"uJRoot":       fmt.Sprintf("%#x", bytesutil.Trunc(uj.Root)),
+			"uFRoot":       fmt.Sprintf("%#x", bytesutil.Trunc(uf.Root)),
+			"storeuJRoot":  fmt.Sprintf("%#x", bytesutil.Trunc(f.store.unrealizedJustifiedCheckpoint.Root[:])),
+			"storeuFRoot":  fmt.Sprintf("%#x", bytesutil.Trunc(f.store.unrealizedFinalizedCheckpoint.Root[:])),
+			"storeJRoot":   fmt.Sprintf("%#x", bytesutil.Trunc(f.store.justifiedCheckpoint.Root[:])),
+			"storeFRoot":   fmt.Sprintf("%#x", bytesutil.Trunc(f.store.finalizedCheckpoint.Root[:])),
+			"uJEpoch":      uj.Epoch,
+			"uFEpoch":      uf.Epoch,
+			"nodeJEpoch":   jc.Epoch,
+			"nodeFEpoch":   fc.Epoch,
+			"storeuJEpoch": f.store.unrealizedJustifiedCheckpoint.Epoch,
+			"storeuFEpoch": f.store.unrealizedFinalizedCheckpoint.Epoch,
+			"storeJEpoch":  f.store.justifiedCheckpoint.Epoch,
+			"storeFEpoch":  f.store.finalizedCheckpoint.Epoch,
+		}).Info("------------------- Unrealized Info ------------")
+
 		if prysmtime.CurrentEpoch(state) < slots.ToEpoch(currentSlot) {
 			jc, fc = uj, uf
+			node.justifiedEpoch = uj.Epoch
+			node.finalizedEpoch = uf.Epoch
 		}
 		f.store.checkpointsLock.Unlock()
 	}

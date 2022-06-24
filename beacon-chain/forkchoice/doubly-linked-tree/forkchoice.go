@@ -174,6 +174,8 @@ func (f *ForkChoice) InsertNode(ctx context.Context, state state.BeaconState, ro
 		currentSlot := slots.CurrentSlot(f.store.genesisTime)
 		if time.CurrentEpoch(state) < slots.ToEpoch(currentSlot) {
 			jc, fc = uj, uf
+			node.justifiedEpoch = uj.Epoch
+			node.finalizedEpoch = uf.Epoch
 		}
 		f.store.checkpointsLock.Unlock()
 	}

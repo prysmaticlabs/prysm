@@ -212,7 +212,9 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 
 	// Save justified check point to db.
 	if justified.Epoch > currJustifiedEpoch {
-		if err := s.cfg.BeaconDB.SaveJustifiedCheckpoint(ctx, postState.CurrentJustifiedCheckpoint()); err != nil {
+		if err := s.cfg.BeaconDB.SaveJustifiedCheckpoint(ctx, &ethpb.Checkpoint{
+			Epoch: justified.Epoch, Root: justified.Root[:],
+		}); err != nil {
 			return err
 		}
 	}
@@ -220,7 +222,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 	// Update finalized check point.
 	finalized := s.ForkChoicer().FinalizedCheckpoint()
 	if finalized.Epoch > currFinalizedEpoch {
-		if err := s.updateFinalized(ctx, postState.FinalizedCheckpoint()); err != nil {
+		if err := s.updateFinalized(ctx, &ethpb.Checkpoint{Epoch: finalized.Epoch, Root: finalized.Root[:]}); err != nil {
 			return err
 		}
 		isOptimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(finalized.Root)
