@@ -241,9 +241,7 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 			params.OverrideBeaconConfig(params.MainnetConfig())
 
 			genesis := util.NewBeaconBlock()
-			wsb, err := wrapper.WrappedSignedBeaconBlock(genesis)
-			require.NoError(t, err)
-			require.NoError(t, db.SaveBlock(context.Background(), wsb), "Could not save genesis block")
+			util.SaveBlock(t, ctx, db, genesis)
 
 			numDeposits := uint64(64)
 			beaconState, _ := util.DeterministicGenesisState(t, numDeposits)
@@ -2054,9 +2052,7 @@ func TestProposer_GetBeaconBlock_PreForkEpoch(t *testing.T) {
 		},
 		Signature: genesis.Signature,
 	}
-	wsb, err := wrapper.WrappedSignedBeaconBlock(genBlk)
-	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, wsb), "Could not save genesis block")
+	util.SaveBlock(t, ctx, db, genBlk)
 
 	parentRoot, err := genBlk.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
@@ -2147,9 +2143,7 @@ func TestProposer_GetBeaconBlock_PostForkEpoch(t *testing.T) {
 	require.NoError(t, err, "Could not hash genesis state")
 
 	genesis := b.NewGenesisBlock(stateRoot[:])
-	wsb, err := wrapper.WrappedSignedBeaconBlock(genesis)
-	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, wsb), "Could not save genesis block")
+	util.SaveBlock(t, ctx, db, genesis)
 
 	parentRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
@@ -2267,9 +2261,7 @@ func TestProposer_GetBeaconBlock_BellatrixEpoch(t *testing.T) {
 	require.NoError(t, err, "Could not hash genesis state")
 
 	genesis := b.NewGenesisBlock(stateRoot[:])
-	wsb, err := wrapper.WrappedSignedBeaconBlock(genesis)
-	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, wsb), "Could not save genesis block")
+	util.SaveBlock(t, ctx, db, genesis)
 
 	parentRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
@@ -2556,9 +2548,7 @@ func setupGetBlock(bm *testing.B) (*Server, state.BeaconState, []bls.SecretKey) 
 	require.NoError(bm, err, "Could not hash genesis state")
 
 	genesis := b.NewGenesisBlock(stateRoot[:])
-	wsb, err := wrapper.WrappedSignedBeaconBlock(genesis)
-	require.NoError(bm, err)
-	require.NoError(bm, db.SaveBlock(ctx, wsb), "Could not save genesis block")
+	util.SaveBlock(bm, ctx, db, genesis)
 
 	parentRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(bm, err, "Could not get signing root")

@@ -3,7 +3,6 @@ package util
 import (
 	"context"
 	"fmt"
-	"testing"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -23,6 +22,7 @@ import (
 	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	v2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/testing/assertions"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
@@ -883,9 +883,9 @@ func HydrateV2BlindedBeaconBlockBodyBellatrix(b *v2.BlindedBeaconBlockBodyBellat
 	return b
 }
 
-func SaveBlock(t *testing.T, ctx context.Context, db iface.NoHeadAccessDatabase, b interface{}) interfaces.SignedBeaconBlock {
+func SaveBlock(tb assertions.AssertionTestingTB, ctx context.Context, db iface.NoHeadAccessDatabase, b interface{}) interfaces.SignedBeaconBlock {
 	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
-	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, wsb))
+	require.NoError(tb, err)
+	require.NoError(tb, db.SaveBlock(ctx, wsb))
 	return wsb
 }

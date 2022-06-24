@@ -22,7 +22,6 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -153,9 +152,7 @@ func TestValidateAggregateAndProof_NotWithinSlotRange(t *testing.T) {
 	beaconState, _ := util.DeterministicGenesisState(t, validators)
 
 	b := util.NewBeaconBlock()
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
-	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(context.Background(), wsb))
+	util.SaveBlock(t, context.Background(), db, b)
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	s, err := util.NewBeaconState()
@@ -242,9 +239,7 @@ func TestValidateAggregateAndProof_ExistedInPool(t *testing.T) {
 	beaconState, _ := util.DeterministicGenesisState(t, validators)
 
 	b := util.NewBeaconBlock()
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
-	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(context.Background(), wsb))
+	util.SaveBlock(t, context.Background(), db, b)
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -310,9 +305,7 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 	beaconState, privKeys := util.DeterministicGenesisState(t, validators)
 
 	b := util.NewBeaconBlock()
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
-	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(context.Background(), wsb))
+	util.SaveBlock(t, context.Background(), db, b)
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	s, err := util.NewBeaconState()
@@ -413,9 +406,7 @@ func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 	beaconState, privKeys := util.DeterministicGenesisState(t, validators)
 
 	b := util.NewBeaconBlock()
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
-	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(context.Background(), wsb))
+	util.SaveBlock(t, context.Background(), db, b)
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	s, err := util.NewBeaconState()
@@ -625,9 +616,7 @@ func TestValidateAggregateAndProof_RejectWhenAttEpochDoesntEqualTargetEpoch(t *t
 	beaconState, privKeys := util.DeterministicGenesisState(t, validators)
 
 	b := util.NewBeaconBlock()
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
-	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(context.Background(), wsb))
+	util.SaveBlock(t, context.Background(), db, b)
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	s, err := util.NewBeaconState()
