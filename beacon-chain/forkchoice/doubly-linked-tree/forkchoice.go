@@ -478,11 +478,11 @@ func (f *ForkChoice) CommonAncestorRoot(ctx context.Context, r1 [32]byte, r2 [32
 
 	n1, ok := f.store.nodeByRoot[r1]
 	if !ok || n1 == nil {
-		return [32]byte{}, errors.Wrap(ErrNilNode, "could not determine common ancestor root")
+		return [32]byte{}, forkchoice.ErrUnknownCommonAncestor
 	}
 	n2, ok := f.store.nodeByRoot[r2]
 	if !ok || n2 == nil {
-		return [32]byte{}, errors.Wrap(ErrNilNode, "could not determine common ancestor root")
+		return [32]byte{}, forkchoice.ErrUnknownCommonAncestor
 	}
 
 	for {

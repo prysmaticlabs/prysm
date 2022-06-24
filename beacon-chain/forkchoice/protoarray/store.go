@@ -280,12 +280,12 @@ func (f *ForkChoice) CommonAncestorRoot(ctx context.Context, r1 [32]byte, r2 [32
 
 	i1, ok := f.store.nodesIndices[r1]
 	if !ok || i1 >= uint64(len(f.store.nodes)) {
-		return [32]byte{}, errInvalidNodeIndex
+		return [32]byte{}, forkchoice.ErrUnknownCommonAncestor
 	}
 
 	i2, ok := f.store.nodesIndices[r2]
 	if !ok || i2 >= uint64(len(f.store.nodes)) {
-		return [32]byte{}, errInvalidNodeIndex
+		return [32]byte{}, forkchoice.ErrUnknownCommonAncestor
 	}
 
 	for {

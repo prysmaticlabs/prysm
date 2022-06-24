@@ -313,7 +313,7 @@ func (s *Service) notifyNewHeadEvent(
 func (s *Service) saveOrphanedAtts(ctx context.Context, orphanedRoot [32]byte, newHeadRoot [32]byte) error {
 	commonAncestorRoot, err := s.ForkChoicer().CommonAncestorRoot(ctx, newHeadRoot, orphanedRoot)
 	switch {
-	// Exit early if there's no common ancestor as there would be nothing to save.
+	// Exit early if there's no common ancestor and root doesn't exist, there would be nothing to save.
 	case errors.Is(err, forkchoice.ErrUnknownCommonAncestor):
 		return nil
 	case err != nil:
