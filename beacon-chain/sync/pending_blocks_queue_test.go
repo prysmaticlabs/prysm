@@ -749,7 +749,7 @@ func TestService_ProcessPendingBlockOnCorrectSlot(t *testing.T) {
 	require.NoError(t, err)
 
 	// Add block1 for slot1
-	wsb, err = wrapper.WrappedSignedBeaconBlock(b1)
+	wsb, err := wrapper.WrappedSignedBeaconBlock(b1)
 	require.NoError(t, err)
 	require.NoError(t, r.insertBlockToPendingQueue(b1.Block.Slot, wsb, b1Root))
 	// Add block2 for slot2

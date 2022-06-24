@@ -126,7 +126,7 @@ func TestServer_StreamAltairBlocksVerified_OnHeadUpdated(t *testing.T) {
 	require.NoError(t, err)
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	util.SaveBlock(t, ctx, db, b)
+	wrappedBlk := util.SaveBlock(t, ctx, db, b)
 	chainService := &chainMock.ChainService{State: beaconState}
 	server := &Server{
 		Ctx:           ctx,

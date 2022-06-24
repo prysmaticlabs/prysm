@@ -613,7 +613,7 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 
 	chainService := &chainMock.ChainService{}
 	ctx := context.Background()
-	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)
 	server := &Server{
 		Ctx:           ctx,

@@ -133,7 +133,7 @@ func TestStore_OnBlock_ProtoArray(t *testing.T) {
 
 			root, err := tt.blk.Block.HashTreeRoot()
 			assert.NoError(t, err)
-			wsb, err = wrapper.WrappedSignedBeaconBlock(tt.blk)
+			wsb, err := wrapper.WrappedSignedBeaconBlock(tt.blk)
 			require.NoError(t, err)
 			err = service.onBlock(ctx, wsb, root)
 			assert.ErrorContains(t, tt.wantErrString, err)
