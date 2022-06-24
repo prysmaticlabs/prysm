@@ -7,7 +7,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -24,9 +23,7 @@ func TestMigrateToCold_CanSaveFinalizedInfo(t *testing.T) {
 	b.Block.Slot = 1
 	br, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
-	require.NoError(t, err)
-	require.NoError(t, service.beaconDB.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, service.beaconDB, b)
 	require.NoError(t, service.epochBoundaryStateCache.put(br, beaconState))
 	require.NoError(t, service.MigrateToCold(ctx, br))
 
@@ -48,9 +45,7 @@ func TestMigrateToCold_HappyPath(t *testing.T) {
 	b.Block.Slot = 2
 	fRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
-	require.NoError(t, err)
-	require.NoError(t, service.beaconDB.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, service.beaconDB, b)
 	require.NoError(t, service.epochBoundaryStateCache.put(fRoot, beaconState))
 	require.NoError(t, service.MigrateToCold(ctx, fRoot))
 
@@ -77,9 +72,7 @@ func TestMigrateToCold_RegeneratePath(t *testing.T) {
 	genesisStateRoot, err := beaconState.HashTreeRoot(ctx)
 	require.NoError(t, err)
 	genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
-	wsb, err := wrapper.WrappedSignedBeaconBlock(genesis)
-	require.NoError(t, err)
-	assert.NoError(t, beaconDB.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, beaconDB, genesis)
 	gRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err)
 	assert.NoError(t, beaconDB.SaveState(ctx, beaconState, gRoot))
@@ -89,18 +82,14 @@ func TestMigrateToCold_RegeneratePath(t *testing.T) {
 	require.NoError(t, err)
 	r1, err := b1.Block.HashTreeRoot()
 	require.NoError(t, err)
-	wsb, err = wrapper.WrappedSignedBeaconBlock(b1)
-	require.NoError(t, err)
-	require.NoError(t, service.beaconDB.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, service.beaconDB, b1)
 	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Slot: 1, Root: r1[:]}))
 
 	b4, err := util.GenerateFullBlock(beaconState, pks, util.DefaultBlockGenConfig(), 4)
 	require.NoError(t, err)
 	r4, err := b4.Block.HashTreeRoot()
 	require.NoError(t, err)
-	wsb, err = wrapper.WrappedSignedBeaconBlock(b4)
-	require.NoError(t, err)
-	require.NoError(t, service.beaconDB.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, service.beaconDB, b4)
 	require.NoError(t, service.beaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Slot: 4, Root: r4[:]}))
 	service.finalizedInfo = &finalizedInfo{
 		slot:  0,
@@ -136,9 +125,7 @@ func TestMigrateToCold_StateExistsInDB(t *testing.T) {
 	b.Block.Slot = 2
 	fRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
-	require.NoError(t, err)
-	require.NoError(t, service.beaconDB.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, service.beaconDB, b)
 	require.NoError(t, service.epochBoundaryStateCache.put(fRoot, beaconState))
 	require.NoError(t, service.beaconDB.SaveState(ctx, beaconState, fRoot))
 
