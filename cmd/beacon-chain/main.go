@@ -17,6 +17,7 @@ import (
 	blockchaincmd "github.com/prysmaticlabs/prysm/cmd/beacon-chain/blockchain"
 	dbcommands "github.com/prysmaticlabs/prysm/cmd/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
+	jwtcommands "github.com/prysmaticlabs/prysm/cmd/beacon-chain/jwt"
 	powchaincmd "github.com/prysmaticlabs/prysm/cmd/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/sync/checkpoint"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/sync/genesis"
@@ -144,6 +145,7 @@ func main() {
 	app.Version = version.Version()
 	app.Commands = []*cli.Command{
 		dbcommands.Commands,
+		jwtcommands.Commands,
 	}
 
 	app.Flags = appFlags
