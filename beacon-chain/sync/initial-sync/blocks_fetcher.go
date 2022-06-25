@@ -308,7 +308,6 @@ func (f *blocksFetcher) requestBlocks(
 	}
 	l := f.peerLock(pid)
 	l.Lock()
-	defer l.Unlock()
 	log.WithFields(logrus.Fields{
 		"peer":     pid,
 		"start":    req.StartSlot,
@@ -319,10 +318,12 @@ func (f *blocksFetcher) requestBlocks(
 	}).Debug("Requesting blocks")
 	if f.rateLimiter.Remaining(pid.String()) < int64(req.Count) {
 		if err := f.waitForBandwidth(pid); err != nil {
+			l.Unlock()
 			return nil, err
 		}
 	}
 	f.rateLimiter.Add(pid.String(), int64(req.Count))
+	l.Unlock()
 	return prysmsync.SendBeaconBlocksByRangeRequest(ctx, f.chain, f.p2p, pid, req, nil)
 }
 
@@ -337,7 +338,6 @@ func (f *blocksFetcher) requestBlocksByRoot(
 	}
 	l := f.peerLock(pid)
 	l.Lock()
-	defer l.Unlock()
 	log.WithFields(logrus.Fields{
 		"peer":     pid,
 		"numRoots": len(*req),
@@ -346,10 +346,12 @@ func (f *blocksFetcher) requestBlocksByRoot(
 	}).Debug("Requesting blocks (by roots)")
 	if f.rateLimiter.Remaining(pid.String()) < int64(len(*req)) {
 		if err := f.waitForBandwidth(pid); err != nil {
+			l.Unlock()
 			return nil, err
 		}
 	}
 	f.rateLimiter.Add(pid.String(), int64(len(*req)))
+	l.Unlock()
 
 	return prysmsync.SendBeaconBlocksByRootRequest(ctx, f.chain, f.p2p, pid, req, nil)
 }
