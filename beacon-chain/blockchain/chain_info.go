@@ -133,7 +133,7 @@ func (s *Service) HeadRoot(ctx context.Context) ([]byte, error) {
 	defer s.headLock.RUnlock()
 
 	if s.head != nil && s.head.root != params.BeaconConfig().ZeroHash {
-		return s.head.root[:], nil
+		return bytesutil.SafeCopyBytes(s.head.root[:]), nil
 	}
 
 	b, err := s.cfg.BeaconDB.HeadBlock(ctx)
