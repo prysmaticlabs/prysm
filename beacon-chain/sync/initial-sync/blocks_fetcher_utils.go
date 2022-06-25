@@ -102,14 +102,17 @@ func (f *blocksFetcher) nonSkippedSlotAfterWithPeersTarget(
 
 	// Quickly find the close enough epoch where a non-empty slot definitely exists.
 	// Only single random slot per epoch is checked - allowing to move forward relatively quickly.
+	// This method has been changed to account for our spec change where step can only be 1 in a
+	// block by range request. https://github.com/ethereum/consensus-specs/pull/2856
+	// The downside is that this method will be less effective during periods without
+	// finality.
 	slot += nonSkippedSlotsFullSearchEpochs * slotsPerEpoch
 	upperBoundSlot, err := slots.EpochStart(targetEpoch + 1)
 	if err != nil {
 		return 0, err
 	}
-	for ind := slot + 1; ind < upperBoundSlot; ind += (slotsPerEpoch * slotsPerEpoch) / 2 {
-		start := ind.Add(uint64(f.rand.Intn(int(slotsPerEpoch)))) // lint:ignore uintcast -- Slots per epoch will never exceed int64.
-		nextSlot, err := fetch(peers[pidInd%len(peers)], start, uint64(slotsPerEpoch/2), uint64(slotsPerEpoch))
+	for ind := slot + 1; ind < upperBoundSlot; ind += slotsPerEpoch {
+		nextSlot, err := fetch(peers[pidInd%len(peers)], ind, uint64(slotsPerEpoch), 1)
 		if err != nil {
 			return 0, err
 		}

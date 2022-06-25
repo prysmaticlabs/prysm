@@ -58,9 +58,7 @@ func TestStore_OnBlock_ProtoArray(t *testing.T) {
 	require.NoError(t, err)
 	genesisStateRoot := [32]byte{}
 	genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
-	wsb, err := wrapper.WrappedSignedBeaconBlock(genesis)
-	require.NoError(t, err)
-	assert.NoError(t, beaconDB.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, beaconDB, genesis)
 	validGenesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err)
 	st, err := util.NewBeaconState()
@@ -71,9 +69,7 @@ func TestStore_OnBlock_ProtoArray(t *testing.T) {
 	random := util.NewBeaconBlock()
 	random.Block.Slot = 1
 	random.Block.ParentRoot = validGenesisRoot[:]
-	wsb, err = wrapper.WrappedSignedBeaconBlock(random)
-	require.NoError(t, err)
-	assert.NoError(t, beaconDB.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, beaconDB, random)
 	randomParentRoot, err := random.Block.HashTreeRoot()
 	assert.NoError(t, err)
 	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Slot: st.Slot(), Root: randomParentRoot[:]}))
@@ -135,7 +131,7 @@ func TestStore_OnBlock_ProtoArray(t *testing.T) {
 			require.NoError(t, service.ForkChoicer().UpdateFinalizedCheckpoint(&forkchoicetypes.Checkpoint{Root: fRoot}))
 			root, err := tt.blk.Block.HashTreeRoot()
 			assert.NoError(t, err)
-			wsb, err = wrapper.WrappedSignedBeaconBlock(tt.blk)
+			wsb, err := wrapper.WrappedSignedBeaconBlock(tt.blk)
 			require.NoError(t, err)
 			err = service.onBlock(ctx, wsb, root)
 			assert.ErrorContains(t, tt.wantErrString, err)
@@ -158,9 +154,7 @@ func TestStore_OnBlock_DoublyLinkedTree(t *testing.T) {
 	require.NoError(t, err)
 	genesisStateRoot := [32]byte{}
 	genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
-	wsb, err := wrapper.WrappedSignedBeaconBlock(genesis)
-	require.NoError(t, err)
-	assert.NoError(t, beaconDB.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, beaconDB, genesis)
 	validGenesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err)
 	st, err := util.NewBeaconState()
@@ -171,9 +165,7 @@ func TestStore_OnBlock_DoublyLinkedTree(t *testing.T) {
 	random := util.NewBeaconBlock()
 	random.Block.Slot = 1
 	random.Block.ParentRoot = validGenesisRoot[:]
-	wsb, err = wrapper.WrappedSignedBeaconBlock(random)
-	require.NoError(t, err)
-	assert.NoError(t, beaconDB.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, beaconDB, random)
 	randomParentRoot, err := random.Block.HashTreeRoot()
 	assert.NoError(t, err)
 	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Slot: st.Slot(), Root: randomParentRoot[:]}))
@@ -374,7 +366,6 @@ func TestStore_OnBlockBatch_NotifyNewPayload(t *testing.T) {
 	}
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
-
 	st, keys := util.DeterministicGenesisState(t, 64)
 	require.NoError(t, service.saveGenesisData(ctx, st))
 	bState := st.Copy()
@@ -557,7 +548,6 @@ func TestFillForkChoiceMissingBlocks_RootsMatch_ProtoArray(t *testing.T) {
 
 	st, _ := util.DeterministicGenesisState(t, 64)
 	require.NoError(t, service.saveGenesisData(ctx, st))
-
 	roots, err := blockTree1(t, beaconDB, service.originBlockRoot[:])
 	require.NoError(t, err)
 
@@ -565,6 +555,7 @@ func TestFillForkChoiceMissingBlocks_RootsMatch_ProtoArray(t *testing.T) {
 	blk := util.NewBeaconBlock()
 	blk.Block.Slot = 9
 	blk.Block.ParentRoot = roots[8]
+
 	wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
 	require.NoError(t, err)
 
@@ -608,6 +599,7 @@ func TestFillForkChoiceMissingBlocks_RootsMatch_DoublyLinkedTree(t *testing.T) {
 	blk := util.NewBeaconBlock()
 	blk.Block.Slot = 9
 	blk.Block.ParentRoot = roots[8]
+
 	wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
 	require.NoError(t, err)
 
@@ -650,9 +642,7 @@ func TestFillForkChoiceMissingBlocks_FilterFinalized_ProtoArray(t *testing.T) {
 
 	genesisStateRoot := [32]byte{}
 	genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
-	wsb, err := wrapper.WrappedSignedBeaconBlock(genesis)
-	require.NoError(t, err)
-	assert.NoError(t, beaconDB.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, beaconDB, genesis)
 	validGenesisRoot, err := genesis.Block.HashTreeRoot()
 	assert.NoError(t, err)
 	st, err := util.NewBeaconState()
@@ -663,17 +653,13 @@ func TestFillForkChoiceMissingBlocks_FilterFinalized_ProtoArray(t *testing.T) {
 	// Define a tree branch, slot 63 <- 64 <- 65 <- 66
 	b63 := util.NewBeaconBlock()
 	b63.Block.Slot = 63
-	wsb, err = wrapper.WrappedSignedBeaconBlock(b63)
-	require.NoError(t, err)
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, service.cfg.BeaconDB, b63)
 	r63, err := b63.Block.HashTreeRoot()
 	require.NoError(t, err)
 	b64 := util.NewBeaconBlock()
 	b64.Block.Slot = 64
 	b64.Block.ParentRoot = r63[:]
-	wsb, err = wrapper.WrappedSignedBeaconBlock(b64)
-	require.NoError(t, err)
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, service.cfg.BeaconDB, b64)
 	r64, err := b64.Block.HashTreeRoot()
 	require.NoError(t, err)
 	b65 := util.NewBeaconBlock()
@@ -681,15 +667,11 @@ func TestFillForkChoiceMissingBlocks_FilterFinalized_ProtoArray(t *testing.T) {
 	b65.Block.ParentRoot = r64[:]
 	r65, err := b65.Block.HashTreeRoot()
 	require.NoError(t, err)
-	wsb, err = wrapper.WrappedSignedBeaconBlock(b65)
-	require.NoError(t, err)
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, service.cfg.BeaconDB, b65)
 	b66 := util.NewBeaconBlock()
 	b66.Block.Slot = 66
 	b66.Block.ParentRoot = r65[:]
-	wsb, err = wrapper.WrappedSignedBeaconBlock(b66)
-	require.NoError(t, err)
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
+	wsb := util.SaveBlock(t, ctx, service.cfg.BeaconDB, b66)
 
 	beaconState, _ := util.DeterministicGenesisState(t, 32)
 	// Set finalized epoch to 2.
@@ -717,9 +699,7 @@ func TestFillForkChoiceMissingBlocks_FilterFinalized_DoublyLinkedTree(t *testing
 
 	genesisStateRoot := [32]byte{}
 	genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
-	wsb, err := wrapper.WrappedSignedBeaconBlock(genesis)
-	require.NoError(t, err)
-	assert.NoError(t, beaconDB.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, beaconDB, genesis)
 	validGenesisRoot, err := genesis.Block.HashTreeRoot()
 	assert.NoError(t, err)
 	st, err := util.NewBeaconState()
@@ -730,17 +710,13 @@ func TestFillForkChoiceMissingBlocks_FilterFinalized_DoublyLinkedTree(t *testing
 	// Define a tree branch, slot 63 <- 64 <- 65
 	b63 := util.NewBeaconBlock()
 	b63.Block.Slot = 63
-	wsb, err = wrapper.WrappedSignedBeaconBlock(b63)
-	require.NoError(t, err)
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, service.cfg.BeaconDB, b63)
 	r63, err := b63.Block.HashTreeRoot()
 	require.NoError(t, err)
 	b64 := util.NewBeaconBlock()
 	b64.Block.Slot = 64
 	b64.Block.ParentRoot = r63[:]
-	wsb, err = wrapper.WrappedSignedBeaconBlock(b64)
-	require.NoError(t, err)
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, service.cfg.BeaconDB, b64)
 	r64, err := b64.Block.HashTreeRoot()
 	require.NoError(t, err)
 	b65 := util.NewBeaconBlock()
@@ -748,15 +724,11 @@ func TestFillForkChoiceMissingBlocks_FilterFinalized_DoublyLinkedTree(t *testing
 	b65.Block.ParentRoot = r64[:]
 	r65, err := b65.Block.HashTreeRoot()
 	require.NoError(t, err)
-	wsb, err = wrapper.WrappedSignedBeaconBlock(b65)
-	require.NoError(t, err)
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, service.cfg.BeaconDB, b65)
 	b66 := util.NewBeaconBlock()
 	b66.Block.Slot = 66
 	b66.Block.ParentRoot = r65[:]
-	wsb, err = wrapper.WrappedSignedBeaconBlock(b66)
-	require.NoError(t, err)
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
+	wsb := util.SaveBlock(t, ctx, service.cfg.BeaconDB, b66)
 
 	beaconState, _ := util.DeterministicGenesisState(t, 32)
 
@@ -785,9 +757,7 @@ func TestFillForkChoiceMissingBlocks_FinalizedSibling_DoublyLinkedTree(t *testin
 
 	genesisStateRoot := [32]byte{}
 	genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
-	wsb, err := wrapper.WrappedSignedBeaconBlock(genesis)
-	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, beaconDB, genesis)
 	validGenesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err)
 	st, err := util.NewBeaconState()
@@ -802,7 +772,7 @@ func TestFillForkChoiceMissingBlocks_FinalizedSibling_DoublyLinkedTree(t *testin
 	blk.Block.Slot = 9
 	blk.Block.ParentRoot = roots[8]
 
-	wsb, err = wrapper.WrappedSignedBeaconBlock(blk)
+	wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
 	require.NoError(t, err)
 
 	err = service.fillInForkChoiceMissingBlocks(
@@ -949,9 +919,7 @@ func TestAncestor_HandleSkipSlot(t *testing.T) {
 		beaconBlock := util.NewBeaconBlock()
 		beaconBlock.Block.Slot = b.Block.Slot
 		beaconBlock.Block.ParentRoot = bytesutil.PadTo(b.Block.ParentRoot, 32)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(beaconBlock)
-		require.NoError(t, err)
-		require.NoError(t, beaconDB.SaveBlock(context.Background(), wsb))
+		util.SaveBlock(t, context.Background(), beaconDB, beaconBlock)
 	}
 
 	// Slots 100 to 200 are skip slots. Requesting root at 150 will yield root at 100. The last physical block.
@@ -1044,9 +1012,7 @@ func TestAncestor_CanUseDB(t *testing.T) {
 		beaconBlock := util.NewBeaconBlock()
 		beaconBlock.Block.Slot = b.Block.Slot
 		beaconBlock.Block.ParentRoot = bytesutil.PadTo(b.Block.ParentRoot, 32)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(beaconBlock)
-		require.NoError(t, err)
-		require.NoError(t, beaconDB.SaveBlock(context.Background(), wsb)) // Saves blocks to DB.
+		util.SaveBlock(t, context.Background(), beaconDB, beaconBlock)
 	}
 
 	state, blkRoot, err := prepareForkchoiceState(context.Background(), 200, r200, r200, params.BeaconConfig().ZeroHash, ojc, ofc)
@@ -1088,18 +1054,14 @@ func TestVerifyBlkDescendant(t *testing.T) {
 	b.Block.Slot = 32
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
-	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, beaconDB, b)
 
 	b1 := util.NewBeaconBlock()
 	b1.Block.Slot = 32
 	b1.Block.Body.Graffiti = bytesutil.PadTo([]byte{'a'}, 32)
 	r1, err := b1.Block.HashTreeRoot()
 	require.NoError(t, err)
-	wsb, err = wrapper.WrappedSignedBeaconBlock(b1)
-	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, beaconDB, b1)
 
 	type args struct {
 		parentRoot    [32]byte

@@ -35,9 +35,7 @@ func TestService_getBlock(t *testing.T) {
 	require.DeepEqual(t, b, got)
 
 	// block in db
-	b, err = wrapper.WrappedSignedBeaconBlock(b2)
-	require.NoError(t, err)
-	require.NoError(t, s.cfg.BeaconDB.SaveBlock(ctx, b))
+	b = util.SaveBlock(t, ctx, s.cfg.BeaconDB, b2)
 	got, err = s.getBlock(ctx, r2)
 	require.NoError(t, err)
 	require.DeepEqual(t, b, got)
@@ -65,8 +63,6 @@ func TestService_hasBlockInInitSyncOrDB(t *testing.T) {
 	require.Equal(t, true, s.hasBlockInInitSyncOrDB(ctx, r1))
 
 	// block in db
-	b, err = wrapper.WrappedSignedBeaconBlock(b2)
-	require.NoError(t, err)
-	require.NoError(t, s.cfg.BeaconDB.SaveBlock(ctx, b))
+	util.SaveBlock(t, ctx, s.cfg.BeaconDB, b2)
 	require.Equal(t, true, s.hasBlockInInitSyncOrDB(ctx, r2))
 }

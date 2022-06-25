@@ -1045,9 +1045,7 @@ func TestBlocksQueue_stuckInUnfavourableFork(t *testing.T) {
 	finalizedEpoch := slots.ToEpoch(finalizedSlot)
 
 	genesisBlock := chain1[0]
-	wsb, err := wrapper.WrappedSignedBeaconBlock(genesisBlock)
-	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveBlock(context.Background(), wsb))
+	util.SaveBlock(t, context.Background(), beaconDB, genesisBlock)
 	genesisRoot, err := genesisBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -1089,9 +1087,7 @@ func TestBlocksQueue_stuckInUnfavourableFork(t *testing.T) {
 		parentRoot := bytesutil.ToBytes32(blk.Block.ParentRoot)
 		// Save block only if parent root is already in database or cache.
 		if beaconDB.HasBlock(ctx, parentRoot) || mc.HasBlock(ctx, parentRoot) {
-			wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
-			require.NoError(t, err)
-			require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
+			util.SaveBlock(t, ctx, beaconDB, blk)
 			require.NoError(t, st.SetSlot(blk.Block.Slot))
 		}
 	}
@@ -1250,9 +1246,7 @@ func TestBlocksQueue_stuckWhenHeadIsSetToOrphanedBlock(t *testing.T) {
 	finalizedEpoch := slots.ToEpoch(finalizedSlot)
 
 	genesisBlock := chain[0]
-	wsb, err := wrapper.WrappedSignedBeaconBlock(genesisBlock)
-	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveBlock(context.Background(), wsb))
+	util.SaveBlock(t, context.Background(), beaconDB, genesisBlock)
 	genesisRoot, err := genesisBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -1275,9 +1269,7 @@ func TestBlocksQueue_stuckWhenHeadIsSetToOrphanedBlock(t *testing.T) {
 		parentRoot := bytesutil.ToBytes32(blk.Block.ParentRoot)
 		// Save block only if parent root is already in database or cache.
 		if beaconDB.HasBlock(ctx, parentRoot) || mc.HasBlock(ctx, parentRoot) {
-			wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
-			require.NoError(t, err)
-			require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
+			util.SaveBlock(t, ctx, beaconDB, blk)
 			require.NoError(t, st.SetSlot(blk.Block.Slot))
 		}
 	}
@@ -1289,9 +1281,7 @@ func TestBlocksQueue_stuckWhenHeadIsSetToOrphanedBlock(t *testing.T) {
 	orphanedBlock := util.NewBeaconBlock()
 	orphanedBlock.Block.Slot = 85
 	orphanedBlock.Block.StateRoot = util.Random32Bytes(t)
-	wsb, err = wrapper.WrappedSignedBeaconBlock(orphanedBlock)
-	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, beaconDB, orphanedBlock)
 	require.NoError(t, st.SetSlot(orphanedBlock.Block.Slot))
 	require.Equal(t, types.Slot(85), mc.HeadSlot())
 
