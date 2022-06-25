@@ -9,6 +9,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
+	"golang.org/x/net/context"
 )
 
 func TestBeaconState_SlotDataRace(t *testing.T) {
@@ -63,7 +64,7 @@ func TestNilState_NoPanic(t *testing.T) {
 	_ = st.PreviousJustifiedCheckpoint()
 	_ = st.CurrentJustifiedCheckpoint()
 	_ = st.FinalizedCheckpoint()
-	_, _, _, err = st.UnrealizedCheckpointBalances()
+	_, _, _, err = st.UnrealizedCheckpointBalances(context.Background())
 	_ = err
 }
 

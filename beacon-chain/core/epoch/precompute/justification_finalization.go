@@ -1,6 +1,8 @@
 package precompute
 
 import (
+	"context"
+
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -15,7 +17,7 @@ var errNilState = errors.New("nil state")
 
 // UnrealizedCheckpoints returns the justification and finalization checkpoints of the
 // given state as if it was progressed with empty slots until the next epoch.
-func UnrealizedCheckpoints(st state.BeaconState) (*ethpb.Checkpoint, *ethpb.Checkpoint, error) {
+func UnrealizedCheckpoints(ctx context.Context, st state.BeaconState) (*ethpb.Checkpoint, *ethpb.Checkpoint, error) {
 	if st == nil || st.IsNil() {
 		return nil, nil, errNilState
 	}
@@ -26,7 +28,7 @@ func UnrealizedCheckpoints(st state.BeaconState) (*ethpb.Checkpoint, *ethpb.Chec
 		return jc, fc, nil
 	}
 
-	activeBalance, prevTarget, currentTarget, err := st.UnrealizedCheckpointBalances()
+	activeBalance, prevTarget, currentTarget, err := st.UnrealizedCheckpointBalances(ctx)
 	if err != nil {
 		return nil, nil, err
 	}

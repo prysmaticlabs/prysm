@@ -1,6 +1,9 @@
 package state_native
 
 import (
+	"context"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/runtime/version"
@@ -41,13 +44,21 @@ func (b *BeaconState) PreviousEpochParticipation() ([]byte, error) {
 // UnrealizedCheckpointBalances returns the total balances: active, target attested in
 // current epoch and target attested in previous epoch. This function is used to
 // compute the "unrealized justification" that a synced Beacon Block will have.
-func (b *BeaconState) UnrealizedCheckpointBalances() (uint64, uint64, uint64, error) {
-	if b.version == version.Phase0 {
-		return 0, 0, 0, errNotSupported("UnrealizedCheckpointBalances", b.version)
-	}
-
+func (b *BeaconState) UnrealizedCheckpointBalances(ctx context.Context) (uint64, uint64, uint64, error) {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
+
+	if b.version == version.Phase0 {
+		vp, bp, err := precompute.New(ctx, b)
+		if err != nil {
+			return 0, 0, 0, err
+		}
+		_, bp, err = precompute.ProcessAttestations(ctx, b, vp, bp)
+		if err != nil {
+			return 0, 0, 0, err
+		}
+		return bp.ActiveCurrentEpoch, bp.PrevEpochTargetAttested, bp.CurrentEpochTargetAttested, nil
+	}
 
 	cp := b.currentEpochParticipation
 	pp := b.previousEpochParticipation

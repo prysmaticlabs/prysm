@@ -156,7 +156,7 @@ func (f *ForkChoice) InsertNode(ctx context.Context, state state.BeaconState, ro
 		return err
 	}
 
-	uj, uf, err := precompute.UnrealizedCheckpoints(state)
+	uj, uf, err := precompute.UnrealizedCheckpoints(ctx, state)
 	if err != nil {
 		log.WithError(err).Debug("could not compute unrealized checkpoints")
 	} else {

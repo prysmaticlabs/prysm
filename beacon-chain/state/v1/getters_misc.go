@@ -1,11 +1,13 @@
 package v1
 
 import (
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
+	"golang.org/x/net/context"
 )
 
 // GenesisTime of the beacon state as a uint64.
@@ -160,4 +162,28 @@ func (b *BeaconState) balancesLength() int {
 	}
 
 	return len(b.state.Balances)
+}
+
+// UnrealizedCheckpointBalances returns the total balances: active, target attested in
+// previous epoch and target attested in current epoch. This function is used to
+// compute the "unrealized justification" that a synced Beacon Block will have.
+// This function is less efficient than the corresponding function for Altair
+// and Bellatrix types as it will not be used except in syncing from genesis and
+// spectests.
+func (b *BeaconState) UnrealizedCheckpointBalances(ctx context.Context) (uint64, uint64, uint64, error) {
+	if !b.hasInnerState() {
+		return 0, 0, 0, ErrNilInnerState
+	}
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	vp, bp, err := precompute.New(ctx, b)
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	_, bp, err = precompute.ProcessAttestations(ctx, b, vp, bp)
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	return bp.ActiveCurrentEpoch, bp.PrevEpochTargetAttested, bp.CurrentEpochTargetAttested, nil
 }
