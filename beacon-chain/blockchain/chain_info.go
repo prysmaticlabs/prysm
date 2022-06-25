@@ -4,8 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/store"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/doubly-linked-tree"
@@ -81,9 +79,9 @@ type CanonicalFetcher interface {
 // FinalizationFetcher defines a common interface for methods in blockchain service which
 // directly retrieve finalization and justification related data.
 type FinalizationFetcher interface {
-	FinalizedCheckpt() (*ethpb.Checkpoint, error)
-	CurrentJustifiedCheckpt() (*ethpb.Checkpoint, error)
-	PreviousJustifiedCheckpt() (*ethpb.Checkpoint, error)
+	FinalizedCheckpt() *ethpb.Checkpoint
+	CurrentJustifiedCheckpt() *ethpb.Checkpoint
+	PreviousJustifiedCheckpt() *ethpb.Checkpoint
 	VerifyFinalizedBlkDescendant(ctx context.Context, blockRoot [32]byte) error
 }
 
@@ -94,47 +92,27 @@ type OptimisticModeFetcher interface {
 }
 
 // FinalizedCheckpt returns the latest finalized checkpoint from chain store.
-func (s *Service) FinalizedCheckpt() (*ethpb.Checkpoint, error) {
-	cp, err := s.store.FinalizedCheckpt()
-	if err != nil {
-		return nil, err
-	}
+func (s *Service) FinalizedCheckpt() *ethpb.Checkpoint {
+	cp := s.ForkChoicer().FinalizedCheckpoint()
+	return &ethpb.Checkpoint{Epoch: cp.Epoch, Root: bytesutil.SafeCopyBytes(cp.Root[:])}
+}
 
-	return ethpb.CopyCheckpoint(cp), nil
+// PreviousJustifiedCheckpt returns the current justified checkpoint from chain store.
+func (s *Service) PreviousJustifiedCheckpt() *ethpb.Checkpoint {
+	cp := s.ForkChoicer().PreviousJustifiedCheckpoint()
+	return &ethpb.Checkpoint{Epoch: cp.Epoch, Root: bytesutil.SafeCopyBytes(cp.Root[:])}
 }
 
 // CurrentJustifiedCheckpt returns the current justified checkpoint from chain store.
-func (s *Service) CurrentJustifiedCheckpt() (*ethpb.Checkpoint, error) {
-	cp, err := s.store.JustifiedCheckpt()
-	if err != nil {
-		return nil, err
-	}
-
-	return ethpb.CopyCheckpoint(cp), nil
-}
-
-// PreviousJustifiedCheckpt returns the previous justified checkpoint from chain store.
-func (s *Service) PreviousJustifiedCheckpt() (*ethpb.Checkpoint, error) {
-	cp, err := s.store.PrevJustifiedCheckpt()
-	if err != nil {
-		return nil, err
-	}
-
-	return ethpb.CopyCheckpoint(cp), nil
+func (s *Service) CurrentJustifiedCheckpt() *ethpb.Checkpoint {
+	cp := s.ForkChoicer().JustifiedCheckpoint()
+	return &ethpb.Checkpoint{Epoch: cp.Epoch, Root: bytesutil.SafeCopyBytes(cp.Root[:])}
 }
 
 // BestJustifiedCheckpt returns the best justified checkpoint from store.
-func (s *Service) BestJustifiedCheckpt() (*ethpb.Checkpoint, error) {
-	cp, err := s.store.BestJustifiedCheckpt()
-	if err != nil {
-		// If there is no best justified checkpoint, return the checkpoint with root as zeros to be used for genesis cases.
-		if errors.Is(err, store.ErrNilCheckpoint) {
-			return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}, nil
-		}
-		return nil, err
-	}
-
-	return ethpb.CopyCheckpoint(cp), nil
+func (s *Service) BestJustifiedCheckpt() *ethpb.Checkpoint {
+	cp := s.ForkChoicer().BestJustifiedCheckpoint()
+	return &ethpb.Checkpoint{Epoch: cp.Epoch, Root: bytesutil.SafeCopyBytes(cp.Root[:])}
 }
 
 // HeadSlot returns the slot of the head of the chain.
@@ -154,9 +132,8 @@ func (s *Service) HeadRoot(ctx context.Context) ([]byte, error) {
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
 
-	if s.headRoot() != params.BeaconConfig().ZeroHash {
-		r := s.headRoot()
-		return r[:], nil
+	if s.head != nil && s.head.root != params.BeaconConfig().ZeroHash {
+		return bytesutil.SafeCopyBytes(s.head.root[:]), nil
 	}
 
 	b, err := s.cfg.BeaconDB.HeadBlock(ctx)

@@ -592,8 +592,6 @@ func TestUpdateHead_noSavedChanges(t *testing.T) {
 		Root:  bellatrixBlkRoot[:],
 		Epoch: 0,
 	}
-	service.store.SetFinalizedCheckptAndPayloadHash(fcp, [32]byte{'a'})
-	service.store.SetJustifiedCheckptAndPayloadHash(fcp, [32]byte{'b'})
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, bellatrixBlkRoot))
 
 	bellatrixState, _ := util.DeterministicGenesisStateBellatrix(t, 2)

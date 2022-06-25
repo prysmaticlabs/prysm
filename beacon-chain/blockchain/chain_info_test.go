@@ -5,11 +5,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/store"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
@@ -78,81 +79,48 @@ func TestService_ForkChoiceStore(t *testing.T) {
 	require.Equal(t, types.Epoch(0), p.FinalizedCheckpoint().Epoch)
 }
 
-func TestFinalizedCheckpt_CanRetrieve(t *testing.T) {
-	beaconDB := testDB.SetupDB(t)
-
-	cp := &ethpb.Checkpoint{Epoch: 5, Root: bytesutil.PadTo([]byte("foo"), 32)}
-	c := setupBeaconChain(t, beaconDB)
-	c.store.SetFinalizedCheckptAndPayloadHash(cp, [32]byte{'a'})
-
-	cp, err := c.FinalizedCheckpt()
-	require.NoError(t, err)
-	assert.Equal(t, cp.Epoch, cp.Epoch, "Unexpected finalized epoch")
-}
-
 func TestFinalizedCheckpt_GenesisRootOk(t *testing.T) {
+	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-
-	genesisRoot := [32]byte{'A'}
-	cp := &ethpb.Checkpoint{Root: genesisRoot[:]}
-	c := setupBeaconChain(t, beaconDB)
-	c.store.SetFinalizedCheckptAndPayloadHash(cp, [32]byte{'a'})
-	c.originBlockRoot = genesisRoot
-	cp, err := c.FinalizedCheckpt()
+	fcs := protoarray.New()
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithForkChoiceStore(fcs),
+		WithStateGen(stategen.New(beaconDB)),
+	}
+	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
-	assert.DeepEqual(t, c.originBlockRoot[:], cp.Root)
+
+	gs, _ := util.DeterministicGenesisState(t, 32)
+	require.NoError(t, service.saveGenesisData(ctx, gs))
+	cp := service.FinalizedCheckpt()
+	assert.DeepEqual(t, [32]byte{}, bytesutil.ToBytes32(cp.Root))
+	cp = service.CurrentJustifiedCheckpt()
+	assert.DeepEqual(t, [32]byte{}, bytesutil.ToBytes32(cp.Root))
+	// check that forkchoice has the right genesis root as the node root
+	root, err := fcs.Head(ctx, []uint64{})
+	require.NoError(t, err)
+	require.Equal(t, service.originBlockRoot, root)
+
 }
 
 func TestCurrentJustifiedCheckpt_CanRetrieve(t *testing.T) {
+	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-
-	c := setupBeaconChain(t, beaconDB)
-	_, err := c.CurrentJustifiedCheckpt()
-	require.ErrorIs(t, err, store.ErrNilCheckpoint)
-	cp := &ethpb.Checkpoint{Epoch: 6, Root: bytesutil.PadTo([]byte("foo"), 32)}
-	c.store.SetJustifiedCheckptAndPayloadHash(cp, [32]byte{})
-	jp, err := c.CurrentJustifiedCheckpt()
+	fcs := protoarray.New()
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithForkChoiceStore(fcs),
+		WithStateGen(stategen.New(beaconDB)),
+	}
+	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
+
+	cp := &forkchoicetypes.Checkpoint{Epoch: 6, Root: [32]byte{'j'}}
+	require.NoError(t, fcs.UpdateJustifiedCheckpoint(cp))
+	jp := service.CurrentJustifiedCheckpt()
 	assert.Equal(t, cp.Epoch, jp.Epoch, "Unexpected justified epoch")
-}
-
-func TestJustifiedCheckpt_GenesisRootOk(t *testing.T) {
-	beaconDB := testDB.SetupDB(t)
-
-	c := setupBeaconChain(t, beaconDB)
-	genesisRoot := [32]byte{'B'}
-	cp := &ethpb.Checkpoint{Root: genesisRoot[:]}
-	c.store.SetJustifiedCheckptAndPayloadHash(cp, [32]byte{})
-	c.originBlockRoot = genesisRoot
-	cp, err := c.CurrentJustifiedCheckpt()
-	require.NoError(t, err)
-	assert.DeepEqual(t, c.originBlockRoot[:], cp.Root)
-}
-
-func TestPreviousJustifiedCheckpt_CanRetrieve(t *testing.T) {
-	beaconDB := testDB.SetupDB(t)
-
-	cp := &ethpb.Checkpoint{Epoch: 7, Root: bytesutil.PadTo([]byte("foo"), 32)}
-	c := setupBeaconChain(t, beaconDB)
-	_, err := c.PreviousJustifiedCheckpt()
-	require.ErrorIs(t, err, store.ErrNilCheckpoint)
-	c.store.SetPrevJustifiedCheckpt(cp)
-	pcp, err := c.PreviousJustifiedCheckpt()
-	require.NoError(t, err)
-	assert.Equal(t, cp.Epoch, pcp.Epoch, "Unexpected previous justified epoch")
-}
-
-func TestPrevJustifiedCheckpt_GenesisRootOk(t *testing.T) {
-	beaconDB := testDB.SetupDB(t)
-
-	genesisRoot := [32]byte{'C'}
-	cp := &ethpb.Checkpoint{Root: genesisRoot[:]}
-	c := setupBeaconChain(t, beaconDB)
-	c.store.SetPrevJustifiedCheckpt(cp)
-	c.originBlockRoot = genesisRoot
-	pcp, err := c.PreviousJustifiedCheckpt()
-	require.NoError(t, err)
-	assert.DeepEqual(t, c.originBlockRoot[:], pcp.Root)
+	require.Equal(t, cp.Root, bytesutil.ToBytes32(jp.Root))
 }
 
 func TestHeadSlot_CanRetrieve(t *testing.T) {
@@ -164,24 +132,46 @@ func TestHeadSlot_CanRetrieve(t *testing.T) {
 }
 
 func TestHeadRoot_CanRetrieve(t *testing.T) {
-	c := &Service{}
-	c.head = &head{root: [32]byte{'A'}}
-	r, err := c.HeadRoot(context.Background())
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+	fcs := protoarray.New()
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithForkChoiceStore(fcs),
+		WithStateGen(stategen.New(beaconDB)),
+	}
+	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
-	assert.Equal(t, [32]byte{'A'}, bytesutil.ToBytes32(r))
+	gs, _ := util.DeterministicGenesisState(t, 32)
+	require.NoError(t, service.saveGenesisData(ctx, gs))
+
+	r, err := service.HeadRoot(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, service.originBlockRoot, bytesutil.ToBytes32(r))
 }
 
 func TestHeadRoot_UseDB(t *testing.T) {
+	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-	c := &Service{cfg: &config{BeaconDB: beaconDB}}
-	c.head = &head{root: params.BeaconConfig().ZeroHash}
+	fcs := protoarray.New()
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithForkChoiceStore(fcs),
+		WithStateGen(stategen.New(beaconDB)),
+	}
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+
+	service.head = &head{root: params.BeaconConfig().ZeroHash}
 	b := util.NewBeaconBlock()
 	br, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	util.SaveBlock(t, context.Background(), beaconDB, b)
-	require.NoError(t, beaconDB.SaveStateSummary(context.Background(), &ethpb.StateSummary{Root: br[:]}))
-	require.NoError(t, beaconDB.SaveHeadBlockRoot(context.Background(), br))
-	r, err := c.HeadRoot(context.Background())
+	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
+	require.NoError(t, beaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Root: br[:]}))
+	require.NoError(t, beaconDB.SaveHeadBlockRoot(ctx, br))
+	r, err := service.HeadRoot(ctx)
 	require.NoError(t, err)
 	assert.Equal(t, br, bytesutil.ToBytes32(r))
 }
