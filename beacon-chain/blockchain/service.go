@@ -12,7 +12,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/async/event"
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/store"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -65,7 +64,6 @@ type Service struct {
 	initSyncBlocksLock      sync.RWMutex
 	justifiedBalances       *stateBalanceCache
 	wsVerifier              *WeakSubjectivityVerifier
-	store                   *store.Store
 	processAttestationsLock sync.Mutex
 }
 
@@ -103,7 +101,6 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 		checkpointStateCache: cache.NewCheckpointStateCache(),
 		initSyncBlocks:       make(map[[32]byte]interfaces.SignedBeaconBlock),
 		cfg:                  &config{},
-		store:                &store.Store{},
 	}
 	for _, opt := range opts {
 		if err := opt(srv); err != nil {
@@ -204,7 +201,6 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 	if finalized == nil {
 		return errNilFinalizedCheckpoint
 	}
-	s.store = store.New(justified, finalized)
 
 	var forkChoicer f.ForkChoicer
 	fRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(finalized.Root))
@@ -471,10 +467,6 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState state.Beacon
 
 	s.originBlockRoot = genesisBlkRoot
 	s.cfg.StateGen.SaveFinalizedState(0 /*slot*/, genesisBlkRoot, genesisState)
-
-	// Finalized checkpoint at genesis is a zero hash.
-	genesisCheckpoint := genesisState.FinalizedCheckpoint()
-	s.store = store.New(genesisCheckpoint, genesisCheckpoint)
 
 	if err := s.cfg.ForkChoiceStore.InsertNode(ctx, genesisState, genesisBlkRoot); err != nil {
 		log.Fatalf("Could not process genesis block for fork choice: %v", err)
