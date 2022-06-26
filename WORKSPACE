@@ -247,8 +247,8 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "b670fc56ddc4d376b58b21f3db134136edc8853c77b4601919b92b3fc5acee7b",
-    urls = ["file:///tmp/minimal-pr-4-20220622.tar.gz"],
+    sha256 = "52f2c52415228cee8a4de5a09abff785f439a77dfef8f03e834e4e16857673c1",
+    url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/minimal.tar.gz" % consensus_spec_version,
 )
 
 http_archive(
