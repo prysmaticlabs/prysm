@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
@@ -156,52 +157,35 @@ func (f *ForkChoice) InsertNode(ctx context.Context, state state.BeaconState, ro
 		return err
 	}
 
-	uj, uf, err := precompute.UnrealizedCheckpoints(ctx, state)
-	if err != nil {
-		log.WithError(err).Debug("could not compute unrealized checkpoints")
-	} else {
-		node.unrealizedJustifiedEpoch, node.unrealizedFinalizedEpoch = uj.Epoch, uf.Epoch
-		f.store.checkpointsLock.Lock()
-		if uj.Epoch > f.store.unrealizedJustifiedCheckpoint.Epoch {
-			f.store.unrealizedJustifiedCheckpoint = &forkchoicetypes.Checkpoint{
-				Epoch: uj.Epoch, Root: bytesutil.ToBytes32(uj.Root),
+	if features.Get().PullTips {
+		uj, uf, err := precompute.UnrealizedCheckpoints(ctx, state)
+		if err != nil {
+			log.WithError(err).Debug("could not compute unrealized checkpoints")
+		} else {
+			node.unrealizedJustifiedEpoch, node.unrealizedFinalizedEpoch = uj.Epoch, uf.Epoch
+			f.store.checkpointsLock.Lock()
+			if uj.Epoch > f.store.unrealizedJustifiedCheckpoint.Epoch {
+				f.store.unrealizedJustifiedCheckpoint = &forkchoicetypes.Checkpoint{
+					Epoch: uj.Epoch, Root: bytesutil.ToBytes32(uj.Root),
+				}
 			}
-		}
-		if uf.Epoch > f.store.unrealizedFinalizedCheckpoint.Epoch {
-			f.store.unrealizedJustifiedCheckpoint = &forkchoicetypes.Checkpoint{
-				Epoch: uj.Epoch, Root: bytesutil.ToBytes32(uj.Root),
+			if uf.Epoch > f.store.unrealizedFinalizedCheckpoint.Epoch {
+				f.store.unrealizedJustifiedCheckpoint = &forkchoicetypes.Checkpoint{
+					Epoch: uj.Epoch, Root: bytesutil.ToBytes32(uj.Root),
+				}
+				f.store.unrealizedFinalizedCheckpoint = &forkchoicetypes.Checkpoint{
+					Epoch: uf.Epoch, Root: bytesutil.ToBytes32(uf.Root),
+				}
 			}
-			f.store.unrealizedFinalizedCheckpoint = &forkchoicetypes.Checkpoint{
-				Epoch: uf.Epoch, Root: bytesutil.ToBytes32(uf.Root),
-			}
-		}
 
-		currentSlot := slots.CurrentSlot(f.store.genesisTime)
-		log.WithFields(logrus.Fields{
-			"nodeJRoot":    fmt.Sprintf("%#x", bytesutil.Trunc(jc.Root)),
-			"nodeFRoot":    fmt.Sprintf("%#x", bytesutil.Trunc(fc.Root)),
-			"uJRoot":       fmt.Sprintf("%#x", bytesutil.Trunc(uj.Root)),
-			"uFRoot":       fmt.Sprintf("%#x", bytesutil.Trunc(uf.Root)),
-			"storeuJRoot":  fmt.Sprintf("%#x", bytesutil.Trunc(f.store.unrealizedJustifiedCheckpoint.Root[:])),
-			"storeuFRoot":  fmt.Sprintf("%#x", bytesutil.Trunc(f.store.unrealizedFinalizedCheckpoint.Root[:])),
-			"storeJRoot":   fmt.Sprintf("%#x", bytesutil.Trunc(f.store.justifiedCheckpoint.Root[:])),
-			"storeFRoot":   fmt.Sprintf("%#x", bytesutil.Trunc(f.store.finalizedCheckpoint.Root[:])),
-			"uJEpoch":      uj.Epoch,
-			"uFEpoch":      uf.Epoch,
-			"nodeJEpoch":   jc.Epoch,
-			"nodeFEpoch":   fc.Epoch,
-			"storeuJEpoch": f.store.unrealizedJustifiedCheckpoint.Epoch,
-			"storeuFEpoch": f.store.unrealizedFinalizedCheckpoint.Epoch,
-			"storeJEpoch":  f.store.justifiedCheckpoint.Epoch,
-			"storeFEpoch":  f.store.finalizedCheckpoint.Epoch,
-		}).Info("------------------- Unrealized Info ------------")
-
-		if prysmtime.CurrentEpoch(state) < slots.ToEpoch(currentSlot) {
-			jc, fc = uj, uf
-			node.justifiedEpoch = uj.Epoch
-			node.finalizedEpoch = uf.Epoch
+			currentSlot := slots.CurrentSlot(f.store.genesisTime)
+			if prysmtime.CurrentEpoch(state) < slots.ToEpoch(currentSlot) {
+				jc, fc = uj, uf
+				node.justifiedEpoch = uj.Epoch
+				node.finalizedEpoch = uf.Epoch
+			}
+			f.store.checkpointsLock.Unlock()
 		}
-		f.store.checkpointsLock.Unlock()
 	}
 	return f.updateCheckpoints(ctx, jc, fc)
 }
