@@ -25,7 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
-	validator_service_config "github.com/prysmaticlabs/prysm/config/validator/service"
+	validatorserviceconfig "github.com/prysmaticlabs/prysm/config/validator/service"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
@@ -41,7 +41,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/graffiti"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/local"
-	remote_web3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
+	remoteweb3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/protobuf/proto"
@@ -95,8 +95,8 @@ type validator struct {
 	validatorClient                    ethpb.BeaconNodeValidatorClient
 	graffiti                           []byte
 	voteStats                          voteStats
-	Web3SignerConfig                   *remote_web3signer.SetupConfig
-	ProposerSettings                   *validator_service_config.ProposerSettings
+	Web3SignerConfig                   *remoteweb3signer.SetupConfig
+	ProposerSettings                   *validatorserviceconfig.ProposerSettings
 	walletIntializedChannel            chan *wallet.Wallet
 }
 
@@ -981,7 +981,7 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 	}
 	log.Infoln("Successfully prepared beacon proposer with fee recipient to validator index mapping.")
 
-	if err := SubmitValidatorRegistration(ctx, v.validatorClient, v.node, km.Sign, registerValidatorRequests); err != nil {
+	if err := SubmitValidatorRegistration(ctx, v.validatorClient, km.Sign, registerValidatorRequests); err != nil {
 		return err
 	}
 	log.Infoln("Successfully submitted builder validator registration settings for custom builders.")

@@ -52,9 +52,9 @@ func deterministicallyGenerateKeys(startIndex, numKeys uint64) ([]bls.SecretKey,
 	for i := startIndex; i < startIndex+numKeys; i++ {
 		enc := make([]byte, 32)
 		binary.LittleEndian.PutUint32(enc, uint32(i))
-		hash := hash.Hash(enc)
+		h := hash.Hash(enc)
 		// Reverse byte order to big endian for use with big ints.
-		b := bytesutil.ReverseByteOrder(hash[:])
+		b := bytesutil.ReverseByteOrder(h[:])
 		num := new(big.Int)
 		num = num.SetBytes(b)
 		order := new(big.Int)

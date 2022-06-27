@@ -4,6 +4,7 @@ package v1_test
 
 import (
 	"context"
+	"encoding/base64"
 	"testing"
 
 	coreState "github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
@@ -14,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
@@ -82,6 +84,20 @@ func FuzzV1StateHashTreeRoot(f *testing.F) {
 		if err == nil {
 			assert.DeepEqual(t, newSSZ, stateObjSSZ)
 			assert.DeepEqual(t, newSSZ, nativeSSZ)
+		}
+	})
+}
+
+func FuzzV1StateUnmarshalSSZ(f *testing.F) {
+	// See example in https://github.com/prysmaticlabs/prysm/issues/5167
+	b, err := base64.StdEncoding.DecodeString("AgAGAAAA5AAAAAAAAAAAAAAAAAAAAAAAAAB51og2NJR6COTeAGdBDUL2wythbDd/ntOHzD/JAg6kywEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHnWiDY0lHoI5N4AZ0ENQvbDK2FsN3+e04fMP8kCDqTLti/UWQrIlR5nKGy5okElUBusCaDxo+6f0kX7B54ry9byYg5qzCruPLf/SccXww14BppwTrLrI/CqCbt6AWTO4kS/jz0no8RYv4wBhofviY9/W28LdzMhh6XVRUzK2Us4/wE=")
+	require.NoError(f, err)
+	f.Add(b)
+
+	f.Fuzz(func(t *testing.T, b []byte) {
+		pbState := &ethpb.BeaconState{}
+		if err := pbState.UnmarshalSSZ(b); err != nil {
+			return // Do nothing
 		}
 	})
 }

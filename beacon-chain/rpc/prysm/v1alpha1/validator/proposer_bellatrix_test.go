@@ -40,9 +40,7 @@ func TestServer_buildHeaderBlock(t *testing.T) {
 	b, err := util.GenerateFullBlockAltair(copiedState, keys, util.DefaultBlockGenConfig(), 1)
 	require.NoError(t, err)
 	r := bytesutil.ToBytes32(b.Block.ParentRoot)
-	wb, err := wrapper.WrappedSignedBeaconBlock(b)
-	require.NoError(t, err)
-	require.NoError(t, proposerServer.BeaconDB.SaveBlock(ctx, wb))
+	util.SaveBlock(t, ctx, proposerServer.BeaconDB, b)
 	require.NoError(t, proposerServer.BeaconDB.SaveState(ctx, beaconState, r))
 
 	b1, err := util.GenerateFullBlockAltair(copiedState, keys, util.DefaultBlockGenConfig(), 2)

@@ -232,9 +232,9 @@ func TestProcessDeposit_SkipsInvalidDeposit(t *testing.T) {
 	dep, _, err := util.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
 	dep[0].Data.Signature = make([]byte, 96)
-	trie, _, err := util.DepositTrieFromDeposits(dep)
+	dt, _, err := util.DepositTrieFromDeposits(dep)
 	require.NoError(t, err)
-	root, err := trie.HashTreeRoot()
+	root, err := dt.HashTreeRoot()
 	require.NoError(t, err)
 	eth1Data := &ethpb.Eth1Data{
 		DepositRoot:  root[:],
@@ -283,15 +283,15 @@ func TestPreGenesisDeposits_SkipInvalidDeposit(t *testing.T) {
 	dep, _, err := util.DeterministicDepositsAndKeys(100)
 	require.NoError(t, err)
 	dep[0].Data.Signature = make([]byte, 96)
-	trie, _, err := util.DepositTrieFromDeposits(dep)
+	dt, _, err := util.DepositTrieFromDeposits(dep)
 	require.NoError(t, err)
 
 	for i := range dep {
-		proof, err := trie.MerkleProof(i)
+		proof, err := dt.MerkleProof(i)
 		require.NoError(t, err)
 		dep[i].Proof = proof
 	}
-	root, err := trie.HashTreeRoot()
+	root, err := dt.HashTreeRoot()
 	require.NoError(t, err)
 
 	eth1Data := &ethpb.Eth1Data{
