@@ -12,7 +12,6 @@ import (
 	powtesting "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
@@ -36,12 +35,12 @@ func TestServer_activationEpochNotReached(t *testing.T) {
 }
 
 func TestServer_getExecutionPayload(t *testing.T) {
+	beaconDB := dbTest.SetupDB(t)
 	nonTransitionSt, _ := util.DeterministicGenesisStateBellatrix(t, 1)
 	b1pb := util.NewBeaconBlock()
 	b1r, err := b1pb.Block.HashTreeRoot()
 	require.NoError(t, err)
-	b1, err := blocks.NewSignedBeaconBlock(b1pb)
-	require.NoError(t, err)
+	util.SaveBlock(t, context.Background(), beaconDB, b1pb)
 	require.NoError(t, nonTransitionSt.SetFinalizedCheckpoint(&ethpb.Checkpoint{
 		Root: b1r[:],
 	}))
@@ -51,15 +50,11 @@ func TestServer_getExecutionPayload(t *testing.T) {
 	b2pb := util.NewBeaconBlockBellatrix()
 	b2r, err := b2pb.Block.HashTreeRoot()
 	require.NoError(t, err)
-	b2, err := blocks.NewSignedBeaconBlock(b2pb)
-	require.NoError(t, err)
+	util.SaveBlock(t, context.Background(), beaconDB, b2pb)
 	require.NoError(t, transitionSt.SetFinalizedCheckpoint(&ethpb.Checkpoint{
 		Root: b2r[:],
 	}))
 
-	beaconDB := dbTest.SetupDB(t)
-	require.NoError(t, beaconDB.SaveBlock(context.Background(), b1))
-	require.NoError(t, beaconDB.SaveBlock(context.Background(), b2))
 	require.NoError(t, beaconDB.SaveFeeRecipientsByValidatorIDs(context.Background(), []types.ValidatorIndex{0}, []common.Address{{}}))
 
 	tests := []struct {
@@ -137,12 +132,12 @@ func TestServer_getExecutionPayload(t *testing.T) {
 
 func TestServer_getExecutionPayload_UnexpectedFeeRecipient(t *testing.T) {
 	hook := logTest.NewGlobal()
+	beaconDB := dbTest.SetupDB(t)
 	nonTransitionSt, _ := util.DeterministicGenesisStateBellatrix(t, 1)
 	b1pb := util.NewBeaconBlock()
 	b1r, err := b1pb.Block.HashTreeRoot()
 	require.NoError(t, err)
-	b1, err := blocks.NewSignedBeaconBlock(b1pb)
-	require.NoError(t, err)
+	util.SaveBlock(t, context.Background(), beaconDB, b1pb)
 	require.NoError(t, nonTransitionSt.SetFinalizedCheckpoint(&ethpb.Checkpoint{
 		Root: b1r[:],
 	}))
@@ -152,15 +147,11 @@ func TestServer_getExecutionPayload_UnexpectedFeeRecipient(t *testing.T) {
 	b2pb := util.NewBeaconBlockBellatrix()
 	b2r, err := b2pb.Block.HashTreeRoot()
 	require.NoError(t, err)
-	b2, err := blocks.NewSignedBeaconBlock(b2pb)
-	require.NoError(t, err)
+	util.SaveBlock(t, context.Background(), beaconDB, b2pb)
 	require.NoError(t, transitionSt.SetFinalizedCheckpoint(&ethpb.Checkpoint{
 		Root: b2r[:],
 	}))
 
-	beaconDB := dbTest.SetupDB(t)
-	require.NoError(t, beaconDB.SaveBlock(context.Background(), b1))
-	require.NoError(t, beaconDB.SaveBlock(context.Background(), b2))
 	feeRecipient := common.BytesToAddress([]byte("a"))
 	require.NoError(t, beaconDB.SaveFeeRecipientsByValidatorIDs(context.Background(), []types.ValidatorIndex{0}, []common.Address{
 		feeRecipient,

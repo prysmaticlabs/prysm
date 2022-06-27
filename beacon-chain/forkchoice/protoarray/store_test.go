@@ -802,9 +802,9 @@ func TestStore_CommonAncestor(t *testing.T) {
 	require.Equal(t, [32]byte{'a'}, r)
 	// Requesting unknown root
 	_, err = f.CommonAncestorRoot(ctx, [32]byte{'a'}, [32]byte{'z'})
-	require.ErrorIs(t, err, errInvalidNodeIndex)
+	require.ErrorIs(t, err, forkchoice.ErrUnknownCommonAncestor)
 	_, err = f.CommonAncestorRoot(ctx, [32]byte{'z'}, [32]byte{'a'})
-	require.ErrorIs(t, err, errInvalidNodeIndex)
+	require.ErrorIs(t, err, forkchoice.ErrUnknownCommonAncestor)
 	state, blkRoot, err = prepareForkchoiceState(ctx, 100, [32]byte{'y'}, [32]byte{'z'}, [32]byte{}, 1, 1)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))

@@ -53,8 +53,8 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get execution payload")
 	}
-	finalizedHash := s.store.FinalizedPayloadBlockHash()
-	justifiedHash := s.store.JustifiedPayloadBlockHash()
+	finalizedHash := s.ForkChoicer().FinalizedPayloadBlockHash()
+	justifiedHash := s.ForkChoicer().JustifiedPayloadBlockHash()
 	fcs := &enginev1.ForkchoiceState{
 		HeadBlockHash:      headPayload.BlockHash,
 		SafeBlockHash:      justifiedHash[:],
