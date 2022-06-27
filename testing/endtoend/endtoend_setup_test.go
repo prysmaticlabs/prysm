@@ -45,7 +45,7 @@ func e2eMinimal(t *testing.T, cfgo ...types.E2EConfigOpt) *testRunner {
 		ev.ValidatorsParticipatingAtEpoch(2),
 		ev.FinalizationOccurs(3),
 		ev.ValidatorsSlashedAfterEpoch(4),
-		ev.SlashedValidatorsLoseBalanceAfterEpoch(4),
+		ev.SlashedValidatorsLoseBalanceAfterEpoch(5),
 		ev.VerifyBlockGraffiti,
 		ev.PeersCheck,
 		ev.ProposeVoluntaryExit,

@@ -73,7 +73,13 @@ func validatorsSlashed(conns ...*grpc.ClientConn) error {
 	slashedIndicesLock.RLock()
 	defer slashedIndicesLock.RUnlock()
 	if len(changes.SlashedIndices) != len(slashedIndices) {
-		return fmt.Errorf("expected %d indices to be slashed, received %d", len(slashedIndices), len(changes.SlashedIndices))
+		return fmt.Errorf(
+			"expected %d (%v) indices to be slashed, received %d (%v)",
+			len(slashedIndices),
+			slashedIndices,
+			len(changes.SlashedIndices),
+			changes.SlashedIndices,
+		)
 	}
 	return nil
 }

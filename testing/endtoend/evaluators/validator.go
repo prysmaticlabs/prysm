@@ -62,12 +62,6 @@ func validatorsAreActive(conns ...*grpc.ClientConn) error {
 		return errors.Wrap(err, "failed to get validators")
 	}
 
-	expectedCount := params.BeaconConfig().MinGenesisActiveValidatorCount
-	receivedCount := uint64(len(validators.ValidatorList))
-	if expectedCount != receivedCount {
-		return fmt.Errorf("expected validator count to be %d, recevied %d", expectedCount, receivedCount)
-	}
-
 	effBalanceLowCount := 0
 	exitEpochWrongCount := 0
 	withdrawEpochWrongCount := 0
@@ -78,6 +72,15 @@ func validatorsAreActive(conns ...*grpc.ClientConn) error {
 		validatorSlashedSoFar[ethtypes.ValidatorIndex(valIdx)] = true
 	}
 	slashedIndicesLock.RUnlock()
+
+	expectedCount := params.BeaconConfig().MinGenesisActiveValidatorCount
+	receivedCount := uint64(len(validators.ValidatorList))
+
+	// Subtract the slashed indices from the expected active number of validators.
+	expectedCount -= uint64(len(slashedIndices))
+	if expectedCount != receivedCount {
+		return fmt.Errorf("expected validator count to be %d, recevied %d", expectedCount, receivedCount)
+	}
 	for _, item := range validators.ValidatorList {
 		// Ignore exited validators in the computation.
 		if valExited && item.Index == exitedIndex {
