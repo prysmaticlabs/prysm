@@ -88,10 +88,7 @@ func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockR
 // readyForBuilder returns true if builder is allowed to be used. Builder is allowed to be use after the
 // first finalized checkpt has been execution-enabled.
 func (vs *Server) readyForBuilder(ctx context.Context) (bool, error) {
-	cp, err := vs.FinalizationFetcher.FinalizedCheckpt()
-	if err != nil {
-		return false, err
-	}
+	cp := vs.FinalizationFetcher.FinalizedCheckpt()
 	if bytesutil.ToBytes32(cp.Root) == params.BeaconConfig().ZeroHash {
 		return false, nil
 	}
@@ -105,7 +102,9 @@ func (vs *Server) readyForBuilder(ctx context.Context) (bool, error) {
 	return blocks.IsExecutionBlock(b.Block().Body())
 }
 
-func (vs *Server) getPayloadHeader(ctx context.Context, slot types.Slot, idx types.ValidatorIndex) (*ethpb.ExecutionPayloadHeader, error) {
+// This function retrieves the payload header given the slot number and the validator index.
+// It's a no-op if the latest head block is not versioned bellatrix.
+func (vs *Server) getPayloadHeader(ctx context.Context, slot types.Slot, idx types.ValidatorIndex) (*enginev1.ExecutionPayloadHeader, error) {
 	if err := vs.BlockBuilder.Status(); err != nil {
 		return nil, err
 	}
@@ -129,139 +128,6 @@ func (vs *Server) getPayloadHeader(ctx context.Context, slot types.Slot, idx typ
 		return nil, err
 	}
 	bid, err := vs.BlockBuilder.GetHeader(ctx, slot, bytesutil.ToBytes32(h.BlockHash), bytesutil.ToBytes48(k))
-	if err != nil {
-		return nil, err
-	}
-	return bid.Message.Header, nil
-}
-
-func (vs *Server) buildHeaderBlock(ctx context.Context, b *ethpb.BeaconBlockAltair, h *ethpb.ExecutionPayloadHeader) (*ethpb.GenericBeaconBlock, error) {
-	blk := &ethpb.BlindedBeaconBlockBellatrix{
-		Slot:          b.Slot,
-		ProposerIndex: b.ProposerIndex,
-		ParentRoot:    b.ParentRoot,
-		StateRoot:     params.BeaconConfig().ZeroHash[:],
-		Body: &ethpb.BlindedBeaconBlockBodyBellatrix{
-			RandaoReveal:           b.Body.RandaoReveal,
-			Eth1Data:               b.Body.Eth1Data,
-			Graffiti:               b.Body.Graffiti,
-			ProposerSlashings:      b.Body.ProposerSlashings,
-			AttesterSlashings:      b.Body.AttesterSlashings,
-			Attestations:           b.Body.Attestations,
-			Deposits:               b.Body.Deposits,
-			VoluntaryExits:         b.Body.VoluntaryExits,
-			SyncAggregate:          b.Body.SyncAggregate,
-			ExecutionPayloadHeader: h,
-		},
-	}
-	wsb, err := wrapper.WrappedSignedBeaconBlock(
-		&ethpb.SignedBlindedBeaconBlockBellatrix{Block: blk, Signature: make([]byte, 96)},
-	)
-	if err != nil {
-		return nil, err
-	}
-	stateRoot, err := vs.computeStateRoot(ctx, wsb)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not compute state root")
-	}
-	blk.StateRoot = stateRoot
-	return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_BlindedBellatrix{BlindedBellatrix: blk}}, nil
-}
-
-func (vs *Server) getBuilderBlock(ctx context.Context, b interfaces.SignedBeaconBlock) (interfaces.SignedBeaconBlock, error) {
-	if b.Version() != version.BellatrixBlind {
-		return b, nil
-	}
-	if !vs.BlockBuilder.Configured() {
-		return b, nil
-	}
-	if err := vs.BlockBuilder.Status(); err != nil {
-		return nil, err
-	}
-	agg, err := b.Block().Body().SyncAggregate()
-	if err != nil {
-		return nil, err
-	}
-	h, err := b.Block().Body().ExecutionPayloadHeader()
-	if err != nil {
-		return nil, err
-	}
-	sb := &ethpb.SignedBlindedBeaconBlockBellatrix{
-		Block: &ethpb.BlindedBeaconBlockBellatrix{
-			Slot:          b.Block().Slot(),
-			ProposerIndex: b.Block().ProposerIndex(),
-			ParentRoot:    b.Block().ParentRoot(),
-			StateRoot:     b.Block().StateRoot(),
-			Body: &ethpb.BlindedBeaconBlockBodyBellatrix{
-				RandaoReveal:           b.Block().Body().RandaoReveal(),
-				Eth1Data:               b.Block().Body().Eth1Data(),
-				Graffiti:               b.Block().Body().Graffiti(),
-				ProposerSlashings:      b.Block().Body().ProposerSlashings(),
-				AttesterSlashings:      b.Block().Body().AttesterSlashings(),
-				Attestations:           b.Block().Body().Attestations(),
-				Deposits:               b.Block().Body().Deposits(),
-				VoluntaryExits:         b.Block().Body().VoluntaryExits(),
-				SyncAggregate:          agg,
-				ExecutionPayloadHeader: h,
-			},
-		},
-		Signature: b.Signature(),
-	}
-
-	payload, err := vs.BlockBuilder.SubmitBlindedBlock(ctx, sb)
-	if err != nil {
-		return nil, err
-	}
-	bb := &ethpb.SignedBeaconBlockBellatrix{
-		Block: &ethpb.BeaconBlockBellatrix{
-			Slot:          sb.Block.Slot,
-			ProposerIndex: sb.Block.ProposerIndex,
-			ParentRoot:    sb.Block.ParentRoot,
-			StateRoot:     sb.Block.StateRoot,
-			Body: &ethpb.BeaconBlockBodyBellatrix{
-				RandaoReveal:      sb.Block.Body.RandaoReveal,
-				Eth1Data:          sb.Block.Body.Eth1Data,
-				Graffiti:          sb.Block.Body.Graffiti,
-				ProposerSlashings: sb.Block.Body.ProposerSlashings,
-				AttesterSlashings: sb.Block.Body.AttesterSlashings,
-				Attestations:      sb.Block.Body.Attestations,
-				Deposits:          sb.Block.Body.Deposits,
-				VoluntaryExits:    sb.Block.Body.VoluntaryExits,
-				SyncAggregate:     agg,
-				ExecutionPayload:  payload,
-			},
-		},
-		Signature: sb.Signature,
-	}
-	wb, err := wrapper.WrappedSignedBeaconBlock(bb)
-	if err != nil {
-		return nil, err
-	}
-	return wb, nil
-}
-
-// This function retrieves the payload header given the slot number and the validator index.
-// It's a no-op if the latest head block is not versioned bellatrix.
-func (vs *Server) getPayloadHeader(ctx context.Context, slot types.Slot, idx types.ValidatorIndex) (*enginev1.ExecutionPayloadHeader, error) {
-	if err := vs.BlockBuilder.Status(); err != nil {
-		return nil, err
-	}
-	b, err := vs.HeadFetcher.HeadBlock(ctx)
-	if err != nil {
-		return nil, err
-	}
-	if blocks.IsPreBellatrixVersion(b.Version()) {
-		return nil, nil
-	}
-	h, err := b.Block().Body().ExecutionPayload()
-	if err != nil {
-		return nil, err
-	}
-	pk, err := vs.HeadFetcher.HeadValidatorIndexToPublicKey(ctx, idx)
-	if err != nil {
-		return nil, err
-	}
-	bid, err := vs.BlockBuilder.GetHeader(ctx, slot, bytesutil.ToBytes32(h.BlockHash), pk)
 	if err != nil {
 		return nil, err
 	}
