@@ -11,7 +11,6 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
@@ -69,24 +68,22 @@ func feeRecipientIsPresent(conns ...*grpc.ClientConn) error {
 		return errors.New("fee recipient is not set")
 	}
 
-	if !bytesutil.ZeroRoot(account.Bytes()) {
-		latestBlockNum, err := web3.BlockNumber(ctx)
-		if err != nil {
-			return err
-		}
-		accountBalance, err := web3.BalanceAt(ctx, account, big.NewInt(0).SetUint64(latestBlockNum))
-		if err != nil {
-			return err
-		}
-		prevAccountBalance, err := web3.BalanceAt(ctx, account, big.NewInt(0).SetUint64(latestBlockNum-1))
-		if err != nil {
-			return err
-		}
-		if accountBalance.Uint64() <= prevAccountBalance.Uint64() {
-			return errors.Errorf("account balance didn't change after applying fee recipient for account: %s", account.Hex())
-		} else {
-			log.Infof("current account balance %v ,increased from previous account balance %v ", accountBalance, prevAccountBalance)
-		}
+	latestBlockNum, err := web3.BlockNumber(ctx)
+	if err != nil {
+		return err
+	}
+	accountBalance, err := web3.BalanceAt(ctx, account, big.NewInt(0).SetUint64(latestBlockNum))
+	if err != nil {
+		return err
+	}
+	prevAccountBalance, err := web3.BalanceAt(ctx, account, big.NewInt(0).SetUint64(latestBlockNum-1))
+	if err != nil {
+		return err
+	}
+	if accountBalance.Uint64() <= prevAccountBalance.Uint64() {
+		return errors.Errorf("account balance didn't change after applying fee recipient for account: %s", account.Hex())
+	} else {
+		log.Infof("current account balance %v ,increased from previous account balance %v ", accountBalance, prevAccountBalance)
 	}
 
 	return nil
