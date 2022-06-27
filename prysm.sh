@@ -76,13 +76,12 @@ fi
 readonly wrapper_dir="$(dirname "$(get_realpath "${BASH_SOURCE[0]}")")/dist"
 
 # for Apple M1s
-if [ "$(uname -s)" == "Darwin" ] && [ "$(uname -m)" == "arm64" ]
-then
-arch="amd64"
+if [ "$(uname -s)" == "Darwin" ] && [ "$(uname -m)" == "arm64" ]; then
+    arch="amd64"
 else
-arch=$(uname -m)
-arch=${arch/x86_64/amd64}
-arch=${arch/aarch64/arm64}
+    arch=$(uname -m)
+    arch=${arch/x86_64/amd64}
+    arch=${arch/aarch64/arm64}
 fi
 readonly os_arch_suffix="$(uname -s | tr '[:upper:]' '[:lower:]')-$arch"
 
@@ -130,11 +129,11 @@ function verify() {
     fi
     checkSum="shasum -a 256"
     hash shasum 2>/dev/null || {
-	checkSum="sha256sum"
-    	hash sha256sum 2>/dev/null || {
-		echo >&2 "SHA checksum utility not available. Either install one (shasum or sha256sum) or run with PRYSM_ALLOW_UNVERIFIED_BINARIES=1."
-		exit 1
-    	}
+        checkSum="sha256sum"
+        hash sha256sum 2>/dev/null || {
+            echo >&2 "SHA checksum utility not available. Either install one (shasum or sha256sum) or run with PRYSM_ALLOW_UNVERIFIED_BINARIES=1."
+            exit 1
+        }
     }
     hash gpg 2>/dev/null || {
         echo >&2 "gpg is not available. Either install it or run with PRYSM_ALLOW_UNVERIFIED_BINARIES=1."
@@ -146,7 +145,7 @@ function verify() {
     gpg --list-keys "$PRYLABS_SIGNING_KEY" >/dev/null 2>&1 || curl --silent https://prysmaticlabs.com/releases/pgp_keys.asc | gpg --import
     (
         cd "$wrapper_dir"
-	$checkSum -c "${file}.sha256" || failed_verification
+        $checkSum -c "${file}.sha256" || failed_verification
     )
     (
         cd "$wrapper_dir"
@@ -176,9 +175,9 @@ get_prysm_version
 color "37" "Latest Prysm version is $prysm_version."
 
 if [ "${USE_PRYSM_MODERN:=false}" = "true" ]; then
-	BEACON_CHAIN_REAL="${wrapper_dir}/beacon-chain-${prysm_version}-modern-${system}-${arch}"
+    BEACON_CHAIN_REAL="${wrapper_dir}/beacon-chain-${prysm_version}-modern-${system}-${arch}"
 else
-	BEACON_CHAIN_REAL="${wrapper_dir}/beacon-chain-${prysm_version}-${system}-${arch}"
+    BEACON_CHAIN_REAL="${wrapper_dir}/beacon-chain-${prysm_version}-${system}-${arch}"
 fi
 VALIDATOR_REAL="${wrapper_dir}/validator-${prysm_version}-${system}-${arch}"
 CLIENT_STATS_REAL="${wrapper_dir}/client-stats-${prysm_version}-${system}-${arch}"
@@ -186,15 +185,15 @@ CLIENT_STATS_REAL="${wrapper_dir}/client-stats-${prysm_version}-${system}-${arch
 if [[ $1 == beacon-chain ]]; then
     if [[ ! -x $BEACON_CHAIN_REAL ]]; then
         color "34" "Downloading beacon chain@${prysm_version} to ${BEACON_CHAIN_REAL} (${reason})"
-	if [ "${USE_PRYSM_MODERN}" = "true" ]; then
-		file=beacon-chain-${prysm_version}-modern-${system}-${arch}
-	else
-		file=beacon-chain-${prysm_version}-${system}-${arch}
-	fi
+        if [ "${USE_PRYSM_MODERN}" = "true" ]; then
+            file=beacon-chain-${prysm_version}-modern-${system}-${arch}
+        else
+            file=beacon-chain-${prysm_version}-${system}-${arch}
+        fi
         res=$(curl -w '%{http_code}\n' -f -L "https://prysmaticlabs.com/releases/${file}"  -o "$BEACON_CHAIN_REAL" | ( grep 404 || true ) )
         if [[ $res == 404 ]];then
-          echo "No prysm beacon chain found for ${prysm_version},(${file}) exit"
-          exit 1
+            echo "No prysm beacon chain found for ${prysm_version},(${file}) exit"
+            exit 1
         fi
         curl --silent -L "https://prysmaticlabs.com/releases/${file}.sha256" -o "${wrapper_dir}/${file}.sha256"
         curl --silent -L "https://prysmaticlabs.com/releases/${file}.sig" -o "${wrapper_dir}/${file}.sig"
@@ -211,8 +210,8 @@ if [[ $1 == validator ]]; then
         file=validator-${prysm_version}-${system}-${arch}
         res=$(curl -w '%{http_code}\n' -f -L "https://prysmaticlabs.com/releases/${file}" -o "$VALIDATOR_REAL" | ( grep 404 || true ) )
         if [[ $res == 404 ]];then
-          echo "No prysm validator found for ${prysm_version}, (${file}) exit"
-          exit 1
+            echo "No prysm validator found for ${prysm_version}, (${file}) exit"
+            exit 1
         fi
         curl --silent -L "https://prysmaticlabs.com/releases/${file}.sha256" -o "${wrapper_dir}/${file}.sha256"
         curl --silent -L "https://prysmaticlabs.com/releases/${file}.sig" -o "${wrapper_dir}/${file}.sig"
@@ -229,8 +228,8 @@ if [[ $1 == client-stats ]]; then
         file=client-stats-${prysm_version}-${system}-${arch}
         res=$(curl -w '%{http_code}\n' -f -L "https://prysmaticlabs.com/releases/${file}" -o "$CLIENT_STATS_REAL" | ( grep 404 || true ) )
         if [[ $res == 404 ]];then
-          echo "No prysm client stats found for ${prysm_version},(${file}) exit"
-          exit 1
+            echo "No prysm client stats found for ${prysm_version},(${file}) exit"
+            exit 1
         fi
         curl --silent -L "https://prysmaticlabs.com/releases/${file}.sha256" -o "${wrapper_dir}/${file}.sha256"
         curl --silent -L "https://prysmaticlabs.com/releases/${file}.sig" -o "${wrapper_dir}/${file}.sig"
