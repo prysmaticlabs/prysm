@@ -52,6 +52,17 @@ func feeRecipientIsPresent(conns ...*grpc.ClientConn) error {
 	web3 := ethclient.NewClient(rpcclient)
 	ctx := context.Background()
 
+	testNetDir := e2e.TestParams.TestPath + "/proposer-settings"
+	configPath := filepath.Join(testNetDir, "config.json")
+	jsonFile, err := os.Open(configPath)
+	if err != nil {
+		return err
+	}
+	var configFile validator_service_config.ProposerSettingsPayload
+	if err := json.NewDecoder(jsonFile).Decode(&configFile); err != nil {
+		return err
+	}
+
 	var account common.Address
 	for _, ctr := range blks.BlockContainers {
 		switch ctr.Block.(type) {
@@ -72,17 +83,6 @@ func feeRecipientIsPresent(conns ...*grpc.ClientConn) error {
 				return errors.Wrap(err, "failed to get validators")
 			}
 			publickey := validator.GetPublicKey()
-			// find
-			testNetDir := e2e.TestParams.TestPath + "/proposer-settings"
-			configPath := filepath.Join(testNetDir, "config.json")
-			jsonFile, err := os.Open(configPath)
-			if err != nil {
-				return err
-			}
-			var configFile validator_service_config.ProposerSettingsPayload
-			if err := json.NewDecoder(jsonFile).Decode(&configFile); err != nil {
-				return err
-			}
 
 			option, ok := configFile.ProposerConfig[hexutil.Encode(publickey)]
 			if !ok {
