@@ -78,8 +78,11 @@ func validatorsAreActive(conns ...*grpc.ClientConn) error {
 
 	// Subtract the slashed indices from the expected active number of validators.
 	expectedCount -= uint64(len(slashedIndices))
-	if expectedCount != receivedCount {
-		return fmt.Errorf("expected validator count to be %d, recevied %d", expectedCount, receivedCount)
+
+	// Although we may have triggered slashed validator indices, sometimes the slashing itself does not
+	// trigger until some time later. We account for this discrepancy in the check below.
+	if receivedCount != expectedCount && receivedCount != expectedCount-uint64(len(slashedIndices)) {
+		return fmt.Errorf("received incorrect active validator count %d", receivedCount)
 	}
 	for _, item := range validators.ValidatorList {
 		// Ignore exited validators in the computation.
