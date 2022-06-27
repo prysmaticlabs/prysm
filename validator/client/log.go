@@ -2,6 +2,7 @@ package client
 
 import (
 	"fmt"
+	"sync/atomic"
 	"time"
 
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -41,6 +42,16 @@ func (v *validator) LogAttestationsSubmitted() {
 	}
 
 	v.attLogs = make(map[[32]byte]*attSubmitted)
+}
+
+// LogSyncCommitteeMessagesSubmitted logs info about submitted sync committee messages.
+func (v *validator) LogSyncCommitteeMessagesSubmitted() {
+	log.Infof(
+		"Submitted %d sync committee messages successfully to beacon node this epoch",
+		v.syncCommitteeStats.totalMessagesSubmitted,
+	)
+	// Reset the amount.
+	atomic.StoreUint64(&v.syncCommitteeStats.totalMessagesSubmitted, 0)
 }
 
 // LogNextDutyTimeLeft logs the next duty info.

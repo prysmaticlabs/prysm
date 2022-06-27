@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
 
 	emptypb "github.com/golang/protobuf/ptypes/empty"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
@@ -82,6 +83,7 @@ func (v *validator) SubmitSyncCommitteeMessage(ctx context.Context, slot types.S
 		"blockRoot":      fmt.Sprintf("%#x", bytesutil.Trunc(msg.BlockRoot)),
 		"validatorIndex": msg.ValidatorIndex,
 	}).Info("Submitted new sync message")
+	atomic.AddUint64(&v.syncCommitteeStats.totalMessagesSubmitted, 1)
 }
 
 // SubmitSignedContributionAndProof submits the signed sync committee contribution and proof to the beacon chain.
