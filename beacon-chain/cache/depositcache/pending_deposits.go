@@ -109,12 +109,12 @@ func (dc *DepositCache) RemovePendingDeposit(ctx context.Context, d *ethpb.Depos
 
 	idx := -1
 	for i, ctnr := range dc.pendingDeposits {
-		hash, err := hash.HashProto(ctnr.Deposit)
+		h, err := hash.HashProto(ctnr.Deposit)
 		if err != nil {
 			log.Errorf("Could not hash deposit %v", err)
 			continue
 		}
-		if hash == depRoot {
+		if h == depRoot {
 			idx = i
 			break
 		}

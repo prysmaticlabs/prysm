@@ -19,7 +19,7 @@ func TestEditWalletConfiguration(t *testing.T) {
 		walletDir:      walletDir,
 		keymanagerKind: keymanager.Remote,
 	})
-	wallet, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
+	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
 			KeymanagerKind: keymanager.Remote,
@@ -39,7 +39,7 @@ func TestEditWalletConfiguration(t *testing.T) {
 	}
 	encodedCfg, err := remote.MarshalOptionsFile(cliCtx.Context, originalCfg)
 	assert.NoError(t, err)
-	assert.NoError(t, wallet.WriteKeymanagerConfigToDisk(cliCtx.Context, encodedCfg))
+	assert.NoError(t, w.WriteKeymanagerConfigToDisk(cliCtx.Context, encodedCfg))
 
 	wantCfg := &remote.KeymanagerOpts{
 		RemoteCertificate: &remote.CertificateConfig{
@@ -68,7 +68,7 @@ func TestEditWalletConfiguration(t *testing.T) {
 
 	err = EditWalletConfigurationCli(cliCtx)
 	require.NoError(t, err)
-	encoded, err := wallet.ReadKeymanagerConfigFromDisk(cliCtx.Context)
+	encoded, err := w.ReadKeymanagerConfigFromDisk(cliCtx.Context)
 	require.NoError(t, err)
 
 	cfg, err := remote.UnmarshalOptionsFile(encoded)

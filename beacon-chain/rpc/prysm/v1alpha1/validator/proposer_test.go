@@ -1040,10 +1040,10 @@ func TestProposer_DepositTrie_UtilizesCachedFinalizedDeposits(t *testing.T) {
 		HeadFetcher:            &mock.ChainService{State: beaconState, Root: blkRoot[:]},
 	}
 
-	trie, err := bs.depositTrie(ctx, &ethpb.Eth1Data{}, big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance)))
+	dt, err := bs.depositTrie(ctx, &ethpb.Eth1Data{}, big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance)))
 	require.NoError(t, err)
 
-	actualRoot, err := trie.HashTreeRoot()
+	actualRoot, err := dt.HashTreeRoot()
 	require.NoError(t, err)
 	expectedRoot, err := depositTrie.HashTreeRoot()
 	require.NoError(t, err)
@@ -1168,12 +1168,12 @@ func TestProposer_DepositTrie_RebuildTrie(t *testing.T) {
 		HeadFetcher:            &mock.ChainService{State: beaconState, Root: blkRoot[:]},
 	}
 
-	trie, err := bs.depositTrie(ctx, &ethpb.Eth1Data{}, big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance)))
+	dt, err := bs.depositTrie(ctx, &ethpb.Eth1Data{}, big.NewInt(int64(params.BeaconConfig().Eth1FollowDistance)))
 	require.NoError(t, err)
 
 	expectedRoot, err := depositTrie.HashTreeRoot()
 	require.NoError(t, err)
-	actualRoot, err := trie.HashTreeRoot()
+	actualRoot, err := dt.HashTreeRoot()
 	require.NoError(t, err)
 	assert.Equal(t, expectedRoot, actualRoot, "Incorrect deposit trie root")
 
@@ -1192,51 +1192,51 @@ func TestProposer_ValidateDepositTrie(t *testing.T) {
 				return &ethpb.Eth1Data{DepositRoot: []byte{}, DepositCount: 10, BlockHash: []byte{}}
 			},
 			trieCreator: func() *trie.SparseMerkleTrie {
-				trie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+				newTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 				assert.NoError(t, err)
-				return trie
+				return newTrie
 			},
 			success: false,
 		},
 		{
 			name: "invalid deposit root",
 			eth1dataCreator: func() *ethpb.Eth1Data {
-				trie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+				newTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 				assert.NoError(t, err)
-				assert.NoError(t, trie.Insert([]byte{'a'}, 0))
-				assert.NoError(t, trie.Insert([]byte{'b'}, 1))
-				assert.NoError(t, trie.Insert([]byte{'c'}, 2))
+				assert.NoError(t, newTrie.Insert([]byte{'a'}, 0))
+				assert.NoError(t, newTrie.Insert([]byte{'b'}, 1))
+				assert.NoError(t, newTrie.Insert([]byte{'c'}, 2))
 				return &ethpb.Eth1Data{DepositRoot: []byte{'B'}, DepositCount: 3, BlockHash: []byte{}}
 			},
 			trieCreator: func() *trie.SparseMerkleTrie {
-				trie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+				newTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 				assert.NoError(t, err)
-				assert.NoError(t, trie.Insert([]byte{'a'}, 0))
-				assert.NoError(t, trie.Insert([]byte{'b'}, 1))
-				assert.NoError(t, trie.Insert([]byte{'c'}, 2))
-				return trie
+				assert.NoError(t, newTrie.Insert([]byte{'a'}, 0))
+				assert.NoError(t, newTrie.Insert([]byte{'b'}, 1))
+				assert.NoError(t, newTrie.Insert([]byte{'c'}, 2))
+				return newTrie
 			},
 			success: false,
 		},
 		{
 			name: "valid deposit trie",
 			eth1dataCreator: func() *ethpb.Eth1Data {
-				trie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+				newTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 				assert.NoError(t, err)
-				assert.NoError(t, trie.Insert([]byte{'a'}, 0))
-				assert.NoError(t, trie.Insert([]byte{'b'}, 1))
-				assert.NoError(t, trie.Insert([]byte{'c'}, 2))
-				rt, err := trie.HashTreeRoot()
+				assert.NoError(t, newTrie.Insert([]byte{'a'}, 0))
+				assert.NoError(t, newTrie.Insert([]byte{'b'}, 1))
+				assert.NoError(t, newTrie.Insert([]byte{'c'}, 2))
+				rt, err := newTrie.HashTreeRoot()
 				require.NoError(t, err)
 				return &ethpb.Eth1Data{DepositRoot: rt[:], DepositCount: 3, BlockHash: []byte{}}
 			},
 			trieCreator: func() *trie.SparseMerkleTrie {
-				trie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+				newTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 				assert.NoError(t, err)
-				assert.NoError(t, trie.Insert([]byte{'a'}, 0))
-				assert.NoError(t, trie.Insert([]byte{'b'}, 1))
-				assert.NoError(t, trie.Insert([]byte{'c'}, 2))
-				return trie
+				assert.NoError(t, newTrie.Insert([]byte{'a'}, 0))
+				assert.NoError(t, newTrie.Insert([]byte{'b'}, 1))
+				assert.NoError(t, newTrie.Insert([]byte{'c'}, 2))
+				return newTrie
 			},
 			success: true,
 		},
@@ -1806,9 +1806,9 @@ func TestProposer_FilterAttestation(t *testing.T) {
 	genesis := util.NewBeaconBlock()
 
 	numValidators := uint64(64)
-	state, privKeys := util.DeterministicGenesisState(t, numValidators)
-	require.NoError(t, state.SetGenesisValidatorsRoot(params.BeaconConfig().ZeroHash[:]))
-	assert.NoError(t, state.SetSlot(1))
+	st, privKeys := util.DeterministicGenesisState(t, numValidators)
+	require.NoError(t, st.SetGenesisValidatorsRoot(params.BeaconConfig().ZeroHash[:]))
+	assert.NoError(t, st.SetSlot(1))
 
 	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -1857,12 +1857,12 @@ func TestProposer_FilterAttestation(t *testing.T) {
 						},
 						AggregationBits: bitfield.Bitlist{0b00000110},
 					})
-					committee, err := helpers.BeaconCommitteeFromState(context.Background(), state, atts[i].Data.Slot, atts[i].Data.CommitteeIndex)
+					committee, err := helpers.BeaconCommitteeFromState(context.Background(), st, atts[i].Data.Slot, atts[i].Data.CommitteeIndex)
 					assert.NoError(t, err)
 					attestingIndices, err := attestation.AttestingIndices(atts[i].AggregationBits, committee)
 					require.NoError(t, err)
 					assert.NoError(t, err)
-					domain, err := signing.Domain(state.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, params.BeaconConfig().ZeroHash[:])
+					domain, err := signing.Domain(st.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, params.BeaconConfig().ZeroHash[:])
 					require.NoError(t, err)
 					sigs := make([]bls.Signature, len(attestingIndices))
 					zeroSig := [96]byte{}
@@ -1888,10 +1888,10 @@ func TestProposer_FilterAttestation(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			proposerServer := &Server{
 				AttPool:     attestations.NewPool(),
-				HeadFetcher: &mock.ChainService{State: state, Root: genesisRoot[:]},
+				HeadFetcher: &mock.ChainService{State: st, Root: genesisRoot[:]},
 			}
 			atts := tt.inputAtts()
-			received, err := proposerServer.validateAndDeleteAttsInPool(context.Background(), state, atts)
+			received, err := proposerServer.validateAndDeleteAttsInPool(context.Background(), st, atts)
 			if tt.wantedErr != "" {
 				assert.ErrorContains(t, tt.wantedErr, err)
 				assert.Equal(t, nil, received)
@@ -2505,8 +2505,8 @@ func TestProposer_PrepareBeaconProposer(t *testing.T) {
 }
 
 func majorityVoteBoundaryTime(slot types.Slot) (uint64, uint64) {
-	slots := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod))
-	slotStartTime := uint64(mockPOW.GenesisTime) + uint64((slot - (slot % (slots))).Mul(params.BeaconConfig().SecondsPerSlot))
+	s := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod))
+	slotStartTime := uint64(mockPOW.GenesisTime) + uint64((slot - (slot % (s))).Mul(params.BeaconConfig().SecondsPerSlot))
 	earliestValidTime := slotStartTime - 2*params.BeaconConfig().SecondsPerETH1Block*params.BeaconConfig().Eth1FollowDistance
 	latestValidTime := slotStartTime - params.BeaconConfig().SecondsPerETH1Block*params.BeaconConfig().Eth1FollowDistance
 

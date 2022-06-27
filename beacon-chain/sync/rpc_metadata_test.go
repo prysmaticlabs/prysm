@@ -122,11 +122,11 @@ func TestMetadataRPCHandler_SendsMetadata(t *testing.T) {
 		assert.NoError(t, r2.metaDataHandler(context.Background(), new(interface{}), stream))
 	})
 
-	metadata, err := r.sendMetaDataRequest(context.Background(), p2.BHost.ID())
+	md, err := r.sendMetaDataRequest(context.Background(), p2.BHost.ID())
 	assert.NoError(t, err)
 
-	if !equality.DeepEqual(metadata.InnerObject(), p2.LocalMetadata.InnerObject()) {
-		t.Fatalf("MetadataV0 unequal, received %v but wanted %v", metadata, p2.LocalMetadata)
+	if !equality.DeepEqual(md.InnerObject(), p2.LocalMetadata.InnerObject()) {
+		t.Fatalf("MetadataV0 unequal, received %v but wanted %v", md, p2.LocalMetadata)
 	}
 
 	if util.WaitTimeout(&wg, 1*time.Second) {
@@ -210,11 +210,11 @@ func TestMetadataRPCHandler_SendsMetadataAltair(t *testing.T) {
 		assert.NoError(t, r2.metaDataHandler(context.Background(), new(interface{}), stream))
 	})
 
-	metadata, err := r.sendMetaDataRequest(context.Background(), p2.BHost.ID())
+	md, err := r.sendMetaDataRequest(context.Background(), p2.BHost.ID())
 	assert.NoError(t, err)
 
-	if !equality.DeepEqual(metadata.InnerObject(), p2.LocalMetadata.InnerObject()) {
-		t.Fatalf("MetadataV1 unequal, received %v but wanted %v", metadata, p2.LocalMetadata)
+	if !equality.DeepEqual(md.InnerObject(), p2.LocalMetadata.InnerObject()) {
+		t.Fatalf("MetadataV1 unequal, received %v but wanted %v", md, p2.LocalMetadata)
 	}
 
 	if util.WaitTimeout(&wg, 1*time.Second) {

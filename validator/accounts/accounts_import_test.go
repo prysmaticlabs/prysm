@@ -141,7 +141,7 @@ func Test_importPrivateKeyAsAccount(t *testing.T) {
 		privateKeyFile:     privKeyFileName,
 	})
 	walletPass := "Passwordz0320$"
-	wallet, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
+	w, err := CreateWalletWithKeymanager(cliCtx.Context, &CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      walletDir,
 			KeymanagerKind: keymanager.Local,
@@ -149,29 +149,27 @@ func Test_importPrivateKeyAsAccount(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	keymanager, err := local.NewKeymanager(
+	km, err := local.NewKeymanager(
 		cliCtx.Context,
 		&local.SetupConfig{
-			Wallet:           wallet,
+			Wallet:           w,
 			ListenForChanges: false,
 		},
 	)
 	require.NoError(t, err)
-	assert.NoError(t, importPrivateKeyAsAccount(cliCtx.Context, wallet, keymanager, privKeyFileName))
+	assert.NoError(t, importPrivateKeyAsAccount(cliCtx.Context, w, km, privKeyFileName))
 
 	// We re-instantiate the keymanager and check we now have 1 public key.
-	keymanager, err = local.NewKeymanager(
+	km, err = local.NewKeymanager(
 		cliCtx.Context,
 		&local.SetupConfig{
-			Wallet:           wallet,
+			Wallet:           w,
 			ListenForChanges: false,
 		},
 	)
 	require.NoError(t, err)
-	pubKeys, err := keymanager.FetchValidatingPublicKeys(cliCtx.Context)
+	pubKeys, err := km.FetchValidatingPublicKeys(cliCtx.Context)
 	require.NoError(t, err)
 	require.Equal(t, 1, len(pubKeys))
 	assert.DeepEqual(t, pubKeys[0], bytesutil.ToBytes48(privKey.PublicKey().Marshal()))
 }
-
-// Returns the fullPath to the newly created keystore file.

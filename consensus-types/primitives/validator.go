@@ -1,7 +1,7 @@
 package types
 
 import (
-	fmt "fmt"
+	"fmt"
 
 	fssz "github.com/ferranbt/fastssz"
 )
