@@ -267,10 +267,7 @@ func TestBlocksFetcher_RoundRobin(t *testing.T) {
 			genesisRoot := cache.rootCache[0]
 			cache.RUnlock()
 
-			wsb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
-			require.NoError(t, err)
-			err = beaconDB.SaveBlock(context.Background(), wsb)
-			require.NoError(t, err)
+			util.SaveBlock(t, context.Background(), beaconDB, util.NewBeaconBlock())
 
 			st, err := util.NewBeaconState()
 			require.NoError(t, err)

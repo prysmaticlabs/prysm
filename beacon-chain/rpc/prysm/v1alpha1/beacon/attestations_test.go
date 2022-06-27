@@ -95,9 +95,7 @@ func TestServer_ListAttestations_Genesis(t *testing.T) {
 	signedBlock.Block.Body.Attestations = []*ethpb.Attestation{att}
 	root, err := signedBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
-	wsb, err := wrapper.WrappedSignedBeaconBlock(signedBlock)
-	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, db, signedBlock)
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 	wanted := &ethpb.ListAttestationsResponse{
 		Attestations:  []*ethpb.Attestation{att},
@@ -134,9 +132,7 @@ func TestServer_ListAttestations_NoPagination(t *testing.T) {
 				AggregationBits: bitfield.Bitlist{0b11},
 			},
 		}
-		wsb, err := wrapper.WrappedSignedBeaconBlock(blockExample)
-		require.NoError(t, err)
-		require.NoError(t, db.SaveBlock(ctx, wsb))
+		util.SaveBlock(t, ctx, db, blockExample)
 		atts = append(atts, blockExample.Block.Body.Attestations...)
 	}
 
@@ -287,9 +283,7 @@ func TestServer_ListAttestations_Pagination_CustomPageParameters(t *testing.T) {
 					AggregationBits: bitfield.Bitlist{0b11},
 				}),
 			}
-			wsb, err := wrapper.WrappedSignedBeaconBlock(blockExample)
-			require.NoError(t, err)
-			require.NoError(t, db.SaveBlock(ctx, wsb))
+			util.SaveBlock(t, ctx, db, blockExample)
 			atts = append(atts, blockExample.Block.Body.Attestations...)
 		}
 	}
@@ -398,9 +392,7 @@ func TestServer_ListAttestations_Pagination_OutOfRange(t *testing.T) {
 				},
 			},
 		})
-		wsb, err := wrapper.WrappedSignedBeaconBlock(blockExample)
-		require.NoError(t, err)
-		require.NoError(t, db.SaveBlock(ctx, wsb))
+		util.SaveBlock(t, ctx, db, blockExample)
 		atts = append(atts, blockExample.Block.Body.Attestations...)
 	}
 
@@ -451,9 +443,7 @@ func TestServer_ListAttestations_Pagination_DefaultPageSize(t *testing.T) {
 				AggregationBits: bitfield.Bitlist{0b11},
 			},
 		}
-		wsb, err := wrapper.WrappedSignedBeaconBlock(blockExample)
-		require.NoError(t, err)
-		require.NoError(t, db.SaveBlock(ctx, wsb))
+		util.SaveBlock(t, ctx, db, blockExample)
 		atts = append(atts, blockExample.Block.Body.Attestations...)
 	}
 
@@ -543,9 +533,7 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 				AggregationBits: bitfield.NewBitlist(128 / uint64(params.BeaconConfig().SlotsPerEpoch)),
 			},
 		}
-		wsb, err := wrapper.WrappedSignedBeaconBlock(blockExample)
-		require.NoError(t, err)
-		require.NoError(t, db.SaveBlock(ctx, wsb))
+		util.SaveBlock(t, ctx, db, blockExample)
 		if i%2 == 0 {
 			atts = append(atts, blockExample.Block.Body.Attestations...)
 		} else {
@@ -650,9 +638,7 @@ func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 				},
 			},
 		}
-		wsb, err := wrapper.WrappedSignedBeaconBlock(blockExample)
-		require.NoError(t, err)
-		require.NoError(t, db.SaveBlock(ctx, wsb))
+		util.SaveBlock(t, ctx, db, blockExample)
 		atts = append(atts, blockExample.Block.Body.Attestations...)
 	}
 
@@ -876,9 +862,7 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 	numValidators := 64
 	headState, privKeys := util.DeterministicGenesisState(t, uint64(numValidators))
 	b := util.NewBeaconBlock()
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
-	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, db, b)
 	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))

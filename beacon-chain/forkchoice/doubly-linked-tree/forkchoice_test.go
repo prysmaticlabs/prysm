@@ -535,9 +535,9 @@ func TestStore_CommonAncestor(t *testing.T) {
 	require.Equal(t, [32]byte{'a'}, r)
 	// Requesting unknown root
 	_, err = f.CommonAncestorRoot(ctx, [32]byte{'a'}, [32]byte{'z'})
-	require.ErrorIs(t, err, ErrNilNode)
+	require.ErrorIs(t, err, forkchoice.ErrUnknownCommonAncestor)
 	_, err = f.CommonAncestorRoot(ctx, [32]byte{'z'}, [32]byte{'a'})
-	require.ErrorIs(t, err, ErrNilNode)
+	require.ErrorIs(t, err, forkchoice.ErrUnknownCommonAncestor)
 	n := &Node{
 		slot:                     100,
 		root:                     [32]byte{'y'},

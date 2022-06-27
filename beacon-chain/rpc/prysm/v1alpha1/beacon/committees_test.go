@@ -44,9 +44,7 @@ func TestServer_ListBeaconCommittees_CurrentEpoch(t *testing.T) {
 		StateGen:           stategen.New(db),
 	}
 	b := util.NewBeaconBlock()
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
-	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, db, b)
 	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
@@ -100,8 +98,8 @@ func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 	require.NoError(t, headState.SetSlot(params.BeaconConfig().SlotsPerEpoch))
 
 	b, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
-	require.NoError(t, wrapper.SetBlockSlot(b, headState.Slot()))
 	require.NoError(t, err)
+	require.NoError(t, wrapper.SetBlockSlot(b, headState.Slot()))
 	require.NoError(t, db.SaveBlock(ctx, b))
 	gRoot, err := b.Block().HashTreeRoot()
 	require.NoError(t, err)
@@ -173,9 +171,7 @@ func TestRetrieveCommitteesForRoot(t *testing.T) {
 		StateGen:           stategen.New(db),
 	}
 	b := util.NewBeaconBlock()
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
-	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, db, b)
 	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))

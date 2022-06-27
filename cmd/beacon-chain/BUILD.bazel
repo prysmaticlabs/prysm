@@ -21,6 +21,7 @@ go_library(
         "//cmd/beacon-chain/blockchain:go_default_library",
         "//cmd/beacon-chain/db:go_default_library",
         "//cmd/beacon-chain/flags:go_default_library",
+        "//cmd/beacon-chain/jwt:go_default_library",
         "//cmd/beacon-chain/powchain:go_default_library",
         "//cmd/beacon-chain/sync/checkpoint:go_default_library",
         "//cmd/beacon-chain/sync/genesis:go_default_library",

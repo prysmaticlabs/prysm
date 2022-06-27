@@ -308,11 +308,7 @@ func (s *Service) updatePeerScorerStats(pid peer.ID, startSlot types.Slot) {
 
 // isProcessedBlock checks DB and local cache for presence of a given block, to avoid duplicates.
 func (s *Service) isProcessedBlock(ctx context.Context, blk interfaces.SignedBeaconBlock, blkRoot [32]byte) bool {
-	cp, err := s.cfg.Chain.FinalizedCheckpt()
-	if err != nil {
-		log.Errorf("could not get finalized checkpoint: %v", err)
-		return false
-	}
+	cp := s.cfg.Chain.FinalizedCheckpt()
 	finalizedSlot, err := slots.EpochStart(cp.Epoch)
 	if err != nil {
 		return false

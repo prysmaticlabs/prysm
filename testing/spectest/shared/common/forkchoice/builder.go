@@ -40,7 +40,7 @@ func (bb *Builder) Tick(t testing.TB, tick int64) {
 	bb.service.ForkChoicer().SetGenesisTime(uint64(time.Now().Unix() - tick))
 	if tick > bb.lastTick {
 		slot := uint64(tick) / params.BeaconConfig().SecondsPerSlot
-		require.NoError(t, bb.service.NewSlot(context.TODO(), types.Slot(slot)))
+		require.NoError(t, bb.service.ForkChoicer().NewSlot(context.TODO(), types.Slot(slot)))
 		bb.lastTick = tick
 	}
 }
@@ -98,8 +98,7 @@ func (bb *Builder) Check(t testing.TB, c *Check) {
 			Epoch: types.Epoch(c.JustifiedCheckPoint.Epoch),
 			Root:  common.FromHex(c.JustifiedCheckPoint.Root),
 		}
-		got, err := bb.service.CurrentJustifiedCheckpt()
-		require.NoError(t, err)
+		got := bb.service.CurrentJustifiedCheckpt()
 		require.DeepEqual(t, cp, got)
 	}
 	if c.BestJustifiedCheckPoint != nil {
@@ -107,8 +106,7 @@ func (bb *Builder) Check(t testing.TB, c *Check) {
 			Epoch: types.Epoch(c.BestJustifiedCheckPoint.Epoch),
 			Root:  common.FromHex(c.BestJustifiedCheckPoint.Root),
 		}
-		got, err := bb.service.BestJustifiedCheckpt()
-		require.NoError(t, err)
+		got := bb.service.BestJustifiedCheckpt()
 		require.DeepEqual(t, cp, got)
 	}
 	if c.FinalizedCheckPoint != nil {
@@ -116,8 +114,7 @@ func (bb *Builder) Check(t testing.TB, c *Check) {
 			Epoch: types.Epoch(c.FinalizedCheckPoint.Epoch),
 			Root:  common.FromHex(c.FinalizedCheckPoint.Root),
 		}
-		got, err := bb.service.FinalizedCheckpt()
-		require.NoError(t, err)
+		got := bb.service.FinalizedCheckpt()
 		require.DeepSSZEqual(t, cp, got)
 	}
 	if c.ProposerBoostRoot != nil {

@@ -283,18 +283,18 @@ func (s *ChainService) CurrentFork() *ethpb.Fork {
 }
 
 // FinalizedCheckpt mocks FinalizedCheckpt method in chain service.
-func (s *ChainService) FinalizedCheckpt() (*ethpb.Checkpoint, error) {
-	return s.FinalizedCheckPoint, nil
+func (s *ChainService) FinalizedCheckpt() *ethpb.Checkpoint {
+	return s.FinalizedCheckPoint
 }
 
 // CurrentJustifiedCheckpt mocks CurrentJustifiedCheckpt method in chain service.
-func (s *ChainService) CurrentJustifiedCheckpt() (*ethpb.Checkpoint, error) {
-	return s.CurrentJustifiedCheckPoint, nil
+func (s *ChainService) CurrentJustifiedCheckpt() *ethpb.Checkpoint {
+	return s.CurrentJustifiedCheckPoint
 }
 
 // PreviousJustifiedCheckpt mocks PreviousJustifiedCheckpt method in chain service.
-func (s *ChainService) PreviousJustifiedCheckpt() (*ethpb.Checkpoint, error) {
-	return s.PreviousJustifiedCheckPoint, nil
+func (s *ChainService) PreviousJustifiedCheckpt() *ethpb.Checkpoint {
+	return s.PreviousJustifiedCheckPoint
 }
 
 // ReceiveAttestation mocks ReceiveAttestation method in chain service.
