@@ -196,6 +196,7 @@ func (v *ValidatorService) Start() {
 		domainDataCache:                cache,
 		aggregatedSlotCommitteeIDCache: aggregatedSlotCommitteeIDCache,
 		voteStats:                      voteStats{startEpoch: types.Epoch(^uint64(0))},
+		syncCommitteeStats:             syncCommitteeStats{},
 		useWeb:                         v.useWeb,
 		interopKeysConfig:              v.interopKeysConfig,
 		wallet:                         v.wallet,
