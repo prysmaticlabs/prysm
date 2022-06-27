@@ -175,7 +175,7 @@ func TestDeleteAccounts_Noninteractive(t *testing.T) {
 	// We attempt to delete the accounts specified.
 	require.NoError(t, accountsDelete(cliCtx))
 
-	keymanager, err := local.NewKeymanager(
+	km, err := local.NewKeymanager(
 		cliCtx.Context,
 		&local.SetupConfig{
 			Wallet:           w,
@@ -183,7 +183,7 @@ func TestDeleteAccounts_Noninteractive(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-	remainingAccounts, err := keymanager.FetchValidatingPublicKeys(cliCtx.Context)
+	remainingAccounts, err := km.FetchValidatingPublicKeys(cliCtx.Context)
 	require.NoError(t, err)
 	require.Equal(t, len(remainingAccounts), 1)
 	remainingPublicKey, err := hex.DecodeString(k3.Pubkey)

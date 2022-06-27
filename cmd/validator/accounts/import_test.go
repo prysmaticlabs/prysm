@@ -44,7 +44,7 @@ func TestImport_Noninteractive(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	keymanager, err := local.NewKeymanager(
+	newKm, err := local.NewKeymanager(
 		cliCtx.Context,
 		&local.SetupConfig{
 			Wallet:           w,
@@ -54,9 +54,9 @@ func TestImport_Noninteractive(t *testing.T) {
 	require.NoError(t, err)
 
 	// Make sure there are no accounts at the start.
-	accounts, err := keymanager.ValidatingAccountNames()
+	accNames, err := newKm.ValidatingAccountNames()
 	require.NoError(t, err)
-	assert.Equal(t, len(accounts), 0)
+	assert.Equal(t, len(accNames), 0)
 
 	// Create 2 keys.
 	createKeystore(t, keysDir)
@@ -149,7 +149,7 @@ func TestImport_Noninteractive_RandomName(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	keymanager, err := local.NewKeymanager(
+	newKm, err := local.NewKeymanager(
 		cliCtx.Context,
 		&local.SetupConfig{
 			Wallet:           w,
@@ -159,9 +159,9 @@ func TestImport_Noninteractive_RandomName(t *testing.T) {
 	require.NoError(t, err)
 
 	// Make sure there are no accounts at the start.
-	accounts, err := keymanager.ValidatingAccountNames()
+	accNames, err := newKm.ValidatingAccountNames()
 	require.NoError(t, err)
-	assert.Equal(t, len(accounts), 0)
+	assert.Equal(t, len(accNames), 0)
 
 	// Create 2 keys.
 	createRandomNameKeystore(t, keysDir)
@@ -232,7 +232,7 @@ func TestImport_Noninteractive_Filepath(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	keymanager, err := local.NewKeymanager(
+	newKm, err := local.NewKeymanager(
 		cliCtx.Context,
 		&local.SetupConfig{
 			Wallet:           w,
@@ -242,9 +242,9 @@ func TestImport_Noninteractive_Filepath(t *testing.T) {
 	require.NoError(t, err)
 
 	// Make sure there are no accounts at the start.
-	accounts, err := keymanager.ValidatingAccountNames()
+	accNames, err := newKm.ValidatingAccountNames()
 	require.NoError(t, err)
-	assert.Equal(t, len(accounts), 0)
+	assert.Equal(t, len(accNames), 0)
 
 	require.NoError(t, accountsImport(cliCtx))
 

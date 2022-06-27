@@ -65,7 +65,7 @@ func (m *MockKeymanager) ReloadPublicKeys(context.Context) ([][fieldparams.BLSPu
 
 // ExtractKeystores --
 func (*MockKeymanager) ExtractKeystores(
-	ctx context.Context, publicKeys []bls.PublicKey, password string,
+	_ context.Context, _ []bls.PublicKey, _ string,
 ) ([]*keymanager.Keystore, error) {
 	return nil, errors.New("extracting keys not supported for a remote keymanager")
 }
