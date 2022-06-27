@@ -1,23 +1,25 @@
 package util
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
-	"github.com/prysmaticlabs/prysm/testing/require"
-
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/go-bitfield"
+	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
+	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 // FillRootsNaturalOpt is meant to be used as an option when calling NewBeaconState.
@@ -57,22 +59,6 @@ func FillRootsNaturalOptBellatrix(state *ethpb.BeaconStateBellatrix) error {
 	state.StateRoots = roots
 	state.BlockRoots = roots
 	return nil
-}
-
-func WithStateSlot(slot types.Slot) NewBeaconStateOption {
-	return func(st *ethpb.BeaconState) error {
-		st.Slot = slot
-		return nil
-	}
-}
-
-func WithLatestHeaderFromBlock(t *testing.T, b interfaces.SignedBeaconBlock) NewBeaconStateOption {
-	return func(st *ethpb.BeaconState) error {
-		sh, err := b.Header()
-		require.NoError(t, err)
-		st.LatestBlockHeader = sh.Header
-		return nil
-	}
 }
 
 type NewBeaconStateOption func(state *ethpb.BeaconState) error
@@ -268,4 +254,30 @@ func PrepareRoots(size int) ([][]byte, error) {
 		roots[j] = h
 	}
 	return roots, nil
+}
+
+// DeterministicGenesisStateWithGenesisBlock creates a genesis state, saves the genesis block,
+// genesis state and head block root. It returns the genesis state, genesis block's root and
+// validator private keys.
+func DeterministicGenesisStateWithGenesisBlock(
+	t *testing.T,
+	ctx context.Context,
+	db iface.HeadAccessDatabase,
+	numValidators uint64,
+) (state.BeaconState, [32]byte, []bls.SecretKey) {
+	genesisState, privateKeys := DeterministicGenesisState(t, numValidators)
+	stateRoot, err := genesisState.HashTreeRoot(ctx)
+	require.NoError(t, err, "Could not hash genesis state")
+
+	genesis := b.NewGenesisBlock(stateRoot[:])
+	wsb, err := wrapper.WrappedSignedBeaconBlock(genesis)
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, wsb), "Could not save genesis block")
+
+	parentRoot, err := genesis.Block.HashTreeRoot()
+	require.NoError(t, err, "Could not get signing root")
+	require.NoError(t, db.SaveState(ctx, genesisState, parentRoot), "Could not save genesis state")
+	require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
+
+	return genesisState, parentRoot, privateKeys
 }

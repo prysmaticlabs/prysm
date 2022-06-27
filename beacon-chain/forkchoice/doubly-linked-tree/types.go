@@ -20,6 +20,7 @@ type ForkChoice struct {
 type Store struct {
 	justifiedCheckpoint        *forkchoicetypes.Checkpoint            // latest justified epoch in store.
 	bestJustifiedCheckpoint    *forkchoicetypes.Checkpoint            // best justified checkpoint in store.
+	prevJustifiedCheckpoint    *forkchoicetypes.Checkpoint            // previous justified checkpoint in store.
 	finalizedCheckpoint        *forkchoicetypes.Checkpoint            // latest finalized epoch in store.
 	pruneThreshold             uint64                                 // do not prune tree unless threshold is reached.
 	proposerBoostRoot          [fieldparams.RootLength]byte           // latest block root that was boosted after being received in a timely manner.

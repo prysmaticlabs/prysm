@@ -35,11 +35,11 @@ func (s *MockBuilderService) GetHeader(context.Context, types.Slot, [32]byte, [4
 }
 
 // Status for mocking.
-func (s *MockBuilderService) Status(context.Context) error {
+func (s *MockBuilderService) Status() error {
 	return s.ErrStatus
 }
 
 // RegisterValidator for mocking.
-func (s *MockBuilderService) RegisterValidator(context.Context, *ethpb.SignedValidatorRegistrationV1) error {
+func (s *MockBuilderService) RegisterValidator(context.Context, []*ethpb.SignedValidatorRegistrationV1) error {
 	return s.ErrRegisterValidator
 }

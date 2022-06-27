@@ -3,24 +3,10 @@ package validator
 import (
 	"context"
 	"testing"
-	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/go-bitfield"
-	ct "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	bt "github.com/prysmaticlabs/prysm/beacon-chain/builder/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
-	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/synccommittee"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
-	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
@@ -30,8 +16,6 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
-	"github.com/prysmaticlabs/prysm/time/slots"
-	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestServer_buildHeaderBlock(t *testing.T) {
@@ -53,16 +37,14 @@ func TestServer_buildHeaderBlock(t *testing.T) {
 	b, err := util.GenerateFullBlockAltair(copiedState, keys, util.DefaultBlockGenConfig(), 1)
 	require.NoError(t, err)
 	r := bytesutil.ToBytes32(b.Block.ParentRoot)
-	wb, err := wrapper.WrappedSignedBeaconBlock(b)
-	require.NoError(t, err)
-	require.NoError(t, proposerServer.BeaconDB.SaveBlock(ctx, wb))
+	util.SaveBlock(t, ctx, proposerServer.BeaconDB, b)
 	require.NoError(t, proposerServer.BeaconDB.SaveState(ctx, beaconState, r))
 
 	b1, err := util.GenerateFullBlockAltair(copiedState, keys, util.DefaultBlockGenConfig(), 2)
 	require.NoError(t, err)
 
 	vs := &Server{StateGen: stategen.New(db), BeaconDB: db}
-	h := &ethpb.ExecutionPayloadHeader{
+	h := &v1.ExecutionPayloadHeader{
 		BlockNumber:      123,
 		GasLimit:         456,
 		GasUsed:          789,
@@ -109,28 +91,34 @@ func TestServer_readyForBuilder(t *testing.T) {
 	ready, err = vs.readyForBuilder(ctx)
 	require.NoError(t, err)
 	require.Equal(t, true, ready)
+
+	_, err = vs.buildHeaderBlock(ctx, nil, h)
+	require.ErrorContains(t, "nil block", err)
+
+	_, err = vs.buildHeaderBlock(ctx, b1.Block, nil)
+	require.ErrorContains(t, "nil header", err)
 }
 
 func TestServer_getPayloadHeader(t *testing.T) {
 	tests := []struct {
 		name           string
 		head           interfaces.SignedBeaconBlock
-		mock           *bt.MockBuilderService
-		fetcher        *ct.ChainService
+		mock           *builderTest.MockBuilderService
+		fetcher        *blockchainTest.ChainService
 		err            string
-		returnedHeader *ethpb.ExecutionPayloadHeader
+		returnedHeader *v1.ExecutionPayloadHeader
 	}{
 		{
 			name: "builder is not ready",
-			mock: &bt.MockBuilderService{
+			mock: &builderTest.MockBuilderService{
 				ErrStatus: errors.New("builder is not ready"),
 			},
 			err: "builder is not ready",
 		},
 		{
 			name: "head is not bellatrix ready",
-			mock: &bt.MockBuilderService{},
-			fetcher: &ct.ChainService{
+			mock: &builderTest.MockBuilderService{},
+			fetcher: &blockchainTest.ChainService{
 				Block: func() interfaces.SignedBeaconBlock {
 					wb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
 					require.NoError(t, err)
@@ -140,10 +128,10 @@ func TestServer_getPayloadHeader(t *testing.T) {
 		},
 		{
 			name: "get header failed",
-			mock: &bt.MockBuilderService{
+			mock: &builderTest.MockBuilderService{
 				ErrGetHeader: errors.New("can't get header"),
 			},
-			fetcher: &ct.ChainService{
+			fetcher: &blockchainTest.ChainService{
 				Block: func() interfaces.SignedBeaconBlock {
 					wb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlockBellatrix())
 					require.NoError(t, err)
@@ -154,24 +142,24 @@ func TestServer_getPayloadHeader(t *testing.T) {
 		},
 		{
 			name: "get header correct",
-			mock: &bt.MockBuilderService{
+			mock: &builderTest.MockBuilderService{
 				Bid: &ethpb.SignedBuilderBid{
 					Message: &ethpb.BuilderBid{
-						Header: &ethpb.ExecutionPayloadHeader{
+						Header: &v1.ExecutionPayloadHeader{
 							BlockNumber: 123,
 						},
 					},
 				},
 				ErrGetHeader: errors.New("can't get header"),
 			},
-			fetcher: &ct.ChainService{
+			fetcher: &blockchainTest.ChainService{
 				Block: func() interfaces.SignedBeaconBlock {
 					wb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlockBellatrix())
 					require.NoError(t, err)
 					return wb
 				}(),
 			},
-			returnedHeader: &ethpb.ExecutionPayloadHeader{
+			returnedHeader: &v1.ExecutionPayloadHeader{
 				BlockNumber: 123,
 			},
 		},
@@ -193,10 +181,15 @@ func TestServer_getBuilderBlock(t *testing.T) {
 	tests := []struct {
 		name        string
 		blk         interfaces.SignedBeaconBlock
-		mock        *bt.MockBuilderService
+		mock        *builderTest.MockBuilderService
 		err         string
 		returnedBlk interfaces.SignedBeaconBlock
 	}{
+		{
+			name: "nil block",
+			blk:  nil,
+			err:  "signed beacon block can't be nil",
+		},
 		{
 			name: "old block version",
 			blk: func() interfaces.SignedBeaconBlock {
@@ -217,7 +210,7 @@ func TestServer_getBuilderBlock(t *testing.T) {
 				require.NoError(t, err)
 				return wb
 			}(),
-			mock: &bt.MockBuilderService{
+			mock: &builderTest.MockBuilderService{
 				HasConfigured: false,
 			},
 			returnedBlk: func() interfaces.SignedBeaconBlock {
@@ -233,7 +226,7 @@ func TestServer_getBuilderBlock(t *testing.T) {
 				require.NoError(t, err)
 				return wb
 			}(),
-			mock: &bt.MockBuilderService{
+			mock: &builderTest.MockBuilderService{
 				HasConfigured: true,
 				ErrStatus:     errors.New("builder is not ready"),
 			},
@@ -249,7 +242,7 @@ func TestServer_getBuilderBlock(t *testing.T) {
 				require.NoError(t, err)
 				return wb
 			}(),
-			mock: &bt.MockBuilderService{
+			mock: &builderTest.MockBuilderService{
 				HasConfigured:         true,
 				ErrSubmitBlindedBlock: errors.New("can't submit"),
 			},
@@ -265,7 +258,7 @@ func TestServer_getBuilderBlock(t *testing.T) {
 				require.NoError(t, err)
 				return wb
 			}(),
-			mock: &bt.MockBuilderService{
+			mock: &builderTest.MockBuilderService{
 				HasConfigured: true,
 				Payload:       &v1.ExecutionPayload{GasLimit: 123},
 			},
