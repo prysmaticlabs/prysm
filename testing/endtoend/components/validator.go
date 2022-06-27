@@ -37,7 +37,6 @@ import (
 )
 
 const depositGasLimit = 4000000
-const FeeRecipientAddress = "0x055FB65722e7B2455043BfeBf6177f1d2e9738d9"
 const DefaultFeeRecipientAddress = "0x099FB65722e7b2455043bfebF6177f1D2E9738d9"
 
 var _ e2etypes.ComponentRunner = (*ValidatorNode)(nil)
@@ -412,11 +411,13 @@ func createProposerSettingsPath(pubkeys []string) (string, error) {
 		}
 	} else {
 		config := make(map[string]*validator_service_config.ProposerOptionPayload)
-		config[pubkeys[0]] = &validator_service_config.ProposerOptionPayload{
-			FeeRecipient: FeeRecipientAddress,
+		for index, pubkey := range pubkeys {
+			config[pubkey] = &validator_service_config.ProposerOptionPayload{
+				FeeRecipient: fmt.Sprintf("0x%40d", 1+index),
+			}
 		}
 		proposerSettingsPayload = validator_service_config.ProposerSettingsPayload{
-			ProposeConfig: config,
+			ProposerConfig: config,
 			DefaultConfig: &validator_service_config.ProposerOptionPayload{
 				FeeRecipient: DefaultFeeRecipientAddress,
 			},
