@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sync/atomic"
+	"time"
 
 	emptypb "github.com/golang/protobuf/ptypes/empty"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
@@ -78,10 +79,14 @@ func (v *validator) SubmitSyncCommitteeMessage(ctx context.Context, slot types.S
 		return
 	}
 
+	msgSlot := msg.Slot
+	slotTime := time.Unix(int64(v.genesisTime+uint64(msgSlot)*params.BeaconConfig().SecondsPerSlot), 0)
 	log.WithFields(logrus.Fields{
-		"slot":           msg.Slot,
-		"blockRoot":      fmt.Sprintf("%#x", bytesutil.Trunc(msg.BlockRoot)),
-		"validatorIndex": msg.ValidatorIndex,
+		"slot":               msg.Slot,
+		"slotStartTime":      slotTime,
+		"timeSinceSlotStart": time.Since(slotTime),
+		"blockRoot":          fmt.Sprintf("%#x", bytesutil.Trunc(msg.BlockRoot)),
+		"validatorIndex":     msg.ValidatorIndex,
 	}).Info("Submitted new sync message")
 	atomic.AddUint64(&v.syncCommitteeStats.totalMessagesSubmitted, 1)
 }
@@ -167,12 +172,16 @@ func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot t
 			return
 		}
 
+		contributionSlot := contributionAndProof.Contribution.Slot
+		slotTime := time.Unix(int64(v.genesisTime+uint64(contributionSlot)*params.BeaconConfig().SecondsPerSlot), 0)
 		log.WithFields(logrus.Fields{
-			"slot":              contributionAndProof.Contribution.Slot,
-			"blockRoot":         fmt.Sprintf("%#x", bytesutil.Trunc(contributionAndProof.Contribution.BlockRoot)),
-			"subcommitteeIndex": contributionAndProof.Contribution.SubcommitteeIndex,
-			"aggregatorIndex":   contributionAndProof.AggregatorIndex,
-			"bitsCount":         contributionAndProof.Contribution.AggregationBits.Count(),
+			"slot":               contributionAndProof.Contribution.Slot,
+			"slotStartTime":      slotTime,
+			"timeSinceSlotStart": time.Since(slotTime),
+			"blockRoot":          fmt.Sprintf("%#x", bytesutil.Trunc(contributionAndProof.Contribution.BlockRoot)),
+			"subcommitteeIndex":  contributionAndProof.Contribution.SubcommitteeIndex,
+			"aggregatorIndex":    contributionAndProof.AggregatorIndex,
+			"bitsCount":          contributionAndProof.Contribution.AggregationBits.Count(),
 		}).Info("Submitted new sync contribution and proof")
 	}
 }
