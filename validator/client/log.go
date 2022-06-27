@@ -46,10 +46,7 @@ func (v *validator) LogAttestationsSubmitted() {
 
 // LogSyncCommitteeMessagesSubmitted logs info about submitted sync committee messages.
 func (v *validator) LogSyncCommitteeMessagesSubmitted() {
-	log.Infof(
-		"Submitted %d sync committee messages successfully to beacon node this epoch",
-		v.syncCommitteeStats.totalMessagesSubmitted,
-	)
+	log.WithField("messages", v.syncCommitteeStats.totalMessagesSubmitted).Debug("Submitted sync committee messages successfully to beacon node")
 	// Reset the amount.
 	atomic.StoreUint64(&v.syncCommitteeStats.totalMessagesSubmitted, 0)
 }
