@@ -20,7 +20,7 @@ func TestPruneAttestations_NoPruning(t *testing.T) {
 	// Write attesting history for every single epoch
 	// since genesis to a specified number of epochs.
 	numEpochs := params.BeaconConfig().SlashingProtectionPruningEpochs - 1
-	err := setupAttestationsForEveryEpoch(t, validatorDB, pubKey, numEpochs)
+	err := setupAttestationsForEveryEpoch(validatorDB, pubKey, numEpochs)
 	require.NoError(t, err)
 
 	// Next, attempt to prune and realize that we still have all epochs intact
@@ -51,7 +51,7 @@ func TestPruneAttestations_OK(t *testing.T) {
 	// since genesis to SLASHING_PROTECTION_PRUNING_EPOCHS * 2.
 	numEpochs := params.BeaconConfig().SlashingProtectionPruningEpochs * 2
 	for _, pk := range pks {
-		require.NoError(t, setupAttestationsForEveryEpoch(t, validatorDB, pk, numEpochs))
+		require.NoError(t, setupAttestationsForEveryEpoch(validatorDB, pk, numEpochs))
 	}
 
 	require.NoError(t, validatorDB.PruneAttestations(context.Background()))
@@ -104,7 +104,7 @@ func BenchmarkPruneAttestations(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		b.StopTimer()
 		for _, pk := range pks {
-			require.NoError(b, setupAttestationsForEveryEpoch(b, validatorDB, pk, numEpochs))
+			require.NoError(b, setupAttestationsForEveryEpoch(validatorDB, pk, numEpochs))
 		}
 		b.StartTimer()
 
@@ -114,7 +114,7 @@ func BenchmarkPruneAttestations(b *testing.B) {
 
 // Saves attesting history for every (source, target = source + 1) pairs since genesis
 // up to a given number of epochs for a validator public key.
-func setupAttestationsForEveryEpoch(t testing.TB, validatorDB *Store, pubKey [fieldparams.BLSPubkeyLength]byte, numEpochs types.Epoch) error {
+func setupAttestationsForEveryEpoch(validatorDB *Store, pubKey [48]byte, numEpochs types.Epoch) error {
 	return validatorDB.update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(pubKeysBucket)
 		pkBucket, err := bucket.CreateBucketIfNotExists(pubKey[:])

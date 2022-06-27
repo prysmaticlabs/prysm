@@ -96,8 +96,8 @@ func ComputeShuffledIndex(index types.ValidatorIndex, indexCount uint64, seed [3
 	copy(buf[:32], seed[:])
 	for {
 		buf[seedSize] = round
-		hash := hashfunc(buf[:pivotViewSize])
-		hash8 := hash[:8]
+		h := hashfunc(buf[:pivotViewSize])
+		hash8 := h[:8]
 		hash8Int := bytesutil.FromBytes8(hash8)
 		pivot := hash8Int % indexCount
 		flip := (pivot + indexCount - uint64(index)) % indexCount

@@ -14,7 +14,7 @@ import (
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
-	validator_service_config "github.com/prysmaticlabs/prysm/config/validator/service"
+	validatorserviceconfig "github.com/prysmaticlabs/prysm/config/validator/service"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
@@ -29,7 +29,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
-	remote_web3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
+	remoteweb3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
 	"github.com/prysmaticlabs/prysm/validator/slashing-protection-history/format"
 	mocks "github.com/prysmaticlabs/prysm/validator/testing"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
@@ -245,7 +245,7 @@ func TestServer_ImportKeystores_WrongKeymanagerKind(t *testing.T) {
 	w := wallet.NewWalletForWeb3Signer()
 	root := make([]byte, fieldparams.RootLength)
 	root[0] = 1
-	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false, Web3SignerConfig: &remote_web3signer.SetupConfig{
+	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false, Web3SignerConfig: &remoteweb3signer.SetupConfig{
 		BaseEndpoint:          "http://example.com",
 		GenesisValidatorsRoot: root,
 		PublicKeysURL:         "http://example.com/public_keys",
@@ -461,7 +461,7 @@ func TestServer_DeleteKeystores_WrongKeymanagerKind(t *testing.T) {
 	root := make([]byte, fieldparams.RootLength)
 	root[0] = 1
 	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false,
-		Web3SignerConfig: &remote_web3signer.SetupConfig{
+		Web3SignerConfig: &remoteweb3signer.SetupConfig{
 			BaseEndpoint:          "http://example.com",
 			GenesisValidatorsRoot: root,
 			PublicKeysURL:         "http://example.com/public_keys",
@@ -545,7 +545,7 @@ func TestServer_ListRemoteKeys(t *testing.T) {
 	bytevalue, err := hexutil.Decode("0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a")
 	require.NoError(t, err)
 	pubkeys := [][fieldparams.BLSPubkeyLength]byte{bytesutil.ToBytes48(bytevalue)}
-	config := &remote_web3signer.SetupConfig{
+	config := &remoteweb3signer.SetupConfig{
 		BaseEndpoint:          "http://example.com",
 		GenesisValidatorsRoot: root,
 		ProvidedPublicKeys:    pubkeys,
@@ -587,7 +587,7 @@ func TestServer_ImportRemoteKeys(t *testing.T) {
 	w := wallet.NewWalletForWeb3Signer()
 	root := make([]byte, fieldparams.RootLength)
 	root[0] = 1
-	config := &remote_web3signer.SetupConfig{
+	config := &remoteweb3signer.SetupConfig{
 		BaseEndpoint:          "http://example.com",
 		GenesisValidatorsRoot: root,
 		ProvidedPublicKeys:    nil,
@@ -645,7 +645,7 @@ func TestServer_DeleteRemoteKeys(t *testing.T) {
 	bytevalue, err := hexutil.Decode("0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a")
 	require.NoError(t, err)
 	pubkeys := [][fieldparams.BLSPubkeyLength]byte{bytesutil.ToBytes48(bytevalue)}
-	config := &remote_web3signer.SetupConfig{
+	config := &remoteweb3signer.SetupConfig{
 		BaseEndpoint:          "http://example.com",
 		GenesisValidatorsRoot: root,
 		ProvidedPublicKeys:    pubkeys,
@@ -698,19 +698,19 @@ func TestServer_ListFeeRecipientByPubkey(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		args    *validator_service_config.ProposerSettings
+		args    *validatorserviceconfig.ProposerSettings
 		want    *want
 		wantErr bool
 	}{
 		{
 			name: "Happy Path Test",
-			args: &validator_service_config.ProposerSettings{
-				ProposeConfig: map[[48]byte]*validator_service_config.ProposerOption{
+			args: &validatorserviceconfig.ProposerSettings{
+				ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{
 					bytesutil.ToBytes48(byteval): {
 						FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9"),
 					},
 				},
-				DefaultConfig: &validator_service_config.ProposerOption{
+				DefaultConfig: &validatorserviceconfig.ProposerOption{
 					FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9"),
 				},
 			},
@@ -754,7 +754,7 @@ func TestServer_SetFeeRecipientByPubkey(t *testing.T) {
 	tests := []struct {
 		name             string
 		args             string
-		proposerSettings *validator_service_config.ProposerSettings
+		proposerSettings *validatorserviceconfig.ProposerSettings
 		want             *want
 		wantErr          bool
 	}{
@@ -793,19 +793,19 @@ func TestServer_DeleteFeeRecipientByPubkey(t *testing.T) {
 	}
 	tests := []struct {
 		name             string
-		proposerSettings *validator_service_config.ProposerSettings
+		proposerSettings *validatorserviceconfig.ProposerSettings
 		want             *want
 		wantErr          bool
 	}{
 		{
 			name: "Happy Path Test",
-			proposerSettings: &validator_service_config.ProposerSettings{
-				ProposeConfig: map[[48]byte]*validator_service_config.ProposerOption{
+			proposerSettings: &validatorserviceconfig.ProposerSettings{
+				ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{
 					bytesutil.ToBytes48(byteval): {
 						FeeRecipient: common.HexToAddress("0x055Fb65722E7b2455012BFEBf6177F1D2e9738D5"),
 					},
 				},
-				DefaultConfig: &validator_service_config.ProposerOption{
+				DefaultConfig: &validatorserviceconfig.ProposerOption{
 					FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9"),
 				},
 			},

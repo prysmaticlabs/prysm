@@ -14,32 +14,32 @@ var _ fssz.Unmarshaler = (*Domain)(nil)
 type Domain []byte
 
 // HashTreeRoot --
-func (e Domain) HashTreeRoot() ([32]byte, error) {
-	return fssz.HashWithDefaultHasher(e)
+func (d Domain) HashTreeRoot() ([32]byte, error) {
+	return fssz.HashWithDefaultHasher(d)
 }
 
 // HashTreeRootWith --
-func (e Domain) HashTreeRootWith(hh *fssz.Hasher) error {
-	hh.PutBytes(e[:])
+func (d Domain) HashTreeRootWith(hh *fssz.Hasher) error {
+	hh.PutBytes(d[:])
 	return nil
 }
 
 // UnmarshalSSZ --
-func (e *Domain) UnmarshalSSZ(buf []byte) error {
-	if len(buf) != e.SizeSSZ() {
-		return fmt.Errorf("expected buffer of length %d received %d", e.SizeSSZ(), len(buf))
+func (d *Domain) UnmarshalSSZ(buf []byte) error {
+	if len(buf) != d.SizeSSZ() {
+		return fmt.Errorf("expected buffer of length %d received %d", d.SizeSSZ(), len(buf))
 	}
 
 	var b [32]byte
 	item := Domain(b[:])
 	copy(item, buf)
-	*e = item
+	*d = item
 	return nil
 }
 
 // MarshalSSZTo --
-func (e *Domain) MarshalSSZTo(dst []byte) ([]byte, error) {
-	marshalled, err := e.MarshalSSZ()
+func (d *Domain) MarshalSSZTo(dst []byte) ([]byte, error) {
+	marshalled, err := d.MarshalSSZ()
 	if err != nil {
 		return nil, err
 	}
@@ -47,11 +47,11 @@ func (e *Domain) MarshalSSZTo(dst []byte) ([]byte, error) {
 }
 
 // MarshalSSZ --
-func (e *Domain) MarshalSSZ() ([]byte, error) {
-	return *e, nil
+func (d *Domain) MarshalSSZ() ([]byte, error) {
+	return *d, nil
 }
 
 // SizeSSZ --
-func (e *Domain) SizeSSZ() int {
+func (_ *Domain) SizeSSZ() int {
 	return 32
 }

@@ -65,7 +65,7 @@ func (bb *Builder) ValidBlock(t testing.TB, b interfaces.SignedBeaconBlock) {
 }
 
 // PoWBlock receives the block and notifies a mocked execution engine.
-func (bb *Builder) PoWBlock(t testing.TB, pb *ethpb.PowBlock) {
+func (bb *Builder) PoWBlock(pb *ethpb.PowBlock) {
 	bb.execMock.powBlocks[bytesutil.ToBytes32(pb.BlockHash)] = pb
 }
 

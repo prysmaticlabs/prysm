@@ -1,7 +1,6 @@
 package execution_test
 
 import (
-	"context"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/execution"
@@ -16,7 +15,7 @@ import (
 func TestUpgradeToBellatrix(t *testing.T) {
 	st, _ := util.DeterministicGenesisStateAltair(t, params.BeaconConfig().MaxValidatorsPerCommittee)
 	preForkState := st.Copy()
-	mSt, err := execution.UpgradeToBellatrix(context.Background(), st)
+	mSt, err := execution.UpgradeToBellatrix(st)
 	require.NoError(t, err)
 
 	require.Equal(t, preForkState.GenesisTime(), mSt.GenesisTime())
