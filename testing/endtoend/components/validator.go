@@ -16,6 +16,7 @@ import (
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
@@ -411,9 +412,14 @@ func createProposerSettingsPath(pubkeys []string) (string, error) {
 		}
 	} else {
 		config := make(map[string]*validator_service_config.ProposerOptionPayload)
+
 		for index, pubkey := range pubkeys {
+			mixedAddress, err := common.NewMixedcaseAddressFromString(fmt.Sprintf("0x%40d", 1+index))
+			if err != nil {
+				return "", err
+			}
 			config[pubkey] = &validator_service_config.ProposerOptionPayload{
-				FeeRecipient: fmt.Sprintf("0x%40d", 1+index),
+				FeeRecipient: mixedAddress.Address().Hex(),
 			}
 		}
 		proposerSettingsPayload = validator_service_config.ProposerSettingsPayload{
