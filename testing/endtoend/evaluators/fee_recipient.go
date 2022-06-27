@@ -85,14 +85,16 @@ func feeRecipientIsPresent(conns ...*grpc.ClientConn) error {
 			publickey := validator.GetPublicKey()
 
 			option, ok := configFile.ProposerConfig[hexutil.Encode(publickey)]
-			if !ok {
+			if ok {
+				if option.FeeRecipient != account.Hex() {
+					return fmt.Errorf("fee recipient %s does not match the proposer settings fee recipient %s", account.Hex(), option.FeeRecipient)
+				}
+			} else {
 				if configFile.DefaultConfig.FeeRecipient != account.Hex() {
 					return fmt.Errorf("fee recipient %s does not match the default fee recipient %s", account.Hex(), configFile.DefaultConfig.FeeRecipient)
 				}
 			}
-			if option.FeeRecipient != account.Hex() {
-				return fmt.Errorf("fee recipient %s does not match the proposer settings fee recipient %s", account.Hex(), option.FeeRecipient)
-			}
+
 		}
 
 	}
