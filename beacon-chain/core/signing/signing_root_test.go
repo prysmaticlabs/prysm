@@ -112,7 +112,7 @@ func TestSigningRoot_ComputeForkDigest(t *testing.T) {
 
 func TestFuzzverifySigningRoot_10000(_ *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
-	state := &ethpb.BeaconState{}
+	st := &ethpb.BeaconState{}
 	pubkey := [fieldparams.BLSPubkeyLength]byte{}
 	sig := [96]byte{}
 	domain := [4]byte{}
@@ -120,17 +120,17 @@ func TestFuzzverifySigningRoot_10000(_ *testing.T) {
 	var s []byte
 	var d []byte
 	for i := 0; i < 10000; i++ {
-		fuzzer.Fuzz(state)
+		fuzzer.Fuzz(st)
 		fuzzer.Fuzz(&pubkey)
 		fuzzer.Fuzz(&sig)
 		fuzzer.Fuzz(&domain)
-		fuzzer.Fuzz(state)
+		fuzzer.Fuzz(st)
 		fuzzer.Fuzz(&p)
 		fuzzer.Fuzz(&s)
 		fuzzer.Fuzz(&d)
-		err := signing.VerifySigningRoot(state, pubkey[:], sig[:], domain[:])
+		err := signing.VerifySigningRoot(st, pubkey[:], sig[:], domain[:])
 		_ = err
-		err = signing.VerifySigningRoot(state, p, s, d)
+		err = signing.VerifySigningRoot(st, p, s, d)
 		_ = err
 	}
 }

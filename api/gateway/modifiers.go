@@ -9,7 +9,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func HttpResponseModifier(ctx context.Context, w http.ResponseWriter, resp proto.Message) error {
+func HttpResponseModifier(ctx context.Context, w http.ResponseWriter, _ proto.Message) error {
 	md, ok := gwruntime.ServerMetadataFromContext(ctx)
 	if !ok {
 		return nil

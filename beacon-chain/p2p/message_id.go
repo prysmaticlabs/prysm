@@ -1,7 +1,7 @@
 package p2p
 
 import (
-	pubsub_pb "github.com/libp2p/go-libp2p-pubsub/pb"
+	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
@@ -22,7 +22,7 @@ import (
 //    Otherwise, set `message-id` to the first 20 bytes of the `SHA256` hash of
 //    the concatenation of `MESSAGE_DOMAIN_INVALID_SNAPPY` with the raw message data,
 //    i.e. `SHA256(MESSAGE_DOMAIN_INVALID_SNAPPY + message.data)[:20]`.
-func MsgID(genesisValidatorsRoot []byte, pmsg *pubsub_pb.Message) string {
+func MsgID(genesisValidatorsRoot []byte, pmsg *pubsubpb.Message) string {
 	if pmsg == nil || pmsg.Data == nil || pmsg.Topic == nil {
 		// Impossible condition that should
 		// never be hit.
@@ -71,7 +71,7 @@ func MsgID(genesisValidatorsRoot []byte, pmsg *pubsub_pb.Message) string {
 // + message.topic + snappy_decompress(message.data))[:20]. Otherwise, set message-id to the first 20 bytes of the SHA256 hash of the concatenation
 // of the following data: MESSAGE_DOMAIN_INVALID_SNAPPY, the length of the topic byte string (encoded as little-endian uint64),
 // the topic byte string, and the raw message data: i.e. SHA256(MESSAGE_DOMAIN_INVALID_SNAPPY + uint_to_bytes(uint64(len(message.topic))) + message.topic + message.data)[:20].
-func postAltairMsgID(pmsg *pubsub_pb.Message, fEpoch types.Epoch) string {
+func postAltairMsgID(pmsg *pubsubpb.Message, fEpoch types.Epoch) string {
 	topic := *pmsg.Topic
 	topicLen := len(topic)
 	topicLenBytes := bytesutil.Uint64ToBytesLittleEndian(uint64(topicLen)) // topicLen cannot be negative

@@ -130,7 +130,7 @@ func WithPasswordFilePath(passwordFilePath string) Option {
 	}
 }
 
-// WithBackupDir specifies the directory backups are written to.
+// WithBackupsDir specifies the directory backups are written to.
 func WithBackupsDir(backupsDir string) Option {
 	return func(acc *AccountsCLIManager) error {
 		acc.backupsDir = backupsDir
@@ -138,7 +138,7 @@ func WithBackupsDir(backupsDir string) Option {
 	}
 }
 
-// WithBackupPassword specifies the password for backups.
+// WithBackupsPassword specifies the password for backups.
 func WithBackupsPassword(backupsPassword string) Option {
 	return func(acc *AccountsCLIManager) error {
 		acc.backupsPassword = backupsPassword
