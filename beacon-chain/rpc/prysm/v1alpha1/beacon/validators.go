@@ -540,10 +540,7 @@ func (bs *Server) GetValidatorParticipation(
 	default:
 		return nil, status.Errorf(codes.Internal, "Invalid state type retrieved with a version of %d", beaconState.Version())
 	}
-	cp, err := bs.FinalizationFetcher.FinalizedCheckpt()
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get finalized checkpoint: %v", err)
-	}
+	cp := bs.FinalizationFetcher.FinalizedCheckpt()
 	p := &ethpb.ValidatorParticipationResponse{
 		Epoch:     requestedEpoch,
 		Finalized: requestedEpoch <= cp.Epoch,

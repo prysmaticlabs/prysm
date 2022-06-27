@@ -27,7 +27,6 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
-	"github.com/prysmaticlabs/prysm/time/slots"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -183,9 +182,6 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 			st, _ := util.DeterministicGenesisState(t, 1)
 			require.NoError(t, beaconDB.SaveState(ctx, st, tt.finalizedRoot))
 			require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, tt.finalizedRoot))
-			fc := &ethpb.Checkpoint{Epoch: 0, Root: tt.finalizedRoot[:]}
-			service.store.SetFinalizedCheckptAndPayloadHash(fc, [32]byte{'a'})
-			service.store.SetJustifiedCheckptAndPayloadHash(fc, [32]byte{'b'})
 			arg := &notifyForkchoiceUpdateArg{
 				headState: st,
 				headRoot:  tt.headRoot,
@@ -325,9 +321,6 @@ func Test_NotifyForkchoiceUpdateRecursive(t *testing.T) {
 
 	require.NoError(t, beaconDB.SaveState(ctx, st, bra))
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, bra))
-	fc := &ethpb.Checkpoint{Epoch: 0, Root: bra[:]}
-	service.store.SetFinalizedCheckptAndPayloadHash(fc, [32]byte{'a'})
-	service.store.SetJustifiedCheckptAndPayloadHash(fc, [32]byte{'b'})
 	a := &notifyForkchoiceUpdateArg{
 		headState: st,
 		headBlock: wbg.Block(),
@@ -705,14 +698,7 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		jRoot, err := tt.justified.Block().HashTreeRoot()
-		require.NoError(t, err)
 		require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, tt.justified))
-		service.store.SetJustifiedCheckptAndPayloadHash(
-			&ethpb.Checkpoint{
-				Root:  jRoot[:],
-				Epoch: slots.ToEpoch(tt.justified.Block().Slot()),
-			}, [32]byte{'a'})
 		require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrappedParentBlock))
 
 		err = service.optimisticCandidateBlock(ctx, tt.blk)
@@ -985,7 +971,7 @@ func TestService_getPayloadHash(t *testing.T) {
 	require.NoError(t, err)
 	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)
-	service.saveInitSyncBlock(r, wsb)
+	require.NoError(t, service.saveInitSyncBlock(ctx, r, wsb))
 
 	h, err := service.getPayloadHash(ctx, r[:])
 	require.NoError(t, err)
@@ -998,7 +984,7 @@ func TestService_getPayloadHash(t *testing.T) {
 	require.NoError(t, err)
 	wsb, err = wrapper.WrappedSignedBeaconBlock(bb)
 	require.NoError(t, err)
-	service.saveInitSyncBlock(r, wsb)
+	require.NoError(t, service.saveInitSyncBlock(ctx, r, wsb))
 
 	h, err = service.getPayloadHash(ctx, r[:])
 	require.NoError(t, err)

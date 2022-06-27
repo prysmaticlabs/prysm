@@ -71,10 +71,7 @@ func (s *Service) VerifyFinalizedConsistency(ctx context.Context, root []byte) e
 		return nil
 	}
 
-	f, err := s.FinalizedCheckpt()
-	if err != nil {
-		return err
-	}
+	f := s.FinalizedCheckpt()
 	ss, err := slots.EpochStart(f.Epoch)
 	if err != nil {
 		return err
@@ -123,7 +120,7 @@ func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
 			case <-s.ctx.Done():
 				return
 			case <-st.C():
-				if err := s.NewSlot(s.ctx, s.CurrentSlot()); err != nil {
+				if err := s.ForkChoicer().NewSlot(s.ctx, s.CurrentSlot()); err != nil {
 					log.WithError(err).Error("Could not process new slot")
 					return
 				}
@@ -152,11 +149,8 @@ func (s *Service) UpdateHead(ctx context.Context) error {
 
 	s.processAttestations(ctx)
 
-	justified, err := s.store.JustifiedCheckpt()
-	if err != nil {
-		return err
-	}
-	balances, err := s.justifiedBalances.get(ctx, bytesutil.ToBytes32(justified.Root))
+	justified := s.ForkChoicer().JustifiedCheckpoint()
+	balances, err := s.justifiedBalances.get(ctx, justified.Root)
 	if err != nil {
 		return err
 	}

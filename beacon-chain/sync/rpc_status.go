@@ -131,10 +131,7 @@ func (s *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 	if err != nil {
 		return err
 	}
-	cp, err := s.cfg.chain.FinalizedCheckpt()
-	if err != nil {
-		return err
-	}
+	cp := s.cfg.chain.FinalizedCheckpt()
 	resp := &pb.Status{
 		ForkDigest:     forkDigest[:],
 		FinalizedRoot:  cp.Root,
@@ -264,10 +261,7 @@ func (s *Service) respondWithStatus(ctx context.Context, stream network.Stream) 
 	if err != nil {
 		return err
 	}
-	cp, err := s.cfg.chain.FinalizedCheckpt()
-	if err != nil {
-		return err
-	}
+	cp := s.cfg.chain.FinalizedCheckpt()
 	resp := &pb.Status{
 		ForkDigest:     forkDigest[:],
 		FinalizedRoot:  cp.Root,
@@ -292,10 +286,7 @@ func (s *Service) validateStatusMessage(ctx context.Context, msg *pb.Status) err
 		return p2ptypes.ErrWrongForkDigestVersion
 	}
 	genesis := s.cfg.chain.GenesisTime()
-	cp, err := s.cfg.chain.FinalizedCheckpt()
-	if err != nil {
-		return err
-	}
+	cp := s.cfg.chain.FinalizedCheckpt()
 	finalizedEpoch := cp.Epoch
 	maxEpoch := slots.EpochsSinceGenesis(genesis)
 	// It would take a minimum of 2 epochs to finalize a
