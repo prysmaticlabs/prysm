@@ -260,9 +260,6 @@ func TestProxy_CustomInterceptors(t *testing.T) {
 }
 
 func Test_isEngineAPICall(t *testing.T) {
-	type args struct {
-		reqBytes []byte
-	}
 	tests := []struct {
 		name string
 		args *jsonRPCObject

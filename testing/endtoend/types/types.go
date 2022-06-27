@@ -11,12 +11,6 @@ import (
 
 type E2EConfigOpt func(*E2EConfig)
 
-func WithExtraEpochs(extra uint64) E2EConfigOpt {
-	return func(cfg *E2EConfig) {
-		cfg.ExtraEpochs = extra
-	}
-}
-
 func WithEpochs(e uint64) E2EConfigOpt {
 	return func(cfg *E2EConfig) {
 		cfg.EpochsToRun = e

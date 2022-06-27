@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/async/event"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
-	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -217,9 +217,9 @@ func TestChainService_InitializeBeaconChain(t *testing.T) {
 	count := uint64(10)
 	deposits, _, err := util.DeterministicDepositsAndKeys(count)
 	require.NoError(t, err)
-	trie, _, err := util.DepositTrieFromDeposits(deposits)
+	dt, _, err := util.DepositTrieFromDeposits(deposits)
 	require.NoError(t, err)
-	hashTreeRoot, err := trie.HashTreeRoot()
+	hashTreeRoot, err := dt.HashTreeRoot()
 	require.NoError(t, err)
 	genState, err := transition.EmptyGenesisState()
 	require.NoError(t, err)
@@ -229,7 +229,7 @@ func TestChainService_InitializeBeaconChain(t *testing.T) {
 		BlockHash:    make([]byte, 32),
 	})
 	require.NoError(t, err)
-	genState, err = b.ProcessPreGenesisDeposits(ctx, genState, deposits)
+	genState, err = blocks.ProcessPreGenesisDeposits(ctx, genState, deposits)
 	require.NoError(t, err)
 
 	_, err = bc.initializeBeaconChain(ctx, time.Unix(0, 0), genState, &ethpb.Eth1Data{DepositRoot: hashTreeRoot[:], BlockHash: make([]byte, 32)})
@@ -524,10 +524,10 @@ func TestServiceStop_SaveCachedBlocks(t *testing.T) {
 		cancel:         cancel,
 		initSyncBlocks: make(map[[32]byte]interfaces.SignedBeaconBlock),
 	}
-	b := util.NewBeaconBlock()
-	r, err := b.Block.HashTreeRoot()
+	bb := util.NewBeaconBlock()
+	r, err := bb.Block.HashTreeRoot()
 	require.NoError(t, err)
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err := wrapper.WrappedSignedBeaconBlock(bb)
 	require.NoError(t, err)
 	require.NoError(t, s.saveInitSyncBlock(ctx, r, wsb))
 	require.NoError(t, s.Stop())

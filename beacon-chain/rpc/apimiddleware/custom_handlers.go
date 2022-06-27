@@ -65,7 +65,7 @@ func handleGetBeaconBlockSSZV2(m *apimiddleware.ApiProxyMiddleware, endpoint api
 }
 
 func handleSubmitBlockSSZ(m *apimiddleware.ApiProxyMiddleware, endpoint apimiddleware.Endpoint, w http.ResponseWriter, req *http.Request) (handled bool) {
-	return handlePostSSZ(m, endpoint, w, req, sszConfig{})
+	return handlePostSSZ(m, endpoint, w, req)
 }
 
 func handleSubmitBlindedBlockSSZ(
@@ -74,7 +74,7 @@ func handleSubmitBlindedBlockSSZ(
 	w http.ResponseWriter,
 	req *http.Request,
 ) (handled bool) {
-	return handlePostSSZ(m, endpoint, w, req, sszConfig{})
+	return handlePostSSZ(m, endpoint, w, req)
 }
 
 func handleProduceBlockSSZ(m *apimiddleware.ApiProxyMiddleware, endpoint apimiddleware.Endpoint, w http.ResponseWriter, req *http.Request) (handled bool) {
@@ -157,13 +157,7 @@ func handleGetSSZ(
 	return true
 }
 
-func handlePostSSZ(
-	m *apimiddleware.ApiProxyMiddleware,
-	endpoint apimiddleware.Endpoint,
-	w http.ResponseWriter,
-	req *http.Request,
-	config sszConfig,
-) (handled bool) {
+func handlePostSSZ(m *apimiddleware.ApiProxyMiddleware, endpoint apimiddleware.Endpoint, w http.ResponseWriter, req *http.Request) (handled bool) {
 	if !sszPosted(req) {
 		return false
 	}

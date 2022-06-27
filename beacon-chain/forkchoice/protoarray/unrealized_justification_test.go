@@ -1,9 +1,8 @@
 package protoarray
 
 import (
-	"testing"
-
 	"context"
+	"testing"
 
 	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/config/params"

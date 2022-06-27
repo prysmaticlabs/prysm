@@ -335,7 +335,11 @@ func (e *ExecutionPayload) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 			return
 		}
 		hh.PutBytes(e.ExtraData)
-		hh.MerkleizeWithMixin(elemIndx, byteLen, (32+31)/32)
+		if ssz.EnableVectorizedHTR {
+			hh.MerkleizeWithMixinVectorizedHTR(elemIndx, byteLen, (32+31)/32)
+		} else {
+			hh.MerkleizeWithMixin(elemIndx, byteLen, (32+31)/32)
+		}
 	}
 
 	// Field (11) 'BaseFeePerGas'
@@ -369,13 +373,25 @@ func (e *ExecutionPayload) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 					return
 				}
 				hh.AppendBytes32(elem)
-				hh.MerkleizeWithMixin(elemIndx, byteLen, (1073741824+31)/32)
+				if ssz.EnableVectorizedHTR {
+					hh.MerkleizeWithMixinVectorizedHTR(elemIndx, byteLen, (1073741824+31)/32)
+				} else {
+					hh.MerkleizeWithMixin(elemIndx, byteLen, (1073741824+31)/32)
+				}
 			}
 		}
-		hh.MerkleizeWithMixin(subIndx, num, 1048576)
+		if ssz.EnableVectorizedHTR {
+			hh.MerkleizeWithMixinVectorizedHTR(subIndx, num, 1048576)
+		} else {
+			hh.MerkleizeWithMixin(subIndx, num, 1048576)
+		}
 	}
 
-	hh.Merkleize(indx)
+	if ssz.EnableVectorizedHTR {
+		hh.MerkleizeVectorizedHTR(indx)
+	} else {
+		hh.Merkleize(indx)
+	}
 	return
 }
 
@@ -660,7 +676,11 @@ func (e *ExecutionPayloadHeader) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 			return
 		}
 		hh.PutBytes(e.ExtraData)
-		hh.MerkleizeWithMixin(elemIndx, byteLen, (32+31)/32)
+		if ssz.EnableVectorizedHTR {
+			hh.MerkleizeWithMixinVectorizedHTR(elemIndx, byteLen, (32+31)/32)
+		} else {
+			hh.MerkleizeWithMixin(elemIndx, byteLen, (32+31)/32)
+		}
 	}
 
 	// Field (11) 'BaseFeePerGas'
@@ -684,6 +704,10 @@ func (e *ExecutionPayloadHeader) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	}
 	hh.PutBytes(e.TransactionsRoot)
 
-	hh.Merkleize(indx)
+	if ssz.EnableVectorizedHTR {
+		hh.MerkleizeVectorizedHTR(indx)
+	} else {
+		hh.Merkleize(indx)
+	}
 	return
 }

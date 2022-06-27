@@ -255,7 +255,7 @@ func NewKeystoreGenerator() *KeystoreGenerator {
 	return &KeystoreGenerator{started: make(chan struct{})}
 }
 
-func (k *KeystoreGenerator) Start(ctx context.Context) error {
+func (k *KeystoreGenerator) Start(_ context.Context) error {
 	validatorNum := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
 	lighthouseBeaconNum := e2e.TestParams.LighthouseBeaconNodeCount
 	prysmBeaconNum := e2e.TestParams.BeaconNodeCount

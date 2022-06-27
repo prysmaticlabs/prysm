@@ -83,6 +83,8 @@ type MockValidator struct {
 	Km keymanager.IKeymanager
 }
 
+func (_ MockValidator) LogSyncCommitteeMessagesSubmitted() {}
+
 func (_ MockValidator) Done() {
 	panic("implement me")
 }

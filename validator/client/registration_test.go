@@ -11,8 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
-	"google.golang.org/protobuf/types/known/emptypb"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func TestSubmitValidatorRegistration(t *testing.T) {
@@ -20,7 +18,7 @@ func TestSubmitValidatorRegistration(t *testing.T) {
 	defer finish()
 
 	ctx := context.Background()
-	require.NoError(t, nil, SubmitValidatorRegistration(ctx, m.validatorClient, m.nodeClient, m.signfunc, []*ethpb.ValidatorRegistrationV1{}))
+	require.NoError(t, nil, SubmitValidatorRegistration(ctx, m.validatorClient, m.signfunc, []*ethpb.ValidatorRegistrationV1{}))
 
 	reg := &ethpb.ValidatorRegistrationV1{
 		FeeRecipient: bytesutil.PadTo([]byte("fee"), 20),
@@ -30,11 +28,6 @@ func TestSubmitValidatorRegistration(t *testing.T) {
 	}
 	regs := []*ethpb.ValidatorRegistrationV1{reg}
 
-	ti := &timestamppb.Timestamp{}
-	m.nodeClient.EXPECT().
-		GetGenesis(gomock.Any(), &emptypb.Empty{}).
-		Return(&ethpb.Genesis{GenesisTime: ti}, nil)
-
 	m.validatorClient.EXPECT().
 		SubmitValidatorRegistration(gomock.Any(), &ethpb.SignedValidatorRegistrationsV1{
 			Messages: []*ethpb.SignedValidatorRegistrationV1{
@@ -43,7 +36,7 @@ func TestSubmitValidatorRegistration(t *testing.T) {
 			},
 		}).
 		Return(nil, nil)
-	require.NoError(t, nil, SubmitValidatorRegistration(ctx, m.validatorClient, m.nodeClient, m.signfunc, regs))
+	require.NoError(t, nil, SubmitValidatorRegistration(ctx, m.validatorClient, m.signfunc, regs))
 }
 
 func TestSubmitValidatorRegistration_CantSign(t *testing.T) {
@@ -59,11 +52,6 @@ func TestSubmitValidatorRegistration_CantSign(t *testing.T) {
 	}
 	regs := []*ethpb.ValidatorRegistrationV1{reg}
 
-	genesisTime := &timestamppb.Timestamp{}
-	m.nodeClient.EXPECT().
-		GetGenesis(gomock.Any(), &emptypb.Empty{}).
-		Return(&ethpb.Genesis{GenesisTime: genesisTime}, nil)
-
 	m.validatorClient.EXPECT().
 		SubmitValidatorRegistration(gomock.Any(), &ethpb.SignedValidatorRegistrationsV1{
 			Messages: []*ethpb.SignedValidatorRegistrationV1{
@@ -72,7 +60,7 @@ func TestSubmitValidatorRegistration_CantSign(t *testing.T) {
 			},
 		}).
 		Return(nil, errors.New("could not sign"))
-	require.ErrorContains(t, "could not sign", SubmitValidatorRegistration(ctx, m.validatorClient, m.nodeClient, m.signfunc, regs))
+	require.ErrorContains(t, "could not sign", SubmitValidatorRegistration(ctx, m.validatorClient, m.signfunc, regs))
 }
 
 func Test_signValidatorRegistration(t *testing.T) {
@@ -86,10 +74,7 @@ func Test_signValidatorRegistration(t *testing.T) {
 		Timestamp:    uint64(time.Now().Unix()),
 		Pubkey:       validatorKey.PublicKey().Marshal(),
 	}
-	_, err := signValidatorRegistration(
-		ctx,
-		1,
-		m.validatorClient, m.signfunc, reg)
+	_, err := signValidatorRegistration(ctx, m.signfunc, reg)
 	require.NoError(t, err)
 
 }

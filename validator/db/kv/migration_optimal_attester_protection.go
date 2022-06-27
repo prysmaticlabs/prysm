@@ -18,7 +18,7 @@ var migrationOptimalAttesterProtectionKey = []byte("optimal_attester_protection_
 // stored attesting history as large, 2Mb arrays per validator, we need to perform
 // this migration differently than the rest, ensuring we perform each expensive bolt
 // update in its own transaction to prevent having everything on the heap.
-func (s *Store) migrateOptimalAttesterProtectionUp(ctx context.Context) error {
+func (s *Store) migrateOptimalAttesterProtectionUp(_ context.Context) error {
 	publicKeyBytes := make([][]byte, 0)
 	attestingHistoryBytes := make([][]byte, 0)
 	numKeys := 0
@@ -76,14 +76,14 @@ func (s *Store) migrateOptimalAttesterProtectionUp(ctx context.Context) error {
 			// Extract every single source, target, signing root
 			// from the attesting history then insert them into the
 			// respective buckets under the new db schema.
-			latestEpochWritten, err := attestingHistory.getLatestEpochWritten(ctx)
+			latestEpochWritten, err := attestingHistory.getLatestEpochWritten()
 			if err != nil {
 				return err
 			}
 			// For every epoch since genesis up to the highest epoch written, we then
 			// extract historical data and insert it into the new schema.
 			for targetEpoch := types.Epoch(0); targetEpoch <= latestEpochWritten; targetEpoch++ {
-				historicalAtt, err := attestingHistory.getTargetData(ctx, targetEpoch)
+				historicalAtt, err := attestingHistory.getTargetData(targetEpoch)
 				if err != nil {
 					return err
 				}
@@ -113,7 +113,7 @@ func (s *Store) migrateOptimalAttesterProtectionUp(ctx context.Context) error {
 }
 
 // Migrate attester protection from the more optimal format to the old format in the DB.
-func (s *Store) migrateOptimalAttesterProtectionDown(ctx context.Context) error {
+func (s *Store) migrateOptimalAttesterProtectionDown(_ context.Context) error {
 	// First we extract the public keys we are migrating down for.
 	pubKeys, err := s.extractPubKeysForMigratingDown()
 	if err != nil {
@@ -183,7 +183,7 @@ func (s *Store) migrateOptimalAttesterProtectionDown(ctx context.Context) error 
 					if sr, ok := signingRootsByTarget[target]; ok {
 						signingRoot = sr
 					}
-					newHist, err := history.setTargetData(ctx, target, &deprecatedHistoryData{
+					newHist, err := history.setTargetData(target, &deprecatedHistoryData{
 						Source:      source,
 						SigningRoot: signingRoot,
 					})
@@ -196,7 +196,7 @@ func (s *Store) migrateOptimalAttesterProtectionDown(ctx context.Context) error 
 					}
 				}
 			}
-			newHist, err := history.setLatestEpochWritten(ctx, maxTargetWritten)
+			newHist, err := history.setLatestEpochWritten(maxTargetWritten)
 			if err != nil {
 				return err
 			}

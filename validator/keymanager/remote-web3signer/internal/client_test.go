@@ -108,9 +108,9 @@ func TestClient_Sign_400(t *testing.T) {
 
 func TestClient_GetPublicKeys_HappyPath(t *testing.T) {
 	// public keys are returned hex encoded with 0x
-	json := `["0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820"]`
+	j := `["0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820"]`
 	// create a new reader with that JSON
-	r := io.NopCloser(bytes.NewReader([]byte(json)))
+	r := io.NopCloser(bytes.NewReader([]byte(j)))
 	mock := &mockTransport{mockResponse: &http.Response{
 		StatusCode: 200,
 		Body:       r,
@@ -127,9 +127,9 @@ func TestClient_GetPublicKeys_HappyPath(t *testing.T) {
 
 func TestClient_GetPublicKeys_EncodingError(t *testing.T) {
 	// public keys are returned hex encoded with 0x
-	json := `["a2b5aaad9c6efefe7bb9b1243a043404f3362937c","fb6b31833929833173f476630ea2cfe","b0d9ddf15fca8685948820"]`
+	j := `["a2b5aaad9c6efefe7bb9b1243a043404f3362937c","fb6b31833929833173f476630ea2cfe","b0d9ddf15fca8685948820"]`
 	// create a new reader with that JSON
-	r := io.NopCloser(bytes.NewReader([]byte(json)))
+	r := io.NopCloser(bytes.NewReader([]byte(j)))
 	mock := &mockTransport{mockResponse: &http.Response{
 		StatusCode: 200,
 		Body:       r,
@@ -157,8 +157,8 @@ func TestClient_ReloadSignerKeys_HappyPath(t *testing.T) {
 
 // TODO: not really in use, should be revisited
 func TestClient_GetServerStatus_HappyPath(t *testing.T) {
-	json := `"some server status, not sure what it looks like, need to find some sample data"`
-	r := io.NopCloser(bytes.NewReader([]byte(json)))
+	j := `"some server status, not sure what it looks like, need to find some sample data"`
+	r := io.NopCloser(bytes.NewReader([]byte(j)))
 	mock := &mockTransport{mockResponse: &http.Response{
 		StatusCode: 200,
 		Body:       r,

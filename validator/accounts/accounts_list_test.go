@@ -51,7 +51,7 @@ func (_ *mockRemoteKeymanager) SubscribeAccountChanges(_ chan [][fieldparams.BLS
 }
 
 func (_ *mockRemoteKeymanager) ExtractKeystores(
-	ctx context.Context, publicKeys []bls.PublicKey, password string,
+	_ context.Context, _ []bls.PublicKey, _ string,
 ) ([]*keymanager.Keystore, error) {
 	return nil, nil
 }

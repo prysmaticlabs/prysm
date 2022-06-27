@@ -23,8 +23,8 @@ func RunParticipationFlagUpdatesTests(t *testing.T, config string) {
 	}
 }
 
-func processParticipationFlagUpdatesWrapper(t *testing.T, state state.BeaconState) (state.BeaconState, error) {
-	state, err := altair.ProcessParticipationFlagUpdates(state)
+func processParticipationFlagUpdatesWrapper(t *testing.T, st state.BeaconState) (state.BeaconState, error) {
+	st, err := altair.ProcessParticipationFlagUpdates(st)
 	require.NoError(t, err, "Could not process participation flag update")
-	return state, nil
+	return st, nil
 }
