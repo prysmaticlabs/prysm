@@ -53,7 +53,7 @@ func feeRecipientIsPresent(conns ...*grpc.ClientConn) error {
 	ctx := context.Background()
 
 	testNetDir := e2e.TestParams.TestPath + "/proposer-settings"
-	configPath := filepath.Join(testNetDir, "config.json")
+	configPath := filepath.Join(testNetDir, filepath.Clean("config.json"))
 	jsonFile, err := os.Open(configPath)
 	if err != nil {
 		return err
