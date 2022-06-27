@@ -1,12 +1,12 @@
 package v2
 
 import (
+	"context"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
-	"golang.org/x/net/context"
 )
 
 func TestState_UnrealizedCheckpointBalances(t *testing.T) {

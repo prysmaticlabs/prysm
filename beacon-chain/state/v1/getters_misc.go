@@ -2,6 +2,7 @@ package v1
 
 import (
 	"bytes"
+	"context"
 	"errors"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -14,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/time/slots"
-	"golang.org/x/net/context"
 )
 
 // GenesisTime of the beacon state as a uint64.

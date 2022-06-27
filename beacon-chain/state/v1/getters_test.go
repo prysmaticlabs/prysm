@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"context"
 	"runtime/debug"
 	"testing"
 	"time"
@@ -11,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
-	"golang.org/x/net/context"
 )
 
 func TestBeaconState_SlotDataRace(t *testing.T) {
