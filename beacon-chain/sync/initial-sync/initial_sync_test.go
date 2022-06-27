@@ -188,10 +188,10 @@ func connectPeer(t *testing.T, host *p2pt.TestP2P, datum *peerData, peerStatus *
 		}
 
 		// Determine the correct subset of blocks to return as dictated by the test scenario.
-		slots := slice.IntersectionSlot(datum.blocks, requestedBlocks)
+		ss := slice.IntersectionSlot(datum.blocks, requestedBlocks)
 
 		ret := make([]*ethpb.SignedBeaconBlock, 0)
-		for _, slot := range slots {
+		for _, slot := range ss {
 			if (slot - req.StartSlot).Mod(req.Step) != 0 {
 				continue
 			}

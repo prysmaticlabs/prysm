@@ -222,7 +222,7 @@ func (ns *Server) ListPeers(ctx context.Context, _ *empty.Empty) (*ethpb.Peers, 
 }
 
 // GetETH1ConnectionStatus gets data about the ETH1 endpoints.
-func (ns *Server) GetETH1ConnectionStatus(ctx context.Context, _ *empty.Empty) (*ethpb.ETH1ConnectionStatus, error) {
+func (ns *Server) GetETH1ConnectionStatus(_ context.Context, _ *empty.Empty) (*ethpb.ETH1ConnectionStatus, error) {
 	var errStrs []string
 	errs := ns.POWChainInfoFetcher.ETH1ConnectionErrors()
 	// Extract string version of the errors.

@@ -555,21 +555,21 @@ func TestServer_SubscribeCommitteeSubnets_DifferentLengthSlots(t *testing.T) {
 		OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
 	}
 
-	var slots []types.Slot
+	var ss []types.Slot
 	var comIdxs []types.CommitteeIndex
 	var isAggregator []bool
 
 	for i := types.Slot(100); i < 200; i++ {
-		slots = append(slots, i)
+		ss = append(ss, i)
 		comIdxs = append(comIdxs, types.CommitteeIndex(randGen.Int63n(64)))
 		boolVal := randGen.Uint64()%2 == 0
 		isAggregator = append(isAggregator, boolVal)
 	}
 
-	slots = append(slots, 321)
+	ss = append(ss, 321)
 
 	_, err := attesterServer.SubscribeCommitteeSubnets(context.Background(), &ethpb.CommitteeSubnetsSubscribeRequest{
-		Slots:        slots,
+		Slots:        ss,
 		CommitteeIds: comIdxs,
 		IsAggregator: isAggregator,
 	})
@@ -601,19 +601,19 @@ func TestServer_SubscribeCommitteeSubnets_MultipleSlots(t *testing.T) {
 		OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
 	}
 
-	var slots []types.Slot
+	var ss []types.Slot
 	var comIdxs []types.CommitteeIndex
 	var isAggregator []bool
 
 	for i := types.Slot(100); i < 200; i++ {
-		slots = append(slots, i)
+		ss = append(ss, i)
 		comIdxs = append(comIdxs, types.CommitteeIndex(randGen.Int63n(64)))
 		boolVal := randGen.Uint64()%2 == 0
 		isAggregator = append(isAggregator, boolVal)
 	}
 
 	_, err = attesterServer.SubscribeCommitteeSubnets(context.Background(), &ethpb.CommitteeSubnetsSubscribeRequest{
-		Slots:        slots,
+		Slots:        ss,
 		CommitteeIds: comIdxs,
 		IsAggregator: isAggregator,
 	})

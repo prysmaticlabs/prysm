@@ -237,10 +237,10 @@ func (s *Service) registerHandlers() {
 	defer stateSub.Unsubscribe()
 	for {
 		select {
-		case event := <-stateChannel:
-			switch event.Type {
+		case e := <-stateChannel:
+			switch e.Type {
 			case statefeed.Initialized:
-				data, ok := event.Data.(*statefeed.InitializedData)
+				data, ok := e.Data.(*statefeed.InitializedData)
 				if !ok {
 					log.Error("Event feed data is not type *statefeed.InitializedData")
 					return
@@ -259,7 +259,7 @@ func (s *Service) registerHandlers() {
 					s.markForChainStart()
 				}()
 			case statefeed.Synced:
-				_, ok := event.Data.(*statefeed.SyncedData)
+				_, ok := e.Data.(*statefeed.SyncedData)
 				if !ok {
 					log.Error("Event feed data is not type *statefeed.SyncedData")
 					return

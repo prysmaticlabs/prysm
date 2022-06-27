@@ -79,7 +79,7 @@ func (m *engineMock) NewPayload(context.Context, *pb.ExecutionPayload) ([]byte, 
 	return nil, nil
 }
 
-func (m *engineMock) LatestExecutionBlock(context.Context) (*pb.ExecutionBlock, error) {
+func (m *engineMock) LatestExecutionBlock() (*pb.ExecutionBlock, error) {
 	return nil, nil
 }
 
