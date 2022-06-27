@@ -95,6 +95,7 @@ type validator struct {
 	validatorClient                    ethpb.BeaconNodeValidatorClient
 	graffiti                           []byte
 	voteStats                          voteStats
+	syncCommitteeStats                 syncCommitteeStats
 	Web3SignerConfig                   *remoteweb3signer.SetupConfig
 	ProposerSettings                   *validatorserviceconfig.ProposerSettings
 	walletIntializedChannel            chan *wallet.Wallet
@@ -1070,4 +1071,9 @@ type voteStats struct {
 	totalCorrectSource  uint64
 	totalCorrectTarget  uint64
 	totalCorrectHead    uint64
+}
+
+// This tracks all validators' submissions for sync committees.
+type syncCommitteeStats struct {
+	totalMessagesSubmitted uint64
 }
