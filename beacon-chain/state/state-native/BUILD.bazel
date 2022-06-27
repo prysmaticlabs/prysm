@@ -55,7 +55,7 @@ go_library(
         "//tools/pcli:__pkg__",
     ],
     deps = [
-        "//beacon-chain/core/epoch/precompute:go_default_library",
+        "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/time:go_default_library",
         "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/fieldtrie:go_default_library",
@@ -72,6 +72,7 @@ go_library(
         "//encoding/ssz:go_default_library",
         "//proto/engine/v1:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
+        "//proto/prysm/v1alpha1/attestation:go_default_library",
         "//runtime/version:go_default_library",
         "@com_github_ferranbt_fastssz//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
