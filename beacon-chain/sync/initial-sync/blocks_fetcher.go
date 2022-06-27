@@ -318,6 +318,7 @@ func (f *blocksFetcher) requestBlocks(
 	}).Debug("Requesting blocks")
 	if f.rateLimiter.Remaining(pid.String()) < int64(req.Count) {
 		if err := f.waitForBandwidth(pid); err != nil {
+			l.Unlock()
 			return nil, err
 		}
 	}
@@ -345,6 +346,7 @@ func (f *blocksFetcher) requestBlocksByRoot(
 	}).Debug("Requesting blocks (by roots)")
 	if f.rateLimiter.Remaining(pid.String()) < int64(len(*req)) {
 		if err := f.waitForBandwidth(pid); err != nil {
+			l.Unlock()
 			return nil, err
 		}
 	}
