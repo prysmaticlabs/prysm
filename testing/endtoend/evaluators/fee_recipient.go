@@ -77,7 +77,7 @@ func feeRecipientIsPresent(conns ...*grpc.ClientConn) error {
 			configPath := filepath.Join(testNetDir, "config.json")
 			jsonFile, err := os.Open(configPath)
 			if err != nil {
-				fmt.Println(err)
+				return err
 			}
 			var configFile validator_service_config.ProposerSettingsPayload
 			if err := json.NewDecoder(jsonFile).Decode(&configFile); err != nil {
