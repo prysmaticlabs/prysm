@@ -35,7 +35,7 @@ func TestPoWBlock(t *testing.T) {
 	blk, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
 	require.NoError(t, err)
 	builder := NewBuilder(t, st, blk)
-	builder.PoWBlock(t, &ethpb.PowBlock{BlockHash: []byte{1, 2, 3}})
+	builder.PoWBlock(&ethpb.PowBlock{BlockHash: []byte{1, 2, 3}})
 
 	require.Equal(t, 1, len(builder.execMock.powBlocks))
 }

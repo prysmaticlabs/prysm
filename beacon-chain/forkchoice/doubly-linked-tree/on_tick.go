@@ -1,13 +1,10 @@
-package blockchain
+package doublylinkedtree
 
 import (
-	"bytes"
 	"context"
 
 	"github.com/pkg/errors"
-	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
@@ -31,9 +28,9 @@ import (
 //        ancestor_at_finalized_slot = get_ancestor(store, store.best_justified_checkpoint.root, finalized_slot)
 //        if ancestor_at_finalized_slot == store.finalized_checkpoint.root:
 //            store.justified_checkpoint = store.best_justified_checkpoint
-func (s *Service) NewSlot(ctx context.Context, slot types.Slot) error {
-	// Reset proposer boost root in fork choice.
-	if err := s.cfg.ForkChoiceStore.ResetBoostedProposerRoot(ctx); err != nil {
+func (f *ForkChoice) NewSlot(ctx context.Context, slot types.Slot) error {
+	// Reset proposer boost root
+	if err := f.ResetBoostedProposerRoot(ctx); err != nil {
 		return errors.Wrap(err, "could not reset boosted proposer root in fork choice")
 	}
 
@@ -43,39 +40,29 @@ func (s *Service) NewSlot(ctx context.Context, slot types.Slot) error {
 	}
 
 	// Update store.justified_checkpoint if a better checkpoint on the store.finalized_checkpoint chain
-	bj, err := s.store.BestJustifiedCheckpt()
-	if err != nil {
-		return errors.Wrap(err, "could not get best justified checkpoint")
-	}
-	j, err := s.store.JustifiedCheckpt()
-	if err != nil {
-		return errors.Wrap(err, "could not get justified checkpoint")
-	}
-	f, err := s.store.FinalizedCheckpt()
-	if err != nil {
-		return errors.Wrap(err, "could not get finalized checkpoint")
-	}
-	if bj.Epoch > j.Epoch {
-		finalizedSlot, err := slots.EpochStart(f.Epoch)
+	f.store.checkpointsLock.Lock()
+	defer f.store.checkpointsLock.Unlock()
+
+	bjcp := f.store.bestJustifiedCheckpoint
+	jcp := f.store.justifiedCheckpoint
+	fcp := f.store.finalizedCheckpoint
+	if bjcp.Epoch > jcp.Epoch {
+		finalizedSlot, err := slots.EpochStart(fcp.Epoch)
 		if err != nil {
 			return err
 		}
-		r, err := s.ancestor(ctx, bj.Root, finalizedSlot)
+
+		// We check that the best justified checkpoint is a descendant of the finalized checkpoint.
+		// This should always happen as forkchoice enforces that every node is a descendant of the
+		// finalized checkpoint. This check is here for additional security, consider removing the extra
+		// loop call here.
+		r, err := f.AncestorRoot(ctx, bjcp.Root, finalizedSlot)
 		if err != nil {
 			return err
 		}
-		if bytes.Equal(r, f.Root) {
-			h, err := s.getPayloadHash(ctx, bj.Root)
-			if err != nil {
-				return err
-			}
-			s.store.SetJustifiedCheckptAndPayloadHash(bj, h)
-			if err := s.cfg.ForkChoiceStore.UpdateJustifiedCheckpoint(&forkchoicetypes.Checkpoint{
-				Epoch: bj.Epoch, Root: bytesutil.ToBytes32(bj.Root)}); err != nil {
-				return err
-			}
+		if r == fcp.Root {
+			f.store.justifiedCheckpoint = bjcp
 		}
 	}
 	return nil
-
 }

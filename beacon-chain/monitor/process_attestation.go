@@ -57,8 +57,8 @@ func (s *Service) processAttestations(ctx context.Context, state state.BeaconSta
 	if blk == nil || blk.Body() == nil {
 		return
 	}
-	for _, attestation := range blk.Body().Attestations() {
-		s.processIncludedAttestation(ctx, state, attestation)
+	for _, att := range blk.Body().Attestations() {
+		s.processIncludedAttestation(ctx, state, att)
 	}
 }
 
@@ -165,13 +165,13 @@ func (s *Service) processUnaggregatedAttestation(ctx context.Context, att *ethpb
 	s.RLock()
 	defer s.RUnlock()
 	root := bytesutil.ToBytes32(att.Data.BeaconBlockRoot)
-	state := s.config.StateGen.StateByRootIfCachedNoCopy(root)
-	if state == nil {
+	st := s.config.StateGen.StateByRootIfCachedNoCopy(root)
+	if st == nil {
 		log.WithField("BeaconBlockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debug(
 			"Skipping unaggregated attestation due to state not found in cache")
 		return
 	}
-	attestingIndices, err := attestingIndices(ctx, state, att)
+	attestingIndices, err := attestingIndices(ctx, st, att)
 	if err != nil {
 		log.WithError(err).Error("Could not get attesting indices")
 		return
@@ -207,13 +207,13 @@ func (s *Service) processAggregatedAttestation(ctx context.Context, att *ethpb.A
 
 	var root [32]byte
 	copy(root[:], att.Aggregate.Data.BeaconBlockRoot)
-	state := s.config.StateGen.StateByRootIfCachedNoCopy(root)
-	if state == nil {
+	st := s.config.StateGen.StateByRootIfCachedNoCopy(root)
+	if st == nil {
 		log.WithField("BeaconBlockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debug(
 			"Skipping aggregated attestation due to state not found in cache")
 		return
 	}
-	attestingIndices, err := attestingIndices(ctx, state, att.Aggregate)
+	attestingIndices, err := attestingIndices(ctx, st, att.Aggregate)
 	if err != nil {
 		log.WithError(err).Error("Could not get attesting indices")
 		return

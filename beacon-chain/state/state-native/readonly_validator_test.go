@@ -67,8 +67,7 @@ func TestReadOnlyValidator_WithdrawalCredentials(t *testing.T) {
 }
 
 func TestReadOnlyValidator_Slashed(t *testing.T) {
-	slashed := true
-	v, err := statenative.NewValidator(&ethpb.Validator{Slashed: slashed})
+	v, err := statenative.NewValidator(&ethpb.Validator{Slashed: true})
 	require.NoError(t, err)
-	assert.Equal(t, slashed, v.Slashed())
+	assert.Equal(t, true, v.Slashed())
 }

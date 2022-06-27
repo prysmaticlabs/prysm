@@ -7,16 +7,16 @@ import (
 
 	"github.com/dgraph-io/ristretto"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
-	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
-	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
-	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	grpcretry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
+	grpcopentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
+	grpcprometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/pkg/errors"
 	grpcutil "github.com/prysmaticlabs/prysm/api/grpc"
 	"github.com/prysmaticlabs/prysm/async/event"
 	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
-	validator_service_config "github.com/prysmaticlabs/prysm/config/validator/service"
+	validatorserviceconfig "github.com/prysmaticlabs/prysm/config/validator/service"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -26,7 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/graffiti"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/local"
-	remote_web3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
+	remoteweb3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -69,8 +69,8 @@ type ValidatorService struct {
 	db                    db.Database
 	grpcHeaders           []string
 	graffiti              []byte
-	Web3SignerConfig      *remote_web3signer.SetupConfig
-	ProposerSettings      *validator_service_config.ProposerSettings
+	Web3SignerConfig      *remoteweb3signer.SetupConfig
+	ProposerSettings      *validatorserviceconfig.ProposerSettings
 }
 
 // Config for the validator service.
@@ -93,8 +93,8 @@ type Config struct {
 	GrpcHeadersFlag            string
 	GraffitiFlag               string
 	Endpoint                   string
-	Web3SignerConfig           *remote_web3signer.SetupConfig
-	ProposerSettings           *validator_service_config.ProposerSettings
+	Web3SignerConfig           *remoteweb3signer.SetupConfig
+	ProposerSettings           *validatorserviceconfig.ProposerSettings
 }
 
 // NewValidatorService creates a new validator service for the service
@@ -281,21 +281,21 @@ func ConstructDialOptions(
 		transportSecurity,
 		grpc.WithDefaultCallOptions(
 			grpc.MaxCallRecvMsgSize(maxCallRecvMsgSize),
-			grpc_retry.WithMax(grpcRetries),
-			grpc_retry.WithBackoff(grpc_retry.BackoffLinear(grpcRetryDelay)),
+			grpcretry.WithMax(grpcRetries),
+			grpcretry.WithBackoff(grpcretry.BackoffLinear(grpcRetryDelay)),
 		),
 		grpc.WithStatsHandler(&ocgrpc.ClientHandler{}),
 		grpc.WithUnaryInterceptor(middleware.ChainUnaryClient(
-			grpc_opentracing.UnaryClientInterceptor(),
-			grpc_prometheus.UnaryClientInterceptor,
-			grpc_retry.UnaryClientInterceptor(),
+			grpcopentracing.UnaryClientInterceptor(),
+			grpcprometheus.UnaryClientInterceptor,
+			grpcretry.UnaryClientInterceptor(),
 			grpcutil.LogRequests,
 		)),
 		grpc.WithChainStreamInterceptor(
 			grpcutil.LogStream,
-			grpc_opentracing.StreamClientInterceptor(),
-			grpc_prometheus.StreamClientInterceptor,
-			grpc_retry.StreamClientInterceptor(),
+			grpcopentracing.StreamClientInterceptor(),
+			grpcprometheus.StreamClientInterceptor,
+			grpcretry.StreamClientInterceptor(),
 		),
 		grpc.WithResolvers(&multipleEndpointsGrpcResolverBuilder{}),
 	}

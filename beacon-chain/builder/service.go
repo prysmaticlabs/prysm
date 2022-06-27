@@ -21,8 +21,9 @@ import (
 type BlockBuilder interface {
 	SubmitBlindedBlock(ctx context.Context, block *ethpb.SignedBlindedBeaconBlockBellatrix) (*v1.ExecutionPayload, error)
 	GetHeader(ctx context.Context, slot types.Slot, parentHash [32]byte, pubKey [48]byte) (*ethpb.SignedBuilderBid, error)
-	Status(ctx context.Context) error
-	RegisterValidator(ctx context.Context, reg *ethpb.SignedValidatorRegistrationV1) error
+	Status() error
+	RegisterValidator(ctx context.Context, reg []*ethpb.SignedValidatorRegistrationV1) error
+	Configured() bool
 }
 
 // config defines a config struct for dependencies into the service.
@@ -34,13 +35,20 @@ type config struct {
 
 // Service defines a service that provides a client for interacting with the beacon chain and MEV relay network.
 type Service struct {
-	cfg *config
-	c   *builder.Client
+	cfg    *config
+	c      *builder.Client
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
 // NewService instantiates a new service.
 func NewService(ctx context.Context, opts ...Option) (*Service, error) {
-	s := &Service{}
+	ctx, cancel := context.WithCancel(ctx)
+	s := &Service{
+		ctx:    ctx,
+		cancel: cancel,
+		cfg:    &config{},
+	}
 	for _, opt := range opts {
 		if err := opt(s); err != nil {
 			return nil, err
@@ -89,13 +97,18 @@ func (s *Service) GetHeader(ctx context.Context, slot types.Slot, parentHash [32
 }
 
 // Status retrieves the status of the builder relay network.
-func (s *Service) Status(ctx context.Context) error {
-	ctx, span := trace.StartSpan(ctx, "builder.Status")
+func (s *Service) Status() error {
+	ctx, span := trace.StartSpan(context.Background(), "builder.Status")
 	defer span.End()
 	start := time.Now()
 	defer func() {
 		getStatusLatency.Observe(float64(time.Since(start).Milliseconds()))
 	}()
+
+	// Return early if builder isn't initialized in service.
+	if s.c == nil {
+		return nil
+	}
 
 	return s.c.Status(ctx)
 }
@@ -131,4 +144,9 @@ func (s *Service) RegisterValidator(ctx context.Context, reg []*ethpb.SignedVali
 	}
 
 	return s.cfg.beaconDB.SaveRegistrationsByValidatorIDs(ctx, idxs, msgs)
+}
+
+// Configured returns true if the user has input a builder URL.
+func (s *Service) Configured() bool {
+	return s.cfg.builderEndpoint.Url != ""
 }

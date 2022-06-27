@@ -18,7 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/local"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
-	remote_web3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
+	remoteweb3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
 	"github.com/urfave/cli/v2"
 )
 
@@ -27,7 +27,7 @@ type CreateWalletConfig struct {
 	SkipMnemonicConfirm   bool
 	NumAccounts           int
 	RemoteKeymanagerOpts  *remote.KeymanagerOpts
-	Web3SignerSetupConfig *remote_web3signer.SetupConfig
+	Web3SignerSetupConfig *remoteweb3signer.SetupConfig
 	WalletCfg             *wallet.Config
 	Mnemonic25thWord      string
 }

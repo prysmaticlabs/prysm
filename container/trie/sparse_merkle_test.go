@@ -135,14 +135,14 @@ func TestMerkleTrie_MerkleProofOutOfRange(t *testing.T) {
 }
 
 func TestMerkleTrieRoot_EmptyTrie(t *testing.T) {
-	trie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+	newTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err)
 	testAccount, err := contracts.Setup()
 	require.NoError(t, err)
 
 	depRoot, err := testAccount.Contract.GetDepositRoot(&bind.CallOpts{})
 	require.NoError(t, err)
-	root, err := trie.HashTreeRoot()
+	root, err := newTrie.HashTreeRoot()
 	require.NoError(t, err)
 	require.DeepEqual(t, depRoot, root)
 }
