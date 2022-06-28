@@ -220,6 +220,7 @@ service BeaconChain {
     option (google.api.http) = {
       get: "/internal/eth/v1/beacon/blocks/{block_id}/root"
     };
+    option deprecated = true;
   }
 
   // GetBlock retrieves block details for given block id.
