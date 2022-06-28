@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	fssz "github.com/ferranbt/fastssz"
+	fssz "github.com/prysmaticlabs/fastssz"
 	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
