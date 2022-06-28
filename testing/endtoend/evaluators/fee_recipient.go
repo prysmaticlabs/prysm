@@ -74,10 +74,10 @@ func feeRecipientIsPresent(conns ...*grpc.ClientConn) error {
 		}
 	}
 
-	var account common.Address
 	for _, ctr := range blks.BlockContainers {
 		switch ctr.Block.(type) {
 		case *ethpb.BeaconBlockContainer_BellatrixBlock:
+			var account common.Address
 			fr := ctr.GetBellatrixBlock().Block.Body.ExecutionPayload.FeeRecipient
 			if len(fr) != 0 && hexutil.Encode(fr) != params.BeaconConfig().EthBurnAddressHex {
 				account = common.BytesToAddress(fr)
@@ -109,27 +109,25 @@ func feeRecipientIsPresent(conns ...*grpc.ClientConn) error {
 					return fmt.Errorf("fee recipient %s does not match the default fee recipient %s", account.Hex(), configFiles[0].DefaultConfig.FeeRecipient)
 				}
 			}
-
+			latestBlockNum, err := web3.BlockNumber(ctx)
+			if err != nil {
+				return err
+			}
+			accountBalance, err := web3.BalanceAt(ctx, account, big.NewInt(0).SetUint64(latestBlockNum))
+			if err != nil {
+				return err
+			}
+			prevAccountBalance, err := web3.BalanceAt(ctx, account, big.NewInt(0).SetUint64(latestBlockNum-uint64(params.BeaconConfig().SlotsPerEpoch)))
+			if err != nil {
+				return err
+			}
+			if accountBalance.Uint64() <= prevAccountBalance.Uint64() {
+				return errors.Errorf("account balance didn't change after applying fee recipient for account: %s", account.Hex())
+			} else {
+				log.Infof("current account balance %v ,increased from previous account balance %v ", accountBalance, prevAccountBalance)
+			}
 		}
 
-	}
-
-	latestBlockNum, err := web3.BlockNumber(ctx)
-	if err != nil {
-		return err
-	}
-	accountBalance, err := web3.BalanceAt(ctx, account, big.NewInt(0).SetUint64(latestBlockNum))
-	if err != nil {
-		return err
-	}
-	prevAccountBalance, err := web3.BalanceAt(ctx, account, big.NewInt(0).SetUint64(latestBlockNum-1))
-	if err != nil {
-		return err
-	}
-	if accountBalance.Uint64() <= prevAccountBalance.Uint64() {
-		return errors.Errorf("account balance didn't change after applying fee recipient for account: %s", account.Hex())
-	} else {
-		log.Infof("current account balance %v ,increased from previous account balance %v ", accountBalance, prevAccountBalance)
 	}
 
 	return nil
