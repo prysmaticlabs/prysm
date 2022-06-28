@@ -246,7 +246,7 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 	//TODO: web3signer does not support validator registration signing currently, move this when support is there.
 	//TODO: current version of prysmsh still uses wrong flag name.
 	if !v.config.UsePrysmShValidator && !v.config.UseWeb3RemoteSigner {
-		proposerSettingsPathPath, err := createProposerSettingsPath(validatorHexPubKeys)
+		proposerSettingsPathPath, err := createProposerSettingsPath(validatorHexPubKeys, index)
 		if err != nil {
 			return err
 		}
@@ -397,8 +397,8 @@ func sendDeposits(web3 *ethclient.Client, keystoreBytes []byte, num, offset int,
 	return nil
 }
 
-func createProposerSettingsPath(pubkeys []string) (string, error) {
-	testNetDir := e2e.TestParams.TestPath + "/proposer-settings"
+func createProposerSettingsPath(pubkeys []string, validatorIndex int) (string, error) {
+	testNetDir := e2e.TestParams.TestPath + fmt.Sprintf("/proposer-settings/validator_%d", validatorIndex)
 	configPath := filepath.Join(testNetDir, "config.json")
 	if len(pubkeys) == 0 {
 		return "", errors.New("number of validators must be greater than 0")

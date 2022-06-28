@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -52,15 +53,25 @@ func feeRecipientIsPresent(conns ...*grpc.ClientConn) error {
 	web3 := ethclient.NewClient(rpcclient)
 	ctx := context.Background()
 
+	var configFiles []*validator_service_config.ProposerSettingsPayload
 	testNetDir := e2e.TestParams.TestPath + "/proposer-settings"
-	configPath := filepath.Join(testNetDir, filepath.Clean("config.json"))
-	jsonFile, err := os.Open(filepath.Clean(configPath))
+	dirs, err := ioutil.ReadDir(filepath.Clean(testNetDir))
 	if err != nil {
 		return err
 	}
-	var configFile validator_service_config.ProposerSettingsPayload
-	if err := json.NewDecoder(jsonFile).Decode(&configFile); err != nil {
-		return err
+	for _, f := range dirs {
+		if !f.IsDir() {
+			configPath := filepath.Join(testNetDir, filepath.Clean(f.Name()+"/config.json"))
+			jsonFile, err := os.Open(filepath.Clean(configPath))
+			if err != nil {
+				return err
+			}
+			var configFile validator_service_config.ProposerSettingsPayload
+			if err := json.NewDecoder(jsonFile).Decode(&configFile); err != nil {
+				return err
+			}
+			configFiles = append(configFiles, &configFile)
+		}
 	}
 
 	var account common.Address
@@ -83,15 +94,19 @@ func feeRecipientIsPresent(conns ...*grpc.ClientConn) error {
 				return errors.Wrap(err, "failed to get validators")
 			}
 			publickey := validator.GetPublicKey()
-
-			option, ok := configFile.ProposerConfig[hexutil.Encode(publickey)]
-			if ok {
-				if option.FeeRecipient != account.Hex() {
-					return fmt.Errorf("fee recipient %s does not match the proposer settings fee recipient %s", account.Hex(), option.FeeRecipient)
+			usesDefaultFeeRecipient := false
+			for _, config := range configFiles {
+				option, ok := config.ProposerConfig[hexutil.Encode(publickey)]
+				if ok {
+					if option.FeeRecipient != account.Hex() {
+						return fmt.Errorf("fee recipient %s does not match the proposer settings fee recipient %s", account.Hex(), option.FeeRecipient)
+					}
+					usesDefaultFeeRecipient = true
 				}
-			} else {
-				if configFile.DefaultConfig.FeeRecipient != account.Hex() {
-					return fmt.Errorf("fee recipient %s does not match the default fee recipient %s", account.Hex(), configFile.DefaultConfig.FeeRecipient)
+			}
+			if !usesDefaultFeeRecipient {
+				if configFiles[0].DefaultConfig.FeeRecipient != account.Hex() {
+					return fmt.Errorf("fee recipient %s does not match the default fee recipient %s", account.Hex(), configFiles[0].DefaultConfig.FeeRecipient)
 				}
 			}
 
