@@ -60,7 +60,7 @@ func feeRecipientIsPresent(conns ...*grpc.ClientConn) error {
 		return err
 	}
 	for _, f := range dirs {
-		if !f.IsDir() {
+		if f.IsDir() {
 			configPath := filepath.Join(testNetDir, filepath.Clean(f.Name()+"/config.json"))
 			jsonFile, err := os.Open(filepath.Clean(configPath))
 			if err != nil {
