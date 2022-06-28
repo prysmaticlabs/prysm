@@ -1,8 +1,6 @@
 package v3
 
 import (
-	"context"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 )
@@ -40,7 +38,7 @@ func (b *BeaconState) PreviousEpochParticipation() ([]byte, error) {
 // UnrealizedCheckpointBalances returns the total balances: active, target attested in
 // current epoch and target attested in previous epoch. This function is used to
 // compute the "unrealized justification" that a synced Beacon Block will have.
-func (b *BeaconState) UnrealizedCheckpointBalances(_ context.Context) (uint64, uint64, uint64, error) {
+func (b *BeaconState) UnrealizedCheckpointBalances() (uint64, uint64, uint64, error) {
 	if !b.hasInnerState() {
 		return 0, 0, 0, ErrNilInnerState
 	}

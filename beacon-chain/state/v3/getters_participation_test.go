@@ -1,7 +1,6 @@
 package v3
 
 import (
-	"context"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -33,7 +32,7 @@ func TestState_UnrealizedCheckpointBalances(t *testing.T) {
 
 	// No one voted in the last two epochs
 	allActive := params.BeaconConfig().MinGenesisActiveValidatorCount * params.BeaconConfig().MaxEffectiveBalance
-	active, previous, current, err := state.UnrealizedCheckpointBalances(context.Background())
+	active, previous, current, err := state.UnrealizedCheckpointBalances()
 	require.NoError(t, err)
 	require.Equal(t, allActive, active)
 	require.Equal(t, uint64(0), current)
@@ -46,7 +45,7 @@ func TestState_UnrealizedCheckpointBalances(t *testing.T) {
 
 	state, err = InitializeFromProto(base)
 	require.NoError(t, err)
-	active, previous, current, err = state.UnrealizedCheckpointBalances(context.Background())
+	active, previous, current, err = state.UnrealizedCheckpointBalances()
 	require.NoError(t, err)
 	require.Equal(t, allActive, active)
 	require.Equal(t, params.BeaconConfig().MaxEffectiveBalance, current)
@@ -56,7 +55,7 @@ func TestState_UnrealizedCheckpointBalances(t *testing.T) {
 	validators[0].Slashed = true
 	state, err = InitializeFromProto(base)
 	require.NoError(t, err)
-	active, previous, current, err = state.UnrealizedCheckpointBalances(context.Background())
+	active, previous, current, err = state.UnrealizedCheckpointBalances()
 	require.NoError(t, err)
 	require.Equal(t, allActive-params.BeaconConfig().MaxEffectiveBalance, active)
 	require.Equal(t, uint64(0), current)

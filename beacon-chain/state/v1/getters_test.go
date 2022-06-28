@@ -4,12 +4,10 @@ import (
 	"context"
 	"runtime/debug"
 	"testing"
-	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	testtmpl "github.com/prysmaticlabs/prysm/beacon-chain/state/testing"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
@@ -122,36 +120,4 @@ func TestBeaconState_ValidatorByPubkey(t *testing.T) {
 	testtmpl.VerifyBeaconStateValidatorByPubkey(t, func() (state.BeaconState, error) {
 		return InitializeFromProto(&ethpb.BeaconState{})
 	})
-}
-
-func TestBeaconState_UnrealizedCheckpointBalances(t *testing.T) {
-	vals := make([]*ethpb.Validator, 10)
-	for i := 0; i < len(vals); i++ {
-		vals[i] = &ethpb.Validator{
-			EffectiveBalance: params.BeaconConfig().MaxEffectiveBalance,
-			ExitEpoch:        params.BeaconConfig().FarFutureEpoch,
-		}
-	}
-	prevAtt := &ethpb.PendingAttestation{
-		InclusionDelay: 1,
-		Data: &ethpb.AttestationData{
-			Slot:   65,
-			Target: &ethpb.Checkpoint{Epoch: 1},
-			Source: &ethpb.Checkpoint{Epoch: 0},
-		},
-	}
-
-	base := &ethpb.BeaconState{
-		GenesisTime:               uint64(time.Now().Unix()) - 96*params.BeaconConfig().SecondsPerSlot,
-		Slot:                      96,
-		Validators:                vals,
-		PreviousEpochAttestations: []*ethpb.PendingAttestation{prevAtt},
-	}
-	b, err := InitializeFromProto(base)
-	require.NoError(t, err)
-	active, curr, prev, err := b.UnrealizedCheckpointBalances(context.Background())
-	require.NoError(t, err)
-	require.Equal(t, 10*params.BeaconConfig().MaxEffectiveBalance, active)
-	require.Equal(t, params.BeaconConfig().MinDepositAmount, curr)
-	require.Equal(t, params.BeaconConfig().MinDepositAmount, prev)
 }

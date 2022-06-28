@@ -28,7 +28,7 @@ func UnrealizedCheckpoints(ctx context.Context, st state.BeaconState) (*ethpb.Ch
 		return jc, fc, nil
 	}
 
-	activeBalance, prevTarget, currentTarget, err := st.UnrealizedCheckpointBalances(ctx)
+	activeBalance, prevTarget, currentTarget, err := st.UnrealizedCheckpointBalances()
 	if err != nil {
 		return nil, nil, err
 	}

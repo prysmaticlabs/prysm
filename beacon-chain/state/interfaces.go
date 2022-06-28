@@ -224,7 +224,7 @@ type FutureForkStub interface {
 	AppendInactivityScore(s uint64) error
 	CurrentEpochParticipation() ([]byte, error)
 	PreviousEpochParticipation() ([]byte, error)
-	UnrealizedCheckpointBalances(context.Context) (uint64, uint64, uint64, error)
+	UnrealizedCheckpointBalances() (uint64, uint64, uint64, error)
 	InactivityScores() ([]uint64, error)
 	SetInactivityScores(val []uint64) error
 	CurrentSyncCommittee() (*ethpb.SyncCommittee, error)
