@@ -73,7 +73,7 @@ ssz_gen_marshal = rule(
         "srcs": attr.label_list(allow_files = True),
         "go_proto": attr.label(providers = [GoLibrary]),
         "sszgen": attr.label(
-            default = Label("@com_github_ferranbt_fastssz//sszgen:sszgen"),
+            default = Label("@com_github_prysmaticlabs_fastssz//sszgen:sszgen"),
             executable = True,
             cfg = "host",
         ),
@@ -83,4 +83,4 @@ ssz_gen_marshal = rule(
     outputs = {"out": "generated.ssz.go"},
 )
 
-SSZ_DEPS = ["@com_github_ferranbt_fastssz//:go_default_library"]
+SSZ_DEPS = ["@com_github_prysmaticlabs_fastssz//:go_default_library"]

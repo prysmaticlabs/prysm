@@ -260,6 +260,7 @@ func performRoles(slotCtx context.Context, allRoles map[[48]byte][]iface.Validat
 		}()
 		// Log this client performance in the previous epoch
 		v.LogAttestationsSubmitted()
+		v.LogSyncCommitteeMessagesSubmitted()
 		if err := v.LogValidatorGainsAndLosses(slotCtx, slot); err != nil {
 			log.WithError(err).Error("Could not report validator's rewards/penalties")
 		}

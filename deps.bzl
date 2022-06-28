@@ -951,9 +951,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_ferranbt_fastssz",
         importpath = "github.com/ferranbt/fastssz",
-        replace = "github.com/prysmaticlabs/fastssz",
-        sum = "h1:gzptjYavIGXHFnh0dt2HiiHYsc6TPDaxg9yl7wfpVlk=",
-        version = "v0.0.0-20220624091011-83d37f0650eb",
+        sum = "h1:9VDpsWq096+oGMDTT/SgBD/VgZYf4pTF+KTPmZ+OaKM=",
+        version = "v0.0.0-20210120143747-11b9eff30ea9",
     )
 
     go_repository(
@@ -3191,6 +3190,13 @@ def prysm_deps():
         sum = "h1:If5rVCMTp6W2SiRAQFlbpJNgVlgMEd+U2GZckwK38ic=",
         version = "v0.10.0",
     )
+    go_repository(
+        name = "com_github_prysmaticlabs_fastssz",
+        importpath = "github.com/prysmaticlabs/fastssz",
+        sum = "h1:fat9avCPKKYZKe9KJq/VlF43/Nrxmn+sg59Ibe/pGs8=",
+        version = "v0.0.0-20220624091035-af5440c5d1dc",
+    )
+
     go_repository(
         name = "com_github_prysmaticlabs_go_bitfield",
         importpath = "github.com/prysmaticlabs/go-bitfield",
