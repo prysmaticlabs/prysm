@@ -3,8 +3,8 @@ package doublylinkedtree
 import (
 	"context"
 	"fmt"
+	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
