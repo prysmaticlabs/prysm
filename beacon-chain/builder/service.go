@@ -60,6 +60,7 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 			return nil, err
 		}
 		s.c = c
+		log.Infof("Builder configured with end point: %s", s.cfg.builderEndpoint.Url)
 	}
 	return s, nil
 }

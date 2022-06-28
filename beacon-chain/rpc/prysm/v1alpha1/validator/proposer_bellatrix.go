@@ -16,12 +16,47 @@ import (
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
+	"github.com/sirupsen/logrus"
 )
 
-func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BeaconBlockBellatrix, error) {
+func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.GenericBeaconBlock, error) {
 	altairBlk, err := vs.buildAltairBeaconBlock(ctx, req)
 	if err != nil {
 		return nil, err
+	}
+
+	log.WithFields(logrus.Fields{
+		"NilStatus":  vs.BlockBuilder != nil,
+		"Configured": vs.BlockBuilder.Configured(),
+	}).Info("Checking builder status")
+
+	// Did the user specify block builder
+	if vs.BlockBuilder != nil && vs.BlockBuilder.Configured() {
+		// Does the protocol allow node to use block builder to construct payload header now
+		ready, err := vs.readyForBuilder(ctx)
+		if err == nil && ready {
+			log.Info("Builder is ready")
+			// Retrieve header from block builder and construct the head block if there's no error.
+			h, err := vs.getPayloadHeader(ctx, req.Slot, altairBlk.ProposerIndex)
+			if err == nil {
+				log.WithFields(logrus.Fields{
+					"BlockHash":    fmt.Sprintf("%#x", h.BlockHash),
+					"TxRoot":       fmt.Sprintf("%#x", h.TransactionsRoot),
+					"FeeRecipient": fmt.Sprintf("%#x", h.FeeRecipient),
+					"GasUsed":      h.GasUsed,
+					"GasLimit":     h.GasLimit,
+				}).Info("Retrieved payload header from builder")
+				return vs.buildHeaderBlock(ctx, altairBlk, h)
+			}
+			// If there's an error at retrieving header, default back to using local EE.
+			log.WithError(err).Warning("Could not construct block using the header from builders, using local execution engine instead")
+		}
+		if err != nil {
+			log.WithError(err).Warning("Could not decide builder is ready")
+		}
+		if !ready {
+			log.Debug("Can't use builder yet. Using local execution engine to propose")
+		}
 	}
 
 	payload, err := vs.getExecutionPayload(ctx, req.Slot, altairBlk.ProposerIndex)
@@ -60,7 +95,24 @@ func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockR
 		return nil, fmt.Errorf("could not compute state root: %v", err)
 	}
 	blk.StateRoot = stateRoot
-	return blk, nil
+	return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Bellatrix{Bellatrix: blk}}, nil
+}
+
+// readyForBuilder returns true if builder is allowed to be used. Builder is allowed to be use after the
+// first finalized checkpt has been execution-enabled.
+func (vs *Server) readyForBuilder(ctx context.Context) (bool, error) {
+	cp := vs.FinalizationFetcher.FinalizedCheckpt()
+	if bytesutil.ToBytes32(cp.Root) == params.BeaconConfig().ZeroHash {
+		return false, nil
+	}
+	b, err := vs.BeaconDB.Block(ctx, bytesutil.ToBytes32(cp.Root))
+	if err != nil {
+		return false, err
+	}
+	if err := coreBlock.BeaconBlockIsNil(b); err != nil {
+		return false, err
+	}
+	return blocks.IsExecutionBlock(b.Block().Body())
 }
 
 // This function retrieves the payload header given the slot number and the validator index.
@@ -181,10 +233,27 @@ func (vs *Server) getBuilderBlock(ctx context.Context, b interfaces.SignedBeacon
 		Signature: b.Signature(),
 	}
 
+	log.WithFields(logrus.Fields{
+		"BlockHash":    fmt.Sprintf("%#x", h.BlockHash),
+		"TxRoot":       fmt.Sprintf("%#x", h.TransactionsRoot),
+		"FeeRecipient": fmt.Sprintf("%#x", h.FeeRecipient),
+		"GasUsed":      h.GasUsed,
+		"GasLimit":     h.GasLimit,
+	}).Info("Submitting blind block")
+
 	payload, err := vs.BlockBuilder.SubmitBlindedBlock(ctx, sb)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not submit blind block")
 	}
+
+	log.WithFields(logrus.Fields{
+		"BlockHash":    fmt.Sprintf("%#x", payload.BlockHash),
+		"Txs":          len(payload.Transactions),
+		"FeeRecipient": fmt.Sprintf("%#x", payload.FeeRecipient),
+		"GasUsed":      payload.GasUsed,
+		"GasLimit":     payload.GasLimit,
+	}).Info("Retrieved payload")
+
 	bb := &ethpb.SignedBeaconBlockBellatrix{
 		Block: &ethpb.BeaconBlockBellatrix{
 			Slot:          sb.Block.Slot,
