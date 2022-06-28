@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -14,7 +13,6 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
 	"github.com/prysmaticlabs/prysm/runtime/version"
-	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 // GenesisTime of the beacon state as a uint64.
@@ -188,23 +186,22 @@ func (b *BeaconState) UnrealizedCheckpointBalances(ctx context.Context) (uint64,
 
 	currentEpoch := time.CurrentEpoch(b)
 	var currentRoot []byte
-	var err error
-	if slots.SinceEpochStarts(b.Slot()) > 0 {
-		currentRoot, err = helpers.BlockRoot(b, currentEpoch)
-		if err != nil {
-			return 0, 0, 0, err
-		}
-	}
+	//if slots.SinceEpochStarts(b.Slot()) > 0 {
+	//	//currentRoot, err = helpers.BlockRoot(b, currentEpoch)
+	//	//if err != nil {
+	//	//	return 0, 0, 0, err
+	//	//}
+	//}
 	cp := make([]byte, len(b.state.Validators))
 	pp := make([]byte, len(b.state.Validators))
 
 	currAtt := b.state.CurrentEpochAttestations
 
 	prevEpoch := time.PrevEpoch(b)
-	prevRoot, err := helpers.BlockRoot(b, prevEpoch)
-	if err != nil {
-		return 0, 0, 0, err
-	}
+	//prevRoot, err := helpers.BlockRoot(b, prevEpoch)
+	//if err != nil {
+	//	return 0, 0, 0, err
+	//}
 	prevAtt := b.state.PreviousEpochAttestations
 
 	for _, a := range append(prevAtt, currAtt...) {
@@ -212,13 +209,13 @@ func (b *BeaconState) UnrealizedCheckpointBalances(ctx context.Context) (uint64,
 			return 0, 0, 0, errors.New("attestation with inclusion delay of 0")
 		}
 		currTarget := a.Data.Target.Epoch == currentEpoch && bytes.Equal(a.Data.Target.Root, currentRoot)
-		prevTarget := a.Data.Target.Epoch == prevEpoch && bytes.Equal(a.Data.Target.Root, prevRoot)
+		prevTarget := a.Data.Target.Epoch == prevEpoch && bytes.Equal(a.Data.Target.Root, []byte{})
 		if currTarget || prevTarget {
-			committee, err := helpers.BeaconCommitteeFromState(ctx, b, a.Data.Slot, a.Data.CommitteeIndex)
-			if err != nil {
-				return 0, 0, 0, err
-			}
-			indices, err := attestation.AttestingIndices(a.AggregationBits, committee)
+			//committee, err := helpers.BeaconCommitteeFromState(ctx, b, a.Data.Slot, a.Data.CommitteeIndex)
+			//if err != nil {
+			//	return 0, 0, 0, err
+			//}
+			indices, err := attestation.AttestingIndices(a.AggregationBits, []types.ValidatorIndex{})
 			if err != nil {
 				return 0, 0, 0, err
 			}

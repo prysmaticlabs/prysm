@@ -55,7 +55,6 @@ go_library(
         "//tools/pcli:__pkg__",
     ],
     deps = [
-        "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/time:go_default_library",
         "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/fieldtrie:go_default_library",
