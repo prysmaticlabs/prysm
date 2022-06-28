@@ -130,7 +130,7 @@ func feeRecipientIsPresent(conns ...*grpc.ClientConn) error {
 				log.Infof("current block num: %d , previous block num: %d , account balance: %d,  pre account balance %d", currentBlock.Number(), previousBlock.Number(), accountBalance, prevAccountBalance)
 				return errors.Errorf("account balance didn't change after applying fee recipient for account: %s", account.Hex())
 			} else {
-				log.Infof("current account balance %v ,increased from previous account balance %v ", accountBalance, prevAccountBalance)
+				log.Infof("current gas used: %v current account balance %v ,increased from previous account balance %v ", currentBlock.GasUsed(), accountBalance, prevAccountBalance)
 			}
 		}
 
