@@ -122,6 +122,7 @@ func feeRecipientIsPresent(conns ...*grpc.ClientConn) error {
 				return err
 			}
 			if accountBalance.Uint64() <= prevAccountBalance.Uint64() {
+				log.Infof("block num: %d account balance: %d pre account balance %d", latestBlockNum, accountBalance, prevAccountBalance)
 				return errors.Errorf("account balance didn't change after applying fee recipient for account: %s", account.Hex())
 			} else {
 				log.Infof("current account balance %v ,increased from previous account balance %v ", accountBalance, prevAccountBalance)
