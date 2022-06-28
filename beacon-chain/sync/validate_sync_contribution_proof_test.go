@@ -11,7 +11,7 @@ import (
 	"github.com/golang/snappy"
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
-	pubsub_pb "github.com/libp2p/go-libp2p-pubsub/pb"
+	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	"github.com/prysmaticlabs/go-bitfield"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
@@ -20,7 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	testingDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	testingdb "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
@@ -41,8 +41,8 @@ import (
 )
 
 func TestService_ValidateSyncContributionAndProof(t *testing.T) {
-	db := testingDB.SetupDB(t)
-	headRoot, keys := fillUpBlocksAndState(context.Background(), t, db)
+	database := testingdb.SetupDB(t)
+	headRoot, keys := fillUpBlocksAndState(context.Background(), t, database)
 	defaultTopic := p2p.SyncContributionAndProofSubnetTopicFormat
 	defaultTopic = fmt.Sprintf(defaultTopic, []byte{0xAB, 0x00, 0xCC, 0x9E})
 	defaultTopic = defaultTopic + "/" + encoder.ProtocolSuffixSSZSnappy
@@ -74,9 +74,9 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
-				s.cfg.stateGen = stategen.New(db)
+				s.cfg.stateGen = stategen.New(database)
 				msg.Message.Contribution.BlockRoot = headRoot[:]
-				s.cfg.beaconDB = db
+				s.cfg.beaconDB = database
 				s.initCaches()
 				return s
 			},
@@ -110,9 +110,9 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
-				s.cfg.stateGen = stategen.New(db)
+				s.cfg.stateGen = stategen.New(database)
 				msg.Message.Contribution.BlockRoot = headRoot[:]
-				s.cfg.beaconDB = db
+				s.cfg.beaconDB = database
 				s.initCaches()
 				return s
 			},
@@ -146,8 +146,8 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
-				s.cfg.stateGen = stategen.New(db)
-				s.cfg.beaconDB = db
+				s.cfg.stateGen = stategen.New(database)
+				s.cfg.beaconDB = database
 				s.initCaches()
 				return s
 			},
@@ -181,8 +181,8 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
-				s.cfg.stateGen = stategen.New(db)
-				s.cfg.beaconDB = db
+				s.cfg.stateGen = stategen.New(database)
+				s.cfg.beaconDB = database
 				s.initCaches()
 				s.cfg.chain = &mockChain.ChainService{
 					ValidatorsRoot: [32]byte{'A'},
@@ -224,8 +224,8 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
-				s.cfg.stateGen = stategen.New(db)
-				s.cfg.beaconDB = db
+				s.cfg.stateGen = stategen.New(database)
+				s.cfg.beaconDB = database
 				s.initCaches()
 				s.cfg.chain = &mockChain.ChainService{
 					ValidatorsRoot: [32]byte{'A'},
@@ -267,8 +267,8 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
-				s.cfg.stateGen = stategen.New(db)
-				s.cfg.beaconDB = db
+				s.cfg.stateGen = stategen.New(database)
+				s.cfg.beaconDB = database
 				s.initCaches()
 				s.cfg.chain = &mockChain.ChainService{
 					ValidatorsRoot: [32]byte{'A'},
@@ -311,15 +311,15 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
-				s.cfg.stateGen = stategen.New(db)
-				s.cfg.beaconDB = db
+				s.cfg.stateGen = stategen.New(database)
+				s.cfg.beaconDB = database
 				s.initCaches()
 				s.cfg.chain = &mockChain.ChainService{
 					ValidatorsRoot: [32]byte{'A'},
 					Genesis:        time.Now().Add(-time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(msg.Message.Contribution.Slot)),
 				}
 				msg.Message.Contribution.BlockRoot = headRoot[:]
-				hState, err := db.State(context.Background(), headRoot)
+				hState, err := database.State(context.Background(), headRoot)
 				assert.NoError(t, err)
 				sc, err := hState.CurrentSyncCommittee()
 				assert.NoError(t, err)
@@ -373,10 +373,10 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
-				s.cfg.stateGen = stategen.New(db)
-				s.cfg.beaconDB = db
+				s.cfg.stateGen = stategen.New(database)
+				s.cfg.beaconDB = database
 				msg.Message.Contribution.BlockRoot = headRoot[:]
-				hState, err := db.State(context.Background(), headRoot)
+				hState, err := database.State(context.Background(), headRoot)
 				assert.NoError(t, err)
 				sc, err := hState.CurrentSyncCommittee()
 				assert.NoError(t, err)
@@ -438,11 +438,11 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
-				s.cfg.stateGen = stategen.New(db)
-				s.cfg.beaconDB = db
+				s.cfg.stateGen = stategen.New(database)
+				s.cfg.beaconDB = database
 				s.cfg.chain = chainService
 				msg.Message.Contribution.BlockRoot = headRoot[:]
-				hState, err := db.State(context.Background(), headRoot)
+				hState, err := database.State(context.Background(), headRoot)
 				assert.NoError(t, err)
 				sc, err := hState.CurrentSyncCommittee()
 				assert.NoError(t, err)
@@ -518,10 +518,10 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
-				s.cfg.stateGen = stategen.New(db)
-				s.cfg.beaconDB = db
+				s.cfg.stateGen = stategen.New(database)
+				s.cfg.beaconDB = database
 				msg.Message.Contribution.BlockRoot = headRoot[:]
-				hState, err := db.State(context.Background(), headRoot)
+				hState, err := database.State(context.Background(), headRoot)
 				assert.NoError(t, err)
 				sc, err := hState.CurrentSyncCommittee()
 				assert.NoError(t, err)
@@ -600,10 +600,10 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
-				s.cfg.stateGen = stategen.New(db)
+				s.cfg.stateGen = stategen.New(database)
 				msg.Message.Contribution.BlockRoot = headRoot[:]
-				s.cfg.beaconDB = db
-				hState, err := db.State(context.Background(), headRoot)
+				s.cfg.beaconDB = database
+				hState, err := database.State(context.Background(), headRoot)
 				assert.NoError(t, err)
 				sc, err := hState.CurrentSyncCommittee()
 				assert.NoError(t, err)
@@ -684,10 +684,10 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
-				s.cfg.stateGen = stategen.New(db)
+				s.cfg.stateGen = stategen.New(database)
 				msg.Message.Contribution.BlockRoot = headRoot[:]
-				s.cfg.beaconDB = db
-				hState, err := db.State(context.Background(), headRoot)
+				s.cfg.beaconDB = database
+				hState, err := database.State(context.Background(), headRoot)
 				assert.NoError(t, err)
 				sc, err := hState.CurrentSyncCommittee()
 				assert.NoError(t, err)
@@ -780,10 +780,10 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 				WithOperationNotifier(chainService.OperationNotifier()),
 			),
 			setupSvc: func(s *Service, msg *ethpb.SignedContributionAndProof) *Service {
-				s.cfg.stateGen = stategen.New(db)
+				s.cfg.stateGen = stategen.New(database)
 				msg.Message.Contribution.BlockRoot = headRoot[:]
-				s.cfg.beaconDB = db
-				hState, err := db.State(context.Background(), headRoot)
+				s.cfg.beaconDB = database
+				hState, err := database.State(context.Background(), headRoot)
 				assert.NoError(t, err)
 				sc, err := hState.CurrentSyncCommittee()
 				assert.NoError(t, err)
@@ -877,7 +877,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 			assert.NoError(t, err)
 			marshalledObj = snappy.Encode(nil, marshalledObj)
 			msg := &pubsub.Message{
-				Message: &pubsub_pb.Message{
+				Message: &pubsubpb.Message{
 					Data:  marshalledObj,
 					Topic: &tt.args.topic,
 				},
@@ -894,8 +894,8 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 
 func TestValidateSyncContributionAndProof(t *testing.T) {
 	ctx := context.Background()
-	db := testingDB.SetupDB(t)
-	headRoot, keys := fillUpBlocksAndState(ctx, t, db)
+	database := testingdb.SetupDB(t)
+	headRoot, keys := fillUpBlocksAndState(ctx, t, database)
 	defaultTopic := p2p.SyncContributionAndProofSubnetTopicFormat
 	defaultTopic = fmt.Sprintf(defaultTopic, []byte{0xAB, 0x00, 0xCC, 0x9E})
 	defaultTopic = defaultTopic + "/" + encoder.ProtocolSuffixSSZSnappy
@@ -927,10 +927,10 @@ func TestValidateSyncContributionAndProof(t *testing.T) {
 		WithOperationNotifier(chainService.OperationNotifier()),
 	)
 	go s.verifierRoutine()
-	s.cfg.stateGen = stategen.New(db)
+	s.cfg.stateGen = stategen.New(database)
 	msg.Message.Contribution.BlockRoot = headRoot[:]
-	s.cfg.beaconDB = db
-	hState, err := db.State(context.Background(), headRoot)
+	s.cfg.beaconDB = database
+	hState, err := database.State(context.Background(), headRoot)
 	assert.NoError(t, err)
 	sc, err := hState.CurrentSyncCommittee()
 	assert.NoError(t, err)
@@ -996,7 +996,7 @@ func TestValidateSyncContributionAndProof(t *testing.T) {
 	assert.NoError(t, err)
 	marshalledObj = snappy.Encode(nil, marshalledObj)
 	pubsubMsg := &pubsub.Message{
-		Message: &pubsub_pb.Message{
+		Message: &pubsubpb.Message{
 			Data:  marshalledObj,
 			Topic: &defaultTopic,
 		},
@@ -1049,7 +1049,7 @@ func TestValidateSyncContributionAndProof_Optimistic(t *testing.T) {
 
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(slashing)]
 	msg := &pubsub.Message{
-		Message: &pubsub_pb.Message{
+		Message: &pubsubpb.Message{
 			Data:  buf.Bytes(),
 			Topic: &topic,
 		},

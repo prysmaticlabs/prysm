@@ -259,8 +259,8 @@ func TestProposeBlock_ProposeBlockFailed(t *testing.T) {
 
 func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
 	slot := params.BeaconConfig().SlotsPerEpoch.Mul(5).Add(2)
-	graffiti := [32]byte{}
-	copy(graffiti[:], "someothergraffiti")
+	blockGraffiti := [32]byte{}
+	copy(blockGraffiti[:], "someothergraffiti")
 
 	tests := []struct {
 		name   string
@@ -270,7 +270,7 @@ func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
 			name: "phase0",
 			blocks: func() []*ethpb.GenericBeaconBlock {
 				block0, block1 := util.NewBeaconBlock(), util.NewBeaconBlock()
-				block1.Block.Body.Graffiti = graffiti[:]
+				block1.Block.Body.Graffiti = blockGraffiti[:]
 
 				var blocks []*ethpb.GenericBeaconBlock
 				for _, block := range []*ethpb.SignedBeaconBlock{block0, block1} {
@@ -288,7 +288,7 @@ func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
 			name: "altair",
 			blocks: func() []*ethpb.GenericBeaconBlock {
 				block0, block1 := util.NewBeaconBlockAltair(), util.NewBeaconBlockAltair()
-				block1.Block.Body.Graffiti = graffiti[:]
+				block1.Block.Body.Graffiti = blockGraffiti[:]
 
 				var blocks []*ethpb.GenericBeaconBlock
 				for _, block := range []*ethpb.SignedBeaconBlockAltair{block0, block1} {
@@ -306,7 +306,7 @@ func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
 			name: "bellatrix",
 			blocks: func() []*ethpb.GenericBeaconBlock {
 				block0, block1 := util.NewBeaconBlockBellatrix(), util.NewBeaconBlockBellatrix()
-				block1.Block.Body.Graffiti = graffiti[:]
+				block1.Block.Body.Graffiti = blockGraffiti[:]
 
 				var blocks []*ethpb.GenericBeaconBlock
 				for _, block := range []*ethpb.SignedBeaconBlockBellatrix{block0, block1} {
@@ -399,9 +399,9 @@ func TestProposeBlock_BlocksDoubleProposal_After54KEpochs(t *testing.T) {
 
 	secondTestBlock := util.NewBeaconBlock()
 	secondTestBlock.Block.Slot = farFuture
-	graffiti := [32]byte{}
-	copy(graffiti[:], "someothergraffiti")
-	secondTestBlock.Block.Body.Graffiti = graffiti[:]
+	blockGraffiti := [32]byte{}
+	copy(blockGraffiti[:], "someothergraffiti")
+	secondTestBlock.Block.Body.Graffiti = blockGraffiti[:]
 	m.validatorClient.EXPECT().GetBeaconBlock(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&ethpb.BlockRequest{}),
@@ -505,8 +505,8 @@ func TestProposeBlock_BroadcastsBlock(t *testing.T) {
 }
 
 func TestProposeBlock_BroadcastsBlock_WithGraffiti(t *testing.T) {
-	graffiti := []byte("12345678901234567890123456789012")
-	testProposeBlock(t, graffiti)
+	blockGraffiti := []byte("12345678901234567890123456789012")
+	testProposeBlock(t, blockGraffiti)
 }
 
 func testProposeBlock(t *testing.T, graffiti []byte) {

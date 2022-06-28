@@ -227,7 +227,7 @@ func TestSetOptimisticToInvalid(t *testing.T) {
 			3,
 			12,
 			8,
-			[][32]byte{[32]byte{'j'}},
+			[][32]byte{{'j'}},
 		},
 		{
 			"Remove tip, parent was optimistic",
@@ -237,7 +237,7 @@ func TestSetOptimisticToInvalid(t *testing.T) {
 			NonExistentNode,
 			NonExistentNode,
 			1,
-			[][32]byte{[32]byte{'i'}},
+			[][32]byte{{'i'}},
 		},
 		{
 			"Remove tip, lvh is inner and valid",
@@ -247,7 +247,7 @@ func TestSetOptimisticToInvalid(t *testing.T) {
 			6,
 			8,
 			3,
-			[][32]byte{[32]byte{'g'}, [32]byte{'h'}, [32]byte{'k'}, [32]byte{'i'}, [32]byte{'l'}},
+			[][32]byte{{'g'}, {'h'}, {'k'}, {'i'}, {'l'}},
 		},
 		{
 			"Remove inner, lvh is inner and optimistic",
@@ -257,7 +257,7 @@ func TestSetOptimisticToInvalid(t *testing.T) {
 			10,
 			12,
 			2,
-			[][32]byte{[32]byte{'h'}, [32]byte{'i'}},
+			[][32]byte{{'h'}, {'i'}},
 		},
 		{
 			"Remove tip, lvh is inner and optimistic",
@@ -267,7 +267,7 @@ func TestSetOptimisticToInvalid(t *testing.T) {
 			9,
 			11,
 			2,
-			[][32]byte{[32]byte{'k'}, [32]byte{'l'}},
+			[][32]byte{{'k'}, {'l'}},
 		},
 		{
 			"Remove tip, lvh is not an ancestor",
@@ -277,7 +277,7 @@ func TestSetOptimisticToInvalid(t *testing.T) {
 			5,
 			12,
 			7,
-			[][32]byte{[32]byte{'j'}},
+			[][32]byte{{'j'}},
 		},
 		{
 			"Remove inner, lvh is not an ancestor",
@@ -287,7 +287,7 @@ func TestSetOptimisticToInvalid(t *testing.T) {
 			NonExistentNode,
 			NonExistentNode,
 			1,
-			[][32]byte{[32]byte{'g'}, [32]byte{'h'}, [32]byte{'k'}, [32]byte{'i'}, [32]byte{'l'}},
+			[][32]byte{{'g'}, {'h'}, {'k'}, {'i'}, {'l'}},
 		},
 		{
 			"Remove not inserted, parent was invalid",
@@ -297,7 +297,7 @@ func TestSetOptimisticToInvalid(t *testing.T) {
 			3,
 			12,
 			8,
-			[][32]byte{[32]byte{'j'}},
+			[][32]byte{{'j'}},
 		},
 		{
 			"Remove not inserted, parent was valid",

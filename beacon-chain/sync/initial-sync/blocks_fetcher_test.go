@@ -343,14 +343,14 @@ func TestBlocksFetcher_RoundRobin(t *testing.T) {
 				return blocks[i].Block().Slot() < blocks[j].Block().Slot()
 			})
 
-			slots := make([]types.Slot, len(blocks))
+			ss := make([]types.Slot, len(blocks))
 			for i, block := range blocks {
-				slots[i] = block.Block().Slot()
+				ss[i] = block.Block().Slot()
 			}
 
 			log.WithFields(logrus.Fields{
 				"blocksLen": len(blocks),
-				"slots":     slots,
+				"slots":     ss,
 			}).Debug("Finished block fetching")
 
 			if len(blocks) > int(maxExpectedBlocks) {

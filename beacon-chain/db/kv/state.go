@@ -9,7 +9,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/genesis"
-	state_native "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native"
+	statenative "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
@@ -224,7 +224,7 @@ func (s *Store) saveStatesEfficientInternal(ctx context.Context, tx *bolt.Tx, bl
 			var pbState *ethpb.BeaconState
 			var err error
 			if features.Get().EnableNativeState {
-				pbState, err = state_native.ProtobufBeaconStatePhase0(rawType)
+				pbState, err = statenative.ProtobufBeaconStatePhase0(rawType)
 			} else {
 				pbState, err = v1.ProtobufBeaconState(rawType)
 			}
@@ -251,7 +251,7 @@ func (s *Store) saveStatesEfficientInternal(ctx context.Context, tx *bolt.Tx, bl
 			var pbState *ethpb.BeaconStateAltair
 			var err error
 			if features.Get().EnableNativeState {
-				pbState, err = state_native.ProtobufBeaconStateAltair(rawType)
+				pbState, err = statenative.ProtobufBeaconStateAltair(rawType)
 			} else {
 				pbState, err = v2.ProtobufBeaconState(rawType)
 			}
@@ -279,7 +279,7 @@ func (s *Store) saveStatesEfficientInternal(ctx context.Context, tx *bolt.Tx, bl
 			var pbState *ethpb.BeaconStateBellatrix
 			var err error
 			if features.Get().EnableNativeState {
-				pbState, err = state_native.ProtobufBeaconStateBellatrix(rawType)
+				pbState, err = statenative.ProtobufBeaconStateBellatrix(rawType)
 			} else {
 				pbState, err = v3.ProtobufBeaconState(rawType)
 			}

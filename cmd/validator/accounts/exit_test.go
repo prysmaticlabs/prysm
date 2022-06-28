@@ -77,11 +77,11 @@ func TestExitAccountsCli_OK(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, accountsImport(cliCtx))
 
-	_, keymanager, err := walletWithKeymanager(cliCtx)
+	_, km, err := walletWithKeymanager(cliCtx)
 	require.NoError(t, err)
-	require.NotNil(t, keymanager)
+	require.NotNil(t, km)
 
-	validatingPublicKeys, err := keymanager.FetchValidatingPublicKeys(cliCtx.Context)
+	validatingPublicKeys, err := km.FetchValidatingPublicKeys(cliCtx.Context)
 	require.NoError(t, err)
 	require.NotNil(t, validatingPublicKeys)
 
@@ -98,7 +98,7 @@ func TestExitAccountsCli_OK(t *testing.T) {
 	cfg := accounts.PerformExitCfg{
 		ValidatorClient:  mockValidatorClient,
 		NodeClient:       mockNodeClient,
-		Keymanager:       keymanager,
+		Keymanager:       km,
 		RawPubKeys:       rawPubKeys,
 		FormattedPubKeys: formattedPubKeys,
 	}
@@ -177,11 +177,11 @@ func TestExitAccountsCli_OK_AllPublicKeys(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, accountsImport(cliCtx))
 
-	_, keymanager, err := walletWithKeymanager(cliCtx)
+	_, km, err := walletWithKeymanager(cliCtx)
 	require.NoError(t, err)
-	require.NotNil(t, keymanager)
+	require.NotNil(t, km)
 
-	validatingPublicKeys, err := keymanager.FetchValidatingPublicKeys(cliCtx.Context)
+	validatingPublicKeys, err := km.FetchValidatingPublicKeys(cliCtx.Context)
 	require.NoError(t, err)
 	require.NotNil(t, validatingPublicKeys)
 
@@ -198,7 +198,7 @@ func TestExitAccountsCli_OK_AllPublicKeys(t *testing.T) {
 	cfg := accounts.PerformExitCfg{
 		ValidatorClient:  mockValidatorClient,
 		NodeClient:       mockNodeClient,
-		Keymanager:       keymanager,
+		Keymanager:       km,
 		RawPubKeys:       rawPubKeys,
 		FormattedPubKeys: formattedPubKeys,
 	}

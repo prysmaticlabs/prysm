@@ -41,7 +41,7 @@ func setupValidExit(t *testing.T) (*ethpb.SignedVoluntaryExit, state.BeaconState
 			ActivationEpoch: 0,
 		},
 	}
-	state, err := v1.InitializeFromProto(&ethpb.BeaconState{
+	st, err := v1.InitializeFromProto(&ethpb.BeaconState{
 		Validators: registry,
 		Fork: &ethpb.Fork{
 			CurrentVersion:  params.BeaconConfig().GenesisForkVersion,
@@ -50,24 +50,24 @@ func setupValidExit(t *testing.T) (*ethpb.SignedVoluntaryExit, state.BeaconState
 		Slot: params.BeaconConfig().SlotsPerEpoch * 5,
 	})
 	require.NoError(t, err)
-	err = state.SetSlot(state.Slot() + params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().ShardCommitteePeriod)))
+	err = st.SetSlot(st.Slot() + params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().ShardCommitteePeriod)))
 	require.NoError(t, err)
 
 	priv, err := bls.RandKey()
 	require.NoError(t, err)
-	exit.Signature, err = signing.ComputeDomainAndSign(state, coreTime.CurrentEpoch(state), exit.Exit, params.BeaconConfig().DomainVoluntaryExit, priv)
+	exit.Signature, err = signing.ComputeDomainAndSign(st, coreTime.CurrentEpoch(st), exit.Exit, params.BeaconConfig().DomainVoluntaryExit, priv)
 	require.NoError(t, err)
 
-	val, err := state.ValidatorAtIndex(0)
+	val, err := st.ValidatorAtIndex(0)
 	require.NoError(t, err)
 	val.PublicKey = priv.PublicKey().Marshal()
-	require.NoError(t, state.UpdateValidatorAtIndex(0, val))
+	require.NoError(t, st.UpdateValidatorAtIndex(0, val))
 
 	b := make([]byte, 32)
 	_, err = rand.Read(b)
 	require.NoError(t, err)
 
-	return exit, state
+	return exit, st
 }
 
 func TestValidateVoluntaryExit_ValidExit(t *testing.T) {

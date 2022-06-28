@@ -1,8 +1,6 @@
 package execution
 
 import (
-	"context"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
@@ -13,7 +11,7 @@ import (
 
 // UpgradeToBellatrix updates inputs a generic state to return the version Bellatrix state.
 // It inserts an empty `ExecutionPayloadHeader` into the state.
-func UpgradeToBellatrix(ctx context.Context, state state.BeaconState) (state.BeaconState, error) {
+func UpgradeToBellatrix(state state.BeaconState) (state.BeaconState, error) {
 	epoch := time.CurrentEpoch(state)
 
 	currentSyncCommittee, err := state.CurrentSyncCommittee()

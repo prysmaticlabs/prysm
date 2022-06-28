@@ -23,8 +23,8 @@ func RunParticipationRecordUpdatesTests(t *testing.T, config string) {
 	}
 }
 
-func processParticipationRecordUpdatesWrapper(t *testing.T, state state.BeaconState) (state.BeaconState, error) {
-	state, err := epoch.ProcessParticipationRecordUpdates(state)
+func processParticipationRecordUpdatesWrapper(t *testing.T, st state.BeaconState) (state.BeaconState, error) {
+	st, err := epoch.ProcessParticipationRecordUpdates(st)
 	require.NoError(t, err, "Could not process final updates")
-	return state, nil
+	return st, nil
 }

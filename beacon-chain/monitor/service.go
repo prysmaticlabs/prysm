@@ -135,24 +135,24 @@ func (s *Service) run(stateChannel chan *feed.Event, stateSub event.Subscription
 		log.WithError(err)
 		return
 	}
-	state, err := s.config.HeadFetcher.HeadState(s.ctx)
+	st, err := s.config.HeadFetcher.HeadState(s.ctx)
 	if err != nil {
 		log.WithError(err).Error("Could not get head state")
 		return
 	}
-	if state == nil {
+	if st == nil {
 		log.Error("Head state is nil")
 		return
 	}
 
-	epoch := slots.ToEpoch(state.Slot())
+	epoch := slots.ToEpoch(st.Slot())
 	log.WithField("Epoch", epoch).Info("Synced to head epoch, starting reporting performance")
 
 	s.Lock()
-	s.initializePerformanceStructures(state, epoch)
+	s.initializePerformanceStructures(st, epoch)
 	s.Unlock()
 
-	s.updateSyncCommitteeTrackedVals(state)
+	s.updateSyncCommitteeTrackedVals(st)
 
 	s.Lock()
 	s.isLogging = true
@@ -200,9 +200,9 @@ func (s *Service) Stop() error {
 func (s *Service) waitForSync(stateChannel chan *feed.Event, stateSub event.Subscription) error {
 	for {
 		select {
-		case event := <-stateChannel:
-			if event.Type == statefeed.Synced {
-				_, ok := event.Data.(*statefeed.SyncedData)
+		case e := <-stateChannel:
+			if e.Type == statefeed.Synced {
+				_, ok := e.Data.(*statefeed.SyncedData)
 				if !ok {
 					return errNotSyncedData
 				}
@@ -231,9 +231,9 @@ func (s *Service) monitorRoutine(stateChannel chan *feed.Event, stateSub event.S
 
 	for {
 		select {
-		case event := <-stateChannel:
-			if event.Type == statefeed.BlockProcessed {
-				data, ok := event.Data.(*statefeed.BlockProcessedData)
+		case e := <-stateChannel:
+			if e.Type == statefeed.BlockProcessed {
+				data, ok := e.Data.(*statefeed.BlockProcessedData)
 				if !ok {
 					log.Error("Event feed data is not of type *statefeed.BlockProcessedData")
 				} else if data.Verified {
@@ -241,31 +241,31 @@ func (s *Service) monitorRoutine(stateChannel chan *feed.Event, stateSub event.S
 					s.processBlock(s.ctx, data.SignedBlock)
 				}
 			}
-		case event := <-opChannel:
-			switch event.Type {
+		case e := <-opChannel:
+			switch e.Type {
 			case operation.UnaggregatedAttReceived:
-				data, ok := event.Data.(*operation.UnAggregatedAttReceivedData)
+				data, ok := e.Data.(*operation.UnAggregatedAttReceivedData)
 				if !ok {
 					log.Error("Event feed data is not of type *operation.UnAggregatedAttReceivedData")
 				} else {
 					s.processUnaggregatedAttestation(s.ctx, data.Attestation)
 				}
 			case operation.AggregatedAttReceived:
-				data, ok := event.Data.(*operation.AggregatedAttReceivedData)
+				data, ok := e.Data.(*operation.AggregatedAttReceivedData)
 				if !ok {
 					log.Error("Event feed data is not of type *operation.AggregatedAttReceivedData")
 				} else {
 					s.processAggregatedAttestation(s.ctx, data.Attestation)
 				}
 			case operation.ExitReceived:
-				data, ok := event.Data.(*operation.ExitReceivedData)
+				data, ok := e.Data.(*operation.ExitReceivedData)
 				if !ok {
 					log.Error("Event feed data is not of type *operation.ExitReceivedData")
 				} else {
 					s.processExit(data.Exit)
 				}
 			case operation.SyncCommitteeContributionReceived:
-				data, ok := event.Data.(*operation.SyncCommitteeContributionReceivedData)
+				data, ok := e.Data.(*operation.SyncCommitteeContributionReceivedData)
 				if !ok {
 					log.Error("Event feed data is not of type *operation.SyncCommitteeContributionReceivedData")
 				} else {
