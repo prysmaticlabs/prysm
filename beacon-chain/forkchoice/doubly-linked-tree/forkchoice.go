@@ -6,8 +6,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -153,34 +151,7 @@ func (f *ForkChoice) InsertNode(ctx context.Context, state state.BeaconState, ro
 	}
 
 	if features.Get().PullTips {
-		uj, uf, err := precompute.UnrealizedCheckpoints(ctx, state)
-		if err != nil {
-			log.WithError(err).Debug("could not compute unrealized checkpoints")
-		} else {
-			node.unrealizedJustifiedEpoch, node.unrealizedFinalizedEpoch = uj.Epoch, uf.Epoch
-			f.store.checkpointsLock.Lock()
-			if uj.Epoch > f.store.unrealizedJustifiedCheckpoint.Epoch {
-				f.store.unrealizedJustifiedCheckpoint = &forkchoicetypes.Checkpoint{
-					Epoch: uj.Epoch, Root: bytesutil.ToBytes32(uj.Root),
-				}
-			}
-			if uf.Epoch > f.store.unrealizedFinalizedCheckpoint.Epoch {
-				f.store.unrealizedJustifiedCheckpoint = &forkchoicetypes.Checkpoint{
-					Epoch: uj.Epoch, Root: bytesutil.ToBytes32(uj.Root),
-				}
-				f.store.unrealizedFinalizedCheckpoint = &forkchoicetypes.Checkpoint{
-					Epoch: uf.Epoch, Root: bytesutil.ToBytes32(uf.Root),
-				}
-			}
-
-			currentSlot := slots.CurrentSlot(f.store.genesisTime)
-			if time.CurrentEpoch(state) < slots.ToEpoch(currentSlot) {
-				jc, fc = uj, uf
-				node.justifiedEpoch = uj.Epoch
-				node.finalizedEpoch = uf.Epoch
-			}
-			f.store.checkpointsLock.Unlock()
-		}
+		jc, fc = f.store.pullTips(ctx, state, node, jc, fc)
 	}
 	return f.updateCheckpoints(ctx, jc, fc)
 }
