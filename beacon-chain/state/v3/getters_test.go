@@ -1,7 +1,6 @@
 package v3
 
 import (
-	"context"
 	"runtime/debug"
 	"testing"
 
@@ -76,7 +75,7 @@ func TestNilState_NoPanic(t *testing.T) {
 	require.ErrorIs(t, ErrNilInnerState, err)
 	_, err = st.LatestExecutionPayloadHeader()
 	require.ErrorIs(t, ErrNilInnerState, err)
-	_, _, _, err = st.UnrealizedCheckpointBalances(context.Background())
+	_, _, _, err = st.UnrealizedCheckpointBalances()
 	require.ErrorIs(t, ErrNilInnerState, err)
 
 }

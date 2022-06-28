@@ -1,7 +1,6 @@
 package v1
 
 import (
-	"context"
 	"runtime/debug"
 	"testing"
 
@@ -64,7 +63,7 @@ func TestNilState_NoPanic(t *testing.T) {
 	_ = st.PreviousJustifiedCheckpoint()
 	_ = st.CurrentJustifiedCheckpoint()
 	_ = st.FinalizedCheckpoint()
-	_, _, _, err = st.UnrealizedCheckpointBalances(context.Background())
+	_, _, _, err = st.UnrealizedCheckpointBalances()
 	_ = err
 }
 
