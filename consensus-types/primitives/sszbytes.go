@@ -1,7 +1,7 @@
 package types
 
 import (
-	fssz "github.com/ferranbt/fastssz"
+	fssz "github.com/prysmaticlabs/fastssz"
 )
 
 // SSZBytes --
