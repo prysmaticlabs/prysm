@@ -8,7 +8,7 @@ import (
 	"sort"
 	"testing"
 
-	ssz "github.com/ferranbt/fastssz"
+	ssz "github.com/prysmaticlabs/fastssz"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"

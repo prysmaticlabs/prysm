@@ -3,7 +3,7 @@
 package enginev1
 
 import (
-	ssz "github.com/ferranbt/fastssz"
+	ssz "github.com/prysmaticlabs/fastssz"
 )
 
 // MarshalSSZ ssz marshals the ExecutionPayload object
