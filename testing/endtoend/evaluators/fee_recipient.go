@@ -118,6 +118,9 @@ func feeRecipientIsPresent(conns ...*grpc.ClientConn) error {
 				return err
 			}
 			previousBlock, err := web3.BlockByHash(ctx, common.BytesToHash(ctr.GetBellatrixBlock().GetBlock().GetBody().GetExecutionPayload().ParentHash))
+			if err != nil {
+				return err
+			}
 			prevAccountBalance, err := web3.BalanceAt(ctx, account, previousBlock.Number())
 			if err != nil {
 				return err
