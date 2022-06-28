@@ -168,7 +168,7 @@ func TestHeadRoot_UseDB(t *testing.T) {
 	require.NoError(t, err)
 	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
+	require.NoError(t, beaconDB.SaveBlock(ctx, wsb, br))
 	require.NoError(t, beaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Root: br[:]}))
 	require.NoError(t, beaconDB.SaveHeadBlockRoot(ctx, br))
 	r, err := service.HeadRoot(ctx)

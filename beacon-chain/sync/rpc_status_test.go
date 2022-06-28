@@ -562,7 +562,7 @@ func TestStatusRPCRequest_FinalizedBlockSkippedSlots(t *testing.T) {
 
 	wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
 	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(context.Background(), wsb))
+	require.NoError(t, db.SaveBlock(context.Background(), wsb, genRoot))
 	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), genRoot))
 	blocksTillHead := makeBlocks(t, 1, 1000, genRoot)
 	require.NoError(t, db.SaveBlocks(context.Background(), blocksTillHead))

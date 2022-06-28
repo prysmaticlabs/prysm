@@ -182,7 +182,7 @@ func (s *ChainService) ReceiveBlockInitialSync(ctx context.Context, block interf
 		return err
 	}
 	if s.DB != nil {
-		if err := s.DB.SaveBlock(ctx, block); err != nil {
+		if err := s.DB.SaveBlock(ctx, block, signingRoot); err != nil {
 			return err
 		}
 		logrus.Infof("Saved block with root: %#x at slot %d", signingRoot, block.Block().Slot())
@@ -210,7 +210,7 @@ func (s *ChainService) ReceiveBlockBatch(ctx context.Context, blks []interfaces.
 			return err
 		}
 		if s.DB != nil {
-			if err := s.DB.SaveBlock(ctx, b); err != nil {
+			if err := s.DB.SaveBlock(ctx, b, signingRoot); err != nil {
 				return err
 			}
 			logrus.Infof("Saved block with root: %#x at slot %d", signingRoot, b.Block().Slot())
@@ -241,7 +241,7 @@ func (s *ChainService) ReceiveBlock(ctx context.Context, block interfaces.Signed
 		return err
 	}
 	if s.DB != nil {
-		if err := s.DB.SaveBlock(ctx, block); err != nil {
+		if err := s.DB.SaveBlock(ctx, block, signingRoot); err != nil {
 			return err
 		}
 		logrus.Infof("Saved block with root: %#x at slot %d", signingRoot, block.Block().Slot())

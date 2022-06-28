@@ -224,7 +224,7 @@ func TestService_ProcessAttestationsAndUpdateHead(t *testing.T) {
 	copied, err = service.cfg.StateGen.StateByRoot(ctx, tRoot)
 	require.NoError(t, err)
 	require.Equal(t, 2, fcs.NodeCount())
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb, tRoot))
 
 	// Generate attestatios for this block in Slot 1
 	atts, err := util.GenerateAttestations(copied, pks, 1, 1, false)

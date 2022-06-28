@@ -27,9 +27,9 @@ import (
 func startChainService(t testing.TB, st state.BeaconState, block interfaces.SignedBeaconBlock, engineMock *engineMock) *blockchain.Service {
 	db := testDB.SetupDB(t)
 	ctx := context.Background()
-	require.NoError(t, db.SaveBlock(ctx, block))
 	r, err := block.Block().HashTreeRoot()
 	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, block, r))
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, r))
 	require.NoError(t, db.SaveState(ctx, st, r))
 	cp := &ethpb.Checkpoint{

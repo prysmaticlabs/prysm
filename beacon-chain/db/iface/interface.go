@@ -64,7 +64,7 @@ type NoHeadAccessDatabase interface {
 
 	// Block related methods.
 	DeleteBlock(ctx context.Context, root [32]byte) error
-	SaveBlock(ctx context.Context, block interfaces.SignedBeaconBlock) error
+	SaveBlock(ctx context.Context, block interfaces.SignedBeaconBlock, blockRoot [32]byte) error
 	SaveBlocks(ctx context.Context, blocks []interfaces.SignedBeaconBlock) error
 	SaveGenesisBlockRoot(ctx context.Context, blockRoot [32]byte) error
 	// State related methods.

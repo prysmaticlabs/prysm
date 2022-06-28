@@ -191,7 +191,7 @@ func TestChainStartStop_GenesisZeroHashes(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveState(ctx, s, blkRoot))
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, blkRoot))
-	require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
+	require.NoError(t, beaconDB.SaveBlock(ctx, wsb, blkRoot))
 	require.NoError(t, beaconDB.SaveJustifiedCheckpoint(ctx, &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}))
 	require.NoError(t, beaconDB.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{Root: blkRoot[:]}))
 	chainService.cfg.FinalizedStateAtStartUp = s
@@ -557,9 +557,9 @@ func BenchmarkHasBlockDB(b *testing.B) {
 	blk := util.NewBeaconBlock()
 	wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
 	require.NoError(b, err)
-	require.NoError(b, s.cfg.BeaconDB.SaveBlock(ctx, wsb))
 	r, err := blk.Block.HashTreeRoot()
 	require.NoError(b, err)
+	require.NoError(b, s.cfg.BeaconDB.SaveBlock(ctx, wsb, r))
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

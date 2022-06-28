@@ -1341,7 +1341,7 @@ func TestBlocksQueue_stuckWhenHeadIsSetToOrphanedBlock(t *testing.T) {
 			}
 
 			// Block is not already processed, and parent exists in database - process.
-			require.NoError(t, beaconDB.SaveBlock(ctx, blk))
+			require.NoError(t, beaconDB.SaveBlock(ctx, blk, blkRoot))
 			require.NoError(t, st.SetSlot(blk.Block().Slot()))
 		}
 	}

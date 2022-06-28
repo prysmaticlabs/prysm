@@ -630,10 +630,15 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 	parentRoot, err := wrappedParentBlock.Block().HashTreeRoot()
 	require.NoError(t, err)
 
+	type justifiedData struct {
+		block interfaces.SignedBeaconBlock
+		root  [32]byte
+	}
+
 	tests := []struct {
 		name      string
 		blk       interfaces.BeaconBlock
-		justified interfaces.SignedBeaconBlock
+		justified justifiedData
 		err       error
 	}{
 		{
@@ -646,13 +651,15 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 				require.NoError(tt, err)
 				return wr
 			}(t),
-			justified: func(tt *testing.T) interfaces.SignedBeaconBlock {
+			justified: func(tt *testing.T) justifiedData {
 				blk := util.NewBeaconBlockBellatrix()
 				blk.Block.Slot = 32
 				blk.Block.ParentRoot = parentRoot[:]
 				wr, err := wrapper.WrappedSignedBeaconBlock(blk)
 				require.NoError(tt, err)
-				return wr
+				r, err := wr.Block().HashTreeRoot()
+				require.NoError(t, err)
+				return justifiedData{block: wr, root: r}
 			}(t),
 			err: nil,
 		},
@@ -666,13 +673,15 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 				require.NoError(tt, err)
 				return wr
 			}(t),
-			justified: func(tt *testing.T) interfaces.SignedBeaconBlock {
+			justified: func(tt *testing.T) justifiedData {
 				blk := util.NewBeaconBlockAltair()
 				blk.Block.Slot = 32
 				blk.Block.ParentRoot = parentRoot[:]
 				wr, err := wrapper.WrappedSignedBeaconBlock(blk)
 				require.NoError(tt, err)
-				return wr
+				r, err := wr.Block().HashTreeRoot()
+				require.NoError(t, err)
+				return justifiedData{block: wr, root: r}
 			}(t),
 			err: errNotOptimisticCandidate,
 		},
@@ -686,20 +695,22 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 				require.NoError(tt, err)
 				return wr
 			}(t),
-			justified: func(tt *testing.T) interfaces.SignedBeaconBlock {
+			justified: func(tt *testing.T) justifiedData {
 				blk := util.NewBeaconBlockBellatrix()
 				blk.Block.Slot = 32
 				blk.Block.ParentRoot = parentRoot[:]
 				wr, err := wrapper.WrappedSignedBeaconBlock(blk)
 				require.NoError(tt, err)
-				return wr
+				r, err := wr.Block().HashTreeRoot()
+				require.NoError(t, err)
+				return justifiedData{block: wr, root: r}
 			}(t),
 			err: errNotOptimisticCandidate,
 		},
 	}
 	for _, tt := range tests {
-		require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, tt.justified))
-		require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrappedParentBlock))
+		require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, tt.justified.block, tt.justified.root))
+		require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wrappedParentBlock, parentRoot))
 
 		err = service.optimisticCandidateBlock(ctx, tt.blk)
 		if tt.err != nil {

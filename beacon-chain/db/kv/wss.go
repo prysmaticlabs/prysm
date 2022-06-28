@@ -56,7 +56,7 @@ func (s *Store) SaveOrigin(ctx context.Context, serState, serBlock []byte) error
 		return errors.Wrap(err, "could not compute HashTreeRoot of checkpoint block")
 	}
 	log.Infof("saving checkpoint block to db, w/ root=%#x", blockRoot)
-	if err := s.SaveBlock(ctx, wblk); err != nil {
+	if err := s.SaveBlock(ctx, wblk, blockRoot); err != nil {
 		return errors.Wrap(err, "could not save checkpoint block")
 	}
 

@@ -100,9 +100,9 @@ func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 	b, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
 	require.NoError(t, err)
 	require.NoError(t, wrapper.SetBlockSlot(b, headState.Slot()))
-	require.NoError(t, db.SaveBlock(ctx, b))
 	gRoot, err := b.Block().HashTreeRoot()
 	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, b, gRoot))
 	require.NoError(t, db.SaveState(ctx, headState, gRoot))
 
 	offset := int64(headState.Slot().Mul(params.BeaconConfig().SecondsPerSlot))

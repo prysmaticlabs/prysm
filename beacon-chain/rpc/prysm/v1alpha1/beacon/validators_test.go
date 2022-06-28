@@ -1721,7 +1721,7 @@ func runGetValidatorParticipationCurrentAndPrevEpoch(t *testing.T, genState stat
 	require.NoError(t, err)
 
 	require.NoError(t, beaconDB.SaveState(ctx, genState, gRoot))
-	require.NoError(t, beaconDB.SaveBlock(ctx, gb))
+	require.NoError(t, beaconDB.SaveBlock(ctx, gb, gRoot))
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, gRoot))
 
 	m := &mock.ChainService{State: genState}

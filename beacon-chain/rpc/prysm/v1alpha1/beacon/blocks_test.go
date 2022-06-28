@@ -895,7 +895,7 @@ func runListBlocksGenesis(t *testing.T, blk interfaces.SignedBeaconBlock, blkCon
 
 	root, err := blk.Block().HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, blk))
+	require.NoError(t, db.SaveBlock(ctx, blk, root))
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 	blkContainer.BlockRoot = root[:]
 	blkContainer.Canonical = true
@@ -975,7 +975,7 @@ func runListBeaconBlocksGenesisMultiBlocks(t *testing.T, genBlock interfaces.Sig
 	// Should return the proper genesis block if it exists.
 	root, err := genBlock.Block().HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, genBlock))
+	require.NoError(t, db.SaveBlock(ctx, genBlock, root))
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
 	count := types.Slot(100)
@@ -1097,7 +1097,7 @@ func runListBeaconBlocksPagination(t *testing.T, orphanedBlk interfaces.SignedBe
 
 	orphanedBlkRoot, err := orphanedBlk.Block().HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, orphanedBlk))
+	require.NoError(t, db.SaveBlock(ctx, orphanedBlk, orphanedBlkRoot))
 
 	bs := &Server{
 		BeaconDB:         db,

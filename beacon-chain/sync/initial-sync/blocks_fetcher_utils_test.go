@@ -211,7 +211,9 @@ func TestBlocksFetcher_findFork(t *testing.T) {
 		blocks, err := fetcher.requestBlocks(ctx, req, peers[pidInd%len(peers)])
 		require.NoError(t, err)
 		for _, blk := range blocks {
-			require.NoError(t, beaconDB.SaveBlock(ctx, blk))
+			r, err := blk.Block().HashTreeRoot()
+			require.NoError(t, err)
+			require.NoError(t, beaconDB.SaveBlock(ctx, blk, r))
 			require.NoError(t, st.SetSlot(blk.Block().Slot()))
 		}
 		pidInd++
@@ -286,7 +288,9 @@ func TestBlocksFetcher_findFork(t *testing.T) {
 
 	// Process returned blocks and then attempt to extend chain (ensuring that parent block exists).
 	for _, blk := range fork.blocks {
-		require.NoError(t, beaconDB.SaveBlock(ctx, blk))
+		r, err := blk.Block().HashTreeRoot()
+		require.NoError(t, err)
+		require.NoError(t, beaconDB.SaveBlock(ctx, blk, r))
 		require.NoError(t, st.SetSlot(blk.Block().Slot()))
 	}
 	assert.Equal(t, forkSlot.Add(uint64(len(fork.blocks)-1)), mc.HeadSlot())

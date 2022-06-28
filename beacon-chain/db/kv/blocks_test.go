@@ -98,15 +98,19 @@ func TestStore_SaveBlock_NoDuplicates(t *testing.T) {
 			// First we save a previous block to ensure the cache max size is reached.
 			prevBlock, err := tt.newBlock(slot-1, bytesutil.PadTo([]byte{1, 2, 3}, 32))
 			require.NoError(t, err)
-			require.NoError(t, db.SaveBlock(ctx, prevBlock))
+			r, err := prevBlock.Block().HashTreeRoot()
+			require.NoError(t, err)
+			require.NoError(t, db.SaveBlock(ctx, prevBlock, r))
 
 			blk, err := tt.newBlock(slot, bytesutil.PadTo([]byte{1, 2, 3}, 32))
+			require.NoError(t, err)
+			r, err = blk.Block().HashTreeRoot()
 			require.NoError(t, err)
 
 			// Even with a full cache, saving new blocks should not cause
 			// duplicated blocks in the DB.
 			for i := 0; i < 100; i++ {
-				require.NoError(t, db.SaveBlock(ctx, blk))
+				require.NoError(t, db.SaveBlock(ctx, blk, r))
 			}
 
 			f := filters.NewFilter().SetStartSlot(slot).SetEndSlot(slot)
@@ -134,7 +138,7 @@ func TestStore_BlocksCRUD(t *testing.T) {
 			retrievedBlock, err := db.Block(ctx, blockRoot)
 			require.NoError(t, err)
 			assert.DeepEqual(t, nil, retrievedBlock, "Expected nil block")
-			require.NoError(t, db.SaveBlock(ctx, blk))
+			require.NoError(t, db.SaveBlock(ctx, blk, blockRoot))
 			assert.Equal(t, true, db.HasBlock(ctx, blockRoot), "Expected block to exist in the db")
 			retrievedBlock, err = db.Block(ctx, blockRoot)
 			require.NoError(t, err)
@@ -256,7 +260,7 @@ func TestStore_DeleteJustifiedBlock(t *testing.T) {
 	require.NoError(t, err)
 	blk, err := wrapper.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, blk))
+	require.NoError(t, db.SaveBlock(ctx, blk, root))
 	require.NoError(t, db.SaveState(ctx, st, root))
 	require.NoError(t, db.SaveJustifiedCheckpoint(ctx, cp))
 	require.ErrorIs(t, db.DeleteBlock(ctx, root), ErrDeleteJustifiedAndFinalized)
@@ -275,7 +279,7 @@ func TestStore_DeleteFinalizedBlock(t *testing.T) {
 	require.NoError(t, err)
 	blk, err := wrapper.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, blk))
+	require.NoError(t, db.SaveBlock(ctx, blk, root))
 	require.NoError(t, db.SaveState(ctx, st, root))
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 	require.NoError(t, db.SaveFinalizedCheckpoint(ctx, cp))
@@ -291,7 +295,7 @@ func TestStore_GenesisBlock(t *testing.T) {
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, blockRoot))
 	wsb, err := wrapper.WrappedSignedBeaconBlock(genesisBlock)
 	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, wsb))
+	require.NoError(t, db.SaveBlock(ctx, wsb, blockRoot))
 	retrievedBlock, err := db.GenesisBlock(ctx)
 	require.NoError(t, err)
 	assert.Equal(t, true, proto.Equal(genesisBlock, retrievedBlock.Proto()), "Wanted: %v, received: %v", genesisBlock, retrievedBlock)
@@ -309,7 +313,7 @@ func TestStore_BlocksCRUD_NoCache(t *testing.T) {
 			retrievedBlock, err := db.Block(ctx, blockRoot)
 			require.NoError(t, err)
 			require.DeepEqual(t, nil, retrievedBlock, "Expected nil block")
-			require.NoError(t, db.SaveBlock(ctx, blk))
+			require.NoError(t, db.SaveBlock(ctx, blk, blockRoot))
 			db.blockCache.Del(string(blockRoot[:]))
 			assert.Equal(t, true, db.HasBlock(ctx, blockRoot), "Expected block to exist in the db")
 			retrievedBlock, err = db.Block(ctx, blockRoot)
@@ -421,8 +425,8 @@ func TestStore_Blocks_VerifyBlockRoots(t *testing.T) {
 			r2, err := b2.Block().HashTreeRoot()
 			require.NoError(t, err)
 
-			require.NoError(t, db.SaveBlock(ctx, b1))
-			require.NoError(t, db.SaveBlock(ctx, b2))
+			require.NoError(t, db.SaveBlock(ctx, b1, r1))
+			require.NoError(t, db.SaveBlock(ctx, b2, r2))
 
 			filter := filters.NewFilter().SetStartSlot(b1.Block().Slot()).SetEndSlot(b2.Block().Slot())
 			roots, err := db.BlockRoots(ctx, filter)
@@ -508,14 +512,20 @@ func TestStore_SaveBlock_CanGetHighestAt(t *testing.T) {
 
 			block1, err := tt.newBlock(types.Slot(1), nil)
 			require.NoError(t, err)
+			r1, err := block1.Block().HashTreeRoot()
+			require.NoError(t, err)
 			block2, err := tt.newBlock(types.Slot(10), nil)
+			require.NoError(t, err)
+			r2, err := block2.Block().HashTreeRoot()
 			require.NoError(t, err)
 			block3, err := tt.newBlock(types.Slot(100), nil)
 			require.NoError(t, err)
+			r3, err := block3.Block().HashTreeRoot()
+			require.NoError(t, err)
 
-			require.NoError(t, db.SaveBlock(ctx, block1))
-			require.NoError(t, db.SaveBlock(ctx, block2))
-			require.NoError(t, db.SaveBlock(ctx, block3))
+			require.NoError(t, db.SaveBlock(ctx, block1, r1))
+			require.NoError(t, db.SaveBlock(ctx, block2, r2))
+			require.NoError(t, db.SaveBlock(ctx, block3, r3))
 
 			_, roots, err := db.HighestRootsBelowSlot(ctx, 2)
 			require.NoError(t, err)
@@ -558,10 +568,12 @@ func TestStore_GenesisBlock_CanGetHighestAt(t *testing.T) {
 			genesisRoot, err := genesisBlock.Block().HashTreeRoot()
 			require.NoError(t, err)
 			require.NoError(t, db.SaveGenesisBlockRoot(ctx, genesisRoot))
-			require.NoError(t, db.SaveBlock(ctx, genesisBlock))
+			require.NoError(t, db.SaveBlock(ctx, genesisBlock, genesisRoot))
 			block1, err := tt.newBlock(types.Slot(1), nil)
 			require.NoError(t, err)
-			require.NoError(t, db.SaveBlock(ctx, block1))
+			r, err := block1.Block().HashTreeRoot()
+			require.NoError(t, err)
+			require.NoError(t, db.SaveBlock(ctx, block1, r))
 
 			_, roots, err := db.HighestRootsBelowSlot(ctx, 2)
 			require.NoError(t, err)
@@ -603,7 +615,9 @@ func TestStore_SaveBlocks_HasCachedBlocks(t *testing.T) {
 				b[i] = blk
 			}
 
-			require.NoError(t, db.SaveBlock(ctx, b[0]))
+			r, err := b[0].Block().HashTreeRoot()
+			require.NoError(t, err)
+			require.NoError(t, db.SaveBlock(ctx, b[0], r))
 			require.NoError(t, db.SaveBlocks(ctx, b))
 			f := filters.NewFilter().SetStartSlot(0).SetEndSlot(500)
 
@@ -651,20 +665,19 @@ func TestStore_BlocksBySlot_BlockRootsBySlot(t *testing.T) {
 
 			b1, err := tt.newBlock(types.Slot(20), nil)
 			require.NoError(t, err)
-			require.NoError(t, db.SaveBlock(ctx, b1))
-			b2, err := tt.newBlock(types.Slot(100), bytesutil.PadTo([]byte("parent1"), 32))
-			require.NoError(t, err)
-			require.NoError(t, db.SaveBlock(ctx, b2))
-			b3, err := tt.newBlock(types.Slot(100), bytesutil.PadTo([]byte("parent2"), 32))
-			require.NoError(t, err)
-			require.NoError(t, db.SaveBlock(ctx, b3))
-
 			r1, err := b1.Block().HashTreeRoot()
+			require.NoError(t, err)
+			require.NoError(t, db.SaveBlock(ctx, b1, r1))
+			b2, err := tt.newBlock(types.Slot(100), bytesutil.PadTo([]byte("parent1"), 32))
 			require.NoError(t, err)
 			r2, err := b2.Block().HashTreeRoot()
 			require.NoError(t, err)
+			require.NoError(t, db.SaveBlock(ctx, b2, r2))
+			b3, err := tt.newBlock(types.Slot(100), bytesutil.PadTo([]byte("parent2"), 32))
+			require.NoError(t, err)
 			r3, err := b3.Block().HashTreeRoot()
 			require.NoError(t, err)
+			require.NoError(t, db.SaveBlock(ctx, b3, r3))
 
 			retrievedBlocks, err := db.BlocksBySlot(ctx, 1)
 			require.NoError(t, err)

@@ -28,9 +28,9 @@ func TestRestore(t *testing.T) {
 	head.Block.Slot = 5000
 	wsb, err := wrapper.WrappedSignedBeaconBlock(head)
 	require.NoError(t, err)
-	require.NoError(t, backupDb.SaveBlock(ctx, wsb))
 	root, err := head.Block.HashTreeRoot()
 	require.NoError(t, err)
+	require.NoError(t, backupDb.SaveBlock(ctx, wsb, root))
 	st, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, backupDb.SaveState(ctx, st, root))

@@ -536,7 +536,7 @@ func (s *Service) InsertSlashingsToForkChoiceStore(ctx context.Context, slashing
 func (s *Service) savePostStateInfo(ctx context.Context, r [32]byte, b interfaces.SignedBeaconBlock, st state.BeaconState) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.savePostStateInfo")
 	defer span.End()
-	if err := s.cfg.BeaconDB.SaveBlock(ctx, b); err != nil {
+	if err := s.cfg.BeaconDB.SaveBlock(ctx, b, r); err != nil {
 		return errors.Wrapf(err, "could not save block from slot %d", b.Block().Slot())
 	}
 	if err := s.cfg.StateGen.SaveState(ctx, r, st); err != nil {
