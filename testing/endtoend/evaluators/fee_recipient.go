@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"math/big"
 	"os"
 	"path/filepath"
 
@@ -78,6 +77,7 @@ func feeRecipientIsPresent(conns ...*grpc.ClientConn) error {
 		switch ctr.Block.(type) {
 		case *ethpb.BeaconBlockContainer_BellatrixBlock:
 			var account common.Address
+
 			fr := ctr.GetBellatrixBlock().Block.Body.ExecutionPayload.FeeRecipient
 			if len(fr) != 0 && hexutil.Encode(fr) != params.BeaconConfig().EthBurnAddressHex {
 				account = common.BytesToAddress(fr)
@@ -109,20 +109,21 @@ func feeRecipientIsPresent(conns ...*grpc.ClientConn) error {
 					return fmt.Errorf("fee recipient %s does not match the default fee recipient %s", account.Hex(), configFiles[0].DefaultConfig.FeeRecipient)
 				}
 			}
-			latestBlockNum, err := web3.BlockNumber(ctx)
+			currentBlock, err := web3.BlockByHash(ctx, common.BytesToHash(ctr.GetBellatrixBlock().GetBlock().GetBody().GetExecutionPayload().BlockHash))
 			if err != nil {
 				return err
 			}
-			accountBalance, err := web3.BalanceAt(ctx, account, big.NewInt(0).SetUint64(latestBlockNum))
+			accountBalance, err := web3.BalanceAt(ctx, account, currentBlock.Number())
 			if err != nil {
 				return err
 			}
-			prevAccountBalance, err := web3.BalanceAt(ctx, account, big.NewInt(0).SetUint64(latestBlockNum-uint64(params.BeaconConfig().SlotsPerEpoch)))
+			previousBlock, err := web3.BlockByHash(ctx, common.BytesToHash(ctr.GetBellatrixBlock().GetBlock().GetBody().GetExecutionPayload().ParentHash))
+			prevAccountBalance, err := web3.BalanceAt(ctx, account, previousBlock.Number())
 			if err != nil {
 				return err
 			}
 			if accountBalance.Uint64() <= prevAccountBalance.Uint64() {
-				log.Infof("block num: %d account balance: %d pre account balance %d", latestBlockNum, accountBalance, prevAccountBalance)
+				log.Infof("current block num: %d , previous block num: %d , account balance: %d,  pre account balance %d", currentBlock.Number(), previousBlock.Number(), accountBalance, prevAccountBalance)
 				return errors.Errorf("account balance didn't change after applying fee recipient for account: %s", account.Hex())
 			} else {
 				log.Infof("current account balance %v ,increased from previous account balance %v ", accountBalance, prevAccountBalance)
