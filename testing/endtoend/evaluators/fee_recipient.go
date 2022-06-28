@@ -113,6 +113,7 @@ func feeRecipientIsPresent(conns ...*grpc.ClientConn) error {
 			if err != nil {
 				return err
 			}
+
 			accountBalance, err := web3.BalanceAt(ctx, account, currentBlock.Number())
 			if err != nil {
 				return err
@@ -125,7 +126,7 @@ func feeRecipientIsPresent(conns ...*grpc.ClientConn) error {
 			if err != nil {
 				return err
 			}
-			if accountBalance.Uint64() <= prevAccountBalance.Uint64() {
+			if currentBlock.GasUsed() > 0 && accountBalance.Uint64() <= prevAccountBalance.Uint64() {
 				log.Infof("current block num: %d , previous block num: %d , account balance: %d,  pre account balance %d", currentBlock.Number(), previousBlock.Number(), accountBalance, prevAccountBalance)
 				return errors.Errorf("account balance didn't change after applying fee recipient for account: %s", account.Hex())
 			} else {
