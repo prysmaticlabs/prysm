@@ -8,9 +8,9 @@ import (
 	"sort"
 	"sync"
 
-	ssz "github.com/ferranbt/fastssz"
 	"github.com/golang/snappy"
 	"github.com/pkg/errors"
+	ssz "github.com/prysmaticlabs/fastssz"
 	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
