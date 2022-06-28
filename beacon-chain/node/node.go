@@ -975,5 +975,12 @@ func (b *BeaconNode) registerBuilderService() error {
 }
 
 func hasNetworkFlag(cliCtx *cli.Context) bool {
-	return cliCtx.IsSet(features.PraterTestnet.Name) || cliCtx.IsSet(features.Mainnet.Name) || cliCtx.IsSet(features.RopstenTestnet.Name)
+	for _, flag := range features.NetworkFlags {
+		for _, name := range flag.Names() {
+			if cliCtx.IsSet(name) {
+				return true
+			}
+		}
+	}
+	return false
 }
