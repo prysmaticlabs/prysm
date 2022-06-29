@@ -14,6 +14,7 @@ import (
 	grpcopentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpcprometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
@@ -112,6 +113,7 @@ type Config struct {
 	ExecutionEngineCaller   powchain.EngineCaller
 	ProposerIdsCache        *cache.ProposerPayloadIDsCache
 	OptimisticModeFetcher   blockchain.OptimisticModeFetcher
+	BlockBuilder            builder.BlockBuilder
 }
 
 // NewService instantiates a new RPC service instance that will
@@ -216,6 +218,7 @@ func (s *Service) Start() {
 		ExecutionEngineCaller:  s.cfg.ExecutionEngineCaller,
 		BeaconDB:               s.cfg.BeaconDB,
 		ProposerSlotIndexCache: s.cfg.ProposerIdsCache,
+		BlockBuilder:           s.cfg.BlockBuilder,
 	}
 	validatorServerV1 := &validator.Server{
 		HeadFetcher:           s.cfg.HeadFetcher,
