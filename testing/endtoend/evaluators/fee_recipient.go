@@ -12,6 +12,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/runtime/interop"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/components"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
@@ -70,11 +71,27 @@ func feeRecipientIsPresent(conns ...*grpc.ClientConn) error {
 				return errors.Wrap(err, "failed to get validators")
 			}
 			publickey := validator.GetPublicKey()
+			isDeterministicKey := false
+			validatorNum := int(params.BeaconConfig().MinGenesisActiveValidatorCount) // matches validator start in validator component
+			_, pubs, err := interop.DeterministicallyGenerateKeys(uint64(0), uint64(validatorNum))
+			if err != nil {
+				return err
+			}
+			for _, pub := range pubs {
+				if hexutil.Encode(publickey) == hexutil.Encode(pub.Marshal()) {
+					isDeterministicKey = true
+					break
+				}
+			}
 			// calculate deterministic fee recipient using first 20 bytes of public key
 			deterministicFeeRecipient := common.HexToAddress(hexutil.Encode(publickey[:fieldparams.FeeRecipientLength])).Hex()
-			if deterministicFeeRecipient != account.Hex() && components.DefaultFeeRecipientAddress != account.Hex() {
-				return fmt.Errorf("publickey %s, fee recipient %s does not match the proposer settings fee recipient %s nor the default fee recipient %s",
-					hexutil.Encode(publickey), account.Hex(), deterministicFeeRecipient, components.DefaultFeeRecipientAddress)
+			if isDeterministicKey && deterministicFeeRecipient != account.Hex() {
+				return fmt.Errorf("publickey %s, fee recipient %s does not match the proposer settings fee recipient %s",
+					hexutil.Encode(publickey), account.Hex(), deterministicFeeRecipient)
+			}
+			if !isDeterministicKey && components.DefaultFeeRecipientAddress != account.Hex() {
+				return fmt.Errorf("publickey %s, fee recipient %s does not match the default fee recipient %s",
+					hexutil.Encode(publickey), account.Hex(), components.DefaultFeeRecipientAddress)
 			}
 			currentBlock, err := web3.BlockByHash(ctx, common.BytesToHash(ctr.GetBellatrixBlock().GetBlock().GetBody().GetExecutionPayload().BlockHash))
 			if err != nil {
