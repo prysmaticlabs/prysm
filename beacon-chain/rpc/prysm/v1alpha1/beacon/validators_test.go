@@ -1525,7 +1525,7 @@ func TestServer_GetValidatorParticipation_CurrentAndPrevEpoch(t *testing.T) {
 	}
 
 	atts := []*ethpb.PendingAttestation{{
-		Data:            util.HydrateAttestationData(&ethpb.AttestationData{}),
+		Data:            util.NewAttestationUtil().HydrateAttestationData(&ethpb.AttestationData{}),
 		InclusionDelay:  1,
 		AggregationBits: bitfield.NewBitlist(validatorCount / uint64(params.BeaconConfig().SlotsPerEpoch)),
 	}}
@@ -1607,7 +1607,7 @@ func TestServer_GetValidatorParticipation_OrphanedUntilGenesis(t *testing.T) {
 	}
 
 	atts := []*ethpb.PendingAttestation{{
-		Data:            util.HydrateAttestationData(&ethpb.AttestationData{}),
+		Data:            util.NewAttestationUtil().HydrateAttestationData(&ethpb.AttestationData{}),
 		InclusionDelay:  1,
 		AggregationBits: bitfield.NewBitlist(validatorCount / uint64(params.BeaconConfig().SlotsPerEpoch)),
 	}}
@@ -2292,9 +2292,10 @@ func TestServer_GetIndividualVotes_Working(t *testing.T) {
 	require.NoError(t, beaconState.SetValidators(stateWithValidators.Validators()))
 
 	bf := bitfield.NewBitlist(validators / uint64(params.BeaconConfig().SlotsPerEpoch))
-	att1 := util.NewAttestation()
+	au := util.AttestationUtil{}
+	att1 := au.NewAttestation()
 	att1.AggregationBits = bf
-	att2 := util.NewAttestation()
+	att2 := au.NewAttestation()
 	att2.AggregationBits = bf
 	rt := [32]byte{'A'}
 	att1.Data.Target.Root = rt[:]
