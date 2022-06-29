@@ -4,8 +4,8 @@ import (
 	"context"
 	"math/big"
 
-	fastssz "github.com/ferranbt/fastssz"
 	"github.com/pkg/errors"
+	fastssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
