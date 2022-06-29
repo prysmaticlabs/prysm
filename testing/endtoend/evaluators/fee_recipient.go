@@ -73,7 +73,8 @@ func feeRecipientIsPresent(conns ...*grpc.ClientConn) error {
 			// calculate deterministic fee recipient using first 20 bytes of public key
 			deterministicFeeRecipient := common.HexToAddress(hexutil.Encode(publickey[:fieldparams.FeeRecipientLength])).Hex()
 			if deterministicFeeRecipient != account.Hex() && components.DefaultFeeRecipientAddress != account.Hex() {
-				return fmt.Errorf("publickey %s, fee recipient %s does not match the proposer settings fee recipient %s nor the default fee recipient %s", account.Hex(), deterministicFeeRecipient, components.DefaultFeeRecipientAddress)
+				return fmt.Errorf("publickey %s, fee recipient %s does not match the proposer settings fee recipient %s nor the default fee recipient %s",
+					hexutil.Encode(publickey), account.Hex(), deterministicFeeRecipient, components.DefaultFeeRecipientAddress)
 			}
 			currentBlock, err := web3.BlockByHash(ctx, common.BytesToHash(ctr.GetBellatrixBlock().GetBlock().GetBody().GetExecutionPayload().BlockHash))
 			if err != nil {
