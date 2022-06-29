@@ -1,8 +1,17 @@
 package doublylinkedtree
 
 import (
+	"context"
+
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 func (s *Store) setUnrealizedJustifiedEpoch(root [32]byte, epoch types.Epoch) error {
@@ -45,10 +54,47 @@ func (f *ForkChoice) UpdateUnrealizedCheckpoints() {
 		node.justifiedEpoch = node.unrealizedJustifiedEpoch
 		node.finalizedEpoch = node.unrealizedFinalizedEpoch
 		if node.justifiedEpoch > f.store.justifiedCheckpoint.Epoch {
-			f.store.justifiedCheckpoint.Epoch = node.justifiedEpoch
+			if node.justifiedEpoch > f.store.bestJustifiedCheckpoint.Epoch {
+				f.store.bestJustifiedCheckpoint = f.store.unrealizedJustifiedCheckpoint
+			}
+			f.store.justifiedCheckpoint = f.store.unrealizedJustifiedCheckpoint
 		}
 		if node.finalizedEpoch > f.store.finalizedCheckpoint.Epoch {
-			f.store.finalizedCheckpoint.Epoch = node.finalizedEpoch
+			f.store.justifiedCheckpoint = f.store.unrealizedJustifiedCheckpoint
+			f.store.finalizedCheckpoint = f.store.unrealizedFinalizedCheckpoint
 		}
 	}
+}
+
+func (s *Store) pullTips(ctx context.Context, state state.BeaconState, node *Node, jc, fc *ethpb.Checkpoint) (*ethpb.Checkpoint, *ethpb.Checkpoint) {
+	var uj, uf *ethpb.Checkpoint
+	uj, uf, err := precompute.UnrealizedCheckpoints(ctx, state)
+	if err != nil {
+		log.WithError(err).Debug("could not compute unrealized checkpoints")
+		uj, uf = jc, fc
+	}
+	node.unrealizedJustifiedEpoch, node.unrealizedFinalizedEpoch = uj.Epoch, uf.Epoch
+	s.checkpointsLock.Lock()
+	if uj.Epoch > s.unrealizedJustifiedCheckpoint.Epoch {
+		s.unrealizedJustifiedCheckpoint = &forkchoicetypes.Checkpoint{
+			Epoch: uj.Epoch, Root: bytesutil.ToBytes32(uj.Root),
+		}
+	}
+	if uf.Epoch > s.unrealizedFinalizedCheckpoint.Epoch {
+		s.unrealizedJustifiedCheckpoint = &forkchoicetypes.Checkpoint{
+			Epoch: uj.Epoch, Root: bytesutil.ToBytes32(uj.Root),
+		}
+		s.unrealizedFinalizedCheckpoint = &forkchoicetypes.Checkpoint{
+			Epoch: uf.Epoch, Root: bytesutil.ToBytes32(uf.Root),
+		}
+	}
+
+	currentSlot := slots.CurrentSlot(s.genesisTime)
+	if time.CurrentEpoch(state) < slots.ToEpoch(currentSlot) {
+		jc, fc = uj, uf
+		node.justifiedEpoch = uj.Epoch
+		node.finalizedEpoch = uf.Epoch
+	}
+	s.checkpointsLock.Unlock()
+	return jc, fc
 }
