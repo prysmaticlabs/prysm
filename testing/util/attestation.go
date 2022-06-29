@@ -25,8 +25,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// AttestationUtil is an empty struct used as the receiver for all attestation utility methods.
 type AttestationUtil struct{}
 
+// NewAttestationUtil returns a set of attestation utilities.
 func NewAttestationUtil() *AttestationUtil {
 	return &AttestationUtil{}
 }
