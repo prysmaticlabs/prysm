@@ -18,6 +18,7 @@ import (
 )
 
 func TestProcessSlashings(t *testing.T) {
+	au := util.AttestationUtil{}
 	tests := []struct {
 		name      string
 		block     *ethpb.BeaconBlock
@@ -77,13 +78,13 @@ func TestProcessSlashings(t *testing.T) {
 				Body: &ethpb.BeaconBlockBody{
 					AttesterSlashings: []*ethpb.AttesterSlashing{
 						{
-							Attestation_1: util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+							Attestation_1: au.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 								Data: &ethpb.AttestationData{
 									Source: &ethpb.Checkpoint{Epoch: 1},
 								},
 								AttestingIndices: []uint64{1, 3, 4},
 							}),
-							Attestation_2: util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+							Attestation_2: au.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 								AttestingIndices: []uint64{1, 5, 6},
 							}),
 						},
@@ -99,13 +100,13 @@ func TestProcessSlashings(t *testing.T) {
 				Body: &ethpb.BeaconBlockBody{
 					AttesterSlashings: []*ethpb.AttesterSlashing{
 						{
-							Attestation_1: util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+							Attestation_1: au.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 								Data: &ethpb.AttestationData{
 									Source: &ethpb.Checkpoint{Epoch: 1},
 								},
 								AttestingIndices: []uint64{1, 3, 4},
 							}),
-							Attestation_2: util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+							Attestation_2: au.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 								AttestingIndices: []uint64{3, 5, 6},
 							}),
 						},

@@ -39,8 +39,9 @@ func TestProcessAttesterSlashings_RegressionSlashableIndices(t *testing.T) {
 	expectedSlashedVal := 2800
 
 	root1 := [32]byte{'d', 'o', 'u', 'b', 'l', 'e', '1'}
+	au := util.AttestationUtil{}
 	att1 := &ethpb.IndexedAttestation{
-		Data:             util.HydrateAttestationData(&ethpb.AttestationData{Target: &ethpb.Checkpoint{Epoch: 0, Root: root1[:]}}),
+		Data:             au.HydrateAttestationData(&ethpb.AttestationData{Target: &ethpb.Checkpoint{Epoch: 0, Root: root1[:]}}),
 		AttestingIndices: setA,
 		Signature:        make([]byte, 96),
 	}
@@ -58,7 +59,7 @@ func TestProcessAttesterSlashings_RegressionSlashableIndices(t *testing.T) {
 
 	root2 := [32]byte{'d', 'o', 'u', 'b', 'l', 'e', '2'}
 	att2 := &ethpb.IndexedAttestation{
-		Data: util.HydrateAttestationData(&ethpb.AttestationData{
+		Data: au.HydrateAttestationData(&ethpb.AttestationData{
 			Target: &ethpb.Checkpoint{Root: root2[:]},
 		}),
 		AttestingIndices: setB,

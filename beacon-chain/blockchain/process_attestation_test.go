@@ -70,6 +70,7 @@ func TestStore_OnAttestation_ErrorConditions_ProtoArray(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, s, blkWithValidStateRoot))
 
+	au := util.AttestationUtil{}
 	tests := []struct {
 		name      string
 		a         *ethpb.Attestation
@@ -77,17 +78,17 @@ func TestStore_OnAttestation_ErrorConditions_ProtoArray(t *testing.T) {
 	}{
 		{
 			name:      "attestation's data slot not aligned with target vote",
-			a:         util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: params.BeaconConfig().SlotsPerEpoch, Target: &ethpb.Checkpoint{Root: make([]byte, 32)}}}),
+			a:         au.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: params.BeaconConfig().SlotsPerEpoch, Target: &ethpb.Checkpoint{Root: make([]byte, 32)}}}),
 			wantedErr: "slot 32 does not match target epoch 0",
 		},
 		{
 			name:      "no pre state for attestations's target block",
-			a:         util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Root: BlkWithOutStateRoot[:]}}}),
+			a:         au.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Root: BlkWithOutStateRoot[:]}}}),
 			wantedErr: "could not get pre state for epoch 0",
 		},
 		{
 			name: "process attestation doesn't match current epoch",
-			a: util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 100 * params.BeaconConfig().SlotsPerEpoch, Target: &ethpb.Checkpoint{Epoch: 100,
+			a: au.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 100 * params.BeaconConfig().SlotsPerEpoch, Target: &ethpb.Checkpoint{Epoch: 100,
 				Root: BlkWithStateBadAttRoot[:]}}}),
 			wantedErr: "target epoch 100 does not match current epoch",
 		},
@@ -176,6 +177,7 @@ func TestStore_OnAttestation_ErrorConditions_DoublyLinkedTree(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, s, blkWithValidStateRoot))
 
+	au := util.AttestationUtil{}
 	tests := []struct {
 		name      string
 		a         *ethpb.Attestation
@@ -183,17 +185,17 @@ func TestStore_OnAttestation_ErrorConditions_DoublyLinkedTree(t *testing.T) {
 	}{
 		{
 			name:      "attestation's data slot not aligned with target vote",
-			a:         util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: params.BeaconConfig().SlotsPerEpoch, Target: &ethpb.Checkpoint{Root: make([]byte, 32)}}}),
+			a:         au.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: params.BeaconConfig().SlotsPerEpoch, Target: &ethpb.Checkpoint{Root: make([]byte, 32)}}}),
 			wantedErr: "slot 32 does not match target epoch 0",
 		},
 		{
 			name:      "no pre state for attestations's target block",
-			a:         util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Root: BlkWithOutStateRoot[:]}}}),
+			a:         au.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Target: &ethpb.Checkpoint{Root: BlkWithOutStateRoot[:]}}}),
 			wantedErr: "could not get pre state for epoch 0",
 		},
 		{
 			name: "process attestation doesn't match current epoch",
-			a: util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 100 * params.BeaconConfig().SlotsPerEpoch, Target: &ethpb.Checkpoint{Epoch: 100,
+			a: au.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 100 * params.BeaconConfig().SlotsPerEpoch, Target: &ethpb.Checkpoint{Epoch: 100,
 				Root: BlkWithStateBadAttRoot[:]}}}),
 			wantedErr: "target epoch 100 does not match current epoch",
 		},
@@ -249,7 +251,7 @@ func TestStore_OnAttestation_Ok_ProtoArray(t *testing.T) {
 	genesisState, pks := util.DeterministicGenesisState(t, 64)
 	service.SetGenesisTime(time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0))
 	require.NoError(t, service.saveGenesisData(ctx, genesisState))
-	att, err := util.GenerateAttestations(genesisState, pks, 1, 0, false)
+	att, err := util.NewAttestationUtil().GenerateAttestations(genesisState, pks, 1, 0, false)
 	require.NoError(t, err)
 	tRoot := bytesutil.ToBytes32(att[0].Data.Target.Root)
 	copied := genesisState.Copy()
@@ -279,7 +281,7 @@ func TestStore_OnAttestation_Ok_DoublyLinkedTree(t *testing.T) {
 	genesisState, pks := util.DeterministicGenesisState(t, 64)
 	service.SetGenesisTime(time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0))
 	require.NoError(t, service.saveGenesisData(ctx, genesisState))
-	att, err := util.GenerateAttestations(genesisState, pks, 1, 0, false)
+	att, err := util.NewAttestationUtil().GenerateAttestations(genesisState, pks, 1, 0, false)
 	require.NoError(t, err)
 	tRoot := bytesutil.ToBytes32(att[0].Data.Target.Root)
 	copied := genesisState.Copy()
@@ -422,8 +424,7 @@ func TestVerifyBeaconBlock_NoBlock(t *testing.T) {
 	opts := testServiceOptsWithDB(t)
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
-
-	d := util.HydrateAttestationData(&ethpb.AttestationData{})
+	d := util.NewAttestationUtil().HydrateAttestationData(&ethpb.AttestationData{})
 	require.Equal(t, errBlockNotFoundInCacheOrDB, service.verifyBeaconBlock(ctx, d))
 }
 

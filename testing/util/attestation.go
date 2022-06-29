@@ -27,6 +27,10 @@ import (
 
 type AttestationUtil struct{}
 
+func NewAttestationUtil() *AttestationUtil {
+	return &AttestationUtil{}
+}
+
 // NewAttestation creates an attestation block with minimum marshalable fields.
 func (u *AttestationUtil) NewAttestation() *ethpb.Attestation {
 	return &ethpb.Attestation{
