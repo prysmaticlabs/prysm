@@ -19,10 +19,6 @@ import (
 	"go.opencensus.io/trace"
 )
 
-var ErrNoAncestorForBlock = errors.New("could not find an ancestor state for block")
-var ErrNoCanonicalBlockForSlot = errors.New("none of the blocks found in the db slot index are canonical")
-var ErrInvalidDBBlock = errors.New("invalid block found in database")
-
 // StateIdParseError represents an error scenario where a state ID could not be parsed.
 type StateIdParseError struct {
 	message string
@@ -116,19 +112,13 @@ func (p *StateProvider) State(ctx context.Context, stateId []byte) (state.Beacon
 			return nil, errors.Wrap(err, "could not get genesis state")
 		}
 	case "finalized":
-		checkpoint, err := p.ChainInfoFetcher.FinalizedCheckpt()
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get finalized checkpoint")
-		}
+		checkpoint := p.ChainInfoFetcher.FinalizedCheckpt()
 		s, err = p.StateGenService.StateByRoot(ctx, bytesutil.ToBytes32(checkpoint.Root))
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get finalized state")
 		}
 	case "justified":
-		checkpoint, err := p.ChainInfoFetcher.CurrentJustifiedCheckpt()
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get justified checkpoint")
-		}
+		checkpoint := p.ChainInfoFetcher.CurrentJustifiedCheckpt()
 		s, err = p.StateGenService.StateByRoot(ctx, bytesutil.ToBytes32(checkpoint.Root))
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get justified state")
@@ -209,6 +199,13 @@ func (p *StateProvider) stateByHex(ctx context.Context, stateId []byte) (state.B
 func (p *StateProvider) StateBySlot(ctx context.Context, target types.Slot) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "statefetcher.StateBySlot")
 	defer span.End()
+
+	if target > p.GenesisTimeFetcher.CurrentSlot() {
+		return nil, errors.New("requested slot is in the future")
+	}
+	if target > p.ChainInfoFetcher.HeadSlot() {
+		return nil, errors.New("requested slot number is higher than head slot number")
+	}
 
 	st, err := p.ReplayerBuilder.ReplayerForSlot(target).ReplayBlocks(ctx)
 	if err != nil {

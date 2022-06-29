@@ -110,12 +110,21 @@ func (s *ProxySet) StopAtIndex(i int) error {
 	return s.proxies[i].Stop()
 }
 
+// ComponentAtIndex returns the component at the provided index.
+func (s *ProxySet) ComponentAtIndex(i int) (e2etypes.ComponentRunner, error) {
+	if i >= len(s.proxies) {
+		return nil, errors.Errorf("provided index exceeds slice size: %d >= %d", i, len(s.proxies))
+	}
+	return s.proxies[i], nil
+}
+
 // Proxy represents an engine-api proxy.
 type Proxy struct {
 	e2etypes.ComponentRunner
-	started chan struct{}
-	index   int
-	cancel  func()
+	started     chan struct{}
+	index       int
+	engineProxy *proxy.Proxy
+	cancel      func()
 }
 
 // NewProxy creates and returns an engine-api proxy.
@@ -128,7 +137,7 @@ func NewProxy(index int) *Proxy {
 
 // Start runs a proxy.
 func (node *Proxy) Start(ctx context.Context) error {
-	file, err := os.Create(path.Join(e2e.TestParams.LogPath, "eth1_proxy_"+strconv.Itoa(node.index)+".log"))
+	f, err := os.Create(path.Join(e2e.TestParams.LogPath, "eth1_proxy_"+strconv.Itoa(node.index)+".log"))
 	if err != nil {
 		return err
 	}
@@ -145,18 +154,19 @@ func (node *Proxy) Start(ctx context.Context) error {
 		proxy.WithDestinationAddress(fmt.Sprintf("http://127.0.0.1:%d", e2e.TestParams.Ports.Eth1AuthRPCPort+node.index)),
 		proxy.WithPort(e2e.TestParams.Ports.Eth1ProxyPort + node.index),
 		proxy.WithLogger(log.New()),
-		proxy.WithLogFile(file),
+		proxy.WithLogFile(f),
 		proxy.WithJwtSecret(string(secret)),
 	}
 	nProxy, err := proxy.New(opts...)
 	if err != nil {
 		return err
 	}
-	log.Infof("Starting eth1 proxy %d with port: %d and file %s", node.index, e2e.TestParams.Ports.Eth1ProxyPort+node.index, file.Name())
+	log.Infof("Starting eth1 proxy %d with port: %d and file %s", node.index, e2e.TestParams.Ports.Eth1ProxyPort+node.index, f.Name())
 
 	// Set cancel into context.
 	ctx, cancel := context.WithCancel(ctx)
 	node.cancel = cancel
+	node.engineProxy = nProxy
 	// Mark node as ready.
 	close(node.started)
 	return nProxy.Start(ctx)
@@ -183,6 +193,22 @@ func (node *Proxy) Resume() error {
 func (node *Proxy) Stop() error {
 	node.cancel()
 	return nil
+}
+
+// AddRequestInterceptor adds in a json-rpc request interceptor.
+func (node *Proxy) AddRequestInterceptor(rpcMethodName string, responseGen func() interface{}, trigger func() bool) {
+	node.engineProxy.AddRequestInterceptor(rpcMethodName, responseGen, trigger)
+}
+
+// RemoveRequestInterceptor removes the request interceptor for the provided method.
+func (node *Proxy) RemoveRequestInterceptor(rpcMethodName string) {
+	node.engineProxy.RemoveRequestInterceptor(rpcMethodName)
+}
+
+// ReleaseBackedUpRequests releases backed up http requests which
+// were previously ignored due to our interceptors.
+func (node *Proxy) ReleaseBackedUpRequests(rpcMethodName string) {
+	node.engineProxy.ReleaseBackedUpRequests(rpcMethodName)
 }
 
 func parseJWTSecretFromFile(jwtSecretFile string) ([]byte, error) {

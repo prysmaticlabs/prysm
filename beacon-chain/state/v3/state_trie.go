@@ -376,14 +376,31 @@ func (b *BeaconState) rootSelector(field types.FieldIndex) ([32]byte, error) {
 
 func (b *BeaconState) recomputeFieldTrie(index types.FieldIndex, elements interface{}) ([32]byte, error) {
 	fTrie := b.stateFieldLeaves[index]
-	if fTrie.FieldReference().Refs() > 1 {
-		fTrie.Lock()
-		defer fTrie.Unlock()
+	fTrieMutex := fTrie.RWMutex
+	// We can't lock the trie directly because the trie's variable gets reassigned,
+	// and therefore we would call Unlock() on a different object.
+	fTrieMutex.Lock()
+
+	if fTrie.Empty() {
+		err := b.resetFieldTrie(index, elements, fTrie.Length())
+		if err != nil {
+			fTrieMutex.Unlock()
+			return [32]byte{}, err
+		}
+		// Reduce reference count as we are instantiating a new trie.
 		fTrie.FieldReference().MinusRef()
-		newTrie := fTrie.CopyTrie()
+		fTrieMutex.Unlock()
+		return b.stateFieldLeaves[index].TrieRoot()
+	}
+
+	if fTrie.FieldReference().Refs() > 1 {
+		fTrie.FieldReference().MinusRef()
+		newTrie := fTrie.TransferTrie()
 		b.stateFieldLeaves[index] = newTrie
 		fTrie = newTrie
 	}
+	fTrieMutex.Unlock()
+
 	// remove duplicate indexes
 	b.dirtyIndices[index] = slice.SetUint64(b.dirtyIndices[index])
 	// sort indexes again

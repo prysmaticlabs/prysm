@@ -156,11 +156,11 @@ func createListener(ipAddr string, port int, cfg discover.Config) *discover.UDPv
 		log.Fatal(err)
 	}
 
-	network, err := discover.ListenV5(conn, localNode, cfg)
+	net, err := discover.ListenV5(conn, localNode, cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
-	return network
+	return net
 }
 
 func (h *handler) httpHandler(w http.ResponseWriter, _ *http.Request) {

@@ -34,8 +34,8 @@ func ProcessAttestationsNoVerifySignature(
 	if err != nil {
 		return nil, err
 	}
-	for idx, attestation := range body.Attestations() {
-		beaconState, err = ProcessAttestationNoVerifySignature(ctx, beaconState, attestation, totalBalance)
+	for idx, att := range body.Attestations() {
+		beaconState, err = ProcessAttestationNoVerifySignature(ctx, beaconState, att, totalBalance)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not verify attestation at index %d in block", idx)
 		}

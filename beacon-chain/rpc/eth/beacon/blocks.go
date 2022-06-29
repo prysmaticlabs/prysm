@@ -53,7 +53,7 @@ func (e *blockIdParseError) Error() string {
 // GetWeakSubjectivity computes the starting epoch of the current weak subjectivity period, and then also
 // determines the best block root and state root to use for a Checkpoint Sync starting from that point.
 func (bs *Server) GetWeakSubjectivity(ctx context.Context, _ *empty.Empty) (*ethpbv1.WeakSubjectivityResponse, error) {
-	if err := rpchelpers.ValidateSync(ctx, bs.SyncChecker, bs.HeadFetcher, bs.GenesisTimeFetcher); err != nil {
+	if err := rpchelpers.ValidateSync(ctx, bs.SyncChecker, bs.HeadFetcher, bs.GenesisTimeFetcher, bs.OptimisticModeFetcher); err != nil {
 		// This is already a grpc error, so we can't wrap it any further
 		return nil, err
 	}
@@ -612,10 +612,7 @@ func (bs *Server) GetBlockRoot(ctx context.Context, req *ethpbv1.BlockRequest) (
 			return nil, status.Errorf(codes.NotFound, "No head root was found")
 		}
 	case "finalized":
-		finalized, err := bs.ChainInfoFetcher.FinalizedCheckpt()
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not retrieve finalized checkpoint: %v", err)
-		}
+		finalized := bs.ChainInfoFetcher.FinalizedCheckpt()
 		root = finalized.Root
 	case "genesis":
 		blk, err := bs.BeaconDB.GenesisBlock(ctx)
@@ -766,10 +763,7 @@ func (bs *Server) blockFromBlockID(ctx context.Context, blockId []byte) (interfa
 			return nil, errors.Wrap(err, "could not retrieve head block")
 		}
 	case "finalized":
-		finalized, err := bs.ChainInfoFetcher.FinalizedCheckpt()
-		if err != nil {
-			return nil, errors.Wrap(err, "could not retrieve finalized checkpoint")
-		}
+		finalized := bs.ChainInfoFetcher.FinalizedCheckpt()
 		finalizedRoot := bytesutil.ToBytes32(finalized.Root)
 		blk, err = bs.BeaconDB.Block(ctx, finalizedRoot)
 		if err != nil {

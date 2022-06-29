@@ -44,15 +44,12 @@ func TestSaveHead_Different(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	service := setupBeaconChain(t, beaconDB)
 
-	util.NewBeaconBlock()
-	oldBlock, err := wrapper.WrappedSignedBeaconBlock(
-		util.NewBeaconBlock(),
-	)
-	require.NoError(t, err)
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), oldBlock))
+	oldBlock := util.SaveBlock(t, context.Background(), service.cfg.BeaconDB, util.NewBeaconBlock())
 	oldRoot, err := oldBlock.Block().HashTreeRoot()
 	require.NoError(t, err)
-	state, blkRoot, err := prepareForkchoiceState(ctx, oldBlock.Block().Slot(), oldRoot, bytesutil.ToBytes32(oldBlock.Block().ParentRoot()), [32]byte{}, 0, 0)
+	ojc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	ofc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	state, blkRoot, err := prepareForkchoiceState(ctx, oldBlock.Block().Slot(), oldRoot, bytesutil.ToBytes32(oldBlock.Block().ParentRoot()), [32]byte{}, ojc, ofc)
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
 	service.head = &head{
@@ -65,12 +62,10 @@ func TestSaveHead_Different(t *testing.T) {
 	newHeadSignedBlock.Block.Slot = 1
 	newHeadBlock := newHeadSignedBlock.Block
 
-	wsb, err := wrapper.WrappedSignedBeaconBlock(newHeadSignedBlock)
-	require.NoError(t, err)
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), wsb))
+	wsb := util.SaveBlock(t, context.Background(), service.cfg.BeaconDB, newHeadSignedBlock)
 	newRoot, err := newHeadBlock.HashTreeRoot()
 	require.NoError(t, err)
-	state, blkRoot, err = prepareForkchoiceState(ctx, wsb.Block().Slot(), newRoot, bytesutil.ToBytes32(wsb.Block().ParentRoot()), [32]byte{}, 0, 0)
+	state, blkRoot, err = prepareForkchoiceState(ctx, wsb.Block().Slot(), newRoot, bytesutil.ToBytes32(wsb.Block().ParentRoot()), [32]byte{}, ojc, ofc)
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
 	headState, err := util.NewBeaconState()
@@ -95,14 +90,12 @@ func TestSaveHead_Different_Reorg(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	service := setupBeaconChain(t, beaconDB)
 
-	oldBlock, err := wrapper.WrappedSignedBeaconBlock(
-		util.NewBeaconBlock(),
-	)
-	require.NoError(t, err)
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), oldBlock))
+	oldBlock := util.SaveBlock(t, context.Background(), service.cfg.BeaconDB, util.NewBeaconBlock())
 	oldRoot, err := oldBlock.Block().HashTreeRoot()
 	require.NoError(t, err)
-	state, blkRoot, err := prepareForkchoiceState(ctx, oldBlock.Block().Slot(), oldRoot, bytesutil.ToBytes32(oldBlock.Block().ParentRoot()), [32]byte{}, 0, 0)
+	ojc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	ofc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	state, blkRoot, err := prepareForkchoiceState(ctx, oldBlock.Block().Slot(), oldRoot, bytesutil.ToBytes32(oldBlock.Block().ParentRoot()), [32]byte{}, ojc, ofc)
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
 	service.head = &head{
@@ -117,12 +110,10 @@ func TestSaveHead_Different_Reorg(t *testing.T) {
 	newHeadSignedBlock.Block.ParentRoot = reorgChainParent[:]
 	newHeadBlock := newHeadSignedBlock.Block
 
-	wsb, err := wrapper.WrappedSignedBeaconBlock(newHeadSignedBlock)
-	require.NoError(t, err)
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), wsb))
+	wsb := util.SaveBlock(t, context.Background(), service.cfg.BeaconDB, newHeadSignedBlock)
 	newRoot, err := newHeadBlock.HashTreeRoot()
 	require.NoError(t, err)
-	state, blkRoot, err = prepareForkchoiceState(ctx, wsb.Block().Slot(), newRoot, bytesutil.ToBytes32(wsb.Block().ParentRoot()), [32]byte{}, 0, 0)
+	state, blkRoot, err = prepareForkchoiceState(ctx, wsb.Block().Slot(), newRoot, bytesutil.ToBytes32(wsb.Block().ParentRoot()), [32]byte{}, ojc, ofc)
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
 	headState, err := util.NewBeaconState()
@@ -156,28 +147,6 @@ func TestCacheJustifiedStateBalances_CanCache(t *testing.T) {
 	balances, err := service.justifiedBalances.get(ctx, r)
 	require.NoError(t, err)
 	require.DeepEqual(t, balances, state.Balances(), "Incorrect justified balances")
-}
-
-func TestUpdateHead_MissingJustifiedRoot(t *testing.T) {
-	beaconDB := testDB.SetupDB(t)
-	service := setupBeaconChain(t, beaconDB)
-
-	b := util.NewBeaconBlock()
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
-	require.NoError(t, err)
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(context.Background(), wsb))
-	r, err := b.Block.HashTreeRoot()
-	require.NoError(t, err)
-	state, _ := util.DeterministicGenesisState(t, 1)
-	require.NoError(t, service.cfg.BeaconDB.SaveState(context.Background(), state, r))
-
-	service.store.SetJustifiedCheckptAndPayloadHash(&ethpb.Checkpoint{Root: r[:]}, [32]byte{'a'})
-	service.store.SetFinalizedCheckptAndPayloadHash(&ethpb.Checkpoint{}, [32]byte{'b'})
-	service.store.SetBestJustifiedCheckpt(&ethpb.Checkpoint{})
-	headRoot, err := service.updateHead(context.Background(), []uint64{})
-	require.NoError(t, err)
-	st, _ := util.DeterministicGenesisState(t, 1)
-	require.NoError(t, service.saveHead(context.Background(), headRoot, wsb, st))
 }
 
 func Test_notifyNewHeadEvent(t *testing.T) {
@@ -258,9 +227,7 @@ func TestSaveOrphanedAtts_NoCommonAncestor(t *testing.T) {
 	st, keys := util.DeterministicGenesisState(t, 64)
 	blkG, err := util.GenerateFullBlock(st, keys, util.DefaultBlockGenConfig(), 0)
 	assert.NoError(t, err)
-	b, err := wrapper.WrappedSignedBeaconBlock(blkG)
-	assert.NoError(t, err)
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, b))
+	util.SaveBlock(t, ctx, service.cfg.BeaconDB, blkG)
 	rG, err := blkG.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -290,12 +257,12 @@ func TestSaveOrphanedAtts_NoCommonAncestor(t *testing.T) {
 	for _, blk := range []*ethpb.SignedBeaconBlock{blkG, blk1, blk2, blk3, blk4} {
 		r, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
-		state, blkRoot, err := prepareForkchoiceState(ctx, blk.Block.Slot, r, bytesutil.ToBytes32(blk.Block.ParentRoot), [32]byte{}, 0, 0)
+		ojc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+		ofc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+		state, blkRoot, err := prepareForkchoiceState(ctx, blk.Block.Slot, r, bytesutil.ToBytes32(blk.Block.ParentRoot), [32]byte{}, ojc, ofc)
 		require.NoError(t, err)
 		require.NoError(t, service.ForkChoicer().InsertNode(ctx, state, blkRoot))
-		b, err := wrapper.WrappedSignedBeaconBlock(blk)
-		require.NoError(t, err)
-		require.NoError(t, beaconDB.SaveBlock(ctx, b))
+		util.SaveBlock(t, ctx, beaconDB, blk)
 	}
 
 	require.NoError(t, service.saveOrphanedAtts(ctx, r3, r4))
@@ -314,9 +281,8 @@ func TestSaveOrphanedAtts(t *testing.T) {
 	st, keys := util.DeterministicGenesisState(t, 64)
 	blkG, err := util.GenerateFullBlock(st, keys, util.DefaultBlockGenConfig(), 0)
 	assert.NoError(t, err)
-	b, err := wrapper.WrappedSignedBeaconBlock(blkG)
-	assert.NoError(t, err)
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, b))
+
+	util.SaveBlock(t, ctx, service.cfg.BeaconDB, blkG)
 	rG, err := blkG.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -343,16 +309,16 @@ func TestSaveOrphanedAtts(t *testing.T) {
 	blk4.Block.ParentRoot = rG[:]
 	r4, err := blk4.Block.HashTreeRoot()
 	require.NoError(t, err)
+	ojc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	ofc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 
 	for _, blk := range []*ethpb.SignedBeaconBlock{blkG, blk1, blk2, blk3, blk4} {
 		r, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
-		state, blkRoot, err := prepareForkchoiceState(ctx, blk.Block.Slot, r, bytesutil.ToBytes32(blk.Block.ParentRoot), [32]byte{}, 0, 0)
+		state, blkRoot, err := prepareForkchoiceState(ctx, blk.Block.Slot, r, bytesutil.ToBytes32(blk.Block.ParentRoot), [32]byte{}, ojc, ofc)
 		require.NoError(t, err)
 		require.NoError(t, service.ForkChoicer().InsertNode(ctx, state, blkRoot))
-		b, err := wrapper.WrappedSignedBeaconBlock(blk)
-		require.NoError(t, err)
-		require.NoError(t, beaconDB.SaveBlock(ctx, b))
+		util.SaveBlock(t, ctx, beaconDB, blk)
 	}
 
 	require.NoError(t, service.saveOrphanedAtts(ctx, r3, r4))
@@ -381,9 +347,7 @@ func TestSaveOrphanedAtts_CanFilter(t *testing.T) {
 	st, keys := util.DeterministicGenesisState(t, 64)
 	blkG, err := util.GenerateFullBlock(st, keys, util.DefaultBlockGenConfig(), 0)
 	assert.NoError(t, err)
-	b, err := wrapper.WrappedSignedBeaconBlock(blkG)
-	assert.NoError(t, err)
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, b))
+	util.SaveBlock(t, ctx, service.cfg.BeaconDB, blkG)
 	rG, err := blkG.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -404,16 +368,16 @@ func TestSaveOrphanedAtts_CanFilter(t *testing.T) {
 	blk4.Block.ParentRoot = rG[:]
 	r4, err := blk4.Block.HashTreeRoot()
 	require.NoError(t, err)
+	ojc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	ofc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 
 	for _, blk := range []*ethpb.SignedBeaconBlock{blkG, blk1, blk2, blk4} {
 		r, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
-		state, blkRoot, err := prepareForkchoiceState(ctx, blk.Block.Slot, r, bytesutil.ToBytes32(blk.Block.ParentRoot), [32]byte{}, 0, 0)
+		state, blkRoot, err := prepareForkchoiceState(ctx, blk.Block.Slot, r, bytesutil.ToBytes32(blk.Block.ParentRoot), [32]byte{}, ojc, ofc)
 		require.NoError(t, err)
 		require.NoError(t, service.ForkChoicer().InsertNode(ctx, state, blkRoot))
-		b, err := wrapper.WrappedSignedBeaconBlock(blk)
-		require.NoError(t, err)
-		require.NoError(t, beaconDB.SaveBlock(ctx, b))
+		util.SaveBlock(t, ctx, beaconDB, blk)
 	}
 
 	require.NoError(t, service.saveOrphanedAtts(ctx, r2, r4))
@@ -437,9 +401,7 @@ func TestSaveOrphanedAtts_NoCommonAncestor_DoublyLinkedTrie(t *testing.T) {
 	st, keys := util.DeterministicGenesisState(t, 64)
 	blkG, err := util.GenerateFullBlock(st, keys, util.DefaultBlockGenConfig(), 0)
 	assert.NoError(t, err)
-	b, err := wrapper.WrappedSignedBeaconBlock(blkG)
-	assert.NoError(t, err)
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, b))
+	util.SaveBlock(t, ctx, service.cfg.BeaconDB, blkG)
 	rG, err := blkG.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -466,15 +428,15 @@ func TestSaveOrphanedAtts_NoCommonAncestor_DoublyLinkedTrie(t *testing.T) {
 	r4, err := blk4.Block.HashTreeRoot()
 	require.NoError(t, err)
 
+	ojc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	ofc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	for _, blk := range []*ethpb.SignedBeaconBlock{blkG, blk1, blk2, blk3, blk4} {
 		r, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
-		state, blkRoot, err := prepareForkchoiceState(ctx, blk.Block.Slot, r, bytesutil.ToBytes32(blk.Block.ParentRoot), [32]byte{}, 0, 0)
+		state, blkRoot, err := prepareForkchoiceState(ctx, blk.Block.Slot, r, bytesutil.ToBytes32(blk.Block.ParentRoot), [32]byte{}, ojc, ofc)
 		require.NoError(t, err)
 		require.NoError(t, service.ForkChoicer().InsertNode(ctx, state, blkRoot))
-		b, err := wrapper.WrappedSignedBeaconBlock(blk)
-		require.NoError(t, err)
-		require.NoError(t, beaconDB.SaveBlock(ctx, b))
+		util.SaveBlock(t, ctx, beaconDB, blk)
 	}
 
 	require.NoError(t, service.saveOrphanedAtts(ctx, r3, r4))
@@ -498,9 +460,7 @@ func TestSaveOrphanedAtts_DoublyLinkedTrie(t *testing.T) {
 	st, keys := util.DeterministicGenesisState(t, 64)
 	blkG, err := util.GenerateFullBlock(st, keys, util.DefaultBlockGenConfig(), 0)
 	assert.NoError(t, err)
-	b, err := wrapper.WrappedSignedBeaconBlock(blkG)
-	assert.NoError(t, err)
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, b))
+	util.SaveBlock(t, ctx, service.cfg.BeaconDB, blkG)
 	rG, err := blkG.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -528,15 +488,15 @@ func TestSaveOrphanedAtts_DoublyLinkedTrie(t *testing.T) {
 	r4, err := blk4.Block.HashTreeRoot()
 	require.NoError(t, err)
 
+	ojc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	ofc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	for _, blk := range []*ethpb.SignedBeaconBlock{blkG, blk1, blk2, blk3, blk4} {
 		r, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
-		state, blkRoot, err := prepareForkchoiceState(ctx, blk.Block.Slot, r, bytesutil.ToBytes32(blk.Block.ParentRoot), [32]byte{}, 0, 0)
+		state, blkRoot, err := prepareForkchoiceState(ctx, blk.Block.Slot, r, bytesutil.ToBytes32(blk.Block.ParentRoot), [32]byte{}, ojc, ofc)
 		require.NoError(t, err)
 		require.NoError(t, service.ForkChoicer().InsertNode(ctx, state, blkRoot))
-		b, err := wrapper.WrappedSignedBeaconBlock(blk)
-		require.NoError(t, err)
-		require.NoError(t, beaconDB.SaveBlock(ctx, b))
+		util.SaveBlock(t, ctx, beaconDB, blk)
 	}
 
 	require.NoError(t, service.saveOrphanedAtts(ctx, r3, r4))
@@ -570,9 +530,7 @@ func TestSaveOrphanedAtts_CanFilter_DoublyLinkedTrie(t *testing.T) {
 	st, keys := util.DeterministicGenesisState(t, 64)
 	blkG, err := util.GenerateFullBlock(st, keys, util.DefaultBlockGenConfig(), 0)
 	assert.NoError(t, err)
-	b, err := wrapper.WrappedSignedBeaconBlock(blkG)
-	assert.NoError(t, err)
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, b))
+	util.SaveBlock(t, ctx, service.cfg.BeaconDB, blkG)
 	rG, err := blkG.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -594,15 +552,15 @@ func TestSaveOrphanedAtts_CanFilter_DoublyLinkedTrie(t *testing.T) {
 	r4, err := blk4.Block.HashTreeRoot()
 	require.NoError(t, err)
 
+	ojc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	ofc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	for _, blk := range []*ethpb.SignedBeaconBlock{blkG, blk1, blk2, blk4} {
 		r, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
-		state, blkRoot, err := prepareForkchoiceState(ctx, blk.Block.Slot, r, bytesutil.ToBytes32(blk.Block.ParentRoot), [32]byte{}, 0, 0)
+		state, blkRoot, err := prepareForkchoiceState(ctx, blk.Block.Slot, r, bytesutil.ToBytes32(blk.Block.ParentRoot), [32]byte{}, ojc, ofc)
 		require.NoError(t, err)
 		require.NoError(t, service.ForkChoicer().InsertNode(ctx, state, blkRoot))
-		b, err := wrapper.WrappedSignedBeaconBlock(blk)
-		require.NoError(t, err)
-		require.NoError(t, beaconDB.SaveBlock(ctx, b))
+		util.SaveBlock(t, ctx, beaconDB, blk)
 	}
 
 	require.NoError(t, service.saveOrphanedAtts(ctx, r2, r4))
@@ -613,7 +571,7 @@ func TestUpdateHead_noSavedChanges(t *testing.T) {
 	ctx := context.Background()
 
 	beaconDB := testDB.SetupDB(t)
-	fcs := doublylinkedtree.New(0, 0)
+	fcs := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),
@@ -622,18 +580,18 @@ func TestUpdateHead_noSavedChanges(t *testing.T) {
 
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
-
-	bellatrixBlk, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlockBellatrix())
+	ojp := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	st, blkRoot, err := prepareForkchoiceState(ctx, 0, [32]byte{}, [32]byte{}, [32]byte{}, ojp, ojp)
 	require.NoError(t, err)
+	require.NoError(t, fcs.InsertNode(ctx, st, blkRoot))
+
+	bellatrixBlk := util.SaveBlock(t, ctx, beaconDB, util.NewBeaconBlockBellatrix())
 	bellatrixBlkRoot, err := bellatrixBlk.Block().HashTreeRoot()
 	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveBlock(ctx, bellatrixBlk))
 	fcp := &ethpb.Checkpoint{
 		Root:  bellatrixBlkRoot[:],
-		Epoch: 1,
+		Epoch: 0,
 	}
-	service.store.SetFinalizedCheckptAndPayloadHash(fcp, [32]byte{'a'})
-	service.store.SetJustifiedCheckptAndPayloadHash(fcp, [32]byte{'b'})
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, bellatrixBlkRoot))
 
 	bellatrixState, _ := util.DeterministicGenesisStateBellatrix(t, 2)
@@ -643,10 +601,10 @@ func TestUpdateHead_noSavedChanges(t *testing.T) {
 	headRoot := service.headRoot()
 	require.Equal(t, [32]byte{}, headRoot)
 
-	st, blkRoot, err := prepareForkchoiceState(ctx, 0, bellatrixBlkRoot, [32]byte{}, [32]byte{}, 0, 0)
+	st, blkRoot, err = prepareForkchoiceState(ctx, 0, bellatrixBlkRoot, [32]byte{}, [32]byte{}, fcp, fcp)
 	require.NoError(t, err)
 	require.NoError(t, fcs.InsertNode(ctx, st, blkRoot))
-	newRoot, err := service.updateHead(ctx, []uint64{1, 2})
+	newRoot, err := service.cfg.ForkChoiceStore.Head(ctx, []uint64{1, 2})
 	require.NoError(t, err)
 	require.NotEqual(t, headRoot, newRoot)
 	require.Equal(t, headRoot, service.headRoot())

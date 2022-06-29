@@ -26,20 +26,21 @@ import (
 )
 
 func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, state.BeaconState) {
-	state, privKeys := util.DeterministicGenesisState(t, 5)
-	vals := state.Validators()
+	s, privKeys := util.DeterministicGenesisState(t, 5)
+	vals := s.Validators()
 	for _, vv := range vals {
 		vv.WithdrawableEpoch = types.Epoch(1 * params.BeaconConfig().SlotsPerEpoch)
 	}
-	require.NoError(t, state.SetValidators(vals))
+	require.NoError(t, s.SetValidators(vals))
 
-	att1 := util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+	au := util.AttestationUtil{}
+	att1 := au.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: 1},
 		},
 		AttestingIndices: []uint64{0, 1},
 	})
-	domain, err := signing.Domain(state.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, state.GenesisValidatorsRoot())
+	domain, err := signing.Domain(s.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, s.GenesisValidatorsRoot())
 	require.NoError(t, err)
 	hashTreeRoot, err := signing.ComputeSigningRoot(att1.Data, domain)
 	assert.NoError(t, err)
@@ -48,7 +49,7 @@ func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, state.Be
 	aggregateSig := bls.AggregateSignatures([]bls.Signature{sig0, sig1})
 	att1.Signature = aggregateSig.Marshal()
 
-	att2 := util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+	att2 := au.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{0, 1},
 	})
 	hashTreeRoot, err = signing.ComputeSigningRoot(att2.Data, domain)
@@ -64,13 +65,13 @@ func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, state.Be
 	}
 
 	currentSlot := 2 * params.BeaconConfig().SlotsPerEpoch
-	require.NoError(t, state.SetSlot(currentSlot))
+	require.NoError(t, s.SetSlot(currentSlot))
 
 	b := make([]byte, 32)
 	_, err = rand.Read(b)
 	require.NoError(t, err)
 
-	return slashing, state
+	return slashing, s
 }
 
 func TestValidateAttesterSlashing_ValidSlashing(t *testing.T) {
@@ -132,12 +133,13 @@ func TestValidateAttesterSlashing_CanFilter(t *testing.T) {
 	d, err := r.currentForkDigest()
 	assert.NoError(t, err)
 	topic = r.addDigestToTopic(topic, d)
+	au := util.AttestationUtil{}
 	buf := new(bytes.Buffer)
 	_, err = p.Encoding().EncodeGossip(buf, &ethpb.AttesterSlashing{
-		Attestation_1: util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+		Attestation_1: au.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 			AttestingIndices: []uint64{3},
 		}),
-		Attestation_2: util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+		Attestation_2: au.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 			AttestingIndices: []uint64{3},
 		}),
 	})
@@ -155,10 +157,10 @@ func TestValidateAttesterSlashing_CanFilter(t *testing.T) {
 
 	buf = new(bytes.Buffer)
 	_, err = p.Encoding().EncodeGossip(buf, &ethpb.AttesterSlashing{
-		Attestation_1: util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+		Attestation_1: au.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 			AttestingIndices: []uint64{4, 3},
 		}),
-		Attestation_2: util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+		Attestation_2: au.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 			AttestingIndices: []uint64{3, 4},
 		}),
 	})
@@ -178,7 +180,7 @@ func TestValidateAttesterSlashing_CanFilter(t *testing.T) {
 func TestValidateAttesterSlashing_ContextTimeout(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 
-	slashing, state := setupValidAttesterSlashing(t)
+	slashing, s := setupValidAttesterSlashing(t)
 	slashing.Attestation_1.Data.Target.Epoch = 100000000
 
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
@@ -187,7 +189,7 @@ func TestValidateAttesterSlashing_ContextTimeout(t *testing.T) {
 	r := &Service{
 		cfg: &config{
 			p2p:         p,
-			chain:       &mock.ChainService{State: state},
+			chain:       &mock.ChainService{State: s},
 			initialSync: &mockSync.Sync{IsSyncing: false},
 		},
 		seenAttesterSlashingCache: make(map[uint64]bool),

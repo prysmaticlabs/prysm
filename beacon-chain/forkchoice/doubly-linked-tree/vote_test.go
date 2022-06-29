@@ -15,7 +15,7 @@ func TestVotes_CanFindHead(t *testing.T) {
 	ctx := context.Background()
 
 	// The head should always start at the finalized block.
-	r, err := f.Head(context.Background(), params.BeaconConfig().ZeroHash, balances)
+	r, err := f.Head(context.Background(), balances)
 	require.NoError(t, err)
 	assert.Equal(t, params.BeaconConfig().ZeroHash, r, "Incorrect head with genesis")
 
@@ -27,7 +27,7 @@ func TestVotes_CanFindHead(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 
-	r, err = f.Head(context.Background(), params.BeaconConfig().ZeroHash, balances)
+	r, err = f.Head(context.Background(), balances)
 	require.NoError(t, err)
 	assert.Equal(t, indexToHash(2), r, "Incorrect head for with justified epoch at 1")
 
@@ -39,7 +39,7 @@ func TestVotes_CanFindHead(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 
-	r, err = f.Head(context.Background(), params.BeaconConfig().ZeroHash, balances)
+	r, err = f.Head(context.Background(), balances)
 	require.NoError(t, err)
 	assert.Equal(t, indexToHash(2), r, "Incorrect head for with justified epoch at 1")
 
@@ -48,7 +48,7 @@ func TestVotes_CanFindHead(t *testing.T) {
 	//           / \
 	//          2  1 <- +vote, new head
 	f.ProcessAttestation(context.Background(), []uint64{0}, indexToHash(1), 2)
-	r, err = f.Head(context.Background(), params.BeaconConfig().ZeroHash, balances)
+	r, err = f.Head(context.Background(), balances)
 	require.NoError(t, err)
 	assert.Equal(t, indexToHash(1), r, "Incorrect head for with justified epoch at 1")
 
@@ -57,7 +57,7 @@ func TestVotes_CanFindHead(t *testing.T) {
 	//                    / \
 	// vote, new head -> 2  1
 	f.ProcessAttestation(context.Background(), []uint64{1}, indexToHash(2), 2)
-	r, err = f.Head(context.Background(), params.BeaconConfig().ZeroHash, balances)
+	r, err = f.Head(context.Background(), balances)
 	require.NoError(t, err)
 	assert.Equal(t, indexToHash(2), r, "Incorrect head for with justified epoch at 1")
 
@@ -71,7 +71,7 @@ func TestVotes_CanFindHead(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 
-	r, err = f.Head(context.Background(), params.BeaconConfig().ZeroHash, balances)
+	r, err = f.Head(context.Background(), balances)
 	require.NoError(t, err)
 	assert.Equal(t, indexToHash(2), r, "Incorrect head for with justified epoch at 1")
 
@@ -82,7 +82,7 @@ func TestVotes_CanFindHead(t *testing.T) {
 	//             |
 	//             3 <- new vote
 	f.ProcessAttestation(context.Background(), []uint64{0}, indexToHash(3), 3)
-	r, err = f.Head(context.Background(), params.BeaconConfig().ZeroHash, balances)
+	r, err = f.Head(context.Background(), balances)
 	require.NoError(t, err)
 	assert.Equal(t, indexToHash(2), r, "Incorrect head for with justified epoch at 1")
 
@@ -93,7 +93,7 @@ func TestVotes_CanFindHead(t *testing.T) {
 	//                |
 	//                3 <- head
 	f.ProcessAttestation(context.Background(), []uint64{1}, indexToHash(1), 3)
-	r, err = f.Head(context.Background(), params.BeaconConfig().ZeroHash, balances)
+	r, err = f.Head(context.Background(), balances)
 	require.NoError(t, err)
 	assert.Equal(t, indexToHash(3), r, "Incorrect head for with justified epoch at 1")
 
@@ -109,11 +109,11 @@ func TestVotes_CanFindHead(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 
-	r, err = f.Head(context.Background(), params.BeaconConfig().ZeroHash, balances)
+	r, err = f.Head(context.Background(), balances)
 	require.NoError(t, err)
 	assert.Equal(t, indexToHash(4), r, "Incorrect head for with justified epoch at 1")
 
-	// Insert block 5 with justified epoch 2, it should be filtered out:
+	// Insert block 5 with justified epoch 2, it becomes head
 	//            0
 	//           / \
 	//          2  1
@@ -127,11 +127,11 @@ func TestVotes_CanFindHead(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 
-	r, err = f.Head(context.Background(), params.BeaconConfig().ZeroHash, balances)
+	r, err = f.Head(context.Background(), balances)
 	require.NoError(t, err)
-	assert.Equal(t, indexToHash(4), r, "Incorrect head for with justified epoch at 1")
+	assert.Equal(t, indexToHash(5), r, "Incorrect head for with justified epoch at 1")
 
-	// Insert block 6 with justified epoch 0:
+	// Insert block 6 with justified epoch 3: verify it's head
 	//            0
 	//           / \
 	//          2  1
@@ -140,28 +140,18 @@ func TestVotes_CanFindHead(t *testing.T) {
 	//             |
 	//             4 <- head
 	//            / \
-	//           5  6 <- justified epoch = 0
-	state, blkRoot, err = prepareForkchoiceState(context.Background(), 0, indexToHash(6), indexToHash(4), params.BeaconConfig().ZeroHash, 1, 1)
+	//           5  6 <- justified epoch = 3
+	state, blkRoot, err = prepareForkchoiceState(context.Background(), 0, indexToHash(6), indexToHash(4), params.BeaconConfig().ZeroHash, 3, 2)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	r, err = f.Head(context.Background(), balances)
+	require.NoError(t, err)
+	assert.Equal(t, indexToHash(6), r, "Incorrect head for with justified epoch at 1")
 
 	// Moved 2 votes to block 5:
-	//            0
-	//           / \
-	//          2  1
-	//             |
-	//             3
-	//             |
-	//             4
-	//            / \
-	// 2 votes-> 5  6
-	state, blkRoot, err = prepareForkchoiceState(context.Background(), 0, indexToHash(6), indexToHash(4), params.BeaconConfig().ZeroHash, 1, 1)
-	require.NoError(t, err)
-	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
-
 	f.ProcessAttestation(context.Background(), []uint64{0, 1}, indexToHash(5), 4)
 
-	// Inset blocks 7, 8 and 9:
+	// Inset blocks 7 and 8
 	// 6 should still be the head, even though 5 has all the votes.
 	//            0
 	//           / \
@@ -176,23 +166,17 @@ func TestVotes_CanFindHead(t *testing.T) {
 	//           7
 	//           |
 	//           8
-	//           |
-	//           9
 	state, blkRoot, err = prepareForkchoiceState(context.Background(), 0, indexToHash(7), indexToHash(5), params.BeaconConfig().ZeroHash, 2, 2)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 	state, blkRoot, err = prepareForkchoiceState(context.Background(), 0, indexToHash(8), indexToHash(7), params.BeaconConfig().ZeroHash, 2, 2)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
-	state, blkRoot, err = prepareForkchoiceState(context.Background(), 0, indexToHash(9), indexToHash(8), params.BeaconConfig().ZeroHash, 2, 2)
-	require.NoError(t, err)
-	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
-
-	r, err = f.Head(context.Background(), params.BeaconConfig().ZeroHash, balances)
+	r, err = f.Head(context.Background(), balances)
 	require.NoError(t, err)
 	assert.Equal(t, indexToHash(6), r, "Incorrect head for with justified epoch at 1")
 
-	// Update fork choice justified epoch to 2 and start block to 5.
+	// Insert block 9 with justified epoch 3, it becomes head
 	// Verify 9 is the head:
 	//            0
 	//           / \
@@ -208,15 +192,15 @@ func TestVotes_CanFindHead(t *testing.T) {
 	//           |
 	//           8
 	//           |
-	//           9 <- head
-	f.store.justifiedEpoch = 2
-	f.store.finalizedEpoch = 2
-	r, err = f.Head(context.Background(), indexToHash(5), balances)
+	//           10 <- head
+	state, blkRoot, err = prepareForkchoiceState(context.Background(), 0, indexToHash(10), indexToHash(8), params.BeaconConfig().ZeroHash, 3, 2)
 	require.NoError(t, err)
-	assert.Equal(t, indexToHash(9), r, "Incorrect head for with justified epoch at 2")
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	r, err = f.Head(context.Background(), balances)
+	require.NoError(t, err)
+	assert.Equal(t, indexToHash(10), r, "Incorrect head for with justified epoch at 3")
 
-	// Insert block 10 and 2 validators updated their vote to 9.
-	// Verify 9 is the head:
+	// Insert block 9 forking 10 verify it's head (lexicographic order)
 	//             0
 	//            / \
 	//           2  1
@@ -231,54 +215,63 @@ func TestVotes_CanFindHead(t *testing.T) {
 	//            |
 	//            8
 	//           / \
-	// 2 votes->9  10
-	f.ProcessAttestation(context.Background(), []uint64{0, 1}, indexToHash(9), 5)
-	state, blkRoot, err = prepareForkchoiceState(context.Background(), 0, indexToHash(10), indexToHash(8), params.BeaconConfig().ZeroHash, 2, 2)
+	//	    9  10
+	state, blkRoot, err = prepareForkchoiceState(context.Background(), 0, indexToHash(9), indexToHash(8), params.BeaconConfig().ZeroHash, 3, 2)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 
-	r, err = f.Head(context.Background(), indexToHash(5), balances)
+	r, err = f.Head(context.Background(), balances)
 	require.NoError(t, err)
-	assert.Equal(t, indexToHash(9), r, "Incorrect head for with justified epoch at 2")
+	assert.Equal(t, indexToHash(9), r, "Incorrect head for with justified epoch at 3")
+
+	// Move two votes for 10, verify it's head
+
+	f.ProcessAttestation(context.Background(), []uint64{0, 1}, indexToHash(10), 5)
+	r, err = f.Head(context.Background(), balances)
+	require.NoError(t, err)
+	assert.Equal(t, indexToHash(10), r, "Incorrect head for with justified epoch at 3")
 
 	// Add 3 more validators to the system.
 	balances = []uint64{1, 1, 1, 1, 1}
-	// The new validators voted for 10.
-	f.ProcessAttestation(context.Background(), []uint64{2, 3, 4}, indexToHash(10), 5)
-	// The new head should be 10.
-	r, err = f.Head(context.Background(), indexToHash(5), balances)
+	// The new validators voted for 9
+	f.ProcessAttestation(context.Background(), []uint64{2, 3, 4}, indexToHash(9), 5)
+	// The new head should be 9.
+	r, err = f.Head(context.Background(), balances)
 	require.NoError(t, err)
-	assert.Equal(t, indexToHash(10), r, "Incorrect head for with justified epoch at 2")
+	assert.Equal(t, indexToHash(9), r, "Incorrect head for with justified epoch at 3")
 
 	// Set the balances of the last 2 validators to 0.
 	balances = []uint64{1, 1, 1, 0, 0}
-	// The head should be back to 9.
-	r, err = f.Head(context.Background(), indexToHash(5), balances)
+	// The head should be back to 10.
+	r, err = f.Head(context.Background(), balances)
 	require.NoError(t, err)
-	assert.Equal(t, indexToHash(9), r, "Incorrect head for with justified epoch at 1")
+	assert.Equal(t, indexToHash(10), r, "Incorrect head for with justified epoch at 3")
 
 	// Set the balances back to normal.
 	balances = []uint64{1, 1, 1, 1, 1}
-	// The head should be back to 10.
-	r, err = f.Head(context.Background(), indexToHash(5), balances)
+	// The head should be back to 9.
+	r, err = f.Head(context.Background(), balances)
 	require.NoError(t, err)
-	assert.Equal(t, indexToHash(10), r, "Incorrect head for with justified epoch at 2")
+	assert.Equal(t, indexToHash(9), r, "Incorrect head for with justified epoch at 3")
 
 	// Remove the last 2 validators.
 	balances = []uint64{1, 1, 1}
-	// The head should be back to 9.
-	r, err = f.Head(context.Background(), indexToHash(5), balances)
+	// The head should be back to 10.
+	r, err = f.Head(context.Background(), balances)
 	require.NoError(t, err)
-	assert.Equal(t, indexToHash(9), r, "Incorrect head for with justified epoch at 1")
+	assert.Equal(t, indexToHash(10), r, "Incorrect head for with justified epoch at 3")
 
 	// Verify pruning below the prune threshold does not affect head.
 	f.store.pruneThreshold = 1000
-	require.NoError(t, f.store.prune(context.Background(), indexToHash(5)))
+	prevRoot := f.store.finalizedCheckpoint.Root
+	f.store.finalizedCheckpoint.Root = indexToHash(5)
+	require.NoError(t, f.store.prune(context.Background()))
 	assert.Equal(t, 11, len(f.store.nodeByRoot), "Incorrect nodes length after prune")
 
-	r, err = f.Head(context.Background(), indexToHash(5), balances)
+	f.store.finalizedCheckpoint.Root = prevRoot
+	r, err = f.Head(context.Background(), balances)
 	require.NoError(t, err)
-	assert.Equal(t, indexToHash(9), r, "Incorrect head for with justified epoch at 2")
+	assert.Equal(t, indexToHash(10), r, "Incorrect head for with justified epoch at 3")
 
 	// Verify pruning above the prune threshold does prune:
 	//          0
@@ -297,12 +290,16 @@ func TestVotes_CanFindHead(t *testing.T) {
 	//         / \
 	//        9  10
 	f.store.pruneThreshold = 1
-	require.NoError(t, f.store.prune(context.Background(), indexToHash(5)))
+	f.store.finalizedCheckpoint.Root = indexToHash(5)
+	require.NoError(t, f.store.prune(context.Background()))
 	assert.Equal(t, 5, len(f.store.nodeByRoot), "Incorrect nodes length after prune")
+	// we pruned artificially the justified root.
+	f.store.justifiedCheckpoint.Root = indexToHash(5)
+	f.store.finalizedCheckpoint.Root = prevRoot
 
-	r, err = f.Head(context.Background(), indexToHash(5), balances)
+	r, err = f.Head(context.Background(), balances)
 	require.NoError(t, err)
-	assert.Equal(t, indexToHash(9), r, "Incorrect head for with justified epoch at 2")
+	assert.Equal(t, indexToHash(10), r, "Incorrect head for with justified epoch at 2")
 
 	// Insert new block 11 and verify head is at 11.
 	//          5   6
@@ -311,14 +308,14 @@ func TestVotes_CanFindHead(t *testing.T) {
 	//          |
 	//          8
 	//         / \
-	//        9  10
+	//        10  9
 	//        |
 	// head-> 11
-	state, blkRoot, err = prepareForkchoiceState(context.Background(), 0, indexToHash(11), indexToHash(9), params.BeaconConfig().ZeroHash, 2, 2)
+	state, blkRoot, err = prepareForkchoiceState(context.Background(), 0, indexToHash(11), indexToHash(10), params.BeaconConfig().ZeroHash, 3, 2)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 
-	r, err = f.Head(context.Background(), indexToHash(5), balances)
+	r, err = f.Head(context.Background(), balances)
 	require.NoError(t, err)
-	assert.Equal(t, indexToHash(11), r, "Incorrect head for with justified epoch at 2")
+	assert.Equal(t, indexToHash(11), r, "Incorrect head for with justified epoch at 3")
 }

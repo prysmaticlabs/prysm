@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	v1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
@@ -73,7 +74,7 @@ func TestClient_Status(t *testing.T) {
 
 func TestClient_RegisterValidator(t *testing.T) {
 	ctx := context.Background()
-	expectedBody := `{"message":{"fee_recipient":"0x0000000000000000000000000000000000000000","gas_limit":"23","timestamp":"42","pubkey":"0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a"}}`
+	expectedBody := `[{"message":{"fee_recipient":"0x0000000000000000000000000000000000000000","gas_limit":"23","timestamp":"42","pubkey":"0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a"}}]`
 	expectedPath := "/eth/v1/builder/validators"
 	hc := &http.Client{
 		Transport: roundtrip(func(r *http.Request) (*http.Response, error) {
@@ -104,7 +105,7 @@ func TestClient_RegisterValidator(t *testing.T) {
 			Pubkey:       ezDecode(t, "0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a"),
 		},
 	}
-	require.NoError(t, c.RegisterValidator(ctx, reg))
+	require.NoError(t, c.RegisterValidator(ctx, []*eth.SignedValidatorRegistrationV1{reg}))
 }
 
 func TestClient_GetHeader(t *testing.T) {
@@ -300,7 +301,7 @@ func testSignedBlindedBeaconBlockBellatrix(t *testing.T) *eth.SignedBlindedBeaco
 					SyncCommitteeSignature: make([]byte, 48),
 					SyncCommitteeBits:      bitfield.Bitvector512{0x01},
 				},
-				ExecutionPayloadHeader: &eth.ExecutionPayloadHeader{
+				ExecutionPayloadHeader: &v1.ExecutionPayloadHeader{
 					ParentHash:       ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
 					FeeRecipient:     ezDecode(t, "0xabcf8e0d4e9587369b2301d0790347320302cc09"),
 					StateRoot:        ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),

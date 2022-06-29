@@ -17,7 +17,6 @@ import (
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -84,7 +83,7 @@ func TestProposeAttestation_IncorrectSignature(t *testing.T) {
 		OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
 	}
 
-	req := util.HydrateAttestation(&ethpb.Attestation{})
+	req := util.NewAttestationUtil().HydrateAttestation(&ethpb.Attestation{})
 	wanted := "Incorrect attestation signature"
 	_, err := attesterServer.ProposeAttestation(context.Background(), req)
 	assert.ErrorContains(t, wanted, err)
@@ -382,9 +381,7 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 	require.NoError(t, err, "Could not hash beacon block")
 	blockRoot2, err := block2.HashTreeRoot()
 	require.NoError(t, err)
-	wsb, err := wrapper.WrappedSignedBeaconBlock(block2)
-	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, db, block2)
 	justifiedRoot, err := justifiedBlock.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root for justified block")
 	targetRoot, err := targetBlock.Block.HashTreeRoot()
@@ -429,9 +426,7 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 		StateGen:            stategen.New(db),
 	}
 	require.NoError(t, db.SaveState(ctx, beaconState, blockRoot))
-	wsb, err = wrapper.WrappedSignedBeaconBlock(block)
-	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, db, block)
 	require.NoError(t, db.SaveHeadBlockRoot(ctx, blockRoot))
 
 	req := &ethpb.AttestationDataRequest{
@@ -560,21 +555,21 @@ func TestServer_SubscribeCommitteeSubnets_DifferentLengthSlots(t *testing.T) {
 		OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
 	}
 
-	var slots []types.Slot
+	var ss []types.Slot
 	var comIdxs []types.CommitteeIndex
 	var isAggregator []bool
 
 	for i := types.Slot(100); i < 200; i++ {
-		slots = append(slots, i)
+		ss = append(ss, i)
 		comIdxs = append(comIdxs, types.CommitteeIndex(randGen.Int63n(64)))
 		boolVal := randGen.Uint64()%2 == 0
 		isAggregator = append(isAggregator, boolVal)
 	}
 
-	slots = append(slots, 321)
+	ss = append(ss, 321)
 
 	_, err := attesterServer.SubscribeCommitteeSubnets(context.Background(), &ethpb.CommitteeSubnetsSubscribeRequest{
-		Slots:        slots,
+		Slots:        ss,
 		CommitteeIds: comIdxs,
 		IsAggregator: isAggregator,
 	})
@@ -606,19 +601,19 @@ func TestServer_SubscribeCommitteeSubnets_MultipleSlots(t *testing.T) {
 		OperationNotifier: (&mock.ChainService{}).OperationNotifier(),
 	}
 
-	var slots []types.Slot
+	var ss []types.Slot
 	var comIdxs []types.CommitteeIndex
 	var isAggregator []bool
 
 	for i := types.Slot(100); i < 200; i++ {
-		slots = append(slots, i)
+		ss = append(ss, i)
 		comIdxs = append(comIdxs, types.CommitteeIndex(randGen.Int63n(64)))
 		boolVal := randGen.Uint64()%2 == 0
 		isAggregator = append(isAggregator, boolVal)
 	}
 
 	_, err = attesterServer.SubscribeCommitteeSubnets(context.Background(), &ethpb.CommitteeSubnetsSubscribeRequest{
-		Slots:        slots,
+		Slots:        ss,
 		CommitteeIds: comIdxs,
 		IsAggregator: isAggregator,
 	})

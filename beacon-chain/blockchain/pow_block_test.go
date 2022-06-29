@@ -109,7 +109,7 @@ func Test_validateMergeBlock(t *testing.T) {
 
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-	fcs := protoarray.New(0, 0)
+	fcs := protoarray.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),
@@ -152,7 +152,7 @@ func Test_validateMergeBlock(t *testing.T) {
 func Test_getBlkParentHashAndTD(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-	fcs := protoarray.New(0, 0)
+	fcs := protoarray.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),

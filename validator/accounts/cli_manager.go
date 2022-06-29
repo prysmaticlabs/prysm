@@ -32,13 +32,20 @@ type AccountsCLIManager struct {
 	showPrivateKeys      bool
 	listValidatorIndices bool
 	deletePublicKeys     bool
+	importPrivateKeys    bool
+	readPasswordFile     bool
 	dialOpts             []grpc.DialOption
 	grpcHeaders          []string
 	beaconRPCProvider    string
-	filteredPubKeys      []bls.PublicKey
 	walletKeyCount       int
+	privateKeyFile       string
+	passwordFilePath     string
+	keysDir              string
 	backupsDir           string
 	backupsPassword      string
+	filteredPubKeys      []bls.PublicKey
+	rawPubKeys           [][]byte
+	formattedPubKeys     []string
 }
 
 func (acm *AccountsCLIManager) prepareBeaconClients(ctx context.Context) (*ethpb.BeaconNodeValidatorClient, *ethpb.NodeClient, error) {

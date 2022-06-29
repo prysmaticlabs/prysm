@@ -3,21 +3,20 @@ package bellatrix
 import (
 	"bytes"
 
-	"github.com/prysmaticlabs/prysm/config/fieldparams"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
-	"github.com/prysmaticlabs/prysm/proto/engine/v1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 )
 
 // PayloadToHeader converts `payload` into execution payload header format.
-func PayloadToHeader(payload *enginev1.ExecutionPayload) (*eth.ExecutionPayloadHeader, error) {
+func PayloadToHeader(payload *enginev1.ExecutionPayload) (*enginev1.ExecutionPayloadHeader, error) {
 	txRoot, err := ssz.TransactionsRoot(payload.Transactions)
 	if err != nil {
 		return nil, err
 	}
 
-	return &eth.ExecutionPayloadHeader{
+	return &enginev1.ExecutionPayloadHeader{
 		ParentHash:       bytesutil.SafeCopyBytes(payload.ParentHash),
 		FeeRecipient:     bytesutil.SafeCopyBytes(payload.FeeRecipient),
 		StateRoot:        bytesutil.SafeCopyBytes(payload.StateRoot),
@@ -39,28 +38,28 @@ func IsEmptyPayload(p *enginev1.ExecutionPayload) bool {
 	if p == nil {
 		return true
 	}
-	if !bytes.Equal(p.ParentHash, make([]byte, field_params.RootLength)) {
+	if !bytes.Equal(p.ParentHash, make([]byte, fieldparams.RootLength)) {
 		return false
 	}
-	if !bytes.Equal(p.FeeRecipient, make([]byte, field_params.FeeRecipientLength)) {
+	if !bytes.Equal(p.FeeRecipient, make([]byte, fieldparams.FeeRecipientLength)) {
 		return false
 	}
-	if !bytes.Equal(p.StateRoot, make([]byte, field_params.RootLength)) {
+	if !bytes.Equal(p.StateRoot, make([]byte, fieldparams.RootLength)) {
 		return false
 	}
-	if !bytes.Equal(p.ReceiptsRoot, make([]byte, field_params.RootLength)) {
+	if !bytes.Equal(p.ReceiptsRoot, make([]byte, fieldparams.RootLength)) {
 		return false
 	}
-	if !bytes.Equal(p.LogsBloom, make([]byte, field_params.LogsBloomLength)) {
+	if !bytes.Equal(p.LogsBloom, make([]byte, fieldparams.LogsBloomLength)) {
 		return false
 	}
-	if !bytes.Equal(p.PrevRandao, make([]byte, field_params.RootLength)) {
+	if !bytes.Equal(p.PrevRandao, make([]byte, fieldparams.RootLength)) {
 		return false
 	}
-	if !bytes.Equal(p.BaseFeePerGas, make([]byte, field_params.RootLength)) {
+	if !bytes.Equal(p.BaseFeePerGas, make([]byte, fieldparams.RootLength)) {
 		return false
 	}
-	if !bytes.Equal(p.BlockHash, make([]byte, field_params.RootLength)) {
+	if !bytes.Equal(p.BlockHash, make([]byte, fieldparams.RootLength)) {
 		return false
 	}
 	if len(p.Transactions) != 0 {
@@ -84,32 +83,32 @@ func IsEmptyPayload(p *enginev1.ExecutionPayload) bool {
 	return true
 }
 
-func IsEmptyHeader(h *eth.ExecutionPayloadHeader) bool {
-	if !bytes.Equal(h.ParentHash, make([]byte, field_params.RootLength)) {
+func IsEmptyHeader(h *enginev1.ExecutionPayloadHeader) bool {
+	if !bytes.Equal(h.ParentHash, make([]byte, fieldparams.RootLength)) {
 		return false
 	}
-	if !bytes.Equal(h.FeeRecipient, make([]byte, field_params.FeeRecipientLength)) {
+	if !bytes.Equal(h.FeeRecipient, make([]byte, fieldparams.FeeRecipientLength)) {
 		return false
 	}
-	if !bytes.Equal(h.StateRoot, make([]byte, field_params.RootLength)) {
+	if !bytes.Equal(h.StateRoot, make([]byte, fieldparams.RootLength)) {
 		return false
 	}
-	if !bytes.Equal(h.ReceiptsRoot, make([]byte, field_params.RootLength)) {
+	if !bytes.Equal(h.ReceiptsRoot, make([]byte, fieldparams.RootLength)) {
 		return false
 	}
-	if !bytes.Equal(h.LogsBloom, make([]byte, field_params.LogsBloomLength)) {
+	if !bytes.Equal(h.LogsBloom, make([]byte, fieldparams.LogsBloomLength)) {
 		return false
 	}
-	if !bytes.Equal(h.PrevRandao, make([]byte, field_params.RootLength)) {
+	if !bytes.Equal(h.PrevRandao, make([]byte, fieldparams.RootLength)) {
 		return false
 	}
-	if !bytes.Equal(h.BaseFeePerGas, make([]byte, field_params.RootLength)) {
+	if !bytes.Equal(h.BaseFeePerGas, make([]byte, fieldparams.RootLength)) {
 		return false
 	}
-	if !bytes.Equal(h.BlockHash, make([]byte, field_params.RootLength)) {
+	if !bytes.Equal(h.BlockHash, make([]byte, fieldparams.RootLength)) {
 		return false
 	}
-	if !bytes.Equal(h.TransactionsRoot, make([]byte, field_params.RootLength)) {
+	if !bytes.Equal(h.TransactionsRoot, make([]byte, fieldparams.RootLength)) {
 		return false
 	}
 	if len(h.ExtraData) != 0 {

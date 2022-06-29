@@ -2,7 +2,8 @@ package validator_service_config
 
 import (
 	"github.com/ethereum/go-ethereum/common"
-	field_params "github.com/prysmaticlabs/prysm/config/fieldparams"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/config/params"
 )
 
 // ProposerSettingsPayload is the struct representation of the JSON or YAML payload set in the validator through the CLI.
@@ -24,7 +25,7 @@ type ProposerOptionPayload struct {
 // ProposerSettings is a Prysm internal representation of the fee recipient config on the validator client.
 // ProposerSettingsPayload maps to ProposerSettings on import through the CLI.
 type ProposerSettings struct {
-	ProposeConfig map[[field_params.BLSPubkeyLength]byte]*ProposerOption
+	ProposeConfig map[[fieldparams.BLSPubkeyLength]byte]*ProposerOption
 	DefaultConfig *ProposerOption
 }
 
@@ -32,4 +33,12 @@ type ProposerSettings struct {
 type ProposerOption struct {
 	FeeRecipient common.Address
 	GasLimit     uint64
+}
+
+// DefaultProposerOption returns a Proposer Option with defaults filled
+func DefaultProposerOption() ProposerOption {
+	return ProposerOption{
+		FeeRecipient: params.BeaconConfig().DefaultFeeRecipient,
+		GasLimit:     params.BeaconConfig().DefaultBuilderGasLimit,
+	}
 }

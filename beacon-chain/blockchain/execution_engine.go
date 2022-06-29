@@ -18,7 +18,6 @@ import (
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -54,8 +53,8 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get execution payload")
 	}
-	finalizedHash := s.store.FinalizedPayloadBlockHash()
-	justifiedHash := s.store.JustifiedPayloadBlockHash()
+	finalizedHash := s.ForkChoicer().FinalizedPayloadBlockHash()
+	justifiedHash := s.ForkChoicer().JustifiedPayloadBlockHash()
 	fcs := &enginev1.ForkchoiceState{
 		HeadBlockHash:      headPayload.BlockHash,
 		SafeBlockHash:      justifiedHash[:],
@@ -90,7 +89,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 				return nil, err
 			}
 
-			r, err := s.updateHead(ctx, s.justifiedBalances.balances)
+			r, err := s.cfg.ForkChoiceStore.Head(ctx, s.justifiedBalances.balances)
 			if err != nil {
 				return nil, err
 			}
@@ -147,7 +146,7 @@ func (s *Service) getPayloadHash(ctx context.Context, root []byte) ([32]byte, er
 // notifyForkchoiceUpdate signals execution engine on a new payload.
 // It returns true if the EL has returned VALID for the block
 func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
-	postStateHeader *ethpb.ExecutionPayloadHeader, blk interfaces.SignedBeaconBlock) (bool, error) {
+	postStateHeader *enginev1.ExecutionPayloadHeader, blk interfaces.SignedBeaconBlock) (bool, error) {
 	ctx, span := trace.StartSpan(ctx, "blockChain.notifyNewPayload")
 	defer span.End()
 

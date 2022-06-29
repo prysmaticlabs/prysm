@@ -131,6 +131,14 @@ func (s *LighthouseValidatorNodeSet) StopAtIndex(i int) error {
 	return s.nodes[i].Stop()
 }
 
+// ComponentAtIndex returns the component at the provided index.
+func (s *LighthouseValidatorNodeSet) ComponentAtIndex(i int) (e2etypes.ComponentRunner, error) {
+	if i >= len(s.nodes) {
+		return nil, errors.Errorf("provided index exceeds slice size: %d >= %d", i, len(s.nodes))
+	}
+	return s.nodes[i], nil
+}
+
 // LighthouseValidatorNode represents a lighthouse validator node.
 type LighthouseValidatorNode struct {
 	e2etypes.ComponentRunner
@@ -247,7 +255,7 @@ func NewKeystoreGenerator() *KeystoreGenerator {
 	return &KeystoreGenerator{started: make(chan struct{})}
 }
 
-func (k *KeystoreGenerator) Start(ctx context.Context) error {
+func (k *KeystoreGenerator) Start(_ context.Context) error {
 	validatorNum := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
 	lighthouseBeaconNum := e2e.TestParams.LighthouseBeaconNodeCount
 	prysmBeaconNum := e2e.TestParams.BeaconNodeCount

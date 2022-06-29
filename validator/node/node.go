@@ -21,6 +21,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/pkg/errors"
+	fastssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/api/gateway"
 	"github.com/prysmaticlabs/prysm/api/gateway/apimiddleware"
 	"github.com/prysmaticlabs/prysm/async/event"
@@ -47,9 +48,9 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	g "github.com/prysmaticlabs/prysm/validator/graffiti"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/local"
-	remote_web3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
+	remoteweb3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
 	"github.com/prysmaticlabs/prysm/validator/rpc"
-	validatorMiddleware "github.com/prysmaticlabs/prysm/validator/rpc/apimiddleware"
+	validatormiddleware "github.com/prysmaticlabs/prysm/validator/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/validator/web"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -118,6 +119,8 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 			return nil, err
 		}
 	}
+
+	configureFastSSZHashingAlgorithm()
 
 	// If the --web flag is enabled to administer the validator
 	// client via a web portal, we start the validator client in a different way.
@@ -435,8 +438,8 @@ func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
 	return c.services.RegisterService(v)
 }
 
-func web3SignerConfig(cliCtx *cli.Context) (*remote_web3signer.SetupConfig, error) {
-	var web3signerConfig *remote_web3signer.SetupConfig
+func web3SignerConfig(cliCtx *cli.Context) (*remoteweb3signer.SetupConfig, error) {
+	var web3signerConfig *remoteweb3signer.SetupConfig
 	if cliCtx.IsSet(flags.Web3SignerURLFlag.Name) {
 		urlStr := cliCtx.String(flags.Web3SignerURLFlag.Name)
 		u, err := url.ParseRequestURI(urlStr)
@@ -446,7 +449,7 @@ func web3SignerConfig(cliCtx *cli.Context) (*remote_web3signer.SetupConfig, erro
 		if u.Scheme == "" || u.Host == "" {
 			return nil, fmt.Errorf("web3signer url must be in the format of http(s)://host:port url used: %v", urlStr)
 		}
-		web3signerConfig = &remote_web3signer.SetupConfig{
+		web3signerConfig = &remoteweb3signer.SetupConfig{
 			BaseEndpoint:          u.String(),
 			GenesisValidatorsRoot: nil,
 		}
@@ -524,16 +527,14 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 	if fileConfig.DefaultConfig == nil {
 		return nil, errors.New("default fileConfig is required")
 	}
-	bytes, err := hexutil.Decode(fileConfig.DefaultConfig.FeeRecipient)
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not decode fee recipient %s", fileConfig.DefaultConfig.FeeRecipient)
-	}
 	if !common.IsHexAddress(fileConfig.DefaultConfig.FeeRecipient) {
 		return nil, errors.New("default fileConfig fee recipient is not a valid eth1 address")
 	}
-
+	if err := warnNonChecksummedAddress(fileConfig.DefaultConfig.FeeRecipient); err != nil {
+		return nil, err
+	}
 	vpSettings.DefaultConfig = &validatorServiceConfig.ProposerOption{
-		FeeRecipient: common.BytesToAddress(bytes),
+		FeeRecipient: common.HexToAddress(fileConfig.DefaultConfig.FeeRecipient),
 		GasLimit:     reviewGasLimit(fileConfig.DefaultConfig.GasLimit),
 	}
 
@@ -542,7 +543,7 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 		for key, option := range fileConfig.ProposeConfig {
 			decodedKey, err := hexutil.Decode(key)
 			if err != nil {
-				return nil, errors.Wrapf(err, "could not decode public key for web3signer: %s", key)
+				return nil, errors.Wrapf(err, "could not decode public key %s", key)
 			}
 			if len(decodedKey) != fieldparams.BLSPubkeyLength {
 				return nil, fmt.Errorf("%v  is not a bls public key", key)
@@ -550,32 +551,34 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 			if option == nil {
 				return nil, fmt.Errorf("fee recipient is required for proposer %s", key)
 			}
-			feebytes, err := hexutil.Decode(option.FeeRecipient)
-			if err != nil {
-				return nil, errors.Wrapf(err, "could not decode fee recipient %s", option.FeeRecipient)
-			}
 			if !common.IsHexAddress(option.FeeRecipient) {
 				return nil, errors.New("fee recipient is not a valid eth1 address")
 			}
-			mixedcaseAddress, err := common.NewMixedcaseAddressFromString(option.FeeRecipient)
-			if err != nil {
-				return nil, errors.Wrapf(err, "could not decode fee recipient %s", option.FeeRecipient)
-			}
-			checksumAddress := common.BytesToAddress(feebytes)
-			if !mixedcaseAddress.ValidChecksum() {
-				log.Warnf("Fee recipient %s is not a checksum Ethereum address. "+
-					"The checksummed address is %s and will be used as the fee recipient. "+
-					"We recommend using a mixed-case address (checksum) "+
-					"to prevent spelling mistakes in your fee recipient Ethereum address", option.FeeRecipient, checksumAddress.Hex())
+			if err := warnNonChecksummedAddress(option.FeeRecipient); err != nil {
+				return nil, err
 			}
 			vpSettings.ProposeConfig[bytesutil.ToBytes48(decodedKey)] = &validatorServiceConfig.ProposerOption{
-				FeeRecipient: checksumAddress,
+				FeeRecipient: common.HexToAddress(option.FeeRecipient),
 				GasLimit:     reviewGasLimit(option.GasLimit),
 			}
 		}
 	}
 
 	return vpSettings, nil
+}
+
+func warnNonChecksummedAddress(feeRecipient string) error {
+	mixedcaseAddress, err := common.NewMixedcaseAddressFromString(feeRecipient)
+	if err != nil {
+		return errors.Wrapf(err, "could not decode fee recipient %s", feeRecipient)
+	}
+	if !mixedcaseAddress.ValidChecksum() {
+		log.Warnf("Fee recipient %s is not a checksum Ethereum address. "+
+			"The checksummed address is %s and will be used as the fee recipient. "+
+			"We recommend using a mixed-case address (checksum) "+
+			"to prevent spelling mistakes in your fee recipient Ethereum address", feeRecipient, mixedcaseAddress.Address().Hex())
+	}
+	return nil
 }
 
 func reviewGasLimit(gasLimit uint64) uint64 {
@@ -678,6 +681,7 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 		gwruntime.WithMarshalerOption(
 			"text/event-stream", &gwruntime.EventSourceJSONPb{},
 		),
+		gwruntime.WithForwardResponseOption(gateway.HttpResponseModifier),
 	)
 	muxHandler := func(apiMware *apimiddleware.ApiProxyMiddleware, h http.HandlerFunc, w http.ResponseWriter, req *http.Request) {
 		// The validator gateway handler requires this special logic as it serves two kinds of APIs, namely
@@ -708,7 +712,7 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 		gateway.WithMaxCallRecvMsgSize(maxCallSize),
 		gateway.WithPbHandlers([]*gateway.PbMux{pbHandler}),
 		gateway.WithAllowedOrigins(allowedOrigins),
-		gateway.WithApiMiddleware(&validatorMiddleware.ValidatorEndpointFactory{}),
+		gateway.WithApiMiddleware(&validatormiddleware.ValidatorEndpointFactory{}),
 		gateway.WithMuxHandler(muxHandler),
 		gateway.WithTimeout(uint64(timeout)),
 	}
@@ -822,4 +826,10 @@ func unmarshalFromFile(ctx context.Context, from string, to interface{}) error {
 	}
 
 	return nil
+}
+
+func configureFastSSZHashingAlgorithm() {
+	if features.Get().EnableVectorizedHTR {
+		fastssz.EnableVectorizedHTR = true
+	}
 }

@@ -27,7 +27,7 @@ import (
 
 func TestProcessAttestations_InclusionDelayFailure(t *testing.T) {
 	attestations := []*ethpb.Attestation{
-		util.HydrateAttestation(&ethpb.Attestation{
+		util.NewAttestationUtil().HydrateAttestation(&ethpb.Attestation{
 			Data: &ethpb.AttestationData{
 				Target: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, fieldparams.RootLength)},
 				Slot:   5,
@@ -55,7 +55,7 @@ func TestProcessAttestations_InclusionDelayFailure(t *testing.T) {
 }
 
 func TestProcessAttestations_NeitherCurrentNorPrevEpoch(t *testing.T) {
-	att := util.HydrateAttestation(&ethpb.Attestation{
+	att := util.NewAttestationUtil().HydrateAttestation(&ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: 0, Root: []byte("hello-world")},
 			Target: &ethpb.Checkpoint{Epoch: 0}}})
@@ -201,7 +201,7 @@ func TestProcessAttestations_OK(t *testing.T) {
 	aggBits.SetBitAt(0, true)
 	var mockRoot [32]byte
 	copy(mockRoot[:], "hello-world")
-	att := util.HydrateAttestation(&ethpb.Attestation{
+	att := util.NewAttestationUtil().HydrateAttestation(&ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Root: mockRoot[:]},
 			Target: &ethpb.Checkpoint{Root: mockRoot[:]},
@@ -411,21 +411,21 @@ func TestValidatorFlag_Add_ExceedsLength(t *testing.T) {
 
 func TestFuzzProcessAttestationsNoVerify_10000(t *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
-	state := &ethpb.BeaconStateAltair{}
+	st := &ethpb.BeaconStateAltair{}
 	b := &ethpb.SignedBeaconBlockAltair{Block: &ethpb.BeaconBlockAltair{}}
 	for i := 0; i < 10000; i++ {
-		fuzzer.Fuzz(state)
+		fuzzer.Fuzz(st)
 		fuzzer.Fuzz(b)
 		if b.Block == nil {
 			b.Block = &ethpb.BeaconBlockAltair{}
 		}
-		s, err := stateAltair.InitializeFromProtoUnsafe(state)
+		s, err := stateAltair.InitializeFromProtoUnsafe(st)
 		require.NoError(t, err)
 		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
 		require.NoError(t, err)
 		r, err := altair.ProcessAttestationsNoVerifySignature(context.Background(), s, wsb)
 		if err != nil && r != nil {
-			t.Fatalf("return value should be nil on err. found: %v on error: %v for state: %v and block: %v", r, err, state, b)
+			t.Fatalf("return value should be nil on err. found: %v on error: %v for state: %v and block: %v", r, err, s, b)
 		}
 	}
 }

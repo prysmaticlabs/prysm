@@ -120,6 +120,118 @@
 				}
 			},
 			"response": []
+		},
+		{
+			"name": "get fee recipient",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.ck3J6tcvHcI74IiFjyJqcBH-MmNAq-fMr0ncyZkGvFM",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "default"
+					}
+				],
+				"url": {
+					"raw": "localhost:7500/eth/v1/validator/0xaf2e7ba294e03438ea819bd4033c6c1bf6b04320ee2075b77273c08d02f8a61bcc303c2c06bd3713cb442072ae591494/feerecipient",
+					"host": [
+						"localhost"
+					],
+					"port": "7500",
+					"path": [
+						"eth",
+						"v1",
+						"validator",
+						"0xaf2e7ba294e03438ea819bd4033c6c1bf6b04320ee2075b77273c08d02f8a61bcc303c2c06bd3713cb442072ae591494",
+						"feerecipient"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "set fee recipient",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.ck3J6tcvHcI74IiFjyJqcBH-MmNAq-fMr0ncyZkGvFM",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"ethaddress\":\"0x046FB65722E7b2455012bfebF6177F4d2e9738D9\"\n}\n"
+				},
+				"url": {
+					"raw": "localhost:7500/eth/v1/validator/0xaf2e7ba294e03438ea819bd4033c6c1bf6b04320ee2075b77273c08d02f8a61bcc303c2c06bd3713cb442072ae591494/feerecipient",
+					"host": [
+						"localhost"
+					],
+					"port": "7500",
+					"path": [
+						"eth",
+						"v1",
+						"validator",
+						"0xaf2e7ba294e03438ea819bd4033c6c1bf6b04320ee2075b77273c08d02f8a61bcc303c2c06bd3713cb442072ae591494",
+						"feerecipient"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "delete fee recipient",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.ck3J6tcvHcI74IiFjyJqcBH-MmNAq-fMr0ncyZkGvFM",
+							"type": "string"
+						}
+					]
+				},
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "default"
+					}
+				],
+				"url": {
+					"raw": "localhost:7500/eth/v1/validator/0xaf2e7ba294e03438ea819bd4033c6c1bf6b04320ee2075b77273c08d02f8a61bcc303c2c06bd3713cb442072ae591494/feerecipient",
+					"host": [
+						"localhost"
+					],
+					"port": "7500",
+					"path": [
+						"eth",
+						"v1",
+						"validator",
+						"0xaf2e7ba294e03438ea819bd4033c6c1bf6b04320ee2075b77273c08d02f8a61bcc303c2c06bd3713cb442072ae591494",
+						"feerecipient"
+					]
+				}
+			},
+			"response": []
 		}
 	]
 }

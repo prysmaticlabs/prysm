@@ -59,23 +59,21 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.SignedBeaco
 	}
 
 	// Reports on block and fork choice metrics.
-	justified, err := s.store.JustifiedCheckpt()
-	if err != nil {
-		return err
-	}
-	finalized, err := s.store.FinalizedCheckpt()
-	if err != nil {
-		return errNilFinalizedInStore
-	}
+	finalized := s.FinalizedCheckpt()
 	reportSlotMetrics(blockCopy.Block().Slot(), s.HeadSlot(), s.CurrentSlot(), finalized)
 
 	// Log block sync status.
+	justified := s.CurrentJustifiedCheckpt()
 	if err := logBlockSyncStatus(blockCopy.Block(), blockRoot, justified, finalized, receivedTime, uint64(s.genesisTime.Unix())); err != nil {
-		return err
+		log.WithError(err).Error("Unable to log block sync status")
+	}
+	// Log payload data
+	if err := logPayload(blockCopy.Block()); err != nil {
+		log.WithError(err).Error("Unable to log debug block payload data")
 	}
 	// Log state transition data.
 	if err := logStateTransitionData(blockCopy.Block()); err != nil {
-		return err
+		log.WithError(err).Error("Unable to log state transition data")
 	}
 
 	return nil
@@ -109,20 +107,14 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []interfaces.Sig
 		})
 
 		// Reports on blockCopy and fork choice metrics.
-		finalized, err := s.store.FinalizedCheckpt()
-		if err != nil {
-			return errors.Wrap(err, "could not get finalized checkpoint")
-		}
+		finalized := s.FinalizedCheckpt()
 		reportSlotMetrics(blockCopy.Block().Slot(), s.HeadSlot(), s.CurrentSlot(), finalized)
 	}
 
 	if err := s.cfg.BeaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
 		return err
 	}
-	finalized, err := s.store.FinalizedCheckpt()
-	if err != nil {
-		return errors.Wrap(err, "could not get finalized checkpoint")
-	}
+	finalized := s.FinalizedCheckpt()
 	if finalized == nil {
 		return errNilFinalizedInStore
 	}
@@ -175,10 +167,7 @@ func (s *Service) checkSaveHotStateDB(ctx context.Context) error {
 	currentEpoch := slots.ToEpoch(s.CurrentSlot())
 	// Prevent `sinceFinality` going underflow.
 	var sinceFinality types.Epoch
-	finalized, err := s.store.FinalizedCheckpt()
-	if err != nil {
-		return err
-	}
+	finalized := s.FinalizedCheckpt()
 	if finalized == nil {
 		return errNilFinalizedInStore
 	}

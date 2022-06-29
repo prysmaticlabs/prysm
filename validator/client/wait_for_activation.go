@@ -96,103 +96,117 @@ func (v *validator) waitForActivation(ctx context.Context, accountsChangedChan <
 
 	remoteKm, ok := v.keyManager.(remote.RemoteKeymanager)
 	if ok {
-		for {
-			select {
-			case <-accountsChangedChan:
-				// Accounts (keys) changed, restart the process.
-				return v.waitForActivation(ctx, accountsChangedChan)
-			case <-v.NextSlot():
-				if ctx.Err() == context.Canceled {
-					return errors.Wrap(ctx.Err(), "context canceled, not waiting for activation anymore")
-				}
-				validatingKeys, err = remoteKm.ReloadPublicKeys(ctx)
-				if err != nil {
-					return errors.Wrap(err, msgCouldNotFetchKeys)
-				}
-				statusRequestKeys := make([][]byte, len(validatingKeys))
-				for i := range validatingKeys {
-					statusRequestKeys[i] = validatingKeys[i][:]
-				}
-				resp, err := v.validatorClient.MultipleValidatorStatus(ctx, &ethpb.MultipleValidatorStatusRequest{
-					PublicKeys: statusRequestKeys,
-				})
-				if err != nil {
-					return err
-				}
-				statuses := make([]*validatorStatus, len(resp.Statuses))
-				for i, s := range resp.Statuses {
-					statuses[i] = &validatorStatus{
-						publicKey: resp.PublicKeys[i],
-						status:    s,
-						index:     resp.Indices[i],
-					}
-				}
-
-				valActivated := v.checkAndLogValidatorStatus(statuses)
-				if valActivated {
-					logActiveValidatorStatus(statuses)
-					// Set properties on the beacon node like the fee recipient for validators that are being used & active.
-					if err := v.PushProposerSettings(ctx, remoteKm); err != nil {
-						return err
-					}
-				} else {
-					continue
-				}
-			}
-			break
+		if err = v.handleWithRemoteKeyManager(ctx, accountsChangedChan, &remoteKm); err != nil {
+			return err
 		}
 	} else {
-		for {
-			select {
-			case <-accountsChangedChan:
-				// Accounts (keys) changed, restart the process.
-				return v.waitForActivation(ctx, accountsChangedChan)
-			default:
-				res, err := stream.Recv()
-				// If the stream is closed, we stop the loop.
-				if errors.Is(err, io.EOF) {
-					break
-				}
-				// If context is canceled we return from the function.
-				if ctx.Err() == context.Canceled {
-					return errors.Wrap(ctx.Err(), "context has been canceled so shutting down the loop")
-				}
-				if err != nil {
-					tracing.AnnotateError(span, err)
-					attempts := streamAttempts(ctx)
-					log.WithError(err).WithField("attempts", attempts).
-						Error("Stream broken while waiting for activation. Reconnecting...")
-					// Reconnection attempt backoff, up to 60s.
-					time.Sleep(time.Second * time.Duration(math.Min(uint64(attempts), 60)))
-					return v.waitForActivation(incrementRetries(ctx), accountsChangedChan)
-				}
-
-				statuses := make([]*validatorStatus, len(res.Statuses))
-				for i, s := range res.Statuses {
-					statuses[i] = &validatorStatus{
-						publicKey: s.PublicKey,
-						status:    s.Status,
-						index:     s.Index,
-					}
-				}
-
-				valActivated := v.checkAndLogValidatorStatus(statuses)
-				if valActivated {
-					logActiveValidatorStatus(statuses)
-
-					// Set properties on the beacon node like the fee recipient for validators that are being used & active.
-					if err := v.PushProposerSettings(ctx, v.keyManager); err != nil {
-						return err
-					}
-				} else {
-					continue
-				}
-			}
-			break
+		if err = v.handleWithoutRemoteKeyManager(ctx, accountsChangedChan, &stream, span); err != nil {
+			return err
 		}
 	}
 
 	v.ticker = slots.NewSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SecondsPerSlot)
+	return nil
+}
+
+func (v *validator) handleWithRemoteKeyManager(ctx context.Context, accountsChangedChan <-chan [][fieldparams.BLSPubkeyLength]byte, remoteKm *remote.RemoteKeymanager) error {
+	for {
+		select {
+		case <-accountsChangedChan:
+			// Accounts (keys) changed, restart the process.
+			return v.waitForActivation(ctx, accountsChangedChan)
+		case <-v.NextSlot():
+			if ctx.Err() == context.Canceled {
+				return errors.Wrap(ctx.Err(), "context canceled, not waiting for activation anymore")
+			}
+			validatingKeys, err := (*remoteKm).ReloadPublicKeys(ctx)
+			if err != nil {
+				return errors.Wrap(err, msgCouldNotFetchKeys)
+			}
+			statusRequestKeys := make([][]byte, len(validatingKeys))
+			for i := range validatingKeys {
+				statusRequestKeys[i] = validatingKeys[i][:]
+			}
+			resp, err := v.validatorClient.MultipleValidatorStatus(ctx, &ethpb.MultipleValidatorStatusRequest{
+				PublicKeys: statusRequestKeys,
+			})
+			if err != nil {
+				return err
+			}
+			statuses := make([]*validatorStatus, len(resp.Statuses))
+			for i, s := range resp.Statuses {
+				statuses[i] = &validatorStatus{
+					publicKey: resp.PublicKeys[i],
+					status:    s,
+					index:     resp.Indices[i],
+				}
+			}
+
+			valActivated := v.checkAndLogValidatorStatus(statuses)
+			if valActivated {
+				logActiveValidatorStatus(statuses)
+				// Set properties on the beacon node like the fee recipient for validators that are being used & active.
+				if err := v.PushProposerSettings(ctx, *remoteKm); err != nil {
+					return err
+				}
+			} else {
+				continue
+			}
+		}
+		break
+	}
+	return nil
+}
+
+func (v *validator) handleWithoutRemoteKeyManager(ctx context.Context, accountsChangedChan <-chan [][fieldparams.BLSPubkeyLength]byte, stream *ethpb.BeaconNodeValidator_WaitForActivationClient, span *trace.Span) error {
+	for {
+		select {
+		case <-accountsChangedChan:
+			// Accounts (keys) changed, restart the process.
+			return v.waitForActivation(ctx, accountsChangedChan)
+		default:
+			res, err := (*stream).Recv()
+			// If the stream is closed, we stop the loop.
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			// If context is canceled we return from the function.
+			if ctx.Err() == context.Canceled {
+				return errors.Wrap(ctx.Err(), "context has been canceled so shutting down the loop")
+			}
+			if err != nil {
+				tracing.AnnotateError(span, err)
+				attempts := streamAttempts(ctx)
+				log.WithError(err).WithField("attempts", attempts).
+					Error("Stream broken while waiting for activation. Reconnecting...")
+				// Reconnection attempt backoff, up to 60s.
+				time.Sleep(time.Second * time.Duration(math.Min(uint64(attempts), 60)))
+				return v.waitForActivation(incrementRetries(ctx), accountsChangedChan)
+			}
+
+			statuses := make([]*validatorStatus, len(res.Statuses))
+			for i, s := range res.Statuses {
+				statuses[i] = &validatorStatus{
+					publicKey: s.PublicKey,
+					status:    s.Status,
+					index:     s.Index,
+				}
+			}
+
+			valActivated := v.checkAndLogValidatorStatus(statuses)
+			if valActivated {
+				logActiveValidatorStatus(statuses)
+
+				// Set properties on the beacon node like the fee recipient for validators that are being used & active.
+				if err := v.PushProposerSettings(ctx, v.keyManager); err != nil {
+					return err
+				}
+			} else {
+				continue
+			}
+		}
+		break
+	}
 	return nil
 }
 

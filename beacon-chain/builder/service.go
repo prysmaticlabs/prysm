@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/network"
 	v1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -20,8 +21,9 @@ import (
 type BlockBuilder interface {
 	SubmitBlindedBlock(ctx context.Context, block *ethpb.SignedBlindedBeaconBlockBellatrix) (*v1.ExecutionPayload, error)
 	GetHeader(ctx context.Context, slot types.Slot, parentHash [32]byte, pubKey [48]byte) (*ethpb.SignedBuilderBid, error)
-	Status(ctx context.Context) error
-	RegisterValidator(ctx context.Context, reg *ethpb.SignedValidatorRegistrationV1) error
+	Status() error
+	RegisterValidator(ctx context.Context, reg []*ethpb.SignedValidatorRegistrationV1) error
+	Configured() bool
 }
 
 // config defines a config struct for dependencies into the service.
@@ -33,13 +35,20 @@ type config struct {
 
 // Service defines a service that provides a client for interacting with the beacon chain and MEV relay network.
 type Service struct {
-	cfg *config
-	c   *builder.Client
+	cfg    *config
+	c      *builder.Client
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
 // NewService instantiates a new service.
 func NewService(ctx context.Context, opts ...Option) (*Service, error) {
-	s := &Service{}
+	ctx, cancel := context.WithCancel(ctx)
+	s := &Service{
+		ctx:    ctx,
+		cancel: cancel,
+		cfg:    &config{},
+	}
 	for _, opt := range opts {
 		if err := opt(s); err != nil {
 			return nil, err
@@ -51,6 +60,7 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 			return nil, err
 		}
 		s.c = c
+		log.WithField("endpoint", c.NodeURL()).Info("Builder has been configured")
 	}
 	return s, nil
 }
@@ -88,20 +98,25 @@ func (s *Service) GetHeader(ctx context.Context, slot types.Slot, parentHash [32
 }
 
 // Status retrieves the status of the builder relay network.
-func (s *Service) Status(ctx context.Context) error {
-	ctx, span := trace.StartSpan(ctx, "builder.Status")
+func (s *Service) Status() error {
+	ctx, span := trace.StartSpan(context.Background(), "builder.Status")
 	defer span.End()
 	start := time.Now()
 	defer func() {
 		getStatusLatency.Observe(float64(time.Since(start).Milliseconds()))
 	}()
 
+	// Return early if builder isn't initialized in service.
+	if s.c == nil {
+		return nil
+	}
+
 	return s.c.Status(ctx)
 }
 
 // RegisterValidator registers a validator with the builder relay network.
 // It also saves the registration object to the DB.
-func (s *Service) RegisterValidator(ctx context.Context, reg *ethpb.SignedValidatorRegistrationV1) error {
+func (s *Service) RegisterValidator(ctx context.Context, reg []*ethpb.SignedValidatorRegistrationV1) error {
 	ctx, span := trace.StartSpan(ctx, "builder.RegisterValidator")
 	defer span.End()
 	start := time.Now()
@@ -109,13 +124,30 @@ func (s *Service) RegisterValidator(ctx context.Context, reg *ethpb.SignedValida
 		registerValidatorLatency.Observe(float64(time.Since(start).Milliseconds()))
 	}()
 
-	idx, exists := s.cfg.headFetcher.HeadPublicKeyToValidatorIndex(bytesutil.ToBytes48(reg.Message.Pubkey))
-	if !exists {
-		return nil // If the pubkey is not found, it is not a validator. Do nothing.
+	idxs := make([]types.ValidatorIndex, 0)
+	msgs := make([]*ethpb.ValidatorRegistrationV1, 0)
+	valid := make([]*ethpb.SignedValidatorRegistrationV1, 0)
+	for i := 0; i < len(reg); i++ {
+		r := reg[i]
+		nx, exists := s.cfg.headFetcher.HeadPublicKeyToValidatorIndex(bytesutil.ToBytes48(r.Message.Pubkey))
+		if !exists {
+			// we want to allow validators to set up keys that haven't been added to the beaconstate validator list yet,
+			// so we should tolerate keys that do not seem to be valid by skipping past them.
+			log.Warnf("Skipping validator registration for pubkey=%#x - not in current validator set.", r.Message.Pubkey)
+			continue
+		}
+		idxs = append(idxs, nx)
+		msgs = append(msgs, r.Message)
+		valid = append(valid, r)
 	}
-	if err := s.c.RegisterValidator(ctx, reg); err != nil {
-		return errors.Wrap(err, "could not register validator")
+	if err := s.c.RegisterValidator(ctx, valid); err != nil {
+		return errors.Wrap(err, "could not register validator(s)")
 	}
 
-	return s.cfg.beaconDB.SaveRegistrationsByValidatorIDs(ctx, []types.ValidatorIndex{idx}, []*ethpb.ValidatorRegistrationV1{reg.Message})
+	return s.cfg.beaconDB.SaveRegistrationsByValidatorIDs(ctx, idxs, msgs)
+}
+
+// Configured returns true if the user has input a builder URL.
+func (s *Service) Configured() bool {
+	return s.cfg.builderEndpoint.Url != ""
 }

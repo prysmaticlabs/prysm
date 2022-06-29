@@ -95,17 +95,13 @@ func (s *Service) verifyBlkPreState(ctx context.Context, b interfaces.BeaconBloc
 func (s *Service) VerifyFinalizedBlkDescendant(ctx context.Context, root [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.VerifyFinalizedBlkDescendant")
 	defer span.End()
-	finalized, err := s.store.FinalizedCheckpt()
-	if err != nil {
-		return errors.Wrap(err, "could not get finalized checkpoint")
-	}
-	fRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(finalized.Root))
-	finalizedBlkSigned, err := s.getBlock(ctx, fRoot)
+	finalized := s.ForkChoicer().FinalizedCheckpoint()
+	fRoot := s.ensureRootNotZeros(finalized.Root)
+	fSlot, err := slots.EpochStart(finalized.Epoch)
 	if err != nil {
 		return err
 	}
-	finalizedBlk := finalizedBlkSigned.Block()
-	bFinalizedRoot, err := s.ancestor(ctx, root[:], finalizedBlk.Slot())
+	bFinalizedRoot, err := s.ancestor(ctx, root[:], fSlot)
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized block root")
 	}
@@ -115,7 +111,7 @@ func (s *Service) VerifyFinalizedBlkDescendant(ctx context.Context, root [32]byt
 
 	if !bytes.Equal(bFinalizedRoot, fRoot[:]) {
 		err := fmt.Errorf("block %#x is not a descendant of the current finalized block slot %d, %#x != %#x",
-			bytesutil.Trunc(root[:]), finalizedBlk.Slot(), bytesutil.Trunc(bFinalizedRoot),
+			bytesutil.Trunc(root[:]), fSlot, bytesutil.Trunc(bFinalizedRoot),
 			bytesutil.Trunc(fRoot[:]))
 		tracing.AnnotateError(span, err)
 		return invalidBlock{err}
@@ -126,10 +122,7 @@ func (s *Service) VerifyFinalizedBlkDescendant(ctx context.Context, root [32]byt
 // verifyBlkFinalizedSlot validates input block is not less than or equal
 // to current finalized slot.
 func (s *Service) verifyBlkFinalizedSlot(b interfaces.BeaconBlock) error {
-	finalized, err := s.store.FinalizedCheckpt()
-	if err != nil {
-		return errors.Wrap(err, "could not get finalized checkpoint")
-	}
+	finalized := s.ForkChoicer().FinalizedCheckpoint()
 	finalizedSlot, err := slots.EpochStart(finalized.Epoch)
 	if err != nil {
 		return err
@@ -141,112 +134,8 @@ func (s *Service) verifyBlkFinalizedSlot(b interfaces.BeaconBlock) error {
 	return nil
 }
 
-// shouldUpdateCurrentJustified prevents bouncing attack, by only update conflicting justified
-// checkpoints in the fork choice if in the early slots of the epoch.
-// Otherwise, delay incorporation of new justified checkpoint until next epoch boundary.
-//
-// Spec code:
-// def should_update_justified_checkpoint(store: Store, new_justified_checkpoint: Checkpoint) -> bool:
-//    """
-//    To address the bouncing attack, only update conflicting justified
-//    checkpoints in the fork choice if in the early slots of the epoch.
-//    Otherwise, delay incorporation of new justified checkpoint until next epoch boundary.
-//
-//    See https://ethresear.ch/t/prevention-of-bouncing-attack-on-ffg/6114 for more detailed analysis and discussion.
-//    """
-//    if compute_slots_since_epoch_start(get_current_slot(store)) < SAFE_SLOTS_TO_UPDATE_JUSTIFIED:
-//        return True
-//
-//    justified_slot = compute_start_slot_at_epoch(store.justified_checkpoint.epoch)
-//    if not get_ancestor(store, new_justified_checkpoint.root, justified_slot) == store.justified_checkpoint.root:
-//        return False
-//
-//    return True
-func (s *Service) shouldUpdateCurrentJustified(ctx context.Context, newJustifiedCheckpt *ethpb.Checkpoint) (bool, error) {
-	ctx, span := trace.StartSpan(ctx, "blockChain.shouldUpdateCurrentJustified")
-	defer span.End()
-
-	if slots.SinceEpochStarts(s.CurrentSlot()) < params.BeaconConfig().SafeSlotsToUpdateJustified {
-		return true, nil
-	}
-	justified, err := s.store.JustifiedCheckpt()
-	if err != nil {
-		return false, errors.Wrap(err, "could not get justified checkpoint")
-	}
-	jSlot, err := slots.EpochStart(justified.Epoch)
-	if err != nil {
-		return false, err
-	}
-	justifiedRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(newJustifiedCheckpt.Root))
-	b, err := s.ancestor(ctx, justifiedRoot[:], jSlot)
-	if err != nil {
-		return false, err
-	}
-	if !bytes.Equal(b, justified.Root) {
-		return false, nil
-	}
-
-	return true, nil
-}
-
-func (s *Service) updateJustified(ctx context.Context, state state.ReadOnlyBeaconState) error {
-	ctx, span := trace.StartSpan(ctx, "blockChain.updateJustified")
-	defer span.End()
-
-	cpt := state.CurrentJustifiedCheckpoint()
-	bestJustified, err := s.store.BestJustifiedCheckpt()
-	if err != nil {
-		return errors.Wrap(err, "could not get best justified checkpoint")
-	}
-	if cpt.Epoch > bestJustified.Epoch {
-		s.store.SetBestJustifiedCheckpt(cpt)
-	}
-	canUpdate, err := s.shouldUpdateCurrentJustified(ctx, cpt)
-	if err != nil {
-		return err
-	}
-
-	if canUpdate {
-		justified, err := s.store.JustifiedCheckpt()
-		if err != nil {
-			return errors.Wrap(err, "could not get justified checkpoint")
-		}
-		s.store.SetPrevJustifiedCheckpt(justified)
-		h, err := s.getPayloadHash(ctx, cpt.Root)
-		if err != nil {
-			return err
-		}
-		s.store.SetJustifiedCheckptAndPayloadHash(cpt, h)
-		// Update forkchoice's justified checkpoint
-		if err := s.cfg.ForkChoiceStore.UpdateJustifiedCheckpoint(cpt); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// This caches input checkpoint as justified for the service struct. It rotates current justified to previous justified,
-// caches justified checkpoint balances for fork choice and save justified checkpoint in DB.
-// This method does not have defense against fork choice bouncing attack, which is why it's only recommend to be used during initial syncing.
-func (s *Service) updateJustifiedInitSync(ctx context.Context, cp *ethpb.Checkpoint) error {
-	justified, err := s.store.JustifiedCheckpt()
-	if err != nil {
-		return errors.Wrap(err, "could not get justified checkpoint")
-	}
-	s.store.SetPrevJustifiedCheckpt(justified)
-
-	if err := s.cfg.BeaconDB.SaveJustifiedCheckpoint(ctx, cp); err != nil {
-		return err
-	}
-	h, err := s.getPayloadHash(ctx, cp.Root)
-	if err != nil {
-		return err
-	}
-	s.store.SetJustifiedCheckptAndPayloadHash(cp, h)
-	return s.cfg.ForkChoiceStore.UpdateJustifiedCheckpoint(cp)
-}
-
+// updateFinalized saves the init sync blocks, finalized checkpoint, migrates
+// to cold old states and saves the last validated checkpoint to DB
 func (s *Service) updateFinalized(ctx context.Context, cp *ethpb.Checkpoint) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.updateFinalized")
 	defer span.End()
@@ -319,7 +208,8 @@ func (s *Service) ancestorByForkChoiceStore(ctx context.Context, r [32]byte, slo
 	if !s.cfg.ForkChoiceStore.HasParent(r) {
 		return nil, errors.New("could not find root in fork choice store")
 	}
-	return s.cfg.ForkChoiceStore.AncestorRoot(ctx, r, slot)
+	root, err := s.cfg.ForkChoiceStore.AncestorRoot(ctx, r, slot)
+	return root[:], err
 }
 
 // This retrieves an ancestor root using DB. The look up is recursively looking up DB. Slower than `ancestorByForkChoiceStore`.
@@ -351,16 +241,13 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk interfa
 	pendingNodes := make([]*forkchoicetypes.BlockAndCheckpoints, 0)
 
 	// Fork choice only matters from last finalized slot.
-	finalized, err := s.store.FinalizedCheckpt()
-	if err != nil {
-		return err
-	}
+	finalized := s.ForkChoicer().FinalizedCheckpoint()
 	fSlot, err := slots.EpochStart(finalized.Epoch)
 	if err != nil {
 		return err
 	}
 	pendingNodes = append(pendingNodes, &forkchoicetypes.BlockAndCheckpoints{Block: blk,
-		JustifiedEpoch: jCheckpoint.Epoch, FinalizedEpoch: fCheckpoint.Epoch})
+		JustifiedCheckpoint: jCheckpoint, FinalizedCheckpoint: fCheckpoint})
 	// As long as parent node is not in fork choice store, and parent node is in DB.
 	root := bytesutil.ToBytes32(blk.ParentRoot())
 	for !s.cfg.ForkChoiceStore.HasNode(root) && s.cfg.BeaconDB.HasBlock(ctx, root) {
@@ -373,14 +260,14 @@ func (s *Service) fillInForkChoiceMissingBlocks(ctx context.Context, blk interfa
 		}
 		root = bytesutil.ToBytes32(b.Block().ParentRoot())
 		args := &forkchoicetypes.BlockAndCheckpoints{Block: b.Block(),
-			JustifiedEpoch: jCheckpoint.Epoch,
-			FinalizedEpoch: fCheckpoint.Epoch}
+			JustifiedCheckpoint: jCheckpoint,
+			FinalizedCheckpoint: fCheckpoint}
 		pendingNodes = append(pendingNodes, args)
 	}
 	if len(pendingNodes) == 1 {
 		return nil
 	}
-	if root != s.ensureRootNotZeros(bytesutil.ToBytes32(finalized.Root)) {
+	if root != s.ensureRootNotZeros(finalized.Root) {
 		return errNotDescendantOfFinalized
 	}
 	return s.cfg.ForkChoiceStore.InsertOptimisticChain(ctx, pendingNodes)

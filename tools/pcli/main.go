@@ -8,8 +8,8 @@ import (
 	"regexp"
 	"strings"
 
-	fssz "github.com/ferranbt/fastssz"
 	"github.com/kr/pretty"
+	fssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"

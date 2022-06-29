@@ -1,8 +1,8 @@
 package wrapper
 
 import (
-	ssz "github.com/ferranbt/fastssz"
 	"github.com/pkg/errors"
+	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
@@ -307,6 +307,6 @@ func (w Phase0BeaconBlockBody) ExecutionPayload() (*enginev1.ExecutionPayload, e
 }
 
 // ExecutionPayloadHeader is a stub.
-func (w Phase0BeaconBlockBody) ExecutionPayloadHeader() (*eth.ExecutionPayloadHeader, error) {
+func (w Phase0BeaconBlockBody) ExecutionPayloadHeader() (*enginev1.ExecutionPayloadHeader, error) {
 	return nil, errors.Wrapf(ErrUnsupportedField, "ExecutionPayloadHeader for %T", w)
 }

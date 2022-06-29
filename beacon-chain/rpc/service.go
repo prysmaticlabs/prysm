@@ -11,9 +11,10 @@ import (
 
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
-	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
-	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	grpcopentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
+	grpcprometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
@@ -70,6 +71,7 @@ type Service struct {
 
 // Config options for the beacon node RPC server.
 type Config struct {
+	ExecutionPayloadReconstructor powchain.ExecutionPayloadReconstructor
 	Host                          string
 	Port                          string
 	CertFlag                      string
@@ -112,7 +114,7 @@ type Config struct {
 	ExecutionEngineCaller         powchain.EngineCaller
 	ProposerIdsCache              *cache.ProposerPayloadIDsCache
 	OptimisticModeFetcher         blockchain.OptimisticModeFetcher
-	ExecutionPayloadReconstructor powchain.ExecutionPayloadReconstructor
+	BlockBuilder                  builder.BlockBuilder
 }
 
 // NewService instantiates a new RPC service instance that will
@@ -141,16 +143,16 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 			recovery.StreamServerInterceptor(
 				recovery.WithRecoveryHandlerContext(tracing.RecoveryHandlerFunc),
 			),
-			grpc_prometheus.StreamServerInterceptor,
-			grpc_opentracing.StreamServerInterceptor(),
+			grpcprometheus.StreamServerInterceptor,
+			grpcopentracing.StreamServerInterceptor(),
 			s.validatorStreamConnectionInterceptor,
 		)),
 		grpc.UnaryInterceptor(middleware.ChainUnaryServer(
 			recovery.UnaryServerInterceptor(
 				recovery.WithRecoveryHandlerContext(tracing.RecoveryHandlerFunc),
 			),
-			grpc_prometheus.UnaryServerInterceptor,
-			grpc_opentracing.UnaryServerInterceptor(),
+			grpcprometheus.UnaryServerInterceptor,
+			grpcopentracing.UnaryServerInterceptor(),
 			s.validatorUnaryConnectionInterceptor,
 		)),
 		grpc.MaxRecvMsgSize(s.cfg.MaxMsgSize),
@@ -177,7 +179,7 @@ var _ stategen.CurrentSlotter = blockchain.ChainInfoFetcher(nil)
 
 // Start the gRPC server.
 func (s *Service) Start() {
-	grpc_prometheus.EnableHandlingTimeHistogram()
+	grpcprometheus.EnableHandlingTimeHistogram()
 
 	var stateCache stategen.CachedGetter
 	if s.cfg.StateGen != nil {
@@ -217,16 +219,18 @@ func (s *Service) Start() {
 		ExecutionEngineCaller:  s.cfg.ExecutionEngineCaller,
 		BeaconDB:               s.cfg.BeaconDB,
 		ProposerSlotIndexCache: s.cfg.ProposerIdsCache,
+		BlockBuilder:           s.cfg.BlockBuilder,
 	}
 	validatorServerV1 := &validator.Server{
-		HeadFetcher:      s.cfg.HeadFetcher,
-		HeadUpdater:      s.cfg.HeadUpdater,
-		TimeFetcher:      s.cfg.GenesisTimeFetcher,
-		SyncChecker:      s.cfg.SyncService,
-		AttestationsPool: s.cfg.AttestationsPool,
-		PeerManager:      s.cfg.PeerManager,
-		Broadcaster:      s.cfg.Broadcaster,
-		V1Alpha1Server:   validatorServer,
+		HeadFetcher:           s.cfg.HeadFetcher,
+		HeadUpdater:           s.cfg.HeadUpdater,
+		TimeFetcher:           s.cfg.GenesisTimeFetcher,
+		SyncChecker:           s.cfg.SyncService,
+		OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
+		AttestationsPool:      s.cfg.AttestationsPool,
+		PeerManager:           s.cfg.PeerManager,
+		Broadcaster:           s.cfg.Broadcaster,
+		V1Alpha1Server:        validatorServer,
 		StateFetcher: &statefetcher.StateProvider{
 			BeaconDB:           s.cfg.BeaconDB,
 			ChainInfoFetcher:   s.cfg.ChainInfoFetcher,
@@ -234,8 +238,7 @@ func (s *Service) Start() {
 			StateGenService:    s.cfg.StateGen,
 			ReplayerBuilder:    ch,
 		},
-		OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
-		SyncCommitteePool:     s.cfg.SyncCommitteeObjectPool,
+		SyncCommitteePool: s.cfg.SyncCommitteeObjectPool,
 	}
 
 	nodeServer := &nodev1alpha1.Server{
@@ -253,14 +256,15 @@ func (s *Service) Start() {
 		BeaconMonitoringPort: s.cfg.BeaconMonitoringPort,
 	}
 	nodeServerV1 := &node.Server{
-		BeaconDB:           s.cfg.BeaconDB,
-		Server:             s.grpcServer,
-		SyncChecker:        s.cfg.SyncService,
-		GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
-		PeersFetcher:       s.cfg.PeersFetcher,
-		PeerManager:        s.cfg.PeerManager,
-		MetadataProvider:   s.cfg.MetadataProvider,
-		HeadFetcher:        s.cfg.HeadFetcher,
+		BeaconDB:              s.cfg.BeaconDB,
+		Server:                s.grpcServer,
+		SyncChecker:           s.cfg.SyncService,
+		OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
+		GenesisTimeFetcher:    s.cfg.GenesisTimeFetcher,
+		PeersFetcher:          s.cfg.PeersFetcher,
+		PeerManager:           s.cfg.PeerManager,
+		MetadataProvider:      s.cfg.MetadataProvider,
+		HeadFetcher:           s.cfg.HeadFetcher,
 	}
 
 	beaconChainServer := &beaconv1alpha1.Server{
@@ -269,6 +273,7 @@ func (s *Service) Start() {
 		AttestationsPool:            s.cfg.AttestationsPool,
 		SlashingsPool:               s.cfg.SlashingsPool,
 		HeadUpdater:                 s.cfg.HeadUpdater,
+		OptimisticModeFetcher:       s.cfg.OptimisticModeFetcher,
 		HeadFetcher:                 s.cfg.HeadFetcher,
 		FinalizationFetcher:         s.cfg.FinalizationFetcher,
 		CanonicalFetcher:            s.cfg.CanonicalFetcher,

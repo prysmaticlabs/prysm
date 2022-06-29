@@ -399,6 +399,10 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get head block")
 	}
+	optimisticStatus, err := bs.OptimisticModeFetcher.IsOptimistic(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Could not get optimistic status")
+	}
 	if err := wrapper.BeaconBlockIsNil(headBlock); err != nil {
 		return nil, status.Errorf(codes.NotFound, "Head block of chain was nil: %v", err)
 	}
@@ -431,26 +435,17 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 		return nil
 	}
 
-	finalizedCheckpoint, err := bs.FinalizationFetcher.FinalizedCheckpt()
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get finalized checkpoint: %v", err)
-	}
+	finalizedCheckpoint := bs.FinalizationFetcher.FinalizedCheckpt()
 	if err := validateCP(finalizedCheckpoint, "finalized"); err != nil {
 		return nil, err
 	}
 
-	justifiedCheckpoint, err := bs.FinalizationFetcher.CurrentJustifiedCheckpt()
-	if err != nil {
-		return nil, err
-	}
+	justifiedCheckpoint := bs.FinalizationFetcher.CurrentJustifiedCheckpt()
 	if err := validateCP(justifiedCheckpoint, "justified"); err != nil {
 		return nil, err
 	}
 
-	prevJustifiedCheckpoint, err := bs.FinalizationFetcher.PreviousJustifiedCheckpt()
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get previous justified checkpoint: %v", err)
-	}
+	prevJustifiedCheckpoint := bs.FinalizationFetcher.PreviousJustifiedCheckpt()
 	if err := validateCP(prevJustifiedCheckpoint, "prev justified"); err != nil {
 		return nil, err
 	}
@@ -480,5 +475,6 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 		PreviousJustifiedSlot:      pjSlot,
 		PreviousJustifiedEpoch:     prevJustifiedCheckpoint.Epoch,
 		PreviousJustifiedBlockRoot: prevJustifiedCheckpoint.Root,
+		OptimisticStatus:           optimisticStatus,
 	}, nil
 }

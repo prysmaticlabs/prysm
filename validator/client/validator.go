@@ -25,7 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
-	validator_service_config "github.com/prysmaticlabs/prysm/config/validator/service"
+	validatorserviceconfig "github.com/prysmaticlabs/prysm/config/validator/service"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
@@ -41,7 +41,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/graffiti"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/local"
-	remote_web3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
+	remoteweb3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/protobuf/proto"
@@ -95,8 +95,9 @@ type validator struct {
 	validatorClient                    ethpb.BeaconNodeValidatorClient
 	graffiti                           []byte
 	voteStats                          voteStats
-	Web3SignerConfig                   *remote_web3signer.SetupConfig
-	ProposerSettings                   *validator_service_config.ProposerSettings
+	syncCommitteeStats                 syncCommitteeStats
+	Web3SignerConfig                   *remoteweb3signer.SetupConfig
+	ProposerSettings                   *validatorserviceconfig.ProposerSettings
 	walletIntializedChannel            chan *wallet.Wallet
 }
 
@@ -980,17 +981,9 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 		return err
 	}
 	log.Infoln("Successfully prepared beacon proposer with fee recipient to validator index mapping.")
-	failedRegistrationCount := 0
-	for _, request := range registerValidatorRequests {
-		// calls beacon API but used for custom builders
-		if err := SubmitValidatorRegistration(ctx, v.validatorClient, v.node, km.Sign, request); err != nil {
-			// log the error and keep going
-			failedRegistrationCount++
-			log.Warnf("failed to register validator for custom builder for %s, error: %v ", hexutil.Encode(request.Pubkey), err)
-		}
-	}
-	if failedRegistrationCount != 0 {
-		return errors.Errorf("Register validator requests failed %d times out of %d requests", failedRegistrationCount, len(registerValidatorRequests))
+
+	if err := SubmitValidatorRegistration(ctx, v.validatorClient, km.Sign, registerValidatorRequests); err != nil {
+		return err
 	}
 	log.Infoln("Successfully submitted builder validator registration settings for custom builders.")
 	return nil
@@ -1000,7 +993,7 @@ func (v *validator) buildProposerSettingsRequests(ctx context.Context, pubkeys [
 	var validatorToFeeRecipients []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer
 	var registerValidatorRequests []*ethpb.ValidatorRegistrationV1
 	// need to check for pubkey to validator index mappings
-	for _, key := range pubkeys {
+	for i, key := range pubkeys {
 		skipAppendToFeeRecipientArray := false
 		feeRecipient := common.HexToAddress(params.BeaconConfig().EthBurnAddressHex)
 		gasLimit := params.BeaconConfig().DefaultBuilderGasLimit
@@ -1042,7 +1035,7 @@ func (v *validator) buildProposerSettingsRequests(ctx context.Context, pubkeys [
 			FeeRecipient: feeRecipient[:],
 			GasLimit:     gasLimit,
 			Timestamp:    uint64(time.Now().UTC().Unix()),
-			Pubkey:       key[:],
+			Pubkey:       pubkeys[i][:],
 		})
 
 	}
@@ -1078,4 +1071,9 @@ type voteStats struct {
 	totalCorrectSource  uint64
 	totalCorrectTarget  uint64
 	totalCorrectHead    uint64
+}
+
+// This tracks all validators' submissions for sync committees.
+type syncCommitteeStats struct {
+	totalMessagesSubmitted uint64
 }
