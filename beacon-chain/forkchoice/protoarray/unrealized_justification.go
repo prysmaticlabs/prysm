@@ -68,7 +68,6 @@ func (f *ForkChoice) UpdateUnrealizedCheckpoints() {
 			if node.justifiedEpoch > f.store.bestJustifiedCheckpoint.Epoch {
 				f.store.bestJustifiedCheckpoint = f.store.unrealizedJustifiedCheckpoint
 			}
-			// shouldUpdate will always be true in slot 0
 			f.store.justifiedCheckpoint = f.store.unrealizedJustifiedCheckpoint
 		}
 		if node.finalizedEpoch > f.store.finalizedCheckpoint.Epoch {
@@ -79,33 +78,34 @@ func (f *ForkChoice) UpdateUnrealizedCheckpoints() {
 }
 
 func (s *Store) pullTips(ctx context.Context, state state.BeaconState, node *Node, jc, fc *ethpb.Checkpoint) (*ethpb.Checkpoint, *ethpb.Checkpoint) {
+	var uj, uf *ethpb.Checkpoint
 	uj, uf, err := precompute.UnrealizedCheckpoints(ctx, state)
 	if err != nil {
 		log.WithError(err).Debug("could not compute unrealized checkpoints")
-	} else {
-		node.unrealizedJustifiedEpoch, node.unrealizedFinalizedEpoch = uj.Epoch, uf.Epoch
-		s.checkpointsLock.Lock()
-		if uj.Epoch > s.unrealizedJustifiedCheckpoint.Epoch {
-			s.unrealizedJustifiedCheckpoint = &forkchoicetypes.Checkpoint{
-				Epoch: uj.Epoch, Root: bytesutil.ToBytes32(uj.Root),
-			}
-		}
-		if uf.Epoch > s.unrealizedFinalizedCheckpoint.Epoch {
-			s.unrealizedJustifiedCheckpoint = &forkchoicetypes.Checkpoint{
-				Epoch: uj.Epoch, Root: bytesutil.ToBytes32(uj.Root),
-			}
-			s.unrealizedFinalizedCheckpoint = &forkchoicetypes.Checkpoint{
-				Epoch: uf.Epoch, Root: bytesutil.ToBytes32(uf.Root),
-			}
-		}
-
-		currentSlot := slots.CurrentSlot(s.genesisTime)
-		if time.CurrentEpoch(state) < slots.ToEpoch(currentSlot) {
-			jc, fc = uj, uf
-			node.justifiedEpoch = uj.Epoch
-			node.finalizedEpoch = uf.Epoch
-		}
-		s.checkpointsLock.Unlock()
+		uj, uf = jc, fc
 	}
+	node.unrealizedJustifiedEpoch, node.unrealizedFinalizedEpoch = uj.Epoch, uf.Epoch
+	s.checkpointsLock.Lock()
+	if uj.Epoch > s.unrealizedJustifiedCheckpoint.Epoch {
+		s.unrealizedJustifiedCheckpoint = &forkchoicetypes.Checkpoint{
+			Epoch: uj.Epoch, Root: bytesutil.ToBytes32(uj.Root),
+		}
+	}
+	if uf.Epoch > s.unrealizedFinalizedCheckpoint.Epoch {
+		s.unrealizedJustifiedCheckpoint = &forkchoicetypes.Checkpoint{
+			Epoch: uj.Epoch, Root: bytesutil.ToBytes32(uj.Root),
+		}
+		s.unrealizedFinalizedCheckpoint = &forkchoicetypes.Checkpoint{
+			Epoch: uf.Epoch, Root: bytesutil.ToBytes32(uf.Root),
+		}
+	}
+
+	currentSlot := slots.CurrentSlot(s.genesisTime)
+	if time.CurrentEpoch(state) < slots.ToEpoch(currentSlot) {
+		jc, fc = uj, uf
+		node.justifiedEpoch = uj.Epoch
+		node.finalizedEpoch = uf.Epoch
+	}
+	s.checkpointsLock.Unlock()
 	return jc, fc
 }
