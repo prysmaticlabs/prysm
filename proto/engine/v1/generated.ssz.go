@@ -17,43 +17,43 @@ func (e *ExecutionPayload) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	offset := int(508)
 
 	// Field (0) 'ParentHash'
-	if len(e.ParentHash) != 32 {
-		err = ssz.ErrBytesLength
+	if size := len(e.ParentHash); size != 32 {
+		err = ssz.ErrBytesLengthFn("--.ParentHash", size, 32)
 		return
 	}
 	dst = append(dst, e.ParentHash...)
 
 	// Field (1) 'FeeRecipient'
-	if len(e.FeeRecipient) != 20 {
-		err = ssz.ErrBytesLength
+	if size := len(e.FeeRecipient); size != 20 {
+		err = ssz.ErrBytesLengthFn("--.FeeRecipient", size, 20)
 		return
 	}
 	dst = append(dst, e.FeeRecipient...)
 
 	// Field (2) 'StateRoot'
-	if len(e.StateRoot) != 32 {
-		err = ssz.ErrBytesLength
+	if size := len(e.StateRoot); size != 32 {
+		err = ssz.ErrBytesLengthFn("--.StateRoot", size, 32)
 		return
 	}
 	dst = append(dst, e.StateRoot...)
 
 	// Field (3) 'ReceiptsRoot'
-	if len(e.ReceiptsRoot) != 32 {
-		err = ssz.ErrBytesLength
+	if size := len(e.ReceiptsRoot); size != 32 {
+		err = ssz.ErrBytesLengthFn("--.ReceiptsRoot", size, 32)
 		return
 	}
 	dst = append(dst, e.ReceiptsRoot...)
 
 	// Field (4) 'LogsBloom'
-	if len(e.LogsBloom) != 256 {
-		err = ssz.ErrBytesLength
+	if size := len(e.LogsBloom); size != 256 {
+		err = ssz.ErrBytesLengthFn("--.LogsBloom", size, 256)
 		return
 	}
 	dst = append(dst, e.LogsBloom...)
 
 	// Field (5) 'PrevRandao'
-	if len(e.PrevRandao) != 32 {
-		err = ssz.ErrBytesLength
+	if size := len(e.PrevRandao); size != 32 {
+		err = ssz.ErrBytesLengthFn("--.PrevRandao", size, 32)
 		return
 	}
 	dst = append(dst, e.PrevRandao...)
@@ -75,15 +75,15 @@ func (e *ExecutionPayload) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	offset += len(e.ExtraData)
 
 	// Field (11) 'BaseFeePerGas'
-	if len(e.BaseFeePerGas) != 32 {
-		err = ssz.ErrBytesLength
+	if size := len(e.BaseFeePerGas); size != 32 {
+		err = ssz.ErrBytesLengthFn("--.BaseFeePerGas", size, 32)
 		return
 	}
 	dst = append(dst, e.BaseFeePerGas...)
 
 	// Field (12) 'BlockHash'
-	if len(e.BlockHash) != 32 {
-		err = ssz.ErrBytesLength
+	if size := len(e.BlockHash); size != 32 {
+		err = ssz.ErrBytesLengthFn("--.BlockHash", size, 32)
 		return
 	}
 	dst = append(dst, e.BlockHash...)
@@ -96,15 +96,15 @@ func (e *ExecutionPayload) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	}
 
 	// Field (10) 'ExtraData'
-	if len(e.ExtraData) > 32 {
-		err = ssz.ErrBytesLength
+	if size := len(e.ExtraData); size > 32 {
+		err = ssz.ErrBytesLengthFn("--.ExtraData", size, 32)
 		return
 	}
 	dst = append(dst, e.ExtraData...)
 
 	// Field (13) 'Transactions'
-	if len(e.Transactions) > 1048576 {
-		err = ssz.ErrListTooBig
+	if size := len(e.Transactions); size > 1048576 {
+		err = ssz.ErrListTooBigFn("--.Transactions", size, 1048576)
 		return
 	}
 	{
@@ -115,8 +115,8 @@ func (e *ExecutionPayload) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 		}
 	}
 	for ii := 0; ii < len(e.Transactions); ii++ {
-		if len(e.Transactions[ii]) > 1073741824 {
-			err = ssz.ErrBytesLength
+		if size := len(e.Transactions[ii]); size > 1073741824 {
+			err = ssz.ErrBytesLengthFn("--.Transactions[ii]", size, 1073741824)
 			return
 		}
 		dst = append(dst, e.Transactions[ii]...)
@@ -273,43 +273,43 @@ func (e *ExecutionPayload) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	indx := hh.Index()
 
 	// Field (0) 'ParentHash'
-	if len(e.ParentHash) != 32 {
-		err = ssz.ErrBytesLength
+	if size := len(e.ParentHash); size != 32 {
+		err = ssz.ErrBytesLengthFn("--.ParentHash", size, 32)
 		return
 	}
 	hh.PutBytes(e.ParentHash)
 
 	// Field (1) 'FeeRecipient'
-	if len(e.FeeRecipient) != 20 {
-		err = ssz.ErrBytesLength
+	if size := len(e.FeeRecipient); size != 20 {
+		err = ssz.ErrBytesLengthFn("--.FeeRecipient", size, 20)
 		return
 	}
 	hh.PutBytes(e.FeeRecipient)
 
 	// Field (2) 'StateRoot'
-	if len(e.StateRoot) != 32 {
-		err = ssz.ErrBytesLength
+	if size := len(e.StateRoot); size != 32 {
+		err = ssz.ErrBytesLengthFn("--.StateRoot", size, 32)
 		return
 	}
 	hh.PutBytes(e.StateRoot)
 
 	// Field (3) 'ReceiptsRoot'
-	if len(e.ReceiptsRoot) != 32 {
-		err = ssz.ErrBytesLength
+	if size := len(e.ReceiptsRoot); size != 32 {
+		err = ssz.ErrBytesLengthFn("--.ReceiptsRoot", size, 32)
 		return
 	}
 	hh.PutBytes(e.ReceiptsRoot)
 
 	// Field (4) 'LogsBloom'
-	if len(e.LogsBloom) != 256 {
-		err = ssz.ErrBytesLength
+	if size := len(e.LogsBloom); size != 256 {
+		err = ssz.ErrBytesLengthFn("--.LogsBloom", size, 256)
 		return
 	}
 	hh.PutBytes(e.LogsBloom)
 
 	// Field (5) 'PrevRandao'
-	if len(e.PrevRandao) != 32 {
-		err = ssz.ErrBytesLength
+	if size := len(e.PrevRandao); size != 32 {
+		err = ssz.ErrBytesLengthFn("--.PrevRandao", size, 32)
 		return
 	}
 	hh.PutBytes(e.PrevRandao)
@@ -343,15 +343,15 @@ func (e *ExecutionPayload) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	}
 
 	// Field (11) 'BaseFeePerGas'
-	if len(e.BaseFeePerGas) != 32 {
-		err = ssz.ErrBytesLength
+	if size := len(e.BaseFeePerGas); size != 32 {
+		err = ssz.ErrBytesLengthFn("--.BaseFeePerGas", size, 32)
 		return
 	}
 	hh.PutBytes(e.BaseFeePerGas)
 
 	// Field (12) 'BlockHash'
-	if len(e.BlockHash) != 32 {
-		err = ssz.ErrBytesLength
+	if size := len(e.BlockHash); size != 32 {
+		err = ssz.ErrBytesLengthFn("--.BlockHash", size, 32)
 		return
 	}
 	hh.PutBytes(e.BlockHash)
@@ -406,43 +406,43 @@ func (e *ExecutionPayloadHeader) MarshalSSZTo(buf []byte) (dst []byte, err error
 	offset := int(536)
 
 	// Field (0) 'ParentHash'
-	if len(e.ParentHash) != 32 {
-		err = ssz.ErrBytesLength
+	if size := len(e.ParentHash); size != 32 {
+		err = ssz.ErrBytesLengthFn("--.ParentHash", size, 32)
 		return
 	}
 	dst = append(dst, e.ParentHash...)
 
 	// Field (1) 'FeeRecipient'
-	if len(e.FeeRecipient) != 20 {
-		err = ssz.ErrBytesLength
+	if size := len(e.FeeRecipient); size != 20 {
+		err = ssz.ErrBytesLengthFn("--.FeeRecipient", size, 20)
 		return
 	}
 	dst = append(dst, e.FeeRecipient...)
 
 	// Field (2) 'StateRoot'
-	if len(e.StateRoot) != 32 {
-		err = ssz.ErrBytesLength
+	if size := len(e.StateRoot); size != 32 {
+		err = ssz.ErrBytesLengthFn("--.StateRoot", size, 32)
 		return
 	}
 	dst = append(dst, e.StateRoot...)
 
 	// Field (3) 'ReceiptsRoot'
-	if len(e.ReceiptsRoot) != 32 {
-		err = ssz.ErrBytesLength
+	if size := len(e.ReceiptsRoot); size != 32 {
+		err = ssz.ErrBytesLengthFn("--.ReceiptsRoot", size, 32)
 		return
 	}
 	dst = append(dst, e.ReceiptsRoot...)
 
 	// Field (4) 'LogsBloom'
-	if len(e.LogsBloom) != 256 {
-		err = ssz.ErrBytesLength
+	if size := len(e.LogsBloom); size != 256 {
+		err = ssz.ErrBytesLengthFn("--.LogsBloom", size, 256)
 		return
 	}
 	dst = append(dst, e.LogsBloom...)
 
 	// Field (5) 'PrevRandao'
-	if len(e.PrevRandao) != 32 {
-		err = ssz.ErrBytesLength
+	if size := len(e.PrevRandao); size != 32 {
+		err = ssz.ErrBytesLengthFn("--.PrevRandao", size, 32)
 		return
 	}
 	dst = append(dst, e.PrevRandao...)
@@ -464,29 +464,29 @@ func (e *ExecutionPayloadHeader) MarshalSSZTo(buf []byte) (dst []byte, err error
 	offset += len(e.ExtraData)
 
 	// Field (11) 'BaseFeePerGas'
-	if len(e.BaseFeePerGas) != 32 {
-		err = ssz.ErrBytesLength
+	if size := len(e.BaseFeePerGas); size != 32 {
+		err = ssz.ErrBytesLengthFn("--.BaseFeePerGas", size, 32)
 		return
 	}
 	dst = append(dst, e.BaseFeePerGas...)
 
 	// Field (12) 'BlockHash'
-	if len(e.BlockHash) != 32 {
-		err = ssz.ErrBytesLength
+	if size := len(e.BlockHash); size != 32 {
+		err = ssz.ErrBytesLengthFn("--.BlockHash", size, 32)
 		return
 	}
 	dst = append(dst, e.BlockHash...)
 
 	// Field (13) 'TransactionsRoot'
-	if len(e.TransactionsRoot) != 32 {
-		err = ssz.ErrBytesLength
+	if size := len(e.TransactionsRoot); size != 32 {
+		err = ssz.ErrBytesLengthFn("--.TransactionsRoot", size, 32)
 		return
 	}
 	dst = append(dst, e.TransactionsRoot...)
 
 	// Field (10) 'ExtraData'
-	if len(e.ExtraData) > 32 {
-		err = ssz.ErrBytesLength
+	if size := len(e.ExtraData); size > 32 {
+		err = ssz.ErrBytesLengthFn("--.ExtraData", size, 32)
 		return
 	}
 	dst = append(dst, e.ExtraData...)
@@ -614,43 +614,43 @@ func (e *ExecutionPayloadHeader) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	indx := hh.Index()
 
 	// Field (0) 'ParentHash'
-	if len(e.ParentHash) != 32 {
-		err = ssz.ErrBytesLength
+	if size := len(e.ParentHash); size != 32 {
+		err = ssz.ErrBytesLengthFn("--.ParentHash", size, 32)
 		return
 	}
 	hh.PutBytes(e.ParentHash)
 
 	// Field (1) 'FeeRecipient'
-	if len(e.FeeRecipient) != 20 {
-		err = ssz.ErrBytesLength
+	if size := len(e.FeeRecipient); size != 20 {
+		err = ssz.ErrBytesLengthFn("--.FeeRecipient", size, 20)
 		return
 	}
 	hh.PutBytes(e.FeeRecipient)
 
 	// Field (2) 'StateRoot'
-	if len(e.StateRoot) != 32 {
-		err = ssz.ErrBytesLength
+	if size := len(e.StateRoot); size != 32 {
+		err = ssz.ErrBytesLengthFn("--.StateRoot", size, 32)
 		return
 	}
 	hh.PutBytes(e.StateRoot)
 
 	// Field (3) 'ReceiptsRoot'
-	if len(e.ReceiptsRoot) != 32 {
-		err = ssz.ErrBytesLength
+	if size := len(e.ReceiptsRoot); size != 32 {
+		err = ssz.ErrBytesLengthFn("--.ReceiptsRoot", size, 32)
 		return
 	}
 	hh.PutBytes(e.ReceiptsRoot)
 
 	// Field (4) 'LogsBloom'
-	if len(e.LogsBloom) != 256 {
-		err = ssz.ErrBytesLength
+	if size := len(e.LogsBloom); size != 256 {
+		err = ssz.ErrBytesLengthFn("--.LogsBloom", size, 256)
 		return
 	}
 	hh.PutBytes(e.LogsBloom)
 
 	// Field (5) 'PrevRandao'
-	if len(e.PrevRandao) != 32 {
-		err = ssz.ErrBytesLength
+	if size := len(e.PrevRandao); size != 32 {
+		err = ssz.ErrBytesLengthFn("--.PrevRandao", size, 32)
 		return
 	}
 	hh.PutBytes(e.PrevRandao)
@@ -684,22 +684,22 @@ func (e *ExecutionPayloadHeader) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	}
 
 	// Field (11) 'BaseFeePerGas'
-	if len(e.BaseFeePerGas) != 32 {
-		err = ssz.ErrBytesLength
+	if size := len(e.BaseFeePerGas); size != 32 {
+		err = ssz.ErrBytesLengthFn("--.BaseFeePerGas", size, 32)
 		return
 	}
 	hh.PutBytes(e.BaseFeePerGas)
 
 	// Field (12) 'BlockHash'
-	if len(e.BlockHash) != 32 {
-		err = ssz.ErrBytesLength
+	if size := len(e.BlockHash); size != 32 {
+		err = ssz.ErrBytesLengthFn("--.BlockHash", size, 32)
 		return
 	}
 	hh.PutBytes(e.BlockHash)
 
 	// Field (13) 'TransactionsRoot'
-	if len(e.TransactionsRoot) != 32 {
-		err = ssz.ErrBytesLength
+	if size := len(e.TransactionsRoot); size != 32 {
+		err = ssz.ErrBytesLengthFn("--.TransactionsRoot", size, 32)
 		return
 	}
 	hh.PutBytes(e.TransactionsRoot)
