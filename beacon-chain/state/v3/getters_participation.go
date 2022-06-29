@@ -42,6 +42,7 @@ func (b *BeaconState) UnrealizedCheckpointBalances() (uint64, uint64, uint64, er
 	if !b.hasInnerState() {
 		return 0, 0, 0, ErrNilInnerState
 	}
+	currentEpoch := time.CurrentEpoch(b)
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
@@ -50,7 +51,6 @@ func (b *BeaconState) UnrealizedCheckpointBalances() (uint64, uint64, uint64, er
 	if cp == nil || pp == nil {
 		return 0, 0, 0, ErrNilParticipation
 	}
-	currentEpoch := time.CurrentEpoch(b)
 	return stateutil.UnrealizedCheckpointBalances(cp, pp, b.state.Validators, currentEpoch)
 
 }
