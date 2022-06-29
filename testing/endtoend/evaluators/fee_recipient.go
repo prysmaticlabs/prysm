@@ -72,7 +72,7 @@ func feeRecipientIsPresent(conns ...*grpc.ClientConn) error {
 			publickey := validator.GetPublicKey()
 			// calculate deterministic fee recipient using first 20 bytes of public key
 			deterministicFeeRecipient := common.HexToAddress(hexutil.Encode(publickey[:fieldparams.FeeRecipientLength])).Hex()
-			if deterministicFeeRecipient == account.Hex() {
+			if deterministicFeeRecipient != account.Hex() {
 				return fmt.Errorf("fee recipient %s does not match the proposer settings fee recipient %s", account.Hex(), deterministicFeeRecipient)
 			} else {
 
