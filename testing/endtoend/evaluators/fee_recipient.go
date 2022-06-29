@@ -2,20 +2,17 @@ package evaluators
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"os"
-	"path/filepath"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
-	validator_service_config "github.com/prysmaticlabs/prysm/config/validator/service"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/testing/endtoend/components"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/policies"
@@ -52,27 +49,6 @@ func feeRecipientIsPresent(conns ...*grpc.ClientConn) error {
 	web3 := ethclient.NewClient(rpcclient)
 	ctx := context.Background()
 
-	var configFiles []*validator_service_config.ProposerSettingsPayload
-	testNetDir := e2e.TestParams.TestPath + "/proposer-settings"
-	dirs, err := ioutil.ReadDir(filepath.Clean(testNetDir))
-	if err != nil {
-		return err
-	}
-	for _, f := range dirs {
-		if f.IsDir() {
-			configPath := filepath.Join(testNetDir, filepath.Clean(f.Name()+"/config.json"))
-			jsonFile, err := os.Open(filepath.Clean(configPath))
-			if err != nil {
-				return err
-			}
-			var configFile validator_service_config.ProposerSettingsPayload
-			if err := json.NewDecoder(jsonFile).Decode(&configFile); err != nil {
-				return err
-			}
-			configFiles = append(configFiles, &configFile)
-		}
-	}
-
 	for _, ctr := range blks.BlockContainers {
 		switch ctr.Block.(type) {
 		case *ethpb.BeaconBlockContainer_BellatrixBlock:
@@ -94,19 +70,14 @@ func feeRecipientIsPresent(conns ...*grpc.ClientConn) error {
 				return errors.Wrap(err, "failed to get validators")
 			}
 			publickey := validator.GetPublicKey()
-			usesDefaultFeeRecipient := false
-			for _, config := range configFiles {
-				option, ok := config.ProposerConfig[hexutil.Encode(publickey)]
-				if ok {
-					if option.FeeRecipient != account.Hex() {
-						return fmt.Errorf("fee recipient %s does not match the proposer settings fee recipient %s", account.Hex(), option.FeeRecipient)
-					}
-					usesDefaultFeeRecipient = true
-				}
-			}
-			if !usesDefaultFeeRecipient {
-				if configFiles[0].DefaultConfig.FeeRecipient != account.Hex() {
-					return fmt.Errorf("fee recipient %s does not match the default fee recipient %s", account.Hex(), configFiles[0].DefaultConfig.FeeRecipient)
+			// calculate deterministic fee recipient using first 20 bytes of public key
+			deterministicFeeRecipient := common.HexToAddress(hexutil.Encode(publickey[:fieldparams.FeeRecipientLength])).Hex()
+			if deterministicFeeRecipient == account.Hex() {
+				return fmt.Errorf("fee recipient %s does not match the proposer settings fee recipient %s", account.Hex(), deterministicFeeRecipient)
+			} else {
+
+				if components.DefaultFeeRecipientAddress != account.Hex() {
+					return fmt.Errorf("fee recipient %s does not match the default fee recipient %s", account.Hex(), components.DefaultFeeRecipientAddress)
 				}
 			}
 			currentBlock, err := web3.BlockByHash(ctx, common.BytesToHash(ctr.GetBellatrixBlock().GetBlock().GetBody().GetExecutionPayload().BlockHash))

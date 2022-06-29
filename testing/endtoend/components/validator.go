@@ -16,14 +16,15 @@ import (
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
 	cmdshared "github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	validator_service_config "github.com/prysmaticlabs/prysm/config/validator/service"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit"
@@ -415,12 +416,13 @@ func createProposerSettingsPath(pubkeys []string, validatorIndex int) (string, e
 
 		for _, pubkey := range pubkeys {
 			// Create an account
-			key, err := crypto.GenerateKey()
+			byteval, err := hexutil.Decode(pubkey)
 			if err != nil {
 				return "", err
 			}
+			deterministicFeeRecipient := common.HexToAddress(hexutil.Encode(byteval[:fieldparams.FeeRecipientLength])).Hex()
 			config[pubkey] = &validator_service_config.ProposerOptionPayload{
-				FeeRecipient: crypto.PubkeyToAddress(key.PublicKey).Hex(),
+				FeeRecipient: deterministicFeeRecipient,
 			}
 		}
 		proposerSettingsPayload = validator_service_config.ProposerSettingsPayload{
