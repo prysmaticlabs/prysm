@@ -26,14 +26,11 @@ func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockR
 	}
 
 	builderReady, b, err := vs.getAndBuildHeaderBlock(ctx, altairBlk)
-	// Nothing to do if the builder has not been configured nor ready.
-	if builderReady {
+	if err != nil {
 		// In the event of an error, the node should fall back to default execution engine for building block.
-		if err != nil {
-			log.WithError(err).Error("Default back to local execution client")
-		} else {
-			return b, nil
-		}
+		log.WithError(err).Error("Default back to local execution client")
+	} else if builderReady {
+		return b, nil
 	}
 
 	payload, err := vs.getExecutionPayload(ctx, req.Slot, altairBlk.ProposerIndex)
