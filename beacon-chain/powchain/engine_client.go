@@ -18,7 +18,6 @@ import (
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -346,7 +345,7 @@ func (s *Service) ReconstructFullBellatrixBlock(
 	return wrapper.BuildSignedBeaconBlockFromExecutionPayload(blindedBlock, payload)
 }
 
-func fullPayloadFromExecutionBlock(header *ethpb.ExecutionPayloadHeader, block *pb.ExecutionBlockWithTxs) *pb.ExecutionPayload {
+func fullPayloadFromExecutionBlock(header *pb.ExecutionPayloadHeader, block *pb.ExecutionBlockWithTxs) *pb.ExecutionPayload {
 	return &pb.ExecutionPayload{
 		ParentHash:    header.ParentHash,
 		FeeRecipient:  header.FeeRecipient,
