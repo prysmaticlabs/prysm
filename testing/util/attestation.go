@@ -25,8 +25,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+type AttestationUtil struct{}
+
 // NewAttestation creates an attestation block with minimum marshalable fields.
-func NewAttestation() *ethpb.Attestation {
+func (u *AttestationUtil) NewAttestation() *ethpb.Attestation {
 	return &ethpb.Attestation{
 		AggregationBits: bitfield.Bitlist{0b1101},
 		Data: &ethpb.AttestationData{
@@ -49,7 +51,7 @@ func NewAttestation() *ethpb.Attestation {
 // for the same data with their aggregation bits split uniformly.
 //
 // If you request 4 attestations, but there are 8 committees, you will get 4 fully aggregated attestations.
-func GenerateAttestations(
+func (u *AttestationUtil) GenerateAttestations(
 	bState state.BeaconState, privs []bls.SecretKey, numToGen uint64, slot types.Slot, randomRoot bool,
 ) ([]*ethpb.Attestation, error) {
 	var attestations []*ethpb.Attestation
@@ -205,7 +207,7 @@ func GenerateAttestations(
 
 // HydrateAttestation hydrates an attestation object with correct field length sizes
 // to comply with fssz marshalling and unmarshalling rules.
-func HydrateAttestation(a *ethpb.Attestation) *ethpb.Attestation {
+func (u *AttestationUtil) HydrateAttestation(a *ethpb.Attestation) *ethpb.Attestation {
 	if a.Signature == nil {
 		a.Signature = make([]byte, 96)
 	}
@@ -215,13 +217,13 @@ func HydrateAttestation(a *ethpb.Attestation) *ethpb.Attestation {
 	if a.Data == nil {
 		a.Data = &ethpb.AttestationData{}
 	}
-	a.Data = HydrateAttestationData(a.Data)
+	a.Data = u.HydrateAttestationData(a.Data)
 	return a
 }
 
 // HydrateV1Attestation hydrates a v1 attestation object with correct field length sizes
 // to comply with fssz marshalling and unmarshalling rules.
-func HydrateV1Attestation(a *attv1.Attestation) *attv1.Attestation {
+func (u *AttestationUtil) HydrateV1Attestation(a *attv1.Attestation) *attv1.Attestation {
 	if a.Signature == nil {
 		a.Signature = make([]byte, 96)
 	}
@@ -231,13 +233,13 @@ func HydrateV1Attestation(a *attv1.Attestation) *attv1.Attestation {
 	if a.Data == nil {
 		a.Data = &attv1.AttestationData{}
 	}
-	a.Data = HydrateV1AttestationData(a.Data)
+	a.Data = u.HydrateV1AttestationData(a.Data)
 	return a
 }
 
 // HydrateAttestationData hydrates an attestation data object with correct field length sizes
 // to comply with fssz marshalling and unmarshalling rules.
-func HydrateAttestationData(d *ethpb.AttestationData) *ethpb.AttestationData {
+func (u *AttestationUtil) HydrateAttestationData(d *ethpb.AttestationData) *ethpb.AttestationData {
 	if d.BeaconBlockRoot == nil {
 		d.BeaconBlockRoot = make([]byte, fieldparams.RootLength)
 	}
@@ -258,7 +260,7 @@ func HydrateAttestationData(d *ethpb.AttestationData) *ethpb.AttestationData {
 
 // HydrateV1AttestationData hydrates a v1 attestation data object with correct field length sizes
 // to comply with fssz marshalling and unmarshalling rules.
-func HydrateV1AttestationData(d *attv1.AttestationData) *attv1.AttestationData {
+func (u *AttestationUtil) HydrateV1AttestationData(d *attv1.AttestationData) *attv1.AttestationData {
 	if d.BeaconBlockRoot == nil {
 		d.BeaconBlockRoot = make([]byte, fieldparams.RootLength)
 	}
@@ -279,13 +281,13 @@ func HydrateV1AttestationData(d *attv1.AttestationData) *attv1.AttestationData {
 
 // HydrateIndexedAttestation hydrates an indexed attestation with correct field length sizes
 // to comply with fssz marshalling and unmarshalling rules.
-func HydrateIndexedAttestation(a *ethpb.IndexedAttestation) *ethpb.IndexedAttestation {
+func (u *AttestationUtil) HydrateIndexedAttestation(a *ethpb.IndexedAttestation) *ethpb.IndexedAttestation {
 	if a.Signature == nil {
 		a.Signature = make([]byte, 96)
 	}
 	if a.Data == nil {
 		a.Data = &ethpb.AttestationData{}
 	}
-	a.Data = HydrateAttestationData(a.Data)
+	a.Data = u.HydrateAttestationData(a.Data)
 	return a
 }
