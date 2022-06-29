@@ -33,7 +33,8 @@ func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, state.Be
 	}
 	require.NoError(t, s.SetValidators(vals))
 
-	att1 := util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+	au := util.AttestationUtil{}
+	att1 := au.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: 1},
 		},
@@ -48,7 +49,7 @@ func setupValidAttesterSlashing(t *testing.T) (*ethpb.AttesterSlashing, state.Be
 	aggregateSig := bls.AggregateSignatures([]bls.Signature{sig0, sig1})
 	att1.Signature = aggregateSig.Marshal()
 
-	att2 := util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+	att2 := au.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{0, 1},
 	})
 	hashTreeRoot, err = signing.ComputeSigningRoot(att2.Data, domain)
@@ -132,12 +133,13 @@ func TestValidateAttesterSlashing_CanFilter(t *testing.T) {
 	d, err := r.currentForkDigest()
 	assert.NoError(t, err)
 	topic = r.addDigestToTopic(topic, d)
+	au := util.AttestationUtil{}
 	buf := new(bytes.Buffer)
 	_, err = p.Encoding().EncodeGossip(buf, &ethpb.AttesterSlashing{
-		Attestation_1: util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+		Attestation_1: au.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 			AttestingIndices: []uint64{3},
 		}),
-		Attestation_2: util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+		Attestation_2: au.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 			AttestingIndices: []uint64{3},
 		}),
 	})
@@ -155,10 +157,10 @@ func TestValidateAttesterSlashing_CanFilter(t *testing.T) {
 
 	buf = new(bytes.Buffer)
 	_, err = p.Encoding().EncodeGossip(buf, &ethpb.AttesterSlashing{
-		Attestation_1: util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+		Attestation_1: au.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 			AttestingIndices: []uint64{4, 3},
 		}),
-		Attestation_2: util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+		Attestation_2: au.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 			AttestingIndices: []uint64{3, 4},
 		}),
 	})

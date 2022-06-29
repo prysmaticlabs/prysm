@@ -23,14 +23,15 @@ func TestKV_Aggregated_AggregateUnaggregatedAttestations(t *testing.T) {
 	require.NoError(t, err)
 	sig1 := priv.Sign([]byte{'a'})
 	sig2 := priv.Sign([]byte{'b'})
-	att1 := util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b1001}, Signature: sig1.Marshal()})
-	att2 := util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b1010}, Signature: sig1.Marshal()})
-	att3 := util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b1100}, Signature: sig1.Marshal()})
-	att4 := util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b1001}, Signature: sig2.Marshal()})
-	att5 := util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b1001}, Signature: sig1.Marshal()})
-	att6 := util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b1010}, Signature: sig1.Marshal()})
-	att7 := util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b1100}, Signature: sig1.Marshal()})
-	att8 := util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b1001}, Signature: sig2.Marshal()})
+	au := util.AttestationUtil{}
+	att1 := au.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b1001}, Signature: sig1.Marshal()})
+	att2 := au.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b1010}, Signature: sig1.Marshal()})
+	att3 := au.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b1100}, Signature: sig1.Marshal()})
+	att4 := au.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b1001}, Signature: sig2.Marshal()})
+	att5 := au.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b1001}, Signature: sig1.Marshal()})
+	att6 := au.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b1010}, Signature: sig1.Marshal()})
+	att7 := au.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b1100}, Signature: sig1.Marshal()})
+	att8 := au.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b1001}, Signature: sig2.Marshal()})
 	atts := []*ethpb.Attestation{att1, att2, att3, att4, att5, att6, att7, att8}
 	require.NoError(t, cache.SaveUnaggregatedAttestations(atts))
 	require.NoError(t, cache.AggregateUnaggregatedAttestations(context.Background()))
@@ -42,7 +43,7 @@ func TestKV_Aggregated_AggregateUnaggregatedAttestations(t *testing.T) {
 func TestKV_Aggregated_AggregateUnaggregatedAttestationsBySlotIndex(t *testing.T) {
 	cache := NewAttCaches()
 	genData := func(slot types.Slot, committeeIndex types.CommitteeIndex) *ethpb.AttestationData {
-		return util.HydrateAttestationData(&ethpb.AttestationData{
+		return util.NewAttestationUtil().HydrateAttestationData(&ethpb.AttestationData{
 			Slot:           slot,
 			CommitteeIndex: committeeIndex,
 		})
@@ -95,6 +96,7 @@ func TestKV_Aggregated_AggregateUnaggregatedAttestationsBySlotIndex(t *testing.T
 }
 
 func TestKV_Aggregated_SaveAggregatedAttestation(t *testing.T) {
+	au := util.AttestationUtil{}
 	tests := []struct {
 		name          string
 		att           *ethpb.Attestation
@@ -113,14 +115,14 @@ func TestKV_Aggregated_SaveAggregatedAttestation(t *testing.T) {
 		},
 		{
 			name: "not aggregated",
-			att: util.HydrateAttestation(&ethpb.Attestation{
+			att: au.HydrateAttestation(&ethpb.Attestation{
 				Data: &ethpb.AttestationData{}, AggregationBits: bitfield.Bitlist{0b10100}}),
 			wantErrString: "attestation is not aggregated",
 		},
 		{
 			name: "invalid hash",
 			att: &ethpb.Attestation{
-				Data: util.HydrateAttestationData(&ethpb.AttestationData{
+				Data: au.HydrateAttestationData(&ethpb.AttestationData{
 					BeaconBlockRoot: []byte{0b0},
 				}),
 				AggregationBits: bitfield.Bitlist{0b10111},
@@ -129,7 +131,7 @@ func TestKV_Aggregated_SaveAggregatedAttestation(t *testing.T) {
 		},
 		{
 			name: "already seen",
-			att: util.HydrateAttestation(&ethpb.Attestation{
+			att: au.HydrateAttestation(&ethpb.Attestation{
 				Data: &ethpb.AttestationData{
 					Slot: 100,
 				},
@@ -139,7 +141,7 @@ func TestKV_Aggregated_SaveAggregatedAttestation(t *testing.T) {
 		},
 		{
 			name: "normal save",
-			att: util.HydrateAttestation(&ethpb.Attestation{
+			att: au.HydrateAttestation(&ethpb.Attestation{
 				Data: &ethpb.AttestationData{
 					Slot: 1,
 				},
@@ -148,7 +150,7 @@ func TestKV_Aggregated_SaveAggregatedAttestation(t *testing.T) {
 			count: 1,
 		},
 	}
-	r, err := hashFn(util.HydrateAttestationData(&ethpb.AttestationData{
+	r, err := hashFn(au.HydrateAttestationData(&ethpb.AttestationData{
 		Slot: 100,
 	}))
 	require.NoError(t, err)
@@ -172,6 +174,7 @@ func TestKV_Aggregated_SaveAggregatedAttestation(t *testing.T) {
 }
 
 func TestKV_Aggregated_SaveAggregatedAttestations(t *testing.T) {
+	au := util.AttestationUtil{}
 	tests := []struct {
 		name          string
 		atts          []*ethpb.Attestation
@@ -181,9 +184,9 @@ func TestKV_Aggregated_SaveAggregatedAttestations(t *testing.T) {
 		{
 			name: "no duplicates",
 			atts: []*ethpb.Attestation{
-				util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1},
+				au.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1},
 					AggregationBits: bitfield.Bitlist{0b1101}}),
-				util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1},
+				au.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1},
 					AggregationBits: bitfield.Bitlist{0b1101}}),
 			},
 			count: 1,
@@ -207,6 +210,7 @@ func TestKV_Aggregated_SaveAggregatedAttestations(t *testing.T) {
 }
 
 func TestKV_Aggregated_SaveAggregatedAttestations_SomeGoodSomeBad(t *testing.T) {
+	au := util.AttestationUtil{}
 	tests := []struct {
 		name          string
 		atts          []*ethpb.Attestation
@@ -216,9 +220,9 @@ func TestKV_Aggregated_SaveAggregatedAttestations_SomeGoodSomeBad(t *testing.T) 
 		{
 			name: "the first attestation is bad",
 			atts: []*ethpb.Attestation{
-				util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1},
+				au.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1},
 					AggregationBits: bitfield.Bitlist{0b1100}}),
-				util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1},
+				au.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1},
 					AggregationBits: bitfield.Bitlist{0b1101}}),
 			},
 			count: 1,
@@ -243,10 +247,11 @@ func TestKV_Aggregated_SaveAggregatedAttestations_SomeGoodSomeBad(t *testing.T) 
 
 func TestKV_Aggregated_AggregatedAttestations(t *testing.T) {
 	cache := NewAttCaches()
+	au := util.AttestationUtil{}
 
-	att1 := util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b1101}})
-	att2 := util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b1101}})
-	att3 := util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 3}, AggregationBits: bitfield.Bitlist{0b1101}})
+	att1 := au.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b1101}})
+	att2 := au.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b1101}})
+	att3 := au.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 3}, AggregationBits: bitfield.Bitlist{0b1101}})
 	atts := []*ethpb.Attestation{att1, att2, att3}
 
 	for _, att := range atts {
@@ -261,16 +266,17 @@ func TestKV_Aggregated_AggregatedAttestations(t *testing.T) {
 }
 
 func TestKV_Aggregated_DeleteAggregatedAttestation(t *testing.T) {
+	au := util.AttestationUtil{}
 	t.Run("nil attestation", func(t *testing.T) {
 		cache := NewAttCaches()
 		assert.ErrorContains(t, "attestation can't be nil", cache.DeleteAggregatedAttestation(nil))
-		att := util.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b10101}, Data: &ethpb.AttestationData{Slot: 2}})
+		att := au.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b10101}, Data: &ethpb.AttestationData{Slot: 2}})
 		assert.NoError(t, cache.DeleteAggregatedAttestation(att))
 	})
 
 	t.Run("non aggregated attestation", func(t *testing.T) {
 		cache := NewAttCaches()
-		att := util.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1001}, Data: &ethpb.AttestationData{Slot: 2}})
+		att := au.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1001}, Data: &ethpb.AttestationData{Slot: 2}})
 		err := cache.DeleteAggregatedAttestation(att)
 		assert.ErrorContains(t, "attestation is not aggregated", err)
 	})
@@ -292,16 +298,16 @@ func TestKV_Aggregated_DeleteAggregatedAttestation(t *testing.T) {
 
 	t.Run("nonexistent attestation", func(t *testing.T) {
 		cache := NewAttCaches()
-		att := util.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1111}, Data: &ethpb.AttestationData{Slot: 2}})
+		att := au.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1111}, Data: &ethpb.AttestationData{Slot: 2}})
 		assert.NoError(t, cache.DeleteAggregatedAttestation(att))
 	})
 
 	t.Run("non-filtered deletion", func(t *testing.T) {
 		cache := NewAttCaches()
-		att1 := util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b11010}})
-		att2 := util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b11010}})
-		att3 := util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 3}, AggregationBits: bitfield.Bitlist{0b11010}})
-		att4 := util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 3}, AggregationBits: bitfield.Bitlist{0b10101}})
+		att1 := au.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b11010}})
+		att2 := au.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b11010}})
+		att3 := au.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 3}, AggregationBits: bitfield.Bitlist{0b11010}})
+		att4 := au.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 3}, AggregationBits: bitfield.Bitlist{0b10101}})
 		atts := []*ethpb.Attestation{att1, att2, att3, att4}
 		require.NoError(t, cache.SaveAggregatedAttestations(atts))
 		require.NoError(t, cache.DeleteAggregatedAttestation(att1))
@@ -314,10 +320,10 @@ func TestKV_Aggregated_DeleteAggregatedAttestation(t *testing.T) {
 
 	t.Run("filtered deletion", func(t *testing.T) {
 		cache := NewAttCaches()
-		att1 := util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b110101}})
-		att2 := util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b110111}})
-		att3 := util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b110100}})
-		att4 := util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b110101}})
+		att1 := au.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b110101}})
+		att2 := au.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b110111}})
+		att3 := au.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b110100}})
+		att4 := au.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b110101}})
 		atts := []*ethpb.Attestation{att1, att2, att3, att4}
 		require.NoError(t, cache.SaveAggregatedAttestations(atts))
 
@@ -334,6 +340,7 @@ func TestKV_Aggregated_DeleteAggregatedAttestation(t *testing.T) {
 }
 
 func TestKV_Aggregated_HasAggregatedAttestation(t *testing.T) {
+	au := util.AttestationUtil{}
 	tests := []struct {
 		name     string
 		existing []*ethpb.Attestation
@@ -357,7 +364,7 @@ func TestKV_Aggregated_HasAggregatedAttestation(t *testing.T) {
 		},
 		{
 			name: "empty cache aggregated",
-			input: util.HydrateAttestation(&ethpb.Attestation{
+			input: au.HydrateAttestation(&ethpb.Attestation{
 				Data: &ethpb.AttestationData{
 					Slot: 1,
 				},
@@ -366,7 +373,7 @@ func TestKV_Aggregated_HasAggregatedAttestation(t *testing.T) {
 		},
 		{
 			name: "empty cache unaggregated",
-			input: util.HydrateAttestation(&ethpb.Attestation{
+			input: au.HydrateAttestation(&ethpb.Attestation{
 				Data: &ethpb.AttestationData{
 					Slot: 1,
 				},
@@ -376,13 +383,13 @@ func TestKV_Aggregated_HasAggregatedAttestation(t *testing.T) {
 		{
 			name: "single attestation in cache with exact match",
 			existing: []*ethpb.Attestation{{
-				Data: util.HydrateAttestationData(&ethpb.AttestationData{
+				Data: au.HydrateAttestationData(&ethpb.AttestationData{
 					Slot: 1,
 				}),
 				AggregationBits: bitfield.Bitlist{0b1111}},
 			},
 			input: &ethpb.Attestation{
-				Data: util.HydrateAttestationData(&ethpb.AttestationData{
+				Data: au.HydrateAttestationData(&ethpb.AttestationData{
 					Slot: 1,
 				}),
 				AggregationBits: bitfield.Bitlist{0b1111}},
@@ -391,13 +398,13 @@ func TestKV_Aggregated_HasAggregatedAttestation(t *testing.T) {
 		{
 			name: "single attestation in cache with subset aggregation",
 			existing: []*ethpb.Attestation{{
-				Data: util.HydrateAttestationData(&ethpb.AttestationData{
+				Data: au.HydrateAttestationData(&ethpb.AttestationData{
 					Slot: 1,
 				}),
 				AggregationBits: bitfield.Bitlist{0b1111}},
 			},
 			input: &ethpb.Attestation{
-				Data: util.HydrateAttestationData(&ethpb.AttestationData{
+				Data: au.HydrateAttestationData(&ethpb.AttestationData{
 					Slot: 1,
 				}),
 				AggregationBits: bitfield.Bitlist{0b1110}},
@@ -406,13 +413,13 @@ func TestKV_Aggregated_HasAggregatedAttestation(t *testing.T) {
 		{
 			name: "single attestation in cache with superset aggregation",
 			existing: []*ethpb.Attestation{{
-				Data: util.HydrateAttestationData(&ethpb.AttestationData{
+				Data: au.HydrateAttestationData(&ethpb.AttestationData{
 					Slot: 1,
 				}),
 				AggregationBits: bitfield.Bitlist{0b1110}},
 			},
 			input: &ethpb.Attestation{
-				Data: util.HydrateAttestationData(&ethpb.AttestationData{
+				Data: au.HydrateAttestationData(&ethpb.AttestationData{
 					Slot: 1,
 				}),
 				AggregationBits: bitfield.Bitlist{0b1111}},
@@ -422,20 +429,20 @@ func TestKV_Aggregated_HasAggregatedAttestation(t *testing.T) {
 			name: "multiple attestations with same data in cache with overlapping aggregation, input is subset",
 			existing: []*ethpb.Attestation{
 				{
-					Data: util.HydrateAttestationData(&ethpb.AttestationData{
+					Data: au.HydrateAttestationData(&ethpb.AttestationData{
 						Slot: 1,
 					}),
 					AggregationBits: bitfield.Bitlist{0b1111000},
 				},
 				{
-					Data: util.HydrateAttestationData(&ethpb.AttestationData{
+					Data: au.HydrateAttestationData(&ethpb.AttestationData{
 						Slot: 1,
 					}),
 					AggregationBits: bitfield.Bitlist{0b1100111},
 				},
 			},
 			input: &ethpb.Attestation{
-				Data: util.HydrateAttestationData(&ethpb.AttestationData{
+				Data: au.HydrateAttestationData(&ethpb.AttestationData{
 					Slot: 1,
 				}),
 				AggregationBits: bitfield.Bitlist{0b1100000}},
@@ -445,20 +452,20 @@ func TestKV_Aggregated_HasAggregatedAttestation(t *testing.T) {
 			name: "multiple attestations with same data in cache with overlapping aggregation and input is superset",
 			existing: []*ethpb.Attestation{
 				{
-					Data: util.HydrateAttestationData(&ethpb.AttestationData{
+					Data: au.HydrateAttestationData(&ethpb.AttestationData{
 						Slot: 1,
 					}),
 					AggregationBits: bitfield.Bitlist{0b1111000},
 				},
 				{
-					Data: util.HydrateAttestationData(&ethpb.AttestationData{
+					Data: au.HydrateAttestationData(&ethpb.AttestationData{
 						Slot: 1,
 					}),
 					AggregationBits: bitfield.Bitlist{0b1100111},
 				},
 			},
 			input: &ethpb.Attestation{
-				Data: util.HydrateAttestationData(&ethpb.AttestationData{
+				Data: au.HydrateAttestationData(&ethpb.AttestationData{
 					Slot: 1,
 				}),
 				AggregationBits: bitfield.Bitlist{0b1111111}},
@@ -468,20 +475,20 @@ func TestKV_Aggregated_HasAggregatedAttestation(t *testing.T) {
 			name: "multiple attestations with different data in cache",
 			existing: []*ethpb.Attestation{
 				{
-					Data: util.HydrateAttestationData(&ethpb.AttestationData{
+					Data: au.HydrateAttestationData(&ethpb.AttestationData{
 						Slot: 2,
 					}),
 					AggregationBits: bitfield.Bitlist{0b1111000},
 				},
 				{
-					Data: util.HydrateAttestationData(&ethpb.AttestationData{
+					Data: au.HydrateAttestationData(&ethpb.AttestationData{
 						Slot: 3,
 					}),
 					AggregationBits: bitfield.Bitlist{0b1100111},
 				},
 			},
 			input: &ethpb.Attestation{
-				Data: util.HydrateAttestationData(&ethpb.AttestationData{
+				Data: au.HydrateAttestationData(&ethpb.AttestationData{
 					Slot: 1,
 				}),
 				AggregationBits: bitfield.Bitlist{0b1111111}},
@@ -491,14 +498,14 @@ func TestKV_Aggregated_HasAggregatedAttestation(t *testing.T) {
 			name: "attestations with different bitlist lengths",
 			existing: []*ethpb.Attestation{
 				{
-					Data: util.HydrateAttestationData(&ethpb.AttestationData{
+					Data: au.HydrateAttestationData(&ethpb.AttestationData{
 						Slot: 2,
 					}),
 					AggregationBits: bitfield.Bitlist{0b1111000},
 				},
 			},
 			input: &ethpb.Attestation{
-				Data: util.HydrateAttestationData(&ethpb.AttestationData{
+				Data: au.HydrateAttestationData(&ethpb.AttestationData{
 					Slot: 2,
 				}),
 				AggregationBits: bitfield.Bitlist{0b1111},
@@ -540,8 +547,9 @@ func TestKV_Aggregated_HasAggregatedAttestation(t *testing.T) {
 func TestKV_Aggregated_DuplicateAggregatedAttestations(t *testing.T) {
 	cache := NewAttCaches()
 
-	att1 := util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b1101}})
-	att2 := util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b1111}})
+	au := util.AttestationUtil{}
+	att1 := au.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b1101}})
+	att2 := au.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b1111}})
 	atts := []*ethpb.Attestation{att1, att2}
 
 	for _, att := range atts {
