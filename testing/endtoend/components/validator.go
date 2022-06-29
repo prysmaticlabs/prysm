@@ -414,14 +414,14 @@ func createProposerSettingsPath(pubkeys []string, validatorIndex int) (string, e
 	} else {
 		config := make(map[string]*validator_service_config.ProposerOptionPayload)
 
-		for _, pubkey := range pubkeys {
+		for i, pubkey := range pubkeys {
 			// Create an account
 			byteval, err := hexutil.Decode(pubkey)
 			if err != nil {
 				return "", err
 			}
 			deterministicFeeRecipient := common.HexToAddress(hexutil.Encode(byteval[:fieldparams.FeeRecipientLength])).Hex()
-			config[pubkey] = &validator_service_config.ProposerOptionPayload{
+			config[pubkeys[i]] = &validator_service_config.ProposerOptionPayload{
 				FeeRecipient: deterministicFeeRecipient,
 			}
 		}

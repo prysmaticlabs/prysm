@@ -72,13 +72,8 @@ func feeRecipientIsPresent(conns ...*grpc.ClientConn) error {
 			publickey := validator.GetPublicKey()
 			// calculate deterministic fee recipient using first 20 bytes of public key
 			deterministicFeeRecipient := common.HexToAddress(hexutil.Encode(publickey[:fieldparams.FeeRecipientLength])).Hex()
-			if deterministicFeeRecipient != account.Hex() {
-				return fmt.Errorf("fee recipient %s does not match the proposer settings fee recipient %s", account.Hex(), deterministicFeeRecipient)
-			} else {
-
-				if components.DefaultFeeRecipientAddress != account.Hex() {
-					return fmt.Errorf("fee recipient %s does not match the default fee recipient %s", account.Hex(), components.DefaultFeeRecipientAddress)
-				}
+			if deterministicFeeRecipient != account.Hex() && components.DefaultFeeRecipientAddress != account.Hex() {
+				return fmt.Errorf("publickey %s, fee recipient %s does not match the proposer settings fee recipient %s nor the default fee recipient %s", account.Hex(), deterministicFeeRecipient, components.DefaultFeeRecipientAddress)
 			}
 			currentBlock, err := web3.BlockByHash(ctx, common.BytesToHash(ctr.GetBellatrixBlock().GetBlock().GetBody().GetExecutionPayload().BlockHash))
 			if err != nil {
@@ -104,7 +99,6 @@ func feeRecipientIsPresent(conns ...*grpc.ClientConn) error {
 				log.Infof("current gas used: %v current account balance %v ,increased from previous account balance %v ", currentBlock.GasUsed(), accountBalance, prevAccountBalance)
 			}
 		}
-
 	}
 
 	return nil
