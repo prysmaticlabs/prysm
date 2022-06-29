@@ -44,10 +44,11 @@ build:release --compilation_mode=opt
 build:release --config=llvm
 
 # LLVM compiler for building C/C++ dependencies.
-build:llvm --crosstool_top=@llvm_toolchain//:toolchain
 build:llvm --define compiler=llvm
 build:llvm --copt -fno-sanitize=vptr,function
 build:llvm --linkopt -fno-sanitize=vptr,function
+# --incompatible_enable_cc_toolchain_resolution not needed after this issue is closed https://github.com/bazelbuild/bazel/issues/7260
+build:llvm --incompatible_enable_cc_toolchain_resolution
 
 build:asan --copt -fsanitize=address,undefined
 build:asan --copt -fno-omit-frame-pointer
