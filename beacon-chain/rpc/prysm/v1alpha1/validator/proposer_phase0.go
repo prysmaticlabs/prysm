@@ -10,11 +10,13 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/interop"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"go.opencensus.io/trace"
 )
 
@@ -91,10 +93,23 @@ func (vs *Server) buildPhase0BlockData(ctx context.Context, req *ethpb.BlockRequ
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve head root: %v", err)
 	}
+	var head state.BeaconState
 
-	head, err := vs.HeadFetcher.HeadState(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("could not get head state %v", err)
+	if slots.SinceEpochStarts(req.Slot) == 0 {
+		root, err := vs.ForkFetcher.ForkChoicer().AncestorRoot(ctx, bytesutil.ToBytes32(parentRoot), req.Slot-5)
+		if err != nil {
+			return nil, fmt.Errorf("could not retrieve head root: %v", err)
+		}
+		parentRoot = root[:]
+		head, err = vs.StateGen.StateByRoot(ctx, root)
+		if err != nil {
+			return nil, fmt.Errorf("could not get head state %v", err)
+		}
+	} else {
+		head, err = vs.HeadFetcher.HeadState(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get head state %v", err)
+		}
 	}
 
 	head, err = transition.ProcessSlotsUsingNextSlotCache(ctx, head, parentRoot, req.Slot)
