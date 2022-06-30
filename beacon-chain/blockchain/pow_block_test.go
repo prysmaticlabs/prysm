@@ -130,7 +130,7 @@ func Test_validateMergeBlock(t *testing.T) {
 	// Recent execution blocks:
 	// ... <- 3 <- b <- a
 	// TD:  488  498   500
-	// Block 'a' is the expected merge block with a TD of 500 and a parent TD of 498
+	// Block 'a' is the expected TTD block with a TD of 500 and a parent TD of 498
 	engine.BlockByHashMap[[32]byte{'a'}] = &enginev1.ExecutionBlock{
 		ParentHash:      bytesutil.PadTo([]byte{'b'}, fieldparams.RootLength),
 		TotalDifficulty: "0x1F4", // 500
@@ -148,8 +148,7 @@ func Test_validateMergeBlock(t *testing.T) {
 			Slot: 79,
 			Body: &ethpb.BeaconBlockBodyBellatrix{
 				ExecutionPayload: &enginev1.ExecutionPayload{
-					BlockHash:  bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength),
-					ParentHash: bytesutil.PadTo([]byte{'b'}, fieldparams.RootLength),
+					ParentHash:  bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength),
 				},
 			},
 		},
