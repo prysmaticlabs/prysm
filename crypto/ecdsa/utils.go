@@ -36,6 +36,9 @@ func ConvertToInterfacePubkey(pubkey *ecdsa.PublicKey) (crypto.PubKey, error) {
 	if yVal.SetByteSlice(pubkey.Y.Bytes()) {
 		return nil, errors.Errorf("Y value overflows")
 	}
-	typeAssertedKey := crypto.PubKey((*crypto.Secp256k1PublicKey)(btcec.NewPublicKey(xVal, yVal)))
-	return typeAssertedKey, nil
+	newKey := crypto.PubKey((*crypto.Secp256k1PublicKey)(btcec.NewPublicKey(xVal, yVal)))
+	// Zero out temporary values.
+	xVal.Zero()
+	yVal.Zero()
+	return newKey, nil
 }
