@@ -72,8 +72,8 @@ func feeRecipientIsPresent(conns ...*grpc.ClientConn) error {
 			}
 			publickey := validator.GetPublicKey()
 			isDeterministicKey := false
-			validatorNum := int(params.BeaconConfig().MinGenesisActiveValidatorCount) // matches validator start in validator component
-			_, pubs, err := interop.DeterministicallyGenerateKeys(uint64(0), uint64(validatorNum))
+			validatorNum := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
+			_, pubs, err := interop.DeterministicallyGenerateKeys(uint64(0), uint64(validatorNum+int(e2e.DepositCount))) // matches validator start in validator component + validators used for deposits
 			if err != nil {
 				return err
 			}
