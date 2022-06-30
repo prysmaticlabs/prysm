@@ -7,19 +7,17 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
-	"math/big"
 	"net"
 	"os"
 	"path"
 	"time"
 
-	"github.com/btcsuite/btcd/btcec"
-	gcrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
+	ecdsaprysm "github.com/prysmaticlabs/prysm/crypto/ecdsa"
 	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/network"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -46,39 +44,6 @@ func SerializeENR(record *enr.Record) (string, error) {
 	return enrString, nil
 }
 
-func convertFromInterfacePrivKey(privkey interface{}) (*ecdsa.PrivateKey, error) {
-	secpKey := (privkey.(*crypto.Secp256k1PrivateKey))
-	rawKey, err := secpKey.Raw()
-	if err != nil {
-		return nil, err
-	}
-	privKey := new(ecdsa.PrivateKey)
-	k := new(big.Int).SetBytes(rawKey)
-	privKey.D = k
-	privKey.Curve = gcrypto.S256() // Temporary hack, so libp2p Secp256k1 is recognized as geth Secp256k1 in disc v5.1.
-	privKey.X, privKey.Y = gcrypto.S256().ScalarBaseMult(rawKey)
-	return privKey, nil
-}
-
-func convertToInterfacePrivkey(privkey *ecdsa.PrivateKey) (crypto.PrivKey, error) {
-	return crypto.UnmarshalSecp256k1PrivateKey(privkey.D.Bytes())
-}
-
-func convertToInterfacePubkey(pubkey *ecdsa.PublicKey) (crypto.PubKey, error) {
-	if !pubkey.Curve.IsOnCurve(pubkey.X, pubkey.Y) {
-		return nil, errors.Errorf("not on curve")
-	}
-	xVal, yVal := new(btcec.FieldVal), new(btcec.FieldVal)
-	if xVal.SetByteSlice(pubkey.X.Bytes()) {
-		return nil, errors.Errorf("X value overflows")
-	}
-	if yVal.SetByteSlice(pubkey.Y.Bytes()) {
-		return nil, errors.Errorf("Y value overflows")
-	}
-	typeAssertedKey := crypto.PubKey((*crypto.Secp256k1PublicKey)(btcec.NewPublicKey(xVal, yVal)))
-	return typeAssertedKey, nil
-}
-
 // Determines a private key for p2p networking from the p2p service's
 // configuration struct. If no key is found, it generates a new one.
 func privKey(cfg *Config) (*ecdsa.PrivateKey, error) {
@@ -96,7 +61,7 @@ func privKey(cfg *Config) (*ecdsa.PrivateKey, error) {
 		if err != nil {
 			return nil, err
 		}
-		return convertFromInterfacePrivKey(priv)
+		return ecdsaprysm.ConvertFromInterfacePrivKey(priv)
 	}
 	if defaultKeysExist && privateKeyPath == "" {
 		privateKeyPath = defaultKeyPath
@@ -120,7 +85,7 @@ func privKeyFromFile(path string) (*ecdsa.PrivateKey, error) {
 	if err != nil {
 		return nil, err
 	}
-	return convertFromInterfacePrivKey(unmarshalledKey)
+	return ecdsaprysm.ConvertFromInterfacePrivKey(unmarshalledKey)
 }
 
 // Retrieves node p2p metadata from a set of configuration values

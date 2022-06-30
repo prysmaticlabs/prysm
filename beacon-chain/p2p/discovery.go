@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/config/params"
+	ecdsaprysm "github.com/prysmaticlabs/prysm/crypto/ecdsa"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/time/slots"
 )
@@ -391,7 +392,7 @@ func convertToAddrInfo(node *enode.Node) (*peer.AddrInfo, ma.Multiaddr, error) {
 
 func convertToSingleMultiAddr(node *enode.Node) (ma.Multiaddr, error) {
 	pubkey := node.Pubkey()
-	assertedKey, err := convertToInterfacePubkey(pubkey)
+	assertedKey, err := ecdsaprysm.ConvertToInterfacePubkey(pubkey)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get pubkey")
 	}
@@ -404,7 +405,7 @@ func convertToSingleMultiAddr(node *enode.Node) (ma.Multiaddr, error) {
 
 func convertToUdpMultiAddr(node *enode.Node) ([]ma.Multiaddr, error) {
 	pubkey := node.Pubkey()
-	assertedKey, err := convertToInterfacePubkey(pubkey)
+	assertedKey, err := ecdsaprysm.ConvertToInterfacePubkey(pubkey)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get pubkey")
 	}
