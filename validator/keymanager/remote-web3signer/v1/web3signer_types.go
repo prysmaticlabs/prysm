@@ -101,6 +101,14 @@ type SyncCommitteeContributionAndProofSignRequest struct {
 	ContributionAndProof *ContributionAndProof `json:"contribution_and_proof" validate:"required"`
 }
 
+// ValidatorRegistrationSignRequest a request object for web3signer sign api.
+type ValidatorRegistrationSignRequest struct {
+	FeeRecipient string `json:"fee_recipient" validate:"required"` /* 42 hexadecimal string */
+	GasLimit     string `json:"gas_limit" validate:"required"`     /* uint64 */
+	Timestamp    string `json:"timestamp" validate:"required"`     /* uint64 */
+	Pubkey       string `json:"pubkey"  validate:"required"`       /* bls hexadecimal string */
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // sub properties of Sign Requests /////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////

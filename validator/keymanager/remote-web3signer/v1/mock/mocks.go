@@ -411,6 +411,21 @@ func GetMockSignRequest(t string) *validatorpb.SignRequest {
 			},
 			SigningSlot: 0,
 		}
+	case "VALIDATOR_REGISTRATION":
+		return &validatorpb.SignRequest{
+			PublicKey:       make([]byte, fieldparams.BLSPubkeyLength),
+			SigningRoot:     make([]byte, fieldparams.RootLength),
+			SignatureDomain: make([]byte, 4),
+			Object: &validatorpb.SignRequest_Registration{
+				Registration: &eth.ValidatorRegistrationV1{
+					FeeRecipient: make([]byte, fieldparams.FeeRecipientLength),
+					GasLimit:     uint64(0),
+					Timestamp:    uint64(0),
+					Pubkey:       make([]byte, fieldparams.BLSSignatureLength),
+				},
+			},
+			SigningSlot: 0,
+		}
 	default:
 		fmt.Printf("Web3signer sign request type: %v  not found", t)
 		return nil
@@ -556,6 +571,16 @@ func MockVoluntaryExitSignRequest() *v1.VoluntaryExitSignRequest {
 			Epoch:          "0",
 			ValidatorIndex: "0",
 		},
+	}
+}
+
+// MockValidatorRegistrationSignRequest is a mock implementation of the ValidatorRegistrationSignRequest.
+func MockValidatorRegistrationSignRequest() *v1.ValidatorRegistrationSignRequest {
+	return &v1.ValidatorRegistrationSignRequest{
+		FeeRecipient: hexutil.Encode(make([]byte, fieldparams.FeeRecipientLength)),
+		GasLimit:     fmt.Sprint(0),
+		Timestamp:    fmt.Sprint(0),
+		Pubkey:       hexutil.Encode(make([]byte, fieldparams.BLSSignatureLength)),
 	}
 }
 
