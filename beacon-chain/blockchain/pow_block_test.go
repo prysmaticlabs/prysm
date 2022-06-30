@@ -148,7 +148,7 @@ func Test_validateMergeBlock(t *testing.T) {
 			Slot: 79,
 			Body: &ethpb.BeaconBlockBodyBellatrix{
 				ExecutionPayload: &enginev1.ExecutionPayload{
-					ParentHash:  bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength),
+					ParentHash: bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength),
 				},
 			},
 		},
