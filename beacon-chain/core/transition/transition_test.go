@@ -133,15 +133,16 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 			}),
 		},
 	}
+	au := util.AttestationUtil{}
 	attesterSlashings := []*ethpb.AttesterSlashing{
 		{
 			Attestation_1: &ethpb.IndexedAttestation{
-				Data:             util.HydrateAttestationData(&ethpb.AttestationData{}),
+				Data:             au.HydrateAttestationData(&ethpb.AttestationData{}),
 				AttestingIndices: []uint64{0, 1},
 				Signature:        make([]byte, 96),
 			},
 			Attestation_2: &ethpb.IndexedAttestation{
-				Data:             util.HydrateAttestationData(&ethpb.AttestationData{}),
+				Data:             au.HydrateAttestationData(&ethpb.AttestationData{}),
 				AttestingIndices: []uint64{0, 1},
 				Signature:        make([]byte, 96),
 			},
@@ -152,7 +153,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 		blockRoots = append(blockRoots, []byte{byte(i)})
 	}
 	require.NoError(t, beaconState.SetBlockRoots(blockRoots))
-	blockAtt := util.HydrateAttestation(&ethpb.Attestation{
+	blockAtt := au.HydrateAttestation(&ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			Target: &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("hello-world"), 32)},
 		},
@@ -255,7 +256,8 @@ func createFullBlockWithOperations(t *testing.T) (state.BeaconState,
 	require.NoError(t, beaconState.SetValidators(validators))
 
 	mockRoot2 := [32]byte{'A'}
-	att1 := util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+	au := util.AttestationUtil{}
+	att1 := au.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: 0, Root: mockRoot2[:]},
 		},
@@ -271,7 +273,7 @@ func createFullBlockWithOperations(t *testing.T) (state.BeaconState,
 	att1.Signature = aggregateSig.Marshal()
 
 	mockRoot3 := [32]byte{'B'}
-	att2 := util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+	att2 := au.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: 0, Root: mockRoot3[:]},
 			Target: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, fieldparams.RootLength)},
@@ -301,7 +303,7 @@ func createFullBlockWithOperations(t *testing.T) (state.BeaconState,
 
 	aggBits := bitfield.NewBitlist(1)
 	aggBits.SetBitAt(0, true)
-	blockAtt := util.HydrateAttestation(&ethpb.Attestation{
+	blockAtt := au.HydrateAttestation(&ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			Slot:   beaconState.Slot(),
 			Target: &ethpb.Checkpoint{Epoch: time.CurrentEpoch(beaconState)},

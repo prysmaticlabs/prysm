@@ -82,6 +82,10 @@ func e2eMinimal(t *testing.T, cfgo ...types.E2EConfigOpt) *testRunner {
 	for _, o := range cfgo {
 		o(testConfig)
 	}
+	//TODO: web3signer does not currently support validator registration signing so evaluator will break code
+	if !testConfig.UseWeb3RemoteSigner {
+		testConfig.Evaluators = append(testConfig.Evaluators, ev.FeeRecipientIsPresent)
+	}
 
 	return newTestRunner(t, testConfig)
 }
@@ -158,7 +162,10 @@ func e2eMainnet(t *testing.T, usePrysmSh, useMultiClient bool, cfgo ...types.E2E
 	for _, o := range cfgo {
 		o(testConfig)
 	}
-
+	//TODO: web3signer does not currently support validator registration signing so evaluator will break code
+	if !testConfig.UseWeb3RemoteSigner {
+		testConfig.Evaluators = append(testConfig.Evaluators, ev.FeeRecipientIsPresent)
+	}
 	return newTestRunner(t, testConfig)
 }
 

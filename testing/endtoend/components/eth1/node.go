@@ -90,7 +90,7 @@ func (node *Node) Start(ctx context.Context) error {
 		"--ws.origins=\"*\"",
 		"--ipcdisable",
 		"--verbosity=4",
-		"--txpool.locals=0x878705ba3f8bc32fcf7f4caa1a35e72af65cf766",
+		fmt.Sprintf("--txpool.locals=%s", EthAddress),
 	}
 	// If we are testing sync, geth needs to be run via full sync as snap sync does not
 	// work in our setup.

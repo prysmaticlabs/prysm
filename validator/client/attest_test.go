@@ -461,7 +461,7 @@ func TestSignAttestation(t *testing.T) {
 		DomainData(gomock.Any(), gomock.Any()).
 		Return(&ethpb.DomainResponse{SignatureDomain: attesterDomain}, nil)
 	ctx := context.Background()
-	att := util.NewAttestation()
+	att := util.NewAttestationUtil().NewAttestation()
 	att.Data.Source.Epoch = 100
 	att.Data.Target.Epoch = 200
 	att.Data.Slot = 999

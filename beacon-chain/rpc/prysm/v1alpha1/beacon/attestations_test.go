@@ -81,7 +81,7 @@ func TestServer_ListAttestations_Genesis(t *testing.T) {
 		},
 	}
 
-	att := util.HydrateAttestation(&ethpb.Attestation{
+	att := util.NewAttestationUtil().HydrateAttestation(&ethpb.Attestation{
 		AggregationBits: bitfield.NewBitlist(0),
 		Data: &ethpb.AttestationData{
 			Slot:           2,
@@ -275,7 +275,7 @@ func TestServer_ListAttestations_Pagination_CustomPageParameters(t *testing.T) {
 			blockExample := util.NewBeaconBlock()
 			blockExample.Block.Slot = i
 			blockExample.Block.Body.Attestations = []*ethpb.Attestation{
-				util.HydrateAttestation(&ethpb.Attestation{
+				util.NewAttestationUtil().HydrateAttestation(&ethpb.Attestation{
 					Data: &ethpb.AttestationData{
 						CommitteeIndex: s,
 						Slot:           i,
@@ -754,7 +754,7 @@ func TestServer_AttestationPool_Pagination_DefaultPageSize(t *testing.T) {
 
 	atts := make([]*ethpb.Attestation, params.BeaconConfig().DefaultPageSize+1)
 	for i := 0; i < len(atts); i++ {
-		att := util.NewAttestation()
+		att := util.NewAttestationUtil().NewAttestation()
 		att.Data.Slot = types.Slot(i)
 		atts[i] = att
 	}
@@ -776,7 +776,7 @@ func TestServer_AttestationPool_Pagination_CustomPageSize(t *testing.T) {
 	numAtts := 100
 	atts := make([]*ethpb.Attestation, numAtts)
 	for i := 0; i < len(atts); i++ {
-		att := util.NewAttestation()
+		att := util.NewAttestationUtil().NewAttestation()
 		att.Data.Slot = types.Slot(i)
 		atts[i] = att
 	}
@@ -1031,10 +1031,11 @@ func TestServer_StreamAttestations_OnSlotTick(t *testing.T) {
 		AttestationNotifier: chainService.OperationNotifier(),
 	}
 
+	au := util.AttestationUtil{}
 	atts := []*ethpb.Attestation{
-		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b1101}}),
-		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b1101}}),
-		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 3}, AggregationBits: bitfield.Bitlist{0b1101}}),
+		au.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b1101}}),
+		au.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 2}, AggregationBits: bitfield.Bitlist{0b1101}}),
+		au.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 3}, AggregationBits: bitfield.Bitlist{0b1101}}),
 	}
 
 	mockStream := mock.NewMockBeaconChain_StreamAttestationsServer(ctrl)
