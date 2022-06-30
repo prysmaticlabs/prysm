@@ -70,6 +70,13 @@ func Test_validTerminalPowBlock(t *testing.T) {
 			ttd:               2,
 			want:              true,
 		},
+		{
+			name:              "hive test",
+			currentDifficulty: uint256.NewInt(500),
+			parentDifficulty:  uint256.NewInt(498),
+			ttd:               498,
+			want:              false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -104,7 +111,7 @@ func Test_validTerminalPowBlockSpecConfig(t *testing.T) {
 
 func Test_validateMergeBlock(t *testing.T) {
 	cfg := params.BeaconConfig()
-	cfg.TerminalTotalDifficulty = "2"
+	cfg.TerminalTotalDifficulty = "500"
 	params.OverrideBeaconConfig(cfg)
 
 	ctx := context.Background()
@@ -120,20 +127,29 @@ func Test_validateMergeBlock(t *testing.T) {
 
 	engine := &mocks.EngineClient{BlockByHashMap: map[[32]byte]*enginev1.ExecutionBlock{}}
 	service.cfg.ExecutionEngineCaller = engine
+	// Recent execution blocks:
+	// ... <- 3 <- b <- a
+	// TD:  488  498   500
+	// Block 'a' is the expected merge block with a TD of 500 and a parent TD of 498
 	engine.BlockByHashMap[[32]byte{'a'}] = &enginev1.ExecutionBlock{
 		ParentHash:      bytesutil.PadTo([]byte{'b'}, fieldparams.RootLength),
-		TotalDifficulty: "0x2",
+		TotalDifficulty: "0x1F4", // 500
 	}
 	engine.BlockByHashMap[[32]byte{'b'}] = &enginev1.ExecutionBlock{
 		ParentHash:      bytesutil.PadTo([]byte{'3'}, fieldparams.RootLength),
-		TotalDifficulty: "0x1",
+		TotalDifficulty: "0x1F2", // 498
+	}
+	engine.BlockByHashMap[[32]byte{'3'}] = &enginev1.ExecutionBlock{
+		ParentHash:      bytesutil.PadTo([]byte{'f'}, fieldparams.RootLength),
+		TotalDifficulty: "0x1E8", // 488
 	}
 	blk := &ethpb.SignedBeaconBlockBellatrix{
 		Block: &ethpb.BeaconBlockBellatrix{
-			Slot: 1,
+			Slot: 79,
 			Body: &ethpb.BeaconBlockBodyBellatrix{
 				ExecutionPayload: &enginev1.ExecutionPayload{
-					ParentHash: bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength),
+					BlockHash:  bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength),
+					ParentHash: bytesutil.PadTo([]byte{'b'}, fieldparams.RootLength),
 				},
 			},
 		},
@@ -142,10 +158,10 @@ func Test_validateMergeBlock(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, service.validateMergeBlock(ctx, b))
 
-	cfg.TerminalTotalDifficulty = "1"
+	cfg.TerminalTotalDifficulty = "498"
 	params.OverrideBeaconConfig(cfg)
 	err = service.validateMergeBlock(ctx, b)
-	require.ErrorContains(t, "invalid TTD, configTTD: 1, currentTTD: 2, parentTTD: 1", err)
+	require.ErrorContains(t, "invalid TTD, configTTD: 498, currentTTD: 500, parentTTD: 498", err)
 	require.Equal(t, true, IsInvalidBlock(err))
 }
 
