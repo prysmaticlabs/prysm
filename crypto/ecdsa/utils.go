@@ -29,9 +29,6 @@ func ConvertToInterfacePrivkey(privkey *ecdsa.PrivateKey) (crypto.PrivKey, error
 }
 
 func ConvertToInterfacePubkey(pubkey *ecdsa.PublicKey) (crypto.PubKey, error) {
-	if !pubkey.Curve.IsOnCurve(pubkey.X, pubkey.Y) {
-		return nil, errors.Errorf("not on curve")
-	}
 	xVal, yVal := new(btcec.FieldVal), new(btcec.FieldVal)
 	if xVal.SetByteSlice(pubkey.X.Bytes()) {
 		return nil, errors.Errorf("X value overflows")
