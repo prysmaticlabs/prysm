@@ -1,6 +1,7 @@
 package sync
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"errors"
@@ -9,9 +10,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
+	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	gcache "github.com/patrickmn/go-cache"
+	"github.com/protolambda/ztyp/codec"
 	"github.com/prysmaticlabs/prysm/async/abool"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -1425,4 +1429,172 @@ func Test_getBlockFields(t *testing.T) {
 
 	require.LogsContain(t, hook, "nil block")
 	require.LogsContain(t, hook, "bad block")
+}
+
+func TestValidateBeaconBlockPubSub_ValidBlobKzgs(t *testing.T) {
+	db := dbtest.SetupDB(t)
+	p := p2ptest.NewTestP2P(t)
+	ctx := context.Background()
+	beaconState, privKeys := util.DeterministicGenesisStateBellatrix(t, 100)
+	parentBlock := util.HydrateEIP4844SignedBeaconBlock(&ethpb.SignedBeaconBlockWithBlobKZGs{})
+	signedParentBlock, err := wrapper.WrappedSignedBeaconBlock(parentBlock)
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, signedParentBlock))
+	bRoot, err := parentBlock.Block.HashTreeRoot()
+	require.NoError(t, err)
+	presentTime := time.Now().Unix()
+	require.NoError(t, beaconState.SetGenesisTime(uint64(presentTime)))
+	require.NoError(t, db.SaveState(ctx, beaconState, bRoot))
+	require.NoError(t, db.SaveStateSummary(ctx, &ethpb.StateSummary{Root: bRoot[:]}))
+	copied := beaconState.Copy()
+	require.NoError(t, copied.SetSlot(1))
+	proposerIdx, err := helpers.BeaconProposerIndex(ctx, copied)
+	require.NoError(t, err)
+
+	msg := util.HydrateEIP4844SignedBeaconBlock(&ethpb.SignedBeaconBlockWithBlobKZGs{})
+	msg.Block.ParentRoot = bRoot[:]
+	msg.Block.Slot = 1
+	msg.Block.ProposerIndex = proposerIdx
+	msg.Block.Body.ExecutionPayload.Timestamp = uint64(presentTime) + params.BeaconConfig().SecondsPerSlot
+	msg.Block.Body.ExecutionPayload.GasUsed = 10
+	msg.Block.Body.ExecutionPayload.GasLimit = 11
+	msg.Block.Body.ExecutionPayload.BlockHash = bytesutil.PadTo([]byte("blockHash"), 32)
+	msg.Block.Body.ExecutionPayload.ParentHash = bytesutil.PadTo([]byte("parentHash"), 32)
+
+	blob := gethTypes.Blob{[32]byte{0x10, 0x11}}
+	commitment, ok := blob.ComputeCommitment()
+	require.Equal(t, ok, true)
+	sbt := gethTypes.SignedBlobTx{
+		Message: gethTypes.BlobTxMessage{
+			BlobVersionedHashes: []common.Hash{commitment.ComputeVersionedHash()},
+		},
+	}
+	var txbuf bytes.Buffer
+	w := bufio.NewWriter(&txbuf)
+	encW := codec.NewEncodingWriter(w)
+	require.NoError(t, sbt.Serialize(encW))
+	require.NoError(t, w.Flush())
+	var tx []byte
+	tx = append(tx, gethTypes.BlobTxType)
+	tx = append(tx, txbuf.Bytes()...)
+
+	msg.Block.Body.ExecutionPayload.Transactions = append(msg.Block.Body.ExecutionPayload.Transactions, tx)
+	msg.Block.Body.BlobKzgs = [][]byte{commitment[:]}
+	msg.Signature, err = signing.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
+	require.NoError(t, err)
+
+	stateGen := stategen.New(db)
+	chainService := &mock.ChainService{Genesis: time.Unix(presentTime-int64(params.BeaconConfig().SecondsPerSlot), 0),
+		DB: db,
+		FinalizedCheckPoint: &ethpb.Checkpoint{
+			Epoch: 0,
+			Root:  make([]byte, 32),
+		}}
+	r := &Service{
+		cfg: &config{
+			beaconDB:      db,
+			p2p:           p,
+			initialSync:   &mockSync.Sync{IsSyncing: false},
+			chain:         chainService,
+			blockNotifier: chainService.BlockNotifier(),
+			stateGen:      stateGen,
+		},
+		seenBlockCache: lruwrpr.New(10),
+		badBlockCache:  lruwrpr.New(10),
+	}
+
+	buf := new(bytes.Buffer)
+	_, err = p.Encoding().EncodeGossip(buf, msg)
+	require.NoError(t, err)
+	topic := p2p.GossipTypeMapping[reflect.TypeOf(msg)]
+	genesisValidatorsRoot := r.cfg.chain.GenesisValidatorsRoot()
+	eip4844Digest, err := signing.ComputeForkDigest(params.BeaconConfig().Eip4844ForkVersion, genesisValidatorsRoot[:])
+	require.NoError(t, err)
+	topic = r.addDigestToTopic(topic, eip4844Digest)
+	m := &pubsub.Message{
+		Message: &pubsubpb.Message{
+			Data:  buf.Bytes(),
+			Topic: &topic,
+		},
+	}
+
+	res, err := r.validateBeaconBlockPubSub(ctx, "", m)
+	require.NoError(t, err)
+	require.Equal(t, pubsub.ValidationAccept, res)
+}
+
+func TestValidateBeaconBlockPubSub_InvalidBlobKzgs(t *testing.T) {
+	db := dbtest.SetupDB(t)
+	p := p2ptest.NewTestP2P(t)
+	ctx := context.Background()
+	beaconState, privKeys := util.DeterministicGenesisStateBellatrix(t, 100)
+	parentBlock := util.HydrateEIP4844SignedBeaconBlock(&ethpb.SignedBeaconBlockWithBlobKZGs{})
+	signedParentBlock, err := wrapper.WrappedSignedBeaconBlock(parentBlock)
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, signedParentBlock))
+	bRoot, err := parentBlock.Block.HashTreeRoot()
+	require.NoError(t, err)
+	presentTime := time.Now().Unix()
+	require.NoError(t, beaconState.SetGenesisTime(uint64(presentTime)))
+	require.NoError(t, db.SaveState(ctx, beaconState, bRoot))
+	require.NoError(t, db.SaveStateSummary(ctx, &ethpb.StateSummary{Root: bRoot[:]}))
+	copied := beaconState.Copy()
+	require.NoError(t, copied.SetSlot(1))
+	proposerIdx, err := helpers.BeaconProposerIndex(ctx, copied)
+	require.NoError(t, err)
+
+	msg := util.HydrateEIP4844SignedBeaconBlock(&ethpb.SignedBeaconBlockWithBlobKZGs{})
+	msg.Block.ParentRoot = bRoot[:]
+	msg.Block.Slot = 1
+	msg.Block.ProposerIndex = proposerIdx
+	msg.Block.Body.ExecutionPayload.Timestamp = uint64(presentTime) + params.BeaconConfig().SecondsPerSlot
+	msg.Block.Body.ExecutionPayload.GasUsed = 10
+	msg.Block.Body.ExecutionPayload.GasLimit = 11
+	msg.Block.Body.ExecutionPayload.BlockHash = bytesutil.PadTo([]byte("blockHash"), 32)
+	msg.Block.Body.ExecutionPayload.ParentHash = bytesutil.PadTo([]byte("parentHash"), 32)
+	msg.Block.Body.ExecutionPayload.Transactions = append(msg.Block.Body.ExecutionPayload.Transactions, []byte("transaction 1"))
+	msg.Block.Body.ExecutionPayload.Transactions = append(msg.Block.Body.ExecutionPayload.Transactions, []byte("transaction 2"))
+	kzg := [48]byte{'a'}
+	msg.Block.Body.BlobKzgs = [][]byte{kzg[:]}
+	msg.Signature, err = signing.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
+	require.NoError(t, err)
+
+	stateGen := stategen.New(db)
+	chainService := &mock.ChainService{Genesis: time.Unix(presentTime-int64(params.BeaconConfig().SecondsPerSlot), 0),
+		DB: db,
+		FinalizedCheckPoint: &ethpb.Checkpoint{
+			Epoch: 0,
+			Root:  make([]byte, 32),
+		}}
+	r := &Service{
+		cfg: &config{
+			beaconDB:      db,
+			p2p:           p,
+			initialSync:   &mockSync.Sync{IsSyncing: false},
+			chain:         chainService,
+			blockNotifier: chainService.BlockNotifier(),
+			stateGen:      stateGen,
+		},
+		seenBlockCache: lruwrpr.New(10),
+		badBlockCache:  lruwrpr.New(10),
+	}
+
+	buf := new(bytes.Buffer)
+	_, err = p.Encoding().EncodeGossip(buf, msg)
+	require.NoError(t, err)
+	topic := p2p.GossipTypeMapping[reflect.TypeOf(msg)]
+	genesisValidatorsRoot := r.cfg.chain.GenesisValidatorsRoot()
+	eip4844Digest, err := signing.ComputeForkDigest(params.BeaconConfig().Eip4844ForkVersion, genesisValidatorsRoot[:])
+	require.NoError(t, err)
+	topic = r.addDigestToTopic(topic, eip4844Digest)
+	m := &pubsub.Message{
+		Message: &pubsubpb.Message{
+			Data:  buf.Bytes(),
+			Topic: &topic,
+		},
+	}
+
+	res, err := r.validateBeaconBlockPubSub(ctx, "", m)
+	assert.Equal(t, pubsub.ValidationReject, res, "block with invalid parent should be ignored")
+	require.ErrorContains(t, "invalid blob kzg encoding", err)
 }

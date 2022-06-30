@@ -297,10 +297,10 @@ func (s *Service) validateEIP4844BeaconBlock(ctx context.Context, parentState st
 	blobKzgsInput := make([][48]byte, len(blobKzgs))
 	for i := range blobKzgs {
 		if len(blobKzgs[i]) != 48 {
-			return errors.New("invalid kzg encoding")
+			return errors.New("invalid blob kzg length")
 		}
 		if _, err := bls.FromCompressedG1(blobKzgs[i]); err != nil {
-			return errors.Wrap(err, "invalid commitment")
+			return errors.Wrap(err, "invalid blob kzg encoding")
 		}
 		blobKzgsInput[i] = bytesutil.ToBytes48(blobKzgs[i])
 	}

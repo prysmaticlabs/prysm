@@ -3,6 +3,7 @@ package eip4844
 import (
 	"bytes"
 	"errors"
+	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -21,7 +22,7 @@ func TxPeekBlobVersionedHashes(tx []byte) ([]common.Hash, error) {
 	}
 	sbt := types.SignedBlobTx{}
 	if err := sbt.Deserialize(codec.NewDecodingReader(bytes.NewReader(tx[1:]), uint64(len(tx)-1))); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: unable to decode Blob Tx", err)
 	}
 	return sbt.Message.BlobVersionedHashes, nil
 }
