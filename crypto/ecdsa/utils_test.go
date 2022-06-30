@@ -15,8 +15,8 @@ func TestConvertToInterfacePubkey(t *testing.T) {
 	privKey, err := gcrypto.GenerateKey()
 	require.NoError(t, err)
 
-	pubkey,ok := privKey.Public().(*ecdsa.PublicKey)
-	require.NotEqual(t,false,ok)
+	pubkey, ok := privKey.Public().(*ecdsa.PublicKey)
+	require.NotEqual(t, false, ok)
 
 	altPubkey, err := ConvertToInterfacePubkey(pubkey)
 	require.NoError(t, err)
