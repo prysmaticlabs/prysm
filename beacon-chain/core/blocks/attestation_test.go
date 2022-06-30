@@ -25,7 +25,7 @@ import (
 
 func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 	beaconState, privKeys := util.DeterministicGenesisState(t, 100)
-	data := util.HydrateAttestationData(&ethpb.AttestationData{
+	data := util.NewAttestationUtil().HydrateAttestationData(&ethpb.AttestationData{
 		Source: &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
 		Target: &ethpb.Checkpoint{Epoch: 0, Root: bytesutil.PadTo([]byte("hello-world"), 32)},
 	})
@@ -85,7 +85,7 @@ func TestProcessAggregatedAttestation_OverlappingBits(t *testing.T) {
 func TestVerifyAttestationNoVerifySignature_IncorrectSlotTargetEpoch(t *testing.T) {
 	beaconState, _ := util.DeterministicGenesisState(t, 1)
 
-	att := util.HydrateAttestation(&ethpb.Attestation{
+	att := util.NewAttestationUtil().HydrateAttestation(&ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			Slot:   params.BeaconConfig().SlotsPerEpoch,
 			Target: &ethpb.Checkpoint{Root: make([]byte, 32)},
@@ -218,7 +218,7 @@ func TestConvertToIndexed_OK(t *testing.T) {
 
 	var sig [fieldparams.BLSSignatureLength]byte
 	copy(sig[:], "signed")
-	att := util.HydrateAttestation(&ethpb.Attestation{
+	att := util.NewAttestationUtil().HydrateAttestation(&ethpb.Attestation{
 		Signature: sig[:],
 	})
 	for _, tt := range tests {
@@ -261,11 +261,12 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
 	require.NoError(t, err)
+	au := util.AttestationUtil{}
 	tests := []struct {
 		attestation *ethpb.IndexedAttestation
 	}{
 		{attestation: &ethpb.IndexedAttestation{
-			Data: util.HydrateAttestationData(&ethpb.AttestationData{
+			Data: au.HydrateAttestationData(&ethpb.AttestationData{
 				Target: &ethpb.Checkpoint{
 					Epoch: 2,
 				},
@@ -275,7 +276,7 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 			Signature:        make([]byte, fieldparams.BLSSignatureLength),
 		}},
 		{attestation: &ethpb.IndexedAttestation{
-			Data: util.HydrateAttestationData(&ethpb.AttestationData{
+			Data: au.HydrateAttestationData(&ethpb.AttestationData{
 				Target: &ethpb.Checkpoint{
 					Epoch: 1,
 				},
@@ -284,7 +285,7 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 			Signature:        make([]byte, fieldparams.BLSSignatureLength),
 		}},
 		{attestation: &ethpb.IndexedAttestation{
-			Data: util.HydrateAttestationData(&ethpb.AttestationData{
+			Data: au.HydrateAttestationData(&ethpb.AttestationData{
 				Target: &ethpb.Checkpoint{
 					Epoch: 4,
 				},
@@ -293,7 +294,7 @@ func TestVerifyIndexedAttestation_OK(t *testing.T) {
 			Signature:        make([]byte, fieldparams.BLSSignatureLength),
 		}},
 		{attestation: &ethpb.IndexedAttestation{
-			Data: util.HydrateAttestationData(&ethpb.AttestationData{
+			Data: au.HydrateAttestationData(&ethpb.AttestationData{
 				Target: &ethpb.Checkpoint{
 					Epoch: 7,
 				},
@@ -411,7 +412,8 @@ func TestVerifyAttestations_HandlesPlannedFork(t *testing.T) {
 
 	comm1, err := helpers.BeaconCommitteeFromState(context.Background(), st, 1 /*slot*/, 0 /*committeeIndex*/)
 	require.NoError(t, err)
-	att1 := util.HydrateAttestation(&ethpb.Attestation{
+	au := util.AttestationUtil{}
+	att1 := au.HydrateAttestation(&ethpb.Attestation{
 		AggregationBits: bitfield.NewBitlist(uint64(len(comm1))),
 		Data: &ethpb.AttestationData{
 			Slot: 1,
@@ -430,7 +432,7 @@ func TestVerifyAttestations_HandlesPlannedFork(t *testing.T) {
 
 	comm2, err := helpers.BeaconCommitteeFromState(context.Background(), st, 1*params.BeaconConfig().SlotsPerEpoch+1 /*slot*/, 1 /*committeeIndex*/)
 	require.NoError(t, err)
-	att2 := util.HydrateAttestation(&ethpb.Attestation{
+	att2 := au.HydrateAttestation(&ethpb.Attestation{
 		AggregationBits: bitfield.NewBitlist(uint64(len(comm2))),
 		Data: &ethpb.AttestationData{
 			Slot:           1*params.BeaconConfig().SlotsPerEpoch + 1,
@@ -470,7 +472,8 @@ func TestRetrieveAttestationSignatureSet_VerifiesMultipleAttestations(t *testing
 
 	comm1, err := helpers.BeaconCommitteeFromState(context.Background(), st, 1 /*slot*/, 0 /*committeeIndex*/)
 	require.NoError(t, err)
-	att1 := util.HydrateAttestation(&ethpb.Attestation{
+	au := util.AttestationUtil{}
+	att1 := au.HydrateAttestation(&ethpb.Attestation{
 		AggregationBits: bitfield.NewBitlist(uint64(len(comm1))),
 		Data: &ethpb.AttestationData{
 			Slot: 1,
@@ -489,7 +492,7 @@ func TestRetrieveAttestationSignatureSet_VerifiesMultipleAttestations(t *testing
 
 	comm2, err := helpers.BeaconCommitteeFromState(context.Background(), st, 1 /*slot*/, 1 /*committeeIndex*/)
 	require.NoError(t, err)
-	att2 := util.HydrateAttestation(&ethpb.Attestation{
+	att2 := au.HydrateAttestation(&ethpb.Attestation{
 		AggregationBits: bitfield.NewBitlist(uint64(len(comm2))),
 		Data: &ethpb.AttestationData{
 			Slot:           1,
@@ -534,7 +537,8 @@ func TestRetrieveAttestationSignatureSet_AcrossFork(t *testing.T) {
 
 	comm1, err := helpers.BeaconCommitteeFromState(ctx, st, 1 /*slot*/, 0 /*committeeIndex*/)
 	require.NoError(t, err)
-	att1 := util.HydrateAttestation(&ethpb.Attestation{
+	au := util.AttestationUtil{}
+	att1 := au.HydrateAttestation(&ethpb.Attestation{
 		AggregationBits: bitfield.NewBitlist(uint64(len(comm1))),
 		Data: &ethpb.AttestationData{
 			Slot: 1,
@@ -553,7 +557,7 @@ func TestRetrieveAttestationSignatureSet_AcrossFork(t *testing.T) {
 
 	comm2, err := helpers.BeaconCommitteeFromState(ctx, st, 1 /*slot*/, 1 /*committeeIndex*/)
 	require.NoError(t, err)
-	att2 := util.HydrateAttestation(&ethpb.Attestation{
+	att2 := au.HydrateAttestation(&ethpb.Attestation{
 		AggregationBits: bitfield.NewBitlist(uint64(len(comm2))),
 		Data: &ethpb.AttestationData{
 			Slot:           1,

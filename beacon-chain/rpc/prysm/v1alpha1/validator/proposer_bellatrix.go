@@ -16,12 +16,21 @@ import (
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
+	"github.com/sirupsen/logrus"
 )
 
-func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BeaconBlockBellatrix, error) {
+func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.GenericBeaconBlock, error) {
 	altairBlk, err := vs.buildAltairBeaconBlock(ctx, req)
 	if err != nil {
 		return nil, err
+	}
+
+	builderReady, b, err := vs.getAndBuildHeaderBlock(ctx, altairBlk)
+	if err != nil {
+		// In the event of an error, the node should fall back to default execution engine for building block.
+		log.WithError(err).Error("Default back to local execution client")
+	} else if builderReady {
+		return b, nil
 	}
 
 	payload, err := vs.getExecutionPayload(ctx, req.Slot, altairBlk.ProposerIndex)
@@ -60,7 +69,7 @@ func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockR
 		return nil, fmt.Errorf("could not compute state root: %v", err)
 	}
 	blk.StateRoot = stateRoot
-	return blk, nil
+	return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Bellatrix{Bellatrix: blk}}, nil
 }
 
 // This function retrieves the payload header given the slot number and the validator index.
@@ -135,7 +144,7 @@ func (vs *Server) buildHeaderBlock(ctx context.Context, b *ethpb.BeaconBlockAlta
 // This function retrieves the full payload block using the input blind block. This input must be versioned as
 // bellatrix blind block. The output block will contain the full payload. The original header block
 // will be returned the block builder is not configured.
-func (vs *Server) getBuilderBlock(ctx context.Context, b interfaces.SignedBeaconBlock) (interfaces.SignedBeaconBlock, error) {
+func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.SignedBeaconBlock) (interfaces.SignedBeaconBlock, error) {
 	if err := coreBlock.BeaconBlockIsNil(b); err != nil {
 		return nil, err
 	}
@@ -210,5 +219,64 @@ func (vs *Server) getBuilderBlock(ctx context.Context, b interfaces.SignedBeacon
 	if err != nil {
 		return nil, err
 	}
+
+	log.WithFields(logrus.Fields{
+		"blockHash":    fmt.Sprintf("%#x", h.BlockHash),
+		"feeRecipient": fmt.Sprintf("%#x", h.FeeRecipient),
+		"gasUsed":      h.GasUsed,
+		"slot":         b.Block().Slot(),
+		"txs":          len(payload.Transactions),
+	}).Info("Retrieved full payload from builder")
+
 	return wb, nil
+}
+
+// readyForBuilder returns true if builder is allowed to be used. Builder is only allowed to be use after the
+// first finalized checkpt has been execution-enabled.
+func (vs *Server) readyForBuilder(ctx context.Context) (bool, error) {
+	cp := vs.FinalizationFetcher.FinalizedCheckpt()
+	// Checkpoint root is zero means we are still at genesis epoch.
+	if bytesutil.ToBytes32(cp.Root) == params.BeaconConfig().ZeroHash {
+		return false, nil
+	}
+	b, err := vs.BeaconDB.Block(ctx, bytesutil.ToBytes32(cp.Root))
+	if err != nil {
+		return false, err
+	}
+	if err = coreBlock.BeaconBlockIsNil(b); err != nil {
+		return false, err
+	}
+	return blocks.IsExecutionBlock(b.Block().Body())
+}
+
+// Get and builder header block. Returns a boolean status, built block and error.
+// If the status is false that means builder the header block is disallowed.
+func (vs *Server) getAndBuildHeaderBlock(ctx context.Context, b *ethpb.BeaconBlockAltair) (bool, *ethpb.GenericBeaconBlock, error) {
+	// No op. Builder is not defined. User did not specify a user URL. We should use local EE.
+	if vs.BlockBuilder == nil || !vs.BlockBuilder.Configured() {
+		return false, nil, nil
+	}
+	// Does the protocol allow for builder at this current moment. Builder is only allowed post merge after finalization.
+	ready, err := vs.readyForBuilder(ctx)
+	if err != nil {
+		return false, nil, errors.Wrap(err, "could not determine if builder is ready")
+	}
+	if !ready {
+		return false, nil, nil
+	}
+	h, err := vs.getPayloadHeader(ctx, b.Slot, b.ProposerIndex)
+	if err != nil {
+		return false, nil, errors.Wrap(err, "could not get payload header")
+	}
+	log.WithFields(logrus.Fields{
+		"blockHash":    fmt.Sprintf("%#x", h.BlockHash),
+		"feeRecipient": fmt.Sprintf("%#x", h.FeeRecipient),
+		"gasUsed":      h.GasUsed,
+		"slot":         b.Slot,
+	}).Info("Retrieved header from builder")
+	gb, err := vs.buildHeaderBlock(ctx, b, h)
+	if err != nil {
+		return false, nil, errors.Wrap(err, "could not combine altair block with payload header")
+	}
+	return true, gb, nil
 }

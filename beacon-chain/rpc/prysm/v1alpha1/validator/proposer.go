@@ -57,12 +57,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		return nil, err
 	}
 
-	blk, err := vs.getBellatrixBeaconBlock(ctx, req)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not fetch Bellatrix beacon block: %v", err)
-	}
-
-	return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Bellatrix{Bellatrix: blk}}, nil
+	return vs.getBellatrixBeaconBlock(ctx, req)
 }
 
 // GetBlock is called by a proposer during its assigned slot to request a block to sign
@@ -139,6 +134,11 @@ func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.
 	root, err := blk.Block().HashTreeRoot()
 	if err != nil {
 		return nil, fmt.Errorf("could not tree hash block: %v", err)
+	}
+
+	blk, err = vs.unblindBuilderBlock(ctx, blk)
+	if err != nil {
+		return nil, err
 	}
 
 	// Do not block proposal critical path with debug logging or block feed updates.
