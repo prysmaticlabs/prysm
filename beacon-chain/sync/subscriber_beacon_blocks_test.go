@@ -25,10 +25,11 @@ func TestDeleteAttsInPool(t *testing.T) {
 		cfg: &config{attPool: attestations.NewPool()},
 	}
 
-	att1 := util.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1101}})
-	att2 := util.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1110}})
-	att3 := util.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1011}})
-	att4 := util.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1001}})
+	au := util.AttestationUtil{}
+	att1 := au.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1101}})
+	att2 := au.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1110}})
+	att3 := au.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1011}})
+	att4 := au.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b1001}})
 	require.NoError(t, r.cfg.attPool.SaveAggregatedAttestation(att1))
 	require.NoError(t, r.cfg.attPool.SaveAggregatedAttestation(att2))
 	require.NoError(t, r.cfg.attPool.SaveAggregatedAttestation(att3))
@@ -42,11 +43,12 @@ func TestDeleteAttsInPool(t *testing.T) {
 }
 
 func TestService_beaconBlockSubscriber(t *testing.T) {
+	au := util.AttestationUtil{}
 	pooledAttestations := []*ethpb.Attestation{
 		// Aggregated.
-		util.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b00011111}}),
+		au.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b00011111}}),
 		// Unaggregated.
-		util.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b00010001}}),
+		au.HydrateAttestation(&ethpb.Attestation{AggregationBits: bitfield.Bitlist{0b00010001}}),
 	}
 
 	type args struct {

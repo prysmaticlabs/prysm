@@ -30,15 +30,15 @@ func (a *Attestation) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	}
 
 	// Field (2) 'Signature'
-	if len(a.Signature) != 96 {
-		err = ssz.ErrBytesLength
+	if size := len(a.Signature); size != 96 {
+		err = ssz.ErrBytesLengthFn("--.Signature", size, 96)
 		return
 	}
 	dst = append(dst, a.Signature...)
 
 	// Field (0) 'AggregationBits'
-	if len(a.AggregationBits) > 2048 {
-		err = ssz.ErrBytesLength
+	if size := len(a.AggregationBits); size > 2048 {
+		err = ssz.ErrBytesLengthFn("--.AggregationBits", size, 2048)
 		return
 	}
 	dst = append(dst, a.AggregationBits...)
@@ -126,8 +126,8 @@ func (a *Attestation) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	}
 
 	// Field (2) 'Signature'
-	if len(a.Signature) != 96 {
-		err = ssz.ErrBytesLength
+	if size := len(a.Signature); size != 96 {
+		err = ssz.ErrBytesLengthFn("--.Signature", size, 96)
 		return
 	}
 	hh.PutBytes(a.Signature)
@@ -161,8 +161,8 @@ func (a *AggregateAttestationAndProof) MarshalSSZTo(buf []byte) (dst []byte, err
 	offset += a.Aggregate.SizeSSZ()
 
 	// Field (2) 'SelectionProof'
-	if len(a.SelectionProof) != 96 {
-		err = ssz.ErrBytesLength
+	if size := len(a.SelectionProof); size != 96 {
+		err = ssz.ErrBytesLengthFn("--.SelectionProof", size, 96)
 		return
 	}
 	dst = append(dst, a.SelectionProof...)
@@ -248,8 +248,8 @@ func (a *AggregateAttestationAndProof) HashTreeRootWith(hh *ssz.Hasher) (err err
 	}
 
 	// Field (2) 'SelectionProof'
-	if len(a.SelectionProof) != 96 {
-		err = ssz.ErrBytesLength
+	if size := len(a.SelectionProof); size != 96 {
+		err = ssz.ErrBytesLengthFn("--.SelectionProof", size, 96)
 		return
 	}
 	hh.PutBytes(a.SelectionProof)
@@ -280,8 +280,8 @@ func (s *SignedAggregateAttestationAndProof) MarshalSSZTo(buf []byte) (dst []byt
 	offset += s.Message.SizeSSZ()
 
 	// Field (1) 'Signature'
-	if len(s.Signature) != 96 {
-		err = ssz.ErrBytesLength
+	if size := len(s.Signature); size != 96 {
+		err = ssz.ErrBytesLengthFn("--.Signature", size, 96)
 		return
 	}
 	dst = append(dst, s.Signature...)
@@ -361,8 +361,8 @@ func (s *SignedAggregateAttestationAndProof) HashTreeRootWith(hh *ssz.Hasher) (e
 	}
 
 	// Field (1) 'Signature'
-	if len(s.Signature) != 96 {
-		err = ssz.ErrBytesLength
+	if size := len(s.Signature); size != 96 {
+		err = ssz.ErrBytesLengthFn("--.Signature", size, 96)
 		return
 	}
 	hh.PutBytes(s.Signature)
@@ -391,8 +391,8 @@ func (a *AttestationData) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = ssz.MarshalUint64(dst, uint64(a.Index))
 
 	// Field (2) 'BeaconBlockRoot'
-	if len(a.BeaconBlockRoot) != 32 {
-		err = ssz.ErrBytesLength
+	if size := len(a.BeaconBlockRoot); size != 32 {
+		err = ssz.ErrBytesLengthFn("--.BeaconBlockRoot", size, 32)
 		return
 	}
 	dst = append(dst, a.BeaconBlockRoot...)
@@ -477,8 +477,8 @@ func (a *AttestationData) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	hh.PutUint64(uint64(a.Index))
 
 	// Field (2) 'BeaconBlockRoot'
-	if len(a.BeaconBlockRoot) != 32 {
-		err = ssz.ErrBytesLength
+	if size := len(a.BeaconBlockRoot); size != 32 {
+		err = ssz.ErrBytesLengthFn("--.BeaconBlockRoot", size, 32)
 		return
 	}
 	hh.PutBytes(a.BeaconBlockRoot)
@@ -514,8 +514,8 @@ func (c *Checkpoint) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = ssz.MarshalUint64(dst, uint64(c.Epoch))
 
 	// Field (1) 'Root'
-	if len(c.Root) != 32 {
-		err = ssz.ErrBytesLength
+	if size := len(c.Root); size != 32 {
+		err = ssz.ErrBytesLengthFn("--.Root", size, 32)
 		return
 	}
 	dst = append(dst, c.Root...)
@@ -562,8 +562,8 @@ func (c *Checkpoint) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	hh.PutUint64(uint64(c.Epoch))
 
 	// Field (1) 'Root'
-	if len(c.Root) != 32 {
-		err = ssz.ErrBytesLength
+	if size := len(c.Root); size != 32 {
+		err = ssz.ErrBytesLengthFn("--.Root", size, 32)
 		return
 	}
 	hh.PutBytes(c.Root)
@@ -593,15 +593,15 @@ func (b *BeaconBlock) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = ssz.MarshalUint64(dst, uint64(b.ProposerIndex))
 
 	// Field (2) 'ParentRoot'
-	if len(b.ParentRoot) != 32 {
-		err = ssz.ErrBytesLength
+	if size := len(b.ParentRoot); size != 32 {
+		err = ssz.ErrBytesLengthFn("--.ParentRoot", size, 32)
 		return
 	}
 	dst = append(dst, b.ParentRoot...)
 
 	// Field (3) 'StateRoot'
-	if len(b.StateRoot) != 32 {
-		err = ssz.ErrBytesLength
+	if size := len(b.StateRoot); size != 32 {
+		err = ssz.ErrBytesLengthFn("--.StateRoot", size, 32)
 		return
 	}
 	dst = append(dst, b.StateRoot...)
@@ -701,15 +701,15 @@ func (b *BeaconBlock) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	hh.PutUint64(uint64(b.ProposerIndex))
 
 	// Field (2) 'ParentRoot'
-	if len(b.ParentRoot) != 32 {
-		err = ssz.ErrBytesLength
+	if size := len(b.ParentRoot); size != 32 {
+		err = ssz.ErrBytesLengthFn("--.ParentRoot", size, 32)
 		return
 	}
 	hh.PutBytes(b.ParentRoot)
 
 	// Field (3) 'StateRoot'
-	if len(b.StateRoot) != 32 {
-		err = ssz.ErrBytesLength
+	if size := len(b.StateRoot); size != 32 {
+		err = ssz.ErrBytesLengthFn("--.StateRoot", size, 32)
 		return
 	}
 	hh.PutBytes(b.StateRoot)
@@ -745,8 +745,8 @@ func (s *SignedBeaconBlock) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	offset += s.Block.SizeSSZ()
 
 	// Field (1) 'Signature'
-	if len(s.Signature) != 96 {
-		err = ssz.ErrBytesLength
+	if size := len(s.Signature); size != 96 {
+		err = ssz.ErrBytesLengthFn("--.Signature", size, 96)
 		return
 	}
 	dst = append(dst, s.Signature...)
@@ -826,8 +826,8 @@ func (s *SignedBeaconBlock) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	}
 
 	// Field (1) 'Signature'
-	if len(s.Signature) != 96 {
-		err = ssz.ErrBytesLength
+	if size := len(s.Signature); size != 96 {
+		err = ssz.ErrBytesLengthFn("--.Signature", size, 96)
 		return
 	}
 	hh.PutBytes(s.Signature)
@@ -851,8 +851,8 @@ func (b *BeaconBlockBody) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	offset := int(220)
 
 	// Field (0) 'RandaoReveal'
-	if len(b.RandaoReveal) != 96 {
-		err = ssz.ErrBytesLength
+	if size := len(b.RandaoReveal); size != 96 {
+		err = ssz.ErrBytesLengthFn("--.RandaoReveal", size, 96)
 		return
 	}
 	dst = append(dst, b.RandaoReveal...)
@@ -866,8 +866,8 @@ func (b *BeaconBlockBody) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	}
 
 	// Field (2) 'Graffiti'
-	if len(b.Graffiti) != 32 {
-		err = ssz.ErrBytesLength
+	if size := len(b.Graffiti); size != 32 {
+		err = ssz.ErrBytesLengthFn("--.Graffiti", size, 32)
 		return
 	}
 	dst = append(dst, b.Graffiti...)
@@ -899,8 +899,8 @@ func (b *BeaconBlockBody) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	offset += len(b.VoluntaryExits) * 112
 
 	// Field (3) 'ProposerSlashings'
-	if len(b.ProposerSlashings) > 16 {
-		err = ssz.ErrListTooBig
+	if size := len(b.ProposerSlashings); size > 16 {
+		err = ssz.ErrListTooBigFn("--.ProposerSlashings", size, 16)
 		return
 	}
 	for ii := 0; ii < len(b.ProposerSlashings); ii++ {
@@ -910,8 +910,8 @@ func (b *BeaconBlockBody) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	}
 
 	// Field (4) 'AttesterSlashings'
-	if len(b.AttesterSlashings) > 2 {
-		err = ssz.ErrListTooBig
+	if size := len(b.AttesterSlashings); size > 2 {
+		err = ssz.ErrListTooBigFn("--.AttesterSlashings", size, 2)
 		return
 	}
 	{
@@ -928,8 +928,8 @@ func (b *BeaconBlockBody) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	}
 
 	// Field (5) 'Attestations'
-	if len(b.Attestations) > 128 {
-		err = ssz.ErrListTooBig
+	if size := len(b.Attestations); size > 128 {
+		err = ssz.ErrListTooBigFn("--.Attestations", size, 128)
 		return
 	}
 	{
@@ -946,8 +946,8 @@ func (b *BeaconBlockBody) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	}
 
 	// Field (6) 'Deposits'
-	if len(b.Deposits) > 16 {
-		err = ssz.ErrListTooBig
+	if size := len(b.Deposits); size > 16 {
+		err = ssz.ErrListTooBigFn("--.Deposits", size, 16)
 		return
 	}
 	for ii := 0; ii < len(b.Deposits); ii++ {
@@ -957,8 +957,8 @@ func (b *BeaconBlockBody) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	}
 
 	// Field (7) 'VoluntaryExits'
-	if len(b.VoluntaryExits) > 16 {
-		err = ssz.ErrListTooBig
+	if size := len(b.VoluntaryExits); size > 16 {
+		err = ssz.ErrListTooBigFn("--.VoluntaryExits", size, 16)
 		return
 	}
 	for ii := 0; ii < len(b.VoluntaryExits); ii++ {
@@ -1168,8 +1168,8 @@ func (b *BeaconBlockBody) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	indx := hh.Index()
 
 	// Field (0) 'RandaoReveal'
-	if len(b.RandaoReveal) != 96 {
-		err = ssz.ErrBytesLength
+	if size := len(b.RandaoReveal); size != 96 {
+		err = ssz.ErrBytesLengthFn("--.RandaoReveal", size, 96)
 		return
 	}
 	hh.PutBytes(b.RandaoReveal)
@@ -1180,8 +1180,8 @@ func (b *BeaconBlockBody) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	}
 
 	// Field (2) 'Graffiti'
-	if len(b.Graffiti) != 32 {
-		err = ssz.ErrBytesLength
+	if size := len(b.Graffiti); size != 32 {
+		err = ssz.ErrBytesLengthFn("--.Graffiti", size, 32)
 		return
 	}
 	hh.PutBytes(b.Graffiti)
@@ -1524,13 +1524,13 @@ func (d *Deposit) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
 
 	// Field (0) 'Proof'
-	if len(d.Proof) != 33 {
-		err = ssz.ErrVectorLength
+	if size := len(d.Proof); size != 33 {
+		err = ssz.ErrVectorLengthFn("--.Proof", size, 33)
 		return
 	}
 	for ii := 0; ii < 33; ii++ {
-		if len(d.Proof[ii]) != 32 {
-			err = ssz.ErrBytesLength
+		if size := len(d.Proof[ii]); size != 32 {
+			err = ssz.ErrBytesLengthFn("--.Proof[ii]", size, 32)
 			return
 		}
 		dst = append(dst, d.Proof[ii]...)
@@ -1592,8 +1592,8 @@ func (d *Deposit) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 
 	// Field (0) 'Proof'
 	{
-		if len(d.Proof) != 33 {
-			err = ssz.ErrVectorLength
+		if size := len(d.Proof); size != 33 {
+			err = ssz.ErrVectorLengthFn("--.Proof", size, 33)
 			return
 		}
 		subIndx := hh.Index()
@@ -1707,8 +1707,8 @@ func (s *SignedVoluntaryExit) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	}
 
 	// Field (1) 'Signature'
-	if len(s.Signature) != 96 {
-		err = ssz.ErrBytesLength
+	if size := len(s.Signature); size != 96 {
+		err = ssz.ErrBytesLengthFn("--.Signature", size, 96)
 		return
 	}
 	dst = append(dst, s.Signature...)
@@ -1762,8 +1762,8 @@ func (s *SignedVoluntaryExit) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	}
 
 	// Field (1) 'Signature'
-	if len(s.Signature) != 96 {
-		err = ssz.ErrBytesLength
+	if size := len(s.Signature); size != 96 {
+		err = ssz.ErrBytesLengthFn("--.Signature", size, 96)
 		return
 	}
 	hh.PutBytes(s.Signature)
@@ -1786,8 +1786,8 @@ func (e *Eth1Data) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
 
 	// Field (0) 'DepositRoot'
-	if len(e.DepositRoot) != 32 {
-		err = ssz.ErrBytesLength
+	if size := len(e.DepositRoot); size != 32 {
+		err = ssz.ErrBytesLengthFn("--.DepositRoot", size, 32)
 		return
 	}
 	dst = append(dst, e.DepositRoot...)
@@ -1796,8 +1796,8 @@ func (e *Eth1Data) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = ssz.MarshalUint64(dst, e.DepositCount)
 
 	// Field (2) 'BlockHash'
-	if len(e.BlockHash) != 32 {
-		err = ssz.ErrBytesLength
+	if size := len(e.BlockHash); size != 32 {
+		err = ssz.ErrBytesLengthFn("--.BlockHash", size, 32)
 		return
 	}
 	dst = append(dst, e.BlockHash...)
@@ -1847,8 +1847,8 @@ func (e *Eth1Data) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	indx := hh.Index()
 
 	// Field (0) 'DepositRoot'
-	if len(e.DepositRoot) != 32 {
-		err = ssz.ErrBytesLength
+	if size := len(e.DepositRoot); size != 32 {
+		err = ssz.ErrBytesLengthFn("--.DepositRoot", size, 32)
 		return
 	}
 	hh.PutBytes(e.DepositRoot)
@@ -1857,8 +1857,8 @@ func (e *Eth1Data) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	hh.PutUint64(e.DepositCount)
 
 	// Field (2) 'BlockHash'
-	if len(e.BlockHash) != 32 {
-		err = ssz.ErrBytesLength
+	if size := len(e.BlockHash); size != 32 {
+		err = ssz.ErrBytesLengthFn("--.BlockHash", size, 32)
 		return
 	}
 	hh.PutBytes(e.BlockHash)
@@ -1887,22 +1887,22 @@ func (b *BeaconBlockHeader) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = ssz.MarshalUint64(dst, uint64(b.ProposerIndex))
 
 	// Field (2) 'ParentRoot'
-	if len(b.ParentRoot) != 32 {
-		err = ssz.ErrBytesLength
+	if size := len(b.ParentRoot); size != 32 {
+		err = ssz.ErrBytesLengthFn("--.ParentRoot", size, 32)
 		return
 	}
 	dst = append(dst, b.ParentRoot...)
 
 	// Field (3) 'StateRoot'
-	if len(b.StateRoot) != 32 {
-		err = ssz.ErrBytesLength
+	if size := len(b.StateRoot); size != 32 {
+		err = ssz.ErrBytesLengthFn("--.StateRoot", size, 32)
 		return
 	}
 	dst = append(dst, b.StateRoot...)
 
 	// Field (4) 'BodyRoot'
-	if len(b.BodyRoot) != 32 {
-		err = ssz.ErrBytesLength
+	if size := len(b.BodyRoot); size != 32 {
+		err = ssz.ErrBytesLengthFn("--.BodyRoot", size, 32)
 		return
 	}
 	dst = append(dst, b.BodyRoot...)
@@ -1967,22 +1967,22 @@ func (b *BeaconBlockHeader) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	hh.PutUint64(uint64(b.ProposerIndex))
 
 	// Field (2) 'ParentRoot'
-	if len(b.ParentRoot) != 32 {
-		err = ssz.ErrBytesLength
+	if size := len(b.ParentRoot); size != 32 {
+		err = ssz.ErrBytesLengthFn("--.ParentRoot", size, 32)
 		return
 	}
 	hh.PutBytes(b.ParentRoot)
 
 	// Field (3) 'StateRoot'
-	if len(b.StateRoot) != 32 {
-		err = ssz.ErrBytesLength
+	if size := len(b.StateRoot); size != 32 {
+		err = ssz.ErrBytesLengthFn("--.StateRoot", size, 32)
 		return
 	}
 	hh.PutBytes(b.StateRoot)
 
 	// Field (4) 'BodyRoot'
-	if len(b.BodyRoot) != 32 {
-		err = ssz.ErrBytesLength
+	if size := len(b.BodyRoot); size != 32 {
+		err = ssz.ErrBytesLengthFn("--.BodyRoot", size, 32)
 		return
 	}
 	hh.PutBytes(b.BodyRoot)
@@ -2013,8 +2013,8 @@ func (s *SignedBeaconBlockHeader) MarshalSSZTo(buf []byte) (dst []byte, err erro
 	}
 
 	// Field (1) 'Signature'
-	if len(s.Signature) != 96 {
-		err = ssz.ErrBytesLength
+	if size := len(s.Signature); size != 96 {
+		err = ssz.ErrBytesLengthFn("--.Signature", size, 96)
 		return
 	}
 	dst = append(dst, s.Signature...)
@@ -2068,8 +2068,8 @@ func (s *SignedBeaconBlockHeader) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	}
 
 	// Field (1) 'Signature'
-	if len(s.Signature) != 96 {
-		err = ssz.ErrBytesLength
+	if size := len(s.Signature); size != 96 {
+		err = ssz.ErrBytesLengthFn("--.Signature", size, 96)
 		return
 	}
 	hh.PutBytes(s.Signature)
@@ -2105,15 +2105,15 @@ func (i *IndexedAttestation) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	}
 
 	// Field (2) 'Signature'
-	if len(i.Signature) != 96 {
-		err = ssz.ErrBytesLength
+	if size := len(i.Signature); size != 96 {
+		err = ssz.ErrBytesLengthFn("--.Signature", size, 96)
 		return
 	}
 	dst = append(dst, i.Signature...)
 
 	// Field (0) 'AttestingIndices'
-	if len(i.AttestingIndices) > 2048 {
-		err = ssz.ErrListTooBig
+	if size := len(i.AttestingIndices); size > 2048 {
+		err = ssz.ErrListTooBigFn("--.AttestingIndices", size, 2048)
 		return
 	}
 	for ii := 0; ii < len(i.AttestingIndices); ii++ {
@@ -2193,8 +2193,8 @@ func (i *IndexedAttestation) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 
 	// Field (0) 'AttestingIndices'
 	{
-		if len(i.AttestingIndices) > 2048 {
-			err = ssz.ErrListTooBig
+		if size := len(i.AttestingIndices); size > 2048 {
+			err = ssz.ErrListTooBigFn("--.AttestingIndices", size, 2048)
 			return
 		}
 		subIndx := hh.Index()
@@ -2217,8 +2217,8 @@ func (i *IndexedAttestation) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	}
 
 	// Field (2) 'Signature'
-	if len(i.Signature) != 96 {
-		err = ssz.ErrBytesLength
+	if size := len(i.Signature); size != 96 {
+		err = ssz.ErrBytesLengthFn("--.Signature", size, 96)
 		return
 	}
 	hh.PutBytes(i.Signature)
@@ -2241,15 +2241,15 @@ func (s *SyncAggregate) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
 
 	// Field (0) 'SyncCommitteeBits'
-	if len(s.SyncCommitteeBits) != 64 {
-		err = ssz.ErrBytesLength
+	if size := len(s.SyncCommitteeBits); size != 64 {
+		err = ssz.ErrBytesLengthFn("--.SyncCommitteeBits", size, 64)
 		return
 	}
 	dst = append(dst, s.SyncCommitteeBits...)
 
 	// Field (1) 'SyncCommitteeSignature'
-	if len(s.SyncCommitteeSignature) != 96 {
-		err = ssz.ErrBytesLength
+	if size := len(s.SyncCommitteeSignature); size != 96 {
+		err = ssz.ErrBytesLengthFn("--.SyncCommitteeSignature", size, 96)
 		return
 	}
 	dst = append(dst, s.SyncCommitteeSignature...)
@@ -2296,15 +2296,15 @@ func (s *SyncAggregate) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	indx := hh.Index()
 
 	// Field (0) 'SyncCommitteeBits'
-	if len(s.SyncCommitteeBits) != 64 {
-		err = ssz.ErrBytesLength
+	if size := len(s.SyncCommitteeBits); size != 64 {
+		err = ssz.ErrBytesLengthFn("--.SyncCommitteeBits", size, 64)
 		return
 	}
 	hh.PutBytes(s.SyncCommitteeBits)
 
 	// Field (1) 'SyncCommitteeSignature'
-	if len(s.SyncCommitteeSignature) != 96 {
-		err = ssz.ErrBytesLength
+	if size := len(s.SyncCommitteeSignature); size != 96 {
+		err = ssz.ErrBytesLengthFn("--.SyncCommitteeSignature", size, 96)
 		return
 	}
 	hh.PutBytes(s.SyncCommitteeSignature)
@@ -2327,15 +2327,15 @@ func (d *Deposit_Data) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
 
 	// Field (0) 'Pubkey'
-	if len(d.Pubkey) != 48 {
-		err = ssz.ErrBytesLength
+	if size := len(d.Pubkey); size != 48 {
+		err = ssz.ErrBytesLengthFn("--.Pubkey", size, 48)
 		return
 	}
 	dst = append(dst, d.Pubkey...)
 
 	// Field (1) 'WithdrawalCredentials'
-	if len(d.WithdrawalCredentials) != 32 {
-		err = ssz.ErrBytesLength
+	if size := len(d.WithdrawalCredentials); size != 32 {
+		err = ssz.ErrBytesLengthFn("--.WithdrawalCredentials", size, 32)
 		return
 	}
 	dst = append(dst, d.WithdrawalCredentials...)
@@ -2344,8 +2344,8 @@ func (d *Deposit_Data) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = ssz.MarshalUint64(dst, d.Amount)
 
 	// Field (3) 'Signature'
-	if len(d.Signature) != 96 {
-		err = ssz.ErrBytesLength
+	if size := len(d.Signature); size != 96 {
+		err = ssz.ErrBytesLengthFn("--.Signature", size, 96)
 		return
 	}
 	dst = append(dst, d.Signature...)
@@ -2401,15 +2401,15 @@ func (d *Deposit_Data) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	indx := hh.Index()
 
 	// Field (0) 'Pubkey'
-	if len(d.Pubkey) != 48 {
-		err = ssz.ErrBytesLength
+	if size := len(d.Pubkey); size != 48 {
+		err = ssz.ErrBytesLengthFn("--.Pubkey", size, 48)
 		return
 	}
 	hh.PutBytes(d.Pubkey)
 
 	// Field (1) 'WithdrawalCredentials'
-	if len(d.WithdrawalCredentials) != 32 {
-		err = ssz.ErrBytesLength
+	if size := len(d.WithdrawalCredentials); size != 32 {
+		err = ssz.ErrBytesLengthFn("--.WithdrawalCredentials", size, 32)
 		return
 	}
 	hh.PutBytes(d.WithdrawalCredentials)
@@ -2418,8 +2418,8 @@ func (d *Deposit_Data) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	hh.PutUint64(d.Amount)
 
 	// Field (3) 'Signature'
-	if len(d.Signature) != 96 {
-		err = ssz.ErrBytesLength
+	if size := len(d.Signature); size != 96 {
+		err = ssz.ErrBytesLengthFn("--.Signature", size, 96)
 		return
 	}
 	hh.PutBytes(d.Signature)
@@ -2442,15 +2442,15 @@ func (v *Validator) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
 
 	// Field (0) 'Pubkey'
-	if len(v.Pubkey) != 48 {
-		err = ssz.ErrBytesLength
+	if size := len(v.Pubkey); size != 48 {
+		err = ssz.ErrBytesLengthFn("--.Pubkey", size, 48)
 		return
 	}
 	dst = append(dst, v.Pubkey...)
 
 	// Field (1) 'WithdrawalCredentials'
-	if len(v.WithdrawalCredentials) != 32 {
-		err = ssz.ErrBytesLength
+	if size := len(v.WithdrawalCredentials); size != 32 {
+		err = ssz.ErrBytesLengthFn("--.WithdrawalCredentials", size, 32)
 		return
 	}
 	dst = append(dst, v.WithdrawalCredentials...)
@@ -2533,15 +2533,15 @@ func (v *Validator) HashTreeRootWith(hh *ssz.Hasher) (err error) {
 	indx := hh.Index()
 
 	// Field (0) 'Pubkey'
-	if len(v.Pubkey) != 48 {
-		err = ssz.ErrBytesLength
+	if size := len(v.Pubkey); size != 48 {
+		err = ssz.ErrBytesLengthFn("--.Pubkey", size, 48)
 		return
 	}
 	hh.PutBytes(v.Pubkey)
 
 	// Field (1) 'WithdrawalCredentials'
-	if len(v.WithdrawalCredentials) != 32 {
-		err = ssz.ErrBytesLength
+	if size := len(v.WithdrawalCredentials); size != 32 {
+		err = ssz.ErrBytesLengthFn("--.WithdrawalCredentials", size, 32)
 		return
 	}
 	hh.PutBytes(v.WithdrawalCredentials)
