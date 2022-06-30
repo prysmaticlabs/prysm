@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
@@ -19,6 +20,7 @@ import (
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -29,21 +31,19 @@ import (
 // [REJECT] the beacon proposer signature, signed_blobs_sidecar.signature, is valid
 // [IGNORE] The sidecar is the first sidecar with valid signature received for the (proposer_index, sidecar.beacon_block_slot)
 // combination, where proposer_index is the validator index of the beacon block proposer of blobs_sidecar.beacon_block_slot
-func (s *Service) validateBlobsSidecar(ctx context.Context, pid peer.ID, msg *pubsub.Message) (pubsub.ValidationResult, error) {
-	ctx, span := trace.StartSpan(ctx, "sync.validateBlobsSidecar")
-	defer span.End()
-
-	// Accept the blob if it came from itself.
+func (s *Service) validateBlobsSidecarPubSub(ctx context.Context, pid peer.ID, msg *pubsub.Message) (pubsub.ValidationResult, error) {
+	// Accept the sidecar if it came from itself.
 	if pid == s.cfg.p2p.PeerID() {
 		return pubsub.ValidationAccept, nil
 	}
 
-	// Ignore the blobs sidecar if the beacon node is syncing.
+	ctx, span := trace.StartSpan(ctx, "sync.validateBlobsSidecar")
+	defer span.End()
+
+	// Ignore the sidecar if the beacon node is syncing.
 	if s.cfg.initialSync.Syncing() {
 		return pubsub.ValidationIgnore, nil
 	}
-
-	// TODO(inphi): Handle received blobs when optimistic.
 
 	m, err := s.decodePubsubMessage(msg)
 	if err != nil {
@@ -56,28 +56,59 @@ func (s *Service) validateBlobsSidecar(ctx context.Context, pid peer.ID, msg *pu
 		return pubsub.ValidationReject, errWrongMessage
 	}
 	if signed.Message == nil {
-		return pubsub.ValidationReject, errors.New("nil blob message")
+		return pubsub.ValidationReject, errors.New("nil sidecar message")
 	}
 	if signed.Signature == nil {
-		return pubsub.ValidationReject, errors.New("nil blob signature")
+		return pubsub.ValidationReject, errors.New("nil sidecar signature")
+	}
+	if signed.Message.BeaconBlockRoot == nil || signed.Message.Blobs == nil {
+		return pubsub.ValidationReject, errors.New("nil sidecar message data")
 	}
 
-	if err := altair.ValidateSyncMessageTime(signed.Message.GetBeaconBlockSlot(), s.cfg.chain.GenesisTime(), params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
+	if s.cfg.beaconDB.HasBlobsSidecar(ctx, bytesutil.ToBytes32(signed.Message.BeaconBlockRoot)) {
+		return pubsub.ValidationIgnore, nil
+	}
+
+	if err := altair.ValidateSyncMessageTime(signed.Message.BeaconBlockSlot, s.cfg.chain.GenesisTime(), params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
 		tracing.AnnotateError(span, err)
 		return pubsub.ValidationIgnore, err
 	}
 
-	blobs := signed.Message.GetBlobs()
-	if err := validateBlobFr(blobs); err != nil {
+	// Ensure that the sidecar isn't associated with an invalid block
+	if s.hasBadBlock(bytesutil.ToBytes32(signed.Message.BeaconBlockRoot)) {
+		return pubsub.ValidationReject, errors.New("sidecar references bad block root")
+	}
+
+	s.pendingQueueLock.RLock()
+	if s.seenPendingSidecars[bytesutil.ToBytes32(signed.Message.BeaconBlockRoot)] {
+		s.pendingQueueLock.RUnlock()
+		return pubsub.ValidationIgnore, nil
+	}
+	s.pendingQueueLock.RUnlock()
+
+	if err := validateBlobFr(signed.Message.Blobs); err != nil {
+		log.WithError(err).WithField("slot", signed.Message.BeaconBlockSlot).Debug("Sidecar contains invalid BLS field elements")
 		return pubsub.ValidationReject, err
 	}
 
-	blk, err := s.cfg.beaconDB.Block(ctx, bytesutil.ToBytes32(signed.Message.BeaconBlockRoot))
+	blk, err := s.getPendingBlockForSidecar(signed.Message)
 	if err != nil {
-		return pubsub.ValidationIgnore, errors.Wrap(err, "Could not retrieve block")
+		log.WithError(err).WithField("slot", signed.Message.BeaconBlockSlot).Warn("Failed to lookup pending block in queue")
+		return pubsub.ValidationIgnore, err
+	}
+	if blk == nil {
+		// We expect the block including this sidecar to follow shortly. Add the sidecar the queue so the pending block processor can readily retrieve it
+		s.pendingQueueLock.Lock()
+		s.insertSidecarToPendingQueue(&queuedBlobsSidecar{signed.Message, signed.Signature, false})
+		s.pendingQueueLock.Unlock()
+		return pubsub.ValidationIgnore, nil
+	}
+	if err := wrapper.BeaconBlockIsNil(blk); err != nil {
+		log.WithError(err).WithField("slot", signed.Message.BeaconBlockSlot).Warn("Nil block found in pending queue")
+		return pubsub.ValidationIgnore, nil
 	}
 
-	validationResult, err := s.validateBlobsSidecarSignature(ctx, blk, signed)
+	validationResult, err := s.validateBlobsSidecar(ctx, blk, signed)
 	if err != nil {
 		tracing.AnnotateError(span, err)
 		return validationResult, err
@@ -86,14 +117,27 @@ func (s *Service) validateBlobsSidecar(ctx context.Context, pid peer.ID, msg *pu
 	if s.hasSeenBlobsSidecarIndexSlot(blk.Block().ProposerIndex(), signed.Message.BeaconBlockSlot) {
 		return pubsub.ValidationIgnore, nil
 	}
+	s.setSeenSidecarIndexSlot(blk.Block().ProposerIndex(), signed.Message.BeaconBlockSlot)
 
-	s.setBlobsSidecarIndexSlotSeen(blk.Block().ProposerIndex(), signed.Message.BeaconBlockSlot)
 	msg.ValidatorData = signed
 
+	span.AddAttributes(trace.Int64Attribute("numBlobs", int64(len(signed.Message.Blobs))))
+	log.WithFields(logrus.Fields{
+		"blockSlot": signed.Message.BeaconBlockRoot,
+		"blockRoot": signed.Message.BeaconBlockRoot,
+		"numBlobs":  len(signed.Message.Blobs),
+	}).Debug("Received sidecar")
 	return pubsub.ValidationAccept, nil
 }
 
+func (s *Service) validateBlobsSidecar(ctx context.Context, blk interfaces.SignedBeaconBlock, m *ethpb.SignedBlobsSidecar) (pubsub.ValidationResult, error) {
+	return s.validateBlobsSidecarSignature(ctx, blk, m)
+}
+
 func (s *Service) validateBlobsSidecarSignature(ctx context.Context, blk interfaces.SignedBeaconBlock, m *ethpb.SignedBlobsSidecar) (pubsub.ValidationResult, error) {
+	ctx, span := trace.StartSpan(ctx, "sync.validateBlobsSidecarSignature")
+	defer span.End()
+
 	currentEpoch := slots.ToEpoch(m.Message.BeaconBlockSlot)
 	fork, err := forks.Fork(currentEpoch)
 	if err != nil {
@@ -158,10 +202,36 @@ func (s *Service) hasSeenBlobsSidecarIndexSlot(proposerIndex types.ValidatorInde
 	return seen
 }
 
-func (s *Service) setBlobsSidecarIndexSlotSeen(proposerIndex types.ValidatorIndex, slot types.Slot) {
-	s.seenBlobsSidecarLock.RLock()
-	defer s.seenBlobsSidecarLock.RUnlock()
+func (s *Service) setSeenSidecarIndexSlot(proposerIndex types.ValidatorIndex, slot types.Slot) {
+	s.seenBlobsSidecarLock.Lock()
+	defer s.seenBlobsSidecarLock.Unlock()
 
 	b := append(bytesutil.Bytes32(uint64(proposerIndex)), bytesutil.Bytes32(uint64(slot))...)
 	s.seenBlobsSidecarCache.Add(string(b), true)
+}
+
+func (s *Service) getPendingBlockForSidecar(sc *ethpb.BlobsSidecar) (interfaces.SignedBeaconBlock, error) {
+	blkRoot := bytesutil.ToBytes32(sc.BeaconBlockRoot)
+	s.pendingQueueLock.RLock()
+	if !s.seenPendingBlocks[blkRoot] {
+		s.pendingQueueLock.RUnlock()
+		return nil, nil
+	}
+	blks := s.pendingBlocksInCache(sc.BeaconBlockSlot)
+	s.pendingQueueLock.RUnlock()
+
+	for _, b := range blks {
+		if b.Block().Slot() != sc.BeaconBlockSlot {
+			continue
+		}
+		r, err := b.Block().HashTreeRoot()
+		if err != nil {
+			return nil, err
+		}
+		if r != bytesutil.ToBytes32(sc.BeaconBlockRoot) {
+			continue
+		}
+		return b, nil
+	}
+	return nil, nil
 }

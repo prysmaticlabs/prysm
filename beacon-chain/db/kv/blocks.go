@@ -240,6 +240,10 @@ func (s *Store) DeleteBlock(ctx context.Context, root [32]byte) error {
 		return err
 	}
 
+	if err := s.DeleteBlobsSidecar(ctx, root); err != nil {
+		return err
+	}
+
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(finalizedBlockRootsIndexBucket)
 		if b := bkt.Get(root[:]); b != nil {

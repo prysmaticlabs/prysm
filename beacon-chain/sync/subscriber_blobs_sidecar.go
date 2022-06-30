@@ -14,11 +14,13 @@ func (s *Service) blobsSidecarSubscriber(ctx context.Context, msg proto.Message)
 	if !ok {
 		return fmt.Errorf("message was not type *eth.SignedBlobsSidecar, type=%T", msg)
 	}
-
 	if m == nil {
 		return errors.New("nil blobs sidecar message")
 	}
 
-	blob := m.Message
-	return s.cfg.beaconDB.SaveBlobsSidecar(ctx, blob)
+	// Sidecars are handled by the block queue processing routine
+	s.pendingQueueLock.Lock()
+	s.insertSidecarToPendingQueue(&queuedBlobsSidecar{m.Message, m.Signature, true})
+	s.pendingQueueLock.Unlock()
+	return nil
 }

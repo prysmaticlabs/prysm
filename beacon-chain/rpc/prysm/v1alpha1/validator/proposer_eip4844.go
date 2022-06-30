@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 
@@ -8,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/interop"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
+	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -17,10 +19,26 @@ func (vs *Server) getEip4844BeaconBlock(ctx context.Context, req *ethpb.BlockReq
 		return nil, nil, errors.Wrap(err, "could not get bellatrix block")
 	}
 
-	blobs, err := vs.ExecutionEngineCaller.GetBlobsBundle(ctx, payloadID)
+	blobsBundle, err := vs.ExecutionEngineCaller.GetBlobsBundle(ctx, payloadID)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not get blobs")
 	}
+	// sanity check the blobs bundle
+	if bytes.Compare(blobsBundle.BlockHash, bellatrixBlk.Body.ExecutionPayload.BlockHash) != 0 {
+		return nil, nil, errors.New("invalid blobs bundle received")
+	}
+	if len(blobsBundle.Blobs) != len(blobsBundle.Kzgs) {
+		return nil, nil, errors.New("mismatched blobs and kzgs length")
+	}
+	var (
+		kzgs  [][]byte
+		blobs []*enginev1.Blob
+	)
+	if len(blobsBundle.Kzgs) != 0 {
+		kzgs = blobsBundle.Kzgs
+		blobs = blobsBundle.Blobs
+	}
+
 	blk := &ethpb.BeaconBlockWithBlobKZGs{
 		Slot:          bellatrixBlk.Slot,
 		ProposerIndex: bellatrixBlk.ProposerIndex,
@@ -37,7 +55,7 @@ func (vs *Server) getEip4844BeaconBlock(ctx context.Context, req *ethpb.BlockReq
 			VoluntaryExits:    bellatrixBlk.Body.VoluntaryExits,
 			SyncAggregate:     bellatrixBlk.Body.SyncAggregate,
 			ExecutionPayload:  bellatrixBlk.Body.ExecutionPayload,
-			BlobKzgs:          blobs.Kzgs,
+			BlobKzgs:          kzgs,
 		},
 	}
 	// Compute state root with the newly constructed block.
@@ -60,10 +78,14 @@ func (vs *Server) getEip4844BeaconBlock(ctx context.Context, req *ethpb.BlockReq
 	if err != nil {
 		return nil, nil, err
 	}
-	sideCar := &ethpb.BlobsSidecar{
-		BeaconBlockRoot: r[:],
-		BeaconBlockSlot: blk.Slot,
-		Blobs:           blobs.Blobs,
+
+	var sideCar *ethpb.BlobsSidecar
+	if len(blobs) != 0 {
+		sideCar = &ethpb.BlobsSidecar{
+			BeaconBlockRoot: r[:],
+			BeaconBlockSlot: blk.Slot,
+			Blobs:           blobs,
+		}
 	}
 
 	return blk, sideCar, nil

@@ -35,6 +35,8 @@ func (f *ForkChoice) SetOptimisticToValid(ctx context.Context, root [32]byte) er
 		return ErrUnknownNodeRoot
 	}
 
+	// TODO(EIP-4844): Update status transition algo
+
 	for node := f.store.nodes[index]; node.status == syncing; node = f.store.nodes[index] {
 		if ctx.Err() != nil {
 			return ctx.Err()

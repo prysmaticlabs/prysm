@@ -2,7 +2,6 @@ package sync
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"time"
 
@@ -10,12 +9,10 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blob"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/time/slots"
@@ -24,6 +21,8 @@ import (
 
 // We assume a cost of 1 MiB per sidecar responded to a range request.
 const avgSidecarBlobsTransferBytes = 1 << 10
+
+type BlobsSidecarProcessor func(sidecar *pb.BlobsSidecar) error
 
 // blobsSidecarsByRangeRPCHandler looks up the request blobs from the database from a given start slot index
 func (s *Service) blobsSidecarsByRangeRPCHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
@@ -50,13 +49,13 @@ func (s *Service) blobsSidecarsByRangeRPCHandler(ctx context.Context, msg interf
 			return err
 		}
 
-		exists, sidecars, err := s.cfg.beaconDB.BlobsSidecarsBySlot(ctx, slot)
+		sidecars, err := s.cfg.beaconDB.BlobsSidecarsBySlot(ctx, slot)
 		if err != nil {
 			s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
 			tracing.AnnotateError(span, err)
 			return err
 		}
-		if !exists {
+		if len(sidecars) == 0 {
 			continue
 		}
 
@@ -101,9 +100,23 @@ func (s *Service) blobsSidecarsByRangeRPCHandler(ctx context.Context, msg interf
 	return nil
 }
 
+// sendRecentBlobsSidecarsRequest retrieves sidecars and inserts them to the pending queue
+func (s *Service) sendRecentBlobSidecarsRequest(ctx context.Context, req *pb.BlobsSidecarsByRangeRequest, pid peer.ID) error {
+	ctx, cancel := context.WithTimeout(ctx, respTimeout)
+	defer cancel()
+
+	_, err := SendBlobsSidecarsByRangeRequest(ctx, s.cfg.chain, s.cfg.p2p, pid, req, func(sc *pb.BlobsSidecar) error {
+		s.pendingQueueLock.Lock()
+		s.insertSidecarToPendingQueue(&queuedBlobsSidecar{s: sc})
+		s.pendingQueueLock.Unlock()
+		return nil
+	})
+	return err
+}
+
 func SendBlobsSidecarsByRangeRequest(
-	ctx context.Context, db db.NoHeadAccessDatabase, chain blockchain.ChainInfoFetcher, p2pProvider p2p.P2P, pid peer.ID,
-	req *pb.BlobsSidecarsByRangeRequest) ([]*pb.BlobsSidecar, error) {
+	ctx context.Context, chain blockchain.ChainInfoFetcher, p2pProvider p2p.P2P, pid peer.ID,
+	req *pb.BlobsSidecarsByRangeRequest, sidecarProcessor BlobsSidecarProcessor) ([]*pb.BlobsSidecar, error) {
 	topic, err := p2p.TopicFromMessage(p2p.BlobsSidecarsByRangeMessageName, slots.ToEpoch(chain.CurrentSlot()))
 	if err != nil {
 		return nil, err
@@ -114,9 +127,19 @@ func SendBlobsSidecarsByRangeRequest(
 	}
 	defer closeStream(stream, log)
 
-	var blobsSidecars []*pb.BlobsSidecar
-	for {
-		blobs, err := ReadChunkedBlobsSidecar(stream, chain, p2pProvider, len(blobsSidecars) == 0)
+	var sidecars []*pb.BlobsSidecar
+	process := func(sidecar *pb.BlobsSidecar) error {
+		sidecars = append(sidecars, sidecar)
+		if sidecarProcessor != nil {
+			return sidecarProcessor(sidecar)
+		}
+		return nil
+	}
+
+	var prevSlot types.Slot
+	for i := uint64(0); ; i++ {
+		isFirstChunk := len(sidecars) == 0
+		sidecar, err := ReadChunkedBlobsSidecar(stream, chain, p2pProvider, isFirstChunk)
 		if errors.Is(err, io.EOF) {
 			break
 		}
@@ -124,32 +147,23 @@ func SendBlobsSidecarsByRangeRequest(
 			return nil, err
 		}
 
-		signed, err := db.Block(ctx, bytesutil.ToBytes32(blobs.BeaconBlockRoot))
-		if err != nil {
-			return nil, err
-		}
-		if signed == nil || signed.IsNil() || signed.Block().IsNil() {
-			return nil, fmt.Errorf("unable to find block with block root for slot: %v", blobs.BeaconBlockSlot)
-		}
-		blk, err := signed.PbEip4844Block()
-		if err != nil {
-			return nil, err
-		}
-		blockKzgs := blk.Block.Body.BlobKzgs
-		expectedKzgs := make([][48]byte, len(blockKzgs))
-		for i := range blockKzgs {
-			expectedKzgs[i] = bytesutil.ToBytes48(blockKzgs[i])
-		}
-		if err := blob.VerifyBlobsSidecar(blobs.BeaconBlockSlot, bytesutil.ToBytes32(blobs.BeaconBlockRoot), expectedKzgs, blobs); err != nil {
-			return nil, errors.Wrap(err, "invalid blobs sidecar")
-		}
-
-		blobsSidecars = append(blobsSidecars, blobs)
-		if len(blobsSidecars) >= int(params.BeaconNetworkConfig().MaxRequestBlobsSidecars) {
+		if i >= req.Count || i >= params.BeaconNetworkConfig().MaxRequestBlobsSidecars {
 			return nil, ErrInvalidFetchedData
 		}
+		if sidecar.BeaconBlockSlot < req.StartSlot || sidecar.BeaconBlockSlot >= req.StartSlot.Add(req.Count) {
+			return nil, ErrInvalidFetchedData
+		}
+		// assert slots aren't out of order and always increasing
+		if prevSlot >= sidecar.BeaconBlockSlot {
+			return nil, ErrInvalidFetchedData
+		}
+		prevSlot = sidecar.BeaconBlockSlot
+
+		if err := process(sidecar); err != nil {
+			return nil, err
+		}
 	}
-	return blobsSidecars, nil
+	return sidecars, nil
 }
 
 func estimateBlobsSidecarCost(sidecar *pb.BlobsSidecar) int {

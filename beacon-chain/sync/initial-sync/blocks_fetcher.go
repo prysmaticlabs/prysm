@@ -9,6 +9,8 @@ import (
 	"github.com/kevinms/leakybucket-go"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blob"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2pTypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
@@ -18,6 +20,8 @@ import (
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	p2ppb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -52,6 +56,9 @@ var (
 	errBlockAlreadyProcessed = errors.New("block is already processed")
 	errParentDoesNotExist    = errors.New("beacon node doesn't have a parent in db with root")
 	errNoPeersWithAltBlocks  = errors.New("no peers with alternative blocks found")
+	errInvalidSidecar        = errors.New("sidecar verification failed")
+	errMissingSidecar        = errors.New("block recieved without sidecar")
+	errUnexpectedSidecar     = errors.New("received unexpected sidecar")
 )
 
 // blocksFetcherConfig is a config to setup the block fetcher.
@@ -100,11 +107,12 @@ type fetchRequestParams struct {
 // fetchRequestResponse is a combined type to hold results of both successful executions and errors.
 // Valid usage pattern will be to check whether result's `err` is nil, before using `blocks`.
 type fetchRequestResponse struct {
-	pid    peer.ID
-	start  types.Slot
-	count  uint64
-	blocks []interfaces.SignedBeaconBlock
-	err    error
+	pid      peer.ID
+	start    types.Slot
+	count    uint64
+	blocks   []interfaces.SignedBeaconBlock
+	sidecars []*ethpb.BlobsSidecar
+	err      error
 }
 
 // newBlocksFetcher creates ready to use fetcher.
@@ -242,10 +250,11 @@ func (f *blocksFetcher) handleRequest(ctx context.Context, start types.Slot, cou
 	defer span.End()
 
 	response := &fetchRequestResponse{
-		start:  start,
-		count:  count,
-		blocks: []interfaces.SignedBeaconBlock{},
-		err:    nil,
+		start:    start,
+		count:    count,
+		blocks:   []interfaces.SignedBeaconBlock{},
+		sidecars: []*ethpb.BlobsSidecar{},
+		err:      nil,
 	}
 
 	if ctx.Err() != nil {
@@ -269,7 +278,7 @@ func (f *blocksFetcher) handleRequest(ctx context.Context, start types.Slot, cou
 		}
 	}
 
-	response.blocks, response.pid, response.err = f.fetchBlocksFromPeer(ctx, start, count, peers)
+	response.blocks, response.sidecars, response.pid, response.err = f.fetchBlocksFromPeer(ctx, start, count, peers)
 	return response
 }
 
@@ -278,7 +287,7 @@ func (f *blocksFetcher) fetchBlocksFromPeer(
 	ctx context.Context,
 	start types.Slot, count uint64,
 	peers []peer.ID,
-) ([]interfaces.SignedBeaconBlock, peer.ID, error) {
+) ([]interfaces.SignedBeaconBlock, []*ethpb.BlobsSidecar, peer.ID, error) {
 	ctx, span := trace.StartSpan(ctx, "initialsync.fetchBlocksFromPeer")
 	defer span.End()
 
@@ -288,13 +297,37 @@ func (f *blocksFetcher) fetchBlocksFromPeer(
 		Count:     count,
 		Step:      1,
 	}
-	for i := 0; i < len(peers); i++ {
-		if blocks, err := f.requestBlocks(ctx, req, peers[i]); err == nil {
-			f.p2p.Peers().Scorers().BlockProviderScorer().Touch(peers[i])
-			return blocks, peers[i], err
-		}
+	sidecarReq := &p2ppb.BlobsSidecarsByRangeRequest{
+		StartSlot: start,
+		Count:     count,
 	}
-	return nil, "", errNoPeersAvailable
+
+	var (
+		blocks   []interfaces.SignedBeaconBlock
+		sidecars []*ethpb.BlobsSidecar
+		err      error
+	)
+	for i := 0; i < len(peers); i++ {
+		if blocks, err = f.requestBlocks(ctx, req, peers[i]); err == nil {
+			if sidecars, err = f.requestSidecars(ctx, sidecarReq, peers[i], blocks); err == nil {
+				if err = checkBlocksForAvailableSidecars(blocks, sidecars); err == nil {
+					f.p2p.Peers().Scorers().BlockProviderScorer().Touch(peers[i])
+					return blocks, sidecars, peers[i], err
+				}
+			}
+			if errors.Is(err, errMissingSidecar) || errors.Is(err, errInvalidSidecar) {
+				// Penalize peer for hiding or sending invalid sidecars
+				f.p2p.Peers().Scorers().BadResponsesScorer().Increment(peers[i])
+			}
+		}
+		log.WithFields(logrus.Fields{
+			"err":       err,
+			"startSlot": start,
+			"count":     count,
+			"peer":      peers[i],
+		}).Trace("Error getting data from peer")
+	}
+	return nil, nil, "", errNoPeersAvailable
 }
 
 // requestBlocks is a wrapper for handling BeaconBlocksByRangeRequest requests/streams.
@@ -318,6 +351,7 @@ func (f *blocksFetcher) requestBlocks(
 	}).Debug("Requesting blocks")
 	if f.rateLimiter.Remaining(pid.String()) < int64(req.Count) {
 		if err := f.waitForBandwidth(pid); err != nil {
+			l.Unlock()
 			return nil, err
 		}
 	}
@@ -345,6 +379,7 @@ func (f *blocksFetcher) requestBlocksByRoot(
 	}).Debug("Requesting blocks (by roots)")
 	if f.rateLimiter.Remaining(pid.String()) < int64(len(*req)) {
 		if err := f.waitForBandwidth(pid); err != nil {
+			l.Unlock()
 			return nil, err
 		}
 	}
@@ -352,6 +387,34 @@ func (f *blocksFetcher) requestBlocksByRoot(
 	l.Unlock()
 
 	return prysmsync.SendBeaconBlocksByRootRequest(ctx, f.chain, f.p2p, pid, req, nil)
+}
+
+func (f *blocksFetcher) requestSidecars(
+	ctx context.Context,
+	req *p2ppb.BlobsSidecarsByRangeRequest,
+	pid peer.ID,
+	blkRefs []interfaces.SignedBeaconBlock,
+) ([]*ethpb.BlobsSidecar, error) {
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+	l := f.peerLock(pid)
+	l.Lock()
+	log.WithFields(logrus.Fields{
+		"peer":     pid,
+		"start":    req.StartSlot,
+		"count":    req.Count,
+		"capacity": f.rateLimiter.Remaining(pid.String()),
+		"score":    f.p2p.Peers().Scorers().BlockProviderScorer().FormatScorePretty(pid),
+	}).Debug("Requesting sidecars")
+	// TODO(EIP-4844): sidecar rate limiting
+	l.Unlock()
+
+	var sidecarProcessor func(*ethpb.BlobsSidecar) error
+	if blkRefs != nil {
+		sidecarProcessor = sidecarVerifier(blkRefs)
+	}
+	return prysmsync.SendBlobsSidecarsByRangeRequest(ctx, f.chain, f.p2p, pid, req, sidecarProcessor)
 }
 
 // waitForBandwidth blocks up until peer's bandwidth is restored.
@@ -366,4 +429,63 @@ func (f *blocksFetcher) waitForBandwidth(pid peer.ID) error {
 		// Peer has gathered enough capacity to be polled again.
 	}
 	return nil
+}
+
+func checkBlocksForAvailableSidecars(blks []interfaces.SignedBeaconBlock, sidecars []*ethpb.BlobsSidecar) error {
+	for _, b := range blks {
+		if blocks.IsPreEIP4844Version(b.Version()) {
+			continue
+		}
+		if blobKzgs, _ := b.Block().Body().BlobKzgs(); len(blobKzgs) == 0 {
+			continue
+		}
+		bRoot, err := b.Block().HashTreeRoot()
+		if err != nil {
+			return err
+		}
+		var foundSidecar bool
+		for _, s := range sidecars {
+			if b.Block().Slot() == s.BeaconBlockSlot && bRoot == bytesutil.ToBytes32(s.BeaconBlockRoot) {
+				foundSidecar = true
+				break
+			}
+		}
+		if !foundSidecar {
+			return fmt.Errorf("%w, slot: %d", errMissingSidecar, b.Block().Slot())
+		}
+	}
+	return nil
+}
+
+func sidecarVerifier(blks []interfaces.SignedBeaconBlock) func(*ethpb.BlobsSidecar) error {
+	return func(sidecar *ethpb.BlobsSidecar) error {
+		for _, b := range blks {
+			if blocks.IsPreEIP4844Version(b.Version()) {
+				continue
+			}
+			blobKzgs, err := b.Block().Body().BlobKzgs()
+			if err != nil {
+				return err
+			}
+			if len(blobKzgs) == 0 {
+				continue
+			}
+			if b.Block().Slot() != sidecar.BeaconBlockSlot {
+				continue
+			}
+			bRoot, err := b.Block().HashTreeRoot()
+			if err != nil {
+				return err
+			}
+			if bRoot != bytesutil.ToBytes32(sidecar.BeaconBlockRoot) {
+				continue
+			}
+			if err := blob.VerifyBlobsSidecar(b.Block().Slot(), bRoot, bytesutil.ToBytes48Array(blobKzgs), sidecar); err != nil {
+				return errors.Wrap(errInvalidSidecar, err.Error())
+			}
+			return nil
+		}
+		// If here then we've received an unwanted sidecar. This is an error because it means some other valid sidecar got pushed out
+		return errUnexpectedSidecar
+	}
 }

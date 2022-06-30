@@ -32,7 +32,8 @@ type ReadOnlyDatabase interface {
 	FinalizedChildBlock(ctx context.Context, blockRoot [32]byte) (interfaces.SignedBeaconBlock, error)
 	// Blobs related methods.
 	BlobsSidecar(ctx context.Context, blockRoot [32]byte) (*ethpb.BlobsSidecar, error)
-	BlobsSidecarsBySlot(ctx context.Context, slot types.Slot) (bool, []*ethpb.BlobsSidecar, error)
+	BlobsSidecarsBySlot(ctx context.Context, slot types.Slot) ([]*ethpb.BlobsSidecar, error)
+	HasBlobsSidecar(ctx context.Context, blockRoot [32]byte) bool
 	HighestRootsBelowSlot(ctx context.Context, slot types.Slot) (types.Slot, [][32]byte, error)
 	// State related methods.
 	State(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error)
@@ -71,6 +72,7 @@ type NoHeadAccessDatabase interface {
 	SaveBlocks(ctx context.Context, blocks []interfaces.SignedBeaconBlock) error
 	SaveGenesisBlockRoot(ctx context.Context, blockRoot [32]byte) error
 	// Blob related methods.
+	DeleteBlobsSidecar(ctx context.Context, root [32]byte) error
 	SaveBlobsSidecar(ctx context.Context, blob *ethpb.BlobsSidecar) error
 	// State related methods.
 	SaveState(ctx context.Context, state state.ReadOnlyBeaconState, blockRoot [32]byte) error

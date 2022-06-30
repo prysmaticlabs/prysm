@@ -226,6 +226,13 @@ func connectPeer(t *testing.T, host *p2pt.TestP2P, datum *peerData, peerStatus *
 			assert.NoError(t, beaconsync.WriteBlockChunk(stream, mChain, p.Encoding(), wsb))
 		}
 	})
+	p.SetStreamHandler("/eth2/beacon_chain/req/blobs_sidecars_by_range/1/ssz_snappy", func(stream network.Stream) {
+		defer func() {
+			assert.NoError(t, stream.Close())
+		}()
+		req := &ethpb.BlobsSidecarsByRangeRequest{}
+		assert.NoError(t, p.Encoding().DecodeWithMaxLength(stream, req))
+	})
 
 	p.Connect(host)
 
@@ -321,6 +328,15 @@ func connectPeerHavingBlocks(
 				}
 			}
 		}
+	})
+
+	p.SetStreamHandler("/eth2/beacon_chain/req/blobs_sidecars_by_range/1/ssz_snappy", func(stream network.Stream) {
+		defer func() {
+			_err := stream.Close()
+			_ = _err
+		}()
+		req := new(ethpb.BlobsSidecarsByRangeRequest)
+		assert.NoError(t, p.Encoding().DecodeWithMaxLength(stream, req))
 	})
 
 	p.Connect(host)

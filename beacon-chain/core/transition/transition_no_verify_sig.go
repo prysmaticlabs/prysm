@@ -7,6 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/interop"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
@@ -374,7 +375,7 @@ func ProcessBlockForStateRoot(
 		return nil, errors.Wrap(err, "process_sync_aggregate failed")
 	}
 
-	if v := signed.Block().Version(); v == version.Phase0 || v == version.Altair || v == version.Bellatrix {
+	if blocks.IsPreEIP4844Version(signed.Block().Version()) {
 		return state, nil
 	}
 

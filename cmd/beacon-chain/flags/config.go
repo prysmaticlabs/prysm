@@ -52,6 +52,7 @@ func ConfigureGlobalFlags(ctx *cli.Context) {
 		cfg.SubscribeToAllSubnets = true
 	}
 	cfg.DisableDiscv5 = ctx.Bool(DisableDiscv5.Name)
+	// TODO(EIP-4844): assert BlockBatchLimit < MAX_REQUEST_BLOBS_SIDECARS (128) as initial-sync uses this same config for sidecar fetch
 	cfg.BlockBatchLimit = ctx.Int(BlockBatchLimit.Name)
 	cfg.BlockBatchLimitBurstFactor = ctx.Int(BlockBatchLimitBurstFactor.Name)
 	cfg.BlobsTransferRate = ctx.Int(BlobsTransferRate.Name)

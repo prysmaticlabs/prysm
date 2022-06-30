@@ -160,7 +160,7 @@ func TestSendRequest_SendBlobsSidecarsByRangeRequest(t *testing.T) {
 	p2.SetStreamHandler(pcl, blobsProvider(p2))
 
 	chain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
-	sidecars, err := SendBlobsSidecarsByRangeRequest(ctx, db, chain, p1, p2.PeerID(), req)
+	sidecars, err := SendBlobsSidecarsByRangeRequest(ctx, chain, p1, p2.PeerID(), req, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, req.Count, uint64(len(sidecars)))
 }

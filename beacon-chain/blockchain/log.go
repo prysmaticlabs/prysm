@@ -44,13 +44,20 @@ func logStateTransitionData(b interfaces.BeaconBlock) error {
 		}
 		log = log.WithField("syncBitsCount", agg.SyncCommitteeBits.Count())
 	}
-	if b.Version() == version.Bellatrix {
+	if b.Version() == version.Bellatrix || b.Version() == version.EIP4844 {
 		p, err := b.Body().ExecutionPayload()
 		if err != nil {
 			return err
 		}
 		log = log.WithField("payloadHash", fmt.Sprintf("%#x", bytesutil.Trunc(p.BlockHash)))
 		log = log.WithField("txCount", len(p.Transactions))
+	}
+	if b.Version() == version.EIP4844 {
+		k, err := b.Body().BlobKzgs()
+		if err != nil {
+			return err
+		}
+		log = log.WithField("blobKzgCount", len(k))
 	}
 	log.Info("Finished applying state transition")
 	return nil

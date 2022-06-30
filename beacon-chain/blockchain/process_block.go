@@ -93,7 +93,7 @@ var initialSyncBlockCacheSize = uint64(2 * params.BeaconConfig().SlotsPerEpoch)
 //            ancestor_at_finalized_slot = get_ancestor(store, store.justified_checkpoint.root, finalized_slot)
 //            if ancestor_at_finalized_slot != store.finalized_checkpoint.root:
 //                store.justified_checkpoint = state.current_justified_checkpoint
-func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlock, blockRoot [32]byte) error {
+func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlock, blockRoot [32]byte, verifiedSidecar *ethpb.BlobsSidecar) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.onBlock")
 	defer span.End()
 	if err := wrapper.BeaconBlockIsNil(signed); err != nil {
@@ -127,7 +127,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 			return err
 		}
 	}
-	if err := s.savePostStateInfo(ctx, blockRoot, signed, postState); err != nil {
+	if err := s.savePostStateInfo(ctx, blockRoot, signed, verifiedSidecar, postState); err != nil {
 		return err
 	}
 	if err := s.insertBlockAndAttestationsToForkChoiceStore(ctx, signed.Block(), blockRoot, postState); err != nil {
@@ -315,7 +315,7 @@ func getStateVersionAndPayload(st state.BeaconState) (int, *enginev1.ExecutionPa
 }
 
 func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeaconBlock,
-	blockRoots [][32]byte) error {
+	blockRoots [][32]byte, sidecars []*ethpb.BlobsSidecar) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.onBlockBatch")
 	defer span.End()
 
@@ -424,7 +424,15 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 			FinalizedCheckpoint: fCheckpoints[i]}
 		pendingNodes[len(blks)-i-1] = args
 		s.saveInitSyncBlock(blockRoots[i], b)
-		if err = s.handleBlockAfterBatchVerify(ctx, b, blockRoots[i], fCheckpoints[i], jCheckpoints[i]); err != nil {
+
+		var sidecar *ethpb.BlobsSidecar
+		for _, sc := range sidecars {
+			if sc.BeaconBlockSlot == b.Block().Slot() {
+				sidecar = sc
+				break
+			}
+		}
+		if err = s.handleBlockAfterBatchVerify(ctx, b, blockRoots[i], sidecar, fCheckpoints[i], jCheckpoints[i]); err != nil {
 			tracing.AnnotateError(span, err)
 			return err
 		}
@@ -469,12 +477,18 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 // handles a block after the block's batch has been verified, where we can save blocks
 // their state summaries and split them off to relative hot/cold storage.
 func (s *Service) handleBlockAfterBatchVerify(ctx context.Context, signed interfaces.SignedBeaconBlock,
-	blockRoot [32]byte, fCheckpoint, jCheckpoint *ethpb.Checkpoint) error {
+	blockRoot [32]byte, sidecar *ethpb.BlobsSidecar, fCheckpoint, jCheckpoint *ethpb.Checkpoint) error {
 	if err := s.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{
 		Slot: signed.Block().Slot(),
 		Root: blockRoot[:],
 	}); err != nil {
 		return err
+	}
+
+	if sidecar != nil {
+		if err := s.cfg.BeaconDB.SaveBlobsSidecar(ctx, sidecar); err != nil {
+			return err
+		}
 	}
 
 	// Rate limit how many blocks (2 epochs worth of blocks) a node keeps in the memory.
@@ -612,9 +626,14 @@ func (s *Service) InsertSlashingsToForkChoiceStore(ctx context.Context, slashing
 
 // This saves post state info to DB or cache. This also saves post state info to fork choice store.
 // Post state info consists of processed block and state. Do not call this method unless the block and state are verified.
-func (s *Service) savePostStateInfo(ctx context.Context, r [32]byte, b interfaces.SignedBeaconBlock, st state.BeaconState) error {
+func (s *Service) savePostStateInfo(ctx context.Context, r [32]byte, b interfaces.SignedBeaconBlock, sc *ethpb.BlobsSidecar, st state.BeaconState) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.savePostStateInfo")
 	defer span.End()
+	if sc != nil {
+		if err := s.cfg.BeaconDB.SaveBlobsSidecar(ctx, sc); err != nil {
+			return errors.Wrapf(err, "could not save sidecar from slot %d", b.Block().Slot())
+		}
+	}
 	if err := s.cfg.BeaconDB.SaveBlock(ctx, b); err != nil {
 		return errors.Wrapf(err, "could not save block from slot %d", b.Block().Slot())
 	}

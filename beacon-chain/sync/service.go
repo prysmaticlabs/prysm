@@ -55,7 +55,8 @@ const seenBlobsSidecarSize = 1000
 
 var (
 	// Seconds in one epoch.
-	pendingBlockExpTime = time.Duration(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot)) * time.Second
+	pendingBlockExpTime   = time.Duration(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot)) * time.Second
+	pendingSidecarExpTime = time.Duration(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot)) * time.Second
 	// time to allow processing early blocks.
 	earlyBlockProcessingTolerance = slots.MultiplySlotBy(2)
 	// time to allow processing early attestations.
@@ -107,7 +108,9 @@ type Service struct {
 	ctx                              context.Context
 	cancel                           context.CancelFunc
 	slotToPendingBlocks              *gcache.Cache
+	slotToPendingSidecars            *gcache.Cache
 	seenPendingBlocks                map[[32]byte]bool
+	seenPendingSidecars              map[[32]byte]bool
 	blkRootToPendingAtts             map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof
 	subHandler                       *subTopicHandler
 	pendingAttsLock                  sync.RWMutex
@@ -142,17 +145,20 @@ type Service struct {
 
 // NewService initializes new regular sync service.
 func NewService(ctx context.Context, opts ...Option) *Service {
-	c := gcache.New(pendingBlockExpTime /* exp time */, 2*pendingBlockExpTime /* prune time */)
 	ctx, cancel := context.WithCancel(ctx)
+	c := gcache.New(pendingBlockExpTime /* exp time */, 2*pendingBlockExpTime /* prune time */)
+	sidecarCache := gcache.New(pendingSidecarExpTime /* exp time */, 2*pendingSidecarExpTime /* prune time */)
 	r := &Service{
-		ctx:                  ctx,
-		cancel:               cancel,
-		chainStarted:         abool.New(),
-		cfg:                  &config{},
-		slotToPendingBlocks:  c,
-		seenPendingBlocks:    make(map[[32]byte]bool),
-		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
-		signatureChan:        make(chan *signatureVerifier, verifierLimit),
+		ctx:                   ctx,
+		cancel:                cancel,
+		chainStarted:          abool.New(),
+		cfg:                   &config{},
+		slotToPendingBlocks:   c,
+		slotToPendingSidecars: sidecarCache,
+		seenPendingBlocks:     make(map[[32]byte]bool),
+		seenPendingSidecars:   make(map[[32]byte]bool),
+		blkRootToPendingAtts:  make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
+		signatureChan:         make(chan *signatureVerifier, verifierLimit),
 	}
 	for _, opt := range opts {
 		if err := opt(r); err != nil {
