@@ -586,7 +586,7 @@ func (s *Service) initPOWService() {
 			// Cache eth1 headers from our voting period.
 			if err := s.cacheHeadersForEth1DataVote(ctx); err != nil {
 				s.retryExecutionClientConnection(ctx, err)
-				errorLogger(err, "Unable to cache headers for execution client votes")
+				log.WithError(err).Warn("Unable to cache headers for execution client votes")
 				continue
 			}
 			// Handle edge case with embedded genesis state by fetching genesis header to determine
