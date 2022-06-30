@@ -60,6 +60,7 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 			return nil, err
 		}
 		s.c = c
+		log.WithField("endpoint", c.NodeURL()).Info("Builder has been configured")
 	}
 	return s, nil
 }

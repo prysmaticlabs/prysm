@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
@@ -30,17 +31,19 @@ const defaultPruneThreshold = 256
 // New initializes a new fork choice store.
 func New() *ForkChoice {
 	s := &Store{
-		justifiedCheckpoint:     &forkchoicetypes.Checkpoint{},
-		bestJustifiedCheckpoint: &forkchoicetypes.Checkpoint{},
-		prevJustifiedCheckpoint: &forkchoicetypes.Checkpoint{},
-		finalizedCheckpoint:     &forkchoicetypes.Checkpoint{},
-		proposerBoostRoot:       [32]byte{},
-		nodes:                   make([]*Node, 0),
-		nodesIndices:            make(map[[32]byte]uint64),
-		payloadIndices:          make(map[[32]byte]uint64),
-		canonicalNodes:          make(map[[32]byte]bool),
-		slashedIndices:          make(map[types.ValidatorIndex]bool),
-		pruneThreshold:          defaultPruneThreshold,
+		justifiedCheckpoint:           &forkchoicetypes.Checkpoint{},
+		bestJustifiedCheckpoint:       &forkchoicetypes.Checkpoint{},
+		unrealizedJustifiedCheckpoint: &forkchoicetypes.Checkpoint{},
+		prevJustifiedCheckpoint:       &forkchoicetypes.Checkpoint{},
+		finalizedCheckpoint:           &forkchoicetypes.Checkpoint{},
+		unrealizedFinalizedCheckpoint: &forkchoicetypes.Checkpoint{},
+		proposerBoostRoot:             [32]byte{},
+		nodes:                         make([]*Node, 0),
+		nodesIndices:                  make(map[[32]byte]uint64),
+		payloadIndices:                make(map[[32]byte]uint64),
+		canonicalNodes:                make(map[[32]byte]bool),
+		slashedIndices:                make(map[types.ValidatorIndex]bool),
+		pruneThreshold:                defaultPruneThreshold,
 	}
 
 	b := make([]uint64, 0)
@@ -117,7 +120,7 @@ func (f *ForkChoice) ProposerBoost() [fieldparams.RootLength]byte {
 }
 
 // InsertNode processes a new block by inserting it to the fork choice store.
-func (f *ForkChoice) InsertNode(ctx context.Context, state state.ReadOnlyBeaconState, root [32]byte) error {
+func (f *ForkChoice) InsertNode(ctx context.Context, state state.BeaconState, root [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.InsertNode")
 	defer span.End()
 
@@ -147,9 +150,13 @@ func (f *ForkChoice) InsertNode(ctx context.Context, state state.ReadOnlyBeaconS
 		return errInvalidNilCheckpoint
 	}
 	finalizedEpoch := fc.Epoch
-	err := f.store.insert(ctx, slot, root, parentRoot, payloadHash, justifiedEpoch, finalizedEpoch)
+	node, err := f.store.insert(ctx, slot, root, parentRoot, payloadHash, justifiedEpoch, finalizedEpoch)
 	if err != nil {
 		return err
+	}
+
+	if features.Get().PullTips {
+		jc, fc = f.store.pullTips(ctx, state, node, jc, fc)
 	}
 	return f.updateCheckpoints(ctx, jc, fc)
 }
@@ -462,7 +469,7 @@ func (s *Store) updateCanonicalNodes(ctx context.Context, root [32]byte) error {
 func (s *Store) insert(ctx context.Context,
 	slot types.Slot,
 	root, parent, payloadHash [32]byte,
-	justifiedEpoch, finalizedEpoch types.Epoch) error {
+	justifiedEpoch, finalizedEpoch types.Epoch) (*Node, error) {
 	_, span := trace.StartSpan(ctx, "protoArrayForkChoice.insert")
 	defer span.End()
 
@@ -470,8 +477,8 @@ func (s *Store) insert(ctx context.Context,
 	defer s.nodesLock.Unlock()
 
 	// Return if the block has been inserted into Store before.
-	if _, ok := s.nodesIndices[root]; ok {
-		return nil
+	if idx, ok := s.nodesIndices[root]; ok {
+		return s.nodes[idx], nil
 	}
 
 	index := uint64(len(s.nodes))
@@ -502,7 +509,7 @@ func (s *Store) insert(ctx context.Context,
 	// Apply proposer boost
 	timeNow := uint64(time.Now().Unix())
 	if timeNow < s.genesisTime {
-		return nil
+		return n, nil
 	}
 	secondsIntoSlot := (timeNow - s.genesisTime) % params.BeaconConfig().SecondsPerSlot
 	currentSlot := slots.CurrentSlot(s.genesisTime)
@@ -516,7 +523,7 @@ func (s *Store) insert(ctx context.Context,
 	// Update parent with the best child and descendant only if it's available.
 	if n.parent != NonExistentNode {
 		if err := s.updateBestChildAndDescendant(parentIndex, index); err != nil {
-			return err
+			return n, err
 		}
 	}
 
@@ -524,7 +531,7 @@ func (s *Store) insert(ctx context.Context,
 	processedBlockCount.Inc()
 	nodeCount.Set(float64(len(s.nodes)))
 
-	return nil
+	return n, nil
 }
 
 // applyWeightChanges iterates backwards through the nodes in store. It checks all nodes parent
@@ -991,7 +998,7 @@ func (f *ForkChoice) InsertOptimisticChain(ctx context.Context, chain []*forkcho
 		if err != nil {
 			return err
 		}
-		if err := f.store.insert(ctx,
+		if _, err := f.store.insert(ctx,
 			b.Slot(), r, parentRoot, payloadHash,
 			chain[i].JustifiedCheckpoint.Epoch, chain[i].FinalizedCheckpoint.Epoch); err != nil {
 			return err

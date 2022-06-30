@@ -3,17 +3,20 @@ package components
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"strings"
 	"syscall"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
@@ -21,9 +24,12 @@ import (
 	cmdshared "github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	validator_service_config "github.com/prysmaticlabs/prysm/config/validator/service"
 	contracts "github.com/prysmaticlabs/prysm/contracts/deposit"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/runtime/interop"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/components/eth1"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
@@ -33,6 +39,7 @@ import (
 )
 
 const depositGasLimit = 4000000
+const DefaultFeeRecipientAddress = "0x099FB65722e7b2455043bfebF6177f1D2E9738d9"
 
 var _ e2etypes.ComponentRunner = (*ValidatorNode)(nil)
 var _ e2etypes.ComponentRunner = (*ValidatorNodeSet)(nil)
@@ -170,6 +177,7 @@ func NewValidatorNode(config *e2etypes.E2EConfig, validatorNum, index, offset in
 
 // Start starts a validator client.
 func (v *ValidatorNode) Start(ctx context.Context) error {
+	validatorHexPubKeys := make([]string, 0)
 	var pkg, target string
 	if v.config.UsePrysmShValidator {
 		pkg = ""
@@ -198,6 +206,15 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+
+	_, pubs, err := interop.DeterministicallyGenerateKeys(uint64(offset), uint64(validatorNum))
+	if err != nil {
+		return err
+	}
+	for _, pub := range pubs {
+		validatorHexPubKeys = append(validatorHexPubKeys, hexutil.Encode(pub.Marshal()))
+	}
+
 	args := []string{
 		fmt.Sprintf("--%s=%s/eth2-val-%d", cmdshared.DataDirFlag.Name, e2e.TestParams.TestPath, index),
 		fmt.Sprintf("--%s=%s", cmdshared.LogFileName.Name, file.Name()),
@@ -219,20 +236,22 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 		args = append(args, fmt.Sprintf("--%s=http://localhost:%d", flags.Web3SignerURLFlag.Name, Web3RemoteSignerPort))
 		// Write the pubkeys as comma seperated hex strings with 0x prefix.
 		// See: https://docs.teku.consensys.net/en/latest/HowTo/External-Signer/Use-External-Signer/
-		_, pubs, err := interop.DeterministicallyGenerateKeys(uint64(offset), uint64(validatorNum))
-		if err != nil {
-			return err
-		}
-		var hexPubs []string
-		for _, pub := range pubs {
-			hexPubs = append(hexPubs, hexutil.Encode(pub.Marshal()))
-		}
-		args = append(args, fmt.Sprintf("--%s=%s", flags.Web3SignerPublicValidatorKeysFlag.Name, strings.Join(hexPubs, ",")))
+		args = append(args, fmt.Sprintf("--%s=%s", flags.Web3SignerPublicValidatorKeysFlag.Name, strings.Join(validatorHexPubKeys, ",")))
 	} else {
 		// When not using remote key signer, use interop keys.
 		args = append(args,
 			fmt.Sprintf("--%s=%d", flags.InteropNumValidators.Name, validatorNum),
-			fmt.Sprintf("--%s=%d", flags.InteropStartIndex.Name, offset))
+			fmt.Sprintf("--%s=%d", flags.InteropStartIndex.Name, offset),
+		)
+	}
+	//TODO: web3signer does not support validator registration signing currently, move this when support is there.
+	//TODO: current version of prysmsh still uses wrong flag name.
+	if !v.config.UsePrysmShValidator && !v.config.UseWeb3RemoteSigner {
+		proposerSettingsPathPath, err := createProposerSettingsPath(validatorHexPubKeys, index)
+		if err != nil {
+			return err
+		}
+		args = append(args, fmt.Sprintf("--%s=%s", flags.ProposerSettingsFlag.Name, proposerSettingsPathPath))
 	}
 	args = append(args, config.ValidatorFlags...)
 
@@ -377,4 +396,51 @@ func sendDeposits(web3 *ethclient.Client, keystoreBytes []byte, num, offset int,
 		txOps.Nonce = txOps.Nonce.Add(txOps.Nonce, big.NewInt(1))
 	}
 	return nil
+}
+
+func createProposerSettingsPath(pubkeys []string, validatorIndex int) (string, error) {
+	testNetDir := e2e.TestParams.TestPath + fmt.Sprintf("/proposer-settings/validator_%d", validatorIndex)
+	configPath := filepath.Join(testNetDir, "config.json")
+	if len(pubkeys) == 0 {
+		return "", errors.New("number of validators must be greater than 0")
+	}
+	var proposerSettingsPayload validator_service_config.ProposerSettingsPayload
+	if len(pubkeys) == 1 {
+		proposerSettingsPayload = validator_service_config.ProposerSettingsPayload{
+			DefaultConfig: &validator_service_config.ProposerOptionPayload{
+				FeeRecipient: DefaultFeeRecipientAddress,
+			},
+		}
+	} else {
+		config := make(map[string]*validator_service_config.ProposerOptionPayload)
+
+		for i, pubkey := range pubkeys {
+			// Create an account
+			byteval, err := hexutil.Decode(pubkey)
+			if err != nil {
+				return "", err
+			}
+			deterministicFeeRecipient := common.HexToAddress(hexutil.Encode(byteval[:fieldparams.FeeRecipientLength])).Hex()
+			config[pubkeys[i]] = &validator_service_config.ProposerOptionPayload{
+				FeeRecipient: deterministicFeeRecipient,
+			}
+		}
+		proposerSettingsPayload = validator_service_config.ProposerSettingsPayload{
+			ProposerConfig: config,
+			DefaultConfig: &validator_service_config.ProposerOptionPayload{
+				FeeRecipient: DefaultFeeRecipientAddress,
+			},
+		}
+	}
+	jsonBytes, err := json.Marshal(proposerSettingsPayload)
+	if err != nil {
+		return "", err
+	}
+	if err := file.MkdirAll(testNetDir); err != nil {
+		return "", err
+	}
+	if err := file.WriteFile(configPath, jsonBytes); err != nil {
+		return "", err
+	}
+	return configPath, nil
 }

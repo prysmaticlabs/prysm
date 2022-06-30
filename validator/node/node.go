@@ -489,7 +489,7 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 	if cliCtx.IsSet(flags.SuggestedFeeRecipientFlag.Name) {
 		suggestedFee := cliCtx.String(flags.SuggestedFeeRecipientFlag.Name)
 		fileConfig = &validatorServiceConfig.ProposerSettingsPayload{
-			ProposeConfig: nil,
+			ProposerConfig: nil,
 			DefaultConfig: &validatorServiceConfig.ProposerOptionPayload{
 				FeeRecipient: suggestedFee,
 				GasLimit:     params.BeaconConfig().DefaultBuilderGasLimit,
@@ -538,9 +538,9 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 		GasLimit:     reviewGasLimit(fileConfig.DefaultConfig.GasLimit),
 	}
 
-	if fileConfig.ProposeConfig != nil {
+	if fileConfig.ProposerConfig != nil {
 		vpSettings.ProposeConfig = make(map[[fieldparams.BLSPubkeyLength]byte]*validatorServiceConfig.ProposerOption)
-		for key, option := range fileConfig.ProposeConfig {
+		for key, option := range fileConfig.ProposerConfig {
 			decodedKey, err := hexutil.Decode(key)
 			if err != nil {
 				return nil, errors.Wrapf(err, "could not decode public key %s", key)
