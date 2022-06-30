@@ -391,7 +391,10 @@ func convertToAddrInfo(node *enode.Node) (*peer.AddrInfo, ma.Multiaddr, error) {
 
 func convertToSingleMultiAddr(node *enode.Node) (ma.Multiaddr, error) {
 	pubkey := node.Pubkey()
-	assertedKey := convertToInterfacePubkey(pubkey)
+	assertedKey, err := convertToInterfacePubkey(pubkey)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get pubkey")
+	}
 	id, err := peer.IDFromPublicKey(assertedKey)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get peer id")
@@ -401,7 +404,10 @@ func convertToSingleMultiAddr(node *enode.Node) (ma.Multiaddr, error) {
 
 func convertToUdpMultiAddr(node *enode.Node) ([]ma.Multiaddr, error) {
 	pubkey := node.Pubkey()
-	assertedKey := convertToInterfacePubkey(pubkey)
+	assertedKey, err := convertToInterfacePubkey(pubkey)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get pubkey")
+	}
 	id, err := peer.IDFromPublicKey(assertedKey)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get peer id")

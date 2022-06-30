@@ -36,7 +36,8 @@ func TestPrivateKeyLoading(t *testing.T) {
 	}
 	pKey, err := privKey(cfg)
 	require.NoError(t, err, "Could not apply option")
-	newPkey := convertToInterfacePrivkey(pKey)
+	newPkey, err := convertToInterfacePrivkey(pKey)
+	require.NoError(t, err)
 	rawBytes, err := key.Raw()
 	require.NoError(t, err)
 	newRaw, err := newPkey.Raw()
