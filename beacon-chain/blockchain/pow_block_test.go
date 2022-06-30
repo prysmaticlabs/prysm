@@ -71,7 +71,7 @@ func Test_validTerminalPowBlock(t *testing.T) {
 			want:              true,
 		},
 		{
-			name:              "hive test",
+			name:              "hive test scenario",
 			currentDifficulty: uint256.NewInt(500),
 			parentDifficulty:  uint256.NewInt(498),
 			ttd:               498,
