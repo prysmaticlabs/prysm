@@ -23,7 +23,7 @@ func RunShuffleTests(t *testing.T, config string) {
 	testFolders, testsFolderPath := utils.TestFolders(t, config, "phase0", "shuffling/core/shuffle")
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
-			testCaseFile, err := util.BazelFileBytes(path.Join(testsFolderPath, folder.Name(), "mapping.yaml"))
+			testCaseFile, err := util.NewBazelUtil().BazelFileBytes(path.Join(testsFolderPath, folder.Name(), "mapping.yaml"))
 			require.NoError(t, err, "Could not read YAML tests directory")
 
 			testCase := &ShuffleTestCase{}

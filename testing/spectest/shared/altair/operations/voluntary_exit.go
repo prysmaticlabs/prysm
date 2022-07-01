@@ -21,7 +21,7 @@ func RunVoluntaryExitTest(t *testing.T, config string) {
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			folderPath := path.Join(testsFolderPath, folder.Name())
-			exitFile, err := util.BazelFileBytes(folderPath, "voluntary_exit.ssz_snappy")
+			exitFile, err := util.NewBazelUtil().BazelFileBytes(folderPath, "voluntary_exit.ssz_snappy")
 			require.NoError(t, err)
 			exitSSZ, err := snappy.Decode(nil /* dst */, exitFile)
 			require.NoError(t, err, "Failed to decompress")

@@ -28,25 +28,25 @@ func init() {
 // Run executes "forkchoice" test.
 func Run(t *testing.T, config string, fork int) {
 	require.NoError(t, utils.SetConfig(t, config))
+	bu := util.NewBazelUtil()
 	testFolders, _ := utils.TestFolders(t, config, version.String(fork), "fork_choice")
-
 	for _, folder := range testFolders {
 		folderPath := path.Join("fork_choice", folder.Name(), "pyspec_tests")
 		testFolders, testsFolderPath := utils.TestFolders(t, config, version.String(fork), folderPath)
 
 		for _, folder := range testFolders {
 			t.Run(folder.Name(), func(t *testing.T) {
-				preStepsFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), "steps.yaml")
+				preStepsFile, err := bu.BazelFileBytes(testsFolderPath, folder.Name(), "steps.yaml")
 				require.NoError(t, err)
 				var steps []Step
 				require.NoError(t, utils.UnmarshalYaml(preStepsFile, &steps))
 
-				preBeaconStateFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), "anchor_state.ssz_snappy")
+				preBeaconStateFile, err := bu.BazelFileBytes(testsFolderPath, folder.Name(), "anchor_state.ssz_snappy")
 				require.NoError(t, err)
 				preBeaconStateSSZ, err := snappy.Decode(nil /* dst */, preBeaconStateFile)
 				require.NoError(t, err)
 
-				blockFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), "anchor_block.ssz_snappy")
+				blockFile, err := bu.BazelFileBytes(testsFolderPath, folder.Name(), "anchor_block.ssz_snappy")
 				require.NoError(t, err)
 				blockSSZ, err := snappy.Decode(nil /* dst */, blockFile)
 				require.NoError(t, err)
@@ -74,7 +74,7 @@ func Run(t *testing.T, config string, fork int) {
 						builder.Tick(t, int64(*step.Tick))
 					}
 					if step.Block != nil {
-						blockFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), fmt.Sprint(*step.Block, ".ssz_snappy"))
+						blockFile, err := bu.BazelFileBytes(testsFolderPath, folder.Name(), fmt.Sprint(*step.Block, ".ssz_snappy"))
 						require.NoError(t, err)
 						blockSSZ, err := snappy.Decode(nil /* dst */, blockFile)
 						require.NoError(t, err)
@@ -96,7 +96,7 @@ func Run(t *testing.T, config string, fork int) {
 						}
 					}
 					if step.AttesterSlashing != nil {
-						slashingFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), fmt.Sprint(*step.AttesterSlashing, ".ssz_snappy"))
+						slashingFile, err := bu.BazelFileBytes(testsFolderPath, folder.Name(), fmt.Sprint(*step.AttesterSlashing, ".ssz_snappy"))
 						require.NoError(t, err)
 						slashingSSZ, err := snappy.Decode(nil /* dst */, slashingFile)
 						require.NoError(t, err)
@@ -105,7 +105,7 @@ func Run(t *testing.T, config string, fork int) {
 						builder.AttesterSlashing(slashing)
 					}
 					if step.Attestation != nil {
-						attFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), fmt.Sprint(*step.Attestation, ".ssz_snappy"))
+						attFile, err := bu.BazelFileBytes(testsFolderPath, folder.Name(), fmt.Sprint(*step.Attestation, ".ssz_snappy"))
 						require.NoError(t, err)
 						attSSZ, err := snappy.Decode(nil /* dst */, attFile)
 						require.NoError(t, err)
@@ -114,7 +114,7 @@ func Run(t *testing.T, config string, fork int) {
 						builder.Attestation(t, att)
 					}
 					if step.PowBlock != nil {
-						powBlockFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), fmt.Sprint(*step.PowBlock, ".ssz_snappy"))
+						powBlockFile, err := bu.BazelFileBytes(testsFolderPath, folder.Name(), fmt.Sprint(*step.PowBlock, ".ssz_snappy"))
 						require.NoError(t, err)
 						p, err := snappy.Decode(nil /* dst */, powBlockFile)
 						require.NoError(t, err)

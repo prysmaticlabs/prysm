@@ -22,13 +22,14 @@ import (
 func RunUpgradeToAltair(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
 
+	bu := util.NewBazelUtil()
 	testFolders, testsFolderPath := utils.TestFolders(t, config, "altair", "fork/fork/pyspec_tests")
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			helpers.ClearCache()
 			folderPath := path.Join(testsFolderPath, folder.Name())
 
-			preStateFile, err := util.BazelFileBytes(path.Join(folderPath, "pre.ssz_snappy"))
+			preStateFile, err := bu.BazelFileBytes(path.Join(folderPath, "pre.ssz_snappy"))
 			require.NoError(t, err)
 			preStateSSZ, err := snappy.Decode(nil /* dst */, preStateFile)
 			require.NoError(t, err, "Failed to decompress")
@@ -43,7 +44,7 @@ func RunUpgradeToAltair(t *testing.T, config string) {
 			postStateFromFunction, err := statealtair.ProtobufBeaconState(postState.InnerStateUnsafe())
 			require.NoError(t, err)
 
-			postStateFile, err := util.BazelFileBytes(path.Join(folderPath, "post.ssz_snappy"))
+			postStateFile, err := bu.BazelFileBytes(path.Join(folderPath, "post.ssz_snappy"))
 			require.NoError(t, err)
 			postStateSSZ, err := snappy.Decode(nil /* dst */, postStateFile)
 			require.NoError(t, err, "Failed to decompress")

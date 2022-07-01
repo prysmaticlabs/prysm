@@ -22,17 +22,18 @@ import (
 // RunBlockHeaderTest executes "operations/block_header" tests.
 func RunBlockHeaderTest(t *testing.T, config string) {
 	require.NoError(t, utils.SetConfig(t, config))
+	bu := util.NewBazelUtil()
 	testFolders, testsFolderPath := utils.TestFolders(t, config, "phase0", "operations/block_header/pyspec_tests")
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
-			blockFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), "block.ssz_snappy")
+			blockFile, err := bu.BazelFileBytes(testsFolderPath, folder.Name(), "block.ssz_snappy")
 			require.NoError(t, err)
 			blockSSZ, err := snappy.Decode(nil /* dst */, blockFile)
 			require.NoError(t, err, "Failed to decompress")
 			block := &ethpb.BeaconBlock{}
 			require.NoError(t, block.UnmarshalSSZ(blockSSZ), "Failed to unmarshal")
 
-			preBeaconStateFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), "pre.ssz_snappy")
+			preBeaconStateFile, err := bu.BazelFileBytes(testsFolderPath, folder.Name(), "pre.ssz_snappy")
 			require.NoError(t, err)
 			preBeaconStateSSZ, err := snappy.Decode(nil /* dst */, preBeaconStateFile)
 			require.NoError(t, err, "Failed to decompress")

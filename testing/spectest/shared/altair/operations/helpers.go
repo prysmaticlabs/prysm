@@ -31,7 +31,7 @@ func RunBlockOperationTest(
 	body *ethpb.BeaconBlockBodyAltair,
 	operationFn blockOperation,
 ) {
-	preBeaconStateFile, err := util.BazelFileBytes(path.Join(folderPath, "pre.ssz_snappy"))
+	preBeaconStateFile, err := util.NewBazelUtil().BazelFileBytes(path.Join(folderPath, "pre.ssz_snappy"))
 	require.NoError(t, err)
 	preBeaconStateSSZ, err := snappy.Decode(nil /* dst */, preBeaconStateFile)
 	require.NoError(t, err, "Failed to decompress")

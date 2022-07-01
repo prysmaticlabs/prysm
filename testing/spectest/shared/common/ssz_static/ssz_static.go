@@ -18,6 +18,7 @@ import (
 // HTR methods via the customHTR callback.
 func RunSSZStaticTests(t *testing.T, config, forkOrPhase string, unmarshaller Unmarshaller, customHtr CustomHTRAdder) {
 	require.NoError(t, utils.SetConfig(t, config))
+	bu := util.NewBazelUtil()
 	testFolders, _ := utils.TestFolders(t, config, forkOrPhase, "ssz_static")
 
 	if len(testFolders) == 0 {
@@ -42,14 +43,14 @@ func RunSSZStaticTests(t *testing.T, config, forkOrPhase string, unmarshaller Un
 
 			for _, innerFolder := range innerTestFolders {
 				t.Run(path.Join(modeFolder.Name(), folder.Name(), innerFolder.Name()), func(t *testing.T) {
-					serializedBytes, err := util.BazelFileBytes(innerTestsFolderPath, innerFolder.Name(), "serialized.ssz_snappy")
+					serializedBytes, err := bu.BazelFileBytes(innerTestsFolderPath, innerFolder.Name(), "serialized.ssz_snappy")
 					require.NoError(t, err)
 					serializedSSZ, err := snappy.Decode(nil /* dst */, serializedBytes)
 					require.NoError(t, err, "Failed to decompress")
 					object, err := unmarshaller(t, serializedSSZ, folder.Name())
 					require.NoError(t, err, "Could not unmarshall serialized SSZ")
 
-					rootsYamlFile, err := util.BazelFileBytes(innerTestsFolderPath, innerFolder.Name(), "roots.yaml")
+					rootsYamlFile, err := bu.BazelFileBytes(innerTestsFolderPath, innerFolder.Name(), "roots.yaml")
 					require.NoError(t, err)
 					rootsYaml := &SSZRoots{}
 					require.NoError(t, utils.UnmarshalYaml(rootsYamlFile, rootsYaml), "Failed to Unmarshal")

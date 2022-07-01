@@ -26,7 +26,7 @@ func RunEpochOperationTest(
 	testFolderPath string,
 	operationFn epochOperation,
 ) {
-	preBeaconStateFile, err := util.BazelFileBytes(path.Join(testFolderPath, "pre.ssz_snappy"))
+	preBeaconStateFile, err := util.NewBazelUtil().BazelFileBytes(path.Join(testFolderPath, "pre.ssz_snappy"))
 	require.NoError(t, err)
 	preBeaconStateSSZ, err := snappy.Decode(nil /* dst */, preBeaconStateFile)
 	require.NoError(t, err, "Failed to decompress")

@@ -22,7 +22,7 @@ func RunProposerSlashingTest(t *testing.T, config string) {
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			folderPath := path.Join(testsFolderPath, folder.Name())
-			proposerSlashingFile, err := util.BazelFileBytes(folderPath, "proposer_slashing.ssz_snappy")
+			proposerSlashingFile, err := util.NewBazelUtil().BazelFileBytes(folderPath, "proposer_slashing.ssz_snappy")
 			require.NoError(t, err)
 			proposerSlashingSSZ, err := snappy.Decode(nil /* dst */, proposerSlashingFile)
 			require.NoError(t, err, "Failed to decompress")

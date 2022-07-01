@@ -21,7 +21,7 @@ func RunSyncCommitteeTest(t *testing.T, config string) {
 	for _, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
 			folderPath := path.Join(testsFolderPath, folder.Name())
-			syncCommitteeFile, err := util.BazelFileBytes(folderPath, "sync_aggregate.ssz_snappy")
+			syncCommitteeFile, err := util.NewBazelUtil().BazelFileBytes(folderPath, "sync_aggregate.ssz_snappy")
 			require.NoError(t, err)
 			syncCommitteeSSZ, err := snappy.Decode(nil /* dst */, syncCommitteeFile)
 			require.NoError(t, err, "Failed to decompress")

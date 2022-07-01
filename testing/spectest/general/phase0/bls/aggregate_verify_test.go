@@ -24,7 +24,7 @@ func testAggregateVerify(t *testing.T) {
 
 	for i, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
-			file, err := util.BazelFileBytes(path.Join(testFolderPath, folder.Name(), "data.yaml"))
+			file, err := util.NewBazelUtil().BazelFileBytes(path.Join(testFolderPath, folder.Name(), "data.yaml"))
 			require.NoError(t, err)
 			test := &AggregateVerifyTest{}
 			require.NoError(t, yaml.Unmarshal(file, test))
