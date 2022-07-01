@@ -36,9 +36,17 @@ type BlockGenConfig struct {
 	NumVoluntaryExits    uint64
 }
 
+// BlockUtil is an empty struct used as the receiver for all block utility methods.
+type BlockUtil struct{}
+
+// NewBlockUtil returns a set of block utilities.
+func NewBlockUtil() *BlockUtil {
+	return &BlockUtil{}
+}
+
 // DefaultBlockGenConfig returns the block config that utilizes the
 // current params in the beacon config.
-func DefaultBlockGenConfig() *BlockGenConfig {
+func (bu *BlockUtil) DefaultBlockGenConfig() *BlockGenConfig {
 	return &BlockGenConfig{
 		NumProposerSlashings: 0,
 		NumAttesterSlashings: 0,
@@ -49,7 +57,7 @@ func DefaultBlockGenConfig() *BlockGenConfig {
 }
 
 // NewBeaconBlock creates a beacon block with minimum marshalable fields.
-func NewBeaconBlock() *ethpb.SignedBeaconBlock {
+func (bu *BlockUtil) NewBeaconBlock() *ethpb.SignedBeaconBlock {
 	return &ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
 			ParentRoot: make([]byte, fieldparams.RootLength),
@@ -74,7 +82,7 @@ func NewBeaconBlock() *ethpb.SignedBeaconBlock {
 
 // GenerateFullBlock generates a fully valid block with the requested parameters.
 // Use BlockGenConfig to declare the conditions you would like the block generated under.
-func GenerateFullBlock(
+func (bu *BlockUtil) GenerateFullBlock(
 	bState state.BeaconState,
 	privs []bls.SecretKey,
 	conf *BlockGenConfig,
@@ -187,7 +195,7 @@ func GenerateFullBlock(
 		return nil, err
 	}
 
-	signature, err := BlockSignature(bState, block, privs)
+	signature, err := bu.BlockSignature(bState, block, privs)
 	if err != nil {
 		return nil, err
 	}
@@ -196,12 +204,12 @@ func GenerateFullBlock(
 }
 
 // GenerateProposerSlashingForValidator for a specific validator index.
-func GenerateProposerSlashingForValidator(
+func (bu *BlockUtil) GenerateProposerSlashingForValidator(
 	bState state.BeaconState,
 	priv bls.SecretKey,
 	idx types.ValidatorIndex,
 ) (*ethpb.ProposerSlashing, error) {
-	header1 := HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
+	header1 := bu.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
 			ProposerIndex: idx,
 			Slot:          bState.Slot(),
@@ -246,7 +254,7 @@ func generateProposerSlashings(
 		if err != nil {
 			return nil, err
 		}
-		slashing, err := GenerateProposerSlashingForValidator(bState, privs[proposerIndex], proposerIndex)
+		slashing, err := NewBlockUtil().GenerateProposerSlashingForValidator(bState, privs[proposerIndex], proposerIndex)
 		if err != nil {
 			return nil, err
 		}
@@ -256,7 +264,7 @@ func generateProposerSlashings(
 }
 
 // GenerateAttesterSlashingForValidator for a specific validator index.
-func GenerateAttesterSlashingForValidator(
+func (bu *BlockUtil) GenerateAttesterSlashingForValidator(
 	bState state.BeaconState,
 	priv bls.SecretKey,
 	idx types.ValidatorIndex,
@@ -327,7 +335,7 @@ func generateAttesterSlashings(
 		}
 		randIndex := randGen.Uint64() % uint64(len(committee))
 		valIndex := committee[randIndex]
-		slashing, err := GenerateAttesterSlashingForValidator(bState, privs[valIndex], valIndex)
+		slashing, err := NewBlockUtil().GenerateAttesterSlashingForValidator(bState, privs[valIndex], valIndex)
 		if err != nil {
 			return nil, err
 		}
@@ -394,17 +402,17 @@ func randValIndex(bState state.BeaconState) (types.ValidatorIndex, error) {
 
 // HydrateSignedBeaconHeader hydrates a signed beacon block header with correct field length sizes
 // to comply with fssz marshalling and unmarshalling rules.
-func HydrateSignedBeaconHeader(h *ethpb.SignedBeaconBlockHeader) *ethpb.SignedBeaconBlockHeader {
+func (bu *BlockUtil) HydrateSignedBeaconHeader(h *ethpb.SignedBeaconBlockHeader) *ethpb.SignedBeaconBlockHeader {
 	if h.Signature == nil {
 		h.Signature = make([]byte, fieldparams.BLSSignatureLength)
 	}
-	h.Header = HydrateBeaconHeader(h.Header)
+	h.Header = bu.HydrateBeaconHeader(h.Header)
 	return h
 }
 
 // HydrateBeaconHeader hydrates a beacon block header with correct field length sizes
 // to comply with fssz marshalling and unmarshalling rules.
-func HydrateBeaconHeader(h *ethpb.BeaconBlockHeader) *ethpb.BeaconBlockHeader {
+func (bu *BlockUtil) HydrateBeaconHeader(h *ethpb.BeaconBlockHeader) *ethpb.BeaconBlockHeader {
 	if h == nil {
 		h = &ethpb.BeaconBlockHeader{}
 	}
@@ -422,17 +430,17 @@ func HydrateBeaconHeader(h *ethpb.BeaconBlockHeader) *ethpb.BeaconBlockHeader {
 
 // HydrateSignedBeaconBlock hydrates a signed beacon block with correct field length sizes
 // to comply with fssz marshalling and unmarshalling rules.
-func HydrateSignedBeaconBlock(b *ethpb.SignedBeaconBlock) *ethpb.SignedBeaconBlock {
+func (bu *BlockUtil) HydrateSignedBeaconBlock(b *ethpb.SignedBeaconBlock) *ethpb.SignedBeaconBlock {
 	if b.Signature == nil {
 		b.Signature = make([]byte, fieldparams.BLSSignatureLength)
 	}
-	b.Block = HydrateBeaconBlock(b.Block)
+	b.Block = bu.HydrateBeaconBlock(b.Block)
 	return b
 }
 
 // HydrateBeaconBlock hydrates a beacon block with correct field length sizes
 // to comply with fssz marshalling and unmarshalling rules.
-func HydrateBeaconBlock(b *ethpb.BeaconBlock) *ethpb.BeaconBlock {
+func (bu *BlockUtil) HydrateBeaconBlock(b *ethpb.BeaconBlock) *ethpb.BeaconBlock {
 	if b == nil {
 		b = &ethpb.BeaconBlock{}
 	}
@@ -442,13 +450,13 @@ func HydrateBeaconBlock(b *ethpb.BeaconBlock) *ethpb.BeaconBlock {
 	if b.StateRoot == nil {
 		b.StateRoot = make([]byte, fieldparams.RootLength)
 	}
-	b.Body = HydrateBeaconBlockBody(b.Body)
+	b.Body = bu.HydrateBeaconBlockBody(b.Body)
 	return b
 }
 
 // HydrateBeaconBlockBody hydrates a beacon block body with correct field length sizes
 // to comply with fssz marshalling and unmarshalling rules.
-func HydrateBeaconBlockBody(b *ethpb.BeaconBlockBody) *ethpb.BeaconBlockBody {
+func (bu *BlockUtil) HydrateBeaconBlockBody(b *ethpb.BeaconBlockBody) *ethpb.BeaconBlockBody {
 	if b == nil {
 		b = &ethpb.BeaconBlockBody{}
 	}
@@ -469,17 +477,17 @@ func HydrateBeaconBlockBody(b *ethpb.BeaconBlockBody) *ethpb.BeaconBlockBody {
 
 // HydrateV1SignedBeaconBlock hydrates a signed beacon block with correct field length sizes
 // to comply with fssz marshalling and unmarshalling rules.
-func HydrateV1SignedBeaconBlock(b *v1.SignedBeaconBlock) *v1.SignedBeaconBlock {
+func (bu *BlockUtil) HydrateV1SignedBeaconBlock(b *v1.SignedBeaconBlock) *v1.SignedBeaconBlock {
 	if b.Signature == nil {
 		b.Signature = make([]byte, fieldparams.BLSSignatureLength)
 	}
-	b.Block = HydrateV1BeaconBlock(b.Block)
+	b.Block = bu.HydrateV1BeaconBlock(b.Block)
 	return b
 }
 
 // HydrateV1BeaconBlock hydrates a beacon block with correct field length sizes
 // to comply with fssz marshalling and unmarshalling rules.
-func HydrateV1BeaconBlock(b *v1.BeaconBlock) *v1.BeaconBlock {
+func (bu *BlockUtil) HydrateV1BeaconBlock(b *v1.BeaconBlock) *v1.BeaconBlock {
 	if b == nil {
 		b = &v1.BeaconBlock{}
 	}
@@ -489,13 +497,13 @@ func HydrateV1BeaconBlock(b *v1.BeaconBlock) *v1.BeaconBlock {
 	if b.StateRoot == nil {
 		b.StateRoot = make([]byte, fieldparams.RootLength)
 	}
-	b.Body = HydrateV1BeaconBlockBody(b.Body)
+	b.Body = bu.HydrateV1BeaconBlockBody(b.Body)
 	return b
 }
 
 // HydrateV1BeaconBlockBody hydrates a beacon block body with correct field length sizes
 // to comply with fssz marshalling and unmarshalling rules.
-func HydrateV1BeaconBlockBody(b *v1.BeaconBlockBody) *v1.BeaconBlockBody {
+func (bu *BlockUtil) HydrateV1BeaconBlockBody(b *v1.BeaconBlockBody) *v1.BeaconBlockBody {
 	if b == nil {
 		b = &v1.BeaconBlockBody{}
 	}
@@ -883,7 +891,7 @@ func HydrateV2BlindedBeaconBlockBodyBellatrix(b *v2.BlindedBeaconBlockBodyBellat
 	return b
 }
 
-func SaveBlock(tb assertions.AssertionTestingTB, ctx context.Context, db iface.NoHeadAccessDatabase, b interface{}) interfaces.SignedBeaconBlock {
+func (bu *BlockUtil) SaveBlock(tb assertions.AssertionTestingTB, ctx context.Context, db iface.NoHeadAccessDatabase, b interface{}) interfaces.SignedBeaconBlock {
 	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
 	require.NoError(tb, err)
 	require.NoError(tb, db.SaveBlock(ctx, wsb))
