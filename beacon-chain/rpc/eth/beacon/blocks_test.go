@@ -27,18 +27,19 @@ import (
 
 func fillDBTestBlocks(ctx context.Context, t *testing.T, beaconDB db.Database) (*ethpbalpha.SignedBeaconBlock, []*ethpbalpha.BeaconBlockContainer) {
 	parentRoot := [32]byte{1, 2, 3}
-	genBlk := util.NewBeaconBlock()
+	bu := util.NewBlockUtil()
+	genBlk := bu.NewBeaconBlock()
 	genBlk.Block.ParentRoot = parentRoot[:]
 	root, err := genBlk.Block.HashTreeRoot()
 	require.NoError(t, err)
-	util.SaveBlock(t, ctx, beaconDB, genBlk)
+	bu.SaveBlock(t, ctx, beaconDB, genBlk)
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, root))
 
 	count := types.Slot(100)
 	blks := make([]interfaces.SignedBeaconBlock, count)
 	blkContainers := make([]*ethpbalpha.BeaconBlockContainer, count)
 	for i := types.Slot(0); i < count; i++ {
-		b := util.NewBeaconBlock()
+		b := bu.NewBeaconBlock()
 		b.Block.Slot = i
 		b.Block.ParentRoot = bytesutil.PadTo([]byte{uint8(i)}, 32)
 		au := util.AttestationUtil{}
@@ -75,7 +76,7 @@ func fillDBTestBlocksAltair(ctx context.Context, t *testing.T, beaconDB db.Datab
 	genBlk.Block.ParentRoot = parentRoot[:]
 	root, err := genBlk.Block.HashTreeRoot()
 	require.NoError(t, err)
-	util.SaveBlock(t, ctx, beaconDB, genBlk)
+	util.NewBlockUtil().SaveBlock(t, ctx, beaconDB, genBlk)
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, root))
 
 	count := types.Slot(100)
@@ -118,7 +119,7 @@ func fillDBTestBlocksBellatrix(ctx context.Context, t *testing.T, beaconDB db.Da
 	genBlk.Block.ParentRoot = parentRoot[:]
 	root, err := genBlk.Block.HashTreeRoot()
 	require.NoError(t, err)
-	util.SaveBlock(t, ctx, beaconDB, genBlk)
+	util.NewBlockUtil().SaveBlock(t, ctx, beaconDB, genBlk)
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, root))
 
 	count := types.Slot(100)
@@ -164,14 +165,15 @@ func TestServer_GetBlockHeader(t *testing.T) {
 	require.NoError(t, err)
 	headBlock := blkContainers[len(blkContainers)-1]
 
-	b2 := util.NewBeaconBlock()
+	bu := util.NewBlockUtil()
+	b2 := bu.NewBeaconBlock()
 	b2.Block.Slot = 30
 	b2.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
-	util.SaveBlock(t, ctx, beaconDB, b2)
-	b3 := util.NewBeaconBlock()
+	bu.SaveBlock(t, ctx, beaconDB, b2)
+	b3 := bu.NewBeaconBlock()
 	b3.Block.Slot = 30
 	b3.Block.ParentRoot = bytesutil.PadTo([]byte{4}, 32)
-	util.SaveBlock(t, ctx, beaconDB, b3)
+	bu.SaveBlock(t, ctx, beaconDB, b3)
 	wsb, err := wrapper.WrappedSignedBeaconBlock(headBlock.Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block)
 	require.NoError(t, err)
 
@@ -315,22 +317,23 @@ func TestServer_ListBlockHeaders(t *testing.T) {
 		OptimisticModeFetcher: mockChainFetcher,
 	}
 
-	b2 := util.NewBeaconBlock()
+	bu := util.NewBlockUtil()
+	b2 := bu.NewBeaconBlock()
 	b2.Block.Slot = 30
 	b2.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
-	util.SaveBlock(t, ctx, beaconDB, b2)
-	b3 := util.NewBeaconBlock()
+	bu.SaveBlock(t, ctx, beaconDB, b2)
+	b3 := bu.NewBeaconBlock()
 	b3.Block.Slot = 30
 	b3.Block.ParentRoot = bytesutil.PadTo([]byte{4}, 32)
-	util.SaveBlock(t, ctx, beaconDB, b3)
-	b4 := util.NewBeaconBlock()
+	bu.SaveBlock(t, ctx, beaconDB, b3)
+	b4 := bu.NewBeaconBlock()
 	b4.Block.Slot = 31
 	b4.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
-	util.SaveBlock(t, ctx, beaconDB, b4)
-	b5 := util.NewBeaconBlock()
+	bu.SaveBlock(t, ctx, beaconDB, b4)
+	b5 := bu.NewBeaconBlock()
 	b5.Block.Slot = 28
 	b5.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
-	util.SaveBlock(t, ctx, beaconDB, b5)
+	bu.SaveBlock(t, ctx, beaconDB, b5)
 
 	tests := []struct {
 		name       string
@@ -421,12 +424,13 @@ func TestServer_ListBlockHeaders(t *testing.T) {
 }
 
 func TestServer_SubmitBlock_OK(t *testing.T) {
+	bu := util.NewBlockUtil()
 	t.Run("Phase 0", func(t *testing.T) {
 		beaconDB := dbTest.SetupDB(t)
 		ctx := context.Background()
 
-		genesis := util.NewBeaconBlock()
-		util.SaveBlock(t, context.Background(), beaconDB, genesis)
+		genesis := bu.NewBeaconBlock()
+		bu.SaveBlock(t, context.Background(), beaconDB, genesis)
 
 		numDeposits := uint64(64)
 		beaconState, _ := util.DeterministicGenesisState(t, numDeposits)
@@ -445,12 +449,12 @@ func TestServer_SubmitBlock_OK(t *testing.T) {
 			Broadcaster:      mockp2p.NewTestP2P(t),
 			HeadFetcher:      c,
 		}
-		req := util.NewBeaconBlock()
+		req := bu.NewBeaconBlock()
 		req.Block.Slot = 5
 		req.Block.ParentRoot = bsRoot[:]
 		v1Block, err := migration.V1Alpha1ToV1SignedBlock(req)
 		require.NoError(t, err)
-		util.SaveBlock(t, ctx, beaconDB, req)
+		bu.SaveBlock(t, ctx, beaconDB, req)
 		blockReq := &ethpbv2.SignedBeaconBlockContainerV2{
 			Message:   &ethpbv2.SignedBeaconBlockContainerV2_Phase0Block{Phase0Block: v1Block.Block},
 			Signature: v1Block.Signature,
@@ -464,7 +468,7 @@ func TestServer_SubmitBlock_OK(t *testing.T) {
 		ctx := context.Background()
 
 		genesis := util.NewBeaconBlockAltair()
-		util.SaveBlock(t, context.Background(), beaconDB, genesis)
+		bu.SaveBlock(t, context.Background(), beaconDB, genesis)
 
 		numDeposits := uint64(64)
 		beaconState, _ := util.DeterministicGenesisState(t, numDeposits)
@@ -488,7 +492,7 @@ func TestServer_SubmitBlock_OK(t *testing.T) {
 		req.Block.ParentRoot = bsRoot[:]
 		v2Block, err := migration.V1Alpha1BeaconBlockAltairToV2(req.Block)
 		require.NoError(t, err)
-		util.SaveBlock(t, ctx, beaconDB, req)
+		bu.SaveBlock(t, ctx, beaconDB, req)
 		blockReq := &ethpbv2.SignedBeaconBlockContainerV2{
 			Message:   &ethpbv2.SignedBeaconBlockContainerV2_AltairBlock{AltairBlock: v2Block},
 			Signature: req.Signature,
@@ -502,7 +506,7 @@ func TestServer_SubmitBlock_OK(t *testing.T) {
 		ctx := context.Background()
 
 		genesis := util.NewBeaconBlockBellatrix()
-		util.SaveBlock(t, context.Background(), beaconDB, genesis)
+		bu.SaveBlock(t, context.Background(), beaconDB, genesis)
 
 		numDeposits := uint64(64)
 		beaconState, _ := util.DeterministicGenesisState(t, numDeposits)
@@ -526,7 +530,7 @@ func TestServer_SubmitBlock_OK(t *testing.T) {
 		req.Block.ParentRoot = bsRoot[:]
 		v2Block, err := migration.V1Alpha1BeaconBlockBellatrixToV2(req.Block)
 		require.NoError(t, err)
-		util.SaveBlock(t, ctx, beaconDB, req)
+		bu.SaveBlock(t, ctx, beaconDB, req)
 		blockReq := &ethpbv2.SignedBeaconBlockContainerV2{
 			Message:   &ethpbv2.SignedBeaconBlockContainerV2_BellatrixBlock{BellatrixBlock: v2Block},
 			Signature: req.Signature,
@@ -537,12 +541,13 @@ func TestServer_SubmitBlock_OK(t *testing.T) {
 }
 
 func TestServer_SubmitBlockSSZ_OK(t *testing.T) {
+	bu := util.NewBlockUtil()
 	t.Run("Phase 0", func(t *testing.T) {
 		beaconDB := dbTest.SetupDB(t)
 		ctx := context.Background()
 
-		genesis := util.NewBeaconBlock()
-		util.SaveBlock(t, context.Background(), beaconDB, genesis)
+		genesis := bu.NewBeaconBlock()
+		bu.SaveBlock(t, context.Background(), beaconDB, genesis)
 
 		numDeposits := uint64(64)
 		beaconState, _ := util.DeterministicGenesisState(t, numDeposits)
@@ -561,10 +566,10 @@ func TestServer_SubmitBlockSSZ_OK(t *testing.T) {
 			Broadcaster:      mockp2p.NewTestP2P(t),
 			HeadFetcher:      c,
 		}
-		req := util.NewBeaconBlock()
+		req := bu.NewBeaconBlock()
 		req.Block.Slot = 5
 		req.Block.ParentRoot = bsRoot[:]
-		util.SaveBlock(t, ctx, beaconDB, req)
+		bu.SaveBlock(t, ctx, beaconDB, req)
 		blockSsz, err := req.MarshalSSZ()
 		require.NoError(t, err)
 		blockReq := &ethpbv2.SSZContainer{
@@ -582,7 +587,7 @@ func TestServer_SubmitBlockSSZ_OK(t *testing.T) {
 		ctx := context.Background()
 
 		genesis := util.NewBeaconBlockAltair()
-		util.SaveBlock(t, context.Background(), beaconDB, genesis)
+		bu.SaveBlock(t, context.Background(), beaconDB, genesis)
 
 		numDeposits := uint64(64)
 		beaconState, _ := util.DeterministicGenesisState(t, numDeposits)
@@ -604,7 +609,7 @@ func TestServer_SubmitBlockSSZ_OK(t *testing.T) {
 		req := util.NewBeaconBlockAltair()
 		req.Block.Slot = params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().AltairForkEpoch))
 		req.Block.ParentRoot = bsRoot[:]
-		util.SaveBlock(t, ctx, beaconDB, req)
+		bu.SaveBlock(t, ctx, beaconDB, req)
 		blockSsz, err := req.MarshalSSZ()
 		require.NoError(t, err)
 		blockReq := &ethpbv2.SSZContainer{
@@ -629,7 +634,7 @@ func TestServer_SubmitBlockSSZ_OK(t *testing.T) {
 		ctx := context.Background()
 
 		genesis := util.NewBeaconBlockBellatrix()
-		util.SaveBlock(t, context.Background(), beaconDB, genesis)
+		bu.SaveBlock(t, context.Background(), beaconDB, genesis)
 
 		numDeposits := uint64(64)
 		beaconState, _ := util.DeterministicGenesisState(t, numDeposits)
@@ -651,7 +656,7 @@ func TestServer_SubmitBlockSSZ_OK(t *testing.T) {
 		req := util.NewBeaconBlockBellatrix()
 		req.Block.Slot = params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().BellatrixForkEpoch))
 		req.Block.ParentRoot = bsRoot[:]
-		util.SaveBlock(t, ctx, beaconDB, req)
+		bu.SaveBlock(t, ctx, beaconDB, req)
 		blockSsz, err := req.MarshalSSZ()
 		require.NoError(t, err)
 		blockReq := &ethpbv2.SSZContainer{
@@ -666,12 +671,13 @@ func TestServer_SubmitBlockSSZ_OK(t *testing.T) {
 }
 
 func TestServer_SubmitBlindedBlockSSZ_OK(t *testing.T) {
+	bu := util.NewBlockUtil()
 	t.Run("Phase 0", func(t *testing.T) {
 		beaconDB := dbTest.SetupDB(t)
 		ctx := context.Background()
 
-		genesis := util.NewBeaconBlock()
-		util.SaveBlock(t, context.Background(), beaconDB, genesis)
+		genesis := bu.NewBeaconBlock()
+		bu.SaveBlock(t, context.Background(), beaconDB, genesis)
 
 		numDeposits := uint64(64)
 		beaconState, _ := util.DeterministicGenesisState(t, numDeposits)
@@ -690,10 +696,10 @@ func TestServer_SubmitBlindedBlockSSZ_OK(t *testing.T) {
 			Broadcaster:      mockp2p.NewTestP2P(t),
 			HeadFetcher:      c,
 		}
-		req := util.NewBeaconBlock()
+		req := bu.NewBeaconBlock()
 		req.Block.Slot = 5
 		req.Block.ParentRoot = bsRoot[:]
-		util.SaveBlock(t, ctx, beaconDB, req)
+		bu.SaveBlock(t, ctx, beaconDB, req)
 		blockSsz, err := req.MarshalSSZ()
 		require.NoError(t, err)
 		blockReq := &ethpbv2.SSZContainer{
@@ -711,7 +717,7 @@ func TestServer_SubmitBlindedBlockSSZ_OK(t *testing.T) {
 		ctx := context.Background()
 
 		genesis := util.NewBeaconBlockAltair()
-		util.SaveBlock(t, context.Background(), beaconDB, genesis)
+		bu.SaveBlock(t, context.Background(), beaconDB, genesis)
 
 		numDeposits := uint64(64)
 		beaconState, _ := util.DeterministicGenesisState(t, numDeposits)
@@ -733,7 +739,7 @@ func TestServer_SubmitBlindedBlockSSZ_OK(t *testing.T) {
 		req := util.NewBeaconBlockAltair()
 		req.Block.Slot = params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().AltairForkEpoch))
 		req.Block.ParentRoot = bsRoot[:]
-		util.SaveBlock(t, ctx, beaconDB, req)
+		bu.SaveBlock(t, ctx, beaconDB, req)
 		blockSsz, err := req.MarshalSSZ()
 		require.NoError(t, err)
 		blockReq := &ethpbv2.SSZContainer{
@@ -759,7 +765,7 @@ func TestServer_SubmitBlindedBlockSSZ_OK(t *testing.T) {
 		ctx := context.Background()
 
 		genesis := util.NewBeaconBlockBellatrix()
-		util.SaveBlock(t, context.Background(), beaconDB, genesis)
+		bu.SaveBlock(t, context.Background(), beaconDB, genesis)
 
 		numDeposits := uint64(64)
 		beaconState, _ := util.DeterministicGenesisState(t, numDeposits)
@@ -781,7 +787,7 @@ func TestServer_SubmitBlindedBlockSSZ_OK(t *testing.T) {
 		req := util.NewBlindedBeaconBlockBellatrix()
 		req.Block.Slot = params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().BellatrixForkEpoch))
 		req.Block.ParentRoot = bsRoot[:]
-		util.SaveBlock(t, ctx, beaconDB, req)
+		bu.SaveBlock(t, ctx, beaconDB, req)
 		blockSsz, err := req.MarshalSSZ()
 		require.NoError(t, err)
 		blockReq := &ethpbv2.SSZContainer{
@@ -796,12 +802,13 @@ func TestServer_SubmitBlindedBlockSSZ_OK(t *testing.T) {
 }
 
 func TestSubmitBlindedBlock(t *testing.T) {
+	bu := util.NewBlockUtil()
 	t.Run("Phase 0", func(t *testing.T) {
 		beaconDB := dbTest.SetupDB(t)
 		ctx := context.Background()
 
-		genesis := util.NewBeaconBlock()
-		util.SaveBlock(t, context.Background(), beaconDB, genesis)
+		genesis := bu.NewBeaconBlock()
+		bu.SaveBlock(t, context.Background(), beaconDB, genesis)
 
 		numDeposits := uint64(64)
 		beaconState, _ := util.DeterministicGenesisState(t, numDeposits)
@@ -819,12 +826,12 @@ func TestSubmitBlindedBlock(t *testing.T) {
 			BlockNotifier:    c.BlockNotifier(),
 			Broadcaster:      mockp2p.NewTestP2P(t),
 		}
-		req := util.NewBeaconBlock()
+		req := bu.NewBeaconBlock()
 		req.Block.Slot = 5
 		req.Block.ParentRoot = bsRoot[:]
 		v1Block, err := migration.V1Alpha1ToV1SignedBlock(req)
 		require.NoError(t, err)
-		util.SaveBlock(t, ctx, beaconDB, req)
+		bu.SaveBlock(t, ctx, beaconDB, req)
 		blockReq := &ethpbv2.SignedBlindedBeaconBlockContainer{
 			Message:   &ethpbv2.SignedBlindedBeaconBlockContainer_Phase0Block{Phase0Block: v1Block.Block},
 			Signature: v1Block.Signature,
@@ -838,7 +845,7 @@ func TestSubmitBlindedBlock(t *testing.T) {
 		ctx := context.Background()
 
 		genesis := util.NewBeaconBlockAltair()
-		util.SaveBlock(t, context.Background(), beaconDB, genesis)
+		bu.SaveBlock(t, context.Background(), beaconDB, genesis)
 
 		numDeposits := uint64(64)
 		beaconState, _ := util.DeterministicGenesisState(t, numDeposits)
@@ -861,7 +868,7 @@ func TestSubmitBlindedBlock(t *testing.T) {
 		req.Block.ParentRoot = bsRoot[:]
 		v2Block, err := migration.V1Alpha1BeaconBlockAltairToV2(req.Block)
 		require.NoError(t, err)
-		util.SaveBlock(t, ctx, beaconDB, req)
+		bu.SaveBlock(t, ctx, beaconDB, req)
 		blockReq := &ethpbv2.SignedBlindedBeaconBlockContainer{
 			Message:   &ethpbv2.SignedBlindedBeaconBlockContainer_AltairBlock{AltairBlock: v2Block},
 			Signature: req.Signature,
@@ -879,7 +886,7 @@ func TestSubmitBlindedBlock(t *testing.T) {
 		ctx := context.Background()
 
 		genesis := util.NewBeaconBlockBellatrix()
-		util.SaveBlock(t, context.Background(), beaconDB, genesis)
+		bu.SaveBlock(t, context.Background(), beaconDB, genesis)
 
 		numDeposits := uint64(64)
 		beaconState, _ := util.DeterministicGenesisState(t, numDeposits)
@@ -906,7 +913,7 @@ func TestSubmitBlindedBlock(t *testing.T) {
 		blindedBlk.Message.Slot = 5
 		blindedBlk.Message.ParentRoot = bsRoot[:]
 		blindedBlk.Message.Body.ExecutionPayloadHeader.TransactionsRoot = transactionsRoot[:]
-		util.SaveBlock(t, ctx, beaconDB, blk)
+		bu.SaveBlock(t, ctx, beaconDB, blk)
 
 		blockReq := &ethpbv2.SignedBlindedBeaconBlockContainer{
 			Message:   &ethpbv2.SignedBlindedBeaconBlockContainer_BellatrixBlock{BellatrixBlock: blindedBlk.Message},
@@ -924,14 +931,15 @@ func TestServer_GetBlock(t *testing.T) {
 	_, blkContainers := fillDBTestBlocks(ctx, t, beaconDB)
 	headBlock := blkContainers[len(blkContainers)-1]
 
-	b2 := util.NewBeaconBlock()
+	bu := util.NewBlockUtil()
+	b2 := bu.NewBeaconBlock()
 	b2.Block.Slot = 30
 	b2.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
-	util.SaveBlock(t, ctx, beaconDB, b2)
-	b3 := util.NewBeaconBlock()
+	bu.SaveBlock(t, ctx, beaconDB, b2)
+	b3 := bu.NewBeaconBlock()
 	b3.Block.Slot = 30
 	b3.Block.ParentRoot = bytesutil.PadTo([]byte{4}, 32)
-	util.SaveBlock(t, ctx, beaconDB, b3)
+	bu.SaveBlock(t, ctx, beaconDB, b3)
 	wsb, err := wrapper.WrappedSignedBeaconBlock(headBlock.Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block)
 	require.NoError(t, err)
 
@@ -1028,6 +1036,7 @@ func TestServer_GetBlock(t *testing.T) {
 }
 
 func TestServer_GetBlockV2(t *testing.T) {
+	bu := util.NewBlockUtil()
 	t.Run("Phase 0", func(t *testing.T) {
 		beaconDB := dbTest.SetupDB(t)
 		ctx := context.Background()
@@ -1035,14 +1044,14 @@ func TestServer_GetBlockV2(t *testing.T) {
 		_, blkContainers := fillDBTestBlocks(ctx, t, beaconDB)
 		headBlock := blkContainers[len(blkContainers)-1]
 
-		b2 := util.NewBeaconBlock()
+		b2 := bu.NewBeaconBlock()
 		b2.Block.Slot = 30
 		b2.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
-		util.SaveBlock(t, ctx, beaconDB, b2)
-		b3 := util.NewBeaconBlock()
+		bu.SaveBlock(t, ctx, beaconDB, b2)
+		b3 := bu.NewBeaconBlock()
 		b3.Block.Slot = 30
 		b3.Block.ParentRoot = bytesutil.PadTo([]byte{4}, 32)
-		util.SaveBlock(t, ctx, beaconDB, b3)
+		bu.SaveBlock(t, ctx, beaconDB, b3)
 
 		wsb, err := wrapper.WrappedSignedBeaconBlock(headBlock.Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block)
 		require.NoError(t, err)
@@ -1155,11 +1164,11 @@ func TestServer_GetBlockV2(t *testing.T) {
 		b2 := util.NewBeaconBlockAltair()
 		b2.Block.Slot = 30
 		b2.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
-		util.SaveBlock(t, ctx, beaconDB, b2)
+		bu.SaveBlock(t, ctx, beaconDB, b2)
 		b3 := util.NewBeaconBlockAltair()
 		b3.Block.Slot = 30
 		b3.Block.ParentRoot = bytesutil.PadTo([]byte{4}, 32)
-		util.SaveBlock(t, ctx, beaconDB, b3)
+		bu.SaveBlock(t, ctx, beaconDB, b3)
 
 		chainBlk, err := wrapper.WrappedSignedBeaconBlock(headBlock.GetAltairBlock())
 		require.NoError(t, err)
@@ -1271,11 +1280,11 @@ func TestServer_GetBlockV2(t *testing.T) {
 		b2 := util.NewBeaconBlockBellatrix()
 		b2.Block.Slot = 30
 		b2.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
-		util.SaveBlock(t, ctx, beaconDB, b2)
+		bu.SaveBlock(t, ctx, beaconDB, b2)
 		b3 := util.NewBeaconBlockBellatrix()
 		b3.Block.Slot = 30
 		b3.Block.ParentRoot = bytesutil.PadTo([]byte{4}, 32)
-		util.SaveBlock(t, ctx, beaconDB, b3)
+		bu.SaveBlock(t, ctx, beaconDB, b3)
 
 		chainBlk, err := wrapper.WrappedSignedBeaconBlock(headBlock.GetBellatrixBlock())
 		require.NoError(t, err)
@@ -1387,11 +1396,11 @@ func TestServer_GetBlockV2(t *testing.T) {
 		b2 := util.NewBeaconBlockBellatrix()
 		b2.Block.Slot = 30
 		b2.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
-		util.SaveBlock(t, ctx, beaconDB, b2)
+		bu.SaveBlock(t, ctx, beaconDB, b2)
 		b3 := util.NewBeaconBlockBellatrix()
 		b3.Block.Slot = 30
 		b3.Block.ParentRoot = bytesutil.PadTo([]byte{4}, 32)
-		util.SaveBlock(t, ctx, beaconDB, b3)
+		bu.SaveBlock(t, ctx, beaconDB, b3)
 
 		chainBlk, err := wrapper.WrappedSignedBeaconBlock(headBlock.GetBellatrixBlock())
 		require.NoError(t, err)
@@ -1424,10 +1433,11 @@ func TestServer_GetBlockSSZ(t *testing.T) {
 	_, blkContainers := fillDBTestBlocks(ctx, t, beaconDB)
 	headBlock := blkContainers[len(blkContainers)-1]
 
-	b2 := util.NewBeaconBlock()
+	bu := util.NewBlockUtil()
+	b2 := bu.NewBeaconBlock()
 	b2.Block.Slot = 30
 	b2.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
-	util.SaveBlock(t, ctx, beaconDB, b2)
+	bu.SaveBlock(t, ctx, beaconDB, b2)
 
 	wsb, err := wrapper.WrappedSignedBeaconBlock(headBlock.Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block)
 	require.NoError(t, err)
@@ -1455,6 +1465,7 @@ func TestServer_GetBlockSSZ(t *testing.T) {
 }
 
 func TestServer_GetBlockSSZV2(t *testing.T) {
+	bu := util.NewBlockUtil()
 	t.Run("Phase 0", func(t *testing.T) {
 		beaconDB := dbTest.SetupDB(t)
 		ctx := context.Background()
@@ -1462,10 +1473,10 @@ func TestServer_GetBlockSSZV2(t *testing.T) {
 		_, blkContainers := fillDBTestBlocks(ctx, t, beaconDB)
 		headBlock := blkContainers[len(blkContainers)-1]
 
-		b2 := util.NewBeaconBlock()
+		b2 := bu.NewBeaconBlock()
 		b2.Block.Slot = 30
 		b2.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
-		util.SaveBlock(t, ctx, beaconDB, b2)
+		bu.SaveBlock(t, ctx, beaconDB, b2)
 
 		wsb, err := wrapper.WrappedSignedBeaconBlock(headBlock.Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block)
 		require.NoError(t, err)
@@ -1503,7 +1514,7 @@ func TestServer_GetBlockSSZV2(t *testing.T) {
 		b2 := util.NewBeaconBlockAltair()
 		b2.Block.Slot = 30
 		b2.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
-		util.SaveBlock(t, ctx, beaconDB, b2)
+		bu.SaveBlock(t, ctx, beaconDB, b2)
 
 		chainBlk, err := wrapper.WrappedSignedBeaconBlock(headBlock.GetAltairBlock())
 		require.NoError(t, err)
@@ -1540,7 +1551,7 @@ func TestServer_GetBlockSSZV2(t *testing.T) {
 		b2 := util.NewBeaconBlockBellatrix()
 		b2.Block.Slot = 30
 		b2.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
-		util.SaveBlock(t, ctx, beaconDB, b2)
+		bu.SaveBlock(t, ctx, beaconDB, b2)
 
 		chainBlk, err := wrapper.WrappedSignedBeaconBlock(headBlock.GetBellatrixBlock())
 		require.NoError(t, err)
@@ -1574,14 +1585,15 @@ func TestServer_GetBlockRoot(t *testing.T) {
 
 	genBlk, blkContainers := fillDBTestBlocks(ctx, t, beaconDB)
 	headBlock := blkContainers[len(blkContainers)-1]
-	b2 := util.NewBeaconBlock()
+	bu := util.NewBlockUtil()
+	b2 := bu.NewBeaconBlock()
 	b2.Block.Slot = 30
 	b2.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
-	util.SaveBlock(t, ctx, beaconDB, b2)
-	b3 := util.NewBeaconBlock()
+	bu.SaveBlock(t, ctx, beaconDB, b2)
+	b3 := bu.NewBeaconBlock()
 	b3.Block.Slot = 30
 	b3.Block.ParentRoot = bytesutil.PadTo([]byte{4}, 32)
-	util.SaveBlock(t, ctx, beaconDB, b3)
+	bu.SaveBlock(t, ctx, beaconDB, b3)
 
 	wsb, err := wrapper.WrappedSignedBeaconBlock(headBlock.Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block)
 	require.NoError(t, err)

@@ -34,7 +34,7 @@ func TestSaveOrigin(t *testing.T) {
 	require.NoError(t, err)
 	csb, err := cst.MarshalSSZ()
 	require.NoError(t, err)
-	cb := util.NewBeaconBlock()
+	cb := util.NewBlockUtil().NewBeaconBlock()
 	scb, err := wrapper.WrappedSignedBeaconBlock(cb)
 	require.NoError(t, err)
 	cbb, err := scb.MarshalSSZ()

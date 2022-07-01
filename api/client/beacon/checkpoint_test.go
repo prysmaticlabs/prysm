@@ -134,7 +134,7 @@ func TestDownloadWeakSubjectivityCheckpoint(t *testing.T) {
 	require.NoError(t, wst.SetFork(fork))
 
 	// set up checkpoint block
-	b, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+	b, err := wrapper.WrappedSignedBeaconBlock(util.NewBlockUtil().NewBeaconBlock())
 	require.NoError(t, wrapper.SetBlockParentRoot(b, cfg.ZeroHash))
 	require.NoError(t, wrapper.SetBlockSlot(b, wSlot))
 	require.NoError(t, wrapper.SetProposerIndex(b, 0))
@@ -230,7 +230,7 @@ func TestDownloadBackwardsCompatibleCombined(t *testing.T) {
 	require.NoError(t, wst.SetFork(fork))
 
 	// set up checkpoint block
-	b, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+	b, err := wrapper.WrappedSignedBeaconBlock(util.NewBlockUtil().NewBeaconBlock())
 	require.NoError(t, wrapper.SetBlockParentRoot(b, cfg.ZeroHash))
 	require.NoError(t, wrapper.SetBlockSlot(b, wSlot))
 	require.NoError(t, wrapper.SetProposerIndex(b, 0))
@@ -410,7 +410,7 @@ func TestDownloadFinalizedData(t *testing.T) {
 	require.NoError(t, st.SetFork(fork))
 
 	// set up checkpoint block
-	b, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+	b, err := wrapper.WrappedSignedBeaconBlock(util.NewBlockUtil().NewBeaconBlock())
 	require.NoError(t, wrapper.SetBlockParentRoot(b, cfg.ZeroHash))
 	require.NoError(t, wrapper.SetBlockSlot(b, slot))
 	require.NoError(t, wrapper.SetProposerIndex(b, 0))

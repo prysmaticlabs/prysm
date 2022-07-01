@@ -17,7 +17,7 @@ func TestStore_Backup(t *testing.T) {
 	require.NoError(t, err, "Failed to instantiate DB")
 	ctx := context.Background()
 
-	head := util.NewBeaconBlock()
+	head := util.NewBlockUtil().NewBeaconBlock()
 	head.Block.Slot = 5000
 
 	wsb, err := wrapper.WrappedSignedBeaconBlock(head)
@@ -60,7 +60,7 @@ func TestStore_BackupMultipleBuckets(t *testing.T) {
 	startSlot := types.Slot(5000)
 
 	for i := startSlot; i < 5200; i++ {
-		head := util.NewBeaconBlock()
+		head := util.NewBlockUtil().NewBeaconBlock()
 		head.Block.Slot = i
 		wsb, err := wrapper.WrappedSignedBeaconBlock(head)
 		require.NoError(t, err)
@@ -94,7 +94,7 @@ func TestStore_BackupMultipleBuckets(t *testing.T) {
 		require.NoError(t, backedDB.Close(), "Failed to close database")
 	})
 	for i := startSlot; i < 5200; i++ {
-		head := util.NewBeaconBlock()
+		head := util.NewBlockUtil().NewBeaconBlock()
 		head.Block.Slot = i
 		root, err := head.Block.HashTreeRoot()
 		require.NoError(t, err)

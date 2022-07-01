@@ -114,7 +114,7 @@ func TestEIP3076SpecTests(t *testing.T) {
 					require.NoError(t, err)
 					pk, err := history.PubKeyFromHex(sb.Pubkey)
 					require.NoError(t, err)
-					b := util.NewBeaconBlock()
+					b := util.NewBlockUtil().NewBeaconBlock()
 					b.Block.Slot = bSlot
 
 					var signingRoot [32]byte

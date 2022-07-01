@@ -50,13 +50,14 @@ func TestServer_buildHeaderBlock(t *testing.T) {
 		BeaconDB: db,
 		StateGen: stategen.New(db),
 	}
-	b, err := util.GenerateFullBlockAltair(copiedState, keys, util.DefaultBlockGenConfig(), 1)
+	bu := util.NewBlockUtil()
+	b, err := util.GenerateFullBlockAltair(copiedState, keys, bu.DefaultBlockGenConfig(), 1)
 	require.NoError(t, err)
 	r := bytesutil.ToBytes32(b.Block.ParentRoot)
-	util.SaveBlock(t, ctx, proposerServer.BeaconDB, b)
+	bu.SaveBlock(t, ctx, proposerServer.BeaconDB, b)
 	require.NoError(t, proposerServer.BeaconDB.SaveState(ctx, beaconState, r))
 
-	b1, err := util.GenerateFullBlockAltair(copiedState, keys, util.DefaultBlockGenConfig(), 2)
+	b1, err := util.GenerateFullBlockAltair(copiedState, keys, bu.DefaultBlockGenConfig(), 2)
 	require.NoError(t, err)
 
 	vs := &Server{StateGen: stategen.New(db), BeaconDB: db}
@@ -107,7 +108,7 @@ func TestServer_getPayloadHeader(t *testing.T) {
 			mock: &builderTest.MockBuilderService{},
 			fetcher: &blockchainTest.ChainService{
 				Block: func() interfaces.SignedBeaconBlock {
-					wb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+					wb, err := wrapper.WrappedSignedBeaconBlock(util.NewBlockUtil().NewBeaconBlock())
 					require.NoError(t, err)
 					return wb
 				}(),
@@ -165,6 +166,7 @@ func TestServer_getPayloadHeader(t *testing.T) {
 }
 
 func TestServer_getBuilderBlock(t *testing.T) {
+	bu := util.NewBlockUtil()
 	tests := []struct {
 		name        string
 		blk         interfaces.SignedBeaconBlock
@@ -180,12 +182,12 @@ func TestServer_getBuilderBlock(t *testing.T) {
 		{
 			name: "old block version",
 			blk: func() interfaces.SignedBeaconBlock {
-				wb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+				wb, err := wrapper.WrappedSignedBeaconBlock(bu.NewBeaconBlock())
 				require.NoError(t, err)
 				return wb
 			}(),
 			returnedBlk: func() interfaces.SignedBeaconBlock {
-				wb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+				wb, err := wrapper.WrappedSignedBeaconBlock(bu.NewBeaconBlock())
 				require.NoError(t, err)
 				return wb
 			}(),
@@ -359,13 +361,14 @@ func TestServer_getAndBuildHeaderBlock(t *testing.T) {
 	require.NoError(t, beaconState.SetCurrentSyncCommittee(sCom))
 	copiedState := beaconState.Copy()
 
-	b, err := util.GenerateFullBlockAltair(copiedState, keys, util.DefaultBlockGenConfig(), 1)
+	bu := util.NewBlockUtil()
+	b, err := util.GenerateFullBlockAltair(copiedState, keys, bu.DefaultBlockGenConfig(), 1)
 	require.NoError(t, err)
 	r := bytesutil.ToBytes32(b.Block.ParentRoot)
-	util.SaveBlock(t, ctx, vs.BeaconDB, b)
+	bu.SaveBlock(t, ctx, vs.BeaconDB, b)
 	require.NoError(t, vs.BeaconDB.SaveState(ctx, beaconState, r))
 
-	altairBlk, err := util.GenerateFullBlockAltair(copiedState, keys, util.DefaultBlockGenConfig(), 2)
+	altairBlk, err := util.GenerateFullBlockAltair(copiedState, keys, bu.DefaultBlockGenConfig(), 2)
 	require.NoError(t, err)
 
 	h := &v1.ExecutionPayloadHeader{

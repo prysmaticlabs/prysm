@@ -24,7 +24,7 @@ func TestRestore(t *testing.T) {
 
 	backupDb, err := kv.NewKVStore(context.Background(), t.TempDir(), &kv.Config{})
 	require.NoError(t, err)
-	head := util.NewBeaconBlock()
+	head := util.NewBlockUtil().NewBeaconBlock()
 	head.Block.Slot = 5000
 	wsb, err := wrapper.WrappedSignedBeaconBlock(head)
 	require.NoError(t, err)

@@ -35,7 +35,7 @@ func RandaoReveal(beaconState state.ReadOnlyBeaconState, epoch types.Epoch, priv
 }
 
 // BlockSignature calculates the post-state root of the block and returns the signature.
-func BlockSignature(
+func (bu *BlockUtil) BlockSignature(
 	bState state.BeaconState,
 	block *ethpb.BeaconBlock,
 	privKeys []bls.SecretKey,

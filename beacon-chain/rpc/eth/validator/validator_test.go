@@ -48,7 +48,7 @@ import (
 
 func TestGetAttesterDuties(t *testing.T) {
 	ctx := context.Background()
-	genesis := util.NewBeaconBlock()
+	genesis := util.NewBlockUtil().NewBeaconBlock()
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
 	deposits, _, err := util.DeterministicDepositsAndKeys(depChainStart)
 	require.NoError(t, err)

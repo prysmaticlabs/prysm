@@ -58,7 +58,8 @@ func TestStore_OnBlock_ProtoArray(t *testing.T) {
 	require.NoError(t, err)
 	genesisStateRoot := [32]byte{}
 	genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
-	util.SaveBlock(t, ctx, beaconDB, genesis)
+	bu := util.NewBlockUtil()
+	bu.SaveBlock(t, ctx, beaconDB, genesis)
 	validGenesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err)
 	st, err := util.NewBeaconState()
@@ -66,10 +67,10 @@ func TestStore_OnBlock_ProtoArray(t *testing.T) {
 	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, st.Copy(), validGenesisRoot))
 	roots, err := blockTree1(t, beaconDB, validGenesisRoot[:])
 	require.NoError(t, err)
-	random := util.NewBeaconBlock()
+	random := bu.NewBeaconBlock()
 	random.Block.Slot = 1
 	random.Block.ParentRoot = validGenesisRoot[:]
-	util.SaveBlock(t, ctx, beaconDB, random)
+	bu.SaveBlock(t, ctx, beaconDB, random)
 	randomParentRoot, err := random.Block.HashTreeRoot()
 	assert.NoError(t, err)
 	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Slot: st.Slot(), Root: randomParentRoot[:]}))
@@ -87,14 +88,14 @@ func TestStore_OnBlock_ProtoArray(t *testing.T) {
 	}{
 		{
 			name:          "parent block root does not have a state",
-			blk:           util.NewBeaconBlock(),
+			blk:           bu.NewBeaconBlock(),
 			s:             st.Copy(),
 			wantErrString: "could not reconstruct parent state",
 		},
 		{
 			name: "block is from the future",
 			blk: func() *ethpb.SignedBeaconBlock {
-				b := util.NewBeaconBlock()
+				b := bu.NewBeaconBlock()
 				b.Block.ParentRoot = randomParentRoot2
 				b.Block.Slot = params.BeaconConfig().FarFutureSlot
 				return b
@@ -105,7 +106,7 @@ func TestStore_OnBlock_ProtoArray(t *testing.T) {
 		{
 			name: "could not get finalized block",
 			blk: func() *ethpb.SignedBeaconBlock {
-				b := util.NewBeaconBlock()
+				b := bu.NewBeaconBlock()
 				b.Block.ParentRoot = randomParentRoot[:]
 				return b
 			}(),
@@ -115,7 +116,7 @@ func TestStore_OnBlock_ProtoArray(t *testing.T) {
 		{
 			name: "same slot as finalized block",
 			blk: func() *ethpb.SignedBeaconBlock {
-				b := util.NewBeaconBlock()
+				b := bu.NewBeaconBlock()
 				b.Block.Slot = 0
 				b.Block.ParentRoot = randomParentRoot2
 				return b
@@ -154,7 +155,8 @@ func TestStore_OnBlock_DoublyLinkedTree(t *testing.T) {
 	require.NoError(t, err)
 	genesisStateRoot := [32]byte{}
 	genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
-	util.SaveBlock(t, ctx, beaconDB, genesis)
+	bu := util.NewBlockUtil()
+	bu.SaveBlock(t, ctx, beaconDB, genesis)
 	validGenesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err)
 	st, err := util.NewBeaconState()
@@ -162,10 +164,10 @@ func TestStore_OnBlock_DoublyLinkedTree(t *testing.T) {
 	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, st.Copy(), validGenesisRoot))
 	roots, err := blockTree1(t, beaconDB, validGenesisRoot[:])
 	require.NoError(t, err)
-	random := util.NewBeaconBlock()
+	random := bu.NewBeaconBlock()
 	random.Block.Slot = 1
 	random.Block.ParentRoot = validGenesisRoot[:]
-	util.SaveBlock(t, ctx, beaconDB, random)
+	bu.SaveBlock(t, ctx, beaconDB, random)
 	randomParentRoot, err := random.Block.HashTreeRoot()
 	assert.NoError(t, err)
 	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Slot: st.Slot(), Root: randomParentRoot[:]}))
@@ -183,14 +185,14 @@ func TestStore_OnBlock_DoublyLinkedTree(t *testing.T) {
 	}{
 		{
 			name:          "parent block root does not have a state",
-			blk:           util.NewBeaconBlock(),
+			blk:           bu.NewBeaconBlock(),
 			s:             st.Copy(),
 			wantErrString: "could not reconstruct parent state",
 		},
 		{
 			name: "block is from the future",
 			blk: func() *ethpb.SignedBeaconBlock {
-				b := util.NewBeaconBlock()
+				b := bu.NewBeaconBlock()
 				b.Block.ParentRoot = randomParentRoot2
 				b.Block.Slot = params.BeaconConfig().FarFutureSlot
 				return b
@@ -201,7 +203,7 @@ func TestStore_OnBlock_DoublyLinkedTree(t *testing.T) {
 		{
 			name: "could not get finalized block",
 			blk: func() *ethpb.SignedBeaconBlock {
-				b := util.NewBeaconBlock()
+				b := bu.NewBeaconBlock()
 				b.Block.ParentRoot = randomParentRoot[:]
 				return b
 			}(),
@@ -211,7 +213,7 @@ func TestStore_OnBlock_DoublyLinkedTree(t *testing.T) {
 		{
 			name: "same slot as finalized block",
 			blk: func() *ethpb.SignedBeaconBlock {
-				b := util.NewBeaconBlock()
+				b := bu.NewBeaconBlock()
 				b.Block.Slot = 0
 				b.Block.ParentRoot = randomParentRoot2
 				return b
@@ -253,8 +255,9 @@ func TestStore_OnBlockBatch_ProtoArray(t *testing.T) {
 
 	var blks []interfaces.SignedBeaconBlock
 	var blkRoots [][32]byte
+	bu := util.NewBlockUtil()
 	for i := 0; i < 97; i++ {
-		b, err := util.GenerateFullBlock(bState, keys, util.DefaultBlockGenConfig(), types.Slot(i))
+		b, err := bu.GenerateFullBlock(bState, keys, bu.DefaultBlockGenConfig(), types.Slot(i))
 		require.NoError(t, err)
 		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
 		require.NoError(t, err)
@@ -294,8 +297,9 @@ func TestStore_OnBlockBatch_PruneOK_Protoarray(t *testing.T) {
 
 	var blks []interfaces.SignedBeaconBlock
 	var blkRoots [][32]byte
+	bu := util.NewBlockUtil()
 	for i := 0; i < 320; i++ {
-		b, err := util.GenerateFullBlock(bState, keys, util.DefaultBlockGenConfig(), types.Slot(i))
+		b, err := bu.GenerateFullBlock(bState, keys, bu.DefaultBlockGenConfig(), types.Slot(i))
 		require.NoError(t, err)
 		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
 		require.NoError(t, err)
@@ -330,8 +334,9 @@ func TestStore_OnBlockBatch_DoublyLinkedTree(t *testing.T) {
 
 	var blks []interfaces.SignedBeaconBlock
 	var blkRoots [][32]byte
+	bu := util.NewBlockUtil()
 	for i := 0; i < 97; i++ {
-		b, err := util.GenerateFullBlock(bState, keys, util.DefaultBlockGenConfig(), types.Slot(i))
+		b, err := bu.GenerateFullBlock(bState, keys, bu.DefaultBlockGenConfig(), types.Slot(i))
 		require.NoError(t, err)
 		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
 		require.NoError(t, err)
@@ -373,8 +378,9 @@ func TestStore_OnBlockBatch_NotifyNewPayload(t *testing.T) {
 	var blks []interfaces.SignedBeaconBlock
 	var blkRoots [][32]byte
 	blkCount := 4
+	bu := util.NewBlockUtil()
 	for i := 0; i <= blkCount; i++ {
-		b, err := util.GenerateFullBlock(bState, keys, util.DefaultBlockGenConfig(), types.Slot(i))
+		b, err := bu.GenerateFullBlock(bState, keys, bu.DefaultBlockGenConfig(), types.Slot(i))
 		require.NoError(t, err)
 		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
 		require.NoError(t, err)
@@ -404,7 +410,8 @@ func TestCachedPreState_CanGetFromStateSummary_ProtoArray(t *testing.T) {
 
 	st, keys := util.DeterministicGenesisState(t, 64)
 	require.NoError(t, service.saveGenesisData(ctx, st))
-	b, err := util.GenerateFullBlock(st, keys, util.DefaultBlockGenConfig(), types.Slot(1))
+	bu := util.NewBlockUtil()
+	b, err := bu.GenerateFullBlock(st, keys, bu.DefaultBlockGenConfig(), types.Slot(1))
 	require.NoError(t, err)
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -431,7 +438,8 @@ func TestCachedPreState_CanGetFromStateSummary_DoublyLinkedTree(t *testing.T) {
 
 	st, keys := util.DeterministicGenesisState(t, 64)
 	require.NoError(t, service.saveGenesisData(ctx, st))
-	b, err := util.GenerateFullBlock(st, keys, util.DefaultBlockGenConfig(), types.Slot(1))
+	bu := util.NewBlockUtil()
+	b, err := bu.GenerateFullBlock(st, keys, bu.DefaultBlockGenConfig(), types.Slot(1))
 	require.NoError(t, err)
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -462,7 +470,7 @@ func TestFillForkChoiceMissingBlocks_CanSave_ProtoArray(t *testing.T) {
 	roots, err := blockTree1(t, beaconDB, service.originBlockRoot[:])
 	require.NoError(t, err)
 	beaconState, _ := util.DeterministicGenesisState(t, 32)
-	blk := util.NewBeaconBlock()
+	blk := util.NewBlockUtil().NewBeaconBlock()
 	blk.Block.Slot = 9
 	blk.Block.ParentRoot = roots[8]
 	wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
@@ -503,7 +511,7 @@ func TestFillForkChoiceMissingBlocks_CanSave_DoublyLinkedTree(t *testing.T) {
 	roots, err := blockTree1(t, beaconDB, service.originBlockRoot[:])
 	require.NoError(t, err)
 	beaconState, _ := util.DeterministicGenesisState(t, 32)
-	blk := util.NewBeaconBlock()
+	blk := util.NewBlockUtil().NewBeaconBlock()
 	blk.Block.Slot = 9
 	blk.Block.ParentRoot = roots[8]
 	wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
@@ -552,7 +560,7 @@ func TestFillForkChoiceMissingBlocks_RootsMatch_ProtoArray(t *testing.T) {
 	require.NoError(t, err)
 
 	beaconState, _ := util.DeterministicGenesisState(t, 32)
-	blk := util.NewBeaconBlock()
+	blk := util.NewBlockUtil().NewBeaconBlock()
 	blk.Block.Slot = 9
 	blk.Block.ParentRoot = roots[8]
 
@@ -596,7 +604,7 @@ func TestFillForkChoiceMissingBlocks_RootsMatch_DoublyLinkedTree(t *testing.T) {
 	require.NoError(t, err)
 
 	beaconState, _ := util.DeterministicGenesisState(t, 32)
-	blk := util.NewBeaconBlock()
+	blk := util.NewBlockUtil().NewBeaconBlock()
 	blk.Block.Slot = 9
 	blk.Block.ParentRoot = roots[8]
 
@@ -642,7 +650,8 @@ func TestFillForkChoiceMissingBlocks_FilterFinalized_ProtoArray(t *testing.T) {
 
 	genesisStateRoot := [32]byte{}
 	genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
-	util.SaveBlock(t, ctx, beaconDB, genesis)
+	bu := util.NewBlockUtil()
+	bu.SaveBlock(t, ctx, beaconDB, genesis)
 	validGenesisRoot, err := genesis.Block.HashTreeRoot()
 	assert.NoError(t, err)
 	st, err := util.NewBeaconState()
@@ -651,27 +660,27 @@ func TestFillForkChoiceMissingBlocks_FilterFinalized_ProtoArray(t *testing.T) {
 	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, st.Copy(), validGenesisRoot))
 
 	// Define a tree branch, slot 63 <- 64 <- 65 <- 66
-	b63 := util.NewBeaconBlock()
+	b63 := bu.NewBeaconBlock()
 	b63.Block.Slot = 63
-	util.SaveBlock(t, ctx, service.cfg.BeaconDB, b63)
+	bu.SaveBlock(t, ctx, service.cfg.BeaconDB, b63)
 	r63, err := b63.Block.HashTreeRoot()
 	require.NoError(t, err)
-	b64 := util.NewBeaconBlock()
+	b64 := bu.NewBeaconBlock()
 	b64.Block.Slot = 64
 	b64.Block.ParentRoot = r63[:]
-	util.SaveBlock(t, ctx, service.cfg.BeaconDB, b64)
+	bu.SaveBlock(t, ctx, service.cfg.BeaconDB, b64)
 	r64, err := b64.Block.HashTreeRoot()
 	require.NoError(t, err)
-	b65 := util.NewBeaconBlock()
+	b65 := bu.NewBeaconBlock()
 	b65.Block.Slot = 65
 	b65.Block.ParentRoot = r64[:]
 	r65, err := b65.Block.HashTreeRoot()
 	require.NoError(t, err)
-	util.SaveBlock(t, ctx, service.cfg.BeaconDB, b65)
-	b66 := util.NewBeaconBlock()
+	bu.SaveBlock(t, ctx, service.cfg.BeaconDB, b65)
+	b66 := bu.NewBeaconBlock()
 	b66.Block.Slot = 66
 	b66.Block.ParentRoot = r65[:]
-	wsb := util.SaveBlock(t, ctx, service.cfg.BeaconDB, b66)
+	wsb := bu.SaveBlock(t, ctx, service.cfg.BeaconDB, b66)
 
 	beaconState, _ := util.DeterministicGenesisState(t, 32)
 	// Set finalized epoch to 2.
@@ -699,7 +708,8 @@ func TestFillForkChoiceMissingBlocks_FilterFinalized_DoublyLinkedTree(t *testing
 
 	genesisStateRoot := [32]byte{}
 	genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
-	util.SaveBlock(t, ctx, beaconDB, genesis)
+	bu := util.NewBlockUtil()
+	bu.SaveBlock(t, ctx, beaconDB, genesis)
 	validGenesisRoot, err := genesis.Block.HashTreeRoot()
 	assert.NoError(t, err)
 	st, err := util.NewBeaconState()
@@ -708,27 +718,27 @@ func TestFillForkChoiceMissingBlocks_FilterFinalized_DoublyLinkedTree(t *testing
 	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, st.Copy(), validGenesisRoot))
 
 	// Define a tree branch, slot 63 <- 64 <- 65
-	b63 := util.NewBeaconBlock()
+	b63 := bu.NewBeaconBlock()
 	b63.Block.Slot = 63
-	util.SaveBlock(t, ctx, service.cfg.BeaconDB, b63)
+	bu.SaveBlock(t, ctx, service.cfg.BeaconDB, b63)
 	r63, err := b63.Block.HashTreeRoot()
 	require.NoError(t, err)
-	b64 := util.NewBeaconBlock()
+	b64 := bu.NewBeaconBlock()
 	b64.Block.Slot = 64
 	b64.Block.ParentRoot = r63[:]
-	util.SaveBlock(t, ctx, service.cfg.BeaconDB, b64)
+	bu.SaveBlock(t, ctx, service.cfg.BeaconDB, b64)
 	r64, err := b64.Block.HashTreeRoot()
 	require.NoError(t, err)
-	b65 := util.NewBeaconBlock()
+	b65 := bu.NewBeaconBlock()
 	b65.Block.Slot = 65
 	b65.Block.ParentRoot = r64[:]
 	r65, err := b65.Block.HashTreeRoot()
 	require.NoError(t, err)
-	util.SaveBlock(t, ctx, service.cfg.BeaconDB, b65)
-	b66 := util.NewBeaconBlock()
+	bu.SaveBlock(t, ctx, service.cfg.BeaconDB, b65)
+	b66 := bu.NewBeaconBlock()
 	b66.Block.Slot = 66
 	b66.Block.ParentRoot = r65[:]
-	wsb := util.SaveBlock(t, ctx, service.cfg.BeaconDB, b66)
+	wsb := bu.SaveBlock(t, ctx, service.cfg.BeaconDB, b66)
 
 	beaconState, _ := util.DeterministicGenesisState(t, 32)
 
@@ -757,7 +767,8 @@ func TestFillForkChoiceMissingBlocks_FinalizedSibling_DoublyLinkedTree(t *testin
 
 	genesisStateRoot := [32]byte{}
 	genesis := blocks.NewGenesisBlock(genesisStateRoot[:])
-	util.SaveBlock(t, ctx, beaconDB, genesis)
+	bu := util.NewBlockUtil()
+	bu.SaveBlock(t, ctx, beaconDB, genesis)
 	validGenesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err)
 	st, err := util.NewBeaconState()
@@ -768,7 +779,7 @@ func TestFillForkChoiceMissingBlocks_FinalizedSibling_DoublyLinkedTree(t *testin
 	require.NoError(t, err)
 
 	beaconState, _ := util.DeterministicGenesisState(t, 32)
-	blk := util.NewBeaconBlock()
+	blk := bu.NewBeaconBlock()
 	blk.Block.Slot = 9
 	blk.Block.ParentRoot = roots[8]
 
@@ -786,56 +797,57 @@ func TestFillForkChoiceMissingBlocks_FinalizedSibling_DoublyLinkedTree(t *testin
 //    \- B3 - B4 - B6 - B8
 func blockTree1(t *testing.T, beaconDB db.Database, genesisRoot []byte) ([][]byte, error) {
 	genesisRoot = bytesutil.PadTo(genesisRoot, 32)
-	b0 := util.NewBeaconBlock()
+	bu := util.NewBlockUtil()
+	b0 := bu.NewBeaconBlock()
 	b0.Block.Slot = 0
 	b0.Block.ParentRoot = genesisRoot
 	r0, err := b0.Block.HashTreeRoot()
 	if err != nil {
 		return nil, err
 	}
-	b1 := util.NewBeaconBlock()
+	b1 := bu.NewBeaconBlock()
 	b1.Block.Slot = 1
 	b1.Block.ParentRoot = r0[:]
 	r1, err := b1.Block.HashTreeRoot()
 	if err != nil {
 		return nil, err
 	}
-	b3 := util.NewBeaconBlock()
+	b3 := bu.NewBeaconBlock()
 	b3.Block.Slot = 3
 	b3.Block.ParentRoot = r0[:]
 	r3, err := b3.Block.HashTreeRoot()
 	if err != nil {
 		return nil, err
 	}
-	b4 := util.NewBeaconBlock()
+	b4 := bu.NewBeaconBlock()
 	b4.Block.Slot = 4
 	b4.Block.ParentRoot = r3[:]
 	r4, err := b4.Block.HashTreeRoot()
 	if err != nil {
 		return nil, err
 	}
-	b5 := util.NewBeaconBlock()
+	b5 := bu.NewBeaconBlock()
 	b5.Block.Slot = 5
 	b5.Block.ParentRoot = r4[:]
 	r5, err := b5.Block.HashTreeRoot()
 	if err != nil {
 		return nil, err
 	}
-	b6 := util.NewBeaconBlock()
+	b6 := bu.NewBeaconBlock()
 	b6.Block.Slot = 6
 	b6.Block.ParentRoot = r4[:]
 	r6, err := b6.Block.HashTreeRoot()
 	if err != nil {
 		return nil, err
 	}
-	b7 := util.NewBeaconBlock()
+	b7 := bu.NewBeaconBlock()
 	b7.Block.Slot = 7
 	b7.Block.ParentRoot = r5[:]
 	r7, err := b7.Block.HashTreeRoot()
 	if err != nil {
 		return nil, err
 	}
-	b8 := util.NewBeaconBlock()
+	b8 := bu.NewBeaconBlock()
 	b8.Block.Slot = 8
 	b8.Block.ParentRoot = r6[:]
 	r8, err := b8.Block.HashTreeRoot()
@@ -846,7 +858,7 @@ func blockTree1(t *testing.T, beaconDB db.Database, genesisRoot []byte) ([][]byt
 	require.NoError(t, err)
 
 	for _, b := range []*ethpb.SignedBeaconBlock{b0, b1, b3, b4, b5, b6, b7, b8} {
-		beaconBlock := util.NewBeaconBlock()
+		beaconBlock := bu.NewBeaconBlock()
 		beaconBlock.Block.Slot = b.Block.Slot
 		beaconBlock.Block.ParentRoot = bytesutil.PadTo(b.Block.ParentRoot, 32)
 		wsb, err := wrapper.WrappedSignedBeaconBlock(beaconBlock)
@@ -900,26 +912,27 @@ func TestAncestor_HandleSkipSlot(t *testing.T) {
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 
-	b1 := util.NewBeaconBlock()
+	bu := util.NewBlockUtil()
+	b1 := bu.NewBeaconBlock()
 	b1.Block.Slot = 1
 	b1.Block.ParentRoot = bytesutil.PadTo([]byte{'a'}, 32)
 	r1, err := b1.Block.HashTreeRoot()
 	require.NoError(t, err)
-	b100 := util.NewBeaconBlock()
+	b100 := bu.NewBeaconBlock()
 	b100.Block.Slot = 100
 	b100.Block.ParentRoot = r1[:]
 	r100, err := b100.Block.HashTreeRoot()
 	require.NoError(t, err)
-	b200 := util.NewBeaconBlock()
+	b200 := bu.NewBeaconBlock()
 	b200.Block.Slot = 200
 	b200.Block.ParentRoot = r100[:]
 	r200, err := b200.Block.HashTreeRoot()
 	require.NoError(t, err)
 	for _, b := range []*ethpb.SignedBeaconBlock{b1, b100, b200} {
-		beaconBlock := util.NewBeaconBlock()
+		beaconBlock := bu.NewBeaconBlock()
 		beaconBlock.Block.Slot = b.Block.Slot
 		beaconBlock.Block.ParentRoot = bytesutil.PadTo(b.Block.ParentRoot, 32)
-		util.SaveBlock(t, context.Background(), beaconDB, beaconBlock)
+		bu.SaveBlock(t, context.Background(), beaconDB, beaconBlock)
 	}
 
 	// Slots 100 to 200 are skip slots. Requesting root at 150 will yield root at 100. The last physical block.
@@ -943,17 +956,18 @@ func TestAncestor_CanUseForkchoice(t *testing.T) {
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 
-	b1 := util.NewBeaconBlock()
+	bu := util.NewBlockUtil()
+	b1 := bu.NewBeaconBlock()
 	b1.Block.Slot = 1
 	b1.Block.ParentRoot = bytesutil.PadTo([]byte{'a'}, 32)
 	r1, err := b1.Block.HashTreeRoot()
 	require.NoError(t, err)
-	b100 := util.NewBeaconBlock()
+	b100 := bu.NewBeaconBlock()
 	b100.Block.Slot = 100
 	b100.Block.ParentRoot = r1[:]
 	r100, err := b100.Block.HashTreeRoot()
 	require.NoError(t, err)
-	b200 := util.NewBeaconBlock()
+	b200 := bu.NewBeaconBlock()
 	b200.Block.Slot = 200
 	b200.Block.ParentRoot = r100[:]
 	r200, err := b200.Block.HashTreeRoot()
@@ -961,7 +975,7 @@ func TestAncestor_CanUseForkchoice(t *testing.T) {
 	ojc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	ofc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	for _, b := range []*ethpb.SignedBeaconBlock{b1, b100, b200} {
-		beaconBlock := util.NewBeaconBlock()
+		beaconBlock := bu.NewBeaconBlock()
 		beaconBlock.Block.Slot = b.Block.Slot
 		beaconBlock.Block.ParentRoot = bytesutil.PadTo(b.Block.ParentRoot, 32)
 		r, err := b.Block.HashTreeRoot()
@@ -991,17 +1005,18 @@ func TestAncestor_CanUseDB(t *testing.T) {
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 
-	b1 := util.NewBeaconBlock()
+	bu := util.NewBlockUtil()
+	b1 := bu.NewBeaconBlock()
 	b1.Block.Slot = 1
 	b1.Block.ParentRoot = bytesutil.PadTo([]byte{'a'}, 32)
 	r1, err := b1.Block.HashTreeRoot()
 	require.NoError(t, err)
-	b100 := util.NewBeaconBlock()
+	b100 := bu.NewBeaconBlock()
 	b100.Block.Slot = 100
 	b100.Block.ParentRoot = r1[:]
 	r100, err := b100.Block.HashTreeRoot()
 	require.NoError(t, err)
-	b200 := util.NewBeaconBlock()
+	b200 := bu.NewBeaconBlock()
 	b200.Block.Slot = 200
 	b200.Block.ParentRoot = r100[:]
 	r200, err := b200.Block.HashTreeRoot()
@@ -1009,10 +1024,10 @@ func TestAncestor_CanUseDB(t *testing.T) {
 	ojc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	ofc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	for _, b := range []*ethpb.SignedBeaconBlock{b1, b100, b200} {
-		beaconBlock := util.NewBeaconBlock()
+		beaconBlock := bu.NewBeaconBlock()
 		beaconBlock.Block.Slot = b.Block.Slot
 		beaconBlock.Block.ParentRoot = bytesutil.PadTo(b.Block.ParentRoot, 32)
-		util.SaveBlock(t, context.Background(), beaconDB, beaconBlock)
+		bu.SaveBlock(t, context.Background(), beaconDB, beaconBlock)
 	}
 
 	st, blkRoot, err := prepareForkchoiceState(context.Background(), 200, r200, r200, params.BeaconConfig().ZeroHash, ojc, ofc)
@@ -1050,18 +1065,19 @@ func TestVerifyBlkDescendant(t *testing.T) {
 		WithStateGen(stategen.New(beaconDB)),
 		WithForkChoiceStore(fcs),
 	}
-	b := util.NewBeaconBlock()
+	bu := util.NewBlockUtil()
+	b := bu.NewBeaconBlock()
 	b.Block.Slot = 32
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	util.SaveBlock(t, ctx, beaconDB, b)
+	bu.SaveBlock(t, ctx, beaconDB, b)
 
-	b1 := util.NewBeaconBlock()
+	b1 := bu.NewBeaconBlock()
 	b1.Block.Slot = 32
 	b1.Block.Body.Graffiti = bytesutil.PadTo([]byte{'a'}, 32)
 	r1, err := b1.Block.HashTreeRoot()
 	require.NoError(t, err)
-	util.SaveBlock(t, ctx, beaconDB, b1)
+	bu.SaveBlock(t, ctx, beaconDB, b1)
 
 	type args struct {
 		parentRoot    [32]byte
@@ -1169,8 +1185,9 @@ func TestOnBlock_CanFinalize(t *testing.T) {
 	require.NoError(t, service.saveGenesisData(ctx, gs))
 
 	testState := gs.Copy()
+	bu := util.NewBlockUtil()
 	for i := types.Slot(1); i <= 4*params.BeaconConfig().SlotsPerEpoch; i++ {
-		blk, err := util.GenerateFullBlock(testState, keys, util.DefaultBlockGenConfig(), i)
+		blk, err := bu.GenerateFullBlock(testState, keys, bu.DefaultBlockGenConfig(), i)
 		require.NoError(t, err)
 		r, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
@@ -1234,7 +1251,8 @@ func TestOnBlock_InvalidSignature(t *testing.T) {
 	gs, keys := util.DeterministicGenesisState(t, 32)
 	require.NoError(t, service.saveGenesisData(ctx, gs))
 
-	blk, err := util.GenerateFullBlock(gs, keys, util.DefaultBlockGenConfig(), 1)
+	bu := util.NewBlockUtil()
+	blk, err := bu.GenerateFullBlock(gs, keys, bu.DefaultBlockGenConfig(), 1)
 	require.NoError(t, err)
 	blk.Signature = []byte{'a'} // Mutate the signature.
 	r, err := blk.Block.HashTreeRoot()
@@ -1271,8 +1289,9 @@ func TestOnBlock_CallNewPayloadAndForkchoiceUpdated(t *testing.T) {
 	gs, keys := util.DeterministicGenesisState(t, 32)
 	require.NoError(t, service.saveGenesisData(ctx, gs))
 	testState := gs.Copy()
+	bu := util.NewBlockUtil()
 	for i := types.Slot(1); i < params.BeaconConfig().SlotsPerEpoch; i++ {
-		blk, err := util.GenerateFullBlock(testState, keys, util.DefaultBlockGenConfig(), i)
+		blk, err := bu.GenerateFullBlock(testState, keys, bu.DefaultBlockGenConfig(), i)
 		require.NoError(t, err)
 		r, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
@@ -1371,7 +1390,8 @@ func TestInsertFinalizedDeposits_MultipleFinalizedRoutines(t *testing.T) {
 
 func TestRemoveBlockAttestationsInPool_Canonical(t *testing.T) {
 	genesis, keys := util.DeterministicGenesisState(t, 64)
-	b, err := util.GenerateFullBlock(genesis, keys, util.DefaultBlockGenConfig(), 1)
+	bu := util.NewBlockUtil()
+	b, err := bu.GenerateFullBlock(genesis, keys, bu.DefaultBlockGenConfig(), 1)
 	assert.NoError(t, err)
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -1392,7 +1412,8 @@ func TestRemoveBlockAttestationsInPool_Canonical(t *testing.T) {
 
 func TestRemoveBlockAttestationsInPool_NonCanonical(t *testing.T) {
 	genesis, keys := util.DeterministicGenesisState(t, 64)
-	b, err := util.GenerateFullBlock(genesis, keys, util.DefaultBlockGenConfig(), 1)
+	bu := util.NewBlockUtil()
+	b, err := bu.GenerateFullBlock(genesis, keys, bu.DefaultBlockGenConfig(), 1)
 	assert.NoError(t, err)
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -1638,7 +1659,7 @@ func TestService_insertSlashingsToForkChoiceStore(t *testing.T) {
 			Attestation_2: att2,
 		},
 	}
-	b := util.NewBeaconBlock()
+	b := util.NewBlockUtil().NewBeaconBlock()
 	b.Block.Body.AttesterSlashings = slashings
 	wb, err := wrapper.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)
@@ -1665,25 +1686,26 @@ func TestOnBlock_ProcessBlocksParallel(t *testing.T) {
 	gs, keys := util.DeterministicGenesisState(t, 32)
 	require.NoError(t, service.saveGenesisData(ctx, gs))
 
-	blk1, err := util.GenerateFullBlock(gs, keys, util.DefaultBlockGenConfig(), 1)
+	bu := util.NewBlockUtil()
+	blk1, err := bu.GenerateFullBlock(gs, keys, bu.DefaultBlockGenConfig(), 1)
 	require.NoError(t, err)
 	r1, err := blk1.Block.HashTreeRoot()
 	require.NoError(t, err)
 	wsb1, err := wrapper.WrappedSignedBeaconBlock(blk1)
 	require.NoError(t, err)
-	blk2, err := util.GenerateFullBlock(gs, keys, util.DefaultBlockGenConfig(), 2)
+	blk2, err := bu.GenerateFullBlock(gs, keys, bu.DefaultBlockGenConfig(), 2)
 	require.NoError(t, err)
 	r2, err := blk2.Block.HashTreeRoot()
 	require.NoError(t, err)
 	wsb2, err := wrapper.WrappedSignedBeaconBlock(blk2)
 	require.NoError(t, err)
-	blk3, err := util.GenerateFullBlock(gs, keys, util.DefaultBlockGenConfig(), 3)
+	blk3, err := bu.GenerateFullBlock(gs, keys, bu.DefaultBlockGenConfig(), 3)
 	require.NoError(t, err)
 	r3, err := blk3.Block.HashTreeRoot()
 	require.NoError(t, err)
 	wsb3, err := wrapper.WrappedSignedBeaconBlock(blk3)
 	require.NoError(t, err)
-	blk4, err := util.GenerateFullBlock(gs, keys, util.DefaultBlockGenConfig(), 4)
+	blk4, err := bu.GenerateFullBlock(gs, keys, bu.DefaultBlockGenConfig(), 4)
 	require.NoError(t, err)
 	r4, err := blk4.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -1733,7 +1755,7 @@ func Test_verifyBlkFinalizedSlot_invalidBlock(t *testing.T) {
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 	require.NoError(t, service.ForkChoicer().UpdateFinalizedCheckpoint(&forkchoicetypes.Checkpoint{Epoch: 1}))
-	blk := util.HydrateBeaconBlock(&ethpb.BeaconBlock{Slot: 1})
+	blk := util.NewBlockUtil().HydrateBeaconBlock(&ethpb.BeaconBlock{Slot: 1})
 	wb, err := wrapper.WrappedBeaconBlock(blk)
 	require.NoError(t, err)
 	err = service.verifyBlkFinalizedSlot(wb)

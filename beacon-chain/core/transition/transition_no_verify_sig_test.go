@@ -45,7 +45,8 @@ func TestExecuteStateTransitionNoVerify_FullProcess(t *testing.T) {
 	require.NoError(t, err)
 	proposerIdx, err := helpers.BeaconProposerIndex(context.Background(), nextSlotState)
 	require.NoError(t, err)
-	block := util.NewBeaconBlock()
+	bu := util.NewBlockUtil()
+	block := bu.NewBeaconBlock()
 	block.Block.ProposerIndex = proposerIdx
 	block.Block.Slot = beaconState.Slot() + 1
 	block.Block.ParentRoot = parentRoot[:]
@@ -59,7 +60,7 @@ func TestExecuteStateTransitionNoVerify_FullProcess(t *testing.T) {
 
 	block.Block.StateRoot = stateRoot[:]
 
-	sig, err := util.BlockSignature(beaconState, block.Block, privKeys)
+	sig, err := bu.BlockSignature(beaconState, block.Block, privKeys)
 	require.NoError(t, err)
 	block.Signature = sig.Marshal()
 
@@ -101,7 +102,8 @@ func TestExecuteStateTransitionNoVerifySignature_CouldNotVerifyStateRoot(t *test
 	require.NoError(t, err)
 	proposerIdx, err := helpers.BeaconProposerIndex(context.Background(), nextSlotState)
 	require.NoError(t, err)
-	block := util.NewBeaconBlock()
+	bu := util.NewBlockUtil()
+	block := bu.NewBeaconBlock()
 	block.Block.ProposerIndex = proposerIdx
 	block.Block.Slot = beaconState.Slot() + 1
 	block.Block.ParentRoot = parentRoot[:]
@@ -115,7 +117,7 @@ func TestExecuteStateTransitionNoVerifySignature_CouldNotVerifyStateRoot(t *test
 
 	block.Block.StateRoot = stateRoot[:]
 
-	sig, err := util.BlockSignature(beaconState, block.Block, privKeys)
+	sig, err := bu.BlockSignature(beaconState, block.Block, privKeys)
 	require.NoError(t, err)
 	block.Signature = sig.Marshal()
 

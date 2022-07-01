@@ -193,7 +193,7 @@ func TestProcessBlock_AllEventsTrackedVals(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, genesis.SetCurrentSyncCommittee(c))
 
-	genConfig := util.DefaultBlockGenConfig()
+	genConfig := util.NewBlockUtil().DefaultBlockGenConfig()
 	genConfig.NumProposerSlashings = 1
 	b, err := util.GenerateFullBlockAltair(genesis, keys, genConfig, 1)
 	require.NoError(t, err)

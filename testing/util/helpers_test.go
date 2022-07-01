@@ -19,7 +19,8 @@ import (
 
 func TestBlockSignature(t *testing.T) {
 	beaconState, privKeys := DeterministicGenesisState(t, 100)
-	block, err := GenerateFullBlock(beaconState, privKeys, nil, 0)
+	bu := NewBlockUtil()
+	block, err := bu.GenerateFullBlock(beaconState, privKeys, nil, 0)
 	require.NoError(t, err)
 
 	require.NoError(t, beaconState.SetSlot(beaconState.Slot()+1))
@@ -31,7 +32,7 @@ func TestBlockSignature(t *testing.T) {
 	blockSig, err := signing.ComputeDomainAndSign(beaconState, epoch, block.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 
-	signature, err := BlockSignature(beaconState, block.Block, privKeys)
+	signature, err := bu.BlockSignature(beaconState, block.Block, privKeys)
 	assert.NoError(t, err)
 
 	if !bytes.Equal(blockSig, signature.Marshal()) {

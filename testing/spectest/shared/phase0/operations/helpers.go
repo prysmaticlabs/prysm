@@ -52,7 +52,7 @@ func RunBlockOperationTest(
 	}
 
 	helpers.ClearCache()
-	b := util.NewBeaconBlock()
+	b := util.NewBlockUtil().NewBeaconBlock()
 	b.Block.Body = body
 	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)

@@ -59,7 +59,7 @@ func TestStore_IsFinalizedBlockGenesis(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
 
-	blk := util.NewBeaconBlock()
+	blk := util.NewBlockUtil().NewBeaconBlock()
 	blk.Block.Slot = 0
 	root, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -203,7 +203,7 @@ func makeBlocks(t *testing.T, i, n uint64, previousRoot [32]byte) []interfaces.S
 	for j := i; j < n+i; j++ {
 		parentRoot := make([]byte, fieldparams.RootLength)
 		copy(parentRoot, previousRoot[:])
-		blocks[j-i] = util.NewBeaconBlock()
+		blocks[j-i] = util.NewBlockUtil().NewBeaconBlock()
 		blocks[j-i].Block.Slot = types.Slot(j + 1)
 		blocks[j-i].Block.ParentRoot = parentRoot
 		var err error

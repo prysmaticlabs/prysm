@@ -47,15 +47,16 @@ func TestVerifyLMDFFGConsistent_NotOK(t *testing.T) {
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 
-	b32 := util.NewBeaconBlock()
+	bu := util.NewBlockUtil()
+	b32 := bu.NewBeaconBlock()
 	b32.Block.Slot = 32
-	util.SaveBlock(t, ctx, service.cfg.BeaconDB, b32)
+	bu.SaveBlock(t, ctx, service.cfg.BeaconDB, b32)
 	r32, err := b32.Block.HashTreeRoot()
 	require.NoError(t, err)
-	b33 := util.NewBeaconBlock()
+	b33 := bu.NewBeaconBlock()
 	b33.Block.Slot = 33
 	b33.Block.ParentRoot = r32[:]
-	util.SaveBlock(t, ctx, service.cfg.BeaconDB, b33)
+	bu.SaveBlock(t, ctx, service.cfg.BeaconDB, b33)
 	r33, err := b33.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -74,15 +75,16 @@ func TestVerifyLMDFFGConsistent_OK(t *testing.T) {
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 
-	b32 := util.NewBeaconBlock()
+	bu := util.NewBlockUtil()
+	b32 := bu.NewBeaconBlock()
 	b32.Block.Slot = 32
-	util.SaveBlock(t, ctx, service.cfg.BeaconDB, b32)
+	bu.SaveBlock(t, ctx, service.cfg.BeaconDB, b32)
 	r32, err := b32.Block.HashTreeRoot()
 	require.NoError(t, err)
-	b33 := util.NewBeaconBlock()
+	b33 := bu.NewBeaconBlock()
 	b33.Block.Slot = 33
 	b33.Block.ParentRoot = r32[:]
-	util.SaveBlock(t, ctx, service.cfg.BeaconDB, b33)
+	bu.SaveBlock(t, ctx, service.cfg.BeaconDB, b33)
 	r33, err := b33.Block.HashTreeRoot()
 	require.NoError(t, err)
 	a := util.NewAttestationUtil().NewAttestation()
@@ -136,7 +138,8 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 	invalidStateErr := "Could not get state from db"
 	require.LogsDoNotContain(t, hook, invalidStateErr)
 	require.LogsDoNotContain(t, hook, hookErr)
-	gb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+	bu := util.NewBlockUtil()
+	gb, err := wrapper.WrappedSignedBeaconBlock(bu.NewBeaconBlock())
 	require.NoError(t, err)
 	require.NoError(t, service.saveInitSyncBlock(ctx, [32]byte{'a'}, gb))
 	service.notifyEngineIfChangedHead(ctx, [32]byte{'a'})
@@ -149,7 +152,7 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 	}
 
 	// Block in Cache
-	b := util.NewBeaconBlock()
+	b := bu.NewBeaconBlock()
 	b.Block.Slot = 2
 	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)
@@ -169,9 +172,9 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 	require.LogsDoNotContain(t, hook, hookErr)
 
 	// Block in DB
-	b = util.NewBeaconBlock()
+	b = bu.NewBeaconBlock()
 	b.Block.Slot = 3
-	util.SaveBlock(t, ctx, service.cfg.BeaconDB, b)
+	bu.SaveBlock(t, ctx, service.cfg.BeaconDB, b)
 	r1, err = b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	st, _ = util.DeterministicGenesisState(t, 1)
@@ -213,7 +216,8 @@ func TestService_ProcessAttestationsAndUpdateHead(t *testing.T) {
 	require.NoError(t, service.saveGenesisData(ctx, genesisState))
 	copied := genesisState.Copy()
 	// Generate a new block for attesters to attest
-	blk, err := util.GenerateFullBlock(copied, pks, util.DefaultBlockGenConfig(), 1)
+	bu := util.NewBlockUtil()
+	blk, err := bu.GenerateFullBlock(copied, pks, bu.DefaultBlockGenConfig(), 1)
 	require.NoError(t, err)
 	tRoot, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -234,12 +238,12 @@ func TestService_ProcessAttestationsAndUpdateHead(t *testing.T) {
 
 	// Insert a new block to forkchoice
 	ojc := &ethpb.Checkpoint{Epoch: 0, Root: params.BeaconConfig().ZeroHash[:]}
-	b, err := util.GenerateFullBlock(genesisState, pks, util.DefaultBlockGenConfig(), 2)
+	b, err := bu.GenerateFullBlock(genesisState, pks, bu.DefaultBlockGenConfig(), 2)
 	require.NoError(t, err)
 	b.Block.ParentRoot = service.originBlockRoot[:]
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	util.SaveBlock(t, ctx, service.cfg.BeaconDB, b)
+	bu.SaveBlock(t, ctx, service.cfg.BeaconDB, b)
 	state, blkRoot, err := prepareForkchoiceState(ctx, 2, r, service.originBlockRoot, [32]byte{'b'}, ojc, ojc)
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))

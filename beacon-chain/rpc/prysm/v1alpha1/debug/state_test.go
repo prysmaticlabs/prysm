@@ -29,9 +29,10 @@ func TestServer_GetBeaconState(t *testing.T) {
 	require.NoError(t, err)
 	slot := types.Slot(100)
 	require.NoError(t, st.SetSlot(slot))
-	b := util.NewBeaconBlock()
+	bu := util.NewBlockUtil()
+	b := bu.NewBeaconBlock()
 	b.Block.Slot = slot
-	util.SaveBlock(t, ctx, db, b)
+	bu.SaveBlock(t, ctx, db, b)
 	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	gen := stategen.New(db)

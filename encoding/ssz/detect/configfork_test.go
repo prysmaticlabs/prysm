@@ -21,7 +21,7 @@ import (
 )
 
 func TestSlotFromBlock(t *testing.T) {
-	b := util.NewBeaconBlock()
+	b := util.NewBlockUtil().NewBeaconBlock()
 	var slot types.Slot = 3
 	b.Block.Slot = slot
 	bb, err := b.MarshalSSZ()
@@ -369,7 +369,7 @@ func TestUnmarshalBlindedBlock(t *testing.T) {
 }
 
 func signedTestBlockGenesis(t *testing.T, slot types.Slot) interfaces.SignedBeaconBlock {
-	b := util.NewBeaconBlock()
+	b := util.NewBlockUtil().NewBeaconBlock()
 	b.Block.Slot = slot
 	s, err := wrapper.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)

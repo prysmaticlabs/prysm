@@ -25,12 +25,13 @@ func TestSkipSlotCache_OK(t *testing.T) {
 	originalState, err := v1.InitializeFromProto(pbState)
 	require.NoError(t, err)
 
-	blkCfg := util.DefaultBlockGenConfig()
+	bu := util.NewBlockUtil()
+	blkCfg := bu.DefaultBlockGenConfig()
 	blkCfg.NumAttestations = 1
 
 	// First transition will be with an empty cache, so the cache becomes populated
 	// with the state
-	blk, err := util.GenerateFullBlock(bState, privs, blkCfg, originalState.Slot()+10)
+	blk, err := bu.GenerateFullBlock(bState, privs, blkCfg, originalState.Slot()+10)
 	require.NoError(t, err)
 	wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
 	require.NoError(t, err)
@@ -52,14 +53,15 @@ func TestSkipSlotCache_ConcurrentMixup(t *testing.T) {
 	originalState, err := v1.InitializeFromProto(pbState)
 	require.NoError(t, err)
 
-	blkCfg := util.DefaultBlockGenConfig()
+	bu := util.NewBlockUtil()
+	blkCfg := bu.DefaultBlockGenConfig()
 	blkCfg.NumAttestations = 1
 
 	transition.SkipSlotCache.Disable()
 
 	// First transition will be with an empty cache, so the cache becomes populated
 	// with the state
-	blk, err := util.GenerateFullBlock(bState, privs, blkCfg, originalState.Slot()+10)
+	blk, err := bu.GenerateFullBlock(bState, privs, blkCfg, originalState.Slot()+10)
 	require.NoError(t, err)
 	wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
 	require.NoError(t, err)
@@ -70,10 +72,10 @@ func TestSkipSlotCache_ConcurrentMixup(t *testing.T) {
 	// Create two shallow but different forks
 	var s1, s0 state.BeaconState
 	{
-		blk, err := util.GenerateFullBlock(originalState.Copy(), privs, blkCfg, originalState.Slot()+10)
+		blk, err := bu.GenerateFullBlock(originalState.Copy(), privs, blkCfg, originalState.Slot()+10)
 		require.NoError(t, err)
 		copy(blk.Block.Body.Graffiti, "block 1")
-		signature, err := util.BlockSignature(originalState, blk.Block, privs)
+		signature, err := bu.BlockSignature(originalState, blk.Block, privs)
 		require.NoError(t, err)
 		blk.Signature = signature.Marshal()
 		wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
@@ -83,10 +85,10 @@ func TestSkipSlotCache_ConcurrentMixup(t *testing.T) {
 	}
 
 	{
-		blk, err := util.GenerateFullBlock(originalState.Copy(), privs, blkCfg, originalState.Slot()+10)
+		blk, err := bu.GenerateFullBlock(originalState.Copy(), privs, blkCfg, originalState.Slot()+10)
 		require.NoError(t, err)
 		copy(blk.Block.Body.Graffiti, "block 2")
-		signature, err := util.BlockSignature(originalState, blk.Block, privs)
+		signature, err := bu.BlockSignature(originalState, blk.Block, privs)
 		require.NoError(t, err)
 		blk.Signature = signature.Marshal()
 		wsb, err := wrapper.WrappedSignedBeaconBlock(blk)

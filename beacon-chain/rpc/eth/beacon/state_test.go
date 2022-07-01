@@ -99,11 +99,12 @@ func TestGetStateRoot(t *testing.T) {
 
 	t.Run("execution optimistic", func(t *testing.T) {
 		parentRoot := [32]byte{'a'}
-		blk := util.NewBeaconBlock()
+		bu := util.NewBlockUtil()
+		blk := bu.NewBeaconBlock()
 		blk.Block.ParentRoot = parentRoot[:]
 		root, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
-		util.SaveBlock(t, ctx, db, blk)
+		bu.SaveBlock(t, ctx, db, blk)
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
 		chainService := &chainMock.ChainService{Optimistic: true}
@@ -160,12 +161,13 @@ func TestGetStateFork(t *testing.T) {
 	assert.DeepEqual(t, expectedFork.PreviousVersion, resp.Data.PreviousVersion)
 
 	t.Run("execution optimistic", func(t *testing.T) {
+		bu := util.NewBlockUtil()
 		parentRoot := [32]byte{'a'}
-		blk := util.NewBeaconBlock()
+		blk := bu.NewBeaconBlock()
 		blk.Block.ParentRoot = parentRoot[:]
 		root, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
-		util.SaveBlock(t, ctx, db, blk)
+		bu.SaveBlock(t, ctx, db, blk)
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
 		chainService := &chainMock.ChainService{Optimistic: true}
@@ -230,12 +232,13 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 	assert.DeepEqual(t, fakeState.PreviousJustifiedCheckpoint().Root, resp.Data.PreviousJustified.Root)
 
 	t.Run("execution optimistic", func(t *testing.T) {
+		bu := util.NewBlockUtil()
 		parentRoot := [32]byte{'a'}
-		blk := util.NewBeaconBlock()
+		blk := bu.NewBeaconBlock()
 		blk.Block.ParentRoot = parentRoot[:]
 		root, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
-		util.SaveBlock(t, ctx, db, blk)
+		bu.SaveBlock(t, ctx, db, blk)
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
 		chainService := &chainMock.ChainService{Optimistic: true}

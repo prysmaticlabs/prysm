@@ -1070,7 +1070,7 @@ func fillUpBlocksAndState(ctx context.Context, t *testing.T, beaconDB db.Databas
 	testState := gs.Copy()
 	hRoot := [32]byte{}
 	for i := types.Slot(1); i <= params.BeaconConfig().SlotsPerEpoch; i++ {
-		blk, err := util.GenerateFullBlockAltair(testState, keys, util.DefaultBlockGenConfig(), i)
+		blk, err := util.GenerateFullBlockAltair(testState, keys, util.NewBlockUtil().DefaultBlockGenConfig(), i)
 		require.NoError(t, err)
 		r, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)

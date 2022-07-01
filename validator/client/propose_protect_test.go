@@ -90,7 +90,7 @@ func Test_slashableProposalCheck(t *testing.T) {
 	validator, mocks, validatorKey, finish := setup(t)
 	defer finish()
 
-	blk := util.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
+	blk := util.NewBlockUtil().HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
 			Slot:          10,
 			ProposerIndex: 0,
@@ -167,7 +167,7 @@ func Test_slashableProposalCheck_RemoteProtection(t *testing.T) {
 	pubKey := [fieldparams.BLSPubkeyLength]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 
-	blk := util.NewBeaconBlock()
+	blk := util.NewBlockUtil().NewBeaconBlock()
 	blk.Block.Slot = 10
 	sBlock, err := wrapper.WrappedSignedBeaconBlock(blk)
 	require.NoError(t, err)

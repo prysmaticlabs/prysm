@@ -27,9 +27,10 @@ import (
 func TestService_ReceiveBlock(t *testing.T) {
 	ctx := context.Background()
 
+	bu := util.NewBlockUtil()
 	genesis, keys := util.DeterministicGenesisState(t, 64)
 	genFullBlock := func(t *testing.T, conf *util.BlockGenConfig, slot types.Slot) *ethpb.SignedBeaconBlock {
-		blk, err := util.GenerateFullBlock(genesis, keys, conf, slot)
+		blk, err := bu.GenerateFullBlock(genesis, keys, conf, slot)
 		assert.NoError(t, err)
 		return blk
 	}
@@ -50,7 +51,7 @@ func TestService_ReceiveBlock(t *testing.T) {
 		{
 			name: "applies block with state transition",
 			args: args{
-				block: genFullBlock(t, util.DefaultBlockGenConfig(), 2 /*slot*/),
+				block: genFullBlock(t, bu.DefaultBlockGenConfig(), 2 /*slot*/),
 			},
 			check: func(t *testing.T, s *Service) {
 				if hs := s.head.state.Slot(); hs != 2 {
@@ -109,7 +110,7 @@ func TestService_ReceiveBlock(t *testing.T) {
 		{
 			name: "notifies block processed on state feed",
 			args: args{
-				block: genFullBlock(t, util.DefaultBlockGenConfig(), 1 /*slot*/),
+				block: genFullBlock(t, bu.DefaultBlockGenConfig(), 1 /*slot*/),
 			},
 			check: func(t *testing.T, s *Service) {
 				if recvd := len(s.cfg.StateNotifier.(*blockchainTesting.MockStateNotifier).ReceivedEvents()); recvd < 1 {
@@ -155,7 +156,8 @@ func TestService_ReceiveBlock(t *testing.T) {
 func TestService_ReceiveBlockUpdateHead(t *testing.T) {
 	ctx := context.Background()
 	genesis, keys := util.DeterministicGenesisState(t, 64)
-	b, err := util.GenerateFullBlock(genesis, keys, util.DefaultBlockGenConfig(), 1)
+	bu := util.NewBlockUtil()
+	b, err := bu.GenerateFullBlock(genesis, keys, bu.DefaultBlockGenConfig(), 1)
 	assert.NoError(t, err)
 	beaconDB := testDB.SetupDB(t)
 	genesisBlockRoot := bytesutil.ToBytes32(nil)
@@ -194,8 +196,9 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 	ctx := context.Background()
 
 	genesis, keys := util.DeterministicGenesisState(t, 64)
+	bu := util.NewBlockUtil()
 	genFullBlock := func(t *testing.T, conf *util.BlockGenConfig, slot types.Slot) *ethpb.SignedBeaconBlock {
-		blk, err := util.GenerateFullBlock(genesis, keys, conf, slot)
+		blk, err := bu.GenerateFullBlock(genesis, keys, conf, slot)
 		assert.NoError(t, err)
 		return blk
 	}
@@ -212,7 +215,7 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 		{
 			name: "applies block with state transition",
 			args: args{
-				block: genFullBlock(t, util.DefaultBlockGenConfig(), 2 /*slot*/),
+				block: genFullBlock(t, bu.DefaultBlockGenConfig(), 2 /*slot*/),
 			},
 			check: func(t *testing.T, s *Service) {
 				assert.Equal(t, types.Slot(2), s.head.state.Slot(), "Incorrect head state slot")
@@ -222,7 +225,7 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 		{
 			name: "notifies block processed on state feed",
 			args: args{
-				block: genFullBlock(t, util.DefaultBlockGenConfig(), 1 /*slot*/),
+				block: genFullBlock(t, bu.DefaultBlockGenConfig(), 1 /*slot*/),
 			},
 			check: func(t *testing.T, s *Service) {
 				if recvd := len(s.cfg.StateNotifier.(*blockchainTesting.MockStateNotifier).ReceivedEvents()); recvd < 1 {
@@ -271,15 +274,16 @@ func TestService_HasBlock(t *testing.T) {
 	if s.HasBlock(context.Background(), r) {
 		t.Error("Should not have block")
 	}
-	wsb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+	bu := util.NewBlockUtil()
+	wsb, err := wrapper.WrappedSignedBeaconBlock(bu.NewBeaconBlock())
 	require.NoError(t, err)
 	require.NoError(t, s.saveInitSyncBlock(context.Background(), r, wsb))
 	if !s.HasBlock(context.Background(), r) {
 		t.Error("Should have block")
 	}
-	b := util.NewBeaconBlock()
+	b := bu.NewBeaconBlock()
 	b.Block.Slot = 1
-	util.SaveBlock(t, context.Background(), s.cfg.BeaconDB, b)
+	bu.SaveBlock(t, context.Background(), s.cfg.BeaconDB, b)
 	r, err = b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.Equal(t, true, s.HasBlock(context.Background(), r))

@@ -79,7 +79,7 @@ func TestServer_StreamAltairBlocks_OnHeadUpdated(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetCurrentSyncCommittee(c))
 
-	b, err := util.GenerateFullBlockAltair(beaconState, privs, util.DefaultBlockGenConfig(), 1)
+	b, err := util.GenerateFullBlockAltair(beaconState, privs, util.NewBlockUtil().DefaultBlockGenConfig(), 1)
 	require.NoError(t, err)
 	chainService := &chainMock.ChainService{State: beaconState}
 	server := &Server{
@@ -122,11 +122,12 @@ func TestServer_StreamAltairBlocksVerified_OnHeadUpdated(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetCurrentSyncCommittee(c))
 
-	b, err := util.GenerateFullBlockAltair(beaconState, privs, util.DefaultBlockGenConfig(), 1)
+	bu := util.NewBlockUtil()
+	b, err := util.GenerateFullBlockAltair(beaconState, privs, bu.DefaultBlockGenConfig(), 1)
 	require.NoError(t, err)
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	wrappedBlk := util.SaveBlock(t, ctx, db, b)
+	wrappedBlk := bu.SaveBlock(t, ctx, db, b)
 	chainService := &chainMock.ChainService{State: beaconState}
 	server := &Server{
 		Ctx:           ctx,

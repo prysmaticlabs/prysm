@@ -89,11 +89,12 @@ func TestServer_ListBlocks_Genesis(t *testing.T) {
 
 	// Should return the proper genesis block if it exists.
 	parentRoot := [32]byte{'a'}
-	blk := util.NewBeaconBlock()
+	bu := util.NewBlockUtil()
+	blk := bu.NewBeaconBlock()
 	blk.Block.ParentRoot = parentRoot[:]
 	root, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
-	util.SaveBlock(t, ctx, db, blk)
+	bu.SaveBlock(t, ctx, db, blk)
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 	wanted := &ethpb.ListBlocksResponse{
 		BlockContainers: []*ethpb.BeaconBlockContainer{
@@ -126,17 +127,18 @@ func TestServer_ListBlocks_Genesis_MultiBlocks(t *testing.T) {
 	}
 	// Should return the proper genesis block if it exists.
 	parentRoot := [32]byte{1, 2, 3}
-	blk := util.NewBeaconBlock()
+	bu := util.NewBlockUtil()
+	blk := bu.NewBeaconBlock()
 	blk.Block.ParentRoot = parentRoot[:]
 	root, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
-	util.SaveBlock(t, ctx, db, blk)
+	bu.SaveBlock(t, ctx, db, blk)
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
 	count := types.Slot(100)
 	blks := make([]interfaces.SignedBeaconBlock, count)
 	for i := types.Slot(0); i < count; i++ {
-		b := util.NewBeaconBlock()
+		b := bu.NewBeaconBlock()
 		b.Block.Slot = i
 		require.NoError(t, err)
 		blks[i], err = wrapper.WrappedSignedBeaconBlock(b)
@@ -162,12 +164,13 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 		CanonicalRoots: map[[32]byte]bool{},
 	}
 	ctx := context.Background()
+	bu := util.NewBlockUtil()
 
 	count := types.Slot(100)
 	blks := make([]interfaces.SignedBeaconBlock, count)
 	blkContainers := make([]*ethpb.BeaconBlockContainer, count)
 	for i := types.Slot(0); i < count; i++ {
-		b := util.NewBeaconBlock()
+		b := bu.NewBeaconBlock()
 		b.Block.Slot = i
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
@@ -182,11 +185,11 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 	}
 	require.NoError(t, db.SaveBlocks(ctx, blks))
 
-	orphanedBlk := util.NewBeaconBlock()
+	orphanedBlk := bu.NewBeaconBlock()
 	orphanedBlk.Block.Slot = 300
 	orphanedBlkRoot, err := orphanedBlk.Block.HashTreeRoot()
 	require.NoError(t, err)
-	util.SaveBlock(t, ctx, db, orphanedBlk)
+	bu.SaveBlock(t, ctx, db, orphanedBlk)
 
 	bs := &Server{
 		BeaconDB:         db,
@@ -208,7 +211,7 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 				BlockContainers: []*ethpb.BeaconBlockContainer{
 					{
 						Block: &ethpb.BeaconBlockContainer_Phase0Block{
-							Phase0Block: util.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
+							Phase0Block: bu.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
 								Block: &ethpb.BeaconBlock{
 									Slot: 5,
 								},
@@ -230,7 +233,7 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 				BlockContainers: []*ethpb.BeaconBlockContainer{
 					{
 						Block: &ethpb.BeaconBlockContainer_Phase0Block{
-							Phase0Block: util.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
+							Phase0Block: bu.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
 								Block: &ethpb.BeaconBlock{
 									Slot: 6,
 								},
@@ -249,7 +252,7 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 				BlockContainers: []*ethpb.BeaconBlockContainer{
 					{
 						Block: &ethpb.BeaconBlockContainer_Phase0Block{
-							Phase0Block: util.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
+							Phase0Block: bu.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
 								Block: &ethpb.BeaconBlock{
 									Slot: 6,
 								},
@@ -303,7 +306,7 @@ func TestServer_ListBlocks_Pagination(t *testing.T) {
 				BlockContainers: []*ethpb.BeaconBlockContainer{
 					{
 						Block: &ethpb.BeaconBlockContainer_Phase0Block{
-							Phase0Block: util.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
+							Phase0Block: bu.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
 								Block: &ethpb.BeaconBlock{
 									Slot: 300,
 								},
@@ -376,9 +379,10 @@ func TestServer_GetChainHead_NoGenesis(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, s.SetSlot(1))
 
-	genBlock := util.NewBeaconBlock()
+	bu := util.NewBlockUtil()
+	genBlock := bu.NewBeaconBlock()
 	genBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'G'}, fieldparams.RootLength)
-	util.SaveBlock(t, context.Background(), db, genBlock)
+	bu.SaveBlock(t, context.Background(), db, genBlock)
 	gRoot, err := genBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	cases := []struct {
@@ -435,9 +439,10 @@ func TestServer_GetChainHead_NoFinalizedBlock(t *testing.T) {
 	require.NoError(t, s.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{Epoch: 2, Root: bytesutil.PadTo([]byte{'B'}, fieldparams.RootLength)}))
 	require.NoError(t, s.SetFinalizedCheckpoint(&ethpb.Checkpoint{Epoch: 1, Root: bytesutil.PadTo([]byte{'C'}, fieldparams.RootLength)}))
 
-	genBlock := util.NewBeaconBlock()
+	bu := util.NewBlockUtil()
+	genBlock := bu.NewBeaconBlock()
 	genBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'G'}, fieldparams.RootLength)
-	util.SaveBlock(t, context.Background(), db, genBlock)
+	bu.SaveBlock(t, context.Background(), db, genBlock)
 	gRoot, err := genBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), gRoot))
@@ -473,31 +478,32 @@ func TestServer_GetChainHead(t *testing.T) {
 	params.OverrideBeaconConfig(params.MinimalSpecConfig())
 
 	db := dbTest.SetupDB(t)
-	genBlock := util.NewBeaconBlock()
+	bu := util.NewBlockUtil()
+	genBlock := bu.NewBeaconBlock()
 	genBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'G'}, fieldparams.RootLength)
-	util.SaveBlock(t, context.Background(), db, genBlock)
+	bu.SaveBlock(t, context.Background(), db, genBlock)
 	gRoot, err := genBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), gRoot))
 
-	finalizedBlock := util.NewBeaconBlock()
+	finalizedBlock := bu.NewBeaconBlock()
 	finalizedBlock.Block.Slot = 1
 	finalizedBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'A'}, fieldparams.RootLength)
-	util.SaveBlock(t, context.Background(), db, finalizedBlock)
+	bu.SaveBlock(t, context.Background(), db, finalizedBlock)
 	fRoot, err := finalizedBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	justifiedBlock := util.NewBeaconBlock()
+	justifiedBlock := bu.NewBeaconBlock()
 	justifiedBlock.Block.Slot = 2
 	justifiedBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'B'}, fieldparams.RootLength)
-	util.SaveBlock(t, context.Background(), db, justifiedBlock)
+	bu.SaveBlock(t, context.Background(), db, justifiedBlock)
 	jRoot, err := justifiedBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	prevJustifiedBlock := util.NewBeaconBlock()
+	prevJustifiedBlock := bu.NewBeaconBlock()
 	prevJustifiedBlock.Block.Slot = 3
 	prevJustifiedBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'C'}, fieldparams.RootLength)
-	util.SaveBlock(t, context.Background(), db, prevJustifiedBlock)
+	bu.SaveBlock(t, context.Background(), db, prevJustifiedBlock)
 	pjRoot, err := prevJustifiedBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -509,7 +515,7 @@ func TestServer_GetChainHead(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	b := util.NewBeaconBlock()
+	b := bu.NewBeaconBlock()
 	b.Block.Slot, err = slots.EpochStart(s.PreviousJustifiedCheckpoint().Epoch)
 	require.NoError(t, err)
 	b.Block.Slot++
@@ -568,31 +574,32 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
 	db := dbTest.SetupDB(t)
-	genBlock := util.NewBeaconBlock()
+	bu := util.NewBlockUtil()
+	genBlock := bu.NewBeaconBlock()
 	genBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'G'}, fieldparams.RootLength)
-	util.SaveBlock(t, context.Background(), db, genBlock)
+	bu.SaveBlock(t, context.Background(), db, genBlock)
 	gRoot, err := genBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), gRoot))
 
-	finalizedBlock := util.NewBeaconBlock()
+	finalizedBlock := bu.NewBeaconBlock()
 	finalizedBlock.Block.Slot = 32
 	finalizedBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'A'}, fieldparams.RootLength)
-	util.SaveBlock(t, context.Background(), db, finalizedBlock)
+	bu.SaveBlock(t, context.Background(), db, finalizedBlock)
 	fRoot, err := finalizedBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	justifiedBlock := util.NewBeaconBlock()
+	justifiedBlock := bu.NewBeaconBlock()
 	justifiedBlock.Block.Slot = 64
 	justifiedBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'B'}, fieldparams.RootLength)
-	util.SaveBlock(t, context.Background(), db, justifiedBlock)
+	bu.SaveBlock(t, context.Background(), db, justifiedBlock)
 	jRoot, err := justifiedBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	prevJustifiedBlock := util.NewBeaconBlock()
+	prevJustifiedBlock := bu.NewBeaconBlock()
 	prevJustifiedBlock.Block.Slot = 96
 	prevJustifiedBlock.Block.ParentRoot = bytesutil.PadTo([]byte{'C'}, fieldparams.RootLength)
-	util.SaveBlock(t, context.Background(), db, prevJustifiedBlock)
+	bu.SaveBlock(t, context.Background(), db, prevJustifiedBlock)
 	pjRoot, err := prevJustifiedBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -604,7 +611,7 @@ func TestServer_StreamChainHead_OnHeadUpdated(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	b := util.NewBeaconBlock()
+	b := bu.NewBeaconBlock()
 	b.Block.Slot, err = slots.EpochStart(s.PreviousJustifiedCheckpoint().Epoch)
 	require.NoError(t, err)
 
@@ -724,7 +731,8 @@ func TestServer_StreamBlocks_OnHeadUpdated(t *testing.T) {
 
 	ctx := context.Background()
 	beaconState, privs := util.DeterministicGenesisState(t, 32)
-	b, err := util.GenerateFullBlock(beaconState, privs, util.DefaultBlockGenConfig(), 1)
+	bu := util.NewBlockUtil()
+	b, err := bu.GenerateFullBlock(beaconState, privs, bu.DefaultBlockGenConfig(), 1)
 	require.NoError(t, err)
 	chainService := &chainMock.ChainService{State: beaconState}
 	server := &Server{
@@ -764,11 +772,12 @@ func TestServer_StreamBlocksVerified_OnHeadUpdated(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 	beaconState, privs := util.DeterministicGenesisState(t, 32)
-	b, err := util.GenerateFullBlock(beaconState, privs, util.DefaultBlockGenConfig(), 1)
+	bu := util.NewBlockUtil()
+	b, err := bu.GenerateFullBlock(beaconState, privs, bu.DefaultBlockGenConfig(), 1)
 	require.NoError(t, err)
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	util.SaveBlock(t, ctx, db, b)
+	bu.SaveBlock(t, ctx, db, b)
 	chainService := &chainMock.ChainService{State: beaconState}
 	server := &Server{
 		Ctx:           ctx,
@@ -847,7 +856,7 @@ func TestServer_ListBeaconBlocks_NoResults(t *testing.T) {
 func TestServer_ListBeaconBlocks_Genesis(t *testing.T) {
 	t.Run("phase 0 block", func(t *testing.T) {
 		parentRoot := [32]byte{'a'}
-		blk := util.NewBeaconBlock()
+		blk := util.NewBlockUtil().NewBeaconBlock()
 		blk.Block.ParentRoot = parentRoot[:]
 		blkContainer := &ethpb.BeaconBlockContainer{
 			Block: &ethpb.BeaconBlockContainer_Phase0Block{Phase0Block: blk}}
@@ -919,10 +928,11 @@ func runListBlocksGenesis(t *testing.T, blk interfaces.SignedBeaconBlock, blkCon
 func TestServer_ListBeaconBlocks_Genesis_MultiBlocks(t *testing.T) {
 	t.Run("phase 0 block", func(t *testing.T) {
 		parentRoot := [32]byte{1, 2, 3}
-		blk := util.NewBeaconBlock()
+		bu := util.NewBlockUtil()
+		blk := bu.NewBeaconBlock()
 		blk.Block.ParentRoot = parentRoot[:]
 		blockCreator := func(i types.Slot) interfaces.SignedBeaconBlock {
-			b := util.NewBeaconBlock()
+			b := bu.NewBeaconBlock()
 			b.Block.Slot = i
 			wrappedB, err := wrapper.WrappedSignedBeaconBlock(b)
 			assert.NoError(t, err)
@@ -997,22 +1007,23 @@ func runListBeaconBlocksGenesisMultiBlocks(t *testing.T, genBlock interfaces.Sig
 func TestServer_ListBeaconBlocks_Pagination(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MinimalSpecConfig())
+	bu := util.NewBlockUtil()
 	t.Run("phase 0 block", func(t *testing.T) {
-		blk := util.NewBeaconBlock()
+		blk := bu.NewBeaconBlock()
 		blk.Block.Slot = 300
 		blockCreator := func(i types.Slot) interfaces.SignedBeaconBlock {
-			b := util.NewBeaconBlock()
+			b := bu.NewBeaconBlock()
 			b.Block.Slot = i
 			wrappedB, err := wrapper.WrappedSignedBeaconBlock(b)
 			assert.NoError(t, err)
 			return wrappedB
 		}
 		containerCreator := func(i types.Slot, root []byte, canonical bool) *ethpb.BeaconBlockContainer {
-			b := util.NewBeaconBlock()
+			b := bu.NewBeaconBlock()
 			b.Block.Slot = i
 			ctr := &ethpb.BeaconBlockContainer{
 				Block: &ethpb.BeaconBlockContainer_Phase0Block{
-					Phase0Block: util.HydrateSignedBeaconBlock(b)},
+					Phase0Block: bu.HydrateSignedBeaconBlock(b)},
 				BlockRoot: root,
 				Canonical: canonical}
 			return ctr

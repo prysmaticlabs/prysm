@@ -35,6 +35,7 @@ func TestGetBeaconState(t *testing.T) {
 func TestGetBeaconStateV2(t *testing.T) {
 	ctx := context.Background()
 	db := dbTest.SetupDB(t)
+	bu := util.NewBlockUtil()
 
 	t.Run("Phase 0", func(t *testing.T) {
 		fakeState, err := util.NewBeaconState()
@@ -90,11 +91,11 @@ func TestGetBeaconStateV2(t *testing.T) {
 	})
 	t.Run("execution optimistic", func(t *testing.T) {
 		parentRoot := [32]byte{'a'}
-		blk := util.NewBeaconBlock()
+		blk := bu.NewBeaconBlock()
 		blk.Block.ParentRoot = parentRoot[:]
 		root, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
-		util.SaveBlock(t, ctx, db, blk)
+		bu.SaveBlock(t, ctx, db, blk)
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
 		fakeState, _ := util.DeterministicGenesisStateBellatrix(t, 1)

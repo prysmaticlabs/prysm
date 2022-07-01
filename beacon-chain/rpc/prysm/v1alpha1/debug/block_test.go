@@ -22,9 +22,10 @@ func TestServer_GetBlock(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 
-	b := util.NewBeaconBlock()
+	bu := util.NewBlockUtil()
+	b := bu.NewBeaconBlock()
 	b.Block.Slot = 100
-	util.SaveBlock(t, ctx, db, b)
+	bu.SaveBlock(t, ctx, db, b)
 	blockRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	bs := &Server{
@@ -73,10 +74,11 @@ func TestServer_GetAttestationInclusionSlot(t *testing.T) {
 		AggregationBits: bitfield.Bitlist{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x01},
 		Signature:       make([]byte, fieldparams.BLSSignatureLength),
 	}
-	b := util.NewBeaconBlock()
+	bu := util.NewBlockUtil()
+	b := bu.NewBeaconBlock()
 	b.Block.Slot = 2
 	b.Block.Body.Attestations = []*ethpb.Attestation{a}
-	util.SaveBlock(t, ctx, bs.BeaconDB, b)
+	bu.SaveBlock(t, ctx, bs.BeaconDB, b)
 	res, err := bs.GetInclusionSlot(ctx, &ethpb.InclusionSlotRequest{Slot: 1, Id: uint64(c[0])})
 	require.NoError(t, err)
 	require.Equal(t, b.Block.Slot, res.Slot)

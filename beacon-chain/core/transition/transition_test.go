@@ -82,7 +82,8 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 	require.NoError(t, err)
 	proposerIdx, err := helpers.BeaconProposerIndex(context.Background(), nextSlotState)
 	require.NoError(t, err)
-	block := util.NewBeaconBlock()
+	bu := util.NewBlockUtil()
+	block := bu.NewBeaconBlock()
 	block.Block.ProposerIndex = proposerIdx
 	block.Block.Slot = beaconState.Slot() + 1
 	block.Block.ParentRoot = parentRoot[:]
@@ -96,7 +97,7 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 
 	block.Block.StateRoot = stateRoot[:]
 
-	sig, err := util.BlockSignature(beaconState, block.Block, privKeys)
+	sig, err := bu.BlockSignature(beaconState, block.Block, privKeys)
 	require.NoError(t, err)
 	block.Signature = sig.Marshal()
 
@@ -114,17 +115,18 @@ func TestExecuteStateTransition_FullProcess(t *testing.T) {
 
 func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	beaconState, _ := util.DeterministicGenesisState(t, 100)
+	bu := util.NewBlockUtil()
 
 	proposerSlashings := []*ethpb.ProposerSlashing{
 		{
-			Header_1: util.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
+			Header_1: bu.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
 					ProposerIndex: 3,
 					Slot:          1,
 				},
 				Signature: bytesutil.PadTo([]byte("A"), 96),
 			}),
-			Header_2: util.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
+			Header_2: bu.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{
 					ProposerIndex: 3,
 					Slot:          1,
@@ -167,7 +169,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	genesisBlock := blocks.NewGenesisBlock([]byte{})
 	bodyRoot, err := genesisBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
-	err = beaconState.SetLatestBlockHeader(util.HydrateBeaconHeader(&ethpb.BeaconBlockHeader{
+	err = beaconState.SetLatestBlockHeader(bu.HydrateBeaconHeader(&ethpb.BeaconBlockHeader{
 		Slot:       genesisBlock.Block.Slot,
 		ParentRoot: genesisBlock.Block.ParentRoot,
 		BodyRoot:   bodyRoot[:],
@@ -175,7 +177,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	require.NoError(t, err)
 	parentRoot, err := beaconState.LatestBlockHeader().HashTreeRoot()
 	require.NoError(t, err)
-	block := util.NewBeaconBlock()
+	block := bu.NewBeaconBlock()
 	block.Block.Slot = 1
 	block.Block.ParentRoot = parentRoot[:]
 	block.Block.Body.ProposerSlashings = proposerSlashings
@@ -225,7 +227,8 @@ func createFullBlockWithOperations(t *testing.T) (state.BeaconState,
 	require.NoError(t, err)
 
 	currentEpoch := time.CurrentEpoch(beaconState)
-	header1 := util.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
+	bu := util.NewBlockUtil()
+	header1 := bu.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
 			ProposerIndex: proposerSlashIdx,
 			Slot:          1,
@@ -235,7 +238,7 @@ func createFullBlockWithOperations(t *testing.T) (state.BeaconState,
 	header1.Signature, err = signing.ComputeDomainAndSign(beaconState, currentEpoch, header1.Header, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerSlashIdx])
 	require.NoError(t, err)
 
-	header2 := util.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
+	header2 := bu.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{
 		Header: &ethpb.BeaconBlockHeader{
 			ProposerIndex: proposerSlashIdx,
 			Slot:          1,
@@ -347,7 +350,8 @@ func createFullBlockWithOperations(t *testing.T) (state.BeaconState,
 	require.NoError(t, err)
 	proposerIndex, err := helpers.BeaconProposerIndex(context.Background(), copied)
 	require.NoError(t, err)
-	block := util.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
+	bu := util.NewBlockUtil()
+	block := bu.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
 		Block: &ethpb.BeaconBlock{
 			ParentRoot:    parentRoot[:],
 			Slot:          beaconState.Slot() + 1,
@@ -362,7 +366,7 @@ func createFullBlockWithOperations(t *testing.T) (state.BeaconState,
 		},
 	})
 
-	sig, err := util.BlockSignature(beaconState, block.Block, privKeys)
+	sig, err := bu.BlockSignature(beaconState, block.Block, privKeys)
 	require.NoError(t, err)
 	block.Signature = sig.Marshal()
 

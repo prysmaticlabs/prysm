@@ -237,7 +237,7 @@ func TestMonitorRoutine(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, genesis.SetCurrentSyncCommittee(c))
 
-	genConfig := util.DefaultBlockGenConfig()
+	genConfig := util.NewBlockUtil().DefaultBlockGenConfig()
 	block, err := util.GenerateFullBlockAltair(genesis, keys, genConfig, 1)
 	require.NoError(t, err)
 	root, err := block.GetBlock().HashTreeRoot()

@@ -26,7 +26,7 @@ var blockTests = []struct {
 	{
 		name: "phase0",
 		newBlock: func(slot types.Slot, root []byte) (interfaces.SignedBeaconBlock, error) {
-			b := util.NewBeaconBlock()
+			b := util.NewBlockUtil().NewBeaconBlock()
 			b.Block.Slot = slot
 			if root != nil {
 				b.Block.ParentRoot = root
@@ -245,7 +245,7 @@ func TestStore_DeleteBlock(t *testing.T) {
 func TestStore_DeleteJustifiedBlock(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
-	b := util.NewBeaconBlock()
+	b := util.NewBlockUtil().NewBeaconBlock()
 	b.Block.Slot = 1
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -265,7 +265,7 @@ func TestStore_DeleteJustifiedBlock(t *testing.T) {
 func TestStore_DeleteFinalizedBlock(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
-	b := util.NewBeaconBlock()
+	b := util.NewBlockUtil().NewBeaconBlock()
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	cp := &ethpb.Checkpoint{
@@ -284,7 +284,7 @@ func TestStore_DeleteFinalizedBlock(t *testing.T) {
 func TestStore_GenesisBlock(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
-	genesisBlock := util.NewBeaconBlock()
+	genesisBlock := util.NewBlockUtil().NewBeaconBlock()
 	genesisBlock.Block.ParentRoot = bytesutil.PadTo([]byte{1, 2, 3}, 32)
 	blockRoot, err := genesisBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
