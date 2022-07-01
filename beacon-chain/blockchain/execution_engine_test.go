@@ -31,6 +31,7 @@ import (
 )
 
 func Test_NotifyForkchoiceUpdate(t *testing.T) {
+	params.BeaconConfig().SafeSlotsToImportOptimistically = 0
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 	altairBlk := util.SaveBlock(t, ctx, beaconDB, util.NewBeaconBlockAltair())
