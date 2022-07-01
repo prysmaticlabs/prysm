@@ -204,7 +204,7 @@ func (r *testRunner) testTxGeneration(ctx context.Context, g *errgroup.Group, ke
 	})
 }
 
-func (r *testRunner) waitForMatchingHead(ctx context.Context, timeout time.Duration, check, ref *grpc.ClientConn) error {
+func (r *testRunner) waitForMatchingFinalized(ctx context.Context, timeout time.Duration, check, ref *grpc.ClientConn) error {
 	start := time.Now()
 	dctx, cancel := context.WithDeadline(ctx, start.Add(timeout))
 	defer cancel()
@@ -287,7 +287,7 @@ func (r *testRunner) testCheckpointSync(ctx context.Context, g *errgroup.Group, 
 
 	// this is so that the syncEvaluators checks can run on the checkpoint sync'd node
 	conns = append(conns, c)
-	err = r.waitForMatchingHead(ctx, matchTimeout, c, conns[0])
+	err = r.waitForMatchingFinalized(ctx, matchTimeout, c, conns[0])
 	if err != nil {
 		return err
 	}
