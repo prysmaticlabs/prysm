@@ -28,10 +28,10 @@ var (
 			"the data cardinality.",
 	}
 	// BeaconRPCProviderFlag defines a beacon node RPC endpoint.
-	BeaconRPCProviderFlag = &cli.StringFlag{
+	BeaconRPCProviderFlag = &cli.StringSliceFlag{
 		Name:  "beacon-rpc-provider",
 		Usage: "Beacon node RPC provider endpoint",
-		Value: "127.0.0.1:4000",
+		Value: cli.NewStringSlice("127.0.0.1:4000"),
 	}
 	// BeaconRPCGatewayProviderFlag defines a beacon node JSON-RPC endpoint.
 	BeaconRPCGatewayProviderFlag = &cli.StringFlag{
