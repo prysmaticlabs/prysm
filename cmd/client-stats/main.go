@@ -29,6 +29,10 @@ var appFlags = []cli.Flag{
 	flags.ScrapeIntervalFlag,
 }
 
+func init() {
+	appFlags = cmd.WrapFlags(appFlags)
+}
+
 func main() {
 	app := cli.App{}
 	app.Name = "client-stats"

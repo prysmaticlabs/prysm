@@ -11,6 +11,7 @@ import (
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/interop"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/components"
@@ -18,13 +19,12 @@ import (
 	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/policies"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/types"
-	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 var FeeRecipientIsPresent = types.Evaluator{
-	Name:       "Fee_Recipient_Is_Present_%d",
+	Name:       "fee_recipient_is_present_%d",
 	Policy:     policies.AfterNthEpoch(helpers.BellatrixE2EForkEpoch),
 	Evaluation: feeRecipientIsPresent,
 }
@@ -50,6 +50,23 @@ func feeRecipientIsPresent(conns ...*grpc.ClientConn) error {
 	web3 := ethclient.NewClient(rpcclient)
 	ctx := context.Background()
 
+	validatorNum := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
+	_, pubs, err := interop.DeterministicallyGenerateKeys(uint64(0), uint64(validatorNum+int(e2e.DepositCount))) // matches validator start in validator component + validators used for deposits
+	if err != nil {
+		return err
+	}
+	lighthouseKeys := []bls.PublicKey{}
+	if e2e.TestParams.LighthouseBeaconNodeCount != 0 {
+		totalNodecount := e2e.TestParams.BeaconNodeCount + e2e.TestParams.LighthouseBeaconNodeCount
+		valPerNode := validatorNum / totalNodecount
+		lighthouseOffset := valPerNode * e2e.TestParams.BeaconNodeCount
+
+		_, lighthouseKeys, err = interop.DeterministicallyGenerateKeys(uint64(lighthouseOffset), uint64(valPerNode*e2e.TestParams.LighthouseBeaconNodeCount))
+		if err != nil {
+			return err
+		}
+	}
+
 	for _, ctr := range blks.BlockContainers {
 		switch ctr.Block.(type) {
 		case *ethpb.BeaconBlockContainer_BellatrixBlock:
@@ -72,10 +89,17 @@ func feeRecipientIsPresent(conns ...*grpc.ClientConn) error {
 			}
 			publickey := validator.GetPublicKey()
 			isDeterministicKey := false
-			validatorNum := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
-			_, pubs, err := interop.DeterministicallyGenerateKeys(uint64(0), uint64(validatorNum+int(e2e.DepositCount))) // matches validator start in validator component + validators used for deposits
-			if err != nil {
-				return err
+			isLighthouseKey := false
+
+			// If lighthouse keys are present, we skip the check.
+			for _, pub := range lighthouseKeys {
+				if hexutil.Encode(publickey) == hexutil.Encode(pub.Marshal()) {
+					isLighthouseKey = true
+					break
+				}
+			}
+			if isLighthouseKey {
+				continue
 			}
 			for _, pub := range pubs {
 				if hexutil.Encode(publickey) == hexutil.Encode(pub.Marshal()) {
@@ -111,10 +135,7 @@ func feeRecipientIsPresent(conns ...*grpc.ClientConn) error {
 				return err
 			}
 			if currentBlock.GasUsed() > 0 && accountBalance.Uint64() <= prevAccountBalance.Uint64() {
-				log.Infof("current block num: %d , previous block num: %d , account balance: %d,  pre account balance %d", currentBlock.Number(), previousBlock.Number(), accountBalance, prevAccountBalance)
 				return errors.Errorf("account balance didn't change after applying fee recipient for account: %s", account.Hex())
-			} else {
-				log.Infof("current gas used: %v current account balance %v ,increased from previous account balance %v ", currentBlock.GasUsed(), accountBalance, prevAccountBalance)
 			}
 		}
 	}
