@@ -8,9 +8,17 @@ import (
 	"github.com/pkg/errors"
 )
 
+// BazelUtil is an empty struct used as the receiver for all Bazel utility methods.
+type BazelUtil struct{}
+
+// NewBazelUtil returns a set of Bazel utilities.
+func NewBazelUtil() *BazelUtil {
+	return &BazelUtil{}
+}
+
 // BazelDirectoryNonEmpty returns true if directory exists and is not empty.
-func BazelDirectoryNonEmpty(filePath string) (bool, error) {
-	fs, err := bazelReadDir(filePath)
+func (u *BazelUtil) BazelDirectoryNonEmpty(filePath string) (bool, error) {
+	fs, err := u.bazelReadDir(filePath)
 	if err != nil {
 		return false, err
 	}
@@ -18,7 +26,7 @@ func BazelDirectoryNonEmpty(filePath string) (bool, error) {
 }
 
 // BazelFileBytes returns the byte array of the bazel file path given.
-func BazelFileBytes(filePaths ...string) ([]byte, error) {
+func (u *BazelUtil) BazelFileBytes(filePaths ...string) ([]byte, error) {
 	filepath, err := bazel.Runfile(path.Join(filePaths...))
 	if err != nil {
 		return nil, err
@@ -35,8 +43,8 @@ func BazelFileBytes(filePaths ...string) ([]byte, error) {
 
 // BazelListFiles lists all of the file names in a given directory. Excludes directories. Returns
 // an error when no non-directory files exist.
-func BazelListFiles(filepath string) ([]string, error) {
-	d, err := bazelReadDir(filepath)
+func (u *BazelUtil) BazelListFiles(filepath string) ([]string, error) {
+	d, err := u.bazelReadDir(filepath)
 	if err != nil {
 		return nil, err
 	}
@@ -59,8 +67,8 @@ func BazelListFiles(filepath string) ([]string, error) {
 
 // BazelListDirectories lists all of the directories in the given directory. Excludes regular files.
 // Returns error when no directories exist.
-func BazelListDirectories(filepath string) ([]string, error) {
-	d, err := bazelReadDir(filepath)
+func (u *BazelUtil) BazelListDirectories(filepath string) ([]string, error) {
+	d, err := u.bazelReadDir(filepath)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +86,7 @@ func BazelListDirectories(filepath string) ([]string, error) {
 	return ret, nil
 }
 
-func bazelReadDir(filepath string) ([]os.DirEntry, error) {
+func (u *BazelUtil) bazelReadDir(filepath string) ([]os.DirEntry, error) {
 	p, err := bazel.Runfile(filepath)
 	if err != nil {
 		return nil, err
