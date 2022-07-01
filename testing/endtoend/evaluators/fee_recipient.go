@@ -24,7 +24,7 @@ import (
 )
 
 var FeeRecipientIsPresent = types.Evaluator{
-	Name:       "Fee_Recipient_Is_Present_%d",
+	Name:       "fee_recipient_is_present_%d",
 	Policy:     policies.AfterNthEpoch(helpers.BellatrixE2EForkEpoch),
 	Evaluation: feeRecipientIsPresent,
 }
