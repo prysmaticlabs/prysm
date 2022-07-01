@@ -12,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/prysmaticlabs/prysm/config/params"
+	ecdsaprysm "github.com/prysmaticlabs/prysm/crypto/ecdsa"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
@@ -36,7 +37,8 @@ func TestPrivateKeyLoading(t *testing.T) {
 	}
 	pKey, err := privKey(cfg)
 	require.NoError(t, err, "Could not apply option")
-	newPkey := convertToInterfacePrivkey(pKey)
+	newPkey, err := ecdsaprysm.ConvertToInterfacePrivkey(pKey)
+	require.NoError(t, err)
 	rawBytes, err := key.Raw()
 	require.NoError(t, err)
 	newRaw, err := newPkey.Raw()
