@@ -22,6 +22,6 @@ func SetMaxFdLimits() error {
 	if err != nil {
 		return err
 	}
-	log.Infof("Updated file descriptor limit to %d from %d", raisedVal, curr)
+	log.Debugf("Updated file descriptor limit to %d from %d", raisedVal, curr)
 	return nil
 }
