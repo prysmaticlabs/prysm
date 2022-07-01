@@ -22,21 +22,21 @@ func (vs *Server) packDepositsAndAttestations(ctx context.Context, head state.Be
 	var deposits []*ethpb.Deposit
 	var atts []*ethpb.Attestation
 
-	eg.Go(func() error {
-		// Pack ETH1 deposits which have not been included in the beacon chain.
-		localDeposits, err := vs.deposits(egctx, head, eth1Data)
-		if err != nil {
-			return status.Errorf(codes.Internal, "Could not get ETH1 deposits: %v", err)
-		}
-		// if the original context is cancelled, then cancel this routine too
-		select {
-		case <-egctx.Done():
-			return egctx.Err()
-		default:
-		}
-		deposits = localDeposits
-		return nil
-	})
+	//eg.Go(func() error {
+	//	// Pack ETH1 deposits which have not been included in the beacon chain.
+	//	localDeposits, err := vs.deposits(egctx, head, eth1Data)
+	//	if err != nil {
+	//		return status.Errorf(codes.Internal, "Could not get ETH1 deposits: %v", err)
+	//	}
+	//	// if the original context is cancelled, then cancel this routine too
+	//	select {
+	//	case <-egctx.Done():
+	//		return egctx.Err()
+	//	default:
+	//	}
+	//	deposits = localDeposits
+	//	return nil
+	//})
 
 	eg.Go(func() error {
 		// Pack aggregated attestations which have not been included in the beacon chain.
