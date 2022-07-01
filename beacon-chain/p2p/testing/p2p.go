@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/enr"
-	bhost "github.com/libp2p/go-libp2p-blankhost"
 	core "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/control"
 	"github.com/libp2p/go-libp2p-core/host"
@@ -18,7 +17,8 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
-	swarmt "github.com/libp2p/go-libp2p-swarm/testing"
+	bhost "github.com/libp2p/go-libp2p/p2p/host/blank"
+	swarmt "github.com/libp2p/go-libp2p/p2p/net/swarm/testing"
 	"github.com/multiformats/go-multiaddr"
 	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
