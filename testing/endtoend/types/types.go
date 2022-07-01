@@ -6,6 +6,7 @@ import (
 	"context"
 
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	ev "github.com/prysmaticlabs/prysm/testing/endtoend/evaluators"
 	"google.golang.org/grpc"
 )
 
@@ -23,6 +24,21 @@ func WithRemoteSigner() E2EConfigOpt {
 	}
 }
 
+func WithSlasher() E2EConfigOpt {
+	return func(cfg *E2EConfig) {
+		cfg.UseSlasher = true
+		cfg.Evaluators = []Evaluator{
+			ev.PeersConnect,
+			ev.HealthzCheck,
+			ev.ValidatorsSlashedAfterEpoch(4),
+			ev.SlashedValidatorsLoseBalanceAfterEpoch(4),
+			ev.InjectDoubleVoteOnEpoch(2),
+			ev.InjectDoubleBlockOnEpoch(2),
+		}
+		cfg.BeaconFlags = append(cfg.BeaconFlags, "--slasher")
+	}
+}
+
 func WithCheckpointSync() E2EConfigOpt {
 	return func(cfg *E2EConfig) {
 		cfg.TestCheckpointSync = true
@@ -37,6 +53,7 @@ type E2EConfig struct {
 	UsePrysmShValidator     bool
 	UsePprof                bool
 	UseWeb3RemoteSigner     bool
+	UseSlasher              bool
 	TestDeposits            bool
 	UseFixedPeerIDs         bool
 	UseValidatorCrossClient bool
