@@ -217,7 +217,7 @@ func (r *testRunner) waitForMatchingHead(ctx context.Context, timeout time.Durat
 			elapsed := time.Since(start)
 			return fmt.Errorf("deadline exceeded after %s waiting for known good block to appear in checkpoint-synced node", elapsed)
 		default:
-			cResp, err := checkClient.GetBlockRoot(ctx, &v1.BlockRequest{BlockId: []byte("head")})
+			cResp, err := checkClient.GetBlockRoot(ctx, &v1.BlockRequest{BlockId: []byte("finalized")})
 			if err != nil {
 				errStatus, ok := status.FromError(err)
 				// in the happy path we expect NotFound results until the node has synced
@@ -226,7 +226,7 @@ func (r *testRunner) waitForMatchingHead(ctx context.Context, timeout time.Durat
 				}
 				return fmt.Errorf("error requesting head from 'check' beacon node")
 			}
-			rResp, err := refClient.GetBlockRoot(ctx, &v1.BlockRequest{BlockId: []byte("head")})
+			rResp, err := refClient.GetBlockRoot(ctx, &v1.BlockRequest{BlockId: []byte("finalized")})
 			if err != nil {
 				return errors.Wrap(err, "unexpected error requesting head block root from 'ref' beacon node")
 			}
