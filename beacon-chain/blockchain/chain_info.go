@@ -83,6 +83,7 @@ type FinalizationFetcher interface {
 	CurrentJustifiedCheckpt() *ethpb.Checkpoint
 	PreviousJustifiedCheckpt() *ethpb.Checkpoint
 	VerifyFinalizedBlkDescendant(ctx context.Context, blockRoot [32]byte) error
+	IsFinalized(ctx context.Context, blockRoot [32]byte) bool
 }
 
 // OptimisticModeFetcher retrieves information about optimistic status of the node.
@@ -305,6 +306,15 @@ func (s *Service) IsOptimistic(ctx context.Context) (bool, error) {
 	}
 
 	return s.IsOptimisticForRoot(ctx, s.head.root)
+}
+
+// IsFinalized returns true if the input root is finalized.
+// It first checks latest finalized root then checks finalized root index in DB.
+func (s *Service) IsFinalized(ctx context.Context, root [32]byte) bool {
+	if s.ForkChoicer().FinalizedCheckpoint().Root == root {
+		return true
+	}
+	return s.cfg.BeaconDB.IsFinalizedBlock(ctx, root)
 }
 
 // IsOptimisticForRoot takes the root as argument instead of the current head
