@@ -493,8 +493,6 @@ func TestStatusRPCRequest_FinalizedBlockExists(t *testing.T) {
 	}
 	totalSec := int64(params.BeaconConfig().SlotsPerEpoch.Mul(5 * params.BeaconConfig().SecondsPerSlot))
 	genTime := time.Now().Unix() - totalSec
-	t.Log(finalizedRoot)
-	t.Log(headRoot)
 	r := &Service{
 		cfg: &config{
 			p2p: p1,
