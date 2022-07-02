@@ -42,7 +42,7 @@ require (
 	github.com/kevinms/leakybucket-go v0.0.0-20200115003610-082473db97ca
 	github.com/kr/pretty v0.3.0
 	github.com/libp2p/go-libp2p v0.20.3
-	github.com/libp2p/go-libp2p-core v0.19.0
+	github.com/libp2p/go-libp2p-core v0.17.0
 	github.com/libp2p/go-libp2p-peerstore v0.7.0
 	github.com/libp2p/go-libp2p-pubsub v0.7.1-0.20220701163738-60cf38003244
 	github.com/logrusorgru/aurora v2.0.3+incompatible
