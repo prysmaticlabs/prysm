@@ -212,7 +212,9 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 
 	// Save justified check point to db.
 	if justified.Epoch > currJustifiedEpoch {
-		if err := s.cfg.BeaconDB.SaveJustifiedCheckpoint(ctx, postState.CurrentJustifiedCheckpoint()); err != nil {
+		if err := s.cfg.BeaconDB.SaveJustifiedCheckpoint(ctx, &ethpb.Checkpoint{
+			Epoch: justified.Epoch, Root: justified.Root[:],
+		}); err != nil {
 			return err
 		}
 	}
@@ -220,7 +222,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 	// Update finalized check point.
 	finalized := s.ForkChoicer().FinalizedCheckpoint()
 	if finalized.Epoch > currFinalizedEpoch {
-		if err := s.updateFinalized(ctx, postState.FinalizedCheckpoint()); err != nil {
+		if err := s.updateFinalized(ctx, &ethpb.Checkpoint{Epoch: finalized.Epoch, Root: finalized.Root[:]}); err != nil {
 			return err
 		}
 		isOptimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(finalized.Root)
@@ -493,9 +495,15 @@ func (s *Service) insertBlockAndAttestationsToForkChoiceStore(ctx context.Contex
 	ctx, span := trace.StartSpan(ctx, "blockChain.insertBlockAndAttestationsToForkChoiceStore")
 	defer span.End()
 
-	fCheckpoint := st.FinalizedCheckpoint()
-	jCheckpoint := st.CurrentJustifiedCheckpoint()
-	if err := s.insertBlockToForkChoiceStore(ctx, blk, root, st, fCheckpoint, jCheckpoint); err != nil {
+	if !s.cfg.ForkChoiceStore.HasNode(bytesutil.ToBytes32(blk.ParentRoot())) {
+		fCheckpoint := st.FinalizedCheckpoint()
+		jCheckpoint := st.CurrentJustifiedCheckpoint()
+		if err := s.fillInForkChoiceMissingBlocks(ctx, blk, fCheckpoint, jCheckpoint); err != nil {
+			return err
+		}
+	}
+
+	if err := s.cfg.ForkChoiceStore.InsertNode(ctx, st, root); err != nil {
 		return err
 	}
 	// Feed in block's attestations to fork choice store.
@@ -511,13 +519,6 @@ func (s *Service) insertBlockAndAttestationsToForkChoiceStore(ctx context.Contex
 		s.cfg.ForkChoiceStore.ProcessAttestation(ctx, indices, bytesutil.ToBytes32(a.Data.BeaconBlockRoot), a.Data.Target.Epoch)
 	}
 	return nil
-}
-
-func (s *Service) insertBlockToForkChoiceStore(ctx context.Context, blk interfaces.BeaconBlock, root [32]byte, st state.BeaconState, fCheckpoint, jCheckpoint *ethpb.Checkpoint) error {
-	if err := s.fillInForkChoiceMissingBlocks(ctx, blk, fCheckpoint, jCheckpoint); err != nil {
-		return err
-	}
-	return s.cfg.ForkChoiceStore.InsertNode(ctx, st, root)
 }
 
 // InsertSlashingsToForkChoiceStore inserts attester slashing indices to fork choice store.

@@ -147,6 +147,8 @@ func TestStore_NoDeadLock(t *testing.T) {
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 	require.NoError(t, f.store.setUnrealizedJustifiedEpoch([32]byte{'g'}, 2))
 	require.NoError(t, f.store.setUnrealizedFinalizedEpoch([32]byte{'g'}, 1))
+	f.store.unrealizedJustifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: 2}
+	f.store.unrealizedFinalizedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: 1}
 	state, blkRoot, err = prepareForkchoiceState(ctx, 107, [32]byte{'h'}, [32]byte{'g'}, [32]byte{'H'}, 0, 0)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
@@ -236,6 +238,7 @@ func TestStore_ForkNextEpoch(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 	require.NoError(t, f.store.setUnrealizedJustifiedEpoch([32]byte{'d'}, 1))
+	f.store.unrealizedJustifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: 1}
 	f.UpdateUnrealizedCheckpoints()
 	headRoot, err = f.Head(ctx, []uint64{100})
 	require.NoError(t, err)

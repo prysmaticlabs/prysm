@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
@@ -23,15 +24,17 @@ import (
 // New initializes a new fork choice store.
 func New() *ForkChoice {
 	s := &Store{
-		justifiedCheckpoint:     &forkchoicetypes.Checkpoint{},
-		bestJustifiedCheckpoint: &forkchoicetypes.Checkpoint{},
-		prevJustifiedCheckpoint: &forkchoicetypes.Checkpoint{},
-		finalizedCheckpoint:     &forkchoicetypes.Checkpoint{},
-		proposerBoostRoot:       [32]byte{},
-		nodeByRoot:              make(map[[fieldparams.RootLength]byte]*Node),
-		nodeByPayload:           make(map[[fieldparams.RootLength]byte]*Node),
-		slashedIndices:          make(map[types.ValidatorIndex]bool),
-		pruneThreshold:          defaultPruneThreshold,
+		justifiedCheckpoint:           &forkchoicetypes.Checkpoint{},
+		bestJustifiedCheckpoint:       &forkchoicetypes.Checkpoint{},
+		unrealizedJustifiedCheckpoint: &forkchoicetypes.Checkpoint{},
+		unrealizedFinalizedCheckpoint: &forkchoicetypes.Checkpoint{},
+		prevJustifiedCheckpoint:       &forkchoicetypes.Checkpoint{},
+		finalizedCheckpoint:           &forkchoicetypes.Checkpoint{},
+		proposerBoostRoot:             [32]byte{},
+		nodeByRoot:                    make(map[[fieldparams.RootLength]byte]*Node),
+		nodeByPayload:                 make(map[[fieldparams.RootLength]byte]*Node),
+		slashedIndices:                make(map[types.ValidatorIndex]bool),
+		pruneThreshold:                defaultPruneThreshold,
 	}
 
 	b := make([]uint64, 0)
@@ -112,7 +115,7 @@ func (f *ForkChoice) ProcessAttestation(ctx context.Context, validatorIndices []
 }
 
 // InsertNode processes a new block by inserting it to the fork choice store.
-func (f *ForkChoice) InsertNode(ctx context.Context, state state.ReadOnlyBeaconState, root [32]byte) error {
+func (f *ForkChoice) InsertNode(ctx context.Context, state state.BeaconState, root [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.InsertNode")
 	defer span.End()
 
@@ -142,9 +145,13 @@ func (f *ForkChoice) InsertNode(ctx context.Context, state state.ReadOnlyBeaconS
 		return errInvalidNilCheckpoint
 	}
 	finalizedEpoch := fc.Epoch
-	err := f.store.insert(ctx, slot, root, parentRoot, payloadHash, justifiedEpoch, finalizedEpoch)
+	node, err := f.store.insert(ctx, slot, root, parentRoot, payloadHash, justifiedEpoch, finalizedEpoch)
 	if err != nil {
 		return err
+	}
+
+	if features.Get().PullTips {
+		jc, fc = f.store.pullTips(ctx, state, node, jc, fc)
 	}
 	return f.updateCheckpoints(ctx, jc, fc)
 }
@@ -546,7 +553,7 @@ func (f *ForkChoice) InsertOptimisticChain(ctx context.Context, chain []*forkcho
 		if err != nil {
 			return err
 		}
-		if err := f.store.insert(ctx,
+		if _, err := f.store.insert(ctx,
 			b.Slot(), r, parentRoot, payloadHash,
 			chain[i].JustifiedCheckpoint.Epoch, chain[i].FinalizedCheckpoint.Epoch); err != nil {
 			return err
