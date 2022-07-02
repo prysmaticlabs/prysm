@@ -10,18 +10,21 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/config/params"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	validator_service_config "github.com/prysmaticlabs/prysm/config/validator/service"
+	validatorserviceconfig "github.com/prysmaticlabs/prysm/config/validator/service"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	remote_web3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
-	logTest "github.com/sirupsen/logrus/hooks/test"
+	remoteweb3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
+	logtest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/urfave/cli/v2"
 )
 
@@ -45,8 +48,8 @@ func TestNode_Builds(t *testing.T) {
 	set.String("keymanager-kind", "imported", "keymanager kind")
 	set.String("verbosity", "debug", "log verbosity")
 	require.NoError(t, set.Set(flags.WalletPasswordFileFlag.Name, passwordFile))
-	context := cli.NewContext(&app, set, nil)
-	_, err := accounts.CreateWalletWithKeymanager(context.Context, &accounts.CreateWalletConfig{
+	ctx := cli.NewContext(&app, set, nil)
+	_, err := accounts.CreateWalletWithKeymanager(ctx.Context, &accounts.CreateWalletConfig{
 		WalletCfg: &wallet.Config{
 			WalletDir:      dir,
 			KeymanagerKind: keymanager.Local,
@@ -55,7 +58,7 @@ func TestNode_Builds(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	valClient, err := NewValidatorClient(context)
+	valClient, err := NewValidatorClient(ctx)
 	require.NoError(t, err, "Failed to create ValidatorClient")
 	err = valClient.db.Close()
 	require.NoError(t, err)
@@ -63,7 +66,7 @@ func TestNode_Builds(t *testing.T) {
 
 // TestClearDB tests clearing the database
 func TestClearDB(t *testing.T) {
-	hook := logTest.NewGlobal()
+	hook := logtest.NewGlobal()
 	tmp := filepath.Join(t.TempDir(), "datadirtest")
 	require.NoError(t, clearDB(context.Background(), tmp, true))
 	require.LogsContain(t, hook, "Removing database")
@@ -86,7 +89,7 @@ func TestWeb3SignerConfig(t *testing.T) {
 	tests := []struct {
 		name       string
 		args       args
-		want       *remote_web3signer.SetupConfig
+		want       *remoteweb3signer.SetupConfig
 		wantErrMsg string
 	}{
 		{
@@ -96,7 +99,7 @@ func TestWeb3SignerConfig(t *testing.T) {
 				publicKeysOrURL: "0xa99a76ed7796f7be22d5b7e85deeb7c5677e88e511e0b337618f8c4eb61349b4bf2d153f649f7b53359fe8b94a38e44c," +
 					"0xb89bebc699769726a318c8e9971bd3171297c61aea4a6578a7a4f94b547dcba5bac16a89108b6b6a1fe3695d1a874a0b",
 			},
-			want: &remote_web3signer.SetupConfig{
+			want: &remoteweb3signer.SetupConfig{
 				BaseEndpoint:          "http://localhost:8545",
 				GenesisValidatorsRoot: nil,
 				PublicKeysURL:         "",
@@ -112,7 +115,7 @@ func TestWeb3SignerConfig(t *testing.T) {
 				baseURL:         "http://localhost:8545",
 				publicKeysOrURL: "http://localhost:8545/api/v1/eth2/publicKeys",
 			},
-			want: &remote_web3signer.SetupConfig{
+			want: &remoteweb3signer.SetupConfig{
 				BaseEndpoint:          "http://localhost:8545",
 				GenesisValidatorsRoot: nil,
 				PublicKeysURL:         "http://localhost:8545/api/v1/eth2/publicKeys",
@@ -189,194 +192,82 @@ func newWeb3SignerCli(t *testing.T, baseUrl string, publicKeysOrURL string) *cli
 	return cli.NewContext(&app, set, nil)
 }
 
-type test struct {
-	Foo string `json:"foo"`
-	Bar int    `json:"bar"`
-}
+func TestProposerSettings(t *testing.T) {
+	hook := logtest.NewGlobal()
 
-func TestUnmarshalFromFile(t *testing.T) {
-	ctx := context.Background()
-	type args struct {
-		File string
-		To   interface{}
-	}
-	tests := []struct {
-		name        string
-		args        args
-		want        interface{}
-		urlResponse string
-		wantErr     bool
-	}{
-		{
-			name: "Happy Path File",
-			args: args{
-				File: "./testdata/test-unmarshal-good.json",
-				To:   &test{},
-			},
-			want: &test{
-				Foo: "foo",
-				Bar: 1,
-			},
-			wantErr: false,
-		},
-		{
-			name: "Bad File Path, not json",
-			args: args{
-				File: "./jsontools.go",
-				To:   &test{},
-			},
-			want:    &test{},
-			wantErr: true,
-		},
-		{
-			name: "Bad File Path",
-			args: args{
-				File: "./testdata/test-unmarshal-bad.json",
-				To:   &test{},
-			},
-			want:    &test{},
-			wantErr: true,
-		},
-		{
-			name: "Bad File Path, not found",
-			args: args{
-				File: "./test-notfound.json",
-				To:   &test{},
-			},
-			want:    &test{},
-			wantErr: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if err := unmarshalFromFile(ctx, tt.args.File, tt.args.To); (err != nil) != tt.wantErr {
-				t.Errorf(" error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			require.DeepEqual(t, tt.want, tt.args.To)
-		})
-	}
-}
-
-func TestUnmarshalFromURL(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(200)
-		w.Header().Set("Content-Type", "application/json")
-		_, err := fmt.Fprintf(w, `{ "foo": "foo", "bar": 1}`)
-		require.NoError(t, err)
-	}))
-	defer srv.Close()
-	ctx := context.Background()
-	type args struct {
-		URL string
-		To  interface{}
-	}
-	tests := []struct {
-		name        string
-		args        args
-		want        interface{}
-		urlResponse string
-		wantErr     bool
-	}{
-		{
-			name: "Happy Path URL",
-			args: args{
-				URL: srv.URL,
-				To:  &test{},
-			},
-			want: &test{
-				Foo: "foo",
-				Bar: 1,
-			},
-			wantErr: false,
-		},
-		{
-			name: "Bad URL",
-			args: args{
-				URL: "sadjflksdjflksadjflkdj",
-				To:  &test{},
-			},
-			want:    &test{},
-			wantErr: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if err := unmarshalFromURL(ctx, tt.args.URL, tt.args.To); (err != nil) != tt.wantErr {
-				t.Errorf(" error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			require.DeepEqual(t, tt.want, tt.args.To)
-		})
-	}
-}
-
-func TestFeeRecipientConfig(t *testing.T) {
-	type feeRecipientFlag struct {
+	type proposerSettingsFlag struct {
 		dir        string
 		url        string
 		defaultfee string
 	}
+
 	type args struct {
-		feeRecipientFlagValues *feeRecipientFlag
+		proposerSettingsFlagValues *proposerSettingsFlag
 	}
 	tests := []struct {
 		name        string
 		args        args
-		want        func() *validator_service_config.FeeRecipientConfig
+		want        func() *validatorserviceconfig.ProposerSettings
 		urlResponse string
 		wantErr     string
+		wantLog     string
 	}{
 		{
-			name: "Happy Path Config file File",
+			name: "Happy Path Config file File, bad checksum",
 			args: args{
-				feeRecipientFlagValues: &feeRecipientFlag{
-					dir:        "./testdata/good-prepare-beacon-proposer-config.json",
+				proposerSettingsFlagValues: &proposerSettingsFlag{
+					dir:        "./testdata/good-prepare-beacon-proposer-config-badchecksum.json",
 					url:        "",
 					defaultfee: "",
 				},
 			},
-			want: func() *validator_service_config.FeeRecipientConfig {
+			want: func() *validatorserviceconfig.ProposerSettings {
 				key1, err := hexutil.Decode("0xa057816155ad77931185101128655c0191bd0214c201ca48ed887f6c4c6adf334070efcd75140eada5ac83a92506dd7a")
 				require.NoError(t, err)
-				return &validator_service_config.FeeRecipientConfig{
-					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validator_service_config.FeeRecipientOptions{
+				return &validatorserviceconfig.ProposerSettings{
+					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption{
 						bytesutil.ToBytes48(key1): {
-							FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
+							FeeRecipient: common.HexToAddress("0xae967917c465db8578ca9024c205720b1a3651A9"),
+							GasLimit:     params.BeaconConfig().DefaultBuilderGasLimit,
 						},
 					},
-					DefaultConfig: &validator_service_config.FeeRecipientOptions{
-						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
+					DefaultConfig: &validatorserviceconfig.ProposerOption{
+						FeeRecipient: common.HexToAddress("0xae967917c465db8578ca9024c205720b1a3651A9"),
+						GasLimit:     params.BeaconConfig().DefaultBuilderGasLimit,
 					},
 				}
 			},
 			wantErr: "",
+			wantLog: "is not a checksum Ethereum address",
 		},
 		{
 			name: "Happy Path Config file File multiple fee recipients",
 			args: args{
-				feeRecipientFlagValues: &feeRecipientFlag{
+				proposerSettingsFlagValues: &proposerSettingsFlag{
 					dir:        "./testdata/good-prepare-beacon-proposer-config-multiple.json",
 					url:        "",
 					defaultfee: "",
 				},
 			},
-			want: func() *validator_service_config.FeeRecipientConfig {
+			want: func() *validatorserviceconfig.ProposerSettings {
 				key1, err := hexutil.Decode("0xa057816155ad77931185101128655c0191bd0214c201ca48ed887f6c4c6adf334070efcd75140eada5ac83a92506dd7a")
 				require.NoError(t, err)
 				key2, err := hexutil.Decode("0xb057816155ad77931185101128655c0191bd0214c201ca48ed887f6c4c6adf334070efcd75140eada5ac83a92506dd7b")
 				require.NoError(t, err)
-				return &validator_service_config.FeeRecipientConfig{
-					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validator_service_config.FeeRecipientOptions{
+				return &validatorserviceconfig.ProposerSettings{
+					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption{
 						bytesutil.ToBytes48(key1): {
 							FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
+							GasLimit:     params.BeaconConfig().DefaultBuilderGasLimit,
 						},
 						bytesutil.ToBytes48(key2): {
 							FeeRecipient: common.HexToAddress("0x60155530FCE8a85ec7055A5F8b2bE214B3DaeFd4"),
+							GasLimit:     params.BeaconConfig().DefaultBuilderGasLimit,
 						},
 					},
-					DefaultConfig: &validator_service_config.FeeRecipientOptions{
+					DefaultConfig: &validatorserviceconfig.ProposerOption{
 						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
+						GasLimit:     params.BeaconConfig().DefaultBuilderGasLimit,
 					},
 				}
 			},
@@ -385,23 +276,52 @@ func TestFeeRecipientConfig(t *testing.T) {
 		{
 			name: "Happy Path Config URL File",
 			args: args{
-				feeRecipientFlagValues: &feeRecipientFlag{
+				proposerSettingsFlagValues: &proposerSettingsFlag{
 					dir:        "",
 					url:        "./testdata/good-prepare-beacon-proposer-config.json",
 					defaultfee: "",
 				},
 			},
-			want: func() *validator_service_config.FeeRecipientConfig {
+			want: func() *validatorserviceconfig.ProposerSettings {
 				key1, err := hexutil.Decode("0xa057816155ad77931185101128655c0191bd0214c201ca48ed887f6c4c6adf334070efcd75140eada5ac83a92506dd7a")
 				require.NoError(t, err)
-				return &validator_service_config.FeeRecipientConfig{
-					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validator_service_config.FeeRecipientOptions{
+				return &validatorserviceconfig.ProposerSettings{
+					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption{
 						bytesutil.ToBytes48(key1): {
 							FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
+							GasLimit:     params.BeaconConfig().DefaultBuilderGasLimit,
 						},
 					},
-					DefaultConfig: &validator_service_config.FeeRecipientOptions{
+					DefaultConfig: &validatorserviceconfig.ProposerOption{
 						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
+						GasLimit:     params.BeaconConfig().DefaultBuilderGasLimit,
+					},
+				}
+			},
+			wantErr: "",
+		},
+		{
+			name: "Happy Path Config YAML file with custom Gas Limit",
+			args: args{
+				proposerSettingsFlagValues: &proposerSettingsFlag{
+					dir:        "./testdata/good-prepare-beacon-proposer-config.yaml",
+					url:        "",
+					defaultfee: "",
+				},
+			},
+			want: func() *validatorserviceconfig.ProposerSettings {
+				key1, err := hexutil.Decode("0xa057816155ad77931185101128655c0191bd0214c201ca48ed887f6c4c6adf334070efcd75140eada5ac83a92506dd7a")
+				require.NoError(t, err)
+				return &validatorserviceconfig.ProposerSettings{
+					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption{
+						bytesutil.ToBytes48(key1): {
+							FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
+							GasLimit:     uint64(40000000),
+						},
+					},
+					DefaultConfig: &validatorserviceconfig.ProposerOption{
+						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
+						GasLimit:     uint64(45000000),
 					},
 				}
 			},
@@ -410,36 +330,45 @@ func TestFeeRecipientConfig(t *testing.T) {
 		{
 			name: "Happy Path Suggested Fee File",
 			args: args{
-				feeRecipientFlagValues: &feeRecipientFlag{
+				proposerSettingsFlagValues: &proposerSettingsFlag{
 					dir:        "",
 					url:        "",
 					defaultfee: "0x6e35733c5af9B61374A128e6F85f553aF09ff89A",
 				},
 			},
-			want: func() *validator_service_config.FeeRecipientConfig {
-				return &validator_service_config.FeeRecipientConfig{
+			want: func() *validatorserviceconfig.ProposerSettings {
+				return &validatorserviceconfig.ProposerSettings{
 					ProposeConfig: nil,
-					DefaultConfig: &validator_service_config.FeeRecipientOptions{
+					DefaultConfig: &validatorserviceconfig.ProposerOption{
 						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
+						GasLimit:     params.BeaconConfig().DefaultBuilderGasLimit,
 					},
 				}
 			},
 			wantErr: "",
 		},
 		{
-			name: "Suggested Fee Override Config",
+			name: "Suggested Fee does not Override Config",
 			args: args{
-				feeRecipientFlagValues: &feeRecipientFlag{
+				proposerSettingsFlagValues: &proposerSettingsFlag{
 					dir:        "./testdata/good-prepare-beacon-proposer-config.json",
 					url:        "",
 					defaultfee: "0x6e35733c5af9B61374A128e6F85f553aF09ff89B",
 				},
 			},
-			want: func() *validator_service_config.FeeRecipientConfig {
-				return &validator_service_config.FeeRecipientConfig{
-					ProposeConfig: nil,
-					DefaultConfig: &validator_service_config.FeeRecipientOptions{
-						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89B"),
+			want: func() *validatorserviceconfig.ProposerSettings {
+				key1, err := hexutil.Decode("0xa057816155ad77931185101128655c0191bd0214c201ca48ed887f6c4c6adf334070efcd75140eada5ac83a92506dd7a")
+				require.NoError(t, err)
+				return &validatorserviceconfig.ProposerSettings{
+					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption{
+						bytesutil.ToBytes48(key1): {
+							FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
+							GasLimit:     params.BeaconConfig().DefaultBuilderGasLimit,
+						},
+					},
+					DefaultConfig: &validatorserviceconfig.ProposerOption{
+						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
+						GasLimit:     params.BeaconConfig().DefaultBuilderGasLimit,
 					},
 				}
 			},
@@ -448,28 +377,42 @@ func TestFeeRecipientConfig(t *testing.T) {
 		{
 			name: "No flags set means empty config",
 			args: args{
-				feeRecipientFlagValues: &feeRecipientFlag{
+				proposerSettingsFlagValues: &proposerSettingsFlag{
 					dir:        "",
 					url:        "",
 					defaultfee: "",
 				},
 			},
-			want: func() *validator_service_config.FeeRecipientConfig {
+			want: func() *validatorserviceconfig.ProposerSettings {
 				return nil
 			},
 			wantErr: "",
 		},
 		{
+			name: "Bad File Path",
+			args: args{
+				proposerSettingsFlagValues: &proposerSettingsFlag{
+					dir:        "./testdata/bad-prepare-beacon-proposer-config.json",
+					url:        "",
+					defaultfee: "",
+				},
+			},
+			want: func() *validatorserviceconfig.ProposerSettings {
+				return nil
+			},
+			wantErr: "failed to unmarshal yaml file",
+		},
+		{
 			name: "Both URL and Dir flags used resulting in error",
 			args: args{
-				feeRecipientFlagValues: &feeRecipientFlag{
+				proposerSettingsFlagValues: &proposerSettingsFlag{
 					dir:        "./testdata/good-prepare-beacon-proposer-config.json",
 					url:        "./testdata/good-prepare-beacon-proposer-config.json",
 					defaultfee: "",
 				},
 			},
-			want: func() *validator_service_config.FeeRecipientConfig {
-				return &validator_service_config.FeeRecipientConfig{}
+			want: func() *validatorserviceconfig.ProposerSettings {
+				return &validatorserviceconfig.ProposerSettings{}
 			},
 			wantErr: "cannot specify both",
 		},
@@ -478,12 +421,12 @@ func TestFeeRecipientConfig(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			app := cli.App{}
 			set := flag.NewFlagSet("test", 0)
-			if tt.args.feeRecipientFlagValues.dir != "" {
-				set.String(flags.FeeRecipientConfigFileFlag.Name, tt.args.feeRecipientFlagValues.dir, "")
-				require.NoError(t, set.Set(flags.FeeRecipientConfigFileFlag.Name, tt.args.feeRecipientFlagValues.dir))
+			if tt.args.proposerSettingsFlagValues.dir != "" {
+				set.String(flags.ProposerSettingsFlag.Name, tt.args.proposerSettingsFlagValues.dir, "")
+				require.NoError(t, set.Set(flags.ProposerSettingsFlag.Name, tt.args.proposerSettingsFlagValues.dir))
 			}
-			if tt.args.feeRecipientFlagValues.url != "" {
-				content, err := os.ReadFile(tt.args.feeRecipientFlagValues.url)
+			if tt.args.proposerSettingsFlagValues.url != "" {
+				content, err := os.ReadFile(tt.args.proposerSettingsFlagValues.url)
 				require.NoError(t, err)
 				srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					w.WriteHeader(200)
@@ -493,18 +436,23 @@ func TestFeeRecipientConfig(t *testing.T) {
 				}))
 				defer srv.Close()
 
-				set.String(flags.FeeRecipientConfigURLFlag.Name, tt.args.feeRecipientFlagValues.url, "")
-				require.NoError(t, set.Set(flags.FeeRecipientConfigURLFlag.Name, srv.URL))
+				set.String(flags.ProposerSettingsURLFlag.Name, tt.args.proposerSettingsFlagValues.url, "")
+				require.NoError(t, set.Set(flags.ProposerSettingsURLFlag.Name, srv.URL))
 			}
-			if tt.args.feeRecipientFlagValues.defaultfee != "" {
-				set.String(flags.SuggestedFeeRecipientFlag.Name, tt.args.feeRecipientFlagValues.defaultfee, "")
-				require.NoError(t, set.Set(flags.SuggestedFeeRecipientFlag.Name, tt.args.feeRecipientFlagValues.defaultfee))
+			if tt.args.proposerSettingsFlagValues.defaultfee != "" {
+				set.String(flags.SuggestedFeeRecipientFlag.Name, tt.args.proposerSettingsFlagValues.defaultfee, "")
+				require.NoError(t, set.Set(flags.SuggestedFeeRecipientFlag.Name, tt.args.proposerSettingsFlagValues.defaultfee))
 			}
 			cliCtx := cli.NewContext(&app, set, nil)
-			got, err := feeRecipientConfig(cliCtx)
+			got, err := proposerSettings(cliCtx)
 			if tt.wantErr != "" {
 				require.ErrorContains(t, tt.wantErr, err)
 				return
+			}
+			if tt.wantLog != "" {
+				assert.LogsContain(t, hook,
+					tt.wantLog,
+				)
 			}
 			w := tt.want()
 			require.DeepEqual(t, w, got)

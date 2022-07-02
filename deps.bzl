@@ -951,9 +951,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_ferranbt_fastssz",
         importpath = "github.com/ferranbt/fastssz",
-        replace = "github.com/prysmaticlabs/fastssz",
-        sum = "h1:MRQwO/qZtHJFQA7M3uQBadrscFC5org7fWm8CCBRzMM=",
-        version = "v0.0.0-20220110145812-fafb696cae88",
+        sum = "h1:9VDpsWq096+oGMDTT/SgBD/VgZYf4pTF+KTPmZ+OaKM=",
+        version = "v0.0.0-20210120143747-11b9eff30ea9",
     )
 
     go_repository(
@@ -1247,7 +1246,7 @@ def prysm_deps():
     go_repository(
         name = "com_github_gogo_protobuf",
         importpath = "github.com/gogo/protobuf",
-        commit = "b03c65ea87cdc3521ede29f62fe3ce239267c1bc",
+        sum = "h1:Ov1cvc58UF3b5XjBnZv7+opcTcQFZebYjWzi34vdm4Q=",
         version = "v1.3.2",
     )
 
@@ -3192,6 +3191,13 @@ def prysm_deps():
         version = "v0.10.0",
     )
     go_repository(
+        name = "com_github_prysmaticlabs_fastssz",
+        importpath = "github.com/prysmaticlabs/fastssz",
+        sum = "h1:fat9avCPKKYZKe9KJq/VlF43/Nrxmn+sg59Ibe/pGs8=",
+        version = "v0.0.0-20220624091035-af5440c5d1dc",
+    )
+
+    go_repository(
         name = "com_github_prysmaticlabs_go_bitfield",
         importpath = "github.com/prysmaticlabs/go-bitfield",
         sum = "h1:0tVE4tdWQK9ZpYygoV7+vS6QkDvQVySboMVEIxBJmXw=",
@@ -4504,8 +4510,8 @@ def prysm_deps():
     go_repository(
         name = "org_golang_x_mod",
         importpath = "golang.org/x/mod",
-        sum = "h1:kQgndtyPBW/JIYERgdxfwMYh3AVStj88WQTlNDi2a+o=",
-        version = "v0.6.0-dev.0.20220106191415-9b9b3d81d5e3",
+        sum = "h1:6zppjxzCulZykYSLyVDYbneBfbaBIQPYMevg0bEwv2s=",
+        version = "v0.6.0-dev.0.20220419223038-86c51ed26bb4",
     )
 
     go_repository(
@@ -4561,8 +4567,8 @@ def prysm_deps():
     go_repository(
         name = "org_golang_x_tools",
         importpath = "golang.org/x/tools",
-        sum = "h1:QjFRCZxdOhBJ/UNgnBZLbNV13DlbnK0quyivTnXJM20=",
-        version = "v0.1.10",
+        sum = "h1:FsZrnczqPMLkWZqyqBPGYJTko7xFkWqyypB7a4Xldkw=",
+        version = "v0.1.11-0.20220523181440-ccb10502d1a5",
     )
 
     go_repository(

@@ -10,12 +10,11 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/async"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/encoding/ssz/equality"
@@ -37,6 +36,10 @@ func (s *Service) processPendingBlocksQueue() {
 	// Prevents multiple queue processing goroutines (invoked by RunEvery) from contending for data.
 	locker := new(sync.Mutex)
 	async.RunEvery(s.ctx, processPendingBlocksPeriod, func() {
+		// Don't process the pending blocks if genesis time has not been set. The chain is not ready.
+		if !s.isGenesisTimeSet() {
+			return
+		}
 		locker.Lock()
 		if err := s.processPendingBlocks(s.ctx); err != nil {
 			log.WithError(err).Debug("Could not process pending blocks")
@@ -54,16 +57,16 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 	if err := s.validatePendingSlots(); err != nil {
 		return errors.Wrap(err, "could not validate pending slots")
 	}
-	slots := s.sortedPendingSlots()
+	ss := s.sortedPendingSlots()
 	var parentRoots [][32]byte
 
 	span.AddAttributes(
-		trace.Int64Attribute("numSlots", int64(len(slots))),
+		trace.Int64Attribute("numSlots", int64(len(ss))),
 		trace.Int64Attribute("numPeers", int64(len(pids))),
 	)
 
 	randGen := rand.NewGenerator()
-	for _, slot := range slots {
+	for _, slot := range ss {
 		// process the blocks during their respective slot.
 		// otherwise wait for the right slot to process the block.
 		if slot > s.cfg.chain.CurrentSlot() {
@@ -156,10 +159,6 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			err = s.validateBeaconBlock(ctx, b, blkRoot)
 			switch {
 			case errors.Is(ErrOptimisticParent, err): // Ok to continue process block with parent that is an optimistic candidate.
-			case errors.Is(blockchain.ErrUndefinedExecutionEngineError, err):
-				// don't mark the block as bad with an undefined EE error.
-				log.Debugf("Could not validate block due to undefined ee error %d: %v", b.Block().Slot(), err)
-				continue
 			case err != nil:
 				log.Debugf("Could not validate block from slot %d: %v", b.Block().Slot(), err)
 				s.setBadBlock(ctx, blkRoot)
@@ -170,11 +169,12 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			}
 
 			if err := s.cfg.chain.ReceiveBlock(ctx, b, blkRoot); err != nil {
-				if !errors.Is(err, powchain.ErrHTTPTimeout) {
-					log.Debugf("Could not process block from slot %d: %v", b.Block().Slot(), err)
+				if blockchain.IsInvalidBlock(err) {
 					tracing.AnnotateError(span, err)
 					s.setBadBlock(ctx, blkRoot)
 				}
+				log.Debugf("Could not process block from slot %d: %v", b.Block().Slot(), err)
+
 				// In the next iteration of the queue, this block will be removed from
 				// the pending queue as it has been marked as a 'bad' block.
 				span.End()
@@ -214,8 +214,8 @@ func (s *Service) sendBatchRootRequest(ctx context.Context, roots [][32]byte, ra
 	if len(roots) == 0 {
 		return nil
 	}
-
-	_, bestPeers := s.cfg.p2p.Peers().BestFinalized(maxPeerRequest, s.cfg.chain.FinalizedCheckpt().Epoch)
+	cp := s.cfg.chain.FinalizedCheckpt()
+	_, bestPeers := s.cfg.p2p.Peers().BestFinalized(maxPeerRequest, cp.Epoch)
 	if len(bestPeers) == 0 {
 		return nil
 	}
@@ -257,15 +257,15 @@ func (s *Service) sortedPendingSlots() []types.Slot {
 
 	items := s.slotToPendingBlocks.Items()
 
-	slots := make([]types.Slot, 0, len(items))
+	ss := make([]types.Slot, 0, len(items))
 	for k := range items {
 		slot := cacheKeyToSlot(k)
-		slots = append(slots, slot)
+		ss = append(ss, slot)
 	}
-	sort.Slice(slots, func(i, j int) bool {
-		return slots[i] < slots[j]
+	sort.Slice(ss, func(i, j int) bool {
+		return ss[i] < ss[j]
 	})
-	return slots
+	return ss
 }
 
 // validatePendingSlots validates the pending blocks
@@ -276,7 +276,8 @@ func (s *Service) validatePendingSlots() error {
 	defer s.pendingQueueLock.Unlock()
 	oldBlockRoots := make(map[[32]byte]bool)
 
-	finalizedEpoch := s.cfg.chain.FinalizedCheckpt().Epoch
+	cp := s.cfg.chain.FinalizedCheckpt()
+	finalizedEpoch := cp.Epoch
 	if s.slotToPendingBlocks == nil {
 		return errors.New("slotToPendingBlocks cache can't be nil")
 	}
@@ -332,7 +333,7 @@ func (s *Service) deleteBlockFromPendingQueue(slot types.Slot, b interfaces.Sign
 	}
 
 	// Defensive check to ignore nil blocks
-	if err := helpers.BeaconBlockIsNil(b); err != nil {
+	if err := wrapper.BeaconBlockIsNil(b); err != nil {
 		return err
 	}
 
@@ -391,7 +392,7 @@ func (s *Service) pendingBlocksInCache(slot types.Slot) []interfaces.SignedBeaco
 
 // This adds input signed beacon block to slotToPendingBlocks cache.
 func (s *Service) addPendingBlockToCache(b interfaces.SignedBeaconBlock) error {
-	if err := helpers.BeaconBlockIsNil(b); err != nil {
+	if err := wrapper.BeaconBlockIsNil(b); err != nil {
 		return err
 	}
 
@@ -405,6 +406,12 @@ func (s *Service) addPendingBlockToCache(b interfaces.SignedBeaconBlock) error {
 	k := slotToCacheKey(b.Block().Slot())
 	s.slotToPendingBlocks.Set(k, blks, pendingBlockExpTime)
 	return nil
+}
+
+// Returns true if the genesis time has been set in chain service.
+// Without the genesis time, the chain does not start.
+func (s *Service) isGenesisTimeSet() bool {
+	return s.cfg.chain.GenesisTime().Unix() != 0
 }
 
 // This converts input string to slot.

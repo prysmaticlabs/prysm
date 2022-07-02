@@ -45,6 +45,7 @@ func TestV1Alpha1SignedContributionAndProofToV2(t *testing.T) {
 	assert.DeepEqual(t, bitfield.NewBitvector128(), contrib.AggregationBits)
 	assert.DeepEqual(t, signature, contrib.Signature)
 }
+
 func Test_V1Alpha1BeaconBlockAltairToV2(t *testing.T) {
 	alphaBlock := util.HydrateBeaconBlockAltair(&ethpbalpha.BeaconBlockAltair{})
 	alphaBlock.Slot = slot
@@ -460,7 +461,7 @@ func TestBeaconStateBellatrixToProto(t *testing.T) {
 			Pubkeys:         [][]byte{bytesutil.PadTo([]byte("nscpubkeys"), 48)},
 			AggregatePubkey: bytesutil.PadTo([]byte("nscaggregatepubkey"), 48),
 		}
-		state.LatestExecutionPayloadHeader = &ethpbalpha.ExecutionPayloadHeader{
+		state.LatestExecutionPayloadHeader = &enginev1.ExecutionPayloadHeader{
 			ParentHash:       bytesutil.PadTo([]byte("parenthash"), 32),
 			FeeRecipient:     bytesutil.PadTo([]byte("feerecipient"), 20),
 			StateRoot:        bytesutil.PadTo([]byte("stateroot"), 32),

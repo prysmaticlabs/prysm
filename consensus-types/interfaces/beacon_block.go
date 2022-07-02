@@ -1,7 +1,7 @@
 package interfaces
 
 import (
-	ssz "github.com/ferranbt/fastssz"
+	ssz "github.com/prysmaticlabs/fastssz"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -63,5 +63,5 @@ type BeaconBlockBody interface {
 	HashTreeRoot() ([32]byte, error)
 	Proto() proto.Message
 	ExecutionPayload() (*enginev1.ExecutionPayload, error)
-	ExecutionPayloadHeader() (*ethpb.ExecutionPayloadHeader, error)
+	ExecutionPayloadHeader() (*enginev1.ExecutionPayloadHeader, error)
 }

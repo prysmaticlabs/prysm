@@ -1,6 +1,4 @@
 //go:build ((linux && amd64) || (linux && arm64) || (darwin && amd64) || (darwin && arm64) || (windows && amd64)) && !blst_disabled
-// +build linux,amd64 linux,arm64 darwin,amd64 darwin,arm64 windows,amd64
-// +build !blst_disabled
 
 package blst
 
@@ -44,7 +42,7 @@ func TestAggregateVerify(t *testing.T) {
 func TestAggregateVerify_CompressedSignatures(t *testing.T) {
 	pubkeys := make([]common.PublicKey, 0, 100)
 	sigs := make([]common.Signature, 0, 100)
-	sigBytes := [][]byte{}
+	var sigBytes [][]byte
 	var msgs [][32]byte
 	for i := 0; i < 100; i++ {
 		msg := [32]byte{'h', 'e', 'l', 'l', 'o', byte(i)}

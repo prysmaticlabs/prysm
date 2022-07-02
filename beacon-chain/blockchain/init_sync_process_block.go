@@ -4,17 +4,24 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 )
 
-var errBlockNotFoundInCacheOrDB = errors.New("block not found in cache or db")
-
-// This saves a beacon block to the initial sync blocks cache.
-func (s *Service) saveInitSyncBlock(r [32]byte, b interfaces.SignedBeaconBlock) {
+// This saves a beacon block to the initial sync blocks cache. It rate limits how many blocks
+// the cache keeps in memory (2 epochs worth of blocks) and saves them to DB when it hits this limit.
+func (s *Service) saveInitSyncBlock(ctx context.Context, r [32]byte, b interfaces.SignedBeaconBlock) error {
 	s.initSyncBlocksLock.Lock()
-	defer s.initSyncBlocksLock.Unlock()
 	s.initSyncBlocks[r] = b
+	numBlocks := len(s.initSyncBlocks)
+	s.initSyncBlocksLock.Unlock()
+	if uint64(numBlocks) > initialSyncBlockCacheSize {
+		if err := s.cfg.BeaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
+			return err
+		}
+		s.clearInitSyncBlocks()
+	}
+	return nil
 }
 
 // This checks if a beacon block exists in the initial sync blocks cache using the root
@@ -49,7 +56,7 @@ func (s *Service) getBlock(ctx context.Context, r [32]byte) (interfaces.SignedBe
 			return nil, errors.Wrap(err, "could not retrieve block from db")
 		}
 	}
-	if err := helpers.BeaconBlockIsNil(b); err != nil {
+	if err := wrapper.BeaconBlockIsNil(b); err != nil {
 		return nil, errBlockNotFoundInCacheOrDB
 	}
 	return b, nil

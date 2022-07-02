@@ -20,7 +20,7 @@ import (
 )
 
 func TestSyncCommitteeIndices_CanGet(t *testing.T) {
-	getState := func(t *testing.T, count uint64) state.BeaconStateAltair {
+	getState := func(t *testing.T, count uint64) state.BeaconState {
 		validators := make([]*ethpb.Validator, count)
 		for i := 0; i < len(validators); i++ {
 			validators[i] = &ethpb.Validator{
@@ -28,16 +28,16 @@ func TestSyncCommitteeIndices_CanGet(t *testing.T) {
 				EffectiveBalance: params.BeaconConfig().MinDepositAmount,
 			}
 		}
-		state, err := stateAltair.InitializeFromProto(&ethpb.BeaconStateAltair{
+		st, err := stateAltair.InitializeFromProto(&ethpb.BeaconStateAltair{
 			Validators:  validators,
 			RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		})
 		require.NoError(t, err)
-		return state
+		return st
 	}
 
 	type args struct {
-		state state.BeaconStateAltair
+		state state.BeaconState
 		epoch types.Epoch
 	}
 	tests := []struct {
@@ -95,7 +95,7 @@ func TestSyncCommitteeIndices_CanGet(t *testing.T) {
 
 func TestSyncCommitteeIndices_DifferentPeriods(t *testing.T) {
 	helpers.ClearCache()
-	getState := func(t *testing.T, count uint64) state.BeaconStateAltair {
+	getState := func(t *testing.T, count uint64) state.BeaconState {
 		validators := make([]*ethpb.Validator, count)
 		for i := 0; i < len(validators); i++ {
 			validators[i] = &ethpb.Validator{
@@ -103,33 +103,33 @@ func TestSyncCommitteeIndices_DifferentPeriods(t *testing.T) {
 				EffectiveBalance: params.BeaconConfig().MinDepositAmount,
 			}
 		}
-		state, err := stateAltair.InitializeFromProto(&ethpb.BeaconStateAltair{
+		st, err := stateAltair.InitializeFromProto(&ethpb.BeaconStateAltair{
 			Validators:  validators,
 			RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		})
 		require.NoError(t, err)
-		return state
+		return st
 	}
 
-	state := getState(t, params.BeaconConfig().MaxValidatorsPerCommittee)
-	got1, err := altair.NextSyncCommitteeIndices(context.Background(), state)
+	st := getState(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	got1, err := altair.NextSyncCommitteeIndices(context.Background(), st)
 	require.NoError(t, err)
-	require.NoError(t, state.SetSlot(params.BeaconConfig().SlotsPerEpoch))
-	got2, err := altair.NextSyncCommitteeIndices(context.Background(), state)
-	require.NoError(t, err)
-	require.DeepNotEqual(t, got1, got2)
-	require.NoError(t, state.SetSlot(params.BeaconConfig().SlotsPerEpoch*types.Slot(params.BeaconConfig().EpochsPerSyncCommitteePeriod)))
-	got2, err = altair.NextSyncCommitteeIndices(context.Background(), state)
+	require.NoError(t, st.SetSlot(params.BeaconConfig().SlotsPerEpoch))
+	got2, err := altair.NextSyncCommitteeIndices(context.Background(), st)
 	require.NoError(t, err)
 	require.DeepNotEqual(t, got1, got2)
-	require.NoError(t, state.SetSlot(params.BeaconConfig().SlotsPerEpoch*types.Slot(2*params.BeaconConfig().EpochsPerSyncCommitteePeriod)))
-	got2, err = altair.NextSyncCommitteeIndices(context.Background(), state)
+	require.NoError(t, st.SetSlot(params.BeaconConfig().SlotsPerEpoch*types.Slot(params.BeaconConfig().EpochsPerSyncCommitteePeriod)))
+	got2, err = altair.NextSyncCommitteeIndices(context.Background(), st)
+	require.NoError(t, err)
+	require.DeepNotEqual(t, got1, got2)
+	require.NoError(t, st.SetSlot(params.BeaconConfig().SlotsPerEpoch*types.Slot(2*params.BeaconConfig().EpochsPerSyncCommitteePeriod)))
+	got2, err = altair.NextSyncCommitteeIndices(context.Background(), st)
 	require.NoError(t, err)
 	require.DeepNotEqual(t, got1, got2)
 }
 
 func TestSyncCommittee_CanGet(t *testing.T) {
-	getState := func(t *testing.T, count uint64) state.BeaconStateAltair {
+	getState := func(t *testing.T, count uint64) state.BeaconState {
 		validators := make([]*ethpb.Validator, count)
 		for i := 0; i < len(validators); i++ {
 			blsKey, err := bls.RandKey()
@@ -140,16 +140,16 @@ func TestSyncCommittee_CanGet(t *testing.T) {
 				PublicKey:        blsKey.PublicKey().Marshal(),
 			}
 		}
-		state, err := stateAltair.InitializeFromProto(&ethpb.BeaconStateAltair{
+		st, err := stateAltair.InitializeFromProto(&ethpb.BeaconStateAltair{
 			Validators:  validators,
 			RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		})
 		require.NoError(t, err)
-		return state
+		return st
 	}
 
 	type args struct {
-		state state.BeaconStateAltair
+		state state.BeaconState
 		epoch types.Epoch
 	}
 	tests := []struct {
@@ -260,8 +260,8 @@ func TestValidateNilSyncContribution(t *testing.T) {
 
 func TestSyncSubCommitteePubkeys_CanGet(t *testing.T) {
 	helpers.ClearCache()
-	state := getState(t, params.BeaconConfig().MaxValidatorsPerCommittee)
-	com, err := altair.NextSyncCommittee(context.Background(), state)
+	st := getState(t, params.BeaconConfig().MaxValidatorsPerCommittee)
+	com, err := altair.NextSyncCommittee(context.Background(), st)
 	require.NoError(t, err)
 	sub, err := altair.SyncSubCommitteePubkeys(com, 0)
 	require.NoError(t, err)
@@ -328,7 +328,7 @@ func Test_ValidateSyncMessageTime(t *testing.T) {
 				syncMessageSlot: 16,
 				genesisTime:     prysmTime.Now().Add(-(15 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)),
 			},
-			wantedErr: "sync message slot 16 not within allowable range of",
+			wantedErr: "(slot 16) not within allowable range of",
 		},
 		{
 			name: "sync_message.slot == current_slot+CLOCK_DISPARITY",
@@ -344,7 +344,7 @@ func Test_ValidateSyncMessageTime(t *testing.T) {
 				syncMessageSlot: 100,
 				genesisTime:     prysmTime.Now().Add(-(100 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second) + params.BeaconNetworkConfig().MaximumGossipClockDisparity + 1000*time.Millisecond),
 			},
-			wantedErr: "sync message slot 100 not within allowable range of",
+			wantedErr: "(slot 100) not within allowable range of",
 		},
 		{
 			name: "sync_message.slot == current_slot-CLOCK_DISPARITY",
@@ -360,7 +360,7 @@ func Test_ValidateSyncMessageTime(t *testing.T) {
 				syncMessageSlot: 101,
 				genesisTime:     prysmTime.Now().Add(-(100*time.Duration(params.BeaconConfig().SecondsPerSlot)*time.Second + params.BeaconNetworkConfig().MaximumGossipClockDisparity)),
 			},
-			wantedErr: "sync message slot 101 not within allowable range of",
+			wantedErr: "(slot 101) not within allowable range of",
 		},
 		{
 			name: "sync_message.slot is well beyond current slot",
@@ -384,7 +384,7 @@ func Test_ValidateSyncMessageTime(t *testing.T) {
 	}
 }
 
-func getState(t *testing.T, count uint64) state.BeaconStateAltair {
+func getState(t *testing.T, count uint64) state.BeaconState {
 	validators := make([]*ethpb.Validator, count)
 	for i := 0; i < len(validators); i++ {
 		blsKey, err := bls.RandKey()
@@ -395,10 +395,10 @@ func getState(t *testing.T, count uint64) state.BeaconStateAltair {
 			PublicKey:        blsKey.PublicKey().Marshal(),
 		}
 	}
-	state, err := stateAltair.InitializeFromProto(&ethpb.BeaconStateAltair{
+	st, err := stateAltair.InitializeFromProto(&ethpb.BeaconStateAltair{
 		Validators:  validators,
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
 	require.NoError(t, err)
-	return state
+	return st
 }

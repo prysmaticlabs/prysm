@@ -113,7 +113,7 @@ func TestReplayBlocks_LowerSlotBlock(t *testing.T) {
 
 func TestReplayBlocks_ThroughForkBoundary(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	bCfg := params.BeaconConfig()
+	bCfg := params.BeaconConfig().Copy()
 	bCfg.AltairForkEpoch = 1
 	bCfg.ForkVersionSchedule[bytesutil.ToBytes4(bCfg.AltairForkVersion)] = 1
 	params.OverrideBeaconConfig(bCfg)
@@ -141,7 +141,7 @@ func TestReplayBlocks_ThroughForkBoundary(t *testing.T) {
 
 func TestReplayBlocks_ThroughBellatrixForkBoundary(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	bCfg := params.BeaconConfig()
+	bCfg := params.BeaconConfig().Copy()
 	bCfg.AltairForkEpoch = 1
 	bCfg.ForkVersionSchedule[bytesutil.ToBytes4(bCfg.AltairForkVersion)] = 1
 	bCfg.BellatrixForkEpoch = 2
@@ -670,9 +670,7 @@ func TestLoadFinalizedBlocks(t *testing.T) {
 	gBlock := util.NewBeaconBlock()
 	gRoot, err := gBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
-	wsb, err := wrapper.WrappedSignedBeaconBlock(gBlock)
-	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, beaconDB, gBlock)
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, [32]byte{}))
 	roots, _, err := tree1(t, beaconDB, gRoot[:])
 	require.NoError(t, err)

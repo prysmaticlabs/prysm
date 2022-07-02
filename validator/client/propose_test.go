@@ -35,7 +35,7 @@ type mocks struct {
 	validatorClient *mock.MockBeaconNodeValidatorClient
 	nodeClient      *mock.MockNodeClient
 	slasherClient   *mock.MockSlasherClient
-	signExitFunc    func(context.Context, *validatorpb.SignRequest) (bls.Signature, error)
+	signfunc        func(context.Context, *validatorpb.SignRequest) (bls.Signature, error)
 }
 
 type mockSignature struct{}
@@ -74,7 +74,7 @@ func setupWithKey(t *testing.T, validatorKey bls.SecretKey) (*validator, *mocks,
 		validatorClient: mock.NewMockBeaconNodeValidatorClient(ctrl),
 		nodeClient:      mock.NewMockNodeClient(ctrl),
 		slasherClient:   mock.NewMockSlasherClient(ctrl),
-		signExitFunc: func(ctx context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
+		signfunc: func(ctx context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
 			return mockSignature{}, nil
 		},
 	}
@@ -143,7 +143,8 @@ func TestProposeBlock_DomainDataIsNil(t *testing.T) {
 }
 
 func TestProposeBlock_RequestBlockFailed(t *testing.T) {
-	cfg := params.BeaconConfig()
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig().Copy()
 	cfg.AltairForkEpoch = 2
 	cfg.BellatrixForkEpoch = 4
 	params.OverrideBeaconConfig(cfg)
@@ -257,8 +258,8 @@ func TestProposeBlock_ProposeBlockFailed(t *testing.T) {
 
 func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
 	slot := params.BeaconConfig().SlotsPerEpoch.Mul(5).Add(2)
-	graffiti := [32]byte{}
-	copy(graffiti[:], "someothergraffiti")
+	blockGraffiti := [32]byte{}
+	copy(blockGraffiti[:], "someothergraffiti")
 
 	tests := []struct {
 		name   string
@@ -268,7 +269,7 @@ func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
 			name: "phase0",
 			blocks: func() []*ethpb.GenericBeaconBlock {
 				block0, block1 := util.NewBeaconBlock(), util.NewBeaconBlock()
-				block1.Block.Body.Graffiti = graffiti[:]
+				block1.Block.Body.Graffiti = blockGraffiti[:]
 
 				var blocks []*ethpb.GenericBeaconBlock
 				for _, block := range []*ethpb.SignedBeaconBlock{block0, block1} {
@@ -286,7 +287,7 @@ func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
 			name: "altair",
 			blocks: func() []*ethpb.GenericBeaconBlock {
 				block0, block1 := util.NewBeaconBlockAltair(), util.NewBeaconBlockAltair()
-				block1.Block.Body.Graffiti = graffiti[:]
+				block1.Block.Body.Graffiti = blockGraffiti[:]
 
 				var blocks []*ethpb.GenericBeaconBlock
 				for _, block := range []*ethpb.SignedBeaconBlockAltair{block0, block1} {
@@ -304,7 +305,7 @@ func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
 			name: "bellatrix",
 			blocks: func() []*ethpb.GenericBeaconBlock {
 				block0, block1 := util.NewBeaconBlockBellatrix(), util.NewBeaconBlockBellatrix()
-				block1.Block.Body.Graffiti = graffiti[:]
+				block1.Block.Body.Graffiti = blockGraffiti[:]
 
 				var blocks []*ethpb.GenericBeaconBlock
 				for _, block := range []*ethpb.SignedBeaconBlockBellatrix{block0, block1} {
@@ -397,9 +398,9 @@ func TestProposeBlock_BlocksDoubleProposal_After54KEpochs(t *testing.T) {
 
 	secondTestBlock := util.NewBeaconBlock()
 	secondTestBlock.Block.Slot = farFuture
-	graffiti := [32]byte{}
-	copy(graffiti[:], "someothergraffiti")
-	secondTestBlock.Block.Body.Graffiti = graffiti[:]
+	blockGraffiti := [32]byte{}
+	copy(blockGraffiti[:], "someothergraffiti")
+	secondTestBlock.Block.Body.Graffiti = blockGraffiti[:]
 	m.validatorClient.EXPECT().GetBeaconBlock(
 		gomock.Any(), // ctx
 		gomock.AssignableToTypeOf(&ethpb.BlockRequest{}),
@@ -503,8 +504,8 @@ func TestProposeBlock_BroadcastsBlock(t *testing.T) {
 }
 
 func TestProposeBlock_BroadcastsBlock_WithGraffiti(t *testing.T) {
-	graffiti := []byte("12345678901234567890123456789012")
-	testProposeBlock(t, graffiti)
+	blockGraffiti := []byte("12345678901234567890123456789012")
+	testProposeBlock(t, blockGraffiti)
 }
 
 func testProposeBlock(t *testing.T, graffiti []byte) {
@@ -609,7 +610,7 @@ func TestProposeExit_ValidatorIndexFailed(t *testing.T) {
 		context.Background(),
 		m.validatorClient,
 		m.nodeClient,
-		m.signExitFunc,
+		m.signfunc,
 		validatorKey.PublicKey().Marshal(),
 	)
 	assert.NotNil(t, err)
@@ -633,7 +634,7 @@ func TestProposeExit_GetGenesisFailed(t *testing.T) {
 		context.Background(),
 		m.validatorClient,
 		m.nodeClient,
-		m.signExitFunc,
+		m.signfunc,
 		validatorKey.PublicKey().Marshal(),
 	)
 	assert.NotNil(t, err)
@@ -666,7 +667,7 @@ func TestProposeExit_DomainDataFailed(t *testing.T) {
 		context.Background(),
 		m.validatorClient,
 		m.nodeClient,
-		m.signExitFunc,
+		m.signfunc,
 		validatorKey.PublicKey().Marshal(),
 	)
 	assert.NotNil(t, err)
@@ -700,7 +701,7 @@ func TestProposeExit_DomainDataIsNil(t *testing.T) {
 		context.Background(),
 		m.validatorClient,
 		m.nodeClient,
-		m.signExitFunc,
+		m.signfunc,
 		validatorKey.PublicKey().Marshal(),
 	)
 	assert.NotNil(t, err)
@@ -737,7 +738,7 @@ func TestProposeBlock_ProposeExitFailed(t *testing.T) {
 		context.Background(),
 		m.validatorClient,
 		m.nodeClient,
-		m.signExitFunc,
+		m.signfunc,
 		validatorKey.PublicKey().Marshal(),
 	)
 	assert.NotNil(t, err)
@@ -774,7 +775,7 @@ func TestProposeExit_BroadcastsBlock(t *testing.T) {
 		context.Background(),
 		m.validatorClient,
 		m.nodeClient,
-		m.signExitFunc,
+		m.signfunc,
 		validatorKey.PublicKey().Marshal(),
 	))
 }

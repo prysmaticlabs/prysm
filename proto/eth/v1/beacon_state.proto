@@ -105,7 +105,3 @@ message ForkChoiceHead {
 message BeaconStateResponse {
   BeaconState data = 1;
 }
-
-message BeaconStateSSZResponse {
-  bytes data = 1;
-}

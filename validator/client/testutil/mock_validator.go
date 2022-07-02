@@ -11,6 +11,7 @@ import (
 	prysmTime "github.com/prysmaticlabs/prysm/time"
 	"github.com/prysmaticlabs/prysm/validator/client/iface"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	log "github.com/sirupsen/logrus"
 )
 
 var _ iface.Validator = (*FakeValidator)(nil)
@@ -62,11 +63,14 @@ func (fv *FakeValidator) Done() {
 	fv.DoneCalled = true
 }
 
-// WaitForWalletInitialization for mocking.
+// WaitForKeymanagerInitialization for mocking.
 func (fv *FakeValidator) WaitForKeymanagerInitialization(_ context.Context) error {
 	fv.WaitForWalletInitializationCalled = true
 	return nil
 }
+
+// LogSyncCommitteeMessagesSubmitted --
+func (fv *FakeValidator) LogSyncCommitteeMessagesSubmitted() {}
 
 // WaitForChainStart for mocking.
 func (fv *FakeValidator) WaitForChainStart(_ context.Context) error {
@@ -247,8 +251,9 @@ func (fv *FakeValidator) HandleKeyReload(_ context.Context, newKeys [][fieldpara
 func (_ *FakeValidator) SubmitSignedContributionAndProof(_ context.Context, _ types.Slot, _ [fieldparams.BLSPubkeyLength]byte) {
 }
 
-// UpdateFeeRecipient for mocking
-func (_ *FakeValidator) UpdateFeeRecipient(_ context.Context, _ keymanager.IKeymanager) error {
+// PushProposerSettings for mocking
+func (_ *FakeValidator) PushProposerSettings(_ context.Context, _ keymanager.IKeymanager) error {
+	log.Infoln("Mock updated proposer settings")
 	return nil
 }
 

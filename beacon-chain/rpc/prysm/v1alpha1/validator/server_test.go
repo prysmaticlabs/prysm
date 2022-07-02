@@ -93,7 +93,7 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	// This test breaks if it doesnt use mainnet config
 	params.SetupTestConfigCleanup(t)
-	params.OverrideBeaconConfig(params.MainnetConfig())
+	params.OverrideBeaconConfig(params.MainnetConfig().Copy())
 	ctx := context.Background()
 
 	priv1, err := bls.RandKey()
@@ -140,7 +140,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	root, err := depositTrie.HashTreeRoot()
 	require.NoError(t, err)
 	assert.NoError(t, depositCache.InsertDeposit(ctx, deposit, 10 /*blockNum*/, 0, root))
-	trie, err := v1.InitializeFromProtoUnsafe(beaconState)
+	s, err := v1.InitializeFromProtoUnsafe(beaconState)
 	require.NoError(t, err)
 	vs := &Server{
 		Ctx:               context.Background(),
@@ -148,7 +148,7 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 		BlockFetcher:      &mockPOW.POWChain{},
 		Eth1InfoFetcher:   &mockPOW.POWChain{},
 		DepositFetcher:    depositCache,
-		HeadFetcher:       &mockChain.ChainService{State: trie, Root: genesisRoot[:]},
+		HeadFetcher:       &mockChain.ChainService{State: s, Root: genesisRoot[:]},
 	}
 	req := &ethpb.ValidatorActivationRequest{
 		PublicKeys: [][]byte{pubKey1, pubKey2},
@@ -219,12 +219,12 @@ func TestWaitForActivation_MultipleStatuses(t *testing.T) {
 	block := util.NewBeaconBlock()
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
-	trie, err := v1.InitializeFromProtoUnsafe(beaconState)
+	s, err := v1.InitializeFromProtoUnsafe(beaconState)
 	require.NoError(t, err)
 	vs := &Server{
 		Ctx:               context.Background(),
 		ChainStartFetcher: &mockPOW.POWChain{},
-		HeadFetcher:       &mockChain.ChainService{State: trie, Root: genesisRoot[:]},
+		HeadFetcher:       &mockChain.ChainService{State: s, Root: genesisRoot[:]},
 	}
 	req := &ethpb.ValidatorActivationRequest{
 		PublicKeys: [][]byte{pubKey1, pubKey2, pubKey3},

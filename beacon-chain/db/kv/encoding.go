@@ -5,8 +5,8 @@ import (
 	"errors"
 	"reflect"
 
-	fastssz "github.com/ferranbt/fastssz"
 	"github.com/golang/snappy"
+	fastssz "github.com/prysmaticlabs/fastssz"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"go.opencensus.io/trace"
 	"google.golang.org/protobuf/proto"
@@ -69,6 +69,8 @@ func isSSZStorageFormat(obj interface{}) bool {
 	case *ethpb.ProposerSlashing:
 		return true
 	case *ethpb.VoluntaryExit:
+		return true
+	case *ethpb.ValidatorRegistrationV1:
 		return true
 	default:
 		return false

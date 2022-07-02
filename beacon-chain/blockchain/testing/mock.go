@@ -62,6 +62,7 @@ type ChainService struct {
 	Genesis                     time.Time
 	ForkChoiceStore             forkchoice.ForkChoicer
 	ReceiveBlockMockErr         error
+	OptimisticCheckRootReceived [32]byte
 }
 
 // ForkChoicer mocks the same method in the chain service
@@ -376,7 +377,7 @@ func (_ *ChainService) HeadGenesisValidatorsRoot() [32]byte {
 	return [32]byte{}
 }
 
-// VerifyBlkDescendant mocks VerifyBlkDescendant and always returns nil.
+// VerifyFinalizedBlkDescendant mocks VerifyBlkDescendant and always returns nil.
 func (s *ChainService) VerifyFinalizedBlkDescendant(_ context.Context, _ [32]byte) error {
 	return s.VerifyBlkDescendantErr
 }
@@ -447,11 +448,12 @@ func (s *ChainService) IsOptimistic(_ context.Context) (bool, error) {
 }
 
 // IsOptimisticForRoot mocks the same method in the chain service.
-func (s *ChainService) IsOptimisticForRoot(_ context.Context, _ [32]byte) (bool, error) {
+func (s *ChainService) IsOptimisticForRoot(_ context.Context, root [32]byte) (bool, error) {
+	s.OptimisticCheckRootReceived = root
 	return s.Optimistic, nil
 }
 
-// ProcessAttestationsAndUpdateHead mocks the same method in the chain service.
+// UpdateHead mocks the same method in the chain service.
 func (s *ChainService) UpdateHead(_ context.Context) error { return nil }
 
 // ReceiveAttesterSlashing mocks the same method in the chain service.

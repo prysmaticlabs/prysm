@@ -5,6 +5,7 @@ import (
 
 	"github.com/pkg/errors"
 	grpcutil "github.com/prysmaticlabs/prysm/api/grpc"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
@@ -30,9 +31,21 @@ type AccountsCLIManager struct {
 	showDepositData      bool
 	showPrivateKeys      bool
 	listValidatorIndices bool
+	deletePublicKeys     bool
+	importPrivateKeys    bool
+	readPasswordFile     bool
 	dialOpts             []grpc.DialOption
 	grpcHeaders          []string
 	beaconRPCProvider    string
+	walletKeyCount       int
+	privateKeyFile       string
+	passwordFilePath     string
+	keysDir              string
+	backupsDir           string
+	backupsPassword      string
+	filteredPubKeys      []bls.PublicKey
+	rawPubKeys           [][]byte
+	formattedPubKeys     []string
 }
 
 func (acm *AccountsCLIManager) prepareBeaconClients(ctx context.Context) (*ethpb.BeaconNodeValidatorClient, *ethpb.NodeClient, error) {

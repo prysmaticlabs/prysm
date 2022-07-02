@@ -25,7 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
-	validator_service_config "github.com/prysmaticlabs/prysm/config/validator/service"
+	validatorserviceconfig "github.com/prysmaticlabs/prysm/config/validator/service"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
@@ -41,7 +41,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/graffiti"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/local"
-	remote_web3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
+	remoteweb3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/protobuf/proto"
@@ -67,6 +67,7 @@ type validator struct {
 	domainDataLock                     sync.Mutex
 	attLogsLock                        sync.Mutex
 	aggregatedSlotCommitteeIDCacheLock sync.Mutex
+	highestValidSlotLock               sync.Mutex
 	prevBalanceLock                    sync.RWMutex
 	slashableKeysLock                  sync.RWMutex
 	eipImportBlacklistedPublicKeys     map[[fieldparams.BLSPubkeyLength]byte]bool
@@ -94,8 +95,9 @@ type validator struct {
 	validatorClient                    ethpb.BeaconNodeValidatorClient
 	graffiti                           []byte
 	voteStats                          voteStats
-	Web3SignerConfig                   *remote_web3signer.SetupConfig
-	feeRecipientConfig                 *validator_service_config.FeeRecipientConfig
+	syncCommitteeStats                 syncCommitteeStats
+	Web3SignerConfig                   *remoteweb3signer.SetupConfig
+	ProposerSettings                   *validatorserviceconfig.ProposerSettings
 	walletIntializedChannel            chan *wallet.Wallet
 }
 
@@ -357,9 +359,11 @@ func (v *validator) ReceiveBlocks(ctx context.Context, connectionErrorChannel ch
 			log.Error("Received nil block")
 			continue
 		}
+		v.highestValidSlotLock.Lock()
 		if blk.Block().Slot() > v.highestValidSlot {
 			v.highestValidSlot = blk.Block().Slot()
 		}
+		v.highestValidSlotLock.Unlock()
 		v.blockFeed.Send(blk)
 	}
 }
@@ -938,10 +942,10 @@ func (v *validator) logDuties(slot types.Slot, duties []*ethpb.DutiesResponse_Du
 	}
 }
 
-// UpdateFeeRecipient calls the prepareBeaconProposer RPC to set the fee recipient.
-func (v *validator) UpdateFeeRecipient(ctx context.Context, km keymanager.IKeymanager) error {
+// PushProposerSettings calls the prepareBeaconProposer RPC to set the fee recipient and also the register validator API if using a custom builder.
+func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKeymanager) error {
 	// only used after Bellatrix
-	if v.feeRecipientConfig == nil {
+	if v.ProposerSettings == nil {
 		e := params.BeaconConfig().BellatrixForkEpoch
 		if e != math.MaxUint64 && slots.ToEpoch(slots.CurrentSlot(v.genesisTime)) < e {
 			log.Warn("After the Ethereum merge, you will need to specify the Ethereum addresses which will receive transaction fee rewards from proposing blocks. " +
@@ -953,6 +957,9 @@ func (v *validator) UpdateFeeRecipient(ctx context.Context, km keymanager.IKeyma
 		}
 		return nil
 	}
+	deadline := v.SlotDeadline(slots.RoundUpToNearestEpoch(slots.CurrentSlot(v.genesisTime)))
+	ctx, cancel := context.WithDeadline(ctx, deadline)
+	defer cancel()
 	if km == nil {
 		return errors.New("keymanager is nil when calling PrepareBeaconProposer")
 	}
@@ -960,7 +967,7 @@ func (v *validator) UpdateFeeRecipient(ctx context.Context, km keymanager.IKeyma
 	if err != nil {
 		return err
 	}
-	feeRecipients, err := v.feeRecipients(ctx, pubkeys)
+	feeRecipients, registerValidatorRequests, err := v.buildProposerSettingsRequests(ctx, pubkeys)
 	if err != nil {
 		return err
 	}
@@ -974,47 +981,65 @@ func (v *validator) UpdateFeeRecipient(ctx context.Context, km keymanager.IKeyma
 		return err
 	}
 	log.Infoln("Successfully prepared beacon proposer with fee recipient to validator index mapping.")
+
+	if err := SubmitValidatorRegistration(ctx, v.validatorClient, km.Sign, registerValidatorRequests); err != nil {
+		return err
+	}
+	log.Infoln("Successfully submitted builder validator registration settings for custom builders.")
 	return nil
 }
 
-func (v *validator) feeRecipients(ctx context.Context, pubkeys [][fieldparams.BLSPubkeyLength]byte) ([]*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer, error) {
-	var validatorToFeeRecipientArray []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer
+func (v *validator) buildProposerSettingsRequests(ctx context.Context, pubkeys [][fieldparams.BLSPubkeyLength]byte) ([]*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer, []*ethpb.ValidatorRegistrationV1, error) {
+	var validatorToFeeRecipients []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer
+	var registerValidatorRequests []*ethpb.ValidatorRegistrationV1
 	// need to check for pubkey to validator index mappings
-	for _, key := range pubkeys {
-		feeRecipient := common.HexToAddress(fieldparams.EthBurnAddressHex)
+	for i, key := range pubkeys {
+		skipAppendToFeeRecipientArray := false
+		feeRecipient := common.HexToAddress(params.BeaconConfig().EthBurnAddressHex)
+		gasLimit := params.BeaconConfig().DefaultBuilderGasLimit
 		validatorIndex, found := v.pubkeyToValidatorIndex[key]
 		// ignore updating fee recipient if validator index is not found
 		if !found {
 			ind, foundIndex, err := v.cacheValidatorPubkeyHexToValidatorIndex(ctx, key)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			if !foundIndex {
-				//if still not found, skip this validator
-				continue
+				skipAppendToFeeRecipientArray = true
 			}
 			validatorIndex = ind
 			v.pubkeyToValidatorIndex[key] = validatorIndex
 		}
-		if v.feeRecipientConfig.DefaultConfig != nil {
-			feeRecipient = v.feeRecipientConfig.DefaultConfig.FeeRecipient
+		if v.ProposerSettings.DefaultConfig != nil {
+			feeRecipient = v.ProposerSettings.DefaultConfig.FeeRecipient
+			gasLimit = v.ProposerSettings.DefaultConfig.GasLimit
 		}
-		if v.feeRecipientConfig.ProposeConfig != nil {
-			option, ok := v.feeRecipientConfig.ProposeConfig[key]
+		if v.ProposerSettings.ProposeConfig != nil {
+			option, ok := v.ProposerSettings.ProposeConfig[key]
 			if ok && option != nil {
 				// override the default if a proposeconfig is set
 				feeRecipient = option.FeeRecipient
+				gasLimit = option.GasLimit
 			}
 		}
-		if hexutil.Encode(feeRecipient.Bytes()) == fieldparams.EthBurnAddressHex {
+		if hexutil.Encode(feeRecipient.Bytes()) == params.BeaconConfig().EthBurnAddressHex {
 			log.Warnln("Fee recipient is set to the burn address. You will not be rewarded transaction fees on this setting. Please set a different fee recipient.")
 		}
-		validatorToFeeRecipientArray = append(validatorToFeeRecipientArray, &ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
-			ValidatorIndex: validatorIndex,
-			FeeRecipient:   feeRecipient[:],
+		if !skipAppendToFeeRecipientArray {
+			validatorToFeeRecipients = append(validatorToFeeRecipients, &ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
+				ValidatorIndex: validatorIndex,
+				FeeRecipient:   feeRecipient[:],
+			})
+		}
+		registerValidatorRequests = append(registerValidatorRequests, &ethpb.ValidatorRegistrationV1{
+			FeeRecipient: feeRecipient[:],
+			GasLimit:     gasLimit,
+			Timestamp:    uint64(time.Now().UTC().Unix()),
+			Pubkey:       pubkeys[i][:],
 		})
+
 	}
-	return validatorToFeeRecipientArray, nil
+	return validatorToFeeRecipients, registerValidatorRequests, nil
 }
 
 func (v *validator) cacheValidatorPubkeyHexToValidatorIndex(ctx context.Context, pubkey [fieldparams.BLSPubkeyLength]byte) (types.ValidatorIndex, bool, error) {
@@ -1046,4 +1071,9 @@ type voteStats struct {
 	totalCorrectSource  uint64
 	totalCorrectTarget  uint64
 	totalCorrectHead    uint64
+}
+
+// This tracks all validators' submissions for sync committees.
+type syncCommitteeStats struct {
+	totalMessagesSubmitted uint64
 }

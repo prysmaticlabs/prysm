@@ -187,3 +187,17 @@ func (vs *Server) computeStateRoot(ctx context.Context, block interfaces.SignedB
 	log.WithField("beaconStateRoot", fmt.Sprintf("%#x", root)).Debugf("Computed state root")
 	return root[:], nil
 }
+
+// SubmitValidatorRegistration submits validator registrations.
+func (vs *Server) SubmitValidatorRegistration(ctx context.Context, reg *ethpb.SignedValidatorRegistrationsV1) (*emptypb.Empty, error) {
+	// No-op is the builder is nil / not configured. The node should still function without a builder.
+	if vs.BlockBuilder == nil || !vs.BlockBuilder.Configured() {
+		return &emptypb.Empty{}, nil
+	}
+
+	if err := vs.BlockBuilder.RegisterValidator(ctx, reg.Messages); err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Could not register block builder: %v", err)
+	}
+
+	return &emptypb.Empty{}, nil
+}

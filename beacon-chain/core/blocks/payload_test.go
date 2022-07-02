@@ -9,11 +9,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/consensus-types/forks/bellatrix"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
 	"github.com/prysmaticlabs/prysm/time/slots"
@@ -22,7 +22,7 @@ import (
 func Test_IsMergeComplete(t *testing.T) {
 	tests := []struct {
 		name    string
-		payload *ethpb.ExecutionPayloadHeader
+		payload *enginev1.ExecutionPayloadHeader
 		want    bool
 	}{
 		{
@@ -32,7 +32,7 @@ func Test_IsMergeComplete(t *testing.T) {
 		},
 		{
 			name: "has parent hash",
-			payload: func() *ethpb.ExecutionPayloadHeader {
+			payload: func() *enginev1.ExecutionPayloadHeader {
 				h := emptyPayloadHeader()
 				h.ParentHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				return h
@@ -41,7 +41,7 @@ func Test_IsMergeComplete(t *testing.T) {
 		},
 		{
 			name: "has fee recipient",
-			payload: func() *ethpb.ExecutionPayloadHeader {
+			payload: func() *enginev1.ExecutionPayloadHeader {
 				h := emptyPayloadHeader()
 				h.FeeRecipient = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				return h
@@ -50,7 +50,7 @@ func Test_IsMergeComplete(t *testing.T) {
 		},
 		{
 			name: "has state root",
-			payload: func() *ethpb.ExecutionPayloadHeader {
+			payload: func() *enginev1.ExecutionPayloadHeader {
 				h := emptyPayloadHeader()
 				h.StateRoot = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				return h
@@ -59,7 +59,7 @@ func Test_IsMergeComplete(t *testing.T) {
 		},
 		{
 			name: "has receipt root",
-			payload: func() *ethpb.ExecutionPayloadHeader {
+			payload: func() *enginev1.ExecutionPayloadHeader {
 				h := emptyPayloadHeader()
 				h.ReceiptsRoot = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				return h
@@ -68,7 +68,7 @@ func Test_IsMergeComplete(t *testing.T) {
 		},
 		{
 			name: "has logs bloom",
-			payload: func() *ethpb.ExecutionPayloadHeader {
+			payload: func() *enginev1.ExecutionPayloadHeader {
 				h := emptyPayloadHeader()
 				h.LogsBloom = bytesutil.PadTo([]byte{'a'}, fieldparams.LogsBloomLength)
 				return h
@@ -77,7 +77,7 @@ func Test_IsMergeComplete(t *testing.T) {
 		},
 		{
 			name: "has random",
-			payload: func() *ethpb.ExecutionPayloadHeader {
+			payload: func() *enginev1.ExecutionPayloadHeader {
 				h := emptyPayloadHeader()
 				h.PrevRandao = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				return h
@@ -86,7 +86,7 @@ func Test_IsMergeComplete(t *testing.T) {
 		},
 		{
 			name: "has base fee",
-			payload: func() *ethpb.ExecutionPayloadHeader {
+			payload: func() *enginev1.ExecutionPayloadHeader {
 				h := emptyPayloadHeader()
 				h.BaseFeePerGas = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				return h
@@ -95,7 +95,7 @@ func Test_IsMergeComplete(t *testing.T) {
 		},
 		{
 			name: "has block hash",
-			payload: func() *ethpb.ExecutionPayloadHeader {
+			payload: func() *enginev1.ExecutionPayloadHeader {
 				h := emptyPayloadHeader()
 				h.BlockHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				return h
@@ -104,7 +104,7 @@ func Test_IsMergeComplete(t *testing.T) {
 		},
 		{
 			name: "has tx root",
-			payload: func() *ethpb.ExecutionPayloadHeader {
+			payload: func() *enginev1.ExecutionPayloadHeader {
 				h := emptyPayloadHeader()
 				h.TransactionsRoot = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				return h
@@ -113,7 +113,7 @@ func Test_IsMergeComplete(t *testing.T) {
 		},
 		{
 			name: "has extra data",
-			payload: func() *ethpb.ExecutionPayloadHeader {
+			payload: func() *enginev1.ExecutionPayloadHeader {
 				h := emptyPayloadHeader()
 				h.ExtraData = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				return h
@@ -122,7 +122,7 @@ func Test_IsMergeComplete(t *testing.T) {
 		},
 		{
 			name: "has block number",
-			payload: func() *ethpb.ExecutionPayloadHeader {
+			payload: func() *enginev1.ExecutionPayloadHeader {
 				h := emptyPayloadHeader()
 				h.BlockNumber = 1
 				return h
@@ -131,7 +131,7 @@ func Test_IsMergeComplete(t *testing.T) {
 		},
 		{
 			name: "has gas limit",
-			payload: func() *ethpb.ExecutionPayloadHeader {
+			payload: func() *enginev1.ExecutionPayloadHeader {
 				h := emptyPayloadHeader()
 				h.GasLimit = 1
 				return h
@@ -140,7 +140,7 @@ func Test_IsMergeComplete(t *testing.T) {
 		},
 		{
 			name: "has gas used",
-			payload: func() *ethpb.ExecutionPayloadHeader {
+			payload: func() *enginev1.ExecutionPayloadHeader {
 				h := emptyPayloadHeader()
 				h.GasUsed = 1
 				return h
@@ -149,7 +149,7 @@ func Test_IsMergeComplete(t *testing.T) {
 		},
 		{
 			name: "has time stamp",
-			payload: func() *ethpb.ExecutionPayloadHeader {
+			payload: func() *enginev1.ExecutionPayloadHeader {
 				h := emptyPayloadHeader()
 				h.Timestamp = 1
 				return h
@@ -174,7 +174,7 @@ func Test_IsMergeTransitionBlockUsingPayloadHeader(t *testing.T) {
 	tests := []struct {
 		name    string
 		payload *enginev1.ExecutionPayload
-		header  *ethpb.ExecutionPayloadHeader
+		header  *enginev1.ExecutionPayloadHeader
 		want    bool
 	}{
 		{
@@ -186,7 +186,7 @@ func Test_IsMergeTransitionBlockUsingPayloadHeader(t *testing.T) {
 		{
 			name:    "non-empty header, empty payload",
 			payload: emptyPayload(),
-			header: func() *ethpb.ExecutionPayloadHeader {
+			header: func() *enginev1.ExecutionPayloadHeader {
 				h := emptyPayloadHeader()
 				h.ParentHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				return h
@@ -387,7 +387,7 @@ func Test_IsExecutionEnabled(t *testing.T) {
 	tests := []struct {
 		name        string
 		payload     *enginev1.ExecutionPayload
-		header      *ethpb.ExecutionPayloadHeader
+		header      *enginev1.ExecutionPayloadHeader
 		useAltairSt bool
 		want        bool
 	}{
@@ -407,7 +407,7 @@ func Test_IsExecutionEnabled(t *testing.T) {
 		{
 			name:    "non-empty header, empty payload",
 			payload: emptyPayload(),
-			header: func() *ethpb.ExecutionPayloadHeader {
+			header: func() *enginev1.ExecutionPayloadHeader {
 				h := emptyPayloadHeader()
 				h.ParentHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				return h
@@ -426,7 +426,7 @@ func Test_IsExecutionEnabled(t *testing.T) {
 		},
 		{
 			name: "non-empty header, non-empty payload",
-			header: func() *ethpb.ExecutionPayloadHeader {
+			header: func() *enginev1.ExecutionPayloadHeader {
 				h := emptyPayloadHeader()
 				h.ParentHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				return h
@@ -463,7 +463,7 @@ func Test_IsExecutionEnabledUsingHeader(t *testing.T) {
 	tests := []struct {
 		name    string
 		payload *enginev1.ExecutionPayload
-		header  *ethpb.ExecutionPayloadHeader
+		header  *enginev1.ExecutionPayloadHeader
 		want    bool
 	}{
 		{
@@ -475,7 +475,7 @@ func Test_IsExecutionEnabledUsingHeader(t *testing.T) {
 		{
 			name:    "non-empty header, empty payload",
 			payload: emptyPayload(),
-			header: func() *ethpb.ExecutionPayloadHeader {
+			header: func() *enginev1.ExecutionPayloadHeader {
 				h := emptyPayloadHeader()
 				h.ParentHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				return h
@@ -494,7 +494,7 @@ func Test_IsExecutionEnabledUsingHeader(t *testing.T) {
 		},
 		{
 			name: "non-empty header, non-empty payload",
-			header: func() *ethpb.ExecutionPayloadHeader {
+			header: func() *enginev1.ExecutionPayloadHeader {
 				h := emptyPayloadHeader()
 				h.ParentHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				return h
@@ -526,7 +526,7 @@ func Test_ValidatePayloadWhenMergeCompletes(t *testing.T) {
 	tests := []struct {
 		name    string
 		payload *enginev1.ExecutionPayload
-		header  *ethpb.ExecutionPayloadHeader
+		header  *enginev1.ExecutionPayloadHeader
 		err     error
 	}{
 		{
@@ -542,7 +542,7 @@ func Test_ValidatePayloadWhenMergeCompletes(t *testing.T) {
 				p.ParentHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				return p
 			}(),
-			header: func() *ethpb.ExecutionPayloadHeader {
+			header: func() *enginev1.ExecutionPayloadHeader {
 				h := emptyPayloadHeader()
 				h.BlockHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				return h
@@ -556,7 +556,7 @@ func Test_ValidatePayloadWhenMergeCompletes(t *testing.T) {
 				p.ParentHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				return p
 			}(),
-			header: func() *ethpb.ExecutionPayloadHeader {
+			header: func() *enginev1.ExecutionPayloadHeader {
 				h := emptyPayloadHeader()
 				h.BlockHash = bytesutil.PadTo([]byte{'b'}, fieldparams.RootLength)
 				return h
@@ -669,7 +669,7 @@ func Test_ProcessPayload(t *testing.T) {
 				require.Equal(t, tt.err.Error(), err.Error())
 			} else {
 				require.Equal(t, tt.err, err)
-				want, err := blocks.PayloadToHeader(tt.payload)
+				want, err := bellatrix.PayloadToHeader(tt.payload)
 				require.Equal(t, tt.err, err)
 				got, err := st.LatestExecutionPayloadHeader()
 				require.NoError(t, err)
@@ -687,12 +687,12 @@ func Test_ProcessPayloadHeader(t *testing.T) {
 	require.NoError(t, err)
 	tests := []struct {
 		name   string
-		header *ethpb.ExecutionPayloadHeader
+		header *enginev1.ExecutionPayloadHeader
 		err    error
 	}{
 		{
 			name: "process passes",
-			header: func() *ethpb.ExecutionPayloadHeader {
+			header: func() *enginev1.ExecutionPayloadHeader {
 				h := emptyPayloadHeader()
 				h.PrevRandao = random
 				h.Timestamp = uint64(ts.Unix())
@@ -706,7 +706,7 @@ func Test_ProcessPayloadHeader(t *testing.T) {
 		},
 		{
 			name: "incorrect timestamp",
-			header: func() *ethpb.ExecutionPayloadHeader {
+			header: func() *enginev1.ExecutionPayloadHeader {
 				h := emptyPayloadHeader()
 				h.PrevRandao = random
 				h.Timestamp = 1
@@ -738,12 +738,12 @@ func Test_ValidatePayloadHeader(t *testing.T) {
 	require.NoError(t, err)
 	tests := []struct {
 		name   string
-		header *ethpb.ExecutionPayloadHeader
+		header *enginev1.ExecutionPayloadHeader
 		err    error
 	}{
 		{
 			name: "process passes",
-			header: func() *ethpb.ExecutionPayloadHeader {
+			header: func() *enginev1.ExecutionPayloadHeader {
 				h := emptyPayloadHeader()
 				h.PrevRandao = random
 				h.Timestamp = uint64(ts.Unix())
@@ -757,7 +757,7 @@ func Test_ValidatePayloadHeader(t *testing.T) {
 		},
 		{
 			name: "incorrect timestamp",
-			header: func() *ethpb.ExecutionPayloadHeader {
+			header: func() *enginev1.ExecutionPayloadHeader {
 				h := emptyPayloadHeader()
 				h.PrevRandao = random
 				h.Timestamp = 1
@@ -777,16 +777,16 @@ func Test_ValidatePayloadHeader(t *testing.T) {
 func Test_ValidatePayloadHeaderWhenMergeCompletes(t *testing.T) {
 	st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
 	emptySt := st.Copy()
-	require.NoError(t, st.SetLatestExecutionPayloadHeader(&ethpb.ExecutionPayloadHeader{BlockHash: []byte{'a'}}))
+	require.NoError(t, st.SetLatestExecutionPayloadHeader(&enginev1.ExecutionPayloadHeader{BlockHash: []byte{'a'}}))
 	tests := []struct {
 		name   string
 		state  state.BeaconState
-		header *ethpb.ExecutionPayloadHeader
+		header *enginev1.ExecutionPayloadHeader
 		err    error
 	}{
 		{
 			name: "no merge",
-			header: func() *ethpb.ExecutionPayloadHeader {
+			header: func() *enginev1.ExecutionPayloadHeader {
 				h := emptyPayloadHeader()
 				return h
 			}(),
@@ -795,7 +795,7 @@ func Test_ValidatePayloadHeaderWhenMergeCompletes(t *testing.T) {
 		},
 		{
 			name: "process passes",
-			header: func() *ethpb.ExecutionPayloadHeader {
+			header: func() *enginev1.ExecutionPayloadHeader {
 				h := emptyPayloadHeader()
 				h.ParentHash = []byte{'a'}
 				return h
@@ -805,7 +805,7 @@ func Test_ValidatePayloadHeaderWhenMergeCompletes(t *testing.T) {
 		},
 		{
 			name: "invalid block hash",
-			header: func() *ethpb.ExecutionPayloadHeader {
+			header: func() *enginev1.ExecutionPayloadHeader {
 				h := emptyPayloadHeader()
 				h.ParentHash = []byte{'b'}
 				return h
@@ -824,7 +824,7 @@ func Test_ValidatePayloadHeaderWhenMergeCompletes(t *testing.T) {
 
 func Test_PayloadToHeader(t *testing.T) {
 	p := emptyPayload()
-	h, err := blocks.PayloadToHeader(p)
+	h, err := bellatrix.PayloadToHeader(p)
 	require.NoError(t, err)
 	txRoot, err := ssz.TransactionsRoot(p.Transactions)
 	require.NoError(t, err)
@@ -872,8 +872,8 @@ func BenchmarkBellatrixComplete(b *testing.B) {
 	}
 }
 
-func emptyPayloadHeader() *ethpb.ExecutionPayloadHeader {
-	return &ethpb.ExecutionPayloadHeader{
+func emptyPayloadHeader() *enginev1.ExecutionPayloadHeader {
+	return &enginev1.ExecutionPayloadHeader{
 		ParentHash:       make([]byte, fieldparams.RootLength),
 		FeeRecipient:     make([]byte, fieldparams.FeeRecipientLength),
 		StateRoot:        make([]byte, fieldparams.RootLength),

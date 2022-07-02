@@ -72,9 +72,6 @@ func (s *Service) VerifyFinalizedConsistency(ctx context.Context, root []byte) e
 	}
 
 	f := s.FinalizedCheckpt()
-	if f == nil {
-		return errNilFinalizedInStore
-	}
 	ss, err := slots.EpochStart(f.Epoch)
 	if err != nil {
 		return err
@@ -123,7 +120,7 @@ func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
 			case <-s.ctx.Done():
 				return
 			case <-st.C():
-				if err := s.NewSlot(s.ctx, s.CurrentSlot()); err != nil {
+				if err := s.ForkChoicer().NewSlot(s.ctx, s.CurrentSlot()); err != nil {
 					log.WithError(err).Error("Could not process new slot")
 					return
 				}
@@ -152,33 +149,35 @@ func (s *Service) UpdateHead(ctx context.Context) error {
 
 	s.processAttestations(ctx)
 
-	justified := s.store.JustifiedCheckpt()
-	if justified == nil {
-		return errNilJustifiedInStore
-	}
-	balances, err := s.justifiedBalances.get(ctx, bytesutil.ToBytes32(justified.Root))
+	justified := s.ForkChoicer().JustifiedCheckpoint()
+	balances, err := s.justifiedBalances.get(ctx, justified.Root)
 	if err != nil {
 		return err
 	}
-	newHeadRoot, err := s.updateHead(ctx, balances)
+	newHeadRoot, err := s.cfg.ForkChoiceStore.Head(ctx, balances)
 	if err != nil {
 		log.WithError(err).Warn("Resolving fork due to new attestation")
 	}
+	s.headLock.RLock()
 	if s.headRoot() != newHeadRoot {
 		log.WithFields(logrus.Fields{
 			"oldHeadRoot": fmt.Sprintf("%#x", s.headRoot()),
 			"newHeadRoot": fmt.Sprintf("%#x", newHeadRoot),
 		}).Debug("Head changed due to attestations")
 	}
+	s.headLock.RUnlock()
 	s.notifyEngineIfChangedHead(ctx, newHeadRoot)
 	return nil
 }
 
 // This calls notify Forkchoice Update in the event that the head has changed
 func (s *Service) notifyEngineIfChangedHead(ctx context.Context, newHeadRoot [32]byte) {
-	if s.headRoot() == newHeadRoot {
+	s.headLock.RLock()
+	if newHeadRoot == [32]byte{} || s.headRoot() == newHeadRoot {
+		s.headLock.RUnlock()
 		return
 	}
+	s.headLock.RUnlock()
 
 	if !s.hasBlockInInitSyncOrDB(ctx, newHeadRoot) {
 		log.Debug("New head does not exist in DB. Do nothing")

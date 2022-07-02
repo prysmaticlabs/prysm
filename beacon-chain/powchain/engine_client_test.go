@@ -217,27 +217,6 @@ func TestClient_HTTP(t *testing.T) {
 		require.DeepEqual(t, (*pb.PayloadIDBytes)(nil), payloadID)
 		require.DeepEqual(t, []byte(nil), validHash)
 	})
-	t.Run(ForkchoiceUpdatedMethod+" INVALID_TERMINAL_BLOCK status", func(t *testing.T) {
-		forkChoiceState := &pb.ForkchoiceState{
-			HeadBlockHash:      []byte("head"),
-			SafeBlockHash:      []byte("safe"),
-			FinalizedBlockHash: []byte("finalized"),
-		}
-		payloadAttributes := &pb.PayloadAttributes{
-			Timestamp:             1,
-			PrevRandao:            []byte("random"),
-			SuggestedFeeRecipient: []byte("suggestedFeeRecipient"),
-		}
-		want, ok := fix["ForkchoiceUpdatedInvalidTerminalBlockResponse"].(*ForkchoiceUpdatedResponse)
-		require.Equal(t, true, ok)
-		client := forkchoiceUpdateSetup(t, forkChoiceState, payloadAttributes, want)
-
-		// We call the RPC method via HTTP and expect a proper result.
-		payloadID, validHash, err := client.ForkchoiceUpdated(ctx, forkChoiceState, payloadAttributes)
-		require.ErrorContains(t, "could not satisfy terminal block condition", err)
-		require.DeepEqual(t, (*pb.PayloadIDBytes)(nil), payloadID)
-		require.DeepEqual(t, []byte(nil), validHash)
-	})
 	t.Run(NewPayloadMethod+" VALID status", func(t *testing.T) {
 		execPayload, ok := fix["ExecutionPayload"].(*pb.ExecutionPayload)
 		require.Equal(t, true, ok)
@@ -272,18 +251,6 @@ func TestClient_HTTP(t *testing.T) {
 		// We call the RPC method via HTTP and expect a proper result.
 		resp, err := client.NewPayload(ctx, execPayload)
 		require.ErrorContains(t, "could not validate block hash", err)
-		require.DeepEqual(t, []uint8(nil), resp)
-	})
-	t.Run(NewPayloadMethod+" INVALID_TERMINAL_BLOCK status", func(t *testing.T) {
-		execPayload, ok := fix["ExecutionPayload"].(*pb.ExecutionPayload)
-		require.Equal(t, true, ok)
-		want, ok := fix["InvalidTerminalBlockStatus"].(*pb.PayloadStatus)
-		require.Equal(t, true, ok)
-		client := newPayloadSetup(t, want, execPayload)
-
-		// We call the RPC method via HTTP and expect a proper result.
-		resp, err := client.NewPayload(ctx, execPayload)
-		require.ErrorContains(t, "could not satisfy terminal block condition", err)
 		require.DeepEqual(t, []uint8(nil), resp)
 	})
 	t.Run(NewPayloadMethod+" INVALID status", func(t *testing.T) {
@@ -521,7 +488,7 @@ func TestServer_getPowBlockHashAtTerminalTotalDifficulty(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg := params.BeaconConfig()
+			cfg := params.BeaconConfig().Copy()
 			cfg.TerminalTotalDifficulty = tt.paramsTd
 			params.OverrideBeaconConfig(cfg)
 			var m map[[32]byte]*pb.ExecutionBlock
@@ -721,7 +688,17 @@ func Test_handleRPCError(t *testing.T) {
 		{
 			name:             "ErrUnknownPayload",
 			expectedContains: ErrUnknownPayload.Error(),
-			given:            &customError{code: -32001},
+			given:            &customError{code: -38001},
+		},
+		{
+			name:             "ErrInvalidForkchoiceState",
+			expectedContains: ErrInvalidForkchoiceState.Error(),
+			given:            &customError{code: -38002},
+		},
+		{
+			name:             "ErrInvalidPayloadAttributes",
+			expectedContains: ErrInvalidPayloadAttributes.Error(),
+			given:            &customError{code: -38003},
 		},
 		{
 			name:             "ErrServer unexpected no data",
@@ -819,13 +796,6 @@ func fixtures() map[string]interface{} {
 		},
 		PayloadId: &id,
 	}
-	forkChoiceInvalidTerminalBlockResp := &ForkchoiceUpdatedResponse{
-		Status: &pb.PayloadStatus{
-			Status:          pb.PayloadStatus_INVALID_TERMINAL_BLOCK,
-			LatestValidHash: nil,
-		},
-		PayloadId: &id,
-	}
 	forkChoiceAcceptedResp := &ForkchoiceUpdatedResponse{
 		Status: &pb.PayloadStatus{
 			Status:          pb.PayloadStatus_ACCEPTED,
@@ -856,10 +826,6 @@ func fixtures() map[string]interface{} {
 		Status:          pb.PayloadStatus_INVALID_BLOCK_HASH,
 		LatestValidHash: nil,
 	}
-	inValidTerminalBlockStatus := &pb.PayloadStatus{
-		Status:          pb.PayloadStatus_INVALID_TERMINAL_BLOCK,
-		LatestValidHash: nil,
-	}
 	acceptedStatus := &pb.PayloadStatus{
 		Status:          pb.PayloadStatus_ACCEPTED,
 		LatestValidHash: nil,
@@ -877,21 +843,19 @@ func fixtures() map[string]interface{} {
 		LatestValidHash: foo[:],
 	}
 	return map[string]interface{}{
-		"ExecutionBlock":                                executionBlock,
-		"ExecutionPayload":                              executionPayloadFixture,
-		"ValidPayloadStatus":                            validStatus,
-		"InvalidBlockHashStatus":                        inValidBlockHashStatus,
-		"InvalidTerminalBlockStatus":                    inValidTerminalBlockStatus,
-		"AcceptedStatus":                                acceptedStatus,
-		"SyncingStatus":                                 syncingStatus,
-		"InvalidStatus":                                 invalidStatus,
-		"UnknownStatus":                                 unknownStatus,
-		"ForkchoiceUpdatedResponse":                     forkChoiceResp,
-		"ForkchoiceUpdatedSyncingResponse":              forkChoiceSyncingResp,
-		"ForkchoiceUpdatedInvalidTerminalBlockResponse": forkChoiceInvalidTerminalBlockResp,
-		"ForkchoiceUpdatedAcceptedResponse":             forkChoiceAcceptedResp,
-		"ForkchoiceUpdatedInvalidResponse":              forkChoiceInvalidResp,
-		"TransitionConfiguration":                       transitionCfg,
+		"ExecutionBlock":                    executionBlock,
+		"ExecutionPayload":                  executionPayloadFixture,
+		"ValidPayloadStatus":                validStatus,
+		"InvalidBlockHashStatus":            inValidBlockHashStatus,
+		"AcceptedStatus":                    acceptedStatus,
+		"SyncingStatus":                     syncingStatus,
+		"InvalidStatus":                     invalidStatus,
+		"UnknownStatus":                     unknownStatus,
+		"ForkchoiceUpdatedResponse":         forkChoiceResp,
+		"ForkchoiceUpdatedSyncingResponse":  forkChoiceSyncingResp,
+		"ForkchoiceUpdatedAcceptedResponse": forkChoiceAcceptedResp,
+		"ForkchoiceUpdatedInvalidResponse":  forkChoiceInvalidResp,
+		"TransitionConfiguration":           transitionCfg,
 	}
 }
 

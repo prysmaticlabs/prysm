@@ -215,8 +215,8 @@ func TestStaticPeering_PeersAreAdded(t *testing.T) {
 		})
 	}
 	time.Sleep(4 * time.Second)
-	peers := s.host.Network().Peers()
-	assert.Equal(t, 5, len(peers), "Not all peers added to peerstore")
+	ps := s.host.Network().Peers()
+	assert.Equal(t, 5, len(ps), "Not all peers added to peerstore")
 	require.NoError(t, s.Stop())
 	exitRoutine <- true
 }
@@ -410,7 +410,7 @@ func TestRefreshENR_ForkBoundaries(t *testing.T) {
 				assert.NoError(t, err)
 
 				// Update params
-				cfg := params.BeaconConfig()
+				cfg := params.BeaconConfig().Copy()
 				cfg.AltairForkEpoch = 5
 				params.OverrideBeaconConfig(cfg)
 				params.BeaconConfig().InitializeForkSchedule()
@@ -441,7 +441,7 @@ func TestRefreshENR_ForkBoundaries(t *testing.T) {
 				assert.NoError(t, err)
 
 				// Update params
-				cfg := params.BeaconConfig()
+				cfg := params.BeaconConfig().Copy()
 				cfg.AltairForkEpoch = 5
 				params.OverrideBeaconConfig(cfg)
 				params.BeaconConfig().InitializeForkSchedule()
@@ -471,7 +471,7 @@ func TestRefreshENR_ForkBoundaries(t *testing.T) {
 				assert.NoError(t, err)
 
 				// Update params
-				cfg := params.BeaconConfig()
+				cfg := params.BeaconConfig().Copy()
 				cfg.AltairForkEpoch = 5
 				params.OverrideBeaconConfig(cfg)
 				params.BeaconConfig().InitializeForkSchedule()

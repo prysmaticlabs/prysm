@@ -210,7 +210,7 @@ func (s *Service) retrieveHeaderInfo(ctx context.Context, bNum uint64) (*types.H
 			return nil, err
 		}
 		if blk == nil {
-			return nil, errors.New("header with the provided number does not exist")
+			return nil, errors.Errorf("header with the number %d does not exist", bNum)
 		}
 		if err := s.headerCache.AddHeader(blk); err != nil {
 			return nil, err

@@ -95,6 +95,7 @@ type blockchainService interface {
 	blockchain.TimeFetcher
 	blockchain.GenesisFetcher
 	blockchain.CanonicalFetcher
+	blockchain.OptimisticModeFetcher
 	blockchain.SlashingReceiver
 }
 
@@ -131,6 +132,8 @@ type Service struct {
 	seenSyncContributionCache        *lru.Cache
 	badBlockCache                    *lru.Cache
 	badBlockLock                     sync.RWMutex
+	syncContributionBitsOverlapLock  sync.RWMutex
+	syncContributionBitsOverlapCache *lru.Cache
 	signatureChan                    chan *signatureVerifier
 }
 
@@ -220,6 +223,7 @@ func (s *Service) initCaches() {
 	s.seenUnAggregatedAttestationCache = lruwrpr.New(seenUnaggregatedAttSize)
 	s.seenSyncMessageCache = lruwrpr.New(seenSyncMsgSize)
 	s.seenSyncContributionCache = lruwrpr.New(seenSyncContributionSize)
+	s.syncContributionBitsOverlapCache = lruwrpr.New(seenSyncContributionSize)
 	s.seenExitCache = lruwrpr.New(seenExitSize)
 	s.seenAttesterSlashingCache = make(map[uint64]bool)
 	s.seenProposerSlashingCache = lruwrpr.New(seenProposerSlashingSize)
@@ -233,10 +237,10 @@ func (s *Service) registerHandlers() {
 	defer stateSub.Unsubscribe()
 	for {
 		select {
-		case event := <-stateChannel:
-			switch event.Type {
+		case e := <-stateChannel:
+			switch e.Type {
 			case statefeed.Initialized:
-				data, ok := event.Data.(*statefeed.InitializedData)
+				data, ok := e.Data.(*statefeed.InitializedData)
 				if !ok {
 					log.Error("Event feed data is not type *statefeed.InitializedData")
 					return
@@ -255,7 +259,7 @@ func (s *Service) registerHandlers() {
 					s.markForChainStart()
 				}()
 			case statefeed.Synced:
-				_, ok := event.Data.(*statefeed.SyncedData)
+				_, ok := e.Data.(*statefeed.SyncedData)
 				if !ok {
 					log.Error("Event feed data is not type *statefeed.SyncedData")
 					return
