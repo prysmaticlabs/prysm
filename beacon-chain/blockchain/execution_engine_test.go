@@ -271,14 +271,11 @@ func Test_NotifyForkchoiceUpdateRecursive(t *testing.T) {
 	require.NoError(t, err)
 
 	// Insert blocks into forkchoice
+	service := setupBeaconChain(t, beaconDB)
 	fcs := doublylinkedtree.New()
-	opts := []Option{
-		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
-		WithForkChoiceStore(fcs),
-		WithProposerIdsCache(cache.NewProposerPayloadIDsCache()),
-	}
-	service, err := NewService(ctx, opts...)
+	service.cfg.ForkChoiceStore = fcs
+	service.cfg.ProposerSlotIndexCache = cache.NewProposerPayloadIDsCache()
+
 	service.justifiedBalances.balances = []uint64{50, 100, 200}
 	require.NoError(t, err)
 	ojc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
@@ -319,6 +316,10 @@ func Test_NotifyForkchoiceUpdateRecursive(t *testing.T) {
 	// Prepare Engine Mock to return invalid unless head is D, LVH =  E
 	service.cfg.ExecutionEngineCaller = &mockPOW.EngineClient{ErrForkchoiceUpdated: powchain.ErrInvalidPayloadStatus, ForkChoiceUpdatedResp: pe[:], OverrideValidHash: [32]byte{'D'}}
 	st, _ := util.DeterministicGenesisState(t, 1)
+	service.head = &head{
+		state: st,
+		block: wba,
+	}
 
 	require.NoError(t, beaconDB.SaveState(ctx, st, bra))
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, bra))
