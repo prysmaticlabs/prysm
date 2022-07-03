@@ -106,7 +106,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 		return err
 	}
 
-	// save current justified and finalized epochs for future use
+	// Save current justified and finalized epochs for future use.
 	currStoreJustifiedEpoch := s.ForkChoicer().JustifiedCheckpoint().Epoch
 	currStoreFinalizedEpoch := s.ForkChoicer().FinalizedCheckpoint().Epoch
 	preStateFinalizedEpoch := preState.FinalizedCheckpoint().Epoch
@@ -215,7 +215,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 
 	// Save justified check point to db.
 	postStateJustifiedEpoch := postState.CurrentJustifiedCheckpoint().Epoch
-	if justified.Epoch > currStoreJustifiedEpoch || (postStateJustifiedEpoch == justified.Epoch && justified.Epoch > preStateJustifiedEpoch) {
+	if justified.Epoch > currStoreJustifiedEpoch || (justified.Epoch == postStateJustifiedEpoch && justified.Epoch > preStateJustifiedEpoch) {
 		if err := s.cfg.BeaconDB.SaveJustifiedCheckpoint(ctx, &ethpb.Checkpoint{
 			Epoch: justified.Epoch, Root: justified.Root[:],
 		}); err != nil {
@@ -223,10 +223,10 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 		}
 	}
 
-	// Update finalized check point.
+	// Save finalized check point to db and more.
 	postStateFinalizedEpoch := postState.FinalizedCheckpoint().Epoch
 	finalized := s.ForkChoicer().FinalizedCheckpoint()
-	if finalized.Epoch > currStoreFinalizedEpoch || (postStateFinalizedEpoch == finalized.Epoch && finalized.Epoch > preStateFinalizedEpoch) {
+	if finalized.Epoch > currStoreFinalizedEpoch || (finalized.Epoch == postStateFinalizedEpoch && finalized.Epoch > preStateFinalizedEpoch) {
 		if err := s.updateFinalized(ctx, &ethpb.Checkpoint{Epoch: finalized.Epoch, Root: finalized.Root[:]}); err != nil {
 			return err
 		}
