@@ -27,7 +27,7 @@ func TestComputeDelta_ZeroHash(t *testing.T) {
 	}
 
 	slashedIndices := make(map[types.ValidatorIndex]bool)
-	delta, _, err := computeDeltas(context.Background(), indices, votes, oldBalances, newBalances, slashedIndices)
+	delta, _, err := computeDeltas(context.Background(), len(indices), indices, votes, oldBalances, newBalances, slashedIndices)
 	require.NoError(t, err)
 	assert.Equal(t, int(validatorCount), len(delta))
 
@@ -55,7 +55,7 @@ func TestComputeDelta_AllVoteTheSame(t *testing.T) {
 	}
 
 	slashedIndices := make(map[types.ValidatorIndex]bool)
-	delta, _, err := computeDeltas(context.Background(), indices, votes, oldBalances, newBalances, slashedIndices)
+	delta, _, err := computeDeltas(context.Background(), len(indices), indices, votes, oldBalances, newBalances, slashedIndices)
 	require.NoError(t, err)
 	assert.Equal(t, int(validatorCount), len(delta))
 
@@ -88,7 +88,7 @@ func TestComputeDelta_DifferentVotes(t *testing.T) {
 	}
 
 	slashedIndices := make(map[types.ValidatorIndex]bool)
-	delta, _, err := computeDeltas(context.Background(), indices, votes, oldBalances, newBalances, slashedIndices)
+	delta, _, err := computeDeltas(context.Background(), len(indices), indices, votes, oldBalances, newBalances, slashedIndices)
 	require.NoError(t, err)
 	assert.Equal(t, int(validatorCount), len(delta))
 
@@ -118,7 +118,7 @@ func TestComputeDelta_MovingVotes(t *testing.T) {
 	}
 
 	slashedIndices := make(map[types.ValidatorIndex]bool)
-	delta, _, err := computeDeltas(context.Background(), indices, votes, oldBalances, newBalances, slashedIndices)
+	delta, _, err := computeDeltas(context.Background(), len(indices), indices, votes, oldBalances, newBalances, slashedIndices)
 	require.NoError(t, err)
 	assert.Equal(t, int(validatorCount), len(delta))
 
@@ -151,7 +151,7 @@ func TestComputeDelta_MoveOutOfTree(t *testing.T) {
 		Vote{indexToHash(1), [32]byte{'A'}, 0})
 
 	slashedIndices := make(map[types.ValidatorIndex]bool)
-	delta, _, err := computeDeltas(context.Background(), indices, votes, oldBalances, newBalances, slashedIndices)
+	delta, _, err := computeDeltas(context.Background(), len(indices), indices, votes, oldBalances, newBalances, slashedIndices)
 	require.NoError(t, err)
 	assert.Equal(t, 1, len(delta))
 	assert.Equal(t, 0-2*int(balance), delta[0])
@@ -180,7 +180,7 @@ func TestComputeDelta_ChangingBalances(t *testing.T) {
 	}
 
 	slashedIndices := make(map[types.ValidatorIndex]bool)
-	delta, _, err := computeDeltas(context.Background(), indices, votes, oldBalances, newBalances, slashedIndices)
+	delta, _, err := computeDeltas(context.Background(), len(indices), indices, votes, oldBalances, newBalances, slashedIndices)
 	require.NoError(t, err)
 	assert.Equal(t, 16, len(delta))
 
@@ -214,7 +214,7 @@ func TestComputeDelta_ValidatorAppear(t *testing.T) {
 		Vote{indexToHash(1), indexToHash(2), 0})
 
 	slashedIndices := make(map[types.ValidatorIndex]bool)
-	delta, _, err := computeDeltas(context.Background(), indices, votes, oldBalances, newBalances, slashedIndices)
+	delta, _, err := computeDeltas(context.Background(), len(indices), indices, votes, oldBalances, newBalances, slashedIndices)
 	require.NoError(t, err)
 	assert.Equal(t, 2, len(delta))
 	assert.Equal(t, 0-int(balance), delta[0])
@@ -240,7 +240,7 @@ func TestComputeDelta_ValidatorDisappears(t *testing.T) {
 		Vote{indexToHash(1), indexToHash(2), 0})
 
 	slashedIndices := make(map[types.ValidatorIndex]bool)
-	delta, _, err := computeDeltas(context.Background(), indices, votes, oldBalances, newBalances, slashedIndices)
+	delta, _, err := computeDeltas(context.Background(), len(indices), indices, votes, oldBalances, newBalances, slashedIndices)
 	require.NoError(t, err)
 	assert.Equal(t, 2, len(delta))
 	assert.Equal(t, 0-2*int(balance), delta[0])
