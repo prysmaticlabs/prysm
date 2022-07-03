@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"testing"
 
-	bh "github.com/libp2p/go-libp2p-blankhost"
-	swarmt "github.com/libp2p/go-libp2p-swarm/testing"
+	bh "github.com/libp2p/go-libp2p/p2p/host/blank"
+	swarmt "github.com/libp2p/go-libp2p/p2p/net/swarm/testing"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )

@@ -669,3 +669,25 @@ func TestService_IsOptimisticForRoot_DB_non_canonical(t *testing.T) {
 	require.Equal(t, true, validated)
 
 }
+
+func TestService_IsFinalized(t *testing.T) {
+	beaconDB := testDB.SetupDB(t)
+	ctx := context.Background()
+	c := &Service{cfg: &config{BeaconDB: beaconDB, ForkChoiceStore: doublylinkedtree.New()}}
+	r1 := [32]byte{'a'}
+	require.NoError(t, c.ForkChoiceStore().UpdateFinalizedCheckpoint(&forkchoicetypes.Checkpoint{
+		Root: r1,
+	}))
+	b := util.NewBeaconBlock()
+	br, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	util.SaveBlock(t, ctx, beaconDB, b)
+	require.NoError(t, beaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Root: br[:], Slot: 10}))
+	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, br))
+	require.NoError(t, beaconDB.SaveFinalizedCheckpoint(ctx, &ethpb.Checkpoint{
+		Root: br[:],
+	}))
+	require.Equal(t, true, c.IsFinalized(ctx, r1))
+	require.Equal(t, true, c.IsFinalized(ctx, br))
+	require.Equal(t, false, c.IsFinalized(ctx, [32]byte{'c'}))
+}
