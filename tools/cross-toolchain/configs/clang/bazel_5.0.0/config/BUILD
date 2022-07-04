@@ -40,8 +40,5 @@ platform(
         "@bazel_tools//platforms:linux",
         "@bazel_tools//tools/cpp:clang",
     ],
-    exec_properties = {
-        "container-image": "docker://gcr.io/prysmaticlabs/rbe-worker@sha256:ebf03ab43a88499e70c8bb4dad70b8bdbc9f9923a87bc72c39e9e7690fcd49f2",
-        "OSFamily": "Linux",
-    },
+    exec_properties = {"container-image": "docker://registry.hub.docker.com/leolara/prysm-rbe-worker@sha256:8888ff6c340717250df64f9af2c895361786912a39f5af9b5998b87cc8c179fd", "OSFamily": "Linux"},
 )

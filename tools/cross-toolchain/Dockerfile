@@ -25,13 +25,15 @@ RUN apt-get update && \
         pkg-config make docker.io gnupg2 libgmp-dev python
 
 # install llvm/clang cross-build toolchains
-ENV INSTALL_LLVM_VERSION=10.0.0
+ENV INSTALL_LLVM_VERSION=12.0.0
 ADD install_clang_cross10.sh /tmp/install_clang_cross.sh
 RUN /tmp/install_clang_cross.sh
 
 # install osxcross
 ADD install_osxcross.sh /tmp/install_osxcross.sh
 ADD common_osxcross.sh /tmp/common_osxcross.sh
+# This can be removed once the new SDK is uploaded to https://prysmaticlabs.com/uploads/
+COPY MacOSX12.3.sdk.tar.xz /tmp/MacOSX12.3.sdk.tar.xz
 RUN /tmp/install_osxcross.sh
 ADD link_osxcross.sh /tmp/link_osxcross.sh
 RUN /tmp/link_osxcross.sh

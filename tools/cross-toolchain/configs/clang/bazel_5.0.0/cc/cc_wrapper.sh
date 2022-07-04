@@ -22,4 +22,4 @@ set -eu
 
 
 # Call the C++ compiler
-/usr/bin/clang-10 "$@"
+/usr/bin/clang-12 "$@"

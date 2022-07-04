@@ -1,9 +1,10 @@
 load("@bazel_toolchains//rules:rbe_repo.bzl", "rbe_autoconfig")
 load("@prysm//tools/cross-toolchain:configs/versions.bzl", _generated_toolchain_config_suite_autogen_spec = "TOOLCHAIN_CONFIG_AUTOGEN_SPEC")
 
-_PRYSM_BUILD_IMAGE_REGISTRY = "gcr.io"
-_PRYSM_BUILD_IMAGE_REPOSITORY = "prysmaticlabs/rbe-worker"
-_PRYSM_BUILD_IMAGE_DIGEST = "sha256:ebf03ab43a88499e70c8bb4dad70b8bdbc9f9923a87bc72c39e9e7690fcd49f2"
+# this can be restored to Prysm registry once the docker image is uploaded
+_PRYSM_BUILD_IMAGE_REGISTRY = "registry.hub.docker.com"
+_PRYSM_BUILD_IMAGE_REPOSITORY = "leolara/prysm-rbe-worker"
+_PRYSM_BUILD_IMAGE_DIGEST = "sha256:8888ff6c340717250df64f9af2c895361786912a39f5af9b5998b87cc8c179fd"
 _PRYSM_BUILD_IMAGE_JAVA_HOME = "/usr/lib/jvm/java-8-openjdk-amd64"
 _CONFIGS_OUTPUT_BASE = "tools/cross-toolchain/configs"
 

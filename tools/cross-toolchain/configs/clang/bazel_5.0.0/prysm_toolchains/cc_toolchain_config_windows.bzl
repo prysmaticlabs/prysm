@@ -37,7 +37,7 @@ def _impl(ctx):
     action_configs = []
 
     install = "/usr/x86_64-w64-mingw32/"
-    gcc_libpath = "/usr/lib/gcc/x86_64-w64-mingw32/8.3-win32/"
+    gcc_libpath = "/usr/lib/gcc/x86_64-w64-mingw32/10-win32/"
     bin_prefix = "/usr/bin/x86_64-w64-mingw32-"
 
 

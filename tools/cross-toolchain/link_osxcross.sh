@@ -4,9 +4,9 @@
 # SymLink includes and clean up 
 
 cd "/tmp/osxcross"
-mv target/* /usr/x86_64-apple-darwin/osxcross/
-mv tools /usr/x86_64-apple-darwin/osxcross/
-cd /usr/x86_64-apple-darwin/osxcross/include
+mv target/* /usr/osxcross/
+mv tools /usr/osxcross/
+cd /usr/osxcross/include
 ln -s ../SDK/${OSX_SDK}/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/CarbonCore.framework/Versions/A/Headers/ CarbonCore
 ln -s ../SDK/${OSX_SDK}/System/Library/Frameworks/CoreFoundation.framework/Versions/A/Headers/ CoreFoundation
 ln -s ../SDK/${OSX_SDK}/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/ Frameworks
@@ -25,8 +25,8 @@ ln -s ../SDK/${OSX_SDK}/System/Library/Frameworks/CoreServices.framework/Version
 ln -s ../SDK/${OSX_SDK}/System/Library/Frameworks/CoreServices.framework/Versions/Current/Frameworks/SharedFileList.framework/Headers/ SharedFileList
 
 rm -rf /tmp/osxcross
-rm -rf "/usr/x86_64-apple-darwin/osxcross/SDK/${OSX_SDK}/usr/share/man"
+rm -rf "/usr/osxcross/SDK/${OSX_SDK}/usr/share/man"
 # symlink ld64.lld
-ln -s /usr/x86_64-apple-darwin/osxcross/bin/x86_64-apple-darwin19-ld /usr/x86_64-apple-darwin/osxcross/bin/ld64.lld
-ln -s /usr/x86_64-apple-darwin/osxcross/lib/libxar.so.1 /usr/lib
-ln -s /usr/x86_64-apple-darwin/osxcross/lib/libtapi.so* /usr/lib
+ln -s /usr/osxcross/bin/x86_64-apple-darwin19-ld /usr/osxcross/bin/ld64.lld
+ln -s /usr/osxcross/lib/libxar.so.1 /usr/lib
+ln -s /usr/osxcross/lib/libtapi.so* /usr/lib
