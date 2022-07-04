@@ -120,7 +120,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 				"invalidCount": len(invalidRoots),
 				"newHeadRoot":  fmt.Sprintf("%#x", bytesutil.Trunc(r[:])),
 			}).Warn("Pruned invalid blocks")
-			return pid, ErrInvalidPayload
+			return pid, invalidBlock{error: ErrInvalidPayload, invalidRoots: invalidRoots}
 
 		default:
 			return nil, errors.WithMessage(ErrUndefinedExecutionEngineError, err.Error())
