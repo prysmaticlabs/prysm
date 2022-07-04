@@ -173,14 +173,14 @@ func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
 	body := blk.Block().Body()
 	enabled, err := blocks.IsExecutionEnabledUsingHeader(postStateHeader, body)
 	if err != nil {
-		return false, errors.Wrap(invalidBlock{err}, "could not determine if execution is enabled")
+		return false, errors.Wrap(invalidBlock{error: err}, "could not determine if execution is enabled")
 	}
 	if !enabled {
 		return true, nil
 	}
 	payload, err := body.ExecutionPayload()
 	if err != nil {
-		return false, errors.Wrap(invalidBlock{err}, "could not get execution payload")
+		return false, errors.Wrap(invalidBlock{error: err}, "could not get execution payload")
 	}
 	lastValidHash, err := s.cfg.ExecutionEngineCaller.NewPayload(ctx, payload)
 	switch err {
@@ -212,7 +212,7 @@ func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
 			"blockRoot":    fmt.Sprintf("%#x", root),
 			"invalidCount": len(invalidRoots),
 		}).Warn("Pruned invalid blocks")
-		return false, invalidBlock{ErrInvalidPayload}
+		return false, invalidBlock{error: ErrInvalidPayload, invalidRoots: invalidRoots}
 	default:
 		return false, errors.WithMessage(ErrUndefinedExecutionEngineError, err.Error())
 	}

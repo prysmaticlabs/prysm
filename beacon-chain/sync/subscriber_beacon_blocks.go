@@ -33,6 +33,10 @@ func (s *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) 
 		if blockchain.IsInvalidBlock(err) {
 			interop.WriteBlockToDisk(signed, true /*failed*/)
 			s.setBadBlock(ctx, root)
+			for _, root := range blockchain.InvalidRoots(err) {
+				interop.WriteBlockToDisk(signed, true /*failed*/)
+				s.setBadBlock(ctx, root)
+			}
 		}
 		return err
 	}

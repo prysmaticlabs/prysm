@@ -9,7 +9,7 @@ import (
 
 func TestIsInvalidBlock(t *testing.T) {
 	require.Equal(t, false, IsInvalidBlock(ErrInvalidPayload))
-	err := invalidBlock{ErrInvalidPayload}
+	err := invalidBlock{error: ErrInvalidPayload}
 	require.Equal(t, true, IsInvalidBlock(err))
 
 	newErr := errors.Wrap(err, "wrap me")

@@ -28,7 +28,7 @@ var (
 	// errWSBlockNotFoundInEpoch is returned when a block is not found in the WS cache or DB within epoch.
 	errWSBlockNotFoundInEpoch = errors.New("weak subjectivity root not found in db within epoch")
 	// errNotDescendantOfFinalized is returned when a block is not a descendant of the finalized checkpoint
-	errNotDescendantOfFinalized = invalidBlock{errors.New("not descendant of finalized checkpoint")}
+	errNotDescendantOfFinalized = invalidBlock{error: errors.New("not descendant of finalized checkpoint")}
 )
 
 // An invalid block is the block that fails state transition based on the core protocol rules.
@@ -38,17 +38,24 @@ var (
 // The block is deemed invalid according to execution layer client.
 // The block violates certain fork choice rules (before finalized slot, not finalized ancestor)
 type invalidBlock struct {
+	invalidRoots [][32]byte
 	error
 }
 
 type invalidBlockError interface {
 	Error() string
 	InvalidBlock() bool
+	InvalidRoots() [][32]byte
 }
 
 // InvalidBlock returns true for `invalidBlock`.
 func (e invalidBlock) InvalidBlock() bool {
 	return true
+}
+
+// InvalidRoots returns an optional list of invalid roots of the invalid block which leads up last valid root.
+func (e invalidBlock) InvalidRoots() [][32]byte {
+	return e.invalidRoots
 }
 
 // IsInvalidBlock returns true if the error has `invalidBlock`.
@@ -61,4 +68,16 @@ func IsInvalidBlock(e error) bool {
 		return IsInvalidBlock(errors.Unwrap(e))
 	}
 	return d.InvalidBlock()
+}
+
+// InvalidRoots returns a list of invalid roots up to last valid root.
+func InvalidRoots(e error) [][32]byte {
+	if e == nil {
+		return [][32]byte{}
+	}
+	d, ok := e.(invalidBlockError)
+	if !ok {
+		return [][32]byte{}
+	}
+	return d.InvalidRoots()
 }
