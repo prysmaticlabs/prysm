@@ -26,7 +26,7 @@ RUN apt-get update && \
 
 # install llvm/clang cross-build toolchains
 ENV INSTALL_LLVM_VERSION=12.0.0
-ADD install_clang_cross10.sh /tmp/install_clang_cross.sh
+ADD install_clang_cross.sh /tmp/install_clang_cross.sh
 RUN /tmp/install_clang_cross.sh
 
 # install osxcross
