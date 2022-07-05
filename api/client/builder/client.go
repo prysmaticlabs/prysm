@@ -12,8 +12,10 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	v1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"go.opencensus.io/trace"
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
@@ -128,37 +130,49 @@ func (c *Client) NodeURL() string {
 
 type reqOption func(*http.Request)
 
-// do is a generic, opinionated GET function to reduce boilerplate amongst the getters in this packageapi/client/builder/types.go.
-func (c *Client) do(ctx context.Context, method string, path string, body io.Reader, opts ...reqOption) ([]byte, error) {
+// do is a generic, opinionated request function to reduce boilerplate amongst the methods in this package api/client/builder/types.go.
+func (c *Client) do(ctx context.Context, method string, path string, body io.Reader, opts ...reqOption) (res []byte, err error) {
+	ctx, span := trace.StartSpan(ctx, "builder.client.do")
+	defer func() {
+		tracing.AnnotateError(span, err)
+		span.End()
+	}()
+
 	u := c.baseURL.ResolveReference(&url.URL{Path: path})
-	log.Printf("requesting %s", u.String())
+
+	span.AddAttributes(trace.StringAttribute("url", u.String()),
+		trace.StringAttribute("method", method))
+
 	req, err := http.NewRequestWithContext(ctx, method, u.String(), body)
 	if err != nil {
-		return nil, err
+		return
 	}
 	for _, o := range opts {
 		o(req)
 	}
 	for _, o := range c.obvs {
-		if err := o.observe(req); err != nil {
-			return nil, err
+		if err = o.observe(req); err != nil {
+			return
 		}
 	}
 	r, err := c.hc.Do(req)
 	if err != nil {
-		return nil, err
+		return
 	}
 	defer func() {
-		err = r.Body.Close()
+		closeErr := r.Body.Close()
+		log.WithError(closeErr).Error("Failed to close response body")
 	}()
 	if r.StatusCode != http.StatusOK {
-		return nil, non200Err(r)
+		err = non200Err(r)
+		return
 	}
-	b, err := io.ReadAll(r.Body)
+	res, err = io.ReadAll(r.Body)
 	if err != nil {
-		return nil, errors.Wrap(err, "error reading http response body from GetBlock")
+		err = errors.Wrap(err, "error reading http response body from builder server")
+		return
 	}
-	return b, nil
+	return
 }
 
 var execHeaderTemplate = template.Must(template.New("").Parse(getExecHeaderPath))
@@ -201,8 +215,13 @@ func (c *Client) GetHeader(ctx context.Context, slot types.Slot, parentHash [32]
 // RegisterValidator encodes the SignedValidatorRegistrationV1 message to json (including hex-encoding the byte
 // fields with 0x prefixes) and posts to the builder validator registration endpoint.
 func (c *Client) RegisterValidator(ctx context.Context, svr []*ethpb.SignedValidatorRegistrationV1) error {
+	ctx, span := trace.StartSpan(ctx, "builder.client.RegisterValidator")
+	defer span.End()
+
 	if len(svr) == 0 {
-		return errors.Wrap(errMalformedRequest, "empty validator registration list")
+		err := errors.Wrap(errMalformedRequest, "empty validator registration list")
+		tracing.AnnotateError(span, err)
+		return err
 	}
 	vs := make([]*SignedValidatorRegistration, len(svr))
 	for i := 0; i < len(svr); i++ {
@@ -210,8 +229,10 @@ func (c *Client) RegisterValidator(ctx context.Context, svr []*ethpb.SignedValid
 	}
 	body, err := json.Marshal(vs)
 	if err != nil {
-		return errors.Wrap(err, "error encoding the SignedValidatorRegistration value body in RegisterValidator")
+		err := errors.Wrap(err, "error encoding the SignedValidatorRegistration value body in RegisterValidator")
+		tracing.AnnotateError(span, err)
 	}
+
 	_, err = c.do(ctx, http.MethodPost, postRegisterValidatorPath, bytes.NewBuffer(body))
 	return err
 }
