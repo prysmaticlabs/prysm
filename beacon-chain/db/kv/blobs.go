@@ -2,6 +2,7 @@ package kv
 
 import (
 	"context"
+	"time"
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
@@ -15,7 +16,10 @@ func (s *Store) DeleteBlobsSidecar(ctx context.Context, root [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.DeleteBlobsSidecar")
 	defer span.End()
 	return s.db.Update(func(tx *bolt.Tx) error {
-		return tx.Bucket(blobsBucket).Delete(root[:])
+		if err := tx.Bucket(blobsBucket).Delete(root[:]); err != nil {
+			return err
+		}
+		return tx.Bucket(blobsAgesBucket).Delete(root[:])
 	})
 }
 
@@ -24,12 +28,19 @@ func (s *Store) SaveBlobsSidecar(ctx context.Context, blob *ethpb.BlobsSidecar) 
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveBlobsSidecar")
 	defer span.End()
 	return s.db.Update(func(tx *bolt.Tx) error {
+		blobKey := blob.BeaconBlockRoot
+		insertTime := time.Now().Format(time.RFC3339)
+		ageBkt := tx.Bucket(blobsAgesBucket)
+		if err := ageBkt.Put(blobKey, []byte(insertTime)); err != nil {
+			return err
+		}
+
 		bkt := tx.Bucket(blobsBucket)
 		enc, err := encode(ctx, blob)
 		if err != nil {
 			return err
 		}
-		return bkt.Put(blob.BeaconBlockRoot, enc)
+		return bkt.Put(blobKey, enc)
 	})
 }
 
@@ -100,4 +111,45 @@ func (s *Store) HasBlobsSidecar(ctx context.Context, root [32]byte) bool {
 		panic(err)
 	}
 	return exists
+}
+
+func (s *Store) CleanupBlobs(ctx context.Context, ttl time.Duration) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.pruneBlobs")
+	defer span.End()
+
+	var expiredBlobs [][]byte
+	now := time.Now()
+	err := s.db.View(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(blobsAgesBucket)
+		c := bkt.Cursor()
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			insertTime, err := time.Parse(time.RFC3339, string(v))
+			if err != nil {
+				return err
+			}
+			if now.Sub(insertTime) > ttl {
+				expiredBlobs = append(expiredBlobs, k)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	log.WithField("count", len(expiredBlobs)).Info("Cleaning up blobs")
+
+	return s.db.Update(func(tx *bolt.Tx) error {
+		agesBkt := tx.Bucket(blobsAgesBucket)
+		bkt := tx.Bucket(blobsBucket)
+		for _, root := range expiredBlobs {
+			if err := bkt.Delete(root); err != nil {
+				return err
+			}
+			if err := agesBkt.Delete(root); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }

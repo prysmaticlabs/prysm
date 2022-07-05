@@ -10,6 +10,7 @@ var (
 	attestationsBucket      = []byte("attestations")
 	blocksBucket            = []byte("blocks")
 	blobsBucket             = []byte("blobs")
+	blobsAgesBucket         = []byte("blobs-ages")
 	stateBucket             = []byte("state")
 	stateSummaryBucket      = []byte("state-summary")
 	proposerSlashingsBucket = []byte("proposer-slashings")
