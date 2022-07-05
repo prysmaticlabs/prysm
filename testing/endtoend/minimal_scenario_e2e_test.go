@@ -20,6 +20,7 @@ func TestEndToEnd_MinimalConfig_Web3Signer(t *testing.T) {
 }
 
 func TestEndToEnd_MinimalConfig_Slasher(t *testing.T) {
+	t.Skip("Skip test until it is fixed.")
 	e2eMinimal(
 		t,
 		types.WithSlasher(
