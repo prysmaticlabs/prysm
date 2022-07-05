@@ -2189,8 +2189,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_libp2p_go_buffer_pool",
         importpath = "github.com/libp2p/go-buffer-pool",
-        sum = "h1:QNK2iAFa8gjAe1SPz6mHSMuCcjs+X1wlHzeOSqcmlfs=",
-        version = "v0.0.2",
+        sum = "h1:oK4mSFcQz7cTQIfqbe4MIj9gLW+mnanjyFtc6cdF0Y8=",
+        version = "v0.1.0",
     )
     go_repository(
         name = "com_github_libp2p_go_cidranger",
@@ -2286,8 +2286,8 @@ def prysm_deps():
         name = "com_github_libp2p_go_libp2p_pubsub",
         build_file_proto_mode = "disable_global",
         importpath = "github.com/libp2p/go-libp2p-pubsub",
-        sum = "h1:19FI1ziaZWPtlEd6O0bpQuidSUObhoCue3SJPWwkbH4=",
-        version = "v0.7.1-0.20220630043019-ca702289e67f",
+        sum = "h1:Om2zX4v6lQo7CIT99xkCVTSXeSwjfPtzzN3nzQRlApA=",
+        version = "v0.7.1-0.20220701163738-60cf38003244",
     )
     go_repository(
         name = "com_github_libp2p_go_libp2p_quic_transport",
@@ -4512,8 +4512,8 @@ def prysm_deps():
     go_repository(
         name = "org_golang_x_sys",
         importpath = "golang.org/x/sys",
-        sum = "h1:2n253B2r0pYSmEV+UNCQoPfU/FiaizQEK5Gu4Bq4JE8=",
-        version = "v0.0.0-20220627191245-f75cf1eec38b",
+        sum = "h1:xdsejrW/0Wf2diT5CPp3XmKUNbr7Xvw8kYilQ+6qjRY=",
+        version = "v0.0.0-20220702020025-31831981b65f",
     )
     go_repository(
         name = "org_golang_x_term",

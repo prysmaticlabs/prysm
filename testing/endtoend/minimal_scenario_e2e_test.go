@@ -3,6 +3,7 @@ package endtoend
 import (
 	"testing"
 
+	ev "github.com/prysmaticlabs/prysm/testing/endtoend/evaluators"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/types"
 )
 
@@ -16,6 +17,20 @@ func TestEndToEnd_MultiScenarioRun(t *testing.T) {
 
 func TestEndToEnd_MinimalConfig_Web3Signer(t *testing.T) {
 	e2eMinimal(t, types.WithRemoteSigner()).run()
+}
+
+func TestEndToEnd_MinimalConfig_Slasher(t *testing.T) {
+	e2eMinimal(
+		t,
+		types.WithSlasher(
+			ev.PeersConnect,
+			ev.HealthzCheck,
+			ev.ValidatorsSlashedAfterEpoch(4),
+			ev.SlashedValidatorsLoseBalanceAfterEpoch(4),
+			ev.InjectDoubleVoteOnEpoch(2),
+			ev.InjectDoubleBlockOnEpoch(2),
+		),
+	).run()
 }
 
 func TestEndToEnd_ScenarioRun_EEOffline(t *testing.T) {
