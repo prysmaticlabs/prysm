@@ -169,7 +169,7 @@ func (c *Client) do(ctx context.Context, method string, path string, body io.Rea
 	}
 	res, err = io.ReadAll(r.Body)
 	if err != nil {
-		err = errors.Wrap(err, "error reading http response body from GetBlock")
+		err = errors.Wrap(err, "error reading http response body from builder server")
 		return
 	}
 	return
