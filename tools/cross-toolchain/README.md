@@ -2,10 +2,11 @@
 
 ## Toolchain suite
 
-This package declares a c++ toolchain suite with cross compilers for targeting four platforms:
+This package declares a c++ toolchain suite with cross compilers for targeting five platforms:
 * linux_amd64
 * linux_arm64
 * osx_amd64
+* osx_arm64
 * windows_amd64
 
 This toolchain suite describes cross compile configuration with a Dockerfile with the appropriate host dependencies. These toolchains can be used locally (see [caveats](#caveats)), [Remote Build Execution (RBE)](https://docs.bazel.build/versions/master/remote-execution.html), and in a docker sandbox (like RBE, but local).
@@ -13,10 +14,10 @@ This toolchain suite describes cross compile configuration with a Dockerfile wit
 
 ### Cross compile target support
 
-| target  | linux_amd64 | linux_arm64 | osx_amd64 | windows_amd64 |
-|----------|-------------------|------------------|-----------------|-----------------------|
-| `//beacon-chain` | :heavy_check_mark:  docker-sandbox and RBE, supported locally only | :heavy_check_mark:  docker-sandbox and RBE | :heavy_check_mark:  docker-sandbox | :heavy_check_mark:  docker-sandbox |
-| `//validator`| :heavy_check_mark:  docker-sandbox and RBE | :heavy_check_mark: docker-sandbox and RBE | :heavy_check_mark:  docker-sandbox | :heavy_check_mark: |
+| target           | linux_amd64 | linux_arm64 | osx_amd64 | osx_arm64 | windows_amd64                     |
+|------------------|-------------------|------------------|-----------------|-----------------|-----------------------------------|
+| `//beacon-chain` | :heavy_check_mark:  docker-sandbox and RBE, supported locally only | :heavy_check_mark:  docker-sandbox and RBE | :heavy_check_mark:  docker-sandbox | :heavy_check_mark:  docker-sandbox | :heavy_check_mark:  docker-sandbox |
+| `//validator`    | :heavy_check_mark:  docker-sandbox and RBE | :heavy_check_mark: docker-sandbox and RBE | :heavy_check_mark:  docker-sandbox | :heavy_check_mark:  docker-sandbox | :heavy_check_mark:                 |
 
 The configurations above are enforced via pull request presubmit checks.
 
@@ -24,11 +25,11 @@ The configurations above are enforced via pull request presubmit checks.
 
 Use these values with `--config=<flag>`, multiple times if more than one value is defined in the table. Example: `bazel build //beacon-chain --config=windows_amd64_docker` to build windows binary in a docker sandbox.
 
-| Config | linux_amd64 | linux_arm64 | osx_amd64 | windows_amd64 |
-|----------|-------------------|------------------|-----------------|-----------------------|
-| Local run | `linux_amd64` | `linux_arm64` | `osx_amd64` | `windows_amd64` | 
-| Docker sandbox | `linux_amd64_docker` | `linux_arm64_docker` | `osx_amd64_docker` | `windows_amd64_docker `|
-| RBE (See [Caveats](#caveats)) | `linux_amd64` and `remote` | `linux_arm64`  and `remote` | `osx_amd64`  and `remote` | `windows_amd64`  and `remote` |
+| Config                        | linux_amd64 | linux_arm64 | osx_amd64                 | osx_arm64                 | windows_amd64                |
+|-------------------------------|-------------------|------------------|---------------------------|---------------------------|------------------------------|
+| Local run                     | `linux_amd64` | `linux_arm64` | `osx_amd64`               | `osx_arm64`               | `windows_amd64`              | 
+| Docker sandbox                | `linux_amd64_docker` | `linux_arm64_docker` | `osx_amd64_docker`        | `osx_arm64_docker`        | `windows_amd64_docker `      |
+| RBE (See [Caveats](#caveats)) | `linux_amd64` and `remote` | `linux_arm64`  and `remote` | `osx_amd64`  and `remote` | `osx_arm64`  and `remote` | `windows_amd64`  and `remote` |
 
 ### Caveats
 
