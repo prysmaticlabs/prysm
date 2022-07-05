@@ -492,7 +492,6 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 			ProposerConfig: nil,
 			DefaultConfig: &validatorServiceConfig.ProposerOptionPayload{
 				FeeRecipient: suggestedFee,
-				GasLimit:     params.BeaconConfig().DefaultBuilderGasLimit,
 			},
 		}
 	}
@@ -525,7 +524,7 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 
 	// default fileConfig is mandatory
 	if fileConfig.DefaultConfig == nil {
-		return nil, errors.New("default fileConfig is required")
+		return nil, errors.New("default fileConfig is required, proposer settings file is either empty or an incorrect format")
 	}
 	if !common.IsHexAddress(fileConfig.DefaultConfig.FeeRecipient) {
 		return nil, errors.New("default fileConfig fee recipient is not a valid eth1 address")
@@ -534,8 +533,11 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 		return nil, err
 	}
 	vpSettings.DefaultConfig = &validatorServiceConfig.ProposerOption{
-		FeeRecipient: common.HexToAddress(fileConfig.DefaultConfig.FeeRecipient),
-		GasLimit:     reviewGasLimit(fileConfig.DefaultConfig.GasLimit),
+		FeeRecipient:          common.HexToAddress(fileConfig.DefaultConfig.FeeRecipient),
+		ValidatorRegistration: fileConfig.DefaultConfig.ValidatorRegistration,
+	}
+	if vpSettings.DefaultConfig.ValidatorRegistration != nil {
+		reviewGasLimit(vpSettings.DefaultConfig.ValidatorRegistration.GasLimit)
 	}
 
 	if fileConfig.ProposerConfig != nil {
@@ -558,8 +560,11 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 				return nil, err
 			}
 			vpSettings.ProposeConfig[bytesutil.ToBytes48(decodedKey)] = &validatorServiceConfig.ProposerOption{
-				FeeRecipient: common.HexToAddress(option.FeeRecipient),
-				GasLimit:     reviewGasLimit(option.GasLimit),
+				FeeRecipient:          common.HexToAddress(option.FeeRecipient),
+				ValidatorRegistration: option.ValidatorRegistration,
+			}
+			if option.ValidatorRegistration != nil {
+				reviewGasLimit(option.ValidatorRegistration.GasLimit)
 			}
 		}
 	}

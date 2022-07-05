@@ -228,12 +228,10 @@ func TestProposerSettings(t *testing.T) {
 					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption{
 						bytesutil.ToBytes48(key1): {
 							FeeRecipient: common.HexToAddress("0xae967917c465db8578ca9024c205720b1a3651A9"),
-							GasLimit:     params.BeaconConfig().DefaultBuilderGasLimit,
 						},
 					},
 					DefaultConfig: &validatorserviceconfig.ProposerOption{
 						FeeRecipient: common.HexToAddress("0xae967917c465db8578ca9024c205720b1a3651A9"),
-						GasLimit:     params.BeaconConfig().DefaultBuilderGasLimit,
 					},
 				}
 			},
@@ -258,16 +256,25 @@ func TestProposerSettings(t *testing.T) {
 					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption{
 						bytesutil.ToBytes48(key1): {
 							FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
-							GasLimit:     params.BeaconConfig().DefaultBuilderGasLimit,
+							ValidatorRegistration: &validatorserviceconfig.ValidatorRegistration{
+								Enable:   true,
+								GasLimit: params.BeaconConfig().DefaultBuilderGasLimit,
+							},
 						},
 						bytesutil.ToBytes48(key2): {
 							FeeRecipient: common.HexToAddress("0x60155530FCE8a85ec7055A5F8b2bE214B3DaeFd4"),
-							GasLimit:     params.BeaconConfig().DefaultBuilderGasLimit,
+							ValidatorRegistration: &validatorserviceconfig.ValidatorRegistration{
+								Enable:   true,
+								GasLimit: params.BeaconConfig().DefaultBuilderGasLimit,
+							},
 						},
 					},
 					DefaultConfig: &validatorserviceconfig.ProposerOption{
 						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
-						GasLimit:     params.BeaconConfig().DefaultBuilderGasLimit,
+						ValidatorRegistration: &validatorserviceconfig.ValidatorRegistration{
+							Enable:   true,
+							GasLimit: params.BeaconConfig().DefaultBuilderGasLimit,
+						},
 					},
 				}
 			},
@@ -289,12 +296,10 @@ func TestProposerSettings(t *testing.T) {
 					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption{
 						bytesutil.ToBytes48(key1): {
 							FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
-							GasLimit:     params.BeaconConfig().DefaultBuilderGasLimit,
 						},
 					},
 					DefaultConfig: &validatorserviceconfig.ProposerOption{
 						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
-						GasLimit:     params.BeaconConfig().DefaultBuilderGasLimit,
 					},
 				}
 			},
@@ -316,12 +321,18 @@ func TestProposerSettings(t *testing.T) {
 					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption{
 						bytesutil.ToBytes48(key1): {
 							FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
-							GasLimit:     uint64(40000000),
+							ValidatorRegistration: &validatorserviceconfig.ValidatorRegistration{
+								Enable:   true,
+								GasLimit: uint64(40000000),
+							},
 						},
 					},
 					DefaultConfig: &validatorserviceconfig.ProposerOption{
 						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
-						GasLimit:     uint64(45000000),
+						ValidatorRegistration: &validatorserviceconfig.ValidatorRegistration{
+							Enable:   false,
+							GasLimit: params.BeaconConfig().DefaultBuilderGasLimit,
+						},
 					},
 				}
 			},
@@ -341,7 +352,6 @@ func TestProposerSettings(t *testing.T) {
 					ProposeConfig: nil,
 					DefaultConfig: &validatorserviceconfig.ProposerOption{
 						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
-						GasLimit:     params.BeaconConfig().DefaultBuilderGasLimit,
 					},
 				}
 			},
@@ -363,12 +373,10 @@ func TestProposerSettings(t *testing.T) {
 					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption{
 						bytesutil.ToBytes48(key1): {
 							FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
-							GasLimit:     params.BeaconConfig().DefaultBuilderGasLimit,
 						},
 					},
 					DefaultConfig: &validatorserviceconfig.ProposerOption{
 						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
-						GasLimit:     params.BeaconConfig().DefaultBuilderGasLimit,
 					},
 				}
 			},
