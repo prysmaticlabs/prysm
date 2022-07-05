@@ -12,8 +12,10 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	v1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"go.opencensus.io/trace"
 
 	"github.com/pkg/errors"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
@@ -130,8 +132,14 @@ type reqOption func(*http.Request)
 
 // do is a generic, opinionated GET function to reduce boilerplate amongst the getters in this packageapi/client/builder/types.go.
 func (c *Client) do(ctx context.Context, method string, path string, body io.Reader, opts ...reqOption) ([]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "builder.client.do")
+	defer span.End()
+
 	u := c.baseURL.ResolveReference(&url.URL{Path: path})
-	log.Printf("requesting %s", u.String())
+
+	span.AddAttributes(trace.StringAttribute("url", u.String()),
+		trace.StringAttribute("method", method))
+
 	req, err := http.NewRequestWithContext(ctx, method, u.String(), body)
 	if err != nil {
 		return nil, err
@@ -201,8 +209,13 @@ func (c *Client) GetHeader(ctx context.Context, slot types.Slot, parentHash [32]
 // RegisterValidator encodes the SignedValidatorRegistrationV1 message to json (including hex-encoding the byte
 // fields with 0x prefixes) and posts to the builder validator registration endpoint.
 func (c *Client) RegisterValidator(ctx context.Context, svr []*ethpb.SignedValidatorRegistrationV1) error {
+	ctx, span := trace.StartSpan(ctx, "builder.client.RegisterValidator")
+	defer span.End()
+
 	if len(svr) == 0 {
-		return errors.Wrap(errMalformedRequest, "empty validator registration list")
+		err := errors.Wrap(errMalformedRequest, "empty validator registration list")
+		tracing.AnnotateError(span, err)
+		return err
 	}
 	vs := make([]*SignedValidatorRegistration, len(svr))
 	for i := 0; i < len(svr); i++ {
@@ -210,8 +223,10 @@ func (c *Client) RegisterValidator(ctx context.Context, svr []*ethpb.SignedValid
 	}
 	body, err := json.Marshal(vs)
 	if err != nil {
-		return errors.Wrap(err, "error encoding the SignedValidatorRegistration value body in RegisterValidator")
+		err := errors.Wrap(err, "error encoding the SignedValidatorRegistration value body in RegisterValidator")
+		tracing.AnnotateError(span, err)
 	}
+
 	_, err = c.do(ctx, http.MethodPost, postRegisterValidatorPath, bytes.NewBuffer(body))
 	return err
 }
