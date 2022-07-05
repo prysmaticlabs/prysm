@@ -110,10 +110,15 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 				return nil, err
 			}
 
+			if err := s.saveHead(ctx, r, b, st); err != nil {
+				log.WithError(err).Error("could not save head after pruning invalid blocks")
+			}
+
 			log.WithFields(logrus.Fields{
 				"slot":         headBlk.Slot(),
-				"blockRoot":    fmt.Sprintf("%#x", headRoot),
+				"blockRoot":    fmt.Sprintf("%#x", bytesutil.Trunc(headRoot[:])),
 				"invalidCount": len(invalidRoots),
+				"newHeadRoot":  fmt.Sprintf("%#x", bytesutil.Trunc(r[:])),
 			}).Warn("Pruned invalid blocks")
 			return pid, ErrInvalidPayload
 

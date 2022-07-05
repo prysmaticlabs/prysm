@@ -7,11 +7,11 @@ import (
 )
 
 // ProposerSettingsPayload is the struct representation of the JSON or YAML payload set in the validator through the CLI.
-// ProposeConfig is the map of validator address to fee recipient options all in hex format.
+// ProposerConfig is the map of validator address to fee recipient options all in hex format.
 // DefaultConfig is the default fee recipient address for all validators unless otherwise specified in the propose config.required.
 type ProposerSettingsPayload struct {
-	ProposeConfig map[string]*ProposerOptionPayload `json:"proposer_config" yaml:"proposer_config"`
-	DefaultConfig *ProposerOptionPayload            `json:"default_config" yaml:"default_config"`
+	ProposerConfig map[string]*ProposerOptionPayload `json:"proposer_config" yaml:"proposer_config"`
+	DefaultConfig  *ProposerOptionPayload            `json:"default_config" yaml:"default_config"`
 }
 
 // ProposerOptionPayload is the struct representation of the JSON config file set in the validator through the CLI.

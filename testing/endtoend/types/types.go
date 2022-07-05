@@ -23,6 +23,14 @@ func WithRemoteSigner() E2EConfigOpt {
 	}
 }
 
+func WithSlasher(evs ...Evaluator) E2EConfigOpt {
+	return func(cfg *E2EConfig) {
+		cfg.UseSlasher = true
+		cfg.Evaluators = evs
+		cfg.BeaconFlags = append(cfg.BeaconFlags, "--slasher")
+	}
+}
+
 func WithCheckpointSync() E2EConfigOpt {
 	return func(cfg *E2EConfig) {
 		cfg.TestCheckpointSync = true
@@ -37,6 +45,7 @@ type E2EConfig struct {
 	UsePrysmShValidator     bool
 	UsePprof                bool
 	UseWeb3RemoteSigner     bool
+	UseSlasher              bool
 	TestDeposits            bool
 	UseFixedPeerIDs         bool
 	UseValidatorCrossClient bool
