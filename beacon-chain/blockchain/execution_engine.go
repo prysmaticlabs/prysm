@@ -215,13 +215,6 @@ func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
 		return false, invalidBlock{ErrInvalidPayload}
 	case powchain.ErrInvalidBlockHashPayloadStatus:
 		newPayloadInvalidNodeCount.Inc()
-		root, err := blk.Block().HashTreeRoot()
-		if err != nil {
-			return false, err
-		}
-		if err := s.removeBlockAndState(ctx, root); err != nil {
-			return false, err
-		}
 		return false, invalidBlock{ErrInvalidBlockHashPayloadStatus}
 	default:
 		return false, errors.WithMessage(ErrUndefinedExecutionEngineError, err.Error())
@@ -314,22 +307,16 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 // removeInvalidBlockAndState removes the invalid block and its corresponding state from the cache and DB.
 func (s *Service) removeInvalidBlockAndState(ctx context.Context, blkRoots [][32]byte) error {
 	for _, root := range blkRoots {
-		if err := s.removeBlockAndState(ctx, root); err != nil {
+		if err := s.cfg.StateGen.DeleteStateFromCaches(ctx, root); err != nil {
 			return err
 		}
-	}
-	return nil
-}
 
-func (s *Service) removeBlockAndState(ctx context.Context, blkRoot [32]byte) error {
-	if err := s.cfg.StateGen.DeleteStateFromCaches(ctx, blkRoot); err != nil {
-		return err
-	}
-	// Delete block also deletes the state as well.
-	if err := s.cfg.BeaconDB.DeleteBlock(ctx, blkRoot); err != nil {
-		// TODO(10487): If a caller requests to delete a root that's justified and finalized. We should gracefully shutdown.
-		// This is an irreparable condition, it would me a justified or finalized block has become invalid.
-		return err
+		// Delete block also deletes the state as well.
+		if err := s.cfg.BeaconDB.DeleteBlock(ctx, root); err != nil {
+			// TODO(10487): If a caller requests to delete a root that's justified and finalized. We should gracefully shutdown.
+			// This is an irreparable condition, it would me a justified or finalized block has become invalid.
+			return err
+		}
 	}
 	return nil
 }
