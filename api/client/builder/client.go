@@ -131,9 +131,12 @@ func (c *Client) NodeURL() string {
 type reqOption func(*http.Request)
 
 // do is a generic, opinionated GET function to reduce boilerplate amongst the getters in this packageapi/client/builder/types.go.
-func (c *Client) do(ctx context.Context, method string, path string, body io.Reader, opts ...reqOption) ([]byte, error) {
+func (c *Client) do(ctx context.Context, method string, path string, body io.Reader, opts ...reqOption) (res []byte, err error) {
 	ctx, span := trace.StartSpan(ctx, "builder.client.do")
-	defer span.End()
+	defer func() {
+		tracing.AnnotateError(span, err)
+		span.End()
+	}()
 
 	u := c.baseURL.ResolveReference(&url.URL{Path: path})
 
@@ -142,31 +145,33 @@ func (c *Client) do(ctx context.Context, method string, path string, body io.Rea
 
 	req, err := http.NewRequestWithContext(ctx, method, u.String(), body)
 	if err != nil {
-		return nil, err
+		return
 	}
 	for _, o := range opts {
 		o(req)
 	}
 	for _, o := range c.obvs {
-		if err := o.observe(req); err != nil {
-			return nil, err
+		if err = o.observe(req); err != nil {
+			return
 		}
 	}
 	r, err := c.hc.Do(req)
 	if err != nil {
-		return nil, err
+		return
 	}
 	defer func() {
 		err = r.Body.Close()
 	}()
 	if r.StatusCode != http.StatusOK {
-		return nil, non200Err(r)
+		err = non200Err(r)
+		return
 	}
-	b, err := io.ReadAll(r.Body)
+	res, err = io.ReadAll(r.Body)
 	if err != nil {
-		return nil, errors.Wrap(err, "error reading http response body from GetBlock")
+		err = errors.Wrap(err, "error reading http response body from GetBlock")
+		return
 	}
-	return b, nil
+	return
 }
 
 var execHeaderTemplate = template.Must(template.New("").Parse(getExecHeaderPath))
