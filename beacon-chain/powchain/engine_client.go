@@ -228,8 +228,8 @@ func (s *Service) GetTerminalBlockHash(ctx context.Context) ([]byte, bool, error
 		}
 		blockReachedTTD := currentTotalDifficulty.Cmp(terminalTotalDifficulty) >= 0
 
-		parentHash := bytesutil.ToBytes32(blk.ParentHash)
-		if len(blk.ParentHash) == 0 || parentHash == params.BeaconConfig().ZeroHash {
+		parentHash := blk.ParentHash()
+		if parentHash == params.BeaconConfig().ZeroHash {
 			return nil, false, nil
 		}
 		parentBlk, err := s.ExecutionBlockByHash(ctx, parentHash)
@@ -246,14 +246,15 @@ func (s *Service) GetTerminalBlockHash(ctx context.Context) ([]byte, bool, error
 			}
 			parentReachedTTD := parentTotalDifficulty.Cmp(terminalTotalDifficulty) >= 0
 			if !parentReachedTTD {
+				blockHash := blk.Hash()
 				log.WithFields(logrus.Fields{
 					"number":   blk.Number,
-					"hash":     fmt.Sprintf("%#x", bytesutil.Trunc(blk.Hash)),
+					"hash":     fmt.Sprintf("%#x", bytesutil.Trunc(blockHash[:])),
 					"td":       blk.TotalDifficulty,
 					"parentTd": parentBlk.TotalDifficulty,
 					"ttd":      terminalTotalDifficulty,
 				}).Info("Retrieved terminal block hash")
-				return blk.Hash, true, nil
+				return blockHash[:], true, nil
 			}
 		} else {
 			return nil, false, nil
