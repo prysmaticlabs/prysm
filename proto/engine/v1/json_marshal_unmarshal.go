@@ -5,6 +5,7 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/core/types"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 )
@@ -147,6 +148,141 @@ func (e *ExecutionBlock) UnmarshalJSON(enc []byte) error {
 	transactions := make([][]byte, len(dec.Transactions))
 	for i, tx := range dec.Transactions {
 		transactions[i] = tx
+	}
+	e.Transactions = transactions
+	uncles := make([][]byte, len(dec.Uncles))
+	for i, ucl := range dec.Uncles {
+		uncles[i] = ucl
+	}
+	e.Uncles = uncles
+	return nil
+}
+
+type ExecutionBlockWithTxs struct {
+	ExecutionBlock
+}
+
+type executionBlockWithTxsJSON struct {
+	Number           string               `json:"number"`
+	Hash             hexutil.Bytes        `json:"hash"`
+	ParentHash       hexutil.Bytes        `json:"parentHash"`
+	Sha3Uncles       hexutil.Bytes        `json:"sha3Uncles"`
+	Miner            hexutil.Bytes        `json:"miner"`
+	StateRoot        hexutil.Bytes        `json:"stateRoot"`
+	TransactionsRoot hexutil.Bytes        `json:"transactionsRoot"`
+	ReceiptsRoot     hexutil.Bytes        `json:"receiptsRoot"`
+	LogsBloom        hexutil.Bytes        `json:"logsBloom"`
+	Difficulty       string               `json:"difficulty"`
+	TotalDifficulty  string               `json:"totalDifficulty"`
+	GasLimit         hexutil.Uint64       `json:"gasLimit"`
+	GasUsed          hexutil.Uint64       `json:"gasUsed"`
+	Timestamp        hexutil.Uint64       `json:"timestamp"`
+	BaseFeePerGas    string               `json:"baseFeePerGas"`
+	ExtraData        hexutil.Bytes        `json:"extraData"`
+	MixHash          hexutil.Bytes        `json:"mixHash"`
+	Nonce            hexutil.Bytes        `json:"nonce"`
+	Size             string               `json:"size"`
+	Transactions     []*types.Transaction `json:"transactions"`
+	Uncles           []hexutil.Bytes      `json:"uncles"`
+}
+
+// MarshalJSON defines a custom json.Marshaler interface implementation
+// that uses custom json.Marshalers for the hexutil.Bytes and hexutil.Uint64 types.
+func (e *ExecutionBlockWithTxs) MarshalJSON() ([]byte, error) {
+	transactions := make([]hexutil.Bytes, len(e.Transactions))
+	for i, tx := range e.Transactions {
+		transactions[i] = tx
+	}
+	uncles := make([]hexutil.Bytes, len(e.Uncles))
+	for i, ucl := range e.Uncles {
+		uncles[i] = ucl
+	}
+	num := new(big.Int).SetBytes(e.Number)
+	numHex := hexutil.EncodeBig(num)
+
+	diff := new(big.Int).SetBytes(e.Difficulty)
+	diffHex := hexutil.EncodeBig(diff)
+
+	size := new(big.Int).SetBytes(e.Size)
+	sizeHex := hexutil.EncodeBig(size)
+
+	baseFee := new(big.Int).SetBytes(bytesutil.ReverseByteOrder(e.BaseFeePerGas))
+	baseFeeHex := hexutil.EncodeBig(baseFee)
+	return json.Marshal(executionBlockJSON{
+		Number:           numHex,
+		Hash:             e.Hash,
+		ParentHash:       e.ParentHash,
+		Sha3Uncles:       e.Sha3Uncles,
+		Miner:            e.Miner,
+		StateRoot:        e.StateRoot,
+		TransactionsRoot: e.TransactionsRoot,
+		ReceiptsRoot:     e.ReceiptsRoot,
+		LogsBloom:        e.LogsBloom,
+		Difficulty:       diffHex,
+		TotalDifficulty:  e.TotalDifficulty,
+		GasLimit:         hexutil.Uint64(e.GasLimit),
+		GasUsed:          hexutil.Uint64(e.GasUsed),
+		Timestamp:        hexutil.Uint64(e.Timestamp),
+		ExtraData:        e.ExtraData,
+		MixHash:          e.MixHash,
+		Nonce:            e.Nonce,
+		Size:             sizeHex,
+		BaseFeePerGas:    baseFeeHex,
+		Transactions:     transactions,
+		Uncles:           uncles,
+	})
+}
+
+// UnmarshalJSON defines a custom json.Unmarshaler interface implementation
+// that uses custom json.Unmarshalers for the hexutil.Bytes and hexutil.Uint64 types.
+func (e *ExecutionBlockWithTxs) UnmarshalJSON(enc []byte) error {
+	dec := executionBlockWithTxsJSON{}
+	if err := json.Unmarshal(enc, &dec); err != nil {
+		return err
+	}
+	*e = ExecutionBlockWithTxs{}
+	num, err := hexutil.DecodeBig(dec.Number)
+	if err != nil {
+		return err
+	}
+	e.Number = num.Bytes()
+	e.Hash = dec.Hash
+	e.ParentHash = dec.ParentHash
+	e.Sha3Uncles = dec.Sha3Uncles
+	e.Miner = dec.Miner
+	e.StateRoot = dec.StateRoot
+	e.TransactionsRoot = dec.TransactionsRoot
+	e.ReceiptsRoot = dec.ReceiptsRoot
+	e.LogsBloom = dec.LogsBloom
+	diff, err := hexutil.DecodeBig(dec.Difficulty)
+	if err != nil {
+		return err
+	}
+	e.Difficulty = diff.Bytes()
+	e.TotalDifficulty = dec.TotalDifficulty
+	e.GasLimit = uint64(dec.GasLimit)
+	e.GasUsed = uint64(dec.GasUsed)
+	e.Timestamp = uint64(dec.Timestamp)
+	e.ExtraData = dec.ExtraData
+	e.MixHash = dec.MixHash
+	e.Nonce = dec.Nonce
+	size, err := hexutil.DecodeBig(dec.Size)
+	if err != nil {
+		return err
+	}
+	e.Size = size.Bytes()
+	baseFee, err := hexutil.DecodeBig(dec.BaseFeePerGas)
+	if err != nil {
+		return err
+	}
+	e.BaseFeePerGas = bytesutil.PadTo(bytesutil.ReverseByteOrder(baseFee.Bytes()), fieldparams.RootLength)
+	transactions := make([][]byte, len(dec.Transactions))
+	for i, tx := range dec.Transactions {
+		enc, err := tx.MarshalBinary()
+		if err != nil {
+			return err
+		}
+		transactions[i] = enc
 	}
 	e.Transactions = transactions
 	uncles := make([][]byte, len(dec.Uncles))
