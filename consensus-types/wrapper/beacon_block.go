@@ -1,8 +1,12 @@
 package wrapper
 
 import (
+	"fmt"
+
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/consensus-types/forks/bellatrix"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
+	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -143,6 +147,115 @@ func BuildSignedBeaconBlock(blk interfaces.BeaconBlock, signature []byte) (inter
 	default:
 		return nil, errors.Wrapf(ErrUnsupportedBeaconBlock, "unable to wrap block of type %T", b)
 	}
+}
+
+// BuildSignedBeaconBlockFromExecutionPayload takes a signed, blinded beacon block and converts into
+// a full, signed beacon block by specifying an execution payload.
+func BuildSignedBeaconBlockFromExecutionPayload(
+	blk interfaces.SignedBeaconBlock, payload *enginev1.ExecutionPayload,
+) (interfaces.SignedBeaconBlock, error) {
+	if err := BeaconBlockIsNil(blk); err != nil {
+		return nil, err
+	}
+	b := blk.Block()
+	payloadHeader, err := b.Body().ExecutionPayloadHeader()
+	switch {
+	case errors.Is(err, ErrUnsupportedField):
+		return nil, errors.Wrap(err, "can only build signed beacon block from blinded format")
+	case err != nil:
+		return nil, errors.Wrap(err, "could not get execution payload header")
+	default:
+	}
+	payloadRoot, err := payload.HashTreeRoot()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not hash tree root execution payload")
+	}
+	payloadHeaderRoot, err := payloadHeader.HashTreeRoot()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not hash tree root payload header")
+	}
+	if payloadRoot != payloadHeaderRoot {
+		return nil, fmt.Errorf(
+			"payload %#x and header %#x roots do not match",
+			payloadRoot,
+			payloadHeaderRoot,
+		)
+	}
+	syncAgg, err := b.Body().SyncAggregate()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get sync aggregate from block body")
+	}
+	bellatrixFullBlock := &eth.SignedBeaconBlockBellatrix{
+		Block: &eth.BeaconBlockBellatrix{
+			Slot:          b.Slot(),
+			ProposerIndex: b.ProposerIndex(),
+			ParentRoot:    b.ParentRoot(),
+			StateRoot:     b.StateRoot(),
+			Body: &eth.BeaconBlockBodyBellatrix{
+				RandaoReveal:      b.Body().RandaoReveal(),
+				Eth1Data:          b.Body().Eth1Data(),
+				Graffiti:          b.Body().Graffiti(),
+				ProposerSlashings: b.Body().ProposerSlashings(),
+				AttesterSlashings: b.Body().AttesterSlashings(),
+				Attestations:      b.Body().Attestations(),
+				Deposits:          b.Body().Deposits(),
+				VoluntaryExits:    b.Body().VoluntaryExits(),
+				SyncAggregate:     syncAgg,
+				ExecutionPayload:  payload,
+			},
+		},
+		Signature: blk.Signature(),
+	}
+	return wrappedBellatrixSignedBeaconBlock(bellatrixFullBlock)
+}
+
+// WrapSignedBlindedBeaconBlock converts a signed beacon block into a blinded format.
+func WrapSignedBlindedBeaconBlock(blk interfaces.SignedBeaconBlock) (interfaces.SignedBeaconBlock, error) {
+	if err := BeaconBlockIsNil(blk); err != nil {
+		return nil, err
+	}
+	if blk.Block().IsBlinded() {
+		return blk, nil
+	}
+	b := blk.Block()
+	payload, err := b.Body().ExecutionPayload()
+	switch {
+	case errors.Is(err, ErrUnsupportedField):
+		return nil, ErrUnsupportedSignedBeaconBlock
+	case err != nil:
+		return nil, errors.Wrap(err, "could not get execution payload")
+	default:
+	}
+	syncAgg, err := b.Body().SyncAggregate()
+	if err != nil {
+		return nil, err
+	}
+	header, err := bellatrix.PayloadToHeader(payload)
+	if err != nil {
+		return nil, err
+	}
+	blindedBlock := &eth.SignedBlindedBeaconBlockBellatrix{
+		Block: &eth.BlindedBeaconBlockBellatrix{
+			Slot:          b.Slot(),
+			ProposerIndex: b.ProposerIndex(),
+			ParentRoot:    b.ParentRoot(),
+			StateRoot:     b.StateRoot(),
+			Body: &eth.BlindedBeaconBlockBodyBellatrix{
+				RandaoReveal:           b.Body().RandaoReveal(),
+				Eth1Data:               b.Body().Eth1Data(),
+				Graffiti:               b.Body().Graffiti(),
+				ProposerSlashings:      b.Body().ProposerSlashings(),
+				AttesterSlashings:      b.Body().AttesterSlashings(),
+				Attestations:           b.Body().Attestations(),
+				Deposits:               b.Body().Deposits(),
+				VoluntaryExits:         b.Body().VoluntaryExits(),
+				SyncAggregate:          syncAgg,
+				ExecutionPayloadHeader: header,
+			},
+		},
+		Signature: blk.Signature(),
+	}
+	return wrappedBellatrixSignedBlindedBeaconBlock(blindedBlock)
 }
 
 func UnwrapGenericSignedBeaconBlock(gb *eth.GenericSignedBeaconBlock) (interfaces.SignedBeaconBlock, error) {
