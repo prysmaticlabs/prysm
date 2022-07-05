@@ -130,7 +130,7 @@ func (c *Client) NodeURL() string {
 
 type reqOption func(*http.Request)
 
-// do is a generic, opinionated GET function to reduce boilerplate amongst the getters in this packageapi/client/builder/types.go.
+// do is a generic, opinionated request function to reduce boilerplate amongst the methods in this package api/client/builder/types.go.
 func (c *Client) do(ctx context.Context, method string, path string, body io.Reader, opts ...reqOption) (res []byte, err error) {
 	ctx, span := trace.StartSpan(ctx, "builder.client.do")
 	defer func() {
