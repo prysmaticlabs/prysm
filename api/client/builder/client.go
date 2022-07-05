@@ -160,7 +160,8 @@ func (c *Client) do(ctx context.Context, method string, path string, body io.Rea
 		return
 	}
 	defer func() {
-		err = r.Body.Close()
+		closeErr := r.Body.Close()
+		log.WithError(closeErr).Warn("Failed to close response body")
 	}()
 	if r.StatusCode != http.StatusOK {
 		err = non200Err(r)
