@@ -1011,8 +1011,7 @@ func (b *BeaconNode) pruneBlobs() {
 	async.RunEvery(b.ctx, blobsPruneInterval, func() {
 		log.Debug("Cleaning up old blobs")
 		epochDuration := time.Duration(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot)) * time.Second
-		ttl := epochDuration * time.Duration(params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest)
-		ttl += 1 // add one more epoch as slack
+		ttl := epochDuration * (time.Duration(params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest) + 1) // add one more epoch as slack
 		err := b.db.CleanupBlobs(b.ctx, ttl)
 		if err != nil {
 			log.WithError(err).Error("Unable to prune blobs sidecars in db")
