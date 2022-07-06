@@ -416,7 +416,7 @@ func TestSetOptimisticToInvalid_ProposerBoost(t *testing.T) {
 	f.store.proposerBoostLock.RUnlock()
 }
 
-// This is a regression test ()
+// This is a regression test (10996)
 func TestSetOptimisticToInvalid_BogusLVH(t *testing.T) {
 	ctx := context.Background()
 	f := setup(1, 1)
@@ -433,4 +433,22 @@ func TestSetOptimisticToInvalid_BogusLVH(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 1, len(invalidRoots))
 	require.Equal(t, [32]byte{'b'}, invalidRoots[0])
+}
+
+// This is a regression test (10996)
+func TestSetOptimisticToInvalid_BogusLVH_RotNotImported(t *testing.T) {
+	ctx := context.Background()
+	f := setup(1, 1)
+
+	state, root, err := prepareForkchoiceState(ctx, 1, [32]byte{'a'}, [32]byte{}, [32]byte{'A'}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, root))
+
+	state, root, err = prepareForkchoiceState(ctx, 2, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'B'}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, root))
+
+	invalidRoots, err := f.SetOptimisticToInvalid(ctx, [32]byte{'c'}, [32]byte{'b'}, [32]byte{'R'})
+	require.NoError(t, err)
+	require.Equal(t, 0, len(invalidRoots))
 }

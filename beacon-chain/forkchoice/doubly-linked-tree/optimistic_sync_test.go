@@ -30,6 +30,14 @@ func TestPruneInvalid(t *testing.T) {
 		wantedRoots      [][32]byte
 		wantedErr        error
 	}{
+		{ // Bogus LVH, root not in forkchoice
+			[32]byte{'x'},
+			[32]byte{'i'},
+			[32]byte{'R'},
+			13,
+			[][32]byte{},
+			nil,
+		},
 		{
 			// Bogus LVH
 			[32]byte{'i'},
