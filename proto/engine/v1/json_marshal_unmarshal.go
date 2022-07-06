@@ -7,6 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	gethtypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 )
@@ -37,16 +38,32 @@ func (e *ExecutionBlock) UnmarshalJSON(enc []byte) error {
 	if err := json.Unmarshal(enc, &decoded); err != nil {
 		return err
 	}
-	blockHashStr := decoded["hash"].(string)
+	blockHashStr, ok := decoded["hash"].(string)
+	if !ok {
+		return errors.New("expected `hash` field in JSON response")
+	}
 	e.Hash = common.HexToHash(blockHashStr)
-	e.TotalDifficulty = decoded["totalDifficulty"].(string)
-	rawTxs, ok := decoded["transactions"]
+	e.TotalDifficulty, ok = decoded["totalDifficulty"].(string)
+	if !ok {
+		return errors.New("expected `totalDifficulty` field in JSON response")
+	}
+	txsList, ok := decoded["transactions"].([]interface{})
 	if !ok {
 		return nil
 	}
-	txs, ok := rawTxs.([]*gethtypes.Transaction)
-	if !ok {
-		return nil
+	// If the block contains a list of transactions, we JSON unmarshal
+	// them into a list of geth transaction objects.
+	txs := make([]*gethtypes.Transaction, len(txsList))
+	for i, tx := range txsList {
+		t := &gethtypes.Transaction{}
+		encodedTx, err := json.Marshal(tx)
+		if err != nil {
+			return err
+		}
+		if err := json.Unmarshal(encodedTx, &t); err != nil {
+			return err
+		}
+		txs[i] = t
 	}
 	e.Transactions = txs
 	return nil
