@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -179,13 +178,6 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		require.DeepEqual(t, want.Extra, payloadPb.Extra)
 		require.DeepEqual(t, want.MixDigest, payloadPb.MixDigest)
 		require.DeepEqual(t, want.Nonce, payloadPb.Nonce)
-	})
-	t.Run("nil execution block", func(t *testing.T) {
-		jsonPayload := (*enginev1.ExecutionBlock)(nil)
-		enc, err := json.Marshal(jsonPayload)
-		require.NoError(t, err)
-		payloadPb := &enginev1.ExecutionBlock{}
-		require.ErrorIs(t, hexutil.ErrEmptyString, json.Unmarshal(enc, payloadPb))
 	})
 }
 
