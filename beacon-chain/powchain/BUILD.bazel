@@ -77,6 +77,7 @@ go_test(
         "block_reader_test.go",
         "check_transition_config_test.go",
         "deposit_test.go",
+        "engine_client_fuzz_test.go",
         "engine_client_test.go",
         "init_test.go",
         "log_processing_test.go",
@@ -85,6 +86,7 @@ go_test(
         "provider_test.go",
         "service_test.go",
     ],
+    data = glob(["testdata/**"]),
     embed = [":go_default_library"],
     deps = [
         "//async/event:go_default_library",
@@ -121,6 +123,7 @@ go_test(
         "@com_github_ethereum_go_ethereum//accounts/abi/bind/backends:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_ethereum_go_ethereum//common/hexutil:go_default_library",
+        "@com_github_ethereum_go_ethereum//core/beacon:go_default_library",
         "@com_github_ethereum_go_ethereum//core/types:go_default_library",
         "@com_github_ethereum_go_ethereum//rpc:go_default_library",
         "@com_github_ethereum_go_ethereum//trie:go_default_library",
