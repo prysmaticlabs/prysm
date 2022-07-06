@@ -385,8 +385,6 @@ func TestSetOptimisticToInvalid_InvalidRoots(t *testing.T) {
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 	_, err = f.SetOptimisticToInvalid(ctx, [32]byte{'p'}, [32]byte{'p'}, [32]byte{'B'})
 	require.ErrorIs(t, ErrUnknownNodeRoot, err)
-	_, err = f.SetOptimisticToInvalid(ctx, [32]byte{'a'}, [32]byte{}, [32]byte{'p'})
-	require.ErrorIs(t, errInvalidFinalizedNode, err)
 }
 
 // This is a regression test (10445)
@@ -416,4 +414,41 @@ func TestSetOptimisticToInvalid_ProposerBoost(t *testing.T) {
 	require.DeepEqual(t, [32]byte{}, f.store.proposerBoostRoot)
 	require.DeepEqual(t, params.BeaconConfig().ZeroHash, f.store.previousProposerBoostRoot)
 	f.store.proposerBoostLock.RUnlock()
+}
+
+// This is a regression test (10996)
+func TestSetOptimisticToInvalid_BogusLVH(t *testing.T) {
+	ctx := context.Background()
+	f := setup(1, 1)
+
+	state, root, err := prepareForkchoiceState(ctx, 1, [32]byte{'a'}, [32]byte{}, [32]byte{'A'}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, root))
+
+	state, root, err = prepareForkchoiceState(ctx, 2, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'B'}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, root))
+
+	invalidRoots, err := f.SetOptimisticToInvalid(ctx, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'R'})
+	require.NoError(t, err)
+	require.Equal(t, 1, len(invalidRoots))
+	require.Equal(t, [32]byte{'b'}, invalidRoots[0])
+}
+
+// This is a regression test (10996)
+func TestSetOptimisticToInvalid_BogusLVH_RotNotImported(t *testing.T) {
+	ctx := context.Background()
+	f := setup(1, 1)
+
+	state, root, err := prepareForkchoiceState(ctx, 1, [32]byte{'a'}, [32]byte{}, [32]byte{'A'}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, root))
+
+	state, root, err = prepareForkchoiceState(ctx, 2, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'B'}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, root))
+
+	invalidRoots, err := f.SetOptimisticToInvalid(ctx, [32]byte{'c'}, [32]byte{'b'}, [32]byte{'R'})
+	require.NoError(t, err)
+	require.Equal(t, 0, len(invalidRoots))
 }
