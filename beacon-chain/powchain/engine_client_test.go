@@ -250,7 +250,7 @@ func TestClient_HTTP(t *testing.T) {
 
 		// We call the RPC method via HTTP and expect a proper result.
 		resp, err := client.NewPayload(ctx, execPayload)
-		require.ErrorContains(t, "could not validate block hash", err)
+		require.ErrorIs(t, ErrInvalidBlockHashPayloadStatus, err)
 		require.DeepEqual(t, []uint8(nil), resp)
 	})
 	t.Run(NewPayloadMethod+" INVALID status", func(t *testing.T) {
