@@ -16,10 +16,16 @@ type ProposerSettingsPayload struct {
 
 // ProposerOptionPayload is the struct representation of the JSON config file set in the validator through the CLI.
 // FeeRecipient is set to an eth address in hex string format with 0x prefix.
-// GasLimit is a number set to help the network decide on the maximum gas in each block.
 type ProposerOptionPayload struct {
-	FeeRecipient string `json:"fee_recipient" yaml:"fee_recipient"`
-	GasLimit     uint64 `json:"gas_limit,omitempty" yaml:"gas_limit,omitempty"`
+	FeeRecipient          string                 `json:"fee_recipient" yaml:"fee_recipient"`
+	ValidatorRegistration *ValidatorRegistration `json:"validator_registration" yaml:"validator_registration"`
+}
+
+// ValidatorRegistration is the struct representation of the JSON config file set in the validator through the CLI.
+// GasLimit is a number set to help the network decide on the maximum gas in each block.
+type ValidatorRegistration struct {
+	Enable   bool   `json:"enable" yaml:"enable"`
+	GasLimit uint64 `json:"gas_limit,omitempty" yaml:"gas_limit,omitempty"`
 }
 
 // ProposerSettings is a Prysm internal representation of the fee recipient config on the validator client.
@@ -31,14 +37,14 @@ type ProposerSettings struct {
 
 // ProposerOption is a Prysm internal representation of the ProposerOptionPayload on the validator client in bytes format instead of hex.
 type ProposerOption struct {
-	FeeRecipient common.Address
-	GasLimit     uint64
+	FeeRecipient          common.Address
+	ValidatorRegistration *ValidatorRegistration
 }
 
 // DefaultProposerOption returns a Proposer Option with defaults filled
 func DefaultProposerOption() ProposerOption {
 	return ProposerOption{
-		FeeRecipient: params.BeaconConfig().DefaultFeeRecipient,
-		GasLimit:     params.BeaconConfig().DefaultBuilderGasLimit,
+		FeeRecipient:          params.BeaconConfig().DefaultFeeRecipient,
+		ValidatorRegistration: nil,
 	}
 }
