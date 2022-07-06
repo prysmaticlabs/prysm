@@ -44,10 +44,7 @@ type ProposerOption struct {
 // DefaultProposerOption returns a Proposer Option with defaults filled
 func DefaultProposerOption() ProposerOption {
 	return ProposerOption{
-		FeeRecipient: params.BeaconConfig().DefaultFeeRecipient,
-		ValidatorRegistration: &ValidatorRegistration{
-			Enable:   false,
-			GasLimit: params.BeaconConfig().DefaultBuilderGasLimit,
-		},
+		FeeRecipient:          params.BeaconConfig().DefaultFeeRecipient,
+		ValidatorRegistration: nil,
 	}
 }

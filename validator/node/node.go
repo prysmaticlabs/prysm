@@ -486,12 +486,22 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 	}
 
 	// is overridden by file and URL flags
-	if cliCtx.IsSet(flags.SuggestedFeeRecipientFlag.Name) {
+	if cliCtx.IsSet(flags.SuggestedFeeRecipientFlag.Name) &&
+		!cliCtx.IsSet(flags.ProposerSettingsFlag.Name) &&
+		!cliCtx.IsSet(flags.ProposerSettingsURLFlag.Name) {
 		suggestedFee := cliCtx.String(flags.SuggestedFeeRecipientFlag.Name)
+		var vr *validatorServiceConfig.ValidatorRegistration
+		if cliCtx.Bool(flags.EnableValidatorRegistrationFlag.Name) {
+			vr = &validatorServiceConfig.ValidatorRegistration{
+				Enable:   true,
+				GasLimit: reviewGasLimit(params.BeaconConfig().DefaultBuilderGasLimit),
+			}
+		}
 		fileConfig = &validatorServiceConfig.ProposerSettingsPayload{
 			ProposerConfig: nil,
 			DefaultConfig: &validatorServiceConfig.ProposerOptionPayload{
-				FeeRecipient: suggestedFee,
+				FeeRecipient:          suggestedFee,
+				ValidatorRegistration: vr,
 			},
 		}
 	}

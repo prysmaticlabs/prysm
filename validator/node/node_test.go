@@ -205,12 +205,13 @@ func TestProposerSettings(t *testing.T) {
 		proposerSettingsFlagValues *proposerSettingsFlag
 	}
 	tests := []struct {
-		name        string
-		args        args
-		want        func() *validatorserviceconfig.ProposerSettings
-		urlResponse string
-		wantErr     string
-		wantLog     string
+		name                         string
+		args                         args
+		want                         func() *validatorserviceconfig.ProposerSettings
+		urlResponse                  string
+		wantErr                      string
+		wantLog                      string
+		validatorRegistrationEnabled bool
 	}{
 		{
 			name: "Happy Path Config file File, bad checksum",
@@ -339,7 +340,7 @@ func TestProposerSettings(t *testing.T) {
 			wantErr: "",
 		},
 		{
-			name: "Happy Path Suggested Fee File",
+			name: "Happy Path Suggested Fee ",
 			args: args{
 				proposerSettingsFlagValues: &proposerSettingsFlag{
 					dir:        "",
@@ -356,6 +357,30 @@ func TestProposerSettings(t *testing.T) {
 				}
 			},
 			wantErr: "",
+		},
+		{
+			name: "Happy Path Suggested Fee , validator registration enabled",
+			args: args{
+				proposerSettingsFlagValues: &proposerSettingsFlag{
+					dir:        "",
+					url:        "",
+					defaultfee: "0x6e35733c5af9B61374A128e6F85f553aF09ff89A",
+				},
+			},
+			want: func() *validatorserviceconfig.ProposerSettings {
+				return &validatorserviceconfig.ProposerSettings{
+					ProposeConfig: nil,
+					DefaultConfig: &validatorserviceconfig.ProposerOption{
+						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
+						ValidatorRegistration: &validatorserviceconfig.ValidatorRegistration{
+							Enable:   true,
+							GasLimit: params.BeaconConfig().DefaultBuilderGasLimit,
+						},
+					},
+				}
+			},
+			wantErr:                      "",
+			validatorRegistrationEnabled: true,
 		},
 		{
 			name: "Suggested Fee does not Override Config",
@@ -381,6 +406,32 @@ func TestProposerSettings(t *testing.T) {
 				}
 			},
 			wantErr: "",
+		},
+		{
+			name: "Suggested Fee with validator registration does not Override Config",
+			args: args{
+				proposerSettingsFlagValues: &proposerSettingsFlag{
+					dir:        "./testdata/good-prepare-beacon-proposer-config.json",
+					url:        "",
+					defaultfee: "0x6e35733c5af9B61374A128e6F85f553aF09ff89B",
+				},
+			},
+			want: func() *validatorserviceconfig.ProposerSettings {
+				key1, err := hexutil.Decode("0xa057816155ad77931185101128655c0191bd0214c201ca48ed887f6c4c6adf334070efcd75140eada5ac83a92506dd7a")
+				require.NoError(t, err)
+				return &validatorserviceconfig.ProposerSettings{
+					ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption{
+						bytesutil.ToBytes48(key1): {
+							FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
+						},
+					},
+					DefaultConfig: &validatorserviceconfig.ProposerOption{
+						FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
+					},
+				}
+			},
+			wantErr:                      "",
+			validatorRegistrationEnabled: true,
 		},
 		{
 			name: "No flags set means empty config",
@@ -450,6 +501,9 @@ func TestProposerSettings(t *testing.T) {
 			if tt.args.proposerSettingsFlagValues.defaultfee != "" {
 				set.String(flags.SuggestedFeeRecipientFlag.Name, tt.args.proposerSettingsFlagValues.defaultfee, "")
 				require.NoError(t, set.Set(flags.SuggestedFeeRecipientFlag.Name, tt.args.proposerSettingsFlagValues.defaultfee))
+			}
+			if tt.validatorRegistrationEnabled {
+				set.Bool(flags.EnableValidatorRegistrationFlag.Name, true, "")
 			}
 			cliCtx := cli.NewContext(&app, set, nil)
 			got, err := proposerSettings(cliCtx)
