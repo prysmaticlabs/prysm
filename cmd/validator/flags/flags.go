@@ -358,6 +358,13 @@ var (
 			" For additional setting overrides use the --" + ProposerSettingsFlag.Name + " or --" + ProposerSettingsURLFlag.Name + " Flags. ",
 		Value: params.BeaconConfig().EthBurnAddressHex,
 	}
+
+	// EnableValidatorRegistrationFlag enables the periodic validator registration API calls that will update the custom builder with validator settings.
+	EnableValidatorRegistrationFlag = &cli.StringFlag{
+		Name:  "enable-validator-registration",
+		Usage: "Enables validator registration APIs (MEV Builder APIs) for the validator client to update settings such as fee recipient and gas limit",
+		Value: "",
+	}
 )
 
 // DefaultValidatorDir returns OS-specific default validator directory.
