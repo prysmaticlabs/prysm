@@ -100,7 +100,7 @@ func (s *Service) getBlkParentHashAndTD(ctx context.Context, blkHash []byte) ([]
 	if overflows {
 		return nil, nil, errors.New("total difficulty overflows")
 	}
-	return blk.ParentHash, blkTDUint256, nil
+	return blk.ParentHash[:], blkTDUint256, nil
 }
 
 // validateTerminalBlockHash validates if the merge block is a valid terminal PoW block.

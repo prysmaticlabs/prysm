@@ -4,12 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"math/big"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/holiman/uint256"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
@@ -161,7 +163,27 @@ func TestService_logTtdStatus(t *testing.T) {
 			require.NoError(t, r.Body.Close())
 		}()
 
-		resp := &pb.ExecutionBlock{TotalDifficulty: "0x12345678"}
+		resp := &pb.ExecutionBlock{
+			Header: gethtypes.Header{
+				ParentHash:  common.Hash{},
+				UncleHash:   common.Hash{},
+				Coinbase:    common.Address{},
+				Root:        common.Hash{},
+				TxHash:      common.Hash{},
+				ReceiptHash: common.Hash{},
+				Bloom:       gethtypes.Bloom{},
+				Difficulty:  big.NewInt(1),
+				Number:      big.NewInt(2),
+				GasLimit:    3,
+				GasUsed:     4,
+				Time:        5,
+				Extra:       nil,
+				MixDigest:   common.Hash{},
+				Nonce:       gethtypes.BlockNonce{},
+				BaseFee:     big.NewInt(6),
+			},
+			TotalDifficulty: "0x12345678",
+		}
 		respJSON := map[string]interface{}{
 			"jsonrpc": "2.0",
 			"id":      1,

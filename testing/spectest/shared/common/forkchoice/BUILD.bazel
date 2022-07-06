@@ -40,6 +40,7 @@ go_library(
         "//testing/util:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_ethereum_go_ethereum//common/hexutil:go_default_library",
+        "@com_github_ethereum_go_ethereum//core/types:go_default_library",
         "@com_github_golang_snappy//:go_default_library",
     ],
 )
