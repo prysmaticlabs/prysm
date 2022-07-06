@@ -191,6 +191,9 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 			_, err = service.notifyForkchoiceUpdate(ctx, arg)
 			if tt.errString != "" {
 				require.ErrorContains(t, tt.errString, err)
+				if tt.errString == ErrInvalidPayload.Error() {
+					require.Equal(t, true, IsInvalidBlock(err))
+				}
 			} else {
 				require.NoError(t, err)
 			}
