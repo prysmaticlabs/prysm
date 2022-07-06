@@ -184,7 +184,9 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 	if err != nil {
 		log.WithError(err).Warn("Could not update head")
 	}
-	s.notifyEngineIfChangedHead(ctx, headRoot)
+	if err := s.notifyEngineIfChangedHead(ctx, headRoot); err != nil {
+		return err
+	}
 
 	if err := s.pruneCanonicalAttsFromPool(ctx, blockRoot, signed); err != nil {
 		return err
