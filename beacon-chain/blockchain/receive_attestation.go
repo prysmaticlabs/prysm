@@ -166,7 +166,9 @@ func (s *Service) UpdateHead(ctx context.Context) error {
 		}).Debug("Head changed due to attestations")
 	}
 	s.headLock.RUnlock()
-	s.notifyEngineIfChangedHead(ctx, newHeadRoot)
+	if err := s.notifyEngineIfChangedHead(ctx, newHeadRoot); err != nil {
+		return err
+	}
 	return nil
 }
 
