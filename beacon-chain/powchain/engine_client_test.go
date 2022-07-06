@@ -806,7 +806,7 @@ func fixtures() map[string]interface{} {
 	forkChoiceInvalidResp := &ForkchoiceUpdatedResponse{
 		Status: &pb.PayloadStatus{
 			Status:          pb.PayloadStatus_INVALID,
-			LatestValidHash: []byte("latestValidHash"),
+			LatestValidHash: bytesutil.PadTo([]byte("latestValidHash"), 32),
 		},
 		PayloadId: &id,
 	}
