@@ -107,7 +107,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 				headBlock: b.Block(),
 			})
 			if err != nil {
-				return nil, invalidBlock{err}
+				return nil, err
 			}
 
 			if err := s.saveHead(ctx, r, b, st); err != nil {
@@ -120,7 +120,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 				"invalidCount": len(invalidRoots),
 				"newHeadRoot":  fmt.Sprintf("%#x", bytesutil.Trunc(r[:])),
 			}).Warn("Pruned invalid blocks")
-			return pid, invalidBlock{ErrInvalidPayload}
+			return pid, ErrInvalidPayload
 
 		default:
 			return nil, errors.WithMessage(ErrUndefinedExecutionEngineError, err.Error())
@@ -212,10 +212,10 @@ func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
 			"blockRoot":    fmt.Sprintf("%#x", root),
 			"invalidCount": len(invalidRoots),
 		}).Warn("Pruned invalid blocks")
-		return false, invalidBlock{ErrInvalidPayload}
+		return false, ErrInvalidPayload
 	case powchain.ErrInvalidBlockHashPayloadStatus:
 		newPayloadInvalidNodeCount.Inc()
-		return false, invalidBlock{ErrInvalidBlockHashPayloadStatus}
+		return false, ErrInvalidBlockHashPayloadStatus
 	default:
 		return false, errors.WithMessage(ErrUndefinedExecutionEngineError, err.Error())
 	}
