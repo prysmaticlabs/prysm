@@ -577,10 +577,15 @@ func MockVoluntaryExitSignRequest() *v1.VoluntaryExitSignRequest {
 // MockValidatorRegistrationSignRequest is a mock implementation of the ValidatorRegistrationSignRequest.
 func MockValidatorRegistrationSignRequest() *v1.ValidatorRegistrationSignRequest {
 	return &v1.ValidatorRegistrationSignRequest{
-		FeeRecipient: hexutil.Encode(make([]byte, fieldparams.FeeRecipientLength)),
-		GasLimit:     fmt.Sprint(0),
-		Timestamp:    fmt.Sprint(0),
-		Pubkey:       hexutil.Encode(make([]byte, fieldparams.BLSSignatureLength)),
+		Type:        "VALIDATOR_REGISTRATION",
+		SigningRoot: hexutil.Encode(make([]byte, fieldparams.RootLength)),
+		ValidatorRegistration: &v1.ValidatorRegistration{
+			FeeRecipient: hexutil.Encode(make([]byte, fieldparams.FeeRecipientLength)),
+			GasLimit:     fmt.Sprint(0),
+			Timestamp:    fmt.Sprint(0),
+			Pubkey:       hexutil.Encode(make([]byte, fieldparams.BLSSignatureLength)),
+		},
+		Epoch: "0",
 	}
 }
 
