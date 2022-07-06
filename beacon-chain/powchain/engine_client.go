@@ -80,7 +80,7 @@ func (s *Service) NewPayload(ctx context.Context, payload *pb.ExecutionPayload) 
 
 	switch result.Status {
 	case pb.PayloadStatus_INVALID_BLOCK_HASH:
-		return nil, fmt.Errorf("could not validate block hash: %v", result.ValidationError)
+		return nil, ErrInvalidBlockHashPayloadStatus
 	case pb.PayloadStatus_ACCEPTED, pb.PayloadStatus_SYNCING:
 		return nil, ErrAcceptedSyncingPayloadStatus
 	case pb.PayloadStatus_INVALID:
