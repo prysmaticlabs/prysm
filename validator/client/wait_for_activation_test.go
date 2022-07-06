@@ -8,7 +8,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/golang/mock/gomock"
-	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	validatorserviceconfig "github.com/prysmaticlabs/prysm/config/validator/service"
@@ -106,11 +105,6 @@ func TestWaitActivation_StreamSetupFails_AttemptsToReconnect(t *testing.T) {
 	resp := generateMockStatusResponse([][]byte{pubKey[:]})
 	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_ACTIVE
 	clientStream.EXPECT().Recv().Return(resp, nil)
-
-	client.EXPECT().SubmitValidatorRegistration(
-		gomock.Any(),
-		gomock.Any(),
-	).Return(&empty.Empty{}, nil)
 	assert.NoError(t, v.WaitForActivation(context.Background(), nil))
 }
 
@@ -160,11 +154,6 @@ func TestWaitForActivation_ReceiveErrorFromStream_AttemptsReconnection(t *testin
 		nil,
 		errors.New("fails"),
 	).Return(resp, nil)
-
-	client.EXPECT().SubmitValidatorRegistration(
-		gomock.Any(),
-		gomock.Any(),
-	).Return(&empty.Empty{}, nil)
 	assert.NoError(t, v.WaitForActivation(context.Background(), nil))
 }
 
@@ -210,11 +199,6 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 		resp,
 		nil,
 	)
-
-	client.EXPECT().SubmitValidatorRegistration(
-		gomock.Any(),
-		gomock.Any(),
-	).Return(&empty.Empty{}, nil)
 	client.EXPECT().PrepareBeaconProposer(gomock.Any(), &ethpb.PrepareBeaconProposerRequest{
 		Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
 			{FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9").Bytes(), ValidatorIndex: 1},
@@ -265,11 +249,6 @@ func TestWaitForActivation_Exiting(t *testing.T) {
 		resp,
 		nil,
 	)
-
-	client.EXPECT().SubmitValidatorRegistration(
-		gomock.Any(),
-		gomock.Any(),
-	).Return(&empty.Empty{}, nil)
 	client.EXPECT().PrepareBeaconProposer(gomock.Any(), &ethpb.PrepareBeaconProposerRequest{
 		Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
 			{FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9").Bytes(), ValidatorIndex: 1},
@@ -327,10 +306,6 @@ func TestWaitForActivation_RefetchKeys(t *testing.T) {
 		resp,
 		nil)
 
-	client.EXPECT().SubmitValidatorRegistration(
-		gomock.Any(),
-		gomock.Any(),
-	).Return(&empty.Empty{}, nil)
 	client.EXPECT().PrepareBeaconProposer(gomock.Any(), &ethpb.PrepareBeaconProposerRequest{
 		Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
 			{FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9").Bytes(), ValidatorIndex: 1},
@@ -411,11 +386,6 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 			activeResp,
 			nil,
 		)
-
-		client.EXPECT().SubmitValidatorRegistration(
-			gomock.Any(),
-			gomock.Any(),
-		).Times(1).Return(&empty.Empty{}, nil)
 
 		go func() {
 			// We add the active key into the keymanager and simulate a key refresh.
@@ -507,11 +477,6 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 			nil,
 		)
 
-		client.EXPECT().SubmitValidatorRegistration(
-			gomock.Any(),
-			gomock.Any(),
-		).Times(1).Return(&empty.Empty{}, nil)
-
 		channel := make(chan [][fieldparams.BLSPubkeyLength]byte)
 		go func() {
 			// We add the active key into the keymanager and simulate a key refresh.
@@ -588,10 +553,6 @@ func TestWaitForActivation_RemoteKeymanager(t *testing.T) {
 				PublicKeys: [][]byte{inactiveKey[:], activeKey[:]},
 			},
 		).Return(resp, nil /* err */)
-		client.EXPECT().SubmitValidatorRegistration(
-			gomock.Any(),
-			gomock.Any(),
-		).Times(1).Return(&empty.Empty{}, nil)
 		client.EXPECT().PrepareBeaconProposer(gomock.Any(), &ethpb.PrepareBeaconProposerRequest{
 			Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
 				{FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9").Bytes(), ValidatorIndex: 2},
@@ -677,11 +638,6 @@ func TestWaitForActivation_RemoteKeymanager(t *testing.T) {
 				PublicKeys: [][]byte{inactiveKey[:], activeKey[:]},
 			},
 		).Return(resp2, nil /* err */)
-
-		client.EXPECT().SubmitValidatorRegistration(
-			gomock.Any(),
-			gomock.Any(),
-		).Times(1).Return(&empty.Empty{}, nil)
 		client.EXPECT().PrepareBeaconProposer(gomock.Any(), &ethpb.PrepareBeaconProposerRequest{
 			Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
 				{FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9").Bytes(), ValidatorIndex: 2},
