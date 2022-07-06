@@ -36,7 +36,6 @@ func (s *Service) Send(ctx context.Context, message interface{}, baseTopic strin
 	ctx, cancel := context.WithTimeout(ctx, maxDialTimeout)
 	defer cancel()
 
-	log.Errorf("OPENING STREAM FOR TOPIC %v", topic)
 	stream, err := s.host.NewStream(ctx, pid, protocol.ID(topic))
 	if err != nil {
 		tracing.AnnotateError(span, err)

@@ -46,7 +46,7 @@ import (
 )
 
 var (
-	peerMultiaddr = "/ip4/10.0.0.74/tcp/13000/p2p/16Uiu2HAkyBAs6VWbpi1ZvZQDJSSWbueCBQzHc2oZbcUGRpjYWoZV"
+	peerMultiaddr = "/ip4/10.0.0.74/tcp/13000/p2p/16Uiu2HAmF6NM6UmwgxTk1SbG4kskNBon5Vch2ZunW2Sfm2TqHDNm"
 )
 
 type service struct {
@@ -79,6 +79,9 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	srv := &service{h: host}
+
 	fmt.Println(host.Addrs())
 	peers, err := peersFromStringAddrs([]string{peerMultiaddr})
 	if err != nil {
@@ -103,7 +106,6 @@ func main() {
 	}
 	fmt.Println("CONNECTED: ", host.Peerstore().Peers())
 
-	srv := &service{h: host}
 	for _, pr := range host.Peerstore().Peers() {
 		req := &pb.BeaconBlocksByRangeRequest{}
 		chain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
