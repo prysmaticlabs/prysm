@@ -456,9 +456,9 @@ func TestServer_getPowBlockHashAtTerminalTotalDifficulty(t *testing.T) {
 				TotalDifficulty: "0x3",
 			},
 			parentPowBlock: &pb.ExecutionBlock{
-				Hash: common.BytesToHash([]byte("a")),
+				Hash: common.BytesToHash([]byte("b")),
 				Header: gethtypes.Header{
-					ParentHash: common.BytesToHash([]byte("b")),
+					ParentHash: common.BytesToHash([]byte("c")),
 				},
 				TotalDifficulty: "1",
 			},
@@ -482,7 +482,7 @@ func TestServer_getPowBlockHashAtTerminalTotalDifficulty(t *testing.T) {
 				TotalDifficulty: "0x1",
 			},
 			wantExists:            true,
-			wantTerminalBlockHash: []byte{'a'},
+			wantTerminalBlockHash: common.BytesToHash([]byte("a")).Bytes(),
 		},
 		{
 			name:     "ttd not reached",

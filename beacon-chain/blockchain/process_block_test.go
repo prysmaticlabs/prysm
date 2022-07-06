@@ -1529,6 +1529,9 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 
+	aHash := common.BytesToHash([]byte("a"))
+	bHash := common.BytesToHash([]byte("b"))
+
 	tests := []struct {
 		name         string
 		stateVersion int
@@ -1559,7 +1562,7 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 			name:         "state older than Bellatrix, non empty payload",
 			stateVersion: 1,
 			payload: &enginev1.ExecutionPayload{
-				ParentHash: bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength),
+				ParentHash: aHash[:],
 			},
 		},
 		{
@@ -1585,7 +1588,7 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 			name:         "state is Bellatrix, non empty payload, empty header",
 			stateVersion: 2,
 			payload: &enginev1.ExecutionPayload{
-				ParentHash: bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength),
+				ParentHash: aHash[:],
 			},
 			header: &enginev1.ExecutionPayloadHeader{
 				ParentHash:       make([]byte, fieldparams.RootLength),
@@ -1603,7 +1606,7 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 			name:         "state is Bellatrix, non empty payload, non empty header",
 			stateVersion: 2,
 			payload: &enginev1.ExecutionPayload{
-				ParentHash: bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength),
+				ParentHash: aHash[:],
 			},
 			header: &enginev1.ExecutionPayloadHeader{
 				BlockNumber: 1,
@@ -1613,7 +1616,7 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 			name:         "state is Bellatrix, non empty payload, nil header",
 			stateVersion: 2,
 			payload: &enginev1.ExecutionPayload{
-				ParentHash: bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength),
+				ParentHash: aHash[:],
 			},
 			errString: "nil header or block body",
 		},
@@ -1621,13 +1624,13 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			e := &mockPOW.EngineClient{BlockByHashMap: map[[32]byte]*enginev1.ExecutionBlock{}}
-			e.BlockByHashMap[[32]byte{'a'}] = &enginev1.ExecutionBlock{
+			e.BlockByHashMap[aHash] = &enginev1.ExecutionBlock{
 				Header: gethtypes.Header{
-					ParentHash: common.BytesToHash([]byte("b")),
+					ParentHash: bHash,
 				},
 				TotalDifficulty: "0x2",
 			}
-			e.BlockByHashMap[[32]byte{'b'}] = &enginev1.ExecutionBlock{
+			e.BlockByHashMap[bHash] = &enginev1.ExecutionBlock{
 				Header: gethtypes.Header{
 					ParentHash: common.BytesToHash([]byte("3")),
 				},

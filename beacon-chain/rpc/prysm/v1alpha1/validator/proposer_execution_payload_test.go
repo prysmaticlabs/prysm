@@ -204,7 +204,7 @@ func TestServer_getTerminalBlockHashIfExists(t *testing.T) {
 	}{
 		{
 			name:               "use terminal block hash, doesn't exist",
-			paramsTerminalHash: []byte{'a'},
+			paramsTerminalHash: common.BytesToHash([]byte("a")).Bytes(),
 			errString:          "could not fetch height for hash",
 		},
 		{
@@ -226,14 +226,14 @@ func TestServer_getTerminalBlockHashIfExists(t *testing.T) {
 				TotalDifficulty: "0x3",
 			},
 			parentPowBlock: &pb.ExecutionBlock{
-				Hash: common.BytesToHash([]byte("a")),
+				Hash: common.BytesToHash([]byte("b")),
 				Header: gethtypes.Header{
 					ParentHash: common.BytesToHash([]byte("c")),
 				},
 				TotalDifficulty: "0x1",
 			},
 			wantExists:            true,
-			wantTerminalBlockHash: []byte{'a'},
+			wantTerminalBlockHash: common.BytesToHash([]byte("a")).Bytes(),
 		},
 	}
 	for _, tt := range tests {

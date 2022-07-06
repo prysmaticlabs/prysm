@@ -30,9 +30,28 @@ type ExecutionBlock struct {
 	TotalDifficulty string                   `json:"totalDifficulty"`
 }
 
+func (e *ExecutionBlock) MarshalJSON() ([]byte, error) {
+	decoded := make(map[string]interface{})
+	encodedHeader, err := e.Header.MarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(encodedHeader, &decoded); err != nil {
+		return nil, err
+	}
+	encodedTxs, err := json.Marshal(e.Transactions)
+	if err != nil {
+		return nil, err
+	}
+	decoded["hash"] = e.Hash.String()
+	decoded["transactions"] = string(encodedTxs)
+	decoded["totalDifficulty"] = e.TotalDifficulty
+	return json.Marshal(decoded)
+}
+
 func (e *ExecutionBlock) UnmarshalJSON(enc []byte) error {
 	if err := e.Header.UnmarshalJSON(enc); err != nil {
-		return nil
+		return err
 	}
 	decoded := make(map[string]interface{})
 	if err := json.Unmarshal(enc, &decoded); err != nil {
