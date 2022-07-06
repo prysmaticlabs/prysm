@@ -213,6 +213,9 @@ func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
 			"invalidCount": len(invalidRoots),
 		}).Warn("Pruned invalid blocks")
 		return false, invalidBlock{ErrInvalidPayload}
+	case powchain.ErrInvalidBlockHashPayloadStatus:
+		newPayloadInvalidNodeCount.Inc()
+		return false, invalidBlock{ErrInvalidBlockHashPayloadStatus}
 	default:
 		return false, errors.WithMessage(ErrUndefinedExecutionEngineError, err.Error())
 	}
