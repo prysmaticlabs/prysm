@@ -76,8 +76,8 @@ func (f *ForkChoice) UpdateUnrealizedCheckpoints() {
 }
 
 func (s *Store) pullTips(state state.BeaconState, node *Node, jc, fc *ethpb.Checkpoint) (*ethpb.Checkpoint, *ethpb.Checkpoint) {
-	s.nodesLock.RLock()
-	defer s.nodesLock.RUnlock()
+	s.nodesLock.Lock()
+	defer s.nodesLock.Unlock()
 
 	if node.parent == NonExistentNode { // Nothing to do if the parent is nil.
 		return jc, fc
