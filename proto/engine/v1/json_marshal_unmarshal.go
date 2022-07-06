@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
@@ -14,16 +15,41 @@ import (
 // client with proper JSON Marshal and Unmarshal methods to hex.
 type PayloadIDBytes [8]byte
 
-// ExecutionBlock is the response kind received by the eth_getBlockByHash and
-// eth_getBlockByNumber endpoints via JSON-RPC.
-type ExecutionBlock struct {
-	gethtypes.Block
-	TotalDifficulty string `json:"totalDifficulty"`
-}
-
 // MarshalJSON --
 func (b PayloadIDBytes) MarshalJSON() ([]byte, error) {
 	return json.Marshal(hexutil.Bytes(b[:]))
+}
+
+// ExecutionBlock is the response kind received by the eth_getBlockByHash and
+// eth_getBlockByNumber endpoints via JSON-RPC.
+type ExecutionBlock struct {
+	gethtypes.Header
+	Hash            common.Hash              `json:"hash"`
+	Transactions    []*gethtypes.Transaction `json:"transactions"`
+	TotalDifficulty string                   `json:"totalDifficulty"`
+}
+
+func (e *ExecutionBlock) UnmarshalJSON(enc []byte) error {
+	if err := e.Header.UnmarshalJSON(enc); err != nil {
+		return nil
+	}
+	decoded := make(map[string]interface{})
+	if err := json.Unmarshal(enc, &decoded); err != nil {
+		return err
+	}
+	blockHashStr := decoded["hash"].(string)
+	e.Hash = common.HexToHash(blockHashStr)
+	e.TotalDifficulty = decoded["totalDifficulty"].(string)
+	rawTxs, ok := decoded["transactions"]
+	if !ok {
+		return nil
+	}
+	txs, ok := rawTxs.([]*gethtypes.Transaction)
+	if !ok {
+		return nil
+	}
+	e.Transactions = txs
+	return nil
 }
 
 // UnmarshalJSON --
@@ -36,17 +62,6 @@ func (b *PayloadIDBytes) UnmarshalJSON(enc []byte) error {
 	copy(res[:], hexBytes)
 	*b = res
 	return nil
-}
-
-// MarshalJSON defines a custom json.Marshaler interface implementation.
-func (e *ExecutionBlock) MarshalJSON() ([]byte, error) {
-	return json.Marshal(e)
-}
-
-// UnmarshalJSON defines a custom json.Unmarshaler interface implementation
-// that uses custom json.Unmarshalers for the hexutil.Bytes and hexutil.Uint64 types.
-func (e *ExecutionBlock) UnmarshalJSON(enc []byte) error {
-	return json.Unmarshal(enc, e)
 }
 
 type executionPayloadJSON struct {
