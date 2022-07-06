@@ -106,7 +106,7 @@ type ValidatorRegistrationSignRequest struct {
 	Type                  string                 `json:"type" validate:"required"`
 	SigningRoot           string                 `json:"signingRoot"`
 	ValidatorRegistration *ValidatorRegistration `json:"validator_registration" validate:"required"`
-	Epoch                 string                 `json:"epoch"` /*uint64*/
+	Epoch                 string                 `json:"epoch" validate:"required"` /*uint64*/
 }
 
 ////////////////////////////////////////////////////////////////////////////////
