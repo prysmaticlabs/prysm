@@ -6,6 +6,8 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common"
+	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/holiman/uint256"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
@@ -121,11 +123,15 @@ func Test_validateMergeBlock(t *testing.T) {
 	engine := &mocks.EngineClient{BlockByHashMap: map[[32]byte]*enginev1.ExecutionBlock{}}
 	service.cfg.ExecutionEngineCaller = engine
 	engine.BlockByHashMap[[32]byte{'a'}] = &enginev1.ExecutionBlock{
-		ParentHash:      bytesutil.PadTo([]byte{'b'}, fieldparams.RootLength),
+		Header: gethtypes.Header{
+			ParentHash: common.BytesToHash([]byte("b")),
+		},
 		TotalDifficulty: "0x2",
 	}
 	engine.BlockByHashMap[[32]byte{'b'}] = &enginev1.ExecutionBlock{
-		ParentHash:      bytesutil.PadTo([]byte{'3'}, fieldparams.RootLength),
+		Header: gethtypes.Header{
+			ParentHash: common.BytesToHash([]byte("3")),
+		},
 		TotalDifficulty: "0x1",
 	}
 	blk := &ethpb.SignedBeaconBlockBellatrix{
@@ -167,7 +173,9 @@ func Test_getBlkParentHashAndTD(t *testing.T) {
 	p := [32]byte{'b'}
 	td := "0x1"
 	engine.BlockByHashMap[h] = &enginev1.ExecutionBlock{
-		ParentHash:      p[:],
+		Header: gethtypes.Header{
+			ParentHash: p,
+		},
 		TotalDifficulty: td,
 	}
 	parentHash, totalDifficulty, err := service.getBlkParentHashAndTD(ctx, h[:])
@@ -183,14 +191,18 @@ func Test_getBlkParentHashAndTD(t *testing.T) {
 	require.ErrorContains(t, "pow block is nil", err)
 
 	engine.BlockByHashMap[h] = &enginev1.ExecutionBlock{
-		ParentHash:      p[:],
+		Header: gethtypes.Header{
+			ParentHash: p,
+		},
 		TotalDifficulty: "1",
 	}
 	_, _, err = service.getBlkParentHashAndTD(ctx, h[:])
 	require.ErrorContains(t, "could not decode merge block total difficulty: hex string without 0x prefix", err)
 
 	engine.BlockByHashMap[h] = &enginev1.ExecutionBlock{
-		ParentHash:      p[:],
+		Header: gethtypes.Header{
+			ParentHash: p,
+		},
 		TotalDifficulty: "0XFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
 	}
 	_, _, err = service.getBlkParentHashAndTD(ctx, h[:])

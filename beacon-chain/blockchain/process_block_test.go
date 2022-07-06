@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
+	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
@@ -1620,11 +1622,15 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			e := &mockPOW.EngineClient{BlockByHashMap: map[[32]byte]*enginev1.ExecutionBlock{}}
 			e.BlockByHashMap[[32]byte{'a'}] = &enginev1.ExecutionBlock{
-				ParentHash:      bytesutil.PadTo([]byte{'b'}, fieldparams.RootLength),
+				Header: gethtypes.Header{
+					ParentHash: common.BytesToHash([]byte("b")),
+				},
 				TotalDifficulty: "0x2",
 			}
 			e.BlockByHashMap[[32]byte{'b'}] = &enginev1.ExecutionBlock{
-				ParentHash:      bytesutil.PadTo([]byte{'3'}, fieldparams.RootLength),
+				Header: gethtypes.Header{
+					ParentHash: common.BytesToHash([]byte("3")),
+				},
 				TotalDifficulty: "0x1",
 			}
 			service.cfg.ExecutionEngineCaller = e
