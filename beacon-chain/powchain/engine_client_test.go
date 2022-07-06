@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
+	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
@@ -416,7 +417,7 @@ func TestServer_getPowBlockHashAtTerminalTotalDifficulty(t *testing.T) {
 			name:     "current execution block invalid TD",
 			paramsTd: "1",
 			currentPowBlock: &pb.ExecutionBlock{
-				Hash:            []byte{'a'},
+				Hash:            common.BytesToHash([]byte("a")),
 				TotalDifficulty: "1115792089237316195423570985008687907853269984665640564039457584007913129638912",
 			},
 			errString: "could not convert total difficulty to uint256",
@@ -425,8 +426,10 @@ func TestServer_getPowBlockHashAtTerminalTotalDifficulty(t *testing.T) {
 			name:     "current execution block has zero hash parent",
 			paramsTd: "2",
 			currentPowBlock: &pb.ExecutionBlock{
-				Hash:            []byte{'a'},
-				ParentHash:      params.BeaconConfig().ZeroHash[:],
+				Hash: common.BytesToHash([]byte("a")),
+				Header: gethtypes.Header{
+					ParentHash: common.BytesToHash(params.BeaconConfig().ZeroHash[:]),
+				},
 				TotalDifficulty: "0x3",
 			},
 		},
@@ -434,8 +437,10 @@ func TestServer_getPowBlockHashAtTerminalTotalDifficulty(t *testing.T) {
 			name:     "could not get parent block",
 			paramsTd: "2",
 			currentPowBlock: &pb.ExecutionBlock{
-				Hash:            []byte{'a'},
-				ParentHash:      []byte{'b'},
+				Hash: common.BytesToHash([]byte("a")),
+				Header: gethtypes.Header{
+					ParentHash: common.BytesToHash([]byte("b")),
+				},
 				TotalDifficulty: "0x3",
 			},
 			errString: "could not get parent execution block",
@@ -444,13 +449,17 @@ func TestServer_getPowBlockHashAtTerminalTotalDifficulty(t *testing.T) {
 			name:     "parent execution block invalid TD",
 			paramsTd: "2",
 			currentPowBlock: &pb.ExecutionBlock{
-				Hash:            []byte{'a'},
-				ParentHash:      []byte{'b'},
+				Hash: common.BytesToHash([]byte("a")),
+				Header: gethtypes.Header{
+					ParentHash: common.BytesToHash([]byte("b")),
+				},
 				TotalDifficulty: "0x3",
 			},
 			parentPowBlock: &pb.ExecutionBlock{
-				Hash:            []byte{'b'},
-				ParentHash:      []byte{'c'},
+				Hash: common.BytesToHash([]byte("b")),
+				Header: gethtypes.Header{
+					ParentHash: common.BytesToHash([]byte("c")),
+				},
 				TotalDifficulty: "1",
 			},
 			errString: "could not convert total difficulty to uint256",
@@ -459,29 +468,37 @@ func TestServer_getPowBlockHashAtTerminalTotalDifficulty(t *testing.T) {
 			name:     "happy case",
 			paramsTd: "2",
 			currentPowBlock: &pb.ExecutionBlock{
-				Hash:            []byte{'a'},
-				ParentHash:      []byte{'b'},
+				Hash: common.BytesToHash([]byte("a")),
+				Header: gethtypes.Header{
+					ParentHash: common.BytesToHash([]byte("b")),
+				},
 				TotalDifficulty: "0x3",
 			},
 			parentPowBlock: &pb.ExecutionBlock{
-				Hash:            []byte{'b'},
-				ParentHash:      []byte{'c'},
+				Hash: common.BytesToHash([]byte("b")),
+				Header: gethtypes.Header{
+					ParentHash: common.BytesToHash([]byte("c")),
+				},
 				TotalDifficulty: "0x1",
 			},
 			wantExists:            true,
-			wantTerminalBlockHash: []byte{'a'},
+			wantTerminalBlockHash: common.BytesToHash([]byte("a")).Bytes(),
 		},
 		{
 			name:     "ttd not reached",
 			paramsTd: "3",
 			currentPowBlock: &pb.ExecutionBlock{
-				Hash:            []byte{'a'},
-				ParentHash:      []byte{'b'},
+				Hash: common.BytesToHash([]byte("a")),
+				Header: gethtypes.Header{
+					ParentHash: common.BytesToHash([]byte("b")),
+				},
 				TotalDifficulty: "0x2",
 			},
 			parentPowBlock: &pb.ExecutionBlock{
-				Hash:            []byte{'b'},
-				ParentHash:      []byte{'c'},
+				Hash: common.BytesToHash([]byte("b")),
+				Header: gethtypes.Header{
+					ParentHash: common.BytesToHash([]byte("c")),
+				},
 				TotalDifficulty: "0x1",
 			},
 		},
@@ -494,7 +511,7 @@ func TestServer_getPowBlockHashAtTerminalTotalDifficulty(t *testing.T) {
 			var m map[[32]byte]*pb.ExecutionBlock
 			if tt.parentPowBlock != nil {
 				m = map[[32]byte]*pb.ExecutionBlock{
-					bytesutil.ToBytes32(tt.parentPowBlock.Hash): tt.parentPowBlock,
+					tt.parentPowBlock.Hash: tt.parentPowBlock,
 				}
 			}
 			client := mocks.EngineClient{
@@ -749,8 +766,6 @@ func fixtures() map[string]interface{} {
 		BlockHash:     foo[:],
 		Transactions:  [][]byte{foo[:]},
 	}
-	number := bytesutil.PadTo([]byte("100"), fieldparams.RootLength)
-	hash := bytesutil.PadTo([]byte("hash"), fieldparams.RootLength)
 	parent := bytesutil.PadTo([]byte("parentHash"), fieldparams.RootLength)
 	sha3Uncles := bytesutil.PadTo([]byte("sha3Uncles"), fieldparams.RootLength)
 	miner := bytesutil.PadTo([]byte("miner"), fieldparams.FeeRecipientLength)
@@ -759,25 +774,24 @@ func fixtures() map[string]interface{} {
 	receiptsRoot := bytesutil.PadTo([]byte("receiptsRoot"), fieldparams.RootLength)
 	logsBloom := bytesutil.PadTo([]byte("logs"), fieldparams.LogsBloomLength)
 	executionBlock := &pb.ExecutionBlock{
-		Number:           number,
-		Hash:             hash,
-		ParentHash:       parent,
-		Sha3Uncles:       sha3Uncles,
-		Miner:            miner,
-		StateRoot:        stateRoot,
-		TransactionsRoot: transactionsRoot,
-		ReceiptsRoot:     receiptsRoot,
-		LogsBloom:        logsBloom,
-		Difficulty:       bytesutil.PadTo([]byte("1"), fieldparams.RootLength),
-		TotalDifficulty:  "2",
-		GasLimit:         3,
-		GasUsed:          4,
-		Timestamp:        5,
-		Size:             bytesutil.PadTo([]byte("6"), fieldparams.RootLength),
-		ExtraData:        bytesutil.PadTo([]byte("extraData"), fieldparams.RootLength),
-		BaseFeePerGas:    bytesutil.PadTo([]byte("baseFeePerGas"), fieldparams.RootLength),
-		Transactions:     [][]byte{foo[:]},
-		Uncles:           [][]byte{foo[:]},
+		Header: gethtypes.Header{
+			ParentHash:  common.BytesToHash(parent),
+			UncleHash:   common.BytesToHash(sha3Uncles),
+			Coinbase:    common.BytesToAddress(miner),
+			Root:        common.BytesToHash(stateRoot),
+			TxHash:      common.BytesToHash(transactionsRoot),
+			ReceiptHash: common.BytesToHash(receiptsRoot),
+			Bloom:       gethtypes.BytesToBloom(logsBloom),
+			Difficulty:  big.NewInt(1),
+			Number:      big.NewInt(2),
+			GasLimit:    3,
+			GasUsed:     4,
+			Time:        5,
+			Extra:       []byte("extra"),
+			MixDigest:   common.BytesToHash([]byte("mix")),
+			Nonce:       gethtypes.EncodeNonce(6),
+			BaseFee:     big.NewInt(7),
+		},
 	}
 	status := &pb.PayloadStatus{
 		Status:          pb.PayloadStatus_VALID,

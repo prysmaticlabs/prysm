@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
+	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -203,7 +204,7 @@ func TestServer_getTerminalBlockHashIfExists(t *testing.T) {
 	}{
 		{
 			name:               "use terminal block hash, doesn't exist",
-			paramsTerminalHash: []byte{'a'},
+			paramsTerminalHash: common.BytesToHash([]byte("a")).Bytes(),
 			errString:          "could not fetch height for hash",
 		},
 		{
@@ -218,17 +219,21 @@ func TestServer_getTerminalBlockHashIfExists(t *testing.T) {
 			name:     "use terminal total difficulty",
 			paramsTd: "2",
 			currentPowBlock: &pb.ExecutionBlock{
-				Hash:            []byte{'a'},
-				ParentHash:      []byte{'b'},
+				Hash: common.BytesToHash([]byte("a")),
+				Header: gethtypes.Header{
+					ParentHash: common.BytesToHash([]byte("b")),
+				},
 				TotalDifficulty: "0x3",
 			},
 			parentPowBlock: &pb.ExecutionBlock{
-				Hash:            []byte{'b'},
-				ParentHash:      []byte{'c'},
+				Hash: common.BytesToHash([]byte("b")),
+				Header: gethtypes.Header{
+					ParentHash: common.BytesToHash([]byte("c")),
+				},
 				TotalDifficulty: "0x1",
 			},
 			wantExists:            true,
-			wantTerminalBlockHash: []byte{'a'},
+			wantTerminalBlockHash: common.BytesToHash([]byte("a")).Bytes(),
 		},
 	}
 	for _, tt := range tests {
@@ -240,7 +245,7 @@ func TestServer_getTerminalBlockHashIfExists(t *testing.T) {
 			var m map[[32]byte]*pb.ExecutionBlock
 			if tt.parentPowBlock != nil {
 				m = map[[32]byte]*pb.ExecutionBlock{
-					bytesutil.ToBytes32(tt.parentPowBlock.Hash): tt.parentPowBlock,
+					tt.parentPowBlock.Hash: tt.parentPowBlock,
 				}
 			}
 			c := powtesting.NewPOWChain()

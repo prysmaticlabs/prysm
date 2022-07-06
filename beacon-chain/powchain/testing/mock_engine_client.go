@@ -94,8 +94,8 @@ func (e *EngineClient) GetTerminalBlockHash(ctx context.Context) ([]byte, bool, 
 		currentTotalDifficulty, _ := uint256.FromBig(b)
 		blockReachedTTD := currentTotalDifficulty.Cmp(terminalTotalDifficulty) >= 0
 
-		parentHash := bytesutil.ToBytes32(blk.ParentHash)
-		if len(blk.ParentHash) == 0 || parentHash == params.BeaconConfig().ZeroHash {
+		parentHash := blk.ParentHash
+		if parentHash == params.BeaconConfig().ZeroHash {
 			return nil, false, nil
 		}
 		parentBlk, err := e.ExecutionBlockByHash(ctx, parentHash)
@@ -110,7 +110,7 @@ func (e *EngineClient) GetTerminalBlockHash(ctx context.Context) ([]byte, bool, 
 			parentTotalDifficulty, _ := uint256.FromBig(b)
 			parentReachedTTD := parentTotalDifficulty.Cmp(terminalTotalDifficulty) >= 0
 			if !parentReachedTTD {
-				return blk.Hash, true, nil
+				return blk.Hash[:], true, nil
 			}
 		} else {
 			return nil, false, nil
