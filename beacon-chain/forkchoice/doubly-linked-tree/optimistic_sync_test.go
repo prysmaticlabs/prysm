@@ -31,6 +31,15 @@ func TestPruneInvalid(t *testing.T) {
 		wantedErr        error
 	}{
 		{
+			// Bogus LVH
+			[32]byte{'i'},
+			[32]byte{'h'},
+			[32]byte{'R'},
+			12,
+			[][32]byte{{'i'}},
+			nil,
+		},
+		{
 			[32]byte{'j'},
 			[32]byte{'b'},
 			[32]byte{'B'},
