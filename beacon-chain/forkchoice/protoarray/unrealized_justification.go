@@ -4,9 +4,9 @@ import (
 	"context"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -79,6 +79,24 @@ func (f *ForkChoice) UpdateUnrealizedCheckpoints() {
 
 func (s *Store) pullTips(ctx context.Context, state state.BeaconState, node *Node, jc, fc *ethpb.Checkpoint) (*ethpb.Checkpoint, *ethpb.Checkpoint) {
 	var uj, uf *ethpb.Checkpoint
+
+	currentSlot := slots.CurrentSlot(s.genesisTime)
+	currentEpoch := slots.ToEpoch(currentSlot)
+	stateSlot := state.Slot()
+	stateEpoch := slots.ToEpoch(stateSlot)
+	if node.parent == NonExistentNode {
+		return jc, fc
+	}
+	parent := s.nodes[node.parent]
+	currJustified := parent.unrealizedJustifiedEpoch == currentEpoch
+	prevJustified := parent.unrealizedJustifiedEpoch+1 == currentEpoch
+	tooEarlyForCurr := slots.SinceEpochStarts(stateSlot)*3 < params.BeaconConfig().SlotsPerEpoch*2
+	if currJustified || (stateEpoch == currentEpoch && prevJustified && tooEarlyForCurr) {
+		node.unrealizedJustifiedEpoch = parent.unrealizedJustifiedEpoch
+		node.unrealizedFinalizedEpoch = parent.unrealizedFinalizedEpoch
+		return jc, fc
+	}
+
 	uj, uf, err := precompute.UnrealizedCheckpoints(ctx, state)
 	if err != nil {
 		log.WithError(err).Debug("could not compute unrealized checkpoints")
@@ -100,8 +118,7 @@ func (s *Store) pullTips(ctx context.Context, state state.BeaconState, node *Nod
 		}
 	}
 
-	currentSlot := slots.CurrentSlot(s.genesisTime)
-	if time.CurrentEpoch(state) < slots.ToEpoch(currentSlot) {
+	if stateEpoch < currentEpoch {
 		jc, fc = uj, uf
 		node.justifiedEpoch = uj.Epoch
 		node.finalizedEpoch = uf.Epoch
