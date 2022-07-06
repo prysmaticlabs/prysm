@@ -2,7 +2,6 @@ package enginev1
 
 import (
 	"encoding/json"
-	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -17,16 +16,19 @@ import (
 type PayloadIDBytes [8]byte
 
 // MarshalJSON --
-
-func (b PayloadIDBytes) MarshalText() ([]byte, error) {
-	return hexutil.Bytes(b[:]).MarshalText()
+func (b PayloadIDBytes) MarshalJSON() ([]byte, error) {
+	return json.Marshal(hexutil.Bytes(b[:]))
 }
 
-func (b *PayloadIDBytes) UnmarshalText(input []byte) error {
-	err := hexutil.UnmarshalFixedText("PayloadID", input, b[:])
-	if err != nil {
-		return fmt.Errorf("invalid payload id %q: %w", input, err)
+// UnmarshalJSON --
+func (b *PayloadIDBytes) UnmarshalJSON(enc []byte) error {
+	hexBytes := hexutil.Bytes(make([]byte, 0))
+	if err := json.Unmarshal(enc, &hexBytes); err != nil {
+		return err
 	}
+	res := [8]byte{}
+	copy(res[:], hexBytes)
+	*b = res
 	return nil
 }
 
