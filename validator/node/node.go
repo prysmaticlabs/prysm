@@ -547,7 +547,7 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 		ValidatorRegistration: fileConfig.DefaultConfig.ValidatorRegistration,
 	}
 	if vpSettings.DefaultConfig.ValidatorRegistration != nil {
-		reviewGasLimit(vpSettings.DefaultConfig.ValidatorRegistration.GasLimit)
+		vpSettings.DefaultConfig.ValidatorRegistration.GasLimit = reviewGasLimit(vpSettings.DefaultConfig.ValidatorRegistration.GasLimit)
 	}
 
 	if fileConfig.ProposerConfig != nil {
@@ -569,13 +569,14 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 			if err := warnNonChecksummedAddress(option.FeeRecipient); err != nil {
 				return nil, err
 			}
+			if option.ValidatorRegistration != nil {
+				option.ValidatorRegistration.GasLimit = reviewGasLimit(option.ValidatorRegistration.GasLimit)
+			}
 			vpSettings.ProposeConfig[bytesutil.ToBytes48(decodedKey)] = &validatorServiceConfig.ProposerOption{
 				FeeRecipient:          common.HexToAddress(option.FeeRecipient),
 				ValidatorRegistration: option.ValidatorRegistration,
 			}
-			if option.ValidatorRegistration != nil {
-				reviewGasLimit(option.ValidatorRegistration.GasLimit)
-			}
+
 		}
 	}
 
