@@ -65,7 +65,7 @@ func (f *ForkChoice) Head(ctx context.Context, justifiedStateBalances []uint64) 
 	// Using the write lock here because `updateCanonicalNodes` that gets called subsequently requires a write operation.
 	f.store.nodesLock.Lock()
 	defer f.store.nodesLock.Unlock()
-	deltas, newVotes, err := computeDeltas(ctx, f.store.nodesIndices, f.votes, f.balances, newBalances, f.store.slashedIndices)
+	deltas, newVotes, err := computeDeltas(ctx, len(f.store.nodes), f.store.nodesIndices, f.votes, f.balances, newBalances, f.store.slashedIndices)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "Could not compute deltas")
 	}
@@ -155,8 +155,8 @@ func (f *ForkChoice) InsertNode(ctx context.Context, state state.BeaconState, ro
 		return err
 	}
 
-	if features.Get().PullTips {
-		jc, fc = f.store.pullTips(ctx, state, node, jc, fc)
+	if features.Get().EnablePullTips {
+		jc, fc = f.store.pullTips(state, node, jc, fc)
 	}
 	return f.updateCheckpoints(ctx, jc, fc)
 }

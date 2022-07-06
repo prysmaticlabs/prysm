@@ -1148,6 +1148,55 @@ func TestHandleEpochBoundary_UpdateFirstSlot(t *testing.T) {
 	require.Equal(t, 3*params.BeaconConfig().SlotsPerEpoch, service.nextEpochBoundarySlot)
 }
 
+func TestOnBlock_CanFinalize_WithOnTick(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+	fcs := protoarray.New()
+	depositCache, err := depositcache.New()
+	require.NoError(t, err)
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithStateGen(stategen.New(beaconDB)),
+		WithForkChoiceStore(fcs),
+		WithDepositCache(depositCache),
+		WithStateNotifier(&mock.MockStateNotifier{}),
+		WithAttestationPool(attestations.NewPool()),
+	}
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+
+	gs, keys := util.DeterministicGenesisState(t, 32)
+	require.NoError(t, service.saveGenesisData(ctx, gs))
+
+	testState := gs.Copy()
+	for i := types.Slot(1); i <= 4*params.BeaconConfig().SlotsPerEpoch; i++ {
+		blk, err := util.GenerateFullBlock(testState, keys, util.DefaultBlockGenConfig(), i)
+		require.NoError(t, err)
+		r, err := blk.Block.HashTreeRoot()
+		require.NoError(t, err)
+		wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+		require.NoError(t, err)
+		require.NoError(t, fcs.NewSlot(ctx, i))
+		require.NoError(t, service.onBlock(ctx, wsb, r))
+		testState, err = service.cfg.StateGen.StateByRoot(ctx, r)
+		require.NoError(t, err)
+	}
+	cp := service.CurrentJustifiedCheckpt()
+	require.Equal(t, types.Epoch(3), cp.Epoch)
+	cp = service.FinalizedCheckpt()
+	require.Equal(t, types.Epoch(2), cp.Epoch)
+
+	// The update should persist in DB.
+	j, err := service.cfg.BeaconDB.JustifiedCheckpoint(ctx)
+	require.NoError(t, err)
+	cp = service.CurrentJustifiedCheckpt()
+	require.Equal(t, j.Epoch, cp.Epoch)
+	f, err := service.cfg.BeaconDB.FinalizedCheckpoint(ctx)
+	require.NoError(t, err)
+	cp = service.FinalizedCheckpt()
+	require.Equal(t, f.Epoch, cp.Epoch)
+}
+
 func TestOnBlock_CanFinalize(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)

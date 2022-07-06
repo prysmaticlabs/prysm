@@ -294,7 +294,7 @@ func (f *blocksFetcher) fetchBlocksFromPeer(
 			f.p2p.Peers().Scorers().BlockProviderScorer().Touch(peers[i])
 			return blocks, peers[i], err
 		} else {
-			log.WithError(err).Error("Could not request blocks by range")
+			log.WithError(err).Debug("Could not request blocks by range")
 		}
 	}
 	return nil, "", errNoPeersAvailable
