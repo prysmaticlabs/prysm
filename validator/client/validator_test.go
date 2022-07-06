@@ -1889,7 +1889,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 				}
 				require.Equal(t, len(tt.mockExpectedRequests), len(registerValidatorRequests))
 			}
-			if err := v.PushProposerSettings(ctx, km); tt.err != "" {
+			if err := v.PushProposerSettings(ctx, km, 0); tt.err != "" {
 				assert.ErrorContains(t, tt.err, err)
 			}
 		})

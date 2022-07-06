@@ -6,6 +6,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/config/params"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"go.opencensus.io/trace"
@@ -17,6 +18,7 @@ func SubmitValidatorRegistration(
 	validatorClient ethpb.BeaconNodeValidatorClient,
 	signer signingFunc,
 	regs []*ethpb.ValidatorRegistrationV1,
+	slot types.Slot,
 ) error {
 	ctx, span := trace.StartSpan(ctx, "validator.SubmitBuilderValidatorRegistration")
 	defer span.End()
@@ -27,7 +29,7 @@ func SubmitValidatorRegistration(
 
 	signedRegs := make([]*ethpb.SignedValidatorRegistrationV1, len(regs))
 	for i, reg := range regs {
-		sig, err := signValidatorRegistration(ctx, signer, reg)
+		sig, err := signValidatorRegistration(ctx, signer, reg, slot)
 		if err != nil {
 			log.WithError(err).Error("failed to sign builder validator registration obj")
 			continue
@@ -48,7 +50,7 @@ func SubmitValidatorRegistration(
 }
 
 // Sings validator registration obj with the proposer domain and private key.
-func signValidatorRegistration(ctx context.Context, signer signingFunc, reg *ethpb.ValidatorRegistrationV1) ([]byte, error) {
+func signValidatorRegistration(ctx context.Context, signer signingFunc, reg *ethpb.ValidatorRegistrationV1, slot types.Slot) ([]byte, error) {
 
 	// Per spec, we want the fork version and genesis validator to be nil.
 	// Which is genesis value and zero by default.
@@ -70,6 +72,7 @@ func signValidatorRegistration(ctx context.Context, signer signingFunc, reg *eth
 		SigningRoot:     r[:],
 		SignatureDomain: d,
 		Object:          &validatorpb.SignRequest_Registration{Registration: reg},
+		SigningSlot:     slot,
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, signExitErr)

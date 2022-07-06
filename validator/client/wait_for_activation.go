@@ -115,7 +115,7 @@ func (v *validator) handleWithRemoteKeyManager(ctx context.Context, accountsChan
 		case <-accountsChangedChan:
 			// Accounts (keys) changed, restart the process.
 			return v.waitForActivation(ctx, accountsChangedChan)
-		case <-v.NextSlot():
+		case slot := <-v.NextSlot():
 			if ctx.Err() == context.Canceled {
 				return errors.Wrap(ctx.Err(), "context canceled, not waiting for activation anymore")
 			}
@@ -146,7 +146,7 @@ func (v *validator) handleWithRemoteKeyManager(ctx context.Context, accountsChan
 			if valActivated {
 				logActiveValidatorStatus(statuses)
 				// Set properties on the beacon node like the fee recipient for validators that are being used & active.
-				if err := v.PushProposerSettings(ctx, *remoteKm); err != nil {
+				if err := v.PushProposerSettings(ctx, *remoteKm, slot); err != nil {
 					return err
 				}
 			} else {
@@ -196,11 +196,11 @@ func (v *validator) handleWithoutRemoteKeyManager(ctx context.Context, accountsC
 			valActivated := v.checkAndLogValidatorStatus(statuses)
 			if valActivated {
 				logActiveValidatorStatus(statuses)
-
 				// Set properties on the beacon node like the fee recipient for validators that are being used & active.
-				if err := v.PushProposerSettings(ctx, v.keyManager); err != nil {
+				if err := v.PushProposerSettings(ctx, v.keyManager, slots.CurrentSlot(v.genesisTime)); err != nil {
 					return err
 				}
+
 			} else {
 				continue
 			}

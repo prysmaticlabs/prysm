@@ -103,10 +103,10 @@ type SyncCommitteeContributionAndProofSignRequest struct {
 
 // ValidatorRegistrationSignRequest a request object for web3signer sign api.
 type ValidatorRegistrationSignRequest struct {
-	FeeRecipient string `json:"fee_recipient" validate:"required"` /* 42 hexadecimal string */
-	GasLimit     string `json:"gas_limit" validate:"required"`     /* uint64 */
-	Timestamp    string `json:"timestamp" validate:"required"`     /* uint64 */
-	Pubkey       string `json:"pubkey"  validate:"required"`       /* bls hexadecimal string */
+	Type                  string                 `json:"type" validate:"required"`
+	SigningRoot           string                 `json:"signingRoot"`
+	ValidatorRegistration *ValidatorRegistration `json:"validator_registration" validate:"required"`
+	Epoch                 string                 `json:"epoch"` /*uint64*/
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -330,6 +330,14 @@ type SyncCommitteeContribution struct {
 	SubcommitteeIndex string `json:"subcommittee_index"` /* uint64 */
 	AggregationBits   string `json:"aggregation_bits"`   /* SSZ hexadecimal string */
 	Signature         string `json:"signature"`          /* 96 byte hexadecimal string */
+}
+
+// ValidatorRegistration a sub property of ValidatorRegistrationSignRequest
+type ValidatorRegistration struct {
+	FeeRecipient string `json:"fee_recipient" validate:"required"` /* 42 hexadecimal string */
+	GasLimit     string `json:"gas_limit" validate:"required"`     /* uint64 */
+	Timestamp    string `json:"timestamp" validate:"required"`     /* uint64 */
+	Pubkey       string `json:"pubkey"  validate:"required"`       /* bls hexadecimal string */
 }
 
 ////////////////////////////////////////////////////////////////////////////////

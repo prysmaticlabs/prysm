@@ -943,7 +943,7 @@ func (v *validator) logDuties(slot types.Slot, duties []*ethpb.DutiesResponse_Du
 }
 
 // PushProposerSettings calls the prepareBeaconProposer RPC to set the fee recipient and also the register validator API if using a custom builder.
-func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKeymanager) error {
+func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKeymanager, currentSlot types.Slot) error {
 	// only used after Bellatrix
 	if v.ProposerSettings == nil {
 		e := params.BeaconConfig().BellatrixForkEpoch
@@ -982,7 +982,7 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 	}
 	log.Infoln("Successfully prepared beacon proposer with fee recipient to validator index mapping.")
 
-	if err := SubmitValidatorRegistration(ctx, v.validatorClient, km.Sign, registerValidatorRequests); err != nil {
+	if err := SubmitValidatorRegistration(ctx, v.validatorClient, km.Sign, registerValidatorRequests, currentSlot); err != nil {
 		return err
 	}
 	log.Infoln("Successfully submitted builder validator registration settings for custom builders.")

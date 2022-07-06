@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 // GetBlockSignRequest maps the request for signing type BLOCK.
@@ -346,9 +347,14 @@ func GetValidatorRegistrationSignRequest(request *validatorpb.SignRequest) (*Val
 	}
 	registration := validatorRegistrationRequest.Registration
 	return &ValidatorRegistrationSignRequest{
-		FeeRecipient: hexutil.Encode(registration.FeeRecipient),
-		GasLimit:     fmt.Sprint(registration.GasLimit),
-		Timestamp:    fmt.Sprint(registration.Timestamp),
-		Pubkey:       hexutil.Encode(registration.Pubkey),
+		Type:        "VALIDATOR_REGISTRATION",
+		SigningRoot: hexutil.Encode(request.SigningRoot),
+		ValidatorRegistration: &ValidatorRegistration{
+			FeeRecipient: hexutil.Encode(registration.FeeRecipient),
+			GasLimit:     fmt.Sprint(registration.GasLimit),
+			Timestamp:    fmt.Sprint(registration.Timestamp),
+			Pubkey:       hexutil.Encode(registration.Pubkey),
+		},
+		Epoch: fmt.Sprint(slots.ToEpoch(request.SigningSlot)),
 	}, nil
 }
