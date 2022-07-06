@@ -14,6 +14,8 @@ import (
 	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	"github.com/sirupsen/logrus"
@@ -44,6 +46,15 @@ const (
 type ForkchoiceUpdatedResponse struct {
 	Status    *pb.PayloadStatus  `json:"payloadStatus"`
 	PayloadId *pb.PayloadIDBytes `json:"payloadId"`
+}
+
+// ExecutionPayloadReconstructor defines a service that can reconstruct a full beacon
+// block with an execution payload from a signed beacon block and a connection
+// to an execution client's engine API.
+type ExecutionPayloadReconstructor interface {
+	ReconstructFullBellatrixBlock(
+		ctx context.Context, blindedBlock interfaces.SignedBeaconBlock,
+	) (interfaces.SignedBeaconBlock, error)
 }
 
 // EngineCaller defines a client that can interact with an Ethereum
@@ -284,10 +295,68 @@ func (s *Service) LatestExecutionBlock(ctx context.Context) (*pb.ExecutionBlock,
 func (s *Service) ExecutionBlockByHash(ctx context.Context, hash common.Hash) (*pb.ExecutionBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.ExecutionBlockByHash")
 	defer span.End()
-
 	result := &pb.ExecutionBlock{}
 	err := s.rpcClient.CallContext(ctx, result, ExecutionBlockByHashMethod, hash, false /* no full transaction objects */)
 	return result, handleRPCError(err)
+}
+
+// ReconstructFullBellatrixBlock takes in a blinded beacon block and reconstructs
+// a beacon block with a full execution payload via the engine API.
+func (s *Service) ReconstructFullBellatrixBlock(
+	ctx context.Context, blindedBlock interfaces.SignedBeaconBlock,
+) (interfaces.SignedBeaconBlock, error) {
+	if err := wrapper.BeaconBlockIsNil(blindedBlock); err != nil {
+		return nil, errors.Wrap(err, "cannot reconstruct bellatrix block from nil data")
+	}
+	if !blindedBlock.Block().IsBlinded() {
+		return nil, errors.New("can only reconstruct block from blinded block format")
+	}
+	start := time.Now()
+	defer func() {
+		executionPayloadReconstructionLatency.Observe(float64(time.Since(start).Milliseconds()))
+		reconstructedExecutionPayloadCount.Add(1)
+	}()
+	header, err := blindedBlock.Block().Body().ExecutionPayloadHeader()
+	if err != nil {
+		return nil, err
+	}
+	executionBlockHash := common.BytesToHash(header.BlockHash)
+	executionBlock, err := s.ExecutionBlockByHash(ctx, executionBlockHash)
+	if err != nil {
+		return nil, fmt.Errorf("could not fetch execution block with txs by hash %#x: %v", executionBlockHash, err)
+	}
+	payload, err := fullPayloadFromExecutionBlock(header, executionBlock)
+	if err != nil {
+		return nil, err
+	}
+	return wrapper.BuildSignedBeaconBlockFromExecutionPayload(blindedBlock, payload)
+}
+
+func fullPayloadFromExecutionBlock(header *pb.ExecutionPayloadHeader, block *pb.ExecutionBlock) (*pb.ExecutionPayload, error) {
+	txs := make([][]byte, len(block.Transactions))
+	for i, tx := range block.Transactions {
+		txBin, err := tx.MarshalBinary()
+		if err != nil {
+			return nil, err
+		}
+		txs[i] = txBin
+	}
+	return &pb.ExecutionPayload{
+		ParentHash:    header.ParentHash,
+		FeeRecipient:  header.FeeRecipient,
+		StateRoot:     header.StateRoot,
+		ReceiptsRoot:  header.ReceiptsRoot,
+		LogsBloom:     header.LogsBloom,
+		PrevRandao:    header.PrevRandao,
+		BlockNumber:   header.BlockNumber,
+		GasLimit:      header.GasLimit,
+		GasUsed:       header.GasUsed,
+		Timestamp:     header.Timestamp,
+		ExtraData:     header.ExtraData,
+		BaseFeePerGas: header.BaseFeePerGas,
+		BlockHash:     block.Hash[:],
+		Transactions:  txs,
+	}, nil
 }
 
 // Handles errors received from the RPC server according to the specification.

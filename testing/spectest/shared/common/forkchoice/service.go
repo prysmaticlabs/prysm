@@ -80,7 +80,11 @@ func (m *engineMock) NewPayload(context.Context, *pb.ExecutionPayload) ([]byte, 
 	return nil, nil
 }
 
-func (m *engineMock) LatestExecutionBlock() (*pb.ExecutionBlock, error) {
+func (s *engineMock) ExecutionBlockByHashWithTxs(_ context.Context, _ common.Hash) (*pb.ExecutionBlockWithTxs, error) {
+	return nil, nil
+}
+
+func (m *engineMock) LatestExecutionBlock(context.Context) (*pb.ExecutionBlock, error) {
 	return nil, nil
 }
 
