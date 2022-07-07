@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -673,16 +674,40 @@ func Test_NotifyNewPayload(t *testing.T) {
 			newPayloadErr: ErrUndefinedExecutionEngineError,
 			errString:     ErrUndefinedExecutionEngineError.Error(),
 		},
+		{
+			name:      "invalid block hash error from ee",
+			postState: bellatrixState,
+			blk: func() interfaces.SignedBeaconBlock {
+				blk := &ethpb.SignedBeaconBlockBellatrix{
+					Block: &ethpb.BeaconBlockBellatrix{
+						Body: &ethpb.BeaconBlockBodyBellatrix{
+							ExecutionPayload: &v1.ExecutionPayload{
+								ParentHash: bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength),
+							},
+						},
+					},
+				}
+				b, err := wrapper.WrappedSignedBeaconBlock(blk)
+				require.NoError(t, err)
+				return b
+			}(),
+			newPayloadErr: ErrInvalidBlockHashPayloadStatus,
+			errString:     ErrInvalidBlockHashPayloadStatus.Error(),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			e := &mockPOW.EngineClient{ErrNewPayload: tt.newPayloadErr, BlockByHashMap: map[[32]byte]*v1.ExecutionBlock{}}
 			e.BlockByHashMap[[32]byte{'a'}] = &v1.ExecutionBlock{
-				ParentHash:      bytesutil.PadTo([]byte{'b'}, fieldparams.RootLength),
+				Header: gethtypes.Header{
+					ParentHash: common.BytesToHash([]byte("b")),
+				},
 				TotalDifficulty: "0x2",
 			}
 			e.BlockByHashMap[[32]byte{'b'}] = &v1.ExecutionBlock{
-				ParentHash:      bytesutil.PadTo([]byte{'3'}, fieldparams.RootLength),
+				Header: gethtypes.Header{
+					ParentHash: common.BytesToHash([]byte("3")),
+				},
 				TotalDifficulty: "0x1",
 			}
 			service.cfg.ExecutionEngineCaller = e
@@ -735,11 +760,15 @@ func Test_NotifyNewPayload_SetOptimisticToValid(t *testing.T) {
 	require.NoError(t, err)
 	e := &mockPOW.EngineClient{BlockByHashMap: map[[32]byte]*v1.ExecutionBlock{}}
 	e.BlockByHashMap[[32]byte{'a'}] = &v1.ExecutionBlock{
-		ParentHash:      bytesutil.PadTo([]byte{'b'}, fieldparams.RootLength),
+		Header: gethtypes.Header{
+			ParentHash: common.BytesToHash([]byte("b")),
+		},
 		TotalDifficulty: "0x2",
 	}
 	e.BlockByHashMap[[32]byte{'b'}] = &v1.ExecutionBlock{
-		ParentHash:      bytesutil.PadTo([]byte{'3'}, fieldparams.RootLength),
+		Header: gethtypes.Header{
+			ParentHash: common.BytesToHash([]byte("3")),
+		},
 		TotalDifficulty: "0x1",
 	}
 	service.cfg.ExecutionEngineCaller = e

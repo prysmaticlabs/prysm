@@ -252,7 +252,7 @@ func TestStore_ForkNextEpoch(t *testing.T) {
 
 func TestStore_PullTips_Heuristics(t *testing.T) {
 	resetCfg := features.InitWithReset(&features.Flags{
-		PullTips: true,
+		EnablePullTips: true,
 	})
 	defer resetCfg()
 	ctx := context.Background()

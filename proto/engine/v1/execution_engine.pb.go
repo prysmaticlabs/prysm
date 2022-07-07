@@ -80,213 +80,6 @@ func (PayloadStatus_Status) EnumDescriptor() ([]byte, []int) {
 	return file_proto_engine_v1_execution_engine_proto_rawDescGZIP(), []int{5, 0}
 }
 
-type ExecutionBlock struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Number           []byte   `protobuf:"bytes,1,opt,name=number,proto3" json:"number,omitempty"`
-	Hash             []byte   `protobuf:"bytes,2,opt,name=hash,proto3" json:"hash,omitempty"`
-	ParentHash       []byte   `protobuf:"bytes,3,opt,name=parent_hash,json=parentHash,proto3" json:"parent_hash,omitempty"`
-	Sha3Uncles       []byte   `protobuf:"bytes,4,opt,name=sha3_uncles,json=sha3Uncles,proto3" json:"sha3_uncles,omitempty"`
-	Miner            []byte   `protobuf:"bytes,5,opt,name=miner,proto3" json:"miner,omitempty"`
-	StateRoot        []byte   `protobuf:"bytes,6,opt,name=state_root,json=stateRoot,proto3" json:"state_root,omitempty"`
-	TransactionsRoot []byte   `protobuf:"bytes,7,opt,name=transactions_root,json=transactionsRoot,proto3" json:"transactions_root,omitempty"`
-	ReceiptsRoot     []byte   `protobuf:"bytes,8,opt,name=receipts_root,json=receiptsRoot,proto3" json:"receipts_root,omitempty"`
-	LogsBloom        []byte   `protobuf:"bytes,9,opt,name=logs_bloom,json=logsBloom,proto3" json:"logs_bloom,omitempty"`
-	Difficulty       []byte   `protobuf:"bytes,10,opt,name=difficulty,proto3" json:"difficulty,omitempty"`
-	TotalDifficulty  string   `protobuf:"bytes,11,opt,name=total_difficulty,json=totalDifficulty,proto3" json:"total_difficulty,omitempty"`
-	GasLimit         uint64   `protobuf:"varint,12,opt,name=gas_limit,json=gasLimit,proto3" json:"gas_limit,omitempty"`
-	GasUsed          uint64   `protobuf:"varint,13,opt,name=gas_used,json=gasUsed,proto3" json:"gas_used,omitempty"`
-	BaseFeePerGas    []byte   `protobuf:"bytes,14,opt,name=base_fee_per_gas,json=baseFeePerGas,proto3" json:"base_fee_per_gas,omitempty"`
-	Size             []byte   `protobuf:"bytes,15,opt,name=size,proto3" json:"size,omitempty"`
-	Timestamp        uint64   `protobuf:"varint,16,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
-	ExtraData        []byte   `protobuf:"bytes,17,opt,name=extra_data,json=extraData,proto3" json:"extra_data,omitempty"`
-	MixHash          []byte   `protobuf:"bytes,18,opt,name=mix_hash,json=mixHash,proto3" json:"mix_hash,omitempty"`
-	Nonce            []byte   `protobuf:"bytes,19,opt,name=nonce,proto3" json:"nonce,omitempty"`
-	Transactions     [][]byte `protobuf:"bytes,20,rep,name=transactions,proto3" json:"transactions,omitempty"`
-	Uncles           [][]byte `protobuf:"bytes,21,rep,name=uncles,proto3" json:"uncles,omitempty"`
-}
-
-func (x *ExecutionBlock) Reset() {
-	*x = ExecutionBlock{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_engine_v1_execution_engine_proto_msgTypes[0]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *ExecutionBlock) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ExecutionBlock) ProtoMessage() {}
-
-func (x *ExecutionBlock) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_engine_v1_execution_engine_proto_msgTypes[0]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ExecutionBlock.ProtoReflect.Descriptor instead.
-func (*ExecutionBlock) Descriptor() ([]byte, []int) {
-	return file_proto_engine_v1_execution_engine_proto_rawDescGZIP(), []int{0}
-}
-
-func (x *ExecutionBlock) GetNumber() []byte {
-	if x != nil {
-		return x.Number
-	}
-	return nil
-}
-
-func (x *ExecutionBlock) GetHash() []byte {
-	if x != nil {
-		return x.Hash
-	}
-	return nil
-}
-
-func (x *ExecutionBlock) GetParentHash() []byte {
-	if x != nil {
-		return x.ParentHash
-	}
-	return nil
-}
-
-func (x *ExecutionBlock) GetSha3Uncles() []byte {
-	if x != nil {
-		return x.Sha3Uncles
-	}
-	return nil
-}
-
-func (x *ExecutionBlock) GetMiner() []byte {
-	if x != nil {
-		return x.Miner
-	}
-	return nil
-}
-
-func (x *ExecutionBlock) GetStateRoot() []byte {
-	if x != nil {
-		return x.StateRoot
-	}
-	return nil
-}
-
-func (x *ExecutionBlock) GetTransactionsRoot() []byte {
-	if x != nil {
-		return x.TransactionsRoot
-	}
-	return nil
-}
-
-func (x *ExecutionBlock) GetReceiptsRoot() []byte {
-	if x != nil {
-		return x.ReceiptsRoot
-	}
-	return nil
-}
-
-func (x *ExecutionBlock) GetLogsBloom() []byte {
-	if x != nil {
-		return x.LogsBloom
-	}
-	return nil
-}
-
-func (x *ExecutionBlock) GetDifficulty() []byte {
-	if x != nil {
-		return x.Difficulty
-	}
-	return nil
-}
-
-func (x *ExecutionBlock) GetTotalDifficulty() string {
-	if x != nil {
-		return x.TotalDifficulty
-	}
-	return ""
-}
-
-func (x *ExecutionBlock) GetGasLimit() uint64 {
-	if x != nil {
-		return x.GasLimit
-	}
-	return 0
-}
-
-func (x *ExecutionBlock) GetGasUsed() uint64 {
-	if x != nil {
-		return x.GasUsed
-	}
-	return 0
-}
-
-func (x *ExecutionBlock) GetBaseFeePerGas() []byte {
-	if x != nil {
-		return x.BaseFeePerGas
-	}
-	return nil
-}
-
-func (x *ExecutionBlock) GetSize() []byte {
-	if x != nil {
-		return x.Size
-	}
-	return nil
-}
-
-func (x *ExecutionBlock) GetTimestamp() uint64 {
-	if x != nil {
-		return x.Timestamp
-	}
-	return 0
-}
-
-func (x *ExecutionBlock) GetExtraData() []byte {
-	if x != nil {
-		return x.ExtraData
-	}
-	return nil
-}
-
-func (x *ExecutionBlock) GetMixHash() []byte {
-	if x != nil {
-		return x.MixHash
-	}
-	return nil
-}
-
-func (x *ExecutionBlock) GetNonce() []byte {
-	if x != nil {
-		return x.Nonce
-	}
-	return nil
-}
-
-func (x *ExecutionBlock) GetTransactions() [][]byte {
-	if x != nil {
-		return x.Transactions
-	}
-	return nil
-}
-
-func (x *ExecutionBlock) GetUncles() [][]byte {
-	if x != nil {
-		return x.Uncles
-	}
-	return nil
-}
-
 type ExecutionPayload struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -1066,18 +859,6 @@ func file_proto_engine_v1_execution_engine_proto_init() {
 	}
 	if !protoimpl.UnsafeEnabled {
 		file_proto_engine_v1_execution_engine_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ExecutionBlock); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_proto_engine_v1_execution_engine_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ExecutionPayload); i {
 			case 0:
 				return &v.state
@@ -1089,7 +870,7 @@ func file_proto_engine_v1_execution_engine_proto_init() {
 				return nil
 			}
 		}
-		file_proto_engine_v1_execution_engine_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
+		file_proto_engine_v1_execution_engine_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ExecutionPayloadHeader); i {
 			case 0:
 				return &v.state
@@ -1101,7 +882,7 @@ func file_proto_engine_v1_execution_engine_proto_init() {
 				return nil
 			}
 		}
-		file_proto_engine_v1_execution_engine_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
+		file_proto_engine_v1_execution_engine_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*TransitionConfiguration); i {
 			case 0:
 				return &v.state
@@ -1113,7 +894,7 @@ func file_proto_engine_v1_execution_engine_proto_init() {
 				return nil
 			}
 		}
-		file_proto_engine_v1_execution_engine_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
+		file_proto_engine_v1_execution_engine_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*PayloadAttributes); i {
 			case 0:
 				return &v.state
@@ -1125,7 +906,7 @@ func file_proto_engine_v1_execution_engine_proto_init() {
 				return nil
 			}
 		}
-		file_proto_engine_v1_execution_engine_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
+		file_proto_engine_v1_execution_engine_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*PayloadStatus); i {
 			case 0:
 				return &v.state
@@ -1137,7 +918,7 @@ func file_proto_engine_v1_execution_engine_proto_init() {
 				return nil
 			}
 		}
-		file_proto_engine_v1_execution_engine_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
+		file_proto_engine_v1_execution_engine_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ForkchoiceState); i {
 			case 0:
 				return &v.state
