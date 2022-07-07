@@ -980,12 +980,14 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 	}); err != nil {
 		return err
 	}
-	log.Infoln("Successfully prepared beacon proposer with fee recipient to validator index mapping.")
+	log.Infoln("Prepared beacon proposer with fee recipient to validator index mapping")
 
-	if err := SubmitValidatorRegistration(ctx, v.validatorClient, km.Sign, registerValidatorRequests); err != nil {
-		return err
+	if len(registerValidatorRequests) > 0 {
+		if err := SubmitValidatorRegistration(ctx, v.validatorClient, km.Sign, registerValidatorRequests); err != nil {
+			return err
+		}
+		log.Infoln("Submitted builder validator registration settings for custom builders")
 	}
-	log.Infoln("Successfully submitted builder validator registration settings for custom builders.")
 	return nil
 }
 
