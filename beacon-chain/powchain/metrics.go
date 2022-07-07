@@ -31,13 +31,6 @@ var (
 			Buckets: []float64{25, 50, 100, 200, 500, 1000, 2000, 4000},
 		},
 	)
-	executionBlockByHashWithTxsLatency = promauto.NewHistogram(
-		prometheus.HistogramOpts{
-			Name:    "execution_block_by_hash_with_txs_latency_milliseconds",
-			Help:    "Captures RPC latency for retrieving in milliseconds",
-			Buckets: []float64{1, 2, 5, 10, 20, 50, 100, 200, 500, 1000},
-		},
-	)
 	executionPayloadReconstructionLatency = promauto.NewHistogram(
 		prometheus.HistogramOpts{
 			Name:    "execution_payload_reconstruction_latency_milliseconds",
