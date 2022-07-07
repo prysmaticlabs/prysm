@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"runtime/debug"
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/enode"
@@ -81,6 +82,52 @@ func main() {
 	}
 
 	srv := &service{h: host}
+
+	host.SetStreamHandler("/eth2/beacon_chain/req/beacon_blocks_by_range/1", func(stream corenet.Stream) {
+		defer func() {
+			if r := recover(); r != nil {
+				log.WithField("error", r).Error("Panic occurred")
+				log.Errorf("%s", debug.Stack())
+			}
+		}()
+		// Resetting after closing is a no-op so defer a reset in case something goes wrong.
+		// It's up to the handler to Close the stream (send an EOF) if
+		// it successfully writes a response. We don't blindly call
+		// Close here because we may have only written a partial
+		// response.
+		defer func() {
+			_err := stream.Reset()
+			_ = _err
+		}()
+		//
+		//base, ok := p2p.RPCTopicMappings["/eth2/beacon_chain/req/beacon_blocks_by_range/1"]
+		//if !ok {
+		//	log.Errorf("Could not retrieve base message for topic %s", baseTopic)
+		//	return
+		//}
+		//t := reflect.TypeOf(base)
+		//// Copy Base
+		//base = reflect.New(t)
+		//
+		//if t.Kind() == reflect.Ptr {
+		//	msg, ok := reflect.New(t.Elem()).Interface().(ssz.Unmarshaler)
+		//	if !ok {
+		//		log.Errorf("message of %T does not support marshaller interface", msg)
+		//		return
+		//	}
+		//	if err := srv.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
+		//		// Debug logs for goodbye/status errors
+		//		if strings.Contains(topic, p2p.RPCGoodByeTopicV1) || strings.Contains(topic, p2p.RPCStatusTopicV1) {
+		//			log.WithError(err).Debug("Could not decode goodbye stream message")
+		//			tracing.AnnotateError(span, err)
+		//			return
+		//		}
+		//		log.WithError(err).Debug("Could not decode stream message")
+		//		tracing.AnnotateError(span, err)
+		//		return
+		//	}
+		fmt.Println("HANDLING")
+	})
 
 	fmt.Println(host.Addrs())
 	peers, err := peersFromStringAddrs([]string{peerMultiaddr})
