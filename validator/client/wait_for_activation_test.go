@@ -369,11 +369,6 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 			time.Sleep(time.Second * 1)
 			err = km.RecoverAccountsFromMnemonic(ctx, constant.TestMnemonic, "", 2)
 			require.NoError(t, err)
-			keys, err := km.FetchValidatingPublicKeys(ctx)
-			require.NoError(t, err)
-			for _, key := range keys {
-				v.pubkeyToValidatorIndex[key] = 1
-			}
 			channel <- [][fieldparams.BLSPubkeyLength]byte{}
 		}()
 
