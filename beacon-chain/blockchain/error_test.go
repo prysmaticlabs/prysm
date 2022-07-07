@@ -8,7 +8,7 @@ import (
 )
 
 func TestIsInvalidBlock(t *testing.T) {
-	require.Equal(t, false, IsInvalidBlock(ErrInvalidPayload))
+	require.Equal(t, true, IsInvalidBlock(ErrInvalidPayload)) // Already wrapped.
 	err := invalidBlock{ErrInvalidPayload}
 	require.Equal(t, true, IsInvalidBlock(err))
 

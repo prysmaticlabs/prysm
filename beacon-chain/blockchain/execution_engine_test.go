@@ -76,10 +76,6 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 		errString        string
 	}{
 		{
-			name:      "nil block",
-			errString: "nil head block",
-		},
-		{
 			name: "phase0 block",
 			blk: func() interfaces.BeaconBlock {
 				b, err := wrapper.WrappedBeaconBlock(&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{}})
