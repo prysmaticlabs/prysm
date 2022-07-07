@@ -77,7 +77,7 @@ func (e *ExecutionBlock) UnmarshalJSON(enc []byte) error {
 	for i, tx := range txsList {
 		// If the transaction is just a hex string, do not attempt to
 		// unmarshal into a full transaction object.
-		if txItem, ok := tx.(string); ok && strings.Contains(txItem, "0x") {
+		if txItem, ok := tx.(string); ok && strings.HasPrefix(txItem, "0x") {
 			return nil
 		}
 		t := &gethtypes.Transaction{}
