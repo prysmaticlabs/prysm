@@ -203,9 +203,10 @@ func (s *Service) notifyEngineIfChangedHead(ctx context.Context, newHeadRoot [32
 	}
 	_, err = s.notifyForkchoiceUpdate(s.ctx, arg)
 	if err != nil {
-		log.WithError(err).Error("could not notify forkchoice update")
 		if IsInvalidBlock(err) {
 			return err
+		} else {
+			log.WithError(err).Error("could not notify forkchoice update")
 		}
 	}
 	if err := s.saveHead(ctx, newHeadRoot, newHeadBlock, headState); err != nil {
