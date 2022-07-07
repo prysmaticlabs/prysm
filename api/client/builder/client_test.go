@@ -122,6 +122,8 @@ func TestClient_RegisterValidator_Over100Requests(t *testing.T) {
 		}
 	}
 
+	var total int
+
 	ctx := context.Background()
 	hc := &http.Client{
 		Transport: roundtrip(func(r *http.Request) (*http.Response, error) {
@@ -134,6 +136,7 @@ func TestClient_RegisterValidator_Over100Requests(t *testing.T) {
 			if len(recvd) > registerValidatorBatchLimit {
 				t.Errorf("Number of requests (%d) exceeds limit (%d)", len(recvd), registerValidatorBatchLimit)
 			}
+			total += len(recvd)
 
 			require.Equal(t, http.MethodPost, r.Method)
 			return &http.Response{
@@ -149,6 +152,7 @@ func TestClient_RegisterValidator_Over100Requests(t *testing.T) {
 	}
 
 	require.NoError(t, c.RegisterValidator(ctx, reqs))
+	require.Equal(t, len(reqs), total)
 }
 
 func TestClient_GetHeader(t *testing.T) {
