@@ -54,7 +54,7 @@ import (
 )
 
 var (
-	peerMultiaddr     = "/ip4/10.0.0.74/tcp/13000/p2p/16Uiu2HAmF6NM6UmwgxTk1SbG4kskNBon5Vch2ZunW2Sfm2TqHDNm"
+	peerMultiaddr     = "/ip4/10.0.0.74/tcp/13000/p2p/16Uiu2HAmB8PyNBA3bdScbCPiHbjep6w64T2DuTffcdRxPLqpY43r"
 	beaconAPIEndpoint = "localhost:4000"
 )
 
@@ -142,18 +142,20 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	currEpoch := slots.ToEpoch(slots.SinceGenesis(genesisResp.GenesisTime.AsTime()))
+	currFork, err := forks.Fork(currEpoch)
+	if err != nil {
+		panic(err)
+	}
 	chain := &mock.ChainService{
 		Genesis:        genesisResp.GenesisTime.AsTime(),
+		Fork:           currFork,
 		ValidatorsRoot: bytesutil.ToBytes32(genesisResp.GenesisValidatorsRoot),
 	}
 
 	for _, pr := range host.Peerstore().Peers() {
-		start, err := slots.EpochStart(131074 - 1)
-		if err != nil {
-			panic(err)
-		}
 		req := &pb.BeaconBlocksByRangeRequest{
-			StartSlot: start,
+			StartSlot: 0,
 			Count:     10,
 			Step:      1,
 		}
@@ -161,7 +163,7 @@ func main() {
 		if err != nil {
 			fmt.Println("GOT ERR IN SEND REQ", err)
 		}
-		_ = blocks
+		fmt.Println(blocks)
 	}
 	time.Sleep(time.Minute * 10)
 	if err := host.Close(); err != nil {
@@ -381,6 +383,19 @@ func (s *service) Send(ctx context.Context, message interface{}, baseTopic strin
 	if err != nil {
 		tracing.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "could not open new stream")
+	}
+	// do not encode anything if we are sending a metadata request
+	if baseTopic != p2p.RPCMetaDataTopicV1 && baseTopic != p2p.RPCMetaDataTopicV2 {
+		castedMsg, ok := message.(ssz.Marshaler)
+		if !ok {
+			return nil, errors.Errorf("%T does not support the ssz marshaller interface", message)
+		}
+		if _, err := s.Encoding().EncodeWithMaxLength(stream, castedMsg); err != nil {
+			tracing.AnnotateError(span, err)
+			_err := stream.Reset()
+			_ = _err
+			return nil, err
+		}
 	}
 	// Close stream for writing.
 	if err := stream.CloseWrite(); err != nil {

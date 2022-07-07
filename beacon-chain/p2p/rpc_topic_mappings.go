@@ -5,6 +5,7 @@ import (
 
 	"github.com/pkg/errors"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
@@ -227,10 +228,10 @@ func TopicFromMessage(msg string, epoch types.Epoch) (string, error) {
 	if !messageMapping[msg] {
 		return "", errors.Errorf("%s: %s", invalidRPCMessageType, msg)
 	}
-	version := SchemaVersionV2
-	//isAltair := epoch >= params.BeaconConfig().AltairForkEpoch
-	//if isAltair && altairMapping[msg] {
-	//	version = SchemaVersionV2
-	//}
+	version := SchemaVersionV1
+	isAltair := epoch >= params.BeaconConfig().AltairForkEpoch
+	if isAltair && altairMapping[msg] {
+		version = SchemaVersionV2
+	}
 	return protocolPrefix + msg + version, nil
 }
