@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"reflect"
 	"runtime/debug"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/enode"
@@ -18,10 +20,12 @@ import (
 	corenet "github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/protocol"
+	"github.com/libp2p/go-libp2p/p2p/protocol/identify"
 	"github.com/libp2p/go-libp2p/p2p/security/noise"
 	"github.com/libp2p/go-libp2p/p2p/transport/tcp"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
+	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
@@ -81,52 +85,22 @@ func main() {
 		panic(err)
 	}
 
+	host.RemoveStreamHandler(identify.IDDelta)
 	srv := &service{h: host}
 
-	host.SetStreamHandler("/eth2/beacon_chain/req/beacon_blocks_by_range/1", func(stream corenet.Stream) {
-		defer func() {
-			if r := recover(); r != nil {
-				log.WithField("error", r).Error("Panic occurred")
-				log.Errorf("%s", debug.Stack())
-			}
-		}()
-		// Resetting after closing is a no-op so defer a reset in case something goes wrong.
-		// It's up to the handler to Close the stream (send an EOF) if
-		// it successfully writes a response. We don't blindly call
-		// Close here because we may have only written a partial
-		// response.
-		defer func() {
-			_err := stream.Reset()
-			_ = _err
-		}()
-		//
-		//base, ok := p2p.RPCTopicMappings["/eth2/beacon_chain/req/beacon_blocks_by_range/1"]
-		//if !ok {
-		//	log.Errorf("Could not retrieve base message for topic %s", baseTopic)
-		//	return
-		//}
-		//t := reflect.TypeOf(base)
-		//// Copy Base
-		//base = reflect.New(t)
-		//
-		//if t.Kind() == reflect.Ptr {
-		//	msg, ok := reflect.New(t.Elem()).Interface().(ssz.Unmarshaler)
-		//	if !ok {
-		//		log.Errorf("message of %T does not support marshaller interface", msg)
-		//		return
-		//	}
-		//	if err := srv.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
-		//		// Debug logs for goodbye/status errors
-		//		if strings.Contains(topic, p2p.RPCGoodByeTopicV1) || strings.Contains(topic, p2p.RPCStatusTopicV1) {
-		//			log.WithError(err).Debug("Could not decode goodbye stream message")
-		//			tracing.AnnotateError(span, err)
-		//			return
-		//		}
-		//		log.WithError(err).Debug("Could not decode stream message")
-		//		tracing.AnnotateError(span, err)
-		//		return
-		//	}
-		fmt.Println("HANDLING")
+	srv.registerRPC(p2p.RPCPingTopicV1, func(ctx context.Context, i interface{}, stream libp2pcore.Stream) error {
+		fmt.Println("Handling ping")
+		return nil
+	})
+
+	srv.registerRPC(p2p.RPCStatusTopicV1, func(ctx context.Context, i interface{}, stream libp2pcore.Stream) error {
+		fmt.Println("Handling status")
+		return nil
+	})
+
+	srv.registerRPC(p2p.RPCBlocksByRangeTopicV1, func(ctx context.Context, i interface{}, stream libp2pcore.Stream) error {
+		fmt.Println("Handling blocks by range")
+		return nil
 	})
 
 	fmt.Println(host.Addrs())
@@ -162,6 +136,7 @@ func main() {
 		}
 		fmt.Println("Got this many blocks", len(blocks))
 	}
+	time.Sleep(time.Minute * 10)
 	if err := host.Close(); err != nil {
 		panic(err)
 	}
@@ -531,4 +506,91 @@ func readStatusCodeNoDeadline(stream corenet.Stream, encoding encoder.NetworkEnc
 	}
 
 	return b[0], string(*msg), nil
+}
+
+type rpcHandler func(context.Context, interface{}, libp2pcore.Stream) error
+
+// registerRPC for a given topic with an expected protobuf message type.
+func (s *service) registerRPC(baseTopic string, handle rpcHandler) {
+	topic := baseTopic + s.Encoding().ProtocolSuffix()
+	s.h.SetStreamHandler(protocol.ID(topic), func(stream corenet.Stream) {
+		defer func() {
+			if r := recover(); r != nil {
+				log.WithField("error", r).Error("Panic occurred")
+				log.Errorf("%s", debug.Stack())
+			}
+		}()
+		// Resetting after closing is a no-op so defer a reset in case something goes wrong.
+		// It's up to the handler to Close the stream (send an EOF) if
+		// it successfully writes a response. We don't blindly call
+		// Close here because we may have only written a partial
+		// response.
+		defer func() {
+			_err := stream.Reset()
+			_ = _err
+		}()
+
+		log.WithField("peer", stream.Conn().RemotePeer().Pretty()).WithField("topic", string(stream.Protocol()))
+
+		base, ok := p2p.RPCTopicMappings[baseTopic]
+		if !ok {
+			log.Errorf("Could not retrieve base message for topic %s", baseTopic)
+			return
+		}
+		t := reflect.TypeOf(base)
+		// Copy Base
+		base = reflect.New(t)
+
+		// since metadata requests do not have any data in the payload, we
+		// do not decode anything.
+		if baseTopic == p2p.RPCMetaDataTopicV1 || baseTopic == p2p.RPCMetaDataTopicV2 {
+			if err := handle(context.Background(), base, stream); err != nil {
+				if err != p2ptypes.ErrWrongForkDigestVersion {
+					log.WithError(err).Debug("Could not handle p2p RPC")
+				}
+			}
+			return
+		}
+
+		// Given we have an input argument that can be pointer or the actual object, this gives us
+		// a way to check for its reflect.Kind and based on the result, we can decode
+		// accordingly.
+		if t.Kind() == reflect.Ptr {
+			msg, ok := reflect.New(t.Elem()).Interface().(ssz.Unmarshaler)
+			if !ok {
+				log.Errorf("message of %T does not support marshaller interface", msg)
+				return
+			}
+			if err := s.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
+				// Debug logs for goodbye/status errors
+				if strings.Contains(topic, p2p.RPCGoodByeTopicV1) || strings.Contains(topic, p2p.RPCStatusTopicV1) {
+					log.WithError(err).Debug("Could not decode goodbye stream message")
+					return
+				}
+				log.WithError(err).Debug("Could not decode stream message")
+				return
+			}
+			if err := handle(context.Background(), msg, stream); err != nil {
+				if err != p2ptypes.ErrWrongForkDigestVersion {
+					log.WithError(err).Debug("Could not handle p2p RPC")
+				}
+			}
+		} else {
+			nTyp := reflect.New(t)
+			msg, ok := nTyp.Interface().(ssz.Unmarshaler)
+			if !ok {
+				log.Errorf("message of %T does not support marshaller interface", msg)
+				return
+			}
+			if err := s.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
+				log.WithError(err).Debug("Could not decode stream message")
+				return
+			}
+			if err := handle(context.Background(), nTyp.Elem().Interface(), stream); err != nil {
+				if err != p2ptypes.ErrWrongForkDigestVersion {
+					log.WithError(err).Debug("Could not handle p2p RPC")
+				}
+			}
+		}
+	})
 }
