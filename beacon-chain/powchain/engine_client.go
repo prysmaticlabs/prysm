@@ -323,7 +323,7 @@ func (s *Service) ReconstructFullBellatrixBlock(
 		return nil, fmt.Errorf("could not fetch execution block with txs by hash %#x: %v", executionBlockHash, err)
 	}
 	if executionBlock == nil {
-		return nil, fmt.Errorf("received nil execution block for request by hash %#x", executionBlock)
+		return nil, fmt.Errorf("received nil execution block for request by hash %#x", executionBlockHash)
 	}
 	payload, err := fullPayloadFromExecutionBlock(header, executionBlock)
 	if err != nil {
