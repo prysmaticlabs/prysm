@@ -12,15 +12,15 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/pkg/errors"
 	mathprysm "github.com/prysmaticlabs/prysm/math"
 	"go.opencensus.io/trace"
 	"golang.org/x/sync/errgroup"
-	"github.com/pkg/errors"
 
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	v1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	log "github.com/sirupsen/logrus"
 )
 
