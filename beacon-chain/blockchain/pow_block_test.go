@@ -6,12 +6,12 @@ import (
 	"math/big"
 	"testing"
 
+	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/holiman/uint256"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	mocks "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -120,12 +120,19 @@ func Test_validateMergeBlock(t *testing.T) {
 
 	engine := &mocks.EngineClient{BlockByHashMap: map[[32]byte]*enginev1.ExecutionBlock{}}
 	service.cfg.ExecutionEngineCaller = engine
-	engine.BlockByHashMap[[32]byte{'a'}] = &enginev1.ExecutionBlock{
-		ParentHash:      bytesutil.PadTo([]byte{'b'}, fieldparams.RootLength),
+	a := [32]byte{'a'}
+	b := [32]byte{'b'}
+	mergeBlockParentHash := [32]byte{'3'}
+	engine.BlockByHashMap[a] = &enginev1.ExecutionBlock{
+		Header: gethtypes.Header{
+			ParentHash: b,
+		},
 		TotalDifficulty: "0x2",
 	}
-	engine.BlockByHashMap[[32]byte{'b'}] = &enginev1.ExecutionBlock{
-		ParentHash:      bytesutil.PadTo([]byte{'3'}, fieldparams.RootLength),
+	engine.BlockByHashMap[b] = &enginev1.ExecutionBlock{
+		Header: gethtypes.Header{
+			ParentHash: mergeBlockParentHash,
+		},
 		TotalDifficulty: "0x1",
 	}
 	blk := &ethpb.SignedBeaconBlockBellatrix{
@@ -133,18 +140,18 @@ func Test_validateMergeBlock(t *testing.T) {
 			Slot: 1,
 			Body: &ethpb.BeaconBlockBodyBellatrix{
 				ExecutionPayload: &enginev1.ExecutionPayload{
-					ParentHash: bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength),
+					ParentHash: a[:],
 				},
 			},
 		},
 	}
-	b, err := wrapper.WrappedSignedBeaconBlock(blk)
+	bk, err := wrapper.WrappedSignedBeaconBlock(blk)
 	require.NoError(t, err)
-	require.NoError(t, service.validateMergeBlock(ctx, b))
+	require.NoError(t, service.validateMergeBlock(ctx, bk))
 
 	cfg.TerminalTotalDifficulty = "1"
 	params.OverrideBeaconConfig(cfg)
-	err = service.validateMergeBlock(ctx, b)
+	err = service.validateMergeBlock(ctx, bk)
 	require.ErrorContains(t, "invalid TTD, configTTD: 1, currentTTD: 2, parentTTD: 1", err)
 	require.Equal(t, true, IsInvalidBlock(err))
 }
@@ -167,7 +174,9 @@ func Test_getBlkParentHashAndTD(t *testing.T) {
 	p := [32]byte{'b'}
 	td := "0x1"
 	engine.BlockByHashMap[h] = &enginev1.ExecutionBlock{
-		ParentHash:      p[:],
+		Header: gethtypes.Header{
+			ParentHash: p,
+		},
 		TotalDifficulty: td,
 	}
 	parentHash, totalDifficulty, err := service.getBlkParentHashAndTD(ctx, h[:])
@@ -183,14 +192,18 @@ func Test_getBlkParentHashAndTD(t *testing.T) {
 	require.ErrorContains(t, "pow block is nil", err)
 
 	engine.BlockByHashMap[h] = &enginev1.ExecutionBlock{
-		ParentHash:      p[:],
+		Header: gethtypes.Header{
+			ParentHash: p,
+		},
 		TotalDifficulty: "1",
 	}
 	_, _, err = service.getBlkParentHashAndTD(ctx, h[:])
 	require.ErrorContains(t, "could not decode merge block total difficulty: hex string without 0x prefix", err)
 
 	engine.BlockByHashMap[h] = &enginev1.ExecutionBlock{
-		ParentHash:      p[:],
+		Header: gethtypes.Header{
+			ParentHash: p,
+		},
 		TotalDifficulty: "0XFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
 	}
 	_, _, err = service.getBlkParentHashAndTD(ctx, h[:])

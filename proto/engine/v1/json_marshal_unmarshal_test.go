@@ -5,7 +5,8 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/common"
+	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -125,61 +126,58 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 	})
 	t.Run("execution block", func(t *testing.T) {
 		baseFeePerGas := big.NewInt(1770307273)
-		jsonPayload := &enginev1.ExecutionBlock{
-			Number:           []byte("100"),
-			Hash:             []byte("hash"),
-			ParentHash:       []byte("parent"),
-			Sha3Uncles:       []byte("sha3Uncles"),
-			Miner:            []byte("miner"),
-			StateRoot:        []byte("stateRoot"),
-			TransactionsRoot: []byte("txRoot"),
-			ReceiptsRoot:     []byte("receiptsRoot"),
-			LogsBloom:        []byte("logsBloom"),
-			Difficulty:       []byte("1"),
-			TotalDifficulty:  "2",
-			GasLimit:         3,
-			GasUsed:          4,
-			Timestamp:        5,
-			BaseFeePerGas:    baseFeePerGas.Bytes(),
-			Size:             []byte("7"),
-			ExtraData:        []byte("extraData"),
-			MixHash:          []byte("mixHash"),
-			Nonce:            []byte("nonce"),
-			Transactions:     [][]byte{[]byte("hi")},
-			Uncles:           [][]byte{[]byte("bye")},
+		want := &gethtypes.Header{
+			Number:      big.NewInt(1),
+			ParentHash:  common.BytesToHash([]byte("parent")),
+			UncleHash:   common.BytesToHash([]byte("uncle")),
+			Coinbase:    common.BytesToAddress([]byte("coinbase")),
+			Root:        common.BytesToHash([]byte("uncle")),
+			TxHash:      common.BytesToHash([]byte("txHash")),
+			ReceiptHash: common.BytesToHash([]byte("receiptHash")),
+			Bloom:       gethtypes.BytesToBloom([]byte("bloom")),
+			Difficulty:  big.NewInt(2),
+			GasLimit:    3,
+			GasUsed:     4,
+			Time:        5,
+			BaseFee:     baseFeePerGas,
+			Extra:       []byte("extraData"),
+			MixDigest:   common.BytesToHash([]byte("mix")),
+			Nonce:       gethtypes.EncodeNonce(6),
 		}
-		enc, err := json.Marshal(jsonPayload)
+		enc, err := json.Marshal(want)
 		require.NoError(t, err)
-		payloadPb := &enginev1.ExecutionBlock{}
-		require.NoError(t, json.Unmarshal(enc, payloadPb))
-		require.DeepEqual(t, []byte("100"), payloadPb.Number)
-		require.DeepEqual(t, []byte("hash"), payloadPb.Hash)
-		require.DeepEqual(t, []byte("parent"), payloadPb.ParentHash)
-		require.DeepEqual(t, []byte("sha3Uncles"), payloadPb.Sha3Uncles)
-		require.DeepEqual(t, []byte("miner"), payloadPb.Miner)
-		require.DeepEqual(t, []byte("stateRoot"), payloadPb.StateRoot)
-		require.DeepEqual(t, []byte("txRoot"), payloadPb.TransactionsRoot)
-		require.DeepEqual(t, []byte("receiptsRoot"), payloadPb.ReceiptsRoot)
-		require.DeepEqual(t, []byte("logsBloom"), payloadPb.LogsBloom)
-		require.DeepEqual(t, []byte("1"), payloadPb.Difficulty)
-		require.DeepEqual(t, "2", payloadPb.TotalDifficulty)
-		require.DeepEqual(t, uint64(3), payloadPb.GasLimit)
-		require.DeepEqual(t, uint64(4), payloadPb.GasUsed)
-		require.DeepEqual(t, uint64(5), payloadPb.Timestamp)
-		require.DeepEqual(t, bytesutil.PadTo(baseFeePerGas.Bytes(), fieldparams.RootLength), payloadPb.BaseFeePerGas)
-		require.DeepEqual(t, []byte("7"), payloadPb.Size)
-		require.DeepEqual(t, []byte("extraData"), payloadPb.ExtraData)
-		require.DeepEqual(t, []byte("mixHash"), payloadPb.MixHash)
-		require.DeepEqual(t, []byte("nonce"), payloadPb.Nonce)
-		require.DeepEqual(t, [][]byte{[]byte("hi")}, payloadPb.Transactions)
-		require.DeepEqual(t, [][]byte{[]byte("bye")}, payloadPb.Uncles)
-	})
-	t.Run("nil execution block", func(t *testing.T) {
-		jsonPayload := (*enginev1.ExecutionBlock)(nil)
-		enc, err := json.Marshal(jsonPayload)
+
+		payloadItems := make(map[string]interface{})
+		require.NoError(t, json.Unmarshal(enc, &payloadItems))
+
+		blockHash := want.Hash()
+		payloadItems["hash"] = blockHash.String()
+		payloadItems["totalDifficulty"] = "0x393a2e53de197c"
+
+		encodedPayloadItems, err := json.Marshal(payloadItems)
 		require.NoError(t, err)
+
 		payloadPb := &enginev1.ExecutionBlock{}
-		require.ErrorIs(t, hexutil.ErrEmptyString, json.Unmarshal(enc, payloadPb))
+		require.NoError(t, json.Unmarshal(encodedPayloadItems, payloadPb))
+
+		require.DeepEqual(t, blockHash, payloadPb.Hash)
+		require.DeepEqual(t, want.Number, payloadPb.Number)
+		require.DeepEqual(t, want.ParentHash, payloadPb.ParentHash)
+		require.DeepEqual(t, want.UncleHash, payloadPb.UncleHash)
+		require.DeepEqual(t, want.Coinbase, payloadPb.Coinbase)
+		require.DeepEqual(t, want.Root, payloadPb.Root)
+		require.DeepEqual(t, want.TxHash, payloadPb.TxHash)
+		require.DeepEqual(t, want.ReceiptHash, payloadPb.ReceiptHash)
+		require.DeepEqual(t, want.Bloom, payloadPb.Bloom)
+		require.DeepEqual(t, want.Difficulty, payloadPb.Difficulty)
+		require.DeepEqual(t, payloadItems["totalDifficulty"], payloadPb.TotalDifficulty)
+		require.DeepEqual(t, want.GasUsed, payloadPb.GasUsed)
+		require.DeepEqual(t, want.GasLimit, payloadPb.GasLimit)
+		require.DeepEqual(t, want.Time, payloadPb.Time)
+		require.DeepEqual(t, want.BaseFee, payloadPb.BaseFee)
+		require.DeepEqual(t, want.Extra, payloadPb.Extra)
+		require.DeepEqual(t, want.MixDigest, payloadPb.MixDigest)
+		require.DeepEqual(t, want.Nonce, payloadPb.Nonce)
 	})
 }
 
