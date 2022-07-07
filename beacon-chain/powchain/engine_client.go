@@ -313,10 +313,6 @@ func (s *Service) ReconstructFullBellatrixBlock(
 		return nil, errors.New("can only reconstruct block from blinded block format")
 	}
 	start := time.Now()
-	defer func() {
-		executionPayloadReconstructionLatency.Observe(float64(time.Since(start).Milliseconds()))
-		reconstructedExecutionPayloadCount.Add(1)
-	}()
 	header, err := blindedBlock.Block().Body().ExecutionPayloadHeader()
 	if err != nil {
 		return nil, err
@@ -330,7 +326,13 @@ func (s *Service) ReconstructFullBellatrixBlock(
 	if err != nil {
 		return nil, err
 	}
-	return wrapper.BuildSignedBeaconBlockFromExecutionPayload(blindedBlock, payload)
+	fullBlock, err := wrapper.BuildSignedBeaconBlockFromExecutionPayload(blindedBlock, payload)
+	if err != nil {
+		return nil, err
+	}
+	executionPayloadReconstructionLatency.Observe(float64(time.Since(start).Milliseconds()))
+	reconstructedExecutionPayloadCount.Add(1)
+	return fullBlock, nil
 }
 
 func fullPayloadFromExecutionBlock(
