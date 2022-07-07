@@ -77,10 +77,10 @@ func (e *ExecutionBlock) UnmarshalJSON(enc []byte) error {
 		t := &gethtypes.Transaction{}
 		encodedTx, err := json.Marshal(tx)
 		if err != nil {
-			return err
+			return errors.Wrapf(err, "could not marshal tx %v", tx)
 		}
 		if err := json.Unmarshal(encodedTx, &t); err != nil {
-			return err
+			return errors.Wrapf(err, "could not marshal tx %s", string(encodedTx))
 		}
 		txs[i] = t
 	}
