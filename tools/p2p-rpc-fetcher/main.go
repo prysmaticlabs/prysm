@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/enode"
+	emptypb "github.com/golang/protobuf/ptypes/empty"
 	"github.com/libp2p/go-libp2p"
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/crypto"
@@ -42,29 +43,43 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	"github.com/prysmaticlabs/prysm/network"
+	"github.com/prysmaticlabs/prysm/network/forks"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/metadata"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
+	"google.golang.org/grpc"
 )
 
 var (
-	peerMultiaddr = "/ip4/10.0.0.74/tcp/13000/p2p/16Uiu2HAmF6NM6UmwgxTk1SbG4kskNBon5Vch2ZunW2Sfm2TqHDNm"
+	peerMultiaddr     = "/ip4/10.0.0.74/tcp/13000/p2p/16Uiu2HAmF6NM6UmwgxTk1SbG4kskNBon5Vch2ZunW2Sfm2TqHDNm"
+	beaconAPIEndpoint = "localhost:4000"
 )
 
 type service struct {
-	h host.Host
+	h            host.Host
+	meta         metadata.Metadata
+	beaconClient pb.BeaconChainClient
+	nodeClient   pb.NodeClient
 }
 
 func (s *service) Encoding() encoder.NetworkEncoding {
 	return &encoder.SszNetworkEncoder{}
 }
 
+func (s *service) MetadataSeq() uint64 {
+	return s.meta.SequenceNumber()
+}
+
 func main() {
 	ipAdd := ipAddr()
 	priv, err := privKey()
+	if err != nil {
+		panic(err)
+	}
+	meta, err := readMetadata()
 	if err != nil {
 		panic(err)
 	}
@@ -86,29 +101,26 @@ func main() {
 	}
 
 	host.RemoveStreamHandler(identify.IDDelta)
-	srv := &service{h: host}
+	conn, err := grpc.Dial(beaconAPIEndpoint, grpc.WithInsecure())
+	if err != nil {
+		panic(err)
+	}
+	beaconClient := pb.NewBeaconChainClient(conn)
+	nodeClient := pb.NewNodeClient(conn)
+	srv := &service{h: host, beaconClient: beaconClient, nodeClient: nodeClient, meta: meta}
 
-	srv.registerRPC(p2p.RPCPingTopicV1, func(ctx context.Context, i interface{}, stream libp2pcore.Stream) error {
-		fmt.Println("Handling ping")
-		return nil
-	})
-
-	srv.registerRPC(p2p.RPCStatusTopicV1, func(ctx context.Context, i interface{}, stream libp2pcore.Stream) error {
-		fmt.Println("Handling status")
-		return nil
-	})
+	srv.registerRPC(p2p.RPCPingTopicV1, srv.pingHandler)
+	srv.registerRPC(p2p.RPCStatusTopicV1, srv.statusRPCHandler)
 
 	srv.registerRPC(p2p.RPCBlocksByRangeTopicV1, func(ctx context.Context, i interface{}, stream libp2pcore.Stream) error {
 		fmt.Println("Handling blocks by range")
 		return nil
 	})
 
-	fmt.Println(host.Addrs())
 	peers, err := peersFromStringAddrs([]string{peerMultiaddr})
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("GOT PEERS", peers)
 
 	// Connect with all peers.
 	addrInfos, err := peer.AddrInfosFromP2pAddrs(peers...)
@@ -126,15 +138,30 @@ func main() {
 		}
 	}
 	fmt.Println("CONNECTED: ", host.Peerstore().Peers())
+	genesisResp, err := nodeClient.GetGenesis(ctx, &emptypb.Empty{})
+	if err != nil {
+		panic(err)
+	}
+	chain := &mock.ChainService{
+		Genesis:        genesisResp.GenesisTime.AsTime(),
+		ValidatorsRoot: bytesutil.ToBytes32(genesisResp.GenesisValidatorsRoot),
+	}
 
 	for _, pr := range host.Peerstore().Peers() {
-		req := &pb.BeaconBlocksByRangeRequest{}
-		chain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
+		start, err := slots.EpochStart(131074 - 1)
+		if err != nil {
+			panic(err)
+		}
+		req := &pb.BeaconBlocksByRangeRequest{
+			StartSlot: start,
+			Count:     10,
+			Step:      1,
+		}
 		blocks, err := SendBeaconBlocksByRangeRequest(ctx, chain, srv, pr, req)
 		if err != nil {
 			fmt.Println("GOT ERR IN SEND REQ", err)
 		}
-		fmt.Println("Got this many blocks", len(blocks))
+		_ = blocks
 	}
 	time.Sleep(time.Minute * 10)
 	if err := host.Close(); err != nil {
@@ -153,11 +180,11 @@ func privKey() (*ecdsa.PrivateKey, error) {
 }
 
 func readMetadata() (metadata.Metadata, error) {
-	metaData := &pb.MetaDataV0{
+	metaData := &pb.MetaDataV1{
 		SeqNumber: 0,
 		Attnets:   bitfield.NewBitvector64(),
 	}
-	return wrapper.WrappedMetadataV0(metaData), nil
+	return wrapper.WrappedMetadataV1(metaData), nil
 }
 
 // Retrieves an external ipv4 address and converts into a libp2p formatted value.
@@ -275,7 +302,8 @@ func SendBeaconBlocksByRangeRequest(
 	ctx context.Context, chain blockchain.ChainInfoFetcher, p2pProvider *service, pid peer.ID,
 	req *pb.BeaconBlocksByRangeRequest,
 ) ([]interfaces.SignedBeaconBlock, error) {
-	topic, err := p2p.TopicFromMessage(p2p.BeaconBlocksByRangeMessageName, slots.ToEpoch(chain.CurrentSlot()))
+	sinceGenesis := slots.SinceGenesis(chain.GenesisTime())
+	topic, err := p2p.TopicFromMessage(p2p.BeaconBlocksByRangeMessageName, slots.ToEpoch(sinceGenesis))
 	if err != nil {
 		return nil, errors.Wrap(err, "topic cannot find")
 	}
@@ -349,7 +377,6 @@ func (s *service) Send(ctx context.Context, message interface{}, baseTopic strin
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
 
-	fmt.Println(topic)
 	stream, err := s.h.NewStream(ctx, pid, protocol.ID(topic))
 	if err != nil {
 		tracing.AnnotateError(span, err)
@@ -593,4 +620,65 @@ func (s *service) registerRPC(baseTopic string, handle rpcHandler) {
 			}
 		}
 	})
+}
+
+// pingHandler reads the incoming ping rpc message from the peer.
+func (s *service) pingHandler(_ context.Context, msg interface{}, stream libp2pcore.Stream) error {
+	fmt.Println("RESPONDING WITH PING ITEM")
+	//m, ok := msg.(*types.SSZUint64)
+	//if !ok {
+	//	return fmt.Errorf("wrong message type for ping, got %T, wanted *uint64", msg)
+	//}
+	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
+		return err
+	}
+	sq := types.SSZUint64(s.MetadataSeq())
+	if _, err := s.Encoding().EncodeWithMaxLength(stream, &sq); err != nil {
+		return err
+	}
+	closeStream(stream)
+	return nil
+}
+
+// statusRPCHandler reads the incoming Status RPC from the peer and responds with our version of a status message.
+// This handler will disconnect any peer that does not match our fork version.
+func (s *service) statusRPCHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
+	fmt.Println("RESPONDING WITH STATUS ITEM")
+	//m, ok := msg.(*pb.Status)
+	//if !ok {
+	//	return errors.New("message is not type *pb.Status")
+	//}
+	if err := s.respondWithStatus(ctx, stream); err != nil {
+		return err
+	}
+	closeStream(stream)
+	return nil
+}
+
+func (s *service) respondWithStatus(ctx context.Context, stream corenet.Stream) error {
+	chainHead, err := s.beaconClient.GetChainHead(ctx, &emptypb.Empty{})
+	if err != nil {
+		return err
+	}
+	resp, err := s.nodeClient.GetGenesis(ctx, &emptypb.Empty{})
+	if err != nil {
+		return err
+	}
+	digest, err := forks.CreateForkDigest(resp.GenesisTime.AsTime(), resp.GenesisValidatorsRoot)
+	if err != nil {
+		return err
+	}
+	status := &pb.Status{
+		ForkDigest:     digest[:],
+		FinalizedRoot:  chainHead.FinalizedBlockRoot,
+		FinalizedEpoch: chainHead.FinalizedEpoch,
+		HeadRoot:       chainHead.HeadBlockRoot,
+		HeadSlot:       chainHead.HeadSlot,
+	}
+
+	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
+		log.WithError(err).Debug("Could not write to stream")
+	}
+	_, err = s.Encoding().EncodeWithMaxLength(stream, status)
+	return err
 }
