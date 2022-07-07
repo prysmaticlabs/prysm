@@ -133,10 +133,11 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 				"invalidCount": len(invalidRoots),
 				"newHeadRoot":  fmt.Sprintf("%#x", bytesutil.Trunc(r[:])),
 			}).Warn("Pruned invalid blocks")
-			return pid, ErrInvalidPayload
+			return pid, invalidBlock{error: ErrInvalidPayload, root: arg.headRoot}
 
 		default:
-			return nil, errors.WithMessage(ErrUndefinedExecutionEngineError, err.Error())
+			log.WithError(err).Error(ErrUndefinedExecutionEngineError)
+			return nil, nil
 		}
 	}
 	forkchoiceUpdatedValidNodeCount.Inc()
@@ -187,14 +188,14 @@ func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
 	body := blk.Block().Body()
 	enabled, err := blocks.IsExecutionEnabledUsingHeader(postStateHeader, body)
 	if err != nil {
-		return false, errors.Wrap(invalidBlock{err}, "could not determine if execution is enabled")
+		return false, errors.Wrap(invalidBlock{error: err}, "could not determine if execution is enabled")
 	}
 	if !enabled {
 		return true, nil
 	}
 	payload, err := body.ExecutionPayload()
 	if err != nil {
-		return false, errors.Wrap(invalidBlock{err}, "could not get execution payload")
+		return false, errors.Wrap(invalidBlock{error: err}, "could not get execution payload")
 	}
 	lastValidHash, err := s.cfg.ExecutionEngineCaller.NewPayload(ctx, payload)
 	switch err {
