@@ -77,6 +77,7 @@ type validator struct {
 	duties                             *ethpb.DutiesResponse
 	prevBalance                        map[[fieldparams.BLSPubkeyLength]byte]uint64
 	pubkeyToValidatorIndex             map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex
+	signedValidatorRegistrationCache   map[[fieldparams.BLSPubkeyLength]byte]*ethpb.SignedValidatorRegistrationV1
 	graffitiOrderedIndex               uint64
 	aggregatedSlotCommitteeIDCache     *lru.Cache
 	domainDataCache                    *ristretto.Cache
@@ -967,7 +968,7 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 	if err != nil {
 		return err
 	}
-	feeRecipients, registerValidatorRequests, err := v.buildProposerSettingsRequests(ctx, pubkeys)
+	feeRecipients, signedRegisterValidatorRequests, err := v.buildProposerSettingsRequests(ctx, pubkeys, km.Sign)
 	if err != nil {
 		return err
 	}
@@ -982,18 +983,16 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 	}
 	log.Infoln("Prepared beacon proposer with fee recipient to validator index mapping")
 
-	if len(registerValidatorRequests) > 0 {
-		if err := SubmitValidatorRegistration(ctx, v.validatorClient, km.Sign, registerValidatorRequests); err != nil {
-			return err
-		}
-		log.Infoln("Submitted builder validator registration settings for custom builders")
+	if err := SubmitValidatorRegistration(ctx, v.validatorClient, signedRegisterValidatorRequests); err != nil {
+		return err
 	}
+
 	return nil
 }
 
-func (v *validator) buildProposerSettingsRequests(ctx context.Context, pubkeys [][fieldparams.BLSPubkeyLength]byte) ([]*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer, []*ethpb.ValidatorRegistrationV1, error) {
+func (v *validator) buildProposerSettingsRequests(ctx context.Context, pubkeys [][fieldparams.BLSPubkeyLength]byte, signer signingFunc) ([]*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer, []*ethpb.SignedValidatorRegistrationV1, error) {
 	var validatorToFeeRecipients []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer
-	var registerValidatorRequests []*ethpb.ValidatorRegistrationV1
+	var signedRegisterValidatorRequests []*ethpb.SignedValidatorRegistrationV1
 	// need to check for pubkey to validator index mappings
 	for i, key := range pubkeys {
 		var enableValidatorRegistration bool
@@ -1046,15 +1045,34 @@ func (v *validator) buildProposerSettingsRequests(ctx context.Context, pubkeys [
 			})
 		}
 		if enableValidatorRegistration {
-			registerValidatorRequests = append(registerValidatorRequests, &ethpb.ValidatorRegistrationV1{
-				FeeRecipient: feeRecipient[:],
-				GasLimit:     gasLimit,
-				Timestamp:    uint64(time.Now().UTC().Unix()),
-				Pubkey:       pubkeys[i][:],
-			})
+			signedReg, ok := v.signedValidatorRegistrationCache[pubkeys[i]]
+			if ok &&
+				signedReg.Message.GasLimit == gasLimit &&
+				hexutil.Encode(signedReg.Message.FeeRecipient) == hexutil.Encode(feeRecipient[:]) {
+				signedRegisterValidatorRequests = append(signedRegisterValidatorRequests, signedReg)
+			} else {
+				reg := &ethpb.ValidatorRegistrationV1{
+					FeeRecipient: feeRecipient[:],
+					GasLimit:     gasLimit,
+					Timestamp:    uint64(time.Now().UTC().Unix()),
+					Pubkey:       pubkeys[i][:],
+				}
+				sig, err := signValidatorRegistration(ctx, signer, reg)
+				if err != nil {
+					log.WithError(err).Error("failed to sign builder validator registration obj")
+					continue
+				}
+				newRequest := &ethpb.SignedValidatorRegistrationV1{
+					Message:   reg,
+					Signature: sig,
+				}
+				signedRegisterValidatorRequests = append(signedRegisterValidatorRequests,
+					newRequest)
+				v.signedValidatorRegistrationCache[pubkeys[i]] = newRequest
+			}
 		}
 	}
-	return validatorToFeeRecipients, registerValidatorRequests, nil
+	return validatorToFeeRecipients, signedRegisterValidatorRequests, nil
 }
 
 func (v *validator) cacheValidatorPubkeyHexToValidatorIndex(ctx context.Context, pubkey [fieldparams.BLSPubkeyLength]byte) (types.ValidatorIndex, bool, error) {

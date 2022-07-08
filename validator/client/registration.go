@@ -15,27 +15,13 @@ import (
 func SubmitValidatorRegistration(
 	ctx context.Context,
 	validatorClient ethpb.BeaconNodeValidatorClient,
-	signer signingFunc,
-	regs []*ethpb.ValidatorRegistrationV1,
+	signedRegs []*ethpb.SignedValidatorRegistrationV1,
 ) error {
 	ctx, span := trace.StartSpan(ctx, "validator.SubmitBuilderValidatorRegistration")
 	defer span.End()
 
-	if len(regs) == 0 {
+	if len(signedRegs) == 0 {
 		return nil
-	}
-
-	signedRegs := make([]*ethpb.SignedValidatorRegistrationV1, len(regs))
-	for i, reg := range regs {
-		sig, err := signValidatorRegistration(ctx, signer, reg)
-		if err != nil {
-			log.WithError(err).Error("failed to sign builder validator registration obj")
-			continue
-		}
-		signedRegs[i] = &ethpb.SignedValidatorRegistrationV1{
-			Message:   reg,
-			Signature: sig,
-		}
 	}
 
 	if _, err := validatorClient.SubmitValidatorRegistration(ctx, &ethpb.SignedValidatorRegistrationsV1{
@@ -43,7 +29,7 @@ func SubmitValidatorRegistration(
 	}); err != nil {
 		return errors.Wrap(err, "could not submit signed registrations to beacon node")
 	}
-
+	log.Infoln("Submitted builder validator registration settings for custom builders")
 	return nil
 }
 

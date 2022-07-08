@@ -18,7 +18,7 @@ func TestSubmitValidatorRegistration(t *testing.T) {
 	defer finish()
 
 	ctx := context.Background()
-	require.NoError(t, nil, SubmitValidatorRegistration(ctx, m.validatorClient, m.signfunc, []*ethpb.ValidatorRegistrationV1{}))
+	require.NoError(t, nil, SubmitValidatorRegistration(ctx, m.validatorClient, []*ethpb.SignedValidatorRegistrationV1{}))
 
 	reg := &ethpb.ValidatorRegistrationV1{
 		FeeRecipient: bytesutil.PadTo([]byte("fee"), 20),
@@ -26,7 +26,6 @@ func TestSubmitValidatorRegistration(t *testing.T) {
 		Timestamp:    uint64(time.Now().Unix()),
 		Pubkey:       validatorKey.PublicKey().Marshal(),
 	}
-	regs := []*ethpb.ValidatorRegistrationV1{reg}
 
 	m.validatorClient.EXPECT().
 		SubmitValidatorRegistration(gomock.Any(), &ethpb.SignedValidatorRegistrationsV1{
@@ -36,7 +35,10 @@ func TestSubmitValidatorRegistration(t *testing.T) {
 			},
 		}).
 		Return(nil, nil)
-	require.NoError(t, nil, SubmitValidatorRegistration(ctx, m.validatorClient, m.signfunc, regs))
+	require.NoError(t, nil, SubmitValidatorRegistration(ctx, m.validatorClient, []*ethpb.SignedValidatorRegistrationV1{
+		{Message: reg,
+			Signature: params.BeaconConfig().ZeroHash[:]},
+	}))
 }
 
 func TestSubmitValidatorRegistration_CantSign(t *testing.T) {
@@ -50,7 +52,6 @@ func TestSubmitValidatorRegistration_CantSign(t *testing.T) {
 		Timestamp:    uint64(time.Now().Unix()),
 		Pubkey:       validatorKey.PublicKey().Marshal(),
 	}
-	regs := []*ethpb.ValidatorRegistrationV1{reg}
 
 	m.validatorClient.EXPECT().
 		SubmitValidatorRegistration(gomock.Any(), &ethpb.SignedValidatorRegistrationsV1{
@@ -60,7 +61,10 @@ func TestSubmitValidatorRegistration_CantSign(t *testing.T) {
 			},
 		}).
 		Return(nil, errors.New("could not sign"))
-	require.ErrorContains(t, "could not sign", SubmitValidatorRegistration(ctx, m.validatorClient, m.signfunc, regs))
+	require.ErrorContains(t, "could not sign", SubmitValidatorRegistration(ctx, m.validatorClient, []*ethpb.SignedValidatorRegistrationV1{
+		{Message: reg,
+			Signature: params.BeaconConfig().ZeroHash[:]},
+	}))
 }
 
 func Test_signValidatorRegistration(t *testing.T) {
