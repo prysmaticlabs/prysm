@@ -829,6 +829,9 @@ func marshalBlock(_ context.Context, blk interfaces.SignedBeaconBlock) ([]byte, 
 	case version.BellatrixBlind:
 		return snappy.Encode(nil, append(bellatrixBlindKey, encodedBlock...)), nil
 	case version.Bellatrix:
+		if features.Get().EnableOnlyBlindedBeaconBlocks {
+			return snappy.Encode(nil, append(bellatrixBlindKey, encodedBlock...)), nil
+		}
 		return snappy.Encode(nil, append(bellatrixKey, encodedBlock...)), nil
 	case version.Altair:
 		return snappy.Encode(nil, append(altairKey, encodedBlock...)), nil
