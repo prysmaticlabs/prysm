@@ -304,6 +304,13 @@ func (s *Store) SaveBlocks(ctx context.Context, blocks []interfaces.SignedBeacon
 			if err := updateValueForIndices(ctx, indicesForBlocks[i], blockRoots[i], tx); err != nil {
 				return errors.Wrap(err, "could not update DB indices")
 			}
+			if _, err := blk.Block().Body().ExecutionPayload(); err == nil {
+				blindedBlock, err := wrapper.WrapSignedBlindedBeaconBlock(blk)
+				if err != nil {
+					return err
+				}
+				blk = blindedBlock
+			}
 			s.blockCache.Set(string(blockRoots[i]), blk, int64(len(encodedBlocks[i])))
 			if err := bkt.Put(blockRoots[i], encodedBlocks[i]); err != nil {
 				return err
@@ -768,11 +775,6 @@ func unmarshalBlock(_ context.Context, enc []byte) (interfaces.SignedBeaconBlock
 		if err := rawBlock.UnmarshalSSZ(enc[len(altairKey):]); err != nil {
 			return nil, err
 		}
-	case hasBellatrixKey(enc):
-		rawBlock = &ethpb.SignedBeaconBlockBellatrix{}
-		if err := rawBlock.UnmarshalSSZ(enc[len(bellatrixKey):]); err != nil {
-			return nil, err
-		}
 	case hasBellatrixBlindKey(enc):
 		rawBlock = &ethpb.SignedBlindedBeaconBlockBellatrix{}
 		if err := rawBlock.UnmarshalSSZ(enc[len(bellatrixBlindKey):]); err != nil {
@@ -790,19 +792,34 @@ func unmarshalBlock(_ context.Context, enc []byte) (interfaces.SignedBeaconBlock
 
 // marshal versioned beacon block from struct type down to bytes.
 func marshalBlock(_ context.Context, blk interfaces.SignedBeaconBlock) ([]byte, error) {
-	obj, err := blk.MarshalSSZ()
-	if err != nil {
+	var encodedBlock []byte
+	var blindedBlock interfaces.SignedBeaconBlock
+	var err error
+	// If the block supports blinding of execution payloads, we wrap as
+	// a signed, blinded beacon block and then marshal to bytes. Otherwise,
+	// We just marshal the block as it is.
+	blindedBlock, err = wrapper.WrapSignedBlindedBeaconBlock(blk)
+	switch {
+	case errors.Is(err, wrapper.ErrUnsupportedSignedBeaconBlock):
+		encodedBlock, err = blk.MarshalSSZ()
+		if err != nil {
+			return nil, err
+		}
+	case err != nil:
 		return nil, err
+	default:
+		encodedBlock, err = blindedBlock.MarshalSSZ()
+		if err != nil {
+			return nil, err
+		}
 	}
 	switch blk.Version() {
-	case version.BellatrixBlind:
-		return snappy.Encode(nil, append(bellatrixBlindKey, obj...)), nil
-	case version.Bellatrix:
-		return snappy.Encode(nil, append(bellatrixKey, obj...)), nil
+	case version.Bellatrix, version.BellatrixBlind:
+		return snappy.Encode(nil, append(bellatrixBlindKey, encodedBlock...)), nil
 	case version.Altair:
-		return snappy.Encode(nil, append(altairKey, obj...)), nil
+		return snappy.Encode(nil, append(altairKey, encodedBlock...)), nil
 	case version.Phase0:
-		return snappy.Encode(nil, obj), nil
+		return snappy.Encode(nil, encodedBlock), nil
 	default:
 		return nil, errors.New("Unknown block version")
 	}
