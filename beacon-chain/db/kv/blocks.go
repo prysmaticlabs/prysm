@@ -307,11 +307,11 @@ func (s *Store) SaveBlocks(ctx context.Context, blocks []interfaces.SignedBeacon
 			}
 			if features.Get().EnableOnlyBlindedBeaconBlocks {
 				blindedBlock, err := blk.ToBlinded()
-				switch {
-				case errors.Is(err, wrapper.ErrUnsupportedVersion):
-				case err != nil:
-					return err
-				default:
+				if err != nil {
+					if !errors.Is(err, wrapper.ErrUnsupportedVersion) {
+						return err
+					}
+				} else {
 					blk = blindedBlock
 				}
 			}
