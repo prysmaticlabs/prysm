@@ -81,7 +81,7 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 	}
 }
 
-func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks_ReconstructsExecutionPayloads(t *testing.T) {
+func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks_ReconstructsPayload(t *testing.T) {
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)
