@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	testing2 "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
+	powchaintesting "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
@@ -1292,7 +1292,7 @@ func TestServer_GetBlockV2(t *testing.T) {
 			ChainInfoFetcher:      mockChainService,
 			HeadFetcher:           mockChainService,
 			OptimisticModeFetcher: mockChainService,
-			ExecutionPayloadReconstructor: &testing2.EngineClient{
+			ExecutionPayloadReconstructor: &powchaintesting.EngineClient{
 				ExecutionPayloadByBlockHash: map[[32]byte]*enginev1.ExecutionPayload{},
 			},
 		}
