@@ -80,10 +80,6 @@ func (m *engineMock) NewPayload(context.Context, *pb.ExecutionPayload) ([]byte, 
 	return nil, nil
 }
 
-func (s *engineMock) ExecutionBlockByHashWithTxs(_ context.Context, _ common.Hash) (*pb.ExecutionBlockWithTxs, error) {
-	return nil, nil
-}
-
 func (m *engineMock) LatestExecutionBlock(context.Context) (*pb.ExecutionBlock, error) {
 	return nil, nil
 }
@@ -92,7 +88,7 @@ func (m *engineMock) ExchangeTransitionConfiguration(context.Context, *pb.Transi
 	return nil
 }
 
-func (m *engineMock) ExecutionBlockByHash(_ context.Context, hash common.Hash) (*pb.ExecutionBlock, error) {
+func (m *engineMock) ExecutionBlockByHash(_ context.Context, hash common.Hash, _ bool) (*pb.ExecutionBlock, error) {
 	b, ok := m.powBlocks[bytesutil.ToBytes32(hash.Bytes())]
 	if !ok {
 		return nil, nil
