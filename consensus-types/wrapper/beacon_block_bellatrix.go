@@ -3,6 +3,7 @@ package wrapper
 import (
 	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
+	"github.com/prysmaticlabs/prysm/consensus-types/forks/bellatrix"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
@@ -106,6 +107,37 @@ func (bellatrixSignedBeaconBlock) PbPhase0Block() (*eth.SignedBeaconBlock, error
 // PbAltairBlock returns the underlying protobuf object.
 func (bellatrixSignedBeaconBlock) PbAltairBlock() (*eth.SignedBeaconBlockAltair, error) {
 	return nil, ErrUnsupportedAltairBlock
+}
+
+func (w bellatrixSignedBeaconBlock) ToBlinded() (interfaces.SignedBeaconBlock, error) {
+	payload := w.b.Block.Body.ExecutionPayload
+	header, err := bellatrix.PayloadToHeader(payload)
+	if err != nil {
+		return nil, err
+	}
+	return signedBlindedBeaconBlockBellatrix{
+		b: &eth.SignedBlindedBeaconBlockBellatrix{
+			Block: &eth.BlindedBeaconBlockBellatrix{
+				Slot:          w.b.Block.Slot,
+				ProposerIndex: w.b.Block.ProposerIndex,
+				ParentRoot:    w.b.Block.ParentRoot,
+				StateRoot:     w.b.Block.StateRoot,
+				Body: &eth.BlindedBeaconBlockBodyBellatrix{
+					RandaoReveal:           w.b.Block.Body.RandaoReveal,
+					Eth1Data:               w.b.Block.Body.Eth1Data,
+					Graffiti:               w.b.Block.Body.Graffiti,
+					ProposerSlashings:      w.b.Block.Body.ProposerSlashings,
+					AttesterSlashings:      w.b.Block.Body.AttesterSlashings,
+					Attestations:           w.b.Block.Body.Attestations,
+					Deposits:               w.b.Block.Body.Deposits,
+					VoluntaryExits:         w.b.Block.Body.VoluntaryExits,
+					SyncAggregate:          w.b.Block.Body.SyncAggregate,
+					ExecutionPayloadHeader: header,
+				},
+			},
+			Signature: w.b.Signature,
+		},
+	}, nil
 }
 
 // Version of the underlying protobuf object.

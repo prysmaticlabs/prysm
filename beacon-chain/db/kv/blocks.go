@@ -800,15 +800,34 @@ func unmarshalBlock(_ context.Context, enc []byte) (interfaces.SignedBeaconBlock
 
 // marshal versioned beacon block from struct type down to bytes.
 func marshalBlock(_ context.Context, blk interfaces.SignedBeaconBlock) ([]byte, error) {
-	encodedBlock, err := determineBlockTypeToMarshal(blk)
-	if err != nil {
-		return nil, err
+	var encodedBlock []byte
+	var err error
+	if features.Get().EnableOnlyBlindedBeaconBlocks {
+		blindedBlock, err := blk.ToBlinded()
+		switch {
+		case errors.Is(err, wrapper.ErrUnsupportedVersion):
+			encodedBlock, err = blk.MarshalSSZ()
+			if err != nil {
+				return nil, err
+			}
+		case err != nil:
+			return nil, err
+		default:
+			encodedBlock, err = blindedBlock.MarshalSSZ()
+			if err != nil {
+				return nil, err
+			}
+		}
+	} else {
+		encodedBlock, err = blk.MarshalSSZ()
+		if err != nil {
+			return nil, err
+		}
 	}
 	switch blk.Version() {
-	case version.Bellatrix, version.BellatrixBlind:
-		if features.Get().EnableOnlyBlindedBeaconBlocks {
-			return snappy.Encode(nil, append(bellatrixBlindKey, encodedBlock...)), nil
-		}
+	case version.BellatrixBlind:
+		return snappy.Encode(nil, append(bellatrixBlindKey, encodedBlock...)), nil
+	case version.Bellatrix:
 		return snappy.Encode(nil, append(bellatrixKey, encodedBlock...)), nil
 	case version.Altair:
 		return snappy.Encode(nil, append(altairKey, encodedBlock...)), nil
@@ -817,20 +836,4 @@ func marshalBlock(_ context.Context, blk interfaces.SignedBeaconBlock) ([]byte, 
 	default:
 		return nil, errors.New("Unknown block version")
 	}
-}
-
-func determineBlockTypeToMarshal(blk interfaces.SignedBeaconBlock) ([]byte, error) {
-	if !features.Get().EnableOnlyBlindedBeaconBlocks {
-		return blk.MarshalSSZ()
-	}
-	// If the block supports blinding of execution payloads, we wrap as
-	// a signed, blinded beacon block and then marshal to bytes. Otherwise,
-	// We just marshal the block as it is.
-	blindedBlock, err := wrapper.WrapSignedBlindedBeaconBlock(blk)
-	if errors.Is(err, wrapper.ErrUnsupportedSignedBeaconBlock) {
-		return blk.MarshalSSZ()
-	} else if err != nil {
-		return nil, err
-	}
-	return blindedBlock.MarshalSSZ()
 }
