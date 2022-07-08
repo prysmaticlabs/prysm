@@ -1928,11 +1928,12 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 			validatorSetter: func(t *testing.T) *validator {
 
 				v := validator{
-					validatorClient:        client,
-					node:                   nodeClient,
-					db:                     db,
-					pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
-					useWeb:                 false,
+					validatorClient:                  client,
+					node:                             nodeClient,
+					db:                               db,
+					pubkeyToValidatorIndex:           make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
+					signedValidatorRegistrationCache: make(map[[fieldparams.BLSPubkeyLength]byte]*ethpb.SignedValidatorRegistrationV1),
+					useWeb:                           false,
 					interopKeysConfig: &local.InteropKeymanagerConfig{
 						NumValidatorKeys: 2,
 						Offset:           1,
