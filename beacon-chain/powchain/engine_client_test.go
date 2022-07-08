@@ -971,6 +971,66 @@ func fixtures() map[string]interface{} {
 	}
 }
 
+func Test_fullPayloadFromExecutionBlock(t *testing.T) {
+	type args struct {
+		header *pb.ExecutionPayloadHeader
+		block  *pb.ExecutionBlock
+	}
+	wantedHash := common.BytesToHash([]byte("foo"))
+	tests := []struct {
+		name string
+		args args
+		want *pb.ExecutionPayload
+		err  string
+	}{
+		{
+			name: "nil header fails",
+			args: args{header: nil, block: &pb.ExecutionBlock{}},
+			err:  "cannot be nil",
+		},
+		{
+			name: "nil block fails",
+			args: args{header: &pb.ExecutionPayloadHeader{}, block: nil},
+			err:  "cannot be nil",
+		},
+		{
+			name: "block hash field in header and block hash mismatch",
+			args: args{
+				header: &pb.ExecutionPayloadHeader{
+					BlockHash: []byte("foo"),
+				},
+				block: &pb.ExecutionBlock{
+					Hash: common.BytesToHash([]byte("bar")),
+				},
+			},
+			err: "does not match execution block hash",
+		},
+		{
+			name: "ok",
+			args: args{
+				header: &pb.ExecutionPayloadHeader{
+					BlockHash: wantedHash[:],
+				},
+				block: &pb.ExecutionBlock{
+					Hash: wantedHash,
+				},
+			},
+			want: &pb.ExecutionPayload{
+				BlockHash: wantedHash[:],
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := fullPayloadFromExecutionBlock(tt.args.header, tt.args.block)
+			if (err != nil) && !strings.Contains(err.Error(), tt.err) {
+				t.Fatalf("Wanted err %s got %v", tt.err, err)
+			}
+			require.DeepEqual(t, tt.want, got)
+		})
+	}
+}
+
 type testEngineService struct{}
 
 func (*testEngineService) NoArgsRets() {}

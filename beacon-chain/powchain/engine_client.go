@@ -312,7 +312,6 @@ func (s *Service) ReconstructFullBellatrixBlock(
 	if !blindedBlock.Block().IsBlinded() {
 		return nil, errors.New("can only reconstruct block from blinded block format")
 	}
-	start := time.Now()
 	header, err := blindedBlock.Block().Body().ExecutionPayloadHeader()
 	if err != nil {
 		return nil, err
@@ -333,7 +332,6 @@ func (s *Service) ReconstructFullBellatrixBlock(
 	if err != nil {
 		return nil, err
 	}
-	executionPayloadReconstructionLatency.Observe(float64(time.Since(start).Milliseconds()))
 	reconstructedExecutionPayloadCount.Add(1)
 	return fullBlock, nil
 }
@@ -341,6 +339,16 @@ func (s *Service) ReconstructFullBellatrixBlock(
 func fullPayloadFromExecutionBlock(
 	header *pb.ExecutionPayloadHeader, block *pb.ExecutionBlock,
 ) (*pb.ExecutionPayload, error) {
+	if header == nil || block == nil {
+		return nil, errors.New("execution block and header cannot be nil")
+	}
+	if !bytes.Equal(header.BlockHash, block.Hash[:]) {
+		return nil, fmt.Errorf(
+			"block hash field in execution header %#x does not match execution block hash %#x",
+			header.BlockHash,
+			block.Hash,
+		)
+	}
 	txs := make([][]byte, len(block.Transactions))
 	for i, tx := range block.Transactions {
 		txBin, err := tx.MarshalBinary()
