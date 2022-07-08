@@ -131,7 +131,7 @@ func (s *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]interface
 			encoded := bkt.Get(keys[i])
 			blk, err := unmarshalBlock(ctx, encoded)
 			if err != nil {
-				return err
+				return errors.Wrapf(err, "could not unmarshal block with key %#x", keys[i])
 			}
 			blocks = append(blocks, blk)
 			blockRoots = append(blockRoots, bytesutil.ToBytes32(keys[i]))
@@ -769,7 +769,7 @@ func unmarshalBlock(_ context.Context, enc []byte) (interfaces.SignedBeaconBlock
 	var err error
 	enc, err = snappy.Decode(nil, enc)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not snappy decode block")
 	}
 	var rawBlock ssz.Unmarshaler
 	switch {
@@ -777,23 +777,23 @@ func unmarshalBlock(_ context.Context, enc []byte) (interfaces.SignedBeaconBlock
 		// Marshal block bytes to altair beacon block.
 		rawBlock = &ethpb.SignedBeaconBlockAltair{}
 		if err := rawBlock.UnmarshalSSZ(enc[len(altairKey):]); err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "could not unmarshal Altair block")
 		}
 	case hasBellatrixKey(enc):
 		rawBlock = &ethpb.SignedBeaconBlockBellatrix{}
 		if err := rawBlock.UnmarshalSSZ(enc[len(bellatrixKey):]); err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "could not unmarshal Bellatrix block")
 		}
 	case hasBellatrixBlindKey(enc):
 		rawBlock = &ethpb.SignedBlindedBeaconBlockBellatrix{}
 		if err := rawBlock.UnmarshalSSZ(enc[len(bellatrixBlindKey):]); err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "could not unmarshal blinded Bellatrix block")
 		}
 	default:
 		// Marshal block bytes to phase 0 beacon block.
 		rawBlock = &ethpb.SignedBeaconBlock{}
 		if err := rawBlock.UnmarshalSSZ(enc); err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "could not unmarshal Phase0 block")
 		}
 	}
 	return wrapper.WrappedSignedBeaconBlock(rawBlock)
