@@ -306,11 +306,12 @@ func (s *Store) SaveBlocks(ctx context.Context, blocks []interfaces.SignedBeacon
 				return errors.Wrap(err, "could not update DB indices")
 			}
 			if features.Get().EnableOnlyBlindedBeaconBlocks {
-				if _, err := blk.Block().Body().ExecutionPayload(); err == nil {
-					blindedBlock, err := wrapper.WrapSignedBlindedBeaconBlock(blk)
-					if err != nil {
-						return err
-					}
+				blindedBlock, err := blk.ToBlinded()
+				switch {
+				case errors.Is(err, wrapper.ErrUnsupportedVersion):
+				case err != nil:
+					return err
+				default:
 					blk = blindedBlock
 				}
 			}

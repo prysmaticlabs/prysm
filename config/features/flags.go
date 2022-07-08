@@ -121,7 +121,7 @@ var (
 		Name:  "enable-gossip-batch-aggregation",
 		Usage: "Enables new methods to further aggregate our gossip batches before verifying them.",
 	}
-	enableOnlyBlindedBeaconBlocks = &cli.BoolFlag{
+	EnableOnlyBlindedBeaconBlocks = &cli.BoolFlag{
 		Name:  "enable-only-blinded-beacon-blocks",
 		Usage: "Enables storing only blinded beacon blocks in the database without full execution layer transactions",
 	}
@@ -175,7 +175,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableVecHTR,
 	enableForkChoiceDoublyLinkedTree,
 	enableGossipBatchAggregation,
-	enableOnlyBlindedBeaconBlocks,
+	EnableOnlyBlindedBeaconBlocks,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
