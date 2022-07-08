@@ -166,7 +166,7 @@ func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root, parentRoo
 	for i := len(f.store.nodes) - 1; i >= 0; i-- {
 		n := f.store.nodes[i]
 		if n.parent != NonExistentNode {
-			if err := f.store.updateBestChildAndDescendant(n.parent, uint64(i)); err != nil {
+			if err := f.store.updateBestChildAndDescendant(ctx, n.parent, uint64(i), f.dataAvailability); err != nil {
 				return invalidRoots, err
 			}
 		}

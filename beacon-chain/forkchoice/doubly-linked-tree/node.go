@@ -5,6 +5,7 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -42,7 +43,7 @@ func (n *Node) applyWeightChanges(ctx context.Context) error {
 }
 
 // updateBestDescendant updates the best descendant of this node and its children.
-func (n *Node) updateBestDescendant(ctx context.Context, justifiedEpoch, finalizedEpoch types.Epoch) error {
+func (n *Node) updateBestDescendant(ctx context.Context, justifiedEpoch, finalizedEpoch types.Epoch, dataAvailability forkchoice.DataAvailability) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
@@ -58,10 +59,14 @@ func (n *Node) updateBestDescendant(ctx context.Context, justifiedEpoch, finaliz
 		if child == nil {
 			return errors.Wrap(ErrNilNode, "could not update best descendant")
 		}
-		if err := child.updateBestDescendant(ctx, justifiedEpoch, finalizedEpoch); err != nil {
+		if err := child.updateBestDescendant(ctx, justifiedEpoch, finalizedEpoch, dataAvailability); err != nil {
 			return err
 		}
 		childLeadsToViableHead := child.leadsToViableHead(justifiedEpoch, finalizedEpoch)
+		// optimization: only run DA checks if viable
+		if childLeadsToViableHead && dataAvailability.IsDataAvailable(ctx, child.root) != nil {
+			childLeadsToViableHead = false
+		}
 		if childLeadsToViableHead && !hasViableDescendant {
 			// The child leads to a viable head, but the current
 			// parent's best child doesn't.

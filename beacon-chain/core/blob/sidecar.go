@@ -3,6 +3,8 @@ package blob
 import (
 	types2 "github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -53,4 +55,12 @@ func VerifyBlobsSidecar(slot types.Slot, beaconBlockRoot [32]byte, expectedKZGs 
 		}
 	}
 	return nil
+}
+
+func BlockContainsKZGs(b interfaces.BeaconBlock) bool {
+	if blocks.IsPreEIP4844Version(b.Version()) {
+		return false
+	}
+	blobKzgs, _ := b.Body().BlobKzgs()
+	return len(blobKzgs) != 0
 }

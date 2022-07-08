@@ -31,7 +31,7 @@ const defaultPruneThreshold = 256
 var lastHeadRoot [32]byte
 
 // New initializes a new fork choice store.
-func New() *ForkChoice {
+func New(da forkchoice.DataAvailability) *ForkChoice {
 	s := &Store{
 		justifiedCheckpoint:     &forkchoicetypes.Checkpoint{},
 		bestJustifiedCheckpoint: &forkchoicetypes.Checkpoint{},
@@ -47,7 +47,7 @@ func New() *ForkChoice {
 
 	b := make([]uint64, 0)
 	v := make([]Vote, 0)
-	return &ForkChoice{store: s, balances: b, votes: v}
+	return &ForkChoice{store: s, balances: b, votes: v, dataAvailability: da}
 }
 
 // Head returns the head root from fork choice store.
@@ -70,7 +70,7 @@ func (f *ForkChoice) Head(ctx context.Context, justifiedStateBalances []uint64) 
 	}
 	f.votes = newVotes
 
-	if err := f.store.applyWeightChanges(ctx, newBalances, deltas); err != nil {
+	if err := f.store.applyWeightChanges(ctx, newBalances, deltas, f.dataAvailability); err != nil {
 		return [32]byte{}, errors.Wrap(err, "Could not apply score changes")
 	}
 	f.balances = newBalances
@@ -149,7 +149,7 @@ func (f *ForkChoice) InsertNode(ctx context.Context, state state.ReadOnlyBeaconS
 		return errInvalidNilCheckpoint
 	}
 	finalizedEpoch := fc.Epoch
-	err := f.store.insert(ctx, slot, root, parentRoot, payloadHash, justifiedEpoch, finalizedEpoch)
+	err := f.store.insert(ctx, slot, root, parentRoot, payloadHash, justifiedEpoch, finalizedEpoch, f.dataAvailability)
 	if err != nil {
 		return err
 	}
@@ -448,7 +448,8 @@ func (s *Store) updateCanonicalNodes(ctx context.Context, root [32]byte) error {
 func (s *Store) insert(ctx context.Context,
 	slot types.Slot,
 	root, parent, payloadHash [32]byte,
-	justifiedEpoch, finalizedEpoch types.Epoch) error {
+	justifiedEpoch, finalizedEpoch types.Epoch,
+	dataAvailability forkchoice.DataAvailability) error {
 	_, span := trace.StartSpan(ctx, "protoArrayForkChoice.insert")
 	defer span.End()
 
@@ -501,7 +502,7 @@ func (s *Store) insert(ctx context.Context,
 
 	// Update parent with the best child and descendant only if it's available.
 	if n.parent != NonExistentNode {
-		if err := s.updateBestChildAndDescendant(parentIndex, index); err != nil {
+		if err := s.updateBestChildAndDescendant(ctx, parentIndex, index, dataAvailability); err != nil {
 			return err
 		}
 	}
@@ -519,6 +520,7 @@ func (s *Store) insert(ctx context.Context,
 // the best child is then updated along with the best descendant.
 func (s *Store) applyWeightChanges(
 	ctx context.Context, newBalances []uint64, delta []int,
+	dataAvailability forkchoice.DataAvailability,
 ) error {
 	_, span := trace.StartSpan(ctx, "protoArrayForkChoice.applyWeightChanges")
 	defer span.End()
@@ -611,7 +613,7 @@ func (s *Store) applyWeightChanges(
 			if int(n.parent) >= len(delta) {
 				return errInvalidParentDelta
 			}
-			if err := s.updateBestChildAndDescendant(n.parent, uint64(i)); err != nil {
+			if err := s.updateBestChildAndDescendant(ctx, n.parent, uint64(i), dataAvailability); err != nil {
 				return err
 			}
 		}
@@ -628,7 +630,7 @@ func (s *Store) applyWeightChanges(
 // 2.)  The child is already the best child and the parent is updated with the new best descendant.
 // 3.)  The child is not the best child but becomes the best child.
 // 4.)  The child is not the best child and does not become the best child.
-func (s *Store) updateBestChildAndDescendant(parentIndex, childIndex uint64) error {
+func (s *Store) updateBestChildAndDescendant(ctx context.Context, parentIndex, childIndex uint64, dataAvailability forkchoice.DataAvailability) error {
 
 	// Protection against parent index out of bound, this should not happen.
 	if parentIndex >= uint64(len(s.nodes)) {
@@ -646,6 +648,10 @@ func (s *Store) updateBestChildAndDescendant(parentIndex, childIndex uint64) err
 	childLeadsToViableHead, err := s.leadsToViableHead(child)
 	if err != nil {
 		return err
+	}
+	// optimization: only run DA checks if viable
+	if childLeadsToViableHead && dataAvailability.IsDataAvailable(ctx, child.root) != nil {
+		childLeadsToViableHead = false
 	}
 
 	// Define 3 variables for the 3 outcomes mentioned above. This is to
@@ -978,7 +984,7 @@ func (f *ForkChoice) InsertOptimisticChain(ctx context.Context, chain []*forkcho
 		}
 		if err := f.store.insert(ctx,
 			b.Slot(), r, parentRoot, payloadHash,
-			chain[i].JustifiedCheckpoint.Epoch, chain[i].FinalizedCheckpoint.Epoch); err != nil {
+			chain[i].JustifiedCheckpoint.Epoch, chain[i].FinalizedCheckpoint.Epoch, f.dataAvailability); err != nil {
 			return err
 		}
 	}

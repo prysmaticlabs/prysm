@@ -4,10 +4,9 @@ import (
 	"context"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blob"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/interop"
-	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -33,7 +32,7 @@ func (s *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) 
 	}
 
 	var sidecar *eth.BlobsSidecar
-	if blockRequiresSidecar(block) {
+	if blob.BlockContainsKZGs(block) {
 		slot := block.Slot()
 		s.pendingQueueLock.RLock()
 		sidecars := s.pendingSidecarsInCache(slot)
@@ -77,12 +76,4 @@ func (s *Service) deleteAttsInPool(atts []*ethpb.Attestation) error {
 		}
 	}
 	return nil
-}
-
-func blockRequiresSidecar(b interfaces.BeaconBlock) bool {
-	if blocks.IsPreEIP4844Version(b.Version()) {
-		return false
-	}
-	blobKzgs, _ := b.Body().BlobKzgs()
-	return len(blobKzgs) != 0
 }

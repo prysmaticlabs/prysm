@@ -109,7 +109,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			hasPeer := len(pids) != 0
 
 			var queuedSidecar *queuedBlobsSidecar
-			if blockRequiresSidecar(b.Block()) {
+			if blob.BlockContainsKZGs(b.Block()) {
 				queuedSidecar = findSidecarForBlock(b.Block(), blkRoot, sidecars)
 				if queuedSidecar == nil {
 					if hasPeer {
