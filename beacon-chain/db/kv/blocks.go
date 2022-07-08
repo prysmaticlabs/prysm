@@ -809,14 +809,14 @@ func marshalBlock(_ context.Context, blk interfaces.SignedBeaconBlock) ([]byte, 
 		case errors.Is(err, wrapper.ErrUnsupportedVersion):
 			encodedBlock, err = blk.MarshalSSZ()
 			if err != nil {
-				return nil, err
+				return nil, errors.Wrap(err, "could not marshal non-blinded block")
 			}
 		case err != nil:
-			return nil, err
+			return nil, errors.Wrap(err, "could not convert block to blinded format")
 		default:
 			encodedBlock, err = blindedBlock.MarshalSSZ()
 			if err != nil {
-				return nil, err
+				return nil, errors.Wrap(err, "could not marshal blinded block")
 			}
 		}
 	} else {
