@@ -22,6 +22,7 @@ import (
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/forks/bellatrix"
@@ -164,6 +165,10 @@ func TestRPCBeaconBlocksByRange_ReturnCorrectNumberBack(t *testing.T) {
 }
 
 func TestRPCBeaconBlocksByRange_CanReconstructFullPayloadBlocks(t *testing.T) {
+	resetCfg := features.InitWithReset(&features.Flags{
+		EnableOnlyBlindedBeaconBlocks: true,
+	})
+	defer resetCfg()
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)
