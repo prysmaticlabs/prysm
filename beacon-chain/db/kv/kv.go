@@ -226,7 +226,7 @@ func (s *Store) checkNeedsResync() error {
 	return s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(migrationsBucket)
 		hasDisabledFeature := !features.Get().EnableOnlyBlindedBeaconBlocks
-		if bkt.Get(migrationBlindedBeaconBlocksKey) != nil && hasDisabledFeature {
+		if hasDisabledFeature && bkt.Get(migrationBlindedBeaconBlocksKey) != nil {
 			log.Warnf(
 				"You have disabled the flag %s, and your node must resync to ensure your "+
 					"database is compatible. If you do not want to resync, please re-enable the %s flag",
