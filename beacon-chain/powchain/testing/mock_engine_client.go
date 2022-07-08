@@ -29,7 +29,6 @@ type EngineClient struct {
 	ErrNewPayload               error
 	ExecutionPayloadByBlockHash map[[32]byte]*pb.ExecutionPayload
 	BlockByHashMap              map[[32]byte]*pb.ExecutionBlock
-	BlockWithTxsByHashMap       map[[32]byte]*pb.ExecutionBlock
 	NumReconstructedPayloads    uint64
 	TerminalBlockHash           []byte
 	TerminalBlockHashExists     bool
@@ -91,15 +90,6 @@ func (e *EngineClient) ReconstructFullBellatrixBlock(
 	}
 	e.NumReconstructedPayloads++
 	return wrapper.BuildSignedBeaconBlockFromExecutionPayload(blindedBlock, payload)
-}
-
-// ExecutionBlockByHashWithTxs --
-func (e *EngineClient) ExecutionBlockByHashWithTxs(_ context.Context, h common.Hash) (*pb.ExecutionBlock, error) {
-	b, ok := e.BlockWithTxsByHashMap[h]
-	if !ok {
-		return nil, errors.New("block not found")
-	}
-	return b, e.ErrExecBlockByHash
 }
 
 // GetTerminalBlockHash --

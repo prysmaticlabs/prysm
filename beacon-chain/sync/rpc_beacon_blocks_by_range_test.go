@@ -164,11 +164,8 @@ func TestRPCBeaconBlocksByRange_ReturnCorrectNumberBack(t *testing.T) {
 	}
 }
 
-func TestRPCBeaconBlocksByRange_CanReconstructFullPayloadBlocks(t *testing.T) {
-	resetCfg := features.InitWithReset(&features.Flags{
-		EnableOnlyBlindedBeaconBlocks: true,
-	})
-	defer resetCfg()
+func TestRPCBeaconBlocksByRange_ReconstructsPayloads(t *testing.T) {
+	features.Init(&features.Flags{EnableOnlyBlindedBeaconBlocks: true})
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
 	p1.Connect(p2)
@@ -176,12 +173,11 @@ func TestRPCBeaconBlocksByRange_CanReconstructFullPayloadBlocks(t *testing.T) {
 	d := db.SetupDB(t)
 
 	req := &ethpb.BeaconBlocksByRangeRequest{
-		StartSlot: 200,
-		Step:      21,
-		Count:     33,
+		StartSlot: 0,
+		Step:      1,
+		Count:     200,
 	}
 
-	// Start service with 160 as allowed blocks capacity (and almost zero capacity recovery).
 	parent := bytesutil.PadTo([]byte("parentHash"), fieldparams.RootLength)
 	stateRoot := bytesutil.PadTo([]byte("stateRoot"), fieldparams.RootLength)
 	receiptsRoot := bytesutil.PadTo([]byte("receiptsRoot"), fieldparams.RootLength)
@@ -214,69 +210,70 @@ func TestRPCBeaconBlocksByRange_CanReconstructFullPayloadBlocks(t *testing.T) {
 		BaseFeePerGas: bytesutil.PadTo([]byte("baseFeePerGas"), fieldparams.RootLength),
 		Transactions:  encodedBinaryTxs,
 	}
-	header, err := bellatrix.PayloadToHeader(payload)
-	require.NoError(t, err)
-
-	endSlot := req.StartSlot.Add(req.Step * (req.Count - 1))
-	expectedRoots := make([][32]byte, req.Count)
-
-	// Populate the database with blocks that would match the request.
-	for i, j := endSlot, req.Count-1; i >= req.StartSlot; i -= types.Slot(req.Step) {
-		blk := util.NewBlindedBeaconBlockBellatrix()
-		blk.Block.Body.ExecutionPayloadHeader = header
-		blk.Block.Slot = i
-		rt, err := blk.Block.HashTreeRoot()
-		require.NoError(t, err)
-		expectedRoots[j] = rt
-		wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
-		require.NoError(t, err)
-		require.NoError(t, d.SaveBlock(context.Background(), wsb))
-		j--
-	}
-
 	mockEngine := &mockPOW.EngineClient{
 		ExecutionPayloadByBlockHash: map[[32]byte]*enginev1.ExecutionPayload{
 			blockHash: payload,
 		},
 	}
-	r := &Service{cfg: &config{
-		p2p:                           p1,
-		beaconDB:                      d,
-		chain:                         &chainMock.ChainService{},
-		executionPayloadReconstructor: mockEngine,
-	},
+	header, err := bellatrix.PayloadToHeader(payload)
+	require.NoError(t, err)
+
+	genRoot := [32]byte{}
+	// Populate the database with blocks that would match the request.
+	for i := req.StartSlot; i < req.StartSlot.Add(req.Step*req.Count); i += types.Slot(req.Step) {
+		blk := util.NewBlindedBeaconBlockBellatrix()
+		blk.Block.Slot = i
+		blk.Block.Body.ExecutionPayloadHeader = header
+		if i == 0 {
+			rt, err := blk.Block.HashTreeRoot()
+			require.NoError(t, err)
+			genRoot = rt
+		}
+		util.SaveBlock(t, context.Background(), d, blk)
+	}
+	require.NoError(t, d.SaveGenesisBlockRoot(context.Background(), genRoot))
+
+	// Start service with 160 as allowed blocks capacity (and almost zero capacity recovery).
+	r := &Service{
+		cfg: &config{
+			p2p:                           p1,
+			beaconDB:                      d,
+			chain:                         &chainMock.ChainService{},
+			executionPayloadReconstructor: mockEngine,
+		},
 		rateLimiter: newRateLimiter(p1),
 	}
-
 	pcl := protocol.ID(p2p.RPCBlocksByRangeTopicV1)
 	topic := string(pcl)
 	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(0.000001, int64(req.Count*10), false)
-
 	var wg sync.WaitGroup
 	wg.Add(1)
+
+	// Use a new request to test this out
+	newReq := &ethpb.BeaconBlocksByRangeRequest{StartSlot: 0, Step: 1, Count: 1}
+
 	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
 		defer wg.Done()
-		prevSlot := types.Slot(0)
-		require.Equal(t, uint64(len(expectedRoots)), req.Count, "Number of roots not expected")
-		for i, j := req.StartSlot, 0; i < req.StartSlot.Add(req.Count*req.Step); i += types.Slot(req.Step) {
+		for i := newReq.StartSlot; i < newReq.StartSlot.Add(newReq.Count*newReq.Step); i += types.Slot(newReq.Step) {
 			expectSuccess(t, stream)
-			res := &ethpb.SignedBeaconBlockBellatrix{}
+			res := util.NewBeaconBlockBellatrix()
 			assert.NoError(t, r.cfg.p2p.Encoding().DecodeWithMaxLength(stream, res))
-			if res.Block.Slot < prevSlot {
-				t.Errorf("Received block is unsorted with slot %d lower than previous slot %d", res.Block.Slot, prevSlot)
+			if res.Block.Slot.SubSlot(newReq.StartSlot).Mod(newReq.Step) != 0 {
+				t.Errorf("Received unexpected block slot %d", res.Block.Slot)
 			}
-			rt, err := res.Block.HashTreeRoot()
-			require.NoError(t, err)
-			assert.Equal(t, expectedRoots[j], rt, "roots not equal")
-			prevSlot = res.Block.Slot
-			j++
+			// Expect EOF
+			b := make([]byte, 1)
+			_, err := stream.Read(b)
+			require.ErrorContains(t, io.EOF.Error(), err)
 		}
-		require.Equal(t, uint64(33), mockEngine.NumReconstructedPayloads, "wrong number of reconstructed payloads")
+		require.Equal(t, uint64(1), mockEngine.NumReconstructedPayloads)
 	})
 
 	stream1, err := p1.BHost.NewStream(context.Background(), p2.BHost.ID(), pcl)
 	require.NoError(t, err)
-	require.NoError(t, r.beaconBlocksByRangeRPCHandler(context.Background(), req, stream1))
+
+	err = r.beaconBlocksByRangeRPCHandler(context.Background(), newReq, stream1)
+	require.NoError(t, err)
 
 	if util.WaitTimeout(&wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
