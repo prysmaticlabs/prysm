@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/holiman/uint256"
@@ -19,13 +20,17 @@ import (
 	mocks "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/forks/bellatrix"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/testing/util"
 	"google.golang.org/protobuf/proto"
 )
 
 var (
+	_ = ExecutionPayloadReconstructor(&Service{})
 	_ = EngineCaller(&Service{})
 	_ = EngineCaller(&mocks.EngineClient{})
 )
@@ -383,6 +388,99 @@ func TestClient_HTTP(t *testing.T) {
 		resp, err := service.ExecutionBlockByHash(ctx, arg)
 		require.NoError(t, err)
 		require.DeepEqual(t, want, resp)
+	})
+}
+
+func TestReconstructFullBellatrixBlock(t *testing.T) {
+	ctx := context.Background()
+	t.Run("nil block", func(t *testing.T) {
+		service := &Service{}
+
+		_, err := service.ReconstructFullBellatrixBlock(ctx, nil)
+		require.ErrorContains(t, "nil data", err)
+	})
+	t.Run("only blinded block", func(t *testing.T) {
+		want := "can only reconstruct block from blinded block format"
+		service := &Service{}
+		bellatrixBlock := util.NewBeaconBlockBellatrix()
+		wrapped, err := wrapper.WrappedSignedBeaconBlock(bellatrixBlock)
+		require.NoError(t, err)
+		_, err = service.ReconstructFullBellatrixBlock(ctx, wrapped)
+		require.ErrorContains(t, want, err)
+	})
+	t.Run("properly reconstructs block with correct payload", func(t *testing.T) {
+		fix := fixtures()
+		payload, ok := fix["ExecutionPayload"].(*pb.ExecutionPayload)
+		require.Equal(t, true, ok)
+
+		jsonPayload := make(map[string]interface{})
+		tx := gethtypes.NewTransaction(
+			0,
+			common.HexToAddress("095e7baea6a6c7c4c2dfeb977efac326af552d87"),
+			big.NewInt(0), 0, big.NewInt(0),
+			nil,
+		)
+		txs := []*gethtypes.Transaction{tx}
+		encodedBinaryTxs := make([][]byte, 1)
+		var err error
+		encodedBinaryTxs[0], err = txs[0].MarshalBinary()
+		require.NoError(t, err)
+		payload.Transactions = encodedBinaryTxs
+		jsonPayload["transactions"] = txs
+		num := big.NewInt(1)
+		encodedNum := hexutil.EncodeBig(num)
+		jsonPayload["hash"] = hexutil.Encode(payload.BlockHash)
+		jsonPayload["parentHash"] = common.BytesToHash([]byte("parent"))
+		jsonPayload["sha3Uncles"] = common.BytesToHash([]byte("uncles"))
+		jsonPayload["miner"] = common.BytesToAddress([]byte("miner"))
+		jsonPayload["stateRoot"] = common.BytesToHash([]byte("state"))
+		jsonPayload["transactionsRoot"] = common.BytesToHash([]byte("txs"))
+		jsonPayload["receiptsRoot"] = common.BytesToHash([]byte("receipts"))
+		jsonPayload["logsBloom"] = gethtypes.BytesToBloom([]byte("bloom"))
+		jsonPayload["gasLimit"] = hexutil.EncodeUint64(1)
+		jsonPayload["gasUsed"] = hexutil.EncodeUint64(2)
+		jsonPayload["timestamp"] = hexutil.EncodeUint64(3)
+		jsonPayload["number"] = encodedNum
+		jsonPayload["extraData"] = common.BytesToHash([]byte("extra"))
+		jsonPayload["totalDifficulty"] = "0x123456"
+		jsonPayload["difficulty"] = encodedNum
+		jsonPayload["size"] = encodedNum
+		jsonPayload["baseFeePerGas"] = encodedNum
+
+		header, err := bellatrix.PayloadToHeader(payload)
+		require.NoError(t, err)
+
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			defer func() {
+				require.NoError(t, r.Body.Close())
+			}()
+			respJSON := map[string]interface{}{
+				"jsonrpc": "2.0",
+				"id":      1,
+				"result":  jsonPayload,
+			}
+			require.NoError(t, json.NewEncoder(w).Encode(respJSON))
+		}))
+		defer srv.Close()
+
+		rpcClient, err := rpc.DialHTTP(srv.URL)
+		require.NoError(t, err)
+		defer rpcClient.Close()
+
+		service := &Service{}
+		service.rpcClient = rpcClient
+		blindedBlock := util.NewBlindedBeaconBlockBellatrix()
+
+		blindedBlock.Block.Body.ExecutionPayloadHeader = header
+		wrapped, err := wrapper.WrappedSignedBeaconBlock(blindedBlock)
+		require.NoError(t, err)
+		reconstructed, err := service.ReconstructFullBellatrixBlock(ctx, wrapped)
+		require.NoError(t, err)
+
+		got, err := reconstructed.Block().Body().ExecutionPayload()
+		require.NoError(t, err)
+		require.DeepEqual(t, payload, got)
 	})
 }
 
@@ -870,6 +968,66 @@ func fixtures() map[string]interface{} {
 		"ForkchoiceUpdatedAcceptedResponse": forkChoiceAcceptedResp,
 		"ForkchoiceUpdatedInvalidResponse":  forkChoiceInvalidResp,
 		"TransitionConfiguration":           transitionCfg,
+	}
+}
+
+func Test_fullPayloadFromExecutionBlock(t *testing.T) {
+	type args struct {
+		header *pb.ExecutionPayloadHeader
+		block  *pb.ExecutionBlock
+	}
+	wantedHash := common.BytesToHash([]byte("foo"))
+	tests := []struct {
+		name string
+		args args
+		want *pb.ExecutionPayload
+		err  string
+	}{
+		{
+			name: "nil header fails",
+			args: args{header: nil, block: &pb.ExecutionBlock{}},
+			err:  "cannot be nil",
+		},
+		{
+			name: "nil block fails",
+			args: args{header: &pb.ExecutionPayloadHeader{}, block: nil},
+			err:  "cannot be nil",
+		},
+		{
+			name: "block hash field in header and block hash mismatch",
+			args: args{
+				header: &pb.ExecutionPayloadHeader{
+					BlockHash: []byte("foo"),
+				},
+				block: &pb.ExecutionBlock{
+					Hash: common.BytesToHash([]byte("bar")),
+				},
+			},
+			err: "does not match execution block hash",
+		},
+		{
+			name: "ok",
+			args: args{
+				header: &pb.ExecutionPayloadHeader{
+					BlockHash: wantedHash[:],
+				},
+				block: &pb.ExecutionBlock{
+					Hash: wantedHash,
+				},
+			},
+			want: &pb.ExecutionPayload{
+				BlockHash: wantedHash[:],
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := fullPayloadFromExecutionBlock(tt.args.header, tt.args.block)
+			if (err != nil) && !strings.Contains(err.Error(), tt.err) {
+				t.Fatalf("Wanted err %s got %v", tt.err, err)
+			}
+			require.DeepEqual(t, tt.want, got)
+		})
 	}
 }
 
