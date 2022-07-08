@@ -141,7 +141,7 @@ func TestStore_BlocksCRUD(t *testing.T) {
 			require.NoError(t, err)
 			wanted := retrievedBlock
 			if _, err := retrievedBlock.PbBellatrixBlock(); err == nil {
-				wanted, err = wrapper.WrapSignedBlindedBeaconBlock(retrievedBlock)
+				wanted, err = retrievedBlock.ToBlinded()
 				require.NoError(t, err)
 			}
 			assert.Equal(t, true, proto.Equal(wanted.Proto(), retrievedBlock.Proto()), "Wanted: %v, received: %v", wanted, retrievedBlock)
@@ -323,7 +323,7 @@ func TestStore_BlocksCRUD_NoCache(t *testing.T) {
 
 			wanted := blk
 			if _, err := blk.PbBellatrixBlock(); err == nil {
-				wanted, err = wrapper.WrapSignedBlindedBeaconBlock(blk)
+				wanted, err = blk.ToBlinded()
 				require.NoError(t, err)
 			}
 			assert.Equal(t, true, proto.Equal(wanted.Proto(), retrievedBlock.Proto()), "Wanted: %v, received: %v", wanted, retrievedBlock)
@@ -538,7 +538,7 @@ func TestStore_SaveBlock_CanGetHighestAt(t *testing.T) {
 			require.NoError(t, err)
 			wanted := block1
 			if _, err := block1.PbBellatrixBlock(); err == nil {
-				wanted, err = wrapper.WrapSignedBlindedBeaconBlock(wanted)
+				wanted, err = wanted.ToBlinded()
 				require.NoError(t, err)
 			}
 			assert.Equal(t, true, proto.Equal(wanted.Proto(), b.Proto()), "Wanted: %v, received: %v", wanted, b)
@@ -552,7 +552,7 @@ func TestStore_SaveBlock_CanGetHighestAt(t *testing.T) {
 			require.NoError(t, err)
 			wanted2 := block2
 			if _, err := block2.PbBellatrixBlock(); err == nil {
-				wanted2, err = wrapper.WrapSignedBlindedBeaconBlock(block2)
+				wanted2, err = block2.ToBlinded()
 				require.NoError(t, err)
 			}
 			assert.Equal(t, true, proto.Equal(wanted2.Proto(), b.Proto()), "Wanted: %v, received: %v", wanted2, b)
@@ -566,7 +566,7 @@ func TestStore_SaveBlock_CanGetHighestAt(t *testing.T) {
 			require.NoError(t, err)
 			wanted = block3
 			if _, err := block3.PbBellatrixBlock(); err == nil {
-				wanted, err = wrapper.WrapSignedBlindedBeaconBlock(wanted)
+				wanted, err = wanted.ToBlinded()
 				require.NoError(t, err)
 			}
 			assert.Equal(t, true, proto.Equal(wanted.Proto(), b.Proto()), "Wanted: %v, received: %v", wanted, b)
@@ -598,7 +598,7 @@ func TestStore_GenesisBlock_CanGetHighestAt(t *testing.T) {
 			require.NoError(t, err)
 			wanted := block1
 			if _, err := block1.PbBellatrixBlock(); err == nil {
-				wanted, err = wrapper.WrapSignedBlindedBeaconBlock(block1)
+				wanted, err = block1.ToBlinded()
 				require.NoError(t, err)
 			}
 			assert.Equal(t, true, proto.Equal(wanted.Proto(), b.Proto()), "Wanted: %v, received: %v", wanted, b)
@@ -611,7 +611,7 @@ func TestStore_GenesisBlock_CanGetHighestAt(t *testing.T) {
 			require.NoError(t, err)
 			wanted = genesisBlock
 			if _, err := genesisBlock.PbBellatrixBlock(); err == nil {
-				wanted, err = wrapper.WrapSignedBlindedBeaconBlock(genesisBlock)
+				wanted, err = genesisBlock.ToBlinded()
 				require.NoError(t, err)
 			}
 			assert.Equal(t, true, proto.Equal(wanted.Proto(), b.Proto()), "Wanted: %v, received: %v", wanted, b)
@@ -624,7 +624,7 @@ func TestStore_GenesisBlock_CanGetHighestAt(t *testing.T) {
 			require.NoError(t, err)
 			wanted = genesisBlock
 			if _, err := genesisBlock.PbBellatrixBlock(); err == nil {
-				wanted, err = wrapper.WrapSignedBlindedBeaconBlock(genesisBlock)
+				wanted, err = genesisBlock.ToBlinded()
 				require.NoError(t, err)
 			}
 			assert.Equal(t, true, proto.Equal(wanted.Proto(), b.Proto()), "Wanted: %v, received: %v", wanted, b)
@@ -716,7 +716,7 @@ func TestStore_BlocksBySlot_BlockRootsBySlot(t *testing.T) {
 
 			wanted := b1
 			if _, err := b1.PbBellatrixBlock(); err == nil {
-				wanted, err = wrapper.WrapSignedBlindedBeaconBlock(b1)
+				wanted, err = b1.ToBlinded()
 				require.NoError(t, err)
 			}
 			assert.Equal(t, true, proto.Equal(retrievedBlocks[0].Proto(), wanted.Proto()), "Wanted: %v, received: %v", retrievedBlocks[0], wanted)
@@ -728,13 +728,13 @@ func TestStore_BlocksBySlot_BlockRootsBySlot(t *testing.T) {
 			}
 			wanted = b2
 			if _, err := b2.PbBellatrixBlock(); err == nil {
-				wanted, err = wrapper.WrapSignedBlindedBeaconBlock(b2)
+				wanted, err = b2.ToBlinded()
 				require.NoError(t, err)
 			}
 			assert.Equal(t, true, proto.Equal(wanted.Proto(), retrievedBlocks[0].Proto()), "Wanted: %v, received: %v", retrievedBlocks[0], wanted)
 			wanted = b3
 			if _, err := b3.PbBellatrixBlock(); err == nil {
-				wanted, err = wrapper.WrapSignedBlindedBeaconBlock(b3)
+				wanted, err = b3.ToBlinded()
 				require.NoError(t, err)
 			}
 			assert.Equal(t, true, proto.Equal(retrievedBlocks[1].Proto(), wanted.Proto()), "Wanted: %v, received: %v", retrievedBlocks[1], wanted)
