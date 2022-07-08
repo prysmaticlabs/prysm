@@ -18,7 +18,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-var placeholderFields = []string{"UPDATE_TIMEOUT", "INTERVALS_PER_SLOT", "CAPELLA_FORK_VERSION", "CAPELLA_FORK_EPOCH"}
+var placeholderFields = []string{"UPDATE_TIMEOUT", "INTERVALS_PER_SLOT"}
 
 func TestLoadConfigFile(t *testing.T) {
 	// See https://media.githubusercontent.com/media/ethereum/consensus-spec-tests/master/tests/minimal/config/phase0.yaml
