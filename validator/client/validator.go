@@ -980,12 +980,14 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 	}); err != nil {
 		return err
 	}
-	log.Infoln("Successfully prepared beacon proposer with fee recipient to validator index mapping.")
+	log.Infoln("Prepared beacon proposer with fee recipient to validator index mapping")
 
-	if err := SubmitValidatorRegistration(ctx, v.validatorClient, km.Sign, registerValidatorRequests); err != nil {
-		return err
+	if len(registerValidatorRequests) > 0 {
+		if err := SubmitValidatorRegistration(ctx, v.validatorClient, km.Sign, registerValidatorRequests); err != nil {
+			return err
+		}
+		log.Infoln("Submitted builder validator registration settings for custom builders")
 	}
-	log.Infoln("Successfully submitted builder validator registration settings for custom builders.")
 	return nil
 }
 
@@ -994,6 +996,7 @@ func (v *validator) buildProposerSettingsRequests(ctx context.Context, pubkeys [
 	var registerValidatorRequests []*ethpb.ValidatorRegistrationV1
 	// need to check for pubkey to validator index mappings
 	for i, key := range pubkeys {
+		var enableValidatorRegistration bool
 		skipAppendToFeeRecipientArray := false
 		feeRecipient := common.HexToAddress(params.BeaconConfig().EthBurnAddressHex)
 		gasLimit := params.BeaconConfig().DefaultBuilderGasLimit
@@ -1012,14 +1015,25 @@ func (v *validator) buildProposerSettingsRequests(ctx context.Context, pubkeys [
 		}
 		if v.ProposerSettings.DefaultConfig != nil {
 			feeRecipient = v.ProposerSettings.DefaultConfig.FeeRecipient
-			gasLimit = v.ProposerSettings.DefaultConfig.GasLimit
+			vr := v.ProposerSettings.DefaultConfig.ValidatorRegistration
+			if vr != nil && vr.Enable {
+				gasLimit = vr.GasLimit
+				enableValidatorRegistration = true
+			}
+
 		}
 		if v.ProposerSettings.ProposeConfig != nil {
 			option, ok := v.ProposerSettings.ProposeConfig[key]
 			if ok && option != nil {
 				// override the default if a proposeconfig is set
 				feeRecipient = option.FeeRecipient
-				gasLimit = option.GasLimit
+				vr := option.ValidatorRegistration
+				if vr != nil && vr.Enable {
+					gasLimit = vr.GasLimit
+					enableValidatorRegistration = true
+				} else {
+					enableValidatorRegistration = false
+				}
 			}
 		}
 		if hexutil.Encode(feeRecipient.Bytes()) == params.BeaconConfig().EthBurnAddressHex {
@@ -1031,13 +1045,14 @@ func (v *validator) buildProposerSettingsRequests(ctx context.Context, pubkeys [
 				FeeRecipient:   feeRecipient[:],
 			})
 		}
-		registerValidatorRequests = append(registerValidatorRequests, &ethpb.ValidatorRegistrationV1{
-			FeeRecipient: feeRecipient[:],
-			GasLimit:     gasLimit,
-			Timestamp:    uint64(time.Now().UTC().Unix()),
-			Pubkey:       pubkeys[i][:],
-		})
-
+		if enableValidatorRegistration {
+			registerValidatorRequests = append(registerValidatorRequests, &ethpb.ValidatorRegistrationV1{
+				FeeRecipient: feeRecipient[:],
+				GasLimit:     gasLimit,
+				Timestamp:    uint64(time.Now().UTC().Unix()),
+				Pubkey:       pubkeys[i][:],
+			})
+		}
 	}
 	return validatorToFeeRecipients, registerValidatorRequests, nil
 }
