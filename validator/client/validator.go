@@ -1015,9 +1015,10 @@ func (v *validator) buildProposerSettingsRequests(ctx context.Context, pubkeys [
 			}
 			if !foundIndex {
 				skipAppendToFeeRecipientArray = true
+			} else {
+				validatorIndex = ind
+				v.pubkeyToValidatorIndex[key] = validatorIndex
 			}
-			validatorIndex = ind
-			v.pubkeyToValidatorIndex[key] = validatorIndex
 		}
 		if v.ProposerSettings.DefaultConfig != nil {
 			feeRecipient = v.ProposerSettings.DefaultConfig.FeeRecipient
@@ -1045,13 +1046,15 @@ func (v *validator) buildProposerSettingsRequests(ctx context.Context, pubkeys [
 		if hexutil.Encode(feeRecipient.Bytes()) == params.BeaconConfig().EthBurnAddressHex {
 			log.Warnln("Fee recipient is set to the burn address. You will not be rewarded transaction fees on this setting. Please set a different fee recipient.")
 		}
+
+		// Only include requests with assigned validator index
 		if !skipAppendToFeeRecipientArray {
 			validatorToFeeRecipients = append(validatorToFeeRecipients, &ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
 				ValidatorIndex: validatorIndex,
 				FeeRecipient:   feeRecipient[:],
 			})
 		}
-		if enableValidatorRegistration {
+		if !skipAppendToFeeRecipientArray && enableValidatorRegistration {
 			registerValidatorRequests = append(registerValidatorRequests, &ethpb.ValidatorRegistrationV1{
 				FeeRecipient: feeRecipient[:],
 				GasLimit:     gasLimit,
