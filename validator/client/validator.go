@@ -985,8 +985,8 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 		return err
 	}
 	log.Infoln("Prepared beacon proposer with fee recipient to validator index mapping")
-  if len(registerValidatorRequests) != len(pubkeys) {
-			log.Warnf("%d public key(s) will not be included in validator registration until a validator index is assigned", len(pubkeys)-len(registerValidatorRequests))
+	if len(signedRegisterValidatorRequests) != len(pubkeys) {
+		log.Warnf("%d public key(s) will not be included in validator registration until a validator index is assigned", len(pubkeys)-len(signedRegisterValidatorRequests))
 	}
 	if err := SubmitValidatorRegistration(ctx, v.validatorClient, signedRegisterValidatorRequests); err != nil {
 		return err
