@@ -360,10 +360,10 @@ var (
 	}
 
 	// EnableValidatorRegistrationFlag enables the periodic validator registration API calls that will update the custom builder with validator settings.
-	EnableValidatorRegistrationFlag = &cli.StringFlag{
+	EnableValidatorRegistrationFlag = &cli.BoolFlag{
 		Name:  "enable-validator-registration",
 		Usage: "Enables validator registration APIs (MEV Builder APIs) for the validator client to update settings such as fee recipient and gas limit",
-		Value: "",
+		Value: false,
 	}
 )
 
