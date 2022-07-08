@@ -29,7 +29,7 @@ type EngineClient struct {
 	ErrNewPayload               error
 	ExecutionPayloadByBlockHash map[[32]byte]*pb.ExecutionPayload
 	BlockByHashMap              map[[32]byte]*pb.ExecutionBlock
-	BlockWithTxsByHashMap       map[[32]byte]*pb.ExecutionBlockWithTxs
+	BlockWithTxsByHashMap       map[[32]byte]*pb.ExecutionBlock
 	NumReconstructedPayloads    uint64
 	TerminalBlockHash           []byte
 	TerminalBlockHashExists     bool
@@ -67,7 +67,7 @@ func (e *EngineClient) LatestExecutionBlock(_ context.Context) (*pb.ExecutionBlo
 }
 
 // ExecutionBlockByHash --
-func (e *EngineClient) ExecutionBlockByHash(_ context.Context, h common.Hash) (*pb.ExecutionBlock, error) {
+func (e *EngineClient) ExecutionBlockByHash(_ context.Context, h common.Hash, _ bool) (*pb.ExecutionBlock, error) {
 	b, ok := e.BlockByHashMap[h]
 	if !ok {
 		return nil, errors.New("block not found")
@@ -94,7 +94,7 @@ func (e *EngineClient) ReconstructFullBellatrixBlock(
 }
 
 // ExecutionBlockByHashWithTxs --
-func (e *EngineClient) ExecutionBlockByHashWithTxs(_ context.Context, h common.Hash) (*pb.ExecutionBlockWithTxs, error) {
+func (e *EngineClient) ExecutionBlockByHashWithTxs(_ context.Context, h common.Hash) (*pb.ExecutionBlock, error) {
 	b, ok := e.BlockWithTxsByHashMap[h]
 	if !ok {
 		return nil, errors.New("block not found")
@@ -130,7 +130,7 @@ func (e *EngineClient) GetTerminalBlockHash(ctx context.Context) ([]byte, bool, 
 		if parentHash == params.BeaconConfig().ZeroHash {
 			return nil, false, nil
 		}
-		parentBlk, err := e.ExecutionBlockByHash(ctx, parentHash)
+		parentBlk, err := e.ExecutionBlockByHash(ctx, parentHash, false /* with txs */)
 		if err != nil {
 			return nil, false, errors.Wrap(err, "could not get parent execution block")
 		}
