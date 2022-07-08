@@ -803,6 +803,7 @@ func unmarshalBlock(_ context.Context, enc []byte) (interfaces.SignedBeaconBlock
 func marshalBlock(_ context.Context, blk interfaces.SignedBeaconBlock) ([]byte, error) {
 	var encodedBlock []byte
 	var err error
+	blockToSave := blk
 	if features.Get().EnableOnlyBlindedBeaconBlocks {
 		blindedBlock, err := blk.ToBlinded()
 		switch {
@@ -818,6 +819,7 @@ func marshalBlock(_ context.Context, blk interfaces.SignedBeaconBlock) ([]byte, 
 			if err != nil {
 				return nil, errors.Wrap(err, "could not marshal blinded block")
 			}
+			blockToSave = blindedBlock
 		}
 	} else {
 		encodedBlock, err = blk.MarshalSSZ()
@@ -825,13 +827,10 @@ func marshalBlock(_ context.Context, blk interfaces.SignedBeaconBlock) ([]byte, 
 			return nil, err
 		}
 	}
-	switch blk.Version() {
+	switch blockToSave.Version() {
 	case version.BellatrixBlind:
 		return snappy.Encode(nil, append(bellatrixBlindKey, encodedBlock...)), nil
 	case version.Bellatrix:
-		if features.Get().EnableOnlyBlindedBeaconBlocks {
-			return snappy.Encode(nil, append(bellatrixBlindKey, encodedBlock...)), nil
-		}
 		return snappy.Encode(nil, append(bellatrixKey, encodedBlock...)), nil
 	case version.Altair:
 		return snappy.Encode(nil, append(altairKey, encodedBlock...)), nil
