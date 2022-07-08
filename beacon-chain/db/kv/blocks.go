@@ -778,6 +778,11 @@ func unmarshalBlock(_ context.Context, enc []byte) (interfaces.SignedBeaconBlock
 		if err := rawBlock.UnmarshalSSZ(enc[len(altairKey):]); err != nil {
 			return nil, err
 		}
+	case hasBellatrixKey(enc):
+		rawBlock = &ethpb.SignedBeaconBlockBellatrix{}
+		if err := rawBlock.UnmarshalSSZ(enc[len(bellatrixKey):]); err != nil {
+			return nil, err
+		}
 	case hasBellatrixBlindKey(enc):
 		rawBlock = &ethpb.SignedBlindedBeaconBlockBellatrix{}
 		if err := rawBlock.UnmarshalSSZ(enc[len(bellatrixBlindKey):]); err != nil {
@@ -801,7 +806,10 @@ func marshalBlock(_ context.Context, blk interfaces.SignedBeaconBlock) ([]byte, 
 	}
 	switch blk.Version() {
 	case version.Bellatrix, version.BellatrixBlind:
-		return snappy.Encode(nil, append(bellatrixBlindKey, encodedBlock...)), nil
+		if features.Get().EnableOnlyBlindedBeaconBlocks {
+			return snappy.Encode(nil, append(bellatrixBlindKey, encodedBlock...)), nil
+		}
+		return snappy.Encode(nil, append(bellatrixKey, encodedBlock...)), nil
 	case version.Altair:
 		return snappy.Encode(nil, append(altairKey, encodedBlock...)), nil
 	case version.Phase0:
