@@ -973,8 +973,11 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 		return err
 	}
 	if len(feeRecipients) == 0 {
-		log.Warnf("no valid validator indices were found, prepare beacon proposer request fee recipients array is empty")
+		log.Warnf("No valid validator indices were found, prepare beacon proposer request fee recipients array is empty")
 		return nil
+	}
+	if len(feeRecipients) != len(pubkeys) {
+		log.Warnf("%d public key(s) will not prepare beacon proposer and update fee recipient until a validator index is assigned", len(pubkeys)-len(feeRecipients))
 	}
 	if _, err := v.validatorClient.PrepareBeaconProposer(ctx, &ethpb.PrepareBeaconProposerRequest{
 		Recipients: feeRecipients,
@@ -982,7 +985,9 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 		return err
 	}
 	log.Infoln("Prepared beacon proposer with fee recipient to validator index mapping")
-
+  if len(registerValidatorRequests) != len(pubkeys) {
+			log.Warnf("%d public key(s) will not be included in validator registration until a validator index is assigned", len(pubkeys)-len(registerValidatorRequests))
+	}
 	if err := SubmitValidatorRegistration(ctx, v.validatorClient, signedRegisterValidatorRequests); err != nil {
 		return err
 	}
@@ -1008,9 +1013,10 @@ func (v *validator) buildProposerSettingsRequests(ctx context.Context, pubkeys [
 			}
 			if !foundIndex {
 				skipAppendToFeeRecipientArray = true
+			} else {
+				validatorIndex = ind
+				v.pubkeyToValidatorIndex[key] = validatorIndex
 			}
-			validatorIndex = ind
-			v.pubkeyToValidatorIndex[key] = validatorIndex
 		}
 		if v.ProposerSettings.DefaultConfig != nil {
 			feeRecipient = v.ProposerSettings.DefaultConfig.FeeRecipient
@@ -1038,13 +1044,15 @@ func (v *validator) buildProposerSettingsRequests(ctx context.Context, pubkeys [
 		if hexutil.Encode(feeRecipient.Bytes()) == params.BeaconConfig().EthBurnAddressHex {
 			log.Warnln("Fee recipient is set to the burn address. You will not be rewarded transaction fees on this setting. Please set a different fee recipient.")
 		}
+
+		// Only include requests with assigned validator index
 		if !skipAppendToFeeRecipientArray {
 			validatorToFeeRecipients = append(validatorToFeeRecipients, &ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
 				ValidatorIndex: validatorIndex,
 				FeeRecipient:   feeRecipient[:],
 			})
 		}
-		if enableValidatorRegistration {
+		if !skipAppendToFeeRecipientArray && enableValidatorRegistration {
 			signedReg, ok := v.signedValidatorRegistrationCache[pubkeys[i]]
 			if ok &&
 				signedReg.Message.GasLimit == gasLimit &&
