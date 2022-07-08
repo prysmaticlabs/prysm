@@ -52,6 +52,8 @@ func TestGetSpec(t *testing.T) {
 	config.BellatrixForkEpoch = 101
 	config.ShardingForkVersion = []byte("ShardingForkVersion")
 	config.ShardingForkEpoch = 102
+	config.CapellaForkVersion = []byte("CapellaForkVersion")
+	config.CapellaForkEpoch = 103
 	config.BLSWithdrawalPrefixByte = byte('b')
 	config.GenesisDelay = 24
 	config.SecondsPerSlot = 25
@@ -133,7 +135,7 @@ func TestGetSpec(t *testing.T) {
 	resp, err := server.GetSpec(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 
-	assert.Equal(t, 99, len(resp.Data))
+	assert.Equal(t, 101, len(resp.Data))
 	for k, v := range resp.Data {
 		switch k {
 		case "CONFIG_NAME":
@@ -202,6 +204,10 @@ func TestGetSpec(t *testing.T) {
 			assert.Equal(t, "0x"+hex.EncodeToString([]byte("ShardingForkVersion")), v)
 		case "SHARDING_FORK_EPOCH":
 			assert.Equal(t, "102", v)
+		case "CAPELLA_FORK_VERSION":
+			assert.Equal(t, "0x"+hex.EncodeToString([]byte("CapellaForkVersion")), v)
+		case "CAPELLA_FORK_EPOCH":
+			assert.Equal(t, "103", v)
 		case "MIN_ANCHOR_POW_BLOCK_DIFFICULTY":
 			assert.Equal(t, "1000", v)
 		case "BLS_WITHDRAWAL_PREFIX":
