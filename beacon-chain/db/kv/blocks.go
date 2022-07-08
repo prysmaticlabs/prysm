@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
@@ -304,12 +305,14 @@ func (s *Store) SaveBlocks(ctx context.Context, blocks []interfaces.SignedBeacon
 			if err := updateValueForIndices(ctx, indicesForBlocks[i], blockRoots[i], tx); err != nil {
 				return errors.Wrap(err, "could not update DB indices")
 			}
-			if _, err := blk.Block().Body().ExecutionPayload(); err == nil {
-				blindedBlock, err := wrapper.WrapSignedBlindedBeaconBlock(blk)
-				if err != nil {
-					return err
+			if features.Get().EnableOnlyBlindedBeaconBlocks {
+				if _, err := blk.Block().Body().ExecutionPayload(); err == nil {
+					blindedBlock, err := wrapper.WrapSignedBlindedBeaconBlock(blk)
+					if err != nil {
+						return err
+					}
+					blk = blindedBlock
 				}
-				blk = blindedBlock
 			}
 			s.blockCache.Set(string(blockRoots[i]), blk, int64(len(encodedBlocks[i])))
 			if err := bkt.Put(blockRoots[i], encodedBlocks[i]); err != nil {
@@ -792,26 +795,9 @@ func unmarshalBlock(_ context.Context, enc []byte) (interfaces.SignedBeaconBlock
 
 // marshal versioned beacon block from struct type down to bytes.
 func marshalBlock(_ context.Context, blk interfaces.SignedBeaconBlock) ([]byte, error) {
-	var encodedBlock []byte
-	var blindedBlock interfaces.SignedBeaconBlock
-	var err error
-	// If the block supports blinding of execution payloads, we wrap as
-	// a signed, blinded beacon block and then marshal to bytes. Otherwise,
-	// We just marshal the block as it is.
-	blindedBlock, err = wrapper.WrapSignedBlindedBeaconBlock(blk)
-	switch {
-	case errors.Is(err, wrapper.ErrUnsupportedSignedBeaconBlock):
-		encodedBlock, err = blk.MarshalSSZ()
-		if err != nil {
-			return nil, err
-		}
-	case err != nil:
+	encodedBlock, err := determineBlockTypeToMarshal(blk)
+	if err != nil {
 		return nil, err
-	default:
-		encodedBlock, err = blindedBlock.MarshalSSZ()
-		if err != nil {
-			return nil, err
-		}
 	}
 	switch blk.Version() {
 	case version.Bellatrix, version.BellatrixBlind:
@@ -823,4 +809,20 @@ func marshalBlock(_ context.Context, blk interfaces.SignedBeaconBlock) ([]byte, 
 	default:
 		return nil, errors.New("Unknown block version")
 	}
+}
+
+func determineBlockTypeToMarshal(blk interfaces.SignedBeaconBlock) ([]byte, error) {
+	if !features.Get().EnableOnlyBlindedBeaconBlocks {
+		return blk.MarshalSSZ()
+	}
+	// If the block supports blinding of execution payloads, we wrap as
+	// a signed, blinded beacon block and then marshal to bytes. Otherwise,
+	// We just marshal the block as it is.
+	blindedBlock, err := wrapper.WrapSignedBlindedBeaconBlock(blk)
+	if errors.Is(err, wrapper.ErrUnsupportedSignedBeaconBlock) {
+		return blk.MarshalSSZ()
+	} else if err != nil {
+		return nil, err
+	}
+	return blindedBlock.MarshalSSZ()
 }
