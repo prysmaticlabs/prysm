@@ -109,7 +109,7 @@ func TestWrapSignedBlindedBeaconBlock(t *testing.T) {
 
 		blk, err := wrapper.WrappedSignedBeaconBlock(bellatrixBlk)
 		require.NoError(t, err)
-		builtBlock, err := wrapper.WrapSignedBlindedBeaconBlock(blk)
+		builtBlock, err := blk.ToBlinded()
 		require.NoError(t, err)
 
 		got, err := builtBlock.Block().Body().ExecutionPayloadHeader()
