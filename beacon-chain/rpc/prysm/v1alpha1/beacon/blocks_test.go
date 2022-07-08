@@ -872,7 +872,7 @@ func TestServer_ListBeaconBlocks_Genesis(t *testing.T) {
 		blk.Block.ParentRoot = parentRoot[:]
 		wrapped, err := wrapper.WrappedSignedBeaconBlock(blk)
 		assert.NoError(t, err)
-		blinded, err := wrapper.WrapSignedBlindedBeaconBlock(wrapped)
+		blinded, err := wrapped.ToBlinded()
 		assert.NoError(t, err)
 		blindedProto, err := blinded.PbBlindedBellatrixBlock()
 		assert.NoError(t, err)
