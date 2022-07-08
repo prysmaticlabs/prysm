@@ -46,13 +46,7 @@ type invalidBlock struct {
 
 type invalidBlockError interface {
 	Error() string
-	InvalidBlock() bool
 	BlockRoot() [32]byte
-}
-
-// InvalidBlock returns true for `invalidBlock`.
-func (e invalidBlock) InvalidBlock() bool {
-	return true
 }
 
 // BlockRoot returns the invalid block root.
@@ -65,11 +59,11 @@ func IsInvalidBlock(e error) bool {
 	if e == nil {
 		return false
 	}
-	d, ok := e.(invalidBlockError)
+	_, ok := e.(invalidBlockError)
 	if !ok {
 		return IsInvalidBlock(errors.Unwrap(e))
 	}
-	return d.InvalidBlock()
+	return true
 }
 
 // InvalidBlockRoot returns the invalid block root. If the error
