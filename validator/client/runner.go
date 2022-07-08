@@ -55,7 +55,7 @@ func run(ctx context.Context, v iface.Validator) {
 	}
 	sub := km.SubscribeAccountChanges(accountsChangedChan)
 	// Set properties on the beacon node like the fee recipient for validators that are being used & active.
-	if err := v.PushProposerSettings(ctx, km, headSlot); err != nil {
+	if err := v.PushProposerSettings(ctx, km); err != nil {
 		log.Fatalf("Failed to update proposer settings: %v", err) // allow fatal. skipcq
 	}
 	for {
@@ -117,7 +117,7 @@ func run(ctx context.Context, v iface.Validator) {
 			if slots.IsEpochStart(slot) {
 				go func() {
 					//deadline set for next epoch rounded up
-					if err := v.PushProposerSettings(ctx, km, slot); err != nil {
+					if err := v.PushProposerSettings(ctx, km); err != nil {
 						log.Warnf("Failed to update proposer settings: %v", err)
 					}
 				}()

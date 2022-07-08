@@ -115,7 +115,7 @@ func (v *validator) handleWithRemoteKeyManager(ctx context.Context, accountsChan
 		case <-accountsChangedChan:
 			// Accounts (keys) changed, restart the process.
 			return v.waitForActivation(ctx, accountsChangedChan)
-		case slot := <-v.NextSlot():
+		case <-v.NextSlot():
 			if ctx.Err() == context.Canceled {
 				return errors.Wrap(ctx.Err(), "context canceled, not waiting for activation anymore")
 			}

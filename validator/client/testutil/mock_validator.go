@@ -252,7 +252,7 @@ func (_ *FakeValidator) SubmitSignedContributionAndProof(_ context.Context, _ ty
 }
 
 // PushProposerSettings for mocking
-func (_ *FakeValidator) PushProposerSettings(_ context.Context, _ keymanager.IKeymanager, _ types.Slot) error {
+func (_ *FakeValidator) PushProposerSettings(_ context.Context, _ keymanager.IKeymanager) error {
 	log.Infoln("Mock updated proposer settings")
 	return nil
 }

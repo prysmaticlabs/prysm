@@ -585,7 +585,6 @@ func MockValidatorRegistrationSignRequest() *v1.ValidatorRegistrationSignRequest
 			Timestamp:    fmt.Sprint(0),
 			Pubkey:       hexutil.Encode(make([]byte, fieldparams.BLSSignatureLength)),
 		},
-		Epoch: "0",
 	}
 }
 
