@@ -18,7 +18,7 @@ func TestSubmitValidatorRegistration(t *testing.T) {
 	defer finish()
 
 	ctx := context.Background()
-	require.NoError(t, nil, SubmitValidatorRegistration(ctx, m.validatorClient, m.signfunc, []*ethpb.ValidatorRegistrationV1{}, 0))
+	require.NoError(t, nil, SubmitValidatorRegistration(ctx, m.validatorClient, m.signfunc, []*ethpb.ValidatorRegistrationV1{}))
 
 	reg := &ethpb.ValidatorRegistrationV1{
 		FeeRecipient: bytesutil.PadTo([]byte("fee"), 20),
@@ -36,7 +36,7 @@ func TestSubmitValidatorRegistration(t *testing.T) {
 			},
 		}).
 		Return(nil, nil)
-	require.NoError(t, nil, SubmitValidatorRegistration(ctx, m.validatorClient, m.signfunc, regs, 0))
+	require.NoError(t, nil, SubmitValidatorRegistration(ctx, m.validatorClient, m.signfunc, regs))
 }
 
 func TestSubmitValidatorRegistration_CantSign(t *testing.T) {
@@ -60,7 +60,7 @@ func TestSubmitValidatorRegistration_CantSign(t *testing.T) {
 			},
 		}).
 		Return(nil, errors.New("could not sign"))
-	require.ErrorContains(t, "could not sign", SubmitValidatorRegistration(ctx, m.validatorClient, m.signfunc, regs, 0))
+	require.ErrorContains(t, "could not sign", SubmitValidatorRegistration(ctx, m.validatorClient, m.signfunc, regs))
 }
 
 func Test_signValidatorRegistration(t *testing.T) {
@@ -74,7 +74,7 @@ func Test_signValidatorRegistration(t *testing.T) {
 		Timestamp:    uint64(time.Now().Unix()),
 		Pubkey:       validatorKey.PublicKey().Marshal(),
 	}
-	_, err := signValidatorRegistration(ctx, m.signfunc, reg, 0)
+	_, err := signValidatorRegistration(ctx, m.signfunc, reg)
 	require.NoError(t, err)
 
 }
