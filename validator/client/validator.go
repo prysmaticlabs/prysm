@@ -972,8 +972,11 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 		return err
 	}
 	if len(feeRecipients) == 0 {
-		log.Warnf("no valid validator indices were found, prepare beacon proposer request fee recipients array is empty")
+		log.Warnf("No valid validator indices were found, prepare beacon proposer request fee recipients array is empty")
 		return nil
+	}
+	if len(feeRecipients) != len(pubkeys) {
+		log.Warnf("%d public key(s) will not prepare beacon proposer and update fee recipient until a validator index is assigned", len(pubkeys)-len(feeRecipients))
 	}
 	if _, err := v.validatorClient.PrepareBeaconProposer(ctx, &ethpb.PrepareBeaconProposerRequest{
 		Recipients: feeRecipients,
@@ -983,6 +986,9 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 	log.Infoln("Prepared beacon proposer with fee recipient to validator index mapping")
 
 	if len(registerValidatorRequests) > 0 {
+		if len(registerValidatorRequests) != len(pubkeys) {
+			log.Warnf("%d public key(s) will not be included in validator registration until a validator index is assigned", len(pubkeys)-len(registerValidatorRequests))
+		}
 		if err := SubmitValidatorRegistration(ctx, v.validatorClient, km.Sign, registerValidatorRequests); err != nil {
 			return err
 		}
