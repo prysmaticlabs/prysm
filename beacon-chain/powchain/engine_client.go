@@ -68,8 +68,7 @@ type EngineCaller interface {
 	ExchangeTransitionConfiguration(
 		ctx context.Context, cfg *pb.TransitionConfiguration,
 	) error
-	ExecutionBlockByHash(ctx context.Context, hash common.Hash) (*pb.ExecutionBlock, error)
-	ExecutionBlockByHashWithTxs(ctx context.Context, hash common.Hash) (*pb.ExecutionBlockWithTxs, error)
+	ExecutionBlockByHash(ctx context.Context, hash common.Hash, withTxs bool) (*pb.ExecutionBlock, error)
 	GetTerminalBlockHash(ctx context.Context) ([]byte, bool, error)
 }
 
@@ -244,7 +243,7 @@ func (s *Service) GetTerminalBlockHash(ctx context.Context) ([]byte, bool, error
 		if parentHash == params.BeaconConfig().ZeroHash {
 			return nil, false, nil
 		}
-		parentBlk, err := s.ExecutionBlockByHash(ctx, parentHash)
+		parentBlk, err := s.ExecutionBlockByHash(ctx, parentHash, false /* no txs */)
 		if err != nil {
 			return nil, false, errors.Wrap(err, "could not get parent execution block")
 		}
@@ -293,26 +292,11 @@ func (s *Service) LatestExecutionBlock(ctx context.Context) (*pb.ExecutionBlock,
 
 // ExecutionBlockByHash fetches an execution engine block by hash by calling
 // eth_blockByHash via JSON-RPC.
-func (s *Service) ExecutionBlockByHash(ctx context.Context, hash common.Hash) (*pb.ExecutionBlock, error) {
+func (s *Service) ExecutionBlockByHash(ctx context.Context, hash common.Hash, withTxs bool) (*pb.ExecutionBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.ExecutionBlockByHash")
 	defer span.End()
 	result := &pb.ExecutionBlock{}
-	err := s.rpcClient.CallContext(ctx, result, ExecutionBlockByHashMethod, hash, false /* no full transaction objects */)
-	return result, handleRPCError(err)
-}
-
-// ExecutionBlockByHashWithTxs fetches an execution engine block by hash by calling
-// eth_blockByHash via JSON-RPC and asks for full transactions in the response.
-func (s *Service) ExecutionBlockByHashWithTxs(ctx context.Context, hash common.Hash) (*pb.ExecutionBlockWithTxs, error) {
-	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.ExecutionBlockByHash")
-	defer span.End()
-	start := time.Now()
-	defer func() {
-		executionBlockByHashWithTxsLatency.Observe(float64(time.Since(start).Milliseconds()))
-	}()
-
-	result := &pb.ExecutionBlockWithTxs{}
-	err := s.rpcClient.CallContext(ctx, result, ExecutionBlockByHashMethod, hash, true /* full transaction objects */)
+	err := s.rpcClient.CallContext(ctx, result, ExecutionBlockByHashMethod, hash, withTxs)
 	return result, handleRPCError(err)
 }
 
@@ -327,25 +311,51 @@ func (s *Service) ReconstructFullBellatrixBlock(
 	if !blindedBlock.Block().IsBlinded() {
 		return nil, errors.New("can only reconstruct block from blinded block format")
 	}
-	start := time.Now()
-	defer func() {
-		executionPayloadReconstructionLatency.Observe(float64(time.Since(start).Milliseconds()))
-		reconstructedExecutionPayloadCount.Add(1)
-	}()
 	header, err := blindedBlock.Block().Body().ExecutionPayloadHeader()
 	if err != nil {
 		return nil, err
 	}
 	executionBlockHash := common.BytesToHash(header.BlockHash)
-	executionBlock, err := s.ExecutionBlockByHashWithTxs(ctx, executionBlockHash)
+	executionBlock, err := s.ExecutionBlockByHash(ctx, executionBlockHash, true /* with txs */)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch execution block with txs by hash %#x: %v", executionBlockHash, err)
 	}
-	payload := fullPayloadFromExecutionBlock(header, executionBlock)
-	return wrapper.BuildSignedBeaconBlockFromExecutionPayload(blindedBlock, payload)
+	if executionBlock == nil {
+		return nil, fmt.Errorf("received nil execution block for request by hash %#x", executionBlockHash)
+	}
+	payload, err := fullPayloadFromExecutionBlock(header, executionBlock)
+	if err != nil {
+		return nil, err
+	}
+	fullBlock, err := wrapper.BuildSignedBeaconBlockFromExecutionPayload(blindedBlock, payload)
+	if err != nil {
+		return nil, err
+	}
+	reconstructedExecutionPayloadCount.Add(1)
+	return fullBlock, nil
 }
 
-func fullPayloadFromExecutionBlock(header *pb.ExecutionPayloadHeader, block *pb.ExecutionBlockWithTxs) *pb.ExecutionPayload {
+func fullPayloadFromExecutionBlock(
+	header *pb.ExecutionPayloadHeader, block *pb.ExecutionBlock,
+) (*pb.ExecutionPayload, error) {
+	if header == nil || block == nil {
+		return nil, errors.New("execution block and header cannot be nil")
+	}
+	if !bytes.Equal(header.BlockHash, block.Hash[:]) {
+		return nil, fmt.Errorf(
+			"block hash field in execution header %#x does not match execution block hash %#x",
+			header.BlockHash,
+			block.Hash,
+		)
+	}
+	txs := make([][]byte, len(block.Transactions))
+	for i, tx := range block.Transactions {
+		txBin, err := tx.MarshalBinary()
+		if err != nil {
+			return nil, err
+		}
+		txs[i] = txBin
+	}
 	return &pb.ExecutionPayload{
 		ParentHash:    header.ParentHash,
 		FeeRecipient:  header.FeeRecipient,
@@ -359,9 +369,9 @@ func fullPayloadFromExecutionBlock(header *pb.ExecutionPayloadHeader, block *pb.
 		Timestamp:     header.Timestamp,
 		ExtraData:     header.ExtraData,
 		BaseFeePerGas: header.BaseFeePerGas,
-		BlockHash:     block.Hash,
-		Transactions:  block.Transactions,
-	}
+		BlockHash:     block.Hash[:],
+		Transactions:  txs,
+	}, nil
 }
 
 // Handles errors received from the RPC server according to the specification.
