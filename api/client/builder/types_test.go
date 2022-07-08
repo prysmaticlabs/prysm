@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/golang/protobuf/proto"
 	"github.com/prysmaticlabs/go-bitfield"
 	v1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -31,7 +32,8 @@ func TestSignedValidatorRegistration_MarshalJSON(t *testing.T) {
 		},
 		Signature: make([]byte, 96),
 	}
-	je, err := json.Marshal(&SignedValidatorRegistration{SignedValidatorRegistrationV1: svr})
+	a := &SignedValidatorRegistration{SignedValidatorRegistrationV1: svr}
+	je, err := json.Marshal(a)
 	require.NoError(t, err)
 	// decode with a struct w/ plain strings so we can check the string encoding of the hex fields
 	un := struct {
@@ -45,6 +47,14 @@ func TestSignedValidatorRegistration_MarshalJSON(t *testing.T) {
 	require.Equal(t, "0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000", un.Signature)
 	require.Equal(t, "0x0000000000000000000000000000000000000000", un.Message.FeeRecipient)
 	require.Equal(t, "0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000", un.Message.Pubkey)
+
+	t.Run("roundtrip", func(t *testing.T) {
+		b := &SignedValidatorRegistration{}
+		if err := json.Unmarshal(je, b); err != nil {
+			require.NoError(t, err)
+		}
+		require.Equal(t, proto.Equal(a.SignedValidatorRegistrationV1, b.SignedValidatorRegistrationV1), true)
+	})
 }
 
 var testExampleHeaderResponse = `{

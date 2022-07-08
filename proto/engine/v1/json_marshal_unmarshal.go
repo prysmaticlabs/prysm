@@ -3,6 +3,7 @@ package enginev1
 import (
 	"encoding/json"
 	"math/big"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -74,6 +75,11 @@ func (e *ExecutionBlock) UnmarshalJSON(enc []byte) error {
 	// them into a list of geth transaction objects.
 	txs := make([]*gethtypes.Transaction, len(txsList))
 	for i, tx := range txsList {
+		// If the transaction is just a hex string, do not attempt to
+		// unmarshal into a full transaction object.
+		if txItem, ok := tx.(string); ok && strings.HasPrefix(txItem, "0x") {
+			return nil
+		}
 		t := &gethtypes.Transaction{}
 		encodedTx, err := json.Marshal(tx)
 		if err != nil {

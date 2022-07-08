@@ -358,7 +358,6 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	client := mock2.NewMockBeaconNodeValidatorClient(ctrl)
-	nodeClient := mock2.NewMockNodeClient(ctrl)
 	privKey, err := bls.RandKey()
 	require.NoError(t, err)
 	pubKey := [fieldparams.BLSPubkeyLength]byte{}
@@ -369,21 +368,8 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 		},
 	}
 	v := validator{
-		validatorClient:        client,
-		keyManager:             km,
-		node:                   nodeClient,
-		genesisTime:            1,
-		pubkeyToValidatorIndex: map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex{pubKey: 1},
-		ProposerSettings: &validatorserviceconfig.ProposerSettings{
-			ProposeConfig: nil,
-			DefaultConfig: &validatorserviceconfig.ProposerOption{
-				FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
-				ValidatorRegistration: &validatorserviceconfig.ValidatorRegistration{
-					Enable:   true,
-					GasLimit: uint64(40000000),
-				},
-			},
-		},
+		validatorClient: client,
+		keyManager:      km,
 	}
 
 	resp := generateMockStatusResponse([][]byte{pubKey[:]})
@@ -399,18 +385,6 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 		resp,
 		nil,
 	)
-
-	client.EXPECT().SubmitValidatorRegistration(
-		gomock.Any(),
-		gomock.Any(),
-	).Return(&empty.Empty{}, nil)
-
-	client.EXPECT().PrepareBeaconProposer(gomock.Any(), &ethpb.PrepareBeaconProposerRequest{
-		Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
-			{FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A").Bytes(), ValidatorIndex: 1},
-		},
-	}).Return(nil, nil)
-
 	require.NoError(t, v.WaitForActivation(ctx, nil), "Could not wait for activation")
 	require.LogsContain(t, hook, "Validator activated")
 }
@@ -419,7 +393,6 @@ func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	client := mock2.NewMockBeaconNodeValidatorClient(ctrl)
-	nodeClient := mock2.NewMockNodeClient(ctrl)
 	privKey, err := bls.RandKey()
 	require.NoError(t, err)
 	pubKey := [fieldparams.BLSPubkeyLength]byte{}
@@ -430,21 +403,8 @@ func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 		},
 	}
 	v := validator{
-		validatorClient:        client,
-		node:                   nodeClient,
-		keyManager:             km,
-		genesisTime:            1,
-		pubkeyToValidatorIndex: map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex{pubKey: 1},
-		ProposerSettings: &validatorserviceconfig.ProposerSettings{
-			ProposeConfig: nil,
-			DefaultConfig: &validatorserviceconfig.ProposerOption{
-				FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
-				ValidatorRegistration: &validatorserviceconfig.ValidatorRegistration{
-					Enable:   true,
-					GasLimit: uint64(40000000),
-				},
-			},
-		},
+		validatorClient: client,
+		keyManager:      km,
 	}
 	resp := generateMockStatusResponse([][]byte{pubKey[:]})
 	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_ACTIVE
@@ -461,16 +421,6 @@ func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 		resp,
 		nil,
 	)
-
-	client.EXPECT().SubmitValidatorRegistration(
-		gomock.Any(),
-		gomock.Any(),
-	).Return(&empty.Empty{}, nil)
-	client.EXPECT().PrepareBeaconProposer(gomock.Any(), &ethpb.PrepareBeaconProposerRequest{
-		Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
-			{FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A").Bytes(), ValidatorIndex: 1},
-		},
-	}).Return(nil, nil)
 	assert.NoError(t, v.WaitForActivation(context.Background(), nil), "Could not wait for activation")
 }
 
@@ -1040,9 +990,8 @@ func TestAllValidatorsAreExited_CorrectRequest(t *testing.T) {
 
 	// If AllValidatorsAreExited does not create the expected request, this test will fail
 	v := validator{
-		keyManager:             &mockKeymanager{keysMap: keysMap},
-		validatorClient:        client,
-		pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
+		keyManager:      &mockKeymanager{keysMap: keysMap},
+		validatorClient: client,
 	}
 	exited, err := v.AllValidatorsAreExited(context.Background())
 	require.NoError(t, err)

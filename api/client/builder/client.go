@@ -12,13 +12,15 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/pkg/errors"
+	mathprysm "github.com/prysmaticlabs/prysm/math"
+	"go.opencensus.io/trace"
+	"golang.org/x/sync/errgroup"
+
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	v1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"go.opencensus.io/trace"
-
-	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -31,6 +33,8 @@ const (
 
 var errMalformedHostname = errors.New("hostname must include port, separated by one colon, like example.com:3500")
 var errMalformedRequest = errors.New("required request data are missing")
+
+const registerValidatorBatchLimit = 100
 
 // ClientOpt is a functional option for the Client type (http.Client wrapper)
 type ClientOpt func(*Client)
@@ -223,18 +227,30 @@ func (c *Client) RegisterValidator(ctx context.Context, svr []*ethpb.SignedValid
 		tracing.AnnotateError(span, err)
 		return err
 	}
-	vs := make([]*SignedValidatorRegistration, len(svr))
-	for i := 0; i < len(svr); i++ {
-		vs[i] = &SignedValidatorRegistration{SignedValidatorRegistrationV1: svr[i]}
-	}
-	body, err := json.Marshal(vs)
-	if err != nil {
-		err := errors.Wrap(err, "error encoding the SignedValidatorRegistration value body in RegisterValidator")
-		tracing.AnnotateError(span, err)
+	eg, ctx := errgroup.WithContext(ctx)
+	for i := 0; i < len(svr); i += registerValidatorBatchLimit {
+		end := int(mathprysm.Min(uint64(len(svr)), uint64(i+registerValidatorBatchLimit))) // lint:ignore uintcast -- Request will never exceed int.
+		vs := make([]*SignedValidatorRegistration, 0, registerValidatorBatchLimit)
+		for j := i; j < end; j++ {
+			vs = append(vs, &SignedValidatorRegistration{SignedValidatorRegistrationV1: svr[j]})
+		}
+		body, err := json.Marshal(vs)
+		if err != nil {
+			err := errors.Wrap(err, "error encoding the SignedValidatorRegistration value body in RegisterValidator")
+			tracing.AnnotateError(span, err)
+		}
+
+		eg.Go(func() error {
+			ctx, span := trace.StartSpan(ctx, "builder.client.RegisterValidator.Go")
+			defer span.End()
+			span.AddAttributes(trace.Int64Attribute("reqs", int64(len(vs))))
+
+			_, err = c.do(ctx, http.MethodPost, postRegisterValidatorPath, bytes.NewBuffer(body))
+			return err
+		})
 	}
 
-	_, err = c.do(ctx, http.MethodPost, postRegisterValidatorPath, bytes.NewBuffer(body))
-	return err
+	return eg.Wait()
 }
 
 // SubmitBlindedBlock calls the builder API endpoint that binds the validator to the builder and submits the block.

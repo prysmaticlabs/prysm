@@ -31,6 +31,22 @@ func (r *SignedValidatorRegistration) MarshalJSON() ([]byte, error) {
 	})
 }
 
+func (r *SignedValidatorRegistration) UnmarshalJSON(b []byte) error {
+	if r.SignedValidatorRegistrationV1 == nil {
+		r.SignedValidatorRegistrationV1 = &eth.SignedValidatorRegistrationV1{}
+	}
+	o := struct {
+		Message   *ValidatorRegistration `json:"message,omitempty"`
+		Signature hexutil.Bytes          `json:"signature,omitempty"`
+	}{}
+	if err := json.Unmarshal(b, &o); err != nil {
+		return err
+	}
+	r.Message = o.Message.ValidatorRegistrationV1
+	r.Signature = o.Signature
+	return nil
+}
+
 func (r *ValidatorRegistration) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		FeeRecipient hexutil.Bytes `json:"fee_recipient,omitempty"`
@@ -43,6 +59,33 @@ func (r *ValidatorRegistration) MarshalJSON() ([]byte, error) {
 		Timestamp:    fmt.Sprintf("%d", r.Timestamp),
 		Pubkey:       r.Pubkey,
 	})
+}
+
+func (r *ValidatorRegistration) UnmarshalJSON(b []byte) error {
+	if r.ValidatorRegistrationV1 == nil {
+		r.ValidatorRegistrationV1 = &eth.ValidatorRegistrationV1{}
+	}
+	o := struct {
+		FeeRecipient hexutil.Bytes `json:"fee_recipient,omitempty"`
+		GasLimit     string        `json:"gas_limit,omitempty"`
+		Timestamp    string        `json:"timestamp,omitempty"`
+		Pubkey       hexutil.Bytes `json:"pubkey,omitempty"`
+	}{}
+	if err := json.Unmarshal(b, &o); err != nil {
+		return err
+	}
+
+	r.FeeRecipient = o.FeeRecipient
+	r.Pubkey = o.Pubkey
+	var err error
+	if r.GasLimit, err = strconv.ParseUint(o.GasLimit, 10, 64); err != nil {
+		return errors.Wrap(err, "failed to parse gas limit")
+	}
+	if r.Timestamp, err = strconv.ParseUint(o.Timestamp, 10, 64); err != nil {
+		return errors.Wrap(err, "failed to parse timestamp")
+	}
+
+	return nil
 }
 
 type Uint256 struct {
