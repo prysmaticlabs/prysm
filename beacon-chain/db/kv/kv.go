@@ -4,6 +4,7 @@ package kv
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path"
 	"time"
@@ -227,8 +228,8 @@ func (s *Store) checkNeedsResync() error {
 		bkt := tx.Bucket(migrationsBucket)
 		hasDisabledFeature := !features.Get().EnableOnlyBlindedBeaconBlocks
 		if hasDisabledFeature && bkt.Get(migrationBlindedBeaconBlocksKey) != nil {
-			log.Warnf(
-				"You have disabled the flag %s, and your node must resync to ensure your "+
+			return fmt.Errorf(
+				"you have disabled the flag %s, and your node must resync to ensure your "+
 					"database is compatible. If you do not want to resync, please re-enable the %s flag",
 				features.EnableOnlyBlindedBeaconBlocks.Name,
 				features.EnableOnlyBlindedBeaconBlocks.Name,
