@@ -229,6 +229,10 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logEnabled(enableGossipBatchAggregation)
 		cfg.EnableBatchGossipAggregation = true
 	}
+	if ctx.Bool(enableOnlyBlindedBeaconBlocks.Name) {
+		logEnabled(enableOnlyBlindedBeaconBlocks)
+		cfg.EnableOnlyBlindedBeaconBlocks = true
+	}
 	Init(cfg)
 	return nil
 }
