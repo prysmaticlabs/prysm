@@ -76,10 +76,6 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 		errString        string
 	}{
 		{
-			name:      "nil block",
-			errString: "nil head block",
-		},
-		{
 			name: "phase0 block",
 			blk: func() interfaces.BeaconBlock {
 				b, err := wrapper.WrappedBeaconBlock(&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{}})
@@ -192,6 +188,10 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 			_, err = service.notifyForkchoiceUpdate(ctx, arg)
 			if tt.errString != "" {
 				require.ErrorContains(t, tt.errString, err)
+				if tt.errString == ErrInvalidPayload.Error() {
+					require.Equal(t, true, IsInvalidBlock(err))
+					require.Equal(t, tt.headRoot, InvalidBlockRoot(err)) // Head root should be invalid. Not block root!
+				}
 			} else {
 				require.NoError(t, err)
 			}
@@ -330,7 +330,9 @@ func Test_NotifyForkchoiceUpdateRecursive_Protoarray(t *testing.T) {
 		headRoot:  brg,
 	}
 	_, err = service.notifyForkchoiceUpdate(ctx, a)
-	require.ErrorIs(t, ErrInvalidPayload, err)
+	require.Equal(t, true, IsInvalidBlock(err))
+	require.Equal(t, brf, InvalidBlockRoot(err))
+
 	// Ensure Head is D
 	headRoot, err = fcs.Head(ctx, service.justifiedBalances.balances)
 	require.NoError(t, err)
@@ -473,7 +475,9 @@ func Test_NotifyForkchoiceUpdateRecursive_DoublyLinkedTree(t *testing.T) {
 		headRoot:  brg,
 	}
 	_, err = service.notifyForkchoiceUpdate(ctx, a)
-	require.ErrorIs(t, ErrInvalidPayload, err)
+	require.Equal(t, true, IsInvalidBlock(err))
+	require.Equal(t, brf, InvalidBlockRoot(err))
+
 	// Ensure Head is D
 	headRoot, err = fcs.Head(ctx, service.justifiedBalances.balances)
 	require.NoError(t, err)
