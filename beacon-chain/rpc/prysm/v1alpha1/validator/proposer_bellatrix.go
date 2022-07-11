@@ -3,6 +3,7 @@ package validator
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -18,6 +19,10 @@ import (
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/sirupsen/logrus"
 )
+
+// blockBuilderTimeout is the maximum amount of time allowed for a block builder to respond to a
+// block request.
+const blockBuilderTimeout = 1 * time.Second
 
 func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.GenericBeaconBlock, error) {
 	altairBlk, err := vs.buildAltairBeaconBlock(ctx, req)
@@ -251,11 +256,14 @@ func (vs *Server) readyForBuilder(ctx context.Context) (bool, error) {
 
 // Get and builder header block. Returns a boolean status, built block and error.
 // If the status is false that means builder the header block is disallowed.
+// This routine is time limited by `blockBuilderTimeout`.
 func (vs *Server) getAndBuildHeaderBlock(ctx context.Context, b *ethpb.BeaconBlockAltair) (bool, *ethpb.GenericBeaconBlock, error) {
 	// No op. Builder is not defined. User did not specify a user URL. We should use local EE.
 	if vs.BlockBuilder == nil || !vs.BlockBuilder.Configured() {
 		return false, nil, nil
 	}
+	ctx, cancel := context.WithTimeout(ctx, blockBuilderTimeout)
+	defer cancel()
 	// Does the protocol allow for builder at this current moment. Builder is only allowed post merge after finalization.
 	ready, err := vs.readyForBuilder(ctx)
 	if err != nil {
