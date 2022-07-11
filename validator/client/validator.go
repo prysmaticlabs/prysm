@@ -77,7 +77,7 @@ type validator struct {
 	duties                             *ethpb.DutiesResponse
 	prevBalance                        map[[fieldparams.BLSPubkeyLength]byte]uint64
 	pubkeyToValidatorIndex             map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex
-	signedValidatorRegistrationCache   map[[fieldparams.BLSPubkeyLength]byte]*ethpb.SignedValidatorRegistrationV1
+	signedValidatorRegistrations       map[[fieldparams.BLSPubkeyLength]byte]*ethpb.SignedValidatorRegistrationV1
 	graffitiOrderedIndex               uint64
 	aggregatedSlotCommitteeIDCache     *lru.Cache
 	domainDataCache                    *ristretto.Cache
@@ -1061,7 +1061,7 @@ func (v *validator) buildProposerSettingsRequests(ctx context.Context, pubkeys [
 			})
 		}
 		if !skipAppendToFeeRecipientArray && enableValidatorRegistration {
-			signedReg, ok := v.signedValidatorRegistrationCache[pubkeys[i]]
+			signedReg, ok := v.signedValidatorRegistrations[pubkeys[i]]
 			if ok &&
 				signedReg.Message.GasLimit == gasLimit &&
 				hexutil.Encode(signedReg.Message.FeeRecipient) == hexutil.Encode(feeRecipient[:]) {
@@ -1084,7 +1084,7 @@ func (v *validator) buildProposerSettingsRequests(ctx context.Context, pubkeys [
 				}
 				signedRegisterValidatorRequests = append(signedRegisterValidatorRequests,
 					newRequest)
-				v.signedValidatorRegistrationCache[pubkeys[i]] = newRequest
+				v.signedValidatorRegistrations[pubkeys[i]] = newRequest
 			}
 		}
 	}
