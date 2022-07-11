@@ -3,7 +3,6 @@ package builder
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -107,52 +106,6 @@ func TestClient_RegisterValidator(t *testing.T) {
 		},
 	}
 	require.NoError(t, c.RegisterValidator(ctx, []*eth.SignedValidatorRegistrationV1{reg}))
-}
-
-func TestClient_RegisterValidator_Over100Requests(t *testing.T) {
-	reqs := make([]*eth.SignedValidatorRegistrationV1, 301)
-	for i := 0; i < len(reqs); i++ {
-		reqs[i] = &eth.SignedValidatorRegistrationV1{
-			Message: &eth.ValidatorRegistrationV1{
-				FeeRecipient: ezDecode(t, params.BeaconConfig().EthBurnAddressHex),
-				GasLimit:     23,
-				Timestamp:    42,
-				Pubkey:       []byte(fmt.Sprint(i)),
-			},
-		}
-	}
-
-	var total int
-
-	ctx := context.Background()
-	hc := &http.Client{
-		Transport: roundtrip(func(r *http.Request) (*http.Response, error) {
-			body, err := io.ReadAll(r.Body)
-			require.NoError(t, r.Body.Close())
-			require.NoError(t, err)
-
-			recvd := make([]*SignedValidatorRegistration, 0)
-			require.NoError(t, json.Unmarshal(body, &recvd))
-			if len(recvd) > registerValidatorBatchLimit {
-				t.Errorf("Number of requests (%d) exceeds limit (%d)", len(recvd), registerValidatorBatchLimit)
-			}
-			total += len(recvd)
-
-			require.Equal(t, http.MethodPost, r.Method)
-			return &http.Response{
-				StatusCode: http.StatusOK,
-				Body:       io.NopCloser(bytes.NewBuffer(nil)),
-				Request:    r.Clone(ctx),
-			}, nil
-		}),
-	}
-	c := &Client{
-		hc:      hc,
-		baseURL: &url.URL{Host: "localhost:3500", Scheme: "http"},
-	}
-
-	require.NoError(t, c.RegisterValidator(ctx, reqs))
-	require.Equal(t, len(reqs), total)
 }
 
 func TestClient_GetHeader(t *testing.T) {
