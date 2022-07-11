@@ -158,7 +158,7 @@ func BuildSignedBeaconBlockFromExecutionPayload(
 		return nil, err
 	}
 	b := blk.Block()
-	payloadHeader, err := b.Body().ExecutionPayloadHeader()
+	payloadHeader, err := b.Body().Execution()
 	switch {
 	case errors.Is(err, ErrUnsupportedField):
 		return nil, errors.Wrap(err, "can only build signed beacon block from blinded format")
@@ -218,7 +218,7 @@ func WrapSignedBlindedBeaconBlock(blk interfaces.SignedBeaconBlock) (interfaces.
 		return blk, nil
 	}
 	b := blk.Block()
-	payload, err := b.Body().ExecutionPayload()
+	payload, err := b.Body().Execution()
 	switch {
 	case errors.Is(err, ErrUnsupportedField):
 		return nil, ErrUnsupportedSignedBeaconBlock
