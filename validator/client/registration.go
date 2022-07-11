@@ -3,11 +3,14 @@ package client
 import (
 	"context"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/validator/client/iface"
 	"go.opencensus.io/trace"
 )
 
@@ -34,7 +37,7 @@ func SubmitValidatorRegistration(
 }
 
 // Sings validator registration obj with the proposer domain and private key.
-func signValidatorRegistration(ctx context.Context, signer signingFunc, reg *ethpb.ValidatorRegistrationV1) ([]byte, error) {
+func signValidatorRegistration(ctx context.Context, signer iface.SigningFunc, reg *ethpb.ValidatorRegistrationV1) ([]byte, error) {
 
 	// Per spec, we want the fork version and genesis validator to be nil.
 	// Which is genesis value and zero by default.
@@ -61,4 +64,35 @@ func signValidatorRegistration(ctx context.Context, signer signingFunc, reg *eth
 		return nil, errors.Wrap(err, signExitErr)
 	}
 	return sig.Marshal(), nil
+}
+
+// SignValidatorRegistrationRequest compares and returns either the cached validator registration request or signs a new one.
+func (v *validator) SignValidatorRegistrationRequest(ctx context.Context, signer iface.SigningFunc, newValidatorRegistration *ethpb.ValidatorRegistrationV1) (*ethpb.SignedValidatorRegistrationV1, error) {
+	signedReg, ok := v.signedValidatorRegistrations[bytesutil.ToBytes48(newValidatorRegistration.Pubkey)]
+	if ok && isValidatorRegistrationSame(signedReg.Message, newValidatorRegistration) {
+		return signedReg, nil
+	} else {
+		sig, err := signValidatorRegistration(ctx, signer, newValidatorRegistration)
+		if err != nil {
+			log.WithError(err).Error("failed to sign builder validator registration obj")
+			return nil, err
+		}
+		newRequest := &ethpb.SignedValidatorRegistrationV1{
+			Message:   newValidatorRegistration,
+			Signature: sig,
+		}
+		v.signedValidatorRegistrations[bytesutil.ToBytes48(newValidatorRegistration.Pubkey)] = newRequest
+		return newRequest, nil
+	}
+}
+
+func isValidatorRegistrationSame(cachedVR *ethpb.ValidatorRegistrationV1, newVR *ethpb.ValidatorRegistrationV1) bool {
+	isSame := true
+	if cachedVR.GasLimit != newVR.GasLimit {
+		isSame = false
+	}
+	if hexutil.Encode(cachedVR.FeeRecipient) != hexutil.Encode(newVR.FeeRecipient) {
+		isSame = false
+	}
+	return isSame
 }

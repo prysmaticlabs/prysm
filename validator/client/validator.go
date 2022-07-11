@@ -1003,7 +1003,7 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 	return nil
 }
 
-func (v *validator) buildProposerSettingsRequests(ctx context.Context, pubkeys [][fieldparams.BLSPubkeyLength]byte, signer signingFunc) ([]*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer, []*ethpb.SignedValidatorRegistrationV1, error) {
+func (v *validator) buildProposerSettingsRequests(ctx context.Context, pubkeys [][fieldparams.BLSPubkeyLength]byte, signer iface.SigningFunc) ([]*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer, []*ethpb.SignedValidatorRegistrationV1, error) {
 	var validatorToFeeRecipients []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer
 	var signedRegisterValidatorRequests []*ethpb.SignedValidatorRegistrationV1
 	// need to check for pubkey to validator index mappings
@@ -1061,31 +1061,18 @@ func (v *validator) buildProposerSettingsRequests(ctx context.Context, pubkeys [
 			})
 		}
 		if !skipAppendToFeeRecipientArray && enableValidatorRegistration {
-			signedReg, ok := v.signedValidatorRegistrations[pubkeys[i]]
-			if ok &&
-				signedReg.Message.GasLimit == gasLimit &&
-				hexutil.Encode(signedReg.Message.FeeRecipient) == hexutil.Encode(feeRecipient[:]) {
-				signedRegisterValidatorRequests = append(signedRegisterValidatorRequests, signedReg)
-			} else {
-				reg := &ethpb.ValidatorRegistrationV1{
-					FeeRecipient: feeRecipient[:],
-					GasLimit:     gasLimit,
-					Timestamp:    uint64(time.Now().UTC().Unix()),
-					Pubkey:       pubkeys[i][:],
-				}
-				sig, err := signValidatorRegistration(ctx, signer, reg)
-				if err != nil {
-					log.WithError(err).Error("failed to sign builder validator registration obj")
-					continue
-				}
-				newRequest := &ethpb.SignedValidatorRegistrationV1{
-					Message:   reg,
-					Signature: sig,
-				}
-				signedRegisterValidatorRequests = append(signedRegisterValidatorRequests,
-					newRequest)
-				v.signedValidatorRegistrations[pubkeys[i]] = newRequest
+			unsignedRequest := &ethpb.ValidatorRegistrationV1{
+				FeeRecipient: feeRecipient[:],
+				GasLimit:     gasLimit,
+				Timestamp:    uint64(time.Now().UTC().Unix()),
+				Pubkey:       pubkeys[i][:],
 			}
+			request, err := v.SignValidatorRegistrationRequest(ctx, signer, unsignedRequest)
+			if err != nil {
+				//error is logged and skips appending
+				continue
+			}
+			signedRegisterValidatorRequests = append(signedRegisterValidatorRequests, request)
 		}
 	}
 	return validatorToFeeRecipients, signedRegisterValidatorRequests, nil
