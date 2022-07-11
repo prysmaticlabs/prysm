@@ -352,9 +352,9 @@ func TestBellatrixBeaconBlockBody_ExecutionPayload(t *testing.T) {
 	wbb, err := wrapper.WrappedBeaconBlockBody(body)
 	require.NoError(t, err)
 
-	got, err := wbb.ExecutionPayload()
+	got, err := wbb.Execution()
 	require.NoError(t, err)
-	assert.DeepEqual(t, payloads, got)
+	assert.DeepEqual(t, payloads, got.Proto())
 }
 
 func TestBellatrixBeaconBlock_PbGenericBlock(t *testing.T) {
@@ -396,6 +396,6 @@ func TestBellatrixBeaconBlock_ExecutionPayloadHeader(t *testing.T) {
 	}
 	wsb, err := wrapper.WrappedSignedBeaconBlock(sb)
 	require.NoError(t, err)
-	_, err = wsb.Block().Body().ExecutionPayloadHeader()
+	_, err = wsb.Block().Body().Execution()
 	require.ErrorContains(t, "unsupported field for block type", err)
 }
