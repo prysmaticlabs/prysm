@@ -8,6 +8,7 @@ go_library(
         "beacon_block_bellatrix.go",
         "beacon_block_phase0.go",
         "blinded_beacon_block_bellatrix.go",
+        "execution.go",
         "metadata.go",
         "mutator.go",
     ],
