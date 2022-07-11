@@ -133,8 +133,8 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDu
 
 	cs := vs.TimeFetcher.CurrentSlot()
 	currentEpoch := slots.ToEpoch(cs)
-	if req.Epoch > currentEpoch {
-		return nil, status.Errorf(codes.InvalidArgument, "Request epoch %d can not be greater than current epoch %d", req.Epoch, currentEpoch)
+	if req.Epoch > currentEpoch+1 {
+		return nil, status.Errorf(codes.InvalidArgument, "Request epoch %d can not be greater than next epoch %d", req.Epoch, currentEpoch+1)
 	}
 
 	s, err := vs.HeadFetcher.HeadState(ctx)
@@ -177,7 +177,7 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDu
 		return duties[i].Slot < duties[j].Slot
 	})
 
-	root, err := proposalDependentRoot(s, req.Epoch)
+	root, err := vs.proposalDependentRoot(ctx, s, req.Epoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get dependent root: %v", err)
 	}
@@ -912,7 +912,7 @@ func attestationDependentRoot(s state.BeaconState, epoch types.Epoch) ([]byte, e
 
 // proposalDependentRoot is get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch) - 1)
 // or the genesis block root in the case of underflow.
-func proposalDependentRoot(s state.BeaconState, epoch types.Epoch) ([]byte, error) {
+func (vs *Server) proposalDependentRoot(ctx context.Context, s state.BeaconState, epoch types.Epoch) ([]byte, error) {
 	var dependentRootSlot types.Slot
 	if epoch == 0 {
 		dependentRootSlot = 0
@@ -923,10 +923,21 @@ func proposalDependentRoot(s state.BeaconState, epoch types.Epoch) ([]byte, erro
 		}
 		dependentRootSlot = epochStartSlot.Sub(1)
 	}
-	root, err := helpers.BlockRootAtSlot(s, dependentRootSlot)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get block root")
+	var root []byte
+	var err error
+	// Per spec, if the dependent root epoch is greater than current epoch, use the head root.
+	if dependentRootSlot >= s.Slot() {
+		root, err = vs.HeadFetcher.HeadRoot(ctx)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		root, err = helpers.BlockRootAtSlot(s, dependentRootSlot)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get block root")
+		}
 	}
+
 	return root, nil
 }
 
