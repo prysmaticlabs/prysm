@@ -21,7 +21,7 @@ import (
 )
 
 // blockBuilderTimeout is the maximum amount of time allowed for a block builder to respond to a
-// block request.
+// block request. This value is known as `BUILDER_PROPOSAL_DELAY_TOLERANCE` in builder spec.
 const blockBuilderTimeout = 1 * time.Second
 
 func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.GenericBeaconBlock, error) {
