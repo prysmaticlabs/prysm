@@ -51,7 +51,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 	if !isExecutionBlk {
 		return nil, nil
 	}
-	blockHashFromPayload, err := blockHashFromExecutionPayload(headBlk)
+	blockHashFromPayload, err := blocks.BlockHashFromExecutionPayload(headBlk)
 	if err != nil {
 		log.WithError(err).Error("Could not get block hash for block from payload")
 		return nil, nil
@@ -160,7 +160,7 @@ func (s *Service) payloadBlockHashByBeaconBlockRoot(ctx context.Context, root []
 	if err != nil {
 		return [32]byte{}, err
 	}
-	return blockHashFromExecutionPayload(blk.Block())
+	return blocks.BlockHashFromExecutionPayload(blk.Block())
 }
 
 // notifyForkchoiceUpdate signals execution engine on a new payload.

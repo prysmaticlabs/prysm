@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
@@ -40,7 +41,7 @@ func (s *Service) validateMergeBlock(ctx context.Context, b interfaces.SignedBea
 	if err := wrapper.BeaconBlockIsNil(b); err != nil {
 		return err
 	}
-	parentHashForPayload, err := parentBlockHashFromExecutionPayload(b.Block())
+	parentHashForPayload, err := blocks.ParentBlockHashFromExecutionPayload(b.Block())
 	if err != nil {
 		return err
 	}

@@ -17,6 +17,7 @@ import (
 )
 
 var (
+	ErrNilPayload               = errors.New("nil execution payload")
 	ErrInvalidPayloadBlockHash  = errors.New("invalid payload block hash")
 	ErrInvalidPayloadTimeStamp  = errors.New("invalid payload timestamp")
 	ErrInvalidPayloadPrevRandao = errors.New("invalid payload previous randao")
@@ -276,15 +277,60 @@ func ProcessPayloadHeader(st state.BeaconState, header *enginev1.ExecutionPayloa
 	return st, nil
 }
 
-// GetBlockPayloadHash returns the hash of the execution payload of the block
-func GetBlockPayloadHash(blk interfaces.BeaconBlock) ([32]byte, error) {
-	payloadHash := [32]byte{}
+// BlockHashFromExecutionPayload reads the block hash field from an execution payload or
+// execution payload header contained within a specified beacon block's body.
+func BlockHashFromExecutionPayload(blk interfaces.BeaconBlock) ([32]byte, error) {
+	var blockHashFromPayload [32]byte
 	if IsPreBellatrixVersion(blk.Version()) {
-		return payloadHash, nil
+		return blockHashFromPayload, nil
 	}
 	payload, err := blk.Body().ExecutionPayload()
-	if err != nil {
-		return payloadHash, err
+	switch {
+	case errors.Is(err, wrapper.ErrUnsupportedField):
+		payloadHeader, err := blk.Body().ExecutionPayloadHeader()
+		if err != nil {
+			return blockHashFromPayload, err
+		}
+		if payloadHeader == nil {
+			return blockHashFromPayload, ErrNilPayload
+		}
+		blockHashFromPayload = bytesutil.ToBytes32(payloadHeader.BlockHash)
+	case err != nil:
+		return blockHashFromPayload, err
+	default:
+		if payload == nil {
+			return blockHashFromPayload, ErrNilPayload
+		}
+		blockHashFromPayload = bytesutil.ToBytes32(payload.BlockHash)
 	}
-	return bytesutil.ToBytes32(payload.BlockHash), nil
+	return blockHashFromPayload, nil
+}
+
+// ParentBlockHashFromExecutionPayload reads the parent hash field from an execution
+// payload or execution payload header contained within a specified beacon block's body.
+func ParentBlockHashFromExecutionPayload(blk interfaces.BeaconBlock) ([32]byte, error) {
+	var parentHashFromPayload [32]byte
+	if IsPreBellatrixVersion(blk.Version()) {
+		return parentHashFromPayload, nil
+	}
+	payload, err := blk.Body().ExecutionPayload()
+	switch {
+	case errors.Is(err, wrapper.ErrUnsupportedField):
+		payloadHeader, err := blk.Body().ExecutionPayloadHeader()
+		if err != nil {
+			return parentHashFromPayload, err
+		}
+		if payloadHeader == nil {
+			return parentHashFromPayload, ErrNilPayload
+		}
+		parentHashFromPayload = bytesutil.ToBytes32(payloadHeader.ParentHash)
+	case err != nil:
+		return parentHashFromPayload, err
+	default:
+		if payload == nil {
+			return parentHashFromPayload, ErrNilPayload
+		}
+		parentHashFromPayload = bytesutil.ToBytes32(payload.ParentHash)
+	}
+	return parentHashFromPayload, nil
 }
