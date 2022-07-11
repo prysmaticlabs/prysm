@@ -122,7 +122,7 @@ func (e executionPayload) Transactions() ([][]byte, error) {
 	return e.p.Transactions, nil
 }
 
-func (e executionPayload) TransactionsRoot() ([]byte, error) {
+func (executionPayload) TransactionsRoot() ([]byte, error) {
 	return nil, ErrUnsupportedField
 }
 
@@ -228,7 +228,7 @@ func (e executionPayloadHeader) BlockHash() []byte {
 	return e.p.BlockHash
 }
 
-func (e executionPayloadHeader) Transactions() ([][]byte, error) {
+func (executionPayloadHeader) Transactions() ([][]byte, error) {
 	return nil, ErrUnsupportedField
 }
 
