@@ -1,7 +1,11 @@
 package wrapper
 
 import (
+	"bytes"
+
+	"github.com/pkg/errors"
 	fastssz "github.com/prysmaticlabs/fastssz"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	"google.golang.org/protobuf/proto"
@@ -14,8 +18,8 @@ type executionPayload struct {
 	p *enginev1.ExecutionPayload
 }
 
-// wrappedBellatrixSignedBeaconBlock is a constructor which wraps a protobuf Bellatrix block with the block wrapper.
-func wrappedExecutionPayload(p *enginev1.ExecutionPayload) (interfaces.ExecutionData, error) {
+// WrappedBellatrixSignedBeaconBlock is a constructor which wraps a protobuf Bellatrix block with the block wrapper.
+func WrappedExecutionPayload(p *enginev1.ExecutionPayload) (interfaces.ExecutionData, error) {
 	w := executionPayload{p: p}
 	if w.IsNil() {
 		return nil, ErrNilObjectWrapped
@@ -126,7 +130,7 @@ type executionPayloadHeader struct {
 	p *enginev1.ExecutionPayloadHeader
 }
 
-func wrappedExecutionPayloadHeader(p *enginev1.ExecutionPayloadHeader) (interfaces.ExecutionData, error) {
+func WrappedExecutionPayloadHeader(p *enginev1.ExecutionPayloadHeader) (interfaces.ExecutionData, error) {
 	w := executionPayloadHeader{p: p}
 	if w.IsNil() {
 		return nil, ErrNilObjectWrapped
@@ -173,7 +177,6 @@ func (e executionPayloadHeader) HashTreeRootWith(hh *fastssz.Hasher) error {
 func (e executionPayloadHeader) Proto() proto.Message {
 	return e.p
 }
-
 func (e executionPayloadHeader) ParentHash() []byte {
 	return e.p.ParentHash
 }
@@ -231,4 +234,69 @@ func (e executionPayloadHeader) Transactions() ([][]byte, error) {
 
 func (e executionPayloadHeader) TransactionsRoot() ([]byte, error) {
 	return e.p.TransactionsRoot, nil
+}
+
+func IsEmptyExecutionData(data interfaces.ExecutionData) (bool, error) {
+	if !bytes.Equal(data.ParentHash(), make([]byte, fieldparams.RootLength)) {
+		return false, nil
+	}
+	if !bytes.Equal(data.FeeRecipient(), make([]byte, fieldparams.FeeRecipientLength)) {
+		return false, nil
+	}
+	if !bytes.Equal(data.StateRoot(), make([]byte, fieldparams.RootLength)) {
+		return false, nil
+	}
+	if !bytes.Equal(data.ReceiptsRoot(), make([]byte, fieldparams.RootLength)) {
+		return false, nil
+	}
+	if !bytes.Equal(data.LogsBloom(), make([]byte, fieldparams.LogsBloomLength)) {
+		return false, nil
+	}
+	if !bytes.Equal(data.PrevRandao(), make([]byte, fieldparams.RootLength)) {
+		return false, nil
+	}
+	if !bytes.Equal(data.BaseFeePerGas(), make([]byte, fieldparams.RootLength)) {
+		return false, nil
+	}
+	if !bytes.Equal(data.BlockHash(), make([]byte, fieldparams.RootLength)) {
+		return false, nil
+	}
+
+	txs, err := data.Transactions()
+	switch {
+	case errors.Is(err, ErrUnsupportedField):
+	case err != nil:
+		return false, err
+	default:
+		if len(txs) != 0 {
+			return false, nil
+		}
+	}
+
+	txsRoot, err := data.TransactionsRoot()
+	switch {
+	case errors.Is(err, ErrUnsupportedField):
+	case err != nil:
+		return false, err
+	default:
+		if !bytes.Equal(txsRoot, make([]byte, fieldparams.RootLength)) {
+			return false, nil
+		}
+	}
+	if len(data.ExtraData()) != 0 {
+		return false, nil
+	}
+	if data.BlockNumber() != 0 {
+		return false, nil
+	}
+	if data.GasLimit() != 0 {
+		return false, nil
+	}
+	if data.GasUsed() != 0 {
+		return false, nil
+	}
+	if data.Timestamp() != 0 {
+		return false, nil
+	}
+	return true, nil
 }

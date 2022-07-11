@@ -309,5 +309,5 @@ func (w blindedBeaconBlockBodyBellatrix) Proto() proto.Message {
 }
 
 func (w blindedBeaconBlockBodyBellatrix) Execution() (interfaces.ExecutionData, error) {
-	return wrappedExecutionPayloadHeader(w.b.ExecutionPayloadHeader)
+	return WrappedExecutionPayloadHeader(w.b.ExecutionPayloadHeader)
 }

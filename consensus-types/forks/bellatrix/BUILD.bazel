@@ -6,7 +6,6 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/consensus-types/forks/bellatrix",
     visibility = ["//visibility:public"],
     deps = [
-        "//config/fieldparams:go_default_library",
         "//consensus-types/interfaces:go_default_library",
         "//encoding/bytesutil:go_default_library",
         "//encoding/ssz:go_default_library",

@@ -60,7 +60,7 @@ type ExecutionPayloadReconstructor interface {
 // EngineCaller defines a client that can interact with an Ethereum
 // execution node's engine service via JSON-RPC.
 type EngineCaller interface {
-	NewPayload(ctx context.Context, payload *pb.ExecutionPayload) ([]byte, error)
+	NewPayload(ctx context.Context, payload interfaces.ExecutionData) ([]byte, error)
 	ForkchoiceUpdated(
 		ctx context.Context, state *pb.ForkchoiceState, attrs *pb.PayloadAttributes,
 	) (*pb.PayloadIDBytes, []byte, error)
@@ -73,7 +73,7 @@ type EngineCaller interface {
 }
 
 // NewPayload calls the engine_newPayloadV1 method via JSON-RPC.
-func (s *Service) NewPayload(ctx context.Context, payload *pb.ExecutionPayload) ([]byte, error) {
+func (s *Service) NewPayload(ctx context.Context, payload interfaces.ExecutionData) ([]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.NewPayload")
 	defer span.End()
 	start := time.Now()
@@ -84,7 +84,11 @@ func (s *Service) NewPayload(ctx context.Context, payload *pb.ExecutionPayload) 
 	ctx, cancel := context.WithDeadline(ctx, d)
 	defer cancel()
 	result := &pb.PayloadStatus{}
-	err := s.rpcClient.CallContext(ctx, result, NewPayloadMethod, payload)
+	payloadPb, ok := payload.Proto().(*pb.ExecutionPayload)
+	if !ok {
+		return nil, errors.New("execution data must be an execution payload")
+	}
+	err := s.rpcClient.CallContext(ctx, result, NewPayloadMethod, payloadPb)
 	if err != nil {
 		return nil, handleRPCError(err)
 	}
@@ -312,11 +316,11 @@ func (s *Service) ReconstructFullBellatrixBlock(
 	if !blindedBlock.Block().IsBlinded() {
 		return nil, errors.New("can only reconstruct block from blinded block format")
 	}
-	header, err := blindedBlock.Block().Body().ExecutionPayloadHeader()
+	header, err := blindedBlock.Block().Body().Execution()
 	if err != nil {
 		return nil, err
 	}
-	executionBlockHash := common.BytesToHash(header.BlockHash)
+	executionBlockHash := common.BytesToHash(header.BlockHash())
 	executionBlock, err := s.ExecutionBlockByHash(ctx, executionBlockHash)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch execution block with txs by hash %#x: %v", executionBlockHash, err)
@@ -337,15 +341,15 @@ func (s *Service) ReconstructFullBellatrixBlock(
 }
 
 func fullPayloadFromExecutionBlock(
-	header *pb.ExecutionPayloadHeader, block *pb.ExecutionBlock,
+	header interfaces.ExecutionData, block *pb.ExecutionBlock,
 ) (*pb.ExecutionPayload, error) {
-	if header == nil || block == nil {
+	if header.IsNil() || block == nil {
 		return nil, errors.New("execution block and header cannot be nil")
 	}
-	if !bytes.Equal(header.BlockHash, block.Hash[:]) {
+	if !bytes.Equal(header.BlockHash(), block.Hash[:]) {
 		return nil, fmt.Errorf(
 			"block hash field in execution header %#x does not match execution block hash %#x",
-			header.BlockHash,
+			header.BlockHash(),
 			block.Hash,
 		)
 	}
@@ -358,18 +362,18 @@ func fullPayloadFromExecutionBlock(
 		txs[i] = txBin
 	}
 	return &pb.ExecutionPayload{
-		ParentHash:    header.ParentHash,
-		FeeRecipient:  header.FeeRecipient,
-		StateRoot:     header.StateRoot,
-		ReceiptsRoot:  header.ReceiptsRoot,
-		LogsBloom:     header.LogsBloom,
-		PrevRandao:    header.PrevRandao,
-		BlockNumber:   header.BlockNumber,
-		GasLimit:      header.GasLimit,
-		GasUsed:       header.GasUsed,
-		Timestamp:     header.Timestamp,
-		ExtraData:     header.ExtraData,
-		BaseFeePerGas: header.BaseFeePerGas,
+		ParentHash:    header.ParentHash(),
+		FeeRecipient:  header.FeeRecipient(),
+		StateRoot:     header.StateRoot(),
+		ReceiptsRoot:  header.ReceiptsRoot(),
+		LogsBloom:     header.LogsBloom(),
+		PrevRandao:    header.PrevRandao(),
+		BlockNumber:   header.BlockNumber(),
+		GasLimit:      header.GasLimit(),
+		GasUsed:       header.GasUsed(),
+		Timestamp:     header.Timestamp(),
+		ExtraData:     header.ExtraData(),
+		BaseFeePerGas: header.BaseFeePerGas(),
 		BlockHash:     block.Hash[:],
 		Transactions:  txs,
 	}, nil

@@ -309,5 +309,5 @@ func (w bellatrixBeaconBlockBody) Proto() proto.Message {
 
 // Execution returns the Execution payload of the block body.
 func (w bellatrixBeaconBlockBody) Execution() (interfaces.ExecutionData, error) {
-	return wrappedExecutionPayload(w.b.ExecutionPayload)
+	return WrappedExecutionPayload(w.b.ExecutionPayload)
 }

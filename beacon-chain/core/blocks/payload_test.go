@@ -568,7 +568,9 @@ func Test_ValidatePayloadWhenMergeCompletes(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
 			require.NoError(t, st.SetLatestExecutionPayloadHeader(tt.header))
-			err := blocks.ValidatePayloadWhenMergeCompletes(st, tt.payload)
+			wrappedPayload, err := wrapper.WrappedExecutionPayload(tt.payload)
+			require.NoError(t, err)
+			err = blocks.ValidatePayloadWhenMergeCompletes(st, wrappedPayload)
 			if err != nil {
 				require.Equal(t, tt.err.Error(), err.Error())
 			} else {
@@ -616,7 +618,9 @@ func Test_ValidatePayload(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := blocks.ValidatePayload(st, tt.payload)
+			wrappedPayload, err := wrapper.WrappedExecutionPayload(tt.payload)
+			require.NoError(t, err)
+			err = blocks.ValidatePayload(st, wrappedPayload)
 			if err != nil {
 				require.Equal(t, tt.err.Error(), err.Error())
 			} else {
@@ -664,12 +668,14 @@ func Test_ProcessPayload(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			st, err := blocks.ProcessPayload(st, tt.payload)
+			wrappedPayload, err := wrapper.WrappedExecutionPayload(tt.payload)
+			require.NoError(t, err)
+			st, err := blocks.ProcessPayload(st, wrappedPayload)
 			if err != nil {
 				require.Equal(t, tt.err.Error(), err.Error())
 			} else {
 				require.Equal(t, tt.err, err)
-				want, err := bellatrix.PayloadToHeader(tt.payload)
+				want, err := bellatrix.PayloadToHeader(wrappedPayload)
 				require.Equal(t, tt.err, err)
 				got, err := st.LatestExecutionPayloadHeader()
 				require.NoError(t, err)
@@ -824,7 +830,9 @@ func Test_ValidatePayloadHeaderWhenMergeCompletes(t *testing.T) {
 
 func Test_PayloadToHeader(t *testing.T) {
 	p := emptyPayload()
-	h, err := bellatrix.PayloadToHeader(p)
+	wrappedPayload, err := wrapper.WrappedExecutionPayload(p)
+	require.NoError(t, err)
+	h, err := bellatrix.PayloadToHeader(wrappedPayload)
 	require.NoError(t, err)
 	txRoot, err := ssz.TransactionsRoot(p.Transactions)
 	require.NoError(t, err)
