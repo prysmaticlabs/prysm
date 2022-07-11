@@ -7,7 +7,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
-	"github.com/influxdata/influxdb/pkg/deep"
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -213,7 +212,7 @@ func TestValidator_SignValidatorRegistrationRequest(t *testing.T) {
 			got, err := v.SignValidatorRegistrationRequest(ctx, m.signfunc, tt.arg)
 			require.NoError(t, err)
 			if tt.isCached {
-				deep.Equal(got, v.signedValidatorRegistrations[bytesutil.ToBytes48(tt.arg.Pubkey)])
+				require.DeepEqual(t, got, v.signedValidatorRegistrations[bytesutil.ToBytes48(tt.arg.Pubkey)])
 			} else {
 				if ok {
 					require.NotEqual(t, got.Message.Timestamp, startingReq.Message.Timestamp)
@@ -221,7 +220,7 @@ func TestValidator_SignValidatorRegistrationRequest(t *testing.T) {
 				require.Equal(t, got.Message.Timestamp, tt.arg.Timestamp)
 				require.Equal(t, got.Message.GasLimit, tt.arg.GasLimit)
 				require.Equal(t, hexutil.Encode(got.Message.FeeRecipient), hexutil.Encode(tt.arg.FeeRecipient))
-				deep.Equal(got, v.signedValidatorRegistrations[bytesutil.ToBytes48(tt.arg.Pubkey)])
+				require.DeepEqual(t, got, v.signedValidatorRegistrations[bytesutil.ToBytes48(tt.arg.Pubkey)])
 			}
 		})
 	}
