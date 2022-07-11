@@ -61,7 +61,7 @@ func signValidatorRegistration(ctx context.Context, signer iface.SigningFunc, re
 		Object:          &validatorpb.SignRequest_Registration{Registration: reg},
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, signExitErr)
+		return nil, errors.Wrap(err, "could not sign validator registration")
 	}
 	return sig.Marshal(), nil
 }
