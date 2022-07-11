@@ -998,16 +998,6 @@ func Test_fullPayloadFromExecutionBlock(t *testing.T) {
 		err  string
 	}{
 		{
-			name: "nil header fails",
-			args: args{header: nil, block: &pb.ExecutionBlock{}},
-			err:  "cannot be nil",
-		},
-		{
-			name: "nil block fails",
-			args: args{header: &pb.ExecutionPayloadHeader{}, block: nil},
-			err:  "cannot be nil",
-		},
-		{
 			name: "block hash field in header and block hash mismatch",
 			args: args{
 				header: &pb.ExecutionPayloadHeader{
