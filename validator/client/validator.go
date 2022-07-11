@@ -968,6 +968,10 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 	if err != nil {
 		return err
 	}
+	if len(pubkeys) == 0 {
+		log.Info("No public keys have been imported. Skipping Push Proposer Settings")
+		return nil
+	}
 	feeRecipients, signedRegisterValidatorRequests, err := v.buildProposerSettingsRequests(ctx, pubkeys, km.Sign)
 	if err != nil {
 		return err
@@ -977,7 +981,9 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 		return nil
 	}
 	if len(feeRecipients) != len(pubkeys) {
-		log.Warnf("%d public key(s) will not prepare beacon proposer and update fee recipient until a validator index is assigned", len(pubkeys)-len(feeRecipients))
+		log.WithFields(logrus.Fields{
+			"activePubkeys": len(pubkeys) - len(feeRecipients),
+		}).Warnln("will not prepare beacon proposer and update fee recipient until a validator index is assigned")
 	}
 	if _, err := v.validatorClient.PrepareBeaconProposer(ctx, &ethpb.PrepareBeaconProposerRequest{
 		Recipients: feeRecipients,
@@ -986,7 +992,9 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 	}
 	log.Infoln("Prepared beacon proposer with fee recipient to validator index mapping")
 	if len(signedRegisterValidatorRequests) != len(pubkeys) {
-		log.Warnf("%d public key(s) will not be included in validator registration until a validator index is assigned", len(pubkeys)-len(signedRegisterValidatorRequests))
+		log.WithFields(logrus.Fields{
+			"activePubkeys": len(pubkeys) - len(signedRegisterValidatorRequests),
+		}).Warnln("will not be included in validator registration until a validator index is assigned")
 	}
 	if err := SubmitValidatorRegistration(ctx, v.validatorClient, signedRegisterValidatorRequests); err != nil {
 		return err
