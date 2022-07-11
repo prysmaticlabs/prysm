@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
@@ -51,6 +52,14 @@ func logStateTransitionData(b interfaces.BeaconBlock) error {
 		}
 		log = log.WithField("payloadHash", fmt.Sprintf("%#x", bytesutil.Trunc(p.BlockHash)))
 		log = log.WithField("txCount", len(p.Transactions))
+	}
+	if b.Version() == version.BellatrixBlind {
+		p, err := b.Body().ExecutionPayloadHeader()
+		if err != nil {
+			return err
+		}
+		log = log.WithField("payloadHash", fmt.Sprintf("%#x", bytesutil.Trunc(p.BlockHash)))
+		log = log.WithField("txsRoot", fmt.Sprintf("%#x", bytesutil.Trunc(p.TransactionsRoot)))
 	}
 	log.Info("Finished applying state transition")
 	return nil
@@ -98,19 +107,47 @@ func logPayload(block interfaces.BeaconBlock) error {
 	if !isExecutionBlk {
 		return nil
 	}
+	var gasLimit, gasUsed float64
+	var blockNum uint64
+	var blockHash, parentHash []byte
 	payload, err := block.Body().ExecutionPayload()
-	if err != nil {
+	switch {
+	case errors.Is(err, wrapper.ErrUnsupportedField):
+		payloadHeader, err := block.Body().ExecutionPayloadHeader()
+		if err != nil {
+			return err
+		}
+		if payloadHeader == nil {
+			log.Warn("Nil execution payload header in block")
+			return nil
+		}
+		gasLimit = float64(payloadHeader.GasLimit)
+		gasUsed = float64(payloadHeader.GasUsed)
+		blockNum = payloadHeader.BlockNumber
+		blockHash = payloadHeader.BlockHash
+		parentHash = payloadHeader.ParentHash
+	case err != nil:
 		return err
+	default:
+		if payload == nil {
+			log.Warn("Nil execution payload in block")
+			return nil
+		}
+		gasLimit = float64(payload.GasLimit)
+		gasUsed = float64(payload.GasUsed)
+		blockNum = payload.BlockNumber
+		blockHash = payload.BlockHash
+		parentHash = payload.ParentHash
 	}
-	if payload.GasLimit == 0 {
+	if gasLimit == 0 {
 		return errors.New("gas limit should not be 0")
 	}
-	gasUtilized := float64(payload.GasUsed) / float64(payload.GasLimit)
+	gasUtilized := gasUsed / gasLimit
 
 	log.WithFields(logrus.Fields{
-		"blockHash":   fmt.Sprintf("%#x", bytesutil.Trunc(payload.BlockHash)),
-		"parentHash":  fmt.Sprintf("%#x", bytesutil.Trunc(payload.ParentHash)),
-		"blockNumber": payload.BlockNumber,
+		"blockHash":   fmt.Sprintf("%#x", bytesutil.Trunc(blockHash)),
+		"parentHash":  fmt.Sprintf("%#x", bytesutil.Trunc(parentHash)),
+		"blockNumber": blockNum,
 		"gasUtilized": fmt.Sprintf("%.2f", gasUtilized),
 	}).Debug("Synced new payload")
 	return nil

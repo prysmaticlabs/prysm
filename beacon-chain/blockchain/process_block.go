@@ -539,7 +539,9 @@ func (s *Service) InsertSlashingsToForkChoiceStore(ctx context.Context, slashing
 	}
 }
 
-func getBlockPayloadHash(blk interfaces.BeaconBlock) ([32]byte, error) {
+// Reads the block hash field from an execution payload or execution payload header
+// contained within a specified beacon block's body.
+func blockHashFromExecutionPayload(blk interfaces.BeaconBlock) ([32]byte, error) {
 	var blockHashFromPayload [32]byte
 	if blocks.IsPreBellatrixVersion(blk.Version()) {
 		return blockHashFromPayload, nil
@@ -551,13 +553,48 @@ func getBlockPayloadHash(blk interfaces.BeaconBlock) ([32]byte, error) {
 		if err != nil {
 			return blockHashFromPayload, err
 		}
+		if payloadHeader == nil {
+			return blockHashFromPayload, errNilPayload
+		}
 		blockHashFromPayload = bytesutil.ToBytes32(payloadHeader.BlockHash)
 	case err != nil:
 		return blockHashFromPayload, err
 	default:
+		if payload == nil {
+			return blockHashFromPayload, errNilPayload
+		}
 		blockHashFromPayload = bytesutil.ToBytes32(payload.BlockHash)
 	}
 	return blockHashFromPayload, nil
+}
+
+// Reads the parent hash field from an execution payload or execution payload header
+// contained within a specified beacon block's body.
+func parentBlockHashFromExecutionPayload(blk interfaces.BeaconBlock) ([32]byte, error) {
+	var parentHashFromPayload [32]byte
+	if blocks.IsPreBellatrixVersion(blk.Version()) {
+		return parentHashFromPayload, nil
+	}
+	payload, err := blk.Body().ExecutionPayload()
+	switch {
+	case errors.Is(err, wrapper.ErrUnsupportedField):
+		payloadHeader, err := blk.Body().ExecutionPayloadHeader()
+		if err != nil {
+			return parentHashFromPayload, err
+		}
+		if payloadHeader == nil {
+			return parentHashFromPayload, errNilPayload
+		}
+		parentHashFromPayload = bytesutil.ToBytes32(payloadHeader.ParentHash)
+	case err != nil:
+		return parentHashFromPayload, err
+	default:
+		if payload == nil {
+			return parentHashFromPayload, errNilPayload
+		}
+		parentHashFromPayload = bytesutil.ToBytes32(payload.ParentHash)
+	}
+	return parentHashFromPayload, nil
 }
 
 // This saves post state info to DB or cache. This also saves post state info to fork choice store.

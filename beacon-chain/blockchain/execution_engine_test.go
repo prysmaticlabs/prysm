@@ -1141,7 +1141,7 @@ func TestService_getPayloadHash(t *testing.T) {
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 
-	_, err = service.getPayloadHash(ctx, []byte{})
+	_, err = service.payloadBlockHashByBeaconBlockRoot(ctx, []byte{})
 	require.ErrorIs(t, errBlockNotFoundInCacheOrDB, err)
 
 	b := util.NewBeaconBlock()
@@ -1151,7 +1151,7 @@ func TestService_getPayloadHash(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, service.saveInitSyncBlock(ctx, r, wsb))
 
-	h, err := service.getPayloadHash(ctx, r[:])
+	h, err := service.payloadBlockHashByBeaconBlockRoot(ctx, r[:])
 	require.NoError(t, err)
 	require.DeepEqual(t, params.BeaconConfig().ZeroHash, h)
 
@@ -1164,7 +1164,7 @@ func TestService_getPayloadHash(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, service.saveInitSyncBlock(ctx, r, wsb))
 
-	h, err = service.getPayloadHash(ctx, r[:])
+	h, err = service.payloadBlockHashByBeaconBlockRoot(ctx, r[:])
 	require.NoError(t, err)
 	require.DeepEqual(t, [32]byte{'a'}, h)
 }

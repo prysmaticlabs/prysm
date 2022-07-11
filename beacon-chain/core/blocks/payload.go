@@ -67,7 +67,11 @@ func IsExecutionBlock(body interfaces.BeaconBlockBody) (bool, error) {
 	payload, err := body.ExecutionPayload()
 	switch {
 	case errors.Is(err, wrapper.ErrUnsupportedField):
-		return false, nil
+		payloadHeader, err := body.ExecutionPayloadHeader()
+		if err != nil {
+			return false, err
+		}
+		return !bellatrix.IsEmptyHeader(payloadHeader), nil
 	case err != nil:
 		return false, err
 	default:

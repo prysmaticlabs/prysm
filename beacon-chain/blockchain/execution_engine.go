@@ -51,15 +51,15 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 	if !isExecutionBlk {
 		return nil, nil
 	}
-	headPayload, err := headBlk.Body().ExecutionPayload()
+	blockHashFromPayload, err := blockHashFromExecutionPayload(headBlk)
 	if err != nil {
-		log.WithError(err).Error("Could not get execution payload for head block")
+		log.WithError(err).Error("Could not get block hash for block from payload")
 		return nil, nil
 	}
 	finalizedHash := s.ForkChoicer().FinalizedPayloadBlockHash()
 	justifiedHash := s.ForkChoicer().JustifiedPayloadBlockHash()
 	fcs := &enginev1.ForkchoiceState{
-		HeadBlockHash:      headPayload.BlockHash,
+		HeadBlockHash:      blockHashFromPayload[:],
 		SafeBlockHash:      justifiedHash[:],
 		FinalizedBlockHash: finalizedHash[:],
 	}
@@ -78,7 +78,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 			forkchoiceUpdatedOptimisticNodeCount.Inc()
 			log.WithFields(logrus.Fields{
 				"headSlot":                  headBlk.Slot(),
-				"headPayloadBlockHash":      fmt.Sprintf("%#x", bytesutil.Trunc(headPayload.BlockHash)),
+				"headPayloadBlockHash":      fmt.Sprintf("%#x", bytesutil.Trunc(blockHashFromPayload[:])),
 				"finalizedPayloadBlockHash": fmt.Sprintf("%#x", bytesutil.Trunc(finalizedHash[:])),
 			}).Info("Called fork choice updated with optimistic block")
 			err := s.optimisticCandidateBlock(ctx, headBlk)
@@ -153,14 +153,14 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 	return payloadID, nil
 }
 
-// getPayloadHash returns the payload hash given the block root.
+// payloadBlockHashByBeaconBlockRoot returns the payload hash given the block root.
 // if the block is before bellatrix fork epoch, it returns the zero hash.
-func (s *Service) getPayloadHash(ctx context.Context, root []byte) ([32]byte, error) {
+func (s *Service) payloadBlockHashByBeaconBlockRoot(ctx context.Context, root []byte) ([32]byte, error) {
 	blk, err := s.getBlock(ctx, s.ensureRootNotZeros(bytesutil.ToBytes32(root)))
 	if err != nil {
 		return [32]byte{}, err
 	}
-	return getBlockPayloadHash(blk.Block())
+	return blockHashFromExecutionPayload(blk.Block())
 }
 
 // notifyForkchoiceUpdate signals execution engine on a new payload.
