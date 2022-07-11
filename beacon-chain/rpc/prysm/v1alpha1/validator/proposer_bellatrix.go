@@ -85,7 +85,7 @@ func (vs *Server) getPayloadHeader(ctx context.Context, slot types.Slot, idx typ
 	if blocks.IsPreBellatrixVersion(b.Version()) {
 		return nil, nil
 	}
-	h, err := b.Block().Body().ExecutionPayload()
+	h, err := b.Block().Body().Execution()
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +93,7 @@ func (vs *Server) getPayloadHeader(ctx context.Context, slot types.Slot, idx typ
 	if err != nil {
 		return nil, err
 	}
-	bid, err := vs.BlockBuilder.GetHeader(ctx, slot, bytesutil.ToBytes32(h.BlockHash), pk)
+	bid, err := vs.BlockBuilder.GetHeader(ctx, slot, bytesutil.ToBytes32(h.BlockHash()), pk)
 	if err != nil {
 		return nil, err
 	}
@@ -164,9 +164,13 @@ func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.SignedBe
 	if err != nil {
 		return nil, err
 	}
-	h, err := b.Block().Body().ExecutionPayloadHeader()
+	h, err := b.Block().Body().Execution()
 	if err != nil {
 		return nil, err
+	}
+	header, ok := h.Proto().(*enginev1.ExecutionPayloadHeader)
+	if !ok {
+		return nil, errors.New("execution data must be execution payload header")
 	}
 	sb := &ethpb.SignedBlindedBeaconBlockBellatrix{
 		Block: &ethpb.BlindedBeaconBlockBellatrix{
@@ -184,7 +188,7 @@ func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.SignedBe
 				Deposits:               b.Block().Body().Deposits(),
 				VoluntaryExits:         b.Block().Body().VoluntaryExits(),
 				SyncAggregate:          agg,
-				ExecutionPayloadHeader: h,
+				ExecutionPayloadHeader: header,
 			},
 		},
 		Signature: b.Signature(),
@@ -221,8 +225,8 @@ func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.SignedBe
 	}
 
 	log.WithFields(logrus.Fields{
-		"blockHash":    fmt.Sprintf("%#x", h.BlockHash),
-		"feeRecipient": fmt.Sprintf("%#x", h.FeeRecipient),
+		"blockHash":    fmt.Sprintf("%#x", h.BlockHash()),
+		"feeRecipient": fmt.Sprintf("%#x", h.FeeRecipient()),
 		"gasUsed":      h.GasUsed,
 		"slot":         b.Block().Slot(),
 		"txs":          len(payload.Transactions),
