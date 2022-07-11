@@ -233,6 +233,7 @@ func (c *Client) RegisterValidator(ctx context.Context, svr []*ethpb.SignedValid
 	if err != nil {
 		err := errors.Wrap(err, "error encoding the SignedValidatorRegistration value body in RegisterValidator")
 		tracing.AnnotateError(span, err)
+		return err
 	}
 
 	_, err = c.do(ctx, http.MethodPost, postRegisterValidatorPath, bytes.NewBuffer(body))
