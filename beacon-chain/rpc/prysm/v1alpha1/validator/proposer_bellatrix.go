@@ -3,6 +3,7 @@ package validator
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
@@ -19,6 +20,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// blockBuilderTimeout is the maximum amount of time allowed for a block builder to respond to a
+// block request. This value is known as `BUILDER_PROPOSAL_DELAY_TOLERANCE` in builder spec.
+const blockBuilderTimeout = 1 * time.Second
+
 func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.GenericBeaconBlock, error) {
 	altairBlk, err := vs.buildAltairBeaconBlock(ctx, req)
 	if err != nil {
@@ -28,7 +33,8 @@ func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockR
 	builderReady, b, err := vs.getAndBuildHeaderBlock(ctx, altairBlk)
 	if err != nil {
 		// In the event of an error, the node should fall back to default execution engine for building block.
-		log.WithError(err).Error("Default back to local execution client")
+		log.WithError(err).Error("Failed to build a block from external builder, falling " +
+			"back to local execution client")
 	} else if builderReady {
 		return b, nil
 	}
@@ -251,11 +257,14 @@ func (vs *Server) readyForBuilder(ctx context.Context) (bool, error) {
 
 // Get and builder header block. Returns a boolean status, built block and error.
 // If the status is false that means builder the header block is disallowed.
+// This routine is time limited by `blockBuilderTimeout`.
 func (vs *Server) getAndBuildHeaderBlock(ctx context.Context, b *ethpb.BeaconBlockAltair) (bool, *ethpb.GenericBeaconBlock, error) {
 	// No op. Builder is not defined. User did not specify a user URL. We should use local EE.
 	if vs.BlockBuilder == nil || !vs.BlockBuilder.Configured() {
 		return false, nil, nil
 	}
+	ctx, cancel := context.WithTimeout(ctx, blockBuilderTimeout)
+	defer cancel()
 	// Does the protocol allow for builder at this current moment. Builder is only allowed post merge after finalization.
 	ready, err := vs.readyForBuilder(ctx)
 	if err != nil {
