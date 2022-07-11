@@ -620,7 +620,7 @@ func TestServer_GetBellatrixBeaconBlock_BuilderCase(t *testing.T) {
 func TestServer_validatorRegistered(t *testing.T) {
 	proposerServer := &Server{}
 	ctx := context.Background()
-	
+
 	reg, err := proposerServer.validatorRegistered(ctx, 0)
 	require.ErrorContains(t, "nil beacon db", err)
 	require.Equal(t, false, reg)
