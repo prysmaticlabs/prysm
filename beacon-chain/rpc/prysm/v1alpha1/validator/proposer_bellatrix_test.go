@@ -24,6 +24,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	v1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
@@ -603,6 +604,8 @@ func TestServer_GetBellatrixBeaconBlock_BuilderCase(t *testing.T) {
 	randaoReveal, err := util.RandaoReveal(beaconState, 0, privKeys)
 	require.NoError(t, err)
 
+	require.NoError(t, proposerServer.BeaconDB.SaveRegistrationsByValidatorIDs(ctx, []types.ValidatorIndex{40},
+		[]*ethpb.ValidatorRegistrationV1{{FeeRecipient: bytesutil.PadTo([]byte{}, fieldparams.FeeRecipientLength), Pubkey: bytesutil.PadTo([]byte{}, fieldparams.BLSPubkeyLength)}}))
 	block, err := proposerServer.getBellatrixBeaconBlock(ctx, &ethpb.BlockRequest{
 		Slot:         bellatrixSlot + 1,
 		RandaoReveal: randaoReveal,
@@ -612,4 +615,30 @@ func TestServer_GetBellatrixBeaconBlock_BuilderCase(t *testing.T) {
 	require.Equal(t, true, ok)
 	require.LogsContain(t, hook, "Computed state root")
 	require.DeepEqual(t, h, bellatrixBlk.BlindedBellatrix.Body.ExecutionPayloadHeader) // Payload header should equal.
+}
+
+func TestServer_validatorRegistered(t *testing.T) {
+	proposerServer := &Server{}
+	ctx := context.Background()
+
+	reg, err := proposerServer.validatorRegistered(ctx, 0)
+	require.ErrorContains(t, "nil beacon db", err)
+	require.Equal(t, false, reg)
+
+	proposerServer.BeaconDB = dbTest.SetupDB(t)
+	reg, err = proposerServer.validatorRegistered(ctx, 0)
+	require.NoError(t, err)
+	require.Equal(t, false, reg)
+
+	f := bytesutil.PadTo([]byte{}, fieldparams.FeeRecipientLength)
+	p := bytesutil.PadTo([]byte{}, fieldparams.BLSPubkeyLength)
+	require.NoError(t, proposerServer.BeaconDB.SaveRegistrationsByValidatorIDs(ctx, []types.ValidatorIndex{0, 1},
+		[]*ethpb.ValidatorRegistrationV1{{FeeRecipient: f, Pubkey: p}, {FeeRecipient: f, Pubkey: p}}))
+
+	reg, err = proposerServer.validatorRegistered(ctx, 0)
+	require.NoError(t, err)
+	require.Equal(t, true, reg)
+	reg, err = proposerServer.validatorRegistered(ctx, 1)
+	require.NoError(t, err)
+	require.Equal(t, true, reg)
 }
