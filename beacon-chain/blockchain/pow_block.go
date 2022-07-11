@@ -66,7 +66,7 @@ func (s *Service) validateMergeBlock(ctx context.Context, b interfaces.SignedBea
 	if !valid {
 		err := fmt.Errorf("invalid TTD, configTTD: %s, currentTTD: %s, parentTTD: %s",
 			params.BeaconConfig().TerminalTotalDifficulty, mergeBlockTD, mergeBlockParentTD)
-		return invalidBlock{err}
+		return invalidBlock{error: err}
 	}
 
 	log.WithFields(logrus.Fields{
