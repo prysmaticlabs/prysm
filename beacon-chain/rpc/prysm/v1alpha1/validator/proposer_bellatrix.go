@@ -33,7 +33,8 @@ func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockR
 	builderReady, b, err := vs.getAndBuildHeaderBlock(ctx, altairBlk)
 	if err != nil {
 		// In the event of an error, the node should fall back to default execution engine for building block.
-		log.WithError(err).Error("Default back to local execution client")
+		log.WithError(err).Error("Failed to build a block from external builder, falling " +
+			"back to local execution client")
 	} else if builderReady {
 		return b, nil
 	}
