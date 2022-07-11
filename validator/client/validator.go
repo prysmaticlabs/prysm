@@ -953,7 +953,7 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 		} else {
 			log.Warn("In order to receive transaction fees from proposing blocks, " +
 				"you must now specify a configuration known as a fee recipient config. " +
-				"If it not provided, transaction fees will be burnt. Please see our documentation for more information on this requirement (https://docs.prylabs.network/docs/execution-node/fee-recipient).")
+				"If it is not provided, transaction fees will be burnt. Please see our documentation for more information on this requirement (https://docs.prylabs.network/docs/execution-node/fee-recipient).")
 		}
 		return nil
 	}
