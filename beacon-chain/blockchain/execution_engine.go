@@ -160,14 +160,7 @@ func (s *Service) getPayloadHash(ctx context.Context, root []byte) ([32]byte, er
 	if err != nil {
 		return [32]byte{}, err
 	}
-	if blocks.IsPreBellatrixVersion(blk.Block().Version()) {
-		return params.BeaconConfig().ZeroHash, nil
-	}
-	payload, err := blk.Block().Body().ExecutionPayload()
-	if err != nil {
-		return [32]byte{}, errors.Wrap(err, "could not get execution payload")
-	}
-	return bytesutil.ToBytes32(payload.BlockHash), nil
+	return getBlockPayloadHash(blk.Block())
 }
 
 // notifyForkchoiceUpdate signals execution engine on a new payload.
@@ -258,6 +251,7 @@ func (s *Service) optimisticCandidateBlock(ctx context.Context, blk interfaces.B
 	}
 	parentIsExecutionBlock, err := blocks.IsExecutionBlock(parent.Block().Body())
 	if err != nil {
+		log.Errorf("NOT AN EXECUTION BLOCK: %v", err)
 		return err
 	}
 	if parentIsExecutionBlock {
