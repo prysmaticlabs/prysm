@@ -73,7 +73,7 @@ func (s *BeaconNodeSet) Start(ctx context.Context) error {
 			}
 			s.config.PeerIDs = s.ids
 		}
-		// All nodes stated, close channel, so that all services waiting on a set, can proceed.
+		// All nodes started, close channel, so that all services waiting on a set, can proceed.
 		close(s.started)
 	})
 }
