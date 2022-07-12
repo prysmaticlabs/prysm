@@ -228,7 +228,6 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 		fmt.Sprintf("--%s=%s", flags.GrpcHeadersFlag.Name, "dummy=value,foo=bar"), // Sending random headers shouldn't break anything.
 		fmt.Sprintf("--%s=%s", cmdshared.VerbosityFlag.Name, "debug"),
 		fmt.Sprintf("--%s=%s", flags.ProposerSettingsFlag.Name, proposerSettingsPathPath),
-		fmt.Sprintf("--%s", flags.EnableValidatorRegistrationFlag.Name),
 		"--" + cmdshared.ForceClearDB.Name,
 		"--" + cmdshared.E2EConfigFlag.Name,
 		"--" + cmdshared.AcceptTosFlag.Name,
@@ -405,6 +404,10 @@ func createProposerSettingsPath(pubkeys []string, validatorIndex int) (string, e
 		proposerSettingsPayload = validator_service_config.ProposerSettingsPayload{
 			DefaultConfig: &validator_service_config.ProposerOptionPayload{
 				FeeRecipient: DefaultFeeRecipientAddress,
+				ValidatorRegistration: &validator_service_config.ValidatorRegistration{
+					Enable:   true,
+					GasLimit: params.BeaconConfig().DefaultBuilderGasLimit,
+				},
 			},
 		}
 	} else {
@@ -419,12 +422,20 @@ func createProposerSettingsPath(pubkeys []string, validatorIndex int) (string, e
 			deterministicFeeRecipient := common.HexToAddress(hexutil.Encode(byteval[:fieldparams.FeeRecipientLength])).Hex()
 			config[pubkeys[i]] = &validator_service_config.ProposerOptionPayload{
 				FeeRecipient: deterministicFeeRecipient,
+				ValidatorRegistration: &validator_service_config.ValidatorRegistration{
+					Enable:   true,
+					GasLimit: params.BeaconConfig().DefaultBuilderGasLimit,
+				},
 			}
 		}
 		proposerSettingsPayload = validator_service_config.ProposerSettingsPayload{
 			ProposerConfig: config,
 			DefaultConfig: &validator_service_config.ProposerOptionPayload{
 				FeeRecipient: DefaultFeeRecipientAddress,
+				ValidatorRegistration: &validator_service_config.ValidatorRegistration{
+					Enable:   true,
+					GasLimit: params.BeaconConfig().DefaultBuilderGasLimit,
+				},
 			},
 		}
 	}
