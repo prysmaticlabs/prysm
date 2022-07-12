@@ -228,6 +228,7 @@ func (v *ValidatorNode) Start(ctx context.Context) error {
 		fmt.Sprintf("--%s=%s", flags.GrpcHeadersFlag.Name, "dummy=value,foo=bar"), // Sending random headers shouldn't break anything.
 		fmt.Sprintf("--%s=%s", cmdshared.VerbosityFlag.Name, "debug"),
 		fmt.Sprintf("--%s=%s", flags.ProposerSettingsFlag.Name, proposerSettingsPathPath),
+		fmt.Sprintf("--%s", flags.EnableValidatorRegistrationFlag.Name),
 		"--" + cmdshared.ForceClearDB.Name,
 		"--" + cmdshared.E2EConfigFlag.Name,
 		"--" + cmdshared.AcceptTosFlag.Name,
