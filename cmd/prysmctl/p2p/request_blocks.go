@@ -69,7 +69,7 @@ func cliActionRequestBlocks(_ *cli.Context) error {
 		}
 		blocks, err := sendBeaconBlocksByRangeRequest(ctx, mockChain, c, pr, req)
 		if err != nil {
-			return err
+			fmt.Println(err)
 		}
 		fmt.Println("Got blocks", blocks)
 	}
