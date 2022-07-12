@@ -1540,11 +1540,6 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 		errString    string
 	}{
 		{
-			name:         "state older than Bellatrix, nil payload",
-			stateVersion: 1,
-			payload:      nil,
-		},
-		{
 			name:         "state older than Bellatrix, empty payload",
 			stateVersion: 1,
 			payload: &enginev1.ExecutionPayload{
@@ -1564,11 +1559,6 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 			payload: &enginev1.ExecutionPayload{
 				ParentHash: aHash[:],
 			},
-		},
-		{
-			name:         "state is Bellatrix, nil payload",
-			stateVersion: 2,
-			payload:      nil,
 		},
 		{
 			name:         "state is Bellatrix, empty payload",
@@ -1618,7 +1608,7 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 			payload: &enginev1.ExecutionPayload{
 				ParentHash: aHash[:],
 			},
-			errString: "nil header or block body",
+			errString: "wrap nil object",
 		},
 	}
 	for _, tt := range tests {
