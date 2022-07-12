@@ -20,7 +20,6 @@ import (
 	mocks "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/forks/bellatrix"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
@@ -461,7 +460,7 @@ func TestReconstructFullBellatrixBlock(t *testing.T) {
 
 		wrappedPayload, err := wrapper.WrappedExecutionPayload(payload)
 		require.NoError(t, err)
-		header, err := bellatrix.PayloadToHeader(wrappedPayload)
+		header, err := wrapper.PayloadToHeader(wrappedPayload)
 		require.NoError(t, err)
 
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

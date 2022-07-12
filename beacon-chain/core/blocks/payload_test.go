@@ -9,7 +9,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/consensus-types/forks/bellatrix"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
@@ -675,7 +674,7 @@ func Test_ProcessPayload(t *testing.T) {
 				require.Equal(t, tt.err.Error(), err.Error())
 			} else {
 				require.Equal(t, tt.err, err)
-				want, err := bellatrix.PayloadToHeader(wrappedPayload)
+				want, err := wrapper.PayloadToHeader(wrappedPayload)
 				require.Equal(t, tt.err, err)
 				got, err := st.LatestExecutionPayloadHeader()
 				require.NoError(t, err)
@@ -834,7 +833,7 @@ func Test_PayloadToHeader(t *testing.T) {
 	p := emptyPayload()
 	wrappedPayload, err := wrapper.WrappedExecutionPayload(p)
 	require.NoError(t, err)
-	h, err := bellatrix.PayloadToHeader(wrappedPayload)
+	h, err := wrapper.PayloadToHeader(wrappedPayload)
 	require.NoError(t, err)
 	txRoot, err := ssz.TransactionsRoot(p.Transactions)
 	require.NoError(t, err)

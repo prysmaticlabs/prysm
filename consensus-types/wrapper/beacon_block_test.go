@@ -5,7 +5,6 @@ import (
 
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/consensus-types/forks/bellatrix"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -38,7 +37,7 @@ func TestBuildSignedBeaconBlockFromExecutionPayload(t *testing.T) {
 		}
 		wrapped, err := wrapper.WrappedExecutionPayload(payload)
 		require.NoError(t, err)
-		header, err := bellatrix.PayloadToHeader(wrapped)
+		header, err := wrapper.PayloadToHeader(wrapped)
 		require.NoError(t, err)
 		blindedBlock := util.NewBlindedBeaconBlockBellatrix()
 
@@ -65,7 +64,7 @@ func TestBuildSignedBeaconBlockFromExecutionPayload(t *testing.T) {
 		}
 		wrapped, err := wrapper.WrappedExecutionPayload(payload)
 		require.NoError(t, err)
-		header, err := bellatrix.PayloadToHeader(wrapped)
+		header, err := wrapper.PayloadToHeader(wrapped)
 		require.NoError(t, err)
 		blindedBlock := util.NewBlindedBeaconBlockBellatrix()
 		blindedBlock.Block.Body.ExecutionPayloadHeader = header
@@ -110,7 +109,7 @@ func TestWrapSignedBlindedBeaconBlock(t *testing.T) {
 
 		wrapped, err := wrapper.WrappedExecutionPayload(payload)
 		require.NoError(t, err)
-		want, err := bellatrix.PayloadToHeader(wrapped)
+		want, err := wrapper.PayloadToHeader(wrapped)
 		require.NoError(t, err)
 
 		blk, err := wrapper.WrappedSignedBeaconBlock(bellatrixBlk)
