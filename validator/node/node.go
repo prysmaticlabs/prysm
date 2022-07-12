@@ -476,10 +476,6 @@ func web3SignerConfig(cliCtx *cli.Context) (*remoteweb3signer.SetupConfig, error
 
 func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSettings, error) {
 	var fileConfig *validatorServiceConfig.ProposerSettingsPayload
-	//TODO(10809): remove when fully deprecated
-	if cliCtx.IsSet(flags.FeeRecipientConfigFileFlag.Name) && cliCtx.IsSet(flags.FeeRecipientConfigURLFlag.Name) {
-		return nil, fmt.Errorf("cannot specify both --%s and --%s", flags.FeeRecipientConfigFileFlag.Name, flags.FeeRecipientConfigURLFlag.Name)
-	}
 
 	if cliCtx.IsSet(flags.ProposerSettingsFlag.Name) && cliCtx.IsSet(flags.ProposerSettingsURLFlag.Name) {
 		return nil, errors.New("cannot specify both " + flags.ProposerSettingsFlag.Name + " and " + flags.ProposerSettingsURLFlag.Name)
@@ -504,14 +500,6 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 				ValidatorRegistration: vr,
 			},
 		}
-	}
-
-	if cliCtx.IsSet(flags.FeeRecipientConfigFileFlag.Name) {
-		return nil, errors.New(flags.FeeRecipientConfigFileFlag.Usage)
-	}
-
-	if cliCtx.IsSet(flags.FeeRecipientConfigURLFlag.Name) {
-		return nil, errors.New(flags.FeeRecipientConfigURLFlag.Usage)
 	}
 
 	if cliCtx.IsSet(flags.ProposerSettingsFlag.Name) {
