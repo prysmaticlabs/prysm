@@ -723,7 +723,9 @@ func Test_ProcessPayloadHeader(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			st, err := blocks.ProcessPayloadHeader(st, tt.header)
+			wrappedHeader, err := wrapper.WrappedExecutionPayloadHeader(tt.header)
+			require.NoError(t, err)
+			st, err := blocks.ProcessPayloadHeader(st, wrappedHeader)
 			if err != nil {
 				require.Equal(t, tt.err.Error(), err.Error())
 			} else {
