@@ -7,7 +7,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/consensus-types/forks/bellatrix"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -230,7 +229,7 @@ func ProcessPayload(st state.BeaconState, payload interfaces.ExecutionData) (sta
 	if err := ValidatePayload(st, payload); err != nil {
 		return nil, err
 	}
-	header, err := bellatrix.PayloadToHeader(payload)
+	header, err := wrapper.PayloadToHeader(payload)
 	if err != nil {
 		return nil, err
 	}
