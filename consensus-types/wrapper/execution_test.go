@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -49,13 +50,45 @@ func TestWrapExecutionPayloadHeader_IsNil(t *testing.T) {
 }
 
 func TestWrapExecutionPayload_SSZ(t *testing.T) {
+	wsb := createWrappedPayload(t)
+	rt, err := wsb.HashTreeRoot()
+	assert.NoError(t, err)
+	assert.NotEmpty(t, rt)
+
+	var b []byte
+	b, err = wsb.MarshalSSZTo(b)
+	assert.NoError(t, err)
+	assert.NotEqual(t, 0, len(b))
+	encoded, err := wsb.MarshalSSZ()
+	require.NoError(t, err)
+	assert.NotEqual(t, 0, wsb.SizeSSZ())
+	assert.NoError(t, wsb.UnmarshalSSZ(encoded))
+}
+
+func TestWrapExecutionPayloadHeader_SSZ(t *testing.T) {
+	wsb := createWrappedPayloadHeader(t)
+	rt, err := wsb.HashTreeRoot()
+	assert.NoError(t, err)
+	assert.NotEmpty(t, rt)
+
+	var b []byte
+	b, err = wsb.MarshalSSZTo(b)
+	assert.NoError(t, err)
+	assert.NotEqual(t, 0, len(b))
+	encoded, err := wsb.MarshalSSZ()
+	require.NoError(t, err)
+	assert.NotEqual(t, 0, wsb.SizeSSZ())
+	assert.NoError(t, wsb.UnmarshalSSZ(encoded))
+}
+
+func createWrappedPayload(t testing.TB) interfaces.ExecutionData {
 	wsb, err := wrapper.WrappedExecutionPayload(&enginev1.ExecutionPayload{
 		ParentHash:    make([]byte, fieldparams.RootLength),
 		FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
 		StateRoot:     make([]byte, fieldparams.RootLength),
 		ReceiptsRoot:  make([]byte, fieldparams.RootLength),
 		LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
-		PrevRandao:    make([]byte, fieldparams.BLSSignatureLength),
+		PrevRandao:    make([]byte, fieldparams.RootLength),
 		BlockNumber:   0,
 		GasLimit:      0,
 		GasUsed:       0,
@@ -65,29 +98,18 @@ func TestWrapExecutionPayload_SSZ(t *testing.T) {
 		BlockHash:     make([]byte, fieldparams.RootLength),
 		Transactions:  make([][]byte, 0),
 	})
-	assert.NoError(t, err)
-
-	var b []byte
-	b, err = wsb.MarshalSSZTo(b)
-	assert.NoError(t, err)
-	assert.NotEqual(t, 0, len(b))
-	encoded, err := wsb.MarshalSSZ()
 	require.NoError(t, err)
-	assert.NotEqual(t, 0, wsb.SizeSSZ())
-	assert.NoError(t, wsb.UnmarshalSSZ(encoded))
-	rt, err := wsb.HashTreeRoot()
-	assert.NoError(t, err)
-	assert.NotEmpty(t, rt)
+	return wsb
 }
 
-func TestWrapExecutionPayloadHeader_SSZ(t *testing.T) {
+func createWrappedPayloadHeader(t testing.TB) interfaces.ExecutionData {
 	wsb, err := wrapper.WrappedExecutionPayloadHeader(&enginev1.ExecutionPayloadHeader{
 		ParentHash:       make([]byte, fieldparams.RootLength),
 		FeeRecipient:     make([]byte, fieldparams.FeeRecipientLength),
 		StateRoot:        make([]byte, fieldparams.RootLength),
 		ReceiptsRoot:     make([]byte, fieldparams.RootLength),
 		LogsBloom:        make([]byte, fieldparams.LogsBloomLength),
-		PrevRandao:       make([]byte, fieldparams.BLSSignatureLength),
+		PrevRandao:       make([]byte, fieldparams.RootLength),
 		BlockNumber:      0,
 		GasLimit:         0,
 		GasUsed:          0,
@@ -97,17 +119,6 @@ func TestWrapExecutionPayloadHeader_SSZ(t *testing.T) {
 		BlockHash:        make([]byte, fieldparams.RootLength),
 		TransactionsRoot: make([]byte, fieldparams.RootLength),
 	})
-	assert.NoError(t, err)
-
-	var b []byte
-	b, err = wsb.MarshalSSZTo(b)
-	assert.NoError(t, err)
-	assert.NotEqual(t, 0, len(b))
-	encoded, err := wsb.MarshalSSZ()
 	require.NoError(t, err)
-	assert.NotEqual(t, 0, wsb.SizeSSZ())
-	assert.NoError(t, wsb.UnmarshalSSZ(encoded))
-	rt, err := wsb.HashTreeRoot()
-	assert.NoError(t, err)
-	assert.NotEmpty(t, rt)
+	return wsb
 }
