@@ -296,14 +296,11 @@ func ProcessBlockForStateRoot(
 		}
 		if blk.IsBlinded() {
 			state, err = b.ProcessPayloadHeader(state, executionData)
-			if err != nil {
-				return nil, errors.Wrap(err, "could not process execution payload header")
-			}
 		} else {
 			state, err = b.ProcessPayload(state, executionData)
-			if err != nil {
-				return nil, errors.Wrap(err, "could not process execution payload")
-			}
+		}
+		if err != nil {
+			return nil, errors.Wrap(err, "could not process execution payload header")
 		}
 	}
 
