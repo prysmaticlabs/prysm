@@ -721,8 +721,10 @@ func (r *testRunner) multiScenario(epoch uint64, conns []*grpc.ClientConn) bool 
 			// Have a random delay which is triggered here.
 			gen := rand.NewDeterministicGenerator()
 			genNum := gen.Int63()
-			randomDelay := time.Duration(genNum) % (1 * time.Second)
-			timeToSleep := (11 * time.Second) + randomDelay
+			randFactor := ((time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second) * 1) / 12
+			randomDelay := time.Duration(genNum) % randFactor
+			fixedDelay := ((time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second) * 11) / 12
+			timeToSleep := fixedDelay + randomDelay
 			time.Sleep(timeToSleep)
 			return false
 		})
