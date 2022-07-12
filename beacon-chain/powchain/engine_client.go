@@ -421,7 +421,7 @@ func handleRPCError(err error) error {
 		if !ok {
 			return errors.Wrapf(err, "got an unexpected error in JSON-RPC response")
 		}
-		return errors.Wrapf(ErrServer, "%v", errWithData.ErrorData())
+		return errors.Wrapf(ErrServer, "%v", errWithData.Error())
 	default:
 		return err
 	}
