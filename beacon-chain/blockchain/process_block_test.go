@@ -1608,7 +1608,7 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 			payload: &enginev1.ExecutionPayload{
 				ParentHash: aHash[:],
 			},
-			errString: "wrap nil object",
+			errString: "nil header or block body",
 		},
 	}
 	for _, tt := range tests {
