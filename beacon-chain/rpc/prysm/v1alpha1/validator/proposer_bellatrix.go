@@ -149,7 +149,6 @@ func (vs *Server) buildHeaderBlock(ctx context.Context, b *ethpb.BeaconBlockAlta
 	}
 	stateRoot, err := vs.computeStateRoot(ctx, wsb)
 	if err != nil {
-		fmt.Println(err)
 		return nil, errors.Wrap(err, "could not compute state root")
 	}
 	blk.StateRoot = stateRoot

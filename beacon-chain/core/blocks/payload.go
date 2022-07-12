@@ -40,7 +40,7 @@ func IsMergeTransitionComplete(st state.BeaconState) (bool, error) {
 	}
 	wrappedHeader, err := wrapper.WrappedExecutionPayloadHeader(h)
 	if err != nil {
-		return false, nil
+		return false, err
 	}
 	isEmpty, err := wrapper.IsEmptyExecutionData(wrappedHeader)
 	if err != nil {
@@ -58,7 +58,7 @@ func IsMergeTransitionBlockUsingPreStatePayloadHeader(h *enginev1.ExecutionPaylo
 	}
 	wrappedHeader, err := wrapper.WrappedExecutionPayloadHeader(h)
 	if err != nil {
-		return false, nil
+		return false, err
 	}
 	isEmpty, err := wrapper.IsEmptyExecutionData(wrappedHeader)
 	if err != nil {
@@ -119,7 +119,7 @@ func IsExecutionEnabled(st state.BeaconState, body interfaces.BeaconBlockBody) (
 func IsExecutionEnabledUsingHeader(header *enginev1.ExecutionPayloadHeader, body interfaces.BeaconBlockBody) (bool, error) {
 	wrappedHeader, err := wrapper.WrappedExecutionPayloadHeader(header)
 	if err != nil {
-		return false, nil
+		return false, err
 	}
 	isEmpty, err := wrapper.IsEmptyExecutionData(wrappedHeader)
 	if err != nil {
@@ -309,12 +309,8 @@ func GetBlockPayloadHash(blk interfaces.BeaconBlock) ([32]byte, error) {
 		return payloadHash, nil
 	}
 	payload, err := blk.Body().Execution()
-	switch {
-	case errors.Is(err, wrapper.ErrUnsupportedField):
-		return payloadHash, nil
-	case err != nil:
+	if err != nil {
 		return payloadHash, err
-	default:
-		return bytesutil.ToBytes32(payload.BlockHash()), nil
 	}
+	return bytesutil.ToBytes32(payload.BlockHash()), nil
 }
