@@ -1540,6 +1540,12 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 		errString    string
 	}{
 		{
+			name:         "state older than Bellatrix, nil payload",
+			stateVersion: 1,
+			payload:      nil,
+			errString:    "attempted to wrap nil",
+		},
+		{
 			name:         "state older than Bellatrix, empty payload",
 			stateVersion: 1,
 			payload: &enginev1.ExecutionPayload{
@@ -1559,6 +1565,12 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 			payload: &enginev1.ExecutionPayload{
 				ParentHash: aHash[:],
 			},
+		},
+		{
+			name:         "state is Bellatrix, nil payload",
+			stateVersion: 2,
+			payload:      nil,
+			errString:    "attempted to wrap nil",
 		},
 		{
 			name:         "state is Bellatrix, empty payload",
