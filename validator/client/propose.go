@@ -27,8 +27,6 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-type signingFunc func(context.Context, *validatorpb.SignRequest) (bls.Signature, error)
-
 const domainDataErr = "could not get domain data"
 const signingRootErr = "could not get signing root"
 const signExitErr = "could not sign voluntary exit proposal"
@@ -184,7 +182,7 @@ func ProposeExit(
 	ctx context.Context,
 	validatorClient ethpb.BeaconNodeValidatorClient,
 	nodeClient ethpb.NodeClient,
-	signer signingFunc,
+	signer iface.SigningFunc,
 	pubKey []byte,
 ) error {
 	ctx, span := trace.StartSpan(ctx, "validator.ProposeExit")
@@ -281,7 +279,7 @@ func (v *validator) signBlock(ctx context.Context, pubKey [fieldparams.BLSPubkey
 func signVoluntaryExit(
 	ctx context.Context,
 	validatorClient ethpb.BeaconNodeValidatorClient,
-	signer signingFunc,
+	signer iface.SigningFunc,
 	pubKey []byte,
 	exit *ethpb.VoluntaryExit,
 ) ([]byte, error) {
