@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/api/client/beacon"
+	"github.com/prysmaticlabs/prysm/crypto/rand"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/io/file"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
@@ -665,6 +666,9 @@ func (r *testRunner) eeOffline(epoch uint64, _ []*grpc.ClientConn) bool {
 // After the proxy has been sending `SYNCING` responses to the beacon node, we
 // will test this with our optimistic sync evaluator to ensure everything works
 // as expected.
+// 4) We then start testing late blocks being proposed in the network. This is done via
+// our engine proxy, which would sleep for a random amount of time for our get payload
+// requests.
 func (r *testRunner) multiScenario(epoch uint64, conns []*grpc.ClientConn) bool {
 	switch epoch {
 	case 9:
@@ -708,7 +712,31 @@ func (r *testRunner) multiScenario(epoch uint64, conns []*grpc.ClientConn) bool 
 		engineProxy.ReleaseBackedUpRequests("engine_newPayloadV1")
 
 		return true
-	case 11, 12, 16, 17, 21, 22:
+	case 24:
+		component, err := r.comHandler.eth1Proxy.ComponentAtIndex(0)
+		require.NoError(r.t, err)
+		component.(e2etypes.EngineProxy).AddRequestInterceptor("engine_getPayloadV1", func() interface{} {
+			return nil
+		}, func() bool {
+			// Have a random delay which is triggered here.
+			gen := rand.NewDeterministicGenerator()
+			genNum := gen.Int63()
+			randomDelay := time.Duration(genNum) % (1 * time.Second)
+			timeToSleep := (11 * time.Second) + randomDelay
+			time.Sleep(timeToSleep)
+			return false
+		})
+		return true
+	case 26:
+		// Disable Interceptor
+		component, err := r.comHandler.eth1Proxy.ComponentAtIndex(0)
+		require.NoError(r.t, err)
+		engineProxy, ok := component.(e2etypes.EngineProxy)
+		require.Equal(r.t, true, ok)
+		engineProxy.RemoveRequestInterceptor("engine_getPayloadV1")
+
+		return true
+	case 11, 12, 16, 17, 21, 22, 25, 27, 28:
 		// Allow 2 epochs for the network to finalize again.
 		return true
 	}

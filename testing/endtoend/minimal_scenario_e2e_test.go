@@ -7,7 +7,7 @@ import (
 )
 
 func TestEndToEnd_MultiScenarioRun(t *testing.T) {
-	runner := e2eMinimal(t, types.WithEpochs(22))
+	runner := e2eMinimal(t, types.WithEpochs(29))
 
 	runner.config.Evaluators = scenarioEvals()
 	runner.config.EvalInterceptor = runner.multiScenario

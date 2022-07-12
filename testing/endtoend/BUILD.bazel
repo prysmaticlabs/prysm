@@ -6,6 +6,7 @@ load("@prysm//tools/go:def.bzl", "go_test")
 # gazelle:exclude minimal_scenario_e2e_test.go
 
 common_deps = [
+    "//crypto/rand:go_default_library",
     "//api/client/beacon:go_default_library",
     "//beacon-chain/blockchain/testing:go_default_library",
     "//beacon-chain/core/transition:go_default_library",
