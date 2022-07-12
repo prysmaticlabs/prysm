@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/interop"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/config/params"
 	coreBlock "github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
@@ -30,15 +31,22 @@ func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockR
 		return nil, err
 	}
 
-	builderReady, b, err := vs.getAndBuildHeaderBlock(ctx, altairBlk)
-	if err != nil {
-		// In the event of an error, the node should fall back to default execution engine for building block.
-		log.WithError(err).Error("Failed to build a block from external builder, falling " +
-			"back to local execution client")
-	} else if builderReady {
-		return b, nil
+	registered, err := vs.validatorRegistered(ctx, altairBlk.ProposerIndex)
+	if registered && err == nil {
+		builderReady, b, err := vs.getAndBuildHeaderBlock(ctx, altairBlk)
+		if err != nil {
+			// In the event of an error, the node should fall back to default execution engine for building block.
+			log.WithError(err).Error("Failed to build a block from external builder, falling " +
+				"back to local execution client")
+		} else if builderReady {
+			return b, nil
+		}
+	} else if err != nil {
+		log.WithFields(logrus.Fields{
+			"slot":           req.Slot,
+			"validatorIndex": altairBlk.ProposerIndex,
+		}).Errorf("Could not determine validator has registered. Default to local execution client: %v", err)
 	}
-
 	payload, err := vs.getExecutionPayload(ctx, req.Slot, altairBlk.ProposerIndex)
 	if err != nil {
 		return nil, err
@@ -288,4 +296,19 @@ func (vs *Server) getAndBuildHeaderBlock(ctx context.Context, b *ethpb.BeaconBlo
 		return false, nil, errors.Wrap(err, "could not combine altair block with payload header")
 	}
 	return true, gb, nil
+}
+
+// validatorRegistered returns true if validator with index `id` was previously registered in the database.
+func (vs *Server) validatorRegistered(ctx context.Context, id types.ValidatorIndex) (bool, error) {
+	if vs.BeaconDB == nil {
+		return false, errors.New("nil beacon db")
+	}
+	_, err := vs.BeaconDB.RegistrationByValidatorID(ctx, id)
+	switch {
+	case errors.Is(err, kv.ErrNotFoundFeeRecipient):
+		return false, nil
+	case err != nil:
+		return false, err
+	}
+	return true, nil
 }
