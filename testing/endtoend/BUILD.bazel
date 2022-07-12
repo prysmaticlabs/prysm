@@ -5,6 +5,45 @@ load("@prysm//tools/go:def.bzl", "go_test")
 # gazelle:exclude mainnet_scenario_e2e_test.go
 # gazelle:exclude minimal_scenario_e2e_test.go
 
+# Presubmit tests represent the group of endtoend tests that are run on pull
+# requests and must be passing before a pull request can merge.
+test_suite(
+    name = "presubmit",
+    tags = [
+        "e2e",
+        "manual",
+    ],
+    tests = [
+        ":go_default_test",
+    ],
+)
+
+# Postsubmit tests represent the group of endtoend tests that are run after a
+# pull request has merged.
+test_suite(
+    name = "postsubmit",
+    tags = [
+        "e2e",
+        "manual",
+    ],
+    tests = [
+        ":go_mainnet_test",
+    ],
+)
+
+# Scenario tests are run infrequently in CI to test specific scenarios.
+test_suite(
+    name = "scenario_tests",
+    tags = [
+        "e2e",
+        "manual",
+    ],
+    tests = [
+        ":go_mainnet_scenario_test",
+        ":go_minimal_scenario_test",
+    ],
+)
+
 common_deps = [
     "//api/client/beacon:go_default_library",
     "//beacon-chain/blockchain/testing:go_default_library",
