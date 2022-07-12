@@ -13,6 +13,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/cmd",
     visibility = ["//visibility:public"],
     deps = [
+        "//cmd/validator/flags:go_default_library",
         "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",
         "//io/file:go_default_library",
@@ -35,6 +36,7 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//cmd/mock:go_default_library",
+        "//cmd/validator/flags:go_default_library",
         "//config/params:go_default_library",
         "//testing/assert:go_default_library",
         "//testing/require:go_default_library",
