@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -69,7 +70,10 @@ func cliActionRequestBlocks(_ *cli.Context) error {
 		}
 		blocks, err := sendBeaconBlocksByRangeRequest(ctx, mockChain, c, pr, req)
 		if err != nil {
-			fmt.Println("Got an error", err)
+			if strings.Contains(err.Error(), "dial to self attempted") {
+				continue
+			}
+			return err
 		}
 		fmt.Println("Got blocks", blocks)
 	}
