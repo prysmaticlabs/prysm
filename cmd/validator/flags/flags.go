@@ -324,19 +324,6 @@ var (
 		Value: false,
 	}
 
-	// FeeRecipientConfigFileFlag defines the path or URL to a file with proposer config.
-	FeeRecipientConfigFileFlag = &cli.StringFlag{
-		Name:  "fee-recipient-config-file",
-		Usage: "DEPRECATED, please use proposer-settings-file",
-		Value: "",
-	}
-	// FeeRecipientConfigURLFlag defines the path or URL to a file with proposer config.
-	FeeRecipientConfigURLFlag = &cli.StringFlag{
-		Name:  "fee-recipient-config-url",
-		Usage: "DEPRECATED, please use proposer-settings-url",
-		Value: "",
-	}
-
 	// ProposerSettingsFlag defines the path or URL to a file with proposer config.
 	ProposerSettingsFlag = &cli.StringFlag{
 		Name:  "proposer-settings-file",
