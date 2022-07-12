@@ -99,7 +99,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
 	host.RemoveStreamHandler(identify.IDDelta)
 	conn, err := grpc.Dial(beaconAPIEndpoint, grpc.WithInsecure())
 	if err != nil {
