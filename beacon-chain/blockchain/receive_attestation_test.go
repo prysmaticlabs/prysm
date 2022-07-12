@@ -131,7 +131,7 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 	service.cfg.ProposerSlotIndexCache = cache.NewProposerPayloadIDsCache()
-	service.notifyEngineIfChangedHead(ctx, service.headRoot())
+	require.NoError(t, service.notifyEngineIfChangedHead(ctx, service.headRoot()))
 	hookErr := "could not notify forkchoice update"
 	invalidStateErr := "Could not get state from db"
 	require.LogsDoNotContain(t, hook, invalidStateErr)
@@ -139,7 +139,7 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 	gb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
 	require.NoError(t, err)
 	require.NoError(t, service.saveInitSyncBlock(ctx, [32]byte{'a'}, gb))
-	service.notifyEngineIfChangedHead(ctx, [32]byte{'a'})
+	require.NoError(t, service.notifyEngineIfChangedHead(ctx, [32]byte{'a'}))
 	require.LogsContain(t, hook, invalidStateErr)
 
 	hook.Reset()
@@ -164,7 +164,7 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 		state: st,
 	}
 	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(2, 1, [8]byte{1})
-	service.notifyEngineIfChangedHead(ctx, r1)
+	require.NoError(t, service.notifyEngineIfChangedHead(ctx, r1))
 	require.LogsDoNotContain(t, hook, invalidStateErr)
 	require.LogsDoNotContain(t, hook, hookErr)
 
@@ -182,7 +182,7 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 		state: st,
 	}
 	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(2, 1, [8]byte{1})
-	service.notifyEngineIfChangedHead(ctx, r1)
+	require.NoError(t, service.notifyEngineIfChangedHead(ctx, r1))
 	require.LogsDoNotContain(t, hook, invalidStateErr)
 	require.LogsDoNotContain(t, hook, hookErr)
 	vId, payloadID, has := service.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(2)
@@ -192,7 +192,7 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 
 	// Test zero headRoot returns immediately.
 	headRoot := service.headRoot()
-	service.notifyEngineIfChangedHead(ctx, [32]byte{})
+	require.NoError(t, service.notifyEngineIfChangedHead(ctx, [32]byte{}))
 	require.Equal(t, service.headRoot(), headRoot)
 }
 
