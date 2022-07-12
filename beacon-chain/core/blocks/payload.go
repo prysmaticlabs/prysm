@@ -284,7 +284,11 @@ func ValidatePayloadHeader(st state.BeaconState, header *enginev1.ExecutionPaylo
 }
 
 // ProcessPayloadHeader processes the payload header.
-func ProcessPayloadHeader(st state.BeaconState, header *enginev1.ExecutionPayloadHeader) (state.BeaconState, error) {
+func ProcessPayloadHeader(st state.BeaconState, data interfaces.ExecutionData) (state.BeaconState, error) {
+	header, ok := data.Proto().(*enginev1.ExecutionPayloadHeader)
+	if !ok {
+		return nil, errors.New("execution data not an execution payload header")
+	}
 	if err := ValidatePayloadHeaderWhenMergeCompletes(st, header); err != nil {
 		return nil, err
 	}

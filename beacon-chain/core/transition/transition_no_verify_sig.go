@@ -290,13 +290,20 @@ func ProcessBlockForStateRoot(
 		return nil, errors.Wrap(err, "could not check if execution is enabled")
 	}
 	if enabled {
-		payload, err := blk.Body().Execution()
+		executionData, err := blk.Body().Execution()
 		if err != nil {
 			return nil, err
 		}
-		state, err = b.ProcessPayload(state, payload)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not process execution payload")
+		if blk.IsBlinded() {
+			state, err = b.ProcessPayloadHeader(state, executionData)
+			if err != nil {
+				return nil, errors.Wrap(err, "could not process execution payload header")
+			}
+		} else {
+			state, err = b.ProcessPayload(state, executionData)
+			if err != nil {
+				return nil, errors.Wrap(err, "could not process execution payload")
+			}
 		}
 	}
 
