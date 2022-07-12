@@ -34,11 +34,9 @@ func NewProxySet() *ProxySet {
 
 // Start starts all the proxies in set.
 func (s *ProxySet) Start(ctx context.Context) error {
-
 	totalNodeCount := e2e.TestParams.BeaconNodeCount + e2e.TestParams.LighthouseBeaconNodeCount
 	nodes := make([]e2etypes.ComponentRunner, totalNodeCount)
 	for i := 0; i < totalNodeCount; i++ {
-		// We start indexing nodes from 1 because the miner has an implicit 0 index.
 		nodes[i] = NewProxy(i)
 	}
 	s.proxies = nodes
