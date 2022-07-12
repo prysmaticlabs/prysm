@@ -149,7 +149,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 		return nil, errors.Wrap(err, "could not prepare payload")
 	}
 	if payloadID == nil {
-		return nil, errors.New("nil payload id")
+		return nil, fmt.Errorf("nil payload with block hash: %#x", parentHash)
 	}
 	payload, err := vs.ExecutionEngineCaller.GetPayload(ctx, *payloadID)
 	if err != nil {
