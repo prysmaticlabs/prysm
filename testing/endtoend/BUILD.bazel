@@ -10,7 +10,6 @@ load("@prysm//tools/go:def.bzl", "go_test")
 test_suite(
     name = "presubmit",
     tags = [
-        "e2e",
         "manual",
     ],
     tests = [
@@ -23,7 +22,6 @@ test_suite(
 test_suite(
     name = "postsubmit",
     tags = [
-        "e2e",
         "manual",
     ],
     tests = [
@@ -35,7 +33,6 @@ test_suite(
 test_suite(
     name = "scenario_tests",
     tags = [
-        "e2e",
         "manual",
     ],
     tests = [
