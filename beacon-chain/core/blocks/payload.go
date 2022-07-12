@@ -42,19 +42,6 @@ func IsMergeTransitionComplete(st state.BeaconState) (bool, error) {
 	return !bellatrix.IsEmptyHeader(h), nil
 }
 
-// IsMergeTransitionBlockUsingPreStatePayloadHeader returns true if the input block is the terminal merge block.
-// Terminal merge block must be associated with an empty payload header.
-// This assumes the header `h` is referenced as the parent state for block body `body.
-func IsMergeTransitionBlockUsingPreStatePayloadHeader(h *enginev1.ExecutionPayloadHeader, body interfaces.BeaconBlockBody) (bool, error) {
-	if h == nil || body == nil {
-		return false, errors.New("nil header or block body")
-	}
-	if !bellatrix.IsEmptyHeader(h) {
-		return false, nil
-	}
-	return IsExecutionBlock(body)
-}
-
 // IsExecutionBlock returns whether the block has a non-empty ExecutionPayload.
 //
 // Spec code:
