@@ -300,7 +300,7 @@ func ProcessBlockForStateRoot(
 			state, err = b.ProcessPayload(state, executionData)
 		}
 		if err != nil {
-			return nil, errors.Wrap(err, "could not process execution payload header")
+			return nil, errors.Wrap(err, "could not process execution data")
 		}
 	}
 
