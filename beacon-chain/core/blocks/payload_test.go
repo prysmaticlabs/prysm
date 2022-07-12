@@ -159,7 +159,9 @@ func Test_IsMergeComplete(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
-			require.NoError(t, st.SetLatestExecutionPayloadHeader(tt.payload))
+			wrappedHeader, err := wrapper.WrappedExecutionPayloadHeader(tt.payload)
+			require.NoError(t, err)
+			require.NoError(t, st.SetLatestExecutionPayloadHeader(wrappedHeader))
 			got, err := blocks.IsMergeTransitionComplete(st)
 			require.NoError(t, err)
 			if got != tt.want {
@@ -441,7 +443,9 @@ func Test_IsExecutionEnabled(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
-			require.NoError(t, st.SetLatestExecutionPayloadHeader(tt.header))
+			wrappedHeader, err := wrapper.WrappedExecutionPayloadHeader(tt.header)
+			require.NoError(t, err)
+			require.NoError(t, st.SetLatestExecutionPayloadHeader(wrappedHeader))
 			blk := util.NewBeaconBlockBellatrix()
 			blk.Block.Body.ExecutionPayload = tt.payload
 			body, err := wrapper.WrappedBeaconBlockBody(blk.Block.Body)
@@ -566,7 +570,9 @@ func Test_ValidatePayloadWhenMergeCompletes(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
-			require.NoError(t, st.SetLatestExecutionPayloadHeader(tt.header))
+			wrappedHeader, err := wrapper.WrappedExecutionPayloadHeader(tt.header)
+			require.NoError(t, err)
+			require.NoError(t, st.SetLatestExecutionPayloadHeader(wrappedHeader))
 			wrappedPayload, err := wrapper.WrappedExecutionPayload(tt.payload)
 			require.NoError(t, err)
 			err = blocks.ValidatePayloadWhenMergeCompletes(st, wrappedPayload)
@@ -775,7 +781,9 @@ func Test_ValidatePayloadHeader(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := blocks.ValidatePayloadHeader(st, tt.header)
+			wrappedHeader, err := wrapper.WrappedExecutionPayloadHeader(tt.header)
+			require.NoError(t, err)
+			err = blocks.ValidatePayloadHeader(st, wrappedHeader)
 			require.Equal(t, tt.err, err)
 		})
 	}
@@ -784,7 +792,9 @@ func Test_ValidatePayloadHeader(t *testing.T) {
 func Test_ValidatePayloadHeaderWhenMergeCompletes(t *testing.T) {
 	st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
 	emptySt := st.Copy()
-	require.NoError(t, st.SetLatestExecutionPayloadHeader(&enginev1.ExecutionPayloadHeader{BlockHash: []byte{'a'}}))
+	wrappedHeader, err := wrapper.WrappedExecutionPayloadHeader(&enginev1.ExecutionPayloadHeader{BlockHash: []byte{'a'}})
+	require.NoError(t, err)
+	require.NoError(t, st.SetLatestExecutionPayloadHeader(wrappedHeader))
 	tests := []struct {
 		name   string
 		state  state.BeaconState
@@ -823,7 +833,9 @@ func Test_ValidatePayloadHeaderWhenMergeCompletes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := blocks.ValidatePayloadHeaderWhenMergeCompletes(tt.state, tt.header)
+			wrappedHeader, err := wrapper.WrappedExecutionPayloadHeader(tt.header)
+			require.NoError(t, err)
+			err = blocks.ValidatePayloadHeaderWhenMergeCompletes(tt.state, wrappedHeader)
 			require.Equal(t, tt.err, err)
 		})
 	}
@@ -872,7 +884,9 @@ func Test_PayloadToHeader(t *testing.T) {
 
 func BenchmarkBellatrixComplete(b *testing.B) {
 	st, _ := util.DeterministicGenesisStateBellatrix(b, 1)
-	require.NoError(b, st.SetLatestExecutionPayloadHeader(emptyPayloadHeader()))
+	wrappedHeader, err := wrapper.WrappedExecutionPayloadHeader(emptyPayloadHeader())
+	require.NoError(b, err)
+	require.NoError(b, st.SetLatestExecutionPayloadHeader(wrappedHeader))
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
