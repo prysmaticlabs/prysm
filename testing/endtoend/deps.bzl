@@ -9,7 +9,7 @@ def e2e_deps():
         urls = ["https://output.circle-artifacts.com/output/job/4ea56fc6-d9a2-4f4b-9d6a-f3c04ebb4ba7/artifacts/0/distributions/web3signer-develop.tar.gz"],
         sha256 = "7a3268316f5416c779453cead9656980066cdd52fb909a2102154eb75691a425",
         build_file = "@prysm//testing/endtoend:web3signer.BUILD",
-        strip_prefix = "web3signer-22.5.0",
+        strip_prefix = "web3signer-develop",
     )
 
     http_archive(
