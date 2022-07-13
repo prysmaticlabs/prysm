@@ -13,9 +13,7 @@ go_library(
         "usage.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/cmd/validator",
-    visibility = [
-    "//cmd:__subpackages__",
-    "//validator:__subpackages__"],
+    visibility = ["//validator:__subpackages__"],
     deps = [
         "//cmd:go_default_library",
         "//cmd/validator/accounts:go_default_library",
