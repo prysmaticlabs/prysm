@@ -5,7 +5,6 @@ import (
 	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/runtime/version"
@@ -309,12 +308,6 @@ func (w blindedBeaconBlockBodyBellatrix) Proto() proto.Message {
 	return w.b
 }
 
-// ExecutionPayload returns the execution payload of the block body.
-func (w blindedBeaconBlockBodyBellatrix) ExecutionPayload() (*enginev1.ExecutionPayload, error) {
-	return nil, errors.Wrapf(ErrUnsupportedField, "ExecutionPayload for %T", w)
-}
-
-// ExecutionPayloadHeader returns the execution payload header of the block body.
-func (w blindedBeaconBlockBodyBellatrix) ExecutionPayloadHeader() (*enginev1.ExecutionPayloadHeader, error) {
-	return w.b.ExecutionPayloadHeader, nil
+func (w blindedBeaconBlockBodyBellatrix) Execution() (interfaces.ExecutionData, error) {
+	return WrappedExecutionPayloadHeader(w.b.ExecutionPayloadHeader)
 }

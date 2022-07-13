@@ -1489,9 +1489,11 @@ func Test_getStateVersionAndPayload(t *testing.T) {
 			name: "bellatrix state",
 			st: func() state.BeaconState {
 				s, _ := util.DeterministicGenesisStateBellatrix(t, 1)
-				require.NoError(t, s.SetLatestExecutionPayloadHeader(&enginev1.ExecutionPayloadHeader{
+				wrappedHeader, err := wrapper.WrappedExecutionPayloadHeader(&enginev1.ExecutionPayloadHeader{
 					BlockNumber: 1,
-				}))
+				})
+				require.NoError(t, err)
+				require.NoError(t, s.SetLatestExecutionPayloadHeader(wrappedHeader))
 				return s
 			}(),
 			version: version.Bellatrix,
@@ -1543,6 +1545,7 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 			name:         "state older than Bellatrix, nil payload",
 			stateVersion: 1,
 			payload:      nil,
+			errString:    "attempted to wrap nil",
 		},
 		{
 			name:         "state older than Bellatrix, empty payload",
@@ -1569,6 +1572,7 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 			name:         "state is Bellatrix, nil payload",
 			stateVersion: 2,
 			payload:      nil,
+			errString:    "attempted to wrap nil",
 		},
 		{
 			name:         "state is Bellatrix, empty payload",
