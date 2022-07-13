@@ -112,6 +112,10 @@ func (altairSignedBeaconBlock) PbBlindedBellatrixBlock() (*eth.SignedBlindedBeac
 	return nil, ErrUnsupportedBlindedBellatrixBlock
 }
 
+func (altairSignedBeaconBlock) ToBlinded() (interfaces.SignedBeaconBlock, error) {
+	return nil, ErrUnsupportedVersion
+}
+
 // Version of the underlying protobuf object.
 func (altairSignedBeaconBlock) Version() int {
 	return version.Altair

@@ -31,6 +31,7 @@ import (
 var (
 	_ = ExecutionPayloadReconstructor(&Service{})
 	_ = EngineCaller(&Service{})
+	_ = ExecutionPayloadReconstructor(&Service{})
 	_ = EngineCaller(&mocks.EngineClient{})
 )
 
@@ -88,7 +89,7 @@ func TestClient_IPC(t *testing.T) {
 		want, ok := fix["ExecutionBlock"].(*pb.ExecutionBlock)
 		require.Equal(t, true, ok)
 		arg := common.BytesToHash([]byte("foo"))
-		resp, err := srv.ExecutionBlockByHash(ctx, arg)
+		resp, err := srv.ExecutionBlockByHash(ctx, arg, true /* with txs */)
 		require.NoError(t, err)
 		require.DeepEqual(t, want, resp)
 	})
@@ -396,7 +397,7 @@ func TestClient_HTTP(t *testing.T) {
 		service.rpcClient = rpcClient
 
 		// We call the RPC method via HTTP and expect a proper result.
-		resp, err := service.ExecutionBlockByHash(ctx, arg)
+		resp, err := service.ExecutionBlockByHash(ctx, arg, true /* with txs */)
 		require.NoError(t, err)
 		require.DeepEqual(t, want, resp)
 	})
