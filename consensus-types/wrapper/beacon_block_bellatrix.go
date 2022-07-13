@@ -108,6 +108,9 @@ func (bellatrixSignedBeaconBlock) PbAltairBlock() (*eth.SignedBeaconBlockAltair,
 }
 
 func (w bellatrixSignedBeaconBlock) ToBlinded() (interfaces.SignedBeaconBlock, error) {
+	if w.Block().IsNil() {
+		return nil, errors.New("cannot convert nil block to blinded format")
+	}
 	payload := w.b.Block.Body.ExecutionPayload
 	wrappedPayload, err := WrappedExecutionPayload(payload)
 	if err != nil {
