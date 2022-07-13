@@ -125,14 +125,17 @@ func cliActionRequestBlocks(_ *cli.Context) error {
 			}
 			return err
 		}
+		end := time.Since(start)
+		//totalExecutionBlocks := 0
+		//for _, blk := range blocks {
+		//	exec, err := blk.Block().Body().ExecutionPayload()
+		//}
 		log.WithFields(logrus.Fields{
 			"numBlocks":                           len(blocks),
 			"peer":                                pr.String(),
-			"timeFromSendingToProcessingResponse": time.Since(start),
+			"timeFromSendingToProcessingResponse": end,
 		}).Info("Received blocks from peer")
-		for _, blk := range blocks {
-			blk.Version()
-		}
+
 	}
 	return nil
 }
