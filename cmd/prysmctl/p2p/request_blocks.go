@@ -5,8 +5,10 @@ import (
 	"strings"
 	"time"
 
+	libp2pcore "github.com/libp2p/go-libp2p-core"
 	corenet "github.com/libp2p/go-libp2p-core/network"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
@@ -83,6 +85,12 @@ func cliActionRequestBlocks(_ *cli.Context) error {
 		return err
 	}
 	c.registerHandshakeHandlers()
+
+	c.registerRPCHandler(p2p.RPCBlocksByRangeTopicV1, func(
+		ctx context.Context, i interface{}, stream libp2pcore.Stream,
+	) error {
+		return nil
+	})
 
 	allPeers := strings.Split(requestBlocksFlags.Peers, ",")
 	if err := c.connectToPeers(ctx, allPeers...); err != nil {
