@@ -263,7 +263,6 @@ func (s *Service) optimisticCandidateBlock(ctx context.Context, blk interfaces.B
 	}
 	parentIsExecutionBlock, err := blocks.IsExecutionBlock(parent.Block().Body())
 	if err != nil {
-		log.Errorf("NOT AN EXECUTION BLOCK: %v", err)
 		return err
 	}
 	if parentIsExecutionBlock {
