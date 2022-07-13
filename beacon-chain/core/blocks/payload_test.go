@@ -9,7 +9,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/consensus-types/forks/bellatrix"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
@@ -160,7 +159,9 @@ func Test_IsMergeComplete(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
-			require.NoError(t, st.SetLatestExecutionPayloadHeader(tt.payload))
+			wrappedHeader, err := wrapper.WrappedExecutionPayloadHeader(tt.payload)
+			require.NoError(t, err)
+			require.NoError(t, st.SetLatestExecutionPayloadHeader(wrappedHeader))
 			got, err := blocks.IsMergeTransitionComplete(st)
 			require.NoError(t, err)
 			if got != tt.want {
@@ -263,7 +264,9 @@ func Test_IsExecutionEnabled(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
-			require.NoError(t, st.SetLatestExecutionPayloadHeader(tt.header))
+			wrappedHeader, err := wrapper.WrappedExecutionPayloadHeader(tt.header)
+			require.NoError(t, err)
+			require.NoError(t, st.SetLatestExecutionPayloadHeader(wrappedHeader))
 			blk := util.NewBeaconBlockBellatrix()
 			blk.Block.Body.ExecutionPayload = tt.payload
 			body, err := wrapper.WrappedBeaconBlockBody(blk.Block.Body)
@@ -388,8 +391,12 @@ func Test_ValidatePayloadWhenMergeCompletes(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
-			require.NoError(t, st.SetLatestExecutionPayloadHeader(tt.header))
-			err := blocks.ValidatePayloadWhenMergeCompletes(st, tt.payload)
+			wrappedHeader, err := wrapper.WrappedExecutionPayloadHeader(tt.header)
+			require.NoError(t, err)
+			require.NoError(t, st.SetLatestExecutionPayloadHeader(wrappedHeader))
+			wrappedPayload, err := wrapper.WrappedExecutionPayload(tt.payload)
+			require.NoError(t, err)
+			err = blocks.ValidatePayloadWhenMergeCompletes(st, wrappedPayload)
 			if err != nil {
 				require.Equal(t, tt.err.Error(), err.Error())
 			} else {
@@ -437,7 +444,9 @@ func Test_ValidatePayload(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := blocks.ValidatePayload(st, tt.payload)
+			wrappedPayload, err := wrapper.WrappedExecutionPayload(tt.payload)
+			require.NoError(t, err)
+			err = blocks.ValidatePayload(st, wrappedPayload)
 			if err != nil {
 				require.Equal(t, tt.err.Error(), err.Error())
 			} else {
@@ -485,12 +494,14 @@ func Test_ProcessPayload(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			st, err := blocks.ProcessPayload(st, tt.payload)
+			wrappedPayload, err := wrapper.WrappedExecutionPayload(tt.payload)
+			require.NoError(t, err)
+			st, err := blocks.ProcessPayload(st, wrappedPayload)
 			if err != nil {
 				require.Equal(t, tt.err.Error(), err.Error())
 			} else {
 				require.Equal(t, tt.err, err)
-				want, err := bellatrix.PayloadToHeader(tt.payload)
+				want, err := wrapper.PayloadToHeader(wrappedPayload)
 				require.Equal(t, tt.err, err)
 				got, err := st.LatestExecutionPayloadHeader()
 				require.NoError(t, err)
@@ -538,7 +549,9 @@ func Test_ProcessPayloadHeader(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			st, err := blocks.ProcessPayloadHeader(st, tt.header)
+			wrappedHeader, err := wrapper.WrappedExecutionPayloadHeader(tt.header)
+			require.NoError(t, err)
+			st, err := blocks.ProcessPayloadHeader(st, wrappedHeader)
 			if err != nil {
 				require.Equal(t, tt.err.Error(), err.Error())
 			} else {
@@ -589,7 +602,9 @@ func Test_ValidatePayloadHeader(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := blocks.ValidatePayloadHeader(st, tt.header)
+			wrappedHeader, err := wrapper.WrappedExecutionPayloadHeader(tt.header)
+			require.NoError(t, err)
+			err = blocks.ValidatePayloadHeader(st, wrappedHeader)
 			require.Equal(t, tt.err, err)
 		})
 	}
@@ -598,7 +613,9 @@ func Test_ValidatePayloadHeader(t *testing.T) {
 func Test_ValidatePayloadHeaderWhenMergeCompletes(t *testing.T) {
 	st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
 	emptySt := st.Copy()
-	require.NoError(t, st.SetLatestExecutionPayloadHeader(&enginev1.ExecutionPayloadHeader{BlockHash: []byte{'a'}}))
+	wrappedHeader, err := wrapper.WrappedExecutionPayloadHeader(&enginev1.ExecutionPayloadHeader{BlockHash: []byte{'a'}})
+	require.NoError(t, err)
+	require.NoError(t, st.SetLatestExecutionPayloadHeader(wrappedHeader))
 	tests := []struct {
 		name   string
 		state  state.BeaconState
@@ -637,7 +654,9 @@ func Test_ValidatePayloadHeaderWhenMergeCompletes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := blocks.ValidatePayloadHeaderWhenMergeCompletes(tt.state, tt.header)
+			wrappedHeader, err := wrapper.WrappedExecutionPayloadHeader(tt.header)
+			require.NoError(t, err)
+			err = blocks.ValidatePayloadHeaderWhenMergeCompletes(tt.state, wrappedHeader)
 			require.Equal(t, tt.err, err)
 		})
 	}
@@ -645,7 +664,9 @@ func Test_ValidatePayloadHeaderWhenMergeCompletes(t *testing.T) {
 
 func Test_PayloadToHeader(t *testing.T) {
 	p := emptyPayload()
-	h, err := bellatrix.PayloadToHeader(p)
+	wrappedPayload, err := wrapper.WrappedExecutionPayload(p)
+	require.NoError(t, err)
+	h, err := wrapper.PayloadToHeader(wrappedPayload)
 	require.NoError(t, err)
 	txRoot, err := ssz.TransactionsRoot(p.Transactions)
 	require.NoError(t, err)
@@ -684,7 +705,9 @@ func Test_PayloadToHeader(t *testing.T) {
 
 func BenchmarkBellatrixComplete(b *testing.B) {
 	st, _ := util.DeterministicGenesisStateBellatrix(b, 1)
-	require.NoError(b, st.SetLatestExecutionPayloadHeader(emptyPayloadHeader()))
+	wrappedHeader, err := wrapper.WrappedExecutionPayloadHeader(emptyPayloadHeader())
+	require.NoError(b, err)
+	require.NoError(b, st.SetLatestExecutionPayloadHeader(wrappedHeader))
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

@@ -17,7 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/forks/bellatrix"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
@@ -587,11 +586,15 @@ func (s *Service) validateMergeTransitionBlock(ctx context.Context, stateVersion
 	}
 
 	// Skip validation if block has an empty payload.
-	payload, err := blk.Block().Body().ExecutionPayload()
+	payload, err := blk.Block().Body().Execution()
 	if err != nil {
 		return invalidBlock{error: err}
 	}
-	if bellatrix.IsEmptyPayload(payload) {
+	isEmpty, err := wrapper.IsEmptyExecutionData(payload)
+	if err != nil {
+		return err
+	}
+	if isEmpty {
 		return nil
 	}
 

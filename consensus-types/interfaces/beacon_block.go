@@ -3,7 +3,6 @@ package interfaces
 import (
 	ssz "github.com/prysmaticlabs/fastssz"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"google.golang.org/protobuf/proto"
@@ -62,6 +61,30 @@ type BeaconBlockBody interface {
 	IsNil() bool
 	HashTreeRoot() ([32]byte, error)
 	Proto() proto.Message
-	ExecutionPayload() (*enginev1.ExecutionPayload, error)
-	ExecutionPayloadHeader() (*enginev1.ExecutionPayloadHeader, error)
+	Execution() (ExecutionData, error)
+}
+
+// ExecutionData represents execution layer information that is contained
+// within post-Bellatrix beacon block bodies.
+type ExecutionData interface {
+	ssz.Marshaler
+	ssz.Unmarshaler
+	ssz.HashRoot
+	IsNil() bool
+	Proto() proto.Message
+	ParentHash() []byte
+	FeeRecipient() []byte
+	StateRoot() []byte
+	ReceiptsRoot() []byte
+	LogsBloom() []byte
+	PrevRandao() []byte
+	BlockNumber() uint64
+	GasLimit() uint64
+	GasUsed() uint64
+	Timestamp() uint64
+	ExtraData() []byte
+	BaseFeePerGas() []byte
+	BlockHash() []byte
+	Transactions() ([][]byte, error)
+	TransactionsRoot() ([]byte, error)
 }
