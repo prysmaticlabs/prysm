@@ -2,29 +2,13 @@ package doublylinkedtree
 
 import (
 	"context"
+	"sort"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
-
-func slicesEqual(a, b [][32]byte) bool {
-	if len(a) != len(b) {
-		return false
-	}
-
-	mapA := make(map[[32]byte]bool, len(a))
-	for _, root := range a {
-		mapA[root] = true
-	}
-	for _, root := range b {
-		_, ok := mapA[root]
-		if !ok {
-			return false
-		}
-	}
-	return true
-}
 
 // We test the algorithm to update a node from SYNCING to INVALID
 // We start with the same diagram as above:
@@ -347,7 +331,10 @@ func TestSetOptimisticToInvalid_ForkAtMerge(t *testing.T) {
 	roots, err := f.SetOptimisticToInvalid(ctx, [32]byte{'x'}, [32]byte{'d'}, [32]byte{})
 	require.NoError(t, err)
 	require.Equal(t, 4, len(roots))
-	require.Equal(t, true, slicesEqual(roots, [][32]byte{[32]byte{'b'}, [32]byte{'c'}, [32]byte{'d'}, [32]byte{'e'}}))
+	sort.Slice(roots, func(i, j int) bool {
+		return bytesutil.BytesToUint64BigEndian(roots[i][:]) < bytesutil.BytesToUint64BigEndian(roots[j][:])
+	})
+	require.DeepEqual(t, roots, [][32]byte{{'b'}, {'c'}, {'d'}, {'e'}})
 }
 
 // Pow       |      Pos
@@ -397,5 +384,8 @@ func TestSetOptimisticToInvalid_ForkAtMerge_bis(t *testing.T) {
 	roots, err := f.SetOptimisticToInvalid(ctx, [32]byte{'x'}, [32]byte{'d'}, [32]byte{})
 	require.NoError(t, err)
 	require.Equal(t, 4, len(roots))
-	require.Equal(t, true, slicesEqual(roots, [][32]byte{[32]byte{'b'}, [32]byte{'c'}, [32]byte{'d'}, [32]byte{'e'}}))
+	sort.Slice(roots, func(i, j int) bool {
+		return bytesutil.BytesToUint64BigEndian(roots[i][:]) < bytesutil.BytesToUint64BigEndian(roots[j][:])
+	})
+	require.DeepEqual(t, roots, [][32]byte{{'b'}, {'c'}, {'d'}, {'e'}})
 }
