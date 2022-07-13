@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"crypto/rand"
-	"fmt"
 	"net"
 	"time"
 
@@ -17,7 +16,6 @@ import (
 	"github.com/libp2p/go-libp2p/p2p/protocol/identify"
 	"github.com/libp2p/go-libp2p/p2p/security/noise"
 	"github.com/libp2p/go-libp2p/p2p/transport/tcp"
-	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/go-bitfield"
@@ -56,7 +54,7 @@ func newClient(beaconEndpoint string) (*client, error) {
 	if err != nil {
 		panic(err)
 	}
-	listen, err := multiAddressBuilder(ipAdd.String(), 13001)
+	listen, err := p2p.MultiAddressBuilder(ipAdd.String(), 13001)
 	if err != nil {
 		panic(err)
 	}
@@ -101,10 +99,10 @@ func (c *client) MetadataSeq() uint64 {
 	return c.meta.SequenceNumber()
 }
 
-// SendP2PRequest a specific peer. The returned stream may be used for reading,
+// Send a request to specific peer. The returned stream may be used for reading,
 // but has been closed for writing.
 // When done, the caller must Close() or Reset() on the stream.
-func (c *client) SendP2PRequest(
+func (c *client) Send(
 	ctx context.Context,
 	message interface{},
 	baseTopic string,
@@ -203,15 +201,4 @@ func readMetadata() (metadata.Metadata, error) {
 		Attnets:   bitfield.NewBitvector64(),
 	}
 	return wrapper.WrappedMetadataV1(metaData), nil
-}
-
-func multiAddressBuilder(ipAddr string, port uint) (ma.Multiaddr, error) {
-	parsedIP := net.ParseIP(ipAddr)
-	if parsedIP.To4() == nil && parsedIP.To16() == nil {
-		return nil, errors.Errorf("invalid ip address provided: %s", ipAddr)
-	}
-	if parsedIP.To4() != nil {
-		return ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", ipAddr, port))
-	}
-	return ma.NewMultiaddr(fmt.Sprintf("/ip6/%s/tcp/%d", ipAddr, port))
 }

@@ -224,7 +224,7 @@ func (s *Service) Start() {
 	s.started = true
 
 	if len(s.cfg.StaticPeers) > 0 {
-		addrs, err := peersFromStringAddrs(s.cfg.StaticPeers)
+		addrs, err := PeersFromStringAddrs(s.cfg.StaticPeers)
 		if err != nil {
 			log.Errorf("Could not connect to static peer: %v", err)
 		}

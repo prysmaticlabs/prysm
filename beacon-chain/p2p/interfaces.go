@@ -21,11 +21,10 @@ import (
 type P2P interface {
 	Broadcaster
 	SetStreamHandler
-	EncodingProvider
 	PubSubProvider
 	PubSubTopicUser
+	SenderEncoder
 	PeerManager
-	Sender
 	ConnectionHandler
 	PeersProvider
 	MetadataProvider
@@ -57,6 +56,12 @@ type ConnectionHandler interface {
 		j func(ctx context.Context, id peer.ID) error)
 	AddDisconnectionHandler(f func(ctx context.Context, id peer.ID) error)
 	connmgr.ConnectionGater
+}
+
+// SenderEncoder allows sending functionality from libp2p as well as encoding for requests and responses.
+type SenderEncoder interface {
+	EncodingProvider
+	Sender
 }
 
 // EncodingProvider provides p2p network encoding.
