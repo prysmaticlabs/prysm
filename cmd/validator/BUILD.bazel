@@ -16,7 +16,7 @@ go_library(
     visibility = [
     "//cmd:__subpackages__",
     "//validator:__subpackages__"],
-    deps = [git ad
+    deps = [
         "//cmd:go_default_library",
         "//cmd/validator/accounts:go_default_library",
         "//cmd/validator/db:go_default_library",
