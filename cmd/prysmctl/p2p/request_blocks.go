@@ -103,6 +103,7 @@ func cliActionRequestBlocks(_ *cli.Context) error {
 	}
 
 	startSlot := types.Slot(requestBlocksFlags.StartSlot)
+	var headSlot *types.Slot
 	if startSlot == 0 {
 		headResp, err := c.beaconClient.GetChainHead(ctx, &emptypb.Empty{})
 		if err != nil {
@@ -112,6 +113,7 @@ func cliActionRequestBlocks(_ *cli.Context) error {
 		if err != nil {
 			return err
 		}
+		headSlot = &headResp.HeadSlot
 	}
 
 	// Submit requests.
@@ -121,12 +123,16 @@ func cliActionRequestBlocks(_ *cli.Context) error {
 			Count:     requestBlocksFlags.Count,
 			Step:      requestBlocksFlags.Step,
 		}
-		log.WithFields(logrus.Fields{
+		fields := logrus.Fields{
 			"startSlot": startSlot,
 			"count":     requestBlocksFlags.Count,
 			"step":      requestBlocksFlags.Step,
 			"peer":      pr.String(),
-		}).Info("Sending blocks by range p2p request to peer")
+		}
+		if headSlot != nil {
+			fields["headSlot"] = headSlot
+		}
+		log.WithFields(fields).Info("Sending blocks by range p2p request to peer")
 		start := time.Now()
 		blocks, err := sync.SendBeaconBlocksByRangeRequest(
 			ctx,
