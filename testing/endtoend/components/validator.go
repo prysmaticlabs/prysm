@@ -81,7 +81,7 @@ func (s *ValidatorNodeSet) Start(ctx context.Context) error {
 	// Wait for all nodes to finish their job (blocking).
 	// Once nodes are ready passed in handler function will be called.
 	return helpers.WaitOnNodes(ctx, nodes, func() {
-		// All nodes stated, close channel, so that all services waiting on a set, can proceed.
+		// All nodes started, close channel, so that all services waiting on a set, can proceed.
 		close(s.started)
 	})
 }

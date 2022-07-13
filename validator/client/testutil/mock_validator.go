@@ -261,3 +261,8 @@ func (_ *FakeValidator) PushProposerSettings(_ context.Context, _ keymanager.IKe
 func (_ *FakeValidator) SetPubKeyToValidatorIndexMap(_ context.Context, _ keymanager.IKeymanager) error {
 	return nil
 }
+
+// SignValidatorRegistrationRequest for mocking
+func (_ *FakeValidator) SignValidatorRegistrationRequest(_ context.Context, _ iface.SigningFunc, _ *ethpb.ValidatorRegistrationV1) (*ethpb.SignedValidatorRegistrationV1, error) {
+	return nil, nil
+}
