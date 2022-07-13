@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/urfave/cli/v2"
 	"github.com/urfave/cli/v2/altsrc"
@@ -267,27 +266,11 @@ var (
 // LoadFlagsFromConfig sets flags values from config file if ConfigFileFlag is set.
 func LoadFlagsFromConfig(cliCtx *cli.Context, flags []cli.Flag) error {
 	if cliCtx.IsSet(ConfigFileFlag.Name) {
-		if err := altsrc.InitInputSourceWithContext(flags, configPreProcessing(cliCtx, altsrc.NewYamlSourceFromFlagFunc(ConfigFileFlag.Name)))(cliCtx); err != nil {
+		if err := altsrc.InitInputSourceWithContext(flags, altsrc.NewYamlSourceFromFlagFunc(ConfigFileFlag.Name))(cliCtx); err != nil {
 			return err
 		}
 	}
 	return nil
-}
-
-func configPreProcessing(cliCtx *cli.Context, createInputSource func(context *cli.Context) (altsrc.InputSourceContext, error)) func(context *cli.Context) (altsrc.InputSourceContext, error) {
-	inputSource, err := createInputSource(cliCtx)
-	if err == nil {
-		hexkeys, err := inputSource.StringSlice(flags.Web3SignerPublicValidatorKeysFlag.Name)
-		if err != nil {
-			return createInputSource
-		}
-		if len(hexkeys) != 0 {
-			if err := cliCtx.Set(flags.Web3SignerPublicValidatorKeysFlag.Name, strings.Join(hexkeys, ",")); err != nil {
-				return createInputSource
-			}
-		}
-	}
-	return createInputSource
 }
 
 // ValidateNoArgs insures that the application is not run with erroneous arguments or flags.

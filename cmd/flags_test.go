@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
@@ -61,16 +62,16 @@ func TestLoadFlagsFromConfig_PreProcessing_Web3signer(t *testing.T) {
 			&cli.StringFlag{
 				Name: ConfigFileFlag.Name,
 			},
-			&cli.StringFlag{
-				Name:  flags.Web3SignerPublicValidatorKeysFlag.Name,
-				Value: "",
+			&cli.StringSliceFlag{
+				Name: flags.Web3SignerPublicValidatorKeysFlag.Name,
 			},
 		}),
 		Before: func(cliCtx *cli.Context) error {
 			return LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags)
 		},
 		Action: func(cliCtx *cli.Context) error {
-			require.Equal(t, fmt.Sprintf("%s,%s", pubkey1, pubkey2), cliCtx.String(flags.Web3SignerPublicValidatorKeysFlag.Name))
+			require.Equal(t, strings.Join([]string{pubkey1, pubkey2}, ","),
+				strings.Join(cliCtx.StringSlice(flags.Web3SignerPublicValidatorKeysFlag.Name), ","))
 			return nil
 		},
 	}
