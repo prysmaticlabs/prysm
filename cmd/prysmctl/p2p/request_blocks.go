@@ -6,8 +6,10 @@ import (
 	"time"
 
 	corenet "github.com/libp2p/go-libp2p-core/network"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
@@ -15,7 +17,7 @@ import (
 )
 
 var requestBlocksFlags = struct {
-	Peer        string
+	Peers       string
 	ClientPort  uint
 	APIEndpoint string
 	StartSlot   uint64
@@ -29,9 +31,9 @@ var requestBlocksCmd = &cli.Command{
 	Action: cliActionRequestBlocks,
 	Flags: []cli.Flag{
 		&cli.StringFlag{
-			Name:        "peer",
-			Usage:       "peer multiaddr to connect to for p2p requests",
-			Destination: &requestBlocksFlags.Peer,
+			Name:        "peers",
+			Usage:       "comma-separated, peer multiaddr(s) to connect to for p2p requests",
+			Destination: &requestBlocksFlags.Peers,
 			Value:       "",
 		},
 		&cli.UintFlag{
@@ -80,7 +82,9 @@ func cliActionRequestBlocks(_ *cli.Context) error {
 		return err
 	}
 	c.registerHandshakeHandlers()
-	if err := c.connectToPeers(ctx, requestBlocksFlags.Peer); err != nil {
+
+	allPeers := strings.Split(requestBlocksFlags.Peers, ",")
+	if err := c.connectToPeers(ctx, allPeers...); err != nil {
 		return err
 	}
 
@@ -126,14 +130,33 @@ func cliActionRequestBlocks(_ *cli.Context) error {
 			return err
 		}
 		end := time.Since(start)
-		//totalExecutionBlocks := 0
-		//for _, blk := range blocks {
-		//	exec, err := blk.Block().Body().ExecutionPayload()
-		//}
+		totalExecutionBlocks := 0
+		for _, blk := range blocks {
+			exec, err := blk.Block().Body().Execution()
+			switch {
+			case errors.Is(err, wrapper.ErrUnsupportedField):
+				continue
+			case err != nil:
+				log.WithError(err).Error("Could not read execution data from block body")
+				continue
+			default:
+			}
+			_, err = exec.Transactions()
+			switch {
+			case errors.Is(err, wrapper.ErrUnsupportedField):
+				continue
+			case err != nil:
+				log.WithError(err).Error("Could not read transactions block execution payload")
+				continue
+			default:
+			}
+			totalExecutionBlocks++
+		}
 		log.WithFields(logrus.Fields{
 			"numBlocks":                           len(blocks),
 			"peer":                                pr.String(),
 			"timeFromSendingToProcessingResponse": end,
+			"totalBlocksWithExecutionPayloads":    totalExecutionBlocks,
 		}).Info("Received blocks from peer")
 
 	}
