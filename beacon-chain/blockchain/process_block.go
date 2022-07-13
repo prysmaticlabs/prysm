@@ -605,11 +605,16 @@ func (s *Service) validateMergeTransitionBlock(ctx context.Context, stateVersion
 	}
 
 	// Skip validation if the block is not a merge transition block.
-	atTransition, err := blocks.IsMergeTransitionBlockUsingPreStatePayloadHeader(stateHeader, blk.Block().Body())
+	// To reach here. The payload must be non-empty. If the state header is empty then it's at transition.
+	wh, err := wrapper.WrappedExecutionPayloadHeader(stateHeader)
 	if err != nil {
-		return errors.Wrap(err, "could not check if merge block is terminal")
+		return err
 	}
-	if !atTransition {
+	empty, err := wrapper.IsEmptyExecutionData(wh)
+	if err != nil {
+		return err
+	}
+	if !empty {
 		return nil
 	}
 	return s.validateMergeBlock(ctx, blk)
