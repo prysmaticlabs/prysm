@@ -86,7 +86,7 @@ func cliActionRequestBlocks(_ *cli.Context) error {
 	}
 	c.registerHandshakeHandlers()
 
-	c.registerRPCHandler(p2p.RPCBlocksByRangeTopicV1, func(
+	c.registerRPCHandler(p2p.RPCBlocksByRangeTopicV2, func(
 		ctx context.Context, i interface{}, stream libp2pcore.Stream,
 	) error {
 		return nil
