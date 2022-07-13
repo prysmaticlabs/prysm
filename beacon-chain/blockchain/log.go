@@ -45,12 +45,16 @@ func logStateTransitionData(b interfaces.BeaconBlock) error {
 		log = log.WithField("syncBitsCount", agg.SyncCommitteeBits.Count())
 	}
 	if b.Version() == version.Bellatrix {
-		p, err := b.Body().ExecutionPayload()
+		p, err := b.Body().Execution()
 		if err != nil {
 			return err
 		}
-		log = log.WithField("payloadHash", fmt.Sprintf("%#x", bytesutil.Trunc(p.BlockHash)))
-		log = log.WithField("txCount", len(p.Transactions))
+		log = log.WithField("payloadHash", fmt.Sprintf("%#x", bytesutil.Trunc(p.BlockHash())))
+		txs, err := p.Transactions()
+		if err != nil {
+			return err
+		}
+		log = log.WithField("txCount", len(txs))
 	}
 	log.Info("Finished applying state transition")
 	return nil
@@ -98,18 +102,18 @@ func logPayload(block interfaces.BeaconBlock) error {
 	if !isExecutionBlk {
 		return nil
 	}
-	payload, err := block.Body().ExecutionPayload()
+	payload, err := block.Body().Execution()
 	if err != nil {
 		return err
 	}
-	if payload.GasLimit == 0 {
+	if payload.GasLimit() == 0 {
 		return errors.New("gas limit should not be 0")
 	}
-	gasUtilized := float64(payload.GasUsed) / float64(payload.GasLimit)
+	gasUtilized := float64(payload.GasUsed()) / float64(payload.GasLimit())
 
 	log.WithFields(logrus.Fields{
-		"blockHash":   fmt.Sprintf("%#x", bytesutil.Trunc(payload.BlockHash)),
-		"parentHash":  fmt.Sprintf("%#x", bytesutil.Trunc(payload.ParentHash)),
+		"blockHash":   fmt.Sprintf("%#x", bytesutil.Trunc(payload.BlockHash())),
+		"parentHash":  fmt.Sprintf("%#x", bytesutil.Trunc(payload.ParentHash())),
 		"blockNumber": payload.BlockNumber,
 		"gasUtilized": fmt.Sprintf("%.2f", gasUtilized),
 	}).Debug("Synced new payload")
