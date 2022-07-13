@@ -538,27 +538,6 @@ func (s *Service) InsertSlashingsToForkChoiceStore(ctx context.Context, slashing
 	}
 }
 
-func getBlockPayloadHash(blk interfaces.BeaconBlock) ([32]byte, error) {
-	var blockHashFromPayload [32]byte
-	if blocks.IsPreBellatrixVersion(blk.Version()) {
-		return blockHashFromPayload, nil
-	}
-	payload, err := blk.Body().ExecutionPayload()
-	switch {
-	case errors.Is(err, wrapper.ErrUnsupportedField):
-		payloadHeader, err := blk.Body().ExecutionPayloadHeader()
-		if err != nil {
-			return blockHashFromPayload, err
-		}
-		blockHashFromPayload = bytesutil.ToBytes32(payloadHeader.BlockHash)
-	case err != nil:
-		return blockHashFromPayload, err
-	default:
-		blockHashFromPayload = bytesutil.ToBytes32(payload.BlockHash)
-	}
-	return blockHashFromPayload, nil
-}
-
 // This saves post state info to DB or cache. This also saves post state info to fork choice store.
 // Post state info consists of processed block and state. Do not call this method unless the block and state are verified.
 func (s *Service) savePostStateInfo(ctx context.Context, r [32]byte, b interfaces.SignedBeaconBlock, st state.BeaconState) error {

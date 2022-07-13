@@ -3,7 +3,6 @@ package wrapper
 import (
 	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
-	"github.com/prysmaticlabs/prysm/consensus-types/forks/bellatrix"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -110,7 +109,11 @@ func (bellatrixSignedBeaconBlock) PbAltairBlock() (*eth.SignedBeaconBlockAltair,
 
 func (w bellatrixSignedBeaconBlock) ToBlinded() (interfaces.SignedBeaconBlock, error) {
 	payload := w.b.Block.Body.ExecutionPayload
-	header, err := bellatrix.PayloadToHeader(payload)
+	wrappedPayload, err := WrappedExecutionPayload(payload)
+	if err != nil {
+		return nil, err
+	}
+	header, err := PayloadToHeader(wrappedPayload)
 	if err != nil {
 		return nil, err
 	}

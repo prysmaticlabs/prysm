@@ -25,7 +25,6 @@ import (
 	"github.com/prysmaticlabs/prysm/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/forks/bellatrix"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
@@ -215,7 +214,9 @@ func TestRPCBeaconBlocksByRange_ReconstructsPayloads(t *testing.T) {
 			blockHash: payload,
 		},
 	}
-	header, err := bellatrix.PayloadToHeader(payload)
+	wrappedPayload, err := wrapper.WrappedExecutionPayload(payload)
+	require.NoError(t, err)
+	header, err := wrapper.PayloadToHeader(wrappedPayload)
 	require.NoError(t, err)
 
 	genRoot := [32]byte{}
