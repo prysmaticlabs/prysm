@@ -3,7 +3,8 @@ package params
 // UseEIP4844NetworkConfig uses the EIP4844 beacon chain specific network config.
 func UseEIP4844NetworkConfig() {
 	cfg := BeaconNetworkConfig().Copy()
-	cfg.ContractDeploymentBlock = 0 // deposit contract is a predeploy
+	cfg.MinEpochsForBlobsSidecarsRequest = 1200 // 1 day
+	cfg.ContractDeploymentBlock = 0             // deposit contract is a predeploy
 	cfg.BootstrapNodes = []string{
 		// TODO(EIP-4844): Optimism boot node
 		// TODO(EIP-4844): Coinbase boot node
