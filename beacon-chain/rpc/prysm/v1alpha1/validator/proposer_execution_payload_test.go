@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -47,7 +48,9 @@ func TestServer_getExecutionPayload(t *testing.T) {
 	}))
 
 	transitionSt, _ := util.DeterministicGenesisStateBellatrix(t, 1)
-	require.NoError(t, transitionSt.SetLatestExecutionPayloadHeader(&pb.ExecutionPayloadHeader{BlockNumber: 1}))
+	wrappedHeader, err := wrapper.WrappedExecutionPayloadHeader(&pb.ExecutionPayloadHeader{BlockNumber: 1})
+	require.NoError(t, err)
+	require.NoError(t, transitionSt.SetLatestExecutionPayloadHeader(wrappedHeader))
 	b2pb := util.NewBeaconBlockBellatrix()
 	b2r, err := b2pb.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -144,7 +147,9 @@ func TestServer_getExecutionPayload_UnexpectedFeeRecipient(t *testing.T) {
 	}))
 
 	transitionSt, _ := util.DeterministicGenesisStateBellatrix(t, 1)
-	require.NoError(t, transitionSt.SetLatestExecutionPayloadHeader(&pb.ExecutionPayloadHeader{BlockNumber: 1}))
+	wrappedHeader, err := wrapper.WrappedExecutionPayloadHeader(&pb.ExecutionPayloadHeader{BlockNumber: 1})
+	require.NoError(t, err)
+	require.NoError(t, transitionSt.SetLatestExecutionPayloadHeader(wrappedHeader))
 	b2pb := util.NewBeaconBlockBellatrix()
 	b2r, err := b2pb.Block.HashTreeRoot()
 	require.NoError(t, err)
