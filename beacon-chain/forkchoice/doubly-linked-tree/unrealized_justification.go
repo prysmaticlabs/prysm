@@ -1,8 +1,6 @@
 package doublylinkedtree
 
 import (
-	"context"
-
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
@@ -44,20 +42,19 @@ func (s *Store) setUnrealizedFinalizedEpoch(root [32]byte, epoch types.Epoch) er
 	return nil
 }
 
-// UpdateUnrealizedCheckpoints "realizes" the unrealized justified and finalized
-// epochs stored within nodes. It should be called at the beginning of each
-// epoch
-func (f *ForkChoice) UpdateUnrealizedCheckpoints() {
+// updateUnrealizedCheckpoints "realizes" the unrealized justified and finalized
+// epochs stored within nodes. It should be called at the beginning of each epoch.
+func (f *ForkChoice) updateUnrealizedCheckpoints() {
 	f.store.nodesLock.Lock()
 	defer f.store.nodesLock.Unlock()
 	for _, node := range f.store.nodeByRoot {
 		node.justifiedEpoch = node.unrealizedJustifiedEpoch
 		node.finalizedEpoch = node.unrealizedFinalizedEpoch
 		if node.justifiedEpoch > f.store.justifiedCheckpoint.Epoch {
+			f.store.justifiedCheckpoint = f.store.unrealizedJustifiedCheckpoint
 			if node.justifiedEpoch > f.store.bestJustifiedCheckpoint.Epoch {
 				f.store.bestJustifiedCheckpoint = f.store.unrealizedJustifiedCheckpoint
 			}
-			f.store.justifiedCheckpoint = f.store.unrealizedJustifiedCheckpoint
 		}
 		if node.finalizedEpoch > f.store.finalizedCheckpoint.Epoch {
 			f.store.justifiedCheckpoint = f.store.unrealizedJustifiedCheckpoint
@@ -66,33 +63,37 @@ func (f *ForkChoice) UpdateUnrealizedCheckpoints() {
 	}
 }
 
-func (s *Store) pullTips(ctx context.Context, state state.BeaconState, node *Node, jc, fc *ethpb.Checkpoint) (*ethpb.Checkpoint, *ethpb.Checkpoint) {
+func (s *Store) pullTips(state state.BeaconState, node *Node, jc, fc *ethpb.Checkpoint) (*ethpb.Checkpoint, *ethpb.Checkpoint) {
+	s.nodesLock.Lock()
+	defer s.nodesLock.Unlock()
+
+	if node.parent == nil { // Nothing to do if the parent is nil.
+		return jc, fc
+	}
+
 	s.checkpointsLock.Lock()
 	defer s.checkpointsLock.Unlock()
 
-	var uj, uf *ethpb.Checkpoint
-	currentSlot := slots.CurrentSlot(s.genesisTime)
-	currentEpoch := slots.ToEpoch(currentSlot)
+	currentEpoch := slots.ToEpoch(slots.CurrentSlot(s.genesisTime))
 	stateSlot := state.Slot()
 	stateEpoch := slots.ToEpoch(stateSlot)
-	if node.parent == nil {
-		return jc, fc
-	}
 	currJustified := node.parent.unrealizedJustifiedEpoch == currentEpoch
 	prevJustified := node.parent.unrealizedJustifiedEpoch+1 == currentEpoch
 	tooEarlyForCurr := slots.SinceEpochStarts(stateSlot)*3 < params.BeaconConfig().SlotsPerEpoch*2
+	// Exit early if it's justified or too early to be justified.
 	if currJustified || (stateEpoch == currentEpoch && prevJustified && tooEarlyForCurr) {
 		node.unrealizedJustifiedEpoch = node.parent.unrealizedJustifiedEpoch
 		node.unrealizedFinalizedEpoch = node.parent.unrealizedFinalizedEpoch
 		return jc, fc
 	}
 
-	uj, uf, err := precompute.UnrealizedCheckpoints(ctx, state)
+	uj, uf, err := precompute.UnrealizedCheckpoints(state)
 	if err != nil {
 		log.WithError(err).Debug("could not compute unrealized checkpoints")
 		uj, uf = jc, fc
 	}
-	node.unrealizedJustifiedEpoch, node.unrealizedFinalizedEpoch = uj.Epoch, uf.Epoch
+
+	// Update store's unrealized checkpoints.
 	if uj.Epoch > s.unrealizedJustifiedCheckpoint.Epoch {
 		s.unrealizedJustifiedCheckpoint = &forkchoicetypes.Checkpoint{
 			Epoch: uj.Epoch, Root: bytesutil.ToBytes32(uj.Root),
@@ -107,6 +108,8 @@ func (s *Store) pullTips(ctx context.Context, state state.BeaconState, node *Nod
 		}
 	}
 
+	// Update node's checkpoints.
+	node.unrealizedJustifiedEpoch, node.unrealizedFinalizedEpoch = uj.Epoch, uf.Epoch
 	if stateEpoch < currentEpoch {
 		jc, fc = uj, uf
 		node.justifiedEpoch = uj.Epoch

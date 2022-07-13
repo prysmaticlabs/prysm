@@ -7,7 +7,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/consensus-types/forks/bellatrix"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -39,7 +38,15 @@ func IsMergeTransitionComplete(st state.BeaconState) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return !bellatrix.IsEmptyHeader(h), nil
+	wrappedHeader, err := wrapper.WrappedExecutionPayloadHeader(h)
+	if err != nil {
+		return false, err
+	}
+	isEmpty, err := wrapper.IsEmptyExecutionData(wrappedHeader)
+	if err != nil {
+		return false, err
+	}
+	return !isEmpty, nil
 }
 
 // IsMergeTransitionBlockUsingPreStatePayloadHeader returns true if the input block is the terminal merge block.
@@ -49,7 +56,15 @@ func IsMergeTransitionBlockUsingPreStatePayloadHeader(h *enginev1.ExecutionPaylo
 	if h == nil || body == nil {
 		return false, errors.New("nil header or block body")
 	}
-	if !bellatrix.IsEmptyHeader(h) {
+	wrappedHeader, err := wrapper.WrappedExecutionPayloadHeader(h)
+	if err != nil {
+		return false, err
+	}
+	isEmpty, err := wrapper.IsEmptyExecutionData(wrappedHeader)
+	if err != nil {
+		return false, err
+	}
+	if !isEmpty {
 		return false, nil
 	}
 	return IsExecutionBlock(body)
@@ -64,7 +79,7 @@ func IsExecutionBlock(body interfaces.BeaconBlockBody) (bool, error) {
 	if body == nil {
 		return false, errors.New("nil block body")
 	}
-	payload, err := body.ExecutionPayload()
+	payload, err := body.Execution()
 	switch {
 	case errors.Is(err, wrapper.ErrUnsupportedField):
 		return false, nil
@@ -72,7 +87,11 @@ func IsExecutionBlock(body interfaces.BeaconBlockBody) (bool, error) {
 		return false, err
 	default:
 	}
-	return !bellatrix.IsEmptyPayload(payload), nil
+	isEmpty, err := wrapper.IsEmptyExecutionData(payload)
+	if err != nil {
+		return false, err
+	}
+	return !isEmpty, nil
 }
 
 // IsExecutionEnabled returns true if the beacon chain can begin executing.
@@ -98,7 +117,15 @@ func IsExecutionEnabled(st state.BeaconState, body interfaces.BeaconBlockBody) (
 // IsExecutionEnabledUsingHeader returns true if the execution is enabled using post processed payload header and block body.
 // This is an optimized version of IsExecutionEnabled where beacon state is not required as an argument.
 func IsExecutionEnabledUsingHeader(header *enginev1.ExecutionPayloadHeader, body interfaces.BeaconBlockBody) (bool, error) {
-	if !bellatrix.IsEmptyHeader(header) {
+	wrappedHeader, err := wrapper.WrappedExecutionPayloadHeader(header)
+	if err != nil {
+		return false, err
+	}
+	isEmpty, err := wrapper.IsEmptyExecutionData(wrappedHeader)
+	if err != nil {
+		return false, err
+	}
+	if !isEmpty {
 		return true, nil
 	}
 	return IsExecutionBlock(body)
@@ -116,7 +143,7 @@ func IsPreBellatrixVersion(v int) bool {
 //    # Verify consistency of the parent hash with respect to the previous execution payload header
 //    if is_merge_complete(state):
 //        assert payload.parent_hash == state.latest_execution_payload_header.block_hash
-func ValidatePayloadWhenMergeCompletes(st state.BeaconState, payload *enginev1.ExecutionPayload) error {
+func ValidatePayloadWhenMergeCompletes(st state.BeaconState, payload interfaces.ExecutionData) error {
 	complete, err := IsMergeTransitionComplete(st)
 	if err != nil {
 		return err
@@ -129,7 +156,7 @@ func ValidatePayloadWhenMergeCompletes(st state.BeaconState, payload *enginev1.E
 	if err != nil {
 		return err
 	}
-	if !bytes.Equal(payload.ParentHash, header.BlockHash) {
+	if !bytes.Equal(payload.ParentHash(), header.BlockHash) {
 		return errors.New("incorrect block hash")
 	}
 	return nil
@@ -143,20 +170,20 @@ func ValidatePayloadWhenMergeCompletes(st state.BeaconState, payload *enginev1.E
 //    assert payload.random == get_randao_mix(state, get_current_epoch(state))
 //    # Verify timestamp
 //    assert payload.timestamp == compute_timestamp_at_slot(state, state.slot)
-func ValidatePayload(st state.BeaconState, payload *enginev1.ExecutionPayload) error {
+func ValidatePayload(st state.BeaconState, payload interfaces.ExecutionData) error {
 	random, err := helpers.RandaoMix(st, time.CurrentEpoch(st))
 	if err != nil {
 		return err
 	}
 
-	if !bytes.Equal(payload.PrevRandao, random) {
+	if !bytes.Equal(payload.PrevRandao(), random) {
 		return ErrInvalidPayloadPrevRandao
 	}
 	t, err := slots.ToTime(st.GenesisTime(), st.Slot())
 	if err != nil {
 		return err
 	}
-	if payload.Timestamp != uint64(t.Unix()) {
+	if payload.Timestamp() != uint64(t.Unix()) {
 		return ErrInvalidPayloadTimeStamp
 	}
 	return nil
@@ -194,27 +221,29 @@ func ValidatePayload(st state.BeaconState, payload *enginev1.ExecutionPayload) e
 //        block_hash=payload.block_hash,
 //        transactions_root=hash_tree_root(payload.transactions),
 //    )
-func ProcessPayload(st state.BeaconState, payload *enginev1.ExecutionPayload) (state.BeaconState, error) {
+func ProcessPayload(st state.BeaconState, payload interfaces.ExecutionData) (state.BeaconState, error) {
 	if err := ValidatePayloadWhenMergeCompletes(st, payload); err != nil {
 		return nil, err
 	}
-
 	if err := ValidatePayload(st, payload); err != nil {
 		return nil, err
 	}
-
-	header, err := bellatrix.PayloadToHeader(payload)
+	header, err := wrapper.PayloadToHeader(payload)
 	if err != nil {
 		return nil, err
 	}
-	if err := st.SetLatestExecutionPayloadHeader(header); err != nil {
+	wrappedHeader, err := wrapper.WrappedExecutionPayloadHeader(header)
+	if err != nil {
+		return nil, err
+	}
+	if err := st.SetLatestExecutionPayloadHeader(wrappedHeader); err != nil {
 		return nil, err
 	}
 	return st, nil
 }
 
 // ValidatePayloadHeaderWhenMergeCompletes validates the payload header when the merge completes.
-func ValidatePayloadHeaderWhenMergeCompletes(st state.BeaconState, header *enginev1.ExecutionPayloadHeader) error {
+func ValidatePayloadHeaderWhenMergeCompletes(st state.BeaconState, header interfaces.ExecutionData) error {
 	// Skip validation if the state is not merge compatible.
 	complete, err := IsMergeTransitionComplete(st)
 	if err != nil {
@@ -228,20 +257,20 @@ func ValidatePayloadHeaderWhenMergeCompletes(st state.BeaconState, header *engin
 	if err != nil {
 		return err
 	}
-	if !bytes.Equal(header.ParentHash, h.BlockHash) {
+	if !bytes.Equal(header.ParentHash(), h.BlockHash) {
 		return ErrInvalidPayloadBlockHash
 	}
 	return nil
 }
 
 // ValidatePayloadHeader validates the payload header.
-func ValidatePayloadHeader(st state.BeaconState, header *enginev1.ExecutionPayloadHeader) error {
+func ValidatePayloadHeader(st state.BeaconState, header interfaces.ExecutionData) error {
 	// Validate header's random mix matches with state in current epoch
 	random, err := helpers.RandaoMix(st, time.CurrentEpoch(st))
 	if err != nil {
 		return err
 	}
-	if !bytes.Equal(header.PrevRandao, random) {
+	if !bytes.Equal(header.PrevRandao(), random) {
 		return ErrInvalidPayloadPrevRandao
 	}
 
@@ -250,22 +279,20 @@ func ValidatePayloadHeader(st state.BeaconState, header *enginev1.ExecutionPaylo
 	if err != nil {
 		return err
 	}
-	if header.Timestamp != uint64(t.Unix()) {
+	if header.Timestamp() != uint64(t.Unix()) {
 		return ErrInvalidPayloadTimeStamp
 	}
 	return nil
 }
 
 // ProcessPayloadHeader processes the payload header.
-func ProcessPayloadHeader(st state.BeaconState, header *enginev1.ExecutionPayloadHeader) (state.BeaconState, error) {
+func ProcessPayloadHeader(st state.BeaconState, header interfaces.ExecutionData) (state.BeaconState, error) {
 	if err := ValidatePayloadHeaderWhenMergeCompletes(st, header); err != nil {
 		return nil, err
 	}
-
 	if err := ValidatePayloadHeader(st, header); err != nil {
 		return nil, err
 	}
-
 	if err := st.SetLatestExecutionPayloadHeader(header); err != nil {
 		return nil, err
 	}
@@ -278,9 +305,9 @@ func GetBlockPayloadHash(blk interfaces.BeaconBlock) ([32]byte, error) {
 	if IsPreBellatrixVersion(blk.Version()) {
 		return payloadHash, nil
 	}
-	payload, err := blk.Body().ExecutionPayload()
+	payload, err := blk.Body().Execution()
 	if err != nil {
 		return payloadHash, err
 	}
-	return bytesutil.ToBytes32(payload.BlockHash), nil
+	return bytesutil.ToBytes32(payload.BlockHash()), nil
 }

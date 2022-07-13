@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
+	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
@@ -1487,9 +1489,11 @@ func Test_getStateVersionAndPayload(t *testing.T) {
 			name: "bellatrix state",
 			st: func() state.BeaconState {
 				s, _ := util.DeterministicGenesisStateBellatrix(t, 1)
-				require.NoError(t, s.SetLatestExecutionPayloadHeader(&enginev1.ExecutionPayloadHeader{
+				wrappedHeader, err := wrapper.WrappedExecutionPayloadHeader(&enginev1.ExecutionPayloadHeader{
 					BlockNumber: 1,
-				}))
+				})
+				require.NoError(t, err)
+				require.NoError(t, s.SetLatestExecutionPayloadHeader(wrappedHeader))
 				return s
 			}(),
 			version: version.Bellatrix,
@@ -1527,6 +1531,9 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 
+	aHash := common.BytesToHash([]byte("a"))
+	bHash := common.BytesToHash([]byte("b"))
+
 	tests := []struct {
 		name         string
 		stateVersion int
@@ -1538,6 +1545,7 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 			name:         "state older than Bellatrix, nil payload",
 			stateVersion: 1,
 			payload:      nil,
+			errString:    "attempted to wrap nil",
 		},
 		{
 			name:         "state older than Bellatrix, empty payload",
@@ -1557,13 +1565,14 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 			name:         "state older than Bellatrix, non empty payload",
 			stateVersion: 1,
 			payload: &enginev1.ExecutionPayload{
-				ParentHash: bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength),
+				ParentHash: aHash[:],
 			},
 		},
 		{
 			name:         "state is Bellatrix, nil payload",
 			stateVersion: 2,
 			payload:      nil,
+			errString:    "attempted to wrap nil",
 		},
 		{
 			name:         "state is Bellatrix, empty payload",
@@ -1583,7 +1592,7 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 			name:         "state is Bellatrix, non empty payload, empty header",
 			stateVersion: 2,
 			payload: &enginev1.ExecutionPayload{
-				ParentHash: bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength),
+				ParentHash: aHash[:],
 			},
 			header: &enginev1.ExecutionPayloadHeader{
 				ParentHash:       make([]byte, fieldparams.RootLength),
@@ -1601,7 +1610,7 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 			name:         "state is Bellatrix, non empty payload, non empty header",
 			stateVersion: 2,
 			payload: &enginev1.ExecutionPayload{
-				ParentHash: bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength),
+				ParentHash: aHash[:],
 			},
 			header: &enginev1.ExecutionPayloadHeader{
 				BlockNumber: 1,
@@ -1611,7 +1620,7 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 			name:         "state is Bellatrix, non empty payload, nil header",
 			stateVersion: 2,
 			payload: &enginev1.ExecutionPayload{
-				ParentHash: bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength),
+				ParentHash: aHash[:],
 			},
 			errString: "nil header or block body",
 		},
@@ -1619,12 +1628,16 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			e := &mockPOW.EngineClient{BlockByHashMap: map[[32]byte]*enginev1.ExecutionBlock{}}
-			e.BlockByHashMap[[32]byte{'a'}] = &enginev1.ExecutionBlock{
-				ParentHash:      bytesutil.PadTo([]byte{'b'}, fieldparams.RootLength),
+			e.BlockByHashMap[aHash] = &enginev1.ExecutionBlock{
+				Header: gethtypes.Header{
+					ParentHash: bHash,
+				},
 				TotalDifficulty: "0x2",
 			}
-			e.BlockByHashMap[[32]byte{'b'}] = &enginev1.ExecutionBlock{
-				ParentHash:      bytesutil.PadTo([]byte{'3'}, fieldparams.RootLength),
+			e.BlockByHashMap[bHash] = &enginev1.ExecutionBlock{
+				Header: gethtypes.Header{
+					ParentHash: common.BytesToHash([]byte("3")),
+				},
 				TotalDifficulty: "0x1",
 			}
 			service.cfg.ExecutionEngineCaller = e

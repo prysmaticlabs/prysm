@@ -3,8 +3,13 @@ package enginev1
 import (
 	"encoding/json"
 	"math/big"
+	"reflect"
+	"strings"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	gethtypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 )
@@ -18,159 +23,102 @@ func (b PayloadIDBytes) MarshalJSON() ([]byte, error) {
 	return json.Marshal(hexutil.Bytes(b[:]))
 }
 
-// UnmarshalJSON --
-func (b *PayloadIDBytes) UnmarshalJSON(enc []byte) error {
-	hexBytes := hexutil.Bytes(make([]byte, 0))
-	if err := json.Unmarshal(enc, &hexBytes); err != nil {
+// ExecutionBlock is the response kind received by the eth_getBlockByHash and
+// eth_getBlockByNumber endpoints via JSON-RPC.
+type ExecutionBlock struct {
+	gethtypes.Header
+	Hash            common.Hash              `json:"hash"`
+	Transactions    []*gethtypes.Transaction `json:"transactions"`
+	TotalDifficulty string                   `json:"totalDifficulty"`
+}
+
+func (e *ExecutionBlock) MarshalJSON() ([]byte, error) {
+	decoded := make(map[string]interface{})
+	encodedHeader, err := e.Header.MarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(encodedHeader, &decoded); err != nil {
+		return nil, err
+	}
+	encodedTxs, err := json.Marshal(e.Transactions)
+	if err != nil {
+		return nil, err
+	}
+	decoded["hash"] = e.Hash.String()
+	decoded["transactions"] = string(encodedTxs)
+	decoded["totalDifficulty"] = e.TotalDifficulty
+	return json.Marshal(decoded)
+}
+
+func (e *ExecutionBlock) UnmarshalJSON(enc []byte) error {
+	if err := e.Header.UnmarshalJSON(enc); err != nil {
 		return err
 	}
+	decoded := make(map[string]interface{})
+	if err := json.Unmarshal(enc, &decoded); err != nil {
+		return err
+	}
+	blockHashStr, ok := decoded["hash"].(string)
+	if !ok {
+		return errors.New("expected `hash` field in JSON response")
+	}
+	e.Hash = common.HexToHash(blockHashStr)
+	e.TotalDifficulty, ok = decoded["totalDifficulty"].(string)
+	if !ok {
+		return errors.New("expected `totalDifficulty` field in JSON response")
+	}
+	txsList, ok := decoded["transactions"].([]interface{})
+	if !ok {
+		return nil
+	}
+	// If the block contains a list of transactions, we JSON unmarshal
+	// them into a list of geth transaction objects.
+	txs := make([]*gethtypes.Transaction, len(txsList))
+	for i, tx := range txsList {
+		// If the transaction is just a hex string, do not attempt to
+		// unmarshal into a full transaction object.
+		if txItem, ok := tx.(string); ok && strings.HasPrefix(txItem, "0x") {
+			return nil
+		}
+		t := &gethtypes.Transaction{}
+		encodedTx, err := json.Marshal(tx)
+		if err != nil {
+			return err
+		}
+		if err := json.Unmarshal(encodedTx, &t); err != nil {
+			return err
+		}
+		txs[i] = t
+	}
+	e.Transactions = txs
+	return nil
+}
+
+// UnmarshalJSON --
+func (b *PayloadIDBytes) UnmarshalJSON(enc []byte) error {
 	res := [8]byte{}
-	copy(res[:], hexBytes)
+	if err := hexutil.UnmarshalFixedJSON(reflect.TypeOf(b), enc, res[:]); err != nil {
+		return err
+	}
 	*b = res
 	return nil
 }
 
-type executionBlockJSON struct {
-	Number           string          `json:"number"`
-	Hash             hexutil.Bytes   `json:"hash"`
-	ParentHash       hexutil.Bytes   `json:"parentHash"`
-	Sha3Uncles       hexutil.Bytes   `json:"sha3Uncles"`
-	Miner            hexutil.Bytes   `json:"miner"`
-	StateRoot        hexutil.Bytes   `json:"stateRoot"`
-	TransactionsRoot hexutil.Bytes   `json:"transactionsRoot"`
-	ReceiptsRoot     hexutil.Bytes   `json:"receiptsRoot"`
-	LogsBloom        hexutil.Bytes   `json:"logsBloom"`
-	Difficulty       string          `json:"difficulty"`
-	TotalDifficulty  string          `json:"totalDifficulty"`
-	GasLimit         hexutil.Uint64  `json:"gasLimit"`
-	GasUsed          hexutil.Uint64  `json:"gasUsed"`
-	Timestamp        hexutil.Uint64  `json:"timestamp"`
-	BaseFeePerGas    string          `json:"baseFeePerGas"`
-	ExtraData        hexutil.Bytes   `json:"extraData"`
-	MixHash          hexutil.Bytes   `json:"mixHash"`
-	Nonce            hexutil.Bytes   `json:"nonce"`
-	Size             string          `json:"size"`
-	Transactions     []hexutil.Bytes `json:"transactions"`
-	Uncles           []hexutil.Bytes `json:"uncles"`
-}
-
-// MarshalJSON defines a custom json.Marshaler interface implementation
-// that uses custom json.Marshalers for the hexutil.Bytes and hexutil.Uint64 types.
-func (e *ExecutionBlock) MarshalJSON() ([]byte, error) {
-	transactions := make([]hexutil.Bytes, len(e.Transactions))
-	for i, tx := range e.Transactions {
-		transactions[i] = tx
-	}
-	uncles := make([]hexutil.Bytes, len(e.Uncles))
-	for i, ucl := range e.Uncles {
-		uncles[i] = ucl
-	}
-	num := new(big.Int).SetBytes(e.Number)
-	numHex := hexutil.EncodeBig(num)
-
-	diff := new(big.Int).SetBytes(e.Difficulty)
-	diffHex := hexutil.EncodeBig(diff)
-
-	size := new(big.Int).SetBytes(e.Size)
-	sizeHex := hexutil.EncodeBig(size)
-
-	baseFee := new(big.Int).SetBytes(bytesutil.ReverseByteOrder(e.BaseFeePerGas))
-	baseFeeHex := hexutil.EncodeBig(baseFee)
-	return json.Marshal(executionBlockJSON{
-		Number:           numHex,
-		Hash:             e.Hash,
-		ParentHash:       e.ParentHash,
-		Sha3Uncles:       e.Sha3Uncles,
-		Miner:            e.Miner,
-		StateRoot:        e.StateRoot,
-		TransactionsRoot: e.TransactionsRoot,
-		ReceiptsRoot:     e.ReceiptsRoot,
-		LogsBloom:        e.LogsBloom,
-		Difficulty:       diffHex,
-		TotalDifficulty:  e.TotalDifficulty,
-		GasLimit:         hexutil.Uint64(e.GasLimit),
-		GasUsed:          hexutil.Uint64(e.GasUsed),
-		Timestamp:        hexutil.Uint64(e.Timestamp),
-		ExtraData:        e.ExtraData,
-		MixHash:          e.MixHash,
-		Nonce:            e.Nonce,
-		Size:             sizeHex,
-		BaseFeePerGas:    baseFeeHex,
-		Transactions:     transactions,
-		Uncles:           uncles,
-	})
-}
-
-// UnmarshalJSON defines a custom json.Unmarshaler interface implementation
-// that uses custom json.Unmarshalers for the hexutil.Bytes and hexutil.Uint64 types.
-func (e *ExecutionBlock) UnmarshalJSON(enc []byte) error {
-	dec := executionBlockJSON{}
-	if err := json.Unmarshal(enc, &dec); err != nil {
-		return err
-	}
-	*e = ExecutionBlock{}
-	num, err := hexutil.DecodeBig(dec.Number)
-	if err != nil {
-		return err
-	}
-	e.Number = num.Bytes()
-	e.Hash = dec.Hash
-	e.ParentHash = dec.ParentHash
-	e.Sha3Uncles = dec.Sha3Uncles
-	e.Miner = dec.Miner
-	e.StateRoot = dec.StateRoot
-	e.TransactionsRoot = dec.TransactionsRoot
-	e.ReceiptsRoot = dec.ReceiptsRoot
-	e.LogsBloom = dec.LogsBloom
-	diff, err := hexutil.DecodeBig(dec.Difficulty)
-	if err != nil {
-		return err
-	}
-	e.Difficulty = diff.Bytes()
-	e.TotalDifficulty = dec.TotalDifficulty
-	e.GasLimit = uint64(dec.GasLimit)
-	e.GasUsed = uint64(dec.GasUsed)
-	e.Timestamp = uint64(dec.Timestamp)
-	e.ExtraData = dec.ExtraData
-	e.MixHash = dec.MixHash
-	e.Nonce = dec.Nonce
-	size, err := hexutil.DecodeBig(dec.Size)
-	if err != nil {
-		return err
-	}
-	e.Size = size.Bytes()
-	baseFee, err := hexutil.DecodeBig(dec.BaseFeePerGas)
-	if err != nil {
-		return err
-	}
-	e.BaseFeePerGas = bytesutil.PadTo(bytesutil.ReverseByteOrder(baseFee.Bytes()), fieldparams.RootLength)
-	transactions := make([][]byte, len(dec.Transactions))
-	for i, tx := range dec.Transactions {
-		transactions[i] = tx
-	}
-	e.Transactions = transactions
-	uncles := make([][]byte, len(dec.Uncles))
-	for i, ucl := range dec.Uncles {
-		uncles[i] = ucl
-	}
-	e.Uncles = uncles
-	return nil
-}
-
 type executionPayloadJSON struct {
-	ParentHash    hexutil.Bytes   `json:"parentHash"`
-	FeeRecipient  hexutil.Bytes   `json:"feeRecipient"`
-	StateRoot     hexutil.Bytes   `json:"stateRoot"`
-	ReceiptsRoot  hexutil.Bytes   `json:"receiptsRoot"`
-	LogsBloom     hexutil.Bytes   `json:"logsBloom"`
-	PrevRandao    hexutil.Bytes   `json:"prevRandao"`
-	BlockNumber   hexutil.Uint64  `json:"blockNumber"`
-	GasLimit      hexutil.Uint64  `json:"gasLimit"`
-	GasUsed       hexutil.Uint64  `json:"gasUsed"`
-	Timestamp     hexutil.Uint64  `json:"timestamp"`
+	ParentHash    *common.Hash    `json:"parentHash"`
+	FeeRecipient  *common.Address `json:"feeRecipient"`
+	StateRoot     *common.Hash    `json:"stateRoot"`
+	ReceiptsRoot  *common.Hash    `json:"receiptsRoot"`
+	LogsBloom     *hexutil.Bytes  `json:"logsBloom"`
+	PrevRandao    *common.Hash    `json:"prevRandao"`
+	BlockNumber   *hexutil.Uint64 `json:"blockNumber"`
+	GasLimit      *hexutil.Uint64 `json:"gasLimit"`
+	GasUsed       *hexutil.Uint64 `json:"gasUsed"`
+	Timestamp     *hexutil.Uint64 `json:"timestamp"`
 	ExtraData     hexutil.Bytes   `json:"extraData"`
 	BaseFeePerGas string          `json:"baseFeePerGas"`
-	BlockHash     hexutil.Bytes   `json:"blockHash"`
+	BlockHash     *common.Hash    `json:"blockHash"`
 	Transactions  []hexutil.Bytes `json:"transactions"`
 }
 
@@ -182,20 +130,31 @@ func (e *ExecutionPayload) MarshalJSON() ([]byte, error) {
 	}
 	baseFee := new(big.Int).SetBytes(bytesutil.ReverseByteOrder(e.BaseFeePerGas))
 	baseFeeHex := hexutil.EncodeBig(baseFee)
+	pHash := common.BytesToHash(e.ParentHash)
+	sRoot := common.BytesToHash(e.StateRoot)
+	recRoot := common.BytesToHash(e.ReceiptsRoot)
+	prevRan := common.BytesToHash(e.PrevRandao)
+	bHash := common.BytesToHash(e.BlockHash)
+	blockNum := hexutil.Uint64(e.BlockNumber)
+	gasLimit := hexutil.Uint64(e.GasLimit)
+	gasUsed := hexutil.Uint64(e.GasUsed)
+	timeStamp := hexutil.Uint64(e.Timestamp)
+	recipient := common.BytesToAddress(e.FeeRecipient)
+	logsBloom := hexutil.Bytes(e.LogsBloom)
 	return json.Marshal(executionPayloadJSON{
-		ParentHash:    e.ParentHash,
-		FeeRecipient:  e.FeeRecipient,
-		StateRoot:     e.StateRoot,
-		ReceiptsRoot:  e.ReceiptsRoot,
-		LogsBloom:     e.LogsBloom,
-		PrevRandao:    e.PrevRandao,
-		BlockNumber:   hexutil.Uint64(e.BlockNumber),
-		GasLimit:      hexutil.Uint64(e.GasLimit),
-		GasUsed:       hexutil.Uint64(e.GasUsed),
-		Timestamp:     hexutil.Uint64(e.Timestamp),
+		ParentHash:    &pHash,
+		FeeRecipient:  &recipient,
+		StateRoot:     &sRoot,
+		ReceiptsRoot:  &recRoot,
+		LogsBloom:     &logsBloom,
+		PrevRandao:    &prevRan,
+		BlockNumber:   &blockNum,
+		GasLimit:      &gasLimit,
+		GasUsed:       &gasUsed,
+		Timestamp:     &timeStamp,
 		ExtraData:     e.ExtraData,
 		BaseFeePerGas: baseFeeHex,
-		BlockHash:     e.BlockHash,
+		BlockHash:     &bHash,
 		Transactions:  transactions,
 	})
 }
@@ -206,24 +165,65 @@ func (e *ExecutionPayload) UnmarshalJSON(enc []byte) error {
 	if err := json.Unmarshal(enc, &dec); err != nil {
 		return err
 	}
+
+	if dec.ParentHash == nil {
+		return errors.New("missing required field 'parentHash' for ExecutionPayload")
+	}
+	if dec.FeeRecipient == nil {
+		return errors.New("missing required field 'feeRecipient' for ExecutionPayload")
+	}
+	if dec.StateRoot == nil {
+		return errors.New("missing required field 'stateRoot' for ExecutionPayload")
+	}
+	if dec.ReceiptsRoot == nil {
+		return errors.New("missing required field 'receiptsRoot' for ExecutableDataV1")
+	}
+
+	if dec.LogsBloom == nil {
+		return errors.New("missing required field 'logsBloom' for ExecutionPayload")
+	}
+	if dec.PrevRandao == nil {
+		return errors.New("missing required field 'prevRandao' for ExecutionPayload")
+	}
+	if dec.ExtraData == nil {
+		return errors.New("missing required field 'extraData' for ExecutionPayload")
+	}
+	if dec.BlockHash == nil {
+		return errors.New("missing required field 'blockHash' for ExecutionPayload")
+	}
+	if dec.Transactions == nil {
+		return errors.New("missing required field 'transactions' for ExecutionPayload")
+	}
+	if dec.BlockNumber == nil {
+		return errors.New("missing required field 'blockNumber' for ExecutionPayload")
+	}
+	if dec.Timestamp == nil {
+		return errors.New("missing required field 'timestamp' for ExecutionPayload")
+	}
+	if dec.GasUsed == nil {
+		return errors.New("missing required field 'gasUsed' for ExecutionPayload")
+	}
+	if dec.GasLimit == nil {
+		return errors.New("missing required field 'gasLimit' for ExecutionPayload")
+	}
 	*e = ExecutionPayload{}
-	e.ParentHash = bytesutil.PadTo(dec.ParentHash, fieldparams.RootLength)
-	e.FeeRecipient = bytesutil.PadTo(dec.FeeRecipient, fieldparams.FeeRecipientLength)
-	e.StateRoot = bytesutil.PadTo(dec.StateRoot, fieldparams.RootLength)
-	e.ReceiptsRoot = bytesutil.PadTo(dec.ReceiptsRoot, fieldparams.RootLength)
-	e.LogsBloom = bytesutil.PadTo(dec.LogsBloom, fieldparams.LogsBloomLength)
-	e.PrevRandao = bytesutil.PadTo(dec.PrevRandao, fieldparams.RootLength)
-	e.BlockNumber = uint64(dec.BlockNumber)
-	e.GasLimit = uint64(dec.GasLimit)
-	e.GasUsed = uint64(dec.GasUsed)
-	e.Timestamp = uint64(dec.Timestamp)
+	e.ParentHash = dec.ParentHash.Bytes()
+	e.FeeRecipient = dec.FeeRecipient.Bytes()
+	e.StateRoot = dec.StateRoot.Bytes()
+	e.ReceiptsRoot = dec.ReceiptsRoot.Bytes()
+	e.LogsBloom = *dec.LogsBloom
+	e.PrevRandao = dec.PrevRandao.Bytes()
+	e.BlockNumber = uint64(*dec.BlockNumber)
+	e.GasLimit = uint64(*dec.GasLimit)
+	e.GasUsed = uint64(*dec.GasUsed)
+	e.Timestamp = uint64(*dec.Timestamp)
 	e.ExtraData = dec.ExtraData
 	baseFee, err := hexutil.DecodeBig(dec.BaseFeePerGas)
 	if err != nil {
 		return err
 	}
 	e.BaseFeePerGas = bytesutil.PadTo(bytesutil.ReverseByteOrder(baseFee.Bytes()), fieldparams.RootLength)
-	e.BlockHash = bytesutil.PadTo(dec.BlockHash, fieldparams.RootLength)
+	e.BlockHash = dec.BlockHash.Bytes()
 	transactions := make([][]byte, len(dec.Transactions))
 	for i, tx := range dec.Transactions {
 		transactions[i] = tx
@@ -261,16 +261,20 @@ func (p *PayloadAttributes) UnmarshalJSON(enc []byte) error {
 }
 
 type payloadStatusJSON struct {
-	LatestValidHash *hexutil.Bytes `json:"latestValidHash"`
-	Status          string         `json:"status"`
-	ValidationError *string        `json:"validationError"`
+	LatestValidHash *common.Hash `json:"latestValidHash"`
+	Status          string       `json:"status"`
+	ValidationError *string      `json:"validationError"`
 }
 
 // MarshalJSON --
 func (p *PayloadStatus) MarshalJSON() ([]byte, error) {
-	hash := p.LatestValidHash
+	var latestHash *common.Hash
+	if p.LatestValidHash != nil {
+		hash := common.Hash(bytesutil.ToBytes32(p.LatestValidHash))
+		latestHash = (*common.Hash)(&hash)
+	}
 	return json.Marshal(payloadStatusJSON{
-		LatestValidHash: (*hexutil.Bytes)(&hash),
+		LatestValidHash: latestHash,
 		Status:          p.Status.String(),
 		ValidationError: &p.ValidationError,
 	})
@@ -284,7 +288,7 @@ func (p *PayloadStatus) UnmarshalJSON(enc []byte) error {
 	}
 	*p = PayloadStatus{}
 	if dec.LatestValidHash != nil {
-		p.LatestValidHash = *dec.LatestValidHash
+		p.LatestValidHash = dec.LatestValidHash[:]
 	}
 	p.Status = PayloadStatus_Status(PayloadStatus_Status_value[dec.Status])
 	if dec.ValidationError != nil {

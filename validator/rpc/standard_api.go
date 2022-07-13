@@ -455,6 +455,7 @@ func (s *Server) SetFeeRecipientByPubkey(ctx context.Context, req *ethpbservice.
 			DefaultConfig: &defaultOption,
 		}
 	case s.validatorService.ProposerSettings.ProposeConfig == nil:
+		pOption.ValidatorRegistration = s.validatorService.ProposerSettings.DefaultConfig.ValidatorRegistration
 		s.validatorService.ProposerSettings.ProposeConfig = map[[fieldparams.BLSPubkeyLength]byte]*validatorServiceConfig.ProposerOption{
 			bytesutil.ToBytes48(validatorKey): &pOption,
 		}
@@ -463,6 +464,7 @@ func (s *Server) SetFeeRecipientByPubkey(ctx context.Context, req *ethpbservice.
 		if found {
 			proposerOption.FeeRecipient = common.BytesToAddress(req.Ethaddress)
 		} else {
+			pOption.ValidatorRegistration = s.validatorService.ProposerSettings.DefaultConfig.ValidatorRegistration
 			s.validatorService.ProposerSettings.ProposeConfig[bytesutil.ToBytes48(validatorKey)] = &pOption
 		}
 	}

@@ -324,19 +324,6 @@ var (
 		Value: false,
 	}
 
-	// FeeRecipientConfigFileFlag defines the path or URL to a file with proposer config.
-	FeeRecipientConfigFileFlag = &cli.StringFlag{
-		Name:  "fee-recipient-config-file",
-		Usage: "DEPRECATED, please use proposer-settings-file",
-		Value: "",
-	}
-	// FeeRecipientConfigURLFlag defines the path or URL to a file with proposer config.
-	FeeRecipientConfigURLFlag = &cli.StringFlag{
-		Name:  "fee-recipient-config-url",
-		Usage: "DEPRECATED, please use proposer-settings-url",
-		Value: "",
-	}
-
 	// ProposerSettingsFlag defines the path or URL to a file with proposer config.
 	ProposerSettingsFlag = &cli.StringFlag{
 		Name:  "proposer-settings-file",
@@ -357,6 +344,13 @@ var (
 			" note that this is only a suggestion when integrating with a Builder API, which may choose to specify a different fee recipient as payment for the blocks it builds." +
 			" For additional setting overrides use the --" + ProposerSettingsFlag.Name + " or --" + ProposerSettingsURLFlag.Name + " Flags. ",
 		Value: params.BeaconConfig().EthBurnAddressHex,
+	}
+
+	// EnableValidatorRegistrationFlag enables the periodic validator registration API calls that will update the custom builder with validator settings.
+	EnableValidatorRegistrationFlag = &cli.BoolFlag{
+		Name:  "enable-validator-registration",
+		Usage: "Enables validator registration APIs (MEV Builder APIs) for the validator client to update settings such as fee recipient and gas limit",
+		Value: false,
 	}
 )
 
