@@ -6,8 +6,8 @@ go_library(
     srcs = ["mock.go"],
     importpath = "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing",
     visibility = [
-        "//cmd:__subpackages__",
         "//beacon-chain:__subpackages__",
+        "//cmd:__subpackages__",
         "//testing:__subpackages__",
     ],
     deps = [
