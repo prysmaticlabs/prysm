@@ -35,7 +35,6 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//cmd/mock:go_default_library",
-        "//cmd/validator/flags:go_default_library",
         "//config/params:go_default_library",
         "//testing/assert:go_default_library",
         "//testing/require:go_default_library",
