@@ -14,6 +14,8 @@ var (
 	// This allows us to create a generic beacon block interface that is implemented by different
 	// fork versions of beacon blocks.
 	ErrUnsupportedField = errors.New("unsupported field for block type")
+	// ErrUnsupportedVersion for beacon block methods.
+	ErrUnsupportedVersion = errors.New("unsupported beacon block version")
 	// ErrUnsupportedSignedBeaconBlock is returned when the struct type is not a supported signed
 	// beacon block type.
 	ErrUnsupportedSignedBeaconBlock = errors.New("unsupported signed beacon block")
@@ -206,55 +208,6 @@ func BuildSignedBeaconBlockFromExecutionPayload(
 		Signature: blk.Signature(),
 	}
 	return wrappedBellatrixSignedBeaconBlock(bellatrixFullBlock)
-}
-
-// WrapSignedBlindedBeaconBlock converts a signed beacon block into a blinded format.
-func WrapSignedBlindedBeaconBlock(blk interfaces.SignedBeaconBlock) (interfaces.SignedBeaconBlock, error) {
-	if err := BeaconBlockIsNil(blk); err != nil {
-		return nil, err
-	}
-	if blk.Block().IsBlinded() {
-		return blk, nil
-	}
-	b := blk.Block()
-	payload, err := b.Body().Execution()
-	switch {
-	case errors.Is(err, ErrUnsupportedField):
-		return nil, ErrUnsupportedSignedBeaconBlock
-	case err != nil:
-		return nil, errors.Wrap(err, "could not get execution payload")
-	default:
-	}
-	syncAgg, err := b.Body().SyncAggregate()
-	if err != nil {
-		return nil, err
-	}
-	header, err := PayloadToHeader(payload)
-	if err != nil {
-		return nil, err
-	}
-	blindedBlock := &eth.SignedBlindedBeaconBlockBellatrix{
-		Block: &eth.BlindedBeaconBlockBellatrix{
-			Slot:          b.Slot(),
-			ProposerIndex: b.ProposerIndex(),
-			ParentRoot:    b.ParentRoot(),
-			StateRoot:     b.StateRoot(),
-			Body: &eth.BlindedBeaconBlockBodyBellatrix{
-				RandaoReveal:           b.Body().RandaoReveal(),
-				Eth1Data:               b.Body().Eth1Data(),
-				Graffiti:               b.Body().Graffiti(),
-				ProposerSlashings:      b.Body().ProposerSlashings(),
-				AttesterSlashings:      b.Body().AttesterSlashings(),
-				Attestations:           b.Body().Attestations(),
-				Deposits:               b.Body().Deposits(),
-				VoluntaryExits:         b.Body().VoluntaryExits(),
-				SyncAggregate:          syncAgg,
-				ExecutionPayloadHeader: header,
-			},
-		},
-		Signature: blk.Signature(),
-	}
-	return wrappedBellatrixSignedBlindedBeaconBlock(blindedBlock)
 }
 
 func UnwrapGenericSignedBeaconBlock(gb *eth.GenericSignedBeaconBlock) (interfaces.SignedBeaconBlock, error) {

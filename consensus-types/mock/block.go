@@ -73,6 +73,10 @@ func (SignedBeaconBlock) Version() int {
 	panic("implement me")
 }
 
+func (SignedBeaconBlock) ToBlinded() (interfaces.SignedBeaconBlock, error) {
+	panic("implement me")
+}
+
 func (SignedBeaconBlock) Header() (*eth.SignedBeaconBlockHeader, error) {
 	panic("implement me")
 }

@@ -14,6 +14,7 @@ import (
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/cmd"
+	"github.com/prysmaticlabs/prysm/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
@@ -871,13 +872,21 @@ func TestServer_ListBeaconBlocks_Genesis(t *testing.T) {
 		blk.Block.ParentRoot = parentRoot[:]
 		wrapped, err := wrapper.WrappedSignedBeaconBlock(blk)
 		assert.NoError(t, err)
+		blinded, err := wrapped.ToBlinded()
+		assert.NoError(t, err)
+		blindedProto, err := blinded.PbBlindedBellatrixBlock()
+		assert.NoError(t, err)
 		blkContainer := &ethpb.BeaconBlockContainer{
-			Block: &ethpb.BeaconBlockContainer_BellatrixBlock{BellatrixBlock: blk}}
+			Block: &ethpb.BeaconBlockContainer_BlindedBellatrixBlock{BlindedBellatrixBlock: blindedProto}}
 		runListBlocksGenesis(t, wrapped, blkContainer)
 	})
 }
 
 func runListBlocksGenesis(t *testing.T, blk interfaces.SignedBeaconBlock, blkContainer *ethpb.BeaconBlockContainer) {
+	resetFn := features.InitWithReset(&features.Flags{
+		EnableOnlyBlindedBeaconBlocks: true,
+	})
+	defer resetFn()
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 
