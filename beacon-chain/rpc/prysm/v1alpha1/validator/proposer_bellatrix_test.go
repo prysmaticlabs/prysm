@@ -13,6 +13,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	prysmtime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
@@ -24,6 +26,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	v1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
@@ -561,6 +564,12 @@ func TestServer_GetBellatrixBeaconBlock_BuilderCase(t *testing.T) {
 	wbr1, err := wb1.Block().HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, wb1))
+
+	random, err := helpers.RandaoMix(beaconState, prysmtime.CurrentEpoch(beaconState))
+	require.NoError(t, err)
+
+	tstamp, err := slots.ToTime(beaconState.GenesisTime(), bellatrixSlot+1)
+	require.NoError(t, err)
 	h := &v1.ExecutionPayloadHeader{
 		BlockNumber:      123,
 		GasLimit:         456,
@@ -570,17 +579,18 @@ func TestServer_GetBellatrixBeaconBlock_BuilderCase(t *testing.T) {
 		StateRoot:        make([]byte, fieldparams.RootLength),
 		ReceiptsRoot:     make([]byte, fieldparams.RootLength),
 		LogsBloom:        make([]byte, fieldparams.LogsBloomLength),
-		PrevRandao:       make([]byte, fieldparams.RootLength),
+		PrevRandao:       random,
 		BaseFeePerGas:    make([]byte, fieldparams.RootLength),
 		BlockHash:        make([]byte, fieldparams.RootLength),
 		TransactionsRoot: make([]byte, fieldparams.RootLength),
 		ExtraData:        make([]byte, 0),
+		Timestamp:        uint64(tstamp.Unix()),
 	}
 
 	proposerServer := &Server{
 		FinalizationFetcher: &blockchainTest.ChainService{FinalizedCheckPoint: &ethpb.Checkpoint{Root: wbr1[:]}},
 		HeadFetcher:         &blockchainTest.ChainService{State: beaconState, Root: parentRoot[:], Optimistic: false, Block: wb1},
-		TimeFetcher:         &blockchainTest.ChainService{Genesis: time.Now()},
+		TimeFetcher:         &blockchainTest.ChainService{Genesis: time.Unix(int64(beaconState.GenesisTime()), 0)},
 		SyncChecker:         &mockSync.Sync{IsSyncing: false},
 		BlockReceiver:       &blockchainTest.ChainService{},
 		HeadUpdater:         &blockchainTest.ChainService{},
@@ -603,6 +613,8 @@ func TestServer_GetBellatrixBeaconBlock_BuilderCase(t *testing.T) {
 	randaoReveal, err := util.RandaoReveal(beaconState, 0, privKeys)
 	require.NoError(t, err)
 
+	require.NoError(t, proposerServer.BeaconDB.SaveRegistrationsByValidatorIDs(ctx, []types.ValidatorIndex{40},
+		[]*ethpb.ValidatorRegistrationV1{{FeeRecipient: bytesutil.PadTo([]byte{}, fieldparams.FeeRecipientLength), Pubkey: bytesutil.PadTo([]byte{}, fieldparams.BLSPubkeyLength)}}))
 	block, err := proposerServer.getBellatrixBeaconBlock(ctx, &ethpb.BlockRequest{
 		Slot:         bellatrixSlot + 1,
 		RandaoReveal: randaoReveal,
@@ -612,4 +624,30 @@ func TestServer_GetBellatrixBeaconBlock_BuilderCase(t *testing.T) {
 	require.Equal(t, true, ok)
 	require.LogsContain(t, hook, "Computed state root")
 	require.DeepEqual(t, h, bellatrixBlk.BlindedBellatrix.Body.ExecutionPayloadHeader) // Payload header should equal.
+}
+
+func TestServer_validatorRegistered(t *testing.T) {
+	proposerServer := &Server{}
+	ctx := context.Background()
+
+	reg, err := proposerServer.validatorRegistered(ctx, 0)
+	require.ErrorContains(t, "nil beacon db", err)
+	require.Equal(t, false, reg)
+
+	proposerServer.BeaconDB = dbTest.SetupDB(t)
+	reg, err = proposerServer.validatorRegistered(ctx, 0)
+	require.NoError(t, err)
+	require.Equal(t, false, reg)
+
+	f := bytesutil.PadTo([]byte{}, fieldparams.FeeRecipientLength)
+	p := bytesutil.PadTo([]byte{}, fieldparams.BLSPubkeyLength)
+	require.NoError(t, proposerServer.BeaconDB.SaveRegistrationsByValidatorIDs(ctx, []types.ValidatorIndex{0, 1},
+		[]*ethpb.ValidatorRegistrationV1{{FeeRecipient: f, Pubkey: p}, {FeeRecipient: f, Pubkey: p}}))
+
+	reg, err = proposerServer.validatorRegistered(ctx, 0)
+	require.NoError(t, err)
+	require.Equal(t, true, reg)
+	reg, err = proposerServer.validatorRegistered(ctx, 1)
+	require.NoError(t, err)
+	require.Equal(t, true, reg)
 }

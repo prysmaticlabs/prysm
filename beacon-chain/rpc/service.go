@@ -71,49 +71,50 @@ type Service struct {
 
 // Config options for the beacon node RPC server.
 type Config struct {
-	Host                    string
-	Port                    string
-	CertFlag                string
-	KeyFlag                 string
-	BeaconMonitoringHost    string
-	BeaconMonitoringPort    int
-	BeaconDB                db.HeadAccessDatabase
-	ChainInfoFetcher        blockchain.ChainInfoFetcher
-	HeadUpdater             blockchain.HeadUpdater
-	HeadFetcher             blockchain.HeadFetcher
-	CanonicalFetcher        blockchain.CanonicalFetcher
-	ForkFetcher             blockchain.ForkFetcher
-	FinalizationFetcher     blockchain.FinalizationFetcher
-	AttestationReceiver     blockchain.AttestationReceiver
-	BlockReceiver           blockchain.BlockReceiver
-	POWChainService         powchain.Chain
-	ChainStartFetcher       powchain.ChainStartFetcher
-	POWChainInfoFetcher     powchain.ChainInfoFetcher
-	GenesisTimeFetcher      blockchain.TimeFetcher
-	GenesisFetcher          blockchain.GenesisFetcher
-	EnableDebugRPCEndpoints bool
-	MockEth1Votes           bool
-	AttestationsPool        attestations.Pool
-	ExitPool                voluntaryexits.PoolManager
-	SlashingsPool           slashings.PoolManager
-	SlashingChecker         slasherservice.SlashingChecker
-	SyncCommitteeObjectPool synccommittee.Pool
-	SyncService             chainSync.Checker
-	Broadcaster             p2p.Broadcaster
-	PeersFetcher            p2p.PeersProvider
-	PeerManager             p2p.PeerManager
-	MetadataProvider        p2p.MetadataProvider
-	DepositFetcher          depositcache.DepositFetcher
-	PendingDepositFetcher   depositcache.PendingDepositsFetcher
-	StateNotifier           statefeed.Notifier
-	BlockNotifier           blockfeed.Notifier
-	OperationNotifier       opfeed.Notifier
-	StateGen                *stategen.State
-	MaxMsgSize              int
-	ExecutionEngineCaller   powchain.EngineCaller
-	ProposerIdsCache        *cache.ProposerPayloadIDsCache
-	OptimisticModeFetcher   blockchain.OptimisticModeFetcher
-	BlockBuilder            builder.BlockBuilder
+	ExecutionPayloadReconstructor powchain.ExecutionPayloadReconstructor
+	Host                          string
+	Port                          string
+	CertFlag                      string
+	KeyFlag                       string
+	BeaconMonitoringHost          string
+	BeaconMonitoringPort          int
+	BeaconDB                      db.HeadAccessDatabase
+	ChainInfoFetcher              blockchain.ChainInfoFetcher
+	HeadUpdater                   blockchain.HeadUpdater
+	HeadFetcher                   blockchain.HeadFetcher
+	CanonicalFetcher              blockchain.CanonicalFetcher
+	ForkFetcher                   blockchain.ForkFetcher
+	FinalizationFetcher           blockchain.FinalizationFetcher
+	AttestationReceiver           blockchain.AttestationReceiver
+	BlockReceiver                 blockchain.BlockReceiver
+	POWChainService               powchain.Chain
+	ChainStartFetcher             powchain.ChainStartFetcher
+	POWChainInfoFetcher           powchain.ChainInfoFetcher
+	GenesisTimeFetcher            blockchain.TimeFetcher
+	GenesisFetcher                blockchain.GenesisFetcher
+	EnableDebugRPCEndpoints       bool
+	MockEth1Votes                 bool
+	AttestationsPool              attestations.Pool
+	ExitPool                      voluntaryexits.PoolManager
+	SlashingsPool                 slashings.PoolManager
+	SlashingChecker               slasherservice.SlashingChecker
+	SyncCommitteeObjectPool       synccommittee.Pool
+	SyncService                   chainSync.Checker
+	Broadcaster                   p2p.Broadcaster
+	PeersFetcher                  p2p.PeersProvider
+	PeerManager                   p2p.PeerManager
+	MetadataProvider              p2p.MetadataProvider
+	DepositFetcher                depositcache.DepositFetcher
+	PendingDepositFetcher         depositcache.PendingDepositsFetcher
+	StateNotifier                 statefeed.Notifier
+	BlockNotifier                 blockfeed.Notifier
+	OperationNotifier             opfeed.Notifier
+	StateGen                      *stategen.State
+	MaxMsgSize                    int
+	ExecutionEngineCaller         powchain.EngineCaller
+	ProposerIdsCache              *cache.ProposerPayloadIDsCache
+	OptimisticModeFetcher         blockchain.OptimisticModeFetcher
+	BlockBuilder                  builder.BlockBuilder
 }
 
 // NewService instantiates a new RPC service instance that will
@@ -309,11 +310,12 @@ func (s *Service) Start() {
 			StateGenService:    s.cfg.StateGen,
 			ReplayerBuilder:    ch,
 		},
-		OptimisticModeFetcher:   s.cfg.OptimisticModeFetcher,
-		HeadFetcher:             s.cfg.HeadFetcher,
-		VoluntaryExitsPool:      s.cfg.ExitPool,
-		V1Alpha1ValidatorServer: validatorServer,
-		SyncChecker:             s.cfg.SyncService,
+		OptimisticModeFetcher:         s.cfg.OptimisticModeFetcher,
+		HeadFetcher:                   s.cfg.HeadFetcher,
+		VoluntaryExitsPool:            s.cfg.ExitPool,
+		V1Alpha1ValidatorServer:       validatorServer,
+		SyncChecker:                   s.cfg.SyncService,
+		ExecutionPayloadReconstructor: s.cfg.ExecutionPayloadReconstructor,
 	}
 	ethpbv1alpha1.RegisterNodeServer(s.grpcServer, nodeServer)
 	ethpbservice.RegisterBeaconNodeServer(s.grpcServer, nodeServerV1)

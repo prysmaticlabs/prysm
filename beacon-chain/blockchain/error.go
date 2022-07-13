@@ -4,9 +4,9 @@ import "github.com/pkg/errors"
 
 var (
 	// ErrInvalidPayload is returned when the payload is invalid
-	ErrInvalidPayload = errors.New("received an INVALID payload from execution engine")
+	ErrInvalidPayload = invalidBlock{error: errors.New("received an INVALID payload from execution engine")}
 	// ErrInvalidBlockHashPayloadStatus is returned when the payload has invalid block hash.
-	ErrInvalidBlockHashPayloadStatus = errors.New("received an INVALID_BLOCK_HASH payload from execution engine")
+	ErrInvalidBlockHashPayloadStatus = invalidBlock{error: errors.New("received an INVALID_BLOCK_HASH payload from execution engine")}
 	// ErrUndefinedExecutionEngineError is returned when the execution engine returns an error that is not defined
 	ErrUndefinedExecutionEngineError = errors.New("received an undefined ee error")
 	// errNilFinalizedInStore is returned when a nil finalized checkpt is returned from store.
@@ -30,7 +30,7 @@ var (
 	// errWSBlockNotFoundInEpoch is returned when a block is not found in the WS cache or DB within epoch.
 	errWSBlockNotFoundInEpoch = errors.New("weak subjectivity root not found in db within epoch")
 	// errNotDescendantOfFinalized is returned when a block is not a descendant of the finalized checkpoint
-	errNotDescendantOfFinalized = invalidBlock{errors.New("not descendant of finalized checkpoint")}
+	errNotDescendantOfFinalized = invalidBlock{error: errors.New("not descendant of finalized checkpoint")}
 )
 
 // An invalid block is the block that fails state transition based on the core protocol rules.
@@ -41,16 +41,17 @@ var (
 // The block violates certain fork choice rules (before finalized slot, not finalized ancestor)
 type invalidBlock struct {
 	error
+	root [32]byte
 }
 
 type invalidBlockError interface {
 	Error() string
-	InvalidBlock() bool
+	BlockRoot() [32]byte
 }
 
-// InvalidBlock returns true for `invalidBlock`.
-func (e invalidBlock) InvalidBlock() bool {
-	return true
+// BlockRoot returns the invalid block root.
+func (e invalidBlock) BlockRoot() [32]byte {
+	return e.root
 }
 
 // IsInvalidBlock returns true if the error has `invalidBlock`.
@@ -58,9 +59,22 @@ func IsInvalidBlock(e error) bool {
 	if e == nil {
 		return false
 	}
-	d, ok := e.(invalidBlockError)
+	_, ok := e.(invalidBlockError)
 	if !ok {
 		return IsInvalidBlock(errors.Unwrap(e))
 	}
-	return d.InvalidBlock()
+	return true
+}
+
+// InvalidBlockRoot returns the invalid block root. If the error
+// doesn't have an invalid blockroot. [32]byte{} is returned.
+func InvalidBlockRoot(e error) [32]byte {
+	if e == nil {
+		return [32]byte{}
+	}
+	d, ok := e.(invalidBlockError)
+	if !ok {
+		return [32]byte{}
+	}
+	return d.BlockRoot()
 }

@@ -76,11 +76,11 @@ func (m *engineMock) GetPayload(context.Context, [8]byte) (*pb.ExecutionPayload,
 func (m *engineMock) ForkchoiceUpdated(context.Context, *pb.ForkchoiceState, *pb.PayloadAttributes) (*pb.PayloadIDBytes, []byte, error) {
 	return nil, nil, nil
 }
-func (m *engineMock) NewPayload(context.Context, *pb.ExecutionPayload) ([]byte, error) {
+func (m *engineMock) NewPayload(context.Context, interfaces.ExecutionData) ([]byte, error) {
 	return nil, nil
 }
 
-func (m *engineMock) LatestExecutionBlock() (*pb.ExecutionBlock, error) {
+func (m *engineMock) LatestExecutionBlock(context.Context) (*pb.ExecutionBlock, error) {
 	return nil, nil
 }
 
@@ -88,7 +88,7 @@ func (m *engineMock) ExchangeTransitionConfiguration(context.Context, *pb.Transi
 	return nil
 }
 
-func (m *engineMock) ExecutionBlockByHash(_ context.Context, hash common.Hash) (*pb.ExecutionBlock, error) {
+func (m *engineMock) ExecutionBlockByHash(_ context.Context, hash common.Hash, _ bool) (*pb.ExecutionBlock, error) {
 	b, ok := m.powBlocks[bytesutil.ToBytes32(hash.Bytes())]
 	if !ok {
 		return nil, nil

@@ -1460,17 +1460,19 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 		feeRecipientMap      map[types.ValidatorIndex]string
 		mockExpectedRequests []ExpectedValidatorRegistration
 		err                  string
+		logMessages          []string
 	}{
 		{
 			name: " Happy Path proposer config not nil",
 			validatorSetter: func(t *testing.T) *validator {
 
 				v := validator{
-					validatorClient:        client,
-					node:                   nodeClient,
-					db:                     db,
-					pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
-					useWeb:                 false,
+					validatorClient:              client,
+					node:                         nodeClient,
+					db:                           db,
+					pubkeyToValidatorIndex:       make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
+					signedValidatorRegistrations: make(map[[fieldparams.BLSPubkeyLength]byte]*ethpb.SignedValidatorRegistrationV1),
+					useWeb:                       false,
 					interopKeysConfig: &local.InteropKeymanagerConfig{
 						NumValidatorKeys: 2,
 						Offset:           1,
@@ -1545,11 +1547,12 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 			validatorSetter: func(t *testing.T) *validator {
 
 				v := validator{
-					validatorClient:        client,
-					node:                   nodeClient,
-					db:                     db,
-					pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
-					useWeb:                 false,
+					validatorClient:              client,
+					node:                         nodeClient,
+					db:                           db,
+					pubkeyToValidatorIndex:       make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
+					signedValidatorRegistrations: make(map[[fieldparams.BLSPubkeyLength]byte]*ethpb.SignedValidatorRegistrationV1),
+					useWeb:                       false,
 					interopKeysConfig: &local.InteropKeymanagerConfig{
 						NumValidatorKeys: 2,
 						Offset:           1,
@@ -1620,11 +1623,12 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 			validatorSetter: func(t *testing.T) *validator {
 
 				v := validator{
-					validatorClient:        client,
-					node:                   nodeClient,
-					db:                     db,
-					pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
-					useWeb:                 false,
+					validatorClient:              client,
+					node:                         nodeClient,
+					db:                           db,
+					pubkeyToValidatorIndex:       make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
+					signedValidatorRegistrations: make(map[[fieldparams.BLSPubkeyLength]byte]*ethpb.SignedValidatorRegistrationV1),
+					useWeb:                       false,
 					interopKeysConfig: &local.InteropKeymanagerConfig{
 						NumValidatorKeys: 1,
 						Offset:           1,
@@ -1682,11 +1686,12 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 			validatorSetter: func(t *testing.T) *validator {
 
 				v := validator{
-					validatorClient:        client,
-					node:                   nodeClient,
-					db:                     db,
-					pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
-					useWeb:                 false,
+					validatorClient:              client,
+					node:                         nodeClient,
+					db:                           db,
+					pubkeyToValidatorIndex:       make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
+					signedValidatorRegistrations: make(map[[fieldparams.BLSPubkeyLength]byte]*ethpb.SignedValidatorRegistrationV1),
+					useWeb:                       false,
 					interopKeysConfig: &local.InteropKeymanagerConfig{
 						NumValidatorKeys: 1,
 						Offset:           1,
@@ -1740,10 +1745,11 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 			validatorSetter: func(t *testing.T) *validator {
 
 				v := validator{
-					validatorClient:        client,
-					db:                     db,
-					pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
-					useWeb:                 false,
+					validatorClient:              client,
+					db:                           db,
+					pubkeyToValidatorIndex:       make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
+					signedValidatorRegistrations: make(map[[fieldparams.BLSPubkeyLength]byte]*ethpb.SignedValidatorRegistrationV1),
+					useWeb:                       false,
 					interopKeysConfig: &local.InteropKeymanagerConfig{
 						NumValidatorKeys: 1,
 						Offset:           1,
@@ -1759,11 +1765,12 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 			validatorSetter: func(t *testing.T) *validator {
 
 				v := validator{
-					validatorClient:        client,
-					node:                   nodeClient,
-					db:                     db,
-					pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
-					useWeb:                 false,
+					validatorClient:              client,
+					node:                         nodeClient,
+					db:                           db,
+					pubkeyToValidatorIndex:       make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
+					signedValidatorRegistrations: make(map[[fieldparams.BLSPubkeyLength]byte]*ethpb.SignedValidatorRegistrationV1),
+					useWeb:                       false,
 					interopKeysConfig: &local.InteropKeymanagerConfig{
 						NumValidatorKeys: 1,
 						Offset:           1,
@@ -1804,10 +1811,11 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 			validatorSetter: func(t *testing.T) *validator {
 
 				v := validator{
-					validatorClient:        client,
-					db:                     db,
-					pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
-					useWeb:                 false,
+					validatorClient:              client,
+					db:                           db,
+					pubkeyToValidatorIndex:       make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
+					signedValidatorRegistrations: make(map[[fieldparams.BLSPubkeyLength]byte]*ethpb.SignedValidatorRegistrationV1),
+					useWeb:                       false,
 					interopKeysConfig: &local.InteropKeymanagerConfig{
 						NumValidatorKeys: 1,
 						Offset:           1,
@@ -1840,10 +1848,11 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 			name: "Before Bellatrix returns nil",
 			validatorSetter: func(t *testing.T) *validator {
 				v := validator{
-					validatorClient:        client,
-					db:                     db,
-					pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
-					useWeb:                 false,
+					validatorClient:              client,
+					db:                           db,
+					pubkeyToValidatorIndex:       make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
+					signedValidatorRegistrations: make(map[[fieldparams.BLSPubkeyLength]byte]*ethpb.SignedValidatorRegistrationV1),
+					useWeb:                       false,
 					interopKeysConfig: &local.InteropKeymanagerConfig{
 						NumValidatorKeys: 1,
 						Offset:           1,
@@ -1859,11 +1868,12 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 			name: "register validator batch failed",
 			validatorSetter: func(t *testing.T) *validator {
 				v := validator{
-					validatorClient:        client,
-					node:                   nodeClient,
-					db:                     db,
-					pubkeyToValidatorIndex: make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
-					useWeb:                 false,
+					validatorClient:              client,
+					node:                         nodeClient,
+					db:                           db,
+					pubkeyToValidatorIndex:       make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
+					signedValidatorRegistrations: make(map[[fieldparams.BLSPubkeyLength]byte]*ethpb.SignedValidatorRegistrationV1),
+					useWeb:                       false,
 					interopKeysConfig: &local.InteropKeymanagerConfig{
 						NumValidatorKeys: 1,
 						Offset:           1,
@@ -1913,16 +1923,89 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 			},
 			err: "could not submit signed registrations to beacon node",
 		},
+		{
+			name: "Validator Index Not found with validator registration",
+			validatorSetter: func(t *testing.T) *validator {
+
+				v := validator{
+					validatorClient:              client,
+					node:                         nodeClient,
+					db:                           db,
+					pubkeyToValidatorIndex:       make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
+					signedValidatorRegistrations: make(map[[fieldparams.BLSPubkeyLength]byte]*ethpb.SignedValidatorRegistrationV1),
+					useWeb:                       false,
+					interopKeysConfig: &local.InteropKeymanagerConfig{
+						NumValidatorKeys: 2,
+						Offset:           1,
+					},
+					genesisTime: 0,
+				}
+				// set bellatrix as current epoch
+				params.BeaconConfig().BellatrixForkEpoch = 0
+				err := v.WaitForKeymanagerInitialization(ctx)
+				require.NoError(t, err)
+				km, err := v.Keymanager()
+				require.NoError(t, err)
+				keys, err := km.FetchValidatingPublicKeys(ctx)
+				require.NoError(t, err)
+				v.ProposerSettings = &validatorserviceconfig.ProposerSettings{
+					ProposeConfig: nil,
+					DefaultConfig: &validatorserviceconfig.ProposerOption{
+						FeeRecipient: common.HexToAddress(defaultFeeHex),
+						ValidatorRegistration: &validatorserviceconfig.ValidatorRegistration{
+							Enable:   true,
+							GasLimit: params.BeaconConfig().DefaultBuilderGasLimit,
+						},
+					},
+				}
+				client.EXPECT().ValidatorIndex(
+					gomock.Any(), // ctx
+					&ethpb.ValidatorIndexRequest{PublicKey: keys[0][:]},
+				).Return(&ethpb.ValidatorIndexResponse{
+					Index: 1,
+				}, nil)
+
+				client.EXPECT().ValidatorIndex(
+					gomock.Any(), // ctx
+					&ethpb.ValidatorIndexRequest{PublicKey: keys[1][:]},
+				).Times(2).Return(nil, errors.New("Could not find validator index"))
+
+				client.EXPECT().SubmitValidatorRegistration(
+					gomock.Any(),
+					gomock.Any(),
+				).Return(&empty.Empty{}, nil)
+				client.EXPECT().PrepareBeaconProposer(gomock.Any(), &ethpb.PrepareBeaconProposerRequest{
+					Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
+						{FeeRecipient: common.HexToAddress(defaultFeeHex).Bytes(), ValidatorIndex: 1},
+					},
+				}).Return(nil, nil)
+				return &v
+			},
+			feeRecipientMap: map[types.ValidatorIndex]string{
+				1: defaultFeeHex,
+			},
+			mockExpectedRequests: []ExpectedValidatorRegistration{
+				{
+					FeeRecipient: byteValueAddress,
+					GasLimit:     params.BeaconConfig().DefaultBuilderGasLimit,
+				},
+			},
+			logMessages: []string{
+				"prepare beacon proposer and update fee recipient until a validator index is assigned",
+				"not be included in validator registration until a validator index is assigned",
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			hook := logTest.NewGlobal()
 			v := tt.validatorSetter(t)
 			km, err := v.Keymanager()
 			require.NoError(t, err)
 			pubkeys, err := km.FetchValidatingPublicKeys(ctx)
 			require.NoError(t, err)
 			if tt.feeRecipientMap != nil {
-				feeRecipients, registerValidatorRequests, err := v.buildProposerSettingsRequests(ctx, pubkeys)
+				feeRecipients, signedRegisterValidatorRequests, err := v.buildProposerSettingsRequests(ctx, pubkeys, km.Sign)
 				require.NoError(t, err)
 				for _, recipient := range feeRecipients {
 					require.Equal(t, strings.ToLower(tt.feeRecipientMap[recipient.ValidatorIndex]), strings.ToLower(hexutil.Encode(recipient.FeeRecipient)))
@@ -1934,14 +2017,21 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 				}
 				// check if Pubkeys are always unique
 				var unique = make(map[string]bool)
-				for _, request := range registerValidatorRequests {
-					require.Equal(t, unique[common.BytesToAddress(request.Pubkey).Hex()], false)
-					unique[common.BytesToAddress(request.Pubkey).Hex()] = true
+				for _, request := range signedRegisterValidatorRequests {
+					require.Equal(t, unique[common.BytesToAddress(request.Message.Pubkey).Hex()], false)
+					unique[common.BytesToAddress(request.Message.Pubkey).Hex()] = true
 				}
-				require.Equal(t, len(tt.mockExpectedRequests), len(registerValidatorRequests))
+				require.Equal(t, len(tt.mockExpectedRequests), len(signedRegisterValidatorRequests))
+				require.Equal(t, len(signedRegisterValidatorRequests), len(v.signedValidatorRegistrations))
 			}
 			if err := v.PushProposerSettings(ctx, km); tt.err != "" {
 				assert.ErrorContains(t, tt.err, err)
+			}
+			if len(tt.logMessages) > 0 {
+				for _, message := range tt.logMessages {
+					assert.LogsContain(t, hook, message)
+				}
+
 			}
 		})
 	}

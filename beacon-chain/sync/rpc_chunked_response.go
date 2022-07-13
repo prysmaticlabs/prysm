@@ -30,6 +30,7 @@ func WriteBlockChunk(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher
 		return err
 	}
 	var obtainedCtx []byte
+
 	switch blk.Version() {
 	case version.Phase0:
 		valRoot := chain.GenesisValidatorsRoot()
@@ -45,7 +46,7 @@ func WriteBlockChunk(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher
 			return err
 		}
 		obtainedCtx = digest[:]
-	case version.Bellatrix:
+	case version.Bellatrix, version.BellatrixBlind:
 		valRoot := chain.GenesisValidatorsRoot()
 		digest, err := forks.ForkDigestFromEpoch(params.BeaconConfig().BellatrixForkEpoch, valRoot[:])
 		if err != nil {

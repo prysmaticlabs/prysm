@@ -114,7 +114,7 @@ func (s *Service) VerifyFinalizedBlkDescendant(ctx context.Context, root [32]byt
 			bytesutil.Trunc(root[:]), fSlot, bytesutil.Trunc(bFinalizedRoot),
 			bytesutil.Trunc(fRoot[:]))
 		tracing.AnnotateError(span, err)
-		return invalidBlock{err}
+		return invalidBlock{error: err}
 	}
 	return nil
 }
@@ -129,7 +129,7 @@ func (s *Service) verifyBlkFinalizedSlot(b interfaces.BeaconBlock) error {
 	}
 	if finalizedSlot >= b.Slot() {
 		err = fmt.Errorf("block is equal or earlier than finalized block, slot %d < slot %d", b.Slot(), finalizedSlot)
-		return invalidBlock{err}
+		return invalidBlock{error: err}
 	}
 	return nil
 }
