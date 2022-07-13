@@ -19,12 +19,8 @@ func (c *client) registerHandshakeHandlers() {
 }
 
 // pingHandler reads the incoming ping rpc message from the peer.
-func (c *client) pingHandler(_ context.Context, msg interface{}, stream libp2pcore.Stream) error {
+func (c *client) pingHandler(_ context.Context, _ interface{}, stream libp2pcore.Stream) error {
 	defer closeStream(stream)
-	//m, ok := msg.(*types.SSZUint64)
-	//if !ok {
-	//	return fmt.Errorf("wrong message type for ping, got %T, wanted *uint64", msg)
-	//}
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 		return err
 	}
@@ -37,12 +33,8 @@ func (c *client) pingHandler(_ context.Context, msg interface{}, stream libp2pco
 
 // statusRPCHandler reads the incoming Status RPC from the peer and responds with our version of a status message.
 // This handler will disconnect any peer that does not match our fork version.
-func (c *client) statusRPCHandler(ctx context.Context, msg interface{}, stream libp2pcore.Stream) error {
+func (c *client) statusRPCHandler(ctx context.Context, _ interface{}, stream libp2pcore.Stream) error {
 	defer closeStream(stream)
-	//m, ok := msg.(*pb.Status)
-	//if !ok {
-	//	return errors.New("message is not type *pb.Status")
-	//}
 	chainHead, err := c.beaconClient.GetChainHead(ctx, &emptypb.Empty{})
 	if err != nil {
 		return err
@@ -65,6 +57,7 @@ func (c *client) statusRPCHandler(ctx context.Context, msg interface{}, stream l
 
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 		log.WithError(err).Debug("Could not write to stream")
+		return err
 	}
 	_, err = c.Encoding().EncodeWithMaxLength(stream, status)
 	return err

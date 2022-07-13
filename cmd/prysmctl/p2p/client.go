@@ -37,6 +37,7 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
+// A minimal client for peering with beacon nodes over libp2p and sending p2p RPC requests for data.
 type client struct {
 	host         host.Host
 	meta         metadata.Metadata
@@ -44,19 +45,19 @@ type client struct {
 	nodeClient   pb.NodeClient
 }
 
-func newClient(beaconEndpoint string) (*client, error) {
+func newClient(beaconEndpoint string, clientPort uint) (*client, error) {
 	ipAdd := ipAddr()
 	priv, err := privKey()
 	if err != nil {
-		panic(err)
+		return nil, errors.Wrap(err, "could not set up p2p private key")
 	}
 	meta, err := readMetadata()
 	if err != nil {
-		panic(err)
+		return nil, errors.Wrap(err, "could not set up p2p metadata")
 	}
-	listen, err := p2p.MultiAddressBuilder(ipAdd.String(), 13001)
+	listen, err := p2p.MultiAddressBuilder(ipAdd.String(), clientPort)
 	if err != nil {
-		panic(err)
+		return nil, errors.Wrap(err, "could not set up listening multiaddr")
 	}
 	options := []libp2p.Option{
 		privKeyOption(priv),
@@ -68,12 +69,12 @@ func newClient(beaconEndpoint string) (*client, error) {
 	options = append(options, libp2p.Ping(false))
 	h, err := libp2p.New(options...)
 	if err != nil {
-		panic(err)
+		return nil, errors.Wrap(err, "could not start libp2p")
 	}
 	h.RemoveStreamHandler(identify.IDDelta)
 	conn, err := grpc.Dial(beaconEndpoint, grpc.WithInsecure())
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	beaconClient := pb.NewBeaconChainClient(conn)
 	nodeClient := pb.NewNodeClient(conn)
