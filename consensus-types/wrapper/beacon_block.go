@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/consensus-types/forks/bellatrix"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -158,7 +157,7 @@ func BuildSignedBeaconBlockFromExecutionPayload(
 		return nil, err
 	}
 	b := blk.Block()
-	payloadHeader, err := b.Body().ExecutionPayloadHeader()
+	payloadHeader, err := b.Body().Execution()
 	switch {
 	case errors.Is(err, ErrUnsupportedField):
 		return nil, errors.Wrap(err, "can only build signed beacon block from blinded format")
@@ -218,7 +217,7 @@ func WrapSignedBlindedBeaconBlock(blk interfaces.SignedBeaconBlock) (interfaces.
 		return blk, nil
 	}
 	b := blk.Block()
-	payload, err := b.Body().ExecutionPayload()
+	payload, err := b.Body().Execution()
 	switch {
 	case errors.Is(err, ErrUnsupportedField):
 		return nil, ErrUnsupportedSignedBeaconBlock
@@ -230,7 +229,7 @@ func WrapSignedBlindedBeaconBlock(blk interfaces.SignedBeaconBlock) (interfaces.
 	if err != nil {
 		return nil, err
 	}
-	header, err := bellatrix.PayloadToHeader(payload)
+	header, err := PayloadToHeader(payload)
 	if err != nil {
 		return nil, err
 	}

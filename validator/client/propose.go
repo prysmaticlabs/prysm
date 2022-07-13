@@ -145,19 +145,24 @@ func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [f
 	)
 
 	if blk.Version() == version.Bellatrix {
-		p, err := blk.Block().Body().ExecutionPayload()
+		p, err := blk.Block().Body().Execution()
 		if err != nil {
 			log.WithError(err).Error("Failed to get execution payload")
 			return
 		}
+		txs, err := p.Transactions()
+		if err != nil {
+			log.WithError(err).Error("Failed to get execution payload transactions")
+			return
+		}
 		log = log.WithFields(logrus.Fields{
-			"payloadHash": fmt.Sprintf("%#x", bytesutil.Trunc(p.BlockHash)),
-			"parentHash":  fmt.Sprintf("%#x", bytesutil.Trunc(p.ParentHash)),
+			"payloadHash": fmt.Sprintf("%#x", bytesutil.Trunc(p.BlockHash())),
+			"parentHash":  fmt.Sprintf("%#x", bytesutil.Trunc(p.ParentHash())),
 			"blockNumber": p.BlockNumber,
-			"txCount":     len(p.Transactions),
+			"txCount":     len(txs),
 		})
-		if p.GasLimit != 0 {
-			log = log.WithField("gasUtilized", float64(p.GasUsed)/float64(p.GasLimit))
+		if p.GasLimit() != 0 {
+			log = log.WithField("gasUtilized", float64(p.GasUsed())/float64(p.GasLimit()))
 		}
 	}
 
