@@ -89,9 +89,6 @@ func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockR
 // This function retrieves the payload header given the slot number and the validator index.
 // It's a no-op if the latest head block is not versioned bellatrix.
 func (vs *Server) getPayloadHeader(ctx context.Context, slot types.Slot, idx types.ValidatorIndex) (*enginev1.ExecutionPayloadHeader, error) {
-	if err := vs.BlockBuilder.Status(); err != nil {
-		return nil, err
-	}
 	b, err := vs.HeadFetcher.HeadBlock(ctx)
 	if err != nil {
 		return nil, err
@@ -171,9 +168,7 @@ func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.SignedBe
 	if !vs.BlockBuilder.Configured() {
 		return b, nil
 	}
-	if err := vs.BlockBuilder.Status(); err != nil {
-		return nil, err
-	}
+
 	agg, err := b.Block().Body().SyncAggregate()
 	if err != nil {
 		return nil, err
