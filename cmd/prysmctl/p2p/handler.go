@@ -12,7 +12,6 @@ import (
 	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
-	log "github.com/sirupsen/logrus"
 )
 
 type rpcHandler func(context.Context, interface{}, libp2pcore.Stream) error

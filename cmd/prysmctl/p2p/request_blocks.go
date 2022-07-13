@@ -7,10 +7,12 @@ import (
 	"strings"
 	"time"
 
+	corenet "github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
@@ -107,7 +109,7 @@ func sendBeaconBlocksByRangeRequest(
 	var prevSlot types.Slot
 	for i := uint64(0); ; i++ {
 		isFirstChunk := i == 0
-		blk, err := ReadChunkedBlock(stream, chain, p2pProvider, isFirstChunk)
+		blk, err := sync.ReadChunkedBlock(stream, chain, p2pProvider, isFirstChunk)
 		if errors.Is(err, io.EOF) {
 			break
 		}
@@ -140,4 +142,10 @@ func sendBeaconBlocksByRangeRequest(
 		}
 	}
 	return blocks, nil
+}
+
+func closeStream(stream corenet.Stream) {
+	if err := stream.Close(); err != nil {
+		log.Println(err)
+	}
 }
