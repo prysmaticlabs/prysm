@@ -298,19 +298,18 @@ func (p *PayloadStatus) UnmarshalJSON(enc []byte) error {
 }
 
 type transitionConfigurationJSON struct {
-	TerminalTotalDifficulty string        `json:"terminalTotalDifficulty"`
-	TerminalBlockHash       hexutil.Bytes `json:"terminalBlockHash"`
-	TerminalBlockNumber     string        `json:"terminalBlockNumber"`
+	TerminalTotalDifficulty string         `json:"terminalTotalDifficulty"`
+	TerminalBlockHash       common.Hash    `json:"terminalBlockHash"`
+	TerminalBlockNumber     hexutil.Uint64 `json:"terminalBlockNumber"`
 }
 
 // MarshalJSON --
 func (t *TransitionConfiguration) MarshalJSON() ([]byte, error) {
 	num := new(big.Int).SetBytes(t.TerminalBlockNumber)
-	numHex := hexutil.EncodeBig(num)
 	return json.Marshal(transitionConfigurationJSON{
 		TerminalTotalDifficulty: t.TerminalTotalDifficulty,
-		TerminalBlockHash:       t.TerminalBlockHash,
-		TerminalBlockNumber:     numHex,
+		TerminalBlockHash:       common.Hash(bytesutil.ToBytes32(t.TerminalBlockHash)),
+		TerminalBlockNumber:     hexutil.Uint64(num.Uint64()),
 	})
 }
 
@@ -321,12 +320,10 @@ func (t *TransitionConfiguration) UnmarshalJSON(enc []byte) error {
 		return err
 	}
 	*t = TransitionConfiguration{}
-	num, err := hexutil.DecodeBig(dec.TerminalBlockNumber)
-	if err != nil {
-		return err
-	}
+	num := big.NewInt(int64(dec.TerminalBlockNumber))
+
 	t.TerminalTotalDifficulty = dec.TerminalTotalDifficulty
-	t.TerminalBlockHash = dec.TerminalBlockHash
+	t.TerminalBlockHash = dec.TerminalBlockHash[:]
 	t.TerminalBlockNumber = num.Bytes()
 	return nil
 }
