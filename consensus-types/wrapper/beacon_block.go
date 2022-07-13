@@ -159,7 +159,7 @@ func BuildSignedBeaconBlockFromExecutionPayload(
 		return nil, err
 	}
 	b := blk.Block()
-	payloadHeader, err := b.Body().ExecutionPayloadHeader()
+	payloadHeader, err := b.Body().Execution()
 	switch {
 	case errors.Is(err, ErrUnsupportedField):
 		return nil, errors.Wrap(err, "can only build signed beacon block from blinded format")

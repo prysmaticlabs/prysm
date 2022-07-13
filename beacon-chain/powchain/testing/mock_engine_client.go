@@ -36,7 +36,7 @@ type EngineClient struct {
 }
 
 // NewPayload --
-func (e *EngineClient) NewPayload(_ context.Context, _ *pb.ExecutionPayload) ([]byte, error) {
+func (e *EngineClient) NewPayload(_ context.Context, _ interfaces.ExecutionData) ([]byte, error) {
 	return e.NewPayloadResp, e.ErrNewPayload
 }
 
@@ -80,11 +80,11 @@ func (e *EngineClient) ReconstructFullBellatrixBlock(
 	if !blindedBlock.Block().IsBlinded() {
 		return nil, errors.New("block must be blinded")
 	}
-	header, err := blindedBlock.Block().Body().ExecutionPayloadHeader()
+	header, err := blindedBlock.Block().Body().Execution()
 	if err != nil {
 		return nil, err
 	}
-	payload, ok := e.ExecutionPayloadByBlockHash[bytesutil.ToBytes32(header.BlockHash)]
+	payload, ok := e.ExecutionPayloadByBlockHash[bytesutil.ToBytes32(header.BlockHash())]
 	if !ok {
 		return nil, errors.New("block not found")
 	}
