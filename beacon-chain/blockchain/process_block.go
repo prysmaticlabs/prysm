@@ -606,10 +606,15 @@ func (s *Service) validateMergeTransitionBlock(ctx context.Context, stateVersion
 
 	// Skip validation if the block is not a merge transition block.
 	// To reach here. The payload must be non-empty. If the state header is empty then it's at transition.
-	if stateHeader == nil {
-		return errors.New("nil header")
+	wh, err := wrapper.WrappedExecutionPayloadHeader(stateHeader)
+	if err != nil {
+		return err
 	}
-	if !bellatrix.IsEmptyHeader(stateHeader) {
+	empty, err := wrapper.IsEmptyExecutionData(wh)
+	if err != nil {
+		return err
+	}
+	if !empty {
 		return nil
 	}
 	return s.validateMergeBlock(ctx, blk)
