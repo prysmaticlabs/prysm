@@ -277,9 +277,9 @@ func LoadFlagsFromConfig(cliCtx *cli.Context, flags []cli.Flag) error {
 func configPreProcessing(cliCtx *cli.Context, createInputSource func(context *cli.Context) (altsrc.InputSourceContext, error)) func(context *cli.Context) (altsrc.InputSourceContext, error) {
 	inputSource, err := createInputSource(cliCtx)
 	if err == nil {
-		hexkeylist, _ := inputSource.StringSlice(flags.Web3SignerPublicValidatorKeysFlag.Name)
-		if len(hexkeylist) != 0 {
-			_ = cliCtx.Set(flags.Web3SignerPublicValidatorKeysFlag.Name, strings.Join(hexkeylist[:], ","))
+		hexkeys, _ := inputSource.StringSlice(flags.Web3SignerPublicValidatorKeysFlag.Name)
+		if len(hexkeys) != 0 {
+			_ = cliCtx.Set(flags.Web3SignerPublicValidatorKeysFlag.Name, strings.Join(hexkeys, ","))
 		}
 	}
 	return createInputSource
