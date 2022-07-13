@@ -13,6 +13,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	prysmtime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
@@ -562,6 +564,12 @@ func TestServer_GetBellatrixBeaconBlock_BuilderCase(t *testing.T) {
 	wbr1, err := wb1.Block().HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, wb1))
+
+	random, err := helpers.RandaoMix(beaconState, prysmtime.CurrentEpoch(beaconState))
+	require.NoError(t, err)
+
+	tstamp, err := slots.ToTime(beaconState.GenesisTime(), bellatrixSlot+1)
+	require.NoError(t, err)
 	h := &v1.ExecutionPayloadHeader{
 		BlockNumber:      123,
 		GasLimit:         456,
@@ -571,17 +579,18 @@ func TestServer_GetBellatrixBeaconBlock_BuilderCase(t *testing.T) {
 		StateRoot:        make([]byte, fieldparams.RootLength),
 		ReceiptsRoot:     make([]byte, fieldparams.RootLength),
 		LogsBloom:        make([]byte, fieldparams.LogsBloomLength),
-		PrevRandao:       make([]byte, fieldparams.RootLength),
+		PrevRandao:       random,
 		BaseFeePerGas:    make([]byte, fieldparams.RootLength),
 		BlockHash:        make([]byte, fieldparams.RootLength),
 		TransactionsRoot: make([]byte, fieldparams.RootLength),
 		ExtraData:        make([]byte, 0),
+		Timestamp:        uint64(tstamp.Unix()),
 	}
 
 	proposerServer := &Server{
 		FinalizationFetcher: &blockchainTest.ChainService{FinalizedCheckPoint: &ethpb.Checkpoint{Root: wbr1[:]}},
 		HeadFetcher:         &blockchainTest.ChainService{State: beaconState, Root: parentRoot[:], Optimistic: false, Block: wb1},
-		TimeFetcher:         &blockchainTest.ChainService{Genesis: time.Now()},
+		TimeFetcher:         &blockchainTest.ChainService{Genesis: time.Unix(int64(beaconState.GenesisTime()), 0)},
 		SyncChecker:         &mockSync.Sync{IsSyncing: false},
 		BlockReceiver:       &blockchainTest.ChainService{},
 		HeadUpdater:         &blockchainTest.ChainService{},

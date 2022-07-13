@@ -5,7 +5,6 @@ import (
 
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/consensus-types/forks/bellatrix"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -36,7 +35,9 @@ func TestBuildSignedBeaconBlockFromExecutionPayload(t *testing.T) {
 			BlockHash:     make([]byte, fieldparams.RootLength),
 			Transactions:  make([][]byte, 0),
 		}
-		header, err := bellatrix.PayloadToHeader(payload)
+		wrapped, err := wrapper.WrappedExecutionPayload(payload)
+		require.NoError(t, err)
+		header, err := wrapper.PayloadToHeader(wrapped)
 		require.NoError(t, err)
 		blindedBlock := util.NewBlindedBeaconBlockBellatrix()
 
@@ -61,7 +62,9 @@ func TestBuildSignedBeaconBlockFromExecutionPayload(t *testing.T) {
 			BlockHash:     make([]byte, fieldparams.RootLength),
 			Transactions:  make([][]byte, 0),
 		}
-		header, err := bellatrix.PayloadToHeader(payload)
+		wrapped, err := wrapper.WrappedExecutionPayload(payload)
+		require.NoError(t, err)
+		header, err := wrapper.PayloadToHeader(wrapped)
 		require.NoError(t, err)
 		blindedBlock := util.NewBlindedBeaconBlockBellatrix()
 		blindedBlock.Block.Body.ExecutionPayloadHeader = header
@@ -71,9 +74,9 @@ func TestBuildSignedBeaconBlockFromExecutionPayload(t *testing.T) {
 		builtBlock, err := wrapper.BuildSignedBeaconBlockFromExecutionPayload(blk, payload)
 		require.NoError(t, err)
 
-		got, err := builtBlock.Block().Body().ExecutionPayload()
+		got, err := builtBlock.Block().Body().Execution()
 		require.NoError(t, err)
-		require.DeepEqual(t, payload, got)
+		require.DeepEqual(t, payload, got.Proto())
 	})
 }
 
@@ -104,7 +107,9 @@ func TestWrapSignedBlindedBeaconBlock(t *testing.T) {
 		bellatrixBlk := util.NewBeaconBlockBellatrix()
 		bellatrixBlk.Block.Body.ExecutionPayload = payload
 
-		want, err := bellatrix.PayloadToHeader(payload)
+		wrapped, err := wrapper.WrappedExecutionPayload(payload)
+		require.NoError(t, err)
+		want, err := wrapper.PayloadToHeader(wrapped)
 		require.NoError(t, err)
 
 		blk, err := wrapper.WrappedSignedBeaconBlock(bellatrixBlk)
@@ -112,9 +117,9 @@ func TestWrapSignedBlindedBeaconBlock(t *testing.T) {
 		builtBlock, err := wrapper.WrapSignedBlindedBeaconBlock(blk)
 		require.NoError(t, err)
 
-		got, err := builtBlock.Block().Body().ExecutionPayloadHeader()
+		got, err := builtBlock.Block().Body().Execution()
 		require.NoError(t, err)
-		require.DeepEqual(t, want, got)
+		require.DeepEqual(t, want, got.Proto())
 	})
 }
 

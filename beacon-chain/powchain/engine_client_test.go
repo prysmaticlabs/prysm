@@ -20,7 +20,6 @@ import (
 	mocks "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/forks/bellatrix"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
@@ -66,7 +65,9 @@ func TestClient_IPC(t *testing.T) {
 		require.Equal(t, true, ok)
 		req, ok := fix["ExecutionPayload"].(*pb.ExecutionPayload)
 		require.Equal(t, true, ok)
-		latestValidHash, err := srv.NewPayload(ctx, req)
+		wrappedPayload, err := wrapper.WrappedExecutionPayload(req)
+		require.NoError(t, err)
+		latestValidHash, err := srv.NewPayload(ctx, wrappedPayload)
 		require.NoError(t, err)
 		require.DeepEqual(t, bytesutil.ToBytes32(want.LatestValidHash), bytesutil.ToBytes32(latestValidHash))
 	})
@@ -231,7 +232,9 @@ func TestClient_HTTP(t *testing.T) {
 		client := newPayloadSetup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		resp, err := client.NewPayload(ctx, execPayload)
+		wrappedPayload, err := wrapper.WrappedExecutionPayload(execPayload)
+		require.NoError(t, err)
+		resp, err := client.NewPayload(ctx, wrappedPayload)
 		require.NoError(t, err)
 		require.DeepEqual(t, want.LatestValidHash, resp)
 	})
@@ -243,7 +246,9 @@ func TestClient_HTTP(t *testing.T) {
 		client := newPayloadSetup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		resp, err := client.NewPayload(ctx, execPayload)
+		wrappedPayload, err := wrapper.WrappedExecutionPayload(execPayload)
+		require.NoError(t, err)
+		resp, err := client.NewPayload(ctx, wrappedPayload)
 		require.ErrorIs(t, ErrAcceptedSyncingPayloadStatus, err)
 		require.DeepEqual(t, []uint8(nil), resp)
 	})
@@ -255,7 +260,9 @@ func TestClient_HTTP(t *testing.T) {
 		client := newPayloadSetup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		resp, err := client.NewPayload(ctx, execPayload)
+		wrappedPayload, err := wrapper.WrappedExecutionPayload(execPayload)
+		require.NoError(t, err)
+		resp, err := client.NewPayload(ctx, wrappedPayload)
 		require.ErrorIs(t, ErrInvalidBlockHashPayloadStatus, err)
 		require.DeepEqual(t, []uint8(nil), resp)
 	})
@@ -267,7 +274,9 @@ func TestClient_HTTP(t *testing.T) {
 		client := newPayloadSetup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		resp, err := client.NewPayload(ctx, execPayload)
+		wrappedPayload, err := wrapper.WrappedExecutionPayload(execPayload)
+		require.NoError(t, err)
+		resp, err := client.NewPayload(ctx, wrappedPayload)
 		require.ErrorIs(t, ErrInvalidPayloadStatus, err)
 		require.DeepEqual(t, want.LatestValidHash, resp)
 	})
@@ -279,7 +288,9 @@ func TestClient_HTTP(t *testing.T) {
 		client := newPayloadSetup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		resp, err := client.NewPayload(ctx, execPayload)
+		wrappedPayload, err := wrapper.WrappedExecutionPayload(execPayload)
+		require.NoError(t, err)
+		resp, err := client.NewPayload(ctx, wrappedPayload)
 		require.ErrorIs(t, ErrUnknownPayloadStatus, err)
 		require.DeepEqual(t, []uint8(nil), resp)
 	})
@@ -447,7 +458,9 @@ func TestReconstructFullBellatrixBlock(t *testing.T) {
 		jsonPayload["size"] = encodedNum
 		jsonPayload["baseFeePerGas"] = encodedNum
 
-		header, err := bellatrix.PayloadToHeader(payload)
+		wrappedPayload, err := wrapper.WrappedExecutionPayload(payload)
+		require.NoError(t, err)
+		header, err := wrapper.PayloadToHeader(wrappedPayload)
 		require.NoError(t, err)
 
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -478,9 +491,9 @@ func TestReconstructFullBellatrixBlock(t *testing.T) {
 		reconstructed, err := service.ReconstructFullBellatrixBlock(ctx, wrapped)
 		require.NoError(t, err)
 
-		got, err := reconstructed.Block().Body().ExecutionPayload()
+		got, err := reconstructed.Block().Body().Execution()
 		require.NoError(t, err)
-		require.DeepEqual(t, payload, got)
+		require.DeepEqual(t, payload, got.Proto())
 	})
 }
 
@@ -984,16 +997,6 @@ func Test_fullPayloadFromExecutionBlock(t *testing.T) {
 		err  string
 	}{
 		{
-			name: "nil header fails",
-			args: args{header: nil, block: &pb.ExecutionBlock{}},
-			err:  "cannot be nil",
-		},
-		{
-			name: "nil block fails",
-			args: args{header: &pb.ExecutionPayloadHeader{}, block: nil},
-			err:  "cannot be nil",
-		},
-		{
 			name: "block hash field in header and block hash mismatch",
 			args: args{
 				header: &pb.ExecutionPayloadHeader{
@@ -1022,7 +1025,8 @@ func Test_fullPayloadFromExecutionBlock(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := fullPayloadFromExecutionBlock(tt.args.header, tt.args.block)
+			wrapped, err := wrapper.WrappedExecutionPayloadHeader(tt.args.header)
+			got, err := fullPayloadFromExecutionBlock(wrapped, tt.args.block)
 			if (err != nil) && !strings.Contains(err.Error(), tt.err) {
 				t.Fatalf("Wanted err %s got %v", tt.err, err)
 			}

@@ -365,7 +365,9 @@ func TestBellatrixBlindedBeaconBlockBody_ExecutionPayloadHeader(t *testing.T) {
 	wbb, err := wrapper.WrappedBeaconBlockBody(body)
 	require.NoError(t, err)
 
-	_, err = wbb.ExecutionPayload()
+	exec, err := wbb.Execution()
+	require.NoError(t, err)
+	_, err = exec.Transactions()
 	require.ErrorContains(t, wrapper.ErrUnsupportedField.Error(), err)
 }
 
