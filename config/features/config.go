@@ -129,6 +129,12 @@ func configureTestnet(ctx *cli.Context) error {
 		}
 		applySepoliaFeatureFlags(ctx)
 		params.UseSepoliaNetworkConfig()
+	} else if ctx.Bool(EIP4844Testnet.Name) {
+		log.Warn("Running on the EIP-4844 Beacon Chain Testnet")
+		if err := params.SetActive(params.EIP4844Config().Copy()); err != nil {
+			return err
+		}
+		params.UseEIP4844NetworkConfig()
 	} else {
 		if ctx.IsSet(cmd.ChainConfigFileFlag.Name) {
 			log.Warn("Running on custom Ethereum network specified in a chain configuration yaml file")
