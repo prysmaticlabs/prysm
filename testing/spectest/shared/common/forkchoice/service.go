@@ -76,7 +76,7 @@ func (m *engineMock) GetPayload(context.Context, [8]byte) (*pb.ExecutionPayload,
 func (m *engineMock) ForkchoiceUpdated(context.Context, *pb.ForkchoiceState, *pb.PayloadAttributes) (*pb.PayloadIDBytes, []byte, error) {
 	return nil, nil, nil
 }
-func (m *engineMock) NewPayload(context.Context, *pb.ExecutionPayload) ([]byte, error) {
+func (m *engineMock) NewPayload(context.Context, interfaces.ExecutionData) ([]byte, error) {
 	return nil, nil
 }
 

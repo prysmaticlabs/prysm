@@ -5,7 +5,6 @@ import (
 	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/runtime/version"
@@ -301,12 +300,7 @@ func (w Phase0BeaconBlockBody) Proto() proto.Message {
 	return w.b
 }
 
-// ExecutionPayload is a stub.
-func (w Phase0BeaconBlockBody) ExecutionPayload() (*enginev1.ExecutionPayload, error) {
+// Execution is a stub.
+func (w Phase0BeaconBlockBody) Execution() (interfaces.ExecutionData, error) {
 	return nil, errors.Wrapf(ErrUnsupportedField, "ExecutionPayload for %T", w)
-}
-
-// ExecutionPayloadHeader is a stub.
-func (w Phase0BeaconBlockBody) ExecutionPayloadHeader() (*enginev1.ExecutionPayloadHeader, error) {
-	return nil, errors.Wrapf(ErrUnsupportedField, "ExecutionPayloadHeader for %T", w)
 }

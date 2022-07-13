@@ -9,6 +9,7 @@ import (
 	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
 )
@@ -32,7 +33,7 @@ type EngineClient struct {
 }
 
 // NewPayload --
-func (e *EngineClient) NewPayload(_ context.Context, _ *pb.ExecutionPayload) ([]byte, error) {
+func (e *EngineClient) NewPayload(_ context.Context, _ interfaces.ExecutionData) ([]byte, error) {
 	return e.NewPayloadResp, e.ErrNewPayload
 }
 

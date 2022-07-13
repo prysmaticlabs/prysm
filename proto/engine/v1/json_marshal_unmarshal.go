@@ -3,6 +3,7 @@ package enginev1
 import (
 	"encoding/json"
 	"math/big"
+	"reflect"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -96,12 +97,10 @@ func (e *ExecutionBlock) UnmarshalJSON(enc []byte) error {
 
 // UnmarshalJSON --
 func (b *PayloadIDBytes) UnmarshalJSON(enc []byte) error {
-	hexBytes := hexutil.Bytes(make([]byte, 0))
-	if err := json.Unmarshal(enc, &hexBytes); err != nil {
+	res := [8]byte{}
+	if err := hexutil.UnmarshalFixedJSON(reflect.TypeOf(b), enc, res[:]); err != nil {
 		return err
 	}
-	res := [8]byte{}
-	copy(res[:], hexBytes)
 	*b = res
 	return nil
 }
