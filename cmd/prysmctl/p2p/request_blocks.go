@@ -29,7 +29,7 @@ var requestBlocksFlags = struct {
 }{}
 
 var requestBlocksCmd = &cli.Command{
-	Name:   "request-blocks",
+	Name:   "beacon-blocks-by-range",
 	Usage:  "Request a range of blocks from a beacon node via a p2p connection",
 	Action: cliActionRequestBlocks,
 	Flags: []cli.Flag{
