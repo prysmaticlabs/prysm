@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 var requestBlocksFlags = struct {
@@ -31,7 +32,7 @@ var requestBlocksCmd = &cli.Command{
 	Action: cliActionRequestBlocks,
 	Flags: []cli.Flag{
 		&cli.StringFlag{
-			Name:        "peers",
+			Name:        "peer-multiaddrs",
 			Usage:       "comma-separated, peer multiaddr(s) to connect to for p2p requests",
 			Destination: &requestBlocksFlags.Peers,
 			Value:       "",
@@ -90,7 +91,7 @@ func cliActionRequestBlocks(_ *cli.Context) error {
 
 	startSlot := types.Slot(requestBlocksFlags.StartSlot)
 	if startSlot == 0 {
-		headResp, err := c.beaconClient.GetChainHead(ctx, nil)
+		headResp, err := c.beaconClient.GetChainHead(ctx, &emptypb.Empty{})
 		if err != nil {
 			return err
 		}
