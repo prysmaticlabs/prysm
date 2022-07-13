@@ -279,7 +279,7 @@ func configPreProcessing(cliCtx *cli.Context, createInputSource func(context *cl
 	if err == nil {
 		hexkeylist, _ := inputSource.StringSlice(flags.Web3SignerPublicValidatorKeysFlag.Name)
 		if len(hexkeylist) != 0 {
-			cliCtx.Set(flags.Web3SignerPublicValidatorKeysFlag.Name, strings.Join(hexkeylist[:], ","))
+			_ = cliCtx.Set(flags.Web3SignerPublicValidatorKeysFlag.Name, strings.Join(hexkeylist[:], ","))
 		}
 	}
 	return createInputSource
