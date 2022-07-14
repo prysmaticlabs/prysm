@@ -107,6 +107,44 @@ func (bellatrixSignedBeaconBlock) PbAltairBlock() (*eth.SignedBeaconBlockAltair,
 	return nil, ErrUnsupportedAltairBlock
 }
 
+func (w bellatrixSignedBeaconBlock) ToBlinded() (interfaces.SignedBeaconBlock, error) {
+	if w.Block().IsNil() {
+		return nil, errors.New("cannot convert nil block to blinded format")
+	}
+	payload := w.b.Block.Body.ExecutionPayload
+	wrappedPayload, err := WrappedExecutionPayload(payload)
+	if err != nil {
+		return nil, err
+	}
+	header, err := PayloadToHeader(wrappedPayload)
+	if err != nil {
+		return nil, err
+	}
+	return signedBlindedBeaconBlockBellatrix{
+		b: &eth.SignedBlindedBeaconBlockBellatrix{
+			Block: &eth.BlindedBeaconBlockBellatrix{
+				Slot:          w.b.Block.Slot,
+				ProposerIndex: w.b.Block.ProposerIndex,
+				ParentRoot:    w.b.Block.ParentRoot,
+				StateRoot:     w.b.Block.StateRoot,
+				Body: &eth.BlindedBeaconBlockBodyBellatrix{
+					RandaoReveal:           w.b.Block.Body.RandaoReveal,
+					Eth1Data:               w.b.Block.Body.Eth1Data,
+					Graffiti:               w.b.Block.Body.Graffiti,
+					ProposerSlashings:      w.b.Block.Body.ProposerSlashings,
+					AttesterSlashings:      w.b.Block.Body.AttesterSlashings,
+					Attestations:           w.b.Block.Body.Attestations,
+					Deposits:               w.b.Block.Body.Deposits,
+					VoluntaryExits:         w.b.Block.Body.VoluntaryExits,
+					SyncAggregate:          w.b.Block.Body.SyncAggregate,
+					ExecutionPayloadHeader: header,
+				},
+			},
+			Signature: w.b.Signature,
+		},
+	}, nil
+}
+
 // Version of the underlying protobuf object.
 func (bellatrixSignedBeaconBlock) Version() int {
 	return version.Bellatrix
