@@ -402,3 +402,36 @@ func TestGetBlockV3BellatrixSignRequest(t *testing.T) {
 		})
 	}
 }
+
+func TestGetValidatorRegistrationSignRequest(t *testing.T) {
+	type args struct {
+		request *validatorpb.SignRequest
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    *v1.ValidatorRegistrationSignRequest
+		wantErr bool
+	}{
+		{
+			name: "Happy Path Test",
+			args: args{
+				request: mock.GetMockSignRequest("VALIDATOR_REGISTRATION"),
+			},
+			want:    mock.MockValidatorRegistrationSignRequest(),
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := v1.GetValidatorRegistrationSignRequest(tt.args.request)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("GetValidatorRegistrationSignRequest() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetValidatorRegistrationSignRequest() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

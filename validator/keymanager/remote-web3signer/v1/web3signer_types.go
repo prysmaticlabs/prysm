@@ -2,6 +2,10 @@
 /* Web3Signer Specs are found by searching Consensys' Web3Signer API specification*/
 package v1
 
+import (
+	"github.com/ethereum/go-ethereum/common/hexutil"
+)
+
 // AggregationSlotSignRequest is a request object for web3signer sign api.
 type AggregationSlotSignRequest struct {
 	Type            string           `json:"type" validate:"required"`
@@ -99,6 +103,13 @@ type SyncCommitteeContributionAndProofSignRequest struct {
 	ForkInfo             *ForkInfo             `json:"fork_info" validate:"required"`
 	SigningRoot          string                `json:"signingRoot"`
 	ContributionAndProof *ContributionAndProof `json:"contribution_and_proof" validate:"required"`
+}
+
+// ValidatorRegistrationSignRequest a request object for web3signer sign api.
+type ValidatorRegistrationSignRequest struct {
+	Type                  string                 `json:"type" validate:"required"`
+	SigningRoot           hexutil.Bytes          `json:"signingRoot"`
+	ValidatorRegistration *ValidatorRegistration `json:"validator_registration" validate:"required"`
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -322,6 +333,14 @@ type SyncCommitteeContribution struct {
 	SubcommitteeIndex string `json:"subcommittee_index"` /* uint64 */
 	AggregationBits   string `json:"aggregation_bits"`   /* SSZ hexadecimal string */
 	Signature         string `json:"signature"`          /* 96 byte hexadecimal string */
+}
+
+// ValidatorRegistration a sub property of ValidatorRegistrationSignRequest
+type ValidatorRegistration struct {
+	FeeRecipient hexutil.Bytes `json:"fee_recipient" validate:"required"` /* 42 hexadecimal string */
+	GasLimit     string        `json:"gas_limit" validate:"required"`     /* uint64 */
+	Timestamp    string        `json:"timestamp" validate:"required"`     /* uint64 */
+	Pubkey       hexutil.Bytes `json:"pubkey"  validate:"required"`       /* bls hexadecimal string */
 }
 
 ////////////////////////////////////////////////////////////////////////////////
