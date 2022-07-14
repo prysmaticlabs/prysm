@@ -101,6 +101,11 @@ type SyncCommitteeContributionAndProofSignRequest struct {
 	ContributionAndProof *ContributionAndProof `json:"contribution_and_proof" validate:"required"`
 }
 
+// SignatureResponse is the struct representing the signing request response in json format
+type SignatureResponse struct {
+	Signature string `json:"signature"`
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // sub properties of Sign Requests /////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
