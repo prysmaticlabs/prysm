@@ -38,7 +38,7 @@ var (
 
 // GetIdentity retrieves data about the node's network presence.
 func (ns *Server) GetIdentity(ctx context.Context, _ *emptypb.Empty) (*ethpb.IdentityResponse, error) {
-	_, span := trace.StartSpan(ctx, "node.GetIdentity")
+	ctx, span := trace.StartSpan(ctx, "node.GetIdentity")
 	defer span.End()
 
 	peerId := ns.PeerManager.PeerID().Pretty()
@@ -82,7 +82,7 @@ func (ns *Server) GetIdentity(ctx context.Context, _ *emptypb.Empty) (*ethpb.Ide
 
 // GetPeer retrieves data about the given peer.
 func (ns *Server) GetPeer(ctx context.Context, req *ethpb.PeerRequest) (*ethpb.PeerResponse, error) {
-	_, span := trace.StartSpan(ctx, "node.GetPeer")
+	ctx, span := trace.StartSpan(ctx, "node.GetPeer")
 	defer span.End()
 
 	peerStatus := ns.PeersFetcher.Peers()
@@ -135,7 +135,7 @@ func (ns *Server) GetPeer(ctx context.Context, req *ethpb.PeerRequest) (*ethpb.P
 
 // ListPeers retrieves data about the node's network peers.
 func (ns *Server) ListPeers(ctx context.Context, req *ethpb.PeersRequest) (*ethpb.PeersResponse, error) {
-	_, span := trace.StartSpan(ctx, "node.ListPeers")
+	ctx, span := trace.StartSpan(ctx, "node.ListPeers")
 	defer span.End()
 
 	peerStatus := ns.PeersFetcher.Peers()
@@ -231,7 +231,7 @@ func (ns *Server) ListPeers(ctx context.Context, req *ethpb.PeersRequest) (*ethp
 
 // PeerCount retrieves retrieves number of known peers.
 func (ns *Server) PeerCount(ctx context.Context, _ *emptypb.Empty) (*ethpb.PeerCountResponse, error) {
-	_, span := trace.StartSpan(ctx, "node.PeerCount")
+	ctx, span := trace.StartSpan(ctx, "node.PeerCount")
 	defer span.End()
 
 	peerStatus := ns.PeersFetcher.Peers()
@@ -249,7 +249,7 @@ func (ns *Server) PeerCount(ctx context.Context, _ *emptypb.Empty) (*ethpb.PeerC
 // GetVersion requests that the beacon node identify information about its implementation in a
 // format similar to a HTTP User-Agent field.
 func (_ *Server) GetVersion(ctx context.Context, _ *emptypb.Empty) (*ethpb.VersionResponse, error) {
-	_, span := trace.StartSpan(ctx, "node.GetVersion")
+	ctx, span := trace.StartSpan(ctx, "node.GetVersion")
 	defer span.End()
 
 	v := fmt.Sprintf("Prysm/%s (%s %s)", version.SemanticVersion(), runtime.GOOS, runtime.GOARCH)
@@ -263,7 +263,7 @@ func (_ *Server) GetVersion(ctx context.Context, _ *emptypb.Empty) (*ethpb.Versi
 // GetSyncStatus requests the beacon node to describe if it's currently syncing or not, and
 // if it is, what block it is up to.
 func (ns *Server) GetSyncStatus(ctx context.Context, _ *emptypb.Empty) (*ethpb.SyncingResponse, error) {
-	_, span := trace.StartSpan(ctx, "node.GetSyncStatus")
+	ctx, span := trace.StartSpan(ctx, "node.GetSyncStatus")
 	defer span.End()
 
 	headSlot := ns.HeadFetcher.HeadSlot()
