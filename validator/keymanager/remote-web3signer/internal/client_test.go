@@ -59,6 +59,7 @@ func TestClient_Sign_HappyPath_Jsontype(t *testing.T) {
 	}
 	jsonBytes, err := json.Marshal(sigResp)
 	require.NoError(t, err)
+	require.NoError(t, err)
 	// create a new reader with that JSON
 	header := http.Header{}
 	header.Set("Content-Type", "application/json;  charset=UTF-8")
