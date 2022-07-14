@@ -52,7 +52,7 @@ var (
 	// EnableTracingFlag defines a flag to enable p2p message tracing.
 	EnableTracingFlag = &cli.BoolFlag{
 		Name:  "enable-tracing",
-		Usage: "Enabled request tracing.",
+		Usage: "Enable request tracing.",
 	}
 	// TracingProcessNameFlag defines a flag to specify a process name.
 	TracingProcessNameFlag = &cli.StringFlag{
@@ -87,7 +87,7 @@ var (
 	// to the bootstrap nodes in the cloud
 	NoDiscovery = &cli.BoolFlag{
 		Name:  "no-discovery",
-		Usage: "Enabled only local network p2p and do not connect to cloud bootstrap nodes.",
+		Usage: "Enable only local network p2p and do not connect to cloud bootstrap nodes.",
 	}
 	// StaticPeers specifies a set of peers to connect to explicitly.
 	StaticPeers = &cli.StringSliceFlag{
@@ -201,7 +201,7 @@ var (
 	// EnableUPnPFlag specifies if UPnP should be enabled or not. The default value is false.
 	EnableUPnPFlag = &cli.BoolFlag{
 		Name:  "enable-upnp",
-		Usage: "Enabled the service (Beacon chain or Validator) to use UPnP when possible.",
+		Usage: "Enable the service (Beacon chain or Validator) to use UPnP when possible.",
 	}
 	// ConfigFileFlag specifies the filepath to load flag values.
 	ConfigFileFlag = &cli.StringFlag{

@@ -46,7 +46,7 @@ import (
 )
 
 var (
-	debug                 = flag.Bool("debug", false, "Enabled debug logging")
+	debug                 = flag.Bool("debug", false, "Enable debug logging")
 	logFileName           = flag.String("log-file", "", "Specify log filename, relative or absolute")
 	privateKey            = flag.String("private", "", "Private key to use for peer ID")
 	discv5port            = flag.Int("discv5-port", 4000, "Port to listen for discv5 connections")

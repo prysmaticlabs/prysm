@@ -13,7 +13,7 @@ var (
 	// MevRelayEndpoint provides an HTTP access endpoint to a MEV builder network.
 	MevRelayEndpoint = &cli.StringFlag{
 		Name:  "http-mev-relay",
-		Usage: "A MEV builder relay string http endpoint, this wil be used to interact MEV builder network using API defined in: https://ethereum.github.io/builder-specs/#/BuilderConfig",
+		Usage: "A MEV builder relay string http endpoint, this wil be used to interact MEV builder network using API defined in: https://ethereum.github.io/builder-specs/#/Builder",
 		Value: "",
 	}
 	// HTTPWeb3ProviderFlag provides an HTTP access endpoint to an ETH 1.0 RPC.

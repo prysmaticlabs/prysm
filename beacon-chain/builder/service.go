@@ -66,7 +66,7 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 			return nil, fmt.Errorf("could not connect to builder: %v", err)
 		}
 
-		log.WithField("endpoint", c.NodeURL()).Info("BuilderConfig has been configured")
+		log.WithField("endpoint", c.NodeURL()).Info("Builder has been configured")
 	}
 	return s, nil
 }

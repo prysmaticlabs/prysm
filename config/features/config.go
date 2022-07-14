@@ -56,7 +56,7 @@ type Flags struct {
 	// Bug fixes related flags.
 	AttestTimely bool // AttestTimely fixes #8185. It is gated behind a flag to ensure beacon node's fix can safely roll out first. We'll invert this in v1.1.0.
 
-	EnableSlasher bool // Enabled slasher in the beacon node runtime.
+	EnableSlasher bool // Enable slasher in the beacon node runtime.
 	// EnableSlashingProtectionPruning for the validator client.
 	EnableSlashingProtectionPruning bool
 

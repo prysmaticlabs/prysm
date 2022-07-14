@@ -50,7 +50,7 @@ var (
 	// PProfFlag to enable pprof HTTP server.
 	PProfFlag = &cli.BoolFlag{
 		Name:  "pprof",
-		Usage: "Enabled the pprof HTTP server",
+		Usage: "Enable the pprof HTTP server",
 	}
 	// PProfPortFlag to specify HTTP server listening port.
 	PProfPortFlag = &cli.IntFlag{

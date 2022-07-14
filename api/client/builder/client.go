@@ -83,7 +83,7 @@ func (*requestLogger) observe(r *http.Request) (e error) {
 
 var _ observer = &requestLogger{}
 
-// Client provides a collection of helper methods for calling BuilderConfig API endpoints.
+// Client provides a collection of helper methods for calling Builder API endpoints.
 type Client struct {
 	hc      *http.Client
 	baseURL *url.URL
@@ -196,7 +196,7 @@ func execHeaderPath(slot types.Slot, parentHash [32]byte, pubkey [48]byte) (stri
 	return b.String(), nil
 }
 
-// GetHeader is used by a proposing validator to request an ExecutionPayloadHeader from the BuilderConfig node.
+// GetHeader is used by a proposing validator to request an ExecutionPayloadHeader from the Builder node.
 func (c *Client) GetHeader(ctx context.Context, slot types.Slot, parentHash [32]byte, pubkey [48]byte) (*ethpb.SignedBuilderBid, error) {
 	path, err := execHeaderPath(slot, parentHash, pubkey)
 	if err != nil {
