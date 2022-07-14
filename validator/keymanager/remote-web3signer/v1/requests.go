@@ -347,12 +347,12 @@ func GetValidatorRegistrationSignRequest(request *validatorpb.SignRequest) (*Val
 	registration := validatorRegistrationRequest.Registration
 	return &ValidatorRegistrationSignRequest{
 		Type:        "VALIDATOR_REGISTRATION",
-		SigningRoot: hexutil.Encode(request.SigningRoot),
+		SigningRoot: request.SigningRoot,
 		ValidatorRegistration: &ValidatorRegistration{
-			FeeRecipient: hexutil.Encode(registration.FeeRecipient),
+			FeeRecipient: registration.FeeRecipient,
 			GasLimit:     fmt.Sprint(registration.GasLimit),
 			Timestamp:    fmt.Sprint(registration.Timestamp),
-			Pubkey:       hexutil.Encode(registration.Pubkey),
+			Pubkey:       registration.Pubkey,
 		},
 	}, nil
 }

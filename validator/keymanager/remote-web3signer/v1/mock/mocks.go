@@ -578,12 +578,12 @@ func MockVoluntaryExitSignRequest() *v1.VoluntaryExitSignRequest {
 func MockValidatorRegistrationSignRequest() *v1.ValidatorRegistrationSignRequest {
 	return &v1.ValidatorRegistrationSignRequest{
 		Type:        "VALIDATOR_REGISTRATION",
-		SigningRoot: hexutil.Encode(make([]byte, fieldparams.RootLength)),
+		SigningRoot: make([]byte, fieldparams.RootLength),
 		ValidatorRegistration: &v1.ValidatorRegistration{
-			FeeRecipient: hexutil.Encode(make([]byte, fieldparams.FeeRecipientLength)),
+			FeeRecipient: make([]byte, fieldparams.FeeRecipientLength),
 			GasLimit:     fmt.Sprint(0),
 			Timestamp:    fmt.Sprint(0),
-			Pubkey:       hexutil.Encode(make([]byte, fieldparams.BLSSignatureLength)),
+			Pubkey:       make([]byte, fieldparams.BLSSignatureLength),
 		},
 	}
 }
