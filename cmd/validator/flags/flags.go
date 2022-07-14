@@ -281,10 +281,9 @@ var (
 	// example with external url: --validators-external-signer-public-keys= https://web3signer.com/api/v1/eth2/publicKeys
 	// example with public key: --validators-external-signer-public-keys=0xa99a...e44c,0xb89b...4a0b
 	// web3signer documentation can be found in Consensys' web3signer project docs```
-	Web3SignerPublicValidatorKeysFlag = &cli.StringFlag{
+	Web3SignerPublicValidatorKeysFlag = &cli.StringSliceFlag{
 		Name:  "validators-external-signer-public-keys",
 		Usage: "comma separated list of public keys OR an external url endpoint for the validator to retrieve public keys from for usage with web3signer",
-		Value: "",
 	}
 
 	// KeymanagerKindFlag defines the kind of keymanager desired by a user during wallet creation.
