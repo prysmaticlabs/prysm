@@ -27,7 +27,7 @@ type Proposal struct {
 
 // ProposedPublicKeys retrieves all public keys in our proposals history bucket.
 func (s *Store) ProposedPublicKeys(ctx context.Context) ([][fieldparams.BLSPubkeyLength]byte, error) {
-	_, span := trace.StartSpan(ctx, "Validator.ProposedPublicKeys")
+	ctx, span := trace.StartSpan(ctx, "Validator.ProposedPublicKeys")
 	defer span.End()
 	var err error
 	proposedPublicKeys := make([][fieldparams.BLSPubkeyLength]byte, 0)
@@ -47,7 +47,7 @@ func (s *Store) ProposedPublicKeys(ctx context.Context) ([][fieldparams.BLSPubke
 // as a boolean that tells us if we have a proposal history stored at the slot. It is possible we have proposed
 // a slot but stored a nil signing root, so the boolean helps give full information.
 func (s *Store) ProposalHistoryForSlot(ctx context.Context, publicKey [fieldparams.BLSPubkeyLength]byte, slot types.Slot) ([32]byte, bool, error) {
-	_, span := trace.StartSpan(ctx, "Validator.ProposalHistoryForSlot")
+	ctx, span := trace.StartSpan(ctx, "Validator.ProposalHistoryForSlot")
 	defer span.End()
 
 	var err error
@@ -100,7 +100,7 @@ func (s *Store) ProposalHistoryForPubKey(ctx context.Context, publicKey [fieldpa
 // We also check if the incoming proposal slot is lower than the lowest signed proposal slot
 // for the validator and override its value on disk.
 func (s *Store) SaveProposalHistoryForSlot(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, slot types.Slot, signingRoot []byte) error {
-	_, span := trace.StartSpan(ctx, "Validator.SaveProposalHistoryForEpoch")
+	ctx, span := trace.StartSpan(ctx, "Validator.SaveProposalHistoryForEpoch")
 	defer span.End()
 
 	err := s.update(func(tx *bolt.Tx) error {
@@ -147,7 +147,7 @@ func (s *Store) SaveProposalHistoryForSlot(ctx context.Context, pubKey [fieldpar
 // LowestSignedProposal returns the lowest signed proposal slot for a validator public key.
 // If no data exists, a boolean of value false is returned.
 func (s *Store) LowestSignedProposal(ctx context.Context, publicKey [fieldparams.BLSPubkeyLength]byte) (types.Slot, bool, error) {
-	_, span := trace.StartSpan(ctx, "Validator.LowestSignedProposal")
+	ctx, span := trace.StartSpan(ctx, "Validator.LowestSignedProposal")
 	defer span.End()
 
 	var err error
@@ -170,7 +170,7 @@ func (s *Store) LowestSignedProposal(ctx context.Context, publicKey [fieldparams
 // HighestSignedProposal returns the highest signed proposal slot for a validator public key.
 // If no data exists, a boolean of value false is returned.
 func (s *Store) HighestSignedProposal(ctx context.Context, publicKey [fieldparams.BLSPubkeyLength]byte) (types.Slot, bool, error) {
-	_, span := trace.StartSpan(ctx, "Validator.HighestSignedProposal")
+	ctx, span := trace.StartSpan(ctx, "Validator.HighestSignedProposal")
 	defer span.End()
 
 	var err error

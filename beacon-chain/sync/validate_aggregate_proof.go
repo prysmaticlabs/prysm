@@ -262,7 +262,7 @@ func validateSelectionIndex(
 	validatorIndex types.ValidatorIndex,
 	proof []byte,
 ) (*bls.SignatureBatch, error) {
-	_, span := trace.StartSpan(ctx, "sync.validateSelectionIndex")
+	ctx, span := trace.StartSpan(ctx, "sync.validateSelectionIndex")
 	defer span.End()
 
 	committee, err := helpers.BeaconCommitteeFromState(ctx, bs, data.Slot, data.CommitteeIndex)
