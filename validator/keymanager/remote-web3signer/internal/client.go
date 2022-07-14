@@ -28,6 +28,11 @@ const (
 
 type SignRequestJson []byte
 
+// SignatureResponse is the struct representing the signing request response in json format
+type SignatureResponse struct {
+	Signature hexutil.Bytes `json:"signature"`
+}
+
 // HttpSignerClient defines the interface for interacting with a remote web3signer.
 type HttpSignerClient interface {
 	Sign(ctx context.Context, pubKey string, request SignRequestJson) (bls.Signature, error)
@@ -68,9 +73,17 @@ func (client *ApiClient) Sign(ctx context.Context, pubKey string, request SignRe
 	if resp.StatusCode == http.StatusPreconditionFailed {
 		return nil, fmt.Errorf("signing operation failed due to slashing protection rules,  Signing Request URL: %v, Status: %v", client.BaseURL.String()+requestPath, resp.StatusCode)
 	}
-
-	return unmarshalSignatureResponse(resp.Body)
-
+	contentType := resp.Header.Get("Content-Type")
+	switch contentType {
+	case "application/json":
+		var sigResp SignatureResponse
+		if err := unmarshalResponse(resp.Body, &sigResp); err != nil {
+			return nil, err
+		}
+		return bls.SignatureFromBytes(sigResp.Signature)
+	default:
+		return unmarshalSignatureResponse(resp.Body)
+	}
 }
 
 // GetPublicKeys is a wrapper method around the web3signer publickeys api (this may be removed in the future or moved to another location due to its usage).
