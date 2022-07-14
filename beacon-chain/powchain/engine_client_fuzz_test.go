@@ -96,7 +96,13 @@ func FuzzExchangeTransitionConfiguration(f *testing.F) {
 		}
 		gethBlob, gethErr := json.Marshal(gethResp)
 		prysmBlob, prysmErr := json.Marshal(prysmResp)
-		assert.Equal(t, gethErr != nil, prysmErr != nil, "geth and prysm unmarshaller return inconsistent errors")
+		if gethErr != nil {
+			t.Errorf("%s %s", gethResp.TerminalTotalDifficulty.String(), prysmResp.TerminalTotalDifficulty)
+		}
+		assert.Equal(t, gethErr != nil, prysmErr != nil, fmt.Sprintf("geth and prysm unmarshaller return inconsistent errors. %v and %v", gethErr, prysmErr))
+		if gethErr != nil {
+			t.Errorf("%s %s", gethResp.TerminalTotalDifficulty.String(), prysmResp.TerminalTotalDifficulty)
+		}
 		newGethResp := &beacon.TransitionConfigurationV1{}
 		newGethErr := json.Unmarshal(prysmBlob, newGethResp)
 		assert.NoError(t, newGethErr)
@@ -166,7 +172,7 @@ func FuzzExecutionBlock(f *testing.F) {
 		Data:      []byte{'r', 'a', 'n', 'd', 'o', 'm'},
 
 		// Signature values
-		V: big.NewInt(math.MaxInt),
+		V: big.NewInt(0),
 		R: big.NewInt(math.MaxInt),
 		S: big.NewInt(math.MaxInt),
 	}
@@ -187,19 +193,20 @@ func FuzzExecutionBlock(f *testing.F) {
 		},
 		Hash:            common.Hash([32]byte{0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01}),
 		TotalDifficulty: "999999999999999999999999999999999999999",
-		Transactions:    []*types.Transaction{tx},
+		Transactions:    []*types.Transaction{tx, tx},
 	}
 	output, err := json.Marshal(execBlock)
 	assert.NoError(f, err)
+
 	f.Add(output)
+
 	f.Fuzz(func(t *testing.T, jsonBlob []byte) {
 		gethResp := make(map[string]interface{})
 		prysmResp := &pb.ExecutionBlock{}
 		gethErr := json.Unmarshal(jsonBlob, &gethResp)
 		prysmErr := json.Unmarshal(jsonBlob, prysmResp)
-		assert.Equal(t, gethErr != nil, prysmErr != nil, fmt.Sprintf("geth and prysm unmarshaller return inconsistent errors. %v and %v", gethErr, prysmErr))
 		// Nothing to marshal if we have an error.
-		if gethErr != nil {
+		if gethErr != nil || prysmErr != nil {
 			return
 		}
 
@@ -253,17 +260,27 @@ func validateBlockConsistency(execBlock *pb.ExecutionBlock, jsonMap map[string]i
 	for i := 0; i < fieldnum; i++ {
 		field := bType.Field(i)
 		fName := field.Tag.Get("json")
+		if field.Name == "Header" {
+			continue
+		}
 		if fName == "" {
 			return errors.Errorf("Field %s had no json tag", field.Name)
 		}
 		fVal, ok := jsonMap[fName]
 		if !ok {
-			return errors.Errorf("%s doesn't exist in json map", fName)
+			return errors.Errorf("%s doesn't exist in json map for field %s", fName, field.Name)
 		}
-		if !reflect.DeepEqual(fVal, blockVal.Field(i).Interface()) {
-			return errors.Errorf("fields dont match, %v and %v are not equal", fVal, blockVal.Field(i).Interface())
+		jsonVal := fVal
+		bVal := blockVal.Field(i).Interface()
+		if field.Name == "Hash" {
+			jsonVal = common.HexToHash(jsonVal.(string))
 		}
-
+		if field.Name == "Transactions" {
+			continue
+		}
+		if !reflect.DeepEqual(jsonVal, bVal) {
+			return errors.Errorf("fields dont match, %v and %v are not equal for field %s", jsonVal, bVal, field.Name)
+		}
 	}
 	return nil
 }

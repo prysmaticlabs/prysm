@@ -41,12 +41,8 @@ func (e *ExecutionBlock) MarshalJSON() ([]byte, error) {
 	if err := json.Unmarshal(encodedHeader, &decoded); err != nil {
 		return nil, err
 	}
-	encodedTxs, err := json.Marshal(e.Transactions)
-	if err != nil {
-		return nil, err
-	}
 	decoded["hash"] = e.Hash.String()
-	decoded["transactions"] = string(encodedTxs)
+	decoded["transactions"] = e.Transactions
 	decoded["totalDifficulty"] = e.TotalDifficulty
 	return json.Marshal(decoded)
 }
@@ -63,15 +59,27 @@ func (e *ExecutionBlock) UnmarshalJSON(enc []byte) error {
 	if !ok {
 		return errors.New("expected `hash` field in JSON response")
 	}
-	e.Hash = common.HexToHash(blockHashStr)
+	decodedHash, err := hexutil.Decode(blockHashStr)
+	if err != nil {
+		return err
+	}
+	e.Hash = common.BytesToHash(decodedHash)
 	e.TotalDifficulty, ok = decoded["totalDifficulty"].(string)
 	if !ok {
 		return errors.New("expected `totalDifficulty` field in JSON response")
 	}
-	txsList, ok := decoded["transactions"].([]interface{})
-	if !ok {
+	rawTxList, ok := decoded["transactions"]
+	if !ok || rawTxList == nil {
+		// Exit early if there are no transactions stored in the json payload.
 		return nil
 	}
+	// If the transaction is just a list of hashes, do not attempt to
+	// unmarshal into a full transaction object.
+	txsList, ok := rawTxList.([]interface{})
+	if !ok {
+		return errors.Errorf("expected transaction list to be of a slice interface type.")
+	}
+
 	// If the block contains a list of transactions, we JSON unmarshal
 	// them into a list of geth transaction objects.
 	txs := make([]*gethtypes.Transaction, len(txsList))
@@ -298,7 +306,7 @@ func (p *PayloadStatus) UnmarshalJSON(enc []byte) error {
 }
 
 type transitionConfigurationJSON struct {
-	TerminalTotalDifficulty string         `json:"terminalTotalDifficulty"`
+	TerminalTotalDifficulty *hexutil.Big   `json:"terminalTotalDifficulty"`
 	TerminalBlockHash       common.Hash    `json:"terminalBlockHash"`
 	TerminalBlockNumber     hexutil.Uint64 `json:"terminalBlockNumber"`
 }
@@ -306,8 +314,17 @@ type transitionConfigurationJSON struct {
 // MarshalJSON --
 func (t *TransitionConfiguration) MarshalJSON() ([]byte, error) {
 	num := new(big.Int).SetBytes(t.TerminalBlockNumber)
+	var hexNum *hexutil.Big
+	if t.TerminalTotalDifficulty != "" {
+		ttdNum, err := hexutil.DecodeBig(t.TerminalTotalDifficulty)
+		if err != nil {
+			return nil, err
+		}
+		bHex := hexutil.Big(*ttdNum)
+		hexNum = &bHex
+	}
 	return json.Marshal(transitionConfigurationJSON{
-		TerminalTotalDifficulty: t.TerminalTotalDifficulty,
+		TerminalTotalDifficulty: hexNum,
 		TerminalBlockHash:       common.Hash(bytesutil.ToBytes32(t.TerminalBlockHash)),
 		TerminalBlockNumber:     hexutil.Uint64(num.Uint64()),
 	})
@@ -321,8 +338,9 @@ func (t *TransitionConfiguration) UnmarshalJSON(enc []byte) error {
 	}
 	*t = TransitionConfiguration{}
 	num := big.NewInt(int64(dec.TerminalBlockNumber))
-
-	t.TerminalTotalDifficulty = dec.TerminalTotalDifficulty
+	if dec.TerminalTotalDifficulty != nil {
+		t.TerminalTotalDifficulty = dec.TerminalTotalDifficulty.String()
+	}
 	t.TerminalBlockHash = dec.TerminalBlockHash[:]
 	t.TerminalBlockNumber = num.Bytes()
 	return nil
