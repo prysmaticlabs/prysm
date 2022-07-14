@@ -457,13 +457,21 @@ func web3SignerConfig(cliCtx *cli.Context) (*remoteweb3signer.SetupConfig, error
 			log.Warnf("%s was provided while using web3signer and will be ignored", flags.WalletPasswordFileFlag.Name)
 		}
 		if cliCtx.IsSet(flags.Web3SignerPublicValidatorKeysFlag.Name) {
-			publicKeysStr := cliCtx.String(flags.Web3SignerPublicValidatorKeysFlag.Name)
-			pURL, err := url.ParseRequestURI(publicKeysStr)
-			if err == nil && pURL.Scheme != "" && pURL.Host != "" {
-				web3signerConfig.PublicKeysURL = publicKeysStr
-			} else {
+			publicKeysSlice := cliCtx.StringSlice(flags.Web3SignerPublicValidatorKeysFlag.Name)
+			pks := make([]string, 0)
+			if len(publicKeysSlice) == 1 {
+				pURL, err := url.ParseRequestURI(publicKeysSlice[0])
+				if err == nil && pURL.Scheme != "" && pURL.Host != "" {
+					web3signerConfig.PublicKeysURL = publicKeysSlice[0]
+				} else {
+					pks = strings.Split(publicKeysSlice[0], ",")
+				}
+			} else if len(publicKeysSlice) > 1 {
+				pks = publicKeysSlice
+			}
+			if len(pks) > 0 {
 				var validatorKeys [][48]byte
-				for _, key := range strings.Split(publicKeysStr, ",") {
+				for _, key := range pks {
 					decodedKey, decodeErr := hexutil.Decode(key)
 					if decodeErr != nil {
 						return nil, errors.Wrapf(decodeErr, "could not decode public key for web3signer: %s", key)
