@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
@@ -28,7 +27,9 @@ func (s *Store) applyProposerBoostScore(newBalances []uint64) error {
 	if s.previousProposerBoostRoot != params.BeaconConfig().ZeroHash {
 		previousNode, ok := s.nodeByRoot[s.previousProposerBoostRoot]
 		if !ok || previousNode == nil {
-			return errors.Wrap(errInvalidProposerBoostRoot, fmt.Sprintf("missing prev root %#x", s.previousProposerBoostRoot))
+			s.previousProposerBoostRoot = [32]byte{}
+			log.WithError(errInvalidProposerBoostRoot).Errorf(fmt.Sprintf("invalid prev root %#x", s.previousProposerBoostRoot))
+			return nil
 		}
 		previousNode.balance -= s.previousProposerBoostScore
 	}
@@ -36,7 +37,9 @@ func (s *Store) applyProposerBoostScore(newBalances []uint64) error {
 	if s.proposerBoostRoot != params.BeaconConfig().ZeroHash {
 		currentNode, ok := s.nodeByRoot[s.proposerBoostRoot]
 		if !ok || currentNode == nil {
-			return errors.Wrap(errInvalidProposerBoostRoot, fmt.Sprintf("missing current root %#x", s.proposerBoostRoot))
+			s.previousProposerBoostRoot = [32]byte{}
+			log.WithError(errInvalidProposerBoostRoot).Errorf(fmt.Sprintf("invalid current root %#x", s.previousProposerBoostRoot))
+			return nil
 		}
 		proposerScore, err = computeProposerBoostScore(newBalances)
 		if err != nil {
@@ -187,14 +190,6 @@ func (s *Store) pruneFinalizedNodeByRootMap(ctx context.Context, node, finalized
 		if err := s.pruneFinalizedNodeByRootMap(ctx, child, finalizedNode); err != nil {
 			return err
 		}
-	}
-
-	// Reset proposer boosts if root gets deleted in store.
-	if s.proposerBoostRoot == node.root {
-		s.proposerBoostRoot = [32]byte{}
-	}
-	if s.previousProposerBoostRoot == node.root {
-		s.previousProposerBoostRoot = [32]byte{}
 	}
 
 	delete(s.nodeByRoot, node.root)
