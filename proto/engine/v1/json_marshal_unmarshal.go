@@ -73,8 +73,6 @@ func (e *ExecutionBlock) UnmarshalJSON(enc []byte) error {
 		// Exit early if there are no transactions stored in the json payload.
 		return nil
 	}
-	// If the transaction is just a list of hashes, do not attempt to
-	// unmarshal into a full transaction object.
 	txsList, ok := rawTxList.([]interface{})
 	if !ok {
 		return errors.Errorf("expected transaction list to be of a slice interface type.")
