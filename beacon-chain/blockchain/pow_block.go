@@ -84,7 +84,7 @@ func (s *Service) validateMergeBlock(ctx context.Context, b interfaces.SignedBea
 
 // getBlkParentHashAndTD retrieves the parent hash and total difficulty of the given block.
 func (s *Service) getBlkParentHashAndTD(ctx context.Context, blkHash []byte) ([]byte, *uint256.Int, error) {
-	blk, err := s.cfg.ExecutionEngineCaller.ExecutionBlockByHash(ctx, common.BytesToHash(blkHash))
+	blk, err := s.cfg.ExecutionEngineCaller.ExecutionBlockByHash(ctx, common.BytesToHash(blkHash), false /* no txs */)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not get pow block")
 	}

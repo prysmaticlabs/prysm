@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
+	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
@@ -130,7 +131,7 @@ func (s *Store) Blocks(ctx context.Context, f *filters.QueryFilter) ([]interface
 			encoded := bkt.Get(keys[i])
 			blk, err := unmarshalBlock(ctx, encoded)
 			if err != nil {
-				return err
+				return errors.Wrapf(err, "could not unmarshal block with key %#x", keys[i])
 			}
 			blocks = append(blocks, blk)
 			blockRoots = append(blockRoots, bytesutil.ToBytes32(keys[i]))
@@ -303,6 +304,16 @@ func (s *Store) SaveBlocks(ctx context.Context, blocks []interfaces.SignedBeacon
 			}
 			if err := updateValueForIndices(ctx, indicesForBlocks[i], blockRoots[i], tx); err != nil {
 				return errors.Wrap(err, "could not update DB indices")
+			}
+			if features.Get().EnableOnlyBlindedBeaconBlocks {
+				blindedBlock, err := blk.ToBlinded()
+				if err != nil {
+					if !errors.Is(err, wrapper.ErrUnsupportedVersion) {
+						return err
+					}
+				} else {
+					blk = blindedBlock
+				}
 			}
 			s.blockCache.Set(string(blockRoots[i]), blk, int64(len(encodedBlocks[i])))
 			if err := bkt.Put(blockRoots[i], encodedBlocks[i]); err != nil {
@@ -758,7 +769,7 @@ func unmarshalBlock(_ context.Context, enc []byte) (interfaces.SignedBeaconBlock
 	var err error
 	enc, err = snappy.Decode(nil, enc)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not snappy decode block")
 	}
 	var rawBlock ssz.Unmarshaler
 	switch {
@@ -766,23 +777,23 @@ func unmarshalBlock(_ context.Context, enc []byte) (interfaces.SignedBeaconBlock
 		// Marshal block bytes to altair beacon block.
 		rawBlock = &ethpb.SignedBeaconBlockAltair{}
 		if err := rawBlock.UnmarshalSSZ(enc[len(altairKey):]); err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "could not unmarshal Altair block")
 		}
 	case hasBellatrixKey(enc):
 		rawBlock = &ethpb.SignedBeaconBlockBellatrix{}
 		if err := rawBlock.UnmarshalSSZ(enc[len(bellatrixKey):]); err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "could not unmarshal Bellatrix block")
 		}
 	case hasBellatrixBlindKey(enc):
 		rawBlock = &ethpb.SignedBlindedBeaconBlockBellatrix{}
 		if err := rawBlock.UnmarshalSSZ(enc[len(bellatrixBlindKey):]); err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "could not unmarshal blinded Bellatrix block")
 		}
 	default:
 		// Marshal block bytes to phase 0 beacon block.
 		rawBlock = &ethpb.SignedBeaconBlock{}
 		if err := rawBlock.UnmarshalSSZ(enc); err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "could not unmarshal Phase0 block")
 		}
 	}
 	return wrapper.WrappedSignedBeaconBlock(rawBlock)
@@ -790,19 +801,41 @@ func unmarshalBlock(_ context.Context, enc []byte) (interfaces.SignedBeaconBlock
 
 // marshal versioned beacon block from struct type down to bytes.
 func marshalBlock(_ context.Context, blk interfaces.SignedBeaconBlock) ([]byte, error) {
-	obj, err := blk.MarshalSSZ()
-	if err != nil {
-		return nil, err
+	var encodedBlock []byte
+	var err error
+	blockToSave := blk
+	if features.Get().EnableOnlyBlindedBeaconBlocks {
+		blindedBlock, err := blk.ToBlinded()
+		switch {
+		case errors.Is(err, wrapper.ErrUnsupportedVersion):
+			encodedBlock, err = blk.MarshalSSZ()
+			if err != nil {
+				return nil, errors.Wrap(err, "could not marshal non-blinded block")
+			}
+		case err != nil:
+			return nil, errors.Wrap(err, "could not convert block to blinded format")
+		default:
+			encodedBlock, err = blindedBlock.MarshalSSZ()
+			if err != nil {
+				return nil, errors.Wrap(err, "could not marshal blinded block")
+			}
+			blockToSave = blindedBlock
+		}
+	} else {
+		encodedBlock, err = blk.MarshalSSZ()
+		if err != nil {
+			return nil, err
+		}
 	}
-	switch blk.Version() {
+	switch blockToSave.Version() {
 	case version.BellatrixBlind:
-		return snappy.Encode(nil, append(bellatrixBlindKey, obj...)), nil
+		return snappy.Encode(nil, append(bellatrixBlindKey, encodedBlock...)), nil
 	case version.Bellatrix:
-		return snappy.Encode(nil, append(bellatrixKey, obj...)), nil
+		return snappy.Encode(nil, append(bellatrixKey, encodedBlock...)), nil
 	case version.Altair:
-		return snappy.Encode(nil, append(altairKey, obj...)), nil
+		return snappy.Encode(nil, append(altairKey, encodedBlock...)), nil
 	case version.Phase0:
-		return snappy.Encode(nil, obj), nil
+		return snappy.Encode(nil, encodedBlock), nil
 	default:
 		return nil, errors.New("Unknown block version")
 	}

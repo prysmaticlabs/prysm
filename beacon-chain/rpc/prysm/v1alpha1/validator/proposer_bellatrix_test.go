@@ -99,13 +99,6 @@ func TestServer_getPayloadHeader(t *testing.T) {
 		returnedHeader *v1.ExecutionPayloadHeader
 	}{
 		{
-			name: "builder is not ready",
-			mock: &builderTest.MockBuilderService{
-				ErrStatus: errors.New("builder is not ready"),
-			},
-			err: "builder is not ready",
-		},
-		{
 			name: "head is not bellatrix ready",
 			mock: &builderTest.MockBuilderService{},
 			fetcher: &blockchainTest.ChainService{
@@ -208,19 +201,6 @@ func TestServer_getBuilderBlock(t *testing.T) {
 				require.NoError(t, err)
 				return wb
 			}(),
-		},
-		{
-			name: "builder is not ready",
-			blk: func() interfaces.SignedBeaconBlock {
-				wb, err := wrapper.WrappedSignedBeaconBlock(util.NewBlindedBeaconBlockBellatrix())
-				require.NoError(t, err)
-				return wb
-			}(),
-			mock: &builderTest.MockBuilderService{
-				HasConfigured: true,
-				ErrStatus:     errors.New("builder is not ready"),
-			},
-			err: "builder is not ready",
 		},
 		{
 			name: "submit blind block error",
