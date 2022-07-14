@@ -193,7 +193,6 @@ func (s *Store) pruneFinalizedNodeByRootMap(ctx context.Context, node, finalized
 	}
 
 	delete(s.nodeByRoot, node.root)
-
 	return nil
 }
 
