@@ -244,7 +244,7 @@ func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.SignedBe
 	return wb, nil
 }
 
-// readyForBuilder returns true if builder is allowed to be used. Builder is only allowed to be use after the
+// readyForBuilder returns true if builder is allowed to be used. BuilderConfig is only allowed to be use after the
 // first finalized checkpt has been execution-enabled.
 func (vs *Server) readyForBuilder(ctx context.Context) (bool, error) {
 	cp := vs.FinalizationFetcher.FinalizedCheckpt()
@@ -266,13 +266,13 @@ func (vs *Server) readyForBuilder(ctx context.Context) (bool, error) {
 // If the status is false that means builder the header block is disallowed.
 // This routine is time limited by `blockBuilderTimeout`.
 func (vs *Server) getAndBuildHeaderBlock(ctx context.Context, b *ethpb.BeaconBlockAltair) (bool, *ethpb.GenericBeaconBlock, error) {
-	// No op. Builder is not defined. User did not specify a user URL. We should use local EE.
+	// No op. BuilderConfig is not defined. User did not specify a user URL. We should use local EE.
 	if vs.BlockBuilder == nil || !vs.BlockBuilder.Configured() {
 		return false, nil, nil
 	}
 	ctx, cancel := context.WithTimeout(ctx, blockBuilderTimeout)
 	defer cancel()
-	// Does the protocol allow for builder at this current moment. Builder is only allowed post merge after finalization.
+	// Does the protocol allow for builder at this current moment. BuilderConfig is only allowed post merge after finalization.
 	ready, err := vs.readyForBuilder(ctx)
 	if err != nil {
 		return false, nil, errors.Wrap(err, "could not determine if builder is ready")

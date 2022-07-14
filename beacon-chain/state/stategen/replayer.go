@@ -45,12 +45,12 @@ type CurrentSlotter interface {
 
 // Replayer encapsulates database query and replay logic. It can be constructed via a ReplayerBuilder.
 type Replayer interface {
-	// ReplayBlocks replays the blocks the Replayer knows about based on Builder params
+	// ReplayBlocks replays the blocks the Replayer knows about based on BuilderConfig params
 	ReplayBlocks(ctx context.Context) (state.BeaconState, error)
 	// ReplayToSlot invokes ReplayBlocks under the hood,
 	// but then also runs process_slots to advance the state past the root or slot used in the builder.
 	// For example, if you wanted the state to be at the target slot, but only integrating blocks up to
-	// slot-1, you could request Builder.ReplayerForSlot(slot-1).ReplayToSlot(slot)
+	// slot-1, you could request BuilderConfig.ReplayerForSlot(slot-1).ReplayToSlot(slot)
 	ReplayToSlot(ctx context.Context, target types.Slot) (state.BeaconState, error)
 }
 
@@ -126,7 +126,7 @@ func (rs *stateReplayer) ReplayBlocks(ctx context.Context) (state.BeaconState, e
 // ReplayToSlot invokes ReplayBlocks under the hood,
 // but then also runs process_slots to advance the state past the root or slot used in the builder.
 // for example, if you wanted the state to be at the target slot, but only integrating blocks up to
-// slot-1, you could request Builder.ReplayerForSlot(slot-1).ReplayToSlot(slot)
+// slot-1, you could request BuilderConfig.ReplayerForSlot(slot-1).ReplayToSlot(slot)
 func (rs *stateReplayer) ReplayToSlot(ctx context.Context, replayTo types.Slot) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "stateGen.stateReplayer.ReplayToSlot")
 	defer span.End()

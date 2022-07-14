@@ -43,7 +43,7 @@ func main() {
 	clients := make(map[string]pb.BeaconChainClient)
 
 	flag.Var(&endpts, "endpoint", "Specify gRPC end points for beacon node")
-	compare := flag.Bool("compare", false, "Enable head comparisons between all end points")
+	compare := flag.Bool("compare", false, "Enabled head comparisons between all end points")
 	flag.Parse()
 
 	for _, endpt := range endpts {

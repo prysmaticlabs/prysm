@@ -1028,8 +1028,8 @@ func (v *validator) buildProposerSettingsRequests(ctx context.Context, pubkeys [
 		}
 		if v.ProposerSettings.DefaultConfig != nil {
 			feeRecipient = v.ProposerSettings.DefaultConfig.FeeRecipient
-			vr := v.ProposerSettings.DefaultConfig.ValidatorRegistration
-			if vr != nil && vr.Enable {
+			vr := v.ProposerSettings.DefaultConfig.BuilderConfig
+			if vr != nil && vr.Enabled {
 				gasLimit = vr.GasLimit
 				enableValidatorRegistration = true
 			}
@@ -1040,8 +1040,8 @@ func (v *validator) buildProposerSettingsRequests(ctx context.Context, pubkeys [
 			if ok && option != nil {
 				// override the default if a proposeconfig is set
 				feeRecipient = option.FeeRecipient
-				vr := option.ValidatorRegistration
-				if vr != nil && vr.Enable {
+				vr := option.BuilderConfig
+				if vr != nil && vr.Enabled {
 					gasLimit = vr.GasLimit
 					enableValidatorRegistration = true
 				} else {

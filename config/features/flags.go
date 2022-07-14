@@ -30,7 +30,7 @@ var (
 	}
 	devModeFlag = &cli.BoolFlag{
 		Name:  "dev",
-		Usage: "Enable experimental features still in development. These features may not be stable.",
+		Usage: "Enabled experimental features still in development. These features may not be stable.",
 	}
 	writeSSZStateTransitionsFlag = &cli.BoolFlag{
 		Name:  "interop-write-ssz-state-transitions",
@@ -47,7 +47,7 @@ var (
 	}
 	enablePeerScorer = &cli.BoolFlag{
 		Name:  "enable-peer-scorer",
-		Usage: "Enable experimental P2P peer scorer",
+		Usage: "Enabled experimental P2P peer scorer",
 	}
 	checkPtInfoCache = &cli.BoolFlag{
 		Name:  "use-check-point-cache",

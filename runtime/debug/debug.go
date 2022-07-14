@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-
 	// We are safe to expose this import as we are using a custom
 	// handler only enabled if the pprof flag is on.
 	_ "net/http/pprof" // #nosec G108
@@ -51,7 +50,7 @@ var (
 	// PProfFlag to enable pprof HTTP server.
 	PProfFlag = &cli.BoolFlag{
 		Name:  "pprof",
-		Usage: "Enable the pprof HTTP server",
+		Usage: "Enabled the pprof HTTP server",
 	}
 	// PProfPortFlag to specify HTTP server listening port.
 	PProfPortFlag = &cli.IntFlag{

@@ -110,7 +110,7 @@ var (
 	// GRPCGatewayPort enables a gRPC gateway to be exposed for the validator client.
 	GRPCGatewayPort = &cli.IntFlag{
 		Name:  "grpc-gateway-port",
-		Usage: "Enable gRPC gateway for JSON requests",
+		Usage: "Enabled gRPC gateway for JSON requests",
 		Value: 7500,
 	}
 	// GPRCGatewayCorsDomain serves preflight requests when serving gRPC JSON gateway.
@@ -340,7 +340,7 @@ var (
 	SuggestedFeeRecipientFlag = &cli.StringFlag{
 		Name: "suggested-fee-recipient",
 		Usage: "Sets ALL validators' mapping to a suggested an eth address to receive gas fees when proposing a block." +
-			" note that this is only a suggestion when integrating with a Builder API, which may choose to specify a different fee recipient as payment for the blocks it builds." +
+			" note that this is only a suggestion when integrating with a BuilderConfig API, which may choose to specify a different fee recipient as payment for the blocks it builds." +
 			" For additional setting overrides use the --" + ProposerSettingsFlag.Name + " or --" + ProposerSettingsURLFlag.Name + " Flags. ",
 		Value: params.BeaconConfig().EthBurnAddressHex,
 	}
@@ -348,7 +348,7 @@ var (
 	// EnableValidatorRegistrationFlag enables the periodic validator registration API calls that will update the custom builder with validator settings.
 	EnableValidatorRegistrationFlag = &cli.BoolFlag{
 		Name:  "enable-validator-registration",
-		Usage: "Enables validator registration APIs (MEV Builder APIs) for the validator client to update settings such as fee recipient and gas limit",
+		Usage: "Enables validator registration APIs (MEV BuilderConfig APIs) for the validator client to update settings such as fee recipient and gas limit",
 		Value: false,
 	}
 )
