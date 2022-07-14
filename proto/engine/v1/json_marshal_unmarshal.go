@@ -323,9 +323,12 @@ func (t *TransitionConfiguration) MarshalJSON() ([]byte, error) {
 		bHex := hexutil.Big(*ttdNum)
 		hexNum = &bHex
 	}
+	if len(t.TerminalBlockHash) != fieldparams.RootLength {
+		return nil, errors.Errorf("terminal block hash is of the wrong length: %d", len(t.TerminalBlockHash))
+	}
 	return json.Marshal(transitionConfigurationJSON{
 		TerminalTotalDifficulty: hexNum,
-		TerminalBlockHash:       common.Hash(bytesutil.ToBytes32(t.TerminalBlockHash)),
+		TerminalBlockHash:       common.Hash(*(*[32]byte)(t.TerminalBlockHash)),
 		TerminalBlockNumber:     hexutil.Uint64(num.Uint64()),
 	})
 }
