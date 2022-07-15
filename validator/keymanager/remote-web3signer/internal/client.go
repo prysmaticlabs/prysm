@@ -10,6 +10,7 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -74,14 +75,13 @@ func (client *ApiClient) Sign(ctx context.Context, pubKey string, request SignRe
 		return nil, fmt.Errorf("signing operation failed due to slashing protection rules,  Signing Request URL: %v, Status: %v", client.BaseURL.String()+requestPath, resp.StatusCode)
 	}
 	contentType := resp.Header.Get("Content-Type")
-	switch contentType {
-	case "application/json":
+	if strings.HasPrefix(contentType, "application/json") {
 		var sigResp SignatureResponse
 		if err := unmarshalResponse(resp.Body, &sigResp); err != nil {
 			return nil, err
 		}
 		return bls.SignatureFromBytes(sigResp.Signature)
-	default:
+	} else {
 		return unmarshalSignatureResponse(resp.Body)
 	}
 }
