@@ -30,7 +30,7 @@ func GetBlockSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot
 	return &BlockSignRequest{
 		Type:        "BLOCK",
 		ForkInfo:    fork,
-		SigningRoot: hexutil.Encode(request.SigningRoot),
+		SigningRoot: request.SigningRoot,
 		Block: &BeaconBlock{
 			Slot:          fmt.Sprint(beaconBlock.Block.Slot),
 			ProposerIndex: fmt.Sprint(beaconBlock.Block.ProposerIndex),
@@ -57,7 +57,7 @@ func GetAggregationSlotSignRequest(request *validatorpb.SignRequest, genesisVali
 	return &AggregationSlotSignRequest{
 		Type:        "AGGREGATION_SLOT",
 		ForkInfo:    fork,
-		SigningRoot: hexutil.Encode(request.SigningRoot),
+		SigningRoot: request.SigningRoot,
 		AggregationSlot: &AggregationSlot{
 			Slot: fmt.Sprint(aggregationSlot.Slot),
 		},
@@ -84,7 +84,7 @@ func GetAggregateAndProofSignRequest(request *validatorpb.SignRequest, genesisVa
 	return &AggregateAndProofSignRequest{
 		Type:              "AGGREGATE_AND_PROOF",
 		ForkInfo:          fork,
-		SigningRoot:       hexutil.Encode(request.SigningRoot),
+		SigningRoot:       request.SigningRoot,
 		AggregateAndProof: aggregateAndProof,
 	}, nil
 }
@@ -109,7 +109,7 @@ func GetAttestationSignRequest(request *validatorpb.SignRequest, genesisValidato
 	return &AttestationSignRequest{
 		Type:        "ATTESTATION",
 		ForkInfo:    fork,
-		SigningRoot: hexutil.Encode(request.SigningRoot),
+		SigningRoot: request.SigningRoot,
 		Attestation: attestationData,
 	}, nil
 }
@@ -134,7 +134,7 @@ func GetBlockV2AltairSignRequest(request *validatorpb.SignRequest, genesisValida
 	return &BlockV2AltairSignRequest{
 		Type:        "BLOCK_V2",
 		ForkInfo:    fork,
-		SigningRoot: hexutil.Encode(request.SigningRoot),
+		SigningRoot: request.SigningRoot,
 		BeaconBlock: &BeaconBlockAltairBlockV2{
 			Version: "ALTAIR",
 			Block:   beaconBlockAltair,
@@ -158,7 +158,7 @@ func GetRandaoRevealSignRequest(request *validatorpb.SignRequest, genesisValidat
 	return &RandaoRevealSignRequest{
 		Type:        "RANDAO_REVEAL",
 		ForkInfo:    fork,
-		SigningRoot: hexutil.Encode(request.SigningRoot),
+		SigningRoot: request.SigningRoot,
 		RandaoReveal: &RandaoReveal{
 			Epoch: fmt.Sprint(randaoReveal.Epoch),
 		},
@@ -181,7 +181,7 @@ func GetVoluntaryExitSignRequest(request *validatorpb.SignRequest, genesisValida
 	return &VoluntaryExitSignRequest{
 		Type:        "VOLUNTARY_EXIT",
 		ForkInfo:    fork,
-		SigningRoot: hexutil.Encode(request.SigningRoot),
+		SigningRoot: request.SigningRoot,
 		VoluntaryExit: &VoluntaryExit{
 			ValidatorIndex: fmt.Sprint(voluntaryExit.Exit.ValidatorIndex),
 			Epoch:          fmt.Sprint(voluntaryExit.Exit.Epoch),
@@ -208,7 +208,7 @@ func GetSyncCommitteeMessageSignRequest(request *validatorpb.SignRequest, genesi
 	return &SyncCommitteeMessageSignRequest{
 		Type:        "SYNC_COMMITTEE_MESSAGE",
 		ForkInfo:    fork,
-		SigningRoot: hexutil.Encode(request.SigningRoot),
+		SigningRoot: request.SigningRoot,
 		SyncCommitteeMessage: &SyncCommitteeMessage{
 			BeaconBlockRoot: hexutil.Encode(syncCommitteeMessage.SyncMessageBlockRoot),
 			Slot:            fmt.Sprint(request.SigningSlot),
@@ -239,7 +239,7 @@ func GetSyncCommitteeSelectionProofSignRequest(request *validatorpb.SignRequest,
 	return &SyncCommitteeSelectionProofSignRequest{
 		Type:                        "SYNC_COMMITTEE_SELECTION_PROOF",
 		ForkInfo:                    fork,
-		SigningRoot:                 hexutil.Encode(request.SigningRoot),
+		SigningRoot:                 request.SigningRoot,
 		SyncAggregatorSelectionData: aggregatorSelectionData,
 	}, nil
 }
@@ -267,7 +267,7 @@ func GetSyncCommitteeContributionAndProofSignRequest(request *validatorpb.SignRe
 	return &SyncCommitteeContributionAndProofSignRequest{
 		Type:                 "SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF",
 		ForkInfo:             fork,
-		SigningRoot:          hexutil.Encode(request.SigningRoot),
+		SigningRoot:          request.SigningRoot,
 		ContributionAndProof: contribution,
 	}, nil
 }
@@ -321,7 +321,7 @@ func GetBlockV2BellatrixSignRequest(request *validatorpb.SignRequest, genesisVal
 	return &BlockV2BellatrixSignRequest{
 		Type:        "BLOCK_V2",
 		ForkInfo:    fork,
-		SigningRoot: hexutil.Encode(request.SigningRoot),
+		SigningRoot: request.SigningRoot,
 		BeaconBlock: &BeaconBlockBellatrixBlockV2{
 			Version: "BELLATRIX",
 			BlockHeader: &BeaconBlockHeader{
