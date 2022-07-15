@@ -437,7 +437,7 @@ func MockAggregationSlotSignRequest() *v1.AggregationSlotSignRequest {
 	return &v1.AggregationSlotSignRequest{
 		Type:            "AGGREGATION_SLOT",
 		ForkInfo:        MockForkInfo(),
-		SigningRoot:     hexutil.Encode(make([]byte, fieldparams.RootLength)),
+		SigningRoot:     make([]byte, fieldparams.RootLength),
 		AggregationSlot: &v1.AggregationSlot{Slot: "0"},
 	}
 }
@@ -447,7 +447,7 @@ func MockAggregateAndProofSignRequest() *v1.AggregateAndProofSignRequest {
 	return &v1.AggregateAndProofSignRequest{
 		Type:        "AGGREGATE_AND_PROOF",
 		ForkInfo:    MockForkInfo(),
-		SigningRoot: hexutil.Encode(make([]byte, fieldparams.RootLength)),
+		SigningRoot: make([]byte, fieldparams.RootLength),
 		AggregateAndProof: &v1.AggregateAndProof{
 			AggregatorIndex: "0",
 			Aggregate:       MockAttestation(),
@@ -461,7 +461,7 @@ func MockAttestationSignRequest() *v1.AttestationSignRequest {
 	return &v1.AttestationSignRequest{
 		Type:        "ATTESTATION",
 		ForkInfo:    MockForkInfo(),
-		SigningRoot: hexutil.Encode(make([]byte, fieldparams.RootLength)),
+		SigningRoot: make([]byte, fieldparams.RootLength),
 		Attestation: MockAttestation().Data,
 	}
 }
@@ -471,7 +471,7 @@ func MockBlockSignRequest() *v1.BlockSignRequest {
 	return &v1.BlockSignRequest{
 		Type:        "BLOCK",
 		ForkInfo:    MockForkInfo(),
-		SigningRoot: hexutil.Encode(make([]byte, fieldparams.RootLength)),
+		SigningRoot: make([]byte, fieldparams.RootLength),
 		Block: &v1.BeaconBlock{
 			Slot:          "0",
 			ProposerIndex: "0",
@@ -487,7 +487,7 @@ func MockBlockV2AltairSignRequest() *v1.BlockV2AltairSignRequest {
 	return &v1.BlockV2AltairSignRequest{
 		Type:        "BLOCK_V2",
 		ForkInfo:    MockForkInfo(),
-		SigningRoot: hexutil.Encode(make([]byte, fieldparams.RootLength)),
+		SigningRoot: make([]byte, fieldparams.RootLength),
 		BeaconBlock: &v1.BeaconBlockAltairBlockV2{
 			Version: "ALTAIR",
 			Block:   MockBeaconBlockAltair(),
@@ -499,7 +499,7 @@ func MockBlockV2BellatrixSignRequest(bodyRoot string) *v1.BlockV2BellatrixSignRe
 	return &v1.BlockV2BellatrixSignRequest{
 		Type:        "BLOCK_V2",
 		ForkInfo:    MockForkInfo(),
-		SigningRoot: hexutil.Encode(make([]byte, fieldparams.RootLength)),
+		SigningRoot: make([]byte, fieldparams.RootLength),
 		BeaconBlock: &v1.BeaconBlockBellatrixBlockV2{
 			Version: "BELLATRIX",
 			BlockHeader: &v1.BeaconBlockHeader{
@@ -518,7 +518,7 @@ func MockRandaoRevealSignRequest() *v1.RandaoRevealSignRequest {
 	return &v1.RandaoRevealSignRequest{
 		Type:        "RANDAO_REVEAL",
 		ForkInfo:    MockForkInfo(),
-		SigningRoot: hexutil.Encode(make([]byte, fieldparams.RootLength)),
+		SigningRoot: make([]byte, fieldparams.RootLength),
 		RandaoReveal: &v1.RandaoReveal{
 			Epoch: "0",
 		},
@@ -530,7 +530,7 @@ func MockSyncCommitteeContributionAndProofSignRequest() *v1.SyncCommitteeContrib
 	return &v1.SyncCommitteeContributionAndProofSignRequest{
 		Type:                 "SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF",
 		ForkInfo:             MockForkInfo(),
-		SigningRoot:          hexutil.Encode(make([]byte, fieldparams.RootLength)),
+		SigningRoot:          make([]byte, fieldparams.RootLength),
 		ContributionAndProof: MockContributionAndProof(),
 	}
 }
@@ -540,7 +540,7 @@ func MockSyncCommitteeMessageSignRequest() *v1.SyncCommitteeMessageSignRequest {
 	return &v1.SyncCommitteeMessageSignRequest{
 		Type:        "SYNC_COMMITTEE_MESSAGE",
 		ForkInfo:    MockForkInfo(),
-		SigningRoot: hexutil.Encode(make([]byte, fieldparams.RootLength)),
+		SigningRoot: make([]byte, fieldparams.RootLength),
 		SyncCommitteeMessage: &v1.SyncCommitteeMessage{
 			BeaconBlockRoot: hexutil.Encode(make([]byte, fieldparams.RootLength)),
 			Slot:            "0",
@@ -553,7 +553,7 @@ func MockSyncCommitteeSelectionProofSignRequest() *v1.SyncCommitteeSelectionProo
 	return &v1.SyncCommitteeSelectionProofSignRequest{
 		Type:        "SYNC_COMMITTEE_SELECTION_PROOF",
 		ForkInfo:    MockForkInfo(),
-		SigningRoot: hexutil.Encode(make([]byte, fieldparams.RootLength)),
+		SigningRoot: make([]byte, fieldparams.RootLength),
 		SyncAggregatorSelectionData: &v1.SyncAggregatorSelectionData{
 			Slot:              "0",
 			SubcommitteeIndex: "0",
@@ -566,7 +566,7 @@ func MockVoluntaryExitSignRequest() *v1.VoluntaryExitSignRequest {
 	return &v1.VoluntaryExitSignRequest{
 		Type:        "VOLUNTARY_EXIT",
 		ForkInfo:    MockForkInfo(),
-		SigningRoot: hexutil.Encode(make([]byte, fieldparams.RootLength)),
+		SigningRoot: make([]byte, fieldparams.RootLength),
 		VoluntaryExit: &v1.VoluntaryExit{
 			Epoch:          "0",
 			ValidatorIndex: "0",

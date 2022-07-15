@@ -10,7 +10,7 @@ import (
 type AggregationSlotSignRequest struct {
 	Type            string           `json:"type" validate:"required"`
 	ForkInfo        *ForkInfo        `json:"fork_info" validate:"required"`
-	SigningRoot     string           `json:"signingRoot"`
+	SigningRoot     hexutil.Bytes    `json:"signingRoot"`
 	AggregationSlot *AggregationSlot `json:"aggregation_slot" validate:"required"`
 }
 
@@ -18,7 +18,7 @@ type AggregationSlotSignRequest struct {
 type AggregateAndProofSignRequest struct {
 	Type              string             `json:"type" validate:"required"`
 	ForkInfo          *ForkInfo          `json:"fork_info" validate:"required"`
-	SigningRoot       string             `json:"signingRoot"`
+	SigningRoot       hexutil.Bytes      `json:"signingRoot"`
 	AggregateAndProof *AggregateAndProof `json:"aggregate_and_proof" validate:"required"`
 }
 
@@ -26,23 +26,23 @@ type AggregateAndProofSignRequest struct {
 type AttestationSignRequest struct {
 	Type        string           `json:"type" validate:"required"`
 	ForkInfo    *ForkInfo        `json:"fork_info" validate:"required"`
-	SigningRoot string           `json:"signingRoot"`
+	SigningRoot hexutil.Bytes    `json:"signingRoot"`
 	Attestation *AttestationData `json:"attestation" validate:"required"`
 }
 
 // BlockSignRequest is a request object for web3signer sign api.
 type BlockSignRequest struct {
-	Type        string       `json:"type" validate:"required"`
-	ForkInfo    *ForkInfo    `json:"fork_info" validate:"required"`
-	SigningRoot string       `json:"signingRoot"`
-	Block       *BeaconBlock `json:"block" validate:"required"`
+	Type        string        `json:"type" validate:"required"`
+	ForkInfo    *ForkInfo     `json:"fork_info" validate:"required"`
+	SigningRoot hexutil.Bytes `json:"signingRoot"`
+	Block       *BeaconBlock  `json:"block" validate:"required"`
 }
 
 // BlockV2AltairSignRequest is a request object for web3signer sign api.
 type BlockV2AltairSignRequest struct {
 	Type        string                    `json:"type" validate:"required"`
 	ForkInfo    *ForkInfo                 `json:"fork_info" validate:"required"`
-	SigningRoot string                    `json:"signingRoot"`
+	SigningRoot hexutil.Bytes             `json:"signingRoot"`
 	BeaconBlock *BeaconBlockAltairBlockV2 `json:"beacon_block" validate:"required"`
 }
 
@@ -50,7 +50,7 @@ type BlockV2AltairSignRequest struct {
 type BlockV2BellatrixSignRequest struct {
 	Type        string                       `json:"type" validate:"required"`
 	ForkInfo    *ForkInfo                    `json:"fork_info" validate:"required"`
-	SigningRoot string                       `json:"signingRoot"`
+	SigningRoot hexutil.Bytes                `json:"signingRoot"`
 	BeaconBlock *BeaconBlockBellatrixBlockV2 `json:"beacon_block" validate:"required"`
 }
 
@@ -58,7 +58,7 @@ type BlockV2BellatrixSignRequest struct {
 type BlockV2SignRequest struct {
 	Type        string              `json:"type" validate:"required"`
 	ForkInfo    *ForkInfo           `json:"fork_info" validate:"required"`
-	SigningRoot string              `json:"signingRoot"`
+	SigningRoot hexutil.Bytes       `json:"signingRoot"`
 	BeaconBlock *BeaconBlockBlockV2 `json:"beacon_block" validate:"required"`
 }
 
@@ -69,7 +69,7 @@ type BlockV2SignRequest struct {
 type RandaoRevealSignRequest struct {
 	Type         string        `json:"type" validate:"required"`
 	ForkInfo     *ForkInfo     `json:"fork_info" validate:"required"`
-	SigningRoot  string        `json:"signingRoot"`
+	SigningRoot  hexutil.Bytes `json:"signingRoot"`
 	RandaoReveal *RandaoReveal `json:"randao_reveal" validate:"required"`
 }
 
@@ -77,7 +77,7 @@ type RandaoRevealSignRequest struct {
 type VoluntaryExitSignRequest struct {
 	Type          string         `json:"type" validate:"required"`
 	ForkInfo      *ForkInfo      `json:"fork_info"`
-	SigningRoot   string         `json:"signingRoot" validate:"required"`
+	SigningRoot   hexutil.Bytes  `json:"signingRoot" validate:"required"`
 	VoluntaryExit *VoluntaryExit `json:"voluntary_exit" validate:"required"`
 }
 
@@ -85,7 +85,7 @@ type VoluntaryExitSignRequest struct {
 type SyncCommitteeMessageSignRequest struct {
 	Type                 string                `json:"type" validate:"required"`
 	ForkInfo             *ForkInfo             `json:"fork_info" validate:"required"`
-	SigningRoot          string                `json:"signingRoot"`
+	SigningRoot          hexutil.Bytes         `json:"signingRoot"`
 	SyncCommitteeMessage *SyncCommitteeMessage `json:"sync_committee_message" validate:"required"`
 }
 
@@ -93,7 +93,7 @@ type SyncCommitteeMessageSignRequest struct {
 type SyncCommitteeSelectionProofSignRequest struct {
 	Type                        string                       `json:"type" validate:"required"`
 	ForkInfo                    *ForkInfo                    `json:"fork_info" validate:"required"`
-	SigningRoot                 string                       `json:"signingRoot"`
+	SigningRoot                 hexutil.Bytes                `json:"signingRoot"`
 	SyncAggregatorSelectionData *SyncAggregatorSelectionData `json:"sync_aggregator_selection_data" validate:"required"`
 }
 
@@ -101,7 +101,7 @@ type SyncCommitteeSelectionProofSignRequest struct {
 type SyncCommitteeContributionAndProofSignRequest struct {
 	Type                 string                `json:"type" validate:"required"`
 	ForkInfo             *ForkInfo             `json:"fork_info" validate:"required"`
-	SigningRoot          string                `json:"signingRoot"`
+	SigningRoot          hexutil.Bytes         `json:"signingRoot"`
 	ContributionAndProof *ContributionAndProof `json:"contribution_and_proof" validate:"required"`
 }
 
