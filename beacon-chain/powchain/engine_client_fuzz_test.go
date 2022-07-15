@@ -242,7 +242,12 @@ func isBogusTransactionHash(blk *pb.ExecutionBlock, jsonMap map[string]interface
 	}
 
 	for i, tx := range blk.Transactions {
-		if tx.Hash().String() != jsonMap["transactions"].([]interface{})[i].(map[string]interface{})["hash"].(string) {
+		jsonTx := jsonMap["transactions"].([]interface{})[i].(map[string]interface{})
+		// Fuzzer removed hash field.
+		if _, ok := jsonTx["hash"]; !ok {
+			return true
+		}
+		if tx.Hash().String() != jsonTx["hash"].(string) {
 			return true
 		}
 	}
