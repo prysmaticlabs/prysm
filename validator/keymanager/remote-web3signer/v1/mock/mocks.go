@@ -608,7 +608,7 @@ func MockForkInfo() *v1.ForkInfo {
 // MockAttestation is a mock implementation of the Attestation.
 func MockAttestation() *v1.Attestation {
 	return &v1.Attestation{
-		AggregationBits: hexutil.Encode(bitfield.Bitlist{0b1101}),
+		AggregationBits: bitfield.Bitlist{0b1101}.Bytes(),
 		Data: &v1.AttestationData{
 			Slot:            "0",
 			Index:           "0",
@@ -715,7 +715,7 @@ func MockBeaconBlockAltair() *v1.BeaconBlockAltair {
 			},
 			SyncAggregate: &v1.SyncAggregate{
 				SyncCommitteeSignature: make([]byte, fieldparams.BLSSignatureLength),
-				SyncCommitteeBits:      hexutil.Encode(MockSyncComitteeBits()),
+				SyncCommitteeBits:      MockSyncComitteeBits(),
 			},
 		},
 	}
@@ -793,7 +793,7 @@ func MockContributionAndProof() *v1.ContributionAndProof {
 			Slot:              "0",
 			BeaconBlockRoot:   make([]byte, fieldparams.RootLength),
 			SubcommitteeIndex: "0",
-			AggregationBits:   hexutil.Encode(MockAggregationBits()),
+			AggregationBits:   MockAggregationBits(),
 			Signature:         make([]byte, fieldparams.BLSSignatureLength),
 		},
 		SelectionProof: make([]byte, fieldparams.BLSSignatureLength),

@@ -143,7 +143,7 @@ type AggregateAndProof struct {
 
 // Attestation a sub property of AggregateAndProofSignRequest.
 type Attestation struct {
-	AggregationBits string           `json:"aggregation_bits"` /*hex bitlist*/
+	AggregationBits hexutil.Bytes    `json:"aggregation_bits"` /*hex bitlist*/
 	Data            *AttestationData `json:"data"`
 	Signature       hexutil.Bytes    `json:"signature"`
 }
@@ -291,7 +291,7 @@ type BeaconBlockBellatrixBlockV2 struct {
 
 // SyncAggregate is a sub property of BeaconBlockBodyAltair.
 type SyncAggregate struct {
-	SyncCommitteeBits      string        `json:"sync_committee_bits"`      /* SSZ hexadecimal string */
+	SyncCommitteeBits      hexutil.Bytes `json:"sync_committee_bits"`      /* SSZ hexadecimal string */
 	SyncCommitteeSignature hexutil.Bytes `json:"sync_committee_signature"` /* 96 byte hexadecimal string */
 }
 
@@ -331,7 +331,7 @@ type SyncCommitteeContribution struct {
 	Slot              string        `json:"slot"`               /* uint64 */
 	BeaconBlockRoot   hexutil.Bytes `json:"beacon_block_root"`  /* Hash32 */ // Prysm uses BlockRoot instead of BeaconBlockRoot
 	SubcommitteeIndex string        `json:"subcommittee_index"` /* uint64 */
-	AggregationBits   string        `json:"aggregation_bits"`   /* SSZ hexadecimal string */
+	AggregationBits   hexutil.Bytes `json:"aggregation_bits"`   /* SSZ hexadecimal string */
 	Signature         hexutil.Bytes `json:"signature"`          /* 96 byte hexadecimal string */
 }
 
