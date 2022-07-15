@@ -59,10 +59,10 @@ func TestClient_Sign_HappyPath_Jsontype(t *testing.T) {
 	}
 	jsonBytes, err := json.Marshal(sigResp)
 	require.NoError(t, err)
+	require.NoError(t, err)
 	// create a new reader with that JSON
-	header := http.Header{
-		"Content-Type": []string{"application/json"},
-	}
+	header := http.Header{}
+	header.Set("Content-Type", "application/json;  charset=UTF-8")
 	r := io.NopCloser(bytes.NewReader(jsonBytes))
 	mock := &mockTransport{mockResponse: &http.Response{
 		StatusCode: 200,
