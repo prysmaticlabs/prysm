@@ -4,8 +4,10 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	v1 "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/v1"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/v1/mock"
 )
@@ -376,7 +378,11 @@ func TestGetBlockV3BellatrixSignRequest(t *testing.T) {
 				request:               mock.GetMockSignRequest("BLOCK_V2_BELLATRIX"),
 				genesisValidatorsRoot: make([]byte, fieldparams.RootLength),
 			},
-			want:    mock.MockBlockV2BellatrixSignRequest("0xcd7c49966ebe72b1214e6d4733adf6bf06935c5fbc3b3ad08e84e3085428b82f"),
+			want: mock.MockBlockV2BellatrixSignRequest(func(t *testing.T) []byte {
+				bytevalue, err := hexutil.Decode("0xcd7c49966ebe72b1214e6d4733adf6bf06935c5fbc3b3ad08e84e3085428b82f")
+				require.NoError(t, err)
+				return bytevalue
+			}(t)),
 			wantErr: false,
 		},
 		{
@@ -385,7 +391,11 @@ func TestGetBlockV3BellatrixSignRequest(t *testing.T) {
 				request:               mock.GetMockSignRequest("BLOCK_V2_BLINDED_BELLATRIX"),
 				genesisValidatorsRoot: make([]byte, fieldparams.RootLength),
 			},
-			want:    mock.MockBlockV2BellatrixSignRequest("0xbabb9c2d10dd3f16dc50e31fd6eb270c9c5e95a6dcb5a1eb34389ef28194285b"),
+			want: mock.MockBlockV2BellatrixSignRequest(func(t *testing.T) []byte {
+				bytevalue, err := hexutil.Decode("0xbabb9c2d10dd3f16dc50e31fd6eb270c9c5e95a6dcb5a1eb34389ef28194285b")
+				require.NoError(t, err)
+				return bytevalue
+			}(t)),
 			wantErr: false,
 		},
 	}

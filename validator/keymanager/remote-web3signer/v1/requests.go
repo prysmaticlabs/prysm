@@ -3,7 +3,6 @@ package v1
 import (
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
@@ -34,8 +33,8 @@ func GetBlockSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot
 		Block: &BeaconBlock{
 			Slot:          fmt.Sprint(beaconBlock.Block.Slot),
 			ProposerIndex: fmt.Sprint(beaconBlock.Block.ProposerIndex),
-			ParentRoot:    hexutil.Encode(beaconBlock.Block.ParentRoot),
-			StateRoot:     hexutil.Encode(beaconBlock.Block.StateRoot),
+			ParentRoot:    beaconBlock.Block.ParentRoot,
+			StateRoot:     beaconBlock.Block.StateRoot,
 			Body:          beaconBlockBody,
 		},
 	}, nil
@@ -210,7 +209,7 @@ func GetSyncCommitteeMessageSignRequest(request *validatorpb.SignRequest, genesi
 		ForkInfo:    fork,
 		SigningRoot: request.SigningRoot,
 		SyncCommitteeMessage: &SyncCommitteeMessage{
-			BeaconBlockRoot: hexutil.Encode(syncCommitteeMessage.SyncMessageBlockRoot),
+			BeaconBlockRoot: syncCommitteeMessage.SyncMessageBlockRoot,
 			Slot:            fmt.Sprint(request.SigningSlot),
 		},
 	}, nil
@@ -327,9 +326,9 @@ func GetBlockV2BellatrixSignRequest(request *validatorpb.SignRequest, genesisVal
 			BlockHeader: &BeaconBlockHeader{
 				Slot:          fmt.Sprint(beaconBlockHeader.Slot),
 				ProposerIndex: fmt.Sprint(beaconBlockHeader.ProposerIndex),
-				ParentRoot:    hexutil.Encode(beaconBlockHeader.ParentRoot),
-				StateRoot:     hexutil.Encode(beaconBlockHeader.StateRoot),
-				BodyRoot:      hexutil.Encode(beaconBlockHeader.BodyRoot),
+				ParentRoot:    beaconBlockHeader.ParentRoot,
+				StateRoot:     beaconBlockHeader.StateRoot,
+				BodyRoot:      beaconBlockHeader.BodyRoot,
 			},
 		},
 	}, nil
