@@ -1461,6 +1461,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 		mockExpectedRequests []ExpectedValidatorRegistration
 		err                  string
 		logMessages          []string
+		doesntContainLogs    bool
 	}{
 		{
 			name: " Happy Path proposer config not nil",
@@ -1617,6 +1618,66 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 					GasLimit:     uint64(40000000),
 				},
 			},
+			logMessages: []string{"will not be included in MEV builder validator registration"},
+		},
+		{
+			name: " Happy Path default doesn't send any validator registrations",
+			validatorSetter: func(t *testing.T) *validator {
+
+				v := validator{
+					validatorClient:              client,
+					node:                         nodeClient,
+					db:                           db,
+					pubkeyToValidatorIndex:       make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
+					signedValidatorRegistrations: make(map[[fieldparams.BLSPubkeyLength]byte]*ethpb.SignedValidatorRegistrationV1),
+					useWeb:                       false,
+					interopKeysConfig: &local.InteropKeymanagerConfig{
+						NumValidatorKeys: 2,
+						Offset:           1,
+					},
+				}
+				err := v.WaitForKeymanagerInitialization(ctx)
+				require.NoError(t, err)
+				config := make(map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption)
+				km, err := v.Keymanager()
+				require.NoError(t, err)
+				keys, err := km.FetchValidatingPublicKeys(ctx)
+				require.NoError(t, err)
+				client.EXPECT().ValidatorIndex(
+					ctx, // ctx
+					&ethpb.ValidatorIndexRequest{PublicKey: keys[0][:]},
+				).Return(&ethpb.ValidatorIndexResponse{
+					Index: 1,
+				}, nil)
+				client.EXPECT().ValidatorIndex(
+					ctx, // ctx
+					&ethpb.ValidatorIndexRequest{PublicKey: keys[1][:]},
+				).Return(&ethpb.ValidatorIndexResponse{
+					Index: 2,
+				}, nil)
+				client.EXPECT().PrepareBeaconProposer(gomock.Any(), &ethpb.PrepareBeaconProposerRequest{
+					Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
+						{FeeRecipient: common.HexToAddress("0x055Fb65722E7b2455043BFEBf6177F1D2e9738D9").Bytes(), ValidatorIndex: 1},
+						{FeeRecipient: common.HexToAddress(defaultFeeHex).Bytes(), ValidatorIndex: 2},
+					},
+				}).Return(nil, nil)
+				config[keys[0]] = &validatorserviceconfig.ProposerOption{
+					FeeRecipient: common.HexToAddress("0x055Fb65722E7b2455043BFEBf6177F1D2e9738D9"),
+				}
+				v.ProposerSettings = &validatorserviceconfig.ProposerSettings{
+					ProposeConfig: config,
+					DefaultConfig: &validatorserviceconfig.ProposerOption{
+						FeeRecipient: common.HexToAddress(defaultFeeHex),
+					},
+				}
+				return &v
+			},
+			feeRecipientMap: map[types.ValidatorIndex]string{
+				1: "0x055Fb65722E7b2455043BFEBf6177F1D2e9738D9",
+				2: defaultFeeHex,
+			},
+			logMessages:       []string{"will not be included in MEV builder validator registration"},
+			doesntContainLogs: true,
 		},
 		{
 			name: " Happy Path",
@@ -1992,7 +2053,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 			},
 			logMessages: []string{
 				"prepare beacon proposer and update fee recipient until a validator index is assigned",
-				"not be included in validator registration until a validator index is assigned",
+				"will not be included in MEV builder validator registration until a validator index is assigned",
 			},
 		},
 	}
@@ -2029,7 +2090,11 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 			}
 			if len(tt.logMessages) > 0 {
 				for _, message := range tt.logMessages {
-					assert.LogsContain(t, hook, message)
+					if tt.doesntContainLogs {
+						assert.LogsDoNotContain(t, hook, message)
+					} else {
+						assert.LogsContain(t, hook, message)
+					}
 				}
 
 			}

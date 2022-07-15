@@ -525,7 +525,7 @@ func TestProposerSettings(t *testing.T) {
 				require.NoError(t, set.Set(flags.SuggestedFeeRecipientFlag.Name, tt.args.proposerSettingsFlagValues.defaultfee))
 			}
 			if tt.validatorRegistrationEnabled {
-				set.Bool(flags.EnableValidatorRegistrationFlag.Name, true, "")
+				set.Bool(flags.EnableBuilderFlag.Name, true, "")
 			}
 			cliCtx := cli.NewContext(&app, set, nil)
 			got, err := proposerSettings(cliCtx)

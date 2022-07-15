@@ -498,7 +498,7 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 		!cliCtx.IsSet(flags.ProposerSettingsURLFlag.Name) {
 		suggestedFee := cliCtx.String(flags.SuggestedFeeRecipientFlag.Name)
 		var vr *validatorServiceConfig.BuilderConfig
-		if cliCtx.Bool(flags.EnableValidatorRegistrationFlag.Name) {
+		if cliCtx.Bool(flags.EnableBuilderFlag.Name) {
 			vr = &validatorServiceConfig.BuilderConfig{
 				Enabled:  true,
 				GasLimit: reviewGasLimit(params.BeaconConfig().DefaultBuilderGasLimit),
