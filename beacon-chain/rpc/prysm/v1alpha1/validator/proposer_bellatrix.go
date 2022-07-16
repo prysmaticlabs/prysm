@@ -26,7 +26,7 @@ import (
 // builderGetPayloadMissCount tracks the number of misses when validator tries to get a payload from builder
 var builderGetPayloadMissCount = promauto.NewCounter(prometheus.CounterOpts{
 	Name: "builder_get_payload_miss_count",
-	Help: "The number of get payload misses for validator requests builder",
+	Help: "The number of get payload misses for validator requests to builder",
 })
 
 // blockBuilderTimeout is the maximum amount of time allowed for a block builder to respond to a
