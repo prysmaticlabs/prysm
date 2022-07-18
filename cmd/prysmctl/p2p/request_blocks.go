@@ -118,6 +118,9 @@ func cliActionRequestBlocks(_ *cli.Context) error {
 
 	// Submit requests.
 	for _, pr := range c.host.Peerstore().Peers() {
+		if pr.String() == c.host.ID().String() {
+			continue
+		}
 		req := &pb.BeaconBlocksByRangeRequest{
 			StartSlot: startSlot,
 			Count:     requestBlocksFlags.Count,
@@ -143,10 +146,6 @@ func cliActionRequestBlocks(_ *cli.Context) error {
 			nil, /* no extra block processing */
 		)
 		if err != nil {
-			if strings.Contains(err.Error(), "dial to self attempted") {
-				log.Info("Ignoring sending a request to self")
-				continue
-			}
 			return err
 		}
 		end := time.Since(start)
