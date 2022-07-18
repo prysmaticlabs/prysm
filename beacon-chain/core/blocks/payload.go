@@ -242,34 +242,12 @@ func ValidatePayloadHeaderWhenMergeCompletes(st state.BeaconState, header interf
 	return nil
 }
 
-// ValidatePayloadHeader validates the payload header.
-func ValidatePayloadHeader(st state.BeaconState, header interfaces.ExecutionData) error {
-	// Validate header's random mix matches with state in current epoch
-	random, err := helpers.RandaoMix(st, time.CurrentEpoch(st))
-	if err != nil {
-		return err
-	}
-	if !bytes.Equal(header.PrevRandao(), random) {
-		return ErrInvalidPayloadPrevRandao
-	}
-
-	// Validate header's timestamp matches with state in current slot.
-	t, err := slots.ToTime(st.GenesisTime(), st.Slot())
-	if err != nil {
-		return err
-	}
-	if header.Timestamp() != uint64(t.Unix()) {
-		return ErrInvalidPayloadTimeStamp
-	}
-	return nil
-}
-
 // ProcessPayloadHeader processes the payload header.
 func ProcessPayloadHeader(st state.BeaconState, header interfaces.ExecutionData) (state.BeaconState, error) {
 	if err := ValidatePayloadHeaderWhenMergeCompletes(st, header); err != nil {
 		return nil, err
 	}
-	if err := ValidatePayloadHeader(st, header); err != nil {
+	if err := ValidatePayload(st, header); err != nil {
 		return nil, err
 	}
 	if err := st.SetLatestExecutionPayloadHeader(header); err != nil {

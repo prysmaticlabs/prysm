@@ -564,52 +564,6 @@ func Test_ProcessPayloadHeader(t *testing.T) {
 	}
 }
 
-func Test_ValidatePayloadHeader(t *testing.T) {
-	st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
-	random, err := helpers.RandaoMix(st, time.CurrentEpoch(st))
-	require.NoError(t, err)
-	ts, err := slots.ToTime(st.GenesisTime(), st.Slot())
-	require.NoError(t, err)
-	tests := []struct {
-		name   string
-		header *enginev1.ExecutionPayloadHeader
-		err    error
-	}{
-		{
-			name: "process passes",
-			header: func() *enginev1.ExecutionPayloadHeader {
-				h := emptyPayloadHeader()
-				h.PrevRandao = random
-				h.Timestamp = uint64(ts.Unix())
-				return h
-			}(), err: nil,
-		},
-		{
-			name:   "incorrect prev randao",
-			header: emptyPayloadHeader(),
-			err:    blocks.ErrInvalidPayloadPrevRandao,
-		},
-		{
-			name: "incorrect timestamp",
-			header: func() *enginev1.ExecutionPayloadHeader {
-				h := emptyPayloadHeader()
-				h.PrevRandao = random
-				h.Timestamp = 1
-				return h
-			}(),
-			err: blocks.ErrInvalidPayloadTimeStamp,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			wrappedHeader, err := wrapper.WrappedExecutionPayloadHeader(tt.header)
-			require.NoError(t, err)
-			err = blocks.ValidatePayloadHeader(st, wrappedHeader)
-			require.Equal(t, tt.err, err)
-		})
-	}
-}
-
 func Test_ValidatePayloadHeaderWhenMergeCompletes(t *testing.T) {
 	st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
 	emptySt := st.Copy()
