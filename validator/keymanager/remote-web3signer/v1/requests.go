@@ -334,3 +334,25 @@ func GetBlockV2BellatrixSignRequest(request *validatorpb.SignRequest, genesisVal
 		},
 	}, nil
 }
+
+// GetValidatorRegistrationSignRequest maps the request for signing type VALIDATOR_REGISTRATION.
+func GetValidatorRegistrationSignRequest(request *validatorpb.SignRequest) (*ValidatorRegistrationSignRequest, error) {
+	if request == nil {
+		return nil, errors.New("nil sign request provided")
+	}
+	validatorRegistrationRequest, ok := request.Object.(*validatorpb.SignRequest_Registration)
+	if !ok {
+		return nil, errors.New("failed to cast request object to validator registration")
+	}
+	registration := validatorRegistrationRequest.Registration
+	return &ValidatorRegistrationSignRequest{
+		Type:        "VALIDATOR_REGISTRATION",
+		SigningRoot: request.SigningRoot,
+		ValidatorRegistration: &ValidatorRegistration{
+			FeeRecipient: registration.FeeRecipient,
+			GasLimit:     fmt.Sprint(registration.GasLimit),
+			Timestamp:    fmt.Sprint(registration.Timestamp),
+			Pubkey:       registration.Pubkey,
+		},
+	}, nil
+}
