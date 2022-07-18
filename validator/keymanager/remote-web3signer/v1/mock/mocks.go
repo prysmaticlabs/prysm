@@ -608,7 +608,7 @@ func MockForkInfo() *v1.ForkInfo {
 // MockAttestation is a mock implementation of the Attestation.
 func MockAttestation() *v1.Attestation {
 	return &v1.Attestation{
-		AggregationBits: bitfield.Bitlist{0b1101}.Bytes(),
+		AggregationBits: []byte(bitfield.Bitlist{0b1101}),
 		Data: &v1.AttestationData{
 			Slot:            "0",
 			Index:           "0",
