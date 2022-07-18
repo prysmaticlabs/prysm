@@ -62,4 +62,8 @@ var (
 		Name: "remote_web3signer_sync_committee_contribution_and_proof_sign_requests_total",
 		Help: "Total number of sync committee contribution and proof sign requests",
 	})
+	validatorRegistrationSignRequestsTotal = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "remote_web3signer_validator_registration_sign_requests_total",
+		Help: "Total number of validator registration sign requests",
+	})
 )
