@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"path/filepath"
 	"testing"
+	"time"
 
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	"github.com/prysmaticlabs/prysm/cmd"
+	"github.com/prysmaticlabs/prysm/runtime"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/urfave/cli/v2"
@@ -40,6 +42,25 @@ func TestNodeClose_OK(t *testing.T) {
 	node.Close()
 
 	require.LogsContain(t, hook, "Stopping beacon node")
+}
+
+func TestNodeStart_Ok(t *testing.T) {
+	hook := logTest.NewGlobal()
+	app := cli.App{}
+	tmp := fmt.Sprintf("%s/datadirtest2", t.TempDir())
+	set := flag.NewFlagSet("test", 0)
+	set.String("datadir", tmp, "node data directory")
+	ctx := cli.NewContext(&app, set, nil)
+	node, err := New(ctx)
+	require.NoError(t, err)
+	node.services = &runtime.ServiceRegistry{}
+	go func() {
+		node.Start()
+	}()
+	time.Sleep(5 * time.Second)
+	node.Close()
+	require.LogsContain(t, hook, "Starting beacon node")
+
 }
 
 // TestClearDB tests clearing the database
