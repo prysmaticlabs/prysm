@@ -1071,13 +1071,13 @@ func (v *validator) buildProposerSettingsRequests(ctx context.Context, pubkeys [
 
 	if len(proposerFeeRecipientRequests) != len(pubkeys) {
 		log.WithFields(logrus.Fields{
-			"activePubkeys": len(pubkeys) - len(proposerFeeRecipientRequests),
+			"totalNonActivePubkeys": len(pubkeys) - len(proposerFeeRecipientRequests),
 		}).Warnln("will not prepare beacon proposer and update fee recipient until a validator index is assigned")
 	}
 
 	if len(signedRegisterValidatorRequests) != len(pubkeys) && anyValidatorRegistrationEnabled {
 		log.WithFields(logrus.Fields{
-			"activePubkeys": len(pubkeys) - len(signedRegisterValidatorRequests),
+			"totalNonActivePubkeys": len(pubkeys) - len(signedRegisterValidatorRequests),
 		}).Warnln("will not be included in MEV builder validator registration until a validator index is assigned")
 	}
 
