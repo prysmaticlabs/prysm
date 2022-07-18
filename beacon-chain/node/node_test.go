@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/builder"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
@@ -51,13 +53,15 @@ func TestNodeStart_Ok(t *testing.T) {
 	set := flag.NewFlagSet("test", 0)
 	set.String("datadir", tmp, "node data directory")
 	ctx := cli.NewContext(&app, set, nil)
-	node, err := New(ctx)
+	node, err := New(ctx, WithBlockchainFlagOptions([]blockchain.Option{}),
+		WithBuilderFlagOptions([]builder.Option{}),
+		WithPowchainFlagOptions([]powchain.Option{}))
 	require.NoError(t, err)
 	node.services = &runtime.ServiceRegistry{}
 	go func() {
 		node.Start()
 	}()
-	time.Sleep(5 * time.Second)
+	time.Sleep(3 * time.Second)
 	node.Close()
 	require.LogsContain(t, hook, "Starting beacon node")
 
