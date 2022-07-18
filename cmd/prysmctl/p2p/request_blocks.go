@@ -130,7 +130,7 @@ func cliActionRequestBlocks(_ *cli.Context) error {
 			"peer":      pr.String(),
 		}
 		if headSlot != nil {
-			fields["headSlot"] = headSlot
+			fields["headSlot"] = *headSlot
 		}
 		log.WithFields(fields).Info("Sending blocks by range p2p request to peer")
 		start := time.Now()

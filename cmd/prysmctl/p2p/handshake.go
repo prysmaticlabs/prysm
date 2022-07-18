@@ -8,6 +8,8 @@ import (
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/network/forks"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -16,6 +18,7 @@ var responseCodeSuccess = byte(0x00)
 func (c *client) registerHandshakeHandlers() {
 	c.registerRPCHandler(p2p.RPCPingTopicV1, c.pingHandler)
 	c.registerRPCHandler(p2p.RPCStatusTopicV1, c.statusRPCHandler)
+	c.registerRPCHandler(p2p.RPCGoodByeTopicV1, c.goodbyeHandler)
 }
 
 // pingHandler reads the incoming ping rpc message from the peer.
@@ -29,6 +32,13 @@ func (c *client) pingHandler(_ context.Context, _ interface{}, stream libp2pcore
 		return err
 	}
 	return nil
+}
+
+func (c *client) goodbyeHandler(_ context.Context, msg interface{}, stream libp2pcore.Stream) error {
+	// closes all streams with the peer
+	//return c.host.Disconnect(stream.Conn().RemotePeer())
+	return nil
+
 }
 
 // statusRPCHandler reads the incoming Status RPC from the peer and responds with our version of a status message.
@@ -47,6 +57,16 @@ func (c *client) statusRPCHandler(ctx context.Context, _ interface{}, stream lib
 	if err != nil {
 		return err
 	}
+	kindOfFork, err := forks.Fork(slots.ToEpoch(chainHead.HeadSlot))
+	if err != nil {
+		return err
+	}
+	log.WithFields(logrus.Fields{
+		"genesisTime":  resp.GenesisTime.AsTime(),
+		"forkDigest":   digest,
+		"currentFork":  kindOfFork.CurrentVersion,
+		"previousFork": kindOfFork.PreviousVersion,
+	}).Info("Responding to status RPC handler")
 	status := &pb.Status{
 		ForkDigest:     digest[:],
 		FinalizedRoot:  chainHead.FinalizedBlockRoot,
