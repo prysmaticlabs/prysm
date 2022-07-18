@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/interop"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
@@ -20,6 +22,12 @@ import (
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/sirupsen/logrus"
 )
+
+// builderGetPayloadMissCount tracks the number of misses when validator tries to get a payload from builder
+var builderGetPayloadMissCount = promauto.NewCounter(prometheus.CounterOpts{
+	Name: "builder_get_payload_miss_count",
+	Help: "The number of get payload misses for validator requests to builder",
+})
 
 // blockBuilderTimeout is the maximum amount of time allowed for a block builder to respond to a
 // block request. This value is known as `BUILDER_PROPOSAL_DELAY_TOLERANCE` in builder spec.
@@ -38,6 +46,7 @@ func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockR
 			// In the event of an error, the node should fall back to default execution engine for building block.
 			log.WithError(err).Error("Failed to build a block from external builder, falling " +
 				"back to local execution client")
+			builderGetPayloadMissCount.Inc()
 		} else if builderReady {
 			return b, nil
 		}
@@ -108,6 +117,11 @@ func (vs *Server) getPayloadHeader(ctx context.Context, slot types.Slot, idx typ
 	if err != nil {
 		return nil, err
 	}
+	log.WithFields(logrus.Fields{
+		"bid":           bytesutil.BytesToUint64BigEndian(bid.Message.Value),
+		"builderPubKey": fmt.Sprintf("%#x", bid.Message.Pubkey),
+		"blockHash":     fmt.Sprintf("%#x", bid.Message.Header.BlockHash),
+	}).Info("Received header with bid")
 	return bid.Message.Header, nil
 }
 
