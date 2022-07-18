@@ -111,8 +111,8 @@ func InitWithReset(c *Flags) func() {
 
 // configureTestnet sets the config according to specified testnet flag
 func configureTestnet(ctx *cli.Context) error {
-	if ctx.Bool(PraterTestnet.Name) {
-		log.Warn("Running on the Prater Testnet")
+	if ctx.Bool(PraterTestnet.Name) || ctx.Bool(GoerliTestnet.Name) {
+		log.Warn("Running on the Prater / Goerli Testnet")
 		if err := params.SetActive(params.PraterConfig().Copy()); err != nil {
 			return err
 		}
