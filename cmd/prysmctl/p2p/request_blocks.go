@@ -10,6 +10,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
+	"github.com/prysmaticlabs/prysm/cmd"
+	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -33,6 +35,7 @@ var requestBlocksCmd = &cli.Command{
 	Usage:  "Request a range of blocks from a beacon node via a p2p connection",
 	Action: cliActionRequestBlocks,
 	Flags: []cli.Flag{
+		cmd.ChainConfigFileFlag,
 		&cli.StringFlag{
 			Name:        "peer-multiaddrs",
 			Usage:       "comma-separated, peer multiaddr(s) to connect to for p2p requests",
@@ -72,7 +75,14 @@ var requestBlocksCmd = &cli.Command{
 	},
 }
 
-func cliActionRequestBlocks(_ *cli.Context) error {
+func cliActionRequestBlocks(cliCtx *cli.Context) error {
+	if cliCtx.IsSet(cmd.ChainConfigFileFlag.Name) {
+		chainConfigFileName := cliCtx.String(cmd.ChainConfigFileFlag.Name)
+		if err := params.LoadChainConfigFile(chainConfigFileName, nil); err != nil {
+			return err
+		}
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 	c, err := newClient(requestBlocksFlags.APIEndpoint, requestBlocksFlags.ClientPort)
