@@ -26,9 +26,9 @@ func TestPruneExpired_Ticker(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	au := util.AttestationUtil{}
-	ad1 := au.HydrateAttestationData(&ethpb.AttestationData{})
-	ad2 := au.HydrateAttestationData(&ethpb.AttestationData{Slot: 1})
+	ad1 := util.HydrateAttestationData(&ethpb.AttestationData{})
+
+	ad2 := util.HydrateAttestationData(&ethpb.AttestationData{Slot: 1})
 
 	atts := []*ethpb.Attestation{
 		{Data: ad1, AggregationBits: bitfield.Bitlist{0b1000, 0b1}, Signature: make([]byte, fieldparams.BLSSignatureLength)},
@@ -85,9 +85,9 @@ func TestPruneExpired_PruneExpiredAtts(t *testing.T) {
 	s, err := NewService(context.Background(), &Config{Pool: NewPool()})
 	require.NoError(t, err)
 
-	au := util.AttestationUtil{}
-	ad1 := au.HydrateAttestationData(&ethpb.AttestationData{})
-	ad2 := au.HydrateAttestationData(&ethpb.AttestationData{})
+	ad1 := util.HydrateAttestationData(&ethpb.AttestationData{})
+
+	ad2 := util.HydrateAttestationData(&ethpb.AttestationData{})
 
 	att1 := &ethpb.Attestation{Data: ad1, AggregationBits: bitfield.Bitlist{0b1101}}
 	att2 := &ethpb.Attestation{Data: ad1, AggregationBits: bitfield.Bitlist{0b1111}}
