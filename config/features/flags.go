@@ -12,11 +12,6 @@ var (
 		Name:  "prater",
 		Usage: "Run Prysm configured for the Prater test network",
 	}
-	// GoerliTestnet flag for the multiclient Ethereum consensus testnet.
-	GoerliTestnet = &cli.BoolFlag{
-		Name:  "goerli",
-		Usage: "Run Prysm configured for the Goerli test network",
-	}
 	// RopstenTestnet flag for the multiclient Ethereum consensus testnet.
 	RopstenTestnet = &cli.BoolFlag{
 		Name:  "ropsten",
@@ -146,7 +141,6 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	enableExternalSlasherProtectionFlag,
 	disableAttestingHistoryDBCache,
 	PraterTestnet,
-	GoerliTestnet,
 	RopstenTestnet,
 	SepoliaTestnet,
 	Mainnet,
@@ -167,7 +161,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	writeSSZStateTransitionsFlag,
 	disableGRPCConnectionLogging,
 	PraterTestnet,
-	GoerliTestnet,
 	RopstenTestnet,
 	SepoliaTestnet,
 	Mainnet,
