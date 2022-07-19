@@ -17,15 +17,16 @@ type ProposerSettingsPayload struct {
 // ProposerOptionPayload is the struct representation of the JSON config file set in the validator through the CLI.
 // FeeRecipient is set to an eth address in hex string format with 0x prefix.
 type ProposerOptionPayload struct {
-	FeeRecipient          string                 `json:"fee_recipient" yaml:"fee_recipient"`
-	ValidatorRegistration *ValidatorRegistration `json:"validator_registration" yaml:"validator_registration"`
+	FeeRecipient  string         `json:"fee_recipient" yaml:"fee_recipient"`
+	BuilderConfig *BuilderConfig `json:"builder" yaml:"builder"`
 }
 
-// ValidatorRegistration is the struct representation of the JSON config file set in the validator through the CLI.
+// BuilderConfig is the struct representation of the JSON config file set in the validator through the CLI.
 // GasLimit is a number set to help the network decide on the maximum gas in each block.
-type ValidatorRegistration struct {
-	Enable   bool   `json:"enable" yaml:"enable"`
-	GasLimit uint64 `json:"gas_limit,omitempty" yaml:"gas_limit,omitempty"`
+type BuilderConfig struct {
+	Enabled  bool     `json:"enabled" yaml:"enabled"`
+	GasLimit uint64   `json:"gas_limit,omitempty" yaml:"gas_limit,omitempty"`
+	Relays   []string `json:"relays" yaml:"relays"`
 }
 
 // ProposerSettings is a Prysm internal representation of the fee recipient config on the validator client.
@@ -37,14 +38,14 @@ type ProposerSettings struct {
 
 // ProposerOption is a Prysm internal representation of the ProposerOptionPayload on the validator client in bytes format instead of hex.
 type ProposerOption struct {
-	FeeRecipient          common.Address
-	ValidatorRegistration *ValidatorRegistration
+	FeeRecipient  common.Address
+	BuilderConfig *BuilderConfig
 }
 
 // DefaultProposerOption returns a Proposer Option with defaults filled
 func DefaultProposerOption() ProposerOption {
 	return ProposerOption{
-		FeeRecipient:          params.BeaconConfig().DefaultFeeRecipient,
-		ValidatorRegistration: nil,
+		FeeRecipient:  params.BeaconConfig().DefaultFeeRecipient,
+		BuilderConfig: nil,
 	}
 }
