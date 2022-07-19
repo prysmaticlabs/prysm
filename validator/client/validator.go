@@ -51,8 +51,8 @@ import (
 // keyFetchPeriod is the frequency that we try to refetch validating keys
 // in case no keys were fetched previously.
 var (
-	keyRefetchPeriod            = 30 * time.Second
-	MevValidatorRegistrationErr = "MEV validator registration unsuccessful"
+	keyRefetchPeriod                = 30 * time.Second
+	ErrBuilderValidatorRegistration = errors.New("Builder API validator registration unsuccessful")
 )
 
 var (
@@ -989,7 +989,7 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 	log.Infoln("Prepared beacon proposer with fee recipient to validator index mapping")
 
 	if err := SubmitValidatorRegistration(ctx, v.validatorClient, signedRegisterValidatorRequests); err != nil {
-		return errors.Wrap(err, MevValidatorRegistrationErr)
+		return errors.Wrap(ErrBuilderValidatorRegistration, err.Error())
 	}
 
 	return nil
