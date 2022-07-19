@@ -162,7 +162,7 @@ func TestProcessPendingAtts_NoBroadcastWithBadSignature(t *testing.T) {
 		Aggregate: &ethpb.Attestation{
 			Signature:       priv.Sign([]byte("foo")).Marshal(),
 			AggregationBits: bitfield.Bitlist{0x02},
-			Data:            util.NewAttestationUtil().HydrateAttestationData(&ethpb.AttestationData{}),
+			Data:            util.HydrateAttestationData(&ethpb.AttestationData{}),
 		},
 		SelectionProof: make([]byte, fieldparams.BLSSignatureLength),
 	}
