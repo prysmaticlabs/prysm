@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -56,7 +57,11 @@ func run(ctx context.Context, v iface.Validator) {
 	sub := km.SubscribeAccountChanges(accountsChangedChan)
 	// Set properties on the beacon node like the fee recipient for validators that are being used & active.
 	if err := v.PushProposerSettings(ctx, km); err != nil {
-		log.Fatalf("Failed to update proposer settings: %v", err) // allow fatal. skipcq
+		if strings.Contains(err.Error(), MevValidatorRegistrationErr) {
+			log.Warnf("Push proposer settings error, %v", err)
+		} else {
+			log.Fatalf("Failed to update proposer settings: %v", err) // allow fatal. skipcq
+		}
 	}
 	for {
 		_, cancel := context.WithCancel(ctx)

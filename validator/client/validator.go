@@ -51,7 +51,8 @@ import (
 // keyFetchPeriod is the frequency that we try to refetch validating keys
 // in case no keys were fetched previously.
 var (
-	keyRefetchPeriod = 30 * time.Second
+	keyRefetchPeriod            = 30 * time.Second
+	MevValidatorRegistrationErr = "MEV validator registration unsuccessful"
 )
 
 var (
@@ -997,7 +998,7 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 		}).Warnln("will not be included in validator registration until a validator index is assigned")
 	}
 	if err := SubmitValidatorRegistration(ctx, v.validatorClient, signedRegisterValidatorRequests); err != nil {
-		return err
+		return errors.Wrap(err, MevValidatorRegistrationErr)
 	}
 
 	return nil

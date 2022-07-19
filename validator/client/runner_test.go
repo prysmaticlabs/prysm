@@ -263,3 +263,22 @@ func TestUpdateProposerSettingsAt_EpochStart(t *testing.T) {
 	run(ctx, v)
 	assert.LogsContain(t, hook, "updated proposer settings")
 }
+
+func TestUpdateProposerSettings_ContinuesAfterValidatorRegistrationFails(t *testing.T) {
+	v := &testutil.FakeValidator{
+		ProposerSettingsErr: errors.New(MevValidatorRegistrationErr),
+		Km:                  &mockKeymanager{accountsChangedFeed: &event.Feed{}},
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	hook := logTest.NewGlobal()
+	slot := params.BeaconConfig().SlotsPerEpoch
+	ticker := make(chan types.Slot)
+	v.NextSlotRet = ticker
+	go func() {
+		ticker <- slot
+
+		cancel()
+	}()
+	run(ctx, v)
+	assert.LogsContain(t, hook, MevValidatorRegistrationErr)
+}
