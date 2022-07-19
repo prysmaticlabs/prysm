@@ -50,6 +50,7 @@ func TestServer_AuthenticateUsingExistingToken(t *testing.T) {
 	require.Equal(t, true, len(srv.jwtSecret) > 0)
 	_, err = srv.JWTInterceptor()(ctx, "xyz", unaryInfo, unaryHandler)
 	require.NoError(t, err)
+
 }
 
 func TestServer_RefreshJWTSecretOnFileChange(t *testing.T) {
@@ -79,6 +80,8 @@ func TestServer_RefreshJWTSecretOnFileChange(t *testing.T) {
 	newSecret := srv.jwtSecret
 	require.Equal(t, true, len(newSecret) > 0)
 	require.Equal(t, true, !bytes.Equal(currentSecret, newSecret))
+	err = os.Remove(authTokenFileName)
+	require.NoError(t, err)
 }
 
 func Test_initializeAuthToken(t *testing.T) {
