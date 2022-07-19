@@ -112,7 +112,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.ProposerSettingsFlag,
 			flags.ProposerSettingsURLFlag,
 			flags.SuggestedFeeRecipientFlag,
-			flags.EnableValidatorRegistrationFlag,
+			flags.EnableBuilderFlag,
 		},
 	},
 	{
