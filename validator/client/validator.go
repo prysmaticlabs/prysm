@@ -1079,7 +1079,7 @@ func (v *validator) buildProposerSettingsRequests(ctx context.Context, pubkeys [
 	if len(signedRegisterValidatorRequests) != len(pubkeys) && anyValidatorRegistrationEnabled {
 		log.WithFields(logrus.Fields{
 			"totalNonActivePubkeys": len(pubkeys) - len(signedRegisterValidatorRequests),
-		}).Warnln("will not be included in MEV builder validator registration until a validator index is assigned")
+		}).Warnln("will not be included in builder validator registration until a validator index is assigned")
 	}
 
 	return proposerFeeRecipientRequests, signedRegisterValidatorRequests, nil
