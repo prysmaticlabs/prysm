@@ -6,6 +6,7 @@ import (
 	"github.com/pkg/errors"
 	fastssz "github.com/prysmaticlabs/fastssz"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
@@ -281,9 +282,12 @@ func PayloadToHeader(payload interfaces.ExecutionData) (*enginev1.ExecutionPaylo
 	if err != nil {
 		return nil, err
 	}
-	txRoot, err := ssz.TransactionsRoot(txs)
-	if err != nil {
-		return nil, err
+	txRoot := params.BeaconConfig().ZeroHash
+	if len(txs) > 0 {
+		txRoot, err = ssz.TransactionsRoot(txs)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return &enginev1.ExecutionPayloadHeader{
 		ParentHash:       bytesutil.SafeCopyBytes(payload.ParentHash()),
