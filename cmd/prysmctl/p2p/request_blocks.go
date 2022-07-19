@@ -2,6 +2,7 @@ package p2p
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -22,12 +23,12 @@ import (
 )
 
 var requestBlocksFlags = struct {
-	Peers       string
-	ClientPort  uint
-	APIEndpoint string
-	StartSlot   uint64
-	Count       uint64
-	Step        uint64
+	Peers        string
+	ClientPort   uint
+	APIEndpoints string
+	StartSlot    uint64
+	Count        uint64
+	Step         uint64
 }{}
 
 var requestBlocksCmd = &cli.Command{
@@ -49,9 +50,9 @@ var requestBlocksCmd = &cli.Command{
 			Value:       13001,
 		},
 		&cli.StringFlag{
-			Name:        "prysm-api-endpoint",
-			Usage:       "gRPC API endpoint for a Prysm node",
-			Destination: &requestBlocksFlags.APIEndpoint,
+			Name:        "prysm-api-endpoints",
+			Usage:       "comma-separated, gRPC API endpoint(s) for Prysm beacon node(s)",
+			Destination: &requestBlocksFlags.APIEndpoints,
 			Value:       "localhost:4000",
 		},
 		&cli.Uint64Flag{
@@ -83,13 +84,34 @@ func cliActionRequestBlocks(cliCtx *cli.Context) error {
 		}
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
-	c, err := newClient(requestBlocksFlags.APIEndpoint, requestBlocksFlags.ClientPort)
+
+	allAPIEndpoints := make([]string, 0)
+	if requestBlocksFlags.APIEndpoints != "" {
+		allAPIEndpoints = strings.Split(requestBlocksFlags.APIEndpoints, ",")
+	}
+	var err error
+	c, err := newClient(allAPIEndpoints, requestBlocksFlags.ClientPort)
 	if err != nil {
 		return err
 	}
 	defer c.Close()
+
+	allPeers := make([]string, 0)
+	if requestBlocksFlags.Peers != "" {
+		allPeers = strings.Split(requestBlocksFlags.Peers, ",")
+	}
+	if len(allPeers) == 0 {
+		allPeers, err = c.retrievePeerAddressesViaRPC(ctx, allAPIEndpoints)
+		if err != nil {
+			fmt.Println(err)
+			return err
+		}
+	}
+	if len(allPeers) == 0 {
+		return errors.New("no peers found")
+	}
 	mockChain, err := c.initializeMockChainService(ctx)
 	if err != nil {
 		return err
@@ -107,7 +129,6 @@ func cliActionRequestBlocks(cliCtx *cli.Context) error {
 		return nil
 	})
 
-	allPeers := strings.Split(requestBlocksFlags.Peers, ",")
 	if err := c.connectToPeers(ctx, allPeers...); err != nil {
 		return err
 	}

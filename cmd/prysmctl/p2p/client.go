@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"crypto/rand"
+	"fmt"
 	"net"
 	"time"
 
@@ -45,7 +46,7 @@ type client struct {
 	nodeClient   pb.NodeClient
 }
 
-func newClient(beaconEndpoint string, clientPort uint) (*client, error) {
+func newClient(beaconEndpoints []string, clientPort uint) (*client, error) {
 	ipAdd := ipAddr()
 	priv, err := privKey()
 	if err != nil {
@@ -72,7 +73,10 @@ func newClient(beaconEndpoint string, clientPort uint) (*client, error) {
 		return nil, errors.Wrap(err, "could not start libp2p")
 	}
 	h.RemoveStreamHandler(identify.IDDelta)
-	conn, err := grpc.Dial(beaconEndpoint, grpc.WithInsecure())
+	if len(beaconEndpoints) == 0 {
+		return nil, errors.New("no specified beacon API endpoints")
+	}
+	conn, err := grpc.Dial(beaconEndpoints[0], grpc.WithInsecure())
 	if err != nil {
 		return nil, err
 	}
@@ -145,6 +149,30 @@ func (c *client) Send(
 	}
 
 	return stream, nil
+}
+
+func (c *client) retrievePeerAddressesViaRPC(ctx context.Context, beaconEndpoints []string) ([]string, error) {
+	if len(beaconEndpoints) == 0 {
+		return nil, errors.New("no beacon RPC endpoints specified")
+	}
+	peers := make([]string, 0)
+	for i := 0; i < len(beaconEndpoints); i++ {
+		conn, err := grpc.Dial(beaconEndpoints[i], grpc.WithInsecure())
+		if err != nil {
+			return nil, err
+		}
+		nodeClient := pb.NewNodeClient(conn)
+		hostData, err := nodeClient.GetHost(ctx, &emptypb.Empty{})
+		if err != nil {
+			return nil, err
+		}
+		if len(hostData.Addresses) == 0 {
+			continue
+		}
+		peers = append(peers, hostData.Addresses[0]+"/p2p/"+hostData.PeerId)
+	}
+	fmt.Println(peers)
+	return peers, nil
 }
 
 func (c *client) initializeMockChainService(ctx context.Context) (*mock.ChainService, error) {
