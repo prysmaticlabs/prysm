@@ -72,7 +72,7 @@ func Test_BlockIfaceToV1BlockHeader(t *testing.T) {
 
 func Test_V1Alpha1AggregateAttAndProofToV1(t *testing.T) {
 	proof := [32]byte{1}
-	att := util.NewAttestationUtil().HydrateAttestation(&ethpbalpha.Attestation{
+	att := util.HydrateAttestation(&ethpbalpha.Attestation{
 		Data: &ethpbalpha.AttestationData{
 			Slot: 5,
 		},
@@ -428,7 +428,7 @@ func Test_V1SignedAggregateAttAndProofToV1Alpha1(t *testing.T) {
 	v1Att := &ethpbv1.SignedAggregateAttestationAndProof{
 		Message: &ethpbv1.AggregateAttestationAndProof{
 			AggregatorIndex: 1,
-			Aggregate:       util.NewAttestationUtil().HydrateV1Attestation(&ethpbv1.Attestation{}),
+			Aggregate:       util.HydrateV1Attestation(&ethpbv1.Attestation{}),
 			SelectionProof:  selectionProof,
 		},
 		Signature: signature,
@@ -443,7 +443,7 @@ func Test_V1SignedAggregateAttAndProofToV1Alpha1(t *testing.T) {
 }
 
 func Test_V1AttestationToV1Alpha1(t *testing.T) {
-	v1Att := util.NewAttestationUtil().HydrateV1Attestation(&ethpbv1.Attestation{})
+	v1Att := util.HydrateV1Attestation(&ethpbv1.Attestation{})
 	v1Alpha1Att := V1AttToV1Alpha1(v1Att)
 
 	v1Root, err := v1Att.HashTreeRoot()

@@ -31,7 +31,7 @@ const (
 func (s *Store) LastEpochWrittenForValidators(
 	ctx context.Context, validatorIndices []types.ValidatorIndex,
 ) ([]*slashertypes.AttestedEpochForValidator, error) {
-	_, span := trace.StartSpan(ctx, "BeaconDB.LastEpochWrittenForValidators")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.LastEpochWrittenForValidators")
 	defer span.End()
 	attestedEpochs := make([]*slashertypes.AttestedEpochForValidator, 0)
 	encodedIndices := make([][]byte, len(validatorIndices))
@@ -63,7 +63,7 @@ func (s *Store) LastEpochWrittenForValidators(
 func (s *Store) SaveLastEpochsWrittenForValidators(
 	ctx context.Context, epochByValidator map[types.ValidatorIndex]types.Epoch,
 ) error {
-	_, span := trace.StartSpan(ctx, "BeaconDB.SaveLastEpochsWrittenForValidators")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveLastEpochsWrittenForValidators")
 	defer span.End()
 	encodedIndices := make([][]byte, 0, len(epochByValidator))
 	encodedEpochs := make([][]byte, 0, len(epochByValidator))
@@ -183,7 +183,7 @@ func (s *Store) CheckAttesterDoubleVotes(
 func (s *Store) AttestationRecordForValidator(
 	ctx context.Context, validatorIdx types.ValidatorIndex, targetEpoch types.Epoch,
 ) (*slashertypes.IndexedAttestationWrapper, error) {
-	_, span := trace.StartSpan(ctx, "BeaconDB.AttestationRecordForValidator")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.AttestationRecordForValidator")
 	defer span.End()
 	var record *slashertypes.IndexedAttestationWrapper
 	encIdx := encodeValidatorIndex(validatorIdx)
@@ -215,7 +215,7 @@ func (s *Store) SaveAttestationRecordsForValidators(
 	ctx context.Context,
 	attestations []*slashertypes.IndexedAttestationWrapper,
 ) error {
-	_, span := trace.StartSpan(ctx, "BeaconDB.SaveAttestationRecordsForValidators")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveAttestationRecordsForValidators")
 	defer span.End()
 	encodedTargetEpoch := make([][]byte, len(attestations))
 	encodedRecords := make([][]byte, len(attestations))
@@ -259,7 +259,7 @@ func (s *Store) SaveAttestationRecordsForValidators(
 func (s *Store) LoadSlasherChunks(
 	ctx context.Context, kind slashertypes.ChunkKind, diskKeys [][]byte,
 ) ([][]uint16, []bool, error) {
-	_, span := trace.StartSpan(ctx, "BeaconDB.LoadSlasherChunk")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.LoadSlasherChunk")
 	defer span.End()
 	chunks := make([][]uint16, 0)
 	var exists []bool
@@ -290,7 +290,7 @@ func (s *Store) LoadSlasherChunks(
 func (s *Store) SaveSlasherChunks(
 	ctx context.Context, kind slashertypes.ChunkKind, chunkKeys [][]byte, chunks [][]uint16,
 ) error {
-	_, span := trace.StartSpan(ctx, "BeaconDB.SaveSlasherChunks")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveSlasherChunks")
 	defer span.End()
 	encodedKeys := make([][]byte, len(chunkKeys))
 	encodedChunks := make([][]byte, len(chunkKeys))
@@ -320,7 +320,7 @@ func (s *Store) SaveSlasherChunks(
 func (s *Store) CheckDoubleBlockProposals(
 	ctx context.Context, proposals []*slashertypes.SignedBlockHeaderWrapper,
 ) ([]*ethpb.ProposerSlashing, error) {
-	_, span := trace.StartSpan(ctx, "BeaconDB.CheckDoubleBlockProposals")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.CheckDoubleBlockProposals")
 	defer span.End()
 	proposerSlashings := make([]*ethpb.ProposerSlashing, 0, len(proposals))
 	err := s.db.View(func(tx *bolt.Tx) error {
@@ -359,7 +359,7 @@ func (s *Store) CheckDoubleBlockProposals(
 func (s *Store) BlockProposalForValidator(
 	ctx context.Context, validatorIdx types.ValidatorIndex, slot types.Slot,
 ) (*slashertypes.SignedBlockHeaderWrapper, error) {
-	_, span := trace.StartSpan(ctx, "BeaconDB.BlockProposalForValidator")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.BlockProposalForValidator")
 	defer span.End()
 	var record *slashertypes.SignedBlockHeaderWrapper
 	key, err := keyForValidatorProposal(slot, validatorIdx)
@@ -387,7 +387,7 @@ func (s *Store) BlockProposalForValidator(
 func (s *Store) SaveBlockProposals(
 	ctx context.Context, proposals []*slashertypes.SignedBlockHeaderWrapper,
 ) error {
-	_, span := trace.StartSpan(ctx, "BeaconDB.SaveBlockProposals")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveBlockProposals")
 	defer span.End()
 	encodedKeys := make([][]byte, len(proposals))
 	encodedProposals := make([][]byte, len(proposals))

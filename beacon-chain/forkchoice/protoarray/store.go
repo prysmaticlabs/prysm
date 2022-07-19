@@ -65,7 +65,7 @@ func (f *ForkChoice) Head(ctx context.Context, justifiedStateBalances []uint64) 
 	// Using the write lock here because `updateCanonicalNodes` that gets called subsequently requires a write operation.
 	f.store.nodesLock.Lock()
 	defer f.store.nodesLock.Unlock()
-	deltas, newVotes, err := computeDeltas(ctx, f.store.nodesIndices, f.votes, f.balances, newBalances, f.store.slashedIndices)
+	deltas, newVotes, err := computeDeltas(ctx, len(f.store.nodes), f.store.nodesIndices, f.votes, f.balances, newBalances, f.store.slashedIndices)
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "Could not compute deltas")
 	}
@@ -82,7 +82,7 @@ func (f *ForkChoice) Head(ctx context.Context, justifiedStateBalances []uint64) 
 // ProcessAttestation processes attestation for vote accounting, it iterates around validator indices
 // and update their votes accordingly.
 func (f *ForkChoice) ProcessAttestation(ctx context.Context, validatorIndices []uint64, blockRoot [32]byte, targetEpoch types.Epoch) {
-	_, span := trace.StartSpan(ctx, "protoArrayForkChoice.ProcessAttestation")
+	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.ProcessAttestation")
 	defer span.End()
 	f.votesLock.Lock()
 	defer f.votesLock.Unlock()
@@ -155,8 +155,8 @@ func (f *ForkChoice) InsertNode(ctx context.Context, state state.BeaconState, ro
 		return err
 	}
 
-	if features.Get().PullTips {
-		jc, fc = f.store.pullTips(ctx, state, node, jc, fc)
+	if features.Get().EnablePullTips {
+		jc, fc = f.store.pullTips(state, node, jc, fc)
 	}
 	return f.updateCheckpoints(ctx, jc, fc)
 }
@@ -470,7 +470,7 @@ func (s *Store) insert(ctx context.Context,
 	slot types.Slot,
 	root, parent, payloadHash [32]byte,
 	justifiedEpoch, finalizedEpoch types.Epoch) (*Node, error) {
-	_, span := trace.StartSpan(ctx, "protoArrayForkChoice.insert")
+	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.insert")
 	defer span.End()
 
 	s.nodesLock.Lock()
@@ -541,7 +541,7 @@ func (s *Store) insert(ctx context.Context,
 func (s *Store) applyWeightChanges(
 	ctx context.Context, newBalances []uint64, delta []int,
 ) error {
-	_, span := trace.StartSpan(ctx, "protoArrayForkChoice.applyWeightChanges")
+	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.applyWeightChanges")
 	defer span.End()
 
 	// The length of the nodes can not be different than length of the delta.
@@ -746,7 +746,7 @@ func (s *Store) updateBestChildAndDescendant(parentIndex, childIndex uint64) err
 // prune prunes the store with the new finalized root. The tree is only
 // pruned if the number of the nodes in store has met prune threshold.
 func (s *Store) prune(ctx context.Context) error {
-	_, span := trace.StartSpan(ctx, "protoArrayForkChoice.prune")
+	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.prune")
 	defer span.End()
 
 	s.nodesLock.Lock()

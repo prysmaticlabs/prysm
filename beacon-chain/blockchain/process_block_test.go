@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
+	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
@@ -1148,6 +1150,55 @@ func TestHandleEpochBoundary_UpdateFirstSlot(t *testing.T) {
 	require.Equal(t, 3*params.BeaconConfig().SlotsPerEpoch, service.nextEpochBoundarySlot)
 }
 
+func TestOnBlock_CanFinalize_WithOnTick(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+	fcs := protoarray.New()
+	depositCache, err := depositcache.New()
+	require.NoError(t, err)
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithStateGen(stategen.New(beaconDB)),
+		WithForkChoiceStore(fcs),
+		WithDepositCache(depositCache),
+		WithStateNotifier(&mock.MockStateNotifier{}),
+		WithAttestationPool(attestations.NewPool()),
+	}
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+
+	gs, keys := util.DeterministicGenesisState(t, 32)
+	require.NoError(t, service.saveGenesisData(ctx, gs))
+
+	testState := gs.Copy()
+	for i := types.Slot(1); i <= 4*params.BeaconConfig().SlotsPerEpoch; i++ {
+		blk, err := util.GenerateFullBlock(testState, keys, util.DefaultBlockGenConfig(), i)
+		require.NoError(t, err)
+		r, err := blk.Block.HashTreeRoot()
+		require.NoError(t, err)
+		wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+		require.NoError(t, err)
+		require.NoError(t, fcs.NewSlot(ctx, i))
+		require.NoError(t, service.onBlock(ctx, wsb, r))
+		testState, err = service.cfg.StateGen.StateByRoot(ctx, r)
+		require.NoError(t, err)
+	}
+	cp := service.CurrentJustifiedCheckpt()
+	require.Equal(t, types.Epoch(3), cp.Epoch)
+	cp = service.FinalizedCheckpt()
+	require.Equal(t, types.Epoch(2), cp.Epoch)
+
+	// The update should persist in DB.
+	j, err := service.cfg.BeaconDB.JustifiedCheckpoint(ctx)
+	require.NoError(t, err)
+	cp = service.CurrentJustifiedCheckpt()
+	require.Equal(t, j.Epoch, cp.Epoch)
+	f, err := service.cfg.BeaconDB.FinalizedCheckpoint(ctx)
+	require.NoError(t, err)
+	cp = service.FinalizedCheckpt()
+	require.Equal(t, f.Epoch, cp.Epoch)
+}
+
 func TestOnBlock_CanFinalize(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
@@ -1438,9 +1489,11 @@ func Test_getStateVersionAndPayload(t *testing.T) {
 			name: "bellatrix state",
 			st: func() state.BeaconState {
 				s, _ := util.DeterministicGenesisStateBellatrix(t, 1)
-				require.NoError(t, s.SetLatestExecutionPayloadHeader(&enginev1.ExecutionPayloadHeader{
+				wrappedHeader, err := wrapper.WrappedExecutionPayloadHeader(&enginev1.ExecutionPayloadHeader{
 					BlockNumber: 1,
-				}))
+				})
+				require.NoError(t, err)
+				require.NoError(t, s.SetLatestExecutionPayloadHeader(wrappedHeader))
 				return s
 			}(),
 			version: version.Bellatrix,
@@ -1478,6 +1531,9 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 
+	aHash := common.BytesToHash([]byte("a"))
+	bHash := common.BytesToHash([]byte("b"))
+
 	tests := []struct {
 		name         string
 		stateVersion int
@@ -1489,6 +1545,7 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 			name:         "state older than Bellatrix, nil payload",
 			stateVersion: 1,
 			payload:      nil,
+			errString:    "attempted to wrap nil",
 		},
 		{
 			name:         "state older than Bellatrix, empty payload",
@@ -1508,13 +1565,14 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 			name:         "state older than Bellatrix, non empty payload",
 			stateVersion: 1,
 			payload: &enginev1.ExecutionPayload{
-				ParentHash: bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength),
+				ParentHash: aHash[:],
 			},
 		},
 		{
 			name:         "state is Bellatrix, nil payload",
 			stateVersion: 2,
 			payload:      nil,
+			errString:    "attempted to wrap nil",
 		},
 		{
 			name:         "state is Bellatrix, empty payload",
@@ -1534,7 +1592,7 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 			name:         "state is Bellatrix, non empty payload, empty header",
 			stateVersion: 2,
 			payload: &enginev1.ExecutionPayload{
-				ParentHash: bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength),
+				ParentHash: aHash[:],
 			},
 			header: &enginev1.ExecutionPayloadHeader{
 				ParentHash:       make([]byte, fieldparams.RootLength),
@@ -1552,7 +1610,7 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 			name:         "state is Bellatrix, non empty payload, non empty header",
 			stateVersion: 2,
 			payload: &enginev1.ExecutionPayload{
-				ParentHash: bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength),
+				ParentHash: aHash[:],
 			},
 			header: &enginev1.ExecutionPayloadHeader{
 				BlockNumber: 1,
@@ -1562,20 +1620,24 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 			name:         "state is Bellatrix, non empty payload, nil header",
 			stateVersion: 2,
 			payload: &enginev1.ExecutionPayload{
-				ParentHash: bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength),
+				ParentHash: aHash[:],
 			},
-			errString: "nil header or block body",
+			errString: "attempted to wrap nil object",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			e := &mockPOW.EngineClient{BlockByHashMap: map[[32]byte]*enginev1.ExecutionBlock{}}
-			e.BlockByHashMap[[32]byte{'a'}] = &enginev1.ExecutionBlock{
-				ParentHash:      bytesutil.PadTo([]byte{'b'}, fieldparams.RootLength),
+			e.BlockByHashMap[aHash] = &enginev1.ExecutionBlock{
+				Header: gethtypes.Header{
+					ParentHash: bHash,
+				},
 				TotalDifficulty: "0x2",
 			}
-			e.BlockByHashMap[[32]byte{'b'}] = &enginev1.ExecutionBlock{
-				ParentHash:      bytesutil.PadTo([]byte{'3'}, fieldparams.RootLength),
+			e.BlockByHashMap[bHash] = &enginev1.ExecutionBlock{
+				Header: gethtypes.Header{
+					ParentHash: common.BytesToHash([]byte("3")),
+				},
 				TotalDifficulty: "0x1",
 			}
 			service.cfg.ExecutionEngineCaller = e
@@ -1606,9 +1668,8 @@ func TestService_insertSlashingsToForkChoiceStore(t *testing.T) {
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 
-	au := util.AttestationUtil{}
 	beaconState, privKeys := util.DeterministicGenesisState(t, 100)
-	att1 := au.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+	att1 := util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: 1},
 		},
@@ -1623,7 +1684,7 @@ func TestService_insertSlashingsToForkChoiceStore(t *testing.T) {
 	aggregateSig := bls.AggregateSignatures([]bls.Signature{sig0, sig1})
 	att1.Signature = aggregateSig.Marshal()
 
-	att2 := au.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+	att2 := util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{0, 1},
 	})
 	signingRoot, err = signing.ComputeSigningRoot(att2.Data, domain)

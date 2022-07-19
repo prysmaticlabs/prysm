@@ -111,6 +111,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	MinEpochsToInactivityPenalty:     4,
 	Eth1FollowDistance:               2048,
 	SafeSlotsToUpdateJustified:       8,
+	SafeSlotsToImportOptimistically:  128,
 
 	// Fork choice algorithm constants.
 	ProposerScoreBoost: 40,
@@ -202,6 +203,8 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	AltairForkEpoch:      mainnetAltairForkEpoch,
 	BellatrixForkVersion: []byte{2, 0, 0, 0},
 	BellatrixForkEpoch:   mainnetBellatrixForkEpoch,
+	CapellaForkVersion:   []byte{3, 0, 0, 0},
+	CapellaForkEpoch:     math.MaxUint64,
 	ShardingForkVersion:  []byte{4, 0, 0, 0},
 	ShardingForkEpoch:    math.MaxUint64,
 

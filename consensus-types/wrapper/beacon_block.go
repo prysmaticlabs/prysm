@@ -1,8 +1,11 @@
 package wrapper
 
 import (
+	"fmt"
+
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
+	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -11,6 +14,8 @@ var (
 	// This allows us to create a generic beacon block interface that is implemented by different
 	// fork versions of beacon blocks.
 	ErrUnsupportedField = errors.New("unsupported field for block type")
+	// ErrUnsupportedVersion for beacon block methods.
+	ErrUnsupportedVersion = errors.New("unsupported beacon block version")
 	// ErrUnsupportedSignedBeaconBlock is returned when the struct type is not a supported signed
 	// beacon block type.
 	ErrUnsupportedSignedBeaconBlock = errors.New("unsupported signed beacon block")
@@ -143,6 +148,66 @@ func BuildSignedBeaconBlock(blk interfaces.BeaconBlock, signature []byte) (inter
 	default:
 		return nil, errors.Wrapf(ErrUnsupportedBeaconBlock, "unable to wrap block of type %T", b)
 	}
+}
+
+// BuildSignedBeaconBlockFromExecutionPayload takes a signed, blinded beacon block and converts into
+// a full, signed beacon block by specifying an execution payload.
+func BuildSignedBeaconBlockFromExecutionPayload(
+	blk interfaces.SignedBeaconBlock, payload *enginev1.ExecutionPayload,
+) (interfaces.SignedBeaconBlock, error) {
+	if err := BeaconBlockIsNil(blk); err != nil {
+		return nil, err
+	}
+	b := blk.Block()
+	payloadHeader, err := b.Body().Execution()
+	switch {
+	case errors.Is(err, ErrUnsupportedField):
+		return nil, errors.Wrap(err, "can only build signed beacon block from blinded format")
+	case err != nil:
+		return nil, errors.Wrap(err, "could not get execution payload header")
+	default:
+	}
+	payloadRoot, err := payload.HashTreeRoot()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not hash tree root execution payload")
+	}
+	payloadHeaderRoot, err := payloadHeader.HashTreeRoot()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not hash tree root payload header")
+	}
+	if payloadRoot != payloadHeaderRoot {
+		return nil, fmt.Errorf(
+			"payload %#x and header %#x roots do not match",
+			payloadRoot,
+			payloadHeaderRoot,
+		)
+	}
+	syncAgg, err := b.Body().SyncAggregate()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get sync aggregate from block body")
+	}
+	bellatrixFullBlock := &eth.SignedBeaconBlockBellatrix{
+		Block: &eth.BeaconBlockBellatrix{
+			Slot:          b.Slot(),
+			ProposerIndex: b.ProposerIndex(),
+			ParentRoot:    b.ParentRoot(),
+			StateRoot:     b.StateRoot(),
+			Body: &eth.BeaconBlockBodyBellatrix{
+				RandaoReveal:      b.Body().RandaoReveal(),
+				Eth1Data:          b.Body().Eth1Data(),
+				Graffiti:          b.Body().Graffiti(),
+				ProposerSlashings: b.Body().ProposerSlashings(),
+				AttesterSlashings: b.Body().AttesterSlashings(),
+				Attestations:      b.Body().Attestations(),
+				Deposits:          b.Body().Deposits(),
+				VoluntaryExits:    b.Body().VoluntaryExits(),
+				SyncAggregate:     syncAgg,
+				ExecutionPayload:  payload,
+			},
+		},
+		Signature: blk.Signature(),
+	}
+	return wrappedBellatrixSignedBeaconBlock(bellatrixFullBlock)
 }
 
 func UnwrapGenericSignedBeaconBlock(gb *eth.GenericSignedBeaconBlock) (interfaces.SignedBeaconBlock, error) {

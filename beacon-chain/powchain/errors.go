@@ -30,6 +30,8 @@ var (
 	ErrAcceptedSyncingPayloadStatus = errors.New("payload status is SYNCING or ACCEPTED")
 	// ErrInvalidPayloadStatus when the status of the payload is invalid.
 	ErrInvalidPayloadStatus = errors.New("payload status is INVALID")
+	// ErrInvalidBlockHashPayloadStatus when the status of the payload fails to validate block hash.
+	ErrInvalidBlockHashPayloadStatus = errors.New("payload status is INVALID_BLOCK_HASH")
 	// ErrNilResponse when the response is nil.
 	ErrNilResponse = errors.New("nil response")
 )
