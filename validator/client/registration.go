@@ -15,7 +15,7 @@ import (
 )
 
 // SubmitValidatorRegistration signs validator registration object and submits it to the beacon node.
-func SubmitValidatorRegistrations(
+func SubmitValidatorRegistration(
 	ctx context.Context,
 	validatorClient ethpb.BeaconNodeValidatorClient,
 	signedRegs []*ethpb.SignedValidatorRegistrationV1,
