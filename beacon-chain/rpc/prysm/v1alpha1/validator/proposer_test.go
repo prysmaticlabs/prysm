@@ -2506,20 +2506,20 @@ func TestProposer_PrepareBeaconProposer(t *testing.T) {
 	}
 }
 
-func TestProposer_SubmitValidatorRegistration(t *testing.T) {
+func TestProposer_SubmitValidatorRegistrations(t *testing.T) {
 	ctx := context.Background()
 	proposerServer := &Server{}
 	reg := &ethpb.SignedValidatorRegistrationsV1{}
-	_, err := proposerServer.SubmitValidatorRegistration(ctx, reg)
+	_, err := proposerServer.SubmitValidatorRegistrations(ctx, reg)
 	require.NoError(t, err)
 	proposerServer = &Server{BlockBuilder: &builderTest.MockBuilderService{}}
-	_, err = proposerServer.SubmitValidatorRegistration(ctx, reg)
+	_, err = proposerServer.SubmitValidatorRegistrations(ctx, reg)
 	require.NoError(t, err)
 	proposerServer = &Server{BlockBuilder: &builderTest.MockBuilderService{HasConfigured: true}}
-	_, err = proposerServer.SubmitValidatorRegistration(ctx, reg)
+	_, err = proposerServer.SubmitValidatorRegistrations(ctx, reg)
 	require.NoError(t, err)
 	proposerServer = &Server{BlockBuilder: &builderTest.MockBuilderService{HasConfigured: true, ErrRegisterValidator: errors.New("bad")}}
-	_, err = proposerServer.SubmitValidatorRegistration(ctx, reg)
+	_, err = proposerServer.SubmitValidatorRegistrations(ctx, reg)
 	require.ErrorContains(t, "bad", err)
 }
 

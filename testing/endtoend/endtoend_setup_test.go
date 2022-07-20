@@ -127,7 +127,7 @@ func e2eMainnet(t *testing.T, usePrysmSh, useMultiClient bool, cfgo ...types.E2E
 		ev.APIGatewayV1Alpha1VerifyIntegrity,
 		ev.FinishedSyncing,
 		ev.AllNodesHaveSameHead,
-		//ev.FeeRecipientIsPresent,  TODO: add back in after 2.1.4 when validator registration is no longer called.
+		ev.FeeRecipientIsPresent,
 		//ev.TransactionsPresent, TODO: Renable Transaction evaluator once it tx pool issues are fixed.
 	}
 	testConfig := &types.E2EConfig{
