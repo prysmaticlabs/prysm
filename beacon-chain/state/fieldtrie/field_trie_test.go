@@ -40,6 +40,10 @@ func TestFieldTrie_RecomputeTrie(t *testing.T) {
 	trie, err := fieldtrie.NewFieldTrie(stateTypes.FieldIndex(11), stateTypes.CompositeArray, newState.Validators(), params.BeaconConfig().ValidatorRegistryLimit)
 	require.NoError(t, err)
 
+	oldroot, err := trie.TrieRoot()
+	require.NoError(t, err)
+	require.NotEmpty(t, oldroot)
+
 	changedIdx := []uint64{2, 29}
 	val1, err := newState.ValidatorAtIndex(10)
 	require.NoError(t, err)
@@ -104,11 +108,30 @@ func TestFieldTrie_CopyTrieImmutable(t *testing.T) {
 	}
 }
 
-func TestFieldTrie_CopyWithoutFieldlayers(t *testing.T) {
+func TestFieldTrie_CopyAndTransferEmpty(t *testing.T) {
 	trie, err := fieldtrie.NewFieldTrie(stateTypes.FieldIndex(13), stateTypes.BasicArray, nil, uint64(params.BeaconConfig().EpochsPerHistoricalVector))
 	require.NoError(t, err)
 
 	require.DeepEqual(t, trie, trie.CopyTrie())
+	require.DeepEqual(t, trie, trie.TransferTrie())
+}
+
+func TestFieldTrie_TransferTrie(t *testing.T) {
+	newState, _ := util.DeterministicGenesisState(t, 32)
+	maxLength := (params.BeaconConfig().ValidatorRegistryLimit*8 + 31) / 32
+	trie, err := fieldtrie.NewFieldTrie(stateTypes.FieldIndex(12), stateTypes.CompressedArray, newState.Balances(), maxLength)
+	require.NoError(t, err)
+	oldRoot, err := trie.TrieRoot()
+	require.NoError(t, err)
+
+	newTrie := trie.TransferTrie()
+	root, err := trie.TrieRoot()
+	require.ErrorIs(t, err, fieldtrie.ErrEmptyFieldTrie)
+	require.Equal(t, root, [32]byte{})
+	require.NotNil(t, newTrie)
+	newRoot, err := newTrie.TrieRoot()
+	require.NoError(t, err)
+	require.DeepEqual(t, oldRoot, newRoot)
 }
 
 func FuzzFieldTrie(f *testing.F) {
