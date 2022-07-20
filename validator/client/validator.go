@@ -988,7 +988,7 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 	}
 	log.Infoln("Prepared beacon proposer with fee recipient to validator index mapping")
 
-	if err := SubmitValidatorRegistration(ctx, v.validatorClient, signedRegisterValidatorRequests); err != nil {
+	if err := SubmitValidatorRegistrations(ctx, v.validatorClient, signedRegisterValidatorRequests); err != nil {
 		return errors.Wrap(ErrBuilderValidatorRegistration, err.Error())
 	}
 
