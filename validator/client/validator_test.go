@@ -1521,7 +1521,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 						},
 					},
 				}
-				client.EXPECT().SubmitValidatorRegistration(
+				client.EXPECT().SubmitValidatorRegistrations(
 					gomock.Any(),
 					gomock.Any(),
 				).Return(&empty.Empty{}, nil)
@@ -1601,7 +1601,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 						},
 					},
 				}
-				client.EXPECT().SubmitValidatorRegistration(
+				client.EXPECT().SubmitValidatorRegistrations(
 					gomock.Any(),
 					gomock.Any(),
 				).Return(&empty.Empty{}, nil)
@@ -1721,7 +1721,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 					Index: 1,
 				}, nil)
 
-				client.EXPECT().SubmitValidatorRegistration(
+				client.EXPECT().SubmitValidatorRegistrations(
 					gomock.Any(),
 					gomock.Any(),
 				).Return(&empty.Empty{}, nil)
@@ -1780,7 +1780,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 				).Return(&ethpb.ValidatorIndexResponse{
 					Index: 1,
 				}, nil)
-				client.EXPECT().SubmitValidatorRegistration(
+				client.EXPECT().SubmitValidatorRegistrations(
 					gomock.Any(),
 					gomock.Any(),
 				).Return(&empty.Empty{}, nil)
@@ -1976,7 +1976,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 						{FeeRecipient: common.HexToAddress("0x0").Bytes(), ValidatorIndex: 1},
 					},
 				}).Return(nil, nil)
-				client.EXPECT().SubmitValidatorRegistration(
+				client.EXPECT().SubmitValidatorRegistrations(
 					gomock.Any(),
 					gomock.Any(),
 				).Return(&empty.Empty{}, errors.New("request failed"))
@@ -2031,7 +2031,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 					&ethpb.ValidatorIndexRequest{PublicKey: keys[1][:]},
 				).Times(2).Return(nil, errors.New("Could not find validator index"))
 
-				client.EXPECT().SubmitValidatorRegistration(
+				client.EXPECT().SubmitValidatorRegistrations(
 					gomock.Any(),
 					gomock.Any(),
 				).Return(&empty.Empty{}, nil)

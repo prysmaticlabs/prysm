@@ -188,8 +188,14 @@ func (vs *Server) computeStateRoot(ctx context.Context, block interfaces.SignedB
 	return root[:], nil
 }
 
-// SubmitValidatorRegistration submits validator registrations.
-func (vs *Server) SubmitValidatorRegistration(ctx context.Context, reg *ethpb.SignedValidatorRegistrationsV1) (*emptypb.Empty, error) {
+// SubmitValidatorRegistration submits validator registration.
+// Deprecated: Use SubmitValidatorRegistrations instead.
+func (vs *Server) SubmitValidatorRegistration(ctx context.Context, reg *ethpb.SignedValidatorRegistrationV1) (*emptypb.Empty, error) {
+	return vs.SubmitValidatorRegistrations(ctx, &ethpb.SignedValidatorRegistrationsV1{Messages: []*ethpb.SignedValidatorRegistrationV1{reg}})
+}
+
+// SubmitValidatorRegistrations submits validator registrations.
+func (vs *Server) SubmitValidatorRegistrations(ctx context.Context, reg *ethpb.SignedValidatorRegistrationsV1) (*emptypb.Empty, error) {
 	// No-op is the builder is nil / not configured. The node should still function without a builder.
 	if vs.BlockBuilder == nil || !vs.BlockBuilder.Configured() {
 		return &emptypb.Empty{}, nil
