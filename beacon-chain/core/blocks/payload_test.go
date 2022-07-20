@@ -102,15 +102,6 @@ func Test_IsMergeComplete(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "has tx root",
-			payload: func() *enginev1.ExecutionPayloadHeader {
-				h := emptyPayloadHeader()
-				h.TransactionsRoot = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
-				return h
-			}(),
-			want: true,
-		},
-		{
 			name: "has extra data",
 			payload: func() *enginev1.ExecutionPayloadHeader {
 				h := emptyPayloadHeader()
