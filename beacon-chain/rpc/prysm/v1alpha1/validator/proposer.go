@@ -189,7 +189,7 @@ func (vs *Server) computeStateRoot(ctx context.Context, block interfaces.SignedB
 }
 
 // SubmitValidatorRegistration submits validator registration.
-// DEPRECATED: Use SubmitValidatorRegistrations instead.
+// Deprecated: Use SubmitValidatorRegistrations instead.
 func (vs *Server) SubmitValidatorRegistration(ctx context.Context, reg *ethpb.SignedValidatorRegistrationV1) (*emptypb.Empty, error) {
 	return vs.SubmitValidatorRegistrations(ctx, &ethpb.SignedValidatorRegistrationsV1{Messages: []*ethpb.SignedValidatorRegistrationV1{reg}})
 }
