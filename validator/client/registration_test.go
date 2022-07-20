@@ -31,7 +31,7 @@ func TestSubmitValidatorRegistration(t *testing.T) {
 	}
 
 	m.validatorClient.EXPECT().
-		SubmitValidatorRegistration(gomock.Any(), &ethpb.SignedValidatorRegistrationsV1{
+		SubmitValidatorRegistrations(gomock.Any(), &ethpb.SignedValidatorRegistrationsV1{
 			Messages: []*ethpb.SignedValidatorRegistrationV1{
 				{Message: reg,
 					Signature: params.BeaconConfig().ZeroHash[:]},

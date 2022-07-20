@@ -27,7 +27,7 @@ func SubmitValidatorRegistration(
 		return nil
 	}
 
-	if _, err := validatorClient.SubmitValidatorRegistration(ctx, &ethpb.SignedValidatorRegistrationsV1{
+	if _, err := validatorClient.SubmitValidatorRegistrations(ctx, &ethpb.SignedValidatorRegistrationsV1{
 		Messages: signedRegs,
 	}); err != nil {
 		return errors.Wrap(err, "could not submit signed registrations to beacon node")
