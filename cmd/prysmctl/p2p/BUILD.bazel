@@ -7,6 +7,7 @@ go_library(
         "handler.go",
         "handshake.go",
         "log.go",
+        "mock_chain.go",
         "p2p.go",
         "peers.go",
         "request_blocks.go",
@@ -14,7 +15,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/cmd/prysmctl/p2p",
     visibility = ["//visibility:public"],
     deps = [
-        "//beacon-chain/blockchain/testing:go_default_library",
+        "//beacon-chain/forkchoice:go_default_library",
         "//beacon-chain/p2p:go_default_library",
         "//beacon-chain/p2p/encoder:go_default_library",
         "//beacon-chain/p2p/types:go_default_library",
