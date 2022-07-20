@@ -9,8 +9,9 @@ import (
 var (
 	// PraterTestnet flag for the multiclient Ethereum consensus testnet.
 	PraterTestnet = &cli.BoolFlag{
-		Name:  "prater",
-		Usage: "Run Prysm configured for the Prater test network",
+		Name:    "prater",
+		Usage:   "Run Prysm configured for the Prater / Goerli test network",
+		Aliases: []string{"goerli"},
 	}
 	// RopstenTestnet flag for the multiclient Ethereum consensus testnet.
 	RopstenTestnet = &cli.BoolFlag{
