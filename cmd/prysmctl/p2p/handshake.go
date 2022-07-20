@@ -34,11 +34,8 @@ func (c *client) pingHandler(_ context.Context, _ interface{}, stream libp2pcore
 	return nil
 }
 
-func (c *client) goodbyeHandler(_ context.Context, msg interface{}, stream libp2pcore.Stream) error {
-	// closes all streams with the peer
-	//return c.host.Disconnect(stream.Conn().RemotePeer())
+func (c *client) goodbyeHandler(_ context.Context, _ interface{}, _ libp2pcore.Stream) error {
 	return nil
-
 }
 
 // statusRPCHandler reads the incoming Status RPC from the peer and responds with our version of a status message.

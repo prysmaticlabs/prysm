@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"crypto/rand"
-	"fmt"
 	"net"
 	"time"
 
@@ -171,7 +170,6 @@ func (c *client) retrievePeerAddressesViaRPC(ctx context.Context, beaconEndpoint
 		}
 		peers = append(peers, hostData.Addresses[0]+"/p2p/"+hostData.PeerId)
 	}
-	fmt.Println(peers)
 	return peers, nil
 }
 

@@ -32,6 +32,7 @@ func SendBeaconBlocksByRangeRequest(
 	if err != nil {
 		return nil, err
 	}
+	log.WithField("topic", topic).Info("Preparing request for topic")
 	stream, err := p2pProvider.Send(ctx, req, topic, pid)
 	if err != nil {
 		return nil, err

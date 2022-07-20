@@ -2,7 +2,6 @@ package p2p
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"time"
 
@@ -10,6 +9,7 @@ import (
 	corenet "github.com/libp2p/go-libp2p-core/network"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -83,6 +83,7 @@ func cliActionRequestBlocks(cliCtx *cli.Context) error {
 			return err
 		}
 	}
+	p2ptypes.InitializeDataMaps()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
@@ -105,13 +106,13 @@ func cliActionRequestBlocks(cliCtx *cli.Context) error {
 	if len(allPeers) == 0 {
 		allPeers, err = c.retrievePeerAddressesViaRPC(ctx, allAPIEndpoints)
 		if err != nil {
-			fmt.Println(err)
 			return err
 		}
 	}
 	if len(allPeers) == 0 {
 		return errors.New("no peers found")
 	}
+	log.WithField("peers", allPeers).Info("List of peers")
 	mockChain, err := c.initializeMockChainService(ctx)
 	if err != nil {
 		return err
