@@ -62,6 +62,22 @@ func TestFieldTrie_RecomputeTrie(t *testing.T) {
 	assert.Equal(t, expectedRoot, root)
 }
 
+func TestFieldTrie_RecomputeTrie_CompressedArray(t *testing.T) {
+	newState, _ := util.DeterministicGenesisState(t, 32)
+	trie, err := fieldtrie.NewFieldTrie(stateTypes.FieldIndex(12), stateTypes.CompressedArray, newState.Balances(), params.BeaconConfig().ValidatorRegistryLimit)
+	require.NoError(t, err)
+	changedIdx := []uint64{4, 8}
+	require.NoError(t, newState.UpdateBalancesAtIndex(types.ValidatorIndex(changedIdx[0]), uint64(100000000)))
+	require.NoError(t, newState.UpdateBalancesAtIndex(types.ValidatorIndex(changedIdx[1]), uint64(200000000)))
+	expectedRoot, err := stateutil.Uint64ListRootWithRegistryLimit(newState.Balances())
+	require.NoError(t, err)
+	root, err := trie.RecomputeTrie(changedIdx, newState.Balances())
+	require.NoError(t, err)
+
+	// not equal for some reason :(
+	assert.Equal(t, expectedRoot, root)
+}
+
 func TestFieldTrie_CopyTrieImmutable(t *testing.T) {
 	newState, _ := util.DeterministicGenesisState(t, 32)
 	// 12 represents the enum value of randao mixes.
