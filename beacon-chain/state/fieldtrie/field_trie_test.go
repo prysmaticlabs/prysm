@@ -104,6 +104,13 @@ func TestFieldTrie_CopyTrieImmutable(t *testing.T) {
 	}
 }
 
+func TestFieldTrie_CopyWithoutFieldlayers(t *testing.T) {
+	trie, err := fieldtrie.NewFieldTrie(stateTypes.FieldIndex(13), stateTypes.BasicArray, nil, uint64(params.BeaconConfig().EpochsPerHistoricalVector))
+	require.NoError(t, err)
+
+	require.DeepEqual(t, trie, trie.CopyTrie())
+}
+
 func FuzzFieldTrie(f *testing.F) {
 	newState, _ := util.DeterministicGenesisState(f, 40)
 	var data []byte
