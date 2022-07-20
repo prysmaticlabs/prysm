@@ -6,13 +6,13 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 type mockChain struct {
 	currentFork     *ethpb.Fork
 	genesisValsRoot [32]byte
 	genesisTime     time.Time
-	currentSlot     types.Slot
 }
 
 func (m *mockChain) ForkChoicer() forkchoice.ForkChoicer {
@@ -32,5 +32,5 @@ func (m *mockChain) GenesisTime() time.Time {
 }
 
 func (m *mockChain) CurrentSlot() types.Slot {
-	return m.currentSlot
+	return slots.SinceGenesis(m.genesisTime)
 }
