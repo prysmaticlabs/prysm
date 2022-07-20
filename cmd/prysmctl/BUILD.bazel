@@ -25,9 +25,9 @@ go_image(
         "//tools:base_image_cc": "//tools:cc_image",
         "//conditions:default": "//tools:cc_image",
     }),
-    binary = ":validator",
+    binary = ":prysmctl",
     tags = ["manual"],
-    visibility = ["//validator:__pkg__"],
+    visibility = ["//cmd/prysmctl:__pkg__"],
 )
 
 container_image(
@@ -35,78 +35,78 @@ container_image(
     base = "image",
     stamp = True,
     tags = ["manual"],
-    visibility = ["//validator:__pkg__"],
+    visibility = ["//cmd/prysmctl:__pkg__"],
 )
 
 container_bundle(
     name = "image_bundle",
     images = {
-        "gcr.io/prysmaticlabs/prysm/validator:latest": ":image_with_creation_time",
-        "gcr.io/prysmaticlabs/prysm/validator:{DOCKER_TAG}": ":image_with_creation_time",
-        "index.docker.io/prysmaticlabs/prysm-validator:latest": ":image_with_creation_time",
-        "index.docker.io/prysmaticlabs/prysm-validator:{DOCKER_TAG}": ":image_with_creation_time",
+        "gcr.io/prysmaticlabs/prysm/cmd/prysmctl:latest": ":image_with_creation_time",
+        "gcr.io/prysmaticlabs/prysm/cmd/prysmctl:{DOCKER_TAG}": ":image_with_creation_time",
+        "index.docker.io/prysmaticlabs/prysmctl:latest": ":image_with_creation_time",
+        "index.docker.io/prysmaticlabs/prysmctl:{DOCKER_TAG}": ":image_with_creation_time",
     },
     tags = ["manual"],
-    visibility = ["//validator:__pkg__"],
+    visibility = ["//cmd/prysmctl:__pkg__"],
 )
 
 go_image_debug(
     name = "image_debug",
     image = ":image",
     tags = ["manual"],
-    visibility = ["//validator:__pkg__"],
+    visibility = ["//cmd/prysmctl:__pkg__"],
 )
 
 container_bundle(
     name = "image_bundle_debug",
     images = {
-        "gcr.io/prysmaticlabs/prysm/validator:latest-debug": ":image_debug",
-        "gcr.io/prysmaticlabs/prysm/validator:{DOCKER_TAG}-debug": ":image_debug",
-        "index.docker.io/prysmaticlabs/prysm-validator:latest-debug": ":image_debug",
-        "index.docker.io/prysmaticlabs/prysm-validator:{DOCKER_TAG}-debug": ":image_debug",
+        "gcr.io/prysmaticlabs/prysm/cmd/prysmctl:latest-debug": ":image_debug",
+        "gcr.io/prysmaticlabs/prysm/cmd/prysmctl:{DOCKER_TAG}-debug": ":image_debug",
+        "index.docker.io/prysmaticlabs/prysmctl:latest-debug": ":image_debug",
+        "index.docker.io/prysmaticlabs/prysmctl:{DOCKER_TAG}-debug": ":image_debug",
     },
     tags = ["manual"],
-    visibility = ["//validator:__pkg__"],
+    visibility = ["//cmd/prysmctl:__pkg__"],
 )
 
 go_image_alpine(
     name = "image_alpine",
     image = ":image",
     tags = ["manual"],
-    visibility = ["//validator:__pkg__"],
+    visibility = ["//cmd/prysmctl:__pkg__"],
 )
 
 container_bundle(
     name = "image_bundle_alpine",
     images = {
-        "gcr.io/prysmaticlabs/prysm/validator:latest-alpine": ":image_alpine",
-        "gcr.io/prysmaticlabs/prysm/validator:{DOCKER_TAG}-alpine": ":image_alpine",
-        "index.docker.io/prysmaticlabs/prysm-validator:latest-alpine": ":image_alpine",
-        "index.docker.io/prysmaticlabs/prysm-validator:{DOCKER_TAG}-alpine": ":image_alpine",
+        "gcr.io/prysmaticlabs/prysm/cmd/prysmctl:latest-alpine": ":image_alpine",
+        "gcr.io/prysmaticlabs/prysm/cmd/prysmctl:{DOCKER_TAG}-alpine": ":image_alpine",
+        "index.docker.io/prysmaticlabs/prysmctl:latest-alpine": ":image_alpine",
+        "index.docker.io/prysmaticlabs/prysmctl:{DOCKER_TAG}-alpine": ":image_alpine",
     },
     tags = ["manual"],
-    visibility = ["//validator:__pkg__"],
+    visibility = ["//cmd/prysmctl:__pkg__"],
 )
 
 docker_push(
     name = "push_images",
     bundle = ":image_bundle",
     tags = ["manual"],
-    visibility = ["//validator:__pkg__"],
+    visibility = ["//cmd/prysmctl:__pkg__"],
 )
 
 docker_push(
     name = "push_images_debug",
     bundle = ":image_bundle_debug",
     tags = ["manual"],
-    visibility = ["//validator:__pkg__"],
+    visibility = ["//cmd/prysmctl:__pkg__"],
 )
 
 docker_push(
     name = "push_images_alpine",
     bundle = ":image_bundle_alpine",
     tags = ["manual"],
-    visibility = ["//validator:__pkg__"],
+    visibility = ["//cmd/prysmctl:__pkg__"],
 )
 
 go_binary(
