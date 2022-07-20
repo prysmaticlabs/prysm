@@ -64,8 +64,11 @@ func TestFieldTrie_RecomputeTrie(t *testing.T) {
 
 func TestFieldTrie_RecomputeTrie_CompressedArray(t *testing.T) {
 	newState, _ := util.DeterministicGenesisState(t, 32)
-	trie, err := fieldtrie.NewFieldTrie(stateTypes.FieldIndex(12), stateTypes.CompressedArray, newState.Balances(), (params.BeaconConfig().ValidatorRegistryLimit*8+31)/32)
+	maxLength := (params.BeaconConfig().ValidatorRegistryLimit*8 + 31) / 32
+	trie, err := fieldtrie.NewFieldTrie(stateTypes.FieldIndex(12), stateTypes.CompressedArray, newState.Balances(), maxLength)
 	require.NoError(t, err)
+
+	require.Equal(t, trie.Length(), maxLength)
 	changedIdx := []uint64{4, 8}
 	require.NoError(t, newState.UpdateBalancesAtIndex(types.ValidatorIndex(changedIdx[0]), uint64(100000000)))
 	require.NoError(t, newState.UpdateBalancesAtIndex(types.ValidatorIndex(changedIdx[1]), uint64(200000000)))
