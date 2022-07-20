@@ -24,10 +24,8 @@ import (
 type ChainInfoFetcher interface {
 	HeadFetcher
 	FinalizationFetcher
-	GenesisFetcher
 	CanonicalFetcher
 	ForkFetcher
-	TimeFetcher
 	HeadDomainFetcher
 }
 
@@ -69,6 +67,8 @@ type HeadFetcher interface {
 type ForkFetcher interface {
 	ForkChoicer() forkchoice.ForkChoicer
 	CurrentFork() *ethpb.Fork
+	GenesisFetcher
+	TimeFetcher
 }
 
 // CanonicalFetcher retrieves the current chain's canonical information.

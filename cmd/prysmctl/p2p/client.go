@@ -19,7 +19,6 @@ import (
 	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/go-bitfield"
-	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
@@ -173,7 +172,7 @@ func (c *client) retrievePeerAddressesViaRPC(ctx context.Context, beaconEndpoint
 	return peers, nil
 }
 
-func (c *client) initializeMockChainService(ctx context.Context) (*mock.ChainService, error) {
+func (c *client) initializeMockChainService(ctx context.Context) (*mockChain, error) {
 	genesisResp, err := c.nodeClient.GetGenesis(ctx, &emptypb.Empty{})
 	if err != nil {
 		return nil, err
@@ -183,10 +182,10 @@ func (c *client) initializeMockChainService(ctx context.Context) (*mock.ChainSer
 	if err != nil {
 		return nil, err
 	}
-	return &mock.ChainService{
-		Genesis:        genesisResp.GenesisTime.AsTime(),
-		Fork:           currFork,
-		ValidatorsRoot: bytesutil.ToBytes32(genesisResp.GenesisValidatorsRoot),
+	return &mockChain{
+		genesisTime:     genesisResp.GenesisTime.AsTime(),
+		currentFork:     currFork,
+		genesisValsRoot: bytesutil.ToBytes32(genesisResp.GenesisValidatorsRoot),
 	}, nil
 }
 

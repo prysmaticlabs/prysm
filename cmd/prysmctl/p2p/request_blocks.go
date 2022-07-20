@@ -113,7 +113,7 @@ func cliActionRequestBlocks(cliCtx *cli.Context) error {
 		return errors.New("no peers found")
 	}
 	log.WithField("peers", allPeers).Info("List of peers")
-	mockChain, err := c.initializeMockChainService(ctx)
+	chain, err := c.initializeMockChainService(ctx)
 	if err != nil {
 		return err
 	}
@@ -171,7 +171,7 @@ func cliActionRequestBlocks(cliCtx *cli.Context) error {
 		start := time.Now()
 		blocks, err := sync.SendBeaconBlocksByRangeRequest(
 			ctx,
-			mockChain,
+			chain,
 			c,
 			pr,
 			req,
