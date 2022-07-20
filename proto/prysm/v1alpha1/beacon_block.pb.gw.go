@@ -1,3 +1,3 @@
-// +build ignore
+//go:build ignore
 
 package ignore
