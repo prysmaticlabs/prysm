@@ -14,20 +14,20 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// SubmitValidatorRegistration signs validator registration object and submits it to the beacon node.
-func SubmitValidatorRegistration(
+// SubmitValidatorRegistrations signs validator registration objects and submits it to the beacon node.
+func SubmitValidatorRegistrations(
 	ctx context.Context,
 	validatorClient ethpb.BeaconNodeValidatorClient,
 	signedRegs []*ethpb.SignedValidatorRegistrationV1,
 ) error {
-	ctx, span := trace.StartSpan(ctx, "validator.SubmitBuilderValidatorRegistration")
+	ctx, span := trace.StartSpan(ctx, "validator.SubmitValidatorRegistrations")
 	defer span.End()
 
 	if len(signedRegs) == 0 {
 		return nil
 	}
 
-	if _, err := validatorClient.SubmitValidatorRegistration(ctx, &ethpb.SignedValidatorRegistrationsV1{
+	if _, err := validatorClient.SubmitValidatorRegistrations(ctx, &ethpb.SignedValidatorRegistrationsV1{
 		Messages: signedRegs,
 	}); err != nil {
 		return errors.Wrap(err, "could not submit signed registrations to beacon node")
