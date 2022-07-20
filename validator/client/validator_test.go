@@ -1618,7 +1618,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 					GasLimit:     uint64(40000000),
 				},
 			},
-			logMessages: []string{"will not be included in MEV builder validator registration"},
+			logMessages: []string{"will not be included in builder validator registration"},
 		},
 		{
 			name: " Happy Path default doesn't send any validator registrations",
@@ -1676,7 +1676,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 				1: "0x055Fb65722E7b2455043BFEBf6177F1D2e9738D9",
 				2: defaultFeeHex,
 			},
-			logMessages:       []string{"will not be included in MEV builder validator registration"},
+			logMessages:       []string{"will not be included in builder validator registration"},
 			doesntContainLogs: true,
 		},
 		{
@@ -2053,7 +2053,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 			},
 			logMessages: []string{
 				"prepare beacon proposer and update fee recipient until a validator index is assigned",
-				"will not be included in MEV builder validator registration until a validator index is assigned",
+				"will not be included in builder validator registration until a validator index is assigned",
 			},
 		},
 	}

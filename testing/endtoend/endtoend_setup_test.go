@@ -8,7 +8,6 @@ import (
 
 	"github.com/prysmaticlabs/prysm/config/params"
 	ev "github.com/prysmaticlabs/prysm/testing/endtoend/evaluators"
-	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
 	e2eParams "github.com/prysmaticlabs/prysm/testing/endtoend/params"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/types"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -104,11 +103,6 @@ func e2eMainnet(t *testing.T, usePrysmSh, useMultiClient bool, cfgo ...types.E2E
 		require.NoError(t, err)
 	}
 	_, crossClient := os.LookupEnv("RUN_CROSS_CLIENT")
-	if usePrysmSh {
-		// If using prysm.sh, run for only 6 epochs.
-		// TODO(#9166): remove this block once v2 changes are live.
-		epochsToRun = helpers.AltairE2EForkEpoch - 1
-	}
 	seed := 0
 	seedStr, isValid := os.LookupEnv("E2E_SEED")
 	if isValid {
@@ -133,7 +127,7 @@ func e2eMainnet(t *testing.T, usePrysmSh, useMultiClient bool, cfgo ...types.E2E
 		ev.APIGatewayV1Alpha1VerifyIntegrity,
 		ev.FinishedSyncing,
 		ev.AllNodesHaveSameHead,
-		ev.FeeRecipientIsPresent,
+		//ev.FeeRecipientIsPresent,  TODO: add back in after 2.1.4 when validator registration is no longer called.
 		//ev.TransactionsPresent, TODO: Renable Transaction evaluator once it tx pool issues are fixed.
 	}
 	testConfig := &types.E2EConfig{
