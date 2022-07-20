@@ -87,7 +87,7 @@ func TestVerifySelection_NotAnAggregator(t *testing.T) {
 	beaconState, privKeys := util.DeterministicGenesisState(t, validators)
 
 	sig := privKeys[0].Sign([]byte{'A'})
-	data := util.NewAttestationUtil().HydrateAttestationData(&ethpb.AttestationData{})
+	data := util.HydrateAttestationData(&ethpb.AttestationData{})
 
 	_, err := validateSelectionIndex(ctx, beaconState, data, 0, sig.Marshal())
 	wanted := "validator is not an aggregator for slot"
@@ -98,7 +98,7 @@ func TestValidateAggregateAndProof_NoBlock(t *testing.T) {
 	db := dbtest.SetupDB(t)
 	p := p2ptest.NewTestP2P(t)
 
-	att := util.NewAttestationUtil().HydrateAttestation(&ethpb.Attestation{
+	att := util.HydrateAttestation(&ethpb.Attestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("hello-world"), 32)},
 			Target: &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte("hello-world"), 32)},

@@ -92,7 +92,7 @@ func TestStreamEvents_OperationsEvents(t *testing.T) {
 		srv, ctrl, mockStream := setupServer(ctx, t)
 		defer ctrl.Finish()
 
-		wantedAttV1alpha1 := util.NewAttestationUtil().HydrateAttestation(&eth.Attestation{
+		wantedAttV1alpha1 := util.HydrateAttestation(&eth.Attestation{
 			Data: &eth.AttestationData{
 				Slot: 8,
 			},
@@ -127,7 +127,7 @@ func TestStreamEvents_OperationsEvents(t *testing.T) {
 		defer ctrl.Finish()
 
 		wantedAttV1alpha1 := &eth.AggregateAttestationAndProof{
-			Aggregate: util.NewAttestationUtil().HydrateAttestation(&eth.Attestation{}),
+			Aggregate: util.HydrateAttestation(&eth.Attestation{}),
 		}
 		wantedAtt := migration.V1Alpha1AggregateAttAndProofToV1(wantedAttV1alpha1)
 		genericResponse, err := anypb.New(wantedAtt)
