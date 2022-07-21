@@ -497,18 +497,18 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 		!cliCtx.IsSet(flags.ProposerSettingsFlag.Name) &&
 		!cliCtx.IsSet(flags.ProposerSettingsURLFlag.Name) {
 		suggestedFee := cliCtx.String(flags.SuggestedFeeRecipientFlag.Name)
-		var vr *validatorServiceConfig.ValidatorRegistration
-		if cliCtx.Bool(flags.EnableValidatorRegistrationFlag.Name) {
-			vr = &validatorServiceConfig.ValidatorRegistration{
-				Enable:   true,
+		var vr *validatorServiceConfig.BuilderConfig
+		if cliCtx.Bool(flags.EnableBuilderFlag.Name) {
+			vr = &validatorServiceConfig.BuilderConfig{
+				Enabled:  true,
 				GasLimit: reviewGasLimit(params.BeaconConfig().DefaultBuilderGasLimit),
 			}
 		}
 		fileConfig = &validatorServiceConfig.ProposerSettingsPayload{
 			ProposerConfig: nil,
 			DefaultConfig: &validatorServiceConfig.ProposerOptionPayload{
-				FeeRecipient:          suggestedFee,
-				ValidatorRegistration: vr,
+				FeeRecipient:  suggestedFee,
+				BuilderConfig: vr,
 			},
 		}
 	}
@@ -542,11 +542,11 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 		return nil, err
 	}
 	vpSettings.DefaultConfig = &validatorServiceConfig.ProposerOption{
-		FeeRecipient:          common.HexToAddress(fileConfig.DefaultConfig.FeeRecipient),
-		ValidatorRegistration: fileConfig.DefaultConfig.ValidatorRegistration,
+		FeeRecipient:  common.HexToAddress(fileConfig.DefaultConfig.FeeRecipient),
+		BuilderConfig: fileConfig.DefaultConfig.BuilderConfig,
 	}
-	if vpSettings.DefaultConfig.ValidatorRegistration != nil {
-		vpSettings.DefaultConfig.ValidatorRegistration.GasLimit = reviewGasLimit(vpSettings.DefaultConfig.ValidatorRegistration.GasLimit)
+	if vpSettings.DefaultConfig.BuilderConfig != nil {
+		vpSettings.DefaultConfig.BuilderConfig.GasLimit = reviewGasLimit(vpSettings.DefaultConfig.BuilderConfig.GasLimit)
 	}
 
 	if fileConfig.ProposerConfig != nil {
@@ -568,12 +568,12 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 			if err := warnNonChecksummedAddress(option.FeeRecipient); err != nil {
 				return nil, err
 			}
-			if option.ValidatorRegistration != nil {
-				option.ValidatorRegistration.GasLimit = reviewGasLimit(option.ValidatorRegistration.GasLimit)
+			if option.BuilderConfig != nil {
+				option.BuilderConfig.GasLimit = reviewGasLimit(option.BuilderConfig.GasLimit)
 			}
 			vpSettings.ProposeConfig[bytesutil.ToBytes48(decodedKey)] = &validatorServiceConfig.ProposerOption{
-				FeeRecipient:          common.HexToAddress(option.FeeRecipient),
-				ValidatorRegistration: option.ValidatorRegistration,
+				FeeRecipient:  common.HexToAddress(option.FeeRecipient),
+				BuilderConfig: option.BuilderConfig,
 			}
 
 		}
