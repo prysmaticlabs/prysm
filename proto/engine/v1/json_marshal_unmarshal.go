@@ -359,9 +359,10 @@ func (f *ForkchoiceState) UnmarshalJSON(enc []byte) error {
 }
 
 type blobBundleJSON struct {
-	BlockHash common.Hash           `json:"blockHash"`
-	Kzgs      []types.KZGCommitment `json:"kzgs"`
-	Blobs     []types.Blob          `json:"blobs"`
+	BlockHash       common.Hash           `json:"blockHash"`
+	Kzgs            []types.KZGCommitment `json:"kzgs"`
+	Blobs           []types.Blob          `json:"blobs"`
+	AggregatedProof types.KZGProof        `json:"aggregatedProof"`
 }
 
 // MarshalJSON --
@@ -380,9 +381,10 @@ func (b *BlobsBundle) MarshalJSON() ([]byte, error) {
 	}
 
 	return json.Marshal(blobBundleJSON{
-		BlockHash: bytesutil.ToBytes32(b.BlockHash),
-		Kzgs:      kzgs,
-		Blobs:     blobs,
+		BlockHash:       bytesutil.ToBytes32(b.BlockHash),
+		Kzgs:            kzgs,
+		Blobs:           blobs,
+		AggregatedProof: bytesutil.ToBytes48(b.AggregatedProof),
 	})
 }
 
@@ -409,5 +411,6 @@ func (e *BlobsBundle) UnmarshalJSON(enc []byte) error {
 		}
 	}
 	e.Blobs = blobs
+	e.AggregatedProof = bytesutil.PadTo(dec.AggregatedProof[:], fieldparams.BLSPubkeyLength)
 	return nil
 }

@@ -20,6 +20,7 @@ func TxPeekBlobVersionedHashes(tx []byte) ([]common.Hash, error) {
 	if tx[0] != types.BlobTxType {
 		return nil, errInvalidBlobTxType
 	}
+	// TODO remove geth/ztyp dep
 	sbt := types.SignedBlobTx{}
 	if err := sbt.Deserialize(codec.NewDecodingReader(bytes.NewReader(tx[1:]), uint64(len(tx)-1))); err != nil {
 		return nil, fmt.Errorf("%w: unable to decode Blob Tx", err)

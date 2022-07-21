@@ -156,6 +156,7 @@ func (s *Service) validateBlobsSidecarSignature(ctx context.Context, blk interfa
 		BeaconBlockRoot: m.Message.BeaconBlockRoot,
 		BeaconBlockSlot: m.Message.BeaconBlockSlot,
 		Blobs:           m.Message.Blobs,
+		AggregatedProof: m.Message.AggregatedProof,
 	}
 
 	domain, err := signing.Domain(fork, currentEpoch, params.BeaconConfig().DomainBlobsSidecar, state.GenesisValidatorsRoot())

@@ -85,6 +85,7 @@ func (vs *Server) getEip4844BeaconBlock(ctx context.Context, req *ethpb.BlockReq
 			BeaconBlockRoot: r[:],
 			BeaconBlockSlot: blk.Slot,
 			Blobs:           blobs,
+			AggregatedProof: blobsBundle.AggregatedProof,
 		}
 	}
 

@@ -902,8 +902,8 @@ def prysm_deps():
             "//third_party:com_github_ethereum_go_ethereum_secp256k1.patch",
         ],
         replace = "github.com/mdehoog/go-ethereum",
-        sum = "h1:xrZtQ0tUH1w+JcNuUbHdJfUgqZIz31lE2Ps0dhMZH1U=",
-        version = "v1.10.19-0.20220607211042-6d4820c91805",
+        sum = "h1:sqau71NbS6icnNeas4mqbLLbu3ihQHt9FfCvZCG9v58=",
+        version = "v1.10.19-0.20220719053341-c76d2bd57d77",
     )
 
     go_repository(
