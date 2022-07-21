@@ -79,6 +79,8 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
+        "//beacon-chain/blockchain:go_default_library",
+        "//beacon-chain/builder:go_default_library",
         "//beacon-chain/core/feed/state:go_default_library",
         "//beacon-chain/powchain:go_default_library",
         "//beacon-chain/powchain/testing:go_default_library",
@@ -86,6 +88,7 @@ go_test(
         "//cmd/beacon-chain/flags:go_default_library",
         "//config/params:go_default_library",
         "//consensus-types/primitives:go_default_library",
+        "//runtime:go_default_library",
         "//testing/assert:go_default_library",
         "//testing/require:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
