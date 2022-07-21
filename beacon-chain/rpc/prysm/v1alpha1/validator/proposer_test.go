@@ -148,9 +148,8 @@ func TestProposer_GetBlock_AddsUnaggregatedAtts(t *testing.T) {
 	// Generate a bunch of random attestations at slot. These would be considered double votes, but
 	// we don't care for the purpose of this test.
 	var atts []*ethpb.Attestation
-	au := util.AttestationUtil{}
 	for i := uint64(0); len(atts) < int(params.BeaconConfig().MaxAttestations); i++ {
-		a, err := au.GenerateAttestations(beaconState, privKeys, 4, 1, true)
+		a, err := util.GenerateAttestations(beaconState, privKeys, 4, 1, true)
 		require.NoError(t, err)
 		atts = append(atts, a...)
 	}
@@ -161,7 +160,7 @@ func TestProposer_GetBlock_AddsUnaggregatedAtts(t *testing.T) {
 
 	// Generate some more random attestations with a larger spread so that we can capture at least
 	// one unaggregated attestation.
-	atts, err := au.GenerateAttestations(beaconState, privKeys, 300, 1, true)
+	atts, err := util.GenerateAttestations(beaconState, privKeys, 300, 1, true)
 	require.NoError(t, err)
 	found := false
 	for _, a := range atts {
@@ -1816,7 +1815,6 @@ func TestProposer_FilterAttestation(t *testing.T) {
 	genesisRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	au := util.AttestationUtil{}
 	tests := []struct {
 		name         string
 		wantedErr    string
@@ -1837,7 +1835,7 @@ func TestProposer_FilterAttestation(t *testing.T) {
 			inputAtts: func() []*ethpb.Attestation {
 				atts := make([]*ethpb.Attestation, 10)
 				for i := 0; i < len(atts); i++ {
-					atts[i] = au.HydrateAttestation(&ethpb.Attestation{
+					atts[i] = util.HydrateAttestation(&ethpb.Attestation{
 						Data: &ethpb.AttestationData{
 							CommitteeIndex: types.CommitteeIndex(i),
 						},
@@ -1854,7 +1852,7 @@ func TestProposer_FilterAttestation(t *testing.T) {
 			inputAtts: func() []*ethpb.Attestation {
 				atts := make([]*ethpb.Attestation, 10)
 				for i := 0; i < len(atts); i++ {
-					atts[i] = au.HydrateAttestation(&ethpb.Attestation{
+					atts[i] = util.HydrateAttestation(&ethpb.Attestation{
 						Data: &ethpb.AttestationData{
 							CommitteeIndex: types.CommitteeIndex(i),
 							Source:         &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]},
@@ -2013,13 +2011,12 @@ func TestProposer_DeleteAttsInPool_Aggregated(t *testing.T) {
 	priv, err := bls.RandKey()
 	require.NoError(t, err)
 	sig := priv.Sign([]byte("foo")).Marshal()
-	au := util.AttestationUtil{}
 	aggregatedAtts := []*ethpb.Attestation{
-		au.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b10101}, Signature: sig}),
-		au.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b11010}, Signature: sig})}
+		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b10101}, Signature: sig}),
+		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b11010}, Signature: sig})}
 	unaggregatedAtts := []*ethpb.Attestation{
-		au.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b10010}, Signature: sig}),
-		au.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b10100}, Signature: sig})}
+		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b10010}, Signature: sig}),
+		util.HydrateAttestation(&ethpb.Attestation{Data: &ethpb.AttestationData{Slot: 1}, AggregationBits: bitfield.Bitlist{0b10100}, Signature: sig})}
 
 	require.NoError(t, s.AttPool.SaveAggregatedAttestations(aggregatedAtts))
 	require.NoError(t, s.AttPool.SaveUnaggregatedAttestations(unaggregatedAtts))
