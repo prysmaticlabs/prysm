@@ -88,8 +88,7 @@ func TestFieldTrie_RecomputeTrie_CompressedArray(t *testing.T) {
 func TestNewFieldTrie_UnknownType(t *testing.T) {
 	newState, _ := util.DeterministicGenesisState(t, 32)
 	maxLength := (params.BeaconConfig().ValidatorRegistryLimit*8 + 31) / 32
-	trie, err := fieldtrie.NewFieldTrie(stateTypes.FieldIndex(12), 4, newState.Balances(), maxLength)
-	require.Equal(t, nil, trie)
+	_, err := fieldtrie.NewFieldTrie(stateTypes.FieldIndex(12), 4, newState.Balances(), maxLength)
 	require.ErrorContains(t, "unrecognized data type", err)
 }
 
