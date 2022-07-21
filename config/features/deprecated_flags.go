@@ -120,6 +120,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedDoublyLinkedTree = &cli.BoolFlag{
+		Name:   "enable-forkchoice-doubly-linked-tree",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -144,4 +149,5 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedDisableCorrectlyInsertOrphanedAtts,
 	deprecatedDisableCorrectlyPruneCanonicalAtts,
 	deprecatedEnableNativeState,
+	deprecatedDoublyLinkedTree,
 }

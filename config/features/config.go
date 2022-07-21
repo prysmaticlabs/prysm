@@ -221,9 +221,10 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logEnabled(enableVecHTR)
 		cfg.EnableVectorizedHTR = true
 	}
-	if ctx.Bool(enableForkChoiceDoublyLinkedTree.Name) {
-		logEnabled(enableForkChoiceDoublyLinkedTree)
-		cfg.EnableForkChoiceDoublyLinkedTree = true
+	cfg.EnableForkChoiceDoublyLinkedTree = true
+	if ctx.Bool(disableNativeState.Name) {
+		logDisabled(disableForkChoiceDoublyLinkedTree)
+		cfg.EnableForkChoiceDoublyLinkedTree = false
 	}
 	if ctx.Bool(enableGossipBatchAggregation.Name) {
 		logEnabled(enableGossipBatchAggregation)
