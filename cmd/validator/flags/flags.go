@@ -348,7 +348,7 @@ var (
 	// EnableBuilderFlag enables the periodic validator registration API calls that will update the custom builder with validator settings.
 	EnableBuilderFlag = &cli.BoolFlag{
 		Name:  "enable-builder",
-		Usage: "Enables MEV Builder validator registration APIs for the validator client to update settings such as fee recipient and gas limit. Note* this flag is not required if using proposer settings config file",
+		Usage: "Enables Builder validator registration APIs for the validator client to update settings such as fee recipient and gas limit. Note* this flag is not required if using proposer settings config file",
 		Value: false,
 	}
 )
