@@ -265,13 +265,12 @@ func (ns *Server) GetSyncStatus(ctx context.Context, _ *emptypb.Empty) (*ethpb.S
 	ctx, span := trace.StartSpan(ctx, "node.GetSyncStatus")
 	defer span.End()
 
-	headSlot := ns.HeadFetcher.HeadSlot()
-
 	isOptimistic, err := ns.OptimisticModeFetcher.IsOptimistic(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not check optimistic status: %v", err)
 	}
 
+	headSlot := ns.HeadFetcher.HeadSlot()
 	return &ethpb.SyncingResponse{
 		Data: &ethpb.SyncInfo{
 			HeadSlot:     headSlot,
