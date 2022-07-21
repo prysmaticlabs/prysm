@@ -15,7 +15,6 @@ go_library(
         "//beacon-chain/p2p:go_default_library",
         "//beacon-chain/p2p/peers:go_default_library",
         "//beacon-chain/p2p/peers/peerdata:go_default_library",
-        "//beacon-chain/rpc/eth/helpers:go_default_library",
         "//beacon-chain/sync:go_default_library",
         "//proto/eth/v1:go_default_library",
         "//proto/migration:go_default_library",
