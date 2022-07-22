@@ -9,12 +9,14 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	powchaintesting "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
+	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/proto/migration"
@@ -41,11 +43,10 @@ func fillDBTestBlocks(ctx context.Context, t *testing.T, beaconDB db.Database) (
 		b := util.NewBeaconBlock()
 		b.Block.Slot = i
 		b.Block.ParentRoot = bytesutil.PadTo([]byte{uint8(i)}, 32)
-		au := util.AttestationUtil{}
-		att1 := au.NewAttestation()
+		att1 := util.NewAttestation()
 		att1.Data.Slot = i
 		att1.Data.CommitteeIndex = types.CommitteeIndex(i)
-		att2 := au.NewAttestation()
+		att2 := util.NewAttestation()
 		att2.Data.Slot = i
 		att2.Data.CommitteeIndex = types.CommitteeIndex(i + 1)
 		b.Block.Body.Attestations = []*ethpbalpha.Attestation{att1, att2}
@@ -85,11 +86,10 @@ func fillDBTestBlocksAltair(ctx context.Context, t *testing.T, beaconDB db.Datab
 		b := util.NewBeaconBlockAltair()
 		b.Block.Slot = i
 		b.Block.ParentRoot = bytesutil.PadTo([]byte{uint8(i)}, 32)
-		au := util.AttestationUtil{}
-		att1 := au.NewAttestation()
+		att1 := util.NewAttestation()
 		att1.Data.Slot = i
 		att1.Data.CommitteeIndex = types.CommitteeIndex(i)
-		att2 := au.NewAttestation()
+		att2 := util.NewAttestation()
 		att2.Data.Slot = i
 		att2.Data.CommitteeIndex = types.CommitteeIndex(i + 1)
 		b.Block.Body.Attestations = []*ethpbalpha.Attestation{att1, att2}
@@ -128,11 +128,10 @@ func fillDBTestBlocksBellatrix(ctx context.Context, t *testing.T, beaconDB db.Da
 		b := util.NewBeaconBlockBellatrix()
 		b.Block.Slot = i
 		b.Block.ParentRoot = bytesutil.PadTo([]byte{uint8(i)}, 32)
-		au := util.AttestationUtil{}
-		att1 := au.NewAttestation()
+		att1 := util.NewAttestation()
 		att1.Data.Slot = i
 		att1.Data.CommitteeIndex = types.CommitteeIndex(i)
-		att2 := au.NewAttestation()
+		att2 := util.NewAttestation()
 		att2.Data.Slot = i
 		att2.Data.CommitteeIndex = types.CommitteeIndex(i + 1)
 		b.Block.Body.Attestations = []*ethpbalpha.Attestation{att1, att2}
@@ -1290,6 +1289,9 @@ func TestServer_GetBlockV2(t *testing.T) {
 			ChainInfoFetcher:      mockChainService,
 			HeadFetcher:           mockChainService,
 			OptimisticModeFetcher: mockChainService,
+			ExecutionPayloadReconstructor: &powchaintesting.EngineClient{
+				ExecutionPayloadByBlockHash: map[[32]byte]*enginev1.ExecutionPayload{},
+			},
 		}
 
 		genBlk, blkContainers := fillDBTestBlocksBellatrix(ctx, t, beaconDB)

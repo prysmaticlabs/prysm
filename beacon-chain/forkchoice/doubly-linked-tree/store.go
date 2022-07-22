@@ -27,7 +27,9 @@ func (s *Store) applyProposerBoostScore(newBalances []uint64) error {
 	if s.previousProposerBoostRoot != params.BeaconConfig().ZeroHash {
 		previousNode, ok := s.nodeByRoot[s.previousProposerBoostRoot]
 		if !ok || previousNode == nil {
-			return errInvalidProposerBoostRoot
+			s.previousProposerBoostRoot = [32]byte{}
+			log.WithError(errInvalidProposerBoostRoot).Errorf(fmt.Sprintf("invalid prev root %#x", s.previousProposerBoostRoot))
+			return nil
 		}
 		previousNode.balance -= s.previousProposerBoostScore
 	}
@@ -35,7 +37,9 @@ func (s *Store) applyProposerBoostScore(newBalances []uint64) error {
 	if s.proposerBoostRoot != params.BeaconConfig().ZeroHash {
 		currentNode, ok := s.nodeByRoot[s.proposerBoostRoot]
 		if !ok || currentNode == nil {
-			return errInvalidProposerBoostRoot
+			s.proposerBoostRoot = [32]byte{}
+			log.WithError(errInvalidProposerBoostRoot).Errorf(fmt.Sprintf("invalid current root %#x", s.proposerBoostRoot))
+			return nil
 		}
 		proposerScore, err = computeProposerBoostScore(newBalances)
 		if err != nil {
@@ -63,7 +67,7 @@ func (s *Store) PruneThreshold() uint64 {
 // head starts from justified root and then follows the best descendant links
 // to find the best block for head. This function assumes a lock on s.nodesLock
 func (s *Store) head(ctx context.Context) ([32]byte, error) {
-	_, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.head")
+	ctx, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.head")
 	defer span.End()
 	s.checkpointsLock.RLock()
 	defer s.checkpointsLock.RUnlock()
@@ -109,7 +113,7 @@ func (s *Store) insert(ctx context.Context,
 	slot types.Slot,
 	root, parentRoot, payloadHash [fieldparams.RootLength]byte,
 	justifiedEpoch, finalizedEpoch types.Epoch) (*Node, error) {
-	_, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.insert")
+	ctx, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.insert")
 	defer span.End()
 
 	s.nodesLock.Lock()
@@ -196,7 +200,7 @@ func (s *Store) pruneFinalizedNodeByRootMap(ctx context.Context, node, finalized
 // root is different than the current store finalized root, and the number of the store has met prune threshold.
 // This function does not prune for invalid optimistically synced nodes, it deals only with pruning upon finalization
 func (s *Store) prune(ctx context.Context) error {
-	_, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.Prune")
+	ctx, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.Prune")
 	defer span.End()
 
 	s.nodesLock.Lock()
