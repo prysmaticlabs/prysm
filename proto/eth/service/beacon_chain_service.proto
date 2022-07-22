@@ -154,7 +154,7 @@ service BeaconChain {
   // still broadcast but a different status code is returned (202).
   //
   // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Beacon/publishBlock
-  rpc SubmitBlock(v2.SignedBeaconBlockContainerV2) returns (google.protobuf.Empty) {
+  rpc SubmitBlock(v2.SignedBeaconBlockContainer) returns (google.protobuf.Empty) {
     option (google.api.http) = {
       post: "/internal/eth/v1/beacon/blocks"
       body: "*"

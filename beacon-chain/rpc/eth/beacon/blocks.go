@@ -207,23 +207,23 @@ func (bs *Server) ListBlockHeaders(ctx context.Context, req *ethpbv1.BlockHeader
 // response (20X) only indicates that the broadcast has been successful. The beacon node is expected to integrate the
 // new block into its state, and therefore validate the block internally, however blocks which fail the validation are
 // still broadcast but a different status code is returned (202).
-func (bs *Server) SubmitBlock(ctx context.Context, req *ethpbv2.SignedBeaconBlockContainerV2) (*emptypb.Empty, error) {
+func (bs *Server) SubmitBlock(ctx context.Context, req *ethpbv2.SignedBeaconBlockContainer) (*emptypb.Empty, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon.SubmitBlock")
 	defer span.End()
 
-	phase0BlkContainer, ok := req.Message.(*ethpbv2.SignedBeaconBlockContainerV2_Phase0Block)
+	phase0BlkContainer, ok := req.Message.(*ethpbv2.SignedBeaconBlockContainer_Phase0Block)
 	if ok {
 		if err := bs.submitPhase0Block(ctx, phase0BlkContainer.Phase0Block, req.Signature); err != nil {
 			return nil, err
 		}
 	}
-	altairBlkContainer, ok := req.Message.(*ethpbv2.SignedBeaconBlockContainerV2_AltairBlock)
+	altairBlkContainer, ok := req.Message.(*ethpbv2.SignedBeaconBlockContainer_AltairBlock)
 	if ok {
 		if err := bs.submitAltairBlock(ctx, altairBlkContainer.AltairBlock, req.Signature); err != nil {
 			return nil, err
 		}
 	}
-	bellatrixBlkContainer, ok := req.Message.(*ethpbv2.SignedBeaconBlockContainerV2_BellatrixBlock)
+	bellatrixBlkContainer, ok := req.Message.(*ethpbv2.SignedBeaconBlockContainer_BellatrixBlock)
 	if ok {
 		if err := bs.submitBellatrixBlock(ctx, bellatrixBlkContainer.BellatrixBlock, req.Signature); err != nil {
 			return nil, err
@@ -413,8 +413,8 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 		}
 		return &ethpbv2.BlockResponseV2{
 			Version: ethpbv2.Version_PHASE0,
-			Data: &ethpbv2.SignedBeaconBlockContainerV2{
-				Message:   &ethpbv2.SignedBeaconBlockContainerV2_Phase0Block{Phase0Block: v1Blk.Block},
+			Data: &ethpbv2.SignedBeaconBlockContainer{
+				Message:   &ethpbv2.SignedBeaconBlockContainer_Phase0Block{Phase0Block: v1Blk.Block},
 				Signature: v1Blk.Signature,
 			},
 			ExecutionOptimistic: false,
@@ -436,8 +436,8 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 		}
 		return &ethpbv2.BlockResponseV2{
 			Version: ethpbv2.Version_ALTAIR,
-			Data: &ethpbv2.SignedBeaconBlockContainerV2{
-				Message:   &ethpbv2.SignedBeaconBlockContainerV2_AltairBlock{AltairBlock: v2Blk},
+			Data: &ethpbv2.SignedBeaconBlockContainer{
+				Message:   &ethpbv2.SignedBeaconBlockContainer_AltairBlock{AltairBlock: v2Blk},
 				Signature: blk.Signature(),
 			},
 			ExecutionOptimistic: false,
@@ -467,8 +467,8 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 		}
 		return &ethpbv2.BlockResponseV2{
 			Version: ethpbv2.Version_BELLATRIX,
-			Data: &ethpbv2.SignedBeaconBlockContainerV2{
-				Message:   &ethpbv2.SignedBeaconBlockContainerV2_BellatrixBlock{BellatrixBlock: v2Blk},
+			Data: &ethpbv2.SignedBeaconBlockContainer{
+				Message:   &ethpbv2.SignedBeaconBlockContainer_BellatrixBlock{BellatrixBlock: v2Blk},
 				Signature: blk.Signature(),
 			},
 			ExecutionOptimistic: isOptimistic,
@@ -501,8 +501,8 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 		}
 		return &ethpbv2.BlockResponseV2{
 			Version: ethpbv2.Version_BELLATRIX,
-			Data: &ethpbv2.SignedBeaconBlockContainerV2{
-				Message:   &ethpbv2.SignedBeaconBlockContainerV2_BellatrixBlock{BellatrixBlock: v2Blk},
+			Data: &ethpbv2.SignedBeaconBlockContainer{
+				Message:   &ethpbv2.SignedBeaconBlockContainer_BellatrixBlock{BellatrixBlock: v2Blk},
 				Signature: blk.Signature(),
 			},
 			ExecutionOptimistic: isOptimistic,

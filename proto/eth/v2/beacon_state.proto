@@ -31,7 +31,7 @@ option java_outer_classname = "SyncCommitteeProto";
 option java_package = "org.ethereum.eth.v2";
 option php_namespace = "Ethereum\\Eth\\v2";
 
-message BeaconStateV2 {
+message BeaconState {
   // Versioning [1001-2000]
   uint64 genesis_time = 1001;
   bytes genesis_validators_root = 1002 [(ethereum.eth.ext.ssz_size) = "32"];
@@ -124,7 +124,7 @@ message BeaconStateBellatrix {
    engine.v1.ExecutionPayloadHeader latest_execution_payload_header = 10001; // [New in Bellatrix]
 }
 
-message StateRequestV2 {
+message BeaconStateRequestV2 {
   // The state id which can be any of: "head" (canonical head in node's view),
   // "genesis", "finalized", "justified", <slot>, <hex encoded stateRoot with 0x prefix>.
   bytes state_id = 1;
@@ -144,7 +144,7 @@ message BeaconStateSSZResponseV2 {
 message BeaconStateContainer {
   oneof state {
     v1.BeaconState phase0_state = 1;
-    BeaconStateV2 altair_state = 2;
+    BeaconState altair_state = 2;
     BeaconStateBellatrix bellatrix_state = 3;
   }
 }

@@ -36,7 +36,7 @@ message BlockRequestV2 {
 
 message BlockResponseV2 {
   v2.Version version = 1;
-  SignedBeaconBlockContainerV2 data = 2;
+  SignedBeaconBlockContainer data = 2;
   bool execution_optimistic = 3;
 }
 
@@ -48,7 +48,7 @@ message BeaconBlockContainerV2 {
   }
 }
 
-message SignedBeaconBlockContainerV2 {
+message SignedBeaconBlockContainer {
   oneof message {
     v1.BeaconBlock phase0_block = 1;
     BeaconBlockAltair altair_block = 2;
