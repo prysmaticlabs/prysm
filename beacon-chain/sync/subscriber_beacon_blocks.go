@@ -43,7 +43,10 @@ func (s *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) 
 			// re-schedule block to be processed later.
 			// TODO(XXX): This is a bit inefficient as the block will be validated again
 			s.pendingQueueLock.Lock()
-			s.insertBlockToPendingQueue(slot, signed, root)
+			if err := s.insertBlockToPendingQueue(slot, signed, root); err != nil {
+				s.pendingQueueLock.Unlock()
+				return err
+			}
 			s.pendingQueueLock.Unlock()
 			return nil
 		}

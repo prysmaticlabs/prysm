@@ -11,6 +11,7 @@ go_library(
         "//validator:__subpackages__",
     ],
     deps = [
+        "//beacon-chain/core/blocks:go_default_library",
         "//encoding/bytesutil:go_default_library",
         "//consensus-types/interfaces:go_default_library",
         "//consensus-types/primitives:go_default_library",

@@ -541,7 +541,11 @@ func (d *dbDataAvailability) IsDataAvailable(ctx context.Context, root [32]byte)
 		return nil
 	}
 
-	kzgs, _ := b.Block().Body().BlobKzgs()
+	kzgs, err := b.Block().Body().BlobKzgs()
+	if err != nil {
+		// shouldn't happen if blob contains kzgs
+		return err
+	}
 	sidecar, err := d.db.BlobsSidecar(ctx, root)
 	if err != nil {
 		return err

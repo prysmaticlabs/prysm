@@ -96,7 +96,7 @@ func (s *Service) validateBlobsSidecarPubSub(ctx context.Context, pid peer.ID, m
 		log.WithError(err).WithField("slot", signed.Message.BeaconBlockSlot).Warn("Failed to lookup pending block in queue")
 		return pubsub.ValidationIgnore, err
 	}
-	if blk == nil {
+	if blk == nil || blk.IsNil() {
 		// We expect the block including this sidecar to follow shortly. Add the sidecar the queue so the pending block processor can readily retrieve it
 		s.pendingQueueLock.Lock()
 		s.insertSidecarToPendingQueue(&queuedBlobsSidecar{signed.Message, signed.Signature, false})
