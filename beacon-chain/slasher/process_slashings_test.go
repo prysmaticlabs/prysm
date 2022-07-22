@@ -50,11 +50,10 @@ func TestService_processAttesterSlashings(t *testing.T) {
 		},
 	}
 
-	au := util.AttestationUtil{}
-	firstAtt := au.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+	firstAtt := util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{0},
 	})
-	secondAtt := au.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+	secondAtt := util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{0},
 	})
 

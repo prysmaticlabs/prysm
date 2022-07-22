@@ -18,13 +18,13 @@ func MapForkInfo(slot types.Slot, genesisValidatorsRoot []byte) (*ForkInfo, erro
 		return nil, errors.Wrap(err, "could not get fork info")
 	}
 	forkData := &Fork{
-		PreviousVersion: hexutil.Encode(fork.PreviousVersion),
-		CurrentVersion:  hexutil.Encode(fork.CurrentVersion),
+		PreviousVersion: fork.PreviousVersion,
+		CurrentVersion:  fork.CurrentVersion,
 		Epoch:           fmt.Sprint(fork.Epoch),
 	}
 	return &ForkInfo{
 		Fork:                  forkData,
-		GenesisValidatorsRoot: hexutil.Encode(genesisValidatorsRoot),
+		GenesisValidatorsRoot: genesisValidatorsRoot,
 	}, nil
 }
 
@@ -40,7 +40,7 @@ func MapAggregateAndProof(from *ethpb.AggregateAttestationAndProof) (*AggregateA
 	return &AggregateAndProof{
 		AggregatorIndex: fmt.Sprint(from.AggregatorIndex),
 		Aggregate:       aggregate,
-		SelectionProof:  hexutil.Encode(from.SelectionProof),
+		SelectionProof:  from.SelectionProof,
 	}, nil
 }
 
@@ -57,9 +57,9 @@ func MapAttestation(attestation *ethpb.Attestation) (*Attestation, error) {
 		return nil, err
 	}
 	return &Attestation{
-		AggregationBits: hexutil.Encode(attestation.AggregationBits),
+		AggregationBits: []byte(attestation.AggregationBits),
 		Data:            data,
-		Signature:       hexutil.Encode(attestation.Signature),
+		Signature:       attestation.Signature,
 	}, nil
 }
 
@@ -79,7 +79,7 @@ func MapAttestationData(data *ethpb.AttestationData) (*AttestationData, error) {
 	return &AttestationData{
 		Slot:            fmt.Sprint(data.Slot),
 		Index:           fmt.Sprint(data.CommitteeIndex),
-		BeaconBlockRoot: hexutil.Encode(data.BeaconBlockRoot),
+		BeaconBlockRoot: data.BeaconBlockRoot,
 		Source:          source,
 		Target:          target,
 	}, nil
@@ -105,13 +105,13 @@ func MapBeaconBlockBody(body *ethpb.BeaconBlockBody) (*BeaconBlockBody, error) {
 		return nil, fmt.Errorf("eth1 data in Beacon Block Body is nil")
 	}
 	block := &BeaconBlockBody{
-		RandaoReveal: hexutil.Encode(body.RandaoReveal),
+		RandaoReveal: body.RandaoReveal,
 		Eth1Data: &Eth1Data{
-			DepositRoot:  hexutil.Encode(body.Eth1Data.DepositRoot),
+			DepositRoot:  body.Eth1Data.DepositRoot,
 			DepositCount: fmt.Sprint(body.Eth1Data.DepositCount),
-			BlockHash:    hexutil.Encode(body.Eth1Data.BlockHash),
+			BlockHash:    body.Eth1Data.BlockHash,
 		},
-		Graffiti:          hexutil.Encode(body.Graffiti),
+		Graffiti:          body.Graffiti,
 		ProposerSlashings: make([]*ProposerSlashing, len(body.ProposerSlashings)),
 		AttesterSlashings: make([]*AttesterSlashing, len(body.AttesterSlashings)),
 		Attestations:      make([]*Attestation, len(body.Attestations)),
@@ -187,19 +187,11 @@ func MapSignedBeaconBlockHeader(signedHeader *ethpb.SignedBeaconBlockHeader) (*S
 		Message: &BeaconBlockHeader{
 			Slot:          fmt.Sprint(signedHeader.Header.Slot),
 			ProposerIndex: fmt.Sprint(signedHeader.Header.ProposerIndex),
-			ParentRoot: hexutil.Encode(
-				signedHeader.Header.ParentRoot,
-			),
-			StateRoot: hexutil.Encode(
-				signedHeader.Header.StateRoot,
-			),
-			BodyRoot: hexutil.Encode(
-				signedHeader.Header.BodyRoot,
-			),
+			ParentRoot:    signedHeader.Header.ParentRoot,
+			StateRoot:     signedHeader.Header.StateRoot,
+			BodyRoot:      signedHeader.Header.BodyRoot,
 		},
-		Signature: hexutil.Encode(
-			signedHeader.Signature,
-		),
+		Signature: signedHeader.Signature,
 	}, nil
 }
 
@@ -238,7 +230,7 @@ func MapIndexedAttestation(attestation *ethpb.IndexedAttestation) (*IndexedAttes
 	return &IndexedAttestation{
 		AttestingIndices: attestingIndices,
 		Data:             attestationData,
-		Signature:        hexutil.Encode(attestation.Signature),
+		Signature:        attestation.Signature,
 	}, nil
 }
 
@@ -254,16 +246,10 @@ func MapDeposit(deposit *ethpb.Deposit) (*Deposit, error) {
 	return &Deposit{
 		Proof: proof,
 		Data: &DepositData{
-			PublicKey: hexutil.Encode(
-				deposit.Data.PublicKey,
-			),
-			WithdrawalCredentials: hexutil.Encode(
-				deposit.Data.WithdrawalCredentials,
-			),
-			Amount: fmt.Sprint(deposit.Data.Amount),
-			Signature: hexutil.Encode(
-				deposit.Data.Signature,
-			),
+			PublicKey:             deposit.Data.PublicKey,
+			WithdrawalCredentials: deposit.Data.WithdrawalCredentials,
+			Amount:                fmt.Sprint(deposit.Data.Amount),
+			Signature:             deposit.Data.Signature,
 		},
 	}, nil
 }
@@ -281,9 +267,7 @@ func MapSignedVoluntaryExit(signedVoluntaryExit *ethpb.SignedVoluntaryExit) (*Si
 			Epoch:          fmt.Sprint(signedVoluntaryExit.Exit.Epoch),
 			ValidatorIndex: fmt.Sprint(signedVoluntaryExit.Exit.ValidatorIndex),
 		},
-		Signature: hexutil.Encode(
-			signedVoluntaryExit.Signature,
-		),
+		Signature: signedVoluntaryExit.Signature,
 	}, nil
 }
 
@@ -299,13 +283,9 @@ func MapBeaconBlockAltair(block *ethpb.BeaconBlockAltair) (*BeaconBlockAltair, e
 	return &BeaconBlockAltair{
 		Slot:          fmt.Sprint(block.Slot),
 		ProposerIndex: fmt.Sprint(block.ProposerIndex),
-		ParentRoot: hexutil.Encode(
-			block.ParentRoot,
-		),
-		StateRoot: hexutil.Encode(
-			block.StateRoot,
-		),
-		Body: body,
+		ParentRoot:    block.ParentRoot,
+		StateRoot:     block.StateRoot,
+		Body:          body,
 	}, nil
 }
 
@@ -322,21 +302,21 @@ func MapBeaconBlockBodyAltair(body *ethpb.BeaconBlockBodyAltair) (*BeaconBlockBo
 	}
 
 	block := &BeaconBlockBodyAltair{
-		RandaoReveal: hexutil.Encode(body.RandaoReveal),
+		RandaoReveal: body.RandaoReveal,
 		Eth1Data: &Eth1Data{
-			DepositRoot:  hexutil.Encode(body.Eth1Data.DepositRoot),
+			DepositRoot:  body.Eth1Data.DepositRoot,
 			DepositCount: fmt.Sprint(body.Eth1Data.DepositCount),
-			BlockHash:    hexutil.Encode(body.Eth1Data.BlockHash),
+			BlockHash:    body.Eth1Data.BlockHash,
 		},
-		Graffiti:          hexutil.Encode(body.Graffiti),
+		Graffiti:          body.Graffiti,
 		ProposerSlashings: make([]*ProposerSlashing, len(body.ProposerSlashings)),
 		AttesterSlashings: make([]*AttesterSlashing, len(body.AttesterSlashings)),
 		Attestations:      make([]*Attestation, len(body.Attestations)),
 		Deposits:          make([]*Deposit, len(body.Deposits)),
 		VoluntaryExits:    make([]*SignedVoluntaryExit, len(body.VoluntaryExits)),
 		SyncAggregate: &SyncAggregate{
-			SyncCommitteeBits:      hexutil.Encode(body.SyncAggregate.SyncCommitteeBits),
-			SyncCommitteeSignature: hexutil.Encode(body.SyncAggregate.SyncCommitteeSignature),
+			SyncCommitteeBits:      []byte(body.SyncAggregate.SyncCommitteeBits),
+			SyncCommitteeSignature: body.SyncAggregate.SyncCommitteeSignature,
 		},
 	}
 	for i, slashing := range body.ProposerSlashings {
@@ -402,13 +382,13 @@ func MapContributionAndProof(contribution *ethpb.ContributionAndProof) (*Contrib
 	}
 	return &ContributionAndProof{
 		AggregatorIndex: fmt.Sprint(contribution.AggregatorIndex),
-		SelectionProof:  hexutil.Encode(contribution.SelectionProof),
+		SelectionProof:  contribution.SelectionProof,
 		Contribution: &SyncCommitteeContribution{
 			Slot:              fmt.Sprint(contribution.Contribution.Slot),
-			BeaconBlockRoot:   hexutil.Encode(contribution.Contribution.BlockRoot),
+			BeaconBlockRoot:   contribution.Contribution.BlockRoot,
 			SubcommitteeIndex: fmt.Sprint(contribution.Contribution.SubcommitteeIndex),
-			AggregationBits:   hexutil.Encode(contribution.Contribution.AggregationBits),
-			Signature:         hexutil.Encode(contribution.Contribution.Signature),
+			AggregationBits:   []byte(contribution.Contribution.AggregationBits),
+			Signature:         contribution.Contribution.Signature,
 		},
 	}, nil
 }

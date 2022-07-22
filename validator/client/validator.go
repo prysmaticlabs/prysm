@@ -51,7 +51,8 @@ import (
 // keyFetchPeriod is the frequency that we try to refetch validating keys
 // in case no keys were fetched previously.
 var (
-	keyRefetchPeriod = 30 * time.Second
+	keyRefetchPeriod                = 30 * time.Second
+	ErrBuilderValidatorRegistration = errors.New("Builder API validator registration unsuccessful")
 )
 
 var (
@@ -980,32 +981,24 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 		log.Warnf("No valid validator indices were found, prepare beacon proposer request fee recipients array is empty")
 		return nil
 	}
-	if len(feeRecipients) != len(pubkeys) {
-		log.WithFields(logrus.Fields{
-			"activePubkeys": len(pubkeys) - len(feeRecipients),
-		}).Warnln("will not prepare beacon proposer and update fee recipient until a validator index is assigned")
-	}
 	if _, err := v.validatorClient.PrepareBeaconProposer(ctx, &ethpb.PrepareBeaconProposerRequest{
 		Recipients: feeRecipients,
 	}); err != nil {
 		return err
 	}
 	log.Infoln("Prepared beacon proposer with fee recipient to validator index mapping")
-	if len(signedRegisterValidatorRequests) != len(pubkeys) {
-		log.WithFields(logrus.Fields{
-			"activePubkeys": len(pubkeys) - len(signedRegisterValidatorRequests),
-		}).Warnln("will not be included in validator registration until a validator index is assigned")
-	}
-	if err := SubmitValidatorRegistration(ctx, v.validatorClient, signedRegisterValidatorRequests); err != nil {
-		return err
+
+	if err := SubmitValidatorRegistrations(ctx, v.validatorClient, signedRegisterValidatorRequests); err != nil {
+		return errors.Wrap(ErrBuilderValidatorRegistration, err.Error())
 	}
 
 	return nil
 }
 
 func (v *validator) buildProposerSettingsRequests(ctx context.Context, pubkeys [][fieldparams.BLSPubkeyLength]byte, signer iface.SigningFunc) ([]*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer, []*ethpb.SignedValidatorRegistrationV1, error) {
-	var validatorToFeeRecipients []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer
+	var proposerFeeRecipientRequests []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer
 	var signedRegisterValidatorRequests []*ethpb.SignedValidatorRegistrationV1
+	anyValidatorRegistrationEnabled := false
 	// need to check for pubkey to validator index mappings
 	for i, key := range pubkeys {
 		var enableValidatorRegistration bool
@@ -1028,8 +1021,8 @@ func (v *validator) buildProposerSettingsRequests(ctx context.Context, pubkeys [
 		}
 		if v.ProposerSettings.DefaultConfig != nil {
 			feeRecipient = v.ProposerSettings.DefaultConfig.FeeRecipient
-			vr := v.ProposerSettings.DefaultConfig.ValidatorRegistration
-			if vr != nil && vr.Enable {
+			vr := v.ProposerSettings.DefaultConfig.BuilderConfig
+			if vr != nil && vr.Enabled {
 				gasLimit = vr.GasLimit
 				enableValidatorRegistration = true
 			}
@@ -1040,8 +1033,8 @@ func (v *validator) buildProposerSettingsRequests(ctx context.Context, pubkeys [
 			if ok && option != nil {
 				// override the default if a proposeconfig is set
 				feeRecipient = option.FeeRecipient
-				vr := option.ValidatorRegistration
-				if vr != nil && vr.Enable {
+				vr := option.BuilderConfig
+				if vr != nil && vr.Enabled {
 					gasLimit = vr.GasLimit
 					enableValidatorRegistration = true
 				} else {
@@ -1055,12 +1048,13 @@ func (v *validator) buildProposerSettingsRequests(ctx context.Context, pubkeys [
 
 		// Only include requests with assigned validator index
 		if !skipAppendToFeeRecipientArray {
-			validatorToFeeRecipients = append(validatorToFeeRecipients, &ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
+			proposerFeeRecipientRequests = append(proposerFeeRecipientRequests, &ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
 				ValidatorIndex: validatorIndex,
 				FeeRecipient:   feeRecipient[:],
 			})
 		}
 		if !skipAppendToFeeRecipientArray && enableValidatorRegistration {
+			anyValidatorRegistrationEnabled = true
 			unsignedRequest := &ethpb.ValidatorRegistrationV1{
 				FeeRecipient: feeRecipient[:],
 				GasLimit:     gasLimit,
@@ -1075,7 +1069,20 @@ func (v *validator) buildProposerSettingsRequests(ctx context.Context, pubkeys [
 			signedRegisterValidatorRequests = append(signedRegisterValidatorRequests, request)
 		}
 	}
-	return validatorToFeeRecipients, signedRegisterValidatorRequests, nil
+
+	if len(proposerFeeRecipientRequests) != len(pubkeys) {
+		log.WithFields(logrus.Fields{
+			"totalNonActivePubkeys": len(pubkeys) - len(proposerFeeRecipientRequests),
+		}).Warnln("will not prepare beacon proposer and update fee recipient until a validator index is assigned")
+	}
+
+	if len(signedRegisterValidatorRequests) != len(pubkeys) && anyValidatorRegistrationEnabled {
+		log.WithFields(logrus.Fields{
+			"totalNonActivePubkeys": len(pubkeys) - len(signedRegisterValidatorRequests),
+		}).Warnln("will not be included in builder validator registration until a validator index is assigned")
+	}
+
+	return proposerFeeRecipientRequests, signedRegisterValidatorRequests, nil
 }
 
 func (v *validator) cacheValidatorPubkeyHexToValidatorIndex(ctx context.Context, pubkey [fieldparams.BLSPubkeyLength]byte) (types.ValidatorIndex, bool, error) {

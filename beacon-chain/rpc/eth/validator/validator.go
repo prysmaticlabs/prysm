@@ -53,16 +53,15 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *ethpbv1.AttesterDu
 		return nil, status.Errorf(codes.InvalidArgument, "Request epoch %d can not be greater than next epoch %d", req.Epoch, currentEpoch+1)
 	}
 
+	isOptimistic, err := vs.OptimisticModeFetcher.IsOptimistic(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not check optimistic status: %v", err)
+	}
+
 	s, err := vs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
-
-	isOptimistic, err := rpchelpers.IsOptimistic(ctx, s, vs.OptimisticModeFetcher)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
-	}
-
 	s, err = advanceState(ctx, s, req.Epoch, currentEpoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not advance state to requested epoch start slot: %v", err)
@@ -137,16 +136,15 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDu
 		return nil, status.Errorf(codes.InvalidArgument, "Request epoch %d can not be greater than next epoch %d", req.Epoch, currentEpoch+1)
 	}
 
+	isOptimistic, err := vs.OptimisticModeFetcher.IsOptimistic(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not check optimistic status: %v", err)
+	}
+
 	s, err := vs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
-
-	isOptimistic, err := rpchelpers.IsOptimistic(ctx, s, vs.OptimisticModeFetcher)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
-	}
-
 	s, err = advanceState(ctx, s, req.Epoch, currentEpoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not advance state to requested epoch start slot: %v", err)
