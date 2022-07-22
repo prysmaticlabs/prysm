@@ -79,8 +79,6 @@ func TestServer_CreateWallet_Local(t *testing.T) {
 		Keystores: encodedKeystores,
 		Passwords: passwords,
 	}
-	_, err = s.ImportKeystores(ctx, importReq)
-	require.ErrorContains(t, "Not a valid EIP-2335 keystore", err)
 
 	encryptor := keystorev4.New()
 	keystores := make([]string, 3)
