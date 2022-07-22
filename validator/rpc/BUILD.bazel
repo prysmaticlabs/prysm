@@ -114,7 +114,6 @@ go_test(
         "//validator/db/kv:go_default_library",
         "//validator/keymanager:go_default_library",
         "//validator/keymanager/derived:go_default_library",
-        "//validator/keymanager/local:go_default_library",
         "//validator/keymanager/remote-web3signer:go_default_library",
         "//validator/slashing-protection-history/format:go_default_library",
         "//validator/testing:go_default_library",
