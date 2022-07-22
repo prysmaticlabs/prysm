@@ -863,21 +863,21 @@ func local_request_BeaconNodeValidator_SubmitSignedContributionAndProof_0(ctx co
 }
 
 var (
-	filter_BeaconNodeValidator_StreamBlocksAltair_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
+	filter_BeaconNodeValidator_StreamBlocks_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 )
 
-func request_BeaconNodeValidator_StreamBlocksAltair_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconNodeValidatorClient, req *http.Request, pathParams map[string]string) (BeaconNodeValidator_StreamBlocksAltairClient, runtime.ServerMetadata, error) {
+func request_BeaconNodeValidator_StreamBlocks_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconNodeValidatorClient, req *http.Request, pathParams map[string]string) (BeaconNodeValidator_StreamBlocksClient, runtime.ServerMetadata, error) {
 	var protoReq StreamBlocksRequest
 	var metadata runtime.ServerMetadata
 
 	if err := req.ParseForm(); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_BeaconNodeValidator_StreamBlocksAltair_0); err != nil {
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_BeaconNodeValidator_StreamBlocks_0); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 
-	stream, err := client.StreamBlocksAltair(ctx, &protoReq)
+	stream, err := client.StreamBlocks(ctx, &protoReq)
 	if err != nil {
 		return nil, metadata, err
 	}
@@ -1457,7 +1457,7 @@ func RegisterBeaconNodeValidatorHandlerServer(ctx context.Context, mux *runtime.
 
 	})
 
-	mux.Handle("GET", pattern_BeaconNodeValidator_StreamBlocksAltair_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("GET", pattern_BeaconNodeValidator_StreamBlocks_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		err := status.Error(codes.Unimplemented, "streaming calls are not yet supported in the in-process transport")
 		_, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
@@ -2028,23 +2028,23 @@ func RegisterBeaconNodeValidatorHandlerClient(ctx context.Context, mux *runtime.
 
 	})
 
-	mux.Handle("GET", pattern_BeaconNodeValidator_StreamBlocksAltair_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("GET", pattern_BeaconNodeValidator_StreamBlocks_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/ethereum.eth.v1alpha1.BeaconNodeValidator/StreamBlocksAltair")
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/ethereum.eth.v1alpha1.BeaconNodeValidator/StreamBlocks")
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_BeaconNodeValidator_StreamBlocksAltair_0(rctx, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_BeaconNodeValidator_StreamBlocks_0(rctx, inboundMarshaler, client, req, pathParams)
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
 
-		forward_BeaconNodeValidator_StreamBlocksAltair_0(ctx, mux, outboundMarshaler, w, req, func() (proto.Message, error) { return resp.Recv() }, mux.GetForwardResponseOptions()...)
+		forward_BeaconNodeValidator_StreamBlocks_0(ctx, mux, outboundMarshaler, w, req, func() (proto.Message, error) { return resp.Recv() }, mux.GetForwardResponseOptions()...)
 
 	})
 
@@ -2122,7 +2122,7 @@ var (
 
 	pattern_BeaconNodeValidator_SubmitSignedContributionAndProof_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"eth", "v1alpha1", "validator", "signed_contribution_and_proof"}, ""))
 
-	pattern_BeaconNodeValidator_StreamBlocksAltair_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"eth", "v1alpha1", "validator", "blocks", "stream"}, ""))
+	pattern_BeaconNodeValidator_StreamBlocks_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"eth", "v1alpha1", "validator", "blocks", "stream"}, ""))
 
 	pattern_BeaconNodeValidator_SubmitValidatorRegistrations_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"eth", "v1alpha1", "validator", "registration"}, ""))
 )
@@ -2178,7 +2178,7 @@ var (
 
 	forward_BeaconNodeValidator_SubmitSignedContributionAndProof_0 = runtime.ForwardResponseMessage
 
-	forward_BeaconNodeValidator_StreamBlocksAltair_0 = runtime.ForwardResponseStream
+	forward_BeaconNodeValidator_StreamBlocks_0 = runtime.ForwardResponseStream
 
 	forward_BeaconNodeValidator_SubmitValidatorRegistrations_0 = runtime.ForwardResponseMessage
 )

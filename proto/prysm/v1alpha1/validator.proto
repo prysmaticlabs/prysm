@@ -315,7 +315,7 @@ service BeaconNodeValidator {
 
     // Server-side stream of all signed blocks as they are received by
     // the beacon chain node.
-    rpc StreamBlocksAltair(StreamBlocksRequest) returns (stream StreamBlocksResponse) {
+    rpc StreamBlocks(StreamBlocksRequest) returns (stream StreamBlocksResponse) {
         option (google.api.http) = {
             get: "/eth/v1alpha1/validator/blocks/stream"
         };

@@ -263,7 +263,7 @@ func (mr *MockBeaconNodeValidatorServerMockRecorder) ProposeExit(arg0, arg1 inte
 }
 
 // StreamBlocksAltair mocks base method.
-func (m *MockBeaconNodeValidatorServer) StreamBlocksAltair(arg0 *eth.StreamBlocksRequest, arg1 eth.BeaconNodeValidator_StreamBlocksAltairServer) error {
+func (m *MockBeaconNodeValidatorServer) StreamBlocksAltair(arg0 *eth.StreamBlocksRequest, arg1 eth.BeaconNodeValidator_StreamBlocksServer) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "StreamBlocksAltair", arg0, arg1)
 	ret0, _ := ret[0].(error)

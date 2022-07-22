@@ -12,8 +12,8 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// StreamBlocksAltair to clients every single time a block is received by the beacon node.
-func (vs *Server) StreamBlocksAltair(req *ethpb.StreamBlocksRequest, stream ethpb.BeaconNodeValidator_StreamBlocksAltairServer) error {
+// StreamBlocks to clients every single time a block is received by the beacon node.
+func (vs *Server) StreamBlocks(req *ethpb.StreamBlocksRequest, stream ethpb.BeaconNodeValidator_StreamBlocksServer) error {
 	blocksChannel := make(chan *feed.Event, 1)
 	var blockSub event.Subscription
 	if req.VerifiedOnly {
@@ -45,7 +45,7 @@ func (vs *Server) StreamBlocksAltair(req *ethpb.StreamBlocksRequest, stream ethp
 	}
 }
 
-func sendVerifiedBlocks(stream ethpb.BeaconNodeValidator_StreamBlocksAltairServer, blockEvent *feed.Event) error {
+func sendVerifiedBlocks(stream ethpb.BeaconNodeValidator_StreamBlocksServer, blockEvent *feed.Event) error {
 	if blockEvent.Type != statefeed.BlockProcessed {
 		return nil
 	}
@@ -85,7 +85,7 @@ func sendVerifiedBlocks(stream ethpb.BeaconNodeValidator_StreamBlocksAltairServe
 	return nil
 }
 
-func (vs *Server) sendBlocks(stream ethpb.BeaconNodeValidator_StreamBlocksAltairServer, blockEvent *feed.Event) error {
+func (vs *Server) sendBlocks(stream ethpb.BeaconNodeValidator_StreamBlocksServer, blockEvent *feed.Event) error {
 	if blockEvent.Type != blockfeed.ReceivedBlock {
 		return nil
 	}

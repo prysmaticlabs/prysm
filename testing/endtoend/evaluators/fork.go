@@ -32,7 +32,7 @@ func altairForkOccurs(conns ...*grpc.ClientConn) error {
 	client := ethpb.NewBeaconNodeValidatorClient(conn)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	stream, err := client.StreamBlocksAltair(ctx, &ethpb.StreamBlocksRequest{VerifiedOnly: true})
+	stream, err := client.StreamBlocks(ctx, &ethpb.StreamBlocksRequest{VerifiedOnly: true})
 	if err != nil {
 		return errors.Wrap(err, "failed to get stream")
 	}
@@ -74,7 +74,7 @@ func bellatrixForkOccurs(conns ...*grpc.ClientConn) error {
 	client := ethpb.NewBeaconNodeValidatorClient(conn)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	stream, err := client.StreamBlocksAltair(ctx, &ethpb.StreamBlocksRequest{VerifiedOnly: true})
+	stream, err := client.StreamBlocks(ctx, &ethpb.StreamBlocksRequest{VerifiedOnly: true})
 	if err != nil {
 		return errors.Wrap(err, "failed to get stream")
 	}
