@@ -156,34 +156,6 @@ func (s *Server) BackupAccounts(
 	}, nil
 }
 
-// DeleteAccounts deletes accounts from a user's wallet is an imported or derived wallet.
-func (s *Server) DeleteAccounts(
-	ctx context.Context, req *pb.DeleteAccountsRequest,
-) (*pb.DeleteAccountsResponse, error) {
-	if s.validatorService == nil {
-		return nil, status.Error(codes.FailedPrecondition, "Validator service not yet initialized")
-	}
-	if req.PublicKeysToDelete == nil || len(req.PublicKeysToDelete) < 1 {
-		return nil, status.Error(codes.InvalidArgument, "No public keys specified to delete")
-	}
-	if s.wallet == nil {
-		return nil, status.Error(codes.FailedPrecondition, "No wallet found")
-	}
-	km, err := s.validatorService.Keymanager()
-	if err != nil {
-		return nil, err
-	}
-	if err := accounts.DeleteAccount(ctx, &accounts.DeleteConfig{
-		Keymanager:       km,
-		DeletePublicKeys: req.PublicKeysToDelete,
-	}); err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not delete public keys: %v", err)
-	}
-	return &pb.DeleteAccountsResponse{
-		DeletedKeys: req.PublicKeysToDelete,
-	}, nil
-}
-
 // VoluntaryExit performs a voluntary exit for the validator keys specified in a request.
 func (s *Server) VoluntaryExit(
 	ctx context.Context, req *pb.VoluntaryExitRequest,
