@@ -8,10 +8,10 @@ package validatorpb
 
 import (
 	context "context"
-	empty "github.com/golang/protobuf/ptypes/empty"
 	reflect "reflect"
 	sync "sync"
 
+	empty "github.com/golang/protobuf/ptypes/empty"
 	v1alpha1 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	grpc "google.golang.org/grpc"
