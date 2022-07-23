@@ -209,7 +209,7 @@ func (v *ValidatorService) Start() {
 		logDutyCountDown:               v.logDutyCountDown,
 		Web3SignerConfig:               v.Web3SignerConfig,
 		ProposerSettings:               v.ProposerSettings,
-		walletIntializedChannel:        make(chan *wallet.Wallet, 1),
+		walletInitializedChannel:       make(chan *wallet.Wallet, 1),
 	}
 	// To resolve a race condition at startup due to the interface
 	// nature of the abstracted block type. We initialize

@@ -1394,10 +1394,10 @@ func TestValidator_WaitForKeymanagerInitialization_Web(t *testing.T) {
 	require.NoError(t, err)
 	walletChan := make(chan *wallet.Wallet, 1)
 	v := validator{
-		db:                      db,
-		useWeb:                  true,
-		walletInitializedFeed:   &event.Feed{},
-		walletIntializedChannel: walletChan,
+		db:                       db,
+		useWeb:                   true,
+		walletInitializedFeed:    &event.Feed{},
+		walletInitializedChannel: walletChan,
 	}
 	wait := make(chan struct{})
 	go func() {
@@ -1618,7 +1618,6 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 					GasLimit:     uint64(40000000),
 				},
 			},
-			logMessages: []string{"will not be included in builder validator registration"},
 		},
 		{
 			name: " Happy Path default doesn't send any validator registrations",
@@ -2050,10 +2049,13 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 					FeeRecipient: byteValueAddress,
 					GasLimit:     params.BeaconConfig().DefaultBuilderGasLimit,
 				},
+				{
+					FeeRecipient: byteValueAddress,
+					GasLimit:     params.BeaconConfig().DefaultBuilderGasLimit,
+				},
 			},
 			logMessages: []string{
-				"prepare beacon proposer and update fee recipient until a validator index is assigned",
-				"will not be included in builder validator registration until a validator index is assigned",
+				"Prepare proposer request did not success with all pubkeys",
 			},
 		},
 	}
@@ -2066,7 +2068,9 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 			pubkeys, err := km.FetchValidatingPublicKeys(ctx)
 			require.NoError(t, err)
 			if tt.feeRecipientMap != nil {
-				feeRecipients, signedRegisterValidatorRequests, err := v.buildProposerSettingsRequests(ctx, pubkeys, km.Sign)
+				feeRecipients, err := v.buildPrepProposerReqs(ctx, pubkeys)
+				require.NoError(t, err)
+				signedRegisterValidatorRequests, err := v.buildSignedRegReqs(ctx, pubkeys, km.Sign)
 				require.NoError(t, err)
 				for _, recipient := range feeRecipients {
 					require.Equal(t, strings.ToLower(tt.feeRecipientMap[recipient.ValidatorIndex]), strings.ToLower(hexutil.Encode(recipient.FeeRecipient)))
