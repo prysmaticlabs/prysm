@@ -14,6 +14,8 @@ import (
 	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	"github.com/sirupsen/logrus"
@@ -46,10 +48,19 @@ type ForkchoiceUpdatedResponse struct {
 	PayloadId *pb.PayloadIDBytes `json:"payloadId"`
 }
 
+// ExecutionPayloadReconstructor defines a service that can reconstruct a full beacon
+// block with an execution payload from a signed beacon block and a connection
+// to an execution client's engine API.
+type ExecutionPayloadReconstructor interface {
+	ReconstructFullBellatrixBlock(
+		ctx context.Context, blindedBlock interfaces.SignedBeaconBlock,
+	) (interfaces.SignedBeaconBlock, error)
+}
+
 // EngineCaller defines a client that can interact with an Ethereum
 // execution node's engine service via JSON-RPC.
 type EngineCaller interface {
-	NewPayload(ctx context.Context, payload *pb.ExecutionPayload) ([]byte, error)
+	NewPayload(ctx context.Context, payload interfaces.ExecutionData) ([]byte, error)
 	ForkchoiceUpdated(
 		ctx context.Context, state *pb.ForkchoiceState, attrs *pb.PayloadAttributes,
 	) (*pb.PayloadIDBytes, []byte, error)
@@ -57,12 +68,12 @@ type EngineCaller interface {
 	ExchangeTransitionConfiguration(
 		ctx context.Context, cfg *pb.TransitionConfiguration,
 	) error
-	ExecutionBlockByHash(ctx context.Context, hash common.Hash) (*pb.ExecutionBlock, error)
+	ExecutionBlockByHash(ctx context.Context, hash common.Hash, withTxs bool) (*pb.ExecutionBlock, error)
 	GetTerminalBlockHash(ctx context.Context) ([]byte, bool, error)
 }
 
 // NewPayload calls the engine_newPayloadV1 method via JSON-RPC.
-func (s *Service) NewPayload(ctx context.Context, payload *pb.ExecutionPayload) ([]byte, error) {
+func (s *Service) NewPayload(ctx context.Context, payload interfaces.ExecutionData) ([]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.NewPayload")
 	defer span.End()
 	start := time.Now()
@@ -73,14 +84,18 @@ func (s *Service) NewPayload(ctx context.Context, payload *pb.ExecutionPayload) 
 	ctx, cancel := context.WithDeadline(ctx, d)
 	defer cancel()
 	result := &pb.PayloadStatus{}
-	err := s.rpcClient.CallContext(ctx, result, NewPayloadMethod, payload)
+	payloadPb, ok := payload.Proto().(*pb.ExecutionPayload)
+	if !ok {
+		return nil, errors.New("execution data must be an execution payload")
+	}
+	err := s.rpcClient.CallContext(ctx, result, NewPayloadMethod, payloadPb)
 	if err != nil {
 		return nil, handleRPCError(err)
 	}
 
 	switch result.Status {
 	case pb.PayloadStatus_INVALID_BLOCK_HASH:
-		return nil, fmt.Errorf("could not validate block hash: %v", result.ValidationError)
+		return nil, ErrInvalidBlockHashPayloadStatus
 	case pb.PayloadStatus_ACCEPTED, pb.PayloadStatus_SYNCING:
 		return nil, ErrAcceptedSyncingPayloadStatus
 	case pb.PayloadStatus_INVALID:
@@ -228,11 +243,11 @@ func (s *Service) GetTerminalBlockHash(ctx context.Context) ([]byte, bool, error
 		}
 		blockReachedTTD := currentTotalDifficulty.Cmp(terminalTotalDifficulty) >= 0
 
-		parentHash := bytesutil.ToBytes32(blk.ParentHash)
-		if len(blk.ParentHash) == 0 || parentHash == params.BeaconConfig().ZeroHash {
+		parentHash := blk.ParentHash
+		if parentHash == params.BeaconConfig().ZeroHash {
 			return nil, false, nil
 		}
-		parentBlk, err := s.ExecutionBlockByHash(ctx, parentHash)
+		parentBlk, err := s.ExecutionBlockByHash(ctx, parentHash, false /* no txs */)
 		if err != nil {
 			return nil, false, errors.Wrap(err, "could not get parent execution block")
 		}
@@ -248,12 +263,12 @@ func (s *Service) GetTerminalBlockHash(ctx context.Context) ([]byte, bool, error
 			if !parentReachedTTD {
 				log.WithFields(logrus.Fields{
 					"number":   blk.Number,
-					"hash":     fmt.Sprintf("%#x", bytesutil.Trunc(blk.Hash)),
+					"hash":     fmt.Sprintf("%#x", bytesutil.Trunc(blk.Hash[:])),
 					"td":       blk.TotalDifficulty,
 					"parentTd": parentBlk.TotalDifficulty,
 					"ttd":      terminalTotalDifficulty,
 				}).Info("Retrieved terminal block hash")
-				return blk.Hash, true, nil
+				return blk.Hash[:], true, nil
 			}
 		} else {
 			return nil, false, nil
@@ -281,13 +296,86 @@ func (s *Service) LatestExecutionBlock(ctx context.Context) (*pb.ExecutionBlock,
 
 // ExecutionBlockByHash fetches an execution engine block by hash by calling
 // eth_blockByHash via JSON-RPC.
-func (s *Service) ExecutionBlockByHash(ctx context.Context, hash common.Hash) (*pb.ExecutionBlock, error) {
+func (s *Service) ExecutionBlockByHash(ctx context.Context, hash common.Hash, withTxs bool) (*pb.ExecutionBlock, error) {
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.ExecutionBlockByHash")
 	defer span.End()
-
 	result := &pb.ExecutionBlock{}
-	err := s.rpcClient.CallContext(ctx, result, ExecutionBlockByHashMethod, hash, false /* no full transaction objects */)
+	err := s.rpcClient.CallContext(ctx, result, ExecutionBlockByHashMethod, hash, withTxs)
 	return result, handleRPCError(err)
+}
+
+// ReconstructFullBellatrixBlock takes in a blinded beacon block and reconstructs
+// a beacon block with a full execution payload via the engine API.
+func (s *Service) ReconstructFullBellatrixBlock(
+	ctx context.Context, blindedBlock interfaces.SignedBeaconBlock,
+) (interfaces.SignedBeaconBlock, error) {
+	if err := wrapper.BeaconBlockIsNil(blindedBlock); err != nil {
+		return nil, errors.Wrap(err, "cannot reconstruct bellatrix block from nil data")
+	}
+	if !blindedBlock.Block().IsBlinded() {
+		return nil, errors.New("can only reconstruct block from blinded block format")
+	}
+	header, err := blindedBlock.Block().Body().Execution()
+	if err != nil {
+		return nil, err
+	}
+	executionBlockHash := common.BytesToHash(header.BlockHash())
+	executionBlock, err := s.ExecutionBlockByHash(ctx, executionBlockHash, true /* with txs */)
+	if err != nil {
+		return nil, fmt.Errorf("could not fetch execution block with txs by hash %#x: %v", executionBlockHash, err)
+	}
+	if executionBlock == nil {
+		return nil, fmt.Errorf("received nil execution block for request by hash %#x", executionBlockHash)
+	}
+	payload, err := fullPayloadFromExecutionBlock(header, executionBlock)
+	if err != nil {
+		return nil, err
+	}
+	fullBlock, err := wrapper.BuildSignedBeaconBlockFromExecutionPayload(blindedBlock, payload)
+	if err != nil {
+		return nil, err
+	}
+	reconstructedExecutionPayloadCount.Add(1)
+	return fullBlock, nil
+}
+
+func fullPayloadFromExecutionBlock(
+	header interfaces.ExecutionData, block *pb.ExecutionBlock,
+) (*pb.ExecutionPayload, error) {
+	if header.IsNil() || block == nil {
+		return nil, errors.New("execution block and header cannot be nil")
+	}
+	if !bytes.Equal(header.BlockHash(), block.Hash[:]) {
+		return nil, fmt.Errorf(
+			"block hash field in execution header %#x does not match execution block hash %#x",
+			header.BlockHash(),
+			block.Hash,
+		)
+	}
+	txs := make([][]byte, len(block.Transactions))
+	for i, tx := range block.Transactions {
+		txBin, err := tx.MarshalBinary()
+		if err != nil {
+			return nil, err
+		}
+		txs[i] = txBin
+	}
+	return &pb.ExecutionPayload{
+		ParentHash:    header.ParentHash(),
+		FeeRecipient:  header.FeeRecipient(),
+		StateRoot:     header.StateRoot(),
+		ReceiptsRoot:  header.ReceiptsRoot(),
+		LogsBloom:     header.LogsBloom(),
+		PrevRandao:    header.PrevRandao(),
+		BlockNumber:   header.BlockNumber(),
+		GasLimit:      header.GasLimit(),
+		GasUsed:       header.GasUsed(),
+		Timestamp:     header.Timestamp(),
+		ExtraData:     header.ExtraData(),
+		BaseFeePerGas: header.BaseFeePerGas(),
+		BlockHash:     block.Hash[:],
+		Transactions:  txs,
+	}, nil
 }
 
 // Handles errors received from the RPC server according to the specification.
@@ -332,7 +420,7 @@ func handleRPCError(err error) error {
 		if !ok {
 			return errors.Wrapf(err, "got an unexpected error in JSON-RPC response")
 		}
-		return errors.Wrapf(ErrServer, "%v", errWithData.ErrorData())
+		return errors.Wrapf(ErrServer, "%v", errWithData.Error())
 	default:
 		return err
 	}

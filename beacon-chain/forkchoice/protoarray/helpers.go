@@ -19,7 +19,7 @@ func computeDeltas(
 	oldBalances, newBalances []uint64,
 	slashedIndices map[types.ValidatorIndex]bool,
 ) ([]int, []Vote, error) {
-	_, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.computeDeltas")
+	ctx, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.computeDeltas")
 	defer span.End()
 
 	deltas := make([]int, count)

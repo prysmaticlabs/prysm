@@ -17,7 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/forks/bellatrix"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
@@ -126,7 +125,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 	}
 	isValidPayload, err := s.notifyNewPayload(ctx, postStateVersion, postStateHeader, signed)
 	if err != nil {
-		return fmt.Errorf("could not verify new payload: %v", err)
+		return errors.Wrap(err, "could not validate new payload")
 	}
 	if isValidPayload {
 		if err := s.validateMergeTransitionBlock(ctx, preStateVersion, preStateHeader, signed); err != nil {
@@ -184,7 +183,9 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 	if err != nil {
 		log.WithError(err).Warn("Could not update head")
 	}
-	s.notifyEngineIfChangedHead(ctx, headRoot)
+	if err := s.notifyEngineIfChangedHead(ctx, headRoot); err != nil {
+		return err
+	}
 
 	if err := s.pruneCanonicalAttsFromPool(ctx, blockRoot, signed); err != nil {
 		return err
@@ -585,11 +586,15 @@ func (s *Service) validateMergeTransitionBlock(ctx context.Context, stateVersion
 	}
 
 	// Skip validation if block has an empty payload.
-	payload, err := blk.Block().Body().ExecutionPayload()
+	payload, err := blk.Block().Body().Execution()
 	if err != nil {
 		return invalidBlock{error: err}
 	}
-	if bellatrix.IsEmptyPayload(payload) {
+	isEmpty, err := wrapper.IsEmptyExecutionData(payload)
+	if err != nil {
+		return err
+	}
+	if isEmpty {
 		return nil
 	}
 
@@ -600,11 +605,16 @@ func (s *Service) validateMergeTransitionBlock(ctx context.Context, stateVersion
 	}
 
 	// Skip validation if the block is not a merge transition block.
-	atTransition, err := blocks.IsMergeTransitionBlockUsingPreStatePayloadHeader(stateHeader, blk.Block().Body())
+	// To reach here. The payload must be non-empty. If the state header is empty then it's at transition.
+	wh, err := wrapper.WrappedExecutionPayloadHeader(stateHeader)
 	if err != nil {
-		return errors.Wrap(err, "could not check if merge block is terminal")
+		return err
 	}
-	if !atTransition {
+	empty, err := wrapper.IsEmptyExecutionData(wh)
+	if err != nil {
+		return err
+	}
+	if !empty {
 		return nil
 	}
 	return s.validateMergeBlock(ctx, blk)

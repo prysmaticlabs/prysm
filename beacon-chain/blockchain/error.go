@@ -4,7 +4,9 @@ import "github.com/pkg/errors"
 
 var (
 	// ErrInvalidPayload is returned when the payload is invalid
-	ErrInvalidPayload = errors.New("recevied an INVALID payload from execution engine")
+	ErrInvalidPayload = invalidBlock{error: errors.New("received an INVALID payload from execution engine")}
+	// ErrInvalidBlockHashPayloadStatus is returned when the payload has invalid block hash.
+	ErrInvalidBlockHashPayloadStatus = invalidBlock{error: errors.New("received an INVALID_BLOCK_HASH payload from execution engine")}
 	// ErrUndefinedExecutionEngineError is returned when the execution engine returns an error that is not defined
 	ErrUndefinedExecutionEngineError = errors.New("received an undefined ee error")
 	// errNilFinalizedInStore is returned when a nil finalized checkpt is returned from store.
@@ -40,17 +42,18 @@ var (
 type invalidBlock struct {
 	invalidRoots [][32]byte
 	error
+	root [32]byte
 }
 
 type invalidBlockError interface {
 	Error() string
-	InvalidBlock() bool
 	InvalidRoots() [][32]byte
+	BlockRoot() [32]byte
 }
 
-// InvalidBlock returns true for `invalidBlock`.
-func (e invalidBlock) InvalidBlock() bool {
-	return true
+// BlockRoot returns the invalid block root.
+func (e invalidBlock) BlockRoot() [32]byte {
+	return e.root
 }
 
 // InvalidRoots returns an optional list of invalid roots of the invalid block which leads up last valid root.
@@ -63,11 +66,24 @@ func IsInvalidBlock(e error) bool {
 	if e == nil {
 		return false
 	}
-	d, ok := e.(invalidBlockError)
+	_, ok := e.(invalidBlockError)
 	if !ok {
 		return IsInvalidBlock(errors.Unwrap(e))
 	}
-	return d.InvalidBlock()
+	return true
+}
+
+// InvalidBlockRoot returns the invalid block root. If the error
+// doesn't have an invalid blockroot. [32]byte{} is returned.
+func InvalidBlockRoot(e error) [32]byte {
+	if e == nil {
+		return [32]byte{}
+	}
+	d, ok := e.(invalidBlockError)
+	if !ok {
+		return [32]byte{}
+	}
+	return d.BlockRoot()
 }
 
 // InvalidRoots returns a list of invalid roots up to last valid root.

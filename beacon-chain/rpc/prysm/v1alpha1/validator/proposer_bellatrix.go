@@ -3,10 +3,14 @@ package validator
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/interop"
+	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/config/params"
 	coreBlock "github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
@@ -19,20 +23,39 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// builderGetPayloadMissCount tracks the number of misses when validator tries to get a payload from builder
+var builderGetPayloadMissCount = promauto.NewCounter(prometheus.CounterOpts{
+	Name: "builder_get_payload_miss_count",
+	Help: "The number of get payload misses for validator requests to builder",
+})
+
+// blockBuilderTimeout is the maximum amount of time allowed for a block builder to respond to a
+// block request. This value is known as `BUILDER_PROPOSAL_DELAY_TOLERANCE` in builder spec.
+const blockBuilderTimeout = 1 * time.Second
+
 func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.GenericBeaconBlock, error) {
 	altairBlk, err := vs.buildAltairBeaconBlock(ctx, req)
 	if err != nil {
 		return nil, err
 	}
 
-	builderReady, b, err := vs.getAndBuildHeaderBlock(ctx, altairBlk)
-	if err != nil {
-		// In the event of an error, the node should fall back to default execution engine for building block.
-		log.WithError(err).Error("Default back to local execution client")
-	} else if builderReady {
-		return b, nil
+	registered, err := vs.validatorRegistered(ctx, altairBlk.ProposerIndex)
+	if registered && err == nil {
+		builderReady, b, err := vs.getAndBuildHeaderBlock(ctx, altairBlk)
+		if err != nil {
+			// In the event of an error, the node should fall back to default execution engine for building block.
+			log.WithError(err).Error("Failed to build a block from external builder, falling " +
+				"back to local execution client")
+			builderGetPayloadMissCount.Inc()
+		} else if builderReady {
+			return b, nil
+		}
+	} else if err != nil {
+		log.WithFields(logrus.Fields{
+			"slot":           req.Slot,
+			"validatorIndex": altairBlk.ProposerIndex,
+		}).Errorf("Could not determine validator has registered. Default to local execution client: %v", err)
 	}
-
 	payload, err := vs.getExecutionPayload(ctx, req.Slot, altairBlk.ProposerIndex)
 	if err != nil {
 		return nil, err
@@ -75,9 +98,6 @@ func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockR
 // This function retrieves the payload header given the slot number and the validator index.
 // It's a no-op if the latest head block is not versioned bellatrix.
 func (vs *Server) getPayloadHeader(ctx context.Context, slot types.Slot, idx types.ValidatorIndex) (*enginev1.ExecutionPayloadHeader, error) {
-	if err := vs.BlockBuilder.Status(); err != nil {
-		return nil, err
-	}
 	b, err := vs.HeadFetcher.HeadBlock(ctx)
 	if err != nil {
 		return nil, err
@@ -85,7 +105,7 @@ func (vs *Server) getPayloadHeader(ctx context.Context, slot types.Slot, idx typ
 	if blocks.IsPreBellatrixVersion(b.Version()) {
 		return nil, nil
 	}
-	h, err := b.Block().Body().ExecutionPayload()
+	h, err := b.Block().Body().Execution()
 	if err != nil {
 		return nil, err
 	}
@@ -93,10 +113,15 @@ func (vs *Server) getPayloadHeader(ctx context.Context, slot types.Slot, idx typ
 	if err != nil {
 		return nil, err
 	}
-	bid, err := vs.BlockBuilder.GetHeader(ctx, slot, bytesutil.ToBytes32(h.BlockHash), pk)
+	bid, err := vs.BlockBuilder.GetHeader(ctx, slot, bytesutil.ToBytes32(h.BlockHash()), pk)
 	if err != nil {
 		return nil, err
 	}
+	log.WithFields(logrus.Fields{
+		"bid":           bytesutil.BytesToUint64BigEndian(bid.Message.Value),
+		"builderPubKey": fmt.Sprintf("%#x", bid.Message.Pubkey),
+		"blockHash":     fmt.Sprintf("%#x", bid.Message.Header.BlockHash),
+	}).Info("Received header with bid")
 	return bid.Message.Header, nil
 }
 
@@ -157,16 +182,18 @@ func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.SignedBe
 	if !vs.BlockBuilder.Configured() {
 		return b, nil
 	}
-	if err := vs.BlockBuilder.Status(); err != nil {
-		return nil, err
-	}
+
 	agg, err := b.Block().Body().SyncAggregate()
 	if err != nil {
 		return nil, err
 	}
-	h, err := b.Block().Body().ExecutionPayloadHeader()
+	h, err := b.Block().Body().Execution()
 	if err != nil {
 		return nil, err
+	}
+	header, ok := h.Proto().(*enginev1.ExecutionPayloadHeader)
+	if !ok {
+		return nil, errors.New("execution data must be execution payload header")
 	}
 	sb := &ethpb.SignedBlindedBeaconBlockBellatrix{
 		Block: &ethpb.BlindedBeaconBlockBellatrix{
@@ -184,7 +211,7 @@ func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.SignedBe
 				Deposits:               b.Block().Body().Deposits(),
 				VoluntaryExits:         b.Block().Body().VoluntaryExits(),
 				SyncAggregate:          agg,
-				ExecutionPayloadHeader: h,
+				ExecutionPayloadHeader: header,
 			},
 		},
 		Signature: b.Signature(),
@@ -221,8 +248,8 @@ func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.SignedBe
 	}
 
 	log.WithFields(logrus.Fields{
-		"blockHash":    fmt.Sprintf("%#x", h.BlockHash),
-		"feeRecipient": fmt.Sprintf("%#x", h.FeeRecipient),
+		"blockHash":    fmt.Sprintf("%#x", h.BlockHash()),
+		"feeRecipient": fmt.Sprintf("%#x", h.FeeRecipient()),
 		"gasUsed":      h.GasUsed,
 		"slot":         b.Block().Slot(),
 		"txs":          len(payload.Transactions),
@@ -251,11 +278,14 @@ func (vs *Server) readyForBuilder(ctx context.Context) (bool, error) {
 
 // Get and builder header block. Returns a boolean status, built block and error.
 // If the status is false that means builder the header block is disallowed.
+// This routine is time limited by `blockBuilderTimeout`.
 func (vs *Server) getAndBuildHeaderBlock(ctx context.Context, b *ethpb.BeaconBlockAltair) (bool, *ethpb.GenericBeaconBlock, error) {
 	// No op. Builder is not defined. User did not specify a user URL. We should use local EE.
 	if vs.BlockBuilder == nil || !vs.BlockBuilder.Configured() {
 		return false, nil, nil
 	}
+	ctx, cancel := context.WithTimeout(ctx, blockBuilderTimeout)
+	defer cancel()
 	// Does the protocol allow for builder at this current moment. Builder is only allowed post merge after finalization.
 	ready, err := vs.readyForBuilder(ctx)
 	if err != nil {
@@ -279,4 +309,19 @@ func (vs *Server) getAndBuildHeaderBlock(ctx context.Context, b *ethpb.BeaconBlo
 		return false, nil, errors.Wrap(err, "could not combine altair block with payload header")
 	}
 	return true, gb, nil
+}
+
+// validatorRegistered returns true if validator with index `id` was previously registered in the database.
+func (vs *Server) validatorRegistered(ctx context.Context, id types.ValidatorIndex) (bool, error) {
+	if vs.BeaconDB == nil {
+		return false, errors.New("nil beacon db")
+	}
+	_, err := vs.BeaconDB.RegistrationByValidatorID(ctx, id)
+	switch {
+	case errors.Is(err, kv.ErrNotFoundFeeRecipient):
+		return false, nil
+	case err != nil:
+		return false, err
+	}
+	return true, nil
 }

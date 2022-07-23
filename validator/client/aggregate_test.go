@@ -57,7 +57,7 @@ func TestSubmitAggregateAndProof_SignFails(t *testing.T) {
 	).Return(&ethpb.AggregateSelectionResponse{
 		AggregateAndProof: &ethpb.AggregateAttestationAndProof{
 			AggregatorIndex: 0,
-			Aggregate: util.NewAttestationUtil().HydrateAttestation(&ethpb.Attestation{
+			Aggregate: util.HydrateAttestation(&ethpb.Attestation{
 				AggregationBits: make([]byte, 1),
 			}),
 			SelectionProof: make([]byte, 96),
@@ -96,7 +96,7 @@ func TestSubmitAggregateAndProof_Ok(t *testing.T) {
 	).Return(&ethpb.AggregateSelectionResponse{
 		AggregateAndProof: &ethpb.AggregateAttestationAndProof{
 			AggregatorIndex: 0,
-			Aggregate: util.NewAttestationUtil().HydrateAttestation(&ethpb.Attestation{
+			Aggregate: util.HydrateAttestation(&ethpb.Attestation{
 				AggregationBits: make([]byte, 1),
 			}),
 			SelectionProof: make([]byte, 96),
@@ -159,7 +159,7 @@ func TestAggregateAndProofSignature_CanSignValidSignature(t *testing.T) {
 
 	agg := &ethpb.AggregateAttestationAndProof{
 		AggregatorIndex: 0,
-		Aggregate: util.NewAttestationUtil().HydrateAttestation(&ethpb.Attestation{
+		Aggregate: util.HydrateAttestation(&ethpb.Attestation{
 			AggregationBits: bitfield.NewBitlist(1),
 		}),
 		SelectionProof: make([]byte, 96),
