@@ -40,14 +40,14 @@ var (
 // The block is deemed invalid according to execution layer client.
 // The block violates certain fork choice rules (before finalized slot, not finalized ancestor)
 type invalidBlock struct {
-	invalidRoots [][32]byte
+	ancestorRoots [][32]byte
 	error
 	root [32]byte
 }
 
 type invalidBlockError interface {
 	Error() string
-	InvalidRoots() [][32]byte
+	InvalidAncestorRoots() [][32]byte
 	BlockRoot() [32]byte
 }
 
@@ -56,9 +56,9 @@ func (e invalidBlock) BlockRoot() [32]byte {
 	return e.root
 }
 
-// InvalidRoots returns an optional list of invalid roots of the invalid block which leads up last valid root.
-func (e invalidBlock) InvalidRoots() [][32]byte {
-	return e.invalidRoots
+// InvalidAncestorRoots returns an optional list of invalid roots of the invalid block which leads up last valid root.
+func (e invalidBlock) InvalidAncestorRoots() [][32]byte {
+	return e.ancestorRoots
 }
 
 // IsInvalidBlock returns true if the error has `invalidBlock`.
@@ -86,8 +86,8 @@ func InvalidBlockRoot(e error) [32]byte {
 	return d.BlockRoot()
 }
 
-// InvalidRoots returns a list of invalid roots up to last valid root.
-func InvalidRoots(e error) [][32]byte {
+// InvalidAncestorRoots returns a list of invalid roots up to last valid root.
+func InvalidAncestorRoots(e error) [][32]byte {
 	if e == nil {
 		return [][32]byte{}
 	}
@@ -95,5 +95,5 @@ func InvalidRoots(e error) [][32]byte {
 	if !ok {
 		return [][32]byte{}
 	}
-	return d.InvalidRoots()
+	return d.InvalidAncestorRoots()
 }
