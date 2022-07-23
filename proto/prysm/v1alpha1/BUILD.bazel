@@ -30,6 +30,7 @@ proto_library(
         "slasher.proto",
         "validator.proto",
         "p2p_messages.proto",
+	"withdrawals.proto",
         ":ssz_proto_files",
         #        ":generated_swagger_proto",
     ],
@@ -109,6 +110,9 @@ ssz_gen_marshal(
         "BlindedBeaconBlockBodyBellatrix",
         "SignedValidatorRegistrationV1",
         "ValidatorRegistrationV1",
+	"Withdrawal", 
+	"BLSToExecutionChange",
+	"SignedBLSToExecutionChange",
     ],
 )
 
@@ -201,6 +205,7 @@ ssz_proto_files(
         "beacon_block.proto",
         "beacon_state.proto",
         "sync_committee.proto",
+	"withdrawals.proto",
     ],
     config = select({
         "//conditions:default": "mainnet",
