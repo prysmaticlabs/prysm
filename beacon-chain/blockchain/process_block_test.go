@@ -785,7 +785,7 @@ func TestFillForkChoiceMissingBlocks_FinalizedSibling_DoublyLinkedTree(t *testin
 // blockTree1 constructs the following tree:
 //    /- B1
 // B0           /- B5 - B7
-//    \- B3 - B4 - B6 - B88
+//    \- B3 - B4 - B6 - B888
 func blockTree1(t *testing.T, beaconDB db.Database, genesisRoot []byte) ([][]byte, error) {
 	genesisRoot = bytesutil.PadTo(genesisRoot, 32)
 	b0 := util.NewBeaconBlock()
