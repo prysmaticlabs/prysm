@@ -2,7 +2,6 @@ package blocks
 
 import (
 	"bytes"
-	"context"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -13,6 +12,10 @@ import (
 	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
+// ProcessBLSToExecutionChange validates a signed BLSToExecution message and
+// changes the validator's withdrawal address accordingly.
+//
+// Spec pseudocode definition:
 //
 //def process_bls_to_execution_change(state: BeaconState,e: SignedBLSToExecutionChange) -> None:
 //lidators)
@@ -31,7 +34,7 @@ import (
 //        + address_change.to_execution_address
 //    )
 //
-func ProcessBLSToExecutionChange(ctx context.Context, st state.BeaconState, signed *ethpb.SignedBLSToExecutionChange) (state.BeaconState, error) {
+func ProcessBLSToExecutionChange(st state.BeaconState, signed *ethpb.SignedBLSToExecutionChange) (state.BeaconState, error) {
 	if signed == nil {
 		return st, errNilSignedWithdrawalMessage
 	}
@@ -69,5 +72,6 @@ func ProcessBLSToExecutionChange(ctx context.Context, st state.BeaconState, sign
 	newCredentials := make([]byte, 12)
 	newCredentials[0] = params.BeaconConfig().ETH1AddressWithdrawalPrefixByte
 	val.WithdrawalCredentials = append(newCredentials, message.ToExecutionAddress...)
-	return st, nil
+	err = st.UpdateValidatorAtIndex(message.ValidatorIndex, val)
+	return st, err
 }
