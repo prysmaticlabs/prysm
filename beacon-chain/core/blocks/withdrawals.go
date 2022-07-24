@@ -40,7 +40,7 @@ func ProcessBLSToExecutionChange(st state.BeaconState, signed *ethpb.SignedBLSTo
 	}
 	message := signed.Message
 	if message == nil {
-		return st, errNilSignedWithdrawalMessage
+		return st, errNilWithdrawalMessage
 	}
 
 	val, err := st.ValidatorAtIndex(message.ValidatorIndex)
