@@ -96,6 +96,7 @@ go_test(
         "//consensus-types/wrapper:go_default_library",
         "//container/trie:go_default_library",
         "//crypto/bls:go_default_library",
+        "//crypto/hash/htr:go_default_library",
         "//encoding/bytesutil:go_default_library",
         "//encoding/ssz:go_default_library",
         "//proto/engine/v1:go_default_library",
