@@ -133,7 +133,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 				"invalidCount": len(invalidRoots),
 				"newHeadRoot":  fmt.Sprintf("%#x", bytesutil.Trunc(r[:])),
 			}).Warn("Pruned invalid blocks")
-			return pid, invalidBlock{error: ErrInvalidPayload, root: arg.headRoot, ancestorRoots: invalidRoots}
+			return pid, invalidBlock{error: ErrInvalidPayload, root: arg.headRoot, invalidAncestorRoots: invalidRoots}
 
 		default:
 			log.WithError(err).Error(ErrUndefinedExecutionEngineError)
@@ -233,8 +233,8 @@ func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
 			"invalidCount": len(invalidRoots),
 		}).Warn("Pruned invalid blocks")
 		return false, invalidBlock{
-			ancestorRoots: invalidRoots,
-			error:         ErrInvalidPayload,
+			invalidAncestorRoots: invalidRoots,
+			error:                ErrInvalidPayload,
 		}
 	case powchain.ErrInvalidBlockHashPayloadStatus:
 		newPayloadInvalidNodeCount.Inc()

@@ -28,7 +28,7 @@ func TestInvalidBlockRoot(t *testing.T) {
 
 func TestInvalidRoots(t *testing.T) {
 	roots := [][32]byte{{'d'}, {'b'}, {'c'}}
-	err := invalidBlock{error: ErrInvalidPayload, root: [32]byte{'a'}, ancestorRoots: roots}
+	err := invalidBlock{error: ErrInvalidPayload, root: [32]byte{'a'}, invalidAncestorRoots: roots}
 
 	require.Equal(t, true, IsInvalidBlock(err))
 	require.Equal(t, [32]byte{'a'}, InvalidBlockRoot(err))
