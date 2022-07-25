@@ -32,7 +32,7 @@ func UnrealizedCheckpoints(st state.BeaconState) (*ethpb.Checkpoint, *ethpb.Chec
 	}
 
 	justification := processJustificationBits(st, activeBalance, prevTarget, currentTarget)
-	return computeCheckpoints(st, justification)
+	return computeCheckpoints(st, justification, activeBalance, prevTarget, currentTarget)
 }
 
 // ProcessJustificationAndFinalizationPreCompute processes justification and finalization during
@@ -62,18 +62,19 @@ func ProcessJustificationAndFinalizationPreCompute(state state.BeaconState, pBal
 
 	newBits := processJustificationBits(state, pBal.ActiveCurrentEpoch, pBal.PrevEpochTargetAttested, pBal.CurrentEpochTargetAttested)
 
-	return weighJustificationAndFinalization(state, newBits)
+	return weighJustificationAndFinalization(state, newBits, pBal.ActiveCurrentEpoch, pBal.PrevEpochTargetAttested, pBal.CurrentEpochTargetAttested)
 }
 
 // processJustificationBits processes the justification bits during epoch processing.
 func processJustificationBits(state state.BeaconState, totalActiveBalance, prevEpochTargetBalance, currEpochTargetBalance uint64) bitfield.Bitvector4 {
 	newBits := state.JustificationBits()
 	newBits.Shift(1)
+
 	// If 2/3 or more of total balance attested in the previous epoch.
 	if 3*prevEpochTargetBalance >= 2*totalActiveBalance {
 		newBits.SetBitAt(1, true)
 	}
-
+	// If 2/3 or more of total balance attested in the current epoch.
 	if 3*currEpochTargetBalance >= 2*totalActiveBalance {
 		newBits.SetBitAt(0, true)
 	}
@@ -83,8 +84,8 @@ func processJustificationBits(state state.BeaconState, totalActiveBalance, prevE
 
 // updateJustificationAndFinalization processes justification and finalization during
 // epoch processing. This is where a beacon node can justify and finalize a new epoch.
-func weighJustificationAndFinalization(state state.BeaconState, newBits bitfield.Bitvector4) (state.BeaconState, error) {
-	jc, fc, err := computeCheckpoints(state, newBits)
+func weighJustificationAndFinalization(state state.BeaconState, newBits bitfield.Bitvector4, totalActiveBalance, prevEpochTargetBalance, currEpochTargetBalance uint64) (state.BeaconState, error) {
+	jc, fc, err := computeCheckpoints(state, newBits, totalActiveBalance, prevEpochTargetBalance, currEpochTargetBalance)
 	if err != nil {
 		return nil, err
 	}
@@ -146,7 +147,7 @@ func weighJustificationAndFinalization(state state.BeaconState, newBits bitfield
 //    # The 1st/2nd most recent epochs are justified, the 1st using the 2nd as source
 //    if all(bits[0:2]) and old_current_justified_checkpoint.epoch + 1 == current_epoch:
 //        state.finalized_checkpoint = old_current_justified_checkpoint
-func computeCheckpoints(state state.BeaconState, newBits bitfield.Bitvector4) (*ethpb.Checkpoint, *ethpb.Checkpoint, error) {
+func computeCheckpoints(state state.BeaconState, newBits bitfield.Bitvector4, totalActiveBalance, prevEpochTargetBalance, currEpochTargetBalance uint64) (*ethpb.Checkpoint, *ethpb.Checkpoint, error) {
 	prevEpoch := time.PrevEpoch(state)
 	currentEpoch := time.CurrentEpoch(state)
 	oldPrevJustifiedCheckpoint := state.PreviousJustifiedCheckpoint()
@@ -155,21 +156,22 @@ func computeCheckpoints(state state.BeaconState, newBits bitfield.Bitvector4) (*
 	justifiedCheckpoint := state.CurrentJustifiedCheckpoint()
 	finalizedCheckpoint := state.FinalizedCheckpoint()
 
-	// If 2/3 or more of the total balance attested in the current epoch.
-	if newBits.BitAt(0) && currentEpoch >= justifiedCheckpoint.Epoch {
-		blockRoot, err := helpers.BlockRoot(state, currentEpoch)
-		if err != nil {
-			return nil, nil, errors.Wrapf(err, "could not get block root for current epoch %d", currentEpoch)
-		}
-		justifiedCheckpoint.Epoch = currentEpoch
-		justifiedCheckpoint.Root = blockRoot
-	} else if newBits.BitAt(1) && prevEpoch >= justifiedCheckpoint.Epoch {
+	if prevEpochTargetBalance*3 >= totalActiveBalance*2 {
 		// If 2/3 or more of total balance attested in the previous epoch.
 		blockRoot, err := helpers.BlockRoot(state, prevEpoch)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "could not get block root for previous epoch %d", prevEpoch)
 		}
 		justifiedCheckpoint.Epoch = prevEpoch
+		justifiedCheckpoint.Root = blockRoot
+	}
+	if currEpochTargetBalance*3 >= totalActiveBalance*2 {
+		// If 2/3 or more of the total balance attested in the current epoch.
+		blockRoot, err := helpers.BlockRoot(state, currentEpoch)
+		if err != nil {
+			return nil, nil, errors.Wrapf(err, "could not get block root for current epoch %d", currentEpoch)
+		}
+		justifiedCheckpoint.Epoch = currentEpoch
 		justifiedCheckpoint.Root = blockRoot
 	}
 
