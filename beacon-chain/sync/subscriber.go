@@ -11,6 +11,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -190,10 +191,9 @@ func (s *Service) subscribeWithBase(topic string, validator wrappedVal, handle s
 
 		if err := handle(ctx, msg.ValidatorData.(proto.Message)); err != nil {
 			tracing.AnnotateError(span, err)
-			switch err {
-			case blockchain.ErrInvalidPayload:
+			if errors.Is(err, blockchain.ErrInvalidPayload) {
 				log.Warning(err)
-			default:
+			} else {
 				log.WithError(err).Error("Could not handle p2p pubsub")
 			}
 			messageFailedProcessingCounter.WithLabelValues(topic).Inc()
