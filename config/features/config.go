@@ -116,6 +116,7 @@ func configureTestnet(ctx *cli.Context) error {
 		if err := params.SetActive(params.PraterConfig().Copy()); err != nil {
 			return err
 		}
+		applyPraterFeatureFlags(ctx)
 		params.UsePraterNetworkConfig()
 	} else if ctx.Bool(RopstenTestnet.Name) {
 		log.Warn("Running on the Ropsten Beacon Chain Testnet")
@@ -142,6 +143,13 @@ func configureTestnet(ctx *cli.Context) error {
 		}
 	}
 	return nil
+}
+
+// Insert feature flags within the function to be enabled for Prater testnet.
+func applyPraterFeatureFlags(ctx *cli.Context) {
+	if err := ctx.Set(EnableOnlyBlindedBeaconBlocks.Names()[0], "true"); err != nil {
+		log.WithError(err).Debug("error enabling only saving blinded beacon blocks flag")
+	}
 }
 
 // Insert feature flags within the function to be enabled for Ropsten testnet.
