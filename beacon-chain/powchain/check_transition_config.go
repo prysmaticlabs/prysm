@@ -116,7 +116,7 @@ func (s *Service) handleExchangeConfigurationError(err error) {
 		log.WithError(err).Error(configMismatchLog)
 		return
 	}
-	log.WithError(err).Error("Could not check configuration values between execution and consensus client")
+	log.Errorf("Could not check configuration values between execution and consensus client: %v", err)
 }
 
 // Logs the terminal total difficulty status.

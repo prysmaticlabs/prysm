@@ -587,7 +587,7 @@ func (s *Service) initPOWService() {
 			if err := s.cacheHeadersForEth1DataVote(ctx); err != nil {
 				s.retryExecutionClientConnection(ctx, err)
 				if errors.Is(err, errBlockTimeTooLate) {
-					log.WithError(err).Warn("Unable to cache headers for execution client votes")
+					log.Warnf("Unable to cache headers for execution client votes: %v", err)
 				} else {
 					errorLogger(err, "Unable to cache headers for execution client votes")
 				}
