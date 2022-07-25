@@ -343,8 +343,14 @@ func (s *Service) IsOptimisticForRoot(ctx context.Context, root [32]byte) (bool,
 		return true, nil
 	}
 
+	// Historical non-canonical blocks here are returned as optimistic for safety.
+	isCanonical, err := s.IsCanonical(ctx, root)
+	if err != nil {
+		return false, err
+	}
+
 	if slots.ToEpoch(ss.Slot)+1 < validatedCheckpoint.Epoch {
-		return false, nil
+		return !isCanonical, nil
 	}
 
 	// Checkpoint root could be zeros before the first finalized epoch. Use genesis root if the case.
@@ -359,13 +365,6 @@ func (s *Service) IsOptimisticForRoot(ctx context.Context, root [32]byte) (bool,
 	if ss.Slot > lastValidated.Slot {
 		return true, nil
 	}
-
-	isCanonical, err := s.IsCanonical(ctx, root)
-	if err != nil {
-		return false, err
-	}
-
-	// Historical non-canonical blocks here are returned as optimistic for safety.
 	return !isCanonical, nil
 }
 
