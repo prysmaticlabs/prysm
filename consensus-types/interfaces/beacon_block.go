@@ -19,6 +19,7 @@ type SignedBeaconBlock interface {
 	PbGenericBlock() (*ethpb.GenericSignedBeaconBlock, error)
 	PbPhase0Block() (*ethpb.SignedBeaconBlock, error)
 	PbAltairBlock() (*ethpb.SignedBeaconBlockAltair, error)
+	ToBlinded() (SignedBeaconBlock, error)
 	PbBellatrixBlock() (*ethpb.SignedBeaconBlockBellatrix, error)
 	PbBlindedBellatrixBlock() (*ethpb.SignedBlindedBeaconBlockBellatrix, error)
 	ssz.Marshaler
@@ -86,5 +87,4 @@ type ExecutionData interface {
 	BaseFeePerGas() []byte
 	BlockHash() []byte
 	Transactions() ([][]byte, error)
-	TransactionsRoot() ([]byte, error)
 }

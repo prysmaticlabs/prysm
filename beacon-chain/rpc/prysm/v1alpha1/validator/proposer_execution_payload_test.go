@@ -74,7 +74,7 @@ func TestServer_getExecutionPayload(t *testing.T) {
 		{
 			name:      "transition completed, nil payload id",
 			st:        transitionSt,
-			errString: "nil payload id",
+			errString: "nil payload with block hash",
 		},
 		{
 			name:      "transition completed, happy case (has fee recipient in Db)",

@@ -15,7 +15,6 @@ type MockBuilderService struct {
 	ErrSubmitBlindedBlock error
 	Bid                   *ethpb.SignedBuilderBid
 	ErrGetHeader          error
-	ErrStatus             error
 	ErrRegisterValidator  error
 }
 
@@ -32,11 +31,6 @@ func (s *MockBuilderService) SubmitBlindedBlock(context.Context, *ethpb.SignedBl
 // GetHeader for mocking.
 func (s *MockBuilderService) GetHeader(context.Context, types.Slot, [32]byte, [48]byte) (*ethpb.SignedBuilderBid, error) {
 	return s.Bid, s.ErrGetHeader
-}
-
-// Status for mocking.
-func (s *MockBuilderService) Status() error {
-	return s.ErrStatus
 }
 
 // RegisterValidator for mocking.

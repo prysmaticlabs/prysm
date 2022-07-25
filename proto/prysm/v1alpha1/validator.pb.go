@@ -3099,7 +3099,7 @@ var file_proto_prysm_v1alpha1_validator_proto_rawDesc = []byte{
 	0x4c, 0x41, 0x53, 0x48, 0x49, 0x4e, 0x47, 0x10, 0x05, 0x12, 0x0a, 0x0a, 0x06, 0x45, 0x58, 0x49,
 	0x54, 0x45, 0x44, 0x10, 0x06, 0x12, 0x0b, 0x0a, 0x07, 0x49, 0x4e, 0x56, 0x41, 0x4c, 0x49, 0x44,
 	0x10, 0x07, 0x12, 0x17, 0x0a, 0x13, 0x50, 0x41, 0x52, 0x54, 0x49, 0x41, 0x4c, 0x4c, 0x59, 0x5f,
-	0x44, 0x45, 0x50, 0x4f, 0x53, 0x49, 0x54, 0x45, 0x44, 0x10, 0x08, 0x32, 0xbf, 0x21, 0x0a, 0x13,
+	0x44, 0x45, 0x50, 0x4f, 0x53, 0x49, 0x54, 0x45, 0x44, 0x10, 0x08, 0x32, 0xb2, 0x22, 0x0a, 0x13,
 	0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x4e, 0x6f, 0x64, 0x65, 0x56, 0x61, 0x6c, 0x69, 0x64, 0x61,
 	0x74, 0x6f, 0x72, 0x12, 0x80, 0x01, 0x0a, 0x09, 0x47, 0x65, 0x74, 0x44, 0x75, 0x74, 0x69, 0x65,
 	0x73, 0x12, 0x24, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68,
@@ -3357,27 +3357,34 @@ var file_proto_prysm_v1alpha1_validator_proto_rawDesc = []byte{
 	0x6f, 0x63, 0x6b, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x2d, 0x82, 0xd3,
 	0xe4, 0x93, 0x02, 0x27, 0x12, 0x25, 0x2f, 0x65, 0x74, 0x68, 0x2f, 0x76, 0x31, 0x61, 0x6c, 0x70,
 	0x68, 0x61, 0x31, 0x2f, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2f, 0x62, 0x6c,
-	0x6f, 0x63, 0x6b, 0x73, 0x2f, 0x73, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x30, 0x01, 0x12, 0x9d, 0x01,
-	0x0a, 0x1b, 0x53, 0x75, 0x62, 0x6d, 0x69, 0x74, 0x56, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f,
-	0x72, 0x52, 0x65, 0x67, 0x69, 0x73, 0x74, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x35, 0x2e,
-	0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x31, 0x61,
-	0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x53, 0x69, 0x67, 0x6e, 0x65, 0x64, 0x56, 0x61, 0x6c, 0x69,
-	0x64, 0x61, 0x74, 0x6f, 0x72, 0x52, 0x65, 0x67, 0x69, 0x73, 0x74, 0x72, 0x61, 0x74, 0x69, 0x6f,
-	0x6e, 0x73, 0x56, 0x31, 0x1a, 0x16, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72,
-	0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x22, 0x2f, 0x82, 0xd3,
-	0xe4, 0x93, 0x02, 0x29, 0x22, 0x24, 0x2f, 0x65, 0x74, 0x68, 0x2f, 0x76, 0x31, 0x61, 0x6c, 0x70,
-	0x68, 0x61, 0x31, 0x2f, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2f, 0x72, 0x65,
-	0x67, 0x69, 0x73, 0x74, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x3a, 0x01, 0x2a, 0x42, 0x90, 0x01,
-	0x0a, 0x19, 0x6f, 0x72, 0x67, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65,
-	0x74, 0x68, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x42, 0x0e, 0x56, 0x61, 0x6c,
-	0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x50, 0x01, 0x5a, 0x37, 0x67,
-	0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x70, 0x72, 0x79, 0x73, 0x6d, 0x61,
-	0x74, 0x69, 0x63, 0x6c, 0x61, 0x62, 0x73, 0x2f, 0x70, 0x72, 0x79, 0x73, 0x6d, 0x2f, 0x70, 0x72,
-	0x6f, 0x74, 0x6f, 0x2f, 0x70, 0x72, 0x79, 0x73, 0x6d, 0x2f, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68,
-	0x61, 0x31, 0x3b, 0x65, 0x74, 0x68, 0xaa, 0x02, 0x0f, 0x45, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75,
-	0x6d, 0x2e, 0x45, 0x74, 0x68, 0x2e, 0x56, 0x31, 0xca, 0x02, 0x15, 0x45, 0x74, 0x68, 0x65, 0x72,
-	0x65, 0x75, 0x6d, 0x5c, 0x45, 0x74, 0x68, 0x5c, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31,
-	0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x6f, 0x63, 0x6b, 0x73, 0x2f, 0x73, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x30, 0x01, 0x12, 0x70, 0x0a,
+	0x1b, 0x53, 0x75, 0x62, 0x6d, 0x69, 0x74, 0x56, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72,
+	0x52, 0x65, 0x67, 0x69, 0x73, 0x74, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x34, 0x2e, 0x65,
+	0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x31, 0x61, 0x6c,
+	0x70, 0x68, 0x61, 0x31, 0x2e, 0x53, 0x69, 0x67, 0x6e, 0x65, 0x64, 0x56, 0x61, 0x6c, 0x69, 0x64,
+	0x61, 0x74, 0x6f, 0x72, 0x52, 0x65, 0x67, 0x69, 0x73, 0x74, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e,
+	0x56, 0x31, 0x1a, 0x16, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74,
+	0x6f, 0x62, 0x75, 0x66, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x22, 0x03, 0x88, 0x02, 0x01, 0x12,
+	0x9e, 0x01, 0x0a, 0x1c, 0x53, 0x75, 0x62, 0x6d, 0x69, 0x74, 0x56, 0x61, 0x6c, 0x69, 0x64, 0x61,
+	0x74, 0x6f, 0x72, 0x52, 0x65, 0x67, 0x69, 0x73, 0x74, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x73,
+	0x12, 0x35, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e,
+	0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x53, 0x69, 0x67, 0x6e, 0x65, 0x64, 0x56,
+	0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x52, 0x65, 0x67, 0x69, 0x73, 0x74, 0x72, 0x61,
+	0x74, 0x69, 0x6f, 0x6e, 0x73, 0x56, 0x31, 0x1a, 0x16, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65,
+	0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x22,
+	0x2f, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x29, 0x22, 0x24, 0x2f, 0x65, 0x74, 0x68, 0x2f, 0x76, 0x31,
+	0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2f, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72,
+	0x2f, 0x72, 0x65, 0x67, 0x69, 0x73, 0x74, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x3a, 0x01, 0x2a,
+	0x42, 0x90, 0x01, 0x0a, 0x19, 0x6f, 0x72, 0x67, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75,
+	0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x42, 0x0e,
+	0x56, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x50, 0x01,
+	0x5a, 0x37, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x70, 0x72, 0x79,
+	0x73, 0x6d, 0x61, 0x74, 0x69, 0x63, 0x6c, 0x61, 0x62, 0x73, 0x2f, 0x70, 0x72, 0x79, 0x73, 0x6d,
+	0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2f, 0x70, 0x72, 0x79, 0x73, 0x6d, 0x2f, 0x76, 0x31, 0x61,
+	0x6c, 0x70, 0x68, 0x61, 0x31, 0x3b, 0x65, 0x74, 0x68, 0xaa, 0x02, 0x0f, 0x45, 0x74, 0x68, 0x65,
+	0x72, 0x65, 0x75, 0x6d, 0x2e, 0x45, 0x74, 0x68, 0x2e, 0x56, 0x31, 0xca, 0x02, 0x15, 0x45, 0x74,
+	0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x5c, 0x45, 0x74, 0x68, 0x5c, 0x76, 0x31, 0x61, 0x6c, 0x70,
+	0x68, 0x61, 0x31, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -3448,11 +3455,12 @@ var file_proto_prysm_v1alpha1_validator_proto_goTypes = []interface{}{
 	(*SignedVoluntaryExit)(nil),                                // 50: ethereum.eth.v1alpha1.SignedVoluntaryExit
 	(*SyncCommitteeMessage)(nil),                               // 51: ethereum.eth.v1alpha1.SyncCommitteeMessage
 	(*SignedContributionAndProof)(nil),                         // 52: ethereum.eth.v1alpha1.SignedContributionAndProof
-	(*SignedValidatorRegistrationsV1)(nil),                     // 53: ethereum.eth.v1alpha1.SignedValidatorRegistrationsV1
-	(*BeaconBlock)(nil),                                        // 54: ethereum.eth.v1alpha1.BeaconBlock
-	(*GenericBeaconBlock)(nil),                                 // 55: ethereum.eth.v1alpha1.GenericBeaconBlock
-	(*AttestationData)(nil),                                    // 56: ethereum.eth.v1alpha1.AttestationData
-	(*SyncCommitteeContribution)(nil),                          // 57: ethereum.eth.v1alpha1.SyncCommitteeContribution
+	(*SignedValidatorRegistrationV1)(nil),                      // 53: ethereum.eth.v1alpha1.SignedValidatorRegistrationV1
+	(*SignedValidatorRegistrationsV1)(nil),                     // 54: ethereum.eth.v1alpha1.SignedValidatorRegistrationsV1
+	(*BeaconBlock)(nil),                                        // 55: ethereum.eth.v1alpha1.BeaconBlock
+	(*GenericBeaconBlock)(nil),                                 // 56: ethereum.eth.v1alpha1.GenericBeaconBlock
+	(*AttestationData)(nil),                                    // 57: ethereum.eth.v1alpha1.AttestationData
+	(*SyncCommitteeContribution)(nil),                          // 58: ethereum.eth.v1alpha1.SyncCommitteeContribution
 }
 var file_proto_prysm_v1alpha1_validator_proto_depIdxs = []int32{
 	42, // 0: ethereum.eth.v1alpha1.StreamBlocksResponse.phase0_block:type_name -> ethereum.eth.v1alpha1.SignedBeaconBlock
@@ -3498,36 +3506,38 @@ var file_proto_prysm_v1alpha1_validator_proto_depIdxs = []int32{
 	3,  // 40: ethereum.eth.v1alpha1.BeaconNodeValidator.GetSyncCommitteeContribution:input_type -> ethereum.eth.v1alpha1.SyncCommitteeContributionRequest
 	52, // 41: ethereum.eth.v1alpha1.BeaconNodeValidator.SubmitSignedContributionAndProof:input_type -> ethereum.eth.v1alpha1.SignedContributionAndProof
 	35, // 42: ethereum.eth.v1alpha1.BeaconNodeValidator.StreamBlocksAltair:input_type -> ethereum.eth.v1alpha1.StreamBlocksRequest
-	53, // 43: ethereum.eth.v1alpha1.BeaconNodeValidator.SubmitValidatorRegistration:input_type -> ethereum.eth.v1alpha1.SignedValidatorRegistrationsV1
-	19, // 44: ethereum.eth.v1alpha1.BeaconNodeValidator.GetDuties:output_type -> ethereum.eth.v1alpha1.DutiesResponse
-	19, // 45: ethereum.eth.v1alpha1.BeaconNodeValidator.StreamDuties:output_type -> ethereum.eth.v1alpha1.DutiesResponse
-	7,  // 46: ethereum.eth.v1alpha1.BeaconNodeValidator.DomainData:output_type -> ethereum.eth.v1alpha1.DomainResponse
-	10, // 47: ethereum.eth.v1alpha1.BeaconNodeValidator.WaitForChainStart:output_type -> ethereum.eth.v1alpha1.ChainStartResponse
-	9,  // 48: ethereum.eth.v1alpha1.BeaconNodeValidator.WaitForActivation:output_type -> ethereum.eth.v1alpha1.ValidatorActivationResponse
-	13, // 49: ethereum.eth.v1alpha1.BeaconNodeValidator.ValidatorIndex:output_type -> ethereum.eth.v1alpha1.ValidatorIndexResponse
-	15, // 50: ethereum.eth.v1alpha1.BeaconNodeValidator.ValidatorStatus:output_type -> ethereum.eth.v1alpha1.ValidatorStatusResponse
-	17, // 51: ethereum.eth.v1alpha1.BeaconNodeValidator.MultipleValidatorStatus:output_type -> ethereum.eth.v1alpha1.MultipleValidatorStatusResponse
-	54, // 52: ethereum.eth.v1alpha1.BeaconNodeValidator.GetBlock:output_type -> ethereum.eth.v1alpha1.BeaconBlock
-	21, // 53: ethereum.eth.v1alpha1.BeaconNodeValidator.ProposeBlock:output_type -> ethereum.eth.v1alpha1.ProposeResponse
-	55, // 54: ethereum.eth.v1alpha1.BeaconNodeValidator.GetBeaconBlock:output_type -> ethereum.eth.v1alpha1.GenericBeaconBlock
-	21, // 55: ethereum.eth.v1alpha1.BeaconNodeValidator.ProposeBeaconBlock:output_type -> ethereum.eth.v1alpha1.ProposeResponse
-	47, // 56: ethereum.eth.v1alpha1.BeaconNodeValidator.PrepareBeaconProposer:output_type -> google.protobuf.Empty
-	56, // 57: ethereum.eth.v1alpha1.BeaconNodeValidator.GetAttestationData:output_type -> ethereum.eth.v1alpha1.AttestationData
-	24, // 58: ethereum.eth.v1alpha1.BeaconNodeValidator.ProposeAttestation:output_type -> ethereum.eth.v1alpha1.AttestResponse
-	26, // 59: ethereum.eth.v1alpha1.BeaconNodeValidator.SubmitAggregateSelectionProof:output_type -> ethereum.eth.v1alpha1.AggregateSelectionResponse
-	28, // 60: ethereum.eth.v1alpha1.BeaconNodeValidator.SubmitSignedAggregateSelectionProof:output_type -> ethereum.eth.v1alpha1.SignedAggregateSubmitResponse
-	22, // 61: ethereum.eth.v1alpha1.BeaconNodeValidator.ProposeExit:output_type -> ethereum.eth.v1alpha1.ProposeExitResponse
-	47, // 62: ethereum.eth.v1alpha1.BeaconNodeValidator.SubscribeCommitteeSubnets:output_type -> google.protobuf.Empty
-	34, // 63: ethereum.eth.v1alpha1.BeaconNodeValidator.CheckDoppelGanger:output_type -> ethereum.eth.v1alpha1.DoppelGangerResponse
-	1,  // 64: ethereum.eth.v1alpha1.BeaconNodeValidator.GetSyncMessageBlockRoot:output_type -> ethereum.eth.v1alpha1.SyncMessageBlockRootResponse
-	47, // 65: ethereum.eth.v1alpha1.BeaconNodeValidator.SubmitSyncMessage:output_type -> google.protobuf.Empty
-	4,  // 66: ethereum.eth.v1alpha1.BeaconNodeValidator.GetSyncSubcommitteeIndex:output_type -> ethereum.eth.v1alpha1.SyncSubcommitteeIndexResponse
-	57, // 67: ethereum.eth.v1alpha1.BeaconNodeValidator.GetSyncCommitteeContribution:output_type -> ethereum.eth.v1alpha1.SyncCommitteeContribution
-	47, // 68: ethereum.eth.v1alpha1.BeaconNodeValidator.SubmitSignedContributionAndProof:output_type -> google.protobuf.Empty
-	5,  // 69: ethereum.eth.v1alpha1.BeaconNodeValidator.StreamBlocksAltair:output_type -> ethereum.eth.v1alpha1.StreamBlocksResponse
-	47, // 70: ethereum.eth.v1alpha1.BeaconNodeValidator.SubmitValidatorRegistration:output_type -> google.protobuf.Empty
-	44, // [44:71] is the sub-list for method output_type
-	17, // [17:44] is the sub-list for method input_type
+	53, // 43: ethereum.eth.v1alpha1.BeaconNodeValidator.SubmitValidatorRegistration:input_type -> ethereum.eth.v1alpha1.SignedValidatorRegistrationV1
+	54, // 44: ethereum.eth.v1alpha1.BeaconNodeValidator.SubmitValidatorRegistrations:input_type -> ethereum.eth.v1alpha1.SignedValidatorRegistrationsV1
+	19, // 45: ethereum.eth.v1alpha1.BeaconNodeValidator.GetDuties:output_type -> ethereum.eth.v1alpha1.DutiesResponse
+	19, // 46: ethereum.eth.v1alpha1.BeaconNodeValidator.StreamDuties:output_type -> ethereum.eth.v1alpha1.DutiesResponse
+	7,  // 47: ethereum.eth.v1alpha1.BeaconNodeValidator.DomainData:output_type -> ethereum.eth.v1alpha1.DomainResponse
+	10, // 48: ethereum.eth.v1alpha1.BeaconNodeValidator.WaitForChainStart:output_type -> ethereum.eth.v1alpha1.ChainStartResponse
+	9,  // 49: ethereum.eth.v1alpha1.BeaconNodeValidator.WaitForActivation:output_type -> ethereum.eth.v1alpha1.ValidatorActivationResponse
+	13, // 50: ethereum.eth.v1alpha1.BeaconNodeValidator.ValidatorIndex:output_type -> ethereum.eth.v1alpha1.ValidatorIndexResponse
+	15, // 51: ethereum.eth.v1alpha1.BeaconNodeValidator.ValidatorStatus:output_type -> ethereum.eth.v1alpha1.ValidatorStatusResponse
+	17, // 52: ethereum.eth.v1alpha1.BeaconNodeValidator.MultipleValidatorStatus:output_type -> ethereum.eth.v1alpha1.MultipleValidatorStatusResponse
+	55, // 53: ethereum.eth.v1alpha1.BeaconNodeValidator.GetBlock:output_type -> ethereum.eth.v1alpha1.BeaconBlock
+	21, // 54: ethereum.eth.v1alpha1.BeaconNodeValidator.ProposeBlock:output_type -> ethereum.eth.v1alpha1.ProposeResponse
+	56, // 55: ethereum.eth.v1alpha1.BeaconNodeValidator.GetBeaconBlock:output_type -> ethereum.eth.v1alpha1.GenericBeaconBlock
+	21, // 56: ethereum.eth.v1alpha1.BeaconNodeValidator.ProposeBeaconBlock:output_type -> ethereum.eth.v1alpha1.ProposeResponse
+	47, // 57: ethereum.eth.v1alpha1.BeaconNodeValidator.PrepareBeaconProposer:output_type -> google.protobuf.Empty
+	57, // 58: ethereum.eth.v1alpha1.BeaconNodeValidator.GetAttestationData:output_type -> ethereum.eth.v1alpha1.AttestationData
+	24, // 59: ethereum.eth.v1alpha1.BeaconNodeValidator.ProposeAttestation:output_type -> ethereum.eth.v1alpha1.AttestResponse
+	26, // 60: ethereum.eth.v1alpha1.BeaconNodeValidator.SubmitAggregateSelectionProof:output_type -> ethereum.eth.v1alpha1.AggregateSelectionResponse
+	28, // 61: ethereum.eth.v1alpha1.BeaconNodeValidator.SubmitSignedAggregateSelectionProof:output_type -> ethereum.eth.v1alpha1.SignedAggregateSubmitResponse
+	22, // 62: ethereum.eth.v1alpha1.BeaconNodeValidator.ProposeExit:output_type -> ethereum.eth.v1alpha1.ProposeExitResponse
+	47, // 63: ethereum.eth.v1alpha1.BeaconNodeValidator.SubscribeCommitteeSubnets:output_type -> google.protobuf.Empty
+	34, // 64: ethereum.eth.v1alpha1.BeaconNodeValidator.CheckDoppelGanger:output_type -> ethereum.eth.v1alpha1.DoppelGangerResponse
+	1,  // 65: ethereum.eth.v1alpha1.BeaconNodeValidator.GetSyncMessageBlockRoot:output_type -> ethereum.eth.v1alpha1.SyncMessageBlockRootResponse
+	47, // 66: ethereum.eth.v1alpha1.BeaconNodeValidator.SubmitSyncMessage:output_type -> google.protobuf.Empty
+	4,  // 67: ethereum.eth.v1alpha1.BeaconNodeValidator.GetSyncSubcommitteeIndex:output_type -> ethereum.eth.v1alpha1.SyncSubcommitteeIndexResponse
+	58, // 68: ethereum.eth.v1alpha1.BeaconNodeValidator.GetSyncCommitteeContribution:output_type -> ethereum.eth.v1alpha1.SyncCommitteeContribution
+	47, // 69: ethereum.eth.v1alpha1.BeaconNodeValidator.SubmitSignedContributionAndProof:output_type -> google.protobuf.Empty
+	5,  // 70: ethereum.eth.v1alpha1.BeaconNodeValidator.StreamBlocksAltair:output_type -> ethereum.eth.v1alpha1.StreamBlocksResponse
+	47, // 71: ethereum.eth.v1alpha1.BeaconNodeValidator.SubmitValidatorRegistration:output_type -> google.protobuf.Empty
+	47, // 72: ethereum.eth.v1alpha1.BeaconNodeValidator.SubmitValidatorRegistrations:output_type -> google.protobuf.Empty
+	45, // [45:73] is the sub-list for method output_type
+	17, // [17:45] is the sub-list for method input_type
 	17, // [17:17] is the sub-list for extension type_name
 	17, // [17:17] is the sub-list for extension extendee
 	0,  // [0:17] is the sub-list for field type_name
@@ -4102,7 +4112,9 @@ type BeaconNodeValidatorClient interface {
 	GetSyncCommitteeContribution(ctx context.Context, in *SyncCommitteeContributionRequest, opts ...grpc.CallOption) (*SyncCommitteeContribution, error)
 	SubmitSignedContributionAndProof(ctx context.Context, in *SignedContributionAndProof, opts ...grpc.CallOption) (*empty.Empty, error)
 	StreamBlocksAltair(ctx context.Context, in *StreamBlocksRequest, opts ...grpc.CallOption) (BeaconNodeValidator_StreamBlocksAltairClient, error)
-	SubmitValidatorRegistration(ctx context.Context, in *SignedValidatorRegistrationsV1, opts ...grpc.CallOption) (*empty.Empty, error)
+	// Deprecated: Do not use.
+	SubmitValidatorRegistration(ctx context.Context, in *SignedValidatorRegistrationV1, opts ...grpc.CallOption) (*empty.Empty, error)
+	SubmitValidatorRegistrations(ctx context.Context, in *SignedValidatorRegistrationsV1, opts ...grpc.CallOption) (*empty.Empty, error)
 }
 
 type beaconNodeValidatorClient struct {
@@ -4442,9 +4454,19 @@ func (x *beaconNodeValidatorStreamBlocksAltairClient) Recv() (*StreamBlocksRespo
 	return m, nil
 }
 
-func (c *beaconNodeValidatorClient) SubmitValidatorRegistration(ctx context.Context, in *SignedValidatorRegistrationsV1, opts ...grpc.CallOption) (*empty.Empty, error) {
+// Deprecated: Do not use.
+func (c *beaconNodeValidatorClient) SubmitValidatorRegistration(ctx context.Context, in *SignedValidatorRegistrationV1, opts ...grpc.CallOption) (*empty.Empty, error) {
 	out := new(empty.Empty)
 	err := c.cc.Invoke(ctx, "/ethereum.eth.v1alpha1.BeaconNodeValidator/SubmitValidatorRegistration", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *beaconNodeValidatorClient) SubmitValidatorRegistrations(ctx context.Context, in *SignedValidatorRegistrationsV1, opts ...grpc.CallOption) (*empty.Empty, error) {
+	out := new(empty.Empty)
+	err := c.cc.Invoke(ctx, "/ethereum.eth.v1alpha1.BeaconNodeValidator/SubmitValidatorRegistrations", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -4482,7 +4504,9 @@ type BeaconNodeValidatorServer interface {
 	GetSyncCommitteeContribution(context.Context, *SyncCommitteeContributionRequest) (*SyncCommitteeContribution, error)
 	SubmitSignedContributionAndProof(context.Context, *SignedContributionAndProof) (*empty.Empty, error)
 	StreamBlocksAltair(*StreamBlocksRequest, BeaconNodeValidator_StreamBlocksAltairServer) error
-	SubmitValidatorRegistration(context.Context, *SignedValidatorRegistrationsV1) (*empty.Empty, error)
+	// Deprecated: Do not use.
+	SubmitValidatorRegistration(context.Context, *SignedValidatorRegistrationV1) (*empty.Empty, error)
+	SubmitValidatorRegistrations(context.Context, *SignedValidatorRegistrationsV1) (*empty.Empty, error)
 }
 
 // UnimplementedBeaconNodeValidatorServer can be embedded to have forward compatible implementations.
@@ -4567,8 +4591,11 @@ func (*UnimplementedBeaconNodeValidatorServer) SubmitSignedContributionAndProof(
 func (*UnimplementedBeaconNodeValidatorServer) StreamBlocksAltair(*StreamBlocksRequest, BeaconNodeValidator_StreamBlocksAltairServer) error {
 	return status.Errorf(codes.Unimplemented, "method StreamBlocksAltair not implemented")
 }
-func (*UnimplementedBeaconNodeValidatorServer) SubmitValidatorRegistration(context.Context, *SignedValidatorRegistrationsV1) (*empty.Empty, error) {
+func (*UnimplementedBeaconNodeValidatorServer) SubmitValidatorRegistration(context.Context, *SignedValidatorRegistrationV1) (*empty.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SubmitValidatorRegistration not implemented")
+}
+func (*UnimplementedBeaconNodeValidatorServer) SubmitValidatorRegistrations(context.Context, *SignedValidatorRegistrationsV1) (*empty.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SubmitValidatorRegistrations not implemented")
 }
 
 func RegisterBeaconNodeValidatorServer(s *grpc.Server, srv BeaconNodeValidatorServer) {
@@ -5056,7 +5083,7 @@ func (x *beaconNodeValidatorStreamBlocksAltairServer) Send(m *StreamBlocksRespon
 }
 
 func _BeaconNodeValidator_SubmitValidatorRegistration_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SignedValidatorRegistrationsV1)
+	in := new(SignedValidatorRegistrationV1)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -5068,7 +5095,25 @@ func _BeaconNodeValidator_SubmitValidatorRegistration_Handler(srv interface{}, c
 		FullMethod: "/ethereum.eth.v1alpha1.BeaconNodeValidator/SubmitValidatorRegistration",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BeaconNodeValidatorServer).SubmitValidatorRegistration(ctx, req.(*SignedValidatorRegistrationsV1))
+		return srv.(BeaconNodeValidatorServer).SubmitValidatorRegistration(ctx, req.(*SignedValidatorRegistrationV1))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BeaconNodeValidator_SubmitValidatorRegistrations_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SignedValidatorRegistrationsV1)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BeaconNodeValidatorServer).SubmitValidatorRegistrations(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/ethereum.eth.v1alpha1.BeaconNodeValidator/SubmitValidatorRegistrations",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BeaconNodeValidatorServer).SubmitValidatorRegistrations(ctx, req.(*SignedValidatorRegistrationsV1))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -5168,6 +5213,10 @@ var _BeaconNodeValidator_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SubmitValidatorRegistration",
 			Handler:    _BeaconNodeValidator_SubmitValidatorRegistration_Handler,
+		},
+		{
+			MethodName: "SubmitValidatorRegistrations",
+			Handler:    _BeaconNodeValidator_SubmitValidatorRegistrations_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

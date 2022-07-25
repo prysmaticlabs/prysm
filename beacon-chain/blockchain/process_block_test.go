@@ -1622,7 +1622,7 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 			payload: &enginev1.ExecutionPayload{
 				ParentHash: aHash[:],
 			},
-			errString: "nil header or block body",
+			errString: "attempted to wrap nil object",
 		},
 	}
 	for _, tt := range tests {
@@ -1668,9 +1668,8 @@ func TestService_insertSlashingsToForkChoiceStore(t *testing.T) {
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 
-	au := util.AttestationUtil{}
 	beaconState, privKeys := util.DeterministicGenesisState(t, 100)
-	att1 := au.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+	att1 := util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: 1},
 		},
@@ -1685,7 +1684,7 @@ func TestService_insertSlashingsToForkChoiceStore(t *testing.T) {
 	aggregateSig := bls.AggregateSignatures([]bls.Signature{sig0, sig1})
 	att1.Signature = aggregateSig.Marshal()
 
-	att2 := au.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+	att2 := util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{0, 1},
 	})
 	signingRoot, err = signing.ComputeSigningRoot(att2.Data, domain)
