@@ -38,28 +38,20 @@ type BlockSignRequest struct {
 	Block       *BeaconBlock  `json:"block" validate:"required"`
 }
 
-// BlockV2AltairSignRequest is a request object for web3signer sign api.
-type BlockV2AltairSignRequest struct {
+// BlockAltairSignRequest is a request object for web3signer sign api.
+type BlockAltairSignRequest struct {
 	Type        string                    `json:"type" validate:"required"`
 	ForkInfo    *ForkInfo                 `json:"fork_info" validate:"required"`
 	SigningRoot hexutil.Bytes             `json:"signingRoot"`
 	BeaconBlock *BeaconBlockAltairBlockV2 `json:"beacon_block" validate:"required"`
 }
 
-// BlockV2BellatrixSignRequest is a request object for web3signer sign api for supporting Bellatrix fork.
-type BlockV2BellatrixSignRequest struct {
+// BlockBellatrixSignRequest is a request object for web3signer sign api for supporting Bellatrix fork.
+type BlockBellatrixSignRequest struct {
 	Type        string                       `json:"type" validate:"required"`
 	ForkInfo    *ForkInfo                    `json:"fork_info" validate:"required"`
 	SigningRoot hexutil.Bytes                `json:"signingRoot"`
 	BeaconBlock *BeaconBlockBellatrixBlockV2 `json:"beacon_block" validate:"required"`
-}
-
-// BlockV2SignRequest is a request object for web3signer sign api.
-type BlockV2SignRequest struct {
-	Type        string              `json:"type" validate:"required"`
-	ForkInfo    *ForkInfo           `json:"fork_info" validate:"required"`
-	SigningRoot hexutil.Bytes       `json:"signingRoot"`
-	BeaconBlock *BeaconBlockBlockV2 `json:"beacon_block" validate:"required"`
 }
 
 // DepositSignRequest Not currently supported by Prysm.
@@ -255,7 +247,7 @@ type VoluntaryExit struct {
 	ValidatorIndex string `json:"validator_index"` /* uint64 */
 }
 
-// BeaconBlockAltairBlockV2 a sub property of BlockV2AltairSignRequest.
+// BeaconBlockAltairBlockV2 a sub property of BlockAltairSignRequest.
 type BeaconBlockAltairBlockV2 struct {
 	Version string             `json:"version"`
 	Block   *BeaconBlockAltair `json:"block"`
@@ -283,7 +275,7 @@ type BeaconBlockBodyAltair struct {
 	SyncAggregate     *SyncAggregate         `json:"sync_aggregate"`
 }
 
-// BeaconBlockBellatrixBlockV2 a field of BlockV2BellatrixSignRequest.
+// BeaconBlockBellatrixBlockV2 a field of BlockBellatrixSignRequest.
 type BeaconBlockBellatrixBlockV2 struct {
 	Version     string             `json:"version"`
 	BlockHeader *BeaconBlockHeader `json:"block_header"`

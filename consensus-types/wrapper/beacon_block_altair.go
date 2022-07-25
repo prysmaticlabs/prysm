@@ -235,8 +235,8 @@ func (altairBeaconBlock) Version() int {
 
 // AsSignRequestObject returns the underlying sign request object.
 func (w altairBeaconBlock) AsSignRequestObject() validatorpb.SignRequestObject {
-	return &validatorpb.SignRequest_BlockV2{
-		BlockV2: w.b,
+	return &validatorpb.SignRequest_BlockAltair{
+		BlockAltair: w.b,
 	}
 }
 

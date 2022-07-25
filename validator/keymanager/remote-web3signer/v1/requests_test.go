@@ -159,7 +159,7 @@ func TestGetBlockV2AltairSignRequest(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    *v1.BlockV2AltairSignRequest
+		want    *v1.BlockAltairSignRequest
 		wantErr bool
 	}{
 		{
@@ -176,11 +176,11 @@ func TestGetBlockV2AltairSignRequest(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := v1.GetBlockV2AltairSignRequest(tt.args.request, tt.args.genesisValidatorsRoot)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("GetBlockV2AltairSignRequest() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("GetBlockAltairSignRequest() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("GetBlockV2AltairSignRequest() got = %v, want %v", got, tt.want)
+				t.Errorf("GetBlockAltairSignRequest() got = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -361,7 +361,7 @@ func TestGetVoluntaryExitSignRequest(t *testing.T) {
 	}
 }
 
-func TestGetBlockV3BellatrixSignRequest(t *testing.T) {
+func TestGetBlockBellatrixSignRequest(t *testing.T) {
 	type args struct {
 		request               *validatorpb.SignRequest
 		genesisValidatorsRoot []byte
@@ -369,7 +369,7 @@ func TestGetBlockV3BellatrixSignRequest(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    *v1.BlockV2BellatrixSignRequest
+		want    *v1.BlockBellatrixSignRequest
 		wantErr bool
 	}{
 		{
@@ -403,11 +403,11 @@ func TestGetBlockV3BellatrixSignRequest(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := v1.GetBlockV2BellatrixSignRequest(tt.args.request, tt.args.genesisValidatorsRoot)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("GetBlockV2BellatrixSignRequest() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("GetBlockBellatrixSignRequest() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("GetBlockV2AltairSignRequest() got = %v, want %v", got, tt.want)
+				t.Errorf("GetBlockAltairSignRequest() got = %v, want %v", got, tt.want)
 			}
 		})
 	}

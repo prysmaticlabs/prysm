@@ -26,8 +26,9 @@ WIP
     - ATTESTATION <- *validatorpb.SignRequest_AttestationData
     - AGGREGATE_AND_PROOF <- *validatorpb.SignRequest_AggregateAttestationAndProof
     - AGGREGATION_SLOT <- *validatorpb.SignRequest_Slot
-    - BLOCK_V2 <- *validatorpb.SignRequest_BlockV2
-    - BLOCK_V3 <- *validatorpb.SignRequest_BlockV3
+    - BLOCK_ALTAIR <- *validatorpb.SignRequest_BlockAltair
+    - BLOCK_BELLATRIX <- *validatorpb.SignRequest_BlockBellatrix
+    - BLINDED_BLOCK_BELLATRIX <- *validatorpb.SignRequest_BlindedBlockBellatrix
     - DEPOSIT <- not supported
     - RANDAO_REVEAL <- *validatorpb.SignRequest_Epoch
     - VOLUNTARY_EXIT <- *validatorpb.SignRequest_Exit

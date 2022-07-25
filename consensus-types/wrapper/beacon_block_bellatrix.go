@@ -264,8 +264,8 @@ func (bellatrixBeaconBlock) Version() int {
 
 // AsSignRequestObject returns the underlying sign request object.
 func (w bellatrixBeaconBlock) AsSignRequestObject() validatorpb.SignRequestObject {
-	return &validatorpb.SignRequest_BlockV3{
-		BlockV3: w.b,
+	return &validatorpb.SignRequest_BlockBellatrix{
+		BlockBellatrix: w.b,
 	}
 }
 

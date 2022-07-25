@@ -330,9 +330,9 @@ func TestAltairBeaconBlock_AsSignRequestObject(t *testing.T) {
 	require.NoError(t, err)
 
 	sro := wsb.AsSignRequestObject()
-	got, ok := sro.(*validatorpb.SignRequest_BlockV2)
-	require.Equal(t, true, ok, "Not a SignRequest_BlockV2")
-	assert.Equal(t, abb, got.BlockV2)
+	got, ok := sro.(*validatorpb.SignRequest_BlockAltair)
+	require.Equal(t, true, ok, "Not a SignRequest_BlockAltair")
+	assert.Equal(t, abb, got.BlockAltair)
 }
 
 func TestAltairBeaconBlock_PbBlindedBellatrixBlock(t *testing.T) {
