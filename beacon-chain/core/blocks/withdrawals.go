@@ -12,13 +12,14 @@ import (
 	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
-// ProcessBLSToExecutionChange validates a signed BLSToExecution message and
+const executionToBLSPadding = 12
+
+// ProcessBLSToExecutionChange validates a SignedBLSToExecution message and
 // changes the validator's withdrawal address accordingly.
 //
 // Spec pseudocode definition:
 //
-//def process_bls_to_execution_change(state: BeaconState,e: SignedBLSToExecutionChange) -> None:
-//lidators)
+//def process_bls_to_execution_change(state: BeaconState, signed_address_change: SignedBLSToExecutionChange) -> None:
 //    validator = state.validators[address_change.validator_index]
 //
 //    assert validator.withdrawal_credentials[:1] == BLS_WITHDRAWAL_PREFIX
@@ -69,7 +70,7 @@ func ProcessBLSToExecutionChange(st state.BeaconState, signed *ethpb.SignedBLSTo
 	if err := signing.VerifySigningRoot(message, fromPubkey, signed.Signature, domain); err != nil {
 		return nil, signing.ErrSigFailedToVerify
 	}
-	newCredentials := make([]byte, 12)
+	newCredentials := make([]byte, executionToBLSPadding)
 	newCredentials[0] = params.BeaconConfig().ETH1AddressWithdrawalPrefixByte
 	val.WithdrawalCredentials = append(newCredentials, message.ToExecutionAddress...)
 	err = st.UpdateValidatorAtIndex(message.ValidatorIndex, val)
