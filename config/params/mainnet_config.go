@@ -94,8 +94,9 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	EffectiveBalanceIncrement: 1 * 1e9,
 
 	// Initial value constants.
-	BLSWithdrawalPrefixByte: byte(0),
-	ZeroHash:                [32]byte{},
+	BLSWithdrawalPrefixByte:         byte(0),
+	ETH1AddressWithdrawalPrefixByte: byte(1),
+	ZeroHash:                        [32]byte{},
 
 	// Time parameter constants.
 	MinAttestationInclusionDelay:     1,
@@ -168,6 +169,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	DomainContributionAndProof:        bytesutil.Uint32ToBytes4(0x09000000),
 	DomainApplicationMask:             bytesutil.Uint32ToBytes4(0x00000001),
 	DomainApplicationBuilder:          bytesutil.Uint32ToBytes4(0x00000001),
+	DomainBLSToExecutionChange:        bytesutil.Uint32ToBytes4(0x0A000000),
 
 	// Prysm constants.
 	GweiPerEth:                     1000000000,

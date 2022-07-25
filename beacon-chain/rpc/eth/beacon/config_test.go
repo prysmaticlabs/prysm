@@ -55,6 +55,7 @@ func TestGetSpec(t *testing.T) {
 	config.CapellaForkVersion = []byte("CapellaForkVersion")
 	config.CapellaForkEpoch = 103
 	config.BLSWithdrawalPrefixByte = byte('b')
+	config.ETH1AddressWithdrawalPrefixByte = byte('c')
 	config.GenesisDelay = 24
 	config.SecondsPerSlot = 25
 	config.MinAttestationInclusionDelay = 26
@@ -135,7 +136,7 @@ func TestGetSpec(t *testing.T) {
 	resp, err := server.GetSpec(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 
-	assert.Equal(t, 101, len(resp.Data))
+	assert.Equal(t, 102, len(resp.Data))
 	for k, v := range resp.Data {
 		switch k {
 		case "CONFIG_NAME":
@@ -212,6 +213,8 @@ func TestGetSpec(t *testing.T) {
 			assert.Equal(t, "1000", v)
 		case "BLS_WITHDRAWAL_PREFIX":
 			assert.Equal(t, "0x62", v)
+		case "ETH1_ADDRESS_WITHDRAWAL_PREFIX":
+			assert.Equal(t, "0x63", v)
 		case "GENESIS_DELAY":
 			assert.Equal(t, "24", v)
 		case "SECONDS_PER_SLOT":
