@@ -174,7 +174,7 @@ func TestGetBlockV2AltairSignRequest(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := v1.GetBlockV2AltairSignRequest(tt.args.request, tt.args.genesisValidatorsRoot)
+			got, err := v1.GetBlockAltairSignRequest(tt.args.request, tt.args.genesisValidatorsRoot)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetBlockAltairSignRequest() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -401,7 +401,7 @@ func TestGetBlockBellatrixSignRequest(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := v1.GetBlockV2BellatrixSignRequest(tt.args.request, tt.args.genesisValidatorsRoot)
+			got, err := v1.GetBlockBellatrixSignRequest(tt.args.request, tt.args.genesisValidatorsRoot)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetBlockBellatrixSignRequest() error = %v, wantErr %v", err, tt.wantErr)
 				return
