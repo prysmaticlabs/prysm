@@ -60,7 +60,7 @@ func TestClearDB(t *testing.T) {
 
 	context := cli.NewContext(&app, set, nil)
 	_, err = New(context, WithPowchainFlagOptions([]powchain.Option{
-		powchain.WithHttpEndpoints([]string{endpoint}),
+		powchain.WithHttpEndpoint(endpoint),
 	}))
 	require.NoError(t, err)
 

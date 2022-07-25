@@ -17,17 +17,17 @@ var log = logrus.WithField("prefix", "cmd-powchain")
 
 // FlagOptions for powchain service flag configurations.
 func FlagOptions(c *cli.Context) ([]powchain.Option, error) {
-	endpoints := parsePowchainEndpoint(c)
+	endpoint := parsePowchainEndpoint(c)
 	jwtSecret, err := parseJWTSecretFromFile(c)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not read JWT secret file for authenticating execution API")
 	}
 	opts := []powchain.Option{
-		powchain.WithHttpEndpoints(endpoints),
+		powchain.WithHttpEndpoint(endpoint),
 		powchain.WithEth1HeaderRequestLimit(c.Uint64(flags.Eth1HeaderReqLimit.Name)),
 	}
 	if len(jwtSecret) > 0 {
-		opts = append(opts, powchain.WithHttpEndpointsAndJWTSecret(endpoints, jwtSecret))
+		opts = append(opts, powchain.WithHttpEndpointAndJWTSecret(endpoint, jwtSecret))
 	}
 	return opts, nil
 }

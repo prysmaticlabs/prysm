@@ -107,7 +107,7 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 	web3Service, err = powchain.NewService(
 		ctx,
 		powchain.WithDatabase(beaconDB),
-		powchain.WithHttpEndpoints([]string{endpoint}),
+		powchain.WithHttpEndpoint(endpoint),
 		powchain.WithDepositContractAddress(common.Address{}),
 	)
 	require.NoError(t, err, "Unable to set up web3 service")

@@ -299,14 +299,9 @@ func (s *Service) Status() error {
 
 func (s *Service) updateBeaconNodeStats() {
 	bs := clientstats.BeaconNodeStats{}
-	if len(s.cfg.httpEndpoints) > 1 {
-		bs.SyncEth1FallbackConfigured = true
-	}
 	if s.IsConnectedToETH1() {
 		if s.primaryConnected() {
 			bs.SyncEth1Connected = true
-		} else {
-			bs.SyncEth1FallbackConnected = true
 		}
 	}
 	s.cfg.beaconNodeStatsUpdater.Update(bs)
