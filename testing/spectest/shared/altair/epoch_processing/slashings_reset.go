@@ -23,8 +23,8 @@ func RunSlashingsResetTests(t *testing.T, config string) {
 	}
 }
 
-func processSlashingsResetWrapper(t *testing.T, state state.BeaconState) (state.BeaconState, error) {
-	state, err := epoch.ProcessSlashingsReset(state)
+func processSlashingsResetWrapper(t *testing.T, st state.BeaconState) (state.BeaconState, error) {
+	st, err := epoch.ProcessSlashingsReset(st)
 	require.NoError(t, err, "Could not process final updates")
-	return state, nil
+	return st, nil
 }

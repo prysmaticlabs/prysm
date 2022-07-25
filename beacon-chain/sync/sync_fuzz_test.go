@@ -23,7 +23,6 @@ import (
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -36,9 +35,7 @@ func FuzzValidateBeaconBlockPubSub_Phase0(f *testing.F) {
 	ctx := context.Background()
 	beaconState, privKeys := util.DeterministicGenesisState(f, 100)
 	parentBlock := util.NewBeaconBlock()
-	wsb, err := wrapper.WrappedSignedBeaconBlock(parentBlock)
-	require.NoError(f, err)
-	require.NoError(f, db.SaveBlock(ctx, wsb))
+	util.SaveBlock(f, ctx, db, parentBlock)
 	bRoot, err := parentBlock.Block.HashTreeRoot()
 	require.NoError(f, err)
 	require.NoError(f, db.SaveState(ctx, beaconState, bRoot))
@@ -119,9 +116,7 @@ func FuzzValidateBeaconBlockPubSub_Altair(f *testing.F) {
 	ctx := context.Background()
 	beaconState, privKeys := util.DeterministicGenesisStateAltair(f, 100)
 	parentBlock := util.NewBeaconBlockAltair()
-	wsb, err := wrapper.WrappedSignedBeaconBlock(parentBlock)
-	require.NoError(f, err)
-	require.NoError(f, db.SaveBlock(ctx, wsb))
+	util.SaveBlock(f, ctx, db, parentBlock)
 	bRoot, err := parentBlock.Block.HashTreeRoot()
 	require.NoError(f, err)
 	require.NoError(f, db.SaveState(ctx, beaconState, bRoot))
@@ -202,9 +197,7 @@ func FuzzValidateBeaconBlockPubSub_Bellatrix(f *testing.F) {
 	ctx := context.Background()
 	beaconState, privKeys := util.DeterministicGenesisStateBellatrix(f, 100)
 	parentBlock := util.NewBeaconBlockBellatrix()
-	wsb, err := wrapper.WrappedSignedBeaconBlock(parentBlock)
-	require.NoError(f, err)
-	require.NoError(f, db.SaveBlock(ctx, wsb))
+	util.SaveBlock(f, ctx, db, parentBlock)
 	bRoot, err := parentBlock.Block.HashTreeRoot()
 	require.NoError(f, err)
 	require.NoError(f, db.SaveState(ctx, beaconState, bRoot))

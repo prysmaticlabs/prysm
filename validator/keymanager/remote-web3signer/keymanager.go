@@ -18,7 +18,7 @@ import (
 	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	remote_utils "github.com/prysmaticlabs/prysm/validator/keymanager/remote-utils"
+	remoteutils "github.com/prysmaticlabs/prysm/validator/keymanager/remote-utils"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/internal"
 	web3signerv1 "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/v1"
 	log "github.com/sirupsen/logrus"
@@ -238,6 +238,16 @@ func getSignRequestJson(ctx context.Context, validator *validator.Validate, requ
 		}
 		syncCommitteeContributionAndProofSignRequestsTotal.Inc()
 		return json.Marshal(contributionAndProofRequest)
+	case *validatorpb.SignRequest_Registration:
+		validatorRegistrationRequest, err := web3signerv1.GetValidatorRegistrationSignRequest(request)
+		if err != nil {
+			return nil, err
+		}
+		if err = validator.StructCtx(ctx, validatorRegistrationRequest); err != nil {
+			return nil, err
+		}
+		validatorRegistrationSignRequestsTotal.Inc()
+		return json.Marshal(validatorRegistrationRequest)
 	default:
 		return nil, fmt.Errorf("web3signer sign request type %T not supported", request.Object)
 	}
@@ -250,7 +260,7 @@ func (km *Keymanager) SubscribeAccountChanges(pubKeysChan chan [][fieldparams.BL
 
 // ExtractKeystores is not supported for the remote-web3signer keymanager type.
 func (*Keymanager) ExtractKeystores(
-	ctx context.Context, publicKeys []bls.PublicKey, password string,
+	_ context.Context, _ []bls.PublicKey, _ string,
 ) ([]*keymanager.Keystore, error) {
 	return nil, errors.New("extracting keys is not supported for a web3signer keymanager")
 }
@@ -283,7 +293,7 @@ func (km *Keymanager) ListKeymanagerAccounts(ctx context.Context, cfg keymanager
 	} else {
 		fmt.Printf("Showing %d validator accounts\n", len(validatingPubKeys))
 	}
-	remote_utils.DisplayRemotePublicKeys(validatingPubKeys)
+	remoteutils.DisplayRemotePublicKeys(validatingPubKeys)
 	return nil
 }
 

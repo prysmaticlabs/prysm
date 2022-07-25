@@ -390,7 +390,7 @@ func groupDeleteRemoteKeysErrors(req *ethpbservice.DeleteRemoteKeysRequest, erro
 }
 
 // ListFeeRecipientByPubkey returns the public key to eth address mapping object to the end user.
-func (s *Server) ListFeeRecipientByPubkey(ctx context.Context, req *ethpbservice.PubkeyRequest) (*ethpbservice.GetFeeRecipientByPubkeyResponse, error) {
+func (s *Server) ListFeeRecipientByPubkey(_ context.Context, req *ethpbservice.PubkeyRequest) (*ethpbservice.GetFeeRecipientByPubkeyResponse, error) {
 	if s.validatorService == nil {
 		return nil, status.Error(codes.FailedPrecondition, "Validator service not ready")
 	}
@@ -455,6 +455,7 @@ func (s *Server) SetFeeRecipientByPubkey(ctx context.Context, req *ethpbservice.
 			DefaultConfig: &defaultOption,
 		}
 	case s.validatorService.ProposerSettings.ProposeConfig == nil:
+		pOption.BuilderConfig = s.validatorService.ProposerSettings.DefaultConfig.BuilderConfig
 		s.validatorService.ProposerSettings.ProposeConfig = map[[fieldparams.BLSPubkeyLength]byte]*validatorServiceConfig.ProposerOption{
 			bytesutil.ToBytes48(validatorKey): &pOption,
 		}
@@ -463,6 +464,7 @@ func (s *Server) SetFeeRecipientByPubkey(ctx context.Context, req *ethpbservice.
 		if found {
 			proposerOption.FeeRecipient = common.BytesToAddress(req.Ethaddress)
 		} else {
+			pOption.BuilderConfig = s.validatorService.ProposerSettings.DefaultConfig.BuilderConfig
 			s.validatorService.ProposerSettings.ProposeConfig[bytesutil.ToBytes48(validatorKey)] = &pOption
 		}
 	}

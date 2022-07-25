@@ -23,13 +23,14 @@ type ForkChoicer interface {
 // HeadRetriever retrieves head root and optimistic info of the current chain.
 type HeadRetriever interface {
 	Head(context.Context, []uint64) ([32]byte, error)
+	CachedHeadRoot() [32]byte
 	Tips() ([][32]byte, []types.Slot)
 	IsOptimistic(root [32]byte) (bool, error)
 }
 
 // BlockProcessor processes the block that's used for accounting fork choice.
 type BlockProcessor interface {
-	InsertNode(context.Context, state.ReadOnlyBeaconState, [32]byte) error
+	InsertNode(context.Context, state.BeaconState, [32]byte) error
 	InsertOptimisticChain(context.Context, []*forkchoicetypes.BlockAndCheckpoints) error
 }
 
@@ -53,7 +54,11 @@ type Getter interface {
 	CommonAncestorRoot(ctx context.Context, root1 [32]byte, root2 [32]byte) ([32]byte, error)
 	IsCanonical(root [32]byte) bool
 	FinalizedCheckpoint() *forkchoicetypes.Checkpoint
+	FinalizedPayloadBlockHash() [32]byte
 	JustifiedCheckpoint() *forkchoicetypes.Checkpoint
+	PreviousJustifiedCheckpoint() *forkchoicetypes.Checkpoint
+	JustifiedPayloadBlockHash() [32]byte
+	BestJustifiedCheckpoint() *forkchoicetypes.Checkpoint
 	ForkChoiceNodes() []*ethpb.ForkChoiceNode
 	NodeCount() int
 }
@@ -66,4 +71,5 @@ type Setter interface {
 	UpdateFinalizedCheckpoint(*forkchoicetypes.Checkpoint) error
 	SetGenesisTime(uint64)
 	SetOriginRoot([32]byte)
+	NewSlot(context.Context, types.Slot) error
 }

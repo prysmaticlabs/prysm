@@ -114,7 +114,8 @@ func TestStore_Head_ContextCancelled(t *testing.T) {
 func TestStore_Insert_UnknownParent(t *testing.T) {
 	// The new node does not have a parent.
 	s := &Store{nodesIndices: make(map[[32]byte]uint64), payloadIndices: make(map[[32]byte]uint64)}
-	require.NoError(t, s.insert(context.Background(), 100, [32]byte{'A'}, [32]byte{'B'}, params.BeaconConfig().ZeroHash, 1, 1))
+	_, err := s.insert(context.Background(), 100, [32]byte{'A'}, [32]byte{'B'}, params.BeaconConfig().ZeroHash, 1, 1)
+	require.NoError(t, err)
 	assert.Equal(t, 1, len(s.nodes), "Did not insert block")
 	assert.Equal(t, 1, len(s.nodesIndices), "Did not insert block")
 	assert.Equal(t, NonExistentNode, s.nodes[0].parent, "Incorrect parent")
@@ -133,7 +134,8 @@ func TestStore_Insert_KnownParent(t *testing.T) {
 	payloadHash := [32]byte{'c'}
 	s.justifiedCheckpoint = &forkchoicetypes.Checkpoint{}
 	s.finalizedCheckpoint = &forkchoicetypes.Checkpoint{}
-	require.NoError(t, s.insert(context.Background(), 100, [32]byte{'A'}, p, payloadHash, 1, 1))
+	_, err := s.insert(context.Background(), 100, [32]byte{'A'}, p, payloadHash, 1, 1)
+	require.NoError(t, err)
 	assert.Equal(t, 2, len(s.nodes), "Did not insert block")
 	assert.Equal(t, 2, len(s.nodesIndices), "Did not insert block")
 	assert.Equal(t, uint64(0), s.nodes[1].parent, "Incorrect parent")
@@ -802,9 +804,9 @@ func TestStore_CommonAncestor(t *testing.T) {
 	require.Equal(t, [32]byte{'a'}, r)
 	// Requesting unknown root
 	_, err = f.CommonAncestorRoot(ctx, [32]byte{'a'}, [32]byte{'z'})
-	require.ErrorIs(t, err, errInvalidNodeIndex)
+	require.ErrorIs(t, err, forkchoice.ErrUnknownCommonAncestor)
 	_, err = f.CommonAncestorRoot(ctx, [32]byte{'z'}, [32]byte{'a'})
-	require.ErrorIs(t, err, errInvalidNodeIndex)
+	require.ErrorIs(t, err, forkchoice.ErrUnknownCommonAncestor)
 	state, blkRoot, err = prepareForkchoiceState(ctx, 100, [32]byte{'y'}, [32]byte{'z'}, [32]byte{}, 1, 1)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))

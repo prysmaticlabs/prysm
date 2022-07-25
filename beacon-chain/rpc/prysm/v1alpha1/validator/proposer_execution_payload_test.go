@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
+	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -36,30 +37,28 @@ func TestServer_activationEpochNotReached(t *testing.T) {
 }
 
 func TestServer_getExecutionPayload(t *testing.T) {
+	beaconDB := dbTest.SetupDB(t)
 	nonTransitionSt, _ := util.DeterministicGenesisStateBellatrix(t, 1)
 	b1pb := util.NewBeaconBlock()
 	b1r, err := b1pb.Block.HashTreeRoot()
 	require.NoError(t, err)
-	b1, err := wrapper.WrappedSignedBeaconBlock(b1pb)
-	require.NoError(t, err)
+	util.SaveBlock(t, context.Background(), beaconDB, b1pb)
 	require.NoError(t, nonTransitionSt.SetFinalizedCheckpoint(&ethpb.Checkpoint{
 		Root: b1r[:],
 	}))
 
 	transitionSt, _ := util.DeterministicGenesisStateBellatrix(t, 1)
-	require.NoError(t, transitionSt.SetLatestExecutionPayloadHeader(&pb.ExecutionPayloadHeader{BlockNumber: 1}))
+	wrappedHeader, err := wrapper.WrappedExecutionPayloadHeader(&pb.ExecutionPayloadHeader{BlockNumber: 1})
+	require.NoError(t, err)
+	require.NoError(t, transitionSt.SetLatestExecutionPayloadHeader(wrappedHeader))
 	b2pb := util.NewBeaconBlockBellatrix()
 	b2r, err := b2pb.Block.HashTreeRoot()
 	require.NoError(t, err)
-	b2, err := wrapper.WrappedSignedBeaconBlock(b2pb)
-	require.NoError(t, err)
+	util.SaveBlock(t, context.Background(), beaconDB, b2pb)
 	require.NoError(t, transitionSt.SetFinalizedCheckpoint(&ethpb.Checkpoint{
 		Root: b2r[:],
 	}))
 
-	beaconDB := dbTest.SetupDB(t)
-	require.NoError(t, beaconDB.SaveBlock(context.Background(), b1))
-	require.NoError(t, beaconDB.SaveBlock(context.Background(), b2))
 	require.NoError(t, beaconDB.SaveFeeRecipientsByValidatorIDs(context.Background(), []types.ValidatorIndex{0}, []common.Address{{}}))
 
 	tests := []struct {
@@ -75,7 +74,7 @@ func TestServer_getExecutionPayload(t *testing.T) {
 		{
 			name:      "transition completed, nil payload id",
 			st:        transitionSt,
-			errString: "nil payload id",
+			errString: "nil payload with block hash",
 		},
 		{
 			name:      "transition completed, happy case (has fee recipient in Db)",
@@ -137,30 +136,28 @@ func TestServer_getExecutionPayload(t *testing.T) {
 
 func TestServer_getExecutionPayload_UnexpectedFeeRecipient(t *testing.T) {
 	hook := logTest.NewGlobal()
+	beaconDB := dbTest.SetupDB(t)
 	nonTransitionSt, _ := util.DeterministicGenesisStateBellatrix(t, 1)
 	b1pb := util.NewBeaconBlock()
 	b1r, err := b1pb.Block.HashTreeRoot()
 	require.NoError(t, err)
-	b1, err := wrapper.WrappedSignedBeaconBlock(b1pb)
-	require.NoError(t, err)
+	util.SaveBlock(t, context.Background(), beaconDB, b1pb)
 	require.NoError(t, nonTransitionSt.SetFinalizedCheckpoint(&ethpb.Checkpoint{
 		Root: b1r[:],
 	}))
 
 	transitionSt, _ := util.DeterministicGenesisStateBellatrix(t, 1)
-	require.NoError(t, transitionSt.SetLatestExecutionPayloadHeader(&pb.ExecutionPayloadHeader{BlockNumber: 1}))
+	wrappedHeader, err := wrapper.WrappedExecutionPayloadHeader(&pb.ExecutionPayloadHeader{BlockNumber: 1})
+	require.NoError(t, err)
+	require.NoError(t, transitionSt.SetLatestExecutionPayloadHeader(wrappedHeader))
 	b2pb := util.NewBeaconBlockBellatrix()
 	b2r, err := b2pb.Block.HashTreeRoot()
 	require.NoError(t, err)
-	b2, err := wrapper.WrappedSignedBeaconBlock(b2pb)
-	require.NoError(t, err)
+	util.SaveBlock(t, context.Background(), beaconDB, b2pb)
 	require.NoError(t, transitionSt.SetFinalizedCheckpoint(&ethpb.Checkpoint{
 		Root: b2r[:],
 	}))
 
-	beaconDB := dbTest.SetupDB(t)
-	require.NoError(t, beaconDB.SaveBlock(context.Background(), b1))
-	require.NoError(t, beaconDB.SaveBlock(context.Background(), b2))
 	feeRecipient := common.BytesToAddress([]byte("a"))
 	require.NoError(t, beaconDB.SaveFeeRecipientsByValidatorIDs(context.Background(), []types.ValidatorIndex{0}, []common.Address{
 		feeRecipient,
@@ -212,7 +209,7 @@ func TestServer_getTerminalBlockHashIfExists(t *testing.T) {
 	}{
 		{
 			name:               "use terminal block hash, doesn't exist",
-			paramsTerminalHash: []byte{'a'},
+			paramsTerminalHash: common.BytesToHash([]byte("a")).Bytes(),
 			errString:          "could not fetch height for hash",
 		},
 		{
@@ -227,17 +224,21 @@ func TestServer_getTerminalBlockHashIfExists(t *testing.T) {
 			name:     "use terminal total difficulty",
 			paramsTd: "2",
 			currentPowBlock: &pb.ExecutionBlock{
-				Hash:            []byte{'a'},
-				ParentHash:      []byte{'b'},
+				Hash: common.BytesToHash([]byte("a")),
+				Header: gethtypes.Header{
+					ParentHash: common.BytesToHash([]byte("b")),
+				},
 				TotalDifficulty: "0x3",
 			},
 			parentPowBlock: &pb.ExecutionBlock{
-				Hash:            []byte{'b'},
-				ParentHash:      []byte{'c'},
+				Hash: common.BytesToHash([]byte("b")),
+				Header: gethtypes.Header{
+					ParentHash: common.BytesToHash([]byte("c")),
+				},
 				TotalDifficulty: "0x1",
 			},
 			wantExists:            true,
-			wantTerminalBlockHash: []byte{'a'},
+			wantTerminalBlockHash: common.BytesToHash([]byte("a")).Bytes(),
 		},
 	}
 	for _, tt := range tests {
@@ -249,7 +250,7 @@ func TestServer_getTerminalBlockHashIfExists(t *testing.T) {
 			var m map[[32]byte]*pb.ExecutionBlock
 			if tt.parentPowBlock != nil {
 				m = map[[32]byte]*pb.ExecutionBlock{
-					bytesutil.ToBytes32(tt.parentPowBlock.Hash): tt.parentPowBlock,
+					tt.parentPowBlock.Hash: tt.parentPowBlock,
 				}
 			}
 			c := powtesting.NewPOWChain()

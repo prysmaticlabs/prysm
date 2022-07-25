@@ -14,6 +14,7 @@ var migrations = []migration{
 	migrateArchivedIndex,
 	migrateBlockSlotIndex,
 	migrateStateValidators,
+	migrateBlindedBeaconBlocksEnabled,
 }
 
 // RunMigrations defined in the migrations array.

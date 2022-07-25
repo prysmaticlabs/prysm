@@ -67,7 +67,7 @@ func (s *LighthouseValidatorNodeSet) Start(ctx context.Context) error {
 	// Wait for all nodes to finish their job (blocking).
 	// Once nodes are ready passed in handler function will be called.
 	return helpers.WaitOnNodes(ctx, nodes, func() {
-		// All nodes stated, close channel, so that all services waiting on a set, can proceed.
+		// All nodes started, close channel, so that all services waiting on a set, can proceed.
 		close(s.started)
 	})
 }
@@ -255,7 +255,7 @@ func NewKeystoreGenerator() *KeystoreGenerator {
 	return &KeystoreGenerator{started: make(chan struct{})}
 }
 
-func (k *KeystoreGenerator) Start(ctx context.Context) error {
+func (k *KeystoreGenerator) Start(_ context.Context) error {
 	validatorNum := int(params.BeaconConfig().MinGenesisActiveValidatorCount)
 	lighthouseBeaconNum := e2e.TestParams.LighthouseBeaconNodeCount
 	prysmBeaconNum := e2e.TestParams.BeaconNodeCount

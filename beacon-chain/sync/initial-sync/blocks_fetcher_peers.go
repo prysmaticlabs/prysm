@@ -73,10 +73,7 @@ func (f *blocksFetcher) waitForMinimumPeers(ctx context.Context) ([]peer.ID, err
 		}
 		var peers []peer.ID
 		if f.mode == modeStopOnFinalizedEpoch {
-			cp, err := f.chain.FinalizedCheckpt()
-			if err != nil {
-				return nil, err
-			}
+			cp := f.chain.FinalizedCheckpt()
 			headEpoch := cp.Epoch
 			_, peers = f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, headEpoch)
 		} else {
@@ -96,7 +93,7 @@ func (f *blocksFetcher) waitForMinimumPeers(ctx context.Context) ([]peer.ID, err
 // filterPeers returns transformed list of peers, weight sorted by scores and capacity remaining.
 // List can be further constrained using peersPercentage, where only percentage of peers are returned.
 func (f *blocksFetcher) filterPeers(ctx context.Context, peers []peer.ID, peersPercentage float64) []peer.ID {
-	_, span := trace.StartSpan(ctx, "initialsync.filterPeers")
+	ctx, span := trace.StartSpan(ctx, "initialsync.filterPeers")
 	defer span.End()
 
 	if len(peers) == 0 {

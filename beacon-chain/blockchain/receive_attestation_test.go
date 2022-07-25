@@ -49,17 +49,13 @@ func TestVerifyLMDFFGConsistent_NotOK(t *testing.T) {
 
 	b32 := util.NewBeaconBlock()
 	b32.Block.Slot = 32
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b32)
-	require.NoError(t, err)
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, service.cfg.BeaconDB, b32)
 	r32, err := b32.Block.HashTreeRoot()
 	require.NoError(t, err)
 	b33 := util.NewBeaconBlock()
 	b33.Block.Slot = 33
 	b33.Block.ParentRoot = r32[:]
-	wsb, err = wrapper.WrappedSignedBeaconBlock(b33)
-	require.NoError(t, err)
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, service.cfg.BeaconDB, b33)
 	r33, err := b33.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -80,17 +76,13 @@ func TestVerifyLMDFFGConsistent_OK(t *testing.T) {
 
 	b32 := util.NewBeaconBlock()
 	b32.Block.Slot = 32
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b32)
-	require.NoError(t, err)
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, service.cfg.BeaconDB, b32)
 	r32, err := b32.Block.HashTreeRoot()
 	require.NoError(t, err)
 	b33 := util.NewBeaconBlock()
 	b33.Block.Slot = 33
 	b33.Block.ParentRoot = r32[:]
-	wsb, err = wrapper.WrappedSignedBeaconBlock(b33)
-	require.NoError(t, err)
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, service.cfg.BeaconDB, b33)
 	r33, err := b33.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -140,15 +132,15 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 	service.cfg.ProposerSlotIndexCache = cache.NewProposerPayloadIDsCache()
-	service.notifyEngineIfChangedHead(ctx, service.headRoot())
+	require.NoError(t, service.notifyEngineIfChangedHead(ctx, service.headRoot()))
 	hookErr := "could not notify forkchoice update"
 	invalidStateErr := "Could not get state from db"
 	require.LogsDoNotContain(t, hook, invalidStateErr)
 	require.LogsDoNotContain(t, hook, hookErr)
 	gb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
 	require.NoError(t, err)
-	service.saveInitSyncBlock([32]byte{'a'}, gb)
-	service.notifyEngineIfChangedHead(ctx, [32]byte{'a'})
+	require.NoError(t, service.saveInitSyncBlock(ctx, [32]byte{'a'}, gb))
+	require.NoError(t, service.notifyEngineIfChangedHead(ctx, [32]byte{'a'}))
 	require.LogsContain(t, hook, invalidStateErr)
 
 	hook.Reset()
@@ -164,8 +156,7 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 	require.NoError(t, err)
 	r1, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	service.saveInitSyncBlock(r1, wsb)
-	finalized := &ethpb.Checkpoint{Root: r1[:], Epoch: 0}
+	require.NoError(t, service.saveInitSyncBlock(ctx, r1, wsb))
 	st, _ := util.DeterministicGenesisState(t, 1)
 	service.head = &head{
 		slot:  1,
@@ -174,20 +165,16 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 		state: st,
 	}
 	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(2, 1, [8]byte{1})
-	service.store.SetFinalizedCheckptAndPayloadHash(finalized, [32]byte{})
-	service.notifyEngineIfChangedHead(ctx, r1)
+	require.NoError(t, service.notifyEngineIfChangedHead(ctx, r1))
 	require.LogsDoNotContain(t, hook, invalidStateErr)
 	require.LogsDoNotContain(t, hook, hookErr)
 
 	// Block in DB
 	b = util.NewBeaconBlock()
 	b.Block.Slot = 3
-	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
-	require.NoError(t, err)
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, service.cfg.BeaconDB, b)
 	r1, err = b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	finalized = &ethpb.Checkpoint{Root: r1[:], Epoch: 0}
 	st, _ = util.DeterministicGenesisState(t, 1)
 	service.head = &head{
 		slot:  1,
@@ -196,8 +183,7 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 		state: st,
 	}
 	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(2, 1, [8]byte{1})
-	service.store.SetFinalizedCheckptAndPayloadHash(finalized, [32]byte{})
-	service.notifyEngineIfChangedHead(ctx, r1)
+	require.NoError(t, service.notifyEngineIfChangedHead(ctx, r1))
 	require.LogsDoNotContain(t, hook, invalidStateErr)
 	require.LogsDoNotContain(t, hook, hookErr)
 	vId, payloadID, has := service.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(2)
@@ -207,7 +193,7 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 
 	// Test zero headRoot returns immediately.
 	headRoot := service.headRoot()
-	service.notifyEngineIfChangedHead(ctx, [32]byte{})
+	require.NoError(t, service.notifyEngineIfChangedHead(ctx, [32]byte{}))
 	require.Equal(t, service.headRoot(), headRoot)
 }
 
@@ -254,9 +240,7 @@ func TestService_ProcessAttestationsAndUpdateHead(t *testing.T) {
 	b.Block.ParentRoot = service.originBlockRoot[:]
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	wb, err := wrapper.WrappedSignedBeaconBlock(b)
-	require.NoError(t, err)
-	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wb))
+	util.SaveBlock(t, ctx, service.cfg.BeaconDB, b)
 	state, blkRoot, err := prepareForkchoiceState(ctx, 2, r, service.originBlockRoot, [32]byte{'b'}, ojc, ojc)
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))

@@ -1,11 +1,10 @@
 package wrapper
 
 import (
-	ssz "github.com/ferranbt/fastssz"
 	"github.com/pkg/errors"
+	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/runtime/version"
@@ -106,6 +105,44 @@ func (bellatrixSignedBeaconBlock) PbPhase0Block() (*eth.SignedBeaconBlock, error
 // PbAltairBlock returns the underlying protobuf object.
 func (bellatrixSignedBeaconBlock) PbAltairBlock() (*eth.SignedBeaconBlockAltair, error) {
 	return nil, ErrUnsupportedAltairBlock
+}
+
+func (w bellatrixSignedBeaconBlock) ToBlinded() (interfaces.SignedBeaconBlock, error) {
+	if w.Block().IsNil() {
+		return nil, errors.New("cannot convert nil block to blinded format")
+	}
+	payload := w.b.Block.Body.ExecutionPayload
+	wrappedPayload, err := WrappedExecutionPayload(payload)
+	if err != nil {
+		return nil, err
+	}
+	header, err := PayloadToHeader(wrappedPayload)
+	if err != nil {
+		return nil, err
+	}
+	return signedBlindedBeaconBlockBellatrix{
+		b: &eth.SignedBlindedBeaconBlockBellatrix{
+			Block: &eth.BlindedBeaconBlockBellatrix{
+				Slot:          w.b.Block.Slot,
+				ProposerIndex: w.b.Block.ProposerIndex,
+				ParentRoot:    w.b.Block.ParentRoot,
+				StateRoot:     w.b.Block.StateRoot,
+				Body: &eth.BlindedBeaconBlockBodyBellatrix{
+					RandaoReveal:           w.b.Block.Body.RandaoReveal,
+					Eth1Data:               w.b.Block.Body.Eth1Data,
+					Graffiti:               w.b.Block.Body.Graffiti,
+					ProposerSlashings:      w.b.Block.Body.ProposerSlashings,
+					AttesterSlashings:      w.b.Block.Body.AttesterSlashings,
+					Attestations:           w.b.Block.Body.Attestations,
+					Deposits:               w.b.Block.Body.Deposits,
+					VoluntaryExits:         w.b.Block.Body.VoluntaryExits,
+					SyncAggregate:          w.b.Block.Body.SyncAggregate,
+					ExecutionPayloadHeader: header,
+				},
+			},
+			Signature: w.b.Signature,
+		},
+	}, nil
 }
 
 // Version of the underlying protobuf object.
@@ -308,12 +345,7 @@ func (w bellatrixBeaconBlockBody) Proto() proto.Message {
 	return w.b
 }
 
-// ExecutionPayload returns the Execution payload of the block body.
-func (w bellatrixBeaconBlockBody) ExecutionPayload() (*enginev1.ExecutionPayload, error) {
-	return w.b.ExecutionPayload, nil
-}
-
-// ExecutionPayloadHeader is a stub.
-func (w bellatrixBeaconBlockBody) ExecutionPayloadHeader() (*enginev1.ExecutionPayloadHeader, error) {
-	return nil, errors.Wrapf(ErrUnsupportedField, "ExecutionPayloadHeader for %T", w)
+// Execution returns the Execution payload of the block body.
+func (w bellatrixBeaconBlockBody) Execution() (interfaces.ExecutionData, error) {
+	return WrappedExecutionPayload(w.b.ExecutionPayload)
 }

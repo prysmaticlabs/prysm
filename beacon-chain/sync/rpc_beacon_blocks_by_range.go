@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -40,7 +41,10 @@ func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 		tracing.AnnotateError(span, err)
 		return err
 	}
-
+	// Only have range requests with a step of 1 being processed.
+	if m.Step > 1 {
+		m.Step = 1
+	}
 	// The initial count for the first batch to be returned back.
 	count := m.Count
 	allowedBlocksPerSecond := uint64(flags.Get().BlockBatchLimit)
@@ -158,18 +162,29 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 		tracing.AnnotateError(span, err)
 		return err
 	}
+	start := time.Now()
 	for _, b := range blks {
-		if b == nil || b.IsNil() || b.Block().IsNil() {
+		if err := wrapper.BeaconBlockIsNil(b); err != nil {
 			continue
 		}
-		if chunkErr := s.chunkBlockWriter(stream, b); chunkErr != nil {
-			log.WithError(chunkErr).Debug("Could not send a chunked response")
+		blockToWrite := b
+		if blockToWrite.Block().IsBlinded() {
+			fullBlock, err := s.cfg.executionPayloadReconstructor.ReconstructFullBellatrixBlock(ctx, blockToWrite)
+			if err != nil {
+				log.WithError(err).Error("Could not get reconstruct full bellatrix block from blinded body")
+				s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
+				return err
+			}
+			blockToWrite = fullBlock
+		}
+		if chunkErr := s.chunkBlockWriter(stream, blockToWrite); chunkErr != nil {
+			log.WithError(chunkErr).Error("Could not send a chunked response")
 			s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
 			tracing.AnnotateError(span, chunkErr)
 			return chunkErr
 		}
-
 	}
+	rpcBlocksByRangeResponseLatency.Observe(float64(time.Since(start).Milliseconds()))
 	// Return error in the event we have an invalid parent.
 	return err
 }
@@ -240,7 +255,7 @@ func (s *Service) filterBlocks(ctx context.Context, blks []interfaces.SignedBeac
 			// Set the previous root as the
 			// newly added block's root
 			currRoot := roots[i]
-			prevRoot = &currRoot
+			*prevRoot = currRoot
 		}
 	}
 	return newBlks, nil

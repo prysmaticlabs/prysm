@@ -19,9 +19,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	fastssz "github.com/ferranbt/fastssz"
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/pkg/errors"
+	fastssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/api/gateway"
 	"github.com/prysmaticlabs/prysm/api/gateway/apimiddleware"
 	"github.com/prysmaticlabs/prysm/async/event"
@@ -48,9 +48,9 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/db/kv"
 	g "github.com/prysmaticlabs/prysm/validator/graffiti"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/local"
-	remote_web3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
+	remoteweb3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
 	"github.com/prysmaticlabs/prysm/validator/rpc"
-	validatorMiddleware "github.com/prysmaticlabs/prysm/validator/rpc/apimiddleware"
+	validatormiddleware "github.com/prysmaticlabs/prysm/validator/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/validator/web"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -438,8 +438,8 @@ func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
 	return c.services.RegisterService(v)
 }
 
-func web3SignerConfig(cliCtx *cli.Context) (*remote_web3signer.SetupConfig, error) {
-	var web3signerConfig *remote_web3signer.SetupConfig
+func web3SignerConfig(cliCtx *cli.Context) (*remoteweb3signer.SetupConfig, error) {
+	var web3signerConfig *remoteweb3signer.SetupConfig
 	if cliCtx.IsSet(flags.Web3SignerURLFlag.Name) {
 		urlStr := cliCtx.String(flags.Web3SignerURLFlag.Name)
 		u, err := url.ParseRequestURI(urlStr)
@@ -449,18 +449,29 @@ func web3SignerConfig(cliCtx *cli.Context) (*remote_web3signer.SetupConfig, erro
 		if u.Scheme == "" || u.Host == "" {
 			return nil, fmt.Errorf("web3signer url must be in the format of http(s)://host:port url used: %v", urlStr)
 		}
-		web3signerConfig = &remote_web3signer.SetupConfig{
+		web3signerConfig = &remoteweb3signer.SetupConfig{
 			BaseEndpoint:          u.String(),
 			GenesisValidatorsRoot: nil,
 		}
+		if cliCtx.IsSet(flags.WalletPasswordFileFlag.Name) {
+			log.Warnf("%s was provided while using web3signer and will be ignored", flags.WalletPasswordFileFlag.Name)
+		}
 		if cliCtx.IsSet(flags.Web3SignerPublicValidatorKeysFlag.Name) {
-			publicKeysStr := cliCtx.String(flags.Web3SignerPublicValidatorKeysFlag.Name)
-			pURL, err := url.ParseRequestURI(publicKeysStr)
-			if err == nil && pURL.Scheme != "" && pURL.Host != "" {
-				web3signerConfig.PublicKeysURL = publicKeysStr
-			} else {
+			publicKeysSlice := cliCtx.StringSlice(flags.Web3SignerPublicValidatorKeysFlag.Name)
+			pks := make([]string, 0)
+			if len(publicKeysSlice) == 1 {
+				pURL, err := url.ParseRequestURI(publicKeysSlice[0])
+				if err == nil && pURL.Scheme != "" && pURL.Host != "" {
+					web3signerConfig.PublicKeysURL = publicKeysSlice[0]
+				} else {
+					pks = strings.Split(publicKeysSlice[0], ",")
+				}
+			} else if len(publicKeysSlice) > 1 {
+				pks = publicKeysSlice
+			}
+			if len(pks) > 0 {
 				var validatorKeys [][48]byte
-				for _, key := range strings.Split(publicKeysStr, ",") {
+				for _, key := range pks {
 					decodedKey, decodeErr := hexutil.Decode(key)
 					if decodeErr != nil {
 						return nil, errors.Wrapf(decodeErr, "could not decode public key for web3signer: %s", key)
@@ -476,33 +487,30 @@ func web3SignerConfig(cliCtx *cli.Context) (*remote_web3signer.SetupConfig, erro
 
 func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSettings, error) {
 	var fileConfig *validatorServiceConfig.ProposerSettingsPayload
-	//TODO(10809): remove when fully deprecated
-	if cliCtx.IsSet(flags.FeeRecipientConfigFileFlag.Name) && cliCtx.IsSet(flags.FeeRecipientConfigURLFlag.Name) {
-		return nil, fmt.Errorf("cannot specify both --%s and --%s", flags.FeeRecipientConfigFileFlag.Name, flags.FeeRecipientConfigURLFlag.Name)
-	}
 
 	if cliCtx.IsSet(flags.ProposerSettingsFlag.Name) && cliCtx.IsSet(flags.ProposerSettingsURLFlag.Name) {
 		return nil, errors.New("cannot specify both " + flags.ProposerSettingsFlag.Name + " and " + flags.ProposerSettingsURLFlag.Name)
 	}
 
 	// is overridden by file and URL flags
-	if cliCtx.IsSet(flags.SuggestedFeeRecipientFlag.Name) {
+	if cliCtx.IsSet(flags.SuggestedFeeRecipientFlag.Name) &&
+		!cliCtx.IsSet(flags.ProposerSettingsFlag.Name) &&
+		!cliCtx.IsSet(flags.ProposerSettingsURLFlag.Name) {
 		suggestedFee := cliCtx.String(flags.SuggestedFeeRecipientFlag.Name)
+		var vr *validatorServiceConfig.BuilderConfig
+		if cliCtx.Bool(flags.EnableBuilderFlag.Name) {
+			vr = &validatorServiceConfig.BuilderConfig{
+				Enabled:  true,
+				GasLimit: reviewGasLimit(params.BeaconConfig().DefaultBuilderGasLimit),
+			}
+		}
 		fileConfig = &validatorServiceConfig.ProposerSettingsPayload{
-			ProposeConfig: nil,
+			ProposerConfig: nil,
 			DefaultConfig: &validatorServiceConfig.ProposerOptionPayload{
-				FeeRecipient: suggestedFee,
-				GasLimit:     params.BeaconConfig().DefaultBuilderGasLimit,
+				FeeRecipient:  suggestedFee,
+				BuilderConfig: vr,
 			},
 		}
-	}
-
-	if cliCtx.IsSet(flags.FeeRecipientConfigFileFlag.Name) {
-		return nil, errors.New(flags.FeeRecipientConfigFileFlag.Usage)
-	}
-
-	if cliCtx.IsSet(flags.FeeRecipientConfigURLFlag.Name) {
-		return nil, errors.New(flags.FeeRecipientConfigURLFlag.Usage)
 	}
 
 	if cliCtx.IsSet(flags.ProposerSettingsFlag.Name) {
@@ -525,7 +533,7 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 
 	// default fileConfig is mandatory
 	if fileConfig.DefaultConfig == nil {
-		return nil, errors.New("default fileConfig is required")
+		return nil, errors.New("default fileConfig is required, proposer settings file is either empty or an incorrect format")
 	}
 	if !common.IsHexAddress(fileConfig.DefaultConfig.FeeRecipient) {
 		return nil, errors.New("default fileConfig fee recipient is not a valid eth1 address")
@@ -534,13 +542,16 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 		return nil, err
 	}
 	vpSettings.DefaultConfig = &validatorServiceConfig.ProposerOption{
-		FeeRecipient: common.HexToAddress(fileConfig.DefaultConfig.FeeRecipient),
-		GasLimit:     reviewGasLimit(fileConfig.DefaultConfig.GasLimit),
+		FeeRecipient:  common.HexToAddress(fileConfig.DefaultConfig.FeeRecipient),
+		BuilderConfig: fileConfig.DefaultConfig.BuilderConfig,
+	}
+	if vpSettings.DefaultConfig.BuilderConfig != nil {
+		vpSettings.DefaultConfig.BuilderConfig.GasLimit = reviewGasLimit(vpSettings.DefaultConfig.BuilderConfig.GasLimit)
 	}
 
-	if fileConfig.ProposeConfig != nil {
+	if fileConfig.ProposerConfig != nil {
 		vpSettings.ProposeConfig = make(map[[fieldparams.BLSPubkeyLength]byte]*validatorServiceConfig.ProposerOption)
-		for key, option := range fileConfig.ProposeConfig {
+		for key, option := range fileConfig.ProposerConfig {
 			decodedKey, err := hexutil.Decode(key)
 			if err != nil {
 				return nil, errors.Wrapf(err, "could not decode public key %s", key)
@@ -557,10 +568,14 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 			if err := warnNonChecksummedAddress(option.FeeRecipient); err != nil {
 				return nil, err
 			}
-			vpSettings.ProposeConfig[bytesutil.ToBytes48(decodedKey)] = &validatorServiceConfig.ProposerOption{
-				FeeRecipient: common.HexToAddress(option.FeeRecipient),
-				GasLimit:     reviewGasLimit(option.GasLimit),
+			if option.BuilderConfig != nil {
+				option.BuilderConfig.GasLimit = reviewGasLimit(option.BuilderConfig.GasLimit)
 			}
+			vpSettings.ProposeConfig[bytesutil.ToBytes48(decodedKey)] = &validatorServiceConfig.ProposerOption{
+				FeeRecipient:  common.HexToAddress(option.FeeRecipient),
+				BuilderConfig: option.BuilderConfig,
+			}
+
 		}
 	}
 
@@ -712,7 +727,7 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 		gateway.WithMaxCallRecvMsgSize(maxCallSize),
 		gateway.WithPbHandlers([]*gateway.PbMux{pbHandler}),
 		gateway.WithAllowedOrigins(allowedOrigins),
-		gateway.WithApiMiddleware(&validatorMiddleware.ValidatorEndpointFactory{}),
+		gateway.WithApiMiddleware(&validatormiddleware.ValidatorEndpointFactory{}),
 		gateway.WithMuxHandler(muxHandler),
 		gateway.WithTimeout(uint64(timeout)),
 	}

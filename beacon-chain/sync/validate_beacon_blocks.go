@@ -132,10 +132,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		return pubsub.ValidationIgnore, nil
 	}
 
-	cp, err := s.cfg.chain.FinalizedCheckpt()
-	if err != nil {
-		return pubsub.ValidationIgnore, nil
-	}
+	cp := s.cfg.chain.FinalizedCheckpt()
 	startSlot, err := slots.EpochStart(cp.Epoch)
 	if err != nil {
 		log.WithError(err).WithFields(getBlockFields(blk)).Debug("Ignored block: could not calculate epoch start slot")
@@ -286,14 +283,14 @@ func (s *Service) validateBellatrixBeaconBlock(ctx context.Context, parentState 
 	if err != nil {
 		return err
 	}
-	payload, err := body.ExecutionPayload()
+	payload, err := body.Execution()
 	if err != nil {
 		return err
 	}
-	if payload == nil {
+	if payload.IsNil() {
 		return errors.New("execution payload is nil")
 	}
-	if payload.Timestamp != uint64(t.Unix()) {
+	if payload.Timestamp() != uint64(t.Unix()) {
 		return errors.New("incorrect timestamp")
 	}
 

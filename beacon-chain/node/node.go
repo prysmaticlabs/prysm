@@ -249,6 +249,11 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 		return nil, err
 	}
 
+	log.Debugln("Registering builder service")
+	if err := beacon.registerBuilderService(); err != nil {
+		return nil, err
+	}
+
 	log.Debugln("Registering RPC Service")
 	if err := beacon.registerRPCService(); err != nil {
 		return nil, err
@@ -569,6 +574,14 @@ func (b *BeaconNode) fetchP2P() p2p.P2P {
 	return p
 }
 
+func (b *BeaconNode) fetchBuilderService() *builder.Service {
+	var s *builder.Service
+	if err := b.services.FetchService(&s); err != nil {
+		panic(err)
+	}
+	return s
+}
+
 func (b *BeaconNode) registerAttestationPool() error {
 	s, err := attestations.NewService(b.ctx, &attestations.Config{
 		Pool: b.attestationPool,
@@ -681,6 +694,7 @@ func (b *BeaconNode) registerSyncService() error {
 		regularsync.WithStateGen(b.stateGen),
 		regularsync.WithSlasherAttestationsFeed(b.slasherAttestationsFeed),
 		regularsync.WithSlasherBlockHeadersFeed(b.slasherBlockHeadersFeed),
+		regularsync.WithExecutionPayloadReconstructor(web3Service),
 	)
 	return b.services.RegisterService(rs)
 }
@@ -786,48 +800,50 @@ func (b *BeaconNode) registerRPCService() error {
 
 	p2pService := b.fetchP2P()
 	rpcService := rpc.NewService(b.ctx, &rpc.Config{
-		Host:                    host,
-		Port:                    port,
-		BeaconMonitoringHost:    beaconMonitoringHost,
-		BeaconMonitoringPort:    beaconMonitoringPort,
-		CertFlag:                cert,
-		KeyFlag:                 key,
-		BeaconDB:                b.db,
-		Broadcaster:             p2pService,
-		PeersFetcher:            p2pService,
-		PeerManager:             p2pService,
-		MetadataProvider:        p2pService,
-		ChainInfoFetcher:        chainService,
-		HeadUpdater:             chainService,
-		HeadFetcher:             chainService,
-		CanonicalFetcher:        chainService,
-		ForkFetcher:             chainService,
-		FinalizationFetcher:     chainService,
-		BlockReceiver:           chainService,
-		AttestationReceiver:     chainService,
-		GenesisTimeFetcher:      chainService,
-		GenesisFetcher:          chainService,
-		OptimisticModeFetcher:   chainService,
-		AttestationsPool:        b.attestationPool,
-		ExitPool:                b.exitPool,
-		SlashingsPool:           b.slashingsPool,
-		SlashingChecker:         slasherService,
-		SyncCommitteeObjectPool: b.syncCommitteePool,
-		POWChainService:         web3Service,
-		POWChainInfoFetcher:     web3Service,
-		ChainStartFetcher:       chainStartFetcher,
-		MockEth1Votes:           mockEth1DataVotes,
-		SyncService:             syncService,
-		DepositFetcher:          depositFetcher,
-		PendingDepositFetcher:   b.depositCache,
-		BlockNotifier:           b,
-		StateNotifier:           b,
-		OperationNotifier:       b,
-		StateGen:                b.stateGen,
-		EnableDebugRPCEndpoints: enableDebugRPCEndpoints,
-		MaxMsgSize:              maxMsgSize,
-		ProposerIdsCache:        b.proposerIdsCache,
-		ExecutionEngineCaller:   web3Service,
+		ExecutionEngineCaller:         web3Service,
+		ExecutionPayloadReconstructor: web3Service,
+		Host:                          host,
+		Port:                          port,
+		BeaconMonitoringHost:          beaconMonitoringHost,
+		BeaconMonitoringPort:          beaconMonitoringPort,
+		CertFlag:                      cert,
+		KeyFlag:                       key,
+		BeaconDB:                      b.db,
+		Broadcaster:                   p2pService,
+		PeersFetcher:                  p2pService,
+		PeerManager:                   p2pService,
+		MetadataProvider:              p2pService,
+		ChainInfoFetcher:              chainService,
+		HeadUpdater:                   chainService,
+		HeadFetcher:                   chainService,
+		CanonicalFetcher:              chainService,
+		ForkFetcher:                   chainService,
+		FinalizationFetcher:           chainService,
+		BlockReceiver:                 chainService,
+		AttestationReceiver:           chainService,
+		GenesisTimeFetcher:            chainService,
+		GenesisFetcher:                chainService,
+		OptimisticModeFetcher:         chainService,
+		AttestationsPool:              b.attestationPool,
+		ExitPool:                      b.exitPool,
+		SlashingsPool:                 b.slashingsPool,
+		SlashingChecker:               slasherService,
+		SyncCommitteeObjectPool:       b.syncCommitteePool,
+		POWChainService:               web3Service,
+		POWChainInfoFetcher:           web3Service,
+		ChainStartFetcher:             chainStartFetcher,
+		MockEth1Votes:                 mockEth1DataVotes,
+		SyncService:                   syncService,
+		DepositFetcher:                depositFetcher,
+		PendingDepositFetcher:         b.depositCache,
+		BlockNotifier:                 b,
+		StateNotifier:                 b,
+		OperationNotifier:             b,
+		StateGen:                      b.stateGen,
+		EnableDebugRPCEndpoints:       enableDebugRPCEndpoints,
+		MaxMsgSize:                    maxMsgSize,
+		ProposerIdsCache:              b.proposerIdsCache,
+		BlockBuilder:                  b.fetchBuilderService(),
 	})
 
 	return b.services.RegisterService(rpcService)
@@ -966,6 +982,22 @@ func (b *BeaconNode) registerValidatorMonitorService() error {
 		HeadFetcher:         chainService,
 	}
 	svc, err := monitor.NewService(b.ctx, monitorConfig, tracked)
+	if err != nil {
+		return err
+	}
+	return b.services.RegisterService(svc)
+}
+
+func (b *BeaconNode) registerBuilderService() error {
+	var chainService *blockchain.Service
+	if err := b.services.FetchService(&chainService); err != nil {
+		return err
+	}
+
+	opts := append(b.serviceFlagOpts.builderOpts,
+		builder.WithHeadFetcher(chainService),
+		builder.WithDatabase(b.db))
+	svc, err := builder.NewService(b.ctx, opts...)
 	if err != nil {
 		return err
 	}

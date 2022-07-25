@@ -112,9 +112,7 @@ func TestServer_ListValidatorBalances_NoResults(t *testing.T) {
 	headState, err := util.NewBeaconState()
 	require.NoError(t, err)
 	b := util.NewBeaconBlock()
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
-	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, beaconDB, b)
 	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, gRoot))
@@ -168,9 +166,7 @@ func TestServer_ListValidatorBalances_DefaultResponse_NoArchive(t *testing.T) {
 	require.NoError(t, st.SetValidators(validators))
 	require.NoError(t, st.SetBalances(balances))
 	b := util.NewBeaconBlock()
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
-	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, beaconDB, b)
 	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, gRoot))
@@ -574,9 +570,7 @@ func TestServer_ListValidators_OnlyActiveValidators(t *testing.T) {
 	}
 
 	b := util.NewBeaconBlock()
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
-	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, beaconDB, b)
 	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, gRoot))
@@ -644,9 +638,7 @@ func TestServer_ListValidators_InactiveInTheMiddle(t *testing.T) {
 	}
 
 	b := util.NewBeaconBlock()
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
-	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, beaconDB, b)
 	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, gRoot))
@@ -1037,10 +1029,10 @@ func TestServer_ListValidators_FromOldEpoch(t *testing.T) {
 	epochs := 10
 	numVals := uint64(10)
 
+	beaconDB := dbTest.SetupDB(t)
 	b := util.NewBeaconBlock()
 	b.Block.Slot = slot
-	sb, err := wrapper.WrappedSignedBeaconBlock(b)
-	require.NoError(t, err)
+	util.SaveBlock(t, ctx, beaconDB, b)
 
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -1049,8 +1041,6 @@ func TestServer_ListValidators_FromOldEpoch(t *testing.T) {
 	require.NoError(t, st.SetSlot(slot))
 	require.Equal(t, int(numVals), len(st.Validators()))
 
-	beaconDB := dbTest.SetupDB(t)
-	require.NoError(t, beaconDB.SaveBlock(ctx, sb))
 	require.NoError(t, beaconDB.SaveState(ctx, st, r))
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, r))
 
@@ -1128,9 +1118,7 @@ func TestServer_ListValidators_ProcessHeadStateSlots(t *testing.T) {
 	require.NoError(t, st.SetValidators(validators))
 	require.NoError(t, st.SetBalances(balances))
 	b := util.NewBeaconBlock()
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
-	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, beaconDB, b)
 	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveState(ctx, st, gRoot))
@@ -1284,9 +1272,7 @@ func TestServer_GetValidatorActiveSetChanges(t *testing.T) {
 		require.NoError(t, err)
 	}
 	b := util.NewBeaconBlock()
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
-	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, beaconDB, b)
 
 	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -1553,9 +1539,7 @@ func TestServer_GetValidatorParticipation_CurrentAndPrevEpoch(t *testing.T) {
 
 	b := util.NewBeaconBlock()
 	b.Block.Slot = 16
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
-	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, beaconDB, b)
 	bRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, beaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Root: bRoot[:]}))
 	require.NoError(t, beaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Root: params.BeaconConfig().ZeroHash[:]}))
@@ -1636,9 +1620,7 @@ func TestServer_GetValidatorParticipation_OrphanedUntilGenesis(t *testing.T) {
 	require.NoError(t, headState.AppendPreviousEpochAttestations(atts[0]))
 
 	b := util.NewBeaconBlock()
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
-	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, beaconDB, b)
 	bRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, bRoot))
 	require.NoError(t, err)
@@ -2238,9 +2220,7 @@ func TestServer_GetIndividualVotes_ValidatorsDontExist(t *testing.T) {
 
 	b := util.NewBeaconBlock()
 	b.Block.Slot = slot
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
-	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, beaconDB, b)
 	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	gen := stategen.New(beaconDB)
@@ -2336,9 +2316,7 @@ func TestServer_GetIndividualVotes_Working(t *testing.T) {
 
 	b := util.NewBeaconBlock()
 	b.Block.Slot = 0
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
-	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, beaconDB, b)
 	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	gen := stategen.New(beaconDB)
@@ -2403,9 +2381,7 @@ func TestServer_GetIndividualVotes_WorkingAltair(t *testing.T) {
 
 	b := util.NewBeaconBlock()
 	b.Block.Slot = slot
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
-	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, beaconDB, b)
 	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	gen := stategen.New(beaconDB)
@@ -2469,9 +2445,7 @@ func TestServer_GetIndividualVotes_AltairEndOfEpoch(t *testing.T) {
 
 	b := util.NewBeaconBlock()
 	b.Block.Slot = startSlot
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
-	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, beaconDB, b)
 	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	gen := stategen.New(beaconDB)
@@ -2494,9 +2468,7 @@ func TestServer_GetIndividualVotes_AltairEndOfEpoch(t *testing.T) {
 	require.NoError(t, beaconState.SetPreviousParticipationBits(pb))
 
 	b.Block.Slot = endSlot
-	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
-	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, beaconDB, b)
 	gRoot, err = b.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -2561,9 +2533,7 @@ func TestServer_GetIndividualVotes_BellatrixEndOfEpoch(t *testing.T) {
 
 	b := util.NewBeaconBlock()
 	b.Block.Slot = startSlot
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
-	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, beaconDB, b)
 	gRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	gen := stategen.New(beaconDB)
@@ -2586,9 +2556,7 @@ func TestServer_GetIndividualVotes_BellatrixEndOfEpoch(t *testing.T) {
 	require.NoError(t, beaconState.SetPreviousParticipationBits(pb))
 
 	b.Block.Slot = endSlot
-	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
-	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, beaconDB, b)
 	gRoot, err = b.Block.HashTreeRoot()
 	require.NoError(t, err)
 

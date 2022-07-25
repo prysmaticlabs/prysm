@@ -5,11 +5,12 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
-	state_native "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native"
+	statenative "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -49,11 +50,11 @@ func TestComputeFieldRootsWithHasher_Phase0(t *testing.T) {
 	require.Equal(t, true, ok)
 	protoState, ok := v1State.InnerStateUnsafe().(*ethpb.BeaconState)
 	require.Equal(t, true, ok)
-	initState, err := state_native.InitializeFromProtoPhase0(protoState)
+	initState, err := statenative.InitializeFromProtoPhase0(protoState)
 	require.NoError(t, err)
-	s, ok := initState.(*state_native.BeaconState)
+	s, ok := initState.(*statenative.BeaconState)
 	require.Equal(t, true, ok)
-	root, err := state_native.ComputeFieldRootsWithHasher(context.Background(), s)
+	root, err := statenative.ComputeFieldRootsWithHasher(context.Background(), s)
 	require.NoError(t, err)
 	expected := [][]byte{
 		{0x7b, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
@@ -115,12 +116,12 @@ func TestComputeFieldRootsWithHasher_Altair(t *testing.T) {
 	require.Equal(t, true, ok)
 	protoState, ok := v1State.InnerStateUnsafe().(*ethpb.BeaconStateAltair)
 	require.Equal(t, true, ok)
-	initState, err := state_native.InitializeFromProtoAltair(protoState)
+	initState, err := statenative.InitializeFromProtoAltair(protoState)
 	require.NoError(t, err)
-	s, ok := initState.(*state_native.BeaconState)
+	s, ok := initState.(*statenative.BeaconState)
 	require.Equal(t, true, ok)
 
-	root, err := state_native.ComputeFieldRootsWithHasher(context.Background(), s)
+	root, err := statenative.ComputeFieldRootsWithHasher(context.Background(), s)
 	require.NoError(t, err)
 	expected := [][]byte{
 		{0x7b, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
@@ -180,18 +181,20 @@ func TestComputeFieldRootsWithHasher_Bellatrix(t *testing.T) {
 	require.NoError(t, beaconState.SetInactivityScores([]uint64{1, 2, 3}))
 	require.NoError(t, beaconState.SetCurrentSyncCommittee(syncCommittee("current")))
 	require.NoError(t, beaconState.SetNextSyncCommittee(syncCommittee("next")))
-	require.NoError(t, beaconState.SetLatestExecutionPayloadHeader(executionPayloadHeader()))
+	wrappedHeader, err := wrapper.WrappedExecutionPayloadHeader(executionPayloadHeader())
+	require.NoError(t, err)
+	require.NoError(t, beaconState.SetLatestExecutionPayloadHeader(wrappedHeader))
 
 	v1State, ok := beaconState.(*v3.BeaconState)
 	require.Equal(t, true, ok)
 	protoState, ok := v1State.InnerStateUnsafe().(*ethpb.BeaconStateBellatrix)
 	require.Equal(t, true, ok)
-	initState, err := state_native.InitializeFromProtoBellatrix(protoState)
+	initState, err := statenative.InitializeFromProtoBellatrix(protoState)
 	require.NoError(t, err)
-	s, ok := initState.(*state_native.BeaconState)
+	s, ok := initState.(*statenative.BeaconState)
 	require.Equal(t, true, ok)
 
-	root, err := state_native.ComputeFieldRootsWithHasher(context.Background(), s)
+	root, err := statenative.ComputeFieldRootsWithHasher(context.Background(), s)
 	require.NoError(t, err)
 	expected := [][]byte{
 		{0x7b, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},

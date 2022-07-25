@@ -172,7 +172,9 @@ func TestStart(t *testing.T) {
 	time.Sleep(1000 * time.Millisecond)
 	require.LogsContain(t, hook, "Synced to head epoch, starting reporting performance")
 	require.LogsContain(t, hook, "\"Starting service\" ValidatorIndices=\"[1 2 12 15]\"")
+	s.Lock()
 	require.Equal(t, s.isLogging, true, "monitor is not running")
+	s.Unlock()
 }
 
 func TestInitializePerformanceStructures(t *testing.T) {

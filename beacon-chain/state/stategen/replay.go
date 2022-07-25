@@ -228,7 +228,7 @@ func ReplayProcessSlots(ctx context.Context, state state.BeaconState, slot types
 		}
 
 		if prysmtime.CanUpgradeToBellatrix(state.Slot()) {
-			state, err = execution.UpgradeToBellatrix(ctx, state)
+			state, err = execution.UpgradeToBellatrix(state)
 			if err != nil {
 				tracing.AnnotateError(span, err)
 				return nil, err

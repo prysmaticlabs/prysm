@@ -71,10 +71,7 @@ func (s *Service) VerifyFinalizedConsistency(ctx context.Context, root []byte) e
 		return nil
 	}
 
-	f, err := s.FinalizedCheckpt()
-	if err != nil {
-		return err
-	}
+	f := s.FinalizedCheckpt()
 	ss, err := slots.EpochStart(f.Epoch)
 	if err != nil {
 		return err
@@ -123,7 +120,7 @@ func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
 			case <-s.ctx.Done():
 				return
 			case <-st.C():
-				if err := s.NewSlot(s.ctx, s.CurrentSlot()); err != nil {
+				if err := s.ForkChoicer().NewSlot(s.ctx, s.CurrentSlot()); err != nil {
 					log.WithError(err).Error("Could not process new slot")
 					return
 				}
@@ -152,11 +149,8 @@ func (s *Service) UpdateHead(ctx context.Context) error {
 
 	s.processAttestations(ctx)
 
-	justified, err := s.store.JustifiedCheckpt()
-	if err != nil {
-		return err
-	}
-	balances, err := s.justifiedBalances.get(ctx, bytesutil.ToBytes32(justified.Root))
+	justified := s.ForkChoicer().JustifiedCheckpoint()
+	balances, err := s.justifiedBalances.get(ctx, justified.Root)
 	if err != nil {
 		return err
 	}
@@ -172,33 +166,35 @@ func (s *Service) UpdateHead(ctx context.Context) error {
 		}).Debug("Head changed due to attestations")
 	}
 	s.headLock.RUnlock()
-	s.notifyEngineIfChangedHead(ctx, newHeadRoot)
+	if err := s.notifyEngineIfChangedHead(ctx, newHeadRoot); err != nil {
+		return err
+	}
 	return nil
 }
 
 // This calls notify Forkchoice Update in the event that the head has changed
-func (s *Service) notifyEngineIfChangedHead(ctx context.Context, newHeadRoot [32]byte) {
+func (s *Service) notifyEngineIfChangedHead(ctx context.Context, newHeadRoot [32]byte) error {
 	s.headLock.RLock()
 	if newHeadRoot == [32]byte{} || s.headRoot() == newHeadRoot {
 		s.headLock.RUnlock()
-		return
+		return nil
 	}
 	s.headLock.RUnlock()
 
 	if !s.hasBlockInInitSyncOrDB(ctx, newHeadRoot) {
 		log.Debug("New head does not exist in DB. Do nothing")
-		return // We don't have the block, don't notify the engine and update head.
+		return nil // We don't have the block, don't notify the engine and update head.
 	}
 
 	newHeadBlock, err := s.getBlock(ctx, newHeadRoot)
 	if err != nil {
 		log.WithError(err).Error("Could not get new head block")
-		return
+		return nil
 	}
 	headState, err := s.cfg.StateGen.StateByRoot(ctx, newHeadRoot)
 	if err != nil {
 		log.WithError(err).Error("Could not get state from db")
-		return
+		return nil
 	}
 	arg := &notifyForkchoiceUpdateArg{
 		headState: headState,
@@ -207,11 +203,12 @@ func (s *Service) notifyEngineIfChangedHead(ctx context.Context, newHeadRoot [32
 	}
 	_, err = s.notifyForkchoiceUpdate(s.ctx, arg)
 	if err != nil {
-		log.WithError(err).Error("could not notify forkchoice update")
+		return err
 	}
 	if err := s.saveHead(ctx, newHeadRoot, newHeadBlock, headState); err != nil {
 		log.WithError(err).Error("could not save head")
 	}
+	return nil
 }
 
 // This processes fork choice attestations from the pool to account for validator votes and fork choice.

@@ -5,15 +5,15 @@ import (
 	"errors"
 	"reflect"
 
-	fastssz "github.com/ferranbt/fastssz"
 	"github.com/golang/snappy"
+	fastssz "github.com/prysmaticlabs/fastssz"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"go.opencensus.io/trace"
 	"google.golang.org/protobuf/proto"
 )
 
 func decode(ctx context.Context, data []byte, dst proto.Message) error {
-	_, span := trace.StartSpan(ctx, "BeaconDB.decode")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.decode")
 	defer span.End()
 
 	data, err := snappy.Decode(nil, data)
@@ -27,7 +27,7 @@ func decode(ctx context.Context, data []byte, dst proto.Message) error {
 }
 
 func encode(ctx context.Context, msg proto.Message) ([]byte, error) {
-	_, span := trace.StartSpan(ctx, "BeaconDB.encode")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.encode")
 	defer span.End()
 
 	if msg == nil || reflect.ValueOf(msg).IsNil() {

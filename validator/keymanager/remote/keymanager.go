@@ -23,7 +23,7 @@ import (
 	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	remote_utils "github.com/prysmaticlabs/prysm/validator/keymanager/remote-utils"
+	remoteutils "github.com/prysmaticlabs/prysm/validator/keymanager/remote-utils"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )
@@ -273,7 +273,7 @@ func (km *Keymanager) SubscribeAccountChanges(pubKeysChan chan [][fieldparams.BL
 
 // ExtractKeystores is not supported for the remote keymanager type.
 func (*Keymanager) ExtractKeystores(
-	ctx context.Context, publicKeys []bls.PublicKey, password string,
+	_ context.Context, _ []bls.PublicKey, _ string,
 ) ([]*keymanager.Keystore, error) {
 	return nil, errors.New("extracting keys not supported for a remote keymanager")
 }
@@ -309,6 +309,6 @@ func ListKeymanagerAccountsImpl(ctx context.Context, cfg keymanager.ListKeymanag
 	} else {
 		fmt.Printf("Showing %d validator accounts\n", len(validatingPubKeys))
 	}
-	remote_utils.DisplayRemotePublicKeys(validatingPubKeys)
+	remoteutils.DisplayRemotePublicKeys(validatingPubKeys)
 	return nil
 }

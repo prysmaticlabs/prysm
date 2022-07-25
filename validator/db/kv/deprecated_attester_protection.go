@@ -1,7 +1,6 @@
 package kv
 
 import (
-	"context"
 	"fmt"
 
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
@@ -64,10 +63,9 @@ func newDeprecatedAttestingHistory(target types.Epoch) deprecatedEncodedAttestin
 	arraySize := latestEpochWrittenSize + historyDataSize
 	en := make(deprecatedEncodedAttestingHistory, arraySize)
 	enc := en
-	ctx := context.Background()
 	var err error
 	for i := types.Epoch(0); i <= target%params.BeaconConfig().WeakSubjectivityPeriod; i++ {
-		enc, err = enc.setTargetData(ctx, i, emptyHistoryData())
+		enc, err = enc.setTargetData(i, emptyHistoryData())
 		if err != nil {
 			log.WithError(err).Error("Failed to set empty target data")
 		}
@@ -75,17 +73,14 @@ func newDeprecatedAttestingHistory(target types.Epoch) deprecatedEncodedAttestin
 	return enc
 }
 
-func (dh deprecatedEncodedAttestingHistory) getLatestEpochWritten(ctx context.Context) (types.Epoch, error) {
+func (dh deprecatedEncodedAttestingHistory) getLatestEpochWritten() (types.Epoch, error) {
 	if err := dh.assertSize(); err != nil {
 		return 0, err
 	}
 	return types.Epoch(bytesutil.FromBytes8(dh[:latestEpochWrittenSize])), nil
 }
 
-func (dh deprecatedEncodedAttestingHistory) setLatestEpochWritten(
-	ctx context.Context,
-	latestEpochWritten types.Epoch,
-) (deprecatedEncodedAttestingHistory, error) {
+func (dh deprecatedEncodedAttestingHistory) setLatestEpochWritten(latestEpochWritten types.Epoch) (deprecatedEncodedAttestingHistory, error) {
 	if err := dh.assertSize(); err != nil {
 		return nil, err
 	}
@@ -93,7 +88,7 @@ func (dh deprecatedEncodedAttestingHistory) setLatestEpochWritten(
 	return dh, nil
 }
 
-func (dh deprecatedEncodedAttestingHistory) getTargetData(ctx context.Context, target types.Epoch) (*deprecatedHistoryData, error) {
+func (dh deprecatedEncodedAttestingHistory) getTargetData(target types.Epoch) (*deprecatedHistoryData, error) {
 	if err := dh.assertSize(); err != nil {
 		return nil, err
 	}
@@ -111,11 +106,7 @@ func (dh deprecatedEncodedAttestingHistory) getTargetData(ctx context.Context, t
 	return history, nil
 }
 
-func (dh deprecatedEncodedAttestingHistory) setTargetData(
-	ctx context.Context,
-	target types.Epoch,
-	historyData *deprecatedHistoryData,
-) (deprecatedEncodedAttestingHistory, error) {
+func (dh deprecatedEncodedAttestingHistory) setTargetData(target types.Epoch, historyData *deprecatedHistoryData) (deprecatedEncodedAttestingHistory, error) {
 	if err := dh.assertSize(); err != nil {
 		return nil, err
 	}

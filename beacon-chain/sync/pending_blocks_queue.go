@@ -57,16 +57,16 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 	if err := s.validatePendingSlots(); err != nil {
 		return errors.Wrap(err, "could not validate pending slots")
 	}
-	slots := s.sortedPendingSlots()
+	ss := s.sortedPendingSlots()
 	var parentRoots [][32]byte
 
 	span.AddAttributes(
-		trace.Int64Attribute("numSlots", int64(len(slots))),
+		trace.Int64Attribute("numSlots", int64(len(ss))),
 		trace.Int64Attribute("numPeers", int64(len(pids))),
 	)
 
 	randGen := rand.NewGenerator()
-	for _, slot := range slots {
+	for _, slot := range ss {
 		// process the blocks during their respective slot.
 		// otherwise wait for the right slot to process the block.
 		if slot > s.cfg.chain.CurrentSlot() {
@@ -170,8 +170,12 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 
 			if err := s.cfg.chain.ReceiveBlock(ctx, b, blkRoot); err != nil {
 				if blockchain.IsInvalidBlock(err) {
-					tracing.AnnotateError(span, err)
-					s.setBadBlock(ctx, blkRoot)
+					r := blockchain.InvalidBlockRoot(err)
+					if r != [32]byte{} {
+						s.setBadBlock(ctx, r) // Setting head block as bad.
+					} else {
+						s.setBadBlock(ctx, blkRoot)
+					}
 				}
 				log.Debugf("Could not process block from slot %d: %v", b.Block().Slot(), err)
 
@@ -214,10 +218,7 @@ func (s *Service) sendBatchRootRequest(ctx context.Context, roots [][32]byte, ra
 	if len(roots) == 0 {
 		return nil
 	}
-	cp, err := s.cfg.chain.FinalizedCheckpt()
-	if err != nil {
-		return err
-	}
+	cp := s.cfg.chain.FinalizedCheckpt()
 	_, bestPeers := s.cfg.p2p.Peers().BestFinalized(maxPeerRequest, cp.Epoch)
 	if len(bestPeers) == 0 {
 		return nil
@@ -260,15 +261,15 @@ func (s *Service) sortedPendingSlots() []types.Slot {
 
 	items := s.slotToPendingBlocks.Items()
 
-	slots := make([]types.Slot, 0, len(items))
+	ss := make([]types.Slot, 0, len(items))
 	for k := range items {
 		slot := cacheKeyToSlot(k)
-		slots = append(slots, slot)
+		ss = append(ss, slot)
 	}
-	sort.Slice(slots, func(i, j int) bool {
-		return slots[i] < slots[j]
+	sort.Slice(ss, func(i, j int) bool {
+		return ss[i] < ss[j]
 	})
-	return slots
+	return ss
 }
 
 // validatePendingSlots validates the pending blocks
@@ -279,10 +280,7 @@ func (s *Service) validatePendingSlots() error {
 	defer s.pendingQueueLock.Unlock()
 	oldBlockRoots := make(map[[32]byte]bool)
 
-	cp, err := s.cfg.chain.FinalizedCheckpt()
-	if err != nil {
-		return err
-	}
+	cp := s.cfg.chain.FinalizedCheckpt()
 	finalizedEpoch := cp.Epoch
 	if s.slotToPendingBlocks == nil {
 		return errors.New("slotToPendingBlocks cache can't be nil")

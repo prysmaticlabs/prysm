@@ -9,7 +9,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/genesis"
-	state_native "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native"
+	statenative "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
 	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
@@ -224,7 +224,7 @@ func (s *Store) saveStatesEfficientInternal(ctx context.Context, tx *bolt.Tx, bl
 			var pbState *ethpb.BeaconState
 			var err error
 			if features.Get().EnableNativeState {
-				pbState, err = state_native.ProtobufBeaconStatePhase0(rawType)
+				pbState, err = statenative.ProtobufBeaconStatePhase0(rawType)
 			} else {
 				pbState, err = v1.ProtobufBeaconState(rawType)
 			}
@@ -251,7 +251,7 @@ func (s *Store) saveStatesEfficientInternal(ctx context.Context, tx *bolt.Tx, bl
 			var pbState *ethpb.BeaconStateAltair
 			var err error
 			if features.Get().EnableNativeState {
-				pbState, err = state_native.ProtobufBeaconStateAltair(rawType)
+				pbState, err = statenative.ProtobufBeaconStateAltair(rawType)
 			} else {
 				pbState, err = v2.ProtobufBeaconState(rawType)
 			}
@@ -279,7 +279,7 @@ func (s *Store) saveStatesEfficientInternal(ctx context.Context, tx *bolt.Tx, bl
 			var pbState *ethpb.BeaconStateBellatrix
 			var err error
 			if features.Get().EnableNativeState {
-				pbState, err = state_native.ProtobufBeaconStateBellatrix(rawType)
+				pbState, err = statenative.ProtobufBeaconStateBellatrix(rawType)
 			} else {
 				pbState, err = v3.ProtobufBeaconState(rawType)
 			}
@@ -338,7 +338,7 @@ func (s *Store) storeValidatorEntriesSeparately(ctx context.Context, tx *bolt.Tx
 
 // HasState checks if a state by root exists in the db.
 func (s *Store) HasState(ctx context.Context, blockRoot [32]byte) bool {
-	_, span := trace.StartSpan(ctx, "BeaconDB.HasState")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasState")
 	defer span.End()
 	hasState := false
 	err := s.db.View(func(tx *bolt.Tx) error {
@@ -615,7 +615,7 @@ func (s *Store) validatorEntries(ctx context.Context, blockRoot [32]byte) ([]*et
 
 // retrieves and assembles the state information from multiple buckets.
 func (s *Store) stateBytes(ctx context.Context, blockRoot [32]byte) ([]byte, error) {
-	_, span := trace.StartSpan(ctx, "BeaconDB.stateBytes")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.stateBytes")
 	defer span.End()
 	var dst []byte
 	err := s.db.View(func(tx *bolt.Tx) error {
@@ -738,7 +738,7 @@ func (s *Store) HighestSlotStatesBelow(ctx context.Context, slot types.Slot) ([]
 // a map of bolt DB index buckets corresponding to each particular key for indices for
 // data, such as (shard indices bucket -> shard 5).
 func createStateIndicesFromStateSlot(ctx context.Context, slot types.Slot) map[string][]byte {
-	_, span := trace.StartSpan(ctx, "BeaconDB.createStateIndicesFromState")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.createStateIndicesFromState")
 	defer span.End()
 	indicesByBucket := make(map[string][]byte)
 	// Every index has a unique bucket for fast, binary-search

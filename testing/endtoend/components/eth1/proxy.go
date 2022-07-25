@@ -34,11 +34,9 @@ func NewProxySet() *ProxySet {
 
 // Start starts all the proxies in set.
 func (s *ProxySet) Start(ctx context.Context) error {
-
 	totalNodeCount := e2e.TestParams.BeaconNodeCount + e2e.TestParams.LighthouseBeaconNodeCount
 	nodes := make([]e2etypes.ComponentRunner, totalNodeCount)
 	for i := 0; i < totalNodeCount; i++ {
-		// We start indexing nodes from 1 because the miner has an implicit 0 index.
 		nodes[i] = NewProxy(i)
 	}
 	s.proxies = nodes
@@ -137,7 +135,7 @@ func NewProxy(index int) *Proxy {
 
 // Start runs a proxy.
 func (node *Proxy) Start(ctx context.Context) error {
-	file, err := os.Create(path.Join(e2e.TestParams.LogPath, "eth1_proxy_"+strconv.Itoa(node.index)+".log"))
+	f, err := os.Create(path.Join(e2e.TestParams.LogPath, "eth1_proxy_"+strconv.Itoa(node.index)+".log"))
 	if err != nil {
 		return err
 	}
@@ -154,14 +152,14 @@ func (node *Proxy) Start(ctx context.Context) error {
 		proxy.WithDestinationAddress(fmt.Sprintf("http://127.0.0.1:%d", e2e.TestParams.Ports.Eth1AuthRPCPort+node.index)),
 		proxy.WithPort(e2e.TestParams.Ports.Eth1ProxyPort + node.index),
 		proxy.WithLogger(log.New()),
-		proxy.WithLogFile(file),
+		proxy.WithLogFile(f),
 		proxy.WithJwtSecret(string(secret)),
 	}
 	nProxy, err := proxy.New(opts...)
 	if err != nil {
 		return err
 	}
-	log.Infof("Starting eth1 proxy %d with port: %d and file %s", node.index, e2e.TestParams.Ports.Eth1ProxyPort+node.index, file.Name())
+	log.Infof("Starting eth1 proxy %d with port: %d and file %s", node.index, e2e.TestParams.Ports.Eth1ProxyPort+node.index, f.Name())
 
 	// Set cancel into context.
 	ctx, cancel := context.WithCancel(ctx)

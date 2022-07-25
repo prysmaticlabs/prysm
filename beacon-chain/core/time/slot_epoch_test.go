@@ -43,9 +43,9 @@ func TestCurrentEpoch_OK(t *testing.T) {
 		{slot: 200, epoch: 6},
 	}
 	for _, tt := range tests {
-		state, err := v1.InitializeFromProto(&eth.BeaconState{Slot: tt.slot})
+		st, err := v1.InitializeFromProto(&eth.BeaconState{Slot: tt.slot})
 		require.NoError(t, err)
-		assert.Equal(t, tt.epoch, time.CurrentEpoch(state), "ActiveCurrentEpoch(%d)", state.Slot())
+		assert.Equal(t, tt.epoch, time.CurrentEpoch(st), "ActiveCurrentEpoch(%d)", st.Slot())
 	}
 }
 
@@ -59,9 +59,9 @@ func TestPrevEpoch_OK(t *testing.T) {
 		{slot: 2 * params.BeaconConfig().SlotsPerEpoch, epoch: 1},
 	}
 	for _, tt := range tests {
-		state, err := v1.InitializeFromProto(&eth.BeaconState{Slot: tt.slot})
+		st, err := v1.InitializeFromProto(&eth.BeaconState{Slot: tt.slot})
 		require.NoError(t, err)
-		assert.Equal(t, tt.epoch, time.PrevEpoch(state), "ActivePrevEpoch(%d)", state.Slot())
+		assert.Equal(t, tt.epoch, time.PrevEpoch(st), "ActivePrevEpoch(%d)", st.Slot())
 	}
 }
 
@@ -77,9 +77,9 @@ func TestNextEpoch_OK(t *testing.T) {
 		{slot: 200, epoch: types.Epoch(200/params.BeaconConfig().SlotsPerEpoch + 1)},
 	}
 	for _, tt := range tests {
-		state, err := v1.InitializeFromProto(&eth.BeaconState{Slot: tt.slot})
+		st, err := v1.InitializeFromProto(&eth.BeaconState{Slot: tt.slot})
 		require.NoError(t, err)
-		assert.Equal(t, tt.epoch, time.NextEpoch(state), "NextEpoch(%d)", state.Slot())
+		assert.Equal(t, tt.epoch, time.NextEpoch(st), "NextEpoch(%d)", st.Slot())
 	}
 }
 

@@ -15,7 +15,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//math:go_default_library",
-        "@com_github_ferranbt_fastssz//:go_default_library",
+        "@com_github_prysmaticlabs_fastssz//:go_default_library",
     ],
 )
 

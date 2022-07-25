@@ -53,16 +53,15 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *ethpbv1.AttesterDu
 		return nil, status.Errorf(codes.InvalidArgument, "Request epoch %d can not be greater than next epoch %d", req.Epoch, currentEpoch+1)
 	}
 
+	isOptimistic, err := vs.OptimisticModeFetcher.IsOptimistic(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not check optimistic status: %v", err)
+	}
+
 	s, err := vs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
-
-	isOptimistic, err := rpchelpers.IsOptimistic(ctx, s, vs.OptimisticModeFetcher)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
-	}
-
 	s, err = advanceState(ctx, s, req.Epoch, currentEpoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not advance state to requested epoch start slot: %v", err)
@@ -133,20 +132,19 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDu
 
 	cs := vs.TimeFetcher.CurrentSlot()
 	currentEpoch := slots.ToEpoch(cs)
-	if req.Epoch > currentEpoch {
-		return nil, status.Errorf(codes.InvalidArgument, "Request epoch %d can not be greater than current epoch %d", req.Epoch, currentEpoch)
+	if req.Epoch > currentEpoch+1 {
+		return nil, status.Errorf(codes.InvalidArgument, "Request epoch %d can not be greater than next epoch %d", req.Epoch, currentEpoch+1)
+	}
+
+	isOptimistic, err := vs.OptimisticModeFetcher.IsOptimistic(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not check optimistic status: %v", err)
 	}
 
 	s, err := vs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
-
-	isOptimistic, err := rpchelpers.IsOptimistic(ctx, s, vs.OptimisticModeFetcher)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
-	}
-
 	s, err = advanceState(ctx, s, req.Epoch, currentEpoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not advance state to requested epoch start slot: %v", err)
@@ -158,14 +156,14 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDu
 	}
 
 	duties := make([]*ethpbv1.ProposerDuty, 0)
-	for index, slots := range proposals {
+	for index, ss := range proposals {
 		val, err := s.ValidatorAtIndexReadOnly(index)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not get validator: %v", err)
 		}
 		pubkey48 := val.PublicKey()
 		pubkey := pubkey48[:]
-		for _, s := range slots {
+		for _, s := range ss {
 			duties = append(duties, &ethpbv1.ProposerDuty{
 				Pubkey:         pubkey,
 				ValidatorIndex: index,
@@ -177,7 +175,7 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDu
 		return duties[i].Slot < duties[j].Slot
 	})
 
-	root, err := proposalDependentRoot(s, req.Epoch)
+	root, err := vs.proposalDependentRoot(ctx, s, req.Epoch)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get dependent root: %v", err)
 	}
@@ -288,7 +286,7 @@ func (vs *Server) ProduceBlock(ctx context.Context, req *ethpbv1.ProduceBlockReq
 
 // ProduceBlockV2 requests the beacon node to produce a valid unsigned beacon block, which can then be signed by a proposer and submitted.
 func (vs *Server) ProduceBlockV2(ctx context.Context, req *ethpbv1.ProduceBlockRequest) (*ethpbv2.ProduceBlockResponseV2, error) {
-	_, span := trace.StartSpan(ctx, "validator.ProduceBlockV2")
+	ctx, span := trace.StartSpan(ctx, "validator.ProduceBlockV2")
 	defer span.End()
 
 	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
@@ -352,7 +350,7 @@ func (vs *Server) ProduceBlockV2(ctx context.Context, req *ethpbv1.ProduceBlockR
 //
 // The produced block is in SSZ form.
 func (vs *Server) ProduceBlockV2SSZ(ctx context.Context, req *ethpbv1.ProduceBlockRequest) (*ethpbv2.SSZContainer, error) {
-	_, span := trace.StartSpan(ctx, "validator.ProduceBlockV2SSZ")
+	ctx, span := trace.StartSpan(ctx, "validator.ProduceBlockV2SSZ")
 	defer span.End()
 
 	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
@@ -560,7 +558,7 @@ func (vs *Server) ProduceBlindedBlockSSZ(ctx context.Context, req *ethpbv1.Produ
 func (vs *Server) PrepareBeaconProposer(
 	ctx context.Context, request *ethpbv1.PrepareBeaconProposerRequest,
 ) (*emptypb.Empty, error) {
-	_, span := trace.StartSpan(ctx, "validator.PrepareBeaconProposer")
+	ctx, span := trace.StartSpan(ctx, "validator.PrepareBeaconProposer")
 	defer span.End()
 	var feeRecipients []common.Address
 	var validatorIndices []types.ValidatorIndex
@@ -603,7 +601,7 @@ func (vs *Server) ProduceAttestationData(ctx context.Context, req *ethpbv1.Produ
 
 // GetAggregateAttestation aggregates all attestations matching the given attestation data root and slot, returning the aggregated result.
 func (vs *Server) GetAggregateAttestation(ctx context.Context, req *ethpbv1.AggregateAttestationRequest) (*ethpbv1.AggregateAttestationResponse, error) {
-	_, span := trace.StartSpan(ctx, "validator.GetAggregateAttestation")
+	ctx, span := trace.StartSpan(ctx, "validator.GetAggregateAttestation")
 	defer span.End()
 
 	allAtts := vs.AttestationsPool.AggregatedAttestations()
@@ -912,7 +910,7 @@ func attestationDependentRoot(s state.BeaconState, epoch types.Epoch) ([]byte, e
 
 // proposalDependentRoot is get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch) - 1)
 // or the genesis block root in the case of underflow.
-func proposalDependentRoot(s state.BeaconState, epoch types.Epoch) ([]byte, error) {
+func (vs *Server) proposalDependentRoot(ctx context.Context, s state.BeaconState, epoch types.Epoch) ([]byte, error) {
 	var dependentRootSlot types.Slot
 	if epoch == 0 {
 		dependentRootSlot = 0
@@ -923,10 +921,21 @@ func proposalDependentRoot(s state.BeaconState, epoch types.Epoch) ([]byte, erro
 		}
 		dependentRootSlot = epochStartSlot.Sub(1)
 	}
-	root, err := helpers.BlockRootAtSlot(s, dependentRootSlot)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get block root")
+	var root []byte
+	var err error
+	// Per spec, if the dependent root epoch is greater than current epoch, use the head root.
+	if dependentRootSlot >= s.Slot() {
+		root, err = vs.HeadFetcher.HeadRoot(ctx)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		root, err = helpers.BlockRootAtSlot(s, dependentRootSlot)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get block root")
+		}
 	}
+
 	return root, nil
 }
 

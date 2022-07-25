@@ -61,9 +61,11 @@ type Flags struct {
 	EnableSlashingProtectionPruning bool
 
 	EnableNativeState                bool // EnableNativeState defines whether the beacon state will be represented as a pure Go struct or a Go struct that wraps a proto struct.
+	EnablePullTips                   bool // EnablePullTips enables experimental disabling of boundary checks.
 	EnableVectorizedHTR              bool // EnableVectorizedHTR specifies whether the beacon state will use the optimized sha256 routines.
 	EnableForkChoiceDoublyLinkedTree bool // EnableForkChoiceDoublyLinkedTree specifies whether fork choice store will use a doubly linked tree.
 	EnableBatchGossipAggregation     bool // EnableBatchGossipAggregation specifies whether to further aggregate our gossip batches before verifying them.
+	EnableOnlyBlindedBeaconBlocks    bool // EnableOnlyBlindedBeaconBlocks enables only storing blinded beacon blocks in the DB post-Bellatrix fork.
 
 	// KeystoreImportDebounceInterval specifies the time duration the validator waits to reload new keys if they have
 	// changed on disk. This feature is for advanced use cases only.
@@ -211,6 +213,10 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logDisabled(disableNativeState)
 		cfg.EnableNativeState = false
 	}
+	if ctx.Bool(enablePullTips.Name) {
+		logEnabled(enablePullTips)
+		cfg.EnablePullTips = true
+	}
 	if ctx.Bool(enableVecHTR.Name) {
 		logEnabled(enableVecHTR)
 		cfg.EnableVectorizedHTR = true
@@ -222,6 +228,10 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 	if ctx.Bool(enableGossipBatchAggregation.Name) {
 		logEnabled(enableGossipBatchAggregation)
 		cfg.EnableBatchGossipAggregation = true
+	}
+	if ctx.Bool(EnableOnlyBlindedBeaconBlocks.Name) {
+		logEnabled(EnableOnlyBlindedBeaconBlocks)
+		cfg.EnableOnlyBlindedBeaconBlocks = true
 	}
 	Init(cfg)
 	return nil

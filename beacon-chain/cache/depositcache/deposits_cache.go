@@ -77,7 +77,7 @@ func New() (*DepositCache, error) {
 // InsertDeposit into the database. If deposit or block number are nil
 // then this method does nothing.
 func (dc *DepositCache) InsertDeposit(ctx context.Context, d *ethpb.Deposit, blockNum uint64, index int64, depositRoot [32]byte) error {
-	_, span := trace.StartSpan(ctx, "DepositsCache.InsertDeposit")
+	ctx, span := trace.StartSpan(ctx, "DepositsCache.InsertDeposit")
 	defer span.End()
 	if d == nil {
 		log.WithFields(logrus.Fields{
@@ -111,7 +111,7 @@ func (dc *DepositCache) InsertDeposit(ctx context.Context, d *ethpb.Deposit, blo
 
 // InsertDepositContainers inserts a set of deposit containers into our deposit cache.
 func (dc *DepositCache) InsertDepositContainers(ctx context.Context, ctrs []*ethpb.DepositContainer) {
-	_, span := trace.StartSpan(ctx, "DepositsCache.InsertDepositContainers")
+	ctx, span := trace.StartSpan(ctx, "DepositsCache.InsertDepositContainers")
 	defer span.End()
 	dc.depositsLock.Lock()
 	defer dc.depositsLock.Unlock()
@@ -130,7 +130,7 @@ func (dc *DepositCache) InsertDepositContainers(ctx context.Context, ctrs []*eth
 
 // InsertFinalizedDeposits inserts deposits up to eth1DepositIndex (inclusive) into the finalized deposits cache.
 func (dc *DepositCache) InsertFinalizedDeposits(ctx context.Context, eth1DepositIndex int64) {
-	_, span := trace.StartSpan(ctx, "DepositsCache.InsertFinalizedDeposits")
+	ctx, span := trace.StartSpan(ctx, "DepositsCache.InsertFinalizedDeposits")
 	defer span.End()
 	dc.depositsLock.Lock()
 	defer dc.depositsLock.Unlock()
@@ -180,7 +180,7 @@ func (dc *DepositCache) InsertFinalizedDeposits(ctx context.Context, eth1Deposit
 
 // AllDepositContainers returns all historical deposit containers.
 func (dc *DepositCache) AllDepositContainers(ctx context.Context) []*ethpb.DepositContainer {
-	_, span := trace.StartSpan(ctx, "DepositsCache.AllDepositContainers")
+	ctx, span := trace.StartSpan(ctx, "DepositsCache.AllDepositContainers")
 	defer span.End()
 	dc.depositsLock.RLock()
 	defer dc.depositsLock.RUnlock()
@@ -191,7 +191,7 @@ func (dc *DepositCache) AllDepositContainers(ctx context.Context) []*ethpb.Depos
 // AllDeposits returns a list of historical deposits until the given block number
 // (inclusive). If no block is specified then this method returns all historical deposits.
 func (dc *DepositCache) AllDeposits(ctx context.Context, untilBlk *big.Int) []*ethpb.Deposit {
-	_, span := trace.StartSpan(ctx, "DepositsCache.AllDeposits")
+	ctx, span := trace.StartSpan(ctx, "DepositsCache.AllDeposits")
 	defer span.End()
 	dc.depositsLock.RLock()
 	defer dc.depositsLock.RUnlock()
@@ -212,7 +212,7 @@ func (dc *DepositCache) allDeposits(untilBlk *big.Int) []*ethpb.Deposit {
 // DepositsNumberAndRootAtHeight returns number of deposits made up to blockheight and the
 // root that corresponds to the latest deposit at that blockheight.
 func (dc *DepositCache) DepositsNumberAndRootAtHeight(ctx context.Context, blockHeight *big.Int) (uint64, [32]byte) {
-	_, span := trace.StartSpan(ctx, "DepositsCache.DepositsNumberAndRootAtHeight")
+	ctx, span := trace.StartSpan(ctx, "DepositsCache.DepositsNumberAndRootAtHeight")
 	defer span.End()
 	dc.depositsLock.RLock()
 	defer dc.depositsLock.RUnlock()
@@ -228,7 +228,7 @@ func (dc *DepositCache) DepositsNumberAndRootAtHeight(ctx context.Context, block
 // DepositByPubkey looks through historical deposits and finds one which contains
 // a certain public key within its deposit data.
 func (dc *DepositCache) DepositByPubkey(ctx context.Context, pubKey []byte) (*ethpb.Deposit, *big.Int) {
-	_, span := trace.StartSpan(ctx, "DepositsCache.DepositByPubkey")
+	ctx, span := trace.StartSpan(ctx, "DepositsCache.DepositByPubkey")
 	defer span.End()
 	dc.depositsLock.RLock()
 	defer dc.depositsLock.RUnlock()
@@ -249,7 +249,7 @@ func (dc *DepositCache) DepositByPubkey(ctx context.Context, pubKey []byte) (*et
 
 // FinalizedDeposits returns the finalized deposits trie.
 func (dc *DepositCache) FinalizedDeposits(ctx context.Context) *FinalizedDeposits {
-	_, span := trace.StartSpan(ctx, "DepositsCache.FinalizedDeposits")
+	ctx, span := trace.StartSpan(ctx, "DepositsCache.FinalizedDeposits")
 	defer span.End()
 	dc.depositsLock.RLock()
 	defer dc.depositsLock.RUnlock()

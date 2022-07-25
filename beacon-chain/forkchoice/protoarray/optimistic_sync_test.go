@@ -227,7 +227,7 @@ func TestSetOptimisticToInvalid(t *testing.T) {
 			3,
 			12,
 			8,
-			[][32]byte{[32]byte{'j'}},
+			[][32]byte{{'j'}},
 		},
 		{
 			"Remove tip, parent was optimistic",
@@ -237,7 +237,7 @@ func TestSetOptimisticToInvalid(t *testing.T) {
 			NonExistentNode,
 			NonExistentNode,
 			1,
-			[][32]byte{[32]byte{'i'}},
+			[][32]byte{{'i'}},
 		},
 		{
 			"Remove tip, lvh is inner and valid",
@@ -247,7 +247,7 @@ func TestSetOptimisticToInvalid(t *testing.T) {
 			6,
 			8,
 			3,
-			[][32]byte{[32]byte{'g'}, [32]byte{'h'}, [32]byte{'k'}, [32]byte{'i'}, [32]byte{'l'}},
+			[][32]byte{{'g'}, {'h'}, {'k'}, {'i'}, {'l'}},
 		},
 		{
 			"Remove inner, lvh is inner and optimistic",
@@ -257,7 +257,7 @@ func TestSetOptimisticToInvalid(t *testing.T) {
 			10,
 			12,
 			2,
-			[][32]byte{[32]byte{'h'}, [32]byte{'i'}},
+			[][32]byte{{'h'}, {'i'}},
 		},
 		{
 			"Remove tip, lvh is inner and optimistic",
@@ -267,7 +267,7 @@ func TestSetOptimisticToInvalid(t *testing.T) {
 			9,
 			11,
 			2,
-			[][32]byte{[32]byte{'k'}, [32]byte{'l'}},
+			[][32]byte{{'k'}, {'l'}},
 		},
 		{
 			"Remove tip, lvh is not an ancestor",
@@ -277,7 +277,7 @@ func TestSetOptimisticToInvalid(t *testing.T) {
 			5,
 			12,
 			7,
-			[][32]byte{[32]byte{'j'}},
+			[][32]byte{{'j'}},
 		},
 		{
 			"Remove inner, lvh is not an ancestor",
@@ -287,7 +287,7 @@ func TestSetOptimisticToInvalid(t *testing.T) {
 			NonExistentNode,
 			NonExistentNode,
 			1,
-			[][32]byte{[32]byte{'g'}, [32]byte{'h'}, [32]byte{'k'}, [32]byte{'i'}, [32]byte{'l'}},
+			[][32]byte{{'g'}, {'h'}, {'k'}, {'i'}, {'l'}},
 		},
 		{
 			"Remove not inserted, parent was invalid",
@@ -297,7 +297,7 @@ func TestSetOptimisticToInvalid(t *testing.T) {
 			3,
 			12,
 			8,
-			[][32]byte{[32]byte{'j'}},
+			[][32]byte{{'j'}},
 		},
 		{
 			"Remove not inserted, parent was valid",
@@ -385,8 +385,6 @@ func TestSetOptimisticToInvalid_InvalidRoots(t *testing.T) {
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 	_, err = f.SetOptimisticToInvalid(ctx, [32]byte{'p'}, [32]byte{'p'}, [32]byte{'B'})
 	require.ErrorIs(t, ErrUnknownNodeRoot, err)
-	_, err = f.SetOptimisticToInvalid(ctx, [32]byte{'a'}, [32]byte{}, [32]byte{'p'})
-	require.ErrorIs(t, errInvalidFinalizedNode, err)
 }
 
 // This is a regression test (10445)
@@ -416,4 +414,141 @@ func TestSetOptimisticToInvalid_ProposerBoost(t *testing.T) {
 	require.DeepEqual(t, [32]byte{}, f.store.proposerBoostRoot)
 	require.DeepEqual(t, params.BeaconConfig().ZeroHash, f.store.previousProposerBoostRoot)
 	f.store.proposerBoostLock.RUnlock()
+}
+
+// This is a regression test (10996)
+func TestSetOptimisticToInvalid_BogusLVH(t *testing.T) {
+	ctx := context.Background()
+	f := setup(1, 1)
+
+	state, root, err := prepareForkchoiceState(ctx, 1, [32]byte{'a'}, [32]byte{}, [32]byte{'A'}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, root))
+
+	state, root, err = prepareForkchoiceState(ctx, 2, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'B'}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, root))
+
+	invalidRoots, err := f.SetOptimisticToInvalid(ctx, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'R'})
+	require.NoError(t, err)
+	require.Equal(t, 1, len(invalidRoots))
+	require.Equal(t, [32]byte{'b'}, invalidRoots[0])
+}
+
+// This is a regression test (10996)
+func TestSetOptimisticToInvalid_BogusLVH_RotNotImported(t *testing.T) {
+	ctx := context.Background()
+	f := setup(1, 1)
+
+	state, root, err := prepareForkchoiceState(ctx, 1, [32]byte{'a'}, [32]byte{}, [32]byte{'A'}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, root))
+
+	state, root, err = prepareForkchoiceState(ctx, 2, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'B'}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, root))
+
+	invalidRoots, err := f.SetOptimisticToInvalid(ctx, [32]byte{'c'}, [32]byte{'b'}, [32]byte{'R'})
+	require.NoError(t, err)
+	require.Equal(t, 0, len(invalidRoots))
+}
+
+// Pow       |      Pos
+//
+//  CA -- A -- B -- C-----D
+//   \          \--------------E
+//    \
+//     ----------------------F -- G
+// B is INVALID
+//
+func TestSetOptimisticToInvalid_ForkAtMerge(t *testing.T) {
+	ctx := context.Background()
+	f := setup(1, 1)
+
+	st, root, err := prepareForkchoiceState(ctx, 100, [32]byte{'r'}, [32]byte{}, [32]byte{}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, st, root))
+
+	st, root, err = prepareForkchoiceState(ctx, 101, [32]byte{'a'}, [32]byte{'r'}, [32]byte{}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, st, root))
+
+	st, root, err = prepareForkchoiceState(ctx, 102, [32]byte{'b'}, [32]byte{'a'}, [32]byte{'B'}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, st, root))
+
+	st, root, err = prepareForkchoiceState(ctx, 103, [32]byte{'c'}, [32]byte{'b'}, [32]byte{'C'}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, st, root))
+
+	st, root, err = prepareForkchoiceState(ctx, 104, [32]byte{'d'}, [32]byte{'c'}, [32]byte{'D'}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, st, root))
+
+	st, root, err = prepareForkchoiceState(ctx, 105, [32]byte{'e'}, [32]byte{'b'}, [32]byte{'E'}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, st, root))
+
+	st, root, err = prepareForkchoiceState(ctx, 106, [32]byte{'f'}, [32]byte{'r'}, [32]byte{'F'}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, st, root))
+
+	st, root, err = prepareForkchoiceState(ctx, 107, [32]byte{'g'}, [32]byte{'f'}, [32]byte{'G'}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, st, root))
+
+	roots, err := f.SetOptimisticToInvalid(ctx, [32]byte{'x'}, [32]byte{'d'}, [32]byte{})
+	require.NoError(t, err)
+	require.Equal(t, 4, len(roots))
+	require.Equal(t, true, slicesEqual(roots, [][32]byte{[32]byte{'b'}, [32]byte{'c'}, [32]byte{'d'}, [32]byte{'e'}}))
+}
+
+// Pow       |      Pos
+//
+//  CA -------- B -- C-----D
+//   \           \--------------E
+//    \
+//     --A -------------------------F -- G
+// B is INVALID
+//
+func TestSetOptimisticToInvalid_ForkAtMerge_bis(t *testing.T) {
+	ctx := context.Background()
+	f := setup(1, 1)
+
+	st, root, err := prepareForkchoiceState(ctx, 100, [32]byte{'r'}, [32]byte{}, [32]byte{}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, st, root))
+
+	st, root, err = prepareForkchoiceState(ctx, 101, [32]byte{'a'}, [32]byte{'r'}, [32]byte{}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, st, root))
+
+	st, root, err = prepareForkchoiceState(ctx, 102, [32]byte{'b'}, [32]byte{}, [32]byte{'B'}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, st, root))
+
+	st, root, err = prepareForkchoiceState(ctx, 103, [32]byte{'c'}, [32]byte{'b'}, [32]byte{'C'}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, st, root))
+
+	st, root, err = prepareForkchoiceState(ctx, 104, [32]byte{'d'}, [32]byte{'c'}, [32]byte{'D'}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, st, root))
+
+	st, root, err = prepareForkchoiceState(ctx, 105, [32]byte{'e'}, [32]byte{'b'}, [32]byte{'E'}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, st, root))
+
+	st, root, err = prepareForkchoiceState(ctx, 106, [32]byte{'f'}, [32]byte{'a'}, [32]byte{'F'}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, st, root))
+
+	st, root, err = prepareForkchoiceState(ctx, 107, [32]byte{'g'}, [32]byte{'f'}, [32]byte{'G'}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, st, root))
+
+	roots, err := f.SetOptimisticToInvalid(ctx, [32]byte{'d'}, [32]byte{'c'}, [32]byte{})
+	require.NoError(t, err)
+	require.Equal(t, 1, len(roots))
+	require.Equal(t, [32]byte{'d'}, roots[0])
 }

@@ -35,6 +35,7 @@ import (
 	"github.com/prysmaticlabs/prysm/async"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/config/params"
+	ecdsaprysm "github.com/prysmaticlabs/prysm/crypto/ecdsa"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/io/logs"
 	"github.com/prysmaticlabs/prysm/network"
@@ -156,11 +157,11 @@ func createListener(ipAddr string, port int, cfg discover.Config) *discover.UDPv
 		log.Fatal(err)
 	}
 
-	network, err := discover.ListenV5(conn, localNode, cfg)
+	net, err := discover.ListenV5(conn, localNode, cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
-	return network
+	return net
 }
 
 func (h *handler) httpHandler(w http.ResponseWriter, _ *http.Request) {
@@ -247,14 +248,21 @@ func extractPrivateKey() *ecdsa.PrivateKey {
 		if err != nil {
 			panic(err)
 		}
-		privKey = (*ecdsa.PrivateKey)(unmarshalledKey.(*crypto.Secp256k1PrivateKey))
+
+		privKey, err = ecdsaprysm.ConvertFromInterfacePrivKey(unmarshalledKey)
+		if err != nil {
+			panic(err)
+		}
 
 	} else {
 		privInterfaceKey, _, err := crypto.GenerateSecp256k1Key(rand.Reader)
 		if err != nil {
 			panic(err)
 		}
-		privKey = (*ecdsa.PrivateKey)(privInterfaceKey.(*crypto.Secp256k1PrivateKey))
+		privKey, err = ecdsaprysm.ConvertFromInterfacePrivKey(privInterfaceKey)
+		if err != nil {
+			panic(err)
+		}
 		log.Warning("No private key was provided. Using default/random private key")
 		b, err := privInterfaceKey.Raw()
 		if err != nil {
