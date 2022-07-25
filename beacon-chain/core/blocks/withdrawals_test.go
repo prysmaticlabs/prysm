@@ -187,7 +187,7 @@ func TestProcessBLSToExecutionChange(t *testing.T) {
 		}
 
 		_, err = blocks.ProcessBLSToExecutionChange(st, signed)
-		require.ErrorContains(t, "invalid BLS withdrawal credential prefix", err)
+		require.ErrorContains(t, "withdrawal credential prefix is not a BLS prefix", err)
 
 	})
 }
