@@ -335,7 +335,6 @@ func (s *Service) Start() {
 			BeaconDB:           s.cfg.BeaconDB,
 			StateGen:           s.cfg.StateGen,
 			HeadFetcher:        s.cfg.HeadFetcher,
-			ForkFetcher:        s.cfg.ForkFetcher,
 			PeerManager:        s.cfg.PeerManager,
 			PeersFetcher:       s.cfg.PeersFetcher,
 			ReplayerBuilder:    ch,

@@ -28,7 +28,6 @@ type Server struct {
 	GenesisTimeFetcher blockchain.TimeFetcher
 	StateGen           *stategen.State
 	HeadFetcher        blockchain.HeadFetcher
-	ForkFetcher        blockchain.ForkFetcher
 	PeerManager        p2p.PeerManager
 	PeersFetcher       p2p.PeersProvider
 	ReplayerBuilder    stategen.ReplayerBuilder
