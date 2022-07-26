@@ -1,7 +1,11 @@
 package prefixed_test
 
 import (
+	"testing"
+
+	"github.com/pkg/errors"
 	. "github.com/prysmaticlabs/prysm/runtime/logging/logrus-prefixed-formatter"
+	"github.com/prysmaticlabs/prysm/testing/require"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -49,3 +53,19 @@ var _ = Describe("Formatter", func() {
 
 	})
 })
+
+func TestFormatter_SuppressErrorStackTraces(t *testing.T) {
+	formatter := new(TextFormatter)
+	formatter.ForceFormatting = true
+	log := logrus.New()
+	log.Formatter = formatter
+	output := new(LogOutput)
+	log.Out = output
+
+	errFn := func() error {
+		return errors.New("inner")
+	}
+
+	log.WithError(errors.Wrap(errFn(), "outer")).Error("test")
+	require.Equal(t, "[0000] ERROR test error=inner", output.GetValue(), "wrong log output")
+}
