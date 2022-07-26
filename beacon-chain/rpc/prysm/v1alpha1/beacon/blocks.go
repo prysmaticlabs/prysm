@@ -445,11 +445,6 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 		return nil, err
 	}
 
-	prevJustifiedCheckpoint := bs.FinalizationFetcher.PreviousJustifiedCheckpt()
-	if err := validateCP(prevJustifiedCheckpoint, "prev justified"); err != nil {
-		return nil, err
-	}
-
 	fSlot, err := slots.EpochStart(finalizedCheckpoint.Epoch)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get epoch start slot from finalized checkpoint epoch")
@@ -458,23 +453,16 @@ func (bs *Server) chainHeadRetrieval(ctx context.Context) (*ethpb.ChainHead, err
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get epoch start slot from justified checkpoint epoch")
 	}
-	pjSlot, err := slots.EpochStart(prevJustifiedCheckpoint.Epoch)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get epoch start slot from prev justified checkpoint epoch")
-	}
 	return &ethpb.ChainHead{
-		HeadSlot:                   headBlock.Block().Slot(),
-		HeadEpoch:                  slots.ToEpoch(headBlock.Block().Slot()),
-		HeadBlockRoot:              headBlockRoot[:],
-		FinalizedSlot:              fSlot,
-		FinalizedEpoch:             finalizedCheckpoint.Epoch,
-		FinalizedBlockRoot:         finalizedCheckpoint.Root,
-		JustifiedSlot:              jSlot,
-		JustifiedEpoch:             justifiedCheckpoint.Epoch,
-		JustifiedBlockRoot:         justifiedCheckpoint.Root,
-		PreviousJustifiedSlot:      pjSlot,
-		PreviousJustifiedEpoch:     prevJustifiedCheckpoint.Epoch,
-		PreviousJustifiedBlockRoot: prevJustifiedCheckpoint.Root,
-		OptimisticStatus:           optimisticStatus,
+		HeadSlot:           headBlock.Block().Slot(),
+		HeadEpoch:          slots.ToEpoch(headBlock.Block().Slot()),
+		HeadBlockRoot:      headBlockRoot[:],
+		FinalizedSlot:      fSlot,
+		FinalizedEpoch:     finalizedCheckpoint.Epoch,
+		FinalizedBlockRoot: finalizedCheckpoint.Root,
+		JustifiedSlot:      jSlot,
+		JustifiedEpoch:     justifiedCheckpoint.Epoch,
+		JustifiedBlockRoot: justifiedCheckpoint.Root,
+		OptimisticStatus:   optimisticStatus,
 	}, nil
 }

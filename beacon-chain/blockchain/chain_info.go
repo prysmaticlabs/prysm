@@ -81,7 +81,6 @@ type CanonicalFetcher interface {
 type FinalizationFetcher interface {
 	FinalizedCheckpt() *ethpb.Checkpoint
 	CurrentJustifiedCheckpt() *ethpb.Checkpoint
-	PreviousJustifiedCheckpt() *ethpb.Checkpoint
 	VerifyFinalizedBlkDescendant(ctx context.Context, blockRoot [32]byte) error
 	IsFinalized(ctx context.Context, blockRoot [32]byte) bool
 }
@@ -95,12 +94,6 @@ type OptimisticModeFetcher interface {
 // FinalizedCheckpt returns the latest finalized checkpoint from chain store.
 func (s *Service) FinalizedCheckpt() *ethpb.Checkpoint {
 	cp := s.ForkChoicer().FinalizedCheckpoint()
-	return &ethpb.Checkpoint{Epoch: cp.Epoch, Root: bytesutil.SafeCopyBytes(cp.Root[:])}
-}
-
-// PreviousJustifiedCheckpt returns the current justified checkpoint from chain store.
-func (s *Service) PreviousJustifiedCheckpt() *ethpb.Checkpoint {
-	cp := s.ForkChoicer().PreviousJustifiedCheckpoint()
 	return &ethpb.Checkpoint{Epoch: cp.Epoch, Root: bytesutil.SafeCopyBytes(cp.Root[:])}
 }
 

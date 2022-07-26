@@ -34,7 +34,6 @@ func New() *ForkChoice {
 		justifiedCheckpoint:           &forkchoicetypes.Checkpoint{},
 		bestJustifiedCheckpoint:       &forkchoicetypes.Checkpoint{},
 		unrealizedJustifiedCheckpoint: &forkchoicetypes.Checkpoint{},
-		prevJustifiedCheckpoint:       &forkchoicetypes.Checkpoint{},
 		finalizedCheckpoint:           &forkchoicetypes.Checkpoint{},
 		unrealizedFinalizedCheckpoint: &forkchoicetypes.Checkpoint{},
 		proposerBoostRoot:             [32]byte{},
@@ -172,7 +171,6 @@ func (f *ForkChoice) updateCheckpoints(ctx context.Context, jc, fc *ethpb.Checkp
 		}
 		currentSlot := slots.CurrentSlot(f.store.genesisTime)
 		if slots.SinceEpochStarts(currentSlot) < params.BeaconConfig().SafeSlotsToUpdateJustified {
-			f.store.prevJustifiedCheckpoint = f.store.justifiedCheckpoint
 			f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch,
 				Root: bytesutil.ToBytes32(jc.Root)}
 		} else {
@@ -193,7 +191,6 @@ func (f *ForkChoice) updateCheckpoints(ctx context.Context, jc, fc *ethpb.Checkp
 				return err
 			}
 			if root == currentRoot {
-				f.store.prevJustifiedCheckpoint = f.store.justifiedCheckpoint
 				f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch,
 					Root: jcRoot}
 			}
@@ -331,13 +328,6 @@ func (f *ForkChoice) BestJustifiedCheckpoint() *forkchoicetypes.Checkpoint {
 	f.store.checkpointsLock.RLock()
 	defer f.store.checkpointsLock.RUnlock()
 	return f.store.bestJustifiedCheckpoint
-}
-
-// PreviousJustifiedCheckpoint of fork choice store.
-func (f *ForkChoice) PreviousJustifiedCheckpoint() *forkchoicetypes.Checkpoint {
-	f.store.checkpointsLock.RLock()
-	defer f.store.checkpointsLock.RUnlock()
-	return f.store.prevJustifiedCheckpoint
 }
 
 // JustifiedCheckpoint of fork choice store.
@@ -964,7 +954,6 @@ func (f *ForkChoice) UpdateJustifiedCheckpoint(jc *forkchoicetypes.Checkpoint) e
 	}
 	f.store.checkpointsLock.Lock()
 	defer f.store.checkpointsLock.Unlock()
-	f.store.prevJustifiedCheckpoint = f.store.justifiedCheckpoint
 	f.store.justifiedCheckpoint = jc
 	bj := f.store.bestJustifiedCheckpoint
 	if bj == nil || bj.Root == params.BeaconConfig().ZeroHash || jc.Epoch > bj.Epoch {

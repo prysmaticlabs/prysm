@@ -23,7 +23,6 @@ type Store struct {
 	bestJustifiedCheckpoint       *forkchoicetypes.Checkpoint             // best justified checkpoint in store.
 	unrealizedJustifiedCheckpoint *forkchoicetypes.Checkpoint             // best justified checkpoint in store.
 	unrealizedFinalizedCheckpoint *forkchoicetypes.Checkpoint             // best justified checkpoint in store.
-	prevJustifiedCheckpoint       *forkchoicetypes.Checkpoint             // previous justified checkpoint in store.
 	finalizedCheckpoint           *forkchoicetypes.Checkpoint             // latest finalized checkpoint in store.
 	proposerBoostRoot             [fieldparams.RootLength]byte            // latest block root that was boosted after being received in a timely manner.
 	previousProposerBoostRoot     [fieldparams.RootLength]byte            // previous block root that was boosted after being received in a timely manner.
