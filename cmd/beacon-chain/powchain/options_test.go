@@ -21,8 +21,8 @@ func TestPowchainCmd(t *testing.T) {
 	set.String(flags.HTTPWeb3ProviderFlag.Name, "primary", "")
 	ctx := cli.NewContext(&app, set, nil)
 
-	endpoints := parsePowchainEndpoints(ctx)
-	assert.DeepEqual(t, []string{"primary"}, endpoints)
+	endpoints := parsePowchainEndpoint(ctx)
+	assert.Equal(t, "primary", endpoints)
 }
 
 func Test_parseJWTSecretFromFile(t *testing.T) {
@@ -97,6 +97,6 @@ func TestPowchainPreregistration_EmptyWeb3Provider(t *testing.T) {
 	set := flag.NewFlagSet("test", 0)
 	set.String(flags.HTTPWeb3ProviderFlag.Name, "", "")
 	ctx := cli.NewContext(&app, set, nil)
-	parsePowchainEndpoints(ctx)
+	parsePowchainEndpoint(ctx)
 	assert.LogsContain(t, hook, "No ETH1 node specified to run with the beacon node")
 }
