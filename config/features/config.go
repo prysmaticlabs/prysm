@@ -147,6 +147,15 @@ func configureTestnet(ctx *cli.Context) error {
 
 // Insert feature flags within the function to be enabled for Prater testnet.
 func applyPraterFeatureFlags(ctx *cli.Context) {
+	if err := ctx.Set(enableVecHTR.Names()[0], "true"); err != nil {
+		log.WithError(err).Debug("error enabling disable p flag")
+	}
+	if err := ctx.Set(enablePullTips.Names()[0], "true"); err != nil {
+		log.WithError(err).Debug("error enabling disable of boundary checks flag")
+	}
+	if err := ctx.Set(enableForkChoiceDoublyLinkedTree.Names()[0], "true"); err != nil {
+		log.WithError(err).Debug("error enabling doubly linked tree forkchoice flag")
+	}
 	if err := ctx.Set(EnableOnlyBlindedBeaconBlocks.Names()[0], "true"); err != nil {
 		log.WithError(err).Debug("error enabling only saving blinded beacon blocks flag")
 	}
@@ -157,6 +166,9 @@ func applyRopstenFeatureFlags(ctx *cli.Context) {
 	if err := ctx.Set(enableVecHTR.Names()[0], "true"); err != nil {
 		log.WithError(err).Debug("error enabling vectorized HTR flag")
 	}
+	if err := ctx.Set(enablePullTips.Names()[0], "true"); err != nil {
+		log.WithError(err).Debug("error enabling disable of boundary checks flag")
+	}
 	if err := ctx.Set(enableForkChoiceDoublyLinkedTree.Names()[0], "true"); err != nil {
 		log.WithError(err).Debug("error enabling doubly linked tree forkchoice flag")
 	}
@@ -166,6 +178,9 @@ func applyRopstenFeatureFlags(ctx *cli.Context) {
 func applySepoliaFeatureFlags(ctx *cli.Context) {
 	if err := ctx.Set(enableVecHTR.Names()[0], "true"); err != nil {
 		log.WithError(err).Debug("error enabling vectorized HTR flag")
+	}
+	if err := ctx.Set(enablePullTips.Names()[0], "true"); err != nil {
+		log.WithError(err).Debug("error enabling disable of boundary checks flag")
 	}
 	if err := ctx.Set(enableForkChoiceDoublyLinkedTree.Names()[0], "true"); err != nil {
 		log.WithError(err).Debug("error enabling doubly linked tree forkchoice flag")

@@ -84,6 +84,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 			blockHeader, err := interfaces.SignedBeaconBlockHeaderFromBlockInterface(blk)
 			if err != nil {
 				log.WithError(err).WithField("blockSlot", blk.Block().Slot()).Warn("Could not extract block header")
+				return
 			}
 			s.cfg.slasherBlockHeadersFeed.Send(blockHeader)
 		}()
