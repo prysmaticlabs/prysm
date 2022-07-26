@@ -159,6 +159,7 @@ func FuzzExecutionPayload(f *testing.F) {
 }
 
 func FuzzExecutionBlock(f *testing.F) {
+	f.Skip("Is skipped until false positive rate can be resolved.")
 	logsBloom := [256]byte{'j', 'u', 'n', 'k'}
 	addr := common.HexToAddress("095e7baea6a6c7c4c2dfeb977efac326af552d87")
 	innerData := &types.DynamicFeeTx{
@@ -209,7 +210,16 @@ func FuzzExecutionBlock(f *testing.F) {
 		if gethErr != nil || prysmErr != nil {
 			return
 		}
-
+		// Exit early if fuzzer is inserting bogus hashes in.
+		if isBogusTransactionHash(prysmResp, gethResp) {
+			return
+		}
+		// Exit early if fuzzer provides bogus fields.
+		valid, err := jsonFieldsAreValid(prysmResp, gethResp)
+		assert.NoError(t, err)
+		if !valid {
+			return
+		}
 		assert.NoError(t, validateBlockConsistency(prysmResp, gethResp))
 
 		gethBlob, gethErr := json.Marshal(gethResp)
@@ -225,6 +235,27 @@ func FuzzExecutionBlock(f *testing.F) {
 		assert.DeepEqual(t, newGethResp, newGethResp2)
 		compareHeaders(t, jsonBlob)
 	})
+}
+
+func isBogusTransactionHash(blk *pb.ExecutionBlock, jsonMap map[string]interface{}) bool {
+	if blk.Transactions == nil {
+		return false
+	}
+
+	for i, tx := range blk.Transactions {
+		jsonTx, ok := jsonMap["transactions"].([]interface{})[i].(map[string]interface{})
+		if !ok {
+			return true
+		}
+		// Fuzzer removed hash field.
+		if _, ok := jsonTx["hash"]; !ok {
+			return true
+		}
+		if tx.Hash().String() != jsonTx["hash"].(string) {
+			return true
+		}
+	}
+	return false
 }
 
 func compareHeaders(t *testing.T, jsonBlob []byte) {
@@ -283,4 +314,26 @@ func validateBlockConsistency(execBlock *pb.ExecutionBlock, jsonMap map[string]i
 		}
 	}
 	return nil
+}
+
+func jsonFieldsAreValid(execBlock *pb.ExecutionBlock, jsonMap map[string]interface{}) (bool, error) {
+	bType := reflect.TypeOf(execBlock).Elem()
+
+	fieldnum := bType.NumField()
+
+	for i := 0; i < fieldnum; i++ {
+		field := bType.Field(i)
+		fName := field.Tag.Get("json")
+		if field.Name == "Header" {
+			continue
+		}
+		if fName == "" {
+			return false, errors.Errorf("Field %s had no json tag", field.Name)
+		}
+		_, ok := jsonMap[fName]
+		if !ok {
+			return false, nil
+		}
+	}
+	return true, nil
 }
