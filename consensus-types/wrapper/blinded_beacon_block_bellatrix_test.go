@@ -389,7 +389,7 @@ func TestBellatrixBlindedBeaconBlock_AsSignRequestObject(t *testing.T) {
 	require.NoError(t, err)
 
 	sro := wsb.AsSignRequestObject()
-	got, ok := sro.(*validatorpb.SignRequest_BlindedBlockV3)
-	require.Equal(t, true, ok, "Not a SignRequest_BlockV3")
-	assert.Equal(t, abb, got.BlindedBlockV3)
+	got, ok := sro.(*validatorpb.SignRequest_BlindedBlockBellatrix)
+	require.Equal(t, true, ok, "Not a SignRequest_BlindedBlockBellatrix")
+	assert.Equal(t, abb, got.BlindedBlockBellatrix)
 }
