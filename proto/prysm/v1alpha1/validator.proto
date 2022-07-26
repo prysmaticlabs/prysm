@@ -136,7 +136,6 @@ service BeaconNodeValidator {
         };
     }
 
-
     // Retrieves the latest valid beacon block to be proposed on the beacon chain.
     //
     // The server returns a new beacon block, without proposer signature, that can be
