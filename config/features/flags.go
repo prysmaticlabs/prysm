@@ -9,8 +9,9 @@ import (
 var (
 	// PraterTestnet flag for the multiclient Ethereum consensus testnet.
 	PraterTestnet = &cli.BoolFlag{
-		Name:  "prater",
-		Usage: "Run Prysm configured for the Prater test network",
+		Name:    "prater",
+		Usage:   "Run Prysm configured for the Prater / Goerli test network",
+		Aliases: []string{"goerli"},
 	}
 	// RopstenTestnet flag for the multiclient Ethereum consensus testnet.
 	RopstenTestnet = &cli.BoolFlag{
@@ -105,12 +106,10 @@ var (
 		Name:  "disable-native-state",
 		Usage: "Disables representing the beacon state as a pure Go struct.",
 	}
-
-	pullTips = &cli.BoolFlag{
+	enablePullTips = &cli.BoolFlag{
 		Name:  "experimental-disable-boundary-checks",
 		Usage: "Experimental disable of boundary checks, useful for debugging, may cause bad votes.",
 	}
-
 	enableVecHTR = &cli.BoolFlag{
 		Name:  "enable-vectorized-htr",
 		Usage: "Enables new go sha256 library which utilizes optimized routines for merkle trees",
@@ -122,6 +121,10 @@ var (
 	enableGossipBatchAggregation = &cli.BoolFlag{
 		Name:  "enable-gossip-batch-aggregation",
 		Usage: "Enables new methods to further aggregate our gossip batches before verifying them.",
+	}
+	EnableOnlyBlindedBeaconBlocks = &cli.BoolFlag{
+		Name:  "enable-only-blinded-beacon-blocks",
+		Usage: "Enables storing only blinded beacon blocks in the database without full execution layer transactions",
 	}
 )
 
@@ -169,10 +172,11 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableSlasherFlag,
 	enableHistoricalSpaceRepresentation,
 	disableNativeState,
-	pullTips,
+	enablePullTips,
 	enableVecHTR,
 	enableForkChoiceDoublyLinkedTree,
 	enableGossipBatchAggregation,
+	EnableOnlyBlindedBeaconBlocks,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.

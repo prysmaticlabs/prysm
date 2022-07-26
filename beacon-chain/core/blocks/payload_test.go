@@ -9,7 +9,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/consensus-types/forks/bellatrix"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
@@ -103,15 +102,6 @@ func Test_IsMergeComplete(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "has tx root",
-			payload: func() *enginev1.ExecutionPayloadHeader {
-				h := emptyPayloadHeader()
-				h.TransactionsRoot = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
-				return h
-			}(),
-			want: true,
-		},
-		{
 			name: "has extra data",
 			payload: func() *enginev1.ExecutionPayloadHeader {
 				h := emptyPayloadHeader()
@@ -160,190 +150,13 @@ func Test_IsMergeComplete(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
-			require.NoError(t, st.SetLatestExecutionPayloadHeader(tt.payload))
+			wrappedHeader, err := wrapper.WrappedExecutionPayloadHeader(tt.payload)
+			require.NoError(t, err)
+			require.NoError(t, st.SetLatestExecutionPayloadHeader(wrappedHeader))
 			got, err := blocks.IsMergeTransitionComplete(st)
 			require.NoError(t, err)
 			if got != tt.want {
 				t.Errorf("mergeComplete() got = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_IsMergeTransitionBlockUsingPayloadHeader(t *testing.T) {
-	tests := []struct {
-		name    string
-		payload *enginev1.ExecutionPayload
-		header  *enginev1.ExecutionPayloadHeader
-		want    bool
-	}{
-		{
-			name:    "empty header, empty payload",
-			payload: emptyPayload(),
-			header:  emptyPayloadHeader(),
-			want:    false,
-		},
-		{
-			name:    "non-empty header, empty payload",
-			payload: emptyPayload(),
-			header: func() *enginev1.ExecutionPayloadHeader {
-				h := emptyPayloadHeader()
-				h.ParentHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
-				return h
-			}(),
-			want: false,
-		},
-		{
-			name: "empty header, payload has parent hash",
-			payload: func() *enginev1.ExecutionPayload {
-				p := emptyPayload()
-				p.ParentHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
-				return p
-			}(),
-			header: emptyPayloadHeader(),
-			want:   true,
-		},
-		{
-			name: "empty header, payload has fee recipient",
-			payload: func() *enginev1.ExecutionPayload {
-				p := emptyPayload()
-				p.FeeRecipient = bytesutil.PadTo([]byte{'a'}, fieldparams.FeeRecipientLength)
-				return p
-			}(),
-			header: emptyPayloadHeader(),
-			want:   true,
-		},
-		{
-			name: "empty header, payload has state root",
-			payload: func() *enginev1.ExecutionPayload {
-				p := emptyPayload()
-				p.StateRoot = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
-				return p
-			}(),
-			header: emptyPayloadHeader(),
-			want:   true,
-		},
-		{
-			name: "empty header, payload has receipt root",
-			payload: func() *enginev1.ExecutionPayload {
-				p := emptyPayload()
-				p.ReceiptsRoot = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
-				return p
-			}(),
-			header: emptyPayloadHeader(),
-			want:   true,
-		},
-		{
-			name: "empty header, payload has logs bloom",
-			payload: func() *enginev1.ExecutionPayload {
-				p := emptyPayload()
-				p.LogsBloom = bytesutil.PadTo([]byte{'a'}, fieldparams.LogsBloomLength)
-				return p
-			}(),
-			header: emptyPayloadHeader(),
-			want:   true,
-		},
-		{
-			name: "empty header, payload has random",
-			payload: func() *enginev1.ExecutionPayload {
-				p := emptyPayload()
-				p.PrevRandao = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
-				return p
-			}(),
-			header: emptyPayloadHeader(),
-			want:   true,
-		},
-		{
-			name: "empty header, payload has base fee",
-			payload: func() *enginev1.ExecutionPayload {
-				p := emptyPayload()
-				p.BaseFeePerGas = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
-				return p
-			}(),
-			header: emptyPayloadHeader(),
-			want:   true,
-		},
-		{
-			name: "empty header, payload has block hash",
-			payload: func() *enginev1.ExecutionPayload {
-				p := emptyPayload()
-				p.BlockHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
-				return p
-			}(),
-			header: emptyPayloadHeader(),
-			want:   true,
-		},
-		{
-			name: "empty header, payload has tx",
-			payload: func() *enginev1.ExecutionPayload {
-				p := emptyPayload()
-				p.Transactions = [][]byte{{'a'}}
-				return p
-			}(),
-			header: emptyPayloadHeader(),
-			want:   true,
-		},
-		{
-			name: "empty header, payload has extra data",
-			payload: func() *enginev1.ExecutionPayload {
-				p := emptyPayload()
-				p.ExtraData = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
-				return p
-			}(),
-			header: emptyPayloadHeader(),
-			want:   true,
-		},
-		{
-			name: "empty header, payload has block number",
-			payload: func() *enginev1.ExecutionPayload {
-				p := emptyPayload()
-				p.BlockNumber = 1
-				return p
-			}(),
-			header: emptyPayloadHeader(),
-			want:   true,
-		},
-		{
-			name: "empty header, payload has gas limit",
-			payload: func() *enginev1.ExecutionPayload {
-				p := emptyPayload()
-				p.GasLimit = 1
-				return p
-			}(),
-			header: emptyPayloadHeader(),
-			want:   true,
-		},
-		{
-			name: "empty header, payload has gas used",
-			payload: func() *enginev1.ExecutionPayload {
-				p := emptyPayload()
-				p.GasUsed = 1
-				return p
-			}(),
-			header: emptyPayloadHeader(),
-			want:   true,
-		},
-		{
-			name: "empty header, payload has timestamp",
-			payload: func() *enginev1.ExecutionPayload {
-				p := emptyPayload()
-				p.Timestamp = 1
-				return p
-			}(),
-			header: emptyPayloadHeader(),
-			want:   true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			blk := util.NewBeaconBlockBellatrix()
-			blk.Block.Body.ExecutionPayload = tt.payload
-			body, err := wrapper.WrappedBeaconBlockBody(blk.Block.Body)
-			require.NoError(t, err)
-			got, err := blocks.IsMergeTransitionBlockUsingPreStatePayloadHeader(tt.header, body)
-			require.NoError(t, err)
-			if got != tt.want {
-				t.Errorf("MergeTransitionBlock() got = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -442,7 +255,9 @@ func Test_IsExecutionEnabled(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
-			require.NoError(t, st.SetLatestExecutionPayloadHeader(tt.header))
+			wrappedHeader, err := wrapper.WrappedExecutionPayloadHeader(tt.header)
+			require.NoError(t, err)
+			require.NoError(t, st.SetLatestExecutionPayloadHeader(wrappedHeader))
 			blk := util.NewBeaconBlockBellatrix()
 			blk.Block.Body.ExecutionPayload = tt.payload
 			body, err := wrapper.WrappedBeaconBlockBody(blk.Block.Body)
@@ -567,8 +382,12 @@ func Test_ValidatePayloadWhenMergeCompletes(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
-			require.NoError(t, st.SetLatestExecutionPayloadHeader(tt.header))
-			err := blocks.ValidatePayloadWhenMergeCompletes(st, tt.payload)
+			wrappedHeader, err := wrapper.WrappedExecutionPayloadHeader(tt.header)
+			require.NoError(t, err)
+			require.NoError(t, st.SetLatestExecutionPayloadHeader(wrappedHeader))
+			wrappedPayload, err := wrapper.WrappedExecutionPayload(tt.payload)
+			require.NoError(t, err)
+			err = blocks.ValidatePayloadWhenMergeCompletes(st, wrappedPayload)
 			if err != nil {
 				require.Equal(t, tt.err.Error(), err.Error())
 			} else {
@@ -616,7 +435,9 @@ func Test_ValidatePayload(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := blocks.ValidatePayload(st, tt.payload)
+			wrappedPayload, err := wrapper.WrappedExecutionPayload(tt.payload)
+			require.NoError(t, err)
+			err = blocks.ValidatePayload(st, wrappedPayload)
 			if err != nil {
 				require.Equal(t, tt.err.Error(), err.Error())
 			} else {
@@ -664,12 +485,14 @@ func Test_ProcessPayload(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			st, err := blocks.ProcessPayload(st, tt.payload)
+			wrappedPayload, err := wrapper.WrappedExecutionPayload(tt.payload)
+			require.NoError(t, err)
+			st, err := blocks.ProcessPayload(st, wrappedPayload)
 			if err != nil {
 				require.Equal(t, tt.err.Error(), err.Error())
 			} else {
 				require.Equal(t, tt.err, err)
-				want, err := bellatrix.PayloadToHeader(tt.payload)
+				want, err := wrapper.PayloadToHeader(wrappedPayload)
 				require.Equal(t, tt.err, err)
 				got, err := st.LatestExecutionPayloadHeader()
 				require.NoError(t, err)
@@ -717,7 +540,9 @@ func Test_ProcessPayloadHeader(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			st, err := blocks.ProcessPayloadHeader(st, tt.header)
+			wrappedHeader, err := wrapper.WrappedExecutionPayloadHeader(tt.header)
+			require.NoError(t, err)
+			st, err := blocks.ProcessPayloadHeader(st, wrappedHeader)
 			if err != nil {
 				require.Equal(t, tt.err.Error(), err.Error())
 			} else {
@@ -768,7 +593,9 @@ func Test_ValidatePayloadHeader(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := blocks.ValidatePayloadHeader(st, tt.header)
+			wrappedHeader, err := wrapper.WrappedExecutionPayloadHeader(tt.header)
+			require.NoError(t, err)
+			err = blocks.ValidatePayloadHeader(st, wrappedHeader)
 			require.Equal(t, tt.err, err)
 		})
 	}
@@ -777,7 +604,9 @@ func Test_ValidatePayloadHeader(t *testing.T) {
 func Test_ValidatePayloadHeaderWhenMergeCompletes(t *testing.T) {
 	st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
 	emptySt := st.Copy()
-	require.NoError(t, st.SetLatestExecutionPayloadHeader(&enginev1.ExecutionPayloadHeader{BlockHash: []byte{'a'}}))
+	wrappedHeader, err := wrapper.WrappedExecutionPayloadHeader(&enginev1.ExecutionPayloadHeader{BlockHash: []byte{'a'}})
+	require.NoError(t, err)
+	require.NoError(t, st.SetLatestExecutionPayloadHeader(wrappedHeader))
 	tests := []struct {
 		name   string
 		state  state.BeaconState
@@ -816,7 +645,9 @@ func Test_ValidatePayloadHeaderWhenMergeCompletes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := blocks.ValidatePayloadHeaderWhenMergeCompletes(tt.state, tt.header)
+			wrappedHeader, err := wrapper.WrappedExecutionPayloadHeader(tt.header)
+			require.NoError(t, err)
+			err = blocks.ValidatePayloadHeaderWhenMergeCompletes(tt.state, wrappedHeader)
 			require.Equal(t, tt.err, err)
 		})
 	}
@@ -824,7 +655,9 @@ func Test_ValidatePayloadHeaderWhenMergeCompletes(t *testing.T) {
 
 func Test_PayloadToHeader(t *testing.T) {
 	p := emptyPayload()
-	h, err := bellatrix.PayloadToHeader(p)
+	wrappedPayload, err := wrapper.WrappedExecutionPayload(p)
+	require.NoError(t, err)
+	h, err := wrapper.PayloadToHeader(wrappedPayload)
 	require.NoError(t, err)
 	txRoot, err := ssz.TransactionsRoot(p.Transactions)
 	require.NoError(t, err)
@@ -863,7 +696,9 @@ func Test_PayloadToHeader(t *testing.T) {
 
 func BenchmarkBellatrixComplete(b *testing.B) {
 	st, _ := util.DeterministicGenesisStateBellatrix(b, 1)
-	require.NoError(b, st.SetLatestExecutionPayloadHeader(emptyPayloadHeader()))
+	wrappedHeader, err := wrapper.WrappedExecutionPayloadHeader(emptyPayloadHeader())
+	require.NoError(b, err)
+	require.NoError(b, st.SetLatestExecutionPayloadHeader(wrappedHeader))
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

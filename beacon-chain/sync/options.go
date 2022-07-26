@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 )
 
@@ -117,6 +118,13 @@ func WithSlasherAttestationsFeed(slasherAttestationsFeed *event.Feed) Option {
 func WithSlasherBlockHeadersFeed(slasherBlockHeadersFeed *event.Feed) Option {
 	return func(s *Service) error {
 		s.cfg.slasherBlockHeadersFeed = slasherBlockHeadersFeed
+		return nil
+	}
+}
+
+func WithExecutionPayloadReconstructor(r powchain.ExecutionPayloadReconstructor) Option {
+	return func(s *Service) error {
+		s.cfg.executionPayloadReconstructor = r
 		return nil
 	}
 }

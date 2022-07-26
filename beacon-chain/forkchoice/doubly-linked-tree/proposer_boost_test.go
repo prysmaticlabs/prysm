@@ -478,3 +478,21 @@ func TestForkChoice_computeProposerBoostScore(t *testing.T) {
 		require.Equal(t, uint64(8), score)
 	})
 }
+
+// Regression test (11053)
+func TestForkChoice_missingPreviousProposerBoost(t *testing.T) {
+	ctx := context.Background()
+	f := setup(1, 1)
+	balances := make([]uint64, 64) // 64 active validators.
+	for i := 0; i < len(balances); i++ {
+		balances[i] = 10
+	}
+	driftGenesisTime(f, 1, 0)
+	st, root, err := prepareForkchoiceState(ctx, 1, [32]byte{'r'}, [32]byte{}, [32]byte{}, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, st, root))
+
+	f.store.previousProposerBoostRoot = [32]byte{'p'}
+	_, err = f.Head(ctx, balances)
+	require.NoError(t, err)
+}
