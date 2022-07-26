@@ -820,12 +820,7 @@ func TestETH1Endpoints(t *testing.T) {
 	t.Cleanup(func() {
 		server.Stop()
 	})
-	server, secondEndpoint, err := mockPOW.SetupRPCServer()
-	require.NoError(t, err)
-	t.Cleanup(func() {
-		server.Stop()
-	})
-	endpoints := []string{firstEndpoint, secondEndpoint}
+	endpoints := []string{firstEndpoint}
 
 	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
