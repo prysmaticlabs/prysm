@@ -53,6 +53,7 @@ func main() {
 					Name: "data-type",
 					Usage: "ssz file data type: " +
 						"block|" +
+						"blinded_block|" +
 						"signed_block|" +
 						"attestation|" +
 						"block_header|" +
@@ -73,6 +74,8 @@ func main() {
 					data = &ethpb.BeaconBlock{}
 				case "signed_block":
 					data = &ethpb.SignedBeaconBlock{}
+				case "blinded_block":
+					data = &ethpb.BlindedBeaconBlockBellatrix{}
 				case "attestation":
 					data = &ethpb.Attestation{}
 				case "block_header":
