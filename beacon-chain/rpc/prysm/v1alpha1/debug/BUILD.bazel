@@ -4,7 +4,6 @@ go_library(
     name = "go_default_library",
     srcs = [
         "block.go",
-        "forkchoice.go",
         "p2p.go",
         "server.go",
         "state.go",
@@ -39,7 +38,6 @@ go_test(
     name = "go_default_test",
     srcs = [
         "block_test.go",
-        "forkchoice_test.go",
         "p2p_test.go",
         "state_test.go",
     ],
@@ -48,7 +46,6 @@ go_test(
         "//beacon-chain/blockchain/testing:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/db/testing:go_default_library",
-        "//beacon-chain/forkchoice/protoarray:go_default_library",
         "//beacon-chain/p2p/testing:go_default_library",
         "//beacon-chain/state/stategen:go_default_library",
         "//beacon-chain/state/stategen/mock:go_default_library",
