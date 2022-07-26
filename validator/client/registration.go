@@ -38,7 +38,6 @@ func SubmitValidatorRegistrations(
 
 // Sings validator registration obj with the proposer domain and private key.
 func signValidatorRegistration(ctx context.Context, signer iface.SigningFunc, reg *ethpb.ValidatorRegistrationV1) ([]byte, error) {
-
 	// Per spec, we want the fork version and genesis validator to be nil.
 	// Which is genesis value and zero by default.
 	d, err := signing.ComputeDomain(
@@ -74,7 +73,6 @@ func (v *validator) SignValidatorRegistrationRequest(ctx context.Context, signer
 	} else {
 		sig, err := signValidatorRegistration(ctx, signer, newValidatorRegistration)
 		if err != nil {
-			log.WithError(err).Error("failed to sign builder validator registration obj")
 			return nil, err
 		}
 		newRequest := &ethpb.SignedValidatorRegistrationV1{

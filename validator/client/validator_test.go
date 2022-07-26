@@ -1394,10 +1394,10 @@ func TestValidator_WaitForKeymanagerInitialization_Web(t *testing.T) {
 	require.NoError(t, err)
 	walletChan := make(chan *wallet.Wallet, 1)
 	v := validator{
-		db:                      db,
-		useWeb:                  true,
-		walletInitializedFeed:   &event.Feed{},
-		walletIntializedChannel: walletChan,
+		db:                       db,
+		useWeb:                   true,
+		walletInitializedFeed:    &event.Feed{},
+		walletInitializedChannel: walletChan,
 	}
 	wait := make(chan struct{})
 	go func() {
@@ -1618,7 +1618,6 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 					GasLimit:     uint64(40000000),
 				},
 			},
-			logMessages: []string{"will not be included in builder validator registration"},
 		},
 		{
 			name: " Happy Path default doesn't send any validator registrations",
@@ -1984,78 +1983,6 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 			},
 			err: "could not submit signed registrations to beacon node",
 		},
-		{
-			name: "Validator Index Not found with validator registration",
-			validatorSetter: func(t *testing.T) *validator {
-
-				v := validator{
-					validatorClient:              client,
-					node:                         nodeClient,
-					db:                           db,
-					pubkeyToValidatorIndex:       make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
-					signedValidatorRegistrations: make(map[[fieldparams.BLSPubkeyLength]byte]*ethpb.SignedValidatorRegistrationV1),
-					useWeb:                       false,
-					interopKeysConfig: &local.InteropKeymanagerConfig{
-						NumValidatorKeys: 2,
-						Offset:           1,
-					},
-					genesisTime: 0,
-				}
-				// set bellatrix as current epoch
-				params.BeaconConfig().BellatrixForkEpoch = 0
-				err := v.WaitForKeymanagerInitialization(ctx)
-				require.NoError(t, err)
-				km, err := v.Keymanager()
-				require.NoError(t, err)
-				keys, err := km.FetchValidatingPublicKeys(ctx)
-				require.NoError(t, err)
-				v.ProposerSettings = &validatorserviceconfig.ProposerSettings{
-					ProposeConfig: nil,
-					DefaultConfig: &validatorserviceconfig.ProposerOption{
-						FeeRecipient: common.HexToAddress(defaultFeeHex),
-						BuilderConfig: &validatorserviceconfig.BuilderConfig{
-							Enabled:  true,
-							GasLimit: params.BeaconConfig().DefaultBuilderGasLimit,
-						},
-					},
-				}
-				client.EXPECT().ValidatorIndex(
-					gomock.Any(), // ctx
-					&ethpb.ValidatorIndexRequest{PublicKey: keys[0][:]},
-				).Return(&ethpb.ValidatorIndexResponse{
-					Index: 1,
-				}, nil)
-
-				client.EXPECT().ValidatorIndex(
-					gomock.Any(), // ctx
-					&ethpb.ValidatorIndexRequest{PublicKey: keys[1][:]},
-				).Times(2).Return(nil, errors.New("Could not find validator index"))
-
-				client.EXPECT().SubmitValidatorRegistrations(
-					gomock.Any(),
-					gomock.Any(),
-				).Return(&empty.Empty{}, nil)
-				client.EXPECT().PrepareBeaconProposer(gomock.Any(), &ethpb.PrepareBeaconProposerRequest{
-					Recipients: []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
-						{FeeRecipient: common.HexToAddress(defaultFeeHex).Bytes(), ValidatorIndex: 1},
-					},
-				}).Return(nil, nil)
-				return &v
-			},
-			feeRecipientMap: map[types.ValidatorIndex]string{
-				1: defaultFeeHex,
-			},
-			mockExpectedRequests: []ExpectedValidatorRegistration{
-				{
-					FeeRecipient: byteValueAddress,
-					GasLimit:     params.BeaconConfig().DefaultBuilderGasLimit,
-				},
-			},
-			logMessages: []string{
-				"prepare beacon proposer and update fee recipient until a validator index is assigned",
-				"will not be included in builder validator registration until a validator index is assigned",
-			},
-		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -2066,7 +1993,9 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 			pubkeys, err := km.FetchValidatingPublicKeys(ctx)
 			require.NoError(t, err)
 			if tt.feeRecipientMap != nil {
-				feeRecipients, signedRegisterValidatorRequests, err := v.buildProposerSettingsRequests(ctx, pubkeys, km.Sign)
+				feeRecipients, err := v.buildPrepProposerReqs(ctx, pubkeys)
+				require.NoError(t, err)
+				signedRegisterValidatorRequests, err := v.buildSignedRegReqs(ctx, pubkeys, km.Sign)
 				require.NoError(t, err)
 				for _, recipient := range feeRecipients {
 					require.Equal(t, strings.ToLower(tt.feeRecipientMap[recipient.ValidatorIndex]), strings.ToLower(hexutil.Encode(recipient.FeeRecipient)))
