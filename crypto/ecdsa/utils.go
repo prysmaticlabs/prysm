@@ -25,7 +25,14 @@ func ConvertFromInterfacePrivKey(privkey crypto.PrivKey) (*ecdsa.PrivateKey, err
 }
 
 func ConvertToInterfacePrivkey(privkey *ecdsa.PrivateKey) (crypto.PrivKey, error) {
-	return crypto.UnmarshalSecp256k1PrivateKey(privkey.D.Bytes())
+	privBytes := privkey.D.Bytes()
+	// In the event the number of bytes outputted by the big-int are less than 32,
+	// we append bytes to the start of the sequence for the missing most significant
+	// bytes.
+	if len(privBytes) < 32 {
+		privBytes = append(make([]byte, 32-len(privBytes)), privBytes...)
+	}
+	return crypto.UnmarshalSecp256k1PrivateKey(privBytes)
 }
 
 func ConvertToInterfacePubkey(pubkey *ecdsa.PublicKey) (crypto.PubKey, error) {
