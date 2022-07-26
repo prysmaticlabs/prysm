@@ -801,11 +801,12 @@ func BenchmarkCheckSlashableAttestations(b *testing.B) {
 		Slot:  &slot,
 	}
 
-	s, _ := New(context.Background(), &ServiceConfig{
+	s, err := New(context.Background(), &ServiceConfig{
 		Database:         slasherDB,
 		StateNotifier:    &mock.MockStateNotifier{},
 		HeadStateFetcher: mockChain,
 	})
+	require.NoError(b, err)
 
 	b.Run("1 attestation 1 validator", func(b *testing.B) {
 		b.ResetTimer()
