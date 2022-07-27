@@ -42,10 +42,10 @@ message GenericSignedBeaconBlock {
         SignedBlindedBeaconBlockBellatrix blinded_bellatrix = 4;
 
         // Representing a signed, post-Capella fork beacon block.
-        SignedBeaconBlockCapella capella = 3;
+        SignedBeaconBlockCapella capella = 5;
 
         // Representing a signed, post-Capella fork blinded beacon block.
-        SignedBlindedBeaconBlockCapella blinded_capella = 4;
+        SignedBlindedBeaconBlockCapella blinded_capella = 6;
     }
 }
 
@@ -64,10 +64,10 @@ message GenericBeaconBlock {
         BlindedBeaconBlockBellatrix blinded_bellatrix = 4;
 
         // Representing a post-Capella fork beacon block.
-        BeaconBlockCapella capella = 3;
+        BeaconBlockCapella capella = 5;
 
         // Representing a post-Capella fork blinded beacon block.
-        BlindedBeaconBlockCapella blinded_capella = 4;
+        BlindedBeaconBlockCapella blinded_capella = 6;
     }
 }
 
