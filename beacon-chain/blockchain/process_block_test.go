@@ -1800,3 +1800,65 @@ func Test_verifyBlkFinalizedSlot_invalidBlock(t *testing.T) {
 	err = service.verifyBlkFinalizedSlot(wb)
 	require.Equal(t, true, IsInvalidBlock(err))
 }
+
+func TestStore_NoViableHead_ProtoArray(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	config := params.BeaconConfig()
+	config.SlotsPerEpoch = 4
+	config.AltairForkEpoch = 1
+	config.BellatrixForkEpoch = 1
+	params.OverrideBeaconConfig(config)
+
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithAttestationPool(attestations.NewPool()),
+		WithStateGen(stategen.New(beaconDB)),
+		WithForkChoiceStore(protoarray.New()),
+	}
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+
+	st, keys := util.DeterministicGenesisState(t, 64)
+	stateRoot, err := st.HashTreeRoot(ctx)
+	require.NoError(t, err, "Could not hash genesis state")
+
+	require.NoError(t, service.saveGenesisData(ctx, st))
+	bState := st.Copy()
+
+	genesis := blocks.NewGenesisBlock(stateRoot[:])
+	wsb, err := wrapper.WrappedSignedBeaconBlock(genesis)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb), "Could not save genesis block")
+
+	parentRoot, err := genesis.Block.HashTreeRoot()
+	require.NoError(t, err, "Could not get signing root")
+	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, st, parentRoot), "Could not save genesis state")
+	require.NoError(t, service.cfg.BeaconDB.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
+
+	for i := 1; i < 4; i++ {
+		b, err := util.GenerateFullBlock(bState, keys, util.DefaultBlockGenConfig(), types.Slot(i))
+		require.NoError(t, err)
+		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		require.NoError(t, err)
+		bState, err = transition.ExecuteStateTransition(ctx, bState, wsb)
+		require.NoError(t, err)
+		root, err := b.Block.HashTreeRoot()
+		require.NoError(t, err)
+		require.NoError(t, service.onBlock(ctx, wsb, root))
+	}
+
+	for i := 4; i < 12; i++ {
+		b, err := util.GenerateFullBlockBellatrix(bState, keys, util.DefaultBlockGenConfig(), types.Slot(i))
+		require.NoError(t, err)
+		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		require.NoError(t, err)
+		bState, err = transition.ExecuteStateTransition(ctx, bState, wsb)
+		require.NoError(t, err)
+		root, err := b.Block.HashTreeRoot()
+		require.NoError(t, err)
+		require.NoError(t, service.onBlock(ctx, wsb, root))
+	}
+}

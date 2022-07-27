@@ -293,6 +293,7 @@ func (s *Service) notifyNewHeadEvent(
 	if err != nil {
 		return errors.Wrap(err, "could not check if node is optimistically synced")
 	}
+
 	s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.NewHead,
 		Data: &ethpbv1.EventHead{

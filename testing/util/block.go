@@ -5,10 +5,13 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
+	p2pType "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -24,6 +27,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assertions"
 	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/time/slots"
 )
 
 // BlockGenConfig is used to define the requested conditions
@@ -34,6 +38,7 @@ type BlockGenConfig struct {
 	NumAttestations      uint64
 	NumDeposits          uint64
 	NumVoluntaryExits    uint64
+	NumTransactions      uint64 // Only for post Bellatrix blocks
 }
 
 // DefaultBlockGenConfig returns the block config that utilizes the
@@ -45,6 +50,7 @@ func DefaultBlockGenConfig() *BlockGenConfig {
 		NumAttestations:      1,
 		NumDeposits:          0,
 		NumVoluntaryExits:    0,
+		NumTransactions:      0,
 	}
 }
 
@@ -888,4 +894,195 @@ func SaveBlock(tb assertions.AssertionTestingTB, ctx context.Context, db iface.N
 	require.NoError(tb, err)
 	require.NoError(tb, db.SaveBlock(ctx, wsb))
 	return wsb
+}
+
+// GenerateFullBlockBellatrix generates a fully valid Bellatrix block with the requested parameters.
+// Use BlockGenConfig to declare the conditions you would like the block generated under.
+// This function modifies the passed state as follows:
+// it modifies the sync committe to match the next one
+// it modifies the parent root in the header so that the returned block's parent
+
+func GenerateFullBlockBellatrix(
+	bState state.BeaconState,
+	privs []bls.SecretKey,
+	conf *BlockGenConfig,
+	slot types.Slot,
+) (*ethpb.SignedBeaconBlockBellatrix, error) {
+	ctx := context.Background()
+	currentSlot := bState.Slot()
+	if currentSlot > slot {
+		return nil, fmt.Errorf("current slot in state is larger than given slot. %d > %d", currentSlot, slot)
+	}
+	bState = bState.Copy()
+
+	if conf == nil {
+		conf = &BlockGenConfig{}
+	}
+
+	var err error
+	var pSlashings []*ethpb.ProposerSlashing
+	numToGen := conf.NumProposerSlashings
+	if numToGen > 0 {
+		pSlashings, err = generateProposerSlashings(bState, privs, numToGen)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed generating %d proposer slashings:", numToGen)
+		}
+	}
+
+	numToGen = conf.NumAttesterSlashings
+	var aSlashings []*ethpb.AttesterSlashing
+	if numToGen > 0 {
+		aSlashings, err = generateAttesterSlashings(bState, privs, numToGen)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed generating %d attester slashings:", numToGen)
+		}
+	}
+
+	var atts []*ethpb.Attestation
+
+	numToGen = conf.NumDeposits
+	var newDeposits []*ethpb.Deposit
+	eth1Data := bState.Eth1Data()
+	if numToGen > 0 {
+		newDeposits, eth1Data, err = generateDepositsAndEth1Data(bState, numToGen)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed generating %d deposits:", numToGen)
+		}
+	}
+
+	numToGen = conf.NumVoluntaryExits
+	var exits []*ethpb.SignedVoluntaryExit
+	if numToGen > 0 {
+		exits, err = generateVoluntaryExits(bState, privs, numToGen)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed generating %d attester slashings:", numToGen)
+		}
+	}
+
+	numToGen = conf.NumDeposits
+	newTransactions := make([][]byte, numToGen)
+	for i := uint64(0); i < numToGen; i++ {
+		newTransactions[i] = bytesutil.Uint64ToBytesLittleEndian(i)
+	}
+	random, err := helpers.RandaoMix(bState, time.CurrentEpoch(bState))
+	if err != nil {
+		return nil, errors.Wrap(err, "could not process randao mix")
+	}
+
+	timestamp, err := slots.ToTime(bState.GenesisTime(), slot)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get current timestamp")
+	}
+
+	newExecutionPayload := &enginev1.ExecutionPayload{
+		ParentHash:    params.BeaconConfig().ZeroHash[:],
+		FeeRecipient:  make([]byte, 20),
+		StateRoot:     params.BeaconConfig().ZeroHash[:],
+		ReceiptsRoot:  params.BeaconConfig().ZeroHash[:],
+		LogsBloom:     make([]byte, 256),
+		PrevRandao:    random,
+		BlockNumber:   uint64(slot),
+		ExtraData:     params.BeaconConfig().ZeroHash[:],
+		BaseFeePerGas: params.BeaconConfig().ZeroHash[:],
+		BlockHash:     params.BeaconConfig().ZeroHash[:],
+		Timestamp:     uint64(timestamp.Unix()),
+		Transactions:  newTransactions,
+	}
+
+	committee, err := altair.NextSyncCommittee(context.Background(), bState)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get next sync committee")
+	}
+	if err := bState.SetCurrentSyncCommittee(committee); err != nil {
+		return nil, errors.Wrap(err, "could not set current sync committee")
+	}
+
+	syncCommitteeBits := make(bitfield.Bitvector512, 64)
+	for i := range syncCommitteeBits {
+		syncCommitteeBits[i] = 0xff
+	}
+
+	// all validators are in the sync committee
+	indices, err := altair.NextSyncCommitteeIndices(ctx, bState)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get next sync committee indices")
+	}
+	sigs := make([]bls.Signature, len(indices))
+	pbr, err := helpers.BlockRootAtSlot(bState, slot)
+	for i, indice := range indices {
+		b := p2pType.SSZBytes(pbr)
+		sb, err := signing.ComputeDomainAndSign(bState, time.CurrentEpoch(bState), &b, params.BeaconConfig().DomainSyncCommittee, privs[indice])
+		if err != nil {
+			return nil, errors.Wrap(err, "could not compute domain and sign")
+		}
+		sig, err := bls.SignatureFromBytes(sb)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not unmarshal signature from bytes")
+		}
+		sigs[i] = sig
+	}
+	aggregatedSig := bls.AggregateSignatures(sigs).Marshal()
+	newSyncAggregate := &ethpb.SyncAggregate{
+		SyncCommitteeBits:      syncCommitteeBits,
+		SyncCommitteeSignature: aggregatedSig,
+	}
+
+	newHeader := bState.LatestBlockHeader()
+	prevStateRoot, err := bState.HashTreeRoot(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not hash state")
+	}
+	newHeader.StateRoot = prevStateRoot[:]
+	parentRoot, err := newHeader.HashTreeRoot()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not hash the new header")
+	}
+
+	if slot == currentSlot {
+		slot = currentSlot + 1
+	}
+
+	// Temporarily incrementing the beacon state slot here since BeaconProposerIndex is a
+	// function deterministic on beacon state slot.
+	if err := bState.SetSlot(slot); err != nil {
+		return nil, errors.Wrap(err, "could not set slot")
+	}
+	reveal, err := RandaoReveal(bState, time.CurrentEpoch(bState), privs)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not compute randao reveal")
+	}
+
+	idx, err := helpers.BeaconProposerIndex(ctx, bState)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not compute beacon proposer index")
+	}
+
+	if err := bState.SetSlot(currentSlot); err != nil {
+		return nil, errors.Wrap(err, "could not set slot")
+	}
+
+	block := &ethpb.BeaconBlockBellatrix{
+		Slot:          slot,
+		ParentRoot:    parentRoot[:],
+		ProposerIndex: idx,
+		Body: &ethpb.BeaconBlockBodyBellatrix{
+			Eth1Data:          eth1Data,
+			RandaoReveal:      reveal,
+			ProposerSlashings: pSlashings,
+			AttesterSlashings: aSlashings,
+			Attestations:      atts,
+			VoluntaryExits:    exits,
+			Deposits:          newDeposits,
+			Graffiti:          make([]byte, fieldparams.RootLength),
+			SyncAggregate:     newSyncAggregate,
+			ExecutionPayload:  newExecutionPayload,
+		},
+	}
+
+	signature, err := BlockSignature(bState, block, privs)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not compute block signature")
+	}
+
+	return &ethpb.SignedBeaconBlockBellatrix{Block: block, Signature: signature.Marshal()}, nil
 }
