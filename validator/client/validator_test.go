@@ -1008,7 +1008,7 @@ func TestService_ReceiveBlocks_NilBlock(t *testing.T) {
 	}
 	stream := mock2.NewMockBeaconNodeValidatorAltair_StreamBlocksClient(ctrl)
 	ctx, cancel := context.WithCancel(context.Background())
-	valClient.EXPECT().StreamBlocksAltair(
+	valClient.EXPECT().StreamBlocks(
 		gomock.Any(),
 		&ethpb.StreamBlocksRequest{VerifiedOnly: true},
 	).Return(stream, nil)
@@ -1036,7 +1036,7 @@ func TestService_ReceiveBlocks_SetHighest(t *testing.T) {
 	}
 	stream := mock2.NewMockBeaconNodeValidatorAltair_StreamBlocksClient(ctrl)
 	ctx, cancel := context.WithCancel(context.Background())
-	client.EXPECT().StreamBlocksAltair(
+	client.EXPECT().StreamBlocks(
 		gomock.Any(),
 		&ethpb.StreamBlocksRequest{VerifiedOnly: true},
 	).Return(stream, nil)
