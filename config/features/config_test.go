@@ -12,11 +12,11 @@ import (
 func TestInitFeatureConfig(t *testing.T) {
 	defer Init(&Flags{})
 	cfg := &Flags{
-		EnablePeerScorer: true,
+		EnableSlasher: true,
 	}
 	Init(cfg)
 	c := Get()
-	assert.Equal(t, true, c.EnablePeerScorer)
+	assert.Equal(t, true, c.EnableSlasher)
 
 	// Reset back to false for the follow up tests.
 	cfg = &Flags{RemoteSlasherProtection: false}
@@ -26,27 +26,27 @@ func TestInitFeatureConfig(t *testing.T) {
 func TestInitWithReset(t *testing.T) {
 	defer Init(&Flags{})
 	Init(&Flags{
-		EnablePeerScorer: true,
+		EnableSlasher: true,
 	})
-	assert.Equal(t, true, Get().EnablePeerScorer)
+	assert.Equal(t, true, Get().EnableSlasher)
 
 	// Overwrite previously set value (value that didn't come by default).
 	resetCfg := InitWithReset(&Flags{
-		EnablePeerScorer: false,
+		EnableSlasher: false,
 	})
-	assert.Equal(t, false, Get().EnablePeerScorer)
+	assert.Equal(t, false, Get().EnableSlasher)
 
 	// Reset must get to previously set configuration (not to default config values).
 	resetCfg()
-	assert.Equal(t, true, Get().EnablePeerScorer)
+	assert.Equal(t, true, Get().EnableSlasher)
 }
 
 func TestConfigureBeaconConfig(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	set.Bool(enablePeerScorer.Name, true, "test")
+	set.Bool(enableSlasherFlag.Name, true, "test")
 	context := cli.NewContext(&app, set, nil)
 	require.NoError(t, ConfigureBeaconChain(context))
 	c := Get()
-	assert.Equal(t, true, c.EnablePeerScorer)
+	assert.Equal(t, true, c.EnableSlasher)
 }

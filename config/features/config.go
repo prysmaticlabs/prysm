@@ -208,9 +208,10 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logDisabled(disableGRPCConnectionLogging)
 		cfg.DisableGRPCConnectionLogs = true
 	}
-	if ctx.Bool(enablePeerScorer.Name) {
-		logEnabled(enablePeerScorer)
-		cfg.EnablePeerScorer = true
+	cfg.EnablePeerScorer = true
+	if ctx.Bool(disablePeerScorer.Name) {
+		logDisabled(disablePeerScorer)
+		cfg.EnablePeerScorer = false
 	}
 	if ctx.Bool(checkPtInfoCache.Name) {
 		log.Warn("Advance check point info cache is no longer supported and will soon be deleted")

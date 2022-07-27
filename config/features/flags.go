@@ -46,9 +46,9 @@ var (
 		Name:  "disable-grpc-connection-logging",
 		Usage: "Disables displaying logs for newly connected grpc clients",
 	}
-	enablePeerScorer = &cli.BoolFlag{
-		Name:  "enable-peer-scorer",
-		Usage: "Enable experimental P2P peer scorer",
+	disablePeerScorer = &cli.BoolFlag{
+		Name:  "disable-peer-scorer",
+		Usage: "Disables experimental P2P peer scorer",
 	}
 	checkPtInfoCache = &cli.BoolFlag{
 		Name:  "use-check-point-cache",
@@ -130,7 +130,6 @@ var (
 
 // devModeFlags holds list of flags that are set when development mode is on.
 var devModeFlags = []cli.Flag{
-	enablePeerScorer,
 	enableVecHTR,
 	enableForkChoiceDoublyLinkedTree,
 	enableGossipBatchAggregation,
@@ -165,7 +164,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	RopstenTestnet,
 	SepoliaTestnet,
 	Mainnet,
-	enablePeerScorer,
+	disablePeerScorer,
 	enableLargerGossipHistory,
 	checkPtInfoCache,
 	disableBroadcastSlashingFlag,
