@@ -294,7 +294,11 @@ func (f *TextFormatter) printColored(b *bytes.Buffer, entry *logrus.Entry, keys 
 	for _, k := range keys {
 		if k != "prefix" {
 			v := entry.Data[k]
-			_, err = fmt.Fprintf(b, " %s=%+v", levelColor(k), v)
+			format := " %s=%+v"
+			if k == logrus.ErrorKey {
+				format = " %s=%v" // To avoid printing stack traces for errors
+			}
+			_, err = fmt.Fprintf(b, format, levelColor(k), v)
 		}
 	}
 	return

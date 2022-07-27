@@ -1,6 +1,8 @@
 package prefixed_test
 
 import (
+	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/pkg/errors"
@@ -67,5 +69,5 @@ func TestFormatter_SuppressErrorStackTraces(t *testing.T) {
 	}
 
 	log.WithError(errors.Wrap(errFn(), "outer")).Error("test")
-	require.Equal(t, "[0000] ERROR test error=inner", output.GetValue(), "wrong log output")
+	require.Equal(t, true, regexp.MustCompile(`test error=outer: inner\n\s*$`).MatchString(output.GetValue()), fmt.Sprintf("wrong log output: %s", output.GetValue()))
 }
