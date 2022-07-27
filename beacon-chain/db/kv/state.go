@@ -223,10 +223,10 @@ func (s *Store) saveStatesEfficientInternal(ctx context.Context, tx *bolt.Tx, bl
 		case *ethpb.BeaconState:
 			var pbState *ethpb.BeaconState
 			var err error
-			if features.Get().EnableNativeState {
-				pbState, err = statenative.ProtobufBeaconStatePhase0(rawType)
-			} else {
+			if features.Get().DisableNativeState {
 				pbState, err = v1.ProtobufBeaconState(rawType)
+			} else {
+				pbState, err = statenative.ProtobufBeaconStatePhase0(rawType)
 			}
 			if err != nil {
 				return err
@@ -250,10 +250,10 @@ func (s *Store) saveStatesEfficientInternal(ctx context.Context, tx *bolt.Tx, bl
 		case *ethpb.BeaconStateAltair:
 			var pbState *ethpb.BeaconStateAltair
 			var err error
-			if features.Get().EnableNativeState {
-				pbState, err = statenative.ProtobufBeaconStateAltair(rawType)
-			} else {
+			if features.Get().DisableNativeState {
 				pbState, err = v2.ProtobufBeaconState(rawType)
+			} else {
+				pbState, err = statenative.ProtobufBeaconStateAltair(rawType)
 			}
 			if err != nil {
 				return err
@@ -278,10 +278,10 @@ func (s *Store) saveStatesEfficientInternal(ctx context.Context, tx *bolt.Tx, bl
 		case *ethpb.BeaconStateBellatrix:
 			var pbState *ethpb.BeaconStateBellatrix
 			var err error
-			if features.Get().EnableNativeState {
-				pbState, err = statenative.ProtobufBeaconStateBellatrix(rawType)
-			} else {
+			if features.Get().DisableNativeState {
 				pbState, err = v3.ProtobufBeaconState(rawType)
+			} else {
+				pbState, err = statenative.ProtobufBeaconStateBellatrix(rawType)
 			}
 			if err != nil {
 				return err

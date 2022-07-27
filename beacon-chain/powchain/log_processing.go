@@ -543,10 +543,10 @@ func (s *Service) processChainStartIfReady(ctx context.Context, blockHash [32]by
 func (s *Service) savePowchainData(ctx context.Context) error {
 	var pbState *ethpb.BeaconState
 	var err error
-	if features.Get().EnableNativeState {
-		pbState, err = statenative.ProtobufBeaconStatePhase0(s.preGenesisState.InnerStateUnsafe())
-	} else {
+	if features.Get().DisableNativeState {
 		pbState, err = v1.ProtobufBeaconState(s.preGenesisState.InnerStateUnsafe())
+	} else {
+		pbState, err = statenative.ProtobufBeaconStatePhase0(s.preGenesisState.InnerStateUnsafe())
 	}
 	if err != nil {
 		return err

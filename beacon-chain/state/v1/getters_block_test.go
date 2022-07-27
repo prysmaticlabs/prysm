@@ -5,10 +5,12 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	testtmpl "github.com/prysmaticlabs/prysm/beacon-chain/state/testing"
+	"github.com/prysmaticlabs/prysm/config/features"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
 func TestBeaconState_LatestBlockHeader(t *testing.T) {
+	features.Init(&features.Flags{DisableNativeState: true})
 	testtmpl.VerifyBeaconStateLatestBlockHeader(
 		t,
 		func() (state.BeaconState, error) {
@@ -21,6 +23,7 @@ func TestBeaconState_LatestBlockHeader(t *testing.T) {
 }
 
 func TestBeaconState_BlockRoots(t *testing.T) {
+	features.Init(&features.Flags{DisableNativeState: true})
 	testtmpl.VerifyBeaconStateBlockRoots(
 		t,
 		func() (state.BeaconState, error) {
@@ -33,6 +36,7 @@ func TestBeaconState_BlockRoots(t *testing.T) {
 }
 
 func TestBeaconState_BlockRootAtIndex(t *testing.T) {
+	features.Init(&features.Flags{DisableNativeState: true})
 	testtmpl.VerifyBeaconStateBlockRootAtIndex(
 		t,
 		func() (state.BeaconState, error) {

@@ -97,12 +97,7 @@ func NewBeaconState(options ...NewBeaconStateOption) (state.BeaconState, error) 
 		}
 	}
 
-	var st, err = v1.InitializeFromProtoUnsafe(seed)
-	if err != nil {
-		return nil, err
-	}
-
-	return st.Copy().(*v1.BeaconState), nil
+	return v1.InitializeFromProtoUnsafe(seed)
 }
 
 // NewBeaconStateAltair creates a beacon state with minimum marshalable fields.
@@ -152,12 +147,7 @@ func NewBeaconStateAltair(options ...func(state *ethpb.BeaconStateAltair) error)
 		}
 	}
 
-	var st, err = v2.InitializeFromProtoUnsafe(seed)
-	if err != nil {
-		return nil, err
-	}
-
-	return st.Copy().(*v2.BeaconState), nil
+	return v2.InitializeFromProtoUnsafe(seed)
 }
 
 // NewBeaconStateBellatrix creates a beacon state with minimum marshalable fields.
@@ -219,12 +209,7 @@ func NewBeaconStateBellatrix(options ...func(state *ethpb.BeaconStateBellatrix) 
 		}
 	}
 
-	var st, err = v3.InitializeFromProtoUnsafe(seed)
-	if err != nil {
-		return nil, err
-	}
-
-	return st.Copy().(*v3.BeaconState), nil
+	return v3.InitializeFromProtoUnsafe(seed)
 }
 
 // SSZ will fill 2D byte slices with their respective values, so we must fill these in too for round

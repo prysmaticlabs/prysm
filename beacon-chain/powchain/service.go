@@ -269,10 +269,10 @@ func (s *Service) Stop() error {
 // ClearPreGenesisData clears out the stored chainstart deposits and beacon state.
 func (s *Service) ClearPreGenesisData() {
 	s.chainStartData.ChainstartDeposits = []*ethpb.Deposit{}
-	if features.Get().EnableNativeState {
-		s.preGenesisState = &native.BeaconState{}
-	} else {
+	if features.Get().DisableNativeState {
 		s.preGenesisState = &v1.BeaconState{}
+	} else {
+		s.preGenesisState = &native.BeaconState{}
 	}
 }
 
@@ -838,10 +838,10 @@ func (s *Service) ensureValidPowchainData(ctx context.Context) error {
 	if eth1Data == nil || !eth1Data.ChainstartData.Chainstarted || !validateDepositContainers(eth1Data.DepositContainers) {
 		var pbState *ethpb.BeaconState
 		var err error
-		if features.Get().EnableNativeState {
-			pbState, err = native.ProtobufBeaconStatePhase0(s.preGenesisState.InnerStateUnsafe())
-		} else {
+		if features.Get().DisableNativeState {
 			pbState, err = v1.ProtobufBeaconState(s.preGenesisState.InnerStateUnsafe())
+		} else {
+			pbState, err = native.ProtobufBeaconStatePhase0(s.preGenesisState.InnerStateUnsafe())
 		}
 		if err != nil {
 			return err

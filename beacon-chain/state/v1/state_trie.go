@@ -25,16 +25,16 @@ import (
 
 // InitializeFromProto the beacon state from a protobuf representation.
 func InitializeFromProto(st *ethpb.BeaconState) (state.BeaconState, error) {
-	if features.Get().EnableNativeState {
-		return statenative.InitializeFromProtoPhase0(proto.Clone(st).(*ethpb.BeaconState))
+	if features.Get().DisableNativeState {
+		return InitializeFromProtoUnsafe(proto.Clone(st).(*ethpb.BeaconState))
 	}
-	return InitializeFromProtoUnsafe(proto.Clone(st).(*ethpb.BeaconState))
+	return statenative.InitializeFromProtoPhase0(proto.Clone(st).(*ethpb.BeaconState))
 }
 
 // InitializeFromProtoUnsafe directly uses the beacon state protobuf pointer
 // and sets it as the inner state of the BeaconState type.
 func InitializeFromProtoUnsafe(st *ethpb.BeaconState) (state.BeaconState, error) {
-	if features.Get().EnableNativeState {
+	if !features.Get().DisableNativeState {
 		return statenative.InitializeFromProtoUnsafePhase0(st)
 	}
 

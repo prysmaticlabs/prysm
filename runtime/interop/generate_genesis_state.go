@@ -71,10 +71,10 @@ func GenerateGenesisStateFromDepositData(
 	}
 
 	var pbState *ethpb.BeaconState
-	if features.Get().EnableNativeState {
-		pbState, err = statenative.ProtobufBeaconStatePhase0(beaconState.InnerStateUnsafe())
-	} else {
+	if features.Get().DisableNativeState {
 		pbState, err = v1.ProtobufBeaconState(beaconState.InnerStateUnsafe())
+	} else {
+		pbState, err = statenative.ProtobufBeaconStatePhase0(beaconState.InnerStateUnsafe())
 	}
 	if err != nil {
 		return nil, nil, err
