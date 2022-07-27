@@ -126,8 +126,15 @@ message ForkchoiceState {
 	bytes finalized_block_hash = 3 [(ethereum.eth.ext.ssz_size) = "32"];
 }
 
+// The withdrawal receipt with the recipient address and amount withdrawn
 message Withdrawal {
-	uint64 index = 1;
-	bytes address = 2 [(ethereum.eth.ext.ssz_size) = "20"];
+	// Withdrawal index for accounting purposes
+	uint64 withdrawal_index = 1;
+
+	// The execution address receiving the funds
+	bytes execution_address = 2 [(ethereum.eth.ext.ssz_size) = "20"];
+
+	// The withdrawn amount in Gwei
 	uint64 amount = 3;
 }
+
