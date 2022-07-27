@@ -47,7 +47,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 			OptimisticModeFetcher: &blockchainmock.ChainService{},
 			BeaconDB:              db,
 		}
-		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.StateRequestV2{
+		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.BeaconStateRequestV2{
 			StateId: make([]byte, 0),
 		})
 		require.NoError(t, err)
@@ -64,7 +64,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 			OptimisticModeFetcher: &blockchainmock.ChainService{},
 			BeaconDB:              db,
 		}
-		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.StateRequestV2{
+		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.BeaconStateRequestV2{
 			StateId: make([]byte, 0),
 		})
 		require.NoError(t, err)
@@ -81,7 +81,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 			OptimisticModeFetcher: &blockchainmock.ChainService{},
 			BeaconDB:              db,
 		}
-		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.StateRequestV2{
+		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.BeaconStateRequestV2{
 			StateId: make([]byte, 0),
 		})
 		require.NoError(t, err)
@@ -106,7 +106,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 			OptimisticModeFetcher: &blockchainmock.ChainService{Optimistic: true},
 			BeaconDB:              db,
 		}
-		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.StateRequestV2{
+		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.BeaconStateRequestV2{
 			StateId: make([]byte, 0),
 		})
 		require.NoError(t, err)
@@ -147,7 +147,7 @@ func TestGetBeaconStateSSZV2(t *testing.T) {
 				BeaconState: fakeState,
 			},
 		}
-		resp, err := server.GetBeaconStateSSZV2(context.Background(), &ethpbv2.StateRequestV2{
+		resp, err := server.GetBeaconStateSSZV2(context.Background(), &ethpbv2.BeaconStateRequestV2{
 			StateId: make([]byte, 0),
 		})
 		require.NoError(t, err)
@@ -166,7 +166,7 @@ func TestGetBeaconStateSSZV2(t *testing.T) {
 				BeaconState: fakeState,
 			},
 		}
-		resp, err := server.GetBeaconStateSSZV2(context.Background(), &ethpbv2.StateRequestV2{
+		resp, err := server.GetBeaconStateSSZV2(context.Background(), &ethpbv2.BeaconStateRequestV2{
 			StateId: make([]byte, 0),
 		})
 		require.NoError(t, err)
@@ -185,7 +185,7 @@ func TestGetBeaconStateSSZV2(t *testing.T) {
 				BeaconState: fakeState,
 			},
 		}
-		resp, err := server.GetBeaconStateSSZV2(context.Background(), &ethpbv2.StateRequestV2{
+		resp, err := server.GetBeaconStateSSZV2(context.Background(), &ethpbv2.BeaconStateRequestV2{
 			StateId: make([]byte, 0),
 		})
 		require.NoError(t, err)

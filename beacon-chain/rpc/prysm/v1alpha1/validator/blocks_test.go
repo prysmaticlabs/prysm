@@ -37,7 +37,7 @@ func TestServer_StreamAltairBlocksVerified_ContextCanceled(t *testing.T) {
 	mockStream := mock.NewMockBeaconNodeValidatorAltair_StreamBlocksServer(ctrl)
 	mockStream.EXPECT().Context().Return(ctx)
 	go func(tt *testing.T) {
-		assert.ErrorContains(tt, "Context canceled", server.StreamBlocksAltair(&ethpb.StreamBlocksRequest{
+		assert.ErrorContains(tt, "Context canceled", server.StreamBlocks(&ethpb.StreamBlocksRequest{
 			VerifiedOnly: true,
 		}, mockStream))
 		<-exitRoutine
@@ -63,7 +63,7 @@ func TestServer_StreamAltairBlocks_ContextCanceled(t *testing.T) {
 	mockStream := mock.NewMockBeaconNodeValidatorAltair_StreamBlocksServer(ctrl)
 	mockStream.EXPECT().Context().Return(ctx)
 	go func(tt *testing.T) {
-		assert.ErrorContains(tt, "Context canceled", server.StreamBlocksAltair(&ethpb.StreamBlocksRequest{}, mockStream))
+		assert.ErrorContains(tt, "Context canceled", server.StreamBlocks(&ethpb.StreamBlocksRequest{}, mockStream))
 		<-exitRoutine
 	}(t)
 	cancel()
@@ -98,7 +98,7 @@ func TestServer_StreamAltairBlocks_OnHeadUpdated(t *testing.T) {
 	mockStream.EXPECT().Context().Return(ctx).AnyTimes()
 
 	go func(tt *testing.T) {
-		assert.NoError(tt, server.StreamBlocksAltair(&ethpb.StreamBlocksRequest{}, mockStream), "Could not call RPC method")
+		assert.NoError(tt, server.StreamBlocks(&ethpb.StreamBlocksRequest{}, mockStream), "Could not call RPC method")
 	}(t)
 	wrappedBlk, err := wrapper.WrappedSignedBeaconBlock(b)
 	require.NoError(t, err)
@@ -143,7 +143,7 @@ func TestServer_StreamAltairBlocksVerified_OnHeadUpdated(t *testing.T) {
 	mockStream.EXPECT().Context().Return(ctx).AnyTimes()
 
 	go func(tt *testing.T) {
-		assert.NoError(tt, server.StreamBlocksAltair(&ethpb.StreamBlocksRequest{
+		assert.NoError(tt, server.StreamBlocks(&ethpb.StreamBlocksRequest{
 			VerifiedOnly: true,
 		}, mockStream), "Could not call RPC method")
 	}(t)
