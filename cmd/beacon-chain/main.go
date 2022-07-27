@@ -53,7 +53,6 @@ var appFlags = []cli.Flag{
 	flags.ContractDeploymentBlock,
 	flags.SetGCPercent,
 	flags.HeadSync,
-	flags.DisableSync,
 	flags.DisableDiscv5,
 	flags.BlockBatchLimit,
 	flags.BlockBatchLimitBurstFactor,
