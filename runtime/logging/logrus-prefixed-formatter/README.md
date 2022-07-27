@@ -1,6 +1,6 @@
 # Logrus Prefixed Log Formatter
 
-Originally from []github.com/prysmaticlabs/prysm/runtime/logging/logrus-prefixed-formatter(https://github.com/prysmaticlabs/prysm/runtime/logging/logrus-prefixed-formatter)
+Originally from [github.com/x-cray/logrus-prefixed-formatter(https://github.com/x-cray/logrus-prefixed-formatter)
 
 [Logrus](https://github.com/sirupsen/logrus) formatter mainly based on original `logrus.TextFormatter` but with slightly
 modified colored output and support for log entry prefixes, e.g. message source followed by a colon. In addition, custom
