@@ -120,6 +120,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedEnablePeerScorer = &cli.BoolFlag{
+		Name:   "enable-peer-scorer",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -144,4 +149,5 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedDisableCorrectlyInsertOrphanedAtts,
 	deprecatedDisableCorrectlyPruneCanonicalAtts,
 	deprecatedEnableNativeState,
+	deprecatedEnablePeerScorer,
 }
