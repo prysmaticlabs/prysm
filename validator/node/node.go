@@ -427,7 +427,6 @@ func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
 		Wallet:                     c.wallet,
 		WalletInitializedFeed:      c.walletInitialized,
 		GraffitiStruct:             gStruct,
-		LogDutyCountDown:           c.cliCtx.Bool(flags.EnableDutyCountDown.Name),
 		Web3SignerConfig:           wsc,
 		ProposerSettings:           bpc,
 	})
