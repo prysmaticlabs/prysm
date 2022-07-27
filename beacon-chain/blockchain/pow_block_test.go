@@ -211,16 +211,22 @@ func Test_getBlkParentHashAndTD(t *testing.T) {
 }
 
 func Test_validateTerminalBlockHash(t *testing.T) {
-	require.NoError(t, validateTerminalBlockHash(1, &enginev1.ExecutionPayload{}))
+	wrapped, err := wrapper.WrappedExecutionPayload(&enginev1.ExecutionPayload{})
+	require.NoError(t, err)
+	require.NoError(t, validateTerminalBlockHash(1, wrapped))
 
 	cfg := params.BeaconConfig()
 	cfg.TerminalBlockHash = [32]byte{0x01}
 	params.OverrideBeaconConfig(cfg)
-	require.ErrorContains(t, "terminal block hash activation epoch not reached", validateTerminalBlockHash(1, &enginev1.ExecutionPayload{}))
+	require.ErrorContains(t, "terminal block hash activation epoch not reached", validateTerminalBlockHash(1, wrapped))
 
 	cfg.TerminalBlockHashActivationEpoch = 0
 	params.OverrideBeaconConfig(cfg)
-	require.ErrorContains(t, "parent hash does not match terminal block hash", validateTerminalBlockHash(1, &enginev1.ExecutionPayload{}))
+	require.ErrorContains(t, "parent hash does not match terminal block hash", validateTerminalBlockHash(1, wrapped))
 
-	require.NoError(t, validateTerminalBlockHash(1, &enginev1.ExecutionPayload{ParentHash: cfg.TerminalBlockHash.Bytes()}))
+	wrapped, err = wrapper.WrappedExecutionPayload(&enginev1.ExecutionPayload{
+		ParentHash: cfg.TerminalBlockHash.Bytes(),
+	})
+	require.NoError(t, err)
+	require.NoError(t, validateTerminalBlockHash(1, wrapped))
 }

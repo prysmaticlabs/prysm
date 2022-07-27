@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/interop"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
@@ -20,6 +22,12 @@ import (
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/sirupsen/logrus"
 )
+
+// builderGetPayloadMissCount tracks the number of misses when validator tries to get a payload from builder
+var builderGetPayloadMissCount = promauto.NewCounter(prometheus.CounterOpts{
+	Name: "builder_get_payload_miss_count",
+	Help: "The number of get payload misses for validator requests to builder",
+})
 
 // blockBuilderTimeout is the maximum amount of time allowed for a block builder to respond to a
 // block request. This value is known as `BUILDER_PROPOSAL_DELAY_TOLERANCE` in builder spec.
@@ -38,6 +46,7 @@ func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockR
 			// In the event of an error, the node should fall back to default execution engine for building block.
 			log.WithError(err).Error("Failed to build a block from external builder, falling " +
 				"back to local execution client")
+			builderGetPayloadMissCount.Inc()
 		} else if builderReady {
 			return b, nil
 		}
@@ -89,9 +98,6 @@ func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockR
 // This function retrieves the payload header given the slot number and the validator index.
 // It's a no-op if the latest head block is not versioned bellatrix.
 func (vs *Server) getPayloadHeader(ctx context.Context, slot types.Slot, idx types.ValidatorIndex) (*enginev1.ExecutionPayloadHeader, error) {
-	if err := vs.BlockBuilder.Status(); err != nil {
-		return nil, err
-	}
 	b, err := vs.HeadFetcher.HeadBlock(ctx)
 	if err != nil {
 		return nil, err
@@ -99,7 +105,7 @@ func (vs *Server) getPayloadHeader(ctx context.Context, slot types.Slot, idx typ
 	if blocks.IsPreBellatrixVersion(b.Version()) {
 		return nil, nil
 	}
-	h, err := b.Block().Body().ExecutionPayload()
+	h, err := b.Block().Body().Execution()
 	if err != nil {
 		return nil, err
 	}
@@ -107,10 +113,15 @@ func (vs *Server) getPayloadHeader(ctx context.Context, slot types.Slot, idx typ
 	if err != nil {
 		return nil, err
 	}
-	bid, err := vs.BlockBuilder.GetHeader(ctx, slot, bytesutil.ToBytes32(h.BlockHash), pk)
+	bid, err := vs.BlockBuilder.GetHeader(ctx, slot, bytesutil.ToBytes32(h.BlockHash()), pk)
 	if err != nil {
 		return nil, err
 	}
+	log.WithFields(logrus.Fields{
+		"bid":           bytesutil.BytesToUint64BigEndian(bid.Message.Value),
+		"builderPubKey": fmt.Sprintf("%#x", bid.Message.Pubkey),
+		"blockHash":     fmt.Sprintf("%#x", bid.Message.Header.BlockHash),
+	}).Info("Received header with bid")
 	return bid.Message.Header, nil
 }
 
@@ -171,16 +182,18 @@ func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.SignedBe
 	if !vs.BlockBuilder.Configured() {
 		return b, nil
 	}
-	if err := vs.BlockBuilder.Status(); err != nil {
-		return nil, err
-	}
+
 	agg, err := b.Block().Body().SyncAggregate()
 	if err != nil {
 		return nil, err
 	}
-	h, err := b.Block().Body().ExecutionPayloadHeader()
+	h, err := b.Block().Body().Execution()
 	if err != nil {
 		return nil, err
+	}
+	header, ok := h.Proto().(*enginev1.ExecutionPayloadHeader)
+	if !ok {
+		return nil, errors.New("execution data must be execution payload header")
 	}
 	sb := &ethpb.SignedBlindedBeaconBlockBellatrix{
 		Block: &ethpb.BlindedBeaconBlockBellatrix{
@@ -198,7 +211,7 @@ func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.SignedBe
 				Deposits:               b.Block().Body().Deposits(),
 				VoluntaryExits:         b.Block().Body().VoluntaryExits(),
 				SyncAggregate:          agg,
-				ExecutionPayloadHeader: h,
+				ExecutionPayloadHeader: header,
 			},
 		},
 		Signature: b.Signature(),
@@ -235,8 +248,8 @@ func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.SignedBe
 	}
 
 	log.WithFields(logrus.Fields{
-		"blockHash":    fmt.Sprintf("%#x", h.BlockHash),
-		"feeRecipient": fmt.Sprintf("%#x", h.FeeRecipient),
+		"blockHash":    fmt.Sprintf("%#x", h.BlockHash()),
+		"feeRecipient": fmt.Sprintf("%#x", h.FeeRecipient()),
 		"gasUsed":      h.GasUsed,
 		"slot":         b.Block().Slot(),
 		"txs":          len(payload.Transactions),

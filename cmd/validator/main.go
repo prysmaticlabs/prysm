@@ -23,13 +23,13 @@ import (
 	"github.com/prysmaticlabs/prysm/io/logs"
 	"github.com/prysmaticlabs/prysm/monitoring/journald"
 	"github.com/prysmaticlabs/prysm/runtime/debug"
+	prefixed "github.com/prysmaticlabs/prysm/runtime/logging/logrus-prefixed-formatter"
 	_ "github.com/prysmaticlabs/prysm/runtime/maxprocs"
 	"github.com/prysmaticlabs/prysm/runtime/tos"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/validator/node"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
-	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 )
 
 func startNode(ctx *cli.Context) error {
@@ -75,12 +75,10 @@ var appFlags = []cli.Flag{
 	// Consensys' Web3Signer flags
 	flags.Web3SignerURLFlag,
 	flags.Web3SignerPublicValidatorKeysFlag,
-	flags.FeeRecipientConfigFileFlag,
-	flags.FeeRecipientConfigURLFlag,
 	flags.SuggestedFeeRecipientFlag,
 	flags.ProposerSettingsURLFlag,
 	flags.ProposerSettingsFlag,
-	flags.EnableValidatorRegistrationFlag,
+	flags.EnableBuilderFlag,
 	////////////////////
 	cmd.DisableMonitoringFlag,
 	cmd.MonitoringHostFlag,

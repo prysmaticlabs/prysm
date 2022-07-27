@@ -453,14 +453,25 @@ func web3SignerConfig(cliCtx *cli.Context) (*remoteweb3signer.SetupConfig, error
 			BaseEndpoint:          u.String(),
 			GenesisValidatorsRoot: nil,
 		}
+		if cliCtx.IsSet(flags.WalletPasswordFileFlag.Name) {
+			log.Warnf("%s was provided while using web3signer and will be ignored", flags.WalletPasswordFileFlag.Name)
+		}
 		if cliCtx.IsSet(flags.Web3SignerPublicValidatorKeysFlag.Name) {
-			publicKeysStr := cliCtx.String(flags.Web3SignerPublicValidatorKeysFlag.Name)
-			pURL, err := url.ParseRequestURI(publicKeysStr)
-			if err == nil && pURL.Scheme != "" && pURL.Host != "" {
-				web3signerConfig.PublicKeysURL = publicKeysStr
-			} else {
+			publicKeysSlice := cliCtx.StringSlice(flags.Web3SignerPublicValidatorKeysFlag.Name)
+			pks := make([]string, 0)
+			if len(publicKeysSlice) == 1 {
+				pURL, err := url.ParseRequestURI(publicKeysSlice[0])
+				if err == nil && pURL.Scheme != "" && pURL.Host != "" {
+					web3signerConfig.PublicKeysURL = publicKeysSlice[0]
+				} else {
+					pks = strings.Split(publicKeysSlice[0], ",")
+				}
+			} else if len(publicKeysSlice) > 1 {
+				pks = publicKeysSlice
+			}
+			if len(pks) > 0 {
 				var validatorKeys [][48]byte
-				for _, key := range strings.Split(publicKeysStr, ",") {
+				for _, key := range pks {
 					decodedKey, decodeErr := hexutil.Decode(key)
 					if decodeErr != nil {
 						return nil, errors.Wrapf(decodeErr, "could not decode public key for web3signer: %s", key)
@@ -476,10 +487,6 @@ func web3SignerConfig(cliCtx *cli.Context) (*remoteweb3signer.SetupConfig, error
 
 func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSettings, error) {
 	var fileConfig *validatorServiceConfig.ProposerSettingsPayload
-	//TODO(10809): remove when fully deprecated
-	if cliCtx.IsSet(flags.FeeRecipientConfigFileFlag.Name) && cliCtx.IsSet(flags.FeeRecipientConfigURLFlag.Name) {
-		return nil, fmt.Errorf("cannot specify both --%s and --%s", flags.FeeRecipientConfigFileFlag.Name, flags.FeeRecipientConfigURLFlag.Name)
-	}
 
 	if cliCtx.IsSet(flags.ProposerSettingsFlag.Name) && cliCtx.IsSet(flags.ProposerSettingsURLFlag.Name) {
 		return nil, errors.New("cannot specify both " + flags.ProposerSettingsFlag.Name + " and " + flags.ProposerSettingsURLFlag.Name)
@@ -490,28 +497,20 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 		!cliCtx.IsSet(flags.ProposerSettingsFlag.Name) &&
 		!cliCtx.IsSet(flags.ProposerSettingsURLFlag.Name) {
 		suggestedFee := cliCtx.String(flags.SuggestedFeeRecipientFlag.Name)
-		var vr *validatorServiceConfig.ValidatorRegistration
-		if cliCtx.Bool(flags.EnableValidatorRegistrationFlag.Name) {
-			vr = &validatorServiceConfig.ValidatorRegistration{
-				Enable:   true,
+		var vr *validatorServiceConfig.BuilderConfig
+		if cliCtx.Bool(flags.EnableBuilderFlag.Name) {
+			vr = &validatorServiceConfig.BuilderConfig{
+				Enabled:  true,
 				GasLimit: reviewGasLimit(params.BeaconConfig().DefaultBuilderGasLimit),
 			}
 		}
 		fileConfig = &validatorServiceConfig.ProposerSettingsPayload{
 			ProposerConfig: nil,
 			DefaultConfig: &validatorServiceConfig.ProposerOptionPayload{
-				FeeRecipient:          suggestedFee,
-				ValidatorRegistration: vr,
+				FeeRecipient:  suggestedFee,
+				BuilderConfig: vr,
 			},
 		}
-	}
-
-	if cliCtx.IsSet(flags.FeeRecipientConfigFileFlag.Name) {
-		return nil, errors.New(flags.FeeRecipientConfigFileFlag.Usage)
-	}
-
-	if cliCtx.IsSet(flags.FeeRecipientConfigURLFlag.Name) {
-		return nil, errors.New(flags.FeeRecipientConfigURLFlag.Usage)
 	}
 
 	if cliCtx.IsSet(flags.ProposerSettingsFlag.Name) {
@@ -543,11 +542,11 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 		return nil, err
 	}
 	vpSettings.DefaultConfig = &validatorServiceConfig.ProposerOption{
-		FeeRecipient:          common.HexToAddress(fileConfig.DefaultConfig.FeeRecipient),
-		ValidatorRegistration: fileConfig.DefaultConfig.ValidatorRegistration,
+		FeeRecipient:  common.HexToAddress(fileConfig.DefaultConfig.FeeRecipient),
+		BuilderConfig: fileConfig.DefaultConfig.BuilderConfig,
 	}
-	if vpSettings.DefaultConfig.ValidatorRegistration != nil {
-		vpSettings.DefaultConfig.ValidatorRegistration.GasLimit = reviewGasLimit(vpSettings.DefaultConfig.ValidatorRegistration.GasLimit)
+	if vpSettings.DefaultConfig.BuilderConfig != nil {
+		vpSettings.DefaultConfig.BuilderConfig.GasLimit = reviewGasLimit(vpSettings.DefaultConfig.BuilderConfig.GasLimit)
 	}
 
 	if fileConfig.ProposerConfig != nil {
@@ -569,12 +568,12 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 			if err := warnNonChecksummedAddress(option.FeeRecipient); err != nil {
 				return nil, err
 			}
-			if option.ValidatorRegistration != nil {
-				option.ValidatorRegistration.GasLimit = reviewGasLimit(option.ValidatorRegistration.GasLimit)
+			if option.BuilderConfig != nil {
+				option.BuilderConfig.GasLimit = reviewGasLimit(option.BuilderConfig.GasLimit)
 			}
 			vpSettings.ProposeConfig[bytesutil.ToBytes48(decodedKey)] = &validatorServiceConfig.ProposerOption{
-				FeeRecipient:          common.HexToAddress(option.FeeRecipient),
-				ValidatorRegistration: option.ValidatorRegistration,
+				FeeRecipient:  common.HexToAddress(option.FeeRecipient),
+				BuilderConfig: option.BuilderConfig,
 			}
 
 		}

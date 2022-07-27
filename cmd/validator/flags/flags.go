@@ -281,10 +281,9 @@ var (
 	// example with external url: --validators-external-signer-public-keys= https://web3signer.com/api/v1/eth2/publicKeys
 	// example with public key: --validators-external-signer-public-keys=0xa99a...e44c,0xb89b...4a0b
 	// web3signer documentation can be found in Consensys' web3signer project docs```
-	Web3SignerPublicValidatorKeysFlag = &cli.StringFlag{
+	Web3SignerPublicValidatorKeysFlag = &cli.StringSliceFlag{
 		Name:  "validators-external-signer-public-keys",
 		Usage: "comma separated list of public keys OR an external url endpoint for the validator to retrieve public keys from for usage with web3signer",
-		Value: "",
 	}
 
 	// KeymanagerKindFlag defines the kind of keymanager desired by a user during wallet creation.
@@ -324,19 +323,6 @@ var (
 		Value: false,
 	}
 
-	// FeeRecipientConfigFileFlag defines the path or URL to a file with proposer config.
-	FeeRecipientConfigFileFlag = &cli.StringFlag{
-		Name:  "fee-recipient-config-file",
-		Usage: "DEPRECATED, please use proposer-settings-file",
-		Value: "",
-	}
-	// FeeRecipientConfigURLFlag defines the path or URL to a file with proposer config.
-	FeeRecipientConfigURLFlag = &cli.StringFlag{
-		Name:  "fee-recipient-config-url",
-		Usage: "DEPRECATED, please use proposer-settings-url",
-		Value: "",
-	}
-
 	// ProposerSettingsFlag defines the path or URL to a file with proposer config.
 	ProposerSettingsFlag = &cli.StringFlag{
 		Name:  "proposer-settings-file",
@@ -359,10 +345,10 @@ var (
 		Value: params.BeaconConfig().EthBurnAddressHex,
 	}
 
-	// EnableValidatorRegistrationFlag enables the periodic validator registration API calls that will update the custom builder with validator settings.
-	EnableValidatorRegistrationFlag = &cli.BoolFlag{
-		Name:  "enable-validator-registration",
-		Usage: "Enables validator registration APIs (MEV Builder APIs) for the validator client to update settings such as fee recipient and gas limit",
+	// EnableBuilderFlag enables the periodic validator registration API calls that will update the custom builder with validator settings.
+	EnableBuilderFlag = &cli.BoolFlag{
+		Name:  "enable-builder",
+		Usage: "Enables Builder validator registration APIs for the validator client to update settings such as fee recipient and gas limit. Note* this flag is not required if using proposer settings config file",
 		Value: false,
 	}
 )

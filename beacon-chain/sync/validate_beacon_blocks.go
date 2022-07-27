@@ -84,6 +84,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 			blockHeader, err := interfaces.SignedBeaconBlockHeaderFromBlockInterface(blk)
 			if err != nil {
 				log.WithError(err).WithField("blockSlot", blk.Block().Slot()).Warn("Could not extract block header")
+				return
 			}
 			s.cfg.slasherBlockHeadersFeed.Send(blockHeader)
 		}()
@@ -283,14 +284,14 @@ func (s *Service) validateBellatrixBeaconBlock(ctx context.Context, parentState 
 	if err != nil {
 		return err
 	}
-	payload, err := body.ExecutionPayload()
+	payload, err := body.Execution()
 	if err != nil {
 		return err
 	}
-	if payload == nil {
+	if payload.IsNil() {
 		return errors.New("execution payload is nil")
 	}
-	if payload.Timestamp != uint64(t.Unix()) {
+	if payload.Timestamp() != uint64(t.Unix()) {
 		return errors.New("incorrect timestamp")
 	}
 

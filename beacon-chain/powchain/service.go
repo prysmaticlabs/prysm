@@ -580,13 +580,20 @@ func (s *Service) initPOWService() {
 
 			if err := s.processPastLogs(ctx); err != nil {
 				s.retryExecutionClientConnection(ctx, err)
-				errorLogger(err, "Unable to process past deposit contract logs")
+				errorLogger(
+					err,
+					"Unable to process past deposit contract logs, perhaps your execution client is not fully synced",
+				)
 				continue
 			}
 			// Cache eth1 headers from our voting period.
 			if err := s.cacheHeadersForEth1DataVote(ctx); err != nil {
 				s.retryExecutionClientConnection(ctx, err)
-				errorLogger(err, "Unable to cache headers for execution client votes")
+				if errors.Is(err, errBlockTimeTooLate) {
+					log.WithError(err).Warn("Unable to cache headers for execution client votes")
+				} else {
+					errorLogger(err, "Unable to cache headers for execution client votes")
+				}
 				continue
 			}
 			// Handle edge case with embedded genesis state by fetching genesis header to determine

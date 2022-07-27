@@ -2,6 +2,7 @@ package builder
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/pkg/errors"
@@ -21,7 +22,6 @@ import (
 type BlockBuilder interface {
 	SubmitBlindedBlock(ctx context.Context, block *ethpb.SignedBlindedBeaconBlockBellatrix) (*v1.ExecutionPayload, error)
 	GetHeader(ctx context.Context, slot types.Slot, parentHash [32]byte, pubKey [48]byte) (*ethpb.SignedBuilderBid, error)
-	Status() error
 	RegisterValidator(ctx context.Context, reg []*ethpb.SignedValidatorRegistrationV1) error
 	Configured() bool
 }
@@ -60,6 +60,12 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 			return nil, err
 		}
 		s.c = c
+
+		// Is the builder up?
+		if err := s.c.Status(ctx); err != nil {
+			return nil, fmt.Errorf("could not connect to builder: %v", err)
+		}
+
 		log.WithField("endpoint", c.NodeURL()).Info("Builder has been configured")
 	}
 	return s, nil
