@@ -580,7 +580,10 @@ func (s *Service) initPOWService() {
 
 			if err := s.processPastLogs(ctx); err != nil {
 				s.retryExecutionClientConnection(ctx, err)
-				errorLogger(err, "Unable to process past deposit contract logs")
+				errorLogger(
+					err,
+					"Unable to process past deposit contract logs, perhaps your execution client is not fully synced",
+				)
 				continue
 			}
 			// Cache eth1 headers from our voting period.
