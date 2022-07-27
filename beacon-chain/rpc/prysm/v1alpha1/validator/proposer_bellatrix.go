@@ -9,6 +9,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/interop"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -117,6 +118,10 @@ func (vs *Server) getPayloadHeader(ctx context.Context, slot types.Slot, idx typ
 	if err != nil {
 		return nil, err
 	}
+	if err := vs.validateBuilderSignature(bid); err != nil {
+		return nil, errors.Wrap(err, "could not validate builder signature")
+	}
+
 	log.WithFields(logrus.Fields{
 		"bid":           bytesutil.BytesToUint64BigEndian(bid.Message.Value),
 		"builderPubKey": fmt.Sprintf("%#x", bid.Message.Pubkey),
@@ -324,4 +329,24 @@ func (vs *Server) validatorRegistered(ctx context.Context, id types.ValidatorInd
 		return false, err
 	}
 	return true, nil
+}
+
+// Validates builder signature and returns an error if the signature is invalid.
+func (vs *Server) validateBuilderSignature(bid *ethpb.SignedBuilderBid) error {
+	if vs.ForkFetcher == nil {
+		return errors.New("nil fork fetcher")
+	}
+	f := vs.ForkFetcher.CurrentFork()
+	if vs.GenesisFetcher == nil {
+		return errors.New("nil genesis fetcher")
+	}
+	gr := vs.GenesisFetcher.GenesisValidatorsRoot()
+	d, err := signing.ComputeDomain(params.BeaconConfig().DomainApplicationBuilder, f.CurrentVersion, gr[:])
+	if err != nil {
+		return err
+	}
+	if bid == nil || bid.Message == nil {
+		return errors.New("nil builder bid")
+	}
+	return signing.VerifySigningRoot(bid.Message, bid.Message.Pubkey, bid.Signature, d)
 }

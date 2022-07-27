@@ -112,7 +112,8 @@ ssz_gen_marshal(
         "Withdrawal", 
         "BLSToExecutionChange",
         "SignedBLSToExecutionChange",
-    ],
+        "BuilderBid"
+         ],
 )
 
 go_proto_library(
