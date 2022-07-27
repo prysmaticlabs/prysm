@@ -1,8 +1,6 @@
 package protoarray
 
 import (
-	"context"
-
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -77,16 +75,18 @@ func (f *ForkChoice) UpdateUnrealizedCheckpoints() {
 	}
 }
 
-func (s *Store) pullTips(ctx context.Context, state state.BeaconState, node *Node, jc, fc *ethpb.Checkpoint) (*ethpb.Checkpoint, *ethpb.Checkpoint) {
-	var uj, uf *ethpb.Checkpoint
+func (s *Store) pullTips(state state.BeaconState, node *Node, jc, fc *ethpb.Checkpoint) (*ethpb.Checkpoint, *ethpb.Checkpoint) {
+	s.nodesLock.Lock()
+	defer s.nodesLock.Unlock()
 
-	currentSlot := slots.CurrentSlot(s.genesisTime)
-	currentEpoch := slots.ToEpoch(currentSlot)
-	stateSlot := state.Slot()
-	stateEpoch := slots.ToEpoch(stateSlot)
-	if node.parent == NonExistentNode {
+	if node.parent == NonExistentNode { // Nothing to do if the parent is nil.
 		return jc, fc
 	}
+
+	currentEpoch := slots.ToEpoch(slots.CurrentSlot(s.genesisTime))
+	stateSlot := state.Slot()
+	stateEpoch := slots.ToEpoch(stateSlot)
+
 	parent := s.nodes[node.parent]
 	currJustified := parent.unrealizedJustifiedEpoch == currentEpoch
 	prevJustified := parent.unrealizedJustifiedEpoch+1 == currentEpoch
@@ -97,12 +97,13 @@ func (s *Store) pullTips(ctx context.Context, state state.BeaconState, node *Nod
 		return jc, fc
 	}
 
-	uj, uf, err := precompute.UnrealizedCheckpoints(ctx, state)
+	uj, uf, err := precompute.UnrealizedCheckpoints(state)
 	if err != nil {
 		log.WithError(err).Debug("could not compute unrealized checkpoints")
 		uj, uf = jc, fc
 	}
-	node.unrealizedJustifiedEpoch, node.unrealizedFinalizedEpoch = uj.Epoch, uf.Epoch
+
+	// Update store's unrealized checkpoints.
 	s.checkpointsLock.Lock()
 	if uj.Epoch > s.unrealizedJustifiedCheckpoint.Epoch {
 		s.unrealizedJustifiedCheckpoint = &forkchoicetypes.Checkpoint{
@@ -117,12 +118,15 @@ func (s *Store) pullTips(ctx context.Context, state state.BeaconState, node *Nod
 			Epoch: uf.Epoch, Root: bytesutil.ToBytes32(uf.Root),
 		}
 	}
+	s.checkpointsLock.Unlock()
 
+	// Update node's checkpoints.
+	node.unrealizedJustifiedEpoch, node.unrealizedFinalizedEpoch = uj.Epoch, uf.Epoch
 	if stateEpoch < currentEpoch {
 		jc, fc = uj, uf
 		node.justifiedEpoch = uj.Epoch
 		node.finalizedEpoch = uf.Epoch
 	}
-	s.checkpointsLock.Unlock()
+
 	return jc, fc
 }

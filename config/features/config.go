@@ -61,10 +61,11 @@ type Flags struct {
 	EnableSlashingProtectionPruning bool
 
 	EnableNativeState                bool // EnableNativeState defines whether the beacon state will be represented as a pure Go struct or a Go struct that wraps a proto struct.
-	PullTips                         bool // Experimental disable of boundary checks
+	EnablePullTips                   bool // EnablePullTips enables experimental disabling of boundary checks.
 	EnableVectorizedHTR              bool // EnableVectorizedHTR specifies whether the beacon state will use the optimized sha256 routines.
 	EnableForkChoiceDoublyLinkedTree bool // EnableForkChoiceDoublyLinkedTree specifies whether fork choice store will use a doubly linked tree.
 	EnableBatchGossipAggregation     bool // EnableBatchGossipAggregation specifies whether to further aggregate our gossip batches before verifying them.
+	EnableOnlyBlindedBeaconBlocks    bool // EnableOnlyBlindedBeaconBlocks enables only storing blinded beacon blocks in the DB post-Bellatrix fork.
 
 	// KeystoreImportDebounceInterval specifies the time duration the validator waits to reload new keys if they have
 	// changed on disk. This feature is for advanced use cases only.
@@ -115,6 +116,7 @@ func configureTestnet(ctx *cli.Context) error {
 		if err := params.SetActive(params.PraterConfig().Copy()); err != nil {
 			return err
 		}
+		applyPraterFeatureFlags(ctx)
 		params.UsePraterNetworkConfig()
 	} else if ctx.Bool(RopstenTestnet.Name) {
 		log.Warn("Running on the Ropsten Beacon Chain Testnet")
@@ -143,10 +145,29 @@ func configureTestnet(ctx *cli.Context) error {
 	return nil
 }
 
+// Insert feature flags within the function to be enabled for Prater testnet.
+func applyPraterFeatureFlags(ctx *cli.Context) {
+	if err := ctx.Set(enableVecHTR.Names()[0], "true"); err != nil {
+		log.WithError(err).Debug("error enabling disable p flag")
+	}
+	if err := ctx.Set(enablePullTips.Names()[0], "true"); err != nil {
+		log.WithError(err).Debug("error enabling disable of boundary checks flag")
+	}
+	if err := ctx.Set(enableForkChoiceDoublyLinkedTree.Names()[0], "true"); err != nil {
+		log.WithError(err).Debug("error enabling doubly linked tree forkchoice flag")
+	}
+	if err := ctx.Set(EnableOnlyBlindedBeaconBlocks.Names()[0], "true"); err != nil {
+		log.WithError(err).Debug("error enabling only saving blinded beacon blocks flag")
+	}
+}
+
 // Insert feature flags within the function to be enabled for Ropsten testnet.
 func applyRopstenFeatureFlags(ctx *cli.Context) {
 	if err := ctx.Set(enableVecHTR.Names()[0], "true"); err != nil {
 		log.WithError(err).Debug("error enabling vectorized HTR flag")
+	}
+	if err := ctx.Set(enablePullTips.Names()[0], "true"); err != nil {
+		log.WithError(err).Debug("error enabling disable of boundary checks flag")
 	}
 	if err := ctx.Set(enableForkChoiceDoublyLinkedTree.Names()[0], "true"); err != nil {
 		log.WithError(err).Debug("error enabling doubly linked tree forkchoice flag")
@@ -157,6 +178,9 @@ func applyRopstenFeatureFlags(ctx *cli.Context) {
 func applySepoliaFeatureFlags(ctx *cli.Context) {
 	if err := ctx.Set(enableVecHTR.Names()[0], "true"); err != nil {
 		log.WithError(err).Debug("error enabling vectorized HTR flag")
+	}
+	if err := ctx.Set(enablePullTips.Names()[0], "true"); err != nil {
+		log.WithError(err).Debug("error enabling disable of boundary checks flag")
 	}
 	if err := ctx.Set(enableForkChoiceDoublyLinkedTree.Names()[0], "true"); err != nil {
 		log.WithError(err).Debug("error enabling doubly linked tree forkchoice flag")
@@ -184,9 +208,10 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logDisabled(disableGRPCConnectionLogging)
 		cfg.DisableGRPCConnectionLogs = true
 	}
-	if ctx.Bool(enablePeerScorer.Name) {
-		logEnabled(enablePeerScorer)
-		cfg.EnablePeerScorer = true
+	cfg.EnablePeerScorer = true
+	if ctx.Bool(disablePeerScorer.Name) {
+		logDisabled(disablePeerScorer)
+		cfg.EnablePeerScorer = false
 	}
 	if ctx.Bool(checkPtInfoCache.Name) {
 		log.Warn("Advance check point info cache is no longer supported and will soon be deleted")
@@ -212,9 +237,9 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logDisabled(disableNativeState)
 		cfg.EnableNativeState = false
 	}
-	if ctx.Bool(pullTips.Name) {
-		logEnabled(pullTips)
-		cfg.PullTips = true
+	if ctx.Bool(enablePullTips.Name) {
+		logEnabled(enablePullTips)
+		cfg.EnablePullTips = true
 	}
 	if ctx.Bool(enableVecHTR.Name) {
 		logEnabled(enableVecHTR)
@@ -227,6 +252,10 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 	if ctx.Bool(enableGossipBatchAggregation.Name) {
 		logEnabled(enableGossipBatchAggregation)
 		cfg.EnableBatchGossipAggregation = true
+	}
+	if ctx.Bool(EnableOnlyBlindedBeaconBlocks.Name) {
+		logEnabled(EnableOnlyBlindedBeaconBlocks)
+		cfg.EnableOnlyBlindedBeaconBlocks = true
 	}
 	Init(cfg)
 	return nil

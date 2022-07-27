@@ -9,30 +9,34 @@ import (
 	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
 )
 
 // EngineClient --
 type EngineClient struct {
-	NewPayloadResp          []byte
-	PayloadIDBytes          *pb.PayloadIDBytes
-	ForkChoiceUpdatedResp   []byte
-	ExecutionPayload        *pb.ExecutionPayload
-	ExecutionBlock          *pb.ExecutionBlock
-	Err                     error
-	ErrLatestExecBlock      error
-	ErrExecBlockByHash      error
-	ErrForkchoiceUpdated    error
-	ErrNewPayload           error
-	BlockByHashMap          map[[32]byte]*pb.ExecutionBlock
-	TerminalBlockHash       []byte
-	TerminalBlockHashExists bool
-	OverrideValidHash       [32]byte
+	NewPayloadResp              []byte
+	PayloadIDBytes              *pb.PayloadIDBytes
+	ForkChoiceUpdatedResp       []byte
+	ExecutionPayload            *pb.ExecutionPayload
+	ExecutionBlock              *pb.ExecutionBlock
+	Err                         error
+	ErrLatestExecBlock          error
+	ErrExecBlockByHash          error
+	ErrForkchoiceUpdated        error
+	ErrNewPayload               error
+	ExecutionPayloadByBlockHash map[[32]byte]*pb.ExecutionPayload
+	BlockByHashMap              map[[32]byte]*pb.ExecutionBlock
+	NumReconstructedPayloads    uint64
+	TerminalBlockHash           []byte
+	TerminalBlockHashExists     bool
+	OverrideValidHash           [32]byte
 }
 
 // NewPayload --
-func (e *EngineClient) NewPayload(_ context.Context, _ *pb.ExecutionPayload) ([]byte, error) {
+func (e *EngineClient) NewPayload(_ context.Context, _ interfaces.ExecutionData) ([]byte, error) {
 	return e.NewPayloadResp, e.ErrNewPayload
 }
 
@@ -62,12 +66,30 @@ func (e *EngineClient) LatestExecutionBlock(_ context.Context) (*pb.ExecutionBlo
 }
 
 // ExecutionBlockByHash --
-func (e *EngineClient) ExecutionBlockByHash(_ context.Context, h common.Hash) (*pb.ExecutionBlock, error) {
+func (e *EngineClient) ExecutionBlockByHash(_ context.Context, h common.Hash, _ bool) (*pb.ExecutionBlock, error) {
 	b, ok := e.BlockByHashMap[h]
 	if !ok {
 		return nil, errors.New("block not found")
 	}
 	return b, e.ErrExecBlockByHash
+}
+
+func (e *EngineClient) ReconstructFullBellatrixBlock(
+	_ context.Context, blindedBlock interfaces.SignedBeaconBlock,
+) (interfaces.SignedBeaconBlock, error) {
+	if !blindedBlock.Block().IsBlinded() {
+		return nil, errors.New("block must be blinded")
+	}
+	header, err := blindedBlock.Block().Body().Execution()
+	if err != nil {
+		return nil, err
+	}
+	payload, ok := e.ExecutionPayloadByBlockHash[bytesutil.ToBytes32(header.BlockHash())]
+	if !ok {
+		return nil, errors.New("block not found")
+	}
+	e.NumReconstructedPayloads++
+	return wrapper.BuildSignedBeaconBlockFromExecutionPayload(blindedBlock, payload)
 }
 
 // GetTerminalBlockHash --
@@ -94,11 +116,11 @@ func (e *EngineClient) GetTerminalBlockHash(ctx context.Context) ([]byte, bool, 
 		currentTotalDifficulty, _ := uint256.FromBig(b)
 		blockReachedTTD := currentTotalDifficulty.Cmp(terminalTotalDifficulty) >= 0
 
-		parentHash := bytesutil.ToBytes32(blk.ParentHash)
-		if len(blk.ParentHash) == 0 || parentHash == params.BeaconConfig().ZeroHash {
+		parentHash := blk.ParentHash
+		if parentHash == params.BeaconConfig().ZeroHash {
 			return nil, false, nil
 		}
-		parentBlk, err := e.ExecutionBlockByHash(ctx, parentHash)
+		parentBlk, err := e.ExecutionBlockByHash(ctx, parentHash, false /* with txs */)
 		if err != nil {
 			return nil, false, errors.Wrap(err, "could not get parent execution block")
 		}
@@ -110,7 +132,7 @@ func (e *EngineClient) GetTerminalBlockHash(ctx context.Context) ([]byte, bool, 
 			parentTotalDifficulty, _ := uint256.FromBig(b)
 			parentReachedTTD := parentTotalDifficulty.Cmp(terminalTotalDifficulty) >= 0
 			if !parentReachedTTD {
-				return blk.Hash, true, nil
+				return blk.Hash[:], true, nil
 			}
 		} else {
 			return nil, false, nil

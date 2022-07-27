@@ -39,24 +39,27 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 
 	headBlk := arg.headBlock
 	if headBlk == nil || headBlk.IsNil() || headBlk.Body().IsNil() {
-		return nil, errors.New("nil head block")
+		log.Error("Head block is nil")
+		return nil, nil
 	}
 	// Must not call fork choice updated until the transition conditions are met on the Pow network.
 	isExecutionBlk, err := blocks.IsExecutionBlock(headBlk.Body())
 	if err != nil {
-		return nil, errors.Wrap(err, "could not determine if block is execution block")
+		log.WithError(err).Error("Could not determine if head block is execution block")
+		return nil, nil
 	}
 	if !isExecutionBlk {
 		return nil, nil
 	}
-	headPayload, err := headBlk.Body().ExecutionPayload()
+	headPayload, err := headBlk.Body().Execution()
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get execution payload")
+		log.WithError(err).Error("Could not get execution payload for head block")
+		return nil, nil
 	}
 	finalizedHash := s.ForkChoicer().FinalizedPayloadBlockHash()
 	justifiedHash := s.ForkChoicer().JustifiedPayloadBlockHash()
 	fcs := &enginev1.ForkchoiceState{
-		HeadBlockHash:      headPayload.BlockHash,
+		HeadBlockHash:      headPayload.BlockHash(),
 		SafeBlockHash:      justifiedHash[:],
 		FinalizedBlockHash: finalizedHash[:],
 	}
@@ -64,7 +67,8 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 	nextSlot := s.CurrentSlot() + 1 // Cache payload ID for next slot proposer.
 	hasAttr, attr, proposerId, err := s.getPayloadAttribute(ctx, arg.headState, nextSlot)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get payload attribute")
+		log.WithError(err).Error("Could not get head payload attribute")
+		return nil, nil
 	}
 
 	payloadID, lastValidHash, err := s.cfg.ExecutionEngineCaller.ForkchoiceUpdated(ctx, fcs, attr)
@@ -74,32 +78,41 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 			forkchoiceUpdatedOptimisticNodeCount.Inc()
 			log.WithFields(logrus.Fields{
 				"headSlot":                  headBlk.Slot(),
-				"headPayloadBlockHash":      fmt.Sprintf("%#x", bytesutil.Trunc(headPayload.BlockHash)),
+				"headPayloadBlockHash":      fmt.Sprintf("%#x", bytesutil.Trunc(headPayload.BlockHash())),
 				"finalizedPayloadBlockHash": fmt.Sprintf("%#x", bytesutil.Trunc(finalizedHash[:])),
 			}).Info("Called fork choice updated with optimistic block")
-			return payloadID, s.optimisticCandidateBlock(ctx, headBlk)
+			err := s.optimisticCandidateBlock(ctx, headBlk)
+			if err != nil {
+				log.WithError(err).Error("Optimistic block failed to be candidate")
+			}
+			return payloadID, nil
 		case powchain.ErrInvalidPayloadStatus:
 			newPayloadInvalidNodeCount.Inc()
 			headRoot := arg.headRoot
 			invalidRoots, err := s.ForkChoicer().SetOptimisticToInvalid(ctx, headRoot, bytesutil.ToBytes32(headBlk.ParentRoot()), bytesutil.ToBytes32(lastValidHash))
 			if err != nil {
-				return nil, err
+				log.WithError(err).Error("Could not set head root to invalid")
+				return nil, nil
 			}
 			if err := s.removeInvalidBlockAndState(ctx, invalidRoots); err != nil {
-				return nil, err
+				log.WithError(err).Error("Could not remove invalid block and state")
+				return nil, nil
 			}
 
 			r, err := s.cfg.ForkChoiceStore.Head(ctx, s.justifiedBalances.balances)
 			if err != nil {
-				return nil, err
+				log.WithError(err).Error("Could not get head root")
+				return nil, nil
 			}
 			b, err := s.getBlock(ctx, r)
 			if err != nil {
-				return nil, err
+				log.WithError(err).Error("Could not get head block")
+				return nil, nil
 			}
 			st, err := s.cfg.StateGen.StateByRoot(ctx, r)
 			if err != nil {
-				return nil, err
+				log.WithError(err).Error("Could not get head state")
+				return nil, nil
 			}
 			pid, err := s.notifyForkchoiceUpdate(ctx, &notifyForkchoiceUpdateArg{
 				headState: st,
@@ -107,7 +120,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 				headBlock: b.Block(),
 			})
 			if err != nil {
-				return nil, err
+				return nil, err // Returning err because it's recursive here.
 			}
 
 			if err := s.saveHead(ctx, r, b, st); err != nil {
@@ -120,20 +133,27 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 				"invalidCount": len(invalidRoots),
 				"newHeadRoot":  fmt.Sprintf("%#x", bytesutil.Trunc(r[:])),
 			}).Warn("Pruned invalid blocks")
-			return pid, ErrInvalidPayload
+			return pid, invalidBlock{error: ErrInvalidPayload, root: arg.headRoot, invalidAncestorRoots: invalidRoots}
 
 		default:
-			return nil, errors.WithMessage(ErrUndefinedExecutionEngineError, err.Error())
+			log.WithError(err).Error(ErrUndefinedExecutionEngineError)
+			return nil, nil
 		}
 	}
 	forkchoiceUpdatedValidNodeCount.Inc()
 	if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, arg.headRoot); err != nil {
-		return nil, errors.Wrap(err, "could not set block to valid")
+		log.WithError(err).Error("Could not set head root to valid")
+		return nil, nil
 	}
-	if hasAttr { // If the forkchoice update call has an attribute, update the proposer payload ID cache.
+	if hasAttr && payloadID != nil { // If the forkchoice update call has an attribute, update the proposer payload ID cache.
 		var pId [8]byte
 		copy(pId[:], payloadID[:])
 		s.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(nextSlot, proposerId, pId)
+	} else if hasAttr && payloadID == nil {
+		log.WithFields(logrus.Fields{
+			"blockHash": fmt.Sprintf("%#x", headPayload.BlockHash()),
+			"slot":      headBlk.Slot(),
+		}).Error("Received nil payload ID on VALID engine response")
 	}
 	return payloadID, nil
 }
@@ -148,11 +168,11 @@ func (s *Service) getPayloadHash(ctx context.Context, root []byte) ([32]byte, er
 	if blocks.IsPreBellatrixVersion(blk.Block().Version()) {
 		return params.BeaconConfig().ZeroHash, nil
 	}
-	payload, err := blk.Block().Body().ExecutionPayload()
+	payload, err := blk.Block().Body().Execution()
 	if err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not get execution payload")
 	}
-	return bytesutil.ToBytes32(payload.BlockHash), nil
+	return bytesutil.ToBytes32(payload.BlockHash()), nil
 }
 
 // notifyForkchoiceUpdate signals execution engine on a new payload.
@@ -173,14 +193,14 @@ func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
 	body := blk.Block().Body()
 	enabled, err := blocks.IsExecutionEnabledUsingHeader(postStateHeader, body)
 	if err != nil {
-		return false, errors.Wrap(invalidBlock{err}, "could not determine if execution is enabled")
+		return false, errors.Wrap(invalidBlock{error: err}, "could not determine if execution is enabled")
 	}
 	if !enabled {
 		return true, nil
 	}
-	payload, err := body.ExecutionPayload()
+	payload, err := body.Execution()
 	if err != nil {
-		return false, errors.Wrap(invalidBlock{err}, "could not get execution payload")
+		return false, errors.Wrap(invalidBlock{error: err}, "could not get execution payload")
 	}
 	lastValidHash, err := s.cfg.ExecutionEngineCaller.NewPayload(ctx, payload)
 	switch err {
@@ -191,7 +211,7 @@ func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
 		newPayloadOptimisticNodeCount.Inc()
 		log.WithFields(logrus.Fields{
 			"slot":             blk.Block().Slot(),
-			"payloadBlockHash": fmt.Sprintf("%#x", bytesutil.Trunc(payload.BlockHash)),
+			"payloadBlockHash": fmt.Sprintf("%#x", bytesutil.Trunc(payload.BlockHash())),
 		}).Info("Called new payload with optimistic block")
 		return false, s.optimisticCandidateBlock(ctx, blk.Block())
 	case powchain.ErrInvalidPayloadStatus:
@@ -212,10 +232,13 @@ func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
 			"blockRoot":    fmt.Sprintf("%#x", root),
 			"invalidCount": len(invalidRoots),
 		}).Warn("Pruned invalid blocks")
-		return false, invalidBlock{ErrInvalidPayload}
+		return false, invalidBlock{
+			invalidAncestorRoots: invalidRoots,
+			error:                ErrInvalidPayload,
+		}
 	case powchain.ErrInvalidBlockHashPayloadStatus:
 		newPayloadInvalidNodeCount.Inc()
-		return false, invalidBlock{ErrInvalidBlockHashPayloadStatus}
+		return false, ErrInvalidBlockHashPayloadStatus
 	default:
 		return false, errors.WithMessage(ErrUndefinedExecutionEngineError, err.Error())
 	}

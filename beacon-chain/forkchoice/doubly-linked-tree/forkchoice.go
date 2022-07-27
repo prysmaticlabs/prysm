@@ -89,7 +89,7 @@ func (f *ForkChoice) Head(
 // ProcessAttestation processes attestation for vote accounting, it iterates around validator indices
 // and update their votes accordingly.
 func (f *ForkChoice) ProcessAttestation(ctx context.Context, validatorIndices []uint64, blockRoot [32]byte, targetEpoch types.Epoch) {
-	_, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.ProcessAttestation")
+	ctx, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.ProcessAttestation")
 	defer span.End()
 	f.votesLock.Lock()
 	defer f.votesLock.Unlock()
@@ -150,8 +150,8 @@ func (f *ForkChoice) InsertNode(ctx context.Context, state state.BeaconState, ro
 		return err
 	}
 
-	if features.Get().PullTips {
-		jc, fc = f.store.pullTips(ctx, state, node, jc, fc)
+	if features.Get().EnablePullTips {
+		jc, fc = f.store.pullTips(state, node, jc, fc)
 	}
 	return f.updateCheckpoints(ctx, jc, fc)
 }

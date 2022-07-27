@@ -12,14 +12,13 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	v1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"go.opencensus.io/trace"
-
-	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	log "github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
 )
 
 const (
@@ -161,7 +160,9 @@ func (c *Client) do(ctx context.Context, method string, path string, body io.Rea
 	}
 	defer func() {
 		closeErr := r.Body.Close()
-		log.WithError(closeErr).Error("Failed to close response body")
+		if closeErr != nil {
+			log.WithError(closeErr).Error("Failed to close response body")
+		}
 	}()
 	if r.StatusCode != http.StatusOK {
 		err = non200Err(r)
@@ -217,6 +218,7 @@ func (c *Client) GetHeader(ctx context.Context, slot types.Slot, parentHash [32]
 func (c *Client) RegisterValidator(ctx context.Context, svr []*ethpb.SignedValidatorRegistrationV1) error {
 	ctx, span := trace.StartSpan(ctx, "builder.client.RegisterValidator")
 	defer span.End()
+	span.AddAttributes(trace.Int64Attribute("num_reqs", int64(len(svr))))
 
 	if len(svr) == 0 {
 		err := errors.Wrap(errMalformedRequest, "empty validator registration list")
@@ -231,6 +233,7 @@ func (c *Client) RegisterValidator(ctx context.Context, svr []*ethpb.SignedValid
 	if err != nil {
 		err := errors.Wrap(err, "error encoding the SignedValidatorRegistration value body in RegisterValidator")
 		tracing.AnnotateError(span, err)
+		return err
 	}
 
 	_, err = c.do(ctx, http.MethodPost, postRegisterValidatorPath, bytes.NewBuffer(body))

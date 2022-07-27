@@ -7,6 +7,9 @@ import (
 
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 )
 
@@ -59,4 +62,8 @@ type Validator interface {
 	HandleKeyReload(ctx context.Context, newKeys [][fieldparams.BLSPubkeyLength]byte) (bool, error)
 	CheckDoppelGanger(ctx context.Context) error
 	PushProposerSettings(ctx context.Context, km keymanager.IKeymanager) error
+	SignValidatorRegistrationRequest(ctx context.Context, signer SigningFunc, newValidatorRegistration *ethpb.ValidatorRegistrationV1) (*ethpb.SignedValidatorRegistrationV1, error)
 }
+
+// SigningFunc interface defines a type for the a function that signs a message
+type SigningFunc func(context.Context, *validatorpb.SignRequest) (bls.Signature, error)
