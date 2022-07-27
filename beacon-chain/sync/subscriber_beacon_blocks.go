@@ -39,6 +39,10 @@ func (s *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) 
 				s.setBadBlock(ctx, root)
 			}
 		}
+		// Set the returned invalid ancestors as bad.
+		for _, root := range blockchain.InvalidAncestorRoots(err) {
+			s.setBadBlock(ctx, root)
+		}
 		return err
 	}
 	return err
