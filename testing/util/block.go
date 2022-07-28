@@ -988,7 +988,6 @@ func GenerateFullBlockBellatrix(
 	}
 
 	syncCommitteeBits := make(bitfield.Bitvector512, 64)
-	// all validators are in the sync committee
 	newSyncAggregate := &ethpb.SyncAggregate{
 		SyncCommitteeBits:      syncCommitteeBits,
 		SyncCommitteeSignature: append([]byte{0xC0}, make([]byte, 95)...),
@@ -1000,7 +999,6 @@ func GenerateFullBlockBellatrix(
 		return nil, errors.Wrap(err, "could not hash state")
 	}
 	newHeader.StateRoot = prevStateRoot[:]
-	newHeader = bState.LatestBlockHeader()
 	parentRoot, err := newHeader.HashTreeRoot()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not hash the new header")

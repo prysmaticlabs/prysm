@@ -43,6 +43,7 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
+	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -1803,6 +1804,7 @@ func Test_verifyBlkFinalizedSlot_invalidBlock(t *testing.T) {
 }
 
 func TestStore_NoViableHead_ProtoArray(t *testing.T) {
+	hook := logTest.NewGlobal()
 	params.SetupTestConfigCleanup(t)
 	config := params.BeaconConfig()
 	config.SlotsPerEpoch = 4
@@ -1832,7 +1834,6 @@ func TestStore_NoViableHead_ProtoArray(t *testing.T) {
 	require.NoError(t, err, "Could not hash genesis state")
 
 	require.NoError(t, service.saveGenesisData(ctx, st))
-	bState := st.Copy()
 
 	genesis := blocks.NewGenesisBlock(stateRoot[:])
 	wsb, err := wrapper.WrappedSignedBeaconBlock(genesis)
@@ -1846,26 +1847,27 @@ func TestStore_NoViableHead_ProtoArray(t *testing.T) {
 
 	for i := 1; i < 4; i++ {
 		driftGenesisTime(service, int64(i), 0)
-		b, err := util.GenerateFullBlock(bState, keys, util.DefaultBlockGenConfig(), types.Slot(i))
+		logrus.Infof("Processing block %v", i)
+		st, err := service.HeadState(ctx)
+		require.NoError(t, err)
+		b, err := util.GenerateFullBlock(st, keys, util.DefaultBlockGenConfig(), types.Slot(i))
 		require.NoError(t, err)
 		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
-		require.NoError(t, err)
-		bState, err = transition.ExecuteStateTransition(ctx, bState, wsb)
 		require.NoError(t, err)
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
 		require.NoError(t, service.onBlock(ctx, wsb, root))
 	}
 
-	bState, err = transition.ProcessSlots(ctx, bState, 4)
-	require.NoError(t, err)
-	for i := 5; i < 12; i++ {
+	for i := 4; i < 12; i++ {
+		logrus.Infof("Processing block %v", i)
 		driftGenesisTime(service, int64(i), 0)
-		b, err := util.GenerateFullBlockBellatrix(bState, keys, util.DefaultBlockGenConfig(), types.Slot(i))
+		st, err := service.HeadState(ctx)
+		require.NoError(t, err)
+		b, err := util.GenerateFullBlockBellatrix(st, keys, util.DefaultBlockGenConfig(), types.Slot(i))
+		assert.LogsContain(t, hook, "pingo")
 		require.NoError(t, err)
 		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
-		require.NoError(t, err)
-		bState, err = transition.ExecuteStateTransition(ctx, bState, wsb)
 		require.NoError(t, err)
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
