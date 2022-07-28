@@ -5,7 +5,6 @@ import (
 	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/runtime/version"
@@ -145,6 +144,46 @@ func (b *SignedBeaconBlock) PbBlindedBellatrixBlock() (*eth.SignedBlindedBeaconB
 		return nil, err
 	}
 	return pb.(*eth.SignedBlindedBeaconBlockBellatrix), nil
+}
+
+// ToBlinded converts a non-blinded block to its blinded equivalent.
+func (b *SignedBeaconBlock) ToBlinded() (interfaces.SignedBeaconBlock, error) {
+	if b.version != version.Bellatrix {
+		return nil, ErrUnsupportedVersion
+	}
+	if b.block.IsNil() {
+		return nil, errors.New("cannot convert nil block to blinded format")
+	}
+	payload, err := b.block.Body().Execution()
+	if err != nil {
+		return nil, err
+	}
+	header, err := PayloadToHeader(payload)
+	if err != nil {
+		return nil, err
+	}
+	return initBlindedSignedBlockFromProtoBellatrix(
+		&eth.SignedBlindedBeaconBlockBellatrix{
+			Block: &eth.BlindedBeaconBlockBellatrix{
+				Slot:          b.block.slot,
+				ProposerIndex: b.block.proposerIndex,
+				ParentRoot:    b.block.parentRoot,
+				StateRoot:     b.block.stateRoot,
+				Body: &eth.BlindedBeaconBlockBodyBellatrix{
+					RandaoReveal:           b.block.body.randaoReveal,
+					Eth1Data:               b.block.body.eth1Data,
+					Graffiti:               b.block.body.graffiti,
+					ProposerSlashings:      b.block.body.proposerSlashings,
+					AttesterSlashings:      b.block.body.attesterSlashings,
+					Attestations:           b.block.body.attestations,
+					Deposits:               b.block.body.deposits,
+					VoluntaryExits:         b.block.body.voluntaryExits,
+					SyncAggregate:          b.block.body.syncAggregate,
+					ExecutionPayloadHeader: header,
+				},
+			},
+			Signature: b.signature,
+		})
 }
 
 // Version of the underlying protobuf object.
@@ -569,20 +608,18 @@ func (b *BeaconBlockBody) SyncAggregate() (*eth.SyncAggregate, error) {
 	return b.syncAggregate, nil
 }
 
-// ExecutionPayload returns the execution payload of the block body.
-func (b *BeaconBlockBody) ExecutionPayload() (*enginev1.ExecutionPayload, error) {
-	if b.version != version.Bellatrix {
-		return nil, errNotSupported("ExecutionPayload", b.version)
+// Execution returns the execution payload of the block body.
+func (b *BeaconBlockBody) Execution() (interfaces.ExecutionData, error) {
+	switch b.version {
+	case version.Phase0, version.Altair:
+		return nil, errNotSupported("Execution", b.version)
+	case version.Bellatrix:
+		return WrappedExecutionPayload(b.executionPayload)
+	case version.BellatrixBlind:
+		return WrappedExecutionPayloadHeader(b.executionPayloadHeader)
+	default:
+		return nil, errIncorrectBlockVersion
 	}
-	return b.executionPayload, nil
-}
-
-// ExecutionPayloadHeader returns the execution payload header of the block body.
-func (b *BeaconBlockBody) ExecutionPayloadHeader() (*enginev1.ExecutionPayloadHeader, error) {
-	if b.version != version.BellatrixBlind {
-		return nil, errNotSupported("ExecutionPayloadHeader", b.version)
-	}
-	return b.executionPayloadHeader, nil
 }
 
 // HashTreeRoot returns the ssz root of the block body.

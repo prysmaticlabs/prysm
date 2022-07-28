@@ -341,8 +341,8 @@ func (w bellatrixBeaconBlockBody) HashTreeRoot() ([32]byte, error) {
 
 // Proto returns the underlying proto form of the block
 // body.
-func (w bellatrixBeaconBlockBody) Proto() (proto.Message, error) {
-	return w.b, nil
+func (w bellatrixBeaconBlockBody) Proto() proto.Message {
+	return w.b
 }
 
 // Execution returns the Execution payload of the block body.

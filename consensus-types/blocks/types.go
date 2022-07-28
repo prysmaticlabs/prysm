@@ -24,7 +24,11 @@ const (
 
 var (
 	// ErrUnsupportedGetter is returned when a getter access is not supported for a specific beacon block version.
-	ErrUnsupportedGetter     = errors.New("unsupported getter")
+	ErrUnsupportedGetter = errors.New("unsupported getter")
+	// ErrUnsupportedVersion for beacon block methods.
+	ErrUnsupportedVersion = errors.New("unsupported beacon block version")
+	// ErrNilObjectWrapped is returned in a constructor when the underlying object is nil.
+	ErrNilObjectWrapped      = errors.New("attempted to wrap nil object")
 	errNilBlock              = errors.New("received nil beacon block")
 	errNilBlockBody          = errors.New("received nil beacon block body")
 	errIncorrectBlockVersion = errors.New(incorrectBlockVersion)

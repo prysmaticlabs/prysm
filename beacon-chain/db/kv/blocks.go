@@ -308,7 +308,7 @@ func (s *Store) SaveBlocks(ctx context.Context, blocks []interfaces.SignedBeacon
 			if features.Get().EnableOnlyBlindedBeaconBlocks {
 				blindedBlock, err := blk.ToBlinded()
 				if err != nil {
-					if !errors.Is(err, wrapper.ErrUnsupportedVersion) {
+					if !errors.Is(err, blocks.ErrUnsupportedVersion) {
 						return err
 					}
 				} else {
@@ -807,7 +807,7 @@ func marshalBlock(_ context.Context, blk interfaces.SignedBeaconBlock) ([]byte, 
 	if features.Get().EnableOnlyBlindedBeaconBlocks {
 		blindedBlock, err := blk.ToBlinded()
 		switch {
-		case errors.Is(err, wrapper.ErrUnsupportedVersion):
+		case errors.Is(err, blocks.ErrUnsupportedVersion):
 			encodedBlock, err = blk.MarshalSSZ()
 			if err != nil {
 				return nil, errors.Wrap(err, "could not marshal non-blinded block")

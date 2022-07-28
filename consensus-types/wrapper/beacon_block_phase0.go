@@ -300,8 +300,8 @@ func (w Phase0BeaconBlockBody) HashTreeRoot() ([32]byte, error) {
 
 // Proto returns the underlying proto form of the block
 // body.
-func (w Phase0BeaconBlockBody) Proto() (proto.Message, error) {
-	return w.b, nil
+func (w Phase0BeaconBlockBody) Proto() proto.Message {
+	return w.b
 }
 
 // Execution is a stub.
