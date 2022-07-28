@@ -5,6 +5,7 @@
 [![Consensus_Spec_Version 1.2.0-rc.1](https://img.shields.io/badge/Consensus%20Spec%20Version-v1.2.0.rc.1-blue.svg)](https://github.com/ethereum/consensus-specs/tree/v1.2.0-rc.1)
 [![Execution_API_Version 1.0.0-alpha.9](https://img.shields.io/badge/Execution%20API%20Version-v1.0.0.alpha.9-blue.svg)](https://github.com/ethereum/execution-apis/tree/v1.0.0-alpha.9/src/engine)
 [![Discord](https://user-images.githubusercontent.com/7288322/34471967-1df7808a-efbb-11e7-9088-ed0b04151291.png)](https://discord.gg/CTYGPUJ)
+[![GitPOAP Badge](https://public-api.gitpoap.io/v1/repo/prysmaticlabs/prysm/badge)](https://www.gitpoap.io/gh/prysmaticlabs/prysm)
 
 This is the core repository for Prysm, a [Golang](https://golang.org/) implementation of the [Ethereum Consensus](https://ethereum.org/en/eth2/) specification, developed by [Prysmatic Labs](https://prysmaticlabs.com). See the [Changelog](https://github.com/prysmaticlabs/prysm/releases) for details of the latest releases and upcoming breaking changes.
 

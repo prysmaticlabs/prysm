@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 )
 
 // sendRecentBeaconBlocksRequest sends a recent beacon blocks request to a peer to get
@@ -56,6 +57,7 @@ func (s *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{
 	}
 
 	if uint64(len(blockRoots)) > params.BeaconNetworkConfig().MaxRequestBlocks {
+		s.cfg.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 		s.writeErrorResponseToStream(responseCodeInvalidRequest, "requested more than the max block limit", stream)
 		return errors.New("requested more than the max block limit")
 	}
@@ -68,13 +70,24 @@ func (s *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{
 			s.writeErrorResponseToStream(responseCodeServerError, types.ErrGeneric.Error(), stream)
 			return err
 		}
-		if blk == nil || blk.IsNil() {
+		if err := wrapper.BeaconBlockIsNil(blk); err != nil {
 			continue
 		}
+
+		if blk.Block().IsBlinded() {
+			blk, err = s.cfg.executionPayloadReconstructor.ReconstructFullBellatrixBlock(ctx, blk)
+			if err != nil {
+				log.WithError(err).Error("Could not get reconstruct full bellatrix block from blinded body")
+				s.writeErrorResponseToStream(responseCodeServerError, types.ErrGeneric.Error(), stream)
+				return err
+			}
+		}
+
 		if err := s.chunkBlockWriter(stream, blk); err != nil {
 			return err
 		}
 	}
+
 	closeStream(stream, log)
 	return nil
 }

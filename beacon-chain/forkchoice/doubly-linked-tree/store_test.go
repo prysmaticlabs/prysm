@@ -141,7 +141,8 @@ func TestStore_Insert(t *testing.T) {
 	fc := &forkchoicetypes.Checkpoint{Epoch: 0}
 	s := &Store{nodeByRoot: nodeByRoot, treeRootNode: treeRootNode, nodeByPayload: nodeByPayload, justifiedCheckpoint: jc, finalizedCheckpoint: fc}
 	payloadHash := [32]byte{'a'}
-	require.NoError(t, s.insert(context.Background(), 100, indexToHash(100), indexToHash(0), payloadHash, 1, 1))
+	_, err := s.insert(context.Background(), 100, indexToHash(100), indexToHash(0), payloadHash, 1, 1)
+	require.NoError(t, err)
 	assert.Equal(t, 2, len(s.nodeByRoot), "Did not insert block")
 	assert.Equal(t, (*Node)(nil), treeRootNode.parent, "Incorrect parent")
 	assert.Equal(t, 1, len(treeRootNode.children), "Incorrect children number")

@@ -459,7 +459,7 @@ func (mr *MockBeaconNodeValidatorClientMockRecorder) SubmitSyncMessage(arg0, arg
 }
 
 // SubmitValidatorRegistration mocks base method.
-func (m *MockBeaconNodeValidatorClient) SubmitValidatorRegistration(arg0 context.Context, arg1 *eth.SignedValidatorRegistrationsV1, arg2 ...grpc.CallOption) (*emptypb.Empty, error) {
+func (m *MockBeaconNodeValidatorClient) SubmitValidatorRegistration(arg0 context.Context, arg1 *eth.SignedValidatorRegistrationV1, arg2 ...grpc.CallOption) (*emptypb.Empty, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
@@ -476,6 +476,26 @@ func (mr *MockBeaconNodeValidatorClientMockRecorder) SubmitValidatorRegistration
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubmitValidatorRegistration", reflect.TypeOf((*MockBeaconNodeValidatorClient)(nil).SubmitValidatorRegistration), varargs...)
+}
+
+// SubmitValidatorRegistrations mocks base method.
+func (m *MockBeaconNodeValidatorClient) SubmitValidatorRegistrations(arg0 context.Context, arg1 *eth.SignedValidatorRegistrationsV1, arg2 ...grpc.CallOption) (*emptypb.Empty, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "SubmitValidatorRegistrations", varargs...)
+	ret0, _ := ret[0].(*emptypb.Empty)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SubmitValidatorRegistrations indicates an expected call of SubmitValidatorRegistrations.
+func (mr *MockBeaconNodeValidatorClientMockRecorder) SubmitValidatorRegistrations(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubmitValidatorRegistrations", reflect.TypeOf((*MockBeaconNodeValidatorClient)(nil).SubmitValidatorRegistrations), varargs...)
 }
 
 // SubscribeCommitteeSubnets mocks base method.

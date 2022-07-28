@@ -83,6 +83,7 @@ type FinalizationFetcher interface {
 	CurrentJustifiedCheckpt() *ethpb.Checkpoint
 	PreviousJustifiedCheckpt() *ethpb.Checkpoint
 	VerifyFinalizedBlkDescendant(ctx context.Context, blockRoot [32]byte) error
+	IsFinalized(ctx context.Context, blockRoot [32]byte) bool
 }
 
 // OptimisticModeFetcher retrieves information about optimistic status of the node.
@@ -307,6 +308,15 @@ func (s *Service) IsOptimistic(ctx context.Context) (bool, error) {
 	return s.IsOptimisticForRoot(ctx, s.head.root)
 }
 
+// IsFinalized returns true if the input root is finalized.
+// It first checks latest finalized root then checks finalized root index in DB.
+func (s *Service) IsFinalized(ctx context.Context, root [32]byte) bool {
+	if s.ForkChoicer().FinalizedCheckpoint().Root == root {
+		return true
+	}
+	return s.cfg.BeaconDB.IsFinalizedBlock(ctx, root)
+}
+
 // IsOptimisticForRoot takes the root as argument instead of the current head
 // and returns true if it is optimistic.
 func (s *Service) IsOptimisticForRoot(ctx context.Context, root [32]byte) (bool, error) {
@@ -333,8 +343,14 @@ func (s *Service) IsOptimisticForRoot(ctx context.Context, root [32]byte) (bool,
 		return true, nil
 	}
 
+	// Historical non-canonical blocks here are returned as optimistic for safety.
+	isCanonical, err := s.IsCanonical(ctx, root)
+	if err != nil {
+		return false, err
+	}
+
 	if slots.ToEpoch(ss.Slot)+1 < validatedCheckpoint.Epoch {
-		return false, nil
+		return !isCanonical, nil
 	}
 
 	// Checkpoint root could be zeros before the first finalized epoch. Use genesis root if the case.
@@ -349,13 +365,6 @@ func (s *Service) IsOptimisticForRoot(ctx context.Context, root [32]byte) (bool,
 	if ss.Slot > lastValidated.Slot {
 		return true, nil
 	}
-
-	isCanonical, err := s.IsCanonical(ctx, root)
-	if err != nil {
-		return false, err
-	}
-
-	// Historical non-canonical blocks here are returned as optimistic for safety.
 	return !isCanonical, nil
 }
 

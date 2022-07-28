@@ -189,7 +189,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 // HashTreeRoot of the beacon state retrieves the Merkle root of the trie
 // representation of the beacon state based on the eth2 Simple Serialize specification.
 func (b *BeaconState) HashTreeRoot(ctx context.Context) ([32]byte, error) {
-	_, span := trace.StartSpan(ctx, "beaconStateAltair.HashTreeRoot")
+	ctx, span := trace.StartSpan(ctx, "beaconStateAltair.HashTreeRoot")
 	defer span.End()
 
 	b.lock.Lock()
@@ -263,7 +263,7 @@ func (b *BeaconState) IsNil() bool {
 }
 
 func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) ([32]byte, error) {
-	_, span := trace.StartSpan(ctx, "beaconState.rootSelector")
+	ctx, span := trace.StartSpan(ctx, "beaconState.rootSelector")
 	defer span.End()
 	span.AddAttributes(trace.StringAttribute("field", field.String(b.Version())))
 

@@ -56,8 +56,8 @@ func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root, parentRoo
 	defer f.store.nodesLock.Unlock()
 	invalidRoots := make([][32]byte, 0)
 	lastValidIndex, ok := f.store.payloadIndices[payloadHash]
-	if !ok || lastValidIndex == NonExistentNode {
-		return invalidRoots, errInvalidFinalizedNode
+	if !ok {
+		lastValidIndex = uint64(len(f.store.nodes))
 	}
 
 	invalidIndex, ok := f.store.nodesIndices[root]

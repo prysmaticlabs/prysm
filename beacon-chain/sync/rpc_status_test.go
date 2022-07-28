@@ -200,6 +200,9 @@ func TestStatusRPCHandler_ReturnsHelloMessage(t *testing.T) {
 				},
 				ValidatorsRoot: [32]byte{'A'},
 				Genesis:        time.Unix(genTime, 0),
+				FinalizedRoots: map[[32]byte]bool{
+					finalizedRoot: true,
+				},
 			},
 			beaconDB: db,
 		},
@@ -285,6 +288,9 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 				Genesis:        time.Now(),
 				ValidatorsRoot: [32]byte{'A'},
 				Root:           make([]byte, 32),
+				FinalizedRoots: map[[32]byte]bool{
+					finalizedRoot: true,
+				},
 			},
 			beaconDB: db,
 		},
@@ -501,6 +507,9 @@ func TestStatusRPCRequest_FinalizedBlockExists(t *testing.T) {
 				},
 				Genesis:        time.Unix(genTime, 0),
 				ValidatorsRoot: [32]byte{'A'},
+				FinalizedRoots: map[[32]byte]bool{
+					finalizedRoot: true,
+				},
 			},
 		},
 		ctx:         context.Background(),
@@ -520,6 +529,9 @@ func TestStatusRPCRequest_FinalizedBlockExists(t *testing.T) {
 				},
 				Genesis:        time.Unix(genTime, 0),
 				ValidatorsRoot: [32]byte{'A'},
+				FinalizedRoots: map[[32]byte]bool{
+					finalizedRoot: true,
+				},
 			},
 			beaconDB: db,
 		},
@@ -676,6 +688,10 @@ func TestStatusRPCRequest_FinalizedBlockSkippedSlots(t *testing.T) {
 					},
 					Genesis:        time.Unix(genTime, 0),
 					ValidatorsRoot: [32]byte{'A'},
+					FinalizedRoots: map[[32]byte]bool{
+						tt.expectedFinalizedRoot: true,
+						tt.remoteFinalizedRoot:   true,
+					},
 				},
 			},
 			ctx:         context.Background(),
@@ -695,6 +711,10 @@ func TestStatusRPCRequest_FinalizedBlockSkippedSlots(t *testing.T) {
 					},
 					Genesis:        time.Unix(genTime, 0),
 					ValidatorsRoot: [32]byte{'A'},
+					FinalizedRoots: map[[32]byte]bool{
+						tt.expectedFinalizedRoot: true,
+						tt.remoteFinalizedRoot:   true,
+					},
 				},
 				beaconDB: db,
 			},

@@ -20,6 +20,8 @@ const searchThreshold = 5
 // amount of times we repeat a failed search till is satisfies the conditional.
 const repeatedSearches = 2 * searchThreshold
 
+var errBlockTimeTooLate = errors.New("provided time is later than the current eth1 head")
+
 // BlockExists returns true if the block exists, its height and any possible error encountered.
 func (s *Service) BlockExists(ctx context.Context, hash common.Hash) (bool, *big.Int, error) {
 	ctx, span := trace.StartSpan(ctx, "powchain.BlockExists")
@@ -105,7 +107,7 @@ func (s *Service) BlockByTimestamp(ctx context.Context, time uint64) (*types.Hea
 	s.latestEth1DataLock.RUnlock()
 
 	if time > latestBlkTime {
-		return nil, errors.Errorf("provided time is later than the current eth1 head. %d > %d", time, latestBlkTime)
+		return nil, errors.Wrap(errBlockTimeTooLate, fmt.Sprintf("(%d > %d)", time, latestBlkTime))
 	}
 	// Initialize a pointer to eth1 chain's history to start our search from.
 	cursorNum := big.NewInt(0).SetUint64(latestBlkHeight)

@@ -238,6 +238,16 @@ func getSignRequestJson(ctx context.Context, validator *validator.Validate, requ
 		}
 		syncCommitteeContributionAndProofSignRequestsTotal.Inc()
 		return json.Marshal(contributionAndProofRequest)
+	case *validatorpb.SignRequest_Registration:
+		validatorRegistrationRequest, err := web3signerv1.GetValidatorRegistrationSignRequest(request)
+		if err != nil {
+			return nil, err
+		}
+		if err = validator.StructCtx(ctx, validatorRegistrationRequest); err != nil {
+			return nil, err
+		}
+		validatorRegistrationSignRequestsTotal.Inc()
+		return json.Marshal(validatorRegistrationRequest)
 	default:
 		return nil, fmt.Errorf("web3signer sign request type %T not supported", request.Object)
 	}

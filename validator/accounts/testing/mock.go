@@ -8,6 +8,7 @@ import (
 	"time"
 
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	iface2 "github.com/prysmaticlabs/prysm/validator/client/iface"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
@@ -188,5 +189,10 @@ func (_ MockValidator) PushProposerSettings(_ context.Context, _ keymanager.IKey
 
 // SetPubKeyToValidatorIndexMap for mocking
 func (_ MockValidator) SetPubKeyToValidatorIndexMap(_ context.Context, _ keymanager.IKeymanager) error {
+	panic("implement me")
+}
+
+// SignValidatorRegistrationRequest for mocking
+func (_ MockValidator) SignValidatorRegistrationRequest(_ context.Context, _ iface2.SigningFunc, _ *ethpb.ValidatorRegistrationV1) (*ethpb.SignedValidatorRegistrationV1, error) {
 	panic("implement me")
 }

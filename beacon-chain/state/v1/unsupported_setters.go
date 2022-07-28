@@ -2,7 +2,7 @@ package v1
 
 import (
 	"github.com/pkg/errors"
-	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -57,6 +57,6 @@ func (*BeaconState) SetInactivityScores(_ []uint64) error {
 }
 
 // SetLatestExecutionPayloadHeader is not supported for phase 0 beacon state.
-func (*BeaconState) SetLatestExecutionPayloadHeader(_ *enginev1.ExecutionPayloadHeader) error {
+func (*BeaconState) SetLatestExecutionPayloadHeader(_ interfaces.ExecutionData) error {
 	return errors.New("SetLatestExecutionPayloadHeader is not supported for phase 0 beacon state")
 }

@@ -170,8 +170,12 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 
 			if err := s.cfg.chain.ReceiveBlock(ctx, b, blkRoot); err != nil {
 				if blockchain.IsInvalidBlock(err) {
-					tracing.AnnotateError(span, err)
-					s.setBadBlock(ctx, blkRoot)
+					r := blockchain.InvalidBlockRoot(err)
+					if r != [32]byte{} {
+						s.setBadBlock(ctx, r) // Setting head block as bad.
+					} else {
+						s.setBadBlock(ctx, blkRoot)
+					}
 				}
 				log.Debugf("Could not process block from slot %d: %v", b.Block().Slot(), err)
 

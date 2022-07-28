@@ -32,12 +32,6 @@ func (s *Store) setOptimisticToInvalid(ctx context.Context, root, parentRoot, pa
 			return invalidRoots, errInvalidParentRoot
 		}
 	}
-	// Check if last valid hash is an ancestor of the passed node.
-	lastValid, ok := s.nodeByPayload[payloadHash]
-	if !ok || lastValid == nil {
-		s.nodesLock.Unlock()
-		return invalidRoots, errUnknownPayloadHash
-	}
 	firstInvalid := node
 	for ; firstInvalid.parent != nil && firstInvalid.parent.payloadHash != payloadHash; firstInvalid = firstInvalid.parent {
 		if ctx.Err() != nil {

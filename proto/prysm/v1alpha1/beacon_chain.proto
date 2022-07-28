@@ -434,6 +434,9 @@ message BeaconBlockContainer {
 
         // Representing an bellatrix block.
         SignedBeaconBlockBellatrix bellatrix_block = 5;
+
+        // Representing a blinded bellatrix block.
+        SignedBlindedBeaconBlockBellatrix blinded_bellatrix_block = 6;
     }
 }
 

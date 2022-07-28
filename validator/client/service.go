@@ -192,6 +192,7 @@ func (v *ValidatorService) Start() {
 		startBalances:                  make(map[[fieldparams.BLSPubkeyLength]byte]uint64),
 		prevBalance:                    make(map[[fieldparams.BLSPubkeyLength]byte]uint64),
 		pubkeyToValidatorIndex:         make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
+		signedValidatorRegistrations:   make(map[[fieldparams.BLSPubkeyLength]byte]*ethpb.SignedValidatorRegistrationV1),
 		attLogs:                        make(map[[32]byte]*attSubmitted),
 		domainDataCache:                cache,
 		aggregatedSlotCommitteeIDCache: aggregatedSlotCommitteeIDCache,
@@ -208,7 +209,7 @@ func (v *ValidatorService) Start() {
 		logDutyCountDown:               v.logDutyCountDown,
 		Web3SignerConfig:               v.Web3SignerConfig,
 		ProposerSettings:               v.ProposerSettings,
-		walletIntializedChannel:        make(chan *wallet.Wallet, 1),
+		walletInitializedChannel:       make(chan *wallet.Wallet, 1),
 	}
 	// To resolve a race condition at startup due to the interface
 	// nature of the abstracted block type. We initialize

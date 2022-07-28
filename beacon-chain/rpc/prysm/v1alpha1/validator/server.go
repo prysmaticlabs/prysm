@@ -124,7 +124,7 @@ func (vs *Server) ValidatorIndex(ctx context.Context, req *ethpb.ValidatorIndexR
 	}
 	index, ok := st.ValidatorIndexByPubkey(bytesutil.ToBytes48(req.PublicKey))
 	if !ok {
-		return nil, status.Errorf(codes.Internal, "Could not find validator index for public key %#x not found", req.PublicKey)
+		return nil, status.Errorf(codes.NotFound, "Could not find validator index for public key %#x not found", req.PublicKey)
 	}
 
 	return &ethpb.ValidatorIndexResponse{Index: index}, nil

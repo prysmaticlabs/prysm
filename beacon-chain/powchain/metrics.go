@@ -31,4 +31,8 @@ var (
 			Buckets: []float64{25, 50, 100, 200, 500, 1000, 2000, 4000},
 		},
 	)
+	reconstructedExecutionPayloadCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "reconstructed_execution_payload_count",
+		Help: "Count the number of execution payloads that are reconstructed using JSON-RPC from payload headers",
+	})
 )

@@ -17,6 +17,7 @@ go_library(
         "log.go",
         "migration.go",
         "migration_archived_index.go",
+        "migration_blinded_beacon_blocks.go",
         "migration_block_slot_index.go",
         "migration_state_validators.go",
         "powchain.go",

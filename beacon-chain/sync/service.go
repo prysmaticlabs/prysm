@@ -29,6 +29,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
@@ -68,21 +69,22 @@ type validationFn func(ctx context.Context) (pubsub.ValidationResult, error)
 
 // config to hold dependencies for the sync service.
 type config struct {
-	attestationNotifier     operation.Notifier
-	p2p                     p2p.P2P
-	beaconDB                db.NoHeadAccessDatabase
-	attPool                 attestations.Pool
-	exitPool                voluntaryexits.PoolManager
-	slashingPool            slashings.PoolManager
-	syncCommsPool           synccommittee.Pool
-	chain                   blockchainService
-	initialSync             Checker
-	stateNotifier           statefeed.Notifier
-	blockNotifier           blockfeed.Notifier
-	operationNotifier       operation.Notifier
-	stateGen                *stategen.State
-	slasherAttestationsFeed *event.Feed
-	slasherBlockHeadersFeed *event.Feed
+	attestationNotifier           operation.Notifier
+	p2p                           p2p.P2P
+	beaconDB                      db.NoHeadAccessDatabase
+	attPool                       attestations.Pool
+	exitPool                      voluntaryexits.PoolManager
+	slashingPool                  slashings.PoolManager
+	syncCommsPool                 synccommittee.Pool
+	chain                         blockchainService
+	initialSync                   Checker
+	stateNotifier                 statefeed.Notifier
+	blockNotifier                 blockfeed.Notifier
+	operationNotifier             operation.Notifier
+	executionPayloadReconstructor powchain.ExecutionPayloadReconstructor
+	stateGen                      *stategen.State
+	slasherAttestationsFeed       *event.Feed
+	slasherBlockHeadersFeed       *event.Feed
 }
 
 // This defines the interface for interacting with block chain service

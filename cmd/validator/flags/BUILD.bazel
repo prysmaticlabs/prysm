@@ -1,4 +1,4 @@
-load("@prysm//tools/go:def.bzl", "go_library")
+load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
@@ -15,6 +15,17 @@ go_library(
     deps = [
         "//config/params:go_default_library",
         "//io/file:go_default_library",
+        "@com_github_urfave_cli_v2//:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["flags_test.go"],
+    embed = [":go_default_library"],
+    deps = [
+        "//cmd:go_default_library",
+        "//testing/require:go_default_library",
         "@com_github_urfave_cli_v2//:go_default_library",
     ],
 )

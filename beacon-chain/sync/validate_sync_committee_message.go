@@ -165,7 +165,7 @@ func (s *Service) rejectIncorrectSyncCommittee(
 	committeeIndices []types.CommitteeIndex, topic string,
 ) validationFn {
 	return func(ctx context.Context) (pubsub.ValidationResult, error) {
-		_, span := trace.StartSpan(ctx, "sync.rejectIncorrectSyncCommittee")
+		ctx, span := trace.StartSpan(ctx, "sync.rejectIncorrectSyncCommittee")
 		defer span.End()
 		isValid := false
 		digest, err := s.currentForkDigest()

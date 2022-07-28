@@ -168,7 +168,7 @@ func (km *Keymanager) initializeKeysCachesFromKeystore() error {
 
 // FetchValidatingPublicKeys fetches the list of active public keys from the local account keystores.
 func (_ *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][fieldparams.BLSPubkeyLength]byte, error) {
-	_, span := trace.StartSpan(ctx, "keymanager.FetchValidatingPublicKeys")
+	ctx, span := trace.StartSpan(ctx, "keymanager.FetchValidatingPublicKeys")
 	defer span.End()
 
 	lock.RLock()
@@ -200,7 +200,7 @@ func (km *Keymanager) FetchValidatingPrivateKeys(ctx context.Context) ([][32]byt
 
 // Sign signs a message using a validator key.
 func (_ *Keymanager) Sign(ctx context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
-	_, span := trace.StartSpan(ctx, "keymanager.Sign")
+	ctx, span := trace.StartSpan(ctx, "keymanager.Sign")
 	defer span.End()
 
 	publicKey := req.PublicKey

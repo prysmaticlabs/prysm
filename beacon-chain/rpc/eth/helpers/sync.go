@@ -28,13 +28,7 @@ func ValidateSync(
 		return nil
 	}
 	headSlot := headFetcher.HeadSlot()
-	isOptimistic := false
-
-	headState, err := headFetcher.HeadState(ctx)
-	if err != nil {
-		return status.Errorf(codes.Internal, "Could not get head state: %v", err)
-	}
-	isOptimistic, err = IsOptimistic(ctx, headState, optimisticModeFetcher)
+	isOptimistic, err := optimisticModeFetcher.IsOptimistic(ctx)
 	if err != nil {
 		return status.Errorf(codes.Internal, "Could not check optimistic status: %v", err)
 	}

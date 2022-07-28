@@ -63,6 +63,7 @@ type ChainService struct {
 	ForkChoiceStore             forkchoice.ForkChoicer
 	ReceiveBlockMockErr         error
 	OptimisticCheckRootReceived [32]byte
+	FinalizedRoots              map[[32]byte]bool
 }
 
 // ForkChoicer mocks the same method in the chain service
@@ -458,3 +459,8 @@ func (s *ChainService) UpdateHead(_ context.Context) error { return nil }
 
 // ReceiveAttesterSlashing mocks the same method in the chain service.
 func (s *ChainService) ReceiveAttesterSlashing(context.Context, *ethpb.AttesterSlashing) {}
+
+// IsFinalized mocks the same method in the chain service.
+func (s *ChainService) IsFinalized(_ context.Context, blockRoot [32]byte) bool {
+	return s.FinalizedRoots[blockRoot]
+}

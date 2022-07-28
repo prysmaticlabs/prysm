@@ -145,10 +145,6 @@ func (v *validator) handleWithRemoteKeyManager(ctx context.Context, accountsChan
 			valActivated := v.checkAndLogValidatorStatus(statuses)
 			if valActivated {
 				logActiveValidatorStatus(statuses)
-				// Set properties on the beacon node like the fee recipient for validators that are being used & active.
-				if err := v.PushProposerSettings(ctx, *remoteKm); err != nil {
-					return err
-				}
 			} else {
 				continue
 			}
@@ -196,11 +192,6 @@ func (v *validator) handleWithoutRemoteKeyManager(ctx context.Context, accountsC
 			valActivated := v.checkAndLogValidatorStatus(statuses)
 			if valActivated {
 				logActiveValidatorStatus(statuses)
-
-				// Set properties on the beacon node like the fee recipient for validators that are being used & active.
-				if err := v.PushProposerSettings(ctx, v.keyManager); err != nil {
-					return err
-				}
 			} else {
 				continue
 			}

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -31,6 +32,7 @@ import (
 )
 
 func Test_NotifyForkchoiceUpdate(t *testing.T) {
+	params.BeaconConfig().SafeSlotsToImportOptimistically = 0
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 	altairBlk := util.SaveBlock(t, ctx, beaconDB, util.NewBeaconBlockAltair())
@@ -73,10 +75,6 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 		newForkchoiceErr error
 		errString        string
 	}{
-		{
-			name:      "nil block",
-			errString: "nil head block",
-		},
 		{
 			name: "phase0 block",
 			blk: func() interfaces.BeaconBlock {
@@ -190,6 +188,10 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 			_, err = service.notifyForkchoiceUpdate(ctx, arg)
 			if tt.errString != "" {
 				require.ErrorContains(t, tt.errString, err)
+				if tt.errString == ErrInvalidPayload.Error() {
+					require.Equal(t, true, IsInvalidBlock(err))
+					require.Equal(t, tt.headRoot, InvalidBlockRoot(err)) // Head root should be invalid. Not block root!
+				}
 			} else {
 				require.NoError(t, err)
 			}
@@ -212,7 +214,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 // 2. forkchoice removes the weights of these blocks
 // 3. the blockchain package calls fcu to obtain heads G -> F -> D.
 
-func Test_NotifyForkchoiceUpdateRecursive(t *testing.T) {
+func Test_NotifyForkchoiceUpdateRecursive_Protoarray(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
@@ -270,14 +272,11 @@ func Test_NotifyForkchoiceUpdateRecursive(t *testing.T) {
 	require.NoError(t, err)
 
 	// Insert blocks into forkchoice
-	fcs := doublylinkedtree.New()
-	opts := []Option{
-		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB)),
-		WithForkChoiceStore(fcs),
-		WithProposerIdsCache(cache.NewProposerPayloadIDsCache()),
-	}
-	service, err := NewService(ctx, opts...)
+	service := setupBeaconChain(t, beaconDB)
+	fcs := protoarray.New()
+	service.cfg.ForkChoiceStore = fcs
+	service.cfg.ProposerSlotIndexCache = cache.NewProposerPayloadIDsCache()
+
 	service.justifiedBalances.balances = []uint64{50, 100, 200}
 	require.NoError(t, err)
 	ojc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
@@ -318,6 +317,10 @@ func Test_NotifyForkchoiceUpdateRecursive(t *testing.T) {
 	// Prepare Engine Mock to return invalid unless head is D, LVH =  E
 	service.cfg.ExecutionEngineCaller = &mockPOW.EngineClient{ErrForkchoiceUpdated: powchain.ErrInvalidPayloadStatus, ForkChoiceUpdatedResp: pe[:], OverrideValidHash: [32]byte{'D'}}
 	st, _ := util.DeterministicGenesisState(t, 1)
+	service.head = &head{
+		state: st,
+		block: wba,
+	}
 
 	require.NoError(t, beaconDB.SaveState(ctx, st, bra))
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, bra))
@@ -327,7 +330,154 @@ func Test_NotifyForkchoiceUpdateRecursive(t *testing.T) {
 		headRoot:  brg,
 	}
 	_, err = service.notifyForkchoiceUpdate(ctx, a)
-	require.ErrorIs(t, ErrInvalidPayload, err)
+	require.Equal(t, true, IsInvalidBlock(err))
+	require.Equal(t, brf, InvalidBlockRoot(err))
+
+	// Ensure Head is D
+	headRoot, err = fcs.Head(ctx, service.justifiedBalances.balances)
+	require.NoError(t, err)
+	require.Equal(t, brd, headRoot)
+
+	// Ensure F and G where removed but their parent E wasn't
+	require.Equal(t, false, fcs.HasNode(brf))
+	require.Equal(t, false, fcs.HasNode(brg))
+	require.Equal(t, true, fcs.HasNode(bre))
+}
+
+//
+//
+//  A <- B <- C <- D
+//       \
+//         ---------- E <- F
+//                     \
+//                       ------ G
+// D is the current head, attestations for F and G come late, both are invalid.
+// We switch recursively to F then G and finally to D.
+//
+// We test:
+// 1. forkchoice removes blocks F and G from the forkchoice implementation
+// 2. forkchoice removes the weights of these blocks
+// 3. the blockchain package calls fcu to obtain heads G -> F -> D.
+
+func Test_NotifyForkchoiceUpdateRecursive_DoublyLinkedTree(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+
+	// Prepare blocks
+	ba := util.NewBeaconBlockBellatrix()
+	ba.Block.Body.ExecutionPayload.BlockNumber = 1
+	wba := util.SaveBlock(t, ctx, beaconDB, ba)
+	bra, err := wba.Block().HashTreeRoot()
+	require.NoError(t, err)
+
+	bb := util.NewBeaconBlockBellatrix()
+	bb.Block.Body.ExecutionPayload.BlockNumber = 2
+	wbb := util.SaveBlock(t, ctx, beaconDB, bb)
+	brb, err := wbb.Block().HashTreeRoot()
+	require.NoError(t, err)
+
+	bc := util.NewBeaconBlockBellatrix()
+	bc.Block.Body.ExecutionPayload.BlockNumber = 3
+	wbc := util.SaveBlock(t, ctx, beaconDB, bc)
+	brc, err := wbc.Block().HashTreeRoot()
+	require.NoError(t, err)
+
+	bd := util.NewBeaconBlockBellatrix()
+	pd := [32]byte{'D'}
+	bd.Block.Body.ExecutionPayload.BlockHash = pd[:]
+	bd.Block.Body.ExecutionPayload.BlockNumber = 4
+	wbd := util.SaveBlock(t, ctx, beaconDB, bd)
+	brd, err := wbd.Block().HashTreeRoot()
+	require.NoError(t, err)
+
+	be := util.NewBeaconBlockBellatrix()
+	pe := [32]byte{'E'}
+	be.Block.Body.ExecutionPayload.BlockHash = pe[:]
+	be.Block.Body.ExecutionPayload.BlockNumber = 5
+	wbe := util.SaveBlock(t, ctx, beaconDB, be)
+	bre, err := wbe.Block().HashTreeRoot()
+	require.NoError(t, err)
+
+	bf := util.NewBeaconBlockBellatrix()
+	pf := [32]byte{'F'}
+	bf.Block.Body.ExecutionPayload.BlockHash = pf[:]
+	bf.Block.Body.ExecutionPayload.BlockNumber = 6
+	bf.Block.ParentRoot = bre[:]
+	wbf := util.SaveBlock(t, ctx, beaconDB, bf)
+	brf, err := wbf.Block().HashTreeRoot()
+	require.NoError(t, err)
+
+	bg := util.NewBeaconBlockBellatrix()
+	bg.Block.Body.ExecutionPayload.BlockNumber = 7
+	pg := [32]byte{'G'}
+	bg.Block.Body.ExecutionPayload.BlockHash = pg[:]
+	bg.Block.ParentRoot = bre[:]
+	wbg := util.SaveBlock(t, ctx, beaconDB, bg)
+	brg, err := wbg.Block().HashTreeRoot()
+	require.NoError(t, err)
+
+	// Insert blocks into forkchoice
+	service := setupBeaconChain(t, beaconDB)
+	fcs := doublylinkedtree.New()
+	service.cfg.ForkChoiceStore = fcs
+	service.cfg.ProposerSlotIndexCache = cache.NewProposerPayloadIDsCache()
+
+	service.justifiedBalances.balances = []uint64{50, 100, 200}
+	require.NoError(t, err)
+	ojc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	ofc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	state, blkRoot, err := prepareForkchoiceState(ctx, 1, bra, [32]byte{}, [32]byte{'A'}, ojc, ofc)
+	require.NoError(t, err)
+	require.NoError(t, fcs.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 2, brb, bra, [32]byte{'B'}, ojc, ofc)
+	require.NoError(t, err)
+	require.NoError(t, fcs.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 3, brc, brb, [32]byte{'C'}, ojc, ofc)
+	require.NoError(t, err)
+	require.NoError(t, fcs.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 4, brd, brc, [32]byte{'D'}, ojc, ofc)
+	require.NoError(t, err)
+	require.NoError(t, fcs.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 5, bre, brb, [32]byte{'E'}, ojc, ofc)
+	require.NoError(t, err)
+	require.NoError(t, fcs.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 6, brf, bre, [32]byte{'F'}, ojc, ofc)
+	require.NoError(t, err)
+	require.NoError(t, fcs.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 7, brg, bre, [32]byte{'G'}, ojc, ofc)
+	require.NoError(t, err)
+	require.NoError(t, fcs.InsertNode(ctx, state, blkRoot))
+
+	// Insert Attestations to D, F and G so that they have higher weight than D
+	// Ensure G is head
+	fcs.ProcessAttestation(ctx, []uint64{0}, brd, 1)
+	fcs.ProcessAttestation(ctx, []uint64{1}, brf, 1)
+	fcs.ProcessAttestation(ctx, []uint64{2}, brg, 1)
+	jc := &forkchoicetypes.Checkpoint{Epoch: 0, Root: bra}
+	require.NoError(t, fcs.UpdateJustifiedCheckpoint(jc))
+	headRoot, err := fcs.Head(ctx, []uint64{50, 100, 200})
+	require.NoError(t, err)
+	require.Equal(t, brg, headRoot)
+
+	// Prepare Engine Mock to return invalid unless head is D, LVH =  E
+	service.cfg.ExecutionEngineCaller = &mockPOW.EngineClient{ErrForkchoiceUpdated: powchain.ErrInvalidPayloadStatus, ForkChoiceUpdatedResp: pe[:], OverrideValidHash: [32]byte{'D'}}
+	st, _ := util.DeterministicGenesisState(t, 1)
+	service.head = &head{
+		state: st,
+		block: wba,
+	}
+
+	require.NoError(t, beaconDB.SaveState(ctx, st, bra))
+	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, bra))
+	a := &notifyForkchoiceUpdateArg{
+		headState: st,
+		headBlock: wbg.Block(),
+		headRoot:  brg,
+	}
+	_, err = service.notifyForkchoiceUpdate(ctx, a)
+	require.Equal(t, true, IsInvalidBlock(err))
+	require.Equal(t, brf, InvalidBlockRoot(err))
+
 	// Ensure Head is D
 	headRoot, err = fcs.Head(ctx, service.justifiedBalances.balances)
 	require.NoError(t, err)
@@ -528,16 +678,40 @@ func Test_NotifyNewPayload(t *testing.T) {
 			newPayloadErr: ErrUndefinedExecutionEngineError,
 			errString:     ErrUndefinedExecutionEngineError.Error(),
 		},
+		{
+			name:      "invalid block hash error from ee",
+			postState: bellatrixState,
+			blk: func() interfaces.SignedBeaconBlock {
+				blk := &ethpb.SignedBeaconBlockBellatrix{
+					Block: &ethpb.BeaconBlockBellatrix{
+						Body: &ethpb.BeaconBlockBodyBellatrix{
+							ExecutionPayload: &v1.ExecutionPayload{
+								ParentHash: bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength),
+							},
+						},
+					},
+				}
+				b, err := wrapper.WrappedSignedBeaconBlock(blk)
+				require.NoError(t, err)
+				return b
+			}(),
+			newPayloadErr: ErrInvalidBlockHashPayloadStatus,
+			errString:     ErrInvalidBlockHashPayloadStatus.Error(),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			e := &mockPOW.EngineClient{ErrNewPayload: tt.newPayloadErr, BlockByHashMap: map[[32]byte]*v1.ExecutionBlock{}}
 			e.BlockByHashMap[[32]byte{'a'}] = &v1.ExecutionBlock{
-				ParentHash:      bytesutil.PadTo([]byte{'b'}, fieldparams.RootLength),
+				Header: gethtypes.Header{
+					ParentHash: common.BytesToHash([]byte("b")),
+				},
 				TotalDifficulty: "0x2",
 			}
 			e.BlockByHashMap[[32]byte{'b'}] = &v1.ExecutionBlock{
-				ParentHash:      bytesutil.PadTo([]byte{'3'}, fieldparams.RootLength),
+				Header: gethtypes.Header{
+					ParentHash: common.BytesToHash([]byte("3")),
+				},
 				TotalDifficulty: "0x1",
 			}
 			service.cfg.ExecutionEngineCaller = e
@@ -590,11 +764,15 @@ func Test_NotifyNewPayload_SetOptimisticToValid(t *testing.T) {
 	require.NoError(t, err)
 	e := &mockPOW.EngineClient{BlockByHashMap: map[[32]byte]*v1.ExecutionBlock{}}
 	e.BlockByHashMap[[32]byte{'a'}] = &v1.ExecutionBlock{
-		ParentHash:      bytesutil.PadTo([]byte{'b'}, fieldparams.RootLength),
+		Header: gethtypes.Header{
+			ParentHash: common.BytesToHash([]byte("b")),
+		},
 		TotalDifficulty: "0x2",
 	}
 	e.BlockByHashMap[[32]byte{'b'}] = &v1.ExecutionBlock{
-		ParentHash:      bytesutil.PadTo([]byte{'3'}, fieldparams.RootLength),
+		Header: gethtypes.Header{
+			ParentHash: common.BytesToHash([]byte("3")),
+		},
 		TotalDifficulty: "0x1",
 	}
 	service.cfg.ExecutionEngineCaller = e

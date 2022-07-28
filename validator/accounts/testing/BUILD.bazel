@@ -11,6 +11,7 @@ go_library(
     ],
     deps = [
         "//consensus-types/primitives:go_default_library",
+        "//proto/prysm/v1alpha1:go_default_library",
         "//validator/accounts/iface:go_default_library",
         "//validator/client/iface:go_default_library",
         "//validator/keymanager:go_default_library",

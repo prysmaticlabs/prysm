@@ -198,7 +198,7 @@ func (s *Service) broadcastSyncCommittee(ctx context.Context, subnet uint64, sMs
 
 // method to broadcast messages to other peers in our gossip mesh.
 func (s *Service) broadcastObject(ctx context.Context, obj ssz.Marshaler, topic string) error {
-	_, span := trace.StartSpan(ctx, "p2p.broadcastObject")
+	ctx, span := trace.StartSpan(ctx, "p2p.broadcastObject")
 	defer span.End()
 
 	span.AddAttributes(trace.StringAttribute("topic", topic))

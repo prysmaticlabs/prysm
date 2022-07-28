@@ -105,11 +105,11 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 		switch finalizedBlock.Version() {
 		case version.Phase0, version.Altair: // Blocks before Bellatrix don't have execution payloads. Use zeros as the hash.
 		default:
-			finalizedPayload, err := finalizedBlock.Block().Body().ExecutionPayload()
+			finalizedPayload, err := finalizedBlock.Block().Body().Execution()
 			if err != nil {
 				return nil, err
 			}
-			finalizedBlockHash = finalizedPayload.BlockHash
+			finalizedBlockHash = finalizedPayload.BlockHash()
 		}
 	}
 
@@ -149,7 +149,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 		return nil, errors.Wrap(err, "could not prepare payload")
 	}
 	if payloadID == nil {
-		return nil, errors.New("nil payload id")
+		return nil, fmt.Errorf("nil payload with block hash: %#x", parentHash)
 	}
 	payload, err := vs.ExecutionEngineCaller.GetPayload(ctx, *payloadID)
 	if err != nil {

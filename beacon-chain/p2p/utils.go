@@ -12,12 +12,12 @@ import (
 	"path"
 	"time"
 
-	gcrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
+	ecdsaprysm "github.com/prysmaticlabs/prysm/crypto/ecdsa"
 	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/network"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -44,22 +44,6 @@ func SerializeENR(record *enr.Record) (string, error) {
 	return enrString, nil
 }
 
-func convertFromInterfacePrivKey(privkey crypto.PrivKey) *ecdsa.PrivateKey {
-	typeAssertedKey := (*ecdsa.PrivateKey)(privkey.(*crypto.Secp256k1PrivateKey))
-	typeAssertedKey.Curve = gcrypto.S256() // Temporary hack, so libp2p Secp256k1 is recognized as geth Secp256k1 in disc v5.1.
-	return typeAssertedKey
-}
-
-func convertToInterfacePrivkey(privkey *ecdsa.PrivateKey) crypto.PrivKey {
-	typeAssertedKey := crypto.PrivKey((*crypto.Secp256k1PrivateKey)(privkey))
-	return typeAssertedKey
-}
-
-func convertToInterfacePubkey(pubkey *ecdsa.PublicKey) crypto.PubKey {
-	typeAssertedKey := crypto.PubKey((*crypto.Secp256k1PublicKey)(pubkey))
-	return typeAssertedKey
-}
-
 // Determines a private key for p2p networking from the p2p service's
 // configuration struct. If no key is found, it generates a new one.
 func privKey(cfg *Config) (*ecdsa.PrivateKey, error) {
@@ -77,8 +61,7 @@ func privKey(cfg *Config) (*ecdsa.PrivateKey, error) {
 		if err != nil {
 			return nil, err
 		}
-		convertedKey := convertFromInterfacePrivKey(priv)
-		return convertedKey, nil
+		return ecdsaprysm.ConvertFromInterfacePrivKey(priv)
 	}
 	if defaultKeysExist && privateKeyPath == "" {
 		privateKeyPath = defaultKeyPath
@@ -102,7 +85,7 @@ func privKeyFromFile(path string) (*ecdsa.PrivateKey, error) {
 	if err != nil {
 		return nil, err
 	}
-	return convertFromInterfacePrivKey(unmarshalledKey), nil
+	return ecdsaprysm.ConvertFromInterfacePrivKey(unmarshalledKey)
 }
 
 // Retrieves node p2p metadata from a set of configuration values

@@ -163,6 +163,14 @@ func TestKeymanager_Sign(t *testing.T) {
 			want:    desiredSig,
 			wantErr: false,
 		},
+		{
+			name: "VALIDATOR_REGISTRATION",
+			args: args{
+				request: mock.GetMockSignRequest("VALIDATOR_REGISTRATION"),
+			},
+			want:    desiredSig,
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

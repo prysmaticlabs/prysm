@@ -83,6 +83,6 @@ func TestPhase0BeaconBlock_ExecutionPayloadHeader(t *testing.T) {
 	}
 	wsb, err := wrapper.WrappedSignedBeaconBlock(sb)
 	require.NoError(t, err)
-	_, err = wsb.Block().Body().ExecutionPayloadHeader()
+	_, err = wsb.Block().Body().Execution()
 	require.ErrorContains(t, "unsupported field for block type", err)
 }

@@ -53,6 +53,7 @@ type ReadOnlyDatabase interface {
 	PowchainData(ctx context.Context) (*ethpb.ETH1ChainData, error)
 	// Fee reicipients operations.
 	FeeRecipientByValidatorID(ctx context.Context, id types.ValidatorIndex) (common.Address, error)
+	RegistrationByValidatorID(ctx context.Context, id types.ValidatorIndex) (*ethpb.ValidatorRegistrationV1, error)
 	// origin checkpoint sync support
 	OriginCheckpointBlockRoot(ctx context.Context) ([32]byte, error)
 	BackfillBlockRoot(ctx context.Context) ([32]byte, error)

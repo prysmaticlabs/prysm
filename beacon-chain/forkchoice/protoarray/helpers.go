@@ -13,15 +13,16 @@ import (
 // It returns a list of deltas that represents the difference between old balances and new balances.
 func computeDeltas(
 	ctx context.Context,
+	count int,
 	blockIndices map[[32]byte]uint64,
 	votes []Vote,
 	oldBalances, newBalances []uint64,
 	slashedIndices map[types.ValidatorIndex]bool,
 ) ([]int, []Vote, error) {
-	_, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.computeDeltas")
+	ctx, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.computeDeltas")
 	defer span.End()
 
-	deltas := make([]int, len(blockIndices))
+	deltas := make([]int, count)
 
 	for validatorIndex, vote := range votes {
 		// Skip if validator has been slashed

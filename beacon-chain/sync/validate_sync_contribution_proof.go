@@ -128,7 +128,7 @@ func rejectIncorrectSubcommitteeIndex(
 	m *ethpb.SignedContributionAndProof,
 ) validationFn {
 	return func(ctx context.Context) (pubsub.ValidationResult, error) {
-		_, span := trace.StartSpan(ctx, "sync.rejectIncorrectSubcommitteeIndex")
+		ctx, span := trace.StartSpan(ctx, "sync.rejectIncorrectSubcommitteeIndex")
 		defer span.End()
 		// The subcommittee index is in the allowed range, i.e. `contribution.subcommittee_index < SYNC_COMMITTEE_SUBNET_COUNT`.
 		if m.Message.Contribution.SubcommitteeIndex >= params.BeaconConfig().SyncCommitteeSubnetCount {
@@ -181,7 +181,7 @@ func rejectInvalidAggregator(m *ethpb.SignedContributionAndProof) validationFn {
 
 func (s *Service) rejectInvalidIndexInSubCommittee(m *ethpb.SignedContributionAndProof) validationFn {
 	return func(ctx context.Context) (pubsub.ValidationResult, error) {
-		_, span := trace.StartSpan(ctx, "sync.rejectInvalidIndexInSubCommittee")
+		ctx, span := trace.StartSpan(ctx, "sync.rejectInvalidIndexInSubCommittee")
 		defer span.End()
 		// The aggregator's validator index is in the declared subcommittee of the current sync committee.
 		committeeIndices, err := s.cfg.chain.HeadSyncCommitteeIndices(ctx, m.Message.AggregatorIndex, m.Message.Contribution.Slot)
@@ -210,7 +210,7 @@ func (s *Service) rejectInvalidIndexInSubCommittee(m *ethpb.SignedContributionAn
 
 func (s *Service) rejectInvalidSelectionProof(m *ethpb.SignedContributionAndProof) validationFn {
 	return func(ctx context.Context) (pubsub.ValidationResult, error) {
-		_, span := trace.StartSpan(ctx, "sync.rejectInvalidSelectionProof")
+		ctx, span := trace.StartSpan(ctx, "sync.rejectInvalidSelectionProof")
 		defer span.End()
 		// The `contribution_and_proof.selection_proof` is a valid signature of the `SyncAggregatorSelectionData`.
 		if err := s.verifySyncSelectionData(ctx, m.Message); err != nil {
@@ -223,7 +223,7 @@ func (s *Service) rejectInvalidSelectionProof(m *ethpb.SignedContributionAndProo
 
 func (s *Service) rejectInvalidContributionSignature(m *ethpb.SignedContributionAndProof) validationFn {
 	return func(ctx context.Context) (pubsub.ValidationResult, error) {
-		_, span := trace.StartSpan(ctx, "sync.rejectInvalidContributionSignature")
+		ctx, span := trace.StartSpan(ctx, "sync.rejectInvalidContributionSignature")
 		defer span.End()
 		// The aggregator signature, `signed_contribution_and_proof.signature`, is valid.
 		d, err := s.cfg.chain.HeadSyncContributionProofDomain(ctx, m.Message.Contribution.Slot)
@@ -256,7 +256,7 @@ func (s *Service) rejectInvalidContributionSignature(m *ethpb.SignedContribution
 
 func (s *Service) rejectInvalidSyncAggregateSignature(m *ethpb.SignedContributionAndProof) validationFn {
 	return func(ctx context.Context) (pubsub.ValidationResult, error) {
-		_, span := trace.StartSpan(ctx, "sync.rejectInvalidSyncAggregateSignature")
+		ctx, span := trace.StartSpan(ctx, "sync.rejectInvalidSyncAggregateSignature")
 		defer span.End()
 		// The aggregate signature is valid for the message `beacon_block_root` and aggregate pubkey
 		// derived from the participation info in `aggregation_bits` for the subcommittee specified by the `contribution.subcommittee_index`.
