@@ -42,7 +42,7 @@ func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockR
 
 	registered, err := vs.validatorRegistered(ctx, altairBlk.ProposerIndex)
 	if registered && err == nil {
-		builderReady, b, err := vs.getAndBuildHeaderBlock(ctx, altairBlk)
+		builderReady, b, err := vs.getAndBuildBlindBlock(ctx, altairBlk)
 		if err != nil {
 			// In the event of an error, the node should fall back to default execution engine for building block.
 			log.WithError(err).Error("Failed to build a block from external builder, falling " +
@@ -98,7 +98,7 @@ func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockR
 
 // This function retrieves the payload header given the slot number and the validator index.
 // It's a no-op if the latest head block is not versioned bellatrix.
-func (vs *Server) getPayloadHeader(ctx context.Context, slot types.Slot, idx types.ValidatorIndex) (*enginev1.ExecutionPayloadHeader, error) {
+func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot types.Slot, idx types.ValidatorIndex) (*enginev1.ExecutionPayloadHeader, error) {
 	b, err := vs.HeadFetcher.HeadBlock(ctx)
 	if err != nil {
 		return nil, err
@@ -131,7 +131,7 @@ func (vs *Server) getPayloadHeader(ctx context.Context, slot types.Slot, idx typ
 }
 
 // This function constructs the builder block given the input altair block and the header. It returns a generic beacon block for signing
-func (vs *Server) buildHeaderBlock(ctx context.Context, b *ethpb.BeaconBlockAltair, h *enginev1.ExecutionPayloadHeader) (*ethpb.GenericBeaconBlock, error) {
+func (vs *Server) buildBlindBlock(ctx context.Context, b *ethpb.BeaconBlockAltair, h *enginev1.ExecutionPayloadHeader) (*ethpb.GenericBeaconBlock, error) {
 	if b == nil || b.Body == nil {
 		return nil, errors.New("nil block")
 	}
@@ -281,10 +281,10 @@ func (vs *Server) readyForBuilder(ctx context.Context) (bool, error) {
 	return blocks.IsExecutionBlock(b.Block().Body())
 }
 
-// Get and builder header block. Returns a boolean status, built block and error.
+// Get and build blind block from builder network. Returns a boolean status, built block and error.
 // If the status is false that means builder the header block is disallowed.
 // This routine is time limited by `blockBuilderTimeout`.
-func (vs *Server) getAndBuildHeaderBlock(ctx context.Context, b *ethpb.BeaconBlockAltair) (bool, *ethpb.GenericBeaconBlock, error) {
+func (vs *Server) getAndBuildBlindBlock(ctx context.Context, b *ethpb.BeaconBlockAltair) (bool, *ethpb.GenericBeaconBlock, error) {
 	// No op. Builder is not defined. User did not specify a user URL. We should use local EE.
 	if vs.BlockBuilder == nil || !vs.BlockBuilder.Configured() {
 		return false, nil, nil
@@ -299,7 +299,7 @@ func (vs *Server) getAndBuildHeaderBlock(ctx context.Context, b *ethpb.BeaconBlo
 	if !ready {
 		return false, nil, nil
 	}
-	h, err := vs.getPayloadHeader(ctx, b.Slot, b.ProposerIndex)
+	h, err := vs.getPayloadHeaderFromBuilder(ctx, b.Slot, b.ProposerIndex)
 	if err != nil {
 		return false, nil, errors.Wrap(err, "could not get payload header")
 	}
@@ -309,7 +309,7 @@ func (vs *Server) getAndBuildHeaderBlock(ctx context.Context, b *ethpb.BeaconBlo
 		"gasUsed":      h.GasUsed,
 		"slot":         b.Slot,
 	}).Info("Retrieved header from builder")
-	gb, err := vs.buildHeaderBlock(ctx, b, h)
+	gb, err := vs.buildBlindBlock(ctx, b, h)
 	if err != nil {
 		return false, nil, errors.Wrap(err, "could not combine altair block with payload header")
 	}

@@ -80,14 +80,14 @@ func TestServer_buildHeaderBlock(t *testing.T) {
 		TransactionsRoot: make([]byte, fieldparams.RootLength),
 		ExtraData:        make([]byte, 0),
 	}
-	got, err := vs.buildHeaderBlock(ctx, b1.Block, h)
+	got, err := vs.buildBlindBlock(ctx, b1.Block, h)
 	require.NoError(t, err)
 	require.DeepEqual(t, h, got.GetBlindedBellatrix().Body.ExecutionPayloadHeader)
 
-	_, err = vs.buildHeaderBlock(ctx, nil, h)
+	_, err = vs.buildBlindBlock(ctx, nil, h)
 	require.ErrorContains(t, "nil block", err)
 
-	_, err = vs.buildHeaderBlock(ctx, b1.Block, nil)
+	_, err = vs.buildBlindBlock(ctx, b1.Block, nil)
 	require.ErrorContains(t, "nil header", err)
 }
 
@@ -152,7 +152,7 @@ func TestServer_getPayloadHeader(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			vs := &Server{BlockBuilder: tc.mock, HeadFetcher: tc.fetcher}
-			h, err := vs.getPayloadHeader(context.Background(), 0, 0)
+			h, err := vs.getPayloadHeaderFromBuilder(context.Background(), 0, 0)
 			if err != nil {
 				require.ErrorContains(t, tc.err, err)
 			} else {
@@ -302,20 +302,20 @@ func TestServer_getAndBuildHeaderBlock(t *testing.T) {
 	vs := &Server{}
 
 	// Nil builder
-	ready, _, err := vs.getAndBuildHeaderBlock(ctx, nil)
+	ready, _, err := vs.getAndBuildBlindBlock(ctx, nil)
 	require.NoError(t, err)
 	require.Equal(t, false, ready)
 
 	// Not configured
 	vs.BlockBuilder = &builderTest.MockBuilderService{}
-	ready, _, err = vs.getAndBuildHeaderBlock(ctx, nil)
+	ready, _, err = vs.getAndBuildBlindBlock(ctx, nil)
 	require.NoError(t, err)
 	require.Equal(t, false, ready)
 
 	// Block is not ready
 	vs.BlockBuilder = &builderTest.MockBuilderService{HasConfigured: true}
 	vs.FinalizationFetcher = &blockchainTest.ChainService{FinalizedCheckPoint: &ethpb.Checkpoint{}}
-	ready, _, err = vs.getAndBuildHeaderBlock(ctx, nil)
+	ready, _, err = vs.getAndBuildBlindBlock(ctx, nil)
 	require.NoError(t, err)
 	require.Equal(t, false, ready)
 
@@ -331,7 +331,7 @@ func TestServer_getAndBuildHeaderBlock(t *testing.T) {
 	vs.FinalizationFetcher = &blockchainTest.ChainService{FinalizedCheckPoint: &ethpb.Checkpoint{Root: wbr1[:]}}
 	vs.HeadFetcher = &blockchainTest.ChainService{Block: wb1}
 	vs.BlockBuilder = &builderTest.MockBuilderService{HasConfigured: true, ErrGetHeader: errors.New("could not get payload")}
-	ready, _, err = vs.getAndBuildHeaderBlock(ctx, &ethpb.BeaconBlockAltair{})
+	ready, _, err = vs.getAndBuildBlindBlock(ctx, &ethpb.BeaconBlockAltair{})
 	require.ErrorContains(t, "could not get payload", err)
 	require.Equal(t, false, ready)
 
@@ -404,7 +404,7 @@ func TestServer_getAndBuildHeaderBlock(t *testing.T) {
 	}
 	vs.BlockBuilder = &builderTest.MockBuilderService{HasConfigured: true, Bid: sBid}
 
-	ready, builtBlk, err := vs.getAndBuildHeaderBlock(ctx, altairBlk.Block)
+	ready, builtBlk, err := vs.getAndBuildBlindBlock(ctx, altairBlk.Block)
 	require.NoError(t, err)
 	require.Equal(t, true, ready)
 	require.DeepEqual(t, h, builtBlk.GetBlindedBellatrix().Body.ExecutionPayloadHeader)
