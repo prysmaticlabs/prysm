@@ -23,7 +23,7 @@ import (
 	"go.opencensus.io/trace"
 )
 
-var defaultLatestValidHash = bytesutil.ToBytes32([]byte{0xff})
+var defaultLatestValidHash = bytesutil.PadTo([]byte{0xff}, 32)
 
 // notifyForkchoiceUpdateArg is the argument for the forkchoice update notification `notifyForkchoiceUpdate`.
 type notifyForkchoiceUpdateArg struct {
@@ -92,7 +92,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 			newPayloadInvalidNodeCount.Inc()
 			headRoot := arg.headRoot
 			if len(lastValidHash) == 0 {
-				lastValidHash = defaultLatestValidHash[:]
+				lastValidHash = defaultLatestValidHash
 			}
 			invalidRoots, err := s.ForkChoicer().SetOptimisticToInvalid(ctx, headRoot, bytesutil.ToBytes32(headBlk.ParentRoot()), bytesutil.ToBytes32(lastValidHash))
 			if err != nil {
