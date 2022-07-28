@@ -282,7 +282,7 @@ message BeaconStateCapella {
   SyncCommittee next_sync_committee = 9003; // [New in Altair]
 
   // Bellatrix fields [10001-11000]
-  ethereum.engine.v1.ExecutionPayloadHeader latest_execution_payload_header = 10001; // [New in Bellatrix]
+  ethereum.engine.v1.ExecutionPayloadHeaderCapella latest_execution_payload_header = 10001; // [New in Bellatrix]
 
   // Capella fields [11001-12000]
   repeated  ethereum.engine.v1.Withdrawal withdrawal_queue = 11001 [(ethereum.eth.ext.ssz_max) = "1099511627776"]; // [New in Capella]
