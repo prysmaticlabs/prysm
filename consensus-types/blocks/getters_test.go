@@ -7,7 +7,6 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/runtime/version"
@@ -310,22 +309,6 @@ func Test_BeaconBlockBody_SyncAggregate(t *testing.T) {
 	result, err := bb.SyncAggregate()
 	require.NoError(t, err)
 	assert.Equal(t, result, sa)
-}
-
-func Test_BeaconBlockBody_ExecutionPayload(t *testing.T) {
-	ep := &enginev1.ExecutionPayload{}
-	bb := &BeaconBlockBody{version: version.Bellatrix, executionPayload: ep}
-	result, err := bb.ExecutionPayload()
-	require.NoError(t, err)
-	assert.Equal(t, result, ep)
-}
-
-func Test_BeaconBlockBody_ExecutionPayloadHeader(t *testing.T) {
-	eph := &enginev1.ExecutionPayloadHeader{}
-	bb := &BeaconBlockBody{version: version.BellatrixBlind, executionPayloadHeader: eph}
-	result, err := bb.ExecutionPayloadHeader()
-	require.NoError(t, err)
-	assert.Equal(t, result, eph)
 }
 
 func Test_BeaconBlockBody_HashTreeRoot(t *testing.T) {

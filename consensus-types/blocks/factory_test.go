@@ -2,8 +2,11 @@ package blocks
 
 import (
 	"bytes"
+	"errors"
 	"testing"
 
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -221,5 +224,79 @@ func Test_BuildSignedBeaconBlock(t *testing.T) {
 		assert.DeepEqual(t, sig, sb.Signature())
 		assert.Equal(t, version.BellatrixBlind, sb.Version())
 	})
+}
 
+func TestBuildSignedBeaconBlockFromExecutionPayload(t *testing.T) {
+	t.Run("nil block check", func(t *testing.T) {
+		_, err := BuildSignedBeaconBlockFromExecutionPayload(nil, nil)
+		require.ErrorIs(t, ErrNilSignedBeaconBlock, err)
+	})
+	t.Run("unsupported field payload header", func(t *testing.T) {
+		altairBlock := &eth.SignedBeaconBlockAltair{
+			Block: &eth.BeaconBlockAltair{
+				Body: &eth.BeaconBlockBodyAltair{}}}
+		blk, err := NewSignedBeaconBlock(altairBlock)
+		require.NoError(t, err)
+		_, err = BuildSignedBeaconBlockFromExecutionPayload(blk, nil)
+		require.Equal(t, true, errors.Is(err, ErrUnsupportedGetter))
+	})
+	t.Run("payload header root and payload root mismatch", func(t *testing.T) {
+		payload := &enginev1.ExecutionPayload{
+			ParentHash:    make([]byte, fieldparams.RootLength),
+			FeeRecipient:  make([]byte, 20),
+			StateRoot:     make([]byte, fieldparams.RootLength),
+			ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+			LogsBloom:     make([]byte, 256),
+			PrevRandao:    make([]byte, fieldparams.RootLength),
+			BaseFeePerGas: make([]byte, fieldparams.RootLength),
+			BlockHash:     make([]byte, fieldparams.RootLength),
+			Transactions:  make([][]byte, 0),
+		}
+		wrapped, err := WrappedExecutionPayload(payload)
+		require.NoError(t, err)
+		header, err := PayloadToHeader(wrapped)
+		require.NoError(t, err)
+		blindedBlock := &eth.SignedBlindedBeaconBlockBellatrix{
+			Block: &eth.BlindedBeaconBlockBellatrix{
+				Body: &eth.BlindedBeaconBlockBodyBellatrix{}}}
+
+		// Modify the header.
+		header.GasUsed += 1
+		blindedBlock.Block.Body.ExecutionPayloadHeader = header
+
+		blk, err := NewSignedBeaconBlock(blindedBlock)
+		require.NoError(t, err)
+		_, err = BuildSignedBeaconBlockFromExecutionPayload(blk, payload)
+		require.ErrorContains(t, "roots do not match", err)
+	})
+	t.Run("ok", func(t *testing.T) {
+		payload := &enginev1.ExecutionPayload{
+			ParentHash:    make([]byte, fieldparams.RootLength),
+			FeeRecipient:  make([]byte, 20),
+			StateRoot:     make([]byte, fieldparams.RootLength),
+			ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+			LogsBloom:     make([]byte, 256),
+			PrevRandao:    make([]byte, fieldparams.RootLength),
+			BaseFeePerGas: make([]byte, fieldparams.RootLength),
+			BlockHash:     make([]byte, fieldparams.RootLength),
+			Transactions:  make([][]byte, 0),
+		}
+		wrapped, err := WrappedExecutionPayload(payload)
+		require.NoError(t, err)
+		header, err := PayloadToHeader(wrapped)
+		require.NoError(t, err)
+		blindedBlock := &eth.SignedBlindedBeaconBlockBellatrix{
+			Block: &eth.BlindedBeaconBlockBellatrix{
+				Body: &eth.BlindedBeaconBlockBodyBellatrix{}}}
+		blindedBlock.Block.Body.ExecutionPayloadHeader = header
+
+		blk, err := NewSignedBeaconBlock(blindedBlock)
+		require.NoError(t, err)
+		builtBlock, err := BuildSignedBeaconBlockFromExecutionPayload(blk, payload)
+		require.NoError(t, err)
+
+		got, err := builtBlock.Block().Body().Execution()
+		require.NoError(t, err)
+		require.DeepEqual(t, payload, got.Proto())
+	})
 }
