@@ -24,18 +24,6 @@ option java_outer_classname = "WithdrawalsProto";
 option java_package = "org.ethereum.eth.v1alpha1";
 option php_namespace = "Ethereum\\Eth\\v1alpha1";
 
-// The withdrawal receipt with the recipient address and amount withdrawn
-message Withdrawal {
-        // Withdrawal index for accounting purposes
-        uint64 withdrawal_index = 1; 
-        
-        // The execution address receiving the funds
-        bytes execution_address = 2 [(ethereum.eth.ext.ssz_size) = "20"];
-
-        // The withdrawn amount in Gwei
-        uint64 amount = 3;
-}
-
 // The message requesting a BLS to execution withdrawal credentials change
 message BLSToExecutionChange {
         // The validator index requesting the change

@@ -56,7 +56,7 @@ message ExecutionPayloadCapella {
 	bytes base_fee_per_gas      = 12 [(ethereum.eth.ext.ssz_size) = "32"];
 	bytes block_hash            = 13 [(ethereum.eth.ext.ssz_size) = "32"];
 	repeated bytes transactions = 14 [(ethereum.eth.ext.ssz_size) = "?,?", (ethereum.eth.ext.ssz_max)  = "1048576,1073741824"];
-	repeated uint64 withdrawals = 15; // New in Capella.
+	repeated Withdrawal withdrawals = 15; // New in Capella.
 }
 
 message ExecutionPayloadHeader {
@@ -125,3 +125,16 @@ message ForkchoiceState {
 	bytes safe_block_hash      = 2 [(ethereum.eth.ext.ssz_size) = "32"];
 	bytes finalized_block_hash = 3 [(ethereum.eth.ext.ssz_size) = "32"];
 }
+
+// The withdrawal receipt with the recipient address and amount withdrawn
+message Withdrawal {
+	// Withdrawal index for accounting purposes
+	uint64 withdrawal_index = 1;
+
+	// The execution address receiving the funds
+	bytes execution_address = 2 [(ethereum.eth.ext.ssz_size) = "20"];
+
+	// The withdrawn amount in Gwei
+	uint64 amount = 3;
+}
+
