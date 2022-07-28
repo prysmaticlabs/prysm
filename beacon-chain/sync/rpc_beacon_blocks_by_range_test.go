@@ -214,9 +214,9 @@ func TestRPCBeaconBlocksByRange_ReconstructsPayloads(t *testing.T) {
 			blockHash: payload,
 		},
 	}
-	wrappedPayload, err := wrapper.WrappedExecutionPayload(payload)
+	wrappedPayload, err := blocks.WrappedExecutionPayload(payload)
 	require.NoError(t, err)
-	header, err := wrapper.PayloadToHeader(wrappedPayload)
+	header, err := blocks.PayloadToHeader(wrappedPayload)
 	require.NoError(t, err)
 
 	genRoot := [32]byte{}

@@ -16,7 +16,6 @@ import (
 	coreBlock "github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -153,7 +152,7 @@ func (vs *Server) buildHeaderBlock(ctx context.Context, b *ethpb.BeaconBlockAlta
 			ExecutionPayloadHeader: h,
 		},
 	}
-	wsb, err := wrapper.WrappedSignedBeaconBlock(
+	wsb, err := consensusblocks.NewSignedBeaconBlock(
 		&ethpb.SignedBlindedBeaconBlockBellatrix{Block: blk, Signature: make([]byte, 96)},
 	)
 	if err != nil {
@@ -243,7 +242,7 @@ func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.SignedBe
 		},
 		Signature: sb.Signature,
 	}
-	wb, err := wrapper.WrappedSignedBeaconBlock(bb)
+	wb, err := consensusblocks.NewSignedBeaconBlock(bb)
 	if err != nil {
 		return nil, err
 	}

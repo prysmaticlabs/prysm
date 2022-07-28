@@ -1,7 +1,11 @@
 package blocks
 
 import (
+	"bytes"
+	"errors"
+
 	fastssz "github.com/prysmaticlabs/fastssz"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
@@ -287,4 +291,61 @@ func PayloadToHeader(payload interfaces.ExecutionData) (*enginev1.ExecutionPaylo
 		BlockHash:        bytesutil.SafeCopyBytes(payload.BlockHash()),
 		TransactionsRoot: txRoot[:],
 	}, nil
+}
+
+// IsEmptyExecutionData checks if an execution data is empty underneath. If a single field has
+// a non-zero value, this function will return false.
+func IsEmptyExecutionData(data interfaces.ExecutionData) (bool, error) {
+	if !bytes.Equal(data.ParentHash(), make([]byte, fieldparams.RootLength)) {
+		return false, nil
+	}
+	if !bytes.Equal(data.FeeRecipient(), make([]byte, fieldparams.FeeRecipientLength)) {
+		return false, nil
+	}
+	if !bytes.Equal(data.StateRoot(), make([]byte, fieldparams.RootLength)) {
+		return false, nil
+	}
+	if !bytes.Equal(data.ReceiptsRoot(), make([]byte, fieldparams.RootLength)) {
+		return false, nil
+	}
+	if !bytes.Equal(data.LogsBloom(), make([]byte, fieldparams.LogsBloomLength)) {
+		return false, nil
+	}
+	if !bytes.Equal(data.PrevRandao(), make([]byte, fieldparams.RootLength)) {
+		return false, nil
+	}
+	if !bytes.Equal(data.BaseFeePerGas(), make([]byte, fieldparams.RootLength)) {
+		return false, nil
+	}
+	if !bytes.Equal(data.BlockHash(), make([]byte, fieldparams.RootLength)) {
+		return false, nil
+	}
+
+	txs, err := data.Transactions()
+	switch {
+	case errors.Is(err, ErrUnsupportedGetter):
+	case err != nil:
+		return false, err
+	default:
+		if len(txs) != 0 {
+			return false, nil
+		}
+	}
+
+	if len(data.ExtraData()) != 0 {
+		return false, nil
+	}
+	if data.BlockNumber() != 0 {
+		return false, nil
+	}
+	if data.GasLimit() != 0 {
+		return false, nil
+	}
+	if data.GasUsed() != 0 {
+		return false, nil
+	}
+	if data.Timestamp() != 0 {
+		return false, nil
+	}
+	return true, nil
 }

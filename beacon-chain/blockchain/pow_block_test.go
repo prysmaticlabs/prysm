@@ -145,7 +145,7 @@ func Test_validateMergeBlock(t *testing.T) {
 			},
 		},
 	}
-	b, err := blocks.NewSignedBeaconBlock(blk)
+	bk, err := blocks.NewSignedBeaconBlock(blk)
 	require.NoError(t, err)
 	require.NoError(t, service.validateMergeBlock(ctx, bk))
 
@@ -211,7 +211,7 @@ func Test_getBlkParentHashAndTD(t *testing.T) {
 }
 
 func Test_validateTerminalBlockHash(t *testing.T) {
-	wrapped, err := wrapper.WrappedExecutionPayload(&enginev1.ExecutionPayload{})
+	wrapped, err := blocks.WrappedExecutionPayload(&enginev1.ExecutionPayload{})
 	require.NoError(t, err)
 	require.NoError(t, validateTerminalBlockHash(1, wrapped))
 
@@ -224,7 +224,7 @@ func Test_validateTerminalBlockHash(t *testing.T) {
 	params.OverrideBeaconConfig(cfg)
 	require.ErrorContains(t, "parent hash does not match terminal block hash", validateTerminalBlockHash(1, wrapped))
 
-	wrapped, err = wrapper.WrappedExecutionPayload(&enginev1.ExecutionPayload{
+	wrapped, err = blocks.WrappedExecutionPayload(&enginev1.ExecutionPayload{
 		ParentHash: cfg.TerminalBlockHash.Bytes(),
 	})
 	require.NoError(t, err)

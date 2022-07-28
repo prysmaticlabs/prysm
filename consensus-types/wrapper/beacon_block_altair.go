@@ -312,8 +312,8 @@ func (w altairBeaconBlockBody) HashTreeRoot() ([32]byte, error) {
 
 // Proto returns the underlying proto form of the block
 // body.
-func (w altairBeaconBlockBody) Proto() proto.Message {
-	return w.b
+func (w altairBeaconBlockBody) Proto() (proto.Message, error) {
+	return w.b, nil
 }
 
 // Execution is a stub.

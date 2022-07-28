@@ -61,7 +61,7 @@ type BeaconBlockBody interface {
 	SyncAggregate() (*ethpb.SyncAggregate, error)
 	IsNil() bool
 	HashTreeRoot() ([32]byte, error)
-	Proto() proto.Message
+	Proto() (proto.Message, error)
 	Execution() (ExecutionData, error)
 }
 

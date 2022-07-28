@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
+	consensusblocks "github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
@@ -589,7 +590,7 @@ func (s *Service) validateMergeTransitionBlock(ctx context.Context, stateVersion
 	if err != nil {
 		return invalidBlock{error: err}
 	}
-	isEmpty, err := wrapper.IsEmptyExecutionData(payload)
+	isEmpty, err := consensusblocks.IsEmptyExecutionData(payload)
 	if err != nil {
 		return err
 	}
@@ -605,11 +606,11 @@ func (s *Service) validateMergeTransitionBlock(ctx context.Context, stateVersion
 
 	// Skip validation if the block is not a merge transition block.
 	// To reach here. The payload must be non-empty. If the state header is empty then it's at transition.
-	wh, err := wrapper.WrappedExecutionPayloadHeader(stateHeader)
+	wh, err := consensusblocks.WrappedExecutionPayloadHeader(stateHeader)
 	if err != nil {
 		return err
 	}
-	empty, err := wrapper.IsEmptyExecutionData(wh)
+	empty, err := consensusblocks.IsEmptyExecutionData(wh)
 	if err != nil {
 		return err
 	}

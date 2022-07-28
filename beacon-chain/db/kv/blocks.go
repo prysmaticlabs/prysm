@@ -273,16 +273,16 @@ func (s *Store) SaveBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 }
 
 // SaveBlocks via bulk updates to the db.
-func (s *Store) SaveBlocks(ctx context.Context, blocks []interfaces.SignedBeaconBlock) error {
+func (s *Store) SaveBlocks(ctx context.Context, blks []interfaces.SignedBeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveBlocks")
 	defer span.End()
 
 	// Performing marshaling, hashing, and indexing outside the bolt transaction
 	// to minimize the time we hold the DB lock.
-	blockRoots := make([][]byte, len(blocks))
-	encodedBlocks := make([][]byte, len(blocks))
-	indicesForBlocks := make([]map[string][]byte, len(blocks))
-	for i, blk := range blocks {
+	blockRoots := make([][]byte, len(blks))
+	encodedBlocks := make([][]byte, len(blks))
+	indicesForBlocks := make([]map[string][]byte, len(blks))
+	for i, blk := range blks {
 		blockRoot, err := blk.Block().HashTreeRoot()
 		if err != nil {
 			return err
@@ -298,7 +298,7 @@ func (s *Store) SaveBlocks(ctx context.Context, blocks []interfaces.SignedBeacon
 	}
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
-		for i, blk := range blocks {
+		for i, blk := range blks {
 			if existingBlock := bkt.Get(blockRoots[i]); existingBlock != nil {
 				continue
 			}

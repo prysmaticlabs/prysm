@@ -474,7 +474,7 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 			ExecutionOptimistic: isOptimistic,
 		}, nil
 	}
-	if _, err := blk.PbBlindedBellatrixBlock(); err == nil {
+	if _, err = blk.PbBlindedBellatrixBlock(); err == nil {
 		signedFullBlock, err := bs.ExecutionPayloadReconstructor.ReconstructFullBellatrixBlock(ctx, blk)
 		if err != nil {
 			return nil, status.Errorf(
@@ -508,8 +508,8 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 			ExecutionOptimistic: isOptimistic,
 		}, nil
 	}
-	// ErrUnsupportedBellatrixBlock means that we have another block type
-	if !errors.Is(err, wrapper.ErrUnsupportedBlindedBellatrixBlock) {
+	// ErrUnsupportedGetter means that we have another block type
+	if !errors.Is(err, blocks.ErrUnsupportedGetter) {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
 

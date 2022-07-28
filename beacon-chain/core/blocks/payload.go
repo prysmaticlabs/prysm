@@ -7,6 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
@@ -37,11 +38,11 @@ func IsMergeTransitionComplete(st state.BeaconState) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	wrappedHeader, err := wrapper.WrappedExecutionPayloadHeader(h)
+	wrappedHeader, err := blocks.WrappedExecutionPayloadHeader(h)
 	if err != nil {
 		return false, err
 	}
-	isEmpty, err := wrapper.IsEmptyExecutionData(wrappedHeader)
+	isEmpty, err := blocks.IsEmptyExecutionData(wrappedHeader)
 	if err != nil {
 		return false, err
 	}
@@ -65,7 +66,7 @@ func IsExecutionBlock(body interfaces.BeaconBlockBody) (bool, error) {
 		return false, err
 	default:
 	}
-	isEmpty, err := wrapper.IsEmptyExecutionData(payload)
+	isEmpty, err := blocks.IsEmptyExecutionData(payload)
 	if err != nil {
 		return false, err
 	}
@@ -95,11 +96,11 @@ func IsExecutionEnabled(st state.BeaconState, body interfaces.BeaconBlockBody) (
 // IsExecutionEnabledUsingHeader returns true if the execution is enabled using post processed payload header and block body.
 // This is an optimized version of IsExecutionEnabled where beacon state is not required as an argument.
 func IsExecutionEnabledUsingHeader(header *enginev1.ExecutionPayloadHeader, body interfaces.BeaconBlockBody) (bool, error) {
-	wrappedHeader, err := wrapper.WrappedExecutionPayloadHeader(header)
+	wrappedHeader, err := blocks.WrappedExecutionPayloadHeader(header)
 	if err != nil {
 		return false, err
 	}
-	isEmpty, err := wrapper.IsEmptyExecutionData(wrappedHeader)
+	isEmpty, err := blocks.IsEmptyExecutionData(wrappedHeader)
 	if err != nil {
 		return false, err
 	}
@@ -206,11 +207,11 @@ func ProcessPayload(st state.BeaconState, payload interfaces.ExecutionData) (sta
 	if err := ValidatePayload(st, payload); err != nil {
 		return nil, err
 	}
-	header, err := wrapper.PayloadToHeader(payload)
+	header, err := blocks.PayloadToHeader(payload)
 	if err != nil {
 		return nil, err
 	}
-	wrappedHeader, err := wrapper.WrappedExecutionPayloadHeader(header)
+	wrappedHeader, err := blocks.WrappedExecutionPayloadHeader(header)
 	if err != nil {
 		return nil, err
 	}

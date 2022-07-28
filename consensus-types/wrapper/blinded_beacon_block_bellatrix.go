@@ -308,8 +308,8 @@ func (w blindedBeaconBlockBodyBellatrix) HashTreeRoot() ([32]byte, error) {
 
 // Proto returns the underlying proto form of the block
 // body.
-func (w blindedBeaconBlockBodyBellatrix) Proto() proto.Message {
-	return w.b
+func (w blindedBeaconBlockBodyBellatrix) Proto() (proto.Message, error) {
+	return w.b, nil
 }
 
 func (w blindedBeaconBlockBodyBellatrix) Execution() (interfaces.ExecutionData, error) {
