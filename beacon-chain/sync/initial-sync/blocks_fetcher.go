@@ -407,7 +407,14 @@ func (f *blocksFetcher) requestSidecars(
 		"capacity": f.rateLimiter.Remaining(pid.String()),
 		"score":    f.p2p.Peers().Scorers().BlockProviderScorer().FormatScorePretty(pid),
 	}).Debug("Requesting sidecars")
-	// TODO(EIP-4844): sidecar rate limiting
+	// TODO(EIP-4844): sidecar-specific rate limiting
+	if f.rateLimiter.Remaining(pid.String()) < int64(req.Count) {
+		if err := f.waitForBandwidth(pid); err != nil {
+			l.Unlock()
+			return nil, err
+		}
+	}
+	f.rateLimiter.Add(pid.String(), int64(req.Count))
 	l.Unlock()
 
 	var sidecarProcessor func(*ethpb.BlobsSidecar) error
