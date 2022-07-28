@@ -24,6 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
@@ -1807,16 +1808,21 @@ func TestStore_NoViableHead_ProtoArray(t *testing.T) {
 	config.SlotsPerEpoch = 4
 	config.AltairForkEpoch = 1
 	config.BellatrixForkEpoch = 1
+	config.SafeSlotsToImportOptimistically = 0
 	params.OverrideBeaconConfig(config)
 
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
+	mockEngine := &mockPOW.EngineClient{ErrNewPayload: powchain.ErrAcceptedSyncingPayloadStatus}
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithAttestationPool(attestations.NewPool()),
 		WithStateGen(stategen.New(beaconDB)),
 		WithForkChoiceStore(protoarray.New()),
+		WithStateNotifier(&mock.MockStateNotifier{}),
+		WithExecutionEngineCaller(mockEngine),
+		WithProposerIdsCache(cache.NewProposerPayloadIDsCache()),
 	}
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
@@ -1839,6 +1845,7 @@ func TestStore_NoViableHead_ProtoArray(t *testing.T) {
 	require.NoError(t, service.cfg.BeaconDB.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
 
 	for i := 1; i < 4; i++ {
+		driftGenesisTime(service, int64(i), 0)
 		b, err := util.GenerateFullBlock(bState, keys, util.DefaultBlockGenConfig(), types.Slot(i))
 		require.NoError(t, err)
 		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
@@ -1850,7 +1857,10 @@ func TestStore_NoViableHead_ProtoArray(t *testing.T) {
 		require.NoError(t, service.onBlock(ctx, wsb, root))
 	}
 
-	for i := 4; i < 12; i++ {
+	bState, err = transition.ProcessSlots(ctx, bState, 4)
+	require.NoError(t, err)
+	for i := 5; i < 12; i++ {
+		driftGenesisTime(service, int64(i), 0)
 		b, err := util.GenerateFullBlockBellatrix(bState, keys, util.DefaultBlockGenConfig(), types.Slot(i))
 		require.NoError(t, err)
 		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
@@ -1861,4 +1871,11 @@ func TestStore_NoViableHead_ProtoArray(t *testing.T) {
 		require.NoError(t, err)
 		require.NoError(t, service.onBlock(ctx, wsb, root))
 	}
+}
+
+// Helper function to simulate the block being on time or delayed for proposer
+// boost. It alters the genesisTime tracked by the store.
+func driftGenesisTime(s *Service, slot int64, delay int64) {
+	offset := int64(slot*int64(params.BeaconConfig().SecondsPerSlot) - delay)
+	s.SetGenesisTime(time.Unix(time.Now().Unix()-offset, 0))
 }

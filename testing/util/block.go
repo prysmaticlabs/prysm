@@ -6,12 +6,10 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
-	p2pType "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -989,42 +987,11 @@ func GenerateFullBlockBellatrix(
 		Transactions:  newTransactions,
 	}
 
-	committee, err := altair.NextSyncCommittee(context.Background(), bState)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get next sync committee")
-	}
-	if err := bState.SetCurrentSyncCommittee(committee); err != nil {
-		return nil, errors.Wrap(err, "could not set current sync committee")
-	}
-
 	syncCommitteeBits := make(bitfield.Bitvector512, 64)
-	for i := range syncCommitteeBits {
-		syncCommitteeBits[i] = 0xff
-	}
-
 	// all validators are in the sync committee
-	indices, err := altair.NextSyncCommitteeIndices(ctx, bState)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get next sync committee indices")
-	}
-	sigs := make([]bls.Signature, len(indices))
-	pbr, err := helpers.BlockRootAtSlot(bState, slot)
-	for i, indice := range indices {
-		b := p2pType.SSZBytes(pbr)
-		sb, err := signing.ComputeDomainAndSign(bState, time.CurrentEpoch(bState), &b, params.BeaconConfig().DomainSyncCommittee, privs[indice])
-		if err != nil {
-			return nil, errors.Wrap(err, "could not compute domain and sign")
-		}
-		sig, err := bls.SignatureFromBytes(sb)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not unmarshal signature from bytes")
-		}
-		sigs[i] = sig
-	}
-	aggregatedSig := bls.AggregateSignatures(sigs).Marshal()
 	newSyncAggregate := &ethpb.SyncAggregate{
 		SyncCommitteeBits:      syncCommitteeBits,
-		SyncCommitteeSignature: aggregatedSig,
+		SyncCommitteeSignature: append([]byte{0xC0}, make([]byte, 95)...),
 	}
 
 	newHeader := bState.LatestBlockHeader()
@@ -1033,6 +1000,7 @@ func GenerateFullBlockBellatrix(
 		return nil, errors.Wrap(err, "could not hash state")
 	}
 	newHeader.StateRoot = prevStateRoot[:]
+	newHeader = bState.LatestBlockHeader()
 	parentRoot, err := newHeader.HashTreeRoot()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not hash the new header")
@@ -1057,10 +1025,6 @@ func GenerateFullBlockBellatrix(
 		return nil, errors.Wrap(err, "could not compute beacon proposer index")
 	}
 
-	if err := bState.SetSlot(currentSlot); err != nil {
-		return nil, errors.Wrap(err, "could not set slot")
-	}
-
 	block := &ethpb.BeaconBlockBellatrix{
 		Slot:          slot,
 		ParentRoot:    parentRoot[:],
@@ -1077,6 +1041,10 @@ func GenerateFullBlockBellatrix(
 			SyncAggregate:     newSyncAggregate,
 			ExecutionPayload:  newExecutionPayload,
 		},
+	}
+
+	if err := bState.SetSlot(currentSlot); err != nil {
+		return nil, errors.Wrap(err, "could not set slot")
 	}
 
 	signature, err := BlockSignature(bState, block, privs)
