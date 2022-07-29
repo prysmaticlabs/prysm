@@ -48,6 +48,9 @@ func (e *ExecutionBlock) MarshalJSON() ([]byte, error) {
 }
 
 func (e *ExecutionBlock) UnmarshalJSON(enc []byte) error {
+	type transactionJson struct {
+		Transactions []*gethtypes.Transaction `json:"transactions"`
+	}
 	if err := e.Header.UnmarshalJSON(enc); err != nil {
 		return err
 	}
@@ -78,26 +81,21 @@ func (e *ExecutionBlock) UnmarshalJSON(enc []byte) error {
 		return errors.Errorf("expected transaction list to be of a slice interface type.")
 	}
 
-	// If the block contains a list of transactions, we JSON unmarshal
-	// them into a list of geth transaction objects.
-	txs := make([]*gethtypes.Transaction, len(txsList))
-	for i, tx := range txsList {
+	//
+	for _, tx := range txsList {
 		// If the transaction is just a hex string, do not attempt to
 		// unmarshal into a full transaction object.
 		if txItem, ok := tx.(string); ok && strings.HasPrefix(txItem, "0x") {
 			return nil
 		}
-		t := &gethtypes.Transaction{}
-		encodedTx, err := json.Marshal(tx)
-		if err != nil {
-			return err
-		}
-		if err := json.Unmarshal(encodedTx, &t); err != nil {
-			return err
-		}
-		txs[i] = t
 	}
-	e.Transactions = txs
+	// If the block contains a list of transactions, we JSON unmarshal
+	// them into a list of geth transaction objects.
+	txJson := &transactionJson{}
+	if err := json.Unmarshal(enc, txJson); err != nil {
+		return err
+	}
+	e.Transactions = txJson.Transactions
 	return nil
 }
 
