@@ -354,8 +354,8 @@ var (
 
 	// BuilderGasLimitFlag defines the gas limit for the builder to use for constructing a payload.
 	BuilderGasLimitFlag = &cli.IntFlag{
-		Name:  "gas-limit",
-		Usage: "Gas limit for the builder to use for constructing a payload for all the validators",
+		Name:  "suggested-gas-limit",
+		Usage: "Sets gas limit for the builder to use for constructing a payload for all the validators",
 		Value: int(params.BeaconConfig().DefaultBuilderGasLimit),
 	}
 )
