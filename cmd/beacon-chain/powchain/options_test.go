@@ -18,7 +18,7 @@ import (
 func TestPowchainCmd(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	set.String(flags.HTTPWeb3ProviderFlag.Name, "primary", "")
+	set.String(flags.ExecutionEngineEndpoint.Name, "primary", "")
 	fallback := cli.StringSlice{}
 	err := fallback.Set("fallback1")
 	require.NoError(t, err)
@@ -101,7 +101,7 @@ func TestPowchainPreregistration_EmptyWeb3Provider(t *testing.T) {
 	hook := logTest.NewGlobal()
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	set.String(flags.HTTPWeb3ProviderFlag.Name, "", "")
+	set.String(flags.ExecutionEngineEndpoint.Name, "", "")
 	fallback := cli.StringSlice{}
 	set.Var(&fallback, flags.FallbackWeb3ProviderFlag.Name, "")
 	ctx := cli.NewContext(&app, set, nil)
