@@ -385,7 +385,7 @@ func TestLastAncestorState_CanGetUsingDB(t *testing.T) {
 	util.SaveBlock(t, ctx, service.beaconDB, b3)
 	require.NoError(t, service.beaconDB.SaveState(ctx, b1State, r1))
 
-	lastState, err := service.LastAncestorState(ctx, r3)
+	lastState, err := service.latestAncestor(ctx, r3)
 	require.NoError(t, err)
 	assert.Equal(t, b1State.Slot(), lastState.Slot(), "Did not get wanted state")
 }
@@ -425,7 +425,7 @@ func TestLastAncestorState_CanGetUsingCache(t *testing.T) {
 	util.SaveBlock(t, ctx, service.beaconDB, b3)
 	service.hotStateCache.put(r1, b1State)
 
-	lastState, err := service.LastAncestorState(ctx, r3)
+	lastState, err := service.latestAncestor(ctx, r3)
 	require.NoError(t, err)
 	assert.Equal(t, b1State.Slot(), lastState.Slot(), "Did not get wanted state")
 }
@@ -483,7 +483,7 @@ func TestState_HasStateInCache(t *testing.T) {
 		{rMiss, false},
 	}
 	for _, tc := range tt {
-		got, err := service.HasStateInCache(ctx, tc.root)
+		got, err := service.hasStateInCache(ctx, tc.root)
 		require.NoError(t, err)
 		require.Equal(t, tc.want, got)
 	}
