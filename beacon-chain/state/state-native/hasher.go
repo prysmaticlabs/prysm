@@ -33,6 +33,8 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 		fieldRoots = make([][]byte, params.BeaconConfig().BeaconStateAltairFieldCount)
 	case version.Bellatrix:
 		fieldRoots = make([][]byte, params.BeaconConfig().BeaconStateBellatrixFieldCount)
+	case version.Capella:
+		fieldRoots = make([][]byte, params.BeaconConfig().BeaconStateCapellaFieldCount)
 	}
 
 	// Genesis time root.
@@ -163,7 +165,7 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 		fieldRoots[nativetypes.CurrentEpochAttestations.RealPosition()] = currAttsRoot[:]
 	}
 
-	if state.version == version.Altair || state.version == version.Bellatrix {
+	if state.version >= version.Altair {
 		// PreviousEpochParticipation slice root.
 		prevParticipationRoot, err := stateutil.ParticipationBitsRoot(state.previousEpochParticipation)
 		if err != nil {
@@ -204,7 +206,7 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 	}
 	fieldRoots[nativetypes.FinalizedCheckpoint.RealPosition()] = finalRoot[:]
 
-	if state.version == version.Altair || state.version == version.Bellatrix {
+	if state.version >= version.Altair {
 		// Inactivity scores root.
 		inactivityScoresRoot, err := stateutil.Uint64ListRootWithRegistryLimit(state.inactivityScores)
 		if err != nil {
@@ -227,13 +229,31 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 		fieldRoots[nativetypes.NextSyncCommittee.RealPosition()] = nextSyncCommitteeRoot[:]
 	}
 
-	if state.version == version.Bellatrix {
+	if state.version >= version.Bellatrix {
 		// Execution payload root.
 		executionPayloadRoot, err := state.latestExecutionPayloadHeader.HashTreeRoot()
 		if err != nil {
 			return nil, err
 		}
 		fieldRoots[nativetypes.LatestExecutionPayloadHeader.RealPosition()] = executionPayloadRoot[:]
+	}
+
+	if state.version >= version.Capella {
+		// Withdrawal queue root.
+		withdrawalQueueRoot := []byte("stub")
+		fieldRoots[nativetypes.WithdrawalQueue.RealPosition()] = withdrawalQueueRoot
+
+		// Next withdrawal index root.
+		nextWithdrawalIndexBuf := make([]byte, 8)
+		binary.LittleEndian.PutUint64(nextWithdrawalIndexBuf, state.nextWithdrawalIndex)
+		nextWithdrawalIndexRoot := bytesutil.ToBytes32(nextWithdrawalIndexBuf)
+		fieldRoots[nativetypes.NextWithdrawalIndex.RealPosition()] = nextWithdrawalIndexRoot[:]
+
+		// Next partial withdrawal validator index root.
+		nextPartialWithdrawalValidatorIndexBuf := make([]byte, 8)
+		binary.LittleEndian.PutUint64(nextPartialWithdrawalValidatorIndexBuf, uint64(state.nextPartialWithdrawalValidatorIndex))
+		nextPartialWithdrawalValidatorIndexRoot := bytesutil.ToBytes32(nextPartialWithdrawalValidatorIndexBuf)
+		fieldRoots[nativetypes.NextPartialWithdrawalValidatorIndex.RealPosition()] = nextPartialWithdrawalValidatorIndexRoot[:]
 	}
 
 	return fieldRoots, nil
