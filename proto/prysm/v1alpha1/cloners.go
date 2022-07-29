@@ -512,3 +512,29 @@ func CopyBlindedBeaconBlockBodyBellatrix(body *BlindedBeaconBlockBodyBellatrix) 
 		ExecutionPayloadHeader: CopyExecutionPayloadHeader(body.ExecutionPayloadHeader),
 	}
 }
+
+// CopyWithdrawalSlice copies the provided slice of withdrawals.
+func CopyWithdrawalSlice(withdrawals []*enginev1.Withdrawal) []*enginev1.Withdrawal {
+	if withdrawals == nil {
+		return nil
+	}
+
+	res := make([]*enginev1.Withdrawal, len(withdrawals))
+	for i := 0; i < len(res); i++ {
+		res[i] = CopyWithdrawal(withdrawals[i])
+	}
+	return res
+}
+
+// CopyWithdrawal copies the provided withdrawal object.
+func CopyWithdrawal(withdrawal *enginev1.Withdrawal) *enginev1.Withdrawal {
+	if withdrawal == nil {
+		return nil
+	}
+
+	return &enginev1.Withdrawal{
+		WithdrawalIndex:  withdrawal.WithdrawalIndex,
+		ExecutionAddress: bytesutil.SafeCopyBytes(withdrawal.ExecutionAddress),
+		Amount:           withdrawal.Amount,
+	}
+}
