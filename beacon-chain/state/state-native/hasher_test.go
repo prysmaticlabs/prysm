@@ -6,9 +6,6 @@ import (
 
 	"github.com/prysmaticlabs/go-bitfield"
 	statenative "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
-	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -46,9 +43,9 @@ func TestComputeFieldRootsWithHasher_Phase0(t *testing.T) {
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(checkpoint("current")))
 	require.NoError(t, beaconState.SetFinalizedCheckpoint(checkpoint("finalized")))
 
-	v1State, ok := beaconState.(*v1.BeaconState)
+	nativeState, ok := beaconState.(*statenative.BeaconState)
 	require.Equal(t, true, ok)
-	protoState, ok := v1State.InnerStateUnsafe().(*ethpb.BeaconState)
+	protoState, ok := nativeState.InnerStateUnsafe().(*ethpb.BeaconState)
 	require.Equal(t, true, ok)
 	initState, err := statenative.InitializeFromProtoPhase0(protoState)
 	require.NoError(t, err)
@@ -112,9 +109,9 @@ func TestComputeFieldRootsWithHasher_Altair(t *testing.T) {
 	require.NoError(t, beaconState.SetCurrentSyncCommittee(syncCommittee("current")))
 	require.NoError(t, beaconState.SetNextSyncCommittee(syncCommittee("next")))
 
-	v1State, ok := beaconState.(*v2.BeaconState)
+	nativeState, ok := beaconState.(*statenative.BeaconState)
 	require.Equal(t, true, ok)
-	protoState, ok := v1State.InnerStateUnsafe().(*ethpb.BeaconStateAltair)
+	protoState, ok := nativeState.InnerStateUnsafe().(*ethpb.BeaconStateAltair)
 	require.Equal(t, true, ok)
 	initState, err := statenative.InitializeFromProtoAltair(protoState)
 	require.NoError(t, err)
@@ -185,9 +182,9 @@ func TestComputeFieldRootsWithHasher_Bellatrix(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetLatestExecutionPayloadHeader(wrappedHeader))
 
-	v1State, ok := beaconState.(*v3.BeaconState)
+	nativeState, ok := beaconState.(*statenative.BeaconState)
 	require.Equal(t, true, ok)
-	protoState, ok := v1State.InnerStateUnsafe().(*ethpb.BeaconStateBellatrix)
+	protoState, ok := nativeState.InnerStateUnsafe().(*ethpb.BeaconStateBellatrix)
 	require.Equal(t, true, ok)
 	initState, err := statenative.InitializeFromProtoBellatrix(protoState)
 	require.NoError(t, err)
