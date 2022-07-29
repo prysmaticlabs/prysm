@@ -351,6 +351,13 @@ var (
 		Usage: "Enables Builder validator registration APIs for the validator client to update settings such as fee recipient and gas limit. Note* this flag is not required if using proposer settings config file",
 		Value: false,
 	}
+
+	// BuilderGasLimitFlag defines the gas limit for the builder to use for constructing a payload.
+	BuilderGasLimitFlag = &cli.IntFlag{
+		Name:  "suggested-gas-limit",
+		Usage: "Sets gas limit for the builder to use for constructing a payload for all the validators",
+		Value: int(params.BeaconConfig().DefaultBuilderGasLimit),
+	}
 )
 
 // DefaultValidatorDir returns OS-specific default validator directory.
