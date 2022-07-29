@@ -5,6 +5,8 @@ const (
 	Altair
 	Bellatrix
 	BellatrixBlind
+	Capella
+	CapellaBlind
 )
 
 func String(version int) string {
@@ -17,6 +19,10 @@ func String(version int) string {
 		return "bellatrix"
 	case BellatrixBlind:
 		return "bellatrix-blind"
+	case Capella:
+		return "capella"
+	case CapellaBlind:
+		return "capella-blind"
 	default:
 		return "unknown version"
 	}
