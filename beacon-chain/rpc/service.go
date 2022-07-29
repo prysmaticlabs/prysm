@@ -196,6 +196,7 @@ func (s *Service) Start() {
 		HeadFetcher:            s.cfg.HeadFetcher,
 		HeadUpdater:            s.cfg.HeadUpdater,
 		ForkFetcher:            s.cfg.ForkFetcher,
+		GenesisFetcher:         s.cfg.GenesisFetcher,
 		FinalizationFetcher:    s.cfg.FinalizationFetcher,
 		TimeFetcher:            s.cfg.GenesisTimeFetcher,
 		BlockFetcher:           s.cfg.POWChainService,
