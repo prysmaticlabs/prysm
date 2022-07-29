@@ -46,6 +46,7 @@ type Server struct {
 	HeadFetcher            blockchain.HeadFetcher
 	HeadUpdater            blockchain.HeadUpdater
 	ForkFetcher            blockchain.ForkFetcher
+	GenesisFetcher         blockchain.GenesisFetcher
 	FinalizationFetcher    blockchain.FinalizationFetcher
 	TimeFetcher            blockchain.TimeFetcher
 	BlockFetcher           powchain.POWBlockFetcher

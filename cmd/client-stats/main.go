@@ -12,10 +12,10 @@ import (
 	"github.com/prysmaticlabs/prysm/io/logs"
 	"github.com/prysmaticlabs/prysm/monitoring/clientstats"
 	"github.com/prysmaticlabs/prysm/monitoring/journald"
+	prefixed "github.com/prysmaticlabs/prysm/runtime/logging/logrus-prefixed-formatter"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
-	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 )
 
 var appFlags = []cli.Flag{
