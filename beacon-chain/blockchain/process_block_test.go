@@ -1865,13 +1865,14 @@ func TestStore_NoViableHead_ProtoArray(t *testing.T) {
 		st, err := service.HeadState(ctx)
 		require.NoError(t, err)
 		b, err := util.GenerateFullBlockBellatrix(st, keys, util.DefaultBlockGenConfig(), types.Slot(i))
-		assert.LogsContain(t, hook, "pingo")
 		require.NoError(t, err)
 		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
 		require.NoError(t, err)
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
-		require.NoError(t, service.onBlock(ctx, wsb, root))
+		err = service.onBlock(ctx, wsb, root)
+		assert.LogsContain(t, hook, "pingo")
+		require.NoError(t, err)
 	}
 }
 

@@ -897,8 +897,6 @@ func SaveBlock(tb assertions.AssertionTestingTB, ctx context.Context, db iface.N
 // GenerateFullBlockBellatrix generates a fully valid Bellatrix block with the requested parameters.
 // Use BlockGenConfig to declare the conditions you would like the block generated under.
 // This function modifies the passed state as follows:
-// it modifies the sync committe to match the next one
-// it modifies the parent root in the header so that the returned block's parent
 
 func GenerateFullBlockBellatrix(
 	bState state.BeaconState,
@@ -936,7 +934,14 @@ func GenerateFullBlockBellatrix(
 		}
 	}
 
+	numToGen = conf.NumAttestations
 	var atts []*ethpb.Attestation
+	if numToGen > 0 {
+		atts, err = GenerateAttestations(bState, privs, numToGen, slot, false)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed generating %d attestations:", numToGen)
+		}
+	}
 
 	numToGen = conf.NumDeposits
 	var newDeposits []*ethpb.Deposit
@@ -957,7 +962,7 @@ func GenerateFullBlockBellatrix(
 		}
 	}
 
-	numToGen = conf.NumDeposits
+	numToGen = conf.NumTransactions
 	newTransactions := make([][]byte, numToGen)
 	for i := uint64(0); i < numToGen; i++ {
 		newTransactions[i] = bytesutil.Uint64ToBytesLittleEndian(i)
