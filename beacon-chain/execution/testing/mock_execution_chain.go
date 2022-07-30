@@ -114,12 +114,12 @@ func (m *Chain) PreGenesisState() state.BeaconState {
 }
 
 // ClearPreGenesisData --
-func (_ *Chain) ClearPreGenesisData() {
+func (*Chain) ClearPreGenesisData() {
 	// no-op
 }
 
 // IsConnectedToETH1 --
-func (_ *Chain) IsConnectedToETH1() bool {
+func (*Chain) IsConnectedToETH1() bool {
 	return true
 }
 
@@ -144,7 +144,7 @@ type RPCClient struct {
 	Backend *backends.SimulatedBackend
 }
 
-func (_ *RPCClient) Close() {}
+func (*RPCClient) Close() {}
 
 func (*RPCClient) CallContext(_ context.Context, _ interface{}, _ string, _ ...interface{}) error {
 	return nil
