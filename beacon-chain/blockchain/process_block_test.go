@@ -43,7 +43,6 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
-	"github.com/sirupsen/logrus"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -1803,6 +1802,144 @@ func Test_verifyBlkFinalizedSlot_invalidBlock(t *testing.T) {
 	require.Equal(t, true, IsInvalidBlock(err))
 }
 
+func TestStore_NoViableHead_DoublyLinkedTree(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	config := params.BeaconConfig()
+	config.SlotsPerEpoch = 6
+	config.AltairForkEpoch = 1
+	config.BellatrixForkEpoch = 2
+	config.SafeSlotsToImportOptimistically = 0
+	params.OverrideBeaconConfig(config)
+
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+
+	mockEngine := &mockPOW.EngineClient{ErrNewPayload: powchain.ErrAcceptedSyncingPayloadStatus, ErrForkchoiceUpdated: powchain.ErrAcceptedSyncingPayloadStatus}
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithAttestationPool(attestations.NewPool()),
+		WithStateGen(stategen.New(beaconDB)),
+		WithForkChoiceStore(doublylinkedtree.New()),
+		WithStateNotifier(&mock.MockStateNotifier{}),
+		WithExecutionEngineCaller(mockEngine),
+		WithProposerIdsCache(cache.NewProposerPayloadIDsCache()),
+	}
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+
+	st, keys := util.DeterministicGenesisState(t, 64)
+	stateRoot, err := st.HashTreeRoot(ctx)
+	require.NoError(t, err, "Could not hash genesis state")
+
+	require.NoError(t, service.saveGenesisData(ctx, st))
+
+	genesis := blocks.NewGenesisBlock(stateRoot[:])
+	wsb, err := wrapper.WrappedSignedBeaconBlock(genesis)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb), "Could not save genesis block")
+
+	parentRoot, err := genesis.Block.HashTreeRoot()
+	require.NoError(t, err, "Could not get signing root")
+	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, st, parentRoot), "Could not save genesis state")
+	require.NoError(t, service.cfg.BeaconDB.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
+
+	for i := 1; i < 6; i++ {
+		driftGenesisTime(service, int64(i), 0)
+		st, err := service.HeadState(ctx)
+		require.NoError(t, err)
+		b, err := util.GenerateFullBlock(st, keys, util.DefaultBlockGenConfig(), types.Slot(i))
+		require.NoError(t, err)
+		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		require.NoError(t, err)
+		root, err := b.Block.HashTreeRoot()
+		require.NoError(t, err)
+		require.NoError(t, service.onBlock(ctx, wsb, root))
+	}
+
+	for i := 6; i < 12; i++ {
+		driftGenesisTime(service, int64(i), 0)
+		st, err := service.HeadState(ctx)
+		require.NoError(t, err)
+		b, err := util.GenerateFullBlockAltair(st, keys, util.DefaultBlockGenConfig(), types.Slot(i))
+		require.NoError(t, err)
+		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		require.NoError(t, err)
+		root, err := b.Block.HashTreeRoot()
+		require.NoError(t, err)
+		err = service.onBlock(ctx, wsb, root)
+		require.NoError(t, err)
+	}
+
+	for i := 12; i < 18; i++ {
+		driftGenesisTime(service, int64(i), 0)
+		st, err := service.HeadState(ctx)
+		require.NoError(t, err)
+		b, err := util.GenerateFullBlockBellatrix(st, keys, util.DefaultBlockGenConfig(), types.Slot(i))
+		require.NoError(t, err)
+		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		require.NoError(t, err)
+		root, err := b.Block.HashTreeRoot()
+		require.NoError(t, err)
+		err = service.onBlock(ctx, wsb, root)
+		require.NoError(t, err)
+	}
+	// Check that we haven't justified the second epoch yet
+	jc := service.ForkChoicer().JustifiedCheckpoint()
+	require.Equal(t, types.Epoch(0), jc.Epoch)
+
+	// import a block that justifies the second epoch
+	driftGenesisTime(service, 18, 0)
+	validHeadState, err := service.HeadState(ctx)
+	require.NoError(t, err)
+	b, err := util.GenerateFullBlockBellatrix(validHeadState, keys, util.DefaultBlockGenConfig(), 18)
+	require.NoError(t, err)
+	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	firstInvalidRoot, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	err = service.onBlock(ctx, wsb, firstInvalidRoot)
+	require.NoError(t, err)
+	jc = service.ForkChoicer().JustifiedCheckpoint()
+	require.Equal(t, types.Epoch(2), jc.Epoch)
+
+	sjc := validHeadState.CurrentJustifiedCheckpoint()
+	require.Equal(t, types.Epoch(0), sjc.Epoch)
+	lvh := b.Block.Body.ExecutionPayload.ParentHash
+
+	// check our head
+	require.Equal(t, firstInvalidRoot, service.ForkChoicer().CachedHeadRoot())
+
+	// import another block to find out that it was invalid
+	mockEngine = &mockPOW.EngineClient{ErrNewPayload: powchain.ErrAcceptedSyncingPayloadStatus, ErrForkchoiceUpdated: powchain.ErrInvalidPayloadStatus, ForkChoiceUpdatedResp: lvh}
+	service.cfg.ExecutionEngineCaller = mockEngine
+	driftGenesisTime(service, 19, 0)
+	st, err = service.HeadState(ctx)
+	require.NoError(t, err)
+	b, err = util.GenerateFullBlockBellatrix(st, keys, util.DefaultBlockGenConfig(), 19)
+	require.NoError(t, err)
+	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	root, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	err = service.onBlock(ctx, wsb, root)
+	require.ErrorContains(t, "received an INVALID payload from execution engine", err)
+	require.Equal(t, firstInvalidRoot, service.ForkChoicer().CachedHeadRoot())
+
+	// import another block based on the last valid head state
+	mockEngine = &mockPOW.EngineClient{}
+	service.cfg.ExecutionEngineCaller = mockEngine
+	driftGenesisTime(service, 20, 0)
+	b, err = util.GenerateFullBlockBellatrix(validHeadState, keys, &util.BlockGenConfig{}, 20)
+	require.NoError(t, err)
+	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	root, err = b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	err = service.onBlock(ctx, wsb, root)
+	require.NoError(t, err)
+	require.Equal(t, root, service.ForkChoicer().CachedHeadRoot())
+}
+
 func TestStore_NoViableHead_ProtoArray(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	config := params.BeaconConfig()
@@ -1815,7 +1952,7 @@ func TestStore_NoViableHead_ProtoArray(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
-	mockEngine := &mockPOW.EngineClient{ErrNewPayload: powchain.ErrAcceptedSyncingPayloadStatus}
+	mockEngine := &mockPOW.EngineClient{ErrNewPayload: powchain.ErrAcceptedSyncingPayloadStatus, ErrForkchoiceUpdated: powchain.ErrAcceptedSyncingPayloadStatus}
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithAttestationPool(attestations.NewPool()),
@@ -1846,7 +1983,6 @@ func TestStore_NoViableHead_ProtoArray(t *testing.T) {
 
 	for i := 1; i < 6; i++ {
 		driftGenesisTime(service, int64(i), 0)
-		logrus.Infof("Processing block %v", i)
 		st, err := service.HeadState(ctx)
 		require.NoError(t, err)
 		b, err := util.GenerateFullBlock(st, keys, util.DefaultBlockGenConfig(), types.Slot(i))
@@ -1859,7 +1995,6 @@ func TestStore_NoViableHead_ProtoArray(t *testing.T) {
 	}
 
 	for i := 6; i < 12; i++ {
-		logrus.Infof("Processing block %v", i)
 		driftGenesisTime(service, int64(i), 0)
 		st, err := service.HeadState(ctx)
 		require.NoError(t, err)
@@ -1874,7 +2009,6 @@ func TestStore_NoViableHead_ProtoArray(t *testing.T) {
 	}
 
 	for i := 12; i < 18; i++ {
-		logrus.Infof("Processing block %v", i)
 		driftGenesisTime(service, int64(i), 0)
 		st, err := service.HeadState(ctx)
 		require.NoError(t, err)
@@ -1887,6 +2021,61 @@ func TestStore_NoViableHead_ProtoArray(t *testing.T) {
 		err = service.onBlock(ctx, wsb, root)
 		require.NoError(t, err)
 	}
+	// Check that we haven't justified the second epoch yet
+	jc := service.ForkChoicer().JustifiedCheckpoint()
+	require.Equal(t, types.Epoch(0), jc.Epoch)
+
+	// import a block that justifies the second epoch
+	driftGenesisTime(service, 18, 0)
+	validHeadState, err := service.HeadState(ctx)
+	require.NoError(t, err)
+	b, err := util.GenerateFullBlockBellatrix(validHeadState, keys, util.DefaultBlockGenConfig(), 18)
+	require.NoError(t, err)
+	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	firstInvalidRoot, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	err = service.onBlock(ctx, wsb, firstInvalidRoot)
+	require.NoError(t, err)
+	jc = service.ForkChoicer().JustifiedCheckpoint()
+	require.Equal(t, types.Epoch(2), jc.Epoch)
+
+	sjc := validHeadState.CurrentJustifiedCheckpoint()
+	require.Equal(t, types.Epoch(0), sjc.Epoch)
+	lvh := b.Block.Body.ExecutionPayload.ParentHash
+
+	// check our head
+	require.Equal(t, firstInvalidRoot, service.ForkChoicer().CachedHeadRoot())
+
+	// import another block to find out that it was invalid
+	mockEngine = &mockPOW.EngineClient{ErrNewPayload: powchain.ErrAcceptedSyncingPayloadStatus, ErrForkchoiceUpdated: powchain.ErrInvalidPayloadStatus, ForkChoiceUpdatedResp: lvh}
+	service.cfg.ExecutionEngineCaller = mockEngine
+	driftGenesisTime(service, 19, 0)
+	st, err = service.HeadState(ctx)
+	require.NoError(t, err)
+	b, err = util.GenerateFullBlockBellatrix(st, keys, util.DefaultBlockGenConfig(), 19)
+	require.NoError(t, err)
+	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	root, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	err = service.onBlock(ctx, wsb, root)
+	require.ErrorContains(t, "received an INVALID payload from execution engine", err)
+	require.Equal(t, firstInvalidRoot, service.ForkChoicer().CachedHeadRoot())
+
+	// import another block based on the last valid head state
+	mockEngine = &mockPOW.EngineClient{}
+	service.cfg.ExecutionEngineCaller = mockEngine
+	driftGenesisTime(service, 20, 0)
+	b, err = util.GenerateFullBlockBellatrix(validHeadState, keys, &util.BlockGenConfig{}, 20)
+	require.NoError(t, err)
+	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	root, err = b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	err = service.onBlock(ctx, wsb, root)
+	require.NoError(t, err)
+	require.Equal(t, root, service.ForkChoicer().CachedHeadRoot())
 }
 
 // Helper function to simulate the block being on time or delayed for proposer

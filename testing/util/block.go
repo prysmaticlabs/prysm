@@ -2,6 +2,7 @@ package util
 
 import (
 	"context"
+	"encoding/binary"
 	"fmt"
 
 	"github.com/pkg/errors"
@@ -18,6 +19,7 @@ import (
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
+	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
@@ -978,8 +980,19 @@ func GenerateFullBlockBellatrix(
 		return nil, errors.Wrap(err, "could not get current timestamp")
 	}
 
+	stCopy := bState.Copy()
+	stCopy, err = transition.ProcessSlots(context.Background(), stCopy, slot)
+	if err != nil {
+		return nil, err
+	}
+
+	parentExecution, err := stCopy.LatestExecutionPayloadHeader()
+	if err != nil {
+		return nil, err
+	}
+	blockHash := indexToHash(uint64(slot))
 	newExecutionPayload := &enginev1.ExecutionPayload{
-		ParentHash:    params.BeaconConfig().ZeroHash[:],
+		ParentHash:    parentExecution.BlockHash,
 		FeeRecipient:  make([]byte, 20),
 		StateRoot:     params.BeaconConfig().ZeroHash[:],
 		ReceiptsRoot:  params.BeaconConfig().ZeroHash[:],
@@ -988,7 +1001,7 @@ func GenerateFullBlockBellatrix(
 		BlockNumber:   uint64(slot),
 		ExtraData:     params.BeaconConfig().ZeroHash[:],
 		BaseFeePerGas: params.BeaconConfig().ZeroHash[:],
-		BlockHash:     params.BeaconConfig().ZeroHash[:],
+		BlockHash:     blockHash[:],
 		Timestamp:     uint64(timestamp.Unix()),
 		Transactions:  newTransactions,
 	}
@@ -1014,11 +1027,6 @@ func GenerateFullBlockBellatrix(
 		slot = currentSlot + 1
 	}
 
-	stCopy := bState.Copy()
-	stCopy, err = transition.ProcessSlots(context.Background(), stCopy, slot)
-	if err != nil {
-		return nil, err
-	}
 	reveal, err := RandaoReveal(stCopy, time.CurrentEpoch(stCopy), privs)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute randao reveal")
@@ -1054,4 +1062,10 @@ func GenerateFullBlockBellatrix(
 	}
 
 	return &ethpb.SignedBeaconBlockBellatrix{Block: block, Signature: signature.Marshal()}, nil
+}
+
+func indexToHash(i uint64) [32]byte {
+	var b [8]byte
+	binary.LittleEndian.PutUint64(b[:], i)
+	return hash.Hash(b[:])
 }
