@@ -95,15 +95,15 @@ func run(pass *analysis.Pass) (interface{}, error) {
 						name := a.Name
 						for _, lhs := range f.Lhs {
 							if l, ok := lhs.(*ast.Ident); ok && l.Name == name {
-								typ = pass.TypesInfo.ObjectOf(l).Type()
+								typ = pass.TypesInfo.TypeOf(l)
 								break
 							}
 						}
 					case *ast.Field:
-						typ = pass.TypesInfo.ObjectOf(f.Type.(*ast.Ident)).Type()
+						typ = pass.TypesInfo.TypeOf(f.Type)
 					}
 
-					if typ.String() == "error" {
+					if typ != nil && typ.String() == "error" {
 						pass.Reportf(a.Pos(), errImproperUsage)
 					}
 				}
