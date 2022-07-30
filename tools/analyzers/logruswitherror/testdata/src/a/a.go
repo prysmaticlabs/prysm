@@ -1,16 +1,23 @@
 package testdata
 
+import "errors"
+
 var log = &logger{}
 
 func LogThis(err error) {
-	log.Debugf("Something really bad happened: %v", err)   // want "use logrus.WithError(err) rather than templated log statements"
-	log.Infof("Something really bad happened: %v", err)    // want "use logrus.WithError(err) rather than templated log statements"
-	log.Printf("Something really bad happened: %v", err)   // want "use logrus.WithError(err) rather than templated log statements"
-	log.Warnf("Something really bad happened: %v", err)    // want "use logrus.WithError(err) rather than templated log statements"
-	log.Warningf("Something really bad happened: %v", err) // want "use logrus.WithError(err) rather than templated log statements"
-	log.Errorf("Something really bad happened: %v", err)   // want "use logrus.WithError(err) rather than templated log statements"
-	log.Fatalf("Something really bad happened: %v", err)   // want "use logrus.WithError(err) rather than templated log statements"
-	log.Panicf("Something really bad happened: %v", err)   // want "use logrus.WithError(err) rather than templated log statements"
+	// Most common use cases with all types of formatted log methods.
+	log.Debugf("Something really bad happened: %v", err)   // want "use log.WithError rather than templated log statements with errors"
+	log.Infof("Something really bad happened: %v", err)    // want "use log.WithError rather than templated log statements with errors"
+	log.Printf("Something really bad happened: %v", err)   // want "use log.WithError rather than templated log statements with errors"
+	log.Warnf("Something really bad happened: %v", err)    // want "use log.WithError rather than templated log statements with errors"
+	log.Warningf("Something really bad happened: %v", err) // want "use log.WithError rather than templated log statements with errors"
+	log.Errorf("Something really bad happened: %v", err)   // want "use log.WithError rather than templated log statements with errors"
+	log.Fatalf("Something really bad happened: %v", err)   // want "use log.WithError rather than templated log statements with errors"
+	log.Panicf("Something really bad happened: %v", err)   // want "use log.WithError rather than templated log statements with errors"
+
+	// Inline declaration of errors and multiple value arguments.
+	log.Panicf("Something really bad happened: %v", errors.New("foobar")) // want "use log.WithError rather than templated log statements with errors"
+	log.Panicf("Something really bad happened %d times: %v", 12, err)     // want "use log.WithError rather than templated log statements with errors"
 
 	log.WithError(err).Error("Something bad happened, but this log statement is OK :)")
 }
