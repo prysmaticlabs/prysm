@@ -1,6 +1,9 @@
 package testdata
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
 var log = &logger{}
 
@@ -19,7 +22,17 @@ func LogThis(err error) {
 	log.Panicf("Something really bad happened: %v", errors.New("foobar")) // want "use log.WithError rather than templated log statements with errors"
 	log.Panicf("Something really bad happened %d times: %v", 12, err)     // want "use log.WithError rather than templated log statements with errors"
 
+	if err := do(); err != nil {
+		log.Errorf("Something really bad happened: %v", err) // want "use log.WithError rather than templated log statements with errors"
+	}
+
 	log.WithError(err).Error("Something bad happened, but this log statement is OK :)")
+
+	_ = fmt.Errorf("this is ok: %v", err)
+}
+
+func do() error {
+	return errors.New("bad")
 }
 
 type logger struct{}

@@ -51,8 +51,19 @@ func run(pass *analysis.Pass) (interface{}, error) {
 	inspect.Preorder(nodeFilter, func(node ast.Node) {
 		switch stmt := node.(type) {
 		case *ast.CallExpr:
+			fse, ok := stmt.Fun.(*ast.SelectorExpr)
+			if !ok {
+				return
+			}
+
+			// TODO: can this be done better?
+			// Only complain on logrus functions.
+			if x, ok := fse.X.(*ast.Ident); !ok || x.Name != "log" {
+				return
+			}
+
 			// Lookup function name
-			fnName := stmt.Fun.(*ast.SelectorExpr).Sel.Name
+			fnName := fse.Sel.Name
 
 			// If function matches any of the logrus functions, check if it uses errors.
 			if _, ok := logFns[fnName]; !ok {
@@ -72,17 +83,20 @@ func run(pass *analysis.Pass) (interface{}, error) {
 					// if err := ast.Print(pass.Fset, a); err != nil {
 					// 	panic(err)
 					// }
-					// return
+					return
 				case *ast.Ident:
 					// Check if the error is a variable.
+					if a.Obj == nil {
+						return
+					}
 
 					f, ok := a.Obj.Decl.(*ast.Field)
 					if !ok {
-						panic("its not ok 0")
+						return
 					}
 					typ, ok := f.Type.(*ast.Ident)
 					if !ok {
-						panic("its not ok 1")
+						return
 					}
 
 					if typ.Name == "error" {
