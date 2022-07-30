@@ -13,19 +13,19 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
-// FaultymockExecutionChain defines an incorrectly functioning powchain service.
-type FaultymockExecutionChain struct {
+// FaultyExecutionChain defines an incorrectly functioning powchain service.
+type FaultyExecutionChain struct {
 	ChainFeed      *event.Feed
 	HashesByHeight map[int][]byte
 }
 
 // Eth2GenesisPowchainInfo --
-func (_ *FaultymockExecutionChain) Eth2GenesisPowchainInfo() (uint64, *big.Int) {
+func (*FaultyExecutionChain) Eth2GenesisPowchainInfo() (uint64, *big.Int) {
 	return 0, big.NewInt(0)
 }
 
 // BlockExists --
-func (f *FaultymockExecutionChain) BlockExists(_ context.Context, _ common.Hash) (bool, *big.Int, error) {
+func (f *FaultyExecutionChain) BlockExists(context.Context, common.Hash) (bool, *big.Int, error) {
 	if f.HashesByHeight == nil {
 		return false, big.NewInt(1), errors.New("failed")
 	}
@@ -34,27 +34,27 @@ func (f *FaultymockExecutionChain) BlockExists(_ context.Context, _ common.Hash)
 }
 
 // BlockHashByHeight --
-func (_ *FaultymockExecutionChain) BlockHashByHeight(_ context.Context, _ *big.Int) (common.Hash, error) {
+func (*FaultyExecutionChain) BlockHashByHeight(context.Context, *big.Int) (common.Hash, error) {
 	return [32]byte{}, errors.New("failed")
 }
 
 // BlockTimeByHeight --
-func (_ *FaultymockExecutionChain) BlockTimeByHeight(_ context.Context, _ *big.Int) (uint64, error) {
+func (*FaultyExecutionChain) BlockTimeByHeight(context.Context, *big.Int) (uint64, error) {
 	return 0, errors.New("failed")
 }
 
 // BlockByTimestamp --
-func (_ *FaultymockExecutionChain) BlockByTimestamp(_ context.Context, _ uint64) (*types.HeaderInfo, error) {
+func (*FaultyExecutionChain) BlockByTimestamp(context.Context, uint64) (*types.HeaderInfo, error) {
 	return &types.HeaderInfo{Number: big.NewInt(0)}, nil
 }
 
 // ChainStartEth1Data --
-func (_ *FaultymockExecutionChain) ChainStartEth1Data() *ethpb.Eth1Data {
+func (*FaultyExecutionChain) ChainStartEth1Data() *ethpb.Eth1Data {
 	return &ethpb.Eth1Data{}
 }
 
 // PreGenesisState --
-func (_ *FaultymockExecutionChain) PreGenesisState() state.BeaconState {
+func (*FaultyExecutionChain) PreGenesisState() state.BeaconState {
 	s, err := v1.InitializeFromProtoUnsafe(&ethpb.BeaconState{})
 	if err != nil {
 		panic("could not initialize state")
@@ -63,11 +63,11 @@ func (_ *FaultymockExecutionChain) PreGenesisState() state.BeaconState {
 }
 
 // ClearPreGenesisData --
-func (_ *FaultymockExecutionChain) ClearPreGenesisData() {
+func (*FaultyExecutionChain) ClearPreGenesisData() {
 	// no-op
 }
 
 // IsConnectedToETH1 --
-func (_ *FaultymockExecutionChain) IsConnectedToETH1() bool {
+func (*FaultyExecutionChain) IsConnectedToETH1() bool {
 	return true
 }

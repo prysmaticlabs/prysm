@@ -273,7 +273,7 @@ func TestWaitForChainStart_ContextClosed(t *testing.T) {
 	chainService := &mockChain.ChainService{}
 	Server := &Server{
 		Ctx: ctx,
-		ChainStartFetcher: &mockExecution.FaultymockExecutionChain{
+		ChainStartFetcher: &mockExecution.FaultyExecutionChain{
 			ChainFeed: new(event.Feed),
 		},
 		StateNotifier: chainService.StateNotifier(),
@@ -368,7 +368,7 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 	chainService := &mockChain.ChainService{}
 	Server := &Server{
 		Ctx: context.Background(),
-		ChainStartFetcher: &mockExecution.FaultymockExecutionChain{
+		ChainStartFetcher: &mockExecution.FaultyExecutionChain{
 			ChainFeed: new(event.Feed),
 		},
 		StateNotifier: chainService.StateNotifier(),
