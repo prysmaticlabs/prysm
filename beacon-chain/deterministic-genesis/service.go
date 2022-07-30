@@ -11,7 +11,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/execution"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
@@ -23,7 +23,7 @@ import (
 
 var _ runtime.Service = (*Service)(nil)
 var _ depositcache.DepositFetcher = (*Service)(nil)
-var _ powchain.ChainStartFetcher = (*Service)(nil)
+var _ execution.ChainStartFetcher = (*Service)(nil)
 
 // Service spins up an client interoperability service that handles responsibilities such
 // as kickstarting a genesis state for the beacon node from cli flags or a genesis.ssz file.

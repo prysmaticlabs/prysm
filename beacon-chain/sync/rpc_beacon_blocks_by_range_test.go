@@ -16,11 +16,11 @@ import (
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	db2 "github.com/prysmaticlabs/prysm/beacon-chain/db"
 	db "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	mockExecution "github.com/prysmaticlabs/prysm/beacon-chain/execution/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
-	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
@@ -209,7 +209,7 @@ func TestRPCBeaconBlocksByRange_ReconstructsPayloads(t *testing.T) {
 		BaseFeePerGas: bytesutil.PadTo([]byte("baseFeePerGas"), fieldparams.RootLength),
 		Transactions:  encodedBinaryTxs,
 	}
-	mockEngine := &mockPOW.EngineClient{
+	mockEngine := &mockExecution.EngineClient{
 		ExecutionPayloadByBlockHash: map[[32]byte]*enginev1.ExecutionPayload{
 			blockHash: payload,
 		},

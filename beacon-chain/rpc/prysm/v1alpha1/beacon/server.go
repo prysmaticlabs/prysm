@@ -13,10 +13,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/execution"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -27,12 +27,12 @@ import (
 type Server struct {
 	BeaconDB                    db.ReadOnlyDatabase
 	Ctx                         context.Context
-	ChainStartFetcher           powchain.ChainStartFetcher
+	ChainStartFetcher           execution.ChainStartFetcher
 	HeadFetcher                 blockchain.HeadFetcher
 	CanonicalFetcher            blockchain.CanonicalFetcher
 	FinalizationFetcher         blockchain.FinalizationFetcher
 	DepositFetcher              depositcache.DepositFetcher
-	BlockFetcher                powchain.POWBlockFetcher
+	BlockFetcher                execution.POWBlockFetcher
 	GenesisTimeFetcher          blockchain.TimeFetcher
 	StateNotifier               statefeed.Notifier
 	BlockNotifier               blockfeed.Notifier

@@ -17,11 +17,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	prysmtime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	mockExecution "github.com/prysmaticlabs/prysm/beacon-chain/execution/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
-	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
@@ -480,15 +480,15 @@ func TestServer_GetBellatrixBeaconBlock_HappyCase(t *testing.T) {
 		SyncChecker:       &mockSync.Sync{IsSyncing: false},
 		BlockReceiver:     &blockchainTest.ChainService{},
 		HeadUpdater:       &blockchainTest.ChainService{},
-		ChainStartFetcher: &mockPOW.POWChain{},
-		Eth1InfoFetcher:   &mockPOW.POWChain{},
+		ChainStartFetcher: &mockExecution.Chain{},
+		Eth1InfoFetcher:   &mockExecution.Chain{},
 		MockEth1Votes:     true,
 		AttPool:           attestations.NewPool(),
 		SlashingsPool:     slashings.NewPool(),
 		ExitPool:          voluntaryexits.NewPool(),
 		StateGen:          stategen.New(db),
 		SyncCommitteePool: synccommittee.NewStore(),
-		ExecutionEngineCaller: &mockPOW.EngineClient{
+		ExecutionEngineCaller: &mockExecution.EngineClient{
 			PayloadIDBytes:   &v1.PayloadIDBytes{1},
 			ExecutionPayload: emptyPayload,
 		},
@@ -611,15 +611,15 @@ func TestServer_GetBellatrixBeaconBlock_BuilderCase(t *testing.T) {
 		HeadUpdater:         &blockchainTest.ChainService{},
 		ForkFetcher:         &blockchainTest.ChainService{Fork: &ethpb.Fork{}},
 		GenesisFetcher:      &blockchainTest.ChainService{},
-		ChainStartFetcher:   &mockPOW.POWChain{},
-		Eth1InfoFetcher:     &mockPOW.POWChain{},
+		ChainStartFetcher:   &mockExecution.Chain{},
+		Eth1InfoFetcher:     &mockExecution.Chain{},
 		MockEth1Votes:       true,
 		AttPool:             attestations.NewPool(),
 		SlashingsPool:       slashings.NewPool(),
 		ExitPool:            voluntaryexits.NewPool(),
 		StateGen:            stategen.New(db),
 		SyncCommitteePool:   synccommittee.NewStore(),
-		ExecutionEngineCaller: &mockPOW.EngineClient{
+		ExecutionEngineCaller: &mockExecution.EngineClient{
 			PayloadIDBytes:   &v1.PayloadIDBytes{1},
 			ExecutionPayload: emptyPayload,
 		},
