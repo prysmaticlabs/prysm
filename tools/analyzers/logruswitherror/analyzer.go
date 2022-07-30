@@ -5,6 +5,7 @@ package logruswitherror
 import (
 	"errors"
 	"go/ast"
+	"go/types"
 
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/passes/inspect"
@@ -46,8 +47,6 @@ func run(pass *analysis.Pass) (interface{}, error) {
 		(*ast.CallExpr)(nil),
 	}
 
-	_, _ = inspect, nodeFilter
-
 	inspect.Preorder(nodeFilter, func(node ast.Node) {
 		switch stmt := node.(type) {
 		case *ast.CallExpr:
@@ -70,19 +69,18 @@ func run(pass *analysis.Pass) (interface{}, error) {
 				return
 			}
 
-			for i, arg := range stmt.Args {
-				if i < 1 {
-					continue
-				}
-
+			for _, arg := range stmt.Args {
 				// Check CallExpr and Ident for error type.
 				switch a := arg.(type) {
 				case *ast.CallExpr:
 					// _ = a.Fun.(*ast.SelectorExpr).Sel
 
+					// o := pass.TypesInfo.ObjectOf(a.Fun.(*ast.SelectorExpr).Sel)
+
 					// if err := ast.Print(pass.Fset, a); err != nil {
 					// 	panic(err)
 					// }
+
 					return
 				case *ast.Ident:
 					// Check if the error is a variable.
@@ -90,16 +88,22 @@ func run(pass *analysis.Pass) (interface{}, error) {
 						return
 					}
 
-					f, ok := a.Obj.Decl.(*ast.Field)
-					if !ok {
-						return
-					}
-					typ, ok := f.Type.(*ast.Ident)
-					if !ok {
-						return
+					var typ types.Type
+
+					switch f := a.Obj.Decl.(type) {
+					case *ast.AssignStmt:
+						name := a.Name
+						for _, lhs := range f.Lhs {
+							if l, ok := lhs.(*ast.Ident); ok && l.Name == name {
+								typ = pass.TypesInfo.ObjectOf(l).Type()
+								break
+							}
+						}
+					case *ast.Field:
+						typ = pass.TypesInfo.ObjectOf(f.Type.(*ast.Ident)).Type()
 					}
 
-					if typ.Name == "error" {
+					if typ.String() == "error" {
 						pass.Reportf(a.Pos(), errImproperUsage)
 					}
 				}

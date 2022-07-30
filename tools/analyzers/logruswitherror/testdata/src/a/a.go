@@ -22,7 +22,11 @@ func LogThis(err error) {
 	log.Panicf("Something really bad happened: %v", errors.New("foobar")) // want "use log.WithError rather than templated log statements with errors"
 	log.Panicf("Something really bad happened %d times: %v", 12, err)     // want "use log.WithError rather than templated log statements with errors"
 
-	if err := do(); err != nil {
+	if _, err := do(); err != nil {
+		log.Errorf("Something really bad happened: %v", err) // want "use log.WithError rather than templated log statements with errors"
+	}
+
+	if ok, err := false, do2(); !ok || err != nil {
 		log.Errorf("Something really bad happened: %v", err) // want "use log.WithError rather than templated log statements with errors"
 	}
 
@@ -31,8 +35,12 @@ func LogThis(err error) {
 	_ = fmt.Errorf("this is ok: %v", err)
 }
 
-func do() error {
-	return errors.New("bad")
+func do() (bool, error) {
+	return false, errors.New("bad")
+}
+
+func do2() error {
+	return errors.New("bad2")
 }
 
 type logger struct{}
