@@ -18,9 +18,8 @@ func LogThis(err error) {
 	log.Fatalf("Something really bad happened: %v", err)   // want "use log.WithError rather than templated log statements with errors"
 	log.Panicf("Something really bad happened: %v", err)   // want "use log.WithError rather than templated log statements with errors"
 
-	// Inline declaration of errors and multiple value arguments.
-	log.Panicf("Something really bad happened: %v", errors.New("foobar")) // want "use log.WithError rather than templated log statements with errors"
-	log.Panicf("Something really bad happened %d times: %v", 12, err)     // want "use log.WithError rather than templated log statements with errors"
+	// Other common use cases.
+	log.Panicf("Something really bad happened %d times: %v", 12, err) // want "use log.WithError rather than templated log statements with errors"
 
 	if _, err := do(); err != nil {
 		log.Errorf("Something really bad happened: %v", err) // want "use log.WithError rather than templated log statements with errors"

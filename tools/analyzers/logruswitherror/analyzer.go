@@ -70,18 +70,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 			}
 
 			for _, arg := range stmt.Args {
-				// Check CallExpr and Ident for error type.
 				switch a := arg.(type) {
-				case *ast.CallExpr:
-					// _ = a.Fun.(*ast.SelectorExpr).Sel
-
-					// o := pass.TypesInfo.ObjectOf(a.Fun.(*ast.SelectorExpr).Sel)
-
-					// if err := ast.Print(pass.Fset, a); err != nil {
-					// 	panic(err)
-					// }
-
-					return
 				case *ast.Ident:
 					// Check if the error is a variable.
 					if a.Obj == nil {
