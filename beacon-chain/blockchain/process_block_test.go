@@ -1804,12 +1804,11 @@ func Test_verifyBlkFinalizedSlot_invalidBlock(t *testing.T) {
 }
 
 func TestStore_NoViableHead_ProtoArray(t *testing.T) {
-	hook := logTest.NewGlobal()
 	params.SetupTestConfigCleanup(t)
 	config := params.BeaconConfig()
-	config.SlotsPerEpoch = 4
+	config.SlotsPerEpoch = 6
 	config.AltairForkEpoch = 1
-	config.BellatrixForkEpoch = 1
+	config.BellatrixForkEpoch = 2
 	config.SafeSlotsToImportOptimistically = 0
 	params.OverrideBeaconConfig(config)
 
@@ -1845,7 +1844,7 @@ func TestStore_NoViableHead_ProtoArray(t *testing.T) {
 	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, st, parentRoot), "Could not save genesis state")
 	require.NoError(t, service.cfg.BeaconDB.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
 
-	for i := 1; i < 4; i++ {
+	for i := 1; i < 6; i++ {
 		driftGenesisTime(service, int64(i), 0)
 		logrus.Infof("Processing block %v", i)
 		st, err := service.HeadState(ctx)
@@ -1859,7 +1858,22 @@ func TestStore_NoViableHead_ProtoArray(t *testing.T) {
 		require.NoError(t, service.onBlock(ctx, wsb, root))
 	}
 
-	for i := 4; i < 12; i++ {
+	for i := 6; i < 12; i++ {
+		logrus.Infof("Processing block %v", i)
+		driftGenesisTime(service, int64(i), 0)
+		st, err := service.HeadState(ctx)
+		require.NoError(t, err)
+		b, err := util.GenerateFullBlockAltair(st, keys, util.DefaultBlockGenConfig(), types.Slot(i))
+		require.NoError(t, err)
+		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		require.NoError(t, err)
+		root, err := b.Block.HashTreeRoot()
+		require.NoError(t, err)
+		err = service.onBlock(ctx, wsb, root)
+		require.NoError(t, err)
+	}
+
+	for i := 12; i < 18; i++ {
 		logrus.Infof("Processing block %v", i)
 		driftGenesisTime(service, int64(i), 0)
 		st, err := service.HeadState(ctx)
@@ -1871,7 +1885,6 @@ func TestStore_NoViableHead_ProtoArray(t *testing.T) {
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
 		err = service.onBlock(ctx, wsb, root)
-		assert.LogsContain(t, hook, "pingo")
 		require.NoError(t, err)
 	}
 }

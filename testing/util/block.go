@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/iface"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
@@ -1013,17 +1014,17 @@ func GenerateFullBlockBellatrix(
 		slot = currentSlot + 1
 	}
 
-	// Temporarily incrementing the beacon state slot here since BeaconProposerIndex is a
-	// function deterministic on beacon state slot.
-	if err := bState.SetSlot(slot); err != nil {
-		return nil, errors.Wrap(err, "could not set slot")
+	stCopy := bState.Copy()
+	stCopy, err = transition.ProcessSlots(context.Background(), stCopy, slot)
+	if err != nil {
+		return nil, err
 	}
-	reveal, err := RandaoReveal(bState, time.CurrentEpoch(bState), privs)
+	reveal, err := RandaoReveal(stCopy, time.CurrentEpoch(stCopy), privs)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute randao reveal")
 	}
 
-	idx, err := helpers.BeaconProposerIndex(ctx, bState)
+	idx, err := helpers.BeaconProposerIndex(ctx, stCopy)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute beacon proposer index")
 	}
@@ -1046,10 +1047,7 @@ func GenerateFullBlockBellatrix(
 		},
 	}
 
-	if err := bState.SetSlot(currentSlot); err != nil {
-		return nil, errors.Wrap(err, "could not set slot")
-	}
-
+	// The fork can change after processing the state
 	signature, err := BlockSignature(bState, block, privs)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute block signature")

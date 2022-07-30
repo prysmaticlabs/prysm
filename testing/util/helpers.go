@@ -43,6 +43,8 @@ func BlockSignature(
 ) (bls.Signature, error) {
 	var wsb interfaces.SignedBeaconBlock
 	var err error
+	// copy the state since we need to process slots
+	bState = bState.Copy()
 	switch b := block.(type) {
 	case *ethpb.BeaconBlock:
 		wsb, err = wrapper.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: b})
@@ -70,6 +72,24 @@ func BlockSignature(
 		b.StateRoot = s[:]
 	}
 
+	// Temporarily increasing the beacon state slot here since BeaconProposerIndex is a
+	// function deterministic on beacon state slot.
+	var blockSlot types.Slot
+	switch b := block.(type) {
+	case *ethpb.BeaconBlock:
+		blockSlot = b.Slot
+	case *ethpb.BeaconBlockAltair:
+		blockSlot = b.Slot
+	case *ethpb.BeaconBlockBellatrix:
+		blockSlot = b.Slot
+	}
+
+	// process slots to get the right fork
+	bState, err = transition.ProcessSlots(context.Background(), bState, blockSlot)
+	if err != nil {
+		return nil, err
+	}
+
 	domain, err := signing.Domain(bState.Fork(), time.CurrentEpoch(bState), params.BeaconConfig().DomainBeaconProposer, bState.GenesisValidatorsRoot())
 	if err != nil {
 		return nil, err
@@ -87,27 +107,9 @@ func BlockSignature(
 	if err != nil {
 		return nil, err
 	}
-	// Temporarily increasing the beacon state slot here since BeaconProposerIndex is a
-	// function deterministic on beacon state slot.
-	currentSlot := bState.Slot()
-	var blockSlot types.Slot
-	switch b := block.(type) {
-	case *ethpb.BeaconBlock:
-		blockSlot = b.Slot
-	case *ethpb.BeaconBlockAltair:
-		blockSlot = b.Slot
-	case *ethpb.BeaconBlockBellatrix:
-		blockSlot = b.Slot
-	}
 
-	if err := bState.SetSlot(blockSlot); err != nil {
-		return nil, err
-	}
 	proposerIdx, err := helpers.BeaconProposerIndex(context.Background(), bState)
 	if err != nil {
-		return nil, err
-	}
-	if err := bState.SetSlot(currentSlot); err != nil {
 		return nil, err
 	}
 	return privKeys[proposerIdx].Sign(blockRoot[:]), nil
