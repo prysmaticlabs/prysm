@@ -345,11 +345,18 @@ var (
 		Value: params.BeaconConfig().EthBurnAddressHex,
 	}
 
-	// EnableValidatorRegistrationFlag enables the periodic validator registration API calls that will update the custom builder with validator settings.
-	EnableValidatorRegistrationFlag = &cli.BoolFlag{
-		Name:  "enable-validator-registration",
-		Usage: "Enables validator registration APIs (MEV Builder APIs) for the validator client to update settings such as fee recipient and gas limit",
+	// EnableBuilderFlag enables the periodic validator registration API calls that will update the custom builder with validator settings.
+	EnableBuilderFlag = &cli.BoolFlag{
+		Name:  "enable-builder",
+		Usage: "Enables Builder validator registration APIs for the validator client to update settings such as fee recipient and gas limit. Note* this flag is not required if using proposer settings config file",
 		Value: false,
+	}
+
+	// BuilderGasLimitFlag defines the gas limit for the builder to use for constructing a payload.
+	BuilderGasLimitFlag = &cli.IntFlag{
+		Name:  "suggested-gas-limit",
+		Usage: "Sets gas limit for the builder to use for constructing a payload for all the validators",
+		Value: int(params.BeaconConfig().DefaultBuilderGasLimit),
 	}
 )
 

@@ -15,10 +15,10 @@ import (
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/ssz/equality"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	prefixed "github.com/prysmaticlabs/prysm/runtime/logging/logrus-prefixed-formatter"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
-	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 	"gopkg.in/d4l3k/messagediff.v1"
 )
 
@@ -53,6 +53,7 @@ func main() {
 					Name: "data-type",
 					Usage: "ssz file data type: " +
 						"block|" +
+						"blinded_block|" +
 						"signed_block|" +
 						"attestation|" +
 						"block_header|" +
@@ -73,6 +74,8 @@ func main() {
 					data = &ethpb.BeaconBlock{}
 				case "signed_block":
 					data = &ethpb.SignedBeaconBlock{}
+				case "blinded_block":
+					data = &ethpb.BlindedBeaconBlockBellatrix{}
 				case "attestation":
 					data = &ethpb.Attestation{}
 				case "block_header":

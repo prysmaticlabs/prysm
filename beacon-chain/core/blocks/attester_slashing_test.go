@@ -19,12 +19,11 @@ import (
 )
 
 func TestSlashableAttestationData_CanSlash(t *testing.T) {
-	au := util.AttestationUtil{}
-	att1 := au.HydrateAttestationData(&ethpb.AttestationData{
+	att1 := util.HydrateAttestationData(&ethpb.AttestationData{
 		Target: &ethpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)},
 		Source: &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte{'A'}, 32)},
 	})
-	att2 := au.HydrateAttestationData(&ethpb.AttestationData{
+	att2 := util.HydrateAttestationData(&ethpb.AttestationData{
 		Target: &ethpb.Checkpoint{Epoch: 1, Root: make([]byte, 32)},
 		Source: &ethpb.Checkpoint{Root: bytesutil.PadTo([]byte{'B'}, 32)},
 	})
@@ -36,10 +35,9 @@ func TestSlashableAttestationData_CanSlash(t *testing.T) {
 }
 
 func TestProcessAttesterSlashings_DataNotSlashable(t *testing.T) {
-	au := util.AttestationUtil{}
 	slashings := []*ethpb.AttesterSlashing{{
-		Attestation_1: au.HydrateIndexedAttestation(&ethpb.IndexedAttestation{}),
-		Attestation_2: au.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+		Attestation_1: util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{}),
+		Attestation_2: util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 			Data: &ethpb.AttestationData{
 				Source: &ethpb.Checkpoint{Epoch: 1},
 				Target: &ethpb.Checkpoint{Epoch: 1}},
@@ -73,16 +71,15 @@ func TestProcessAttesterSlashings_IndexedAttestationFailedToVerify(t *testing.T)
 	})
 	require.NoError(t, err)
 
-	au := util.AttestationUtil{}
 	slashings := []*ethpb.AttesterSlashing{
 		{
-			Attestation_1: au.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+			Attestation_1: util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 				Data: &ethpb.AttestationData{
 					Source: &ethpb.Checkpoint{Epoch: 1},
 				},
 				AttestingIndices: make([]uint64, params.BeaconConfig().MaxValidatorsPerCommittee+1),
 			}),
-			Attestation_2: au.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+			Attestation_2: util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 				AttestingIndices: make([]uint64, params.BeaconConfig().MaxValidatorsPerCommittee+1),
 			}),
 		},
@@ -105,8 +102,7 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 		vv.WithdrawableEpoch = types.Epoch(params.BeaconConfig().SlotsPerEpoch)
 	}
 
-	au := util.AttestationUtil{}
-	att1 := au.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+	att1 := util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: 1},
 		},
@@ -121,7 +117,7 @@ func TestProcessAttesterSlashings_AppliesCorrectStatus(t *testing.T) {
 	aggregateSig := bls.AggregateSignatures([]bls.Signature{sig0, sig1})
 	att1.Signature = aggregateSig.Marshal()
 
-	att2 := au.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+	att2 := util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{0, 1},
 	})
 	signingRoot, err = signing.ComputeSigningRoot(att2.Data, domain)
@@ -175,8 +171,7 @@ func TestProcessAttesterSlashings_AppliesCorrectStatusAltair(t *testing.T) {
 		vv.WithdrawableEpoch = types.Epoch(params.BeaconConfig().SlotsPerEpoch)
 	}
 
-	au := util.AttestationUtil{}
-	att1 := au.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+	att1 := util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: 1},
 		},
@@ -191,7 +186,7 @@ func TestProcessAttesterSlashings_AppliesCorrectStatusAltair(t *testing.T) {
 	aggregateSig := bls.AggregateSignatures([]bls.Signature{sig0, sig1})
 	att1.Signature = aggregateSig.Marshal()
 
-	att2 := au.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+	att2 := util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{0, 1},
 	})
 	signingRoot, err = signing.ComputeSigningRoot(att2.Data, domain)
@@ -245,8 +240,7 @@ func TestProcessAttesterSlashings_AppliesCorrectStatusBellatrix(t *testing.T) {
 		vv.WithdrawableEpoch = types.Epoch(params.BeaconConfig().SlotsPerEpoch)
 	}
 
-	au := util.AttestationUtil{}
-	att1 := au.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+	att1 := util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 		Data: &ethpb.AttestationData{
 			Source: &ethpb.Checkpoint{Epoch: 1},
 		},
@@ -261,7 +255,7 @@ func TestProcessAttesterSlashings_AppliesCorrectStatusBellatrix(t *testing.T) {
 	aggregateSig := bls.AggregateSignatures([]bls.Signature{sig0, sig1})
 	att1.Signature = aggregateSig.Marshal()
 
-	att2 := au.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
+	att2 := util.HydrateIndexedAttestation(&ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{0, 1},
 	})
 	signingRoot, err = signing.ComputeSigningRoot(att2.Data, domain)

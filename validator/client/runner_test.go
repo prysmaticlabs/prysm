@@ -2,10 +2,10 @@ package client
 
 import (
 	"context"
-	"errors"
 	"testing"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/async/event"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -262,4 +262,24 @@ func TestUpdateProposerSettingsAt_EpochStart(t *testing.T) {
 
 	run(ctx, v)
 	assert.LogsContain(t, hook, "updated proposer settings")
+}
+
+func TestUpdateProposerSettings_ContinuesAfterValidatorRegistrationFails(t *testing.T) {
+	errSomeotherError := errors.New("some internal error")
+	v := &testutil.FakeValidator{
+		ProposerSettingsErr: errors.Wrap(ErrBuilderValidatorRegistration, errSomeotherError.Error()),
+		Km:                  &mockKeymanager{accountsChangedFeed: &event.Feed{}},
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	hook := logTest.NewGlobal()
+	slot := params.BeaconConfig().SlotsPerEpoch
+	ticker := make(chan types.Slot)
+	v.NextSlotRet = ticker
+	go func() {
+		ticker <- slot
+
+		cancel()
+	}()
+	run(ctx, v)
+	assert.LogsContain(t, hook, ErrBuilderValidatorRegistration.Error())
 }

@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	prysmtime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
@@ -28,6 +29,7 @@ import (
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
+	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	v1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -78,14 +80,14 @@ func TestServer_buildHeaderBlock(t *testing.T) {
 		TransactionsRoot: make([]byte, fieldparams.RootLength),
 		ExtraData:        make([]byte, 0),
 	}
-	got, err := vs.buildHeaderBlock(ctx, b1.Block, h)
+	got, err := vs.buildBlindBlock(ctx, b1.Block, h)
 	require.NoError(t, err)
 	require.DeepEqual(t, h, got.GetBlindedBellatrix().Body.ExecutionPayloadHeader)
 
-	_, err = vs.buildHeaderBlock(ctx, nil, h)
+	_, err = vs.buildBlindBlock(ctx, nil, h)
 	require.ErrorContains(t, "nil block", err)
 
-	_, err = vs.buildHeaderBlock(ctx, b1.Block, nil)
+	_, err = vs.buildBlindBlock(ctx, b1.Block, nil)
 	require.ErrorContains(t, "nil header", err)
 }
 
@@ -150,7 +152,7 @@ func TestServer_getPayloadHeader(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			vs := &Server{BlockBuilder: tc.mock, HeadFetcher: tc.fetcher}
-			h, err := vs.getPayloadHeader(context.Background(), 0, 0)
+			h, err := vs.getPayloadHeaderFromBuilder(context.Background(), 0, 0)
 			if err != nil {
 				require.ErrorContains(t, tc.err, err)
 			} else {
@@ -300,20 +302,20 @@ func TestServer_getAndBuildHeaderBlock(t *testing.T) {
 	vs := &Server{}
 
 	// Nil builder
-	ready, _, err := vs.getAndBuildHeaderBlock(ctx, nil)
+	ready, _, err := vs.getAndBuildBlindBlock(ctx, nil)
 	require.NoError(t, err)
 	require.Equal(t, false, ready)
 
 	// Not configured
 	vs.BlockBuilder = &builderTest.MockBuilderService{}
-	ready, _, err = vs.getAndBuildHeaderBlock(ctx, nil)
+	ready, _, err = vs.getAndBuildBlindBlock(ctx, nil)
 	require.NoError(t, err)
 	require.Equal(t, false, ready)
 
 	// Block is not ready
 	vs.BlockBuilder = &builderTest.MockBuilderService{HasConfigured: true}
 	vs.FinalizationFetcher = &blockchainTest.ChainService{FinalizedCheckPoint: &ethpb.Checkpoint{}}
-	ready, _, err = vs.getAndBuildHeaderBlock(ctx, nil)
+	ready, _, err = vs.getAndBuildBlindBlock(ctx, nil)
 	require.NoError(t, err)
 	require.Equal(t, false, ready)
 
@@ -329,7 +331,7 @@ func TestServer_getAndBuildHeaderBlock(t *testing.T) {
 	vs.FinalizationFetcher = &blockchainTest.ChainService{FinalizedCheckPoint: &ethpb.Checkpoint{Root: wbr1[:]}}
 	vs.HeadFetcher = &blockchainTest.ChainService{Block: wb1}
 	vs.BlockBuilder = &builderTest.MockBuilderService{HasConfigured: true, ErrGetHeader: errors.New("could not get payload")}
-	ready, _, err = vs.getAndBuildHeaderBlock(ctx, &ethpb.BeaconBlockAltair{})
+	ready, _, err = vs.getAndBuildBlindBlock(ctx, &ethpb.BeaconBlockAltair{})
 	require.ErrorContains(t, "could not get payload", err)
 	require.Equal(t, false, ready)
 
@@ -364,12 +366,45 @@ func TestServer_getAndBuildHeaderBlock(t *testing.T) {
 		BaseFeePerGas:    make([]byte, fieldparams.RootLength),
 		BlockHash:        make([]byte, fieldparams.RootLength),
 		TransactionsRoot: make([]byte, fieldparams.RootLength),
-		ExtraData:        make([]byte, 0),
 	}
 
 	vs.StateGen = stategen.New(vs.BeaconDB)
-	vs.BlockBuilder = &builderTest.MockBuilderService{HasConfigured: true, Bid: &ethpb.SignedBuilderBid{Message: &ethpb.BuilderBid{Header: h}}}
-	ready, builtBlk, err := vs.getAndBuildHeaderBlock(ctx, altairBlk.Block)
+	vs.GenesisFetcher = &blockchainTest.ChainService{}
+	vs.ForkFetcher = &blockchainTest.ChainService{Fork: &ethpb.Fork{}}
+
+	sk, err := bls.RandKey()
+	require.NoError(t, err)
+	bid := &ethpb.BuilderBid{
+		Header: &v1.ExecutionPayloadHeader{
+			BlockNumber:      123,
+			GasLimit:         456,
+			GasUsed:          789,
+			ParentHash:       make([]byte, fieldparams.RootLength),
+			FeeRecipient:     make([]byte, fieldparams.FeeRecipientLength),
+			StateRoot:        make([]byte, fieldparams.RootLength),
+			ReceiptsRoot:     make([]byte, fieldparams.RootLength),
+			LogsBloom:        make([]byte, fieldparams.LogsBloomLength),
+			PrevRandao:       make([]byte, fieldparams.RootLength),
+			BaseFeePerGas:    make([]byte, fieldparams.RootLength),
+			BlockHash:        make([]byte, fieldparams.RootLength),
+			TransactionsRoot: make([]byte, fieldparams.RootLength),
+		},
+		Pubkey: sk.PublicKey().Marshal(),
+		Value:  bytesutil.PadTo([]byte{1, 2, 3}, 32),
+	}
+	d := params.BeaconConfig().DomainApplicationBuilder
+	g := vs.GenesisFetcher.GenesisValidatorsRoot()
+	domain, err := signing.ComputeDomain(d, vs.ForkFetcher.CurrentFork().CurrentVersion, g[:])
+	require.NoError(t, err)
+	sr, err := signing.ComputeSigningRoot(bid, domain)
+	require.NoError(t, err)
+	sBid := &ethpb.SignedBuilderBid{
+		Message:   bid,
+		Signature: sk.Sign(sr[:]).Marshal(),
+	}
+	vs.BlockBuilder = &builderTest.MockBuilderService{HasConfigured: true, Bid: sBid}
+
+	ready, builtBlk, err := vs.getAndBuildBlindBlock(ctx, altairBlk.Block)
 	require.NoError(t, err)
 	require.Equal(t, true, ready)
 	require.DeepEqual(t, h, builtBlk.GetBlindedBellatrix().Body.ExecutionPayloadHeader)
@@ -574,6 +609,8 @@ func TestServer_GetBellatrixBeaconBlock_BuilderCase(t *testing.T) {
 		SyncChecker:         &mockSync.Sync{IsSyncing: false},
 		BlockReceiver:       &blockchainTest.ChainService{},
 		HeadUpdater:         &blockchainTest.ChainService{},
+		ForkFetcher:         &blockchainTest.ChainService{Fork: &ethpb.Fork{}},
+		GenesisFetcher:      &blockchainTest.ChainService{},
 		ChainStartFetcher:   &mockPOW.POWChain{},
 		Eth1InfoFetcher:     &mockPOW.POWChain{},
 		MockEth1Votes:       true,
@@ -586,9 +623,26 @@ func TestServer_GetBellatrixBeaconBlock_BuilderCase(t *testing.T) {
 			PayloadIDBytes:   &v1.PayloadIDBytes{1},
 			ExecutionPayload: emptyPayload,
 		},
-		BeaconDB:     db,
-		BlockBuilder: &builderTest.MockBuilderService{HasConfigured: true, Bid: &ethpb.SignedBuilderBid{Message: &ethpb.BuilderBid{Header: h}}},
+		BeaconDB: db,
 	}
+	sk, err := bls.RandKey()
+	require.NoError(t, err)
+	bid := &ethpb.BuilderBid{
+		Header: h,
+		Pubkey: sk.PublicKey().Marshal(),
+		Value:  bytesutil.PadTo([]byte{1, 2, 3}, 32),
+	}
+	d := params.BeaconConfig().DomainApplicationBuilder
+	g := proposerServer.GenesisFetcher.GenesisValidatorsRoot()
+	domain, err := signing.ComputeDomain(d, proposerServer.ForkFetcher.CurrentFork().CurrentVersion, g[:])
+	require.NoError(t, err)
+	sr, err := signing.ComputeSigningRoot(bid, domain)
+	require.NoError(t, err)
+	sBid := &ethpb.SignedBuilderBid{
+		Message:   bid,
+		Signature: sk.Sign(sr[:]).Marshal(),
+	}
+	proposerServer.BlockBuilder = &builderTest.MockBuilderService{HasConfigured: true, Bid: sBid}
 
 	randaoReveal, err := util.RandaoReveal(beaconState, 0, privKeys)
 	require.NoError(t, err)
@@ -630,4 +684,46 @@ func TestServer_validatorRegistered(t *testing.T) {
 	reg, err = proposerServer.validatorRegistered(ctx, 1)
 	require.NoError(t, err)
 	require.Equal(t, true, reg)
+}
+
+func TestServer_validateBuilderSignature(t *testing.T) {
+	m := &blockchainTest.ChainService{
+		Fork: &ethpb.Fork{},
+	}
+	s := &Server{
+		ForkFetcher:    m,
+		GenesisFetcher: m,
+	}
+	sk, err := bls.RandKey()
+	require.NoError(t, err)
+	bid := &ethpb.BuilderBid{
+		Header: &v1.ExecutionPayloadHeader{
+			ParentHash:       make([]byte, fieldparams.RootLength),
+			FeeRecipient:     make([]byte, fieldparams.FeeRecipientLength),
+			StateRoot:        make([]byte, fieldparams.RootLength),
+			ReceiptsRoot:     make([]byte, fieldparams.RootLength),
+			LogsBloom:        make([]byte, fieldparams.LogsBloomLength),
+			PrevRandao:       make([]byte, fieldparams.RootLength),
+			BaseFeePerGas:    make([]byte, fieldparams.RootLength),
+			BlockHash:        make([]byte, fieldparams.RootLength),
+			TransactionsRoot: make([]byte, fieldparams.RootLength),
+			BlockNumber:      1,
+		},
+		Pubkey: sk.PublicKey().Marshal(),
+		Value:  bytesutil.PadTo([]byte{1, 2, 3}, 32),
+	}
+	d := params.BeaconConfig().DomainApplicationBuilder
+	g := s.GenesisFetcher.GenesisValidatorsRoot()
+	domain, err := signing.ComputeDomain(d, s.ForkFetcher.CurrentFork().CurrentVersion, g[:])
+	require.NoError(t, err)
+	sr, err := signing.ComputeSigningRoot(bid, domain)
+	require.NoError(t, err)
+	sBid := &ethpb.SignedBuilderBid{
+		Message:   bid,
+		Signature: sk.Sign(sr[:]).Marshal(),
+	}
+	require.NoError(t, s.validateBuilderSignature(sBid))
+
+	sBid.Message.Value = make([]byte, 32)
+	require.ErrorIs(t, s.validateBuilderSignature(sBid), signing.ErrSigFailedToVerify)
 }

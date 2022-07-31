@@ -352,7 +352,7 @@ func GenerateFullBlockAltair(
 	numToGen = conf.NumAttestations
 	var atts []*ethpb.Attestation
 	if numToGen > 0 {
-		atts, err = NewAttestationUtil().GenerateAttestations(bState, privs, numToGen, slot, false)
+		atts, err = GenerateAttestations(bState, privs, numToGen, slot, false)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed generating %d attestations:", numToGen)
 		}

@@ -60,7 +60,7 @@ func TestVerifyLMDFFGConsistent_NotOK(t *testing.T) {
 	require.NoError(t, err)
 
 	wanted := "FFG and LMD votes are not consistent"
-	a := util.NewAttestationUtil().NewAttestation()
+	a := util.NewAttestation()
 	a.Data.Target.Epoch = 1
 	a.Data.Target.Root = []byte{'a'}
 	a.Data.BeaconBlockRoot = r33[:]
@@ -85,7 +85,8 @@ func TestVerifyLMDFFGConsistent_OK(t *testing.T) {
 	util.SaveBlock(t, ctx, service.cfg.BeaconDB, b33)
 	r33, err := b33.Block.HashTreeRoot()
 	require.NoError(t, err)
-	a := util.NewAttestationUtil().NewAttestation()
+
+	a := util.NewAttestation()
 	a.Data.Target.Epoch = 1
 	a.Data.Target.Root = r32[:]
 	a.Data.BeaconBlockRoot = r33[:]
@@ -105,7 +106,7 @@ func TestProcessAttestations_Ok(t *testing.T) {
 	genesisState, pks := util.DeterministicGenesisState(t, 64)
 	require.NoError(t, genesisState.SetGenesisTime(uint64(prysmTime.Now().Unix())-params.BeaconConfig().SecondsPerSlot))
 	require.NoError(t, service.saveGenesisData(ctx, genesisState))
-	atts, err := util.NewAttestationUtil().GenerateAttestations(genesisState, pks, 1, 0, false)
+	atts, err := util.GenerateAttestations(genesisState, pks, 1, 0, false)
 	require.NoError(t, err)
 	tRoot := bytesutil.ToBytes32(atts[0].Data.Target.Root)
 	copied := genesisState.Copy()
@@ -226,7 +227,7 @@ func TestService_ProcessAttestationsAndUpdateHead(t *testing.T) {
 	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb))
 
 	// Generate attestatios for this block in Slot 1
-	atts, err := util.NewAttestationUtil().GenerateAttestations(copied, pks, 1, 1, false)
+	atts, err := util.GenerateAttestations(copied, pks, 1, 1, false)
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.AttPool.SaveForkchoiceAttestations(atts))
 	// Verify the target is in forchoice

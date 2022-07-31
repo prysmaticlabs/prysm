@@ -35,7 +35,7 @@ func TestReportEpochMetrics_SlashedValidatorOutOfBound(t *testing.T) {
 	require.NoError(t, err)
 	v.Slashed = true
 	require.NoError(t, h.UpdateValidatorAtIndex(0, v))
-	require.NoError(t, h.AppendCurrentEpochAttestations(&eth.PendingAttestation{InclusionDelay: 1, Data: util.NewAttestationUtil().HydrateAttestationData(&eth.AttestationData{})}))
+	require.NoError(t, h.AppendCurrentEpochAttestations(&eth.PendingAttestation{InclusionDelay: 1, Data: util.HydrateAttestationData(&eth.AttestationData{})}))
 	err = reportEpochMetrics(context.Background(), h, h)
 	require.ErrorContains(t, "slot 0 out of bounds", err)
 }

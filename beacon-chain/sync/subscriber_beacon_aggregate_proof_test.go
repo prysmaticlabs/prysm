@@ -26,7 +26,7 @@ func TestBeaconAggregateProofSubscriber_CanSaveAggregatedAttestation(t *testing.
 
 	a := &ethpb.SignedAggregateAttestationAndProof{
 		Message: &ethpb.AggregateAttestationAndProof{
-			Aggregate: util.NewAttestationUtil().HydrateAttestation(&ethpb.Attestation{
+			Aggregate: util.HydrateAttestation(&ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0x07},
 			}),
 			AggregatorIndex: 100,
@@ -48,7 +48,7 @@ func TestBeaconAggregateProofSubscriber_CanSaveUnaggregatedAttestation(t *testin
 
 	a := &ethpb.SignedAggregateAttestationAndProof{
 		Message: &ethpb.AggregateAttestationAndProof{
-			Aggregate: util.NewAttestationUtil().HydrateAttestation(&ethpb.Attestation{
+			Aggregate: util.HydrateAttestation(&ethpb.Attestation{
 				AggregationBits: bitfield.Bitlist{0x03},
 				Signature:       make([]byte, fieldparams.BLSSignatureLength),
 			}),

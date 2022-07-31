@@ -139,11 +139,6 @@ func (e executionPayload) Transactions() ([][]byte, error) {
 	return e.p.Transactions, nil
 }
 
-// TransactionsRoot --
-func (executionPayload) TransactionsRoot() ([]byte, error) {
-	return nil, ErrUnsupportedField
-}
-
 // executionPayloadHeader is a convenience wrapper around a blinded beacon block body's execution header data structure
 // This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across Prysm without issues.
@@ -270,11 +265,6 @@ func (executionPayloadHeader) Transactions() ([][]byte, error) {
 	return nil, ErrUnsupportedField
 }
 
-// TransactionsRoot --
-func (e executionPayloadHeader) TransactionsRoot() ([]byte, error) {
-	return e.p.TransactionsRoot, nil
-}
-
 // PayloadToHeader converts `payload` into execution payload header format.
 func PayloadToHeader(payload interfaces.ExecutionData) (*enginev1.ExecutionPayloadHeader, error) {
 	txs, err := payload.Transactions()
@@ -342,16 +332,6 @@ func IsEmptyExecutionData(data interfaces.ExecutionData) (bool, error) {
 		}
 	}
 
-	txsRoot, err := data.TransactionsRoot()
-	switch {
-	case errors.Is(err, ErrUnsupportedField):
-	case err != nil:
-		return false, err
-	default:
-		if !bytes.Equal(txsRoot, make([]byte, fieldparams.RootLength)) {
-			return false, nil
-		}
-	}
 	if len(data.ExtraData()) != 0 {
 		return false, nil
 	}

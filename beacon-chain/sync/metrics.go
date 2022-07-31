@@ -79,7 +79,7 @@ var (
 		prometheus.HistogramOpts{
 			Name:    "rpc_blocks_by_range_response_latency_milliseconds",
 			Help:    "Captures total time to respond to rpc blocks by range requests in a milliseconds distribution",
-			Buckets: []float64{250, 500, 1000, 1500, 2000, 3000, 4000, 10000},
+			Buckets: []float64{5, 10, 50, 100, 150, 250, 500, 1000, 2000},
 		},
 	)
 	arrivalBlockPropagationHistogram = promauto.NewHistogram(
