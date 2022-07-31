@@ -22,6 +22,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
 )
 
 // builderGetPayloadMissCount tracks the number of misses when validator tries to get a payload from builder
@@ -34,10 +35,12 @@ var builderGetPayloadMissCount = promauto.NewCounter(prometheus.CounterOpts{
 // block request. This value is known as `BUILDER_PROPOSAL_DELAY_TOLERANCE` in builder spec.
 const blockBuilderTimeout = 1 * time.Second
 
-func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.GenericBeaconBlock, error) {
+func (vs *Server) buildBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BeaconBlockBellatrix, enginev1.PayloadIDBytes, error) {
+	ctx, span := trace.StartSpan(ctx, "ProposerServer.buildBellatrixBeaconBlock")
+	defer span.End()
 	altairBlk, err := vs.buildAltairBeaconBlock(ctx, req)
 	if err != nil {
-		return nil, err
+		return nil, enginev1.PayloadIDBytes{}, err
 	}
 
 	registered, err := vs.validatorRegistered(ctx, altairBlk.ProposerIndex)
@@ -49,7 +52,7 @@ func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockR
 				"back to local execution client")
 			builderGetPayloadMissCount.Inc()
 		} else if builderReady {
-			return b, nil
+			return b, enginev1.PayloadIDBytes{}, nil
 		}
 	} else if err != nil {
 		log.WithFields(logrus.Fields{
@@ -57,12 +60,12 @@ func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockR
 			"validatorIndex": altairBlk.ProposerIndex,
 		}).Errorf("Could not determine validator has registered. Default to local execution client: %v", err)
 	}
-	payload, err := vs.getExecutionPayload(ctx, req.Slot, altairBlk.ProposerIndex)
-	if err != nil {
-		return nil, err
-	}
 
-	blk := &ethpb.BeaconBlockBellatrix{
+	payload, payloadID, err := vs.getExecutionPayload(ctx, req.Slot, altairBlk.ProposerIndex)
+	if err != nil {
+		return nil, enginev1.PayloadIDBytes{}, err
+	}
+	return &ethpb.BeaconBlockBellatrix{
 		Slot:          altairBlk.Slot,
 		ProposerIndex: altairBlk.ProposerIndex,
 		ParentRoot:    altairBlk.ParentRoot,
@@ -79,6 +82,15 @@ func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockR
 			SyncAggregate:     altairBlk.Body.SyncAggregate,
 			ExecutionPayload:  payload,
 		},
+	}, payloadID, nil
+}
+
+func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.GenericBeaconBlock, error) {
+	ctx, span := trace.StartSpan(ctx, "ProposerServer.getBellatrixBeaconBlock")
+	defer span.End()
+	blk, _, err := vs.buildBellatrixBeaconBlock(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("could not build block data: %v", err)
 	}
 	// Compute state root with the newly constructed block.
 	wsb, err := wrapper.WrappedSignedBeaconBlock(

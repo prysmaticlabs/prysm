@@ -29,6 +29,8 @@ const (
 	ForkchoiceUpdatedMethod = "engine_forkchoiceUpdatedV1"
 	// GetPayloadMethod v1 request string for JSON-RPC.
 	GetPayloadMethod = "engine_getPayloadV1"
+	// GetBlobsBundleMethod v1 request string for JSON-RPC.
+	GetBlobsBundleMethod = "engine_getBlobsBundleV1"
 	// ExchangeTransitionConfigurationMethod v1 request string for JSON-RPC.
 	ExchangeTransitionConfigurationMethod = "engine_exchangeTransitionConfigurationV1"
 	// ExecutionBlockByHashMethod request string for JSON-RPC.
@@ -307,13 +309,16 @@ func (s *Service) ExecutionBlockByHash(ctx context.Context, hash common.Hash, wi
 	return result, handleRPCError(err)
 }
 
-// GetBlobsBundle calls the getBlobsBundleV1 method via JSON-RPC.
+// GetBlobsBundle calls the engine_getBlobsV1 method via JSON-RPC.
 func (s *Service) GetBlobsBundle(ctx context.Context, payloadId [8]byte) (*pb.BlobsBundle, error) {
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.GetBlobsBundle")
 	defer span.End()
 
+	d := time.Now().Add(defaultEngineTimeout)
+	ctx, cancel := context.WithDeadline(ctx, d)
+	defer cancel()
 	result := &pb.BlobsBundle{}
-	err := s.rpcClient.CallContext(ctx, result, BlobsBundleMethod, pb.PayloadIDBytes(payloadId))
+	err := s.rpcClient.CallContext(ctx, result, GetBlobsBundleMethod, pb.PayloadIDBytes(payloadId))
 	return result, handleRPCError(err)
 }
 

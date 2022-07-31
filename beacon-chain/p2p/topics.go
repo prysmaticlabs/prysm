@@ -26,6 +26,8 @@ const (
 	GossipAggregateAndProofMessage = "beacon_aggregate_and_proof"
 	// GossipContributionAndProofMessage is the name for the sync contribution and proof message type.
 	GossipContributionAndProofMessage = "sync_committee_contribution_and_proof"
+	// GossipBlobsMessage is the name of the blobs message type.
+	GossipBlobsMessage = "blobs_sidecar"
 
 	// Topic Formats
 	//
@@ -45,4 +47,6 @@ const (
 	AggregateAndProofSubnetTopicFormat = GossipProtocolAndDigest + GossipAggregateAndProofMessage
 	// SyncContributionAndProofSubnetTopicFormat is the topic format for the sync aggregate and proof subnet.
 	SyncContributionAndProofSubnetTopicFormat = GossipProtocolAndDigest + GossipContributionAndProofMessage
+	// BlobsSubnetTopicFormat is the topic format for the blobs sidecar subnet.
+	BlobsSubnetTopicFormat = GossipProtocolAndDigest + GossipBlobsMessage
 )

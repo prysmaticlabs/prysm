@@ -118,6 +118,8 @@ var appHelpFlagGroups = []flagGroup{
 			flags.DisableDiscv5,
 			flags.BlockBatchLimit,
 			flags.BlockBatchLimitBurstFactor,
+			flags.BlobsTransferRate,
+			flags.BlobsTransferRateThresh,
 			flags.EnableDebugRPCEndpoints,
 			flags.SubscribeToAllSubnets,
 			flags.HistoricalSlasherNode,

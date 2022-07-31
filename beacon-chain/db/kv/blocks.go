@@ -241,6 +241,10 @@ func (s *Store) DeleteBlock(ctx context.Context, root [32]byte) error {
 		return err
 	}
 
+	if err := s.DeleteBlobsSidecar(ctx, root); err != nil {
+		return err
+	}
+
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(finalizedBlockRootsIndexBucket)
 		if b := bkt.Get(root[:]); b != nil {
@@ -789,6 +793,11 @@ func unmarshalBlock(_ context.Context, enc []byte) (interfaces.SignedBeaconBlock
 		if err := rawBlock.UnmarshalSSZ(enc[len(bellatrixBlindKey):]); err != nil {
 			return nil, errors.Wrap(err, "could not unmarshal blinded Bellatrix block")
 		}
+	case hasEip4844Key(enc):
+		rawBlock = &ethpb.SignedBeaconBlockWithBlobKZGs{}
+		if err := rawBlock.UnmarshalSSZ(enc[len(eip4844Key):]); err != nil {
+			return nil, err
+		}
 	default:
 		// Marshal block bytes to phase 0 beacon block.
 		rawBlock = &ethpb.SignedBeaconBlock{}
@@ -828,6 +837,8 @@ func marshalBlock(_ context.Context, blk interfaces.SignedBeaconBlock) ([]byte, 
 		}
 	}
 	switch blockToSave.Version() {
+	case version.EIP4844:
+		return snappy.Encode(nil, append(eip4844Key, obj...)), nil
 	case version.BellatrixBlind:
 		return snappy.Encode(nil, append(bellatrixBlindKey, encodedBlock...)), nil
 	case version.Bellatrix:
@@ -836,8 +847,6 @@ func marshalBlock(_ context.Context, blk interfaces.SignedBeaconBlock) ([]byte, 
 		return snappy.Encode(nil, append(altairKey, encodedBlock...)), nil
 	case version.Phase0:
 		return snappy.Encode(nil, encodedBlock), nil
-	case version.Eip4844:
-		return snappy.Encode(nil, append(eip4844Key, obj...)), nil
 	default:
 		return nil, errors.New("Unknown block version")
 	}

@@ -35,6 +35,8 @@ func (f *ForkChoice) SetOptimisticToValid(ctx context.Context, root [32]byte) er
 		return ErrUnknownNodeRoot
 	}
 
+	// TODO(EIP-4844): Update status transition algo
+
 	for node := f.store.nodes[index]; node.status == syncing; node = f.store.nodes[index] {
 		if ctx.Err() != nil {
 			return ctx.Err()
@@ -164,7 +166,7 @@ func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root, parentRoo
 	for i := len(f.store.nodes) - 1; i >= 0; i-- {
 		n := f.store.nodes[i]
 		if n.parent != NonExistentNode {
-			if err := f.store.updateBestChildAndDescendant(n.parent, uint64(i)); err != nil {
+			if err := f.store.updateBestChildAndDescendant(ctx, n.parent, uint64(i), f.dataAvailability); err != nil {
 				return invalidRoots, err
 			}
 		}

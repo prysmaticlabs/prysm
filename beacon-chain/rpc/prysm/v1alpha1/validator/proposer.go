@@ -62,9 +62,12 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	}
 	blk, sideCar, err := vs.getEip4844BeaconBlock(ctx, req)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not fetch EIP-4844 beacon block: %v", err)
+		return nil, status.Errorf(codes.Internal, "Could not fetch eip4844 beacon block: %v", err)
 	}
-	return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Eip4844{Eip4844: &ethpb.BeaconBlockWithBlobKZGsAndBlobsSidecar{Block: blk, Sidecar: sideCar}}}, nil
+	return &ethpb.GenericBeaconBlock{
+		Block:   &ethpb.GenericBeaconBlock_Eip4844{Eip4844: blk},
+		Sidecar: sideCar,
+	}, nil
 }
 
 // GetBlock is called by a proposer during its assigned slot to request a block to sign
@@ -93,7 +96,7 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Could not decode block: %v", err)
 	}
-	return vs.proposeGenericBeaconBlock(ctx, blk)
+	return vs.proposeGenericBeaconBlock(ctx, blk, req.Sidecar)
 }
 
 // ProposeBlock is called by a proposer during its assigned slot to create a block in an attempt
@@ -107,7 +110,7 @@ func (vs *Server) ProposeBlock(ctx context.Context, rBlk *ethpb.SignedBeaconBloc
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Could not decode block: %v", err)
 	}
-	return vs.proposeGenericBeaconBlock(ctx, blk)
+	return vs.proposeGenericBeaconBlock(ctx, blk, nil)
 }
 
 // PrepareBeaconProposer caches and updates the fee recipient for the given proposer.
@@ -135,7 +138,7 @@ func (vs *Server) PrepareBeaconProposer(
 	return &emptypb.Empty{}, nil
 }
 
-func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.SignedBeaconBlock) (*ethpb.ProposeResponse, error) {
+func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.SignedBeaconBlock, sidecar *ethpb.SignedBlobsSidecar) (*ethpb.ProposeResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.proposeGenericBeaconBlock")
 	defer span.End()
 	root, err := blk.Block().HashTreeRoot()
@@ -162,11 +165,19 @@ func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.
 	if err := vs.P2P.Broadcast(ctx, blk.Proto()); err != nil {
 		return nil, fmt.Errorf("could not broadcast block: %v", err)
 	}
+	var sidecarData *ethpb.BlobsSidecar
+	if sidecar != nil {
+		sidecarData = sidecar.Message
+		if err := vs.P2P.Broadcast(ctx, sidecar); err != nil {
+			log.Errorf("could not broadcast blobs sidecar: %v", err)
+		}
+	}
+
 	log.WithFields(logrus.Fields{
 		"blockRoot": hex.EncodeToString(root[:]),
 	}).Debug("Broadcasting block")
 
-	if err := vs.BlockReceiver.ReceiveBlock(ctx, blk, root); err != nil {
+	if err := vs.BlockReceiver.ReceiveBlock(ctx, blk, root, sidecarData); err != nil {
 		return nil, fmt.Errorf("could not process beacon block: %v", err)
 	}
 

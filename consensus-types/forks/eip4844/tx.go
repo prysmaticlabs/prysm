@@ -1,40 +1,48 @@
 package eip4844
 
 import (
-	"encoding/binary"
+	"bytes"
 	"errors"
+	"fmt"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/protolambda/ztyp/codec"
 )
 
-var errInvalidBlobTxType = errors.New("invalid blob tx type")
-var errInvalidVersionHashesVsKzg = errors.New("invalid version hashes vs kzg")
+var (
+	errInvalidBlobTxType             = errors.New("invalid blob tx type")
+	errInvalidVersionHashesVsKzg     = errors.New("invalid version hashes vs kzg")
+	errInvalidNumBlobVersionedHashes = errors.New("invalid number of blob versioned hashes")
+)
 
-func TxPeekBlobVersionedHashes(tx []byte) ([][32]byte, error) {
-	if tx[0] != 5 {
+func TxPeekBlobVersionedHashes(tx []byte) ([]common.Hash, error) {
+	if tx[0] != types.BlobTxType {
 		return nil, errInvalidBlobTxType
 	}
-	offset := 1 + binary.BigEndian.Uint32(tx[1:5])
-	hashesOffset := binary.BigEndian.Uint32(tx[offset+156 : offset+160])
-	hashes := make([][32]byte, (uint32(len(tx))-hashesOffset)/32)
-	for i := hashesOffset; i < uint32(len(tx)); i += 32 {
-		var hash [32]byte
-		copy(hash[:], tx[i:i+32])
-		hashes = append(hashes, hash)
+	// TODO remove geth/ztyp dep
+	sbt := types.SignedBlobTx{}
+	if err := sbt.Deserialize(codec.NewDecodingReader(bytes.NewReader(tx[1:]), uint64(len(tx)-1))); err != nil {
+		return nil, fmt.Errorf("%w: unable to decode Blob Tx", err)
 	}
-	return hashes, nil
+	return sbt.Message.BlobVersionedHashes, nil
 }
 
-func VerifyKzgsAgainstTxs(txs [][]byte, blogKzgs [][48]byte) error {
-	versionedHashes := make([][32]byte, 0)
+func VerifyKzgsAgainstTxs(txs [][]byte, blobKzgs [][48]byte) error {
+	versionedHashes := make([]common.Hash, 0)
 	for _, tx := range txs {
-		hs, err := TxPeekBlobVersionedHashes(tx)
-		if err != nil {
-			return err
+		if tx[0] == types.BlobTxType {
+			hs, err := TxPeekBlobVersionedHashes(tx)
+			if err != nil {
+				return err
+			}
+			versionedHashes = append(versionedHashes, hs...)
 		}
-		versionedHashes = append(versionedHashes, hs...)
 	}
-	for i, kzg := range blogKzgs {
+	if len(blobKzgs) != len(versionedHashes) {
+		return errInvalidNumBlobVersionedHashes
+	}
+	for i, kzg := range blobKzgs {
 		h := types.KZGCommitment(kzg).ComputeVersionedHash()
 		if h != versionedHashes[i] {
 			return errInvalidVersionHashesVsKzg

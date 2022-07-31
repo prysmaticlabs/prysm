@@ -63,6 +63,8 @@ ssz_gen_marshal(
         "BeaconBlockBellatrix",
         "BeaconBlockBodyBellatrix",
         "SignedBeaconBlockBellatrix",
+        "BeaconBlockWithBlobKZGs",
+        "SignedBeaconBlockWithBlobKZGs",
         "SyncAggregate",
         "SyncCommitteeMessage",
         "SyncCommitteeContribution",
@@ -115,12 +117,13 @@ ssz_gen_marshal(
         "Blob",
         "BlobsSidecar",
         "SignedBlobsSidecar",
-        "SignedValidatorRegistrationV1",
-        "ValidatorRegistrationV1",
-        "Withdrawal", 
+        "Withdrawal",
         "BLSToExecutionChange",
         "SignedBLSToExecutionChange",
-        "BuilderBid"
+        "BuilderBid",
+        "BlindedBeaconBlockWithBlobKZGs",
+        "SignedBlindedBeaconBlockWithBlobKZGs",
+        "BlobsSidecarsByRangeRequest",
          ],
 )
 

@@ -437,6 +437,9 @@ message BeaconBlockContainer {
 
         // Representing a blinded bellatrix block.
         SignedBlindedBeaconBlockBellatrix blinded_bellatrix_block = 6;
+
+        // Representing a signed, eip4844 compatible fork beacon block.
+        SignedBeaconBlockWithBlobKZGs eip4844_block = 7;
     }
 }
 

@@ -1,7 +1,6 @@
 package wrapper
 
 import (
-	ssz "github.com/ferranbt/fastssz"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
@@ -13,21 +12,20 @@ import (
 )
 
 var (
-	_ = interfaces.SignedBeaconBlock(&signed4844BeaconBlock{})
+	_ = interfaces.SignedBeaconBlock(&eip4844SignedBeaconBlock{})
 	_ = interfaces.BeaconBlock(&eip4844BeaconBlock{})
-	_ = interfaces.BeaconBlockBody(&eip4844BeaconBlockBody{})
 )
 
-// signed4844BeaconBlock is a convenience wrapper around an eip4844 beacon block
+// eip4844SignedBeaconBlock is a convenience wrapper around an eip4844 beacon block
 // object. This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across prysm without issues.
-type signed4844BeaconBlock struct {
+type eip4844SignedBeaconBlock struct {
 	b *eth.SignedBeaconBlockWithBlobKZGs
 }
 
-// wrappedEip4844SignedBeaconBlock is constructor which wraps a protobuf eip4844 block with the block wrapper.
+// WrappedEip4844SignedBeaconBlock is constructor which wraps a protobuf eip4844 block with the block wrapper.
 func wrappedEip4844SignedBeaconBlock(b *eth.SignedBeaconBlockWithBlobKZGs) (interfaces.SignedBeaconBlock, error) {
-	w := signed4844BeaconBlock{b: b}
+	w := eip4844SignedBeaconBlock{b: b}
 	if w.IsNil() {
 		return nil, ErrNilObjectWrapped
 	}
@@ -35,92 +33,90 @@ func wrappedEip4844SignedBeaconBlock(b *eth.SignedBeaconBlockWithBlobKZGs) (inte
 }
 
 // Signature returns the respective block signature.
-func (w signed4844BeaconBlock) Signature() []byte {
+func (w eip4844SignedBeaconBlock) Signature() []byte {
 	return w.b.Signature
 }
 
 // Block returns the underlying beacon block object.
-func (w signed4844BeaconBlock) Block() interfaces.BeaconBlock {
+func (w eip4844SignedBeaconBlock) Block() interfaces.BeaconBlock {
 	return eip4844BeaconBlock{b: w.b.Block}
 }
 
 // IsNil checks if the underlying beacon block is nil.
-func (w signed4844BeaconBlock) IsNil() bool {
+func (w eip4844SignedBeaconBlock) IsNil() bool {
 	return w.b == nil || w.b.Block == nil
 }
 
 // Copy performs a deep copy of the signed beacon block object.
-func (w signed4844BeaconBlock) Copy() interfaces.SignedBeaconBlock {
-	return signed4844BeaconBlock{b: w.b} // TODO: Add copy method
+func (w eip4844SignedBeaconBlock) Copy() interfaces.SignedBeaconBlock {
+	return eip4844SignedBeaconBlock{b: w.b} // TODO(EIP-4844): Add copy method
 }
 
 // MarshalSSZ marshals the signed beacon block to its relevant ssz form.
-func (w signed4844BeaconBlock) MarshalSSZ() ([]byte, error) {
+func (w eip4844SignedBeaconBlock) MarshalSSZ() ([]byte, error) {
 	return w.b.MarshalSSZ()
 }
 
 // MarshalSSZTo marshals the signed beacon block to its relevant ssz
 // form to the provided byte buffer.
-func (w signed4844BeaconBlock) MarshalSSZTo(dst []byte) ([]byte, error) {
+func (w eip4844SignedBeaconBlock) MarshalSSZTo(dst []byte) ([]byte, error) {
 	return w.b.MarshalSSZTo(dst)
 }
 
 // SizeSSZ returns the size of serialized signed block
-func (w signed4844BeaconBlock) SizeSSZ() int {
+func (w eip4844SignedBeaconBlock) SizeSSZ() int {
 	return w.b.SizeSSZ()
 }
 
 // UnmarshalSSZ unmarshalls the signed beacon block from its relevant ssz
 // form.
-func (w signed4844BeaconBlock) UnmarshalSSZ(buf []byte) error {
+func (w eip4844SignedBeaconBlock) UnmarshalSSZ(buf []byte) error {
 	return w.b.UnmarshalSSZ(buf)
 }
 
 // Proto returns the block in its underlying protobuf interface.
-func (w signed4844BeaconBlock) Proto() proto.Message {
+func (w eip4844SignedBeaconBlock) Proto() proto.Message {
 	return w.b
 }
 
-// PbGenericBlock returns a generic signed beacon block.
-func (w signed4844BeaconBlock) PbGenericBlock() (*eth.GenericSignedBeaconBlock, error) {
-	return &eth.GenericSignedBeaconBlock{
-		Block: &eth.GenericSignedBeaconBlock_Eip4844{Eip4844: &eth.SignedBeaconBlockWithBlobKZGsAndBlobsSidecar{
-			Block: w.b,
-		}},
-	}, nil
-}
-
 // PbEip4844Block returns the underlying protobuf object.
-func (w signed4844BeaconBlock) PbEip4844Block() (*eth.SignedBeaconBlockWithBlobKZGs, error) {
+func (w eip4844SignedBeaconBlock) PbEip4844Block() (*eth.SignedBeaconBlockWithBlobKZGs, error) {
 	return w.b, nil
 }
 
+// PbGenericBlock returns a generic signed beacon block.
+func (w eip4844SignedBeaconBlock) PbGenericBlock() (*eth.GenericSignedBeaconBlock, error) {
+	return &eth.GenericSignedBeaconBlock{
+		Block: &eth.GenericSignedBeaconBlock_Eip4844{Eip4844: w.b},
+	}, nil
+}
+
+// PbBlindedBellatrixBlock is a stub.
+func (eip4844SignedBeaconBlock) PbBlindedBellatrixBlock() (*eth.SignedBlindedBeaconBlockBellatrix, error) {
+	return nil, ErrUnsupportedBlindedBellatrixBlock
+}
+
 // PbPhase0Block is a stub.
-func (_ signed4844BeaconBlock) PbPhase0Block() (*eth.SignedBeaconBlock, error) {
+func (_ eip4844SignedBeaconBlock) PbPhase0Block() (*eth.SignedBeaconBlock, error) {
 	return nil, ErrUnsupportedPhase0Block
 }
 
 // PbAltairBlock returns the underlying protobuf object.
-func (_ signed4844BeaconBlock) PbAltairBlock() (*eth.SignedBeaconBlockAltair, error) {
-	return nil, errors.New("unsupported altair block")
+func (_ eip4844SignedBeaconBlock) PbAltairBlock() (*eth.SignedBeaconBlockAltair, error) {
+	return nil, ErrUnsupportedAltairBlock
 }
 
-// PbBellatrixBlock returns the underlying protobuf object.
-func (w signed4844BeaconBlock) PbBellatrixBlock() (*eth.SignedBeaconBlockBellatrix, error) {
-	return nil, errors.New("unsupported bellatrix block")
-}
-
-// PbBlindedBellatrixBlock is a stub.
-func (signed4844BeaconBlock) PbBlindedBellatrixBlock() (*eth.SignedBlindedBeaconBlockBellatrix, error) {
-	return nil, ErrUnsupportedBlindedBellatrixBlock
+// Pbeip4844Block returns the underlying protobuf object.
+func (w eip4844SignedBeaconBlock) PbBellatrixBlock() (*eth.SignedBeaconBlockBellatrix, error) {
+	return nil, ErrUnsupportedBellatrixBlock
 }
 
 // Version of the underlying protobuf object.
-func (_ signed4844BeaconBlock) Version() int {
-	return version.Eip4844
+func (_ eip4844SignedBeaconBlock) Version() int {
+	return version.EIP4844
 }
 
-func (w signed4844BeaconBlock) Header() (*eth.SignedBeaconBlockHeader, error) {
+func (w eip4844SignedBeaconBlock) Header() (*eth.SignedBeaconBlockHeader, error) {
 	root, err := w.b.Block.Body.HashTreeRoot()
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not hash block")
@@ -143,7 +139,7 @@ type eip4844BeaconBlock struct {
 	b *eth.BeaconBlockWithBlobKZGs
 }
 
-// wrappedEip4844BeaconBlock is constructor which wraps a protobuf eip4844 object
+// WrappedEip4844BeaconBlock is constructor which wraps a protobuf eip4844 object
 // with the block wrapper.
 func wrappedEip4844BeaconBlock(b *eth.BeaconBlockWithBlobKZGs) (interfaces.BeaconBlock, error) {
 	w := eip4844BeaconBlock{b: b}
@@ -229,7 +225,7 @@ func (w eip4844BeaconBlock) Proto() proto.Message {
 
 // Version of the underlying protobuf object.
 func (_ eip4844BeaconBlock) Version() int {
-	return version.Eip4844
+	return version.EIP4844
 }
 
 func (w eip4844BeaconBlock) AsSignRequestObject() validatorpb.SignRequestObject {
@@ -318,8 +314,7 @@ func (w eip4844BeaconBlockBody) ExecutionPayload() (*enginev1.ExecutionPayload, 
 	return w.b.ExecutionPayload, nil
 }
 
-// ExecutionPayloadHeader is a stub.
-func (w eip4844BeaconBlockBody) ExecutionPayloadHeader() (*eth.ExecutionPayloadHeader, error) {
+func (w eip4844BeaconBlockBody) ExecutionPayloadHeader() (*enginev1.ExecutionPayloadHeader, error) {
 	return nil, errors.Wrapf(ErrUnsupportedField, "ExecutionPayloadHeader for %T", w)
 }
 

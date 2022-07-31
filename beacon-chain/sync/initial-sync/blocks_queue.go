@@ -11,6 +11,7 @@ import (
 	beaconsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 )
@@ -88,8 +89,9 @@ type blocksQueue struct {
 
 // blocksQueueFetchedData is a data container that is returned from a queue on each step.
 type blocksQueueFetchedData struct {
-	pid    peer.ID
-	blocks []interfaces.SignedBeaconBlock
+	pid      peer.ID
+	blocks   []interfaces.SignedBeaconBlock
+	sidecars []*ethpb.BlobsSidecar
 }
 
 // newBlocksQueue creates initialized priority queue.
@@ -333,6 +335,7 @@ func (q *blocksQueue) onDataReceivedEvent(ctx context.Context) eventHandlerFn {
 		}
 		m.pid = response.pid
 		m.blocks = response.blocks
+		m.sidecars = response.sidecars
 		return stateDataParsed, nil
 	}
 }
@@ -353,8 +356,9 @@ func (q *blocksQueue) onReadyToSendEvent(ctx context.Context) eventHandlerFn {
 
 		send := func() (stateID, error) {
 			data := &blocksQueueFetchedData{
-				pid:    m.pid,
-				blocks: m.blocks,
+				pid:      m.pid,
+				blocks:   m.blocks,
+				sidecars: m.sidecars,
 			}
 			select {
 			case <-ctx.Done():

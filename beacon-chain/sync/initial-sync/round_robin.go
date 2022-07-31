@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 )
@@ -24,10 +25,10 @@ const (
 )
 
 // blockReceiverFn defines block receiving function.
-type blockReceiverFn func(ctx context.Context, block interfaces.SignedBeaconBlock, blockRoot [32]byte) error
+type blockReceiverFn func(ctx context.Context, block interfaces.SignedBeaconBlock, blockRoot [32]byte, sidecar *ethpb.BlobsSidecar) error
 
 // batchBlockReceiverFn defines batch receiving function.
-type batchBlockReceiverFn func(ctx context.Context, blks []interfaces.SignedBeaconBlock, roots [][32]byte) error
+type batchBlockReceiverFn func(ctx context.Context, blks []interfaces.SignedBeaconBlock, roots [][32]byte, sidecars []*ethpb.BlobsSidecar) error
 
 // Round Robin sync looks at the latest peer statuses and syncs up to the highest known epoch.
 //
@@ -130,7 +131,7 @@ func (s *Service) processFetchedData(
 	defer s.updatePeerScorerStats(data.pid, startSlot)
 
 	// Use Batch Block Verify to process and verify batches directly.
-	if err := s.processBatchedBlocks(ctx, genesis, data.blocks, s.cfg.Chain.ReceiveBlockBatch); err != nil {
+	if err := s.processBatchedBlocks(ctx, genesis, data.blocks, data.sidecars, s.cfg.Chain.ReceiveBlockBatch); err != nil {
 		log.WithError(err).Warn("Batch is not processed")
 	}
 }
@@ -144,7 +145,14 @@ func (s *Service) processFetchedDataRegSync(
 	invalidBlocks := 0
 	blksWithoutParentCount := 0
 	for _, blk := range data.blocks {
-		if err := s.processBlock(ctx, genesis, blk, blockReceiver); err != nil {
+		var sidecar *ethpb.BlobsSidecar
+		for _, s := range data.sidecars {
+			if s.BeaconBlockSlot == blk.Block().Slot() {
+				sidecar = s
+				break
+			}
+		}
+		if err := s.processBlock(ctx, genesis, blk, sidecar, blockReceiver); err != nil {
 			switch {
 			case errors.Is(err, errBlockAlreadyProcessed):
 				log.WithError(err).Debug("Block is not processed")
@@ -229,6 +237,7 @@ func (s *Service) processBlock(
 	ctx context.Context,
 	genesis time.Time,
 	blk interfaces.SignedBeaconBlock,
+	sidecar *ethpb.BlobsSidecar,
 	blockReceiver blockReceiverFn,
 ) error {
 	blkRoot, err := blk.Block().HashTreeRoot()
@@ -244,11 +253,11 @@ func (s *Service) processBlock(
 	if !s.cfg.Chain.HasBlock(ctx, parentRoot) {
 		return fmt.Errorf("%w: (in processBlock, slot=%d) %#x", errParentDoesNotExist, blk.Block().Slot(), blk.Block().ParentRoot())
 	}
-	return blockReceiver(ctx, blk, blkRoot)
+	return blockReceiver(ctx, blk, blkRoot, sidecar)
 }
 
 func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
-	blks []interfaces.SignedBeaconBlock, bFunc batchBlockReceiverFn) error {
+	blks []interfaces.SignedBeaconBlock, sidecars []*ethpb.BlobsSidecar, bFunc batchBlockReceiverFn) error {
 	if len(blks) == 0 {
 		return errors.New("0 blocks provided into method")
 	}
@@ -288,7 +297,7 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 		}
 		blockRoots[i] = blkRoot
 	}
-	return bFunc(ctx, blks, blockRoots)
+	return bFunc(ctx, blks, blockRoots, sidecars)
 }
 
 // updatePeerScorerStats adjusts monitored metrics for a peer.

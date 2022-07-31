@@ -12,6 +12,8 @@ import (
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/network/forks"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 )
 
@@ -53,7 +55,7 @@ func WriteBlockChunk(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher
 			return err
 		}
 		obtainedCtx = digest[:]
-	case version.Eip4844:
+	case version.EIP4844:
 		valRoot := chain.GenesisValidatorsRoot()
 		digest, err := forks.ForkDigestFromEpoch(params.BeaconConfig().Eip4844ForkEpoch, valRoot[:])
 		if err != nil {
@@ -78,6 +80,57 @@ func ReadChunkedBlock(stream libp2pcore.Stream, chain blockchain.ChainInfoFetche
 	}
 
 	return readResponseChunk(stream, chain, p2p)
+}
+
+// WriteBlobsChunk writes blobs chunk object to stream.
+// response_chunk  ::= <result> | <context-bytes> | <encoding-dependent-header> | <encoded-payload>
+func WriteBlobsSidecarChunk(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher, encoding encoder.NetworkEncoding, blobs *ethpb.BlobsSidecar) error {
+	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
+		return err
+	}
+	valRoot := chain.GenesisValidatorsRoot()
+	ctxBytes, err := forks.ForkDigestFromEpoch(params.BeaconConfig().Eip4844ForkEpoch, valRoot[:])
+	if err != nil {
+		return err
+	}
+
+	if err := writeContextToStream(ctxBytes[:], stream, chain); err != nil {
+		return err
+	}
+	_, err = encoding.EncodeWithMaxLength(stream, blobs)
+	return err
+}
+
+func ReadChunkedBlobsSidecar(stream libp2pcore.Stream, chain blockchain.ChainInfoFetcher, p2p p2p.P2P, isFirstChunk bool) (*pb.BlobsSidecar, error) {
+	var (
+		code   uint8
+		errMsg string
+		err    error
+	)
+	if isFirstChunk {
+		code, errMsg, err = ReadStatusCode(stream, p2p.Encoding())
+	} else {
+		SetStreamReadDeadline(stream, respTimeout)
+		code, errMsg, err = readStatusCodeNoDeadline(stream, p2p.Encoding())
+	}
+	if err != nil {
+		return nil, err
+	}
+	if code != 0 {
+		return nil, errors.New(errMsg)
+	}
+	// No-op for now with the rpc context.
+	rpcCtx, err := readContextFromStream(stream, chain)
+	if err != nil {
+		return nil, err
+	}
+	// blobs sidecars use v1
+	if len(rpcCtx) != 0 {
+		return nil, errors.New("unexpected fork digest in stream")
+	}
+	sidecar := new(pb.BlobsSidecar)
+	err = p2p.Encoding().DecodeWithMaxLength(stream, sidecar)
+	return sidecar, err
 }
 
 // readFirstChunkedBlock reads the first chunked block and applies the appropriate deadlines to

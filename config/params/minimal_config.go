@@ -87,7 +87,9 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.BellatrixForkEpoch = math.MaxUint64
 	minimalConfig.CapellaForkVersion = []byte{3, 0, 0, 1}
 	minimalConfig.CapellaForkEpoch = math.MaxUint64
-	minimalConfig.ShardingForkVersion = []byte{4, 0, 0, 1}
+	minimalConfig.Eip4844ForkVersion = []byte{4, 0, 0, 1}
+	minimalConfig.Eip4844ForkEpoch = math.MaxUint64
+	minimalConfig.ShardingForkVersion = []byte{8, 0, 0, 1}
 	minimalConfig.ShardingForkEpoch = math.MaxUint64
 
 	minimalConfig.SyncCommitteeSize = 32

@@ -23,6 +23,7 @@ import (
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/proto/migration"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
@@ -229,6 +230,7 @@ func (bs *Server) SubmitBlock(ctx context.Context, req *ethpbv2.SignedBeaconBloc
 			return nil, err
 		}
 	}
+	// TODO(EIP-4844): submitEip4844Block
 	return &emptypb.Empty{}, nil
 }
 
@@ -268,7 +270,8 @@ func (bs *Server) SubmitBlockSSZ(ctx context.Context, req *ethpbv2.SSZContainer)
 	if err != nil {
 		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not compute block's hash tree root: %v", err)
 	}
-	return &emptypb.Empty{}, bs.submitBlock(ctx, root, block)
+	// TODO(EIP-4844): Unmarshal Sidecar in Request
+	return &emptypb.Empty{}, bs.submitBlock(ctx, root, block, nil)
 }
 
 // SubmitBlindedBlock instructs the beacon node to use the components of the `SignedBlindedBeaconBlock` to construct
@@ -346,7 +349,8 @@ func (bs *Server) SubmitBlindedBlockSSZ(ctx context.Context, req *ethpbv2.SSZCon
 	if err != nil {
 		return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not compute block's hash tree root: %v", err)
 	}
-	return &emptypb.Empty{}, bs.submitBlock(ctx, root, block)
+	// TODO(EIP-4844): Unmarshal sidecar in request
+	return &emptypb.Empty{}, bs.submitBlock(ctx, root, block, nil)
 }
 
 // GetBlock retrieves block details for given block ID.
@@ -513,6 +517,33 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
 
+	eip4844Blk, err := blk.PbEip4844Block()
+	if err == nil {
+		if eip4844Blk == nil {
+			return nil, status.Errorf(codes.Internal, "Nil block")
+		}
+		v2Blk, err := migration.V1Alpha1BeaconBlockEip4844ToV2(eip4844Blk.Block)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
+		}
+		root, err := blk.Block().HashTreeRoot()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get block root: %v", err)
+		}
+		isOptimistic, err := bs.OptimisticModeFetcher.IsOptimisticForRoot(ctx, root)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not check if block is optimistic: %v", err)
+		}
+		return &ethpbv2.BlockResponseV2{
+			Version: ethpbv2.Version_EIP4844,
+			Data: &ethpbv2.SignedBeaconBlockContainerV2{
+				Message:   &ethpbv2.SignedBeaconBlockContainerV2_Eip4844Block{Eip4844Block: v2Blk},
+				Signature: blk.Signature(),
+			},
+			ExecutionOptimistic: isOptimistic,
+		}, nil
+	}
+
 	return nil, status.Errorf(codes.Internal, "Unknown block type %T", blk)
 }
 
@@ -590,6 +621,26 @@ func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2
 	// ErrUnsupportedBellatrixBlock means that we have another block type
 	if !errors.Is(err, wrapper.ErrUnsupportedBellatrixBlock) {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
+	}
+
+	eip4844Blk, err := blk.PbEip4844Block()
+	if err == nil {
+		if eip4844Blk == nil {
+			return nil, status.Errorf(codes.Internal, "Nil block")
+		}
+		v2Blk, err := migration.V1Alpha1BeaconBlockEip4844ToV2(eip4844Blk.Block)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
+		}
+		data := &ethpbv2.SignedBeaconBlockEip4844{
+			Message:   v2Blk,
+			Signature: blk.Signature(),
+		}
+		sszData, err := data.MarshalSSZ()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not marshal block into SSZ: %v", err)
+		}
+		return &ethpbv2.SSZContainer{Version: ethpbv2.Version_EIP4844, Data: sszData}, nil
 	}
 
 	return nil, status.Errorf(codes.Internal, "Unknown block type %T", blk)
@@ -845,7 +896,7 @@ func (bs *Server) submitPhase0Block(ctx context.Context, phase0Blk *ethpbv1.Beac
 		return status.Errorf(codes.InvalidArgument, "Could not tree hash block: %v", err)
 	}
 
-	return bs.submitBlock(ctx, root, wrappedPhase0Blk)
+	return bs.submitBlock(ctx, root, wrappedPhase0Blk, nil)
 }
 
 func (bs *Server) submitAltairBlock(ctx context.Context, altairBlk *ethpbv2.BeaconBlockAltair, sig []byte) error {
@@ -863,7 +914,7 @@ func (bs *Server) submitAltairBlock(ctx context.Context, altairBlk *ethpbv2.Beac
 		return status.Errorf(codes.InvalidArgument, "Could not tree hash block: %v", err)
 	}
 
-	return bs.submitBlock(ctx, root, wrappedAltairBlk)
+	return bs.submitBlock(ctx, root, wrappedAltairBlk, nil)
 }
 
 func (bs *Server) submitBellatrixBlock(ctx context.Context, bellatrixBlk *ethpbv2.BeaconBlockBellatrix, sig []byte) error {
@@ -881,7 +932,7 @@ func (bs *Server) submitBellatrixBlock(ctx context.Context, bellatrixBlk *ethpbv
 		return status.Errorf(codes.InvalidArgument, "Could not tree hash block: %v", err)
 	}
 
-	return bs.submitBlock(ctx, root, wrappedBellatrixBlk)
+	return bs.submitBlock(ctx, root, wrappedBellatrixBlk, nil)
 }
 
 func (bs *Server) submitBlindedBellatrixBlock(ctx context.Context, blindedBellatrixBlk *ethpbv2.BlindedBeaconBlockBellatrix, sig []byte) error {
@@ -902,10 +953,10 @@ func (bs *Server) submitBlindedBellatrixBlock(ctx context.Context, blindedBellat
 		return status.Errorf(codes.InvalidArgument, "Could not tree hash block: %v", err)
 	}
 
-	return bs.submitBlock(ctx, root, wrappedBellatrixSignedBlk)
+	return bs.submitBlock(ctx, root, wrappedBellatrixSignedBlk, nil)
 }
 
-func (bs *Server) submitBlock(ctx context.Context, blockRoot [fieldparams.RootLength]byte, block interfaces.SignedBeaconBlock) error {
+func (bs *Server) submitBlock(ctx context.Context, blockRoot [fieldparams.RootLength]byte, block interfaces.SignedBeaconBlock, sidecar *ethpb.BlobsSidecar) error {
 	// Do not block proposal critical path with debug logging or block feed updates.
 	defer func() {
 		log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(blockRoot[:]))).Debugf(
@@ -921,7 +972,7 @@ func (bs *Server) submitBlock(ctx context.Context, blockRoot [fieldparams.RootLe
 		return status.Errorf(codes.Internal, "Could not broadcast block: %v", err)
 	}
 
-	if err := bs.BlockReceiver.ReceiveBlock(ctx, block, blockRoot); err != nil {
+	if err := bs.BlockReceiver.ReceiveBlock(ctx, block, blockRoot, sidecar); err != nil {
 		return status.Errorf(codes.Internal, "Could not process beacon block: %v", err)
 	}
 

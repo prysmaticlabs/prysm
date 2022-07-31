@@ -57,3 +57,15 @@ message MetaDataV1 {
   bytes attnets = 2 [(ethereum.eth.ext.ssz_size) = "8", (ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/go-bitfield.Bitvector64"];
   bytes syncnets = 3 [(ethereum.eth.ext.ssz_size) = "1", (ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/go-bitfield.Bitvector4"];
 }
+
+/*
+ Spec Definition:
+ (
+  start_slot: Slot
+  count: uint64
+ )
+*/
+message BlobsSidecarsByRangeRequest {
+  uint64 start_slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"];
+  uint64 count = 2;
+}

@@ -97,6 +97,11 @@ func (bellatrixSignedBeaconBlock) PbBlindedBellatrixBlock() (*eth.SignedBlindedB
 	return nil, ErrUnsupportedBlindedBellatrixBlock
 }
 
+// PbEip4844Block is a stub.
+func (bellatrixSignedBeaconBlock) PbEip4844Block() (*eth.SignedBeaconBlockWithBlobKZGs, error) {
+	return nil, ErrUnsupportedPhase0Block
+}
+
 // PbPhase0Block is a stub.
 func (bellatrixSignedBeaconBlock) PbPhase0Block() (*eth.SignedBeaconBlock, error) {
 	return nil, ErrUnsupportedPhase0Block
@@ -358,4 +363,9 @@ func (w bellatrixBeaconBlockBody) Execution() (interfaces.ExecutionData, error) 
 // BlobKzgs is a stub.
 func (w bellatrixBeaconBlockBody) BlobKzgs() ([][]byte, error) {
 	return nil, errors.Wrapf(ErrUnsupportedField, "ExecutionPayloadHeader for %T", w)
+}
+
+// BlobKzgs is a stub.
+func (w bellatrixBeaconBlockBody) BlobKzgs() ([][]byte, error) {
+	return nil, errors.Wrapf(ErrUnsupportedField, "BlobKzgs for %T", w)
 }

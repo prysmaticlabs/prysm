@@ -6,6 +6,7 @@ package iface
 import (
 	"context"
 	"io"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
@@ -30,6 +31,10 @@ type ReadOnlyDatabase interface {
 	GenesisBlockRoot(ctx context.Context) ([32]byte, error)
 	IsFinalizedBlock(ctx context.Context, blockRoot [32]byte) bool
 	FinalizedChildBlock(ctx context.Context, blockRoot [32]byte) (interfaces.SignedBeaconBlock, error)
+	// Blobs related methods.
+	BlobsSidecar(ctx context.Context, blockRoot [32]byte) (*ethpb.BlobsSidecar, error)
+	BlobsSidecarsBySlot(ctx context.Context, slot types.Slot) ([]*ethpb.BlobsSidecar, error)
+	HasBlobsSidecar(ctx context.Context, blockRoot [32]byte) bool
 	HighestRootsBelowSlot(ctx context.Context, slot types.Slot) (types.Slot, [][32]byte, error)
 	BlobsSidecar(ctx context.Context, blockRoot [32]byte) (*ethpb.BlobsSidecar, error)
 	// State related methods.
@@ -69,7 +74,10 @@ type NoHeadAccessDatabase interface {
 	SaveBlock(ctx context.Context, block interfaces.SignedBeaconBlock) error
 	SaveBlocks(ctx context.Context, blocks []interfaces.SignedBeaconBlock) error
 	SaveGenesisBlockRoot(ctx context.Context, blockRoot [32]byte) error
+	// Blob related methods.
+	DeleteBlobsSidecar(ctx context.Context, root [32]byte) error
 	SaveBlobsSidecar(ctx context.Context, blob *ethpb.BlobsSidecar) error
+	CleanupBlobs(ctx context.Context, ttl time.Duration) error
 	// State related methods.
 	SaveState(ctx context.Context, state state.ReadOnlyBeaconState, blockRoot [32]byte) error
 	SaveStates(ctx context.Context, states []state.ReadOnlyBeaconState, blockRoots [][32]byte) error

@@ -7,15 +7,14 @@
 package v1
 
 import (
-	reflect "reflect"
-	sync "sync"
-
 	_ "github.com/golang/protobuf/protoc-gen-go/descriptor"
 	github_com_prysmaticlabs_prysm_consensus_types_primitives "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	_ "github.com/prysmaticlabs/prysm/proto/eth/ext"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
+	reflect "reflect"
+	sync "sync"
 )
 
 const (

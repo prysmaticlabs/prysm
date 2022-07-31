@@ -36,6 +36,8 @@ var (
 	ErrUnsupportedBellatrixBlock = errors.New("unsupported bellatrix block")
 	// ErrUnsupportedBlindedBellatrixBlock is returned when accessing a blinded bellatrix block from unsupported method.
 	ErrUnsupportedBlindedBellatrixBlock = errors.New("unsupported blinded bellatrix block")
+	// ErrUnsupportedEip4844Block is returned when accessing a eip4844 block from a non-eip4844 wrapped block.
+	ErrUnsupportedEip4844Block = errors.New("unsupported eip4844 block")
 	// ErrNilObjectWrapped is returned in a constructor when the underlying object is nil.
 	ErrNilObjectWrapped     = errors.New("attempted to wrap nil object")
 	ErrNilSignedBeaconBlock = errors.New("signed beacon block can't be nil")
@@ -65,6 +67,8 @@ func WrappedSignedBeaconBlock(i interface{}) (interfaces.SignedBeaconBlock, erro
 		return wrappedBellatrixSignedBlindedBeaconBlock(b.BlindedBellatrix)
 	case *eth.SignedBlindedBeaconBlockBellatrix:
 		return wrappedBellatrixSignedBlindedBeaconBlock(b)
+	case *eth.GenericSignedBeaconBlock_Eip4844:
+		return wrappedEip4844SignedBeaconBlock(b.Eip4844)
 	case *eth.SignedBeaconBlockWithBlobKZGs:
 		return wrappedEip4844SignedBeaconBlock(b)
 	case nil:
@@ -117,6 +121,8 @@ func WrappedBeaconBlockBody(i interface{}) (interfaces.BeaconBlockBody, error) {
 		return wrappedBellatrixBeaconBlockBody(b)
 	case *eth.BlindedBeaconBlockBodyBellatrix:
 		return wrappedBellatrixBlindedBeaconBlockBody(b)
+	case *eth.BeaconBlockBodyWithBlobKZGs:
+		return wrappedEip4844BeaconBlockBody(b)
 	case nil:
 		return nil, ErrNilObjectWrapped
 	default:

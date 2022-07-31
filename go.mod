@@ -14,6 +14,7 @@ require (
 	github.com/dustin/go-humanize v1.0.0
 	github.com/emicklei/dot v0.11.0
 	github.com/ethereum/go-ethereum v1.10.17-0.20220323200026-535f25d65fa0
+	github.com/ferranbt/fastssz v0.0.0-20210120143747-11b9eff30ea9
 	github.com/fjl/memsize v0.0.0-20190710130421-bcb5799ab5e5
 	github.com/fsnotify/fsnotify v1.5.4
 	github.com/ghodss/yaml v1.0.0
@@ -32,7 +33,7 @@ require (
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.0.1
 	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d
-	github.com/herumi/bls-eth-go-binary v0.0.0-20210917013441-d37c07cfda4e
+	github.com/herumi/bls-eth-go-binary v0.0.0-20220216073600-600054663ec1
 	github.com/holiman/uint256 v1.2.0
 	github.com/ianlancetaylor/cgosymbolizer v0.0.0-20200424224625-be1b05b0b279
 	github.com/ipfs/go-log/v2 v2.5.1
@@ -61,7 +62,8 @@ require (
 	github.com/prometheus/client_golang v1.12.2
 	github.com/prometheus/client_model v0.2.0
 	github.com/prometheus/prom2json v1.3.0
-	github.com/protolambda/go-ethereum v1.7.3
+	github.com/protolambda/go-kzg v0.0.0-20220220065500-36404333406f
+	github.com/protolambda/ztyp v0.2.1
 	github.com/prysmaticlabs/fastssz v0.0.0-20220628121656-93dfe28febab
 	github.com/prysmaticlabs/go-bitfield v0.0.0-20210809151128-385d8c5e3fb7
 	github.com/prysmaticlabs/prombbolt v0.0.0-20210126082820-9b7adba6db7c
@@ -72,7 +74,7 @@ require (
 	github.com/sirupsen/logrus v1.8.1
 	github.com/status-im/keycard-go v0.0.0-20200402102358-957c09536969
 	github.com/stretchr/testify v1.7.0
-	github.com/supranational/blst v0.3.5
+	github.com/supranational/blst v0.3.8-0.20220526154634-513d2456b344
 	github.com/thomaso-mirodin/intmath v0.0.0-20160323211736-5dc6d854e46e
 	github.com/trailofbits/go-mutexasserts v0.0.0-20200708152505-19999e7d3cef
 	github.com/tyler-smith/go-bip39 v1.1.0
@@ -119,10 +121,9 @@ require (
 	github.com/deepmap/oapi-codegen v1.8.2 // indirect
 	github.com/dlclark/regexp2 v1.4.1-0.20201116162257-a2a8dda75c91 // indirect
 	github.com/docker/go-units v0.4.0 // indirect
-	github.com/dop251/goja v0.0.0-20211011172007-d99e4b8cbf48 // indirect
+	github.com/dop251/goja v0.0.0-20220405120441-9037c2b61cbf // indirect
 	github.com/edsrzf/mmap-go v1.0.0 // indirect
 	github.com/elastic/gosigar v0.14.2 // indirect
-	github.com/ferranbt/fastssz v0.0.0-20210120143747-11b9eff30ea9 // indirect
 	github.com/flynn/noise v1.0.0 // indirect
 	github.com/francoispqt/gojay v1.2.13 // indirect
 	github.com/go-playground/locales v0.14.0 // indirect
@@ -150,6 +151,7 @@ require (
 	github.com/jbenet/go-temp-err-catcher v0.1.0 // indirect
 	github.com/juju/ansiterm v0.0.0-20180109212912-720a0952cc2a // indirect
 	github.com/karalabe/usb v0.0.2 // indirect
+	github.com/kilic/bls12-381 v0.1.1-0.20210208205449-6045b0235e36 // indirect
 	github.com/klauspost/compress v1.15.7 // indirect
 	github.com/klauspost/cpuid/v2 v2.0.14 // indirect
 	github.com/koron/go-ssdp v0.0.3 // indirect
@@ -265,4 +267,7 @@ replace github.com/json-iterator/go => github.com/prestonvanloon/go v1.1.7-0.201
 // See https://github.com/prysmaticlabs/grpc-gateway/issues/2
 replace github.com/grpc-ecosystem/grpc-gateway/v2 => github.com/prysmaticlabs/grpc-gateway/v2 v2.3.1-0.20220428175429-ee99f663f83d
 
-replace github.com/ethereum/go-ethereum => github.com/protolambda/go-ethereum v1.7.4-0.20220322192006-d6fb21061346
+replace github.com/ferranbt/fastssz => github.com/prysmaticlabs/fastssz v0.0.0-20220602201051-e406b8091121
+
+// For eip-4844 types
+replace github.com/ethereum/go-ethereum => github.com/mdehoog/go-ethereum v1.10.19-0.20220719053341-c76d2bd57d77

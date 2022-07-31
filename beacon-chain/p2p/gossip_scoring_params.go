@@ -116,6 +116,9 @@ func (s *Service) topicScoreParams(topic string) (*pubsub.TopicScoreParams, erro
 		return defaultProposerSlashingTopicParams(), nil
 	case strings.Contains(topic, GossipAttesterSlashingMessage):
 		return defaultAttesterSlashingTopicParams(), nil
+	case strings.Contains(topic, GossipBlobsMessage):
+		// TODO(EIP-4844): Using the block topic scoring for now. But this should be updated for blobs
+		return defaultBlockTopicParams(), nil
 	default:
 		return nil, errors.Errorf("unrecognized topic provided for parameter registration: %s", topic)
 	}

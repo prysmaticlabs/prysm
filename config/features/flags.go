@@ -23,6 +23,10 @@ var (
 		Name:  "sepolia",
 		Usage: "Run Prysm configured for the Sepolia beacon chain test network",
 	}
+	EIP4844Testnet = &cli.BoolFlag{
+		Name:  "eip4844",
+		Usage: "Run Prysm configured for the EIP-4844 (proto-danksharding) beacon chain test network",
+	}
 	// Mainnet flag for easier tooling, no-op
 	Mainnet = &cli.BoolFlag{
 		Value: true,
@@ -143,6 +147,7 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	PraterTestnet,
 	RopstenTestnet,
 	SepoliaTestnet,
+	EIP4844Testnet,
 	Mainnet,
 	dynamicKeyReloadDebounceInterval,
 	attestTimely,
@@ -163,6 +168,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	PraterTestnet,
 	RopstenTestnet,
 	SepoliaTestnet,
+	EIP4844Testnet,
 	Mainnet,
 	disablePeerScorer,
 	enableLargerGossipHistory,

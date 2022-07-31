@@ -41,6 +41,9 @@ func InitializeDataMaps() {
 		bytesutil.ToBytes4(params.BeaconConfig().BellatrixForkVersion): func() (interfaces.SignedBeaconBlock, error) {
 			return wrapper.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: &ethpb.BeaconBlockBellatrix{}})
 		},
+		bytesutil.ToBytes4(params.BeaconConfig().Eip4844ForkVersion): func() (interfaces.SignedBeaconBlock, error) {
+			return wrapper.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlockWithBlobKZGs{Block: &ethpb.BeaconBlockWithBlobKZGs{}})
+		},
 	}
 
 	// Reset our metadata map.
@@ -52,6 +55,9 @@ func InitializeDataMaps() {
 			return wrapper.WrappedMetadataV1(&ethpb.MetaDataV1{})
 		},
 		bytesutil.ToBytes4(params.BeaconConfig().BellatrixForkVersion): func() metadata.Metadata {
+			return wrapper.WrappedMetadataV1(&ethpb.MetaDataV1{})
+		},
+		bytesutil.ToBytes4(params.BeaconConfig().Eip4844ForkVersion): func() metadata.Metadata {
 			return wrapper.WrappedMetadataV1(&ethpb.MetaDataV1{})
 		},
 	}

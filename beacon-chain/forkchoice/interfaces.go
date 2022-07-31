@@ -10,6 +10,10 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
+type DataAvailability interface {
+	IsDataAvailable(ctx context.Context, root [32]byte) error
+}
+
 // ForkChoicer represents the full fork choice interface composed of all the sub-interfaces.
 type ForkChoicer interface {
 	HeadRetriever        // to compute head.

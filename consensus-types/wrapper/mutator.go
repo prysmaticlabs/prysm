@@ -40,12 +40,13 @@ func (m BlockMutator) Apply(b interfaces.SignedBeaconBlock) error {
 		}
 		m.Bellatrix(bb)
 		return nil
-	case version.Eip4844:
+	case version.EIP4844:
 		bb, err := b.PbEip4844Block()
 		if err != nil {
 			return err
 		}
 		m.Eip4844(bb)
+		return nil
 	}
 	msg := fmt.Sprintf("version %d = %s", b.Version(), version.String(b.Version()))
 	return errors.Wrap(ErrUnsupportedSignedBeaconBlock, msg)
@@ -56,6 +57,7 @@ func SetBlockStateRoot(b interfaces.SignedBeaconBlock, sr [32]byte) error {
 		Phase0:    func(bb *eth.SignedBeaconBlock) { bb.Block.StateRoot = sr[:] },
 		Altair:    func(bb *eth.SignedBeaconBlockAltair) { bb.Block.StateRoot = sr[:] },
 		Bellatrix: func(bb *eth.SignedBeaconBlockBellatrix) { bb.Block.StateRoot = sr[:] },
+		Eip4844:   func(bb *eth.SignedBeaconBlockWithBlobKZGs) { bb.Block.StateRoot = sr[:] },
 	}.Apply(b)
 }
 
@@ -64,6 +66,7 @@ func SetBlockParentRoot(b interfaces.SignedBeaconBlock, pr [32]byte) error {
 		Phase0:    func(bb *eth.SignedBeaconBlock) { bb.Block.ParentRoot = pr[:] },
 		Altair:    func(bb *eth.SignedBeaconBlockAltair) { bb.Block.ParentRoot = pr[:] },
 		Bellatrix: func(bb *eth.SignedBeaconBlockBellatrix) { bb.Block.ParentRoot = pr[:] },
+		Eip4844:   func(bb *eth.SignedBeaconBlockWithBlobKZGs) { bb.Block.ParentRoot = pr[:] },
 	}.Apply(b)
 }
 
@@ -72,6 +75,7 @@ func SetBlockSlot(b interfaces.SignedBeaconBlock, s types.Slot) error {
 		Phase0:    func(bb *eth.SignedBeaconBlock) { bb.Block.Slot = s },
 		Altair:    func(bb *eth.SignedBeaconBlockAltair) { bb.Block.Slot = s },
 		Bellatrix: func(bb *eth.SignedBeaconBlockBellatrix) { bb.Block.Slot = s },
+		Eip4844:   func(bb *eth.SignedBeaconBlockWithBlobKZGs) { bb.Block.Slot = s },
 	}.Apply(b)
 }
 
@@ -80,5 +84,6 @@ func SetProposerIndex(b interfaces.SignedBeaconBlock, idx types.ValidatorIndex) 
 		Phase0:    func(bb *eth.SignedBeaconBlock) { bb.Block.ProposerIndex = idx },
 		Altair:    func(bb *eth.SignedBeaconBlockAltair) { bb.Block.ProposerIndex = idx },
 		Bellatrix: func(bb *eth.SignedBeaconBlockBellatrix) { bb.Block.ProposerIndex = idx },
+		Eip4844:   func(bb *eth.SignedBeaconBlockWithBlobKZGs) { bb.Block.ProposerIndex = idx },
 	}.Apply(b)
 }

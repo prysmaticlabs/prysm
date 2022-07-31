@@ -8,10 +8,10 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/core/types"
 	gethtypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/params"
 	"github.com/pkg/errors"
-	"github.com/protolambda/go-ethereum/core/types"
-	"github.com/protolambda/go-ethereum/params"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 )
@@ -376,30 +376,32 @@ func (f *ForkchoiceState) UnmarshalJSON(enc []byte) error {
 }
 
 type blobBundleJSON struct {
-	BlockHash common.Hash                                          `json:"blockHash"`
-	Kzgs      []types.KZGCommitment                                `json:"kzgs"`
-	Blobs     [][params.FieldElementsPerBlob]types.BLSFieldElement `json:"blobs"`
+	BlockHash       common.Hash           `json:"blockHash"`
+	Kzgs            []types.KZGCommitment `json:"kzgs"`
+	Blobs           []types.Blob          `json:"blobs"`
+	AggregatedProof types.KZGProof        `json:"aggregatedProof"`
 }
 
 // MarshalJSON --
 func (b *BlobsBundle) MarshalJSON() ([]byte, error) {
-	kzgs := make([]types.KZGCommitment, len(b.Kzg))
-	for i, kzg := range b.Kzg {
+	kzgs := make([]types.KZGCommitment, len(b.Kzgs))
+	for i, kzg := range b.Kzgs {
 		kzgs[i] = bytesutil.ToBytes48(kzg)
 	}
-	blobs := make([][params.FieldElementsPerBlob]types.BLSFieldElement, len(b.Blobs))
-	for _, b1 := range b.Blobs {
+	blobs := make([]types.Blob, len(b.Blobs))
+	for i, b1 := range b.Blobs {
 		var blob [params.FieldElementsPerBlob]types.BLSFieldElement
-		for i, b2 := range b1.Blob {
-			blob[i] = bytesutil.ToBytes32(b2)
+		for j, b2 := range b1.Blob {
+			blob[j] = bytesutil.ToBytes32(b2)
 		}
-		blobs = append(blobs, blob)
+		blobs[i] = blob
 	}
 
 	return json.Marshal(blobBundleJSON{
-		BlockHash: bytesutil.ToBytes32(b.BlockHash),
-		Kzgs:      kzgs,
-		Blobs:     blobs,
+		BlockHash:       bytesutil.ToBytes32(b.BlockHash),
+		Kzgs:            kzgs,
+		Blobs:           blobs,
+		AggregatedProof: bytesutil.ToBytes48(b.AggregatedProof),
 	})
 }
 
@@ -415,15 +417,17 @@ func (e *BlobsBundle) UnmarshalJSON(enc []byte) error {
 	for i, kzg := range dec.Kzgs {
 		kzgs[i] = bytesutil.PadTo(kzg[:], fieldparams.BLSPubkeyLength)
 	}
-	e.Kzg = kzgs
+	e.Kzgs = kzgs
 	blobs := make([]*Blob, len(dec.Blobs))
 	for i, blob := range dec.Blobs {
-		b := &Blob{}
-		for _, fe := range blob {
-			b.Blob = append(b.Blob, fe[:])
+		blobs[i] = &Blob{
+			Blob: make([][]byte, len(blob)),
 		}
-		blobs[i] = b
+		for j, b := range blob {
+			blobs[i].Blob[j] = bytesutil.SafeCopyBytes(b[:])
+		}
 	}
 	e.Blobs = blobs
+	e.AggregatedProof = bytesutil.PadTo(dec.AggregatedProof[:], fieldparams.BLSPubkeyLength)
 	return nil
 }

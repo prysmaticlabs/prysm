@@ -3,6 +3,7 @@ package protoarray
 import (
 	"sync"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
@@ -10,10 +11,11 @@ import (
 
 // ForkChoice defines the overall fork choice store which includes all block nodes, validator's latest votes and balances.
 type ForkChoice struct {
-	store     *Store
-	votes     []Vote // tracks individual validator's last vote.
-	votesLock sync.RWMutex
-	balances  []uint64 // tracks individual validator's last justified balances.
+	store            *Store
+	votes            []Vote // tracks individual validator's last vote.
+	votesLock        sync.RWMutex
+	balances         []uint64 // tracks individual validator's last justified balances.
+	dataAvailability forkchoice.DataAvailability
 }
 
 // Store defines the fork choice store which includes block nodes and the last view of checkpoint information.

@@ -328,5 +328,5 @@ func (w altairBeaconBlockBody) Execution() (interfaces.ExecutionData, error) {
 
 // BlobKzgs is a stub.
 func (w altairBeaconBlockBody) BlobKzgs() ([][]byte, error) {
-	return nil, errors.Wrapf(ErrUnsupportedField, "ExecutionPayloadHeader for %T", w)
+	return nil, errors.Wrapf(ErrUnsupportedField, "BlobKzgs for %T", w)
 }
