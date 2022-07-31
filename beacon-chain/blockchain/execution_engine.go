@@ -23,6 +23,8 @@ import (
 	"go.opencensus.io/trace"
 )
 
+var defaultLatestValidHash = bytesutil.PadTo([]byte{0xff}, 32)
+
 // notifyForkchoiceUpdateArg is the argument for the forkchoice update notification `notifyForkchoiceUpdate`.
 type notifyForkchoiceUpdateArg struct {
 	headState state.BeaconState
@@ -89,6 +91,9 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 		case powchain.ErrInvalidPayloadStatus:
 			newPayloadInvalidNodeCount.Inc()
 			headRoot := arg.headRoot
+			if len(lastValidHash) == 0 {
+				lastValidHash = defaultLatestValidHash
+			}
 			invalidRoots, err := s.ForkChoicer().SetOptimisticToInvalid(ctx, headRoot, bytesutil.ToBytes32(headBlk.ParentRoot()), bytesutil.ToBytes32(lastValidHash))
 			if err != nil {
 				log.WithError(err).Error("Could not set head root to invalid")
