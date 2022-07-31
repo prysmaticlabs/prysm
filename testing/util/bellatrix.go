@@ -130,8 +130,16 @@ func GenerateFullBlockBellatrix(
 		Timestamp:     uint64(timestamp.Unix()),
 		Transactions:  newTransactions,
 	}
-
-	syncCommitteeBits := make(bitfield.Bitvector512, 64)
+	var syncCommitteeBits []byte
+	currSize := new(ethpb.SyncAggregate).SyncCommitteeBits.Len()
+	switch currSize {
+	case 512:
+		syncCommitteeBits = bitfield.NewBitvector512()
+	case 32:
+		syncCommitteeBits = bitfield.NewBitvector32()
+	default:
+		return nil, errors.New("invalid bit vector size")
+	}
 	newSyncAggregate := &ethpb.SyncAggregate{
 		SyncCommitteeBits:      syncCommitteeBits,
 		SyncCommitteeSignature: append([]byte{0xC0}, make([]byte, 95)...),
