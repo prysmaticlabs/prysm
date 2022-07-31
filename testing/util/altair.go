@@ -377,21 +377,6 @@ func GenerateFullBlockAltair(
 		}
 	}
 
-	var syncCommitteeBits []byte
-	currSize := new(ethpb.SyncAggregate).SyncCommitteeBits.Len()
-	switch currSize {
-	case 512:
-		syncCommitteeBits = bitfield.NewBitvector512()
-	case 32:
-		syncCommitteeBits = bitfield.NewBitvector32()
-	default:
-		return nil, errors.New("invalid bit vector size")
-	}
-	newSyncAggregate := &ethpb.SyncAggregate{
-		SyncCommitteeBits:      syncCommitteeBits,
-		SyncCommitteeSignature: append([]byte{0xC0}, make([]byte, 95)...),
-	}
-
 	newHeader := bState.LatestBlockHeader()
 	prevStateRoot, err := bState.HashTreeRoot(ctx)
 	if err != nil {
@@ -401,6 +386,29 @@ func GenerateFullBlockAltair(
 	parentRoot, err := newHeader.HashTreeRoot()
 	if err != nil {
 		return nil, err
+	}
+
+	var newSyncAggregate *ethpb.SyncAggregate
+	if conf.FullSyncAggregate {
+		newSyncAggregate, err = generateSyncAggregate(bState, privs, parentRoot)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed generating syncAggregate")
+		}
+	} else {
+		var syncCommitteeBits []byte
+		currSize := new(ethpb.SyncAggregate).SyncCommitteeBits.Len()
+		switch currSize {
+		case 512:
+			syncCommitteeBits = bitfield.NewBitvector512()
+		case 32:
+			syncCommitteeBits = bitfield.NewBitvector32()
+		default:
+			return nil, errors.New("invalid bit vector size")
+		}
+		newSyncAggregate = &ethpb.SyncAggregate{
+			SyncCommitteeBits:      syncCommitteeBits,
+			SyncCommitteeSignature: append([]byte{0xC0}, make([]byte, 95)...),
+		}
 	}
 
 	if slot == currentSlot {
