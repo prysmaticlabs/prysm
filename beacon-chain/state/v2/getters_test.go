@@ -74,6 +74,8 @@ func TestNilState_NoPanic(t *testing.T) {
 	require.ErrorIs(t, ErrNilInnerState, err)
 	_, err = st.NextSyncCommittee()
 	require.ErrorIs(t, ErrNilInnerState, err)
+	_, _, _, err = st.UnrealizedCheckpointBalances()
+	require.ErrorIs(t, ErrNilInnerState, err)
 }
 
 func TestBeaconState_MatchCurrentJustifiedCheckpt(t *testing.T) {

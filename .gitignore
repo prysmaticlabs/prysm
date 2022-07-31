@@ -35,3 +35,6 @@ bin
 
 # p2p metaData
 metaData
+
+# execution API authentication
+jwt.hex

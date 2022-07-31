@@ -143,4 +143,7 @@ message SyncInfo {
 
   // A bool indicating whether the node is currently syncing or not.
   bool is_syncing = 3;
+
+  // A bool indicating whether the node is currently in optimistic mode.
+  bool is_optimistic = 4;
 }

@@ -102,14 +102,17 @@ func (f *blocksFetcher) nonSkippedSlotAfterWithPeersTarget(
 
 	// Quickly find the close enough epoch where a non-empty slot definitely exists.
 	// Only single random slot per epoch is checked - allowing to move forward relatively quickly.
+	// This method has been changed to account for our spec change where step can only be 1 in a
+	// block by range request. https://github.com/ethereum/consensus-specs/pull/2856
+	// The downside is that this method will be less effective during periods without
+	// finality.
 	slot += nonSkippedSlotsFullSearchEpochs * slotsPerEpoch
 	upperBoundSlot, err := slots.EpochStart(targetEpoch + 1)
 	if err != nil {
 		return 0, err
 	}
-	for ind := slot + 1; ind < upperBoundSlot; ind += (slotsPerEpoch * slotsPerEpoch) / 2 {
-		start := ind.Add(uint64(f.rand.Intn(int(slotsPerEpoch)))) // lint:ignore uintcast -- Slots per epoch will never exceed int64.
-		nextSlot, err := fetch(peers[pidInd%len(peers)], start, uint64(slotsPerEpoch/2), uint64(slotsPerEpoch))
+	for ind := slot + 1; ind < upperBoundSlot; ind += slotsPerEpoch {
+		nextSlot, err := fetch(peers[pidInd%len(peers)], ind, uint64(slotsPerEpoch), 1)
 		if err != nil {
 			return 0, err
 		}
@@ -157,17 +160,14 @@ func (f *blocksFetcher) findFork(ctx context.Context, slot types.Slot) (*forkDat
 
 	// The current slot's epoch must be after the finalization epoch,
 	// triggering backtracking on earlier epochs is unnecessary.
-	cp, err := f.chain.FinalizedCheckpt()
-	if err != nil {
-		return nil, err
-	}
+	cp := f.chain.FinalizedCheckpt()
 	finalizedEpoch := cp.Epoch
 	epoch := slots.ToEpoch(slot)
 	if epoch <= finalizedEpoch {
 		return nil, errors.New("slot is not after the finalized epoch, no backtracking is necessary")
 	}
 	// Update slot to the beginning of the current epoch (preserve original slot for comparison).
-	slot, err = slots.EpochStart(epoch)
+	slot, err := slots.EpochStart(epoch)
 	if err != nil {
 		return nil, err
 	}
@@ -291,11 +291,7 @@ func (f *blocksFetcher) findAncestor(ctx context.Context, pid peer.ID, b interfa
 
 // bestFinalizedSlot returns the highest finalized slot of the majority of connected peers.
 func (f *blocksFetcher) bestFinalizedSlot() types.Slot {
-	cp, err := f.chain.FinalizedCheckpt()
-	if err != nil {
-		log.WithError(err).Error("Failed to get finalized checkpoint")
-		return 0
-	}
+	cp := f.chain.FinalizedCheckpt()
 	finalizedEpoch, _ := f.p2p.Peers().BestFinalized(
 		params.BeaconConfig().MaxPeersToSync, cp.Epoch)
 	return params.BeaconConfig().SlotsPerEpoch.Mul(uint64(finalizedEpoch))
@@ -312,11 +308,7 @@ func (f *blocksFetcher) bestNonFinalizedSlot() types.Slot {
 // epoch. For the latter peers supporting that target epoch are returned as well.
 func (f *blocksFetcher) calculateHeadAndTargetEpochs() (headEpoch, targetEpoch types.Epoch, peers []peer.ID) {
 	if f.mode == modeStopOnFinalizedEpoch {
-		cp, err := f.chain.FinalizedCheckpt()
-		if err != nil {
-			log.WithError(err).Error("Failed to get finalized checkpoint")
-			return 0, 0, peers
-		}
+		cp := f.chain.FinalizedCheckpt()
 		headEpoch = cp.Epoch
 		targetEpoch, peers = f.p2p.Peers().BestFinalized(params.BeaconConfig().MaxPeersToSync, headEpoch)
 	} else {

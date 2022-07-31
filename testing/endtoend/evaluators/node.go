@@ -136,7 +136,7 @@ func allNodesHaveSameHead(conns ...*grpc.ClientConn) error {
 		beaconClient := eth.NewBeaconChainClient(conn)
 		chainHead, err := beaconClient.GetChainHead(context.Background(), &emptypb.Empty{})
 		if err != nil {
-			return err
+			return errors.Wrapf(err, "connection number=%d", i)
 		}
 		headEpochs[i] = chainHead.HeadEpoch
 		justifiedRoots[i] = chainHead.JustifiedBlockRoot

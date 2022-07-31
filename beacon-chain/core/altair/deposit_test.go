@@ -183,7 +183,7 @@ func TestProcessDeposit_AddsNewValidatorDeposit(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	newState, err := altair.ProcessDeposit(context.Background(), beaconState, dep[0], true)
+	newState, err := altair.ProcessDeposit(beaconState, dep[0], true)
 	require.NoError(t, err, "Process deposit failed")
 	require.Equal(t, 2, len(newState.Validators()), "Expected validator list to have length 2")
 	require.Equal(t, 2, len(newState.Balances()), "Expected validator balances list to have length 2")
@@ -201,9 +201,9 @@ func TestProcessDeposit_SkipsInvalidDeposit(t *testing.T) {
 	dep, _, err := util.DeterministicDepositsAndKeys(1)
 	require.NoError(t, err)
 	dep[0].Data.Signature = make([]byte, 96)
-	trie, _, err := util.DepositTrieFromDeposits(dep)
+	dt, _, err := util.DepositTrieFromDeposits(dep)
 	require.NoError(t, err)
-	root, err := trie.HashTreeRoot()
+	root, err := dt.HashTreeRoot()
 	require.NoError(t, err)
 	eth1Data := &ethpb.Eth1Data{
 		DepositRoot:  root[:],
@@ -226,7 +226,7 @@ func TestProcessDeposit_SkipsInvalidDeposit(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	newState, err := altair.ProcessDeposit(context.Background(), beaconState, dep[0], true)
+	newState, err := altair.ProcessDeposit(beaconState, dep[0], true)
 	require.NoError(t, err, "Expected invalid block deposit to be ignored without error")
 
 	if newState.Eth1DepositIndex() != 1 {

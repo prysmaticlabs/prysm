@@ -4,7 +4,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/go-bitfield"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
@@ -47,7 +46,7 @@ func TestMapAggregateAndProof(t *testing.T) {
 			want: &v1.AggregateAndProof{
 				AggregatorIndex: "0",
 				Aggregate:       mock.MockAttestation(),
-				SelectionProof:  hexutil.Encode(make([]byte, fieldparams.BLSSignatureLength)),
+				SelectionProof:  make([]byte, fieldparams.BLSSignatureLength),
 			},
 			wantErr: false,
 		},

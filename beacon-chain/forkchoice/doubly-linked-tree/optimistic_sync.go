@@ -3,6 +3,7 @@ package doublylinkedtree
 import (
 	"context"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/params"
 )
 
@@ -14,7 +15,7 @@ func (s *Store) setOptimisticToInvalid(ctx context.Context, root, parentRoot, pa
 		node, ok = s.nodeByRoot[parentRoot]
 		if !ok || node == nil {
 			s.nodesLock.Unlock()
-			return invalidRoots, ErrNilNode
+			return invalidRoots, errors.Wrap(ErrNilNode, "could not set node to invalid")
 		}
 		// return early if the parent is LVH
 		if node.payloadHash == payloadHash {
@@ -24,18 +25,12 @@ func (s *Store) setOptimisticToInvalid(ctx context.Context, root, parentRoot, pa
 	} else {
 		if node == nil {
 			s.nodesLock.Unlock()
-			return invalidRoots, ErrNilNode
+			return invalidRoots, errors.Wrap(ErrNilNode, "could not set node to invalid")
 		}
 		if node.parent.root != parentRoot {
 			s.nodesLock.Unlock()
 			return invalidRoots, errInvalidParentRoot
 		}
-	}
-	// Check if last valid hash is an ancestor of the passed node.
-	lastValid, ok := s.nodeByPayload[payloadHash]
-	if !ok || lastValid == nil {
-		s.nodesLock.Unlock()
-		return invalidRoots, errUnknownPayloadHash
 	}
 	firstInvalid := node
 	for ; firstInvalid.parent != nil && firstInvalid.parent.payloadHash != payloadHash; firstInvalid = firstInvalid.parent {
@@ -66,7 +61,7 @@ func (s *Store) removeNode(ctx context.Context, node *Node) ([][32]byte, error) 
 	invalidRoots := make([][32]byte, 0)
 
 	if node == nil {
-		return invalidRoots, ErrNilNode
+		return invalidRoots, errors.Wrap(ErrNilNode, "could not remove node")
 	}
 	if !node.optimistic || node.parent == nil {
 		return invalidRoots, errInvalidOptimisticStatus

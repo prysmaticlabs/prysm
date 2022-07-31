@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/libp2p/go-libp2p-core/mux"
 	"github.com/libp2p/go-libp2p-core/network"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -88,7 +87,7 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 				wsb, err := wrapper.WrappedSignedBeaconBlock(knownBlocks[i])
 				require.NoError(t, err)
 				err = WriteBlockChunk(stream, chain, p2pProvider.Encoding(), wsb)
-				if err != nil && err.Error() != mux.ErrReset.Error() {
+				if err != nil && err.Error() != network.ErrReset.Error() {
 					require.NoError(t, err)
 				}
 			}
@@ -242,7 +241,7 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 				chain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
 				wsb, err := wrapper.WrappedSignedBeaconBlock(knownBlocks[i])
 				err = WriteBlockChunk(stream, chain, p2.Encoding(), wsb)
-				if err != nil && err.Error() != mux.ErrReset.Error() {
+				if err != nil && err.Error() != network.ErrReset.Error() {
 					require.NoError(t, err)
 				}
 			}
@@ -287,7 +286,7 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 				wsb, err := wrapper.WrappedSignedBeaconBlock(knownBlocks[i])
 				require.NoError(t, err)
 				err = WriteBlockChunk(stream, chain, p2.Encoding(), wsb)
-				if err != nil && err.Error() != mux.ErrReset.Error() {
+				if err != nil && err.Error() != network.ErrReset.Error() {
 					require.NoError(t, err)
 				}
 			}

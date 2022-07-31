@@ -52,7 +52,7 @@ func NewService(addr string, svcRegistry *runtime.ServiceRegistry, additionalHan
 		mux.HandleFunc(h.Path, h.Handler)
 	}
 
-	s.server = &http.Server{Addr: addr, Handler: mux}
+	s.server = &http.Server{Addr: addr, Handler: mux, ReadHeaderTimeout: time.Second}
 
 	return s
 }

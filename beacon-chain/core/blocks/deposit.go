@@ -37,8 +37,8 @@ func ProcessPreGenesisDeposits(
 
 // ActivateValidatorWithEffectiveBalance updates validator's effective balance, and if it's above MaxEffectiveBalance, validator becomes active in genesis.
 func ActivateValidatorWithEffectiveBalance(beaconState state.BeaconState, deposits []*ethpb.Deposit) (state.BeaconState, error) {
-	for _, deposit := range deposits {
-		pubkey := deposit.Data.PublicKey
+	for _, d := range deposits {
+		pubkey := d.Data.PublicKey
 		index, ok := beaconState.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubkey))
 		// In the event of the pubkey not existing, we continue processing the other
 		// deposits.
@@ -85,13 +85,13 @@ func ProcessDeposits(
 		return nil, err
 	}
 
-	for _, deposit := range deposits {
-		if deposit == nil || deposit.Data == nil {
+	for _, d := range deposits {
+		if d == nil || d.Data == nil {
 			return nil, errors.New("got a nil deposit in block")
 		}
-		beaconState, _, err = ProcessDeposit(beaconState, deposit, batchVerified)
+		beaconState, _, err = ProcessDeposit(beaconState, d, batchVerified)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not process deposit from %#x", bytesutil.Trunc(deposit.Data.PublicKey))
+			return nil, errors.Wrapf(err, "could not process deposit from %#x", bytesutil.Trunc(d.Data.PublicKey))
 		}
 	}
 	return beaconState, nil

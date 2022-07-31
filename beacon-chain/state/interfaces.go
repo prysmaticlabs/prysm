@@ -8,7 +8,9 @@ import (
 
 	"github.com/prysmaticlabs/go-bitfield"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -60,7 +62,7 @@ type ReadOnlyBeaconState interface {
 	MarshalSSZ() ([]byte, error)
 	IsNil() bool
 	Version() int
-	LatestExecutionPayloadHeader() (*ethpb.ExecutionPayloadHeader, error)
+	LatestExecutionPayloadHeader() (*enginev1.ExecutionPayloadHeader, error)
 }
 
 // WriteOnlyBeaconState defines a struct which only has write access to beacon state methods.
@@ -82,7 +84,7 @@ type WriteOnlyBeaconState interface {
 	SetSlashings(val []uint64) error
 	UpdateSlashingsAtIndex(idx, val uint64) error
 	AppendHistoricalRoots(root [32]byte) error
-	SetLatestExecutionPayloadHeader(payload *ethpb.ExecutionPayloadHeader) error
+	SetLatestExecutionPayloadHeader(payload interfaces.ExecutionData) error
 }
 
 // ReadOnlyValidator defines a struct which only has read access to validator methods.
@@ -223,6 +225,7 @@ type FutureForkStub interface {
 	AppendInactivityScore(s uint64) error
 	CurrentEpochParticipation() ([]byte, error)
 	PreviousEpochParticipation() ([]byte, error)
+	UnrealizedCheckpointBalances() (uint64, uint64, uint64, error)
 	InactivityScores() ([]uint64, error)
 	SetInactivityScores(val []uint64) error
 	CurrentSyncCommittee() (*ethpb.SyncCommittee, error)

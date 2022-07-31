@@ -163,9 +163,7 @@ func TestBlocksFetcher_findFork(t *testing.T) {
 	finalizedEpoch := slots.ToEpoch(finalizedSlot)
 
 	genesisBlock := chain1[0]
-	wsb, err := wrapper.WrappedSignedBeaconBlock(genesisBlock)
-	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveBlock(context.Background(), wsb))
+	util.SaveBlock(t, context.Background(), beaconDB, genesisBlock)
 	genesisRoot, err := genesisBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -261,9 +259,7 @@ func TestBlocksFetcher_findFork(t *testing.T) {
 	require.Equal(t, curForkMoreBlocksPeer, fork.peer)
 	// Save all chain1b blocks (so that they do not interfere with alternative fork)
 	for _, blk := range chain1b {
-		wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
-		require.NoError(t, err)
-		require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
+		util.SaveBlock(t, ctx, beaconDB, blk)
 		require.NoError(t, st.SetSlot(blk.Block.Slot))
 	}
 	forkSlot := types.Slot(129)
@@ -300,9 +296,7 @@ func TestBlocksFetcher_findFork(t *testing.T) {
 		// Only save is parent block exists.
 		parentRoot := bytesutil.ToBytes32(blk.Block.ParentRoot)
 		if beaconDB.HasBlock(ctx, parentRoot) || mc.HasBlock(ctx, parentRoot) {
-			wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
-			require.NoError(t, err)
-			require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
+			util.SaveBlock(t, ctx, beaconDB, blk)
 			require.NoError(t, st.SetSlot(blk.Block.Slot))
 		}
 	}
@@ -321,9 +315,7 @@ func TestBlocksFetcher_findForkWithPeer(t *testing.T) {
 
 	knownBlocks := extendBlockSequence(t, []*ethpb.SignedBeaconBlock{}, 128)
 	genesisBlock := knownBlocks[0]
-	wsb, err := wrapper.WrappedSignedBeaconBlock(genesisBlock)
-	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveBlock(context.Background(), wsb))
+	util.SaveBlock(t, context.Background(), beaconDB, genesisBlock)
 	genesisRoot, err := genesisBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -350,9 +342,7 @@ func TestBlocksFetcher_findForkWithPeer(t *testing.T) {
 	fetcher.rateLimiter = leakybucket.NewCollector(6400, 6400, false)
 
 	for _, blk := range knownBlocks {
-		wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
-		require.NoError(t, err)
-		require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
+		util.SaveBlock(t, ctx, beaconDB, blk)
 		require.NoError(t, st.SetSlot(blk.Block.Slot))
 	}
 
@@ -437,9 +427,7 @@ func TestBlocksFetcher_findAncestor(t *testing.T) {
 	finalizedEpoch := slots.ToEpoch(finalizedSlot)
 
 	genesisBlock := knownBlocks[0]
-	wsb, err := wrapper.WrappedSignedBeaconBlock(genesisBlock)
-	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveBlock(context.Background(), wsb))
+	util.SaveBlock(t, context.Background(), beaconDB, genesisBlock)
 	genesisRoot, err := genesisBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 

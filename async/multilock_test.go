@@ -22,22 +22,22 @@ import (
 
 func TestUnique(t *testing.T) {
 	var arr []string
-	assert := assert.New(t)
+	a := assert.New(t)
 
 	arr = []string{"a", "b", "c"}
-	assert.Equal(arr, unique(arr))
+	a.Equal(arr, unique(arr))
 
 	arr = []string{"a", "a", "a"}
-	assert.Equal([]string{"a"}, unique(arr))
+	a.Equal([]string{"a"}, unique(arr))
 
 	arr = []string{"a", "a", "b"}
-	assert.Equal([]string{"a", "b"}, unique(arr))
+	a.Equal([]string{"a", "b"}, unique(arr))
 
 	arr = []string{"a", "b", "a"}
-	assert.Equal([]string{"a", "b"}, unique(arr))
+	a.Equal([]string{"a", "b"}, unique(arr))
 
 	arr = []string{"a", "b", "c", "b", "d"}
-	assert.Equal([]string{"a", "b", "c", "d"}, unique(arr))
+	a.Equal([]string{"a", "b", "c", "d"}, unique(arr))
 }
 
 func TestGetChan(t *testing.T) {
@@ -45,9 +45,9 @@ func TestGetChan(t *testing.T) {
 	ch2 := getChan("aa")
 	ch3 := getChan("a")
 
-	assert := assert.New(t)
-	assert.NotEqual(ch1, ch2)
-	assert.Equal(ch1, ch3)
+	a := assert.New(t)
+	a.NotEqual(ch1, ch2)
+	a.Equal(ch1, ch3)
 }
 
 func TestLockUnlock(_ *testing.T) {

@@ -3,6 +3,8 @@ package genesis
 import (
 	"context"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/api/client/beacon"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -27,6 +29,18 @@ func NewAPIInitializer(beaconNodeHost string) (*APIInitializer, error) {
 // Initialize downloads origin state and block for checkpoint sync and initializes database records to
 // prepare the node to begin syncing from that point.
 func (dl *APIInitializer) Initialize(ctx context.Context, d db.Database) error {
+	existing, err := d.GenesisState(ctx)
+	if err != nil {
+		return err
+	}
+	if existing != nil && !existing.IsNil() {
+		htr, err := existing.HashTreeRoot(ctx)
+		if err != nil {
+			return errors.Wrap(err, "error while computing hash_tree_root of existing genesis state")
+		}
+		log.Warnf("database contains genesis with htr=%#x, ignoring remote genesis state parameter", htr)
+		return nil
+	}
 	sb, err := dl.c.GetState(ctx, beacon.IdGenesis)
 	if err != nil {
 		return errors.Wrapf(err, "Error retrieving genesis state from %s", dl.c.NodeURL())

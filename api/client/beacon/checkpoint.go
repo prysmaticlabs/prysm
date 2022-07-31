@@ -26,69 +26,126 @@ type OriginData struct {
 	bb  []byte
 	st  state.BeaconState
 	b   interfaces.SignedBeaconBlock
-	cf  *detect.VersionedUnmarshaler
-}
-
-// CheckpointString returns the standard string representation of a Checkpoint for the block root and epoch for the
-// SignedBeaconBlock value found by DownloadOriginData.
-// The format is a a hex-encoded block root, followed by the epoch of the block, separated by a colon. For example:
-// "0x1c35540cac127315fabb6bf29181f2ae0de1a3fc909d2e76ba771e61312cc49a:74888"
-func (od *OriginData) CheckpointString() string {
-	return fmt.Sprintf("%#x:%d", od.wsd.BlockRoot, od.wsd.Epoch)
+	vu  *detect.VersionedUnmarshaler
+	br  [32]byte
+	sr  [32]byte
 }
 
 // SaveBlock saves the downloaded block to a unique file in the given path.
 // For readability and collision avoidance, the file name includes: type, config name, slot and root
-func (od *OriginData) SaveBlock(dir string) (string, error) {
-	blockPath := path.Join(dir, fname("block", od.cf, od.b.Block().Slot(), od.wsd.BlockRoot))
-	return blockPath, file.WriteFile(blockPath, od.BlockBytes())
+func (o *OriginData) SaveBlock(dir string) (string, error) {
+	blockPath := path.Join(dir, fname("block", o.vu, o.b.Block().Slot(), o.br))
+	return blockPath, file.WriteFile(blockPath, o.BlockBytes())
 }
 
 // SaveState saves the downloaded state to a unique file in the given path.
 // For readability and collision avoidance, the file name includes: type, config name, slot and root
-func (od *OriginData) SaveState(dir string) (string, error) {
-	statePath := path.Join(dir, fname("state", od.cf, od.st.Slot(), od.wsd.StateRoot))
-	return statePath, file.WriteFile(statePath, od.StateBytes())
+func (o *OriginData) SaveState(dir string) (string, error) {
+	statePath := path.Join(dir, fname("state", o.vu, o.st.Slot(), o.sr))
+	return statePath, file.WriteFile(statePath, o.StateBytes())
 }
 
 // StateBytes returns the ssz-encoded bytes of the downloaded BeaconState value.
-func (od *OriginData) StateBytes() []byte {
-	return od.sb
+func (o *OriginData) StateBytes() []byte {
+	return o.sb
 }
 
 // BlockBytes returns the ssz-encoded bytes of the downloaded SignedBeaconBlock value.
-func (od *OriginData) BlockBytes() []byte {
-	return od.bb
+func (o *OriginData) BlockBytes() []byte {
+	return o.bb
 }
 
-func fname(prefix string, cf *detect.VersionedUnmarshaler, slot types.Slot, root [32]byte) string {
-	return fmt.Sprintf("%s_%s_%s_%d-%#x.ssz", prefix, cf.Config.ConfigName, version.String(cf.Fork), slot, root)
+func fname(prefix string, vu *detect.VersionedUnmarshaler, slot types.Slot, root [32]byte) string {
+	return fmt.Sprintf("%s_%s_%s_%d-%#x.ssz", prefix, vu.Config.ConfigName, version.String(vu.Fork), slot, root)
 }
 
-// this method downloads the head state, which can be used to find the correct chain config
-// and use prysm's helper methods to compute the latest weak subjectivity epoch.
-func getWeakSubjectivityEpochFromHead(ctx context.Context, client *Client) (types.Epoch, error) {
-	headBytes, err := client.GetState(ctx, IdHead)
+// DownloadFinalizedData downloads the most recently finalized state, and the block most recently applied to that state.
+// This pair can be used to initialize a new beacon node via checkpoint sync.
+func DownloadFinalizedData(ctx context.Context, client *Client) (*OriginData, error) {
+	sb, err := client.GetState(ctx, IdFinalized)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
-	cf, err := detect.FromState(headBytes)
+	vu, err := detect.FromState(sb)
 	if err != nil {
-		return 0, errors.Wrap(err, "error detecting chain config for beacon state")
+		return nil, errors.Wrap(err, "error detecting chain config for finalized state")
 	}
-	log.Printf("detected supported config in remote head state, name=%s, fork=%s", cf.Config.ConfigName, version.String(cf.Fork))
-	headState, err := cf.UnmarshalBeaconState(headBytes)
+	log.Printf("detected supported config in remote finalized state, name=%s, fork=%s", vu.Config.ConfigName, version.String(vu.Fork))
+	s, err := vu.UnmarshalBeaconState(sb)
 	if err != nil {
-		return 0, errors.Wrap(err, "error unmarshaling state to correct version")
-	}
-
-	epoch, err := helpers.LatestWeakSubjectivityEpoch(ctx, headState, cf.Config)
-	if err != nil {
-		return 0, errors.Wrap(err, "error computing the weak subjectivity epoch from head state")
+		return nil, errors.Wrap(err, "error unmarshaling finalized state to correct version")
 	}
 
-	log.Printf("(computed client-side) weak subjectivity epoch = %d", epoch)
-	return epoch, nil
+	sr, err := s.HashTreeRoot(ctx)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to compute htr for finalized state at slot=%d", s.Slot())
+	}
+	header := s.LatestBlockHeader()
+	header.StateRoot = sr[:]
+	br, err := header.HashTreeRoot()
+	if err != nil {
+		return nil, errors.Wrap(err, "error while computing block root using state data")
+	}
+
+	bb, err := client.GetBlock(ctx, IdFromRoot(br))
+	if err != nil {
+		return nil, errors.Wrapf(err, "error requesting block by root = %#x", br)
+	}
+	b, err := vu.UnmarshalBeaconBlock(bb)
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to unmarshal block to a supported type using the detected fork schedule")
+	}
+	realBlockRoot, err := b.Block().HashTreeRoot()
+	if err != nil {
+		return nil, errors.Wrap(err, "error computing hash_tree_root of retrieved block")
+	}
+
+	log.Printf("BeaconState slot=%d, Block slot=%d", s.Slot(), b.Block().Slot())
+	log.Printf("BeaconState htr=%#xd, Block state_root=%#x", sr, b.Block().StateRoot())
+	log.Printf("BeaconState latest_block_header htr=%#xd, block htr=%#x", br, realBlockRoot)
+	return &OriginData{
+		st: s,
+		b:  b,
+		sb: sb,
+		bb: bb,
+		vu: vu,
+		br: br,
+		sr: sr,
+	}, nil
+}
+
+// WeakSubjectivityData represents the state root, block root and epoch of the BeaconState + SignedBeaconBlock
+// that falls at the beginning of the current weak subjectivity period. These values can be used to construct
+// a weak subjectivity checkpoint beacon node flag to be used for validation.
+type WeakSubjectivityData struct {
+	BlockRoot [32]byte
+	StateRoot [32]byte
+	Epoch     types.Epoch
+}
+
+// CheckpointString returns the standard string representation of a Checkpoint.
+// The format is a a hex-encoded block root, followed by the epoch of the block, separated by a colon. For example:
+// "0x1c35540cac127315fabb6bf29181f2ae0de1a3fc909d2e76ba771e61312cc49a:74888"
+func (wsd *WeakSubjectivityData) CheckpointString() string {
+	return fmt.Sprintf("%#x:%d", wsd.BlockRoot, wsd.Epoch)
+}
+
+// ComputeWeakSubjectivityCheckpoint attempts to use the prysm weak_subjectivity api
+// to obtain the current weak_subjectivity checkpoint.
+// For non-prysm nodes, the same computation will be performed with extra steps,
+// using the head state downloaded from the beacon node api.
+func ComputeWeakSubjectivityCheckpoint(ctx context.Context, client *Client) (*WeakSubjectivityData, error) {
+	ws, err := client.GetWeakSubjectivity(ctx)
+	if err != nil {
+		// a 404/405 is expected if querying an endpoint that doesn't support the weak subjectivity checkpoint api
+		if !errors.Is(err, ErrNotOK) {
+			return nil, errors.Wrap(err, "unexpected API response for prysm-only weak subjectivity checkpoint API")
+		}
+		// fall back to vanilla Beacon Node API method
+		return computeBackwardsCompatible(ctx, client)
+	}
+	log.Printf("server weak subjectivity checkpoint response - epoch=%d, block_root=%#x, state_root=%#x", ws.Epoch, ws.BlockRoot, ws.StateRoot)
+	return ws, nil
 }
 
 const (
@@ -96,8 +153,8 @@ const (
 	prysmImplementationName = "Prysm"
 )
 
-// ErrUnsupportedPrysmCheckpointVersion indicates remote beacon node can't be used for checkpoint retrieval.
-var ErrUnsupportedPrysmCheckpointVersion = errors.New("node does not meet minimum version requirements for checkpoint retrieval")
+// errUnsupportedPrysmCheckpointVersion indicates remote beacon node can't be used for checkpoint retrieval.
+var errUnsupportedPrysmCheckpointVersion = errors.New("node does not meet minimum version requirements for checkpoint retrieval")
 
 // for older endpoints or clients that do not support the weak_subjectivity api method
 // we gather the necessary data for a checkpoint sync by:
@@ -105,14 +162,14 @@ var ErrUnsupportedPrysmCheckpointVersion = errors.New("node does not meet minimu
 // - requesting the state at the first slot of the epoch
 // - using hash_tree_root(state.latest_block_header) to compute the block the state integrates
 // - requesting that block by its root
-func downloadBackwardsCompatible(ctx context.Context, client *Client) (*OriginData, error) {
+func computeBackwardsCompatible(ctx context.Context, client *Client) (*WeakSubjectivityData, error) {
 	log.Print("falling back to generic checkpoint derivation, weak_subjectivity API not supported by server")
 	nv, err := client.GetNodeVersion(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to proceed with fallback method without confirming node version")
 	}
 	if nv.implementation == prysmImplementationName && semver.Compare(nv.semver, prysmMinimumVersion) < 0 {
-		return nil, errors.Wrapf(ErrUnsupportedPrysmCheckpointVersion, "%s < minimum (%s)", nv.semver, prysmMinimumVersion)
+		return nil, errors.Wrapf(errUnsupportedPrysmCheckpointVersion, "%s < minimum (%s)", nv.semver, prysmMinimumVersion)
 	}
 	epoch, err := getWeakSubjectivityEpochFromHead(ctx, client)
 	if err != nil {
@@ -127,136 +184,78 @@ func downloadBackwardsCompatible(ctx context.Context, client *Client) (*OriginDa
 
 	log.Printf("requesting checkpoint state at slot %d", slot)
 	// get the state at the first slot of the epoch
-	stateBytes, err := client.GetState(ctx, IdFromSlot(slot))
+	sb, err := client.GetState(ctx, IdFromSlot(slot))
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to request state by slot from api, slot=%d", slot)
 	}
 
 	// ConfigFork is used to unmarshal the BeaconState so we can read the block root in latest_block_header
-	cf, err := detect.FromState(stateBytes)
+	vu, err := detect.FromState(sb)
 	if err != nil {
 		return nil, errors.Wrap(err, "error detecting chain config for beacon state")
 	}
-	log.Printf("detected supported config in checkpoint state, name=%s, fork=%s", cf.Config.ConfigName, version.String(cf.Fork))
+	log.Printf("detected supported config in checkpoint state, name=%s, fork=%s", vu.Config.ConfigName, version.String(vu.Fork))
 
-	st, err := cf.UnmarshalBeaconState(stateBytes)
+	s, err := vu.UnmarshalBeaconState(sb)
 	if err != nil {
 		return nil, errors.Wrap(err, "error using detected config fork to unmarshal state bytes")
 	}
 
 	// compute state and block roots
-	stateRoot, err := st.HashTreeRoot(ctx)
+	sr, err := s.HashTreeRoot(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "error computing hash_tree_root of state")
 	}
 
-	header := st.LatestBlockHeader()
-	header.StateRoot = stateRoot[:]
-	computedBlockRoot, err := header.HashTreeRoot()
+	h := s.LatestBlockHeader()
+	h.StateRoot = sr[:]
+	br, err := h.HashTreeRoot()
 	if err != nil {
 		return nil, errors.Wrap(err, "error while computing block root using state data")
 	}
 
-	blockBytes, err := client.GetBlock(ctx, IdFromRoot(computedBlockRoot))
+	bb, err := client.GetBlock(ctx, IdFromRoot(br))
 	if err != nil {
-		return nil, errors.Wrapf(err, "error requesting block by root = %d", computedBlockRoot)
+		return nil, errors.Wrapf(err, "error requesting block by root = %d", br)
 	}
-	block, err := cf.UnmarshalBeaconBlock(blockBytes)
+	b, err := vu.UnmarshalBeaconBlock(bb)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to unmarshal block to a supported type using the detected fork schedule")
 	}
-	blockRoot, err := block.Block().HashTreeRoot()
+	br, err = b.Block().HashTreeRoot()
 	if err != nil {
 		return nil, errors.Wrap(err, "error computing hash_tree_root for block obtained via root")
 	}
 
-	log.Printf("BeaconState slot=%d, Block slot=%d", st.Slot(), block.Block().Slot())
-	log.Printf("BeaconState htr=%#xd, Block state_root=%#x", stateRoot, block.Block().StateRoot())
-	log.Printf("BeaconBlock root computed from state=%#x, Block htr=%#x", computedBlockRoot, blockRoot)
-
-	return &OriginData{
-		wsd: &WeakSubjectivityData{
-			BlockRoot: blockRoot,
-			StateRoot: stateRoot,
-			Epoch:     epoch,
-		},
-		st: st,
-		sb: stateBytes,
-		b:  block,
-		bb: blockBytes,
-		cf: cf,
+	return &WeakSubjectivityData{
+		Epoch:     epoch,
+		BlockRoot: br,
+		StateRoot: sr,
 	}, nil
 }
 
-// DownloadOriginData attempts to use the proposed weak_subjectivity beacon node api
-// to obtain the weak_subjectivity metadata (epoch, block_root, state_root) needed to sync
-// a beacon node from the canonical weak subjectivity checkpoint. As this is a proposed API
-// that will only be supported by prysm at first, in the event of a 404 we fallback to using a
-// different technique where we first download the head state which can be used to compute the
-// weak subjectivity epoch on the client side.
-func DownloadOriginData(ctx context.Context, client *Client) (*OriginData, error) {
-	ws, err := client.GetWeakSubjectivity(ctx)
+// this method downloads the head state, which can be used to find the correct chain config
+// and use prysm's helper methods to compute the latest weak subjectivity epoch.
+func getWeakSubjectivityEpochFromHead(ctx context.Context, client *Client) (types.Epoch, error) {
+	headBytes, err := client.GetState(ctx, IdHead)
 	if err != nil {
-		// a 404/405 is expected if querying an endpoint that doesn't support the weak subjectivity checkpoint api
-		if !errors.Is(err, ErrNotOK) {
-			return nil, errors.Wrap(err, "unexpected API response for prysm-only weak subjectivity checkpoint API")
-		}
-		// fall back to vanilla Beacon Node API method
-		return downloadBackwardsCompatible(ctx, client)
+		return 0, err
 	}
-	log.Printf("server weak subjectivity checkpoint response - epoch=%d, block_root=%#x, state_root=%#x", ws.Epoch, ws.BlockRoot, ws.StateRoot)
-
-	// use first slot of the epoch for the block slot
-	slot, err := slots.EpochStart(ws.Epoch)
+	vu, err := detect.FromState(headBytes)
 	if err != nil {
-		return nil, errors.Wrapf(err, "error computing first slot of epoch=%d", ws.Epoch)
+		return 0, errors.Wrap(err, "error detecting chain config for beacon state")
 	}
-	log.Printf("requesting checkpoint state at slot %d", slot)
-
-	stateBytes, err := client.GetState(ctx, IdFromSlot(slot))
+	log.Printf("detected supported config in remote head state, name=%s, fork=%s", vu.Config.ConfigName, version.String(vu.Fork))
+	headState, err := vu.UnmarshalBeaconState(headBytes)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to request state by slot from api, slot=%d", slot)
-	}
-	cf, err := detect.FromState(stateBytes)
-	if err != nil {
-		return nil, errors.Wrap(err, "error detecting chain config for beacon state")
-	}
-	log.Printf("detected supported config in checkpoint state, name=%s, fork=%s", cf.Config.ConfigName, version.String(cf.Fork))
-
-	state, err := cf.UnmarshalBeaconState(stateBytes)
-	if err != nil {
-		return nil, errors.Wrap(err, "error using detected config fork to unmarshal state bytes")
-	}
-	stateRoot, err := state.HashTreeRoot(ctx)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to compute htr for state at slot=%d", slot)
+		return 0, errors.Wrap(err, "error unmarshaling state to correct version")
 	}
 
-	blockRoot, err := state.LatestBlockHeader().HashTreeRoot()
+	epoch, err := helpers.LatestWeakSubjectivityEpoch(ctx, headState, vu.Config)
 	if err != nil {
-		return nil, errors.Wrap(err, "error computing hash_tree_root of latest_block_header")
+		return 0, errors.Wrap(err, "error computing the weak subjectivity epoch from head state")
 	}
-	blockBytes, err := client.GetBlock(ctx, IdFromRoot(ws.BlockRoot))
-	if err != nil {
-		return nil, errors.Wrapf(err, "error requesting block by slot = %d", slot)
-	}
-	block, err := cf.UnmarshalBeaconBlock(blockBytes)
-	if err != nil {
-		return nil, errors.Wrap(err, "unable to unmarshal block to a supported type using the detected fork schedule")
-	}
-	realBlockRoot, err := block.Block().HashTreeRoot()
-	if err != nil {
-		return nil, errors.Wrap(err, "error computing hash_tree_root of retrieved block")
-	}
-	log.Printf("BeaconState slot=%d, Block slot=%d", state.Slot(), block.Block().Slot())
-	log.Printf("BeaconState htr=%#xd, Block state_root=%#x", stateRoot, block.Block().StateRoot())
-	log.Printf("BeaconState latest_block_header htr=%#xd, block htr=%#x", blockRoot, realBlockRoot)
-	return &OriginData{
-		wsd: ws,
-		st:  state,
-		b:   block,
-		sb:  stateBytes,
-		bb:  blockBytes,
-		cf:  cf,
-	}, nil
+
+	log.Printf("(computed client-side) weak subjectivity epoch = %d", epoch)
+	return epoch, nil
 }

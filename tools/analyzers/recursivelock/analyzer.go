@@ -66,7 +66,7 @@ func (m mode) ErrorFound() error {
 }
 
 func run(pass *analysis.Pass) (interface{}, error) {
-	inspect, ok := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
+	inspectResult, ok := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
 	if !ok {
 		return nil, errors.New("analyzer is not type *inspector.Inspector")
 	}
@@ -86,7 +86,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 		rLockTrack: &lockTracker{},
 		lockTrack:  &lockTracker{},
 	}
-	inspect.Preorder(nodeFilter, func(node ast.Node) {
+	inspectResult.Preorder(nodeFilter, func(node ast.Node) {
 		if keepTrackOf.rLockTrack.funcLitEnd.IsValid() && node.Pos() <= keepTrackOf.rLockTrack.funcLitEnd &&
 			keepTrackOf.lockTrack.funcLitEnd.IsValid() && node.Pos() <= keepTrackOf.lockTrack.funcLitEnd {
 			return
@@ -113,7 +113,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 			keepTrackOf.lockTrack.retEnd = token.NoPos
 			keepTrackOf.lockTrack.incFRU()
 		}
-		keepTrackOf = stmtSelector(node, pass, keepTrackOf, inspect)
+		keepTrackOf = stmtSelector(node, pass, keepTrackOf, inspectResult)
 	})
 	return nil, nil
 }
@@ -418,7 +418,7 @@ func (s *selIdentList) changeRoot(r *ast.Ident, t types.Object) {
 }
 
 func (s selIdentList) String() (str string) {
-	var temp *selIdentNode = s.start
+	var temp = s.start
 	str = fmt.Sprintf("length: %v\n[\n", s.length)
 	for i := 0; temp != nil; i++ {
 		if i == s.currentIndex {

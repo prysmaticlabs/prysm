@@ -231,7 +231,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "57120e8e2d5aaec956fc6a25ddc58fae2477f5b3ac7789174cf5ac1106dcc151",
+    sha256 = "9c93f87378aaa6d6fe1c67b396eac2aacc9594af2a83f028cb99c95dea5b81df",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/general.tar.gz" % consensus_spec_version,
 )
 
@@ -247,7 +247,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "aa46676b26c173274ec8ea8756ae3072474b73ef7ccc7414d4026884810d8de2",
+    sha256 = "52f2c52415228cee8a4de5a09abff785f439a77dfef8f03e834e4e16857673c1",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/minimal.tar.gz" % consensus_spec_version,
 )
 
@@ -263,7 +263,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "d7dba93110cf35d9575ce21af6b7c3989f4aba621a9749bc090bca216e0345f7",
+    sha256 = "022dcc0d6de7dd27b337a0d1b945077eaf5ee47000700395a693fc25e12f96df",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/mainnet.tar.gz" % consensus_spec_version,
 )
 
@@ -309,9 +309,9 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "4e8a18b21d056c4032605621b1a6632198eabab57cb90c61e273f344c287f1b2",
-    strip_prefix = "eth2-networks-791a5369c5981e829698b17fbcdcdacbdaba97c8",
-    url = "https://github.com/eth-clients/eth2-networks/archive/791a5369c5981e829698b17fbcdcdacbdaba97c8.tar.gz",
+    sha256 = "126b615e3853e29b61f082f6c89c8bc1c38cd92fb84b0004396fc49e7acc8d9f",
+    strip_prefix = "eth2-networks-f3ccbe0cf5798d5cd23e4e6e7119aefa043c0935",
+    url = "https://github.com/eth-clients/eth2-networks/archive/f3ccbe0cf5798d5cd23e4e6e7119aefa043c0935.tar.gz",
 )
 
 http_archive(
@@ -342,9 +342,9 @@ filegroup(
     visibility = ["//visibility:public"],
 )
 """,
-    sha256 = "4797a7e594a5b1f4c1c8080701613f3ee451b01ec0861499ea7d9b60877a6b23",
+    sha256 = "98013b40922e54a64996da49b939e0a88fe2456f68eedc5aee4ceba0f8623f71",
     urls = [
-        "https://github.com/prysmaticlabs/prysm-web-ui/releases/download/v1.0.3/prysm-web-ui.tar.gz",
+        "https://github.com/prysmaticlabs/prysm-web-ui/releases/download/v2.0.0/prysm-web-ui.tar.gz",
     ],
 )
 

@@ -20,6 +20,7 @@ import (
 	apigateway "github.com/prysmaticlabs/prysm/api/gateway"
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -76,6 +77,7 @@ const debugGrpcMaxMsgSize = 1 << 27
 type serviceFlagOpts struct {
 	blockchainFlagOpts []blockchain.Option
 	powchainFlagOpts   []powchain.Option
+	builderOpts        []builder.Option
 }
 
 // BeaconNode defines a struct that handles the services running a random beacon chain
@@ -147,6 +149,7 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 	if err := configureExecutionSetting(cliCtx); err != nil {
 		return nil, err
 	}
+	configureFastSSZHashingAlgorithm()
 
 	// Initializes any forks here.
 	params.BeaconConfig().InitializeForkSchedule()
@@ -243,6 +246,11 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 
 	log.Debugln("Registering Slasher Service")
 	if err := beacon.registerSlasherService(); err != nil {
+		return nil, err
+	}
+
+	log.Debugln("Registering builder service")
+	if err := beacon.registerBuilderService(); err != nil {
 		return nil, err
 	}
 
@@ -346,9 +354,9 @@ func (b *BeaconNode) Close() {
 
 func (b *BeaconNode) startForkChoice() {
 	if features.Get().EnableForkChoiceDoublyLinkedTree {
-		b.forkChoiceStore = doublylinkedtree.New(0, 0)
+		b.forkChoiceStore = doublylinkedtree.New()
 	} else {
-		b.forkChoiceStore = protoarray.New(0, 0)
+		b.forkChoiceStore = protoarray.New()
 	}
 }
 
@@ -566,6 +574,14 @@ func (b *BeaconNode) fetchP2P() p2p.P2P {
 	return p
 }
 
+func (b *BeaconNode) fetchBuilderService() *builder.Service {
+	var s *builder.Service
+	if err := b.services.FetchService(&s); err != nil {
+		panic(err)
+	}
+	return s
+}
+
 func (b *BeaconNode) registerAttestationPool() error {
 	s, err := attestations.NewService(b.ctx, &attestations.Config{
 		Pool: b.attestationPool,
@@ -678,6 +694,7 @@ func (b *BeaconNode) registerSyncService() error {
 		regularsync.WithStateGen(b.stateGen),
 		regularsync.WithSlasherAttestationsFeed(b.slasherAttestationsFeed),
 		regularsync.WithSlasherBlockHeadersFeed(b.slasherBlockHeadersFeed),
+		regularsync.WithExecutionPayloadReconstructor(web3Service),
 	)
 	return b.services.RegisterService(rs)
 }
@@ -783,48 +800,50 @@ func (b *BeaconNode) registerRPCService() error {
 
 	p2pService := b.fetchP2P()
 	rpcService := rpc.NewService(b.ctx, &rpc.Config{
-		Host:                    host,
-		Port:                    port,
-		BeaconMonitoringHost:    beaconMonitoringHost,
-		BeaconMonitoringPort:    beaconMonitoringPort,
-		CertFlag:                cert,
-		KeyFlag:                 key,
-		BeaconDB:                b.db,
-		Broadcaster:             p2pService,
-		PeersFetcher:            p2pService,
-		PeerManager:             p2pService,
-		MetadataProvider:        p2pService,
-		ChainInfoFetcher:        chainService,
-		HeadUpdater:             chainService,
-		HeadFetcher:             chainService,
-		CanonicalFetcher:        chainService,
-		ForkFetcher:             chainService,
-		FinalizationFetcher:     chainService,
-		BlockReceiver:           chainService,
-		AttestationReceiver:     chainService,
-		GenesisTimeFetcher:      chainService,
-		GenesisFetcher:          chainService,
-		OptimisticModeFetcher:   chainService,
-		AttestationsPool:        b.attestationPool,
-		ExitPool:                b.exitPool,
-		SlashingsPool:           b.slashingsPool,
-		SlashingChecker:         slasherService,
-		SyncCommitteeObjectPool: b.syncCommitteePool,
-		POWChainService:         web3Service,
-		POWChainInfoFetcher:     web3Service,
-		ChainStartFetcher:       chainStartFetcher,
-		MockEth1Votes:           mockEth1DataVotes,
-		SyncService:             syncService,
-		DepositFetcher:          depositFetcher,
-		PendingDepositFetcher:   b.depositCache,
-		BlockNotifier:           b,
-		StateNotifier:           b,
-		OperationNotifier:       b,
-		StateGen:                b.stateGen,
-		EnableDebugRPCEndpoints: enableDebugRPCEndpoints,
-		MaxMsgSize:              maxMsgSize,
-		ProposerIdsCache:        b.proposerIdsCache,
-		ExecutionEngineCaller:   web3Service,
+		ExecutionEngineCaller:         web3Service,
+		ExecutionPayloadReconstructor: web3Service,
+		Host:                          host,
+		Port:                          port,
+		BeaconMonitoringHost:          beaconMonitoringHost,
+		BeaconMonitoringPort:          beaconMonitoringPort,
+		CertFlag:                      cert,
+		KeyFlag:                       key,
+		BeaconDB:                      b.db,
+		Broadcaster:                   p2pService,
+		PeersFetcher:                  p2pService,
+		PeerManager:                   p2pService,
+		MetadataProvider:              p2pService,
+		ChainInfoFetcher:              chainService,
+		HeadUpdater:                   chainService,
+		HeadFetcher:                   chainService,
+		CanonicalFetcher:              chainService,
+		ForkFetcher:                   chainService,
+		FinalizationFetcher:           chainService,
+		BlockReceiver:                 chainService,
+		AttestationReceiver:           chainService,
+		GenesisTimeFetcher:            chainService,
+		GenesisFetcher:                chainService,
+		OptimisticModeFetcher:         chainService,
+		AttestationsPool:              b.attestationPool,
+		ExitPool:                      b.exitPool,
+		SlashingsPool:                 b.slashingsPool,
+		SlashingChecker:               slasherService,
+		SyncCommitteeObjectPool:       b.syncCommitteePool,
+		POWChainService:               web3Service,
+		POWChainInfoFetcher:           web3Service,
+		ChainStartFetcher:             chainStartFetcher,
+		MockEth1Votes:                 mockEth1DataVotes,
+		SyncService:                   syncService,
+		DepositFetcher:                depositFetcher,
+		PendingDepositFetcher:         b.depositCache,
+		BlockNotifier:                 b,
+		StateNotifier:                 b,
+		OperationNotifier:             b,
+		StateGen:                      b.stateGen,
+		EnableDebugRPCEndpoints:       enableDebugRPCEndpoints,
+		MaxMsgSize:                    maxMsgSize,
+		ProposerIdsCache:              b.proposerIdsCache,
+		BlockBuilder:                  b.fetchBuilderService(),
 	})
 
 	return b.services.RegisterService(rpcService)
@@ -963,6 +982,22 @@ func (b *BeaconNode) registerValidatorMonitorService() error {
 		HeadFetcher:         chainService,
 	}
 	svc, err := monitor.NewService(b.ctx, monitorConfig, tracked)
+	if err != nil {
+		return err
+	}
+	return b.services.RegisterService(svc)
+}
+
+func (b *BeaconNode) registerBuilderService() error {
+	var chainService *blockchain.Service
+	if err := b.services.FetchService(&chainService); err != nil {
+		return err
+	}
+
+	opts := append(b.serviceFlagOpts.builderOpts,
+		builder.WithHeadFetcher(chainService),
+		builder.WithDatabase(b.db))
+	svc, err := builder.NewService(b.ctx, opts...)
 	if err != nil {
 		return err
 	}

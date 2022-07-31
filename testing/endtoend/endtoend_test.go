@@ -14,6 +14,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/api/client/beacon"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/io/file"
+	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
+	"github.com/prysmaticlabs/prysm/proto/eth/service"
+	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -141,26 +150,10 @@ func (r *testRunner) runEvaluators(conns []*grpc.ClientConn, tickingStartTime ti
 	secondsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
 	ticker := helpers.NewEpochTicker(tickingStartTime, secondsPerEpoch)
 	for currentEpoch := range ticker.C() {
-		if config.EvalInterceptor(currentEpoch) {
+		if config.EvalInterceptor(currentEpoch, conns) {
 			continue
 		}
-		wg := new(sync.WaitGroup)
-		for _, eval := range config.Evaluators {
-			// Fix reference to evaluator as it will be running
-			// in a separate goroutine.
-			evaluator := eval
-			// Only run if the policy says so.
-			if !evaluator.Policy(types.Epoch(currentEpoch)) {
-				continue
-			}
-			wg.Add(1)
-			go t.Run(fmt.Sprintf(evaluator.Name, currentEpoch), func(t *testing.T) {
-				err := evaluator.Evaluation(conns...)
-				assert.NoError(t, err, "Evaluation failed for epoch %d: %v", currentEpoch, err)
-				wg.Done()
-			})
-		}
-		wg.Wait()
+		r.executeProvidedEvaluators(currentEpoch, conns, config.Evaluators)
 
 		if t.Failed() || currentEpoch >= config.EpochsToRun-1 {
 			ticker.Done()
@@ -211,9 +204,106 @@ func (r *testRunner) testTxGeneration(ctx context.Context, g *errgroup.Group, ke
 	})
 }
 
+func (r *testRunner) waitForMatchingHead(ctx context.Context, timeout time.Duration, check, ref *grpc.ClientConn) error {
+	start := time.Now()
+	dctx, cancel := context.WithDeadline(ctx, start.Add(timeout))
+	defer cancel()
+	checkClient := service.NewBeaconChainClient(check)
+	refClient := service.NewBeaconChainClient(ref)
+	for {
+		select {
+		case <-dctx.Done():
+			// deadline ensures that the test eventually exits when beacon node fails to sync in a resonable timeframe
+			elapsed := time.Since(start)
+			return fmt.Errorf("deadline exceeded after %s waiting for known good block to appear in checkpoint-synced node", elapsed)
+		default:
+			cResp, err := checkClient.GetBlockRoot(ctx, &v1.BlockRequest{BlockId: []byte("head")})
+			if err != nil {
+				errStatus, ok := status.FromError(err)
+				// in the happy path we expect NotFound results until the node has synced
+				if ok && errStatus.Code() == codes.NotFound {
+					continue
+				}
+				return fmt.Errorf("error requesting head from 'check' beacon node")
+			}
+			rResp, err := refClient.GetBlockRoot(ctx, &v1.BlockRequest{BlockId: []byte("head")})
+			if err != nil {
+				return errors.Wrap(err, "unexpected error requesting head block root from 'ref' beacon node")
+			}
+			if bytesutil.ToBytes32(cResp.Data.Root) == bytesutil.ToBytes32(rResp.Data.Root) {
+				return nil
+			}
+		}
+	}
+}
+
+func (r *testRunner) testCheckpointSync(ctx context.Context, g *errgroup.Group, i int, conns []*grpc.ClientConn, bnAPI, enr, minerEnr string) error {
+	matchTimeout := 3 * time.Minute
+	ethNode := eth1.NewNode(i, minerEnr)
+	g.Go(func() error {
+		return ethNode.Start(ctx)
+	})
+	if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{ethNode}); err != nil {
+		return fmt.Errorf("sync beacon node not ready: %w", err)
+	}
+	proxyNode := eth1.NewProxy(i)
+	g.Go(func() error {
+		return proxyNode.Start(ctx)
+	})
+	if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{proxyNode}); err != nil {
+		return fmt.Errorf("sync beacon node not ready: %w", err)
+	}
+
+	client, err := beacon.NewClient(bnAPI)
+	if err != nil {
+		return err
+	}
+	gb, err := client.GetState(ctx, beacon.IdGenesis)
+	if err != nil {
+		return err
+	}
+	genPath := path.Join(e2e.TestParams.TestPath, "genesis.ssz")
+	err = file.WriteFile(genPath, gb)
+	if err != nil {
+		return err
+	}
+
+	flags := append([]string{}, r.config.BeaconFlags...)
+	flags = append(flags, fmt.Sprintf("--checkpoint-sync-url=%s", bnAPI))
+	flags = append(flags, fmt.Sprintf("--genesis-beacon-api-url=%s", bnAPI))
+
+	cfgcp := new(e2etypes.E2EConfig)
+	*cfgcp = *r.config
+	cfgcp.BeaconFlags = flags
+	cpsyncer := components.NewBeaconNode(cfgcp, i, enr)
+	g.Go(func() error {
+		return cpsyncer.Start(ctx)
+	})
+	if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{cpsyncer}); err != nil {
+		return fmt.Errorf("checkpoint sync beacon node not ready: %w", err)
+	}
+	c, err := grpc.Dial(fmt.Sprintf("127.0.0.1:%d", e2e.TestParams.Ports.PrysmBeaconNodeRPCPort+i), grpc.WithInsecure())
+	require.NoError(r.t, err, "Failed to dial")
+
+	// this is so that the syncEvaluators checks can run on the checkpoint sync'd node
+	conns = append(conns, c)
+	err = r.waitForMatchingHead(ctx, matchTimeout, c, conns[0])
+	if err != nil {
+		return err
+	}
+
+	syncEvaluators := []e2etypes.Evaluator{ev.FinishedSyncing, ev.AllNodesHaveSameHead}
+	for _, evaluator := range syncEvaluators {
+		r.t.Run(evaluator.Name, func(t *testing.T) {
+			assert.NoError(t, evaluator.Evaluation(conns...), "Evaluation failed for sync node")
+		})
+	}
+	return nil
+}
+
 // testBeaconChainSync creates another beacon node, and tests whether it can sync to head using previous nodes.
 func (r *testRunner) testBeaconChainSync(ctx context.Context, g *errgroup.Group,
-	conns []*grpc.ClientConn, tickingStartTime time.Time, bootnodeEnr, minerEnr string) (*grpc.ClientConn, error) {
+	conns []*grpc.ClientConn, tickingStartTime time.Time, bootnodeEnr, minerEnr string) error {
 	t, config := r.t, r.config
 	index := e2e.TestParams.BeaconNodeCount + e2e.TestParams.LighthouseBeaconNodeCount
 	ethNode := eth1.NewNode(index, minerEnr)
@@ -221,14 +311,21 @@ func (r *testRunner) testBeaconChainSync(ctx context.Context, g *errgroup.Group,
 		return ethNode.Start(ctx)
 	})
 	if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{ethNode}); err != nil {
-		return nil, fmt.Errorf("sync beacon node not ready: %w", err)
+		return fmt.Errorf("sync beacon node not ready: %w", err)
+	}
+	proxyNode := eth1.NewProxy(index)
+	g.Go(func() error {
+		return proxyNode.Start(ctx)
+	})
+	if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{proxyNode}); err != nil {
+		return fmt.Errorf("sync beacon node not ready: %w", err)
 	}
 	syncBeaconNode := components.NewBeaconNode(config, index, bootnodeEnr)
 	g.Go(func() error {
 		return syncBeaconNode.Start(ctx)
 	})
 	if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{syncBeaconNode}); err != nil {
-		return nil, fmt.Errorf("sync beacon node not ready: %w", err)
+		return fmt.Errorf("sync beacon node not ready: %w", err)
 	}
 	syncConn, err := grpc.Dial(fmt.Sprintf("127.0.0.1:%d", e2e.TestParams.Ports.PrysmBeaconNodeRPCPort+index), grpc.WithInsecure())
 	require.NoError(t, err, "Failed to dial")
@@ -247,7 +344,7 @@ func (r *testRunner) testBeaconChainSync(ctx context.Context, g *errgroup.Group,
 		assert.NoError(t, helpers.WaitForTextInFile(syncLogFile, "Synced up to"), "Failed to sync")
 	})
 	if t.Failed() {
-		return nil, errors.New("cannot sync beacon node")
+		return errors.New("cannot sync beacon node")
 	}
 
 	// Sleep a slot to make sure the synced state is made.
@@ -258,7 +355,7 @@ func (r *testRunner) testBeaconChainSync(ctx context.Context, g *errgroup.Group,
 			assert.NoError(t, evaluator.Evaluation(conns...), "Evaluation failed for sync node")
 		})
 	}
-	return syncConn, nil
+	return nil
 }
 
 func (r *testRunner) testDoppelGangerProtection(ctx context.Context) error {
@@ -365,17 +462,24 @@ func (r *testRunner) defaultEndToEndRun() error {
 		return errors.Wrap(err, "one or more evaluators failed")
 	}
 
-	// If requested, run sync test.
-	if !config.TestSync {
-		return nil
+	index := e2e.TestParams.BeaconNodeCount + e2e.TestParams.LighthouseBeaconNodeCount
+	if config.TestSync {
+		if err := r.testBeaconChainSync(ctx, g, conns, tickingStartTime, bootNode.ENR(), eth1Miner.ENR()); err != nil {
+			return errors.Wrap(err, "beacon chain sync test failed")
+		}
+		index += 1
+		if err := r.testDoppelGangerProtection(ctx); err != nil {
+			return errors.Wrap(err, "doppel ganger protection check failed")
+		}
 	}
-	syncConn, err := r.testBeaconChainSync(ctx, g, conns, tickingStartTime, bootNode.ENR(), eth1Miner.ENR())
-	if err != nil {
-		return errors.Wrap(err, "beacon chain sync test failed")
-	}
-	conns = append(conns, syncConn)
-	if err := r.testDoppelGangerProtection(ctx); err != nil {
-		return errors.Wrap(err, "doppel ganger protection check failed")
+	if config.TestCheckpointSync {
+		httpEndpoints := helpers.BeaconAPIHostnames(e2e.TestParams.BeaconNodeCount)
+		menr := eth1Miner.ENR()
+		benr := bootNode.ENR()
+		if err := r.testCheckpointSync(ctx, g, index, conns, httpEndpoints[0], benr, menr); err != nil {
+			return errors.Wrap(err, "checkpoint sync test failed")
+		}
+		index += 1
 	}
 
 	if config.ExtraEpochs > 0 {
@@ -439,24 +543,37 @@ func (r *testRunner) addEvent(ev func() error) {
 	r.comHandler.group.Go(ev)
 }
 
-func (r *testRunner) singleNodeOffline(epoch uint64) bool {
-	switch epoch {
-	case 9:
-		require.NoError(r.t, r.comHandler.beaconNodes.PauseAtIndex(0))
-		require.NoError(r.t, r.comHandler.validatorNodes.PauseAtIndex(0))
-		return true
-	case 10:
-		require.NoError(r.t, r.comHandler.beaconNodes.ResumeAtIndex(0))
-		require.NoError(r.t, r.comHandler.validatorNodes.ResumeAtIndex(0))
-		return true
-	case 11, 12:
-		// Allow 2 epochs for the network to finalize again.
-		return true
+func (r *testRunner) executeProvidedEvaluators(currentEpoch uint64, conns []*grpc.ClientConn, evals []e2etypes.Evaluator) {
+	wg := new(sync.WaitGroup)
+	for _, eval := range evals {
+		// Fix reference to evaluator as it will be running
+		// in a separate goroutine.
+		evaluator := eval
+		// Only run if the policy says so.
+		if !evaluator.Policy(types.Epoch(currentEpoch)) {
+			continue
+		}
+		wg.Add(1)
+		go r.t.Run(fmt.Sprintf(evaluator.Name, currentEpoch), func(t *testing.T) {
+			err := evaluator.Evaluation(conns...)
+			assert.NoError(t, err, "Evaluation failed for epoch %d: %v", currentEpoch, err)
+			wg.Done()
+		})
 	}
-	return false
+	wg.Wait()
 }
 
-func (r *testRunner) singleNodeOfflineMulticlient(epoch uint64) bool {
+// This interceptor will define the multi scenario run for our minimal tests.
+// 1) In the first scenario we will be taking a single prysm node and its validator offline.
+// Along with that we will also take a single lighthouse node and its validator offline.
+// After 1 epoch we will then attempt to bring it online again.
+//
+//
+// 2) Then we will start testing optimistic sync by engaging our engine proxy.
+// After the proxy has been sending `SYNCING` responses to the beacon node, we
+// will test this with our optimistic sync evaluator to ensure everything works
+// as expected.
+func (r *testRunner) multiScenarioMulticlient(epoch uint64, conns []*grpc.ClientConn) bool {
 	switch epoch {
 	case 9:
 		require.NoError(r.t, r.comHandler.beaconNodes.PauseAtIndex(0))
@@ -470,14 +587,59 @@ func (r *testRunner) singleNodeOfflineMulticlient(epoch uint64) bool {
 		require.NoError(r.t, r.comHandler.lighthouseBeaconNodes.ResumeAtIndex(0))
 		require.NoError(r.t, r.comHandler.lighthouseValidatorNodes.ResumeAtIndex(0))
 		return true
-	case 11, 12:
+	case 14:
+		// Set it for prysm beacon node.
+		component, err := r.comHandler.eth1Proxy.ComponentAtIndex(0)
+		require.NoError(r.t, err)
+		component.(e2etypes.EngineProxy).AddRequestInterceptor("engine_newPayloadV1", func() interface{} {
+			return &enginev1.PayloadStatus{
+				Status:          enginev1.PayloadStatus_SYNCING,
+				LatestValidHash: make([]byte, 32),
+			}
+		}, func() bool {
+			return true
+		})
+		// Set it for lighthouse beacon node.
+		component, err = r.comHandler.eth1Proxy.ComponentAtIndex(2)
+		require.NoError(r.t, err)
+		component.(e2etypes.EngineProxy).AddRequestInterceptor("engine_newPayloadV1", func() interface{} {
+			return &enginev1.PayloadStatus{
+				Status:          enginev1.PayloadStatus_SYNCING,
+				LatestValidHash: make([]byte, 32),
+			}
+		}, func() bool {
+			return true
+		})
+		return true
+	case 15:
+		r.executeProvidedEvaluators(epoch, []*grpc.ClientConn{conns[0]}, []e2etypes.Evaluator{
+			ev.OptimisticSyncEnabled,
+		})
+		// Disable Interceptor
+		component, err := r.comHandler.eth1Proxy.ComponentAtIndex(0)
+		require.NoError(r.t, err)
+		engineProxy, ok := component.(e2etypes.EngineProxy)
+		require.Equal(r.t, true, ok)
+		engineProxy.RemoveRequestInterceptor("engine_newPayloadV1")
+		engineProxy.ReleaseBackedUpRequests("engine_newPayloadV1")
+
+		// Remove for lighthouse too
+		component, err = r.comHandler.eth1Proxy.ComponentAtIndex(2)
+		require.NoError(r.t, err)
+		engineProxy, ok = component.(e2etypes.EngineProxy)
+		require.Equal(r.t, true, ok)
+		engineProxy.RemoveRequestInterceptor("engine_newPayloadV1")
+		engineProxy.ReleaseBackedUpRequests("engine_newPayloadV1")
+
+		return true
+	case 11, 12, 16, 17:
 		// Allow 2 epochs for the network to finalize again.
 		return true
 	}
 	return false
 }
 
-func (r *testRunner) eeOffline(epoch uint64) bool {
+func (r *testRunner) eeOffline(epoch uint64, _ []*grpc.ClientConn) bool {
 	switch epoch {
 	case 9:
 		require.NoError(r.t, r.comHandler.eth1Miner.Pause())
@@ -492,17 +654,61 @@ func (r *testRunner) eeOffline(epoch uint64) bool {
 	return false
 }
 
-func (r *testRunner) allValidatorsOffline(epoch uint64) bool {
+// This interceptor will define the multi scenario run for our minimal tests.
+// 1) In the first scenario we will be taking a single node and its validator offline.
+// After 1 epoch we will then attempt to bring it online again.
+//
+// 2) In the second scenario we will be taking all validators offline. After 2
+// epochs we will wait for the network to recover.
+//
+// 3) Then we will start testing optimistic sync by engaging our engine proxy.
+// After the proxy has been sending `SYNCING` responses to the beacon node, we
+// will test this with our optimistic sync evaluator to ensure everything works
+// as expected.
+func (r *testRunner) multiScenario(epoch uint64, conns []*grpc.ClientConn) bool {
 	switch epoch {
 	case 9:
+		require.NoError(r.t, r.comHandler.beaconNodes.PauseAtIndex(0))
+		require.NoError(r.t, r.comHandler.validatorNodes.PauseAtIndex(0))
+		return true
+	case 10:
+		require.NoError(r.t, r.comHandler.beaconNodes.ResumeAtIndex(0))
+		require.NoError(r.t, r.comHandler.validatorNodes.ResumeAtIndex(0))
+		return true
+	case 14:
 		require.NoError(r.t, r.comHandler.validatorNodes.PauseAtIndex(0))
 		require.NoError(r.t, r.comHandler.validatorNodes.PauseAtIndex(1))
 		return true
-	case 10:
+	case 15:
 		require.NoError(r.t, r.comHandler.validatorNodes.ResumeAtIndex(0))
 		require.NoError(r.t, r.comHandler.validatorNodes.ResumeAtIndex(1))
 		return true
-	case 11, 12:
+	case 19:
+		component, err := r.comHandler.eth1Proxy.ComponentAtIndex(0)
+		require.NoError(r.t, err)
+		component.(e2etypes.EngineProxy).AddRequestInterceptor("engine_newPayloadV1", func() interface{} {
+			return &enginev1.PayloadStatus{
+				Status:          enginev1.PayloadStatus_SYNCING,
+				LatestValidHash: make([]byte, 32),
+			}
+		}, func() bool {
+			return true
+		})
+		return true
+	case 20:
+		r.executeProvidedEvaluators(epoch, []*grpc.ClientConn{conns[0]}, []e2etypes.Evaluator{
+			ev.OptimisticSyncEnabled,
+		})
+		// Disable Interceptor
+		component, err := r.comHandler.eth1Proxy.ComponentAtIndex(0)
+		require.NoError(r.t, err)
+		engineProxy, ok := component.(e2etypes.EngineProxy)
+		require.Equal(r.t, true, ok)
+		engineProxy.RemoveRequestInterceptor("engine_newPayloadV1")
+		engineProxy.ReleaseBackedUpRequests("engine_newPayloadV1")
+
+		return true
+	case 11, 12, 16, 17, 21, 22:
 		// Allow 2 epochs for the network to finalize again.
 		return true
 	}
@@ -510,6 +716,6 @@ func (r *testRunner) allValidatorsOffline(epoch uint64) bool {
 }
 
 // All Epochs are valid.
-func defaultInterceptor(_ uint64) bool {
+func defaultInterceptor(_ uint64, _ []*grpc.ClientConn) bool {
 	return false
 }

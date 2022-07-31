@@ -214,9 +214,12 @@ func ValidateSyncMessageTime(slot types.Slot, genesisTime time.Time, clockDispar
 	// Verify sync message slot is within the time range.
 	if messageTime.Before(lowerBound) || messageTime.After(upperBound) {
 		return fmt.Errorf(
-			"sync message slot %d not within allowable range of %d to %d (current slot)",
+			"sync message time %v (slot %d) not within allowable range of %v (slot %d) to %v (slot %d)",
+			messageTime,
 			slot,
+			lowerBound,
 			uint64(lowerBound.Unix()-genesisTime.Unix())/params.BeaconConfig().SecondsPerSlot,
+			upperBound,
 			uint64(upperBound.Unix()-genesisTime.Unix())/params.BeaconConfig().SecondsPerSlot,
 		)
 	}

@@ -3,7 +3,7 @@ package customtypes
 import (
 	"fmt"
 
-	fssz "github.com/ferranbt/fastssz"
+	fssz "github.com/prysmaticlabs/fastssz"
 )
 
 var _ fssz.HashRoot = (HistoricalRoots)([][32]byte{})

@@ -10,6 +10,8 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/internal"
 	"github.com/stretchr/testify/assert"
 )
@@ -36,6 +38,35 @@ func TestClient_Sign_HappyPath(t *testing.T) {
 	r := io.NopCloser(bytes.NewReader([]byte(jsonSig)))
 	mock := &mockTransport{mockResponse: &http.Response{
 		StatusCode: 200,
+		Body:       r,
+	}}
+	u, err := url.Parse("example.com")
+	assert.NoError(t, err)
+	cl := internal.ApiClient{BaseURL: u, RestClient: &http.Client{Transport: mock}}
+	jsonRequest, err := json.Marshal(`{message: "hello"}`)
+	assert.NoError(t, err)
+	resp, err := cl.Sign(context.Background(), "a2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820", jsonRequest)
+	assert.NotNil(t, resp)
+	assert.Nil(t, err)
+	assert.EqualValues(t, "0xb3baa751d0a9132cfe93e4e3d5ff9075111100e3789dca219ade5a24d27e19d16b3353149da1833e9b691bb38634e8dc04469be7032132906c927d7e1a49b414730612877bc6b2810c8f202daf793d1ab0d6b5cb21d52f9e52e883859887a5d9", fmt.Sprintf("%#x", resp.Marshal()))
+}
+
+func TestClient_Sign_HappyPath_Jsontype(t *testing.T) {
+	byteval, err := hexutil.Decode(`0xb3baa751d0a9132cfe93e4e3d5ff9075111100e3789dca219ade5a24d27e19d16b3353149da1833e9b691bb38634e8dc04469be7032132906c927d7e1a49b414730612877bc6b2810c8f202daf793d1ab0d6b5cb21d52f9e52e883859887a5d9`)
+	require.NoError(t, err)
+	sigResp := &internal.SignatureResponse{
+		Signature: byteval,
+	}
+	jsonBytes, err := json.Marshal(sigResp)
+	require.NoError(t, err)
+	require.NoError(t, err)
+	// create a new reader with that JSON
+	header := http.Header{}
+	header.Set("Content-Type", "application/json;  charset=UTF-8")
+	r := io.NopCloser(bytes.NewReader(jsonBytes))
+	mock := &mockTransport{mockResponse: &http.Response{
+		StatusCode: 200,
+		Header:     header,
 		Body:       r,
 	}}
 	u, err := url.Parse("example.com")
@@ -108,9 +139,9 @@ func TestClient_Sign_400(t *testing.T) {
 
 func TestClient_GetPublicKeys_HappyPath(t *testing.T) {
 	// public keys are returned hex encoded with 0x
-	json := `["0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820"]`
+	j := `["0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820"]`
 	// create a new reader with that JSON
-	r := io.NopCloser(bytes.NewReader([]byte(json)))
+	r := io.NopCloser(bytes.NewReader([]byte(j)))
 	mock := &mockTransport{mockResponse: &http.Response{
 		StatusCode: 200,
 		Body:       r,
@@ -127,9 +158,9 @@ func TestClient_GetPublicKeys_HappyPath(t *testing.T) {
 
 func TestClient_GetPublicKeys_EncodingError(t *testing.T) {
 	// public keys are returned hex encoded with 0x
-	json := `["a2b5aaad9c6efefe7bb9b1243a043404f3362937c","fb6b31833929833173f476630ea2cfe","b0d9ddf15fca8685948820"]`
+	j := `["a2b5aaad9c6efefe7bb9b1243a043404f3362937c","fb6b31833929833173f476630ea2cfe","b0d9ddf15fca8685948820"]`
 	// create a new reader with that JSON
-	r := io.NopCloser(bytes.NewReader([]byte(json)))
+	r := io.NopCloser(bytes.NewReader([]byte(j)))
 	mock := &mockTransport{mockResponse: &http.Response{
 		StatusCode: 200,
 		Body:       r,
@@ -157,8 +188,8 @@ func TestClient_ReloadSignerKeys_HappyPath(t *testing.T) {
 
 // TODO: not really in use, should be revisited
 func TestClient_GetServerStatus_HappyPath(t *testing.T) {
-	json := `"some server status, not sure what it looks like, need to find some sample data"`
-	r := io.NopCloser(bytes.NewReader([]byte(json)))
+	j := `"some server status, not sure what it looks like, need to find some sample data"`
+	r := io.NopCloser(bytes.NewReader([]byte(j)))
 	mock := &mockTransport{mockResponse: &http.Response{
 		StatusCode: 200,
 		Body:       r,

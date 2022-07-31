@@ -29,6 +29,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
@@ -68,21 +69,22 @@ type validationFn func(ctx context.Context) (pubsub.ValidationResult, error)
 
 // config to hold dependencies for the sync service.
 type config struct {
-	attestationNotifier     operation.Notifier
-	p2p                     p2p.P2P
-	beaconDB                db.NoHeadAccessDatabase
-	attPool                 attestations.Pool
-	exitPool                voluntaryexits.PoolManager
-	slashingPool            slashings.PoolManager
-	syncCommsPool           synccommittee.Pool
-	chain                   blockchainService
-	initialSync             Checker
-	stateNotifier           statefeed.Notifier
-	blockNotifier           blockfeed.Notifier
-	operationNotifier       operation.Notifier
-	stateGen                *stategen.State
-	slasherAttestationsFeed *event.Feed
-	slasherBlockHeadersFeed *event.Feed
+	attestationNotifier           operation.Notifier
+	p2p                           p2p.P2P
+	beaconDB                      db.NoHeadAccessDatabase
+	attPool                       attestations.Pool
+	exitPool                      voluntaryexits.PoolManager
+	slashingPool                  slashings.PoolManager
+	syncCommsPool                 synccommittee.Pool
+	chain                         blockchainService
+	initialSync                   Checker
+	stateNotifier                 statefeed.Notifier
+	blockNotifier                 blockfeed.Notifier
+	operationNotifier             operation.Notifier
+	executionPayloadReconstructor powchain.ExecutionPayloadReconstructor
+	stateGen                      *stategen.State
+	slasherAttestationsFeed       *event.Feed
+	slasherBlockHeadersFeed       *event.Feed
 }
 
 // This defines the interface for interacting with block chain service
@@ -132,6 +134,8 @@ type Service struct {
 	seenSyncContributionCache        *lru.Cache
 	badBlockCache                    *lru.Cache
 	badBlockLock                     sync.RWMutex
+	syncContributionBitsOverlapLock  sync.RWMutex
+	syncContributionBitsOverlapCache *lru.Cache
 	signatureChan                    chan *signatureVerifier
 }
 
@@ -221,6 +225,7 @@ func (s *Service) initCaches() {
 	s.seenUnAggregatedAttestationCache = lruwrpr.New(seenUnaggregatedAttSize)
 	s.seenSyncMessageCache = lruwrpr.New(seenSyncMsgSize)
 	s.seenSyncContributionCache = lruwrpr.New(seenSyncContributionSize)
+	s.syncContributionBitsOverlapCache = lruwrpr.New(seenSyncContributionSize)
 	s.seenExitCache = lruwrpr.New(seenExitSize)
 	s.seenAttesterSlashingCache = make(map[uint64]bool)
 	s.seenProposerSlashingCache = lruwrpr.New(seenProposerSlashingSize)
@@ -234,10 +239,10 @@ func (s *Service) registerHandlers() {
 	defer stateSub.Unsubscribe()
 	for {
 		select {
-		case event := <-stateChannel:
-			switch event.Type {
+		case e := <-stateChannel:
+			switch e.Type {
 			case statefeed.Initialized:
-				data, ok := event.Data.(*statefeed.InitializedData)
+				data, ok := e.Data.(*statefeed.InitializedData)
 				if !ok {
 					log.Error("Event feed data is not type *statefeed.InitializedData")
 					return
@@ -256,7 +261,7 @@ func (s *Service) registerHandlers() {
 					s.markForChainStart()
 				}()
 			case statefeed.Synced:
-				_, ok := event.Data.(*statefeed.SyncedData)
+				_, ok := e.Data.(*statefeed.SyncedData)
 				if !ok {
 					log.Error("Event feed data is not type *statefeed.SyncedData")
 					return

@@ -1,8 +1,8 @@
 package signing
 
 import (
-	fssz "github.com/ferranbt/fastssz"
 	"github.com/pkg/errors"
+	fssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"

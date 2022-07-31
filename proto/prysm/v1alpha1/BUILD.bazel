@@ -115,7 +115,13 @@ ssz_gen_marshal(
         "Blob",
         "BlobsSidecar",
         "SignedBlobsSidecar",
-    ],
+        "SignedValidatorRegistrationV1",
+        "ValidatorRegistrationV1",
+        "Withdrawal", 
+        "BLSToExecutionChange",
+        "SignedBLSToExecutionChange",
+        "BuilderBid"
+         ],
 )
 
 go_proto_library(
@@ -207,6 +213,7 @@ ssz_proto_files(
         "beacon_block.proto",
         "beacon_state.proto",
         "sync_committee.proto",
+        "withdrawals.proto",
     ],
     config = select({
         "//conditions:default": "mainnet",

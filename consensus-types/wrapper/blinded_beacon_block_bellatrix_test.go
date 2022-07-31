@@ -7,6 +7,7 @@ import (
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/runtime/version"
@@ -357,14 +358,16 @@ func TestBellatrixBlindedBeaconBlockBody_Proto(t *testing.T) {
 }
 
 func TestBellatrixBlindedBeaconBlockBody_ExecutionPayloadHeader(t *testing.T) {
-	payloads := &ethpb.ExecutionPayloadHeader{
+	payloads := &enginev1.ExecutionPayloadHeader{
 		BlockNumber: 100,
 	}
 	body := &ethpb.BlindedBeaconBlockBodyBellatrix{ExecutionPayloadHeader: payloads}
 	wbb, err := wrapper.WrappedBeaconBlockBody(body)
 	require.NoError(t, err)
 
-	_, err = wbb.ExecutionPayload()
+	exec, err := wbb.Execution()
+	require.NoError(t, err)
+	_, err = exec.Transactions()
 	require.ErrorContains(t, wrapper.ErrUnsupportedField.Error(), err)
 }
 

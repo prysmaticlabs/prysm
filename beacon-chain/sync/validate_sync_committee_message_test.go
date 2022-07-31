@@ -11,10 +11,10 @@ import (
 	"github.com/golang/snappy"
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
-	pubsub_pb "github.com/libp2p/go-libp2p-pubsub/pb"
+	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
-	testingDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	testingdb "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
 	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
@@ -31,7 +31,7 @@ import (
 )
 
 func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
-	beaconDB := testingDB.SetupDB(t)
+	beaconDB := testingdb.SetupDB(t)
 	headRoot, keys := fillUpBlocksAndState(context.Background(), t, beaconDB)
 	defaultTopic := p2p.SyncCommitteeSubnetTopicFormat
 	fakeDigest := []byte{0xAB, 0x00, 0xCC, 0x9E}
@@ -417,7 +417,7 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 			assert.NoError(t, err)
 			marshalledObj = snappy.Encode(nil, marshalledObj)
 			msg := &pubsub.Message{
-				Message: &pubsub_pb.Message{
+				Message: &pubsubpb.Message{
 					Data:  marshalledObj,
 					Topic: &tt.args.topic,
 				},
@@ -583,7 +583,7 @@ func TestValidateSyncCommitteeMessage_Optimistic(t *testing.T) {
 
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(slashing)]
 	msg := &pubsub.Message{
-		Message: &pubsub_pb.Message{
+		Message: &pubsubpb.Message{
 			Data:  buf.Bytes(),
 			Topic: &topic,
 		},

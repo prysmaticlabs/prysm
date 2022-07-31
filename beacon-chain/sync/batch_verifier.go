@@ -51,7 +51,7 @@ func (s *Service) verifierRoutine() {
 }
 
 func (s *Service) validateWithBatchVerifier(ctx context.Context, message string, set *bls.SignatureBatch) (pubsub.ValidationResult, error) {
-	_, span := trace.StartSpan(ctx, "sync.validateWithBatchVerifier")
+	ctx, span := trace.StartSpan(ctx, "sync.validateWithBatchVerifier")
 	defer span.End()
 
 	resChan := make(chan error)

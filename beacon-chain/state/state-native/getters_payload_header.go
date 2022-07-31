@@ -1,12 +1,13 @@
 package state_native
 
 import (
+	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 )
 
 // LatestExecutionPayloadHeader of the beacon state.
-func (b *BeaconState) LatestExecutionPayloadHeader() (*ethpb.ExecutionPayloadHeader, error) {
+func (b *BeaconState) LatestExecutionPayloadHeader() (*enginev1.ExecutionPayloadHeader, error) {
 	if b.version == version.Phase0 || b.version == version.Altair {
 		return nil, errNotSupported("LatestExecutionPayloadHeader", b.version)
 	}
@@ -23,6 +24,6 @@ func (b *BeaconState) LatestExecutionPayloadHeader() (*ethpb.ExecutionPayloadHea
 
 // latestExecutionPayloadHeaderVal of the beacon state.
 // This assumes that a lock is already held on BeaconState.
-func (b *BeaconState) latestExecutionPayloadHeaderVal() *ethpb.ExecutionPayloadHeader {
+func (b *BeaconState) latestExecutionPayloadHeaderVal() *enginev1.ExecutionPayloadHeader {
 	return ethpb.CopyExecutionPayloadHeader(b.latestExecutionPayloadHeader)
 }

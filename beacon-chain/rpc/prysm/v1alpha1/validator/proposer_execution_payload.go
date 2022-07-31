@@ -105,11 +105,11 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 		switch finalizedBlock.Version() {
 		case version.Phase0, version.Altair: // Blocks before Bellatrix don't have execution payloads. Use zeros as the hash.
 		default:
-			finalizedPayload, err := finalizedBlock.Block().Body().ExecutionPayload()
+			finalizedPayload, err := finalizedBlock.Block().Body().Execution()
 			if err != nil {
 				return nil, err
 			}
-			finalizedBlockHash = finalizedPayload.BlockHash
+			finalizedBlockHash = finalizedPayload.BlockHash()
 		}
 	}
 
@@ -127,10 +127,10 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 	case errors.As(err, kv.ErrNotFoundFeeRecipient):
 		// If fee recipient is not found in DB and not set from beacon node CLI,
 		// use the burn address.
-		if feeRecipient.String() == fieldparams.EthBurnAddressHex {
+		if feeRecipient.String() == params.BeaconConfig().EthBurnAddressHex {
 			logrus.WithFields(logrus.Fields{
 				"validatorIndex": vIdx,
-				"burnAddress":    fieldparams.EthBurnAddressHex,
+				"burnAddress":    params.BeaconConfig().EthBurnAddressHex,
 			}).Warn("Fee recipient is currently using the burn address, " +
 				"you will not be rewarded transaction fees on this setting. " +
 				"Please set a different eth address as the fee recipient. " +
@@ -149,7 +149,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 		return nil, errors.Wrap(err, "could not prepare payload")
 	}
 	if payloadID == nil {
-		return nil, errors.New("nil payload id")
+		return nil, fmt.Errorf("nil payload with block hash: %#x", parentHash)
 	}
 	payload, err := vs.ExecutionEngineCaller.GetPayload(ctx, *payloadID)
 	if err != nil {

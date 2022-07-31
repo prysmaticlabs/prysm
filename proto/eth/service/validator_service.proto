@@ -44,6 +44,8 @@ service BeaconValidator {
   //  - 400: Invalid epoch or index
   //  - 500: Beacon node internal error
   //  - 503: Beacon node is currently syncing, try again later
+  //
+  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Validator/getAttesterDuties
   rpc GetAttesterDuties(v1.AttesterDutiesRequest) returns (v1.AttesterDutiesResponse) {
     option (google.api.http) = {
       post: "/internal/eth/v1/validator/duties/attester/{epoch}"
@@ -59,6 +61,8 @@ service BeaconValidator {
   //  - 400: Invalid epoch
   //  - 500: Beacon node internal error
   //  - 503: Beacon node is currently syncing, try again later
+  //
+  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Validator/getProposerDuties
   rpc GetProposerDuties(v1.ProposerDutiesRequest) returns (v1.ProposerDutiesResponse) {
     option (google.api.http) = { get: "/internal/eth/v1/validator/duties/proposer/{epoch}" };
   }
@@ -70,6 +74,8 @@ service BeaconValidator {
   //  - 400: Invalid epoch or index
   //  - 500: Beacon node internal error
   //  - 503: Beacon node is currently syncing, try again later
+  //
+  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Validator/getSyncCommitteeDuties
   rpc GetSyncCommitteeDuties(v2.SyncCommitteeDutiesRequest) returns (v2.SyncCommitteeDutiesResponse) {
     option (google.api.http) = {
       post: "/internal/eth/v1/validator/duties/sync/{epoch}"
@@ -85,6 +91,8 @@ service BeaconValidator {
   //  - 400: Invalid block production request
   //  - 500: Beacon node internal error
   //  - 503: Beacon node is currently syncing, try again later
+  //
+  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Validator/produceBlock
   rpc ProduceBlock(v1.ProduceBlockRequest) returns (v1.ProduceBlockResponse) {
     option (google.api.http) = { get: "/internal/eth/v1/validator/blocks/{slot}" };
   }
@@ -98,6 +106,8 @@ service BeaconValidator {
   //  - 400: Invalid block production request
   //  - 500: Beacon node internal error
   //  - 503: Beacon node is currently syncing, try again later
+  //
+  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Validator/produceBlockV2
   rpc ProduceBlockV2(v1.ProduceBlockRequest) returns (v2.ProduceBlockResponseV2) {
     option (google.api.http) = { get: "/internal/eth/v2/validator/blocks/{slot}" };
   }
@@ -112,6 +122,8 @@ service BeaconValidator {
   //  - 400: Invalid block production request
   //  - 500: Beacon node internal error
   //  - 503: Beacon node is currently syncing, try again later
+  //
+  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Validator/produceBlockV2
   rpc ProduceBlockV2SSZ(v1.ProduceBlockRequest) returns (v2.SSZContainer) {
     option (google.api.http) = { get: "/internal/eth/v2/validator/blocks/{slot}/ssz" };
   }
@@ -128,6 +140,8 @@ service BeaconValidator {
   //  - 400: Invalid block production request
   //  - 500: Beacon node internal error
   //  - 503: Beacon node is currently syncing, try again later
+  //
+  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Validator/produceBlindedBlock
   rpc ProduceBlindedBlock(v1.ProduceBlockRequest) returns (v2.ProduceBlindedBlockResponse) {
     option (google.api.http) = { get: "/internal/eth/v1/validator/blinded_blocks/{slot}" };
   }
@@ -146,6 +160,8 @@ service BeaconValidator {
   //  - 400: Invalid block production request
   //  - 500: Beacon node internal error
   //  - 503: Beacon node is currently syncing, try again later
+  //
+  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Validator/produceBlindedBlock
   rpc ProduceBlindedBlockSSZ(v1.ProduceBlockRequest) returns (v2.SSZContainer) {
     option (google.api.http) = { get: "/internal/eth/v1/validator/blinded_blocks/{slot}/ssz" };
   }
@@ -157,6 +173,8 @@ service BeaconValidator {
   //  - 200: Successful response
   //  - 400: Invalid block production request
   //  - 500: Beacon node internal error
+  //
+  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Validator/prepareBeaconProposer
   rpc PrepareBeaconProposer(v1.PrepareBeaconProposerRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {
       post: "/internal/eth/v1/validator/prepare_beacon_proposer"
@@ -172,6 +190,8 @@ service BeaconValidator {
   //  - 400: Invalid request syntax
   //  - 500: Beacon node internal error
   //  - 503: Beacon node is currently syncing, try again later
+  //
+  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Validator/produceAttestationData
   rpc ProduceAttestationData(v1.ProduceAttestationDataRequest) returns (v1.ProduceAttestationDataResponse) {
     option (google.api.http) = { get: "/internal/eth/v1/validator/attestation_data" };
   }
@@ -183,6 +203,8 @@ service BeaconValidator {
   // - 200: Successful response
   // - 400: Invalid request syntax
   // - 500: Beacon node internal error
+  //
+  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Validator/getAggregatedAttestation
   rpc GetAggregateAttestation(v1.AggregateAttestationRequest) returns (v1.AggregateAttestationResponse) {
     option (google.api.http) = { get: "/internal/eth/v1/validator/aggregate_attestation" };
   }
@@ -193,6 +215,8 @@ service BeaconValidator {
   // - 200: Successful response
   // - 400: Invalid request syntax
   // - 500: Beacon node internal error
+  //
+  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Validator/publishAggregateAndProofs
   rpc SubmitAggregateAndProofs(v1.SubmitAggregateAndProofsRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {
       post: "/internal/eth/v1/validator/aggregate_and_proofs"
@@ -213,6 +237,8 @@ service BeaconValidator {
   // - 400: Invalid request syntax
   // - 500: Beacon node internal error
   // - 503: Beacon node is currently syncing, try again later
+  //
+  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Validator/prepareBeaconCommitteeSubnet
   rpc SubmitBeaconCommitteeSubscription(v1.SubmitBeaconCommitteeSubscriptionsRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {
       post: "/internal/eth/v1/validator/beacon_committee_subscriptions"
@@ -226,6 +252,8 @@ service BeaconValidator {
   // - 200: Successful response
   // - 400: Invalid request syntax
   // - 500: Beacon node internal error
+  //
+  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Validator/prepareSyncCommitteeSubnets
   rpc SubmitSyncCommitteeSubscription(v2.SubmitSyncCommitteeSubscriptionsRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {
       post: "/internal/eth/v1/validator/sync_committee_subscriptions"
@@ -240,6 +268,8 @@ service BeaconValidator {
   //  - 400: Invalid request syntax
   //  - 500: Beacon node internal error
   //  - 503: Beacon node is currently syncing, try again later
+  //
+  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Validator/produceSyncCommitteeContribution
   rpc ProduceSyncCommitteeContribution(v2.ProduceSyncCommitteeContributionRequest) returns (v2.ProduceSyncCommitteeContributionResponse) {
     option (google.api.http) = { get: "/internal/eth/v1/validator/sync_committee_contribution" };
   }
@@ -250,6 +280,8 @@ service BeaconValidator {
   // - 200: Successful response
   // - 400: Invalid request syntax
   // - 500: Beacon node internal error
+  //
+  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Validator/publishContributionAndProofs
   rpc SubmitContributionAndProofs(v2.SubmitContributionAndProofsRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {
       post: "/internal/eth/v1/validator/contribution_and_proofs"

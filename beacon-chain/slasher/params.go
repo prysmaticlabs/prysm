@@ -1,7 +1,7 @@
 package slasher
 
 import (
-	ssz "github.com/ferranbt/fastssz"
+	ssz "github.com/prysmaticlabs/fastssz"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 )
 

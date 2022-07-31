@@ -18,7 +18,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-var placeholderFields = []string{"UPDATE_TIMEOUT", "INTERVALS_PER_SLOT", "CAPELLA_FORK_VERSION", "CAPELLA_FORK_EPOCH"}
+var placeholderFields = []string{"UPDATE_TIMEOUT", "INTERVALS_PER_SLOT"}
 
 func TestLoadConfigFile(t *testing.T) {
 	// See https://media.githubusercontent.com/media/ethereum/consensus-spec-tests/master/tests/minimal/config/phase0.yaml
@@ -60,6 +60,7 @@ func TestLoadConfigFile(t *testing.T) {
 		// Initial values.
 		assert.DeepEqual(t, expected.GenesisForkVersion, actual.GenesisForkVersion, "%s: GenesisForkVersion", name)
 		assert.DeepEqual(t, expected.BLSWithdrawalPrefixByte, actual.BLSWithdrawalPrefixByte, "%s: BLSWithdrawalPrefixByte", name)
+		assert.DeepEqual(t, expected.ETH1AddressWithdrawalPrefixByte, actual.ETH1AddressWithdrawalPrefixByte, "%s: ETH1AddressWithdrawalPrefixByte", name)
 
 		// Time parameters.
 		assert.Equal(t, expected.GenesisDelay, actual.GenesisDelay, "%s: GenesisDelay", name)
@@ -158,12 +159,12 @@ func TestLoadConfigFile(t *testing.T) {
 }
 
 func TestLoadConfigFile_OverwriteCorrectly(t *testing.T) {
-	file, err := os.CreateTemp("", "")
+	f, err := os.CreateTemp("", "")
 	require.NoError(t, err)
 	// Set current config to minimal config
 	cfg := params.MinimalSpecConfig().Copy()
 	params.FillTestVersions(cfg, 128)
-	_, err = io.Copy(file, bytes.NewBuffer(params.ConfigToYaml(cfg)))
+	_, err = io.Copy(f, bytes.NewBuffer(params.ConfigToYaml(cfg)))
 	require.NoError(t, err)
 
 	// set active config to mainnet, so that we can confirm LoadChainConfigFile overrides it
@@ -177,7 +178,7 @@ func TestLoadConfigFile_OverwriteCorrectly(t *testing.T) {
 	}()
 
 	// load empty config file, so that it defaults to mainnet values
-	require.NoError(t, params.LoadChainConfigFile(file.Name(), nil))
+	require.NoError(t, params.LoadChainConfigFile(f.Name(), nil))
 	if params.BeaconConfig().MinGenesisTime != cfg.MinGenesisTime {
 		t.Errorf("Expected MinGenesisTime to be set to value written to config: %d found: %d",
 			cfg.MinGenesisTime,
@@ -276,9 +277,9 @@ func TestConfigParityYaml(t *testing.T) {
 // configFilePath sets the proper config and returns the relevant
 // config file path from eth2-spec-tests directory.
 func configFilePath(t *testing.T, config string) string {
-	filepath, err := bazel.Runfile("external/consensus_spec")
+	fPath, err := bazel.Runfile("external/consensus_spec")
 	require.NoError(t, err)
-	configFilePath := path.Join(filepath, "configs", config+".yaml")
+	configFilePath := path.Join(fPath, "configs", config+".yaml")
 	return configFilePath
 }
 
@@ -286,11 +287,11 @@ func configFilePath(t *testing.T, config string) string {
 // directory. This method returns a preset file path for each hard fork or
 // major network upgrade, in order.
 func presetsFilePath(t *testing.T, config string) []string {
-	filepath, err := bazel.Runfile("external/consensus_spec")
+	fPath, err := bazel.Runfile("external/consensus_spec")
 	require.NoError(t, err)
 	return []string{
-		path.Join(filepath, "presets", config, "phase0.yaml"),
-		path.Join(filepath, "presets", config, "altair.yaml"),
+		path.Join(fPath, "presets", config, "phase0.yaml"),
+		path.Join(fPath, "presets", config, "altair.yaml"),
 	}
 }
 

@@ -26,8 +26,8 @@ func RunSlashingsTests(t *testing.T, config string) {
 	}
 }
 
-func processSlashingsWrapper(t *testing.T, state state.BeaconState) (state.BeaconState, error) {
-	state, err := epoch.ProcessSlashings(state, params.BeaconConfig().ProportionalSlashingMultiplierBellatrix)
+func processSlashingsWrapper(t *testing.T, st state.BeaconState) (state.BeaconState, error) {
+	st, err := epoch.ProcessSlashings(st, params.BeaconConfig().ProportionalSlashingMultiplierBellatrix)
 	require.NoError(t, err, "Could not process slashings")
-	return state, nil
+	return st, nil
 }

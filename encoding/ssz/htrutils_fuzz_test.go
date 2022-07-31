@@ -1,13 +1,12 @@
 //go:build fuzz && go1.18
-// +build fuzz,go1.18
 
 package ssz_test
 
 import (
 	"testing"
 
-	fssz "github.com/ferranbt/fastssz"
 	"github.com/pkg/errors"
+	fssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"

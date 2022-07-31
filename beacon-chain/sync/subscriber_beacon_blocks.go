@@ -6,7 +6,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/interop"
-	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"google.golang.org/protobuf/proto"
@@ -32,18 +31,19 @@ func (s *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) 
 
 	if err := s.cfg.chain.ReceiveBlock(ctx, signed, root); err != nil {
 		if blockchain.IsInvalidBlock(err) {
-			interop.WriteBlockToDisk(signed, true /*failed*/)
+			r := blockchain.InvalidBlockRoot(err)
+			if r != [32]byte{} {
+				s.setBadBlock(ctx, r) // Setting head block as bad.
+			} else {
+				interop.WriteBlockToDisk(signed, true /*failed*/)
+				s.setBadBlock(ctx, root)
+			}
+		}
+		// Set the returned invalid ancestors as bad.
+		for _, root := range blockchain.InvalidAncestorRoots(err) {
 			s.setBadBlock(ctx, root)
 		}
 		return err
-	}
-
-	if !features.Get().CorrectlyPruneCanonicalAtts {
-		// Delete attestations from the block in the pool to avoid inclusion in future block.
-		if err := s.deleteAttsInPool(block.Body().Attestations()); err != nil {
-			log.Debugf("Could not delete attestations in pool: %v", err)
-			return nil
-		}
 	}
 	return err
 }

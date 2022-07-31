@@ -692,13 +692,6 @@ func genBlindedBeaconBlockBellatrix() *v1alpha1.BlindedBeaconBlockBellatrix {
 	}
 }
 
-func genSignedBlindedBeaconBlockBellatrix() *v1alpha1.SignedBlindedBeaconBlockBellatrix {
-	return &v1alpha1.SignedBlindedBeaconBlockBellatrix{
-		Block:     genBlindedBeaconBlockBellatrix(),
-		Signature: bytes(),
-	}
-}
-
 func genSyncCommitteeMessage() *v1alpha1.SyncCommitteeMessage {
 	return &v1alpha1.SyncCommitteeMessage{
 		Slot:           424555,
@@ -727,8 +720,8 @@ func genPayload() *enginev1.ExecutionPayload {
 	}
 }
 
-func genPayloadHeader() *v1alpha1.ExecutionPayloadHeader {
-	return &v1alpha1.ExecutionPayloadHeader{
+func genPayloadHeader() *enginev1.ExecutionPayloadHeader {
+	return &enginev1.ExecutionPayloadHeader{
 		ParentHash:       bytes(),
 		FeeRecipient:     bytes(),
 		StateRoot:        bytes(),

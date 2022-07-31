@@ -680,14 +680,14 @@ func (s *Service) filterNeededPeers(pids []peer.ID) []peer.ID {
 
 	for _, sub := range wantedSubs {
 		subnetTopic := fmt.Sprintf(topic, digest, sub) + s.cfg.p2p.Encoding().ProtocolSuffix()
-		peers := s.cfg.p2p.PubSub().ListPeers(subnetTopic)
-		if len(peers) > flags.Get().MinimumPeersPerSubnet {
+		ps := s.cfg.p2p.PubSub().ListPeers(subnetTopic)
+		if len(ps) > flags.Get().MinimumPeersPerSubnet {
 			// In the event we have more than the minimum, we can
 			// mark the remaining as viable for pruning.
-			peers = peers[:flags.Get().MinimumPeersPerSubnet]
+			ps = ps[:flags.Get().MinimumPeersPerSubnet]
 		}
 		// Add peer to peer map.
-		for _, p := range peers {
+		for _, p := range ps {
 			// Even if the peer id has
 			// already been seen we still set
 			// it, as the outcome is the same.

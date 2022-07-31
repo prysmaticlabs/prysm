@@ -37,8 +37,8 @@ func (s *Service) processBlock(ctx context.Context, b interfaces.SignedBeaconBlo
 		log.WithError(err).Error("Could not compute block's hash tree root")
 		return
 	}
-	state := s.config.StateGen.StateByRootIfCachedNoCopy(root)
-	if state == nil {
+	st := s.config.StateGen.StateByRootIfCachedNoCopy(root)
+	if st == nil {
 		log.WithField("BeaconBlockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debug(
 			"Skipping block collection due to state not found in cache")
 		return
@@ -51,12 +51,12 @@ func (s *Service) processBlock(ctx context.Context, b interfaces.SignedBeaconBlo
 
 	if currEpoch != lastSyncedEpoch &&
 		slots.SyncCommitteePeriod(currEpoch) == slots.SyncCommitteePeriod(lastSyncedEpoch) {
-		s.updateSyncCommitteeTrackedVals(state)
+		s.updateSyncCommitteeTrackedVals(st)
 	}
 
-	s.processSyncAggregate(state, blk)
-	s.processProposedBlock(state, root, blk)
-	s.processAttestations(ctx, state, blk)
+	s.processSyncAggregate(st, blk)
+	s.processProposedBlock(st, root, blk)
+	s.processAttestations(ctx, st, blk)
 
 	if blk.Slot()%(AggregateReportingPeriod*params.BeaconConfig().SlotsPerEpoch) == 0 {
 		s.logAggregatedPerformance()

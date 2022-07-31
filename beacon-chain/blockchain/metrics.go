@@ -158,6 +158,10 @@ var (
 		Name: "forkchoice_updated_optimistic_node_count",
 		Help: "Count the number of optimistic nodes after forkchoiceUpdated EE call",
 	})
+	missedPayloadIDFilledCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "missed_payload_id_filled_count",
+		Help: "",
+	})
 )
 
 // reportSlotMetrics reports slot related metrics.

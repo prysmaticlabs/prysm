@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/network"
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 )
 
@@ -85,7 +86,8 @@ func (s *Service) checkTransitionConfiguration(
 			ctx, cancel := context.WithDeadline(ctx, tm.Add(network.DefaultRPCHTTPTimeout))
 			err = s.ExchangeTransitionConfiguration(ctx, cfg)
 			s.handleExchangeConfigurationError(err)
-			if !hasTtdReached {
+			currentEpoch := slots.ToEpoch(slots.CurrentSlot(s.chainStartData.GetGenesisTime()))
+			if currentEpoch >= params.BeaconConfig().BellatrixForkEpoch && !hasTtdReached {
 				hasTtdReached, err = s.logTtdStatus(ctx, ttd)
 				if err != nil {
 					log.WithError(err).Error("Could not log ttd status")
@@ -142,5 +144,7 @@ func (s *Service) logTtdStatus(ctx context.Context, ttd *uint256.Int) (bool, err
 		"latestDifficulty":   latestTtd.String(),
 		"terminalDifficulty": ttd.ToBig().String(),
 	}).Info("terminal difficulty has not been reached yet")
+
+	totalTerminalDifficulty.Set(float64(latestTtd.Uint64()))
 	return false, nil
 }

@@ -82,10 +82,7 @@ func initializeTestServices(t *testing.T, slots []types.Slot, peers []*peerData)
 	genesisRoot := cache.rootCache[0]
 	cache.RUnlock()
 
-	wsb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
-	require.NoError(t, err)
-	err = beaconDB.SaveBlock(context.Background(), wsb)
-	require.NoError(t, err)
+	util.SaveBlock(t, context.Background(), beaconDB, util.NewBeaconBlock())
 
 	st, err := util.NewBeaconState()
 	require.NoError(t, err)
@@ -191,10 +188,10 @@ func connectPeer(t *testing.T, host *p2pt.TestP2P, datum *peerData, peerStatus *
 		}
 
 		// Determine the correct subset of blocks to return as dictated by the test scenario.
-		slots := slice.IntersectionSlot(datum.blocks, requestedBlocks)
+		ss := slice.IntersectionSlot(datum.blocks, requestedBlocks)
 
 		ret := make([]*ethpb.SignedBeaconBlock, 0)
-		for _, slot := range slots {
+		for _, slot := range ss {
 			if (slot - req.StartSlot).Mod(req.Step) != 0 {
 				continue
 			}

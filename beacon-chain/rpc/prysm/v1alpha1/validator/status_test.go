@@ -180,10 +180,10 @@ func TestValidatorStatus_Pending(t *testing.T) {
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 	// Pending active because activation epoch is still defaulted at far future slot.
-	state, err := util.NewBeaconState()
+	st, err := util.NewBeaconState()
 	require.NoError(t, err)
-	require.NoError(t, state.SetSlot(5000))
-	err = state.SetValidators([]*ethpb.Validator{
+	require.NoError(t, st.SetSlot(5000))
+	err = st.SetValidators([]*ethpb.Validator{
 		{
 			ActivationEpoch:       params.BeaconConfig().FarFutureEpoch,
 			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
@@ -223,7 +223,7 @@ func TestValidatorStatus_Pending(t *testing.T) {
 		BlockFetcher:      p,
 		Eth1InfoFetcher:   p,
 		DepositFetcher:    depositCache,
-		HeadFetcher:       &mockChain.ChainService{State: state, Root: genesisRoot[:]},
+		HeadFetcher:       &mockChain.ChainService{State: st, Root: genesisRoot[:]},
 	}
 	req := &ethpb.ValidatorStatusRequest{
 		PublicKey: pubKey,
@@ -266,7 +266,7 @@ func TestValidatorStatus_Active(t *testing.T) {
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 
-	state := &ethpb.BeaconState{
+	st := &ethpb.BeaconState{
 		GenesisTime: uint64(time.Unix(0, 0).Unix()),
 		Slot:        10000,
 		Validators: []*ethpb.Validator{{
@@ -275,7 +275,7 @@ func TestValidatorStatus_Active(t *testing.T) {
 			WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
 			PublicKey:         pubKey},
 		}}
-	stateObj, err := v1.InitializeFromProtoUnsafe(state)
+	stateObj, err := v1.InitializeFromProtoUnsafe(st)
 	require.NoError(t, err)
 
 	timestamp := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
@@ -320,7 +320,7 @@ func TestValidatorStatus_Exiting(t *testing.T) {
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 
-	state := &ethpb.BeaconState{
+	st := &ethpb.BeaconState{
 		Slot: slot,
 		Validators: []*ethpb.Validator{{
 			PublicKey:         pubKey,
@@ -328,7 +328,7 @@ func TestValidatorStatus_Exiting(t *testing.T) {
 			ExitEpoch:         exitEpoch,
 			WithdrawableEpoch: withdrawableEpoch},
 		}}
-	stateObj, err := v1.InitializeFromProtoUnsafe(state)
+	stateObj, err := v1.InitializeFromProtoUnsafe(st)
 	require.NoError(t, err)
 	depData := &ethpb.Deposit_Data{
 		PublicKey:             pubKey,
@@ -380,14 +380,14 @@ func TestValidatorStatus_Slashing(t *testing.T) {
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
 
-	state := &ethpb.BeaconState{
+	st := &ethpb.BeaconState{
 		Slot: slot,
 		Validators: []*ethpb.Validator{{
 			Slashed:           true,
 			PublicKey:         pubKey,
 			WithdrawableEpoch: epoch + 1},
 		}}
-	stateObj, err := v1.InitializeFromProtoUnsafe(state)
+	stateObj, err := v1.InitializeFromProtoUnsafe(st)
 	require.NoError(t, err)
 	depData := &ethpb.Deposit_Data{
 		PublicKey:             pubKey,
@@ -440,10 +440,10 @@ func TestValidatorStatus_Exited(t *testing.T) {
 	require.NoError(t, err, "Could not get signing root")
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig().Copy())
-	state, err := util.NewBeaconState()
+	st, err := util.NewBeaconState()
 	require.NoError(t, err)
-	require.NoError(t, state.SetSlot(slot))
-	err = state.SetValidators([]*ethpb.Validator{{
+	require.NoError(t, st.SetSlot(slot))
+	err = st.SetValidators([]*ethpb.Validator{{
 		PublicKey:             pubKey,
 		WithdrawableEpoch:     epoch + 1,
 		WithdrawalCredentials: make([]byte, 32)},
@@ -477,7 +477,7 @@ func TestValidatorStatus_Exited(t *testing.T) {
 		Eth1InfoFetcher:   p,
 		BlockFetcher:      p,
 		DepositFetcher:    depositCache,
-		HeadFetcher:       &mockChain.ChainService{State: state, Root: genesisRoot[:]},
+		HeadFetcher:       &mockChain.ChainService{State: st, Root: genesisRoot[:]},
 	}
 	req := &ethpb.ValidatorStatusRequest{
 		PublicKey: pubKey,
@@ -677,10 +677,10 @@ func TestValidatorStatus_CorrectActivationQueue(t *testing.T) {
 			WithdrawableEpoch:     params.BeaconConfig().FarFutureEpoch,
 		},
 	}
-	state, err := util.NewBeaconState()
+	st, err := util.NewBeaconState()
 	require.NoError(t, err)
-	require.NoError(t, state.SetValidators(validators))
-	require.NoError(t, state.SetSlot(currentSlot))
+	require.NoError(t, st.SetValidators(validators))
+	require.NoError(t, st.SetSlot(currentSlot))
 
 	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 	require.NoError(t, err, "Could not setup deposit trie")
@@ -714,7 +714,7 @@ func TestValidatorStatus_CorrectActivationQueue(t *testing.T) {
 		BlockFetcher:      p,
 		Eth1InfoFetcher:   p,
 		DepositFetcher:    depositCache,
-		HeadFetcher:       &mockChain.ChainService{State: state, Root: genesisRoot[:]},
+		HeadFetcher:       &mockChain.ChainService{State: st, Root: genesisRoot[:]},
 	}
 	req := &ethpb.ValidatorStatusRequest{
 		PublicKey: pbKey,

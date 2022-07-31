@@ -40,7 +40,7 @@ func TestFuzzProcessDeposit_10000(t *testing.T) {
 		fuzzer.Fuzz(deposit)
 		s, err := stateAltair.InitializeFromProtoUnsafe(state)
 		require.NoError(t, err)
-		r, err := altair.ProcessDeposit(context.Background(), s, deposit, true)
+		r, err := altair.ProcessDeposit(s, deposit, true)
 		if err != nil && r != nil {
 			t.Fatalf("return value should be nil on err. found: %v on error: %v for state: %v and block: %v", r, err, state, deposit)
 		}

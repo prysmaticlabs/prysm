@@ -223,14 +223,14 @@ func encrypt(cliCtx *cli.Context) error {
 // Reads the keystore file at the provided path and attempts
 // to decrypt it with the specified passwords.
 func readAndDecryptKeystore(fullPath, password string) error {
-	file, err := os.ReadFile(fullPath) // #nosec G304
+	f, err := os.ReadFile(fullPath) // #nosec G304
 	if err != nil {
 		return errors.Wrapf(err, "could not read file at path: %s", fullPath)
 	}
 	decryptor := keystorev4.New()
 	keystoreFile := &keymanager.Keystore{}
 
-	if err := json.Unmarshal(file, keystoreFile); err != nil {
+	if err := json.Unmarshal(f, keystoreFile); err != nil {
 		return errors.Wrap(err, "could not JSON unmarshal keystore file")
 	}
 	// We extract the validator signing private key from the keystore

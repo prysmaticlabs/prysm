@@ -21,7 +21,6 @@ import (
 	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -66,9 +65,7 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 
 	blk := util.NewBeaconBlock()
 	blk.Block.Slot = 1
-	wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
-	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, db, blk)
 
 	validBlockRoot, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -338,4 +335,31 @@ func TestServiceValidateCommitteeIndexBeaconAttestation_Optimistic(t *testing.T)
 	assert.NoError(t, err)
 	valid := res == pubsub.ValidationIgnore
 	assert.Equal(t, true, valid, "Should have ignore this message")
+}
+
+func TestService_setSeenCommitteeIndicesSlot(t *testing.T) {
+	chainService := &mockChain.ChainService{
+		Genesis:        time.Now(),
+		ValidatorsRoot: [32]byte{'A'},
+	}
+	s := NewService(context.Background(), WithP2P(p2ptest.NewTestP2P(t)), WithStateNotifier(chainService.StateNotifier()))
+	s.initCaches()
+
+	// Empty cache
+	b0 := []byte{9} // 1001
+	require.Equal(t, false, s.hasSeenCommitteeIndicesSlot(0, 0, b0))
+
+	// Cache some entries but same key
+	s.setSeenCommitteeIndicesSlot(0, 0, b0)
+	require.Equal(t, true, s.hasSeenCommitteeIndicesSlot(0, 0, b0))
+	b1 := []byte{14} // 1110
+	s.setSeenCommitteeIndicesSlot(0, 0, b1)
+	require.Equal(t, true, s.hasSeenCommitteeIndicesSlot(0, 0, b0))
+	require.Equal(t, true, s.hasSeenCommitteeIndicesSlot(0, 0, b1))
+
+	// Cache some entries with diff keys
+	s.setSeenCommitteeIndicesSlot(1, 2, b1)
+	require.Equal(t, false, s.hasSeenCommitteeIndicesSlot(1, 0, b1))
+	require.Equal(t, false, s.hasSeenCommitteeIndicesSlot(0, 2, b1))
+	require.Equal(t, true, s.hasSeenCommitteeIndicesSlot(1, 2, b1))
 }

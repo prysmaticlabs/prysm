@@ -23,8 +23,8 @@ func RunHistoricalRootsUpdateTests(t *testing.T, config string) {
 	}
 }
 
-func processHistoricalRootsUpdateWrapper(t *testing.T, state state.BeaconState) (state.BeaconState, error) {
-	state, err := epoch.ProcessHistoricalRootsUpdate(state)
+func processHistoricalRootsUpdateWrapper(t *testing.T, st state.BeaconState) (state.BeaconState, error) {
+	st, err := epoch.ProcessHistoricalRootsUpdate(st)
 	require.NoError(t, err, "Could not process final updates")
-	return state, nil
+	return st, nil
 }

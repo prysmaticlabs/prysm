@@ -14,7 +14,7 @@ import (
 func TestEndToEnd_Slasher_MinimalConfig(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.E2ETestConfig().Copy())
-	require.NoError(t, e2eParams.Init(e2eParams.StandardBeaconCount))
+	require.NoError(t, e2eParams.Init(t, e2eParams.StandardBeaconCount))
 
 	tracingPort := e2eParams.TestParams.Ports.JaegerTracingPort
 	tracingEndpoint := fmt.Sprintf("127.0.0.1:%d", tracingPort)

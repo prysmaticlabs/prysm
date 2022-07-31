@@ -346,11 +346,11 @@ func TestService_BroadcastAttestationWithDiscoveryAttempts(t *testing.T) {
 
 	time.Sleep(500 * time.Millisecond) // libp2p fails without this delay...
 
-	peers := p.pubsub.ListPeers(topic)
-	peers2 := p2.pubsub.ListPeers(topic)
+	nodePeers := p.pubsub.ListPeers(topic)
+	nodePeers2 := p2.pubsub.ListPeers(topic)
 
-	assert.Equal(t, 1, len(peers))
-	assert.Equal(t, 1, len(peers2))
+	assert.Equal(t, 1, len(nodePeers))
+	assert.Equal(t, 1, len(nodePeers2))
 
 	// Async listen for the pubsub, must be before the broadcast.
 	var wg sync.WaitGroup

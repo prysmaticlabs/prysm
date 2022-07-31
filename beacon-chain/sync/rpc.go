@@ -4,12 +4,11 @@ import (
 	"context"
 	"reflect"
 	"runtime/debug"
-	"strings"
 
-	ssz "github.com/ferranbt/fastssz"
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/protocol"
+	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -190,14 +189,9 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 				return
 			}
 			if err := s.cfg.p2p.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
-				// Debug logs for goodbye/status errors
-				if strings.Contains(topic, p2p.RPCGoodByeTopicV1) || strings.Contains(topic, p2p.RPCStatusTopicV1) {
-					log.WithError(err).Debug("Could not decode goodbye stream message")
-					tracing.AnnotateError(span, err)
-					return
-				}
-				log.WithError(err).Debug("Could not decode stream message")
+				log.WithError(err).WithField("topic", topic).Debug("Could not decode stream message")
 				tracing.AnnotateError(span, err)
+				s.cfg.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 				return
 			}
 			if err := handle(ctx, msg, stream); err != nil {
@@ -215,8 +209,9 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 				return
 			}
 			if err := s.cfg.p2p.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
-				log.WithError(err).Debug("Could not decode stream message")
+				log.WithError(err).WithField("topic", topic).Debug("Could not decode stream message")
 				tracing.AnnotateError(span, err)
+				s.cfg.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 				return
 			}
 			if err := handle(ctx, nTyp.Elem().Interface(), stream); err != nil {

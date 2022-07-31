@@ -10,7 +10,7 @@ import (
 // resetWithBlocks removes all state machines, then re-adds enough machines to contain all provided
 // blocks (machines are set into stateDataParsed state, so that their content is immediately
 // consumable). It is assumed that blocks come in an ascending order.
-func (q *blocksQueue) resetFromFork(ctx context.Context, fork *forkData) error {
+func (q *blocksQueue) resetFromFork(fork *forkData) error {
 	if fork == nil {
 		return errors.New("nil fork data")
 	}

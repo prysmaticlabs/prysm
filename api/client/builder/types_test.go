@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/golang/protobuf/proto"
 	"github.com/prysmaticlabs/go-bitfield"
 	v1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -31,7 +32,8 @@ func TestSignedValidatorRegistration_MarshalJSON(t *testing.T) {
 		},
 		Signature: make([]byte, 96),
 	}
-	je, err := json.Marshal(&SignedValidatorRegistration{SignedValidatorRegistrationV1: svr})
+	a := &SignedValidatorRegistration{SignedValidatorRegistrationV1: svr}
+	je, err := json.Marshal(a)
 	require.NoError(t, err)
 	// decode with a struct w/ plain strings so we can check the string encoding of the hex fields
 	un := struct {
@@ -45,6 +47,14 @@ func TestSignedValidatorRegistration_MarshalJSON(t *testing.T) {
 	require.Equal(t, "0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000", un.Signature)
 	require.Equal(t, "0x0000000000000000000000000000000000000000", un.Message.FeeRecipient)
 	require.Equal(t, "0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000", un.Message.Pubkey)
+
+	t.Run("roundtrip", func(t *testing.T) {
+		b := &SignedValidatorRegistration{}
+		if err := json.Unmarshal(je, b); err != nil {
+			require.NoError(t, err)
+		}
+		require.Equal(t, proto.Equal(a.SignedValidatorRegistrationV1, b.SignedValidatorRegistrationV1), true)
+	})
 }
 
 var testExampleHeaderResponse = `{
@@ -205,7 +215,7 @@ func TestExecutionHeaderResponseToProto(t *testing.T) {
 
 	expected := &eth.SignedBuilderBid{
 		Message: &eth.BuilderBid{
-			Header: &eth.ExecutionPayloadHeader{
+			Header: &v1.ExecutionPayloadHeader{
 				ParentHash:       parentHash,
 				FeeRecipient:     feeRecipient,
 				StateRoot:        stateRoot,
@@ -567,9 +577,9 @@ func TestProposerSlashings(t *testing.T) {
 	require.Equal(t, expected, string(b))
 }
 
-func pbExecutionPayloadHeader(t *testing.T) *eth.ExecutionPayloadHeader {
+func pbExecutionPayloadHeader(t *testing.T) *v1.ExecutionPayloadHeader {
 	bfpg := stringToUint256("452312848583266388373324160190187140051835877600158453279131187530910662656")
-	return &eth.ExecutionPayloadHeader{
+	return &v1.ExecutionPayloadHeader{
 		ParentHash:       ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
 		FeeRecipient:     ezDecode(t, "0xabcf8e0d4e9587369b2301d0790347320302cc09"),
 		StateRoot:        ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
@@ -694,9 +704,10 @@ func TestMarshalBlindedBeaconBlockBodyBellatrix(t *testing.T) {
 }
 
 func TestRoundTripUint256(t *testing.T) {
-	vs := "452312848583266388373324160190187140051835877600158453279131187530910662656"
+	vs := "4523128485832663883733241601901871400518358776001584532791311875309106626"
 	u := stringToUint256(vs)
 	sb := u.SSZBytes()
+	require.Equal(t, 32, len(sb))
 	uu := sszBytesToUint256(sb)
 	require.Equal(t, true, bytes.Equal(u.SSZBytes(), uu.SSZBytes()))
 	require.Equal(t, vs, uu.String())

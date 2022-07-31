@@ -53,7 +53,7 @@ func (e *blockIdParseError) Error() string {
 // GetWeakSubjectivity computes the starting epoch of the current weak subjectivity period, and then also
 // determines the best block root and state root to use for a Checkpoint Sync starting from that point.
 func (bs *Server) GetWeakSubjectivity(ctx context.Context, _ *empty.Empty) (*ethpbv1.WeakSubjectivityResponse, error) {
-	if err := rpchelpers.ValidateSync(ctx, bs.SyncChecker, bs.HeadFetcher, bs.GenesisTimeFetcher); err != nil {
+	if err := rpchelpers.ValidateSync(ctx, bs.SyncChecker, bs.HeadFetcher, bs.GenesisTimeFetcher, bs.OptimisticModeFetcher); err != nil {
 		// This is already a grpc error, so we can't wrap it any further
 		return nil, err
 	}
@@ -70,9 +70,13 @@ func (bs *Server) GetWeakSubjectivity(ctx context.Context, _ *empty.Empty) (*eth
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not get weak subjectivity slot: %v", err)
 	}
-	cbr, cb, err := bs.CanonicalHistory.BlockForSlot(ctx, wsSlot)
+	cbr, err := bs.CanonicalHistory.BlockRootForSlot(ctx, wsSlot)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, fmt.Sprintf("could not find highest block below slot %d", wsSlot))
+	}
+	cb, err := bs.BeaconDB.Block(ctx, cbr)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, fmt.Sprintf("block with root %#x from slot index %d not found in db", cbr, wsSlot))
 	}
 	stateRoot := bytesutil.ToBytes32(cb.Block().StateRoot())
 	log.Printf("weak subjectivity checkpoint reported as epoch=%d, block root=%#x, state root=%#x", wsEpoch, cbr, stateRoot)
@@ -150,7 +154,7 @@ func (bs *Server) ListBlockHeaders(ctx context.Context, req *ethpbv1.BlockHeader
 		if req.Slot != nil {
 			slot = *req.Slot
 		}
-		_, blks, err = bs.BeaconDB.BlocksBySlot(ctx, slot)
+		blks, err = bs.BeaconDB.BlocksBySlot(ctx, slot)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not retrieve blocks for slot %d: %v", req.Slot, err)
 		}
@@ -470,8 +474,42 @@ func (bs *Server) GetBlockV2(ctx context.Context, req *ethpbv2.BlockRequestV2) (
 			ExecutionOptimistic: isOptimistic,
 		}, nil
 	}
+	if _, err := blk.PbBlindedBellatrixBlock(); err == nil {
+		signedFullBlock, err := bs.ExecutionPayloadReconstructor.ReconstructFullBellatrixBlock(ctx, blk)
+		if err != nil {
+			return nil, status.Errorf(
+				codes.Internal,
+				"Could not reconstruct full execution payload to create signed beacon block: %v",
+				err,
+			)
+		}
+		bellatrixBlk, err = signedFullBlock.PbBellatrixBlock()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
+		}
+		v2Blk, err := migration.V1Alpha1BeaconBlockBellatrixToV2(bellatrixBlk.Block)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
+		}
+		root, err := blk.Block().HashTreeRoot()
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not get block root: %v", err)
+		}
+		isOptimistic, err := bs.OptimisticModeFetcher.IsOptimisticForRoot(ctx, root)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not check if block is optimistic: %v", err)
+		}
+		return &ethpbv2.BlockResponseV2{
+			Version: ethpbv2.Version_BELLATRIX,
+			Data: &ethpbv2.SignedBeaconBlockContainerV2{
+				Message:   &ethpbv2.SignedBeaconBlockContainerV2_BellatrixBlock{BellatrixBlock: v2Blk},
+				Signature: blk.Signature(),
+			},
+			ExecutionOptimistic: isOptimistic,
+		}, nil
+	}
 	// ErrUnsupportedBellatrixBlock means that we have another block type
-	if !errors.Is(err, wrapper.ErrUnsupportedBellatrixBlock) {
+	if !errors.Is(err, wrapper.ErrUnsupportedBlindedBellatrixBlock) {
 		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
 	}
 
@@ -574,10 +612,7 @@ func (bs *Server) GetBlockRoot(ctx context.Context, req *ethpbv1.BlockRequest) (
 			return nil, status.Errorf(codes.NotFound, "No head root was found")
 		}
 	case "finalized":
-		finalized, err := bs.ChainInfoFetcher.FinalizedCheckpt()
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not retrieve finalized checkpoint: %v", err)
-		}
+		finalized := bs.ChainInfoFetcher.FinalizedCheckpt()
 		root = finalized.Root
 	case "genesis":
 		blk, err := bs.BeaconDB.GenesisBlock(ctx)
@@ -728,10 +763,7 @@ func (bs *Server) blockFromBlockID(ctx context.Context, blockId []byte) (interfa
 			return nil, errors.Wrap(err, "could not retrieve head block")
 		}
 	case "finalized":
-		finalized, err := bs.ChainInfoFetcher.FinalizedCheckpt()
-		if err != nil {
-			return nil, errors.Wrap(err, "could not retrieve finalized checkpoint")
-		}
+		finalized := bs.ChainInfoFetcher.FinalizedCheckpt()
 		finalizedRoot := bytesutil.ToBytes32(finalized.Root)
 		blk, err = bs.BeaconDB.Block(ctx, finalizedRoot)
 		if err != nil {
@@ -754,7 +786,7 @@ func (bs *Server) blockFromBlockID(ctx context.Context, blockId []byte) (interfa
 				e := newBlockIdParseError(err)
 				return nil, &e
 			}
-			_, blks, err := bs.BeaconDB.BlocksBySlot(ctx, types.Slot(slot))
+			blks, err := bs.BeaconDB.BlocksBySlot(ctx, types.Slot(slot))
 			if err != nil {
 				return nil, errors.Wrapf(err, "could not retrieve blocks for slot %d", slot)
 			}

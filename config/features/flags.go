@@ -9,13 +9,19 @@ import (
 var (
 	// PraterTestnet flag for the multiclient Ethereum consensus testnet.
 	PraterTestnet = &cli.BoolFlag{
-		Name:  "prater",
-		Usage: "Run Prysm configured for the Prater test network",
+		Name:    "prater",
+		Usage:   "Run Prysm configured for the Prater / Goerli test network",
+		Aliases: []string{"goerli"},
 	}
 	// RopstenTestnet flag for the multiclient Ethereum consensus testnet.
 	RopstenTestnet = &cli.BoolFlag{
 		Name:  "ropsten",
 		Usage: "Run Prysm configured for the Ropsten beacon chain test network",
+	}
+	// SepoliaTestnet flag for the multiclient Ethereum consensus testnet.
+	SepoliaTestnet = &cli.BoolFlag{
+		Name:  "sepolia",
+		Usage: "Run Prysm configured for the Sepolia beacon chain test network",
 	}
 	// Mainnet flag for easier tooling, no-op
 	Mainnet = &cli.BoolFlag{
@@ -40,9 +46,9 @@ var (
 		Name:  "disable-grpc-connection-logging",
 		Usage: "Disables displaying logs for newly connected grpc clients",
 	}
-	enablePeerScorer = &cli.BoolFlag{
-		Name:  "enable-peer-scorer",
-		Usage: "Enable experimental P2P peer scorer",
+	disablePeerScorer = &cli.BoolFlag{
+		Name:  "disable-peer-scorer",
+		Usage: "Disables experimental P2P peer scorer",
 	}
 	checkPtInfoCache = &cli.BoolFlag{
 		Name:  "use-check-point-cache",
@@ -96,14 +102,13 @@ var (
 			" (Warning): Once enabled, this feature migrates your database in to a new schema and " +
 			"there is no going back. At worst, your entire database might get corrupted.",
 	}
-	disableCorrectlyPruneCanonicalAtts = &cli.BoolFlag{
-		Name: "disable-correctly-prune-canonical-atts",
-		Usage: "Disable the fix for bug where any block attestations can get incorrectly pruned, which improves validator profitability and overall network health," +
-			"see issue #9443 for further detail",
+	disableNativeState = &cli.BoolFlag{
+		Name:  "disable-native-state",
+		Usage: "Disables representing the beacon state as a pure Go struct.",
 	}
-	enableNativeState = &cli.BoolFlag{
-		Name:  "enable-native-state",
-		Usage: "Enables representing the beacon state as a pure Go struct.",
+	enablePullTips = &cli.BoolFlag{
+		Name:  "experimental-disable-boundary-checks",
+		Usage: "Experimental disable of boundary checks, useful for debugging, may cause bad votes.",
 	}
 	enableVecHTR = &cli.BoolFlag{
 		Name:  "enable-vectorized-htr",
@@ -117,11 +122,14 @@ var (
 		Name:  "enable-gossip-batch-aggregation",
 		Usage: "Enables new methods to further aggregate our gossip batches before verifying them.",
 	}
+	EnableOnlyBlindedBeaconBlocks = &cli.BoolFlag{
+		Name:  "enable-only-blinded-beacon-blocks",
+		Usage: "Enables storing only blinded beacon blocks in the database without full execution layer transactions",
+	}
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
 var devModeFlags = []cli.Flag{
-	enablePeerScorer,
 	enableVecHTR,
 	enableForkChoiceDoublyLinkedTree,
 	enableGossipBatchAggregation,
@@ -134,6 +142,7 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	disableAttestingHistoryDBCache,
 	PraterTestnet,
 	RopstenTestnet,
+	SepoliaTestnet,
 	Mainnet,
 	dynamicKeyReloadDebounceInterval,
 	attestTimely,
@@ -153,18 +162,20 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableGRPCConnectionLogging,
 	PraterTestnet,
 	RopstenTestnet,
+	SepoliaTestnet,
 	Mainnet,
-	enablePeerScorer,
+	disablePeerScorer,
 	enableLargerGossipHistory,
 	checkPtInfoCache,
 	disableBroadcastSlashingFlag,
 	enableSlasherFlag,
 	enableHistoricalSpaceRepresentation,
-	disableCorrectlyPruneCanonicalAtts,
-	enableNativeState,
+	disableNativeState,
+	enablePullTips,
 	enableVecHTR,
 	enableForkChoiceDoublyLinkedTree,
 	enableGossipBatchAggregation,
+	EnableOnlyBlindedBeaconBlocks,
 }...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.

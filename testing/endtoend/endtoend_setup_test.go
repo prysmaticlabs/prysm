@@ -8,16 +8,15 @@ import (
 
 	"github.com/prysmaticlabs/prysm/config/params"
 	ev "github.com/prysmaticlabs/prysm/testing/endtoend/evaluators"
-	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
 	e2eParams "github.com/prysmaticlabs/prysm/testing/endtoend/params"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/types"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
-func e2eMinimal(t *testing.T, useWeb3RemoteSigner bool, extraEpochs uint64) *testRunner {
+func e2eMinimal(t *testing.T, cfgo ...types.E2EConfigOpt) *testRunner {
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.E2ETestConfig().Copy())
-	require.NoError(t, e2eParams.Init(e2eParams.StandardBeaconCount))
+	require.NoError(t, e2eParams.Init(t, e2eParams.StandardBeaconCount))
 
 	// Run for 12 epochs if not in long-running to confirm long-running has no issues.
 	var err error
@@ -58,6 +57,7 @@ func e2eMinimal(t *testing.T, useWeb3RemoteSigner bool, extraEpochs uint64) *tes
 		ev.FinishedSyncing,
 		ev.AllNodesHaveSameHead,
 		ev.ValidatorSyncParticipation,
+		ev.FeeRecipientIsPresent,
 		//ev.TransactionsPresent, TODO: Renable Transaction evaluator once it tx pool issues are fixed.
 	}
 	testConfig := &types.E2EConfig{
@@ -74,24 +74,25 @@ func e2eMinimal(t *testing.T, useWeb3RemoteSigner bool, extraEpochs uint64) *tes
 		TestDeposits:        true,
 		UsePrysmShValidator: false,
 		UsePprof:            !longRunning,
-		UseWeb3RemoteSigner: useWeb3RemoteSigner,
 		TracingSinkEndpoint: tracingEndpoint,
 		Evaluators:          evals,
 		EvalInterceptor:     defaultInterceptor,
 		Seed:                int64(seed),
-		ExtraEpochs:         extraEpochs,
+	}
+	for _, o := range cfgo {
+		o(testConfig)
 	}
 
 	return newTestRunner(t, testConfig)
 }
 
-func e2eMainnet(t *testing.T, usePrysmSh, useMultiClient bool) *testRunner {
+func e2eMainnet(t *testing.T, usePrysmSh, useMultiClient bool, cfgo ...types.E2EConfigOpt) *testRunner {
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.E2EMainnetTestConfig())
 	if useMultiClient {
-		require.NoError(t, e2eParams.InitMultiClient(e2eParams.StandardBeaconCount, e2eParams.StandardLighthouseNodeCount))
+		require.NoError(t, e2eParams.InitMultiClient(t, e2eParams.StandardBeaconCount, e2eParams.StandardLighthouseNodeCount))
 	} else {
-		require.NoError(t, e2eParams.Init(e2eParams.StandardBeaconCount))
+		require.NoError(t, e2eParams.Init(t, e2eParams.StandardBeaconCount))
 	}
 	// Run for 10 epochs if not in long-running to confirm long-running has no issues.
 	var err error
@@ -102,11 +103,6 @@ func e2eMainnet(t *testing.T, usePrysmSh, useMultiClient bool) *testRunner {
 		require.NoError(t, err)
 	}
 	_, crossClient := os.LookupEnv("RUN_CROSS_CLIENT")
-	if usePrysmSh {
-		// If using prysm.sh, run for only 6 epochs.
-		// TODO(#9166): remove this block once v2 changes are live.
-		epochsToRun = helpers.AltairE2EForkEpoch - 1
-	}
 	seed := 0
 	seedStr, isValid := os.LookupEnv("E2E_SEED")
 	if isValid {
@@ -131,6 +127,7 @@ func e2eMainnet(t *testing.T, usePrysmSh, useMultiClient bool) *testRunner {
 		ev.APIGatewayV1Alpha1VerifyIntegrity,
 		ev.FinishedSyncing,
 		ev.AllNodesHaveSameHead,
+		ev.FeeRecipientIsPresent,
 		//ev.TransactionsPresent, TODO: Renable Transaction evaluator once it tx pool issues are fixed.
 	}
 	testConfig := &types.E2EConfig{
@@ -154,7 +151,9 @@ func e2eMainnet(t *testing.T, usePrysmSh, useMultiClient bool) *testRunner {
 		EvalInterceptor:         defaultInterceptor,
 		Seed:                    int64(seed),
 	}
-
+	for _, o := range cfgo {
+		o(testConfig)
+	}
 	return newTestRunner(t, testConfig)
 }
 

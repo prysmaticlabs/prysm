@@ -369,12 +369,17 @@ func (s *Service) ETH1ConnectionErrors() []error {
 
 // refers to the latest eth1 block which follows the condition: eth1_timestamp +
 // SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE <= current_unix_time
-func (s *Service) followedBlockHeight(_ context.Context) (uint64, error) {
-	latestValidBlock := uint64(0)
-	if s.latestEth1Data.BlockHeight > params.BeaconConfig().Eth1FollowDistance {
-		latestValidBlock = s.latestEth1Data.BlockHeight - params.BeaconConfig().Eth1FollowDistance
+func (s *Service) followedBlockHeight(ctx context.Context) (uint64, error) {
+	followTime := params.BeaconConfig().Eth1FollowDistance * params.BeaconConfig().SecondsPerETH1Block
+	latestBlockTime := uint64(0)
+	if s.latestEth1Data.BlockTime > followTime {
+		latestBlockTime = s.latestEth1Data.BlockTime - followTime
 	}
-	return latestValidBlock, nil
+	blk, err := s.BlockByTimestamp(ctx, latestBlockTime)
+	if err != nil {
+		return 0, err
+	}
+	return blk.Number.Uint64(), nil
 }
 
 func (s *Service) initDepositCaches(ctx context.Context, ctrs []*ethpb.DepositContainer) error {
@@ -575,13 +580,20 @@ func (s *Service) initPOWService() {
 
 			if err := s.processPastLogs(ctx); err != nil {
 				s.retryExecutionClientConnection(ctx, err)
-				errorLogger(err, "Unable to process past deposit contract logs")
+				errorLogger(
+					err,
+					"Unable to process past deposit contract logs, perhaps your execution client is not fully synced",
+				)
 				continue
 			}
 			// Cache eth1 headers from our voting period.
 			if err := s.cacheHeadersForEth1DataVote(ctx); err != nil {
 				s.retryExecutionClientConnection(ctx, err)
-				errorLogger(err, "Unable to cache headers for execution client votes")
+				if errors.Is(err, errBlockTimeTooLate) {
+					log.WithError(err).Warn("Unable to cache headers for execution client votes")
+				} else {
+					errorLogger(err, "Unable to cache headers for execution client votes")
+				}
 				continue
 			}
 			// Handle edge case with embedded genesis state by fetching genesis header to determine

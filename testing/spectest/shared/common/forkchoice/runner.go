@@ -120,7 +120,7 @@ func Run(t *testing.T, config string, fork int) {
 						require.NoError(t, err)
 						pb := &ethpb.PowBlock{}
 						require.NoError(t, pb.UnmarshalSSZ(p), "Failed to unmarshal")
-						builder.PoWBlock(t, pb)
+						builder.PoWBlock(pb)
 					}
 					builder.Check(t, step.Check)
 				}

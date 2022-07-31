@@ -1,9 +1,9 @@
 package types
 
 import (
-	fmt "fmt"
+	"fmt"
 
-	fssz "github.com/ferranbt/fastssz"
+	fssz "github.com/prysmaticlabs/fastssz"
 )
 
 var _ fssz.HashRoot = (ValidatorIndex)(0)

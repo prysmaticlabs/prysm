@@ -63,6 +63,8 @@ func TestNilState_NoPanic(t *testing.T) {
 	_ = st.PreviousJustifiedCheckpoint()
 	_ = st.CurrentJustifiedCheckpoint()
 	_ = st.FinalizedCheckpoint()
+	_, _, _, err = st.UnrealizedCheckpointBalances()
+	_ = err
 }
 
 func TestBeaconState_MatchCurrentJustifiedCheckpt(t *testing.T) {
