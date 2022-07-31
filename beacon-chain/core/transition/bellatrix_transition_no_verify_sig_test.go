@@ -99,7 +99,7 @@ func TestExecuteBellatrixStateTransitionNoVerify_FullProcess(t *testing.T) {
 	block.Block.StateRoot = stateRoot[:]
 
 	c := beaconState.Copy()
-	sig, err := util.BlockSignatureBellatrix(c, block.Block, privKeys)
+	sig, err := util.BlockSignature(c, block.Block, privKeys)
 	require.NoError(t, err)
 	block.Signature = sig.Marshal()
 
@@ -187,7 +187,7 @@ func TestExecuteBellatrixStateTransitionNoVerifySignature_CouldNotVerifyStateRoo
 	block.Block.StateRoot = stateRoot[:]
 
 	c := beaconState.Copy()
-	sig, err := util.BlockSignatureBellatrix(c, block.Block, privKeys)
+	sig, err := util.BlockSignature(c, block.Block, privKeys)
 	require.NoError(t, err)
 	block.Signature = sig.Marshal()
 
