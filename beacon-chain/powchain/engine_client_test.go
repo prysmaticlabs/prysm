@@ -597,6 +597,25 @@ func TestServer_getPowBlockHashAtTerminalTotalDifficulty(t *testing.T) {
 			wantTerminalBlockHash: common.BytesToHash([]byte("a")).Bytes(),
 		},
 		{
+			name:     "happy case, but invalid timestamp",
+			paramsTd: "2",
+			currentPowBlock: &pb.ExecutionBlock{
+				Hash: common.BytesToHash([]byte("a")),
+				Header: gethtypes.Header{
+					ParentHash: common.BytesToHash([]byte("b")),
+					Time:       1,
+				},
+				TotalDifficulty: "0x3",
+			},
+			parentPowBlock: &pb.ExecutionBlock{
+				Hash: common.BytesToHash([]byte("b")),
+				Header: gethtypes.Header{
+					ParentHash: common.BytesToHash([]byte("c")),
+				},
+				TotalDifficulty: "0x1",
+			},
+		},
+		{
 			name:     "ttd not reached",
 			paramsTd: "3",
 			currentPowBlock: &pb.ExecutionBlock{
@@ -631,7 +650,7 @@ func TestServer_getPowBlockHashAtTerminalTotalDifficulty(t *testing.T) {
 				ExecutionBlock:     tt.currentPowBlock,
 				BlockByHashMap:     m,
 			}
-			b, e, err := client.GetTerminalBlockHash(context.Background())
+			b, e, err := client.GetTerminalBlockHash(context.Background(), 1)
 			if tt.errString != "" {
 				require.ErrorContains(t, tt.errString, err)
 			} else {
