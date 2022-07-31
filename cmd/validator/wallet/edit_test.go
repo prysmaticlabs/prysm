@@ -23,6 +23,9 @@ const (
 	password         = "OhWOWthisisatest42!$"
 )
 
+// TODO(mikeneuder): Figure out how to shared these functions with
+// `cmd/validator/accounts/delete_test.go`. https://pastebin.com/2n2VB7Ez is
+// the error I couldn't get around.
 func setupWalletAndPasswordsDir(t testing.TB) (string, string, string) {
 	walletDir := filepath.Join(t.TempDir(), "wallet")
 	passwordsDir := filepath.Join(t.TempDir(), "passwords")
