@@ -338,9 +338,9 @@ func (s *Service) IsOptimisticForRoot(ctx context.Context, root [32]byte) (bool,
 		// node as optimistic. This can happen if we pruned INVALID
 		// nodes and no viable head is available.
 		headRoot, err := s.HeadRoot(ctx)
-                 if err != nil {
-                         return true, err
-                 }
+		if err != nil {
+			return true, err
+		}
 		if bytes.Equal(headRoot, root[:]) {
 			return true, nil
 		}
