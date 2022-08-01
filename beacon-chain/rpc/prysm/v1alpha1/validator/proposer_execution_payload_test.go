@@ -10,7 +10,7 @@ import (
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	powtesting "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
+	powtesting "github.com/prysmaticlabs/prysm/beacon-chain/execution/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
@@ -240,6 +240,25 @@ func TestServer_getTerminalBlockHashIfExists(t *testing.T) {
 			wantExists:            true,
 			wantTerminalBlockHash: common.BytesToHash([]byte("a")).Bytes(),
 		},
+		{
+			name:     "use terminal total difficulty but fails timestamp",
+			paramsTd: "2",
+			currentPowBlock: &pb.ExecutionBlock{
+				Hash: common.BytesToHash([]byte("a")),
+				Header: gethtypes.Header{
+					ParentHash: common.BytesToHash([]byte("b")),
+					Time:       1,
+				},
+				TotalDifficulty: "0x3",
+			},
+			parentPowBlock: &pb.ExecutionBlock{
+				Hash: common.BytesToHash([]byte("b")),
+				Header: gethtypes.Header{
+					ParentHash: common.BytesToHash([]byte("c")),
+				},
+				TotalDifficulty: "0x1",
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -253,7 +272,7 @@ func TestServer_getTerminalBlockHashIfExists(t *testing.T) {
 					tt.parentPowBlock.Hash: tt.parentPowBlock,
 				}
 			}
-			c := powtesting.NewPOWChain()
+			c := powtesting.New()
 			c.HashesByHeight[0] = tt.wantTerminalBlockHash
 			vs := &Server{
 				Eth1BlockFetcher: c,
@@ -262,7 +281,7 @@ func TestServer_getTerminalBlockHashIfExists(t *testing.T) {
 					BlockByHashMap: m,
 				},
 			}
-			b, e, err := vs.getTerminalBlockHashIfExists(context.Background())
+			b, e, err := vs.getTerminalBlockHashIfExists(context.Background(), 1)
 			if tt.errString != "" {
 				require.ErrorContains(t, tt.errString, err)
 				require.DeepEqual(t, tt.wantExists, e)
