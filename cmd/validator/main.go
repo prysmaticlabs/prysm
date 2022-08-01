@@ -79,6 +79,7 @@ var appFlags = []cli.Flag{
 	flags.ProposerSettingsURLFlag,
 	flags.ProposerSettingsFlag,
 	flags.EnableBuilderFlag,
+	flags.BuilderGasLimitFlag,
 	////////////////////
 	cmd.DisableMonitoringFlag,
 	cmd.MonitoringHostFlag,
