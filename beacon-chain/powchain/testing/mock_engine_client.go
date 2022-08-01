@@ -93,7 +93,7 @@ func (e *EngineClient) ReconstructFullBellatrixBlock(
 }
 
 // GetTerminalBlockHash --
-func (e *EngineClient) GetTerminalBlockHash(ctx context.Context) ([]byte, bool, error) {
+func (e *EngineClient) GetTerminalBlockHash(ctx context.Context, transitionTime uint64) ([]byte, bool, error) {
 	ttd := new(big.Int)
 	ttd.SetString(params.BeaconConfig().TerminalTotalDifficulty, 10)
 	terminalTotalDifficulty, overflows := uint256.FromBig(ttd)
@@ -131,6 +131,9 @@ func (e *EngineClient) GetTerminalBlockHash(ctx context.Context) ([]byte, bool, 
 			}
 			parentTotalDifficulty, _ := uint256.FromBig(b)
 			parentReachedTTD := parentTotalDifficulty.Cmp(terminalTotalDifficulty) >= 0
+			if blk.Time >= transitionTime {
+				return nil, false, nil
+			}
 			if !parentReachedTTD {
 				return blk.Hash[:], true, nil
 			}
