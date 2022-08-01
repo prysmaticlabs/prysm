@@ -10,7 +10,7 @@ import (
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	powtesting "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
+	powtesting "github.com/prysmaticlabs/prysm/beacon-chain/execution/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
@@ -272,7 +272,7 @@ func TestServer_getTerminalBlockHashIfExists(t *testing.T) {
 					tt.parentPowBlock.Hash: tt.parentPowBlock,
 				}
 			}
-			c := powtesting.NewPOWChain()
+			c := powtesting.New()
 			c.HashesByHeight[0] = tt.wantTerminalBlockHash
 			vs := &Server{
 				Eth1BlockFetcher: c,
