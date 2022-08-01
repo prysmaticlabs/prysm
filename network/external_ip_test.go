@@ -11,12 +11,10 @@ import (
 )
 
 func TestExternalIPv4(t *testing.T) {
-	// Regular expression format for IPv4
-	IPv4Format := `\.\d{1,3}\.\d{1,3}\b`
 	test, err := network.ExternalIPv4()
 	require.NoError(t, err)
-
-	valid := regexp.MustCompile(IPv4Format)
+	// Regular expression format for IPv4
+	valid := regexp.MustCompile(`\.\d{1,3}\.\d{1,3}\b`)
 	assert.Equal(t, true, valid.MatchString(test))
 }
 
