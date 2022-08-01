@@ -130,16 +130,14 @@ func (f FieldIndex) RealPosition() int {
 		return 22
 	case NextSyncCommittee:
 		return 23
-	case LatestExecutionPayloadHeader:
+	case LatestExecutionPayloadHeader, LatestExecutionPayloadHeaderCapella:
 		return 24
-	case LatestExecutionPayloadHeaderCapella:
-		return 25
 	case WithdrawalQueue:
-		return 26
+		return 25
 	case NextWithdrawalIndex:
-		return 27
+		return 26
 	case NextPartialWithdrawalValidatorIndex:
-		return 28
+		return 27
 	default:
 		return -1
 	}
