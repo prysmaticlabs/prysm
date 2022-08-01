@@ -32,7 +32,7 @@ func (b *BeaconState) SetLatestExecutionPayloadHeaderCapella(val interfaces.Exec
 	defer b.lock.Unlock()
 
 	if b.version != version.Capella {
-		return errNotSupported("SetLatestExecutionPayloadHeader", b.version)
+		return errNotSupported("SetLatestExecutionPayloadHeaderCapella", b.version)
 	}
 	header, ok := val.Proto().(*enginev1.ExecutionPayloadHeaderCapella)
 	if !ok {
