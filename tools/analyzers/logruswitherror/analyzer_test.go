@@ -14,7 +14,6 @@ func init() {
 }
 
 func TestAnalyzer(t *testing.T) {
-	// TODO: Need to review how cockroachDB achieves these results.
 	testdata := bazel.TestDataPath(t)
 	analysistest.TestData = func() string { return testdata }
 	analysistest.Run(t, testdata, Analyzer, "a")

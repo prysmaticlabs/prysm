@@ -13,11 +13,11 @@ import (
 )
 
 // Doc explaining the tool.
-const Doc = "TODO"
+const Doc = "This analyzer requires that log statements do not use errors in templated log statements."
 
 const errImproperUsage = "use log.WithError rather than templated log statements with errors"
 
-// List of logrus templated log functions.
+// Map of logrus templated log functions.
 var logFns = map[string]interface{}{
 	"Debugf":   nil,
 	"Infof":    nil,
