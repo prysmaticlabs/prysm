@@ -303,6 +303,30 @@ func (s *Store) saveStatesEfficientInternal(ctx context.Context, tx *bolt.Tx, bl
 			if err := valIdxBkt.Put(rt[:], validatorKeys[i]); err != nil {
 				return err
 			}
+		case *ethpb.BeaconStateCapella:
+			var pbState *ethpb.BeaconStateCapella
+			var err error
+			pbState, err = statenative.ProtobufBeaconStateCapella(rawType)
+			if err != nil {
+				return err
+			}
+			if pbState == nil {
+				return errors.New("nil state")
+			}
+			valEntries := pbState.Validators
+			pbState.Validators = make([]*ethpb.Validator, 0)
+			rawObj, err := pbState.MarshalSSZ()
+			if err != nil {
+				return err
+			}
+			encodedState := snappy.Encode(nil, append(bellatrixKey, rawObj...))
+			if err := bucket.Put(rt[:], encodedState); err != nil {
+				return err
+			}
+			pbState.Validators = valEntries
+			if err := valIdxBkt.Put(rt[:], validatorKeys[i]); err != nil {
+				return err
+			}
 		default:
 			return errors.New("invalid state type")
 		}
