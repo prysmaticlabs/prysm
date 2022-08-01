@@ -1299,21 +1299,21 @@ func TestForkChoice_ReceivedBlocksLastEpoch(t *testing.T) {
 	// Received block last epoch is 1
 	_, err := s.insert(context.Background(), 64, [32]byte{'A'}, b, b, 1, 1)
 	require.NoError(t, err)
-	require.Equal(t, uint64(1), f.ReceivedBlocksLastEpoch())
+	require.Equal(t, uint64(1), f.ReceivedBlocksLastEpoch(64))
 	require.Equal(t, types.Slot(64), f.HighestReceivedBlockSlot())
 
 	// 64 65
 	// Received block last epoch is 2
 	_, err = s.insert(context.Background(), 65, [32]byte{'B'}, b, b, 1, 1)
 	require.NoError(t, err)
-	require.Equal(t, uint64(2), f.ReceivedBlocksLastEpoch())
+	require.Equal(t, uint64(2), f.ReceivedBlocksLastEpoch(65))
 	require.Equal(t, types.Slot(65), f.HighestReceivedBlockSlot())
 
 	// 64 65 66
 	// Received block last epoch is 3
 	_, err = s.insert(context.Background(), 66, [32]byte{'C'}, b, b, 1, 1)
 	require.NoError(t, err)
-	require.Equal(t, uint64(3), f.ReceivedBlocksLastEpoch())
+	require.Equal(t, uint64(3), f.ReceivedBlocksLastEpoch(66))
 	require.Equal(t, types.Slot(66), f.HighestReceivedBlockSlot())
 
 	// 64 65 66
@@ -1321,7 +1321,7 @@ func TestForkChoice_ReceivedBlocksLastEpoch(t *testing.T) {
 	// Received block last epoch is 1
 	_, err = s.insert(context.Background(), 98, [32]byte{'D'}, b, b, 1, 1)
 	require.NoError(t, err)
-	require.Equal(t, uint64(1), f.ReceivedBlocksLastEpoch())
+	require.Equal(t, uint64(1), f.ReceivedBlocksLastEpoch(98))
 	require.Equal(t, types.Slot(98), f.HighestReceivedBlockSlot())
 
 	// 64 65 66
@@ -1330,7 +1330,7 @@ func TestForkChoice_ReceivedBlocksLastEpoch(t *testing.T) {
 	// Received block last epoch is 1
 	_, err = s.insert(context.Background(), 132, [32]byte{'E'}, b, b, 1, 1)
 	require.NoError(t, err)
-	require.Equal(t, uint64(1), f.ReceivedBlocksLastEpoch())
+	require.Equal(t, uint64(1), f.ReceivedBlocksLastEpoch(132))
 	require.Equal(t, types.Slot(132), f.HighestReceivedBlockSlot())
 
 	// 64 65 66
@@ -1340,7 +1340,7 @@ func TestForkChoice_ReceivedBlocksLastEpoch(t *testing.T) {
 	// Received block last epoch is still 1. 99 is outside the window
 	_, err = s.insert(context.Background(), 99, [32]byte{'F'}, b, b, 1, 1)
 	require.NoError(t, err)
-	require.Equal(t, uint64(1), f.ReceivedBlocksLastEpoch())
+	require.Equal(t, uint64(1), f.ReceivedBlocksLastEpoch(132))
 	require.Equal(t, types.Slot(132), f.HighestReceivedBlockSlot())
 
 	// 64 65 66
@@ -1350,7 +1350,7 @@ func TestForkChoice_ReceivedBlocksLastEpoch(t *testing.T) {
 	// Received block last epoch is still 1. 100 is at the same position as 132
 	_, err = s.insert(context.Background(), 100, [32]byte{'G'}, b, b, 1, 1)
 	require.NoError(t, err)
-	require.Equal(t, uint64(1), f.ReceivedBlocksLastEpoch())
+	require.Equal(t, uint64(1), f.ReceivedBlocksLastEpoch(132))
 	require.Equal(t, types.Slot(132), f.HighestReceivedBlockSlot())
 
 	// 64 65 66
@@ -1360,6 +1360,9 @@ func TestForkChoice_ReceivedBlocksLastEpoch(t *testing.T) {
 	// Received block last epoch is 2. 101 is within the window
 	_, err = s.insert(context.Background(), 101, [32]byte{'H'}, b, b, 1, 1)
 	require.NoError(t, err)
-	require.Equal(t, uint64(2), f.ReceivedBlocksLastEpoch())
+	require.Equal(t, uint64(2), f.ReceivedBlocksLastEpoch(132))
 	require.Equal(t, types.Slot(132), f.HighestReceivedBlockSlot())
+
+	require.Equal(t, uint64(1), f.ReceivedBlocksLastEpoch(133))
+	require.Equal(t, uint64(0), f.ReceivedBlocksLastEpoch(164))
 }

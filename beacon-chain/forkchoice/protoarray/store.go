@@ -532,14 +532,7 @@ func (s *Store) insert(ctx context.Context,
 	processedBlockCount.Inc()
 	nodeCount.Set(float64(len(s.nodes)))
 
-	// Update received block slots tracking over the epoch.
-	for i, sl := range s.receivedBlocksLastEpoch {
-		// Reset received block slot to 0 if input slot is an epoch older than existing slot.
-		if sl != 0 && slot > sl.AddSlot(params.BeaconConfig().SlotsPerEpoch) {
-			s.receivedBlocksLastEpoch[i] = 0
-		}
-	}
-	// Only update received block slot if it's within 32 slots from the highest received slot.
+	// Only update received block slot if it's within epoch from the highest received slot.
 	if slot+params.BeaconConfig().SlotsPerEpoch > s.highestReceivedSlot {
 		s.receivedBlocksLastEpoch[slot%params.BeaconConfig().SlotsPerEpoch] = slot
 	}
@@ -1078,12 +1071,12 @@ func (f *ForkChoice) HighestReceivedBlockSlot() types.Slot {
 }
 
 // ReceivedBlocksLastEpoch returns the number of blocks received in the last epoch
-func (f *ForkChoice) ReceivedBlocksLastEpoch() uint64 {
+func (f *ForkChoice) ReceivedBlocksLastEpoch(slot types.Slot) uint64 {
 	f.store.nodesLock.RLock()
 	defer f.store.nodesLock.RUnlock()
 	count := uint64(0)
 	for _, s := range f.store.receivedBlocksLastEpoch {
-		if s != 0 {
+		if s != 0 && slot-params.BeaconConfig().SlotsPerEpoch < s {
 			count++
 		}
 	}
