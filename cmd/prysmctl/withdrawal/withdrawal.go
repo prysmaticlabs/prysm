@@ -3,6 +3,7 @@ package withdrawal
 import (
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/api/client/beacon"
@@ -12,6 +13,7 @@ import (
 
 var withdrawalFlags = struct {
 	BeaconNodeHost string
+	Timeout        time.Duration
 	File           string
 }{}
 
@@ -27,6 +29,12 @@ var Commands = []*cli.Command{
 				Usage:       "host:port for beacon node to query",
 				Destination: &withdrawalFlags.BeaconNodeHost,
 				Value:       "http://localhost:3500",
+			},
+			&cli.DurationFlag{
+				Name:        "http-timeout",
+				Usage:       "timeout for http requests made to beacon-node-url (uses duration format, ex: 2m31s). default: 2m",
+				Destination: &withdrawalFlags.Timeout,
+				Value:       time.Minute * 2,
 			},
 			&cli.StringFlag{
 				Name:        "file",
@@ -53,11 +61,13 @@ func cliActionLatest(_ *cli.Context) error {
 	if to.Message == nil {
 		return errors.New("the message field in file is empty")
 	}
-
-	_, err = beacon.NewClient(withdrawalFlags.BeaconNodeHost)
+	opts := []beacon.ClientOpt{beacon.WithTimeout(f.Timeout)}
+	_, err = beacon.NewClient(withdrawalFlags.BeaconNodeHost, opts...)
 	if err != nil {
 		return err
 	}
+
+	// client.NewAPI
 
 	return nil
 }
