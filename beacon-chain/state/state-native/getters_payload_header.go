@@ -8,7 +8,7 @@ import (
 
 // LatestExecutionPayloadHeader of the beacon state.
 func (b *BeaconState) LatestExecutionPayloadHeader() (*enginev1.ExecutionPayloadHeader, error) {
-	if b.version == version.Phase0 || b.version == version.Altair {
+	if b.version != version.Bellatrix {
 		return nil, errNotSupported("LatestExecutionPayloadHeader", b.version)
 	}
 
@@ -26,4 +26,26 @@ func (b *BeaconState) LatestExecutionPayloadHeader() (*enginev1.ExecutionPayload
 // This assumes that a lock is already held on BeaconState.
 func (b *BeaconState) latestExecutionPayloadHeaderVal() *enginev1.ExecutionPayloadHeader {
 	return ethpb.CopyExecutionPayloadHeader(b.latestExecutionPayloadHeader)
+}
+
+// LatestExecutionPayloadHeaderCapella of the beacon state.
+func (b *BeaconState) LatestExecutionPayloadHeaderCapella() (*enginev1.ExecutionPayloadHeaderCapella, error) {
+	if b.version != version.Capella {
+		return nil, errNotSupported("LatestExecutionPayloadHeaderCapella", b.version)
+	}
+
+	if b.latestExecutionPayloadHeaderCapella == nil {
+		return nil, nil
+	}
+
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	return b.latestExecutionPayloadHeaderCapellaVal(), nil
+}
+
+// latestExecutionPayloadHeaderCapellaVal of the beacon state.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) latestExecutionPayloadHeaderCapellaVal() *enginev1.ExecutionPayloadHeaderCapella {
+	return ethpb.CopyExecutionPayloadHeaderCapella(b.latestExecutionPayloadHeaderCapella)
 }

@@ -319,6 +319,16 @@ func TestCopyPayloadHeader(t *testing.T) {
 	assert.NotEmpty(t, got, "Copied execution payload header has empty fields")
 }
 
+func TestCopyPayloadHeaderCapella(t *testing.T) {
+	p := genPayloadHeaderCapella()
+
+	got := v1alpha1.CopyExecutionPayloadHeaderCapella(p)
+	if !reflect.DeepEqual(got, p) {
+		t.Errorf("TestCopyPayloadHeaderCapella() = %v, want %v", got, p)
+	}
+	assert.NotEmpty(t, got, "Copied execution payload header has empty fields")
+}
+
 func TestCopySignedBeaconBlockBellatrix(t *testing.T) {
 	sbb := genSignedBeaconBlockBellatrix()
 
@@ -756,6 +766,26 @@ func genPayloadHeader() *enginev1.ExecutionPayloadHeader {
 		BaseFeePerGas:    bytes(32),
 		BlockHash:        bytes(32),
 		TransactionsRoot: bytes(32),
+	}
+}
+
+func genPayloadHeaderCapella() *enginev1.ExecutionPayloadHeaderCapella {
+	return &enginev1.ExecutionPayloadHeaderCapella{
+		ParentHash:       bytes(32),
+		FeeRecipient:     bytes(32),
+		StateRoot:        bytes(32),
+		ReceiptsRoot:     bytes(32),
+		LogsBloom:        bytes(32),
+		PrevRandao:       bytes(32),
+		BlockNumber:      1,
+		GasLimit:         2,
+		GasUsed:          3,
+		Timestamp:        4,
+		ExtraData:        bytes(32),
+		BaseFeePerGas:    bytes(32),
+		BlockHash:        bytes(32),
+		TransactionsRoot: bytes(32),
+		WithdrawalsRoot:  bytes(32),
 	}
 }
 
