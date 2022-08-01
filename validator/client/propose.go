@@ -401,8 +401,8 @@ func (v *validator) signBlob(ctx context.Context, pubKey [fieldparams.BLSPubkeyL
 		PublicKey:       pubKey[:],
 		SigningRoot:     root[:],
 		SignatureDomain: domain.SignatureDomain,
-		Object: &validatorpb.SignRequest_Blob{
-			Blob: sideCar,
+		Object: &validatorpb.SignRequest_Sidecar{
+			Sidecar: sideCar,
 		},
 	})
 	if err != nil {

@@ -440,7 +440,11 @@ func checkBlocksForAvailableSidecars(blks []interfaces.SignedBeaconBlock, sideca
 		if blocks.IsPreEIP4844Version(b.Version()) {
 			continue
 		}
-		if blobKzgs, _ := b.Block().Body().BlobKzgs(); len(blobKzgs) == 0 {
+		blobKzgs, err := b.Block().Body().BlobKzgs()
+		if err != nil {
+			log.WithError(err).Error("Could not get blob kzgs")
+		}
+		if len(blobKzgs) == 0 {
 			continue
 		}
 		bRoot, err := b.Block().HashTreeRoot()

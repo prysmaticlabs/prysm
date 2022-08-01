@@ -343,10 +343,7 @@ func (s *Service) sendBatchSidecarRequest(ctx context.Context, reqs map[types.Sl
 	if len(reqs) == 0 {
 		return nil
 	}
-	cp, err := s.cfg.chain.FinalizedCheckpt()
-	if err != nil {
-		return err
-	}
+	cp := s.cfg.chain.FinalizedCheckpt()
 	_, bestPeers := s.cfg.p2p.Peers().BestFinalized(maxPeerRequest, cp.Epoch)
 	if len(bestPeers) == 0 {
 		return nil

@@ -36,7 +36,6 @@ type ReadOnlyDatabase interface {
 	BlobsSidecarsBySlot(ctx context.Context, slot types.Slot) ([]*ethpb.BlobsSidecar, error)
 	HasBlobsSidecar(ctx context.Context, blockRoot [32]byte) bool
 	HighestRootsBelowSlot(ctx context.Context, slot types.Slot) (types.Slot, [][32]byte, error)
-	BlobsSidecar(ctx context.Context, blockRoot [32]byte) (*ethpb.BlobsSidecar, error)
 	// State related methods.
 	State(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error)
 	StateOrError(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error)

@@ -276,7 +276,7 @@ func (s *Service) validateEIP4844BeaconBlock(ctx context.Context, parentState st
 		return nil
 	}
 
-	payload, err := body.ExecutionPayload()
+	payload, err := body.Execution()
 	if err != nil {
 		return err
 	}
@@ -302,7 +302,11 @@ func (s *Service) validateEIP4844BeaconBlock(ctx context.Context, parentState st
 		}
 		blobKzgsInput[i] = bytesutil.ToBytes48(blobKzgs[i])
 	}
-	return eip4844.VerifyKzgsAgainstTxs(payload.Transactions, blobKzgsInput)
+	txs, err := payload.Transactions()
+	if err != nil {
+		return err
+	}
+	return eip4844.VerifyKzgsAgainstTxs(txs, blobKzgsInput)
 }
 
 // validateBellatrixBeaconBlock validates the block for the Bellatrix fork.

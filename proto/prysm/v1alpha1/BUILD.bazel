@@ -124,6 +124,7 @@ ssz_gen_marshal(
         "BlindedBeaconBlockWithBlobKZGs",
         "SignedBlindedBeaconBlockWithBlobKZGs",
         "BlobsSidecarsByRangeRequest",
+        "ValidatorRegistrationV1",
          ],
 )
 

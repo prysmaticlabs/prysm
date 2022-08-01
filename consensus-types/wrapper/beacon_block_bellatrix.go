@@ -112,11 +112,6 @@ func (bellatrixSignedBeaconBlock) PbAltairBlock() (*eth.SignedBeaconBlockAltair,
 	return nil, ErrUnsupportedAltairBlock
 }
 
-// PbEip4844Block is a stub.
-func (bellatrixSignedBeaconBlock) PbEip4844Block() (*eth.SignedBeaconBlockWithBlobKZGs, error) {
-	return nil, ErrUnsupportedEip4844Block
-}
-
 func (w bellatrixSignedBeaconBlock) ToBlinded() (interfaces.SignedBeaconBlock, error) {
 	if w.Block().IsNil() {
 		return nil, errors.New("cannot convert nil block to blinded format")
@@ -358,11 +353,6 @@ func (w bellatrixBeaconBlockBody) Proto() proto.Message {
 // Execution returns the Execution payload of the block body.
 func (w bellatrixBeaconBlockBody) Execution() (interfaces.ExecutionData, error) {
 	return WrappedExecutionPayload(w.b.ExecutionPayload)
-}
-
-// BlobKzgs is a stub.
-func (w bellatrixBeaconBlockBody) BlobKzgs() ([][]byte, error) {
-	return nil, errors.Wrapf(ErrUnsupportedField, "ExecutionPayloadHeader for %T", w)
 }
 
 // BlobKzgs is a stub.

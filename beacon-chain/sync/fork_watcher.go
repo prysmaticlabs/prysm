@@ -78,7 +78,7 @@ func (s *Service) registerForUpcomingFork(currEpoch types.Epoch) error {
 				return nil
 			}
 			s.registerSubscribers(nextEpoch, digest)
-			
+
 			s.registerRPCHandlersEIP4844()
 		}
 	}

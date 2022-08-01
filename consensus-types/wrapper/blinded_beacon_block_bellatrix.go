@@ -323,10 +323,5 @@ func (w blindedBeaconBlockBodyBellatrix) Execution() (interfaces.ExecutionData, 
 
 // BlobKzgs is a stub.
 func (w blindedBeaconBlockBodyBellatrix) BlobKzgs() ([][]byte, error) {
-	return nil, errors.Wrapf(ErrUnsupportedField, "ExecutionPayloadHeader for %T", w)
-}
-
-// BlobKzgs is a stub.
-func (w blindedBeaconBlockBodyBellatrix) BlobKzgs() ([][]byte, error) {
 	return nil, errors.Wrapf(ErrUnsupportedField, "BlobKzgs for %T", w)
 }

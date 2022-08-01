@@ -43,8 +43,6 @@ var (
 	ErrNilSignedBeaconBlock = errors.New("signed beacon block can't be nil")
 	ErrNilBeaconBlock       = errors.New("beacon block can't be nil")
 	ErrNilBeaconBlockBody   = errors.New("beacon block body can't be nil")
-	// ErrUnsupportedEip4844Block is returned when accessing an eip4844 block from a non-eip4844 wrapped
-	ErrUnsupportedEip4844Block = errors.New("unsupported eip4844 block")
 )
 
 // WrappedSignedBeaconBlock will wrap a signed beacon block to conform to the
@@ -101,7 +99,7 @@ func WrappedBeaconBlock(i interface{}) (interfaces.BeaconBlock, error) {
 	case *eth.BeaconBlockWithBlobKZGs:
 		return wrappedEip4844BeaconBlock(b)
 	case *eth.GenericBeaconBlock_Eip4844:
-		return wrappedEip4844BeaconBlock(b.Eip4844.Block)
+		return wrappedEip4844BeaconBlock(b.Eip4844)
 	case nil:
 		return nil, ErrNilObjectWrapped
 	default:

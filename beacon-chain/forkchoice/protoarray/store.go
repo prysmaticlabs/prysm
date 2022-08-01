@@ -523,7 +523,7 @@ func (s *Store) insert(ctx context.Context,
 
 	// Update parent with the best child and descendant only if it's available.
 	if n.parent != NonExistentNode {
-		if err := s.updateBestChildAndDescendant(parentIndex, index, dataAvailability); err != nil {
+		if err := s.updateBestChildAndDescendant(ctx, parentIndex, index, dataAvailability); err != nil {
 			return n, err
 		}
 	}

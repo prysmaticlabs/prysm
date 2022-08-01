@@ -2,9 +2,9 @@ package wrapper
 
 import (
 	"github.com/pkg/errors"
+	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/runtime/version"
@@ -106,9 +106,13 @@ func (_ eip4844SignedBeaconBlock) PbAltairBlock() (*eth.SignedBeaconBlockAltair,
 	return nil, ErrUnsupportedAltairBlock
 }
 
-// Pbeip4844Block returns the underlying protobuf object.
+// PbBellatrixBlock returns the underlying protobuf object.
 func (w eip4844SignedBeaconBlock) PbBellatrixBlock() (*eth.SignedBeaconBlockBellatrix, error) {
 	return nil, ErrUnsupportedBellatrixBlock
+}
+
+func (eip4844SignedBeaconBlock) ToBlinded() (interfaces.SignedBeaconBlock, error) {
+	return nil, ErrUnsupportedVersion
 }
 
 // Version of the underlying protobuf object.
@@ -310,12 +314,9 @@ func (w eip4844BeaconBlockBody) Proto() proto.Message {
 	return w.b
 }
 
-func (w eip4844BeaconBlockBody) ExecutionPayload() (*enginev1.ExecutionPayload, error) {
-	return w.b.ExecutionPayload, nil
-}
-
-func (w eip4844BeaconBlockBody) ExecutionPayloadHeader() (*enginev1.ExecutionPayloadHeader, error) {
-	return nil, errors.Wrapf(ErrUnsupportedField, "ExecutionPayloadHeader for %T", w)
+// Execution returns the Execution payload of the block body.
+func (w eip4844BeaconBlockBody) Execution() (interfaces.ExecutionData, error) {
+	return WrappedExecutionPayload(w.b.ExecutionPayload)
 }
 
 // BlobKzgs returns the blob kzgs in the block.

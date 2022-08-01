@@ -167,14 +167,14 @@ func ProcessBlockNoVerifyAnySig(
 		return nil, nil, err
 	}
 
-	sv := state.Version()
+	sv := st.Version()
 	bv := signed.Block().Version()
 	switch {
 	case sv == bv:
 	case sv == version.Bellatrix && bv == version.EIP4844:
 		// The EIP-4844 BeaconState is the same as Bellatrix's
 	default:
-		return nil, nil, fmt.Errorf("state and block are different version. %d != %d", state.Version(), signed.Block().Version())
+		return nil, nil, fmt.Errorf("state and block are different version. %d != %d", sv, bv)
 	}
 
 	blk := signed.Block()
@@ -263,7 +263,7 @@ func ProcessBlobKzgs(ctx context.Context, state state.BeaconState, body interfac
 	_, span := trace.StartSpan(ctx, "core.state.ProocessBlobKzgs")
 	defer span.End()
 
-	payload, err := body.ExecutionPayload()
+	payload, err := body.Execution()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get execution payload from block")
 	}
@@ -276,7 +276,11 @@ func ProcessBlobKzgs(ctx context.Context, state state.BeaconState, body interfac
 		blobKzgsInput[i] = bytesutil.ToBytes48(blobKzgs[i])
 	}
 
-	if err := eip4844.VerifyKzgsAgainstTxs(payload.Transactions, blobKzgsInput); err != nil {
+	txs, err := payload.Transactions()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get transactions from payload")
+	}
+	if err := eip4844.VerifyKzgsAgainstTxs(txs, blobKzgsInput); err != nil {
 		return nil, err
 	}
 	return state, nil

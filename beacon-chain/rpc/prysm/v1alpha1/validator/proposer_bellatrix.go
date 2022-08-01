@@ -52,7 +52,7 @@ func (vs *Server) buildBellatrixBeaconBlock(ctx context.Context, req *ethpb.Bloc
 				"back to local execution client")
 			builderGetPayloadMissCount.Inc()
 		} else if builderReady {
-			return b, enginev1.PayloadIDBytes{}, nil
+			return b.GetBellatrix(), enginev1.PayloadIDBytes{}, nil
 		}
 	} else if err != nil {
 		log.WithFields(logrus.Fields{

@@ -1,6 +1,7 @@
 package blob
 
 import (
+	gethType "github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
@@ -38,9 +39,9 @@ func VerifyBlobsSidecar(slot types.Slot, beaconBlockRoot [32]byte, expectedKZGs 
 		return ErrInvalidBlobsLength
 	}
 	for i, expectedKzg := range expectedKZGs {
-		var blob types2.Blob
+		var blob gethType.Blob
 		for i, b := range blobsSidecar.Blobs[i].Blob {
-			var f types2.BLSFieldElement
+			var f gethType.BLSFieldElement
 			copy(f[:], b)
 			blob[i] = f
 		}

@@ -1,6 +1,8 @@
 package execution
 
 import (
+	"context"
+
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
