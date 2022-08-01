@@ -532,14 +532,14 @@ func (s *Store) insert(ctx context.Context,
 	processedBlockCount.Inc()
 	nodeCount.Set(float64(len(s.nodes)))
 
-	// Update received block slot over the epoch.
+	// Update received block slots tracking over the epoch.
 	for i, sl := range s.receivedBlocksLastEpoch {
-		// Reset received block slot to 9 if input slot is one epoch older than existing slot.
+		// Reset received block slot to 0 if input slot is an epoch older than existing slot.
 		if sl != 0 && slot > sl.AddSlot(params.BeaconConfig().SlotsPerEpoch) {
 			s.receivedBlocksLastEpoch[i] = 0
 		}
 	}
-	// Only update received block slot if it's within 32 slots of the highest received slot.
+	// Only update received block slot if it's within 32 slots from the highest received slot.
 	if slot+params.BeaconConfig().SlotsPerEpoch > s.highestReceivedSlot {
 		s.receivedBlocksLastEpoch[slot%params.BeaconConfig().SlotsPerEpoch] = slot
 	}
