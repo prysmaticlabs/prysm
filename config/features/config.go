@@ -249,9 +249,10 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logEnabled(enableForkChoiceDoublyLinkedTree)
 		cfg.EnableForkChoiceDoublyLinkedTree = true
 	}
-	if ctx.Bool(enableGossipBatchAggregation.Name) {
-		logEnabled(enableGossipBatchAggregation)
-		cfg.EnableBatchGossipAggregation = true
+	cfg.EnableBatchGossipAggregation = true
+	if ctx.Bool(disableGossipBatchAggregation.Name) {
+		logDisabled(disableGossipBatchAggregation)
+		cfg.EnableBatchGossipAggregation = false
 	}
 	if ctx.Bool(EnableOnlyBlindedBeaconBlocks.Name) {
 		logEnabled(EnableOnlyBlindedBeaconBlocks)
