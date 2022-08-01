@@ -221,110 +221,19 @@ func (s *Store) saveStatesEfficientInternal(ctx context.Context, tx *bolt.Tx, bl
 		// look at issue https://github.com/prysmaticlabs/prysm/issues/9262.
 		switch rawType := states[i].InnerStateUnsafe().(type) {
 		case *ethpb.BeaconState:
-			var pbState *ethpb.BeaconState
-			var err error
-			if features.Get().EnableNativeState {
-				pbState, err = statenative.ProtobufBeaconStatePhase0(rawType)
-			} else {
-				pbState, err = v1.ProtobufBeaconState(rawType)
-			}
-			if err != nil {
-				return err
-			}
-			if pbState == nil {
-				return errors.New("nil state")
-			}
-			valEntries := pbState.Validators
-			pbState.Validators = make([]*ethpb.Validator, 0)
-			encodedState, err := encode(ctx, pbState)
-			if err != nil {
-				return err
-			}
-			if err := bucket.Put(rt[:], encodedState); err != nil {
-				return err
-			}
-			pbState.Validators = valEntries
-			if err := valIdxBkt.Put(rt[:], validatorKeys[i]); err != nil {
+			if err := savePhase0Efficient(ctx, rawType, bucket, rt, valIdxBkt, validatorKeys[i]); err != nil {
 				return err
 			}
 		case *ethpb.BeaconStateAltair:
-			var pbState *ethpb.BeaconStateAltair
-			var err error
-			if features.Get().EnableNativeState {
-				pbState, err = statenative.ProtobufBeaconStateAltair(rawType)
-			} else {
-				pbState, err = v2.ProtobufBeaconState(rawType)
-			}
-			if err != nil {
-				return err
-			}
-			if pbState == nil {
-				return errors.New("nil state")
-			}
-			valEntries := pbState.Validators
-			pbState.Validators = make([]*ethpb.Validator, 0)
-			rawObj, err := pbState.MarshalSSZ()
-			if err != nil {
-				return err
-			}
-			encodedState := snappy.Encode(nil, append(altairKey, rawObj...))
-			if err := bucket.Put(rt[:], encodedState); err != nil {
-				return err
-			}
-			pbState.Validators = valEntries
-			if err := valIdxBkt.Put(rt[:], validatorKeys[i]); err != nil {
+			if err := saveAltairEfficient(rawType, bucket, rt, valIdxBkt, validatorKeys[i]); err != nil {
 				return err
 			}
 		case *ethpb.BeaconStateBellatrix:
-			var pbState *ethpb.BeaconStateBellatrix
-			var err error
-			if features.Get().EnableNativeState {
-				pbState, err = statenative.ProtobufBeaconStateBellatrix(rawType)
-			} else {
-				pbState, err = v3.ProtobufBeaconState(rawType)
-			}
-			if err != nil {
-				return err
-			}
-			if pbState == nil {
-				return errors.New("nil state")
-			}
-			valEntries := pbState.Validators
-			pbState.Validators = make([]*ethpb.Validator, 0)
-			rawObj, err := pbState.MarshalSSZ()
-			if err != nil {
-				return err
-			}
-			encodedState := snappy.Encode(nil, append(bellatrixKey, rawObj...))
-			if err := bucket.Put(rt[:], encodedState); err != nil {
-				return err
-			}
-			pbState.Validators = valEntries
-			if err := valIdxBkt.Put(rt[:], validatorKeys[i]); err != nil {
+			if err := saveBellatrixEfficient(rawType, bucket, rt, valIdxBkt, validatorKeys[i]); err != nil {
 				return err
 			}
 		case *ethpb.BeaconStateCapella:
-			var pbState *ethpb.BeaconStateCapella
-			var err error
-			pbState, err = statenative.ProtobufBeaconStateCapella(rawType)
-			if err != nil {
-				return err
-			}
-			if pbState == nil {
-				return errors.New("nil state")
-			}
-			valEntries := pbState.Validators
-			pbState.Validators = make([]*ethpb.Validator, 0)
-			rawObj, err := pbState.MarshalSSZ()
-			if err != nil {
-				return err
-			}
-			encodedState := snappy.Encode(nil, append(bellatrixKey, rawObj...))
-			if err := bucket.Put(rt[:], encodedState); err != nil {
-				return err
-			}
-			pbState.Validators = valEntries
-			if err := valIdxBkt.Put(rt[:], validatorKeys[i]); err != nil {
+			if err := saveCapellaEfficient(rawType, bucket, rt, valIdxBkt, validatorKeys[i]); err != nil {
 				return err
 			}
 		default:
@@ -333,6 +242,113 @@ func (s *Store) saveStatesEfficientInternal(ctx context.Context, tx *bolt.Tx, bl
 	}
 	// store the validator entries separately to save space.
 	return s.storeValidatorEntriesSeparately(ctx, tx, validatorsEntries)
+}
+
+func savePhase0Efficient(ctx context.Context, rawType interface{}, bucket *bolt.Bucket, blockRoot [32]byte, valIdxBkt *bolt.Bucket, valKey []byte) error {
+	var pbState *ethpb.BeaconState
+	var err error
+	if features.Get().EnableNativeState {
+		pbState, err = statenative.ProtobufBeaconStatePhase0(rawType)
+	} else {
+		pbState, err = v1.ProtobufBeaconState(rawType)
+	}
+	if err != nil {
+		return err
+	}
+	if pbState == nil {
+		return errors.New("nil state")
+	}
+	valEntries := pbState.Validators
+	pbState.Validators = make([]*ethpb.Validator, 0)
+	encodedState, err := encode(ctx, pbState)
+	if err != nil {
+		return err
+	}
+	if err := bucket.Put(blockRoot[:], encodedState); err != nil {
+		return err
+	}
+	pbState.Validators = valEntries
+	return valIdxBkt.Put(blockRoot[:], valKey)
+}
+
+func saveAltairEfficient(rawType interface{}, bucket *bolt.Bucket, blockRoot [32]byte, valIdxBkt *bolt.Bucket, valKey []byte) error {
+	var pbState *ethpb.BeaconStateAltair
+	var err error
+	if features.Get().EnableNativeState {
+		pbState, err = statenative.ProtobufBeaconStateAltair(rawType)
+	} else {
+		pbState, err = v2.ProtobufBeaconState(rawType)
+	}
+	if err != nil {
+		return err
+	}
+	if pbState == nil {
+		return errors.New("nil state")
+	}
+	valEntries := pbState.Validators
+	pbState.Validators = make([]*ethpb.Validator, 0)
+	rawObj, err := pbState.MarshalSSZ()
+	if err != nil {
+		return err
+	}
+	encodedState := snappy.Encode(nil, append(altairKey, rawObj...))
+	if err := bucket.Put(blockRoot[:], encodedState); err != nil {
+		return err
+	}
+	pbState.Validators = valEntries
+	return valIdxBkt.Put(blockRoot[:], valKey)
+}
+
+func saveBellatrixEfficient(rawType interface{}, bucket *bolt.Bucket, blockRoot [32]byte, valIdxBkt *bolt.Bucket, valKey []byte) error {
+	var pbState *ethpb.BeaconStateBellatrix
+	var err error
+	if features.Get().EnableNativeState {
+		pbState, err = statenative.ProtobufBeaconStateBellatrix(rawType)
+	} else {
+		pbState, err = v3.ProtobufBeaconState(rawType)
+	}
+	if err != nil {
+		return err
+	}
+	if pbState == nil {
+		return errors.New("nil state")
+	}
+	valEntries := pbState.Validators
+	pbState.Validators = make([]*ethpb.Validator, 0)
+	rawObj, err := pbState.MarshalSSZ()
+	if err != nil {
+		return err
+	}
+	encodedState := snappy.Encode(nil, append(bellatrixKey, rawObj...))
+	if err := bucket.Put(blockRoot[:], encodedState); err != nil {
+		return err
+	}
+	pbState.Validators = valEntries
+	return valIdxBkt.Put(blockRoot[:], valKey)
+}
+
+func saveCapellaEfficient(rawType interface{}, bucket *bolt.Bucket, blockRoot [32]byte, valIdxBkt *bolt.Bucket, valKey []byte) error {
+	var pbState *ethpb.BeaconStateCapella
+	var err error
+	pbState, err = statenative.ProtobufBeaconStateCapella(rawType)
+	if err != nil {
+		return err
+	}
+	if pbState == nil {
+		return errors.New("nil state")
+	}
+	valEntries := pbState.Validators
+	pbState.Validators = make([]*ethpb.Validator, 0)
+	rawObj, err := pbState.MarshalSSZ()
+	if err != nil {
+		return err
+	}
+	encodedState := snappy.Encode(nil, append(bellatrixKey, rawObj...))
+	if err := bucket.Put(blockRoot[:], encodedState); err != nil {
+		return err
+	}
+	pbState.Validators = valEntries
+	return valIdxBkt.Put(blockRoot[:], valKey)
 }
 
 func (s *Store) storeValidatorEntriesSeparately(ctx context.Context, tx *bolt.Tx, validatorsEntries map[string]*ethpb.Validator) error {
