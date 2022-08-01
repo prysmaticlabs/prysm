@@ -7,9 +7,6 @@
 package eth
 
 import (
-	reflect "reflect"
-	sync "sync"
-
 	github_com_prysmaticlabs_go_bitfield "github.com/prysmaticlabs/go-bitfield"
 	github_com_prysmaticlabs_prysm_consensus_types_primitives "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	v11 "github.com/prysmaticlabs/prysm/proto/engine/v1"
@@ -17,6 +14,8 @@ import (
 	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	reflect "reflect"
+	sync "sync"
 )
 
 const (
