@@ -44,6 +44,7 @@ func New() *ForkChoice {
 		canonicalNodes:                make(map[[32]byte]bool),
 		slashedIndices:                make(map[types.ValidatorIndex]bool),
 		pruneThreshold:                defaultPruneThreshold,
+		receivedBlocksLastEpoch:       [32]types.Slot{},
 	}
 
 	b := make([]uint64, 0)
@@ -530,6 +531,22 @@ func (s *Store) insert(ctx context.Context,
 	// Update metrics.
 	processedBlockCount.Inc()
 	nodeCount.Set(float64(len(s.nodes)))
+
+	// Update received block slot over the epoch.
+	for i, sl := range s.receivedBlocksLastEpoch {
+		// Reset received block slot to 9 if input slot is one epoch older than existing slot.
+		if sl != 0 && slot > sl.AddSlot(params.BeaconConfig().SlotsPerEpoch) {
+			s.receivedBlocksLastEpoch[i] = 0
+		}
+	}
+	// Only update received block slot if it's within 32 slots of the highest received slot.
+	if slot+params.BeaconConfig().SlotsPerEpoch > s.highestReceivedSlot {
+		s.receivedBlocksLastEpoch[slot%params.BeaconConfig().SlotsPerEpoch] = slot
+	}
+	// Update highest slot tracking.
+	if slot > s.highestReceivedSlot {
+		s.highestReceivedSlot = slot
+	}
 
 	return n, nil
 }
@@ -1051,4 +1068,24 @@ func (f *ForkChoice) JustifiedPayloadBlockHash() [32]byte {
 	}
 	node := f.store.nodes[idx]
 	return node.payloadHash
+}
+
+// HighestReceivedBlockSlot returns the highest slot received by the forkchoice
+func (f *ForkChoice) HighestReceivedBlockSlot() types.Slot {
+	f.store.nodesLock.RLock()
+	defer f.store.nodesLock.RUnlock()
+	return f.store.highestReceivedSlot
+}
+
+// ReceivedBlocksLastEpoch returns the number of blocks received in the last epoch
+func (f *ForkChoice) ReceivedBlocksLastEpoch() uint64 {
+	f.store.nodesLock.RLock()
+	defer f.store.nodesLock.RUnlock()
+	count := uint64(0)
+	for _, s := range f.store.receivedBlocksLastEpoch {
+		if s != 0 {
+			count++
+		}
+	}
+	return count
 }
