@@ -293,14 +293,6 @@ func ProcessSlots(ctx context.Context, state state.BeaconState, slot types.Slot)
 				return nil, err
 			}
 		}
-
-		if time.CanUpgradeToEip4844(state.Slot()) {
-			state, err = execution.UpgradeToEip4844(ctx, state)
-			if err != nil {
-				tracing.AnnotateError(span, err)
-				return nil, err
-			}
-		}
 	}
 
 	if highestSlot < state.Slot() {
