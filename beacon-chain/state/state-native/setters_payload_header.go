@@ -14,7 +14,7 @@ func (b *BeaconState) SetLatestExecutionPayloadHeader(val interfaces.ExecutionDa
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	if b.version == version.Phase0 || b.version == version.Altair {
+	if b.version != version.Bellatrix {
 		return errNotSupported("SetLatestExecutionPayloadHeader", b.version)
 	}
 	header, ok := val.Proto().(*enginev1.ExecutionPayloadHeader)
@@ -23,5 +23,22 @@ func (b *BeaconState) SetLatestExecutionPayloadHeader(val interfaces.ExecutionDa
 	}
 	b.latestExecutionPayloadHeader = header
 	b.markFieldAsDirty(nativetypes.LatestExecutionPayloadHeader)
+	return nil
+}
+
+// SetLatestExecutionPayloadHeaderCapella for the beacon state.
+func (b *BeaconState) SetLatestExecutionPayloadHeaderCapella(val interfaces.ExecutionData) error {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	if b.version != version.Capella {
+		return errNotSupported("SetLatestExecutionPayloadHeader", b.version)
+	}
+	header, ok := val.Proto().(*enginev1.ExecutionPayloadHeaderCapella)
+	if !ok {
+		return errors.New("value must be an execution payload header")
+	}
+	b.latestExecutionPayloadHeaderCapella = header
+	b.markFieldAsDirty(nativetypes.LatestExecutionPayloadHeaderCapella)
 	return nil
 }
