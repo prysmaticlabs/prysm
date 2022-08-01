@@ -501,7 +501,7 @@ func proposerSettings(cliCtx *cli.Context) (*validatorServiceConfig.ProposerSett
 		if cliCtx.Bool(flags.EnableBuilderFlag.Name) {
 			vr = &validatorServiceConfig.BuilderConfig{
 				Enabled:  true,
-				GasLimit: reviewGasLimit(params.BeaconConfig().DefaultBuilderGasLimit),
+				GasLimit: reviewGasLimit(uint64(cliCtx.Int(flags.BuilderGasLimitFlag.Name))),
 			}
 		}
 		fileConfig = &validatorServiceConfig.ProposerSettingsPayload{
