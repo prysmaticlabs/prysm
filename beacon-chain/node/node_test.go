@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
-	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/execution"
+	mockExecution "github.com/prysmaticlabs/prysm/beacon-chain/execution/testing"
 	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -45,7 +45,7 @@ func TestNodeClose_OK(t *testing.T) {
 // TestClearDB tests clearing the database
 func TestClearDB(t *testing.T) {
 	hook := logTest.NewGlobal()
-	srv, endpoint, err := mockPOW.SetupRPCServer()
+	srv, endpoint, err := mockExecution.SetupRPCServer()
 	require.NoError(t, err)
 	t.Cleanup(func() {
 		srv.Stop()
@@ -59,8 +59,8 @@ func TestClearDB(t *testing.T) {
 	set.Bool(cmd.ForceClearDB.Name, true, "force clear db")
 
 	context := cli.NewContext(&app, set, nil)
-	_, err = New(context, WithPowchainFlagOptions([]powchain.Option{
-		powchain.WithHttpEndpoints([]string{endpoint}),
+	_, err = New(context, WithExecutionChainOptions([]execution.Option{
+		execution.WithHttpEndpoints([]string{endpoint}),
 	}))
 	require.NoError(t, err)
 

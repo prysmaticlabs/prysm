@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
-	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/execution"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
@@ -76,7 +76,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 	payloadID, lastValidHash, err := s.cfg.ExecutionEngineCaller.ForkchoiceUpdated(ctx, fcs, attr)
 	if err != nil {
 		switch err {
-		case powchain.ErrAcceptedSyncingPayloadStatus:
+		case execution.ErrAcceptedSyncingPayloadStatus:
 			forkchoiceUpdatedOptimisticNodeCount.Inc()
 			log.WithFields(logrus.Fields{
 				"headSlot":                  headBlk.Slot(),
@@ -88,7 +88,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 				log.WithError(err).Error("Optimistic block failed to be candidate")
 			}
 			return payloadID, nil
-		case powchain.ErrInvalidPayloadStatus:
+		case execution.ErrInvalidPayloadStatus:
 			newPayloadInvalidNodeCount.Inc()
 			headRoot := arg.headRoot
 			if len(lastValidHash) == 0 {
@@ -212,14 +212,14 @@ func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
 	case nil:
 		newPayloadValidNodeCount.Inc()
 		return true, nil
-	case powchain.ErrAcceptedSyncingPayloadStatus:
+	case execution.ErrAcceptedSyncingPayloadStatus:
 		newPayloadOptimisticNodeCount.Inc()
 		log.WithFields(logrus.Fields{
 			"slot":             blk.Block().Slot(),
 			"payloadBlockHash": fmt.Sprintf("%#x", bytesutil.Trunc(payload.BlockHash())),
 		}).Info("Called new payload with optimistic block")
 		return false, s.optimisticCandidateBlock(ctx, blk.Block())
-	case powchain.ErrInvalidPayloadStatus:
+	case execution.ErrInvalidPayloadStatus:
 		newPayloadInvalidNodeCount.Inc()
 		root, err := blk.Block().HashTreeRoot()
 		if err != nil {
@@ -241,7 +241,7 @@ func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
 			invalidAncestorRoots: invalidRoots,
 			error:                ErrInvalidPayload,
 		}
-	case powchain.ErrInvalidBlockHashPayloadStatus:
+	case execution.ErrInvalidBlockHashPayloadStatus:
 		newPayloadInvalidNodeCount.Inc()
 		return false, ErrInvalidBlockHashPayloadStatus
 	default:
