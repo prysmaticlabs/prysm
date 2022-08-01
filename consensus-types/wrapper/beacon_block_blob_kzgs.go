@@ -21,6 +21,7 @@ var (
 // blocks for future forks can also be applied across prysm without issues.
 type eip4844SignedBeaconBlock struct {
 	b *eth.SignedBeaconBlockWithBlobKZGs
+	s *eth.SignedBlobsSidecar
 }
 
 // WrappedEip4844SignedBeaconBlock is constructor which wraps a protobuf eip4844 block with the block wrapper.
@@ -136,6 +137,23 @@ func (w eip4844SignedBeaconBlock) Header() (*eth.SignedBeaconBlockHeader, error)
 		},
 		Signature: w.Signature(),
 	}, nil
+}
+
+// SideCar is a stub.
+func (w eip4844SignedBeaconBlock) SideCar() (*eth.SignedBlobsSidecar, error) {
+	if w.s == nil {
+		return nil, ErrNilSidecar
+	}
+	return w.s, nil
+}
+
+// SetSideCar is a stub.
+func (w eip4844SignedBeaconBlock) SetSideCar(s *eth.SignedBlobsSidecar) error {
+	if w.IsNil() {
+		return ErrNilObjectWrapped
+	}
+	w.s = s
+	return nil
 }
 
 // eip4844BeaconBlock is the wrapper for the actual block.

@@ -6,6 +6,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
@@ -54,6 +55,20 @@ func VerifyBlobsSidecar(slot types.Slot, beaconBlockRoot [32]byte, expectedKZGs 
 		}
 	}
 	return nil
+}
+
+func BlockContainsSidecar(b interfaces.SignedBeaconBlock) (bool, error) {
+	if blocks.IsPreEIP4844Version(b.Version()) {
+		return false, nil
+	}
+	_, err := b.SideCar()
+	switch {
+	case errors.Is(err, wrapper.ErrNilSidecar):
+		return false, nil
+	case err != nil:
+		return false, err
+	}
+	return true, nil
 }
 
 func BlockContainsKZGs(b interfaces.BeaconBlock) bool {

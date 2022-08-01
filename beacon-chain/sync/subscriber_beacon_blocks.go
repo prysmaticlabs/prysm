@@ -51,9 +51,16 @@ func (s *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) 
 			return nil
 		}
 		sidecar = queuedSidecar.s
+		if sidecar != nil {
+			if err := signed.SetSideCar(&ethpb.SignedBlobsSidecar{
+				Message: sidecar,
+			}); err != nil {
+				return err
+			}
+		}
 	}
 
-	if err := s.cfg.chain.ReceiveBlock(ctx, signed, root, sidecar); err != nil {
+	if err := s.cfg.chain.ReceiveBlock(ctx, signed, root); err != nil {
 		if blockchain.IsInvalidBlock(err) {
 			r := blockchain.InvalidBlockRoot(err)
 			if r != [32]byte{} {

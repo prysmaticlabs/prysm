@@ -113,8 +113,19 @@ func (Phase0SignedBeaconBlock) PbEip4844Block() (*eth.SignedBeaconBlockWithBlobK
 	return nil, ErrUnsupportedEip4844Block
 }
 
+// ToBlinded is a stub.
 func (Phase0SignedBeaconBlock) ToBlinded() (interfaces.SignedBeaconBlock, error) {
 	return nil, ErrUnsupportedVersion
+}
+
+// SideCar is a stub.
+func (Phase0SignedBeaconBlock) SideCar() (*eth.SignedBlobsSidecar, error) {
+	return nil, ErrUnsupportedVersion
+}
+
+// SetSideCar is a stub.
+func (Phase0SignedBeaconBlock) SetSideCar(*eth.SignedBlobsSidecar) error {
+	return ErrUnsupportedVersion
 }
 
 // Version of the underlying protobuf object.

@@ -155,6 +155,16 @@ func (bellatrixSignedBeaconBlock) Version() int {
 	return version.Bellatrix
 }
 
+// SideCar is a stub.
+func (bellatrixSignedBeaconBlock) SideCar() (*eth.SignedBlobsSidecar, error) {
+	return nil, ErrUnsupportedVersion
+}
+
+// SetSideCar is a stub.
+func (bellatrixSignedBeaconBlock) SetSideCar(*eth.SignedBlobsSidecar) error {
+	return ErrUnsupportedVersion
+}
+
 func (w bellatrixSignedBeaconBlock) Header() (*eth.SignedBeaconBlockHeader, error) {
 	root, err := w.b.Block.Body.HashTreeRoot()
 	if err != nil {

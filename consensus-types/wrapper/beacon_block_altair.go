@@ -144,6 +144,16 @@ func (w altairSignedBeaconBlock) Header() (*eth.SignedBeaconBlockHeader, error) 
 	}, nil
 }
 
+// SideCar is a stub.
+func (altairSignedBeaconBlock) SideCar() (*eth.SignedBlobsSidecar, error) {
+	return nil, ErrUnsupportedVersion
+}
+
+// SetSideCar is a stub.
+func (altairSignedBeaconBlock) SetSideCar(*eth.SignedBlobsSidecar) error {
+	return ErrUnsupportedVersion
+}
+
 // altairBeaconBlock is the wrapper for the actual block.
 type altairBeaconBlock struct {
 	b *eth.BeaconBlockAltair

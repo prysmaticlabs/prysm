@@ -43,6 +43,7 @@ var (
 	ErrNilSignedBeaconBlock = errors.New("signed beacon block can't be nil")
 	ErrNilBeaconBlock       = errors.New("beacon block can't be nil")
 	ErrNilBeaconBlockBody   = errors.New("beacon block body can't be nil")
+	ErrNilSidecar           = errors.New("sidecar can't be nil")
 )
 
 // WrappedSignedBeaconBlock will wrap a signed beacon block to conform to the

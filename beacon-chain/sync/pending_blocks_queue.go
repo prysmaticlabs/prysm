@@ -229,9 +229,17 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 				if err := blob.VerifyBlobsSidecar(b.Block().Slot(), blkRoot, bytesutil.ToBytes48Array(kzgs), queuedSidecar.s); err != nil {
 					log.Debugf("Could not verify sidecar from slot %d: %v", b.Block().Slot(), err)
 				}
+				if sidecar != nil {
+					if err := b.SetSideCar(&ethpb.SignedBlobsSidecar{
+						Message: sidecar,
+					}); err != nil {
+						log.Error("Could not set sidecar on block", err)
+						continue
+					}
+				}
 			}
 
-			if err := s.cfg.chain.ReceiveBlock(ctx, b, blkRoot, sidecar); err != nil {
+			if err := s.cfg.chain.ReceiveBlock(ctx, b, blkRoot); err != nil {
 				if blockchain.IsInvalidBlock(err) {
 					r := blockchain.InvalidBlockRoot(err)
 					if r != [32]byte{} {

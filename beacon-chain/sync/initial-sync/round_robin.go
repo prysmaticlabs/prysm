@@ -15,6 +15,7 @@ import (
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 )
@@ -25,10 +26,10 @@ const (
 )
 
 // blockReceiverFn defines block receiving function.
-type blockReceiverFn func(ctx context.Context, block interfaces.SignedBeaconBlock, blockRoot [32]byte, sidecar *ethpb.BlobsSidecar) error
+type blockReceiverFn func(ctx context.Context, block interfaces.SignedBeaconBlock, blockRoot [32]byte) error
 
 // batchBlockReceiverFn defines batch receiving function.
-type batchBlockReceiverFn func(ctx context.Context, blks []interfaces.SignedBeaconBlock, roots [][32]byte, sidecars []*ethpb.BlobsSidecar) error
+type batchBlockReceiverFn func(ctx context.Context, blks []interfaces.SignedBeaconBlock, roots [][32]byte) error
 
 // Round Robin sync looks at the latest peer statuses and syncs up to the highest known epoch.
 //
@@ -253,7 +254,14 @@ func (s *Service) processBlock(
 	if !s.cfg.Chain.HasBlock(ctx, parentRoot) {
 		return fmt.Errorf("%w: (in processBlock, slot=%d) %#x", errParentDoesNotExist, blk.Block().Slot(), blk.Block().ParentRoot())
 	}
-	return blockReceiver(ctx, blk, blkRoot, sidecar)
+
+	if sidecar != nil && blk.Version() == version.EIP4844 {
+		if err := blk.SetSideCar(&ethpb.SignedBlobsSidecar{Message: sidecar}); err != nil {
+			return err
+		}
+	}
+
+	return blockReceiver(ctx, blk, blkRoot)
 }
 
 func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
@@ -296,8 +304,18 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 			return err
 		}
 		blockRoots[i] = blkRoot
+
+		for _, sc := range sidecars {
+			if sc.BeaconBlockSlot == b.Block().Slot() {
+				if err := b.SetSideCar(&ethpb.SignedBlobsSidecar{Message: sc}); err != nil {
+					return err
+				}
+				blks[i] = b
+			}
+		}
 	}
-	return bFunc(ctx, blks, blockRoots, sidecars)
+
+	return bFunc(ctx, blks, blockRoots)
 }
 
 // updatePeerScorerStats adjusts monitored metrics for a peer.

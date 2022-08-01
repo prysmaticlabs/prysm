@@ -27,6 +27,8 @@ type SignedBeaconBlock interface {
 	ssz.Unmarshaler
 	Version() int
 	Header() (*ethpb.SignedBeaconBlockHeader, error)
+	SideCar() (*ethpb.SignedBlobsSidecar, error)
+	SetSideCar(*ethpb.SignedBlobsSidecar) error
 }
 
 // BeaconBlock describes an interface which states the methods

@@ -7,6 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/async/event"
+	"github.com/prysmaticlabs/prysm/beacon-chain/core/blob"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
@@ -92,7 +93,7 @@ var initialSyncBlockCacheSize = uint64(2 * params.BeaconConfig().SlotsPerEpoch)
 //            ancestor_at_finalized_slot = get_ancestor(store, store.justified_checkpoint.root, finalized_slot)
 //            if ancestor_at_finalized_slot != store.finalized_checkpoint.root:
 //                store.justified_checkpoint = state.current_justified_checkpoint
-func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlock, blockRoot [32]byte, verifiedSidecar *ethpb.BlobsSidecar) error {
+func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlock, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.onBlock")
 	defer span.End()
 	if err := wrapper.BeaconBlockIsNil(signed); err != nil {
@@ -132,7 +133,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 			return err
 		}
 	}
-	if err := s.savePostStateInfo(ctx, blockRoot, signed, verifiedSidecar, postState); err != nil {
+	if err := s.savePostStateInfo(ctx, blockRoot, signed, postState); err != nil {
 		return err
 	}
 
@@ -280,8 +281,7 @@ func getStateVersionAndPayload(st state.BeaconState) (int, *enginev1.ExecutionPa
 	return preStateVersion, preStateHeader, nil
 }
 
-func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeaconBlock,
-	blockRoots [][32]byte, sidecars []*ethpb.BlobsSidecar) error {
+func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeaconBlock, blockRoots [][32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.onBlockBatch")
 	defer span.End()
 
@@ -401,17 +401,8 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 			return err
 		}
 
-		var sidecar *ethpb.BlobsSidecar
-		for _, sc := range sidecars {
-			if sc.BeaconBlockSlot == b.Block().Slot() {
-				sidecar = sc
-				break
-			}
-		}
-		if sidecar != nil {
-			if err := s.cfg.BeaconDB.SaveBlobsSidecar(ctx, sidecar); err != nil {
-				return err
-			}
+		if err := s.saveSidecar(ctx, b); err != nil {
+			return err
 		}
 
 		if i > 0 && jCheckpoints[i].Epoch > jCheckpoints[i-1].Epoch {
@@ -554,21 +545,37 @@ func (s *Service) InsertSlashingsToForkChoiceStore(ctx context.Context, slashing
 
 // This saves post state info to DB or cache. This also saves post state info to fork choice store.
 // Post state info consists of processed block and state. Do not call this method unless the block and state are verified.
-func (s *Service) savePostStateInfo(ctx context.Context, r [32]byte, b interfaces.SignedBeaconBlock, sc *ethpb.BlobsSidecar, st state.BeaconState) error {
+func (s *Service) savePostStateInfo(ctx context.Context, r [32]byte, b interfaces.SignedBeaconBlock, st state.BeaconState) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.savePostStateInfo")
 	defer span.End()
-	if sc != nil {
-		if err := s.cfg.BeaconDB.SaveBlobsSidecar(ctx, sc); err != nil {
-			return errors.Wrapf(err, "could not save sidecar from slot %d", b.Block().Slot())
-		}
-	}
+
 	if err := s.cfg.BeaconDB.SaveBlock(ctx, b); err != nil {
 		return errors.Wrapf(err, "could not save block from slot %d", b.Block().Slot())
+	}
+	if err := s.saveSidecar(ctx, b); err != nil {
+		return errors.Wrapf(err, "could not save sidecar from slot %d", b.Block().Slot())
 	}
 	if err := s.cfg.StateGen.SaveState(ctx, r, st); err != nil {
 		return errors.Wrap(err, "could not save state")
 	}
 	return nil
+}
+
+// Saves sidecar to the DB for the compatible block that contains the sidecar.
+func (s *Service) saveSidecar(ctx context.Context, b interfaces.SignedBeaconBlock) error {
+	ok, err := blob.BlockContainsSidecar(b)
+	if err != nil {
+		return errors.Wrap(err, "could not determine if block contains sidecar")
+	}
+	if !ok {
+		return nil
+	}
+
+	sc, err := b.SideCar()
+	if err != nil {
+		return errors.Wrap(err, "could not get sidecar")
+	}
+	return s.cfg.BeaconDB.SaveBlobsSidecar(ctx, sc.Message)
 }
 
 // This removes the attestations from the mem pool. It will only remove the attestations if input root `r` is canonical,

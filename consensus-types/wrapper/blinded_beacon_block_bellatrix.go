@@ -140,6 +140,16 @@ func (w signedBlindedBeaconBlockBellatrix) Header() (*eth.SignedBeaconBlockHeade
 	}, nil
 }
 
+// SideCar is a stub.
+func (signedBlindedBeaconBlockBellatrix) SideCar() (*eth.SignedBlobsSidecar, error) {
+	return nil, ErrUnsupportedVersion
+}
+
+// SetSideCar is a stub.
+func (signedBlindedBeaconBlockBellatrix) SetSideCar(*eth.SignedBlobsSidecar) error {
+	return ErrUnsupportedVersion
+}
+
 // blindedBeaconBlockBellatrix is the wrapper for the actual block.
 type blindedBeaconBlockBellatrix struct {
 	b *eth.BlindedBeaconBlockBellatrix

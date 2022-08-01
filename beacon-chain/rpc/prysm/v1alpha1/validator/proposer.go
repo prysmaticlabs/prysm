@@ -165,19 +165,19 @@ func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.
 	if err := vs.P2P.Broadcast(ctx, blk.Proto()); err != nil {
 		return nil, fmt.Errorf("could not broadcast block: %v", err)
 	}
-	var sidecarData *ethpb.BlobsSidecar
 	if sidecar != nil {
-		sidecarData = sidecar.Message
 		if err := vs.P2P.Broadcast(ctx, sidecar); err != nil {
 			log.Errorf("could not broadcast blobs sidecar: %v", err)
 		}
+		if err := blk.SetSideCar(sidecar); err != nil {
+			return nil, err
+		}
 	}
-
 	log.WithFields(logrus.Fields{
 		"blockRoot": hex.EncodeToString(root[:]),
 	}).Debug("Broadcasting block")
 
-	if err := vs.BlockReceiver.ReceiveBlock(ctx, blk, root, sidecarData); err != nil {
+	if err := vs.BlockReceiver.ReceiveBlock(ctx, blk, root); err != nil {
 		return nil, fmt.Errorf("could not process beacon block: %v", err)
 	}
 
