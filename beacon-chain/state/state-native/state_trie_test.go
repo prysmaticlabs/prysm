@@ -131,6 +131,42 @@ func TestInitializeFromProto_Bellatrix(t *testing.T) {
 	}
 }
 
+func TestInitializeFromProto_Capella(t *testing.T) {
+	type test struct {
+		name  string
+		state *ethpb.BeaconStateCapella
+		error string
+	}
+	initTests := []test{
+		{
+			name:  "nil state",
+			state: nil,
+			error: "received nil state",
+		},
+		{
+			name: "nil validators",
+			state: &ethpb.BeaconStateCapella{
+				Slot:       4,
+				Validators: nil,
+			},
+		},
+		{
+			name:  "empty state",
+			state: &ethpb.BeaconStateCapella{},
+		},
+	}
+	for _, tt := range initTests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := statenative.InitializeFromProtoCapella(tt.state)
+			if tt.error != "" {
+				require.ErrorContains(t, tt.error, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
 func TestInitializeFromProtoUnsafe_Phase0(t *testing.T) {
 	testState, _ := util.DeterministicGenesisState(t, 64)
 	pbState, err := statenative.ProtobufBeaconStatePhase0(testState.InnerStateUnsafe())

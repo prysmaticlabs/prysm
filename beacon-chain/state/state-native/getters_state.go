@@ -97,6 +97,34 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 			NextSyncCommittee:            b.nextSyncCommittee,
 			LatestExecutionPayloadHeader: b.latestExecutionPayloadHeader,
 		}
+	case version.Capella:
+		return &ethpb.BeaconStateCapella{
+			GenesisTime:                  b.genesisTime,
+			GenesisValidatorsRoot:        gvrCopy[:],
+			Slot:                         b.slot,
+			Fork:                         b.fork,
+			LatestBlockHeader:            b.latestBlockHeader,
+			BlockRoots:                   b.blockRoots.Slice(),
+			StateRoots:                   b.stateRoots.Slice(),
+			HistoricalRoots:              b.historicalRoots.Slice(),
+			Eth1Data:                     b.eth1Data,
+			Eth1DataVotes:                b.eth1DataVotes,
+			Eth1DepositIndex:             b.eth1DepositIndex,
+			Validators:                   b.validators,
+			Balances:                     b.balances,
+			RandaoMixes:                  b.randaoMixes.Slice(),
+			Slashings:                    b.slashings,
+			PreviousEpochParticipation:   b.previousEpochParticipation,
+			CurrentEpochParticipation:    b.currentEpochParticipation,
+			JustificationBits:            b.justificationBits,
+			PreviousJustifiedCheckpoint:  b.previousJustifiedCheckpoint,
+			CurrentJustifiedCheckpoint:   b.currentJustifiedCheckpoint,
+			FinalizedCheckpoint:          b.finalizedCheckpoint,
+			InactivityScores:             b.inactivityScores,
+			CurrentSyncCommittee:         b.currentSyncCommittee,
+			NextSyncCommittee:            b.nextSyncCommittee,
+			LatestExecutionPayloadHeader: b.latestExecutionPayloadHeaderCapella,
+		}
 	default:
 		return nil
 	}
@@ -263,6 +291,16 @@ func ProtobufBeaconStateBellatrix(s interface{}) (*ethpb.BeaconStateBellatrix, e
 	pbState, ok := s.(*ethpb.BeaconStateBellatrix)
 	if !ok {
 		return nil, errors.New("input is not type pb.BeaconStateBellatrix")
+	}
+	return pbState, nil
+}
+
+// ProtobufBeaconStateCapella transforms an input into beacon state Capella in the form of protobuf.
+// Error is returned if the input is not type protobuf beacon state.
+func ProtobufBeaconStateCapella(s interface{}) (*ethpb.BeaconStateCapella, error) {
+	pbState, ok := s.(*ethpb.BeaconStateCapella)
+	if !ok {
+		return nil, errors.New("input is not type pb.BeaconStateCapella")
 	}
 	return pbState, nil
 }
