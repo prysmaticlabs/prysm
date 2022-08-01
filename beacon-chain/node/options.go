@@ -3,7 +3,7 @@ package node
 import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/builder"
-	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/execution"
 )
 
 // Option for beacon node configuration.
@@ -17,10 +17,10 @@ func WithBlockchainFlagOptions(opts []blockchain.Option) Option {
 	}
 }
 
-// WithPowchainFlagOptions includes functional options for the powchain service related to CLI flags.
-func WithPowchainFlagOptions(opts []powchain.Option) Option {
+// WithExecutionChainOptions includes functional options for the execution chain service related to CLI flags.
+func WithExecutionChainOptions(opts []execution.Option) Option {
 	return func(bn *BeaconNode) error {
-		bn.serviceFlagOpts.powchainFlagOpts = opts
+		bn.serviceFlagOpts.executionChainFlagOpts = opts
 		return nil
 	}
 }

@@ -21,12 +21,12 @@ import (
 	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/execution"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/beacon"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/debug"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/events"
@@ -71,7 +71,7 @@ type Service struct {
 
 // Config options for the beacon node RPC server.
 type Config struct {
-	ExecutionPayloadReconstructor powchain.ExecutionPayloadReconstructor
+	ExecutionPayloadReconstructor execution.ExecutionPayloadReconstructor
 	Host                          string
 	Port                          string
 	CertFlag                      string
@@ -87,9 +87,9 @@ type Config struct {
 	FinalizationFetcher           blockchain.FinalizationFetcher
 	AttestationReceiver           blockchain.AttestationReceiver
 	BlockReceiver                 blockchain.BlockReceiver
-	POWChainService               powchain.Chain
-	ChainStartFetcher             powchain.ChainStartFetcher
-	POWChainInfoFetcher           powchain.ChainInfoFetcher
+	ExecutionChainService         execution.Chain
+	ChainStartFetcher             execution.ChainStartFetcher
+	ExecutionChainInfoFetcher     execution.ChainInfoFetcher
 	GenesisTimeFetcher            blockchain.TimeFetcher
 	GenesisFetcher                blockchain.GenesisFetcher
 	EnableDebugRPCEndpoints       bool
@@ -111,7 +111,7 @@ type Config struct {
 	OperationNotifier             opfeed.Notifier
 	StateGen                      *stategen.State
 	MaxMsgSize                    int
-	ExecutionEngineCaller         powchain.EngineCaller
+	ExecutionEngineCaller         execution.EngineCaller
 	ProposerIdsCache              *cache.ProposerPayloadIDsCache
 	OptimisticModeFetcher         blockchain.OptimisticModeFetcher
 	BlockBuilder                  builder.BlockBuilder
@@ -199,10 +199,10 @@ func (s *Service) Start() {
 		GenesisFetcher:         s.cfg.GenesisFetcher,
 		FinalizationFetcher:    s.cfg.FinalizationFetcher,
 		TimeFetcher:            s.cfg.GenesisTimeFetcher,
-		BlockFetcher:           s.cfg.POWChainService,
+		BlockFetcher:           s.cfg.ExecutionChainService,
 		DepositFetcher:         s.cfg.DepositFetcher,
 		ChainStartFetcher:      s.cfg.ChainStartFetcher,
-		Eth1InfoFetcher:        s.cfg.POWChainService,
+		Eth1InfoFetcher:        s.cfg.ExecutionChainService,
 		OptimisticModeFetcher:  s.cfg.OptimisticModeFetcher,
 		SyncChecker:            s.cfg.SyncService,
 		StateNotifier:          s.cfg.StateNotifier,
@@ -211,7 +211,7 @@ func (s *Service) Start() {
 		P2P:                    s.cfg.Broadcaster,
 		BlockReceiver:          s.cfg.BlockReceiver,
 		MockEth1Votes:          s.cfg.MockEth1Votes,
-		Eth1BlockFetcher:       s.cfg.POWChainService,
+		Eth1BlockFetcher:       s.cfg.ExecutionChainService,
 		PendingDepositsFetcher: s.cfg.PendingDepositFetcher,
 		SlashingsPool:          s.cfg.SlashingsPool,
 		StateGen:               s.cfg.StateGen,
@@ -252,7 +252,7 @@ func (s *Service) Start() {
 		PeersFetcher:         s.cfg.PeersFetcher,
 		PeerManager:          s.cfg.PeerManager,
 		GenesisFetcher:       s.cfg.GenesisFetcher,
-		POWChainInfoFetcher:  s.cfg.POWChainInfoFetcher,
+		POWChainInfoFetcher:  s.cfg.ExecutionChainInfoFetcher,
 		BeaconMonitoringHost: s.cfg.BeaconMonitoringHost,
 		BeaconMonitoringPort: s.cfg.BeaconMonitoringPort,
 	}
@@ -280,7 +280,7 @@ func (s *Service) Start() {
 		CanonicalFetcher:            s.cfg.CanonicalFetcher,
 		ChainStartFetcher:           s.cfg.ChainStartFetcher,
 		DepositFetcher:              s.cfg.DepositFetcher,
-		BlockFetcher:                s.cfg.POWChainService,
+		BlockFetcher:                s.cfg.ExecutionChainService,
 		GenesisTimeFetcher:          s.cfg.GenesisTimeFetcher,
 		StateNotifier:               s.cfg.StateNotifier,
 		BlockNotifier:               s.cfg.BlockNotifier,
