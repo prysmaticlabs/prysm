@@ -1,25 +1,29 @@
 package withdrawal
 
 import (
+	"bytes"
+	"context"
+	"fmt"
+	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
-	"time"
 
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/api/client/beacon"
 	"github.com/urfave/cli/v2"
+	"go.opencensus.io/trace"
 	"gopkg.in/yaml.v2"
 )
 
 var withdrawalFlags = struct {
 	BeaconNodeHost string
-	Timeout        time.Duration
 	File           string
 }{}
 
 var Commands = []*cli.Command{
 	{
-		Name:    "set-withdrawal-address",
+		Name:    "update-withdrawal-address",
 		Aliases: []string{"swa"},
 		Usage:   "command for setting the withdrawal ethereum address to the associated validator key",
 		Action:  cliActionLatest,
@@ -29,12 +33,6 @@ var Commands = []*cli.Command{
 				Usage:       "host:port for beacon node to query",
 				Destination: &withdrawalFlags.BeaconNodeHost,
 				Value:       "http://localhost:3500",
-			},
-			&cli.DurationFlag{
-				Name:        "http-timeout",
-				Usage:       "timeout for http requests made to beacon-node-url (uses duration format, ex: 2m31s). default: 2m",
-				Destination: &withdrawalFlags.Timeout,
-				Value:       time.Minute * 2,
 			},
 			&cli.StringFlag{
 				Name:        "file",
@@ -47,6 +45,8 @@ var Commands = []*cli.Command{
 }
 
 func cliActionLatest(_ *cli.Context) error {
+	ctx := context.Background()
+	apiPath := "/blsToExecutionAddress"
 	f := withdrawalFlags
 
 	cleanpath := filepath.Clean(f.File)
@@ -61,13 +61,35 @@ func cliActionLatest(_ *cli.Context) error {
 	if to.Message == nil {
 		return errors.New("the message field in file is empty")
 	}
-	opts := []beacon.ClientOpt{beacon.WithTimeout(f.Timeout)}
-	_, err = beacon.NewClient(withdrawalFlags.BeaconNodeHost, opts...)
+	u, err := url.ParseRequestURI(f.BeaconNodeHost)
+	if err != nil {
+		return errors.Wrap(err, "invalid format, unable to parse url")
+	}
+	if u.Scheme == "" || u.Host == "" {
+		return fmt.Errorf("url must be in the format of http(s)://host:port url used: %v", f.BeaconNodeHost)
+	}
+
+	ctx, span := trace.StartSpan(ctx, "withdrawal.blsToExecutionAddress")
+	defer span.End()
+
+	fullpath := f.BeaconNodeHost + apiPath
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, fullpath, bytes.NewBuffer(b)) //TODO:change this b
+	if err != nil {
+		return errors.Wrap(err, "invalid format, failed to create new Post Request Object")
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	//start := time.Now()
+	resp, err := client.Do(req)
+	//duration := time.Since(start)
 	if err != nil {
 		return err
 	}
-
-	// client.NewAPI
-
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("API request to %s , responded with a status other than OK, status: %v", fullpath, resp.Status)
+	}
+	log.Info("Successfully published message to update withdrawal address.")
 	return nil
 }
