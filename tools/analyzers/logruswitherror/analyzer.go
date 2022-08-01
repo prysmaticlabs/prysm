@@ -55,8 +55,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 				return
 			}
 
-			// TODO: can this be done better?
-			// Only complain on logrus functions.
+			// Only complain on log functions.
 			if x, ok := fse.X.(*ast.Ident); !ok || x.Name != "log" {
 				return
 			}
@@ -100,5 +99,5 @@ func run(pass *analysis.Pass) (interface{}, error) {
 		}
 	})
 
-	return nil, nil // TODO
+	return nil, nil
 }
