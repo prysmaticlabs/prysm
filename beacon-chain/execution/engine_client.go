@@ -69,7 +69,7 @@ type EngineCaller interface {
 		ctx context.Context, cfg *pb.TransitionConfiguration,
 	) error
 	ExecutionBlockByHash(ctx context.Context, hash common.Hash, withTxs bool) (*pb.ExecutionBlock, error)
-	GetTerminalBlockHash(ctx context.Context) ([]byte, bool, error)
+	GetTerminalBlockHash(ctx context.Context, transitionTime uint64) ([]byte, bool, error)
 }
 
 // NewPayload calls the engine_newPayloadV1 method via JSON-RPC.
@@ -218,7 +218,7 @@ func (s *Service) ExchangeTransitionConfiguration(
 //            return block
 //
 //    return None
-func (s *Service) GetTerminalBlockHash(ctx context.Context) ([]byte, bool, error) {
+func (s *Service) GetTerminalBlockHash(ctx context.Context, transitionTime uint64) ([]byte, bool, error) {
 	ttd := new(big.Int)
 	ttd.SetString(params.BeaconConfig().TerminalTotalDifficulty, 10)
 	terminalTotalDifficulty, overflows := uint256.FromBig(ttd)
@@ -254,13 +254,23 @@ func (s *Service) GetTerminalBlockHash(ctx context.Context) ([]byte, bool, error
 		if parentBlk == nil {
 			return nil, false, errors.New("parent execution block is nil")
 		}
+
 		if blockReachedTTD {
 			parentTotalDifficulty, err := tDStringToUint256(parentBlk.TotalDifficulty)
 			if err != nil {
 				return nil, false, errors.Wrap(err, "could not convert total difficulty to uint256")
 			}
+
+			// If terminal block has time same timestamp or greater than transition time,
+			// then the node violates the invariant that a block's timestamp must be
+			// greater than its parent's timestamp. Execution layer will reject
+			// a fcu call with such payload attributes. It's best that we return `None` in this a case.
 			parentReachedTTD := parentTotalDifficulty.Cmp(terminalTotalDifficulty) >= 0
 			if !parentReachedTTD {
+				if blk.Time >= transitionTime {
+					return nil, false, nil
+				}
+
 				log.WithFields(logrus.Fields{
 					"number":   blk.Number,
 					"hash":     fmt.Sprintf("%#x", bytesutil.Trunc(blk.Hash[:])),
