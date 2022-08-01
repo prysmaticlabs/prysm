@@ -1112,7 +1112,7 @@ func (v *validator) validatorIndex(ctx context.Context, pubkey [fieldparams.BLSP
 	switch {
 	case status.Code(err) == codes.NotFound:
 		log.Warnf("Could not find validator index for public key %#x not found. "+
-			"Perhaps the validator is not yet active.", hexutil.Encode(pubkey[:]))
+			"Perhaps the validator is not yet active.", pubkey)
 		return 0, false, nil
 	case err != nil:
 		return 0, false, err
