@@ -26,9 +26,9 @@ import (
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	v1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
@@ -105,7 +105,7 @@ func TestServer_getPayloadHeader(t *testing.T) {
 			mock: &builderTest.MockBuilderService{},
 			fetcher: &blockchainTest.ChainService{
 				Block: func() interfaces.SignedBeaconBlock {
-					wb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+					wb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 					require.NoError(t, err)
 					return wb
 				}(),
@@ -118,7 +118,7 @@ func TestServer_getPayloadHeader(t *testing.T) {
 			},
 			fetcher: &blockchainTest.ChainService{
 				Block: func() interfaces.SignedBeaconBlock {
-					wb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlockBellatrix())
+					wb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockBellatrix())
 					require.NoError(t, err)
 					return wb
 				}(),
@@ -139,7 +139,7 @@ func TestServer_getPayloadHeader(t *testing.T) {
 			},
 			fetcher: &blockchainTest.ChainService{
 				Block: func() interfaces.SignedBeaconBlock {
-					wb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlockBellatrix())
+					wb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockBellatrix())
 					require.NoError(t, err)
 					return wb
 				}(),
@@ -178,12 +178,12 @@ func TestServer_getBuilderBlock(t *testing.T) {
 		{
 			name: "old block version",
 			blk: func() interfaces.SignedBeaconBlock {
-				wb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+				wb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 				require.NoError(t, err)
 				return wb
 			}(),
 			returnedBlk: func() interfaces.SignedBeaconBlock {
-				wb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+				wb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 				require.NoError(t, err)
 				return wb
 			}(),
@@ -191,7 +191,7 @@ func TestServer_getBuilderBlock(t *testing.T) {
 		{
 			name: "not configured",
 			blk: func() interfaces.SignedBeaconBlock {
-				wb, err := wrapper.WrappedSignedBeaconBlock(util.NewBlindedBeaconBlockBellatrix())
+				wb, err := blocks.NewSignedBeaconBlock(util.NewBlindedBeaconBlockBellatrix())
 				require.NoError(t, err)
 				return wb
 			}(),
@@ -199,7 +199,7 @@ func TestServer_getBuilderBlock(t *testing.T) {
 				HasConfigured: false,
 			},
 			returnedBlk: func() interfaces.SignedBeaconBlock {
-				wb, err := wrapper.WrappedSignedBeaconBlock(util.NewBlindedBeaconBlockBellatrix())
+				wb, err := blocks.NewSignedBeaconBlock(util.NewBlindedBeaconBlockBellatrix())
 				require.NoError(t, err)
 				return wb
 			}(),
@@ -210,7 +210,7 @@ func TestServer_getBuilderBlock(t *testing.T) {
 				b := util.NewBlindedBeaconBlockBellatrix()
 				b.Block.Slot = 1
 				b.Block.ProposerIndex = 2
-				wb, err := wrapper.WrappedSignedBeaconBlock(b)
+				wb, err := blocks.NewSignedBeaconBlock(b)
 				require.NoError(t, err)
 				return wb
 			}(),
@@ -226,7 +226,7 @@ func TestServer_getBuilderBlock(t *testing.T) {
 				b := util.NewBlindedBeaconBlockBellatrix()
 				b.Block.Slot = 1
 				b.Block.ProposerIndex = 2
-				wb, err := wrapper.WrappedSignedBeaconBlock(b)
+				wb, err := blocks.NewSignedBeaconBlock(b)
 				require.NoError(t, err)
 				return wb
 			}(),
@@ -239,7 +239,7 @@ func TestServer_getBuilderBlock(t *testing.T) {
 				b.Block.Slot = 1
 				b.Block.ProposerIndex = 2
 				b.Block.Body.ExecutionPayload = &v1.ExecutionPayload{GasLimit: 123}
-				wb, err := wrapper.WrappedSignedBeaconBlock(b)
+				wb, err := blocks.NewSignedBeaconBlock(b)
 				require.NoError(t, err)
 				return wb
 			}(),
@@ -268,14 +268,14 @@ func TestServer_readyForBuilder(t *testing.T) {
 	require.Equal(t, false, ready)
 
 	b := util.NewBeaconBlockBellatrix()
-	wb, err := wrapper.WrappedSignedBeaconBlock(b)
+	wb, err := blocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
 	wbr, err := wb.Block().HashTreeRoot()
 	require.NoError(t, err)
 
 	b1 := util.NewBeaconBlockBellatrix()
 	b1.Block.Body.ExecutionPayload.BlockNumber = 1 // Execution enabled.
-	wb1, err := wrapper.WrappedSignedBeaconBlock(b1)
+	wb1, err := blocks.NewSignedBeaconBlock(b1)
 	require.NoError(t, err)
 	wbr1, err := wb1.Block().HashTreeRoot()
 	require.NoError(t, err)
@@ -322,7 +322,7 @@ func TestServer_getAndBuildHeaderBlock(t *testing.T) {
 	// Failed to get header
 	b1 := util.NewBeaconBlockBellatrix()
 	b1.Block.Body.ExecutionPayload.BlockNumber = 1 // Execution enabled.
-	wb1, err := wrapper.WrappedSignedBeaconBlock(b1)
+	wb1, err := blocks.NewSignedBeaconBlock(b1)
 	require.NoError(t, err)
 	wbr1, err := wb1.Block().HashTreeRoot()
 	require.NoError(t, err)
@@ -430,7 +430,7 @@ func TestServer_GetBellatrixBeaconBlock_HappyCase(t *testing.T) {
 	require.NoError(t, err, "Could not hash genesis state")
 
 	genesis := b.NewGenesisBlock(stateRoot[:])
-	wsb, err := wrapper.WrappedSignedBeaconBlock(genesis)
+	wsb, err := blocks.NewSignedBeaconBlock(genesis)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, wsb), "Could not save genesis block")
 
@@ -528,7 +528,7 @@ func TestServer_GetBellatrixBeaconBlock_BuilderCase(t *testing.T) {
 	require.NoError(t, err, "Could not hash genesis state")
 
 	genesis := b.NewGenesisBlock(stateRoot[:])
-	wsb, err := wrapper.WrappedSignedBeaconBlock(genesis)
+	wsb, err := blocks.NewSignedBeaconBlock(genesis)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, wsb), "Could not save genesis block")
 
@@ -574,7 +574,7 @@ func TestServer_GetBellatrixBeaconBlock_BuilderCase(t *testing.T) {
 
 	b1 := util.NewBeaconBlockBellatrix()
 	b1.Block.Body.ExecutionPayload.BlockNumber = 1 // Execution enabled.
-	wb1, err := wrapper.WrappedSignedBeaconBlock(b1)
+	wb1, err := blocks.NewSignedBeaconBlock(b1)
 	require.NoError(t, err)
 	wbr1, err := wb1.Block().HashTreeRoot()
 	require.NoError(t, err)

@@ -122,29 +122,45 @@ func WrappedBeaconBlockBody(i interface{}) (interfaces.BeaconBlockBody, error) {
 func BuildSignedBeaconBlock(blk interfaces.BeaconBlock, signature []byte) (interfaces.SignedBeaconBlock, error) {
 	switch b := blk.(type) {
 	case Phase0BeaconBlock:
-		pb, ok := b.Proto().(*eth.BeaconBlock)
+		pb, err := b.Proto()
+		if err != nil {
+			return nil, err
+		}
+		blkPb, ok := pb.(*eth.BeaconBlock)
 		if !ok {
 			return nil, errors.New("unable to access inner phase0 proto")
 		}
-		return WrappedSignedBeaconBlock(&eth.SignedBeaconBlock{Block: pb, Signature: signature})
+		return WrappedSignedBeaconBlock(&eth.SignedBeaconBlock{Block: blkPb, Signature: signature})
 	case altairBeaconBlock:
-		pb, ok := b.Proto().(*eth.BeaconBlockAltair)
+		pb, err := b.Proto()
+		if err != nil {
+			return nil, err
+		}
+		blkPb, ok := pb.(*eth.BeaconBlockAltair)
 		if !ok {
 			return nil, errors.New("unable to access inner altair proto")
 		}
-		return WrappedSignedBeaconBlock(&eth.SignedBeaconBlockAltair{Block: pb, Signature: signature})
+		return WrappedSignedBeaconBlock(&eth.SignedBeaconBlockAltair{Block: blkPb, Signature: signature})
 	case bellatrixBeaconBlock:
-		pb, ok := b.Proto().(*eth.BeaconBlockBellatrix)
+		pb, err := b.Proto()
+		if err != nil {
+			return nil, err
+		}
+		blkPb, ok := pb.(*eth.BeaconBlockBellatrix)
 		if !ok {
 			return nil, errors.New("unable to access inner bellatrix proto")
 		}
-		return WrappedSignedBeaconBlock(&eth.SignedBeaconBlockBellatrix{Block: pb, Signature: signature})
+		return WrappedSignedBeaconBlock(&eth.SignedBeaconBlockBellatrix{Block: blkPb, Signature: signature})
 	case blindedBeaconBlockBellatrix:
-		pb, ok := b.Proto().(*eth.BlindedBeaconBlockBellatrix)
+		pb, err := b.Proto()
+		if err != nil {
+			return nil, err
+		}
+		blkPb, ok := pb.(*eth.BlindedBeaconBlockBellatrix)
 		if !ok {
 			return nil, errors.New("unable to access inner bellatrix proto")
 		}
-		return WrappedSignedBeaconBlock(&eth.SignedBlindedBeaconBlockBellatrix{Block: pb, Signature: signature})
+		return WrappedSignedBeaconBlock(&eth.SignedBlindedBeaconBlockBellatrix{Block: blkPb, Signature: signature})
 	default:
 		return nil, errors.Wrapf(ErrUnsupportedBeaconBlock, "unable to wrap block of type %T", b)
 	}

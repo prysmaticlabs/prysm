@@ -26,8 +26,8 @@ import (
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -1246,7 +1246,7 @@ func Test_validateBellatrixBeaconBlock(t *testing.T) {
 
 	st, _ := util.DeterministicGenesisStateAltair(t, 1)
 	b := util.NewBeaconBlockBellatrix()
-	blk, err := wrapper.WrappedSignedBeaconBlock(b)
+	blk, err := blocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
 	require.ErrorContains(t, "block and state are not the same version", r.validateBellatrixBeaconBlock(ctx, st, blk.Block()))
 }
@@ -1302,7 +1302,7 @@ func Test_validateBellatrixBeaconBlockParentValidation(t *testing.T) {
 		badBlockCache:  lruwrpr.New(10),
 	}
 
-	blk, err := wrapper.WrappedSignedBeaconBlock(msg)
+	blk, err := blocks.NewSignedBeaconBlock(msg)
 	require.NoError(t, err)
 	require.ErrorContains(t, "parent of the block is optimistic", r.validateBellatrixBeaconBlock(ctx, beaconState, blk.Block()))
 }
@@ -1387,7 +1387,7 @@ func Test_getBlockFields(t *testing.T) {
 	log.WithFields(getBlockFields(nil)).Info("nil block")
 	// Good block
 	b := util.NewBeaconBlockBellatrix()
-	wb, err := wrapper.WrappedSignedBeaconBlock(b)
+	wb, err := blocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
 	log.WithFields(getBlockFields(wb)).Info("bad block")
 

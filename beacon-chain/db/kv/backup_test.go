@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
 )
@@ -20,7 +20,7 @@ func TestStore_Backup(t *testing.T) {
 	head := util.NewBeaconBlock()
 	head.Block.Slot = 5000
 
-	wsb, err := wrapper.WrappedSignedBeaconBlock(head)
+	wsb, err := blocks.NewSignedBeaconBlock(head)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, wsb))
 	root, err := head.Block.HashTreeRoot()
@@ -62,7 +62,7 @@ func TestStore_BackupMultipleBuckets(t *testing.T) {
 	for i := startSlot; i < 5200; i++ {
 		head := util.NewBeaconBlock()
 		head.Block.Slot = i
-		wsb, err := wrapper.WrappedSignedBeaconBlock(head)
+		wsb, err := blocks.NewSignedBeaconBlock(head)
 		require.NoError(t, err)
 		require.NoError(t, db.SaveBlock(ctx, wsb))
 		root, err := head.Block.HashTreeRoot()

@@ -26,9 +26,10 @@ import (
 	"github.com/prysmaticlabs/prysm/cmd"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
+	blocktest "github.com/prysmaticlabs/prysm/consensus-types/blocks/testing"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -1682,7 +1683,7 @@ func TestServer_GetValidatorParticipation_CurrentAndPrevEpochWithBits(t *testing
 		}
 		require.NoError(t, genState.SetCurrentParticipationBits(bits))
 		require.NoError(t, genState.SetPreviousParticipationBits(bits))
-		gb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlockAltair())
+		gb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockAltair())
 		assert.NoError(t, err)
 		runGetValidatorParticipationCurrentAndPrevEpoch(t, genState, gb)
 	})
@@ -1700,7 +1701,7 @@ func TestServer_GetValidatorParticipation_CurrentAndPrevEpochWithBits(t *testing
 		}
 		require.NoError(t, genState.SetCurrentParticipationBits(bits))
 		require.NoError(t, genState.SetPreviousParticipationBits(bits))
-		gb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlockBellatrix())
+		gb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockBellatrix())
 		assert.NoError(t, err)
 		runGetValidatorParticipationCurrentAndPrevEpoch(t, genState, gb)
 	})
@@ -1715,7 +1716,8 @@ func runGetValidatorParticipationCurrentAndPrevEpoch(t *testing.T, genState stat
 
 	gsr, err := genState.HashTreeRoot(ctx)
 	require.NoError(t, err)
-	require.NoError(t, wrapper.SetBlockStateRoot(gb, gsr))
+	gb, err = blocktest.SetBlockStateRoot(gb, gsr)
+	require.NoError(t, err)
 	require.NoError(t, err)
 	gRoot, err := gb.Block().HashTreeRoot()
 	require.NoError(t, err)

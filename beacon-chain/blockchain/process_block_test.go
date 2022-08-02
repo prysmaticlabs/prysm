@@ -31,9 +31,9 @@ import (
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	consensusblocks "github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
@@ -134,7 +134,7 @@ func TestStore_OnBlock_ProtoArray(t *testing.T) {
 			require.NoError(t, service.ForkChoicer().UpdateFinalizedCheckpoint(&forkchoicetypes.Checkpoint{Root: fRoot}))
 			root, err := tt.blk.Block.HashTreeRoot()
 			assert.NoError(t, err)
-			wsb, err := wrapper.WrappedSignedBeaconBlock(tt.blk)
+			wsb, err := consensusblocks.NewSignedBeaconBlock(tt.blk)
 			require.NoError(t, err)
 			err = service.onBlock(ctx, wsb, root)
 			assert.ErrorContains(t, tt.wantErrString, err)
@@ -230,7 +230,7 @@ func TestStore_OnBlock_DoublyLinkedTree(t *testing.T) {
 			require.NoError(t, service.ForkChoicer().UpdateFinalizedCheckpoint(&forkchoicetypes.Checkpoint{Root: fRoot}))
 			root, err := tt.blk.Block.HashTreeRoot()
 			assert.NoError(t, err)
-			wsb, err := wrapper.WrappedSignedBeaconBlock(tt.blk)
+			wsb, err := consensusblocks.NewSignedBeaconBlock(tt.blk)
 			require.NoError(t, err)
 			err = service.onBlock(ctx, wsb, root)
 			assert.ErrorContains(t, tt.wantErrString, err)
@@ -259,7 +259,7 @@ func TestStore_OnBlockBatch_ProtoArray(t *testing.T) {
 	for i := 0; i < 97; i++ {
 		b, err := util.GenerateFullBlock(bState, keys, util.DefaultBlockGenConfig(), types.Slot(i))
 		require.NoError(t, err)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		wsb, err := consensusblocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)
 		bState, err = transition.ExecuteStateTransition(ctx, bState, wsb)
 		require.NoError(t, err)
@@ -300,7 +300,7 @@ func TestStore_OnBlockBatch_PruneOK_Protoarray(t *testing.T) {
 	for i := 0; i < 320; i++ {
 		b, err := util.GenerateFullBlock(bState, keys, util.DefaultBlockGenConfig(), types.Slot(i))
 		require.NoError(t, err)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		wsb, err := consensusblocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)
 		bState, err = transition.ExecuteStateTransition(ctx, bState, wsb)
 		require.NoError(t, err)
@@ -336,14 +336,14 @@ func TestStore_OnBlockBatch_DoublyLinkedTree(t *testing.T) {
 	for i := 0; i < 97; i++ {
 		b, err := util.GenerateFullBlock(bState, keys, util.DefaultBlockGenConfig(), types.Slot(i))
 		require.NoError(t, err)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		wsb, err := consensusblocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)
 		bState, err = transition.ExecuteStateTransition(ctx, bState, wsb)
 		require.NoError(t, err)
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
 		require.NoError(t, service.saveInitSyncBlock(ctx, root, wsb))
-		wsb, err = wrapper.WrappedSignedBeaconBlock(b)
+		wsb, err = consensusblocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)
 		blks = append(blks, wsb)
 		blkRoots = append(blkRoots, root)
@@ -379,7 +379,7 @@ func TestStore_OnBlockBatch_NotifyNewPayload(t *testing.T) {
 	for i := 0; i <= blkCount; i++ {
 		b, err := util.GenerateFullBlock(bState, keys, util.DefaultBlockGenConfig(), types.Slot(i))
 		require.NoError(t, err)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		wsb, err := consensusblocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)
 		bState, err = transition.ExecuteStateTransition(ctx, bState, wsb)
 		require.NoError(t, err)
@@ -411,7 +411,7 @@ func TestCachedPreState_CanGetFromStateSummary_ProtoArray(t *testing.T) {
 	require.NoError(t, err)
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err := consensusblocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
 
@@ -438,7 +438,7 @@ func TestCachedPreState_CanGetFromStateSummary_DoublyLinkedTree(t *testing.T) {
 	require.NoError(t, err)
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err := consensusblocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
 	require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
 
@@ -468,7 +468,7 @@ func TestFillForkChoiceMissingBlocks_CanSave_ProtoArray(t *testing.T) {
 	blk := util.NewBeaconBlock()
 	blk.Block.Slot = 9
 	blk.Block.ParentRoot = roots[8]
-	wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+	wsb, err := consensusblocks.NewSignedBeaconBlock(blk)
 	require.NoError(t, err)
 
 	r0 := bytesutil.ToBytes32(roots[0])
@@ -509,7 +509,7 @@ func TestFillForkChoiceMissingBlocks_CanSave_DoublyLinkedTree(t *testing.T) {
 	blk := util.NewBeaconBlock()
 	blk.Block.Slot = 9
 	blk.Block.ParentRoot = roots[8]
-	wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+	wsb, err := consensusblocks.NewSignedBeaconBlock(blk)
 	require.NoError(t, err)
 
 	// save invalid block at slot 0 because doubly linked tree enforces that
@@ -559,7 +559,7 @@ func TestFillForkChoiceMissingBlocks_RootsMatch_ProtoArray(t *testing.T) {
 	blk.Block.Slot = 9
 	blk.Block.ParentRoot = roots[8]
 
-	wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+	wsb, err := consensusblocks.NewSignedBeaconBlock(blk)
 	require.NoError(t, err)
 
 	r0 := bytesutil.ToBytes32(roots[0])
@@ -603,7 +603,7 @@ func TestFillForkChoiceMissingBlocks_RootsMatch_DoublyLinkedTree(t *testing.T) {
 	blk.Block.Slot = 9
 	blk.Block.ParentRoot = roots[8]
 
-	wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+	wsb, err := consensusblocks.NewSignedBeaconBlock(blk)
 	require.NoError(t, err)
 
 	// save invalid block at slot 0 because doubly linked tree enforces that
@@ -775,7 +775,7 @@ func TestFillForkChoiceMissingBlocks_FinalizedSibling_DoublyLinkedTree(t *testin
 	blk.Block.Slot = 9
 	blk.Block.ParentRoot = roots[8]
 
-	wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+	wsb, err := consensusblocks.NewSignedBeaconBlock(blk)
 	require.NoError(t, err)
 
 	err = service.fillInForkChoiceMissingBlocks(
@@ -852,7 +852,7 @@ func blockTree1(t *testing.T, beaconDB db.Database, genesisRoot []byte) ([][]byt
 		beaconBlock := util.NewBeaconBlock()
 		beaconBlock.Block.Slot = b.Block.Slot
 		beaconBlock.Block.ParentRoot = bytesutil.PadTo(b.Block.ParentRoot, 32)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(beaconBlock)
+		wsb, err := consensusblocks.NewSignedBeaconBlock(beaconBlock)
 		require.NoError(t, err)
 		if err := beaconDB.SaveBlock(context.Background(), wsb); err != nil {
 			return nil, err
@@ -1177,7 +1177,7 @@ func TestOnBlock_CanFinalize_WithOnTick(t *testing.T) {
 		require.NoError(t, err)
 		r, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+		wsb, err := consensusblocks.NewSignedBeaconBlock(blk)
 		require.NoError(t, err)
 		require.NoError(t, fcs.NewSlot(ctx, i))
 		require.NoError(t, service.onBlock(ctx, wsb, r))
@@ -1226,7 +1226,7 @@ func TestOnBlock_CanFinalize(t *testing.T) {
 		require.NoError(t, err)
 		r, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+		wsb, err := consensusblocks.NewSignedBeaconBlock(blk)
 		require.NoError(t, err)
 		require.NoError(t, service.onBlock(ctx, wsb, r))
 		testState, err = service.cfg.StateGen.StateByRoot(ctx, r)
@@ -1291,7 +1291,7 @@ func TestOnBlock_InvalidSignature(t *testing.T) {
 	blk.Signature = []byte{'a'} // Mutate the signature.
 	r, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
-	wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+	wsb, err := consensusblocks.NewSignedBeaconBlock(blk)
 	require.NoError(t, err)
 	err = service.onBlock(ctx, wsb, r)
 	require.Equal(t, true, IsInvalidBlock(err))
@@ -1328,7 +1328,7 @@ func TestOnBlock_CallNewPayloadAndForkchoiceUpdated(t *testing.T) {
 		require.NoError(t, err)
 		r, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+		wsb, err := consensusblocks.NewSignedBeaconBlock(blk)
 		require.NoError(t, err)
 		require.NoError(t, service.onBlock(ctx, wsb, r))
 		testState, err = service.cfg.StateGen.StateByRoot(ctx, r)
@@ -1436,7 +1436,7 @@ func TestRemoveBlockAttestationsInPool_Canonical(t *testing.T) {
 
 	atts := b.Block.Body.Attestations
 	require.NoError(t, service.cfg.AttPool.SaveAggregatedAttestations(atts))
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err := consensusblocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
 	require.NoError(t, service.pruneCanonicalAttsFromPool(ctx, r, wsb))
 	require.Equal(t, 0, service.cfg.AttPool.AggregatedAttestationCount())
@@ -1455,7 +1455,7 @@ func TestRemoveBlockAttestationsInPool_NonCanonical(t *testing.T) {
 
 	atts := b.Block.Body.Attestations
 	require.NoError(t, service.cfg.AttPool.SaveAggregatedAttestations(atts))
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err := consensusblocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
 	require.NoError(t, service.pruneCanonicalAttsFromPool(ctx, r, wsb))
 	require.Equal(t, 1, service.cfg.AttPool.AggregatedAttestationCount())
@@ -1490,7 +1490,7 @@ func Test_getStateVersionAndPayload(t *testing.T) {
 			name: "bellatrix state",
 			st: func() state.BeaconState {
 				s, _ := util.DeterministicGenesisStateBellatrix(t, 1)
-				wrappedHeader, err := wrapper.WrappedExecutionPayloadHeader(&enginev1.ExecutionPayloadHeader{
+				wrappedHeader, err := consensusblocks.WrappedExecutionPayloadHeader(&enginev1.ExecutionPayloadHeader{
 					BlockNumber: 1,
 				})
 				require.NoError(t, err)
@@ -1644,7 +1644,7 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 			service.cfg.ExecutionEngineCaller = e
 			b := util.HydrateSignedBeaconBlockBellatrix(&ethpb.SignedBeaconBlockBellatrix{})
 			b.Block.Body.ExecutionPayload = tt.payload
-			blk, err := wrapper.WrappedSignedBeaconBlock(b)
+			blk, err := consensusblocks.NewSignedBeaconBlock(b)
 			require.NoError(t, err)
 			err = service.validateMergeTransitionBlock(ctx, tt.stateVersion, tt.header, blk)
 			if tt.errString != "" {
@@ -1702,7 +1702,7 @@ func TestService_insertSlashingsToForkChoiceStore(t *testing.T) {
 	}
 	b := util.NewBeaconBlock()
 	b.Block.Body.AttesterSlashings = slashings
-	wb, err := wrapper.WrappedSignedBeaconBlock(b)
+	wb, err := consensusblocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
 	service.InsertSlashingsToForkChoiceStore(ctx, wb.Block().Body().AttesterSlashings())
 }
@@ -1731,25 +1731,25 @@ func TestOnBlock_ProcessBlocksParallel(t *testing.T) {
 	require.NoError(t, err)
 	r1, err := blk1.Block.HashTreeRoot()
 	require.NoError(t, err)
-	wsb1, err := wrapper.WrappedSignedBeaconBlock(blk1)
+	wsb1, err := consensusblocks.NewSignedBeaconBlock(blk1)
 	require.NoError(t, err)
 	blk2, err := util.GenerateFullBlock(gs, keys, util.DefaultBlockGenConfig(), 2)
 	require.NoError(t, err)
 	r2, err := blk2.Block.HashTreeRoot()
 	require.NoError(t, err)
-	wsb2, err := wrapper.WrappedSignedBeaconBlock(blk2)
+	wsb2, err := consensusblocks.NewSignedBeaconBlock(blk2)
 	require.NoError(t, err)
 	blk3, err := util.GenerateFullBlock(gs, keys, util.DefaultBlockGenConfig(), 3)
 	require.NoError(t, err)
 	r3, err := blk3.Block.HashTreeRoot()
 	require.NoError(t, err)
-	wsb3, err := wrapper.WrappedSignedBeaconBlock(blk3)
+	wsb3, err := consensusblocks.NewSignedBeaconBlock(blk3)
 	require.NoError(t, err)
 	blk4, err := util.GenerateFullBlock(gs, keys, util.DefaultBlockGenConfig(), 4)
 	require.NoError(t, err)
 	r4, err := blk4.Block.HashTreeRoot()
 	require.NoError(t, err)
-	wsb4, err := wrapper.WrappedSignedBeaconBlock(blk4)
+	wsb4, err := consensusblocks.NewSignedBeaconBlock(blk4)
 	require.NoError(t, err)
 
 	logHook := logTest.NewGlobal()
@@ -1796,7 +1796,7 @@ func Test_verifyBlkFinalizedSlot_invalidBlock(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, service.ForkChoicer().UpdateFinalizedCheckpoint(&forkchoicetypes.Checkpoint{Epoch: 1}))
 	blk := util.HydrateBeaconBlock(&ethpb.BeaconBlock{Slot: 1})
-	wb, err := wrapper.WrappedBeaconBlock(blk)
+	wb, err := consensusblocks.NewBeaconBlock(blk)
 	require.NoError(t, err)
 	err = service.verifyBlkFinalizedSlot(wb)
 	require.Equal(t, true, IsInvalidBlock(err))
@@ -1840,7 +1840,7 @@ func TestStore_NoViableHead_FCU_Protoarray(t *testing.T) {
 	require.NoError(t, service.saveGenesisData(ctx, st))
 
 	genesis := blocks.NewGenesisBlock(stateRoot[:])
-	wsb, err := wrapper.WrappedSignedBeaconBlock(genesis)
+	wsb, err := consensusblocks.NewSignedBeaconBlock(genesis)
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb), "Could not save genesis block")
 
@@ -1855,7 +1855,7 @@ func TestStore_NoViableHead_FCU_Protoarray(t *testing.T) {
 		require.NoError(t, err)
 		b, err := util.GenerateFullBlock(st, keys, util.DefaultBlockGenConfig(), types.Slot(i))
 		require.NoError(t, err)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		wsb, err := consensusblocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
@@ -1868,7 +1868,7 @@ func TestStore_NoViableHead_FCU_Protoarray(t *testing.T) {
 		require.NoError(t, err)
 		b, err := util.GenerateFullBlockAltair(st, keys, util.DefaultBlockGenConfig(), types.Slot(i))
 		require.NoError(t, err)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		wsb, err := consensusblocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
@@ -1882,7 +1882,7 @@ func TestStore_NoViableHead_FCU_Protoarray(t *testing.T) {
 		require.NoError(t, err)
 		b, err := util.GenerateFullBlockBellatrix(st, keys, util.DefaultBlockGenConfig(), types.Slot(i))
 		require.NoError(t, err)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		wsb, err := consensusblocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
@@ -1899,7 +1899,7 @@ func TestStore_NoViableHead_FCU_Protoarray(t *testing.T) {
 	require.NoError(t, err)
 	b, err := util.GenerateFullBlockBellatrix(validHeadState, keys, util.DefaultBlockGenConfig(), 18)
 	require.NoError(t, err)
-	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err = consensusblocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
 	firstInvalidRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -1922,7 +1922,7 @@ func TestStore_NoViableHead_FCU_Protoarray(t *testing.T) {
 	require.NoError(t, err)
 	b, err = util.GenerateFullBlockBellatrix(st, keys, util.DefaultBlockGenConfig(), 19)
 	require.NoError(t, err)
-	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err = consensusblocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -1945,7 +1945,7 @@ func TestStore_NoViableHead_FCU_Protoarray(t *testing.T) {
 	driftGenesisTime(service, 20, 0)
 	b, err = util.GenerateFullBlockBellatrix(validHeadState, keys, &util.BlockGenConfig{}, 20)
 	require.NoError(t, err)
-	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err = consensusblocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
 	root, err = b.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -2000,7 +2000,7 @@ func TestStore_NoViableHead_FCU_DoublyLinkedTree(t *testing.T) {
 	require.NoError(t, service.saveGenesisData(ctx, st))
 
 	genesis := blocks.NewGenesisBlock(stateRoot[:])
-	wsb, err := wrapper.WrappedSignedBeaconBlock(genesis)
+	wsb, err := consensusblocks.NewSignedBeaconBlock(genesis)
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb), "Could not save genesis block")
 
@@ -2015,7 +2015,7 @@ func TestStore_NoViableHead_FCU_DoublyLinkedTree(t *testing.T) {
 		require.NoError(t, err)
 		b, err := util.GenerateFullBlock(st, keys, util.DefaultBlockGenConfig(), types.Slot(i))
 		require.NoError(t, err)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		wsb, err := consensusblocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
@@ -2028,7 +2028,7 @@ func TestStore_NoViableHead_FCU_DoublyLinkedTree(t *testing.T) {
 		require.NoError(t, err)
 		b, err := util.GenerateFullBlockAltair(st, keys, util.DefaultBlockGenConfig(), types.Slot(i))
 		require.NoError(t, err)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		wsb, err := consensusblocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
@@ -2042,7 +2042,7 @@ func TestStore_NoViableHead_FCU_DoublyLinkedTree(t *testing.T) {
 		require.NoError(t, err)
 		b, err := util.GenerateFullBlockBellatrix(st, keys, util.DefaultBlockGenConfig(), types.Slot(i))
 		require.NoError(t, err)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		wsb, err := consensusblocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
@@ -2059,7 +2059,7 @@ func TestStore_NoViableHead_FCU_DoublyLinkedTree(t *testing.T) {
 	require.NoError(t, err)
 	b, err := util.GenerateFullBlockBellatrix(validHeadState, keys, util.DefaultBlockGenConfig(), 18)
 	require.NoError(t, err)
-	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err = consensusblocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
 	firstInvalidRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -2082,7 +2082,7 @@ func TestStore_NoViableHead_FCU_DoublyLinkedTree(t *testing.T) {
 	require.NoError(t, err)
 	b, err = util.GenerateFullBlockBellatrix(st, keys, util.DefaultBlockGenConfig(), 19)
 	require.NoError(t, err)
-	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err = consensusblocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -2105,7 +2105,7 @@ func TestStore_NoViableHead_FCU_DoublyLinkedTree(t *testing.T) {
 	driftGenesisTime(service, 20, 0)
 	b, err = util.GenerateFullBlockBellatrix(validHeadState, keys, &util.BlockGenConfig{}, 20)
 	require.NoError(t, err)
-	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err = consensusblocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
 	root, err = b.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -2160,7 +2160,7 @@ func TestStore_NoViableHead_NewPayload_DoublyLinkedTree(t *testing.T) {
 	require.NoError(t, service.saveGenesisData(ctx, st))
 
 	genesis := blocks.NewGenesisBlock(stateRoot[:])
-	wsb, err := wrapper.WrappedSignedBeaconBlock(genesis)
+	wsb, err := consensusblocks.NewSignedBeaconBlock(genesis)
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb), "Could not save genesis block")
 
@@ -2175,7 +2175,7 @@ func TestStore_NoViableHead_NewPayload_DoublyLinkedTree(t *testing.T) {
 		require.NoError(t, err)
 		b, err := util.GenerateFullBlock(st, keys, util.DefaultBlockGenConfig(), types.Slot(i))
 		require.NoError(t, err)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		wsb, err := consensusblocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
@@ -2188,7 +2188,7 @@ func TestStore_NoViableHead_NewPayload_DoublyLinkedTree(t *testing.T) {
 		require.NoError(t, err)
 		b, err := util.GenerateFullBlockAltair(st, keys, util.DefaultBlockGenConfig(), types.Slot(i))
 		require.NoError(t, err)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		wsb, err := consensusblocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
@@ -2202,7 +2202,7 @@ func TestStore_NoViableHead_NewPayload_DoublyLinkedTree(t *testing.T) {
 		require.NoError(t, err)
 		b, err := util.GenerateFullBlockBellatrix(st, keys, util.DefaultBlockGenConfig(), types.Slot(i))
 		require.NoError(t, err)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		wsb, err := consensusblocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
@@ -2219,7 +2219,7 @@ func TestStore_NoViableHead_NewPayload_DoublyLinkedTree(t *testing.T) {
 	require.NoError(t, err)
 	b, err := util.GenerateFullBlockBellatrix(validHeadState, keys, util.DefaultBlockGenConfig(), 18)
 	require.NoError(t, err)
-	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err = consensusblocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
 	firstInvalidRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -2242,7 +2242,7 @@ func TestStore_NoViableHead_NewPayload_DoublyLinkedTree(t *testing.T) {
 	require.NoError(t, err)
 	b, err = util.GenerateFullBlockBellatrix(st, keys, util.DefaultBlockGenConfig(), 19)
 	require.NoError(t, err)
-	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err = consensusblocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -2265,7 +2265,7 @@ func TestStore_NoViableHead_NewPayload_DoublyLinkedTree(t *testing.T) {
 	driftGenesisTime(service, 20, 0)
 	b, err = util.GenerateFullBlockBellatrix(validHeadState, keys, &util.BlockGenConfig{}, 20)
 	require.NoError(t, err)
-	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err = consensusblocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
 	root, err = b.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -2320,7 +2320,7 @@ func TestStore_NoViableHead_NewPayload_Protoarray(t *testing.T) {
 	require.NoError(t, service.saveGenesisData(ctx, st))
 
 	genesis := blocks.NewGenesisBlock(stateRoot[:])
-	wsb, err := wrapper.WrappedSignedBeaconBlock(genesis)
+	wsb, err := consensusblocks.NewSignedBeaconBlock(genesis)
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb), "Could not save genesis block")
 
@@ -2335,7 +2335,7 @@ func TestStore_NoViableHead_NewPayload_Protoarray(t *testing.T) {
 		require.NoError(t, err)
 		b, err := util.GenerateFullBlock(st, keys, util.DefaultBlockGenConfig(), types.Slot(i))
 		require.NoError(t, err)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		wsb, err := consensusblocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
@@ -2348,7 +2348,7 @@ func TestStore_NoViableHead_NewPayload_Protoarray(t *testing.T) {
 		require.NoError(t, err)
 		b, err := util.GenerateFullBlockAltair(st, keys, util.DefaultBlockGenConfig(), types.Slot(i))
 		require.NoError(t, err)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		wsb, err := consensusblocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
@@ -2362,7 +2362,7 @@ func TestStore_NoViableHead_NewPayload_Protoarray(t *testing.T) {
 		require.NoError(t, err)
 		b, err := util.GenerateFullBlockBellatrix(st, keys, util.DefaultBlockGenConfig(), types.Slot(i))
 		require.NoError(t, err)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		wsb, err := consensusblocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
@@ -2379,7 +2379,7 @@ func TestStore_NoViableHead_NewPayload_Protoarray(t *testing.T) {
 	require.NoError(t, err)
 	b, err := util.GenerateFullBlockBellatrix(validHeadState, keys, util.DefaultBlockGenConfig(), 18)
 	require.NoError(t, err)
-	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err = consensusblocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
 	firstInvalidRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -2402,7 +2402,7 @@ func TestStore_NoViableHead_NewPayload_Protoarray(t *testing.T) {
 	require.NoError(t, err)
 	b, err = util.GenerateFullBlockBellatrix(st, keys, util.DefaultBlockGenConfig(), 19)
 	require.NoError(t, err)
-	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err = consensusblocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -2425,7 +2425,7 @@ func TestStore_NoViableHead_NewPayload_Protoarray(t *testing.T) {
 	driftGenesisTime(service, 20, 0)
 	b, err = util.GenerateFullBlockBellatrix(validHeadState, keys, &util.BlockGenConfig{}, 20)
 	require.NoError(t, err)
-	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err = consensusblocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
 	root, err = b.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -2481,7 +2481,7 @@ func TestStore_NoViableHead_Liveness_DoublyLinkedTree(t *testing.T) {
 	require.NoError(t, service.saveGenesisData(ctx, st))
 
 	genesis := blocks.NewGenesisBlock(stateRoot[:])
-	wsb, err := wrapper.WrappedSignedBeaconBlock(genesis)
+	wsb, err := consensusblocks.NewSignedBeaconBlock(genesis)
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb), "Could not save genesis block")
 
@@ -2496,7 +2496,7 @@ func TestStore_NoViableHead_Liveness_DoublyLinkedTree(t *testing.T) {
 		require.NoError(t, err)
 		b, err := util.GenerateFullBlock(st, keys, util.DefaultBlockGenConfig(), types.Slot(i))
 		require.NoError(t, err)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		wsb, err := consensusblocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
@@ -2509,7 +2509,7 @@ func TestStore_NoViableHead_Liveness_DoublyLinkedTree(t *testing.T) {
 		require.NoError(t, err)
 		b, err := util.GenerateFullBlockAltair(st, keys, util.DefaultBlockGenConfig(), types.Slot(i))
 		require.NoError(t, err)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		wsb, err := consensusblocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
@@ -2523,7 +2523,7 @@ func TestStore_NoViableHead_Liveness_DoublyLinkedTree(t *testing.T) {
 	require.NoError(t, err)
 	b, err := util.GenerateFullBlockBellatrix(st, keys, util.DefaultBlockGenConfig(), 12)
 	require.NoError(t, err)
-	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err = consensusblocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
 	lastValidRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -2544,7 +2544,7 @@ func TestStore_NoViableHead_Liveness_DoublyLinkedTree(t *testing.T) {
 		require.NoError(t, err)
 		b, err := util.GenerateFullBlockBellatrix(st, keys, util.DefaultBlockGenConfig(), types.Slot(i))
 		require.NoError(t, err)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		wsb, err := consensusblocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
@@ -2565,7 +2565,7 @@ func TestStore_NoViableHead_Liveness_DoublyLinkedTree(t *testing.T) {
 	require.NoError(t, err)
 	b, err = util.GenerateFullBlockBellatrix(st, keys, util.DefaultBlockGenConfig(), 19)
 	require.NoError(t, err)
-	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err = consensusblocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -2594,7 +2594,7 @@ func TestStore_NoViableHead_Liveness_DoublyLinkedTree(t *testing.T) {
 	driftGenesisTime(service, 20, 0)
 	b, err = util.GenerateFullBlockBellatrix(validHeadState, keys, &util.BlockGenConfig{}, 20)
 	require.NoError(t, err)
-	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err = consensusblocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
 	root, err = b.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -2612,7 +2612,7 @@ func TestStore_NoViableHead_Liveness_DoublyLinkedTree(t *testing.T) {
 		require.NoError(t, err)
 		b, err := util.GenerateFullBlockBellatrix(st, keys, util.DefaultBlockGenConfig(), types.Slot(i))
 		require.NoError(t, err)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		wsb, err := consensusblocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
@@ -2632,7 +2632,7 @@ func TestStore_NoViableHead_Liveness_DoublyLinkedTree(t *testing.T) {
 	driftGenesisTime(service, 30, 0)
 	b, err = util.GenerateFullBlockBellatrix(st, keys, util.DefaultBlockGenConfig(), 30)
 	require.NoError(t, err)
-	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err = consensusblocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
 	root, err = b.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -2685,7 +2685,7 @@ func TestStore_NoViableHead_Liveness_Protoarray(t *testing.T) {
 	require.NoError(t, service.saveGenesisData(ctx, st))
 
 	genesis := blocks.NewGenesisBlock(stateRoot[:])
-	wsb, err := wrapper.WrappedSignedBeaconBlock(genesis)
+	wsb, err := consensusblocks.NewSignedBeaconBlock(genesis)
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb), "Could not save genesis block")
 
@@ -2700,7 +2700,7 @@ func TestStore_NoViableHead_Liveness_Protoarray(t *testing.T) {
 		require.NoError(t, err)
 		b, err := util.GenerateFullBlock(st, keys, util.DefaultBlockGenConfig(), types.Slot(i))
 		require.NoError(t, err)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		wsb, err := consensusblocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
@@ -2713,7 +2713,7 @@ func TestStore_NoViableHead_Liveness_Protoarray(t *testing.T) {
 		require.NoError(t, err)
 		b, err := util.GenerateFullBlockAltair(st, keys, util.DefaultBlockGenConfig(), types.Slot(i))
 		require.NoError(t, err)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		wsb, err := consensusblocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
@@ -2727,7 +2727,7 @@ func TestStore_NoViableHead_Liveness_Protoarray(t *testing.T) {
 	require.NoError(t, err)
 	b, err := util.GenerateFullBlockBellatrix(st, keys, util.DefaultBlockGenConfig(), 12)
 	require.NoError(t, err)
-	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err = consensusblocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
 	lastValidRoot, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -2748,7 +2748,7 @@ func TestStore_NoViableHead_Liveness_Protoarray(t *testing.T) {
 		require.NoError(t, err)
 		b, err := util.GenerateFullBlockBellatrix(st, keys, util.DefaultBlockGenConfig(), types.Slot(i))
 		require.NoError(t, err)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		wsb, err := consensusblocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
@@ -2769,7 +2769,7 @@ func TestStore_NoViableHead_Liveness_Protoarray(t *testing.T) {
 	require.NoError(t, err)
 	b, err = util.GenerateFullBlockBellatrix(st, keys, util.DefaultBlockGenConfig(), 19)
 	require.NoError(t, err)
-	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err = consensusblocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -2798,7 +2798,7 @@ func TestStore_NoViableHead_Liveness_Protoarray(t *testing.T) {
 	driftGenesisTime(service, 20, 0)
 	b, err = util.GenerateFullBlockBellatrix(validHeadState, keys, &util.BlockGenConfig{}, 20)
 	require.NoError(t, err)
-	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err = consensusblocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
 	root, err = b.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -2816,7 +2816,7 @@ func TestStore_NoViableHead_Liveness_Protoarray(t *testing.T) {
 		require.NoError(t, err)
 		b, err := util.GenerateFullBlockBellatrix(st, keys, util.DefaultBlockGenConfig(), types.Slot(i))
 		require.NoError(t, err)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		wsb, err := consensusblocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)
 		root, err := b.Block.HashTreeRoot()
 		require.NoError(t, err)
@@ -2836,7 +2836,7 @@ func TestStore_NoViableHead_Liveness_Protoarray(t *testing.T) {
 	driftGenesisTime(service, 30, 0)
 	b, err = util.GenerateFullBlockBellatrix(st, keys, util.DefaultBlockGenConfig(), 30)
 	require.NoError(t, err)
-	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err = consensusblocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
 	root, err = b.Block.HashTreeRoot()
 	require.NoError(t, err)

@@ -14,36 +14,36 @@ type blockMutator struct {
 	Bellatrix func(beaconBlock *eth.SignedBeaconBlockBellatrix)
 }
 
-func (m blockMutator) apply(b interfaces.SignedBeaconBlock) error {
+func (m blockMutator) apply(b interfaces.SignedBeaconBlock) (interfaces.SignedBeaconBlock, error) {
 	switch b.Version() {
 	case version.Phase0:
 		bb, err := b.PbPhase0Block()
 		if err != nil {
-			return err
+			return nil, err
 		}
 		m.Phase0(bb)
-		return nil
+		return blocks.NewSignedBeaconBlock(bb)
 	case version.Altair:
 		bb, err := b.PbAltairBlock()
 		if err != nil {
-			return err
+			return nil, err
 		}
 		m.Altair(bb)
-		return nil
+		return blocks.NewSignedBeaconBlock(bb)
 	case version.Bellatrix:
 		bb, err := b.PbBellatrixBlock()
 		if err != nil {
-			return err
+			return nil, err
 		}
 		m.Bellatrix(bb)
-		return nil
+		return blocks.NewSignedBeaconBlock(bb)
 	default:
-		return blocks.ErrUnsupportedSignedBeaconBlock
+		return nil, blocks.ErrUnsupportedSignedBeaconBlock
 	}
 }
 
 // SetBlockStateRoot modifies the block's state root.
-func SetBlockStateRoot(b interfaces.SignedBeaconBlock, sr [32]byte) error {
+func SetBlockStateRoot(b interfaces.SignedBeaconBlock, sr [32]byte) (interfaces.SignedBeaconBlock, error) {
 	return blockMutator{
 		Phase0:    func(bb *eth.SignedBeaconBlock) { bb.Block.StateRoot = sr[:] },
 		Altair:    func(bb *eth.SignedBeaconBlockAltair) { bb.Block.StateRoot = sr[:] },
@@ -52,7 +52,7 @@ func SetBlockStateRoot(b interfaces.SignedBeaconBlock, sr [32]byte) error {
 }
 
 // SetBlockParentRoot modifies the block's parent root.
-func SetBlockParentRoot(b interfaces.SignedBeaconBlock, pr [32]byte) error {
+func SetBlockParentRoot(b interfaces.SignedBeaconBlock, pr [32]byte) (interfaces.SignedBeaconBlock, error) {
 	return blockMutator{
 		Phase0:    func(bb *eth.SignedBeaconBlock) { bb.Block.ParentRoot = pr[:] },
 		Altair:    func(bb *eth.SignedBeaconBlockAltair) { bb.Block.ParentRoot = pr[:] },
@@ -61,7 +61,7 @@ func SetBlockParentRoot(b interfaces.SignedBeaconBlock, pr [32]byte) error {
 }
 
 // SetBlockSlot modifies the block's slot.
-func SetBlockSlot(b interfaces.SignedBeaconBlock, s types.Slot) error {
+func SetBlockSlot(b interfaces.SignedBeaconBlock, s types.Slot) (interfaces.SignedBeaconBlock, error) {
 	return blockMutator{
 		Phase0:    func(bb *eth.SignedBeaconBlock) { bb.Block.Slot = s },
 		Altair:    func(bb *eth.SignedBeaconBlockAltair) { bb.Block.Slot = s },
@@ -70,7 +70,7 @@ func SetBlockSlot(b interfaces.SignedBeaconBlock, s types.Slot) error {
 }
 
 // SetProposerIndex modifies the block's proposer index.
-func SetProposerIndex(b interfaces.SignedBeaconBlock, idx types.ValidatorIndex) error {
+func SetProposerIndex(b interfaces.SignedBeaconBlock, idx types.ValidatorIndex) (interfaces.SignedBeaconBlock, error) {
 	return blockMutator{
 		Phase0:    func(bb *eth.SignedBeaconBlock) { bb.Block.ProposerIndex = idx },
 		Altair:    func(bb *eth.SignedBeaconBlockAltair) { bb.Block.ProposerIndex = idx },

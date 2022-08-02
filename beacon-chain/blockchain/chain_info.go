@@ -162,7 +162,7 @@ func (s *Service) HeadBlock(ctx context.Context) (interfaces.SignedBeaconBlock, 
 	defer s.headLock.RUnlock()
 
 	if s.hasHeadState() {
-		return s.headBlock(), nil
+		return s.headBlock()
 	}
 
 	return s.cfg.BeaconDB.HeadBlock(ctx)
