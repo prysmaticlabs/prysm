@@ -51,7 +51,7 @@ func ProcessSyncAggregate(ctx context.Context, s state.BeaconState, sync *ethpb.
 	}
 
 	if err := VerifySyncCommitteeSig(s, votedKeys, sync.SyncCommitteeSignature); err != nil {
-		return nil, errors.Wrap(err, "could not verify Sync Committee signature")
+		return nil, errors.Wrap(err, "could not verify sync committee signature")
 	}
 
 	return ApplySyncRewardsPenalties(ctx, s, votedIndices, didntVoteIndices)
