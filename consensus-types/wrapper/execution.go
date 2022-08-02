@@ -142,16 +142,6 @@ func (e executionPayload) Transactions() ([][]byte, error) {
 	return e.p.Transactions, nil
 }
 
-// Withdrawals --
-func (e executionPayload) Withdrawals() ([]*enginev1.Withdrawal, error) {
-	return nil, errUnsupportedExecutionField
-}
-
-// WithdrawalsRoot --
-func (e executionPayload) WithdrawalsRoot() ([]byte, error) {
-	return nil, errUnsupportedExecutionField
-}
-
 // executionPayloadHeader is a convenience wrapper around a blinded beacon block body's execution header data structure
 // This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across Prysm without issues.
@@ -275,16 +265,6 @@ func (e executionPayloadHeader) BlockHash() []byte {
 
 // Transactions --
 func (executionPayloadHeader) Transactions() ([][]byte, error) {
-	return nil, errUnsupportedExecutionField
-}
-
-// Withdrawals --
-func (e executionPayloadHeader) Withdrawals() ([]*enginev1.Withdrawal, error) {
-	return nil, errUnsupportedExecutionField
-}
-
-// WithdrawalsRoot --
-func (e executionPayloadHeader) WithdrawalsRoot() ([]byte, error) {
 	return nil, errUnsupportedExecutionField
 }
 
@@ -442,16 +422,6 @@ func (e executionPayloadCapella) Transactions() ([][]byte, error) {
 	return e.p.Transactions, nil
 }
 
-// Withdrawals --
-func (e executionPayloadCapella) Withdrawals() ([]*enginev1.Withdrawal, error) {
-	return e.p.Withdrawals, nil
-}
-
-// WithdrawalsRoot --
-func (e executionPayloadCapella) WithdrawalsRoot() ([]byte, error) {
-	return nil, errUnsupportedExecutionField
-}
-
 // executionPayloadHeaderCapella is a convenience wrapper around a blinded beacon block body's execution header data structure
 // This wrapper allows us to conform to a common interface so that beacon
 // blocks for future forks can also be applied across Prysm without issues.
@@ -576,16 +546,6 @@ func (e executionPayloadHeaderCapella) BlockHash() []byte {
 // Transactions --
 func (executionPayloadHeaderCapella) Transactions() ([][]byte, error) {
 	return nil, errUnsupportedExecutionField
-}
-
-// Withdrawals --
-func (e executionPayloadHeaderCapella) Withdrawals() ([]*enginev1.Withdrawal, error) {
-	return nil, errUnsupportedExecutionField
-}
-
-// WithdrawalsRoot --
-func (e executionPayloadHeaderCapella) WithdrawalsRoot() ([]byte, error) {
-	return e.p.WithdrawalsRoot, nil
 }
 
 // PayloadToHeaderCapella converts `payload` into execution payload header format.
