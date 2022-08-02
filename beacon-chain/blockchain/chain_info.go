@@ -341,9 +341,8 @@ func (s *Service) IsOptimisticForRoot(ctx context.Context, root [32]byte) (bool,
 	if err != protoarray.ErrUnknownNodeRoot && err != doublylinkedtree.ErrNilNode {
 		return false, err
 	}
-	// if the requested root is the headroot we should treat the
-	// node as optimistic. This can happen if we pruned INVALID
-	// nodes and no viable head is available.
+	// if the requested root is the headroot and the root is not found in
+	// forkchoice, the node should respond that it is optimistic
 	headRoot, err := s.HeadRoot(ctx)
 	if err != nil {
 		return true, err
