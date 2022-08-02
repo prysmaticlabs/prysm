@@ -7,7 +7,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/async/event"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blob"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
@@ -18,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/blobs"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
@@ -563,7 +563,7 @@ func (s *Service) savePostStateInfo(ctx context.Context, r [32]byte, b interface
 
 // Saves sidecar to the DB for the compatible block that contains the sidecar.
 func (s *Service) saveSidecar(ctx context.Context, b interfaces.SignedBeaconBlock) error {
-	ok, err := blob.BlockContainsSidecar(b)
+	ok, err := blobs.BlockContainsSidecar(b)
 	if err != nil {
 		return errors.Wrap(err, "could not determine if block contains sidecar")
 	}

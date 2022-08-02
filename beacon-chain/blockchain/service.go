@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blob"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
@@ -34,6 +33,7 @@ import (
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/blobs"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
@@ -528,7 +528,7 @@ func (d *dbDataAvailability) IsDataAvailable(ctx context.Context, root [32]byte)
 	if err := wrapper.BeaconBlockIsNil(b); err != nil {
 		return err
 	}
-	if !blob.BlockContainsKZGs(b.Block()) {
+	if !blobs.BlockContainsKZGs(b.Block()) {
 		// no sidecar referenced. We have all the data we need
 		return nil
 	}
@@ -545,5 +545,5 @@ func (d *dbDataAvailability) IsDataAvailable(ctx context.Context, root [32]byte)
 	if sidecar.BeaconBlockSlot != b.Block().Slot() {
 		return errors.New("blobs sidecar is unavailable")
 	}
-	return blob.VerifyBlobsSidecar(b.Block().Slot(), root, bytesutil.ToBytes48Array(kzgs), sidecar)
+	return blobs.VerifyBlobsSidecar(b.Block().Slot(), root, bytesutil.ToBytes48Array(kzgs), sidecar)
 }

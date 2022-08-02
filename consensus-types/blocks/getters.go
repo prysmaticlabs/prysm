@@ -590,3 +590,8 @@ func (b *BeaconBlockBody) HashTreeRoot() ([32]byte, error) {
 		return [32]byte{}, errIncorrectBodyVersion
 	}
 }
+
+// IsPreEIP4844Version returns true if input version is before eip-4844 fork.
+func IsPreEIP4844Version(v int) bool {
+	return v < version.EIP4844
+}

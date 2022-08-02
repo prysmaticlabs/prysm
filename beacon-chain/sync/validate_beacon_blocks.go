@@ -17,7 +17,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/forks/eip4844"
+	"github.com/prysmaticlabs/prysm/consensus-types/blobs"
+	b "github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
@@ -284,7 +285,7 @@ func (s *Service) validateEIP4844BeaconBlock(ctx context.Context, parentState st
 		return errors.New("execution payload is nil")
 	}
 
-	if blocks.IsPreEIP4844Version(blk.Version()) {
+	if b.IsPreEIP4844Version(blk.Version()) {
 		return nil
 	}
 
@@ -306,7 +307,7 @@ func (s *Service) validateEIP4844BeaconBlock(ctx context.Context, parentState st
 	if err != nil {
 		return err
 	}
-	return eip4844.VerifyKzgsAgainstTxs(txs, blobKzgsInput)
+	return blobs.VerifyKzgsAgainstTxs(txs, blobKzgsInput)
 }
 
 // validateBellatrixBeaconBlock validates the block for the Bellatrix fork.

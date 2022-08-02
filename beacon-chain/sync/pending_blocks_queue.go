@@ -12,9 +12,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/async"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blob"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/blobs"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
@@ -109,7 +109,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			hasPeer := len(pids) != 0
 
 			var queuedSidecar *queuedBlobsSidecar
-			if blob.BlockContainsKZGs(b.Block()) {
+			if blobs.BlockContainsKZGs(b.Block()) {
 				queuedSidecar = findSidecarForBlock(b.Block(), blkRoot, sidecars)
 				if queuedSidecar == nil {
 					if hasPeer {
@@ -226,7 +226,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 					span.End()
 					continue
 				}
-				if err := blob.VerifyBlobsSidecar(b.Block().Slot(), blkRoot, bytesutil.ToBytes48Array(kzgs), queuedSidecar.s); err != nil {
+				if err := blobs.VerifyBlobsSidecar(b.Block().Slot(), blkRoot, bytesutil.ToBytes48Array(kzgs), queuedSidecar.s); err != nil {
 					log.Debugf("Could not verify sidecar from slot %d: %v", b.Block().Slot(), err)
 				}
 				if sidecar != nil {

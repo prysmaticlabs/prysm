@@ -9,14 +9,14 @@ import (
 	"github.com/kevinms/leakybucket-go"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blob"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2pTypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	prysmsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/blobs"
+	cb "github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
@@ -437,7 +437,7 @@ func (f *blocksFetcher) waitForBandwidth(pid peer.ID) error {
 
 func checkBlocksForAvailableSidecars(blks []interfaces.SignedBeaconBlock, sidecars []*ethpb.BlobsSidecar) error {
 	for _, b := range blks {
-		if blocks.IsPreEIP4844Version(b.Version()) {
+		if cb.IsPreEIP4844Version(b.Version()) {
 			continue
 		}
 		blobKzgs, err := b.Block().Body().BlobKzgs()
@@ -468,7 +468,7 @@ func checkBlocksForAvailableSidecars(blks []interfaces.SignedBeaconBlock, sideca
 func sidecarVerifier(blks []interfaces.SignedBeaconBlock) func(*ethpb.BlobsSidecar) error {
 	return func(sidecar *ethpb.BlobsSidecar) error {
 		for _, b := range blks {
-			if blocks.IsPreEIP4844Version(b.Version()) {
+			if cb.IsPreEIP4844Version(b.Version()) {
 				continue
 			}
 			blobKzgs, err := b.Block().Body().BlobKzgs()
@@ -488,7 +488,7 @@ func sidecarVerifier(blks []interfaces.SignedBeaconBlock) func(*ethpb.BlobsSidec
 			if bRoot != bytesutil.ToBytes32(sidecar.BeaconBlockRoot) {
 				continue
 			}
-			if err := blob.VerifyBlobsSidecar(b.Block().Slot(), bRoot, bytesutil.ToBytes48Array(blobKzgs), sidecar); err != nil {
+			if err := blobs.VerifyBlobsSidecar(b.Block().Slot(), bRoot, bytesutil.ToBytes48Array(blobKzgs), sidecar); err != nil {
 				return errors.Wrap(errInvalidSidecar, err.Error())
 			}
 			return nil

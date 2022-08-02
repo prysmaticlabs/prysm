@@ -48,11 +48,9 @@ type ChainService struct {
 	DB                          db.Database
 	State                       state.BeaconState
 	Block                       interfaces.SignedBeaconBlock
-	Sidecar                     *ethpb.BlobsSidecar
 	VerifyBlkDescendantErr      error
 	stateNotifier               statefeed.Notifier
 	BlocksReceived              []interfaces.SignedBeaconBlock
-	SidecarsReceived            []*ethpb.BlobsSidecar
 	SyncCommitteeIndices        []types.CommitteeIndex
 	blockNotifier               blockfeed.Notifier
 	opNotifier                  opfeed.Notifier
@@ -196,7 +194,7 @@ func (s *ChainService) ReceiveBlockInitialSync(ctx context.Context, block interf
 }
 
 // ReceiveBlockBatch processes blocks in batches from initial-sync.
-func (s *ChainService) ReceiveBlockBatch(ctx context.Context, blks []interfaces.SignedBeaconBlock, _ [][32]byte, sidecars []*ethpb.BlobsSidecar) error {
+func (s *ChainService) ReceiveBlockBatch(ctx context.Context, blks []interfaces.SignedBeaconBlock, _ [][32]byte) error {
 	if s.State == nil {
 		return ErrNilState
 	}
@@ -212,21 +210,7 @@ func (s *ChainService) ReceiveBlockBatch(ctx context.Context, blks []interfaces.
 		if err != nil {
 			return err
 		}
-		sidecar := findSidecarForBlock(b.Block(), signingRoot, sidecars)
-		if sidecar != nil {
-			if bytesutil.ToBytes32(sidecar.BeaconBlockRoot) != signingRoot {
-				return errors.Errorf("sidecar root mismatch blk=%#x sidecar=%#x", signingRoot, sidecar.BeaconBlockRoot)
-			}
-			if sidecar.BeaconBlockSlot != b.Block().Slot() {
-				return errors.Errorf("sidecar slot mismatch blk=%#x sidecar=%#x", b.Block().Slot(), sidecar.BeaconBlockSlot)
-			}
-		}
 		if s.DB != nil {
-			if sidecar != nil {
-				if err := s.DB.SaveBlobsSidecar(ctx, sidecar); err != nil {
-					return err
-				}
-			}
 			if err := s.DB.SaveBlock(ctx, b); err != nil {
 				return err
 			}
@@ -234,13 +218,12 @@ func (s *ChainService) ReceiveBlockBatch(ctx context.Context, blks []interfaces.
 		}
 		s.Root = signingRoot[:]
 		s.Block = b
-		s.Sidecar = sidecar
 	}
 	return nil
 }
 
 // ReceiveBlock mocks ReceiveBlock method in chain service.
-func (s *ChainService) ReceiveBlock(ctx context.Context, block interfaces.SignedBeaconBlock, _ [32]byte, sidecar *ethpb.BlobsSidecar) error {
+func (s *ChainService) ReceiveBlock(ctx context.Context, block interfaces.SignedBeaconBlock, _ [32]byte) error {
 	if s.ReceiveBlockMockErr != nil {
 		return s.ReceiveBlockMockErr
 	}
@@ -258,23 +241,7 @@ func (s *ChainService) ReceiveBlock(ctx context.Context, block interfaces.Signed
 	if err != nil {
 		return err
 	}
-	if sidecar != nil {
-		if bytesutil.ToBytes32(sidecar.BeaconBlockRoot) != signingRoot {
-			return errors.Errorf("sidecar root mismatch blk=%#x sidecar=%#x", signingRoot, sidecar.BeaconBlockRoot)
-		}
-		if sidecar.BeaconBlockSlot != block.Block().Slot() {
-			return errors.Errorf("sidecar slot mismatch blk=%#x sidecar=%#x", block.Block().Slot(), sidecar.BeaconBlockSlot)
-		}
-	}
-	if sidecar != nil {
-		s.SidecarsReceived = append(s.SidecarsReceived, sidecar)
-	}
 	if s.DB != nil {
-		if sidecar != nil {
-			if err := s.DB.SaveBlobsSidecar(ctx, sidecar); err != nil {
-				return err
-			}
-		}
 		if err := s.DB.SaveBlock(ctx, block); err != nil {
 			return err
 		}
@@ -282,7 +249,6 @@ func (s *ChainService) ReceiveBlock(ctx context.Context, block interfaces.Signed
 	}
 	s.Root = signingRoot[:]
 	s.Block = block
-	s.Sidecar = sidecar
 	return nil
 }
 
@@ -497,17 +463,4 @@ func (s *ChainService) ReceiveAttesterSlashing(context.Context, *ethpb.AttesterS
 // IsFinalized mocks the same method in the chain service.
 func (s *ChainService) IsFinalized(_ context.Context, blockRoot [32]byte) bool {
 	return s.FinalizedRoots[blockRoot]
-}
-
-func findSidecarForBlock(b interfaces.BeaconBlock, blkRoot [32]byte, sidecars []*ethpb.BlobsSidecar) *ethpb.BlobsSidecar {
-	for _, s := range sidecars {
-		if b.Slot() != s.BeaconBlockSlot {
-			continue
-		}
-		if blkRoot != bytesutil.ToBytes32(s.BeaconBlockRoot) {
-			continue
-		}
-		return s
-	}
-	return nil
 }

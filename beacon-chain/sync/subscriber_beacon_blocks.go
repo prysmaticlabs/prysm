@@ -4,9 +4,9 @@ import (
 	"context"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blob"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/interop"
+	"github.com/prysmaticlabs/prysm/consensus-types/blobs"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -32,7 +32,7 @@ func (s *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) 
 	}
 
 	var sidecar *eth.BlobsSidecar
-	if blob.BlockContainsKZGs(block) {
+	if blobs.BlockContainsKZGs(block) {
 		slot := block.Slot()
 		s.pendingQueueLock.RLock()
 		sidecars := s.pendingSidecarsInCache(slot)

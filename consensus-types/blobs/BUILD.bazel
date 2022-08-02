@@ -2,17 +2,22 @@ load("@prysm//tools/go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = ["sidecar.go"],
-    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/core/blob",
+    srcs = [
+        "sidecar.go",
+        "tx.go",
+    ],
+    importpath = "github.com/prysmaticlabs/prysm/consensus-types/blobs",
     visibility = ["//visibility:public"],
     deps = [
-        "//beacon-chain/core/blocks:go_default_library",
+        "//consensus-types/blocks:go_default_library",
         "//consensus-types/interfaces:go_default_library",
         "//consensus-types/primitives:go_default_library",
         "//consensus-types/wrapper:go_default_library",
         "//encoding/bytesutil:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
+        "@com_github_ethereum_go_ethereum//common:go_default_library",
         "@com_github_ethereum_go_ethereum//core/types:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
+        "@com_github_protolambda_ztyp//codec:go_default_library",
     ],
 )

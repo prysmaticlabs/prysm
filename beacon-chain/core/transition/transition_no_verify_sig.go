@@ -7,12 +7,12 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/interop"
 	v "github.com/prysmaticlabs/prysm/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/consensus-types/forks/eip4844"
+	"github.com/prysmaticlabs/prysm/consensus-types/blobs"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
@@ -259,6 +259,9 @@ func ProcessOperationsNoVerifyAttsSigs(
 	return state, nil
 }
 
+// ProcessBlobKzgs validates the blob kzgs in the beacon block.
+// def process_blob_kzg_commitments(state: BeaconState, body: BeaconBlockBody):
+//    assert verify_kzg_commitments_against_transactions(body.execution_payload.transactions, body.blob_kzg_commitments
 func ProcessBlobKzgs(ctx context.Context, state state.BeaconState, body interfaces.BeaconBlockBody) (state.BeaconState, error) {
 	_, span := trace.StartSpan(ctx, "core.state.ProocessBlobKzgs")
 	defer span.End()
@@ -280,7 +283,7 @@ func ProcessBlobKzgs(ctx context.Context, state state.BeaconState, body interfac
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get transactions from payload")
 	}
-	if err := eip4844.VerifyKzgsAgainstTxs(txs, blobKzgsInput); err != nil {
+	if err := blobs.VerifyKzgsAgainstTxs(txs, blobKzgsInput); err != nil {
 		return nil, err
 	}
 	return state, nil
@@ -378,7 +381,6 @@ func ProcessBlockForStateRoot(
 
 	state, err = ProcessBlobKzgs(ctx, state, signed.Block().Body())
 	if err != nil {
-		tracing.AnnotateError(span, err)
 		return nil, errors.Wrap(err, "process_blob_kzgs failed")
 	}
 

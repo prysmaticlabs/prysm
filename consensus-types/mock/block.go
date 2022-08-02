@@ -85,6 +85,14 @@ func (SignedBeaconBlock) Header() (*eth.SignedBeaconBlockHeader, error) {
 	panic("implement me")
 }
 
+func (SignedBeaconBlock) SideCar() (*eth.SignedBlobsSidecar, error) {
+	panic("implement me")
+}
+
+func (SignedBeaconBlock) SetSideCar(*eth.SignedBlobsSidecar) error {
+	panic("implement me")
+}
+
 type BeaconBlock struct {
 	Htr             [32]byte
 	HtrErr          error
