@@ -12,7 +12,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-func walletEdit(c *cli.Context) error {
+func remoteWalletEdit(c *cli.Context) error {
 	w, err := wallet.OpenWalletOrElseCli(c, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
 		return nil, wallet.ErrNoWalletFound
 	})

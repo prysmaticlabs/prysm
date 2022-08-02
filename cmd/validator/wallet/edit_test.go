@@ -152,7 +152,7 @@ func TestEditWalletConfiguration(t *testing.T) {
 	assert.NoError(t, set.Set(flags.RemoteSignerCACertPathFlag.Name, wantCfg.RemoteCertificate.CACertPath))
 	cliCtx = cli.NewContext(&app, set, nil)
 
-	err = walletEdit(cliCtx)
+	err = remoteWalletEdit(cliCtx)
 	require.NoError(t, err)
 	encoded, err := w.ReadKeymanagerConfigFromDisk(cliCtx.Context)
 	require.NoError(t, err)
