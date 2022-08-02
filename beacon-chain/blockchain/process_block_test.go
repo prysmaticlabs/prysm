@@ -20,12 +20,12 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/execution"
 	mockExecution "github.com/prysmaticlabs/prysm/beacon-chain/execution/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
-	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
@@ -1820,7 +1820,7 @@ func TestStore_NoViableHead_FCU_Protoarray(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
-	mockEngine := &mockPOW.EngineClient{ErrNewPayload: powchain.ErrAcceptedSyncingPayloadStatus, ErrForkchoiceUpdated: powchain.ErrAcceptedSyncingPayloadStatus}
+	mockEngine := &mockExecution.EngineClient{ErrNewPayload: execution.ErrAcceptedSyncingPayloadStatus, ErrForkchoiceUpdated: execution.ErrAcceptedSyncingPayloadStatus}
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithAttestationPool(attestations.NewPool()),
@@ -1915,7 +1915,7 @@ func TestStore_NoViableHead_FCU_Protoarray(t *testing.T) {
 	require.Equal(t, firstInvalidRoot, service.ForkChoicer().CachedHeadRoot())
 
 	// import another block to find out that it was invalid
-	mockEngine = &mockPOW.EngineClient{ErrNewPayload: powchain.ErrAcceptedSyncingPayloadStatus, ErrForkchoiceUpdated: powchain.ErrInvalidPayloadStatus, ForkChoiceUpdatedResp: lvh}
+	mockEngine = &mockExecution.EngineClient{ErrNewPayload: execution.ErrAcceptedSyncingPayloadStatus, ErrForkchoiceUpdated: execution.ErrInvalidPayloadStatus, ForkChoiceUpdatedResp: lvh}
 	service.cfg.ExecutionEngineCaller = mockEngine
 	driftGenesisTime(service, 19, 0)
 	st, err = service.HeadState(ctx)
@@ -1940,7 +1940,7 @@ func TestStore_NoViableHead_FCU_Protoarray(t *testing.T) {
 	require.Equal(t, true, optimistic)
 
 	// import another block based on the last valid head state
-	mockEngine = &mockPOW.EngineClient{}
+	mockEngine = &mockExecution.EngineClient{}
 	service.cfg.ExecutionEngineCaller = mockEngine
 	driftGenesisTime(service, 20, 0)
 	b, err = util.GenerateFullBlockBellatrix(validHeadState, keys, &util.BlockGenConfig{}, 20)
@@ -1980,7 +1980,7 @@ func TestStore_NoViableHead_FCU_DoublyLinkedTree(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
-	mockEngine := &mockPOW.EngineClient{ErrNewPayload: powchain.ErrAcceptedSyncingPayloadStatus, ErrForkchoiceUpdated: powchain.ErrAcceptedSyncingPayloadStatus}
+	mockEngine := &mockExecution.EngineClient{ErrNewPayload: execution.ErrAcceptedSyncingPayloadStatus, ErrForkchoiceUpdated: execution.ErrAcceptedSyncingPayloadStatus}
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithAttestationPool(attestations.NewPool()),
@@ -2075,7 +2075,7 @@ func TestStore_NoViableHead_FCU_DoublyLinkedTree(t *testing.T) {
 	require.Equal(t, firstInvalidRoot, service.ForkChoicer().CachedHeadRoot())
 
 	// import another block to find out that it was invalid
-	mockEngine = &mockPOW.EngineClient{ErrNewPayload: powchain.ErrAcceptedSyncingPayloadStatus, ErrForkchoiceUpdated: powchain.ErrInvalidPayloadStatus, ForkChoiceUpdatedResp: lvh}
+	mockEngine = &mockExecution.EngineClient{ErrNewPayload: execution.ErrAcceptedSyncingPayloadStatus, ErrForkchoiceUpdated: execution.ErrInvalidPayloadStatus, ForkChoiceUpdatedResp: lvh}
 	service.cfg.ExecutionEngineCaller = mockEngine
 	driftGenesisTime(service, 19, 0)
 	st, err = service.HeadState(ctx)
@@ -2100,7 +2100,7 @@ func TestStore_NoViableHead_FCU_DoublyLinkedTree(t *testing.T) {
 	require.Equal(t, true, optimistic)
 
 	// import another block based on the last valid head state
-	mockEngine = &mockPOW.EngineClient{}
+	mockEngine = &mockExecution.EngineClient{}
 	service.cfg.ExecutionEngineCaller = mockEngine
 	driftGenesisTime(service, 20, 0)
 	b, err = util.GenerateFullBlockBellatrix(validHeadState, keys, &util.BlockGenConfig{}, 20)
@@ -2140,7 +2140,7 @@ func TestStore_NoViableHead_NewPayload_DoublyLinkedTree(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
-	mockEngine := &mockPOW.EngineClient{ErrNewPayload: powchain.ErrAcceptedSyncingPayloadStatus, ErrForkchoiceUpdated: powchain.ErrAcceptedSyncingPayloadStatus}
+	mockEngine := &mockExecution.EngineClient{ErrNewPayload: execution.ErrAcceptedSyncingPayloadStatus, ErrForkchoiceUpdated: execution.ErrAcceptedSyncingPayloadStatus}
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithAttestationPool(attestations.NewPool()),
@@ -2235,7 +2235,7 @@ func TestStore_NoViableHead_NewPayload_DoublyLinkedTree(t *testing.T) {
 	require.Equal(t, firstInvalidRoot, service.ForkChoicer().CachedHeadRoot())
 
 	// import another block to find out that it was invalid
-	mockEngine = &mockPOW.EngineClient{ErrNewPayload: powchain.ErrInvalidPayloadStatus, NewPayloadResp: lvh}
+	mockEngine = &mockExecution.EngineClient{ErrNewPayload: execution.ErrInvalidPayloadStatus, NewPayloadResp: lvh}
 	service.cfg.ExecutionEngineCaller = mockEngine
 	driftGenesisTime(service, 19, 0)
 	st, err = service.HeadState(ctx)
@@ -2260,7 +2260,7 @@ func TestStore_NoViableHead_NewPayload_DoublyLinkedTree(t *testing.T) {
 	require.Equal(t, true, optimistic)
 
 	// import another block based on the last valid head state
-	mockEngine = &mockPOW.EngineClient{}
+	mockEngine = &mockExecution.EngineClient{}
 	service.cfg.ExecutionEngineCaller = mockEngine
 	driftGenesisTime(service, 20, 0)
 	b, err = util.GenerateFullBlockBellatrix(validHeadState, keys, &util.BlockGenConfig{}, 20)
@@ -2300,7 +2300,7 @@ func TestStore_NoViableHead_NewPayload_Protoarray(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
-	mockEngine := &mockPOW.EngineClient{ErrNewPayload: powchain.ErrAcceptedSyncingPayloadStatus, ErrForkchoiceUpdated: powchain.ErrAcceptedSyncingPayloadStatus}
+	mockEngine := &mockExecution.EngineClient{ErrNewPayload: execution.ErrAcceptedSyncingPayloadStatus, ErrForkchoiceUpdated: execution.ErrAcceptedSyncingPayloadStatus}
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithAttestationPool(attestations.NewPool()),
@@ -2395,7 +2395,7 @@ func TestStore_NoViableHead_NewPayload_Protoarray(t *testing.T) {
 	require.Equal(t, firstInvalidRoot, service.ForkChoicer().CachedHeadRoot())
 
 	// import another block to find out that it was invalid
-	mockEngine = &mockPOW.EngineClient{ErrNewPayload: powchain.ErrInvalidPayloadStatus, NewPayloadResp: lvh}
+	mockEngine = &mockExecution.EngineClient{ErrNewPayload: execution.ErrInvalidPayloadStatus, NewPayloadResp: lvh}
 	service.cfg.ExecutionEngineCaller = mockEngine
 	driftGenesisTime(service, 19, 0)
 	st, err = service.HeadState(ctx)
@@ -2420,7 +2420,7 @@ func TestStore_NoViableHead_NewPayload_Protoarray(t *testing.T) {
 	require.Equal(t, true, optimistic)
 
 	// import another block based on the last valid head state
-	mockEngine = &mockPOW.EngineClient{}
+	mockEngine = &mockExecution.EngineClient{}
 	service.cfg.ExecutionEngineCaller = mockEngine
 	driftGenesisTime(service, 20, 0)
 	b, err = util.GenerateFullBlockBellatrix(validHeadState, keys, &util.BlockGenConfig{}, 20)
@@ -2461,7 +2461,7 @@ func TestStore_NoViableHead_Liveness_DoublyLinkedTree(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
-	mockEngine := &mockPOW.EngineClient{ErrNewPayload: powchain.ErrAcceptedSyncingPayloadStatus, ErrForkchoiceUpdated: powchain.ErrAcceptedSyncingPayloadStatus}
+	mockEngine := &mockExecution.EngineClient{ErrNewPayload: execution.ErrAcceptedSyncingPayloadStatus, ErrForkchoiceUpdated: execution.ErrAcceptedSyncingPayloadStatus}
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithAttestationPool(attestations.NewPool()),
@@ -2558,7 +2558,7 @@ func TestStore_NoViableHead_Liveness_DoublyLinkedTree(t *testing.T) {
 
 	// import block 19 to find out that the whole chain 13--18 was in fact
 	// invalid
-	mockEngine = &mockPOW.EngineClient{ErrNewPayload: powchain.ErrInvalidPayloadStatus, NewPayloadResp: lvh}
+	mockEngine = &mockExecution.EngineClient{ErrNewPayload: execution.ErrInvalidPayloadStatus, NewPayloadResp: lvh}
 	service.cfg.ExecutionEngineCaller = mockEngine
 	driftGenesisTime(service, 19, 0)
 	st, err = service.HeadState(ctx)
@@ -2589,7 +2589,7 @@ func TestStore_NoViableHead_Liveness_DoublyLinkedTree(t *testing.T) {
 	require.Equal(t, types.Epoch(2), sjc.Epoch)
 
 	// import another block based on the last valid head state
-	mockEngine = &mockPOW.EngineClient{}
+	mockEngine = &mockExecution.EngineClient{}
 	service.cfg.ExecutionEngineCaller = mockEngine
 	driftGenesisTime(service, 20, 0)
 	b, err = util.GenerateFullBlockBellatrix(validHeadState, keys, &util.BlockGenConfig{}, 20)
@@ -2665,7 +2665,7 @@ func TestStore_NoViableHead_Liveness_Protoarray(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
-	mockEngine := &mockPOW.EngineClient{ErrNewPayload: powchain.ErrAcceptedSyncingPayloadStatus, ErrForkchoiceUpdated: powchain.ErrAcceptedSyncingPayloadStatus}
+	mockEngine := &mockExecution.EngineClient{ErrNewPayload: execution.ErrAcceptedSyncingPayloadStatus, ErrForkchoiceUpdated: execution.ErrAcceptedSyncingPayloadStatus}
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithAttestationPool(attestations.NewPool()),
@@ -2762,7 +2762,7 @@ func TestStore_NoViableHead_Liveness_Protoarray(t *testing.T) {
 
 	// import block 19 to find out that the whole chain 13--18 was in fact
 	// invalid
-	mockEngine = &mockPOW.EngineClient{ErrNewPayload: powchain.ErrInvalidPayloadStatus, NewPayloadResp: lvh}
+	mockEngine = &mockExecution.EngineClient{ErrNewPayload: execution.ErrInvalidPayloadStatus, NewPayloadResp: lvh}
 	service.cfg.ExecutionEngineCaller = mockEngine
 	driftGenesisTime(service, 19, 0)
 	st, err = service.HeadState(ctx)
@@ -2793,7 +2793,7 @@ func TestStore_NoViableHead_Liveness_Protoarray(t *testing.T) {
 	require.Equal(t, types.Epoch(2), sjc.Epoch)
 
 	// import another block based on the last valid head state
-	mockEngine = &mockPOW.EngineClient{}
+	mockEngine = &mockExecution.EngineClient{}
 	service.cfg.ExecutionEngineCaller = mockEngine
 	driftGenesisTime(service, 20, 0)
 	b, err = util.GenerateFullBlockBellatrix(validHeadState, keys, &util.BlockGenConfig{}, 20)
