@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.27.1
 // 	protoc        v3.15.8
-// source: proto/prysm/v1alpha1/powchain.proto
+// source: proto/prysm/v1alpha1/execution.proto
 
 package eth
 

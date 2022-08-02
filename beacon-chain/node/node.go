@@ -27,6 +27,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/slasherkv"
 	interopcoldstart "github.com/prysmaticlabs/prysm/beacon-chain/deterministic-genesis"
+	"github.com/prysmaticlabs/prysm/beacon-chain/execution"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
@@ -38,7 +39,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/beacon-chain/slasher"
@@ -75,9 +75,9 @@ const debugGrpcMaxMsgSize = 1 << 27
 // for the beacon node. We keep this as a separate struct to not pollute the actual BeaconNode
 // struct, as it is merely used to pass down configuration options into the appropriate services.
 type serviceFlagOpts struct {
-	blockchainFlagOpts []blockchain.Option
-	powchainFlagOpts   []powchain.Option
-	builderOpts        []builder.Option
+	blockchainFlagOpts     []blockchain.Option
+	executionChainFlagOpts []execution.Option
+	builderOpts            []builder.Option
 }
 
 // BeaconNode defines a struct that handles the services running a random beacon chain
@@ -182,7 +182,7 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 		}
 	}
 
-	depositAddress, err := powchain.DepositContractAddress()
+	depositAddress, err := execution.DepositContractAddress()
 	if err != nil {
 		return nil, err
 	}
@@ -593,7 +593,7 @@ func (b *BeaconNode) registerAttestationPool() error {
 }
 
 func (b *BeaconNode) registerBlockchainService() error {
-	var web3Service *powchain.Service
+	var web3Service *execution.Service
 	if err := b.services.FetchService(&web3Service); err != nil {
 		return err
 	}
@@ -631,29 +631,29 @@ func (b *BeaconNode) registerBlockchainService() error {
 
 func (b *BeaconNode) registerPOWChainService() error {
 	if b.cliCtx.Bool(testSkipPowFlag) {
-		return b.services.RegisterService(&powchain.Service{})
+		return b.services.RegisterService(&execution.Service{})
 	}
-	bs, err := powchain.NewPowchainCollector(b.ctx)
+	bs, err := execution.NewPowchainCollector(b.ctx)
 	if err != nil {
 		return err
 	}
-	depositContractAddr, err := powchain.DepositContractAddress()
+	depositContractAddr, err := execution.DepositContractAddress()
 	if err != nil {
 		return err
 	}
 
 	// skipcq: CRT-D0001
 	opts := append(
-		b.serviceFlagOpts.powchainFlagOpts,
-		powchain.WithDepositContractAddress(common.HexToAddress(depositContractAddr)),
-		powchain.WithDatabase(b.db),
-		powchain.WithDepositCache(b.depositCache),
-		powchain.WithStateNotifier(b),
-		powchain.WithStateGen(b.stateGen),
-		powchain.WithBeaconNodeStatsUpdater(bs),
-		powchain.WithFinalizedStateAtStartup(b.finalizedStateAtStartUp),
+		b.serviceFlagOpts.executionChainFlagOpts,
+		execution.WithDepositContractAddress(common.HexToAddress(depositContractAddr)),
+		execution.WithDatabase(b.db),
+		execution.WithDepositCache(b.depositCache),
+		execution.WithStateNotifier(b),
+		execution.WithStateGen(b.stateGen),
+		execution.WithBeaconNodeStatsUpdater(bs),
+		execution.WithFinalizedStateAtStartup(b.finalizedStateAtStartUp),
 	)
-	web3Service, err := powchain.NewService(b.ctx, opts...)
+	web3Service, err := execution.NewService(b.ctx, opts...)
 	if err != nil {
 		return errors.Wrap(err, "could not register proof-of-work chain web3Service")
 	}
@@ -662,7 +662,7 @@ func (b *BeaconNode) registerPOWChainService() error {
 }
 
 func (b *BeaconNode) registerSyncService() error {
-	var web3Service *powchain.Service
+	var web3Service *execution.Service
 	if err := b.services.FetchService(&web3Service); err != nil {
 		return err
 	}
@@ -751,7 +751,7 @@ func (b *BeaconNode) registerRPCService() error {
 		return err
 	}
 
-	var web3Service *powchain.Service
+	var web3Service *execution.Service
 	if err := b.services.FetchService(&web3Service); err != nil {
 		return err
 	}
@@ -771,7 +771,7 @@ func (b *BeaconNode) registerRPCService() error {
 	genesisValidators := b.cliCtx.Uint64(flags.InteropNumValidatorsFlag.Name)
 	genesisStatePath := b.cliCtx.String(flags.InteropGenesisStateFlag.Name)
 	var depositFetcher depositcache.DepositFetcher
-	var chainStartFetcher powchain.ChainStartFetcher
+	var chainStartFetcher execution.ChainStartFetcher
 	if genesisValidators > 0 || genesisStatePath != "" {
 		var interopService *interopcoldstart.Service
 		if err := b.services.FetchService(&interopService); err != nil {
@@ -829,8 +829,8 @@ func (b *BeaconNode) registerRPCService() error {
 		SlashingsPool:                 b.slashingsPool,
 		SlashingChecker:               slasherService,
 		SyncCommitteeObjectPool:       b.syncCommitteePool,
-		POWChainService:               web3Service,
-		POWChainInfoFetcher:           web3Service,
+		ExecutionChainService:         web3Service,
+		ExecutionChainInfoFetcher:     web3Service,
 		ChainStartFetcher:             chainStartFetcher,
 		MockEth1Votes:                 mockEth1DataVotes,
 		SyncService:                   syncService,
