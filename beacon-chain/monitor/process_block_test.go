@@ -196,6 +196,7 @@ func TestProcessBlock_AllEventsTrackedVals(t *testing.T) {
 
 	genConfig := util.DefaultBlockGenConfig()
 	genConfig.NumProposerSlashings = 1
+	genConfig.FullSyncAggregate = true
 	b, err := util.GenerateFullBlockAltair(genesis, keys, genConfig, 1)
 	require.NoError(t, err)
 	s := setupService(t)

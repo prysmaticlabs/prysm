@@ -311,7 +311,7 @@ func BlockSignatureAltair(
 	return privKeys[proposerIdx].Sign(blockRoot[:]), nil
 }
 
-// GenerateFullBlockAltair generates a fully valid block with the requested parameters.
+// GenerateFullBlockAltair generates a fully valid Altair block with the requested parameters.
 // Use BlockGenConfig to declare the conditions you would like the block generated under.
 func GenerateFullBlockAltair(
 	bState state.BeaconState,
@@ -388,26 +388,44 @@ func GenerateFullBlockAltair(
 		return nil, err
 	}
 
+	var newSyncAggregate *ethpb.SyncAggregate
+	if conf.FullSyncAggregate {
+		newSyncAggregate, err = generateSyncAggregate(bState, privs, parentRoot)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed generating syncAggregate")
+		}
+	} else {
+		var syncCommitteeBits []byte
+		currSize := new(ethpb.SyncAggregate).SyncCommitteeBits.Len()
+		switch currSize {
+		case 512:
+			syncCommitteeBits = bitfield.NewBitvector512()
+		case 32:
+			syncCommitteeBits = bitfield.NewBitvector32()
+		default:
+			return nil, errors.New("invalid bit vector size")
+		}
+		newSyncAggregate = &ethpb.SyncAggregate{
+			SyncCommitteeBits:      syncCommitteeBits,
+			SyncCommitteeSignature: append([]byte{0xC0}, make([]byte, 95)...),
+		}
+	}
+
 	if slot == currentSlot {
 		slot = currentSlot + 1
 	}
 
-	syncAgg, err := generateSyncAggregate(bState, privs, parentRoot)
+	stCopy := bState.Copy()
+	stCopy, err = transition.ProcessSlots(context.Background(), stCopy, slot)
+	if err != nil {
+		return nil, err
+	}
+	reveal, err := RandaoReveal(stCopy, time.CurrentEpoch(stCopy), privs)
 	if err != nil {
 		return nil, err
 	}
 
-	// Temporarily incrementing the beacon state slot here since BeaconProposerIndex is a
-	// function deterministic on beacon state slot.
-	if err := bState.SetSlot(slot); err != nil {
-		return nil, err
-	}
-	reveal, err := RandaoReveal(bState, time.CurrentEpoch(bState), privs)
-	if err != nil {
-		return nil, err
-	}
-
-	idx, err := helpers.BeaconProposerIndex(ctx, bState)
+	idx, err := helpers.BeaconProposerIndex(ctx, stCopy)
 	if err != nil {
 		return nil, err
 	}
@@ -424,15 +442,12 @@ func GenerateFullBlockAltair(
 			Attestations:      atts,
 			VoluntaryExits:    exits,
 			Deposits:          newDeposits,
-			Graffiti:          make([]byte, 32),
-			SyncAggregate:     syncAgg,
+			Graffiti:          make([]byte, fieldparams.RootLength),
+			SyncAggregate:     newSyncAggregate,
 		},
 	}
-	if err := bState.SetSlot(currentSlot); err != nil {
-		return nil, err
-	}
 
-	signature, err := BlockSignatureAltair(bState, block, privs)
+	signature, err := BlockSignature(bState, block, privs)
 	if err != nil {
 		return nil, err
 	}

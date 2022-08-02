@@ -106,8 +106,12 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 
 			r, err := s.cfg.ForkChoiceStore.Head(ctx, s.justifiedBalances.balances)
 			if err != nil {
-				log.WithError(err).Error("Could not get head root")
-				return nil, nil
+				log.WithFields(logrus.Fields{
+					"slot":         headBlk.Slot(),
+					"blockRoot":    fmt.Sprintf("%#x", bytesutil.Trunc(headRoot[:])),
+					"invalidCount": len(invalidRoots),
+				}).Warn("Pruned invalid blocks, could not update head root")
+				return nil, invalidBlock{error: ErrInvalidPayload, root: arg.headRoot, invalidAncestorRoots: invalidRoots}
 			}
 			b, err := s.getBlock(ctx, r)
 			if err != nil {

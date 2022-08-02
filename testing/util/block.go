@@ -34,6 +34,8 @@ type BlockGenConfig struct {
 	NumAttestations      uint64
 	NumDeposits          uint64
 	NumVoluntaryExits    uint64
+	NumTransactions      uint64 // Only for post Bellatrix blocks
+	FullSyncAggregate    bool
 }
 
 // DefaultBlockGenConfig returns the block config that utilizes the
@@ -45,6 +47,7 @@ func DefaultBlockGenConfig() *BlockGenConfig {
 		NumAttestations:      1,
 		NumDeposits:          0,
 		NumVoluntaryExits:    0,
+		NumTransactions:      0,
 	}
 }
 
