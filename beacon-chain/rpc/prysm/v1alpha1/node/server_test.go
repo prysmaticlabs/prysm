@@ -155,7 +155,7 @@ func TestNodeServer_GetETH1ConnectionStatus(t *testing.T) {
 	eps := []string{"foo", "bar"}
 	errs := []error{fmt.Errorf("error 1"), fmt.Errorf("error 2"), nil}
 	errStrs := []string{"error 1", "error 2", ""}
-	mockFetcher := &testutil.MockPOWChainInfoFetcher{
+	mockFetcher := &testutil.MockExecutionChainInfoFetcher{
 		CurrEndpoint: eps[0],
 		CurrError:    errs[0],
 		Endpoints:    eps,

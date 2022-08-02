@@ -21,7 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	coreTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/execution"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -37,7 +37,7 @@ type infostream struct {
 	ctx                 context.Context
 	headFetcher         blockchain.HeadFetcher
 	depositFetcher      depositcache.DepositFetcher
-	blockFetcher        powchain.POWBlockFetcher
+	blockFetcher        execution.POWBlockFetcher
 	beaconDB            db.ReadOnlyDatabase
 	pubKeys             [][]byte
 	pubKeysMutex        *sync.RWMutex

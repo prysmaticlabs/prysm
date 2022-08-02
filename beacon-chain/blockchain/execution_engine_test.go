@@ -10,11 +10,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/execution"
+	mockExecution "github.com/prysmaticlabs/prysm/beacon-chain/execution/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
-	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	bstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
@@ -151,7 +151,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 				require.NoError(t, err)
 				return b
 			}(),
-			newForkchoiceErr: powchain.ErrAcceptedSyncingPayloadStatus,
+			newForkchoiceErr: execution.ErrAcceptedSyncingPayloadStatus,
 			finalizedRoot:    bellatrixBlkRoot,
 			justifiedRoot:    bellatrixBlkRoot,
 		},
@@ -166,7 +166,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 				require.NoError(t, err)
 				return b
 			}(),
-			newForkchoiceErr: powchain.ErrInvalidPayloadStatus,
+			newForkchoiceErr: execution.ErrInvalidPayloadStatus,
 			finalizedRoot:    bellatrixBlkRoot,
 			justifiedRoot:    bellatrixBlkRoot,
 			headRoot:         [32]byte{'a'},
@@ -176,7 +176,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			service.cfg.ExecutionEngineCaller = &mockPOW.EngineClient{ErrForkchoiceUpdated: tt.newForkchoiceErr}
+			service.cfg.ExecutionEngineCaller = &mockExecution.EngineClient{ErrForkchoiceUpdated: tt.newForkchoiceErr}
 			st, _ := util.DeterministicGenesisState(t, 1)
 			require.NoError(t, beaconDB.SaveState(ctx, st, tt.finalizedRoot))
 			require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, tt.finalizedRoot))
@@ -315,7 +315,7 @@ func Test_NotifyForkchoiceUpdateRecursive_Protoarray(t *testing.T) {
 	require.Equal(t, brg, headRoot)
 
 	// Prepare Engine Mock to return invalid unless head is D, LVH =  E
-	service.cfg.ExecutionEngineCaller = &mockPOW.EngineClient{ErrForkchoiceUpdated: powchain.ErrInvalidPayloadStatus, ForkChoiceUpdatedResp: pe[:], OverrideValidHash: [32]byte{'D'}}
+	service.cfg.ExecutionEngineCaller = &mockExecution.EngineClient{ErrForkchoiceUpdated: execution.ErrInvalidPayloadStatus, ForkChoiceUpdatedResp: pe[:], OverrideValidHash: [32]byte{'D'}}
 	st, _ := util.DeterministicGenesisState(t, 1)
 	service.head = &head{
 		state: st,
@@ -402,7 +402,7 @@ func Test_NotifyForkchoiceUpdate_NIlLVH(t *testing.T) {
 	require.NoError(t, fcs.InsertNode(ctx, state, blkRoot))
 
 	// Prepare Engine Mock to return invalid LVH =  nil
-	service.cfg.ExecutionEngineCaller = &mockPOW.EngineClient{ErrForkchoiceUpdated: powchain.ErrInvalidPayloadStatus, OverrideValidHash: [32]byte{'C'}}
+	service.cfg.ExecutionEngineCaller = &mockExecution.EngineClient{ErrForkchoiceUpdated: execution.ErrInvalidPayloadStatus, OverrideValidHash: [32]byte{'C'}}
 	st, _ := util.DeterministicGenesisState(t, 1)
 	service.head = &head{
 		state: st,
@@ -539,7 +539,7 @@ func Test_NotifyForkchoiceUpdateRecursive_DoublyLinkedTree(t *testing.T) {
 	require.Equal(t, brg, headRoot)
 
 	// Prepare Engine Mock to return invalid unless head is D, LVH =  E
-	service.cfg.ExecutionEngineCaller = &mockPOW.EngineClient{ErrForkchoiceUpdated: powchain.ErrInvalidPayloadStatus, ForkChoiceUpdatedResp: pe[:], OverrideValidHash: [32]byte{'D'}}
+	service.cfg.ExecutionEngineCaller = &mockExecution.EngineClient{ErrForkchoiceUpdated: execution.ErrInvalidPayloadStatus, ForkChoiceUpdatedResp: pe[:], OverrideValidHash: [32]byte{'D'}}
 	st, _ := util.DeterministicGenesisState(t, 1)
 	service.head = &head{
 		state: st,
@@ -655,14 +655,14 @@ func Test_NotifyNewPayload(t *testing.T) {
 			name:           "new payload with optimistic block",
 			postState:      bellatrixState,
 			blk:            bellatrixBlk,
-			newPayloadErr:  powchain.ErrAcceptedSyncingPayloadStatus,
+			newPayloadErr:  execution.ErrAcceptedSyncingPayloadStatus,
 			isValidPayload: false,
 		},
 		{
 			name:           "new payload with invalid block",
 			postState:      bellatrixState,
 			blk:            bellatrixBlk,
-			newPayloadErr:  powchain.ErrInvalidPayloadStatus,
+			newPayloadErr:  execution.ErrInvalidPayloadStatus,
 			errString:      ErrInvalidPayload.Error(),
 			isValidPayload: false,
 			invalidBlock:   true,
@@ -780,7 +780,7 @@ func Test_NotifyNewPayload(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			e := &mockPOW.EngineClient{ErrNewPayload: tt.newPayloadErr, BlockByHashMap: map[[32]byte]*v1.ExecutionBlock{}}
+			e := &mockExecution.EngineClient{ErrNewPayload: tt.newPayloadErr, BlockByHashMap: map[[32]byte]*v1.ExecutionBlock{}}
 			e.BlockByHashMap[[32]byte{'a'}] = &v1.ExecutionBlock{
 				Header: gethtypes.Header{
 					ParentHash: common.BytesToHash([]byte("b")),
@@ -841,7 +841,7 @@ func Test_NotifyNewPayload_SetOptimisticToValid(t *testing.T) {
 	require.NoError(t, err)
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
-	e := &mockPOW.EngineClient{BlockByHashMap: map[[32]byte]*v1.ExecutionBlock{}}
+	e := &mockExecution.EngineClient{BlockByHashMap: map[[32]byte]*v1.ExecutionBlock{}}
 	e.BlockByHashMap[[32]byte{'a'}] = &v1.ExecutionBlock{
 		Header: gethtypes.Header{
 			ParentHash: common.BytesToHash([]byte("b")),

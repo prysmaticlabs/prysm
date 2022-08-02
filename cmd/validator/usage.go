@@ -113,6 +113,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.ProposerSettingsURLFlag,
 			flags.SuggestedFeeRecipientFlag,
 			flags.EnableBuilderFlag,
+			flags.BuilderGasLimitFlag,
 		},
 	},
 	{
