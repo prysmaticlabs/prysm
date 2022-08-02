@@ -100,17 +100,30 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 				return err
 			}
 
-			keepProcessing, err := s.processPendingBlock(ctx, span, slot, b, blkRoot)
-			if err != nil {
-				return err
-			}
-			if !keepProcessing {
+			inDB := s.cfg.beaconDB.HasBlock(ctx, blkRoot)
+			// No need to process the same block twice.
+			if inDB {
+				s.pendingQueueLock.Lock()
+				if err = s.deleteBlockFromPendingQueue(slot, b, blkRoot); err != nil {
+					s.pendingQueueLock.Unlock()
+					return err
+				}
+				s.pendingQueueLock.Unlock()
+				span.End()
 				continue
 			}
 
 			s.pendingQueueLock.RLock()
 			inPendingQueue := s.seenPendingBlocks[bytesutil.ToBytes32(b.Block().ParentRoot())]
 			s.pendingQueueLock.RUnlock()
+
+			keepProcessing, err := s.checkIfBlockIsBad(ctx, span, slot, b, blkRoot)
+			if err != nil {
+				return err
+			}
+			if !keepProcessing {
+				continue
+			}
 
 			parentInDb := s.cfg.beaconDB.HasBlock(ctx, bytesutil.ToBytes32(b.Block().ParentRoot()))
 			hasPeer := len(pids) != 0
@@ -193,26 +206,13 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 	return s.sendBatchRootRequest(ctx, parentRoots, randGen)
 }
 
-func (s *Service) processPendingBlock(
+func (s *Service) checkIfBlockIsBad(
 	ctx context.Context,
 	span *trace.Span,
 	slot types.Slot,
 	b interfaces.SignedBeaconBlock,
 	blkRoot [32]byte,
 ) (keepProcessing bool, err error) {
-	inDB := s.cfg.beaconDB.HasBlock(ctx, blkRoot)
-	// No need to process the same block twice.
-	if inDB {
-		s.pendingQueueLock.Lock()
-		if err = s.deleteBlockFromPendingQueue(slot, b, blkRoot); err != nil {
-			s.pendingQueueLock.Unlock()
-			return false, err
-		}
-		s.pendingQueueLock.Unlock()
-		span.End()
-		return false, nil
-	}
-
 	parentIsBad := s.hasBadBlock(bytesutil.ToBytes32(b.Block().ParentRoot()))
 	blockIsBad := s.hasBadBlock(blkRoot)
 	// Check if parent is a bad block.
