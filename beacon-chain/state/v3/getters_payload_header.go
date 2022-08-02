@@ -1,12 +1,14 @@
 package v3
 
 import (
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
 // LatestExecutionPayloadHeader of the beacon state.
-func (b *BeaconState) LatestExecutionPayloadHeader() (*enginev1.ExecutionPayloadHeader, error) {
+func (b *BeaconState) LatestExecutionPayloadHeader() (interfaces.ExecutionData, error) {
 	if !b.hasInnerState() {
 		return nil, ErrNilInnerState
 	}
@@ -17,7 +19,7 @@ func (b *BeaconState) LatestExecutionPayloadHeader() (*enginev1.ExecutionPayload
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.latestExecutionPayloadHeader(), nil
+	return wrapper.WrappedExecutionPayloadHeader(b.latestExecutionPayloadHeader())
 }
 
 // latestExecutionPayloadHeader of the beacon state.

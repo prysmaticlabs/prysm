@@ -10,7 +10,6 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
@@ -62,7 +61,7 @@ type ReadOnlyBeaconState interface {
 	MarshalSSZ() ([]byte, error)
 	IsNil() bool
 	Version() int
-	LatestExecutionPayloadHeader() (*enginev1.ExecutionPayloadHeader, error)
+	LatestExecutionPayloadHeader() (interfaces.ExecutionData, error)
 }
 
 // WriteOnlyBeaconState defines a struct which only has write access to beacon state methods.
