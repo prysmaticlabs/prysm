@@ -1537,7 +1537,7 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 	tests := []struct {
 		name         string
 		stateVersion int
-		header       *enginev1.ExecutionPayloadHeader
+		header       interfaces.ExecutionData
 		payload      *enginev1.ExecutionPayload
 		errString    string
 	}{
@@ -1594,17 +1594,21 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 			payload: &enginev1.ExecutionPayload{
 				ParentHash: aHash[:],
 			},
-			header: &enginev1.ExecutionPayloadHeader{
-				ParentHash:       make([]byte, fieldparams.RootLength),
-				FeeRecipient:     make([]byte, fieldparams.FeeRecipientLength),
-				StateRoot:        make([]byte, fieldparams.RootLength),
-				ReceiptsRoot:     make([]byte, fieldparams.RootLength),
-				LogsBloom:        make([]byte, fieldparams.LogsBloomLength),
-				PrevRandao:       make([]byte, fieldparams.RootLength),
-				BaseFeePerGas:    make([]byte, fieldparams.RootLength),
-				BlockHash:        make([]byte, fieldparams.RootLength),
-				TransactionsRoot: make([]byte, fieldparams.RootLength),
-			},
+			header: func() interfaces.ExecutionData {
+				h, err := wrapper.WrappedExecutionPayloadHeader(&enginev1.ExecutionPayloadHeader{
+					ParentHash:       make([]byte, fieldparams.RootLength),
+					FeeRecipient:     make([]byte, fieldparams.FeeRecipientLength),
+					StateRoot:        make([]byte, fieldparams.RootLength),
+					ReceiptsRoot:     make([]byte, fieldparams.RootLength),
+					LogsBloom:        make([]byte, fieldparams.LogsBloomLength),
+					PrevRandao:       make([]byte, fieldparams.RootLength),
+					BaseFeePerGas:    make([]byte, fieldparams.RootLength),
+					BlockHash:        make([]byte, fieldparams.RootLength),
+					TransactionsRoot: make([]byte, fieldparams.RootLength),
+				})
+				require.NoError(t, err)
+				return h
+			}(),
 		},
 		{
 			name:         "state is Bellatrix, non empty payload, non empty header",
@@ -1612,9 +1616,13 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 			payload: &enginev1.ExecutionPayload{
 				ParentHash: aHash[:],
 			},
-			header: &enginev1.ExecutionPayloadHeader{
-				BlockNumber: 1,
-			},
+			header: func() interfaces.ExecutionData {
+				h, err := wrapper.WrappedExecutionPayloadHeader(&enginev1.ExecutionPayloadHeader{
+					BlockNumber: 1,
+				})
+				require.NoError(t, err)
+				return h
+			}(),
 		},
 		{
 			name:         "state is Bellatrix, non empty payload, nil header",
