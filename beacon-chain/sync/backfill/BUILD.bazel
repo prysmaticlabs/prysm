@@ -7,9 +7,9 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//beacon-chain/db:go_default_library",
+        "//consensus-types/blocks:go_default_library",
         "//consensus-types/interfaces:go_default_library",
         "//consensus-types/primitives:go_default_library",
-        "//consensus-types/wrapper:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
     ],
 )
@@ -19,11 +19,11 @@ go_test(
     srcs = ["status_test.go"],
     embed = [":go_default_library"],
     deps = [
-        "//beacon-chain/db:go_default_library",
         "//config/params:go_default_library",
+        "//consensus-types/blocks:go_default_library",
+        "//consensus-types/blocks/testing:go_default_library",
         "//consensus-types/interfaces:go_default_library",
         "//consensus-types/primitives:go_default_library",
-        "//consensus-types/wrapper:go_default_library",
         "//testing/require:go_default_library",
         "//testing/util:go_default_library",
         "@com_github_pkg_errors//:go_default_library",

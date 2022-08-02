@@ -13,9 +13,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/time/slots"
@@ -74,7 +74,7 @@ func (s *Service) saveHead(ctx context.Context, newHeadRoot [32]byte, headBlock 
 	if newHeadRoot == oldHeadRoot {
 		return nil
 	}
-	if err := wrapper.BeaconBlockIsNil(headBlock); err != nil {
+	if err := blocks.BeaconBlockIsNil(headBlock); err != nil {
 		return err
 	}
 	if headState == nil || headState.IsNil() {
@@ -89,7 +89,11 @@ func (s *Service) saveHead(ctx context.Context, newHeadRoot [32]byte, headBlock 
 
 	// A chain re-org occurred, so we fire an event notifying the rest of the services.
 	s.headLock.RLock()
-	oldStateRoot := s.headBlock().Block().StateRoot()
+	oldHeadBlock, err := s.headBlock()
+	if err != nil {
+		return errors.Wrap(err, "could not get old head block")
+	}
+	oldStateRoot := oldHeadBlock.Block().StateRoot()
 	s.headLock.RUnlock()
 	headSlot := s.HeadSlot()
 	newHeadSlot := headBlock.Block().Slot()
@@ -125,7 +129,9 @@ func (s *Service) saveHead(ctx context.Context, newHeadRoot [32]byte, headBlock 
 	}
 
 	// Cache the new head info.
-	s.setHead(newHeadRoot, headBlock, headState)
+	if err := s.setHead(newHeadRoot, headBlock, headState); err != nil {
+		return errors.Wrap(err, "could not set head")
+	}
 
 	// Save the new head root to DB.
 	if err := s.cfg.BeaconDB.SaveHeadBlockRoot(ctx, newHeadRoot); err != nil {
@@ -147,7 +153,7 @@ func (s *Service) saveHead(ctx context.Context, newHeadRoot [32]byte, headBlock 
 // root in DB. With the inception of initial-sync-cache-state flag, it uses finalized
 // check point as anchors to resume sync therefore head is no longer needed to be saved on per slot basis.
 func (s *Service) saveHeadNoDB(ctx context.Context, b interfaces.SignedBeaconBlock, r [32]byte, hs state.BeaconState) error {
-	if err := wrapper.BeaconBlockIsNil(b); err != nil {
+	if err := blocks.BeaconBlockIsNil(b); err != nil {
 		return err
 	}
 	cachedHeadRoot, err := s.HeadRoot(ctx)
@@ -158,38 +164,54 @@ func (s *Service) saveHeadNoDB(ctx context.Context, b interfaces.SignedBeaconBlo
 		return nil
 	}
 
-	s.setHeadInitialSync(r, b.Copy(), hs)
+	bCp, err := b.Copy()
+	if err != nil {
+		return err
+	}
+	if err := s.setHeadInitialSync(r, bCp, hs); err != nil {
+		return errors.Wrap(err, "could not set head")
+	}
 	return nil
 }
 
 // This sets head view object which is used to track the head slot, root, block and state.
-func (s *Service) setHead(root [32]byte, block interfaces.SignedBeaconBlock, state state.BeaconState) {
+func (s *Service) setHead(root [32]byte, block interfaces.SignedBeaconBlock, state state.BeaconState) error {
 	s.headLock.Lock()
 	defer s.headLock.Unlock()
 
 	// This does a full copy of the block and state.
+	bCp, err := block.Copy()
+	if err != nil {
+		return err
+	}
 	s.head = &head{
 		slot:  block.Block().Slot(),
 		root:  root,
-		block: block.Copy(),
+		block: bCp,
 		state: state.Copy(),
 	}
+	return nil
 }
 
 // This sets head view object which is used to track the head slot, root, block and state. The method
 // assumes that state being passed into the method will not be modified by any other alternate
 // caller which holds the state's reference.
-func (s *Service) setHeadInitialSync(root [32]byte, block interfaces.SignedBeaconBlock, state state.BeaconState) {
+func (s *Service) setHeadInitialSync(root [32]byte, block interfaces.SignedBeaconBlock, state state.BeaconState) error {
 	s.headLock.Lock()
 	defer s.headLock.Unlock()
 
 	// This does a full copy of the block only.
+	bCp, err := block.Copy()
+	if err != nil {
+		return err
+	}
 	s.head = &head{
 		slot:  block.Block().Slot(),
 		root:  root,
-		block: block.Copy(),
+		block: bCp,
 		state: state,
 	}
+	return nil
 }
 
 // This returns the head slot.
@@ -212,7 +234,7 @@ func (s *Service) headRoot() [32]byte {
 // This returns the head block.
 // It does a full copy on head block for immutability.
 // This is a lock free version.
-func (s *Service) headBlock() interfaces.SignedBeaconBlock {
+func (s *Service) headBlock() (interfaces.SignedBeaconBlock, error) {
 	return s.head.block.Copy()
 }
 

@@ -49,8 +49,8 @@ func (w signedBlindedBeaconBlockBellatrix) IsNil() bool {
 }
 
 // Copy performs a deep copy of the signed beacon block object.
-func (w signedBlindedBeaconBlockBellatrix) Copy() interfaces.SignedBeaconBlock {
-	return signedBlindedBeaconBlockBellatrix{b: eth.CopySignedBlindedBeaconBlockBellatrix(w.b)}
+func (w signedBlindedBeaconBlockBellatrix) Copy() (interfaces.SignedBeaconBlock, error) {
+	return signedBlindedBeaconBlockBellatrix{b: eth.CopySignedBlindedBeaconBlockBellatrix(w.b)}, nil
 }
 
 // MarshalSSZ marshals the signed beacon block to its relevant ssz form.
@@ -76,8 +76,8 @@ func (w signedBlindedBeaconBlockBellatrix) UnmarshalSSZ(buf []byte) error {
 }
 
 // Proto returns the block in its underlying protobuf interface.
-func (w signedBlindedBeaconBlockBellatrix) Proto() proto.Message {
-	return w.b
+func (w signedBlindedBeaconBlockBellatrix) Proto() (proto.Message, error) {
+	return w.b, nil
 }
 
 // PbGenericBlock returns a generic signed beacon block.
@@ -220,8 +220,8 @@ func (w blindedBeaconBlockBellatrix) UnmarshalSSZ(buf []byte) error {
 
 // Proto returns the underlying block object in its
 // proto form.
-func (w blindedBeaconBlockBellatrix) Proto() proto.Message {
-	return w.b
+func (w blindedBeaconBlockBellatrix) Proto() (proto.Message, error) {
+	return w.b, nil
 }
 
 // Version of the underlying protobuf object.
@@ -230,10 +230,10 @@ func (blindedBeaconBlockBellatrix) Version() int {
 }
 
 // AsSignRequestObject returns the underlying sign request object.
-func (w blindedBeaconBlockBellatrix) AsSignRequestObject() validatorpb.SignRequestObject {
+func (w blindedBeaconBlockBellatrix) AsSignRequestObject() (validatorpb.SignRequestObject, error) {
 	return &validatorpb.SignRequest_BlindedBlockV3{
 		BlindedBlockV3: w.b,
-	}
+	}, nil
 }
 
 // blindedBeaconBlockBodyBellatrix is a wrapper of a beacon block body.
@@ -308,8 +308,8 @@ func (w blindedBeaconBlockBodyBellatrix) HashTreeRoot() ([32]byte, error) {
 
 // Proto returns the underlying proto form of the block
 // body.
-func (w blindedBeaconBlockBodyBellatrix) Proto() proto.Message {
-	return w.b
+func (w blindedBeaconBlockBodyBellatrix) Proto() (proto.Message, error) {
+	return w.b, nil
 }
 
 func (w blindedBeaconBlockBodyBellatrix) Execution() (interfaces.ExecutionData, error) {

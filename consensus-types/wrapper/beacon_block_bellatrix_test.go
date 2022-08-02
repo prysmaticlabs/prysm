@@ -61,7 +61,9 @@ func TestBellatrixSignedBeaconBlock_Block(t *testing.T) {
 	wsb, err := wrapper.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: blk})
 	require.NoError(t, err)
 
-	assert.DeepEqual(t, blk, wsb.Block().Proto())
+	pb, err := wsb.Block().Proto()
+	require.NoError(t, err)
+	assert.DeepEqual(t, blk, pb)
 }
 
 func TestBellatrixSignedBeaconBlock_IsNil(t *testing.T) {
@@ -86,7 +88,9 @@ func TestBellatrixSignedBeaconBlock_Proto(t *testing.T) {
 	wsb, err := wrapper.WrappedSignedBeaconBlock(sb)
 	require.NoError(t, err)
 
-	assert.Equal(t, sb, wsb.Proto())
+	pb, err := wsb.Proto()
+	require.NoError(t, err)
+	assert.Equal(t, sb, pb)
 }
 
 func TestBellatrixSignedBeaconBlock_PbPhase0Block(t *testing.T) {
@@ -178,7 +182,9 @@ func TestBellatrixBeaconBlock_Body(t *testing.T) {
 	wb, err := wrapper.WrappedBeaconBlock(&ethpb.BeaconBlockBellatrix{Body: body})
 	require.NoError(t, err)
 
-	assert.Equal(t, body, wb.Body().Proto())
+	pb, err := wb.Body().Proto()
+	require.NoError(t, err)
+	assert.Equal(t, body, pb)
 }
 
 func TestBellatrixBeaconBlock_IsNil(t *testing.T) {
@@ -211,7 +217,9 @@ func TestBellatrixBeaconBlock_Proto(t *testing.T) {
 	wb, err := wrapper.WrappedBeaconBlock(blk)
 	require.NoError(t, err)
 
-	assert.Equal(t, blk, wb.Proto())
+	pb, err := wb.Proto()
+	require.NoError(t, err)
+	assert.Equal(t, blk, pb)
 }
 
 func TestBellatrixBeaconBlock_SSZ(t *testing.T) {
@@ -341,7 +349,9 @@ func TestBellatrixBeaconBlockBody_Proto(t *testing.T) {
 	wbb, err := wrapper.WrappedBeaconBlockBody(body)
 	require.NoError(t, err)
 
-	assert.Equal(t, body, wbb.Proto())
+	pb, err := wbb.Proto()
+	require.NoError(t, err)
+	assert.Equal(t, body, pb)
 }
 
 func TestBellatrixBeaconBlockBody_ExecutionPayload(t *testing.T) {
@@ -374,7 +384,8 @@ func TestBellatrixBeaconBlock_AsSignRequestObject(t *testing.T) {
 	wsb, err := wrapper.WrappedBeaconBlock(abb)
 	require.NoError(t, err)
 
-	sro := wsb.AsSignRequestObject()
+	sro, err := wsb.AsSignRequestObject()
+	require.NoError(t, err)
 	got, ok := sro.(*validatorpb.SignRequest_BlockV3)
 	require.Equal(t, true, ok, "Not a SignRequest_BlockV3")
 	assert.Equal(t, abb, got.BlockV3)

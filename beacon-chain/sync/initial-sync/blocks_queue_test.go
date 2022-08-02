@@ -14,9 +14,9 @@ import (
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	beaconsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/container/slice"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -521,14 +521,16 @@ func TestBlocksQueue_onDataReceivedEvent(t *testing.T) {
 			chain:               mc,
 			highestExpectedSlot: types.Slot(blockBatchLimit),
 		})
-		wsb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+		wsb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 		require.NoError(t, err)
 		handlerFn := queue.onDataReceivedEvent(ctx)
+		wsbCopy, err := wsb.Copy()
+		require.NoError(t, err)
 		response := &fetchRequestResponse{
 			pid: "abc",
 			blocks: []interfaces.SignedBeaconBlock{
 				wsb,
-				wsb.Copy(),
+				wsbCopy,
 			},
 		}
 		fsm := &stateMachine{
@@ -618,7 +620,7 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 			chain:               mc,
 			highestExpectedSlot: types.Slot(blockBatchLimit),
 		})
-		wsb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+		wsb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 		require.NoError(t, err)
 		queue.smm.addStateMachine(256)
 		queue.smm.addStateMachine(320)
@@ -645,7 +647,7 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 			chain:               mc,
 			highestExpectedSlot: types.Slot(blockBatchLimit),
 		})
-		wsb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+		wsb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 		require.NoError(t, err)
 		queue.smm.addStateMachine(128)
 		queue.smm.machines[128].state = stateNew
@@ -678,7 +680,7 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 			chain:               mc,
 			highestExpectedSlot: types.Slot(blockBatchLimit),
 		})
-		wsb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+		wsb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 		require.NoError(t, err)
 		queue.smm.addStateMachine(256)
 		queue.smm.machines[256].state = stateSkipped

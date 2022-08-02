@@ -30,8 +30,8 @@ import (
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/container/trie"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -303,7 +303,7 @@ func TestProposer_ComputeStateRoot_OK(t *testing.T) {
 	req.Signature, err = signing.ComputeDomainAndSign(beaconState, currentEpoch, req.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 
-	wsb, err := wrapper.WrappedSignedBeaconBlock(req)
+	wsb, err := blocks.NewSignedBeaconBlock(req)
 	require.NoError(t, err)
 	_, err = proposerServer.computeStateRoot(context.Background(), wsb)
 	require.NoError(t, err)

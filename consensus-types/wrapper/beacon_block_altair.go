@@ -52,8 +52,8 @@ func (w altairSignedBeaconBlock) IsNil() bool {
 
 // Copy performs a deep copy of the signed beacon block
 // object.
-func (w altairSignedBeaconBlock) Copy() interfaces.SignedBeaconBlock {
-	return altairSignedBeaconBlock{b: eth.CopySignedBeaconBlockAltair(w.b)}
+func (w altairSignedBeaconBlock) Copy() (interfaces.SignedBeaconBlock, error) {
+	return altairSignedBeaconBlock{b: eth.CopySignedBeaconBlockAltair(w.b)}, nil
 }
 
 // MarshalSSZ marshals the signed beacon block to its relevant ssz
@@ -81,8 +81,8 @@ func (w altairSignedBeaconBlock) UnmarshalSSZ(buf []byte) error {
 
 // Proto returns the block in its underlying protobuf
 // interface.
-func (w altairSignedBeaconBlock) Proto() proto.Message {
-	return w.b
+func (w altairSignedBeaconBlock) Proto() (proto.Message, error) {
+	return w.b, nil
 }
 
 // PbGenericBlock returns a generic signed beacon block.
@@ -224,8 +224,8 @@ func (w altairBeaconBlock) UnmarshalSSZ(buf []byte) error {
 
 // Proto returns the underlying block object in its
 // proto form.
-func (w altairBeaconBlock) Proto() proto.Message {
-	return w.b
+func (w altairBeaconBlock) Proto() (proto.Message, error) {
+	return w.b, nil
 }
 
 // Version of the underlying protobuf object.
@@ -234,10 +234,10 @@ func (altairBeaconBlock) Version() int {
 }
 
 // AsSignRequestObject returns the underlying sign request object.
-func (w altairBeaconBlock) AsSignRequestObject() validatorpb.SignRequestObject {
+func (w altairBeaconBlock) AsSignRequestObject() (validatorpb.SignRequestObject, error) {
 	return &validatorpb.SignRequest_BlockV2{
 		BlockV2: w.b,
-	}
+	}, nil
 }
 
 // altairBeaconBlockBody is a wrapper of a beacon block body.
@@ -312,8 +312,8 @@ func (w altairBeaconBlockBody) HashTreeRoot() ([32]byte, error) {
 
 // Proto returns the underlying proto form of the block
 // body.
-func (w altairBeaconBlockBody) Proto() proto.Message {
-	return w.b
+func (w altairBeaconBlockBody) Proto() (proto.Message, error) {
+	return w.b, nil
 }
 
 // Execution is a stub.

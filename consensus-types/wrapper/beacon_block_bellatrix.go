@@ -49,8 +49,8 @@ func (w bellatrixSignedBeaconBlock) IsNil() bool {
 }
 
 // Copy performs a deep copy of the signed beacon block object.
-func (w bellatrixSignedBeaconBlock) Copy() interfaces.SignedBeaconBlock {
-	return bellatrixSignedBeaconBlock{b: eth.CopySignedBeaconBlockBellatrix(w.b)}
+func (w bellatrixSignedBeaconBlock) Copy() (interfaces.SignedBeaconBlock, error) {
+	return bellatrixSignedBeaconBlock{b: eth.CopySignedBeaconBlockBellatrix(w.b)}, nil
 }
 
 // MarshalSSZ marshals the signed beacon block to its relevant ssz form.
@@ -76,8 +76,8 @@ func (w bellatrixSignedBeaconBlock) UnmarshalSSZ(buf []byte) error {
 }
 
 // Proto returns the block in its underlying protobuf interface.
-func (w bellatrixSignedBeaconBlock) Proto() proto.Message {
-	return w.b
+func (w bellatrixSignedBeaconBlock) Proto() (proto.Message, error) {
+	return w.b, nil
 }
 
 // PbGenericBlock returns a generic signed beacon block.
@@ -253,8 +253,8 @@ func (w bellatrixBeaconBlock) UnmarshalSSZ(buf []byte) error {
 
 // Proto returns the underlying block object in its
 // proto form.
-func (w bellatrixBeaconBlock) Proto() proto.Message {
-	return w.b
+func (w bellatrixBeaconBlock) Proto() (proto.Message, error) {
+	return w.b, nil
 }
 
 // Version of the underlying protobuf object.
@@ -263,10 +263,10 @@ func (bellatrixBeaconBlock) Version() int {
 }
 
 // AsSignRequestObject returns the underlying sign request object.
-func (w bellatrixBeaconBlock) AsSignRequestObject() validatorpb.SignRequestObject {
+func (w bellatrixBeaconBlock) AsSignRequestObject() (validatorpb.SignRequestObject, error) {
 	return &validatorpb.SignRequest_BlockV3{
 		BlockV3: w.b,
-	}
+	}, nil
 }
 
 // bellatrixBeaconBlockBody is a wrapper of a beacon block body.
@@ -341,8 +341,8 @@ func (w bellatrixBeaconBlockBody) HashTreeRoot() ([32]byte, error) {
 
 // Proto returns the underlying proto form of the block
 // body.
-func (w bellatrixBeaconBlockBody) Proto() proto.Message {
-	return w.b
+func (w bellatrixBeaconBlockBody) Proto() (proto.Message, error) {
+	return w.b, nil
 }
 
 // Execution returns the Execution payload of the block body.
