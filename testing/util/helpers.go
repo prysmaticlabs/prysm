@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
@@ -37,37 +38,78 @@ func RandaoReveal(beaconState state.ReadOnlyBeaconState, epoch types.Epoch, priv
 // BlockSignature calculates the post-state root of the block and returns the signature.
 func BlockSignature(
 	bState state.BeaconState,
-	block *ethpb.BeaconBlock,
+	block interface{},
 	privKeys []bls.SecretKey,
 ) (bls.Signature, error) {
-	wsb, err := wrapper.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: block})
+	var wsb interfaces.SignedBeaconBlock
+	var err error
+	// copy the state since we need to process slots
+	bState = bState.Copy()
+	switch b := block.(type) {
+	case *ethpb.BeaconBlock:
+		wsb, err = wrapper.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: b})
+	case *ethpb.BeaconBlockAltair:
+		wsb, err = wrapper.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: b})
+	case *ethpb.BeaconBlockBellatrix:
+		wsb, err = wrapper.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: b})
+	default:
+		return nil, errors.New("unsupported block type")
+	}
 	if err != nil {
 		return nil, errors.Wrap(err, "could not wrap block")
 	}
 	s, err := transition.CalculateStateRoot(context.Background(), bState, wsb)
 	if err != nil {
+		return nil, errors.Wrap(err, "could not calculate state root")
+	}
+
+	switch b := block.(type) {
+	case *ethpb.BeaconBlock:
+		b.StateRoot = s[:]
+	case *ethpb.BeaconBlockAltair:
+		b.StateRoot = s[:]
+	case *ethpb.BeaconBlockBellatrix:
+		b.StateRoot = s[:]
+	}
+
+	// Temporarily increasing the beacon state slot here since BeaconProposerIndex is a
+	// function deterministic on beacon state slot.
+	var blockSlot types.Slot
+	switch b := block.(type) {
+	case *ethpb.BeaconBlock:
+		blockSlot = b.Slot
+	case *ethpb.BeaconBlockAltair:
+		blockSlot = b.Slot
+	case *ethpb.BeaconBlockBellatrix:
+		blockSlot = b.Slot
+	}
+
+	// process slots to get the right fork
+	bState, err = transition.ProcessSlots(context.Background(), bState, blockSlot)
+	if err != nil {
 		return nil, err
 	}
-	block.StateRoot = s[:]
+
 	domain, err := signing.Domain(bState.Fork(), time.CurrentEpoch(bState), params.BeaconConfig().DomainBeaconProposer, bState.GenesisValidatorsRoot())
 	if err != nil {
 		return nil, err
 	}
-	blockRoot, err := signing.ComputeSigningRoot(block, domain)
+
+	var blockRoot [32]byte
+	switch b := block.(type) {
+	case *ethpb.BeaconBlock:
+		blockRoot, err = signing.ComputeSigningRoot(b, domain)
+	case *ethpb.BeaconBlockAltair:
+		blockRoot, err = signing.ComputeSigningRoot(b, domain)
+	case *ethpb.BeaconBlockBellatrix:
+		blockRoot, err = signing.ComputeSigningRoot(b, domain)
+	}
 	if err != nil {
 		return nil, err
 	}
-	// Temporarily increasing the beacon state slot here since BeaconProposerIndex is a
-	// function deterministic on beacon state slot.
-	currentSlot := bState.Slot()
-	if err := bState.SetSlot(block.Slot); err != nil {
-		return nil, err
-	}
+
 	proposerIdx, err := helpers.BeaconProposerIndex(context.Background(), bState)
 	if err != nil {
-		return nil, err
-	}
-	if err := bState.SetSlot(currentSlot); err != nil {
 		return nil, err
 	}
 	return privKeys[proposerIdx].Sign(blockRoot[:]), nil

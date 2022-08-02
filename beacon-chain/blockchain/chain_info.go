@@ -1,6 +1,7 @@
 package blockchain
 
 import (
+	"bytes"
 	"context"
 	"time"
 
@@ -299,13 +300,14 @@ func (s *Service) ForkChoicer() forkchoice.ForkChoicer {
 
 // IsOptimistic returns true if the current head is optimistic.
 func (s *Service) IsOptimistic(ctx context.Context) (bool, error) {
-	s.headLock.RLock()
-	defer s.headLock.RUnlock()
 	if slots.ToEpoch(s.CurrentSlot()) < params.BeaconConfig().BellatrixForkEpoch {
 		return false, nil
 	}
+	s.headLock.RLock()
+	headRoot := s.head.root
+	s.headLock.RUnlock()
 
-	return s.IsOptimisticForRoot(ctx, s.head.root)
+	return s.IsOptimisticForRoot(ctx, headRoot)
 }
 
 // IsFinalized returns true if the input root is finalized.
@@ -332,7 +334,17 @@ func (s *Service) IsOptimisticForRoot(ctx context.Context, root [32]byte) (bool,
 		return false, err
 	}
 	if ss == nil {
-		return false, errInvalidNilSummary
+		// if the requested root is the headroot we should treat the
+		// node as optimistic. This can happen if we pruned INVALID
+		// nodes and no viable head is available.
+		headRoot, err := s.HeadRoot(ctx)
+		if err != nil {
+			return true, err
+		}
+		if bytes.Equal(headRoot, root[:]) {
+			return true, nil
+		}
+		return true, errInvalidNilSummary
 	}
 
 	validatedCheckpoint, err := s.cfg.BeaconDB.LastValidatedCheckpoint(ctx)

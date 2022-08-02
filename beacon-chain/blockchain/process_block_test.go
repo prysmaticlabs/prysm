@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/execution"
 	mockExecution "github.com/prysmaticlabs/prysm/beacon-chain/execution/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
@@ -1799,4 +1800,1059 @@ func Test_verifyBlkFinalizedSlot_invalidBlock(t *testing.T) {
 	require.NoError(t, err)
 	err = service.verifyBlkFinalizedSlot(wb)
 	require.Equal(t, true, IsInvalidBlock(err))
+}
+
+// See the description in #10777 and #10782 for the full setup
+// We sync optimistically a chain of blocks. Block 17 is the last block in Epoch
+// 2. Block 18 justifies block 12 (the first in Epoch 2) and Block 19 returns
+// INVALID from FCU, with LVH block 17. No head is viable. We check
+// that the node is optimistic and that we can actually import a block on top of
+// 17 and recover.
+func TestStore_NoViableHead_FCU_Protoarray(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	config := params.BeaconConfig()
+	config.SlotsPerEpoch = 6
+	config.AltairForkEpoch = 1
+	config.BellatrixForkEpoch = 2
+	config.SafeSlotsToImportOptimistically = 0
+	params.OverrideBeaconConfig(config)
+
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+
+	mockEngine := &mockExecution.EngineClient{ErrNewPayload: execution.ErrAcceptedSyncingPayloadStatus, ErrForkchoiceUpdated: execution.ErrAcceptedSyncingPayloadStatus}
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithAttestationPool(attestations.NewPool()),
+		WithStateGen(stategen.New(beaconDB)),
+		WithForkChoiceStore(protoarray.New()),
+		WithStateNotifier(&mock.MockStateNotifier{}),
+		WithExecutionEngineCaller(mockEngine),
+		WithProposerIdsCache(cache.NewProposerPayloadIDsCache()),
+	}
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+
+	st, keys := util.DeterministicGenesisState(t, 64)
+	stateRoot, err := st.HashTreeRoot(ctx)
+	require.NoError(t, err, "Could not hash genesis state")
+
+	require.NoError(t, service.saveGenesisData(ctx, st))
+
+	genesis := blocks.NewGenesisBlock(stateRoot[:])
+	wsb, err := wrapper.WrappedSignedBeaconBlock(genesis)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb), "Could not save genesis block")
+
+	parentRoot, err := genesis.Block.HashTreeRoot()
+	require.NoError(t, err, "Could not get signing root")
+	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, st, parentRoot), "Could not save genesis state")
+	require.NoError(t, service.cfg.BeaconDB.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
+
+	for i := 1; i < 6; i++ {
+		driftGenesisTime(service, int64(i), 0)
+		st, err := service.HeadState(ctx)
+		require.NoError(t, err)
+		b, err := util.GenerateFullBlock(st, keys, util.DefaultBlockGenConfig(), types.Slot(i))
+		require.NoError(t, err)
+		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		require.NoError(t, err)
+		root, err := b.Block.HashTreeRoot()
+		require.NoError(t, err)
+		require.NoError(t, service.onBlock(ctx, wsb, root))
+	}
+
+	for i := 6; i < 12; i++ {
+		driftGenesisTime(service, int64(i), 0)
+		st, err := service.HeadState(ctx)
+		require.NoError(t, err)
+		b, err := util.GenerateFullBlockAltair(st, keys, util.DefaultBlockGenConfig(), types.Slot(i))
+		require.NoError(t, err)
+		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		require.NoError(t, err)
+		root, err := b.Block.HashTreeRoot()
+		require.NoError(t, err)
+		err = service.onBlock(ctx, wsb, root)
+		require.NoError(t, err)
+	}
+
+	for i := 12; i < 18; i++ {
+		driftGenesisTime(service, int64(i), 0)
+		st, err := service.HeadState(ctx)
+		require.NoError(t, err)
+		b, err := util.GenerateFullBlockBellatrix(st, keys, util.DefaultBlockGenConfig(), types.Slot(i))
+		require.NoError(t, err)
+		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		require.NoError(t, err)
+		root, err := b.Block.HashTreeRoot()
+		require.NoError(t, err)
+		err = service.onBlock(ctx, wsb, root)
+		require.NoError(t, err)
+	}
+	// Check that we haven't justified the second epoch yet
+	jc := service.ForkChoicer().JustifiedCheckpoint()
+	require.Equal(t, types.Epoch(0), jc.Epoch)
+
+	// import a block that justifies the second epoch
+	driftGenesisTime(service, 18, 0)
+	validHeadState, err := service.HeadState(ctx)
+	require.NoError(t, err)
+	b, err := util.GenerateFullBlockBellatrix(validHeadState, keys, util.DefaultBlockGenConfig(), 18)
+	require.NoError(t, err)
+	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	firstInvalidRoot, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	err = service.onBlock(ctx, wsb, firstInvalidRoot)
+	require.NoError(t, err)
+	jc = service.ForkChoicer().JustifiedCheckpoint()
+	require.Equal(t, types.Epoch(2), jc.Epoch)
+
+	sjc := validHeadState.CurrentJustifiedCheckpoint()
+	require.Equal(t, types.Epoch(0), sjc.Epoch)
+	lvh := b.Block.Body.ExecutionPayload.ParentHash
+	// check our head
+	require.Equal(t, firstInvalidRoot, service.ForkChoicer().CachedHeadRoot())
+
+	// import another block to find out that it was invalid
+	mockEngine = &mockExecution.EngineClient{ErrNewPayload: execution.ErrAcceptedSyncingPayloadStatus, ErrForkchoiceUpdated: execution.ErrInvalidPayloadStatus, ForkChoiceUpdatedResp: lvh}
+	service.cfg.ExecutionEngineCaller = mockEngine
+	driftGenesisTime(service, 19, 0)
+	st, err = service.HeadState(ctx)
+	require.NoError(t, err)
+	b, err = util.GenerateFullBlockBellatrix(st, keys, util.DefaultBlockGenConfig(), 19)
+	require.NoError(t, err)
+	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	root, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	err = service.onBlock(ctx, wsb, root)
+	require.ErrorContains(t, "received an INVALID payload from execution engine", err)
+	// Check that forkchoice's head is the last invalid block imported. The
+	// store's headroot is the previous head (since the invalid block did
+	// not finish importing) one and that the node is optimistic
+	require.Equal(t, root, service.ForkChoicer().CachedHeadRoot())
+	headRoot, err := service.HeadRoot(ctx)
+	require.NoError(t, err)
+	require.Equal(t, firstInvalidRoot, bytesutil.ToBytes32(headRoot))
+	optimistic, err := service.IsOptimistic(ctx)
+	require.NoError(t, err)
+	require.Equal(t, true, optimistic)
+
+	// import another block based on the last valid head state
+	mockEngine = &mockExecution.EngineClient{}
+	service.cfg.ExecutionEngineCaller = mockEngine
+	driftGenesisTime(service, 20, 0)
+	b, err = util.GenerateFullBlockBellatrix(validHeadState, keys, &util.BlockGenConfig{}, 20)
+	require.NoError(t, err)
+	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	root, err = b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	err = service.onBlock(ctx, wsb, root)
+	require.NoError(t, err)
+	// Check the newly imported block is head, it justified the right
+	// checkpoint and the node is no longer optimistic
+	require.Equal(t, root, service.ForkChoicer().CachedHeadRoot())
+	sjc = service.CurrentJustifiedCheckpt()
+	require.Equal(t, jc.Epoch, sjc.Epoch)
+	require.Equal(t, jc.Root, bytesutil.ToBytes32(sjc.Root))
+	optimistic, err = service.IsOptimistic(ctx)
+	require.NoError(t, err)
+	require.Equal(t, false, optimistic)
+}
+
+// See the description in #10777 and #10782 for the full setup
+// We sync optimistically a chain of blocks. Block 17 is the last block in Epoch
+// 2. Block 18 justifies block 12 (the first in Epoch 2) and Block 19 returns
+// INVALID from FCU, with LVH block 17. No head is viable. We check
+// that the node is optimistic and that we can actually import a block on top of
+// 17 and recover.
+func TestStore_NoViableHead_FCU_DoublyLinkedTree(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	config := params.BeaconConfig()
+	config.SlotsPerEpoch = 6
+	config.AltairForkEpoch = 1
+	config.BellatrixForkEpoch = 2
+	config.SafeSlotsToImportOptimistically = 0
+	params.OverrideBeaconConfig(config)
+
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+
+	mockEngine := &mockExecution.EngineClient{ErrNewPayload: execution.ErrAcceptedSyncingPayloadStatus, ErrForkchoiceUpdated: execution.ErrAcceptedSyncingPayloadStatus}
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithAttestationPool(attestations.NewPool()),
+		WithStateGen(stategen.New(beaconDB)),
+		WithForkChoiceStore(doublylinkedtree.New()),
+		WithStateNotifier(&mock.MockStateNotifier{}),
+		WithExecutionEngineCaller(mockEngine),
+		WithProposerIdsCache(cache.NewProposerPayloadIDsCache()),
+	}
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+
+	st, keys := util.DeterministicGenesisState(t, 64)
+	stateRoot, err := st.HashTreeRoot(ctx)
+	require.NoError(t, err, "Could not hash genesis state")
+
+	require.NoError(t, service.saveGenesisData(ctx, st))
+
+	genesis := blocks.NewGenesisBlock(stateRoot[:])
+	wsb, err := wrapper.WrappedSignedBeaconBlock(genesis)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb), "Could not save genesis block")
+
+	parentRoot, err := genesis.Block.HashTreeRoot()
+	require.NoError(t, err, "Could not get signing root")
+	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, st, parentRoot), "Could not save genesis state")
+	require.NoError(t, service.cfg.BeaconDB.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
+
+	for i := 1; i < 6; i++ {
+		driftGenesisTime(service, int64(i), 0)
+		st, err := service.HeadState(ctx)
+		require.NoError(t, err)
+		b, err := util.GenerateFullBlock(st, keys, util.DefaultBlockGenConfig(), types.Slot(i))
+		require.NoError(t, err)
+		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		require.NoError(t, err)
+		root, err := b.Block.HashTreeRoot()
+		require.NoError(t, err)
+		require.NoError(t, service.onBlock(ctx, wsb, root))
+	}
+
+	for i := 6; i < 12; i++ {
+		driftGenesisTime(service, int64(i), 0)
+		st, err := service.HeadState(ctx)
+		require.NoError(t, err)
+		b, err := util.GenerateFullBlockAltair(st, keys, util.DefaultBlockGenConfig(), types.Slot(i))
+		require.NoError(t, err)
+		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		require.NoError(t, err)
+		root, err := b.Block.HashTreeRoot()
+		require.NoError(t, err)
+		err = service.onBlock(ctx, wsb, root)
+		require.NoError(t, err)
+	}
+
+	for i := 12; i < 18; i++ {
+		driftGenesisTime(service, int64(i), 0)
+		st, err := service.HeadState(ctx)
+		require.NoError(t, err)
+		b, err := util.GenerateFullBlockBellatrix(st, keys, util.DefaultBlockGenConfig(), types.Slot(i))
+		require.NoError(t, err)
+		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		require.NoError(t, err)
+		root, err := b.Block.HashTreeRoot()
+		require.NoError(t, err)
+		err = service.onBlock(ctx, wsb, root)
+		require.NoError(t, err)
+	}
+	// Check that we haven't justified the second epoch yet
+	jc := service.ForkChoicer().JustifiedCheckpoint()
+	require.Equal(t, types.Epoch(0), jc.Epoch)
+
+	// import a block that justifies the second epoch
+	driftGenesisTime(service, 18, 0)
+	validHeadState, err := service.HeadState(ctx)
+	require.NoError(t, err)
+	b, err := util.GenerateFullBlockBellatrix(validHeadState, keys, util.DefaultBlockGenConfig(), 18)
+	require.NoError(t, err)
+	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	firstInvalidRoot, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	err = service.onBlock(ctx, wsb, firstInvalidRoot)
+	require.NoError(t, err)
+	jc = service.ForkChoicer().JustifiedCheckpoint()
+	require.Equal(t, types.Epoch(2), jc.Epoch)
+
+	sjc := validHeadState.CurrentJustifiedCheckpoint()
+	require.Equal(t, types.Epoch(0), sjc.Epoch)
+	lvh := b.Block.Body.ExecutionPayload.ParentHash
+	// check our head
+	require.Equal(t, firstInvalidRoot, service.ForkChoicer().CachedHeadRoot())
+
+	// import another block to find out that it was invalid
+	mockEngine = &mockExecution.EngineClient{ErrNewPayload: execution.ErrAcceptedSyncingPayloadStatus, ErrForkchoiceUpdated: execution.ErrInvalidPayloadStatus, ForkChoiceUpdatedResp: lvh}
+	service.cfg.ExecutionEngineCaller = mockEngine
+	driftGenesisTime(service, 19, 0)
+	st, err = service.HeadState(ctx)
+	require.NoError(t, err)
+	b, err = util.GenerateFullBlockBellatrix(st, keys, util.DefaultBlockGenConfig(), 19)
+	require.NoError(t, err)
+	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	root, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	err = service.onBlock(ctx, wsb, root)
+	require.ErrorContains(t, "received an INVALID payload from execution engine", err)
+	// Check that forkchoice's head is the last invalid block imported. The
+	// store's headroot is the previous head (since the invalid block did
+	// not finish importing) one and that the node is optimistic
+	require.Equal(t, root, service.ForkChoicer().CachedHeadRoot())
+	headRoot, err := service.HeadRoot(ctx)
+	require.NoError(t, err)
+	require.Equal(t, firstInvalidRoot, bytesutil.ToBytes32(headRoot))
+	optimistic, err := service.IsOptimistic(ctx)
+	require.NoError(t, err)
+	require.Equal(t, true, optimistic)
+
+	// import another block based on the last valid head state
+	mockEngine = &mockExecution.EngineClient{}
+	service.cfg.ExecutionEngineCaller = mockEngine
+	driftGenesisTime(service, 20, 0)
+	b, err = util.GenerateFullBlockBellatrix(validHeadState, keys, &util.BlockGenConfig{}, 20)
+	require.NoError(t, err)
+	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	root, err = b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	err = service.onBlock(ctx, wsb, root)
+	require.NoError(t, err)
+	// Check the newly imported block is head, it justified the right
+	// checkpoint and the node is no longer optimistic
+	require.Equal(t, root, service.ForkChoicer().CachedHeadRoot())
+	sjc = service.CurrentJustifiedCheckpt()
+	require.Equal(t, jc.Epoch, sjc.Epoch)
+	require.Equal(t, jc.Root, bytesutil.ToBytes32(sjc.Root))
+	optimistic, err = service.IsOptimistic(ctx)
+	require.NoError(t, err)
+	require.Equal(t, false, optimistic)
+}
+
+// See the description in #10777 and #10782 for the full setup
+// We sync optimistically a chain of blocks. Block 17 is the last block in Epoch
+// 2. Block 18 justifies block 12 (the first in Epoch 2) and Block 19 returns
+// INVALID from NewPayload, with LVH block 17. No head is viable. We check
+// that the node is optimistic and that we can actually import a block on top of
+// 17 and recover.
+func TestStore_NoViableHead_NewPayload_DoublyLinkedTree(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	config := params.BeaconConfig()
+	config.SlotsPerEpoch = 6
+	config.AltairForkEpoch = 1
+	config.BellatrixForkEpoch = 2
+	config.SafeSlotsToImportOptimistically = 0
+	params.OverrideBeaconConfig(config)
+
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+
+	mockEngine := &mockExecution.EngineClient{ErrNewPayload: execution.ErrAcceptedSyncingPayloadStatus, ErrForkchoiceUpdated: execution.ErrAcceptedSyncingPayloadStatus}
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithAttestationPool(attestations.NewPool()),
+		WithStateGen(stategen.New(beaconDB)),
+		WithForkChoiceStore(doublylinkedtree.New()),
+		WithStateNotifier(&mock.MockStateNotifier{}),
+		WithExecutionEngineCaller(mockEngine),
+		WithProposerIdsCache(cache.NewProposerPayloadIDsCache()),
+	}
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+
+	st, keys := util.DeterministicGenesisState(t, 64)
+	stateRoot, err := st.HashTreeRoot(ctx)
+	require.NoError(t, err, "Could not hash genesis state")
+
+	require.NoError(t, service.saveGenesisData(ctx, st))
+
+	genesis := blocks.NewGenesisBlock(stateRoot[:])
+	wsb, err := wrapper.WrappedSignedBeaconBlock(genesis)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb), "Could not save genesis block")
+
+	parentRoot, err := genesis.Block.HashTreeRoot()
+	require.NoError(t, err, "Could not get signing root")
+	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, st, parentRoot), "Could not save genesis state")
+	require.NoError(t, service.cfg.BeaconDB.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
+
+	for i := 1; i < 6; i++ {
+		driftGenesisTime(service, int64(i), 0)
+		st, err := service.HeadState(ctx)
+		require.NoError(t, err)
+		b, err := util.GenerateFullBlock(st, keys, util.DefaultBlockGenConfig(), types.Slot(i))
+		require.NoError(t, err)
+		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		require.NoError(t, err)
+		root, err := b.Block.HashTreeRoot()
+		require.NoError(t, err)
+		require.NoError(t, service.onBlock(ctx, wsb, root))
+	}
+
+	for i := 6; i < 12; i++ {
+		driftGenesisTime(service, int64(i), 0)
+		st, err := service.HeadState(ctx)
+		require.NoError(t, err)
+		b, err := util.GenerateFullBlockAltair(st, keys, util.DefaultBlockGenConfig(), types.Slot(i))
+		require.NoError(t, err)
+		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		require.NoError(t, err)
+		root, err := b.Block.HashTreeRoot()
+		require.NoError(t, err)
+		err = service.onBlock(ctx, wsb, root)
+		require.NoError(t, err)
+	}
+
+	for i := 12; i < 18; i++ {
+		driftGenesisTime(service, int64(i), 0)
+		st, err := service.HeadState(ctx)
+		require.NoError(t, err)
+		b, err := util.GenerateFullBlockBellatrix(st, keys, util.DefaultBlockGenConfig(), types.Slot(i))
+		require.NoError(t, err)
+		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		require.NoError(t, err)
+		root, err := b.Block.HashTreeRoot()
+		require.NoError(t, err)
+		err = service.onBlock(ctx, wsb, root)
+		require.NoError(t, err)
+	}
+	// Check that we haven't justified the second epoch yet
+	jc := service.ForkChoicer().JustifiedCheckpoint()
+	require.Equal(t, types.Epoch(0), jc.Epoch)
+
+	// import a block that justifies the second epoch
+	driftGenesisTime(service, 18, 0)
+	validHeadState, err := service.HeadState(ctx)
+	require.NoError(t, err)
+	b, err := util.GenerateFullBlockBellatrix(validHeadState, keys, util.DefaultBlockGenConfig(), 18)
+	require.NoError(t, err)
+	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	firstInvalidRoot, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	err = service.onBlock(ctx, wsb, firstInvalidRoot)
+	require.NoError(t, err)
+	jc = service.ForkChoicer().JustifiedCheckpoint()
+	require.Equal(t, types.Epoch(2), jc.Epoch)
+
+	sjc := validHeadState.CurrentJustifiedCheckpoint()
+	require.Equal(t, types.Epoch(0), sjc.Epoch)
+	lvh := b.Block.Body.ExecutionPayload.ParentHash
+	// check our head
+	require.Equal(t, firstInvalidRoot, service.ForkChoicer().CachedHeadRoot())
+
+	// import another block to find out that it was invalid
+	mockEngine = &mockExecution.EngineClient{ErrNewPayload: execution.ErrInvalidPayloadStatus, NewPayloadResp: lvh}
+	service.cfg.ExecutionEngineCaller = mockEngine
+	driftGenesisTime(service, 19, 0)
+	st, err = service.HeadState(ctx)
+	require.NoError(t, err)
+	b, err = util.GenerateFullBlockBellatrix(st, keys, util.DefaultBlockGenConfig(), 19)
+	require.NoError(t, err)
+	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	root, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	err = service.onBlock(ctx, wsb, root)
+	require.ErrorContains(t, "received an INVALID payload from execution engine", err)
+	// Check that forkchoice's head and store's headroot are the previous head (since the invalid block did
+	// not finish importing and it was never imported to forkchoice). Cehck
+	// also that the node is optimistic
+	require.Equal(t, firstInvalidRoot, service.ForkChoicer().CachedHeadRoot())
+	headRoot, err := service.HeadRoot(ctx)
+	require.NoError(t, err)
+	require.Equal(t, firstInvalidRoot, bytesutil.ToBytes32(headRoot))
+	optimistic, err := service.IsOptimistic(ctx)
+	require.NoError(t, err)
+	require.Equal(t, true, optimistic)
+
+	// import another block based on the last valid head state
+	mockEngine = &mockExecution.EngineClient{}
+	service.cfg.ExecutionEngineCaller = mockEngine
+	driftGenesisTime(service, 20, 0)
+	b, err = util.GenerateFullBlockBellatrix(validHeadState, keys, &util.BlockGenConfig{}, 20)
+	require.NoError(t, err)
+	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	root, err = b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	err = service.onBlock(ctx, wsb, root)
+	require.NoError(t, err)
+	// Check the newly imported block is head, it justified the right
+	// checkpoint and the node is no longer optimistic
+	require.Equal(t, root, service.ForkChoicer().CachedHeadRoot())
+	sjc = service.CurrentJustifiedCheckpt()
+	require.Equal(t, jc.Epoch, sjc.Epoch)
+	require.Equal(t, jc.Root, bytesutil.ToBytes32(sjc.Root))
+	optimistic, err = service.IsOptimistic(ctx)
+	require.NoError(t, err)
+	require.Equal(t, false, optimistic)
+}
+
+// See the description in #10777 and #10782 for the full setup
+// We sync optimistically a chain of blocks. Block 17 is the last block in Epoch
+// 2. Block 18 justifies block 12 (the first in Epoch 2) and Block 19 returns
+// INVALID from NewPayload, with LVH block 17. No head is viable. We check
+// that the node is optimistic and that we can actually import a block on top of
+// 17 and recover.
+func TestStore_NoViableHead_NewPayload_Protoarray(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	config := params.BeaconConfig()
+	config.SlotsPerEpoch = 6
+	config.AltairForkEpoch = 1
+	config.BellatrixForkEpoch = 2
+	config.SafeSlotsToImportOptimistically = 0
+	params.OverrideBeaconConfig(config)
+
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+
+	mockEngine := &mockExecution.EngineClient{ErrNewPayload: execution.ErrAcceptedSyncingPayloadStatus, ErrForkchoiceUpdated: execution.ErrAcceptedSyncingPayloadStatus}
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithAttestationPool(attestations.NewPool()),
+		WithStateGen(stategen.New(beaconDB)),
+		WithForkChoiceStore(protoarray.New()),
+		WithStateNotifier(&mock.MockStateNotifier{}),
+		WithExecutionEngineCaller(mockEngine),
+		WithProposerIdsCache(cache.NewProposerPayloadIDsCache()),
+	}
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+
+	st, keys := util.DeterministicGenesisState(t, 64)
+	stateRoot, err := st.HashTreeRoot(ctx)
+	require.NoError(t, err, "Could not hash genesis state")
+
+	require.NoError(t, service.saveGenesisData(ctx, st))
+
+	genesis := blocks.NewGenesisBlock(stateRoot[:])
+	wsb, err := wrapper.WrappedSignedBeaconBlock(genesis)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb), "Could not save genesis block")
+
+	parentRoot, err := genesis.Block.HashTreeRoot()
+	require.NoError(t, err, "Could not get signing root")
+	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, st, parentRoot), "Could not save genesis state")
+	require.NoError(t, service.cfg.BeaconDB.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
+
+	for i := 1; i < 6; i++ {
+		driftGenesisTime(service, int64(i), 0)
+		st, err := service.HeadState(ctx)
+		require.NoError(t, err)
+		b, err := util.GenerateFullBlock(st, keys, util.DefaultBlockGenConfig(), types.Slot(i))
+		require.NoError(t, err)
+		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		require.NoError(t, err)
+		root, err := b.Block.HashTreeRoot()
+		require.NoError(t, err)
+		require.NoError(t, service.onBlock(ctx, wsb, root))
+	}
+
+	for i := 6; i < 12; i++ {
+		driftGenesisTime(service, int64(i), 0)
+		st, err := service.HeadState(ctx)
+		require.NoError(t, err)
+		b, err := util.GenerateFullBlockAltair(st, keys, util.DefaultBlockGenConfig(), types.Slot(i))
+		require.NoError(t, err)
+		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		require.NoError(t, err)
+		root, err := b.Block.HashTreeRoot()
+		require.NoError(t, err)
+		err = service.onBlock(ctx, wsb, root)
+		require.NoError(t, err)
+	}
+
+	for i := 12; i < 18; i++ {
+		driftGenesisTime(service, int64(i), 0)
+		st, err := service.HeadState(ctx)
+		require.NoError(t, err)
+		b, err := util.GenerateFullBlockBellatrix(st, keys, util.DefaultBlockGenConfig(), types.Slot(i))
+		require.NoError(t, err)
+		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		require.NoError(t, err)
+		root, err := b.Block.HashTreeRoot()
+		require.NoError(t, err)
+		err = service.onBlock(ctx, wsb, root)
+		require.NoError(t, err)
+	}
+	// Check that we haven't justified the second epoch yet
+	jc := service.ForkChoicer().JustifiedCheckpoint()
+	require.Equal(t, types.Epoch(0), jc.Epoch)
+
+	// import a block that justifies the second epoch
+	driftGenesisTime(service, 18, 0)
+	validHeadState, err := service.HeadState(ctx)
+	require.NoError(t, err)
+	b, err := util.GenerateFullBlockBellatrix(validHeadState, keys, util.DefaultBlockGenConfig(), 18)
+	require.NoError(t, err)
+	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	firstInvalidRoot, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	err = service.onBlock(ctx, wsb, firstInvalidRoot)
+	require.NoError(t, err)
+	jc = service.ForkChoicer().JustifiedCheckpoint()
+	require.Equal(t, types.Epoch(2), jc.Epoch)
+
+	sjc := validHeadState.CurrentJustifiedCheckpoint()
+	require.Equal(t, types.Epoch(0), sjc.Epoch)
+	lvh := b.Block.Body.ExecutionPayload.ParentHash
+	// check our head
+	require.Equal(t, firstInvalidRoot, service.ForkChoicer().CachedHeadRoot())
+
+	// import another block to find out that it was invalid
+	mockEngine = &mockExecution.EngineClient{ErrNewPayload: execution.ErrInvalidPayloadStatus, NewPayloadResp: lvh}
+	service.cfg.ExecutionEngineCaller = mockEngine
+	driftGenesisTime(service, 19, 0)
+	st, err = service.HeadState(ctx)
+	require.NoError(t, err)
+	b, err = util.GenerateFullBlockBellatrix(st, keys, util.DefaultBlockGenConfig(), 19)
+	require.NoError(t, err)
+	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	root, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	err = service.onBlock(ctx, wsb, root)
+	require.ErrorContains(t, "received an INVALID payload from execution engine", err)
+	// Check that forkchoice's head and store's headroot are the previous head (since the invalid block did
+	// not finish importing and it was never imported to forkchoice). Cehck
+	// also that the node is optimistic
+	require.Equal(t, firstInvalidRoot, service.ForkChoicer().CachedHeadRoot())
+	headRoot, err := service.HeadRoot(ctx)
+	require.NoError(t, err)
+	require.Equal(t, firstInvalidRoot, bytesutil.ToBytes32(headRoot))
+	optimistic, err := service.IsOptimistic(ctx)
+	require.NoError(t, err)
+	require.Equal(t, true, optimistic)
+
+	// import another block based on the last valid head state
+	mockEngine = &mockExecution.EngineClient{}
+	service.cfg.ExecutionEngineCaller = mockEngine
+	driftGenesisTime(service, 20, 0)
+	b, err = util.GenerateFullBlockBellatrix(validHeadState, keys, &util.BlockGenConfig{}, 20)
+	require.NoError(t, err)
+	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	root, err = b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	err = service.onBlock(ctx, wsb, root)
+	require.NoError(t, err)
+	// Check the newly imported block is head, it justified the right
+	// checkpoint and the node is no longer optimistic
+	require.Equal(t, root, service.ForkChoicer().CachedHeadRoot())
+	sjc = service.CurrentJustifiedCheckpt()
+	require.Equal(t, jc.Epoch, sjc.Epoch)
+	require.Equal(t, jc.Root, bytesutil.ToBytes32(sjc.Root))
+	optimistic, err = service.IsOptimistic(ctx)
+	require.NoError(t, err)
+	require.Equal(t, false, optimistic)
+}
+
+// See the description in #10777 and #10782 for the full setup
+// We sync optimistically a chain of blocks. Block 12 is the first block in Epoch
+// 2 (and the merge block in this sequence). Block 18 justifies it and Block 19 returns
+// INVALID from NewPayload, with LVH block 12. No head is viable. We check
+// that the node is optimistic and that we can actually import a chain of blocks on top of
+// 12 and recover. Notice that it takes two epochs to fully recover, and we stay
+// optimistic for the whole time.
+func TestStore_NoViableHead_Liveness_DoublyLinkedTree(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	config := params.BeaconConfig()
+	config.SlotsPerEpoch = 6
+	config.AltairForkEpoch = 1
+	config.BellatrixForkEpoch = 2
+	config.SafeSlotsToImportOptimistically = 0
+	params.OverrideBeaconConfig(config)
+
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+
+	mockEngine := &mockExecution.EngineClient{ErrNewPayload: execution.ErrAcceptedSyncingPayloadStatus, ErrForkchoiceUpdated: execution.ErrAcceptedSyncingPayloadStatus}
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithAttestationPool(attestations.NewPool()),
+		WithStateGen(stategen.New(beaconDB)),
+		WithForkChoiceStore(doublylinkedtree.New()),
+		WithStateNotifier(&mock.MockStateNotifier{}),
+		WithExecutionEngineCaller(mockEngine),
+		WithProposerIdsCache(cache.NewProposerPayloadIDsCache()),
+	}
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+
+	st, keys := util.DeterministicGenesisState(t, 64)
+	stateRoot, err := st.HashTreeRoot(ctx)
+	require.NoError(t, err, "Could not hash genesis state")
+
+	require.NoError(t, service.saveGenesisData(ctx, st))
+
+	genesis := blocks.NewGenesisBlock(stateRoot[:])
+	wsb, err := wrapper.WrappedSignedBeaconBlock(genesis)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb), "Could not save genesis block")
+
+	parentRoot, err := genesis.Block.HashTreeRoot()
+	require.NoError(t, err, "Could not get signing root")
+	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, st, parentRoot), "Could not save genesis state")
+	require.NoError(t, service.cfg.BeaconDB.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
+
+	for i := 1; i < 6; i++ {
+		driftGenesisTime(service, int64(i), 0)
+		st, err := service.HeadState(ctx)
+		require.NoError(t, err)
+		b, err := util.GenerateFullBlock(st, keys, util.DefaultBlockGenConfig(), types.Slot(i))
+		require.NoError(t, err)
+		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		require.NoError(t, err)
+		root, err := b.Block.HashTreeRoot()
+		require.NoError(t, err)
+		require.NoError(t, service.onBlock(ctx, wsb, root))
+	}
+
+	for i := 6; i < 12; i++ {
+		driftGenesisTime(service, int64(i), 0)
+		st, err := service.HeadState(ctx)
+		require.NoError(t, err)
+		b, err := util.GenerateFullBlockAltair(st, keys, util.DefaultBlockGenConfig(), types.Slot(i))
+		require.NoError(t, err)
+		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		require.NoError(t, err)
+		root, err := b.Block.HashTreeRoot()
+		require.NoError(t, err)
+		err = service.onBlock(ctx, wsb, root)
+		require.NoError(t, err)
+	}
+
+	// import the merge block
+	driftGenesisTime(service, 12, 0)
+	st, err = service.HeadState(ctx)
+	require.NoError(t, err)
+	b, err := util.GenerateFullBlockBellatrix(st, keys, util.DefaultBlockGenConfig(), 12)
+	require.NoError(t, err)
+	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	lastValidRoot, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	err = service.onBlock(ctx, wsb, lastValidRoot)
+	require.NoError(t, err)
+	// save the post state and the payload Hash of this block since it will
+	// be the LVH
+	validHeadState, err := service.HeadState(ctx)
+	require.NoError(t, err)
+	lvh := b.Block.Body.ExecutionPayload.BlockHash
+	validjc := validHeadState.CurrentJustifiedCheckpoint()
+	require.Equal(t, types.Epoch(0), validjc.Epoch)
+
+	// import blocks 13 through 18 to justify 12
+	for i := 13; i < 19; i++ {
+		driftGenesisTime(service, int64(i), 0)
+		st, err := service.HeadState(ctx)
+		require.NoError(t, err)
+		b, err := util.GenerateFullBlockBellatrix(st, keys, util.DefaultBlockGenConfig(), types.Slot(i))
+		require.NoError(t, err)
+		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		require.NoError(t, err)
+		root, err := b.Block.HashTreeRoot()
+		require.NoError(t, err)
+		err = service.onBlock(ctx, wsb, root)
+		require.NoError(t, err)
+	}
+	// Check that we have justified the second epoch
+	jc := service.ForkChoicer().JustifiedCheckpoint()
+	require.Equal(t, types.Epoch(2), jc.Epoch)
+	invalidHeadRoot := service.ForkChoicer().CachedHeadRoot()
+
+	// import block 19 to find out that the whole chain 13--18 was in fact
+	// invalid
+	mockEngine = &mockExecution.EngineClient{ErrNewPayload: execution.ErrInvalidPayloadStatus, NewPayloadResp: lvh}
+	service.cfg.ExecutionEngineCaller = mockEngine
+	driftGenesisTime(service, 19, 0)
+	st, err = service.HeadState(ctx)
+	require.NoError(t, err)
+	b, err = util.GenerateFullBlockBellatrix(st, keys, util.DefaultBlockGenConfig(), 19)
+	require.NoError(t, err)
+	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	root, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	err = service.onBlock(ctx, wsb, root)
+	require.ErrorContains(t, "received an INVALID payload from execution engine", err)
+
+	// Check that forkchoice's head and store's headroot are the previous head (since the invalid block did
+	// not finish importing and it was never imported to forkchoice). Cehck
+	// also that the node is optimistic
+	require.Equal(t, invalidHeadRoot, service.ForkChoicer().CachedHeadRoot())
+	headRoot, err := service.HeadRoot(ctx)
+	require.NoError(t, err)
+	require.Equal(t, invalidHeadRoot, bytesutil.ToBytes32(headRoot))
+	optimistic, err := service.IsOptimistic(ctx)
+	require.NoError(t, err)
+	require.Equal(t, true, optimistic)
+
+	// Check that the node's justified checkpoint does not agree with the
+	// last valid state's justified checkpoint
+	sjc := service.CurrentJustifiedCheckpt()
+	require.Equal(t, types.Epoch(2), sjc.Epoch)
+
+	// import another block based on the last valid head state
+	mockEngine = &mockExecution.EngineClient{}
+	service.cfg.ExecutionEngineCaller = mockEngine
+	driftGenesisTime(service, 20, 0)
+	b, err = util.GenerateFullBlockBellatrix(validHeadState, keys, &util.BlockGenConfig{}, 20)
+	require.NoError(t, err)
+	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	root, err = b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, service.onBlock(ctx, wsb, root))
+	// Check that the head is still INVALID and the node is still optimistic
+	require.Equal(t, invalidHeadRoot, service.ForkChoicer().CachedHeadRoot())
+	optimistic, err = service.IsOptimistic(ctx)
+	require.NoError(t, err)
+	require.Equal(t, true, optimistic)
+	st, err = service.cfg.StateGen.StateByRoot(ctx, root)
+	require.NoError(t, err)
+	// Import blocks 21--30 (Epoch 3 was not enough to justify 2)
+	for i := 21; i < 30; i++ {
+		driftGenesisTime(service, int64(i), 0)
+		require.NoError(t, err)
+		b, err := util.GenerateFullBlockBellatrix(st, keys, util.DefaultBlockGenConfig(), types.Slot(i))
+		require.NoError(t, err)
+		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		require.NoError(t, err)
+		root, err := b.Block.HashTreeRoot()
+		require.NoError(t, err)
+		err = service.onBlock(ctx, wsb, root)
+		require.NoError(t, err)
+		st, err = service.cfg.StateGen.StateByRoot(ctx, root)
+		require.NoError(t, err)
+	}
+	// Head should still be INVALID and the node optimistic
+	require.Equal(t, invalidHeadRoot, service.ForkChoicer().CachedHeadRoot())
+	optimistic, err = service.IsOptimistic(ctx)
+	require.NoError(t, err)
+	require.Equal(t, true, optimistic)
+
+	// Import block 30, it should justify Epoch 4 and become HEAD, the node
+	// recovers
+	driftGenesisTime(service, 30, 0)
+	b, err = util.GenerateFullBlockBellatrix(st, keys, util.DefaultBlockGenConfig(), 30)
+	require.NoError(t, err)
+	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	root, err = b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	err = service.onBlock(ctx, wsb, root)
+	require.NoError(t, err)
+	require.Equal(t, root, service.ForkChoicer().CachedHeadRoot())
+	sjc = service.CurrentJustifiedCheckpt()
+	require.Equal(t, types.Epoch(4), sjc.Epoch)
+	optimistic, err = service.IsOptimistic(ctx)
+	require.NoError(t, err)
+	require.Equal(t, false, optimistic)
+}
+
+// See the description in #10777 and #10782 for the full setup
+// We sync optimistically a chain of blocks. Block 12 is the first block in Epoch
+// 2 (and the merge block in this sequence). Block 18 justifies it and Block 19 returns
+// INVALID from NewPayload, with LVH block 12. No head is viable. We check
+// that the node is optimistic and that we can actually import a chain of blocks on top of
+// 12 and recover. Notice that it takes two epochs to fully recover, and we stay
+// optimistic for the whole time.
+func TestStore_NoViableHead_Liveness_Protoarray(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	config := params.BeaconConfig()
+	config.SlotsPerEpoch = 6
+	config.AltairForkEpoch = 1
+	config.BellatrixForkEpoch = 2
+	config.SafeSlotsToImportOptimistically = 0
+	params.OverrideBeaconConfig(config)
+
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+
+	mockEngine := &mockExecution.EngineClient{ErrNewPayload: execution.ErrAcceptedSyncingPayloadStatus, ErrForkchoiceUpdated: execution.ErrAcceptedSyncingPayloadStatus}
+	opts := []Option{
+		WithDatabase(beaconDB),
+		WithAttestationPool(attestations.NewPool()),
+		WithStateGen(stategen.New(beaconDB)),
+		WithForkChoiceStore(doublylinkedtree.New()),
+		WithStateNotifier(&mock.MockStateNotifier{}),
+		WithExecutionEngineCaller(mockEngine),
+		WithProposerIdsCache(cache.NewProposerPayloadIDsCache()),
+	}
+	service, err := NewService(ctx, opts...)
+	require.NoError(t, err)
+
+	st, keys := util.DeterministicGenesisState(t, 64)
+	stateRoot, err := st.HashTreeRoot(ctx)
+	require.NoError(t, err, "Could not hash genesis state")
+
+	require.NoError(t, service.saveGenesisData(ctx, st))
+
+	genesis := blocks.NewGenesisBlock(stateRoot[:])
+	wsb, err := wrapper.WrappedSignedBeaconBlock(genesis)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.BeaconDB.SaveBlock(ctx, wsb), "Could not save genesis block")
+
+	parentRoot, err := genesis.Block.HashTreeRoot()
+	require.NoError(t, err, "Could not get signing root")
+	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, st, parentRoot), "Could not save genesis state")
+	require.NoError(t, service.cfg.BeaconDB.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
+
+	for i := 1; i < 6; i++ {
+		driftGenesisTime(service, int64(i), 0)
+		st, err := service.HeadState(ctx)
+		require.NoError(t, err)
+		b, err := util.GenerateFullBlock(st, keys, util.DefaultBlockGenConfig(), types.Slot(i))
+		require.NoError(t, err)
+		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		require.NoError(t, err)
+		root, err := b.Block.HashTreeRoot()
+		require.NoError(t, err)
+		require.NoError(t, service.onBlock(ctx, wsb, root))
+	}
+
+	for i := 6; i < 12; i++ {
+		driftGenesisTime(service, int64(i), 0)
+		st, err := service.HeadState(ctx)
+		require.NoError(t, err)
+		b, err := util.GenerateFullBlockAltair(st, keys, util.DefaultBlockGenConfig(), types.Slot(i))
+		require.NoError(t, err)
+		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		require.NoError(t, err)
+		root, err := b.Block.HashTreeRoot()
+		require.NoError(t, err)
+		err = service.onBlock(ctx, wsb, root)
+		require.NoError(t, err)
+	}
+
+	// import the merge block
+	driftGenesisTime(service, 12, 0)
+	st, err = service.HeadState(ctx)
+	require.NoError(t, err)
+	b, err := util.GenerateFullBlockBellatrix(st, keys, util.DefaultBlockGenConfig(), 12)
+	require.NoError(t, err)
+	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	lastValidRoot, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	err = service.onBlock(ctx, wsb, lastValidRoot)
+	require.NoError(t, err)
+	// save the post state and the payload Hash of this block since it will
+	// be the LVH
+	validHeadState, err := service.HeadState(ctx)
+	require.NoError(t, err)
+	lvh := b.Block.Body.ExecutionPayload.BlockHash
+	validjc := validHeadState.CurrentJustifiedCheckpoint()
+	require.Equal(t, types.Epoch(0), validjc.Epoch)
+
+	// import blocks 13 through 18 to justify 12
+	for i := 13; i < 19; i++ {
+		driftGenesisTime(service, int64(i), 0)
+		st, err := service.HeadState(ctx)
+		require.NoError(t, err)
+		b, err := util.GenerateFullBlockBellatrix(st, keys, util.DefaultBlockGenConfig(), types.Slot(i))
+		require.NoError(t, err)
+		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		require.NoError(t, err)
+		root, err := b.Block.HashTreeRoot()
+		require.NoError(t, err)
+		err = service.onBlock(ctx, wsb, root)
+		require.NoError(t, err)
+	}
+	// Check that we have justified the second epoch
+	jc := service.ForkChoicer().JustifiedCheckpoint()
+	require.Equal(t, types.Epoch(2), jc.Epoch)
+	invalidHeadRoot := service.ForkChoicer().CachedHeadRoot()
+
+	// import block 19 to find out that the whole chain 13--18 was in fact
+	// invalid
+	mockEngine = &mockExecution.EngineClient{ErrNewPayload: execution.ErrInvalidPayloadStatus, NewPayloadResp: lvh}
+	service.cfg.ExecutionEngineCaller = mockEngine
+	driftGenesisTime(service, 19, 0)
+	st, err = service.HeadState(ctx)
+	require.NoError(t, err)
+	b, err = util.GenerateFullBlockBellatrix(st, keys, util.DefaultBlockGenConfig(), 19)
+	require.NoError(t, err)
+	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	root, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	err = service.onBlock(ctx, wsb, root)
+	require.ErrorContains(t, "received an INVALID payload from execution engine", err)
+
+	// Check that forkchoice's head and store's headroot are the previous head (since the invalid block did
+	// not finish importing and it was never imported to forkchoice). Cehck
+	// also that the node is optimistic
+	require.Equal(t, invalidHeadRoot, service.ForkChoicer().CachedHeadRoot())
+	headRoot, err := service.HeadRoot(ctx)
+	require.NoError(t, err)
+	require.Equal(t, invalidHeadRoot, bytesutil.ToBytes32(headRoot))
+	optimistic, err := service.IsOptimistic(ctx)
+	require.NoError(t, err)
+	require.Equal(t, true, optimistic)
+
+	// Check that the node's justified checkpoint does not agree with the
+	// last valid state's justified checkpoint
+	sjc := service.CurrentJustifiedCheckpt()
+	require.Equal(t, types.Epoch(2), sjc.Epoch)
+
+	// import another block based on the last valid head state
+	mockEngine = &mockExecution.EngineClient{}
+	service.cfg.ExecutionEngineCaller = mockEngine
+	driftGenesisTime(service, 20, 0)
+	b, err = util.GenerateFullBlockBellatrix(validHeadState, keys, &util.BlockGenConfig{}, 20)
+	require.NoError(t, err)
+	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	root, err = b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, service.onBlock(ctx, wsb, root))
+	// Check that the head is still INVALID and the node is still optimistic
+	require.Equal(t, invalidHeadRoot, service.ForkChoicer().CachedHeadRoot())
+	optimistic, err = service.IsOptimistic(ctx)
+	require.NoError(t, err)
+	require.Equal(t, true, optimistic)
+	st, err = service.cfg.StateGen.StateByRoot(ctx, root)
+	require.NoError(t, err)
+	// Import blocks 21--30 (Epoch 3 was not enough to justify 2)
+	for i := 21; i < 30; i++ {
+		driftGenesisTime(service, int64(i), 0)
+		require.NoError(t, err)
+		b, err := util.GenerateFullBlockBellatrix(st, keys, util.DefaultBlockGenConfig(), types.Slot(i))
+		require.NoError(t, err)
+		wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+		require.NoError(t, err)
+		root, err := b.Block.HashTreeRoot()
+		require.NoError(t, err)
+		err = service.onBlock(ctx, wsb, root)
+		require.NoError(t, err)
+		st, err = service.cfg.StateGen.StateByRoot(ctx, root)
+		require.NoError(t, err)
+	}
+	// Head should still be INVALID and the node optimistic
+	require.Equal(t, invalidHeadRoot, service.ForkChoicer().CachedHeadRoot())
+	optimistic, err = service.IsOptimistic(ctx)
+	require.NoError(t, err)
+	require.Equal(t, true, optimistic)
+
+	// Import block 30, it should justify Epoch 4 and become HEAD, the node
+	// recovers
+	driftGenesisTime(service, 30, 0)
+	b, err = util.GenerateFullBlockBellatrix(st, keys, util.DefaultBlockGenConfig(), 30)
+	require.NoError(t, err)
+	wsb, err = wrapper.WrappedSignedBeaconBlock(b)
+	require.NoError(t, err)
+	root, err = b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	err = service.onBlock(ctx, wsb, root)
+	require.NoError(t, err)
+	require.Equal(t, root, service.ForkChoicer().CachedHeadRoot())
+	sjc = service.CurrentJustifiedCheckpt()
+	require.Equal(t, types.Epoch(4), sjc.Epoch)
+	optimistic, err = service.IsOptimistic(ctx)
+	require.NoError(t, err)
+	require.Equal(t, false, optimistic)
+}
+
+// Helper function to simulate the block being on time or delayed for proposer
+// boost. It alters the genesisTime tracked by the store.
+func driftGenesisTime(s *Service, slot int64, delay int64) {
+	offset := int64(slot*int64(params.BeaconConfig().SecondsPerSlot) - delay)
+	s.SetGenesisTime(time.Unix(time.Now().Unix()-offset, 0))
 }
