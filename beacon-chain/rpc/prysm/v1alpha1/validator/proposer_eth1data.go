@@ -78,7 +78,7 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState state.Be
 }
 
 func (vs *Server) slotStartTime(slot types.Slot) uint64 {
-	startTime, _ := vs.Eth1InfoFetcher.Eth2GenesisPowchainInfo()
+	startTime, _ := vs.Eth1InfoFetcher.GenesisExecutionChainInfo()
 	return slots.VotingPeriodStartTime(startTime, slot)
 }
 

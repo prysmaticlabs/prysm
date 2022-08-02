@@ -10,7 +10,7 @@ import (
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
+	mockExecution "github.com/prysmaticlabs/prysm/beacon-chain/execution/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	mockstategen "github.com/prysmaticlabs/prysm/beacon-chain/state/stategen/mock"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
@@ -45,7 +45,7 @@ func TestValidatorStatus_DepositedEth1(t *testing.T) {
 	require.NoError(t, err)
 	assert.NoError(t, depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, root))
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
-	p := &mockPOW.POWChain{
+	p := &mockExecution.Chain{
 		TimesByHeight: map[int]uint64{
 			0: uint64(height),
 		},
@@ -90,7 +90,7 @@ func TestValidatorStatus_Deposited(t *testing.T) {
 	require.NoError(t, err)
 	assert.NoError(t, depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, root))
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
-	p := &mockPOW.POWChain{
+	p := &mockExecution.Chain{
 		TimesByHeight: map[int]uint64{
 			0: uint64(height),
 		},
@@ -142,7 +142,7 @@ func TestValidatorStatus_PartiallyDeposited(t *testing.T) {
 	require.NoError(t, err)
 	assert.NoError(t, depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, root))
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
-	p := &mockPOW.POWChain{
+	p := &mockExecution.Chain{
 		TimesByHeight: map[int]uint64{
 			0: uint64(height),
 		},
@@ -213,7 +213,7 @@ func TestValidatorStatus_Pending(t *testing.T) {
 	assert.NoError(t, depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, root))
 
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
-	p := &mockPOW.POWChain{
+	p := &mockExecution.Chain{
 		TimesByHeight: map[int]uint64{
 			0: uint64(height),
 		},
@@ -279,7 +279,7 @@ func TestValidatorStatus_Active(t *testing.T) {
 	require.NoError(t, err)
 
 	timestamp := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
-	p := &mockPOW.POWChain{
+	p := &mockExecution.Chain{
 		TimesByHeight: map[int]uint64{
 			int(params.BeaconConfig().Eth1FollowDistance): uint64(timestamp),
 		},
@@ -348,7 +348,7 @@ func TestValidatorStatus_Exiting(t *testing.T) {
 	require.NoError(t, err)
 	assert.NoError(t, depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, root))
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
-	p := &mockPOW.POWChain{
+	p := &mockExecution.Chain{
 		TimesByHeight: map[int]uint64{
 			0: uint64(height),
 		},
@@ -407,7 +407,7 @@ func TestValidatorStatus_Slashing(t *testing.T) {
 	require.NoError(t, err)
 	assert.NoError(t, depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, root))
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
-	p := &mockPOW.POWChain{
+	p := &mockExecution.Chain{
 		TimesByHeight: map[int]uint64{
 			0: uint64(height),
 		},
@@ -467,7 +467,7 @@ func TestValidatorStatus_Exited(t *testing.T) {
 	require.NoError(t, err)
 	assert.NoError(t, depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, root))
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
-	p := &mockPOW.POWChain{
+	p := &mockExecution.Chain{
 		TimesByHeight: map[int]uint64{
 			0: uint64(height),
 		},
@@ -498,7 +498,7 @@ func TestValidatorStatus_UnknownStatus(t *testing.T) {
 	require.NoError(t, err)
 	vs := &Server{
 		DepositFetcher:  depositCache,
-		Eth1InfoFetcher: &mockPOW.POWChain{},
+		Eth1InfoFetcher: &mockExecution.Chain{},
 		HeadFetcher: &mockChain.ChainService{
 			State: stateObj,
 		},
@@ -560,9 +560,9 @@ func TestActivationStatus_OK(t *testing.T) {
 
 	vs := &Server{
 		Ctx:               context.Background(),
-		ChainStartFetcher: &mockPOW.POWChain{},
-		BlockFetcher:      &mockPOW.POWChain{},
-		Eth1InfoFetcher:   &mockPOW.POWChain{},
+		ChainStartFetcher: &mockExecution.Chain{},
+		BlockFetcher:      &mockExecution.Chain{},
+		Eth1InfoFetcher:   &mockExecution.Chain{},
 		DepositFetcher:    depositCache,
 		HeadFetcher:       &mockChain.ChainService{State: stateObj, Root: genesisRoot[:]},
 	}
@@ -704,7 +704,7 @@ func TestValidatorStatus_CorrectActivationQueue(t *testing.T) {
 	}
 
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
-	p := &mockPOW.POWChain{
+	p := &mockExecution.Chain{
 		TimesByHeight: map[int]uint64{
 			0: uint64(height),
 		},
@@ -791,9 +791,9 @@ func TestMultipleValidatorStatus_Pubkeys(t *testing.T) {
 
 	vs := &Server{
 		Ctx:               context.Background(),
-		ChainStartFetcher: &mockPOW.POWChain{},
-		BlockFetcher:      &mockPOW.POWChain{},
-		Eth1InfoFetcher:   &mockPOW.POWChain{},
+		ChainStartFetcher: &mockExecution.Chain{},
+		BlockFetcher:      &mockExecution.Chain{},
+		Eth1InfoFetcher:   &mockExecution.Chain{},
 		DepositFetcher:    depositCache,
 		HeadFetcher:       &mockChain.ChainService{State: stateObj, Root: genesisRoot[:]},
 		SyncChecker:       &mockSync.Sync{IsSyncing: false},
@@ -886,9 +886,9 @@ func TestMultipleValidatorStatus_Indices(t *testing.T) {
 
 	vs := &Server{
 		Ctx:               context.Background(),
-		ChainStartFetcher: &mockPOW.POWChain{},
-		BlockFetcher:      &mockPOW.POWChain{},
-		Eth1InfoFetcher:   &mockPOW.POWChain{},
+		ChainStartFetcher: &mockExecution.Chain{},
+		BlockFetcher:      &mockExecution.Chain{},
+		Eth1InfoFetcher:   &mockExecution.Chain{},
 		HeadFetcher:       &mockChain.ChainService{State: stateObj, Root: genesisRoot[:]},
 		SyncChecker:       &mockSync.Sync{IsSyncing: false},
 	}
@@ -948,7 +948,7 @@ func TestValidatorStatus_Invalid(t *testing.T) {
 	require.NoError(t, err)
 	assert.NoError(t, depositCache.InsertDeposit(ctx, deposit, 0 /*blockNum*/, 0, root))
 	height := time.Unix(int64(params.BeaconConfig().Eth1FollowDistance), 0).Unix()
-	p := &mockPOW.POWChain{
+	p := &mockExecution.Chain{
 		TimesByHeight: map[int]uint64{
 			0: uint64(height),
 		},

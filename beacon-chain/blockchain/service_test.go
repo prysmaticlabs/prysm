@@ -18,12 +18,12 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/execution"
+	mockExecution "github.com/prysmaticlabs/prysm/beacon-chain/execution/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
-	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
@@ -76,9 +76,9 @@ var _ p2p.Broadcaster = (*mockBroadcaster)(nil)
 
 func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 	ctx := context.Background()
-	var web3Service *powchain.Service
+	var web3Service *execution.Service
 	var err error
-	srv, endpoint, err := mockPOW.SetupRPCServer()
+	srv, endpoint, err := mockExecution.SetupRPCServer()
 	require.NoError(t, err)
 	t.Cleanup(func() {
 		srv.Stop()
@@ -88,7 +88,7 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 	require.NoError(t, err)
 	mockTrie, err := trie.NewTrie(0)
 	require.NoError(t, err)
-	err = beaconDB.SavePowchainData(ctx, &ethpb.ETH1ChainData{
+	err = beaconDB.SaveExecutionChainData(ctx, &ethpb.ETH1ChainData{
 		BeaconState: pbState,
 		Trie:        mockTrie.ToProto(),
 		CurrentEth1Data: &ethpb.LatestETH1Data{
@@ -104,11 +104,11 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 		DepositContainers: []*ethpb.DepositContainer{},
 	})
 	require.NoError(t, err)
-	web3Service, err = powchain.NewService(
+	web3Service, err = execution.NewService(
 		ctx,
-		powchain.WithDatabase(beaconDB),
-		powchain.WithHttpEndpoints([]string{endpoint}),
-		powchain.WithDepositContractAddress(common.Address{}),
+		execution.WithDatabase(beaconDB),
+		execution.WithHttpEndpoints([]string{endpoint}),
+		execution.WithDepositContractAddress(common.Address{}),
 	)
 	require.NoError(t, err, "Unable to set up web3 service")
 
@@ -540,7 +540,7 @@ func TestProcessChainStartTime_ReceivedFeed(t *testing.T) {
 	stateChannel := make(chan *feed.Event, 1)
 	stateSub := service.cfg.StateNotifier.StateFeed().Subscribe(stateChannel)
 	defer stateSub.Unsubscribe()
-	service.onPowchainStart(context.Background(), time.Now())
+	service.onExecutionChainStart(context.Background(), time.Now())
 
 	stateEvent := <-stateChannel
 	require.Equal(t, int(stateEvent.Type), statefeed.Initialized)
