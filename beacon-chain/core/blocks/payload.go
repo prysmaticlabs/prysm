@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/time/slots"
 )
@@ -38,11 +37,7 @@ func IsMergeTransitionComplete(st state.BeaconState) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	wrappedHeader, err := wrapper.WrappedExecutionPayloadHeader(h)
-	if err != nil {
-		return false, err
-	}
-	isEmpty, err := wrapper.IsEmptyExecutionData(wrappedHeader)
+	isEmpty, err := wrapper.IsEmptyExecutionData(h)
 	if err != nil {
 		return false, err
 	}
@@ -95,12 +90,8 @@ func IsExecutionEnabled(st state.BeaconState, body interfaces.BeaconBlockBody) (
 
 // IsExecutionEnabledUsingHeader returns true if the execution is enabled using post processed payload header and block body.
 // This is an optimized version of IsExecutionEnabled where beacon state is not required as an argument.
-func IsExecutionEnabledUsingHeader(header *enginev1.ExecutionPayloadHeader, body interfaces.BeaconBlockBody) (bool, error) {
-	wrappedHeader, err := wrapper.WrappedExecutionPayloadHeader(header)
-	if err != nil {
-		return false, err
-	}
-	isEmpty, err := wrapper.IsEmptyExecutionData(wrappedHeader)
+func IsExecutionEnabledUsingHeader(header interfaces.ExecutionData, body interfaces.BeaconBlockBody) (bool, error) {
+	isEmpty, err := wrapper.IsEmptyExecutionData(header)
 	if err != nil {
 		return false, err
 	}
@@ -135,7 +126,7 @@ func ValidatePayloadWhenMergeCompletes(st state.BeaconState, payload interfaces.
 	if err != nil {
 		return err
 	}
-	if !bytes.Equal(payload.ParentHash(), header.BlockHash) {
+	if !bytes.Equal(payload.ParentHash(), header.BlockHash()) {
 		return errors.New("incorrect block hash")
 	}
 	return nil
@@ -236,7 +227,7 @@ func ValidatePayloadHeaderWhenMergeCompletes(st state.BeaconState, header interf
 	if err != nil {
 		return err
 	}
-	if !bytes.Equal(header.ParentHash(), h.BlockHash) {
+	if !bytes.Equal(header.ParentHash(), h.BlockHash()) {
 		return ErrInvalidPayloadBlockHash
 	}
 	return nil

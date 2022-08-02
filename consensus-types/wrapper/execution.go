@@ -607,7 +607,7 @@ func IsEmptyExecutionData(data interfaces.ExecutionData) (bool, error) {
 
 	txs, err := data.Transactions()
 	switch {
-	case errors.Is(err, ErrUnsupportedField):
+	case errors.Is(err, errUnsupportedExecutionField):
 	case err != nil:
 		return false, err
 	default:

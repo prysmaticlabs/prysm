@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
@@ -21,127 +22,170 @@ import (
 func Test_IsMergeComplete(t *testing.T) {
 	tests := []struct {
 		name    string
-		payload *enginev1.ExecutionPayloadHeader
+		payload interfaces.ExecutionData
 		want    bool
 	}{
 		{
-			name:    "empty payload header",
-			payload: emptyPayloadHeader(),
-			want:    false,
+			name: "empty payload header",
+			payload: func() interfaces.ExecutionData {
+				h, err := emptyPayloadHeader()
+				require.NoError(t, err)
+				return h
+			}(),
+			want: false,
 		},
 		{
 			name: "has parent hash",
-			payload: func() *enginev1.ExecutionPayloadHeader {
-				h := emptyPayloadHeader()
-				h.ParentHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
+			payload: func() interfaces.ExecutionData {
+				h, err := emptyPayloadHeader()
+				require.NoError(t, err)
+				p, ok := h.Proto().(*enginev1.ExecutionPayloadHeader)
+				require.Equal(t, true, ok)
+				p.ParentHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				return h
 			}(),
 			want: true,
 		},
 		{
 			name: "has fee recipient",
-			payload: func() *enginev1.ExecutionPayloadHeader {
-				h := emptyPayloadHeader()
-				h.FeeRecipient = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
+			payload: func() interfaces.ExecutionData {
+				h, err := emptyPayloadHeader()
+				require.NoError(t, err)
+				p, ok := h.Proto().(*enginev1.ExecutionPayloadHeader)
+				require.Equal(t, true, ok)
+				p.FeeRecipient = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				return h
 			}(),
 			want: true,
 		},
 		{
 			name: "has state root",
-			payload: func() *enginev1.ExecutionPayloadHeader {
-				h := emptyPayloadHeader()
-				h.StateRoot = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
+			payload: func() interfaces.ExecutionData {
+				h, err := emptyPayloadHeader()
+				require.NoError(t, err)
+				p, ok := h.Proto().(*enginev1.ExecutionPayloadHeader)
+				require.Equal(t, true, ok)
+				p.StateRoot = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				return h
 			}(),
 			want: true,
 		},
 		{
 			name: "has receipt root",
-			payload: func() *enginev1.ExecutionPayloadHeader {
-				h := emptyPayloadHeader()
-				h.ReceiptsRoot = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
+			payload: func() interfaces.ExecutionData {
+				h, err := emptyPayloadHeader()
+				require.NoError(t, err)
+				p, ok := h.Proto().(*enginev1.ExecutionPayloadHeader)
+				require.Equal(t, true, ok)
+				p.ReceiptsRoot = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				return h
 			}(),
 			want: true,
 		},
 		{
 			name: "has logs bloom",
-			payload: func() *enginev1.ExecutionPayloadHeader {
-				h := emptyPayloadHeader()
-				h.LogsBloom = bytesutil.PadTo([]byte{'a'}, fieldparams.LogsBloomLength)
+			payload: func() interfaces.ExecutionData {
+				h, err := emptyPayloadHeader()
+				require.NoError(t, err)
+				p, ok := h.Proto().(*enginev1.ExecutionPayloadHeader)
+				require.Equal(t, true, ok)
+				p.LogsBloom = bytesutil.PadTo([]byte{'a'}, fieldparams.LogsBloomLength)
 				return h
 			}(),
 			want: true,
 		},
 		{
 			name: "has random",
-			payload: func() *enginev1.ExecutionPayloadHeader {
-				h := emptyPayloadHeader()
-				h.PrevRandao = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
+			payload: func() interfaces.ExecutionData {
+				h, err := emptyPayloadHeader()
+				require.NoError(t, err)
+				p, ok := h.Proto().(*enginev1.ExecutionPayloadHeader)
+				require.Equal(t, true, ok)
+				p.PrevRandao = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				return h
 			}(),
 			want: true,
 		},
 		{
 			name: "has base fee",
-			payload: func() *enginev1.ExecutionPayloadHeader {
-				h := emptyPayloadHeader()
-				h.BaseFeePerGas = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
+			payload: func() interfaces.ExecutionData {
+				h, err := emptyPayloadHeader()
+				require.NoError(t, err)
+				p, ok := h.Proto().(*enginev1.ExecutionPayloadHeader)
+				require.Equal(t, true, ok)
+				p.BaseFeePerGas = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				return h
 			}(),
 			want: true,
 		},
 		{
 			name: "has block hash",
-			payload: func() *enginev1.ExecutionPayloadHeader {
-				h := emptyPayloadHeader()
-				h.BlockHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
+			payload: func() interfaces.ExecutionData {
+				h, err := emptyPayloadHeader()
+				require.NoError(t, err)
+				p, ok := h.Proto().(*enginev1.ExecutionPayloadHeader)
+				require.Equal(t, true, ok)
+				p.BlockHash = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				return h
 			}(),
 			want: true,
 		},
 		{
 			name: "has extra data",
-			payload: func() *enginev1.ExecutionPayloadHeader {
-				h := emptyPayloadHeader()
-				h.ExtraData = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
+			payload: func() interfaces.ExecutionData {
+				h, err := emptyPayloadHeader()
+				require.NoError(t, err)
+				p, ok := h.Proto().(*enginev1.ExecutionPayloadHeader)
+				require.Equal(t, true, ok)
+				p.ExtraData = bytesutil.PadTo([]byte{'a'}, fieldparams.RootLength)
 				return h
 			}(),
 			want: true,
 		},
 		{
 			name: "has block number",
-			payload: func() *enginev1.ExecutionPayloadHeader {
-				h := emptyPayloadHeader()
-				h.BlockNumber = 1
+			payload: func() interfaces.ExecutionData {
+				h, err := emptyPayloadHeader()
+				require.NoError(t, err)
+				p, ok := h.Proto().(*enginev1.ExecutionPayloadHeader)
+				require.Equal(t, true, ok)
+				p.BlockNumber = 1
 				return h
 			}(),
 			want: true,
 		},
 		{
 			name: "has gas limit",
-			payload: func() *enginev1.ExecutionPayloadHeader {
-				h := emptyPayloadHeader()
-				h.GasLimit = 1
+			payload: func() interfaces.ExecutionData {
+				h, err := emptyPayloadHeader()
+				require.NoError(t, err)
+				p, ok := h.Proto().(*enginev1.ExecutionPayloadHeader)
+				require.Equal(t, true, ok)
+				p.GasLimit = 1
 				return h
 			}(),
 			want: true,
 		},
 		{
 			name: "has gas used",
-			payload: func() *enginev1.ExecutionPayloadHeader {
-				h := emptyPayloadHeader()
-				h.GasUsed = 1
+			payload: func() interfaces.ExecutionData {
+				h, err := emptyPayloadHeader()
+				require.NoError(t, err)
+				p, ok := h.Proto().(*enginev1.ExecutionPayloadHeader)
+				require.Equal(t, true, ok)
+				p.GasUsed = 1
 				return h
 			}(),
 			want: true,
 		},
 		{
 			name: "has time stamp",
-			payload: func() *enginev1.ExecutionPayloadHeader {
-				h := emptyPayloadHeader()
-				h.Timestamp = 1
+			payload: func() interfaces.ExecutionData {
+				h, err := emptyPayloadHeader()
+				require.NoError(t, err)
+				p, ok := h.Proto().(*enginev1.ExecutionPayloadHeader)
+				require.Equal(t, true, ok)
+				p.Timestamp = 1
 				return h
 			}(),
 			want: true,
@@ -150,9 +194,7 @@ func Test_IsMergeComplete(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
-			wrappedHeader, err := wrapper.WrappedExecutionPayloadHeader(tt.payload)
-			require.NoError(t, err)
-			require.NoError(t, st.SetLatestExecutionPayloadHeader(wrappedHeader))
+			require.NoError(t, st.SetLatestExecutionPayloadHeader(tt.payload))
 			got, err := blocks.IsMergeTransitionComplete(st)
 			require.NoError(t, err)
 			if got != tt.want {
@@ -707,8 +749,8 @@ func BenchmarkBellatrixComplete(b *testing.B) {
 	}
 }
 
-func emptyPayloadHeader() *enginev1.ExecutionPayloadHeader {
-	return &enginev1.ExecutionPayloadHeader{
+func emptyPayloadHeader() (interfaces.ExecutionData, error) {
+	return wrapper.WrappedExecutionPayloadHeader(&enginev1.ExecutionPayloadHeader{
 		ParentHash:       make([]byte, fieldparams.RootLength),
 		FeeRecipient:     make([]byte, fieldparams.FeeRecipientLength),
 		StateRoot:        make([]byte, fieldparams.RootLength),
@@ -719,7 +761,7 @@ func emptyPayloadHeader() *enginev1.ExecutionPayloadHeader {
 		BlockHash:        make([]byte, fieldparams.RootLength),
 		TransactionsRoot: make([]byte, fieldparams.RootLength),
 		ExtraData:        make([]byte, 0),
-	}
+	})
 }
 
 func emptyPayload() *enginev1.ExecutionPayload {
