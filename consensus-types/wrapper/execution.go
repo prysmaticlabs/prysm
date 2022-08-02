@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/encoding/ssz"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
-	"github.com/prysmaticlabs/prysm/runtime/version"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -632,21 +631,4 @@ func IsEmptyExecutionData(data interfaces.ExecutionData) (bool, error) {
 		return false, nil
 	}
 	return true, nil
-}
-
-// ExecutionDataVersion returns the underlying payload's version.
-func ExecutionDataVersion(data interfaces.ExecutionData) int {
-	_, ok := data.(executionPayload)
-	if ok {
-		return version.Bellatrix
-	}
-	_, ok = data.(executionPayloadCapella)
-	if ok {
-		return version.Capella
-	}
-	_, ok = data.(executionPayloadHeader)
-	if ok {
-		return version.Bellatrix
-	}
-	return version.Capella
 }
