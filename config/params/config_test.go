@@ -1,6 +1,7 @@
 package params_test
 
 import (
+	"sync"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -35,13 +36,18 @@ func TestConfig_OverrideBeaconConfigTestTeardown(t *testing.T) {
 
 func TestConfig_DataRace(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
+	wg := new(sync.WaitGroup)
 	for i := 0; i < 10; i++ {
+		wg.Add(2)
 		go func() {
+			defer wg.Done()
 			cfg := params.BeaconConfig()
 			params.OverrideBeaconConfig(cfg)
 		}()
 		go func() uint64 {
+			defer wg.Done()
 			return params.BeaconConfig().MaxDeposits
 		}()
 	}
+	wg.Wait()
 }

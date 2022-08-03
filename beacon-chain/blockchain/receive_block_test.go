@@ -119,8 +119,11 @@ func TestService_ReceiveBlock(t *testing.T) {
 		},
 	}
 
+	wg := new(sync.WaitGroup)
 	for _, tt := range tests {
+		wg.Add(1)
 		t.Run(tt.name, func(t *testing.T) {
+			defer wg.Done()
 			beaconDB := testDB.SetupDB(t)
 			genesisBlockRoot := bytesutil.ToBytes32(nil)
 			require.NoError(t, beaconDB.SaveState(ctx, genesis, genesisBlockRoot))
@@ -150,6 +153,7 @@ func TestService_ReceiveBlock(t *testing.T) {
 			}
 		})
 	}
+	wg.Wait()
 }
 
 func TestService_ReceiveBlockUpdateHead(t *testing.T) {
