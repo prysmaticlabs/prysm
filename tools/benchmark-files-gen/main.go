@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"flag"
-	"log"
 	"os"
 	"path"
 
@@ -22,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/runtime/interop"
 	"github.com/prysmaticlabs/prysm/testing/benchmark"
 	"github.com/prysmaticlabs/prysm/testing/util"
+	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -60,15 +60,15 @@ func main() {
 	log.Println("Generating genesis state")
 	// Generating this for the 2 following states.
 	if err := generateGenesisBeaconState(); err != nil {
-		log.Fatalf("Could not generate genesis state: %v", err)
+		log.WithError(err).Fatal("Could not generate genesis state")
 	}
 	log.Println("Generating full block and state after 1 skipped epoch")
 	if err := generateMarshalledFullStateAndBlock(); err != nil {
-		log.Fatalf("Could not generate full state and block: %v", err)
+		log.WithError(err).Fatal("Could not generate full state and block")
 	}
 	log.Println("Generating state after 2 fully attested epochs")
 	if err := generate2FullEpochState(); err != nil {
-		log.Fatalf("Could not generate 2 full epoch state: %v", err)
+		log.WithError(err).Fatal("Could not generate 2 full epoch state")
 	}
 	// Removing the genesis state SSZ since its 10MB large and no longer needed.
 	if err := os.Remove(path.Join(*outputDir, benchmark.GenesisFileName)); err != nil {
