@@ -582,14 +582,10 @@ func (r *testRunner) multiScenarioMulticlient(epoch uint64, conns []*grpc.Client
 	case 9:
 		require.NoError(r.t, r.comHandler.beaconNodes.PauseAtIndex(0))
 		require.NoError(r.t, r.comHandler.validatorNodes.PauseAtIndex(0))
-		//require.NoError(r.t, r.comHandler.lighthouseBeaconNodes.PauseAtIndex(0))
-		//require.NoError(r.t, r.comHandler.lighthouseValidatorNodes.PauseAtIndex(0))
 		return true
 	case 10:
 		require.NoError(r.t, r.comHandler.beaconNodes.ResumeAtIndex(0))
 		require.NoError(r.t, r.comHandler.validatorNodes.ResumeAtIndex(0))
-		//require.NoError(r.t, r.comHandler.lighthouseBeaconNodes.ResumeAtIndex(0))
-		//require.NoError(r.t, r.comHandler.lighthouseValidatorNodes.ResumeAtIndex(0))
 		return true
 	case 14:
 		// Set it for prysm beacon node.
@@ -614,18 +610,18 @@ func (r *testRunner) multiScenarioMulticlient(epoch uint64, conns []*grpc.Client
 		}, func() bool {
 			return true
 		})
-		/*
-			component.(e2etypes.EngineProxy).AddRequestInterceptor("engine_forkchoiceUpdatedV1", func() interface{} {
-				return &ForkchoiceUpdatedResponse{
-					Status: &enginev1.PayloadStatus{
-						Status:          enginev1.PayloadStatus_SYNCING,
-						LatestValidHash: nil,
-					},
-					PayloadId: nil,
-				}
-			}, func() bool {
-				return true
-			})*/
+
+		component.(e2etypes.EngineProxy).AddRequestInterceptor("engine_forkchoiceUpdatedV1", func() interface{} {
+			return &ForkchoiceUpdatedResponse{
+				Status: &enginev1.PayloadStatus{
+					Status:          enginev1.PayloadStatus_SYNCING,
+					LatestValidHash: nil,
+				},
+				PayloadId: nil,
+			}
+		}, func() bool {
+			return true
+		})
 		return true
 	case 15:
 		r.executeProvidedEvaluators(epoch, []*grpc.ClientConn{conns[0]}, []e2etypes.Evaluator{
@@ -645,7 +641,7 @@ func (r *testRunner) multiScenarioMulticlient(epoch uint64, conns []*grpc.Client
 		engineProxy, ok = component.(e2etypes.EngineProxy)
 		require.Equal(r.t, true, ok)
 		engineProxy.RemoveRequestInterceptor("engine_newPayloadV1")
-		//engineProxy.RemoveRequestInterceptor("engine_forkchoiceUpdatedV1")
+		engineProxy.RemoveRequestInterceptor("engine_forkchoiceUpdatedV1")
 		engineProxy.ReleaseBackedUpRequests("engine_newPayloadV1")
 
 		return true
