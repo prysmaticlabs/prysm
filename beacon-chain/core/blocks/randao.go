@@ -73,7 +73,7 @@ func ProcessRandaoNoVerify(
 	}
 	blockRandaoReveal := hash.Hash(randaoReveal)
 	if len(blockRandaoReveal) != len(latestMixSlice) {
-		return nil, errors.New("blockRandaoReveal length doesnt match latestMixSlice length")
+		return nil, errors.New("blockRandaoReveal length doesn't match latestMixSlice length")
 	}
 	for i, x := range blockRandaoReveal {
 		latestMixSlice[i] ^= x

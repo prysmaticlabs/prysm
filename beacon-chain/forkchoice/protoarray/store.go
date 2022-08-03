@@ -515,8 +515,8 @@ func (s *Store) insert(ctx context.Context,
 	}
 	secondsIntoSlot := (timeNow - s.genesisTime) % params.BeaconConfig().SecondsPerSlot
 	currentSlot := slots.CurrentSlot(s.genesisTime)
-	boostTreshold := params.BeaconConfig().SecondsPerSlot / params.BeaconConfig().IntervalsPerSlot
-	if currentSlot == slot && secondsIntoSlot < boostTreshold {
+	boostThreshold := params.BeaconConfig().SecondsPerSlot / params.BeaconConfig().IntervalsPerSlot
+	if currentSlot == slot && secondsIntoSlot < boostThreshold {
 		s.proposerBoostLock.Lock()
 		s.proposerBoostRoot = root
 		s.proposerBoostLock.Unlock()

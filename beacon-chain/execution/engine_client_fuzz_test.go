@@ -310,7 +310,7 @@ func validateBlockConsistency(execBlock *pb.ExecutionBlock, jsonMap map[string]i
 			continue
 		}
 		if !reflect.DeepEqual(jsonVal, bVal) {
-			return errors.Errorf("fields dont match, %v and %v are not equal for field %s", jsonVal, bVal, field.Name)
+			return errors.Errorf("fields don't match, %v and %v are not equal for field %s", jsonVal, bVal, field.Name)
 		}
 	}
 	return nil
