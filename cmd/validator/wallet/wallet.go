@@ -82,7 +82,7 @@ var Commands = &cli.Command{
 				return features.ConfigureValidator(cliCtx)
 			},
 			Action: func(cliCtx *cli.Context) error {
-				if err := walletEdit(cliCtx); err != nil {
+				if err := remoteWalletEdit(cliCtx); err != nil {
 					log.Fatalf("Could not edit wallet configuration: %v", err)
 				}
 				return nil
