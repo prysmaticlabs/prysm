@@ -20,7 +20,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// selectAccounts Ask user to select accounts via an interactive userprompt.
+// selectAccounts Ask user to select accounts via an interactive user prompt.
 func selectAccounts(selectionPrompt string, pubKeys [][fieldparams.BLSPubkeyLength]byte) (filteredPubKeys []bls.PublicKey, err error) {
 	pubKeyStrings := make([]string, len(pubKeys))
 	for i, pk := range pubKeys {
