@@ -9,11 +9,16 @@ import (
 )
 
 func TestMainnet_Bellatrix_Forkchoice(t *testing.T) {
+	resetCfg := features.InitWithReset(&features.Flags{
+		DisablePullTips: false,
+	})
+	defer resetCfg()
 	forkchoice.Run(t, "mainnet", version.Bellatrix)
 }
 
 func TestMainnet_Bellatrix_Forkchoice_DoublyLinkTree(t *testing.T) {
 	resetCfg := features.InitWithReset(&features.Flags{
+		DisablePullTips:                  false,
 		EnableForkChoiceDoublyLinkedTree: true,
 	})
 	defer resetCfg()
