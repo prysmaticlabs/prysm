@@ -104,7 +104,7 @@ func main() {
 	case "migration-check":
 		destDbNameWithPath := filepath.Join(*destDatadir, *dbName)
 		if _, err := os.Stat(destDbNameWithPath); os.IsNotExist(err) {
-			log.WithError(err).WithField("path", dbNameWithPath).Fatal("could not locate database file")
+			log.WithError(err).WithField("path", destDbNameWithPath).Fatal("could not locate database file")
 		}
 		switch *migrationName {
 		case "validator-entries":
