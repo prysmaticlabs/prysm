@@ -1,11 +1,11 @@
-package wrapper_test
+package blocks_test
 
 import (
 	"testing"
 
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -13,7 +13,7 @@ import (
 
 func TestWrapExecutionPayload(t *testing.T) {
 	data := &enginev1.ExecutionPayload{GasUsed: 54}
-	wsb, err := wrapper.WrappedExecutionPayload(data)
+	wsb, err := blocks.WrappedExecutionPayload(data)
 	require.NoError(t, err)
 
 	assert.DeepEqual(t, data, wsb.Proto())
@@ -21,29 +21,29 @@ func TestWrapExecutionPayload(t *testing.T) {
 
 func TestWrapExecutionPayloadHeader(t *testing.T) {
 	data := &enginev1.ExecutionPayloadHeader{GasUsed: 54}
-	wsb, err := wrapper.WrappedExecutionPayloadHeader(data)
+	wsb, err := blocks.WrappedExecutionPayloadHeader(data)
 	require.NoError(t, err)
 
 	assert.DeepEqual(t, data, wsb.Proto())
 }
 
 func TestWrapExecutionPayload_IsNil(t *testing.T) {
-	_, err := wrapper.WrappedExecutionPayload(nil)
-	require.Equal(t, wrapper.ErrNilObjectWrapped, err)
+	_, err := blocks.WrappedExecutionPayload(nil)
+	require.Equal(t, blocks.ErrNilObjectWrapped, err)
 
 	data := &enginev1.ExecutionPayload{GasUsed: 54}
-	wsb, err := wrapper.WrappedExecutionPayload(data)
+	wsb, err := blocks.WrappedExecutionPayload(data)
 	require.NoError(t, err)
 
 	assert.Equal(t, false, wsb.IsNil())
 }
 
 func TestWrapExecutionPayloadHeader_IsNil(t *testing.T) {
-	_, err := wrapper.WrappedExecutionPayloadHeader(nil)
-	require.Equal(t, wrapper.ErrNilObjectWrapped, err)
+	_, err := blocks.WrappedExecutionPayloadHeader(nil)
+	require.Equal(t, blocks.ErrNilObjectWrapped, err)
 
 	data := &enginev1.ExecutionPayloadHeader{GasUsed: 54}
-	wsb, err := wrapper.WrappedExecutionPayloadHeader(data)
+	wsb, err := blocks.WrappedExecutionPayloadHeader(data)
 	require.NoError(t, err)
 
 	assert.Equal(t, false, wsb.IsNil())
@@ -82,7 +82,7 @@ func TestWrapExecutionPayloadHeader_SSZ(t *testing.T) {
 }
 
 func createWrappedPayload(t testing.TB) interfaces.ExecutionData {
-	wsb, err := wrapper.WrappedExecutionPayload(&enginev1.ExecutionPayload{
+	wsb, err := blocks.WrappedExecutionPayload(&enginev1.ExecutionPayload{
 		ParentHash:    make([]byte, fieldparams.RootLength),
 		FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
 		StateRoot:     make([]byte, fieldparams.RootLength),
@@ -103,7 +103,7 @@ func createWrappedPayload(t testing.TB) interfaces.ExecutionData {
 }
 
 func createWrappedPayloadHeader(t testing.TB) interfaces.ExecutionData {
-	wsb, err := wrapper.WrappedExecutionPayloadHeader(&enginev1.ExecutionPayloadHeader{
+	wsb, err := blocks.WrappedExecutionPayloadHeader(&enginev1.ExecutionPayloadHeader{
 		ParentHash:       make([]byte, fieldparams.RootLength),
 		FeeRecipient:     make([]byte, fieldparams.FeeRecipientLength),
 		StateRoot:        make([]byte, fieldparams.RootLength),

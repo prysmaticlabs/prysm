@@ -14,8 +14,8 @@ import (
 	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	"github.com/sirupsen/logrus"
@@ -319,7 +319,7 @@ func (s *Service) ExecutionBlockByHash(ctx context.Context, hash common.Hash, wi
 func (s *Service) ReconstructFullBellatrixBlock(
 	ctx context.Context, blindedBlock interfaces.SignedBeaconBlock,
 ) (interfaces.SignedBeaconBlock, error) {
-	if err := wrapper.BeaconBlockIsNil(blindedBlock); err != nil {
+	if err := blocks.BeaconBlockIsNil(blindedBlock); err != nil {
 		return nil, errors.Wrap(err, "cannot reconstruct bellatrix block from nil data")
 	}
 	if !blindedBlock.Block().IsBlinded() {
@@ -341,7 +341,7 @@ func (s *Service) ReconstructFullBellatrixBlock(
 	if err != nil {
 		return nil, err
 	}
-	fullBlock, err := wrapper.BuildSignedBeaconBlockFromExecutionPayload(blindedBlock, payload)
+	fullBlock, err := blocks.BuildSignedBeaconBlockFromExecutionPayload(blindedBlock, payload)
 	if err != nil {
 		return nil, err
 	}

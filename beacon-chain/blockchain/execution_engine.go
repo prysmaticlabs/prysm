@@ -13,9 +13,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/execution"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
+	consensusblocks "github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/time/slots"
@@ -106,8 +106,12 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 
 			r, err := s.cfg.ForkChoiceStore.Head(ctx, s.justifiedBalances.balances)
 			if err != nil {
-				log.WithError(err).Error("Could not get head root")
-				return nil, nil
+				log.WithFields(logrus.Fields{
+					"slot":         headBlk.Slot(),
+					"blockRoot":    fmt.Sprintf("%#x", bytesutil.Trunc(headRoot[:])),
+					"invalidCount": len(invalidRoots),
+				}).Warn("Pruned invalid blocks, could not update head root")
+				return nil, invalidBlock{error: ErrInvalidPayload, root: arg.headRoot, invalidAncestorRoots: invalidRoots}
 			}
 			b, err := s.getBlock(ctx, r)
 			if err != nil {
@@ -192,7 +196,7 @@ func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
 	if blocks.IsPreBellatrixVersion(postStateVersion) {
 		return true, nil
 	}
-	if err := wrapper.BeaconBlockIsNil(blk); err != nil {
+	if err := consensusblocks.BeaconBlockIsNil(blk); err != nil {
 		return false, err
 	}
 	body := blk.Block().Body()

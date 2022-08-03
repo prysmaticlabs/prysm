@@ -1,9 +1,9 @@
-package wrapper
+package blocks
 
 import (
 	"bytes"
+	"errors"
 
-	"github.com/pkg/errors"
 	fastssz "github.com/prysmaticlabs/fastssz"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
@@ -262,7 +262,7 @@ func (e executionPayloadHeader) BlockHash() []byte {
 
 // Transactions --
 func (executionPayloadHeader) Transactions() ([][]byte, error) {
-	return nil, ErrUnsupportedField
+	return nil, ErrUnsupportedGetter
 }
 
 // PayloadToHeader converts `payload` into execution payload header format.
@@ -323,7 +323,7 @@ func IsEmptyExecutionData(data interfaces.ExecutionData) (bool, error) {
 
 	txs, err := data.Transactions()
 	switch {
-	case errors.Is(err, ErrUnsupportedField):
+	case errors.Is(err, ErrUnsupportedGetter):
 	case err != nil:
 		return false, err
 	default:

@@ -40,6 +40,7 @@ type Store struct {
 	genesisTime                   uint64
 	highestReceivedSlot           types.Slot     // The highest received slot in the chain.
 	receivedBlocksLastEpoch       [32]types.Slot // Using `highestReceivedSlot`. The slot of blocks received in the last epoch.
+	allTipsAreInvalid             bool           // tracks if all tips are not viable for head
 }
 
 // Node defines the individual block which includes its block parent, ancestor and how much weight accounted for it.

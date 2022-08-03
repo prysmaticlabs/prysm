@@ -22,8 +22,8 @@ import (
 	p2pTypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -120,9 +120,9 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks_ReconstructsPayload(t *testi
 		BaseFeePerGas: bytesutil.PadTo([]byte("baseFeePerGas"), fieldparams.RootLength),
 		Transactions:  encodedBinaryTxs,
 	}
-	wrappedPayload, err := wrapper.WrappedExecutionPayload(payload)
+	wrappedPayload, err := blocks.WrappedExecutionPayload(payload)
 	require.NoError(t, err)
-	header, err := wrapper.PayloadToHeader(wrappedPayload)
+	header, err := blocks.PayloadToHeader(wrappedPayload)
 	require.NoError(t, err)
 
 	var blkRoots p2pTypes.BeaconBlockByRootsReq
@@ -133,7 +133,7 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks_ReconstructsPayload(t *testi
 		blk.Block.Slot = i
 		root, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+		wsb, err := blocks.NewSignedBeaconBlock(blk)
 		require.NoError(t, err)
 		require.NoError(t, d.SaveBlock(context.Background(), wsb))
 		blkRoots = append(blkRoots, root)
