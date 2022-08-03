@@ -10,7 +10,7 @@ import (
 
 func TestMinimal_Altair_Forkchoice(t *testing.T) {
 	resetCfg := features.InitWithReset(&features.Flags{
-		DisablePullTips: false,
+		DisablePullTips: true,
 	})
 	defer resetCfg()
 	forkchoice.Run(t, "minimal", version.Phase0)
@@ -18,7 +18,7 @@ func TestMinimal_Altair_Forkchoice(t *testing.T) {
 
 func TestMinimal_Altair_Forkchoice_DoublyLinkTre(t *testing.T) {
 	resetCfg := features.InitWithReset(&features.Flags{
-		DisablePullTips:                  false,
+		DisablePullTips:                  true,
 		EnableForkChoiceDoublyLinkedTree: true,
 	})
 	defer resetCfg()
