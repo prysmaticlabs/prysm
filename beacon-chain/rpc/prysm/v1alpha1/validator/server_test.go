@@ -91,7 +91,7 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 }
 
 func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
-	// This test breaks if it doesnt use mainnet config
+	// This test breaks if it doesn't use mainnet config
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig().Copy())
 	ctx := context.Background()
