@@ -123,7 +123,6 @@ func TestService_ReceiveBlock(t *testing.T) {
 	for _, tt := range tests {
 		wg.Add(1)
 		t.Run(tt.name, func(t *testing.T) {
-			defer wg.Done()
 			beaconDB := testDB.SetupDB(t)
 			genesisBlockRoot := bytesutil.ToBytes32(nil)
 			require.NoError(t, beaconDB.SaveState(ctx, genesis, genesisBlockRoot))
@@ -139,6 +138,8 @@ func TestService_ReceiveBlock(t *testing.T) {
 			}
 			s, err := NewService(ctx, opts...)
 			require.NoError(t, err)
+			// Initialize it here.
+			_ = s.cfg.StateNotifier.StateFeed()
 			require.NoError(t, s.saveGenesisData(ctx, genesis))
 			root, err := tt.args.block.Block.HashTreeRoot()
 			require.NoError(t, err)
@@ -151,6 +152,7 @@ func TestService_ReceiveBlock(t *testing.T) {
 				assert.NoError(t, err)
 				tt.check(t, s)
 			}
+			wg.Done()
 		})
 	}
 	wg.Wait()
@@ -175,6 +177,8 @@ func TestService_ReceiveBlockUpdateHead(t *testing.T) {
 
 	s, err := NewService(ctx, opts...)
 	require.NoError(t, err)
+	// Initialize it here.
+	_ = s.cfg.StateNotifier.StateFeed()
 	require.NoError(t, s.saveGenesisData(ctx, genesis))
 	root, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
