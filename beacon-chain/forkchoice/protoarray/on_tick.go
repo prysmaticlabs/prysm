@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/config/features"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/time/slots"
 )
@@ -65,8 +64,6 @@ func (f *ForkChoice) NewSlot(ctx context.Context, slot types.Slot) error {
 			f.store.justifiedCheckpoint = bjcp
 		}
 	}
-	if features.Get().EnablePullTips {
-		f.UpdateUnrealizedCheckpoints()
-	}
+	f.UpdateUnrealizedCheckpoints()
 	return nil
 }

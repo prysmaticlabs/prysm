@@ -9,7 +9,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
@@ -150,9 +149,7 @@ func (f *ForkChoice) InsertNode(ctx context.Context, state state.BeaconState, ro
 		return err
 	}
 
-	if features.Get().EnablePullTips {
-		jc, fc = f.store.pullTips(state, node, jc, fc)
-	}
+	jc, fc = f.store.pullTips(state, node, jc, fc)
 	return f.updateCheckpoints(ctx, jc, fc)
 }
 
