@@ -483,7 +483,7 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState state.Beacon
 	s.cfg.ForkChoiceStore.SetGenesisTime(uint64(s.genesisTime.Unix()))
 
 	if err := s.setHead(genesisBlkRoot, genesisBlk, genesisState); err != nil {
-		log.Fatalf("Could not set head: %v", err)
+		log.WithError(err).Fatal("Could not set head")
 	}
 	return nil
 }
