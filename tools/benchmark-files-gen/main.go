@@ -101,7 +101,7 @@ func generateMarshalledFullStateAndBlock() error {
 
 	conf := &util.BlockGenConfig{}
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
-	// Small offset for the beacon state so we dont process a block on an epoch.
+	// Small offset for the beacon state so we don't process a block on an epoch.
 	slotOffset := types.Slot(2)
 	block, err := util.GenerateFullBlock(beaconState, privs, conf, slotsPerEpoch+slotOffset)
 	if err != nil {
