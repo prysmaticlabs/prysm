@@ -11,7 +11,7 @@ import (
 	"go.opencensus.io/trace"
 )
 
-var errMissingStateForCheckpoint = errors.New("missing state summary for finalized root")
+var errMissingStateForCheckpoint = errors.New("missing state summary for checkpoint root")
 
 // JustifiedCheckpoint returns the latest justified checkpoint in beacon chain.
 func (s *Store) JustifiedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, error) {
