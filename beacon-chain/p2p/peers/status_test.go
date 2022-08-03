@@ -17,8 +17,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/metadata"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -189,7 +189,7 @@ func TestPeerCommitteeIndices(t *testing.T) {
 			bitV.SetBitAt(uint64(i), true)
 		}
 	}
-	p.SetMetadata(id, wrapper.WrappedMetadataV0(&pb.MetaDataV0{
+	p.SetMetadata(id, metadata.WrappedMetadataV0(&pb.MetaDataV0{
 		SeqNumber: 2,
 		Attnets:   bitV,
 	}))
@@ -224,7 +224,7 @@ func TestPeerSubscribedToSubnet(t *testing.T) {
 			bitV.SetBitAt(uint64(i), true)
 		}
 	}
-	p.SetMetadata(expectedPeer, wrapper.WrappedMetadataV0(&pb.MetaDataV0{
+	p.SetMetadata(expectedPeer, metadata.WrappedMetadataV0(&pb.MetaDataV0{
 		SeqNumber: 2,
 		Attnets:   bitV,
 	}))
@@ -401,7 +401,7 @@ func TestAddMetaData(t *testing.T) {
 		SeqNumber: 8,
 		Attnets:   bitfield.NewBitvector64(),
 	}
-	p.SetMetadata(newPeer, wrapper.WrappedMetadataV0(newMetaData))
+	p.SetMetadata(newPeer, metadata.WrappedMetadataV0(newMetaData))
 
 	md, err := p.Metadata(newPeer)
 	require.NoError(t, err)
@@ -1037,7 +1037,7 @@ func addPeer(t *testing.T, p *peers.Status, state peerdata.PeerConnectionState) 
 	require.NoError(t, err)
 	p.Add(new(enr.Record), id, nil, network.DirUnknown)
 	p.SetConnectionState(id, state)
-	p.SetMetadata(id, wrapper.WrappedMetadataV0(&pb.MetaDataV0{
+	p.SetMetadata(id, metadata.WrappedMetadataV0(&pb.MetaDataV0{
 		SeqNumber: 0,
 		Attnets:   bitfield.NewBitvector64(),
 	}))

@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
+	"github.com/prysmaticlabs/prysm/consensus-types/metadata"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/network/forks"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -56,7 +56,7 @@ func (s *Service) metaDataHandler(_ context.Context, _ interface{}, stream libp2
 		// We have a v1 metadata object saved locally, so we
 		// convert it back to a v0 metadata object.
 		if currMd.Version() != version.Phase0 {
-			currMd = wrapper.WrappedMetadataV0(
+			currMd = metadata.WrappedMetadataV0(
 				&pb.MetaDataV0{
 					Attnets:   currMd.AttnetsBitfield(),
 					SeqNumber: currMd.SequenceNumber(),
@@ -66,7 +66,7 @@ func (s *Service) metaDataHandler(_ context.Context, _ interface{}, stream libp2
 		// We have a v0 metadata object saved locally, so we
 		// convert it to a v1 metadata object.
 		if currMd.Version() != version.Altair {
-			currMd = wrapper.WrappedMetadataV1(
+			currMd = metadata.WrappedMetadataV1(
 				&pb.MetaDataV1{
 					Attnets:   currMd.AttnetsBitfield(),
 					SeqNumber: currMd.SequenceNumber(),

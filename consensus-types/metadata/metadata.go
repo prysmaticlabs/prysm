@@ -1,4 +1,4 @@
-package wrapper
+package metadata
 
 import (
 	"github.com/prysmaticlabs/go-bitfield"

@@ -16,7 +16,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
+	"github.com/prysmaticlabs/prysm/consensus-types/metadata"
 	ecdsaprysm "github.com/prysmaticlabs/prysm/crypto/ecdsa"
 	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/network"
@@ -112,7 +112,7 @@ func metaDataFromConfig(cfg *Config) (metadata.Metadata, error) {
 		if err := file.WriteFile(defaultKeyPath, dst); err != nil {
 			return nil, err
 		}
-		return wrapper.WrappedMetadataV0(metaData), nil
+		return metadata.WrappedMetadataV0(metaData), nil
 	}
 	if defaultMetadataExist && metaDataPath == "" {
 		metaDataPath = defaultKeyPath
@@ -126,7 +126,7 @@ func metaDataFromConfig(cfg *Config) (metadata.Metadata, error) {
 	if err := proto.Unmarshal(src, metaData); err != nil {
 		return nil, err
 	}
-	return wrapper.WrappedMetadataV0(metaData), nil
+	return metadata.WrappedMetadataV0(metaData), nil
 }
 
 // Retrieves an external ipv4 address and converts into a libp2p formatted value.
