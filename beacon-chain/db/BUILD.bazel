@@ -38,8 +38,8 @@ go_test(
     deps = [
         "//beacon-chain/db/kv:go_default_library",
         "//cmd:go_default_library",
+        "//consensus-types/blocks:go_default_library",
         "//consensus-types/primitives:go_default_library",
-        "//consensus-types/wrapper:go_default_library",
         "//testing/assert:go_default_library",
         "//testing/require:go_default_library",
         "//testing/util:go_default_library",

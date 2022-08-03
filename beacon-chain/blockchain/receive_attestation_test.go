@@ -12,8 +12,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -137,7 +137,7 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 	invalidStateErr := "Could not get state from db"
 	require.LogsDoNotContain(t, hook, invalidStateErr)
 	require.LogsDoNotContain(t, hook, hookErr)
-	gb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+	gb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 	require.NoError(t, err)
 	require.NoError(t, service.saveInitSyncBlock(ctx, [32]byte{'a'}, gb))
 	require.NoError(t, service.notifyEngineIfChangedHead(ctx, [32]byte{'a'}))
@@ -152,7 +152,7 @@ func TestNotifyEngineIfChangedHead(t *testing.T) {
 	// Block in Cache
 	b := util.NewBeaconBlock()
 	b.Block.Slot = 2
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err := blocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
 	r1, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
@@ -218,7 +218,7 @@ func TestService_ProcessAttestationsAndUpdateHead(t *testing.T) {
 	require.NoError(t, err)
 	tRoot, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
-	wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+	wsb, err := blocks.NewSignedBeaconBlock(blk)
 	require.NoError(t, err)
 	require.NoError(t, service.onBlock(ctx, wsb, tRoot))
 	copied, err = service.cfg.StateGen.StateByRoot(ctx, tRoot)

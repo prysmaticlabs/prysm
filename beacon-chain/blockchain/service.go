@@ -33,9 +33,9 @@ import (
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
@@ -271,7 +271,7 @@ func (s *Service) originRootFromSavedState(ctx context.Context) ([32]byte, error
 	if err != nil {
 		return originRoot, errors.Wrap(err, "could not get genesis block from db")
 	}
-	if err := wrapper.BeaconBlockIsNil(genesisBlock); err != nil {
+	if err := blocks.BeaconBlockIsNil(genesisBlock); err != nil {
 		return originRoot, err
 	}
 	genesisBlkRoot, err := genesisBlock.Block().HashTreeRoot()
@@ -329,7 +329,9 @@ func (s *Service) initializeHeadFromDB(ctx context.Context) error {
 			if err != nil {
 				return errors.Wrap(err, "could not retrieve head state")
 			}
-			s.setHead(headRoot, headBlock, headState)
+			if err := s.setHead(headRoot, headBlock, headState); err != nil {
+				return errors.Wrap(err, "could not set head")
+			}
 			return nil
 		} else {
 			log.Warnf("Finalized checkpoint at slot %d is too close to the current head slot, "+
@@ -345,7 +347,9 @@ func (s *Service) initializeHeadFromDB(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized block")
 	}
-	s.setHead(finalizedRoot, finalizedBlock, finalizedState)
+	if err := s.setHead(finalizedRoot, finalizedBlock, finalizedState); err != nil {
+		return errors.Wrap(err, "could not set head")
+	}
 
 	return nil
 }
@@ -478,7 +482,9 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState state.Beacon
 	}
 	s.cfg.ForkChoiceStore.SetGenesisTime(uint64(s.genesisTime.Unix()))
 
-	s.setHead(genesisBlkRoot, genesisBlk, genesisState)
+	if err := s.setHead(genesisBlkRoot, genesisBlk, genesisState); err != nil {
+		log.Fatalf("Could not set head: %v", err)
+	}
 	return nil
 }
 

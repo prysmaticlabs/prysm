@@ -61,7 +61,9 @@ func TestBellatrixSignedBlindedBeaconBlock_Block(t *testing.T) {
 	wsb, err := wrapper.WrappedSignedBeaconBlock(&ethpb.SignedBlindedBeaconBlockBellatrix{Block: blk})
 	require.NoError(t, err)
 
-	assert.DeepEqual(t, blk, wsb.Block().Proto())
+	pb, err := wsb.Block().Proto()
+	require.NoError(t, err)
+	assert.DeepEqual(t, blk, pb)
 }
 
 func TestBellatrixSignedBlindedBeaconBlock_IsNil(t *testing.T) {
@@ -86,7 +88,9 @@ func TestBellatrixSignedBlindedBeaconBlock_Proto(t *testing.T) {
 	wsb, err := wrapper.WrappedSignedBeaconBlock(sb)
 	require.NoError(t, err)
 
-	assert.Equal(t, sb, wsb.Proto())
+	pb, err := wsb.Proto()
+	require.NoError(t, err)
+	assert.Equal(t, sb, pb)
 }
 
 func TestBellatrixSignedBlindedBeaconBlock_PbPhase0Block(t *testing.T) {
@@ -190,7 +194,9 @@ func TestBellatrixBlindedBeaconBlock_Body(t *testing.T) {
 	wb, err := wrapper.WrappedBeaconBlock(&ethpb.BlindedBeaconBlockBellatrix{Body: body})
 	require.NoError(t, err)
 
-	assert.Equal(t, body, wb.Body().Proto())
+	pb, err := wb.Body().Proto()
+	require.NoError(t, err)
+	assert.Equal(t, body, pb)
 }
 
 func TestBellatrixBlindedBeaconBlock_IsNil(t *testing.T) {
@@ -224,7 +230,9 @@ func TestBellatrixBlindedBeaconBlock_Proto(t *testing.T) {
 	wb, err := wrapper.WrappedBeaconBlock(blk)
 	require.NoError(t, err)
 
-	assert.Equal(t, blk, wb.Proto())
+	pb, err := wb.Proto()
+	require.NoError(t, err)
+	assert.Equal(t, blk, pb)
 }
 
 func TestBellatrixBlindedBeaconBlock_SSZ(t *testing.T) {
@@ -354,7 +362,9 @@ func TestBellatrixBlindedBeaconBlockBody_Proto(t *testing.T) {
 	wbb, err := wrapper.WrappedBeaconBlockBody(body)
 	require.NoError(t, err)
 
-	assert.Equal(t, body, wbb.Proto())
+	pb, err := wbb.Proto()
+	require.NoError(t, err)
+	assert.Equal(t, body, pb)
 }
 
 func TestBellatrixBlindedBeaconBlockBody_ExecutionPayloadHeader(t *testing.T) {
@@ -388,7 +398,8 @@ func TestBellatrixBlindedBeaconBlock_AsSignRequestObject(t *testing.T) {
 	wsb, err := wrapper.WrappedBeaconBlock(abb)
 	require.NoError(t, err)
 
-	sro := wsb.AsSignRequestObject()
+	sro, err := wsb.AsSignRequestObject()
+	require.NoError(t, err)
 	got, ok := sro.(*validatorpb.SignRequest_BlindedBlockV3)
 	require.Equal(t, true, ok, "Not a SignRequest_BlockV3")
 	assert.Equal(t, abb, got.BlindedBlockV3)

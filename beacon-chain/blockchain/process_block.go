@@ -17,9 +17,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
+	consensusblocks "github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
@@ -95,7 +95,7 @@ var initialSyncBlockCacheSize = uint64(2 * params.BeaconConfig().SlotsPerEpoch)
 func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlock, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.onBlock")
 	defer span.End()
-	if err := wrapper.BeaconBlockIsNil(signed); err != nil {
+	if err := consensusblocks.BeaconBlockIsNil(signed); err != nil {
 		return invalidBlock{error: err}
 	}
 	b := signed.Block()
@@ -293,7 +293,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 		return errWrongBlockCount
 	}
 
-	if err := wrapper.BeaconBlockIsNil(blks[0]); err != nil {
+	if err := consensusblocks.BeaconBlockIsNil(blks[0]); err != nil {
 		return invalidBlock{error: err}
 	}
 	b := blks[0].Block()
@@ -590,7 +590,7 @@ func (s *Service) validateMergeTransitionBlock(ctx context.Context, stateVersion
 	if err != nil {
 		return invalidBlock{error: err}
 	}
-	isEmpty, err := wrapper.IsEmptyExecutionData(payload)
+	isEmpty, err := consensusblocks.IsEmptyExecutionData(payload)
 	if err != nil {
 		return err
 	}
@@ -606,11 +606,11 @@ func (s *Service) validateMergeTransitionBlock(ctx context.Context, stateVersion
 
 	// Skip validation if the block is not a merge transition block.
 	// To reach here. The payload must be non-empty. If the state header is empty then it's at transition.
-	wh, err := wrapper.WrappedExecutionPayloadHeader(stateHeader)
+	wh, err := consensusblocks.WrappedExecutionPayloadHeader(stateHeader)
 	if err != nil {
 		return err
 	}
-	empty, err := wrapper.IsEmptyExecutionData(wh)
+	empty, err := consensusblocks.IsEmptyExecutionData(wh)
 	if err != nil {
 		return err
 	}
@@ -647,12 +647,17 @@ func (s *Service) fillMissingPayloadIDRoutine(ctx context.Context, stateFeed *ev
 				_, id, has := s.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(s.CurrentSlot() + 1)
 				// There exists proposer for next slot, but we haven't called fcu w/ payload attribute yet.
 				if has && id == [8]byte{} {
-					if _, err := s.notifyForkchoiceUpdate(ctx, &notifyForkchoiceUpdateArg{
-						headState: s.headState(ctx),
-						headRoot:  s.headRoot(),
-						headBlock: s.headBlock().Block(),
-					}); err != nil {
-						log.WithError(err).Error("Could not prepare payload on empty ID")
+					headBlock, err := s.headBlock()
+					if err != nil {
+						log.WithError(err).Error("Could not get head block")
+					} else {
+						if _, err := s.notifyForkchoiceUpdate(ctx, &notifyForkchoiceUpdateArg{
+							headState: s.headState(ctx),
+							headRoot:  s.headRoot(),
+							headBlock: headBlock.Block(),
+						}); err != nil {
+							log.WithError(err).Error("Could not prepare payload on empty ID")
+						}
 					}
 					missedPayloadIDFilledCount.Inc()
 				}
