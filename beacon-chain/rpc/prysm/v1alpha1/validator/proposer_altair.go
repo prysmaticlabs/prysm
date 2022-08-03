@@ -6,8 +6,8 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/interop"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -60,7 +60,7 @@ func (vs *Server) getAltairBeaconBlock(ctx context.Context, req *ethpb.BlockRequ
 		return nil, fmt.Errorf("could not build block data: %v", err)
 	}
 	// Compute state root with the newly constructed block.
-	wsb, err := wrapper.WrappedSignedBeaconBlock(
+	wsb, err := blocks.NewSignedBeaconBlock(
 		&ethpb.SignedBeaconBlockAltair{Block: blk, Signature: make([]byte, 96)},
 	)
 	if err != nil {

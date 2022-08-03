@@ -28,8 +28,8 @@ import (
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/config/params"
+	consensusblocks "github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/container/trie"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -313,7 +313,9 @@ func TestChainService_InitializeChainInfo(t *testing.T) {
 	require.NoError(t, c.StartFromSavedState(headState))
 	headBlk, err := c.HeadBlock(ctx)
 	require.NoError(t, err)
-	assert.DeepEqual(t, headBlock, headBlk.Proto(), "Head block incorrect")
+	pb, err := headBlk.Proto()
+	require.NoError(t, err)
+	assert.DeepEqual(t, headBlock, pb, "Head block incorrect")
 	s, err := c.HeadState(ctx)
 	require.NoError(t, err)
 	assert.DeepSSZEqual(t, headState.InnerStateUnsafe(), s.InnerStateUnsafe(), "Head state incorrect")
@@ -366,7 +368,9 @@ func TestChainService_InitializeChainInfo_SetHeadAtGenesis(t *testing.T) {
 	require.NoError(t, err)
 	assert.DeepSSZEqual(t, headState.InnerStateUnsafe(), s.InnerStateUnsafe(), "Head state incorrect")
 	assert.Equal(t, genesisRoot, c.originBlockRoot, "Genesis block root incorrect")
-	assert.DeepEqual(t, headBlock, c.head.block.Proto())
+	pb, err := c.head.block.Proto()
+	require.NoError(t, err)
+	assert.DeepEqual(t, headBlock, pb)
 }
 
 func TestChainService_InitializeChainInfo_HeadSync(t *testing.T) {
@@ -427,7 +431,9 @@ func TestChainService_InitializeChainInfo_HeadSync(t *testing.T) {
 	assert.DeepSSZEqual(t, headState.InnerStateUnsafe(), s.InnerStateUnsafe(), "Head state incorrect")
 	assert.Equal(t, genesisRoot, c.originBlockRoot, "Genesis block root incorrect")
 	// Since head sync is not triggered, chain is initialized to the last finalization checkpoint.
-	assert.DeepEqual(t, finalizedBlock, c.head.block.Proto())
+	pb, err := c.head.block.Proto()
+	require.NoError(t, err)
+	assert.DeepEqual(t, finalizedBlock, pb)
 	assert.LogsContain(t, hook, "resetting head from the checkpoint ('--head-sync' flag is ignored)")
 	assert.LogsDoNotContain(t, hook, "Regenerating state from the last checkpoint at slot")
 
@@ -448,7 +454,9 @@ func TestChainService_InitializeChainInfo_HeadSync(t *testing.T) {
 	assert.DeepSSZEqual(t, headState.InnerStateUnsafe(), s.InnerStateUnsafe(), "Head state incorrect")
 	assert.Equal(t, genesisRoot, c.originBlockRoot, "Genesis block root incorrect")
 	// Head slot is far beyond the latest finalized checkpoint, head sync is triggered.
-	assert.DeepEqual(t, headBlock, c.head.block.Proto())
+	pb, err = c.head.block.Proto()
+	require.NoError(t, err)
+	assert.DeepEqual(t, headBlock, pb)
 	assert.LogsContain(t, hook, "Regenerating state from the last checkpoint at slot 225")
 	assert.LogsDoNotContain(t, hook, "resetting head from the checkpoint ('--head-sync' flag is ignored)")
 }
@@ -466,7 +474,7 @@ func TestChainService_SaveHeadNoDB(t *testing.T) {
 	newState, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, s.cfg.StateGen.SaveState(ctx, r, newState))
-	wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+	wsb, err := consensusblocks.NewSignedBeaconBlock(blk)
 	require.NoError(t, err)
 	require.NoError(t, s.saveHeadNoDB(ctx, wsb, r, newState))
 
@@ -488,7 +496,7 @@ func TestHasBlock_ForkChoiceAndDB_ProtoArray(t *testing.T) {
 	require.NoError(t, err)
 	beaconState, err := util.NewBeaconState()
 	require.NoError(t, err)
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err := consensusblocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
 	require.NoError(t, s.insertBlockAndAttestationsToForkChoiceStore(ctx, wsb.Block(), r, beaconState))
 
@@ -507,7 +515,7 @@ func TestHasBlock_ForkChoiceAndDB_DoublyLinkedTree(t *testing.T) {
 	require.NoError(t, err)
 	beaconState, err := util.NewBeaconState()
 	require.NoError(t, err)
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err := consensusblocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
 	require.NoError(t, s.insertBlockAndAttestationsToForkChoiceStore(ctx, wsb.Block(), r, beaconState))
 
@@ -527,7 +535,7 @@ func TestServiceStop_SaveCachedBlocks(t *testing.T) {
 	bb := util.NewBeaconBlock()
 	r, err := bb.Block.HashTreeRoot()
 	require.NoError(t, err)
-	wsb, err := wrapper.WrappedSignedBeaconBlock(bb)
+	wsb, err := consensusblocks.NewSignedBeaconBlock(bb)
 	require.NoError(t, err)
 	require.NoError(t, s.saveInitSyncBlock(ctx, r, wsb))
 	require.NoError(t, s.Stop())
@@ -555,7 +563,7 @@ func BenchmarkHasBlockDB(b *testing.B) {
 		cfg: &config{BeaconDB: beaconDB},
 	}
 	blk := util.NewBeaconBlock()
-	wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+	wsb, err := consensusblocks.NewSignedBeaconBlock(blk)
 	require.NoError(b, err)
 	require.NoError(b, s.cfg.BeaconDB.SaveBlock(ctx, wsb))
 	r, err := blk.Block.HashTreeRoot()
@@ -579,7 +587,7 @@ func BenchmarkHasBlockForkChoiceStore_ProtoArray(b *testing.B) {
 	bs := &ethpb.BeaconState{FinalizedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)}, CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)}}
 	beaconState, err := v1.InitializeFromProto(bs)
 	require.NoError(b, err)
-	wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+	wsb, err := consensusblocks.NewSignedBeaconBlock(blk)
 	require.NoError(b, err)
 	require.NoError(b, s.insertBlockAndAttestationsToForkChoiceStore(ctx, wsb.Block(), r, beaconState))
 
@@ -600,7 +608,7 @@ func BenchmarkHasBlockForkChoiceStore_DoublyLinkedTree(b *testing.B) {
 	bs := &ethpb.BeaconState{FinalizedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)}, CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)}}
 	beaconState, err := v1.InitializeFromProto(bs)
 	require.NoError(b, err)
-	wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+	wsb, err := consensusblocks.NewSignedBeaconBlock(blk)
 	require.NoError(b, err)
 	require.NoError(b, s.insertBlockAndAttestationsToForkChoiceStore(ctx, wsb.Block(), r, beaconState))
 

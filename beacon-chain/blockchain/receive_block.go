@@ -39,7 +39,10 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.SignedBeaco
 	ctx, span := trace.StartSpan(ctx, "blockChain.ReceiveBlock")
 	defer span.End()
 	receivedTime := time.Now()
-	blockCopy := block.Copy()
+	blockCopy, err := block.Copy()
+	if err != nil {
+		return err
+	}
 
 	// Apply state transition on the new block.
 	if err := s.onBlock(ctx, blockCopy, blockRoot); err != nil {
@@ -94,7 +97,10 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []interfaces.Sig
 	}
 
 	for i, b := range blocks {
-		blockCopy := b.Copy()
+		blockCopy, err := b.Copy()
+		if err != nil {
+			return err
+		}
 		// Send notification of the processed block to the state feed.
 		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.BlockProcessed,

@@ -26,9 +26,9 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	validatorserviceconfig "github.com/prysmaticlabs/prysm/config/validator/service"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/crypto/hash"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -349,11 +349,11 @@ func (v *validator) ReceiveBlocks(ctx context.Context, connectionErrorChannel ch
 		var blk interfaces.SignedBeaconBlock
 		switch b := res.Block.(type) {
 		case *ethpb.StreamBlocksResponse_Phase0Block:
-			blk, err = wrapper.WrappedSignedBeaconBlock(b.Phase0Block)
+			blk, err = blocks.NewSignedBeaconBlock(b.Phase0Block)
 		case *ethpb.StreamBlocksResponse_AltairBlock:
-			blk, err = wrapper.WrappedSignedBeaconBlock(b.AltairBlock)
+			blk, err = blocks.NewSignedBeaconBlock(b.AltairBlock)
 		case *ethpb.StreamBlocksResponse_BellatrixBlock:
-			blk, err = wrapper.WrappedSignedBeaconBlock(b.BellatrixBlock)
+			blk, err = blocks.NewSignedBeaconBlock(b.BellatrixBlock)
 		}
 		if err != nil {
 			log.WithError(err).Error("Failed to wrap signed block")

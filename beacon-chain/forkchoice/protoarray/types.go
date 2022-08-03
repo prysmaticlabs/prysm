@@ -39,6 +39,7 @@ type Store struct {
 	proposerBoostLock             sync.RWMutex
 	checkpointsLock               sync.RWMutex
 	genesisTime                   uint64
+	allTipsAreInvalid             bool // tracks if all tips are not viable for head
 }
 
 // Node defines the individual block which includes its block parent, ancestor and how much weight accounted for it.

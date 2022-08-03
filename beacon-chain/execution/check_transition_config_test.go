@@ -20,7 +20,7 @@ import (
 	mocks "github.com/prysmaticlabs/prysm/beacon-chain/execution/testing"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -67,7 +67,7 @@ func Test_checkTransitionConfiguration(t *testing.T) {
 		}()
 		payload := emptyPayload()
 		payload.GasUsed = 21000
-		wrappedBlock, err := wrapper.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{
+		wrappedBlock, err := blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{
 			Block: &ethpb.BeaconBlockBellatrix{
 				Body: &ethpb.BeaconBlockBodyBellatrix{
 					ExecutionPayload: payload,
