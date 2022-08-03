@@ -14,7 +14,6 @@ import (
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
-	validator_service_config "github.com/prysmaticlabs/prysm/config/validator/service"
 	validatorserviceconfig "github.com/prysmaticlabs/prysm/config/validator/service"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -851,11 +850,11 @@ func TestServer_GetGasLimit(t *testing.T) {
 			args: &validatorserviceconfig.ProposerSettings{
 				ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{
 					bytesutil.ToBytes48(byteval): {
-						BuilderConfig: &validator_service_config.BuilderConfig{GasLimit: 123456789},
+						BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: 123456789},
 					},
 				},
 				DefaultConfig: &validatorserviceconfig.ProposerOption{
-					BuilderConfig: &validator_service_config.BuilderConfig{GasLimit: 987654321},
+					BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: 987654321},
 				},
 			},
 			pubkey: bytesutil.ToBytes48(byteval),
@@ -866,11 +865,11 @@ func TestServer_GetGasLimit(t *testing.T) {
 			args: &validatorserviceconfig.ProposerSettings{
 				ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{
 					bytesutil.ToBytes48(byteval): {
-						BuilderConfig: &validator_service_config.BuilderConfig{GasLimit: 123456789},
+						BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: 123456789},
 					},
 				},
 				DefaultConfig: &validatorserviceconfig.ProposerOption{
-					BuilderConfig: &validator_service_config.BuilderConfig{GasLimit: 987654321},
+					BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: 987654321},
 				},
 			},
 			// no settings for the following validator, so the gaslimit returned is the default value.
