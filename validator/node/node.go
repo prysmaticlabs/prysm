@@ -31,6 +31,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	validatorServiceConfig "github.com/prysmaticlabs/prysm/config/validator/service"
+	"github.com/prysmaticlabs/prysm/container/slice"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/monitoring/backup"
@@ -456,7 +457,8 @@ func web3SignerConfig(cliCtx *cli.Context) (*remoteweb3signer.SetupConfig, error
 		if cliCtx.IsSet(flags.WalletPasswordFileFlag.Name) {
 			log.Warnf("%s was provided while using web3signer and will be ignored", flags.WalletPasswordFileFlag.Name)
 		}
-		if cliCtx.IsSet(flags.Web3SignerPublicValidatorKeysFlag.Name) {
+
+		if cliCtx.IsSet(flags.Web3SignerPublicValidatorKeysFlag.Name) || len(cliCtx.StringSlice(flags.Web3SignerPublicValidatorKeysFlag.Name)) > 0 {
 			publicKeysSlice := cliCtx.StringSlice(flags.Web3SignerPublicValidatorKeysFlag.Name)
 			pks := make([]string, 0)
 			if len(publicKeysSlice) == 1 {
@@ -470,6 +472,7 @@ func web3SignerConfig(cliCtx *cli.Context) (*remoteweb3signer.SetupConfig, error
 				pks = publicKeysSlice
 			}
 			if len(pks) > 0 {
+				pks = slice.Unique[string](pks)
 				var validatorKeys [][48]byte
 				for _, key := range pks {
 					decodedKey, decodeErr := hexutil.Decode(key)
