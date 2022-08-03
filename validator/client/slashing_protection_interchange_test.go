@@ -10,7 +10,7 @@ import (
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/io/file"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -124,7 +124,7 @@ func TestEIP3076SpecTests(t *testing.T) {
 						copy(signingRoot[:], signingRootBytes)
 					}
 
-					wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+					wsb, err := blocks.NewSignedBeaconBlock(b)
 					require.NoError(t, err)
 					err = validator.slashableProposalCheck(context.Background(), pk, wsb, signingRoot)
 					if sb.ShouldSucceed {

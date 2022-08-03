@@ -60,7 +60,8 @@ func TestBeaconBlock_AsSignRequestObject(t *testing.T) {
 	wsb, err := wrapper.WrappedBeaconBlock(abb)
 	require.NoError(t, err)
 
-	sro := wsb.AsSignRequestObject()
+	sro, err := wsb.AsSignRequestObject()
+	require.NoError(t, err)
 	got, ok := sro.(*validatorpb.SignRequest_Block)
 	require.Equal(t, true, ok, "Not a SignRequest_Block")
 	assert.Equal(t, abb, got.Block)

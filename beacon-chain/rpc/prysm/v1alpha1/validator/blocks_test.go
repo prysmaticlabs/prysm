@@ -12,7 +12,7 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/mock"
@@ -100,7 +100,7 @@ func TestServer_StreamAltairBlocks_OnHeadUpdated(t *testing.T) {
 	go func(tt *testing.T) {
 		assert.NoError(tt, server.StreamBlocksAltair(&ethpb.StreamBlocksRequest{}, mockStream), "Could not call RPC method")
 	}(t)
-	wrappedBlk, err := wrapper.WrappedSignedBeaconBlock(b)
+	wrappedBlk, err := blocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
 	// Send in a loop to ensure it is delivered (busy wait for the service to subscribe to the state feed).
 	for sent := 0; sent == 0; {

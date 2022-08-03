@@ -15,7 +15,6 @@ import (
 	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -270,9 +269,7 @@ func DeterministicGenesisStateWithGenesisBlock(
 	require.NoError(t, err, "Could not hash genesis state")
 
 	genesis := b.NewGenesisBlock(stateRoot[:])
-	wsb, err := wrapper.WrappedSignedBeaconBlock(genesis)
-	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, wsb), "Could not save genesis block")
+	SaveBlock(t, ctx, db, genesis)
 
 	parentRoot, err := genesis.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")

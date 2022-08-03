@@ -48,8 +48,8 @@ func (w Phase0SignedBeaconBlock) IsNil() bool {
 
 // Copy performs a deep copy of the signed beacon block
 // object.
-func (w Phase0SignedBeaconBlock) Copy() interfaces.SignedBeaconBlock {
-	return wrappedPhase0SignedBeaconBlock(eth.CopySignedBeaconBlock(w.b))
+func (w Phase0SignedBeaconBlock) Copy() (interfaces.SignedBeaconBlock, error) {
+	return wrappedPhase0SignedBeaconBlock(eth.CopySignedBeaconBlock(w.b)), nil
 }
 
 // MarshalSSZ marshals the signed beacon block to its relevant ssz
@@ -77,8 +77,8 @@ func (w Phase0SignedBeaconBlock) UnmarshalSSZ(buf []byte) error {
 
 // Proto returns the block in its underlying protobuf
 // interface.
-func (w Phase0SignedBeaconBlock) Proto() proto.Message {
-	return w.b
+func (w Phase0SignedBeaconBlock) Proto() (proto.Message, error) {
+	return w.b, nil
 }
 
 // PbGenericBlock returns a generic signed beacon block.
@@ -216,8 +216,8 @@ func (w Phase0BeaconBlock) UnmarshalSSZ(buf []byte) error {
 
 // Proto returns the underlying block object in its
 // proto form.
-func (w Phase0BeaconBlock) Proto() proto.Message {
-	return w.b
+func (w Phase0BeaconBlock) Proto() (proto.Message, error) {
+	return w.b, nil
 }
 
 // Version of the underlying protobuf object.
@@ -226,10 +226,10 @@ func (Phase0BeaconBlock) Version() int {
 }
 
 // AsSignRequestObject returns the underlying sign request object.
-func (w Phase0BeaconBlock) AsSignRequestObject() validatorpb.SignRequestObject {
+func (w Phase0BeaconBlock) AsSignRequestObject() (validatorpb.SignRequestObject, error) {
 	return &validatorpb.SignRequest_Block{
 		Block: w.b,
-	}
+	}, nil
 }
 
 // Phase0BeaconBlockBody is a wrapper of a beacon block body.
@@ -300,8 +300,8 @@ func (w Phase0BeaconBlockBody) HashTreeRoot() ([32]byte, error) {
 
 // Proto returns the underlying proto form of the block
 // body.
-func (w Phase0BeaconBlockBody) Proto() proto.Message {
-	return w.b
+func (w Phase0BeaconBlockBody) Proto() (proto.Message, error) {
+	return w.b, nil
 }
 
 // Execution is a stub.
