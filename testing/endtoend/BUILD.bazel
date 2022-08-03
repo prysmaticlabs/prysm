@@ -105,7 +105,6 @@ go_test(
     flaky = True,
     shard_count = 2,
     tags = [
-        "develop",
         "e2e",
         "manual",
         "minimal",
@@ -138,7 +137,6 @@ go_test(
     flaky = True,
     shard_count = 2,
     tags = [
-        "develop",
         "e2e",
         "exclusive",
         "mainnet",
@@ -172,7 +170,6 @@ go_test(
     flaky = True,
     shard_count = 2,
     tags = [
-        "develop",
         "exclusive",
         "mainnet",
         "manual",
@@ -206,7 +203,6 @@ go_test(
     flaky = True,
     shard_count = 2,
     tags = [
-        "develop",
         "exclusive",
         "manual",
         "minimal",
