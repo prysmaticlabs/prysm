@@ -389,6 +389,30 @@ func groupDeleteRemoteKeysErrors(req *ethpbservice.DeleteRemoteKeysRequest, erro
 	return statuses
 }
 
+func (s *Server) GetGasLimit(_ context.Context, req *ethpbservice.PubkeyRequest) (*ethpbservice.GetGasLimitResponse, error) {
+	if s.validatorService == nil {
+		return nil, status.Error(codes.FailedPrecondition, "Validator service not ready")
+	}
+	validatorKey := req.Pubkey
+	if err := validatePublicKey(validatorKey); err != nil {
+		return nil, status.Error(codes.FailedPrecondition, err.Error())
+	}
+	if s.validatorService.ProposerSettings != nil {
+		proposerOption, found := s.validatorService.ProposerSettings.ProposeConfig[bytesutil.ToBytes48(validatorKey)]
+		if found {
+			return &ethpbservice.GetGasLimitResponse{
+				Gaslimit: proposerOption.BuilderConfig.GasLimit,
+			}, nil
+		} else if s.validatorService.ProposerSettings.DefaultConfig != nil && s.validatorService.ProposerSettings.DefaultConfig.BuilderConfig != nil {
+			return &ethpbservice.GetGasLimitResponse{
+				Gaslimit: s.validatorService.ProposerSettings.DefaultConfig.BuilderConfig.GasLimit,
+			}, nil
+		}
+	}
+	defaultGasLimit := params.BeaconConfig().DefaultBuilderGasLimit
+	return &ethpbservice.GetGasLimitResponse{Gaslimit: defaultGasLimit}, nil
+}
+
 // ListFeeRecipientByPubkey returns the public key to eth address mapping object to the end user.
 func (s *Server) ListFeeRecipientByPubkey(_ context.Context, req *ethpbservice.PubkeyRequest) (*ethpbservice.GetFeeRecipientByPubkeyResponse, error) {
 	if s.validatorService == nil {

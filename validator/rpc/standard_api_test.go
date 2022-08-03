@@ -14,6 +14,7 @@ import (
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	validator_service_config "github.com/prysmaticlabs/prysm/config/validator/service"
 	validatorserviceconfig "github.com/prysmaticlabs/prysm/config/validator/service"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -828,6 +829,74 @@ func TestServer_DeleteFeeRecipientByPubkey(t *testing.T) {
 			_, err = s.DeleteFeeRecipientByPubkey(ctx, &ethpbservice.PubkeyRequest{Pubkey: byteval})
 			require.NoError(t, err)
 			assert.Equal(t, tt.want.EthAddress, s.validatorService.ProposerSettings.ProposeConfig[bytesutil.ToBytes48(byteval)].FeeRecipient.Hex())
+		})
+	}
+}
+
+func TestServer_GetGasLimit(t *testing.T) {
+	ctx := context.Background()
+	byteval, err := hexutil.Decode("0xaf2e7ba294e03438ea819bd4033c6c1bf6b04320ee2075b77273c08d02f8a61bcc303c2c06bd3713cb442072ae591493")
+	byteval2, err2 := hexutil.Decode("0x1234567878903438ea819bd4033c6c1bf6b04320ee2075b77273c08d02f8a61bcc303c2c06bd3713cb442072ae591493")
+	require.NoError(t, err)
+	require.NoError(t, err2)
+
+	tests := []struct {
+		name   string
+		args   *validatorserviceconfig.ProposerSettings
+		pubkey [48]byte
+		want   uint64
+	}{
+		{
+			name: "ProposerSetting for specific pubkey exists",
+			args: &validatorserviceconfig.ProposerSettings{
+				ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{
+					bytesutil.ToBytes48(byteval): {
+						BuilderConfig: &validator_service_config.BuilderConfig{GasLimit: 123456789},
+					},
+				},
+				DefaultConfig: &validatorserviceconfig.ProposerOption{
+					BuilderConfig: &validator_service_config.BuilderConfig{GasLimit: 987654321},
+				},
+			},
+			pubkey: bytesutil.ToBytes48(byteval),
+			want:   123456789,
+		},
+		{
+			name: "ProposerSetting for specific pubkey does not exist",
+			args: &validatorserviceconfig.ProposerSettings{
+				ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{
+					bytesutil.ToBytes48(byteval): {
+						BuilderConfig: &validator_service_config.BuilderConfig{GasLimit: 123456789},
+					},
+				},
+				DefaultConfig: &validatorserviceconfig.ProposerOption{
+					BuilderConfig: &validator_service_config.BuilderConfig{GasLimit: 987654321},
+				},
+			},
+			// no settings for the following validator, so the gaslimit returned is the default value.
+			pubkey: bytesutil.ToBytes48(byteval2),
+			want:   987654321,
+		},
+		{
+			name:   "No proposerSetting at all",
+			args:   nil,
+			pubkey: bytesutil.ToBytes48(byteval),
+			want:   params.BeaconConfig().DefaultBuilderGasLimit,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			vs, err := client.NewValidatorService(ctx, &client.Config{
+				Validator:        &mock.MockValidator{},
+				ProposerSettings: tt.args,
+			})
+			require.NoError(t, err)
+			s := &Server{
+				validatorService: vs,
+			}
+			got, err := s.GetGasLimit(ctx, &ethpbservice.PubkeyRequest{Pubkey: tt.pubkey[:]})
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got.Gaslimit)
 		})
 	}
 }
