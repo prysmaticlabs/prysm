@@ -167,7 +167,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 						s.setBadBlock(ctx, blkRoot)
 					}
 				}
-				log.WithError(err).WithField("slot", b.Block().Slot()).Debug("Could not process block from slot")
+				log.WithError(err).WithField("slot", b.Block().Slot()).Debug("Could not process block")
 
 				// In the next iteration of the queue, this block will be removed from
 				// the pending queue as it has been marked as a 'bad' block.
