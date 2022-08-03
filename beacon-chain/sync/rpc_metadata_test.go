@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/ssz/equality"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/metadata"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -240,7 +241,7 @@ func TestExtractMetaDataType(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    wrapper.Metadata
+		want    metadata.Metadata
 		wantErr bool
 	}{
 		{

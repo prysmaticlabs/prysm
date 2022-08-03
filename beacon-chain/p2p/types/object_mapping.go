@@ -7,6 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/metadata"
 )
 
 func init() {
@@ -24,7 +25,7 @@ var (
 	BlockMap map[[4]byte]func() (interfaces.SignedBeaconBlock, error)
 	// MetaDataMap maps the fork-version to the underlying data type for that
 	// particular fork period.
-	MetaDataMap map[[4]byte]func() wrapper.Metadata
+	MetaDataMap map[[4]byte]func() metadata.Metadata
 )
 
 // InitializeDataMaps initializes all the relevant object maps. This function is called to
@@ -50,14 +51,14 @@ func InitializeDataMaps() {
 	}
 
 	// Reset our metadata map.
-	MetaDataMap = map[[4]byte]func() wrapper.Metadata{
-		bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion): func() wrapper.Metadata {
+	MetaDataMap = map[[4]byte]func() metadata.Metadata{
+		bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion): func() metadata.Metadata {
 			return wrapper.WrappedMetadataV0(&ethpb.MetaDataV0{})
 		},
-		bytesutil.ToBytes4(params.BeaconConfig().AltairForkVersion): func() wrapper.Metadata {
+		bytesutil.ToBytes4(params.BeaconConfig().AltairForkVersion): func() metadata.Metadata {
 			return wrapper.WrappedMetadataV1(&ethpb.MetaDataV1{})
 		},
-		bytesutil.ToBytes4(params.BeaconConfig().BellatrixForkVersion): func() wrapper.Metadata {
+		bytesutil.ToBytes4(params.BeaconConfig().BellatrixForkVersion): func() metadata.Metadata {
 			return wrapper.WrappedMetadataV1(&ethpb.MetaDataV1{})
 		},
 	}
