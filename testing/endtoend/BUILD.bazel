@@ -103,9 +103,9 @@ go_test(
     ],
     eth_network = "minimal",
     flaky = True,
+    gotags = ["develop"],
     shard_count = 2,
     tags = [
-        "develop",
         "e2e",
         "manual",
         "minimal",
@@ -136,9 +136,9 @@ go_test(
     ],
     eth_network = "mainnet",
     flaky = True,
+    gotags = ["develop"],
     shard_count = 2,
     tags = [
-        "develop",
         "e2e",
         "exclusive",
         "mainnet",
@@ -170,9 +170,9 @@ go_test(
     ],
     eth_network = "mainnet",
     flaky = True,
+    gotags = ["develop"],
     shard_count = 2,
     tags = [
-        "develop",
         "exclusive",
         "mainnet",
         "manual",
@@ -204,9 +204,9 @@ go_test(
     ],
     eth_network = "minimal",
     flaky = True,
+    gotags = ["develop"],
     shard_count = 2,
     tags = [
-        "develop",
         "exclusive",
         "manual",
         "minimal",
