@@ -17,7 +17,7 @@ import (
 // ErrEmpty is returned for queues with no items
 var ErrEmpty = errors.New("queue is empty")
 
-// ErrDuplicateItem is returned when the queue attmepts to push an item to a key that
+// ErrDuplicateItem is returned when the queue attempts to push an item to a key that
 // already exists. The queue does not attempt to update, instead returns this
 // error. If an Item needs to be updated or replaced, pop the item first.
 var ErrDuplicateItem = errors.New("duplicate item")

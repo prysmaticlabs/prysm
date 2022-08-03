@@ -171,7 +171,7 @@ func (s *Service) logAggregatedPerformance() {
 			"AverageInclusionDistance": fmt.Sprintf("%.1f", percentDistance),
 			"TotalProposedBlocks":      p.totalProposedCount,
 			"TotalAggregations":        p.totalAggregations,
-			"TotalSyncContributions":   p.totalSyncComitteeContributions,
+			"TotalSyncContributions":   p.totalSyncCommitteeContributions,
 		}).Info("Aggregated performance since launch")
 	}
 }

@@ -165,7 +165,7 @@ func validateMetadata(ctx context.Context, validatorDB db.Database, interchangeJ
 		return nil
 	}
 	if !bytes.Equal(dbGvr, gvr[:]) {
-		return errors.New("genesis validators root doesnt match the one that is stored in slashing protection db. " +
+		return errors.New("genesis validators root doesn't match the one that is stored in slashing protection db. " +
 			"Please make sure you import the protection data that is relevant to the chain you are on")
 	}
 	return nil
