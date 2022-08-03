@@ -51,7 +51,6 @@ type testWalletConfig struct {
 	deletePublicKeys        string
 	keysDir                 string
 	backupDir               string
-	passwordsDir            string
 	walletDir               string
 }
 
