@@ -1,5 +1,3 @@
-//go:build develop
-
 package params
 
 import (
