@@ -2249,7 +2249,7 @@ func TestStore_NoViableHead_NewPayload_DoublyLinkedTree(t *testing.T) {
 	err = service.onBlock(ctx, wsb, root)
 	require.ErrorContains(t, "received an INVALID payload from execution engine", err)
 	// Check that forkchoice's head and store's headroot are the previous head (since the invalid block did
-	// not finish importing and it was never imported to forkchoice). Cehck
+	// not finish importing and it was never imported to forkchoice). Check
 	// also that the node is optimistic
 	require.Equal(t, firstInvalidRoot, service.ForkChoicer().CachedHeadRoot())
 	headRoot, err := service.HeadRoot(ctx)
@@ -2409,7 +2409,7 @@ func TestStore_NoViableHead_NewPayload_Protoarray(t *testing.T) {
 	err = service.onBlock(ctx, wsb, root)
 	require.ErrorContains(t, "received an INVALID payload from execution engine", err)
 	// Check that forkchoice's head and store's headroot are the previous head (since the invalid block did
-	// not finish importing and it was never imported to forkchoice). Cehck
+	// not finish importing and it was never imported to forkchoice). Check
 	// also that the node is optimistic
 	require.Equal(t, firstInvalidRoot, service.ForkChoicer().CachedHeadRoot())
 	headRoot, err := service.HeadRoot(ctx)
