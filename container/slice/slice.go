@@ -370,12 +370,14 @@ func Unique[T comparable](a []T) []T {
 		return a
 	}
 	found := map[T]bool{}
-	result := make([]T, 0, len(a))
-	for _, v := range a {
-		if !found[v] {
-			found[v] = true
-			result = append(result, v)
+	result := make([]T, len(a))
+	end := 0
+	for i := 0; i < len(a); i++ {
+		if !found[a[i]] {
+			found[a[i]] = true
+			result[end] = a[i]
+			end += 1
 		}
 	}
-	return result
+	return result[:end]
 }
