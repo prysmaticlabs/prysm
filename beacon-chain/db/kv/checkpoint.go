@@ -115,6 +115,9 @@ func recoverStateSummary(ctx context.Context, tx *bolt.Tx, root []byte) error {
 		Slot: blk.Block().Slot(),
 		Root: root,
 	})
+	if err != nil {
+		return err
+	}
 	summaryBucket := tx.Bucket(stateBucket)
 	return summaryBucket.Put(root, summaryEnc)
 }
