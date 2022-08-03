@@ -16,7 +16,11 @@ func SetupTestConfigCleanup(t testing.TB) {
 	prevNetworkCfg := networkConfig.Copy()
 	t.Cleanup(func() {
 		mainnetBeaconConfig = prevDefaultBeaconConfig
+		// Lock the config, when cleaning up
+		// otherwise the race detector is triggered.
+		cfgrw.Lock()
 		err = undo()
+		cfgrw.Unlock()
 		if err != nil {
 			t.Error(err)
 		}
