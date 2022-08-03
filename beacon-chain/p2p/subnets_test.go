@@ -18,7 +18,7 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/metadata"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	ecdsaprysm "github.com/prysmaticlabs/prysm/crypto/ecdsa"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -132,7 +132,7 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 	// Update ENR of a peer.
 	testService := &Service{
 		dv5Listener: listeners[0],
-		metaData: metadata.WrappedMetadataV0(&pb.MetaDataV0{
+		metaData: wrapper.WrappedMetadataV0(&pb.MetaDataV0{
 			Attnets: bitfield.NewBitvector64(),
 		}),
 	}

@@ -12,11 +12,10 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/metadata"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/network/forks"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/metadata"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/time/slots"
 )
@@ -56,7 +55,7 @@ func (s *Service) metaDataHandler(_ context.Context, _ interface{}, stream libp2
 		// We have a v1 metadata object saved locally, so we
 		// convert it back to a v0 metadata object.
 		if currMd.Version() != version.Phase0 {
-			currMd = metadata.WrappedMetadataV0(
+			currMd = wrapper.WrappedMetadataV0(
 				&pb.MetaDataV0{
 					Attnets:   currMd.AttnetsBitfield(),
 					SeqNumber: currMd.SequenceNumber(),
@@ -66,7 +65,7 @@ func (s *Service) metaDataHandler(_ context.Context, _ interface{}, stream libp2
 		// We have a v0 metadata object saved locally, so we
 		// convert it to a v1 metadata object.
 		if currMd.Version() != version.Altair {
-			currMd = metadata.WrappedMetadataV1(
+			currMd = wrapper.WrappedMetadataV1(
 				&pb.MetaDataV1{
 					Attnets:   currMd.AttnetsBitfield(),
 					SeqNumber: currMd.SequenceNumber(),
@@ -85,7 +84,7 @@ func (s *Service) metaDataHandler(_ context.Context, _ interface{}, stream libp2
 	return nil
 }
 
-func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (metadata.Metadata, error) {
+func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (wrapper.Metadata, error) {
 	ctx, cancel := context.WithTimeout(ctx, respTimeout)
 	defer cancel()
 
@@ -134,7 +133,7 @@ func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (metadata
 	return msg, nil
 }
 
-func extractMetaDataType(digest []byte, chain blockchain.ChainInfoFetcher) (metadata.Metadata, error) {
+func extractMetaDataType(digest []byte, chain blockchain.ChainInfoFetcher) (wrapper.Metadata, error) {
 	if len(digest) == 0 {
 		mdFunc, ok := types.MetaDataMap[bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion)]
 		if !ok {

@@ -17,7 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers/scorers"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/consensus-types/metadata"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	testpb "github.com/prysmaticlabs/prysm/proto/testing"
@@ -253,7 +253,7 @@ func TestService_BroadcastAttestationWithDiscoveryAttempts(t *testing.T) {
 		// Set for 2nd peer
 		if i == 2 {
 			s.dv5Listener = listener
-			s.metaData = metadata.WrappedMetadataV0(new(ethpb.MetaDataV0))
+			s.metaData = wrapper.WrappedMetadataV0(new(ethpb.MetaDataV0))
 			bitV := bitfield.NewBitvector64()
 			bitV.SetBitAt(subnet, true)
 			s.updateSubnetRecordWithMetadata(bitV)

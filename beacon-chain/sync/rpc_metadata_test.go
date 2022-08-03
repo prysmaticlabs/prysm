@@ -17,10 +17,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/metadata"
+	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/ssz/equality"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/metadata"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -32,7 +31,7 @@ func TestMetaDataRPCHandler_ReceivesMetadata(t *testing.T) {
 	p1.Connect(p2)
 	assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
 	bitfield := [8]byte{'A', 'B'}
-	p1.LocalMetadata = metadata.WrappedMetadataV0(&pb.MetaDataV0{
+	p1.LocalMetadata = wrapper.WrappedMetadataV0(&pb.MetaDataV0{
 		SeqNumber: 2,
 		Attnets:   bitfield[:],
 	})
@@ -84,7 +83,7 @@ func TestMetadataRPCHandler_SendsMetadata(t *testing.T) {
 	p1.Connect(p2)
 	assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
 	bitfield := [8]byte{'A', 'B'}
-	p2.LocalMetadata = metadata.WrappedMetadataV0(&pb.MetaDataV0{
+	p2.LocalMetadata = wrapper.WrappedMetadataV0(&pb.MetaDataV0{
 		SeqNumber: 2,
 		Attnets:   bitfield[:],
 	})
@@ -151,7 +150,7 @@ func TestMetadataRPCHandler_SendsMetadataAltair(t *testing.T) {
 	p1.Connect(p2)
 	assert.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
 	bitfield := [8]byte{'A', 'B'}
-	p2.LocalMetadata = metadata.WrappedMetadataV0(&pb.MetaDataV0{
+	p2.LocalMetadata = wrapper.WrappedMetadataV0(&pb.MetaDataV0{
 		SeqNumber: 2,
 		Attnets:   bitfield[:],
 	})
@@ -198,7 +197,7 @@ func TestMetadataRPCHandler_SendsMetadataAltair(t *testing.T) {
 	}
 
 	// Fix up peer with the correct metadata.
-	p2.LocalMetadata = metadata.WrappedMetadataV1(&pb.MetaDataV1{
+	p2.LocalMetadata = wrapper.WrappedMetadataV1(&pb.MetaDataV1{
 		SeqNumber: 2,
 		Attnets:   bitfield[:],
 		Syncnets:  []byte{0x0},
@@ -241,7 +240,7 @@ func TestExtractMetaDataType(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    metadata.Metadata
+		want    wrapper.Metadata
 		wantErr bool
 	}{
 		{
@@ -250,7 +249,7 @@ func TestExtractMetaDataType(t *testing.T) {
 				digest: []byte{},
 				chain:  &mock.ChainService{ValidatorsRoot: [32]byte{}},
 			},
-			want:    metadata.WrappedMetadataV0(&pb.MetaDataV0{}),
+			want:    wrapper.WrappedMetadataV0(&pb.MetaDataV0{}),
 			wantErr: false,
 		},
 		{
@@ -277,7 +276,7 @@ func TestExtractMetaDataType(t *testing.T) {
 				digest: genDigest[:],
 				chain:  &mock.ChainService{ValidatorsRoot: [32]byte{}},
 			},
-			want:    metadata.WrappedMetadataV0(&pb.MetaDataV0{}),
+			want:    wrapper.WrappedMetadataV0(&pb.MetaDataV0{}),
 			wantErr: false,
 		},
 		{
@@ -286,7 +285,7 @@ func TestExtractMetaDataType(t *testing.T) {
 				digest: altairDigest[:],
 				chain:  &mock.ChainService{ValidatorsRoot: [32]byte{}},
 			},
-			want:    metadata.WrappedMetadataV1(&pb.MetaDataV1{}),
+			want:    wrapper.WrappedMetadataV1(&pb.MetaDataV1{}),
 			wantErr: false,
 		},
 	}
