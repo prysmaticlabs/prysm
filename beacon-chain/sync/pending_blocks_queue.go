@@ -102,7 +102,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 
 			inDB := s.cfg.beaconDB.HasBlock(ctx, blkRoot)
 			// No need to process the same block twice.
-			if inDB {
+			if inDB && !s.hasSeenBlockIndexSlot(b.Block().Slot(), b.Block().ProposerIndex()) {
 				s.pendingQueueLock.Lock()
 				if err = s.deleteBlockFromPendingQueue(slot, b, blkRoot); err != nil {
 					s.pendingQueueLock.Unlock()
