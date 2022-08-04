@@ -25,6 +25,5 @@ done
 # Run goimports on newly generated protos
 # formats imports properly.
 # https://github.com/gogo/protobuf/issues/554
-# goimports is adding duplicate import paths to the generated files. commented out for now
-#goimports -w proto
+goimports -w proto
 gofmt -s -w proto

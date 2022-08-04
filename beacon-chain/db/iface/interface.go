@@ -6,7 +6,6 @@ package iface
 import (
 	"context"
 	"io"
-	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
@@ -76,7 +75,7 @@ type NoHeadAccessDatabase interface {
 	// Blob related methods.
 	DeleteBlobsSidecar(ctx context.Context, root [32]byte) error
 	SaveBlobsSidecar(ctx context.Context, blob *ethpb.BlobsSidecar) error
-	CleanupBlobs(ctx context.Context, ttl time.Duration) error
+	CleanupBlobs(ctx context.Context) error
 	// State related methods.
 	SaveState(ctx context.Context, state state.ReadOnlyBeaconState, blockRoot [32]byte) error
 	SaveStates(ctx context.Context, states []state.ReadOnlyBeaconState, blockRoots [][32]byte) error

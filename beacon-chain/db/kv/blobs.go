@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	bolt "go.etcd.io/bbolt"
@@ -81,7 +82,7 @@ func (s *Store) BlobsSidecarsBySlot(ctx context.Context, slot types.Slot) ([]*et
 		for _, blockRoot := range blockRoots {
 			enc := tx.Bucket(blobsBucket).Get(blockRoot[:])
 			if len(enc) == 0 {
-				return nil
+				continue
 			}
 			blobs := &ethpb.BlobsSidecar{}
 			if err := decode(ctx, enc, blobs); err != nil {
@@ -98,6 +99,7 @@ func (s *Store) BlobsSidecarsBySlot(ctx context.Context, slot types.Slot) ([]*et
 	return blobsSidecars, nil
 }
 
+// HasBlobsSidecar returns true if the blobs are in the db.
 func (s *Store) HasBlobsSidecar(ctx context.Context, root [32]byte) bool {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasBlobsSidecar")
 	defer span.End()
@@ -113,9 +115,13 @@ func (s *Store) HasBlobsSidecar(ctx context.Context, root [32]byte) bool {
 	return exists
 }
 
-func (s *Store) CleanupBlobs(ctx context.Context, ttl time.Duration) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.pruneBlobs")
+// CleanupBlobs removes blobs that are older than the cutoff time.
+func (s *Store) CleanupBlobs(ctx context.Context) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.CleanupBlobs")
 	defer span.End()
+
+	secsInEpoch := time.Duration(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot)) * time.Second
+	ttl := secsInEpoch * (time.Duration(params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest) + 1) // add one more epoch as slack
 
 	var expiredBlobs [][]byte
 	now := time.Now()

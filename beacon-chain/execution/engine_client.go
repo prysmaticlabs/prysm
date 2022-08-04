@@ -37,8 +37,6 @@ const (
 	ExecutionBlockByHashMethod = "eth_getBlockByHash"
 	// ExecutionBlockByNumberMethod request string for JSON-RPC.
 	ExecutionBlockByNumberMethod = "eth_getBlockByNumber"
-	// BlobsBundleMethod request string for JSON-RPC.
-	BlobsBundleMethod = "getBlobsBundleV1"
 	// Defines the seconds to wait before timing out engine endpoints with block execution semantics (newPayload, forkchoiceUpdated).
 	payloadAndForkchoiceUpdatedTimeout = 8 * time.Second
 	// Defines the seconds before timing out engine endpoints with non-block execution semantics.
