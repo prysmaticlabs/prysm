@@ -164,24 +164,24 @@ func (f *ForkChoice) InsertNode(ctx context.Context, state state.BeaconState, ro
 // updateCheckpoints update the checkpoints when inserting a new node.
 func (f *ForkChoice) updateCheckpoints(ctx context.Context, jc, fc *ethpb.Checkpoint) error {
 	f.store.checkpointsLock.Lock()
-	currentJCP := &forkchoicetypes.Checkpoint{Epoch: f.store.justifiedCheckpoint.Epoch,
-		Root: f.store.justifiedCheckpoint.Root}
-	if jc.Epoch > currentJCP.Epoch {
-		if jc.Epoch > f.store.bestJustifiedCheckpoint.Epoch {
+	if jc.Epoch > f.store.justifiedCheckpoint.Epoch {
+		bj := f.store.bestJustifiedCheckpoint
+		if bj == nil || jc.Epoch > bj.Epoch {
 			f.store.bestJustifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch,
 				Root: bytesutil.ToBytes32(jc.Root)}
 		}
 		currentSlot := slots.CurrentSlot(f.store.genesisTime)
 		if slots.SinceEpochStarts(currentSlot) < params.BeaconConfig().SafeSlotsToUpdateJustified {
-			f.store.prevJustifiedCheckpoint = currentJCP
+			f.store.prevJustifiedCheckpoint = f.store.justifiedCheckpoint
 			f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch,
 				Root: bytesutil.ToBytes32(jc.Root)}
 		} else {
-			currentRoot := currentJCP.Root
+			currentJcp := f.store.justifiedCheckpoint
+			currentRoot := currentJcp.Root
 			if currentRoot == params.BeaconConfig().ZeroHash {
 				currentRoot = f.store.originRoot
 			}
-			jSlot, err := slots.EpochStart(currentJCP.Epoch)
+			jSlot, err := slots.EpochStart(currentJcp.Epoch)
 			if err != nil {
 				f.store.checkpointsLock.Unlock()
 				return err
@@ -193,7 +193,7 @@ func (f *ForkChoice) updateCheckpoints(ctx context.Context, jc, fc *ethpb.Checkp
 				return err
 			}
 			if root == currentRoot {
-				f.store.prevJustifiedCheckpoint = currentJCP
+				f.store.prevJustifiedCheckpoint = f.store.justifiedCheckpoint
 				f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch,
 					Root: jcRoot}
 			}
@@ -206,7 +206,7 @@ func (f *ForkChoice) updateCheckpoints(ctx context.Context, jc, fc *ethpb.Checkp
 	}
 	f.store.finalizedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: fc.Epoch,
 		Root: bytesutil.ToBytes32(fc.Root)}
-	f.store.prevJustifiedCheckpoint = currentJCP
+	f.store.prevJustifiedCheckpoint = f.store.justifiedCheckpoint
 	f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: jc.Epoch,
 		Root: bytesutil.ToBytes32(jc.Root)}
 	f.store.checkpointsLock.Unlock()
