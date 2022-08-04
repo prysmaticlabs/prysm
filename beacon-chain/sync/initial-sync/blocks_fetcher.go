@@ -488,7 +488,7 @@ func sidecarVerifier(blks []interfaces.SignedBeaconBlock) func(*ethpb.BlobsSidec
 			if bRoot != bytesutil.ToBytes32(sidecar.BeaconBlockRoot) {
 				continue
 			}
-			if err := blob.VerifyBlobsSidecar(b.Block().Slot(), bRoot, bytesutil.ToBytes48Array(blobKzgs), sidecar); err != nil {
+			if err := blob.ValidateBlobsSidecar(b.Block().Slot(), bRoot, blobKzgs, sidecar); err != nil {
 				return errors.Wrap(errInvalidSidecar, err.Error())
 			}
 			return nil

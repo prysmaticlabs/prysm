@@ -545,5 +545,5 @@ func (d *dbDataAvailability) IsDataAvailable(ctx context.Context, root [32]byte)
 	if sidecar.BeaconBlockSlot != b.Block().Slot() {
 		return errors.New("blobs sidecar is unavailable")
 	}
-	return blob.VerifyBlobsSidecar(b.Block().Slot(), root, bytesutil.ToBytes48Array(kzgs), sidecar)
+	return blob.ValidateBlobsSidecar(b.Block().Slot(), root, kzgs, sidecar)
 }

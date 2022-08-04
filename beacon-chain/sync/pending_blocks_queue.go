@@ -226,7 +226,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 					span.End()
 					continue
 				}
-				if err := blob.VerifyBlobsSidecar(b.Block().Slot(), blkRoot, bytesutil.ToBytes48Array(kzgs), queuedSidecar.s); err != nil {
+				if err := blob.ValidateBlobsSidecar(b.Block().Slot(), blkRoot, kzgs, queuedSidecar.s); err != nil {
 					log.Debugf("Could not verify sidecar from slot %d: %v", b.Block().Slot(), err)
 				}
 			}

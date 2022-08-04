@@ -117,6 +117,8 @@ ssz_gen_marshal(
         "Blob",
         "BlobsSidecar",
         "SignedBlobsSidecar",
+        "BlobsAndCommitments",
+        "PolynomialAndCommitment",
         "Withdrawal",
         "BLSToExecutionChange",
         "SignedBLSToExecutionChange",

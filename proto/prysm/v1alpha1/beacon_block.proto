@@ -681,3 +681,17 @@ message SignedBlobsSidecar {
     BlobsSidecar message = 1;
     bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
 }
+
+// BlobsAndCommitments contains the data we must merkelize in order to compute the "r" value during
+// EIP-4844 blob validation.
+message BlobsAndCommitments {
+    repeated ethereum.engine.v1.Blob blobs = 1 [(ethereum.eth.ext.ssz_max) = "16"];
+    repeated bytes commitments = 2 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max) = "16"];
+}
+
+// PolynomailAndCommitment contains the data we must merkelize in order to compute the "x" value
+// during EIP-4844 blob validation.
+message PolynomialAndCommitment {
+    repeated bytes polynomial = 1 [(ethereum.eth.ext.ssz_size) = "4096,32"];
+    bytes commitment = 2 [(ethereum.eth.ext.ssz_size) = "48"];
+}
