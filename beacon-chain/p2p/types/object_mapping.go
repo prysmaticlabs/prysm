@@ -49,7 +49,9 @@ func InitializeDataMaps() {
 			)
 		},
 		bytesutil.ToBytes4(params.BeaconConfig().Eip4844ForkVersion): func() (interfaces.SignedBeaconBlock, error) {
-			return wrapper.WrappedSignedBeaconBlock(&ethpb.SignedBeaconBlockWithBlobKZGs{Block: &ethpb.BeaconBlockWithBlobKZGs{}})
+			return blocks.NewSignedBeaconBlock(
+				&ethpb.SignedBeaconBlockWithBlobKZGs{Block: &ethpb.BeaconBlockWithBlobKZGs{Body: &ethpb.BeaconBlockBodyWithBlobKZGs{}}},
+			)
 		},
 	}
 

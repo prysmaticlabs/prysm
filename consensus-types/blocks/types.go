@@ -27,6 +27,8 @@ var (
 	ErrUnsupportedGetter = errors.New("unsupported getter")
 	// ErrUnsupportedVersion for beacon block methods.
 	ErrUnsupportedVersion = errors.New("unsupported beacon block version")
+	// ErrNilSidecar is returned when a nil sidecar is received.
+	ErrNilSidecar = errors.New("nil sidecar")
 	// ErrNilObjectWrapped is returned in a constructor when the underlying object is nil.
 	ErrNilObjectWrapped      = errors.New("attempted to wrap nil object")
 	errNilBlock              = errors.New("received nil beacon block")
@@ -49,6 +51,7 @@ type BeaconBlockBody struct {
 	syncAggregate          *eth.SyncAggregate
 	executionPayload       *engine.ExecutionPayload
 	executionPayloadHeader *engine.ExecutionPayloadHeader
+	blogKzgs               [][]byte
 }
 
 // BeaconBlock is the main beacon block structure. It can represent any block type.
@@ -66,6 +69,7 @@ type SignedBeaconBlock struct {
 	version   int
 	block     *BeaconBlock
 	signature []byte
+	sideCar   *eth.SignedBlobsSidecar
 }
 
 func errNotSupported(funcName string, ver int) error {

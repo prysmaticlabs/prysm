@@ -71,6 +71,19 @@ func (b *SignedBeaconBlock) Proto() (proto.Message, error) {
 			Block:     block,
 			Signature: b.signature,
 		}, nil
+	case version.EIP4844:
+		var block *eth.BeaconBlockWithBlobKZGs
+		if blockMessage != nil {
+			var ok bool
+			block, ok = blockMessage.(*eth.BeaconBlockWithBlobKZGs)
+			if !ok {
+				return nil, errors.Wrap(err, incorrectBlockVersion)
+			}
+		}
+		return &eth.SignedBeaconBlockWithBlobKZGs{
+			Block:     block,
+			Signature: b.signature,
+		}, nil
 	default:
 		return nil, errors.New("unsupported signed beacon block version")
 	}
@@ -152,6 +165,22 @@ func (b *BeaconBlock) Proto() (proto.Message, error) {
 			StateRoot:     b.stateRoot,
 			Body:          body,
 		}, nil
+	case version.EIP4844:
+		var body *eth.BeaconBlockBodyWithBlobKZGs
+		if bodyMessage != nil {
+			var ok bool
+			body, ok = bodyMessage.(*eth.BeaconBlockBodyWithBlobKZGs)
+			if !ok {
+				return nil, errors.Wrap(err, incorrectBodyVersion)
+			}
+		}
+		return &eth.BeaconBlockWithBlobKZGs{
+			Slot:          b.slot,
+			ProposerIndex: b.proposerIndex,
+			ParentRoot:    b.parentRoot,
+			StateRoot:     b.stateRoot,
+			Body:          body,
+		}, nil
 	default:
 		return nil, errors.New("unsupported beacon block version")
 	}
@@ -212,6 +241,20 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 			VoluntaryExits:         b.voluntaryExits,
 			SyncAggregate:          b.syncAggregate,
 			ExecutionPayloadHeader: b.executionPayloadHeader,
+		}, nil
+	case version.EIP4844:
+		return &eth.BeaconBlockBodyWithBlobKZGs{
+			RandaoReveal:      b.randaoReveal,
+			Eth1Data:          b.eth1Data,
+			Graffiti:          b.graffiti,
+			ProposerSlashings: b.proposerSlashings,
+			AttesterSlashings: b.attesterSlashings,
+			Attestations:      b.attestations,
+			Deposits:          b.deposits,
+			VoluntaryExits:    b.voluntaryExits,
+			SyncAggregate:     b.syncAggregate,
+			ExecutionPayload:  b.executionPayload,
+			BlobKzgs:          b.blogKzgs,
 		}, nil
 	default:
 		return nil, errors.New("unsupported beacon block body version")
@@ -280,6 +323,23 @@ func initBlindedSignedBlockFromProtoBellatrix(pb *eth.SignedBlindedBeaconBlockBe
 	}
 	b := &SignedBeaconBlock{
 		version:   version.BellatrixBlind,
+		block:     block,
+		signature: pb.Signature,
+	}
+	return b, nil
+}
+
+func initSignedBlockFromProtoEIP4844(pb *eth.SignedBeaconBlockWithBlobKZGs) (*SignedBeaconBlock, error) {
+	if pb == nil {
+		return nil, errNilBlock
+	}
+
+	block, err := initBlockFromProtoEIP4844(pb.Block)
+	if err != nil {
+		return nil, err
+	}
+	b := &SignedBeaconBlock{
+		version:   version.EIP4844,
 		block:     block,
 		signature: pb.Signature,
 	}
@@ -366,6 +426,26 @@ func initBlindedBlockFromProtoBellatrix(pb *eth.BlindedBeaconBlockBellatrix) (*B
 	return b, nil
 }
 
+func initBlockFromProtoEIP4844(pb *eth.BeaconBlockWithBlobKZGs) (*BeaconBlock, error) {
+	if pb == nil {
+		return nil, errNilBlock
+	}
+
+	body, err := initBlockBodyFromProtoEIP4844(pb.Body)
+	if err != nil {
+		return nil, err
+	}
+	b := &BeaconBlock{
+		version:       version.EIP4844,
+		slot:          pb.Slot,
+		proposerIndex: pb.ProposerIndex,
+		parentRoot:    pb.ParentRoot,
+		stateRoot:     pb.StateRoot,
+		body:          body,
+	}
+	return b, nil
+}
+
 func initBlockBodyFromProtoPhase0(pb *eth.BeaconBlockBody) (*BeaconBlockBody, error) {
 	if pb == nil {
 		return nil, errNilBlockBody
@@ -443,6 +523,28 @@ func initBlindedBlockBodyFromProtoBellatrix(pb *eth.BlindedBeaconBlockBodyBellat
 		voluntaryExits:         pb.VoluntaryExits,
 		syncAggregate:          pb.SyncAggregate,
 		executionPayloadHeader: pb.ExecutionPayloadHeader,
+	}
+	return b, nil
+}
+
+func initBlockBodyFromProtoEIP4844(pb *eth.BeaconBlockBodyWithBlobKZGs) (*BeaconBlockBody, error) {
+	if pb == nil {
+		return nil, errNilBlockBody
+	}
+
+	b := &BeaconBlockBody{
+		version:           version.EIP4844,
+		randaoReveal:      pb.RandaoReveal,
+		eth1Data:          pb.Eth1Data,
+		graffiti:          pb.Graffiti,
+		proposerSlashings: pb.ProposerSlashings,
+		attesterSlashings: pb.AttesterSlashings,
+		attestations:      pb.Attestations,
+		deposits:          pb.Deposits,
+		voluntaryExits:    pb.VoluntaryExits,
+		syncAggregate:     pb.SyncAggregate,
+		executionPayload:  pb.ExecutionPayload,
+		blogKzgs:          pb.BlobKzgs,
 	}
 	return b, nil
 }

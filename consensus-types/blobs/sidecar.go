@@ -6,7 +6,6 @@ import (
 	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
@@ -63,7 +62,7 @@ func BlockContainsSidecar(b interfaces.SignedBeaconBlock) (bool, error) {
 	}
 	_, err := b.SideCar()
 	switch {
-	case errors.Is(err, wrapper.ErrNilSidecar):
+	case errors.Is(err, blocks.ErrNilSidecar):
 		return false, nil
 	case err != nil:
 		return false, err

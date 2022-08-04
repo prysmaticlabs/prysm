@@ -10,9 +10,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
@@ -103,7 +103,7 @@ func (s *Service) validateBlobsSidecarPubSub(ctx context.Context, pid peer.ID, m
 		s.pendingQueueLock.Unlock()
 		return pubsub.ValidationIgnore, nil
 	}
-	if err := wrapper.BeaconBlockIsNil(blk); err != nil {
+	if err := blocks.BeaconBlockIsNil(blk); err != nil {
 		log.WithError(err).WithField("slot", signed.Message.BeaconBlockSlot).Warn("Nil block found in pending queue")
 		return pubsub.ValidationIgnore, nil
 	}
