@@ -307,7 +307,19 @@ func (s *Service) IsOptimistic(ctx context.Context) (bool, error) {
 	headRoot := s.head.root
 	s.headLock.RUnlock()
 
-	return s.IsOptimisticForRoot(ctx, headRoot)
+	if s.cfg.ForkChoiceStore.AllTipsAreInvalid() {
+		return true, nil
+	}
+	optimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(headRoot)
+	if err == nil {
+		return optimistic, nil
+	}
+	if err != protoarray.ErrUnknownNodeRoot && err != doublylinkedtree.ErrNilNode {
+		return true, err
+	}
+	// If fockchoice does not have the headroot, then the node is considered
+	// optimistic
+	return true, nil
 }
 
 // IsFinalized returns true if the input root is finalized.
@@ -329,24 +341,24 @@ func (s *Service) IsOptimisticForRoot(ctx context.Context, root [32]byte) (bool,
 	if err != protoarray.ErrUnknownNodeRoot && err != doublylinkedtree.ErrNilNode {
 		return false, err
 	}
+	// if the requested root is the headroot and the root is not found in
+	// forkchoice, the node should respond that it is optimistic
+	headRoot, err := s.HeadRoot(ctx)
+	if err != nil {
+		return true, err
+	}
+	if bytes.Equal(headRoot, root[:]) {
+		return true, nil
+	}
+
 	ss, err := s.cfg.BeaconDB.StateSummary(ctx, root)
 	if err != nil {
 		return false, err
 	}
+
 	if ss == nil {
-		// if the requested root is the headroot we should treat the
-		// node as optimistic. This can happen if we pruned INVALID
-		// nodes and no viable head is available.
-		headRoot, err := s.HeadRoot(ctx)
-		if err != nil {
-			return true, err
-		}
-		if bytes.Equal(headRoot, root[:]) {
-			return true, nil
-		}
 		return true, errInvalidNilSummary
 	}
-
 	validatedCheckpoint, err := s.cfg.BeaconDB.LastValidatedCheckpoint(ctx)
 	if err != nil {
 		return false, err
