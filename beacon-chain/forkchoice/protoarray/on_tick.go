@@ -62,10 +62,11 @@ func (f *ForkChoice) NewSlot(ctx context.Context, slot types.Slot) error {
 			return err
 		}
 		if r == fcp.Root {
+			f.store.prevJustifiedCheckpoint = jcp
 			f.store.justifiedCheckpoint = bjcp
 		}
 	}
-	if features.Get().EnablePullTips {
+	if !features.Get().DisablePullTips {
 		f.UpdateUnrealizedCheckpoints()
 	}
 	return nil
