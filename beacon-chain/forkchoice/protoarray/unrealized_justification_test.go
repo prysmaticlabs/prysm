@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
-	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -251,10 +250,6 @@ func TestStore_ForkNextEpoch(t *testing.T) {
 }
 
 func TestStore_PullTips_Heuristics(t *testing.T) {
-	resetCfg := features.InitWithReset(&features.Flags{
-		EnablePullTips: true,
-	})
-	defer resetCfg()
 	ctx := context.Background()
 	t.Run("Current epoch is justified", func(tt *testing.T) {
 		f := setup(1, 1)

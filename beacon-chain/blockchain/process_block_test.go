@@ -3037,15 +3037,16 @@ func TestStore_NoViableHead_Reboot_DoublyLinkedTree(t *testing.T) {
 	require.Equal(t, true, service.ForkChoicer().AllTipsAreInvalid())
 	st, err = service.cfg.StateGen.StateByRoot(ctx, root)
 	require.NoError(t, err)
-	// Import blocks 21--30 (Epoch 3 was not enough to justify 2)
-	for i := 21; i < 30; i++ {
+
+	// Import blocks 21--23
+	for i := 21; i < 24; i++ {
 		driftGenesisTime(service, int64(i), 0)
 		require.NoError(t, err)
 		b, err := util.GenerateFullBlockBellatrix(st, keys, util.DefaultBlockGenConfig(), types.Slot(i))
 		require.NoError(t, err)
 		wsb, err := consensusblocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)
-		root, err := b.Block.HashTreeRoot()
+		root, err = b.Block.HashTreeRoot()
 		require.NoError(t, err)
 		err = service.onBlock(ctx, wsb, root)
 		require.NoError(t, err)
@@ -3063,10 +3064,10 @@ func TestStore_NoViableHead_Reboot_DoublyLinkedTree(t *testing.T) {
 	require.Equal(t, true, optimistic)
 	require.Equal(t, true, service.ForkChoicer().AllTipsAreInvalid())
 
-	// Import block 30, it should justify Epoch 4 and become HEAD, the node
+	// Import block 24, it should justify Epoch 3 and become HEAD, the node
 	// recovers
-	driftGenesisTime(service, 30, 0)
-	b, err = util.GenerateFullBlockBellatrix(st, keys, util.DefaultBlockGenConfig(), 30)
+	driftGenesisTime(service, 24, 0)
+	b, err = util.GenerateFullBlockBellatrix(st, keys, util.DefaultBlockGenConfig(), 24)
 	require.NoError(t, err)
 	wsb, err = consensusblocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
@@ -3080,7 +3081,7 @@ func TestStore_NoViableHead_Reboot_DoublyLinkedTree(t *testing.T) {
 	require.Equal(t, root, bytesutil.ToBytes32(headRoot))
 
 	sjc = service.CurrentJustifiedCheckpt()
-	require.Equal(t, types.Epoch(4), sjc.Epoch)
+	require.Equal(t, types.Epoch(3), sjc.Epoch)
 	optimistic, err = service.IsOptimistic(ctx)
 	require.NoError(t, err)
 	require.Equal(t, false, optimistic)
@@ -3262,8 +3263,8 @@ func TestStore_NoViableHead_Reboot_Protoarray(t *testing.T) {
 	require.Equal(t, true, service.ForkChoicer().AllTipsAreInvalid())
 	st, err = service.cfg.StateGen.StateByRoot(ctx, root)
 	require.NoError(t, err)
-	// Import blocks 21--30 (Epoch 3 was not enough to justify 2)
-	for i := 21; i < 30; i++ {
+	// Import blocks 21--23
+	for i := 21; i < 24; i++ {
 		driftGenesisTime(service, int64(i), 0)
 		require.NoError(t, err)
 		b, err := util.GenerateFullBlockBellatrix(st, keys, util.DefaultBlockGenConfig(), types.Slot(i))
@@ -3288,10 +3289,10 @@ func TestStore_NoViableHead_Reboot_Protoarray(t *testing.T) {
 	require.Equal(t, true, optimistic)
 	require.Equal(t, true, service.ForkChoicer().AllTipsAreInvalid())
 
-	// Import block 30, it should justify Epoch 4 and become HEAD, the node
+	// Import block 24, it should justify Epoch 3 and become HEAD, the node
 	// recovers
-	driftGenesisTime(service, 30, 0)
-	b, err = util.GenerateFullBlockBellatrix(st, keys, util.DefaultBlockGenConfig(), 30)
+	driftGenesisTime(service, 24, 0)
+	b, err = util.GenerateFullBlockBellatrix(st, keys, util.DefaultBlockGenConfig(), 24)
 	require.NoError(t, err)
 	wsb, err = consensusblocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
@@ -3305,7 +3306,7 @@ func TestStore_NoViableHead_Reboot_Protoarray(t *testing.T) {
 	require.Equal(t, root, bytesutil.ToBytes32(headRoot))
 
 	sjc = service.CurrentJustifiedCheckpt()
-	require.Equal(t, types.Epoch(4), sjc.Epoch)
+	require.Equal(t, types.Epoch(3), sjc.Epoch)
 	optimistic, err = service.IsOptimistic(ctx)
 	require.NoError(t, err)
 	require.Equal(t, false, optimistic)
