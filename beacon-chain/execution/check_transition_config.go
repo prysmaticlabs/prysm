@@ -144,7 +144,7 @@ func (s *Service) logTtdStatus(ctx context.Context, ttd *uint256.Int) (bool, err
 		"latestDifficulty":   latestTtd.String(),
 		"terminalDifficulty": ttd.ToBig().String(),
 		"network":            params.BeaconConfig().ConfigName,
-	}).Info("Ready for merge")
+	}).Info("Ready for The Merge")
 
 	totalTerminalDifficulty.Set(float64(latestTtd.Uint64()))
 	return false, nil
