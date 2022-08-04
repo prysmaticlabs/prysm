@@ -44,6 +44,7 @@ func TestStore_JustifiedCheckpoint_Recover(t *testing.T) {
 		Root:  r[:],
 	}
 	wb, err := blocks.NewSignedBeaconBlock(blk)
+	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, wb))
 	require.NoError(t, db.SaveJustifiedCheckpoint(ctx, cp))
 	retrieved, err := db.JustifiedCheckpoint(ctx)
@@ -98,6 +99,7 @@ func TestStore_FinalizedCheckpoint_Recover(t *testing.T) {
 		Root:  r[:],
 	}
 	wb, err := blocks.NewSignedBeaconBlock(blk)
+	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, r))
 	require.NoError(t, db.SaveBlock(ctx, wb))
 	require.NoError(t, db.SaveFinalizedCheckpoint(ctx, cp))

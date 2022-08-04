@@ -43,6 +43,7 @@ func TestStore_LastValidatedCheckpoint_Recover(t *testing.T) {
 		Root:  r[:],
 	}
 	wb, err := blocks.NewSignedBeaconBlock(blk)
+	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, wb))
 	require.NoError(t, db.SaveLastValidatedCheckpoint(ctx, cp))
 	retrieved, err := db.LastValidatedCheckpoint(ctx)
