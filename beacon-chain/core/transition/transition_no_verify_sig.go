@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/consensus-types/blobs"
 	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
@@ -163,7 +162,7 @@ func ProcessBlockNoVerifyAnySig(
 ) (*bls.SignatureBatch, state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessBlockNoVerifyAnySig")
 	defer span.End()
-	if err := wrapper.BeaconBlockIsNil(signed); err != nil {
+	if err := blocks.BeaconBlockIsNil(signed); err != nil {
 		return nil, nil, err
 	}
 
@@ -232,7 +231,7 @@ func ProcessOperationsNoVerifyAttsSigs(
 	signedBeaconBlock interfaces.SignedBeaconBlock) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessOperationsNoVerifyAttsSigs")
 	defer span.End()
-	if err := wrapper.BeaconBlockIsNil(signedBeaconBlock); err != nil {
+	if err := blocks.BeaconBlockIsNil(signedBeaconBlock); err != nil {
 		return nil, err
 	}
 
@@ -309,7 +308,7 @@ func ProcessBlockForStateRoot(
 ) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "core.state.ProcessBlockForStateRoot")
 	defer span.End()
-	if err := wrapper.BeaconBlockIsNil(signed); err != nil {
+	if err := blocks.BeaconBlockIsNil(signed); err != nil {
 		return nil, err
 	}
 

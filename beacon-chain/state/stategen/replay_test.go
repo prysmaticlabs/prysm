@@ -8,8 +8,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/config/params"
+	consensusblocks "github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
@@ -104,7 +104,7 @@ func TestReplayBlocks_LowerSlotBlock(t *testing.T) {
 	targetSlot := beaconState.Slot()
 	b := util.NewBeaconBlock()
 	b.Block.Slot = beaconState.Slot() - 1
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err := consensusblocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
 	newState, err := service.ReplayBlocks(context.Background(), beaconState, []interfaces.SignedBeaconBlock{wsb}, targetSlot)
 	require.NoError(t, err)
@@ -192,7 +192,9 @@ func TestLoadBlocks_FirstBranch(t *testing.T) {
 	}
 
 	for i, block := range wanted {
-		if !proto.Equal(block, filteredBlocks[i].Proto()) {
+		filteredBlocksPb, err := filteredBlocks[i].Proto()
+		require.NoError(t, err)
+		if !proto.Equal(block, filteredBlocksPb) {
 			t.Error("Did not get wanted blocks")
 		}
 	}
@@ -219,7 +221,9 @@ func TestLoadBlocks_SecondBranch(t *testing.T) {
 	}
 
 	for i, block := range wanted {
-		if !proto.Equal(block, filteredBlocks[i].Proto()) {
+		filteredBlocksPb, err := filteredBlocks[i].Proto()
+		require.NoError(t, err)
+		if !proto.Equal(block, filteredBlocksPb) {
 			t.Error("Did not get wanted blocks")
 		}
 	}
@@ -248,7 +252,9 @@ func TestLoadBlocks_ThirdBranch(t *testing.T) {
 	}
 
 	for i, block := range wanted {
-		if !proto.Equal(block, filteredBlocks[i].Proto()) {
+		filteredBlocksPb, err := filteredBlocks[i].Proto()
+		require.NoError(t, err)
+		if !proto.Equal(block, filteredBlocksPb) {
 			t.Error("Did not get wanted blocks")
 		}
 	}
@@ -275,7 +281,9 @@ func TestLoadBlocks_SameSlots(t *testing.T) {
 	}
 
 	for i, block := range wanted {
-		if !proto.Equal(block, filteredBlocks[i].Proto()) {
+		filteredBlocksPb, err := filteredBlocks[i].Proto()
+		require.NoError(t, err)
+		if !proto.Equal(block, filteredBlocksPb) {
 			t.Error("Did not get wanted blocks")
 		}
 	}
@@ -301,7 +309,9 @@ func TestLoadBlocks_SameEndSlots(t *testing.T) {
 	}
 
 	for i, block := range wanted {
-		if !proto.Equal(block, filteredBlocks[i].Proto()) {
+		filteredBlocksPb, err := filteredBlocks[i].Proto()
+		require.NoError(t, err)
+		if !proto.Equal(block, filteredBlocksPb) {
 			t.Error("Did not get wanted blocks")
 		}
 	}
@@ -326,7 +336,9 @@ func TestLoadBlocks_SameEndSlotsWith2blocks(t *testing.T) {
 	}
 
 	for i, block := range wanted {
-		if !proto.Equal(block, filteredBlocks[i].Proto()) {
+		filteredBlocksPb, err := filteredBlocks[i].Proto()
+		require.NoError(t, err)
+		if !proto.Equal(block, filteredBlocksPb) {
 			t.Error("Did not get wanted blocks")
 		}
 	}
@@ -421,7 +433,7 @@ func tree1(t *testing.T, beaconDB db.Database, genesisRoot []byte) ([][32]byte, 
 		beaconBlock := util.NewBeaconBlock()
 		beaconBlock.Block.Slot = b.Block.Slot
 		beaconBlock.Block.ParentRoot = bytesutil.PadTo(b.Block.ParentRoot, 32)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(beaconBlock)
+		wsb, err := consensusblocks.NewSignedBeaconBlock(beaconBlock)
 		require.NoError(t, err)
 		if err := beaconDB.SaveBlock(context.Background(), wsb); err != nil {
 			return nil, nil, err
@@ -503,7 +515,7 @@ func tree2(t *testing.T, beaconDB db.Database, genesisRoot []byte) ([][32]byte, 
 		beaconBlock.Block.Slot = b.Block.Slot
 		beaconBlock.Block.ParentRoot = bytesutil.PadTo(b.Block.ParentRoot, 32)
 		beaconBlock.Block.StateRoot = bytesutil.PadTo(b.Block.StateRoot, 32)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(beaconBlock)
+		wsb, err := consensusblocks.NewSignedBeaconBlock(beaconBlock)
 		require.NoError(t, err)
 		if err := beaconDB.SaveBlock(context.Background(), wsb); err != nil {
 			return nil, nil, err
@@ -578,7 +590,7 @@ func tree3(t *testing.T, beaconDB db.Database, genesisRoot []byte) ([][32]byte, 
 		beaconBlock.Block.Slot = b.Block.Slot
 		beaconBlock.Block.ParentRoot = bytesutil.PadTo(b.Block.ParentRoot, 32)
 		beaconBlock.Block.StateRoot = bytesutil.PadTo(b.Block.StateRoot, 32)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(beaconBlock)
+		wsb, err := consensusblocks.NewSignedBeaconBlock(beaconBlock)
 		require.NoError(t, err)
 		if err := beaconDB.SaveBlock(context.Background(), wsb); err != nil {
 			return nil, nil, err
@@ -647,7 +659,7 @@ func tree4(t *testing.T, beaconDB db.Database, genesisRoot []byte) ([][32]byte, 
 		beaconBlock.Block.Slot = b.Block.Slot
 		beaconBlock.Block.ParentRoot = bytesutil.PadTo(b.Block.ParentRoot, 32)
 		beaconBlock.Block.StateRoot = bytesutil.PadTo(b.Block.StateRoot, 32)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(beaconBlock)
+		wsb, err := consensusblocks.NewSignedBeaconBlock(beaconBlock)
 		require.NoError(t, err)
 		if err := beaconDB.SaveBlock(context.Background(), wsb); err != nil {
 			return nil, nil, err

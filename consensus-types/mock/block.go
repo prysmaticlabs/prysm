@@ -29,11 +29,11 @@ func (m SignedBeaconBlock) IsNil() bool {
 	return m.BeaconBlock == nil || m.Block().IsNil()
 }
 
-func (SignedBeaconBlock) Copy() interfaces.SignedBeaconBlock {
+func (SignedBeaconBlock) Copy() (interfaces.SignedBeaconBlock, error) {
 	panic("implement me")
 }
 
-func (SignedBeaconBlock) Proto() proto.Message {
+func (SignedBeaconBlock) Proto() (proto.Message, error) {
 	panic("implement me")
 }
 
@@ -100,7 +100,7 @@ type BeaconBlock struct {
 	BlockSlot       types.Slot
 }
 
-func (BeaconBlock) AsSignRequestObject() validatorpb.SignRequestObject {
+func (BeaconBlock) AsSignRequestObject() (validatorpb.SignRequestObject, error) {
 	panic("implement me")
 }
 
@@ -136,7 +136,7 @@ func (BeaconBlock) IsBlinded() bool {
 	return false
 }
 
-func (BeaconBlock) Proto() proto.Message {
+func (BeaconBlock) Proto() (proto.Message, error) {
 	panic("implement me")
 }
 
@@ -210,7 +210,7 @@ func (BeaconBlockBody) HashTreeRoot() ([32]byte, error) {
 	panic("implement me")
 }
 
-func (BeaconBlockBody) Proto() proto.Message {
+func (BeaconBlockBody) Proto() (proto.Message, error) {
 	panic("implement me")
 }
 

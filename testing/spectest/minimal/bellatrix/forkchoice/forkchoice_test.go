@@ -9,11 +9,16 @@ import (
 )
 
 func TestMinimal_Bellatrix_Forkchoice(t *testing.T) {
+	resetCfg := features.InitWithReset(&features.Flags{
+		DisablePullTips: true,
+	})
+	defer resetCfg()
 	forkchoice.Run(t, "minimal", version.Bellatrix)
 }
 
 func TestMinimal_Bellatrix_Forkchoice_DoublyLinkTree(t *testing.T) {
 	resetCfg := features.InitWithReset(&features.Flags{
+		DisablePullTips:                  true,
 		EnableForkChoiceDoublyLinkedTree: true,
 	})
 	defer resetCfg()

@@ -10,9 +10,9 @@ import (
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	dbtest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/container/slice"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -358,7 +358,7 @@ func TestService_processBlock(t *testing.T) {
 		blk2.Block.ParentRoot = blk1Root[:]
 
 		// Process block normally.
-		wsb, err := wrapper.WrappedSignedBeaconBlock(blk1)
+		wsb, err := blocks.NewSignedBeaconBlock(blk1)
 		require.NoError(t, err)
 		err = s.processBlock(ctx, genesis, wsb, nil, func(
 			ctx context.Context, block interfaces.SignedBeaconBlock, blockRoot [32]byte, _ *ethpb.BlobsSidecar) error {
@@ -368,7 +368,7 @@ func TestService_processBlock(t *testing.T) {
 		assert.NoError(t, err)
 
 		// Duplicate processing should trigger error.
-		wsb, err = wrapper.WrappedSignedBeaconBlock(blk1)
+		wsb, err = blocks.NewSignedBeaconBlock(blk1)
 		require.NoError(t, err)
 		err = s.processBlock(ctx, genesis, wsb, nil, func(
 			ctx context.Context, block interfaces.SignedBeaconBlock, blockRoot [32]byte, _ *ethpb.BlobsSidecar) error {
@@ -377,7 +377,7 @@ func TestService_processBlock(t *testing.T) {
 		assert.ErrorContains(t, errBlockAlreadyProcessed.Error(), err)
 
 		// Continue normal processing, should proceed w/o errors.
-		wsb, err = wrapper.WrappedSignedBeaconBlock(blk2)
+		wsb, err = blocks.NewSignedBeaconBlock(blk2)
 		require.NoError(t, err)
 		err = s.processBlock(ctx, genesis, wsb, nil, func(
 			ctx context.Context, block interfaces.SignedBeaconBlock, blockRoot [32]byte, _ *ethpb.BlobsSidecar) error {
@@ -424,7 +424,7 @@ func TestService_processBlockBatch(t *testing.T) {
 			blk1Root, err := blk1.Block.HashTreeRoot()
 			require.NoError(t, err)
 			util.SaveBlock(t, context.Background(), beaconDB, blk1)
-			wsb, err := wrapper.WrappedSignedBeaconBlock(blk1)
+			wsb, err := blocks.NewSignedBeaconBlock(blk1)
 			require.NoError(t, err)
 			batch = append(batch, wsb)
 			currBlockRoot = blk1Root
@@ -439,7 +439,7 @@ func TestService_processBlockBatch(t *testing.T) {
 			blk1Root, err := blk1.Block.HashTreeRoot()
 			require.NoError(t, err)
 			util.SaveBlock(t, context.Background(), beaconDB, blk1)
-			wsb, err := wrapper.WrappedSignedBeaconBlock(blk1)
+			wsb, err := blocks.NewSignedBeaconBlock(blk1)
 			require.NoError(t, err)
 			batch2 = append(batch2, wsb)
 			currBlockRoot = blk1Root

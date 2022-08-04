@@ -4,15 +4,40 @@ import (
 	"testing"
 
 	ssz "github.com/prysmaticlabs/fastssz"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
 )
+
+func Test_BeaconBlockIsNil(t *testing.T) {
+	t.Run("not nil", func(t *testing.T) {
+		assert.NoError(t, BeaconBlockIsNil(&SignedBeaconBlock{block: &BeaconBlock{body: &BeaconBlockBody{}}}))
+	})
+	t.Run("nil interface", func(t *testing.T) {
+		err := BeaconBlockIsNil(nil)
+		assert.NotNil(t, err)
+	})
+	t.Run("nil signed block", func(t *testing.T) {
+		var i interfaces.SignedBeaconBlock
+		var sb *SignedBeaconBlock
+		i = sb
+		err := BeaconBlockIsNil(i)
+		assert.NotNil(t, err)
+	})
+	t.Run("nil block", func(t *testing.T) {
+		err := BeaconBlockIsNil(&SignedBeaconBlock{})
+		assert.NotNil(t, err)
+	})
+	t.Run("nil block body", func(t *testing.T) {
+		err := BeaconBlockIsNil(&SignedBeaconBlock{block: &BeaconBlock{}})
+		assert.NotNil(t, err)
+	})
+}
 
 func Test_SignedBeaconBlock_Signature(t *testing.T) {
 	sb := &SignedBeaconBlock{signature: []byte("signature")}
@@ -51,8 +76,8 @@ func Test_SignedBeaconBlock_Copy(t *testing.T) {
 	cp, err := sb.Copy()
 	require.NoError(t, err)
 	assert.NotEqual(t, cp, sb)
-	assert.NotEqual(t, cp.block, sb.block)
-	assert.NotEqual(t, cp.block.body, sb.block.body)
+	assert.NotEqual(t, cp.Block(), sb.block)
+	assert.NotEqual(t, cp.Block().Body(), sb.block.body)
 }
 
 func Test_SignedBeaconBlock_Version(t *testing.T) {
@@ -95,7 +120,7 @@ func Test_SignedBeaconBlock_Header(t *testing.T) {
 }
 
 func Test_SignedBeaconBlock_UnmarshalSSZ(t *testing.T) {
-	pb := util.HydrateSignedBeaconBlock(&eth.SignedBeaconBlock{})
+	pb := hydrateSignedBeaconBlock()
 	buf, err := pb.MarshalSSZ()
 	require.NoError(t, err)
 	expectedHTR, err := pb.HashTreeRoot()
@@ -166,7 +191,7 @@ func Test_BeaconBlock_Version(t *testing.T) {
 }
 
 func Test_BeaconBlock_HashTreeRoot(t *testing.T) {
-	pb := util.HydrateBeaconBlock(&eth.BeaconBlock{})
+	pb := hydrateBeaconBlock()
 	expectedHTR, err := pb.HashTreeRoot()
 	require.NoError(t, err)
 	b, err := initBlockFromProtoPhase0(pb)
@@ -177,7 +202,7 @@ func Test_BeaconBlock_HashTreeRoot(t *testing.T) {
 }
 
 func Test_BeaconBlock_HashTreeRootWith(t *testing.T) {
-	pb := util.HydrateBeaconBlock(&eth.BeaconBlock{})
+	pb := hydrateBeaconBlock()
 	expectedHTR, err := pb.HashTreeRoot()
 	require.NoError(t, err)
 	b, err := initBlockFromProtoPhase0(pb)
@@ -190,7 +215,7 @@ func Test_BeaconBlock_HashTreeRootWith(t *testing.T) {
 }
 
 func Test_BeaconBlock_UnmarshalSSZ(t *testing.T) {
-	pb := util.HydrateBeaconBlock(&eth.BeaconBlock{})
+	pb := hydrateBeaconBlock()
 	buf, err := pb.MarshalSSZ()
 	require.NoError(t, err)
 	expectedHTR, err := pb.HashTreeRoot()
@@ -207,7 +232,7 @@ func Test_BeaconBlock_UnmarshalSSZ(t *testing.T) {
 }
 
 func Test_BeaconBlock_AsSignRequestObject(t *testing.T) {
-	pb := util.HydrateBeaconBlock(&eth.BeaconBlock{})
+	pb := hydrateBeaconBlock()
 	expectedHTR, err := pb.HashTreeRoot()
 	require.NoError(t, err)
 	b, err := initBlockFromProtoPhase0(pb)
@@ -286,24 +311,8 @@ func Test_BeaconBlockBody_SyncAggregate(t *testing.T) {
 	assert.Equal(t, result, sa)
 }
 
-func Test_BeaconBlockBody_ExecutionPayload(t *testing.T) {
-	ep := &enginev1.ExecutionPayload{}
-	bb := &BeaconBlockBody{version: version.Bellatrix, executionPayload: ep}
-	result, err := bb.ExecutionPayload()
-	require.NoError(t, err)
-	assert.Equal(t, result, ep)
-}
-
-func Test_BeaconBlockBody_ExecutionPayloadHeader(t *testing.T) {
-	eph := &enginev1.ExecutionPayloadHeader{}
-	bb := &BeaconBlockBody{version: version.BellatrixBlind, executionPayloadHeader: eph}
-	result, err := bb.ExecutionPayloadHeader()
-	require.NoError(t, err)
-	assert.Equal(t, result, eph)
-}
-
 func Test_BeaconBlockBody_HashTreeRoot(t *testing.T) {
-	pb := util.HydrateBeaconBlockBody(&eth.BeaconBlockBody{})
+	pb := hydrateBeaconBlockBody()
 	expectedHTR, err := pb.HashTreeRoot()
 	require.NoError(t, err)
 	b, err := initBlockBodyFromProtoPhase0(pb)
@@ -311,4 +320,30 @@ func Test_BeaconBlockBody_HashTreeRoot(t *testing.T) {
 	actualHTR, err := b.HashTreeRoot()
 	require.NoError(t, err)
 	assert.DeepEqual(t, expectedHTR, actualHTR)
+}
+
+func hydrateSignedBeaconBlock() *eth.SignedBeaconBlock {
+	return &eth.SignedBeaconBlock{
+		Signature: make([]byte, fieldparams.BLSSignatureLength),
+		Block:     hydrateBeaconBlock(),
+	}
+}
+
+func hydrateBeaconBlock() *eth.BeaconBlock {
+	return &eth.BeaconBlock{
+		ParentRoot: make([]byte, fieldparams.RootLength),
+		StateRoot:  make([]byte, fieldparams.RootLength),
+		Body:       hydrateBeaconBlockBody(),
+	}
+}
+
+func hydrateBeaconBlockBody() *eth.BeaconBlockBody {
+	return &eth.BeaconBlockBody{
+		RandaoReveal: make([]byte, fieldparams.BLSSignatureLength),
+		Graffiti:     make([]byte, fieldparams.RootLength),
+		Eth1Data: &eth.Eth1Data{
+			DepositRoot: make([]byte, fieldparams.RootLength),
+			BlockHash:   make([]byte, fieldparams.RootLength),
+		},
+	}
 }

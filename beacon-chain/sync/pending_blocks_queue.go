@@ -15,9 +15,9 @@ import (
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/blobs"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/encoding/ssz/equality"
@@ -129,7 +129,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			// No need to process the same block twice.
 			if inDB {
 				s.pendingQueueLock.Lock()
-				if err := s.deleteBlockFromPendingQueue(slot, b, blkRoot); err != nil {
+				if err = s.deleteBlockFromPendingQueue(slot, b, blkRoot); err != nil {
 					s.pendingQueueLock.Unlock()
 					return err
 				}
@@ -148,28 +148,11 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			inPendingQueue := s.seenPendingBlocks[bytesutil.ToBytes32(b.Block().ParentRoot())]
 			s.pendingQueueLock.RUnlock()
 
-			parentIsBad := s.hasBadBlock(bytesutil.ToBytes32(b.Block().ParentRoot()))
-			blockIsBad := s.hasBadBlock(blkRoot)
-			// Check if parent is a bad block.
-			if parentIsBad || blockIsBad {
-				// Set block as bad if its parent block is bad too.
-				if parentIsBad {
-					s.setBadBlock(ctx, blkRoot)
-				}
-				// Remove block from queue.
-				s.pendingQueueLock.Lock()
-				if err := s.deleteBlockFromPendingQueue(slot, b, blkRoot); err != nil {
-					s.pendingQueueLock.Unlock()
-					return err
-				}
-				if queuedSidecar != nil {
-					if err := s.deleteSidecarFromPendingQueue(slot, queuedSidecar); err != nil {
-						s.pendingQueueLock.Unlock()
-						return err
-					}
-				}
-				s.pendingQueueLock.Unlock()
-				span.End()
+			keepProcessing, err := s.checkIfBlockIsBad(ctx, span, slot, b, blkRoot)
+			if err != nil {
+				return err
+			}
+			if !keepProcessing {
 				continue
 			}
 
@@ -259,8 +242,13 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			s.setSeenBlockIndexSlot(b.Block().Slot(), b.Block().ProposerIndex())
 
 			// Broadcasting the block again once a node is able to process it.
-			if err := s.cfg.p2p.Broadcast(ctx, b.Proto()); err != nil {
-				log.WithError(err).Debug("Could not broadcast block")
+			pb, err := b.Proto()
+			if err != nil {
+				log.WithError(err).Debug("Could not get protobuf block")
+			} else {
+				if err := s.cfg.p2p.Broadcast(ctx, pb); err != nil {
+					log.WithError(err).Debug("Could not broadcast block")
+				}
 			}
 			if queuedSidecar != nil {
 				if queuedSidecar.IsSigned() {
@@ -298,6 +286,35 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 		err = s.sendBatchSidecarRequest(ctx, missingSidecarRefs, randGen)
 	}
 	return err
+}
+
+func (s *Service) checkIfBlockIsBad(
+	ctx context.Context,
+	span *trace.Span,
+	slot types.Slot,
+	b interfaces.SignedBeaconBlock,
+	blkRoot [32]byte,
+) (keepProcessing bool, err error) {
+	parentIsBad := s.hasBadBlock(bytesutil.ToBytes32(b.Block().ParentRoot()))
+	blockIsBad := s.hasBadBlock(blkRoot)
+	// Check if parent is a bad block.
+	if parentIsBad || blockIsBad {
+		// Set block as bad if its parent block is bad too.
+		if parentIsBad {
+			s.setBadBlock(ctx, blkRoot)
+		}
+		// Remove block from queue.
+		s.pendingQueueLock.Lock()
+		if err = s.deleteBlockFromPendingQueue(slot, b, blkRoot); err != nil {
+			s.pendingQueueLock.Unlock()
+			return false, err
+		}
+		s.pendingQueueLock.Unlock()
+		span.End()
+		return false, nil
+	}
+
+	return true, nil
 }
 
 func (s *Service) sendBatchRootRequest(ctx context.Context, roots [][32]byte, randGen *rand.Rand) error {
@@ -508,13 +525,21 @@ func (s *Service) deleteBlockFromPendingQueue(slot types.Slot, b interfaces.Sign
 	}
 
 	// Defensive check to ignore nil blocks
-	if err := wrapper.BeaconBlockIsNil(b); err != nil {
+	if err := blocks.BeaconBlockIsNil(b); err != nil {
 		return err
 	}
 
 	newBlks := make([]interfaces.SignedBeaconBlock, 0, len(blks))
 	for _, blk := range blks {
-		if equality.DeepEqual(blk.Proto(), b.Proto()) {
+		blkPb, err := blk.Proto()
+		if err != nil {
+			return err
+		}
+		bPb, err := b.Proto()
+		if err != nil {
+			return err
+		}
+		if equality.DeepEqual(blkPb, bPb) {
 			continue
 		}
 		newBlks = append(newBlks, blk)
@@ -567,7 +592,7 @@ func (s *Service) pendingBlocksInCache(slot types.Slot) []interfaces.SignedBeaco
 
 // This adds input signed beacon block to slotToPendingBlocks cache.
 func (s *Service) addPendingBlockToCache(b interfaces.SignedBeaconBlock) error {
-	if err := wrapper.BeaconBlockIsNil(b); err != nil {
+	if err := blocks.BeaconBlockIsNil(b); err != nil {
 		return err
 	}
 

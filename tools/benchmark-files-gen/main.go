@@ -15,8 +15,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/io/file"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/interop"
@@ -101,13 +101,13 @@ func generateMarshalledFullStateAndBlock() error {
 
 	conf := &util.BlockGenConfig{}
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
-	// Small offset for the beacon state so we dont process a block on an epoch.
+	// Small offset for the beacon state so we don't process a block on an epoch.
 	slotOffset := types.Slot(2)
 	block, err := util.GenerateFullBlock(beaconState, privs, conf, slotsPerEpoch+slotOffset)
 	if err != nil {
 		return err
 	}
-	wsb, err := wrapper.WrappedSignedBeaconBlock(block)
+	wsb, err := blocks.NewSignedBeaconBlock(block)
 	if err != nil {
 		return err
 	}
@@ -135,7 +135,7 @@ func generateMarshalledFullStateAndBlock() error {
 	}
 	block.Block.Body.Attestations = append(atts, block.Block.Body.Attestations...)
 
-	wsb, err = wrapper.WrappedSignedBeaconBlock(block)
+	wsb, err = blocks.NewSignedBeaconBlock(block)
 	if err != nil {
 		return err
 	}
@@ -170,7 +170,7 @@ func generateMarshalledFullStateAndBlock() error {
 	}
 
 	// Running a single state transition to make sure the generated files aren't broken.
-	wsb, err = wrapper.WrappedSignedBeaconBlock(block)
+	wsb, err = blocks.NewSignedBeaconBlock(block)
 	if err != nil {
 		return err
 	}
@@ -207,7 +207,7 @@ func generate2FullEpochState() error {
 		if err != nil {
 			return err
 		}
-		wsb, err := wrapper.WrappedSignedBeaconBlock(block)
+		wsb, err := blocks.NewSignedBeaconBlock(block)
 		if err != nil {
 			return err
 		}

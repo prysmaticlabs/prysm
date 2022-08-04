@@ -155,7 +155,7 @@ func (f *ForkChoice) InsertNode(ctx context.Context, state state.BeaconState, ro
 		return err
 	}
 
-	if features.Get().EnablePullTips {
+	if !features.Get().DisablePullTips {
 		jc, fc = f.store.pullTips(state, node, jc, fc)
 	}
 	return f.updateCheckpoints(ctx, jc, fc)
@@ -402,9 +402,11 @@ func (s *Store) head(ctx context.Context) ([32]byte, error) {
 	bestNode := s.nodes[bestDescendantIndex]
 
 	if !s.viableForHead(bestNode) {
+		s.allTipsAreInvalid = true
 		return [32]byte{}, fmt.Errorf("head at slot %d with weight %d is not eligible, finalizedEpoch %d != %d, justifiedEpoch %d != %d",
 			bestNode.slot, bestNode.weight/10e9, bestNode.finalizedEpoch, s.finalizedCheckpoint.Epoch, bestNode.justifiedEpoch, s.justifiedCheckpoint.Epoch)
 	}
+	s.allTipsAreInvalid = false
 
 	// Update metrics and tracked head Root
 	if bestNode.root != s.lastHeadRoot {
@@ -514,8 +516,8 @@ func (s *Store) insert(ctx context.Context,
 	}
 	secondsIntoSlot := (timeNow - s.genesisTime) % params.BeaconConfig().SecondsPerSlot
 	currentSlot := slots.CurrentSlot(s.genesisTime)
-	boostTreshold := params.BeaconConfig().SecondsPerSlot / params.BeaconConfig().IntervalsPerSlot
-	if currentSlot == slot && secondsIntoSlot < boostTreshold {
+	boostThreshold := params.BeaconConfig().SecondsPerSlot / params.BeaconConfig().IntervalsPerSlot
+	if currentSlot == slot && secondsIntoSlot < boostThreshold {
 		s.proposerBoostLock.Lock()
 		s.proposerBoostRoot = root
 		s.proposerBoostLock.Unlock()

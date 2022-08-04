@@ -19,9 +19,9 @@ import (
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/blobs"
 	b "github.com/prysmaticlabs/prysm/consensus-types/blocks"
+	consensusblocks "github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	"github.com/prysmaticlabs/prysm/runtime/version"
@@ -190,7 +190,12 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 
 	// Record attribute of valid block.
 	span.AddAttributes(trace.Int64Attribute("slotInEpoch", int64(blk.Block().Slot()%params.BeaconConfig().SlotsPerEpoch)))
-	msg.ValidatorData = blk.Proto() // Used in downstream subscriber
+	blkPb, err := blk.Proto()
+	if err != nil {
+		log.WithError(err).WithFields(getBlockFields(blk)).Debug("Could not convert beacon block to protobuf type")
+		return pubsub.ValidationIgnore, err
+	}
+	msg.ValidatorData = blkPb // Used in downstream subscriber
 
 	// Log the arrival time of the accepted block
 	startTime, err := slots.ToTime(genesisTime, blk.Block().Slot())
@@ -431,7 +436,7 @@ func isBlockQueueable(genesisTime uint64, slot types.Slot, receivedTime time.Tim
 }
 
 func getBlockFields(b interfaces.SignedBeaconBlock) logrus.Fields {
-	if wrapper.BeaconBlockIsNil(b) != nil {
+	if consensusblocks.BeaconBlockIsNil(b) != nil {
 		return logrus.Fields{}
 	}
 	return logrus.Fields{

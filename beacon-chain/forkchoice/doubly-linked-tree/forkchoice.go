@@ -150,7 +150,7 @@ func (f *ForkChoice) InsertNode(ctx context.Context, state state.BeaconState, ro
 		return err
 	}
 
-	if features.Get().EnablePullTips {
+	if !features.Get().DisablePullTips {
 		jc, fc = f.store.pullTips(state, node, jc, fc)
 	}
 	return f.updateCheckpoints(ctx, jc, fc)
