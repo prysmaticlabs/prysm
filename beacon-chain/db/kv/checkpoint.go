@@ -2,8 +2,8 @@ package kv
 
 import (
 	"context"
-	"errors"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -11,7 +11,7 @@ import (
 	"go.opencensus.io/trace"
 )
 
-var errMissingStateForCheckpoint = errors.New("missing state summary for finalized root")
+var errMissingStateForCheckpoint = errors.New("missing state summary for checkpoint root")
 
 // JustifiedCheckpoint returns the latest justified checkpoint in beacon chain.
 func (s *Store) JustifiedCheckpoint(ctx context.Context) (*ethpb.Checkpoint, error) {
@@ -63,7 +63,7 @@ func (s *Store) SaveJustifiedCheckpoint(ctx context.Context, checkpoint *ethpb.C
 		hasStateSummary := s.hasStateSummaryBytes(tx, bytesutil.ToBytes32(checkpoint.Root))
 		hasStateInDB := tx.Bucket(stateBucket).Get(checkpoint.Root) != nil
 		if !(hasStateInDB || hasStateSummary) {
-			return errMissingStateForCheckpoint
+			return errors.Wrapf(errMissingStateForCheckpoint, "could not save justified checkpoint, justified root: %#x", bytesutil.Trunc(checkpoint.Root))
 		}
 		return bucket.Put(justifiedCheckpointKey, enc)
 	})
@@ -83,7 +83,7 @@ func (s *Store) SaveFinalizedCheckpoint(ctx context.Context, checkpoint *ethpb.C
 		hasStateSummary := s.hasStateSummaryBytes(tx, bytesutil.ToBytes32(checkpoint.Root))
 		hasStateInDB := tx.Bucket(stateBucket).Get(checkpoint.Root) != nil
 		if !(hasStateInDB || hasStateSummary) {
-			return errMissingStateForCheckpoint
+			return errors.Wrapf(errMissingStateForCheckpoint, "could not save Finalized checkpoint, finalized root: %#x", bytesutil.Trunc(checkpoint.Root))
 		}
 		if err := bucket.Put(finalizedCheckpointKey, enc); err != nil {
 			return err
