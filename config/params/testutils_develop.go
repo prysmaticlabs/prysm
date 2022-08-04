@@ -1,4 +1,5 @@
-// go:build develop
+//go:build develop
+
 package params
 
 import "testing"
