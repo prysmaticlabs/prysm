@@ -17,7 +17,7 @@ import (
 const defaultPruneThreshold = 256
 
 // applyProposerBoostScore applies the current proposer boost scores to the
-// relevant nodes
+// relevant nodes. This function requires a lock in Store.nodesLock.
 func (s *Store) applyProposerBoostScore(newBalances []uint64) error {
 	s.proposerBoostLock.Lock()
 	defer s.proposerBoostLock.Unlock()
