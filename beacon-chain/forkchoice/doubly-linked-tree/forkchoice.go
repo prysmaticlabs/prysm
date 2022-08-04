@@ -63,7 +63,7 @@ func (f *ForkChoice) Head(
 	calledHeadCount.Inc()
 
 	// Using the write lock here because subsequent calls to `updateBalances`, `applyProposerBoostScore`,
-	// `applyWeightChanges`, `updateBestDescendant`, and `head` require a write operations on nodes.
+	// `applyWeightChanges`, `updateBestDescendant`, and `head` require write operations on nodes.
 	f.store.nodesLock.Lock()
 	defer f.store.nodesLock.Unlock()
 
