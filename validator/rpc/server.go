@@ -194,8 +194,8 @@ func (s *Server) Start() {
 			return
 		}
 		validatorWebAddr := fmt.Sprintf("%s:%d", s.validatorGatewayHost, s.validatorGatewayPort)
-		logValidatorWebAuth(validatorWebAddr, token)
 		authTokenPath := filepath.Join(s.walletDir, authTokenFileName)
+		logValidatorWebAuth(validatorWebAddr, token, authTokenPath)
 		go s.refreshAuthTokenFromFileChanges(s.ctx, authTokenPath)
 	}
 }
