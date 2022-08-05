@@ -48,9 +48,11 @@ func TestNodeClose_OK(t *testing.T) {
 	set.Bool(cmd.EnableBackupWebhookFlag.Name, true, "")
 	require.NoError(t, set.Set(cmd.EnableBackupWebhookFlag.Name, "true"))
 	set.String(cmd.BackupWebhookOutputDir.Name, "datadir", "")
-	context := cli.NewContext(&app, set, nil)
+	cmd.ValidatorMonitorIndicesFlag.Value = &cli.IntSlice{}
+	cmd.ValidatorMonitorIndicesFlag.Value.SetInt(1)
+	ctx := cli.NewContext(&app, set, nil)
 
-	node, err := New(context)
+	node, err := New(ctx)
 	require.NoError(t, err)
 
 	node.Close()
