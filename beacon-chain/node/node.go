@@ -345,7 +345,7 @@ func (b *BeaconNode) Close() {
 	log.Info("Stopping beacon node")
 	b.services.StopAll()
 	if err := b.db.Close(); err != nil {
-		log.Errorf("Failed to close database: %v", err)
+		log.WithError(err).Error("Failed to close database")
 	}
 	b.collector.unregister()
 	b.cancel()

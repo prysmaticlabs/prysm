@@ -132,7 +132,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 	address := fmt.Sprintf("%s:%s", s.cfg.Host, s.cfg.Port)
 	lis, err := net.Listen("tcp", address)
 	if err != nil {
-		log.Errorf("Could not listen to port in Start() %s: %v", address, err)
+		log.WithError(err).Errorf("Could not listen to port in Start() %s", address)
 	}
 	s.listener = lis
 	log.WithField("address", address).Info("gRPC server listening on port")
@@ -364,7 +364,7 @@ func (s *Service) Start() {
 	go func() {
 		if s.listener != nil {
 			if err := s.grpcServer.Serve(s.listener); err != nil {
-				log.Errorf("Could not serve gRPC: %v", err)
+				log.WithError(err).Errorf("Could not serve gRPC")
 			}
 		}
 	}()

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/golang-jwt/jwt/v4"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -24,7 +25,10 @@ func (s *Server) JWTInterceptor() grpc.UnaryServerInterceptor {
 			return nil, err
 		}
 		h, err := handler(ctx, req)
-		log.Debugf("Request - Method: %s, Error: %v\n", info.FullMethod, err)
+		log.WithError(err).WithFields(logrus.Fields{
+			"FullMethod": info.FullMethod,
+			"Server":     info.Server,
+		}).Debug("Request handled")
 		return h, err
 	}
 }

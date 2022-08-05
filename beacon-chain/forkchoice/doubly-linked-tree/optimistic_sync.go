@@ -8,34 +8,34 @@ import (
 )
 
 func (s *Store) setOptimisticToInvalid(ctx context.Context, root, parentRoot, payloadHash [32]byte) ([][32]byte, error) {
-	s.nodesLock.Lock()
+	s.nodesLock.RLock()
 	invalidRoots := make([][32]byte, 0)
 	node, ok := s.nodeByRoot[root]
 	if !ok {
 		node, ok = s.nodeByRoot[parentRoot]
 		if !ok || node == nil {
-			s.nodesLock.Unlock()
+			s.nodesLock.RUnlock()
 			return invalidRoots, errors.Wrap(ErrNilNode, "could not set node to invalid")
 		}
 		// return early if the parent is LVH
 		if node.payloadHash == payloadHash {
-			s.nodesLock.Unlock()
+			s.nodesLock.RUnlock()
 			return invalidRoots, nil
 		}
 	} else {
 		if node == nil {
-			s.nodesLock.Unlock()
+			s.nodesLock.RUnlock()
 			return invalidRoots, errors.Wrap(ErrNilNode, "could not set node to invalid")
 		}
 		if node.parent.root != parentRoot {
-			s.nodesLock.Unlock()
+			s.nodesLock.RUnlock()
 			return invalidRoots, errInvalidParentRoot
 		}
 	}
 	firstInvalid := node
 	for ; firstInvalid.parent != nil && firstInvalid.parent.payloadHash != payloadHash; firstInvalid = firstInvalid.parent {
 		if ctx.Err() != nil {
-			s.nodesLock.Unlock()
+			s.nodesLock.RUnlock()
 			return invalidRoots, ctx.Err()
 		}
 	}
@@ -44,12 +44,12 @@ func (s *Store) setOptimisticToInvalid(ctx context.Context, root, parentRoot, pa
 	if firstInvalid.parent == nil {
 		// return early if the invalid node was not imported
 		if node.root == parentRoot {
-			s.nodesLock.Unlock()
+			s.nodesLock.RUnlock()
 			return invalidRoots, nil
 		}
 		firstInvalid = node
 	}
-	s.nodesLock.Unlock()
+	s.nodesLock.RUnlock()
 	return s.removeNode(ctx, firstInvalid)
 }
 

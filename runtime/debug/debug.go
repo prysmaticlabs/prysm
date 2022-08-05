@@ -141,7 +141,7 @@ func (h *HandlerT) StartCPUProfile(file string) error {
 	}
 	if err := pprof.StartCPUProfile(f); err != nil {
 		if err := f.Close(); err != nil {
-			log.Errorf("Failed to close file: %v", err)
+			log.WithError(err).Error("Failed to close file")
 		}
 		return err
 	}
@@ -191,7 +191,7 @@ func (h *HandlerT) StartGoTrace(file string) error {
 	}
 	if err := trace.Start(f); err != nil {
 		if err := f.Close(); err != nil {
-			log.Errorf("Failed to close file: %v", err)
+			log.WithError(err).Error("Failed to close file")
 		}
 		return err
 	}
@@ -270,7 +270,7 @@ func (*HandlerT) WriteMemProfile(file string) error {
 func (*HandlerT) Stacks() string {
 	buf := new(bytes.Buffer)
 	if err := pprof.Lookup("goroutine").WriteTo(buf, 2); err != nil {
-		log.Errorf("Failed to write pprof goroutine stacks: %v", err)
+		log.WithError(err).Error("Failed to write pprof goroutine stacks")
 	}
 	return buf.String()
 }
@@ -365,12 +365,12 @@ func startPProf(address string) {
 func Exit(ctx *cli.Context) {
 	if traceFile := ctx.String(TraceFlag.Name); traceFile != "" {
 		if err := Handler.StopGoTrace(); err != nil {
-			log.Errorf("Failed to stop go tracing: %v", err)
+			log.WithError(err).Error("Failed to stop go tracing")
 		}
 	}
 	if cpuFile := ctx.String(CPUProfileFlag.Name); cpuFile != "" {
 		if err := Handler.StopCPUProfile(); err != nil {
-			log.Errorf("Failed to stop CPU profiling: %v", err)
+			log.WithError(err).Error("Failed to stop CPU profiling")
 		}
 	}
 }

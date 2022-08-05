@@ -115,7 +115,7 @@ func main() {
 	mux.HandleFunc("/p2p", handler.httpHandler)
 
 	if err := http.ListenAndServe(fmt.Sprintf(":%d", *metricsPort), mux); err != nil {
-		log.Fatalf("Failed to start server %v", err)
+		log.WithError(err).Fatal("Failed to start server")
 	}
 
 	// Update metrics once per slot.
