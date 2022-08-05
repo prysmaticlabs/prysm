@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"flag"
 	"io"
-	"log"
 	"os"
 	"strings"
 
@@ -15,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/io/file"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/interop"
+	log "github.com/sirupsen/logrus"
 )
 
 // DepositDataJSON representing a json object of hex string and uint64 values for
@@ -70,23 +70,23 @@ func main() {
 		inputFile := *depositJSONFile
 		expanded, err := file.ExpandPath(inputFile)
 		if err != nil {
-			log.Printf("Could not expand file path %s: %v", inputFile, err)
+			log.WithError(err).Printf("Could not expand file path %s", inputFile)
 			return
 		}
 		inputJSON, err := os.Open(expanded) // #nosec G304
 		if err != nil {
-			log.Printf("Could not open JSON file for reading: %v", err)
+			log.WithError(err).Print("Could not open JSON file for reading")
 			return
 		}
 		defer func() {
 			if err := inputJSON.Close(); err != nil {
-				log.Printf("Could not close file %s: %v", inputFile, err)
+				log.WithError(err).Printf("Could not close file %s", inputFile)
 			}
 		}()
 		log.Printf("Generating genesis state from input JSON deposit data %s", inputFile)
 		genesisState, err = genesisStateFromJSONValidators(inputJSON, *genesisTime)
 		if err != nil {
-			log.Printf("Could not generate genesis beacon state: %v", err)
+			log.WithError(err).Print("Could not generate genesis beacon state")
 			return
 		}
 	} else {
@@ -97,7 +97,7 @@ func main() {
 		// If no JSON input is specified, we create the state deterministically from interop keys.
 		genesisState, _, err = interop.GenerateGenesisState(context.Background(), *genesisTime, uint64(*numValidators))
 		if err != nil {
-			log.Printf("Could not generate genesis beacon state: %v", err)
+			log.WithError(err).Print("Could not generate genesis beacon state")
 			return
 		}
 	}
@@ -105,11 +105,11 @@ func main() {
 	if *sszOutputFile != "" {
 		encodedState, err := genesisState.MarshalSSZ()
 		if err != nil {
-			log.Printf("Could not ssz marshal the genesis beacon state: %v", err)
+			log.WithError(err).Print("Could not ssz marshal the genesis beacon state")
 			return
 		}
 		if err := file.WriteFile(*sszOutputFile, encodedState); err != nil {
-			log.Printf("Could not write encoded genesis beacon state to file: %v", err)
+			log.WithError(err).Print("Could not write encoded genesis beacon state to file")
 			return
 		}
 		log.Printf("Done writing to %s", *sszOutputFile)
@@ -117,11 +117,11 @@ func main() {
 	if *yamlOutputFile != "" {
 		encodedState, err := yaml.Marshal(genesisState)
 		if err != nil {
-			log.Printf("Could not yaml marshal the genesis beacon state: %v", err)
+			log.WithError(err).Print("Could not yaml marshal the genesis beacon state")
 			return
 		}
 		if err := file.WriteFile(*yamlOutputFile, encodedState); err != nil {
-			log.Printf("Could not write encoded genesis beacon state to file: %v", err)
+			log.WithError(err).Print("Could not write encoded genesis beacon state to file")
 			return
 		}
 		log.Printf("Done writing to %s", *yamlOutputFile)
@@ -129,11 +129,11 @@ func main() {
 	if *jsonOutputFile != "" {
 		encodedState, err := json.Marshal(genesisState)
 		if err != nil {
-			log.Printf("Could not json marshal the genesis beacon state: %v", err)
+			log.WithError(err).Print("Could not json marshal the genesis beacon state")
 			return
 		}
 		if err := file.WriteFile(*jsonOutputFile, encodedState); err != nil {
-			log.Printf("Could not write encoded genesis beacon state to file: %v", err)
+			log.WithError(err).Print("Could not write encoded genesis beacon state to file")
 			return
 		}
 		log.Printf("Done writing to %s", *jsonOutputFile)

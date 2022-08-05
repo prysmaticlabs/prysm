@@ -9,7 +9,7 @@ type RPCGoodbyeCode = types.SSZUint64
 
 const (
 	// Spec defined codes.
-	GoodbyeCodeClientShutdown RPCGoodbyeCode = iota
+	GoodbyeCodeClientShutdown RPCGoodbyeCode = iota + 1
 	GoodbyeCodeWrongNetwork
 	GoodbyeCodeGenericError
 

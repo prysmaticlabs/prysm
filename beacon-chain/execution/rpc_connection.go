@@ -51,7 +51,7 @@ func (s *Service) pollConnectionStatus(ctx context.Context) {
 	logCounter := 0
 	errorLogger := func(err error, msg string) {
 		if logCounter > logThreshold {
-			log.Errorf("%s: %v", msg, err)
+			log.WithError(err).Error(msg)
 			logCounter = 0
 		}
 		logCounter++
@@ -114,7 +114,7 @@ func (s *Service) checkDefaultEndpoint(ctx context.Context) {
 
 	currClient := s.rpcClient
 	if err := s.setupExecutionClientConnections(ctx, primaryEndpoint); err != nil {
-		log.Debugf("Primary endpoint not ready: %v", err)
+		log.WithError(err).Debug("Primary endpoint not ready")
 		return
 	}
 	// Close previous client, if connection was successful.

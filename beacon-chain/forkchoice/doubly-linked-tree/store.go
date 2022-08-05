@@ -17,7 +17,7 @@ import (
 const defaultPruneThreshold = 256
 
 // applyProposerBoostScore applies the current proposer boost scores to the
-// relevant nodes
+// relevant nodes. This function requires a lock in Store.nodesLock.
 func (s *Store) applyProposerBoostScore(newBalances []uint64) error {
 	s.proposerBoostLock.Lock()
 	defer s.proposerBoostLock.Unlock()
@@ -239,6 +239,10 @@ func (s *Store) prune(ctx context.Context) error {
 func (s *Store) tips() ([][32]byte, []types.Slot) {
 	var roots [][32]byte
 	var slots []types.Slot
+
+	s.nodesLock.RLock()
+	defer s.nodesLock.RUnlock()
+
 	for root, node := range s.nodeByRoot {
 		if len(node.children) == 0 {
 			roots = append(roots, root)

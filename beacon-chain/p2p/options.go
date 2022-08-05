@@ -7,6 +7,7 @@ import (
 
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/libp2p/go-libp2p/p2p/muxer/mplex"
 	noise "github.com/libp2p/go-libp2p/p2p/security/noise"
 	"github.com/libp2p/go-libp2p/p2p/transport/tcp"
 	ma "github.com/multiformats/go-multiaddr"
@@ -20,7 +21,7 @@ func (s *Service) buildOptions(ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Opt
 	cfg := s.cfg
 	listen, err := multiAddressBuilder(ip.String(), cfg.TCPPort)
 	if err != nil {
-		log.Fatalf("Failed to p2p listen: %v", err)
+		log.WithError(err).Fatal("Failed to p2p listen")
 	}
 	if cfg.LocalIP != "" {
 		if net.ParseIP(cfg.LocalIP) == nil {
@@ -28,16 +29,16 @@ func (s *Service) buildOptions(ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Opt
 		}
 		listen, err = multiAddressBuilder(cfg.LocalIP, cfg.TCPPort)
 		if err != nil {
-			log.Fatalf("Failed to p2p listen: %v", err)
+			log.WithError(err).Fatal("Failed to p2p listen")
 		}
 	}
 	ifaceKey, err := ecdsaprysm.ConvertToInterfacePrivkey(priKey)
 	if err != nil {
-		log.Fatalf("Failed to retrieve private key: %v", err)
+		log.WithError(err).Fatal("Failed to retrieve private key")
 	}
 	id, err := peer.IDFromPublicKey(ifaceKey.GetPublic())
 	if err != nil {
-		log.Fatalf("Failed to retrieve peer id: %v", err)
+		log.WithError(err).Fatal("Failed to retrieve peer id")
 	}
 	log.Infof("Running node with peer id of %s ", id.String())
 
@@ -47,6 +48,8 @@ func (s *Service) buildOptions(ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Opt
 		libp2p.UserAgent(version.BuildData()),
 		libp2p.ConnectionGater(s),
 		libp2p.Transport(tcp.NewTCPTransport),
+		libp2p.Muxer("/mplex/6.7.0", mplex.DefaultTransport),
+		libp2p.DefaultMuxers,
 	}
 
 	options = append(options, libp2p.Security(noise.ID, noise.New))
