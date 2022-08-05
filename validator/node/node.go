@@ -54,8 +54,8 @@ import (
 	validatormiddleware "github.com/prysmaticlabs/prysm/validator/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/validator/web"
 	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v2"
 	"google.golang.org/protobuf/encoding/protojson"
-	"gopkg.in/urfave/cli.v1"
 	"gopkg.in/yaml.v2"
 )
 
