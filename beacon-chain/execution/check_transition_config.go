@@ -143,7 +143,8 @@ func (s *Service) logTtdStatus(ctx context.Context, ttd *uint256.Int) (bool, err
 	log.WithFields(logrus.Fields{
 		"latestDifficulty":   latestTtd.String(),
 		"terminalDifficulty": ttd.ToBig().String(),
-	}).Info("terminal difficulty has not been reached yet")
+		"network":            params.BeaconConfig().ConfigName,
+	}).Info("Ready for The Merge")
 
 	totalTerminalDifficulty.Set(float64(latestTtd.Uint64()))
 	return false, nil

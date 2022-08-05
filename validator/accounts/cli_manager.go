@@ -9,6 +9,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
 	"google.golang.org/grpc"
 )
 
@@ -28,6 +29,7 @@ func NewCLIManager(opts ...Option) (*AccountsCLIManager, error) {
 type AccountsCLIManager struct {
 	wallet               *wallet.Wallet
 	keymanager           keymanager.IKeymanager
+	keymanagerOpts       *remote.KeymanagerOpts
 	showDepositData      bool
 	showPrivateKeys      bool
 	listValidatorIndices bool

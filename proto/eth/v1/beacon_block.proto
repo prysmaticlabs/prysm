@@ -95,7 +95,7 @@ message ProposerSlashing {
 }
 
 // Attestor slashings are proofs that a slashable offense has been committed by
-// attestating to two conflicting pieces of information by the same validator.
+// attesting to two conflicting pieces of information by the same validator.
 message AttesterSlashing {
     // First conflicting attestation.
     IndexedAttestation attestation_1 = 1;
