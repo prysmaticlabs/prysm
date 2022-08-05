@@ -96,8 +96,8 @@ func (m *Miner) Start(ctx context.Context) error {
 		ctx,
 		binaryPath,
 		"init",
-		genesisDstPath+"/genesis.json",
-		fmt.Sprintf("--datadir=%s", eth1Path)) // #nosec G204 -- Safe
+		fmt.Sprintf("--datadir=%s", eth1Path),
+		genesisDstPath+"/genesis.json") // #nosec G204 -- Safe
 	initFile, err := helpers.DeleteAndCreateFile(e2e.TestParams.LogPath, "eth1-init_miner.log")
 	if err != nil {
 		return err
