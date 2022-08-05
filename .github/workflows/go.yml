@@ -18,17 +18,24 @@ jobs:
         id: gomodtidy
         uses: ./.github/actions/gomodtidy
 
+      # - name: Gofmt checker
+      #   id: gofmt
+      #   uses: ./.github/actions/gofmt
+      #   with:
+      #     path: ./
+
       - name: Gofmt checker
-        id: gofmt
-        uses: ./.github/actions/gofmt
+        uses: Jerome1337/gofmt-action@v1.0.4
         with:
-          path: ./
+          gofmt-path: './'
+          gofmt-flags: '-e'
 
       - name: GoImports checker
         id: goimports
         uses: Jerome1337/goimports-action@v1.0.2
         with:
           goimports-path: ./
+          goimports-args: -w
 
   gosec:
     name: Gosec scan
