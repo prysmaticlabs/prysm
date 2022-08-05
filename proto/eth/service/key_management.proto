@@ -177,7 +177,7 @@ service KeyManagement {
   //  - 500: Validator internal error
   rpc GetGasLimit(PubkeyRequest) returns (GetGasLimitResponse) {
     option (google.api.http) = {
-      get: "/internal/eth/v1/validator/{pubkey}/gaslimit"
+      get: "/internal/eth/v1/validator/{pubkey}/gas_limit"
     };
   }
 }
@@ -300,5 +300,9 @@ message SetFeeRecipientByPubkeyRequest {
 }
 
 message GetGasLimitResponse {
-  uint64 gaslimit = 1;
+  message GasLimit {
+    bytes pubkey = 1;
+    uint64 gas_limit = 2;
+  }
+  GasLimit data = 1;
 }

@@ -895,7 +895,7 @@ func TestServer_GetGasLimit(t *testing.T) {
 			}
 			got, err := s.GetGasLimit(ctx, &ethpbservice.PubkeyRequest{Pubkey: tt.pubkey[:]})
 			require.NoError(t, err)
-			assert.Equal(t, tt.want, got.Gaslimit)
+			assert.Equal(t, tt.want, got.Data.GasLimit)
 		})
 	}
 }

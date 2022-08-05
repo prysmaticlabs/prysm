@@ -72,6 +72,11 @@ type feeRecipientJson struct {
 	Ethaddress string `json:"ethaddress" address:"true"`
 }
 
+type gasLimitJson struct {
+	Pubkey   string `json:"pubkey" hex:"true"`
+	GasLimit string `json:"gas_limit"`
+}
+
 type getFeeRecipientByPubkeyResponseJson struct {
 	Data *feeRecipientJson `json:"data"`
 }
@@ -81,5 +86,5 @@ type setFeeRecipientByPubkeyRequestJson struct {
 }
 
 type getGasLimitResponseJson struct {
-	Gaslimit uint64 `json:"gaslimit"`
+	Data *gasLimitJson `json:"data"`
 }

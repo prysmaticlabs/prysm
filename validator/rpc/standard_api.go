@@ -397,20 +397,25 @@ func (s *Server) GetGasLimit(_ context.Context, req *ethpbservice.PubkeyRequest)
 	if err := validatePublicKey(validatorKey); err != nil {
 		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}
+	resp := &ethpbservice.GetGasLimitResponse{
+		Data: &ethpbservice.GetGasLimitResponse_GasLimit{
+			Pubkey: validatorKey,
+		},
+	}
 	if s.validatorService.ProposerSettings != nil {
 		proposerOption, found := s.validatorService.ProposerSettings.ProposeConfig[bytesutil.ToBytes48(validatorKey)]
 		if found {
-			return &ethpbservice.GetGasLimitResponse{
-				Gaslimit: proposerOption.BuilderConfig.GasLimit,
-			}, nil
+			if proposerOption.BuilderConfig != nil {
+				resp.Data.GasLimit = proposerOption.BuilderConfig.GasLimit
+				return resp, nil
+			}
 		} else if s.validatorService.ProposerSettings.DefaultConfig != nil && s.validatorService.ProposerSettings.DefaultConfig.BuilderConfig != nil {
-			return &ethpbservice.GetGasLimitResponse{
-				Gaslimit: s.validatorService.ProposerSettings.DefaultConfig.BuilderConfig.GasLimit,
-			}, nil
+			resp.Data.GasLimit = s.validatorService.ProposerSettings.DefaultConfig.BuilderConfig.GasLimit
+			return resp, nil
 		}
 	}
-	defaultGasLimit := params.BeaconConfig().DefaultBuilderGasLimit
-	return &ethpbservice.GetGasLimitResponse{Gaslimit: defaultGasLimit}, nil
+	resp.Data.GasLimit = params.BeaconConfig().DefaultBuilderGasLimit
+	return resp, nil
 }
 
 // ListFeeRecipientByPubkey returns the public key to eth address mapping object to the end user.
