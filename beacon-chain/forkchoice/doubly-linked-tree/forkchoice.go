@@ -62,7 +62,8 @@ func (f *ForkChoice) Head(
 
 	calledHeadCount.Inc()
 
-	// Using the write lock here because `applyWeightChanges` that gets called subsequently requires a write operation.
+	// Using the write lock here because subsequent calls to `updateBalances`, `applyProposerBoostScore`,
+	// `applyWeightChanges`, `updateBestDescendant`, and `head` require write operations on nodes.
 	f.store.nodesLock.Lock()
 	defer f.store.nodesLock.Unlock()
 
@@ -294,7 +295,7 @@ func (f *ForkChoice) AncestorRoot(ctx context.Context, root [32]byte, slot types
 }
 
 // updateBalances updates the balances that directly voted for each block taking into account the
-// validators' latest votes.
+// validators' latest votes. This function requires a lock in Store.nodesLock.
 func (f *ForkChoice) updateBalances(newBalances []uint64) error {
 	for index, vote := range f.votes {
 		// Skip if validator has been slashed
