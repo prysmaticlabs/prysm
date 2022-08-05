@@ -395,12 +395,12 @@ func (s *Service) onExecutionChainStart(ctx context.Context, genesisTime time.Ti
 	preGenesisState := s.cfg.ChainStartFetcher.PreGenesisState()
 	initializedState, err := s.initializeBeaconChain(ctx, genesisTime, preGenesisState, s.cfg.ChainStartFetcher.ChainStartEth1Data())
 	if err != nil {
-		log.Fatalf("Could not initialize beacon chain: %v", err)
+		log.WithError(err).Fatal("Could not initialize beacon chain")
 	}
 	// We start a counter to genesis, if needed.
 	gRoot, err := initializedState.HashTreeRoot(s.ctx)
 	if err != nil {
-		log.Fatalf("Could not hash tree root genesis state: %v", err)
+		log.WithError(err).Fatal("Could not hash tree root genesis state")
 	}
 	go slots.CountdownToGenesis(ctx, genesisTime, uint64(initializedState.NumValidators()), gRoot)
 
@@ -473,7 +473,7 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState state.Beacon
 	s.cfg.StateGen.SaveFinalizedState(0 /*slot*/, genesisBlkRoot, genesisState)
 
 	if err := s.cfg.ForkChoiceStore.InsertNode(ctx, genesisState, genesisBlkRoot); err != nil {
-		log.Fatalf("Could not process genesis block for fork choice: %v", err)
+		log.WithError(err).Fatal("Could not process genesis block for fork choice")
 	}
 	s.cfg.ForkChoiceStore.SetOriginRoot(genesisBlkRoot)
 	// Set genesis as fully validated
@@ -483,7 +483,7 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState state.Beacon
 	s.cfg.ForkChoiceStore.SetGenesisTime(uint64(s.genesisTime.Unix()))
 
 	if err := s.setHead(genesisBlkRoot, genesisBlk, genesisState); err != nil {
-		log.Fatalf("Could not set head: %v", err)
+		log.WithError(err).Fatal("Could not set head")
 	}
 	return nil
 }
@@ -508,11 +508,11 @@ func spawnCountdownIfPreGenesis(ctx context.Context, genesisTime time.Time, db d
 
 	gState, err := db.GenesisState(ctx)
 	if err != nil {
-		log.Fatalf("Could not retrieve genesis state: %v", err)
+		log.WithError(err).Fatal("Could not retrieve genesis state")
 	}
 	gRoot, err := gState.HashTreeRoot(ctx)
 	if err != nil {
-		log.Fatalf("Could not hash tree root genesis state: %v", err)
+		log.WithError(err).Fatal("Could not hash tree root genesis state")
 	}
 	go slots.CountdownToGenesis(ctx, genesisTime, uint64(gState.NumValidators()), gRoot)
 }
