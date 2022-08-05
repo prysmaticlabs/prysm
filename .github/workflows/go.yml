@@ -28,7 +28,7 @@ jobs:
         uses: Jerome1337/gofmt-action@v1.0.4
         with:
           gofmt-path: './'
-          gofmt-flags: '-e'
+          gofmt-flags: '-e -l'
 
       - name: GoImports checker
         id: goimports
