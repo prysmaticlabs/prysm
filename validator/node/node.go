@@ -54,8 +54,8 @@ import (
 	validatormiddleware "github.com/prysmaticlabs/prysm/validator/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/validator/web"
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
 	"google.golang.org/protobuf/encoding/protojson"
+	"gopkg.in/urfave/cli.v1"
 	"gopkg.in/yaml.v2"
 )
 
@@ -472,7 +472,7 @@ func web3SignerConfig(cliCtx *cli.Context) (*remoteweb3signer.SetupConfig, error
 				pks = publicKeysSlice
 			}
 			if len(pks) > 0 {
-				pks = slice.Unique[string](pks)
+				pks = slice.Unique(pks)
 				var validatorKeys [][48]byte
 				for _, key := range pks {
 					decodedKey, decodeErr := hexutil.Decode(key)
