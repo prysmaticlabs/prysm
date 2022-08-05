@@ -18,17 +18,11 @@ jobs:
         id: gomodtidy
         uses: ./.github/actions/gomodtidy
 
-      # - name: Gofmt checker
-      #   id: gofmt
-      #   uses: ./.github/actions/gofmt
-      #   with:
-      #     path: ./
-
       - name: Gofmt checker
-        uses: Jerome1337/gofmt-action@v1.0.4
+        id: gofmt
+        uses: ./.github/actions/gofmt
         with:
-          gofmt-path: './'
-          gofmt-flags: '-e -l'
+          path: ./
 
       - name: GoImports checker
         id: goimports
