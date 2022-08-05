@@ -21,7 +21,7 @@ func (s *Service) buildOptions(ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Opt
 	cfg := s.cfg
 	listen, err := multiAddressBuilder(ip.String(), cfg.TCPPort)
 	if err != nil {
-		log.Fatalf("Failed to p2p listen: %v", err)
+		log.WithError(err).Fatal("Failed to p2p listen")
 	}
 	if cfg.LocalIP != "" {
 		if net.ParseIP(cfg.LocalIP) == nil {
@@ -29,16 +29,16 @@ func (s *Service) buildOptions(ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Opt
 		}
 		listen, err = multiAddressBuilder(cfg.LocalIP, cfg.TCPPort)
 		if err != nil {
-			log.Fatalf("Failed to p2p listen: %v", err)
+			log.WithError(err).Fatal("Failed to p2p listen")
 		}
 	}
 	ifaceKey, err := ecdsaprysm.ConvertToInterfacePrivkey(priKey)
 	if err != nil {
-		log.Fatalf("Failed to retrieve private key: %v", err)
+		log.WithError(err).Fatal("Failed to retrieve private key")
 	}
 	id, err := peer.IDFromPublicKey(ifaceKey.GetPublic())
 	if err != nil {
-		log.Fatalf("Failed to retrieve peer id: %v", err)
+		log.WithError(err).Fatal("Failed to retrieve peer id")
 	}
 	log.Infof("Running node with peer id of %s ", id.String())
 

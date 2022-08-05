@@ -44,7 +44,7 @@ var Commands = &cli.Command{
 				gatewayPort := cliCtx.Int(flags.GRPCGatewayPort.Name)
 				validatorWebAddr := fmt.Sprintf("%s:%d", gatewayHost, gatewayPort)
 				if err := rpc.CreateAuthToken(walletDirPath, validatorWebAddr); err != nil {
-					log.Fatalf("Could not create web auth token: %v", err)
+					log.WithError(err).Fatal("Could not create web auth token")
 				}
 				return nil
 			},

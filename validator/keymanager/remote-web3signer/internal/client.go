@@ -218,6 +218,6 @@ func unmarshalSignatureResponse(responseBody io.ReadCloser) (bls.Signature, erro
 // closeBody a utility method to wrap an error for closing
 func closeBody(body io.Closer) {
 	if err := body.Close(); err != nil {
-		log.Errorf("could not close response body: %v", err)
+		log.WithError(err).Error("could not close response body")
 	}
 }
