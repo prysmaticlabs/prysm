@@ -1,4 +1,4 @@
-FROM cytopia/gofmt
+FROM golang:1.18
 
 COPY entrypoint.sh /entrypoint.sh
 
