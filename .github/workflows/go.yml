@@ -23,7 +23,6 @@ jobs:
         uses: ./.github/actions/gofmt
         with:
           path: ./
-          gofmt-flags: '-e'
 
       - name: GoImports checker
         id: goimports
