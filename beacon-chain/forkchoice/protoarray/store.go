@@ -29,7 +29,7 @@ import (
 const defaultPruneThreshold = 256
 
 // New initializes a new fork choice store.
-func New(da forkchoice.DataAvailability) *ForkChoice {
+func New() *ForkChoice {
 	s := &Store{
 		justifiedCheckpoint:           &forkchoicetypes.Checkpoint{},
 		bestJustifiedCheckpoint:       &forkchoicetypes.Checkpoint{},
@@ -48,7 +48,7 @@ func New(da forkchoice.DataAvailability) *ForkChoice {
 
 	b := make([]uint64, 0)
 	v := make([]Vote, 0)
-	return &ForkChoice{store: s, balances: b, votes: v, dataAvailability: da}
+	return &ForkChoice{store: s, balances: b, votes: v}
 }
 
 // Head returns the head root from fork choice store.
@@ -71,7 +71,7 @@ func (f *ForkChoice) Head(ctx context.Context, justifiedStateBalances []uint64) 
 	}
 	f.votes = newVotes
 
-	if err := f.store.applyWeightChanges(ctx, newBalances, deltas, f.dataAvailability); err != nil {
+	if err := f.store.applyWeightChanges(ctx, newBalances, deltas); err != nil {
 		return [32]byte{}, errors.Wrap(err, "Could not apply score changes")
 	}
 	f.balances = newBalances
@@ -150,7 +150,7 @@ func (f *ForkChoice) InsertNode(ctx context.Context, state state.BeaconState, ro
 		return errInvalidNilCheckpoint
 	}
 	finalizedEpoch := fc.Epoch
-	node, err := f.store.insert(ctx, slot, root, parentRoot, payloadHash, justifiedEpoch, finalizedEpoch, f.dataAvailability)
+	node, err := f.store.insert(ctx, slot, root, parentRoot, payloadHash, justifiedEpoch, finalizedEpoch)
 	if err != nil {
 		return err
 	}
@@ -234,6 +234,21 @@ func (f *ForkChoice) HasParent(root [32]byte) bool {
 	}
 
 	return f.store.nodes[i].parent != NonExistentNode
+}
+
+// SetValidData sets the node with the given root as a data available node
+func (f *ForkChoice) SetValidData(ctx context.Context, root [32]byte) error {
+	f.store.nodesLock.RLock()
+	defer f.store.nodesLock.RUnlock()
+
+	i, ok := f.store.nodesIndices[root]
+	if !ok || i >= uint64(len(f.store.nodes)) {
+		return ErrUnknownNodeRoot
+	}
+
+	f.store.nodes[i].validData = true
+
+	return nil
 }
 
 // IsCanonical returns true if the given root is part of the canonical chain.
@@ -471,8 +486,7 @@ func (s *Store) updateCanonicalNodes(ctx context.Context, root [32]byte) error {
 func (s *Store) insert(ctx context.Context,
 	slot types.Slot,
 	root, parent, payloadHash [32]byte,
-	justifiedEpoch, finalizedEpoch types.Epoch,
-	dataAvailability forkchoice.DataAvailability) (*Node, error) {
+	justifiedEpoch, finalizedEpoch types.Epoch) (*Node, error) {
 	_, span := trace.StartSpan(ctx, "protoArrayForkChoice.insert")
 	defer span.End()
 
@@ -525,7 +539,7 @@ func (s *Store) insert(ctx context.Context,
 
 	// Update parent with the best child and descendant only if it's available.
 	if n.parent != NonExistentNode {
-		if err := s.updateBestChildAndDescendant(ctx, parentIndex, index, dataAvailability); err != nil {
+		if err := s.updateBestChildAndDescendant(parentIndex, index); err != nil {
 			return n, err
 		}
 	}
@@ -541,10 +555,7 @@ func (s *Store) insert(ctx context.Context,
 // and its best child. For each node, it updates the weight with input delta and
 // back propagate the nodes' delta to its parents' delta. After scoring changes,
 // the best child is then updated along with the best descendant.
-func (s *Store) applyWeightChanges(
-	ctx context.Context, newBalances []uint64, delta []int,
-	dataAvailability forkchoice.DataAvailability,
-) error {
+func (s *Store) applyWeightChanges(ctx context.Context, newBalances []uint64, delta []int) error {
 	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.applyWeightChanges")
 	defer span.End()
 
@@ -636,7 +647,7 @@ func (s *Store) applyWeightChanges(
 			if int(n.parent) >= len(delta) {
 				return errInvalidParentDelta
 			}
-			if err := s.updateBestChildAndDescendant(ctx, n.parent, uint64(i), dataAvailability); err != nil {
+			if err := s.updateBestChildAndDescendant(n.parent, uint64(i)); err != nil {
 				return err
 			}
 		}
@@ -653,7 +664,7 @@ func (s *Store) applyWeightChanges(
 // 2.)  The child is already the best child and the parent is updated with the new best descendant.
 // 3.)  The child is not the best child but becomes the best child.
 // 4.)  The child is not the best child and does not become the best child.
-func (s *Store) updateBestChildAndDescendant(ctx context.Context, parentIndex, childIndex uint64, dataAvailability forkchoice.DataAvailability) error {
+func (s *Store) updateBestChildAndDescendant(parentIndex, childIndex uint64) error {
 
 	// Protection against parent index out of bound, this should not happen.
 	if parentIndex >= uint64(len(s.nodes)) {
@@ -673,7 +684,7 @@ func (s *Store) updateBestChildAndDescendant(ctx context.Context, parentIndex, c
 		return err
 	}
 	// optimization: only run DA checks if viable
-	if childLeadsToViableHead && dataAvailability.IsDataAvailable(ctx, child.root) != nil {
+	if childLeadsToViableHead {
 		childLeadsToViableHead = false
 	}
 
@@ -856,7 +867,7 @@ func (s *Store) viableForHead(node *Node) bool {
 	justified := s.justifiedCheckpoint.Epoch == node.justifiedEpoch || s.justifiedCheckpoint.Epoch == 0
 	finalized := s.finalizedCheckpoint.Epoch == node.finalizedEpoch || s.finalizedCheckpoint.Epoch == 0
 
-	return justified && finalized
+	return justified && finalized && node.validData
 }
 
 // Tips returns all possible chain heads (leaves of fork choice tree).
@@ -1008,7 +1019,7 @@ func (f *ForkChoice) InsertOptimisticChain(ctx context.Context, chain []*forkcho
 		}
 		if _, err := f.store.insert(ctx,
 			b.Slot(), r, parentRoot, payloadHash,
-			chain[i].JustifiedCheckpoint.Epoch, chain[i].FinalizedCheckpoint.Epoch, f.dataAvailability); err != nil {
+			chain[i].JustifiedCheckpoint.Epoch, chain[i].FinalizedCheckpoint.Epoch); err != nil {
 			return err
 		}
 		if err := f.updateCheckpoints(ctx, chain[i].JustifiedCheckpoint, chain[i].FinalizedCheckpoint); err != nil {

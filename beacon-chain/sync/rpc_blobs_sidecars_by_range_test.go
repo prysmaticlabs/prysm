@@ -17,9 +17,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	consensusblock "github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -53,7 +53,7 @@ func TestRPCBlobsSidecarsByRange_RPCHandlerReturnsBlobsSidecars(t *testing.T) {
 		// save the BeaconBlock to index the slots used to retrieve sidecars
 		blk := util.NewBeaconBlock()
 		blk.Block.Slot = i
-		wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+		wsb, err := consensusblock.NewSignedBeaconBlock(blk)
 		require.NoError(t, err)
 		require.NoError(t, d.SaveBlock(context.Background(), wsb))
 		blocks = append(blocks, wsb)
@@ -120,7 +120,7 @@ func TestSendRequest_SendBlobsSidecarsByRangeRequest(t *testing.T) {
 		// Save the blocks that will be used to verify blobs later
 		blk := util.HydrateEIP4844SignedBeaconBlock(new(ethpb.SignedBeaconBlockWithBlobKZGs))
 		blk.Block.Slot = types.Slot(i)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+		wsb, err := consensusblock.NewSignedBeaconBlock(blk)
 		require.NoError(t, err)
 		require.NoError(t, db.SaveBlock(context.Background(), wsb))
 

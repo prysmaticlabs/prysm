@@ -10,10 +10,6 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
-type DataAvailability interface {
-	IsDataAvailable(ctx context.Context, root [32]byte) error
-}
-
 // ForkChoicer represents the full fork choice interface composed of all the sub-interfaces.
 type ForkChoicer interface {
 	HeadRetriever        // to compute head.
@@ -72,6 +68,7 @@ type Getter interface {
 type Setter interface {
 	SetOptimisticToValid(context.Context, [fieldparams.RootLength]byte) error
 	SetOptimisticToInvalid(context.Context, [fieldparams.RootLength]byte, [fieldparams.RootLength]byte, [fieldparams.RootLength]byte) ([][32]byte, error)
+	SetValidData(context.Context, [fieldparams.RootLength]byte) error
 	UpdateJustifiedCheckpoint(*forkchoicetypes.Checkpoint) error
 	UpdateFinalizedCheckpoint(*forkchoicetypes.Checkpoint) error
 	SetGenesisTime(uint64)

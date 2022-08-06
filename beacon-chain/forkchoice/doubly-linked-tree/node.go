@@ -5,7 +5,6 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -43,7 +42,7 @@ func (n *Node) applyWeightChanges(ctx context.Context) error {
 }
 
 // updateBestDescendant updates the best descendant of this node and its children.
-func (n *Node) updateBestDescendant(ctx context.Context, justifiedEpoch, finalizedEpoch types.Epoch, dataAvailability forkchoice.DataAvailability) error {
+func (n *Node) updateBestDescendant(ctx context.Context, justifiedEpoch, finalizedEpoch types.Epoch) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
@@ -59,12 +58,12 @@ func (n *Node) updateBestDescendant(ctx context.Context, justifiedEpoch, finaliz
 		if child == nil {
 			return errors.Wrap(ErrNilNode, "could not update best descendant")
 		}
-		if err := child.updateBestDescendant(ctx, justifiedEpoch, finalizedEpoch, dataAvailability); err != nil {
+		if err := child.updateBestDescendant(ctx, justifiedEpoch, finalizedEpoch); err != nil {
 			return err
 		}
 		childLeadsToViableHead := child.leadsToViableHead(justifiedEpoch, finalizedEpoch)
 		// optimization: only run DA checks if viable
-		if childLeadsToViableHead && dataAvailability.IsDataAvailable(ctx, child.root) != nil {
+		if childLeadsToViableHead {
 			childLeadsToViableHead = false
 		}
 		if childLeadsToViableHead && !hasViableDescendant {
@@ -110,9 +109,9 @@ func (n *Node) viableForHead(justifiedEpoch, finalizedEpoch types.Epoch) bool {
 
 func (n *Node) leadsToViableHead(justifiedEpoch, finalizedEpoch types.Epoch) bool {
 	if n.bestDescendant == nil {
-		return n.viableForHead(justifiedEpoch, finalizedEpoch)
+		return n.viableForHead(justifiedEpoch, finalizedEpoch) && n.validData
 	}
-	return n.bestDescendant.viableForHead(justifiedEpoch, finalizedEpoch)
+	return n.bestDescendant.viableForHead(justifiedEpoch, finalizedEpoch) && n.validData
 }
 
 // setNodeAndParentValidated sets the current node and all the ancestors as validated (i.e. non-optimistic).

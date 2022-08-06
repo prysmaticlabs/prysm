@@ -140,6 +140,16 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 	if err := s.insertBlockAndAttestationsToForkChoiceStore(ctx, signed.Block(), blockRoot, postState); err != nil {
 		return errors.Wrapf(err, "could not insert block %d to fork choice store", signed.Block().Slot())
 	}
+	hasSideCar, err := blobs.BlockContainsSidecar(signed)
+	if err != nil {
+		return err
+	}
+	if hasSideCar {
+		if err := s.cfg.ForkChoiceStore.SetValidData(ctx, blockRoot); err != nil {
+			return err
+		}
+	}
+
 	s.InsertSlashingsToForkChoiceStore(ctx, signed.Block().Body().AttesterSlashings())
 	if isValidPayload {
 		if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, blockRoot); err != nil {
@@ -400,6 +410,15 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 			tracing.AnnotateError(span, err)
 			return err
 		}
+		hasSideCar, err := blobs.BlockContainsSidecar(b)
+		if err != nil {
+			return err
+		}
+		if hasSideCar {
+			if err := s.cfg.ForkChoiceStore.SetValidData(ctx, blockRoots[i]); err != nil {
+				return err
+			}
+		}
 
 		if err := s.saveSidecar(ctx, b); err != nil {
 			return err
@@ -422,6 +441,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 	if err := s.cfg.ForkChoiceStore.InsertOptimisticChain(ctx, pendingNodes); err != nil {
 		return errors.Wrap(err, "could not insert batch to forkchoice")
 	}
+
 	// Insert the last block to forkchoice
 	lastBR := blockRoots[len(blks)-1]
 	if err := s.cfg.ForkChoiceStore.InsertNode(ctx, preState, lastBR); err != nil {

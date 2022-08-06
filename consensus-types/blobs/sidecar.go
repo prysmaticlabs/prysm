@@ -56,11 +56,16 @@ func VerifyBlobsSidecar(slot types.Slot, beaconBlockRoot [32]byte, expectedKZGs 
 	return nil
 }
 
+// BlockContainsSidecar returns true if the block contains an external sidecar and internal kzgs
 func BlockContainsSidecar(b interfaces.SignedBeaconBlock) (bool, error) {
-	if blocks.IsPreEIP4844Version(b.Version()) {
+	hasKzg, err := BlockContainsKZGs(b.Block())
+	if err != nil {
+		return false, err
+	}
+	if !hasKzg {
 		return false, nil
 	}
-	_, err := b.SideCar()
+	_, err = b.SideCar()
 	switch {
 	case errors.Is(err, blocks.ErrNilSidecar):
 		return false, nil
@@ -70,14 +75,13 @@ func BlockContainsSidecar(b interfaces.SignedBeaconBlock) (bool, error) {
 	return true, nil
 }
 
-func BlockContainsKZGs(b interfaces.BeaconBlock) bool {
+func BlockContainsKZGs(b interfaces.BeaconBlock) (bool, error) {
 	if blocks.IsPreEIP4844Version(b.Version()) {
-		return false
+		return false, nil
 	}
 	blobKzgs, err := b.Body().BlobKzgs()
 	if err != nil {
-		// cannot happen!
-		return false
+		return false, err
 	}
-	return len(blobKzgs) != 0
+	return len(blobKzgs) != 0, nil
 }

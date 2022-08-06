@@ -33,7 +33,6 @@ import (
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/blobs"
 	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
@@ -206,9 +205,9 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 	var forkChoicer f.ForkChoicer
 	fRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(finalized.Root))
 	if features.Get().EnableForkChoiceDoublyLinkedTree {
-		forkChoicer = doublylinkedtree.New(NewDBDataAvailability(s.cfg.BeaconDB))
+		forkChoicer = doublylinkedtree.New()
 	} else {
-		forkChoicer = protoarray.New(NewDBDataAvailability(s.cfg.BeaconDB))
+		forkChoicer = protoarray.New()
 	}
 	s.cfg.ForkChoiceStore = forkChoicer
 	if err := forkChoicer.UpdateJustifiedCheckpoint(&forkchoicetypes.Checkpoint{Epoch: justified.Epoch,
@@ -516,40 +515,4 @@ func spawnCountdownIfPreGenesis(ctx context.Context, genesisTime time.Time, db d
 		log.Fatalf("Could not hash tree root genesis state: %v", err)
 	}
 	go slots.CountdownToGenesis(ctx, genesisTime, uint64(gState.NumValidators()), gRoot)
-}
-
-type dbDataAvailability struct {
-	db db.ReadOnlyDatabase
-}
-
-func NewDBDataAvailability(db db.ReadOnlyDatabase) f.DataAvailability {
-	return &dbDataAvailability{db}
-}
-
-func (d *dbDataAvailability) IsDataAvailable(ctx context.Context, root [32]byte) error {
-	b, err := d.db.Block(ctx, root)
-	if err != nil {
-		return err
-	}
-	if err := blocks.BeaconBlockIsNil(b); err != nil {
-		return err
-	}
-	if !blobs.BlockContainsKZGs(b.Block()) {
-		// no sidecar referenced. We have all the data we need
-		return nil
-	}
-
-	kzgs, err := b.Block().Body().BlobKzgs()
-	if err != nil {
-		// shouldn't happen if blob contains kzgs
-		return err
-	}
-	sidecar, err := d.db.BlobsSidecar(ctx, root)
-	if err != nil {
-		return err
-	}
-	if sidecar.BeaconBlockSlot != b.Block().Slot() {
-		return errors.New("blobs sidecar is unavailable")
-	}
-	return blobs.VerifyBlobsSidecar(b.Block().Slot(), root, bytesutil.ToBytes48Array(kzgs), sidecar)
 }

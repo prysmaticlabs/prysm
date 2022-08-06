@@ -124,7 +124,7 @@ func TestServer_getExecutionPayload(t *testing.T) {
 				ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
 			}
 			vs.ProposerSlotIndexCache.SetProposerAndPayloadIDs(tt.st.Slot(), 100, [8]byte{100})
-			_, err := vs.getExecutionPayload(context.Background(), tt.st.Slot(), tt.validatorIndx)
+			_, _, err := vs.getExecutionPayload(context.Background(), tt.st.Slot(), tt.validatorIndx)
 			if tt.errString != "" {
 				require.ErrorContains(t, tt.errString, err)
 			} else {
@@ -175,7 +175,7 @@ func TestServer_getExecutionPayload_UnexpectedFeeRecipient(t *testing.T) {
 		BeaconDB:               beaconDB,
 		ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
 	}
-	gotPayload, err := vs.getExecutionPayload(context.Background(), transitionSt.Slot(), 0)
+	gotPayload, _, err := vs.getExecutionPayload(context.Background(), transitionSt.Slot(), 0)
 	require.NoError(t, err)
 	require.NotNil(t, gotPayload)
 
@@ -187,7 +187,7 @@ func TestServer_getExecutionPayload_UnexpectedFeeRecipient(t *testing.T) {
 	payload.FeeRecipient = evilRecipientAddress[:]
 	vs.ProposerSlotIndexCache = cache.NewProposerPayloadIDsCache()
 
-	gotPayload, err = vs.getExecutionPayload(context.Background(), transitionSt.Slot(), 0)
+	gotPayload, _, err = vs.getExecutionPayload(context.Background(), transitionSt.Slot(), 0)
 	require.NoError(t, err)
 	require.NotNil(t, gotPayload)
 

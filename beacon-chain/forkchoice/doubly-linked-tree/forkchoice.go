@@ -22,7 +22,7 @@ import (
 )
 
 // New initializes a new fork choice store.
-func New(da forkchoice.DataAvailability) *ForkChoice {
+func New() *ForkChoice {
 	s := &Store{
 		justifiedCheckpoint:           &forkchoicetypes.Checkpoint{},
 		bestJustifiedCheckpoint:       &forkchoicetypes.Checkpoint{},
@@ -39,7 +39,7 @@ func New(da forkchoice.DataAvailability) *ForkChoice {
 
 	b := make([]uint64, 0)
 	v := make([]Vote, 0)
-	return &ForkChoice{store: s, balances: b, votes: v, dataAvailability: da}
+	return &ForkChoice{store: s, balances: b, votes: v}
 }
 
 // NodeCount returns the current number of nodes in the Store.
@@ -80,7 +80,7 @@ func (f *ForkChoice) Head(
 
 	jc := f.JustifiedCheckpoint()
 	fc := f.FinalizedCheckpoint()
-	if err := f.store.treeRootNode.updateBestDescendant(ctx, jc.Epoch, fc.Epoch, f.dataAvailability); err != nil {
+	if err := f.store.treeRootNode.updateBestDescendant(ctx, jc.Epoch, fc.Epoch); err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not update best descendant")
 	}
 	return f.store.head(ctx)
@@ -145,7 +145,7 @@ func (f *ForkChoice) InsertNode(ctx context.Context, state state.BeaconState, ro
 		return errInvalidNilCheckpoint
 	}
 	finalizedEpoch := fc.Epoch
-	node, err := f.store.insert(ctx, slot, root, parentRoot, payloadHash, justifiedEpoch, finalizedEpoch, f.dataAvailability)
+	node, err := f.store.insert(ctx, slot, root, parentRoot, payloadHash, justifiedEpoch, finalizedEpoch)
 	if err != nil {
 		return err
 	}
@@ -385,6 +385,18 @@ func (f *ForkChoice) SetOptimisticToValid(ctx context.Context, root [fieldparams
 	return node.setNodeAndParentValidated(ctx)
 }
 
+// SetValidData sets the node with the given root as a data available node
+func (f *ForkChoice) SetValidData(ctx context.Context, root [fieldparams.RootLength]byte) error {
+	f.store.nodesLock.Lock()
+	defer f.store.nodesLock.Unlock()
+	node, ok := f.store.nodeByRoot[root]
+	if !ok || node == nil {
+		return errors.Wrap(ErrNilNode, "could not set node to valid data")
+	}
+	node.validData = true
+	return nil
+}
+
 // BestJustifiedCheckpoint of fork choice store.
 func (f *ForkChoice) BestJustifiedCheckpoint() *forkchoicetypes.Checkpoint {
 	f.store.checkpointsLock.RLock()
@@ -555,7 +567,7 @@ func (f *ForkChoice) InsertOptimisticChain(ctx context.Context, chain []*forkcho
 		}
 		if _, err := f.store.insert(ctx,
 			b.Slot(), r, parentRoot, payloadHash,
-			chain[i].JustifiedCheckpoint.Epoch, chain[i].FinalizedCheckpoint.Epoch, f.dataAvailability); err != nil {
+			chain[i].JustifiedCheckpoint.Epoch, chain[i].FinalizedCheckpoint.Epoch); err != nil {
 			return err
 		}
 		if err := f.updateCheckpoints(ctx, chain[i].JustifiedCheckpoint, chain[i].FinalizedCheckpoint); err != nil {

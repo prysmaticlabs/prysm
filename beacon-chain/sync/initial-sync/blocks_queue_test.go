@@ -263,7 +263,7 @@ func TestBlocksQueue_Loop(t *testing.T) {
 				if err != nil {
 					return err
 				}
-				return mc.ReceiveBlock(ctx, block, root, sidecar)
+				return mc.ReceiveBlock(ctx, block, root)
 			}
 
 			var blocks []interfaces.SignedBeaconBlock

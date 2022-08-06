@@ -3,7 +3,6 @@ package doublylinkedtree
 import (
 	"sync"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
@@ -11,11 +10,10 @@ import (
 
 // ForkChoice defines the overall fork choice store which includes all block nodes, validator's latest votes and balances.
 type ForkChoice struct {
-	store            *Store
-	votes            []Vote // tracks individual validator's last vote.
-	votesLock        sync.RWMutex
-	balances         []uint64 // tracks individual validator's last justified balances.
-	dataAvailability forkchoice.DataAvailability
+	store     *Store
+	votes     []Vote // tracks individual validator's last vote.
+	votesLock sync.RWMutex
+	balances  []uint64 // tracks individual validator's last justified balances.
 }
 
 // Store defines the fork choice store which includes block nodes and the last view of checkpoint information.
@@ -59,6 +57,7 @@ type Node struct {
 	weight                   uint64                       // weight of this node: the total balance including children
 	bestDescendant           *Node                        // bestDescendant node of this node.
 	optimistic               bool                         // whether the block has been fully validated or not
+	validData                bool                         // whether the block has valid data or not
 }
 
 // Vote defines an individual validator's vote.

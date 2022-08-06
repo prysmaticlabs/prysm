@@ -32,7 +32,11 @@ func (s *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) 
 	}
 
 	var sidecar *eth.BlobsSidecar
-	if blobs.BlockContainsKZGs(block) {
+	contains, err := blobs.BlockContainsKZGs(block)
+	if err != nil {
+		return err
+	}
+	if contains {
 		slot := block.Slot()
 		s.pendingQueueLock.RLock()
 		sidecars := s.pendingSidecarsInCache(slot)

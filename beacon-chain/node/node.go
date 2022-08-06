@@ -358,9 +358,9 @@ func (b *BeaconNode) Close() {
 
 func (b *BeaconNode) startForkChoice() {
 	if features.Get().EnableForkChoiceDoublyLinkedTree {
-		b.forkChoiceStore = doublylinkedtree.New(blockchain.NewDBDataAvailability(b.db))
+		b.forkChoiceStore = doublylinkedtree.New()
 	} else {
-		b.forkChoiceStore = protoarray.New(blockchain.NewDBDataAvailability(b.db))
+		b.forkChoiceStore = protoarray.New()
 	}
 }
 

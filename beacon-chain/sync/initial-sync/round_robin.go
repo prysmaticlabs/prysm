@@ -153,7 +153,14 @@ func (s *Service) processFetchedDataRegSync(
 				break
 			}
 		}
-		if err := s.processBlock(ctx, genesis, blk, sidecar, blockReceiver); err != nil {
+		if sidecar != nil && blk.Version() == version.EIP4844 {
+			if err := blk.SetSideCar(&ethpb.SignedBlobsSidecar{Message: sidecar}); err != nil {
+				log.WithError(err).Error("Could not set sidecar")
+				return
+			}
+		}
+
+		if err := s.processBlock(ctx, genesis, blk, blockReceiver); err != nil {
 			switch {
 			case errors.Is(err, errBlockAlreadyProcessed):
 				log.WithError(err).Debug("Block is not processed")
@@ -238,7 +245,6 @@ func (s *Service) processBlock(
 	ctx context.Context,
 	genesis time.Time,
 	blk interfaces.SignedBeaconBlock,
-	sidecar *ethpb.BlobsSidecar,
 	blockReceiver blockReceiverFn,
 ) error {
 	blkRoot, err := blk.Block().HashTreeRoot()
@@ -253,12 +259,6 @@ func (s *Service) processBlock(
 	parentRoot := bytesutil.ToBytes32(blk.Block().ParentRoot())
 	if !s.cfg.Chain.HasBlock(ctx, parentRoot) {
 		return fmt.Errorf("%w: (in processBlock, slot=%d) %#x", errParentDoesNotExist, blk.Block().Slot(), blk.Block().ParentRoot())
-	}
-
-	if sidecar != nil && blk.Version() == version.EIP4844 {
-		if err := blk.SetSideCar(&ethpb.SignedBlobsSidecar{Message: sidecar}); err != nil {
-			return err
-		}
 	}
 
 	return blockReceiver(ctx, blk, blkRoot)
