@@ -13,6 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
+	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
@@ -329,6 +330,17 @@ func (s *Service) ReconstructFullBellatrixBlock(
 	if err != nil {
 		return nil, err
 	}
+	if header.IsNil() {
+		return nil, errors.New("execution payload header in blinded block was nil")
+	}
+
+	// If the payload header has a block hash of 0x0, it means we are pre-merge and should
+	// simply return the block with an empty execution payload.
+	if bytes.Equal(header.BlockHash(), params.BeaconConfig().ZeroHash[:]) {
+		payload := buildEmptyExecutionPayload()
+		return blocks.BuildSignedBeaconBlockFromExecutionPayload(blindedBlock, payload)
+	}
+
 	executionBlockHash := common.BytesToHash(header.BlockHash())
 	executionBlock, err := s.ExecutionBlockByHash(ctx, executionBlockHash, true /* with txs */)
 	if err != nil {
@@ -459,4 +471,19 @@ func tDStringToUint256(td string) (*uint256.Int, error) {
 		return nil, errors.New("total difficulty overflowed")
 	}
 	return i, nil
+}
+
+func buildEmptyExecutionPayload() *pb.ExecutionPayload {
+	return &pb.ExecutionPayload{
+		ParentHash:    make([]byte, fieldparams.RootLength),
+		FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
+		StateRoot:     make([]byte, fieldparams.RootLength),
+		ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+		LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
+		PrevRandao:    make([]byte, fieldparams.RootLength),
+		BaseFeePerGas: make([]byte, fieldparams.RootLength),
+		BlockHash:     make([]byte, fieldparams.RootLength),
+		Transactions:  make([][]byte, 0),
+		ExtraData:     make([]byte, 0),
+	}
 }
