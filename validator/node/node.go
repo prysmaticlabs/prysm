@@ -458,7 +458,7 @@ func web3SignerConfig(cliCtx *cli.Context) (*remoteweb3signer.SetupConfig, error
 			log.Warnf("%s was provided while using web3signer and will be ignored", flags.WalletPasswordFileFlag.Name)
 		}
 
-		if publicKeysSlice := cliCtx.StringSlice(flags.Web3SignerPublicValidatorKeysFlag.Name); len(publicKeysSlice) > 0
+		if publicKeysSlice := cliCtx.StringSlice(flags.Web3SignerPublicValidatorKeysFlag.Name); len(publicKeysSlice) > 0 {
 			pks := make([]string, 0)
 			if len(publicKeysSlice) == 1 {
 				pURL, err := url.ParseRequestURI(publicKeysSlice[0])
