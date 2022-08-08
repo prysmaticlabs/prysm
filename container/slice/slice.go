@@ -365,7 +365,6 @@ func IsInSlots(a types.Slot, b []types.Slot) bool {
 }
 
 // Unique returns an array with duplicates filtered based on the type given
-//( currently supports string but will enable generics after updating gofmt)
 func Unique(a []string) []string {
 	if a == nil || len(a) <= 1 {
 		return a
