@@ -146,7 +146,11 @@ func (vs *Server) CheckDoppelGanger(ctx context.Context, req *ethpb.DoppelGanger
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get previous epoch's end")
 	}
-	prevState, err := vs.ReplayerBuilder.ReplayerForSlot(prevEpochEnd).ReplayBlocks(ctx)
+	b, err := vs.CanonicalHistoryWaiter.WaitForCanonicalHistory(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	prevState, err := b.ReplayerForSlot(prevEpochEnd).ReplayBlocks(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get previous state")
 	}
@@ -252,7 +256,11 @@ func (vs *Server) activationStatus(
 // Spec:
 // https://github.com/ethereum/consensus-specs/blob/dev/sync/optimistic.md
 func (vs *Server) optimisticStatus(ctx context.Context) error {
-	if slots.ToEpoch(vs.TimeFetcher.CurrentSlot()) < params.BeaconConfig().BellatrixForkEpoch {
+	c, err := vs.ClockProvider.WaitForClock(ctx)
+	if err != nil {
+		return status.Errorf(codes.Internal, "timeout while waiting for genesis timestamp, %s", err)
+	}
+	if slots.ToEpoch(c.CurrentSlot()) < params.BeaconConfig().BellatrixForkEpoch {
 		return nil
 	}
 	optimistic, err := vs.OptimisticModeFetcher.IsOptimistic(ctx)
@@ -361,15 +369,6 @@ func (vs *Server) validatorStatus(
 	default:
 		return resp, idx
 	}
-}
-
-func (vs *Server) retrieveAfterEpochTransition(ctx context.Context, epoch types.Epoch) (state.BeaconState, error) {
-	endSlot, err := slots.EpochEnd(epoch)
-	if err != nil {
-		return nil, err
-	}
-	// replay to first slot of following epoch
-	return vs.ReplayerBuilder.ReplayerForSlot(endSlot).ReplayToSlot(ctx, endSlot+1)
 }
 
 func checkValidatorsAreRecent(headEpoch types.Epoch, req *ethpb.DoppelGangerRequest) (bool, *ethpb.DoppelGangerResponse) {

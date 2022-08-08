@@ -22,6 +22,6 @@ type Server struct {
 	PeersFetcher          p2p.PeersProvider
 	PeerManager           p2p.PeerManager
 	MetadataProvider      p2p.MetadataProvider
-	GenesisTimeFetcher    blockchain.TimeFetcher
 	HeadFetcher           blockchain.HeadFetcher
+	ClockProvider         blockchain.ClockProvider
 }

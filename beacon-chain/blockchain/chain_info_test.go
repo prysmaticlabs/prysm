@@ -28,7 +28,6 @@ import (
 
 // Ensure Service implements chain info interface.
 var _ ChainInfoFetcher = (*Service)(nil)
-var _ TimeFetcher = (*Service)(nil)
 var _ ForkFetcher = (*Service)(nil)
 
 // prepareForkchoiceState prepares a beacon state with the given data to mock
@@ -202,9 +201,9 @@ func TestHeadState_CanRetrieve(t *testing.T) {
 }
 
 func TestGenesisTime_CanRetrieve(t *testing.T) {
-	c := &Service{genesisTime: time.Unix(999, 0)}
+	c := &Service{clock: NewClock(time.Unix(999, 0))}
 	wanted := time.Unix(999, 0)
-	assert.Equal(t, wanted, c.GenesisTime(), "Did not get wanted genesis time")
+	assert.Equal(t, wanted, c.genesisTime(), "Did not get wanted genesis time")
 }
 
 func TestCurrentFork_CanRetrieve(t *testing.T) {
@@ -304,6 +303,7 @@ func TestService_HeadGenesisValidatorsRoot(t *testing.T) {
 	root = c.HeadGenesisValidatorsRoot()
 	require.DeepEqual(t, root[:], s.GenesisValidatorsRoot())
 }
+
 func TestService_ChainHeads_ProtoArray(t *testing.T) {
 	ctx := context.Background()
 	c := &Service{cfg: &config{ForkChoiceStore: protoarray.New()}}
@@ -474,7 +474,7 @@ func TestService_IsOptimistic_DoublyLinkedTree(t *testing.T) {
 
 func TestService_IsOptimisticBeforeBellatrix(t *testing.T) {
 	ctx := context.Background()
-	c := &Service{genesisTime: time.Now()}
+	c := &Service{clock: NewClock(time.Now())}
 	opt, err := c.IsOptimistic(ctx)
 	require.NoError(t, err)
 	require.Equal(t, false, opt)

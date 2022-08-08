@@ -38,11 +38,11 @@ type Server struct {
 	BeaconDB             db.ReadOnlyDatabase
 	PeersFetcher         p2p.PeersProvider
 	PeerManager          p2p.PeerManager
-	GenesisTimeFetcher   blockchain.TimeFetcher
 	GenesisFetcher       blockchain.GenesisFetcher
 	POWChainInfoFetcher  powchain.ChainInfoFetcher
 	BeaconMonitoringHost string
 	BeaconMonitoringPort int
+	ClockProvider blockchain.ClockProvider
 }
 
 // GetSyncStatus checks the current network sync status of the node.
@@ -59,7 +59,11 @@ func (ns *Server) GetGenesis(ctx context.Context, _ *empty.Empty) (*ethpb.Genesi
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not retrieve contract address from db: %v", err)
 	}
-	genesisTime := ns.GenesisTimeFetcher.GenesisTime()
+	c, err := ns.ClockProvider.WaitForClock(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "timeout while waiting for genesis timestamp, %s", err)
+	}
+	genesisTime := c.GenesisTime()
 	var defaultGenesisTime time.Time
 	var gt *timestamp.Timestamp
 	if genesisTime == defaultGenesisTime {

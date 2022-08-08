@@ -3,6 +3,7 @@ package sync
 import (
 	"context"
 	"encoding/hex"
+	"github.com/pkg/errors"
 	"sync"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -42,10 +43,14 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "processPendingAtts")
 	defer span.End()
 
+	c, err := s.cfg.chain.WaitForClock(ctx)
+	if err != nil {
+		return errors.Wrap(err, "timeout while waiting for genesis timestamp")
+	}
 	// Before a node processes pending attestations queue, it verifies
 	// the attestations in the queue are still valid. Attestations will
 	// be deleted from the queue if invalid (ie. getting staled from falling too many slots behind).
-	s.validatePendingAtts(ctx, s.cfg.chain.CurrentSlot())
+	s.validatePendingAtts(ctx, c.CurrentSlot())
 
 	s.pendingAttsLock.RLock()
 	roots := make([][32]byte, 0, len(s.blkRootToPendingAtts))
@@ -75,7 +80,7 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 		} else {
 			// Pending attestation's missing block has not arrived yet.
 			log.WithFields(logrus.Fields{
-				"currentSlot": s.cfg.chain.CurrentSlot(),
+				"currentSlot": c.CurrentSlot(),
 				"attSlot":     attestations[0].Message.Aggregate.Data.Slot,
 				"attCount":    len(attestations),
 				"blockRoot":   hex.EncodeToString(bytesutil.Trunc(bRoot[:])),

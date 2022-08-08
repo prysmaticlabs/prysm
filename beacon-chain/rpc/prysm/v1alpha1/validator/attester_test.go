@@ -2,6 +2,7 @@ package validator
 
 import (
 	"context"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"math/rand"
 	"sync"
 	"testing"
@@ -121,6 +122,7 @@ func TestGetAttestationData_OK(t *testing.T) {
 		Genesis: time.Now(),
 	}
 	offset := int64(slot.Mul(params.BeaconConfig().SecondsPerSlot))
+	gent := time.Now().Add(time.Duration(-1*offset) * time.Second)
 	attesterServer := &Server{
 		P2P:              &mockp2p.MockBroadcaster{},
 		SyncChecker:      &mockSync.Sync{IsSyncing: false},
@@ -131,8 +133,8 @@ func TestGetAttestationData_OK(t *testing.T) {
 		FinalizationFetcher: &mock.ChainService{
 			CurrentJustifiedCheckPoint: beaconState.CurrentJustifiedCheckpoint(),
 		},
-		TimeFetcher: &mock.ChainService{
-			Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second),
+		ClockProvider: &mock.ChainService{
+			Clock: blockchain.NewClock(gent),
 		},
 		StateNotifier: chainService.StateNotifier(),
 	}
@@ -178,7 +180,7 @@ func TestGetAttestationData_Optimistic(t *testing.T) {
 
 	as := &Server{
 		SyncChecker:           &mockSync.Sync{},
-		TimeFetcher:           &mock.ChainService{Genesis: time.Now()},
+		ClockProvider:         &mock.ChainService{Clock: blockchain.NewClock(time.Now())},
 		HeadFetcher:           &mock.ChainService{},
 		OptimisticModeFetcher: &mock.ChainService{Optimistic: true},
 	}
@@ -192,7 +194,7 @@ func TestGetAttestationData_Optimistic(t *testing.T) {
 	require.NoError(t, err)
 	as = &Server{
 		SyncChecker:           &mockSync.Sync{},
-		TimeFetcher:           &mock.ChainService{Genesis: time.Now()},
+		ClockProvider:         &mock.ChainService{Clock: blockchain.NewClock(time.Now())},
 		HeadFetcher:           &mock.ChainService{Optimistic: false, State: beaconState},
 		OptimisticModeFetcher: &mock.ChainService{Optimistic: false},
 		AttestationCache:      cache.NewAttestationCache(),
@@ -252,6 +254,8 @@ func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
 		Genesis: time.Now(),
 	}
 	offset := int64(slot.Mul(params.BeaconConfig().SecondsPerSlot))
+	gent := time.Now().Add(time.Duration(-1*offset) * time.Second)
+	clock := blockchain.NewClock(gent)
 	attesterServer := &Server{
 		P2P:              &mockp2p.MockBroadcaster{},
 		AttestationCache: cache.NewAttestationCache(),
@@ -260,7 +264,7 @@ func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
 			CurrentJustifiedCheckPoint: beaconState.CurrentJustifiedCheckpoint(),
 		},
 		SyncChecker:   &mockSync.Sync{IsSyncing: false},
-		TimeFetcher:   &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
+		ClockProvider:   &mock.ChainService{Clock: clock},
 		StateNotifier: chainService.StateNotifier(),
 	}
 
@@ -299,11 +303,13 @@ func TestAttestationDataSlot_handlesInProgressRequest(t *testing.T) {
 	}
 	slot := types.Slot(2)
 	offset := int64(slot.Mul(params.BeaconConfig().SecondsPerSlot))
+	gent := time.Now().Add(time.Duration(-1*offset) * time.Second)
+	clock := blockchain.NewClock(gent)
 	server := &Server{
 		HeadFetcher:      &mock.ChainService{State: state},
 		AttestationCache: cache.NewAttestationCache(),
 		SyncChecker:      &mockSync.Sync{IsSyncing: false},
-		TimeFetcher:      &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
+		ClockProvider:      &mock.ChainService{Clock: clock},
 		StateNotifier:    chainService.StateNotifier(),
 	}
 
@@ -347,10 +353,12 @@ func TestServer_GetAttestationData_InvalidRequestSlot(t *testing.T) {
 
 	slot := 3*params.BeaconConfig().SlotsPerEpoch + 1
 	offset := int64(slot.Mul(params.BeaconConfig().SecondsPerSlot))
+	gent := time.Now().Add(time.Duration(-1*offset) * time.Second)
+	clock := blockchain.NewClock(gent)
 	attesterServer := &Server{
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
 		HeadFetcher: &mock.ChainService{},
-		TimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
+		ClockProvider: &mock.ChainService{Clock: clock},
 	}
 
 	req := &ethpb.AttestationDataRequest{
@@ -411,17 +419,19 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 	beaconstate := beaconState.Copy()
 	require.NoError(t, beaconstate.SetSlot(beaconstate.Slot()-1))
 	require.NoError(t, db.SaveState(ctx, beaconstate, blockRoot2))
-	chainService := &mock.ChainService{
-		Genesis: time.Now(),
-	}
 	offset = int64(slot.Mul(params.BeaconConfig().SecondsPerSlot))
+	gent := time.Now().Add(time.Duration(-1*offset) * time.Second)
+	clock := blockchain.NewClock(gent)
+	chainService := &mock.ChainService{
+		Clock: clock,
+	}
 	attesterServer := &Server{
 		P2P:                 &mockp2p.MockBroadcaster{},
 		SyncChecker:         &mockSync.Sync{IsSyncing: false},
 		AttestationCache:    cache.NewAttestationCache(),
 		HeadFetcher:         &mock.ChainService{State: beaconState, Root: blockRoot[:]},
 		FinalizationFetcher: &mock.ChainService{CurrentJustifiedCheckPoint: beaconState.CurrentJustifiedCheckpoint()},
-		TimeFetcher:         &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
+		ClockProvider:       chainService,
 		StateNotifier:       chainService.StateNotifier(),
 		StateGen:            stategen.New(db),
 	}
@@ -486,6 +496,8 @@ func TestGetAttestationData_SucceedsInFirstEpoch(t *testing.T) {
 		Genesis: time.Now(),
 	}
 	offset := int64(slot.Mul(params.BeaconConfig().SecondsPerSlot))
+	gent := prysmTime.Now().Add(time.Duration(-1*offset) * time.Second)
+	clock := blockchain.NewClock(gent)
 	attesterServer := &Server{
 		P2P:              &mockp2p.MockBroadcaster{},
 		SyncChecker:      &mockSync.Sync{IsSyncing: false},
@@ -496,7 +508,7 @@ func TestGetAttestationData_SucceedsInFirstEpoch(t *testing.T) {
 		FinalizationFetcher: &mock.ChainService{
 			CurrentJustifiedCheckPoint: beaconState.CurrentJustifiedCheckpoint(),
 		},
-		TimeFetcher:   &mock.ChainService{Genesis: prysmTime.Now().Add(time.Duration(-1*offset) * time.Second)},
+		ClockProvider:   &mock.ChainService{Clock: clock},
 		StateNotifier: chainService.StateNotifier(),
 	}
 

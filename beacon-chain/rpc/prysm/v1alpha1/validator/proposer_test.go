@@ -2,6 +2,7 @@ package validator
 
 import (
 	"context"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"math/big"
 	"testing"
 	"time"
@@ -2329,7 +2330,7 @@ func TestProposer_GetBeaconBlock_BellatrixEpoch(t *testing.T) {
 	}
 	proposerServer := &Server{
 		HeadFetcher:       &mock.ChainService{State: beaconState, Root: parentRoot[:], Optimistic: false},
-		TimeFetcher:       &mock.ChainService{Genesis: time.Now()},
+		ClockProvider:     &mock.ChainService{Clock: blockchain.NewClock(time.Now())},
 		SyncChecker:       &mockSync.Sync{IsSyncing: false},
 		BlockReceiver:     &mock.ChainService{},
 		HeadUpdater:       &mock.ChainService{},
@@ -2394,8 +2395,8 @@ func TestProposer_GetBeaconBlock_Optimistic(t *testing.T) {
 
 	bellatrixSlot, err := slots.EpochStart(params.BeaconConfig().BellatrixForkEpoch)
 	require.NoError(t, err)
-
-	proposerServer := &Server{OptimisticModeFetcher: &mock.ChainService{Optimistic: true}, TimeFetcher: &mock.ChainService{}}
+	clockp := &mock.ChainService{Clock: blockchain.NewClock(time.Now())}
+	proposerServer := &Server{OptimisticModeFetcher: &mock.ChainService{Optimistic: true}, ClockProvider: clockp}
 	req := &ethpb.BlockRequest{
 		Slot: bellatrixSlot + 1,
 	}

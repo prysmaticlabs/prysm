@@ -21,7 +21,7 @@ func ValidateSync(
 	ctx context.Context,
 	syncChecker sync.Checker,
 	headFetcher blockchain.HeadFetcher,
-	timeFetcher blockchain.TimeFetcher,
+	clock blockchain.Clock,
 	optimisticModeFetcher blockchain.OptimisticModeFetcher,
 ) error {
 	if !syncChecker.Syncing() {
@@ -36,7 +36,7 @@ func ValidateSync(
 	syncDetailsContainer := &syncDetailsContainer{
 		SyncDetails: &SyncDetailsJson{
 			HeadSlot:     strconv.FormatUint(uint64(headSlot), 10),
-			SyncDistance: strconv.FormatUint(uint64(timeFetcher.CurrentSlot()-headSlot), 10),
+			SyncDistance: strconv.FormatUint(uint64(clock.CurrentSlot()-headSlot), 10),
 			IsSyncing:    true,
 			IsOptimistic: isOptimistic,
 		},

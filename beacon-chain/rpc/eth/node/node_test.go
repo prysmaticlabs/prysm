@@ -173,7 +173,7 @@ func TestSyncStatus(t *testing.T) {
 
 	s := &Server{
 		HeadFetcher:           chainService,
-		GenesisTimeFetcher:    chainService,
+		ClockProvider:         chainService,
 		OptimisticModeFetcher: chainService,
 		SyncChecker:           syncChecker,
 	}

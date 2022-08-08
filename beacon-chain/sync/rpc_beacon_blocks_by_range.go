@@ -190,6 +190,10 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 }
 
 func (s *Service) validateRangeRequest(r *pb.BeaconBlocksByRangeRequest) error {
+	c, err := s.cfg.chain.WaitForClock(s.ctx)
+	if err != nil {
+		return errors.Wrap(err, "timeout while waiting for genesis timestamp")
+	}
 	startSlot := r.StartSlot
 	count := r.Count
 	step := r.Step
@@ -198,7 +202,7 @@ func (s *Service) validateRangeRequest(r *pb.BeaconBlocksByRangeRequest) error {
 	// Add a buffer for possible large range requests from nodes syncing close to the
 	// head of the chain.
 	buffer := rangeLimit * 2
-	highestExpectedSlot := s.cfg.chain.CurrentSlot().Add(uint64(buffer))
+	highestExpectedSlot := c.CurrentSlot().Add(uint64(buffer))
 
 	// Ensure all request params are within appropriate bounds
 	if count == 0 || count > maxRequestBlocks {

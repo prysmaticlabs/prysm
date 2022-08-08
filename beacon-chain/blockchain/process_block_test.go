@@ -873,7 +873,7 @@ func blockTree1(t *testing.T, beaconDB db.Database, genesisRoot []byte) ([][]byt
 }
 
 func TestCurrentSlot_HandlesOverflow(t *testing.T) {
-	svc := Service{genesisTime: prysmTime.Now().Add(1 * time.Hour)}
+	svc := Service{clock: NewClock(prysmTime.Now().Add(1 * time.Hour))}
 
 	slot := svc.CurrentSlot()
 	require.Equal(t, types.Slot(0), slot, "Unexpected slot")

@@ -27,8 +27,8 @@ type ChainInfoFetcher interface {
 	GenesisFetcher
 	CanonicalFetcher
 	ForkFetcher
-	TimeFetcher
 	HeadDomainFetcher
+	ClockProvider
 }
 
 // HeadUpdater defines a common interface for methods in blockchain service
@@ -37,9 +37,7 @@ type HeadUpdater interface {
 	UpdateHead(context.Context) error
 }
 
-// TimeFetcher retrieves the Ethereum consensus data that's related to time.
-type TimeFetcher interface {
-	GenesisTime() time.Time
+type CurrentSlotter interface {
 	CurrentSlot() types.Slot
 }
 
@@ -220,11 +218,6 @@ func (s *Service) HeadETH1Data() *ethpb.Eth1Data {
 	return s.head.state.Eth1Data()
 }
 
-// GenesisTime returns the genesis time of beacon chain.
-func (s *Service) GenesisTime() time.Time {
-	return s.genesisTime
-}
-
 // GenesisValidatorsRoot returns the genesis validators
 // root of the chain.
 func (s *Service) GenesisValidatorsRoot() [32]byte {
@@ -370,10 +363,49 @@ func (s *Service) IsOptimisticForRoot(ctx context.Context, root [32]byte) (bool,
 
 // SetGenesisTime sets the genesis time of beacon chain.
 func (s *Service) SetGenesisTime(t time.Time) {
-	s.genesisTime = t
+	s.clock = NewClock(t)
+	close(s.clockReady)
+}
+
+func (s *Service) setClock(c Clock) {
+	s.clock = c
+	close(s.clockReady)
+}
+
+// GenesisTime returns the genesis time of beacon chain.
+func (s *Service) GenesisTime() time.Time {
+	return s.WaitForClock(context.TODO()).GenesisTime()
+}
+
+func (s *Service) genesisTime() time.Time {
+	c, err := s.WaitForClock(context.TODO())
+	if err != nil {
+		panic(err)
+	}
+	return c.GenesisTime()
 }
 
 // ForkChoiceStore returns the fork choice store in the service.
 func (s *Service) ForkChoiceStore() forkchoice.ForkChoicer {
 	return s.cfg.ForkChoiceStore
+}
+
+// ClockProvider implements WaitForClock, yielding a clock type that can be used to get
+// the genesis time, slot values derived from genesis, or a possibly synthetic time.Now value
+type ClockProvider interface {
+	WaitForClock(context.Context) (Clock, error)
+}
+
+// WaitForClock will block until the Clock is ready. This provides a syncronization mechanism for services that
+// need the clock to be available before they can start running.
+func (s *Service) WaitForClock(ctx context.Context) (Clock, error) {
+	if s.clockReady != nil {
+		select {
+		case <-s.clockReady:
+			return s.clock, nil
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
+	}
+	return s.clock, nil
 }

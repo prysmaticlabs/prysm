@@ -553,14 +553,13 @@ func TestSubscribeWithSyncSubnets_DynamicOK(t *testing.T) {
 
 	p := p2ptest.NewTestP2P(t)
 	ctx, cancel := context.WithCancel(context.Background())
-	currSlot := types.Slot(100)
+	clock := mockChain.NewMockClock(time.Now(), 100)
 	r := Service{
 		ctx: ctx,
 		cfg: &config{
 			chain: &mockChain.ChainService{
-				Genesis:        time.Now(),
 				ValidatorsRoot: [32]byte{'A'},
-				Slot:           &currSlot,
+				Clock: clock,
 			},
 			p2p: p,
 		},
@@ -569,7 +568,9 @@ func TestSubscribeWithSyncSubnets_DynamicOK(t *testing.T) {
 	}
 	// Empty cache at the end of the test.
 	defer cache.SyncSubnetIDs.EmptyAllCaches()
-	slot := r.cfg.chain.CurrentSlot()
+	c, err := r.cfg.chain.WaitForClock(ctx)
+	require.NoError(t, err)
+	slot := c.CurrentSlot()
 	currEpoch := slots.ToEpoch(slot)
 	cache.SyncSubnetIDs.AddSyncCommitteeSubnets([]byte("pubkey"), currEpoch, []uint64{0, 1}, 10*time.Second)
 	digest, err := r.currentForkDigest()

@@ -7,16 +7,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/time"
-	"github.com/prysmaticlabs/prysm/time/slots"
 	"go.opencensus.io/trace"
 )
-
-// This defines how many epochs since finality the run time will begin to save hot state on to the DB.
-var epochsSinceFinalitySaveHotStateDB = types.Epoch(100)
 
 // BlockReceiver interface defines the methods of chain service for receiving and processing new blocks.
 type BlockReceiver interface {
@@ -53,18 +48,13 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.SignedBeaco
 		return err
 	}
 
-	// Have we been finalizing? Should we start saving hot states to db?
-	if err := s.checkSaveHotStateDB(ctx); err != nil {
-		return err
-	}
-
 	// Reports on block and fork choice metrics.
 	finalized := s.FinalizedCheckpt()
 	reportSlotMetrics(blockCopy.Block().Slot(), s.HeadSlot(), s.CurrentSlot(), finalized)
 
 	// Log block sync status.
 	justified := s.CurrentJustifiedCheckpt()
-	if err := logBlockSyncStatus(blockCopy.Block(), blockRoot, justified, finalized, receivedTime, uint64(s.genesisTime.Unix())); err != nil {
+	if err := logBlockSyncStatus(blockCopy.Block(), blockRoot, justified, finalized, receivedTime, uint64(s.genesisTime().Unix())); err != nil {
 		log.WithError(err).Error("Unable to log block sync status")
 	}
 	// Log payload data
@@ -159,26 +149,4 @@ func (s *Service) handlePostBlockOperations(b interfaces.BeaconBlock) error {
 		s.cfg.SlashingPool.MarkIncludedAttesterSlashing(as)
 	}
 	return nil
-}
-
-// This checks whether it's time to start saving hot state to DB.
-// It's time when there's `epochsSinceFinalitySaveHotStateDB` epochs of non-finality.
-func (s *Service) checkSaveHotStateDB(ctx context.Context) error {
-	currentEpoch := slots.ToEpoch(s.CurrentSlot())
-	// Prevent `sinceFinality` going underflow.
-	var sinceFinality types.Epoch
-	finalized := s.FinalizedCheckpt()
-	if finalized == nil {
-		return errNilFinalizedInStore
-	}
-	if currentEpoch > finalized.Epoch {
-		sinceFinality = currentEpoch - finalized.Epoch
-	}
-
-	if sinceFinality >= epochsSinceFinalitySaveHotStateDB {
-		s.cfg.StateGen.EnableSaveHotStateToDB(ctx)
-		return nil
-	}
-
-	return s.cfg.StateGen.DisableSaveHotStateToDB(ctx)
 }

@@ -28,7 +28,11 @@ func SendBeaconBlocksByRangeRequest(
 	ctx context.Context, chain blockchain.ChainInfoFetcher, p2pProvider p2p.P2P, pid peer.ID,
 	req *pb.BeaconBlocksByRangeRequest, blockProcessor BeaconBlockProcessor,
 ) ([]interfaces.SignedBeaconBlock, error) {
-	topic, err := p2p.TopicFromMessage(p2p.BeaconBlocksByRangeMessageName, slots.ToEpoch(chain.CurrentSlot()))
+	c, err := chain.WaitForClock(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "timeout waiting for genesis timestamp")
+	}
+	topic, err := p2p.TopicFromMessage(p2p.BeaconBlocksByRangeMessageName, slots.ToEpoch(c.CurrentSlot()))
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +94,11 @@ func SendBeaconBlocksByRootRequest(
 	ctx context.Context, chain blockchain.ChainInfoFetcher, p2pProvider p2p.P2P, pid peer.ID,
 	req *p2ptypes.BeaconBlockByRootsReq, blockProcessor BeaconBlockProcessor,
 ) ([]interfaces.SignedBeaconBlock, error) {
-	topic, err := p2p.TopicFromMessage(p2p.BeaconBlocksByRootsMessageName, slots.ToEpoch(chain.CurrentSlot()))
+	c, err := chain.WaitForClock(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "timeout waiting for genesis timestamp")
+	}
+	topic, err := p2p.TopicFromMessage(p2p.BeaconBlocksByRootsMessageName, slots.ToEpoch(c.CurrentSlot()))
 	if err != nil {
 		return nil, err
 	}

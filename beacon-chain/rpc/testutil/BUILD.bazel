@@ -4,7 +4,6 @@ go_library(
     name = "go_default_library",
     testonly = True,
     srcs = [
-        "mock_genesis_timefetcher.go",
         "mock_powchain_info_fetcher.go",
         "mock_state_fetcher.go",
     ],
@@ -12,7 +11,6 @@ go_library(
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//beacon-chain/state:go_default_library",
-        "//config/params:go_default_library",
         "//consensus-types/primitives:go_default_library",
     ],
 )

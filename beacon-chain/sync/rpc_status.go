@@ -80,6 +80,11 @@ func (s *Service) maintainPeerStatuses() {
 // resyncIfBehind checks periodically to see if we are in normal sync but have fallen behind our peers
 // by more than an epoch, in which case we attempt a resync using the initial sync method to catch up.
 func (s *Service) resyncIfBehind() {
+	c, err := s.cfg.chain.WaitForClock(s.ctx)
+	if err != nil {
+		log.WithError(err).Error("timeout in resyncIfBehind while waiting for genesis timestamp")
+		return
+	}
 	millisecondsPerEpoch := params.BeaconConfig().SlotsPerEpoch.Mul(1000).Mul(params.BeaconConfig().SecondsPerSlot)
 	// Run sixteen times per epoch.
 	interval := time.Duration(millisecondsPerEpoch/16) * time.Millisecond
@@ -93,7 +98,7 @@ func (s *Service) resyncIfBehind() {
 			// Check if the current node is more than 1 epoch behind.
 			if highestEpoch > (syncedEpoch + 1) {
 				log.WithFields(logrus.Fields{
-					"currentEpoch": slots.ToEpoch(s.cfg.chain.CurrentSlot()),
+					"currentEpoch": slots.ToEpoch(c.CurrentSlot()),
 					"syncedEpoch":  syncedEpoch,
 					"peersEpoch":   highestEpoch,
 				}).Info("Fallen behind peers; reverting to initial sync to catch up")
@@ -109,8 +114,13 @@ func (s *Service) resyncIfBehind() {
 
 // shouldReSync returns true if the node is not syncing and falls behind two epochs.
 func (s *Service) shouldReSync() bool {
+	c, err := s.cfg.chain.WaitForClock(s.ctx)
+	if err != nil {
+		log.WithError(err).Error("timeout in shouldReSync while waiting for genesis timestamp")
+		return false
+	}
 	syncedEpoch := slots.ToEpoch(s.cfg.chain.HeadSlot())
-	currentEpoch := slots.ToEpoch(s.cfg.chain.CurrentSlot())
+	currentEpoch := slots.ToEpoch(c.CurrentSlot())
 	prevEpoch := types.Epoch(0)
 	if currentEpoch > 1 {
 		prevEpoch = currentEpoch - 1
@@ -140,7 +150,11 @@ func (s *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 		HeadRoot:       headRoot,
 		HeadSlot:       s.cfg.chain.HeadSlot(),
 	}
-	topic, err := p2p.TopicFromMessage(p2p.StatusMessageName, slots.ToEpoch(s.cfg.chain.CurrentSlot()))
+	c, err := s.cfg.chain.WaitForClock(ctx)
+	if err != nil {
+		return errors.Wrap(err, "timeout waiting for genesis timestamp")
+	}
+	topic, err := p2p.TopicFromMessage(p2p.StatusMessageName, slots.ToEpoch(c.CurrentSlot()))
 	if err != nil {
 		return err
 	}
@@ -286,7 +300,12 @@ func (s *Service) validateStatusMessage(ctx context.Context, msg *pb.Status) err
 	if !bytes.Equal(forkDigest[:], msg.ForkDigest) {
 		return p2ptypes.ErrWrongForkDigestVersion
 	}
-	genesis := s.cfg.chain.GenesisTime()
+	clock, err := s.cfg.chain.WaitForClock(ctx)
+	if err != nil {
+		// calling function expects this eror type for generic internal service error
+		return p2ptypes.ErrGeneric
+	}
+	genesis := clock.GenesisTime()
 	cp := s.cfg.chain.FinalizedCheckpt()
 	finalizedEpoch := cp.Epoch
 	maxEpoch := slots.EpochsSinceGenesis(genesis)

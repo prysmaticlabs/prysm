@@ -2,14 +2,14 @@ package stategen
 
 import (
 	"context"
-	"testing"
-
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
 	logTest "github.com/sirupsen/logrus/hooks/test"
+	"testing"
 )
 
 func TestSaveState_HotStateCanBeSaved(t *testing.T) {
@@ -199,5 +199,30 @@ func TestEnableSaveHotStateToDB_AlreadyDisabled(t *testing.T) {
 	service := New(beaconDB)
 	require.NoError(t, service.DisableSaveHotStateToDB(ctx))
 	require.LogsDoNotContain(t, hook, "Exiting mode to save hot states in DB")
+	require.Equal(t, false, service.saveHotStateDB.enabled)
+}
+
+type mockMinForkChoicer struct {
+	finalizedCheckpoint *forkchoicetypes.Checkpoint
+}
+
+var _ minimumForkChoicer = &mockMinForkChoicer{}
+
+func (fc *mockMinForkChoicer) FinalizedCheckpoint() *forkchoicetypes.Checkpoint {
+	return fc.finalizedCheckpoint
+}
+
+func TestCheckSaveHotStateDB_EnableDisable(t *testing.T) {
+	beaconDB := testDB.SetupDB(t)
+	service := New(beaconDB)
+	// the zero value will return a finalized checkpoint at slot 0 with zero-value for root - this is fine!
+	service.fc = &mockMinForkChoicer{}
+	// set current slot as over the threshhold for hot state to be enabled
+	service.cs = &mockCurrentSlotter{Slot: params.BeaconConfig().SlotsPerEpoch.Mul(uint64(hotStateSaveThreshold))}
+
+	require.NoError(t, service.toggleHotStateSaving(context.Background()))
+	require.Equal(t, true, service.saveHotStateDB.enabled)
+	// set the finalized checkpoint to the same slot as the current slotter, assert that hot state saving is now disabled
+	service.fc = &mockMinForkChoicer{finalizedCheckpoint: &forkchoicetypes.Checkpoint{Epoch: hotStateSaveThreshold}}
 	require.Equal(t, false, service.saveHotStateDB.enabled)
 }

@@ -535,7 +535,7 @@ func Test_NotifyNewPayload(t *testing.T) {
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 	st := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(epochsSinceFinalitySaveHotStateDB))
-	service.genesisTime = time.Now().Add(time.Duration(-1*int64(st)*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second)
+	service.SetGenesisTime(time.Now().Add(time.Duration(-1*int64(st)*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second))
 	r, err := bellatrixBlk.Block().HashTreeRoot()
 	require.NoError(t, err)
 	ojc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
@@ -800,7 +800,7 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 	require.NoError(t, err)
 
 	params.BeaconConfig().SafeSlotsToImportOptimistically = 128
-	service.genesisTime = time.Now().Add(-time.Second * 12 * 2 * 128)
+	service.SetGenesisTime(time.Now().Add(-time.Second * 12 * 2 * 128))
 
 	parentBlk := util.NewBeaconBlockBellatrix()
 	wrappedParentBlock, err := wrapper.WrappedSignedBeaconBlock(parentBlk)
@@ -903,7 +903,7 @@ func Test_IsOptimisticShallowExecutionParent(t *testing.T) {
 	require.NoError(t, err)
 
 	params.BeaconConfig().SafeSlotsToImportOptimistically = 128
-	service.genesisTime = time.Now().Add(-time.Second * 12 * 2 * 128)
+	service.SetGenesisTime(time.Now().Add(-time.Second * 12 * 2 * 128))
 	payload := &v1.ExecutionPayload{
 		ParentHash:    make([]byte, 32),
 		FeeRecipient:  make([]byte, 20),

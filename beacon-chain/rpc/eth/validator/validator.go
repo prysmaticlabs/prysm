@@ -42,12 +42,16 @@ func (vs *Server) GetAttesterDuties(ctx context.Context, req *ethpbv1.AttesterDu
 	ctx, span := trace.StartSpan(ctx, "validator.GetAttesterDuties")
 	defer span.End()
 
-	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
+	c, err := vs.ClockProvider.WaitForClock(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "timeout while waiting for genesis timestamp, %s", err)
+	}
+	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, c, vs.OptimisticModeFetcher); err != nil {
 		// We simply return the error because it's already a gRPC error.
 		return nil, err
 	}
 
-	cs := vs.TimeFetcher.CurrentSlot()
+	cs := c.CurrentSlot()
 	currentEpoch := slots.ToEpoch(cs)
 	if req.Epoch > currentEpoch+1 {
 		return nil, status.Errorf(codes.InvalidArgument, "Request epoch %d can not be greater than next epoch %d", req.Epoch, currentEpoch+1)
@@ -125,12 +129,16 @@ func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDu
 	ctx, span := trace.StartSpan(ctx, "validator.GetProposerDuties")
 	defer span.End()
 
-	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
+	c, err := vs.ClockProvider.WaitForClock(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "timeout while waiting for genesis timestamp, %s", err)
+	}
+	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, c, vs.OptimisticModeFetcher); err != nil {
 		// We simply return the error because it's already a gRPC error.
 		return nil, err
 	}
 
-	cs := vs.TimeFetcher.CurrentSlot()
+	cs := c.CurrentSlot()
 	currentEpoch := slots.ToEpoch(cs)
 	if req.Epoch > currentEpoch+1 {
 		return nil, status.Errorf(codes.InvalidArgument, "Request epoch %d can not be greater than next epoch %d", req.Epoch, currentEpoch+1)
@@ -202,12 +210,16 @@ func (vs *Server) GetSyncCommitteeDuties(ctx context.Context, req *ethpbv2.SyncC
 	ctx, span := trace.StartSpan(ctx, "validator.GetSyncCommitteeDuties")
 	defer span.End()
 
-	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
+	c, err := vs.ClockProvider.WaitForClock(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "timeout while waiting for genesis timestamp, %s", err)
+	}
+	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, c, vs.OptimisticModeFetcher); err != nil {
 		// We simply return the error because it's already a gRPC error.
 		return nil, err
 	}
 
-	currentEpoch := slots.ToEpoch(vs.TimeFetcher.CurrentSlot())
+	currentEpoch := slots.ToEpoch(c.CurrentSlot())
 	lastValidEpoch := syncCommitteeDutiesLastValidEpoch(currentEpoch)
 	if req.Epoch > lastValidEpoch {
 		return nil, status.Errorf(codes.InvalidArgument, "Epoch is too far in the future. Maximum valid epoch is %v.", lastValidEpoch)
@@ -272,7 +284,11 @@ func (vs *Server) ProduceBlock(ctx context.Context, req *ethpbv1.ProduceBlockReq
 	ctx, span := trace.StartSpan(ctx, "validator.ProduceBlock")
 	defer span.End()
 
-	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
+	c, err := vs.ClockProvider.WaitForClock(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "timeout while waiting for genesis timestamp, %s", err)
+	}
+	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, c, vs.OptimisticModeFetcher); err != nil {
 		// We simply return the error because it's already a gRPC error.
 		return nil, err
 	}
@@ -289,7 +305,11 @@ func (vs *Server) ProduceBlockV2(ctx context.Context, req *ethpbv1.ProduceBlockR
 	ctx, span := trace.StartSpan(ctx, "validator.ProduceBlockV2")
 	defer span.End()
 
-	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
+	c, err := vs.ClockProvider.WaitForClock(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "timeout while waiting for genesis timestamp, %s", err)
+	}
+	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, c, vs.OptimisticModeFetcher); err != nil {
 		// We simply return the error because it's already a gRPC error.
 		return nil, err
 	}
@@ -353,7 +373,11 @@ func (vs *Server) ProduceBlockV2SSZ(ctx context.Context, req *ethpbv1.ProduceBlo
 	ctx, span := trace.StartSpan(ctx, "validator.ProduceBlockV2SSZ")
 	defer span.End()
 
-	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
+	c, err := vs.ClockProvider.WaitForClock(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "timeout while waiting for genesis timestamp, %s", err)
+	}
+	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, c, vs.OptimisticModeFetcher); err != nil {
 		// We simply return the error because it's already a gRPC error.
 		return nil, err
 	}
@@ -424,7 +448,11 @@ func (vs *Server) ProduceBlindedBlock(ctx context.Context, req *ethpbv1.ProduceB
 	ctx, span := trace.StartSpan(ctx, "validator.ProduceBlindedBlock")
 	defer span.End()
 
-	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
+	c, err := vs.ClockProvider.WaitForClock(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "timeout while waiting for genesis timestamp, %s", err)
+	}
+	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, c, vs.OptimisticModeFetcher); err != nil {
 		// We simply return the error because it's already a gRPC error.
 		return nil, err
 	}
@@ -491,7 +519,11 @@ func (vs *Server) ProduceBlindedBlockSSZ(ctx context.Context, req *ethpbv1.Produ
 	ctx, span := trace.StartSpan(ctx, "validator.ProduceBlindedBlockSSZ")
 	defer span.End()
 
-	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
+	c, err := vs.ClockProvider.WaitForClock(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "timeout while waiting for genesis timestamp, %s", err)
+	}
+	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, c, vs.OptimisticModeFetcher); err != nil {
 		// We simply return the error because it's already a gRPC error.
 		return nil, err
 	}
@@ -633,6 +665,10 @@ func (vs *Server) SubmitAggregateAndProofs(ctx context.Context, req *ethpbv1.Sub
 	ctx, span := trace.StartSpan(ctx, "validator.SubmitAggregateAndProofs")
 	defer span.End()
 
+	c, err := vs.ClockProvider.WaitForClock(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "timeout waiting for genesis timestamp, %s", err)
+	}
 	for _, agg := range req.Data {
 		if agg == nil || agg.Message == nil || agg.Message.Aggregate == nil || agg.Message.Aggregate.Data == nil {
 			return nil, status.Error(codes.InvalidArgument, "Signed aggregate request can't be nil")
@@ -648,7 +684,7 @@ func (vs *Server) SubmitAggregateAndProofs(ctx context.Context, req *ethpbv1.Sub
 
 		// As a preventive measure, a beacon node shouldn't broadcast an attestation whose slot is out of range.
 		if err := helpers.ValidateAttestationTime(agg.Message.Aggregate.Data.Slot,
-			vs.TimeFetcher.GenesisTime(), params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
+			c.GenesisTime(), params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
 			return nil, status.Error(codes.InvalidArgument, "Attestation slot is no longer valid from current time")
 		}
 	}
@@ -683,7 +719,11 @@ func (vs *Server) SubmitBeaconCommitteeSubscription(ctx context.Context, req *et
 	ctx, span := trace.StartSpan(ctx, "validator.SubmitBeaconCommitteeSubscription")
 	defer span.End()
 
-	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
+	c, err := vs.ClockProvider.WaitForClock(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "timeout while waiting for genesis timestamp, %s", err)
+	}
+	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, c, vs.OptimisticModeFetcher); err != nil {
 		// We simply return the error because it's already a gRPC error.
 		return nil, err
 	}
@@ -760,7 +800,11 @@ func (vs *Server) SubmitSyncCommitteeSubscription(ctx context.Context, req *ethp
 	ctx, span := trace.StartSpan(ctx, "validator.SubmitSyncCommitteeSubscription")
 	defer span.End()
 
-	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
+	c, err := vs.ClockProvider.WaitForClock(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "timeout while waiting for genesis timestamp, %s", err)
+	}
+	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, c, vs.OptimisticModeFetcher); err != nil {
 		// We simply return the error because it's already a gRPC error.
 		return nil, err
 	}

@@ -3,6 +3,7 @@ package validator
 import (
 	"context"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"strconv"
 	"testing"
 	"time"
@@ -75,13 +76,12 @@ func TestGetAttesterDuties(t *testing.T) {
 		pubKeys[i] = deposits[i].Data.PublicKey
 	}
 
-	chainSlot := types.Slot(0)
 	chain := &mockChain.ChainService{
-		State: bs, Root: genesisRoot[:], Slot: &chainSlot,
+		State: bs, Root: genesisRoot[:],
 	}
 	vs := &Server{
 		HeadFetcher:           chain,
-		TimeFetcher:           chain,
+		ClockProvider:         chain,
 		SyncChecker:           &mockSync.Sync{IsSyncing: false},
 		OptimisticModeFetcher: chain,
 	}
@@ -155,12 +155,13 @@ func TestGetAttesterDuties(t *testing.T) {
 			indices[i] = uint64(i)
 		}
 		chainSlot := params.BeaconConfig().SlotsPerEpoch.Mul(2)
+		clock := mockChain.NewMockClock(time.Now(), chainSlot)
 		chain := &mockChain.ChainService{
-			State: bs, Root: genesisRoot[:], Slot: &chainSlot,
+			State: bs, Root: genesisRoot[:], Clock: clock,
 		}
 		vs := &Server{
 			HeadFetcher:           chain,
-			TimeFetcher:           chain,
+			ClockProvider:           chain,
 			OptimisticModeFetcher: chain,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 		}
@@ -224,13 +225,12 @@ func TestGetAttesterDuties(t *testing.T) {
 		util.SaveBlock(t, ctx, db, blk)
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
-		chainSlot := types.Slot(0)
 		chain := &mockChain.ChainService{
-			State: bs, Root: genesisRoot[:], Slot: &chainSlot, Optimistic: true,
+			State: bs, Root: genesisRoot[:], Optimistic: true,
 		}
 		vs := &Server{
 			HeadFetcher:           chain,
-			TimeFetcher:           chain,
+			ClockProvider:           chain,
 			OptimisticModeFetcher: chain,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 		}
@@ -251,7 +251,7 @@ func TestGetAttesterDuties_SyncNotReady(t *testing.T) {
 	vs := &Server{
 		SyncChecker:           &mockSync.Sync{IsSyncing: true},
 		HeadFetcher:           chainService,
-		TimeFetcher:           chainService,
+		ClockProvider:         chainService,
 		OptimisticModeFetcher: chainService,
 	}
 	_, err = vs.GetAttesterDuties(context.Background(), &ethpbv1.AttesterDutiesRequest{})
@@ -282,13 +282,12 @@ func TestGetProposerDuties(t *testing.T) {
 		pubKeys[i] = deposits[i].Data.PublicKey
 	}
 
-	chainSlot := types.Slot(0)
 	chain := &mockChain.ChainService{
-		State: bs, Root: genesisRoot[:], Slot: &chainSlot,
+		State: bs, Root: genesisRoot[:],
 	}
 	vs := &Server{
 		HeadFetcher:           chain,
-		TimeFetcher:           chain,
+		ClockProvider:         chain,
 		OptimisticModeFetcher: chain,
 		SyncChecker:           &mockSync.Sync{IsSyncing: false},
 	}
@@ -334,12 +333,15 @@ func TestGetProposerDuties(t *testing.T) {
 			indices[i] = uint64(i)
 		}
 		chainSlot := params.BeaconConfig().SlotsPerEpoch.Mul(2)
+		clock := mockChain.NewMockClock(time.Now(), chainSlot)
 		chain := &mockChain.ChainService{
-			State: bs, Root: genesisRoot[:], Slot: &chainSlot,
+			State: bs,
+			Root: genesisRoot[:],
+			Clock: clock,
 		}
 		vs := &Server{
 			HeadFetcher:           chain,
-			TimeFetcher:           chain,
+			ClockProvider:           chain,
 			OptimisticModeFetcher: chain,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 		}
@@ -383,13 +385,12 @@ func TestGetProposerDuties(t *testing.T) {
 		util.SaveBlock(t, ctx, db, blk)
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
-		chainSlot := types.Slot(0)
 		chain := &mockChain.ChainService{
-			State: bs, Root: genesisRoot[:], Slot: &chainSlot, Optimistic: true,
+			State: bs, Root: genesisRoot[:], Optimistic: true,
 		}
 		vs := &Server{
 			HeadFetcher:           chain,
-			TimeFetcher:           chain,
+			ClockProvider:         chain,
 			OptimisticModeFetcher: chain,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 		}
@@ -409,7 +410,7 @@ func TestGetProposerDuties_SyncNotReady(t *testing.T) {
 	vs := &Server{
 		SyncChecker:           &mockSync.Sync{IsSyncing: true},
 		HeadFetcher:           chainService,
-		TimeFetcher:           chainService,
+		ClockProvider:         chainService,
 		OptimisticModeFetcher: chainService,
 	}
 	_, err = vs.GetProposerDuties(context.Background(), &ethpbv1.ProposerDutiesRequest{})
@@ -437,11 +438,11 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 	require.NoError(t, st.SetNextSyncCommittee(nextCommittee))
 	db := dbutil.SetupDB(t)
 
-	mockChainService := &mockChain.ChainService{Genesis: genesisTime}
+	mockChainService := &mockChain.ChainService{Clock: blockchain.NewClock(genesisTime)}
 	vs := &Server{
 		StateFetcher:          &testutil.MockFetcher{BeaconState: st},
 		SyncChecker:           &mockSync.Sync{IsSyncing: false},
-		TimeFetcher:           mockChainService,
+		ClockProvider:           mockChainService,
 		HeadFetcher:           mockChainService,
 		OptimisticModeFetcher: mockChainService,
 	}
@@ -576,11 +577,14 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 				return newSyncPeriodSt
 			}
 		}
-		mockChainService := &mockChain.ChainService{Genesis: genesisTime, Slot: &newSyncPeriodStartSlot}
+		clock := mockChain.NewMockClock(time.Now(), newSyncPeriodStartSlot)
+		mockChainService := &mockChain.ChainService{
+			Clock: clock,
+		}
 		vs := &Server{
 			StateFetcher:          &testutil.MockFetcher{BeaconState: stateFetchFn(newSyncPeriodStartSlot)},
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
-			TimeFetcher:           mockChainService,
+			ClockProvider:         mockChainService,
 			HeadFetcher:           mockChainService,
 			OptimisticModeFetcher: mockChainService,
 		}
@@ -610,11 +614,14 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 		util.SaveBlock(t, ctx, db, blk)
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
-		mockChainService := &mockChain.ChainService{Genesis: genesisTime, Optimistic: true}
+		mockChainService := &mockChain.ChainService{
+			Clock:      blockchain.NewClock(genesisTime),
+			Optimistic: true,
+		}
 		vs := &Server{
 			StateFetcher:          &testutil.MockFetcher{BeaconState: st},
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
-			TimeFetcher:           mockChainService,
+			ClockProvider:         mockChainService,
 			HeadFetcher:           mockChainService,
 			OptimisticModeFetcher: mockChainService,
 		}
@@ -635,7 +642,7 @@ func TestGetSyncCommitteeDuties_SyncNotReady(t *testing.T) {
 	vs := &Server{
 		SyncChecker:           &mockSync.Sync{IsSyncing: true},
 		HeadFetcher:           chainService,
-		TimeFetcher:           chainService,
+		ClockProvider:           chainService,
 		OptimisticModeFetcher: chainService,
 	}
 	_, err = vs.GetSyncCommitteeDuties(context.Background(), &ethpbv2.SyncCommitteeDutiesRequest{})
@@ -745,7 +752,7 @@ func TestProduceBlock_SyncNotReady(t *testing.T) {
 	vs := &Server{
 		SyncChecker:           &mockSync.Sync{IsSyncing: true},
 		HeadFetcher:           chainService,
-		TimeFetcher:           chainService,
+		ClockProvider:           chainService,
 		OptimisticModeFetcher: chainService,
 	}
 	_, err = vs.ProduceBlock(context.Background(), &ethpbv1.ProduceBlockRequest{})
@@ -1011,7 +1018,7 @@ func TestProduceBlockV2(t *testing.T) {
 					TotalDifficulty: "0x1",
 				},
 			},
-			TimeFetcher:            &mockChain.ChainService{},
+			ClockProvider:          &mockChain.ChainService{},
 			HeadFetcher:            &mockChain.ChainService{State: beaconState, Root: parentRoot[:]},
 			OptimisticModeFetcher:  &mockChain.ChainService{},
 			SyncChecker:            &mockSync.Sync{IsSyncing: false},
@@ -1500,7 +1507,7 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 					TotalDifficulty: "0x1",
 				},
 			},
-			TimeFetcher:            &mockChain.ChainService{},
+			ClockProvider:          &mockChain.ChainService{},
 			HeadFetcher:            &mockChain.ChainService{State: bs, Root: parentRoot[:]},
 			OptimisticModeFetcher:  &mockChain.ChainService{},
 			SyncChecker:            &mockSync.Sync{IsSyncing: false},
@@ -1691,7 +1698,7 @@ func TestProduceBlockV2_SyncNotReady(t *testing.T) {
 	vs := &Server{
 		SyncChecker:           &mockSync.Sync{IsSyncing: true},
 		HeadFetcher:           chainService,
-		TimeFetcher:           chainService,
+		ClockProvider:           chainService,
 		OptimisticModeFetcher: chainService,
 	}
 	_, err = vs.ProduceBlockV2(context.Background(), &ethpbv1.ProduceBlockRequest{})
@@ -1705,7 +1712,7 @@ func TestProduceBlockV2SSZ_SyncNotReady(t *testing.T) {
 	vs := &Server{
 		SyncChecker:           &mockSync.Sync{IsSyncing: true},
 		HeadFetcher:           chainService,
-		TimeFetcher:           chainService,
+		ClockProvider:           chainService,
 		OptimisticModeFetcher: chainService,
 	}
 	_, err = vs.ProduceBlockV2SSZ(context.Background(), &ethpbv1.ProduceBlockRequest{})
@@ -1971,7 +1978,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 					TotalDifficulty: "0x1",
 				},
 			},
-			TimeFetcher:            &mockChain.ChainService{},
+			ClockProvider:          &mockChain.ChainService{},
 			HeadFetcher:            &mockChain.ChainService{State: beaconState, Root: parentRoot[:]},
 			OptimisticModeFetcher:  &mockChain.ChainService{},
 			SyncChecker:            &mockSync.Sync{IsSyncing: false},
@@ -2460,7 +2467,7 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 					TotalDifficulty: "0x1",
 				},
 			},
-			TimeFetcher:            &mockChain.ChainService{},
+			ClockProvider:            &mockChain.ChainService{},
 			HeadFetcher:            &mockChain.ChainService{State: bs, Root: parentRoot[:]},
 			OptimisticModeFetcher:  &mockChain.ChainService{},
 			SyncChecker:            &mockSync.Sync{IsSyncing: false},
@@ -2651,7 +2658,7 @@ func TestProduceBlindedBlock_SyncNotReady(t *testing.T) {
 	vs := &Server{
 		SyncChecker:           &mockSync.Sync{IsSyncing: true},
 		HeadFetcher:           chainService,
-		TimeFetcher:           chainService,
+		ClockProvider:           chainService,
 		OptimisticModeFetcher: chainService,
 	}
 	_, err = vs.ProduceBlindedBlock(context.Background(), &ethpbv1.ProduceBlockRequest{})
@@ -2665,7 +2672,7 @@ func TestProduceBlindedBlockSSZ_SyncNotReady(t *testing.T) {
 	vs := &Server{
 		SyncChecker:           &mockSync.Sync{IsSyncing: true},
 		HeadFetcher:           chainService,
-		TimeFetcher:           chainService,
+		ClockProvider:           chainService,
 		OptimisticModeFetcher: chainService,
 	}
 	_, err = vs.ProduceBlindedBlockSSZ(context.Background(), &ethpbv1.ProduceBlockRequest{})
@@ -2704,6 +2711,7 @@ func TestProduceAttestationData(t *testing.T) {
 		Genesis: time.Now(),
 	}
 	offset := int64(slot.Mul(params.BeaconConfig().SecondsPerSlot))
+	gent := time.Now().Add(time.Duration(-1*offset) * time.Second)
 	v1Alpha1Server := &v1alpha1validator.Server{
 		P2P:              &p2pmock.MockBroadcaster{},
 		SyncChecker:      &mockSync.Sync{IsSyncing: false},
@@ -2714,8 +2722,8 @@ func TestProduceAttestationData(t *testing.T) {
 		FinalizationFetcher: &mockChain.ChainService{
 			CurrentJustifiedCheckPoint: beaconState.CurrentJustifiedCheckpoint(),
 		},
-		TimeFetcher: &mockChain.ChainService{
-			Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second),
+		ClockProvider: &mockChain.ChainService{
+			Clock: blockchain.NewClock(gent),
 		},
 		StateNotifier: chainService.StateNotifier(),
 	}
@@ -2925,11 +2933,11 @@ func TestSubmitBeaconCommitteeSubscription(t *testing.T) {
 
 	chainSlot := types.Slot(0)
 	chain := &mockChain.ChainService{
-		State: bs, Root: genesisRoot[:], Slot: &chainSlot,
+		State: bs, Root:genesisRoot[:], Slot: &chainSlot,
 	}
 	vs := &Server{
 		HeadFetcher:    chain,
-		TimeFetcher:    chain,
+		ClockProvider:    chain,
 		SyncChecker:    &mockSync.Sync{IsSyncing: false},
 		V1Alpha1Server: &v1alpha1validator.Server{},
 	}
@@ -3040,7 +3048,7 @@ func TestSubmitBeaconCommitteeSubscription_SyncNotReady(t *testing.T) {
 	vs := &Server{
 		SyncChecker:           &mockSync.Sync{IsSyncing: true},
 		HeadFetcher:           chainService,
-		TimeFetcher:           chainService,
+		ClockProvider:         chainService,
 		OptimisticModeFetcher: chainService,
 	}
 	_, err = vs.SubmitBeaconCommitteeSubscription(context.Background(), &ethpbv1.SubmitBeaconCommitteeSubscriptionsRequest{})
@@ -3069,11 +3077,12 @@ func TestSubmitSyncCommitteeSubscription(t *testing.T) {
 
 	chainSlot := types.Slot(0)
 	chain := &mockChain.ChainService{
-		State: bs, Root: genesisRoot[:], Slot: &chainSlot,
+		State: bs,
+		Root: genesisRoot[:],
 	}
 	vs := &Server{
 		HeadFetcher:    chain,
-		TimeFetcher:    chain,
+		ClockProvider:  chain,
 		SyncChecker:    &mockSync.Sync{IsSyncing: false},
 		V1Alpha1Server: &v1alpha1validator.Server{},
 	}
@@ -3199,7 +3208,7 @@ func TestSubmitSyncCommitteeSubscription_SyncNotReady(t *testing.T) {
 	vs := &Server{
 		SyncChecker:           &mockSync.Sync{IsSyncing: true},
 		HeadFetcher:           chainService,
-		TimeFetcher:           chainService,
+		ClockProvider:           chainService,
 		OptimisticModeFetcher: chainService,
 	}
 	_, err = vs.SubmitSyncCommitteeSubscription(context.Background(), &ethpbv2.SubmitSyncCommitteeSubscriptionsRequest{})
@@ -3236,11 +3245,12 @@ func TestSubmitAggregateAndProofs(t *testing.T) {
 	t.Run("OK", func(t *testing.T) {
 		chainSlot := types.Slot(0)
 		chain := &mockChain.ChainService{
-			Genesis: time.Now(), Slot: &chainSlot,
+			Clock: blockchain.NewClock(time.Now()),
+			Slot: &chainSlot,
 		}
 		broadcaster := &p2pmock.MockBroadcaster{}
 		vs := Server{
-			TimeFetcher: chain,
+			ClockProvider: chain,
 			Broadcaster: broadcaster,
 		}
 
@@ -3458,11 +3468,11 @@ func TestSubmitAggregateAndProofs(t *testing.T) {
 	t.Run("invalid attestation time", func(t *testing.T) {
 		chainSlot := types.Slot(0)
 		chain := &mockChain.ChainService{
-			Genesis: time.Now().Add(time.Hour * 2), Slot: &chainSlot,
+			Clock: blockchain.NewClock(time.Now().Add(time.Hour * 2)), Slot: &chainSlot,
 		}
 		broadcaster := &p2pmock.MockBroadcaster{}
 		vs := Server{
-			TimeFetcher: chain,
+			ClockProvider: chain,
 			Broadcaster: broadcaster,
 		}
 

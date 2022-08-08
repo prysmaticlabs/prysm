@@ -315,7 +315,7 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 	}
 
 	// Get timestamp.
-	t, err := slots.ToTime(uint64(s.genesisTime.Unix()), slot)
+	t, err := slots.ToTime(uint64(s.genesisTime().Unix()), slot)
 	if err != nil {
 		return false, nil, 0, err
 	}

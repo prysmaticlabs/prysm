@@ -3,6 +3,7 @@ package validator
 import (
 	"context"
 	"encoding/binary"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"testing"
 	"time"
 
@@ -57,11 +58,13 @@ func TestGetDuties_OK(t *testing.T) {
 	}
 
 	chain := &mockChain.ChainService{
-		State: bs, Root: genesisRoot[:], Genesis: time.Now(),
+		State: bs,
+		Root: genesisRoot[:],
+		Clock: blockchain.NewClock(time.Now()),
 	}
 	vs := &Server{
 		HeadFetcher:            chain,
-		TimeFetcher:            chain,
+		ClockProvider:            chain,
 		SyncChecker:            &mockSync.Sync{IsSyncing: false},
 		ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
 	}
@@ -141,12 +144,15 @@ func TestGetAltairDuties_SyncCommitteeOK(t *testing.T) {
 	}
 
 	slot := uint64(params.BeaconConfig().SlotsPerEpoch) * uint64(params.BeaconConfig().EpochsPerSyncCommitteePeriod) * params.BeaconConfig().SecondsPerSlot
+	gent := time.Now().Add(time.Duration(-1*int64(slot-1)) * time.Second)
 	chain := &mockChain.ChainService{
-		State: bs, Root: genesisRoot[:], Genesis: time.Now().Add(time.Duration(-1*int64(slot-1)) * time.Second),
+		State: bs,
+		Root: genesisRoot[:],
+		Clock: blockchain.NewClock(gent),
 	}
 	vs := &Server{
 		HeadFetcher:            chain,
-		TimeFetcher:            chain,
+		ClockProvider:          chain,
 		Eth1InfoFetcher:        &mockPOW.POWChain{},
 		SyncChecker:            &mockSync.Sync{IsSyncing: false},
 		ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
@@ -247,12 +253,15 @@ func TestGetBellatrixDuties_SyncCommitteeOK(t *testing.T) {
 	}
 
 	slot := uint64(params.BeaconConfig().SlotsPerEpoch) * uint64(params.BeaconConfig().EpochsPerSyncCommitteePeriod) * params.BeaconConfig().SecondsPerSlot
+	gent := time.Now().Add(time.Duration(-1*int64(slot-1)) * time.Second)
 	chain := &mockChain.ChainService{
-		State: bs, Root: genesisRoot[:], Genesis: time.Now().Add(time.Duration(-1*int64(slot-1)) * time.Second),
+		State: bs,
+		Root: genesisRoot[:],
+		Clock: blockchain.NewClock(gent),
 	}
 	vs := &Server{
 		HeadFetcher:            chain,
-		TimeFetcher:            chain,
+		ClockProvider:            chain,
 		Eth1InfoFetcher:        &mockPOW.POWChain{},
 		SyncChecker:            &mockSync.Sync{IsSyncing: false},
 		ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
@@ -336,15 +345,18 @@ func TestGetAltairDuties_UnknownPubkey(t *testing.T) {
 	require.NoError(t, helpers.UpdateSyncCommitteeCache(bs))
 
 	slot := uint64(params.BeaconConfig().SlotsPerEpoch) * uint64(params.BeaconConfig().EpochsPerSyncCommitteePeriod) * params.BeaconConfig().SecondsPerSlot
+	gent := time.Now().Add(time.Duration(-1*int64(slot-1)) * time.Second)
 	chain := &mockChain.ChainService{
-		State: bs, Root: genesisRoot[:], Genesis: time.Now().Add(time.Duration(-1*int64(slot-1)) * time.Second),
+		State: bs,
+		Root: genesisRoot[:],
+		Clock: blockchain.NewClock(gent),
 	}
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 
 	vs := &Server{
 		HeadFetcher:            chain,
-		TimeFetcher:            chain,
+		ClockProvider:            chain,
 		Eth1InfoFetcher:        &mockPOW.POWChain{},
 		SyncChecker:            &mockSync.Sync{IsSyncing: false},
 		DepositFetcher:         depositCache,
@@ -365,10 +377,10 @@ func TestGetAltairDuties_UnknownPubkey(t *testing.T) {
 
 func TestGetDuties_SlotOutOfUpperBound(t *testing.T) {
 	chain := &mockChain.ChainService{
-		Genesis: time.Now(),
+		Clock: blockchain.NewClock(time.Now()),
 	}
 	vs := &Server{
-		TimeFetcher: chain,
+		ClockProvider: chain,
 	}
 	req := &ethpb.DutiesRequest{
 		Epoch: types.Epoch(chain.CurrentSlot()/params.BeaconConfig().SlotsPerEpoch + 2),
@@ -400,11 +412,13 @@ func TestGetDuties_CurrentEpoch_ShouldNotFail(t *testing.T) {
 	}
 
 	chain := &mockChain.ChainService{
-		State: bState, Root: genesisRoot[:], Genesis: time.Now(),
+		State: bState,
+		Root: genesisRoot[:],
+		Clock: blockchain.NewClock(time.Now()),
 	}
 	vs := &Server{
 		HeadFetcher:            chain,
-		TimeFetcher:            chain,
+		ClockProvider:            chain,
 		SyncChecker:            &mockSync.Sync{IsSyncing: false},
 		ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
 	}
@@ -439,11 +453,12 @@ func TestGetDuties_MultipleKeys_OK(t *testing.T) {
 	}
 
 	chain := &mockChain.ChainService{
-		State: bs, Root: genesisRoot[:], Genesis: time.Now(),
+		State: bs, Root: genesisRoot[:],
+		Clock: blockchain.NewClock(time.Now()),
 	}
 	vs := &Server{
 		HeadFetcher:            chain,
-		TimeFetcher:            chain,
+		ClockProvider:          chain,
 		SyncChecker:            &mockSync.Sync{IsSyncing: false},
 		ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
 	}
@@ -506,13 +521,13 @@ func TestStreamDuties_OK(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	c := &mockChain.ChainService{
-		Genesis: time.Now(),
+		Clock: blockchain.NewClock(time.Now()),
 	}
 	vs := &Server{
 		Ctx:                    ctx,
 		HeadFetcher:            &mockChain.ChainService{State: bs, Root: genesisRoot[:]},
 		SyncChecker:            &mockSync.Sync{IsSyncing: false},
-		TimeFetcher:            c,
+		ClockProvider:            c,
 		StateNotifier:          &mockChain.MockStateNotifier{},
 		ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
 	}
@@ -564,13 +579,13 @@ func TestStreamDuties_OK_ChainReorg(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	c := &mockChain.ChainService{
-		Genesis: time.Now(),
+		Clock: blockchain.NewClock(time.Now()),
 	}
 	vs := &Server{
 		Ctx:                    ctx,
 		HeadFetcher:            &mockChain.ChainService{State: bs, Root: genesisRoot[:]},
 		SyncChecker:            &mockSync.Sync{IsSyncing: false},
-		TimeFetcher:            c,
+		ClockProvider:            c,
 		StateNotifier:          &mockChain.MockStateNotifier{},
 		ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
 	}

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
@@ -51,10 +52,11 @@ func TestServer_GetAttestationInclusionSlot(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 	offset := int64(2 * params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
+	gent := time.Now().Add(time.Duration(-1*offset) * time.Second)
 	bs := &Server{
 		BeaconDB:           db,
 		StateGen:           stategen.New(db),
-		GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
+		ClockProvider: &mock.ChainService{Clock: blockchain.NewClock(gent)},
 	}
 
 	s, _ := util.DeterministicGenesisState(t, 2048)

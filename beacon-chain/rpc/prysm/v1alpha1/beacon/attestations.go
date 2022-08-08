@@ -340,7 +340,12 @@ func (bs *Server) StreamIndexedAttestations(
 func (bs *Server) collectReceivedAttestations(ctx context.Context) {
 	attsByRoot := make(map[[32]byte][]*ethpb.Attestation)
 	twoThirdsASlot := 2 * slots.DivideSlotBy(3) /* 2/3 slot duration */
-	ticker := slots.NewSlotTickerWithOffset(bs.GenesisTimeFetcher.GenesisTime(), twoThirdsASlot, params.BeaconConfig().SecondsPerSlot)
+	c, err := bs.ClockProvider.WaitForClock(ctx)
+	if err != nil {
+		log.WithError(err).Error("timeout while waiting for genesis timestamp in collectReceivedAttestations")
+		return
+	}
+	ticker := slots.NewSlotTickerWithOffset(c.GenesisTime(), twoThirdsASlot, params.BeaconConfig().SecondsPerSlot)
 	for {
 		select {
 		case <-ticker.C():

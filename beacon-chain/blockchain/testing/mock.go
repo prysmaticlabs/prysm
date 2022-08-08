@@ -5,6 +5,7 @@ package testing
 import (
 	"bytes"
 	"context"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"sync"
 	"time"
 
@@ -64,6 +65,7 @@ type ChainService struct {
 	ReceiveBlockMockErr         error
 	OptimisticCheckRootReceived [32]byte
 	FinalizedRoots              map[[32]byte]bool
+	Clock blockchain.Clock
 }
 
 // ForkChoicer mocks the same method in the chain service
@@ -326,6 +328,13 @@ func (s *ChainService) GenesisTime() time.Time {
 	return s.Genesis
 }
 
+func (s *ChainService) WaitForClock(ctx context.Context) (blockchain.Clock, error) {
+	if s.Clock == nil {
+		return blockchain.NewClock(time.Now()), nil
+	}
+	return s.Clock, nil
+}
+
 // GenesisValidatorsRoot mocks the same method in the chain service.
 func (s *ChainService) GenesisValidatorsRoot() [32]byte {
 	return s.ValidatorsRoot
@@ -336,7 +345,7 @@ func (s *ChainService) CurrentSlot() types.Slot {
 	if s.Slot != nil {
 		return *s.Slot
 	}
-	return types.Slot(uint64(time.Now().Unix()-s.Genesis.Unix()) / params.BeaconConfig().SecondsPerSlot)
+	return s.Clock.CurrentSlot()
 }
 
 // Participation mocks the same method in the chain service.
@@ -463,4 +472,12 @@ func (s *ChainService) ReceiveAttesterSlashing(context.Context, *ethpb.AttesterS
 // IsFinalized mocks the same method in the chain service.
 func (s *ChainService) IsFinalized(_ context.Context, blockRoot [32]byte) bool {
 	return s.FinalizedRoots[blockRoot]
+}
+
+func NewMockClock(now time.Time, slotsAfterGenesis types.Slot) blockchain.Clock {
+	offset := uint64(slotsAfterGenesis) * params.BeaconConfig().SecondsPerSlot
+	genesis := now.Add(-1 * time.Second * time.Duration(offset))
+	return blockchain.NewClock(genesis, blockchain.WithNow(func() time.Time {
+		return genesis
+	}))
 }

@@ -2,6 +2,7 @@ package statefetcher
 
 import (
 	"context"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"strconv"
 	"strings"
 	"testing"
@@ -77,11 +78,11 @@ func TestGetState(t *testing.T) {
 		cc := &mockstategen.MockCanonicalChecker{Is: true}
 		cs := &mockstategen.MockCurrentSlotter{Slot: bs.Slot() + 1}
 		ch := stategen.NewCanonicalHistory(db, cc, cs)
-		currentSlot := types.Slot(0)
+		clock := blockchain.NewClock(time.Now())
 		p := StateProvider{
 			BeaconDB:           db,
 			ReplayerBuilder:    ch,
-			GenesisTimeFetcher: &chainMock.ChainService{Slot: &currentSlot},
+			ClockProvider: &chainMock.ChainService{Clock: clock},
 			ChainInfoFetcher:   &chainMock.ChainService{State: bs},
 		}
 
@@ -161,8 +162,10 @@ func TestGetState(t *testing.T) {
 	})
 
 	t.Run("slot", func(t *testing.T) {
+
+		clock := NewMockClock(time.Now(), headSlot)
 		p := StateProvider{
-			GenesisTimeFetcher: &chainMock.ChainService{Slot: &headSlot},
+			ClockProvider: &chainMock.ChainService{Clock: clock},
 			ChainInfoFetcher: &chainMock.ChainService{
 				CanonicalRoots: map[[32]byte]bool{
 					bytesutil.ToBytes32(newBeaconState.LatestBlockHeader().ParentRoot): true,
@@ -346,8 +349,9 @@ func TestGetStateRoot(t *testing.T) {
 		require.NoError(t, db.SaveState(ctx, st, root))
 
 		slot := types.Slot(40)
+		clock := NewMockClock(time.Now(), slot)
 		p := StateProvider{
-			GenesisTimeFetcher: &chainMock.ChainService{Slot: &slot},
+			ClockProvider: &chainMock.ChainService{Clock: clock},
 			BeaconDB:           db,
 		}
 
@@ -357,11 +361,7 @@ func TestGetStateRoot(t *testing.T) {
 	})
 
 	t.Run("slot_too_big", func(t *testing.T) {
-		p := StateProvider{
-			GenesisTimeFetcher: &chainMock.ChainService{
-				Genesis: time.Now(),
-			},
-		}
+		p := StateProvider{ClockProvider: &chainMock.ChainService{Clock: blockchain.NewClock(time.Now())}}
 		_, err := p.StateRoot(ctx, []byte(strconv.FormatUint(1, 10)))
 		assert.ErrorContains(t, "slot cannot be in the future", err)
 	})
@@ -380,7 +380,8 @@ func TestNewStateNotFoundError(t *testing.T) {
 
 func TestStateBySlot_FutureSlot(t *testing.T) {
 	slot := types.Slot(100)
-	p := StateProvider{GenesisTimeFetcher: &chainMock.ChainService{Slot: &slot}}
+	clock := NewMockClock(time.Now(), slot)
+	p := StateProvider{ClockProvider: &chainMock.ChainService{Clock: clock}}
 	_, err := p.StateBySlot(context.Background(), 101)
 	assert.ErrorContains(t, "requested slot is in the future", err)
 }
@@ -389,8 +390,17 @@ func TestStateBySlot_AfterHeadSlot(t *testing.T) {
 	st, err := statenative.InitializeFromProtoPhase0(&ethpb.BeaconState{Slot: 100})
 	require.NoError(t, err)
 	currentSlot := types.Slot(102)
-	mock := &chainMock.ChainService{State: st, Slot: &currentSlot}
-	p := StateProvider{ChainInfoFetcher: mock, GenesisTimeFetcher: mock}
+	clock := NewMockClock(time.Now(), currentSlot)
+	mock := &chainMock.ChainService{State: st, Slot: &currentSlot, Clock: clock}
+	p := StateProvider{ChainInfoFetcher: mock, ClockProvider: mock}
 	_, err = p.StateBySlot(context.Background(), 101)
 	assert.ErrorContains(t, "requested slot number is higher than head slot number", err)
+}
+
+func NewMockClock(now time.Time, slotsAfterGenesis types.Slot) blockchain.Clock {
+	offset := uint64(slotsAfterGenesis) * params.BeaconConfig().SecondsPerSlot
+	genesis := now.Add(-1 * time.Second * time.Duration(offset))
+	return blockchain.NewClock(genesis, blockchain.WithNow(func() time.Time {
+		return genesis
+	}))
 }

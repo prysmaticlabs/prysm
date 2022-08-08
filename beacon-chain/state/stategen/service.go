@@ -6,6 +6,7 @@ package stategen
 import (
 	"context"
 	"errors"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
 	"sync"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
@@ -23,8 +24,6 @@ var defaultHotStateDBInterval types.Slot = 128
 // logic of maintaining both hot and cold states in DB.
 type StateManager interface {
 	Resume(ctx context.Context, fState state.BeaconState) (state.BeaconState, error)
-	DisableSaveHotStateToDB(ctx context.Context) error
-	EnableSaveHotStateToDB(_ context.Context)
 	HasState(ctx context.Context, blockRoot [32]byte) (bool, error)
 	DeleteStateFromCaches(ctx context.Context, blockRoot [32]byte) error
 	ForceCheckpoint(ctx context.Context, root []byte) error
@@ -45,6 +44,12 @@ type State struct {
 	epochBoundaryStateCache *epochBoundaryState
 	saveHotStateDB          *saveHotStateDbConfig
 	backfillStatus          *backfill.Status
+	fc minimumForkChoicer
+	cs CurrentSlotter
+}
+
+type minimumForkChoicer interface {
+	FinalizedCheckpoint() *forkchoicetypes.Checkpoint
 }
 
 // This tracks the config in the event of long non-finality,
@@ -72,6 +77,18 @@ type StateGenOption func(*State)
 func WithBackfillStatus(bfs *backfill.Status) StateGenOption {
 	return func(sg *State) {
 		sg.backfillStatus = bfs
+	}
+}
+
+func WithMinimumForkChoicer(fc minimumForkChoicer) StateGenOption {
+	return func(sg *State) {
+		sg.fc = fc
+	}
+}
+
+func WithCurrentSlotter(cs CurrentSlotter) StateGenOption {
+	return func(sg *State) {
+		sg.cs = cs
 	}
 }
 

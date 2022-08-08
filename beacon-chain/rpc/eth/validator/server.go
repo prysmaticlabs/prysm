@@ -15,7 +15,6 @@ import (
 type Server struct {
 	HeadFetcher           blockchain.HeadFetcher
 	HeadUpdater           blockchain.HeadUpdater
-	TimeFetcher           blockchain.TimeFetcher
 	SyncChecker           sync.Checker
 	AttestationsPool      attestations.Pool
 	PeerManager           p2p.PeerManager
@@ -24,4 +23,5 @@ type Server struct {
 	OptimisticModeFetcher blockchain.OptimisticModeFetcher
 	SyncCommitteePool     synccommittee.Pool
 	V1Alpha1Server        *v1alpha1validator.Server
+	ClockProvider         blockchain.ClockProvider
 }

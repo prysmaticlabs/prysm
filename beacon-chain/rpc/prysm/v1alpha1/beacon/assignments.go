@@ -32,6 +32,10 @@ func (bs *Server) ListValidatorAssignments(
 		)
 	}
 
+	c, err := bs.ClockProvider.WaitForClock(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "timeout waiting for genesis timestamp, %s", err)
+	}
 	var res []*ethpb.ValidatorAssignments_CommitteeAssignment
 	filtered := map[types.ValidatorIndex]bool{} // track filtered validators to prevent duplication in the response.
 	filteredIndices := make([]types.ValidatorIndex, 0)
@@ -45,7 +49,7 @@ func (bs *Server) ListValidatorAssignments(
 		requestedEpoch = q.Epoch
 	}
 
-	currentEpoch := slots.ToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
+	currentEpoch := slots.ToEpoch(c.CurrentSlot())
 	if requestedEpoch > currentEpoch {
 		return nil, status.Errorf(
 			codes.InvalidArgument,
@@ -59,7 +63,11 @@ func (bs *Server) ListValidatorAssignments(
 	if err != nil {
 		return nil, err
 	}
-	requestedState, err := bs.ReplayerBuilder.ReplayerForSlot(startSlot).ReplayBlocks(ctx)
+	b, err := bs.CanonicalHistoryWaiter.WaitForCanonicalHistory(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	requestedState, err := b.ReplayerForSlot(startSlot).ReplayBlocks(ctx)
 	if err != nil {
 		msg := fmt.Sprintf("could not replay all blocks from the closest stored state (at slot %d) "+
 			"to the requested epoch (%d) - %v", startSlot, requestedEpoch, err)

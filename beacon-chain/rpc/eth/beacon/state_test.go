@@ -2,6 +2,7 @@ package beacon
 
 import (
 	"context"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"testing"
 	"time"
 
@@ -29,11 +30,11 @@ func TestGetGenesis(t *testing.T) {
 
 	t.Run("OK", func(t *testing.T) {
 		chainService := &chainMock.ChainService{
-			Genesis:        genesis,
+			Clock:        blockchain.NewClock(genesis),
 			ValidatorsRoot: validatorsRoot,
 		}
 		s := Server{
-			GenesisTimeFetcher: chainService,
+			ClockProvider: chainService,
 			ChainInfoFetcher:   chainService,
 		}
 		resp, err := s.GetGenesis(ctx, &emptypb.Empty{})
@@ -46,11 +47,11 @@ func TestGetGenesis(t *testing.T) {
 
 	t.Run("No genesis time", func(t *testing.T) {
 		chainService := &chainMock.ChainService{
-			Genesis:        time.Time{},
+			Clock:        blockchain.NewClock(time.Time{}),
 			ValidatorsRoot: validatorsRoot,
 		}
 		s := Server{
-			GenesisTimeFetcher: chainService,
+			ClockProvider: chainService,
 			ChainInfoFetcher:   chainService,
 		}
 		_, err := s.GetGenesis(ctx, &emptypb.Empty{})
@@ -59,11 +60,11 @@ func TestGetGenesis(t *testing.T) {
 
 	t.Run("No genesis validators root", func(t *testing.T) {
 		chainService := &chainMock.ChainService{
-			Genesis:        genesis,
+			Clock:        blockchain.NewClock(genesis),
 			ValidatorsRoot: [32]byte{},
 		}
 		s := Server{
-			GenesisTimeFetcher: chainService,
+			ClockProvider: chainService,
 			ChainInfoFetcher:   chainService,
 		}
 		_, err := s.GetGenesis(ctx, &emptypb.Empty{})

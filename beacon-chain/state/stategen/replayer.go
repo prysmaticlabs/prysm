@@ -173,3 +173,10 @@ type ReplayerBuilder interface {
 	// slots via process_slots.
 	ReplayerForSlot(target types.Slot) Replayer
 }
+
+// ReplayerBuiilderWaiter is designed for situations where services need to start up before it is possible to init
+// a ReplayerBuilder. When WaitForReplayerBuilder is called,
+// it will block until prerequisites for a replayer are available, or the parent context is canceled.
+type CanonicalHistoryWaiter interface {
+	WaitForCanonicalHistory(context.Context) (*CanonicalHistory, error)
+}

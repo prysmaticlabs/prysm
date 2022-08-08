@@ -2,6 +2,7 @@ package sync
 
 import (
 	"fmt"
+	"github.com/prysmaticlabs/prysm/async"
 	"reflect"
 	"strings"
 
@@ -91,57 +92,61 @@ var (
 	)
 )
 
-func (s *Service) updateMetrics() {
-	// do not update metrics if genesis time
-	// has not been initialized
-	if s.cfg.chain.GenesisTime().IsZero() {
+func (s *Service) spawnUpdateMetrics() {
+	// do not update metrics if genesis time has not been initialized
+	c, err := s.cfg.chain.WaitForClock(s.ctx)
+	if err != nil {
+		log.WithError(err).Error("timeout while waiting for geenesis time in spawnUpdateMetrics")
 		return
 	}
-	// We update the dynamic subnet topics.
-	digest, err := s.currentForkDigest()
-	if err != nil {
-		log.WithError(err).Debugf("Could not compute fork digest")
-	}
-	indices := s.aggregatorSubnetIndices(s.cfg.chain.CurrentSlot())
-	syncIndices := cache.SyncSubnetIDs.GetAllSubnets(slots.ToEpoch(s.cfg.chain.CurrentSlot()))
-	attTopic := p2p.GossipTypeMapping[reflect.TypeOf(&pb.Attestation{})]
-	syncTopic := p2p.GossipTypeMapping[reflect.TypeOf(&pb.SyncCommitteeMessage{})]
-	attTopic += s.cfg.p2p.Encoding().ProtocolSuffix()
-	syncTopic += s.cfg.p2p.Encoding().ProtocolSuffix()
-	if flags.Get().SubscribeToAllSubnets {
-		for i := uint64(0); i < params.BeaconNetworkConfig().AttestationSubnetCount; i++ {
-			s.collectMetricForSubnet(attTopic, digest, i)
+	async.RunEvery(s.ctx, syncMetricsInterval, func() {
+		// We update the dynamic subnet topics.
+		digest, err := s.currentForkDigest()
+		if err != nil {
+			log.WithError(err).Debugf("Could not compute fork digest")
 		}
-		for i := uint64(0); i < params.BeaconConfig().SyncCommitteeSubnetCount; i++ {
-			s.collectMetricForSubnet(syncTopic, digest, i)
+		indices := s.aggregatorSubnetIndices(c.CurrentSlot())
+		syncIndices := cache.SyncSubnetIDs.GetAllSubnets(slots.ToEpoch(c.CurrentSlot()))
+		attTopic := p2p.GossipTypeMapping[reflect.TypeOf(&pb.Attestation{})]
+		syncTopic := p2p.GossipTypeMapping[reflect.TypeOf(&pb.SyncCommitteeMessage{})]
+		attTopic += s.cfg.p2p.Encoding().ProtocolSuffix()
+		syncTopic += s.cfg.p2p.Encoding().ProtocolSuffix()
+		if flags.Get().SubscribeToAllSubnets {
+			for i := uint64(0); i < params.BeaconNetworkConfig().AttestationSubnetCount; i++ {
+				s.collectMetricForSubnet(attTopic, digest, i)
+			}
+			for i := uint64(0); i < params.BeaconConfig().SyncCommitteeSubnetCount; i++ {
+				s.collectMetricForSubnet(syncTopic, digest, i)
+			}
+		} else {
+			for _, committeeIdx := range indices {
+				s.collectMetricForSubnet(attTopic, digest, committeeIdx)
+			}
+			for _, committeeIdx := range syncIndices {
+				s.collectMetricForSubnet(syncTopic, digest, committeeIdx)
+			}
 		}
-	} else {
-		for _, committeeIdx := range indices {
-			s.collectMetricForSubnet(attTopic, digest, committeeIdx)
-		}
-		for _, committeeIdx := range syncIndices {
-			s.collectMetricForSubnet(syncTopic, digest, committeeIdx)
-		}
-	}
 
-	// We update all other gossip topics.
-	for _, topic := range p2p.AllTopics() {
-		// We already updated attestation subnet topics.
-		if strings.Contains(topic, p2p.GossipAttestationMessage) || strings.Contains(topic, p2p.GossipSyncCommitteeMessage) {
-			continue
+		// We update all other gossip topics.
+		for _, topic := range p2p.AllTopics() {
+			// We already updated attestation subnet topics.
+			if strings.Contains(topic, p2p.GossipAttestationMessage) || strings.Contains(topic, p2p.GossipSyncCommitteeMessage) {
+				continue
+			}
+			topic += s.cfg.p2p.Encoding().ProtocolSuffix()
+			if !strings.Contains(topic, "%x") {
+				topicPeerCount.WithLabelValues(topic).Set(float64(len(s.cfg.p2p.PubSub().ListPeers(topic))))
+				continue
+			}
+			formattedTopic := fmt.Sprintf(topic, digest)
+			topicPeerCount.WithLabelValues(formattedTopic).Set(float64(len(s.cfg.p2p.PubSub().ListPeers(formattedTopic))))
 		}
-		topic += s.cfg.p2p.Encoding().ProtocolSuffix()
-		if !strings.Contains(topic, "%x") {
-			topicPeerCount.WithLabelValues(topic).Set(float64(len(s.cfg.p2p.PubSub().ListPeers(topic))))
-			continue
-		}
-		formattedTopic := fmt.Sprintf(topic, digest)
-		topicPeerCount.WithLabelValues(formattedTopic).Set(float64(len(s.cfg.p2p.PubSub().ListPeers(formattedTopic))))
-	}
 
-	for _, topic := range s.cfg.p2p.PubSub().GetTopics() {
-		subscribedTopicPeerCount.WithLabelValues(topic).Set(float64(len(s.cfg.p2p.PubSub().ListPeers(topic))))
-	}
+		for _, topic := range s.cfg.p2p.PubSub().GetTopics() {
+			subscribedTopicPeerCount.WithLabelValues(topic).Set(float64(len(s.cfg.p2p.PubSub().ListPeers(topic))))
+		}
+	})
+
 }
 
 func (s *Service) collectMetricForSubnet(topic string, digest [4]byte, index uint64) {

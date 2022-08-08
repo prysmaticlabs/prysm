@@ -2,10 +2,6 @@ package blockchain
 
 import (
 	"context"
-	"sync"
-	"testing"
-	"time"
-
 	blockchainTesting "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
@@ -21,7 +17,8 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
-	logTest "github.com/sirupsen/logrus/hooks/test"
+	"sync"
+	"testing"
 )
 
 func TestService_ReceiveBlock(t *testing.T) {
@@ -283,41 +280,4 @@ func TestService_HasBlock(t *testing.T) {
 	r, err = b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.Equal(t, true, s.HasBlock(context.Background(), r))
-}
-
-func TestCheckSaveHotStateDB_Enabling(t *testing.T) {
-	opts := testServiceOptsWithDB(t)
-	hook := logTest.NewGlobal()
-	s, err := NewService(context.Background(), opts...)
-	require.NoError(t, err)
-	st := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(epochsSinceFinalitySaveHotStateDB))
-	s.genesisTime = time.Now().Add(time.Duration(-1*int64(st)*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second)
-
-	require.NoError(t, s.checkSaveHotStateDB(context.Background()))
-	assert.LogsContain(t, hook, "Entering mode to save hot states in DB")
-}
-
-func TestCheckSaveHotStateDB_Disabling(t *testing.T) {
-	hook := logTest.NewGlobal()
-	opts := testServiceOptsWithDB(t)
-	s, err := NewService(context.Background(), opts...)
-	require.NoError(t, err)
-	st := params.BeaconConfig().SlotsPerEpoch.Mul(uint64(epochsSinceFinalitySaveHotStateDB))
-	s.genesisTime = time.Now().Add(time.Duration(-1*int64(st)*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second)
-	require.NoError(t, s.checkSaveHotStateDB(context.Background()))
-	s.genesisTime = time.Now()
-
-	require.NoError(t, s.checkSaveHotStateDB(context.Background()))
-	assert.LogsContain(t, hook, "Exiting mode to save hot states in DB")
-}
-
-func TestCheckSaveHotStateDB_Overflow(t *testing.T) {
-	hook := logTest.NewGlobal()
-	opts := testServiceOptsWithDB(t)
-	s, err := NewService(context.Background(), opts...)
-	require.NoError(t, err)
-	s.genesisTime = time.Now()
-
-	require.NoError(t, s.checkSaveHotStateDB(context.Background()))
-	assert.LogsDoNotContain(t, hook, "Entering mode to save hot states in DB")
 }

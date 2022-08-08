@@ -38,10 +38,11 @@ func (bs *Server) ListValidatorBalances(
 			req.PageSize, cmd.Get().MaxRPCPageSize)
 	}
 
-	if bs.GenesisTimeFetcher == nil {
-		return nil, status.Errorf(codes.Internal, "Nil genesis time fetcher")
+	c, err := bs.ClockProvider.WaitForClock(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "timeout waiting for genesis timestamp, %s", err)
 	}
-	currentEpoch := slots.ToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
+	currentEpoch := slots.ToEpoch(c.CurrentSlot())
 	requestedEpoch := currentEpoch
 	switch q := req.QueryFilter.(type) {
 	case *ethpb.ListValidatorBalancesRequest_Epoch:
@@ -65,7 +66,11 @@ func (bs *Server) ListValidatorBalances(
 	if err != nil {
 		return nil, err
 	}
-	requestedState, err := bs.ReplayerBuilder.ReplayerForSlot(startSlot).ReplayBlocks(ctx)
+	b, err := bs.CanonicalHistoryWaiter.WaitForCanonicalHistory(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	requestedState, err := b.ReplayerForSlot(startSlot).ReplayBlocks(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, fmt.Sprintf("error replaying blocks for state at slot %d: %v", startSlot, err))
 	}
@@ -193,7 +198,11 @@ func (bs *Server) ListValidators(
 			req.PageSize, cmd.Get().MaxRPCPageSize)
 	}
 
-	currentEpoch := slots.ToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
+	c, err := bs.ClockProvider.WaitForClock(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "timeout waiting for genesis timestamp, %s", err)
+	}
+	currentEpoch := slots.ToEpoch(c.CurrentSlot())
 	requestedEpoch := currentEpoch
 
 	switch q := req.QueryFilter.(type) {
@@ -213,14 +222,17 @@ func (bs *Server) ListValidators(
 		requestedEpoch = q.Epoch
 	}
 	var reqState state.BeaconState
-	var err error
 	if requestedEpoch != currentEpoch {
 		var s types.Slot
 		s, err = slots.EpochStart(requestedEpoch)
 		if err != nil {
 			return nil, err
 		}
-		reqState, err = bs.ReplayerBuilder.ReplayerForSlot(s).ReplayBlocks(ctx)
+		b, err := bs.CanonicalHistoryWaiter.WaitForCanonicalHistory(ctx)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+		reqState, err = b.ReplayerForSlot(s).ReplayBlocks(ctx)
 		if err != nil {
 			return nil, status.Error(codes.Internal, fmt.Sprintf("error replaying blocks for state at slot %d: %v", s, err))
 		}
@@ -391,7 +403,11 @@ func (bs *Server) GetValidator(
 func (bs *Server) GetValidatorActiveSetChanges(
 	ctx context.Context, req *ethpb.GetValidatorActiveSetChangesRequest,
 ) (*ethpb.ActiveSetChanges, error) {
-	currentEpoch := slots.ToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
+	c, err := bs.ClockProvider.WaitForClock(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "timeout waiting for genesis timestamp, %s", err)
+	}
+	currentEpoch := slots.ToEpoch(c.CurrentSlot())
 
 	var requestedEpoch types.Epoch
 	switch q := req.QueryFilter.(type) {
@@ -415,7 +431,11 @@ func (bs *Server) GetValidatorActiveSetChanges(
 	if err != nil {
 		return nil, err
 	}
-	requestedState, err := bs.ReplayerBuilder.ReplayerForSlot(s).ReplayBlocks(ctx)
+	b, err := bs.CanonicalHistoryWaiter.WaitForCanonicalHistory(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	requestedState, err := b.ReplayerForSlot(s).ReplayBlocks(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, fmt.Sprintf("error replaying blocks for state at slot %d: %v", s, err))
 	}
@@ -476,7 +496,11 @@ func (bs *Server) GetValidatorActiveSetChanges(
 func (bs *Server) GetValidatorParticipation(
 	ctx context.Context, req *ethpb.GetValidatorParticipationRequest,
 ) (*ethpb.ValidatorParticipationResponse, error) {
-	currentSlot := bs.GenesisTimeFetcher.CurrentSlot()
+	c, err := bs.ClockProvider.WaitForClock(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "timeout waiting for genesis timestamp, %s", err)
+	}
+	currentSlot := c.CurrentSlot()
 	currentEpoch := slots.ToEpoch(currentSlot)
 
 	var requestedEpoch types.Epoch
@@ -512,7 +536,11 @@ func (bs *Server) GetValidatorParticipation(
 	}
 
 	// ReplayerBuilder ensures that a canonical chain is followed to the slot
-	beaconState, err := bs.ReplayerBuilder.ReplayerForSlot(endSlot).ReplayBlocks(ctx)
+	rb, err := bs.CanonicalHistoryWaiter.WaitForCanonicalHistory(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	beaconState, err := rb.ReplayerForSlot(endSlot).ReplayBlocks(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, fmt.Sprintf("error replaying blocks for state at slot %d: %v", endSlot, err))
 	}
@@ -660,12 +688,16 @@ func (bs *Server) GetValidatorPerformance(
 	if bs.SyncChecker.Syncing() {
 		return nil, status.Errorf(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
+	c, err := bs.ClockProvider.WaitForClock(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "timeout waiting for genesis timestamp, %s", err)
+	}
 
 	headState, err := bs.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
 	}
-	currSlot := bs.GenesisTimeFetcher.CurrentSlot()
+	currSlot := c.CurrentSlot()
 
 	if currSlot > headState.Slot() {
 		headRoot, err := bs.HeadFetcher.HeadRoot(ctx)
@@ -817,7 +849,11 @@ func (bs *Server) GetIndividualVotes(
 	ctx context.Context,
 	req *ethpb.IndividualVotesRequest,
 ) (*ethpb.IndividualVotesRespond, error) {
-	currentEpoch := slots.ToEpoch(bs.GenesisTimeFetcher.CurrentSlot())
+	c, err := bs.ClockProvider.WaitForClock(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "timeout waiting for genesis timestamp, %s", err)
+	}
+	currentEpoch := slots.ToEpoch(c.CurrentSlot())
 	if req.Epoch > currentEpoch {
 		return nil, status.Errorf(
 			codes.InvalidArgument,
@@ -831,7 +867,11 @@ func (bs *Server) GetIndividualVotes(
 	if err != nil {
 		return nil, err
 	}
-	st, err := bs.ReplayerBuilder.ReplayerForSlot(s).ReplayBlocks(ctx)
+	b, err := bs.CanonicalHistoryWaiter.WaitForCanonicalHistory(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	st, err := b.ReplayerForSlot(s).ReplayBlocks(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to replay blocks for state at epoch %d: %v", req.Epoch, err)
 	}

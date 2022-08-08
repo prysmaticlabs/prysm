@@ -34,7 +34,12 @@ type rpcHandler func(context.Context, interface{}, libp2pcore.Stream) error
 
 // registerRPCHandlers for p2p RPC.
 func (s *Service) registerRPCHandlers() {
-	currEpoch := slots.ToEpoch(s.cfg.chain.CurrentSlot())
+	c, err := s.cfg.chain.WaitForClock(s.ctx)
+	if err != nil {
+		log.WithError(err).Error("timeout while waiting for genesis timestamp in registerRPCHandlers")
+		return
+	}
+	currEpoch := slots.ToEpoch(c.CurrentSlot())
 	// Register V2 handlers if we are past altair fork epoch.
 	if currEpoch >= params.BeaconConfig().AltairForkEpoch {
 		s.registerRPC(

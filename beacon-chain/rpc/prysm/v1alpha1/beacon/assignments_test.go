@@ -28,16 +28,18 @@ func TestServer_ListAssignments_CannotRequestFutureEpoch(t *testing.T) {
 	ctx := context.Background()
 	bs := &Server{
 		BeaconDB:           db,
-		GenesisTimeFetcher: &mock.ChainService{},
+		ClockProvider: &mock.ChainService{},
 	}
 	addDefaultReplayerBuilder(bs, db)
 
+	c, err := bs.ClockProvider.WaitForClock(ctx)
+	require.NoError(t, err)
 	wanted := errNoEpochInfoError
-	_, err := bs.ListValidatorAssignments(
+	_, err = bs.ListValidatorAssignments(
 		ctx,
 		&ethpb.ListValidatorAssignmentsRequest{
 			QueryFilter: &ethpb.ListValidatorAssignmentsRequest_Epoch{
-				Epoch: slots.ToEpoch(bs.GenesisTimeFetcher.CurrentSlot()) + 1,
+				Epoch: slots.ToEpoch(c.CurrentSlot()) + 1,
 			},
 		},
 	)
@@ -59,7 +61,7 @@ func TestServer_ListAssignments_NoResults(t *testing.T) {
 
 	bs := &Server{
 		BeaconDB:           db,
-		GenesisTimeFetcher: &mock.ChainService{},
+		ClockProvider: &mock.ChainService{},
 		StateGen:           stategen.New(db),
 		ReplayerBuilder:    mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(st)),
 	}
@@ -121,7 +123,7 @@ func TestServer_ListAssignments_Pagination_InputOutOfRange(t *testing.T) {
 				Epoch: 0,
 			},
 		},
-		GenesisTimeFetcher: &mock.ChainService{},
+		ClockProvider: &mock.ChainService{},
 		StateGen:           stategen.New(db),
 		ReplayerBuilder:    mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(s)),
 	}
@@ -197,7 +199,7 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_NoArchive(t *testing.
 				Epoch: 0,
 			},
 		},
-		GenesisTimeFetcher: &mock.ChainService{},
+		ClockProvider: &mock.ChainService{},
 		StateGen:           stategen.New(db),
 		ReplayerBuilder:    mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(s)),
 	}
@@ -264,7 +266,7 @@ func TestServer_ListAssignments_FilterPubkeysIndices_NoPagination(t *testing.T) 
 				Epoch: 0,
 			},
 		},
-		GenesisTimeFetcher: &mock.ChainService{},
+		ClockProvider: &mock.ChainService{},
 		StateGen:           stategen.New(db),
 		ReplayerBuilder:    mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(s)),
 	}
@@ -335,7 +337,7 @@ func TestServer_ListAssignments_CanFilterPubkeysIndices_WithPagination(t *testin
 				Epoch: 0,
 			},
 		},
-		GenesisTimeFetcher: &mock.ChainService{},
+		ClockProvider: &mock.ChainService{},
 		StateGen:           stategen.New(db),
 	}
 

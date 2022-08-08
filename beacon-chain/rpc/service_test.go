@@ -3,6 +3,7 @@ package rpc
 import (
 	"context"
 	"errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"io"
 	"testing"
 	"time"
@@ -24,7 +25,7 @@ func init() {
 func TestLifecycle_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
 	chainService := &mock.ChainService{
-		Genesis: time.Now(),
+		Clock: blockchain.NewClock(time.Now()),
 	}
 	rpcService := NewService(context.Background(), &Config{
 		Port:                "7348",
@@ -32,9 +33,9 @@ func TestLifecycle_OK(t *testing.T) {
 		BlockReceiver:       chainService,
 		AttestationReceiver: chainService,
 		HeadFetcher:         chainService,
-		GenesisTimeFetcher:  chainService,
 		POWChainService:     &mockPOW.POWChain{},
 		StateNotifier:       chainService.StateNotifier(),
+		ClockProvider:       chainService,
 	})
 
 	rpcService.Start()
@@ -55,12 +56,12 @@ func TestStatus_CredentialError(t *testing.T) {
 
 func TestRPC_InsecureEndpoint(t *testing.T) {
 	hook := logTest.NewGlobal()
-	chainService := &mock.ChainService{Genesis: time.Now()}
+	chainService := &mock.ChainService{Clock: blockchain.NewClock(time.Now())}
 	rpcService := NewService(context.Background(), &Config{
 		Port:                "7777",
 		SyncService:         &mockSync.Sync{IsSyncing: false},
 		BlockReceiver:       chainService,
-		GenesisTimeFetcher:  chainService,
+		ClockProvider:       chainService,
 		AttestationReceiver: chainService,
 		HeadFetcher:         chainService,
 		POWChainService:     &mockPOW.POWChain{},

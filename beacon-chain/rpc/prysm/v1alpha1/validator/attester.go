@@ -42,7 +42,11 @@ func (vs *Server) GetAttestationData(ctx context.Context, req *ethpb.Attestation
 		return nil, err
 	}
 
-	if err := helpers.ValidateAttestationTime(req.Slot, vs.TimeFetcher.GenesisTime(),
+	c, err := vs.ClockProvider.WaitForClock(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "timeout while waiting for genesis timestamp, %s", err)
+	}
+	if err := helpers.ValidateAttestationTime(req.Slot, c.GenesisTime(),
 		params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
 		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("invalid request: %v", err))
 	}

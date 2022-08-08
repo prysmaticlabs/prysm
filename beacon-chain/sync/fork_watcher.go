@@ -12,7 +12,11 @@ import (
 // Is a background routine that observes for new incoming forks. Depending on the epoch
 // it will be in charge of subscribing/unsubscribing the relevant topics at the fork boundaries.
 func (s *Service) forkWatcher() {
-	slotTicker := slots.NewSlotTicker(s.cfg.chain.GenesisTime(), params.BeaconConfig().SecondsPerSlot)
+	clock, err := s.cfg.chain.WaitForClock(s.ctx)
+	if err != nil {
+		log.WithError(err).Error("timeout waiting for genesis time in forkWatcher()")
+	}
+	slotTicker := slots.NewSlotTicker(clock.GenesisTime(), params.BeaconConfig().SecondsPerSlot)
 	for {
 		select {
 		// In the event of a node restart, we will still end up subscribing to the correct
@@ -40,7 +44,11 @@ func (s *Service) forkWatcher() {
 // it registers the appropriate gossip and rpc topics.
 func (s *Service) registerForUpcomingFork(currEpoch types.Epoch) error {
 	genRoot := s.cfg.chain.GenesisValidatorsRoot()
-	isNextForkEpoch, err := forks.IsForkNextEpoch(s.cfg.chain.GenesisTime(), genRoot[:])
+	clock, err := s.cfg.chain.WaitForClock(s.ctx)
+	if err != nil {
+		return errors.Wrap(err, "timeout waiting for genesis time in registerForUpcomingFork")
+	}
+	isNextForkEpoch, err := forks.IsForkNextEpoch(clock.GenesisTime(), genRoot[:])
 	if err != nil {
 		return errors.Wrap(err, "Could not retrieve next fork epoch")
 	}

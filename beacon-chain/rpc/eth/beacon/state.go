@@ -30,10 +30,11 @@ func (bs *Server) GetGenesis(ctx context.Context, _ *emptypb.Empty) (*ethpb.Gene
 	ctx, span := trace.StartSpan(ctx, "beacon.GetGenesis")
 	defer span.End()
 
-	genesisTime := bs.GenesisTimeFetcher.GenesisTime()
-	if genesisTime.IsZero() {
-		return nil, status.Errorf(codes.NotFound, "Chain genesis info is not yet known")
+	c, err := bs.ClockProvider.WaitForClock(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "timeout waiting for genesis timestamp, %s", err)
 	}
+	genesisTime := c.GenesisTime()
 	validatorRoot := bs.ChainInfoFetcher.GenesisValidatorsRoot()
 	if bytes.Equal(validatorRoot[:], params.BeaconConfig().ZeroHash[:]) {
 		return nil, status.Errorf(codes.NotFound, "Chain genesis info is not yet known")

@@ -270,11 +270,19 @@ func (ns *Server) GetSyncStatus(ctx context.Context, _ *emptypb.Empty) (*ethpb.S
 		return nil, status.Errorf(codes.Internal, "Could not check optimistic status: %v", err)
 	}
 
+	c, err := ns.ClockProvider.WaitForClock(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "timeout while waiting for genesis timestamp, %s", err)
+	}
 	headSlot := ns.HeadFetcher.HeadSlot()
+	sd, err := c.CurrentSlot().SafeSubSlot(headSlot)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "error computing sync_distance, head > current slot, %s", err)
+	}
 	return &ethpb.SyncingResponse{
 		Data: &ethpb.SyncInfo{
 			HeadSlot:     headSlot,
-			SyncDistance: ns.GenesisTimeFetcher.CurrentSlot() - headSlot,
+			SyncDistance: sd,
 			IsSyncing:    ns.SyncChecker.Syncing(),
 			IsOptimistic: isOptimistic,
 		},

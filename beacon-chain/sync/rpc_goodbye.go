@@ -8,6 +8,7 @@ import (
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/async"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
@@ -96,7 +97,11 @@ func (s *Service) sendGoodByeMessage(ctx context.Context, code p2ptypes.RPCGoodb
 	ctx, cancel := context.WithTimeout(ctx, respTimeout)
 	defer cancel()
 
-	topic, err := p2p.TopicFromMessage(p2p.GoodbyeMessageName, slots.ToEpoch(s.cfg.chain.CurrentSlot()))
+	c, err := s.cfg.chain.WaitForClock(s.ctx)
+	if err != nil {
+		return errors.Wrap(err, "timeout while waiting for genesis timestamp")
+	}
+	topic, err := p2p.TopicFromMessage(p2p.GoodbyeMessageName, slots.ToEpoch(c.CurrentSlot()))
 	if err != nil {
 		return err
 	}

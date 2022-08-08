@@ -83,9 +83,13 @@ func (s *Service) validateAggregateAndProof(ctx context.Context, pid peer.ID, ms
 		return pubsub.ValidationReject, err
 	}
 
+	clock, err := s.cfg.chain.WaitForClock(ctx)
+	if err != nil {
+		return pubsub.ValidationIgnore, errors.Wrap(err, "timeout while waiting for blockchain clock/genesis")
+	}
 	// Attestation's slot is within ATTESTATION_PROPAGATION_SLOT_RANGE and early attestation
 	// processing tolerance.
-	if err := helpers.ValidateAttestationTime(m.Message.Aggregate.Data.Slot, s.cfg.chain.GenesisTime(),
+	if err := helpers.ValidateAttestationTime(m.Message.Aggregate.Data.Slot, clock.GenesisTime(),
 		earlyAttestationProcessingTolerance); err != nil {
 		tracing.AnnotateError(span, err)
 		return pubsub.ValidationIgnore, err

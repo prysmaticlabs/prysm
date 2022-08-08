@@ -2,13 +2,13 @@ package sync
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"reflect"
 	"strings"
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -47,6 +47,10 @@ func (s *Service) validateSyncCommitteeMessage(
 ) (pubsub.ValidationResult, error) {
 	ctx, span := trace.StartSpan(ctx, "sync.validateSyncCommitteeMessage")
 	defer span.End()
+	clock, err := s.cfg.chain.WaitForClock(ctx)
+	if err != nil {
+		return pubsub.ValidationIgnore, errors.Wrap(err, "timeout while waiting for blockchain clock/genesis")
+	}
 
 	if pid == s.cfg.p2p.PeerID() {
 		return pubsub.ValidationAccept, nil
@@ -82,7 +86,7 @@ func (s *Service) validateSyncCommitteeMessage(
 	// The message's `slot` is for the current slot (with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance).
 	if err := altair.ValidateSyncMessageTime(
 		m.Slot,
-		s.cfg.chain.GenesisTime(),
+		clock.GenesisTime(),
 		params.BeaconNetworkConfig().MaximumGossipClockDisparity,
 	); err != nil {
 		tracing.AnnotateError(span, err)

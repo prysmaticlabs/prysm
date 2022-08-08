@@ -4,7 +4,6 @@ package rpc
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net"
 	"sync"
@@ -13,6 +12,7 @@ import (
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpcopentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpcprometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
@@ -90,7 +90,6 @@ type Config struct {
 	POWChainService               powchain.Chain
 	ChainStartFetcher             powchain.ChainStartFetcher
 	POWChainInfoFetcher           powchain.ChainInfoFetcher
-	GenesisTimeFetcher            blockchain.TimeFetcher
 	GenesisFetcher                blockchain.GenesisFetcher
 	EnableDebugRPCEndpoints       bool
 	MockEth1Votes                 bool
@@ -115,6 +114,7 @@ type Config struct {
 	ProposerIdsCache              *cache.ProposerPayloadIDsCache
 	OptimisticModeFetcher         blockchain.OptimisticModeFetcher
 	BlockBuilder                  builder.BlockBuilder
+	ClockProvider                 blockchain.ClockProvider
 }
 
 // NewService instantiates a new RPC service instance that will
@@ -175,7 +175,6 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 
 // paranoid build time check to ensure ChainInfoFetcher implements required interfaces
 var _ stategen.CanonicalChecker = blockchain.ChainInfoFetcher(nil)
-var _ stategen.CurrentSlotter = blockchain.ChainInfoFetcher(nil)
 
 // Start the gRPC server.
 func (s *Service) Start() {
@@ -186,7 +185,8 @@ func (s *Service) Start() {
 		stateCache = s.cfg.StateGen.CombinedCache()
 	}
 	withCache := stategen.WithCache(stateCache)
-	ch := stategen.NewCanonicalHistory(s.cfg.BeaconDB, s.cfg.ChainInfoFetcher, s.cfg.ChainInfoFetcher, withCache)
+	//ch := stategen.NewCanonicalHistory(s.cfg.BeaconDB, s.cfg.ChainInfoFetcher, s.cfg.ChainInfoFetcher, withCache)
+	rbw := NewCanonicalHistoryWaiter(s.cfg.ChainInfoFetcher, s.cfg.BeaconDB, s.cfg.ChainInfoFetcher, withCache)
 
 	validatorServer := &validatorv1alpha1.Server{
 		Ctx:                    s.ctx,
@@ -197,7 +197,6 @@ func (s *Service) Start() {
 		HeadUpdater:            s.cfg.HeadUpdater,
 		ForkFetcher:            s.cfg.ForkFetcher,
 		FinalizationFetcher:    s.cfg.FinalizationFetcher,
-		TimeFetcher:            s.cfg.GenesisTimeFetcher,
 		BlockFetcher:           s.cfg.POWChainService,
 		DepositFetcher:         s.cfg.DepositFetcher,
 		ChainStartFetcher:      s.cfg.ChainStartFetcher,
@@ -215,16 +214,16 @@ func (s *Service) Start() {
 		SlashingsPool:          s.cfg.SlashingsPool,
 		StateGen:               s.cfg.StateGen,
 		SyncCommitteePool:      s.cfg.SyncCommitteeObjectPool,
-		ReplayerBuilder:        ch,
+		CanonicalHistoryWaiter: rbw,
 		ExecutionEngineCaller:  s.cfg.ExecutionEngineCaller,
 		BeaconDB:               s.cfg.BeaconDB,
 		ProposerSlotIndexCache: s.cfg.ProposerIdsCache,
 		BlockBuilder:           s.cfg.BlockBuilder,
+		ClockProvider:          s.cfg.ClockProvider,
 	}
 	validatorServerV1 := &validator.Server{
 		HeadFetcher:           s.cfg.HeadFetcher,
 		HeadUpdater:           s.cfg.HeadUpdater,
-		TimeFetcher:           s.cfg.GenesisTimeFetcher,
 		SyncChecker:           s.cfg.SyncService,
 		OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
 		AttestationsPool:      s.cfg.AttestationsPool,
@@ -232,13 +231,14 @@ func (s *Service) Start() {
 		Broadcaster:           s.cfg.Broadcaster,
 		V1Alpha1Server:        validatorServer,
 		StateFetcher: &statefetcher.StateProvider{
-			BeaconDB:           s.cfg.BeaconDB,
-			ChainInfoFetcher:   s.cfg.ChainInfoFetcher,
-			GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
-			StateGenService:    s.cfg.StateGen,
-			ReplayerBuilder:    ch,
+			BeaconDB:               s.cfg.BeaconDB,
+			ChainInfoFetcher:       s.cfg.ChainInfoFetcher,
+			StateGenService:        s.cfg.StateGen,
+			CanonicalHistoryWaiter: rbw,
+			ClockProvider:          s.cfg.ClockProvider,
 		},
 		SyncCommitteePool: s.cfg.SyncCommitteeObjectPool,
+		ClockProvider: s.cfg.ClockProvider,
 	}
 
 	nodeServer := &nodev1alpha1.Server{
@@ -247,24 +247,24 @@ func (s *Service) Start() {
 		BeaconDB:             s.cfg.BeaconDB,
 		Server:               s.grpcServer,
 		SyncChecker:          s.cfg.SyncService,
-		GenesisTimeFetcher:   s.cfg.GenesisTimeFetcher,
 		PeersFetcher:         s.cfg.PeersFetcher,
 		PeerManager:          s.cfg.PeerManager,
 		GenesisFetcher:       s.cfg.GenesisFetcher,
 		POWChainInfoFetcher:  s.cfg.POWChainInfoFetcher,
 		BeaconMonitoringHost: s.cfg.BeaconMonitoringHost,
 		BeaconMonitoringPort: s.cfg.BeaconMonitoringPort,
+		ClockProvider: s.cfg.ClockProvider,
 	}
 	nodeServerV1 := &node.Server{
 		BeaconDB:              s.cfg.BeaconDB,
 		Server:                s.grpcServer,
 		SyncChecker:           s.cfg.SyncService,
 		OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
-		GenesisTimeFetcher:    s.cfg.GenesisTimeFetcher,
 		PeersFetcher:          s.cfg.PeersFetcher,
 		PeerManager:           s.cfg.PeerManager,
 		MetadataProvider:      s.cfg.MetadataProvider,
 		HeadFetcher:           s.cfg.HeadFetcher,
+		ClockProvider:         s.cfg.ClockProvider,
 	}
 
 	beaconChainServer := &beaconv1alpha1.Server{
@@ -280,7 +280,6 @@ func (s *Service) Start() {
 		ChainStartFetcher:           s.cfg.ChainStartFetcher,
 		DepositFetcher:              s.cfg.DepositFetcher,
 		BlockFetcher:                s.cfg.POWChainService,
-		GenesisTimeFetcher:          s.cfg.GenesisTimeFetcher,
 		StateNotifier:               s.cfg.StateNotifier,
 		BlockNotifier:               s.cfg.BlockNotifier,
 		AttestationNotifier:         s.cfg.OperationNotifier,
@@ -289,26 +288,26 @@ func (s *Service) Start() {
 		SyncChecker:                 s.cfg.SyncService,
 		ReceivedAttestationsBuffer:  make(chan *ethpbv1alpha1.Attestation, attestationBufferSize),
 		CollectedAttestationsBuffer: make(chan []*ethpbv1alpha1.Attestation, attestationBufferSize),
-		ReplayerBuilder:             ch,
+		CanonicalHistoryWaiter:      rbw,
+		ClockProvider:               s.cfg.ClockProvider,
 	}
 	beaconChainServerV1 := &beacon.Server{
-		CanonicalHistory:   ch,
-		BeaconDB:           s.cfg.BeaconDB,
-		AttestationsPool:   s.cfg.AttestationsPool,
-		SlashingsPool:      s.cfg.SlashingsPool,
-		ChainInfoFetcher:   s.cfg.ChainInfoFetcher,
-		GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
-		BlockNotifier:      s.cfg.BlockNotifier,
-		OperationNotifier:  s.cfg.OperationNotifier,
-		Broadcaster:        s.cfg.Broadcaster,
-		BlockReceiver:      s.cfg.BlockReceiver,
-		StateGenService:    s.cfg.StateGen,
+		CanonicalHistoryWaiter: rbw,
+		BeaconDB:               s.cfg.BeaconDB,
+		AttestationsPool:       s.cfg.AttestationsPool,
+		SlashingsPool:          s.cfg.SlashingsPool,
+		ChainInfoFetcher:       s.cfg.ChainInfoFetcher,
+		BlockNotifier:          s.cfg.BlockNotifier,
+		OperationNotifier:      s.cfg.OperationNotifier,
+		Broadcaster:            s.cfg.Broadcaster,
+		BlockReceiver:          s.cfg.BlockReceiver,
+		StateGenService:        s.cfg.StateGen,
 		StateFetcher: &statefetcher.StateProvider{
-			BeaconDB:           s.cfg.BeaconDB,
-			ChainInfoFetcher:   s.cfg.ChainInfoFetcher,
-			GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
-			StateGenService:    s.cfg.StateGen,
-			ReplayerBuilder:    ch,
+			BeaconDB:               s.cfg.BeaconDB,
+			ChainInfoFetcher:       s.cfg.ChainInfoFetcher,
+			StateGenService:        s.cfg.StateGen,
+			CanonicalHistoryWaiter: rbw,
+			ClockProvider:          s.cfg.ClockProvider,
 		},
 		OptimisticModeFetcher:         s.cfg.OptimisticModeFetcher,
 		HeadFetcher:                   s.cfg.HeadFetcher,
@@ -316,6 +315,7 @@ func (s *Service) Start() {
 		V1Alpha1ValidatorServer:       validatorServer,
 		SyncChecker:                   s.cfg.SyncService,
 		ExecutionPayloadReconstructor: s.cfg.ExecutionPayloadReconstructor,
+		ClockProvider:         s.cfg.ClockProvider,
 	}
 	ethpbv1alpha1.RegisterNodeServer(s.grpcServer, nodeServer)
 	ethpbservice.RegisterBeaconNodeServer(s.grpcServer, nodeServerV1)
@@ -331,24 +331,24 @@ func (s *Service) Start() {
 	if s.cfg.EnableDebugRPCEndpoints {
 		log.Info("Enabled debug gRPC endpoints")
 		debugServer := &debugv1alpha1.Server{
-			GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
-			BeaconDB:           s.cfg.BeaconDB,
-			StateGen:           s.cfg.StateGen,
-			HeadFetcher:        s.cfg.HeadFetcher,
-			ForkFetcher:        s.cfg.ForkFetcher,
-			PeerManager:        s.cfg.PeerManager,
-			PeersFetcher:       s.cfg.PeersFetcher,
-			ReplayerBuilder:    ch,
+			BeaconDB:               s.cfg.BeaconDB,
+			StateGen:               s.cfg.StateGen,
+			HeadFetcher:            s.cfg.HeadFetcher,
+			ForkFetcher:            s.cfg.ForkFetcher,
+			PeerManager:            s.cfg.PeerManager,
+			PeersFetcher:           s.cfg.PeersFetcher,
+			CanonicalHistoryWaiter: rbw,
+			ClockProvider:          s.cfg.ClockProvider,
 		}
 		debugServerV1 := &debug.Server{
 			BeaconDB:    s.cfg.BeaconDB,
 			HeadFetcher: s.cfg.HeadFetcher,
 			StateFetcher: &statefetcher.StateProvider{
-				BeaconDB:           s.cfg.BeaconDB,
-				ChainInfoFetcher:   s.cfg.ChainInfoFetcher,
-				GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
-				StateGenService:    s.cfg.StateGen,
-				ReplayerBuilder:    ch,
+				BeaconDB:               s.cfg.BeaconDB,
+				ChainInfoFetcher:       s.cfg.ChainInfoFetcher,
+				StateGenService:        s.cfg.StateGen,
+				CanonicalHistoryWaiter: rbw,
+				ClockProvider:          s.cfg.ClockProvider,
 			},
 			OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
 		}
@@ -428,4 +428,28 @@ func (s *Service) logNewClientConnection(ctx context.Context) {
 			s.connectedRPCClients[clientInfo.Addr] = true
 		}
 	}
+}
+
+func NewCanonicalHistoryWaiter(c blockchain.ClockProvider, h stategen.HistoryAccessor, cc stategen.CanonicalChecker, opts ...stategen.CanonicalHistoryOption) stategen.CanonicalHistoryWaiter {
+	return &canonicalHistoryWaiter{
+		c:    c,
+		h:    h,
+		cc:   cc,
+		opts: opts,
+	}
+}
+
+type canonicalHistoryWaiter struct {
+	c blockchain.ClockProvider
+	h stategen.HistoryAccessor
+	cc stategen.CanonicalChecker
+	opts []stategen.CanonicalHistoryOption
+}
+
+func (w *canonicalHistoryWaiter) WaitForCanonicalHistory(ctx context.Context) (*stategen.CanonicalHistory, error) {
+	c, err := w.c.WaitForClock(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "timeout waiting for genesis timestamp")
+	}
+	return stategen.NewCanonicalHistory(w.h, w.cc, c, w.opts...), nil
 }

@@ -2,10 +2,10 @@ package sync
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 
+	"github.com/pkg/errors"
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
@@ -77,8 +77,12 @@ func (s *Service) sendPingRequest(ctx context.Context, id peer.ID) error {
 	ctx, cancel := context.WithTimeout(ctx, respTimeout)
 	defer cancel()
 
+	c, err := s.cfg.chain.WaitForClock(s.ctx)
+	if err != nil {
+		return errors.Wrap(err, "timeout while waiting for genesis timestamp")
+	}
 	metadataSeq := types.SSZUint64(s.cfg.p2p.MetadataSeq())
-	topic, err := p2p.TopicFromMessage(p2p.PingMessageName, slots.ToEpoch(s.cfg.chain.CurrentSlot()))
+	topic, err := p2p.TopicFromMessage(p2p.PingMessageName, slots.ToEpoch(c.CurrentSlot()))
 	if err != nil {
 		return err
 	}

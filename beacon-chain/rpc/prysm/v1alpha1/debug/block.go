@@ -41,12 +41,14 @@ func (ds *Server) GetBlock(
 
 // GetInclusionSlot of an attestation in block.
 func (ds *Server) GetInclusionSlot(ctx context.Context, req *pbrpc.InclusionSlotRequest) (*pbrpc.InclusionSlotResponse, error) {
-	ds.GenesisTimeFetcher.CurrentSlot()
-
+	c, err := ds.ClockProvider.WaitForClock(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "timeout while waiting for genesis timestamp, %s", err)
+	}
 	// Attestation has one epoch to get included in the chain. This blocks users from requesting too soon.
 	epochBack := types.Slot(0)
-	if ds.GenesisTimeFetcher.CurrentSlot() > params.BeaconConfig().SlotsPerEpoch {
-		epochBack = ds.GenesisTimeFetcher.CurrentSlot() - params.BeaconConfig().SlotsPerEpoch
+	if c.CurrentSlot() > params.BeaconConfig().SlotsPerEpoch {
+		epochBack = c.CurrentSlot() - params.BeaconConfig().SlotsPerEpoch
 	}
 	if epochBack < req.Slot {
 		return nil, fmt.Errorf("attestation has one epoch window, please request slot older than %d", epochBack)

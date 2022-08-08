@@ -53,7 +53,11 @@ func (e *blockIdParseError) Error() string {
 // GetWeakSubjectivity computes the starting epoch of the current weak subjectivity period, and then also
 // determines the best block root and state root to use for a Checkpoint Sync starting from that point.
 func (bs *Server) GetWeakSubjectivity(ctx context.Context, _ *empty.Empty) (*ethpbv1.WeakSubjectivityResponse, error) {
-	if err := rpchelpers.ValidateSync(ctx, bs.SyncChecker, bs.HeadFetcher, bs.GenesisTimeFetcher, bs.OptimisticModeFetcher); err != nil {
+	c, err := bs.ClockProvider.WaitForClock(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "timeout while waiting for genesis timestamp, %s", err)
+	}
+	if err := rpchelpers.ValidateSync(ctx, bs.SyncChecker, bs.HeadFetcher, c, bs.OptimisticModeFetcher); err != nil {
 		// This is already a grpc error, so we can't wrap it any further
 		return nil, err
 	}
@@ -70,7 +74,11 @@ func (bs *Server) GetWeakSubjectivity(ctx context.Context, _ *empty.Empty) (*eth
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not get weak subjectivity slot: %v", err)
 	}
-	cbr, err := bs.CanonicalHistory.BlockRootForSlot(ctx, wsSlot)
+	h, err := bs.CanonicalHistoryWaiter.WaitForCanonicalHistory(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	cbr, err := h.BlockRootForSlot(ctx, wsSlot)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, fmt.Sprintf("could not find highest block below slot %d", wsSlot))
 	}

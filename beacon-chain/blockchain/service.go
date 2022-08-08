@@ -30,7 +30,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
@@ -53,7 +52,6 @@ type Service struct {
 	cfg                     *config
 	ctx                     context.Context
 	cancel                  context.CancelFunc
-	genesisTime             time.Time
 	head                    *head
 	headLock                sync.RWMutex
 	originBlockRoot         [32]byte // genesis root, or weak subjectivity checkpoint root, depending on how the node is initialized
@@ -65,6 +63,8 @@ type Service struct {
 	justifiedBalances       *stateBalanceCache
 	wsVerifier              *WeakSubjectivityVerifier
 	processAttestationsLock sync.Mutex
+	clock Clock
+	clockReady chan struct{}
 }
 
 // config options for the service.
@@ -173,7 +173,7 @@ func (s *Service) Status() error {
 // StartFromSavedState initializes the blockchain using a previously saved finalized checkpoint.
 func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 	log.Info("Blockchain data already exists in DB, initializing...")
-	s.genesisTime = time.Unix(int64(saved.GenesisTime()), 0) // lint:ignore uintcast -- Genesis time will not exceed int64 in your lifetime.
+	s.SetGenesisTime(time.Unix(int64(saved.GenesisTime()), 0)) // lint:ignore uintcast -- Genesis time will not exceed int64 in your lifetime.
 	s.cfg.AttService.SetGenesisTime(saved.GenesisTime())
 
 	originRoot, err := s.originRootFromSavedState(s.ctx)
@@ -185,7 +185,7 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 	if err := s.initializeHeadFromDB(s.ctx); err != nil {
 		return errors.Wrap(err, "could not set up chain info")
 	}
-	spawnCountdownIfPreGenesis(s.ctx, s.genesisTime, s.cfg.BeaconDB)
+	spawnCountdownIfPreGenesis(s.ctx, s.genesisTime(), s.cfg.BeaconDB)
 
 	justified, err := s.cfg.BeaconDB.JustifiedCheckpoint(s.ctx)
 	if err != nil {
@@ -218,7 +218,7 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 		Root: bytesutil.ToBytes32(finalized.Root)}); err != nil {
 		return errors.Wrap(err, "could not update forkchoice's finalized checkpoint")
 	}
-	forkChoicer.SetGenesisTime(uint64(s.genesisTime.Unix()))
+	forkChoicer.SetGenesisTime(uint64(s.genesisTime().Unix()))
 
 	st, err := s.cfg.StateGen.StateByRoot(s.ctx, fRoot)
 	if err != nil {
@@ -247,7 +247,7 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 	s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.Initialized,
 		Data: &statefeed.InitializedData{
-			StartTime:             s.genesisTime,
+			StartTime:             s.genesisTime(),
 			GenesisValidatorsRoot: saved.GenesisValidatorsRoot(),
 		},
 	})
@@ -295,48 +295,11 @@ func (s *Service) initializeHeadFromDB(ctx context.Context) error {
 		return errors.New("no finalized epoch in the database")
 	}
 	finalizedRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(finalized.Root))
-	var finalizedState state.BeaconState
-
-	finalizedState, err = s.cfg.StateGen.Resume(ctx, s.cfg.FinalizedStateAtStartUp)
+	finalizedState, err := s.cfg.StateGen.Resume(ctx, s.cfg.FinalizedStateAtStartUp)
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized state from db")
 	}
 
-	if flags.Get().HeadSync {
-		headBlock, err := s.cfg.BeaconDB.HeadBlock(ctx)
-		if err != nil {
-			return errors.Wrap(err, "could not retrieve head block")
-		}
-		headEpoch := slots.ToEpoch(headBlock.Block().Slot())
-		var epochsSinceFinality types.Epoch
-		if headEpoch > finalized.Epoch {
-			epochsSinceFinality = headEpoch - finalized.Epoch
-		}
-		// Head sync when node is far enough beyond known finalized epoch,
-		// this becomes really useful during long period of non-finality.
-		if epochsSinceFinality >= headSyncMinEpochsAfterCheckpoint {
-			headRoot, err := headBlock.Block().HashTreeRoot()
-			if err != nil {
-				return errors.Wrap(err, "could not hash head block")
-			}
-			finalizedState, err := s.cfg.StateGen.Resume(ctx, s.cfg.FinalizedStateAtStartUp)
-			if err != nil {
-				return errors.Wrap(err, "could not get finalized state from db")
-			}
-			log.Infof("Regenerating state from the last checkpoint at slot %d to current head slot of %d."+
-				"This process may take a while, please wait.", finalizedState.Slot(), headBlock.Block().Slot())
-			headState, err := s.cfg.StateGen.StateByRoot(ctx, headRoot)
-			if err != nil {
-				return errors.Wrap(err, "could not retrieve head state")
-			}
-			s.setHead(headRoot, headBlock, headState)
-			return nil
-		} else {
-			log.Warnf("Finalized checkpoint at slot %d is too close to the current head slot, "+
-				"resetting head from the checkpoint ('--%s' flag is ignored).",
-				finalizedState.Slot(), flags.HeadSync.Name)
-		}
-	}
 	if finalizedState == nil || finalizedState.IsNil() {
 		return errors.New("finalized state can't be nil")
 	}
@@ -421,7 +384,7 @@ func (s *Service) initializeBeaconChain(
 	eth1data *ethpb.Eth1Data) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.Service.initializeBeaconChain")
 	defer span.End()
-	s.genesisTime = genesisTime
+	s.SetGenesisTime(genesisTime)
 	unixTime := uint64(genesisTime.Unix())
 
 	genesisState, err := transition.OptimizedGenesisBeaconState(unixTime, preGenesisState, eth1data)
@@ -476,7 +439,7 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState state.Beacon
 	if err := s.cfg.ForkChoiceStore.SetOptimisticToValid(ctx, genesisBlkRoot); err != nil {
 		return errors.Wrap(err, "Could not set optimistic status of genesis block to false")
 	}
-	s.cfg.ForkChoiceStore.SetGenesisTime(uint64(s.genesisTime.Unix()))
+	s.cfg.ForkChoiceStore.SetGenesisTime(uint64(s.genesisTime().Unix()))
 
 	s.setHead(genesisBlkRoot, genesisBlk, genesisState)
 	return nil

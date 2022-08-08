@@ -3,6 +3,7 @@ package beacon
 import (
 	"context"
 	"encoding/binary"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"math"
 	"testing"
 	"time"
@@ -35,12 +36,13 @@ func TestServer_ListBeaconCommittees_CurrentEpoch(t *testing.T) {
 	headState := setupActiveValidators(t, numValidators)
 
 	offset := int64(headState.Slot().Mul(params.BeaconConfig().SecondsPerSlot))
+	gent := prysmTime.Now().Add(time.Duration(-1*offset) * time.Second)
 	m := &mock.ChainService{
-		Genesis: prysmTime.Now().Add(time.Duration(-1*offset) * time.Second),
+		Clock: blockchain.NewClock(gent),
 	}
 	bs := &Server{
 		HeadFetcher:        m,
-		GenesisTimeFetcher: m,
+		ClockProvider: m,
 		StateGen:           stategen.New(db),
 	}
 	b := util.NewBeaconBlock()
@@ -106,13 +108,14 @@ func TestServer_ListBeaconCommittees_PreviousEpoch(t *testing.T) {
 	require.NoError(t, db.SaveState(ctx, headState, gRoot))
 
 	offset := int64(headState.Slot().Mul(params.BeaconConfig().SecondsPerSlot))
+	gent := prysmTime.Now().Add(time.Duration(-1*offset) * time.Second)
 	m := &mock.ChainService{
 		State:   headState,
-		Genesis: prysmTime.Now().Add(time.Duration(-1*offset) * time.Second),
+		Clock: blockchain.NewClock(gent),
 	}
 	bs := &Server{
 		HeadFetcher:        m,
-		GenesisTimeFetcher: m,
+		ClockProvider: m,
 		StateGen:           stategen.New(db),
 	}
 	addDefaultReplayerBuilder(bs, db)
@@ -162,12 +165,13 @@ func TestRetrieveCommitteesForRoot(t *testing.T) {
 	headState := setupActiveValidators(t, numValidators)
 
 	offset := int64(headState.Slot().Mul(params.BeaconConfig().SecondsPerSlot))
+	gent := prysmTime.Now().Add(time.Duration(-1*offset) * time.Second)
 	m := &mock.ChainService{
-		Genesis: prysmTime.Now().Add(time.Duration(-1*offset) * time.Second),
+		Clock: blockchain.NewClock(gent),
 	}
 	bs := &Server{
 		HeadFetcher:        m,
-		GenesisTimeFetcher: m,
+		ClockProvider: m,
 		StateGen:           stategen.New(db),
 	}
 	b := util.NewBeaconBlock()

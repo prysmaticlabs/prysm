@@ -89,7 +89,11 @@ func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (metadata
 	ctx, cancel := context.WithTimeout(ctx, respTimeout)
 	defer cancel()
 
-	topic, err := p2p.TopicFromMessage(p2p.MetadataMessageName, slots.ToEpoch(s.cfg.chain.CurrentSlot()))
+	c, err := s.cfg.chain.WaitForClock(s.ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "timeout while waiting for genesis timestamp")
+	}
+	topic, err := p2p.TopicFromMessage(p2p.MetadataMessageName, slots.ToEpoch(c.CurrentSlot()))
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +111,7 @@ func (s *Service) sendMetaDataRequest(ctx context.Context, id peer.ID) (metadata
 		return nil, errors.New(errMsg)
 	}
 	valRoot := s.cfg.chain.GenesisValidatorsRoot()
-	rpcCtx, err := forks.ForkDigestFromEpoch(slots.ToEpoch(s.cfg.chain.CurrentSlot()), valRoot[:])
+	rpcCtx, err := forks.ForkDigestFromEpoch(slots.ToEpoch(c.CurrentSlot()), valRoot[:])
 	if err != nil {
 		return nil, err
 	}

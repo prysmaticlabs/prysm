@@ -33,7 +33,6 @@ type Server struct {
 	FinalizationFetcher         blockchain.FinalizationFetcher
 	DepositFetcher              depositcache.DepositFetcher
 	BlockFetcher                powchain.POWBlockFetcher
-	GenesisTimeFetcher          blockchain.TimeFetcher
 	StateNotifier               statefeed.Notifier
 	BlockNotifier               blockfeed.Notifier
 	AttestationNotifier         operation.Notifier
@@ -44,8 +43,9 @@ type Server struct {
 	ReceivedAttestationsBuffer  chan *ethpb.Attestation
 	CollectedAttestationsBuffer chan []*ethpb.Attestation
 	StateGen                    stategen.StateManager
-	SyncChecker                 sync.Checker
-	ReplayerBuilder             stategen.ReplayerBuilder
-	HeadUpdater                 blockchain.HeadUpdater
+	SyncChecker            sync.Checker
+	CanonicalHistoryWaiter stategen.CanonicalHistoryWaiter
+	HeadUpdater            blockchain.HeadUpdater
 	OptimisticModeFetcher       blockchain.OptimisticModeFetcher
+	ClockProvider               blockchain.ClockProvider
 }

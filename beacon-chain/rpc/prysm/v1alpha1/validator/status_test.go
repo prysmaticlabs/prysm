@@ -2,6 +2,7 @@ package validator
 
 import (
 	"context"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"reflect"
 	"testing"
 	"time"
@@ -604,7 +605,8 @@ func TestActivationStatus_OK(t *testing.T) {
 
 func TestOptimisticStatus(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	server := &Server{OptimisticModeFetcher: &mockChain.ChainService{}, TimeFetcher: &mockChain.ChainService{}}
+	clockp := &mockChain.ChainService{Clock: blockchain.NewClock(time.Now())}
+	server := &Server{OptimisticModeFetcher: &mockChain.ChainService{}, ClockProvider: clockp}
 	err := server.optimisticStatus(context.Background())
 	require.NoError(t, err)
 
@@ -612,14 +614,14 @@ func TestOptimisticStatus(t *testing.T) {
 	cfg.BellatrixForkEpoch = 2
 	params.OverrideBeaconConfig(cfg)
 
-	server = &Server{OptimisticModeFetcher: &mockChain.ChainService{Optimistic: true}, TimeFetcher: &mockChain.ChainService{}}
+	server = &Server{OptimisticModeFetcher: &mockChain.ChainService{Optimistic: true}, ClockProvider: clockp}
 	err = server.optimisticStatus(context.Background())
 	s, ok := status.FromError(err)
 	require.Equal(t, true, ok)
 	require.DeepEqual(t, codes.Unavailable, s.Code())
 	require.ErrorContains(t, errOptimisticMode.Error(), err)
 
-	server = &Server{OptimisticModeFetcher: &mockChain.ChainService{Optimistic: false}, TimeFetcher: &mockChain.ChainService{}}
+	server = &Server{OptimisticModeFetcher: &mockChain.ChainService{Optimistic: false}, ClockProvider: clockp}
 	err = server.optimisticStatus(context.Background())
 	require.NoError(t, err)
 }

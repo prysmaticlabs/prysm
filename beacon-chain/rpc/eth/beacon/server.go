@@ -24,7 +24,6 @@ import (
 type Server struct {
 	BeaconDB                      db.ReadOnlyDatabase
 	ChainInfoFetcher              blockchain.ChainInfoFetcher
-	GenesisTimeFetcher            blockchain.TimeFetcher
 	BlockReceiver                 blockchain.BlockReceiver
 	BlockNotifier                 blockfeed.Notifier
 	OperationNotifier             operation.Notifier
@@ -37,8 +36,9 @@ type Server struct {
 	HeadFetcher                   blockchain.HeadFetcher
 	OptimisticModeFetcher         blockchain.OptimisticModeFetcher
 	V1Alpha1ValidatorServer       *v1alpha1validator.Server
-	SyncChecker                   sync.Checker
-	CanonicalHistory              *stategen.CanonicalHistory
-	HeadUpdater                   blockchain.HeadUpdater
+	SyncChecker            sync.Checker
+	CanonicalHistoryWaiter stategen.CanonicalHistoryWaiter
+	HeadUpdater            blockchain.HeadUpdater
 	ExecutionPayloadReconstructor powchain.ExecutionPayloadReconstructor
+	ClockProvider                 blockchain.ClockProvider
 }

@@ -3,6 +3,7 @@ package beacon
 import (
 	"bytes"
 	"context"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"strconv"
 	"strings"
 	"testing"
@@ -161,11 +162,9 @@ func TestListSyncCommittees(t *testing.T) {
 	require.NoError(t, err)
 	db := dbTest.SetupDB(t)
 
-	chainService := &mock.ChainService{}
+	chainService := &mock.ChainService{Clock: blockchain.NewClock(time.Now())}
 	s := &Server{
-		GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
-			Genesis: time.Now(),
-		},
+		ClockProvider: chainService,
 		StateFetcher: &testutil.MockFetcher{
 			BeaconState: st,
 		},
@@ -204,11 +203,9 @@ func TestListSyncCommittees(t *testing.T) {
 		util.SaveBlock(t, ctx, db, blk)
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
-		chainService := &mock.ChainService{Optimistic: true}
+		chainService := &mock.ChainService{Optimistic: true, Clock: blockchain.NewClock(time.Now())}
 		s := &Server{
-			GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
-				Genesis: time.Now(),
-			},
+			ClockProvider: chainService,
 			StateFetcher: &testutil.MockFetcher{
 				BeaconState: st,
 			},
@@ -262,11 +259,9 @@ func TestListSyncCommitteesFuture(t *testing.T) {
 	}))
 	db := dbTest.SetupDB(t)
 
-	chainService := &mock.ChainService{}
+	chainService := &mock.ChainService{Clock: blockchain.NewClock(time.Now())}
 	s := &Server{
-		GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
-			Genesis: time.Now(),
-		},
+		ClockProvider: chainService,
 		StateFetcher: &futureSyncMockFetcher{
 			BeaconState: st,
 		},

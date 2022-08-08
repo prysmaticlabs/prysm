@@ -18,7 +18,11 @@ func (ds *Server) GetBeaconState(
 ) (*pbrpc.SSZResponse, error) {
 	switch q := req.QueryFilter.(type) {
 	case *pbrpc.BeaconStateRequest_Slot:
-		currentSlot := ds.GenesisTimeFetcher.CurrentSlot()
+		c, err := ds.ClockProvider.WaitForClock(ctx)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "timeout waiting for genesis timestamp, %s", err)
+		}
+		currentSlot := c.CurrentSlot()
 		requestedSlot := q.Slot
 		if requestedSlot > currentSlot {
 			return nil, status.Errorf(
@@ -29,7 +33,11 @@ func (ds *Server) GetBeaconState(
 			)
 		}
 
-		st, err := ds.ReplayerBuilder.ReplayerForSlot(q.Slot).ReplayBlocks(ctx)
+		b, err := ds.CanonicalHistoryWaiter.WaitForCanonicalHistory(ctx)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, err.Error())
+		}
+		st, err := b.ReplayerForSlot(q.Slot).ReplayBlocks(ctx)
 		if err != nil {
 			return nil, status.Error(codes.Internal, fmt.Sprintf("error replaying blocks for state at slot %d: %v", q.Slot, err))
 		}

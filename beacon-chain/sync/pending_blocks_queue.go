@@ -4,11 +4,9 @@ import (
 	"context"
 	"encoding/hex"
 	"sort"
-	"sync"
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/async"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -33,25 +31,39 @@ const maxBlocksPerSlot = 3
 
 // processes pending blocks queue on every processPendingBlocksPeriod
 func (s *Service) processPendingBlocksQueue() {
-	// Prevents multiple queue processing goroutines (invoked by RunEvery) from contending for data.
-	locker := new(sync.Mutex)
-	async.RunEvery(s.ctx, processPendingBlocksPeriod, func() {
-		// Don't process the pending blocks if genesis time has not been set. The chain is not ready.
-		if !s.isGenesisTimeSet() {
+	go func() {
+		// WaitForClock blocks until blockchain is initialized with a genesis timestamp
+		_, err := s.cfg.chain.WaitForClock(s.ctx)
+		if err != nil {
+			log.WithError(err).Error("timeout while waiting for genesis time in processPendingBlocksQueue")
 			return
 		}
-		locker.Lock()
-		if err := s.processPendingBlocks(s.ctx); err != nil {
-			log.WithError(err).Debug("Could not process pending blocks")
+		ticker := time.NewTicker(processPendingBlocksPeriod)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				log.WithField("function", "processPendingBlocksQueue").Trace("running")
+				if err := s.processPendingBlocks(s.ctx); err != nil {
+					log.WithError(err).Debug("Could not process pending blocks")
+				}
+			case <-s.ctx.Done():
+				log.WithField("function", "processPendingBlocksQueue").Debug("context is closed, exiting")
+				return
+			}
 		}
-		locker.Unlock()
-	})
+	}()
 }
 
 // processes the block tree inside the queue
 func (s *Service) processPendingBlocks(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "processPendingBlocks")
 	defer span.End()
+
+	c, err := s.cfg.chain.WaitForClock(s.ctx)
+	if err != nil {
+		return errors.Wrap(err, "timeout while waiting for genesis timestamp")
+	}
 
 	pids := s.cfg.p2p.Peers().Connected()
 	if err := s.validatePendingSlots(); err != nil {
@@ -69,7 +81,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 	for _, slot := range ss {
 		// process the blocks during their respective slot.
 		// otherwise wait for the right slot to process the block.
-		if slot > s.cfg.chain.CurrentSlot() {
+		if slot > c.CurrentSlot() {
 			continue
 		}
 
@@ -410,12 +422,6 @@ func (s *Service) addPendingBlockToCache(b interfaces.SignedBeaconBlock) error {
 	k := slotToCacheKey(b.Block().Slot())
 	s.slotToPendingBlocks.Set(k, blks, pendingBlockExpTime)
 	return nil
-}
-
-// Returns true if the genesis time has been set in chain service.
-// Without the genesis time, the chain does not start.
-func (s *Service) isGenesisTimeSet() bool {
-	return s.cfg.chain.GenesisTime().Unix() != 0
 }
 
 // This converts input string to slot.

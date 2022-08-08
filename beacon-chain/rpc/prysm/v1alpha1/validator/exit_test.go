@@ -2,6 +2,7 @@ package validator
 
 import (
 	"context"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"testing"
 	"time"
 
@@ -39,11 +40,15 @@ func TestProposeExit_Notification(t *testing.T) {
 	// Set genesis time to be 100 epochs ago.
 	offset := int64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
 	genesisTime := time.Now().Add(time.Duration(-100*offset) * time.Second)
-	mockChainService := &mockChain.ChainService{State: beaconState, Root: genesisRoot[:], Genesis: genesisTime}
+	mockChainService := &mockChain.ChainService{
+		State: beaconState,
+		Root: genesisRoot[:],
+		Clock: blockchain.NewClock(genesisTime),
+	}
 	server := &Server{
 		HeadFetcher:       mockChainService,
 		SyncChecker:       &mockSync.Sync{IsSyncing: false},
-		TimeFetcher:       mockChainService,
+		ClockProvider:     mockChainService,
 		StateNotifier:     mockChainService.StateNotifier(),
 		OperationNotifier: mockChainService.OperationNotifier(),
 		ExitPool:          voluntaryexits.NewPool(),
@@ -106,11 +111,15 @@ func TestProposeExit_NoPanic(t *testing.T) {
 	// Set genesis time to be 100 epochs ago.
 	offset := int64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
 	genesisTime := time.Now().Add(time.Duration(-100*offset) * time.Second)
-	mockChainService := &mockChain.ChainService{State: beaconState, Root: genesisRoot[:], Genesis: genesisTime}
+	mockChainService := &mockChain.ChainService{
+		State: beaconState,
+		Root: genesisRoot[:],
+		Clock: blockchain.NewClock(genesisTime),
+	}
 	server := &Server{
 		HeadFetcher:       mockChainService,
 		SyncChecker:       &mockSync.Sync{IsSyncing: false},
-		TimeFetcher:       mockChainService,
+		ClockProvider:     mockChainService,
 		StateNotifier:     mockChainService.StateNotifier(),
 		OperationNotifier: mockChainService.OperationNotifier(),
 		ExitPool:          voluntaryexits.NewPool(),

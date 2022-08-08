@@ -59,7 +59,7 @@ func (s *Service) OnAttestation(ctx context.Context, a *ethpb.Attestation) error
 		return err
 	}
 
-	genesisTime := uint64(s.genesisTime.Unix())
+	genesisTime := uint64(s.genesisTime().Unix())
 
 	// Verify attestation target is from current epoch or previous epoch.
 	if err := verifyAttTargetEpoch(ctx, genesisTime, uint64(time.Now().Unix()), tgt); err != nil {

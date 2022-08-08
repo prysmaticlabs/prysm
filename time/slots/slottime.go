@@ -24,6 +24,20 @@ func StartTime(genesis uint64, slot types.Slot) time.Time {
 	return startTime
 }
 
+// Duration returns the number of slots between two time.Time values.
+// This method is permissive, allowing the first argument to greater, less than or equal to the second.
+// It's up to the caller to check bounds on the arguments and look for invalid intervals (like end before beginning).
+func Duration(a, b time.Time) types.Slot {
+	start := a
+	end := b
+	// slot is an unsigned type, so negative values are not possible
+	// we could return an error in this case
+	if b.Before(a) {
+		start, end = b, a
+	}
+	return types.Slot(uint64(end.Sub(start).Seconds()) / params.BeaconConfig().SecondsPerSlot)
+}
+
 // SinceGenesis returns the number of slots since
 // the provided genesis time.
 func SinceGenesis(genesis time.Time) types.Slot {

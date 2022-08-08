@@ -3,6 +3,7 @@ package node
 import (
 	"context"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"testing"
 	"time"
 
@@ -51,7 +52,7 @@ func TestNodeServer_GetGenesis(t *testing.T) {
 	genValRoot := bytesutil.ToBytes32([]byte("I am root"))
 	ns := &Server{
 		BeaconDB:           db,
-		GenesisTimeFetcher: &mock.ChainService{},
+		ClockProvider: &mock.ChainService{},
 		GenesisFetcher: &mock.ChainService{
 			State:          st,
 			ValidatorsRoot: genValRoot,
@@ -64,7 +65,7 @@ func TestNodeServer_GetGenesis(t *testing.T) {
 	assert.Equal(t, res.GenesisTime.Seconds, pUnix.Seconds)
 	assert.DeepEqual(t, genValRoot[:], res.GenesisValidatorsRoot)
 
-	ns.GenesisTimeFetcher = &mock.ChainService{Genesis: time.Unix(10, 0)}
+	ns.ClockProvider = &mock.ChainService{Clock: blockchain.NewClock(time.Unix(10, 0))}
 	res, err = ns.GetGenesis(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 	pUnix = timestamppb.New(time.Unix(10, 0))

@@ -2,6 +2,7 @@ package validator
 
 import (
 	"context"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"reflect"
 	"testing"
 	"time"
@@ -55,7 +56,7 @@ func TestSubmitAggregateAndProof_CantFindValidatorIndex(t *testing.T) {
 	server := &Server{
 		HeadFetcher: &mock.ChainService{State: s},
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
-		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
+		ClockProvider: &mock.ChainService{Clock: blockchain.NewClock(time.Now())},
 	}
 
 	priv, err := bls.RandKey()
@@ -83,7 +84,7 @@ func TestSubmitAggregateAndProof_IsAggregatorAndNoAtts(t *testing.T) {
 		HeadFetcher: &mock.ChainService{State: s},
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
 		AttPool:     attestations.NewPool(),
-		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
+		ClockProvider: &mock.ChainService{Clock: blockchain.NewClock(time.Now())},
 	}
 
 	priv, err := bls.RandKey()
@@ -117,7 +118,7 @@ func TestSubmitAggregateAndProof_UnaggregateOk(t *testing.T) {
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
 		AttPool:     attestations.NewPool(),
 		P2P:         &mockp2p.MockBroadcaster{},
-		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
+		ClockProvider: &mock.ChainService{Clock: blockchain.NewClock(time.Now())},
 	}
 
 	priv, err := bls.RandKey()
@@ -155,7 +156,7 @@ func TestSubmitAggregateAndProof_AggregateOk(t *testing.T) {
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
 		AttPool:     attestations.NewPool(),
 		P2P:         &mockp2p.MockBroadcaster{},
-		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
+		ClockProvider: &mock.ChainService{Clock: blockchain.NewClock(time.Now())},
 	}
 
 	priv, err := bls.RandKey()
@@ -195,7 +196,7 @@ func TestSubmitAggregateAndProof_AggregateNotOk(t *testing.T) {
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
 		AttPool:     attestations.NewPool(),
 		P2P:         &mockp2p.MockBroadcaster{},
-		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
+		ClockProvider: &mock.ChainService{Clock: blockchain.NewClock(time.Now())},
 	}
 
 	priv, err := bls.RandKey()
@@ -324,7 +325,7 @@ func TestSubmitAggregateAndProof_PreferOwnAttestation(t *testing.T) {
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
 		AttPool:     attestations.NewPool(),
 		P2P:         &mockp2p.MockBroadcaster{},
-		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
+		ClockProvider: &mock.ChainService{Clock: blockchain.NewClock(time.Now())},
 	}
 
 	priv, err := bls.RandKey()
@@ -375,7 +376,7 @@ func TestSubmitAggregateAndProof_SelectsMostBitsWhenOwnAttestationNotPresent(t *
 		SyncChecker: &mockSync.Sync{IsSyncing: false},
 		AttPool:     attestations.NewPool(),
 		P2P:         &mockp2p.MockBroadcaster{},
-		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
+		ClockProvider: &mock.ChainService{Clock: blockchain.NewClock(time.Now())},
 	}
 
 	priv, err := bls.RandKey()
@@ -428,8 +429,8 @@ func TestSubmitSignedAggregateSelectionProof_ZeroHashesSignatures(t *testing.T) 
 }
 
 func TestSubmitSignedAggregateSelectionProof_InvalidSlot(t *testing.T) {
-	c := &mock.ChainService{Genesis: time.Now()}
-	aggregatorServer := &Server{TimeFetcher: c}
+	c := &mock.ChainService{Clock: blockchain.NewClock(time.Now())}
+	aggregatorServer := &Server{ClockProvider: c}
 	req := &ethpb.SignedAggregateSubmitRequest{
 		SignedAggregateAndProof: &ethpb.SignedAggregateAttestationAndProof{
 			Signature: []byte{'a'},

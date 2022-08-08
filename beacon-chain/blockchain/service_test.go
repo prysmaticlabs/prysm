@@ -136,7 +136,7 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 
 	chainService, err := NewService(ctx, opts...)
 	require.NoError(t, err, "Unable to setup chain service")
-	chainService.genesisTime = time.Unix(1, 0) // non-zero time
+	chainService.SetGenesisTime(time.Unix(1, 0)) // non-zero time
 
 	return chainService
 }

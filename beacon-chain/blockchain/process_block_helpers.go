@@ -24,7 +24,11 @@ import (
 
 // CurrentSlot returns the current slot based on time.
 func (s *Service) CurrentSlot() types.Slot {
-	return slots.CurrentSlot(uint64(s.genesisTime.Unix()))
+	c, err := s.WaitForClock(context.TODO())
+	if err != nil {
+		panic(err)
+	}
+	return c.CurrentSlot()
 }
 
 // getBlockPreState returns the pre state of an incoming block. It uses the parent root of the block
@@ -48,7 +52,7 @@ func (s *Service) getBlockPreState(ctx context.Context, b interfaces.BeaconBlock
 	}
 
 	// Verify block slot time is not from the future.
-	if err := slots.VerifyTime(uint64(s.genesisTime.Unix()), b.Slot(), params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
+	if err := slots.VerifyTime(uint64(s.genesisTime().Unix()), b.Slot(), params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
 		return nil, err
 	}
 

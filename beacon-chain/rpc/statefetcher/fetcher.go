@@ -81,9 +81,9 @@ type Fetcher interface {
 type StateProvider struct {
 	BeaconDB           db.ReadOnlyDatabase
 	ChainInfoFetcher   blockchain.ChainInfoFetcher
-	GenesisTimeFetcher blockchain.TimeFetcher
-	StateGenService    stategen.StateManager
-	ReplayerBuilder    stategen.ReplayerBuilder
+	StateGenService        stategen.StateManager
+	CanonicalHistoryWaiter stategen.CanonicalHistoryWaiter
+	ClockProvider          blockchain.ClockProvider
 }
 
 // State returns the BeaconState for a given identifier. The identifier can be one of:
@@ -200,14 +200,22 @@ func (p *StateProvider) StateBySlot(ctx context.Context, target types.Slot) (sta
 	ctx, span := trace.StartSpan(ctx, "statefetcher.StateBySlot")
 	defer span.End()
 
-	if target > p.GenesisTimeFetcher.CurrentSlot() {
+	c, err := p.ClockProvider.WaitForClock(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "timeout while waiting for genesis timestamp")
+	}
+	if target > c.CurrentSlot() {
 		return nil, errors.New("requested slot is in the future")
 	}
 	if target > p.ChainInfoFetcher.HeadSlot() {
 		return nil, errors.New("requested slot number is higher than head slot number")
 	}
 
-	st, err := p.ReplayerBuilder.ReplayerForSlot(target).ReplayBlocks(ctx)
+	b, err := p.ReplayerBuilder(ctx)
+	if err != nil {
+		return nil, err
+	}
+	st, err := b.ReplayerForSlot(target).ReplayBlocks(ctx)
 	if err != nil {
 		msg := fmt.Sprintf("error while replaying history to slot=%d", target)
 		return nil, errors.Wrap(err, msg)
@@ -285,7 +293,11 @@ func (p *StateProvider) stateRootByHex(ctx context.Context, stateId []byte) ([]b
 }
 
 func (p *StateProvider) stateRootBySlot(ctx context.Context, slot types.Slot) ([]byte, error) {
-	currentSlot := p.GenesisTimeFetcher.CurrentSlot()
+	c, err := p.ClockProvider.WaitForClock(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "timeout waiting for genesis time")
+	}
+	currentSlot := c.CurrentSlot()
 	if slot > currentSlot {
 		return nil, errors.New("slot cannot be in the future")
 	}
@@ -303,4 +315,8 @@ func (p *StateProvider) stateRootBySlot(ctx context.Context, slot types.Slot) ([
 		return nil, errors.New("nil block")
 	}
 	return blks[0].Block().StateRoot(), nil
+}
+
+func (p *StateProvider) ReplayerBuilder(ctx context.Context) (stategen.ReplayerBuilder, error) {
+	return p.CanonicalHistoryWaiter.WaitForCanonicalHistory(ctx)
 }

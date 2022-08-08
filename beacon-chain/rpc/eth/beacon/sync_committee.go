@@ -27,7 +27,11 @@ func (bs *Server) ListSyncCommittees(ctx context.Context, req *ethpbv2.StateSync
 	ctx, span := trace.StartSpan(ctx, "beacon.ListSyncCommittees")
 	defer span.End()
 
-	currentSlot := bs.GenesisTimeFetcher.CurrentSlot()
+	c, err := bs.ClockProvider.WaitForClock(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "timeout waiting for genesis timestamp, %s", err)
+	}
+	currentSlot := c.CurrentSlot()
 	currentEpoch := slots.ToEpoch(currentSlot)
 	currentPeriodStartEpoch, err := slots.SyncCommitteePeriodStartEpoch(currentEpoch)
 	if err != nil {

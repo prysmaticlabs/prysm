@@ -33,7 +33,7 @@ func TestAttestationCheckPtState_FarFutureSlot(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 
 	chainService := setupBeaconChain(t, beaconDB)
-	chainService.genesisTime = time.Now()
+	chainService.SetGenesisTime(time.Now())
 
 	e := types.Epoch(slots.MaxSlotBuffer/uint64(params.BeaconConfig().SlotsPerEpoch) + 1)
 	_, err := chainService.AttestationTargetState(context.Background(), &ethpb.Checkpoint{Epoch: e})
@@ -102,7 +102,7 @@ func TestProcessAttestations_Ok(t *testing.T) {
 
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
-	service.genesisTime = prysmTime.Now().Add(-1 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
+	service.SetGenesisTime(prysmTime.Now().Add(-1 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second))
 	genesisState, pks := util.DeterministicGenesisState(t, 64)
 	require.NoError(t, genesisState.SetGenesisTime(uint64(prysmTime.Now().Unix())-params.BeaconConfig().SecondsPerSlot))
 	require.NoError(t, service.saveGenesisData(ctx, genesisState))
@@ -209,7 +209,7 @@ func TestService_ProcessAttestationsAndUpdateHead(t *testing.T) {
 
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
-	service.genesisTime = prysmTime.Now().Add(-2 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
+	service.SetGenesisTime(prysmTime.Now().Add(-2 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second))
 	genesisState, pks := util.DeterministicGenesisState(t, 64)
 	require.NoError(t, service.saveGenesisData(ctx, genesisState))
 	copied := genesisState.Copy()

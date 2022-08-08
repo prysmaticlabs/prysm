@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"time"
-
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -38,7 +36,7 @@ func (s *Service) AttestationTargetState(ctx context.Context, target *ethpb.Chec
 	if err != nil {
 		return nil, err
 	}
-	if err := slots.ValidateClock(ss, uint64(s.genesisTime.Unix())); err != nil {
+	if err := slots.ValidateClock(ss, uint64(s.genesisTime().Unix())); err != nil {
 		return nil, err
 	}
 	return s.getAttPreState(ctx, target)
@@ -102,19 +100,14 @@ func (s *Service) spawnProcessAttestationsRoutine(stateFeed *event.Feed) {
 			break
 		}
 
-		if s.genesisTime.IsZero() {
-			log.Warn("ProcessAttestations routine waiting for genesis time")
-			for s.genesisTime.IsZero() {
-				if err := s.ctx.Err(); err != nil {
-					log.WithError(err).Error("Giving up waiting for genesis time")
-					return
-				}
-				time.Sleep(1 * time.Second)
-			}
-			log.Warn("Genesis time received, now available to process attestations")
+		log.Warn("ProcessAttestations routine waiting for genesis time")
+		c, err := s.WaitForClock(s.ctx)
+		if err != nil {
+			log.WithError(err).Error("timeout waiting for genesis time in spawnProcessAttestationsRoutine")
 		}
+		log.Warn("Genesis time received, now available to process attestations")
 
-		st := slots.NewSlotTicker(s.genesisTime, params.BeaconConfig().SecondsPerSlot)
+		st := slots.NewSlotTicker(c.GenesisTime(), params.BeaconConfig().SecondsPerSlot)
 		for {
 			select {
 			case <-s.ctx.Done():
@@ -219,7 +212,7 @@ func (s *Service) processAttestations(ctx context.Context) {
 		// This delays consideration in the fork choice until their slot is in the past.
 		// https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/fork-choice.md#validate_on_attestation
 		nextSlot := a.Data.Slot + 1
-		if err := slots.VerifyTime(uint64(s.genesisTime.Unix()), nextSlot, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
+		if err := slots.VerifyTime(uint64(s.genesisTime().Unix()), nextSlot, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
 			continue
 		}
 
@@ -233,7 +226,7 @@ func (s *Service) processAttestations(ctx context.Context) {
 			log.WithError(err).Error("Could not delete fork choice attestation in pool")
 		}
 
-		if !helpers.VerifyCheckpointEpoch(a.Data.Target, s.genesisTime) {
+		if !helpers.VerifyCheckpointEpoch(a.Data.Target, s.genesisTime()) {
 			continue
 		}
 

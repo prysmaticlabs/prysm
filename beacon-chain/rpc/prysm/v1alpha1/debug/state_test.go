@@ -39,7 +39,7 @@ func TestServer_GetBeaconState(t *testing.T) {
 	require.NoError(t, db.SaveState(ctx, st, gRoot))
 	bs := &Server{
 		StateGen:           gen,
-		GenesisTimeFetcher: &mock.ChainService{},
+		ClockProvider: &mock.ChainService{},
 	}
 	addDefaultReplayerBuilder(bs, db)
 	_, err = bs.GetBeaconState(ctx, &pbrpc.BeaconStateRequest{})
@@ -95,13 +95,15 @@ func TestServer_GetBeaconState(t *testing.T) {
 }
 
 func TestServer_GetBeaconState_RequestFutureSlot(t *testing.T) {
-	ds := &Server{GenesisTimeFetcher: &mock.ChainService{}}
+	ds := &Server{ClockProvider: &mock.ChainService{}}
+	c, err := ds.ClockProvider.WaitForClock(context.Background())
+	require.NoError(t, err)
 	req := &pbrpc.BeaconStateRequest{
 		QueryFilter: &pbrpc.BeaconStateRequest_Slot{
-			Slot: ds.GenesisTimeFetcher.CurrentSlot() + 1,
+			Slot: c.CurrentSlot() + 1,
 		},
 	}
 	wanted := "Cannot retrieve information about a slot in the future"
-	_, err := ds.GetBeaconState(context.Background(), req)
+	_, err = ds.GetBeaconState(context.Background(), req)
 	assert.ErrorContains(t, wanted, err)
 }

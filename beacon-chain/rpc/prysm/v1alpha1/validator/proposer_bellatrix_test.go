@@ -2,6 +2,7 @@ package validator
 
 import (
 	"context"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"testing"
 	"time"
 
@@ -441,7 +442,7 @@ func TestServer_GetBellatrixBeaconBlock_HappyCase(t *testing.T) {
 
 	proposerServer := &Server{
 		HeadFetcher:       &blockchainTest.ChainService{State: beaconState, Root: parentRoot[:], Optimistic: false},
-		TimeFetcher:       &blockchainTest.ChainService{Genesis: time.Now()},
+		ClockProvider:     &blockchainTest.ChainService{Clock: blockchain.NewClock(time.Now())},
 		SyncChecker:       &mockSync.Sync{IsSyncing: false},
 		BlockReceiver:     &blockchainTest.ChainService{},
 		HeadUpdater:       &blockchainTest.ChainService{},
@@ -570,7 +571,7 @@ func TestServer_GetBellatrixBeaconBlock_BuilderCase(t *testing.T) {
 	proposerServer := &Server{
 		FinalizationFetcher: &blockchainTest.ChainService{FinalizedCheckPoint: &ethpb.Checkpoint{Root: wbr1[:]}},
 		HeadFetcher:         &blockchainTest.ChainService{State: beaconState, Root: parentRoot[:], Optimistic: false, Block: wb1},
-		TimeFetcher:         &blockchainTest.ChainService{Genesis: time.Unix(int64(beaconState.GenesisTime()), 0)},
+		ClockProvider:       &blockchainTest.ChainService{Clock: blockchain.NewClock(time.Unix(int64(beaconState.GenesisTime()), 0))},
 		SyncChecker:         &mockSync.Sync{IsSyncing: false},
 		BlockReceiver:       &blockchainTest.ChainService{},
 		HeadUpdater:         &blockchainTest.ChainService{},

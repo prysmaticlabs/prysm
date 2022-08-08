@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	opfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
@@ -27,8 +28,8 @@ import (
 func TestGetSyncMessageBlockRoot_OK(t *testing.T) {
 	r := []byte{'a'}
 	server := &Server{
-		HeadFetcher: &mock.ChainService{Root: r},
-		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
+		HeadFetcher:   &mock.ChainService{Root: r},
+		ClockProvider: &mock.ChainService{Clock: blockchain.NewClock(time.Now())},
 	}
 	res, err := server.GetSyncMessageBlockRoot(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
@@ -43,7 +44,7 @@ func TestGetSyncMessageBlockRoot_Optimistic(t *testing.T) {
 
 	server := &Server{
 		HeadFetcher:           &mock.ChainService{},
-		TimeFetcher:           &mock.ChainService{Genesis: time.Now()},
+		ClockProvider:         &mock.ChainService{Clock: blockchain.NewClock(time.Now())},
 		OptimisticModeFetcher: &mock.ChainService{Optimistic: true},
 	}
 	_, err := server.GetSyncMessageBlockRoot(context.Background(), &emptypb.Empty{})
@@ -54,7 +55,7 @@ func TestGetSyncMessageBlockRoot_Optimistic(t *testing.T) {
 
 	server = &Server{
 		HeadFetcher:           &mock.ChainService{},
-		TimeFetcher:           &mock.ChainService{Genesis: time.Now()},
+		ClockProvider:         &mock.ChainService{Clock: blockchain.NewClock(time.Now())},
 		OptimisticModeFetcher: &mock.ChainService{Optimistic: false},
 	}
 	_, err = server.GetSyncMessageBlockRoot(context.Background(), &emptypb.Empty{})
@@ -103,14 +104,16 @@ func TestGetSyncSubcommitteeIndex_Ok(t *testing.T) {
 
 func TestGetSyncCommitteeContribution_FiltersDuplicates(t *testing.T) {
 	st, _ := util.DeterministicGenesisStateAltair(t, 10)
+	chain := &mock.ChainService{
+		State:                st,
+		SyncCommitteeIndices: []types.CommitteeIndex{10},
+		Clock: blockchain.NewClock(time.Now()),
+	}
 	server := &Server{
 		SyncCommitteePool: synccommittee.NewStore(),
 		P2P:               &mockp2p.MockBroadcaster{},
-		HeadFetcher: &mock.ChainService{
-			State:                st,
-			SyncCommitteeIndices: []types.CommitteeIndex{10},
-		},
-		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
+		HeadFetcher: chain,
+		ClockProvider: chain,
 	}
 	secKey, err := bls.RandKey()
 	require.NoError(t, err)

@@ -11,6 +11,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/peers"
@@ -299,7 +300,12 @@ func (s *Service) subscribeStaticWithSubnets(topic string, validator wrappedVal,
 	for i := uint64(0); i < params.BeaconNetworkConfig().AttestationSubnetCount; i++ {
 		s.subscribeWithBase(s.addDigestAndIndexToTopic(topic, digest, i), validator, handle)
 	}
-	genesis := s.cfg.chain.GenesisTime()
+	clock, err := s.cfg.chain.WaitForClock(s.ctx)
+	if err != nil {
+		log.WithError(err).Error("timeout while waiting for genesis time in subscribeStaticWithSubnets()")
+		return
+	}
+	genesis := clock.GenesisTime()
 	ticker := slots.NewSlotTicker(genesis, params.BeaconConfig().SecondsPerSlot)
 
 	go func() {
@@ -369,7 +375,14 @@ func (s *Service) subscribeDynamicWithSubnets(
 		panic(fmt.Sprintf("%s is not mapped to any message in GossipTopicMappings", topicFormat))
 	}
 	subscriptions := make(map[uint64]*pubsub.Subscription, params.BeaconConfig().MaxCommitteesPerSlot)
-	genesis := s.cfg.chain.GenesisTime()
+	clock, err := s.cfg.chain.WaitForClock(s.ctx)
+	if err != nil {
+		log.WithError(err).WithFields(logrus.Fields{
+			"topic": topicFormat,
+		}).Warnf("timeout in subscribeDynamicWithSubnets() while waiting for genesis time")
+		return
+	}
+	genesis := clock.GenesisTime()
 	ticker := slots.NewSlotTicker(genesis, params.BeaconConfig().SecondsPerSlot)
 
 	go func() {
@@ -499,7 +512,14 @@ func (s *Service) subscribeStaticWithSyncSubnets(topic string, validator wrapped
 	for i := uint64(0); i < params.BeaconConfig().SyncCommitteeSubnetCount; i++ {
 		s.subscribeWithBase(s.addDigestAndIndexToTopic(topic, digest, i), validator, handle)
 	}
-	genesis := s.cfg.chain.GenesisTime()
+	clock, err := s.cfg.chain.WaitForClock(s.ctx)
+	if err != nil {
+		log.WithError(err).WithFields(logrus.Fields{
+			"topic": topic,
+		}).Warnf("timeout in subscribeStaticWithSyncSubnets() while waiting for genesis time")
+		return
+	}
+	genesis := clock.GenesisTime()
 	ticker := slots.NewSlotTicker(genesis, params.BeaconConfig().SecondsPerSlot)
 
 	go func() {
@@ -568,7 +588,14 @@ func (s *Service) subscribeDynamicWithSyncSubnets(
 		panic(fmt.Sprintf("%s is not mapped to any message in GossipTopicMappings", topicFormat))
 	}
 	subscriptions := make(map[uint64]*pubsub.Subscription, params.BeaconConfig().SyncCommitteeSubnetCount)
-	genesis := s.cfg.chain.GenesisTime()
+	clock, err := s.cfg.chain.WaitForClock(s.ctx)
+	if err != nil {
+		log.WithError(err).WithFields(logrus.Fields{
+			"topic": topicFormat,
+		}).Warnf("timeout in subscribeDynamicWithSyncSubnets while waiting for genesis time")
+		return
+	}
+	genesis := clock.GenesisTime()
 	ticker := slots.NewSlotTicker(genesis, params.BeaconConfig().SecondsPerSlot)
 
 	go func() {
@@ -670,7 +697,11 @@ func (s *Service) filterNeededPeers(pids []peer.ID) []peer.ID {
 		log.WithError(err).Error("Could not compute fork digest")
 		return pids
 	}
-	currSlot := s.cfg.chain.CurrentSlot()
+	c, err := s.cfg.chain.WaitForClock(s.ctx)
+	if err != nil {
+		log.WithError(err).Error("timeout waiting for genesis timestamp")
+	}
+	currSlot := c.CurrentSlot()
 	wantedSubs := s.retrievePersistentSubs(currSlot)
 	wantedSubs = slice.SetUint64(append(wantedSubs, s.attesterSubnetIndices(currSlot)...))
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(&ethpb.Attestation{})]
@@ -725,7 +756,11 @@ func (_ *Service) addDigestAndIndexToTopic(topic string, digest [4]byte, idx uin
 
 func (s *Service) currentForkDigest() ([4]byte, error) {
 	genRoot := s.cfg.chain.GenesisValidatorsRoot()
-	return forks.CreateForkDigest(s.cfg.chain.GenesisTime(), genRoot[:])
+	clock, err := s.cfg.chain.WaitForClock(s.ctx)
+	if err != nil {
+		return [4]byte{}, errors.Wrap(err, "timeout while waiting for blockchain clock/genesis")
+	}
+	return forks.CreateForkDigest(clock.GenesisTime(), genRoot[:])
 }
 
 // Checks if the provided digest matches up with the current supposed digest.

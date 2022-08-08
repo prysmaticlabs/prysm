@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"sort"
 	"strconv"
 	"testing"
@@ -51,19 +52,21 @@ func TestServer_GetValidatorActiveSetChanges_CannotRequestFutureEpoch(t *testing
 	require.NoError(t, err)
 	require.NoError(t, st.SetSlot(0))
 	bs := &Server{
-		GenesisTimeFetcher: &mock.ChainService{},
+		ClockProvider: &mock.ChainService{},
 		HeadFetcher: &mock.ChainService{
 			State: st,
 		},
 		BeaconDB: beaconDB,
 	}
 
+	c, err := bs.ClockProvider.WaitForClock(ctx)
+	require.NoError(t, err)
 	wanted := errNoEpochInfoError
 	_, err = bs.GetValidatorActiveSetChanges(
 		ctx,
 		&ethpb.GetValidatorActiveSetChangesRequest{
 			QueryFilter: &ethpb.GetValidatorActiveSetChangesRequest_Epoch{
-				Epoch: slots.ToEpoch(bs.GenesisTimeFetcher.CurrentSlot()) + 1,
+				Epoch: slots.ToEpoch(c.CurrentSlot()) + 1,
 			},
 		},
 	)
@@ -82,15 +85,17 @@ func TestServer_ListValidatorBalances_CannotRequestFutureEpoch(t *testing.T) {
 		HeadFetcher: &mock.ChainService{
 			State: st,
 		},
-		GenesisTimeFetcher: &mock.ChainService{},
+		ClockProvider: &mock.ChainService{},
 	}
 
 	wanted := errNoEpochInfoError
+	c, err := bs.ClockProvider.WaitForClock(ctx)
+	require.NoError(t, err)
 	_, err = bs.ListValidatorBalances(
 		ctx,
 		&ethpb.ListValidatorBalancesRequest{
 			QueryFilter: &ethpb.ListValidatorBalancesRequest_Epoch{
-				Epoch: slots.ToEpoch(bs.GenesisTimeFetcher.CurrentSlot()) + 1,
+				Epoch: slots.ToEpoch(c.CurrentSlot()) + 1,
 			},
 		},
 	)
@@ -105,7 +110,7 @@ func TestServer_ListValidatorBalances_NoResults(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, st.SetSlot(0))
 	bs := &Server{
-		GenesisTimeFetcher: &mock.ChainService{},
+		ClockProvider: &mock.ChainService{},
 		StateGen:           stategen.New(beaconDB),
 	}
 
@@ -172,7 +177,7 @@ func TestServer_ListValidatorBalances_DefaultResponse_NoArchive(t *testing.T) {
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, gRoot))
 	require.NoError(t, beaconDB.SaveState(ctx, st, gRoot))
 	bs := &Server{
-		GenesisTimeFetcher: &mock.ChainService{},
+		ClockProvider: &mock.ChainService{},
 		StateGen:           stategen.New(beaconDB),
 		HeadFetcher: &mock.ChainService{
 			State: st,
@@ -201,7 +206,7 @@ func TestServer_ListValidatorBalances_PaginationOutOfRange(t *testing.T) {
 	require.NoError(t, beaconDB.SaveState(ctx, headState, gRoot))
 
 	bs := &Server{
-		GenesisTimeFetcher: &mock.ChainService{},
+		ClockProvider: &mock.ChainService{},
 		StateGen:           stategen.New(beaconDB),
 		HeadFetcher: &mock.ChainService{
 			State: headState,
@@ -250,7 +255,7 @@ func TestServer_ListValidatorBalances_Pagination_Default(t *testing.T) {
 	require.NoError(t, beaconDB.SaveState(ctx, headState, gRoot))
 
 	bs := &Server{
-		GenesisTimeFetcher: &mock.ChainService{},
+		ClockProvider: &mock.ChainService{},
 		StateGen:           stategen.New(beaconDB),
 		HeadFetcher: &mock.ChainService{
 			State: headState,
@@ -334,7 +339,7 @@ func TestServer_ListValidatorBalances_Pagination_CustomPageSizes(t *testing.T) {
 	require.NoError(t, beaconDB.SaveState(ctx, headState, gRoot))
 
 	bs := &Server{
-		GenesisTimeFetcher: &mock.ChainService{},
+		ClockProvider: &mock.ChainService{},
 		StateGen:           stategen.New(beaconDB),
 		HeadFetcher: &mock.ChainService{
 			State: headState,
@@ -402,7 +407,7 @@ func TestServer_ListValidatorBalances_OutOfRange(t *testing.T) {
 	require.NoError(t, beaconDB.SaveState(ctx, headState, gRoot))
 
 	bs := &Server{
-		GenesisTimeFetcher: &mock.ChainService{},
+		ClockProvider: &mock.ChainService{},
 		StateGen:           stategen.New(beaconDB),
 		HeadFetcher: &mock.ChainService{
 			State: headState,
@@ -425,10 +430,7 @@ func TestServer_ListValidators_CannotRequestFutureEpoch(t *testing.T) {
 	require.NoError(t, st.SetSlot(0))
 	bs := &Server{
 		BeaconDB: beaconDB,
-		GenesisTimeFetcher: &mock.ChainService{
-			// We are in epoch 0.
-			Genesis: time.Now(),
-		},
+		ClockProvider: &mock.ChainService{},
 		HeadFetcher: &mock.ChainService{
 			State: st,
 		},
@@ -449,12 +451,10 @@ func TestServer_ListValidators_CannotRequestFutureEpoch(t *testing.T) {
 func TestServer_ListValidators_reqStateIsNil(t *testing.T) {
 	beaconDB := dbTest.SetupDB(t)
 	secondsPerEpoch := params.BeaconConfig().SecondsPerSlot * uint64(params.BeaconConfig().SlotsPerEpoch)
+	gent := time.Now().Add(time.Duration(-1*int64(secondsPerEpoch)) * time.Second)
 	bs := &Server{
 		BeaconDB: beaconDB,
-		GenesisTimeFetcher: &mock.ChainService{
-			// We are in epoch 1.
-			Genesis: time.Now().Add(time.Duration(-1*int64(secondsPerEpoch)) * time.Second),
-		},
+		ClockProvider: &mock.ChainService{Clock: blockchain.NewClock(gent)},
 		HeadFetcher: &mock.ChainService{
 			State: nil,
 		},
@@ -492,10 +492,7 @@ func TestServer_ListValidators_NoResults(t *testing.T) {
 	require.NoError(t, beaconDB.SaveState(ctx, st, gRoot))
 	bs := &Server{
 		BeaconDB: beaconDB,
-		GenesisTimeFetcher: &mock.ChainService{
-			// We are in epoch 0.
-			Genesis: time.Now(),
-		},
+		ClockProvider: &mock.ChainService{},
 		HeadFetcher: &mock.ChainService{
 			State: st,
 		},
@@ -562,10 +559,7 @@ func TestServer_ListValidators_OnlyActiveValidators(t *testing.T) {
 		HeadFetcher: &mock.ChainService{
 			State: st,
 		},
-		GenesisTimeFetcher: &mock.ChainService{
-			// We are in epoch 0.
-			Genesis: time.Now(),
-		},
+		ClockProvider: &mock.ChainService{},
 		StateGen: stategen.New(beaconDB),
 	}
 
@@ -630,10 +624,7 @@ func TestServer_ListValidators_InactiveInTheMiddle(t *testing.T) {
 		HeadFetcher: &mock.ChainService{
 			State: st,
 		},
-		GenesisTimeFetcher: &mock.ChainService{
-			// We are in epoch 0.
-			Genesis: time.Now(),
-		},
+		ClockProvider: &mock.ChainService{},
 		StateGen: stategen.New(beaconDB),
 	}
 
@@ -665,7 +656,7 @@ func TestServer_ListValidatorBalances_UnknownValidatorInResponse(t *testing.T) {
 	require.NoError(t, beaconDB.SaveState(ctx, headState, gRoot))
 
 	bs := &Server{
-		GenesisTimeFetcher: &mock.ChainService{},
+		ClockProvider: &mock.ChainService{},
 		StateGen:           stategen.New(beaconDB),
 		HeadFetcher: &mock.ChainService{
 			State: headState,
@@ -715,10 +706,7 @@ func TestServer_ListValidators_NoPagination(t *testing.T) {
 		HeadFetcher: &mock.ChainService{
 			State: headState,
 		},
-		GenesisTimeFetcher: &mock.ChainService{
-			// We are in epoch 0.
-			Genesis: time.Now(),
-		},
+		ClockProvider: &mock.ChainService{},
 		FinalizationFetcher: &mock.ChainService{
 			FinalizedCheckPoint: &ethpb.Checkpoint{
 				Epoch: 0,
@@ -748,10 +736,7 @@ func TestServer_ListValidators_StategenNotUsed(t *testing.T) {
 		HeadFetcher: &mock.ChainService{
 			State: headState,
 		},
-		GenesisTimeFetcher: &mock.ChainService{
-			// We are in epoch 0.
-			Genesis: time.Now(),
-		},
+		ClockProvider: &mock.ChainService{},
 	}
 
 	received, err := bs.ListValidators(context.Background(), &ethpb.ListValidatorsRequest{})
@@ -786,10 +771,7 @@ func TestServer_ListValidators_IndicesPubKeys(t *testing.T) {
 				Epoch: 0,
 			},
 		},
-		GenesisTimeFetcher: &mock.ChainService{
-			// We are in epoch 0.
-			Genesis: time.Now(),
-		},
+		ClockProvider: &mock.ChainService{},
 		StateGen: stategen.New(beaconDB),
 	}
 
@@ -822,10 +804,7 @@ func TestServer_ListValidators_Pagination(t *testing.T) {
 				Epoch: 0,
 			},
 		},
-		GenesisTimeFetcher: &mock.ChainService{
-			// We are in epoch 0.
-			Genesis: time.Now(),
-		},
+		ClockProvider: &mock.ChainService{},
 		StateGen: stategen.New(beaconDB),
 	}
 
@@ -959,10 +938,7 @@ func TestServer_ListValidators_PaginationOutOfRange(t *testing.T) {
 				Epoch: 0,
 			},
 		},
-		GenesisTimeFetcher: &mock.ChainService{
-			// We are in epoch 0.
-			Genesis: time.Now(),
-		},
+		ClockProvider: &mock.ChainService{},
 		StateGen: stategen.New(beaconDB),
 	}
 
@@ -1003,10 +979,7 @@ func TestServer_ListValidators_DefaultPageSize(t *testing.T) {
 				Epoch: 0,
 			},
 		},
-		GenesisTimeFetcher: &mock.ChainService{
-			// We are in epoch 0.
-			Genesis: time.Now(),
-		},
+		ClockProvider: &mock.ChainService{},
 		StateGen: stategen.New(beaconDB),
 	}
 
@@ -1045,13 +1018,12 @@ func TestServer_ListValidators_FromOldEpoch(t *testing.T) {
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, r))
 
 	secondsPerEpoch := params.BeaconConfig().SecondsPerSlot * uint64(params.BeaconConfig().SlotsPerEpoch)
+	gent := time.Now().Add(time.Duration(-1*int64(uint64(epochs)*secondsPerEpoch)) * time.Second)
 	bs := &Server{
 		HeadFetcher: &mock.ChainService{
 			State: st,
 		},
-		GenesisTimeFetcher: &mock.ChainService{
-			Genesis: time.Now().Add(time.Duration(-1*int64(uint64(epochs)*secondsPerEpoch)) * time.Second),
-		},
+		ClockProvider: &mock.ChainService{Clock: blockchain.NewClock(gent)},
 	}
 	addDefaultReplayerBuilder(bs, beaconDB)
 
@@ -1124,13 +1096,12 @@ func TestServer_ListValidators_ProcessHeadStateSlots(t *testing.T) {
 	require.NoError(t, beaconDB.SaveState(ctx, st, gRoot))
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, gRoot))
 	secondsPerEpoch := params.BeaconConfig().SecondsPerSlot * uint64(params.BeaconConfig().SlotsPerEpoch)
+	gent := time.Now().Add(time.Duration(-1*int64(secondsPerEpoch)) * time.Second)
 	bs := &Server{
 		HeadFetcher: &mock.ChainService{
 			State: st,
 		},
-		GenesisTimeFetcher: &mock.ChainService{
-			Genesis: time.Now().Add(time.Duration(-1*int64(secondsPerEpoch)) * time.Second),
-		},
+		ClockProvider: &mock.ChainService{Clock: blockchain.NewClock(gent)},
 		StateGen: stategen.New(beaconDB),
 	}
 
@@ -1283,7 +1254,7 @@ func TestServer_GetValidatorActiveSetChanges(t *testing.T) {
 		FinalizationFetcher: &mock.ChainService{
 			FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 0, Root: make([]byte, fieldparams.RootLength)},
 		},
-		GenesisTimeFetcher: &mock.ChainService{},
+		ClockProvider: &mock.ChainService{},
 	}
 	addDefaultReplayerBuilder(bs, beaconDB)
 	res, err := bs.GetValidatorActiveSetChanges(ctx, &ethpb.GetValidatorActiveSetChangesRequest{
@@ -1487,16 +1458,18 @@ func TestServer_GetValidatorParticipation_CannotRequestFutureEpoch(t *testing.T)
 		HeadFetcher: &mock.ChainService{
 			State: headState,
 		},
-		GenesisTimeFetcher: &mock.ChainService{},
+		ClockProvider: &mock.ChainService{},
 		StateGen:           stategen.New(beaconDB),
 	}
 
 	wanted := "Cannot retrieve information about an epoch"
+	c, err := bs.ClockProvider.WaitForClock(ctx)
+	require.NoError(t, err)
 	_, err = bs.GetValidatorParticipation(
 		ctx,
 		&ethpb.GetValidatorParticipationRequest{
 			QueryFilter: &ethpb.GetValidatorParticipationRequest_Epoch{
-				Epoch: slots.ToEpoch(bs.GenesisTimeFetcher.CurrentSlot()) + 1,
+				Epoch: slots.ToEpoch(c.CurrentSlot()) + 1,
 			},
 		},
 	)
@@ -1550,13 +1523,12 @@ func TestServer_GetValidatorParticipation_CurrentAndPrevEpoch(t *testing.T) {
 
 	m := &mock.ChainService{State: headState}
 	offset := int64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
+	gent := prysmTime.Now().Add(time.Duration(-1*offset) * time.Second)
 	bs := &Server{
 		BeaconDB:    beaconDB,
 		HeadFetcher: m,
 		StateGen:    stategen.New(beaconDB),
-		GenesisTimeFetcher: &mock.ChainService{
-			Genesis: prysmTime.Now().Add(time.Duration(-1*offset) * time.Second),
-		},
+		ClockProvider: &mock.ChainService{Clock: blockchain.NewClock(gent)},
 		CanonicalFetcher: &mock.ChainService{
 			CanonicalRoots: map[[32]byte]bool{
 				bRoot: true,
@@ -1629,13 +1601,12 @@ func TestServer_GetValidatorParticipation_OrphanedUntilGenesis(t *testing.T) {
 
 	m := &mock.ChainService{State: headState}
 	offset := int64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
+	gent := prysmTime.Now().Add(time.Duration(-1*offset) * time.Second)
 	bs := &Server{
 		BeaconDB:    beaconDB,
 		HeadFetcher: m,
 		StateGen:    stategen.New(beaconDB),
-		GenesisTimeFetcher: &mock.ChainService{
-			Genesis: prysmTime.Now().Add(time.Duration(-1*offset) * time.Second),
-		},
+		ClockProvider: &mock.ChainService{Clock: blockchain.NewClock(gent),
 		CanonicalFetcher: &mock.ChainService{
 			CanonicalRoots: map[[32]byte]bool{
 				bRoot: true,
@@ -1726,13 +1697,12 @@ func runGetValidatorParticipationCurrentAndPrevEpoch(t *testing.T, genState stat
 
 	m := &mock.ChainService{State: genState}
 	offset := int64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
+	gent := prysmTime.Now().Add(time.Duration(-1*offset) * time.Second)
 	bs := &Server{
 		BeaconDB:    beaconDB,
 		HeadFetcher: m,
 		StateGen:    stategen.New(beaconDB),
-		GenesisTimeFetcher: &mock.ChainService{
-			Genesis: prysmTime.Now().Add(time.Duration(-1*offset) * time.Second),
-		},
+		ClockProvider: &mock.ChainService{Clock: blockchain.NewClock(gent)},
 		FinalizationFetcher: &mock.ChainService{FinalizedCheckPoint: &ethpb.Checkpoint{Epoch: 100}},
 	}
 	addDefaultReplayerBuilder(bs, beaconDB)
@@ -1837,11 +1807,12 @@ func TestGetValidatorPerformance_OK(t *testing.T) {
 	require.NoError(t, headState.SetValidators(validators))
 	require.NoError(t, headState.SetBalances([]uint64{100, 101, 102}))
 	offset := int64(headState.Slot().Mul(params.BeaconConfig().SecondsPerSlot))
+	gent := time.Now().Add(time.Duration(-1*offset) * time.Second)
 	bs := &Server{
 		HeadFetcher: &mock.ChainService{
 			State: headState,
 		},
-		GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
+		ClockProvider: &mock.ChainService{Clock: blockchain.NewClock(gent)},
 		SyncChecker:        &mockSync.Sync{IsSyncing: false},
 	}
 	farFuture := params.BeaconConfig().FarFutureSlot
@@ -1901,13 +1872,14 @@ func TestGetValidatorPerformance_Indices(t *testing.T) {
 	}
 	require.NoError(t, headState.SetValidators(validators))
 	offset := int64(headState.Slot().Mul(params.BeaconConfig().SecondsPerSlot))
+	gent := time.Now().Add(time.Duration(-1*offset) * time.Second)
 	bs := &Server{
 		HeadFetcher: &mock.ChainService{
 			// 10 epochs into the future.
 			State: headState,
 		},
 		SyncChecker:        &mockSync.Sync{IsSyncing: false},
-		GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
+		ClockProvider: &mock.ChainService{Clock: blockchain.NewClock(gent)},
 	}
 	c := headState.Copy()
 	vp, bp, err := precompute.New(ctx, c)
@@ -1974,13 +1946,14 @@ func TestGetValidatorPerformance_IndicesPubkeys(t *testing.T) {
 	require.NoError(t, headState.SetValidators(validators))
 
 	offset := int64(headState.Slot().Mul(params.BeaconConfig().SecondsPerSlot))
+	gent := time.Now().Add(time.Duration(-1*offset) * time.Second)
 	bs := &Server{
 		HeadFetcher: &mock.ChainService{
 			// 10 epochs into the future.
 			State: headState,
 		},
 		SyncChecker:        &mockSync.Sync{IsSyncing: false},
-		GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
+		ClockProvider: &mock.ChainService{Clock: blockchain.NewClock(gent)},
 	}
 	c := headState.Copy()
 	vp, bp, err := precompute.New(ctx, c)
@@ -2053,11 +2026,12 @@ func TestGetValidatorPerformanceAltair_OK(t *testing.T) {
 	require.NoError(t, headState.SetInactivityScores([]uint64{0, 0, 0}))
 	require.NoError(t, headState.SetBalances([]uint64{100, 101, 102}))
 	offset := int64(headState.Slot().Mul(params.BeaconConfig().SecondsPerSlot))
+	gent := time.Now().Add(time.Duration(-1*offset) * time.Second)
 	bs := &Server{
 		HeadFetcher: &mock.ChainService{
 			State: headState,
 		},
-		GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
+		ClockProvider: &mock.ChainService{Clock: blockchain.NewClock(gent)},
 		SyncChecker:        &mockSync.Sync{IsSyncing: false},
 	}
 	want := &ethpb.ValidatorPerformanceResponse{
@@ -2123,11 +2097,13 @@ func TestGetValidatorPerformanceBellatrix_OK(t *testing.T) {
 	require.NoError(t, headState.SetInactivityScores([]uint64{0, 0, 0}))
 	require.NoError(t, headState.SetBalances([]uint64{100, 101, 102}))
 	offset := int64(headState.Slot().Mul(params.BeaconConfig().SecondsPerSlot))
+	gent := time.Now().Add(time.Duration(-1*offset) * time.Second)
+	clock := blockchain.NewClock(gent)
 	bs := &Server{
 		HeadFetcher: &mock.ChainService{
 			State: headState,
 		},
-		GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
+		ClockProvider: &mock.ChainService{Clock: clock},
 		SyncChecker:        &mockSync.Sync{IsSyncing: false},
 	}
 	want := &ethpb.ValidatorPerformanceResponse{
@@ -2194,12 +2170,14 @@ func setupValidators(t testing.TB, _ db.Database, count int) ([]*ethpb.Validator
 }
 
 func TestServer_GetIndividualVotes_RequestFutureSlot(t *testing.T) {
-	ds := &Server{GenesisTimeFetcher: &mock.ChainService{}}
+	ds := &Server{ClockProvider: &mock.ChainService{}}
+	c, err := ds.ClockProvider.WaitForClock(context.Background())
+	require.NoError(t, err)
 	req := &ethpb.IndividualVotesRequest{
-		Epoch: slots.ToEpoch(ds.GenesisTimeFetcher.CurrentSlot()) + 1,
+		Epoch: slots.ToEpoch(c.CurrentSlot()) + 1,
 	}
 	wanted := errNoEpochInfoError
-	_, err := ds.GetIndividualVotes(context.Background(), req)
+	_, err = ds.GetIndividualVotes(context.Background(), req)
 	assert.ErrorContains(t, wanted, err)
 }
 
@@ -2229,7 +2207,7 @@ func TestServer_GetIndividualVotes_ValidatorsDontExist(t *testing.T) {
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, gRoot))
 	bs := &Server{
 		StateGen:           gen,
-		GenesisTimeFetcher: &mock.ChainService{},
+		ClockProvider: &mock.ChainService{},
 	}
 	addDefaultReplayerBuilder(bs, beaconDB)
 
@@ -2325,7 +2303,7 @@ func TestServer_GetIndividualVotes_Working(t *testing.T) {
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, gRoot))
 	bs := &Server{
 		StateGen:           gen,
-		GenesisTimeFetcher: &mock.ChainService{},
+		ClockProvider: &mock.ChainService{},
 	}
 	addDefaultReplayerBuilder(bs, beaconDB)
 
@@ -2390,7 +2368,7 @@ func TestServer_GetIndividualVotes_WorkingAltair(t *testing.T) {
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, gRoot))
 	bs := &Server{
 		StateGen:           gen,
-		GenesisTimeFetcher: &mock.ChainService{},
+		ClockProvider: &mock.ChainService{},
 	}
 	addDefaultReplayerBuilder(bs, beaconDB)
 
@@ -2476,7 +2454,7 @@ func TestServer_GetIndividualVotes_AltairEndOfEpoch(t *testing.T) {
 	require.NoError(t, beaconDB.SaveState(ctx, beaconState, gRoot))
 	bs := &Server{
 		StateGen:           gen,
-		GenesisTimeFetcher: &mock.ChainService{},
+		ClockProvider: &mock.ChainService{},
 	}
 	addDefaultReplayerBuilder(bs, beaconDB)
 
@@ -2564,7 +2542,7 @@ func TestServer_GetIndividualVotes_BellatrixEndOfEpoch(t *testing.T) {
 	require.NoError(t, beaconDB.SaveState(ctx, beaconState, gRoot))
 	bs := &Server{
 		StateGen:           gen,
-		GenesisTimeFetcher: &mock.ChainService{},
+		ClockProvider: &mock.ChainService{},
 	}
 	addDefaultReplayerBuilder(bs, beaconDB)
 

@@ -47,7 +47,6 @@ type Server struct {
 	HeadUpdater            blockchain.HeadUpdater
 	ForkFetcher            blockchain.ForkFetcher
 	FinalizationFetcher    blockchain.FinalizationFetcher
-	TimeFetcher            blockchain.TimeFetcher
 	BlockFetcher           powchain.POWBlockFetcher
 	DepositFetcher         depositcache.DepositFetcher
 	ChainStartFetcher      powchain.ChainStartFetcher
@@ -67,10 +66,11 @@ type Server struct {
 	PendingDepositsFetcher depositcache.PendingDepositsFetcher
 	OperationNotifier      opfeed.Notifier
 	StateGen               stategen.StateManager
-	ReplayerBuilder        stategen.ReplayerBuilder
+	CanonicalHistoryWaiter stategen.CanonicalHistoryWaiter
 	BeaconDB               db.HeadAccessDatabase
 	ExecutionEngineCaller  powchain.EngineCaller
 	BlockBuilder           builder.BlockBuilder
+	ClockProvider          blockchain.ClockProvider
 }
 
 // WaitForActivation checks if a validator public key exists in the active validator registry of the current

@@ -2,6 +2,8 @@ package stategen
 
 import (
 	"context"
+	"github.com/pkg/errors"
+	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"math"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -13,12 +15,38 @@ import (
 	"go.opencensus.io/trace"
 )
 
+
+var errForkChoiceFinalizedNil = errors.New("nil finalized checkpoint returned from forkchoice store")
+
+// number of epochs of non-finality before the hot state store will begin saving snapshots for faster recovery.
+var hotStateSaveThreshold = types.Epoch(100)
+
 // SaveState saves the state in the cache and/or DB.
 func (s *State) SaveState(ctx context.Context, blockRoot [32]byte, st state.BeaconState) error {
 	ctx, span := trace.StartSpan(ctx, "stateGen.SaveState")
 	defer span.End()
 
-	return s.saveStateByRoot(ctx, blockRoot, st)
+	if err := s.saveStateByRoot(ctx, blockRoot, st); err != nil {
+		return err
+	}
+	return s.toggleHotStateSaving(ctx)
+}
+
+func (s *State) toggleHotStateSaving(ctx context.Context) error {
+	finalized := s.fc.FinalizedCheckpoint()
+	if finalized == nil {
+		return errForkChoiceFinalizedNil
+	}
+
+	currentEpoch := slots.ToEpoch(s.cs.CurrentSlot())
+	if currentEpoch > finalized.Epoch {
+		if currentEpoch - finalized.Epoch > hotStateSaveThreshold {
+			s.EnableSaveHotStateToDB(ctx)
+			return nil
+		}
+	}
+
+	return s.DisableSaveHotStateToDB(ctx)
 }
 
 // ForceCheckpoint initiates a cold state save of the given block root's state. This method does not update the

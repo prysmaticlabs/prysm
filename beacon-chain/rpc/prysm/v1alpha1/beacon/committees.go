@@ -23,7 +23,11 @@ func (bs *Server) ListBeaconCommittees(
 	ctx context.Context,
 	req *ethpb.ListCommitteesRequest,
 ) (*ethpb.BeaconCommittees, error) {
-	currentSlot := bs.GenesisTimeFetcher.CurrentSlot()
+	c, err := bs.ClockProvider.WaitForClock(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "timeout waiting for genesis timestamp, %s", err)
+	}
+	currentSlot := c.CurrentSlot()
 	var requestedSlot types.Slot
 	switch q := req.QueryFilter.(type) {
 	case *ethpb.ListCommitteesRequest_Epoch:
@@ -74,7 +78,11 @@ func (bs *Server) retrieveCommitteesForEpoch(
 	if err != nil {
 		return nil, nil, err
 	}
-	requestedState, err := bs.ReplayerBuilder.ReplayerForSlot(startSlot).ReplayBlocks(ctx)
+	b, err := bs.CanonicalHistoryWaiter.WaitForCanonicalHistory(ctx)
+	if err != nil {
+		return nil, nil, status.Error(codes.Internal, err.Error())
+	}
+	requestedState, err := b.ReplayerForSlot(startSlot).ReplayBlocks(ctx)
 	if err != nil {
 		return nil, nil, status.Errorf(codes.Internal, "error replaying blocks for state at slot %d: %v", startSlot, err)
 	}

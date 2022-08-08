@@ -3,11 +3,6 @@ package beacon
 import (
 	"context"
 	"fmt"
-	"sort"
-	"strconv"
-	"testing"
-	"time"
-
 	"github.com/golang/mock/gomock"
 	"github.com/prysmaticlabs/go-bitfield"
 	chainMock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
@@ -36,6 +31,9 @@ import (
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/emptypb"
+	"sort"
+	"strconv"
+	"testing"
 )
 
 func TestServer_ListAttestations_NoResults(t *testing.T) {
@@ -567,7 +565,7 @@ func TestServer_ListIndexedAttestations_GenesisEpoch(t *testing.T) {
 
 	bs := &Server{
 		BeaconDB:           db,
-		GenesisTimeFetcher: &chainMock.ChainService{State: state},
+		ClockProvider:      &chainMock.ChainService{State: state},
 		HeadFetcher:        &chainMock.ChainService{State: state},
 		StateGen:           stategen.New(db),
 	}
@@ -666,9 +664,7 @@ func TestServer_ListIndexedAttestations_OldEpoch(t *testing.T) {
 
 	bs := &Server{
 		BeaconDB: db,
-		GenesisTimeFetcher: &chainMock.ChainService{
-			Genesis: time.Now(),
-		},
+		ClockProvider: &chainMock.ChainService{},
 		StateGen: stategen.New(db),
 	}
 	err = db.SaveStateSummary(ctx, &ethpb.StateSummary{
@@ -831,9 +827,7 @@ func TestServer_StreamIndexedAttestations_ContextCanceled(t *testing.T) {
 	server := &Server{
 		Ctx:                 ctx,
 		AttestationNotifier: chainService.OperationNotifier(),
-		GenesisTimeFetcher: &chainMock.ChainService{
-			Genesis: time.Now(),
-		},
+		ClockProvider: &chainMock.ChainService{},
 	}
 
 	exitRoutine := make(chan bool)
@@ -935,9 +929,7 @@ func TestServer_StreamIndexedAttestations_OK(t *testing.T) {
 		HeadFetcher: &chainMock.ChainService{
 			State: headState,
 		},
-		GenesisTimeFetcher: &chainMock.ChainService{
-			Genesis: time.Now(),
-		},
+		ClockProvider: &chainMock.ChainService{},
 		AttestationNotifier:         chainService.OperationNotifier(),
 		CollectedAttestationsBuffer: make(chan []*ethpb.Attestation, 1),
 		StateGen:                    stategen.New(db),

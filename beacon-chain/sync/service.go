@@ -15,7 +15,6 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	gcache "github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/async"
 	"github.com/prysmaticlabs/prysm/async/abool"
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
@@ -94,11 +93,12 @@ type blockchainService interface {
 	blockchain.FinalizationFetcher
 	blockchain.ForkFetcher
 	blockchain.AttestationReceiver
-	blockchain.TimeFetcher
+	blockchain.CurrentSlotter
 	blockchain.GenesisFetcher
 	blockchain.CanonicalFetcher
 	blockchain.OptimisticModeFetcher
 	blockchain.SlashingReceiver
+	blockchain.ClockProvider
 }
 
 // Service is responsible for handling all run time p2p related operations as the
@@ -137,6 +137,7 @@ type Service struct {
 	syncContributionBitsOverlapLock  sync.RWMutex
 	syncContributionBitsOverlapCache *lru.Cache
 	signatureChan                    chan *signatureVerifier
+	clock blockchain.Clock
 }
 
 // NewService initializes new regular sync service.
@@ -183,8 +184,7 @@ func (s *Service) Start() {
 		s.resyncIfBehind()
 	}
 
-	// Update sync metrics.
-	async.RunEvery(s.ctx, syncMetricsInterval, s.updateMetrics)
+	s.spawnUpdateMetrics()
 }
 
 // Stop the regular sync service.
@@ -210,7 +210,11 @@ func (s *Service) Stop() error {
 func (s *Service) Status() error {
 	// If our head slot is on a previous epoch and our peers are reporting their head block are
 	// in the most recent epoch, then we might be out of sync.
-	if headEpoch := slots.ToEpoch(s.cfg.chain.HeadSlot()); headEpoch+1 < slots.ToEpoch(s.cfg.chain.CurrentSlot()) &&
+	c, err := s.cfg.chain.WaitForClock(s.ctx)
+	if err != nil {
+		return errors.Wrap(err, "timeout waiting for genesis timestamp")
+	}
+	if headEpoch := slots.ToEpoch(s.cfg.chain.HeadSlot()); headEpoch+1 < slots.ToEpoch(c.CurrentSlot()) &&
 		headEpoch+1 < s.cfg.p2p.Peers().HighestEpoch() {
 		return errors.New("out of sync")
 	}
@@ -237,6 +241,11 @@ func (s *Service) registerHandlers() {
 	stateChannel := make(chan *feed.Event, 1)
 	stateSub := s.cfg.stateNotifier.StateFeed().Subscribe(stateChannel)
 	defer stateSub.Unsubscribe()
+	clock, err := s.cfg.chain.WaitForClock(s.ctx)
+	if err != nil {
+		log.WithError(err).Error("timeout while waiting for genesis time in registerHandlers")
+		return
+	}
 	for {
 		select {
 		case e := <-stateChannel:
@@ -272,7 +281,7 @@ func (s *Service) registerHandlers() {
 					log.WithError(err).Error("Could not retrieve current fork digest")
 					return
 				}
-				currentEpoch := slots.ToEpoch(slots.CurrentSlot(uint64(s.cfg.chain.GenesisTime().Unix())))
+				currentEpoch := slots.ToEpoch(slots.CurrentSlot(uint64(clock.GenesisTime().Unix())))
 				s.registerSubscribers(currentEpoch, digest)
 				go s.forkWatcher()
 				return

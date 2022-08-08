@@ -41,15 +41,16 @@ func (vs *Server) StreamDuties(req *ethpb.DutiesRequest, stream ethpb.BeaconNode
 		return status.Error(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
 
+	c, err := vs.ClockProvider.WaitForClock(stream.Context())
+	if err != nil {
+		return status.Errorf(codes.Internal, "timeout waiting for genesis timestamp, %s", err)
+	}
 	// If we are post-genesis time, then set the current epoch to
 	// the number epochs since the genesis time, otherwise 0 by default.
-	genesisTime := vs.TimeFetcher.GenesisTime()
-	if genesisTime.IsZero() {
-		return status.Error(codes.Unavailable, "genesis time is not set")
-	}
+	genesisTime := c.GenesisTime()
 	var currentEpoch types.Epoch
-	if genesisTime.Before(prysmTime.Now()) {
-		currentEpoch = slots.EpochsSinceGenesis(vs.TimeFetcher.GenesisTime())
+	if genesisTime.Before(c.Now()) {
+		currentEpoch = slots.EpochsSinceGenesis(genesisTime)
 	}
 	req.Epoch = currentEpoch
 	res, err := vs.duties(stream.Context(), req)
@@ -66,7 +67,7 @@ func (vs *Server) StreamDuties(req *ethpb.DutiesRequest, stream ethpb.BeaconNode
 	defer stateSub.Unsubscribe()
 
 	secondsPerEpoch := params.BeaconConfig().SecondsPerSlot * uint64(params.BeaconConfig().SlotsPerEpoch)
-	epochTicker := slots.NewSlotTicker(vs.TimeFetcher.GenesisTime(), secondsPerEpoch)
+	epochTicker := slots.NewSlotTicker(genesisTime, secondsPerEpoch)
 	for {
 		select {
 		// Ticks every epoch to submit assignments to connected validator clients.
@@ -82,7 +83,7 @@ func (vs *Server) StreamDuties(req *ethpb.DutiesRequest, stream ethpb.BeaconNode
 		case ev := <-stateChannel:
 			// If a reorg occurred, we recompute duties for the connected validator clients
 			// and send another response over the server stream right away.
-			currentEpoch = slots.EpochsSinceGenesis(vs.TimeFetcher.GenesisTime())
+			currentEpoch = slots.EpochsSinceGenesis(genesisTime)
 			if ev.Type == statefeed.Reorg {
 				data, ok := ev.Data.(*ethpbv1.EventChainReorg)
 				if !ok {
@@ -108,7 +109,11 @@ func (vs *Server) StreamDuties(req *ethpb.DutiesRequest, stream ethpb.BeaconNode
 // Compute the validator duties from the head state's corresponding epoch
 // for validators public key / indices requested.
 func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.DutiesResponse, error) {
-	currentEpoch := slots.ToEpoch(vs.TimeFetcher.CurrentSlot())
+	c, err := vs.ClockProvider.WaitForClock(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "timeout while waiting for genesis timestamp, %s", err)
+	}
+	currentEpoch := slots.ToEpoch(c.CurrentSlot())
 	if req.Epoch > currentEpoch+1 {
 		return nil, status.Errorf(codes.Unavailable, "Request epoch %d can not be greater than next epoch %d", req.Epoch, currentEpoch+1)
 	}
