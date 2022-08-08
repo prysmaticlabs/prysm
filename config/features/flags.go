@@ -106,9 +106,9 @@ var (
 		Name:  "disable-native-state",
 		Usage: "Disables representing the beacon state as a pure Go struct.",
 	}
-	enablePullTips = &cli.BoolFlag{
-		Name:  "experimental-disable-boundary-checks",
-		Usage: "Experimental disable of boundary checks, useful for debugging, may cause bad votes.",
+	disablePullTips = &cli.BoolFlag{
+		Name:  "experimental-enable-boundary-checks",
+		Usage: "Experimental enable of boundary checks, useful for debugging, may cause bad votes.",
 	}
 	enableVecHTR = &cli.BoolFlag{
 		Name:  "enable-vectorized-htr",
@@ -170,7 +170,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableSlasherFlag,
 	enableHistoricalSpaceRepresentation,
 	disableNativeState,
-	enablePullTips,
+	disablePullTips,
 	enableVecHTR,
 	enableForkChoiceDoublyLinkedTree,
 	disableGossipBatchAggregation,

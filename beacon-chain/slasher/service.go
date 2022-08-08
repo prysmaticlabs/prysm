@@ -96,7 +96,7 @@ func (s *Service) run() {
 
 	log.Info("Completed chain sync, starting slashing detection")
 
-	// Get the latest eopch written for each validator from disk on startup.
+	// Get the latest epoch written for each validator from disk on startup.
 	headState, err := s.serviceCfg.HeadStateFetcher.HeadState(s.ctx)
 	if err != nil {
 		log.WithError(err).Error("Failed to fetch head state")

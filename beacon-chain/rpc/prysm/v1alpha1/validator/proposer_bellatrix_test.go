@@ -393,8 +393,7 @@ func TestServer_getAndBuildHeaderBlock(t *testing.T) {
 		Value:  bytesutil.PadTo([]byte{1, 2, 3}, 32),
 	}
 	d := params.BeaconConfig().DomainApplicationBuilder
-	g := vs.GenesisFetcher.GenesisValidatorsRoot()
-	domain, err := signing.ComputeDomain(d, vs.ForkFetcher.CurrentFork().CurrentVersion, g[:])
+	domain, err := signing.ComputeDomain(d, nil, nil)
 	require.NoError(t, err)
 	sr, err := signing.ComputeSigningRoot(bid, domain)
 	require.NoError(t, err)
@@ -633,8 +632,7 @@ func TestServer_GetBellatrixBeaconBlock_BuilderCase(t *testing.T) {
 		Value:  bytesutil.PadTo([]byte{1, 2, 3}, 32),
 	}
 	d := params.BeaconConfig().DomainApplicationBuilder
-	g := proposerServer.GenesisFetcher.GenesisValidatorsRoot()
-	domain, err := signing.ComputeDomain(d, proposerServer.ForkFetcher.CurrentFork().CurrentVersion, g[:])
+	domain, err := signing.ComputeDomain(d, nil, nil)
 	require.NoError(t, err)
 	sr, err := signing.ComputeSigningRoot(bid, domain)
 	require.NoError(t, err)
@@ -687,13 +685,7 @@ func TestServer_validatorRegistered(t *testing.T) {
 }
 
 func TestServer_validateBuilderSignature(t *testing.T) {
-	m := &blockchainTest.ChainService{
-		Fork: &ethpb.Fork{},
-	}
-	s := &Server{
-		ForkFetcher:    m,
-		GenesisFetcher: m,
-	}
+	s := &Server{}
 	sk, err := bls.RandKey()
 	require.NoError(t, err)
 	bid := &ethpb.BuilderBid{
@@ -713,8 +705,7 @@ func TestServer_validateBuilderSignature(t *testing.T) {
 		Value:  bytesutil.PadTo([]byte{1, 2, 3}, 32),
 	}
 	d := params.BeaconConfig().DomainApplicationBuilder
-	g := s.GenesisFetcher.GenesisValidatorsRoot()
-	domain, err := signing.ComputeDomain(d, s.ForkFetcher.CurrentFork().CurrentVersion, g[:])
+	domain, err := signing.ComputeDomain(d, nil, nil)
 	require.NoError(t, err)
 	sr, err := signing.ComputeSigningRoot(bid, domain)
 	require.NoError(t, err)
