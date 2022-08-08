@@ -349,6 +349,7 @@ var (
 	EnableBuilderFlag = &cli.BoolFlag{
 		Name:  "enable-builder",
 		Usage: "Enables Builder validator registration APIs for the validator client to update settings such as fee recipient and gas limit. Note* this flag is not required if using proposer settings config file",
+		Value: false,
 	}
 
 	// BuilderGasLimitFlag defines the gas limit for the builder to use for constructing a payload.
