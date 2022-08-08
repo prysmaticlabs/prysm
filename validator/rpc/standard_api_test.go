@@ -831,3 +831,71 @@ func TestServer_DeleteFeeRecipientByPubkey(t *testing.T) {
 		})
 	}
 }
+
+func TestServer_GetGasLimit(t *testing.T) {
+	ctx := context.Background()
+	byteval, err := hexutil.Decode("0xaf2e7ba294e03438ea819bd4033c6c1bf6b04320ee2075b77273c08d02f8a61bcc303c2c06bd3713cb442072ae591493")
+	byteval2, err2 := hexutil.Decode("0x1234567878903438ea819bd4033c6c1bf6b04320ee2075b77273c08d02f8a61bcc303c2c06bd3713cb442072ae591493")
+	require.NoError(t, err)
+	require.NoError(t, err2)
+
+	tests := []struct {
+		name   string
+		args   *validatorserviceconfig.ProposerSettings
+		pubkey [48]byte
+		want   uint64
+	}{
+		{
+			name: "ProposerSetting for specific pubkey exists",
+			args: &validatorserviceconfig.ProposerSettings{
+				ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{
+					bytesutil.ToBytes48(byteval): {
+						BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: 123456789},
+					},
+				},
+				DefaultConfig: &validatorserviceconfig.ProposerOption{
+					BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: 987654321},
+				},
+			},
+			pubkey: bytesutil.ToBytes48(byteval),
+			want:   123456789,
+		},
+		{
+			name: "ProposerSetting for specific pubkey does not exist",
+			args: &validatorserviceconfig.ProposerSettings{
+				ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{
+					bytesutil.ToBytes48(byteval): {
+						BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: 123456789},
+					},
+				},
+				DefaultConfig: &validatorserviceconfig.ProposerOption{
+					BuilderConfig: &validatorserviceconfig.BuilderConfig{GasLimit: 987654321},
+				},
+			},
+			// no settings for the following validator, so the gaslimit returned is the default value.
+			pubkey: bytesutil.ToBytes48(byteval2),
+			want:   987654321,
+		},
+		{
+			name:   "No proposerSetting at all",
+			args:   nil,
+			pubkey: bytesutil.ToBytes48(byteval),
+			want:   params.BeaconConfig().DefaultBuilderGasLimit,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			vs, err := client.NewValidatorService(ctx, &client.Config{
+				Validator:        &mock.MockValidator{},
+				ProposerSettings: tt.args,
+			})
+			require.NoError(t, err)
+			s := &Server{
+				validatorService: vs,
+			}
+			got, err := s.GetGasLimit(ctx, &ethpbservice.PubkeyRequest{Pubkey: tt.pubkey[:]})
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got.Data.GasLimit)
+		})
+	}
+}
