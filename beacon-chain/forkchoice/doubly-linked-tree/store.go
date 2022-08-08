@@ -8,7 +8,9 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -31,6 +33,11 @@ func (s *Store) applyProposerBoostScore(newBalances []uint64) error {
 			log.WithError(errInvalidProposerBoostRoot).Errorf(fmt.Sprintf("invalid prev root %#x", s.previousProposerBoostRoot))
 			return nil
 		}
+		log.WithFields(logrus.Fields{
+			"root":               fmt.Sprintf("%#x", bytesutil.Trunc(s.previousProposerBoostRoot[:])),
+			"previousBalance":    previousNode.balance,
+			"proposerBoostScore": s.previousProposerBoostScore,
+		}).Info("removing proposer Boost Score")
 		previousNode.balance -= s.previousProposerBoostScore
 	}
 
@@ -45,6 +52,11 @@ func (s *Store) applyProposerBoostScore(newBalances []uint64) error {
 		if err != nil {
 			return err
 		}
+		log.WithFields(logrus.Fields{
+			"root":               fmt.Sprintf("%#x", bytesutil.Trunc(s.proposerBoostRoot[:])),
+			"previousBalance":    currentNode.balance,
+			"proposerBoostScore": proposerScore,
+		}).Info("applying proposer Boost Score")
 		currentNode.balance += proposerScore
 	}
 	s.previousProposerBoostRoot = s.proposerBoostRoot

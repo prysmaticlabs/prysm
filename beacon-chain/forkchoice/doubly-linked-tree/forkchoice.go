@@ -329,6 +329,12 @@ func (f *ForkChoice) updateBalances(newBalances []uint64) error {
 				if nextNode == nil {
 					return errors.Wrap(ErrNilNode, "could not update balances")
 				}
+				log.WithFields(logrus.Fields{
+					"root":        fmt.Sprintf("%#x", bytesutil.Trunc(vote.nextRoot[:])),
+					"NodeBalance": nextNode.balance,
+					"oldBalance":  oldBalance,
+					"newBalance":  newBalance,
+				}).Info("applying vote to new root")
 				nextNode.balance += newBalance
 			}
 
@@ -352,6 +358,12 @@ func (f *ForkChoice) updateBalances(newBalances []uint64) error {
 					f.store.proposerBoostLock.RUnlock()
 					currentNode.balance = 0
 				} else {
+					log.WithFields(logrus.Fields{
+						"root":        fmt.Sprintf("%#x", bytesutil.Trunc(vote.currentRoot[:])),
+						"NodeBalance": currentNode.balance,
+						"oldBalance":  oldBalance,
+						"newBalance":  newBalance,
+					}).Info("removing vote from old root")
 					currentNode.balance -= oldBalance
 				}
 			}
