@@ -251,7 +251,7 @@ func TestBuildSignedBeaconBlockFromExecutionPayload(t *testing.T) {
 			LogsBloom:     make([]byte, 256),
 			PrevRandao:    make([]byte, fieldparams.RootLength),
 			BaseFeePerGas: make([]byte, fieldparams.RootLength),
-			BlockHash:     blockHash[:],
+			BlockHash:     blockHash,
 			Transactions:  make([][]byte, 0),
 		}
 		wrapped, err := WrappedExecutionPayload(payload)
