@@ -154,7 +154,7 @@ func (b *SignedBeaconBlock) ToBlinded() (interfaces.SignedBeaconBlock, error) {
 		return nil, ErrUnsupportedVersion
 	}
 	if b.isBlinded {
-		return nil, errors.New("block is already blinded")
+		return b, nil
 	}
 	if b.block.IsNil() {
 		return nil, errors.New("cannot convert nil block to blinded format")
