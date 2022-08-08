@@ -150,7 +150,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			switch {
 			case errors.Is(ErrOptimisticParent, err): // Ok to continue process block with parent that is an optimistic candidate.
 			case err != nil:
-				log.Debugf("Could not validate block from slot %d: %v", b.Block().Slot(), err)
+				log.WithError(err).WithField("slot", b.Block().Slot()).Debug("Could not validate block")
 				s.setBadBlock(ctx, blkRoot)
 				tracing.AnnotateError(span, err)
 				span.End()
@@ -167,7 +167,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 						s.setBadBlock(ctx, blkRoot)
 					}
 				}
-				log.Debugf("Could not process block from slot %d: %v", b.Block().Slot(), err)
+				log.WithError(err).WithField("slot", b.Block().Slot()).Debug("Could not process block")
 
 				// In the next iteration of the queue, this block will be removed from
 				// the pending queue as it has been marked as a 'bad' block.
@@ -258,7 +258,7 @@ func (s *Service) sendBatchRootRequest(ctx context.Context, roots [][32]byte, ra
 		}
 		if err := s.sendRecentBeaconBlocksRequest(ctx, &req, pid); err != nil {
 			tracing.AnnotateError(span, err)
-			log.Debugf("Could not send recent block request: %v", err)
+			log.WithError(err).Debug("Could not send recent block request")
 		}
 		newRoots := make([][32]byte, 0, len(roots))
 		s.pendingQueueLock.RLock()

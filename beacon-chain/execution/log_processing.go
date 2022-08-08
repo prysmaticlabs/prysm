@@ -184,7 +184,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethtypes.Lo
 			DepositCount: uint64(len(s.chainStartData.ChainstartDeposits)),
 		}
 		if err := s.processDeposit(ctx, eth1Data, deposit); err != nil {
-			log.Errorf("Invalid deposit processed: %v", err)
+			log.WithError(err).Error("Invalid deposit processed")
 			validData = false
 		}
 	} else {
@@ -236,7 +236,7 @@ func (s *Service) ProcessChainStart(genesisTime uint64, eth1BlockHash [32]byte, 
 	for i := range s.chainStartData.ChainstartDeposits {
 		proof, err := s.depositTrie.MerkleProof(i)
 		if err != nil {
-			log.Errorf("unable to generate deposit proof %v", err)
+			log.WithError(err).Error("unable to generate deposit proof")
 		}
 		s.chainStartData.ChainstartDeposits[i].Proof = proof
 	}

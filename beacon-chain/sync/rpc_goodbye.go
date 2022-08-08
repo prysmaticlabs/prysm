@@ -64,7 +64,7 @@ func (s *Service) disconnectBadPeer(ctx context.Context, id peer.ID) {
 		goodbyeCode = p2ptypes.GoodbyeCodeBanned
 	}
 	if err := s.sendGoodByeAndDisconnect(ctx, goodbyeCode, id); err != nil {
-		log.Debugf("Error when disconnecting with bad peer: %v", err)
+		log.WithError(err).Debug("Error when disconnecting with bad peer")
 	}
 }
 

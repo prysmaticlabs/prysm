@@ -132,7 +132,7 @@ func (s *Server) Start() {
 	address := fmt.Sprintf("%s:%s", s.host, s.port)
 	lis, err := net.Listen("tcp", address)
 	if err != nil {
-		log.Errorf("Could not listen to port in Start() %s: %v", address, err)
+		log.WithError(err).Errorf("Could not listen to port in Start() %s", address)
 	}
 	s.listener = lis
 
@@ -182,7 +182,7 @@ func (s *Server) Start() {
 	go func() {
 		if s.listener != nil {
 			if err := s.grpcServer.Serve(s.listener); err != nil {
-				log.Errorf("Could not serve: %v", err)
+				log.WithError(err).Error("Could not serve")
 			}
 		}
 	}()
@@ -190,7 +190,7 @@ func (s *Server) Start() {
 	if s.walletDir != "" {
 		token, err := s.initializeAuthToken(s.walletDir)
 		if err != nil {
-			log.Errorf("Could not initialize web auth token: %v", err)
+			log.WithError(err).Error("Could not initialize web auth token")
 			return
 		}
 		validatorWebAddr := fmt.Sprintf("%s:%d", s.validatorGatewayHost, s.validatorGatewayPort)

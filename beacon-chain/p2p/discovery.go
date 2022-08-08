@@ -49,7 +49,7 @@ func (s *Service) RefreshENR() {
 	}
 	currentBitV, err := attBitvector(s.dv5Listener.Self().Record())
 	if err != nil {
-		log.Errorf("Could not retrieve att bitfield: %v", err)
+		log.WithError(err).Error("Could not retrieve att bitfield")
 		return
 	}
 	// Compare current epoch with our fork epochs
@@ -67,7 +67,7 @@ func (s *Service) RefreshENR() {
 		}
 		currentBitS, err := syncBitvector(s.dv5Listener.Self().Record())
 		if err != nil {
-			log.Errorf("Could not retrieve sync bitfield: %v", err)
+			log.WithError(err).Error("Could not retrieve sync bitfield")
 			return
 		}
 		if bytes.Equal(bitV, currentBitV) && bytes.Equal(bitS, currentBitS) &&
@@ -356,7 +356,7 @@ func parseGenericAddrs(addrs []string) (enodeString, multiAddrString []string) {
 			multiAddrString = append(multiAddrString, addr)
 			continue
 		}
-		log.Errorf("Invalid address of %s provided: %v", addr, err)
+		log.WithError(err).Errorf("Invalid address of %s provided", addr)
 	}
 	return enodeString, multiAddrString
 }

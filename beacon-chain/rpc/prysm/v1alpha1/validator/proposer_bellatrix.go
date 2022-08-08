@@ -333,15 +333,9 @@ func (vs *Server) validatorRegistered(ctx context.Context, id types.ValidatorInd
 
 // Validates builder signature and returns an error if the signature is invalid.
 func (vs *Server) validateBuilderSignature(bid *ethpb.SignedBuilderBid) error {
-	if vs.ForkFetcher == nil {
-		return errors.New("nil fork fetcher")
-	}
-	f := vs.ForkFetcher.CurrentFork()
-	if vs.GenesisFetcher == nil {
-		return errors.New("nil genesis fetcher")
-	}
-	gr := vs.GenesisFetcher.GenesisValidatorsRoot()
-	d, err := signing.ComputeDomain(params.BeaconConfig().DomainApplicationBuilder, f.CurrentVersion, gr[:])
+	d, err := signing.ComputeDomain(params.BeaconConfig().DomainApplicationBuilder,
+		nil, /* fork version */
+		nil /* genesis val root */)
 	if err != nil {
 		return err
 	}

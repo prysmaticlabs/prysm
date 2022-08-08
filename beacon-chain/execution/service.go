@@ -552,7 +552,7 @@ func (s *Service) initPOWService() {
 	logCounter := 0
 	errorLogger := func(err error, msg string) {
 		if logCounter > logThreshold {
-			log.Errorf("%s: %v", msg, err)
+			log.WithError(err).Error(msg)
 			logCounter = 0
 		}
 		logCounter++
