@@ -154,20 +154,30 @@ func BuildSignedBeaconBlockFromExecutionPayload(
 		return nil, errors.Wrap(err, "could not get execution payload header")
 	default:
 	}
-	payloadRoot, err := payload.HashTreeRoot()
+	wrappedPayload, err := WrappedExecutionPayload(payload)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not hash tree root execution payload")
+		return nil, err
 	}
-	payloadHeaderRoot, err := payloadHeader.HashTreeRoot()
+	empty, err := IsEmptyExecutionData(wrappedPayload)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not hash tree root payload header")
+		return nil, err
 	}
-	if payloadRoot != payloadHeaderRoot {
-		return nil, fmt.Errorf(
-			"payload %#x and header %#x roots do not match",
-			payloadRoot,
-			payloadHeaderRoot,
-		)
+	if !empty {
+		payloadRoot, err := payload.HashTreeRoot()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not hash tree root execution payload")
+		}
+		payloadHeaderRoot, err := payloadHeader.HashTreeRoot()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not hash tree root payload header")
+		}
+		if payloadRoot != payloadHeaderRoot {
+			return nil, fmt.Errorf(
+				"payload %#x and header %#x roots do not match",
+				payloadRoot,
+				payloadHeaderRoot,
+			)
+		}
 	}
 	syncAgg, err := b.Body().SyncAggregate()
 	if err != nil {
