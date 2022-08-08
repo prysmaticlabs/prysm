@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/beacon-chain/geninit"
 	"runtime"
 	"sync"
 	"time"
@@ -65,6 +66,7 @@ type Service struct {
 	processAttestationsLock sync.Mutex
 	clock Clock
 	clockReady chan struct{}
+	clockWaiter             geninit.ClockWaiter
 }
 
 // config options for the service.
@@ -319,30 +321,14 @@ func (s *Service) startFromPOWChain() error {
 		return errors.New("not configured web3Service for POW chain")
 	}
 	go func() {
-		stateChannel := make(chan *feed.Event, 1)
-		stateSub := s.cfg.StateNotifier.StateFeed().Subscribe(stateChannel)
-		defer stateSub.Unsubscribe()
-		for {
-			select {
-			case e := <-stateChannel:
-				if e.Type == statefeed.ChainStarted {
-					data, ok := e.Data.(*statefeed.ChainStartedData)
-					if !ok {
-						log.Error("event data is not type *statefeed.ChainStartedData")
-						return
-					}
-					log.WithField("starttime", data.StartTime).Debug("Received chain start event")
-					s.onPowchainStart(s.ctx, data.StartTime)
-					return
-				}
-			case <-s.ctx.Done():
-				log.Debug("Context closed, exiting goroutine")
-				return
-			case err := <-stateSub.Err():
-				log.WithError(err).Error("Subscription to state notifier failed")
-				return
-			}
+		c, err := s.clockWaiter.WaitForClock(s.ctx)
+		if err != nil {
+			log.WithError(err).Error("timeout while waiting for genesis during blockchain service startup")
+			return
 		}
+		s.setClock(c)
+		log.WithField("starttime", c.GenesisTime()).Debug("Received chain start event")
+		s.onPowchainStart(s.ctx, c.GenesisTime())
 	}()
 
 	return nil

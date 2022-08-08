@@ -255,6 +255,7 @@ func (s *Service) ProcessChainStart(genesisTime uint64, eth1BlockHash [32]byte, 
 	log.WithFields(logrus.Fields{
 		"ChainStartTime": chainStartTime,
 	}).Info("Minimum number of validators reached for beacon-chain to start")
+	s.genSync.SetGenesisTime(chainStartTime)
 	s.cfg.stateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.ChainStarted,
 		Data: &statefeed.ChainStartedData{

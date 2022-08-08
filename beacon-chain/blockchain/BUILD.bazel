@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "chain_info.go",
+        "clock.go",
         "error.go",
         "execution_engine.go",
         "head.go",
@@ -52,6 +53,7 @@ go_library(
         "//beacon-chain/forkchoice/doubly-linked-tree:go_default_library",
         "//beacon-chain/forkchoice/protoarray:go_default_library",
         "//beacon-chain/forkchoice/types:go_default_library",
+        "//beacon-chain/geninit:go_default_library",
         "//beacon-chain/operations/attestations:go_default_library",
         "//beacon-chain/operations/slashings:go_default_library",
         "//beacon-chain/operations/voluntaryexits:go_default_library",

@@ -372,11 +372,6 @@ func (s *Service) setClock(c Clock) {
 	close(s.clockReady)
 }
 
-// GenesisTime returns the genesis time of beacon chain.
-func (s *Service) GenesisTime() time.Time {
-	return s.WaitForClock(context.TODO()).GenesisTime()
-}
-
 func (s *Service) genesisTime() time.Time {
 	c, err := s.WaitForClock(context.TODO())
 	if err != nil {

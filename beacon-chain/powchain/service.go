@@ -27,6 +27,7 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/geninit"
 	"github.com/prysmaticlabs/prysm/beacon-chain/powchain/types"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	native "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native"
@@ -161,6 +162,7 @@ type Service struct {
 	lastReceivedMerkleIndex int64 // Keeps track of the last received index to prevent log spam.
 	runError                error
 	preGenesisState         state.BeaconState
+	genSync                 geninit.ClockSetter
 }
 
 // NewService sets up a new instance with an ethclient when given a web3 endpoint as a string in the config.

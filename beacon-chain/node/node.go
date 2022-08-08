@@ -31,6 +31,7 @@ import (
 	doublylinkedtree "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/gateway"
+	"github.com/prysmaticlabs/prysm/beacon-chain/geninit"
 	"github.com/prysmaticlabs/prysm/beacon-chain/monitor"
 	"github.com/prysmaticlabs/prysm/beacon-chain/node/registration"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
@@ -211,10 +212,19 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 		return nil, err
 	}
 
-	log.Debugln("Registering POW Chain Service")
-	if err := beacon.registerPOWChainService(); err != nil {
+	powSync := geninit.NewClockSync()
+	genSync := geninit.NewClockSync()
+	log.Debugln("Registering Genesis Init Service")
+	if err := beacon.registerGenesisInitService(powSync, genSync); err != nil {
 		return nil, err
 	}
+
+	log.Debugln("Registering POW Chain Service")
+	if err := beacon.registerPOWChainService(powSync); err != nil {
+		return nil, err
+	}
+
+
 
 	log.Debugln("Registering Attestation Pool Service")
 	if err := beacon.registerAttestationPool(); err != nil {
@@ -629,7 +639,7 @@ func (b *BeaconNode) registerBlockchainService() error {
 	return b.services.RegisterService(blockchainService)
 }
 
-func (b *BeaconNode) registerPOWChainService() error {
+func (b *BeaconNode) registerPOWChainService(gcs geninit.ClockSetter) error {
 	if b.cliCtx.Bool(testSkipPowFlag) {
 		return b.services.RegisterService(&powchain.Service{})
 	}
@@ -652,6 +662,7 @@ func (b *BeaconNode) registerPOWChainService() error {
 		powchain.WithStateGen(b.stateGen),
 		powchain.WithBeaconNodeStatsUpdater(bs),
 		powchain.WithFinalizedStateAtStartup(b.finalizedStateAtStartUp),
+		powchain.WithGenesisClockSetter(gcs),
 	)
 	web3Service, err := powchain.NewService(b.ctx, opts...)
 	if err != nil {
@@ -659,6 +670,14 @@ func (b *BeaconNode) registerPOWChainService() error {
 	}
 
 	return b.services.RegisterService(web3Service)
+}
+
+func (b *BeaconNode) registerGenesisInitService(w geninit.ClockWaiter, s geninit.ClockSetter) error {
+	g, err := geninit.New(b.ctx, w, s)
+	if err != nil {
+		return err
+	}
+	return b.services.RegisterService(g)
 }
 
 func (b *BeaconNode) registerSyncService() error {
@@ -821,7 +840,6 @@ func (b *BeaconNode) registerRPCService() error {
 		FinalizationFetcher:           chainService,
 		BlockReceiver:                 chainService,
 		AttestationReceiver:           chainService,
-		GenesisTimeFetcher:            chainService,
 		GenesisFetcher:                chainService,
 		OptimisticModeFetcher:         chainService,
 		AttestationsPool:              b.attestationPool,
@@ -844,6 +862,7 @@ func (b *BeaconNode) registerRPCService() error {
 		MaxMsgSize:                    maxMsgSize,
 		ProposerIdsCache:              b.proposerIdsCache,
 		BlockBuilder:                  b.fetchBuilderService(),
+		ClockProvider:                 chainService,
 	})
 
 	return b.services.RegisterService(rpcService)

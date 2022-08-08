@@ -5,6 +5,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/geninit"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/network"
@@ -120,6 +121,13 @@ func WithBeaconNodeStatsUpdater(updater BeaconNodeStatsUpdater) Option {
 func WithFinalizedStateAtStartup(st state.BeaconState) Option {
 	return func(s *Service) error {
 		s.cfg.finalizedStateAtStartup = st
+		return nil
+	}
+}
+
+func WithGenesisClockSetter(cs geninit.ClockSetter) Option {
+	return func(s *Service) error {
+		s.genSync = cs
 		return nil
 	}
 }
