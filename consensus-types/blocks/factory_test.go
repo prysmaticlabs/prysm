@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
@@ -241,6 +242,7 @@ func TestBuildSignedBeaconBlockFromExecutionPayload(t *testing.T) {
 		require.Equal(t, true, errors.Is(err, ErrUnsupportedGetter))
 	})
 	t.Run("payload header root and payload root mismatch", func(t *testing.T) {
+		blockHash := bytesutil.Bytes32(1)
 		payload := &enginev1.ExecutionPayload{
 			ParentHash:    make([]byte, fieldparams.RootLength),
 			FeeRecipient:  make([]byte, 20),
@@ -249,7 +251,7 @@ func TestBuildSignedBeaconBlockFromExecutionPayload(t *testing.T) {
 			LogsBloom:     make([]byte, 256),
 			PrevRandao:    make([]byte, fieldparams.RootLength),
 			BaseFeePerGas: make([]byte, fieldparams.RootLength),
-			BlockHash:     make([]byte, fieldparams.RootLength),
+			BlockHash:     blockHash,
 			Transactions:  make([][]byte, 0),
 		}
 		wrapped, err := WrappedExecutionPayload(payload)
