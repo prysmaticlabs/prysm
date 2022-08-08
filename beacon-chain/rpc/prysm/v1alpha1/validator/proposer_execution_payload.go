@@ -41,11 +41,17 @@ var (
 // The payload is computed given the respected time of merge.
 func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx types.ValidatorIndex) (*enginev1.ExecutionPayload, error) {
 	proposerID, payloadId, ok := vs.ProposerSlotIndexCache.GetProposerPayloadIDs(slot)
-	if ok && proposerID == vIdx && payloadId != [8]byte{} { // Payload ID is cache hit. Return the cached payload ID.
+	cachedPayload := ok && proposerID == vIdx && payloadId != [8]byte{}
+	var payload *enginev1.ExecutionPayload
+	var err error
+	if cachedPayload { // Payload ID cache hit. Retrieve from execution client.
 		var pid [8]byte
 		copy(pid[:], payloadId[:])
 		payloadIDCacheHit.Inc()
-		return vs.ExecutionEngineCaller.GetPayload(ctx, pid)
+		payload, err = vs.ExecutionEngineCaller.GetPayload(ctx, pid)
+		if err != nil {
+			log.WithError(err).Error("Could to get cached payload from execution client, retry without cache")
+		}
 	}
 	payloadIDCacheMiss.Inc()
 
@@ -56,6 +62,25 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 	st, err = transition.ProcessSlotsIfPossible(ctx, st, slot)
 	if err != nil {
 		return nil, err
+	}
+
+	if cachedPayload {
+		p, err := consensusblocks.WrappedExecutionPayload(payload)
+		if err != nil {
+			return nil, err
+		}
+		_, err = blocks.ProcessPayload(st, p)
+		switch {
+		case errors.Is(err, blocks.ErrInvalidPayloadBlockHash):
+			log.WithError(err).Warn("Invalid payload block hash from cached payload, retry without cache")
+		case errors.Is(err, blocks.ErrInvalidPayloadPrevRandao):
+			log.WithError(err).Warn("Invalid previous randao from cached payload, retry without cache")
+		case errors.Is(err, blocks.ErrInvalidPayloadTimeStamp):
+			log.WithError(err).Warn("Invalid timestamp from cached payload, retry without cache")
+		case err != nil:
+			return nil, err
+		default:
+		}
 	}
 
 	var parentHash []byte
@@ -151,7 +176,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 	if payloadID == nil {
 		return nil, fmt.Errorf("nil payload with block hash: %#x", parentHash)
 	}
-	payload, err := vs.ExecutionEngineCaller.GetPayload(ctx, *payloadID)
+	payload, err = vs.ExecutionEngineCaller.GetPayload(ctx, *payloadID)
 	if err != nil {
 		return nil, err
 	}
