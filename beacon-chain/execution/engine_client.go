@@ -330,6 +330,9 @@ func (s *Service) ReconstructFullBellatrixBlock(
 	if err != nil {
 		return nil, err
 	}
+	if header.IsNil() {
+		return nil, errors.New("execution payload header in blinded block was nil")
+	}
 
 	// If the payload header has a block hash of 0x0, it means we are pre-merge and should
 	// simply return the block with an empty execution payload.
