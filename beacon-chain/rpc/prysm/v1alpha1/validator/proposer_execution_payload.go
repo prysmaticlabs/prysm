@@ -80,6 +80,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 		case err != nil:
 			return nil, err
 		default:
+			return payload, nil
 		}
 	}
 
