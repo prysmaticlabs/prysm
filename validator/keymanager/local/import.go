@@ -40,7 +40,7 @@ func (km *Keymanager) ImportKeystores(
 		privKeyBytes, pubKeyBytes, _, err = km.attemptDecryptKeystore(decryptor, keystores[i], passwords[i])
 		if err != nil {
 			statuses[i] = &ethpbservice.ImportedKeystoreStatus{
-				Status:  ethpbservice.ImportedKeystoreStatus_ERROR,
+				Status:  ethpbservice.ImportedKeystoreStatus_error,
 				Message: err.Error(),
 			}
 			continue
@@ -52,13 +52,13 @@ func (km *Keymanager) ImportKeystores(
 		if _, ok := keys[string(pubKeyBytes)]; ok {
 			log.Warnf("Duplicate key in import will be ignored: %#x", pubKeyBytes)
 			statuses[i] = &ethpbservice.ImportedKeystoreStatus{
-				Status: ethpbservice.ImportedKeystoreStatus_DUPLICATE,
+				Status: ethpbservice.ImportedKeystoreStatus_duplicate,
 			}
 			continue
 		}
 		keys[string(pubKeyBytes)] = string(privKeyBytes)
 		statuses[i] = &ethpbservice.ImportedKeystoreStatus{
-			Status: ethpbservice.ImportedKeystoreStatus_IMPORTED,
+			Status: ethpbservice.ImportedKeystoreStatus_imported,
 		}
 	}
 	privKeys := make([][]byte, 0)

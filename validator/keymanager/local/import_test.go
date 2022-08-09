@@ -121,7 +121,7 @@ func TestLocalKeymanager_ImportKeystores(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, numKeystores, len(statuses))
 		for _, status := range statuses {
-			require.Equal(t, ethpbservice.ImportedKeystoreStatus_IMPORTED, status.Status)
+			require.Equal(t, ethpbservice.ImportedKeystoreStatus_imported, status.Status)
 		}
 	})
 	t.Run("each imported keystore with a different password succeeds", func(t *testing.T) {
@@ -141,7 +141,7 @@ func TestLocalKeymanager_ImportKeystores(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, numKeystores, len(statuses))
 		for _, status := range statuses {
-			require.Equal(t, ethpbservice.ImportedKeystoreStatus_IMPORTED, status.Status)
+			require.Equal(t, ethpbservice.ImportedKeystoreStatus_imported, status.Status)
 		}
 	})
 	t.Run("some succeed, some fail to decrypt, some duplicated", func(t *testing.T) {
@@ -171,17 +171,17 @@ func TestLocalKeymanager_ImportKeystores(t *testing.T) {
 		require.Equal(t, len(keystores), len(statuses))
 		require.Equal(
 			t,
-			ethpbservice.ImportedKeystoreStatus_IMPORTED,
+			ethpbservice.ImportedKeystoreStatus_imported,
 			statuses[0].Status,
 		)
 		require.Equal(
 			t,
-			ethpbservice.ImportedKeystoreStatus_DUPLICATE,
+			ethpbservice.ImportedKeystoreStatus_duplicate,
 			statuses[1].Status,
 		)
 		require.Equal(
 			t,
-			ethpbservice.ImportedKeystoreStatus_ERROR,
+			ethpbservice.ImportedKeystoreStatus_error,
 			statuses[2].Status,
 		)
 		require.Equal(

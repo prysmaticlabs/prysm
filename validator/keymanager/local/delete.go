@@ -29,7 +29,7 @@ func (km *Keymanager) DeleteKeystores(
 		// Check if the key in the request is a duplicate.
 		if _, ok := trackedPublicKeys[bytesutil.ToBytes48(publicKey)]; ok {
 			statuses = append(statuses, &ethpbservice.DeletedKeystoreStatus{
-				Status: ethpbservice.DeletedKeystoreStatus_NOT_ACTIVE,
+				Status: ethpbservice.DeletedKeystoreStatus_not_active,
 			})
 			continue
 		}
@@ -44,7 +44,7 @@ func (km *Keymanager) DeleteKeystores(
 		}
 		if !found {
 			statuses = append(statuses, &ethpbservice.DeletedKeystoreStatus{
-				Status: ethpbservice.DeletedKeystoreStatus_NOT_FOUND,
+				Status: ethpbservice.DeletedKeystoreStatus_not_found,
 			})
 			continue
 		}
@@ -57,7 +57,7 @@ func (km *Keymanager) DeleteKeystores(
 			return nil, errors.Wrap(err, "could not rewrite accounts keystore")
 		}
 		statuses = append(statuses, &ethpbservice.DeletedKeystoreStatus{
-			Status: ethpbservice.DeletedKeystoreStatus_DELETED,
+			Status: ethpbservice.DeletedKeystoreStatus_deleted,
 		})
 		trackedPublicKeys[bytesutil.ToBytes48(publicKey)] = true
 	}
