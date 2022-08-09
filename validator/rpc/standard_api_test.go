@@ -131,7 +131,7 @@ func TestServer_ImportKeystores(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.Equal(t, 1, len(response.Data))
-		require.Equal(t, ethpbservice.ImportedKeystoreStatus_ERROR, response.Data[0].Status)
+		require.Equal(t, ethpbservice.ImportedKeystoreStatus_error, response.Data[0].Status)
 	})
 	t.Run("200 response even if  no passwords in request", func(t *testing.T) {
 		response, err := s.ImportKeystores(context.Background(), &ethpbservice.ImportKeystoresRequest{
@@ -140,7 +140,7 @@ func TestServer_ImportKeystores(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.Equal(t, 1, len(response.Data))
-		require.Equal(t, ethpbservice.ImportedKeystoreStatus_ERROR, response.Data[0].Status)
+		require.Equal(t, ethpbservice.ImportedKeystoreStatus_error, response.Data[0].Status)
 	})
 	t.Run("200 response even if  keystores more than passwords in request", func(t *testing.T) {
 		response, err := s.ImportKeystores(context.Background(), &ethpbservice.ImportKeystoresRequest{
@@ -149,7 +149,7 @@ func TestServer_ImportKeystores(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.Equal(t, 2, len(response.Data))
-		require.Equal(t, ethpbservice.ImportedKeystoreStatus_ERROR, response.Data[0].Status)
+		require.Equal(t, ethpbservice.ImportedKeystoreStatus_error, response.Data[0].Status)
 	})
 	t.Run("200 response even if number of passwords does not match number of keystores", func(t *testing.T) {
 		response, err := s.ImportKeystores(context.Background(), &ethpbservice.ImportKeystoresRequest{
@@ -158,7 +158,7 @@ func TestServer_ImportKeystores(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.Equal(t, 1, len(response.Data))
-		require.Equal(t, ethpbservice.ImportedKeystoreStatus_ERROR, response.Data[0].Status)
+		require.Equal(t, ethpbservice.ImportedKeystoreStatus_error, response.Data[0].Status)
 	})
 	t.Run("200 response even if faulty slashing protection data", func(t *testing.T) {
 		numKeystores := 5
@@ -179,7 +179,7 @@ func TestServer_ImportKeystores(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, numKeystores, len(resp.Data))
 		for _, st := range resp.Data {
-			require.Equal(t, ethpbservice.ImportedKeystoreStatus_ERROR, st.Status)
+			require.Equal(t, ethpbservice.ImportedKeystoreStatus_error, st.Status)
 		}
 	})
 	t.Run("returns proper statuses for keystores in request", func(t *testing.T) {
@@ -235,7 +235,7 @@ func TestServer_ImportKeystores(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, numKeystores, len(resp.Data))
 		for _, status := range resp.Data {
-			require.Equal(t, ethpbservice.ImportedKeystoreStatus_IMPORTED, status.Status)
+			require.Equal(t, ethpbservice.ImportedKeystoreStatus_imported, status.Status)
 		}
 	})
 }
@@ -269,7 +269,7 @@ func TestServer_ImportKeystores_WrongKeymanagerKind(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Equal(t, 1, len(response.Data))
-	require.Equal(t, ethpbservice.ImportedKeystoreStatus_ERROR, response.Data[0].Status)
+	require.Equal(t, ethpbservice.ImportedKeystoreStatus_error, response.Data[0].Status)
 	require.Equal(t, "Keymanager kind cannot import keys", response.Data[0].Message)
 }
 
@@ -355,10 +355,10 @@ func TestServer_DeleteKeystores(t *testing.T) {
 				{id: "c", wantProtectionData: true},
 			},
 			wantStatuses: []ethpbservice.DeletedKeystoreStatus_Status{
-				ethpbservice.DeletedKeystoreStatus_DELETED,
-				ethpbservice.DeletedKeystoreStatus_NOT_ACTIVE,
-				ethpbservice.DeletedKeystoreStatus_NOT_FOUND,
-				ethpbservice.DeletedKeystoreStatus_DELETED,
+				ethpbservice.DeletedKeystoreStatus_deleted,
+				ethpbservice.DeletedKeystoreStatus_not_active,
+				ethpbservice.DeletedKeystoreStatus_not_found,
+				ethpbservice.DeletedKeystoreStatus_deleted,
 			},
 		},
 		{
@@ -367,8 +367,8 @@ func TestServer_DeleteKeystores(t *testing.T) {
 				{id: "c", wantProtectionData: true},
 			},
 			wantStatuses: []ethpbservice.DeletedKeystoreStatus_Status{
-				ethpbservice.DeletedKeystoreStatus_NOT_ACTIVE,
-				ethpbservice.DeletedKeystoreStatus_NOT_ACTIVE,
+				ethpbservice.DeletedKeystoreStatus_not_active,
+				ethpbservice.DeletedKeystoreStatus_not_active,
 			},
 		},
 		{
@@ -376,7 +376,7 @@ func TestServer_DeleteKeystores(t *testing.T) {
 				{id: "x"},
 			},
 			wantStatuses: []ethpbservice.DeletedKeystoreStatus_Status{
-				ethpbservice.DeletedKeystoreStatus_NOT_FOUND,
+				ethpbservice.DeletedKeystoreStatus_not_found,
 			},
 		},
 	}
@@ -449,7 +449,7 @@ func TestServer_DeleteKeystores_FailedSlashingProtectionExport(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Equal(t, 1, len(response.Data))
-	require.Equal(t, ethpbservice.DeletedKeystoreStatus_ERROR, response.Data[0].Status)
+	require.Equal(t, ethpbservice.DeletedKeystoreStatus_error, response.Data[0].Status)
 	require.Equal(t, "Non duplicate keys that were existing were deleted, but could not export slashing protection history.",
 		response.Data[0].Message,
 	)
@@ -621,7 +621,7 @@ func TestServer_ImportRemoteKeys(t *testing.T) {
 		})
 		expectedStatuses := []*ethpbservice.ImportedRemoteKeysStatus{
 			{
-				Status:  ethpbservice.ImportedRemoteKeysStatus_IMPORTED,
+				Status:  ethpbservice.ImportedRemoteKeysStatus_imported,
 				Message: fmt.Sprintf("Successfully added pubkey: %v", hexutil.Encode(bytevalue)),
 			},
 		}
@@ -672,7 +672,7 @@ func TestServer_DeleteRemoteKeys(t *testing.T) {
 		})
 		expectedStatuses := []*ethpbservice.DeletedRemoteKeysStatus{
 			{
-				Status:  ethpbservice.DeletedRemoteKeysStatus_DELETED,
+				Status:  ethpbservice.DeletedRemoteKeysStatus_deleted,
 				Message: fmt.Sprintf("Successfully deleted pubkey: %v", hexutil.Encode(bytevalue)),
 			},
 		}

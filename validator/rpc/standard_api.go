@@ -100,7 +100,7 @@ func (s *Server) ImportKeystores(
 			statuses := make([]*ethpbservice.ImportedKeystoreStatus, len(req.Keystores))
 			for i := range statuses {
 				statuses[i] = &ethpbservice.ImportedKeystoreStatus{
-					Status:  ethpbservice.ImportedKeystoreStatus_ERROR,
+					Status:  ethpbservice.ImportedKeystoreStatus_error,
 					Message: fmt.Sprintf("could not import slashing protection: %v", err),
 				}
 			}
@@ -135,7 +135,7 @@ func groupImportErrors(req *ethpbservice.ImportKeystoresRequest, errorMessage st
 	statuses := make([]*ethpbservice.ImportedKeystoreStatus, len(req.Keystores))
 	for i := 0; i < len(req.Keystores); i++ {
 		statuses[i] = &ethpbservice.ImportedKeystoreStatus{
-			Status:  ethpbservice.ImportedKeystoreStatus_ERROR,
+			Status:  ethpbservice.ImportedKeystoreStatus_error,
 			Message: errorMessage,
 		}
 	}
@@ -195,7 +195,7 @@ func groupExportErrors(req *ethpbservice.DeleteKeystoresRequest, errorMessage st
 	statuses := make([]*ethpbservice.DeletedKeystoreStatus, len(req.Pubkeys))
 	for i := 0; i < len(req.Pubkeys); i++ {
 		statuses[i] = &ethpbservice.DeletedKeystoreStatus{
-			Status:  ethpbservice.DeletedKeystoreStatus_ERROR,
+			Status:  ethpbservice.DeletedKeystoreStatus_error,
 			Message: errorMessage,
 		}
 	}
@@ -216,8 +216,8 @@ func (s *Server) transformDeletedKeysStatuses(
 	if len(pubKeysInDB) > 0 {
 		for i := 0; i < len(pubKeys); i++ {
 			keyExistsInDB := pubKeysInDB[bytesutil.ToBytes48(pubKeys[i])]
-			if keyExistsInDB && statuses[i].Status == ethpbservice.DeletedKeystoreStatus_NOT_FOUND {
-				statuses[i].Status = ethpbservice.DeletedKeystoreStatus_NOT_ACTIVE
+			if keyExistsInDB && statuses[i].Status == ethpbservice.DeletedKeystoreStatus_not_found {
+				statuses[i].Status = ethpbservice.DeletedKeystoreStatus_not_active
 			}
 		}
 	}
@@ -250,8 +250,8 @@ func (s *Server) slashingProtectionHistoryForDeletedKeys(
 	// and use that to filter our slashing protection export.
 	filteredKeys := make([][]byte, 0, len(pubKeys))
 	for i, pk := range pubKeys {
-		if statuses[i].Status == ethpbservice.DeletedKeystoreStatus_DELETED ||
-			statuses[i].Status == ethpbservice.DeletedKeystoreStatus_NOT_ACTIVE {
+		if statuses[i].Status == ethpbservice.DeletedKeystoreStatus_deleted ||
+			statuses[i].Status == ethpbservice.DeletedKeystoreStatus_not_active {
 			filteredKeys = append(filteredKeys, pk)
 		}
 	}
@@ -337,7 +337,7 @@ func groupImportRemoteKeysErrors(req *ethpbservice.ImportRemoteKeysRequest, erro
 	statuses := make([]*ethpbservice.ImportedRemoteKeysStatus, len(req.RemoteKeys))
 	for i := 0; i < len(req.RemoteKeys); i++ {
 		statuses[i] = &ethpbservice.ImportedRemoteKeysStatus{
-			Status:  ethpbservice.ImportedRemoteKeysStatus_ERROR,
+			Status:  ethpbservice.ImportedRemoteKeysStatus_error,
 			Message: errorMessage,
 		}
 	}
@@ -382,7 +382,7 @@ func groupDeleteRemoteKeysErrors(req *ethpbservice.DeleteRemoteKeysRequest, erro
 	statuses := make([]*ethpbservice.DeletedRemoteKeysStatus, len(req.Pubkeys))
 	for i := 0; i < len(req.Pubkeys); i++ {
 		statuses[i] = &ethpbservice.DeletedRemoteKeysStatus{
-			Status:  ethpbservice.DeletedRemoteKeysStatus_ERROR,
+			Status:  ethpbservice.DeletedRemoteKeysStatus_error,
 			Message: errorMessage,
 		}
 	}
