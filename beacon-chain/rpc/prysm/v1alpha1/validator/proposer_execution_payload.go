@@ -39,21 +39,14 @@ var (
 
 // This returns the execution payload of a given slot. The function has full awareness of pre and post merge.
 // The payload is computed given the respected time of merge.
-func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx types.ValidatorIndex) (*enginev1.ExecutionPayload, error) {
-	proposerID, payloadId, ok := vs.ProposerSlotIndexCache.GetProposerPayloadIDs(slot)
-	cachedPayload := ok && proposerID == vIdx && payloadId != [8]byte{}
-	var payload *enginev1.ExecutionPayload
-	var err error
-	if cachedPayload { // Payload ID cache hit. Retrieve from execution client.
+func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx types.ValidatorIndex, headRoot [32]byte) (*enginev1.ExecutionPayload, error) {
+	proposerID, payloadId, ok := vs.ProposerSlotIndexCache.GetProposerPayloadIDs(slot, headRoot)
+	if ok && proposerID == vIdx && payloadId != [8]byte{} { // Payload ID is cache hit. Return the cached payload ID.
 		var pid [8]byte
 		copy(pid[:], payloadId[:])
 		payloadIDCacheHit.Inc()
-		payload, err = vs.ExecutionEngineCaller.GetPayload(ctx, pid)
-		if err != nil {
-			log.WithError(err).Error("Could to get cached payload from execution client, retry without cache")
-		}
+		return vs.ExecutionEngineCaller.GetPayload(ctx, pid)
 	}
-	payloadIDCacheMiss.Inc()
 
 	st, err := vs.HeadFetcher.HeadState(ctx)
 	if err != nil {
@@ -62,26 +55,6 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 	st, err = transition.ProcessSlotsIfPossible(ctx, st, slot)
 	if err != nil {
 		return nil, err
-	}
-
-	if cachedPayload {
-		p, err := consensusblocks.WrappedExecutionPayload(payload)
-		if err != nil {
-			return nil, err
-		}
-		_, err = blocks.ProcessPayload(st, p)
-		switch {
-		case errors.Is(err, blocks.ErrInvalidPayloadBlockHash):
-			log.WithError(err).Warn("Invalid payload block hash from cached payload, retry without cache")
-		case errors.Is(err, blocks.ErrInvalidPayloadPrevRandao):
-			log.WithError(err).Warn("Invalid previous randao from cached payload, retry without cache")
-		case errors.Is(err, blocks.ErrInvalidPayloadTimeStamp):
-			log.WithError(err).Warn("Invalid timestamp from cached payload, retry without cache")
-		case err != nil:
-			return nil, err
-		default:
-			return payload, nil
-		}
 	}
 
 	var parentHash []byte
@@ -113,6 +86,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 			return emptyPayload(), nil
 		}
 	}
+	payloadIDCacheMiss.Inc()
 
 	random, err := helpers.RandaoMix(st, time.CurrentEpoch(st))
 	if err != nil {
@@ -177,7 +151,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 	if payloadID == nil {
 		return nil, fmt.Errorf("nil payload with block hash: %#x", parentHash)
 	}
-	payload, err = vs.ExecutionEngineCaller.GetPayload(ctx, *payloadID)
+	payload, err := vs.ExecutionEngineCaller.GetPayload(ctx, *payloadID)
 	if err != nil {
 		return nil, err
 	}
