@@ -67,10 +67,14 @@ func (s *Store) PruneThreshold() uint64 {
 // head starts from justified root and then follows the best descendant links
 // to find the best block for head. This function assumes a lock on s.nodesLock
 func (s *Store) head(ctx context.Context) ([32]byte, error) {
-	_, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.head")
+	ctx, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.head")
 	defer span.End()
 	s.checkpointsLock.RLock()
 	defer s.checkpointsLock.RUnlock()
+
+	if err := ctx.Err(); err != nil {
+		return [32]byte{}, err
+	}
 
 	// JustifiedRoot has to be known
 	justifiedNode, ok := s.nodeByRoot[s.justifiedCheckpoint.Root]

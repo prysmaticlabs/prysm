@@ -472,11 +472,15 @@ func (s *Store) insert(ctx context.Context,
 	slot types.Slot,
 	root, parent, payloadHash [32]byte,
 	justifiedEpoch, finalizedEpoch types.Epoch) (*Node, error) {
-	_, span := trace.StartSpan(ctx, "protoArrayForkChoice.insert")
+	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.insert")
 	defer span.End()
 
 	s.nodesLock.Lock()
 	defer s.nodesLock.Unlock()
+
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 
 	// Return if the block has been inserted into Store before.
 	if idx, ok := s.nodesIndices[root]; ok {
@@ -557,6 +561,9 @@ func (s *Store) applyWeightChanges(
 	// Iterate backwards through all index to node in store.
 	var err error
 	for i := len(s.nodes) - 1; i >= 0; i-- {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
 		n := s.nodes[i]
 
 		// There is no need to adjust the balances or manage parent of the zero hash, it
@@ -748,7 +755,7 @@ func (s *Store) updateBestChildAndDescendant(parentIndex, childIndex uint64) err
 // prune prunes the store with the new finalized root. The tree is only
 // pruned if the number of the nodes in store has met prune threshold.
 func (s *Store) prune(ctx context.Context) error {
-	_, span := trace.StartSpan(ctx, "protoArrayForkChoice.prune")
+	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.prune")
 	defer span.End()
 
 	s.nodesLock.Lock()
@@ -777,6 +784,9 @@ func (s *Store) prune(ctx context.Context) error {
 	canonicalNodesMap[finalizedIndex] = uint64(0)
 
 	for idx := uint64(0); idx < uint64(len(s.nodes)); idx++ {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
 		node := copyNode(s.nodes[idx])
 		parentIdx, ok := canonicalNodesMap[node.parent]
 		if ok {
