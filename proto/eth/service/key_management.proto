@@ -211,9 +211,9 @@ message DeleteKeystoresResponse {
 
 message ImportedKeystoreStatus {
   enum Status {
-    IMPORTED = 0;
-    DUPLICATE = 1;
-    ERROR = 2;
+    imported = 0;
+    duplicate = 1;
+    error = 2;
   }
   Status status = 1;
   string message = 2;
@@ -221,10 +221,10 @@ message ImportedKeystoreStatus {
 
 message DeletedKeystoreStatus {
   enum Status {
-    DELETED = 0;
-    NOT_FOUND = 1;
-    NOT_ACTIVE = 2;
-    ERROR = 3;
+    deleted = 0;
+    not_found = 1;
+    not_active = 2;
+    error = 3;
   }
   Status status = 1;
   string message = 2;
@@ -262,10 +262,10 @@ message DeleteRemoteKeysResponse {
 
 message ImportedRemoteKeysStatus {
   enum Status {
-    UNKNOWN = 0;
-    IMPORTED = 1;
-    DUPLICATE = 2;
-    ERROR = 3;
+    unknown = 0;
+    imported = 1;
+    duplicate = 2;
+    error = 3;
   }
   Status status = 1;
   string message = 2;
@@ -273,9 +273,9 @@ message ImportedRemoteKeysStatus {
 
 message DeletedRemoteKeysStatus {
   enum Status {
-    NOT_FOUND = 0;
-    DELETED = 1;
-    ERROR = 3; // skips 2 to match Delete KeyStore status which has error = 3.
+    not_found = 0;
+    deleted = 1;
+    error = 3; // skips 2 to match Delete KeyStore status which has error = 3.
   }
   Status status = 1;
   string message = 2;
