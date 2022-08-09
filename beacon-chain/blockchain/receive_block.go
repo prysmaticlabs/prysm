@@ -128,7 +128,7 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []interfaces.Sig
 		// log.Fatalf will prevent defer from being called
 		span.End()
 		// Exit run time if the node failed to verify weak subjectivity checkpoint.
-		log.Fatalf("Could not verify weak subjectivity checkpoint: %v", err)
+		log.WithError(err).Fatal("Could not verify weak subjectivity checkpoint")
 	}
 
 	return nil
@@ -152,7 +152,7 @@ func (s *Service) handlePostBlockOperations(b interfaces.BeaconBlock) error {
 
 	// Add block attestations to the fork choice pool to compute head.
 	if err := s.cfg.AttPool.SaveBlockAttestations(b.Body().Attestations()); err != nil {
-		log.Errorf("Could not save block attestations for fork choice: %v", err)
+		log.WithError(err).Error("Could not save block attestations for fork choice")
 		return nil
 	}
 	// Mark block exits as seen so we don't include same ones in future blocks.

@@ -160,7 +160,7 @@ func (vs *Server) depositTrie(ctx context.Context, canonicalEth1Data *ethpb.Eth1
 	valid, err := validateDepositTrie(depositTrie, canonicalEth1Data)
 	// Log a warning here, as the cached trie is invalid.
 	if !valid {
-		log.Warnf("Cached deposit trie is invalid, rebuilding it now: %v", err)
+		log.WithError(err).Warn("Cached deposit trie is invalid, rebuilding it now")
 		return vs.rebuildDepositTrie(ctx, canonicalEth1Data, canonicalEth1DataHeight)
 	}
 
@@ -190,7 +190,7 @@ func (vs *Server) rebuildDepositTrie(ctx context.Context, canonicalEth1Data *eth
 	valid, err := validateDepositTrie(depositTrie, canonicalEth1Data)
 	// Log an error here, as even with rebuilding the trie, it is still invalid.
 	if !valid {
-		log.Errorf("Rebuilt deposit trie is invalid: %v", err)
+		log.WithError(err).Error("Rebuilt deposit trie is invalid")
 	}
 	return depositTrie, nil
 }

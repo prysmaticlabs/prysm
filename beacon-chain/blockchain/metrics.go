@@ -198,7 +198,7 @@ func reportEpochMetrics(ctx context.Context, postState, headState state.BeaconSt
 	for i, validator := range postState.Validators() {
 		bal, err := postState.BalanceAtIndex(types.ValidatorIndex(i))
 		if err != nil {
-			log.Errorf("Could not load validator balance: %v", err)
+			log.WithError(err).Error("Could not load validator balance")
 			continue
 		}
 		if validator.Slashed {
