@@ -156,9 +156,9 @@ func (acm *AccountsCLIManager) Import(ctx context.Context) error {
 	}
 	for i, status := range statuses {
 		switch status.Status {
-		case ethpbservice.ImportedKeystoreStatus_DUPLICATE:
+		case ethpbservice.ImportedKeystoreStatus_duplicate:
 			log.Warnf("Duplicate key %s found in import request, skipped", keystoresImported[i].Pubkey)
-		case ethpbservice.ImportedKeystoreStatus_ERROR:
+		case ethpbservice.ImportedKeystoreStatus_error:
 			log.Warnf("Could not import keystore for %s: %s", keystoresImported[i].Pubkey, status.Message)
 		}
 	}
@@ -176,7 +176,7 @@ func ImportAccounts(ctx context.Context, cfg *ImportAccountsConfig) ([]*ethpbser
 		statuses := make([]*ethpbservice.ImportedKeystoreStatus, len(cfg.Keystores))
 		for i, keystore := range cfg.Keystores {
 			statuses[i] = &ethpbservice.ImportedKeystoreStatus{
-				Status: ethpbservice.ImportedKeystoreStatus_ERROR,
+				Status: ethpbservice.ImportedKeystoreStatus_error,
 				Message: fmt.Sprintf(
 					"account password is required to import keystore %s",
 					keystore.Pubkey,
@@ -240,9 +240,9 @@ func importPrivateKeyAsAccount(ctx context.Context, wallet *wallet.Wallet, impor
 		return errors.Wrap(err, "could not import keystore into wallet")
 	}
 	for _, status := range statuses {
-		if status.Status == ethpbservice.ImportedKeystoreStatus_ERROR {
+		if status.Status == ethpbservice.ImportedKeystoreStatus_error {
 			log.Warnf("Could not import keystore for %s: %s", keystore.Pubkey, status.Message)
-		} else if status.Status == ethpbservice.ImportedKeystoreStatus_DUPLICATE {
+		} else if status.Status == ethpbservice.ImportedKeystoreStatus_duplicate {
 			log.Warnf("Duplicate key %s skipped", keystore.Pubkey)
 		}
 	}

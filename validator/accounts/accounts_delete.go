@@ -76,11 +76,11 @@ func DeleteAccount(ctx context.Context, cfg *DeleteConfig) error {
 	}
 	for i, status := range statuses {
 		switch status.Status {
-		case ethpbservice.DeletedKeystoreStatus_ERROR:
+		case ethpbservice.DeletedKeystoreStatus_error:
 			log.Errorf("Error deleting key %#x: %s", bytesutil.Trunc(cfg.DeletePublicKeys[i]), status.Message)
-		case ethpbservice.DeletedKeystoreStatus_NOT_ACTIVE:
+		case ethpbservice.DeletedKeystoreStatus_not_active:
 			log.Warnf("Duplicate key %#x found in delete request", bytesutil.Trunc(cfg.DeletePublicKeys[i]))
-		case ethpbservice.DeletedKeystoreStatus_NOT_FOUND:
+		case ethpbservice.DeletedKeystoreStatus_not_found:
 			log.Warnf("Could not find keystore for %#x", bytesutil.Trunc(cfg.DeletePublicKeys[i]))
 		}
 	}
