@@ -16,7 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/internal"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/v1/mock"
-	"github.com/stretchr/testify/assert"
 )
 
 type MockClient struct {
@@ -211,9 +210,9 @@ func TestKeymanager_FetchValidatingPublicKeys_HappyPath_WithKeyList(t *testing.T
 	if err != nil {
 		fmt.Printf("error: %v", err)
 	}
-	assert.NotNil(t, resp)
-	assert.Nil(t, err)
-	assert.EqualValues(t, resp, keys)
+	require.NotNil(t, resp)
+	require.NoError(t, err)
+	require.Equal(t, resp, keys)
 }
 
 func TestKeymanager_FetchValidatingPublicKeys_HappyPath_WithExternalURL(t *testing.T) {
@@ -246,9 +245,9 @@ func TestKeymanager_FetchValidatingPublicKeys_HappyPath_WithExternalURL(t *testi
 	if err != nil {
 		fmt.Printf("error: %v", err)
 	}
-	assert.NotNil(t, resp)
-	assert.Nil(t, err)
-	assert.EqualValues(t, resp, keys)
+	require.NotNil(t, resp)
+	require.NoError(t, err)
+	require.Equal(t, resp, keys)
 }
 
 func TestKeymanager_FetchValidatingPublicKeys_WithExternalURL_ThrowsError(t *testing.T) {
@@ -272,9 +271,9 @@ func TestKeymanager_FetchValidatingPublicKeys_WithExternalURL_ThrowsError(t *tes
 	}
 	km.client = client
 	resp, err := km.FetchValidatingPublicKeys(ctx)
-	assert.NotNil(t, err)
-	assert.Nil(t, resp)
-	assert.Equal(t, "could not get public keys from remote server url: http://example2.com/api/v1/eth2/publicKeys: mock error", fmt.Sprintf("%v", err))
+	require.NotNil(t, err)
+	require.Equal(t, 0, len(resp))
+	require.Equal(t, "could not get public keys from remote server url: http://example2.com/api/v1/eth2/publicKeys: mock error", fmt.Sprintf("%v", err))
 }
 
 func TestKeymanager_AddPublicKeys(t *testing.T) {
@@ -299,12 +298,12 @@ func TestKeymanager_AddPublicKeys(t *testing.T) {
 	statuses, err := km.AddPublicKeys(ctx, publicKeys)
 	require.NoError(t, err)
 	for _, status := range statuses {
-		require.Equal(t, ethpbservice.ImportedRemoteKeysStatus_IMPORTED, status.Status)
+		require.Equal(t, ethpbservice.ImportedRemoteKeysStatus_imported, status.Status)
 	}
 	statuses, err = km.AddPublicKeys(ctx, publicKeys)
 	require.NoError(t, err)
 	for _, status := range statuses {
-		require.Equal(t, ethpbservice.ImportedRemoteKeysStatus_DUPLICATE, status.Status)
+		require.Equal(t, ethpbservice.ImportedRemoteKeysStatus_duplicate, status.Status)
 	}
 }
 
@@ -330,18 +329,18 @@ func TestKeymanager_DeletePublicKeys(t *testing.T) {
 	statuses, err := km.AddPublicKeys(ctx, publicKeys)
 	require.NoError(t, err)
 	for _, status := range statuses {
-		require.Equal(t, ethpbservice.ImportedRemoteKeysStatus_IMPORTED, status.Status)
+		require.Equal(t, ethpbservice.ImportedRemoteKeysStatus_imported, status.Status)
 	}
 
 	s, err := km.DeletePublicKeys(ctx, publicKeys)
 	require.NoError(t, err)
 	for _, status := range s {
-		require.Equal(t, ethpbservice.DeletedRemoteKeysStatus_DELETED, status.Status)
+		require.Equal(t, ethpbservice.DeletedRemoteKeysStatus_deleted, status.Status)
 	}
 
 	s, err = km.DeletePublicKeys(ctx, publicKeys)
 	require.NoError(t, err)
 	for _, status := range s {
-		require.Equal(t, ethpbservice.DeletedRemoteKeysStatus_NOT_FOUND, status.Status)
+		require.Equal(t, ethpbservice.DeletedRemoteKeysStatus_not_found, status.Status)
 	}
 }

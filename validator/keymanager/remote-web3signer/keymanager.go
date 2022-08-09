@@ -313,14 +313,14 @@ func (km *Keymanager) AddPublicKeys(ctx context.Context, pubKeys [][fieldparams.
 		}
 		if found {
 			importedRemoteKeysStatuses[i] = &ethpbservice.ImportedRemoteKeysStatus{
-				Status:  ethpbservice.ImportedRemoteKeysStatus_DUPLICATE,
+				Status:  ethpbservice.ImportedRemoteKeysStatus_duplicate,
 				Message: fmt.Sprintf("Duplicate pubkey: %v, already in use", hexutil.Encode(pubKey[:])),
 			}
 			continue
 		}
 		km.providedPublicKeys = append(km.providedPublicKeys, pubKey)
 		importedRemoteKeysStatuses[i] = &ethpbservice.ImportedRemoteKeysStatus{
-			Status:  ethpbservice.ImportedRemoteKeysStatus_IMPORTED,
+			Status:  ethpbservice.ImportedRemoteKeysStatus_imported,
 			Message: fmt.Sprintf("Successfully added pubkey: %v", hexutil.Encode(pubKey[:])),
 		}
 		log.Debug("Added pubkey to keymanager for web3signer", "pubkey", hexutil.Encode(pubKey[:]))
@@ -338,7 +338,7 @@ func (km *Keymanager) DeletePublicKeys(ctx context.Context, pubKeys [][fieldpara
 	if len(km.providedPublicKeys) == 0 {
 		for i := range deletedRemoteKeysStatuses {
 			deletedRemoteKeysStatuses[i] = &ethpbservice.DeletedRemoteKeysStatus{
-				Status:  ethpbservice.DeletedRemoteKeysStatus_NOT_FOUND,
+				Status:  ethpbservice.DeletedRemoteKeysStatus_not_found,
 				Message: "No pubkeys are set in validator",
 			}
 		}
@@ -349,7 +349,7 @@ func (km *Keymanager) DeletePublicKeys(ctx context.Context, pubKeys [][fieldpara
 			if bytes.Equal(key[:], pubkey[:]) {
 				km.providedPublicKeys = append(km.providedPublicKeys[:in], km.providedPublicKeys[in+1:]...)
 				deletedRemoteKeysStatuses[i] = &ethpbservice.DeletedRemoteKeysStatus{
-					Status:  ethpbservice.DeletedRemoteKeysStatus_DELETED,
+					Status:  ethpbservice.DeletedRemoteKeysStatus_deleted,
 					Message: fmt.Sprintf("Successfully deleted pubkey: %v", hexutil.Encode(pubkey[:])),
 				}
 				log.Debug("Deleted pubkey from keymanager for web3signer", "pubkey", hexutil.Encode(pubkey[:]))
@@ -358,7 +358,7 @@ func (km *Keymanager) DeletePublicKeys(ctx context.Context, pubKeys [][fieldpara
 		}
 		if deletedRemoteKeysStatuses[i] == nil {
 			deletedRemoteKeysStatuses[i] = &ethpbservice.DeletedRemoteKeysStatus{
-				Status:  ethpbservice.DeletedRemoteKeysStatus_NOT_FOUND,
+				Status:  ethpbservice.DeletedRemoteKeysStatus_not_found,
 				Message: fmt.Sprintf("Pubkey: %v not found", hexutil.Encode(pubkey[:])),
 			}
 		}
