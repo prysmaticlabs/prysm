@@ -49,7 +49,7 @@ func TestValidatorPayloadIDsCache_GetAndSaveValidatorPayloadIDs(t *testing.T) {
 	i, p, ok = cache.GetProposerPayloadIDs(slot)
 	require.Equal(t, true, ok)
 	require.Equal(t, vid, i)
-	require.Equal(t, newPid, p)
+	require.Equal(t, pid, p)
 
 	// remove cache entry
 	cache.PrunePayloadIDs(slot + 1)
