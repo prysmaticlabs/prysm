@@ -382,7 +382,9 @@ func TestForkChoice_ReceivedBlocksLastEpoch(t *testing.T) {
 	s.genesisTime = uint64(time.Now().Add(time.Duration(-1*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second).Unix())
 	_, err := s.insert(context.Background(), 1, [32]byte{'a'}, b, b, 1, 1)
 	require.NoError(t, err)
-	require.Equal(t, uint64(1), f.ReceivedBlocksLastEpoch())
+	count, err := f.ReceivedBlocksLastEpoch()
+	require.NoError(t, err)
+	require.Equal(t, uint64(1), count)
 	require.Equal(t, types.Slot(1), f.HighestReceivedBlockSlot())
 
 	// 64
@@ -390,7 +392,9 @@ func TestForkChoice_ReceivedBlocksLastEpoch(t *testing.T) {
 	_, err = s.insert(context.Background(), 64, [32]byte{'A'}, b, b, 1, 1)
 	require.NoError(t, err)
 	s.genesisTime = uint64(time.Now().Add(time.Duration(-64*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second).Unix())
-	require.Equal(t, uint64(1), f.ReceivedBlocksLastEpoch())
+	count, err = f.ReceivedBlocksLastEpoch()
+	require.NoError(t, err)
+	require.Equal(t, uint64(1), count)
 	require.Equal(t, types.Slot(64), f.HighestReceivedBlockSlot())
 
 	// 64 65
@@ -398,7 +402,9 @@ func TestForkChoice_ReceivedBlocksLastEpoch(t *testing.T) {
 	_, err = s.insert(context.Background(), 65, [32]byte{'B'}, b, b, 1, 1)
 	require.NoError(t, err)
 	s.genesisTime = uint64(time.Now().Add(time.Duration(-65*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second).Unix())
-	require.Equal(t, uint64(2), f.ReceivedBlocksLastEpoch())
+	count, err = f.ReceivedBlocksLastEpoch()
+	require.NoError(t, err)
+	require.Equal(t, uint64(2), count)
 	require.Equal(t, types.Slot(65), f.HighestReceivedBlockSlot())
 
 	// 64 65 66
@@ -406,7 +412,9 @@ func TestForkChoice_ReceivedBlocksLastEpoch(t *testing.T) {
 	_, err = s.insert(context.Background(), 66, [32]byte{'C'}, b, b, 1, 1)
 	require.NoError(t, err)
 	s.genesisTime = uint64(time.Now().Add(time.Duration(-66*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second).Unix())
-	require.Equal(t, uint64(3), f.ReceivedBlocksLastEpoch())
+	count, err = f.ReceivedBlocksLastEpoch()
+	require.NoError(t, err)
+	require.Equal(t, uint64(3), count)
 	require.Equal(t, types.Slot(66), f.HighestReceivedBlockSlot())
 
 	// 64 65 66
@@ -415,7 +423,9 @@ func TestForkChoice_ReceivedBlocksLastEpoch(t *testing.T) {
 	_, err = s.insert(context.Background(), 98, [32]byte{'D'}, b, b, 1, 1)
 	require.NoError(t, err)
 	s.genesisTime = uint64(time.Now().Add(time.Duration(-98*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second).Unix())
-	require.Equal(t, uint64(1), f.ReceivedBlocksLastEpoch())
+	count, err = f.ReceivedBlocksLastEpoch()
+	require.NoError(t, err)
+	require.Equal(t, uint64(1), count)
 	require.Equal(t, types.Slot(98), f.HighestReceivedBlockSlot())
 
 	// 64 65 66
@@ -425,7 +435,9 @@ func TestForkChoice_ReceivedBlocksLastEpoch(t *testing.T) {
 	_, err = s.insert(context.Background(), 132, [32]byte{'E'}, b, b, 1, 1)
 	require.NoError(t, err)
 	s.genesisTime = uint64(time.Now().Add(time.Duration(-132*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second).Unix())
-	require.Equal(t, uint64(1), f.ReceivedBlocksLastEpoch())
+	count, err = f.ReceivedBlocksLastEpoch()
+	require.NoError(t, err)
+	require.Equal(t, uint64(1), count)
 	require.Equal(t, types.Slot(132), f.HighestReceivedBlockSlot())
 
 	// 64 65 66
@@ -436,7 +448,9 @@ func TestForkChoice_ReceivedBlocksLastEpoch(t *testing.T) {
 	_, err = s.insert(context.Background(), 99, [32]byte{'F'}, b, b, 1, 1)
 	require.NoError(t, err)
 	s.genesisTime = uint64(time.Now().Add(time.Duration(-132*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second).Unix())
-	require.Equal(t, uint64(1), f.ReceivedBlocksLastEpoch())
+	count, err = f.ReceivedBlocksLastEpoch()
+	require.NoError(t, err)
+	require.Equal(t, uint64(1), count)
 	require.Equal(t, types.Slot(132), f.HighestReceivedBlockSlot())
 
 	// 64 65 66
@@ -447,7 +461,9 @@ func TestForkChoice_ReceivedBlocksLastEpoch(t *testing.T) {
 	_, err = s.insert(context.Background(), 100, [32]byte{'G'}, b, b, 1, 1)
 	require.NoError(t, err)
 	s.genesisTime = uint64(time.Now().Add(time.Duration(-132*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second).Unix())
-	require.Equal(t, uint64(1), f.ReceivedBlocksLastEpoch())
+	count, err = f.ReceivedBlocksLastEpoch()
+	require.NoError(t, err)
+	require.Equal(t, uint64(1), count)
 	require.Equal(t, types.Slot(132), f.HighestReceivedBlockSlot())
 
 	// 64 65 66
@@ -458,11 +474,17 @@ func TestForkChoice_ReceivedBlocksLastEpoch(t *testing.T) {
 	_, err = s.insert(context.Background(), 101, [32]byte{'H'}, b, b, 1, 1)
 	require.NoError(t, err)
 	s.genesisTime = uint64(time.Now().Add(time.Duration(-132*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second).Unix())
-	require.Equal(t, uint64(2), f.ReceivedBlocksLastEpoch())
+	count, err = f.ReceivedBlocksLastEpoch()
+	require.NoError(t, err)
+	require.Equal(t, uint64(2), count)
 	require.Equal(t, types.Slot(132), f.HighestReceivedBlockSlot())
 
 	s.genesisTime = uint64(time.Now().Add(time.Duration(-134*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second).Unix())
-	require.Equal(t, uint64(1), f.ReceivedBlocksLastEpoch())
+	count, err = f.ReceivedBlocksLastEpoch()
+	require.NoError(t, err)
+	require.Equal(t, uint64(1), count)
 	s.genesisTime = uint64(time.Now().Add(time.Duration(-165*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second).Unix())
-	require.Equal(t, uint64(0), f.ReceivedBlocksLastEpoch())
+	count, err = f.ReceivedBlocksLastEpoch()
+	require.NoError(t, err)
+	require.Equal(t, uint64(0), count)
 }
