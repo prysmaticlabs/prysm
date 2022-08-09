@@ -212,7 +212,7 @@ func TestKeymanager_FetchValidatingPublicKeys_HappyPath_WithKeyList(t *testing.T
 	}
 	require.NotNil(t, resp)
 	require.NoError(t, err)
-	require.Equal(t, resp, keys)
+	require.DeepEqual(t, resp, keys)
 }
 
 func TestKeymanager_FetchValidatingPublicKeys_HappyPath_WithExternalURL(t *testing.T) {
@@ -247,7 +247,7 @@ func TestKeymanager_FetchValidatingPublicKeys_HappyPath_WithExternalURL(t *testi
 	}
 	require.NotNil(t, resp)
 	require.NoError(t, err)
-	require.Equal(t, resp, keys)
+	require.DeepEqual(t, resp, keys)
 }
 
 func TestKeymanager_FetchValidatingPublicKeys_WithExternalURL_ThrowsError(t *testing.T) {
