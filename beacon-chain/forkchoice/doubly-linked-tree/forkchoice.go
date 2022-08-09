@@ -21,8 +21,6 @@ import (
 	"go.opencensus.io/trace"
 )
 
-const slotsPerEpoch = 32
-
 // New initializes a new fork choice store.
 func New() *ForkChoice {
 	s := &Store{
@@ -37,7 +35,7 @@ func New() *ForkChoice {
 		nodeByPayload:                 make(map[[fieldparams.RootLength]byte]*Node),
 		slashedIndices:                make(map[types.ValidatorIndex]bool),
 		pruneThreshold:                defaultPruneThreshold,
-		receivedBlocksLastEpoch:       [slotsPerEpoch]types.Slot{},
+		receivedBlocksLastEpoch:       [fieldparams.SlotsPerEpoch]types.Slot{},
 	}
 
 	b := make([]uint64, 0)

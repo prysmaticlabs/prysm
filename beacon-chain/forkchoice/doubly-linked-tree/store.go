@@ -279,8 +279,8 @@ func (f *ForkChoice) ReceivedBlocksLastEpoch() (uint64, error) {
 	count := uint64(0)
 	lowerBound := slots.CurrentSlot(f.store.genesisTime)
 	var err error
-	if lowerBound > params.BeaconConfig().SlotsPerEpoch {
-		lowerBound, err = lowerBound.SafeSubSlot(params.BeaconConfig().SlotsPerEpoch)
+	if lowerBound > fieldparams.SlotsPerEpoch {
+		lowerBound, err = lowerBound.SafeSub(fieldparams.SlotsPerEpoch)
 		if err != nil {
 			return 0, err
 		}

@@ -27,7 +27,6 @@ import (
 // This defines the minimal number of block nodes that can be in the tree
 // before getting pruned upon new finalization.
 const defaultPruneThreshold = 256
-const slotsPerEpoch = 32
 
 // New initializes a new fork choice store.
 func New() *ForkChoice {
@@ -45,7 +44,7 @@ func New() *ForkChoice {
 		canonicalNodes:                make(map[[32]byte]bool),
 		slashedIndices:                make(map[types.ValidatorIndex]bool),
 		pruneThreshold:                defaultPruneThreshold,
-		receivedBlocksLastEpoch:       [slotsPerEpoch]types.Slot{},
+		receivedBlocksLastEpoch:       [fieldparams.SlotsPerEpoch]types.Slot{},
 	}
 
 	b := make([]uint64, 0)
@@ -1090,8 +1089,8 @@ func (f *ForkChoice) ReceivedBlocksLastEpoch() (uint64, error) {
 	count := uint64(0)
 	lowerBound := slots.CurrentSlot(f.store.genesisTime)
 	var err error
-	if lowerBound > params.BeaconConfig().SlotsPerEpoch {
-		lowerBound, err = lowerBound.SafeSubSlot(params.BeaconConfig().SlotsPerEpoch)
+	if lowerBound > fieldparams.SlotsPerEpoch {
+		lowerBound, err = lowerBound.SafeSub(fieldparams.SlotsPerEpoch)
 		if err != nil {
 			return 0, err
 		}
