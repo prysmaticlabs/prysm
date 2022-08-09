@@ -63,7 +63,7 @@ func TestImportKeystores_JSONisEqual(t *testing.T) {
 	protoImportKeystoresResponse := &service.ImportKeystoresResponse{
 		Data: []*service.ImportedKeystoreStatus{
 			{
-				Status:  service.ImportedKeystoreStatus_ERROR,
+				Status:  service.ImportedKeystoreStatus_error,
 				Message: "a",
 			},
 		},
@@ -101,7 +101,7 @@ func TestDeleteKeystores_JSONisEqual(t *testing.T) {
 	protoDeleteResponse := &service.DeleteKeystoresResponse{
 		Data: []*service.DeletedKeystoreStatus{
 			{
-				Status:  service.DeletedKeystoreStatus_ERROR,
+				Status:  service.DeletedKeystoreStatus_error,
 				Message: "a",
 			},
 		},
@@ -176,7 +176,7 @@ func TestImportRemoteKeys_JSONisEqual(t *testing.T) {
 	protoImportKeystoresResponse := &service.ImportRemoteKeysResponse{
 		Data: []*service.ImportedRemoteKeysStatus{
 			{
-				Status:  service.ImportedRemoteKeysStatus_ERROR,
+				Status:  service.ImportedRemoteKeysStatus_error,
 				Message: "a",
 			},
 		},
@@ -213,7 +213,7 @@ func TestDeleteRemoteKeys_JSONisEqual(t *testing.T) {
 	protoDeleteResponse := &service.DeleteRemoteKeysResponse{
 		Data: []*service.DeletedRemoteKeysStatus{
 			{
-				Status:  service.DeletedRemoteKeysStatus_ERROR,
+				Status:  service.DeletedRemoteKeysStatus_error,
 				Message: "a",
 			},
 		},
