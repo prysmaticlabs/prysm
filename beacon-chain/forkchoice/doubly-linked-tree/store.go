@@ -72,6 +72,10 @@ func (s *Store) head(ctx context.Context) ([32]byte, error) {
 	s.checkpointsLock.RLock()
 	defer s.checkpointsLock.RUnlock()
 
+	if err := ctx.Err(); err != nil {
+		return [32]byte{}, err
+	}
+
 	// JustifiedRoot has to be known
 	justifiedNode, ok := s.nodeByRoot[s.justifiedCheckpoint.Root]
 	if !ok || justifiedNode == nil {
