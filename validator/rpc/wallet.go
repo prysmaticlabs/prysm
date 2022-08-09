@@ -306,7 +306,7 @@ func (s *Server) ImportAccounts(
 		return nil, err
 	}
 	for _, stat := range statuses {
-		if stat.Status == ethpbservice.ImportedKeystoreStatus_ERROR {
+		if stat.Status == ethpbservice.ImportedKeystoreStatus_error {
 			return nil, status.Error(codes.FailedPrecondition, stat.Message)
 		}
 	}
