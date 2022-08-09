@@ -54,7 +54,8 @@ func (f *ProposerPayloadIDsCache) SetProposerAndPayloadIDs(slot types.Slot, vId 
 	copy(bs[:], append(vIdBytes[:], pId[:]...))
 
 	ids, ok := f.slotToProposerAndPayloadIDs[slot]
-	// Ok to overwrite if the slot is already set but the payload ID is not set.
+	// Ok to overwrite if the slot is already set but the cached payload ID is not set.
+	// Ok to overwrite if the slot is already set but the cached payload ID is not set.
 	// This combats the re-org case where payload assignment could change the epoch of.
 	byte8 := [8]byte{}
 	if !ok || (ok && bytes.Equal(ids[vIdLength:], byte8[:])) {
