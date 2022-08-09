@@ -18,7 +18,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	f "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/doubly-linked-tree"
@@ -140,6 +139,70 @@ func (s *Service) Start() {
 	s.fillMissingPayloadIDRoutine(s.ctx, s.cfg.StateNotifier.StateFeed())
 }
 
+func (s *Service) CombinedStart(genesis state.BeaconState) error {
+	// TODO: we only do this on the genesis code path, not from disk - why?
+	/*
+		// Update committee shuffled indices for genesis epoch.
+		if err := helpers.UpdateCommitteeCache(ctx, genesisState, 0); err != nil {
+			return nil, err
+		}
+		if err := helpers.UpdateProposerIndicesInCache(ctx, genesisState); err != nil {
+			return nil, err
+		}
+	 */
+	gt := time.Unix(int64(genesis.GenesisTime()), 0)
+	s.SetGenesisTime(gt)
+	s.cfg.AttService.SetGenesisTime(genesis.GenesisTime())
+
+	if features.Get().EnableForkChoiceDoublyLinkedTree {
+		s.cfg.ForkChoiceStore = doublylinkedtree.New()
+	} else {
+		s.cfg.ForkChoiceStore = protoarray.New()
+	}
+	// TODO: move head to use fork choice - we currently do not call initializeHeadFromDB!!
+
+	gb, err := s.cfg.BeaconDB.GenesisBlock(s.ctx)
+	if err != nil {
+		return errors.Wrap(err, "could not get genesis block from db")
+	}
+	if err := wrapper.BeaconBlockIsNil(gb); err != nil {
+		return errors.Wrap(err, "nil value from database block query")
+	}
+	gbr, err := gb.Block().HashTreeRoot()
+	if err != nil {
+		return errors.Wrap(err, "could not compute hash_tree_root of genesis block")
+	}
+	if err := s.cfg.ForkChoiceStore.InsertNode(s.ctx, genesis, gbr); err != nil {
+		log.Fatalf("Could not process genesis block for fork choice: %v", err)
+	}
+	s.cfg.ForkChoiceStore.SetGenesisTime(genesis.GenesisTime())
+
+	obr, err := s.cfg.BeaconDB.OriginCheckpointBlockRoot(s.ctx)
+	if err == nil {
+		// this means checkpoint sync was used, use the database origin root value
+		s.originBlockRoot = obr
+	} else {
+		if !errors.Is(err, db.ErrNotFound) {
+			return errors.Wrap(err, "could not retrieve checkpoint sync chain origin data from db")
+		}
+		// this means we got ErrNotFound, meaning checkpoint sync wasn't used, so the node should
+		// be synced from genesis. In this case, use the genesis block root as origin.
+		s.originBlockRoot = gbr
+	}
+	// TODO: should we set origin root when its the genesis block root, or is this method only for checkpoint sync?
+	s.cfg.ForkChoiceStore.SetOriginRoot(s.originBlockRoot)
+
+	spawnCountdownIfPreGenesis(s.ctx, gt, genesis)
+	s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
+		Type: statefeed.Initialized,
+		Data: &statefeed.InitializedData{
+			StartTime:             gt,
+			GenesisValidatorsRoot: genesis.GenesisValidatorsRoot(),
+		},
+	})
+	return nil
+}
+
 // Stop the blockchain service's main event loop and associated goroutines.
 func (s *Service) Stop() error {
 	defer s.cancel()
@@ -187,7 +250,12 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 	if err := s.initializeHeadFromDB(s.ctx); err != nil {
 		return errors.Wrap(err, "could not set up chain info")
 	}
-	spawnCountdownIfPreGenesis(s.ctx, s.genesisTime(), s.cfg.BeaconDB)
+	gs, err := s.cfg.BeaconDB.GenesisState(s.ctx)
+	if err != nil {
+		return err
+	}
+	gt := time.Unix(int64(gs.GenesisTime()), 0)
+	spawnCountdownIfPreGenesis(s.ctx, gt, gs)
 
 	justified, err := s.cfg.BeaconDB.JustifiedCheckpoint(s.ctx)
 	if err != nil {
@@ -317,18 +385,15 @@ func (s *Service) initializeHeadFromDB(ctx context.Context) error {
 
 func (s *Service) startFromPOWChain() error {
 	log.Info("Waiting to reach the validator deposit threshold to start the beacon chain...")
-	if s.cfg.ChainStartFetcher == nil {
-		return errors.New("not configured web3Service for POW chain")
-	}
 	go func() {
 		c, err := s.clockWaiter.WaitForClock(s.ctx)
 		if err != nil {
 			log.WithError(err).Error("timeout while waiting for genesis during blockchain service startup")
 			return
 		}
-		s.setClock(c)
 		log.WithField("starttime", c.GenesisTime()).Debug("Received chain start event")
 		s.onPowchainStart(s.ctx, c.GenesisTime())
+		s.setClock(c)
 	}()
 
 	return nil
@@ -337,8 +402,7 @@ func (s *Service) startFromPOWChain() error {
 // onPowchainStart initializes a series of deposits from the ChainStart deposits in the eth1
 // deposit contract, initializes the beacon chain's state, and kicks off the beacon chain.
 func (s *Service) onPowchainStart(ctx context.Context, genesisTime time.Time) {
-	preGenesisState := s.cfg.ChainStartFetcher.PreGenesisState()
-	initializedState, err := s.initializeBeaconChain(ctx, genesisTime, preGenesisState, s.cfg.ChainStartFetcher.ChainStartEth1Data())
+	initializedState, err := s.initializeBeaconChain(ctx, genesisTime, preGenesisState)
 	if err != nil {
 		log.Fatalf("Could not initialize beacon chain: %v", err)
 	}
@@ -363,29 +427,10 @@ func (s *Service) onPowchainStart(ctx context.Context, genesisTime time.Time) {
 // initializes the state and genesis block of the beacon chain to persistent storage
 // based on a genesis timestamp value obtained from the ChainStart event emitted
 // by the ETH1.0 Deposit Contract and the POWChain service of the node.
-func (s *Service) initializeBeaconChain(
-	ctx context.Context,
-	genesisTime time.Time,
-	preGenesisState state.BeaconState,
-	eth1data *ethpb.Eth1Data) (state.BeaconState, error) {
+func (s *Service) initializeBeaconChain(ctx context.Context, genesisTime time.Time) (state.BeaconState, error) {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.Service.initializeBeaconChain")
 	defer span.End()
 	s.SetGenesisTime(genesisTime)
-	unixTime := uint64(genesisTime.Unix())
-
-	genesisState, err := transition.OptimizedGenesisBeaconState(unixTime, preGenesisState, eth1data)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not initialize genesis state")
-	}
-
-	if err := s.saveGenesisData(ctx, genesisState); err != nil {
-		return nil, errors.Wrap(err, "could not save genesis data")
-	}
-
-	log.Info("Initialized beacon chain genesis state")
-
-	// Clear out all pre-genesis data now that the state is initialized.
-	s.cfg.ChainStartFetcher.ClearPreGenesisData()
 
 	// Update committee shuffled indices for genesis epoch.
 	if err := helpers.UpdateCommitteeCache(ctx, genesisState, 0); err != nil {
@@ -396,15 +441,11 @@ func (s *Service) initializeBeaconChain(
 	}
 
 	s.cfg.AttService.SetGenesisTime(genesisState.GenesisTime())
-
 	return genesisState, nil
 }
 
 // This gets called when beacon chain is first initialized to save genesis data (state, block, and more) in db.
 func (s *Service) saveGenesisData(ctx context.Context, genesisState state.BeaconState) error {
-	if err := s.cfg.BeaconDB.SaveGenesisData(ctx, genesisState); err != nil {
-		return errors.Wrap(err, "could not save genesis data")
-	}
 	genesisBlk, err := s.cfg.BeaconDB.GenesisBlock(ctx)
 	if err != nil || genesisBlk == nil || genesisBlk.IsNil() {
 		return fmt.Errorf("could not load genesis block: %v", err)
@@ -443,19 +484,14 @@ func (s *Service) hasBlock(ctx context.Context, root [32]byte) bool {
 	return s.cfg.BeaconDB.HasBlock(ctx, root)
 }
 
-func spawnCountdownIfPreGenesis(ctx context.Context, genesisTime time.Time, db db.HeadAccessDatabase) {
-	currentTime := prysmTime.Now()
-	if currentTime.After(genesisTime) {
+func spawnCountdownIfPreGenesis(ctx context.Context, gt time.Time, gs state.BeaconState) {
+	// only proceed if this function runs before genesis time
+	if prysmTime.Now().After(gt) {
 		return
 	}
-
-	gState, err := db.GenesisState(ctx)
+	gr, err := gs.HashTreeRoot(ctx)
 	if err != nil {
-		log.Fatalf("Could not retrieve genesis state: %v", err)
+		log.WithError(err).Fatal("Could not compute hash_tree_root of genesis state")
 	}
-	gRoot, err := gState.HashTreeRoot(ctx)
-	if err != nil {
-		log.Fatalf("Could not hash tree root genesis state: %v", err)
-	}
-	go slots.CountdownToGenesis(ctx, genesisTime, uint64(gState.NumValidators()), gRoot)
+	go slots.CountdownToGenesis(ctx, gt, uint64(gs.NumValidators()), gr)
 }

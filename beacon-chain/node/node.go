@@ -214,17 +214,17 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 
 	powSync := geninit.NewClockSync()
 	genSync := geninit.NewClockSync()
-	log.Debugln("Registering Genesis Init Service")
-	if err := beacon.registerGenesisInitService(powSync, genSync); err != nil {
-		return nil, err
-	}
 
 	log.Debugln("Registering POW Chain Service")
-	if err := beacon.registerPOWChainService(powSync); err != nil {
+	powService, err := beacon.registerPOWChainService(powSync)
+	if err != nil {
 		return nil, err
 	}
 
-
+	log.Debugln("Registering Genesis Init Service")
+	if err := beacon.registerGenesisInitService(powSync, genSync, powService, beacon.db); err != nil {
+		return nil, err
+	}
 
 	log.Debugln("Registering Attestation Pool Service")
 	if err := beacon.registerAttestationPool(); err != nil {
@@ -639,17 +639,17 @@ func (b *BeaconNode) registerBlockchainService() error {
 	return b.services.RegisterService(blockchainService)
 }
 
-func (b *BeaconNode) registerPOWChainService(gcs geninit.ClockSetter) error {
+func (b *BeaconNode) registerPOWChainService(gcs geninit.ClockSetter) (*powchain.Service, error) {
 	if b.cliCtx.Bool(testSkipPowFlag) {
-		return b.services.RegisterService(&powchain.Service{})
+		return nil, b.services.RegisterService(&powchain.Service{})
 	}
 	bs, err := powchain.NewPowchainCollector(b.ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	depositContractAddr, err := powchain.DepositContractAddress()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// skipcq: CRT-D0001
@@ -664,16 +664,17 @@ func (b *BeaconNode) registerPOWChainService(gcs geninit.ClockSetter) error {
 		powchain.WithFinalizedStateAtStartup(b.finalizedStateAtStartUp),
 		powchain.WithGenesisClockSetter(gcs),
 	)
-	web3Service, err := powchain.NewService(b.ctx, opts...)
+	srv, err := powchain.NewService(b.ctx, opts...)
 	if err != nil {
-		return errors.Wrap(err, "could not register proof-of-work chain web3Service")
+		return nil, errors.Wrap(err, "could not register proof-of-work chain web3Service")
 	}
 
-	return b.services.RegisterService(web3Service)
+	err = b.services.RegisterService(srv)
+	return srv, err
 }
 
-func (b *BeaconNode) registerGenesisInitService(w geninit.ClockWaiter, s geninit.ClockSetter) error {
-	g, err := geninit.New(b.ctx, w, s)
+func (b *BeaconNode) registerGenesisInitService(w geninit.ClockWaiter, s geninit.ClockSetter, f powchain.ChainStartFetcher, d db.HeadAccessDatabase) error {
+	g, err := geninit.New(b.ctx, w, s, f, d)
 	if err != nil {
 		return err
 	}
