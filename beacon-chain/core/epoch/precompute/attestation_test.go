@@ -39,7 +39,7 @@ func TestUpdateValidator_InclusionOnlyCountsPrevEpoch(t *testing.T) {
 	record := &precompute.Validator{IsCurrentEpochAttester: true, IsCurrentEpochTargetAttester: true}
 	a := &ethpb.PendingAttestation{InclusionDelay: 1, ProposerIndex: 2}
 
-	// Verify inclusion info doesnt get updated.
+	// Verify inclusion info doesn't get updated.
 	vp = precompute.UpdateValidator(vp, record, []uint64{0}, a, 100)
 	wanted := &precompute.Validator{IsCurrentEpochAttester: true, IsCurrentEpochTargetAttester: true, InclusionSlot: e}
 	wantedVp := []*precompute.Validator{wanted}

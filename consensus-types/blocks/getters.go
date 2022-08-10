@@ -5,7 +5,6 @@ import (
 	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/runtime/version"
@@ -16,7 +15,7 @@ import (
 // it is recommended to run these checks as first line of defense.
 func BeaconBlockIsNil(b interfaces.SignedBeaconBlock) error {
 	if b == nil || b.IsNil() {
-		return errNilSignedBeaconBlock
+		return ErrNilSignedBeaconBlock
 	}
 	if b.Block().IsNil() {
 		return errNilBeaconBlock
@@ -33,7 +32,7 @@ func (b *SignedBeaconBlock) Signature() []byte {
 }
 
 // Block returns the underlying beacon block object.
-func (b *SignedBeaconBlock) Block() *BeaconBlock {
+func (b *SignedBeaconBlock) Block() interfaces.BeaconBlock {
 	return b.block
 }
 
@@ -43,7 +42,11 @@ func (b *SignedBeaconBlock) IsNil() bool {
 }
 
 // Copy performs a deep copy of the signed beacon block object.
-func (b *SignedBeaconBlock) Copy() (*SignedBeaconBlock, error) {
+func (b *SignedBeaconBlock) Copy() (interfaces.SignedBeaconBlock, error) {
+	if b == nil {
+		return nil, nil
+	}
+
 	pb, err := b.Proto()
 	if err != nil {
 		return nil, err
@@ -143,6 +146,46 @@ func (b *SignedBeaconBlock) PbBlindedBellatrixBlock() (*eth.SignedBlindedBeaconB
 	return pb.(*eth.SignedBlindedBeaconBlockBellatrix), nil
 }
 
+// ToBlinded converts a non-blinded block to its blinded equivalent.
+func (b *SignedBeaconBlock) ToBlinded() (interfaces.SignedBeaconBlock, error) {
+	if b.version != version.Bellatrix {
+		return nil, ErrUnsupportedVersion
+	}
+	if b.block.IsNil() {
+		return nil, errors.New("cannot convert nil block to blinded format")
+	}
+	payload, err := b.block.Body().Execution()
+	if err != nil {
+		return nil, err
+	}
+	header, err := PayloadToHeader(payload)
+	if err != nil {
+		return nil, err
+	}
+	return initBlindedSignedBlockFromProtoBellatrix(
+		&eth.SignedBlindedBeaconBlockBellatrix{
+			Block: &eth.BlindedBeaconBlockBellatrix{
+				Slot:          b.block.slot,
+				ProposerIndex: b.block.proposerIndex,
+				ParentRoot:    b.block.parentRoot,
+				StateRoot:     b.block.stateRoot,
+				Body: &eth.BlindedBeaconBlockBodyBellatrix{
+					RandaoReveal:           b.block.body.randaoReveal,
+					Eth1Data:               b.block.body.eth1Data,
+					Graffiti:               b.block.body.graffiti,
+					ProposerSlashings:      b.block.body.proposerSlashings,
+					AttesterSlashings:      b.block.body.attesterSlashings,
+					Attestations:           b.block.body.attestations,
+					Deposits:               b.block.body.deposits,
+					VoluntaryExits:         b.block.body.voluntaryExits,
+					SyncAggregate:          b.block.body.syncAggregate,
+					ExecutionPayloadHeader: header,
+				},
+			},
+			Signature: b.signature,
+		})
+}
+
 // Version of the underlying protobuf object.
 func (b *SignedBeaconBlock) Version() int {
 	return b.version
@@ -212,22 +255,27 @@ func (b *SignedBeaconBlock) MarshalSSZTo(dst []byte) ([]byte, error) {
 }
 
 // SizeSSZ returns the size of the serialized signed block
-func (b *SignedBeaconBlock) SizeSSZ() (int, error) {
+//
+// WARNING: This function panics. It is required to change the signature
+// of fastssz's SizeSSZ() interface function to avoid panicking.
+// Changing the signature causes very problematic issues with wealdtech deps.
+// For the time being panicking is preferable.
+func (b *SignedBeaconBlock) SizeSSZ() int {
 	pb, err := b.Proto()
 	if err != nil {
-		return 0, err
+		panic(err)
 	}
 	switch b.version {
 	case version.Phase0:
-		return pb.(*eth.SignedBeaconBlock).SizeSSZ(), nil
+		return pb.(*eth.SignedBeaconBlock).SizeSSZ()
 	case version.Altair:
-		return pb.(*eth.SignedBeaconBlockAltair).SizeSSZ(), nil
+		return pb.(*eth.SignedBeaconBlockAltair).SizeSSZ()
 	case version.Bellatrix:
-		return pb.(*eth.SignedBeaconBlockBellatrix).SizeSSZ(), nil
+		return pb.(*eth.SignedBeaconBlockBellatrix).SizeSSZ()
 	case version.BellatrixBlind:
-		return pb.(*eth.SignedBlindedBeaconBlockBellatrix).SizeSSZ(), nil
+		return pb.(*eth.SignedBlindedBeaconBlockBellatrix).SizeSSZ()
 	default:
-		return 0, errIncorrectBlockVersion
+		panic(incorrectBlockVersion)
 	}
 }
 
@@ -303,7 +351,7 @@ func (b *BeaconBlock) StateRoot() []byte {
 }
 
 // Body returns the underlying block body.
-func (b *BeaconBlock) Body() *BeaconBlockBody {
+func (b *BeaconBlock) Body() interfaces.BeaconBlockBody {
 	return b.body
 }
 
@@ -412,22 +460,27 @@ func (b *BeaconBlock) MarshalSSZTo(dst []byte) ([]byte, error) {
 }
 
 // SizeSSZ returns the size of the serialized block.
-func (b *BeaconBlock) SizeSSZ() (int, error) {
+//
+// WARNING: This function panics. It is required to change the signature
+// of fastssz's SizeSSZ() interface function to avoid panicking.
+// Changing the signature causes very problematic issues with wealdtech deps.
+// For the time being panicking is preferable.
+func (b *BeaconBlock) SizeSSZ() int {
 	pb, err := b.Proto()
 	if err != nil {
-		return 0, err
+		panic(err)
 	}
 	switch b.version {
 	case version.Phase0:
-		return pb.(*eth.BeaconBlock).SizeSSZ(), nil
+		return pb.(*eth.BeaconBlock).SizeSSZ()
 	case version.Altair:
-		return pb.(*eth.BeaconBlockAltair).SizeSSZ(), nil
+		return pb.(*eth.BeaconBlockAltair).SizeSSZ()
 	case version.Bellatrix:
-		return pb.(*eth.BeaconBlockBellatrix).SizeSSZ(), nil
+		return pb.(*eth.BeaconBlockBellatrix).SizeSSZ()
 	case version.BellatrixBlind:
-		return pb.(*eth.BlindedBeaconBlockBellatrix).SizeSSZ(), nil
+		return pb.(*eth.BlindedBeaconBlockBellatrix).SizeSSZ()
 	default:
-		return 0, errIncorrectBlockVersion
+		panic(incorrectBodyVersion)
 	}
 }
 
@@ -555,20 +608,18 @@ func (b *BeaconBlockBody) SyncAggregate() (*eth.SyncAggregate, error) {
 	return b.syncAggregate, nil
 }
 
-// ExecutionPayload returns the execution payload of the block body.
-func (b *BeaconBlockBody) ExecutionPayload() (*enginev1.ExecutionPayload, error) {
-	if b.version != version.Bellatrix {
-		return nil, errNotSupported("ExecutionPayload", b.version)
+// Execution returns the execution payload of the block body.
+func (b *BeaconBlockBody) Execution() (interfaces.ExecutionData, error) {
+	switch b.version {
+	case version.Phase0, version.Altair:
+		return nil, errNotSupported("Execution", b.version)
+	case version.Bellatrix:
+		return WrappedExecutionPayload(b.executionPayload)
+	case version.BellatrixBlind:
+		return WrappedExecutionPayloadHeader(b.executionPayloadHeader)
+	default:
+		return nil, errIncorrectBlockVersion
 	}
-	return b.executionPayload, nil
-}
-
-// ExecutionPayloadHeader returns the execution payload header of the block body.
-func (b *BeaconBlockBody) ExecutionPayloadHeader() (*enginev1.ExecutionPayloadHeader, error) {
-	if b.version != version.BellatrixBlind {
-		return nil, errNotSupported("ExecutionPayloadHeader", b.version)
-	}
-	return b.executionPayloadHeader, nil
 }
 
 // HashTreeRoot returns the ssz root of the block body.

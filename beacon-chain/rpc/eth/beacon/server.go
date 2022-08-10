@@ -8,11 +8,11 @@ import (
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/execution"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	v1alpha1validator "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/validator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/statefetcher"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
@@ -40,5 +40,5 @@ type Server struct {
 	SyncChecker                   sync.Checker
 	CanonicalHistory              *stategen.CanonicalHistory
 	HeadUpdater                   blockchain.HeadUpdater
-	ExecutionPayloadReconstructor powchain.ExecutionPayloadReconstructor
+	ExecutionPayloadReconstructor execution.ExecutionPayloadReconstructor
 }

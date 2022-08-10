@@ -44,8 +44,9 @@ type BeaconChainConfig struct {
 	EffectiveBalanceIncrement uint64 `yaml:"EFFECTIVE_BALANCE_INCREMENT" spec:"true"` // EffectiveBalanceIncrement is used for converting the high balance into the low balance for validators.
 
 	// Initial value constants.
-	BLSWithdrawalPrefixByte byte     `yaml:"BLS_WITHDRAWAL_PREFIX" spec:"true"` // BLSWithdrawalPrefixByte is used for BLS withdrawal and it's the first byte.
-	ZeroHash                [32]byte // ZeroHash is used to represent a zeroed out 32 byte array.
+	BLSWithdrawalPrefixByte         byte     `yaml:"BLS_WITHDRAWAL_PREFIX" spec:"true"`          // BLSWithdrawalPrefixByte is used for BLS withdrawal and it's the first byte.
+	ETH1AddressWithdrawalPrefixByte byte     `yaml:"ETH1_ADDRESS_WITHDRAWAL_PREFIX" spec:"true"` // ETH1AddressWithdrawalPrefixByte is used for withdrawals and it's the first byte.
+	ZeroHash                        [32]byte // ZeroHash is used to represent a zeroed out 32 byte array.
 
 	// Time parameters constants.
 	GenesisDelay                     uint64      `yaml:"GENESIS_DELAY" spec:"true"`                   // GenesisDelay is the minimum number of seconds to delay starting the Ethereum Beacon Chain genesis. Must be at least 1 second.
@@ -112,6 +113,7 @@ type BeaconChainConfig struct {
 	DomainContributionAndProof        [4]byte `yaml:"DOMAIN_CONTRIBUTION_AND_PROOF" spec:"true"`         // DomainAggregateAndProof defines the BLS signature domain for contribution and proof.
 	DomainApplicationMask             [4]byte `yaml:"DOMAIN_APPLICATION_MASK" spec:"true"`               // DomainApplicationMask defines the BLS signature domain for application mask.
 	DomainApplicationBuilder          [4]byte // DomainApplicationBuilder defines the BLS signature domain for application builder.
+	DomainBLSToExecutionChange        [4]byte // DomainBLSToExecutionChange defines the BLS signature domain to change withdrawal addresses to ETH1 prefix
 
 	// Prysm constants.
 	GweiPerEth                     uint64        // GweiPerEth is the amount of gwei corresponding to 1 eth.

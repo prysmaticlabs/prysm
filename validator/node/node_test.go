@@ -169,16 +169,6 @@ func TestWeb3SignerConfig(t *testing.T) {
 			wantErrMsg: "could not decode public key for web3signer: localhost:8545: hex string without 0x prefix",
 		},
 		{
-			name: "incorrect amount of flag calls used",
-			args: &args{
-				baseURL: "http://localhost:8545",
-				publicKeysOrURLs: []string{"0xa99a76ed7796f7be22d5b7e85deeb7c5677e88e511e0b337618f8c4eb61349b4bf2d153f649f7b53359fe8b94a38e44c," +
-					"0xb89bebc699769726a318c8e9971bd3171297c61aea4a6578a7a4f94b547dcba5bac16a89108b6b6a1fe3695d1a874a0b", "0xa99a76ed7796f7be22d5b7e85deeb7c5677e88e511e0b337618f8c4eb61349b4bf2d153f649f7b53359fe8b94a38e44c"},
-			},
-			want:       nil,
-			wantErrMsg: "could not decode public key for web3signer",
-		},
-		{
 			name: "incorrect amount of flag calls used with url",
 			args: &args{
 				baseURL: "http://localhost:8545",

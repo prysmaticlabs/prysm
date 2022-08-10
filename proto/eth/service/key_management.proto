@@ -167,6 +167,19 @@ service KeyManagement {
       body: "*"
     };
   }
+
+  // GetGasLimit returns the execution gas limit for an individual validator.
+  //
+  // HTTP response status codes:
+  //  - 400: Bad request
+  //  - 401: Unauthorized
+  //  - 403: Forbidden
+  //  - 500: Validator internal error
+  rpc GetGasLimit(PubkeyRequest) returns (GetGasLimitResponse) {
+    option (google.api.http) = {
+      get: "/internal/eth/v1/validator/{pubkey}/gas_limit"
+    };
+  }
 }
 
 message ListKeystoresResponse {
@@ -284,4 +297,12 @@ message GetFeeRecipientByPubkeyResponse {
 message SetFeeRecipientByPubkeyRequest {
   bytes pubkey = 1;
   bytes ethaddress = 2;
+}
+
+message GetGasLimitResponse {
+  message GasLimit {
+    bytes pubkey = 1;
+    uint64 gas_limit = 2;
+  }
+  GasLimit data = 1;
 }

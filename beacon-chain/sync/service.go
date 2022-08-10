@@ -24,12 +24,12 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/execution"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
@@ -81,7 +81,7 @@ type config struct {
 	stateNotifier                 statefeed.Notifier
 	blockNotifier                 blockfeed.Notifier
 	operationNotifier             operation.Notifier
-	executionPayloadReconstructor powchain.ExecutionPayloadReconstructor
+	executionPayloadReconstructor execution.ExecutionPayloadReconstructor
 	stateGen                      *stategen.State
 	slasherAttestationsFeed       *event.Feed
 	slasherBlockHeadersFeed       *event.Feed

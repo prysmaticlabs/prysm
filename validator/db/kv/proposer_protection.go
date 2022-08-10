@@ -202,7 +202,7 @@ func pruneProposalHistoryBySlot(valBucket *bolt.Bucket, newestSlot types.Slot) e
 				return errors.Wrapf(err, "could not prune epoch %d in proposal history", epoch)
 			}
 		} else {
-			// If starting from the oldest, we dont find anything prunable, stop pruning.
+			// If starting from the oldest, we don't find anything prunable, stop pruning.
 			break
 		}
 	}
