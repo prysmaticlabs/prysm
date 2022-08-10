@@ -12,10 +12,10 @@ import (
 	"github.com/prysmaticlabs/prysm/io/logs"
 	"github.com/prysmaticlabs/prysm/monitoring/clientstats"
 	"github.com/prysmaticlabs/prysm/monitoring/journald"
+	prefixed "github.com/prysmaticlabs/prysm/runtime/logging/logrus-prefixed-formatter"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
-	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 )
 
 var appFlags = []cli.Flag{
@@ -130,12 +130,12 @@ func run(ctx *cli.Context) error {
 			for _, s := range scrapers {
 				r, err := s.Scrape()
 				if err != nil {
-					log.Errorf("Scraper error: %s", err)
+					log.WithError(err).Error("Scraper error")
 					continue
 				}
 				err = upd.Update(r)
 				if err != nil {
-					log.Errorf("client-stats collector error: %s", err)
+					log.WithError(err).Error("client-stats collector error")
 					continue
 				}
 			}

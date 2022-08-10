@@ -14,9 +14,9 @@ import (
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/time/slots"
@@ -65,7 +65,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSignedBeaconBlock) (*ethpb.ProposeResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.ProposeBeaconBlock")
 	defer span.End()
-	blk, err := wrapper.WrappedSignedBeaconBlock(req.Block)
+	blk, err := blocks.NewSignedBeaconBlock(req.Block)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Could not decode block: %v", err)
 	}
@@ -121,7 +121,11 @@ func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.
 	}()
 
 	// Broadcast the new block to the network.
-	if err := vs.P2P.Broadcast(ctx, blk.Proto()); err != nil {
+	blkPb, err := blk.Proto()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get protobuf block")
+	}
+	if err := vs.P2P.Broadcast(ctx, blkPb); err != nil {
 		return nil, fmt.Errorf("could not broadcast block: %v", err)
 	}
 	log.WithFields(logrus.Fields{

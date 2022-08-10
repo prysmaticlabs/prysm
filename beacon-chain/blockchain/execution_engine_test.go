@@ -10,18 +10,18 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/execution"
+	mockExecution "github.com/prysmaticlabs/prysm/beacon-chain/execution/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
-	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	bstate "github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	consensusblocks "github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	v1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -78,7 +78,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 		{
 			name: "phase0 block",
 			blk: func() interfaces.BeaconBlock {
-				b, err := wrapper.WrappedBeaconBlock(&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{}})
+				b, err := consensusblocks.NewBeaconBlock(&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{}})
 				require.NoError(t, err)
 				return b
 			}(),
@@ -86,7 +86,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 		{
 			name: "altair block",
 			blk: func() interfaces.BeaconBlock {
-				b, err := wrapper.WrappedBeaconBlock(&ethpb.BeaconBlockAltair{Body: &ethpb.BeaconBlockBodyAltair{}})
+				b, err := consensusblocks.NewBeaconBlock(&ethpb.BeaconBlockAltair{Body: &ethpb.BeaconBlockBodyAltair{}})
 				require.NoError(t, err)
 				return b
 			}(),
@@ -94,7 +94,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 		{
 			name: "not execution block",
 			blk: func() interfaces.BeaconBlock {
-				b, err := wrapper.WrappedBeaconBlock(&ethpb.BeaconBlockBellatrix{
+				b, err := consensusblocks.NewBeaconBlock(&ethpb.BeaconBlockBellatrix{
 					Body: &ethpb.BeaconBlockBodyBellatrix{
 						ExecutionPayload: &v1.ExecutionPayload{
 							ParentHash:    make([]byte, fieldparams.RootLength),
@@ -115,7 +115,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 		{
 			name: "happy case: finalized root is altair block",
 			blk: func() interfaces.BeaconBlock {
-				b, err := wrapper.WrappedBeaconBlock(&ethpb.BeaconBlockBellatrix{
+				b, err := consensusblocks.NewBeaconBlock(&ethpb.BeaconBlockBellatrix{
 					Body: &ethpb.BeaconBlockBodyBellatrix{
 						ExecutionPayload: &v1.ExecutionPayload{},
 					},
@@ -129,7 +129,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 		{
 			name: "happy case: finalized root is bellatrix block",
 			blk: func() interfaces.BeaconBlock {
-				b, err := wrapper.WrappedBeaconBlock(&ethpb.BeaconBlockBellatrix{
+				b, err := consensusblocks.NewBeaconBlock(&ethpb.BeaconBlockBellatrix{
 					Body: &ethpb.BeaconBlockBodyBellatrix{
 						ExecutionPayload: &v1.ExecutionPayload{},
 					},
@@ -143,7 +143,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 		{
 			name: "forkchoice updated with optimistic block",
 			blk: func() interfaces.BeaconBlock {
-				b, err := wrapper.WrappedBeaconBlock(&ethpb.BeaconBlockBellatrix{
+				b, err := consensusblocks.NewBeaconBlock(&ethpb.BeaconBlockBellatrix{
 					Body: &ethpb.BeaconBlockBodyBellatrix{
 						ExecutionPayload: &v1.ExecutionPayload{},
 					},
@@ -151,14 +151,14 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 				require.NoError(t, err)
 				return b
 			}(),
-			newForkchoiceErr: powchain.ErrAcceptedSyncingPayloadStatus,
+			newForkchoiceErr: execution.ErrAcceptedSyncingPayloadStatus,
 			finalizedRoot:    bellatrixBlkRoot,
 			justifiedRoot:    bellatrixBlkRoot,
 		},
 		{
 			name: "forkchoice updated with invalid block",
 			blk: func() interfaces.BeaconBlock {
-				b, err := wrapper.WrappedBeaconBlock(&ethpb.BeaconBlockBellatrix{
+				b, err := consensusblocks.NewBeaconBlock(&ethpb.BeaconBlockBellatrix{
 					Body: &ethpb.BeaconBlockBodyBellatrix{
 						ExecutionPayload: &v1.ExecutionPayload{},
 					},
@@ -166,7 +166,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 				require.NoError(t, err)
 				return b
 			}(),
-			newForkchoiceErr: powchain.ErrInvalidPayloadStatus,
+			newForkchoiceErr: execution.ErrInvalidPayloadStatus,
 			finalizedRoot:    bellatrixBlkRoot,
 			justifiedRoot:    bellatrixBlkRoot,
 			headRoot:         [32]byte{'a'},
@@ -176,7 +176,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			service.cfg.ExecutionEngineCaller = &mockPOW.EngineClient{ErrForkchoiceUpdated: tt.newForkchoiceErr}
+			service.cfg.ExecutionEngineCaller = &mockExecution.EngineClient{ErrForkchoiceUpdated: tt.newForkchoiceErr}
 			st, _ := util.DeterministicGenesisState(t, 1)
 			require.NoError(t, beaconDB.SaveState(ctx, st, tt.finalizedRoot))
 			require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, tt.finalizedRoot))
@@ -315,7 +315,7 @@ func Test_NotifyForkchoiceUpdateRecursive_Protoarray(t *testing.T) {
 	require.Equal(t, brg, headRoot)
 
 	// Prepare Engine Mock to return invalid unless head is D, LVH =  E
-	service.cfg.ExecutionEngineCaller = &mockPOW.EngineClient{ErrForkchoiceUpdated: powchain.ErrInvalidPayloadStatus, ForkChoiceUpdatedResp: pe[:], OverrideValidHash: [32]byte{'D'}}
+	service.cfg.ExecutionEngineCaller = &mockExecution.EngineClient{ErrForkchoiceUpdated: execution.ErrInvalidPayloadStatus, ForkChoiceUpdatedResp: pe[:], OverrideValidHash: [32]byte{'D'}}
 	st, _ := util.DeterministicGenesisState(t, 1)
 	service.head = &head{
 		state: st,
@@ -342,6 +342,85 @@ func Test_NotifyForkchoiceUpdateRecursive_Protoarray(t *testing.T) {
 	require.Equal(t, false, fcs.HasNode(brf))
 	require.Equal(t, false, fcs.HasNode(brg))
 	require.Equal(t, true, fcs.HasNode(bre))
+}
+
+func Test_NotifyForkchoiceUpdate_NIlLVH(t *testing.T) {
+	ctx := context.Background()
+	beaconDB := testDB.SetupDB(t)
+
+	// Prepare blocks
+	ba := util.NewBeaconBlockBellatrix()
+	ba.Block.Body.ExecutionPayload.BlockNumber = 1
+	wba := util.SaveBlock(t, ctx, beaconDB, ba)
+	bra, err := wba.Block().HashTreeRoot()
+	require.NoError(t, err)
+
+	bb := util.NewBeaconBlockBellatrix()
+	bb.Block.Body.ExecutionPayload.BlockNumber = 2
+	wbb := util.SaveBlock(t, ctx, beaconDB, bb)
+	brb, err := wbb.Block().HashTreeRoot()
+	require.NoError(t, err)
+
+	bc := util.NewBeaconBlockBellatrix()
+	pc := [32]byte{'C'}
+	bc.Block.Body.ExecutionPayload.BlockHash = pc[:]
+	bc.Block.Body.ExecutionPayload.BlockNumber = 3
+	wbc := util.SaveBlock(t, ctx, beaconDB, bc)
+	brc, err := wbc.Block().HashTreeRoot()
+	require.NoError(t, err)
+
+	bd := util.NewBeaconBlockBellatrix()
+	pd := [32]byte{'D'}
+	bd.Block.Body.ExecutionPayload.BlockHash = pd[:]
+	bd.Block.Body.ExecutionPayload.BlockNumber = 4
+	bd.Block.ParentRoot = brc[:]
+	wbd := util.SaveBlock(t, ctx, beaconDB, bd)
+	brd, err := wbd.Block().HashTreeRoot()
+	require.NoError(t, err)
+
+	// Insert blocks into forkchoice
+	service := setupBeaconChain(t, beaconDB)
+	fcs := doublylinkedtree.New()
+	service.cfg.ForkChoiceStore = fcs
+	service.cfg.ProposerSlotIndexCache = cache.NewProposerPayloadIDsCache()
+
+	service.justifiedBalances.balances = []uint64{50, 100, 200}
+	require.NoError(t, err)
+	ojc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	ofc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	state, blkRoot, err := prepareForkchoiceState(ctx, 1, bra, [32]byte{}, [32]byte{'A'}, ojc, ofc)
+	require.NoError(t, err)
+	require.NoError(t, fcs.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 2, brb, bra, [32]byte{'B'}, ojc, ofc)
+	require.NoError(t, err)
+	require.NoError(t, fcs.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 3, brc, brb, [32]byte{'C'}, ojc, ofc)
+	require.NoError(t, err)
+	require.NoError(t, fcs.InsertNode(ctx, state, blkRoot))
+	state, blkRoot, err = prepareForkchoiceState(ctx, 4, brd, brc, [32]byte{'D'}, ojc, ofc)
+	require.NoError(t, err)
+	require.NoError(t, fcs.InsertNode(ctx, state, blkRoot))
+
+	// Prepare Engine Mock to return invalid LVH =  nil
+	service.cfg.ExecutionEngineCaller = &mockExecution.EngineClient{ErrForkchoiceUpdated: execution.ErrInvalidPayloadStatus, OverrideValidHash: [32]byte{'C'}}
+	st, _ := util.DeterministicGenesisState(t, 1)
+	service.head = &head{
+		state: st,
+		block: wba,
+	}
+
+	require.NoError(t, beaconDB.SaveState(ctx, st, bra))
+	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, bra))
+	a := &notifyForkchoiceUpdateArg{
+		headState: st,
+		headBlock: wbd.Block(),
+		headRoot:  brd,
+	}
+	_, err = service.notifyForkchoiceUpdate(ctx, a)
+	require.Equal(t, true, IsInvalidBlock(err))
+	require.Equal(t, brd, InvalidBlockRoot(err))
+	require.Equal(t, brd, InvalidAncestorRoots(err)[0])
+	require.Equal(t, 1, len(InvalidAncestorRoots(err)))
 }
 
 //
@@ -460,7 +539,7 @@ func Test_NotifyForkchoiceUpdateRecursive_DoublyLinkedTree(t *testing.T) {
 	require.Equal(t, brg, headRoot)
 
 	// Prepare Engine Mock to return invalid unless head is D, LVH =  E
-	service.cfg.ExecutionEngineCaller = &mockPOW.EngineClient{ErrForkchoiceUpdated: powchain.ErrInvalidPayloadStatus, ForkChoiceUpdatedResp: pe[:], OverrideValidHash: [32]byte{'D'}}
+	service.cfg.ExecutionEngineCaller = &mockExecution.EngineClient{ErrForkchoiceUpdated: execution.ErrInvalidPayloadStatus, ForkChoiceUpdatedResp: pe[:], OverrideValidHash: [32]byte{'D'}}
 	st, _ := util.DeterministicGenesisState(t, 1)
 	service.head = &head{
 		state: st,
@@ -510,7 +589,7 @@ func Test_NotifyNewPayload(t *testing.T) {
 			Body: &ethpb.BeaconBlockBodyAltair{},
 		},
 	}
-	altairBlk, err := wrapper.WrappedSignedBeaconBlock(a)
+	altairBlk, err := consensusblocks.NewSignedBeaconBlock(a)
 	require.NoError(t, err)
 	blk := &ethpb.SignedBeaconBlockBellatrix{
 		Block: &ethpb.BeaconBlockBellatrix{
@@ -530,7 +609,7 @@ func Test_NotifyNewPayload(t *testing.T) {
 			},
 		},
 	}
-	bellatrixBlk, err := wrapper.WrappedSignedBeaconBlock(util.HydrateSignedBeaconBlockBellatrix(blk))
+	bellatrixBlk, err := consensusblocks.NewSignedBeaconBlock(util.HydrateSignedBeaconBlockBellatrix(blk))
 	require.NoError(t, err)
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
@@ -576,14 +655,14 @@ func Test_NotifyNewPayload(t *testing.T) {
 			name:           "new payload with optimistic block",
 			postState:      bellatrixState,
 			blk:            bellatrixBlk,
-			newPayloadErr:  powchain.ErrAcceptedSyncingPayloadStatus,
+			newPayloadErr:  execution.ErrAcceptedSyncingPayloadStatus,
 			isValidPayload: false,
 		},
 		{
 			name:           "new payload with invalid block",
 			postState:      bellatrixState,
 			blk:            bellatrixBlk,
-			newPayloadErr:  powchain.ErrInvalidPayloadStatus,
+			newPayloadErr:  execution.ErrInvalidPayloadStatus,
 			errString:      ErrInvalidPayload.Error(),
 			isValidPayload: false,
 			invalidBlock:   true,
@@ -607,7 +686,7 @@ func Test_NotifyNewPayload(t *testing.T) {
 						},
 					},
 				}
-				b, err := wrapper.WrappedSignedBeaconBlock(blk)
+				b, err := consensusblocks.NewSignedBeaconBlock(blk)
 				require.NoError(t, err)
 				return b
 			}(),
@@ -633,7 +712,7 @@ func Test_NotifyNewPayload(t *testing.T) {
 						},
 					},
 				}
-				b, err := wrapper.WrappedSignedBeaconBlock(blk)
+				b, err := consensusblocks.NewSignedBeaconBlock(blk)
 				require.NoError(t, err)
 				return b
 			}(),
@@ -652,7 +731,7 @@ func Test_NotifyNewPayload(t *testing.T) {
 						},
 					},
 				}
-				b, err := wrapper.WrappedSignedBeaconBlock(blk)
+				b, err := consensusblocks.NewSignedBeaconBlock(blk)
 				require.NoError(t, err)
 				return b
 			}(),
@@ -671,7 +750,7 @@ func Test_NotifyNewPayload(t *testing.T) {
 						},
 					},
 				}
-				b, err := wrapper.WrappedSignedBeaconBlock(blk)
+				b, err := consensusblocks.NewSignedBeaconBlock(blk)
 				require.NoError(t, err)
 				return b
 			}(),
@@ -691,7 +770,7 @@ func Test_NotifyNewPayload(t *testing.T) {
 						},
 					},
 				}
-				b, err := wrapper.WrappedSignedBeaconBlock(blk)
+				b, err := consensusblocks.NewSignedBeaconBlock(blk)
 				require.NoError(t, err)
 				return b
 			}(),
@@ -701,7 +780,7 @@ func Test_NotifyNewPayload(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			e := &mockPOW.EngineClient{ErrNewPayload: tt.newPayloadErr, BlockByHashMap: map[[32]byte]*v1.ExecutionBlock{}}
+			e := &mockExecution.EngineClient{ErrNewPayload: tt.newPayloadErr, BlockByHashMap: map[[32]byte]*v1.ExecutionBlock{}}
 			e.BlockByHashMap[[32]byte{'a'}] = &v1.ExecutionBlock{
 				Header: gethtypes.Header{
 					ParentHash: common.BytesToHash([]byte("b")),
@@ -758,11 +837,11 @@ func Test_NotifyNewPayload_SetOptimisticToValid(t *testing.T) {
 			},
 		},
 	}
-	bellatrixBlk, err := wrapper.WrappedSignedBeaconBlock(blk)
+	bellatrixBlk, err := consensusblocks.NewSignedBeaconBlock(blk)
 	require.NoError(t, err)
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
-	e := &mockPOW.EngineClient{BlockByHashMap: map[[32]byte]*v1.ExecutionBlock{}}
+	e := &mockExecution.EngineClient{BlockByHashMap: map[[32]byte]*v1.ExecutionBlock{}}
 	e.BlockByHashMap[[32]byte{'a'}] = &v1.ExecutionBlock{
 		Header: gethtypes.Header{
 			ParentHash: common.BytesToHash([]byte("b")),
@@ -803,7 +882,7 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 	service.genesisTime = time.Now().Add(-time.Second * 12 * 2 * 128)
 
 	parentBlk := util.NewBeaconBlockBellatrix()
-	wrappedParentBlock, err := wrapper.WrappedSignedBeaconBlock(parentBlk)
+	wrappedParentBlock, err := consensusblocks.NewSignedBeaconBlock(parentBlk)
 	require.NoError(t, err)
 	parentRoot, err := wrappedParentBlock.Block().HashTreeRoot()
 	require.NoError(t, err)
@@ -820,7 +899,7 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 				blk := util.NewBeaconBlockBellatrix()
 				blk.Block.Slot = 1
 				blk.Block.ParentRoot = parentRoot[:]
-				wr, err := wrapper.WrappedBeaconBlock(blk.Block)
+				wr, err := consensusblocks.NewBeaconBlock(blk.Block)
 				require.NoError(tt, err)
 				return wr
 			}(t),
@@ -828,7 +907,7 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 				blk := util.NewBeaconBlockBellatrix()
 				blk.Block.Slot = 32
 				blk.Block.ParentRoot = parentRoot[:]
-				wr, err := wrapper.WrappedSignedBeaconBlock(blk)
+				wr, err := consensusblocks.NewSignedBeaconBlock(blk)
 				require.NoError(tt, err)
 				return wr
 			}(t),
@@ -840,7 +919,7 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 				blk := util.NewBeaconBlockAltair()
 				blk.Block.Slot = 200
 				blk.Block.ParentRoot = parentRoot[:]
-				wr, err := wrapper.WrappedBeaconBlock(blk.Block)
+				wr, err := consensusblocks.NewBeaconBlock(blk.Block)
 				require.NoError(tt, err)
 				return wr
 			}(t),
@@ -848,7 +927,7 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 				blk := util.NewBeaconBlockAltair()
 				blk.Block.Slot = 32
 				blk.Block.ParentRoot = parentRoot[:]
-				wr, err := wrapper.WrappedSignedBeaconBlock(blk)
+				wr, err := consensusblocks.NewSignedBeaconBlock(blk)
 				require.NoError(tt, err)
 				return wr
 			}(t),
@@ -860,7 +939,7 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 				blk := util.NewBeaconBlockBellatrix()
 				blk.Block.Slot = 200
 				blk.Block.ParentRoot = parentRoot[:]
-				wr, err := wrapper.WrappedBeaconBlock(blk.Block)
+				wr, err := consensusblocks.NewBeaconBlock(blk.Block)
 				require.NoError(tt, err)
 				return wr
 			}(t),
@@ -868,7 +947,7 @@ func Test_IsOptimisticCandidateBlock(t *testing.T) {
 				blk := util.NewBeaconBlockBellatrix()
 				blk.Block.Slot = 32
 				blk.Block.ParentRoot = parentRoot[:]
-				wr, err := wrapper.WrappedSignedBeaconBlock(blk)
+				wr, err := consensusblocks.NewSignedBeaconBlock(blk)
 				require.NoError(tt, err)
 				return wr
 			}(t),
@@ -1147,7 +1226,7 @@ func TestService_getPayloadHash(t *testing.T) {
 	b := util.NewBeaconBlock()
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err := consensusblocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
 	require.NoError(t, service.saveInitSyncBlock(ctx, r, wsb))
 
@@ -1160,7 +1239,7 @@ func TestService_getPayloadHash(t *testing.T) {
 	bb.Block.Body.ExecutionPayload.BlockHash = h[:]
 	r, err = b.Block.HashTreeRoot()
 	require.NoError(t, err)
-	wsb, err = wrapper.WrappedSignedBeaconBlock(bb)
+	wsb, err = consensusblocks.NewSignedBeaconBlock(bb)
 	require.NoError(t, err)
 	require.NoError(t, service.saveInitSyncBlock(ctx, r, wsb))
 
