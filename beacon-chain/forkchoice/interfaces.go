@@ -62,6 +62,8 @@ type Getter interface {
 	BestJustifiedCheckpoint() *forkchoicetypes.Checkpoint
 	ForkChoiceNodes() []*ethpb.ForkChoiceNode
 	NodeCount() int
+	HighestReceivedBlockSlot() types.Slot
+	ReceivedBlocksLastEpoch() (uint64, error)
 }
 
 // Setter allows to set forkchoice information

@@ -22,4 +22,5 @@ const (
 	FeeRecipientLength              = 20            // FeeRecipientLength defines the byte length of a fee recipient.
 	LogsBloomLength                 = 256           // LogsBloomLength defines the byte length of a logs bloom.
 	VersionLength                   = 4             // VersionLength defines the byte length of a fork version number.
+	SlotsPerEpoch                   = 32            // SlotsPerEpoch defines the number of slots per epoch.
 )
