@@ -55,7 +55,6 @@ type BeaconBlockBody struct {
 // BeaconBlock is the main beacon block structure. It can represent any block type.
 type BeaconBlock struct {
 	version       int
-	isBlinded     bool
 	slot          types.Slot
 	proposerIndex types.ValidatorIndex
 	parentRoot    []byte
@@ -66,7 +65,6 @@ type BeaconBlock struct {
 // SignedBeaconBlock is the main signed beacon block structure. It can represent any block type.
 type SignedBeaconBlock struct {
 	version   int
-	isBlinded bool
 	block     *BeaconBlock
 	signature []byte
 }

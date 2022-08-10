@@ -223,7 +223,7 @@ func Test_BuildSignedBeaconBlock(t *testing.T) {
 		assert.Equal(t, version.Bellatrix, sb.Version())
 	})
 	t.Run("BellatrixBlind", func(t *testing.T) {
-		b := &BeaconBlock{version: version.Bellatrix, isBlinded: true, body: &BeaconBlockBody{version: version.Bellatrix, isBlinded: true}}
+		b := &BeaconBlock{version: version.Bellatrix, body: &BeaconBlockBody{version: version.Bellatrix, isBlinded: true}}
 		sb, err := BuildSignedBeaconBlock(b, sig)
 		require.NoError(t, err)
 		assert.DeepEqual(t, sig, sb.Signature())

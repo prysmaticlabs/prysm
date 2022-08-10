@@ -144,11 +144,9 @@ func Test_SignedBeaconBlock_Proto(t *testing.T) {
 			Signature: f.b96,
 		}
 		block := &SignedBeaconBlock{
-			version:   version.Bellatrix,
-			isBlinded: true,
+			version: version.Bellatrix,
 			block: &BeaconBlock{
 				version:       version.Bellatrix,
-				isBlinded:     true,
 				slot:          128,
 				proposerIndex: 128,
 				parentRoot:    f.b32,
@@ -264,7 +262,6 @@ func Test_BeaconBlock_Proto(t *testing.T) {
 		}
 		block := &BeaconBlock{
 			version:       version.Bellatrix,
-			isBlinded:     true,
 			slot:          128,
 			proposerIndex: 128,
 			parentRoot:    f.b32,

@@ -46,7 +46,7 @@ func (b *SignedBeaconBlock) Proto() (proto.Message, error) {
 			Signature: b.signature,
 		}, nil
 	case version.Bellatrix:
-		if b.isBlinded {
+		if b.IsBlinded() {
 			var block *eth.BlindedBeaconBlockBellatrix
 			if blockMessage != nil {
 				var ok bool
@@ -122,7 +122,7 @@ func (b *BeaconBlock) Proto() (proto.Message, error) {
 			Body:          body,
 		}, nil
 	case version.Bellatrix:
-		if b.isBlinded {
+		if b.IsBlinded() {
 			var body *eth.BlindedBeaconBlockBodyBellatrix
 			if bodyMessage != nil {
 				var ok bool
@@ -232,7 +232,6 @@ func initSignedBlockFromProtoPhase0(pb *eth.SignedBeaconBlock) (*SignedBeaconBlo
 	}
 	b := &SignedBeaconBlock{
 		version:   version.Phase0,
-		isBlinded: false,
 		block:     block,
 		signature: pb.Signature,
 	}
@@ -250,7 +249,6 @@ func initSignedBlockFromProtoAltair(pb *eth.SignedBeaconBlockAltair) (*SignedBea
 	}
 	b := &SignedBeaconBlock{
 		version:   version.Altair,
-		isBlinded: false,
 		block:     block,
 		signature: pb.Signature,
 	}
@@ -268,7 +266,6 @@ func initSignedBlockFromProtoBellatrix(pb *eth.SignedBeaconBlockBellatrix) (*Sig
 	}
 	b := &SignedBeaconBlock{
 		version:   version.Bellatrix,
-		isBlinded: false,
 		block:     block,
 		signature: pb.Signature,
 	}
@@ -286,7 +283,6 @@ func initBlindedSignedBlockFromProtoBellatrix(pb *eth.SignedBlindedBeaconBlockBe
 	}
 	b := &SignedBeaconBlock{
 		version:   version.Bellatrix,
-		isBlinded: true,
 		block:     block,
 		signature: pb.Signature,
 	}
@@ -304,7 +300,6 @@ func initBlockFromProtoPhase0(pb *eth.BeaconBlock) (*BeaconBlock, error) {
 	}
 	b := &BeaconBlock{
 		version:       version.Phase0,
-		isBlinded:     false,
 		slot:          pb.Slot,
 		proposerIndex: pb.ProposerIndex,
 		parentRoot:    pb.ParentRoot,
@@ -325,7 +320,6 @@ func initBlockFromProtoAltair(pb *eth.BeaconBlockAltair) (*BeaconBlock, error) {
 	}
 	b := &BeaconBlock{
 		version:       version.Altair,
-		isBlinded:     false,
 		slot:          pb.Slot,
 		proposerIndex: pb.ProposerIndex,
 		parentRoot:    pb.ParentRoot,
@@ -346,7 +340,6 @@ func initBlockFromProtoBellatrix(pb *eth.BeaconBlockBellatrix) (*BeaconBlock, er
 	}
 	b := &BeaconBlock{
 		version:       version.Bellatrix,
-		isBlinded:     false,
 		slot:          pb.Slot,
 		proposerIndex: pb.ProposerIndex,
 		parentRoot:    pb.ParentRoot,
@@ -367,7 +360,6 @@ func initBlindedBlockFromProtoBellatrix(pb *eth.BlindedBeaconBlockBellatrix) (*B
 	}
 	b := &BeaconBlock{
 		version:       version.Bellatrix,
-		isBlinded:     true,
 		slot:          pb.Slot,
 		proposerIndex: pb.ProposerIndex,
 		parentRoot:    pb.ParentRoot,
