@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"time"
@@ -21,6 +22,7 @@ import (
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 )
 
@@ -118,6 +120,18 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot types.Sl
 	if err != nil {
 		return nil, err
 	}
+	if !bytes.Equal(bid.Message.Header.ParentHash, h.BlockHash()) {
+		return nil, fmt.Errorf("incorrect parent hash %#x != %#x", bid.Message.Header.ParentHash, h.BlockHash())
+	}
+
+	t, err := slots.ToTime(uint64(vs.TimeFetcher.GenesisTime().Unix()), slot)
+	if err != nil {
+		return nil, err
+	}
+	if bid.Message.Header.Timestamp != uint64(t.Unix()) {
+		return nil, fmt.Errorf("incorrect timestamp %d != %d", bid.Message.Header.Timestamp, uint64(t.Unix()))
+	}
+
 	if err := vs.validateBuilderSignature(bid); err != nil {
 		return nil, errors.Wrap(err, "could not validate builder signature")
 	}
