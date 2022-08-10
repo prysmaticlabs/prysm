@@ -9,9 +9,7 @@ curl -sLo osxcross.tar.gz "https://codeload.github.com/${OSXCROSS_REPO}/tar.gz/$
 tar --strip=1 -xzf osxcross.tar.gz
 rm -f osxcross.tar.gz
 
-# This can be uncommented once the new SDK is uploaded to https://prysmaticlabs.com/uploads/
-#curl -sLo tarballs/${OSX_SDK}.tar.xz "https://prysmaticlabs.com/uploads/${OSX_SDK}.tar.xz"
-cp /tmp/"${OSX_SDK}".tar.xz  tarballs/"${OSX_SDK}".tar.xz
+curl -sLo tarballs/${OSX_SDK}.tar.xz "https://prysmaticlabs.com/uploads/${OSX_SDK}.tar.xz"
 
 echo "${OSX_SDK_SUM}"  "tarballs/${OSX_SDK}.tar.xz" | sha256sum -c -
 yes "" | SDK_VERSION=12.3 OSX_VERSION_MIN=11.0 OCDEBUG=1 ./build.sh
