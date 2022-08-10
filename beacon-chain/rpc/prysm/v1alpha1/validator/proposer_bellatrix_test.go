@@ -353,6 +353,7 @@ func TestServer_getAndBuildHeaderBlock(t *testing.T) {
 	altairBlk, err := util.GenerateFullBlockAltair(copiedState, keys, util.DefaultBlockGenConfig(), 2)
 	require.NoError(t, err)
 
+	ts := uint64(time.Now().Unix()) + uint64(altairBlk.Block.Slot)*params.BeaconConfig().SecondsPerSlot
 	h := &v1.ExecutionPayloadHeader{
 		BlockNumber:      123,
 		GasLimit:         456,
@@ -366,6 +367,7 @@ func TestServer_getAndBuildHeaderBlock(t *testing.T) {
 		BaseFeePerGas:    make([]byte, fieldparams.RootLength),
 		BlockHash:        make([]byte, fieldparams.RootLength),
 		TransactionsRoot: make([]byte, fieldparams.RootLength),
+		Timestamp:        ts,
 	}
 
 	vs.StateGen = stategen.New(vs.BeaconDB)
@@ -388,6 +390,7 @@ func TestServer_getAndBuildHeaderBlock(t *testing.T) {
 			BaseFeePerGas:    make([]byte, fieldparams.RootLength),
 			BlockHash:        make([]byte, fieldparams.RootLength),
 			TransactionsRoot: make([]byte, fieldparams.RootLength),
+			Timestamp:        ts,
 		},
 		Pubkey: sk.PublicKey().Marshal(),
 		Value:  bytesutil.PadTo([]byte{1, 2, 3}, 32),
@@ -402,7 +405,7 @@ func TestServer_getAndBuildHeaderBlock(t *testing.T) {
 		Signature: sk.Sign(sr[:]).Marshal(),
 	}
 	vs.BlockBuilder = &builderTest.MockBuilderService{HasConfigured: true, Bid: sBid}
-
+	vs.TimeFetcher = &blockchainTest.ChainService{Genesis: time.Now()}
 	ready, builtBlk, err := vs.getAndBuildBlindBlock(ctx, altairBlk.Block)
 	require.NoError(t, err)
 	require.Equal(t, true, ready)
