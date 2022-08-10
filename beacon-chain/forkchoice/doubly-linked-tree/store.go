@@ -179,6 +179,15 @@ func (s *Store) insert(ctx context.Context,
 	processedBlockCount.Inc()
 	nodeCount.Set(float64(len(s.nodeByRoot)))
 
+	// Only update received block slot if it's within epoch from current time.
+	if slot+params.BeaconConfig().SlotsPerEpoch > slots.CurrentSlot(s.genesisTime) {
+		s.receivedBlocksLastEpoch[slot%params.BeaconConfig().SlotsPerEpoch] = slot
+	}
+	// Update highest slot tracking.
+	if slot > s.highestReceivedSlot {
+		s.highestReceivedSlot = slot
+	}
+
 	return n, nil
 }
 
@@ -254,4 +263,33 @@ func (s *Store) tips() ([][32]byte, []types.Slot) {
 		}
 	}
 	return roots, slots
+}
+
+// HighestReceivedBlockSlot returns the highest slot received by the forkchoice
+func (f *ForkChoice) HighestReceivedBlockSlot() types.Slot {
+	f.store.nodesLock.RLock()
+	defer f.store.nodesLock.RUnlock()
+	return f.store.highestReceivedSlot
+}
+
+// ReceivedBlocksLastEpoch returns the number of blocks received in the last epoch
+func (f *ForkChoice) ReceivedBlocksLastEpoch() (uint64, error) {
+	f.store.nodesLock.RLock()
+	defer f.store.nodesLock.RUnlock()
+	count := uint64(0)
+	lowerBound := slots.CurrentSlot(f.store.genesisTime)
+	var err error
+	if lowerBound > fieldparams.SlotsPerEpoch {
+		lowerBound, err = lowerBound.SafeSub(fieldparams.SlotsPerEpoch)
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	for _, s := range f.store.receivedBlocksLastEpoch {
+		if s != 0 && lowerBound <= s {
+			count++
+		}
+	}
+	return count, nil
 }
