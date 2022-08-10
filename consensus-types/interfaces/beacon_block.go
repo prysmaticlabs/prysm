@@ -25,6 +25,7 @@ type SignedBeaconBlock interface {
 	ssz.Marshaler
 	ssz.Unmarshaler
 	Version() int
+	IsBlinded() bool
 	Header() (*ethpb.SignedBeaconBlockHeader, error)
 }
 

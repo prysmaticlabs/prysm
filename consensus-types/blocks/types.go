@@ -38,6 +38,7 @@ var (
 // BeaconBlockBody is the main beacon block body structure. It can represent any block type.
 type BeaconBlockBody struct {
 	version                int
+	isBlinded              bool
 	randaoReveal           []byte
 	eth1Data               *eth.Eth1Data
 	graffiti               []byte

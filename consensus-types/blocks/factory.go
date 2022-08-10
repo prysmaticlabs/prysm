@@ -121,17 +121,18 @@ func BuildSignedBeaconBlock(blk interfaces.BeaconBlock, signature []byte) (inter
 		}
 		return NewSignedBeaconBlock(&eth.SignedBeaconBlockAltair{Block: pb, Signature: signature})
 	case version.Bellatrix:
+		if blk.IsBlinded() {
+			pb, ok := pb.(*eth.BlindedBeaconBlockBellatrix)
+			if !ok {
+				return nil, errIncorrectBlockVersion
+			}
+			return NewSignedBeaconBlock(&eth.SignedBlindedBeaconBlockBellatrix{Block: pb, Signature: signature})
+		}
 		pb, ok := pb.(*eth.BeaconBlockBellatrix)
 		if !ok {
 			return nil, errIncorrectBlockVersion
 		}
 		return NewSignedBeaconBlock(&eth.SignedBeaconBlockBellatrix{Block: pb, Signature: signature})
-	case version.BellatrixBlind:
-		pb, ok := pb.(*eth.BlindedBeaconBlockBellatrix)
-		if !ok {
-			return nil, errIncorrectBlockVersion
-		}
-		return NewSignedBeaconBlock(&eth.SignedBlindedBeaconBlockBellatrix{Block: pb, Signature: signature})
 	default:
 		return nil, errUnsupportedBeaconBlock
 	}
