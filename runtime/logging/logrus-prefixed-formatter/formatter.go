@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 
 	"github.com/mgutz/ansi"
 	"github.com/sirupsen/logrus"
@@ -294,14 +295,27 @@ func (f *TextFormatter) printColored(b *bytes.Buffer, entry *logrus.Entry, keys 
 	for _, k := range keys {
 		if k != "prefix" {
 			v := entry.Data[k]
-			format := " %s=%+v"
+
+			format := "%+v"
 			if k == logrus.ErrorKey {
-				format = " %s=%v" // To avoid printing stack traces for errors
+				format = "%v" // To avoid printing stack traces for errors
 			}
-			_, err = fmt.Fprintf(b, format, levelColor(k), v)
+
+			// Sanitize field values to remove new lines and other control characters.
+			s := sanitize(fmt.Sprintf(format, v))
+			_, err = fmt.Fprintf(b, " %s=%s", levelColor(k), s)
 		}
 	}
 	return
+}
+
+func sanitize(s string) string {
+	return strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) {
+			return -1
+		}
+		return r
+	}, s)
 }
 
 func (f *TextFormatter) needsQuoting(text string) bool {
