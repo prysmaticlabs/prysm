@@ -275,7 +275,7 @@ func non200Err(response *http.Response) error {
 		body = "(Unable to read response body.)"
 	} else {
 		if jsonErr := json.Unmarshal(bodyBytes, &errMessage); jsonErr != nil {
-			body = errors.Wrap(jsonErr, "(Unable to read response body.)").Error()
+			return errors.Wrap(jsonErr, "(Unable to read response body.)")
 		}
 		body = "response body:\n" + string(bodyBytes)
 	}
