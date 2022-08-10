@@ -106,9 +106,9 @@ var (
 		Name:  "disable-native-state",
 		Usage: "Disables representing the beacon state as a pure Go struct.",
 	}
-	enablePullTips = &cli.BoolFlag{
-		Name:  "experimental-disable-boundary-checks",
-		Usage: "Experimental disable of boundary checks, useful for debugging, may cause bad votes.",
+	disablePullTips = &cli.BoolFlag{
+		Name:  "experimental-enable-boundary-checks",
+		Usage: "Experimental enable of boundary checks, useful for debugging, may cause bad votes.",
 	}
 	enableVecHTR = &cli.BoolFlag{
 		Name:  "enable-vectorized-htr",
@@ -118,9 +118,9 @@ var (
 		Name:  "enable-forkchoice-doubly-linked-tree",
 		Usage: "Enables new forkchoice store structure that uses doubly linked trees",
 	}
-	enableGossipBatchAggregation = &cli.BoolFlag{
-		Name:  "enable-gossip-batch-aggregation",
-		Usage: "Enables new methods to further aggregate our gossip batches before verifying them.",
+	disableGossipBatchAggregation = &cli.BoolFlag{
+		Name:  "disable-gossip-batch-aggregation",
+		Usage: "Disables new methods to further aggregate our gossip batches before verifying them.",
 	}
 	EnableOnlyBlindedBeaconBlocks = &cli.BoolFlag{
 		Name:  "enable-only-blinded-beacon-blocks",
@@ -132,7 +132,6 @@ var (
 var devModeFlags = []cli.Flag{
 	enableVecHTR,
 	enableForkChoiceDoublyLinkedTree,
-	enableGossipBatchAggregation,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -171,10 +170,10 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	enableSlasherFlag,
 	enableHistoricalSpaceRepresentation,
 	disableNativeState,
-	enablePullTips,
+	disablePullTips,
 	enableVecHTR,
 	enableForkChoiceDoublyLinkedTree,
-	enableGossipBatchAggregation,
+	disableGossipBatchAggregation,
 	EnableOnlyBlindedBeaconBlocks,
 }...)
 

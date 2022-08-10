@@ -10,12 +10,12 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
-	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/execution"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/params"
+	consensusblocks "github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/time/slots"
@@ -76,7 +76,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 	payloadID, lastValidHash, err := s.cfg.ExecutionEngineCaller.ForkchoiceUpdated(ctx, fcs, attr)
 	if err != nil {
 		switch err {
-		case powchain.ErrAcceptedSyncingPayloadStatus:
+		case execution.ErrAcceptedSyncingPayloadStatus:
 			forkchoiceUpdatedOptimisticNodeCount.Inc()
 			log.WithFields(logrus.Fields{
 				"headSlot":                  headBlk.Slot(),
@@ -88,7 +88,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 				log.WithError(err).Error("Optimistic block failed to be candidate")
 			}
 			return payloadID, nil
-		case powchain.ErrInvalidPayloadStatus:
+		case execution.ErrInvalidPayloadStatus:
 			newPayloadInvalidNodeCount.Inc()
 			headRoot := arg.headRoot
 			if len(lastValidHash) == 0 {
@@ -106,8 +106,12 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 
 			r, err := s.cfg.ForkChoiceStore.Head(ctx, s.justifiedBalances.balances)
 			if err != nil {
-				log.WithError(err).Error("Could not get head root")
-				return nil, nil
+				log.WithFields(logrus.Fields{
+					"slot":         headBlk.Slot(),
+					"blockRoot":    fmt.Sprintf("%#x", bytesutil.Trunc(headRoot[:])),
+					"invalidCount": len(invalidRoots),
+				}).Warn("Pruned invalid blocks, could not update head root")
+				return nil, invalidBlock{error: ErrInvalidPayload, root: arg.headRoot, invalidAncestorRoots: invalidRoots}
 			}
 			b, err := s.getBlock(ctx, r)
 			if err != nil {
@@ -192,7 +196,7 @@ func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
 	if blocks.IsPreBellatrixVersion(postStateVersion) {
 		return true, nil
 	}
-	if err := wrapper.BeaconBlockIsNil(blk); err != nil {
+	if err := consensusblocks.BeaconBlockIsNil(blk); err != nil {
 		return false, err
 	}
 	body := blk.Block().Body()
@@ -212,14 +216,14 @@ func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
 	case nil:
 		newPayloadValidNodeCount.Inc()
 		return true, nil
-	case powchain.ErrAcceptedSyncingPayloadStatus:
+	case execution.ErrAcceptedSyncingPayloadStatus:
 		newPayloadOptimisticNodeCount.Inc()
 		log.WithFields(logrus.Fields{
 			"slot":             blk.Block().Slot(),
 			"payloadBlockHash": fmt.Sprintf("%#x", bytesutil.Trunc(payload.BlockHash())),
 		}).Info("Called new payload with optimistic block")
 		return false, s.optimisticCandidateBlock(ctx, blk.Block())
-	case powchain.ErrInvalidPayloadStatus:
+	case execution.ErrInvalidPayloadStatus:
 		newPayloadInvalidNodeCount.Inc()
 		root, err := blk.Block().HashTreeRoot()
 		if err != nil {
@@ -241,7 +245,7 @@ func (s *Service) notifyNewPayload(ctx context.Context, postStateVersion int,
 			invalidAncestorRoots: invalidRoots,
 			error:                ErrInvalidPayload,
 		}
-	case powchain.ErrInvalidBlockHashPayloadStatus:
+	case execution.ErrInvalidBlockHashPayloadStatus:
 		newPayloadInvalidNodeCount.Inc()
 		return false, ErrInvalidBlockHashPayloadStatus
 	default:

@@ -12,9 +12,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/container/slice"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -273,16 +273,16 @@ func (s *Store) SaveBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 }
 
 // SaveBlocks via bulk updates to the db.
-func (s *Store) SaveBlocks(ctx context.Context, blocks []interfaces.SignedBeaconBlock) error {
+func (s *Store) SaveBlocks(ctx context.Context, blks []interfaces.SignedBeaconBlock) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveBlocks")
 	defer span.End()
 
 	// Performing marshaling, hashing, and indexing outside the bolt transaction
 	// to minimize the time we hold the DB lock.
-	blockRoots := make([][]byte, len(blocks))
-	encodedBlocks := make([][]byte, len(blocks))
-	indicesForBlocks := make([]map[string][]byte, len(blocks))
-	for i, blk := range blocks {
+	blockRoots := make([][]byte, len(blks))
+	encodedBlocks := make([][]byte, len(blks))
+	indicesForBlocks := make([]map[string][]byte, len(blks))
+	for i, blk := range blks {
 		blockRoot, err := blk.Block().HashTreeRoot()
 		if err != nil {
 			return err
@@ -298,7 +298,7 @@ func (s *Store) SaveBlocks(ctx context.Context, blocks []interfaces.SignedBeacon
 	}
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
-		for i, blk := range blocks {
+		for i, blk := range blks {
 			if existingBlock := bkt.Get(blockRoots[i]); existingBlock != nil {
 				continue
 			}
@@ -308,7 +308,7 @@ func (s *Store) SaveBlocks(ctx context.Context, blocks []interfaces.SignedBeacon
 			if features.Get().EnableOnlyBlindedBeaconBlocks {
 				blindedBlock, err := blk.ToBlinded()
 				if err != nil {
-					if !errors.Is(err, wrapper.ErrUnsupportedVersion) {
+					if !errors.Is(err, blocks.ErrUnsupportedVersion) {
 						return err
 					}
 				} else {
@@ -796,7 +796,7 @@ func unmarshalBlock(_ context.Context, enc []byte) (interfaces.SignedBeaconBlock
 			return nil, errors.Wrap(err, "could not unmarshal Phase0 block")
 		}
 	}
-	return wrapper.WrappedSignedBeaconBlock(rawBlock)
+	return blocks.NewSignedBeaconBlock(rawBlock)
 }
 
 // marshal versioned beacon block from struct type down to bytes.
@@ -807,7 +807,7 @@ func marshalBlock(_ context.Context, blk interfaces.SignedBeaconBlock) ([]byte, 
 	if features.Get().EnableOnlyBlindedBeaconBlocks {
 		blindedBlock, err := blk.ToBlinded()
 		switch {
-		case errors.Is(err, wrapper.ErrUnsupportedVersion):
+		case errors.Is(err, blocks.ErrUnsupportedVersion):
 			encodedBlock, err = blk.MarshalSSZ()
 			if err != nil {
 				return nil, errors.Wrap(err, "could not marshal non-blinded block")

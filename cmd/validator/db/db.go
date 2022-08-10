@@ -26,7 +26,7 @@ var Commands = &cli.Command{
 			Before: tos.VerifyTosAcceptedOrPrompt,
 			Action: func(cliCtx *cli.Context) error {
 				if err := validatordb.Restore(cliCtx); err != nil {
-					log.Fatalf("Could not restore database: %v", err)
+					log.WithError(err).Fatal("Could not restore database")
 				}
 				return nil
 			},
@@ -45,7 +45,7 @@ var Commands = &cli.Command{
 					Before: tos.VerifyTosAcceptedOrPrompt,
 					Action: func(cliCtx *cli.Context) error {
 						if err := validatordb.MigrateUp(cliCtx); err != nil {
-							log.Fatalf("Could not run database migrations: %v", err)
+							log.WithError(err).Fatal("Could not run database migrations")
 						}
 						return nil
 					},
@@ -59,7 +59,7 @@ var Commands = &cli.Command{
 					Before: tos.VerifyTosAcceptedOrPrompt,
 					Action: func(cliCtx *cli.Context) error {
 						if err := validatordb.MigrateDown(cliCtx); err != nil {
-							log.Fatalf("Could not run database migrations: %v", err)
+							log.WithError(err).Fatal("Could not run database migrations")
 						}
 						return nil
 					},

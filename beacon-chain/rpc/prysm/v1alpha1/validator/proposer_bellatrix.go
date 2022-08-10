@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"time"
@@ -13,14 +14,15 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/interop"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/config/params"
+	consensusblocks "github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	coreBlock "github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
 )
 
@@ -81,7 +83,7 @@ func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockR
 		},
 	}
 	// Compute state root with the newly constructed block.
-	wsb, err := wrapper.WrappedSignedBeaconBlock(
+	wsb, err := consensusblocks.NewSignedBeaconBlock(
 		&ethpb.SignedBeaconBlockBellatrix{Block: blk, Signature: make([]byte, 96)},
 	)
 	if err != nil {
@@ -118,6 +120,18 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot types.Sl
 	if err != nil {
 		return nil, err
 	}
+	if !bytes.Equal(bid.Message.Header.ParentHash, h.BlockHash()) {
+		return nil, fmt.Errorf("incorrect parent hash %#x != %#x", bid.Message.Header.ParentHash, h.BlockHash())
+	}
+
+	t, err := slots.ToTime(uint64(vs.TimeFetcher.GenesisTime().Unix()), slot)
+	if err != nil {
+		return nil, err
+	}
+	if bid.Message.Header.Timestamp != uint64(t.Unix()) {
+		return nil, fmt.Errorf("incorrect timestamp %d != %d", bid.Message.Header.Timestamp, uint64(t.Unix()))
+	}
+
 	if err := vs.validateBuilderSignature(bid); err != nil {
 		return nil, errors.Wrap(err, "could not validate builder signature")
 	}
@@ -157,7 +171,7 @@ func (vs *Server) buildBlindBlock(ctx context.Context, b *ethpb.BeaconBlockAltai
 			ExecutionPayloadHeader: h,
 		},
 	}
-	wsb, err := wrapper.WrappedSignedBeaconBlock(
+	wsb, err := consensusblocks.NewSignedBeaconBlock(
 		&ethpb.SignedBlindedBeaconBlockBellatrix{Block: blk, Signature: make([]byte, 96)},
 	)
 	if err != nil {
@@ -247,7 +261,7 @@ func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.SignedBe
 		},
 		Signature: sb.Signature,
 	}
-	wb, err := wrapper.WrappedSignedBeaconBlock(bb)
+	wb, err := consensusblocks.NewSignedBeaconBlock(bb)
 	if err != nil {
 		return nil, err
 	}
@@ -333,15 +347,9 @@ func (vs *Server) validatorRegistered(ctx context.Context, id types.ValidatorInd
 
 // Validates builder signature and returns an error if the signature is invalid.
 func (vs *Server) validateBuilderSignature(bid *ethpb.SignedBuilderBid) error {
-	if vs.ForkFetcher == nil {
-		return errors.New("nil fork fetcher")
-	}
-	f := vs.ForkFetcher.CurrentFork()
-	if vs.GenesisFetcher == nil {
-		return errors.New("nil genesis fetcher")
-	}
-	gr := vs.GenesisFetcher.GenesisValidatorsRoot()
-	d, err := signing.ComputeDomain(params.BeaconConfig().DomainApplicationBuilder, f.CurrentVersion, gr[:])
+	d, err := signing.ComputeDomain(params.BeaconConfig().DomainApplicationBuilder,
+		nil, /* fork version */
+		nil /* genesis val root */)
 	if err != nil {
 		return err
 	}
