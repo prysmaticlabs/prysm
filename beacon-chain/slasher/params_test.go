@@ -455,7 +455,7 @@ func TestParams_validatorIndicesInChunk(t *testing.T) {
 			want:              []types.ValidatorIndex{6, 7, 8},
 		},
 		{
-			name: "0 validator chunk size returs empty",
+			name: "0 validator chunk size returns empty",
 			fields: &Parameters{
 				validatorChunkSize: 0,
 			},

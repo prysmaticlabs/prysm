@@ -666,7 +666,7 @@ func TestConcurrentPeerLimitHolds(t *testing.T) {
 			},
 		},
 	})
-	assert.Equal(t, true, uint64(p.MaxPeerLimit()) > p.ConnectedPeerLimit(), "max peer limit doesnt exceed connected peer limit")
+	assert.Equal(t, true, uint64(p.MaxPeerLimit()) > p.ConnectedPeerLimit(), "max peer limit doesn't exceed connected peer limit")
 }
 
 func TestAtInboundPeerLimit(t *testing.T) {

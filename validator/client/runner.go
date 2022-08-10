@@ -51,15 +51,15 @@ func run(ctx context.Context, v iface.Validator) {
 	accountsChangedChan := make(chan [][fieldparams.BLSPubkeyLength]byte, 1)
 	km, err := v.Keymanager()
 	if err != nil {
-		log.Fatalf("Could not get keymanager: %v", err)
+		log.WithError(err).Fatal("Could not get keymanager")
 	}
 	sub := km.SubscribeAccountChanges(accountsChangedChan)
 	// Set properties on the beacon node like the fee recipient for validators that are being used & active.
 	if err := v.PushProposerSettings(ctx, km); err != nil {
 		if errors.Is(err, ErrBuilderValidatorRegistration) {
-			log.Warnf("Push proposer settings error, %v", err)
+			log.WithError(err).Warn("Push proposer settings error")
 		} else {
-			log.Fatalf("Failed to update proposer settings: %v", err) // allow fatal. skipcq
+			log.WithError(err).Fatal("Failed to update proposer settings") // allow fatal. skipcq
 		}
 	}
 	for {
@@ -89,7 +89,7 @@ func run(ctx context.Context, v iface.Validator) {
 				log.Info("No active keys found. Waiting for activation...")
 				err := v.WaitForActivation(ctx, accountsChangedChan)
 				if err != nil {
-					log.Fatalf("Could not wait for validator activation: %v", err)
+					log.WithError(err).Fatal("Could not wait for validator activation")
 				}
 			}
 		case slot := <-v.NextSlot():
@@ -122,7 +122,7 @@ func run(ctx context.Context, v iface.Validator) {
 				go func() {
 					//deadline set for next epoch rounded up
 					if err := v.PushProposerSettings(ctx, km); err != nil {
-						log.Warnf("Failed to update proposer settings: %v", err)
+						log.WithError(err).Warn("Failed to update proposer settings")
 					}
 				}()
 			}
@@ -173,52 +173,52 @@ func waitForActivation(ctx context.Context, v iface.Validator) (types.Slot, erro
 		}
 		err := v.WaitForChainStart(ctx)
 		if isConnectionError(err) {
-			log.Warnf("Could not determine if beacon chain started: %v", err)
+			log.WithError(err).Warn("Could not determine if beacon chain started")
 			continue
 		}
 		if err != nil {
-			log.Fatalf("Could not determine if beacon chain started: %v", err)
+			log.WithError(err).Fatal("Could not determine if beacon chain started")
 		}
 
 		err = v.WaitForKeymanagerInitialization(ctx)
 		if err != nil {
-			// log.Fatalf will prevent defer from being called
+			// log.Fatal will prevent defer from being called
 			v.Done()
-			log.Fatalf("Wallet is not ready: %v", err)
+			log.WithError(err).Fatal("Wallet is not ready")
 		}
 
 		err = v.WaitForSync(ctx)
 		if isConnectionError(err) {
-			log.Warnf("Could not determine if beacon chain started: %v", err)
+			log.WithError(err).Warn("Could not determine if beacon chain started")
 			continue
 		}
 		if err != nil {
-			log.Fatalf("Could not determine if beacon node synced: %v", err)
+			log.WithError(err).Fatal("Could not determine if beacon node synced")
 		}
 		err = v.WaitForActivation(ctx, nil /* accountsChangedChan */)
 		if isConnectionError(err) {
-			log.Warnf("Could not wait for validator activation: %v", err)
+			log.WithError(err).Warn("Could not wait for validator activation")
 			continue
 		}
 		if err != nil {
-			log.Fatalf("Could not wait for validator activation: %v", err)
+			log.WithError(err).Fatal("Could not wait for validator activation")
 		}
 
 		headSlot, err = v.CanonicalHeadSlot(ctx)
 		if isConnectionError(err) {
-			log.Warnf("Could not get current canonical head slot: %v", err)
+			log.WithError(err).Warn("Could not get current canonical head slot")
 			continue
 		}
 		if err != nil {
-			log.Fatalf("Could not get current canonical head slot: %v", err)
+			log.WithError(err).Fatal("Could not get current canonical head slot")
 		}
 		err = v.CheckDoppelGanger(ctx)
 		if isConnectionError(err) {
-			log.Warnf("Could not wait for checking doppelganger: %v", err)
+			log.WithError(err).Warn("Could not wait for checking doppelganger")
 			continue
 		}
 		if err != nil {
-			log.Fatalf("Could not succeed with doppelganger check: %v", err)
+			log.WithError(err).Fatal("Could not succeed with doppelganger check")
 		}
 		break
 	}

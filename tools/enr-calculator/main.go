@@ -44,17 +44,17 @@ func main() {
 	}
 
 	if net.ParseIP(*ipAddr).To4() == nil {
-		log.Fatalf("Invalid ipv4 address given: %v\n", err)
+		log.WithField("address", *ipAddr).Fatal("Invalid ipv4 address given")
 	}
 
 	if *udpPort == 0 {
-		log.Fatalf("Invalid udp port given: %v\n", err)
+		log.WithField("port", *udpPort).Fatal("Invalid udp port given")
 		return
 	}
 
 	db, err := enode.OpenDB("")
 	if err != nil {
-		log.Fatalf("Could not open node's peer database: %v\n", err)
+		log.WithError(err).Fatal("Could not open node's peer database")
 		return
 	}
 	defer db.Close()

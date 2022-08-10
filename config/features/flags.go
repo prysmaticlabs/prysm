@@ -46,9 +46,9 @@ var (
 		Name:  "disable-grpc-connection-logging",
 		Usage: "Disables displaying logs for newly connected grpc clients",
 	}
-	enablePeerScorer = &cli.BoolFlag{
-		Name:  "enable-peer-scorer",
-		Usage: "Enable experimental P2P peer scorer",
+	disablePeerScorer = &cli.BoolFlag{
+		Name:  "disable-peer-scorer",
+		Usage: "Disables experimental P2P peer scorer",
 	}
 	checkPtInfoCache = &cli.BoolFlag{
 		Name:  "use-check-point-cache",
@@ -106,9 +106,9 @@ var (
 		Name:  "disable-native-state",
 		Usage: "Disables representing the beacon state as a pure Go struct.",
 	}
-	enablePullTips = &cli.BoolFlag{
-		Name:  "experimental-disable-boundary-checks",
-		Usage: "Experimental disable of boundary checks, useful for debugging, may cause bad votes.",
+	disablePullTips = &cli.BoolFlag{
+		Name:  "experimental-enable-boundary-checks",
+		Usage: "Experimental enable of boundary checks, useful for debugging, may cause bad votes.",
 	}
 	enableVecHTR = &cli.BoolFlag{
 		Name:  "enable-vectorized-htr",
@@ -118,9 +118,9 @@ var (
 		Name:  "enable-forkchoice-doubly-linked-tree",
 		Usage: "Enables new forkchoice store structure that uses doubly linked trees",
 	}
-	enableGossipBatchAggregation = &cli.BoolFlag{
-		Name:  "enable-gossip-batch-aggregation",
-		Usage: "Enables new methods to further aggregate our gossip batches before verifying them.",
+	disableGossipBatchAggregation = &cli.BoolFlag{
+		Name:  "disable-gossip-batch-aggregation",
+		Usage: "Disables new methods to further aggregate our gossip batches before verifying them.",
 	}
 	EnableOnlyBlindedBeaconBlocks = &cli.BoolFlag{
 		Name:  "enable-only-blinded-beacon-blocks",
@@ -130,10 +130,8 @@ var (
 
 // devModeFlags holds list of flags that are set when development mode is on.
 var devModeFlags = []cli.Flag{
-	enablePeerScorer,
 	enableVecHTR,
 	enableForkChoiceDoublyLinkedTree,
-	enableGossipBatchAggregation,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -165,17 +163,17 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	RopstenTestnet,
 	SepoliaTestnet,
 	Mainnet,
-	enablePeerScorer,
+	disablePeerScorer,
 	enableLargerGossipHistory,
 	checkPtInfoCache,
 	disableBroadcastSlashingFlag,
 	enableSlasherFlag,
 	enableHistoricalSpaceRepresentation,
 	disableNativeState,
-	enablePullTips,
+	disablePullTips,
 	enableVecHTR,
 	enableForkChoiceDoublyLinkedTree,
-	enableGossipBatchAggregation,
+	disableGossipBatchAggregation,
 	EnableOnlyBlindedBeaconBlocks,
 }...)
 

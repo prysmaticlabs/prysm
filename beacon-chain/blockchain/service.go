@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/execution"
 	f "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
@@ -27,15 +28,14 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	prysmTime "github.com/prysmaticlabs/prysm/time"
@@ -70,7 +70,7 @@ type Service struct {
 // config options for the service.
 type config struct {
 	BeaconBlockBuf          int
-	ChainStartFetcher       powchain.ChainStartFetcher
+	ChainStartFetcher       execution.ChainStartFetcher
 	BeaconDB                db.HeadAccessDatabase
 	DepositCache            *depositcache.DepositCache
 	ProposerSlotIndexCache  *cache.ProposerPayloadIDsCache
@@ -85,9 +85,9 @@ type config struct {
 	StateGen                *stategen.State
 	SlasherAttestationsFeed *event.Feed
 	WeakSubjectivityCheckpt *ethpb.Checkpoint
-	BlockFetcher            powchain.POWBlockFetcher
+	BlockFetcher            execution.POWBlockFetcher
 	FinalizedStateAtStartUp state.BeaconState
-	ExecutionEngineCaller   powchain.EngineCaller
+	ExecutionEngineCaller   execution.EngineCaller
 }
 
 // NewService instantiates a new block service instance that will
@@ -130,7 +130,7 @@ func (s *Service) Start() {
 			log.Fatal(err)
 		}
 	} else {
-		if err := s.startFromPOWChain(); err != nil {
+		if err := s.startFromExecutionChain(); err != nil {
 			log.Fatal(err)
 		}
 	}
@@ -271,7 +271,7 @@ func (s *Service) originRootFromSavedState(ctx context.Context) ([32]byte, error
 	if err != nil {
 		return originRoot, errors.Wrap(err, "could not get genesis block from db")
 	}
-	if err := wrapper.BeaconBlockIsNil(genesisBlock); err != nil {
+	if err := blocks.BeaconBlockIsNil(genesisBlock); err != nil {
 		return originRoot, err
 	}
 	genesisBlkRoot, err := genesisBlock.Block().HashTreeRoot()
@@ -329,7 +329,9 @@ func (s *Service) initializeHeadFromDB(ctx context.Context) error {
 			if err != nil {
 				return errors.Wrap(err, "could not retrieve head state")
 			}
-			s.setHead(headRoot, headBlock, headState)
+			if err := s.setHead(headRoot, headBlock, headState); err != nil {
+				return errors.Wrap(err, "could not set head")
+			}
 			return nil
 		} else {
 			log.Warnf("Finalized checkpoint at slot %d is too close to the current head slot, "+
@@ -345,15 +347,17 @@ func (s *Service) initializeHeadFromDB(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized block")
 	}
-	s.setHead(finalizedRoot, finalizedBlock, finalizedState)
+	if err := s.setHead(finalizedRoot, finalizedBlock, finalizedState); err != nil {
+		return errors.Wrap(err, "could not set head")
+	}
 
 	return nil
 }
 
-func (s *Service) startFromPOWChain() error {
+func (s *Service) startFromExecutionChain() error {
 	log.Info("Waiting to reach the validator deposit threshold to start the beacon chain...")
 	if s.cfg.ChainStartFetcher == nil {
-		return errors.New("not configured web3Service for POW chain")
+		return errors.New("not configured execution chain")
 	}
 	go func() {
 		stateChannel := make(chan *feed.Event, 1)
@@ -369,7 +373,7 @@ func (s *Service) startFromPOWChain() error {
 						return
 					}
 					log.WithField("starttime", data.StartTime).Debug("Received chain start event")
-					s.onPowchainStart(s.ctx, data.StartTime)
+					s.onExecutionChainStart(s.ctx, data.StartTime)
 					return
 				}
 			case <-s.ctx.Done():
@@ -385,18 +389,18 @@ func (s *Service) startFromPOWChain() error {
 	return nil
 }
 
-// onPowchainStart initializes a series of deposits from the ChainStart deposits in the eth1
+// onExecutionChainStart initializes a series of deposits from the ChainStart deposits in the eth1
 // deposit contract, initializes the beacon chain's state, and kicks off the beacon chain.
-func (s *Service) onPowchainStart(ctx context.Context, genesisTime time.Time) {
+func (s *Service) onExecutionChainStart(ctx context.Context, genesisTime time.Time) {
 	preGenesisState := s.cfg.ChainStartFetcher.PreGenesisState()
 	initializedState, err := s.initializeBeaconChain(ctx, genesisTime, preGenesisState, s.cfg.ChainStartFetcher.ChainStartEth1Data())
 	if err != nil {
-		log.Fatalf("Could not initialize beacon chain: %v", err)
+		log.WithError(err).Fatal("Could not initialize beacon chain")
 	}
 	// We start a counter to genesis, if needed.
 	gRoot, err := initializedState.HashTreeRoot(s.ctx)
 	if err != nil {
-		log.Fatalf("Could not hash tree root genesis state: %v", err)
+		log.WithError(err).Fatal("Could not hash tree root genesis state")
 	}
 	go slots.CountdownToGenesis(ctx, genesisTime, uint64(initializedState.NumValidators()), gRoot)
 
@@ -469,7 +473,7 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState state.Beacon
 	s.cfg.StateGen.SaveFinalizedState(0 /*slot*/, genesisBlkRoot, genesisState)
 
 	if err := s.cfg.ForkChoiceStore.InsertNode(ctx, genesisState, genesisBlkRoot); err != nil {
-		log.Fatalf("Could not process genesis block for fork choice: %v", err)
+		log.WithError(err).Fatal("Could not process genesis block for fork choice")
 	}
 	s.cfg.ForkChoiceStore.SetOriginRoot(genesisBlkRoot)
 	// Set genesis as fully validated
@@ -478,7 +482,9 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState state.Beacon
 	}
 	s.cfg.ForkChoiceStore.SetGenesisTime(uint64(s.genesisTime.Unix()))
 
-	s.setHead(genesisBlkRoot, genesisBlk, genesisState)
+	if err := s.setHead(genesisBlkRoot, genesisBlk, genesisState); err != nil {
+		log.WithError(err).Fatal("Could not set head")
+	}
 	return nil
 }
 
@@ -502,11 +508,11 @@ func spawnCountdownIfPreGenesis(ctx context.Context, genesisTime time.Time, db d
 
 	gState, err := db.GenesisState(ctx)
 	if err != nil {
-		log.Fatalf("Could not retrieve genesis state: %v", err)
+		log.WithError(err).Fatal("Could not retrieve genesis state")
 	}
 	gRoot, err := gState.HashTreeRoot(ctx)
 	if err != nil {
-		log.Fatalf("Could not hash tree root genesis state: %v", err)
+		log.WithError(err).Fatal("Could not hash tree root genesis state")
 	}
 	go slots.CountdownToGenesis(ctx, genesisTime, uint64(gState.NumValidators()), gRoot)
 }
