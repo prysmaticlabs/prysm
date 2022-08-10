@@ -82,7 +82,7 @@ func (f *ForkChoice) Head(ctx context.Context, justifiedStateBalances []uint64) 
 // ProcessAttestation processes attestation for vote accounting, it iterates around validator indices
 // and update their votes accordingly.
 func (f *ForkChoice) ProcessAttestation(ctx context.Context, validatorIndices []uint64, blockRoot [32]byte, targetEpoch types.Epoch) {
-	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.ProcessAttestation")
+	_, span := trace.StartSpan(ctx, "protoArrayForkChoice.ProcessAttestation")
 	defer span.End()
 	f.votesLock.Lock()
 	defer f.votesLock.Unlock()
@@ -493,6 +493,10 @@ func (s *Store) insert(ctx context.Context,
 	s.nodesLock.Lock()
 	defer s.nodesLock.Unlock()
 
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	// Return if the block has been inserted into Store before.
 	if idx, ok := s.nodesIndices[root]; ok {
 		return s.nodes[idx], nil
@@ -555,8 +559,10 @@ func (s *Store) insert(ctx context.Context,
 // and its best child. For each node, it updates the weight with input delta and
 // back propagate the nodes' delta to its parents' delta. After scoring changes,
 // the best child is then updated along with the best descendant.
-func (s *Store) applyWeightChanges(ctx context.Context, newBalances []uint64, delta []int) error {
-	ctx, span := trace.StartSpan(ctx, "protoArrayForkChoice.applyWeightChanges")
+func (s *Store) applyWeightChanges(
+	ctx context.Context, newBalances []uint64, delta []int,
+) error {
+	_, span := trace.StartSpan(ctx, "protoArrayForkChoice.applyWeightChanges")
 	defer span.End()
 
 	// The length of the nodes can not be different than length of the delta.
@@ -570,6 +576,9 @@ func (s *Store) applyWeightChanges(ctx context.Context, newBalances []uint64, de
 	// Iterate backwards through all index to node in store.
 	var err error
 	for i := len(s.nodes) - 1; i >= 0; i-- {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
 		n := s.nodes[i]
 
 		// There is no need to adjust the balances or manage parent of the zero hash, it
@@ -794,6 +803,9 @@ func (s *Store) prune(ctx context.Context) error {
 	canonicalNodesMap[finalizedIndex] = uint64(0)
 
 	for idx := uint64(0); idx < uint64(len(s.nodes)); idx++ {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
 		node := copyNode(s.nodes[idx])
 		parentIdx, ok := canonicalNodesMap[node.parent]
 		if ok {

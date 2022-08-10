@@ -420,6 +420,22 @@ func TestReconstructFullBellatrixBlock(t *testing.T) {
 		_, err = service.ReconstructFullBellatrixBlock(ctx, wrapped)
 		require.ErrorContains(t, want, err)
 	})
+	t.Run("pre-merge execution payload", func(t *testing.T) {
+		service := &Service{}
+		bellatrixBlock := util.NewBlindedBeaconBlockBellatrix()
+		wanted := util.NewBeaconBlockBellatrix()
+		wanted.Block.Slot = 1
+		// Make sure block hash is the zero hash.
+		bellatrixBlock.Block.Body.ExecutionPayloadHeader.BlockHash = make([]byte, 32)
+		bellatrixBlock.Block.Slot = 1
+		wrapped, err := blocks.NewSignedBeaconBlock(bellatrixBlock)
+		require.NoError(t, err)
+		wantedWrapped, err := blocks.NewSignedBeaconBlock(wanted)
+		require.NoError(t, err)
+		reconstructed, err := service.ReconstructFullBellatrixBlock(ctx, wrapped)
+		require.NoError(t, err)
+		require.DeepEqual(t, wantedWrapped, reconstructed)
+	})
 	t.Run("properly reconstructs block with correct payload", func(t *testing.T) {
 		fix := fixtures()
 		payload, ok := fix["ExecutionPayload"].(*pb.ExecutionPayload)

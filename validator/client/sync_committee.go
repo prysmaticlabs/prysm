@@ -99,7 +99,7 @@ func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot t
 
 	duty, err := v.duty(pubKey)
 	if err != nil {
-		log.Errorf("Could not fetch validator assignment: %v", err)
+		log.WithError(err).Error("Could not fetch validator assignment")
 		return
 	}
 
@@ -108,7 +108,7 @@ func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot t
 		Slot:      slot,
 	})
 	if err != nil {
-		log.Errorf("Could not get sync subcommittee index: %v", err)
+		log.WithError(err).Error("Could not get sync subcommittee index")
 		return
 	}
 	if len(indexRes.Indices) == 0 {
@@ -118,7 +118,7 @@ func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot t
 
 	selectionProofs, err := v.selectionProofs(ctx, slot, pubKey, indexRes)
 	if err != nil {
-		log.Errorf("Could not get selection proofs: %v", err)
+		log.WithError(err).Error("Could not get selection proofs")
 		return
 	}
 
@@ -127,7 +127,7 @@ func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot t
 	for i, comIdx := range indexRes.Indices {
 		isAggregator, err := altair.IsSyncCommitteeAggregator(selectionProofs[i])
 		if err != nil {
-			log.Errorf("Could check in aggregator: %v", err)
+			log.WithError(err).Error("Could check in aggregator")
 			return
 		}
 		if !isAggregator {
@@ -141,7 +141,7 @@ func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot t
 			SubnetId:  subnet,
 		})
 		if err != nil {
-			log.Errorf("Could not get sync committee contribution: %v", err)
+			log.WithError(err).Error("Could not get sync committee contribution")
 			return
 		}
 		if contribution.AggregationBits.Count() == 0 {
@@ -160,7 +160,7 @@ func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot t
 		}
 		sig, err := v.signContributionAndProof(ctx, pubKey, contributionAndProof, slot)
 		if err != nil {
-			log.Errorf("Could not sign contribution and proof: %v", err)
+			log.WithError(err).Error("Could not sign contribution and proof")
 			return
 		}
 
@@ -168,7 +168,7 @@ func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot t
 			Message:   contributionAndProof,
 			Signature: sig,
 		}); err != nil {
-			log.Errorf("Could not submit signed contribution and proof: %v", err)
+			log.WithError(err).Error("Could not submit signed contribution and proof")
 			return
 		}
 
