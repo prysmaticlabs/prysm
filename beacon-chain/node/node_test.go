@@ -2,7 +2,6 @@ package node
 
 import (
 	"context"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -70,7 +69,7 @@ func TestNodeStart_Ok(t *testing.T) {
 	ctx := cli.NewContext(&app, set, nil)
 	node, err := New(ctx, WithBlockchainFlagOptions([]blockchain.Option{}),
 		WithBuilderFlagOptions([]builder.Option{}),
-		WithPowchainFlagOptions([]powchain.Option{}))
+		WithExecutionChainOptions([]execution.Option{}))
 	require.NoError(t, err)
 	node.services = &runtime.ServiceRegistry{}
 	go func() {
@@ -116,7 +115,7 @@ func TestNodeStart_Ok_registerDeterminsticGenesisService(t *testing.T) {
 	ctx := cli.NewContext(&app, set, nil)
 	node, err := New(ctx, WithBlockchainFlagOptions([]blockchain.Option{}),
 		WithBuilderFlagOptions([]builder.Option{}),
-		WithPowchainFlagOptions([]powchain.Option{}))
+		WithExecutionChainOptions([]execution.Option{}))
 	require.NoError(t, err)
 	node.services = &runtime.ServiceRegistry{}
 	go func() {
@@ -126,17 +125,6 @@ func TestNodeStart_Ok_registerDeterminsticGenesisService(t *testing.T) {
 	node.Close()
 	require.LogsContain(t, hook, "Starting beacon node")
 	require.NoError(t, os.Remove("genesis_ssz.json"))
-}
-
-func TestGenerateGenesisSSZ(t *testing.T) {
-	data, err := os.ReadFile("../../testing/endtoend/static-files/eth1/genesis.json")
-	require.NoError(t, err)
-	genesisState := &ethpb.BeaconState{}
-	err = json.Unmarshal(data, genesisState)
-	require.NoError(t, err)
-	bytes, err := genesisState.MarshalSSZ()
-	require.NoError(t, err)
-	require.NoError(t, os.WriteFile("genesis_ssz.json", bytes, 0666))
 }
 
 // TestClearDB tests clearing the database
@@ -162,24 +150,25 @@ func TestClearDB(t *testing.T) {
 	require.NoError(t, err)
 
 	require.LogsContain(t, hook, "Removing database")
-}
+	t.Run("TestStartSlasherDB_ForceClearDb", func(t *testing.T) {
+		features.Init(&features.Flags{EnableSlasher: true})
 
-func TestStartSlasherDB_ForceClearDb(t *testing.T) {
-	hook := logTest.NewGlobal()
-	features.Init(&features.Flags{EnableSlasher: true})
+		tmp := filepath.Join(t.TempDir(), "datadirtest-slasher")
 
-	tmp := filepath.Join(t.TempDir(), "datadirtest")
+		app := cli.App{}
+		set := flag.NewFlagSet("test", 0)
+		set.String("datadir", tmp, "node data directory")
+		set.Bool(cmd.ClearDB.Name, true, "clear db")
+		set.Bool(cmd.ForceClearDB.Name, true, "force clear db")
+		set.Bool("slasher", true, "enable slasher")
 
-	app := cli.App{}
-	set := flag.NewFlagSet("test", 0)
-	set.String("datadir", tmp, "node data directory")
-	set.Bool(cmd.ClearDB.Name, true, "clear db")
-	set.Bool(cmd.ForceClearDB.Name, true, "force clear db")
-	set.Bool("slasher", true, "enable slasher")
+		ctx := cli.NewContext(&app, set, nil)
+		_, err := New(ctx, WithBlockchainFlagOptions([]blockchain.Option{}))
+		//ignore prometheusError
+		if err.Error() != "duplicate metrics collector registration attempted" {
+			require.NoError(t, err)
+		}
 
-	ctx := cli.NewContext(&app, set, nil)
-	_, err := New(ctx, WithBlockchainFlagOptions([]blockchain.Option{}))
-	require.NoError(t, err)
-
-	require.LogsContain(t, hook, "Removing database")
+		require.LogsContain(t, hook, "Removing database")
+	})
 }
