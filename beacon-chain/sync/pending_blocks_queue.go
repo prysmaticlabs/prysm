@@ -208,13 +208,13 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 				kzgs, err := b.Block().Body().BlobKzgs()
 				// an error shouldn't happen! A non-nil sidecar means we're dealing with a EIP-4844 block
 				if err != nil {
-					log.Errorf("Could not retrieve blob kzgs from block %d: %v", b.Block().Slot(), err)
+					log.WithError(err).WithField("slot", b.Block().Slot()).Debug("Could not get KZGs from block")
 					tracing.AnnotateError(span, err)
 					span.End()
 					continue
 				}
 				if err := blobs.VerifyBlobsSidecar(b.Block().Slot(), blkRoot, bytesutil.ToBytes48Array(kzgs), queuedSidecar.s); err != nil {
-					log.Debugf("Could not verify sidecar from slot %d: %v", b.Block().Slot(), err)
+					log.WithError(err).WithField("slot", b.Block().Slot()).Debug("Could not verify blobs sidecar")
 				}
 				if sidecar != nil {
 					if err := b.SetSideCar(&ethpb.SignedBlobsSidecar{
@@ -406,7 +406,7 @@ func (s *Service) sendBatchSidecarRequest(ctx context.Context, reqs map[types.Sl
 		sidecarReq := makeSidecarRangeRequest(reqs)
 		if err := s.sendRecentBlobSidecarsRequest(ctx, sidecarReq, pid); err != nil {
 			tracing.AnnotateError(span, err)
-			log.Debugf("Could not send recent block request: %v", err)
+			log.WithError(err).Debug("Could not send recent blob sidecar request")
 		}
 
 		newReqs := make(map[types.Slot][][32]byte)
