@@ -136,7 +136,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 		return err
 	}
 
-	if err := s.insertBlockAndToForkChoiceStore(ctx, signed.Block(), blockRoot, postState); err != nil {
+	if err := s.insertBlockToForkchoiceStore(ctx, signed.Block(), blockRoot, postState); err != nil {
 		return errors.Wrapf(err, "could not insert block %d to fork choice store", signed.Block().Slot())
 	}
 	s.InsertSlashingsToForkChoiceStore(ctx, signed.Block().Body().AttesterSlashings())
@@ -497,8 +497,8 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState state.Beaco
 
 // This feeds in the block to fork choice store. It's allows fork choice store
 // to gain information on the most current chain.
-func (s *Service) insertBlockAndToForkChoiceStore(ctx context.Context, blk interfaces.BeaconBlock, root [32]byte, st state.BeaconState) error {
-	ctx, span := trace.StartSpan(ctx, "blockChain.insertBlockAndToForkChoiceStore")
+func (s *Service) insertBlockToForkchoiceStore(ctx context.Context, blk interfaces.BeaconBlock, root [32]byte, st state.BeaconState) error {
+	ctx, span := trace.StartSpan(ctx, "blockChain.insertBlockToForkchoiceStore")
 	defer span.End()
 
 	if !s.cfg.ForkChoiceStore.HasNode(bytesutil.ToBytes32(blk.ParentRoot())) {
