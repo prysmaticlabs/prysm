@@ -49,7 +49,7 @@ func (lk *Lock) Lock() {
 	lk.unlock <- 1
 }
 
-// Unlocks this lock. Must be called after Lock.
+// Unlock unlocks this lock. Must be called after Lock.
 // Can only be invoked if there is a previous call to Lock.
 func (lk *Lock) Unlock() {
 	<-lk.unlock
@@ -65,14 +65,14 @@ func (lk *Lock) Unlock() {
 	<-lk.lock
 }
 
-// Temporarily unlocks, gives up the cpu time to other goroutine, and attempts to lock again.
+// Yield temporarily unlocks, gives up the cpu time to other goroutine, and attempts to lock again.
 func (lk *Lock) Yield() {
 	lk.Unlock()
 	runtime.Gosched()
 	lk.Lock()
 }
 
-// Creates a new multilock for the specified keys
+// NewMultilock creates a new multilock for the specified keys
 func NewMultilock(locks ...string) *Lock {
 	if len(locks) == 0 {
 		return nil
@@ -87,7 +87,7 @@ func NewMultilock(locks ...string) *Lock {
 	}
 }
 
-// Cleans old unused locks. Returns removed keys.
+// Clean cleans old unused locks. Returns removed keys.
 func Clean() []string {
 	locks.lock <- 1
 	defer func() { <-locks.lock }()

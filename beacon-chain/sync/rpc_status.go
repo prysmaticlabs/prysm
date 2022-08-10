@@ -3,6 +3,7 @@ package sync
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -39,7 +40,7 @@ func (s *Service) maintainPeerStatuses() {
 				if s.cfg.p2p.Host().Network().Connectedness(id) != network.Connected {
 					s.cfg.p2p.Peers().SetConnectionState(id, peers.PeerDisconnecting)
 					if err := s.cfg.p2p.Disconnect(id); err != nil {
-						log.Debugf("Error when disconnecting with peer: %v", err)
+						log.WithError(err).Debug("Error when disconnecting with peer")
 					}
 					s.cfg.p2p.Peers().SetConnectionState(id, peers.PeerDisconnected)
 					return
@@ -99,7 +100,7 @@ func (s *Service) resyncIfBehind() {
 				numberOfTimesResyncedCounter.Inc()
 				s.clearPendingSlots()
 				if err := s.cfg.initialSync.Resync(); err != nil {
-					log.Errorf("Could not resync chain: %v", err)
+					log.WithError(err).Errorf("Could not resync chain")
 				}
 			}
 		}
@@ -131,10 +132,7 @@ func (s *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 	if err != nil {
 		return err
 	}
-	cp, err := s.cfg.chain.FinalizedCheckpt()
-	if err != nil {
-		return err
-	}
+	cp := s.cfg.chain.FinalizedCheckpt()
 	resp := &pb.Status{
 		ForkDigest:     forkDigest[:],
 		FinalizedRoot:  cp.Root,
@@ -154,6 +152,7 @@ func (s *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 
 	code, errMsg, err := ReadStatusCode(stream, s.cfg.p2p.Encoding())
 	if err != nil {
+		s.cfg.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 		return err
 	}
 
@@ -163,6 +162,7 @@ func (s *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 	}
 	msg := &pb.Status{}
 	if err := s.cfg.p2p.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
+		s.cfg.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 		return err
 	}
 
@@ -264,10 +264,7 @@ func (s *Service) respondWithStatus(ctx context.Context, stream network.Stream) 
 	if err != nil {
 		return err
 	}
-	cp, err := s.cfg.chain.FinalizedCheckpt()
-	if err != nil {
-		return err
-	}
+	cp := s.cfg.chain.FinalizedCheckpt()
 	resp := &pb.Status{
 		ForkDigest:     forkDigest[:],
 		FinalizedRoot:  cp.Root,
@@ -292,10 +289,7 @@ func (s *Service) validateStatusMessage(ctx context.Context, msg *pb.Status) err
 		return p2ptypes.ErrWrongForkDigestVersion
 	}
 	genesis := s.cfg.chain.GenesisTime()
-	cp, err := s.cfg.chain.FinalizedCheckpt()
-	if err != nil {
-		return err
-	}
+	cp := s.cfg.chain.FinalizedCheckpt()
 	finalizedEpoch := cp.Epoch
 	maxEpoch := slots.EpochsSinceGenesis(genesis)
 	// It would take a minimum of 2 epochs to finalize a
@@ -318,7 +312,8 @@ func (s *Service) validateStatusMessage(ctx context.Context, msg *pb.Status) err
 	if finalizedAtGenesis && rootIsEqual {
 		return nil
 	}
-	if !s.cfg.beaconDB.IsFinalizedBlock(ctx, bytesutil.ToBytes32(msg.FinalizedRoot)) {
+	if !s.cfg.chain.IsFinalized(ctx, bytesutil.ToBytes32(msg.FinalizedRoot)) {
+		log.WithField("root", fmt.Sprintf("%#x", msg.FinalizedRoot)).Debug("Could not validate finalized root")
 		return p2ptypes.ErrInvalidFinalizedRoot
 	}
 	blk, err := s.cfg.beaconDB.Block(ctx, bytesutil.ToBytes32(msg.FinalizedRoot))

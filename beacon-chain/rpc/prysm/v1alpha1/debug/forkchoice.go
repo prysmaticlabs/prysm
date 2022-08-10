@@ -12,8 +12,8 @@ func (ds *Server) GetForkChoice(_ context.Context, _ *empty.Empty) (*pbrpc.ForkC
 	store := ds.ForkFetcher.ForkChoicer()
 
 	return &pbrpc.ForkChoiceResponse{
-		JustifiedEpoch:  store.JustifiedEpoch(),
-		FinalizedEpoch:  store.FinalizedEpoch(),
+		JustifiedEpoch:  store.JustifiedCheckpoint().Epoch,
+		FinalizedEpoch:  store.FinalizedCheckpoint().Epoch,
 		ForkchoiceNodes: store.ForkChoiceNodes(),
 	}, nil
 }

@@ -13,8 +13,8 @@ go_library(
         "//testing/require:go_default_library",
         "//testing/spectest/utils:go_default_library",
         "//testing/util:go_default_library",
-        "@com_github_ferranbt_fastssz//:go_default_library",
         "@com_github_golang_snappy//:go_default_library",
+        "@com_github_prysmaticlabs_fastssz//:go_default_library",
     ],
 )
 
@@ -27,7 +27,7 @@ go_test(
         "//beacon-chain/state/v1:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//testing/require:go_default_library",
-        "@com_github_ferranbt_fastssz//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
+        "@com_github_prysmaticlabs_fastssz//:go_default_library",
     ],
 )

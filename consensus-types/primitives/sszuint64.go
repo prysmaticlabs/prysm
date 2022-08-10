@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	fssz "github.com/ferranbt/fastssz"
+	fssz "github.com/prysmaticlabs/fastssz"
 )
 
 var _ fssz.HashRoot = (Epoch)(0)

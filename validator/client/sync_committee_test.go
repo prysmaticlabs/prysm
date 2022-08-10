@@ -259,7 +259,8 @@ func TestSubmitSignedContributionAndProof_BadDomain(t *testing.T) {
 		}, errors.New("bad domain response"))
 
 	validator.SubmitSignedContributionAndProof(context.Background(), 1, pubKey)
-	require.LogsContain(t, hook, "Could not get selection proofs: bad domain response")
+	require.LogsContain(t, hook, "Could not get selection proofs")
+	require.LogsContain(t, hook, "bad domain response")
 }
 
 func TestSubmitSignedContributionAndProof_CouldNotGetContribution(t *testing.T) {

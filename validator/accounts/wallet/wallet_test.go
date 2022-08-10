@@ -13,7 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
-	remote_web3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
+	remoteweb3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
 	"github.com/sirupsen/logrus"
 )
 
@@ -62,7 +62,7 @@ func TestWallet_InitializeKeymanager_web3Signer_HappyPath(t *testing.T) {
 	require.NoError(t, err)
 	config := iface.InitKeymanagerConfig{
 		ListenForChanges: false,
-		Web3SignerConfig: &remote_web3signer.SetupConfig{
+		Web3SignerConfig: &remoteweb3signer.SetupConfig{
 			BaseEndpoint:          "http://localhost:8545",
 			GenesisValidatorsRoot: root,
 			PublicKeysURL:         "http://localhost:8545/public_keys",

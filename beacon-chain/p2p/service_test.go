@@ -13,7 +13,7 @@ import (
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
-	noise "github.com/libp2p/go-libp2p-noise"
+	noise "github.com/libp2p/go-libp2p/p2p/security/noise"
 	"github.com/multiformats/go-multiaddr"
 	"github.com/prysmaticlabs/prysm/async/event"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"

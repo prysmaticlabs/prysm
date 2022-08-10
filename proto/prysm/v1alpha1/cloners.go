@@ -447,11 +447,11 @@ func CopyExecutionPayload(payload *enginev1.ExecutionPayload) *enginev1.Executio
 }
 
 // CopyExecutionPayloadHeader copies the provided execution payload object.
-func CopyExecutionPayloadHeader(payload *ExecutionPayloadHeader) *ExecutionPayloadHeader {
+func CopyExecutionPayloadHeader(payload *enginev1.ExecutionPayloadHeader) *enginev1.ExecutionPayloadHeader {
 	if payload == nil {
 		return nil
 	}
-	return &ExecutionPayloadHeader{
+	return &enginev1.ExecutionPayloadHeader{
 		ParentHash:       bytesutil.SafeCopyBytes(payload.ParentHash),
 		FeeRecipient:     bytesutil.SafeCopyBytes(payload.FeeRecipient),
 		StateRoot:        bytesutil.SafeCopyBytes(payload.StateRoot),

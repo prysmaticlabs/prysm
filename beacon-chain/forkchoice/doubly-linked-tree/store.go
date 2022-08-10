@@ -3,10 +3,12 @@ package doublylinkedtree
 import (
 	"context"
 	"fmt"
+	"time"
 
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/time/slots"
 	"go.opencensus.io/trace"
 )
 
@@ -15,7 +17,7 @@ import (
 const defaultPruneThreshold = 256
 
 // applyProposerBoostScore applies the current proposer boost scores to the
-// relevant nodes
+// relevant nodes. This function requires a lock in Store.nodesLock.
 func (s *Store) applyProposerBoostScore(newBalances []uint64) error {
 	s.proposerBoostLock.Lock()
 	defer s.proposerBoostLock.Unlock()
@@ -25,7 +27,9 @@ func (s *Store) applyProposerBoostScore(newBalances []uint64) error {
 	if s.previousProposerBoostRoot != params.BeaconConfig().ZeroHash {
 		previousNode, ok := s.nodeByRoot[s.previousProposerBoostRoot]
 		if !ok || previousNode == nil {
-			return errInvalidProposerBoostRoot
+			s.previousProposerBoostRoot = [32]byte{}
+			log.WithError(errInvalidProposerBoostRoot).Errorf(fmt.Sprintf("invalid prev root %#x", s.previousProposerBoostRoot))
+			return nil
 		}
 		previousNode.balance -= s.previousProposerBoostScore
 	}
@@ -33,7 +37,9 @@ func (s *Store) applyProposerBoostScore(newBalances []uint64) error {
 	if s.proposerBoostRoot != params.BeaconConfig().ZeroHash {
 		currentNode, ok := s.nodeByRoot[s.proposerBoostRoot]
 		if !ok || currentNode == nil {
-			return errInvalidProposerBoostRoot
+			s.proposerBoostRoot = [32]byte{}
+			log.WithError(errInvalidProposerBoostRoot).Errorf(fmt.Sprintf("invalid current root %#x", s.proposerBoostRoot))
+			return nil
 		}
 		proposerScore, err = computeProposerBoostScore(newBalances)
 		if err != nil {
@@ -60,14 +66,27 @@ func (s *Store) PruneThreshold() uint64 {
 
 // head starts from justified root and then follows the best descendant links
 // to find the best block for head. This function assumes a lock on s.nodesLock
-func (s *Store) head(ctx context.Context, justifiedRoot [32]byte) ([32]byte, error) {
-	_, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.head")
+func (s *Store) head(ctx context.Context) ([32]byte, error) {
+	ctx, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.head")
 	defer span.End()
+	s.checkpointsLock.RLock()
+	defer s.checkpointsLock.RUnlock()
+
+	if err := ctx.Err(); err != nil {
+		return [32]byte{}, err
+	}
 
 	// JustifiedRoot has to be known
-	justifiedNode, ok := s.nodeByRoot[justifiedRoot]
+	justifiedNode, ok := s.nodeByRoot[s.justifiedCheckpoint.Root]
 	if !ok || justifiedNode == nil {
-		return [32]byte{}, errUnknownJustifiedRoot
+		// If the justifiedCheckpoint is from genesis, then the root is
+		// zeroHash. In this case it should be the root of forkchoice
+		// tree.
+		if s.justifiedCheckpoint.Epoch == params.BeaconConfig().GenesisEpoch {
+			justifiedNode = s.treeRootNode
+		} else {
+			return [32]byte{}, errUnknownJustifiedRoot
+		}
 	}
 
 	// If the justified node doesn't have a best descendant,
@@ -77,10 +96,12 @@ func (s *Store) head(ctx context.Context, justifiedRoot [32]byte) ([32]byte, err
 		bestDescendant = justifiedNode
 	}
 
-	if !bestDescendant.viableForHead(s.justifiedEpoch, s.finalizedEpoch) {
-		return [32]byte{}, fmt.Errorf("head at slot %d with weight %d is not eligible, finalizedEpoch %d != %d, justifiedEpoch %d != %d",
-			bestDescendant.slot, bestDescendant.weight/10e9, bestDescendant.finalizedEpoch, s.finalizedEpoch, bestDescendant.justifiedEpoch, s.justifiedEpoch)
+	if !bestDescendant.viableForHead(s.justifiedCheckpoint.Epoch, s.finalizedCheckpoint.Epoch) {
+		s.allTipsAreInvalid = true
+		return [32]byte{}, fmt.Errorf("head at slot %d with weight %d is not eligible, finalizedEpoch, justified Epoch %d, %d != %d, %d",
+			bestDescendant.slot, bestDescendant.weight/10e9, bestDescendant.finalizedEpoch, bestDescendant.justifiedEpoch, s.finalizedCheckpoint.Epoch, s.justifiedCheckpoint.Epoch)
 	}
+	s.allTipsAreInvalid = false
 
 	// Update metrics.
 	if bestDescendant != s.headNode {
@@ -97,16 +118,16 @@ func (s *Store) head(ctx context.Context, justifiedRoot [32]byte) ([32]byte, err
 func (s *Store) insert(ctx context.Context,
 	slot types.Slot,
 	root, parentRoot, payloadHash [fieldparams.RootLength]byte,
-	justifiedEpoch, finalizedEpoch types.Epoch) error {
-	_, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.insert")
+	justifiedEpoch, finalizedEpoch types.Epoch) (*Node, error) {
+	ctx, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.insert")
 	defer span.End()
 
 	s.nodesLock.Lock()
 	defer s.nodesLock.Unlock()
 
 	// Return if the block has been inserted into Store before.
-	if _, ok := s.nodeByRoot[root]; ok {
-		return nil
+	if n, ok := s.nodeByRoot[root]; ok {
+		return n, nil
 	}
 
 	parent := s.nodeByRoot[parentRoot]
@@ -125,24 +146,49 @@ func (s *Store) insert(ctx context.Context,
 
 	s.nodeByPayload[payloadHash] = n
 	s.nodeByRoot[root] = n
-	if parent != nil {
+	if parent == nil {
+		if s.treeRootNode == nil {
+			s.treeRootNode = n
+			s.headNode = n
+		} else {
+			return n, errInvalidParentRoot
+		}
+	} else {
 		parent.children = append(parent.children, n)
-		if err := s.treeRootNode.updateBestDescendant(ctx, s.justifiedEpoch, s.finalizedEpoch); err != nil {
-			return err
+		// Apply proposer boost
+		timeNow := uint64(time.Now().Unix())
+		if timeNow < s.genesisTime {
+			return n, nil
+		}
+		secondsIntoSlot := (timeNow - s.genesisTime) % params.BeaconConfig().SecondsPerSlot
+		currentSlot := slots.CurrentSlot(s.genesisTime)
+		boostThreshold := params.BeaconConfig().SecondsPerSlot / params.BeaconConfig().IntervalsPerSlot
+		if currentSlot == slot && secondsIntoSlot < boostThreshold {
+			s.proposerBoostLock.Lock()
+			s.proposerBoostRoot = root
+			s.proposerBoostLock.Unlock()
+		}
+
+		// Update best descendants
+		if err := s.treeRootNode.updateBestDescendant(ctx,
+			s.justifiedCheckpoint.Epoch, s.finalizedCheckpoint.Epoch); err != nil {
+			return n, err
 		}
 	}
-
-	// Set the node as root if the store was empty
-	if s.treeRootNode == nil {
-		s.treeRootNode = n
-		s.headNode = n
-	}
-
 	// Update metrics.
 	processedBlockCount.Inc()
 	nodeCount.Set(float64(len(s.nodeByRoot)))
 
-	return nil
+	// Only update received block slot if it's within epoch from current time.
+	if slot+params.BeaconConfig().SlotsPerEpoch > slots.CurrentSlot(s.genesisTime) {
+		s.receivedBlocksLastEpoch[slot%params.BeaconConfig().SlotsPerEpoch] = slot
+	}
+	// Update highest slot tracking.
+	if slot > s.highestReceivedSlot {
+		s.highestReceivedSlot = slot
+	}
+
+	return n, nil
 }
 
 // pruneFinalizedNodeByRootMap prunes the `nodeByRoot` map
@@ -168,12 +214,15 @@ func (s *Store) pruneFinalizedNodeByRootMap(ctx context.Context, node, finalized
 // prune prunes the fork choice store with the new finalized root. The store is only pruned if the input
 // root is different than the current store finalized root, and the number of the store has met prune threshold.
 // This function does not prune for invalid optimistically synced nodes, it deals only with pruning upon finalization
-func (s *Store) prune(ctx context.Context, finalizedRoot [32]byte) error {
-	_, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.Prune")
+func (s *Store) prune(ctx context.Context) error {
+	ctx, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.Prune")
 	defer span.End()
 
 	s.nodesLock.Lock()
 	defer s.nodesLock.Unlock()
+	s.checkpointsLock.RLock()
+	finalizedRoot := s.finalizedCheckpoint.Root
+	s.checkpointsLock.RUnlock()
 
 	finalizedNode, ok := s.nodeByRoot[finalizedRoot]
 	if !ok || finalizedNode == nil {
@@ -203,6 +252,10 @@ func (s *Store) prune(ctx context.Context, finalizedRoot [32]byte) error {
 func (s *Store) tips() ([][32]byte, []types.Slot) {
 	var roots [][32]byte
 	var slots []types.Slot
+
+	s.nodesLock.RLock()
+	defer s.nodesLock.RUnlock()
+
 	for root, node := range s.nodeByRoot {
 		if len(node.children) == 0 {
 			roots = append(roots, root)
@@ -210,4 +263,33 @@ func (s *Store) tips() ([][32]byte, []types.Slot) {
 		}
 	}
 	return roots, slots
+}
+
+// HighestReceivedBlockSlot returns the highest slot received by the forkchoice
+func (f *ForkChoice) HighestReceivedBlockSlot() types.Slot {
+	f.store.nodesLock.RLock()
+	defer f.store.nodesLock.RUnlock()
+	return f.store.highestReceivedSlot
+}
+
+// ReceivedBlocksLastEpoch returns the number of blocks received in the last epoch
+func (f *ForkChoice) ReceivedBlocksLastEpoch() (uint64, error) {
+	f.store.nodesLock.RLock()
+	defer f.store.nodesLock.RUnlock()
+	count := uint64(0)
+	lowerBound := slots.CurrentSlot(f.store.genesisTime)
+	var err error
+	if lowerBound > fieldparams.SlotsPerEpoch {
+		lowerBound, err = lowerBound.SafeSub(fieldparams.SlotsPerEpoch)
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	for _, s := range f.store.receivedBlocksLastEpoch {
+		if s != 0 && lowerBound <= s {
+			count++
+		}
+	}
+	return count, nil
 }

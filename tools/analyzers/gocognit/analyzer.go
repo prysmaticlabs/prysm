@@ -34,7 +34,7 @@ var Analyzer = &analysis.Analyzer{
 const over = 100
 
 func run(pass *analysis.Pass) (interface{}, error) {
-	inspect, ok := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
+	inspectResult, ok := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
 	if !ok {
 		return nil, errors.New("analyzer is not type *inspector.Inspector")
 	}
@@ -42,7 +42,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 	nodeFilter := []ast.Node{
 		(*ast.FuncDecl)(nil),
 	}
-	inspect.Preorder(nodeFilter, func(n ast.Node) {
+	inspectResult.Preorder(nodeFilter, func(n ast.Node) {
 		fnDecl, ok := n.(*ast.FuncDecl)
 		if !ok {
 			return

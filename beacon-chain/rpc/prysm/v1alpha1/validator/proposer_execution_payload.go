@@ -15,8 +15,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	consensusblocks "github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/runtime/version"
@@ -65,6 +65,10 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 		return nil, err
 	}
 
+	t, err := slots.ToTime(st.GenesisTime(), slot)
+	if err != nil {
+		return nil, err
+	}
 	if mergeComplete {
 		header, err := st.LatestExecutionPayloadHeader()
 		if err != nil {
@@ -75,7 +79,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 		if activationEpochNotReached(slot) {
 			return emptyPayload(), nil
 		}
-		parentHash, hasTerminalBlock, err = vs.getTerminalBlockHashIfExists(ctx)
+		parentHash, hasTerminalBlock, err = vs.getTerminalBlockHashIfExists(ctx, uint64(t.Unix()))
 		if err != nil {
 			return nil, err
 		}
@@ -84,10 +88,6 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 		}
 	}
 
-	t, err := slots.ToTime(st.GenesisTime(), slot)
-	if err != nil {
-		return nil, err
-	}
 	random, err := helpers.RandaoMix(st, time.CurrentEpoch(st))
 	if err != nil {
 		return nil, err
@@ -99,17 +99,17 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 		if err != nil {
 			return nil, err
 		}
-		if err := wrapper.BeaconBlockIsNil(finalizedBlock); err != nil {
+		if err := consensusblocks.BeaconBlockIsNil(finalizedBlock); err != nil {
 			return nil, err
 		}
 		switch finalizedBlock.Version() {
 		case version.Phase0, version.Altair: // Blocks before Bellatrix don't have execution payloads. Use zeros as the hash.
 		default:
-			finalizedPayload, err := finalizedBlock.Block().Body().ExecutionPayload()
+			finalizedPayload, err := finalizedBlock.Block().Body().Execution()
 			if err != nil {
 				return nil, err
 			}
-			finalizedBlockHash = finalizedPayload.BlockHash
+			finalizedBlockHash = finalizedPayload.BlockHash()
 		}
 	}
 
@@ -127,10 +127,10 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 	case errors.As(err, kv.ErrNotFoundFeeRecipient):
 		// If fee recipient is not found in DB and not set from beacon node CLI,
 		// use the burn address.
-		if feeRecipient.String() == fieldparams.EthBurnAddressHex {
+		if feeRecipient.String() == params.BeaconConfig().EthBurnAddressHex {
 			logrus.WithFields(logrus.Fields{
 				"validatorIndex": vIdx,
-				"burnAddress":    fieldparams.EthBurnAddressHex,
+				"burnAddress":    params.BeaconConfig().EthBurnAddressHex,
 			}).Warn("Fee recipient is currently using the burn address, " +
 				"you will not be rewarded transaction fees on this setting. " +
 				"Please set a different eth address as the fee recipient. " +
@@ -149,7 +149,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 		return nil, errors.Wrap(err, "could not prepare payload")
 	}
 	if payloadID == nil {
-		return nil, errors.New("nil payload id")
+		return nil, fmt.Errorf("nil payload with block hash: %#x", parentHash)
 	}
 	payload, err := vs.ExecutionEngineCaller.GetPayload(ctx, *payloadID)
 	if err != nil {
@@ -178,7 +178,7 @@ func (vs *Server) getExecutionPayload(ctx context.Context, slot types.Slot, vIdx
 //            return None
 //
 //    return get_pow_block_at_terminal_total_difficulty(pow_chain)
-func (vs *Server) getTerminalBlockHashIfExists(ctx context.Context) ([]byte, bool, error) {
+func (vs *Server) getTerminalBlockHashIfExists(ctx context.Context, transitionTime uint64) ([]byte, bool, error) {
 	terminalBlockHash := params.BeaconConfig().TerminalBlockHash
 	// Terminal block hash override takes precedence over terminal total difficulty.
 	if params.BeaconConfig().TerminalBlockHash != params.BeaconConfig().ZeroHash {
@@ -193,7 +193,7 @@ func (vs *Server) getTerminalBlockHashIfExists(ctx context.Context) ([]byte, boo
 		return terminalBlockHash.Bytes(), true, nil
 	}
 
-	return vs.ExecutionEngineCaller.GetTerminalBlockHash(ctx)
+	return vs.ExecutionEngineCaller.GetTerminalBlockHash(ctx, transitionTime)
 }
 
 // activationEpochNotReached returns true if activation epoch has not been reach.

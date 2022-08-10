@@ -33,7 +33,7 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot types.Slot
 
 	duty, err := v.duty(pubKey)
 	if err != nil {
-		log.Errorf("Could not fetch validator assignment: %v", err)
+		log.WithError(err).Error("Could not fetch validator assignment")
 		if v.emitAccountMetrics {
 			ValidatorAggFailVec.WithLabelValues(fmtKey).Inc()
 		}
@@ -52,7 +52,7 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot types.Slot
 
 	slotSig, err := v.signSlotWithSelectionProof(ctx, pubKey, slot)
 	if err != nil {
-		log.Errorf("Could not sign slot: %v", err)
+		log.WithError(err).Error("Could not sign slot")
 		if v.emitAccountMetrics {
 			ValidatorAggFailVec.WithLabelValues(fmtKey).Inc()
 		}
@@ -86,7 +86,7 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot types.Slot
 
 	sig, err := v.aggregateAndProofSig(ctx, pubKey, res.AggregateAndProof, slot)
 	if err != nil {
-		log.Errorf("Could not sign aggregate and proof: %v", err)
+		log.WithError(err).Error("Could not sign aggregate and proof")
 		return
 	}
 	_, err = v.validatorClient.SubmitSignedAggregateSelectionProof(ctx, &ethpb.SignedAggregateSubmitRequest{
@@ -96,7 +96,7 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot types.Slot
 		},
 	})
 	if err != nil {
-		log.Errorf("Could not submit signed aggregate and proof to beacon node: %v", err)
+		log.WithError(err).Error("Could not submit signed aggregate and proof to beacon node")
 		if v.emitAccountMetrics {
 			ValidatorAggFailVec.WithLabelValues(fmtKey).Inc()
 		}
@@ -104,7 +104,7 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot types.Slot
 	}
 
 	if err := v.addIndicesToLog(duty); err != nil {
-		log.Errorf("Could not add aggregator indices to logs: %v", err)
+		log.WithError(err).Error("Could not add aggregator indices to logs")
 		if v.emitAccountMetrics {
 			ValidatorAggFailVec.WithLabelValues(fmtKey).Inc()
 		}

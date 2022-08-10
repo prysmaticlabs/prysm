@@ -1,11 +1,10 @@
 package blockchain
 
 import (
+	"bytes"
 	"context"
 	"time"
 
-	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain/store"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/doubly-linked-tree"
@@ -81,10 +80,11 @@ type CanonicalFetcher interface {
 // FinalizationFetcher defines a common interface for methods in blockchain service which
 // directly retrieve finalization and justification related data.
 type FinalizationFetcher interface {
-	FinalizedCheckpt() (*ethpb.Checkpoint, error)
-	CurrentJustifiedCheckpt() (*ethpb.Checkpoint, error)
-	PreviousJustifiedCheckpt() (*ethpb.Checkpoint, error)
+	FinalizedCheckpt() *ethpb.Checkpoint
+	CurrentJustifiedCheckpt() *ethpb.Checkpoint
+	PreviousJustifiedCheckpt() *ethpb.Checkpoint
 	VerifyFinalizedBlkDescendant(ctx context.Context, blockRoot [32]byte) error
+	IsFinalized(ctx context.Context, blockRoot [32]byte) bool
 }
 
 // OptimisticModeFetcher retrieves information about optimistic status of the node.
@@ -94,47 +94,27 @@ type OptimisticModeFetcher interface {
 }
 
 // FinalizedCheckpt returns the latest finalized checkpoint from chain store.
-func (s *Service) FinalizedCheckpt() (*ethpb.Checkpoint, error) {
-	cp, err := s.store.FinalizedCheckpt()
-	if err != nil {
-		return nil, err
-	}
+func (s *Service) FinalizedCheckpt() *ethpb.Checkpoint {
+	cp := s.ForkChoicer().FinalizedCheckpoint()
+	return &ethpb.Checkpoint{Epoch: cp.Epoch, Root: bytesutil.SafeCopyBytes(cp.Root[:])}
+}
 
-	return ethpb.CopyCheckpoint(cp), nil
+// PreviousJustifiedCheckpt returns the current justified checkpoint from chain store.
+func (s *Service) PreviousJustifiedCheckpt() *ethpb.Checkpoint {
+	cp := s.ForkChoicer().PreviousJustifiedCheckpoint()
+	return &ethpb.Checkpoint{Epoch: cp.Epoch, Root: bytesutil.SafeCopyBytes(cp.Root[:])}
 }
 
 // CurrentJustifiedCheckpt returns the current justified checkpoint from chain store.
-func (s *Service) CurrentJustifiedCheckpt() (*ethpb.Checkpoint, error) {
-	cp, err := s.store.JustifiedCheckpt()
-	if err != nil {
-		return nil, err
-	}
-
-	return ethpb.CopyCheckpoint(cp), nil
-}
-
-// PreviousJustifiedCheckpt returns the previous justified checkpoint from chain store.
-func (s *Service) PreviousJustifiedCheckpt() (*ethpb.Checkpoint, error) {
-	cp, err := s.store.PrevJustifiedCheckpt()
-	if err != nil {
-		return nil, err
-	}
-
-	return ethpb.CopyCheckpoint(cp), nil
+func (s *Service) CurrentJustifiedCheckpt() *ethpb.Checkpoint {
+	cp := s.ForkChoicer().JustifiedCheckpoint()
+	return &ethpb.Checkpoint{Epoch: cp.Epoch, Root: bytesutil.SafeCopyBytes(cp.Root[:])}
 }
 
 // BestJustifiedCheckpt returns the best justified checkpoint from store.
-func (s *Service) BestJustifiedCheckpt() (*ethpb.Checkpoint, error) {
-	cp, err := s.store.BestJustifiedCheckpt()
-	if err != nil {
-		// If there is no best justified checkpoint, return the checkpoint with root as zeros to be used for genesis cases.
-		if errors.Is(err, store.ErrNilCheckpoint) {
-			return &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}, nil
-		}
-		return nil, err
-	}
-
-	return ethpb.CopyCheckpoint(cp), nil
+func (s *Service) BestJustifiedCheckpt() *ethpb.Checkpoint {
+	cp := s.ForkChoicer().BestJustifiedCheckpoint()
+	return &ethpb.Checkpoint{Epoch: cp.Epoch, Root: bytesutil.SafeCopyBytes(cp.Root[:])}
 }
 
 // HeadSlot returns the slot of the head of the chain.
@@ -154,9 +134,8 @@ func (s *Service) HeadRoot(ctx context.Context) ([]byte, error) {
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
 
-	if s.headRoot() != params.BeaconConfig().ZeroHash {
-		r := s.headRoot()
-		return r[:], nil
+	if s.head != nil && s.head.root != params.BeaconConfig().ZeroHash {
+		return bytesutil.SafeCopyBytes(s.head.root[:]), nil
 	}
 
 	b, err := s.cfg.BeaconDB.HeadBlock(ctx)
@@ -183,7 +162,7 @@ func (s *Service) HeadBlock(ctx context.Context) (interfaces.SignedBeaconBlock, 
 	defer s.headLock.RUnlock()
 
 	if s.hasHeadState() {
-		return s.headBlock(), nil
+		return s.headBlock()
 	}
 
 	return s.cfg.BeaconDB.HeadBlock(ctx)
@@ -321,13 +300,35 @@ func (s *Service) ForkChoicer() forkchoice.ForkChoicer {
 
 // IsOptimistic returns true if the current head is optimistic.
 func (s *Service) IsOptimistic(ctx context.Context) (bool, error) {
-	s.headLock.RLock()
-	defer s.headLock.RUnlock()
 	if slots.ToEpoch(s.CurrentSlot()) < params.BeaconConfig().BellatrixForkEpoch {
 		return false, nil
 	}
+	s.headLock.RLock()
+	headRoot := s.head.root
+	s.headLock.RUnlock()
 
-	return s.IsOptimisticForRoot(ctx, s.head.root)
+	if s.cfg.ForkChoiceStore.AllTipsAreInvalid() {
+		return true, nil
+	}
+	optimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(headRoot)
+	if err == nil {
+		return optimistic, nil
+	}
+	if err != protoarray.ErrUnknownNodeRoot && err != doublylinkedtree.ErrNilNode {
+		return true, err
+	}
+	// If fockchoice does not have the headroot, then the node is considered
+	// optimistic
+	return true, nil
+}
+
+// IsFinalized returns true if the input root is finalized.
+// It first checks latest finalized root then checks finalized root index in DB.
+func (s *Service) IsFinalized(ctx context.Context, root [32]byte) bool {
+	if s.ForkChoicer().FinalizedCheckpoint().Root == root {
+		return true
+	}
+	return s.cfg.BeaconDB.IsFinalizedBlock(ctx, root)
 }
 
 // IsOptimisticForRoot takes the root as argument instead of the current head
@@ -340,14 +341,24 @@ func (s *Service) IsOptimisticForRoot(ctx context.Context, root [32]byte) (bool,
 	if err != protoarray.ErrUnknownNodeRoot && err != doublylinkedtree.ErrNilNode {
 		return false, err
 	}
+	// if the requested root is the headroot and the root is not found in
+	// forkchoice, the node should respond that it is optimistic
+	headRoot, err := s.HeadRoot(ctx)
+	if err != nil {
+		return true, err
+	}
+	if bytes.Equal(headRoot, root[:]) {
+		return true, nil
+	}
+
 	ss, err := s.cfg.BeaconDB.StateSummary(ctx, root)
 	if err != nil {
 		return false, err
 	}
-	if ss == nil {
-		return false, errInvalidNilSummary
-	}
 
+	if ss == nil {
+		return true, errInvalidNilSummary
+	}
 	validatedCheckpoint, err := s.cfg.BeaconDB.LastValidatedCheckpoint(ctx)
 	if err != nil {
 		return false, err
@@ -356,8 +367,14 @@ func (s *Service) IsOptimisticForRoot(ctx context.Context, root [32]byte) (bool,
 		return true, nil
 	}
 
+	// Historical non-canonical blocks here are returned as optimistic for safety.
+	isCanonical, err := s.IsCanonical(ctx, root)
+	if err != nil {
+		return false, err
+	}
+
 	if slots.ToEpoch(ss.Slot)+1 < validatedCheckpoint.Epoch {
-		return false, nil
+		return !isCanonical, nil
 	}
 
 	// Checkpoint root could be zeros before the first finalized epoch. Use genesis root if the case.
@@ -372,13 +389,6 @@ func (s *Service) IsOptimisticForRoot(ctx context.Context, root [32]byte) (bool,
 	if ss.Slot > lastValidated.Slot {
 		return true, nil
 	}
-
-	isCanonical, err := s.IsCanonical(ctx, root)
-	if err != nil {
-		return false, err
-	}
-
-	// Historical non-canonical blocks here are returned as optimistic for safety.
 	return !isCanonical, nil
 }
 

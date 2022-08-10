@@ -19,7 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/local"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
-	remote_web3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
+	remoteweb3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -313,7 +313,7 @@ func (w *Wallet) InitializeKeymanager(ctx context.Context, cfg iface.InitKeymana
 		if !bytesutil.IsValidRoot(config.GenesisValidatorsRoot) {
 			return nil, errors.New("web3signer requires a genesis validators root value")
 		}
-		km, err = remote_web3signer.NewKeymanager(ctx, config)
+		km, err = remoteweb3signer.NewKeymanager(ctx, config)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not initialize web3signer keymanager")
 		}

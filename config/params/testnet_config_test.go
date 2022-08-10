@@ -13,9 +13,9 @@ import (
 )
 
 func testnetConfigFilePath(t *testing.T, network string) string {
-	filepath, err := bazel.Runfile("external/eth2_networks")
+	fPath, err := bazel.Runfile("external/eth2_networks")
 	require.NoError(t, err)
-	configFilePath := path.Join(filepath, "shared", network, "config.yaml")
+	configFilePath := path.Join(fPath, "shared", network, "config.yaml")
 	return configFilePath
 }
 

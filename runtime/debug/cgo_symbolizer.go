@@ -1,5 +1,4 @@
 //go:build cgosymbolizer_enabled
-// +build cgosymbolizer_enabled
 
 package debug
 

@@ -5,9 +5,9 @@ import (
 	"sort"
 	"testing"
 
-	fssz "github.com/ferranbt/fastssz"
 	c "github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
+	fssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/go-bitfield"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
@@ -125,7 +125,7 @@ func TestKV_Aggregated_SaveAggregatedAttestation(t *testing.T) {
 				}),
 				AggregationBits: bitfield.Bitlist{0b10111},
 			},
-			wantErrString: "could not tree hash attestation: " + fssz.ErrBytesLength.Error(),
+			wantErrString: "could not tree hash attestation: --.BeaconBlockRoot (" + fssz.ErrBytesLength.Error() + ")",
 		},
 		{
 			name: "already seen",
@@ -286,7 +286,7 @@ func TestKV_Aggregated_DeleteAggregatedAttestation(t *testing.T) {
 			},
 		}
 		err := cache.DeleteAggregatedAttestation(att)
-		wantErr := "could not tree hash attestation data: " + fssz.ErrBytesLength.Error()
+		wantErr := "could not tree hash attestation data: --.BeaconBlockRoot (" + fssz.ErrBytesLength.Error() + ")"
 		assert.ErrorContains(t, wantErr, err)
 	})
 

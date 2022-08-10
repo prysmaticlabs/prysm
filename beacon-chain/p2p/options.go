@@ -7,10 +7,12 @@ import (
 
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p-core/peer"
-	noise "github.com/libp2p/go-libp2p-noise"
-	"github.com/libp2p/go-tcp-transport"
+	"github.com/libp2p/go-libp2p/p2p/muxer/mplex"
+	noise "github.com/libp2p/go-libp2p/p2p/security/noise"
+	"github.com/libp2p/go-libp2p/p2p/transport/tcp"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
+	ecdsaprysm "github.com/prysmaticlabs/prysm/crypto/ecdsa"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 )
 
@@ -19,7 +21,7 @@ func (s *Service) buildOptions(ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Opt
 	cfg := s.cfg
 	listen, err := multiAddressBuilder(ip.String(), cfg.TCPPort)
 	if err != nil {
-		log.Fatalf("Failed to p2p listen: %v", err)
+		log.WithError(err).Fatal("Failed to p2p listen")
 	}
 	if cfg.LocalIP != "" {
 		if net.ParseIP(cfg.LocalIP) == nil {
@@ -27,13 +29,16 @@ func (s *Service) buildOptions(ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Opt
 		}
 		listen, err = multiAddressBuilder(cfg.LocalIP, cfg.TCPPort)
 		if err != nil {
-			log.Fatalf("Failed to p2p listen: %v", err)
+			log.WithError(err).Fatal("Failed to p2p listen")
 		}
 	}
-	ifaceKey := convertToInterfacePrivkey(priKey)
+	ifaceKey, err := ecdsaprysm.ConvertToInterfacePrivkey(priKey)
+	if err != nil {
+		log.WithError(err).Fatal("Failed to retrieve private key")
+	}
 	id, err := peer.IDFromPublicKey(ifaceKey.GetPublic())
 	if err != nil {
-		log.Fatalf("Failed to retrieve peer id: %v", err)
+		log.WithError(err).Fatal("Failed to retrieve peer id")
 	}
 	log.Infof("Running node with peer id of %s ", id.String())
 
@@ -43,6 +48,8 @@ func (s *Service) buildOptions(ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Opt
 		libp2p.UserAgent(version.BuildData()),
 		libp2p.ConnectionGater(s),
 		libp2p.Transport(tcp.NewTCPTransport),
+		libp2p.Muxer("/mplex/6.7.0", mplex.DefaultTransport),
+		libp2p.DefaultMuxers,
 	}
 
 	options = append(options, libp2p.Security(noise.ID, noise.New))
@@ -113,7 +120,11 @@ func multiAddressBuilderWithID(ipAddr, protocol string, port uint, id peer.ID) (
 // private key contents cannot be marshaled, an exception is thrown.
 func privKeyOption(privkey *ecdsa.PrivateKey) libp2p.Option {
 	return func(cfg *libp2p.Config) error {
+		ifaceKey, err := ecdsaprysm.ConvertToInterfacePrivkey(privkey)
+		if err != nil {
+			return err
+		}
 		log.Debug("ECDSA private key generated")
-		return cfg.Apply(libp2p.Identity(convertToInterfacePrivkey(privkey)))
+		return cfg.Apply(libp2p.Identity(ifaceKey))
 	}
 }

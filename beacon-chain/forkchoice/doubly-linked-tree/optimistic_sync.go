@@ -3,44 +3,39 @@ package doublylinkedtree
 import (
 	"context"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/params"
 )
 
 func (s *Store) setOptimisticToInvalid(ctx context.Context, root, parentRoot, payloadHash [32]byte) ([][32]byte, error) {
-	s.nodesLock.Lock()
+	s.nodesLock.RLock()
 	invalidRoots := make([][32]byte, 0)
 	node, ok := s.nodeByRoot[root]
 	if !ok {
 		node, ok = s.nodeByRoot[parentRoot]
 		if !ok || node == nil {
-			s.nodesLock.Unlock()
-			return invalidRoots, ErrNilNode
+			s.nodesLock.RUnlock()
+			return invalidRoots, errors.Wrap(ErrNilNode, "could not set node to invalid")
 		}
 		// return early if the parent is LVH
 		if node.payloadHash == payloadHash {
-			s.nodesLock.Unlock()
+			s.nodesLock.RUnlock()
 			return invalidRoots, nil
 		}
 	} else {
 		if node == nil {
-			s.nodesLock.Unlock()
-			return invalidRoots, ErrNilNode
+			s.nodesLock.RUnlock()
+			return invalidRoots, errors.Wrap(ErrNilNode, "could not set node to invalid")
 		}
 		if node.parent.root != parentRoot {
-			s.nodesLock.Unlock()
+			s.nodesLock.RUnlock()
 			return invalidRoots, errInvalidParentRoot
 		}
-	}
-	// Check if last valid hash is an ancestor of the passed node.
-	lastValid, ok := s.nodeByPayload[payloadHash]
-	if !ok || lastValid == nil {
-		s.nodesLock.Unlock()
-		return invalidRoots, errUnknownPayloadHash
 	}
 	firstInvalid := node
 	for ; firstInvalid.parent != nil && firstInvalid.parent.payloadHash != payloadHash; firstInvalid = firstInvalid.parent {
 		if ctx.Err() != nil {
-			s.nodesLock.Unlock()
+			s.nodesLock.RUnlock()
 			return invalidRoots, ctx.Err()
 		}
 	}
@@ -49,12 +44,12 @@ func (s *Store) setOptimisticToInvalid(ctx context.Context, root, parentRoot, pa
 	if firstInvalid.parent == nil {
 		// return early if the invalid node was not imported
 		if node.root == parentRoot {
-			s.nodesLock.Unlock()
+			s.nodesLock.RUnlock()
 			return invalidRoots, nil
 		}
 		firstInvalid = node
 	}
-	s.nodesLock.Unlock()
+	s.nodesLock.RUnlock()
 	return s.removeNode(ctx, firstInvalid)
 }
 
@@ -66,7 +61,7 @@ func (s *Store) removeNode(ctx context.Context, node *Node) ([][32]byte, error) 
 	invalidRoots := make([][32]byte, 0)
 
 	if node == nil {
-		return invalidRoots, ErrNilNode
+		return invalidRoots, errors.Wrap(ErrNilNode, "could not remove node")
 	}
 	if !node.optimistic || node.parent == nil {
 		return invalidRoots, errInvalidOptimisticStatus
@@ -113,4 +108,11 @@ func (s *Store) removeNodeAndChildren(ctx context.Context, node *Node, invalidRo
 	delete(s.nodeByRoot, node.root)
 	delete(s.nodeByPayload, node.payloadHash)
 	return invalidRoots, nil
+}
+
+// AllTipsAreInvalid returns true if no forkchoice tip is viable for head
+func (f *ForkChoice) AllTipsAreInvalid() bool {
+	f.store.nodesLock.RLock()
+	defer f.store.nodesLock.RUnlock()
+	return f.store.allTipsAreInvalid
 }

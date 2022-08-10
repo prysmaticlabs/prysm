@@ -23,8 +23,8 @@ func RunEth1DataResetTests(t *testing.T, config string) {
 	}
 }
 
-func processEth1DataResetWrapper(t *testing.T, state state.BeaconState) (state.BeaconState, error) {
-	state, err := epoch.ProcessEth1DataReset(state)
+func processEth1DataResetWrapper(t *testing.T, st state.BeaconState) (state.BeaconState, error) {
+	st, err := epoch.ProcessEth1DataReset(st)
 	require.NoError(t, err, "Could not process final updates")
-	return state, nil
+	return st, nil
 }

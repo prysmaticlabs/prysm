@@ -14,9 +14,9 @@ import (
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/time/slots"
@@ -57,12 +57,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		return nil, err
 	}
 
-	blk, err := vs.getBellatrixBeaconBlock(ctx, req)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not fetch Bellatrix beacon block: %v", err)
-	}
-
-	return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Bellatrix{Bellatrix: blk}}, nil
+	return vs.getBellatrixBeaconBlock(ctx, req)
 }
 
 // GetBlock is called by a proposer during its assigned slot to request a block to sign
@@ -87,7 +82,7 @@ func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb
 func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSignedBeaconBlock) (*ethpb.ProposeResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.ProposeBeaconBlock")
 	defer span.End()
-	blk, err := wrapper.WrappedSignedBeaconBlock(req.Block)
+	blk, err := blocks.NewSignedBeaconBlock(req.Block)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Could not decode block: %v", err)
 	}
@@ -101,7 +96,7 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 func (vs *Server) ProposeBlock(ctx context.Context, rBlk *ethpb.SignedBeaconBlock) (*ethpb.ProposeResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.ProposeBlock")
 	defer span.End()
-	blk, err := wrapper.WrappedSignedBeaconBlock(rBlk)
+	blk, err := blocks.NewSignedBeaconBlock(rBlk)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Could not decode block: %v", err)
 	}
@@ -112,7 +107,7 @@ func (vs *Server) ProposeBlock(ctx context.Context, rBlk *ethpb.SignedBeaconBloc
 func (vs *Server) PrepareBeaconProposer(
 	ctx context.Context, request *ethpb.PrepareBeaconProposerRequest,
 ) (*emptypb.Empty, error) {
-	_, span := trace.StartSpan(ctx, "validator.PrepareBeaconProposer")
+	ctx, span := trace.StartSpan(ctx, "validator.PrepareBeaconProposer")
 	defer span.End()
 	var feeRecipients []common.Address
 	var validatorIndices []types.ValidatorIndex
@@ -141,6 +136,11 @@ func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.
 		return nil, fmt.Errorf("could not tree hash block: %v", err)
 	}
 
+	blk, err = vs.unblindBuilderBlock(ctx, blk)
+	if err != nil {
+		return nil, err
+	}
+
 	// Do not block proposal critical path with debug logging or block feed updates.
 	defer func() {
 		log.WithField("blockRoot", fmt.Sprintf("%#x", bytesutil.Trunc(root[:]))).Debugf(
@@ -152,7 +152,11 @@ func (vs *Server) proposeGenericBeaconBlock(ctx context.Context, blk interfaces.
 	}()
 
 	// Broadcast the new block to the network.
-	if err := vs.P2P.Broadcast(ctx, blk.Proto()); err != nil {
+	blkPb, err := blk.Proto()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get protobuf block")
+	}
+	if err := vs.P2P.Broadcast(ctx, blkPb); err != nil {
 		return nil, fmt.Errorf("could not broadcast block: %v", err)
 	}
 	log.WithFields(logrus.Fields{
@@ -186,4 +190,24 @@ func (vs *Server) computeStateRoot(ctx context.Context, block interfaces.SignedB
 
 	log.WithField("beaconStateRoot", fmt.Sprintf("%#x", root)).Debugf("Computed state root")
 	return root[:], nil
+}
+
+// SubmitValidatorRegistration submits validator registration.
+// Deprecated: Use SubmitValidatorRegistrations instead.
+func (vs *Server) SubmitValidatorRegistration(ctx context.Context, reg *ethpb.SignedValidatorRegistrationV1) (*emptypb.Empty, error) {
+	return vs.SubmitValidatorRegistrations(ctx, &ethpb.SignedValidatorRegistrationsV1{Messages: []*ethpb.SignedValidatorRegistrationV1{reg}})
+}
+
+// SubmitValidatorRegistrations submits validator registrations.
+func (vs *Server) SubmitValidatorRegistrations(ctx context.Context, reg *ethpb.SignedValidatorRegistrationsV1) (*emptypb.Empty, error) {
+	// No-op is the builder is nil / not configured. The node should still function without a builder.
+	if vs.BlockBuilder == nil || !vs.BlockBuilder.Configured() {
+		return &emptypb.Empty{}, nil
+	}
+
+	if err := vs.BlockBuilder.RegisterValidator(ctx, reg.Messages); err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Could not register block builder: %v", err)
+	}
+
+	return &emptypb.Empty{}, nil
 }

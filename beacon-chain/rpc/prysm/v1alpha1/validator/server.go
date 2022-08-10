@@ -9,6 +9,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
@@ -17,12 +18,12 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/execution"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -45,12 +46,13 @@ type Server struct {
 	HeadFetcher            blockchain.HeadFetcher
 	HeadUpdater            blockchain.HeadUpdater
 	ForkFetcher            blockchain.ForkFetcher
+	GenesisFetcher         blockchain.GenesisFetcher
 	FinalizationFetcher    blockchain.FinalizationFetcher
 	TimeFetcher            blockchain.TimeFetcher
-	BlockFetcher           powchain.POWBlockFetcher
+	BlockFetcher           execution.POWBlockFetcher
 	DepositFetcher         depositcache.DepositFetcher
-	ChainStartFetcher      powchain.ChainStartFetcher
-	Eth1InfoFetcher        powchain.ChainInfoFetcher
+	ChainStartFetcher      execution.ChainStartFetcher
+	Eth1InfoFetcher        execution.ChainInfoFetcher
 	OptimisticModeFetcher  blockchain.OptimisticModeFetcher
 	SyncChecker            sync.Checker
 	StateNotifier          statefeed.Notifier
@@ -62,13 +64,14 @@ type Server struct {
 	SyncCommitteePool      synccommittee.Pool
 	BlockReceiver          blockchain.BlockReceiver
 	MockEth1Votes          bool
-	Eth1BlockFetcher       powchain.POWBlockFetcher
+	Eth1BlockFetcher       execution.POWBlockFetcher
 	PendingDepositsFetcher depositcache.PendingDepositsFetcher
 	OperationNotifier      opfeed.Notifier
 	StateGen               stategen.StateManager
 	ReplayerBuilder        stategen.ReplayerBuilder
 	BeaconDB               db.HeadAccessDatabase
-	ExecutionEngineCaller  powchain.EngineCaller
+	ExecutionEngineCaller  execution.EngineCaller
+	BlockBuilder           builder.BlockBuilder
 }
 
 // WaitForActivation checks if a validator public key exists in the active validator registry of the current
@@ -122,7 +125,7 @@ func (vs *Server) ValidatorIndex(ctx context.Context, req *ethpb.ValidatorIndexR
 	}
 	index, ok := st.ValidatorIndexByPubkey(bytesutil.ToBytes48(req.PublicKey))
 	if !ok {
-		return nil, status.Errorf(codes.Internal, "Could not find validator index for public key %#x not found", req.PublicKey)
+		return nil, status.Errorf(codes.NotFound, "Could not find validator index for public key %#x", req.PublicKey)
 	}
 
 	return &ethpb.ValidatorIndexResponse{Index: index}, nil

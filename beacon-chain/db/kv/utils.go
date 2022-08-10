@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 
+	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -16,7 +18,7 @@ import (
 // we might find roots `0x23` and `0x45` stored under that index. We can then
 // do a batch read for attestations corresponding to those roots.
 func lookupValuesForIndices(ctx context.Context, indicesByBucket map[string][]byte, tx *bolt.Tx) [][][]byte {
-	_, span := trace.StartSpan(ctx, "BeaconDB.lookupValuesForIndices")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.lookupValuesForIndices")
 	defer span.End()
 	values := make([][][]byte, 0, len(indicesByBucket))
 	for k, v := range indicesByBucket {
@@ -35,7 +37,7 @@ func lookupValuesForIndices(ctx context.Context, indicesByBucket map[string][]by
 // values stored at said index. Typically, indices are roots of data that can then
 // be used for reads or batch reads from the DB.
 func updateValueForIndices(ctx context.Context, indicesByBucket map[string][]byte, root []byte, tx *bolt.Tx) error {
-	_, span := trace.StartSpan(ctx, "BeaconDB.updateValueForIndices")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.updateValueForIndices")
 	defer span.End()
 	for k, idx := range indicesByBucket {
 		bkt := tx.Bucket([]byte(k))
@@ -61,7 +63,7 @@ func updateValueForIndices(ctx context.Context, indicesByBucket map[string][]byt
 
 // deleteValueForIndices clears a root stored at each index.
 func deleteValueForIndices(ctx context.Context, indicesByBucket map[string][]byte, root []byte, tx *bolt.Tx) error {
-	_, span := trace.StartSpan(ctx, "BeaconDB.deleteValueForIndices")
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.deleteValueForIndices")
 	defer span.End()
 	for k, idx := range indicesByBucket {
 		bkt := tx.Bucket([]byte(k))
@@ -98,4 +100,17 @@ func deleteValueForIndices(ctx context.Context, indicesByBucket map[string][]byt
 		}
 	}
 	return nil
+}
+
+var errMisalignedRootList = errors.New("incorrectly packed root list, length is not a multiple of 32")
+
+func splitRoots(b []byte) ([][32]byte, error) {
+	rl := make([][32]byte, 0)
+	if len(b)%32 != 0 {
+		return nil, errors.Wrapf(errMisalignedRootList, "root list len=%d", len(b))
+	}
+	for s, f := 0, 32; f <= len(b); s, f = f, f+32 {
+		rl = append(rl, bytesutil.ToBytes32(b[s:f]))
+	}
+	return rl, nil
 }

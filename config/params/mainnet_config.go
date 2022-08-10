@@ -94,8 +94,9 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	EffectiveBalanceIncrement: 1 * 1e9,
 
 	// Initial value constants.
-	BLSWithdrawalPrefixByte: byte(0),
-	ZeroHash:                [32]byte{},
+	BLSWithdrawalPrefixByte:         byte(0),
+	ETH1AddressWithdrawalPrefixByte: byte(1),
+	ZeroHash:                        [32]byte{},
 
 	// Time parameter constants.
 	MinAttestationInclusionDelay:     1,
@@ -111,6 +112,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	MinEpochsToInactivityPenalty:     4,
 	Eth1FollowDistance:               2048,
 	SafeSlotsToUpdateJustified:       8,
+	SafeSlotsToImportOptimistically:  128,
 
 	// Fork choice algorithm constants.
 	ProposerScoreBoost: 40,
@@ -166,6 +168,8 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	DomainSyncCommitteeSelectionProof: bytesutil.Uint32ToBytes4(0x08000000),
 	DomainContributionAndProof:        bytesutil.Uint32ToBytes4(0x09000000),
 	DomainApplicationMask:             bytesutil.Uint32ToBytes4(0x00000001),
+	DomainApplicationBuilder:          bytesutil.Uint32ToBytes4(0x00000001),
+	DomainBLSToExecutionChange:        bytesutil.Uint32ToBytes4(0x0A000000),
 
 	// Prysm constants.
 	GweiPerEth:                     1000000000,
@@ -201,6 +205,8 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	AltairForkEpoch:      mainnetAltairForkEpoch,
 	BellatrixForkVersion: []byte{2, 0, 0, 0},
 	BellatrixForkEpoch:   mainnetBellatrixForkEpoch,
+	CapellaForkVersion:   []byte{3, 0, 0, 0},
+	CapellaForkEpoch:     math.MaxUint64,
 	ShardingForkVersion:  []byte{4, 0, 0, 0},
 	ShardingForkEpoch:    math.MaxUint64,
 
@@ -243,6 +249,8 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	TerminalBlockHashActivationEpoch: 18446744073709551615,
 	TerminalBlockHash:                [32]byte{},
 	TerminalTotalDifficulty:          "115792089237316195423570985008687907853269984665640564039457584007913129638912",
+	EthBurnAddressHex:                "0x0000000000000000000000000000000000000000",
+	DefaultBuilderGasLimit:           uint64(30000000),
 }
 
 // MainnetTestConfig provides a version of the mainnet config that has a different name

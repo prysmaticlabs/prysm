@@ -138,3 +138,60 @@ func Test_deleteValueForIndices(t *testing.T) {
 		})
 	}
 }
+
+func testPack(bs [][32]byte) []byte {
+	r := make([]byte, 0)
+	for _, b := range bs {
+		r = append(r, b[:]...)
+	}
+	return r
+}
+
+func TestSplitRoots(t *testing.T) {
+	bt := make([][32]byte, 0)
+	for _, x := range []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9} {
+		var b [32]byte
+		for i := 0; i < 32; i++ {
+			b[i] = x
+		}
+		bt = append(bt, b)
+	}
+	cases := []struct {
+		name   string
+		b      []byte
+		expect [][32]byte
+		err    error
+	}{
+		{
+			name: "misaligned",
+			b:    make([]byte, 61),
+			err:  errMisalignedRootList,
+		},
+		{
+			name:   "happy",
+			b:      testPack(bt[0:5]),
+			expect: bt[0:5],
+		},
+		{
+			name:   "single",
+			b:      testPack([][32]byte{bt[0]}),
+			expect: [][32]byte{bt[0]},
+		},
+		{
+			name:   "empty",
+			b:      []byte{},
+			expect: [][32]byte{},
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			r, err := splitRoots(c.b)
+			if c.err != nil {
+				require.ErrorIs(t, err, c.err)
+				return
+			}
+			require.NoError(t, err)
+			require.DeepEqual(t, c.expect, r)
+		})
+	}
+}

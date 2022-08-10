@@ -54,23 +54,23 @@ import (
 //    return state
 // This method differs from the spec so as to process deposits beforehand instead of the end of the function.
 func GenesisBeaconState(ctx context.Context, deposits []*ethpb.Deposit, genesisTime uint64, eth1Data *ethpb.Eth1Data) (state.BeaconState, error) {
-	state, err := EmptyGenesisState()
+	st, err := EmptyGenesisState()
 	if err != nil {
 		return nil, err
 	}
 
 	// Process initial deposits.
-	state, err = helpers.UpdateGenesisEth1Data(state, deposits, eth1Data)
+	st, err = helpers.UpdateGenesisEth1Data(st, deposits, eth1Data)
 	if err != nil {
 		return nil, err
 	}
 
-	state, err = b.ProcessPreGenesisDeposits(ctx, state, deposits)
+	st, err = b.ProcessPreGenesisDeposits(ctx, st, deposits)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not process validator deposits")
 	}
 
-	return OptimizedGenesisBeaconState(genesisTime, state, state.Eth1Data())
+	return OptimizedGenesisBeaconState(genesisTime, st, st.Eth1Data())
 }
 
 // OptimizedGenesisBeaconState is used to create a state that has already processed deposits. This is to efficiently
@@ -111,7 +111,7 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState state.BeaconState,
 		return nil, errors.Wrapf(err, "could not hash tree root genesis validators %v", err)
 	}
 
-	state := &ethpb.BeaconState{
+	st := &ethpb.BeaconState{
 		// Misc fields.
 		Slot:                  0,
 		GenesisTime:           genesisTime,
@@ -170,18 +170,18 @@ func OptimizedGenesisBeaconState(genesisTime uint64, preState state.BeaconState,
 		return nil, errors.Wrap(err, "could not hash tree root empty block body")
 	}
 
-	state.LatestBlockHeader = &ethpb.BeaconBlockHeader{
+	st.LatestBlockHeader = &ethpb.BeaconBlockHeader{
 		ParentRoot: zeroHash,
 		StateRoot:  zeroHash,
 		BodyRoot:   bodyRoot[:],
 	}
 
-	return v1.InitializeFromProto(state)
+	return v1.InitializeFromProto(st)
 }
 
 // EmptyGenesisState returns an empty beacon state object.
 func EmptyGenesisState() (state.BeaconState, error) {
-	state := &ethpb.BeaconState{
+	st := &ethpb.BeaconState{
 		// Misc fields.
 		Slot: 0,
 		Fork: &ethpb.Fork{
@@ -203,7 +203,7 @@ func EmptyGenesisState() (state.BeaconState, error) {
 		Eth1DataVotes:    []*ethpb.Eth1Data{},
 		Eth1DepositIndex: 0,
 	}
-	return v1.InitializeFromProto(state)
+	return v1.InitializeFromProto(st)
 }
 
 // IsValidGenesisState gets called whenever there's a deposit event,

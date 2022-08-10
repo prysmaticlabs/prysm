@@ -21,6 +21,7 @@ import (
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/config/params"
+	consensusblocks "github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
@@ -177,9 +178,7 @@ func TestStatusRPCHandler_ReturnsHelloMessage(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, genesisState.SetSlot(111))
 	require.NoError(t, genesisState.UpdateBlockRootAtIndex(111%uint64(params.BeaconConfig().SlotsPerHistoricalRoot), headRoot))
-	wsb, err := wrapper.WrappedSignedBeaconBlock(finalized)
-	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(context.Background(), wsb))
+	util.SaveBlock(t, context.Background(), db, finalized)
 	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), finalizedRoot))
 	finalizedCheckpt := &ethpb.Checkpoint{
 		Epoch: 3,
@@ -201,6 +200,9 @@ func TestStatusRPCHandler_ReturnsHelloMessage(t *testing.T) {
 				},
 				ValidatorsRoot: [32]byte{'A'},
 				Genesis:        time.Unix(genTime, 0),
+				FinalizedRoots: map[[32]byte]bool{
+					finalizedRoot: true,
+				},
 			},
 			beaconDB: db,
 		},
@@ -269,9 +271,7 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 	require.NoError(t, err)
 	blk := util.NewBeaconBlock()
 	blk.Block.Slot = 0
-	wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
-	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(context.Background(), wsb))
+	util.SaveBlock(t, context.Background(), db, blk)
 	finalizedRoot, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), finalizedRoot))
@@ -288,6 +288,9 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 				Genesis:        time.Now(),
 				ValidatorsRoot: [32]byte{'A'},
 				Root:           make([]byte, 32),
+				FinalizedRoots: map[[32]byte]bool{
+					finalizedRoot: true,
+				},
 			},
 			beaconDB: db,
 		},
@@ -483,9 +486,7 @@ func TestStatusRPCRequest_FinalizedBlockExists(t *testing.T) {
 	require.NoError(t, genesisState.UpdateBlockRootAtIndex(111%uint64(params.BeaconConfig().SlotsPerHistoricalRoot), headRoot))
 	blk := util.NewBeaconBlock()
 	blk.Block.Slot = blkSlot
-	wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
-	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(context.Background(), wsb))
+	util.SaveBlock(t, context.Background(), db, blk)
 	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), finalizedRoot))
 	finalizedCheckpt := &ethpb.Checkpoint{
 		Epoch: 3,
@@ -506,6 +507,9 @@ func TestStatusRPCRequest_FinalizedBlockExists(t *testing.T) {
 				},
 				Genesis:        time.Unix(genTime, 0),
 				ValidatorsRoot: [32]byte{'A'},
+				FinalizedRoots: map[[32]byte]bool{
+					finalizedRoot: true,
+				},
 			},
 		},
 		ctx:         context.Background(),
@@ -525,6 +529,9 @@ func TestStatusRPCRequest_FinalizedBlockExists(t *testing.T) {
 				},
 				Genesis:        time.Unix(genTime, 0),
 				ValidatorsRoot: [32]byte{'A'},
+				FinalizedRoots: map[[32]byte]bool{
+					finalizedRoot: true,
+				},
 			},
 			beaconDB: db,
 		},
@@ -566,7 +573,7 @@ func TestStatusRPCRequest_FinalizedBlockSkippedSlots(t *testing.T) {
 	genRoot, err := blk.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+	wsb, err := consensusblocks.NewSignedBeaconBlock(blk)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(context.Background(), wsb))
 	require.NoError(t, db.SaveGenesisBlockRoot(context.Background(), genRoot))
@@ -681,6 +688,10 @@ func TestStatusRPCRequest_FinalizedBlockSkippedSlots(t *testing.T) {
 					},
 					Genesis:        time.Unix(genTime, 0),
 					ValidatorsRoot: [32]byte{'A'},
+					FinalizedRoots: map[[32]byte]bool{
+						tt.expectedFinalizedRoot: true,
+						tt.remoteFinalizedRoot:   true,
+					},
 				},
 			},
 			ctx:         context.Background(),
@@ -700,6 +711,10 @@ func TestStatusRPCRequest_FinalizedBlockSkippedSlots(t *testing.T) {
 					},
 					Genesis:        time.Unix(genTime, 0),
 					ValidatorsRoot: [32]byte{'A'},
+					FinalizedRoots: map[[32]byte]bool{
+						tt.expectedFinalizedRoot: true,
+						tt.remoteFinalizedRoot:   true,
+					},
 				},
 				beaconDB: db,
 			},
@@ -947,7 +962,7 @@ func makeBlocks(t *testing.T, i, n uint64, previousRoot [32]byte) []interfaces.S
 		var err error
 		previousRoot, err = blocks[j-i].Block.HashTreeRoot()
 		require.NoError(t, err)
-		ifaceBlocks[j-i], err = wrapper.WrappedSignedBeaconBlock(blocks[j-i])
+		ifaceBlocks[j-i], err = consensusblocks.NewSignedBeaconBlock(blocks[j-i])
 		require.NoError(t, err)
 	}
 	return ifaceBlocks

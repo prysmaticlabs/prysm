@@ -26,8 +26,8 @@ import (
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -47,9 +47,7 @@ func TestValidateBeaconBlockPubSub_InvalidSignature(t *testing.T) {
 	ctx := context.Background()
 	beaconState, privKeys := util.DeterministicGenesisState(t, 100)
 	parentBlock := util.NewBeaconBlock()
-	wsb, err := wrapper.WrappedSignedBeaconBlock(parentBlock)
-	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, db, parentBlock)
 	bRoot, err := parentBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveState(ctx, beaconState, bRoot))
@@ -114,9 +112,7 @@ func TestValidateBeaconBlockPubSub_BlockAlreadyPresentInDB(t *testing.T) {
 	msg := util.NewBeaconBlock()
 	msg.Block.Slot = 100
 	msg.Block.ParentRoot = util.Random32Bytes(t)
-	wsb, err := wrapper.WrappedSignedBeaconBlock(msg)
-	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(context.Background(), wsb))
+	util.SaveBlock(t, context.Background(), db, msg)
 
 	chainService := &mock.ChainService{Genesis: time.Now()}
 	r := &Service{
@@ -132,7 +128,7 @@ func TestValidateBeaconBlockPubSub_BlockAlreadyPresentInDB(t *testing.T) {
 	}
 
 	buf := new(bytes.Buffer)
-	_, err = p.Encoding().EncodeGossip(buf, msg)
+	_, err := p.Encoding().EncodeGossip(buf, msg)
 	require.NoError(t, err)
 
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(msg)]
@@ -156,9 +152,7 @@ func TestValidateBeaconBlockPubSub_CanRecoverStateSummary(t *testing.T) {
 	ctx := context.Background()
 	beaconState, privKeys := util.DeterministicGenesisState(t, 100)
 	parentBlock := util.NewBeaconBlock()
-	wsb, err := wrapper.WrappedSignedBeaconBlock(parentBlock)
-	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, db, parentBlock)
 	bRoot, err := parentBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveState(ctx, beaconState, bRoot))
@@ -287,9 +281,7 @@ func TestValidateBeaconBlockPubSub_ValidProposerSignature(t *testing.T) {
 	ctx := context.Background()
 	beaconState, privKeys := util.DeterministicGenesisState(t, 100)
 	parentBlock := util.NewBeaconBlock()
-	wsb, err := wrapper.WrappedSignedBeaconBlock(parentBlock)
-	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, db, parentBlock)
 	bRoot, err := parentBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveState(ctx, beaconState, bRoot))
@@ -354,9 +346,7 @@ func TestValidateBeaconBlockPubSub_WithLookahead(t *testing.T) {
 	ctx := context.Background()
 	beaconState, privKeys := util.DeterministicGenesisState(t, 100)
 	parentBlock := util.NewBeaconBlock()
-	wsb, err := wrapper.WrappedSignedBeaconBlock(parentBlock)
-	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, db, parentBlock)
 	bRoot, err := parentBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveState(ctx, beaconState, bRoot))
@@ -424,9 +414,7 @@ func TestValidateBeaconBlockPubSub_AdvanceEpochsForState(t *testing.T) {
 	ctx := context.Background()
 	beaconState, privKeys := util.DeterministicGenesisState(t, 100)
 	parentBlock := util.NewBeaconBlock()
-	wsb, err := wrapper.WrappedSignedBeaconBlock(parentBlock)
-	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, db, parentBlock)
 	bRoot, err := parentBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveState(ctx, beaconState, bRoot))
@@ -535,9 +523,7 @@ func TestValidateBeaconBlockPubSub_IgnoreAndQueueBlocksFromNearFuture(t *testing
 
 	beaconState, privKeys := util.DeterministicGenesisState(t, 100)
 	parentBlock := util.NewBeaconBlock()
-	wsb, err := wrapper.WrappedSignedBeaconBlock(parentBlock)
-	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, db, parentBlock)
 	bRoot, err := parentBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveState(ctx, beaconState, bRoot))
@@ -700,9 +686,7 @@ func TestValidateBeaconBlockPubSub_SeenProposerSlot(t *testing.T) {
 	ctx := context.Background()
 	beaconState, privKeys := util.DeterministicGenesisState(t, 100)
 	parentBlock := util.NewBeaconBlock()
-	wsb, err := wrapper.WrappedSignedBeaconBlock(parentBlock)
-	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, db, parentBlock)
 	bRoot, err := parentBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveState(ctx, beaconState, bRoot))
@@ -763,9 +747,7 @@ func TestValidateBeaconBlockPubSub_FilterByFinalizedEpoch(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 
 	parent := util.NewBeaconBlock()
-	wsb, err := wrapper.WrappedSignedBeaconBlock(parent)
-	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(context.Background(), wsb))
+	util.SaveBlock(t, context.Background(), db, parent)
 	parentRoot, err := parent.Block.HashTreeRoot()
 	require.NoError(t, err)
 	chain := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
@@ -831,9 +813,7 @@ func TestValidateBeaconBlockPubSub_ParentNotFinalizedDescendant(t *testing.T) {
 	ctx := context.Background()
 	beaconState, privKeys := util.DeterministicGenesisState(t, 100)
 	parentBlock := util.NewBeaconBlock()
-	wsb, err := wrapper.WrappedSignedBeaconBlock(parentBlock)
-	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, db, parentBlock)
 	bRoot, err := parentBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveState(ctx, beaconState, bRoot))
@@ -897,9 +877,7 @@ func TestValidateBeaconBlockPubSub_InvalidParentBlock(t *testing.T) {
 	ctx := context.Background()
 	beaconState, privKeys := util.DeterministicGenesisState(t, 100)
 	parentBlock := util.NewBeaconBlock()
-	wsb, err := wrapper.WrappedSignedBeaconBlock(parentBlock)
-	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, db, parentBlock)
 	bRoot, err := parentBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveState(ctx, beaconState, bRoot))
@@ -996,9 +974,7 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromBadParent(t *testing.T) {
 	beaconState, privKeys := util.DeterministicGenesisState(t, 100)
 	parentBlock := util.NewBeaconBlock()
 	parentBlock.Block.ParentRoot = bytesutil.PadTo([]byte("foo"), 32)
-	wsb, err := wrapper.WrappedSignedBeaconBlock(parentBlock)
-	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, db, parentBlock)
 	bRoot, err := parentBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveState(ctx, beaconState, bRoot))
@@ -1089,7 +1065,7 @@ func TestService_isBlockQueueable(t *testing.T) {
 	genesisTime := uint64(currentTime.Unix() - int64(params.BeaconConfig().SecondsPerSlot))
 	blockSlot := types.Slot(1)
 
-	// slot time within MAXIMUM_GOSSIP_CLOCK_DISPARITY, so dont queue the block.
+	// slot time within MAXIMUM_GOSSIP_CLOCK_DISPARITY, so don't queue the block.
 	receivedTime := currentTime.Add(-400 * time.Millisecond)
 	result := isBlockQueueable(genesisTime, blockSlot, receivedTime)
 	assert.Equal(t, false, result)
@@ -1106,9 +1082,7 @@ func TestValidateBeaconBlockPubSub_ValidExecutionPayload(t *testing.T) {
 	ctx := context.Background()
 	beaconState, privKeys := util.DeterministicGenesisStateBellatrix(t, 100)
 	parentBlock := util.NewBeaconBlockBellatrix()
-	signedParentBlock, err := wrapper.WrappedSignedBeaconBlock(parentBlock)
-	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, signedParentBlock))
+	util.SaveBlock(t, ctx, db, parentBlock)
 	bRoot, err := parentBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	presentTime := time.Now().Unix()
@@ -1181,9 +1155,7 @@ func TestValidateBeaconBlockPubSub_InvalidPayloadTimestamp(t *testing.T) {
 	ctx := context.Background()
 	beaconState, privKeys := util.DeterministicGenesisStateBellatrix(t, 100)
 	parentBlock := util.NewBeaconBlockBellatrix()
-	signedParentBlock, err := wrapper.WrappedSignedBeaconBlock(parentBlock)
-	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, signedParentBlock))
+	util.SaveBlock(t, ctx, db, parentBlock)
 	bRoot, err := parentBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveState(ctx, beaconState, bRoot))
@@ -1274,7 +1246,7 @@ func Test_validateBellatrixBeaconBlock(t *testing.T) {
 
 	st, _ := util.DeterministicGenesisStateAltair(t, 1)
 	b := util.NewBeaconBlockBellatrix()
-	blk, err := wrapper.WrappedSignedBeaconBlock(b)
+	blk, err := blocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
 	require.ErrorContains(t, "block and state are not the same version", r.validateBellatrixBeaconBlock(ctx, st, blk.Block()))
 }
@@ -1287,9 +1259,7 @@ func Test_validateBellatrixBeaconBlockParentValidation(t *testing.T) {
 
 	beaconState, privKeys := util.DeterministicGenesisStateBellatrix(t, 100)
 	parentBlock := util.NewBeaconBlockBellatrix()
-	signedParentBlock, err := wrapper.WrappedSignedBeaconBlock(parentBlock)
-	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, signedParentBlock))
+	util.SaveBlock(t, ctx, db, parentBlock)
 	bRoot, err := parentBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveState(ctx, beaconState, bRoot))
@@ -1332,7 +1302,7 @@ func Test_validateBellatrixBeaconBlockParentValidation(t *testing.T) {
 		badBlockCache:  lruwrpr.New(10),
 	}
 
-	blk, err := wrapper.WrappedSignedBeaconBlock(msg)
+	blk, err := blocks.NewSignedBeaconBlock(msg)
 	require.NoError(t, err)
 	require.ErrorContains(t, "parent of the block is optimistic", r.validateBellatrixBeaconBlock(ctx, beaconState, blk.Block()))
 }
@@ -1345,9 +1315,7 @@ func Test_validateBeaconBlockProcessingWhenParentIsOptimistic(t *testing.T) {
 
 	beaconState, privKeys := util.DeterministicGenesisStateBellatrix(t, 100)
 	parentBlock := util.NewBeaconBlockBellatrix()
-	signedParentBlock, err := wrapper.WrappedSignedBeaconBlock(parentBlock)
-	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, signedParentBlock))
+	util.SaveBlock(t, ctx, db, parentBlock)
 	bRoot, err := parentBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, db.SaveState(ctx, beaconState, bRoot))
@@ -1419,7 +1387,7 @@ func Test_getBlockFields(t *testing.T) {
 	log.WithFields(getBlockFields(nil)).Info("nil block")
 	// Good block
 	b := util.NewBeaconBlockBellatrix()
-	wb, err := wrapper.WrappedSignedBeaconBlock(b)
+	wb, err := blocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
 	log.WithFields(getBlockFields(wb)).Info("bad block")
 

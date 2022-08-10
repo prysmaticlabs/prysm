@@ -6,6 +6,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/time/slots"
 )
@@ -17,6 +18,12 @@ var errNilState = errors.New("nil state")
 func UnrealizedCheckpoints(st state.BeaconState) (*ethpb.Checkpoint, *ethpb.Checkpoint, error) {
 	if st == nil || st.IsNil() {
 		return nil, nil, errNilState
+	}
+
+	if slots.ToEpoch(st.Slot()) <= params.BeaconConfig().GenesisEpoch+1 {
+		jc := st.CurrentJustifiedCheckpoint()
+		fc := st.FinalizedCheckpoint()
+		return jc, fc, nil
 	}
 
 	activeBalance, prevTarget, currentTarget, err := st.UnrealizedCheckpointBalances()
@@ -149,14 +156,14 @@ func computeCheckpoints(state state.BeaconState, newBits bitfield.Bitvector4) (*
 	finalizedCheckpoint := state.FinalizedCheckpoint()
 
 	// If 2/3 or more of the total balance attested in the current epoch.
-	if newBits.BitAt(0) {
+	if newBits.BitAt(0) && currentEpoch >= justifiedCheckpoint.Epoch {
 		blockRoot, err := helpers.BlockRoot(state, currentEpoch)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "could not get block root for current epoch %d", currentEpoch)
 		}
 		justifiedCheckpoint.Epoch = currentEpoch
 		justifiedCheckpoint.Root = blockRoot
-	} else if newBits.BitAt(1) {
+	} else if newBits.BitAt(1) && prevEpoch >= justifiedCheckpoint.Epoch {
 		// If 2/3 or more of total balance attested in the previous epoch.
 		blockRoot, err := helpers.BlockRoot(state, prevEpoch)
 		if err != nil {

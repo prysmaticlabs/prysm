@@ -125,6 +125,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.WeakSubjectivityCheckpoint,
 			flags.Eth1HeaderReqLimit,
 			flags.MinPeersPerSubnet,
+			flags.MevRelayEndpoint,
 			checkpoint.BlockPath,
 			checkpoint.StatePath,
 			checkpoint.RemoteURL,

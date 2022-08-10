@@ -6,9 +6,9 @@ import (
 
 	"github.com/golang/protobuf/ptypes/empty"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
-	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
-	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
-	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	grpcretry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
+	grpcopentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
+	grpcprometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/pkg/errors"
 	grpcutil "github.com/prysmaticlabs/prysm/api/grpc"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -21,9 +21,9 @@ import (
 // Initialize a client connect to a beacon node gRPC endpoint.
 func (s *Server) registerBeaconClient() error {
 	streamInterceptor := grpc.WithStreamInterceptor(middleware.ChainStreamClient(
-		grpc_opentracing.StreamClientInterceptor(),
-		grpc_prometheus.StreamClientInterceptor,
-		grpc_retry.StreamClientInterceptor(),
+		grpcopentracing.StreamClientInterceptor(),
+		grpcprometheus.StreamClientInterceptor,
+		grpcretry.StreamClientInterceptor(),
 	))
 	dialOpts := client.ConstructDialOptions(
 		s.clientMaxCallRecvMsgSize,

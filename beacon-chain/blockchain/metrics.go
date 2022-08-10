@@ -158,6 +158,10 @@ var (
 		Name: "forkchoice_updated_optimistic_node_count",
 		Help: "Count the number of optimistic nodes after forkchoiceUpdated EE call",
 	})
+	missedPayloadIDFilledCount = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "missed_payload_id_filled_count",
+		Help: "",
+	})
 )
 
 // reportSlotMetrics reports slot related metrics.
@@ -194,7 +198,7 @@ func reportEpochMetrics(ctx context.Context, postState, headState state.BeaconSt
 	for i, validator := range postState.Validators() {
 		bal, err := postState.BalanceAtIndex(types.ValidatorIndex(i))
 		if err != nil {
-			log.Errorf("Could not load validator balance: %v", err)
+			log.WithError(err).Error("Could not load validator balance")
 			continue
 		}
 		if validator.Slashed {

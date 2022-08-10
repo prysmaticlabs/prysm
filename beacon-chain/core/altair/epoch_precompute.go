@@ -15,7 +15,7 @@ import (
 
 // InitializePrecomputeValidators precomputes individual validator for its attested balances and the total sum of validators attested balances of the epoch.
 func InitializePrecomputeValidators(ctx context.Context, beaconState state.BeaconState) ([]*precompute.Validator, *precompute.Balance, error) {
-	_, span := trace.StartSpan(ctx, "altair.InitializePrecomputeValidators")
+	ctx, span := trace.StartSpan(ctx, "altair.InitializePrecomputeValidators")
 	defer span.End()
 	vals := make([]*precompute.Validator, beaconState.NumValidators())
 	bal := &precompute.Balance{}
@@ -76,7 +76,7 @@ func ProcessInactivityScores(
 	beaconState state.BeaconState,
 	vals []*precompute.Validator,
 ) (state.BeaconState, []*precompute.Validator, error) {
-	_, span := trace.StartSpan(ctx, "altair.ProcessInactivityScores")
+	ctx, span := trace.StartSpan(ctx, "altair.ProcessInactivityScores")
 	defer span.End()
 
 	cfg := params.BeaconConfig()
@@ -144,7 +144,7 @@ func ProcessEpochParticipation(
 	bal *precompute.Balance,
 	vals []*precompute.Validator,
 ) ([]*precompute.Validator, *precompute.Balance, error) {
-	_, span := trace.StartSpan(ctx, "altair.ProcessEpochParticipation")
+	ctx, span := trace.StartSpan(ctx, "altair.ProcessEpochParticipation")
 	defer span.End()
 
 	cp, err := beaconState.CurrentEpochParticipation()

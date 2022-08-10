@@ -18,9 +18,9 @@ import (
 	beaconsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/container/slice"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -267,10 +267,7 @@ func TestBlocksFetcher_RoundRobin(t *testing.T) {
 			genesisRoot := cache.rootCache[0]
 			cache.RUnlock()
 
-			wsb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
-			require.NoError(t, err)
-			err = beaconDB.SaveBlock(context.Background(), wsb)
-			require.NoError(t, err)
+			util.SaveBlock(t, context.Background(), beaconDB, util.NewBeaconBlock())
 
 			st, err := util.NewBeaconState()
 			require.NoError(t, err)
@@ -346,14 +343,14 @@ func TestBlocksFetcher_RoundRobin(t *testing.T) {
 				return blocks[i].Block().Slot() < blocks[j].Block().Slot()
 			})
 
-			slots := make([]types.Slot, len(blocks))
+			ss := make([]types.Slot, len(blocks))
 			for i, block := range blocks {
-				slots[i] = block.Block().Slot()
+				ss[i] = block.Block().Slot()
 			}
 
 			log.WithFields(logrus.Fields{
 				"blocksLen": len(blocks),
-				"slots":     slots,
+				"slots":     ss,
 			}).Debug("Finished block fetching")
 
 			if len(blocks) > int(maxExpectedBlocks) {
@@ -615,7 +612,7 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 						blk := util.NewBeaconBlock()
 						blk.Block.Slot = i
 						mchain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
-						wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+						wsb, err := blocks.NewSignedBeaconBlock(blk)
 						require.NoError(t, err)
 						assert.NoError(t, beaconsync.WriteBlockChunk(stream, mchain, p1.Encoding(), wsb))
 					}
@@ -639,7 +636,7 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 						blk := util.NewBeaconBlock()
 						blk.Block.Slot = i
 						chain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
-						wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+						wsb, err := blocks.NewSignedBeaconBlock(blk)
 						require.NoError(t, err)
 						assert.NoError(t, beaconsync.WriteBlockChunk(stream, chain, p1.Encoding(), wsb))
 					}
@@ -663,13 +660,13 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 					blk := util.NewBeaconBlock()
 					blk.Block.Slot = 163
 					chain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
-					wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+					wsb, err := blocks.NewSignedBeaconBlock(blk)
 					require.NoError(t, err)
 					assert.NoError(t, beaconsync.WriteBlockChunk(stream, chain, p1.Encoding(), wsb))
 
 					blk = util.NewBeaconBlock()
 					blk.Block.Slot = 162
-					wsb, err = wrapper.WrappedSignedBeaconBlock(blk)
+					wsb, err = blocks.NewSignedBeaconBlock(blk)
 					require.NoError(t, err)
 					assert.NoError(t, beaconsync.WriteBlockChunk(stream, chain, p1.Encoding(), wsb))
 					assert.NoError(t, stream.Close())
@@ -693,13 +690,13 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 					blk.Block.Slot = 160
 					chain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
 
-					wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+					wsb, err := blocks.NewSignedBeaconBlock(blk)
 					require.NoError(t, err)
 					assert.NoError(t, beaconsync.WriteBlockChunk(stream, chain, p1.Encoding(), wsb))
 
 					blk = util.NewBeaconBlock()
 					blk.Block.Slot = 160
-					wsb, err = wrapper.WrappedSignedBeaconBlock(blk)
+					wsb, err = blocks.NewSignedBeaconBlock(blk)
 					require.NoError(t, err)
 					assert.NoError(t, beaconsync.WriteBlockChunk(stream, chain, p1.Encoding(), wsb))
 					assert.NoError(t, stream.Close())
@@ -728,13 +725,13 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 						// Patch mid block, with invalid slot number.
 						if i == req.StartSlot.Add(req.Count*req.Step/2) {
 							blk.Block.Slot = req.StartSlot - 1
-							wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+							wsb, err := blocks.NewSignedBeaconBlock(blk)
 							require.NoError(t, err)
 							assert.NoError(t, beaconsync.WriteBlockChunk(stream, chain, p1.Encoding(), wsb))
 							break
 						}
 						blk.Block.Slot = i
-						wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+						wsb, err := blocks.NewSignedBeaconBlock(blk)
 						require.NoError(t, err)
 						assert.NoError(t, beaconsync.WriteBlockChunk(stream, chain, p1.Encoding(), wsb))
 					}
@@ -763,13 +760,13 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 						// Patch mid block, with invalid slot number.
 						if i == req.StartSlot.Add(req.Count*req.Step/2) {
 							blk.Block.Slot = req.StartSlot.Add(req.Count * req.Step)
-							wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+							wsb, err := blocks.NewSignedBeaconBlock(blk)
 							require.NoError(t, err)
 							assert.NoError(t, beaconsync.WriteBlockChunk(stream, chain, p1.Encoding(), wsb))
 							break
 						}
 						blk.Block.Slot = i
-						wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+						wsb, err := blocks.NewSignedBeaconBlock(blk)
 						require.NoError(t, err)
 						assert.NoError(t, beaconsync.WriteBlockChunk(stream, chain, p1.Encoding(), wsb))
 					}
@@ -792,13 +789,13 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 					blk := util.NewBeaconBlock()
 					blk.Block.Slot = 100
 					chain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
-					wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+					wsb, err := blocks.NewSignedBeaconBlock(blk)
 					require.NoError(t, err)
 					assert.NoError(t, beaconsync.WriteBlockChunk(stream, chain, p1.Encoding(), wsb))
 
 					blk = util.NewBeaconBlock()
 					blk.Block.Slot = 105
-					wsb, err = wrapper.WrappedSignedBeaconBlock(blk)
+					wsb, err = blocks.NewSignedBeaconBlock(blk)
 					require.NoError(t, err)
 					assert.NoError(t, beaconsync.WriteBlockChunk(stream, chain, p1.Encoding(), wsb))
 					assert.NoError(t, stream.Close())
@@ -820,13 +817,13 @@ func TestBlocksFetcher_requestBlocksFromPeerReturningInvalidBlocks(t *testing.T)
 					blk := util.NewBeaconBlock()
 					blk.Block.Slot = 100
 					chain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
-					wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+					wsb, err := blocks.NewSignedBeaconBlock(blk)
 					require.NoError(t, err)
 					assert.NoError(t, beaconsync.WriteBlockChunk(stream, chain, p1.Encoding(), wsb))
 
 					blk = util.NewBeaconBlock()
 					blk.Block.Slot = 103
-					wsb, err = wrapper.WrappedSignedBeaconBlock(blk)
+					wsb, err = blocks.NewSignedBeaconBlock(blk)
 					require.NoError(t, err)
 					assert.NoError(t, beaconsync.WriteBlockChunk(stream, chain, p1.Encoding(), wsb))
 					assert.NoError(t, stream.Close())

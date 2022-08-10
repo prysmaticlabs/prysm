@@ -5,6 +5,42 @@ load("@prysm//tools/go:def.bzl", "go_test")
 # gazelle:exclude mainnet_scenario_e2e_test.go
 # gazelle:exclude minimal_scenario_e2e_test.go
 
+# Presubmit tests represent the group of endtoend tests that are run on pull
+# requests and must be passing before a pull request can merge.
+test_suite(
+    name = "presubmit",
+    tags = [
+        "manual",
+    ],
+    tests = [
+        ":go_default_test",
+    ],
+)
+
+# Postsubmit tests represent the group of endtoend tests that are run after a
+# pull request has merged.
+test_suite(
+    name = "postsubmit",
+    tags = [
+        "manual",
+    ],
+    tests = [
+        ":go_mainnet_test",
+    ],
+)
+
+# Scenario tests are run infrequently in CI to test specific scenarios.
+test_suite(
+    name = "scenario_tests",
+    tags = [
+        "manual",
+    ],
+    tests = [
+        ":go_mainnet_scenario_test",
+        ":go_minimal_scenario_test",
+    ],
+)
+
 common_deps = [
     "//api/client/beacon:go_default_library",
     "//beacon-chain/blockchain/testing:go_default_library",
@@ -19,6 +55,8 @@ common_deps = [
     "//io/file:go_default_library",
     "//proto/eth/service:go_default_library",
     "//proto/eth/v1:go_default_library",
+    "//math:go_default_library",
+    "//proto/engine/v1:go_default_library",
     "//proto/prysm/v1alpha1:go_default_library",
     "//testing/assert:go_default_library",
     "//testing/endtoend/components:go_default_library",
@@ -64,6 +102,7 @@ go_test(
         "@web3signer",
     ],
     eth_network = "minimal",
+    flaky = True,
     shard_count = 2,
     tags = [
         "e2e",
@@ -95,6 +134,7 @@ go_test(
         "@web3signer",
     ],
     eth_network = "mainnet",
+    flaky = True,
     shard_count = 2,
     tags = [
         "e2e",
@@ -127,6 +167,7 @@ go_test(
         "@web3signer",
     ],
     eth_network = "mainnet",
+    flaky = True,
     shard_count = 2,
     tags = [
         "exclusive",
@@ -159,6 +200,7 @@ go_test(
         "@web3signer",
     ],
     eth_network = "minimal",
+    flaky = True,
     shard_count = 2,
     tags = [
         "exclusive",

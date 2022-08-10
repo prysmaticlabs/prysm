@@ -6,8 +6,8 @@ import (
 	"path"
 	"testing"
 
-	fssz "github.com/ferranbt/fastssz"
 	"github.com/golang/snappy"
+	fssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/spectest/utils"
 	"github.com/prysmaticlabs/prysm/testing/util"

@@ -1,10 +1,9 @@
 package mock
 
 import (
-	ssz "github.com/ferranbt/fastssz"
+	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"google.golang.org/protobuf/proto"
@@ -30,11 +29,11 @@ func (m SignedBeaconBlock) IsNil() bool {
 	return m.BeaconBlock == nil || m.Block().IsNil()
 }
 
-func (SignedBeaconBlock) Copy() interfaces.SignedBeaconBlock {
+func (SignedBeaconBlock) Copy() (interfaces.SignedBeaconBlock, error) {
 	panic("implement me")
 }
 
-func (SignedBeaconBlock) Proto() proto.Message {
+func (SignedBeaconBlock) Proto() (proto.Message, error) {
 	panic("implement me")
 }
 
@@ -74,6 +73,10 @@ func (SignedBeaconBlock) Version() int {
 	panic("implement me")
 }
 
+func (SignedBeaconBlock) ToBlinded() (interfaces.SignedBeaconBlock, error) {
+	panic("implement me")
+}
+
 func (SignedBeaconBlock) Header() (*eth.SignedBeaconBlockHeader, error) {
 	panic("implement me")
 }
@@ -85,7 +88,7 @@ type BeaconBlock struct {
 	BlockSlot       types.Slot
 }
 
-func (BeaconBlock) AsSignRequestObject() validatorpb.SignRequestObject {
+func (BeaconBlock) AsSignRequestObject() (validatorpb.SignRequestObject, error) {
 	panic("implement me")
 }
 
@@ -121,7 +124,7 @@ func (BeaconBlock) IsBlinded() bool {
 	return false
 }
 
-func (BeaconBlock) Proto() proto.Message {
+func (BeaconBlock) Proto() (proto.Message, error) {
 	panic("implement me")
 }
 
@@ -195,15 +198,11 @@ func (BeaconBlockBody) HashTreeRoot() ([32]byte, error) {
 	panic("implement me")
 }
 
-func (BeaconBlockBody) Proto() proto.Message {
+func (BeaconBlockBody) Proto() (proto.Message, error) {
 	panic("implement me")
 }
 
-func (BeaconBlockBody) ExecutionPayload() (*enginev1.ExecutionPayload, error) {
-	panic("implement me")
-}
-
-func (BeaconBlockBody) ExecutionPayloadHeader() (*eth.ExecutionPayloadHeader, error) {
+func (BeaconBlockBody) Execution() (interfaces.ExecutionData, error) {
 	panic("implement me")
 }
 

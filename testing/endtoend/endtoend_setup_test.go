@@ -8,7 +8,6 @@ import (
 
 	"github.com/prysmaticlabs/prysm/config/params"
 	ev "github.com/prysmaticlabs/prysm/testing/endtoend/evaluators"
-	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
 	e2eParams "github.com/prysmaticlabs/prysm/testing/endtoend/params"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/types"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -58,7 +57,8 @@ func e2eMinimal(t *testing.T, cfgo ...types.E2EConfigOpt) *testRunner {
 		ev.FinishedSyncing,
 		ev.AllNodesHaveSameHead,
 		ev.ValidatorSyncParticipation,
-		//ev.TransactionsPresent, TODO: Renable Transaction evaluator once it tx pool issues are fixed.
+		ev.FeeRecipientIsPresent,
+		//ev.TransactionsPresent, TODO: Re-enable Transaction evaluator once it tx pool issues are fixed.
 	}
 	testConfig := &types.E2EConfig{
 		BeaconFlags: []string{
@@ -86,7 +86,7 @@ func e2eMinimal(t *testing.T, cfgo ...types.E2EConfigOpt) *testRunner {
 	return newTestRunner(t, testConfig)
 }
 
-func e2eMainnet(t *testing.T, usePrysmSh, useMultiClient bool) *testRunner {
+func e2eMainnet(t *testing.T, usePrysmSh, useMultiClient bool, cfgo ...types.E2EConfigOpt) *testRunner {
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.E2EMainnetTestConfig())
 	if useMultiClient {
@@ -103,11 +103,6 @@ func e2eMainnet(t *testing.T, usePrysmSh, useMultiClient bool) *testRunner {
 		require.NoError(t, err)
 	}
 	_, crossClient := os.LookupEnv("RUN_CROSS_CLIENT")
-	if usePrysmSh {
-		// If using prysm.sh, run for only 6 epochs.
-		// TODO(#9166): remove this block once v2 changes are live.
-		epochsToRun = helpers.AltairE2EForkEpoch - 1
-	}
 	seed := 0
 	seedStr, isValid := os.LookupEnv("E2E_SEED")
 	if isValid {
@@ -132,7 +127,8 @@ func e2eMainnet(t *testing.T, usePrysmSh, useMultiClient bool) *testRunner {
 		ev.APIGatewayV1Alpha1VerifyIntegrity,
 		ev.FinishedSyncing,
 		ev.AllNodesHaveSameHead,
-		//ev.TransactionsPresent, TODO: Renable Transaction evaluator once it tx pool issues are fixed.
+		ev.FeeRecipientIsPresent,
+		//ev.TransactionsPresent, TODO: Re-enable Transaction evaluator once it tx pool issues are fixed.
 	}
 	testConfig := &types.E2EConfig{
 		BeaconFlags: []string{
@@ -155,7 +151,9 @@ func e2eMainnet(t *testing.T, usePrysmSh, useMultiClient bool) *testRunner {
 		EvalInterceptor:         defaultInterceptor,
 		Seed:                    int64(seed),
 	}
-
+	for _, o := range cfgo {
+		o(testConfig)
+	}
 	return newTestRunner(t, testConfig)
 }
 

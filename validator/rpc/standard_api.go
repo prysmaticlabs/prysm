@@ -6,15 +6,21 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/protobuf/ptypes/empty"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/config/params"
+	validatorServiceConfig "github.com/prysmaticlabs/prysm/config/validator/service"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
 	slashingprotection "github.com/prysmaticlabs/prysm/validator/slashing-protection-history"
 	"github.com/prysmaticlabs/prysm/validator/slashing-protection-history/format"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
@@ -167,7 +173,7 @@ func (s *Server) DeleteKeystores(
 
 	exportedHistory, err := s.slashingProtectionHistoryForDeletedKeys(ctx, req.Pubkeys, statuses)
 	if err != nil {
-		log.Warnf("Could not get slashing protection history for deleted keys: %v", err)
+		log.WithError(err).Warn("Could not get slashing protection history for deleted keys")
 		statuses := groupExportErrors(req, "Non duplicate keys that were existing were deleted, but could not export slashing protection history.")
 		return &ethpbservice.DeleteKeystoresResponse{Data: statuses}, nil
 	}
@@ -381,4 +387,153 @@ func groupDeleteRemoteKeysErrors(req *ethpbservice.DeleteRemoteKeysRequest, erro
 		}
 	}
 	return statuses
+}
+
+func (s *Server) GetGasLimit(_ context.Context, req *ethpbservice.PubkeyRequest) (*ethpbservice.GetGasLimitResponse, error) {
+	if s.validatorService == nil {
+		return nil, status.Error(codes.FailedPrecondition, "Validator service not ready")
+	}
+	validatorKey := req.Pubkey
+	if err := validatePublicKey(validatorKey); err != nil {
+		return nil, status.Error(codes.FailedPrecondition, err.Error())
+	}
+	resp := &ethpbservice.GetGasLimitResponse{
+		Data: &ethpbservice.GetGasLimitResponse_GasLimit{
+			Pubkey: validatorKey,
+		},
+	}
+	if s.validatorService.ProposerSettings != nil {
+		proposerOption, found := s.validatorService.ProposerSettings.ProposeConfig[bytesutil.ToBytes48(validatorKey)]
+		if found {
+			if proposerOption.BuilderConfig != nil {
+				resp.Data.GasLimit = proposerOption.BuilderConfig.GasLimit
+				return resp, nil
+			}
+		} else if s.validatorService.ProposerSettings.DefaultConfig != nil && s.validatorService.ProposerSettings.DefaultConfig.BuilderConfig != nil {
+			resp.Data.GasLimit = s.validatorService.ProposerSettings.DefaultConfig.BuilderConfig.GasLimit
+			return resp, nil
+		}
+	}
+	resp.Data.GasLimit = params.BeaconConfig().DefaultBuilderGasLimit
+	return resp, nil
+}
+
+// ListFeeRecipientByPubkey returns the public key to eth address mapping object to the end user.
+func (s *Server) ListFeeRecipientByPubkey(_ context.Context, req *ethpbservice.PubkeyRequest) (*ethpbservice.GetFeeRecipientByPubkeyResponse, error) {
+	if s.validatorService == nil {
+		return nil, status.Error(codes.FailedPrecondition, "Validator service not ready")
+	}
+	validatorKey := req.Pubkey
+	if err := validatePublicKey(validatorKey); err != nil {
+		return nil, status.Error(codes.FailedPrecondition, err.Error())
+	}
+	defaultFeeRecipient := params.BeaconConfig().DefaultFeeRecipient.Bytes()
+	if s.validatorService.ProposerSettings == nil {
+		return &ethpbservice.GetFeeRecipientByPubkeyResponse{
+			Data: &ethpbservice.GetFeeRecipientByPubkeyResponse_FeeRecipient{
+				Pubkey:     validatorKey,
+				Ethaddress: defaultFeeRecipient,
+			},
+		}, nil
+	}
+	if s.validatorService.ProposerSettings.ProposeConfig != nil {
+		proposerOption, found := s.validatorService.ProposerSettings.ProposeConfig[bytesutil.ToBytes48(validatorKey)]
+		if found {
+			return &ethpbservice.GetFeeRecipientByPubkeyResponse{
+				Data: &ethpbservice.GetFeeRecipientByPubkeyResponse_FeeRecipient{
+					Pubkey:     validatorKey,
+					Ethaddress: proposerOption.FeeRecipient.Bytes(),
+				},
+			}, nil
+		}
+	}
+	if s.validatorService.ProposerSettings.DefaultConfig != nil {
+		defaultFeeRecipient = s.validatorService.ProposerSettings.DefaultConfig.FeeRecipient.Bytes()
+	}
+	return &ethpbservice.GetFeeRecipientByPubkeyResponse{
+		Data: &ethpbservice.GetFeeRecipientByPubkeyResponse_FeeRecipient{
+			Pubkey:     validatorKey,
+			Ethaddress: defaultFeeRecipient,
+		},
+	}, nil
+}
+
+// SetFeeRecipientByPubkey updates the eth address mapped to the public key.
+func (s *Server) SetFeeRecipientByPubkey(ctx context.Context, req *ethpbservice.SetFeeRecipientByPubkeyRequest) (*empty.Empty, error) {
+	if s.validatorService == nil {
+		return nil, status.Error(codes.FailedPrecondition, "Validator service not ready")
+	}
+	validatorKey := req.Pubkey
+	if err := validatePublicKey(validatorKey); err != nil {
+		return nil, status.Error(codes.FailedPrecondition, err.Error())
+	}
+	defaultOption := validatorServiceConfig.DefaultProposerOption()
+	encoded := hexutil.Encode(req.Ethaddress)
+	if !common.IsHexAddress(encoded) {
+		return nil, status.Error(
+			codes.InvalidArgument, "Fee recipient is not a valid Ethereum address")
+	}
+	pOption := validatorServiceConfig.DefaultProposerOption()
+	pOption.FeeRecipient = common.BytesToAddress(req.Ethaddress)
+	switch {
+	case s.validatorService.ProposerSettings == nil:
+		s.validatorService.ProposerSettings = &validatorServiceConfig.ProposerSettings{
+			ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validatorServiceConfig.ProposerOption{
+				bytesutil.ToBytes48(validatorKey): &pOption,
+			},
+			DefaultConfig: &defaultOption,
+		}
+	case s.validatorService.ProposerSettings.ProposeConfig == nil:
+		pOption.BuilderConfig = s.validatorService.ProposerSettings.DefaultConfig.BuilderConfig
+		s.validatorService.ProposerSettings.ProposeConfig = map[[fieldparams.BLSPubkeyLength]byte]*validatorServiceConfig.ProposerOption{
+			bytesutil.ToBytes48(validatorKey): &pOption,
+		}
+	default:
+		proposerOption, found := s.validatorService.ProposerSettings.ProposeConfig[bytesutil.ToBytes48(validatorKey)]
+		if found {
+			proposerOption.FeeRecipient = common.BytesToAddress(req.Ethaddress)
+		} else {
+			pOption.BuilderConfig = s.validatorService.ProposerSettings.DefaultConfig.BuilderConfig
+			s.validatorService.ProposerSettings.ProposeConfig[bytesutil.ToBytes48(validatorKey)] = &pOption
+		}
+	}
+	// override the 200 success with 202 according to the specs
+	if err := grpc.SetHeader(ctx, metadata.Pairs("x-http-code", "202")); err != nil {
+		return &empty.Empty{}, status.Errorf(codes.Internal, "Could not set custom success code header: %v", err)
+	}
+	return &empty.Empty{}, nil
+}
+
+// DeleteFeeRecipientByPubkey updates the eth address mapped to the public key to the default fee recipient listed
+func (s *Server) DeleteFeeRecipientByPubkey(ctx context.Context, req *ethpbservice.PubkeyRequest) (*empty.Empty, error) {
+	if s.validatorService == nil {
+		return nil, status.Error(codes.FailedPrecondition, "Validator service not ready")
+	}
+	validatorKey := req.Pubkey
+	if err := validatePublicKey(validatorKey); err != nil {
+		return nil, status.Error(codes.FailedPrecondition, err.Error())
+	}
+	defaultFeeRecipient := params.BeaconConfig().DefaultFeeRecipient
+	if s.validatorService.ProposerSettings != nil && s.validatorService.ProposerSettings.DefaultConfig != nil {
+		defaultFeeRecipient = s.validatorService.ProposerSettings.DefaultConfig.FeeRecipient
+	}
+	if s.validatorService.ProposerSettings != nil && s.validatorService.ProposerSettings.ProposeConfig != nil {
+		proposerOption, found := s.validatorService.ProposerSettings.ProposeConfig[bytesutil.ToBytes48(validatorKey)]
+		if found {
+			proposerOption.FeeRecipient = defaultFeeRecipient
+		}
+	}
+	// override the 200 success with 204 according to the specs
+	if err := grpc.SetHeader(ctx, metadata.Pairs("x-http-code", "204")); err != nil {
+		return &empty.Empty{}, status.Errorf(codes.Internal, "Could not set custom success code header: %v", err)
+	}
+	return &empty.Empty{}, nil
+}
+
+func validatePublicKey(pubkey []byte) error {
+	if len(pubkey) != fieldparams.BLSPubkeyLength {
+		return status.Errorf(
+			codes.InvalidArgument, "Provided public key in path is not byte length %d and not a valid bls public key", fieldparams.BLSPubkeyLength)
+	}
+	return nil
 }

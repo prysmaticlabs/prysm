@@ -13,7 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
-	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
+	mockExecution "github.com/prysmaticlabs/prysm/beacon-chain/execution/testing"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/container/trie"
@@ -64,9 +64,9 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 
 	vs := &Server{
 		Ctx:               ctx,
-		ChainStartFetcher: &mockPOW.POWChain{},
-		BlockFetcher:      &mockPOW.POWChain{},
-		Eth1InfoFetcher:   &mockPOW.POWChain{},
+		ChainStartFetcher: &mockExecution.Chain{},
+		BlockFetcher:      &mockExecution.Chain{},
+		Eth1InfoFetcher:   &mockExecution.Chain{},
 		DepositFetcher:    depositCache,
 		HeadFetcher:       &mockChain.ChainService{State: beaconState, Root: genesisRoot[:]},
 	}
@@ -91,7 +91,7 @@ func TestWaitForActivation_ContextClosed(t *testing.T) {
 }
 
 func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
-	// This test breaks if it doesnt use mainnet config
+	// This test breaks if it doesn't use mainnet config
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig().Copy())
 	ctx := context.Background()
@@ -140,15 +140,15 @@ func TestWaitForActivation_ValidatorOriginallyExists(t *testing.T) {
 	root, err := depositTrie.HashTreeRoot()
 	require.NoError(t, err)
 	assert.NoError(t, depositCache.InsertDeposit(ctx, deposit, 10 /*blockNum*/, 0, root))
-	trie, err := v1.InitializeFromProtoUnsafe(beaconState)
+	s, err := v1.InitializeFromProtoUnsafe(beaconState)
 	require.NoError(t, err)
 	vs := &Server{
 		Ctx:               context.Background(),
-		ChainStartFetcher: &mockPOW.POWChain{},
-		BlockFetcher:      &mockPOW.POWChain{},
-		Eth1InfoFetcher:   &mockPOW.POWChain{},
+		ChainStartFetcher: &mockExecution.Chain{},
+		BlockFetcher:      &mockExecution.Chain{},
+		Eth1InfoFetcher:   &mockExecution.Chain{},
 		DepositFetcher:    depositCache,
-		HeadFetcher:       &mockChain.ChainService{State: trie, Root: genesisRoot[:]},
+		HeadFetcher:       &mockChain.ChainService{State: s, Root: genesisRoot[:]},
 	}
 	req := &ethpb.ValidatorActivationRequest{
 		PublicKeys: [][]byte{pubKey1, pubKey2},
@@ -219,12 +219,12 @@ func TestWaitForActivation_MultipleStatuses(t *testing.T) {
 	block := util.NewBeaconBlock()
 	genesisRoot, err := block.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not get signing root")
-	trie, err := v1.InitializeFromProtoUnsafe(beaconState)
+	s, err := v1.InitializeFromProtoUnsafe(beaconState)
 	require.NoError(t, err)
 	vs := &Server{
 		Ctx:               context.Background(),
-		ChainStartFetcher: &mockPOW.POWChain{},
-		HeadFetcher:       &mockChain.ChainService{State: trie, Root: genesisRoot[:]},
+		ChainStartFetcher: &mockExecution.Chain{},
+		HeadFetcher:       &mockChain.ChainService{State: s, Root: genesisRoot[:]},
 	}
 	req := &ethpb.ValidatorActivationRequest{
 		PublicKeys: [][]byte{pubKey1, pubKey2, pubKey3},
@@ -273,7 +273,7 @@ func TestWaitForChainStart_ContextClosed(t *testing.T) {
 	chainService := &mockChain.ChainService{}
 	Server := &Server{
 		Ctx: ctx,
-		ChainStartFetcher: &mockPOW.FaultyMockPOWChain{
+		ChainStartFetcher: &mockExecution.FaultyExecutionChain{
 			ChainFeed: new(event.Feed),
 		},
 		StateNotifier: chainService.StateNotifier(),
@@ -304,7 +304,7 @@ func TestWaitForChainStart_AlreadyStarted(t *testing.T) {
 	chainService := &mockChain.ChainService{State: st, ValidatorsRoot: genesisValidatorsRoot}
 	Server := &Server{
 		Ctx: context.Background(),
-		ChainStartFetcher: &mockPOW.POWChain{
+		ChainStartFetcher: &mockExecution.Chain{
 			ChainFeed: new(event.Feed),
 		},
 		StateNotifier: chainService.StateNotifier(),
@@ -332,7 +332,7 @@ func TestWaitForChainStart_HeadStateDoesNotExist(t *testing.T) {
 	notifier := chainService.StateNotifier()
 	Server := &Server{
 		Ctx: context.Background(),
-		ChainStartFetcher: &mockPOW.POWChain{
+		ChainStartFetcher: &mockExecution.Chain{
 			ChainFeed: new(event.Feed),
 		},
 		StateNotifier: chainService.StateNotifier(),
@@ -368,7 +368,7 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 	chainService := &mockChain.ChainService{}
 	Server := &Server{
 		Ctx: context.Background(),
-		ChainStartFetcher: &mockPOW.FaultyMockPOWChain{
+		ChainStartFetcher: &mockExecution.FaultyExecutionChain{
 			ChainFeed: new(event.Feed),
 		},
 		StateNotifier: chainService.StateNotifier(),

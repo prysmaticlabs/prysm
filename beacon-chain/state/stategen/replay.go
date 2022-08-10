@@ -12,9 +12,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	"github.com/prysmaticlabs/prysm/runtime/version"
@@ -146,7 +146,7 @@ func executeStateTransitionStateGen(
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
-	if err := wrapper.BeaconBlockIsNil(signed); err != nil {
+	if err := blocks.BeaconBlockIsNil(signed); err != nil {
 		return nil, err
 	}
 	ctx, span := trace.StartSpan(ctx, "stategen.executeStateTransitionStateGen")
@@ -228,7 +228,7 @@ func ReplayProcessSlots(ctx context.Context, state state.BeaconState, slot types
 		}
 
 		if prysmtime.CanUpgradeToBellatrix(state.Slot()) {
-			state, err = execution.UpgradeToBellatrix(ctx, state)
+			state, err = execution.UpgradeToBellatrix(state)
 			if err != nil {
 				tracing.AnnotateError(span, err)
 				return nil, err

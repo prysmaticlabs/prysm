@@ -7,8 +7,8 @@ import (
 	fuzz "github.com/google/gofuzz"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
@@ -25,7 +25,10 @@ func TestFuzzExecuteStateTransition_1000(t *testing.T) {
 	for i := 0; i < 1000; i++ {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(sb)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(sb)
+		if sb.Block == nil || sb.Block.Body == nil {
+			continue
+		}
+		wsb, err := blocks.NewSignedBeaconBlock(sb)
 		require.NoError(t, err)
 		s, err := ExecuteStateTransition(ctx, state, wsb)
 		if err != nil && s != nil {
@@ -46,7 +49,10 @@ func TestFuzzCalculateStateRoot_1000(t *testing.T) {
 	for i := 0; i < 1000; i++ {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(sb)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(sb)
+		if sb.Block == nil || sb.Block.Body == nil {
+			continue
+		}
+		wsb, err := blocks.NewSignedBeaconBlock(sb)
 		require.NoError(t, err)
 		stateRoot, err := CalculateStateRoot(ctx, state, wsb)
 		if err != nil && stateRoot != [32]byte{} {
@@ -103,7 +109,10 @@ func TestFuzzprocessOperationsNoVerify_1000(t *testing.T) {
 	for i := 0; i < 1000; i++ {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(bb)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(bb)
+		if bb.Block == nil || bb.Block.Body == nil {
+			continue
+		}
+		wsb, err := blocks.NewSignedBeaconBlock(bb)
 		require.NoError(t, err)
 		s, err := ProcessOperationsNoVerifyAttsSigs(ctx, state, wsb)
 		if err != nil && s != nil {
@@ -123,7 +132,10 @@ func TestFuzzverifyOperationLengths_10000(t *testing.T) {
 	for i := 0; i < 10000; i++ {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(bb)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(bb)
+		if bb.Block == nil || bb.Block.Body == nil {
+			continue
+		}
+		wsb, err := blocks.NewSignedBeaconBlock(bb)
 		require.NoError(t, err)
 		_, err = VerifyOperationLengths(context.Background(), state, wsb)
 		_ = err
@@ -172,7 +184,10 @@ func TestFuzzProcessBlockForStateRoot_1000(t *testing.T) {
 	for i := 0; i < 1000; i++ {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(sb)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(sb)
+		if sb.Block == nil || sb.Block.Body == nil {
+			continue
+		}
+		wsb, err := blocks.NewSignedBeaconBlock(sb)
 		require.NoError(t, err)
 		s, err := ProcessBlockForStateRoot(ctx, state, wsb)
 		if err != nil && s != nil {

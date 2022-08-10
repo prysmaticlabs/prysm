@@ -111,7 +111,7 @@ func (m *ApiProxyMiddleware) WithMiddleware(path string) http.HandlerFunc {
 			}
 		}
 
-		if req.Method == "DELETE" {
+		if req.Method == "DELETE" && req.Body != http.NoBody {
 			if errJson := handleDeleteRequestForEndpoint(endpoint, req); errJson != nil {
 				WriteError(w, errJson, nil)
 				return

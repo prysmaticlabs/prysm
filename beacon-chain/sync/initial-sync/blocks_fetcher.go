@@ -289,9 +289,12 @@ func (f *blocksFetcher) fetchBlocksFromPeer(
 		Step:      1,
 	}
 	for i := 0; i < len(peers); i++ {
-		if blocks, err := f.requestBlocks(ctx, req, peers[i]); err == nil {
+		blocks, err := f.requestBlocks(ctx, req, peers[i])
+		if err == nil {
 			f.p2p.Peers().Scorers().BlockProviderScorer().Touch(peers[i])
 			return blocks, peers[i], err
+		} else {
+			log.WithError(err).Debug("Could not request blocks by range")
 		}
 	}
 	return nil, "", errNoPeersAvailable
@@ -318,6 +321,7 @@ func (f *blocksFetcher) requestBlocks(
 	}).Debug("Requesting blocks")
 	if f.rateLimiter.Remaining(pid.String()) < int64(req.Count) {
 		if err := f.waitForBandwidth(pid); err != nil {
+			l.Unlock()
 			return nil, err
 		}
 	}
@@ -345,6 +349,7 @@ func (f *blocksFetcher) requestBlocksByRoot(
 	}).Debug("Requesting blocks (by roots)")
 	if f.rateLimiter.Remaining(pid.String()) < int64(len(*req)) {
 		if err := f.waitForBandwidth(pid); err != nil {
+			l.Unlock()
 			return nil, err
 		}
 	}

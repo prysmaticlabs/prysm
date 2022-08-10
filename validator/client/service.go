@@ -7,16 +7,16 @@ import (
 
 	"github.com/dgraph-io/ristretto"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
-	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
-	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
-	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	grpcretry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
+	grpcopentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
+	grpcprometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/pkg/errors"
 	grpcutil "github.com/prysmaticlabs/prysm/api/grpc"
 	"github.com/prysmaticlabs/prysm/async/event"
 	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
-	validator_service_config "github.com/prysmaticlabs/prysm/config/validator/service"
+	validatorserviceconfig "github.com/prysmaticlabs/prysm/config/validator/service"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -26,7 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/validator/graffiti"
 	"github.com/prysmaticlabs/prysm/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/validator/keymanager/local"
-	remote_web3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
+	remoteweb3signer "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -69,8 +69,8 @@ type ValidatorService struct {
 	db                    db.Database
 	grpcHeaders           []string
 	graffiti              []byte
-	Web3SignerConfig      *remote_web3signer.SetupConfig
-	feeRecipientConfig    *validator_service_config.FeeRecipientConfig
+	Web3SignerConfig      *remoteweb3signer.SetupConfig
+	ProposerSettings      *validatorserviceconfig.ProposerSettings
 }
 
 // Config for the validator service.
@@ -93,8 +93,8 @@ type Config struct {
 	GrpcHeadersFlag            string
 	GraffitiFlag               string
 	Endpoint                   string
-	Web3SignerConfig           *remote_web3signer.SetupConfig
-	FeeRecipientConfig         *validator_service_config.FeeRecipientConfig
+	Web3SignerConfig           *remoteweb3signer.SetupConfig
+	ProposerSettings           *validatorserviceconfig.ProposerSettings
 }
 
 // NewValidatorService creates a new validator service for the service
@@ -123,7 +123,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		graffitiStruct:        cfg.GraffitiStruct,
 		logDutyCountDown:      cfg.LogDutyCountDown,
 		Web3SignerConfig:      cfg.Web3SignerConfig,
-		feeRecipientConfig:    cfg.FeeRecipientConfig,
+		ProposerSettings:      cfg.ProposerSettings,
 	}
 
 	dialOpts := ConstructDialOptions(
@@ -166,7 +166,7 @@ func (v *ValidatorService) Start() {
 
 	sPubKeys, err := v.db.EIPImportBlacklistedPublicKeys(v.ctx)
 	if err != nil {
-		log.Errorf("Could not read slashable public keys from disk: %v", err)
+		log.WithError(err).Error("Could not read slashable public keys from disk")
 		return
 	}
 	slashablePublicKeys := make(map[[fieldparams.BLSPubkeyLength]byte]bool)
@@ -176,7 +176,7 @@ func (v *ValidatorService) Start() {
 
 	graffitiOrderedIndex, err := v.db.GraffitiOrderedIndex(v.ctx, v.graffitiStruct.Hash)
 	if err != nil {
-		log.Errorf("Could not read graffiti ordered index from disk: %v", err)
+		log.WithError(err).Error("Could not read graffiti ordered index from disk")
 		return
 	}
 
@@ -192,10 +192,12 @@ func (v *ValidatorService) Start() {
 		startBalances:                  make(map[[fieldparams.BLSPubkeyLength]byte]uint64),
 		prevBalance:                    make(map[[fieldparams.BLSPubkeyLength]byte]uint64),
 		pubkeyToValidatorIndex:         make(map[[fieldparams.BLSPubkeyLength]byte]types.ValidatorIndex),
+		signedValidatorRegistrations:   make(map[[fieldparams.BLSPubkeyLength]byte]*ethpb.SignedValidatorRegistrationV1),
 		attLogs:                        make(map[[32]byte]*attSubmitted),
 		domainDataCache:                cache,
 		aggregatedSlotCommitteeIDCache: aggregatedSlotCommitteeIDCache,
 		voteStats:                      voteStats{startEpoch: types.Epoch(^uint64(0))},
+		syncCommitteeStats:             syncCommitteeStats{},
 		useWeb:                         v.useWeb,
 		interopKeysConfig:              v.interopKeysConfig,
 		wallet:                         v.wallet,
@@ -206,8 +208,8 @@ func (v *ValidatorService) Start() {
 		eipImportBlacklistedPublicKeys: slashablePublicKeys,
 		logDutyCountDown:               v.logDutyCountDown,
 		Web3SignerConfig:               v.Web3SignerConfig,
-		feeRecipientConfig:             v.feeRecipientConfig,
-		walletIntializedChannel:        make(chan *wallet.Wallet, 1),
+		ProposerSettings:               v.ProposerSettings,
+		walletInitializedChannel:       make(chan *wallet.Wallet, 1),
 	}
 	// To resolve a race condition at startup due to the interface
 	// nature of the abstracted block type. We initialize
@@ -262,7 +264,7 @@ func ConstructDialOptions(
 	if withCert != "" {
 		creds, err := credentials.NewClientTLSFromFile(withCert, "")
 		if err != nil {
-			log.Errorf("Could not get valid credentials: %v", err)
+			log.WithError(err).Error("Could not get valid credentials")
 			return nil
 		}
 		transportSecurity = grpc.WithTransportCredentials(creds)
@@ -281,21 +283,21 @@ func ConstructDialOptions(
 		transportSecurity,
 		grpc.WithDefaultCallOptions(
 			grpc.MaxCallRecvMsgSize(maxCallRecvMsgSize),
-			grpc_retry.WithMax(grpcRetries),
-			grpc_retry.WithBackoff(grpc_retry.BackoffLinear(grpcRetryDelay)),
+			grpcretry.WithMax(grpcRetries),
+			grpcretry.WithBackoff(grpcretry.BackoffLinear(grpcRetryDelay)),
 		),
 		grpc.WithStatsHandler(&ocgrpc.ClientHandler{}),
 		grpc.WithUnaryInterceptor(middleware.ChainUnaryClient(
-			grpc_opentracing.UnaryClientInterceptor(),
-			grpc_prometheus.UnaryClientInterceptor,
-			grpc_retry.UnaryClientInterceptor(),
+			grpcopentracing.UnaryClientInterceptor(),
+			grpcprometheus.UnaryClientInterceptor,
+			grpcretry.UnaryClientInterceptor(),
 			grpcutil.LogRequests,
 		)),
 		grpc.WithChainStreamInterceptor(
 			grpcutil.LogStream,
-			grpc_opentracing.StreamClientInterceptor(),
-			grpc_prometheus.StreamClientInterceptor,
-			grpc_retry.StreamClientInterceptor(),
+			grpcopentracing.StreamClientInterceptor(),
+			grpcprometheus.StreamClientInterceptor,
+			grpcretry.StreamClientInterceptor(),
 		),
 		grpc.WithResolvers(&multipleEndpointsGrpcResolverBuilder{}),
 	}

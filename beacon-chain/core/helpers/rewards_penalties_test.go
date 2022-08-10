@@ -74,6 +74,27 @@ func TestTotalActiveBalance(t *testing.T) {
 	}
 }
 
+func TestTotalActiveBal_ReturnMin(t *testing.T) {
+	tests := []struct {
+		vCount int
+	}{
+		{1},
+		{10},
+		{10000},
+	}
+	for _, test := range tests {
+		validators := make([]*ethpb.Validator, 0)
+		for i := 0; i < test.vCount; i++ {
+			validators = append(validators, &ethpb.Validator{EffectiveBalance: 1, ExitEpoch: 1})
+		}
+		state, err := v1.InitializeFromProto(&ethpb.BeaconState{Validators: validators})
+		require.NoError(t, err)
+		bal, err := TotalActiveBalance(state)
+		require.NoError(t, err)
+		require.Equal(t, params.BeaconConfig().EffectiveBalanceIncrement, bal)
+	}
+}
+
 func TestTotalActiveBalance_WithCache(t *testing.T) {
 	tests := []struct {
 		vCount    int

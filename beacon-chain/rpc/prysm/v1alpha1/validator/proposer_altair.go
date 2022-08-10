@@ -6,8 +6,8 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/interop"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -60,7 +60,7 @@ func (vs *Server) getAltairBeaconBlock(ctx context.Context, req *ethpb.BlockRequ
 		return nil, fmt.Errorf("could not build block data: %v", err)
 	}
 	// Compute state root with the newly constructed block.
-	wsb, err := wrapper.WrappedSignedBeaconBlock(
+	wsb, err := blocks.NewSignedBeaconBlock(
 		&ethpb.SignedBeaconBlockAltair{Block: blk, Signature: make([]byte, 96)},
 	)
 	if err != nil {
@@ -78,7 +78,7 @@ func (vs *Server) getAltairBeaconBlock(ctx context.Context, req *ethpb.BlockRequ
 // getSyncAggregate retrieves the sync contributions from the pool to construct the sync aggregate object.
 // The contributions are filtered based on matching of the input root and slot then profitability.
 func (vs *Server) getSyncAggregate(ctx context.Context, slot types.Slot, root [32]byte) (*ethpb.SyncAggregate, error) {
-	_, span := trace.StartSpan(ctx, "ProposerServer.getSyncAggregate")
+	ctx, span := trace.StartSpan(ctx, "ProposerServer.getSyncAggregate")
 	defer span.End()
 
 	// Contributions have to match the input root

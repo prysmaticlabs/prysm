@@ -24,6 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/execution"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/synccommittee"
@@ -68,21 +69,22 @@ type validationFn func(ctx context.Context) (pubsub.ValidationResult, error)
 
 // config to hold dependencies for the sync service.
 type config struct {
-	attestationNotifier     operation.Notifier
-	p2p                     p2p.P2P
-	beaconDB                db.NoHeadAccessDatabase
-	attPool                 attestations.Pool
-	exitPool                voluntaryexits.PoolManager
-	slashingPool            slashings.PoolManager
-	syncCommsPool           synccommittee.Pool
-	chain                   blockchainService
-	initialSync             Checker
-	stateNotifier           statefeed.Notifier
-	blockNotifier           blockfeed.Notifier
-	operationNotifier       operation.Notifier
-	stateGen                *stategen.State
-	slasherAttestationsFeed *event.Feed
-	slasherBlockHeadersFeed *event.Feed
+	attestationNotifier           operation.Notifier
+	p2p                           p2p.P2P
+	beaconDB                      db.NoHeadAccessDatabase
+	attPool                       attestations.Pool
+	exitPool                      voluntaryexits.PoolManager
+	slashingPool                  slashings.PoolManager
+	syncCommsPool                 synccommittee.Pool
+	chain                         blockchainService
+	initialSync                   Checker
+	stateNotifier                 statefeed.Notifier
+	blockNotifier                 blockfeed.Notifier
+	operationNotifier             operation.Notifier
+	executionPayloadReconstructor execution.ExecutionPayloadReconstructor
+	stateGen                      *stategen.State
+	slasherAttestationsFeed       *event.Feed
+	slasherBlockHeadersFeed       *event.Feed
 }
 
 // This defines the interface for interacting with block chain service
@@ -237,10 +239,10 @@ func (s *Service) registerHandlers() {
 	defer stateSub.Unsubscribe()
 	for {
 		select {
-		case event := <-stateChannel:
-			switch event.Type {
+		case e := <-stateChannel:
+			switch e.Type {
 			case statefeed.Initialized:
-				data, ok := event.Data.(*statefeed.InitializedData)
+				data, ok := e.Data.(*statefeed.InitializedData)
 				if !ok {
 					log.Error("Event feed data is not type *statefeed.InitializedData")
 					return
@@ -259,7 +261,7 @@ func (s *Service) registerHandlers() {
 					s.markForChainStart()
 				}()
 			case statefeed.Synced:
-				_, ok := event.Data.(*statefeed.SyncedData)
+				_, ok := e.Data.(*statefeed.SyncedData)
 				if !ok {
 					log.Error("Event feed data is not type *statefeed.SyncedData")
 					return

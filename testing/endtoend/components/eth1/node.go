@@ -56,8 +56,8 @@ func (node *Node) Start(ctx context.Context) error {
 		ctx,
 		binaryPath,
 		"init",
-		binaryPath[:strings.LastIndex(binaryPath, "/")]+"/genesis.json",
-		fmt.Sprintf("--datadir=%s", eth1Path)) // #nosec G204 -- Safe
+		fmt.Sprintf("--datadir=%s", eth1Path),
+		binaryPath[:strings.LastIndex(binaryPath, "/")]+"/genesis.json") // #nosec G204 -- Safe
 	initFile, err := helpers.DeleteAndCreateFile(e2e.TestParams.LogPath, "eth1-init_"+strconv.Itoa(node.index)+".log")
 	if err != nil {
 		return err
@@ -90,7 +90,7 @@ func (node *Node) Start(ctx context.Context) error {
 		"--ws.origins=\"*\"",
 		"--ipcdisable",
 		"--verbosity=4",
-		"--txpool.locals=0x878705ba3f8bc32fcf7f4caa1a35e72af65cf766",
+		fmt.Sprintf("--txpool.locals=%s", EthAddress),
 	}
 	// If we are testing sync, geth needs to be run via full sync as snap sync does not
 	// work in our setup.

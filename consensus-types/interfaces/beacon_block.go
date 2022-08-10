@@ -1,9 +1,8 @@
 package interfaces
 
 import (
-	ssz "github.com/ferranbt/fastssz"
+	ssz "github.com/prysmaticlabs/fastssz"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"google.golang.org/protobuf/proto"
@@ -15,11 +14,12 @@ type SignedBeaconBlock interface {
 	Block() BeaconBlock
 	Signature() []byte
 	IsNil() bool
-	Copy() SignedBeaconBlock
-	Proto() proto.Message
+	Copy() (SignedBeaconBlock, error)
+	Proto() (proto.Message, error)
 	PbGenericBlock() (*ethpb.GenericSignedBeaconBlock, error)
 	PbPhase0Block() (*ethpb.SignedBeaconBlock, error)
 	PbAltairBlock() (*ethpb.SignedBeaconBlockAltair, error)
+	ToBlinded() (SignedBeaconBlock, error)
 	PbBellatrixBlock() (*ethpb.SignedBeaconBlockBellatrix, error)
 	PbBlindedBellatrixBlock() (*ethpb.SignedBlindedBeaconBlockBellatrix, error)
 	ssz.Marshaler
@@ -39,12 +39,12 @@ type BeaconBlock interface {
 	IsNil() bool
 	IsBlinded() bool
 	HashTreeRoot() ([32]byte, error)
-	Proto() proto.Message
+	Proto() (proto.Message, error)
 	ssz.Marshaler
 	ssz.Unmarshaler
 	ssz.HashRoot
 	Version() int
-	AsSignRequestObject() validatorpb.SignRequestObject
+	AsSignRequestObject() (validatorpb.SignRequestObject, error)
 }
 
 // BeaconBlockBody describes the method set employed by an object
@@ -61,7 +61,30 @@ type BeaconBlockBody interface {
 	SyncAggregate() (*ethpb.SyncAggregate, error)
 	IsNil() bool
 	HashTreeRoot() ([32]byte, error)
+	Proto() (proto.Message, error)
+	Execution() (ExecutionData, error)
+}
+
+// ExecutionData represents execution layer information that is contained
+// within post-Bellatrix beacon block bodies.
+type ExecutionData interface {
+	ssz.Marshaler
+	ssz.Unmarshaler
+	ssz.HashRoot
+	IsNil() bool
 	Proto() proto.Message
-	ExecutionPayload() (*enginev1.ExecutionPayload, error)
-	ExecutionPayloadHeader() (*ethpb.ExecutionPayloadHeader, error)
+	ParentHash() []byte
+	FeeRecipient() []byte
+	StateRoot() []byte
+	ReceiptsRoot() []byte
+	LogsBloom() []byte
+	PrevRandao() []byte
+	BlockNumber() uint64
+	GasLimit() uint64
+	GasUsed() uint64
+	Timestamp() uint64
+	ExtraData() []byte
+	BaseFeePerGas() []byte
+	BlockHash() []byte
+	Transactions() ([][]byte, error)
 }

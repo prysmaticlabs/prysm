@@ -460,6 +460,9 @@ func TestFilterSubnetPeers(t *testing.T) {
 				Genesis:        time.Now(),
 				ValidatorsRoot: [32]byte{'A'},
 				Slot:           &currSlot,
+				FinalizedRoots: map[[32]byte]bool{
+					[32]byte{}: true,
+				},
 			},
 			p2p: p,
 		},

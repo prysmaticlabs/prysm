@@ -16,7 +16,7 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
-	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
+	mockExecution "github.com/prysmaticlabs/prysm/beacon-chain/execution/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -147,7 +147,7 @@ func TestGetAltairDuties_SyncCommitteeOK(t *testing.T) {
 	vs := &Server{
 		HeadFetcher:            chain,
 		TimeFetcher:            chain,
-		Eth1InfoFetcher:        &mockPOW.POWChain{},
+		Eth1InfoFetcher:        &mockExecution.Chain{},
 		SyncChecker:            &mockSync.Sync{IsSyncing: false},
 		ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
 	}
@@ -238,7 +238,7 @@ func TestGetBellatrixDuties_SyncCommitteeOK(t *testing.T) {
 	require.NoError(t, bs.SetSlot(params.BeaconConfig().SlotsPerEpoch*types.Slot(params.BeaconConfig().EpochsPerSyncCommitteePeriod)-1))
 	require.NoError(t, helpers.UpdateSyncCommitteeCache(bs))
 
-	bs, err = execution.UpgradeToBellatrix(context.Background(), bs)
+	bs, err = execution.UpgradeToBellatrix(bs)
 	require.NoError(t, err)
 
 	pubkeysAs48ByteType := make([][fieldparams.BLSPubkeyLength]byte, len(pubKeys))
@@ -253,7 +253,7 @@ func TestGetBellatrixDuties_SyncCommitteeOK(t *testing.T) {
 	vs := &Server{
 		HeadFetcher:            chain,
 		TimeFetcher:            chain,
-		Eth1InfoFetcher:        &mockPOW.POWChain{},
+		Eth1InfoFetcher:        &mockExecution.Chain{},
 		SyncChecker:            &mockSync.Sync{IsSyncing: false},
 		ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
 	}
@@ -345,7 +345,7 @@ func TestGetAltairDuties_UnknownPubkey(t *testing.T) {
 	vs := &Server{
 		HeadFetcher:            chain,
 		TimeFetcher:            chain,
-		Eth1InfoFetcher:        &mockPOW.POWChain{},
+		Eth1InfoFetcher:        &mockExecution.Chain{},
 		SyncChecker:            &mockSync.Sync{IsSyncing: false},
 		DepositFetcher:         depositCache,
 		ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),

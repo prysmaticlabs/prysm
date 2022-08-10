@@ -9,8 +9,8 @@ import (
 
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
-	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
-	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	grpcopentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
+	grpcprometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/prysmaticlabs/prysm/async/event"
 	"github.com/prysmaticlabs/prysm/io/logs"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
@@ -132,7 +132,7 @@ func (s *Server) Start() {
 	address := fmt.Sprintf("%s:%s", s.host, s.port)
 	lis, err := net.Listen("tcp", address)
 	if err != nil {
-		log.Errorf("Could not listen to port in Start() %s: %v", address, err)
+		log.WithError(err).Errorf("Could not listen to port in Start() %s", address)
 	}
 	s.listener = lis
 
@@ -144,12 +144,12 @@ func (s *Server) Start() {
 			recovery.UnaryServerInterceptor(
 				recovery.WithRecoveryHandlerContext(tracing.RecoveryHandlerFunc),
 			),
-			grpc_prometheus.UnaryServerInterceptor,
-			grpc_opentracing.UnaryServerInterceptor(),
+			grpcprometheus.UnaryServerInterceptor,
+			grpcopentracing.UnaryServerInterceptor(),
 			s.JWTInterceptor(),
 		)),
 	}
-	grpc_prometheus.EnableHandlingTimeHistogram()
+	grpcprometheus.EnableHandlingTimeHistogram()
 
 	if s.withCert != "" && s.withKey != "" {
 		creds, err := credentials.NewServerTLSFromFile(s.withCert, s.withKey)
@@ -182,7 +182,7 @@ func (s *Server) Start() {
 	go func() {
 		if s.listener != nil {
 			if err := s.grpcServer.Serve(s.listener); err != nil {
-				log.Errorf("Could not serve: %v", err)
+				log.WithError(err).Error("Could not serve")
 			}
 		}
 	}()
@@ -190,12 +190,12 @@ func (s *Server) Start() {
 	if s.walletDir != "" {
 		token, err := s.initializeAuthToken(s.walletDir)
 		if err != nil {
-			log.Errorf("Could not initialize web auth token: %v", err)
+			log.WithError(err).Error("Could not initialize web auth token")
 			return
 		}
 		validatorWebAddr := fmt.Sprintf("%s:%d", s.validatorGatewayHost, s.validatorGatewayPort)
-		logValidatorWebAuth(validatorWebAddr, token)
 		authTokenPath := filepath.Join(s.walletDir, authTokenFileName)
+		logValidatorWebAuth(validatorWebAddr, token, authTokenPath)
 		go s.refreshAuthTokenFromFileChanges(s.ctx, authTokenPath)
 	}
 }

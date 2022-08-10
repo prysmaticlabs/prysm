@@ -1,4 +1,4 @@
-// Package cmd defines the command line flags for the shared utlities.
+// Package cmd defines the command line flags for the shared utilities.
 package cmd
 
 import (
@@ -254,6 +254,12 @@ var (
 		Name:  "api-timeout",
 		Usage: "Specifies the timeout value for API requests in seconds",
 		Value: 120,
+	}
+	// JwtOutputFileFlag specifies the JWT file path that gets generated into when invoked by generate-jwt-secret.
+	JwtOutputFileFlag = &cli.StringFlag{
+		Name:    "output-file",
+		Usage:   "Target file path for outputting a generated JWT secret to be used for JSON-RPC authentication",
+		Aliases: []string{"o"},
 	}
 )
 

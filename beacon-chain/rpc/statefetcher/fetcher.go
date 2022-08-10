@@ -13,15 +13,11 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"go.opencensus.io/trace"
 )
-
-var ErrNoAncestorForBlock = errors.New("could not find an ancestor state for block")
-var ErrNoCanonicalBlockForSlot = errors.New("none of the blocks found in the db slot index are canonical")
-var ErrInvalidDBBlock = errors.New("invalid block found in database")
 
 // StateIdParseError represents an error scenario where a state ID could not be parsed.
 type StateIdParseError struct {
@@ -116,26 +112,20 @@ func (p *StateProvider) State(ctx context.Context, stateId []byte) (state.Beacon
 			return nil, errors.Wrap(err, "could not get genesis state")
 		}
 	case "finalized":
-		checkpoint, err := p.ChainInfoFetcher.FinalizedCheckpt()
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get finalized checkpoint")
-		}
+		checkpoint := p.ChainInfoFetcher.FinalizedCheckpt()
 		s, err = p.StateGenService.StateByRoot(ctx, bytesutil.ToBytes32(checkpoint.Root))
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get finalized state")
 		}
 	case "justified":
-		checkpoint, err := p.ChainInfoFetcher.CurrentJustifiedCheckpt()
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get justified checkpoint")
-		}
+		checkpoint := p.ChainInfoFetcher.CurrentJustifiedCheckpt()
 		s, err = p.StateGenService.StateByRoot(ctx, bytesutil.ToBytes32(checkpoint.Root))
 		if err != nil {
 			return nil, errors.Wrap(err, "could not get justified state")
 		}
 	default:
 		if len(stateId) == 32 {
-			s, err = p.stateByHex(ctx, stateId)
+			s, err = p.stateByRoot(ctx, stateId)
 		} else {
 			slotNumber, parseErr := strconv.ParseUint(stateIdString, 10, 64)
 			if parseErr != nil {
@@ -170,7 +160,7 @@ func (p *StateProvider) StateRoot(ctx context.Context, stateId []byte) (root []b
 		root, err = p.justifiedStateRoot(ctx)
 	default:
 		if len(stateId) == 32 {
-			root, err = p.stateRootByHex(ctx, stateId)
+			root, err = p.stateRootByRoot(ctx, stateId)
 		} else {
 			slotNumber, parseErr := strconv.ParseUint(stateIdString, 10, 64)
 			if parseErr != nil {
@@ -185,13 +175,13 @@ func (p *StateProvider) StateRoot(ctx context.Context, stateId []byte) (root []b
 	return root, err
 }
 
-func (p *StateProvider) stateByHex(ctx context.Context, stateId []byte) (state.BeaconState, error) {
+func (p *StateProvider) stateByRoot(ctx context.Context, stateRoot []byte) (state.BeaconState, error) {
 	headState, err := p.ChainInfoFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get head state")
 	}
 	for i, root := range headState.StateRoots() {
-		if bytes.Equal(root, stateId) {
+		if bytes.Equal(root, stateRoot) {
 			blockRoot := headState.BlockRoots()[i]
 			return p.StateGenService.StateByRoot(ctx, bytesutil.ToBytes32(blockRoot))
 		}
@@ -210,6 +200,13 @@ func (p *StateProvider) StateBySlot(ctx context.Context, target types.Slot) (sta
 	ctx, span := trace.StartSpan(ctx, "statefetcher.StateBySlot")
 	defer span.End()
 
+	if target > p.GenesisTimeFetcher.CurrentSlot() {
+		return nil, errors.New("requested slot is in the future")
+	}
+	if target > p.ChainInfoFetcher.HeadSlot() {
+		return nil, errors.New("requested slot number is higher than head slot number")
+	}
+
 	st, err := p.ReplayerBuilder.ReplayerForSlot(target).ReplayBlocks(ctx)
 	if err != nil {
 		msg := fmt.Sprintf("error while replaying history to slot=%d", target)
@@ -223,7 +220,7 @@ func (p *StateProvider) headStateRoot(ctx context.Context) ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get head block")
 	}
-	if err = wrapper.BeaconBlockIsNil(b); err != nil {
+	if err = blocks.BeaconBlockIsNil(b); err != nil {
 		return nil, err
 	}
 	return b.Block().StateRoot(), nil
@@ -234,7 +231,7 @@ func (p *StateProvider) genesisStateRoot(ctx context.Context) ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get genesis block")
 	}
-	if err := wrapper.BeaconBlockIsNil(b); err != nil {
+	if err := blocks.BeaconBlockIsNil(b); err != nil {
 		return nil, err
 	}
 	return b.Block().StateRoot(), nil
@@ -249,7 +246,7 @@ func (p *StateProvider) finalizedStateRoot(ctx context.Context) ([]byte, error) 
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get finalized block")
 	}
-	if err := wrapper.BeaconBlockIsNil(b); err != nil {
+	if err := blocks.BeaconBlockIsNil(b); err != nil {
 		return nil, err
 	}
 	return b.Block().StateRoot(), nil
@@ -264,22 +261,22 @@ func (p *StateProvider) justifiedStateRoot(ctx context.Context) ([]byte, error) 
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get justified block")
 	}
-	if err := wrapper.BeaconBlockIsNil(b); err != nil {
+	if err := blocks.BeaconBlockIsNil(b); err != nil {
 		return nil, err
 	}
 	return b.Block().StateRoot(), nil
 }
 
-func (p *StateProvider) stateRootByHex(ctx context.Context, stateId []byte) ([]byte, error) {
-	var stateRoot [32]byte
-	copy(stateRoot[:], stateId)
+func (p *StateProvider) stateRootByRoot(ctx context.Context, stateRoot []byte) ([]byte, error) {
+	var r [32]byte
+	copy(r[:], stateRoot)
 	headState, err := p.ChainInfoFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get head state")
 	}
 	for _, root := range headState.StateRoots() {
-		if bytes.Equal(root, stateRoot[:]) {
-			return stateRoot[:], nil
+		if bytes.Equal(root, r[:]) {
+			return r[:], nil
 		}
 	}
 
@@ -292,11 +289,11 @@ func (p *StateProvider) stateRootBySlot(ctx context.Context, slot types.Slot) ([
 	if slot > currentSlot {
 		return nil, errors.New("slot cannot be in the future")
 	}
-	found, blks, err := p.BeaconDB.BlocksBySlot(ctx, slot)
+	blks, err := p.BeaconDB.BlocksBySlot(ctx, slot)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get blocks")
 	}
-	if !found {
+	if len(blks) == 0 {
 		return nil, errors.New("no block exists")
 	}
 	if len(blks) != 1 {

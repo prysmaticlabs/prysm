@@ -13,6 +13,7 @@ go_library(
         "//async:go_default_library",
         "//beacon-chain/core/signing:go_default_library",
         "//config/params:go_default_library",
+        "//crypto/ecdsa:go_default_library",
         "//encoding/bytesutil:go_default_library",
         "//io/logs:go_default_library",
         "//network:go_default_library",
@@ -68,6 +69,7 @@ go_test(
     embed = [":go_default_library"],
     flaky = True,
     deps = [
+        "//crypto/ecdsa:go_default_library",
         "//network:go_default_library",
         "//runtime/maxprocs:go_default_library",
         "//testing/assert:go_default_library",

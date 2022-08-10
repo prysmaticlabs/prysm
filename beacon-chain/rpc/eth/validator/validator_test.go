@@ -12,11 +12,11 @@ import (
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	coreTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	mockExecution "github.com/prysmaticlabs/prysm/beacon-chain/execution/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations/mock"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
@@ -24,16 +24,14 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	p2pmock "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	p2pType "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
-	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	v1alpha1validator "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/validator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/testutil"
-	beaconState "github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
@@ -223,9 +221,7 @@ func TestGetAttesterDuties(t *testing.T) {
 		blk.Block.Slot = 31
 		root, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
-		require.NoError(t, err)
-		require.NoError(t, db.SaveBlock(ctx, wsb))
+		util.SaveBlock(t, ctx, db, blk)
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
 		chainSlot := types.Slot(0)
@@ -249,13 +245,16 @@ func TestGetAttesterDuties(t *testing.T) {
 }
 
 func TestGetAttesterDuties_SyncNotReady(t *testing.T) {
-	chainService := &mockChain.ChainService{}
+	st, err := util.NewBeaconState()
+	require.NoError(t, err)
+	chainService := &mockChain.ChainService{State: st}
 	vs := &Server{
-		SyncChecker: &mockSync.Sync{IsSyncing: true},
-		HeadFetcher: chainService,
-		TimeFetcher: chainService,
+		SyncChecker:           &mockSync.Sync{IsSyncing: true},
+		HeadFetcher:           chainService,
+		TimeFetcher:           chainService,
+		OptimisticModeFetcher: chainService,
 	}
-	_, err := vs.GetAttesterDuties(context.Background(), &ethpbv1.AttesterDutiesRequest{})
+	_, err = vs.GetAttesterDuties(context.Background(), &ethpbv1.AttesterDutiesRequest{})
 	assert.ErrorContains(t, "Syncing to latest head, not ready to respond", err)
 }
 
@@ -367,11 +366,11 @@ func TestGetProposerDuties(t *testing.T) {
 	t.Run("Epoch out of bound", func(t *testing.T) {
 		currentEpoch := slots.ToEpoch(bs.Slot())
 		req := &ethpbv1.ProposerDutiesRequest{
-			Epoch: currentEpoch + 1,
+			Epoch: currentEpoch + 2,
 		}
 		_, err := vs.GetProposerDuties(ctx, req)
 		require.NotNil(t, err)
-		assert.ErrorContains(t, fmt.Sprintf("Request epoch %d can not be greater than current epoch %d", currentEpoch+1, currentEpoch), err)
+		assert.ErrorContains(t, fmt.Sprintf("Request epoch %d can not be greater than next epoch %d", currentEpoch+2, currentEpoch+1), err)
 	})
 
 	t.Run("execution optimistic", func(t *testing.T) {
@@ -381,9 +380,7 @@ func TestGetProposerDuties(t *testing.T) {
 		blk.Block.Slot = 31
 		root, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
-		require.NoError(t, err)
-		require.NoError(t, db.SaveBlock(ctx, wsb))
+		util.SaveBlock(t, ctx, db, blk)
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
 		chainSlot := types.Slot(0)
@@ -406,13 +403,16 @@ func TestGetProposerDuties(t *testing.T) {
 }
 
 func TestGetProposerDuties_SyncNotReady(t *testing.T) {
-	chainService := &mockChain.ChainService{}
+	st, err := util.NewBeaconState()
+	require.NoError(t, err)
+	chainService := &mockChain.ChainService{State: st}
 	vs := &Server{
-		SyncChecker: &mockSync.Sync{IsSyncing: true},
-		HeadFetcher: chainService,
-		TimeFetcher: chainService,
+		SyncChecker:           &mockSync.Sync{IsSyncing: true},
+		HeadFetcher:           chainService,
+		TimeFetcher:           chainService,
+		OptimisticModeFetcher: chainService,
 	}
-	_, err := vs.GetProposerDuties(context.Background(), &ethpbv1.ProposerDutiesRequest{})
+	_, err = vs.GetProposerDuties(context.Background(), &ethpbv1.ProposerDutiesRequest{})
 	assert.ErrorContains(t, "Syncing to latest head, not ready to respond", err)
 }
 
@@ -569,7 +569,7 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 		}
 		require.NoError(t, newSyncPeriodSt.SetNextSyncCommittee(nextCommittee))
 
-		stateFetchFn := func(slot types.Slot) beaconState.BeaconState {
+		stateFetchFn := func(slot types.Slot) state.BeaconState {
 			if slot < newSyncPeriodStartSlot {
 				return st
 			} else {
@@ -607,9 +607,7 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 		blk.Block.ParentRoot = parentRoot[:]
 		root, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
-		require.NoError(t, err)
-		require.NoError(t, db.SaveBlock(ctx, wsb))
+		util.SaveBlock(t, ctx, db, blk)
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
 		mockChainService := &mockChain.ChainService{Genesis: genesisTime, Optimistic: true}
@@ -631,14 +629,16 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 }
 
 func TestGetSyncCommitteeDuties_SyncNotReady(t *testing.T) {
-	chainService := &mockChain.ChainService{}
+	st, err := util.NewBeaconState()
+	require.NoError(t, err)
+	chainService := &mockChain.ChainService{State: st}
 	vs := &Server{
 		SyncChecker:           &mockSync.Sync{IsSyncing: true},
 		HeadFetcher:           chainService,
 		TimeFetcher:           chainService,
 		OptimisticModeFetcher: chainService,
 	}
-	_, err := vs.GetSyncCommitteeDuties(context.Background(), &ethpbv2.SyncCommitteeDutiesRequest{})
+	_, err = vs.GetSyncCommitteeDuties(context.Background(), &ethpbv2.SyncCommitteeDutiesRequest{})
 	assert.ErrorContains(t, "Syncing to latest head, not ready to respond", err)
 }
 
@@ -661,29 +661,17 @@ func TestProduceBlock(t *testing.T) {
 
 	params.SetupTestConfigCleanup(t)
 	params.OverrideBeaconConfig(params.MainnetConfig())
-	beaconState, privKeys := util.DeterministicGenesisState(t, 64)
 
-	stateRoot, err := beaconState.HashTreeRoot(ctx)
-	require.NoError(t, err, "Could not hash genesis state")
-
-	genesis := blocks.NewGenesisBlock(stateRoot[:])
-	wsb, err := wrapper.WrappedSignedBeaconBlock(genesis)
-	require.NoError(t, err)
-	require.NoError(t, db.SaveBlock(ctx, wsb), "Could not save genesis block")
-
-	parentRoot, err := genesis.Block.HashTreeRoot()
-	require.NoError(t, err, "Could not get signing root")
-	require.NoError(t, db.SaveState(ctx, beaconState, parentRoot), "Could not save genesis state")
-	require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
+	beaconState, parentRoot, privKeys := util.DeterministicGenesisStateWithGenesisBlock(t, ctx, db, 64)
 
 	v1Alpha1Server := &v1alpha1validator.Server{
 		HeadFetcher:       &mockChain.ChainService{State: beaconState, Root: parentRoot[:]},
 		SyncChecker:       &mockSync.Sync{IsSyncing: false},
 		BlockReceiver:     &mockChain.ChainService{},
 		HeadUpdater:       &mockChain.ChainService{},
-		ChainStartFetcher: &mockPOW.POWChain{},
-		Eth1InfoFetcher:   &mockPOW.POWChain{},
-		Eth1BlockFetcher:  &mockPOW.POWChain{},
+		ChainStartFetcher: &mockExecution.Chain{},
+		Eth1InfoFetcher:   &mockExecution.Chain{},
+		Eth1BlockFetcher:  &mockExecution.Chain{},
 		MockEth1Votes:     true,
 		AttPool:           attestations.NewPool(),
 		SlashingsPool:     slashings.NewPool(),
@@ -751,13 +739,16 @@ func TestProduceBlock(t *testing.T) {
 }
 
 func TestProduceBlock_SyncNotReady(t *testing.T) {
-	chainService := &mockChain.ChainService{}
+	st, err := util.NewBeaconState()
+	require.NoError(t, err)
+	chainService := &mockChain.ChainService{State: st}
 	vs := &Server{
-		SyncChecker: &mockSync.Sync{IsSyncing: true},
-		HeadFetcher: chainService,
-		TimeFetcher: chainService,
+		SyncChecker:           &mockSync.Sync{IsSyncing: true},
+		HeadFetcher:           chainService,
+		TimeFetcher:           chainService,
+		OptimisticModeFetcher: chainService,
 	}
-	_, err := vs.ProduceBlock(context.Background(), &ethpbv1.ProduceBlockRequest{})
+	_, err = vs.ProduceBlock(context.Background(), &ethpbv1.ProduceBlockRequest{})
 	assert.ErrorContains(t, "Syncing to latest head, not ready to respond", err)
 }
 
@@ -766,29 +757,16 @@ func TestProduceBlockV2(t *testing.T) {
 		db := dbutil.SetupDB(t)
 		ctx := context.Background()
 
-		beaconState, privKeys := util.DeterministicGenesisState(t, 64)
-
-		stateRoot, err := beaconState.HashTreeRoot(ctx)
-		require.NoError(t, err, "Could not hash genesis state")
-
-		genesis := blocks.NewGenesisBlock(stateRoot[:])
-		wsb, err := wrapper.WrappedSignedBeaconBlock(genesis)
-		require.NoError(t, err)
-		require.NoError(t, db.SaveBlock(ctx, wsb), "Could not save genesis block")
-
-		parentRoot, err := genesis.Block.HashTreeRoot()
-		require.NoError(t, err, "Could not get signing root")
-		require.NoError(t, db.SaveState(ctx, beaconState, parentRoot), "Could not save genesis state")
-		require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
+		beaconState, parentRoot, privKeys := util.DeterministicGenesisStateWithGenesisBlock(t, ctx, db, 64)
 
 		v1Alpha1Server := &v1alpha1validator.Server{
 			HeadFetcher:       &mockChain.ChainService{State: beaconState, Root: parentRoot[:]},
 			SyncChecker:       &mockSync.Sync{IsSyncing: false},
 			BlockReceiver:     &mockChain.ChainService{},
 			HeadUpdater:       &mockChain.ChainService{},
-			ChainStartFetcher: &mockPOW.POWChain{},
-			Eth1InfoFetcher:   &mockPOW.POWChain{},
-			Eth1BlockFetcher:  &mockPOW.POWChain{},
+			ChainStartFetcher: &mockExecution.Chain{},
+			Eth1InfoFetcher:   &mockExecution.Chain{},
+			Eth1BlockFetcher:  &mockExecution.Chain{},
 			MockEth1Votes:     true,
 			AttPool:           attestations.NewPool(),
 			SlashingsPool:     slashings.NewPool(),
@@ -878,9 +856,7 @@ func TestProduceBlockV2(t *testing.T) {
 		require.NoError(t, err, "Could not hash genesis state")
 		genesisBlock := util.NewBeaconBlockAltair()
 		genesisBlock.Block.StateRoot = stateRoot[:]
-		wrappedAltairBlock, err := wrapper.WrappedSignedBeaconBlock(genesisBlock)
-		require.NoError(t, err)
-		require.NoError(t, db.SaveBlock(ctx, wrappedAltairBlock))
+		util.SaveBlock(t, ctx, db, genesisBlock)
 		parentRoot, err := genesisBlock.Block.HashTreeRoot()
 		require.NoError(t, err)
 
@@ -892,9 +868,9 @@ func TestProduceBlockV2(t *testing.T) {
 			SyncChecker:       &mockSync.Sync{IsSyncing: false},
 			BlockReceiver:     &mockChain.ChainService{},
 			HeadUpdater:       &mockChain.ChainService{},
-			ChainStartFetcher: &mockPOW.POWChain{},
-			Eth1InfoFetcher:   &mockPOW.POWChain{},
-			Eth1BlockFetcher:  &mockPOW.POWChain{},
+			ChainStartFetcher: &mockExecution.Chain{},
+			Eth1InfoFetcher:   &mockExecution.Chain{},
+			Eth1BlockFetcher:  &mockExecution.Chain{},
 			MockEth1Votes:     true,
 			AttPool:           attestations.NewPool(),
 			SlashingsPool:     slashings.NewPool(),
@@ -1022,9 +998,7 @@ func TestProduceBlockV2(t *testing.T) {
 		require.NoError(t, err, "Could not hash genesis state")
 		genesisBlock := util.NewBeaconBlockBellatrix()
 		genesisBlock.Block.StateRoot = stateRoot[:]
-		wrappedBellatrixBlock, err := wrapper.WrappedSignedBeaconBlock(genesisBlock)
-		require.NoError(t, err)
-		require.NoError(t, db.SaveBlock(ctx, wrappedBellatrixBlock))
+		util.SaveBlock(t, ctx, db, genesisBlock)
 		parentRoot, err := genesisBlock.Block.HashTreeRoot()
 		require.NoError(t, err)
 
@@ -1032,7 +1006,7 @@ func TestProduceBlockV2(t *testing.T) {
 		require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
 
 		v1Alpha1Server := &v1alpha1validator.Server{
-			ExecutionEngineCaller: &mockPOW.EngineClient{
+			ExecutionEngineCaller: &mockExecution.EngineClient{
 				ExecutionBlock: &enginev1.ExecutionBlock{
 					TotalDifficulty: "0x1",
 				},
@@ -1043,9 +1017,9 @@ func TestProduceBlockV2(t *testing.T) {
 			SyncChecker:            &mockSync.Sync{IsSyncing: false},
 			BlockReceiver:          &mockChain.ChainService{},
 			HeadUpdater:            &mockChain.ChainService{},
-			ChainStartFetcher:      &mockPOW.POWChain{},
-			Eth1InfoFetcher:        &mockPOW.POWChain{},
-			Eth1BlockFetcher:       &mockPOW.POWChain{},
+			ChainStartFetcher:      &mockExecution.Chain{},
+			Eth1InfoFetcher:        &mockExecution.Chain{},
+			Eth1BlockFetcher:       &mockExecution.Chain{},
 			MockEth1Votes:          true,
 			AttPool:                attestations.NewPool(),
 			SlashingsPool:          slashings.NewPool(),
@@ -1160,29 +1134,16 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 
 		db := dbutil.SetupDB(t)
 
-		bs, privKeys := util.DeterministicGenesisState(t, 2)
-
-		stateRoot, err := bs.HashTreeRoot(ctx)
-		require.NoError(t, err, "Could not hash genesis state")
-
-		genesis := blocks.NewGenesisBlock(stateRoot[:])
-		wsb, err := wrapper.WrappedSignedBeaconBlock(genesis)
-		require.NoError(t, err)
-		require.NoError(t, db.SaveBlock(ctx, wsb), "Could not save genesis block")
-
-		parentRoot, err := genesis.Block.HashTreeRoot()
-		require.NoError(t, err, "Could not get signing root")
-		require.NoError(t, db.SaveState(ctx, bs, parentRoot), "Could not save genesis state")
-		require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
+		bs, parentRoot, privKeys := util.DeterministicGenesisStateWithGenesisBlock(t, ctx, db, 2)
 
 		v1Alpha1Server := &v1alpha1validator.Server{
 			HeadFetcher:       &mockChain.ChainService{State: bs, Root: parentRoot[:]},
 			SyncChecker:       &mockSync.Sync{IsSyncing: false},
 			BlockReceiver:     &mockChain.ChainService{},
 			HeadUpdater:       &mockChain.ChainService{},
-			ChainStartFetcher: &mockPOW.POWChain{},
-			Eth1InfoFetcher:   &mockPOW.POWChain{},
-			Eth1BlockFetcher:  &mockPOW.POWChain{},
+			ChainStartFetcher: &mockExecution.Chain{},
+			Eth1InfoFetcher:   &mockExecution.Chain{},
+			Eth1BlockFetcher:  &mockExecution.Chain{},
 			MockEth1Votes:     true,
 			AttPool:           attestations.NewPool(),
 			SlashingsPool:     slashings.NewPool(),
@@ -1329,9 +1290,7 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 		require.NoError(t, err, "Could not hash genesis state")
 		genesisBlock := util.NewBeaconBlockAltair()
 		genesisBlock.Block.StateRoot = stateRoot[:]
-		wrappedAltairBlock, err := wrapper.WrappedSignedBeaconBlock(genesisBlock)
-		require.NoError(t, err)
-		require.NoError(t, db.SaveBlock(ctx, wrappedAltairBlock))
+		util.SaveBlock(t, ctx, db, genesisBlock)
 		parentRoot, err := genesisBlock.Block.HashTreeRoot()
 		require.NoError(t, err)
 
@@ -1343,9 +1302,9 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 			SyncChecker:       &mockSync.Sync{IsSyncing: false},
 			BlockReceiver:     &mockChain.ChainService{},
 			HeadUpdater:       &mockChain.ChainService{},
-			ChainStartFetcher: &mockPOW.POWChain{},
-			Eth1InfoFetcher:   &mockPOW.POWChain{},
-			Eth1BlockFetcher:  &mockPOW.POWChain{},
+			ChainStartFetcher: &mockExecution.Chain{},
+			Eth1InfoFetcher:   &mockExecution.Chain{},
+			Eth1BlockFetcher:  &mockExecution.Chain{},
 			MockEth1Votes:     true,
 			AttPool:           attestations.NewPool(),
 			SlashingsPool:     slashings.NewPool(),
@@ -1528,9 +1487,7 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 		require.NoError(t, err, "Could not hash genesis state")
 		genesisBlock := util.NewBeaconBlockBellatrix()
 		genesisBlock.Block.StateRoot = stateRoot[:]
-		wrappedBellatrixBlock, err := wrapper.WrappedSignedBeaconBlock(genesisBlock)
-		require.NoError(t, err)
-		require.NoError(t, db.SaveBlock(ctx, wrappedBellatrixBlock))
+		util.SaveBlock(t, ctx, db, genesisBlock)
 		parentRoot, err := genesisBlock.Block.HashTreeRoot()
 		require.NoError(t, err)
 
@@ -1538,7 +1495,7 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 		require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
 
 		v1Alpha1Server := &v1alpha1validator.Server{
-			ExecutionEngineCaller: &mockPOW.EngineClient{
+			ExecutionEngineCaller: &mockExecution.EngineClient{
 				ExecutionBlock: &enginev1.ExecutionBlock{
 					TotalDifficulty: "0x1",
 				},
@@ -1549,9 +1506,9 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 			SyncChecker:            &mockSync.Sync{IsSyncing: false},
 			BlockReceiver:          &mockChain.ChainService{},
 			HeadUpdater:            &mockChain.ChainService{},
-			ChainStartFetcher:      &mockPOW.POWChain{},
-			Eth1InfoFetcher:        &mockPOW.POWChain{},
-			Eth1BlockFetcher:       &mockPOW.POWChain{},
+			ChainStartFetcher:      &mockExecution.Chain{},
+			Eth1InfoFetcher:        &mockExecution.Chain{},
+			Eth1BlockFetcher:       &mockExecution.Chain{},
 			MockEth1Votes:          true,
 			AttPool:                attestations.NewPool(),
 			SlashingsPool:          slashings.NewPool(),
@@ -1728,24 +1685,30 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 }
 
 func TestProduceBlockV2_SyncNotReady(t *testing.T) {
-	chainService := &mockChain.ChainService{}
+	st, err := util.NewBeaconState()
+	require.NoError(t, err)
+	chainService := &mockChain.ChainService{State: st}
 	vs := &Server{
-		SyncChecker: &mockSync.Sync{IsSyncing: true},
-		HeadFetcher: chainService,
-		TimeFetcher: chainService,
+		SyncChecker:           &mockSync.Sync{IsSyncing: true},
+		HeadFetcher:           chainService,
+		TimeFetcher:           chainService,
+		OptimisticModeFetcher: chainService,
 	}
-	_, err := vs.ProduceBlockV2(context.Background(), &ethpbv1.ProduceBlockRequest{})
+	_, err = vs.ProduceBlockV2(context.Background(), &ethpbv1.ProduceBlockRequest{})
 	assert.ErrorContains(t, "Syncing to latest head, not ready to respond", err)
 }
 
 func TestProduceBlockV2SSZ_SyncNotReady(t *testing.T) {
-	chainService := &mockChain.ChainService{}
+	st, err := util.NewBeaconState()
+	require.NoError(t, err)
+	chainService := &mockChain.ChainService{State: st}
 	vs := &Server{
-		SyncChecker: &mockSync.Sync{IsSyncing: true},
-		HeadFetcher: chainService,
-		TimeFetcher: chainService,
+		SyncChecker:           &mockSync.Sync{IsSyncing: true},
+		HeadFetcher:           chainService,
+		TimeFetcher:           chainService,
+		OptimisticModeFetcher: chainService,
 	}
-	_, err := vs.ProduceBlockV2SSZ(context.Background(), &ethpbv1.ProduceBlockRequest{})
+	_, err = vs.ProduceBlockV2SSZ(context.Background(), &ethpbv1.ProduceBlockRequest{})
 	assert.ErrorContains(t, "Syncing to latest head, not ready to respond", err)
 }
 
@@ -1754,29 +1717,16 @@ func TestProduceBlindedBlock(t *testing.T) {
 		db := dbutil.SetupDB(t)
 		ctx := context.Background()
 
-		beaconState, privKeys := util.DeterministicGenesisState(t, 64)
-
-		stateRoot, err := beaconState.HashTreeRoot(ctx)
-		require.NoError(t, err, "Could not hash genesis state")
-
-		genesis := blocks.NewGenesisBlock(stateRoot[:])
-		wrapped, err := wrapper.WrappedSignedBeaconBlock(genesis)
-		require.NoError(t, err)
-		require.NoError(t, db.SaveBlock(ctx, wrapped), "Could not save genesis block")
-
-		parentRoot, err := genesis.Block.HashTreeRoot()
-		require.NoError(t, err, "Could not get signing root")
-		require.NoError(t, db.SaveState(ctx, beaconState, parentRoot), "Could not save genesis state")
-		require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
+		beaconState, parentRoot, privKeys := util.DeterministicGenesisStateWithGenesisBlock(t, ctx, db, 64)
 
 		v1Alpha1Server := &v1alpha1validator.Server{
 			HeadFetcher:       &mockChain.ChainService{State: beaconState, Root: parentRoot[:]},
 			SyncChecker:       &mockSync.Sync{IsSyncing: false},
 			BlockReceiver:     &mockChain.ChainService{},
 			HeadUpdater:       &mockChain.ChainService{},
-			ChainStartFetcher: &mockPOW.POWChain{},
-			Eth1InfoFetcher:   &mockPOW.POWChain{},
-			Eth1BlockFetcher:  &mockPOW.POWChain{},
+			ChainStartFetcher: &mockExecution.Chain{},
+			Eth1InfoFetcher:   &mockExecution.Chain{},
+			Eth1BlockFetcher:  &mockExecution.Chain{},
 			MockEth1Votes:     true,
 			AttPool:           attestations.NewPool(),
 			SlashingsPool:     slashings.NewPool(),
@@ -1866,10 +1816,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 		require.NoError(t, err, "Could not hash genesis state")
 		genesisBlock := util.NewBeaconBlockAltair()
 		genesisBlock.Block.StateRoot = stateRoot[:]
-		wrappedAltairBlock, err := wrapper.WrappedSignedBeaconBlock(genesisBlock)
-		require.NoError(t, err)
-		require.NoError(t, err)
-		require.NoError(t, db.SaveBlock(ctx, wrappedAltairBlock))
+		util.SaveBlock(t, ctx, db, genesisBlock)
 		parentRoot, err := genesisBlock.Block.HashTreeRoot()
 		require.NoError(t, err)
 
@@ -1881,9 +1828,9 @@ func TestProduceBlindedBlock(t *testing.T) {
 			SyncChecker:       &mockSync.Sync{IsSyncing: false},
 			BlockReceiver:     &mockChain.ChainService{},
 			HeadUpdater:       &mockChain.ChainService{},
-			ChainStartFetcher: &mockPOW.POWChain{},
-			Eth1InfoFetcher:   &mockPOW.POWChain{},
-			Eth1BlockFetcher:  &mockPOW.POWChain{},
+			ChainStartFetcher: &mockExecution.Chain{},
+			Eth1InfoFetcher:   &mockExecution.Chain{},
+			Eth1BlockFetcher:  &mockExecution.Chain{},
 			MockEth1Votes:     true,
 			AttPool:           attestations.NewPool(),
 			SlashingsPool:     slashings.NewPool(),
@@ -2011,9 +1958,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 		require.NoError(t, err, "Could not hash genesis state")
 		genesisBlock := util.NewBeaconBlockBellatrix()
 		genesisBlock.Block.StateRoot = stateRoot[:]
-		wrappedBellatrixBlock, err := wrapper.WrappedSignedBeaconBlock(genesisBlock)
-		require.NoError(t, err)
-		require.NoError(t, db.SaveBlock(ctx, wrappedBellatrixBlock))
+		util.SaveBlock(t, ctx, db, genesisBlock)
 		parentRoot, err := genesisBlock.Block.HashTreeRoot()
 		require.NoError(t, err)
 
@@ -2021,7 +1966,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 		require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
 
 		v1Alpha1Server := &v1alpha1validator.Server{
-			ExecutionEngineCaller: &mockPOW.EngineClient{
+			ExecutionEngineCaller: &mockExecution.EngineClient{
 				ExecutionBlock: &enginev1.ExecutionBlock{
 					TotalDifficulty: "0x1",
 				},
@@ -2032,9 +1977,9 @@ func TestProduceBlindedBlock(t *testing.T) {
 			SyncChecker:            &mockSync.Sync{IsSyncing: false},
 			BlockReceiver:          &mockChain.ChainService{},
 			HeadUpdater:            &mockChain.ChainService{},
-			ChainStartFetcher:      &mockPOW.POWChain{},
-			Eth1InfoFetcher:        &mockPOW.POWChain{},
-			Eth1BlockFetcher:       &mockPOW.POWChain{},
+			ChainStartFetcher:      &mockExecution.Chain{},
+			Eth1InfoFetcher:        &mockExecution.Chain{},
+			Eth1BlockFetcher:       &mockExecution.Chain{},
 			MockEth1Votes:          true,
 			AttPool:                attestations.NewPool(),
 			SlashingsPool:          slashings.NewPool(),
@@ -2149,29 +2094,16 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 
 		db := dbutil.SetupDB(t)
 
-		bs, privKeys := util.DeterministicGenesisState(t, 2)
-
-		stateRoot, err := bs.HashTreeRoot(ctx)
-		require.NoError(t, err, "Could not hash genesis state")
-
-		genesis := blocks.NewGenesisBlock(stateRoot[:])
-		wsb, err := wrapper.WrappedSignedBeaconBlock(genesis)
-		require.NoError(t, err)
-		require.NoError(t, db.SaveBlock(ctx, wsb), "Could not save genesis block")
-
-		parentRoot, err := genesis.Block.HashTreeRoot()
-		require.NoError(t, err, "Could not get signing root")
-		require.NoError(t, db.SaveState(ctx, bs, parentRoot), "Could not save genesis state")
-		require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
+		bs, parentRoot, privKeys := util.DeterministicGenesisStateWithGenesisBlock(t, ctx, db, 2)
 
 		v1Alpha1Server := &v1alpha1validator.Server{
 			HeadFetcher:       &mockChain.ChainService{State: bs, Root: parentRoot[:]},
 			SyncChecker:       &mockSync.Sync{IsSyncing: false},
 			BlockReceiver:     &mockChain.ChainService{},
 			HeadUpdater:       &mockChain.ChainService{},
-			ChainStartFetcher: &mockPOW.POWChain{},
-			Eth1InfoFetcher:   &mockPOW.POWChain{},
-			Eth1BlockFetcher:  &mockPOW.POWChain{},
+			ChainStartFetcher: &mockExecution.Chain{},
+			Eth1InfoFetcher:   &mockExecution.Chain{},
+			Eth1BlockFetcher:  &mockExecution.Chain{},
 			MockEth1Votes:     true,
 			AttPool:           attestations.NewPool(),
 			SlashingsPool:     slashings.NewPool(),
@@ -2318,9 +2250,7 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 		require.NoError(t, err, "Could not hash genesis state")
 		genesisBlock := util.NewBeaconBlockAltair()
 		genesisBlock.Block.StateRoot = stateRoot[:]
-		wrappedAltairBlock, err := wrapper.WrappedSignedBeaconBlock(genesisBlock)
-		require.NoError(t, err)
-		require.NoError(t, db.SaveBlock(ctx, wrappedAltairBlock))
+		util.SaveBlock(t, ctx, db, genesisBlock)
 		parentRoot, err := genesisBlock.Block.HashTreeRoot()
 		require.NoError(t, err)
 
@@ -2332,9 +2262,9 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 			SyncChecker:       &mockSync.Sync{IsSyncing: false},
 			BlockReceiver:     &mockChain.ChainService{},
 			HeadUpdater:       &mockChain.ChainService{},
-			ChainStartFetcher: &mockPOW.POWChain{},
-			Eth1InfoFetcher:   &mockPOW.POWChain{},
-			Eth1BlockFetcher:  &mockPOW.POWChain{},
+			ChainStartFetcher: &mockExecution.Chain{},
+			Eth1InfoFetcher:   &mockExecution.Chain{},
+			Eth1BlockFetcher:  &mockExecution.Chain{},
 			MockEth1Votes:     true,
 			AttPool:           attestations.NewPool(),
 			SlashingsPool:     slashings.NewPool(),
@@ -2517,9 +2447,7 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 		require.NoError(t, err, "Could not hash genesis state")
 		genesisBlock := util.NewBeaconBlockBellatrix()
 		genesisBlock.Block.StateRoot = stateRoot[:]
-		wrappedBellatrixBlock, err := wrapper.WrappedSignedBeaconBlock(genesisBlock)
-		require.NoError(t, err)
-		require.NoError(t, db.SaveBlock(ctx, wrappedBellatrixBlock))
+		util.SaveBlock(t, ctx, db, genesisBlock)
 		parentRoot, err := genesisBlock.Block.HashTreeRoot()
 		require.NoError(t, err)
 
@@ -2527,7 +2455,7 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 		require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
 
 		v1Alpha1Server := &v1alpha1validator.Server{
-			ExecutionEngineCaller: &mockPOW.EngineClient{
+			ExecutionEngineCaller: &mockExecution.EngineClient{
 				ExecutionBlock: &enginev1.ExecutionBlock{
 					TotalDifficulty: "0x1",
 				},
@@ -2538,9 +2466,9 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 			SyncChecker:            &mockSync.Sync{IsSyncing: false},
 			BlockReceiver:          &mockChain.ChainService{},
 			HeadUpdater:            &mockChain.ChainService{},
-			ChainStartFetcher:      &mockPOW.POWChain{},
-			Eth1InfoFetcher:        &mockPOW.POWChain{},
-			Eth1BlockFetcher:       &mockPOW.POWChain{},
+			ChainStartFetcher:      &mockExecution.Chain{},
+			Eth1InfoFetcher:        &mockExecution.Chain{},
+			Eth1BlockFetcher:       &mockExecution.Chain{},
 			MockEth1Votes:          true,
 			AttPool:                attestations.NewPool(),
 			SlashingsPool:          slashings.NewPool(),
@@ -2717,24 +2645,30 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 }
 
 func TestProduceBlindedBlock_SyncNotReady(t *testing.T) {
-	chainService := &mockChain.ChainService{}
+	st, err := util.NewBeaconState()
+	require.NoError(t, err)
+	chainService := &mockChain.ChainService{State: st}
 	vs := &Server{
-		SyncChecker: &mockSync.Sync{IsSyncing: true},
-		HeadFetcher: chainService,
-		TimeFetcher: chainService,
+		SyncChecker:           &mockSync.Sync{IsSyncing: true},
+		HeadFetcher:           chainService,
+		TimeFetcher:           chainService,
+		OptimisticModeFetcher: chainService,
 	}
-	_, err := vs.ProduceBlindedBlock(context.Background(), &ethpbv1.ProduceBlockRequest{})
+	_, err = vs.ProduceBlindedBlock(context.Background(), &ethpbv1.ProduceBlockRequest{})
 	assert.ErrorContains(t, "Syncing to latest head, not ready to respond", err)
 }
 
 func TestProduceBlindedBlockSSZ_SyncNotReady(t *testing.T) {
-	chainService := &mockChain.ChainService{}
+	st, err := util.NewBeaconState()
+	require.NoError(t, err)
+	chainService := &mockChain.ChainService{State: st}
 	vs := &Server{
-		SyncChecker: &mockSync.Sync{IsSyncing: true},
-		HeadFetcher: chainService,
-		TimeFetcher: chainService,
+		SyncChecker:           &mockSync.Sync{IsSyncing: true},
+		HeadFetcher:           chainService,
+		TimeFetcher:           chainService,
+		OptimisticModeFetcher: chainService,
 	}
-	_, err := vs.ProduceBlindedBlockSSZ(context.Background(), &ethpbv1.ProduceBlockRequest{})
+	_, err = vs.ProduceBlindedBlockSSZ(context.Background(), &ethpbv1.ProduceBlockRequest{})
 	assert.ErrorContains(t, "Syncing to latest head, not ready to respond", err)
 }
 
@@ -3100,13 +3034,16 @@ func TestSubmitBeaconCommitteeSubscription(t *testing.T) {
 }
 
 func TestSubmitBeaconCommitteeSubscription_SyncNotReady(t *testing.T) {
-	chainService := &mockChain.ChainService{}
+	st, err := util.NewBeaconState()
+	require.NoError(t, err)
+	chainService := &mockChain.ChainService{State: st}
 	vs := &Server{
-		SyncChecker: &mockSync.Sync{IsSyncing: true},
-		HeadFetcher: chainService,
-		TimeFetcher: chainService,
+		SyncChecker:           &mockSync.Sync{IsSyncing: true},
+		HeadFetcher:           chainService,
+		TimeFetcher:           chainService,
+		OptimisticModeFetcher: chainService,
 	}
-	_, err := vs.SubmitBeaconCommitteeSubscription(context.Background(), &ethpbv1.SubmitBeaconCommitteeSubscriptionsRequest{})
+	_, err = vs.SubmitBeaconCommitteeSubscription(context.Background(), &ethpbv1.SubmitBeaconCommitteeSubscriptionsRequest{})
 	assert.ErrorContains(t, "Syncing to latest head, not ready to respond", err)
 }
 
@@ -3256,13 +3193,16 @@ func TestSubmitSyncCommitteeSubscription(t *testing.T) {
 }
 
 func TestSubmitSyncCommitteeSubscription_SyncNotReady(t *testing.T) {
-	chainService := &mockChain.ChainService{}
+	st, err := util.NewBeaconState()
+	require.NoError(t, err)
+	chainService := &mockChain.ChainService{State: st}
 	vs := &Server{
-		SyncChecker: &mockSync.Sync{IsSyncing: true},
-		HeadFetcher: chainService,
-		TimeFetcher: chainService,
+		SyncChecker:           &mockSync.Sync{IsSyncing: true},
+		HeadFetcher:           chainService,
+		TimeFetcher:           chainService,
+		OptimisticModeFetcher: chainService,
 	}
-	_, err := vs.SubmitSyncCommitteeSubscription(context.Background(), &ethpbv2.SubmitSyncCommitteeSubscriptionsRequest{})
+	_, err = vs.SubmitSyncCommitteeSubscription(context.Background(), &ethpbv2.SubmitSyncCommitteeSubscriptionsRequest{})
 	assert.ErrorContains(t, "Syncing to latest head, not ready to respond", err)
 }
 

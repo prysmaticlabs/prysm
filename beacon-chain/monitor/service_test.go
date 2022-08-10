@@ -13,8 +13,8 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -66,17 +66,17 @@ func setupService(t *testing.T) *Service {
 	}
 	aggregatedPerformance := map[types.ValidatorIndex]ValidatorAggregatedPerformance{
 		1: {
-			startEpoch:                     0,
-			startBalance:                   31700000000,
-			totalAttestedCount:             12,
-			totalRequestedCount:            15,
-			totalDistance:                  14,
-			totalCorrectHead:               8,
-			totalCorrectSource:             11,
-			totalCorrectTarget:             12,
-			totalProposedCount:             1,
-			totalSyncComitteeContributions: 0,
-			totalSyncComitteeAggregations:  0,
+			startEpoch:                      0,
+			startBalance:                    31700000000,
+			totalAttestedCount:              12,
+			totalRequestedCount:             15,
+			totalDistance:                   14,
+			totalCorrectHead:                8,
+			totalCorrectSource:              11,
+			totalCorrectTarget:              12,
+			totalProposedCount:              1,
+			totalSyncCommitteeContributions: 0,
+			totalSyncCommitteeAggregations:  0,
 		},
 		2:  {},
 		12: {},
@@ -172,7 +172,9 @@ func TestStart(t *testing.T) {
 	time.Sleep(1000 * time.Millisecond)
 	require.LogsContain(t, hook, "Synced to head epoch, starting reporting performance")
 	require.LogsContain(t, hook, "\"Starting service\" ValidatorIndices=\"[1 2 12 15]\"")
+	s.Lock()
 	require.Equal(t, s.isLogging, true, "monitor is not running")
+	s.Unlock()
 }
 
 func TestInitializePerformanceStructures(t *testing.T) {
@@ -244,7 +246,7 @@ func TestMonitorRoutine(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, s.config.StateGen.SaveState(ctx, root, genesis))
 
-	wrapped, err := wrapper.WrappedSignedBeaconBlock(block)
+	wrapped, err := blocks.NewSignedBeaconBlock(block)
 	require.NoError(t, err)
 
 	stateChannel <- &feed.Event{

@@ -88,10 +88,10 @@ http_archive(
         # Expose internals of go_test for custom build transitions.
         "//third_party:io_bazel_rules_go_test.patch",
     ],
-    sha256 = "f2dcd210c7095febe54b804bb1cd3a58fe8435a909db2ec04e31542631cf715c",
+    sha256 = "16e9fca53ed6bd4ff4ad76facc9b7b651a89db1689a2877d6fd7b82aa824e366",
     urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.31.0/rules_go-v0.31.0.zip",
-        "https://github.com/bazelbuild/rules_go/releases/download/v0.31.0/rules_go-v0.31.0.zip",
+        "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.34.0/rules_go-v0.34.0.zip",
+        "https://github.com/bazelbuild/rules_go/releases/download/v0.34.0/rules_go-v0.34.0.zip",
     ],
 )
 
@@ -176,7 +176,7 @@ load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_depe
 go_rules_dependencies()
 
 go_register_toolchains(
-    go_version = "1.18.1",
+    go_version = "1.18.5",
     nogo = "@//:nogo",
 )
 
@@ -309,9 +309,9 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "4e8a18b21d056c4032605621b1a6632198eabab57cb90c61e273f344c287f1b2",
-    strip_prefix = "eth2-networks-791a5369c5981e829698b17fbcdcdacbdaba97c8",
-    url = "https://github.com/eth-clients/eth2-networks/archive/791a5369c5981e829698b17fbcdcdacbdaba97c8.tar.gz",
+    sha256 = "126b615e3853e29b61f082f6c89c8bc1c38cd92fb84b0004396fc49e7acc8d9f",
+    strip_prefix = "eth2-networks-f3ccbe0cf5798d5cd23e4e6e7119aefa043c0935",
+    url = "https://github.com/eth-clients/eth2-networks/archive/f3ccbe0cf5798d5cd23e4e6e7119aefa043c0935.tar.gz",
 )
 
 http_archive(
@@ -342,9 +342,9 @@ filegroup(
     visibility = ["//visibility:public"],
 )
 """,
-    sha256 = "4797a7e594a5b1f4c1c8080701613f3ee451b01ec0861499ea7d9b60877a6b23",
+    sha256 = "98013b40922e54a64996da49b939e0a88fe2456f68eedc5aee4ceba0f8623f71",
     urls = [
-        "https://github.com/prysmaticlabs/prysm-web-ui/releases/download/v1.0.3/prysm-web-ui.tar.gz",
+        "https://github.com/prysmaticlabs/prysm-web-ui/releases/download/v2.0.0/prysm-web-ui.tar.gz",
     ],
 )
 

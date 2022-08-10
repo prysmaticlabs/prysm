@@ -1,9 +1,9 @@
 package types
 
 import (
-	fmt "fmt"
+	"fmt"
 
-	fssz "github.com/ferranbt/fastssz"
+	fssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/math"
 )
 

@@ -76,6 +76,8 @@ func TotalActiveBalance(s state.ReadOnlyBeaconState) (uint64, error) {
 		return 0, err
 	}
 
+	// Spec defines `EffectiveBalanceIncrement` as min to avoid divisions by zero.
+	total = mathutil.Max(params.BeaconConfig().EffectiveBalanceIncrement, total)
 	if err := balanceCache.AddTotalEffectiveBalance(s, total); err != nil {
 		return 0, err
 	}

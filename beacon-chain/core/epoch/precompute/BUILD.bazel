@@ -39,6 +39,7 @@ go_test(
         "attestation_test.go",
         "justification_finalization_test.go",
         "new_test.go",
+        "precompute_test.go",
         "reward_penalty_test.go",
         "slashing_test.go",
     ],

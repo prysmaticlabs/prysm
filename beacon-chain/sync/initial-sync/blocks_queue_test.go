@@ -14,9 +14,9 @@ import (
 	p2pt "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	beaconsync "github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/container/slice"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -521,14 +521,16 @@ func TestBlocksQueue_onDataReceivedEvent(t *testing.T) {
 			chain:               mc,
 			highestExpectedSlot: types.Slot(blockBatchLimit),
 		})
-		wsb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+		wsb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 		require.NoError(t, err)
 		handlerFn := queue.onDataReceivedEvent(ctx)
+		wsbCopy, err := wsb.Copy()
+		require.NoError(t, err)
 		response := &fetchRequestResponse{
 			pid: "abc",
 			blocks: []interfaces.SignedBeaconBlock{
 				wsb,
-				wsb.Copy(),
+				wsbCopy,
 			},
 		}
 		fsm := &stateMachine{
@@ -618,7 +620,7 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 			chain:               mc,
 			highestExpectedSlot: types.Slot(blockBatchLimit),
 		})
-		wsb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+		wsb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 		require.NoError(t, err)
 		queue.smm.addStateMachine(256)
 		queue.smm.addStateMachine(320)
@@ -645,7 +647,7 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 			chain:               mc,
 			highestExpectedSlot: types.Slot(blockBatchLimit),
 		})
-		wsb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+		wsb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 		require.NoError(t, err)
 		queue.smm.addStateMachine(128)
 		queue.smm.machines[128].state = stateNew
@@ -678,7 +680,7 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 			chain:               mc,
 			highestExpectedSlot: types.Slot(blockBatchLimit),
 		})
-		wsb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+		wsb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 		require.NoError(t, err)
 		queue.smm.addStateMachine(256)
 		queue.smm.machines[256].state = stateSkipped
@@ -1045,9 +1047,7 @@ func TestBlocksQueue_stuckInUnfavourableFork(t *testing.T) {
 	finalizedEpoch := slots.ToEpoch(finalizedSlot)
 
 	genesisBlock := chain1[0]
-	wsb, err := wrapper.WrappedSignedBeaconBlock(genesisBlock)
-	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveBlock(context.Background(), wsb))
+	util.SaveBlock(t, context.Background(), beaconDB, genesisBlock)
 	genesisRoot, err := genesisBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -1089,9 +1089,7 @@ func TestBlocksQueue_stuckInUnfavourableFork(t *testing.T) {
 		parentRoot := bytesutil.ToBytes32(blk.Block.ParentRoot)
 		// Save block only if parent root is already in database or cache.
 		if beaconDB.HasBlock(ctx, parentRoot) || mc.HasBlock(ctx, parentRoot) {
-			wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
-			require.NoError(t, err)
-			require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
+			util.SaveBlock(t, ctx, beaconDB, blk)
 			require.NoError(t, st.SetSlot(blk.Block.Slot))
 		}
 	}
@@ -1250,9 +1248,7 @@ func TestBlocksQueue_stuckWhenHeadIsSetToOrphanedBlock(t *testing.T) {
 	finalizedEpoch := slots.ToEpoch(finalizedSlot)
 
 	genesisBlock := chain[0]
-	wsb, err := wrapper.WrappedSignedBeaconBlock(genesisBlock)
-	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveBlock(context.Background(), wsb))
+	util.SaveBlock(t, context.Background(), beaconDB, genesisBlock)
 	genesisRoot, err := genesisBlock.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -1275,9 +1271,7 @@ func TestBlocksQueue_stuckWhenHeadIsSetToOrphanedBlock(t *testing.T) {
 		parentRoot := bytesutil.ToBytes32(blk.Block.ParentRoot)
 		// Save block only if parent root is already in database or cache.
 		if beaconDB.HasBlock(ctx, parentRoot) || mc.HasBlock(ctx, parentRoot) {
-			wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
-			require.NoError(t, err)
-			require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
+			util.SaveBlock(t, ctx, beaconDB, blk)
 			require.NoError(t, st.SetSlot(blk.Block.Slot))
 		}
 	}
@@ -1289,9 +1283,7 @@ func TestBlocksQueue_stuckWhenHeadIsSetToOrphanedBlock(t *testing.T) {
 	orphanedBlock := util.NewBeaconBlock()
 	orphanedBlock.Block.Slot = 85
 	orphanedBlock.Block.StateRoot = util.Random32Bytes(t)
-	wsb, err = wrapper.WrappedSignedBeaconBlock(orphanedBlock)
-	require.NoError(t, err)
-	require.NoError(t, beaconDB.SaveBlock(ctx, wsb))
+	util.SaveBlock(t, ctx, beaconDB, orphanedBlock)
 	require.NoError(t, st.SetSlot(orphanedBlock.Block.Slot))
 	require.Equal(t, types.Slot(85), mc.HeadSlot())
 
@@ -1321,8 +1313,7 @@ func TestBlocksQueue_stuckWhenHeadIsSetToOrphanedBlock(t *testing.T) {
 
 	require.NoError(t, queue.start())
 	isProcessedBlock := func(ctx context.Context, blk interfaces.SignedBeaconBlock, blkRoot [32]byte) bool {
-		cp, err := mc.FinalizedCheckpt()
-		require.NoError(t, err)
+		cp := mc.FinalizedCheckpt()
 		finalizedSlot, err := slots.EpochStart(cp.Epoch)
 		if err != nil {
 			return false

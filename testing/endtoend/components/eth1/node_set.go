@@ -110,3 +110,11 @@ func (s *NodeSet) StopAtIndex(i int) error {
 	}
 	return s.nodes[i].Stop()
 }
+
+// ComponentAtIndex returns the component at the provided index.
+func (s *NodeSet) ComponentAtIndex(i int) (e2etypes.ComponentRunner, error) {
+	if i >= len(s.nodes) {
+		return nil, errors.Errorf("provided index exceeds slice size: %d >= %d", i, len(s.nodes))
+	}
+	return s.nodes[i], nil
+}

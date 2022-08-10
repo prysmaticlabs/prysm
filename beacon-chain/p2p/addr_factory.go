@@ -23,7 +23,7 @@ func withRelayAddrs(relay string) config.AddrsFactory {
 			}
 			relayAddr, err := ma.NewMultiaddr(relay + "/p2p-circuit" + a.String())
 			if err != nil {
-				log.Errorf("Failed to create multiaddress for relay node: %v", err)
+				log.WithError(err).Error("Failed to create multiaddress for relay node")
 			} else {
 				relayAddrs = append(relayAddrs, relayAddr)
 			}

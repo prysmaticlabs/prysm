@@ -39,7 +39,10 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.SignedBeaco
 	ctx, span := trace.StartSpan(ctx, "blockChain.ReceiveBlock")
 	defer span.End()
 	receivedTime := time.Now()
-	blockCopy := block.Copy()
+	blockCopy, err := block.Copy()
+	if err != nil {
+		return err
+	}
 
 	// Apply state transition on the new block.
 	if err := s.onBlock(ctx, blockCopy, blockRoot); err != nil {
@@ -59,23 +62,21 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.SignedBeaco
 	}
 
 	// Reports on block and fork choice metrics.
-	justified, err := s.store.JustifiedCheckpt()
-	if err != nil {
-		return err
-	}
-	finalized, err := s.store.FinalizedCheckpt()
-	if err != nil {
-		return errNilFinalizedInStore
-	}
+	finalized := s.FinalizedCheckpt()
 	reportSlotMetrics(blockCopy.Block().Slot(), s.HeadSlot(), s.CurrentSlot(), finalized)
 
 	// Log block sync status.
+	justified := s.CurrentJustifiedCheckpt()
 	if err := logBlockSyncStatus(blockCopy.Block(), blockRoot, justified, finalized, receivedTime, uint64(s.genesisTime.Unix())); err != nil {
-		return err
+		log.WithError(err).Error("Unable to log block sync status")
+	}
+	// Log payload data
+	if err := logPayload(blockCopy.Block()); err != nil {
+		log.WithError(err).Error("Unable to log debug block payload data")
 	}
 	// Log state transition data.
 	if err := logStateTransitionData(blockCopy.Block()); err != nil {
-		return err
+		log.WithError(err).Error("Unable to log state transition data")
 	}
 
 	return nil
@@ -96,7 +97,10 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []interfaces.Sig
 	}
 
 	for i, b := range blocks {
-		blockCopy := b.Copy()
+		blockCopy, err := b.Copy()
+		if err != nil {
+			return err
+		}
 		// Send notification of the processed block to the state feed.
 		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.BlockProcessed,
@@ -109,20 +113,14 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []interfaces.Sig
 		})
 
 		// Reports on blockCopy and fork choice metrics.
-		finalized, err := s.store.FinalizedCheckpt()
-		if err != nil {
-			return errors.Wrap(err, "could not get finalized checkpoint")
-		}
+		finalized := s.FinalizedCheckpt()
 		reportSlotMetrics(blockCopy.Block().Slot(), s.HeadSlot(), s.CurrentSlot(), finalized)
 	}
 
 	if err := s.cfg.BeaconDB.SaveBlocks(ctx, s.getInitSyncBlocks()); err != nil {
 		return err
 	}
-	finalized, err := s.store.FinalizedCheckpt()
-	if err != nil {
-		return errors.Wrap(err, "could not get finalized checkpoint")
-	}
+	finalized := s.FinalizedCheckpt()
 	if finalized == nil {
 		return errNilFinalizedInStore
 	}
@@ -130,7 +128,7 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []interfaces.Sig
 		// log.Fatalf will prevent defer from being called
 		span.End()
 		// Exit run time if the node failed to verify weak subjectivity checkpoint.
-		log.Fatalf("Could not verify weak subjectivity checkpoint: %v", err)
+		log.WithError(err).Fatal("Could not verify weak subjectivity checkpoint")
 	}
 
 	return nil
@@ -154,7 +152,7 @@ func (s *Service) handlePostBlockOperations(b interfaces.BeaconBlock) error {
 
 	// Add block attestations to the fork choice pool to compute head.
 	if err := s.cfg.AttPool.SaveBlockAttestations(b.Body().Attestations()); err != nil {
-		log.Errorf("Could not save block attestations for fork choice: %v", err)
+		log.WithError(err).Error("Could not save block attestations for fork choice")
 		return nil
 	}
 	// Mark block exits as seen so we don't include same ones in future blocks.
@@ -175,10 +173,7 @@ func (s *Service) checkSaveHotStateDB(ctx context.Context) error {
 	currentEpoch := slots.ToEpoch(s.CurrentSlot())
 	// Prevent `sinceFinality` going underflow.
 	var sinceFinality types.Epoch
-	finalized, err := s.store.FinalizedCheckpt()
-	if err != nil {
-		return err
-	}
+	finalized := s.FinalizedCheckpt()
 	if finalized == nil {
 		return errNilFinalizedInStore
 	}

@@ -3,7 +3,6 @@
 package main
 
 import (
-	"crypto/ecdsa"
 	"encoding/hex"
 	"flag"
 	"net"
@@ -11,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/libp2p/go-libp2p-core/crypto"
+	ecdsaprysm "github.com/prysmaticlabs/prysm/crypto/ecdsa"
 	"github.com/prysmaticlabs/prysm/io/file"
 	_ "github.com/prysmaticlabs/prysm/runtime/maxprocs"
 	log "github.com/sirupsen/logrus"
@@ -38,20 +38,23 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	ecdsaPrivKey := (*ecdsa.PrivateKey)(unmarshalledKey.(*crypto.Secp256k1PrivateKey))
+	ecdsaPrivKey, err := ecdsaprysm.ConvertFromInterfacePrivKey(unmarshalledKey)
+	if err != nil {
+		panic(err)
+	}
 
 	if net.ParseIP(*ipAddr).To4() == nil {
-		log.Fatalf("Invalid ipv4 address given: %v\n", err)
+		log.WithField("address", *ipAddr).Fatal("Invalid ipv4 address given")
 	}
 
 	if *udpPort == 0 {
-		log.Fatalf("Invalid udp port given: %v\n", err)
+		log.WithField("port", *udpPort).Fatal("Invalid udp port given")
 		return
 	}
 
 	db, err := enode.OpenDB("")
 	if err != nil {
-		log.Fatalf("Could not open node's peer database: %v\n", err)
+		log.WithError(err).Fatal("Could not open node's peer database")
 		return
 	}
 	defer db.Close()

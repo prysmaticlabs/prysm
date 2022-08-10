@@ -27,6 +27,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+const (
+	EthAddress = "0x878705ba3f8bc32fcf7f4caa1a35e72af65cf766"
+)
+
 // Miner represents an ETH1 node which mines blocks.
 type Miner struct {
 	e2etypes.ComponentRunner
@@ -92,8 +96,8 @@ func (m *Miner) Start(ctx context.Context) error {
 		ctx,
 		binaryPath,
 		"init",
-		genesisDstPath+"/genesis.json",
-		fmt.Sprintf("--datadir=%s", eth1Path)) // #nosec G204 -- Safe
+		fmt.Sprintf("--datadir=%s", eth1Path),
+		genesisDstPath+"/genesis.json") // #nosec G204 -- Safe
 	initFile, err := helpers.DeleteAndCreateFile(e2e.TestParams.LogPath, "eth1-init_miner.log")
 	if err != nil {
 		return err
@@ -127,9 +131,9 @@ func (m *Miner) Start(ctx context.Context) error {
 		"--ipcdisable",
 		"--verbosity=4",
 		"--mine",
-		"--unlock=0x878705ba3f8bc32fcf7f4caa1a35e72af65cf766",
+		fmt.Sprintf("--unlock=%s", EthAddress),
 		"--allow-insecure-unlock",
-		"--txpool.locals=0x878705ba3f8bc32fcf7f4caa1a35e72af65cf766",
+		fmt.Sprintf("--txpool.locals=%s", EthAddress),
 		fmt.Sprintf("--password=%s", eth1Path+"/keystore/"+minerPasswordFile),
 	}
 

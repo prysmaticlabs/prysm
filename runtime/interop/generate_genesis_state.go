@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/async"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	coreState "github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
-	state_native "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native"
+	statenative "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -46,15 +46,15 @@ func GenerateGenesisState(ctx context.Context, genesisTime, numValidators uint64
 func GenerateGenesisStateFromDepositData(
 	ctx context.Context, genesisTime uint64, depositData []*ethpb.Deposit_Data, depositDataRoots [][]byte,
 ) (*ethpb.BeaconState, []*ethpb.Deposit, error) {
-	trie, err := trie.GenerateTrieFromItems(depositDataRoots, params.BeaconConfig().DepositContractTreeDepth)
+	t, err := trie.GenerateTrieFromItems(depositDataRoots, params.BeaconConfig().DepositContractTreeDepth)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not generate Merkle trie for deposit proofs")
 	}
-	deposits, err := GenerateDepositsFromData(depositData, trie)
+	deposits, err := GenerateDepositsFromData(depositData, t)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not generate deposits from the deposit data provided")
 	}
-	root, err := trie.HashTreeRoot()
+	root, err := t.HashTreeRoot()
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not hash tree root of deposit trie")
 	}
@@ -72,7 +72,7 @@ func GenerateGenesisStateFromDepositData(
 
 	var pbState *ethpb.BeaconState
 	if features.Get().EnableNativeState {
-		pbState, err = state_native.ProtobufBeaconStatePhase0(beaconState.InnerStateUnsafe())
+		pbState, err = statenative.ProtobufBeaconStatePhase0(beaconState.InnerStateUnsafe())
 	} else {
 		pbState, err = v1.ProtobufBeaconState(beaconState.InnerStateUnsafe())
 	}
@@ -151,11 +151,11 @@ func depositDataFromKeys(privKeys []bls.SecretKey, pubKeys []bls.PublicKey) ([]*
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "could not create deposit data for key: %#x", privKeys[i].Marshal())
 		}
-		hash, err := data.HashTreeRoot()
+		h, err := data.HashTreeRoot()
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "could not hash tree root deposit data item")
 		}
-		dataRoots[i] = hash[:]
+		dataRoots[i] = h[:]
 		depositDataItems[i] = data
 	}
 	return depositDataItems, dataRoots, nil

@@ -121,8 +121,8 @@ func TestCommitteeAssignments_NoProposerForSlot0(t *testing.T) {
 	ClearCache()
 	_, proposerIndexToSlots, err := CommitteeAssignments(context.Background(), state, 0)
 	require.NoError(t, err, "Failed to determine CommitteeAssignments")
-	for _, slots := range proposerIndexToSlots {
-		for _, s := range slots {
+	for _, ss := range proposerIndexToSlots {
+		for _, s := range ss {
 			assert.NotEqual(t, uint64(0), s, "No proposer should be assigned to slot 0")
 		}
 	}
@@ -386,7 +386,7 @@ func TestUpdateCommitteeCache_CanUpdate(t *testing.T) {
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 	})
 	require.NoError(t, err)
-	require.NoError(t, UpdateCommitteeCache(state, time.CurrentEpoch(state)))
+	require.NoError(t, UpdateCommitteeCache(context.Background(), state, time.CurrentEpoch(state)))
 
 	epoch := types.Epoch(1)
 	idx := types.CommitteeIndex(1)

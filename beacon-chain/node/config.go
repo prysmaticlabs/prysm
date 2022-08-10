@@ -5,8 +5,10 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
+	fastssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	tracing2 "github.com/prysmaticlabs/prysm/monitoring/tracing"
@@ -98,7 +100,7 @@ func configureEth1Config(cliCtx *cli.Context) error {
 }
 
 func configureNetwork(cliCtx *cli.Context) {
-	if cliCtx.IsSet(cmd.BootstrapNode.Name) {
+	if len(cliCtx.StringSlice(cmd.BootstrapNode.Name)) > 0 {
 		c := params.BeaconNetworkConfig()
 		c.BootstrapNodes = cliCtx.StringSlice(cmd.BootstrapNode.Name)
 		params.OverrideBeaconNetworkConfig(c)
@@ -170,4 +172,10 @@ func configureExecutionSetting(cliCtx *cli.Context) error {
 	}
 	c.DefaultFeeRecipient = checksumAddress
 	return params.SetActive(c)
+}
+
+func configureFastSSZHashingAlgorithm() {
+	if features.Get().EnableVectorizedHTR {
+		fastssz.EnableVectorizedHTR = true
+	}
 }

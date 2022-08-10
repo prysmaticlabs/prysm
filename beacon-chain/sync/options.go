@@ -6,6 +6,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/beacon-chain/execution"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/synccommittee"
@@ -117,6 +118,13 @@ func WithSlasherAttestationsFeed(slasherAttestationsFeed *event.Feed) Option {
 func WithSlasherBlockHeadersFeed(slasherBlockHeadersFeed *event.Feed) Option {
 	return func(s *Service) error {
 		s.cfg.slasherBlockHeadersFeed = slasherBlockHeadersFeed
+		return nil
+	}
+}
+
+func WithExecutionPayloadReconstructor(r execution.ExecutionPayloadReconstructor) Option {
+	return func(s *Service) error {
+		s.cfg.executionPayloadReconstructor = r
 		return nil
 	}
 }

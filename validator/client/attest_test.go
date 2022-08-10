@@ -16,8 +16,8 @@ import (
 	"github.com/prysmaticlabs/prysm/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -540,9 +540,9 @@ func TestServer_WaitToSlotOneThird_ReceiveBlockSlot(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		time.Sleep(100 * time.Millisecond)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(
+		wsb, err := blocks.NewSignedBeaconBlock(
 			&ethpb.SignedBeaconBlock{
-				Block: &ethpb.BeaconBlock{Slot: currentSlot},
+				Block: &ethpb.BeaconBlock{Slot: currentSlot, Body: &ethpb.BeaconBlockBody{}},
 			})
 		require.NoError(t, err)
 		v.blockFeed.Send(wsb)

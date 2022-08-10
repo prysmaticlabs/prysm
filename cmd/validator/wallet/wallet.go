@@ -36,6 +36,7 @@ var Commands = &cli.Command{
 				features.Mainnet,
 				features.PraterTestnet,
 				features.RopstenTestnet,
+				features.SepoliaTestnet,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
@@ -49,7 +50,7 @@ var Commands = &cli.Command{
 					return err
 				}
 				if _, err := accounts.CreateAndSaveWalletCli(cliCtx); err != nil {
-					log.Fatalf("Could not create a wallet: %v", err)
+					log.WithError(err).Fatal("Could not create a wallet")
 				}
 				return nil
 			},
@@ -68,20 +69,21 @@ var Commands = &cli.Command{
 				features.Mainnet,
 				features.PraterTestnet,
 				features.RopstenTestnet,
+				features.SepoliaTestnet,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
 				if err := cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags); err != nil {
 					return err
 				}
-				return tos.VerifyTosAcceptedOrPrompt(cliCtx)
-			},
-			Action: func(cliCtx *cli.Context) error {
-				if err := features.ConfigureValidator(cliCtx); err != nil {
+				if err := tos.VerifyTosAcceptedOrPrompt(cliCtx); err != nil {
 					return err
 				}
-				if err := accounts.EditWalletConfigurationCli(cliCtx); err != nil {
-					log.Fatalf("Could not edit wallet configuration: %v", err)
+				return features.ConfigureValidator(cliCtx)
+			},
+			Action: func(cliCtx *cli.Context) error {
+				if err := remoteWalletEdit(cliCtx); err != nil {
+					log.WithError(err).Fatal("Could not edit wallet configuration")
 				}
 				return nil
 			},
@@ -99,6 +101,7 @@ var Commands = &cli.Command{
 				features.Mainnet,
 				features.PraterTestnet,
 				features.RopstenTestnet,
+				features.SepoliaTestnet,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
@@ -112,7 +115,7 @@ var Commands = &cli.Command{
 					return err
 				}
 				if err := accounts.RecoverWalletCli(cliCtx); err != nil {
-					log.Fatalf("Could not recover wallet: %v", err)
+					log.WithError(err).Fatal("Could not recover wallet")
 				}
 				return nil
 			},

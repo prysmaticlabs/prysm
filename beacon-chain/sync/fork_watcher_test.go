@@ -28,7 +28,7 @@ func TestService_CheckForNextEpochFork(t *testing.T) {
 		{
 			name: "no fork in the next epoch",
 			svcCreator: func(t *testing.T) *Service {
-				p2p := p2ptest.NewTestP2P(t)
+				peer2peer := p2ptest.NewTestP2P(t)
 				chainService := &mockChain.ChainService{
 					Genesis:        time.Now().Add(time.Duration(-params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().SlotsPerEpoch))) * time.Second),
 					ValidatorsRoot: [32]byte{'A'},
@@ -38,7 +38,7 @@ func TestService_CheckForNextEpochFork(t *testing.T) {
 					ctx:    ctx,
 					cancel: cancel,
 					cfg: &config{
-						p2p:           p2p,
+						p2p:           peer2peer,
 						chain:         chainService,
 						stateNotifier: chainService.StateNotifier(),
 						initialSync:   &mockSync.Sync{IsSyncing: false},
@@ -57,7 +57,7 @@ func TestService_CheckForNextEpochFork(t *testing.T) {
 		{
 			name: "altair fork in the next epoch",
 			svcCreator: func(t *testing.T) *Service {
-				p2p := p2ptest.NewTestP2P(t)
+				peer2peer := p2ptest.NewTestP2P(t)
 				chainService := &mockChain.ChainService{
 					Genesis:        time.Now().Add(-4 * oneEpoch()),
 					ValidatorsRoot: [32]byte{'A'},
@@ -71,7 +71,7 @@ func TestService_CheckForNextEpochFork(t *testing.T) {
 					ctx:    ctx,
 					cancel: cancel,
 					cfg: &config{
-						p2p:           p2p,
+						p2p:           peer2peer,
 						chain:         chainService,
 						stateNotifier: chainService.StateNotifier(),
 						initialSync:   &mockSync.Sync{IsSyncing: false},
@@ -100,7 +100,7 @@ func TestService_CheckForNextEpochFork(t *testing.T) {
 		{
 			name: "bellatrix fork in the next epoch",
 			svcCreator: func(t *testing.T) *Service {
-				p2p := p2ptest.NewTestP2P(t)
+				peer2peer := p2ptest.NewTestP2P(t)
 				chainService := &mockChain.ChainService{
 					Genesis:        time.Now().Add(-4 * oneEpoch()),
 					ValidatorsRoot: [32]byte{'A'},
@@ -115,7 +115,7 @@ func TestService_CheckForNextEpochFork(t *testing.T) {
 					ctx:    ctx,
 					cancel: cancel,
 					cfg: &config{
-						p2p:           p2p,
+						p2p:           peer2peer,
 						chain:         chainService,
 						stateNotifier: chainService.StateNotifier(),
 						initialSync:   &mockSync.Sync{IsSyncing: false},
@@ -162,7 +162,7 @@ func TestService_CheckForPreviousEpochFork(t *testing.T) {
 		{
 			name: "no fork in the previous epoch",
 			svcCreator: func(t *testing.T) *Service {
-				p2p := p2ptest.NewTestP2P(t)
+				peer2peer := p2ptest.NewTestP2P(t)
 				chainService := &mockChain.ChainService{
 					Genesis:        time.Now().Add(-oneEpoch()),
 					ValidatorsRoot: [32]byte{'A'},
@@ -172,7 +172,7 @@ func TestService_CheckForPreviousEpochFork(t *testing.T) {
 					ctx:    ctx,
 					cancel: cancel,
 					cfg: &config{
-						p2p:           p2p,
+						p2p:           peer2peer,
 						chain:         chainService,
 						stateNotifier: chainService.StateNotifier(),
 						initialSync:   &mockSync.Sync{IsSyncing: false},
@@ -202,7 +202,7 @@ func TestService_CheckForPreviousEpochFork(t *testing.T) {
 		{
 			name: "altair fork in the previous epoch",
 			svcCreator: func(t *testing.T) *Service {
-				p2p := p2ptest.NewTestP2P(t)
+				peer2peer := p2ptest.NewTestP2P(t)
 				chainService := &mockChain.ChainService{
 					Genesis:        time.Now().Add(-4 * oneEpoch()),
 					ValidatorsRoot: [32]byte{'A'},
@@ -216,7 +216,7 @@ func TestService_CheckForPreviousEpochFork(t *testing.T) {
 					ctx:    ctx,
 					cancel: cancel,
 					cfg: &config{
-						p2p:           p2p,
+						p2p:           peer2peer,
 						chain:         chainService,
 						stateNotifier: chainService.StateNotifier(),
 						initialSync:   &mockSync.Sync{IsSyncing: false},
@@ -276,7 +276,7 @@ func TestService_CheckForPreviousEpochFork(t *testing.T) {
 		{
 			name: "bellatrix fork in the previous epoch",
 			svcCreator: func(t *testing.T) *Service {
-				p2p := p2ptest.NewTestP2P(t)
+				peer2peer := p2ptest.NewTestP2P(t)
 				chainService := &mockChain.ChainService{
 					Genesis:        time.Now().Add(-4 * oneEpoch()),
 					ValidatorsRoot: [32]byte{'A'},
@@ -291,7 +291,7 @@ func TestService_CheckForPreviousEpochFork(t *testing.T) {
 					ctx:    ctx,
 					cancel: cancel,
 					cfg: &config{
-						p2p:           p2p,
+						p2p:           peer2peer,
 						chain:         chainService,
 						stateNotifier: chainService.StateNotifier(),
 						initialSync:   &mockSync.Sync{IsSyncing: false},

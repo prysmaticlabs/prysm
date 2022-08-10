@@ -7,7 +7,7 @@ import (
 	"runtime"
 	"time"
 
-	field_params "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/urfave/cli/v2"
 )
@@ -281,10 +281,9 @@ var (
 	// example with external url: --validators-external-signer-public-keys= https://web3signer.com/api/v1/eth2/publicKeys
 	// example with public key: --validators-external-signer-public-keys=0xa99a...e44c,0xb89b...4a0b
 	// web3signer documentation can be found in Consensys' web3signer project docs```
-	Web3SignerPublicValidatorKeysFlag = &cli.StringFlag{
+	Web3SignerPublicValidatorKeysFlag = &cli.StringSliceFlag{
 		Name:  "validators-external-signer-public-keys",
 		Usage: "comma separated list of public keys OR an external url endpoint for the validator to retrieve public keys from for usage with web3signer",
-		Value: "",
 	}
 
 	// KeymanagerKindFlag defines the kind of keymanager desired by a user during wallet creation.
@@ -324,24 +323,40 @@ var (
 		Value: false,
 	}
 
-	// FeeRecipientConfigFileFlag defines the path or URL to a file with proposer config.
-	FeeRecipientConfigFileFlag = &cli.StringFlag{
-		Name:  "fee-recipient-config-file",
-		Usage: "Set path to a JSON file containing validator mappings to ETH addresses for receiving transaction fees when proposing blocks (i.e. --fee-recipient-config-file=/path/to/proposer.json). File format found in docs",
+	// ProposerSettingsFlag defines the path or URL to a file with proposer config.
+	ProposerSettingsFlag = &cli.StringFlag{
+		Name:  "proposer-settings-file",
+		Usage: "Set path to a YAML or JSON file containing validator settings used when proposing blocks such as (fee recipient and gas limit) (i.e. --proposer-settings-file=/path/to/proposer.json). File format found in docs",
 		Value: "",
 	}
-	// FeeRecipientConfigURLFlag defines the path or URL to a file with proposer config.
-	FeeRecipientConfigURLFlag = &cli.StringFlag{
-		Name:  "fee-recipient-config-url",
-		Usage: "Set URL to a REST endpoint containing validator mappings to ETH addresses for receiving transaction fees when proposing blocks (i.e. --fee-recipient-config-url=https://example.com/api/getConfig). File format found in docs",
+	// ProposerSettingsURLFlag defines the path or URL to a file with proposer config.
+	ProposerSettingsURLFlag = &cli.StringFlag{
+		Name:  "proposer-settings-url",
+		Usage: "Set URL to a REST endpoint containing validator settings used when proposing blocks such as (fee recipient) (i.e. --proposer-settings-url=https://example.com/api/getConfig). File format found in docs",
 		Value: "",
 	}
 
 	// SuggestedFeeRecipientFlag defines the address of the fee recipient.
 	SuggestedFeeRecipientFlag = &cli.StringFlag{
-		Name:  "suggested-fee-recipient",
-		Usage: "Sets ALL validators' mapping to a suggested an eth address to receive gas fees when proposing a block. Overrides the --fee-recipient-config-file flag if set",
-		Value: field_params.EthBurnAddressHex,
+		Name: "suggested-fee-recipient",
+		Usage: "Sets ALL validators' mapping to a suggested an eth address to receive gas fees when proposing a block." +
+			" note that this is only a suggestion when integrating with a Builder API, which may choose to specify a different fee recipient as payment for the blocks it builds." +
+			" For additional setting overrides use the --" + ProposerSettingsFlag.Name + " or --" + ProposerSettingsURLFlag.Name + " Flags. ",
+		Value: params.BeaconConfig().EthBurnAddressHex,
+	}
+
+	// EnableBuilderFlag enables the periodic validator registration API calls that will update the custom builder with validator settings.
+	EnableBuilderFlag = &cli.BoolFlag{
+		Name:  "enable-builder",
+		Usage: "Enables Builder validator registration APIs for the validator client to update settings such as fee recipient and gas limit. Note* this flag is not required if using proposer settings config file",
+		Value: false,
+	}
+
+	// BuilderGasLimitFlag defines the gas limit for the builder to use for constructing a payload.
+	BuilderGasLimitFlag = &cli.IntFlag{
+		Name:  "suggested-gas-limit",
+		Usage: "Sets gas limit for the builder to use for constructing a payload for all the validators",
+		Value: int(params.BeaconConfig().DefaultBuilderGasLimit),
 	}
 )
 
