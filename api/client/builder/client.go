@@ -282,16 +282,16 @@ func non200Err(response *http.Response) error {
 	msg := fmt.Sprintf("code=%d, url=%s, body=%s", response.StatusCode, response.Request.URL, body)
 	switch response.StatusCode {
 	case 204:
-		log.Debug(errors.Wrap(ErrNoContent, msg))
+		log.WithError(ErrNoContent).Debug(msg)
 		return ErrNoContent
 	case 400:
-		log.Debug(errors.Wrap(ErrBadRequest, msg))
+		log.WithError(ErrBadRequest).Debug(msg)
 		return errors.Wrap(ErrBadRequest, errMessage.Message)
 	case 404:
-		log.Debug(errors.Wrap(ErrNotFound, msg))
+		log.WithError(ErrNotFound).Debug(msg)
 		return errors.Wrap(ErrNotFound, errMessage.Message)
 	default:
-		log.Debug(errors.Wrap(ErrNotOK, msg))
+		log.WithError(ErrNotOK).Debug(msg)
 		return errors.Wrap(ErrNotOK, errMessage.Message)
 	}
 }
