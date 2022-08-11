@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	wrapperv2 "github.com/prysmaticlabs/prysm/consensus-types/wrapper"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
 	"github.com/prysmaticlabs/prysm/testing/endtoend/policies"
@@ -56,11 +56,11 @@ func altairForkOccurs(conns ...*grpc.ClientConn) error {
 	if res.GetPhase0Block() != nil {
 		return errors.New("phase 0 block returned after altair fork has occurred")
 	}
-	blk, err := wrapperv2.WrappedSignedBeaconBlock(res.GetAltairBlock())
+	blk, err := blocks.NewSignedBeaconBlock(res.GetAltairBlock())
 	if err != nil {
 		return err
 	}
-	if err := wrapperv2.BeaconBlockIsNil(blk); err != nil {
+	if err := blocks.BeaconBlockIsNil(blk); err != nil {
 		return err
 	}
 	if blk.Block().Slot() < fSlot {
@@ -101,11 +101,11 @@ func bellatrixForkOccurs(conns ...*grpc.ClientConn) error {
 	if res.GetAltairBlock() != nil {
 		return errors.New("altair block returned after bellatrix fork has occurred")
 	}
-	blk, err := wrapperv2.WrappedSignedBeaconBlock(res.GetBellatrixBlock())
+	blk, err := blocks.NewSignedBeaconBlock(res.GetBellatrixBlock())
 	if err != nil {
 		return err
 	}
-	if err := wrapperv2.BeaconBlockIsNil(blk); err != nil {
+	if err := blocks.BeaconBlockIsNil(blk); err != nil {
 		return err
 	}
 	if blk.Block().Slot() < fSlot {

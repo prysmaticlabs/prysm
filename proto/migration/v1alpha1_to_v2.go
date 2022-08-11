@@ -418,7 +418,7 @@ func BeaconStateBellatrixToProto(st state.BeaconState) (*ethpbv2.BeaconStateBell
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get next sync committee")
 	}
-	sourceLatestExecutionPaylodHeader, err := st.LatestExecutionPayloadHeader()
+	sourceLatestExecutionPayloadHeader, err := st.LatestExecutionPayloadHeader()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get latest execution payload header")
 	}
@@ -478,20 +478,20 @@ func BeaconStateBellatrixToProto(st state.BeaconState) (*ethpbv2.BeaconStateBell
 			AggregatePubkey: bytesutil.SafeCopyBytes(sourceNextSyncCommittee.AggregatePubkey),
 		},
 		LatestExecutionPayloadHeader: &enginev1.ExecutionPayloadHeader{
-			ParentHash:       bytesutil.SafeCopyBytes(sourceLatestExecutionPaylodHeader.ParentHash),
-			FeeRecipient:     bytesutil.SafeCopyBytes(sourceLatestExecutionPaylodHeader.FeeRecipient),
-			StateRoot:        bytesutil.SafeCopyBytes(sourceLatestExecutionPaylodHeader.StateRoot),
-			ReceiptsRoot:     bytesutil.SafeCopyBytes(sourceLatestExecutionPaylodHeader.ReceiptsRoot),
-			LogsBloom:        bytesutil.SafeCopyBytes(sourceLatestExecutionPaylodHeader.LogsBloom),
-			PrevRandao:       bytesutil.SafeCopyBytes(sourceLatestExecutionPaylodHeader.PrevRandao),
-			BlockNumber:      sourceLatestExecutionPaylodHeader.BlockNumber,
-			GasLimit:         sourceLatestExecutionPaylodHeader.GasLimit,
-			GasUsed:          sourceLatestExecutionPaylodHeader.GasUsed,
-			Timestamp:        sourceLatestExecutionPaylodHeader.Timestamp,
-			ExtraData:        bytesutil.SafeCopyBytes(sourceLatestExecutionPaylodHeader.ExtraData),
-			BaseFeePerGas:    bytesutil.SafeCopyBytes(sourceLatestExecutionPaylodHeader.BaseFeePerGas),
-			BlockHash:        bytesutil.SafeCopyBytes(sourceLatestExecutionPaylodHeader.BlockHash),
-			TransactionsRoot: bytesutil.SafeCopyBytes(sourceLatestExecutionPaylodHeader.TransactionsRoot),
+			ParentHash:       bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.ParentHash),
+			FeeRecipient:     bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.FeeRecipient),
+			StateRoot:        bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.StateRoot),
+			ReceiptsRoot:     bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.ReceiptsRoot),
+			LogsBloom:        bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.LogsBloom),
+			PrevRandao:       bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.PrevRandao),
+			BlockNumber:      sourceLatestExecutionPayloadHeader.BlockNumber,
+			GasLimit:         sourceLatestExecutionPayloadHeader.GasLimit,
+			GasUsed:          sourceLatestExecutionPayloadHeader.GasUsed,
+			Timestamp:        sourceLatestExecutionPayloadHeader.Timestamp,
+			ExtraData:        bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.ExtraData),
+			BaseFeePerGas:    bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.BaseFeePerGas),
+			BlockHash:        bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.BlockHash),
+			TransactionsRoot: bytesutil.SafeCopyBytes(sourceLatestExecutionPayloadHeader.TransactionsRoot),
 		},
 	}
 

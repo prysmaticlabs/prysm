@@ -740,7 +740,7 @@ func (p *Status) BestNonFinalized(minPeers int, ourHeadEpoch types.Epoch) (types
 	return targetEpoch, potentialPIDs
 }
 
-// PeersToPrune selects the most sutiable inbound peers
+// PeersToPrune selects the most suitable inbound peers
 // to disconnect the host peer from. As of this moment
 // the pruning relies on simple heuristics such as
 // bad response count. In the future scoring will be used
