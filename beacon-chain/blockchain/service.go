@@ -161,7 +161,7 @@ func (s *Service) Status() error {
 		return fmt.Errorf("failed to check if service is optimistic: %v", err)
 	}
 	if optimistic {
-		return fmt.Errorf("service is optimistic, and only limited service functionality is provided " +
+		return errors.New("service is optimistic, and only limited service functionality is provided " +
 			"please check if execution layer is fully synced")
 	}
 
