@@ -35,4 +35,3 @@ Want to get involved? Check out our [Contribution Guide](https://docs.prylabs.ne
 ## Legal Disclaimer
 
 [Terms of Use](/TERMS_OF_SERVICE.md)
-
