@@ -154,12 +154,6 @@ var (
 		Usage: "The factor by which block batch limit may increase on burst.",
 		Value: 10,
 	}
-	// DisableSync disables a node from syncing at start-up. Instead the node enters regular sync
-	// immediately.
-	DisableSync = &cli.BoolFlag{
-		Name:  "disable-sync",
-		Usage: "Starts the beacon node without entering initial sync and instead exits to regular sync immediately.",
-	}
 	// EnableDebugRPCEndpoints as /v1/beacon/state.
 	EnableDebugRPCEndpoints = &cli.BoolFlag{
 		Name:  "enable-debug-rpc-endpoints",
