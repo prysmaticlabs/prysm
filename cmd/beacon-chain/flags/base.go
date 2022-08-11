@@ -122,11 +122,6 @@ var (
 		Usage: "The percentage of freshly allocated data to live data on which the gc will be run again.",
 		Value: 100,
 	}
-	// HeadSync starts the beacon node from the previously saved head state and syncs from there.
-	HeadSync = &cli.BoolFlag{
-		Name:  "head-sync",
-		Usage: "Starts the beacon node with the previously saved head state instead of finalized state.",
-	}
 	// SafeSlotsToImportOptimistically specifies the number of slots that a
 	// node should wait before being able to optimistically sync blocks
 	// across the merge boundary
