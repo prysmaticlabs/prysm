@@ -13,8 +13,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/config/params"
+	consensusblocks "github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
@@ -185,7 +185,7 @@ func cliActionRequestBlocks(cliCtx *cli.Context) error {
 		for _, blk := range blocks {
 			exec, err := blk.Block().Body().Execution()
 			switch {
-			case errors.Is(err, wrapper.ErrUnsupportedField):
+			case errors.Is(err, consensusblocks.ErrUnsupportedGetter):
 				continue
 			case err != nil:
 				log.WithError(err).Error("Could not read execution data from block body")
@@ -194,7 +194,7 @@ func cliActionRequestBlocks(cliCtx *cli.Context) error {
 			}
 			_, err = exec.Transactions()
 			switch {
-			case errors.Is(err, wrapper.ErrUnsupportedField):
+			case errors.Is(err, consensusblocks.ErrUnsupportedGetter):
 				continue
 			case err != nil:
 				log.WithError(err).Error("Could not read transactions block execution payload")
