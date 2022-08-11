@@ -115,7 +115,7 @@ func (s *Service) Status() error {
 		getStatusLatency.Observe(float64(time.Since(start).Milliseconds()))
 	}()
 
-	// Return early if builder isn't initilized in service.
+	// Return early if builder isn't initialized in service.
 	if s.c == nil {
 		return nil
 	}
