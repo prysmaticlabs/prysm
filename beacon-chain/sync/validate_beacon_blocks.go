@@ -216,13 +216,6 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk interfaces.Signed
 		return err
 	}
 
-	hasStateSummaryDB := s.cfg.beaconDB.HasStateSummary(ctx, bytesutil.ToBytes32(blk.Block().ParentRoot()))
-	if !hasStateSummaryDB {
-		_, err := s.cfg.stateGen.RecoverStateSummary(ctx, bytesutil.ToBytes32(blk.Block().ParentRoot()))
-		if err != nil {
-			return err
-		}
-	}
 	parentState, err := s.cfg.stateGen.StateByRoot(ctx, bytesutil.ToBytes32(blk.Block().ParentRoot()))
 	if err != nil {
 		return err
