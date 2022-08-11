@@ -9,11 +9,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/execution"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/io/file"
-	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
-
-var log = logrus.WithField("prefix", "cmd-execution-chain")
 
 // FlagOptions for execution service flag configurations.
 func FlagOptions(c *cli.Context) ([]execution.Option, error) {
