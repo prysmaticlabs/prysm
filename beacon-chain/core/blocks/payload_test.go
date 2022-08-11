@@ -3,7 +3,6 @@ package blocks_test
 import (
 	"testing"
 
-	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
@@ -376,7 +375,7 @@ func Test_ValidatePayloadWhenMergeCompletes(t *testing.T) {
 				h.BlockHash = bytesutil.PadTo([]byte{'b'}, fieldparams.RootLength)
 				return h
 			}(),
-			err: errors.New("incorrect block hash"),
+			err: blocks.ErrInvalidPayloadBlockHash,
 		},
 	}
 	for _, tt := range tests {

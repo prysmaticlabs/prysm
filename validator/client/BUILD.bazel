@@ -94,7 +94,6 @@ go_test(
         "attest_protect_test.go",
         "attest_test.go",
         "key_reload_test.go",
-        "log_test.go",
         "metrics_test.go",
         "propose_protect_test.go",
         "propose_test.go",
