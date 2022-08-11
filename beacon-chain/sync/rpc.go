@@ -138,13 +138,13 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 		// Check before hand that peer is valid.
 		if s.cfg.p2p.Peers().IsBad(stream.Conn().RemotePeer()) {
 			if err := s.sendGoodByeAndDisconnect(ctx, p2ptypes.GoodbyeCodeBanned, stream.Conn().RemotePeer()); err != nil {
-				log.Debugf("Could not disconnect from peer: %v", err)
+				log.WithError(err).Debug("Could not disconnect from peer")
 			}
 			return
 		}
 		// Validate request according to peer limits.
 		if err := s.rateLimiter.validateRawRpcRequest(stream); err != nil {
-			log.Debugf("Could not validate rpc request from peer: %v", err)
+			log.WithError(err).Debug("Could not validate rpc request from peer")
 			return
 		}
 		s.rateLimiter.addRawStream(stream)

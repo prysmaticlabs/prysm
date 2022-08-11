@@ -209,7 +209,7 @@ func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
 	// HistoricalRootsLimit = 8192
 	//
 	// More background: https://github.com/prysmaticlabs/prysm/issues/2153
-	// This test breaks if it doesnt use mainnet config
+	// This test breaks if it doesn't use mainnet config
 
 	// Ensure HistoricalRootsLimit matches scenario
 	params.SetupTestConfigCleanup(t)

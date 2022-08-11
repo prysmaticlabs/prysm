@@ -183,11 +183,6 @@ func (_ *FakeValidator) SubmitSyncCommitteeMessage(_ context.Context, _ types.Sl
 // LogAttestationsSubmitted for mocking.
 func (_ *FakeValidator) LogAttestationsSubmitted() {}
 
-// LogNextDutyTimeLeft for mocking.
-func (_ *FakeValidator) LogNextDutyTimeLeft(_ types.Slot) error {
-	return nil
-}
-
 // UpdateDomainDataCaches for mocking.
 func (_ *FakeValidator) UpdateDomainDataCaches(context.Context, types.Slot) {}
 

@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 )
 
 // This saves a beacon block to the initial sync blocks cache. It rate limits how many blocks
@@ -56,7 +56,7 @@ func (s *Service) getBlock(ctx context.Context, r [32]byte) (interfaces.SignedBe
 			return nil, errors.Wrap(err, "could not retrieve block from db")
 		}
 	}
-	if err := wrapper.BeaconBlockIsNil(b); err != nil {
+	if err := blocks.BeaconBlockIsNil(b); err != nil {
 		return nil, errBlockNotFoundInCacheOrDB
 	}
 	return b, nil

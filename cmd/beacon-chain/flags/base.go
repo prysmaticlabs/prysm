@@ -123,11 +123,6 @@ var (
 		Usage: "The percentage of freshly allocated data to live data on which the gc will be run again.",
 		Value: 100,
 	}
-	// HeadSync starts the beacon node from the previously saved head state and syncs from there.
-	HeadSync = &cli.BoolFlag{
-		Name:  "head-sync",
-		Usage: "Starts the beacon node with the previously saved head state instead of finalized state.",
-	}
 	// SafeSlotsToImportOptimistically specifies the number of slots that a
 	// node should wait before being able to optimistically sync blocks
 	// across the merge boundary
@@ -159,12 +154,6 @@ var (
 		Name:  "block-batch-limit-burst-factor",
 		Usage: "The factor by which block batch limit may increase on burst.",
 		Value: 10,
-	}
-	// DisableSync disables a node from syncing at start-up. Instead the node enters regular sync
-	// immediately.
-	DisableSync = &cli.BoolFlag{
-		Name:  "disable-sync",
-		Usage: "Starts the beacon node without entering initial sync and instead exits to regular sync immediately.",
 	}
 	// EnableDebugRPCEndpoints as /v1/beacon/state.
 	EnableDebugRPCEndpoints = &cli.BoolFlag{

@@ -626,3 +626,9 @@ func (b *BlindedBeaconBlockBodyBellatrix) MarshalJSON() ([]byte, error) {
 		ExecutionPayloadHeader: &ExecutionPayloadHeader{ExecutionPayloadHeader: b.BlindedBeaconBlockBodyBellatrix.ExecutionPayloadHeader},
 	})
 }
+
+type ErrorMessage struct {
+	Code        int      `json:"code"`
+	Message     string   `json:"message"`
+	Stacktraces []string `json:"stacktraces,omitempty"`
+}

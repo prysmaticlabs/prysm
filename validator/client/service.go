@@ -51,7 +51,6 @@ type ValidatorService struct {
 	useWeb                bool
 	emitAccountMetrics    bool
 	logValidatorBalances  bool
-	logDutyCountDown      bool
 	interopKeysConfig     *local.InteropKeymanagerConfig
 	conn                  *grpc.ClientConn
 	grpcRetryDelay        time.Duration
@@ -78,7 +77,6 @@ type Config struct {
 	UseWeb                     bool
 	LogValidatorBalances       bool
 	EmitAccountMetrics         bool
-	LogDutyCountDown           bool
 	InteropKeysConfig          *local.InteropKeymanagerConfig
 	Wallet                     *wallet.Wallet
 	WalletInitializedFeed      *event.Feed
@@ -121,7 +119,6 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		useWeb:                cfg.UseWeb,
 		interopKeysConfig:     cfg.InteropKeysConfig,
 		graffitiStruct:        cfg.GraffitiStruct,
-		logDutyCountDown:      cfg.LogDutyCountDown,
 		Web3SignerConfig:      cfg.Web3SignerConfig,
 		ProposerSettings:      cfg.ProposerSettings,
 	}
@@ -166,7 +163,7 @@ func (v *ValidatorService) Start() {
 
 	sPubKeys, err := v.db.EIPImportBlacklistedPublicKeys(v.ctx)
 	if err != nil {
-		log.Errorf("Could not read slashable public keys from disk: %v", err)
+		log.WithError(err).Error("Could not read slashable public keys from disk")
 		return
 	}
 	slashablePublicKeys := make(map[[fieldparams.BLSPubkeyLength]byte]bool)
@@ -176,7 +173,7 @@ func (v *ValidatorService) Start() {
 
 	graffitiOrderedIndex, err := v.db.GraffitiOrderedIndex(v.ctx, v.graffitiStruct.Hash)
 	if err != nil {
-		log.Errorf("Could not read graffiti ordered index from disk: %v", err)
+		log.WithError(err).Error("Could not read graffiti ordered index from disk")
 		return
 	}
 
@@ -206,7 +203,6 @@ func (v *ValidatorService) Start() {
 		graffitiStruct:                 v.graffitiStruct,
 		graffitiOrderedIndex:           graffitiOrderedIndex,
 		eipImportBlacklistedPublicKeys: slashablePublicKeys,
-		logDutyCountDown:               v.logDutyCountDown,
 		Web3SignerConfig:               v.Web3SignerConfig,
 		ProposerSettings:               v.ProposerSettings,
 		walletInitializedChannel:       make(chan *wallet.Wallet, 1),
@@ -264,7 +260,7 @@ func ConstructDialOptions(
 	if withCert != "" {
 		creds, err := credentials.NewClientTLSFromFile(withCert, "")
 		if err != nil {
-			log.Errorf("Could not get valid credentials: %v", err)
+			log.WithError(err).Error("Could not get valid credentials")
 			return nil
 		}
 		transportSecurity = grpc.WithTransportCredentials(creds)

@@ -17,18 +17,18 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	prysmtime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	mockExecution "github.com/prysmaticlabs/prysm/beacon-chain/execution/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
-	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	v1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
@@ -105,7 +105,7 @@ func TestServer_getPayloadHeader(t *testing.T) {
 			mock: &builderTest.MockBuilderService{},
 			fetcher: &blockchainTest.ChainService{
 				Block: func() interfaces.SignedBeaconBlock {
-					wb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+					wb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 					require.NoError(t, err)
 					return wb
 				}(),
@@ -118,7 +118,7 @@ func TestServer_getPayloadHeader(t *testing.T) {
 			},
 			fetcher: &blockchainTest.ChainService{
 				Block: func() interfaces.SignedBeaconBlock {
-					wb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlockBellatrix())
+					wb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockBellatrix())
 					require.NoError(t, err)
 					return wb
 				}(),
@@ -139,7 +139,7 @@ func TestServer_getPayloadHeader(t *testing.T) {
 			},
 			fetcher: &blockchainTest.ChainService{
 				Block: func() interfaces.SignedBeaconBlock {
-					wb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlockBellatrix())
+					wb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockBellatrix())
 					require.NoError(t, err)
 					return wb
 				}(),
@@ -178,12 +178,12 @@ func TestServer_getBuilderBlock(t *testing.T) {
 		{
 			name: "old block version",
 			blk: func() interfaces.SignedBeaconBlock {
-				wb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+				wb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 				require.NoError(t, err)
 				return wb
 			}(),
 			returnedBlk: func() interfaces.SignedBeaconBlock {
-				wb, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+				wb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 				require.NoError(t, err)
 				return wb
 			}(),
@@ -191,7 +191,7 @@ func TestServer_getBuilderBlock(t *testing.T) {
 		{
 			name: "not configured",
 			blk: func() interfaces.SignedBeaconBlock {
-				wb, err := wrapper.WrappedSignedBeaconBlock(util.NewBlindedBeaconBlockBellatrix())
+				wb, err := blocks.NewSignedBeaconBlock(util.NewBlindedBeaconBlockBellatrix())
 				require.NoError(t, err)
 				return wb
 			}(),
@@ -199,7 +199,7 @@ func TestServer_getBuilderBlock(t *testing.T) {
 				HasConfigured: false,
 			},
 			returnedBlk: func() interfaces.SignedBeaconBlock {
-				wb, err := wrapper.WrappedSignedBeaconBlock(util.NewBlindedBeaconBlockBellatrix())
+				wb, err := blocks.NewSignedBeaconBlock(util.NewBlindedBeaconBlockBellatrix())
 				require.NoError(t, err)
 				return wb
 			}(),
@@ -210,7 +210,7 @@ func TestServer_getBuilderBlock(t *testing.T) {
 				b := util.NewBlindedBeaconBlockBellatrix()
 				b.Block.Slot = 1
 				b.Block.ProposerIndex = 2
-				wb, err := wrapper.WrappedSignedBeaconBlock(b)
+				wb, err := blocks.NewSignedBeaconBlock(b)
 				require.NoError(t, err)
 				return wb
 			}(),
@@ -226,7 +226,7 @@ func TestServer_getBuilderBlock(t *testing.T) {
 				b := util.NewBlindedBeaconBlockBellatrix()
 				b.Block.Slot = 1
 				b.Block.ProposerIndex = 2
-				wb, err := wrapper.WrappedSignedBeaconBlock(b)
+				wb, err := blocks.NewSignedBeaconBlock(b)
 				require.NoError(t, err)
 				return wb
 			}(),
@@ -239,7 +239,7 @@ func TestServer_getBuilderBlock(t *testing.T) {
 				b.Block.Slot = 1
 				b.Block.ProposerIndex = 2
 				b.Block.Body.ExecutionPayload = &v1.ExecutionPayload{GasLimit: 123}
-				wb, err := wrapper.WrappedSignedBeaconBlock(b)
+				wb, err := blocks.NewSignedBeaconBlock(b)
 				require.NoError(t, err)
 				return wb
 			}(),
@@ -268,14 +268,14 @@ func TestServer_readyForBuilder(t *testing.T) {
 	require.Equal(t, false, ready)
 
 	b := util.NewBeaconBlockBellatrix()
-	wb, err := wrapper.WrappedSignedBeaconBlock(b)
+	wb, err := blocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
 	wbr, err := wb.Block().HashTreeRoot()
 	require.NoError(t, err)
 
 	b1 := util.NewBeaconBlockBellatrix()
 	b1.Block.Body.ExecutionPayload.BlockNumber = 1 // Execution enabled.
-	wb1, err := wrapper.WrappedSignedBeaconBlock(b1)
+	wb1, err := blocks.NewSignedBeaconBlock(b1)
 	require.NoError(t, err)
 	wbr1, err := wb1.Block().HashTreeRoot()
 	require.NoError(t, err)
@@ -322,7 +322,7 @@ func TestServer_getAndBuildHeaderBlock(t *testing.T) {
 	// Failed to get header
 	b1 := util.NewBeaconBlockBellatrix()
 	b1.Block.Body.ExecutionPayload.BlockNumber = 1 // Execution enabled.
-	wb1, err := wrapper.WrappedSignedBeaconBlock(b1)
+	wb1, err := blocks.NewSignedBeaconBlock(b1)
 	require.NoError(t, err)
 	wbr1, err := wb1.Block().HashTreeRoot()
 	require.NoError(t, err)
@@ -353,6 +353,7 @@ func TestServer_getAndBuildHeaderBlock(t *testing.T) {
 	altairBlk, err := util.GenerateFullBlockAltair(copiedState, keys, util.DefaultBlockGenConfig(), 2)
 	require.NoError(t, err)
 
+	ts := uint64(time.Now().Unix()) + uint64(altairBlk.Block.Slot)*params.BeaconConfig().SecondsPerSlot
 	h := &v1.ExecutionPayloadHeader{
 		BlockNumber:      123,
 		GasLimit:         456,
@@ -366,6 +367,7 @@ func TestServer_getAndBuildHeaderBlock(t *testing.T) {
 		BaseFeePerGas:    make([]byte, fieldparams.RootLength),
 		BlockHash:        make([]byte, fieldparams.RootLength),
 		TransactionsRoot: make([]byte, fieldparams.RootLength),
+		Timestamp:        ts,
 	}
 
 	vs.StateGen = stategen.New(vs.BeaconDB)
@@ -388,13 +390,13 @@ func TestServer_getAndBuildHeaderBlock(t *testing.T) {
 			BaseFeePerGas:    make([]byte, fieldparams.RootLength),
 			BlockHash:        make([]byte, fieldparams.RootLength),
 			TransactionsRoot: make([]byte, fieldparams.RootLength),
+			Timestamp:        ts,
 		},
 		Pubkey: sk.PublicKey().Marshal(),
 		Value:  bytesutil.PadTo([]byte{1, 2, 3}, 32),
 	}
 	d := params.BeaconConfig().DomainApplicationBuilder
-	g := vs.GenesisFetcher.GenesisValidatorsRoot()
-	domain, err := signing.ComputeDomain(d, vs.ForkFetcher.CurrentFork().CurrentVersion, g[:])
+	domain, err := signing.ComputeDomain(d, nil, nil)
 	require.NoError(t, err)
 	sr, err := signing.ComputeSigningRoot(bid, domain)
 	require.NoError(t, err)
@@ -403,7 +405,7 @@ func TestServer_getAndBuildHeaderBlock(t *testing.T) {
 		Signature: sk.Sign(sr[:]).Marshal(),
 	}
 	vs.BlockBuilder = &builderTest.MockBuilderService{HasConfigured: true, Bid: sBid}
-
+	vs.TimeFetcher = &blockchainTest.ChainService{Genesis: time.Now()}
 	ready, builtBlk, err := vs.getAndBuildBlindBlock(ctx, altairBlk.Block)
 	require.NoError(t, err)
 	require.Equal(t, true, ready)
@@ -430,7 +432,7 @@ func TestServer_GetBellatrixBeaconBlock_HappyCase(t *testing.T) {
 	require.NoError(t, err, "Could not hash genesis state")
 
 	genesis := b.NewGenesisBlock(stateRoot[:])
-	wsb, err := wrapper.WrappedSignedBeaconBlock(genesis)
+	wsb, err := blocks.NewSignedBeaconBlock(genesis)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, wsb), "Could not save genesis block")
 
@@ -480,15 +482,15 @@ func TestServer_GetBellatrixBeaconBlock_HappyCase(t *testing.T) {
 		SyncChecker:       &mockSync.Sync{IsSyncing: false},
 		BlockReceiver:     &blockchainTest.ChainService{},
 		HeadUpdater:       &blockchainTest.ChainService{},
-		ChainStartFetcher: &mockPOW.POWChain{},
-		Eth1InfoFetcher:   &mockPOW.POWChain{},
+		ChainStartFetcher: &mockExecution.Chain{},
+		Eth1InfoFetcher:   &mockExecution.Chain{},
 		MockEth1Votes:     true,
 		AttPool:           attestations.NewPool(),
 		SlashingsPool:     slashings.NewPool(),
 		ExitPool:          voluntaryexits.NewPool(),
 		StateGen:          stategen.New(db),
 		SyncCommitteePool: synccommittee.NewStore(),
-		ExecutionEngineCaller: &mockPOW.EngineClient{
+		ExecutionEngineCaller: &mockExecution.EngineClient{
 			PayloadIDBytes:   &v1.PayloadIDBytes{1},
 			ExecutionPayload: emptyPayload,
 		},
@@ -496,7 +498,7 @@ func TestServer_GetBellatrixBeaconBlock_HappyCase(t *testing.T) {
 		ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
 		BlockBuilder:           &builderTest.MockBuilderService{},
 	}
-	proposerServer.ProposerSlotIndexCache.SetProposerAndPayloadIDs(65, 40, [8]byte{'a'})
+	proposerServer.ProposerSlotIndexCache.SetProposerAndPayloadIDs(65, 40, [8]byte{'a'}, parentRoot)
 
 	randaoReveal, err := util.RandaoReveal(beaconState, 0, privKeys)
 	require.NoError(t, err)
@@ -528,7 +530,7 @@ func TestServer_GetBellatrixBeaconBlock_BuilderCase(t *testing.T) {
 	require.NoError(t, err, "Could not hash genesis state")
 
 	genesis := b.NewGenesisBlock(stateRoot[:])
-	wsb, err := wrapper.WrappedSignedBeaconBlock(genesis)
+	wsb, err := blocks.NewSignedBeaconBlock(genesis)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, wsb), "Could not save genesis block")
 
@@ -574,7 +576,7 @@ func TestServer_GetBellatrixBeaconBlock_BuilderCase(t *testing.T) {
 
 	b1 := util.NewBeaconBlockBellatrix()
 	b1.Block.Body.ExecutionPayload.BlockNumber = 1 // Execution enabled.
-	wb1, err := wrapper.WrappedSignedBeaconBlock(b1)
+	wb1, err := blocks.NewSignedBeaconBlock(b1)
 	require.NoError(t, err)
 	wbr1, err := wb1.Block().HashTreeRoot()
 	require.NoError(t, err)
@@ -611,15 +613,15 @@ func TestServer_GetBellatrixBeaconBlock_BuilderCase(t *testing.T) {
 		HeadUpdater:         &blockchainTest.ChainService{},
 		ForkFetcher:         &blockchainTest.ChainService{Fork: &ethpb.Fork{}},
 		GenesisFetcher:      &blockchainTest.ChainService{},
-		ChainStartFetcher:   &mockPOW.POWChain{},
-		Eth1InfoFetcher:     &mockPOW.POWChain{},
+		ChainStartFetcher:   &mockExecution.Chain{},
+		Eth1InfoFetcher:     &mockExecution.Chain{},
 		MockEth1Votes:       true,
 		AttPool:             attestations.NewPool(),
 		SlashingsPool:       slashings.NewPool(),
 		ExitPool:            voluntaryexits.NewPool(),
 		StateGen:            stategen.New(db),
 		SyncCommitteePool:   synccommittee.NewStore(),
-		ExecutionEngineCaller: &mockPOW.EngineClient{
+		ExecutionEngineCaller: &mockExecution.EngineClient{
 			PayloadIDBytes:   &v1.PayloadIDBytes{1},
 			ExecutionPayload: emptyPayload,
 		},
@@ -633,8 +635,7 @@ func TestServer_GetBellatrixBeaconBlock_BuilderCase(t *testing.T) {
 		Value:  bytesutil.PadTo([]byte{1, 2, 3}, 32),
 	}
 	d := params.BeaconConfig().DomainApplicationBuilder
-	g := proposerServer.GenesisFetcher.GenesisValidatorsRoot()
-	domain, err := signing.ComputeDomain(d, proposerServer.ForkFetcher.CurrentFork().CurrentVersion, g[:])
+	domain, err := signing.ComputeDomain(d, nil, nil)
 	require.NoError(t, err)
 	sr, err := signing.ComputeSigningRoot(bid, domain)
 	require.NoError(t, err)
@@ -687,13 +688,7 @@ func TestServer_validatorRegistered(t *testing.T) {
 }
 
 func TestServer_validateBuilderSignature(t *testing.T) {
-	m := &blockchainTest.ChainService{
-		Fork: &ethpb.Fork{},
-	}
-	s := &Server{
-		ForkFetcher:    m,
-		GenesisFetcher: m,
-	}
+	s := &Server{}
 	sk, err := bls.RandKey()
 	require.NoError(t, err)
 	bid := &ethpb.BuilderBid{
@@ -713,8 +708,7 @@ func TestServer_validateBuilderSignature(t *testing.T) {
 		Value:  bytesutil.PadTo([]byte{1, 2, 3}, 32),
 	}
 	d := params.BeaconConfig().DomainApplicationBuilder
-	g := s.GenesisFetcher.GenesisValidatorsRoot()
-	domain, err := signing.ComputeDomain(d, s.ForkFetcher.CurrentFork().CurrentVersion, g[:])
+	domain, err := signing.ComputeDomain(d, nil, nil)
 	require.NoError(t, err)
 	sr, err := signing.ComputeSigningRoot(bid, domain)
 	require.NoError(t, err)

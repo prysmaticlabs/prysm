@@ -46,7 +46,7 @@ func IsCurrentPeriodSyncCommittee(
 		// Fill in the cache on miss.
 		go func() {
 			if err := syncCommitteeCache.UpdatePositionsInCommittee(root, st); err != nil {
-				log.Errorf("Could not fill sync committee cache on miss: %v", err)
+				log.WithError(err).Error("Could not fill sync committee cache on miss")
 			}
 		}()
 
@@ -110,7 +110,7 @@ func CurrentPeriodSyncSubcommitteeIndices(
 		// Fill in the cache on miss.
 		go func() {
 			if err := syncCommitteeCache.UpdatePositionsInCommittee(root, st); err != nil {
-				log.Errorf("Could not fill sync committee cache on miss: %v", err)
+				log.WithError(err).Error("Could not fill sync committee cache on miss")
 			}
 		}()
 
