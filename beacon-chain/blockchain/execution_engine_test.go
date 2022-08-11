@@ -1031,7 +1031,7 @@ func Test_GetPayloadAttribute(t *testing.T) {
 	// Cache hit, advance state, no fee recipient
 	suggestedVid := types.ValidatorIndex(1)
 	slot := types.Slot(1)
-	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(slot, suggestedVid, [8]byte{})
+	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(slot, suggestedVid, [8]byte{}, [32]byte{})
 	st, _ := util.DeterministicGenesisState(t, 1)
 	hook := logTest.NewGlobal()
 	hasPayload, attr, vId, err := service.getPayloadAttribute(ctx, st, slot)
@@ -1044,7 +1044,7 @@ func Test_GetPayloadAttribute(t *testing.T) {
 	// Cache hit, advance state, has fee recipient
 	suggestedAddr := common.HexToAddress("123")
 	require.NoError(t, service.cfg.BeaconDB.SaveFeeRecipientsByValidatorIDs(ctx, []types.ValidatorIndex{suggestedVid}, []common.Address{suggestedAddr}))
-	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(slot, suggestedVid, [8]byte{})
+	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(slot, suggestedVid, [8]byte{}, [32]byte{})
 	hasPayload, attr, vId, err = service.getPayloadAttribute(ctx, st, slot)
 	require.NoError(t, err)
 	require.Equal(t, true, hasPayload)
