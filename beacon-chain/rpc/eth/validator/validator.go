@@ -984,11 +984,11 @@ func (vs *Server) v1BeaconBlock(ctx context.Context, req *ethpbv1.ProduceBlockRe
 		RandaoReveal: req.RandaoReveal,
 		Graffiti:     req.Graffiti,
 	}
-	v1alpha1resp, err := vs.V1Alpha1Server.GetBlock(ctx, v1alpha1req)
+	v1alpha1resp, err := vs.V1Alpha1Server.GetBeaconBlock(ctx, v1alpha1req)
 	if err != nil {
 		return nil, err
 	}
-	return migration.V1Alpha1ToV1Block(v1alpha1resp)
+	return migration.V1Alpha1ToV1Block(v1alpha1resp.GetPhase0())
 }
 
 func syncCommitteeDutiesLastValidEpoch(currentEpoch types.Epoch) types.Epoch {
