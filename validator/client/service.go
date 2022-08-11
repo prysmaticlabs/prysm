@@ -166,7 +166,7 @@ func (v *ValidatorService) Start() {
 
 	sPubKeys, err := v.db.EIPImportBlacklistedPublicKeys(v.ctx)
 	if err != nil {
-		log.Errorf("Could not read slashable public keys from disk: %v", err)
+		log.WithError(err).Error("Could not read slashable public keys from disk")
 		return
 	}
 	slashablePublicKeys := make(map[[fieldparams.BLSPubkeyLength]byte]bool)
@@ -176,7 +176,7 @@ func (v *ValidatorService) Start() {
 
 	graffitiOrderedIndex, err := v.db.GraffitiOrderedIndex(v.ctx, v.graffitiStruct.Hash)
 	if err != nil {
-		log.Errorf("Could not read graffiti ordered index from disk: %v", err)
+		log.WithError(err).Error("Could not read graffiti ordered index from disk")
 		return
 	}
 
@@ -209,7 +209,7 @@ func (v *ValidatorService) Start() {
 		logDutyCountDown:               v.logDutyCountDown,
 		Web3SignerConfig:               v.Web3SignerConfig,
 		ProposerSettings:               v.ProposerSettings,
-		walletIntializedChannel:        make(chan *wallet.Wallet, 1),
+		walletInitializedChannel:       make(chan *wallet.Wallet, 1),
 	}
 	// To resolve a race condition at startup due to the interface
 	// nature of the abstracted block type. We initialize
@@ -264,7 +264,7 @@ func ConstructDialOptions(
 	if withCert != "" {
 		creds, err := credentials.NewClientTLSFromFile(withCert, "")
 		if err != nil {
-			log.Errorf("Could not get valid credentials: %v", err)
+			log.WithError(err).Error("Could not get valid credentials")
 			return nil
 		}
 		transportSecurity = grpc.WithTransportCredentials(creds)

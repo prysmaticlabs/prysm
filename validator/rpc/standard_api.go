@@ -173,7 +173,7 @@ func (s *Server) DeleteKeystores(
 
 	exportedHistory, err := s.slashingProtectionHistoryForDeletedKeys(ctx, req.Pubkeys, statuses)
 	if err != nil {
-		log.Warnf("Could not get slashing protection history for deleted keys: %v", err)
+		log.WithError(err).Warn("Could not get slashing protection history for deleted keys")
 		statuses := groupExportErrors(req, "Non duplicate keys that were existing were deleted, but could not export slashing protection history.")
 		return &ethpbservice.DeleteKeystoresResponse{Data: statuses}, nil
 	}
@@ -387,6 +387,35 @@ func groupDeleteRemoteKeysErrors(req *ethpbservice.DeleteRemoteKeysRequest, erro
 		}
 	}
 	return statuses
+}
+
+func (s *Server) GetGasLimit(_ context.Context, req *ethpbservice.PubkeyRequest) (*ethpbservice.GetGasLimitResponse, error) {
+	if s.validatorService == nil {
+		return nil, status.Error(codes.FailedPrecondition, "Validator service not ready")
+	}
+	validatorKey := req.Pubkey
+	if err := validatePublicKey(validatorKey); err != nil {
+		return nil, status.Error(codes.FailedPrecondition, err.Error())
+	}
+	resp := &ethpbservice.GetGasLimitResponse{
+		Data: &ethpbservice.GetGasLimitResponse_GasLimit{
+			Pubkey: validatorKey,
+		},
+	}
+	if s.validatorService.ProposerSettings != nil {
+		proposerOption, found := s.validatorService.ProposerSettings.ProposeConfig[bytesutil.ToBytes48(validatorKey)]
+		if found {
+			if proposerOption.BuilderConfig != nil {
+				resp.Data.GasLimit = proposerOption.BuilderConfig.GasLimit
+				return resp, nil
+			}
+		} else if s.validatorService.ProposerSettings.DefaultConfig != nil && s.validatorService.ProposerSettings.DefaultConfig.BuilderConfig != nil {
+			resp.Data.GasLimit = s.validatorService.ProposerSettings.DefaultConfig.BuilderConfig.GasLimit
+			return resp, nil
+		}
+	}
+	resp.Data.GasLimit = params.BeaconConfig().DefaultBuilderGasLimit
+	return resp, nil
 }
 
 // ListFeeRecipientByPubkey returns the public key to eth address mapping object to the end user.

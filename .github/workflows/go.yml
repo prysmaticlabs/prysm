@@ -62,10 +62,9 @@ jobs:
           id: go
 
       - name: Golangci-lint
-        uses: golangci/golangci-lint-action@v2
+        uses: golangci/golangci-lint-action@v3
         with:
-          version: v1.45.2
-          skip-go-installation: true
+          version: v1.47.2
 
   build:
     name: Build

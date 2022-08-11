@@ -13,8 +13,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -31,7 +31,7 @@ func TestSaveHead_Same(t *testing.T) {
 
 	r := [32]byte{'A'}
 	service.head = &head{slot: 0, root: r}
-	b, err := wrapper.WrappedSignedBeaconBlock(util.NewBeaconBlock())
+	b, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 	require.NoError(t, err)
 	st, _ := util.DeterministicGenesisState(t, 1)
 	require.NoError(t, service.saveHead(context.Background(), r, b, st))
@@ -80,7 +80,11 @@ func TestSaveHead_Different(t *testing.T) {
 	cachedRoot, err := service.HeadRoot(context.Background())
 	require.NoError(t, err)
 	assert.DeepEqual(t, cachedRoot, newRoot[:], "Head did not change")
-	assert.DeepEqual(t, newHeadSignedBlock, service.headBlock().Proto(), "Head did not change")
+	headBlock, err := service.headBlock()
+	require.NoError(t, err)
+	pb, err := headBlock.Proto()
+	require.NoError(t, err)
+	assert.DeepEqual(t, newHeadSignedBlock, pb, "Head did not change")
 	assert.DeepSSZEqual(t, headState.CloneInnerState(), service.headState(ctx).CloneInnerState(), "Head did not change")
 }
 
@@ -130,7 +134,11 @@ func TestSaveHead_Different_Reorg(t *testing.T) {
 	if !bytes.Equal(cachedRoot, newRoot[:]) {
 		t.Error("Head did not change")
 	}
-	assert.DeepEqual(t, newHeadSignedBlock, service.headBlock().Proto(), "Head did not change")
+	headBlock, err := service.headBlock()
+	require.NoError(t, err)
+	pb, err := headBlock.Proto()
+	require.NoError(t, err)
+	assert.DeepEqual(t, newHeadSignedBlock, pb, "Head did not change")
 	assert.DeepSSZEqual(t, headState.CloneInnerState(), service.headState(ctx).CloneInnerState(), "Head did not change")
 	require.LogsContain(t, hook, "Chain reorg occurred")
 }
