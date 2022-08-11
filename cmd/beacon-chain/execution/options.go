@@ -17,17 +17,17 @@ var log = logrus.WithField("prefix", "cmd-execution-chain")
 
 // FlagOptions for execution service flag configurations.
 func FlagOptions(c *cli.Context) ([]execution.Option, error) {
-	endpoints := parseExecutionChainEndpoint(c)
+	endpoint := parseExecutionChainEndpoint(c)
 	jwtSecret, err := parseJWTSecretFromFile(c)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not read JWT secret file for authenticating execution API")
 	}
 	opts := []execution.Option{
-		execution.WithHttpEndpoints(endpoints),
+		execution.WithHttpEndpoint(endpoint),
 		execution.WithEth1HeaderRequestLimit(c.Uint64(flags.Eth1HeaderReqLimit.Name)),
 	}
 	if len(jwtSecret) > 0 {
-		opts = append(opts, execution.WithHttpEndpointsAndJWTSecret(endpoints, jwtSecret))
+		opts = append(opts, execution.WithHttpEndpointAndJWTSecret(endpoint, jwtSecret))
 	}
 	return opts, nil
 }
@@ -63,7 +63,7 @@ func parseJWTSecretFromFile(c *cli.Context) ([]byte, error) {
 	return secret, nil
 }
 
-func parseExecutionChainEndpoint(c *cli.Context) []string {
+func parseExecutionChainEndpoint(c *cli.Context) string {
 	if c.String(flags.HTTPWeb3ProviderFlag.Name) == "" {
 		log.Error(
 			"You will need to specify --http-web3provider to attach " +
