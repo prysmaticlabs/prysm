@@ -2,6 +2,8 @@ package ecdsa
 
 import (
 	"crypto/ecdsa"
+	"crypto/rand"
+	"math/big"
 	"testing"
 
 	"github.com/btcsuite/btcd/btcec/v2"
@@ -25,4 +27,21 @@ func TestConvertToInterfacePubkey(t *testing.T) {
 	rawKey := btcec.PublicKey(nKey).SerializeUncompressed()
 	origRawKey := gcrypto.FromECDSAPub(pubkey)
 	assert.DeepEqual(t, origRawKey, rawKey)
+}
+
+func TestConvertToInterfacePrivkey_HandlesShorterKeys(t *testing.T) {
+	priv, _, err := crypto.GenerateSecp256k1Key(rand.Reader)
+	assert.NoError(t, err)
+	rawBytes, err := priv.Raw()
+	assert.NoError(t, err)
+	// Zero-out most significant byte so that the big int normalizes
+	// it by removing it.
+	rawBytes[0] = 0
+	privKey := new(ecdsa.PrivateKey)
+	k := new(big.Int).SetBytes(rawBytes)
+	privKey.D = k
+	privKey.Curve = gcrypto.S256()
+	privKey.X, privKey.Y = gcrypto.S256().ScalarBaseMult(rawBytes)
+	_, err = ConvertToInterfacePrivkey(privKey)
+	assert.NoError(t, err)
 }

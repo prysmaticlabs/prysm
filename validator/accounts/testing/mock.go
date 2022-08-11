@@ -150,10 +150,6 @@ func (_ MockValidator) LogAttestationsSubmitted() {
 	panic("implement me")
 }
 
-func (_ MockValidator) LogNextDutyTimeLeft(_ types.Slot) error {
-	panic("implement me")
-}
-
 func (_ MockValidator) UpdateDomainDataCaches(_ context.Context, _ types.Slot) {
 	panic("implement me")
 }

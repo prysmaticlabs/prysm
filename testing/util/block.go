@@ -12,9 +12,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -34,6 +34,8 @@ type BlockGenConfig struct {
 	NumAttestations      uint64
 	NumDeposits          uint64
 	NumVoluntaryExits    uint64
+	NumTransactions      uint64 // Only for post Bellatrix blocks
+	FullSyncAggregate    bool
 }
 
 // DefaultBlockGenConfig returns the block config that utilizes the
@@ -45,6 +47,7 @@ func DefaultBlockGenConfig() *BlockGenConfig {
 		NumAttestations:      1,
 		NumDeposits:          0,
 		NumVoluntaryExits:    0,
+		NumTransactions:      0,
 	}
 }
 
@@ -746,6 +749,8 @@ func HydrateBeaconBlockBodyBellatrix(b *ethpb.BeaconBlockBodyBellatrix) *ethpb.B
 			PrevRandao:    make([]byte, fieldparams.RootLength),
 			BaseFeePerGas: make([]byte, fieldparams.RootLength),
 			BlockHash:     make([]byte, fieldparams.RootLength),
+			Transactions:  make([][]byte, 0),
+			ExtraData:     make([]byte, 0),
 		}
 	}
 	return b
@@ -812,6 +817,7 @@ func HydrateBlindedBeaconBlockBodyBellatrix(b *ethpb.BlindedBeaconBlockBodyBella
 			BaseFeePerGas:    make([]byte, 32),
 			BlockHash:        make([]byte, 32),
 			TransactionsRoot: make([]byte, fieldparams.RootLength),
+			ExtraData:        make([]byte, 0),
 		}
 	}
 	return b
@@ -884,7 +890,7 @@ func HydrateV2BlindedBeaconBlockBodyBellatrix(b *v2.BlindedBeaconBlockBodyBellat
 }
 
 func SaveBlock(tb assertions.AssertionTestingTB, ctx context.Context, db iface.NoHeadAccessDatabase, b interface{}) interfaces.SignedBeaconBlock {
-	wsb, err := wrapper.WrappedSignedBeaconBlock(b)
+	wsb, err := blocks.NewSignedBeaconBlock(b)
 	require.NoError(tb, err)
 	require.NoError(tb, db.SaveBlock(ctx, wsb))
 	return wsb

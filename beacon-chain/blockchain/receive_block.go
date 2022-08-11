@@ -39,7 +39,10 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.SignedBeaco
 	ctx, span := trace.StartSpan(ctx, "blockChain.ReceiveBlock")
 	defer span.End()
 	receivedTime := time.Now()
-	blockCopy := block.Copy()
+	blockCopy, err := block.Copy()
+	if err != nil {
+		return err
+	}
 
 	// Apply state transition on the new block.
 	if err := s.onBlock(ctx, blockCopy, blockRoot); err != nil {
@@ -94,7 +97,10 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []interfaces.Sig
 	}
 
 	for i, b := range blocks {
-		blockCopy := b.Copy()
+		blockCopy, err := b.Copy()
+		if err != nil {
+			return err
+		}
 		// Send notification of the processed block to the state feed.
 		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.BlockProcessed,
@@ -122,7 +128,7 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []interfaces.Sig
 		// log.Fatalf will prevent defer from being called
 		span.End()
 		// Exit run time if the node failed to verify weak subjectivity checkpoint.
-		log.Fatalf("Could not verify weak subjectivity checkpoint: %v", err)
+		log.WithError(err).Fatal("Could not verify weak subjectivity checkpoint")
 	}
 
 	return nil
@@ -146,7 +152,7 @@ func (s *Service) handlePostBlockOperations(b interfaces.BeaconBlock) error {
 
 	// Add block attestations to the fork choice pool to compute head.
 	if err := s.cfg.AttPool.SaveBlockAttestations(b.Body().Attestations()); err != nil {
-		log.Errorf("Could not save block attestations for fork choice: %v", err)
+		log.WithError(err).Error("Could not save block attestations for fork choice")
 		return nil
 	}
 	// Mark block exits as seen so we don't include same ones in future blocks.

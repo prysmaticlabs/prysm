@@ -8,7 +8,7 @@ import (
 	"time"
 
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
+	mockExecution "github.com/prysmaticlabs/prysm/beacon-chain/execution/testing"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -27,14 +27,14 @@ func TestLifecycle_OK(t *testing.T) {
 		Genesis: time.Now(),
 	}
 	rpcService := NewService(context.Background(), &Config{
-		Port:                "7348",
-		SyncService:         &mockSync.Sync{IsSyncing: false},
-		BlockReceiver:       chainService,
-		AttestationReceiver: chainService,
-		HeadFetcher:         chainService,
-		GenesisTimeFetcher:  chainService,
-		POWChainService:     &mockPOW.POWChain{},
-		StateNotifier:       chainService.StateNotifier(),
+		Port:                  "7348",
+		SyncService:           &mockSync.Sync{IsSyncing: false},
+		BlockReceiver:         chainService,
+		AttestationReceiver:   chainService,
+		HeadFetcher:           chainService,
+		GenesisTimeFetcher:    chainService,
+		ExecutionChainService: &mockExecution.Chain{},
+		StateNotifier:         chainService.StateNotifier(),
 	})
 
 	rpcService.Start()
@@ -57,14 +57,14 @@ func TestRPC_InsecureEndpoint(t *testing.T) {
 	hook := logTest.NewGlobal()
 	chainService := &mock.ChainService{Genesis: time.Now()}
 	rpcService := NewService(context.Background(), &Config{
-		Port:                "7777",
-		SyncService:         &mockSync.Sync{IsSyncing: false},
-		BlockReceiver:       chainService,
-		GenesisTimeFetcher:  chainService,
-		AttestationReceiver: chainService,
-		HeadFetcher:         chainService,
-		POWChainService:     &mockPOW.POWChain{},
-		StateNotifier:       chainService.StateNotifier(),
+		Port:                  "7777",
+		SyncService:           &mockSync.Sync{IsSyncing: false},
+		BlockReceiver:         chainService,
+		GenesisTimeFetcher:    chainService,
+		AttestationReceiver:   chainService,
+		HeadFetcher:           chainService,
+		ExecutionChainService: &mockExecution.Chain{},
+		StateNotifier:         chainService.StateNotifier(),
 	})
 
 	rpcService.Start()

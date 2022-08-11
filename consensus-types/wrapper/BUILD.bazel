@@ -1,60 +1,15 @@
-load("@prysm//tools/go:def.bzl", "go_library", "go_test")
+load("@prysm//tools/go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = [
-        "beacon_block.go",
-        "beacon_block_altair.go",
-        "beacon_block_bellatrix.go",
-        "beacon_block_phase0.go",
-        "blinded_beacon_block_bellatrix.go",
-        "execution.go",
-        "metadata.go",
-        "mutator.go",
-    ],
+    srcs = ["metadata.go"],
     importpath = "github.com/prysmaticlabs/prysm/consensus-types/wrapper",
     visibility = ["//visibility:public"],
     deps = [
-        "//config/fieldparams:go_default_library",
-        "//consensus-types/interfaces:go_default_library",
-        "//consensus-types/primitives:go_default_library",
-        "//encoding/bytesutil:go_default_library",
-        "//encoding/ssz:go_default_library",
-        "//proto/engine/v1:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//proto/prysm/v1alpha1/metadata:go_default_library",
-        "//proto/prysm/v1alpha1/validator-client:go_default_library",
         "//runtime/version:go_default_library",
-        "@com_github_pkg_errors//:go_default_library",
-        "@com_github_prysmaticlabs_fastssz//:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
         "@org_golang_google_protobuf//proto:go_default_library",
-    ],
-)
-
-go_test(
-    name = "go_default_test",
-    srcs = [
-        "beacon_block_altair_test.go",
-        "beacon_block_bellatrix_test.go",
-        "beacon_block_phase0_test.go",
-        "beacon_block_test.go",
-        "blinded_beacon_block_bellatrix_test.go",
-        "execution_test.go",
-    ],
-    deps = [
-        ":go_default_library",
-        "//config/fieldparams:go_default_library",
-        "//consensus-types/interfaces:go_default_library",
-        "//consensus-types/primitives:go_default_library",
-        "//encoding/bytesutil:go_default_library",
-        "//proto/engine/v1:go_default_library",
-        "//proto/prysm/v1alpha1:go_default_library",
-        "//proto/prysm/v1alpha1/validator-client:go_default_library",
-        "//runtime/version:go_default_library",
-        "//testing/assert:go_default_library",
-        "//testing/require:go_default_library",
-        "//testing/util:go_default_library",
-        "@com_github_pkg_errors//:go_default_library",
     ],
 )
