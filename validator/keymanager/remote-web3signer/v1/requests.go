@@ -286,11 +286,7 @@ func GetBlockBellatrixSignRequest(request *validatorpb.SignRequest, genesisValid
 		if blindedBlockBellatrix == nil {
 			return nil, errors.New("invalid sign request - blindedBlockBellatrix is nil")
 		}
-<<<<<<< HEAD
-		beaconBlock, err := wrapper.WrappedBeaconBlock(blindedBlockBellatrix.BlindedBlockBellatrix)
-=======
-		beaconBlock, err := blocks.NewBeaconBlock(blindedBlockV3.BlindedBlockV3)
->>>>>>> develop
+		beaconBlock, err := blocks.NewBeaconBlock(blindedBlockBellatrix.BlindedBlockBellatrix)
 		if err != nil {
 			return nil, err
 		}
@@ -304,11 +300,7 @@ func GetBlockBellatrixSignRequest(request *validatorpb.SignRequest, genesisValid
 		if blockBellatrix == nil {
 			return nil, errors.New("invalid sign request: blockBellatrix is nil")
 		}
-<<<<<<< HEAD
-		beaconBlock, err := wrapper.WrappedBeaconBlock(blockBellatrix.BlockBellatrix)
-=======
-		beaconBlock, err := blocks.NewBeaconBlock(blockV3Bellatrix.BlockV3)
->>>>>>> develop
+		beaconBlock, err := blocks.NewBeaconBlock(blockBellatrix.BlockBellatrix)
 		if err != nil {
 			return nil, err
 		}
