@@ -73,6 +73,10 @@ func (SignedBeaconBlock) Version() int {
 	panic("implement me")
 }
 
+func (SignedBeaconBlock) IsBlinded() bool {
+	return false
+}
+
 func (SignedBeaconBlock) ToBlinded() (interfaces.SignedBeaconBlock, error) {
 	panic("implement me")
 }
