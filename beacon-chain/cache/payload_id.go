@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"bytes"
 	"sync"
 
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
@@ -14,14 +15,14 @@ const vpIdsLength = vIdLength + pIdLength
 // ProposerPayloadIDsCache is a cache of proposer payload IDs.
 // The key is the slot. The value is the concatenation of the proposer and payload IDs. 8 bytes each.
 type ProposerPayloadIDsCache struct {
-	slotToProposerAndPayloadIDs map[[32]byte][vpIdsLength]byte
+	slotToProposerAndPayloadIDs map[[40]byte][vpIdsLength]byte
 	sync.RWMutex
 }
 
 // NewProposerPayloadIDsCache creates a new proposer payload IDs cache.
 func NewProposerPayloadIDsCache() *ProposerPayloadIDsCache {
 	return &ProposerPayloadIDsCache{
-		slotToProposerAndPayloadIDs: make(map[[32]byte][vpIdsLength]byte),
+		slotToProposerAndPayloadIDs: make(map[[40]byte][vpIdsLength]byte),
 	}
 }
 
@@ -49,15 +50,16 @@ func (f *ProposerPayloadIDsCache) SetProposerAndPayloadIDs(slot types.Slot, vId 
 	var vIdBytes [vIdLength]byte
 	copy(vIdBytes[:], bytesutil.Uint64ToBytesBigEndian(uint64(vId)))
 
-	var bytes [vpIdsLength]byte
-	copy(bytes[:], append(vIdBytes[:], pId[:]...))
+	var bs [vpIdsLength]byte
+	copy(bs[:], append(vIdBytes[:], pId[:]...))
 
 	k := idKey(slot, r)
-	_, ok := f.slotToProposerAndPayloadIDs[k]
-	// Ok to overwrite if the slot is already set but the payload ID is not set.
-	// This combats the re-org case where payload assignment could change the epoch of.
-	if !ok || (ok && pId != [pIdLength]byte{}) {
-		f.slotToProposerAndPayloadIDs[k] = bytes
+	ids, ok := f.slotToProposerAndPayloadIDs[k]
+	// Ok to overwrite if the slot is already set but the cached payload ID is not set.
+	// This combats the re-org case where payload assignment could change at the start of the epoch.
+	byte8 := [vIdLength]byte{}
+	if !ok || (ok && bytes.Equal(ids[vIdLength:], byte8[:])) {
+		f.slotToProposerAndPayloadIDs[k] = bs
 	}
 }
 
@@ -74,8 +76,8 @@ func (f *ProposerPayloadIDsCache) PrunePayloadIDs(slot types.Slot) {
 	}
 }
 
-func idKey(slot types.Slot, r [32]byte) [32]byte {
-	var k [32]byte
+func idKey(slot types.Slot, r [32]byte) [40]byte {
+	var k [40]byte
 	copy(k[:], append(bytesutil.Uint64ToBytesBigEndian(uint64(slot)), r[:]...))
 	return k
 }

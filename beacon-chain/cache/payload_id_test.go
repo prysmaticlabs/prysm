@@ -52,15 +52,16 @@ func TestValidatorPayloadIDsCache_GetAndSaveValidatorPayloadIDs(t *testing.T) {
 	require.Equal(t, types.ValidatorIndex(0), i)
 	require.Equal(t, [pIdLength]byte{}, p)
 
-	// reset cache with existing pid
+	// existing pid - no change in cache
 	slot = types.Slot(9456456)
 	vid = types.ValidatorIndex(11111)
+	r = [32]byte{7, 8, 9}
 	newPid := [8]byte{1, 2, 3, 33, 72, 8, 7, 1}
 	cache.SetProposerAndPayloadIDs(slot, vid, newPid, r)
 	i, p, ok = cache.GetProposerPayloadIDs(slot, r)
 	require.Equal(t, true, ok)
 	require.Equal(t, vid, i)
-	require.Equal(t, newPid, p)
+	require.Equal(t, pid, p)
 
 	// remove cache entry
 	cache.PrunePayloadIDs(slot + 1)

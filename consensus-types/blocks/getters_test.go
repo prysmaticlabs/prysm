@@ -178,11 +178,8 @@ func Test_BeaconBlock_IsNil(t *testing.T) {
 }
 
 func Test_BeaconBlock_IsBlinded(t *testing.T) {
-	assert.Equal(t, false, (&BeaconBlock{version: version.Phase0}).IsBlinded())
-	assert.Equal(t, false, (&BeaconBlock{version: version.Altair}).IsBlinded())
-	assert.Equal(t, false, (&BeaconBlock{version: version.Bellatrix}).IsBlinded())
-	assert.Equal(t, true, (&BeaconBlock{version: version.BellatrixBlind}).IsBlinded())
-	assert.Equal(t, false, (&BeaconBlock{version: 128}).IsBlinded())
+	assert.Equal(t, false, (&BeaconBlock{body: &BeaconBlockBody{isBlinded: false}}).IsBlinded())
+	assert.Equal(t, true, (&BeaconBlock{body: &BeaconBlockBody{isBlinded: true}}).IsBlinded())
 }
 
 func Test_BeaconBlock_Version(t *testing.T) {
