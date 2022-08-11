@@ -17,7 +17,10 @@ var log = logrus.WithField("prefix", "cmd-execution-chain")
 
 // FlagOptions for execution service flag configurations.
 func FlagOptions(c *cli.Context) ([]execution.Option, error) {
-	endpoint := parseExecutionChainEndpoint(c)
+	endpoint, err := parseExecutionChainEndpoint(c)
+	if err != nil {
+		return nil, err
+	}
 	jwtSecret, err := parseJWTSecretFromFile(c)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not read JWT secret file for authenticating execution API")
@@ -63,13 +66,15 @@ func parseJWTSecretFromFile(c *cli.Context) ([]byte, error) {
 	return secret, nil
 }
 
-func parseExecutionChainEndpoint(c *cli.Context) string {
+func parseExecutionChainEndpoint(c *cli.Context) (string, error) {
 	if c.String(flags.HTTPWeb3ProviderFlag.Name) == "" {
-		log.Error(
-			"You will need to specify --http-web3provider to attach " +
-				"an eth1 node to the prysm node. Without an eth1 node block proposals for your " +
-				"validator will be affected and the beacon node will not be able to initialize the genesis state",
+		return "", fmt.Errorf(
+			"you need to specify %s to provide a connection endpoint to an Ethereum execution client "+
+				"for your Prysm beacon node. This is a requirement for running a node. You can read more about "+
+				"how to configure this execution client connection in our docs here "+
+				"https://docs.prylabs.network/docs/install/install-with-script",
+			flags.HTTPWeb3ProviderFlag.Name,
 		)
 	}
-	return c.String(flags.HTTPWeb3ProviderFlag.Name)
+	return c.String(flags.HTTPWeb3ProviderFlag.Name), nil
 }
