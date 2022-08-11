@@ -7,7 +7,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/network"
 	"github.com/prysmaticlabs/prysm/network/authorization"
 )
 
@@ -16,7 +15,6 @@ type Option func(s *Service) error
 // WithHttpEndpoint parse http endpoint for the powchain service to use.
 func WithHttpEndpoint(endpointString string) Option {
 	return func(s *Service) error {
-		s.cfg.httpEndpoints = []network.Endpoint{HttpEndpoint(endpointString)}
 		s.cfg.currHttpEndpoint = HttpEndpoint(endpointString)
 		return nil
 	}
@@ -33,7 +31,6 @@ func WithHttpEndpointAndJWTSecret(endpointString string, secret []byte) Option {
 		hEndpoint.Auth.Method = authorization.Bearer
 		hEndpoint.Auth.Value = string(secret)
 
-		s.cfg.httpEndpoints = []network.Endpoint{hEndpoint}
 		s.cfg.currHttpEndpoint = hEndpoint
 		return nil
 	}

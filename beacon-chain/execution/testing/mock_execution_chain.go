@@ -118,16 +118,15 @@ func (*Chain) ClearPreGenesisData() {
 	// no-op
 }
 
-// IsConnectedToETH1 --
-func (*Chain) IsConnectedToETH1() bool {
+func (*Chain) ExecutionClientConnected() bool {
 	return true
 }
 
-func (m *Chain) CurrentETH1Endpoint() string {
+func (m *Chain) ExecutionClientEndpoint() string {
 	return m.CurrEndpoint
 }
 
-func (m *Chain) CurrentETH1ConnectionError() error {
+func (m *Chain) ExecutionClientConnectionErr() error {
 	return m.CurrError
 }
 

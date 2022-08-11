@@ -26,7 +26,6 @@ import (
 	"github.com/prysmaticlabs/prysm/contracts/deposit/mock"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/clientstats"
-	"github.com/prysmaticlabs/prysm/network"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -583,58 +582,6 @@ func (mbs *mockBSUpdater) Update(bs clientstats.BeaconNodeStats) {
 
 var _ BeaconNodeStatsUpdater = &mockBSUpdater{}
 
-func TestServiceFallbackCorrectly(t *testing.T) {
-	testAcc, err := mock.Setup()
-	require.NoError(t, err, "Unable to set up simulated backend")
-	beaconDB := dbutil.SetupDB(t)
-
-	server, firstEndpoint, err := mockExecution.SetupRPCServer()
-	require.NoError(t, err)
-	t.Cleanup(func() {
-		server.Stop()
-	})
-	server2, secondEndpoint, err := mockExecution.SetupRPCServer()
-	require.NoError(t, err)
-	t.Cleanup(func() {
-		server2.Stop()
-	})
-	server3, thirdEndpoint, err := mockExecution.SetupRPCServer()
-	require.NoError(t, err)
-	t.Cleanup(func() {
-		server3.Stop()
-	})
-
-	mbs := &mockBSUpdater{}
-	s1, err := NewService(context.Background(),
-		WithHttpEndpoint(firstEndpoint),
-		WithDepositContractAddress(testAcc.ContractAddr),
-		WithDatabase(beaconDB),
-		WithBeaconNodeStatsUpdater(mbs),
-	)
-	require.NoError(t, err)
-	s1.cfg.beaconNodeStatsUpdater = mbs
-
-	assert.Equal(t, firstEndpoint, s1.cfg.currHttpEndpoint.Url, "Unexpected http endpoint")
-
-	// Stay at the first endpoint.
-	s1.fallbackToNextEndpoint()
-	assert.Equal(t, firstEndpoint, s1.cfg.currHttpEndpoint.Url, "Unexpected http endpoint")
-
-	s1.cfg.httpEndpoints = append(s1.cfg.httpEndpoints, network.Endpoint{Url: secondEndpoint})
-
-	s1.fallbackToNextEndpoint()
-	assert.Equal(t, secondEndpoint, s1.cfg.currHttpEndpoint.Url, "Unexpected http endpoint")
-
-	s1.cfg.httpEndpoints = append(s1.cfg.httpEndpoints, network.Endpoint{Url: thirdEndpoint})
-
-	s1.fallbackToNextEndpoint()
-	assert.Equal(t, thirdEndpoint, s1.cfg.currHttpEndpoint.Url, "Unexpected http endpoint")
-
-	// Rollover correctly back to the first endpoint
-	s1.fallbackToNextEndpoint()
-	assert.Equal(t, firstEndpoint, s1.cfg.currHttpEndpoint.Url, "Unexpected http endpoint")
-}
-
 func TestDedupEndpoints(t *testing.T) {
 	assert.DeepEqual(t, []string{"A"}, dedupEndpoints([]string{"A"}), "did not dedup correctly")
 	assert.DeepEqual(t, []string{"A", "B"}, dedupEndpoints([]string{"A", "B"}), "did not dedup correctly")
@@ -837,10 +784,7 @@ func TestETH1Endpoints(t *testing.T) {
 	require.NoError(t, err)
 
 	// Check default endpoint is set to current.
-	assert.Equal(t, firstEndpoint, s1.CurrentETH1Endpoint(), "Unexpected http endpoint")
-
-	// Check endpoints are all present.
-	assert.DeepSSZEqual(t, endpoints, s1.ETH1Endpoints(), "Unexpected http endpoint slice")
+	assert.Equal(t, firstEndpoint, s1.ExecutionClientEndpoint(), "Unexpected http endpoint")
 }
 
 func TestService_CacheBlockHeaders(t *testing.T) {

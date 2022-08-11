@@ -223,26 +223,15 @@ func (ns *Server) ListPeers(ctx context.Context, _ *empty.Empty) (*ethpb.Peers, 
 
 // GetETH1ConnectionStatus gets data about the ETH1 endpoints.
 func (ns *Server) GetETH1ConnectionStatus(_ context.Context, _ *empty.Empty) (*ethpb.ETH1ConnectionStatus, error) {
-	var errStrs []string
-	var currErrString string
-	errs := ns.POWChainInfoFetcher.ETH1ConnectionErrors()
-	// Extract string version of the errors.
-	for _, err := range errs {
-		if err == nil {
-			errStrs = append(errStrs, "")
-		} else {
-			errStrs = append(errStrs, err.Error())
-		}
-	}
-	curErr := ns.POWChainInfoFetcher.CurrentETH1ConnectionError()
-	if curErr != nil {
-		currErrString = curErr.Error()
+	var currErr string
+	err := ns.POWChainInfoFetcher.ExecutionClientConnectionErr()
+	if err != nil {
+		currErr = err.Error()
 	}
 	return &ethpb.ETH1ConnectionStatus{
-		CurrentAddress:         ns.POWChainInfoFetcher.CurrentETH1Endpoint(),
-		CurrentConnectionError: currErrString,
-		Addresses:              ns.POWChainInfoFetcher.ETH1Endpoints(),
-		ConnectionErrors:       errStrs,
+		CurrentAddress:         ns.POWChainInfoFetcher.ExecutionClientEndpoint(),
+		CurrentConnectionError: currErr,
+		Addresses:              []string{ns.POWChainInfoFetcher.ExecutionClientEndpoint()},
 	}, nil
 }
 
