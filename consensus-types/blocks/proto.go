@@ -7,7 +7,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// Proto returns the underlying protobuf signed beacon block.
+// Proto converts the signed beacon block to a protobuf object.
 func (b *SignedBeaconBlock) Proto() (proto.Message, error) {
 	if b == nil {
 		return nil, errNilBlock
@@ -20,38 +20,55 @@ func (b *SignedBeaconBlock) Proto() (proto.Message, error) {
 
 	switch b.version {
 	case version.Phase0:
-		block, ok := blockMessage.(*eth.BeaconBlock)
-		if !ok {
-			return nil, errors.Wrap(err, incorrectBlockVersion)
+		var block *eth.BeaconBlock
+		if blockMessage != nil {
+			var ok bool
+			block, ok = blockMessage.(*eth.BeaconBlock)
+			if !ok {
+				return nil, errors.Wrap(err, incorrectBlockVersion)
+			}
 		}
 		return &eth.SignedBeaconBlock{
 			Block:     block,
 			Signature: b.signature,
 		}, nil
 	case version.Altair:
-		block, ok := blockMessage.(*eth.BeaconBlockAltair)
-		if !ok {
-			return nil, errors.Wrap(err, incorrectBlockVersion)
+		var block *eth.BeaconBlockAltair
+		if blockMessage != nil {
+			var ok bool
+			block, ok = blockMessage.(*eth.BeaconBlockAltair)
+			if !ok {
+				return nil, errors.Wrap(err, incorrectBlockVersion)
+			}
 		}
 		return &eth.SignedBeaconBlockAltair{
 			Block:     block,
 			Signature: b.signature,
 		}, nil
 	case version.Bellatrix:
-		block, ok := blockMessage.(*eth.BeaconBlockBellatrix)
-		if !ok {
-			return nil, errors.Wrap(err, incorrectBlockVersion)
+		if b.IsBlinded() {
+			var block *eth.BlindedBeaconBlockBellatrix
+			if blockMessage != nil {
+				var ok bool
+				block, ok = blockMessage.(*eth.BlindedBeaconBlockBellatrix)
+				if !ok {
+					return nil, errors.Wrap(err, incorrectBlockVersion)
+				}
+			}
+			return &eth.SignedBlindedBeaconBlockBellatrix{
+				Block:     block,
+				Signature: b.signature,
+			}, nil
+		}
+		var block *eth.BeaconBlockBellatrix
+		if blockMessage != nil {
+			var ok bool
+			block, ok = blockMessage.(*eth.BeaconBlockBellatrix)
+			if !ok {
+				return nil, errors.Wrap(err, incorrectBlockVersion)
+			}
 		}
 		return &eth.SignedBeaconBlockBellatrix{
-			Block:     block,
-			Signature: b.signature,
-		}, nil
-	case version.BellatrixBlind:
-		block, ok := blockMessage.(*eth.BlindedBeaconBlockBellatrix)
-		if !ok {
-			return nil, errors.Wrap(err, incorrectBlockVersion)
-		}
-		return &eth.SignedBlindedBeaconBlockBellatrix{
 			Block:     block,
 			Signature: b.signature,
 		}, nil
@@ -60,10 +77,10 @@ func (b *SignedBeaconBlock) Proto() (proto.Message, error) {
 	}
 }
 
-// Proto returns the underlying protobuf beacon block.
+// Proto converts the beacon block to a protobuf object.
 func (b *BeaconBlock) Proto() (proto.Message, error) {
 	if b == nil {
-		return nil, errNilBlock
+		return nil, nil
 	}
 
 	bodyMessage, err := b.body.Proto()
@@ -73,9 +90,13 @@ func (b *BeaconBlock) Proto() (proto.Message, error) {
 
 	switch b.version {
 	case version.Phase0:
-		body, ok := bodyMessage.(*eth.BeaconBlockBody)
-		if !ok {
-			return nil, errors.Wrap(err, incorrectBodyVersion)
+		var body *eth.BeaconBlockBody
+		if bodyMessage != nil {
+			var ok bool
+			body, ok = bodyMessage.(*eth.BeaconBlockBody)
+			if !ok {
+				return nil, errors.Wrap(err, incorrectBodyVersion)
+			}
 		}
 		return &eth.BeaconBlock{
 			Slot:          b.slot,
@@ -85,9 +106,13 @@ func (b *BeaconBlock) Proto() (proto.Message, error) {
 			Body:          body,
 		}, nil
 	case version.Altair:
-		body, ok := bodyMessage.(*eth.BeaconBlockBodyAltair)
-		if !ok {
-			return nil, errors.Wrap(err, incorrectBodyVersion)
+		var body *eth.BeaconBlockBodyAltair
+		if bodyMessage != nil {
+			var ok bool
+			body, ok = bodyMessage.(*eth.BeaconBlockBodyAltair)
+			if !ok {
+				return nil, errors.Wrap(err, incorrectBodyVersion)
+			}
 		}
 		return &eth.BeaconBlockAltair{
 			Slot:          b.slot,
@@ -97,23 +122,32 @@ func (b *BeaconBlock) Proto() (proto.Message, error) {
 			Body:          body,
 		}, nil
 	case version.Bellatrix:
-		body, ok := bodyMessage.(*eth.BeaconBlockBodyBellatrix)
-		if !ok {
-			return nil, errors.Wrap(err, incorrectBodyVersion)
+		if b.IsBlinded() {
+			var body *eth.BlindedBeaconBlockBodyBellatrix
+			if bodyMessage != nil {
+				var ok bool
+				body, ok = bodyMessage.(*eth.BlindedBeaconBlockBodyBellatrix)
+				if !ok {
+					return nil, errors.Wrap(err, incorrectBodyVersion)
+				}
+			}
+			return &eth.BlindedBeaconBlockBellatrix{
+				Slot:          b.slot,
+				ProposerIndex: b.proposerIndex,
+				ParentRoot:    b.parentRoot,
+				StateRoot:     b.stateRoot,
+				Body:          body,
+			}, nil
+		}
+		var body *eth.BeaconBlockBodyBellatrix
+		if bodyMessage != nil {
+			var ok bool
+			body, ok = bodyMessage.(*eth.BeaconBlockBodyBellatrix)
+			if !ok {
+				return nil, errors.Wrap(err, incorrectBodyVersion)
+			}
 		}
 		return &eth.BeaconBlockBellatrix{
-			Slot:          b.slot,
-			ProposerIndex: b.proposerIndex,
-			ParentRoot:    b.parentRoot,
-			StateRoot:     b.stateRoot,
-			Body:          body,
-		}, nil
-	case version.BellatrixBlind:
-		body, ok := bodyMessage.(*eth.BlindedBeaconBlockBodyBellatrix)
-		if !ok {
-			return nil, errors.Wrap(err, incorrectBodyVersion)
-		}
-		return &eth.BlindedBeaconBlockBellatrix{
 			Slot:          b.slot,
 			ProposerIndex: b.proposerIndex,
 			ParentRoot:    b.parentRoot,
@@ -125,10 +159,10 @@ func (b *BeaconBlock) Proto() (proto.Message, error) {
 	}
 }
 
-// Proto returns the underlying protobuf beacon block body.
+// Proto converts the beacon block body to a protobuf object.
 func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 	if b == nil {
-		return nil, errNilBody
+		return nil, nil
 	}
 
 	switch b.version {
@@ -156,6 +190,20 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 			SyncAggregate:     b.syncAggregate,
 		}, nil
 	case version.Bellatrix:
+		if b.isBlinded {
+			return &eth.BlindedBeaconBlockBodyBellatrix{
+				RandaoReveal:           b.randaoReveal,
+				Eth1Data:               b.eth1Data,
+				Graffiti:               b.graffiti,
+				ProposerSlashings:      b.proposerSlashings,
+				AttesterSlashings:      b.attesterSlashings,
+				Attestations:           b.attestations,
+				Deposits:               b.deposits,
+				VoluntaryExits:         b.voluntaryExits,
+				SyncAggregate:          b.syncAggregate,
+				ExecutionPayloadHeader: b.executionPayloadHeader,
+			}, nil
+		}
 		return &eth.BeaconBlockBodyBellatrix{
 			RandaoReveal:      b.randaoReveal,
 			Eth1Data:          b.eth1Data,
@@ -167,19 +215,6 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 			VoluntaryExits:    b.voluntaryExits,
 			SyncAggregate:     b.syncAggregate,
 			ExecutionPayload:  b.executionPayload,
-		}, nil
-	case version.BellatrixBlind:
-		return &eth.BlindedBeaconBlockBodyBellatrix{
-			RandaoReveal:           b.randaoReveal,
-			Eth1Data:               b.eth1Data,
-			Graffiti:               b.graffiti,
-			ProposerSlashings:      b.proposerSlashings,
-			AttesterSlashings:      b.attesterSlashings,
-			Attestations:           b.attestations,
-			Deposits:               b.deposits,
-			VoluntaryExits:         b.voluntaryExits,
-			SyncAggregate:          b.syncAggregate,
-			ExecutionPayloadHeader: b.executionPayloadHeader,
 		}, nil
 	default:
 		return nil, errors.New("unsupported beacon block body version")
@@ -247,7 +282,7 @@ func initBlindedSignedBlockFromProtoBellatrix(pb *eth.SignedBlindedBeaconBlockBe
 		return nil, err
 	}
 	b := &SignedBeaconBlock{
-		version:   version.BellatrixBlind,
+		version:   version.Bellatrix,
 		block:     block,
 		signature: pb.Signature,
 	}
@@ -324,7 +359,7 @@ func initBlindedBlockFromProtoBellatrix(pb *eth.BlindedBeaconBlockBellatrix) (*B
 		return nil, err
 	}
 	b := &BeaconBlock{
-		version:       version.BellatrixBlind,
+		version:       version.Bellatrix,
 		slot:          pb.Slot,
 		proposerIndex: pb.ProposerIndex,
 		parentRoot:    pb.ParentRoot,
@@ -336,11 +371,12 @@ func initBlindedBlockFromProtoBellatrix(pb *eth.BlindedBeaconBlockBellatrix) (*B
 
 func initBlockBodyFromProtoPhase0(pb *eth.BeaconBlockBody) (*BeaconBlockBody, error) {
 	if pb == nil {
-		return nil, errNilBody
+		return nil, errNilBlockBody
 	}
 
 	b := &BeaconBlockBody{
 		version:           version.Phase0,
+		isBlinded:         false,
 		randaoReveal:      pb.RandaoReveal,
 		eth1Data:          pb.Eth1Data,
 		graffiti:          pb.Graffiti,
@@ -355,11 +391,12 @@ func initBlockBodyFromProtoPhase0(pb *eth.BeaconBlockBody) (*BeaconBlockBody, er
 
 func initBlockBodyFromProtoAltair(pb *eth.BeaconBlockBodyAltair) (*BeaconBlockBody, error) {
 	if pb == nil {
-		return nil, errNilBody
+		return nil, errNilBlockBody
 	}
 
 	b := &BeaconBlockBody{
 		version:           version.Altair,
+		isBlinded:         false,
 		randaoReveal:      pb.RandaoReveal,
 		eth1Data:          pb.Eth1Data,
 		graffiti:          pb.Graffiti,
@@ -375,11 +412,12 @@ func initBlockBodyFromProtoAltair(pb *eth.BeaconBlockBodyAltair) (*BeaconBlockBo
 
 func initBlockBodyFromProtoBellatrix(pb *eth.BeaconBlockBodyBellatrix) (*BeaconBlockBody, error) {
 	if pb == nil {
-		return nil, errNilBody
+		return nil, errNilBlockBody
 	}
 
 	b := &BeaconBlockBody{
 		version:           version.Bellatrix,
+		isBlinded:         false,
 		randaoReveal:      pb.RandaoReveal,
 		eth1Data:          pb.Eth1Data,
 		graffiti:          pb.Graffiti,
@@ -396,11 +434,12 @@ func initBlockBodyFromProtoBellatrix(pb *eth.BeaconBlockBodyBellatrix) (*BeaconB
 
 func initBlindedBlockBodyFromProtoBellatrix(pb *eth.BlindedBeaconBlockBodyBellatrix) (*BeaconBlockBody, error) {
 	if pb == nil {
-		return nil, errNilBody
+		return nil, errNilBlockBody
 	}
 
 	b := &BeaconBlockBody{
-		version:                version.BellatrixBlind,
+		version:                version.Bellatrix,
+		isBlinded:              true,
 		randaoReveal:           pb.RandaoReveal,
 		eth1Data:               pb.Eth1Data,
 		graffiti:               pb.Graffiti,

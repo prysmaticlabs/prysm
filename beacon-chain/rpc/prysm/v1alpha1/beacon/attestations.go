@@ -365,7 +365,7 @@ func (bs *Server) collectReceivedAttestations(ctx context.Context) {
 		case att := <-bs.ReceivedAttestationsBuffer:
 			attDataRoot, err := att.Data.HashTreeRoot()
 			if err != nil {
-				log.Errorf("Could not hash tree root attestation data: %v", err)
+				log.WithError(err).Error("Could not hash tree root attestation data")
 				continue
 			}
 			attsByRoot[attDataRoot] = append(attsByRoot[attDataRoot], att)

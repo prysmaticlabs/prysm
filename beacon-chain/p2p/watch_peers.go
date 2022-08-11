@@ -19,7 +19,7 @@ func ensurePeerConnections(ctx context.Context, h host.Host, peers ...string) {
 		}
 		peerInfo, err := MakePeer(p)
 		if err != nil {
-			log.Errorf("Could not make peer: %v", err)
+			log.WithError(err).Error("Could not make peer")
 			continue
 		}
 

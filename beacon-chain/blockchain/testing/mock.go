@@ -131,13 +131,16 @@ func (msn *MockStateNotifier) StateFeed() *event.Feed {
 			sub := msn.feed.Subscribe(msn.recvCh)
 
 			go func() {
-				select {
-				case evt := <-msn.recvCh:
-					msn.recvLock.Lock()
-					msn.recv = append(msn.recv, evt)
-					msn.recvLock.Unlock()
-				case <-sub.Err():
-					sub.Unsubscribe()
+				for {
+					select {
+					case evt := <-msn.recvCh:
+						msn.recvLock.Lock()
+						msn.recv = append(msn.recv, evt)
+						msn.recvLock.Unlock()
+					case <-sub.Err():
+						sub.Unsubscribe()
+						return
+					}
 				}
 			}()
 		}
