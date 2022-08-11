@@ -33,7 +33,7 @@ func SubmitValidatorRegistrations(
 		Messages: signedRegs,
 	}); err != nil {
 		if strings.Contains(err.Error(), builder.ErrNoBuilder.Error()) {
-			log.Warnln("Beacon node does not utilize a custom builder. Validator registration skipped.")
+			log.Warnln("Beacon node does not utilize a custom builder via the --http-mev-relay flag. Validator registration skipped.")
 			return nil
 		}
 		return errors.Wrap(err, "could not submit signed registrations to beacon node")
