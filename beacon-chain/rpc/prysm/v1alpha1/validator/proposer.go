@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	emptypb "github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
@@ -169,9 +170,8 @@ func (vs *Server) SubmitValidatorRegistration(ctx context.Context, reg *ethpb.Si
 
 // SubmitValidatorRegistrations submits validator registrations.
 func (vs *Server) SubmitValidatorRegistrations(ctx context.Context, reg *ethpb.SignedValidatorRegistrationsV1) (*emptypb.Empty, error) {
-	// No-op is the builder is nil / not configured. The node should still function without a builder.
 	if vs.BlockBuilder == nil || !vs.BlockBuilder.Configured() {
-		return &emptypb.Empty{}, nil
+		return &emptypb.Empty{}, status.Errorf(codes.InvalidArgument, "Could not register block builder: %v", builder.ErrNoBuilder)
 	}
 
 	if err := vs.BlockBuilder.RegisterValidator(ctx, reg.Messages); err != nil {
