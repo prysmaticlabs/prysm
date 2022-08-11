@@ -8,10 +8,10 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"sort"
 
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/tools/cover"
 )
 
@@ -127,7 +127,7 @@ func main() {
 	for _, file := range flag.Args() {
 		profiles, err := cover.ParseProfiles(file)
 		if err != nil {
-			log.Fatalf("failed to parse profiles: %v", err)
+			log.WithError(err).Fatal("failed to parse profiles")
 
 		}
 		for _, p := range profiles {

@@ -71,7 +71,6 @@ var appFlags = []cli.Flag{
 	flags.WalletDirFlag,
 	flags.EnableWebFlag,
 	flags.GraffitiFileFlag,
-	flags.EnableDutyCountDown,
 	// Consensys' Web3Signer flags
 	flags.Web3SignerURLFlag,
 	flags.Web3SignerPublicValidatorKeysFlag,
@@ -79,6 +78,7 @@ var appFlags = []cli.Flag{
 	flags.ProposerSettingsURLFlag,
 	flags.ProposerSettingsFlag,
 	flags.EnableBuilderFlag,
+	flags.BuilderGasLimitFlag,
 	////////////////////
 	cmd.DisableMonitoringFlag,
 	cmd.MonitoringHostFlag,

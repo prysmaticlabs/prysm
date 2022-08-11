@@ -16,6 +16,7 @@ import (
 	coreTime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	mockExecution "github.com/prysmaticlabs/prysm/beacon-chain/execution/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations/mock"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
@@ -23,7 +24,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
 	p2pmock "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
 	p2pType "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
-	mockPOW "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	v1alpha1validator "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/validator"
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/testutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
@@ -669,9 +669,9 @@ func TestProduceBlock(t *testing.T) {
 		SyncChecker:       &mockSync.Sync{IsSyncing: false},
 		BlockReceiver:     &mockChain.ChainService{},
 		HeadUpdater:       &mockChain.ChainService{},
-		ChainStartFetcher: &mockPOW.POWChain{},
-		Eth1InfoFetcher:   &mockPOW.POWChain{},
-		Eth1BlockFetcher:  &mockPOW.POWChain{},
+		ChainStartFetcher: &mockExecution.Chain{},
+		Eth1InfoFetcher:   &mockExecution.Chain{},
+		Eth1BlockFetcher:  &mockExecution.Chain{},
 		MockEth1Votes:     true,
 		AttPool:           attestations.NewPool(),
 		SlashingsPool:     slashings.NewPool(),
@@ -764,9 +764,9 @@ func TestProduceBlockV2(t *testing.T) {
 			SyncChecker:       &mockSync.Sync{IsSyncing: false},
 			BlockReceiver:     &mockChain.ChainService{},
 			HeadUpdater:       &mockChain.ChainService{},
-			ChainStartFetcher: &mockPOW.POWChain{},
-			Eth1InfoFetcher:   &mockPOW.POWChain{},
-			Eth1BlockFetcher:  &mockPOW.POWChain{},
+			ChainStartFetcher: &mockExecution.Chain{},
+			Eth1InfoFetcher:   &mockExecution.Chain{},
+			Eth1BlockFetcher:  &mockExecution.Chain{},
 			MockEth1Votes:     true,
 			AttPool:           attestations.NewPool(),
 			SlashingsPool:     slashings.NewPool(),
@@ -868,9 +868,9 @@ func TestProduceBlockV2(t *testing.T) {
 			SyncChecker:       &mockSync.Sync{IsSyncing: false},
 			BlockReceiver:     &mockChain.ChainService{},
 			HeadUpdater:       &mockChain.ChainService{},
-			ChainStartFetcher: &mockPOW.POWChain{},
-			Eth1InfoFetcher:   &mockPOW.POWChain{},
-			Eth1BlockFetcher:  &mockPOW.POWChain{},
+			ChainStartFetcher: &mockExecution.Chain{},
+			Eth1InfoFetcher:   &mockExecution.Chain{},
+			Eth1BlockFetcher:  &mockExecution.Chain{},
 			MockEth1Votes:     true,
 			AttPool:           attestations.NewPool(),
 			SlashingsPool:     slashings.NewPool(),
@@ -1006,7 +1006,7 @@ func TestProduceBlockV2(t *testing.T) {
 		require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
 
 		v1Alpha1Server := &v1alpha1validator.Server{
-			ExecutionEngineCaller: &mockPOW.EngineClient{
+			ExecutionEngineCaller: &mockExecution.EngineClient{
 				ExecutionBlock: &enginev1.ExecutionBlock{
 					TotalDifficulty: "0x1",
 				},
@@ -1017,9 +1017,9 @@ func TestProduceBlockV2(t *testing.T) {
 			SyncChecker:            &mockSync.Sync{IsSyncing: false},
 			BlockReceiver:          &mockChain.ChainService{},
 			HeadUpdater:            &mockChain.ChainService{},
-			ChainStartFetcher:      &mockPOW.POWChain{},
-			Eth1InfoFetcher:        &mockPOW.POWChain{},
-			Eth1BlockFetcher:       &mockPOW.POWChain{},
+			ChainStartFetcher:      &mockExecution.Chain{},
+			Eth1InfoFetcher:        &mockExecution.Chain{},
+			Eth1BlockFetcher:       &mockExecution.Chain{},
 			MockEth1Votes:          true,
 			AttPool:                attestations.NewPool(),
 			SlashingsPool:          slashings.NewPool(),
@@ -1141,9 +1141,9 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 			SyncChecker:       &mockSync.Sync{IsSyncing: false},
 			BlockReceiver:     &mockChain.ChainService{},
 			HeadUpdater:       &mockChain.ChainService{},
-			ChainStartFetcher: &mockPOW.POWChain{},
-			Eth1InfoFetcher:   &mockPOW.POWChain{},
-			Eth1BlockFetcher:  &mockPOW.POWChain{},
+			ChainStartFetcher: &mockExecution.Chain{},
+			Eth1InfoFetcher:   &mockExecution.Chain{},
+			Eth1BlockFetcher:  &mockExecution.Chain{},
 			MockEth1Votes:     true,
 			AttPool:           attestations.NewPool(),
 			SlashingsPool:     slashings.NewPool(),
@@ -1302,9 +1302,9 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 			SyncChecker:       &mockSync.Sync{IsSyncing: false},
 			BlockReceiver:     &mockChain.ChainService{},
 			HeadUpdater:       &mockChain.ChainService{},
-			ChainStartFetcher: &mockPOW.POWChain{},
-			Eth1InfoFetcher:   &mockPOW.POWChain{},
-			Eth1BlockFetcher:  &mockPOW.POWChain{},
+			ChainStartFetcher: &mockExecution.Chain{},
+			Eth1InfoFetcher:   &mockExecution.Chain{},
+			Eth1BlockFetcher:  &mockExecution.Chain{},
 			MockEth1Votes:     true,
 			AttPool:           attestations.NewPool(),
 			SlashingsPool:     slashings.NewPool(),
@@ -1495,7 +1495,7 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 		require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
 
 		v1Alpha1Server := &v1alpha1validator.Server{
-			ExecutionEngineCaller: &mockPOW.EngineClient{
+			ExecutionEngineCaller: &mockExecution.EngineClient{
 				ExecutionBlock: &enginev1.ExecutionBlock{
 					TotalDifficulty: "0x1",
 				},
@@ -1506,9 +1506,9 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 			SyncChecker:            &mockSync.Sync{IsSyncing: false},
 			BlockReceiver:          &mockChain.ChainService{},
 			HeadUpdater:            &mockChain.ChainService{},
-			ChainStartFetcher:      &mockPOW.POWChain{},
-			Eth1InfoFetcher:        &mockPOW.POWChain{},
-			Eth1BlockFetcher:       &mockPOW.POWChain{},
+			ChainStartFetcher:      &mockExecution.Chain{},
+			Eth1InfoFetcher:        &mockExecution.Chain{},
+			Eth1BlockFetcher:       &mockExecution.Chain{},
 			MockEth1Votes:          true,
 			AttPool:                attestations.NewPool(),
 			SlashingsPool:          slashings.NewPool(),
@@ -1724,9 +1724,9 @@ func TestProduceBlindedBlock(t *testing.T) {
 			SyncChecker:       &mockSync.Sync{IsSyncing: false},
 			BlockReceiver:     &mockChain.ChainService{},
 			HeadUpdater:       &mockChain.ChainService{},
-			ChainStartFetcher: &mockPOW.POWChain{},
-			Eth1InfoFetcher:   &mockPOW.POWChain{},
-			Eth1BlockFetcher:  &mockPOW.POWChain{},
+			ChainStartFetcher: &mockExecution.Chain{},
+			Eth1InfoFetcher:   &mockExecution.Chain{},
+			Eth1BlockFetcher:  &mockExecution.Chain{},
 			MockEth1Votes:     true,
 			AttPool:           attestations.NewPool(),
 			SlashingsPool:     slashings.NewPool(),
@@ -1828,9 +1828,9 @@ func TestProduceBlindedBlock(t *testing.T) {
 			SyncChecker:       &mockSync.Sync{IsSyncing: false},
 			BlockReceiver:     &mockChain.ChainService{},
 			HeadUpdater:       &mockChain.ChainService{},
-			ChainStartFetcher: &mockPOW.POWChain{},
-			Eth1InfoFetcher:   &mockPOW.POWChain{},
-			Eth1BlockFetcher:  &mockPOW.POWChain{},
+			ChainStartFetcher: &mockExecution.Chain{},
+			Eth1InfoFetcher:   &mockExecution.Chain{},
+			Eth1BlockFetcher:  &mockExecution.Chain{},
 			MockEth1Votes:     true,
 			AttPool:           attestations.NewPool(),
 			SlashingsPool:     slashings.NewPool(),
@@ -1966,7 +1966,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 		require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
 
 		v1Alpha1Server := &v1alpha1validator.Server{
-			ExecutionEngineCaller: &mockPOW.EngineClient{
+			ExecutionEngineCaller: &mockExecution.EngineClient{
 				ExecutionBlock: &enginev1.ExecutionBlock{
 					TotalDifficulty: "0x1",
 				},
@@ -1977,9 +1977,9 @@ func TestProduceBlindedBlock(t *testing.T) {
 			SyncChecker:            &mockSync.Sync{IsSyncing: false},
 			BlockReceiver:          &mockChain.ChainService{},
 			HeadUpdater:            &mockChain.ChainService{},
-			ChainStartFetcher:      &mockPOW.POWChain{},
-			Eth1InfoFetcher:        &mockPOW.POWChain{},
-			Eth1BlockFetcher:       &mockPOW.POWChain{},
+			ChainStartFetcher:      &mockExecution.Chain{},
+			Eth1InfoFetcher:        &mockExecution.Chain{},
+			Eth1BlockFetcher:       &mockExecution.Chain{},
 			MockEth1Votes:          true,
 			AttPool:                attestations.NewPool(),
 			SlashingsPool:          slashings.NewPool(),
@@ -2101,9 +2101,9 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 			SyncChecker:       &mockSync.Sync{IsSyncing: false},
 			BlockReceiver:     &mockChain.ChainService{},
 			HeadUpdater:       &mockChain.ChainService{},
-			ChainStartFetcher: &mockPOW.POWChain{},
-			Eth1InfoFetcher:   &mockPOW.POWChain{},
-			Eth1BlockFetcher:  &mockPOW.POWChain{},
+			ChainStartFetcher: &mockExecution.Chain{},
+			Eth1InfoFetcher:   &mockExecution.Chain{},
+			Eth1BlockFetcher:  &mockExecution.Chain{},
 			MockEth1Votes:     true,
 			AttPool:           attestations.NewPool(),
 			SlashingsPool:     slashings.NewPool(),
@@ -2262,9 +2262,9 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 			SyncChecker:       &mockSync.Sync{IsSyncing: false},
 			BlockReceiver:     &mockChain.ChainService{},
 			HeadUpdater:       &mockChain.ChainService{},
-			ChainStartFetcher: &mockPOW.POWChain{},
-			Eth1InfoFetcher:   &mockPOW.POWChain{},
-			Eth1BlockFetcher:  &mockPOW.POWChain{},
+			ChainStartFetcher: &mockExecution.Chain{},
+			Eth1InfoFetcher:   &mockExecution.Chain{},
+			Eth1BlockFetcher:  &mockExecution.Chain{},
 			MockEth1Votes:     true,
 			AttPool:           attestations.NewPool(),
 			SlashingsPool:     slashings.NewPool(),
@@ -2455,7 +2455,7 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 		require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
 
 		v1Alpha1Server := &v1alpha1validator.Server{
-			ExecutionEngineCaller: &mockPOW.EngineClient{
+			ExecutionEngineCaller: &mockExecution.EngineClient{
 				ExecutionBlock: &enginev1.ExecutionBlock{
 					TotalDifficulty: "0x1",
 				},
@@ -2466,9 +2466,9 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 			SyncChecker:            &mockSync.Sync{IsSyncing: false},
 			BlockReceiver:          &mockChain.ChainService{},
 			HeadUpdater:            &mockChain.ChainService{},
-			ChainStartFetcher:      &mockPOW.POWChain{},
-			Eth1InfoFetcher:        &mockPOW.POWChain{},
-			Eth1BlockFetcher:       &mockPOW.POWChain{},
+			ChainStartFetcher:      &mockExecution.Chain{},
+			Eth1InfoFetcher:        &mockExecution.Chain{},
+			Eth1BlockFetcher:       &mockExecution.Chain{},
 			MockEth1Votes:          true,
 			AttPool:                attestations.NewPool(),
 			SlashingsPool:          slashings.NewPool(),

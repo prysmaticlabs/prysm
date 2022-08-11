@@ -9,11 +9,11 @@ import (
 	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/holiman/uint256"
 	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
+	mocks "github.com/prysmaticlabs/prysm/beacon-chain/execution/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
-	mocks "github.com/prysmaticlabs/prysm/beacon-chain/powchain/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -145,7 +145,7 @@ func Test_validateMergeBlock(t *testing.T) {
 			},
 		},
 	}
-	bk, err := wrapper.WrappedSignedBeaconBlock(blk)
+	bk, err := blocks.NewSignedBeaconBlock(blk)
 	require.NoError(t, err)
 	require.NoError(t, service.validateMergeBlock(ctx, bk))
 
@@ -211,7 +211,7 @@ func Test_getBlkParentHashAndTD(t *testing.T) {
 }
 
 func Test_validateTerminalBlockHash(t *testing.T) {
-	wrapped, err := wrapper.WrappedExecutionPayload(&enginev1.ExecutionPayload{})
+	wrapped, err := blocks.WrappedExecutionPayload(&enginev1.ExecutionPayload{})
 	require.NoError(t, err)
 	require.NoError(t, validateTerminalBlockHash(1, wrapped))
 
@@ -224,7 +224,7 @@ func Test_validateTerminalBlockHash(t *testing.T) {
 	params.OverrideBeaconConfig(cfg)
 	require.ErrorContains(t, "parent hash does not match terminal block hash", validateTerminalBlockHash(1, wrapped))
 
-	wrapped, err = wrapper.WrappedExecutionPayload(&enginev1.ExecutionPayload{
+	wrapped, err = blocks.WrappedExecutionPayload(&enginev1.ExecutionPayload{
 		ParentHash: cfg.TerminalBlockHash.Bytes(),
 	})
 	require.NoError(t, err)

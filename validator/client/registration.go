@@ -2,9 +2,11 @@ package client
 
 import (
 	"context"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -30,6 +32,10 @@ func SubmitValidatorRegistrations(
 	if _, err := validatorClient.SubmitValidatorRegistrations(ctx, &ethpb.SignedValidatorRegistrationsV1{
 		Messages: signedRegs,
 	}); err != nil {
+		if strings.Contains(err.Error(), builder.ErrNoBuilder.Error()) {
+			log.Warnln("Beacon node does not utilize a custom builder via the --http-mev-relay flag. Validator registration skipped.")
+			return nil
+		}
 		return errors.Wrap(err, "could not submit signed registrations to beacon node")
 	}
 	log.Infoln("Submitted builder validator registration settings for custom builders")

@@ -7,10 +7,10 @@ package main
 import (
 	"encoding/hex"
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/prysmaticlabs/prysm/tools/unencrypted-keys-gen/keygen"
+	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 )
 
@@ -32,18 +32,18 @@ func main() {
 
 	in, err := os.ReadFile(inFile) // #nosec G304
 	if err != nil {
-		log.Fatalf("Failed to read file %s: %v", inFile, err)
+		log.WithError(err).Fatalf("Failed to read file %s", inFile)
 	}
 	data := make(KeyPairs, 0)
 	if err := yaml.UnmarshalStrict(in, &data); err != nil {
-		log.Fatalf("Failed to unmarshal yaml: %v", err)
+		log.WithError(err).Fatal("Failed to unmarshal yaml")
 	}
 
 	out := &keygen.UnencryptedKeysContainer{}
 	for _, key := range data {
 		pk, err := hex.DecodeString(key.Priv[2:])
 		if err != nil {
-			log.Fatalf("Failed to decode hex string %s: %v", key.Priv, err)
+			log.WithError(err).Fatalf("Failed to decode hex string %s", key.Priv)
 		}
 
 		out.Keys = append(out.Keys, &keygen.UnencryptedKeys{
@@ -54,7 +54,7 @@ func main() {
 
 	outFile, err := os.Create(os.Args[2])
 	if err != nil {
-		log.Fatalf("Failed to create file at %s: %v", os.Args[2], err)
+		log.WithError(err).Fatalf("Failed to create file at %s", os.Args[2])
 	}
 	cleanup := func() {
 		if err := outFile.Close(); err != nil {
@@ -65,7 +65,7 @@ func main() {
 	if err := keygen.SaveUnencryptedKeysToFile(outFile, out); err != nil {
 		// log.Fatalf will prevent defer from being called
 		cleanup()
-		log.Fatalf("Failed to save %v", err)
+		log.WithError(err).Fatal("Failed to save")
 	}
 	log.Printf("Wrote %s\n", os.Args[2])
 }
