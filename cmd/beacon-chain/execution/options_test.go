@@ -21,7 +21,8 @@ func TestExecutionchainCmd(t *testing.T) {
 	set.String(flags.HTTPWeb3ProviderFlag.Name, "primary", "")
 	ctx := cli.NewContext(&app, set, nil)
 
-	endpoints := parseExecutionChainEndpoint(ctx)
+	endpoints, err := parseExecutionChainEndpoint(ctx)
+	require.NoError(t, err)
 	assert.Equal(t, "primary", endpoints)
 }
 
