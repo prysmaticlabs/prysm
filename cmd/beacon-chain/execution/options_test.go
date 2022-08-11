@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/testing/assert"
 	"github.com/prysmaticlabs/prysm/testing/require"
-	logTest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/urfave/cli/v2"
 )
 
@@ -93,11 +92,10 @@ func Test_parseJWTSecretFromFile(t *testing.T) {
 }
 
 func TestPowchainPreregistration_EmptyWeb3Provider(t *testing.T) {
-	hook := logTest.NewGlobal()
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	set.String(flags.HTTPWeb3ProviderFlag.Name, "", "")
 	ctx := cli.NewContext(&app, set, nil)
-	parseExecutionChainEndpoint(ctx)
-	assert.LogsContain(t, hook, "No ETH1 node specified to run with the beacon node")
+	_, err := parseExecutionChainEndpoint(ctx)
+	assert.ErrorContains(t, "you need to specify", err)
 }
