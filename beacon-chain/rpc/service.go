@@ -382,6 +382,14 @@ func (s *Service) Stop() error {
 
 // Status returns nil or credentialError
 func (s *Service) Status() error {
+	optimistic, err := s.cfg.OptimisticModeFetcher.IsOptimistic(s.ctx)
+	if err != nil {
+		return fmt.Errorf("failed to check if service is optimistic: %v", err)
+	}
+	if optimistic {
+		return fmt.Errorf("service is optimistic, validators can't perform duties " +
+			"please check if execution layer is fully synced")
+	}
 	if s.cfg.SyncService.Syncing() {
 		return errors.New("syncing")
 	}
