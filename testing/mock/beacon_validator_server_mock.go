@@ -97,21 +97,6 @@ func (mr *MockBeaconNodeValidatorServerMockRecorder) GetBeaconBlock(arg0, arg1 i
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBeaconBlock", reflect.TypeOf((*MockBeaconNodeValidatorServer)(nil).GetBeaconBlock), arg0, arg1)
 }
 
-// GetBlock mocks base method.
-func (m *MockBeaconNodeValidatorServer) GetBlock(arg0 context.Context, arg1 *eth.BlockRequest) (*eth.BeaconBlock, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetBlock", arg0, arg1)
-	ret0, _ := ret[0].(*eth.BeaconBlock)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetBlock indicates an expected call of GetBlock.
-func (mr *MockBeaconNodeValidatorServerMockRecorder) GetBlock(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBlock", reflect.TypeOf((*MockBeaconNodeValidatorServer)(nil).GetBlock), arg0, arg1)
-}
-
 // GetDuties mocks base method.
 func (m *MockBeaconNodeValidatorServer) GetDuties(arg0 context.Context, arg1 *eth.DutiesRequest) (*eth.DutiesResponse, error) {
 	m.ctrl.T.Helper()
@@ -232,21 +217,6 @@ func (mr *MockBeaconNodeValidatorServerMockRecorder) ProposeBeaconBlock(arg0, ar
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProposeBeaconBlock", reflect.TypeOf((*MockBeaconNodeValidatorServer)(nil).ProposeBeaconBlock), arg0, arg1)
 }
 
-// ProposeBlock mocks base method.
-func (m *MockBeaconNodeValidatorServer) ProposeBlock(arg0 context.Context, arg1 *eth.SignedBeaconBlock) (*eth.ProposeResponse, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ProposeBlock", arg0, arg1)
-	ret0, _ := ret[0].(*eth.ProposeResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ProposeBlock indicates an expected call of ProposeBlock.
-func (mr *MockBeaconNodeValidatorServerMockRecorder) ProposeBlock(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProposeBlock", reflect.TypeOf((*MockBeaconNodeValidatorServer)(nil).ProposeBlock), arg0, arg1)
-}
-
 // ProposeExit mocks base method.
 func (m *MockBeaconNodeValidatorServer) ProposeExit(arg0 context.Context, arg1 *eth.SignedVoluntaryExit) (*eth.ProposeExitResponse, error) {
 	m.ctrl.T.Helper()
@@ -265,15 +235,15 @@ func (mr *MockBeaconNodeValidatorServerMockRecorder) ProposeExit(arg0, arg1 inte
 // StreamBlocksAltair mocks base method.
 func (m *MockBeaconNodeValidatorServer) StreamBlocksAltair(arg0 *eth.StreamBlocksRequest, arg1 eth.BeaconNodeValidator_StreamBlocksAltairServer) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "StreamBlocks", arg0, arg1)
+	ret := m.ctrl.Call(m, "StreamBlocksAltair", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// StreamBlocks indicates an expected call of StreamBlocks.
-func (mr *MockBeaconNodeValidatorServerMockRecorder) StreamBlocks(arg0, arg1 interface{}) *gomock.Call {
+// StreamBlocksAltair indicates an expected call of StreamBlocksAltair.
+func (mr *MockBeaconNodeValidatorServerMockRecorder) StreamBlocksAltair(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StreamBlocks", reflect.TypeOf((*MockBeaconNodeValidatorServer)(nil).StreamBlocks), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StreamBlocksAltair", reflect.TypeOf((*MockBeaconNodeValidatorServer)(nil).StreamBlocksAltair), arg0, arg1)
 }
 
 // StreamDuties mocks base method.
