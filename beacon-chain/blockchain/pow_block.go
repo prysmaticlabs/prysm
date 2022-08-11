@@ -11,9 +11,9 @@ import (
 	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"github.com/sirupsen/logrus"
@@ -37,7 +37,7 @@ import (
 //    # Check if `pow_block` is a valid terminal PoW block
 //    assert is_valid_terminal_pow_block(pow_block, pow_parent)
 func (s *Service) validateMergeBlock(ctx context.Context, b interfaces.SignedBeaconBlock) error {
-	if err := wrapper.BeaconBlockIsNil(b); err != nil {
+	if err := blocks.BeaconBlockIsNil(b); err != nil {
 		return err
 	}
 	payload, err := b.Block().Body().Execution()

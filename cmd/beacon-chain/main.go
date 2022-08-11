@@ -16,9 +16,9 @@ import (
 	"github.com/prysmaticlabs/prysm/cmd"
 	blockchaincmd "github.com/prysmaticlabs/prysm/cmd/beacon-chain/blockchain"
 	dbcommands "github.com/prysmaticlabs/prysm/cmd/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/execution"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	jwtcommands "github.com/prysmaticlabs/prysm/cmd/beacon-chain/jwt"
-	powchaincmd "github.com/prysmaticlabs/prysm/cmd/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/sync/checkpoint"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/sync/genesis"
 	"github.com/prysmaticlabs/prysm/config/features"
@@ -27,12 +27,12 @@ import (
 	"github.com/prysmaticlabs/prysm/monitoring/journald"
 	"github.com/prysmaticlabs/prysm/runtime/debug"
 	"github.com/prysmaticlabs/prysm/runtime/fdlimits"
+	prefixed "github.com/prysmaticlabs/prysm/runtime/logging/logrus-prefixed-formatter"
 	_ "github.com/prysmaticlabs/prysm/runtime/maxprocs"
 	"github.com/prysmaticlabs/prysm/runtime/tos"
 	"github.com/prysmaticlabs/prysm/runtime/version"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
-	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 )
 
 var appFlags = []cli.Flag{
@@ -51,7 +51,6 @@ var appFlags = []cli.Flag{
 	flags.MinSyncPeers,
 	flags.ContractDeploymentBlock,
 	flags.SetGCPercent,
-	flags.HeadSync,
 	flags.DisableSync,
 	flags.DisableDiscv5,
 	flags.BlockBatchLimit,
@@ -247,7 +246,7 @@ func startNode(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	powchainFlagOpts, err := powchaincmd.FlagOptions(ctx)
+	executionFlagOpts, err := execution.FlagOptions(ctx)
 	if err != nil {
 		return err
 	}
@@ -257,7 +256,7 @@ func startNode(ctx *cli.Context) error {
 	}
 	opts := []node.Option{
 		node.WithBlockchainFlagOptions(blockchainFlagOpts),
-		node.WithPowchainFlagOptions(powchainFlagOpts),
+		node.WithExecutionChainOptions(executionFlagOpts),
 		node.WithBuilderFlagOptions(builderFlagOpts),
 	}
 

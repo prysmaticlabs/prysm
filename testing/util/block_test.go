@@ -8,8 +8,8 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/stateutils"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
@@ -24,7 +24,7 @@ func TestGenerateFullBlock_PassesStateTransition(t *testing.T) {
 	}
 	block, err := GenerateFullBlock(beaconState, privs, conf, beaconState.Slot())
 	require.NoError(t, err)
-	wsb, err := wrapper.WrappedSignedBeaconBlock(block)
+	wsb, err := blocks.NewSignedBeaconBlock(block)
 	require.NoError(t, err)
 	_, err = transition.ExecuteStateTransition(context.Background(), beaconState, wsb)
 	require.NoError(t, err)
@@ -39,7 +39,7 @@ func TestGenerateFullBlock_ThousandValidators(t *testing.T) {
 	}
 	block, err := GenerateFullBlock(beaconState, privs, conf, beaconState.Slot())
 	require.NoError(t, err)
-	wsb, err := wrapper.WrappedSignedBeaconBlock(block)
+	wsb, err := blocks.NewSignedBeaconBlock(block)
 	require.NoError(t, err)
 	_, err = transition.ExecuteStateTransition(context.Background(), beaconState, wsb)
 	require.NoError(t, err)
@@ -58,7 +58,7 @@ func TestGenerateFullBlock_Passes4Epochs(t *testing.T) {
 		helpers.ClearCache()
 		block, err := GenerateFullBlock(beaconState, privs, conf, beaconState.Slot())
 		require.NoError(t, err)
-		wsb, err := wrapper.WrappedSignedBeaconBlock(block)
+		wsb, err := blocks.NewSignedBeaconBlock(block)
 		require.NoError(t, err)
 		beaconState, err = transition.ExecuteStateTransition(context.Background(), beaconState, wsb)
 		require.NoError(t, err)
@@ -85,7 +85,7 @@ func TestGenerateFullBlock_ValidProposerSlashings(t *testing.T) {
 	}
 	block, err := GenerateFullBlock(beaconState, privs, conf, beaconState.Slot()+1)
 	require.NoError(t, err)
-	wsb, err := wrapper.WrappedSignedBeaconBlock(block)
+	wsb, err := blocks.NewSignedBeaconBlock(block)
 	require.NoError(t, err)
 	beaconState, err = transition.ExecuteStateTransition(context.Background(), beaconState, wsb)
 	require.NoError(t, err)
@@ -106,7 +106,7 @@ func TestGenerateFullBlock_ValidAttesterSlashings(t *testing.T) {
 	}
 	block, err := GenerateFullBlock(beaconState, privs, conf, beaconState.Slot())
 	require.NoError(t, err)
-	wsb, err := wrapper.WrappedSignedBeaconBlock(block)
+	wsb, err := blocks.NewSignedBeaconBlock(block)
 	require.NoError(t, err)
 	beaconState, err = transition.ExecuteStateTransition(context.Background(), beaconState, wsb)
 	require.NoError(t, err)
@@ -128,7 +128,7 @@ func TestGenerateFullBlock_ValidAttestations(t *testing.T) {
 	}
 	block, err := GenerateFullBlock(beaconState, privs, conf, beaconState.Slot())
 	require.NoError(t, err)
-	wsb, err := wrapper.WrappedSignedBeaconBlock(block)
+	wsb, err := blocks.NewSignedBeaconBlock(block)
 	require.NoError(t, err)
 	beaconState, err = transition.ExecuteStateTransition(context.Background(), beaconState, wsb)
 	require.NoError(t, err)
@@ -151,7 +151,7 @@ func TestGenerateFullBlock_ValidDeposits(t *testing.T) {
 	}
 	block, err := GenerateFullBlock(beaconState, privs, conf, beaconState.Slot())
 	require.NoError(t, err)
-	wsb, err := wrapper.WrappedSignedBeaconBlock(block)
+	wsb, err := blocks.NewSignedBeaconBlock(block)
 	require.NoError(t, err)
 	beaconState, err = transition.ExecuteStateTransition(context.Background(), beaconState, wsb)
 	require.NoError(t, err)
@@ -179,7 +179,7 @@ func TestGenerateFullBlock_ValidVoluntaryExits(t *testing.T) {
 	}
 	block, err := GenerateFullBlock(beaconState, privs, conf, beaconState.Slot())
 	require.NoError(t, err)
-	wsb, err := wrapper.WrappedSignedBeaconBlock(block)
+	wsb, err := blocks.NewSignedBeaconBlock(block)
 	require.NoError(t, err)
 	beaconState, err = transition.ExecuteStateTransition(context.Background(), beaconState, wsb)
 	require.NoError(t, err)
