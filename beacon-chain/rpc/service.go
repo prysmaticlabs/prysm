@@ -387,7 +387,7 @@ func (s *Service) Status() error {
 		return fmt.Errorf("failed to check if service is optimistic: %v", err)
 	}
 	if optimistic {
-		return fmt.Errorf("service is optimistic, validators can't perform duties " +
+		return errors.New("service is optimistic, validators can't perform duties " +
 			"please check if execution layer is fully synced")
 	}
 	if s.cfg.SyncService.Syncing() {
