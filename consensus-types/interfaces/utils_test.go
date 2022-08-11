@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -81,7 +81,7 @@ func TestBeaconBlockHeaderFromBlockInterface(t *testing.T) {
 		BodyRoot:      bodyRoot[:],
 	}
 
-	wb, err := wrapper.WrappedBeaconBlock(blk)
+	wb, err := blocks.NewBeaconBlock(blk)
 	require.NoError(t, err)
 	bh, err := interfaces.BeaconBlockHeaderFromBlockInterface(wb)
 	require.NoError(t, err)
@@ -176,7 +176,7 @@ func TestSignedBeaconBlockHeaderFromBlockInterface(t *testing.T) {
 	},
 		Signature: blk.Signature,
 	}
-	wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+	wsb, err := blocks.NewSignedBeaconBlock(blk)
 	require.NoError(t, err)
 	bh, err := interfaces.SignedBeaconBlockHeaderFromBlockInterface(wsb)
 	require.NoError(t, err)

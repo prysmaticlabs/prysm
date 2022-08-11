@@ -130,12 +130,12 @@ func run(ctx *cli.Context) error {
 			for _, s := range scrapers {
 				r, err := s.Scrape()
 				if err != nil {
-					log.Errorf("Scraper error: %s", err)
+					log.WithError(err).Error("Scraper error")
 					continue
 				}
 				err = upd.Update(r)
 				if err != nil {
-					log.Errorf("client-stats collector error: %s", err)
+					log.WithError(err).Error("client-stats collector error")
 					continue
 				}
 			}

@@ -40,7 +40,7 @@ func (s *Service) maintainPeerStatuses() {
 				if s.cfg.p2p.Host().Network().Connectedness(id) != network.Connected {
 					s.cfg.p2p.Peers().SetConnectionState(id, peers.PeerDisconnecting)
 					if err := s.cfg.p2p.Disconnect(id); err != nil {
-						log.Debugf("Error when disconnecting with peer: %v", err)
+						log.WithError(err).Debug("Error when disconnecting with peer")
 					}
 					s.cfg.p2p.Peers().SetConnectionState(id, peers.PeerDisconnected)
 					return
@@ -100,7 +100,7 @@ func (s *Service) resyncIfBehind() {
 				numberOfTimesResyncedCounter.Inc()
 				s.clearPendingSlots()
 				if err := s.cfg.initialSync.Resync(); err != nil {
-					log.Errorf("Could not resync chain: %v", err)
+					log.WithError(err).Errorf("Could not resync chain")
 				}
 			}
 		}

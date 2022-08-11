@@ -43,7 +43,7 @@ var Commands = &cli.Command{
 			},
 			Action: func(cliCtx *cli.Context) error {
 				if err := accountsDelete(cliCtx); err != nil {
-					log.Fatalf("Could not delete account: %v", err)
+					log.WithError(err).Fatal("Could not delete account")
 				}
 				return nil
 			},
@@ -80,7 +80,7 @@ var Commands = &cli.Command{
 			},
 			Action: func(cliCtx *cli.Context) error {
 				if err := accountsList(cliCtx); err != nil {
-					log.Fatalf("Could not list accounts: %v", err)
+					log.WithError(err).Fatal("Could not list accounts")
 				}
 				return nil
 			},
@@ -114,7 +114,7 @@ var Commands = &cli.Command{
 			},
 			Action: func(cliCtx *cli.Context) error {
 				if err := accountsBackup(cliCtx); err != nil {
-					log.Fatalf("Could not backup accounts: %v", err)
+					log.WithError(err).Fatal("Could not backup accounts")
 				}
 				return nil
 			},
@@ -145,7 +145,7 @@ var Commands = &cli.Command{
 			},
 			Action: func(cliCtx *cli.Context) error {
 				if err := accountsImport(cliCtx); err != nil {
-					log.Fatalf("Could not import accounts: %v", err)
+					log.WithError(err).Fatal("Could not import accounts")
 				}
 				return nil
 			},
@@ -182,7 +182,7 @@ var Commands = &cli.Command{
 			},
 			Action: func(cliCtx *cli.Context) error {
 				if err := accountsExit(cliCtx, os.Stdin); err != nil {
-					log.Fatalf("Could not perform voluntary exit: %v", err)
+					log.WithError(err).Fatal("Could not perform voluntary exit")
 				}
 				return nil
 			},

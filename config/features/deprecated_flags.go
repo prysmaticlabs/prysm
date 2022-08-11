@@ -125,6 +125,16 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedEnableGossipBatchAggregation = &cli.BoolFlag{
+		Name:   "enable-gossip-batch-aggregation",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
+	deprecatedEnablePullTips = &cli.BoolFlag{
+		Name:   "experimental-disable-boundary-checks",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 var deprecatedFlags = []cli.Flag{
@@ -150,4 +160,6 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedDisableCorrectlyPruneCanonicalAtts,
 	deprecatedEnableNativeState,
 	deprecatedEnablePeerScorer,
+	deprecatedEnableGossipBatchAggregation,
+	deprecatedEnablePullTips,
 }

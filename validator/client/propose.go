@@ -11,9 +11,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/crypto/rand"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -86,7 +86,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [f
 	}
 
 	// Sign returned block from beacon node
-	wb, err := wrapper.WrappedBeaconBlock(b.Block)
+	wb, err := blocks.NewBeaconBlock(b.Block)
 	if err != nil {
 		log.WithError(err).Error("Failed to wrap block")
 		if v.emitAccountMetrics {
@@ -104,7 +104,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot types.Slot, pubKey [f
 		return
 	}
 
-	blk, err := wrapper.BuildSignedBeaconBlock(wb, sig)
+	blk, err := blocks.BuildSignedBeaconBlock(wb, sig)
 	if err != nil {
 		log.WithError(err).Error("Failed to build signed beacon block")
 		return
@@ -267,11 +267,15 @@ func (v *validator) signBlock(ctx context.Context, pubKey [fieldparams.BLSPubkey
 	if err != nil {
 		return nil, [32]byte{}, errors.Wrap(err, signingRootErr)
 	}
+	sro, err := b.AsSignRequestObject()
+	if err != nil {
+		return nil, [32]byte{}, err
+	}
 	sig, err := v.keyManager.Sign(ctx, &validatorpb.SignRequest{
 		PublicKey:       pubKey[:],
 		SigningRoot:     blockRoot[:],
 		SignatureDomain: domain.SignatureDomain,
-		Object:          b.AsSignRequestObject(),
+		Object:          sro,
 		SigningSlot:     slot,
 	})
 	if err != nil {

@@ -19,6 +19,7 @@ go_library(
         "testnet_ropsten_config.go",
         "testnet_sepolia_config.go",
         "testutils.go",
+        "testutils_develop.go",  # keep
         "values.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/config/params",

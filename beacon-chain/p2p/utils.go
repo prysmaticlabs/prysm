@@ -133,7 +133,7 @@ func metaDataFromConfig(cfg *Config) (metadata.Metadata, error) {
 func ipAddr() net.IP {
 	ip, err := network.ExternalIP()
 	if err != nil {
-		log.Fatalf("Could not get IPv4 address: %v", err)
+		log.WithError(err).Fatal("Could not get IPv4 address")
 	}
 	return net.ParseIP(ip)
 }

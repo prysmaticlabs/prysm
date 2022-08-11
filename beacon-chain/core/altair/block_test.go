@@ -309,13 +309,13 @@ func Test_SyncRewards(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			proposerReward, participarntReward, err := altair.SyncRewards(tt.activeBalance)
+			proposerReward, participantReward, err := altair.SyncRewards(tt.activeBalance)
 			if (err != nil) && (tt.errString != "") {
 				require.ErrorContains(t, tt.errString, err)
 				return
 			}
 			require.Equal(t, tt.wantProposerReward, proposerReward)
-			require.Equal(t, tt.wantParticipantReward, participarntReward)
+			require.Equal(t, tt.wantParticipantReward, participantReward)
 		})
 	}
 }

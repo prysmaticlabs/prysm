@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/assert"
@@ -32,6 +32,25 @@ func TestStore_LastValidatedCheckpoint_CanSaveRetrieve(t *testing.T) {
 	assert.Equal(t, true, proto.Equal(cp, retrieved), "Wanted %v, received %v", cp, retrieved)
 }
 
+func TestStore_LastValidatedCheckpoint_Recover(t *testing.T) {
+	db := setupDB(t)
+	ctx := context.Background()
+	blk := util.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{})
+	r, err := blk.Block.HashTreeRoot()
+	require.NoError(t, err)
+	cp := &ethpb.Checkpoint{
+		Epoch: 2,
+		Root:  r[:],
+	}
+	wb, err := blocks.NewSignedBeaconBlock(blk)
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, wb))
+	require.NoError(t, db.SaveLastValidatedCheckpoint(ctx, cp))
+	retrieved, err := db.LastValidatedCheckpoint(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, true, proto.Equal(cp, retrieved), "Wanted %v, received %v", cp, retrieved)
+}
+
 func TestStore_LastValidatedCheckpoint_DefaultIsFinalized(t *testing.T) {
 	db := setupDB(t)
 	ctx := context.Background()
@@ -52,7 +71,7 @@ func TestStore_LastValidatedCheckpoint_DefaultIsFinalized(t *testing.T) {
 	}
 
 	// a valid chain is required to save finalized checkpoint.
-	wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+	wsb, err := blocks.NewSignedBeaconBlock(blk)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, wsb))
 	st, err := util.NewBeaconState()
