@@ -44,6 +44,7 @@ func (*ValidatorEndpointFactory) Create(path string) (*apimiddleware.Endpoint, e
 		endpoint.PostRequest = &setFeeRecipientByPubkeyRequestJson{}
 	case "/eth/v1/validator/{pubkey}/gas_limit":
 		endpoint.GetResponse = &getGasLimitResponseJson{}
+		endpoint.PostRequest = &setGasLimitRequestJson{}
 	default:
 		return nil, errors.New("invalid path")
 	}
