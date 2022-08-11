@@ -17,7 +17,7 @@ var ErrNoDataForSlot = errors.New("cannot retrieve data for slot")
 
 // HasState returns true if the state exists in cache or in DB.
 func (s *State) HasState(ctx context.Context, blockRoot [32]byte) (bool, error) {
-	has, err := s.HasStateInCache(ctx, blockRoot)
+	has, err := s.hasStateInCache(ctx, blockRoot)
 	if err != nil {
 		return false, err
 	}
@@ -27,8 +27,8 @@ func (s *State) HasState(ctx context.Context, blockRoot [32]byte) (bool, error) 
 	return s.beaconDB.HasState(ctx, blockRoot), nil
 }
 
-// HasStateInCache returns true if the state exists in cache.
-func (s *State) HasStateInCache(_ context.Context, blockRoot [32]byte) (bool, error) {
+// hasStateInCache returns true if the state exists in cache.
+func (s *State) hasStateInCache(_ context.Context, blockRoot [32]byte) (bool, error) {
 	if s.hotStateCache.has(blockRoot) {
 		return true, nil
 	}
@@ -87,7 +87,7 @@ func (s *State) StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) 
 		return cachedInfo.state, nil
 	}
 
-	startState, err := s.LastAncestorState(ctx, blockRoot)
+	startState, err := s.latestAncestor(ctx, blockRoot)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get ancestor state")
 	}
@@ -102,11 +102,11 @@ func (s *State) StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) 
 		return startState, nil
 	}
 
-	blks, err := s.LoadBlocks(ctx, startState.Slot()+1, summary.Slot, bytesutil.ToBytes32(summary.Root))
+	blks, err := s.loadBlocks(ctx, startState.Slot()+1, summary.Slot, bytesutil.ToBytes32(summary.Root))
 	if err != nil {
 		return nil, errors.Wrap(err, "could not load blocks")
 	}
-	startState, err = s.ReplayBlocks(ctx, startState, blks, summary.Slot)
+	startState, err = s.replayBlocks(ctx, startState, blks, summary.Slot)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not replay blocks")
 	}
@@ -125,13 +125,13 @@ func (s *State) stateSummary(ctx context.Context, blockRoot [32]byte) (*ethpb.St
 	}
 
 	if summary == nil {
-		return s.RecoverStateSummary(ctx, blockRoot)
+		return s.recoverStateSummary(ctx, blockRoot)
 	}
 	return summary, nil
 }
 
 // RecoverStateSummary recovers state summary object of a given block root by using the saved block in DB.
-func (s *State) RecoverStateSummary(ctx context.Context, blockRoot [32]byte) (*ethpb.StateSummary, error) {
+func (s *State) recoverStateSummary(ctx context.Context, blockRoot [32]byte) (*ethpb.StateSummary, error) {
 	if s.beaconDB.HasBlock(ctx, blockRoot) {
 		b, err := s.beaconDB.Block(ctx, blockRoot)
 		if err != nil {
@@ -185,7 +185,7 @@ func (s *State) loadStateByRoot(ctx context.Context, blockRoot [32]byte) (state.
 
 	// Since the requested state is not in caches or DB, start replaying using the last
 	// available ancestor state which is retrieved using input block's root.
-	startState, err := s.LastAncestorState(ctx, blockRoot)
+	startState, err := s.latestAncestor(ctx, blockRoot)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get ancestor state")
 	}
@@ -197,17 +197,17 @@ func (s *State) loadStateByRoot(ctx context.Context, blockRoot [32]byte) (state.
 		return startState, nil
 	}
 
-	blks, err := s.LoadBlocks(ctx, startState.Slot()+1, targetSlot, bytesutil.ToBytes32(summary.Root))
+	blks, err := s.loadBlocks(ctx, startState.Slot()+1, targetSlot, bytesutil.ToBytes32(summary.Root))
 	if err != nil {
 		return nil, errors.Wrap(err, "could not load blocks for hot state using root")
 	}
 
 	replayBlockCount.Observe(float64(len(blks)))
 
-	return s.ReplayBlocks(ctx, startState, blks, targetSlot)
+	return s.replayBlocks(ctx, startState, blks, targetSlot)
 }
 
-// LastAncestorState returns the highest available ancestor state of the input block root.
+// latestAncestor returns the highest available ancestor state of the input block root.
 // It recursively looks up block's parent until a corresponding state of the block root
 // is found in the caches or DB.
 //
@@ -215,8 +215,8 @@ func (s *State) loadStateByRoot(ctx context.Context, blockRoot [32]byte) (state.
 // 1) block parent state is the last finalized state
 // 2) block parent state is the epoch boundary state and exists in epoch boundary cache
 // 3) block parent state is in DB
-func (s *State) LastAncestorState(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "stateGen.LastAncestorState")
+func (s *State) latestAncestor(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error) {
+	ctx, span := trace.StartSpan(ctx, "stateGen.latestAncestor")
 	defer span.End()
 
 	if s.isFinalizedRoot(blockRoot) && s.finalizedState() != nil {
