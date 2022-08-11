@@ -18,10 +18,9 @@ var (
 	}
 	// ExecutionEngineEndpoint provides an HTTP access endpoint to connect to an execution client on the execution layer
 	ExecutionEngineEndpoint = &cli.StringFlag{
-		Name:    "execution-endpoint",
-		Usage:   "An execution client http endpoint. Can contain auth header as well in the format",
-		Value:   "http://localhost:8551",
-		Aliases: []string{"http-web3provider"},
+		Name:  "execution-endpoint",
+		Usage: "An execution client http endpoint. Can contain auth header as well in the format",
+		Value: "http://localhost:8551",
 	}
 	// ExecutionJWTSecretFlag provides a path to a file containing a hex-encoded string representing a 32 byte secret
 	// used to authenticate with an execution node via HTTP. This is required if using an HTTP connection, otherwise all requests
