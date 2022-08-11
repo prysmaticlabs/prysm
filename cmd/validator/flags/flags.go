@@ -316,13 +316,6 @@ var (
 		Name:  "graffiti-file",
 		Usage: "The path to a YAML file with graffiti values",
 	}
-	// EnableDutyCountDown enables more verbose logging for counting down to duty.
-	EnableDutyCountDown = &cli.BoolFlag{
-		Name:  "enable-duty-count-down",
-		Usage: "Enables more verbose logging for counting down to duty",
-		Value: false,
-	}
-
 	// ProposerSettingsFlag defines the path or URL to a file with proposer config.
 	ProposerSettingsFlag = &cli.StringFlag{
 		Name:  "proposer-settings-file",
@@ -350,6 +343,13 @@ var (
 		Name:  "enable-builder",
 		Usage: "Enables Builder validator registration APIs for the validator client to update settings such as fee recipient and gas limit. Note* this flag is not required if using proposer settings config file",
 		Value: false,
+	}
+
+	// BuilderGasLimitFlag defines the gas limit for the builder to use for constructing a payload.
+	BuilderGasLimitFlag = &cli.IntFlag{
+		Name:  "suggested-gas-limit",
+		Usage: "Sets gas limit for the builder to use for constructing a payload for all the validators",
+		Value: int(params.BeaconConfig().DefaultBuilderGasLimit),
 	}
 )
 

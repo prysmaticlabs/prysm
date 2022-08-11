@@ -2,3 +2,4 @@ base:
   language: go
   build_tags:
     - fuzz
+    - develop

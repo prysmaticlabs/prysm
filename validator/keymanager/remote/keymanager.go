@@ -149,7 +149,7 @@ func UnmarshalOptionsFile(r io.ReadCloser) (*KeymanagerOpts, error) {
 	}
 	defer func() {
 		if err := r.Close(); err != nil {
-			log.Errorf("Could not close keymanager config file: %v", err)
+			log.WithError(err).Error("Could not close keymanager config file")
 		}
 	}()
 	opts := &KeymanagerOpts{

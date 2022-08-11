@@ -8,7 +8,6 @@ import (
 // GlobalFlags specifies all the global flags for the
 // beacon node.
 type GlobalFlags struct {
-	HeadSync                   bool
 	DisableDiscv5              bool
 	SubscribeToAllSubnets      bool
 	MinimumSyncPeers           int
@@ -36,10 +35,6 @@ func Init(c *GlobalFlags) {
 // based on the provided cli context.
 func ConfigureGlobalFlags(ctx *cli.Context) {
 	cfg := &GlobalFlags{}
-	if ctx.Bool(HeadSync.Name) {
-		log.Warn("Using Head Sync flag, it starts syncing from last saved head.")
-		cfg.HeadSync = true
-	}
 	if ctx.Bool(SubscribeToAllSubnets.Name) {
 		log.Warn("Subscribing to All Attestation Subnets")
 		cfg.SubscribeToAllSubnets = true

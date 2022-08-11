@@ -6,17 +6,17 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/interop"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"google.golang.org/protobuf/proto"
 )
 
 func (s *Service) beaconBlockSubscriber(ctx context.Context, msg proto.Message) error {
-	signed, err := wrapper.WrappedSignedBeaconBlock(msg)
+	signed, err := blocks.NewSignedBeaconBlock(msg)
 	if err != nil {
 		return err
 	}
-	if err := wrapper.BeaconBlockIsNil(signed); err != nil {
+	if err := blocks.BeaconBlockIsNil(signed); err != nil {
 		return err
 	}
 

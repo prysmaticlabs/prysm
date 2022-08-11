@@ -56,8 +56,8 @@ func (node *Node) Start(ctx context.Context) error {
 		ctx,
 		binaryPath,
 		"init",
-		binaryPath[:strings.LastIndex(binaryPath, "/")]+"/genesis.json",
-		fmt.Sprintf("--datadir=%s", eth1Path)) // #nosec G204 -- Safe
+		fmt.Sprintf("--datadir=%s", eth1Path),
+		binaryPath[:strings.LastIndex(binaryPath, "/")]+"/genesis.json") // #nosec G204 -- Safe
 	initFile, err := helpers.DeleteAndCreateFile(e2e.TestParams.LogPath, "eth1-init_"+strconv.Itoa(node.index)+".log")
 	if err != nil {
 		return err

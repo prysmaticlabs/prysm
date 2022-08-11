@@ -226,7 +226,7 @@ func (s *Service) Start() {
 	if len(s.cfg.StaticPeers) > 0 {
 		addrs, err := peersFromStringAddrs(s.cfg.StaticPeers)
 		if err != nil {
-			log.Errorf("Could not connect to static peer: %v", err)
+			log.WithError(err).Error("Could not connect to static peer")
 		}
 		s.connectWithAllPeers(addrs)
 	}
@@ -437,7 +437,7 @@ func (s *Service) awaitStateInitialized() {
 func (s *Service) connectWithAllPeers(multiAddrs []multiaddr.Multiaddr) {
 	addrInfos, err := peer.AddrInfosFromP2pAddrs(multiAddrs...)
 	if err != nil {
-		log.Errorf("Could not convert to peer address info's from multiaddresses: %v", err)
+		log.WithError(err).Error("Could not convert to peer address info's from multiaddresses")
 		return
 	}
 	for _, info := range addrInfos {
