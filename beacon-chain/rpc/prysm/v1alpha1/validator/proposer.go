@@ -60,43 +60,12 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	return vs.getBellatrixBeaconBlock(ctx, req)
 }
 
-// GetBlock is called by a proposer during its assigned slot to request a block to sign
-// by passing in the slot and the signed randao reveal of the slot.
-//
-// DEPRECATED: Use GetBeaconBlock instead to handle blocks pre and post-Altair hard fork. This endpoint
-// cannot handle blocks after the Altair fork epoch. If requesting a block after Altair, nothing will
-// be returned.
-func (vs *Server) GetBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.BeaconBlock, error) {
-	ctx, span := trace.StartSpan(ctx, "ProposerServer.GetBlock")
-	defer span.End()
-	span.AddAttributes(trace.Int64Attribute("slot", int64(req.Slot)))
-	blk, err := vs.GetBeaconBlock(ctx, req)
-	if err != nil {
-		return nil, err
-	}
-	return blk.GetPhase0(), nil
-}
-
 // ProposeBeaconBlock is called by a proposer during its assigned slot to create a block in an attempt
 // to get it processed by the beacon node as the canonical head.
 func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSignedBeaconBlock) (*ethpb.ProposeResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.ProposeBeaconBlock")
 	defer span.End()
 	blk, err := blocks.NewSignedBeaconBlock(req.Block)
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Could not decode block: %v", err)
-	}
-	return vs.proposeGenericBeaconBlock(ctx, blk)
-}
-
-// ProposeBlock is called by a proposer during its assigned slot to create a block in an attempt
-// to get it processed by the beacon node as the canonical head.
-//
-// DEPRECATED: Use ProposeBeaconBlock instead.
-func (vs *Server) ProposeBlock(ctx context.Context, rBlk *ethpb.SignedBeaconBlock) (*ethpb.ProposeResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "ProposerServer.ProposeBlock")
-	defer span.End()
-	blk, err := blocks.NewSignedBeaconBlock(rBlk)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Could not decode block: %v", err)
 	}
