@@ -384,7 +384,7 @@ func (s *Service) Stop() error {
 func (s *Service) Status() error {
 	optimistic, err := s.cfg.OptimisticModeFetcher.IsOptimistic(s.ctx)
 	if err != nil {
-		return fmt.Errorf("failed to check if service is optimistic: %v", err)
+		return errors.Wrap(err, "failed to check if service is optimistic")
 	}
 	if optimistic {
 		return errors.New("service is optimistic, validators can't perform duties " +
