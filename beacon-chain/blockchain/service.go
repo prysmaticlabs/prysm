@@ -30,7 +30,6 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
@@ -42,10 +41,6 @@ import (
 	"github.com/prysmaticlabs/prysm/time/slots"
 	"go.opencensus.io/trace"
 )
-
-// headSyncMinEpochsAfterCheckpoint defines how many epochs should elapse after known finalization
-// checkpoint for head sync to be triggered.
-const headSyncMinEpochsAfterCheckpoint = 128
 
 // Service represents a service that handles the internal
 // logic of managing the full PoS beacon chain.
@@ -302,43 +297,6 @@ func (s *Service) initializeHeadFromDB(ctx context.Context) error {
 		return errors.Wrap(err, "could not get finalized state from db")
 	}
 
-	if flags.Get().HeadSync {
-		headBlock, err := s.cfg.BeaconDB.HeadBlock(ctx)
-		if err != nil {
-			return errors.Wrap(err, "could not retrieve head block")
-		}
-		headEpoch := slots.ToEpoch(headBlock.Block().Slot())
-		var epochsSinceFinality types.Epoch
-		if headEpoch > finalized.Epoch {
-			epochsSinceFinality = headEpoch - finalized.Epoch
-		}
-		// Head sync when node is far enough beyond known finalized epoch,
-		// this becomes really useful during long period of non-finality.
-		if epochsSinceFinality >= headSyncMinEpochsAfterCheckpoint {
-			headRoot, err := headBlock.Block().HashTreeRoot()
-			if err != nil {
-				return errors.Wrap(err, "could not hash head block")
-			}
-			finalizedState, err := s.cfg.StateGen.Resume(ctx, s.cfg.FinalizedStateAtStartUp)
-			if err != nil {
-				return errors.Wrap(err, "could not get finalized state from db")
-			}
-			log.Infof("Regenerating state from the last checkpoint at slot %d to current head slot of %d."+
-				"This process may take a while, please wait.", finalizedState.Slot(), headBlock.Block().Slot())
-			headState, err := s.cfg.StateGen.StateByRoot(ctx, headRoot)
-			if err != nil {
-				return errors.Wrap(err, "could not retrieve head state")
-			}
-			if err := s.setHead(headRoot, headBlock, headState); err != nil {
-				return errors.Wrap(err, "could not set head")
-			}
-			return nil
-		} else {
-			log.Warnf("Finalized checkpoint at slot %d is too close to the current head slot, "+
-				"resetting head from the checkpoint ('--%s' flag is ignored).",
-				finalizedState.Slot(), flags.HeadSync.Name)
-		}
-	}
 	if finalizedState == nil || finalizedState.IsNil() {
 		return errors.New("finalized state can't be nil")
 	}
