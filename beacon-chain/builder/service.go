@@ -18,6 +18,9 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// ErrNoBuilder is used when builder endpoint is not configured.
+var ErrNoBuilder = errors.New("builder endpoint not configured")
+
 // BlockBuilder defines the interface for interacting with the block builder
 type BlockBuilder interface {
 	SubmitBlindedBlock(ctx context.Context, block *ethpb.SignedBlindedBeaconBlockBellatrix) (*v1.ExecutionPayload, error)
@@ -112,7 +115,7 @@ func (s *Service) Status() error {
 		getStatusLatency.Observe(float64(time.Since(start).Milliseconds()))
 	}()
 
-	// Return early if builder isn't initialized in service.
+	// Return early if builder isn't initilized in service.
 	if s.c == nil {
 		return nil
 	}
