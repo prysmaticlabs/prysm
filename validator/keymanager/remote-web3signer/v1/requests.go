@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 )
 
@@ -286,7 +286,11 @@ func GetBlockBellatrixSignRequest(request *validatorpb.SignRequest, genesisValid
 		if blindedBlockBellatrix == nil {
 			return nil, errors.New("invalid sign request - blindedBlockBellatrix is nil")
 		}
+<<<<<<< HEAD
 		beaconBlock, err := wrapper.WrappedBeaconBlock(blindedBlockBellatrix.BlindedBlockBellatrix)
+=======
+		beaconBlock, err := blocks.NewBeaconBlock(blindedBlockV3.BlindedBlockV3)
+>>>>>>> develop
 		if err != nil {
 			return nil, err
 		}
@@ -300,7 +304,11 @@ func GetBlockBellatrixSignRequest(request *validatorpb.SignRequest, genesisValid
 		if blockBellatrix == nil {
 			return nil, errors.New("invalid sign request: blockBellatrix is nil")
 		}
+<<<<<<< HEAD
 		beaconBlock, err := wrapper.WrappedBeaconBlock(blockBellatrix.BlockBellatrix)
+=======
+		beaconBlock, err := blocks.NewBeaconBlock(blockV3Bellatrix.BlockV3)
+>>>>>>> develop
 		if err != nil {
 			return nil, err
 		}

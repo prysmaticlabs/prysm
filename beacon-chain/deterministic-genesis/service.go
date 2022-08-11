@@ -11,7 +11,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/powchain"
+	"github.com/prysmaticlabs/prysm/beacon-chain/execution"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
@@ -23,7 +23,7 @@ import (
 
 var _ runtime.Service = (*Service)(nil)
 var _ depositcache.DepositFetcher = (*Service)(nil)
-var _ powchain.ChainStartFetcher = (*Service)(nil)
+var _ execution.ChainStartFetcher = (*Service)(nil)
 
 // Service spins up an client interoperability service that handles responsibilities such
 // as kickstarting a genesis state for the beacon node from cli flags or a genesis.ssz file.
@@ -63,18 +63,18 @@ func (s *Service) Start() {
 	if s.cfg.GenesisPath != "" {
 		data, err := os.ReadFile(s.cfg.GenesisPath)
 		if err != nil {
-			log.Fatalf("Could not read pre-loaded state: %v", err)
+			log.WithError(err).Fatal("Could not read pre-loaded state")
 		}
 		genesisState := &ethpb.BeaconState{}
 		if err := genesisState.UnmarshalSSZ(data); err != nil {
-			log.Fatalf("Could not unmarshal pre-loaded state: %v", err)
+			log.WithError(err).Fatal("Could not unmarshal pre-loaded state")
 		}
 		genesisTrie, err := v1.InitializeFromProto(genesisState)
 		if err != nil {
-			log.Fatalf("Could not get state trie: %v", err)
+			log.WithError(err).Fatal("Could not get state trie")
 		}
 		if err := s.saveGenesisState(s.ctx, genesisTrie); err != nil {
-			log.Fatalf("Could not save interop genesis state %v", err)
+			log.WithError(err).Fatal("Could not save interop genesis state")
 		}
 		return
 	}
@@ -82,11 +82,11 @@ func (s *Service) Start() {
 	// Save genesis state in db
 	genesisState, _, err := interop.GenerateGenesisState(s.ctx, s.cfg.GenesisTime, s.cfg.NumValidators)
 	if err != nil {
-		log.Fatalf("Could not generate interop genesis state: %v", err)
+		log.WithError(err).Fatal("Could not generate interop genesis state")
 	}
 	genesisTrie, err := v1.InitializeFromProto(genesisState)
 	if err != nil {
-		log.Fatalf("Could not get state trie: %v", err)
+		log.WithError(err).Fatal("Could not get state trie")
 	}
 	if s.cfg.GenesisTime == 0 {
 		// Generated genesis time; fetch it
@@ -94,12 +94,12 @@ func (s *Service) Start() {
 	}
 	gRoot, err := genesisTrie.HashTreeRoot(s.ctx)
 	if err != nil {
-		log.Fatalf("Could not hash tree root genesis state: %v", err)
+		log.WithError(err).Fatal("Could not hash tree root genesis state")
 	}
 	go slots.CountdownToGenesis(s.ctx, time.Unix(int64(s.cfg.GenesisTime), 0), s.cfg.NumValidators, gRoot)
 
 	if err := s.saveGenesisState(s.ctx, genesisTrie); err != nil {
-		log.Fatalf("Could not save interop genesis state %v", err)
+		log.WithError(err).Fatal("Could not save interop genesis state")
 	}
 }
 

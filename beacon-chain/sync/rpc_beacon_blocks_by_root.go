@@ -8,8 +8,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 )
 
 // sendRecentBeaconBlocksRequest sends a recent beacon blocks request to a peer to get
@@ -57,6 +57,7 @@ func (s *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{
 	}
 
 	if uint64(len(blockRoots)) > params.BeaconNetworkConfig().MaxRequestBlocks {
+		s.cfg.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 		s.writeErrorResponseToStream(responseCodeInvalidRequest, "requested more than the max block limit", stream)
 		return errors.New("requested more than the max block limit")
 	}
@@ -69,7 +70,7 @@ func (s *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{
 			s.writeErrorResponseToStream(responseCodeServerError, types.ErrGeneric.Error(), stream)
 			return err
 		}
-		if err := wrapper.BeaconBlockIsNil(blk); err != nil {
+		if err := blocks.BeaconBlockIsNil(blk); err != nil {
 			continue
 		}
 
