@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"bytes"
 	"sync"
 
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
@@ -49,14 +50,15 @@ func (f *ProposerPayloadIDsCache) SetProposerAndPayloadIDs(slot types.Slot, vId 
 	var vIdBytes [vIdLength]byte
 	copy(vIdBytes[:], bytesutil.Uint64ToBytesBigEndian(uint64(vId)))
 
-	var bytes [vpIdsLength]byte
-	copy(bytes[:], append(vIdBytes[:], pId[:]...))
+	var bs [vpIdsLength]byte
+	copy(bs[:], append(vIdBytes[:], pId[:]...))
 
-	_, ok := f.slotToProposerAndPayloadIDs[slot]
-	// Ok to overwrite if the slot is already set but the payload ID is not set.
-	// This combats the re-org case where payload assignment could change the epoch of.
-	if !ok || (ok && pId != [pIdLength]byte{}) {
-		f.slotToProposerAndPayloadIDs[slot] = bytes
+	ids, ok := f.slotToProposerAndPayloadIDs[slot]
+	// Ok to overwrite if the slot is already set but the cached payload ID is not set.
+	// This combats the re-org case where payload assignment could change at the start of the epoch.
+	byte8 := [vIdLength]byte{}
+	if !ok || (ok && bytes.Equal(ids[vIdLength:], byte8[:])) {
+		f.slotToProposerAndPayloadIDs[slot] = bs
 	}
 }
 

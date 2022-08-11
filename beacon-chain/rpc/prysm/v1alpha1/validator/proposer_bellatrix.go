@@ -194,7 +194,7 @@ func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.SignedBe
 	}
 
 	// No-op if the input block is not version blind and bellatrix.
-	if b.Version() != version.BellatrixBlind {
+	if b.Version() != version.Bellatrix || !b.IsBlinded() {
 		return b, nil
 	}
 	// No-op nothing if the builder has not been configured.
