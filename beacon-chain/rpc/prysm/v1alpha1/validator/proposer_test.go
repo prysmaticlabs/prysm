@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
 	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/builder"
 	builderTest "github.com/prysmaticlabs/prysm/beacon-chain/builder/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
@@ -2361,10 +2362,10 @@ func TestProposer_SubmitValidatorRegistrations(t *testing.T) {
 	proposerServer := &Server{}
 	reg := &ethpb.SignedValidatorRegistrationsV1{}
 	_, err := proposerServer.SubmitValidatorRegistrations(ctx, reg)
-	require.NoError(t, err)
+	require.ErrorContains(t, builder.ErrNoBuilder.Error(), err)
 	proposerServer = &Server{BlockBuilder: &builderTest.MockBuilderService{}}
 	_, err = proposerServer.SubmitValidatorRegistrations(ctx, reg)
-	require.NoError(t, err)
+	require.ErrorContains(t, builder.ErrNoBuilder.Error(), err)
 	proposerServer = &Server{BlockBuilder: &builderTest.MockBuilderService{HasConfigured: true}}
 	_, err = proposerServer.SubmitValidatorRegistrations(ctx, reg)
 	require.NoError(t, err)
