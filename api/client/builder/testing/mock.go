@@ -17,15 +17,15 @@ func NewClient() MockClient {
 	return MockClient{RegisteredVals: map[[48]byte]bool{}}
 }
 
-func (m MockClient) NodeURL() string {
+func (MockClient) NodeURL() string {
 	return ""
 }
 
-func (m MockClient) GetHeader(ctx context.Context, slot types.Slot, parentHash [32]byte, pubkey [48]byte) (*ethpb.SignedBuilderBid, error) {
+func (MockClient) GetHeader(_ context.Context, _ types.Slot, _ [32]byte, _ [48]byte) (*ethpb.SignedBuilderBid, error) {
 	return nil, nil
 }
 
-func (m MockClient) RegisterValidator(ctx context.Context, svr []*ethpb.SignedValidatorRegistrationV1) error {
+func (m MockClient) RegisterValidator(_ context.Context, svr []*ethpb.SignedValidatorRegistrationV1) error {
 	for _, r := range svr {
 		b := bytesutil.ToBytes48(r.Message.Pubkey)
 		m.RegisteredVals[b] = true
@@ -33,10 +33,10 @@ func (m MockClient) RegisterValidator(ctx context.Context, svr []*ethpb.SignedVa
 	return nil
 }
 
-func (m MockClient) SubmitBlindedBlock(ctx context.Context, sb *ethpb.SignedBlindedBeaconBlockBellatrix) (*v1.ExecutionPayload, error) {
+func (MockClient) SubmitBlindedBlock(_ context.Context, _ *ethpb.SignedBlindedBeaconBlockBellatrix) (*v1.ExecutionPayload, error) {
 	return nil, nil
 }
 
-func (m MockClient) Status(ctx context.Context) error {
+func (MockClient) Status(_ context.Context) error {
 	return nil
 }
