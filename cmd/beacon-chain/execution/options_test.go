@@ -18,7 +18,7 @@ import (
 func TestExecutionchainCmd(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	set.String(flags.HTTPWeb3ProviderFlag.Name, "primary", "")
+	set.String(flags.ExecutionEngineEndpoint.Name, "primary", "")
 	fallback := cli.StringSlice{}
 	err := fallback.Set("fallback1")
 	require.NoError(t, err)
@@ -101,10 +101,10 @@ func TestPowchainPreregistration_EmptyWeb3Provider(t *testing.T) {
 	hook := logTest.NewGlobal()
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	set.String(flags.HTTPWeb3ProviderFlag.Name, "", "")
+	set.String(flags.ExecutionEngineEndpoint.Name, "", "")
 	fallback := cli.StringSlice{}
 	set.Var(&fallback, flags.FallbackWeb3ProviderFlag.Name, "")
 	ctx := cli.NewContext(&app, set, nil)
 	parseExecutionChainEndpoint(ctx)
-	assert.LogsContain(t, hook, "No ETH1 node specified to run with the beacon node")
+	assert.LogsContain(t, hook, "No execution engine specified to run with the beacon node. You must specified an execution client in order to participate")
 }
