@@ -181,9 +181,10 @@ service KeyManagement {
     };
   }
 
-  // shenhan: https://ethereum.github.io/keymanager-APIs/#/Gas%20Limit/SetGasLimit
   // SetGasLimit sets the gas limit for the specific public key, overrides the existing one.
   //
+  // Spec page: https://ethereum.github.io/keymanager-APIs/#/Gas%20Limit/SetGasLimit
+  // 
   // HTTP response status codes:
   //  - 202: Successful response
   //  - 400: Bad request
