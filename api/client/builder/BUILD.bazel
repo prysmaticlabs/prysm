@@ -30,7 +30,7 @@ go_test(
         "client_test.go",
         "types_test.go",
     ],
-    data = glob(["testing/testdata/**"]),
+    data = glob(["testdata/**"]),
     embed = [":go_default_library"],
     deps = [
         "//config/params:go_default_library",

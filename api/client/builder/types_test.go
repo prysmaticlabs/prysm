@@ -678,7 +678,7 @@ func TestUint256Unmarshal(t *testing.T) {
 }
 
 func TestMarshalBlindedBeaconBlockBodyBellatrix(t *testing.T) {
-	expected, err := os.ReadFile("testing/testdata/blinded-block.json")
+	expected, err := os.ReadFile("testdata/blinded-block.json")
 	require.NoError(t, err)
 	b := &BlindedBeaconBlockBellatrix{BlindedBeaconBlockBellatrix: &eth.BlindedBeaconBlockBellatrix{
 		Slot:          1,
@@ -730,7 +730,7 @@ func TestRoundTripProtoUint256(t *testing.T) {
 }
 
 func TestExecutionPayloadHeaderRoundtrip(t *testing.T) {
-	expected, err := os.ReadFile("testing/testdata/execution-payload.json")
+	expected, err := os.ReadFile("testdata/execution-payload.json")
 	require.NoError(t, err)
 	hu := &ExecutionPayloadHeader{}
 	require.NoError(t, json.Unmarshal(expected, hu))
