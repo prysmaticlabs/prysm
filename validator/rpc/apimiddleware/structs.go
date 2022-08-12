@@ -90,5 +90,5 @@ type getGasLimitResponseJson struct {
 }
 
 type setGasLimitRequestJson struct {
-	Ethaddress string `json:"ethaddress" hex:"true"`
+	GasLimit string `json:"gas_limit"`
 }
