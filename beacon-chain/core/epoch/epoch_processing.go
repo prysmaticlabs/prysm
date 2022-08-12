@@ -185,7 +185,7 @@ func ProcessSlashings(state state.BeaconState, slashingMultiplier uint64) (state
 		}
 	}
 
-	// a callback is used here to apply the following actions  to all validators
+	// a callback is used here to apply the following actions to all validators
 	// below equally.
 	increment := params.BeaconConfig().EffectiveBalanceIncrement
 	minSlashing := math.Min(totalSlashing*slashingMultiplier, totalBalance)
