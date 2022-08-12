@@ -167,7 +167,7 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 	if len(blks) > 0 && blks[0].IsBlinded() {
 		blks, err = s.cfg.executionPayloadReconstructor.ReconstructFullBellatrixBlockBatch(ctx, blks)
 		if err != nil {
-			log.WithError(err).Error("Could not get reconstruct full bellatrix block from blinded body")
+			log.WithError(err).Error("Could not reconstruct full bellatrix block batch from blinded bodies")
 			s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
 			return err
 		}
