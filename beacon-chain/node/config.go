@@ -65,6 +65,24 @@ func configureSafeSlotsToImportOptimistically(cliCtx *cli.Context) error {
 	return nil
 }
 
+func configureMevBoostCircuitBreakerValues(cliCtx *cli.Context) error {
+	if cliCtx.IsSet(flags.BuilderFallbackSkips.Name) {
+		c := params.BeaconConfig().Copy()
+		c.BuilderFallbackSkipsSlot = types.Slot(cliCtx.Int(flags.BuilderFallbackSkips.Name))
+		if err := params.SetActive(c); err != nil {
+			return err
+		}
+	}
+	if cliCtx.IsSet(flags.BuilderFallbackSkipsPerEpoch.Name) {
+		c := params.BeaconConfig().Copy()
+		c.BuilderFallbackSkipsSlotsLastEpoch = types.Slot(cliCtx.Int(flags.BuilderFallbackSkipsPerEpoch.Name))
+		if err := params.SetActive(c); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func configureSlotsPerArchivedPoint(cliCtx *cli.Context) error {
 	if cliCtx.IsSet(flags.SlotsPerArchivedPoint.Name) {
 		c := params.BeaconConfig().Copy()

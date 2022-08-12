@@ -16,6 +16,16 @@ var (
 		Usage: "A MEV builder relay string http endpoint, this wil be used to interact MEV builder network using API defined in: https://ethereum.github.io/builder-specs/#/Builder",
 		Value: "",
 	}
+	BuilderFallbackSkips = &cli.IntFlag{
+		Name:  "builder-fallback-skips",
+		Usage: "Number of consecutive skip slot to fallback from using relay/builder to local execution engine for block construction",
+		Value: 3,
+	}
+	BuilderFallbackSkipsPerEpoch = &cli.IntFlag{
+		Name:  "builder-fallback-skips-last-epoch",
+		Usage: "Number of total skip slot to fallback from using relay/builder to local execution engine for block construction in last epoch rolling window",
+		Value: 8,
+	}
 	// ExecutionEngineEndpoint provides an HTTP access endpoint to connect to an execution client on the execution layer
 	ExecutionEngineEndpoint = &cli.StringFlag{
 		Name:  "execution-endpoint",
