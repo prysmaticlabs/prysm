@@ -10,6 +10,7 @@ import (
 	"github.com/golang/snappy"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
+	"github.com/prysmaticlabs/prysm/config/features"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -34,6 +35,7 @@ func RunEpochOperationTest(
 	if err := preBeaconStateBase.UnmarshalSSZ(preBeaconStateSSZ); err != nil {
 		t.Fatalf("Failed to unmarshal: %v", err)
 	}
+	features.Init(&features.Flags{DisableNativeState: true})
 	preBeaconState, err := stateAltair.InitializeFromProto(preBeaconStateBase)
 	require.NoError(t, err)
 

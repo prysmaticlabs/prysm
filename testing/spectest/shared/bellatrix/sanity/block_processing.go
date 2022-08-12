@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
+	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -41,6 +42,7 @@ func RunBlockProcessingTest(t *testing.T, config, folderPath string) {
 			require.NoError(t, err, "Failed to decompress")
 			beaconStateBase := &ethpb.BeaconStateBellatrix{}
 			require.NoError(t, beaconStateBase.UnmarshalSSZ(preBeaconStateSSZ), "Failed to unmarshal")
+			features.Init(&features.Flags{DisableNativeState: true})
 			beaconState, err := v3.InitializeFromProto(beaconStateBase)
 			require.NoError(t, err)
 
