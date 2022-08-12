@@ -805,7 +805,7 @@ func TestCheckAndLogValidatorStatus_OK(t *testing.T) {
 					PositionInActivationQueue: 6,
 				},
 			},
-			log:    "Waiting to be assigned activation epoch\" index=50 positionInActivationQueue=6",
+			log:    "Waiting to be assigned activation epoch\" expectedWaitingTime=12m48s index=50 positionInActivationQueue=6",
 			active: false,
 		},
 		{
@@ -873,7 +873,7 @@ func TestCheckAndLogValidatorStatus_OK(t *testing.T) {
 				},
 			}
 
-			active := v.checkAndLogValidatorStatus([]*validatorStatus{test.status})
+			active := v.checkAndLogValidatorStatus([]*validatorStatus{test.status}, 100)
 			require.Equal(t, test.active, active)
 			if test.log != "" {
 				require.LogsContain(t, hook, test.log)

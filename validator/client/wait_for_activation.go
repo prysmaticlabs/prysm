@@ -142,7 +142,12 @@ func (v *validator) handleWithRemoteKeyManager(ctx context.Context, accountsChan
 				}
 			}
 
-			valActivated := v.checkAndLogValidatorStatus(statuses)
+			vals, err := v.beaconClient.ListValidators(ctx, &ethpb.ListValidatorsRequest{Active: true, PageSize: 0})
+			if err != nil {
+				return errors.Wrap(err, "could not get active validator count")
+			}
+
+			valActivated := v.checkAndLogValidatorStatus(statuses, uint64(vals.TotalSize))
 			if valActivated {
 				logActiveValidatorStatus(statuses)
 			} else {
@@ -189,7 +194,12 @@ func (v *validator) handleWithoutRemoteKeyManager(ctx context.Context, accountsC
 				}
 			}
 
-			valActivated := v.checkAndLogValidatorStatus(statuses)
+			vals, err := v.beaconClient.ListValidators(ctx, &ethpb.ListValidatorsRequest{Active: true, PageSize: 0})
+			if err != nil {
+				return errors.Wrap(err, "could not get active validator count")
+			}
+
+			valActivated := v.checkAndLogValidatorStatus(statuses, uint64(vals.TotalSize))
 			if valActivated {
 				logActiveValidatorStatus(statuses)
 			} else {
