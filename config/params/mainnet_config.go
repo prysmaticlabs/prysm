@@ -253,8 +253,8 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	DefaultBuilderGasLimit:           uint64(30000000),
 
 	// Mevboost circuit breaker
-	BuilderFallbackSkipsSlot:           3,
-	BuilderFallbackSkipsSlotsLastEpoch: 8,
+	BuilderFallbackSkipsSlot:           4,
+	BuilderFallbackSkipsSlotsLastEpoch: 6,
 }
 
 // MainnetTestConfig provides a version of the mainnet config that has a different name
