@@ -2,7 +2,6 @@ package rpc
 
 import (
 	"context"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"path/filepath"
@@ -13,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/io/file"
 	"github.com/prysmaticlabs/prysm/io/prompt"
-	ethpbservice "github.com/prysmaticlabs/prysm/proto/eth/service"
 	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/validator/accounts"
 	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
@@ -253,70 +251,6 @@ func (_ *Server) ValidateKeystores(
 	}
 
 	return &emptypb.Empty{}, nil
-}
-
-// ImportAccounts allows importing new keystores via RPC into the wallet
-// which will be decrypted using the specified password .
-func (s *Server) ImportAccounts(
-	ctx context.Context, req *pb.ImportAccountsRequest,
-) (*pb.ImportAccountsResponse, error) {
-	if s.wallet == nil {
-		return nil, status.Error(codes.FailedPrecondition, "No wallet initialized")
-	}
-	if s.validatorService == nil {
-		return nil, status.Error(codes.FailedPrecondition, "No validator service initialized")
-	}
-	ikm, err := s.validatorService.Keymanager()
-	if err != nil {
-		return nil, status.Error(codes.FailedPrecondition, "No keymanager initialized")
-	}
-	km, ok := ikm.(keymanager.Importer)
-	if !ok {
-		return nil, status.Error(codes.FailedPrecondition, "Only imported wallets can import keystores")
-	}
-	if req.KeystoresPassword == "" {
-		return nil, status.Error(codes.InvalidArgument, "Password required for keystores")
-	}
-	// Needs to unmarshal the keystores from the requests.
-	if req.KeystoresImported == nil || len(req.KeystoresImported) < 1 {
-		return nil, status.Error(codes.InvalidArgument, "No keystores included for import")
-	}
-	keystores := make([]*keymanager.Keystore, len(req.KeystoresImported))
-	importedPubKeys := make([][]byte, len(req.KeystoresImported))
-	for i := 0; i < len(req.KeystoresImported); i++ {
-		encoded := req.KeystoresImported[i]
-		keystore := &keymanager.Keystore{}
-		if err := json.Unmarshal([]byte(encoded), &keystore); err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "Not a valid EIP-2335 keystore JSON file: %v", err)
-		}
-		keystores[i] = keystore
-		pubKey, err := hex.DecodeString(keystore.Pubkey)
-		if err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "Not a valid BLS public key in keystore file: %v", err)
-		}
-		importedPubKeys[i] = pubKey
-	}
-	// Import the uploaded accounts.
-	statuses, err := accounts.ImportAccounts(ctx, &accounts.ImportAccountsConfig{
-		Importer:        km,
-		Keystores:       keystores,
-		AccountPassword: req.KeystoresPassword,
-	})
-	if err != nil {
-		return nil, err
-	}
-	for _, stat := range statuses {
-		if stat.Status == ethpbservice.ImportedKeystoreStatus_ERROR {
-			return nil, status.Error(codes.FailedPrecondition, stat.Message)
-		}
-	}
-	if len(statuses) == 0 {
-		return nil, status.Error(codes.Internal, "No statuses returned from import")
-	}
-	s.walletInitializedFeed.Send(s.wallet)
-	return &pb.ImportAccountsResponse{
-		ImportedPublicKeys: importedPubKeys,
-	}, nil
 }
 
 // Initialize a wallet and send it over a global feed.

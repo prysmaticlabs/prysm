@@ -23,7 +23,7 @@ func (m MetadataV0) SequenceNumber() uint64 {
 	return m.md.SeqNumber
 }
 
-// AttnetsBitfield retruns the bitfield stored in the metadata.
+// AttnetsBitfield returns the bitfield stored in the metadata.
 func (m MetadataV0) AttnetsBitfield() bitfield.Bitvector64 {
 	return m.md.Attnets
 }
@@ -98,7 +98,7 @@ func (m MetadataV1) SequenceNumber() uint64 {
 	return m.md.SeqNumber
 }
 
-// AttnetsBitfield retruns the bitfield stored in the metadata.
+// AttnetsBitfield returns the bitfield stored in the metadata.
 func (m MetadataV1) AttnetsBitfield() bitfield.Bitvector64 {
 	return m.md.Attnets
 }
