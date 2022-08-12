@@ -17,9 +17,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
+	consensusblocks "github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
@@ -95,7 +95,7 @@ var initialSyncBlockCacheSize = uint64(2 * params.BeaconConfig().SlotsPerEpoch)
 func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlock, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.onBlock")
 	defer span.End()
-	if err := wrapper.BeaconBlockIsNil(signed); err != nil {
+	if err := consensusblocks.BeaconBlockIsNil(signed); err != nil {
 		return invalidBlock{error: err}
 	}
 	b := signed.Block()
@@ -136,7 +136,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 		return err
 	}
 
-	if err := s.insertBlockAndAttestationsToForkChoiceStore(ctx, signed.Block(), blockRoot, postState); err != nil {
+	if err := s.insertBlockToForkchoiceStore(ctx, signed.Block(), blockRoot, postState); err != nil {
 		return errors.Wrapf(err, "could not insert block %d to fork choice store", signed.Block().Slot())
 	}
 	s.InsertSlashingsToForkChoiceStore(ctx, signed.Block().Body().AttesterSlashings())
@@ -293,7 +293,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []interfaces.SignedBeac
 		return errWrongBlockCount
 	}
 
-	if err := wrapper.BeaconBlockIsNil(blks[0]); err != nil {
+	if err := consensusblocks.BeaconBlockIsNil(blks[0]); err != nil {
 		return invalidBlock{error: err}
 	}
 	b := blks[0].Block()
@@ -495,10 +495,10 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState state.Beaco
 	return nil
 }
 
-// This feeds in the block and block's attestations to fork choice store. It's allows fork choice store
+// This feeds in the block to fork choice store. It's allows fork choice store
 // to gain information on the most current chain.
-func (s *Service) insertBlockAndAttestationsToForkChoiceStore(ctx context.Context, blk interfaces.BeaconBlock, root [32]byte, st state.BeaconState) error {
-	ctx, span := trace.StartSpan(ctx, "blockChain.insertBlockAndAttestationsToForkChoiceStore")
+func (s *Service) insertBlockToForkchoiceStore(ctx context.Context, blk interfaces.BeaconBlock, root [32]byte, st state.BeaconState) error {
+	ctx, span := trace.StartSpan(ctx, "blockChain.insertBlockToForkchoiceStore")
 	defer span.End()
 
 	if !s.cfg.ForkChoiceStore.HasNode(bytesutil.ToBytes32(blk.ParentRoot())) {
@@ -512,18 +512,7 @@ func (s *Service) insertBlockAndAttestationsToForkChoiceStore(ctx context.Contex
 	if err := s.cfg.ForkChoiceStore.InsertNode(ctx, st, root); err != nil {
 		return err
 	}
-	// Feed in block's attestations to fork choice store.
-	for _, a := range blk.Body().Attestations() {
-		committee, err := helpers.BeaconCommitteeFromState(ctx, st, a.Data.Slot, a.Data.CommitteeIndex)
-		if err != nil {
-			return err
-		}
-		indices, err := attestation.AttestingIndices(a.AggregationBits, committee)
-		if err != nil {
-			return err
-		}
-		s.cfg.ForkChoiceStore.ProcessAttestation(ctx, indices, bytesutil.ToBytes32(a.Data.BeaconBlockRoot), a.Data.Target.Epoch)
-	}
+
 	return nil
 }
 
@@ -590,7 +579,7 @@ func (s *Service) validateMergeTransitionBlock(ctx context.Context, stateVersion
 	if err != nil {
 		return invalidBlock{error: err}
 	}
-	isEmpty, err := wrapper.IsEmptyExecutionData(payload)
+	isEmpty, err := consensusblocks.IsEmptyExecutionData(payload)
 	if err != nil {
 		return err
 	}
@@ -606,11 +595,11 @@ func (s *Service) validateMergeTransitionBlock(ctx context.Context, stateVersion
 
 	// Skip validation if the block is not a merge transition block.
 	// To reach here. The payload must be non-empty. If the state header is empty then it's at transition.
-	wh, err := wrapper.WrappedExecutionPayloadHeader(stateHeader)
+	wh, err := consensusblocks.WrappedExecutionPayloadHeader(stateHeader)
 	if err != nil {
 		return err
 	}
-	empty, err := wrapper.IsEmptyExecutionData(wh)
+	empty, err := consensusblocks.IsEmptyExecutionData(wh)
 	if err != nil {
 		return err
 	}
@@ -644,15 +633,20 @@ func (s *Service) fillMissingPayloadIDRoutine(ctx context.Context, stateFeed *ev
 				if !atHalfSlot(ti) {
 					continue
 				}
-				_, id, has := s.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(s.CurrentSlot() + 1)
+				_, id, has := s.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(s.CurrentSlot()+1, s.headRoot())
 				// There exists proposer for next slot, but we haven't called fcu w/ payload attribute yet.
 				if has && id == [8]byte{} {
-					if _, err := s.notifyForkchoiceUpdate(ctx, &notifyForkchoiceUpdateArg{
-						headState: s.headState(ctx),
-						headRoot:  s.headRoot(),
-						headBlock: s.headBlock().Block(),
-					}); err != nil {
-						log.WithError(err).Error("Could not prepare payload on empty ID")
+					headBlock, err := s.headBlock()
+					if err != nil {
+						log.WithError(err).Error("Could not get head block")
+					} else {
+						if _, err := s.notifyForkchoiceUpdate(ctx, &notifyForkchoiceUpdateArg{
+							headState: s.headState(ctx),
+							headRoot:  s.headRoot(),
+							headBlock: headBlock.Block(),
+						}); err != nil {
+							log.WithError(err).Error("Could not prepare payload on empty ID")
+						}
 					}
 					missedPayloadIDFilledCount.Inc()
 				}

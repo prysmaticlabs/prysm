@@ -13,7 +13,7 @@ import (
 	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/proto/migration"
 	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -66,7 +66,7 @@ func TestStreamEvents_BlockEvents(t *testing.T) {
 			Event: BlockTopic,
 			Data:  genericResponse,
 		}
-		wsb, err := wrapper.WrappedSignedBeaconBlock(wantedBlock)
+		wsb, err := blocks.NewSignedBeaconBlock(wantedBlock)
 		require.NoError(t, err)
 		assertFeedSendAndReceive(ctx, &assertFeedArgs{
 			t:             t,

@@ -8,9 +8,9 @@ import (
 	"github.com/prysmaticlabs/prysm/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -35,10 +35,11 @@ func Test_slashableProposalCheck_PreventsLowerThanMinProposal(t *testing.T) {
 		Block: &ethpb.BeaconBlock{
 			Slot:          lowestSignedSlot - 1,
 			ProposerIndex: 0,
+			Body:          &ethpb.BeaconBlockBody{},
 		},
 		Signature: params.BeaconConfig().EmptySignature[:],
 	}
-	wsb, err := wrapper.WrappedSignedBeaconBlock(blk)
+	wsb, err := blocks.NewSignedBeaconBlock(blk)
 	require.NoError(t, err)
 	err = validator.slashableProposalCheck(context.Background(), pubKeyBytes, wsb, [32]byte{4})
 	require.ErrorContains(t, "could not sign block with slot <= lowest signed", err)
@@ -49,17 +50,18 @@ func Test_slashableProposalCheck_PreventsLowerThanMinProposal(t *testing.T) {
 		Block: &ethpb.BeaconBlock{
 			Slot:          lowestSignedSlot,
 			ProposerIndex: 0,
+			Body:          &ethpb.BeaconBlockBody{},
 		},
 		Signature: params.BeaconConfig().EmptySignature[:],
 	}
-	wsb, err = wrapper.WrappedSignedBeaconBlock(blk)
+	wsb, err = blocks.NewSignedBeaconBlock(blk)
 	require.NoError(t, err)
 	err = validator.slashableProposalCheck(context.Background(), pubKeyBytes, wsb, [32]byte{1})
 	require.NoError(t, err)
 
 	// We expect the same block with a slot equal to the lowest
 	// signed slot to fail validation if signing roots are different.
-	wsb, err = wrapper.WrappedSignedBeaconBlock(blk)
+	wsb, err = blocks.NewSignedBeaconBlock(blk)
 	require.NoError(t, err)
 	err = validator.slashableProposalCheck(context.Background(), pubKeyBytes, wsb, [32]byte{4})
 	require.ErrorContains(t, failedBlockSignLocalErr, err)
@@ -70,11 +72,12 @@ func Test_slashableProposalCheck_PreventsLowerThanMinProposal(t *testing.T) {
 		Block: &ethpb.BeaconBlock{
 			Slot:          lowestSignedSlot + 1,
 			ProposerIndex: 0,
+			Body:          &ethpb.BeaconBlockBody{},
 		},
 		Signature: params.BeaconConfig().EmptySignature[:],
 	}
 
-	wsb, err = wrapper.WrappedSignedBeaconBlock(blk)
+	wsb, err = blocks.NewSignedBeaconBlock(blk)
 	require.NoError(t, err)
 	err = validator.slashableProposalCheck(context.Background(), pubKeyBytes, wsb, [32]byte{3})
 	require.NoError(t, err)
@@ -94,6 +97,7 @@ func Test_slashableProposalCheck(t *testing.T) {
 		Block: &ethpb.BeaconBlock{
 			Slot:          10,
 			ProposerIndex: 0,
+			Body:          &ethpb.BeaconBlockBody{},
 		},
 		Signature: params.BeaconConfig().EmptySignature[:],
 	})
@@ -111,7 +115,7 @@ func Test_slashableProposalCheck(t *testing.T) {
 	require.NoError(t, err)
 	pubKey := [fieldparams.BLSPubkeyLength]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-	sBlock, err := wrapper.WrappedSignedBeaconBlock(blk)
+	sBlock, err := blocks.NewSignedBeaconBlock(blk)
 	require.NoError(t, err)
 	blockHdr, err := interfaces.SignedBeaconBlockHeaderFromBlockInterface(sBlock)
 	require.NoError(t, err)
@@ -131,7 +135,7 @@ func Test_slashableProposalCheck(t *testing.T) {
 
 	// We save a proposal at slot 11 with a nil signing root.
 	blk.Block.Slot = 11
-	sBlock, err = wrapper.WrappedSignedBeaconBlock(blk)
+	sBlock, err = blocks.NewSignedBeaconBlock(blk)
 	require.NoError(t, err)
 	err = validator.db.SaveProposalHistoryForSlot(ctx, pubKeyBytes, blk.Block.Slot, nil)
 	require.NoError(t, err)
@@ -144,7 +148,7 @@ func Test_slashableProposalCheck(t *testing.T) {
 	// A block with a different slot for which we do not have a proposing history
 	// should not be failing validation.
 	blk.Block.Slot = 9
-	sBlock, err = wrapper.WrappedSignedBeaconBlock(blk)
+	sBlock, err = blocks.NewSignedBeaconBlock(blk)
 	require.NoError(t, err)
 	blockHdr, err = interfaces.SignedBeaconBlockHeaderFromBlockInterface(sBlock)
 	require.NoError(t, err)
@@ -169,7 +173,7 @@ func Test_slashableProposalCheck_RemoteProtection(t *testing.T) {
 
 	blk := util.NewBeaconBlock()
 	blk.Block.Slot = 10
-	sBlock, err := wrapper.WrappedSignedBeaconBlock(blk)
+	sBlock, err := blocks.NewSignedBeaconBlock(blk)
 	require.NoError(t, err)
 	blockHdr, err := interfaces.SignedBeaconBlockHeaderFromBlockInterface(sBlock)
 	require.NoError(t, err)

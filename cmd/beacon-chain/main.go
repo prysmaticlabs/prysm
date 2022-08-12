@@ -16,9 +16,9 @@ import (
 	"github.com/prysmaticlabs/prysm/cmd"
 	blockchaincmd "github.com/prysmaticlabs/prysm/cmd/beacon-chain/blockchain"
 	dbcommands "github.com/prysmaticlabs/prysm/cmd/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/execution"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	jwtcommands "github.com/prysmaticlabs/prysm/cmd/beacon-chain/jwt"
-	powchaincmd "github.com/prysmaticlabs/prysm/cmd/beacon-chain/powchain"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/sync/checkpoint"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/sync/genesis"
 	"github.com/prysmaticlabs/prysm/config/features"
@@ -37,7 +37,7 @@ import (
 
 var appFlags = []cli.Flag{
 	flags.DepositContractFlag,
-	flags.HTTPWeb3ProviderFlag,
+	flags.ExecutionEngineEndpoint,
 	flags.ExecutionJWTSecretFlag,
 	flags.FallbackWeb3ProviderFlag,
 	flags.RPCHost,
@@ -52,8 +52,6 @@ var appFlags = []cli.Flag{
 	flags.MinSyncPeers,
 	flags.ContractDeploymentBlock,
 	flags.SetGCPercent,
-	flags.HeadSync,
-	flags.DisableSync,
 	flags.DisableDiscv5,
 	flags.BlockBatchLimit,
 	flags.BlockBatchLimitBurstFactor,
@@ -188,7 +186,7 @@ func main() {
 				log.WithError(err).Error("Failed to configuring logging to disk.")
 			}
 		}
-		if err := cmd.ExpandSingleEndpointIfFile(ctx, flags.HTTPWeb3ProviderFlag); err != nil {
+		if err := cmd.ExpandSingleEndpointIfFile(ctx, flags.ExecutionEngineEndpoint); err != nil {
 			return err
 		}
 		if err := cmd.ExpandWeb3EndpointsIfFile(ctx, flags.FallbackWeb3ProviderFlag); err != nil {
@@ -251,7 +249,7 @@ func startNode(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	powchainFlagOpts, err := powchaincmd.FlagOptions(ctx)
+	executionFlagOpts, err := execution.FlagOptions(ctx)
 	if err != nil {
 		return err
 	}
@@ -261,7 +259,7 @@ func startNode(ctx *cli.Context) error {
 	}
 	opts := []node.Option{
 		node.WithBlockchainFlagOptions(blockchainFlagOpts),
-		node.WithPowchainFlagOptions(powchainFlagOpts),
+		node.WithExecutionChainOptions(executionFlagOpts),
 		node.WithBuilderFlagOptions(builderFlagOpts),
 	}
 
