@@ -1,11 +1,10 @@
 package builder
 
 import (
+	"github.com/prysmaticlabs/prysm/api/client/builder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/network"
-	"github.com/prysmaticlabs/prysm/network/authorization"
 	"github.com/urfave/cli/v2"
 )
 
@@ -14,22 +13,26 @@ type Option func(s *Service) error
 // FlagOptions for builder service flag configurations.
 func FlagOptions(c *cli.Context) ([]Option, error) {
 	endpoint := c.String(flags.MevRelayEndpoint.Name)
+	client, err := builder.NewClient(endpoint)
+	if err != nil {
+		return nil, err
+	}
 	opts := []Option{
-		WithBuilderEndpoints(endpoint),
+		WithBuilderClient(client),
 	}
 	return opts, nil
 }
 
-// WithBuilderEndpoints sets the endpoint for the beacon chain builder service.
-func WithBuilderEndpoints(endpoint string) Option {
+// WithBuilderClient sets the builder client and the endpoint for the beacon chain builder service.
+func WithBuilderClient(client builder.BuilderClient) Option {
 	return func(s *Service) error {
-		s.cfg.builderEndpoint = covertEndPoint(endpoint)
+		s.cfg.builderClient = client
 		return nil
 	}
 }
 
 // WithHeadFetcher gets the head info from chain service.
-func WithHeadFetcher(svc *blockchain.Service) Option {
+func WithHeadFetcher(svc blockchain.HeadFetcher) Option {
 	return func(s *Service) error {
 		s.cfg.headFetcher = svc
 		return nil
@@ -42,13 +45,4 @@ func WithDatabase(beaconDB db.HeadAccessDatabase) Option {
 		s.cfg.beaconDB = beaconDB
 		return nil
 	}
-}
-
-func covertEndPoint(ep string) network.Endpoint {
-	return network.Endpoint{
-		Url: ep,
-		Auth: network.AuthorizationData{ // Auth is not used for builder.
-			Method: authorization.None,
-			Value:  "",
-		}}
 }
