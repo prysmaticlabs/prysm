@@ -301,9 +301,9 @@ func (vs *Server) circuitBreakBuilder(s types.Slot) (bool, error) {
 		return true, errors.New("no fork choicer configured")
 	}
 
-	// Circuit breaker is active if the missing consecutive slots greater than `BuilderFallbackSkipsSlot`.
+	// Circuit breaker is active if the missing consecutive slots greater than `MaxBuilderConsecutiveMissedSlots`.
 	highestReceivedSlot := vs.ForkFetcher.ForkChoicer().HighestReceivedBlockSlot()
-	fallbackSlots := params.BeaconConfig().BuilderFallbackSkipsSlot
+	fallbackSlots := params.BeaconConfig().MaxBuilderConsecutiveMissedSlots
 	diff, err := s.SafeSubSlot(highestReceivedSlot)
 	if err != nil {
 		return true, err
@@ -322,12 +322,12 @@ func (vs *Server) circuitBreakBuilder(s types.Slot) (bool, error) {
 		return false, nil
 	}
 
-	// Circuit breaker is active if the missing slots per epoch (rolling window) greater than `BuilderFallbackSkipsSlotsLastEpoch`.
+	// Circuit breaker is active if the missing slots per epoch (rolling window) greater than `MaxBuilderEpochMissedSlots`.
 	receivedCount, err := vs.ForkFetcher.ForkChoicer().ReceivedBlocksLastEpoch()
 	if err != nil {
 		return true, err
 	}
-	fallbackSlotsLastEpoch := params.BeaconConfig().BuilderFallbackSkipsSlotsLastEpoch
+	fallbackSlotsLastEpoch := params.BeaconConfig().MaxBuilderEpochMissedSlots
 	diff, err = params.BeaconConfig().SlotsPerEpoch.SafeSub(receivedCount)
 	if err != nil {
 		return true, err

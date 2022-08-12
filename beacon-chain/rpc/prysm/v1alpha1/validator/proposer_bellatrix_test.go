@@ -658,8 +658,8 @@ func TestServer_GetBellatrixBeaconBlock_BuilderCase(t *testing.T) {
 		[]*ethpb.ValidatorRegistrationV1{{FeeRecipient: bytesutil.PadTo([]byte{}, fieldparams.FeeRecipientLength), Pubkey: bytesutil.PadTo([]byte{}, fieldparams.BLSPubkeyLength)}}))
 
 	params.SetupTestConfigCleanup(t)
-	cfg.BuilderFallbackSkipsSlot = bellatrixSlot + 1
-	cfg.BuilderFallbackSkipsSlotsLastEpoch = 32
+	cfg.MaxBuilderConsecutiveMissedSlots = bellatrixSlot + 1
+	cfg.MaxBuilderEpochMissedSlots = 32
 	params.OverrideBeaconConfig(cfg)
 
 	block, err := proposerServer.getBellatrixBeaconBlock(ctx, &ethpb.BlockRequest{
@@ -742,7 +742,7 @@ func TestServer_circuitBreakBuilder(t *testing.T) {
 
 	s.ForkFetcher = &blockchainTest.ChainService{ForkChoiceStore: protoarray.New()}
 	s.ForkFetcher.ForkChoicer().SetGenesisTime(uint64(time.Now().Unix()))
-	b, err := s.circuitBreakBuilder(params.BeaconConfig().BuilderFallbackSkipsSlot + 1)
+	b, err := s.circuitBreakBuilder(params.BeaconConfig().MaxBuilderConsecutiveMissedSlots + 1)
 	require.NoError(t, err)
 	require.Equal(t, true, b)
 	require.LogsContain(t, hook, "Builder circuit breaker activated due to missing consecutive slot")
@@ -753,7 +753,7 @@ func TestServer_circuitBreakBuilder(t *testing.T) {
 	st, blkRoot, err := createState(1, [32]byte{'a'}, [32]byte{}, params.BeaconConfig().ZeroHash, ojc, ofc)
 	require.NoError(t, err)
 	require.NoError(t, s.ForkFetcher.ForkChoicer().InsertNode(ctx, st, blkRoot))
-	b, err = s.circuitBreakBuilder(params.BeaconConfig().BuilderFallbackSkipsSlot + 1)
+	b, err = s.circuitBreakBuilder(params.BeaconConfig().MaxBuilderConsecutiveMissedSlots + 1)
 	require.NoError(t, err)
 	require.Equal(t, false, b)
 
@@ -767,7 +767,7 @@ func TestServer_circuitBreakBuilder(t *testing.T) {
 	require.Equal(t, true, b)
 	require.LogsContain(t, hook, "Builder circuit breaker activated due to missing enough slots last epoch")
 
-	want := params.BeaconConfig().SlotsPerEpoch - params.BeaconConfig().BuilderFallbackSkipsSlotsLastEpoch
+	want := params.BeaconConfig().SlotsPerEpoch - params.BeaconConfig().MaxBuilderEpochMissedSlots
 	for i := types.Slot(2); i <= want+2; i++ {
 		st, blkRoot, err = createState(i, [32]byte{byte(i)}, [32]byte{'a'}, params.BeaconConfig().ZeroHash, ojc, ofc)
 		require.NoError(t, err)

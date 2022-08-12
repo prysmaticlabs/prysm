@@ -65,17 +65,17 @@ func configureSafeSlotsToImportOptimistically(cliCtx *cli.Context) error {
 	return nil
 }
 
-func configureMevBoostCircuitBreakerValues(cliCtx *cli.Context) error {
-	if cliCtx.IsSet(flags.BuilderFallbackSkips.Name) {
+func configureBuilderCircuitBreaker(cliCtx *cli.Context) error {
+	if cliCtx.IsSet(flags.MaxBuilderConsecutiveMissedSlots.Name) {
 		c := params.BeaconConfig().Copy()
-		c.BuilderFallbackSkipsSlot = types.Slot(cliCtx.Int(flags.BuilderFallbackSkips.Name))
+		c.MaxBuilderConsecutiveMissedSlots = types.Slot(cliCtx.Int(flags.MaxBuilderConsecutiveMissedSlots.Name))
 		if err := params.SetActive(c); err != nil {
 			return err
 		}
 	}
-	if cliCtx.IsSet(flags.BuilderFallbackSkipsPerEpoch.Name) {
+	if cliCtx.IsSet(flags.MaxBuilderEpochMissedSlots.Name) {
 		c := params.BeaconConfig().Copy()
-		c.BuilderFallbackSkipsSlotsLastEpoch = types.Slot(cliCtx.Int(flags.BuilderFallbackSkipsPerEpoch.Name))
+		c.MaxBuilderEpochMissedSlots = types.Slot(cliCtx.Int(flags.MaxBuilderEpochMissedSlots.Name))
 		if err := params.SetActive(c); err != nil {
 			return err
 		}

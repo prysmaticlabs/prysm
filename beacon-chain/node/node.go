@@ -136,7 +136,7 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 	if err := configureSafeSlotsToImportOptimistically(cliCtx); err != nil {
 		return nil, err
 	}
-	err := configureMevBoostCircuitBreakerValues(cliCtx)
+	err := configureBuilderCircuitBreaker(cliCtx)
 	if err != nil {
 		return nil, err
 	}
