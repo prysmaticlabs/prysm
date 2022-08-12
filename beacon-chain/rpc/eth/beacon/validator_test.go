@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/testutil"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
@@ -115,7 +116,7 @@ func TestGetValidator(t *testing.T) {
 func TestListValidators(t *testing.T) {
 	ctx := context.Background()
 	db := dbTest.SetupDB(t)
-
+	features.Init(&features.Flags{DisableNativeState: true})
 	var st state.BeaconState
 	st, _ = util.DeterministicGenesisState(t, 8192)
 
