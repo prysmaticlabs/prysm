@@ -795,7 +795,7 @@ func Test_NotifyNewPayload(t *testing.T) {
 			}
 			service.cfg.ExecutionEngineCaller = e
 			root := [32]byte{'a'}
-			state, blkRoot, err := prepareForkchoiceState(ctx, 0, root, root, params.BeaconConfig().ZeroHash, ojc, ofc)
+			state, blkRoot, err := prepareForkchoiceState(ctx, 0, root, [32]byte{}, params.BeaconConfig().ZeroHash, ojc, ofc)
 			require.NoError(t, err)
 			require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
 			postVersion, postHeader, err := getStateVersionAndPayload(tt.postState)
