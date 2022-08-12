@@ -26,12 +26,6 @@ service Wallet {
             get: "/v2/validator/wallet"
         };
     }
-    rpc ImportAccounts(ImportAccountsRequest) returns (ImportAccountsResponse) {
-        option (google.api.http) = {
-            post: "/v2/validator/wallet/keystores/import",
-            body: "*"
-        };
-    }
     rpc ValidateKeystores(ValidateKeystoresRequest) returns (google.protobuf.Empty) {
         option (google.api.http) = {
             post: "/v2/validator/wallet/keystores/validate",
@@ -55,12 +49,6 @@ service Accounts {
     rpc BackupAccounts(BackupAccountsRequest) returns (BackupAccountsResponse) {
         option (google.api.http) = {
             post: "/v2/validator/accounts/backup",
-            body: "*"
-        };
-    }
-    rpc DeleteAccounts(DeleteAccountsRequest) returns (DeleteAccountsResponse) {
-        option (google.api.http) = {
-            post: "/v2/validator/wallet/accounts/delete",
             body: "*"
         };
     }
