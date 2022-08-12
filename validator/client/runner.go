@@ -268,9 +268,6 @@ func performRoles(slotCtx context.Context, allRoles map[[48]byte][]iface.Validat
 		if err := v.LogValidatorGainsAndLosses(slotCtx, slot); err != nil {
 			log.WithError(err).Error("Could not report validator's rewards/penalties")
 		}
-		if err := v.LogNextDutyTimeLeft(slot); err != nil {
-			log.WithError(err).Error("Could not report next count down")
-		}
 	}()
 }
 

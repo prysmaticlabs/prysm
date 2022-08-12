@@ -16,11 +16,11 @@ var (
 		Usage: "A MEV builder relay string http endpoint, this wil be used to interact MEV builder network using API defined in: https://ethereum.github.io/builder-specs/#/Builder",
 		Value: "",
 	}
-	// HTTPWeb3ProviderFlag provides an HTTP access endpoint to an ETH 1.0 RPC.
-	HTTPWeb3ProviderFlag = &cli.StringFlag{
-		Name:  "http-web3provider",
-		Usage: "A mainchain web3 provider string http endpoint. Can contain auth header as well in the format --http-web3provider=\"https://goerli.infura.io/v3/xxxx,Basic xxx\" for project secret (base64 encoded) and --http-web3provider=\"https://goerli.infura.io/v3/xxxx,Bearer xxx\" for jwt use",
-		Value: "http://localhost:8545",
+	// ExecutionEngineEndpoint provides an HTTP access endpoint to connect to an execution client on the execution layer
+	ExecutionEngineEndpoint = &cli.StringFlag{
+		Name:  "execution-endpoint",
+		Usage: "An execution client http endpoint. Can contain auth header as well in the format",
+		Value: "http://localhost:8551",
 	}
 	// ExecutionJWTSecretFlag provides a path to a file containing a hex-encoded string representing a 32 byte secret
 	// used to authenticate with an execution node via HTTP. This is required if using an HTTP connection, otherwise all requests
@@ -122,11 +122,6 @@ var (
 		Usage: "The percentage of freshly allocated data to live data on which the gc will be run again.",
 		Value: 100,
 	}
-	// HeadSync starts the beacon node from the previously saved head state and syncs from there.
-	HeadSync = &cli.BoolFlag{
-		Name:  "head-sync",
-		Usage: "Starts the beacon node with the previously saved head state instead of finalized state.",
-	}
 	// SafeSlotsToImportOptimistically specifies the number of slots that a
 	// node should wait before being able to optimistically sync blocks
 	// across the merge boundary
@@ -158,12 +153,6 @@ var (
 		Name:  "block-batch-limit-burst-factor",
 		Usage: "The factor by which block batch limit may increase on burst.",
 		Value: 10,
-	}
-	// DisableSync disables a node from syncing at start-up. Instead the node enters regular sync
-	// immediately.
-	DisableSync = &cli.BoolFlag{
-		Name:  "disable-sync",
-		Usage: "Starts the beacon node without entering initial sync and instead exits to regular sync immediately.",
 	}
 	// EnableDebugRPCEndpoints as /v1/beacon/state.
 	EnableDebugRPCEndpoints = &cli.BoolFlag{
