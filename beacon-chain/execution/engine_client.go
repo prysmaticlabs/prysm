@@ -319,10 +319,10 @@ func (s *Service) ExecutionBlockByHash(ctx context.Context, hash common.Hash, wi
 	return result, handleRPCError(err)
 }
 
-// ExecutionBlockByHashes fetches a batch of execution engine blocks by hash by calling
+// ExecutionBlocksByHashes fetches a batch of execution engine blocks by hash by calling
 // eth_blockByHash via JSON-RPC.
-func (s *Service) ExecutionBlockByHashes(ctx context.Context, hashes []common.Hash, withTxs bool) ([]*pb.ExecutionBlock, error) {
-	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.ExecutionBlockByHashes")
+func (s *Service) ExecutionBlocksByHashes(ctx context.Context, hashes []common.Hash, withTxs bool) ([]*pb.ExecutionBlock, error) {
+	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.ExecutionBlocksByHashes")
 	defer span.End()
 	numOfHashes := len(hashes)
 	elems := make([]gethRPC.BatchElem, 0, numOfHashes)
@@ -437,7 +437,7 @@ func (s *Service) ReconstructFullBellatrixBlockBatch(
 			executionHashes = append(executionHashes, executionBlockHash)
 		}
 	}
-	execBlocks, err := s.ExecutionBlockByHashes(ctx, executionHashes, true /* with txs*/)
+	execBlocks, err := s.ExecutionBlocksByHashes(ctx, executionHashes, true /* with txs*/)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch execution blocks with txs by hash %#x: %v", executionHashes, err)
 	}
