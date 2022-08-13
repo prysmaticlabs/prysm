@@ -97,7 +97,7 @@ func TestStore_LongFork(t *testing.T) {
 	require.Equal(t, uint64(100), f.store.nodes[3].weight)
 
 	// Update unrealized justification, c becomes head
-	f.UpdateUnrealizedCheckpoints()
+	f.updateUnrealizedCheckpoints()
 	headRoot, err = f.Head(ctx, []uint64{100})
 	require.NoError(t, err)
 	require.Equal(t, [32]byte{'c'}, headRoot)
@@ -178,7 +178,7 @@ func TestStore_NoDeadLock(t *testing.T) {
 	require.Equal(t, types.Epoch(0), f.FinalizedCheckpoint().Epoch)
 
 	// Realized Justified checkpoints, H becomes head
-	f.UpdateUnrealizedCheckpoints()
+	f.updateUnrealizedCheckpoints()
 	headRoot, err = f.Head(ctx, []uint64{100})
 	require.NoError(t, err)
 	require.Equal(t, [32]byte{'h'}, headRoot)
@@ -239,7 +239,7 @@ func TestStore_ForkNextEpoch(t *testing.T) {
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 	require.NoError(t, f.store.setUnrealizedJustifiedEpoch([32]byte{'d'}, 1))
 	f.store.unrealizedJustifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: 1}
-	f.UpdateUnrealizedCheckpoints()
+	f.updateUnrealizedCheckpoints()
 	headRoot, err = f.Head(ctx, []uint64{100})
 	require.NoError(t, err)
 	require.Equal(t, [32]byte{'d'}, headRoot)
