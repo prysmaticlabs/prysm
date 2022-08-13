@@ -429,10 +429,10 @@ func (s *Service) ReconstructFullBellatrixBlockBatch(
 		}
 		// Determine if the block is pre-merge or post-merge. Depending on the result,
 		// we will ask the execution engine for the full payload.
-		executionBlockHash := common.BytesToHash(header.BlockHash())
 		if bytes.Equal(header.BlockHash(), params.BeaconConfig().ZeroHash[:]) {
 			zeroExecPayloads = append(zeroExecPayloads, i)
 		} else {
+			executionBlockHash := common.BytesToHash(header.BlockHash())
 			validExecPayloads = append(validExecPayloads, i)
 			executionHashes = append(executionHashes, executionBlockHash)
 		}
