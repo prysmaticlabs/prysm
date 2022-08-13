@@ -164,13 +164,25 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 	}
 	start := time.Now()
 	// If the blocks are blinded, we reconstruct the full block via the execution client.
-	if len(blks) > 0 && blks[0].IsBlinded() {
-		blks, err = s.cfg.executionPayloadReconstructor.ReconstructFullBellatrixBlockBatch(ctx, blks)
+	blindedExists := false
+	blindedIndex := 0
+	for i, b := range blks {
+		// Since the blocks are sorted in ascending order, we assume that the following
+		// blocks from the first blinded block are also ascending.
+		if b.IsBlinded() {
+			blindedExists = true
+			blindedIndex = i
+			break
+		}
+	}
+	if blindedExists {
+		reconstructedBlks, err := s.cfg.executionPayloadReconstructor.ReconstructFullBellatrixBlockBatch(ctx, blks[blindedIndex:])
 		if err != nil {
 			log.WithError(err).Error("Could not reconstruct full bellatrix block batch from blinded bodies")
 			s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
 			return err
 		}
+		copy(blks[blindedIndex:], reconstructedBlks)
 	}
 
 	for _, b := range blks {
