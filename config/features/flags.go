@@ -132,6 +132,7 @@ var (
 var devModeFlags = []cli.Flag{
 	enableVecHTR,
 	enableForkChoiceDoublyLinkedTree,
+	EnableOnlyBlindedBeaconBlocks,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
