@@ -44,10 +44,11 @@ build:release --compilation_mode=opt
 build:release --config=llvm
 
 # LLVM compiler for building C/C++ dependencies.
-build:llvm --crosstool_top=@llvm_toolchain//:toolchain
 build:llvm --define compiler=llvm
 build:llvm --copt -fno-sanitize=vptr,function
 build:llvm --linkopt -fno-sanitize=vptr,function
+# --incompatible_enable_cc_toolchain_resolution not needed after this issue is closed https://github.com/bazelbuild/bazel/issues/7260
+build:llvm --incompatible_enable_cc_toolchain_resolution
 
 build:asan --copt -fsanitize=address,undefined
 build:asan --copt -fno-omit-frame-pointer
@@ -85,6 +86,12 @@ build:osx_amd64 --config=cross
 build:osx_amd64 --platforms=@io_bazel_rules_go//go/toolchain:darwin_amd64_cgo
 build:osx_amd64 --compiler=osxcross
 
+# osx_arm64 config for cross compiler toolchain
+build:osx_arm64 --config=cross
+build:osx_arm64 --platforms=@io_bazel_rules_go//go/toolchain:darwin_arm64_cgo
+build:osx_arm64 --compiler=osxcross
+build:osx_arm64 --cpu=aarch64
+
 # windows
 build:windows_amd64 --config=cross
 build:windows_amd64  --platforms=@io_bazel_rules_go//go/toolchain:windows_amd64_cgo
@@ -115,6 +122,10 @@ build:windows_amd64_debug --config=debug
 # osx_amd64 debug config
 build:osx_amd64_debug --config=debug
 build:osx_amd64_debug --config=osx_amd64
+
+# osx_arm64 debug config
+build:osx_arm64_debug --config=debug
+build:osx_arm64_debug --config=osx_arm64
 
 # linux_arm64_debug
 build:linux_arm64_debug --config=linux_arm64
@@ -150,6 +161,10 @@ build:windows_amd64_docker_debug --config=windows_amd64_docker --config=debug
 # osx_amd64 docker sandbox build config
 build:osx_amd64_docker --config=docker-sandbox --config=osx_amd64
 build:osx_amd64_docker_debug --config=osx_amd64_docker --config=debug
+
+# osx_arm64 docker sandbox build config
+build:osx_arm64_docker --config=docker-sandbox --config=osx_arm64
+build:osx_arm64_docker_debug --config=osx_arm64_docker --config=debug
 
 # linux_arm64 docker sandbox build config
 build:linux_arm64_docker --config=docker-sandbox --config=linux_arm64
