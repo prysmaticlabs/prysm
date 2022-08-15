@@ -46,11 +46,21 @@ func TestLifecycle_OK(t *testing.T) {
 func TestStatus_CredentialError(t *testing.T) {
 	credentialErr := errors.New("credentialError")
 	s := &Service{
-		cfg:             &Config{SyncService: &mockSync.Sync{IsSyncing: false}},
+		cfg: &Config{SyncService: &mockSync.Sync{IsSyncing: false},
+			OptimisticModeFetcher: &mock.ChainService{Optimistic: false}},
 		credentialError: credentialErr,
 	}
 
 	assert.ErrorContains(t, s.credentialError.Error(), s.Status())
+}
+
+func TestStatus_Optimistic(t *testing.T) {
+	s := &Service{
+		cfg: &Config{SyncService: &mockSync.Sync{IsSyncing: false},
+			OptimisticModeFetcher: &mock.ChainService{Optimistic: true}},
+	}
+
+	assert.ErrorContains(t, "service is optimistic", s.Status())
 }
 
 func TestRPC_InsecureEndpoint(t *testing.T) {
