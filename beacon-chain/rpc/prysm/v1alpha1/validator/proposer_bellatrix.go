@@ -240,6 +240,20 @@ func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.SignedBe
 	if err != nil {
 		return nil, err
 	}
+	headerRoot, err := header.HashTreeRoot()
+	if err != nil {
+		return nil, err
+	}
+
+	payloadRoot, err := payload.HashTreeRoot()
+	if err != nil {
+		return nil, err
+	}
+	if headerRoot != payloadRoot {
+		return nil, fmt.Errorf("header and payload root do not match, consider disconnect from relay to avoid further issues, "+
+			"%#x != %#x", headerRoot, payloadRoot)
+	}
+
 	bb := &ethpb.SignedBeaconBlockBellatrix{
 		Block: &ethpb.BeaconBlockBellatrix{
 			Slot:          sb.Block.Slot,
