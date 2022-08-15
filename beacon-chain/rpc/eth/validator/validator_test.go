@@ -3770,7 +3770,7 @@ func TestServer_SubmitValidatorRegistrations(t *testing.T) {
 			server := &Server{
 				V1Alpha1Server: v1Server,
 			}
-			_, err := server.SubmitValidatorRegistrations(ctx, tt.args.request)
+			_, err := server.SubmitValidatorRegistration(ctx, tt.args.request)
 			if tt.wantErr != "" {
 				require.ErrorContains(t, tt.wantErr, err)
 				return

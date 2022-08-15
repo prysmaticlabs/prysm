@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/beacon-chain/builder"
 	"sort"
 	"strconv"
 	"time"
+
+	"github.com/prysmaticlabs/prysm/beacon-chain/builder"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -581,8 +582,8 @@ func (vs *Server) PrepareBeaconProposer(
 	return &emptypb.Empty{}, nil
 }
 
-// SubmitValidatorRegistrations submits validator registrations.
-func (vs *Server) SubmitValidatorRegistrations(ctx context.Context, reg *ethpbv1.SubmitValidatorRegistrationsRequest) (*emptypb.Empty, error) {
+// SubmitValidatorRegistration submits validator registrations.
+func (vs *Server) SubmitValidatorRegistration(ctx context.Context, reg *ethpbv1.SubmitValidatorRegistrationsRequest) (*emptypb.Empty, error) {
 	ctx, span := trace.StartSpan(ctx, "validator.ValidatorRegistration")
 	defer span.End()
 
