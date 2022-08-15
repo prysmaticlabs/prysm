@@ -56,9 +56,11 @@ func (s *Store) setUnrealizedFinalizedEpoch(root [32]byte, epoch types.Epoch) er
 // UpdateUnrealizedCheckpoints "realizes" the unrealized justified and finalized
 // epochs stored within nodes. It should be called at the beginning of each
 // epoch
-func (f *ForkChoice) UpdateUnrealizedCheckpoints() {
+func (f *ForkChoice) updateUnrealizedCheckpoints() {
 	f.store.nodesLock.Lock()
 	defer f.store.nodesLock.Unlock()
+	f.store.checkpointsLock.Lock()
+	defer f.store.checkpointsLock.Unlock()
 	for _, node := range f.store.nodes {
 		node.justifiedEpoch = node.unrealizedJustifiedEpoch
 		node.finalizedEpoch = node.unrealizedFinalizedEpoch

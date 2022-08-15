@@ -4,7 +4,6 @@ package rpc
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net"
 	"sync"
@@ -13,6 +12,7 @@ import (
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpcopentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpcprometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
@@ -382,6 +382,14 @@ func (s *Service) Stop() error {
 
 // Status returns nil or credentialError
 func (s *Service) Status() error {
+	optimistic, err := s.cfg.OptimisticModeFetcher.IsOptimistic(s.ctx)
+	if err != nil {
+		return errors.Wrap(err, "failed to check if service is optimistic")
+	}
+	if optimistic {
+		return errors.New("service is optimistic, validators can't perform duties " +
+			"please check if execution layer is fully synced")
+	}
 	if s.cfg.SyncService.Syncing() {
 		return errors.New("syncing")
 	}

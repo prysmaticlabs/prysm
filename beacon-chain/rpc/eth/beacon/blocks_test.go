@@ -2,6 +2,7 @@ package beacon
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -920,8 +921,14 @@ func TestServer_GetBlock(t *testing.T) {
 	beaconDB := dbTest.SetupDB(t)
 	ctx := context.Background()
 
-	_, blkContainers := fillDBTestBlocks(ctx, t, beaconDB)
+	genBlk, blkContainers := fillDBTestBlocks(ctx, t, beaconDB)
+	canonicalRoots := make(map[[32]byte]bool)
+
+	for _, bContr := range blkContainers {
+		canonicalRoots[bytesutil.ToBytes32(bContr.BlockRoot)] = true
+	}
 	headBlock := blkContainers[len(blkContainers)-1]
+	nextSlot := headBlock.GetPhase0Block().Block.Slot + 1
 
 	b2 := util.NewBeaconBlock()
 	b2.Block.Slot = 30
@@ -931,6 +938,11 @@ func TestServer_GetBlock(t *testing.T) {
 	b3.Block.Slot = 30
 	b3.Block.ParentRoot = bytesutil.PadTo([]byte{4}, 32)
 	util.SaveBlock(t, ctx, beaconDB, b3)
+	b4 := util.NewBeaconBlock()
+	b4.Block.Slot = nextSlot
+	b4.Block.ParentRoot = bytesutil.PadTo([]byte{8}, 32)
+	util.SaveBlock(t, ctx, beaconDB, b4)
+
 	wsb, err := blocks.NewSignedBeaconBlock(headBlock.Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block)
 	require.NoError(t, err)
 
@@ -941,10 +953,10 @@ func TestServer_GetBlock(t *testing.T) {
 			Block:               wsb,
 			Root:                headBlock.BlockRoot,
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
+			CanonicalRoots:      canonicalRoots,
 		},
 	}
 
-	genBlk, blkContainers := fillDBTestBlocks(ctx, t, beaconDB)
 	root, err := genBlk.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -968,6 +980,11 @@ func TestServer_GetBlock(t *testing.T) {
 			name:    "canonical",
 			blockID: []byte("30"),
 			want:    blkContainers[30].Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
+		},
+		{
+			name:    "non canonical",
+			blockID: []byte(fmt.Sprintf("%d", nextSlot)),
+			wantErr: true,
 		},
 		{
 			name:    "head",
@@ -1011,7 +1028,7 @@ func TestServer_GetBlock(t *testing.T) {
 				BlockId: tt.blockID,
 			})
 			if tt.wantErr {
-				require.NotEqual(t, err, nil)
+				require.NotEqual(t, err, nil, "no error has been returned")
 				return
 			}
 			require.NoError(t, err)
@@ -1031,8 +1048,14 @@ func TestServer_GetBlockV2(t *testing.T) {
 		beaconDB := dbTest.SetupDB(t)
 		ctx := context.Background()
 
-		_, blkContainers := fillDBTestBlocks(ctx, t, beaconDB)
+		genBlk, blkContainers := fillDBTestBlocks(ctx, t, beaconDB)
+		canonicalRoots := make(map[[32]byte]bool)
+
+		for _, bContr := range blkContainers {
+			canonicalRoots[bytesutil.ToBytes32(bContr.BlockRoot)] = true
+		}
 		headBlock := blkContainers[len(blkContainers)-1]
+		nextSlot := headBlock.GetPhase0Block().Block.Slot + 1
 
 		b2 := util.NewBeaconBlock()
 		b2.Block.Slot = 30
@@ -1042,6 +1065,10 @@ func TestServer_GetBlockV2(t *testing.T) {
 		b3.Block.Slot = 30
 		b3.Block.ParentRoot = bytesutil.PadTo([]byte{4}, 32)
 		util.SaveBlock(t, ctx, beaconDB, b3)
+		b4 := util.NewBeaconBlock()
+		b4.Block.Slot = nextSlot
+		b4.Block.ParentRoot = bytesutil.PadTo([]byte{8}, 32)
+		util.SaveBlock(t, ctx, beaconDB, b4)
 
 		wsb, err := blocks.NewSignedBeaconBlock(headBlock.Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block)
 		require.NoError(t, err)
@@ -1051,6 +1078,7 @@ func TestServer_GetBlockV2(t *testing.T) {
 			Block:               wsb,
 			Root:                headBlock.BlockRoot,
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
+			CanonicalRoots:      canonicalRoots,
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
@@ -1059,7 +1087,6 @@ func TestServer_GetBlockV2(t *testing.T) {
 			OptimisticModeFetcher: mockChainService,
 		}
 
-		genBlk, blkContainers := fillDBTestBlocks(ctx, t, beaconDB)
 		root, err := genBlk.Block.HashTreeRoot()
 		require.NoError(t, err)
 
@@ -1083,6 +1110,11 @@ func TestServer_GetBlockV2(t *testing.T) {
 				name:    "canonical",
 				blockID: []byte("30"),
 				want:    blkContainers[30].Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
+			},
+			{
+				name:    "non canonical",
+				blockID: []byte(fmt.Sprintf("%d", nextSlot)),
+				wantErr: true,
 			},
 			{
 				name:    "head",
@@ -1148,8 +1180,14 @@ func TestServer_GetBlockV2(t *testing.T) {
 		beaconDB := dbTest.SetupDB(t)
 		ctx := context.Background()
 
-		_, blkContainers := fillDBTestBlocksAltair(ctx, t, beaconDB)
+		genBlk, blkContainers := fillDBTestBlocksAltair(ctx, t, beaconDB)
+		canonicalRoots := make(map[[32]byte]bool)
+
+		for _, bContr := range blkContainers {
+			canonicalRoots[bytesutil.ToBytes32(bContr.BlockRoot)] = true
+		}
 		headBlock := blkContainers[len(blkContainers)-1]
+		nextSlot := headBlock.GetAltairBlock().Block.Slot + 1
 
 		b2 := util.NewBeaconBlockAltair()
 		b2.Block.Slot = 30
@@ -1159,6 +1197,10 @@ func TestServer_GetBlockV2(t *testing.T) {
 		b3.Block.Slot = 30
 		b3.Block.ParentRoot = bytesutil.PadTo([]byte{4}, 32)
 		util.SaveBlock(t, ctx, beaconDB, b3)
+		b4 := util.NewBeaconBlockAltair()
+		b4.Block.Slot = nextSlot
+		b4.Block.ParentRoot = bytesutil.PadTo([]byte{8}, 32)
+		util.SaveBlock(t, ctx, beaconDB, b4)
 
 		chainBlk, err := blocks.NewSignedBeaconBlock(headBlock.GetAltairBlock())
 		require.NoError(t, err)
@@ -1167,6 +1209,7 @@ func TestServer_GetBlockV2(t *testing.T) {
 			Block:               chainBlk,
 			Root:                headBlock.BlockRoot,
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
+			CanonicalRoots:      canonicalRoots,
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
@@ -1175,7 +1218,6 @@ func TestServer_GetBlockV2(t *testing.T) {
 			OptimisticModeFetcher: mockChainService,
 		}
 
-		genBlk, blkContainers := fillDBTestBlocksAltair(ctx, t, beaconDB)
 		root, err := genBlk.Block.HashTreeRoot()
 		require.NoError(t, err)
 
@@ -1199,6 +1241,11 @@ func TestServer_GetBlockV2(t *testing.T) {
 				name:    "canonical",
 				blockID: []byte("30"),
 				want:    blkContainers[30].GetAltairBlock(),
+			},
+			{
+				name:    "non canonical",
+				blockID: []byte(fmt.Sprintf("%d", nextSlot)),
+				wantErr: true,
 			},
 			{
 				name:    "head",
@@ -1264,8 +1311,14 @@ func TestServer_GetBlockV2(t *testing.T) {
 		beaconDB := dbTest.SetupDB(t)
 		ctx := context.Background()
 
-		_, blkContainers := fillDBTestBlocksBellatrix(ctx, t, beaconDB)
+		genBlk, blkContainers := fillDBTestBlocksBellatrix(ctx, t, beaconDB)
+		canonicalRoots := make(map[[32]byte]bool)
+
+		for _, bContr := range blkContainers {
+			canonicalRoots[bytesutil.ToBytes32(bContr.BlockRoot)] = true
+		}
 		headBlock := blkContainers[len(blkContainers)-1]
+		nextSlot := headBlock.GetBellatrixBlock().Block.Slot + 1
 
 		b2 := util.NewBeaconBlockBellatrix()
 		b2.Block.Slot = 30
@@ -1275,6 +1328,10 @@ func TestServer_GetBlockV2(t *testing.T) {
 		b3.Block.Slot = 30
 		b3.Block.ParentRoot = bytesutil.PadTo([]byte{4}, 32)
 		util.SaveBlock(t, ctx, beaconDB, b3)
+		b4 := util.NewBeaconBlockBellatrix()
+		b4.Block.Slot = nextSlot
+		b4.Block.ParentRoot = bytesutil.PadTo([]byte{8}, 32)
+		util.SaveBlock(t, ctx, beaconDB, b4)
 
 		chainBlk, err := blocks.NewSignedBeaconBlock(headBlock.GetBellatrixBlock())
 		require.NoError(t, err)
@@ -1283,6 +1340,7 @@ func TestServer_GetBlockV2(t *testing.T) {
 			Block:               chainBlk,
 			Root:                headBlock.BlockRoot,
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
+			CanonicalRoots:      canonicalRoots,
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
@@ -1294,7 +1352,6 @@ func TestServer_GetBlockV2(t *testing.T) {
 			},
 		}
 
-		genBlk, blkContainers := fillDBTestBlocksBellatrix(ctx, t, beaconDB)
 		root, err := genBlk.Block.HashTreeRoot()
 		require.NoError(t, err)
 
@@ -1318,6 +1375,11 @@ func TestServer_GetBlockV2(t *testing.T) {
 				name:    "canonical",
 				blockID: []byte("30"),
 				want:    blkContainers[30].GetBellatrixBlock(),
+			},
+			{
+				name:    "non canonical",
+				blockID: []byte(fmt.Sprintf("%d", nextSlot)),
+				wantErr: true,
 			},
 			{
 				name:    "head",

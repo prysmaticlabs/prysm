@@ -136,7 +136,7 @@ func ValidatePayloadWhenMergeCompletes(st state.BeaconState, payload interfaces.
 		return err
 	}
 	if !bytes.Equal(payload.ParentHash(), header.BlockHash) {
-		return errors.New("incorrect block hash")
+		return ErrInvalidPayloadBlockHash
 	}
 	return nil
 }
