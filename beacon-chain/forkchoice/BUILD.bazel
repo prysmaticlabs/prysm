@@ -7,7 +7,7 @@ go_library(
         "error.go",
         "interfaces.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice",
+    importpath = "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice",
     visibility = [
         "//beacon-chain:__subpackages__",
         "//testing/spectest:__subpackages__",

@@ -4,8 +4,8 @@ import (
 	"math"
 	"time"
 
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 )
 
 // MainnetConfig returns the configuration to be used in the main network.
@@ -131,8 +131,8 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	// order to vote on the correct eth1 blocks.
 	//
 	// Additional context: https://github.com/ethereum/consensus-specs/issues/2132
-	// Bug prompting this change: https://github.com/prysmaticlabs/prysm/issues/7856
-	// Future optimization: https://github.com/prysmaticlabs/prysm/issues/7739
+	// Bug prompting this change: https://github.com/prysmaticlabs/prysm/v3/issues/7856
+	// Future optimization: https://github.com/prysmaticlabs/prysm/v3/issues/7739
 	SecondsPerETH1Block: 14,
 
 	// State list length constants.

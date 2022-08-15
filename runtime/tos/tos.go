@@ -6,9 +6,9 @@ import (
 	"strings"
 
 	"github.com/logrusorgru/aurora"
-	"github.com/prysmaticlabs/prysm/cmd"
-	"github.com/prysmaticlabs/prysm/io/file"
-	"github.com/prysmaticlabs/prysm/io/prompt"
+	"github.com/prysmaticlabs/prysm/v3/cmd"
+	"github.com/prysmaticlabs/prysm/v3/io/file"
+	"github.com/prysmaticlabs/prysm/v3/io/prompt"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -21,13 +21,13 @@ Prysmatic Labs Terms of Use
 By downloading, accessing or using the Prysm implementation (“Prysm”), you (referenced herein
 as “you” or the “user”) certify that you have read and agreed to the terms and conditions below.
 
-TERMS AND CONDITIONS: https://github.com/prysmaticlabs/prysm/blob/master/TERMS_OF_SERVICE.md
+TERMS AND CONDITIONS: https://github.com/prysmaticlabs/prysm/v3/blob/master/TERMS_OF_SERVICE.md
 
 
 Type "accept" to accept this terms and conditions [accept/decline]:`
 	acceptTosPromptErrText = `could not scan text input, if you are trying to run in non-interactive environment, you
 can use the --accept-terms-of-use flag after reading the terms and conditions here: 
-https://github.com/prysmaticlabs/prysm/blob/master/TERMS_OF_SERVICE.md`
+https://github.com/prysmaticlabs/prysm/v3/blob/master/TERMS_OF_SERVICE.md`
 )
 
 var (

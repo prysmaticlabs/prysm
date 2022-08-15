@@ -18,7 +18,7 @@ package ethereum.eth.v2;
 import "proto/eth/ext/options.proto";
 
 option csharp_namespace = "Ethereum.Eth.V2";
-option go_package = "github.com/prysmaticlabs/prysm/proto/eth/v2;eth";
+option go_package = "github.com/prysmaticlabs/prysm/v3/proto/eth/v2;eth";
 option java_multiple_files = true;
 option java_outer_classname = "SyncCommitteeProto";
 option java_package = "org.ethereum.eth.v2";
@@ -41,13 +41,13 @@ message SubmitPoolSyncCommitteeSignatures {
 // Sync committee object to support light client.
 message SyncCommitteeMessage {
   // Slot to which this contribution pertains.
-  uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"];
+  uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"];
 
   // 32 byte block root for this signature.
   bytes beacon_block_root = 2 [(ethereum.eth.ext.ssz_size) = "32"];
 
   // Index of the validator that produced this signature.
-  uint64 validator_index = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.ValidatorIndex"];
+  uint64 validator_index = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"];
 
   // Signature by the validator over the block root of `slot`.
   bytes signature = 4 [(ethereum.eth.ext.ssz_size) = "96"];
@@ -59,7 +59,7 @@ message StateSyncCommitteesRequest {
   bytes state_id = 1;
 
   // The epoch to retrieve the committees of.
-  optional uint64 epoch = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch"];
+  optional uint64 epoch = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"];
 }
 
 message StateSyncCommitteesResponse {
@@ -69,12 +69,12 @@ message StateSyncCommitteesResponse {
 
 message SyncCommitteeValidators {
   // All of the validator indices in the current sync committee.
-  repeated uint64 validators = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.ValidatorIndex"];
+  repeated uint64 validators = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"];
 
   repeated SyncSubcommitteeValidators validator_aggregates = 2;
 }
 
 message SyncSubcommitteeValidators {
   // Subcommittee slices of the current sync committee.
-  repeated uint64 validators = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.ValidatorIndex"];
+  repeated uint64 validators = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"];
 }

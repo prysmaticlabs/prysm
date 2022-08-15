@@ -3,7 +3,7 @@ package sanity
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/testing/spectest/shared/bellatrix/sanity"
+	"github.com/prysmaticlabs/prysm/v3/testing/spectest/shared/bellatrix/sanity"
 )
 
 func TestMinimal_Bellatrix_Sanity_Blocks(t *testing.T) {

@@ -5,10 +5,10 @@ import (
 	"testing"
 
 	fuzz "github.com/google/gofuzz"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
-	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
+	stateAltair "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v2"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 func TestFuzzProcessDeposits_10000(t *testing.T) {

@@ -12,8 +12,8 @@ import (
 	sync "sync"
 
 	empty "github.com/golang/protobuf/ptypes/empty"
-	github_com_prysmaticlabs_prysm_consensus_types_primitives "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	_ "github.com/prysmaticlabs/prysm/proto/eth/ext"
+	github_com_prysmaticlabs_prysm_consensus_types_primitives "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	_ "github.com/prysmaticlabs/prysm/v3/proto/eth/ext"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
@@ -84,7 +84,7 @@ type InclusionSlotRequest struct {
 	unknownFields protoimpl.UnknownFields
 
 	Id   uint64                                                         `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
-	Slot github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot `protobuf:"varint,2,opt,name=slot,proto3" json:"slot,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"`
+	Slot github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot `protobuf:"varint,2,opt,name=slot,proto3" json:"slot,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"`
 }
 
 func (x *InclusionSlotRequest) Reset() {
@@ -138,7 +138,7 @@ type InclusionSlotResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Slot github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot `protobuf:"varint,2,opt,name=slot,proto3" json:"slot,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"`
+	Slot github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot `protobuf:"varint,2,opt,name=slot,proto3" json:"slot,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"`
 }
 
 func (x *InclusionSlotResponse) Reset() {
@@ -249,7 +249,7 @@ type isBeaconStateRequest_QueryFilter interface {
 }
 
 type BeaconStateRequest_Slot struct {
-	Slot github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot `protobuf:"varint,1,opt,name=slot,proto3,oneof" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"`
+	Slot github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot `protobuf:"varint,1,opt,name=slot,proto3,oneof" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"`
 }
 
 type BeaconStateRequest_BlockRoot struct {
@@ -406,8 +406,8 @@ type ForkChoiceResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	JustifiedEpoch  github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch `protobuf:"varint,1,opt,name=justified_epoch,json=justifiedEpoch,proto3" json:"justified_epoch,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch"`
-	FinalizedEpoch  github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch `protobuf:"varint,2,opt,name=finalized_epoch,json=finalizedEpoch,proto3" json:"finalized_epoch,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch"`
+	JustifiedEpoch  github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch `protobuf:"varint,1,opt,name=justified_epoch,json=justifiedEpoch,proto3" json:"justified_epoch,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"`
+	FinalizedEpoch  github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch `protobuf:"varint,2,opt,name=finalized_epoch,json=finalizedEpoch,proto3" json:"finalized_epoch,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"`
 	ForkchoiceNodes []*ForkChoiceNode                                               `protobuf:"bytes,4,rep,name=forkchoice_nodes,json=forkchoiceNodes,proto3" json:"forkchoice_nodes,omitempty"`
 }
 
@@ -469,11 +469,11 @@ type ForkChoiceNode struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Slot           github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot  `protobuf:"varint,1,opt,name=slot,proto3" json:"slot,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"`
+	Slot           github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot  `protobuf:"varint,1,opt,name=slot,proto3" json:"slot,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"`
 	Root           []byte                                                          `protobuf:"bytes,2,opt,name=root,proto3" json:"root,omitempty"`
 	Parent         []byte                                                          `protobuf:"bytes,3,opt,name=parent,proto3" json:"parent,omitempty"`
-	JustifiedEpoch github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch `protobuf:"varint,4,opt,name=justified_epoch,json=justifiedEpoch,proto3" json:"justified_epoch,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch"`
-	FinalizedEpoch github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch `protobuf:"varint,5,opt,name=finalized_epoch,json=finalizedEpoch,proto3" json:"finalized_epoch,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch"`
+	JustifiedEpoch github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch `protobuf:"varint,4,opt,name=justified_epoch,json=justifiedEpoch,proto3" json:"justified_epoch,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"`
+	FinalizedEpoch github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch `protobuf:"varint,5,opt,name=finalized_epoch,json=finalizedEpoch,proto3" json:"finalized_epoch,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"`
 	Weight         uint64                                                          `protobuf:"varint,6,opt,name=weight,proto3" json:"weight,omitempty"`
 	BestDescendant []byte                                                          `protobuf:"bytes,7,opt,name=best_descendant,json=bestDescendant,proto3" json:"best_descendant,omitempty"`
 }

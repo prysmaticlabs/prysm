@@ -4,10 +4,10 @@ import (
 	"context"
 	"testing"
 
-	statenative "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native"
-	"github.com/prysmaticlabs/prysm/container/trie"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
+	statenative "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v3/container/trie"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 )
 
 func TestBeaconStateMerkleProofs(t *testing.T) {

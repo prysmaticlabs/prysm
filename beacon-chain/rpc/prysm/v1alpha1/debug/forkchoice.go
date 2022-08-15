@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/golang/protobuf/ptypes/empty"
-	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	pbrpc "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
 // GetForkChoice returns a fork choice store.

@@ -22,7 +22,7 @@ go_library(
         "status.go",
         "sync_committee.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/validator",
+    importpath = "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/prysm/v1alpha1/validator",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//async/event:go_default_library",

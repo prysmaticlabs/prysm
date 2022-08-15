@@ -8,12 +8,12 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/monitoring/progress"
-	"github.com/prysmaticlabs/prysm/validator/db"
-	"github.com/prysmaticlabs/prysm/validator/slashing-protection-history/format"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/monitoring/progress"
+	"github.com/prysmaticlabs/prysm/v3/validator/db"
+	"github.com/prysmaticlabs/prysm/v3/validator/slashing-protection-history/format"
 )
 
 // ExportStandardProtectionJSON extracts all slashing protection data from a validator database
@@ -150,7 +150,7 @@ func signedAttestationsByPubKey(ctx context.Context, validatorDB db.Database, pu
 		// having a target epoch greater than the next entry in the list. If this manifests,
 		// we skip it to protect users. This check is the best trade-off we can make at
 		// the moment without creating any false positive slashable attestation exports.
-		// More information on the bug can found in https://github.com/prysmaticlabs/prysm/issues/8893.
+		// More information on the bug can found in https://github.com/prysmaticlabs/prysm/v3/issues/8893.
 		if i == 0 && len(history) > 1 {
 			nextEntryTargetEpoch := history[1].Target
 			if att.Target > nextEntryTargetEpoch && att.Source == 0 {

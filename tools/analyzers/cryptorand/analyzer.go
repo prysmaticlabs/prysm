@@ -16,7 +16,7 @@ import (
 // Doc explaining the tool.
 const Doc = "Tool to enforce the use of stronger crypto: crypto/rand instead of math/rand"
 
-var errWeakCrypto = errors.New("crypto-secure RNGs are required, use CSPRNG or PRNG defined in github.com/prysmaticlabs/prysm/crypto/rand")
+var errWeakCrypto = errors.New("crypto-secure RNGs are required, use CSPRNG or PRNG defined in github.com/prysmaticlabs/prysm/v3/crypto/rand")
 
 // Analyzer runs static analysis.
 var Analyzer = &analysis.Analyzer{

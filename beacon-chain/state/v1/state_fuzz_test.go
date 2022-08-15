@@ -7,16 +7,16 @@ import (
 	"encoding/base64"
 	"testing"
 
-	coreState "github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
-	native "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/crypto/rand"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
+	coreState "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
+	native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/crypto/rand"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 )
 
 func FuzzV1StateHashTreeRoot(f *testing.F) {
@@ -89,7 +89,7 @@ func FuzzV1StateHashTreeRoot(f *testing.F) {
 }
 
 func FuzzV1StateUnmarshalSSZ(f *testing.F) {
-	// See example in https://github.com/prysmaticlabs/prysm/issues/5167
+	// See example in https://github.com/prysmaticlabs/prysm/v3/issues/5167
 	b, err := base64.StdEncoding.DecodeString("AgAGAAAA5AAAAAAAAAAAAAAAAAAAAAAAAAB51og2NJR6COTeAGdBDUL2wythbDd/ntOHzD/JAg6kywEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHnWiDY0lHoI5N4AZ0ENQvbDK2FsN3+e04fMP8kCDqTLti/UWQrIlR5nKGy5okElUBusCaDxo+6f0kX7B54ry9byYg5qzCruPLf/SccXww14BppwTrLrI/CqCbt6AWTO4kS/jz0no8RYv4wBhofviY9/W28LdzMhh6XVRUzK2Us4/wE=")
 	require.NoError(f, err)
 	f.Add(b)

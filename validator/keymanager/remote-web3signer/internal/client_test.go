@@ -11,8 +11,8 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer/internal"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote-web3signer/internal"
 	"github.com/stretchr/testify/assert"
 )
 
