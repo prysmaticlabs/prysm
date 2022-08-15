@@ -415,13 +415,6 @@ func (f *ForkChoice) FinalizedCheckpoint() *forkchoicetypes.Checkpoint {
 	return f.store.finalizedCheckpoint
 }
 
-func (f *ForkChoice) ForkChoiceNodes() []*ethpb.ForkChoiceNode {
-	f.store.nodesLock.RLock()
-	defer f.store.nodesLock.RUnlock()
-	ret := make([]*ethpb.ForkChoiceNode, len(f.store.nodeByRoot))
-	return f.store.treeRootNode.rpcNodes(ret)
-}
-
 // SetOptimisticToInvalid removes a block with an invalid execution payload from fork choice store
 func (f *ForkChoice) SetOptimisticToInvalid(ctx context.Context, root, parentRoot, payloadHash [fieldparams.RootLength]byte) ([][32]byte, error) {
 	return f.store.setOptimisticToInvalid(ctx, root, parentRoot, payloadHash)
