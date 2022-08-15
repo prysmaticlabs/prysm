@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/go-bitfield"
 	mockChain "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
+	builderTest "github.com/prysmaticlabs/prysm/beacon-chain/builder/testing"
 	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
@@ -3746,12 +3747,24 @@ func TestServer_SubmitValidatorRegistrations(t *testing.T) {
 			},
 			wantErr: "",
 		},
+		{
+			name: "Empty Request",
+			args: args{
+				request: &ethpbv1.SubmitValidatorRegistrationsRequest{
+					Registrations: []*ethpbv1.SubmitValidatorRegistrationsRequest_SignedValidatorRegistration{},
+				},
+			},
+			wantErr: "validator registration request is empty",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			db := dbutil.SetupDB(t)
 			ctx := context.Background()
 			v1Server := &v1alpha1validator.Server{
+				BlockBuilder: &builderTest.MockBuilderService{
+					HasConfigured: true,
+				},
 				BeaconDB: db,
 			}
 			server := &Server{
