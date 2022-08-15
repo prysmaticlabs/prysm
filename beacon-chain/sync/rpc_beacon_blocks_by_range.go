@@ -163,21 +163,33 @@ func (s *Service) writeBlockRangeToStream(ctx context.Context, startSlot, endSlo
 		return err
 	}
 	start := time.Now()
+	// If the blocks are blinded, we reconstruct the full block via the execution client.
+	blindedExists := false
+	blindedIndex := 0
+	for i, b := range blks {
+		// Since the blocks are sorted in ascending order, we assume that the following
+		// blocks from the first blinded block are also ascending.
+		if b.IsBlinded() {
+			blindedExists = true
+			blindedIndex = i
+			break
+		}
+	}
+	if blindedExists {
+		reconstructedBlks, err := s.cfg.executionPayloadReconstructor.ReconstructFullBellatrixBlockBatch(ctx, blks[blindedIndex:])
+		if err != nil {
+			log.WithError(err).Error("Could not reconstruct full bellatrix block batch from blinded bodies")
+			s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
+			return err
+		}
+		copy(blks[blindedIndex:], reconstructedBlks)
+	}
+
 	for _, b := range blks {
 		if err := blocks.BeaconBlockIsNil(b); err != nil {
 			continue
 		}
-		blockToWrite := b
-		if blockToWrite.Block().IsBlinded() {
-			fullBlock, err := s.cfg.executionPayloadReconstructor.ReconstructFullBellatrixBlock(ctx, blockToWrite)
-			if err != nil {
-				log.WithError(err).Error("Could not get reconstruct full bellatrix block from blinded body")
-				s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
-				return err
-			}
-			blockToWrite = fullBlock
-		}
-		if chunkErr := s.chunkBlockWriter(stream, blockToWrite); chunkErr != nil {
+		if chunkErr := s.chunkBlockWriter(stream, b); chunkErr != nil {
 			log.WithError(chunkErr).Error("Could not send a chunked response")
 			s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
 			tracing.AnnotateError(span, chunkErr)

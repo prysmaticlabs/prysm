@@ -273,6 +273,9 @@ func syncCompatibleBlockFromCtr(container *ethpb.BeaconBlockContainer) (interfac
 	if container.GetBellatrixBlock() != nil {
 		return blocks.NewSignedBeaconBlock(container.GetBellatrixBlock())
 	}
+	if container.GetBlindedBellatrixBlock() != nil {
+		return blocks.NewSignedBeaconBlock(container.GetBlindedBellatrixBlock())
+	}
 	return nil, errors.New("no supported block type in container")
 }
 
