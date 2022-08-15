@@ -7,6 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	statenative "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native"
 	testtmpl "github.com/prysmaticlabs/prysm/beacon-chain/state/testing"
+	"github.com/prysmaticlabs/prysm/config/features"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
@@ -37,11 +38,13 @@ func TestBeaconState_ValidatorAtIndexReadOnly_HandlesNilSlice_Bellatrix(t *testi
 }
 
 func TestValidatorIndexOutOfRangeError(t *testing.T) {
+	features.Init(&features.Flags{EnableNativeState: true})
 	err := statenative.NewValidatorIndexOutOfRangeError(1)
 	require.Equal(t, err.Error(), "index 1 out of range")
 }
 
 func TestValidatorIndexes(t *testing.T) {
+	features.Init(&features.Flags{EnableNativeState: true})
 	dState, _ := util.DeterministicGenesisState(t, 10)
 	byteValue := dState.PubkeyAtIndex(1)
 	t.Run("ValidatorIndexByPubkey", func(t *testing.T) {

@@ -6,12 +6,14 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	statenative "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/container/trie"
 	"github.com/prysmaticlabs/prysm/testing/require"
 	"github.com/prysmaticlabs/prysm/testing/util"
 )
 
 func TestBeaconStateMerkleProofs_phase0_notsupported(t *testing.T) {
+	features.Init(&features.Flags{EnableNativeState: true})
 	ctx := context.Background()
 	st, _ := util.DeterministicGenesisState(t, 256)
 	t.Run("current sync committee", func(t *testing.T) {
@@ -29,6 +31,7 @@ func TestBeaconStateMerkleProofs_phase0_notsupported(t *testing.T) {
 }
 
 func TestBeaconStateMerkleProofs_bellatrix(t *testing.T) {
+	features.Init(&features.Flags{EnableNativeState: true})
 	ctx := context.Background()
 	bellatrix, err := util.NewBeaconStateBellatrix()
 	require.NoError(t, err)
