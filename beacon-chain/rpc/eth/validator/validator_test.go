@@ -3717,3 +3717,52 @@ func TestPrepareBeaconProposer(t *testing.T) {
 		})
 	}
 }
+
+func TestServer_SubmitValidatorRegistrations(t *testing.T) {
+	type args struct {
+		request *ethpbv1.SubmitValidatorRegistrationsRequest
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr string
+	}{
+		{
+			name: "Happy Path",
+			args: args{
+				request: &ethpbv1.SubmitValidatorRegistrationsRequest{
+					Registrations: []*ethpbv1.SubmitValidatorRegistrationsRequest_SignedValidatorRegistration{
+						{
+							Message: &ethpbv1.SubmitValidatorRegistrationsRequest_ValidatorRegistration{
+								FeeRecipient: make([]byte, fieldparams.BLSPubkeyLength),
+								GasLimit:     30000000,
+								Timestamp:    uint64(time.Now().Unix()),
+								Pubkey:       make([]byte, fieldparams.BLSPubkeyLength),
+							},
+							Signature: make([]byte, fieldparams.BLSSignatureLength),
+						},
+					},
+				},
+			},
+			wantErr: "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			db := dbutil.SetupDB(t)
+			ctx := context.Background()
+			v1Server := &v1alpha1validator.Server{
+				BeaconDB: db,
+			}
+			server := &Server{
+				V1Alpha1Server: v1Server,
+			}
+			_, err := server.SubmitValidatorRegistrations(ctx, tt.args.request)
+			if tt.wantErr != "" {
+				require.ErrorContains(t, tt.wantErr, err)
+				return
+			}
+			require.NoError(t, err)
+		})
+	}
+}
