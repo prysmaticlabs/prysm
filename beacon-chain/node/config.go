@@ -65,6 +65,24 @@ func configureSafeSlotsToImportOptimistically(cliCtx *cli.Context) error {
 	return nil
 }
 
+func configureBuilderCircuitBreaker(cliCtx *cli.Context) error {
+	if cliCtx.IsSet(flags.MaxBuilderConsecutiveMissedSlots.Name) {
+		c := params.BeaconConfig().Copy()
+		c.MaxBuilderConsecutiveMissedSlots = types.Slot(cliCtx.Int(flags.MaxBuilderConsecutiveMissedSlots.Name))
+		if err := params.SetActive(c); err != nil {
+			return err
+		}
+	}
+	if cliCtx.IsSet(flags.MaxBuilderEpochMissedSlots.Name) {
+		c := params.BeaconConfig().Copy()
+		c.MaxBuilderEpochMissedSlots = types.Slot(cliCtx.Int(flags.MaxBuilderEpochMissedSlots.Name))
+		if err := params.SetActive(c); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func configureSlotsPerArchivedPoint(cliCtx *cli.Context) error {
 	if cliCtx.IsSet(flags.SlotsPerArchivedPoint.Name) {
 		c := params.BeaconConfig().Copy()
@@ -100,7 +118,7 @@ func configureEth1Config(cliCtx *cli.Context) error {
 }
 
 func configureNetwork(cliCtx *cli.Context) {
-	if cliCtx.IsSet(cmd.BootstrapNode.Name) {
+	if len(cliCtx.StringSlice(cmd.BootstrapNode.Name)) > 0 {
 		c := params.BeaconNetworkConfig()
 		c.BootstrapNodes = cliCtx.StringSlice(cmd.BootstrapNode.Name)
 		params.OverrideBeaconNetworkConfig(c)

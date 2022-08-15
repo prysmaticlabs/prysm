@@ -38,12 +38,12 @@ def _impl(ctx):
     if (target_cpu == "aarch64"):
         cross_system_include_dirs = [
             include_path_prefix + "/include/c++/v1",
-            include_path_prefix + "/lib/clang/10.0.0/include",
+            include_path_prefix + "/lib/clang/12.0.0/include",
         ]
     else:
         cross_system_include_dirs = [
             include_path_prefix + "/include/c++/v1",
-            include_path_prefix + "/lib/clang/10.0.0/include",
+            include_path_prefix + "/lib/clang/12.0.0/include",
             include_path_prefix + "/include/x86_64-linux-gnu",
         ]
 

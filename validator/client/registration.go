@@ -2,9 +2,11 @@ package client
 
 import (
 	"context"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -30,6 +32,10 @@ func SubmitValidatorRegistrations(
 	if _, err := validatorClient.SubmitValidatorRegistrations(ctx, &ethpb.SignedValidatorRegistrationsV1{
 		Messages: signedRegs,
 	}); err != nil {
+		if strings.Contains(err.Error(), builder.ErrNoBuilder.Error()) {
+			log.Warnln("Beacon node does not utilize a custom builder via the --http-mev-relay flag. Validator registration skipped.")
+			return nil
+		}
 		return errors.Wrap(err, "could not submit signed registrations to beacon node")
 	}
 	log.Infoln("Submitted builder validator registration settings for custom builders")
@@ -38,7 +44,6 @@ func SubmitValidatorRegistrations(
 
 // Sings validator registration obj with the proposer domain and private key.
 func signValidatorRegistration(ctx context.Context, signer iface.SigningFunc, reg *ethpb.ValidatorRegistrationV1) ([]byte, error) {
-
 	// Per spec, we want the fork version and genesis validator to be nil.
 	// Which is genesis value and zero by default.
 	d, err := signing.ComputeDomain(
@@ -74,7 +79,6 @@ func (v *validator) SignValidatorRegistrationRequest(ctx context.Context, signer
 	} else {
 		sig, err := signValidatorRegistration(ctx, signer, newValidatorRegistration)
 		if err != nil {
-			log.WithError(err).Error("failed to sign builder validator registration obj")
 			return nil, err
 		}
 		newRequest := &ethpb.SignedValidatorRegistrationV1{

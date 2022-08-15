@@ -47,10 +47,13 @@ func (s *Store) setUnrealizedFinalizedEpoch(root [32]byte, epoch types.Epoch) er
 func (f *ForkChoice) updateUnrealizedCheckpoints() {
 	f.store.nodesLock.Lock()
 	defer f.store.nodesLock.Unlock()
+	f.store.checkpointsLock.Lock()
+	defer f.store.checkpointsLock.Unlock()
 	for _, node := range f.store.nodeByRoot {
 		node.justifiedEpoch = node.unrealizedJustifiedEpoch
 		node.finalizedEpoch = node.unrealizedFinalizedEpoch
 		if node.justifiedEpoch > f.store.justifiedCheckpoint.Epoch {
+			f.store.prevJustifiedCheckpoint = f.store.justifiedCheckpoint
 			f.store.justifiedCheckpoint = f.store.unrealizedJustifiedCheckpoint
 			if node.justifiedEpoch > f.store.bestJustifiedCheckpoint.Epoch {
 				f.store.bestJustifiedCheckpoint = f.store.unrealizedJustifiedCheckpoint

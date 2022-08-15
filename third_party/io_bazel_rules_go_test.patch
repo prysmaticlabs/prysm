@@ -1,24 +1,22 @@
 diff --git a/go/private/rules/test.bzl b/go/private/rules/test.bzl
-index a88ebcc9..f23b0dfb 100644
+index 1dfd1555..eeffefca 100644
 --- a/go/private/rules/test.bzl
 +++ b/go/private/rules/test.bzl
-@@ -185,7 +185,7 @@ def _go_test_impl(ctx):
+@@ -187,7 +187,7 @@ def _go_test_impl(ctx):
          testing.TestEnvironment(env),
      ]
- 
+
 -_go_test_kwargs = {
 +go_test_kwargs = {
      "implementation": _go_test_impl,
      "attrs": {
          "data": attr.label_list(
-@@ -439,8 +439,8 @@ _go_test_kwargs = {
+@@ -447,7 +447,7 @@ _go_test_kwargs = {
      """,
  }
- 
+
 -go_test = rule(**_go_test_kwargs)
--go_transition_test = go_transition_rule(**_go_test_kwargs)
 +go_test = rule(**go_test_kwargs)
-+go_transition_test = go_transition_rule(**go_test_kwargs)
- 
+
  def _recompile_external_deps(go, external_source, internal_archive, library_labels):
      """Recompiles some archives in order to split internal and external tests.

@@ -12,9 +12,9 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/monitoring/tracing"
 	"github.com/prysmaticlabs/prysm/runtime/version"
@@ -25,13 +25,13 @@ import (
 // ReplayBlocks replays the input blocks on the input state until the target slot is reached.
 //
 // WARNING Blocks passed to the function must be in decreasing slots order.
-func (_ *State) ReplayBlocks(
+func (_ *State) replayBlocks(
 	ctx context.Context,
 	state state.BeaconState,
 	signed []interfaces.SignedBeaconBlock,
 	targetSlot types.Slot,
 ) (state.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "stateGen.ReplayBlocks")
+	ctx, span := trace.StartSpan(ctx, "stateGen.replayBlocks")
 	defer span.End()
 	var err error
 
@@ -77,9 +77,9 @@ func (_ *State) ReplayBlocks(
 	return state, nil
 }
 
-// LoadBlocks loads the blocks between start slot and end slot by recursively fetching from end block root.
+// loadBlocks loads the blocks between start slot and end slot by recursively fetching from end block root.
 // The Blocks are returned in slot-descending order.
-func (s *State) LoadBlocks(ctx context.Context, startSlot, endSlot types.Slot, endBlockRoot [32]byte) ([]interfaces.SignedBeaconBlock, error) {
+func (s *State) loadBlocks(ctx context.Context, startSlot, endSlot types.Slot, endBlockRoot [32]byte) ([]interfaces.SignedBeaconBlock, error) {
 	// Nothing to load for invalid range.
 	if endSlot < startSlot {
 		return nil, fmt.Errorf("start slot %d >= end slot %d", startSlot, endSlot)
@@ -146,7 +146,7 @@ func executeStateTransitionStateGen(
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
-	if err := wrapper.BeaconBlockIsNil(signed); err != nil {
+	if err := blocks.BeaconBlockIsNil(signed); err != nil {
 		return nil, err
 	}
 	ctx, span := trace.StartSpan(ctx, "stategen.executeStateTransitionStateGen")

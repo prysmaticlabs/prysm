@@ -4,8 +4,8 @@
 toolchain_config_spec0 = struct(config_repos = ["prysm_toolchains"], create_cc_configs = True, create_java_configs = True, env = {"BAZEL_COMPILER": "clang", "BAZEL_LINKLIBS": "-l%:libstdc++.a", "BAZEL_LINKOPTS": "-lm:-static-libgcc", "BAZEL_USE_LLVM_NATIVE_COVERAGE": "1", "GCOV": "llvm-profdata", "CC": "clang", "CXX": "clang++"}, java_home = "/usr/lib/jvm/java-8-openjdk-amd64", name = "clang")
 _TOOLCHAIN_CONFIG_SPECS = [toolchain_config_spec0]
 _BAZEL_TO_CONFIG_SPEC_NAMES = {"5.0.0": ["clang"]}
-LATEST = "sha256:ebf03ab43a88499e70c8bb4dad70b8bdbc9f9923a87bc72c39e9e7690fcd49f2"
-CONTAINER_TO_CONFIG_SPEC_NAMES = {"sha256:ebf03ab43a88499e70c8bb4dad70b8bdbc9f9923a87bc72c39e9e7690fcd49f2": ["clang"]}
+LATEST = "sha256:9e04c71268adeb4028b4016ca8cc02d134c2e5d7e3a53fdc68154d1797bb3d70"
+CONTAINER_TO_CONFIG_SPEC_NAMES = {"sha256:9e04c71268adeb4028b4016ca8cc02d134c2e5d7e3a53fdc68154d1797bb3d70": ["clang"]}
 _DEFAULT_TOOLCHAIN_CONFIG_SPEC = toolchain_config_spec0
 TOOLCHAIN_CONFIG_AUTOGEN_SPEC = struct(
         bazel_to_config_spec_names_map = _BAZEL_TO_CONFIG_SPEC_NAMES,

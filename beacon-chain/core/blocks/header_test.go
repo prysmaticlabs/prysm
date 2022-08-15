@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/wrapper"
+	consensusblocks "github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -68,7 +68,7 @@ func TestProcessBlockHeader_ImproperBlockSlot(t *testing.T) {
 	err = state.UpdateValidatorAtIndex(proposerIdx, validators[proposerIdx])
 	require.NoError(t, err)
 
-	wsb, err := wrapper.WrappedSignedBeaconBlock(block)
+	wsb, err := consensusblocks.NewSignedBeaconBlock(block)
 	require.NoError(t, err)
 	_, err = blocks.ProcessBlockHeader(context.Background(), state, wsb)
 	assert.ErrorContains(t, "block.Slot 10 must be greater than state.LatestBlockHeader.Slot 10", err)
@@ -96,7 +96,7 @@ func TestProcessBlockHeader_WrongProposerSig(t *testing.T) {
 	block.Signature, err = signing.ComputeDomainAndSign(beaconState, 0, block.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx+1])
 	require.NoError(t, err)
 
-	wsb, err := wrapper.WrappedSignedBeaconBlock(block)
+	wsb, err := consensusblocks.NewSignedBeaconBlock(block)
 	require.NoError(t, err)
 	_, err = blocks.ProcessBlockHeader(context.Background(), beaconState, wsb)
 	want := "signature did not verify"
@@ -140,7 +140,7 @@ func TestProcessBlockHeader_DifferentSlots(t *testing.T) {
 		Signature: blockSig,
 	})
 
-	wsb, err := wrapper.WrappedSignedBeaconBlock(block)
+	wsb, err := consensusblocks.NewSignedBeaconBlock(block)
 	require.NoError(t, err)
 	_, err = blocks.ProcessBlockHeader(context.Background(), state, wsb)
 	want := "is different than block slot"
@@ -181,7 +181,7 @@ func TestProcessBlockHeader_PreviousBlockRootNotSignedRoot(t *testing.T) {
 	block.Block.ParentRoot = bytesutil.PadTo([]byte{'A'}, 32)
 	block.Signature = blockSig
 
-	wsb, err := wrapper.WrappedSignedBeaconBlock(block)
+	wsb, err := consensusblocks.NewSignedBeaconBlock(block)
 	require.NoError(t, err)
 	_, err = blocks.ProcessBlockHeader(context.Background(), state, wsb)
 	want := "does not match"
@@ -225,7 +225,7 @@ func TestProcessBlockHeader_SlashedProposer(t *testing.T) {
 	block.Block.ParentRoot = parentRoot[:]
 	block.Signature = blockSig
 
-	wsb, err := wrapper.WrappedSignedBeaconBlock(block)
+	wsb, err := consensusblocks.NewSignedBeaconBlock(block)
 	require.NoError(t, err)
 	_, err = blocks.ProcessBlockHeader(context.Background(), state, wsb)
 	want := "was previously slashed"
@@ -276,7 +276,7 @@ func TestProcessBlockHeader_OK(t *testing.T) {
 	err = state.UpdateValidatorAtIndex(proposerIdx, validators[proposerIdx])
 	require.NoError(t, err)
 
-	wsb, err := wrapper.WrappedSignedBeaconBlock(block)
+	wsb, err := consensusblocks.NewSignedBeaconBlock(block)
 	require.NoError(t, err)
 	newState, err := blocks.ProcessBlockHeader(context.Background(), state, wsb)
 	require.NoError(t, err, "Failed to process block header got")

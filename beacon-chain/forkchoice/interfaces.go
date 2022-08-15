@@ -25,6 +25,7 @@ type HeadRetriever interface {
 	CachedHeadRoot() [32]byte
 	Tips() ([][32]byte, []types.Slot)
 	IsOptimistic(root [32]byte) (bool, error)
+	AllTipsAreInvalid() bool
 }
 
 // BlockProcessor processes the block that's used for accounting fork choice.
@@ -59,6 +60,8 @@ type Getter interface {
 	JustifiedPayloadBlockHash() [32]byte
 	BestJustifiedCheckpoint() *forkchoicetypes.Checkpoint
 	NodeCount() int
+	HighestReceivedBlockSlot() types.Slot
+	ReceivedBlocksLastEpoch() (uint64, error)
 }
 
 // Setter allows to set forkchoice information

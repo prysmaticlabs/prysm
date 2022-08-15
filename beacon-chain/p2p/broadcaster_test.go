@@ -332,7 +332,7 @@ func TestService_BroadcastAttestationWithDiscoveryAttempts(t *testing.T) {
 
 	// External peer subscribes to the topic.
 	topic += p.Encoding().ProtocolSuffix()
-	// We dont use our internal subscribe method
+	// We don't use our internal subscribe method
 	// due to using floodsub over here.
 	tpHandle, err := p2.JoinTopic(topic)
 	require.NoError(t, err)

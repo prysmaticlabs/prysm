@@ -41,18 +41,18 @@ type ValidatorLatestPerformance struct {
 // ValidatorAggregatedPerformance keeps track of the accumulated performance of
 // the tracked validator since start of monitor service.
 type ValidatorAggregatedPerformance struct {
-	startEpoch                     types.Epoch
-	startBalance                   uint64
-	totalAttestedCount             uint64
-	totalRequestedCount            uint64
-	totalDistance                  uint64
-	totalCorrectSource             uint64
-	totalCorrectTarget             uint64
-	totalCorrectHead               uint64
-	totalProposedCount             uint64
-	totalAggregations              uint64
-	totalSyncComitteeContributions uint64
-	totalSyncComitteeAggregations  uint64
+	startEpoch                      types.Epoch
+	startBalance                    uint64
+	totalAttestedCount              uint64
+	totalRequestedCount             uint64
+	totalDistance                   uint64
+	totalCorrectSource              uint64
+	totalCorrectTarget              uint64
+	totalCorrectHead                uint64
+	totalProposedCount              uint64
+	totalAggregations               uint64
+	totalSyncCommitteeContributions uint64
+	totalSyncCommitteeAggregations  uint64
 }
 
 // ValidatorMonitorConfig contains the list of validator indices that the

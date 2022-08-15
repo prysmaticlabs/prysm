@@ -98,7 +98,7 @@ func meetsMinPlatformReqs(ctx context.Context) (bool, error) {
 func WarnIfPlatformNotSupported(ctx context.Context) {
 	supported, err := meetsMinPlatformReqs(ctx)
 	if err != nil {
-		log.Warnf("Failed to detect host platform:  %v", err)
+		log.WithError(err).Warn("Failed to detect host platform")
 		return
 	}
 	if !supported {

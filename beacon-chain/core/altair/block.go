@@ -2,8 +2,8 @@ package altair
 
 import (
 	"context"
-	"errors"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
 	p2pType "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
@@ -47,11 +47,11 @@ import (
 func ProcessSyncAggregate(ctx context.Context, s state.BeaconState, sync *ethpb.SyncAggregate) (state.BeaconState, error) {
 	votedKeys, votedIndices, didntVoteIndices, err := FilterSyncCommitteeVotes(s, sync)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not filter sync committee votes")
 	}
 
 	if err := VerifySyncCommitteeSig(s, votedKeys, sync.SyncCommitteeSignature); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not verify sync committee signature")
 	}
 
 	return ApplySyncRewardsPenalties(ctx, s, votedIndices, didntVoteIndices)

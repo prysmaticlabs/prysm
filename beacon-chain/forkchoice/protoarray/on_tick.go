@@ -42,7 +42,6 @@ func (f *ForkChoice) NewSlot(ctx context.Context, slot types.Slot) error {
 
 	// Update store.justified_checkpoint if a better checkpoint on the store.finalized_checkpoint chain
 	f.store.checkpointsLock.Lock()
-	defer f.store.checkpointsLock.Unlock()
 
 	bjcp := f.store.bestJustifiedCheckpoint
 	jcp := f.store.justifiedCheckpoint
@@ -50,6 +49,7 @@ func (f *ForkChoice) NewSlot(ctx context.Context, slot types.Slot) error {
 	if bjcp.Epoch > jcp.Epoch {
 		finalizedSlot, err := slots.EpochStart(fcp.Epoch)
 		if err != nil {
+			f.store.checkpointsLock.Unlock()
 			return err
 		}
 
@@ -59,14 +59,17 @@ func (f *ForkChoice) NewSlot(ctx context.Context, slot types.Slot) error {
 		// loop call here.
 		r, err := f.AncestorRoot(ctx, bjcp.Root, finalizedSlot)
 		if err != nil {
+			f.store.checkpointsLock.Unlock()
 			return err
 		}
 		if r == fcp.Root {
+			f.store.prevJustifiedCheckpoint = jcp
 			f.store.justifiedCheckpoint = bjcp
 		}
 	}
-	if features.Get().EnablePullTips {
-		f.UpdateUnrealizedCheckpoints()
+	f.store.checkpointsLock.Unlock()
+	if !features.Get().DisablePullTips {
+		f.updateUnrealizedCheckpoints()
 	}
 	return nil
 }
