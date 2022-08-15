@@ -14,6 +14,7 @@ import (
 	"net/http"
 
 	"github.com/golang/protobuf/ptypes/empty"
+	emptypb "github.com/golang/protobuf/ptypes/empty"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/utilities"
 	github_com_prysmaticlabs_prysm_consensus_types_primitives "github.com/prysmaticlabs/prysm/consensus-types/primitives"
@@ -35,6 +36,7 @@ var _ = runtime.String
 var _ = utilities.NewDoubleArray
 var _ = metadata.Join
 var _ = github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch(0)
+var _ = emptypb.Empty{}
 var _ = empty.Empty{}
 
 func request_BeaconValidator_GetAttesterDuties_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconValidatorClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
