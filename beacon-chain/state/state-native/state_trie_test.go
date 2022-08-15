@@ -174,7 +174,7 @@ func TestInitializeFromProtoUnsafe_Phase0(t *testing.T) {
 	}
 }
 
-func TestInitializeFromProtoUnsafe_Altair(t *testing.T) {
+func TestInitializeFromProtoUnsafe_Altair(_ *testing.T) {
 	type test struct {
 		name  string
 		state *ethpb.BeaconStateAltair
@@ -197,7 +197,7 @@ func TestInitializeFromProtoUnsafe_Altair(t *testing.T) {
 	_ = initTests
 }
 
-func TestInitializeFromProtoUnsafe_Bellatrix(t *testing.T) {
+func TestInitializeFromProtoUnsafe_Bellatrix(_ *testing.T) {
 	type test struct {
 		name  string
 		state *ethpb.BeaconStateBellatrix
