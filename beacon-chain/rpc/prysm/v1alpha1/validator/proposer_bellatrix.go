@@ -295,6 +295,54 @@ func (vs *Server) readyForBuilder(ctx context.Context) (bool, error) {
 	return blocks.IsExecutionBlock(b.Block().Body())
 }
 
+// circuitBreakBuilder returns true if the builder is not allowed to be used due to circuit breaker conditions.
+func (vs *Server) circuitBreakBuilder(s types.Slot) (bool, error) {
+	if vs.ForkFetcher == nil || vs.ForkFetcher.ForkChoicer() == nil {
+		return true, errors.New("no fork choicer configured")
+	}
+
+	// Circuit breaker is active if the missing consecutive slots greater than `MaxBuilderConsecutiveMissedSlots`.
+	highestReceivedSlot := vs.ForkFetcher.ForkChoicer().HighestReceivedBlockSlot()
+	fallbackSlots := params.BeaconConfig().MaxBuilderConsecutiveMissedSlots
+	diff, err := s.SafeSubSlot(highestReceivedSlot)
+	if err != nil {
+		return true, err
+	}
+	if diff > fallbackSlots {
+		log.WithFields(logrus.Fields{
+			"currentSlot":         s,
+			"highestReceivedSlot": highestReceivedSlot,
+			"fallBackSkipSlots":   fallbackSlots,
+		}).Warn("Builder circuit breaker activated due to missing consecutive slot")
+		return true, nil
+	}
+
+	// Not much reason to check missed slots epoch rolling window if input slot is less than epoch.
+	if s < params.BeaconConfig().SlotsPerEpoch {
+		return false, nil
+	}
+
+	// Circuit breaker is active if the missing slots per epoch (rolling window) greater than `MaxBuilderEpochMissedSlots`.
+	receivedCount, err := vs.ForkFetcher.ForkChoicer().ReceivedBlocksLastEpoch()
+	if err != nil {
+		return true, err
+	}
+	fallbackSlotsLastEpoch := params.BeaconConfig().MaxBuilderEpochMissedSlots
+	diff, err = params.BeaconConfig().SlotsPerEpoch.SafeSub(receivedCount)
+	if err != nil {
+		return true, err
+	}
+	if diff > fallbackSlotsLastEpoch {
+		log.WithFields(logrus.Fields{
+			"totalMissed":                receivedCount,
+			"fallBackSkipSlotsLastEpoch": fallbackSlotsLastEpoch,
+		}).Warn("Builder circuit breaker activated due to missing enough slots last epoch")
+		return true, nil
+	}
+
+	return false, nil
+}
+
 // Get and build blind block from builder network. Returns a boolean status, built block and error.
 // If the status is false that means builder the header block is disallowed.
 // This routine is time limited by `blockBuilderTimeout`.
@@ -313,6 +361,15 @@ func (vs *Server) getAndBuildBlindBlock(ctx context.Context, b *ethpb.BeaconBloc
 	if !ready {
 		return false, nil, nil
 	}
+
+	circuitBreak, err := vs.circuitBreakBuilder(b.Slot)
+	if err != nil {
+		return false, nil, errors.Wrap(err, "could not determine if builder circuit breaker condition")
+	}
+	if circuitBreak {
+		return false, nil, nil
+	}
+
 	h, err := vs.getPayloadHeaderFromBuilder(ctx, b.Slot, b.ProposerIndex)
 	if err != nil {
 		return false, nil, errors.Wrap(err, "could not get payload header")
