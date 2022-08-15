@@ -70,14 +70,14 @@ message SignRequest {
         uint64 epoch = 106 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch"];
 
         // Altair objects.
-        ethereum.eth.v1alpha1.BeaconBlockAltair blockV2 = 107;
+        ethereum.eth.v1alpha1.BeaconBlockAltair block_altair = 107;
         ethereum.eth.v1alpha1.SyncAggregatorSelectionData sync_aggregator_selection_data = 108;
         ethereum.eth.v1alpha1.ContributionAndProof contribution_and_proof = 109;
         bytes sync_message_block_root  = 110;
 
         // Bellatrix objects.
-        ethereum.eth.v1alpha1.BeaconBlockBellatrix blockV3 = 111;
-        ethereum.eth.v1alpha1.BlindedBeaconBlockBellatrix blinded_blockV3 = 112;
+        ethereum.eth.v1alpha1.BeaconBlockBellatrix block_bellatrix = 111;
+        ethereum.eth.v1alpha1.BlindedBeaconBlockBellatrix blinded_block_bellatrix = 112;
 
         // Builder objects.
         ethereum.eth.v1alpha1.ValidatorRegistrationV1 registration = 113;
