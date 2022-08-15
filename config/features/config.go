@@ -60,7 +60,7 @@ type Flags struct {
 	// EnableSlashingProtectionPruning for the validator client.
 	EnableSlashingProtectionPruning bool
 
-	DisableNativeState               bool // DisableNativeState disables the use of the beacon state as a pure Go struct and instead uses a Go struct that wraps a proto struct.
+	EnableNativeState                bool // EnableNativeState defines whether the beacon state will be represented as a pure Go struct or a Go struct that wraps a proto struct.
 	DisablePullTips                  bool // DisablePullTips enables experimental disabling of boundary checks.
 	EnableVectorizedHTR              bool // EnableVectorizedHTR specifies whether the beacon state will use the optimized sha256 routines.
 	EnableForkChoiceDoublyLinkedTree bool // EnableForkChoiceDoublyLinkedTree specifies whether fork choice store will use a doubly linked tree.
@@ -223,9 +223,10 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		log.WithField(enableHistoricalSpaceRepresentation.Name, enableHistoricalSpaceRepresentation.Usage).Warn(enabledFeatureFlag)
 		cfg.EnableHistoricalSpaceRepresentation = true
 	}
+	cfg.EnableNativeState = true
 	if ctx.Bool(disableNativeState.Name) {
 		logDisabled(disableNativeState)
-		cfg.DisableNativeState = true
+		cfg.EnableNativeState = false
 	}
 
 	if ctx.Bool(disablePullTips.Name) {

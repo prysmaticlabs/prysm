@@ -6,7 +6,6 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -15,7 +14,6 @@ import (
 
 func Test_BaseReward(t *testing.T) {
 	genState := func(valCount uint64) state.ReadOnlyBeaconState {
-		features.Init(&features.Flags{DisableNativeState: true})
 		s, _ := util.DeterministicGenesisStateAltair(t, valCount)
 		return s
 	}

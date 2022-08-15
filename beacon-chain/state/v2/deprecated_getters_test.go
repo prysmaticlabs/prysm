@@ -3,13 +3,11 @@ package v2
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/config/features"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestBeaconState_PreviousEpochAttestations(t *testing.T) {
-	features.Init(&features.Flags{DisableNativeState: true})
 	s, err := InitializeFromProtoUnsafe(&ethpb.BeaconStateAltair{})
 	require.NoError(t, err)
 	_, err = s.PreviousEpochAttestations()
@@ -17,7 +15,6 @@ func TestBeaconState_PreviousEpochAttestations(t *testing.T) {
 }
 
 func TestBeaconState_CurrentEpochAttestations(t *testing.T) {
-	features.Init(&features.Flags{DisableNativeState: true})
 	s, err := InitializeFromProtoUnsafe(&ethpb.BeaconStateAltair{})
 	require.NoError(t, err)
 	_, err = s.CurrentEpochAttestations()
@@ -25,7 +22,6 @@ func TestBeaconState_CurrentEpochAttestations(t *testing.T) {
 }
 
 func TestBeaconState_LatestExecutionPayloadHeader(t *testing.T) {
-	features.Init(&features.Flags{DisableNativeState: true})
 	s, err := InitializeFromProtoUnsafe(&ethpb.BeaconStateAltair{})
 	require.NoError(t, err)
 	_, err = s.LatestExecutionPayloadHeader()
