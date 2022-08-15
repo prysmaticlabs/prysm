@@ -34,7 +34,7 @@ var _ statefeed.Notifier = (*BeaconNode)(nil)
 // Test that beacon chain node can close.
 func TestNodeClose_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
-
+	features.Init(&features.Flags{EnableNativeState: true})
 	tmp := fmt.Sprintf("%s/datadirtest2", t.TempDir())
 
 	app := cli.App{}
@@ -65,7 +65,7 @@ func TestNodeStart_Ok(t *testing.T) {
 	tmp := fmt.Sprintf("%s/datadirtest2", t.TempDir())
 	set := flag.NewFlagSet("test", 0)
 	set.String("datadir", tmp, "node data directory")
-
+	features.Init(&features.Flags{EnableNativeState: true})
 	ctx := cli.NewContext(&app, set, nil)
 	node, err := New(ctx, WithBlockchainFlagOptions([]blockchain.Option{}),
 		WithBuilderFlagOptions([]builder.Option{}),
@@ -82,6 +82,7 @@ func TestNodeStart_Ok(t *testing.T) {
 }
 
 func TestNodeStart_Ok_registerDeterminsticGenesisService(t *testing.T) {
+	features.Init(&features.Flags{EnableNativeState: true})
 	numValidators := uint64(1)
 	hook := logTest.NewGlobal()
 	app := cli.App{}
