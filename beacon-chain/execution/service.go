@@ -615,7 +615,6 @@ func (s *Service) run(done <-chan struct{}) {
 			}
 			s.processBlockHeader(head)
 			s.handleETH1FollowDistance()
-			s.checkDefaultEndpoint(s.ctx)
 		case <-chainstartTicker.C:
 			if s.chainStartData.Chainstarted {
 				chainstartTicker.Stop()

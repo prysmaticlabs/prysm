@@ -100,22 +100,6 @@ func (s *Service) retryExecutionClientConnection(ctx context.Context, err error)
 	s.runError = nil
 }
 
-// This performs a health check on our primary endpoint, and if it
-// is ready to serve we connect to it again. This method is only
-// relevant if we are on our backup endpoint.
-func (s *Service) checkDefaultEndpoint(ctx context.Context) {
-	currClient := s.rpcClient
-	if err := s.setupExecutionClientConnections(ctx, s.cfg.currHttpEndpoint); err != nil {
-		log.WithError(err).Debug("Primary endpoint not ready")
-		return
-	}
-	// Close previous client, if connection was successful.
-	if currClient != nil {
-		currClient.Close()
-	}
-	s.updateCurrHttpEndpoint(s.cfg.currHttpEndpoint)
-}
-
 // Initializes an RPC connection with authentication headers.
 func (s *Service) newRPCClientWithAuth(ctx context.Context, endpoint network.Endpoint) (*gethRPC.Client, error) {
 	// Need to handle ipc and http
