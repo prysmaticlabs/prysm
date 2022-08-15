@@ -64,20 +64,14 @@ func parseJWTSecretFromFile(c *cli.Context) ([]byte, error) {
 }
 
 func parseExecutionChainEndpoint(c *cli.Context) []string {
-	if c.String(flags.HTTPWeb3ProviderFlag.Name) == "" && len(c.StringSlice(flags.FallbackWeb3ProviderFlag.Name)) == 0 {
+	if c.String(flags.ExecutionEngineEndpoint.Name) == "" && len(c.StringSlice(flags.FallbackWeb3ProviderFlag.Name)) == 0 {
 		log.Error(
-			"No ETH1 node specified to run with the beacon node. " +
-				"Please consider running your own Ethereum proof-of-work node for better uptime, " +
-				"security, and decentralization of Ethereum. Visit " +
+			"No execution engine specified to run with the beacon node. " +
+				"You must specified an execution client in order to participate. Visit " +
 				"https://docs.prylabs.network/docs/prysm-usage/setup-eth1 for more information",
 		)
-		log.Error(
-			"You will need to specify --http-web3provider and/or --fallback-web3provider to attach " +
-				"an eth1 node to the prysm node. Without an eth1 node block proposals for your " +
-				"validator will be affected and the beacon node will not be able to initialize the genesis state",
-		)
 	}
-	endpoints := []string{c.String(flags.HTTPWeb3ProviderFlag.Name)}
+	endpoints := []string{c.String(flags.ExecutionEngineEndpoint.Name)}
 	endpoints = append(endpoints, c.StringSlice(flags.FallbackWeb3ProviderFlag.Name)...)
 	return endpoints
 }

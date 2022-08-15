@@ -136,7 +136,7 @@ func (s *Service) onBlock(ctx context.Context, signed interfaces.SignedBeaconBlo
 		return err
 	}
 
-	if err := s.insertBlockAndAttestationsToForkChoiceStore(ctx, signed.Block(), blockRoot, postState); err != nil {
+	if err := s.insertBlockToForkchoiceStore(ctx, signed.Block(), blockRoot, postState); err != nil {
 		return errors.Wrapf(err, "could not insert block %d to fork choice store", signed.Block().Slot())
 	}
 	s.InsertSlashingsToForkChoiceStore(ctx, signed.Block().Body().AttesterSlashings())
@@ -495,10 +495,10 @@ func (s *Service) handleEpochBoundary(ctx context.Context, postState state.Beaco
 	return nil
 }
 
-// This feeds in the block and block's attestations to fork choice store. It's allows fork choice store
+// This feeds in the block to fork choice store. It's allows fork choice store
 // to gain information on the most current chain.
-func (s *Service) insertBlockAndAttestationsToForkChoiceStore(ctx context.Context, blk interfaces.BeaconBlock, root [32]byte, st state.BeaconState) error {
-	ctx, span := trace.StartSpan(ctx, "blockChain.insertBlockAndAttestationsToForkChoiceStore")
+func (s *Service) insertBlockToForkchoiceStore(ctx context.Context, blk interfaces.BeaconBlock, root [32]byte, st state.BeaconState) error {
+	ctx, span := trace.StartSpan(ctx, "blockChain.insertBlockToForkchoiceStore")
 	defer span.End()
 
 	if !s.cfg.ForkChoiceStore.HasNode(bytesutil.ToBytes32(blk.ParentRoot())) {
@@ -512,18 +512,7 @@ func (s *Service) insertBlockAndAttestationsToForkChoiceStore(ctx context.Contex
 	if err := s.cfg.ForkChoiceStore.InsertNode(ctx, st, root); err != nil {
 		return err
 	}
-	// Feed in block's attestations to fork choice store.
-	for _, a := range blk.Body().Attestations() {
-		committee, err := helpers.BeaconCommitteeFromState(ctx, st, a.Data.Slot, a.Data.CommitteeIndex)
-		if err != nil {
-			return err
-		}
-		indices, err := attestation.AttestingIndices(a.AggregationBits, committee)
-		if err != nil {
-			return err
-		}
-		s.cfg.ForkChoiceStore.ProcessAttestation(ctx, indices, bytesutil.ToBytes32(a.Data.BeaconBlockRoot), a.Data.Target.Epoch)
-	}
+
 	return nil
 }
 

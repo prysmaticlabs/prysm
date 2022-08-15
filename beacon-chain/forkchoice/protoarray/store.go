@@ -369,10 +369,10 @@ func (s *Store) head(ctx context.Context) ([32]byte, error) {
 	defer span.End()
 
 	s.checkpointsLock.RLock()
-	defer s.checkpointsLock.RUnlock()
 
 	// Justified index has to be valid in node indices map, and can not be out of bound.
 	if s.justifiedCheckpoint == nil {
+		s.checkpointsLock.RUnlock()
 		return [32]byte{}, errInvalidNilCheckpoint
 	}
 
@@ -384,9 +384,11 @@ func (s *Store) head(ctx context.Context) ([32]byte, error) {
 		if s.justifiedCheckpoint.Epoch == params.BeaconConfig().GenesisEpoch {
 			justifiedIndex = uint64(0)
 		} else {
+			s.checkpointsLock.RUnlock()
 			return [32]byte{}, errUnknownJustifiedRoot
 		}
 	}
+	s.checkpointsLock.RUnlock()
 	if justifiedIndex >= uint64(len(s.nodes)) {
 		return [32]byte{}, errInvalidJustifiedIndex
 	}
