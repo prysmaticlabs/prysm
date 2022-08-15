@@ -896,42 +896,6 @@ func (f *ForkChoice) Tips() ([][32]byte, []types.Slot) {
 	return headsRoots, headsSlots
 }
 
-func (f *ForkChoice) ForkChoiceNodes() []*ethpb.ForkChoiceNode {
-	f.store.nodesLock.RLock()
-	defer f.store.nodesLock.RUnlock()
-	ret := make([]*ethpb.ForkChoiceNode, len(f.store.nodes))
-	var parentRoot [32]byte
-	for i, node := range f.store.nodes {
-		root := node.Root()
-		parentIdx := node.parent
-		if parentIdx == NonExistentNode {
-			parentRoot = params.BeaconConfig().ZeroHash
-		} else {
-			parent := f.store.nodes[parentIdx]
-			parentRoot = parent.Root()
-		}
-		bestDescendantIdx := node.BestDescendant()
-		var bestDescendantRoot [32]byte
-		if bestDescendantIdx == NonExistentNode {
-			bestDescendantRoot = params.BeaconConfig().ZeroHash
-		} else {
-			bestDescendantNode := f.store.nodes[bestDescendantIdx]
-			bestDescendantRoot = bestDescendantNode.Root()
-		}
-
-		ret[i] = &ethpb.ForkChoiceNode{
-			Slot:           node.Slot(),
-			Root:           root[:],
-			Parent:         parentRoot[:],
-			JustifiedEpoch: node.JustifiedEpoch(),
-			FinalizedEpoch: node.FinalizedEpoch(),
-			Weight:         node.Weight(),
-			BestDescendant: bestDescendantRoot[:],
-		}
-	}
-	return ret
-}
-
 // InsertSlashedIndex adds the given slashed validator index to the
 // store-tracked list. Votes from these validators are not accounted for
 // in forkchoice.
