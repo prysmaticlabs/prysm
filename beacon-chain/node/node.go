@@ -136,6 +136,10 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 	if err := configureSafeSlotsToImportOptimistically(cliCtx); err != nil {
 		return nil, err
 	}
+	err := configureBuilderCircuitBreaker(cliCtx)
+	if err != nil {
+		return nil, err
+	}
 	if err := configureSlotsPerArchivedPoint(cliCtx); err != nil {
 		return nil, err
 	}
