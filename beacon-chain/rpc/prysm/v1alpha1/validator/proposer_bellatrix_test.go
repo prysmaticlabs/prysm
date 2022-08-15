@@ -18,11 +18,14 @@ import (
 	prysmtime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
 	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
 	mockExecution "github.com/prysmaticlabs/prysm/beacon-chain/execution/testing"
+	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
+	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
 	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
@@ -31,6 +34,7 @@ import (
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	v1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -331,6 +335,7 @@ func TestServer_getAndBuildHeaderBlock(t *testing.T) {
 	vs.FinalizationFetcher = &blockchainTest.ChainService{FinalizedCheckPoint: &ethpb.Checkpoint{Root: wbr1[:]}}
 	vs.HeadFetcher = &blockchainTest.ChainService{Block: wb1}
 	vs.BlockBuilder = &builderTest.MockBuilderService{HasConfigured: true, ErrGetHeader: errors.New("could not get payload")}
+	vs.ForkFetcher = &blockchainTest.ChainService{ForkChoiceStore: protoarray.New()}
 	ready, _, err = vs.getAndBuildBlindBlock(ctx, &ethpb.BeaconBlockAltair{})
 	require.ErrorContains(t, "could not get payload", err)
 	require.Equal(t, false, ready)
@@ -406,6 +411,7 @@ func TestServer_getAndBuildHeaderBlock(t *testing.T) {
 	}
 	vs.BlockBuilder = &builderTest.MockBuilderService{HasConfigured: true, Bid: sBid}
 	vs.TimeFetcher = &blockchainTest.ChainService{Genesis: time.Now()}
+	vs.ForkFetcher = &blockchainTest.ChainService{ForkChoiceStore: protoarray.New()}
 	ready, builtBlk, err := vs.getAndBuildBlindBlock(ctx, altairBlk.Block)
 	require.NoError(t, err)
 	require.Equal(t, true, ready)
@@ -644,12 +650,18 @@ func TestServer_GetBellatrixBeaconBlock_BuilderCase(t *testing.T) {
 		Signature: sk.Sign(sr[:]).Marshal(),
 	}
 	proposerServer.BlockBuilder = &builderTest.MockBuilderService{HasConfigured: true, Bid: sBid}
-
+	proposerServer.ForkFetcher = &blockchainTest.ChainService{ForkChoiceStore: protoarray.New()}
 	randaoReveal, err := util.RandaoReveal(beaconState, 0, privKeys)
 	require.NoError(t, err)
 
 	require.NoError(t, proposerServer.BeaconDB.SaveRegistrationsByValidatorIDs(ctx, []types.ValidatorIndex{40},
 		[]*ethpb.ValidatorRegistrationV1{{FeeRecipient: bytesutil.PadTo([]byte{}, fieldparams.FeeRecipientLength), Pubkey: bytesutil.PadTo([]byte{}, fieldparams.BLSPubkeyLength)}}))
+
+	params.SetupTestConfigCleanup(t)
+	cfg.MaxBuilderConsecutiveMissedSlots = bellatrixSlot + 1
+	cfg.MaxBuilderEpochMissedSlots = 32
+	params.OverrideBeaconConfig(cfg)
+
 	block, err := proposerServer.getBellatrixBeaconBlock(ctx, &ethpb.BlockRequest{
 		Slot:         bellatrixSlot + 1,
 		RandaoReveal: randaoReveal,
@@ -720,4 +732,76 @@ func TestServer_validateBuilderSignature(t *testing.T) {
 
 	sBid.Message.Value = make([]byte, 32)
 	require.ErrorIs(t, s.validateBuilderSignature(sBid), signing.ErrSigFailedToVerify)
+}
+
+func TestServer_circuitBreakBuilder(t *testing.T) {
+	hook := logTest.NewGlobal()
+	s := &Server{}
+	_, err := s.circuitBreakBuilder(0)
+	require.ErrorContains(t, "no fork choicer configured", err)
+
+	s.ForkFetcher = &blockchainTest.ChainService{ForkChoiceStore: protoarray.New()}
+	s.ForkFetcher.ForkChoicer().SetGenesisTime(uint64(time.Now().Unix()))
+	b, err := s.circuitBreakBuilder(params.BeaconConfig().MaxBuilderConsecutiveMissedSlots + 1)
+	require.NoError(t, err)
+	require.Equal(t, true, b)
+	require.LogsContain(t, hook, "Builder circuit breaker activated due to missing consecutive slot")
+
+	ojc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	ofc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
+	ctx := context.Background()
+	st, blkRoot, err := createState(1, [32]byte{'a'}, [32]byte{}, params.BeaconConfig().ZeroHash, ojc, ofc)
+	require.NoError(t, err)
+	require.NoError(t, s.ForkFetcher.ForkChoicer().InsertNode(ctx, st, blkRoot))
+	b, err = s.circuitBreakBuilder(params.BeaconConfig().MaxBuilderConsecutiveMissedSlots + 1)
+	require.NoError(t, err)
+	require.Equal(t, false, b)
+
+	params.SetupTestConfigCleanup(t)
+	params.OverrideBeaconConfig(params.MainnetConfig())
+	st, blkRoot, err = createState(params.BeaconConfig().SlotsPerEpoch, [32]byte{'b'}, [32]byte{'a'}, params.BeaconConfig().ZeroHash, ojc, ofc)
+	require.NoError(t, err)
+	require.NoError(t, s.ForkFetcher.ForkChoicer().InsertNode(ctx, st, blkRoot))
+	b, err = s.circuitBreakBuilder(params.BeaconConfig().SlotsPerEpoch + 1)
+	require.NoError(t, err)
+	require.Equal(t, true, b)
+	require.LogsContain(t, hook, "Builder circuit breaker activated due to missing enough slots last epoch")
+
+	want := params.BeaconConfig().SlotsPerEpoch - params.BeaconConfig().MaxBuilderEpochMissedSlots
+	for i := types.Slot(2); i <= want+2; i++ {
+		st, blkRoot, err = createState(i, [32]byte{byte(i)}, [32]byte{'a'}, params.BeaconConfig().ZeroHash, ojc, ofc)
+		require.NoError(t, err)
+		require.NoError(t, s.ForkFetcher.ForkChoicer().InsertNode(ctx, st, blkRoot))
+	}
+	b, err = s.circuitBreakBuilder(params.BeaconConfig().SlotsPerEpoch + 1)
+	require.NoError(t, err)
+	require.Equal(t, false, b)
+}
+
+func createState(
+	slot types.Slot,
+	blockRoot [32]byte,
+	parentRoot [32]byte,
+	payloadHash [32]byte,
+	justified *ethpb.Checkpoint,
+	finalized *ethpb.Checkpoint,
+) (state.BeaconState, [32]byte, error) {
+
+	base := &ethpb.BeaconStateBellatrix{
+		Slot:                       slot,
+		RandaoMixes:                make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		BlockRoots:                 make([][]byte, 1),
+		CurrentJustifiedCheckpoint: justified,
+		FinalizedCheckpoint:        finalized,
+		LatestExecutionPayloadHeader: &enginev1.ExecutionPayloadHeader{
+			BlockHash: payloadHash[:],
+		},
+		LatestBlockHeader: &ethpb.BeaconBlockHeader{
+			ParentRoot: parentRoot[:],
+		},
+	}
+
+	base.BlockRoots[0] = append(base.BlockRoots[0], blockRoot[:]...)
+	st, err := v3.InitializeFromProto(base)
+	return st, blockRoot, err
 }
