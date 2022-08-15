@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/beacon-chain/builder"
 	"sort"
 	"strconv"
 	"time"
@@ -25,6 +26,7 @@ import (
 	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/proto/migration"
+	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/time/slots"
 	log "github.com/sirupsen/logrus"
@@ -576,6 +578,38 @@ func (vs *Server) PrepareBeaconProposer(
 	log.WithFields(log.Fields{
 		"validatorIndices": validatorIndices,
 	}).Info("Updated fee recipient addresses for validator indices")
+	return &emptypb.Empty{}, nil
+}
+
+// SubmitValidatorRegistrations submits validator registrations.
+func (vs *Server) SubmitValidatorRegistrations(ctx context.Context, reg *ethpbv1.SubmitValidatorRegistrationsRequest) (*emptypb.Empty, error) {
+	ctx, span := trace.StartSpan(ctx, "validator.ValidatorRegistration")
+	defer span.End()
+
+	if vs.V1Alpha1Server.BlockBuilder == nil || !vs.V1Alpha1Server.BlockBuilder.Configured() {
+		return &emptypb.Empty{}, status.Errorf(codes.InvalidArgument, "Could not register block builder: %v", builder.ErrNoBuilder)
+	}
+	var registrations []*ethpb.SignedValidatorRegistrationV1
+	for i, registration := range reg.Registrations {
+		message := reg.Registrations[i].Message
+		registrations = append(registrations, &ethpb.SignedValidatorRegistrationV1{
+			Message: &ethpb.ValidatorRegistrationV1{
+				FeeRecipient: message.FeeRecipient,
+				GasLimit:     message.GasLimit,
+				Timestamp:    message.Timestamp,
+				Pubkey:       message.Pubkey,
+			},
+			Signature: registration.Signature,
+		})
+	}
+	if len(registrations) == 0 {
+		return &emptypb.Empty{}, status.Errorf(codes.InvalidArgument, "validator registration request is empty")
+	}
+
+	if err := vs.V1Alpha1Server.BlockBuilder.RegisterValidator(ctx, registrations); err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Could not register block builder: %v", err)
+	}
+
 	return &emptypb.Empty{}, nil
 }
 
