@@ -3,12 +3,14 @@ package state_native
 import (
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/config/features"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/testing/require"
 )
 
 func TestBeaconState_RotateAttestations(t *testing.T) {
+	features.Init(&features.Flags{EnableNativeState: true})
 	st, err := InitializeFromProtoPhase0(&ethpb.BeaconState{
 		Slot:                      1,
 		CurrentEpochAttestations:  []*ethpb.PendingAttestation{{Data: &ethpb.AttestationData{Slot: 456}}},

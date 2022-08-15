@@ -5,12 +5,10 @@ import (
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	testtmpl "github.com/prysmaticlabs/prysm/beacon-chain/state/testing"
-	"github.com/prysmaticlabs/prysm/config/features"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
 func TestBeaconState_LatestBlockHeader_Phase0(t *testing.T) {
-	features.Init(&features.Flags{EnableNativeState: true})
 	testtmpl.VerifyBeaconStateLatestBlockHeader(
 		t,
 		func() (state.BeaconState, error) {
@@ -23,7 +21,6 @@ func TestBeaconState_LatestBlockHeader_Phase0(t *testing.T) {
 }
 
 func TestBeaconState_LatestBlockHeader_Altair(t *testing.T) {
-	features.Init(&features.Flags{EnableNativeState: true})
 	testtmpl.VerifyBeaconStateLatestBlockHeader(
 		t,
 		func() (state.BeaconState, error) {
@@ -36,7 +33,6 @@ func TestBeaconState_LatestBlockHeader_Altair(t *testing.T) {
 }
 
 func TestBeaconState_LatestBlockHeader_Bellatrix(t *testing.T) {
-	features.Init(&features.Flags{EnableNativeState: true})
 	testtmpl.VerifyBeaconStateLatestBlockHeader(
 		t,
 		func() (state.BeaconState, error) {

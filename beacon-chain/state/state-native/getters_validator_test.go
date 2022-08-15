@@ -14,6 +14,7 @@ import (
 )
 
 func TestBeaconState_ValidatorAtIndexReadOnly_HandlesNilSlice_Phase0(t *testing.T) {
+	features.Init(&features.Flags{EnableNativeState: true})
 	testtmpl.VerifyBeaconStateValidatorAtIndexReadOnlyHandlesNilSlice(t, func() (state.BeaconState, error) {
 		return statenative.InitializeFromProtoUnsafePhase0(&ethpb.BeaconState{
 			Validators: nil,
@@ -22,6 +23,7 @@ func TestBeaconState_ValidatorAtIndexReadOnly_HandlesNilSlice_Phase0(t *testing.
 }
 
 func TestBeaconState_ValidatorAtIndexReadOnly_HandlesNilSlice_Altair(t *testing.T) {
+	features.Init(&features.Flags{EnableNativeState: true})
 	testtmpl.VerifyBeaconStateValidatorAtIndexReadOnlyHandlesNilSlice(t, func() (state.BeaconState, error) {
 		return statenative.InitializeFromProtoUnsafeAltair(&ethpb.BeaconStateAltair{
 			Validators: nil,
@@ -30,6 +32,7 @@ func TestBeaconState_ValidatorAtIndexReadOnly_HandlesNilSlice_Altair(t *testing.
 }
 
 func TestBeaconState_ValidatorAtIndexReadOnly_HandlesNilSlice_Bellatrix(t *testing.T) {
+	features.Init(&features.Flags{EnableNativeState: true})
 	testtmpl.VerifyBeaconStateValidatorAtIndexReadOnlyHandlesNilSlice(t, func() (state.BeaconState, error) {
 		return statenative.InitializeFromProtoUnsafeBellatrix(&ethpb.BeaconStateBellatrix{
 			Validators: nil,

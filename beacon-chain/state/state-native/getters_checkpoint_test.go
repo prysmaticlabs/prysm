@@ -6,12 +6,10 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state"
 	testtmpl "github.com/prysmaticlabs/prysm/beacon-chain/state/testing"
-	"github.com/prysmaticlabs/prysm/config/features"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
 )
 
 func TestBeaconState_PreviousJustifiedCheckpointNil_Phase0(t *testing.T) {
-	features.Init(&features.Flags{EnableNativeState: true})
 	testtmpl.VerifyBeaconStatePreviousJustifiedCheckpointNil(
 		t,
 		func() (state.BeaconState, error) {
@@ -20,7 +18,6 @@ func TestBeaconState_PreviousJustifiedCheckpointNil_Phase0(t *testing.T) {
 }
 
 func TestBeaconState_PreviousJustifiedCheckpointNil_Altair(t *testing.T) {
-	features.Init(&features.Flags{EnableNativeState: true})
 	testtmpl.VerifyBeaconStatePreviousJustifiedCheckpointNil(
 		t,
 		func() (state.BeaconState, error) {
@@ -29,7 +26,6 @@ func TestBeaconState_PreviousJustifiedCheckpointNil_Altair(t *testing.T) {
 }
 
 func TestBeaconState_PreviousJustifiedCheckpointNil_Bellatrix(t *testing.T) {
-	features.Init(&features.Flags{EnableNativeState: true})
 	testtmpl.VerifyBeaconStatePreviousJustifiedCheckpointNil(
 		t,
 		func() (state.BeaconState, error) {
@@ -38,7 +34,6 @@ func TestBeaconState_PreviousJustifiedCheckpointNil_Bellatrix(t *testing.T) {
 }
 
 func TestBeaconState_PreviousJustifiedCheckpoint_Phase0(t *testing.T) {
-	features.Init(&features.Flags{EnableNativeState: true})
 	testtmpl.VerifyBeaconStatePreviousJustifiedCheckpoint(
 		t,
 		func(cp *ethpb.Checkpoint) (state.BeaconState, error) {
@@ -47,7 +42,6 @@ func TestBeaconState_PreviousJustifiedCheckpoint_Phase0(t *testing.T) {
 }
 
 func TestBeaconState_PreviousJustifiedCheckpoint_Altair(t *testing.T) {
-	features.Init(&features.Flags{EnableNativeState: true})
 	testtmpl.VerifyBeaconStatePreviousJustifiedCheckpoint(
 		t,
 		func(cp *ethpb.Checkpoint) (state.BeaconState, error) {
@@ -56,7 +50,6 @@ func TestBeaconState_PreviousJustifiedCheckpoint_Altair(t *testing.T) {
 }
 
 func TestBeaconState_PreviousJustifiedCheckpoint_Bellatrix(t *testing.T) {
-	features.Init(&features.Flags{EnableNativeState: true})
 	testtmpl.VerifyBeaconStatePreviousJustifiedCheckpoint(
 		t,
 		func(cp *ethpb.Checkpoint) (state.BeaconState, error) {
@@ -65,7 +58,6 @@ func TestBeaconState_PreviousJustifiedCheckpoint_Bellatrix(t *testing.T) {
 }
 
 func TestBeaconState_CurrentJustifiedCheckpointNil_Phase0(t *testing.T) {
-	features.Init(&features.Flags{EnableNativeState: true})
 	testtmpl.VerifyBeaconStateCurrentJustifiedCheckpointNil(
 		t,
 		func() (state.BeaconState, error) {
@@ -74,7 +66,6 @@ func TestBeaconState_CurrentJustifiedCheckpointNil_Phase0(t *testing.T) {
 }
 
 func TestBeaconState_CurrentJustifiedCheckpointNil_Altair(t *testing.T) {
-	features.Init(&features.Flags{EnableNativeState: true})
 	testtmpl.VerifyBeaconStateCurrentJustifiedCheckpointNil(
 		t,
 		func() (state.BeaconState, error) {
@@ -83,7 +74,6 @@ func TestBeaconState_CurrentJustifiedCheckpointNil_Altair(t *testing.T) {
 }
 
 func TestBeaconState_CurrentJustifiedCheckpointNil_Bellatrix(t *testing.T) {
-	features.Init(&features.Flags{EnableNativeState: true})
 	testtmpl.VerifyBeaconStateCurrentJustifiedCheckpointNil(
 		t,
 		func() (state.BeaconState, error) {

@@ -6,6 +6,7 @@ import (
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/fieldtrie"
 	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
 	stateTypes "github.com/prysmaticlabs/prysm/beacon-chain/state/types"
+	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -15,6 +16,7 @@ import (
 )
 
 func TestFieldTrie_NewTrie(t *testing.T) {
+	features.Init(&features.Flags{EnableNativeState: true})
 	newState, _ := util.DeterministicGenesisState(t, 40)
 
 	// 5 represents the enum value of state roots
@@ -35,6 +37,7 @@ func TestFieldTrie_NewTrie_NilElements(t *testing.T) {
 }
 
 func TestFieldTrie_RecomputeTrie(t *testing.T) {
+	features.Init(&features.Flags{EnableNativeState: true})
 	newState, _ := util.DeterministicGenesisState(t, 32)
 	// 10 represents the enum value of validators
 	trie, err := fieldtrie.NewFieldTrie(stateTypes.FieldIndex(11), stateTypes.CompositeArray, newState.Validators(), params.BeaconConfig().ValidatorRegistryLimit)
@@ -67,6 +70,7 @@ func TestFieldTrie_RecomputeTrie(t *testing.T) {
 }
 
 func TestFieldTrie_RecomputeTrie_CompressedArray(t *testing.T) {
+	features.Init(&features.Flags{EnableNativeState: true})
 	newState, _ := util.DeterministicGenesisState(t, 32)
 	trie, err := fieldtrie.NewFieldTrie(stateTypes.FieldIndex(12), stateTypes.CompressedArray, newState.Balances(), stateutil.ValidatorLimitForBalancesChunks())
 	require.NoError(t, err)
@@ -84,12 +88,14 @@ func TestFieldTrie_RecomputeTrie_CompressedArray(t *testing.T) {
 }
 
 func TestNewFieldTrie_UnknownType(t *testing.T) {
+	features.Init(&features.Flags{EnableNativeState: true})
 	newState, _ := util.DeterministicGenesisState(t, 32)
 	_, err := fieldtrie.NewFieldTrie(stateTypes.FieldIndex(12), 4, newState.Balances(), 32)
 	require.ErrorContains(t, "unrecognized data type", err)
 }
 
 func TestFieldTrie_CopyTrieImmutable(t *testing.T) {
+	features.Init(&features.Flags{EnableNativeState: true})
 	newState, _ := util.DeterministicGenesisState(t, 32)
 	// 12 represents the enum value of randao mixes.
 	trie, err := fieldtrie.NewFieldTrie(stateTypes.FieldIndex(13), stateTypes.BasicArray, newState.RandaoMixes(), uint64(params.BeaconConfig().EpochsPerHistoricalVector))
@@ -121,6 +127,7 @@ func TestFieldTrie_CopyAndTransferEmpty(t *testing.T) {
 }
 
 func TestFieldTrie_TransferTrie(t *testing.T) {
+	features.Init(&features.Flags{EnableNativeState: true})
 	newState, _ := util.DeterministicGenesisState(t, 32)
 	maxLength := (params.BeaconConfig().ValidatorRegistryLimit*8 + 31) / 32
 	trie, err := fieldtrie.NewFieldTrie(stateTypes.FieldIndex(12), stateTypes.CompressedArray, newState.Balances(), maxLength)
@@ -139,6 +146,7 @@ func TestFieldTrie_TransferTrie(t *testing.T) {
 }
 
 func FuzzFieldTrie(f *testing.F) {
+	features.Init(&features.Flags{EnableNativeState: true})
 	newState, _ := util.DeterministicGenesisState(f, 40)
 	var data []byte
 	for _, root := range newState.StateRoots() {
