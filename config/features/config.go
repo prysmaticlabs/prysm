@@ -246,10 +246,11 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		if err != nil {
 			log.Error("could not test if gohashtree is supported")
 		}
+		t := time.NewTimer(time.Millisecond * 100)
 		select {
 		case <-sigc:
 			log.Error("gohashtree is not supported in this CPU")
-		default:
+		case <-t.C:
 			logEnabled(enableVecHTR)
 			cfg.EnableVectorizedHTR = true
 		}
