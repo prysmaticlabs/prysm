@@ -50,6 +50,7 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/blockchain/testing:go_default_library",
+        "//beacon-chain/builder/testing:go_default_library",
         "//beacon-chain/cache:go_default_library",
         "//beacon-chain/core/altair:go_default_library",
         "//beacon-chain/core/signing:go_default_library",
