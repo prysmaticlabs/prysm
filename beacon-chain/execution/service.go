@@ -1,4 +1,4 @@
-// Package powchain defines a runtime service which is tasked with
+// Package execution defines a runtime service which is tasked with
 // communicating with an eth1 endpoint, processing logs from a deposit
 // contract, and the latest eth1 data headers for usage in the beacon node.
 package execution
