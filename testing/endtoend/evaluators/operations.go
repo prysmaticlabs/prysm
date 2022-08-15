@@ -376,8 +376,12 @@ func validatorsVoteWithTheMajority(conns ...*grpc.ClientConn) error {
 			b := blk.GetBellatrixBlock().Block
 			slot = b.Slot
 			vote = b.Body.Eth1Data.BlockHash
+		case *ethpb.BeaconBlockContainer_BlindedBellatrixBlock:
+			b := blk.GetBlindedBellatrixBlock().Block
+			slot = b.Slot
+			vote = b.Body.Eth1Data.BlockHash
 		default:
-			return errors.New("block neither phase0 nor altair")
+			return errors.New("block neither phase0,altair or bellatrix")
 		}
 		slotsPerVotingPeriod := params.E2ETestConfig().SlotsPerEpoch.Mul(uint64(params.E2ETestConfig().EpochsPerEth1VotingPeriod))
 
@@ -419,8 +423,8 @@ func convertToBlockInterface(obj *ethpb.BeaconBlockContainer) (interfaces.Signed
 	if obj.GetBellatrixBlock() != nil {
 		return blocks.NewSignedBeaconBlock(obj.GetBellatrixBlock())
 	}
-	if obj.GetBellatrixBlock() != nil {
-		return blocks.NewSignedBeaconBlock(obj.GetBellatrixBlock())
+	if obj.GetBlindedBellatrixBlock() != nil {
+		return blocks.NewSignedBeaconBlock(obj.GetBlindedBellatrixBlock())
 	}
 	return nil, errors.New("container has no block")
 }
