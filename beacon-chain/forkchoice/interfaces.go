@@ -7,7 +7,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
 // ForkChoicer represents the full fork choice interface composed of all the sub-interfaces.
@@ -60,7 +59,6 @@ type Getter interface {
 	PreviousJustifiedCheckpoint() *forkchoicetypes.Checkpoint
 	JustifiedPayloadBlockHash() [32]byte
 	BestJustifiedCheckpoint() *forkchoicetypes.Checkpoint
-	ForkChoiceNodes() []*ethpb.ForkChoiceNode
 	NodeCount() int
 	HighestReceivedBlockSlot() types.Slot
 	ReceivedBlocksLastEpoch() (uint64, error)
