@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/rpc"
+	gethRPC "github.com/ethereum/go-ethereum/rpc"
 	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
@@ -56,6 +57,9 @@ type ExecutionPayloadReconstructor interface {
 	ReconstructFullBellatrixBlock(
 		ctx context.Context, blindedBlock interfaces.SignedBeaconBlock,
 	) (interfaces.SignedBeaconBlock, error)
+	ReconstructFullBellatrixBlockBatch(
+		ctx context.Context, blindedBlocks []interfaces.SignedBeaconBlock,
+	) ([]interfaces.SignedBeaconBlock, error)
 }
 
 // EngineCaller defines a client that can interact with an Ethereum
@@ -315,6 +319,43 @@ func (s *Service) ExecutionBlockByHash(ctx context.Context, hash common.Hash, wi
 	return result, handleRPCError(err)
 }
 
+// ExecutionBlocksByHashes fetches a batch of execution engine blocks by hash by calling
+// eth_blockByHash via JSON-RPC.
+func (s *Service) ExecutionBlocksByHashes(ctx context.Context, hashes []common.Hash, withTxs bool) ([]*pb.ExecutionBlock, error) {
+	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.ExecutionBlocksByHashes")
+	defer span.End()
+	numOfHashes := len(hashes)
+	elems := make([]gethRPC.BatchElem, 0, numOfHashes)
+	execBlks := make([]*pb.ExecutionBlock, 0, numOfHashes)
+	errs := make([]error, 0, numOfHashes)
+	if numOfHashes == 0 {
+		return execBlks, nil
+	}
+	for _, h := range hashes {
+		blk := &pb.ExecutionBlock{}
+		err := error(nil)
+		newH := h
+		elems = append(elems, gethRPC.BatchElem{
+			Method: ExecutionBlockByHashMethod,
+			Args:   []interface{}{newH, withTxs},
+			Result: blk,
+			Error:  err,
+		})
+		execBlks = append(execBlks, blk)
+		errs = append(errs, err)
+	}
+	ioErr := s.rpcClient.BatchCall(elems)
+	if ioErr != nil {
+		return nil, ioErr
+	}
+	for _, e := range errs {
+		if e != nil {
+			return nil, handleRPCError(e)
+		}
+	}
+	return execBlks, nil
+}
+
 // ReconstructFullBellatrixBlock takes in a blinded beacon block and reconstructs
 // a beacon block with a full execution payload via the engine API.
 func (s *Service) ReconstructFullBellatrixBlock(
@@ -359,6 +400,81 @@ func (s *Service) ReconstructFullBellatrixBlock(
 	}
 	reconstructedExecutionPayloadCount.Add(1)
 	return fullBlock, nil
+}
+
+// ReconstructFullBellatrixBlockBatch takes in a batch of blinded beacon blocks and reconstructs
+// them with a full execution payload for each block via the engine API.
+func (s *Service) ReconstructFullBellatrixBlockBatch(
+	ctx context.Context, blindedBlocks []interfaces.SignedBeaconBlock,
+) ([]interfaces.SignedBeaconBlock, error) {
+	if len(blindedBlocks) == 0 {
+		return []interfaces.SignedBeaconBlock{}, nil
+	}
+	executionHashes := []common.Hash{}
+	validExecPayloads := []int{}
+	zeroExecPayloads := []int{}
+	for i, b := range blindedBlocks {
+		if err := blocks.BeaconBlockIsNil(b); err != nil {
+			return nil, errors.Wrap(err, "cannot reconstruct bellatrix block from nil data")
+		}
+		if !b.Block().IsBlinded() {
+			return nil, errors.New("can only reconstruct block from blinded block format")
+		}
+		header, err := b.Block().Body().Execution()
+		if err != nil {
+			return nil, err
+		}
+		if header.IsNil() {
+			return nil, errors.New("execution payload header in blinded block was nil")
+		}
+		// Determine if the block is pre-merge or post-merge. Depending on the result,
+		// we will ask the execution engine for the full payload.
+		if bytes.Equal(header.BlockHash(), params.BeaconConfig().ZeroHash[:]) {
+			zeroExecPayloads = append(zeroExecPayloads, i)
+		} else {
+			executionBlockHash := common.BytesToHash(header.BlockHash())
+			validExecPayloads = append(validExecPayloads, i)
+			executionHashes = append(executionHashes, executionBlockHash)
+		}
+	}
+	execBlocks, err := s.ExecutionBlocksByHashes(ctx, executionHashes, true /* with txs*/)
+	if err != nil {
+		return nil, fmt.Errorf("could not fetch execution blocks with txs by hash %#x: %v", executionHashes, err)
+	}
+
+	// For each valid payload, we reconstruct the full block from it with the
+	// blinded block.
+	for sliceIdx, realIdx := range validExecPayloads {
+		b := execBlocks[sliceIdx]
+		if b == nil {
+			return nil, fmt.Errorf("received nil execution block for request by hash %#x", executionHashes[sliceIdx])
+		}
+		header, err := blindedBlocks[realIdx].Block().Body().Execution()
+		if err != nil {
+			return nil, err
+		}
+		payload, err := fullPayloadFromExecutionBlock(header, b)
+		if err != nil {
+			return nil, err
+		}
+		fullBlock, err := blocks.BuildSignedBeaconBlockFromExecutionPayload(blindedBlocks[realIdx], payload)
+		if err != nil {
+			return nil, err
+		}
+		blindedBlocks[realIdx] = fullBlock
+	}
+	// For blocks that are pre-merge we simply reconstruct them via an empty
+	// execution payload.
+	for _, realIdx := range zeroExecPayloads {
+		payload := buildEmptyExecutionPayload()
+		fullBlock, err := blocks.BuildSignedBeaconBlockFromExecutionPayload(blindedBlocks[realIdx], payload)
+		if err != nil {
+			return nil, err
+		}
+		blindedBlocks[realIdx] = fullBlock
+	}
+	reconstructedExecutionPayloadCount.Add(float64(len(blindedBlocks)))
+	return blindedBlocks, nil
 }
 
 func fullPayloadFromExecutionBlock(
