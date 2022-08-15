@@ -202,7 +202,10 @@ func configureFastSSZHashingAlgorithm() {
 		signal.Notify(sigc, syscall.SIGILL)
 		defer signal.Stop(sigc)
 		buffer := make([][32]byte, 2)
-		gohashtree.Hash(buffer, buffer)
+		err := gohashtree.Hash(buffer, buffer)
+		if err != nil {
+			log.Error("could not test if gohashtree is supported")
+		}
 		select {
 		case <-sigc:
 			log.Error("gohashtree is not supported in this CPU")
