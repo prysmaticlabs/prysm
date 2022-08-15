@@ -70,6 +70,8 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 		}
 
 		log.WithField("endpoint", c.NodeURL()).Info("Builder has been configured")
+		log.Warn("Out sourcing block construction to external builders adds non-trivial delay to block propagation time.  " +
+			"Builder constructed blocks or fall back blocks may get orphaned. Use at your own risk!")
 	}
 	return s, nil
 }
