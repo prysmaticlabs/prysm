@@ -511,9 +511,9 @@ func TestStore_Prune_NoDanglingBranch(t *testing.T) {
 			indexToHash(uint64(2)): true,
 		},
 		payloadIndices: map[[32]byte]uint64{
-			[32]byte{'A'}: 0,
-			[32]byte{'B'}: 1,
-			[32]byte{'C'}: 2,
+			{'A'}: 0,
+			{'B'}: 1,
+			{'C'}: 2,
 		},
 	}
 	fc := &forkchoicetypes.Checkpoint{Epoch: 1, Root: indexToHash(1)}
@@ -999,11 +999,11 @@ func TestStore_UpdateCanonicalNodes_RemoveOldCanonical(t *testing.T) {
 	f := &ForkChoice{store: &Store{}}
 	f.store.canonicalNodes = map[[32]byte]bool{}
 	f.store.nodesIndices = map[[32]byte]uint64{
-		[32]byte{'a'}: 0,
-		[32]byte{'b'}: 1,
-		[32]byte{'c'}: 2,
-		[32]byte{'d'}: 3,
-		[32]byte{'e'}: 4,
+		{'a'}: 0,
+		{'b'}: 1,
+		{'c'}: 2,
+		{'d'}: 3,
+		{'e'}: 4,
 	}
 
 	f.store.nodes = []*Node{

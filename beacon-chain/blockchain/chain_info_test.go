@@ -364,7 +364,7 @@ func TestService_ChainHeads_DoublyLinkedTree(t *testing.T) {
 
 	roots, slots := c.ChainHeads()
 	require.Equal(t, 3, len(roots))
-	rootMap := map[[32]byte]types.Slot{[32]byte{'c'}: 102, [32]byte{'d'}: 103, [32]byte{'e'}: 104}
+	rootMap := map[[32]byte]types.Slot{{'c'}: 102, {'d'}: 103, {'e'}: 104}
 	for i, root := range roots {
 		slot, ok := rootMap[root]
 		require.Equal(t, true, ok)

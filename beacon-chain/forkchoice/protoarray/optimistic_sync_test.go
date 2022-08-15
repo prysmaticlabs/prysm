@@ -500,7 +500,7 @@ func TestSetOptimisticToInvalid_ForkAtMerge(t *testing.T) {
 	roots, err := f.SetOptimisticToInvalid(ctx, [32]byte{'x'}, [32]byte{'d'}, [32]byte{})
 	require.NoError(t, err)
 	require.Equal(t, 4, len(roots))
-	require.Equal(t, true, slicesEqual(roots, [][32]byte{[32]byte{'b'}, [32]byte{'c'}, [32]byte{'d'}, [32]byte{'e'}}))
+	require.Equal(t, true, slicesEqual(roots, [][32]byte{{'b'}, {'c'}, {'d'}, {'e'}}))
 }
 
 // Pow       |      Pos

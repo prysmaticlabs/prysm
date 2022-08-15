@@ -306,10 +306,10 @@ func TestStore_tips(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 	expectedMap := map[[32]byte]types.Slot{
-		[32]byte{'f'}: 105,
-		[32]byte{'i'}: 106,
-		[32]byte{'l'}: 106,
-		[32]byte{'j'}: 102,
+		{'f'}: 105,
+		{'i'}: 106,
+		{'l'}: 106,
+		{'j'}: 102,
 	}
 	roots, slots := f.store.tips()
 	for i, r := range roots {
