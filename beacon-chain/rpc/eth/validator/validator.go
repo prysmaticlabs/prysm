@@ -583,12 +583,12 @@ func (vs *Server) PrepareBeaconProposer(
 }
 
 // SubmitValidatorRegistration submits validator registrations.
-func (vs *Server) SubmitValidatorRegistration(ctx context.Context, reg *ethpbv1.SubmitValidatorRegistrationsRequest) (*emptypb.Empty, error) {
+func (vs *Server) SubmitValidatorRegistration(ctx context.Context, reg *ethpbv1.SubmitValidatorRegistrationsRequest) (*empty.Empty, error) {
 	ctx, span := trace.StartSpan(ctx, "validator.ValidatorRegistration")
 	defer span.End()
 
 	if vs.V1Alpha1Server.BlockBuilder == nil || !vs.V1Alpha1Server.BlockBuilder.Configured() {
-		return &emptypb.Empty{}, status.Errorf(codes.InvalidArgument, "Could not register block builder: %v", builder.ErrNoBuilder)
+		return &empty.Empty{}, status.Errorf(codes.InvalidArgument, "Could not register block builder: %v", builder.ErrNoBuilder)
 	}
 	var registrations []*ethpb.SignedValidatorRegistrationV1
 	for i, registration := range reg.Registrations {
@@ -604,14 +604,14 @@ func (vs *Server) SubmitValidatorRegistration(ctx context.Context, reg *ethpbv1.
 		})
 	}
 	if len(registrations) == 0 {
-		return &emptypb.Empty{}, status.Errorf(codes.InvalidArgument, "validator registration request is empty")
+		return &empty.Empty{}, status.Errorf(codes.InvalidArgument, "validator registration request is empty")
 	}
 
 	if err := vs.V1Alpha1Server.BlockBuilder.RegisterValidator(ctx, registrations); err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Could not register block builder: %v", err)
 	}
 
-	return &emptypb.Empty{}, nil
+	return &empty.Empty{}, nil
 }
 
 // ProduceAttestationData requests that the beacon node produces attestation data for
