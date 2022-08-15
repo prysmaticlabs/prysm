@@ -251,6 +251,7 @@ func TestServer_getBuilderBlock(t *testing.T) {
 				require.NoError(t, err)
 				return wb
 			}(),
+			err: "header and payload root do not match",
 		},
 		{
 			name: "can get payload",
