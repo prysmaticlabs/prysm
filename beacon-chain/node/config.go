@@ -2,14 +2,10 @@ package node
 
 import (
 	"fmt"
-	"os"
-	"os/signal"
-	"syscall"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
 	fastssz "github.com/prysmaticlabs/fastssz"
-	"github.com/prysmaticlabs/gohashtree"
 	"github.com/prysmaticlabs/prysm/cmd"
 	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/config/features"
@@ -198,19 +194,6 @@ func configureExecutionSetting(cliCtx *cli.Context) error {
 
 func configureFastSSZHashingAlgorithm() {
 	if features.Get().EnableVectorizedHTR {
-		sigc := make(chan os.Signal, 1)
-		signal.Notify(sigc, syscall.SIGILL)
-		defer signal.Stop(sigc)
-		buffer := make([][32]byte, 2)
-		err := gohashtree.Hash(buffer, buffer)
-		if err != nil {
-			log.Error("could not test if gohashtree is supported")
-		}
-		select {
-		case <-sigc:
-			log.Error("gohashtree is not supported in this CPU")
-		default:
-			fastssz.EnableVectorizedHTR = true
-		}
+		fastssz.EnableVectorizedHTR = true
 	}
 }
