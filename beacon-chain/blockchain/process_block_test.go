@@ -3000,17 +3000,16 @@ func TestStore_NoViableHead_Reboot_DoublyLinkedTree(t *testing.T) {
 
 	require.NoError(t, service.StartFromSavedState(genesisState))
 
-	// Forkchoice does not have a cached headroot now
-	require.Equal(t, [32]byte{}, service.ForkChoicer().CachedHeadRoot())
+	// Forkchoice has the genesisRoot loaded at startup
+	require.Equal(t, genesisRoot, service.ForkChoicer().CachedHeadRoot())
 	// Service's store has the finalized state as headRoot
 	headRoot, err := service.HeadRoot(ctx)
 	require.NoError(t, err)
 	require.Equal(t, genesisRoot, bytesutil.ToBytes32(headRoot))
-	// The node is not optimistic now until the first call to forkchoice
-	// Head()
+	// The node is optimistic now.
 	optimistic, err := service.IsOptimistic(ctx)
 	require.NoError(t, err)
-	require.Equal(t, false, optimistic)
+	require.Equal(t, true, optimistic)
 	require.Equal(t, false, service.ForkChoicer().AllTipsAreInvalid())
 
 	// Check that the node's justified checkpoint does not agree with the
@@ -3029,8 +3028,8 @@ func TestStore_NoViableHead_Reboot_DoublyLinkedTree(t *testing.T) {
 	root, err = b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, service.onBlock(ctx, wsb, root))
-	// Check that the head is still INVALID and the node is not optimistic
-	require.Equal(t, [32]byte{}, service.ForkChoicer().CachedHeadRoot())
+	// Check that the head is still INVALID and the node is optimistic
+	require.Equal(t, genesisRoot, service.ForkChoicer().CachedHeadRoot())
 	headRoot, err = service.HeadRoot(ctx)
 	require.NoError(t, err)
 	require.Equal(t, genesisRoot, bytesutil.ToBytes32(headRoot))
@@ -3057,8 +3056,8 @@ func TestStore_NoViableHead_Reboot_DoublyLinkedTree(t *testing.T) {
 		st, err = service.cfg.StateGen.StateByRoot(ctx, root)
 		require.NoError(t, err)
 	}
-	// Head should still be INVALID and the node is not optimistic
-	require.Equal(t, [32]byte{}, service.ForkChoicer().CachedHeadRoot())
+	// Head should still be INVALID and the node is optimistic
+	require.Equal(t, genesisRoot, service.ForkChoicer().CachedHeadRoot())
 	headRoot, err = service.HeadRoot(ctx)
 	require.NoError(t, err)
 	require.Equal(t, genesisRoot, bytesutil.ToBytes32(headRoot))
@@ -3226,17 +3225,15 @@ func TestStore_NoViableHead_Reboot_Protoarray(t *testing.T) {
 
 	require.NoError(t, service.StartFromSavedState(genesisState))
 
-	// Forkchoice does not have a cached headroot now
-	require.Equal(t, [32]byte{}, service.ForkChoicer().CachedHeadRoot())
+	require.Equal(t, genesisRoot, service.ForkChoicer().CachedHeadRoot())
 	// Service's store has the finalized state as headRoot
 	headRoot, err := service.HeadRoot(ctx)
 	require.NoError(t, err)
 	require.Equal(t, genesisRoot, bytesutil.ToBytes32(headRoot))
-	// The node is not optimistic now until the first call to forkchoice
-	// Head()
+	// The node is optimistic now
 	optimistic, err := service.IsOptimistic(ctx)
 	require.NoError(t, err)
-	require.Equal(t, false, optimistic)
+	require.Equal(t, true, optimistic)
 	require.Equal(t, false, service.ForkChoicer().AllTipsAreInvalid())
 
 	// Check that the node's justified checkpoint does not agree with the
@@ -3255,8 +3252,8 @@ func TestStore_NoViableHead_Reboot_Protoarray(t *testing.T) {
 	root, err = b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, service.onBlock(ctx, wsb, root))
-	// Check that the head is still INVALID and the node is not optimistic
-	require.Equal(t, [32]byte{}, service.ForkChoicer().CachedHeadRoot())
+	// Check that the head is still INVALID and the node is optimistic
+	require.Equal(t, genesisRoot, service.ForkChoicer().CachedHeadRoot())
 	headRoot, err = service.HeadRoot(ctx)
 	require.NoError(t, err)
 	require.Equal(t, genesisRoot, bytesutil.ToBytes32(headRoot))
@@ -3282,8 +3279,8 @@ func TestStore_NoViableHead_Reboot_Protoarray(t *testing.T) {
 		st, err = service.cfg.StateGen.StateByRoot(ctx, root)
 		require.NoError(t, err)
 	}
-	// Head should still be INVALID and the node is not optimistic
-	require.Equal(t, [32]byte{}, service.ForkChoicer().CachedHeadRoot())
+	// Head should still be INVALID and the node is optimistic
+	require.Equal(t, genesisRoot, service.ForkChoicer().CachedHeadRoot())
 	headRoot, err = service.HeadRoot(ctx)
 	require.NoError(t, err)
 	require.Equal(t, genesisRoot, bytesutil.ToBytes32(headRoot))
