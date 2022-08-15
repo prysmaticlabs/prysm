@@ -44,6 +44,7 @@ service BeaconDebug {
     option (google.api.http) = {
       get: "/internal/eth/v1/debug/beacon/states/{state_id}"
     };
+    option deprecated = true;
   }
 
   // GetBeaconStateSSZ returns the SSZ-serialized version of the full BeaconState object for given stateId.
@@ -80,6 +81,7 @@ service BeaconDebug {
     option (google.api.http) = {
       get: "/internal/eth/v1/debug/beacon/heads"
     };
+    option deprecated = true;
   }
 
   // ListForkChoiceHeadsV2 retrieves all possible chain heads (leaves of fork choice tree).
