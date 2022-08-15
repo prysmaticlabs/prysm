@@ -825,14 +825,9 @@ func (bs *Server) blockFromBlockID(ctx context.Context, blockId []byte) (interfa
 			if err != nil {
 				return nil, errors.Wrapf(err, "could not retrieve block roots for slot %d", slot)
 			}
-
 			numBlks := len(blks)
 			if numBlks == 0 {
 				return nil, nil
-			}
-			blk = blks[0]
-			if numBlks == 1 {
-				break
 			}
 			for i, b := range blks {
 				canonical, err := bs.ChainInfoFetcher.IsCanonical(ctx, roots[i])
