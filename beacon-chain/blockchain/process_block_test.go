@@ -322,7 +322,7 @@ func TestStore_OnBlockBatch_DoublyLinkedTree(t *testing.T) {
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),
-		WithForkChoiceStore(protoarray.New()),
+		WithForkChoiceStore(doublylinkedtree.New()),
 	}
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
@@ -894,7 +894,7 @@ func TestAncestor_HandleSkipSlot(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
-	fcs := protoarray.New()
+	fcs := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),
@@ -985,7 +985,7 @@ func TestAncestor_CanUseDB(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
-	fcs := protoarray.New()
+	fcs := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),
@@ -1047,7 +1047,7 @@ func TestVerifyBlkDescendant(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	ctx := context.Background()
 
-	fcs := protoarray.New()
+	fcs := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),
@@ -1154,7 +1154,7 @@ func TestHandleEpochBoundary_UpdateFirstSlot(t *testing.T) {
 func TestOnBlock_CanFinalize_WithOnTick(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-	fcs := protoarray.New()
+	fcs := doublylinkedtree.New()
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 	opts := []Option{
@@ -1203,7 +1203,7 @@ func TestOnBlock_CanFinalize_WithOnTick(t *testing.T) {
 func TestOnBlock_CanFinalize(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-	fcs := protoarray.New()
+	fcs := doublylinkedtree.New()
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 	opts := []Option{
@@ -1251,7 +1251,7 @@ func TestOnBlock_CanFinalize(t *testing.T) {
 func TestOnBlock_NilBlock(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-	fcs := protoarray.New()
+	fcs := doublylinkedtree.New()
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 	opts := []Option{
@@ -1270,7 +1270,7 @@ func TestOnBlock_NilBlock(t *testing.T) {
 func TestOnBlock_InvalidSignature(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-	fcs := protoarray.New()
+	fcs := doublylinkedtree.New()
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 	opts := []Option{
@@ -1306,7 +1306,7 @@ func TestOnBlock_CallNewPayloadAndForkchoiceUpdated(t *testing.T) {
 
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-	fcs := protoarray.New()
+	fcs := doublylinkedtree.New()
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 	opts := []Option{
@@ -1521,7 +1521,7 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-	fcs := protoarray.New()
+	fcs := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),
@@ -1659,7 +1659,7 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 func TestService_insertSlashingsToForkChoiceStore(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-	fcs := protoarray.New()
+	fcs := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),
@@ -1710,7 +1710,7 @@ func TestService_insertSlashingsToForkChoiceStore(t *testing.T) {
 func TestOnBlock_ProcessBlocksParallel(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-	fcs := protoarray.New()
+	fcs := doublylinkedtree.New()
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 	opts := []Option{
@@ -1778,7 +1778,7 @@ func TestOnBlock_ProcessBlocksParallel(t *testing.T) {
 		require.NoError(t, service.cfg.BeaconDB.DeleteBlock(ctx, r2))
 		require.NoError(t, service.cfg.BeaconDB.DeleteBlock(ctx, r3))
 		require.NoError(t, service.cfg.BeaconDB.DeleteBlock(ctx, r4))
-		service.cfg.ForkChoiceStore = protoarray.New()
+		service.cfg.ForkChoiceStore = doublylinkedtree.New()
 	}
 }
 
@@ -1786,7 +1786,7 @@ func Test_verifyBlkFinalizedSlot_invalidBlock(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
-	fcs := protoarray.New()
+	fcs := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),

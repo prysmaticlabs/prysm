@@ -394,7 +394,7 @@ func TestSaveOrphanedAtts_CanFilter(t *testing.T) {
 
 func TestSaveOrphanedAtts_NoCommonAncestor_DoublyLinkedTrie(t *testing.T) {
 	resetCfg := features.InitWithReset(&features.Flags{
-		EnableForkChoiceDoublyLinkedTree: true,
+		DisableForkchoiceDoublyLinkedTree: false,
 	})
 	defer resetCfg()
 
@@ -453,7 +453,7 @@ func TestSaveOrphanedAtts_NoCommonAncestor_DoublyLinkedTrie(t *testing.T) {
 
 func TestSaveOrphanedAtts_DoublyLinkedTrie(t *testing.T) {
 	resetCfg := features.InitWithReset(&features.Flags{
-		EnableForkChoiceDoublyLinkedTree: true,
+		DisableForkchoiceDoublyLinkedTree: false,
 	})
 	defer resetCfg()
 
@@ -523,7 +523,7 @@ func TestSaveOrphanedAtts_DoublyLinkedTrie(t *testing.T) {
 
 func TestSaveOrphanedAtts_CanFilter_DoublyLinkedTrie(t *testing.T) {
 	resetCfg := features.InitWithReset(&features.Flags{
-		EnableForkChoiceDoublyLinkedTree: true,
+		DisableForkchoiceDoublyLinkedTree: false,
 	})
 	defer resetCfg()
 

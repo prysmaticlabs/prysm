@@ -82,7 +82,7 @@ func TestService_ForkChoiceStore(t *testing.T) {
 func TestFinalizedCheckpt_GenesisRootOk(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-	fcs := protoarray.New()
+	fcs := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithForkChoiceStore(fcs),
@@ -107,7 +107,7 @@ func TestFinalizedCheckpt_GenesisRootOk(t *testing.T) {
 func TestCurrentJustifiedCheckpt_CanRetrieve(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-	fcs := protoarray.New()
+	fcs := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithForkChoiceStore(fcs),
@@ -134,7 +134,7 @@ func TestHeadSlot_CanRetrieve(t *testing.T) {
 func TestHeadRoot_CanRetrieve(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-	fcs := protoarray.New()
+	fcs := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithForkChoiceStore(fcs),
@@ -153,7 +153,7 @@ func TestHeadRoot_CanRetrieve(t *testing.T) {
 func TestHeadRoot_UseDB(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-	fcs := protoarray.New()
+	fcs := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithForkChoiceStore(fcs),

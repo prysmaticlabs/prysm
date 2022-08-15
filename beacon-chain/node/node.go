@@ -357,7 +357,7 @@ func (b *BeaconNode) Close() {
 }
 
 func (b *BeaconNode) startForkChoice() {
-	if features.Get().EnableForkChoiceDoublyLinkedTree {
+	if !features.Get().DisableForkchoiceDoublyLinkedTree {
 		b.forkChoiceStore = doublylinkedtree.New()
 	} else {
 		b.forkChoiceStore = protoarray.New()
