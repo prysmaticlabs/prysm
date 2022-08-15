@@ -20,7 +20,6 @@ import (
 	status "google.golang.org/grpc/status"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 const (
