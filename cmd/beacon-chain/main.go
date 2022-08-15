@@ -37,7 +37,7 @@ import (
 
 var appFlags = []cli.Flag{
 	flags.DepositContractFlag,
-	flags.HTTPWeb3ProviderFlag,
+	flags.ExecutionEngineEndpoint,
 	flags.ExecutionJWTSecretFlag,
 	flags.RPCHost,
 	flags.RPCPort,
@@ -185,7 +185,7 @@ func main() {
 				log.WithError(err).Error("Failed to configuring logging to disk.")
 			}
 		}
-		if err := cmd.ExpandSingleEndpointIfFile(ctx, flags.HTTPWeb3ProviderFlag); err != nil {
+		if err := cmd.ExpandSingleEndpointIfFile(ctx, flags.ExecutionEngineEndpoint); err != nil {
 			return err
 		}
 		if ctx.IsSet(flags.SetGCPercent.Name) {

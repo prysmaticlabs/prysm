@@ -17,7 +17,7 @@ import (
 func TestExecutionchainCmd(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	set.String(flags.HTTPWeb3ProviderFlag.Name, "primary", "")
+	set.String(flags.ExecutionEngineEndpoint.Name, "primary", "")
 	ctx := cli.NewContext(&app, set, nil)
 
 	endpoints, err := parseExecutionChainEndpoint(ctx)
@@ -94,7 +94,7 @@ func Test_parseJWTSecretFromFile(t *testing.T) {
 func TestPowchainPreregistration_EmptyWeb3Provider(t *testing.T) {
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
-	set.String(flags.HTTPWeb3ProviderFlag.Name, "", "")
+	set.String(flags.ExecutionEngineEndpoint.Name, "", "")
 	ctx := cli.NewContext(&app, set, nil)
 	_, err := parseExecutionChainEndpoint(ctx)
 	assert.ErrorContains(t, "you need to specify", err)

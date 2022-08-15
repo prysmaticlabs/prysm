@@ -64,14 +64,14 @@ func parseJWTSecretFromFile(c *cli.Context) ([]byte, error) {
 }
 
 func parseExecutionChainEndpoint(c *cli.Context) (string, error) {
-	if c.String(flags.HTTPWeb3ProviderFlag.Name) == "" {
+	if c.String(flags.ExecutionEngineEndpoint.Name) == "" {
 		return "", fmt.Errorf(
 			"you need to specify %s to provide a connection endpoint to an Ethereum execution client "+
 				"for your Prysm beacon node. This is a requirement for running a node. You can read more about "+
 				"how to configure this execution client connection in our docs here "+
 				"https://docs.prylabs.network/docs/install/install-with-script",
-			flags.HTTPWeb3ProviderFlag.Name,
+			flags.ExecutionEngineEndpoint.Name,
 		)
 	}
-	return c.String(flags.HTTPWeb3ProviderFlag.Name), nil
+	return c.String(flags.ExecutionEngineEndpoint.Name), nil
 }
