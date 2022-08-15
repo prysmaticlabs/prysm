@@ -34,6 +34,7 @@ import (
 	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/crypto/bls"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/encoding/ssz"
 	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	v1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
@@ -167,6 +168,9 @@ func TestServer_getPayloadHeader(t *testing.T) {
 }
 
 func TestServer_getBuilderBlock(t *testing.T) {
+	p := emptyPayload()
+	p.GasLimit = 123
+
 	tests := []struct {
 		name        string
 		blk         interfaces.SignedBeaconBlock
@@ -225,7 +229,7 @@ func TestServer_getBuilderBlock(t *testing.T) {
 			err: "can't submit",
 		},
 		{
-			name: "can submit block",
+			name: "head and payload root mismatch",
 			blk: func() interfaces.SignedBeaconBlock {
 				b := util.NewBlindedBeaconBlockBellatrix()
 				b.Block.Slot = 1
@@ -236,13 +240,52 @@ func TestServer_getBuilderBlock(t *testing.T) {
 			}(),
 			mock: &builderTest.MockBuilderService{
 				HasConfigured: true,
-				Payload:       &v1.ExecutionPayload{GasLimit: 123},
+				Payload:       p,
 			},
 			returnedBlk: func() interfaces.SignedBeaconBlock {
 				b := util.NewBeaconBlockBellatrix()
 				b.Block.Slot = 1
 				b.Block.ProposerIndex = 2
-				b.Block.Body.ExecutionPayload = &v1.ExecutionPayload{GasLimit: 123}
+				b.Block.Body.ExecutionPayload = p
+				wb, err := blocks.NewSignedBeaconBlock(b)
+				require.NoError(t, err)
+				return wb
+			}(),
+			err: "header and payload root do not match",
+		},
+		{
+			name: "can get payload",
+			blk: func() interfaces.SignedBeaconBlock {
+				b := util.NewBlindedBeaconBlockBellatrix()
+				b.Block.Slot = 1
+				b.Block.ProposerIndex = 2
+				txRoot, err := ssz.TransactionsRoot([][]byte{})
+				require.NoError(t, err)
+				b.Block.Body.ExecutionPayloadHeader = &v1.ExecutionPayloadHeader{
+					ParentHash:       make([]byte, fieldparams.RootLength),
+					FeeRecipient:     make([]byte, fieldparams.FeeRecipientLength),
+					StateRoot:        make([]byte, fieldparams.RootLength),
+					ReceiptsRoot:     make([]byte, fieldparams.RootLength),
+					LogsBloom:        make([]byte, fieldparams.LogsBloomLength),
+					PrevRandao:       make([]byte, fieldparams.RootLength),
+					BaseFeePerGas:    make([]byte, fieldparams.RootLength),
+					BlockHash:        make([]byte, fieldparams.RootLength),
+					TransactionsRoot: txRoot[:],
+					GasLimit:         123,
+				}
+				wb, err := blocks.NewSignedBeaconBlock(b)
+				require.NoError(t, err)
+				return wb
+			}(),
+			mock: &builderTest.MockBuilderService{
+				HasConfigured: true,
+				Payload:       p,
+			},
+			returnedBlk: func() interfaces.SignedBeaconBlock {
+				b := util.NewBeaconBlockBellatrix()
+				b.Block.Slot = 1
+				b.Block.ProposerIndex = 2
+				b.Block.Body.ExecutionPayload = p
 				wb, err := blocks.NewSignedBeaconBlock(b)
 				require.NoError(t, err)
 				return wb
@@ -253,9 +296,10 @@ func TestServer_getBuilderBlock(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			vs := &Server{BlockBuilder: tc.mock}
 			gotBlk, err := vs.unblindBuilderBlock(context.Background(), tc.blk)
-			if err != nil {
+			if tc.err != "" {
 				require.ErrorContains(t, tc.err, err)
 			} else {
+				require.NoError(t, err)
 				require.DeepEqual(t, tc.returnedBlk, gotBlk)
 			}
 		})
