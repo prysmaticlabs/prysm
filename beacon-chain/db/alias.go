@@ -3,7 +3,7 @@ package db
 import "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/iface"
 
 // ReadOnlyDatabase exposes Prysm's Ethereum data backend for read access only, no information about
-// head info. For head info, use github.com/prysmaticlabs/prysm/v3/blockchain.HeadFetcher.
+// head info. For head info, use github.com/prysmaticlabs/prysm/blockchain.HeadFetcher.
 type ReadOnlyDatabase = iface.ReadOnlyDatabase
 
 // NoHeadAccessDatabase exposes Prysm's Ethereum data backend for read/write access, no information
