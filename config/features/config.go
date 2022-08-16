@@ -151,9 +151,6 @@ func configureTestnet(ctx *cli.Context) error {
 
 // Insert feature flags within the function to be enabled for Prater testnet.
 func applyPraterFeatureFlags(ctx *cli.Context) {
-	if err := ctx.Set(enableVecHTR.Names()[0], "true"); err != nil {
-		log.WithError(err).Debug("error enabling disable p flag")
-	}
 	if err := ctx.Set(EnableOnlyBlindedBeaconBlocks.Names()[0], "true"); err != nil {
 		log.WithError(err).Debug("error enabling only saving blinded beacon blocks flag")
 	}
@@ -161,16 +158,10 @@ func applyPraterFeatureFlags(ctx *cli.Context) {
 
 // Insert feature flags within the function to be enabled for Ropsten testnet.
 func applyRopstenFeatureFlags(ctx *cli.Context) {
-	if err := ctx.Set(enableVecHTR.Names()[0], "true"); err != nil {
-		log.WithError(err).Debug("error enabling vectorized HTR flag")
-	}
 }
 
 // Insert feature flags within the function to be enabled for Sepolia testnet.
 func applySepoliaFeatureFlags(ctx *cli.Context) {
-	if err := ctx.Set(enableVecHTR.Names()[0], "true"); err != nil {
-		log.WithError(err).Debug("error enabling vectorized HTR flag")
-	}
 }
 
 // ConfigureBeaconChain sets the global config based
@@ -228,7 +219,9 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logEnabled(disablePullTips)
 		cfg.DisablePullTips = true
 	}
-	if ctx.Bool(enableVecHTR.Name) {
+	if ctx.Bool(disableVecHTR.Name) {
+		logEnabled(disableVecHTR)
+	} else {
 		sigc := make(chan os.Signal, 1)
 		signal.Notify(sigc, syscall.SIGILL)
 		defer signal.Stop(sigc)
@@ -242,7 +235,6 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 			case <-sigc:
 				log.Error("gohashtree is not supported in this CPU")
 			case <-t.C:
-				logEnabled(enableVecHTR)
 				cfg.EnableVectorizedHTR = true
 			}
 		}
