@@ -9,13 +9,13 @@ import (
 	"testing"
 
 	"github.com/golang/snappy"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch/precompute"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/spectest/utils"
-	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/epoch/precompute"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/spectest/utils"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 )
 
 // Delta contains list of rewards and penalties.

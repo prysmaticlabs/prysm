@@ -1,8 +1,8 @@
 package cmd
 
 import (
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/config/params"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/urfave/cli/v2"
 )
 

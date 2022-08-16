@@ -6,11 +6,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/execution"
-	mockExecution "github.com/prysmaticlabs/prysm/beacon-chain/execution/testing"
-	"github.com/prysmaticlabs/prysm/cmd"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution"
+	mockExecution "github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
+	"github.com/prysmaticlabs/prysm/v3/cmd"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/urfave/cli/v2"
 )

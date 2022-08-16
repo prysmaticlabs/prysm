@@ -3,8 +3,8 @@ package filters
 import (
 	"testing"
 
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/testing/assert"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 )
 
 func TestQueryFilter_ChainsCorrectly(t *testing.T) {

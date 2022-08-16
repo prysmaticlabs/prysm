@@ -14,12 +14,12 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/prysmaticlabs/prysm/async/event"
-	"github.com/prysmaticlabs/prysm/beacon-chain/execution/types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/async/event"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/types"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
 // Chain defines a properly functioning mock for the powchain service.

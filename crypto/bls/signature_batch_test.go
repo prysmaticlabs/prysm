@@ -6,7 +6,7 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 )
 
 func TestCopySignatureSet(t *testing.T) {

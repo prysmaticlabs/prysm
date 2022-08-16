@@ -4,14 +4,14 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain"
+	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 func TestExtractBlockDataType(t *testing.T) {

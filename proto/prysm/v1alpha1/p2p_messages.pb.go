@@ -12,8 +12,8 @@ import (
 
 	_ "github.com/golang/protobuf/protoc-gen-go/descriptor"
 	github_com_prysmaticlabs_go_bitfield "github.com/prysmaticlabs/go-bitfield"
-	github_com_prysmaticlabs_prysm_consensus_types_primitives "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	_ "github.com/prysmaticlabs/prysm/proto/eth/ext"
+	github_com_prysmaticlabs_prysm_consensus_types_primitives "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	_ "github.com/prysmaticlabs/prysm/v3/proto/eth/ext"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
@@ -32,9 +32,9 @@ type Status struct {
 
 	ForkDigest     []byte                                                          `protobuf:"bytes,1,opt,name=fork_digest,json=forkDigest,proto3" json:"fork_digest,omitempty" ssz-size:"4"`
 	FinalizedRoot  []byte                                                          `protobuf:"bytes,2,opt,name=finalized_root,json=finalizedRoot,proto3" json:"finalized_root,omitempty" ssz-size:"32"`
-	FinalizedEpoch github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch `protobuf:"varint,3,opt,name=finalized_epoch,json=finalizedEpoch,proto3" json:"finalized_epoch,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch"`
+	FinalizedEpoch github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch `protobuf:"varint,3,opt,name=finalized_epoch,json=finalizedEpoch,proto3" json:"finalized_epoch,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"`
 	HeadRoot       []byte                                                          `protobuf:"bytes,4,opt,name=head_root,json=headRoot,proto3" json:"head_root,omitempty" ssz-size:"32"`
-	HeadSlot       github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot  `protobuf:"varint,5,opt,name=head_slot,json=headSlot,proto3" json:"head_slot,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"`
+	HeadSlot       github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot  `protobuf:"varint,5,opt,name=head_slot,json=headSlot,proto3" json:"head_slot,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"`
 }
 
 func (x *Status) Reset() {
@@ -109,7 +109,7 @@ type BeaconBlocksByRangeRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	StartSlot github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot `protobuf:"varint,1,opt,name=start_slot,json=startSlot,proto3" json:"start_slot,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"`
+	StartSlot github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot `protobuf:"varint,1,opt,name=start_slot,json=startSlot,proto3" json:"start_slot,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"`
 	Count     uint64                                                         `protobuf:"varint,2,opt,name=count,proto3" json:"count,omitempty"`
 	Step      uint64                                                         `protobuf:"varint,3,opt,name=step,proto3" json:"step,omitempty"`
 }
@@ -174,7 +174,7 @@ type ENRForkID struct {
 
 	CurrentForkDigest []byte                                                          `protobuf:"bytes,1,opt,name=current_fork_digest,json=currentForkDigest,proto3" json:"current_fork_digest,omitempty" ssz-size:"4"`
 	NextForkVersion   []byte                                                          `protobuf:"bytes,2,opt,name=next_fork_version,json=nextForkVersion,proto3" json:"next_fork_version,omitempty" ssz-size:"4"`
-	NextForkEpoch     github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch `protobuf:"varint,3,opt,name=next_fork_epoch,json=nextForkEpoch,proto3" json:"next_fork_epoch,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch"`
+	NextForkEpoch     github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch `protobuf:"varint,3,opt,name=next_fork_epoch,json=nextForkEpoch,proto3" json:"next_fork_epoch,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"`
 }
 
 func (x *ENRForkID) Reset() {

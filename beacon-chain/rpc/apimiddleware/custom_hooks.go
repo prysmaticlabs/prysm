@@ -11,11 +11,11 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/api/gateway/apimiddleware"
-	"github.com/prysmaticlabs/prysm/config/params"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/api/gateway/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
 
 // https://ethereum.github.io/beacon-apis/#/Validator/prepareBeaconProposer expects posting a top-level array.

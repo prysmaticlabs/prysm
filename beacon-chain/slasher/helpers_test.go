@@ -4,12 +4,12 @@ import (
 	"reflect"
 	"testing"
 
-	slashertypes "github.com/prysmaticlabs/prysm/beacon-chain/slasher/types"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/config/params"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	slashertypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/slasher/types"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 

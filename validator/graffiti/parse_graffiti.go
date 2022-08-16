@@ -5,8 +5,8 @@ import (
 	"os"
 	"strings"
 
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/crypto/hash"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
 	"gopkg.in/yaml.v2"
 )
 

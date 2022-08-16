@@ -3,16 +3,16 @@ package sync
 import (
 	libp2pcore "github.com/libp2p/go-libp2p-core"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/network/forks"
-	"github.com/prysmaticlabs/prysm/runtime/version"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/encoder"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/network/forks"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 )
 
 // chunkBlockWriter writes the given message as a chunked response to the given network

@@ -8,9 +8,9 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/network/forks"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/network/forks"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"

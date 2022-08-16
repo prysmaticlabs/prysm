@@ -7,7 +7,7 @@ load("@io_bazel_rules_docker//contrib:push-all.bzl", "docker_push")
 go_library(
     name = "go_default_library",
     srcs = ["main.go"],
-    importpath = "github.com/prysmaticlabs/prysm/tools/http-request-sink",
+    importpath = "github.com/prysmaticlabs/prysm/v3/tools/http-request-sink",
     visibility = ["//visibility:private"],
     deps = ["//config/params:go_default_library"],
 )

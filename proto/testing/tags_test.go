@@ -7,10 +7,10 @@ import (
 	"strings"
 	"testing"
 
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 func TestSSZTagSize(t *testing.T) {

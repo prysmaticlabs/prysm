@@ -10,12 +10,12 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/trie"
-	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	mockExecution "github.com/prysmaticlabs/prysm/beacon-chain/execution/testing"
-	contracts "github.com/prysmaticlabs/prysm/contracts/deposit"
-	"github.com/prysmaticlabs/prysm/contracts/deposit/mock"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	dbutil "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
+	mockExecution "github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
+	contracts "github.com/prysmaticlabs/prysm/v3/contracts/deposit"
+	"github.com/prysmaticlabs/prysm/v3/contracts/deposit/mock"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 func setDefaultMocks(service *Service) *Service {

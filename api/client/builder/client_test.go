@@ -12,12 +12,12 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/config/params"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	v1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
-	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	v1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 type roundtrip func(*http.Request) (*http.Response, error)

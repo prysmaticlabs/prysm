@@ -15,7 +15,7 @@ go_library(
         "types.go",
         "unrealized_justification.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray",
+    importpath = "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/protoarray",
     visibility = [
         "//beacon-chain:__subpackages__",
         "//testing/spectest:__subpackages__",
