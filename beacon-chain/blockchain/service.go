@@ -88,8 +88,6 @@ type config struct {
 // NewService instantiates a new block service instance that will
 // be registered into a running beacon node.
 func NewService(ctx context.Context, opts ...Option) (*Service, error) {
-	fmt.Println(params.BeaconConfig().MaxBuilderConsecutiveMissedSlots)
-	fmt.Println(params.BeaconConfig().MaxBuilderEpochMissedSlots)
 	ctx, cancel := context.WithCancel(ctx)
 	srv := &Service{
 		ctx:                  ctx,
