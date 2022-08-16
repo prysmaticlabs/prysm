@@ -20,9 +20,13 @@ The process for implementing new features using this package is as follows:
 package features
 
 import (
+	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 	"time"
 
+	"github.com/prysmaticlabs/gohashtree"
 	"github.com/prysmaticlabs/prysm/v3/cmd"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/sirupsen/logrus"
@@ -225,8 +229,23 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		cfg.DisablePullTips = true
 	}
 	if ctx.Bool(enableVecHTR.Name) {
-		logEnabled(enableVecHTR)
-		cfg.EnableVectorizedHTR = true
+		sigc := make(chan os.Signal, 1)
+		signal.Notify(sigc, syscall.SIGILL)
+		defer signal.Stop(sigc)
+		buffer := make([][32]byte, 2)
+		err := gohashtree.Hash(buffer, buffer)
+		if err != nil {
+			log.Error("could not test if gohashtree is supported")
+		} else {
+			t := time.NewTimer(time.Millisecond * 100)
+			select {
+			case <-sigc:
+				log.Error("gohashtree is not supported in this CPU")
+			case <-t.C:
+				logEnabled(enableVecHTR)
+				cfg.EnableVectorizedHTR = true
+			}
+		}
 	}
 	if ctx.Bool(disableForkChoiceDoublyLinkedTree.Name) {
 		logEnabled(disableForkChoiceDoublyLinkedTree)
