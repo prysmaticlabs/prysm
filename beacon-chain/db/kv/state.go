@@ -218,7 +218,7 @@ func (s *Store) saveStatesEfficientInternal(ctx context.Context, tx *bolt.Tx, bl
 		// thread. But while storing the state object, we should not store the
 		// validator entries.To bring the gap closer, we empty the validators
 		// just before Put() and repopulate that state with original validators.
-		// look at issue https://github.com/prysmaticlabs/prysm/v3/issues/9262.
+		// look at issue https://github.com/prysmaticlabs/prysm/issues/9262.
 		switch rawType := states[i].InnerStateUnsafe().(type) {
 		case *ethpb.BeaconState:
 			var pbState *ethpb.BeaconState
