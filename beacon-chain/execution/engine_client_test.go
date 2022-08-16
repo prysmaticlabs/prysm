@@ -21,6 +21,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
 	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/testing/require"
@@ -509,6 +510,149 @@ func TestReconstructFullBellatrixBlock(t *testing.T) {
 		require.NoError(t, err)
 
 		got, err := reconstructed.Block().Body().Execution()
+		require.NoError(t, err)
+		require.DeepEqual(t, payload, got.Proto())
+	})
+}
+
+func TestReconstructFullBellatrixBlockBatch(t *testing.T) {
+	ctx := context.Background()
+	t.Run("nil block", func(t *testing.T) {
+		service := &Service{}
+
+		_, err := service.ReconstructFullBellatrixBlockBatch(ctx, []interfaces.SignedBeaconBlock{nil})
+		require.ErrorContains(t, "nil data", err)
+	})
+	t.Run("only blinded block", func(t *testing.T) {
+		want := "can only reconstruct block from blinded block format"
+		service := &Service{}
+		bellatrixBlock := util.NewBeaconBlockBellatrix()
+		wrapped, err := blocks.NewSignedBeaconBlock(bellatrixBlock)
+		require.NoError(t, err)
+		_, err = service.ReconstructFullBellatrixBlockBatch(ctx, []interfaces.SignedBeaconBlock{wrapped})
+		require.ErrorContains(t, want, err)
+	})
+	t.Run("pre-merge execution payload", func(t *testing.T) {
+		service := &Service{}
+		bellatrixBlock := util.NewBlindedBeaconBlockBellatrix()
+		wanted := util.NewBeaconBlockBellatrix()
+		wanted.Block.Slot = 1
+		// Make sure block hash is the zero hash.
+		bellatrixBlock.Block.Body.ExecutionPayloadHeader.BlockHash = make([]byte, 32)
+		bellatrixBlock.Block.Slot = 1
+		wrapped, err := blocks.NewSignedBeaconBlock(bellatrixBlock)
+		require.NoError(t, err)
+		wantedWrapped, err := blocks.NewSignedBeaconBlock(wanted)
+		require.NoError(t, err)
+		reconstructed, err := service.ReconstructFullBellatrixBlockBatch(ctx, []interfaces.SignedBeaconBlock{wrapped})
+		require.NoError(t, err)
+		require.DeepEqual(t, []interfaces.SignedBeaconBlock{wantedWrapped}, reconstructed)
+	})
+	t.Run("properly reconstructs block batch with correct payload", func(t *testing.T) {
+		fix := fixtures()
+		payload, ok := fix["ExecutionPayload"].(*pb.ExecutionPayload)
+		require.Equal(t, true, ok)
+
+		jsonPayload := make(map[string]interface{})
+		tx := gethtypes.NewTransaction(
+			0,
+			common.HexToAddress("095e7baea6a6c7c4c2dfeb977efac326af552d87"),
+			big.NewInt(0), 0, big.NewInt(0),
+			nil,
+		)
+		txs := []*gethtypes.Transaction{tx}
+		encodedBinaryTxs := make([][]byte, 1)
+		var err error
+		encodedBinaryTxs[0], err = txs[0].MarshalBinary()
+		require.NoError(t, err)
+		payload.Transactions = encodedBinaryTxs
+		jsonPayload["transactions"] = txs
+		num := big.NewInt(1)
+		encodedNum := hexutil.EncodeBig(num)
+		jsonPayload["hash"] = hexutil.Encode(payload.BlockHash)
+		jsonPayload["parentHash"] = common.BytesToHash([]byte("parent"))
+		jsonPayload["sha3Uncles"] = common.BytesToHash([]byte("uncles"))
+		jsonPayload["miner"] = common.BytesToAddress([]byte("miner"))
+		jsonPayload["stateRoot"] = common.BytesToHash([]byte("state"))
+		jsonPayload["transactionsRoot"] = common.BytesToHash([]byte("txs"))
+		jsonPayload["receiptsRoot"] = common.BytesToHash([]byte("receipts"))
+		jsonPayload["logsBloom"] = gethtypes.BytesToBloom([]byte("bloom"))
+		jsonPayload["gasLimit"] = hexutil.EncodeUint64(1)
+		jsonPayload["gasUsed"] = hexutil.EncodeUint64(2)
+		jsonPayload["timestamp"] = hexutil.EncodeUint64(3)
+		jsonPayload["number"] = encodedNum
+		jsonPayload["extraData"] = common.BytesToHash([]byte("extra"))
+		jsonPayload["totalDifficulty"] = "0x123456"
+		jsonPayload["difficulty"] = encodedNum
+		jsonPayload["size"] = encodedNum
+		jsonPayload["baseFeePerGas"] = encodedNum
+
+		wrappedPayload, err := blocks.WrappedExecutionPayload(payload)
+		require.NoError(t, err)
+		header, err := blocks.PayloadToHeader(wrappedPayload)
+		require.NoError(t, err)
+
+		bellatrixBlock := util.NewBlindedBeaconBlockBellatrix()
+		wanted := util.NewBeaconBlockBellatrix()
+		wanted.Block.Slot = 1
+		// Make sure block hash is the zero hash.
+		bellatrixBlock.Block.Body.ExecutionPayloadHeader.BlockHash = make([]byte, 32)
+		bellatrixBlock.Block.Slot = 1
+		wrappedEmpty, err := blocks.NewSignedBeaconBlock(bellatrixBlock)
+		require.NoError(t, err)
+		wantedWrappedEmpty, err := blocks.NewSignedBeaconBlock(wanted)
+		require.NoError(t, err)
+
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			defer func() {
+				require.NoError(t, r.Body.Close())
+			}()
+
+			respJSON := []map[string]interface{}{
+				{
+					"jsonrpc": "2.0",
+					"id":      1,
+					"result":  jsonPayload,
+				},
+				{
+					"jsonrpc": "2.0",
+					"id":      2,
+					"result":  jsonPayload,
+				},
+			}
+			require.NoError(t, json.NewEncoder(w).Encode(respJSON))
+			require.NoError(t, json.NewEncoder(w).Encode(respJSON))
+
+		}))
+		defer srv.Close()
+
+		rpcClient, err := rpc.DialHTTP(srv.URL)
+		require.NoError(t, err)
+		defer rpcClient.Close()
+
+		service := &Service{}
+		service.rpcClient = rpcClient
+		blindedBlock := util.NewBlindedBeaconBlockBellatrix()
+
+		blindedBlock.Block.Body.ExecutionPayloadHeader = header
+		wrapped, err := blocks.NewSignedBeaconBlock(blindedBlock)
+		require.NoError(t, err)
+		copiedWrapped, err := wrapped.Copy()
+		require.NoError(t, err)
+
+		reconstructed, err := service.ReconstructFullBellatrixBlockBatch(ctx, []interfaces.SignedBeaconBlock{wrappedEmpty, wrapped, copiedWrapped})
+		require.NoError(t, err)
+
+		// Make sure empty blocks are handled correctly
+		require.DeepEqual(t, wantedWrappedEmpty, reconstructed[0])
+
+		// Handle normal execution blocks correctly
+		got, err := reconstructed[1].Block().Body().Execution()
+		require.NoError(t, err)
+		require.DeepEqual(t, payload, got.Proto())
+
+		got, err = reconstructed[2].Block().Body().Execution()
 		require.NoError(t, err)
 		require.DeepEqual(t, payload, got.Proto())
 	})

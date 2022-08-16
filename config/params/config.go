@@ -199,6 +199,10 @@ type BeaconChainConfig struct {
 	DefaultFeeRecipient              common.Address // DefaultFeeRecipient where the transaction fee goes to.
 	EthBurnAddressHex                string         // EthBurnAddressHex is the constant eth address written in hex format to burn fees in that network. the default is 0x0
 	DefaultBuilderGasLimit           uint64         // DefaultBuilderGasLimit is the default used to set the gaslimit for the Builder APIs, typically at around 30M wei.
+
+	// Mev-boost circuit breaker
+	MaxBuilderConsecutiveMissedSlots types.Slot // MaxBuilderConsecutiveMissedSlots defines the number of consecutive skip slot to fallback from using relay/builder to local execution engine for block construction.
+	MaxBuilderEpochMissedSlots       types.Slot // MaxBuilderEpochMissedSlots is defines the number of total skip slot (per epoch rolling windows) to fallback from using relay/builder to local execution engine for block construction.
 }
 
 // InitializeForkSchedule initializes the schedules forks baked into the config.

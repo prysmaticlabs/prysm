@@ -92,6 +92,20 @@ func (e *EngineClient) ReconstructFullBellatrixBlock(
 	return blocks.BuildSignedBeaconBlockFromExecutionPayload(blindedBlock, payload)
 }
 
+func (e *EngineClient) ReconstructFullBellatrixBlockBatch(
+	ctx context.Context, blindedBlocks []interfaces.SignedBeaconBlock,
+) ([]interfaces.SignedBeaconBlock, error) {
+	fullBlocks := make([]interfaces.SignedBeaconBlock, 0, len(blindedBlocks))
+	for _, b := range blindedBlocks {
+		newBlock, err := e.ReconstructFullBellatrixBlock(ctx, b)
+		if err != nil {
+			return nil, err
+		}
+		fullBlocks = append(fullBlocks, newBlock)
+	}
+	return fullBlocks, nil
+}
+
 // GetTerminalBlockHash --
 func (e *EngineClient) GetTerminalBlockHash(ctx context.Context, transitionTime uint64) ([]byte, bool, error) {
 	ttd := new(big.Int)
