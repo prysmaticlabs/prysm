@@ -3754,7 +3754,7 @@ func TestServer_SubmitValidatorRegistrations(t *testing.T) {
 					Registrations: []*ethpbv1.SubmitValidatorRegistrationsRequest_SignedValidatorRegistration{},
 				},
 			},
-			wantErr: "validator registration request is empty",
+			wantErr: "Validator registration request is empty",
 		},
 	}
 	for _, tt := range tests {
