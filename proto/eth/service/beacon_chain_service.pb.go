@@ -387,7 +387,7 @@ var file_proto_eth_service_beacon_chain_service_proto_goTypes = []interface{}{
 	(*v2.StateSyncCommitteesRequest)(nil),        // 6: ethereum.eth.v2.StateSyncCommitteesRequest
 	(*v1.BlockHeadersRequest)(nil),               // 7: ethereum.eth.v1.BlockHeadersRequest
 	(*v1.BlockRequest)(nil),                      // 8: ethereum.eth.v1.BlockRequest
-	(*v2.SignedBeaconBlockContainerV2)(nil),      // 9: ethereum.eth.v2.SignedBeaconBlockContainerV2
+	(*v2.SignedBeaconBlockContainer)(nil),        // 9: ethereum.eth.v2.SignedBeaconBlockContainerV2
 	(*v2.SSZContainer)(nil),                      // 10: ethereum.eth.v2.SSZContainer
 	(*v2.SignedBlindedBeaconBlockContainer)(nil), // 11: ethereum.eth.v2.SignedBlindedBeaconBlockContainer
 	(*v2.BlockRequestV2)(nil),                    // 12: ethereum.eth.v2.BlockRequestV2
@@ -546,7 +546,7 @@ type BeaconChainClient interface {
 	ListSyncCommittees(ctx context.Context, in *v2.StateSyncCommitteesRequest, opts ...grpc.CallOption) (*v2.StateSyncCommitteesResponse, error)
 	ListBlockHeaders(ctx context.Context, in *v1.BlockHeadersRequest, opts ...grpc.CallOption) (*v1.BlockHeadersResponse, error)
 	GetBlockHeader(ctx context.Context, in *v1.BlockRequest, opts ...grpc.CallOption) (*v1.BlockHeaderResponse, error)
-	SubmitBlock(ctx context.Context, in *v2.SignedBeaconBlockContainerV2, opts ...grpc.CallOption) (*empty.Empty, error)
+	SubmitBlock(ctx context.Context, in *v2.SignedBeaconBlockContainer, opts ...grpc.CallOption) (*empty.Empty, error)
 	SubmitBlockSSZ(ctx context.Context, in *v2.SSZContainer, opts ...grpc.CallOption) (*empty.Empty, error)
 	SubmitBlindedBlock(ctx context.Context, in *v2.SignedBlindedBeaconBlockContainer, opts ...grpc.CallOption) (*empty.Empty, error)
 	SubmitBlindedBlockSSZ(ctx context.Context, in *v2.SSZContainer, opts ...grpc.CallOption) (*empty.Empty, error)
@@ -687,7 +687,7 @@ func (c *beaconChainClient) GetBlockHeader(ctx context.Context, in *v1.BlockRequ
 	return out, nil
 }
 
-func (c *beaconChainClient) SubmitBlock(ctx context.Context, in *v2.SignedBeaconBlockContainerV2, opts ...grpc.CallOption) (*empty.Empty, error) {
+func (c *beaconChainClient) SubmitBlock(ctx context.Context, in *v2.SignedBeaconBlockContainer, opts ...grpc.CallOption) (*empty.Empty, error) {
 	out := new(empty.Empty)
 	err := c.cc.Invoke(ctx, "/ethereum.eth.service.BeaconChain/SubmitBlock", in, out, opts...)
 	if err != nil {
@@ -900,7 +900,7 @@ type BeaconChainServer interface {
 	ListSyncCommittees(context.Context, *v2.StateSyncCommitteesRequest) (*v2.StateSyncCommitteesResponse, error)
 	ListBlockHeaders(context.Context, *v1.BlockHeadersRequest) (*v1.BlockHeadersResponse, error)
 	GetBlockHeader(context.Context, *v1.BlockRequest) (*v1.BlockHeaderResponse, error)
-	SubmitBlock(context.Context, *v2.SignedBeaconBlockContainerV2) (*empty.Empty, error)
+	SubmitBlock(context.Context, *v2.SignedBeaconBlockContainer) (*empty.Empty, error)
 	SubmitBlockSSZ(context.Context, *v2.SSZContainer) (*empty.Empty, error)
 	SubmitBlindedBlock(context.Context, *v2.SignedBlindedBeaconBlockContainer) (*empty.Empty, error)
 	SubmitBlindedBlockSSZ(context.Context, *v2.SSZContainer) (*empty.Empty, error)
@@ -965,7 +965,7 @@ func (*UnimplementedBeaconChainServer) ListBlockHeaders(context.Context, *v1.Blo
 func (*UnimplementedBeaconChainServer) GetBlockHeader(context.Context, *v1.BlockRequest) (*v1.BlockHeaderResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetBlockHeader not implemented")
 }
-func (*UnimplementedBeaconChainServer) SubmitBlock(context.Context, *v2.SignedBeaconBlockContainerV2) (*empty.Empty, error) {
+func (*UnimplementedBeaconChainServer) SubmitBlock(context.Context, *v2.SignedBeaconBlockContainer) (*empty.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SubmitBlock not implemented")
 }
 func (*UnimplementedBeaconChainServer) SubmitBlockSSZ(context.Context, *v2.SSZContainer) (*empty.Empty, error) {
@@ -1253,7 +1253,7 @@ func _BeaconChain_GetBlockHeader_Handler(srv interface{}, ctx context.Context, d
 }
 
 func _BeaconChain_SubmitBlock_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v2.SignedBeaconBlockContainerV2)
+	in := new(v2.SignedBeaconBlockContainer)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -1265,7 +1265,7 @@ func _BeaconChain_SubmitBlock_Handler(srv interface{}, ctx context.Context, dec 
 		FullMethod: "/ethereum.eth.service.BeaconChain/SubmitBlock",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BeaconChainServer).SubmitBlock(ctx, req.(*v2.SignedBeaconBlockContainerV2))
+		return srv.(BeaconChainServer).SubmitBlock(ctx, req.(*v2.SignedBeaconBlockContainer))
 	}
 	return interceptor(ctx, in, info, handler)
 }

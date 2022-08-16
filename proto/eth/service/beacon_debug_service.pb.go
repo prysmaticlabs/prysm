@@ -119,7 +119,7 @@ var file_proto_eth_service_beacon_debug_service_proto_rawDesc = []byte{
 
 var file_proto_eth_service_beacon_debug_service_proto_goTypes = []interface{}{
 	(*v1.StateRequest)(nil),            // 0: ethereum.eth.v1.StateRequest
-	(*v2.StateRequestV2)(nil),          // 1: ethereum.eth.v2.StateRequestV2
+	(*v2.BeaconStateRequestV2)(nil),    // 1: ethereum.eth.v2.StateRequestV2
 	(*empty.Empty)(nil),                // 2: google.protobuf.Empty
 	(*v1.BeaconStateResponse)(nil),     // 3: ethereum.eth.v1.BeaconStateResponse
 	(*v2.SSZContainer)(nil),            // 4: ethereum.eth.v2.SSZContainer
@@ -186,8 +186,8 @@ type BeaconDebugClient interface {
 	// Deprecated: Do not use.
 	GetBeaconState(ctx context.Context, in *v1.StateRequest, opts ...grpc.CallOption) (*v1.BeaconStateResponse, error)
 	GetBeaconStateSSZ(ctx context.Context, in *v1.StateRequest, opts ...grpc.CallOption) (*v2.SSZContainer, error)
-	GetBeaconStateV2(ctx context.Context, in *v2.StateRequestV2, opts ...grpc.CallOption) (*v2.BeaconStateResponseV2, error)
-	GetBeaconStateSSZV2(ctx context.Context, in *v2.StateRequestV2, opts ...grpc.CallOption) (*v2.SSZContainer, error)
+	GetBeaconStateV2(ctx context.Context, in *v2.BeaconStateRequestV2, opts ...grpc.CallOption) (*v2.BeaconStateResponseV2, error)
+	GetBeaconStateSSZV2(ctx context.Context, in *v2.BeaconStateRequestV2, opts ...grpc.CallOption) (*v2.SSZContainer, error)
 	// Deprecated: Do not use.
 	ListForkChoiceHeads(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*v1.ForkChoiceHeadsResponse, error)
 	ListForkChoiceHeadsV2(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*v2.ForkChoiceHeadsResponse, error)
@@ -220,7 +220,7 @@ func (c *beaconDebugClient) GetBeaconStateSSZ(ctx context.Context, in *v1.StateR
 	return out, nil
 }
 
-func (c *beaconDebugClient) GetBeaconStateV2(ctx context.Context, in *v2.StateRequestV2, opts ...grpc.CallOption) (*v2.BeaconStateResponseV2, error) {
+func (c *beaconDebugClient) GetBeaconStateV2(ctx context.Context, in *v2.BeaconStateRequestV2, opts ...grpc.CallOption) (*v2.BeaconStateResponseV2, error) {
 	out := new(v2.BeaconStateResponseV2)
 	err := c.cc.Invoke(ctx, "/ethereum.eth.service.BeaconDebug/GetBeaconStateV2", in, out, opts...)
 	if err != nil {
@@ -229,7 +229,7 @@ func (c *beaconDebugClient) GetBeaconStateV2(ctx context.Context, in *v2.StateRe
 	return out, nil
 }
 
-func (c *beaconDebugClient) GetBeaconStateSSZV2(ctx context.Context, in *v2.StateRequestV2, opts ...grpc.CallOption) (*v2.SSZContainer, error) {
+func (c *beaconDebugClient) GetBeaconStateSSZV2(ctx context.Context, in *v2.BeaconStateRequestV2, opts ...grpc.CallOption) (*v2.SSZContainer, error) {
 	out := new(v2.SSZContainer)
 	err := c.cc.Invoke(ctx, "/ethereum.eth.service.BeaconDebug/GetBeaconStateSSZV2", in, out, opts...)
 	if err != nil {
@@ -262,8 +262,8 @@ type BeaconDebugServer interface {
 	// Deprecated: Do not use.
 	GetBeaconState(context.Context, *v1.StateRequest) (*v1.BeaconStateResponse, error)
 	GetBeaconStateSSZ(context.Context, *v1.StateRequest) (*v2.SSZContainer, error)
-	GetBeaconStateV2(context.Context, *v2.StateRequestV2) (*v2.BeaconStateResponseV2, error)
-	GetBeaconStateSSZV2(context.Context, *v2.StateRequestV2) (*v2.SSZContainer, error)
+	GetBeaconStateV2(context.Context, *v2.BeaconStateRequestV2) (*v2.BeaconStateResponseV2, error)
+	GetBeaconStateSSZV2(context.Context, *v2.BeaconStateRequestV2) (*v2.SSZContainer, error)
 	// Deprecated: Do not use.
 	ListForkChoiceHeads(context.Context, *empty.Empty) (*v1.ForkChoiceHeadsResponse, error)
 	ListForkChoiceHeadsV2(context.Context, *empty.Empty) (*v2.ForkChoiceHeadsResponse, error)
@@ -279,10 +279,10 @@ func (*UnimplementedBeaconDebugServer) GetBeaconState(context.Context, *v1.State
 func (*UnimplementedBeaconDebugServer) GetBeaconStateSSZ(context.Context, *v1.StateRequest) (*v2.SSZContainer, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetBeaconStateSSZ not implemented")
 }
-func (*UnimplementedBeaconDebugServer) GetBeaconStateV2(context.Context, *v2.StateRequestV2) (*v2.BeaconStateResponseV2, error) {
+func (*UnimplementedBeaconDebugServer) GetBeaconStateV2(context.Context, *v2.BeaconStateRequestV2) (*v2.BeaconStateResponseV2, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetBeaconStateV2 not implemented")
 }
-func (*UnimplementedBeaconDebugServer) GetBeaconStateSSZV2(context.Context, *v2.StateRequestV2) (*v2.SSZContainer, error) {
+func (*UnimplementedBeaconDebugServer) GetBeaconStateSSZV2(context.Context, *v2.BeaconStateRequestV2) (*v2.SSZContainer, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetBeaconStateSSZV2 not implemented")
 }
 func (*UnimplementedBeaconDebugServer) ListForkChoiceHeads(context.Context, *empty.Empty) (*v1.ForkChoiceHeadsResponse, error) {
@@ -333,7 +333,7 @@ func _BeaconDebug_GetBeaconStateSSZ_Handler(srv interface{}, ctx context.Context
 }
 
 func _BeaconDebug_GetBeaconStateV2_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v2.StateRequestV2)
+	in := new(v2.BeaconStateRequestV2)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -345,13 +345,13 @@ func _BeaconDebug_GetBeaconStateV2_Handler(srv interface{}, ctx context.Context,
 		FullMethod: "/ethereum.eth.service.BeaconDebug/GetBeaconStateV2",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BeaconDebugServer).GetBeaconStateV2(ctx, req.(*v2.StateRequestV2))
+		return srv.(BeaconDebugServer).GetBeaconStateV2(ctx, req.(*v2.BeaconStateRequestV2))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _BeaconDebug_GetBeaconStateSSZV2_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v2.StateRequestV2)
+	in := new(v2.BeaconStateRequestV2)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -363,7 +363,7 @@ func _BeaconDebug_GetBeaconStateSSZV2_Handler(srv interface{}, ctx context.Conte
 		FullMethod: "/ethereum.eth.service.BeaconDebug/GetBeaconStateSSZV2",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BeaconDebugServer).GetBeaconStateSSZV2(ctx, req.(*v2.StateRequestV2))
+		return srv.(BeaconDebugServer).GetBeaconStateSSZV2(ctx, req.(*v2.BeaconStateRequestV2))
 	}
 	return interceptor(ctx, in, info, handler)
 }
