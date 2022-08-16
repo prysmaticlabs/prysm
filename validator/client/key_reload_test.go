@@ -37,10 +37,12 @@ func TestValidator_HandleKeyReload(t *testing.T) {
 			},
 		}
 		client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+		beaconClient := mock.NewMockBeaconChainClient(ctrl)
 		v := validator{
 			validatorClient: client,
 			keyManager:      km,
 			genesisTime:     1,
+			beaconClient:    beaconClient,
 		}
 
 		resp := testutil.GenerateMultipleValidatorStatusResponse([][]byte{inactivePubKey[:], activePubKey[:]})
@@ -52,6 +54,7 @@ func TestValidator_HandleKeyReload(t *testing.T) {
 				PublicKeys: [][]byte{inactivePubKey[:], activePubKey[:]},
 			},
 		).Return(resp, nil)
+		beaconClient.EXPECT().ListValidators(gomock.Any(), gomock.Any()).Return(&ethpb.Validators{}, nil)
 
 		anyActive, err := v.HandleKeyReload(context.Background(), [][fieldparams.BLSPubkeyLength]byte{inactivePubKey, activePubKey})
 		require.NoError(t, err)
@@ -73,10 +76,12 @@ func TestValidator_HandleKeyReload(t *testing.T) {
 			},
 		}
 		client := mock.NewMockBeaconNodeValidatorClient(ctrl)
+		beaconClient := mock.NewMockBeaconChainClient(ctrl)
 		v := validator{
 			validatorClient: client,
 			keyManager:      km,
 			genesisTime:     1,
+			beaconClient:    beaconClient,
 		}
 
 		resp := testutil.GenerateMultipleValidatorStatusResponse([][]byte{inactivePubKey[:]})
@@ -87,6 +92,7 @@ func TestValidator_HandleKeyReload(t *testing.T) {
 				PublicKeys: [][]byte{inactivePubKey[:]},
 			},
 		).Return(resp, nil)
+		beaconClient.EXPECT().ListValidators(gomock.Any(), gomock.Any()).Return(&ethpb.Validators{}, nil)
 
 		anyActive, err := v.HandleKeyReload(context.Background(), [][fieldparams.BLSPubkeyLength]byte{inactivePubKey})
 		require.NoError(t, err)
