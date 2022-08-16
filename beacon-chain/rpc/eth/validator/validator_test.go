@@ -10,7 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/go-bitfield"
 	mockChain "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
-  builderTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/builder/testing"
+	builderTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/builder/testing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
