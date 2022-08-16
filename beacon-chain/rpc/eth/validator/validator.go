@@ -588,11 +588,11 @@ func (vs *Server) SubmitValidatorRegistration(ctx context.Context, reg *ethpbv1.
 	if vs.V1Alpha1Server.BlockBuilder == nil || !vs.V1Alpha1Server.BlockBuilder.Configured() {
 		return &empty.Empty{}, status.Errorf(codes.Internal, "Could not register block builder: %v", builder.ErrNoBuilder)
 	}
-	var registrations []*ethpb.SignedValidatorRegistrationV1
+	var registrations []*ethpbalpha.SignedValidatorRegistrationV1
 	for i, registration := range reg.Registrations {
 		message := reg.Registrations[i].Message
-		registrations = append(registrations, &ethpb.SignedValidatorRegistrationV1{
-			Message: &ethpb.ValidatorRegistrationV1{
+		registrations = append(registrations, &ethpbalpha.SignedValidatorRegistrationV1{
+			Message: &ethpbalpha.ValidatorRegistrationV1{
 				FeeRecipient: message.FeeRecipient,
 				GasLimit:     message.GasLimit,
 				Timestamp:    message.Timestamp,
