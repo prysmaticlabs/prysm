@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/beacon-chain/builder"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/protobuf/ptypes/empty"
