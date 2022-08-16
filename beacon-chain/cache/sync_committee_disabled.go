@@ -3,8 +3,8 @@
 package cache
 
 import (
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 )
 
 // FakeSyncCommitteeCache is a fake `SyncCommitteeCache` to satisfy fuzzing.

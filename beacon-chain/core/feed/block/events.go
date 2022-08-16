@@ -2,7 +2,7 @@
 // during the runtime of a beacon node.
 package block
 
-import "github.com/prysmaticlabs/prysm/consensus-types/interfaces"
+import "github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 
 const (
 	// ReceivedBlock is sent after a block has been received by the beacon node via p2p or RPC.

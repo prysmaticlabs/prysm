@@ -10,7 +10,7 @@ go_library(
         "prune_expired.go",
         "service.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations",
+    importpath = "github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations",
     visibility = [
         "//beacon-chain:__subpackages__",
         "//testing/spectest:__subpackages__",

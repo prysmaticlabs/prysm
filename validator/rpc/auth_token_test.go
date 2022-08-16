@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )

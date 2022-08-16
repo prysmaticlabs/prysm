@@ -4,8 +4,8 @@ package eth
 
 import (
 	ssz "github.com/prysmaticlabs/fastssz"
-	github_com_prysmaticlabs_prysm_consensus_types_primitives "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	v1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
+	github_com_prysmaticlabs_prysm_consensus_types_primitives "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	v1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 )
 
 // MarshalSSZ ssz marshals the Attestation object

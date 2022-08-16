@@ -4,8 +4,8 @@ import (
 	"bytes"
 
 	"github.com/prysmaticlabs/go-bitfield"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
 // JustificationBits marking which epochs have been justified in the beacon chain.

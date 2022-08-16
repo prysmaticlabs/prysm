@@ -12,7 +12,7 @@ go_library(
         "main.go",
         "usage.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/cmd/beacon-chain",
+    importpath = "github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//beacon-chain/builder:go_default_library",

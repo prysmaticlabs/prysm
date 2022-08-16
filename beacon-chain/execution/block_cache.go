@@ -9,8 +9,8 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/execution/types"
-	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/types"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"k8s.io/client-go/tools/cache"
 )
 

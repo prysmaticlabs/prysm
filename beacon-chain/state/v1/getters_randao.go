@@ -1,7 +1,7 @@
 package v1
 
 import (
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 )
 
 // RandaoMixes of block proposers on the beacon chain.

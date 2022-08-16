@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/api/grpc"
+	"github.com/prysmaticlabs/prysm/v3/api/grpc"
 )
 
 // DeserializeRequestBodyIntoContainer deserializes the request's body into an endpoint-specific struct.
