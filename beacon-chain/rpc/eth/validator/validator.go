@@ -584,7 +584,7 @@ func (vs *Server) PrepareBeaconProposer(
 
 // SubmitValidatorRegistration submits validator registrations.
 func (vs *Server) SubmitValidatorRegistration(ctx context.Context, reg *ethpbv1.SubmitValidatorRegistrationsRequest) (*empty.Empty, error) {
-	ctx, span := trace.StartSpan(ctx, "validator.ValidatorRegistration")
+	ctx, span := trace.StartSpan(ctx, "validator.SubmitValidatorRegistration")
 	defer span.End()
 
 	if vs.V1Alpha1Server.BlockBuilder == nil || !vs.V1Alpha1Server.BlockBuilder.Configured() {
