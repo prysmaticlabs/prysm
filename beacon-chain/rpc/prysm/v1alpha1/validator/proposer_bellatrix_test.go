@@ -8,38 +8,39 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
-	blockchainTest "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	builderTest "github.com/prysmaticlabs/prysm/beacon-chain/builder/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
-	b "github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
-	prysmtime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
-	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	mockExecution "github.com/prysmaticlabs/prysm/beacon-chain/execution/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/synccommittee"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
-	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
-	v1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	blockchainTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
+	builderTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/builder/testing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
+	consensusblocks "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
+	prysmtime "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
+	dbTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
+	mockExecution "github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/protoarray"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/slashings"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/synccommittee"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/voluntaryexits"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
+	v3 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v3"
+	mockSync "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/initial-sync/testing"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
+	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+	v1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -167,6 +168,9 @@ func TestServer_getPayloadHeader(t *testing.T) {
 }
 
 func TestServer_getBuilderBlock(t *testing.T) {
+	p := emptyPayload()
+	p.GasLimit = 123
+
 	tests := []struct {
 		name        string
 		blk         interfaces.SignedBeaconBlock
@@ -225,7 +229,7 @@ func TestServer_getBuilderBlock(t *testing.T) {
 			err: "can't submit",
 		},
 		{
-			name: "can submit block",
+			name: "head and payload root mismatch",
 			blk: func() interfaces.SignedBeaconBlock {
 				b := util.NewBlindedBeaconBlockBellatrix()
 				b.Block.Slot = 1
@@ -236,13 +240,52 @@ func TestServer_getBuilderBlock(t *testing.T) {
 			}(),
 			mock: &builderTest.MockBuilderService{
 				HasConfigured: true,
-				Payload:       &v1.ExecutionPayload{GasLimit: 123},
+				Payload:       p,
 			},
 			returnedBlk: func() interfaces.SignedBeaconBlock {
 				b := util.NewBeaconBlockBellatrix()
 				b.Block.Slot = 1
 				b.Block.ProposerIndex = 2
-				b.Block.Body.ExecutionPayload = &v1.ExecutionPayload{GasLimit: 123}
+				b.Block.Body.ExecutionPayload = p
+				wb, err := blocks.NewSignedBeaconBlock(b)
+				require.NoError(t, err)
+				return wb
+			}(),
+			err: "header and payload root do not match",
+		},
+		{
+			name: "can get payload",
+			blk: func() interfaces.SignedBeaconBlock {
+				b := util.NewBlindedBeaconBlockBellatrix()
+				b.Block.Slot = 1
+				b.Block.ProposerIndex = 2
+				txRoot, err := ssz.TransactionsRoot([][]byte{})
+				require.NoError(t, err)
+				b.Block.Body.ExecutionPayloadHeader = &v1.ExecutionPayloadHeader{
+					ParentHash:       make([]byte, fieldparams.RootLength),
+					FeeRecipient:     make([]byte, fieldparams.FeeRecipientLength),
+					StateRoot:        make([]byte, fieldparams.RootLength),
+					ReceiptsRoot:     make([]byte, fieldparams.RootLength),
+					LogsBloom:        make([]byte, fieldparams.LogsBloomLength),
+					PrevRandao:       make([]byte, fieldparams.RootLength),
+					BaseFeePerGas:    make([]byte, fieldparams.RootLength),
+					BlockHash:        make([]byte, fieldparams.RootLength),
+					TransactionsRoot: txRoot[:],
+					GasLimit:         123,
+				}
+				wb, err := blocks.NewSignedBeaconBlock(b)
+				require.NoError(t, err)
+				return wb
+			}(),
+			mock: &builderTest.MockBuilderService{
+				HasConfigured: true,
+				Payload:       p,
+			},
+			returnedBlk: func() interfaces.SignedBeaconBlock {
+				b := util.NewBeaconBlockBellatrix()
+				b.Block.Slot = 1
+				b.Block.ProposerIndex = 2
+				b.Block.Body.ExecutionPayload = p
 				wb, err := blocks.NewSignedBeaconBlock(b)
 				require.NoError(t, err)
 				return wb
@@ -253,9 +296,10 @@ func TestServer_getBuilderBlock(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			vs := &Server{BlockBuilder: tc.mock}
 			gotBlk, err := vs.unblindBuilderBlock(context.Background(), tc.blk)
-			if err != nil {
+			if tc.err != "" {
 				require.ErrorContains(t, tc.err, err)
 			} else {
+				require.NoError(t, err)
 				require.DeepEqual(t, tc.returnedBlk, gotBlk)
 			}
 		})
@@ -437,7 +481,7 @@ func TestServer_GetBellatrixBeaconBlock_HappyCase(t *testing.T) {
 	stateRoot, err := beaconState.HashTreeRoot(ctx)
 	require.NoError(t, err, "Could not hash genesis state")
 
-	genesis := b.NewGenesisBlock(stateRoot[:])
+	genesis := consensusblocks.NewGenesisBlock(stateRoot[:])
 	wsb, err := blocks.NewSignedBeaconBlock(genesis)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, wsb), "Could not save genesis block")
@@ -535,7 +579,7 @@ func TestServer_GetBellatrixBeaconBlock_BuilderCase(t *testing.T) {
 	stateRoot, err := beaconState.HashTreeRoot(ctx)
 	require.NoError(t, err, "Could not hash genesis state")
 
-	genesis := b.NewGenesisBlock(stateRoot[:])
+	genesis := consensusblocks.NewGenesisBlock(stateRoot[:])
 	wsb, err := blocks.NewSignedBeaconBlock(genesis)
 	require.NoError(t, err)
 	require.NoError(t, db.SaveBlock(ctx, wsb), "Could not save genesis block")

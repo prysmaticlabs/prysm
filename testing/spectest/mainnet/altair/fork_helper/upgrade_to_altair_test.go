@@ -3,7 +3,7 @@ package fork_helper
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/testing/spectest/shared/altair/fork"
+	"github.com/prysmaticlabs/prysm/v3/testing/spectest/shared/altair/fork"
 )
 
 func TestMainnet_Altair_UpgradeToAltair(t *testing.T) {

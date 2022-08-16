@@ -7,19 +7,19 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
-	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/config/features"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/config/params"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	pmath "github.com/prysmaticlabs/prysm/math"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/runtime/version"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	pmath "github.com/prysmaticlabs/prysm/v3/math"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -894,42 +894,6 @@ func (f *ForkChoice) Tips() ([][32]byte, []types.Slot) {
 		}
 	}
 	return headsRoots, headsSlots
-}
-
-func (f *ForkChoice) ForkChoiceNodes() []*ethpb.ForkChoiceNode {
-	f.store.nodesLock.RLock()
-	defer f.store.nodesLock.RUnlock()
-	ret := make([]*ethpb.ForkChoiceNode, len(f.store.nodes))
-	var parentRoot [32]byte
-	for i, node := range f.store.nodes {
-		root := node.Root()
-		parentIdx := node.parent
-		if parentIdx == NonExistentNode {
-			parentRoot = params.BeaconConfig().ZeroHash
-		} else {
-			parent := f.store.nodes[parentIdx]
-			parentRoot = parent.Root()
-		}
-		bestDescendantIdx := node.BestDescendant()
-		var bestDescendantRoot [32]byte
-		if bestDescendantIdx == NonExistentNode {
-			bestDescendantRoot = params.BeaconConfig().ZeroHash
-		} else {
-			bestDescendantNode := f.store.nodes[bestDescendantIdx]
-			bestDescendantRoot = bestDescendantNode.Root()
-		}
-
-		ret[i] = &ethpb.ForkChoiceNode{
-			Slot:           node.Slot(),
-			Root:           root[:],
-			Parent:         parentRoot[:],
-			JustifiedEpoch: node.JustifiedEpoch(),
-			FinalizedEpoch: node.FinalizedEpoch(),
-			Weight:         node.Weight(),
-			BestDescendant: bestDescendantRoot[:],
-		}
-	}
-	return ret
 }
 
 // InsertSlashedIndex adds the given slashed validator index to the

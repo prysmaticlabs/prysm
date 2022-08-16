@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/api/client/beacon"
+	"github.com/prysmaticlabs/prysm/v3/api/client/beacon"
 	"github.com/urfave/cli/v2"
 )
 

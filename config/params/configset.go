@@ -2,7 +2,7 @@ package params
 
 import (
 	"github.com/pkg/errors"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 )
 
 var configs *configset

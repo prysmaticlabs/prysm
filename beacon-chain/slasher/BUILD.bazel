@@ -17,7 +17,7 @@ go_library(
         "rpc.go",
         "service.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/slasher",
+    importpath = "github.com/prysmaticlabs/prysm/v3/beacon-chain/slasher",
     visibility = [
         "//beacon-chain:__subpackages__",
         "//testing/slasher/simulator:__subpackages__",
