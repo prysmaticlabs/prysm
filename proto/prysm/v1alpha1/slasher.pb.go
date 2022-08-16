@@ -12,8 +12,8 @@ import (
 	sync "sync"
 
 	github_com_prysmaticlabs_go_bitfield "github.com/prysmaticlabs/go-bitfield"
-	github_com_prysmaticlabs_prysm_consensus_types_primitives "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	_ "github.com/prysmaticlabs/prysm/proto/eth/ext"
+	github_com_prysmaticlabs_prysm_consensus_types_primitives "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	_ "github.com/prysmaticlabs/prysm/v3/proto/eth/ext"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
@@ -223,8 +223,8 @@ type HighestAttestation struct {
 	unknownFields protoimpl.UnknownFields
 
 	ValidatorIndex     uint64                                                          `protobuf:"varint,1,opt,name=validator_index,json=validatorIndex,proto3" json:"validator_index,omitempty"`
-	HighestSourceEpoch github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch `protobuf:"varint,2,opt,name=highest_source_epoch,json=highestSourceEpoch,proto3" json:"highest_source_epoch,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch"`
-	HighestTargetEpoch github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch `protobuf:"varint,3,opt,name=highest_target_epoch,json=highestTargetEpoch,proto3" json:"highest_target_epoch,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch"`
+	HighestSourceEpoch github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch `protobuf:"varint,2,opt,name=highest_source_epoch,json=highestSourceEpoch,proto3" json:"highest_source_epoch,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"`
+	HighestTargetEpoch github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch `protobuf:"varint,3,opt,name=highest_target_epoch,json=highestTargetEpoch,proto3" json:"highest_target_epoch,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"`
 }
 
 func (x *HighestAttestation) Reset() {
@@ -288,7 +288,7 @@ type ProposalHistory struct {
 	// Deprecated: Do not use.
 	EpochBits github_com_prysmaticlabs_go_bitfield.Bitlist `protobuf:"bytes,1,opt,name=epoch_bits,json=epochBits,proto3" json:"epoch_bits,omitempty" cast-type:"github.com/prysmaticlabs/go-bitfield.Bitlist"`
 	// Deprecated: Do not use.
-	LatestEpochWritten github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch `protobuf:"varint,2,opt,name=latest_epoch_written,json=latestEpochWritten,proto3" json:"latest_epoch_written,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch"`
+	LatestEpochWritten github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch `protobuf:"varint,2,opt,name=latest_epoch_written,json=latestEpochWritten,proto3" json:"latest_epoch_written,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"`
 }
 
 func (x *ProposalHistory) Reset() {
@@ -396,7 +396,7 @@ type AttestationHistory struct {
 	// Deprecated: Do not use.
 	TargetToSource map[uint64]uint64 `protobuf:"bytes,1,rep,name=target_to_source,json=targetToSource,proto3" json:"target_to_source,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"varint,2,opt,name=value,proto3"`
 	// Deprecated: Do not use.
-	LatestEpochWritten github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch `protobuf:"varint,2,opt,name=latest_epoch_written,json=latestEpochWritten,proto3" json:"latest_epoch_written,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch"`
+	LatestEpochWritten github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch `protobuf:"varint,2,opt,name=latest_epoch_written,json=latestEpochWritten,proto3" json:"latest_epoch_written,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"`
 }
 
 func (x *AttestationHistory) Reset() {

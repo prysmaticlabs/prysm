@@ -6,7 +6,7 @@ go_library(
         "node.go",
         "server.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/node",
+    importpath = "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/node",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//api/grpc:go_default_library",
