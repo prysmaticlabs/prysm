@@ -89,7 +89,7 @@ func FuzzV1StateHashTreeRoot(f *testing.F) {
 }
 
 func FuzzV1StateUnmarshalSSZ(f *testing.F) {
-	// See example in https://github.com/prysmaticlabs/prysm/v3/issues/5167
+	// See example in https://github.com/prysmaticlabs/prysm/issues/5167
 	b, err := base64.StdEncoding.DecodeString("AgAGAAAA5AAAAAAAAAAAAAAAAAAAAAAAAAB51og2NJR6COTeAGdBDUL2wythbDd/ntOHzD/JAg6kywEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHnWiDY0lHoI5N4AZ0ENQvbDK2FsN3+e04fMP8kCDqTLti/UWQrIlR5nKGy5okElUBusCaDxo+6f0kX7B54ry9byYg5qzCruPLf/SccXww14BppwTrLrI/CqCbt6AWTO4kS/jz0no8RYv4wBhofviY9/W28LdzMhh6XVRUzK2Us4/wE=")
 	require.NoError(f, err)
 	f.Add(b)

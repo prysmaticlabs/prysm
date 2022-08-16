@@ -259,7 +259,7 @@ func performRoles(slotCtx context.Context, allRoles map[[48]byte][]iface.Validat
 			if err := recover(); err != nil { // catch any panic in logging
 				log.WithField("err", err).
 					Error("Panic occurred when logging validator report. This" +
-						" should never happen! Please file a report at github.com/prysmaticlabs/prysm/v3/issues/new")
+						" should never happen! Please file a report at github.com/prysmaticlabs/prysm/issues/new")
 			}
 		}()
 		// Log this client performance in the previous epoch

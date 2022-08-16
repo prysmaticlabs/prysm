@@ -38,7 +38,7 @@ var (
 
 // blockedBuckets represents the buckets that we want to restrict
 // from our metrics fetching for performance reasons. For a detailed
-// summary, it can be read in https://github.com/prysmaticlabs/prysm/v3/issues/8274.
+// summary, it can be read in https://github.com/prysmaticlabs/prysm/issues/8274.
 var blockedBuckets = [][]byte{
 	deprecatedAttestationHistoryBucket,
 	lowestSignedSourceBucket,

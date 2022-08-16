@@ -45,7 +45,7 @@ func DefaultDataDir() string {
 
 // FixDefaultDataDir checks if previous data directory is found and can be migrated to a new path.
 // This is used to resolve issue with weak default path (for Windows users) in existing installations.
-// For full details see: https://github.com/prysmaticlabs/prysm/v3/issues/5660.
+// For full details see: https://github.com/prysmaticlabs/prysm/issues/5660.
 func FixDefaultDataDir(prevDataDir, curDataDir string) error {
 	if runtime.GOOS != "windows" {
 		return nil
@@ -83,7 +83,7 @@ func FixDefaultDataDir(prevDataDir, curDataDir string) error {
 		log.Warnf("Outdated data directory is found: %s! The current data folder %s is not empty, "+
 			"so can not copy files automatically. Either remove outdated data directory, or "+
 			"consider specifying non-existent new data directory (files will be moved automatically).\n"+
-			"For full details see: https://github.com/prysmaticlabs/prysm/v3/issues/5660.",
+			"For full details see: https://github.com/prysmaticlabs/prysm/issues/5660.",
 			prevDataDir, curDataDir)
 		return nil
 	}

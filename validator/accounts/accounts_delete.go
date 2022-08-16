@@ -59,7 +59,7 @@ func (acm *AccountsCLIManager) Delete(ctx context.Context) error {
 	log.WithField("publicKeys", allAccountStr).Warn(
 		"Attempted to delete accounts. IMPORTANT: please run `validator accounts list` to ensure " +
 			"the public keys are indeed deleted. If they are still there, please file an issue at " +
-			"https://github.com/prysmaticlabs/prysm/v3/issues/new")
+			"https://github.com/prysmaticlabs/prysm/issues/new")
 	return nil
 }
 

@@ -46,7 +46,7 @@ func TestProcessAttestationNoVerifySignature_BeaconFuzzIssue78(t *testing.T) {
 	require.ErrorContains(t, "committee index 1 >= committee count 1", err)
 }
 
-// Regression introduced in https://github.com/prysmaticlabs/prysm/v3/pull/8566.
+// Regression introduced in https://github.com/prysmaticlabs/prysm/pull/8566.
 func TestVerifyAttestationNoVerifySignature_IncorrectSourceEpoch(t *testing.T) {
 	// Attestation with an empty signature
 

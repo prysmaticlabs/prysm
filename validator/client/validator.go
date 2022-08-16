@@ -270,7 +270,7 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 				log.Errorf("The genesis validators root received from the beacon node does not match what is in " +
 					"your validator database. This could indicate that this is a database meant for another network. If " +
 					"you were previously running this validator database on another network, please run --clear-db to " +
-					"clear the database. If not, please file an issue at https://github.com/prysmaticlabs/prysm/v3/issues")
+					"clear the database. If not, please file an issue at https://github.com/prysmaticlabs/prysm/issues")
 				return fmt.Errorf(
 					"genesis validators root from beacon node (%#x) does not match root saved in validator db (%#x)",
 					chainStartRes.GenesisValidatorsRoot,
