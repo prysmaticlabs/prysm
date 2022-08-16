@@ -17,7 +17,7 @@ import (
 	emptypb "github.com/golang/protobuf/ptypes/empty"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/utilities"
-	github_com_prysmaticlabs_prysm_consensus_types_primitives "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	github_com_prysmaticlabs_prysm_v3_consensus_types_primitives "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	v1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
 	"google.golang.org/grpc"
@@ -35,7 +35,7 @@ var _ status.Status
 var _ = runtime.String
 var _ = utilities.NewDoubleArray
 var _ = metadata.Join
-var _ = github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch(0)
+var _ = github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.Epoch(0)
 var _ = emptypb.Empty{}
 var _ = empty.Empty{}
 
@@ -67,7 +67,7 @@ func request_BeaconValidator_GetAttesterDuties_0(ctx context.Context, marshaler 
 	if err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "epoch", err)
 	}
-	protoReq.Epoch = github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch(epoch)
+	protoReq.Epoch = github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.Epoch(epoch)
 
 	msg, err := client.GetAttesterDuties(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
@@ -102,7 +102,7 @@ func local_request_BeaconValidator_GetAttesterDuties_0(ctx context.Context, mars
 	if err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "epoch", err)
 	}
-	protoReq.Epoch = github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch(epoch)
+	protoReq.Epoch = github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.Epoch(epoch)
 
 	msg, err := server.GetAttesterDuties(ctx, &protoReq)
 	return msg, metadata, err
@@ -129,7 +129,7 @@ func request_BeaconValidator_GetProposerDuties_0(ctx context.Context, marshaler 
 	if err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "epoch", err)
 	}
-	protoReq.Epoch = github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch(epoch)
+	protoReq.Epoch = github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.Epoch(epoch)
 
 	msg, err := client.GetProposerDuties(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
@@ -156,7 +156,7 @@ func local_request_BeaconValidator_GetProposerDuties_0(ctx context.Context, mars
 	if err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "epoch", err)
 	}
-	protoReq.Epoch = github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch(epoch)
+	protoReq.Epoch = github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.Epoch(epoch)
 
 	msg, err := server.GetProposerDuties(ctx, &protoReq)
 	return msg, metadata, err
@@ -191,7 +191,7 @@ func request_BeaconValidator_GetSyncCommitteeDuties_0(ctx context.Context, marsh
 	if err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "epoch", err)
 	}
-	protoReq.Epoch = github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch(epoch)
+	protoReq.Epoch = github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.Epoch(epoch)
 
 	msg, err := client.GetSyncCommitteeDuties(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
@@ -226,7 +226,7 @@ func local_request_BeaconValidator_GetSyncCommitteeDuties_0(ctx context.Context,
 	if err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "epoch", err)
 	}
-	protoReq.Epoch = github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch(epoch)
+	protoReq.Epoch = github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.Epoch(epoch)
 
 	msg, err := server.GetSyncCommitteeDuties(ctx, &protoReq)
 	return msg, metadata, err
@@ -257,7 +257,7 @@ func request_BeaconValidator_ProduceBlock_0(ctx context.Context, marshaler runti
 	if err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "slot", err)
 	}
-	protoReq.Slot = github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot(slot)
+	protoReq.Slot = github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.Slot(slot)
 
 	if err := req.ParseForm(); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
@@ -291,7 +291,7 @@ func local_request_BeaconValidator_ProduceBlock_0(ctx context.Context, marshaler
 	if err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "slot", err)
 	}
-	protoReq.Slot = github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot(slot)
+	protoReq.Slot = github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.Slot(slot)
 
 	if err := req.ParseForm(); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
@@ -329,7 +329,7 @@ func request_BeaconValidator_ProduceBlockV2_0(ctx context.Context, marshaler run
 	if err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "slot", err)
 	}
-	protoReq.Slot = github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot(slot)
+	protoReq.Slot = github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.Slot(slot)
 
 	if err := req.ParseForm(); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
@@ -363,7 +363,7 @@ func local_request_BeaconValidator_ProduceBlockV2_0(ctx context.Context, marshal
 	if err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "slot", err)
 	}
-	protoReq.Slot = github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot(slot)
+	protoReq.Slot = github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.Slot(slot)
 
 	if err := req.ParseForm(); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
@@ -401,7 +401,7 @@ func request_BeaconValidator_ProduceBlockV2SSZ_0(ctx context.Context, marshaler 
 	if err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "slot", err)
 	}
-	protoReq.Slot = github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot(slot)
+	protoReq.Slot = github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.Slot(slot)
 
 	if err := req.ParseForm(); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
@@ -435,7 +435,7 @@ func local_request_BeaconValidator_ProduceBlockV2SSZ_0(ctx context.Context, mars
 	if err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "slot", err)
 	}
-	protoReq.Slot = github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot(slot)
+	protoReq.Slot = github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.Slot(slot)
 
 	if err := req.ParseForm(); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
@@ -473,7 +473,7 @@ func request_BeaconValidator_ProduceBlindedBlock_0(ctx context.Context, marshale
 	if err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "slot", err)
 	}
-	protoReq.Slot = github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot(slot)
+	protoReq.Slot = github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.Slot(slot)
 
 	if err := req.ParseForm(); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
@@ -507,7 +507,7 @@ func local_request_BeaconValidator_ProduceBlindedBlock_0(ctx context.Context, ma
 	if err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "slot", err)
 	}
-	protoReq.Slot = github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot(slot)
+	protoReq.Slot = github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.Slot(slot)
 
 	if err := req.ParseForm(); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
@@ -545,7 +545,7 @@ func request_BeaconValidator_ProduceBlindedBlockSSZ_0(ctx context.Context, marsh
 	if err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "slot", err)
 	}
-	protoReq.Slot = github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot(slot)
+	protoReq.Slot = github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.Slot(slot)
 
 	if err := req.ParseForm(); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
@@ -579,7 +579,7 @@ func local_request_BeaconValidator_ProduceBlindedBlockSSZ_0(ctx context.Context,
 	if err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "slot", err)
 	}
-	protoReq.Slot = github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot(slot)
+	protoReq.Slot = github_com_prysmaticlabs_prysm_v3_consensus_types_primitives.Slot(slot)
 
 	if err := req.ParseForm(); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
