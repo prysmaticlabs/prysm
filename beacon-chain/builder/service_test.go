@@ -4,13 +4,13 @@ import (
 	"context"
 	"testing"
 
-	buildertesting "github.com/prysmaticlabs/prysm/api/client/builder/testing"
-	blockchainTesting "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	dbtesting "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	buildertesting "github.com/prysmaticlabs/prysm/v3/api/client/builder/testing"
+	blockchainTesting "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
+	dbtesting "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 func Test_NewServiceWithBuilder(t *testing.T) {
