@@ -6,18 +6,18 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/execution"
-	prysmtime "github.com/prysmaticlabs/prysm/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db/filters"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/monitoring/tracing"
-	"github.com/prysmaticlabs/prysm/runtime/version"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/execution"
+	prysmtime "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/filters"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -25,13 +25,13 @@ import (
 // ReplayBlocks replays the input blocks on the input state until the target slot is reached.
 //
 // WARNING Blocks passed to the function must be in decreasing slots order.
-func (_ *State) ReplayBlocks(
+func (_ *State) replayBlocks(
 	ctx context.Context,
 	state state.BeaconState,
 	signed []interfaces.SignedBeaconBlock,
 	targetSlot types.Slot,
 ) (state.BeaconState, error) {
-	ctx, span := trace.StartSpan(ctx, "stateGen.ReplayBlocks")
+	ctx, span := trace.StartSpan(ctx, "stateGen.replayBlocks")
 	defer span.End()
 	var err error
 
@@ -77,9 +77,9 @@ func (_ *State) ReplayBlocks(
 	return state, nil
 }
 
-// LoadBlocks loads the blocks between start slot and end slot by recursively fetching from end block root.
+// loadBlocks loads the blocks between start slot and end slot by recursively fetching from end block root.
 // The Blocks are returned in slot-descending order.
-func (s *State) LoadBlocks(ctx context.Context, startSlot, endSlot types.Slot, endBlockRoot [32]byte) ([]interfaces.SignedBeaconBlock, error) {
+func (s *State) loadBlocks(ctx context.Context, startSlot, endSlot types.Slot, endBlockRoot [32]byte) ([]interfaces.SignedBeaconBlock, error) {
 	// Nothing to load for invalid range.
 	if endSlot < startSlot {
 		return nil, fmt.Errorf("start slot %d >= end slot %d", startSlot, endSlot)

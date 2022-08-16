@@ -6,7 +6,7 @@ go_library(
         "flags.go",
         "interop.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/cmd/validator/flags",
+    importpath = "github.com/prysmaticlabs/prysm/v3/cmd/validator/flags",
     visibility = [
         "//cmd/validator:__subpackages__",
         "//testing/endtoend:__subpackages__",

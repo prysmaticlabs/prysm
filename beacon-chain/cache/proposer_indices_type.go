@@ -3,7 +3,7 @@ package cache
 import (
 	"errors"
 
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 )
 
 // ErrNotProposerIndices will be returned when a cache object is not a pointer to

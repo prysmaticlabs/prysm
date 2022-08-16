@@ -13,7 +13,7 @@ go_library(
         "sync_committee.go",
         "voluntary_exit.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/testing/spectest/shared/bellatrix/operations",
+    importpath = "github.com/prysmaticlabs/prysm/v3/testing/spectest/shared/bellatrix/operations",
     visibility = ["//testing/spectest:__subpackages__"],
     deps = [
         "//beacon-chain/core/altair:go_default_library",

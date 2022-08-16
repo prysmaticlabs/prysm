@@ -9,7 +9,7 @@ go_library(
         "structs.go",
         "structs_marshalling.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/rpc/apimiddleware",
+    importpath = "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/apimiddleware",
     visibility = ["//visibility:public"],
     deps = [
         "//api/gateway/apimiddleware:go_default_library",

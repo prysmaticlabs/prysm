@@ -4,9 +4,9 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	validatorpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
 )
 
 // GetBlockSignRequest maps the request for signing type BLOCK.
@@ -113,30 +113,30 @@ func GetAttestationSignRequest(request *validatorpb.SignRequest, genesisValidato
 	}, nil
 }
 
-// GetBlockV2AltairSignRequest maps the request for signing type BLOCK_V2.
-func GetBlockV2AltairSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot []byte) (*BlockV2AltairSignRequest, error) {
-	beaconBlockV2, ok := request.Object.(*validatorpb.SignRequest_BlockV2)
+// GetBlockAltairSignRequest maps the request for signing type BLOCK_V2.
+func GetBlockAltairSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot []byte) (*BlockAltairSignRequest, error) {
+	beaconBlockAltair, ok := request.Object.(*validatorpb.SignRequest_BlockAltair)
 	if !ok {
-		return nil, errors.New("failed to cast request object to block v2")
+		return nil, errors.New("failed to cast request object to block altair")
 	}
-	if beaconBlockV2 == nil {
+	if beaconBlockAltair == nil {
 		return nil, errors.New("invalid sign request: BeaconBlock is nil")
 	}
 	fork, err := MapForkInfo(request.SigningSlot, genesisValidatorsRoot)
 	if err != nil {
 		return nil, err
 	}
-	beaconBlockAltair, err := MapBeaconBlockAltair(beaconBlockV2.BlockV2)
+	blockAltair, err := MapBeaconBlockAltair(beaconBlockAltair.BlockAltair)
 	if err != nil {
 		return nil, err
 	}
-	return &BlockV2AltairSignRequest{
+	return &BlockAltairSignRequest{
 		Type:        "BLOCK_V2",
 		ForkInfo:    fork,
 		SigningRoot: request.SigningRoot,
 		BeaconBlock: &BeaconBlockAltairBlockV2{
 			Version: "ALTAIR",
-			Block:   beaconBlockAltair,
+			Block:   blockAltair,
 		},
 	}, nil
 }
@@ -271,37 +271,36 @@ func GetSyncCommitteeContributionAndProofSignRequest(request *validatorpb.SignRe
 	}, nil
 }
 
-// GetBlockV2BellatrixSignRequest maps the request for signing type BLOCK_V2_BELLATRIX.
-// note: web3signer uses blockv2 instead of block v3 for signing type
-func GetBlockV2BellatrixSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot []byte) (*BlockV2BellatrixSignRequest, error) {
+// GetBlockBellatrixSignRequest maps the request for signing type BLOCK_V2_BELLATRIX.
+func GetBlockBellatrixSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot []byte) (*BlockBellatrixSignRequest, error) {
 	if request == nil {
 		return nil, errors.New("nil sign request provided")
 	}
 	var b interfaces.BeaconBlock
 	switch request.Object.(type) {
-	case *validatorpb.SignRequest_BlindedBlockV3:
-		blindedBlockV3, ok := request.Object.(*validatorpb.SignRequest_BlindedBlockV3)
+	case *validatorpb.SignRequest_BlindedBlockBellatrix:
+		blindedBlockBellatrix, ok := request.Object.(*validatorpb.SignRequest_BlindedBlockBellatrix)
 		if !ok {
-			return nil, errors.New("failed to cast request object to blinded block v3")
+			return nil, errors.New("failed to cast request object to blinded block bellatrix")
 		}
-		if blindedBlockV3 == nil {
-			return nil, errors.New("invalid sign request - blindedBlockV3 is nil")
+		if blindedBlockBellatrix == nil {
+			return nil, errors.New("invalid sign request - blindedBlockBellatrix is nil")
 		}
-		beaconBlock, err := blocks.NewBeaconBlock(blindedBlockV3.BlindedBlockV3)
+		beaconBlock, err := blocks.NewBeaconBlock(blindedBlockBellatrix.BlindedBlockBellatrix)
 		if err != nil {
 			return nil, err
 		}
 		b = beaconBlock
-	case *validatorpb.SignRequest_BlockV3:
-		blockV3Bellatrix, ok := request.Object.(*validatorpb.SignRequest_BlockV3)
+	case *validatorpb.SignRequest_BlockBellatrix:
+		blockBellatrix, ok := request.Object.(*validatorpb.SignRequest_BlockBellatrix)
 		if !ok {
 			return nil, errors.New("failed to cast request object to block v3 bellatrix")
 		}
 
-		if blockV3Bellatrix == nil {
-			return nil, errors.New("invalid sign request: blockV3Bellatrix is nil")
+		if blockBellatrix == nil {
+			return nil, errors.New("invalid sign request: blockBellatrix is nil")
 		}
-		beaconBlock, err := blocks.NewBeaconBlock(blockV3Bellatrix.BlockV3)
+		beaconBlock, err := blocks.NewBeaconBlock(blockBellatrix.BlockBellatrix)
 		if err != nil {
 			return nil, err
 		}
@@ -317,7 +316,7 @@ func GetBlockV2BellatrixSignRequest(request *validatorpb.SignRequest, genesisVal
 	if err != nil {
 		return nil, err
 	}
-	return &BlockV2BellatrixSignRequest{
+	return &BlockBellatrixSignRequest{
 		Type:        "BLOCK_V2",
 		ForkInfo:    fork,
 		SigningRoot: request.SigningRoot,

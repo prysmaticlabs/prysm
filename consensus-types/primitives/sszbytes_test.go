@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 )
 
 func TestSSZBytes_HashTreeRoot(t *testing.T) {

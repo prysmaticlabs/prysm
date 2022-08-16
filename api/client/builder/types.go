@@ -8,9 +8,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	v1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
-	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	v1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
 type SignedValidatorRegistration struct {
@@ -625,4 +625,10 @@ func (b *BlindedBeaconBlockBodyBellatrix) MarshalJSON() ([]byte, error) {
 		SyncAggregate:          &SyncAggregate{b.BlindedBeaconBlockBodyBellatrix.SyncAggregate},
 		ExecutionPayloadHeader: &ExecutionPayloadHeader{ExecutionPayloadHeader: b.BlindedBeaconBlockBodyBellatrix.ExecutionPayloadHeader},
 	})
+}
+
+type ErrorMessage struct {
+	Code        int      `json:"code"`
+	Message     string   `json:"message"`
+	Stacktraces []string `json:"stacktraces,omitempty"`
 }

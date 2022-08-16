@@ -2,7 +2,7 @@ package v2
 
 import (
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
 )
 
 // SetRandaoMixes for the beacon state. Updates the entire
