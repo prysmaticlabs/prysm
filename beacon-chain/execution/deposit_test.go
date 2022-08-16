@@ -59,7 +59,7 @@ func TestProcessDeposit_OK(t *testing.T) {
 		server.Stop()
 	})
 	web3Service, err := NewService(context.Background(),
-		WithHttpEndpoints([]string{endpoint}),
+		WithHttpEndpoint(endpoint),
 		WithDatabase(beaconDB),
 	)
 	require.NoError(t, err, "Unable to setup web3 ETH1.0 chain service")
@@ -88,7 +88,7 @@ func TestProcessDeposit_InvalidMerkleBranch(t *testing.T) {
 		server.Stop()
 	})
 	web3Service, err := NewService(context.Background(),
-		WithHttpEndpoints([]string{endpoint}),
+		WithHttpEndpoint(endpoint),
 		WithDatabase(beaconDB),
 	)
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
@@ -119,7 +119,7 @@ func TestProcessDeposit_InvalidPublicKey(t *testing.T) {
 		server.Stop()
 	})
 	web3Service, err := NewService(context.Background(),
-		WithHttpEndpoints([]string{endpoint}),
+		WithHttpEndpoint(endpoint),
 		WithDatabase(beaconDB),
 	)
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
@@ -161,7 +161,7 @@ func TestProcessDeposit_InvalidSignature(t *testing.T) {
 		server.Stop()
 	})
 	web3Service, err := NewService(context.Background(),
-		WithHttpEndpoints([]string{endpoint}),
+		WithHttpEndpoint(endpoint),
 		WithDatabase(beaconDB),
 	)
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
@@ -203,7 +203,7 @@ func TestProcessDeposit_UnableToVerify(t *testing.T) {
 		server.Stop()
 	})
 	web3Service, err := NewService(context.Background(),
-		WithHttpEndpoints([]string{endpoint}),
+		WithHttpEndpoint(endpoint),
 		WithDatabase(beaconDB),
 	)
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
@@ -241,7 +241,7 @@ func TestProcessDeposit_IncompleteDeposit(t *testing.T) {
 		server.Stop()
 	})
 	web3Service, err := NewService(context.Background(),
-		WithHttpEndpoints([]string{endpoint}),
+		WithHttpEndpoint(endpoint),
 		WithDatabase(beaconDB),
 	)
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
@@ -310,7 +310,7 @@ func TestProcessDeposit_AllDepositedSuccessfully(t *testing.T) {
 		server.Stop()
 	})
 	web3Service, err := NewService(context.Background(),
-		WithHttpEndpoints([]string{endpoint}),
+		WithHttpEndpoint(endpoint),
 		WithDatabase(beaconDB),
 	)
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")

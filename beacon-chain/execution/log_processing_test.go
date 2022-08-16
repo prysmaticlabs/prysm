@@ -40,7 +40,7 @@ func TestProcessDepositLog_OK(t *testing.T) {
 		server.Stop()
 	})
 	web3Service, err := NewService(context.Background(),
-		WithHttpEndpoints([]string{endpoint}),
+		WithHttpEndpoint(endpoint),
 		WithDepositContractAddress(testAcc.ContractAddr),
 		WithDatabase(beaconDB),
 		WithDepositCache(depositCache),
@@ -109,7 +109,7 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 	})
 
 	web3Service, err := NewService(context.Background(),
-		WithHttpEndpoints([]string{endpoint}),
+		WithHttpEndpoint(endpoint),
 		WithDepositContractAddress(testAcc.ContractAddr),
 		WithDatabase(beaconDB),
 		WithDepositCache(depositCache),
@@ -170,7 +170,7 @@ func TestUnpackDepositLogData_OK(t *testing.T) {
 		server.Stop()
 	})
 	web3Service, err := NewService(context.Background(),
-		WithHttpEndpoints([]string{endpoint}),
+		WithHttpEndpoint(endpoint),
 		WithDepositContractAddress(testAcc.ContractAddr),
 		WithDatabase(beaconDB),
 	)
@@ -225,7 +225,7 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 	})
 
 	web3Service, err := NewService(context.Background(),
-		WithHttpEndpoints([]string{endpoint}),
+		WithHttpEndpoint(endpoint),
 		WithDepositContractAddress(testAcc.ContractAddr),
 		WithDatabase(beaconDB),
 		WithDepositCache(depositCache),
@@ -300,7 +300,7 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 		server.Stop()
 	})
 	web3Service, err := NewService(context.Background(),
-		WithHttpEndpoints([]string{endpoint}),
+		WithHttpEndpoint(endpoint),
 		WithDepositContractAddress(testAcc.ContractAddr),
 		WithDatabase(beaconDB),
 		WithDepositCache(depositCache),
@@ -392,7 +392,7 @@ func TestProcessETH2GenesisLog_CorrectNumOfDeposits(t *testing.T) {
 	})
 
 	web3Service, err := NewService(context.Background(),
-		WithHttpEndpoints([]string{endpoint}),
+		WithHttpEndpoint(endpoint),
 		WithDepositContractAddress(testAcc.ContractAddr),
 		WithDatabase(kvStore),
 		WithDepositCache(depositCache),
@@ -490,7 +490,7 @@ func TestProcessETH2GenesisLog_LargePeriodOfNoLogs(t *testing.T) {
 	})
 
 	web3Service, err := NewService(context.Background(),
-		WithHttpEndpoints([]string{endpoint}),
+		WithHttpEndpoint(endpoint),
 		WithDepositContractAddress(testAcc.ContractAddr),
 		WithDatabase(kvStore),
 		WithDepositCache(depositCache),
@@ -602,7 +602,7 @@ func newPowchainService(t *testing.T, eth1Backend *mock.TestAccount, beaconDB db
 		server.Stop()
 	})
 	web3Service, err := NewService(context.Background(),
-		WithHttpEndpoints([]string{endpoint}),
+		WithHttpEndpoint(endpoint),
 		WithDepositContractAddress(eth1Backend.ContractAddr),
 		WithDatabase(beaconDB),
 		WithDepositCache(depositCache),
