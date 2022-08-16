@@ -3,12 +3,10 @@ package fieldtrie_test
 import (
 	"testing"
 
-
-
-	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/fieldtrie"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
 	stateTypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/types"
+	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
