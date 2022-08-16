@@ -7,7 +7,7 @@ go_library(
         "log.go",
         "main.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/server",
+    importpath = "github.com/prysmaticlabs/prysm/v3/beacon-chain/server",
     visibility = ["//visibility:private"],
     deps = [
         "//api/gateway:go_default_library",

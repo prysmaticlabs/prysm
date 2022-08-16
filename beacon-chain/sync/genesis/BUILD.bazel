@@ -6,7 +6,7 @@ go_library(
         "api.go",
         "file.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/sync/genesis",
+    importpath = "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/genesis",
     visibility = ["//visibility:public"],
     deps = [
         "//api/client/beacon:go_default_library",

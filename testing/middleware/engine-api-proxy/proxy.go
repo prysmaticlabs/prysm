@@ -17,7 +17,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/network"
+	"github.com/prysmaticlabs/prysm/v3/network"
 	"github.com/sirupsen/logrus"
 )
 

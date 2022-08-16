@@ -2,8 +2,8 @@ package v3
 
 import (
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 )
 
 // SetLatestExecutionPayloadHeader for the beacon state.

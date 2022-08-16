@@ -3,7 +3,7 @@ load("@prysm//tools/go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["block.go"],
-    importpath = "github.com/prysmaticlabs/prysm/consensus-types/mock",
+    importpath = "github.com/prysmaticlabs/prysm/v3/consensus-types/mock",
     visibility = ["//visibility:public"],
     deps = [
         "//consensus-types/interfaces:go_default_library",

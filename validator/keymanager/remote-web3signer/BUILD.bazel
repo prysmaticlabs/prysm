@@ -6,7 +6,7 @@ go_library(
         "keymanager.go",
         "metrics.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/validator/keymanager/remote-web3signer",
+    importpath = "github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote-web3signer",
     visibility = [
         "//cmd/validator:__subpackages__",
         "//validator:__subpackages__",

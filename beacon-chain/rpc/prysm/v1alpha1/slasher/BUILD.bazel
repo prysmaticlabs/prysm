@@ -7,7 +7,7 @@ go_library(
         "blocks.go",
         "server.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/rpc/prysm/v1alpha1/slasher",
+    importpath = "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/prysm/v1alpha1/slasher",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//beacon-chain/slasher:go_default_library",

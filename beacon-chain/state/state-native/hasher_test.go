@@ -5,21 +5,20 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
-	statenative "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
-	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
+	statenative "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v3/config/features"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 )
 
 func TestComputeFieldRootsWithHasher_Phase0(t *testing.T) {
+	features.Init(&features.Flags{EnableNativeState: true})
 	beaconState, err := util.NewBeaconState(util.FillRootsNaturalOpt)
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetGenesisTime(123))
@@ -46,10 +45,11 @@ func TestComputeFieldRootsWithHasher_Phase0(t *testing.T) {
 	require.NoError(t, beaconState.SetCurrentJustifiedCheckpoint(checkpoint("current")))
 	require.NoError(t, beaconState.SetFinalizedCheckpoint(checkpoint("finalized")))
 
-	v1State, ok := beaconState.(*v1.BeaconState)
+	nativeState, ok := beaconState.(*statenative.BeaconState)
 	require.Equal(t, true, ok)
-	protoState, ok := v1State.InnerStateUnsafe().(*ethpb.BeaconState)
+	protoState, ok := nativeState.InnerStateUnsafe().(*ethpb.BeaconState)
 	require.Equal(t, true, ok)
+
 	initState, err := statenative.InitializeFromProtoPhase0(protoState)
 	require.NoError(t, err)
 	s, ok := initState.(*statenative.BeaconState)
@@ -80,9 +80,11 @@ func TestComputeFieldRootsWithHasher_Phase0(t *testing.T) {
 		{0xa9, 0xbb, 0x6a, 0x1f, 0x5d, 0x86, 0x7d, 0xa7, 0x5a, 0x7d, 0x9d, 0x8d, 0xc0, 0x15, 0xb7, 0x0, 0xee, 0xa9, 0x68, 0x51, 0x88, 0x57, 0x5a, 0xd9, 0x4e, 0x1d, 0x8e, 0x44, 0xbf, 0xdc, 0x73, 0xff},
 	}
 	assert.DeepEqual(t, expected, root)
+	features.Init(&features.Flags{EnableNativeState: false})
 }
 
 func TestComputeFieldRootsWithHasher_Altair(t *testing.T) {
+	features.Init(&features.Flags{EnableNativeState: true})
 	beaconState, err := util.NewBeaconStateAltair(util.FillRootsNaturalOptAltair)
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetGenesisTime(123))
@@ -112,9 +114,9 @@ func TestComputeFieldRootsWithHasher_Altair(t *testing.T) {
 	require.NoError(t, beaconState.SetCurrentSyncCommittee(syncCommittee("current")))
 	require.NoError(t, beaconState.SetNextSyncCommittee(syncCommittee("next")))
 
-	v1State, ok := beaconState.(*v2.BeaconState)
+	nativeState, ok := beaconState.(*statenative.BeaconState)
 	require.Equal(t, true, ok)
-	protoState, ok := v1State.InnerStateUnsafe().(*ethpb.BeaconStateAltair)
+	protoState, ok := nativeState.InnerStateUnsafe().(*ethpb.BeaconStateAltair)
 	require.Equal(t, true, ok)
 	initState, err := statenative.InitializeFromProtoAltair(protoState)
 	require.NoError(t, err)
@@ -150,9 +152,11 @@ func TestComputeFieldRootsWithHasher_Altair(t *testing.T) {
 		{0xd6, 0x4c, 0xb1, 0xac, 0x61, 0x7, 0x26, 0xbb, 0xd3, 0x27, 0x2a, 0xcd, 0xdd, 0x55, 0xf, 0x2b, 0x6a, 0xe8, 0x1, 0x31, 0x48, 0x66, 0x2f, 0x98, 0x7b, 0x6d, 0x27, 0x69, 0xd9, 0x40, 0xcc, 0x37},
 	}
 	assert.DeepEqual(t, expected, root)
+	features.Init(&features.Flags{EnableNativeState: false})
 }
 
 func TestComputeFieldRootsWithHasher_Bellatrix(t *testing.T) {
+	features.Init(&features.Flags{EnableNativeState: true})
 	beaconState, err := util.NewBeaconStateBellatrix(util.FillRootsNaturalOptBellatrix)
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetGenesisTime(123))
@@ -185,9 +189,9 @@ func TestComputeFieldRootsWithHasher_Bellatrix(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetLatestExecutionPayloadHeader(wrappedHeader))
 
-	v1State, ok := beaconState.(*v3.BeaconState)
+	nativeState, ok := beaconState.(*statenative.BeaconState)
 	require.Equal(t, true, ok)
-	protoState, ok := v1State.InnerStateUnsafe().(*ethpb.BeaconStateBellatrix)
+	protoState, ok := nativeState.InnerStateUnsafe().(*ethpb.BeaconStateBellatrix)
 	require.Equal(t, true, ok)
 	initState, err := statenative.InitializeFromProtoBellatrix(protoState)
 	require.NoError(t, err)
@@ -224,6 +228,7 @@ func TestComputeFieldRootsWithHasher_Bellatrix(t *testing.T) {
 		{0xbc, 0xbb, 0x39, 0x57, 0x61, 0x1d, 0x54, 0xd6, 0x1b, 0xfe, 0x7a, 0xbd, 0x29, 0x52, 0x57, 0xdd, 0x19, 0x1, 0x89, 0x22, 0x7d, 0xdf, 0x7b, 0x53, 0x9f, 0xb, 0x46, 0x5, 0x9f, 0x80, 0xcc, 0x8e},
 	}
 	assert.DeepEqual(t, expected, root)
+	features.Init(&features.Flags{EnableNativeState: false})
 }
 
 func genesisValidatorsRoot() []byte {

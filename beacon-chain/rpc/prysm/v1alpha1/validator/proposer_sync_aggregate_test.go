@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
-	v2 "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/assert"
+	v2 "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 )
 
 func TestProposerSyncContributions_FilterByBlockRoot(t *testing.T) {

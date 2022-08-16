@@ -2,8 +2,8 @@ package validator_service_config
 
 import (
 	"github.com/ethereum/go-ethereum/common"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/config/params"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
 )
 
 // ProposerSettingsPayload is the struct representation of the JSON or YAML payload set in the validator through the CLI.

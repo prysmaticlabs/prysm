@@ -3,9 +3,9 @@ package ssz_test
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/crypto/hash"
-	"github.com/prysmaticlabs/prysm/encoding/ssz"
-	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/crypto/hash"
+	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 )
 
 func TestGetDepth(t *testing.T) {

@@ -4,7 +4,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
 )
 
 // Test cases can be executed in an arbitrary order. TestOverrideBeaconConfigTestTeardown checks

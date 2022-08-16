@@ -7,7 +7,7 @@ go_library(
         "latest.go",
         "save.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/cmd/prysmctl/checkpoint",
+    importpath = "github.com/prysmaticlabs/prysm/v3/cmd/prysmctl/checkpoint",
     visibility = ["//visibility:public"],
     deps = [
         "//api/client/beacon:go_default_library",

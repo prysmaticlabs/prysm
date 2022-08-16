@@ -4,8 +4,8 @@ import (
 	"reflect"
 	"testing"
 
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/testing/assert"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 )
 
 func TestBlockRoots_Casting(t *testing.T) {
