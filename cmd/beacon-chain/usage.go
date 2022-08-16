@@ -110,7 +110,6 @@ var appHelpFlagGroups = []flagGroup{
 			flags.GPRCGatewayCorsDomain,
 			flags.ExecutionEngineEndpoint,
 			flags.ExecutionJWTSecretFlag,
-			flags.FallbackWeb3ProviderFlag,
 			flags.SetGCPercent,
 			flags.SlotsPerArchivedPoint,
 			flags.DisableDiscv5,
