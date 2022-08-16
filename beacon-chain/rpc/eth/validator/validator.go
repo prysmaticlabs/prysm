@@ -604,7 +604,7 @@ func (vs *Server) SubmitValidatorRegistration(ctx context.Context, reg *ethpbv1.
 		})
 	}
 	if len(registrations) == 0 {
-		return &empty.Empty{}, status.Errorf(codes.InvalidArgument, "validator registration request is empty")
+		return &empty.Empty{}, status.Errorf(codes.InvalidArgument, "Validator registration request is empty")
 	}
 
 	if err := vs.V1Alpha1Server.BlockBuilder.RegisterValidator(ctx, registrations); err != nil {
