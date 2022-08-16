@@ -114,9 +114,9 @@ var (
 		Name:  "enable-vectorized-htr",
 		Usage: "Enables new go sha256 library which utilizes optimized routines for merkle trees",
 	}
-	enableForkChoiceDoublyLinkedTree = &cli.BoolFlag{
-		Name:  "enable-forkchoice-doubly-linked-tree",
-		Usage: "Enables new forkchoice store structure that uses doubly linked trees",
+	disableForkChoiceDoublyLinkedTree = &cli.BoolFlag{
+		Name:  "disable-forkchoice-doubly-linked-tree",
+		Usage: "Disables the new forkchoice store structure that uses doubly linked trees",
 	}
 	disableGossipBatchAggregation = &cli.BoolFlag{
 		Name:  "disable-gossip-batch-aggregation",
@@ -131,7 +131,6 @@ var (
 // devModeFlags holds list of flags that are set when development mode is on.
 var devModeFlags = []cli.Flag{
 	enableVecHTR,
-	enableForkChoiceDoublyLinkedTree,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -172,7 +171,7 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	disableNativeState,
 	disablePullTips,
 	enableVecHTR,
-	enableForkChoiceDoublyLinkedTree,
+	disableForkChoiceDoublyLinkedTree,
 	disableGossipBatchAggregation,
 	EnableOnlyBlindedBeaconBlocks,
 }...)

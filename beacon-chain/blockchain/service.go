@@ -208,7 +208,7 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 
 	var forkChoicer f.ForkChoicer
 	fRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(finalized.Root))
-	if features.Get().EnableForkChoiceDoublyLinkedTree {
+	if !features.Get().DisableForkchoiceDoublyLinkedTree {
 		forkChoicer = doublylinkedtree.New()
 	} else {
 		forkChoicer = protoarray.New()
