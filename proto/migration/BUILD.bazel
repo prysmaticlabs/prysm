@@ -7,7 +7,7 @@ go_library(
         "v1alpha1_to_v1.go",
         "v1alpha1_to_v2.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/proto/migration",
+    importpath = "github.com/prysmaticlabs/prysm/v3/proto/migration",
     visibility = ["//visibility:public"],
     deps = [
         "//beacon-chain/state:go_default_library",

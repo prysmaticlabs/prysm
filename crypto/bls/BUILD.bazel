@@ -9,7 +9,7 @@ go_library(
         "interface.go",
         "signature_batch.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/crypto/bls",
+    importpath = "github.com/prysmaticlabs/prysm/v3/crypto/bls",
     visibility = ["//visibility:public"],
     deps = [
         "//crypto/bls/blst:go_default_library",

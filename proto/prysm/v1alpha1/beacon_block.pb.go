@@ -11,9 +11,9 @@ import (
 	sync "sync"
 
 	github_com_prysmaticlabs_go_bitfield "github.com/prysmaticlabs/go-bitfield"
-	github_com_prysmaticlabs_prysm_consensus_types_primitives "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	v1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
-	_ "github.com/prysmaticlabs/prysm/proto/eth/ext"
+	github_com_prysmaticlabs_prysm_consensus_types_primitives "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	v1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+	_ "github.com/prysmaticlabs/prysm/v3/proto/eth/ext"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
@@ -302,8 +302,8 @@ type BeaconBlock struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Slot          github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot           `protobuf:"varint,1,opt,name=slot,proto3" json:"slot,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"`
-	ProposerIndex github_com_prysmaticlabs_prysm_consensus_types_primitives.ValidatorIndex `protobuf:"varint,2,opt,name=proposer_index,json=proposerIndex,proto3" json:"proposer_index,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.ValidatorIndex"`
+	Slot          github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot           `protobuf:"varint,1,opt,name=slot,proto3" json:"slot,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"`
+	ProposerIndex github_com_prysmaticlabs_prysm_consensus_types_primitives.ValidatorIndex `protobuf:"varint,2,opt,name=proposer_index,json=proposerIndex,proto3" json:"proposer_index,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"`
 	ParentRoot    []byte                                                                   `protobuf:"bytes,3,opt,name=parent_root,json=parentRoot,proto3" json:"parent_root,omitempty" ssz-size:"32"`
 	StateRoot     []byte                                                                   `protobuf:"bytes,4,opt,name=state_root,json=stateRoot,proto3" json:"state_root,omitempty" ssz-size:"32"`
 	Body          *BeaconBlockBody                                                         `protobuf:"bytes,5,opt,name=body,proto3" json:"body,omitempty"`
@@ -436,8 +436,8 @@ type BeaconBlockAltair struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Slot          github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot           `protobuf:"varint,1,opt,name=slot,proto3" json:"slot,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"`
-	ProposerIndex github_com_prysmaticlabs_prysm_consensus_types_primitives.ValidatorIndex `protobuf:"varint,2,opt,name=proposer_index,json=proposerIndex,proto3" json:"proposer_index,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.ValidatorIndex"`
+	Slot          github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot           `protobuf:"varint,1,opt,name=slot,proto3" json:"slot,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"`
+	ProposerIndex github_com_prysmaticlabs_prysm_consensus_types_primitives.ValidatorIndex `protobuf:"varint,2,opt,name=proposer_index,json=proposerIndex,proto3" json:"proposer_index,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"`
 	ParentRoot    []byte                                                                   `protobuf:"bytes,3,opt,name=parent_root,json=parentRoot,proto3" json:"parent_root,omitempty" ssz-size:"32"`
 	StateRoot     []byte                                                                   `protobuf:"bytes,4,opt,name=state_root,json=stateRoot,proto3" json:"state_root,omitempty" ssz-size:"32"`
 	Body          *BeaconBlockBodyAltair                                                   `protobuf:"bytes,5,opt,name=body,proto3" json:"body,omitempty"`
@@ -949,8 +949,8 @@ type VoluntaryExit struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Epoch          github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch          `protobuf:"varint,1,opt,name=epoch,proto3" json:"epoch,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch"`
-	ValidatorIndex github_com_prysmaticlabs_prysm_consensus_types_primitives.ValidatorIndex `protobuf:"varint,2,opt,name=validator_index,json=validatorIndex,proto3" json:"validator_index,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.ValidatorIndex"`
+	Epoch          github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch          `protobuf:"varint,1,opt,name=epoch,proto3" json:"epoch,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"`
+	ValidatorIndex github_com_prysmaticlabs_prysm_consensus_types_primitives.ValidatorIndex `protobuf:"varint,2,opt,name=validator_index,json=validatorIndex,proto3" json:"validator_index,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"`
 }
 
 func (x *VoluntaryExit) Reset() {
@@ -1122,8 +1122,8 @@ type BeaconBlockHeader struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Slot          github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot           `protobuf:"varint,1,opt,name=slot,proto3" json:"slot,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"`
-	ProposerIndex github_com_prysmaticlabs_prysm_consensus_types_primitives.ValidatorIndex `protobuf:"varint,2,opt,name=proposer_index,json=proposerIndex,proto3" json:"proposer_index,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.ValidatorIndex"`
+	Slot          github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot           `protobuf:"varint,1,opt,name=slot,proto3" json:"slot,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"`
+	ProposerIndex github_com_prysmaticlabs_prysm_consensus_types_primitives.ValidatorIndex `protobuf:"varint,2,opt,name=proposer_index,json=proposerIndex,proto3" json:"proposer_index,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"`
 	ParentRoot    []byte                                                                   `protobuf:"bytes,3,opt,name=parent_root,json=parentRoot,proto3" json:"parent_root,omitempty" ssz-size:"32"`
 	StateRoot     []byte                                                                   `protobuf:"bytes,4,opt,name=state_root,json=stateRoot,proto3" json:"state_root,omitempty" ssz-size:"32"`
 	BodyRoot      []byte                                                                   `protobuf:"bytes,5,opt,name=body_root,json=bodyRoot,proto3" json:"body_root,omitempty" ssz-size:"32"`
@@ -1429,8 +1429,8 @@ type BeaconBlockBellatrix struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Slot          github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot           `protobuf:"varint,1,opt,name=slot,proto3" json:"slot,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"`
-	ProposerIndex github_com_prysmaticlabs_prysm_consensus_types_primitives.ValidatorIndex `protobuf:"varint,2,opt,name=proposer_index,json=proposerIndex,proto3" json:"proposer_index,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.ValidatorIndex"`
+	Slot          github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot           `protobuf:"varint,1,opt,name=slot,proto3" json:"slot,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"`
+	ProposerIndex github_com_prysmaticlabs_prysm_consensus_types_primitives.ValidatorIndex `protobuf:"varint,2,opt,name=proposer_index,json=proposerIndex,proto3" json:"proposer_index,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"`
 	ParentRoot    []byte                                                                   `protobuf:"bytes,3,opt,name=parent_root,json=parentRoot,proto3" json:"parent_root,omitempty" ssz-size:"32"`
 	StateRoot     []byte                                                                   `protobuf:"bytes,4,opt,name=state_root,json=stateRoot,proto3" json:"state_root,omitempty" ssz-size:"32"`
 	Body          *BeaconBlockBodyBellatrix                                                `protobuf:"bytes,5,opt,name=body,proto3" json:"body,omitempty"`
@@ -1682,8 +1682,8 @@ type BlindedBeaconBlockBellatrix struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Slot          github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot           `protobuf:"varint,1,opt,name=slot,proto3" json:"slot,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"`
-	ProposerIndex github_com_prysmaticlabs_prysm_consensus_types_primitives.ValidatorIndex `protobuf:"varint,2,opt,name=proposer_index,json=proposerIndex,proto3" json:"proposer_index,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.ValidatorIndex"`
+	Slot          github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot           `protobuf:"varint,1,opt,name=slot,proto3" json:"slot,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"`
+	ProposerIndex github_com_prysmaticlabs_prysm_consensus_types_primitives.ValidatorIndex `protobuf:"varint,2,opt,name=proposer_index,json=proposerIndex,proto3" json:"proposer_index,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"`
 	ParentRoot    []byte                                                                   `protobuf:"bytes,3,opt,name=parent_root,json=parentRoot,proto3" json:"parent_root,omitempty" ssz-size:"32"`
 	StateRoot     []byte                                                                   `protobuf:"bytes,4,opt,name=state_root,json=stateRoot,proto3" json:"state_root,omitempty" ssz-size:"32"`
 	Body          *BlindedBeaconBlockBodyBellatrix                                         `protobuf:"bytes,5,opt,name=body,proto3" json:"body,omitempty"`
@@ -1935,8 +1935,8 @@ type BeaconBlockCapella struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Slot          github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot           `protobuf:"varint,1,opt,name=slot,proto3" json:"slot,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"`
-	ProposerIndex github_com_prysmaticlabs_prysm_consensus_types_primitives.ValidatorIndex `protobuf:"varint,2,opt,name=proposer_index,json=proposerIndex,proto3" json:"proposer_index,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.ValidatorIndex"`
+	Slot          github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot           `protobuf:"varint,1,opt,name=slot,proto3" json:"slot,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"`
+	ProposerIndex github_com_prysmaticlabs_prysm_consensus_types_primitives.ValidatorIndex `protobuf:"varint,2,opt,name=proposer_index,json=proposerIndex,proto3" json:"proposer_index,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"`
 	ParentRoot    []byte                                                                   `protobuf:"bytes,3,opt,name=parent_root,json=parentRoot,proto3" json:"parent_root,omitempty" ssz-size:"32"`
 	StateRoot     []byte                                                                   `protobuf:"bytes,4,opt,name=state_root,json=stateRoot,proto3" json:"state_root,omitempty" ssz-size:"32"`
 	Body          *BeaconBlockBodyCapella                                                  `protobuf:"bytes,5,opt,name=body,proto3" json:"body,omitempty"`
@@ -2196,8 +2196,8 @@ type BlindedBeaconBlockCapella struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Slot          github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot           `protobuf:"varint,1,opt,name=slot,proto3" json:"slot,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"`
-	ProposerIndex github_com_prysmaticlabs_prysm_consensus_types_primitives.ValidatorIndex `protobuf:"varint,2,opt,name=proposer_index,json=proposerIndex,proto3" json:"proposer_index,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.ValidatorIndex"`
+	Slot          github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot           `protobuf:"varint,1,opt,name=slot,proto3" json:"slot,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"`
+	ProposerIndex github_com_prysmaticlabs_prysm_consensus_types_primitives.ValidatorIndex `protobuf:"varint,2,opt,name=proposer_index,json=proposerIndex,proto3" json:"proposer_index,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"`
 	ParentRoot    []byte                                                                   `protobuf:"bytes,3,opt,name=parent_root,json=parentRoot,proto3" json:"parent_root,omitempty" ssz-size:"32"`
 	StateRoot     []byte                                                                   `protobuf:"bytes,4,opt,name=state_root,json=stateRoot,proto3" json:"state_root,omitempty" ssz-size:"32"`
 	Body          *BlindedBeaconBlockBodyCapella                                           `protobuf:"bytes,5,opt,name=body,proto3" json:"body,omitempty"`

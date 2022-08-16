@@ -1,8 +1,8 @@
 package v3
 
 import (
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
 )
 
 // CurrentEpochParticipation corresponding to participation bits on the beacon chain.

@@ -25,7 +25,7 @@ import "proto/eth/v2/beacon_state.proto";
 import "proto/eth/v2/ssz.proto";
 
 option csharp_namespace = "Ethereum.Eth.Service";
-option go_package = "github.com/prysmaticlabs/prysm/proto/eth/service";
+option go_package = "github.com/prysmaticlabs/prysm/v3/proto/eth/service";
 option java_multiple_files = true;
 option java_outer_classname = "BeaconDebugServiceProto";
 option java_package = "org.ethereum.eth.service";
@@ -44,6 +44,7 @@ service BeaconDebug {
     option (google.api.http) = {
       get: "/internal/eth/v1/debug/beacon/states/{state_id}"
     };
+    option deprecated = true;
   }
 
   // GetBeaconStateSSZ returns the SSZ-serialized version of the full BeaconState object for given stateId.
@@ -80,6 +81,7 @@ service BeaconDebug {
     option (google.api.http) = {
       get: "/internal/eth/v1/debug/beacon/heads"
     };
+    option deprecated = true;
   }
 
   // ListForkChoiceHeadsV2 retrieves all possible chain heads (leaves of fork choice tree).

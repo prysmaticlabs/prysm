@@ -7,7 +7,7 @@ go_library(
         "error.go",
         "interface.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/crypto/bls/common",
+    importpath = "github.com/prysmaticlabs/prysm/v3/crypto/bls/common",
     visibility = [
         "//crypto/bls:__subpackages__",
         "//testing:__subpackages__",

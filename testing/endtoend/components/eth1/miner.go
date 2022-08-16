@@ -18,12 +18,12 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/config/params"
-	contracts "github.com/prysmaticlabs/prysm/contracts/deposit/mock"
-	io "github.com/prysmaticlabs/prysm/io/file"
-	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
-	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
-	e2etypes "github.com/prysmaticlabs/prysm/testing/endtoend/types"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	contracts "github.com/prysmaticlabs/prysm/v3/contracts/deposit/mock"
+	io "github.com/prysmaticlabs/prysm/v3/io/file"
+	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/helpers"
+	e2e "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
+	e2etypes "github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
 	log "github.com/sirupsen/logrus"
 )
 

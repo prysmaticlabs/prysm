@@ -5,24 +5,24 @@ import (
 	"testing"
 	"time"
 
-	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	doublylinkedtree "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/doubly-linked-tree"
-	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
-	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
+	testDB "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/protoarray"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
+	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
+	v3 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v3"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -82,7 +82,7 @@ func TestService_ForkChoiceStore(t *testing.T) {
 func TestFinalizedCheckpt_GenesisRootOk(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-	fcs := protoarray.New()
+	fcs := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithForkChoiceStore(fcs),
@@ -107,7 +107,7 @@ func TestFinalizedCheckpt_GenesisRootOk(t *testing.T) {
 func TestCurrentJustifiedCheckpt_CanRetrieve(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-	fcs := protoarray.New()
+	fcs := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithForkChoiceStore(fcs),
@@ -134,7 +134,7 @@ func TestHeadSlot_CanRetrieve(t *testing.T) {
 func TestHeadRoot_CanRetrieve(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-	fcs := protoarray.New()
+	fcs := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithForkChoiceStore(fcs),
@@ -153,7 +153,7 @@ func TestHeadRoot_CanRetrieve(t *testing.T) {
 func TestHeadRoot_UseDB(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-	fcs := protoarray.New()
+	fcs := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithForkChoiceStore(fcs),
@@ -364,7 +364,7 @@ func TestService_ChainHeads_DoublyLinkedTree(t *testing.T) {
 
 	roots, slots := c.ChainHeads()
 	require.Equal(t, 3, len(roots))
-	rootMap := map[[32]byte]types.Slot{[32]byte{'c'}: 102, [32]byte{'d'}: 103, [32]byte{'e'}: 104}
+	rootMap := map[[32]byte]types.Slot{{'c'}: 102, {'d'}: 103, {'e'}: 104}
 	for i, root := range roots {
 		slot, ok := rootMap[root]
 		require.Equal(t, true, ok)

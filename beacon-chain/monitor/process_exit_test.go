@@ -3,10 +3,10 @@ package monitor
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 

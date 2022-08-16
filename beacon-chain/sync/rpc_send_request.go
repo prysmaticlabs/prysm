@@ -6,14 +6,14 @@ import (
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	p2ptypes "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
+	p2ptypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
 
 // ErrInvalidFetchedData is thrown if stream fails to provide requested blocks.

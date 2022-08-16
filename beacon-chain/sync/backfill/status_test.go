@@ -4,15 +4,15 @@ import (
 	"context"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
-	blocktest "github.com/prysmaticlabs/prysm/consensus-types/blocks/testing"
-	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	blocktest "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks/testing"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/config/params"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 )
 
 var errEmptyMockDBMethod = errors.New("uninitialized mock db method called")

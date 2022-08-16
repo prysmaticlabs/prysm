@@ -11,34 +11,34 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/async/event"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
-	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/execution"
-	f "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice"
-	doublylinkedtree "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/doubly-linked-tree"
-	"github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/protoarray"
-	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings"
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/voluntaryexits"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/config/features"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	prysmTime "github.com/prysmaticlabs/prysm/time"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/async/event"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache/depositcache"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution"
+	f "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/doubly-linked-tree"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/protoarray"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/slashings"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/voluntaryexits"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/v3/config/features"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	prysmTime "github.com/prysmaticlabs/prysm/v3/time"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"go.opencensus.io/trace"
 )
 
@@ -156,6 +156,15 @@ func (s *Service) Stop() error {
 // Status always returns nil unless there is an error condition that causes
 // this service to be unhealthy.
 func (s *Service) Status() error {
+	optimistic, err := s.IsOptimistic(s.ctx)
+	if err != nil {
+		return errors.Wrap(err, "failed to check if service is optimistic")
+	}
+	if optimistic {
+		return errors.New("service is optimistic, and only limited service functionality is provided " +
+			"please check if execution layer is fully synced")
+	}
+
 	if s.originBlockRoot == params.BeaconConfig().ZeroHash {
 		return errors.New("genesis state has not been created")
 	}
@@ -199,7 +208,7 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 
 	var forkChoicer f.ForkChoicer
 	fRoot := s.ensureRootNotZeros(bytesutil.ToBytes32(finalized.Root))
-	if features.Get().EnableForkChoiceDoublyLinkedTree {
+	if !features.Get().DisableForkchoiceDoublyLinkedTree {
 		forkChoicer = doublylinkedtree.New()
 	} else {
 		forkChoicer = protoarray.New()

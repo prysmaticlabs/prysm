@@ -7,15 +7,15 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/api/pagination"
-	"github.com/prysmaticlabs/prysm/cmd"
-	"github.com/prysmaticlabs/prysm/crypto/bls"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/validator/accounts"
-	"github.com/prysmaticlabs/prysm/validator/accounts/petnames"
-	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/local"
+	"github.com/prysmaticlabs/prysm/v3/api/pagination"
+	"github.com/prysmaticlabs/prysm/v3/cmd"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/v3/validator/accounts"
+	"github.com/prysmaticlabs/prysm/v3/validator/accounts/petnames"
+	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/derived"
+	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/local"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -153,34 +153,6 @@ func (s *Server) BackupAccounts(
 	}
 	return &pb.BackupAccountsResponse{
 		ZipFile: buf.Bytes(),
-	}, nil
-}
-
-// DeleteAccounts deletes accounts from a user's wallet is an imported or derived wallet.
-func (s *Server) DeleteAccounts(
-	ctx context.Context, req *pb.DeleteAccountsRequest,
-) (*pb.DeleteAccountsResponse, error) {
-	if s.validatorService == nil {
-		return nil, status.Error(codes.FailedPrecondition, "Validator service not yet initialized")
-	}
-	if req.PublicKeysToDelete == nil || len(req.PublicKeysToDelete) < 1 {
-		return nil, status.Error(codes.InvalidArgument, "No public keys specified to delete")
-	}
-	if s.wallet == nil {
-		return nil, status.Error(codes.FailedPrecondition, "No wallet found")
-	}
-	km, err := s.validatorService.Keymanager()
-	if err != nil {
-		return nil, err
-	}
-	if err := accounts.DeleteAccount(ctx, &accounts.DeleteConfig{
-		Keymanager:       km,
-		DeletePublicKeys: req.PublicKeysToDelete,
-	}); err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not delete public keys: %v", err)
-	}
-	return &pb.DeleteAccountsResponse{
-		DeletedKeys: req.PublicKeysToDelete,
 	}, nil
 }
 

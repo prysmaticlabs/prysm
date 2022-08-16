@@ -13,7 +13,7 @@ import (
 
 	empty "github.com/golang/protobuf/ptypes/empty"
 	timestamp "github.com/golang/protobuf/ptypes/timestamp"
-	_ "github.com/prysmaticlabs/prysm/proto/eth/ext"
+	_ "github.com/prysmaticlabs/prysm/v3/proto/eth/ext"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"

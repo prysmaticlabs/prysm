@@ -6,7 +6,7 @@ package types
 import (
 	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
-	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
 )
 
 const rootLength = 32

@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/binary"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/fieldtrie"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/fieldtrie"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 )
 
 const (

@@ -14,7 +14,7 @@
 //   }
 package filters
 
-import types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+import types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 
 // FilterType defines an enum which is used as the keys in a map that tracks
 // set attribute filters for data as part of the `FilterQuery` struct type.
