@@ -151,4 +151,25 @@ func TestClearDB(t *testing.T) {
 	require.NoError(t, err)
 
 	require.LogsContain(t, hook, "Removing database")
+	t.Run("TestStartSlasherDB_ForceClearDb", func(t *testing.T) {
+		features.Init(&features.Flags{EnableSlasher: true})
+
+		tmp := filepath.Join(t.TempDir(), "datadirtest-slasher")
+
+		app := cli.App{}
+		set := flag.NewFlagSet("test", 0)
+		set.String("datadir", tmp, "node data directory")
+		set.Bool(cmd.ClearDB.Name, true, "clear db")
+		set.Bool(cmd.ForceClearDB.Name, true, "force clear db")
+		set.Bool("slasher", true, "enable slasher")
+
+		ctx := cli.NewContext(&app, set, nil)
+		_, err := New(ctx, WithBlockchainFlagOptions([]blockchain.Option{}))
+		//ignore prometheusError
+		if err.Error() != "duplicate metrics collector registration attempted" {
+			require.NoError(t, err)
+		}
+
+		require.LogsContain(t, hook, "Removing database")
+	})
 }
