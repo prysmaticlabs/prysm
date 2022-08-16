@@ -3,11 +3,11 @@ package blocks
 import (
 	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
-	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/runtime/version"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	validatorpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 )
 
 // BeaconBlockIsNil checks if any composite field of input signed beacon block is nil.
@@ -559,12 +559,12 @@ func (b *BeaconBlock) AsSignRequestObject() (validatorpb.SignRequestObject, erro
 	case version.Phase0:
 		return &validatorpb.SignRequest_Block{Block: pb.(*eth.BeaconBlock)}, nil
 	case version.Altair:
-		return &validatorpb.SignRequest_BlockV2{BlockV2: pb.(*eth.BeaconBlockAltair)}, nil
+		return &validatorpb.SignRequest_BlockAltair{BlockAltair: pb.(*eth.BeaconBlockAltair)}, nil
 	case version.Bellatrix:
 		if b.IsBlinded() {
-			return &validatorpb.SignRequest_BlindedBlockV3{BlindedBlockV3: pb.(*eth.BlindedBeaconBlockBellatrix)}, nil
+			return &validatorpb.SignRequest_BlindedBlockBellatrix{BlindedBlockBellatrix: pb.(*eth.BlindedBeaconBlockBellatrix)}, nil
 		}
-		return &validatorpb.SignRequest_BlockV3{BlockV3: pb.(*eth.BeaconBlockBellatrix)}, nil
+		return &validatorpb.SignRequest_BlockBellatrix{BlockBellatrix: pb.(*eth.BeaconBlockBellatrix)}, nil
 	default:
 		return nil, errIncorrectBlockVersion
 	}

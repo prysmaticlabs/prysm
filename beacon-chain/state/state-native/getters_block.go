@@ -3,7 +3,7 @@ package state_native
 import (
 	"fmt"
 
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
 // LatestBlockHeader stored within the beacon state.

@@ -8,11 +8,11 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	pb "github.com/prysmaticlabs/prysm/proto/engine/v1"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	pb "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 )
 
 // EngineClient --
@@ -90,6 +90,20 @@ func (e *EngineClient) ReconstructFullBellatrixBlock(
 	}
 	e.NumReconstructedPayloads++
 	return blocks.BuildSignedBeaconBlockFromExecutionPayload(blindedBlock, payload)
+}
+
+func (e *EngineClient) ReconstructFullBellatrixBlockBatch(
+	ctx context.Context, blindedBlocks []interfaces.SignedBeaconBlock,
+) ([]interfaces.SignedBeaconBlock, error) {
+	fullBlocks := make([]interfaces.SignedBeaconBlock, 0, len(blindedBlocks))
+	for _, b := range blindedBlocks {
+		newBlock, err := e.ReconstructFullBellatrixBlock(ctx, b)
+		if err != nil {
+			return nil, err
+		}
+		fullBlocks = append(fullBlocks, newBlock)
+	}
+	return fullBlocks, nil
 }
 
 // GetTerminalBlockHash --

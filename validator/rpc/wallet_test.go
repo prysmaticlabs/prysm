@@ -9,21 +9,21 @@ import (
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/google/uuid"
-	"github.com/prysmaticlabs/prysm/async/event"
-	"github.com/prysmaticlabs/prysm/config/features"
-	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/crypto/rand"
-	"github.com/prysmaticlabs/prysm/io/file"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/validator/accounts"
-	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
-	mock "github.com/prysmaticlabs/prysm/validator/accounts/testing"
-	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
-	"github.com/prysmaticlabs/prysm/validator/client"
-	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/local"
+	"github.com/prysmaticlabs/prysm/v3/async/event"
+	"github.com/prysmaticlabs/prysm/v3/config/features"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v3/crypto/rand"
+	"github.com/prysmaticlabs/prysm/v3/io/file"
+	ethpbservice "github.com/prysmaticlabs/prysm/v3/proto/eth/service"
+	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/validator/accounts"
+	"github.com/prysmaticlabs/prysm/v3/validator/accounts/iface"
+	mock "github.com/prysmaticlabs/prysm/v3/validator/accounts/testing"
+	"github.com/prysmaticlabs/prysm/v3/validator/accounts/wallet"
+	"github.com/prysmaticlabs/prysm/v3/validator/client"
+	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
 	"github.com/tyler-smith/go-bip39"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
 )
@@ -64,12 +64,21 @@ func TestServer_CreateWallet_Local(t *testing.T) {
 	_, err = s.CreateWallet(ctx, req)
 	require.NoError(t, err)
 
-	importReq := &pb.ImportAccountsRequest{
-		KeystoresPassword: strongPass,
-		KeystoresImported: []string{"badjson"},
+	numKeystores := 5
+	password := "12345678"
+	encodedKeystores := make([]string, numKeystores)
+	passwords := make([]string, numKeystores)
+	for i := 0; i < numKeystores; i++ {
+		enc, err := json.Marshal(createRandomKeystore(t, password))
+		encodedKeystores[i] = string(enc)
+		require.NoError(t, err)
+		passwords[i] = password
 	}
-	_, err = s.ImportAccounts(ctx, importReq)
-	require.ErrorContains(t, "Not a valid EIP-2335 keystore", err)
+
+	importReq := &ethpbservice.ImportKeystoresRequest{
+		Keystores: encodedKeystores,
+		Passwords: passwords,
+	}
 
 	encryptor := keystorev4.New()
 	keystores := make([]string, 3)
@@ -92,8 +101,8 @@ func TestServer_CreateWallet_Local(t *testing.T) {
 		require.NoError(t, err)
 		keystores[i] = string(encodedFile)
 	}
-	importReq.KeystoresImported = keystores
-	_, err = s.ImportAccounts(ctx, importReq)
+	importReq.Keystores = keystores
+	_, err = s.ImportKeystores(ctx, importReq)
 	require.NoError(t, err)
 }
 
@@ -329,123 +338,6 @@ func TestServer_WalletConfig(t *testing.T) {
 	})
 }
 
-func TestServer_ImportAccounts_FailedPreconditions(t *testing.T) {
-	localWalletDir := setupWalletDir(t)
-	defaultWalletPath = localWalletDir
-	ctx := context.Background()
-	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
-		WalletCfg: &wallet.Config{
-			WalletDir:      defaultWalletPath,
-			KeymanagerKind: keymanager.Local,
-			WalletPassword: strongPass,
-		},
-		SkipMnemonicConfirm: true,
-	})
-	require.NoError(t, err)
-	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
-	require.NoError(t, err)
-	vs, err := client.NewValidatorService(ctx, &client.Config{
-		Wallet: w,
-		Validator: &mock.MockValidator{
-			Km: km,
-		},
-	})
-	require.NoError(t, err)
-	ss := &Server{
-		validatorService: vs,
-	}
-	_, err = ss.ImportAccounts(ctx, &pb.ImportAccountsRequest{})
-	assert.ErrorContains(t, "No wallet initialized", err)
-	ss.wallet = w
-	_, err = ss.ImportAccounts(ctx, &pb.ImportAccountsRequest{})
-	assert.ErrorContains(t, "Password required for keystores", err)
-	_, err = ss.ImportAccounts(ctx, &pb.ImportAccountsRequest{
-		KeystoresPassword: strongPass,
-	})
-	assert.ErrorContains(t, "No keystores included for import", err)
-	_, err = ss.ImportAccounts(ctx, &pb.ImportAccountsRequest{
-		KeystoresPassword: strongPass,
-		KeystoresImported: []string{"badjson"},
-	})
-	assert.ErrorContains(t, "Not a valid EIP-2335 keystore", err)
-}
-
-func TestServer_ImportAccounts_OK(t *testing.T) {
-	local.ResetCaches()
-	localWalletDir := setupWalletDir(t)
-	defaultWalletPath = localWalletDir
-	ctx := context.Background()
-	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
-		WalletCfg: &wallet.Config{
-			WalletDir:      defaultWalletPath,
-			KeymanagerKind: keymanager.Local,
-			WalletPassword: strongPass,
-		},
-		SkipMnemonicConfirm: true,
-	})
-	require.NoError(t, err)
-	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
-	require.NoError(t, err)
-	vs, err := client.NewValidatorService(ctx, &client.Config{
-		Wallet: w,
-		Validator: &mock.MockValidator{
-			Km: km,
-		},
-	})
-	require.NoError(t, err)
-	ss := &Server{
-		wallet:                w,
-		walletInitializedFeed: new(event.Feed),
-		validatorService:      vs,
-	}
-
-	// Create 3 keystores.
-	encryptor := keystorev4.New()
-	keystores := make([]string, 3)
-	pubKeys := make([][]byte, 3)
-	for i := 0; i < len(keystores); i++ {
-		privKey, err := bls.RandKey()
-		require.NoError(t, err)
-		pubKey := fmt.Sprintf("%x", privKey.PublicKey().Marshal())
-		id, err := uuid.NewRandom()
-		require.NoError(t, err)
-		cryptoFields, err := encryptor.Encrypt(privKey.Marshal(), strongPass)
-		require.NoError(t, err)
-		item := &keymanager.Keystore{
-			Crypto:  cryptoFields,
-			ID:      id.String(),
-			Version: encryptor.Version(),
-			Pubkey:  pubKey,
-			Name:    encryptor.Name(),
-		}
-		encodedFile, err := json.MarshalIndent(item, "", "\t")
-		require.NoError(t, err)
-		keystores[i] = string(encodedFile)
-		pubKeys[i] = privKey.PublicKey().Marshal()
-	}
-
-	// Check the wallet has no accounts to start with.
-	keys, err := km.FetchValidatingPublicKeys(ctx)
-	require.NoError(t, err)
-	assert.Equal(t, 0, len(keys))
-
-	// Import the 3 keystores and verify the wallet has 3 new accounts.
-	res, err := ss.ImportAccounts(ctx, &pb.ImportAccountsRequest{
-		KeystoresPassword: strongPass,
-		KeystoresImported: keystores,
-	})
-	require.NoError(t, err)
-	assert.DeepEqual(t, &pb.ImportAccountsResponse{
-		ImportedPublicKeys: pubKeys,
-	}, res)
-
-	km, err = w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
-	require.NoError(t, err)
-	keys, err = km.FetchValidatingPublicKeys(ctx)
-	require.NoError(t, err)
-	assert.Equal(t, 3, len(keys))
-}
-
 func Test_writeWalletPasswordToDisk(t *testing.T) {
 	walletDir := setupWalletDir(t)
 	resetCfg := features.InitWithReset(&features.Flags{
@@ -471,77 +363,4 @@ func Test_writeWalletPasswordToDisk(t *testing.T) {
 	// Attempting to write again should trigger an error.
 	err = writeWalletPasswordToDisk(walletDir, "somepassword")
 	require.NotNil(t, err)
-}
-
-func createImportedWalletWithAccounts(t testing.TB, numAccounts int) (*Server, [][]byte) {
-	localWalletDir := setupWalletDir(t)
-	defaultWalletPath = localWalletDir
-	ctx := context.Background()
-	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
-		WalletCfg: &wallet.Config{
-			WalletDir:      defaultWalletPath,
-			KeymanagerKind: keymanager.Local,
-			WalletPassword: strongPass,
-		},
-		SkipMnemonicConfirm: true,
-	})
-	require.NoError(t, err)
-
-	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
-	require.NoError(t, err)
-
-	vs, err := client.NewValidatorService(ctx, &client.Config{
-		Wallet: w,
-		Validator: &mock.MockValidator{
-			Km: km,
-		},
-	})
-	require.NoError(t, err)
-	s := &Server{
-		wallet:                w,
-		walletDir:             defaultWalletPath,
-		walletInitializedFeed: new(event.Feed),
-		validatorService:      vs,
-	}
-	// First we import accounts into the wallet.
-	encryptor := keystorev4.New()
-	keystores := make([]string, numAccounts)
-	pubKeys := make([][]byte, len(keystores))
-	for i := 0; i < len(keystores); i++ {
-		privKey, err := bls.RandKey()
-		require.NoError(t, err)
-		pubKey := fmt.Sprintf("%x", privKey.PublicKey().Marshal())
-		id, err := uuid.NewRandom()
-		require.NoError(t, err)
-		cryptoFields, err := encryptor.Encrypt(privKey.Marshal(), strongPass)
-		require.NoError(t, err)
-		item := &keymanager.Keystore{
-			Crypto:  cryptoFields,
-			ID:      id.String(),
-			Version: encryptor.Version(),
-			Pubkey:  pubKey,
-			Name:    encryptor.Name(),
-		}
-		encodedFile, err := json.MarshalIndent(item, "", "\t")
-		require.NoError(t, err)
-		keystores[i] = string(encodedFile)
-		pubKeys[i] = privKey.PublicKey().Marshal()
-	}
-	_, err = s.ImportAccounts(ctx, &pb.ImportAccountsRequest{
-		KeystoresImported: keystores,
-		KeystoresPassword: strongPass,
-	})
-	require.NoError(t, err)
-	ikm, err := s.wallet.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
-	require.NoError(t, err)
-	newVS, err := client.NewValidatorService(ctx, &client.Config{
-		Wallet: s.wallet,
-		Validator: &mock.MockValidator{
-			Km: ikm,
-		},
-	})
-	require.NoError(t, err)
-	s.validatorService = newVS
-	require.NoError(t, err)
-	return s, pubKeys
 }

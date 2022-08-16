@@ -29,7 +29,7 @@ go_library(
         "validated_checkpoint.go",
         "wss.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/db/kv",
+    importpath = "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/kv",
     visibility = [
         "//beacon-chain:__subpackages__",
         "//tools:__subpackages__",

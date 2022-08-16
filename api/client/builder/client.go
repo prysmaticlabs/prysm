@@ -13,10 +13,10 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/monitoring/tracing"
-	v1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
+	v1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -269,17 +269,29 @@ func (c *Client) Status(ctx context.Context) error {
 
 func non200Err(response *http.Response) error {
 	bodyBytes, err := io.ReadAll(response.Body)
+	var errMessage ErrorMessage
 	var body string
 	if err != nil {
 		body = "(Unable to read response body.)"
 	} else {
+		if jsonErr := json.Unmarshal(bodyBytes, &errMessage); jsonErr != nil {
+			return errors.Wrap(jsonErr, "unable to read response body")
+		}
 		body = "response body:\n" + string(bodyBytes)
 	}
 	msg := fmt.Sprintf("code=%d, url=%s, body=%s", response.StatusCode, response.Request.URL, body)
 	switch response.StatusCode {
+	case 204:
+		log.WithError(ErrNoContent).Debug(msg)
+		return ErrNoContent
+	case 400:
+		log.WithError(ErrBadRequest).Debug(msg)
+		return errors.Wrap(ErrBadRequest, errMessage.Message)
 	case 404:
-		return errors.Wrap(ErrNotFound, msg)
+		log.WithError(ErrNotFound).Debug(msg)
+		return errors.Wrap(ErrNotFound, errMessage.Message)
 	default:
-		return errors.Wrap(ErrNotOK, msg)
+		log.WithError(ErrNotOK).Debug(msg)
+		return errors.Wrap(ErrNotOK, errMessage.Message)
 	}
 }

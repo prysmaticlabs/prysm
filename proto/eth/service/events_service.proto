@@ -22,7 +22,7 @@ import "proto/eth/v1/events.proto";
 import "proto/gateway/event_source.proto";
 
 option csharp_namespace = "Ethereum.Eth.Service";
-option go_package = "github.com/prysmaticlabs/prysm/proto/eth/service";
+option go_package = "github.com/prysmaticlabs/prysm/v3/proto/eth/service";
 option java_multiple_files = true;
 option java_outer_classname = "EventsServiceProto";
 option java_package = "org.ethereum.eth.service";

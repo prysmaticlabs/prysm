@@ -3,7 +3,7 @@ package slice
 import (
 	"strings"
 
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 )
 
 // SubsetUint64 returns true if the first array is

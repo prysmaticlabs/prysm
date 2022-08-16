@@ -7,10 +7,10 @@ import (
 	"strconv"
 	"testing"
 
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 func TestMainnetSszValuesAgainstFieldParams(t *testing.T) {

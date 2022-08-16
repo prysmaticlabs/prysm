@@ -8,7 +8,7 @@ import "google/api/annotations.proto";
 import "google/protobuf/empty.proto";
 
 option csharp_namespace = "Ethereum.Validator.Accounts.V2";
-option go_package = "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client;validatorpb";
+option go_package = "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client;validatorpb";
 option java_multiple_files = true;
 option java_outer_classname = "WebProto";
 option java_package = "org.ethereum.validator.accounts.v2";
@@ -24,12 +24,6 @@ service Wallet {
     rpc WalletConfig(google.protobuf.Empty) returns (WalletResponse) {
         option (google.api.http) = {
             get: "/v2/validator/wallet"
-        };
-    }
-    rpc ImportAccounts(ImportAccountsRequest) returns (ImportAccountsResponse) {
-        option (google.api.http) = {
-            post: "/v2/validator/wallet/keystores/import",
-            body: "*"
         };
     }
     rpc ValidateKeystores(ValidateKeystoresRequest) returns (google.protobuf.Empty) {
@@ -55,12 +49,6 @@ service Accounts {
     rpc BackupAccounts(BackupAccountsRequest) returns (BackupAccountsResponse) {
         option (google.api.http) = {
             post: "/v2/validator/accounts/backup",
-            body: "*"
-        };
-    }
-    rpc DeleteAccounts(DeleteAccountsRequest) returns (DeleteAccountsResponse) {
-        option (google.api.http) = {
-            post: "/v2/validator/wallet/accounts/delete",
             body: "*"
         };
     }

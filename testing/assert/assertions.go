@@ -1,7 +1,7 @@
 package assert
 
 import (
-	"github.com/prysmaticlabs/prysm/testing/assertions"
+	"github.com/prysmaticlabs/prysm/v3/testing/assertions"
 	"github.com/sirupsen/logrus/hooks/test"
 )
 

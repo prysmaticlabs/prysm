@@ -3,7 +3,7 @@ package ssz_static
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/testing/spectest/shared/altair/ssz_static"
+	"github.com/prysmaticlabs/prysm/v3/testing/spectest/shared/altair/ssz_static"
 )
 
 func TestMinimal_Altair_SSZStatic(t *testing.T) {

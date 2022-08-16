@@ -6,7 +6,7 @@ go_library(
         "endpoint_factory.go",
         "structs.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/validator/rpc/apimiddleware",
+    importpath = "github.com/prysmaticlabs/prysm/v3/validator/rpc/apimiddleware",
     visibility = ["//visibility:public"],
     deps = [
         "//api/gateway/apimiddleware:go_default_library",

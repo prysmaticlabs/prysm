@@ -4,7 +4,7 @@ go_library(
     name = "go_default_library",
     testonly = True,
     srcs = ["mock_keymanager.go"],
-    importpath = "github.com/prysmaticlabs/prysm/validator/keymanager/remote/mock",
+    importpath = "github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote/mock",
     visibility = ["//visibility:public"],
     deps = [
         "//async/event:go_default_library",
