@@ -6,6 +6,7 @@ import (
 
 	"github.com/prysmaticlabs/go-bitfield"
 	statenative "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -17,6 +18,7 @@ import (
 )
 
 func TestComputeFieldRootsWithHasher_Phase0(t *testing.T) {
+	features.Init(&features.Flags{EnableNativeState: true})
 	beaconState, err := util.NewBeaconState(util.FillRootsNaturalOpt)
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetGenesisTime(123))
@@ -78,6 +80,7 @@ func TestComputeFieldRootsWithHasher_Phase0(t *testing.T) {
 		{0xa9, 0xbb, 0x6a, 0x1f, 0x5d, 0x86, 0x7d, 0xa7, 0x5a, 0x7d, 0x9d, 0x8d, 0xc0, 0x15, 0xb7, 0x0, 0xee, 0xa9, 0x68, 0x51, 0x88, 0x57, 0x5a, 0xd9, 0x4e, 0x1d, 0x8e, 0x44, 0xbf, 0xdc, 0x73, 0xff},
 	}
 	assert.DeepEqual(t, expected, root)
+	features.Init(&features.Flags{EnableNativeState: false})
 }
 
 func TestComputeFieldRootsWithHasher_Altair(t *testing.T) {
