@@ -18,7 +18,7 @@ go_library(
         "wallet_edit.go",
         "wallet_recover.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/validator/accounts",
+    importpath = "github.com/prysmaticlabs/prysm/v3/validator/accounts",
     visibility = [
         "//cmd/validator:__subpackages__",
         "//validator:__pkg__",

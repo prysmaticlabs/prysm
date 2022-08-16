@@ -9,11 +9,11 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	gethRPC "github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/config/params"
-	contracts "github.com/prysmaticlabs/prysm/contracts/deposit"
-	"github.com/prysmaticlabs/prysm/io/logs"
-	"github.com/prysmaticlabs/prysm/network"
-	"github.com/prysmaticlabs/prysm/network/authorization"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	contracts "github.com/prysmaticlabs/prysm/v3/contracts/deposit"
+	"github.com/prysmaticlabs/prysm/v3/io/logs"
+	"github.com/prysmaticlabs/prysm/v3/network"
+	"github.com/prysmaticlabs/prysm/v3/network/authorization"
 )
 
 func (s *Service) setupExecutionClientConnections(ctx context.Context, currEndpoint network.Endpoint) error {

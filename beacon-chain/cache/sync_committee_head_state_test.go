@@ -3,14 +3,14 @@ package cache
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	v2 "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
-	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
-	"github.com/prysmaticlabs/prysm/config/params"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
+	v2 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v2"
+	v3 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v3"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 func TestSyncCommitteeHeadState(t *testing.T) {

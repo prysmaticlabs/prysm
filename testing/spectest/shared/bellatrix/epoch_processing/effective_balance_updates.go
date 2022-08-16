@@ -4,10 +4,10 @@ import (
 	"path"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/epoch"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/spectest/utils"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/epoch"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/spectest/utils"
 )
 
 // RunEffectiveBalanceUpdatesTests executes "epoch_processing/effective_balance_updates" tests.

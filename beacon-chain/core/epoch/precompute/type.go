@@ -1,6 +1,6 @@
 package precompute
 
-import types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+import types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 
 // Validator stores the pre computation of individual validator's attesting records these records
 // consist of attestation votes, block inclusion record. Pre computing and storing such record

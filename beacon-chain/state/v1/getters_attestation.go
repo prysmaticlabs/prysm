@@ -1,7 +1,7 @@
 package v1
 
 import (
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
 // PreviousEpochAttestations corresponding to blocks on the beacon chain.

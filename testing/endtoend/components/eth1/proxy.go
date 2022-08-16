@@ -10,11 +10,11 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/io/file"
-	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
-	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
-	e2etypes "github.com/prysmaticlabs/prysm/testing/endtoend/types"
-	proxy "github.com/prysmaticlabs/prysm/testing/middleware/engine-api-proxy"
+	"github.com/prysmaticlabs/prysm/v3/io/file"
+	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/helpers"
+	e2e "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
+	e2etypes "github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
+	proxy "github.com/prysmaticlabs/prysm/v3/testing/middleware/engine-api-proxy"
 	log "github.com/sirupsen/logrus"
 )
 

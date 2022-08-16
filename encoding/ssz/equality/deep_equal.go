@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"unsafe"
 
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"google.golang.org/protobuf/proto"
 )
 

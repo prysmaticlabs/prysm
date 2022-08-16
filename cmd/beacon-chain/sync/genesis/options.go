@@ -2,8 +2,8 @@ package genesis
 
 import (
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/node"
-	"github.com/prysmaticlabs/prysm/beacon-chain/sync/genesis"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/node"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/genesis"
 	"github.com/urfave/cli/v2"
 )
 

@@ -6,9 +6,9 @@ import (
 	"strings"
 
 	"github.com/logrusorgru/aurora"
-	"github.com/prysmaticlabs/prysm/cmd"
-	"github.com/prysmaticlabs/prysm/io/file"
-	"github.com/prysmaticlabs/prysm/io/prompt"
+	"github.com/prysmaticlabs/prysm/v3/cmd"
+	"github.com/prysmaticlabs/prysm/v3/io/file"
+	"github.com/prysmaticlabs/prysm/v3/io/prompt"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
