@@ -82,7 +82,7 @@ func TestNodeStart_Ok(t *testing.T) {
 
 }
 
-func TestNodeStart_Ok_registerDeterminsticGenesisService(t *testing.T) {
+func TestNodeStart_Ok_registerDeterministicGenesisService(t *testing.T) {
 	features.Init(&features.Flags{EnableNativeState: true})
 	numValidators := uint64(1)
 	hook := logTest.NewGlobal()
