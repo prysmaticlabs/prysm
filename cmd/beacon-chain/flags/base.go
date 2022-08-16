@@ -44,11 +44,6 @@ var (
 			"This is not required if using an IPC connection.",
 		Value: "",
 	}
-	// FallbackWeb3ProviderFlag provides a fallback endpoint to an ETH 1.0 RPC.
-	FallbackWeb3ProviderFlag = &cli.StringSliceFlag{
-		Name:  "fallback-web3provider",
-		Usage: "A mainchain web3 provider string http endpoint. This is our fallback web3 provider, this flag may be used multiple times.",
-	}
 	// DepositContractFlag defines a flag for the deposit contract address.
 	DepositContractFlag = &cli.StringFlag{
 		Name:  "deposit-contract",
