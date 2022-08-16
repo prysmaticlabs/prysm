@@ -106,7 +106,7 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 	web3Service, err = execution.NewService(
 		ctx,
 		execution.WithDatabase(beaconDB),
-		execution.WithHttpEndpoints([]string{endpoint}),
+		execution.WithHttpEndpoint(endpoint),
 		execution.WithDepositContractAddress(common.Address{}),
 	)
 	require.NoError(t, err, "Unable to set up web3 service")
