@@ -19,7 +19,7 @@ go_library(
         "validator.go",
         "wait_for_activation.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/validator/client",
+    importpath = "github.com/prysmaticlabs/prysm/v3/validator/client",
     visibility = [
         "//cmd:__subpackages__",
         "//validator:__subpackages__",

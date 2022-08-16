@@ -8,7 +8,7 @@ go_library(
         "doc.go",
         "errors.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/api/client/beacon",
+    importpath = "github.com/prysmaticlabs/prysm/v3/api/client/beacon",
     visibility = ["//visibility:public"],
     deps = [
         "//beacon-chain/core/helpers:go_default_library",

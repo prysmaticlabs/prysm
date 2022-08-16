@@ -4,10 +4,10 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
 // ProcessDeposits processes validator deposits for beacon state Altair.

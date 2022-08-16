@@ -3,8 +3,8 @@ package slashings
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/slashings/mock"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/slashings/mock"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 var (

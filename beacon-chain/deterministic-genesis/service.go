@@ -9,16 +9,16 @@ import (
 	"os"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/execution"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/runtime"
-	"github.com/prysmaticlabs/prysm/runtime/interop"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache/depositcache"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/runtime"
+	"github.com/prysmaticlabs/prysm/v3/runtime/interop"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
 
 var _ runtime.Service = (*Service)(nil)

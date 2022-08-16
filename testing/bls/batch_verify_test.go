@@ -6,11 +6,11 @@ import (
 	"testing"
 
 	"github.com/ghodss/yaml"
-	"github.com/prysmaticlabs/prysm/crypto/bls"
-	"github.com/prysmaticlabs/prysm/crypto/bls/common"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/testing/bls/utils"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls/common"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/testing/bls/utils"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 func TestBatchVerify(t *testing.T) {

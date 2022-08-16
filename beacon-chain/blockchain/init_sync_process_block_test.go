@@ -4,10 +4,10 @@ import (
 	"context"
 	"testing"
 
-	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
+	testDB "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 )
 
 func TestService_getBlock(t *testing.T) {

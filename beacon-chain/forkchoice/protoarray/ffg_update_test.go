@@ -4,15 +4,15 @@ import (
 	"context"
 	"testing"
 
-	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	v3 "github.com/prysmaticlabs/prysm/beacon-chain/state/v3"
-	"github.com/prysmaticlabs/prysm/config/params"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	v3 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v3"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 // prepareForkchoiceState prepares a beacon State with the given data to mock

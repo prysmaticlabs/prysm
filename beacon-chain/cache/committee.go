@@ -12,11 +12,11 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	lruwrpr "github.com/prysmaticlabs/prysm/cache/lru"
-	"github.com/prysmaticlabs/prysm/config/params"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/container/slice"
-	mathutil "github.com/prysmaticlabs/prysm/math"
+	lruwrpr "github.com/prysmaticlabs/prysm/v3/cache/lru"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/container/slice"
+	mathutil "github.com/prysmaticlabs/prysm/v3/math"
 )
 
 const (

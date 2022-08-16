@@ -12,8 +12,8 @@ import (
 
 	_ "github.com/golang/protobuf/protoc-gen-go/descriptor"
 	github_com_prysmaticlabs_go_bitfield "github.com/prysmaticlabs/go-bitfield"
-	github_com_prysmaticlabs_prysm_consensus_types_primitives "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	_ "github.com/prysmaticlabs/prysm/proto/eth/ext"
+	github_com_prysmaticlabs_prysm_consensus_types_primitives "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	_ "github.com/prysmaticlabs/prysm/v3/proto/eth/ext"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
@@ -780,8 +780,8 @@ type SyncInfo struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	HeadSlot     github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot `protobuf:"varint,1,opt,name=head_slot,json=headSlot,proto3" json:"head_slot,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"`
-	SyncDistance github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot `protobuf:"varint,2,opt,name=sync_distance,json=syncDistance,proto3" json:"sync_distance,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"`
+	HeadSlot     github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot `protobuf:"varint,1,opt,name=head_slot,json=headSlot,proto3" json:"head_slot,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"`
+	SyncDistance github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot `protobuf:"varint,2,opt,name=sync_distance,json=syncDistance,proto3" json:"sync_distance,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"`
 	IsSyncing    bool                                                           `protobuf:"varint,3,opt,name=is_syncing,json=isSyncing,proto3" json:"is_syncing,omitempty"`
 	IsOptimistic bool                                                           `protobuf:"varint,4,opt,name=is_optimistic,json=isOptimistic,proto3" json:"is_optimistic,omitempty"`
 }

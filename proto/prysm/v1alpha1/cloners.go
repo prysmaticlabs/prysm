@@ -1,8 +1,8 @@
 package eth
 
 import (
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
 )
 
 // CopyETH1Data copies the provided eth1data object.

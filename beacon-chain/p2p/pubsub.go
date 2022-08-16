@@ -9,10 +9,10 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/config/features"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	pbrpc "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/v3/config/features"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	pbrpc "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
 const (

@@ -6,7 +6,7 @@ go_library(
         "generate_genesis_state.go",
         "generate_keys.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/runtime/interop",
+    importpath = "github.com/prysmaticlabs/prysm/v3/runtime/interop",
     visibility = ["//visibility:public"],
     deps = [
         "//async:go_default_library",

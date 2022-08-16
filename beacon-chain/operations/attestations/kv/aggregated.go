@@ -4,10 +4,10 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	attaggregation "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation/aggregation/attestations"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	attaggregation "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/attestation/aggregation/attestations"
 	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )

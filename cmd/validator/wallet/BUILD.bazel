@@ -6,7 +6,7 @@ go_library(
         "edit.go",
         "wallet.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/cmd/validator/wallet",
+    importpath = "github.com/prysmaticlabs/prysm/v3/cmd/validator/wallet",
     visibility = ["//visibility:public"],
     deps = [
         "//cmd:go_default_library",
