@@ -96,7 +96,7 @@ func TestAttestationDeltaPrecompute(t *testing.T) {
 	require.NoError(t, err)
 
 	// Add some variances to target and head balances.
-	// See: https://github.com/prysmaticlabs/prysm/v3/issues/5593
+	// See: https://github.com/prysmaticlabs/prysm/issues/5593
 	bp.PrevEpochTargetAttested /= 2
 	bp.PrevEpochHeadAttested = bp.PrevEpochHeadAttested * 2 / 3
 	rewards, penalties, err := AttestationsDelta(beaconState, bp, vp)
