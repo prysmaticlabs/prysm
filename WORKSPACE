@@ -309,7 +309,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "126b615e3853e29b61f082f6c89c8bc1c38cd92fb84b0004396fc49e7acc8d9f",
+    sha256 = "82b01a48b143fe0f2fb7fb5f5dd385c1f934335a12d7954f08b1d45d77427b5e",
     strip_prefix = "eth2-networks-674f7a1d01d9c18345456eab76e3871b3df2126b",
     url = "https://github.com/eth-clients/eth2-networks/archive/674f7a1d01d9c18345456eab76e3871b3df2126b.tar.gz",
 )
