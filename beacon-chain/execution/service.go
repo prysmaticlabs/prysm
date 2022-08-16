@@ -17,7 +17,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
 	gethRPC "github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
@@ -84,11 +83,9 @@ type ChainStartFetcher interface {
 // ChainInfoFetcher retrieves information about eth1 metadata at the Ethereum consensus genesis time.
 type ChainInfoFetcher interface {
 	GenesisExecutionChainInfo() (uint64, *big.Int)
-	IsConnectedToETH1() bool
-	CurrentETH1Endpoint() string
-	CurrentETH1ConnectionError() error
-	ETH1Endpoints() []string
-	ETH1ConnectionErrors() []error
+	ExecutionClientConnected() bool
+	ExecutionClientEndpoint() string
+	ExecutionClientConnectionErr() error
 }
 
 // POWBlockFetcher defines a struct that can retrieve mainchain blocks.
@@ -130,7 +127,6 @@ type config struct {
 	stateGen                *stategen.State
 	eth1HeaderReqLimit      uint64
 	beaconNodeStatsUpdater  BeaconNodeStatsUpdater
-	httpEndpoints           []network.Endpoint
 	currHttpEndpoint        network.Endpoint
 	finalizedStateAtStartup state.BeaconState
 }
@@ -297,17 +293,25 @@ func (s *Service) Status() error {
 	return s.runError
 }
 
+// ExecutionClientConnected checks whether are connected via RPC.
+func (s *Service) ExecutionClientConnected() bool {
+	return s.connectedETH1
+}
+
+// ExecutionClientEndpoint returns the URL of the current, connected execution client.
+func (s *Service) ExecutionClientEndpoint() string {
+	return s.cfg.currHttpEndpoint.Url
+}
+
+// ExecutionClientConnectionErr returns the error (if any) of the current connection.
+func (s *Service) ExecutionClientConnectionErr() error {
+	return s.runError
+}
+
 func (s *Service) updateBeaconNodeStats() {
 	bs := clientstats.BeaconNodeStats{}
-	if len(s.cfg.httpEndpoints) > 1 {
-		bs.SyncEth1FallbackConfigured = true
-	}
-	if s.IsConnectedToETH1() {
-		if s.primaryConnected() {
-			bs.SyncEth1Connected = true
-		} else {
-			bs.SyncEth1FallbackConnected = true
-		}
+	if s.ExecutionClientConnected() {
+		bs.SyncEth1Connected = true
 	}
 	s.cfg.beaconNodeStatsUpdater.Update(bs)
 }
@@ -320,51 +324,6 @@ func (s *Service) updateCurrHttpEndpoint(endpoint network.Endpoint) {
 func (s *Service) updateConnectedETH1(state bool) {
 	s.connectedETH1 = state
 	s.updateBeaconNodeStats()
-}
-
-// IsConnectedToETH1 checks if the beacon node is connected to a ETH1 Node.
-func (s *Service) IsConnectedToETH1() bool {
-	return s.connectedETH1
-}
-
-// CurrentETH1Endpoint returns the URL of the current ETH1 endpoint.
-func (s *Service) CurrentETH1Endpoint() string {
-	return s.cfg.currHttpEndpoint.Url
-}
-
-// CurrentETH1ConnectionError returns the error (if any) of the current connection.
-func (s *Service) CurrentETH1ConnectionError() error {
-	return s.runError
-}
-
-// ETH1Endpoints returns the slice of HTTP endpoint URLs (default is 0th element).
-func (s *Service) ETH1Endpoints() []string {
-	var eps []string
-	for _, ep := range s.cfg.httpEndpoints {
-		eps = append(eps, ep.Url)
-	}
-	return eps
-}
-
-// ETH1ConnectionErrors returns a slice of errors for each HTTP endpoint. An error
-// of nil means the connection was successful.
-func (s *Service) ETH1ConnectionErrors() []error {
-	var errs []error
-	for _, ep := range s.cfg.httpEndpoints {
-		client, err := s.newRPCClientWithAuth(s.ctx, ep)
-		if err != nil {
-			client.Close()
-			errs = append(errs, err)
-			continue
-		}
-		if err := ensureCorrectExecutionChain(s.ctx, ethclient.NewClient(client)); err != nil {
-			client.Close()
-			errs = append(errs, err)
-			continue
-		}
-		client.Close()
-	}
-	return errs
 }
 
 // refers to the latest eth1 block which follows the condition: eth1_timestamp +
@@ -656,7 +615,6 @@ func (s *Service) run(done <-chan struct{}) {
 			}
 			s.processBlockHeader(head)
 			s.handleETH1FollowDistance()
-			s.checkDefaultEndpoint(s.ctx)
 		case <-chainstartTicker.C:
 			if s.chainStartData.Chainstarted {
 				chainstartTicker.Stop()
@@ -887,8 +845,4 @@ func eth1HeadIsBehind(timestamp uint64) bool {
 	timeout := prysmTime.Now().Add(-eth1Threshold)
 	// check that web3 client is syncing
 	return time.Unix(int64(timestamp), 0).Before(timeout) // lint:ignore uintcast -- timestamp will not exceed int64 in your lifetime.
-}
-
-func (s *Service) primaryConnected() bool {
-	return s.cfg.currHttpEndpoint.Equals(s.cfg.httpEndpoints[0])
 }

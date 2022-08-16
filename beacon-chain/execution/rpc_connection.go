@@ -65,8 +65,7 @@ func (s *Service) pollConnectionStatus(ctx context.Context) {
 			currClient := s.rpcClient
 			if err := s.setupExecutionClientConnections(ctx, s.cfg.currHttpEndpoint); err != nil {
 				errorLogger(err, "Could not connect to execution client endpoint")
-				s.runError = err
-				s.fallbackToNextEndpoint()
+				s.retryExecutionClientConnection(ctx, err)
 				continue
 			}
 			// Close previous client, if connection was successful.
@@ -99,52 +98,6 @@ func (s *Service) retryExecutionClientConnection(ctx context.Context, err error)
 	}
 	// Reset run error in the event of a successful connection.
 	s.runError = nil
-}
-
-// This performs a health check on our primary endpoint, and if it
-// is ready to serve we connect to it again. This method is only
-// relevant if we are on our backup endpoint.
-func (s *Service) checkDefaultEndpoint(ctx context.Context) {
-	primaryEndpoint := s.cfg.httpEndpoints[0]
-	// Return early if we are running on our primary
-	// endpoint.
-	if s.cfg.currHttpEndpoint.Equals(primaryEndpoint) {
-		return
-	}
-
-	currClient := s.rpcClient
-	if err := s.setupExecutionClientConnections(ctx, primaryEndpoint); err != nil {
-		log.WithError(err).Debug("Primary endpoint not ready")
-		return
-	}
-	// Close previous client, if connection was successful.
-	if currClient != nil {
-		currClient.Close()
-	}
-	s.updateCurrHttpEndpoint(primaryEndpoint)
-}
-
-// This is an inefficient way to search for the next endpoint, but given N is
-// expected to be small, it is fine to search this way.
-func (s *Service) fallbackToNextEndpoint() {
-	currEndpoint := s.cfg.currHttpEndpoint
-	currIndex := 0
-	totalEndpoints := len(s.cfg.httpEndpoints)
-
-	for i, endpoint := range s.cfg.httpEndpoints {
-		if endpoint.Equals(currEndpoint) {
-			currIndex = i
-			break
-		}
-	}
-	nextIndex := currIndex + 1
-	if nextIndex >= totalEndpoints {
-		nextIndex = 0
-	}
-	s.updateCurrHttpEndpoint(s.cfg.httpEndpoints[nextIndex])
-	if nextIndex != currIndex {
-		log.Infof("Falling back to alternative endpoint: %s", logs.MaskCredentialsLogging(s.cfg.currHttpEndpoint.Url))
-	}
 }
 
 // Initializes an RPC connection with authentication headers.
