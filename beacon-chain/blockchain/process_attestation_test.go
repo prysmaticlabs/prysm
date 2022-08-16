@@ -28,7 +28,7 @@ func TestStore_OnAttestation_ErrorConditions_ProtoArray(t *testing.T) {
 
 	opts := []Option{
 		WithDatabase(beaconDB),
-		WithForkChoiceStore(protoarray.New()),
+		WithForkChoiceStore(doublylinkedtree.New()),
 		WithStateGen(stategen.New(beaconDB)),
 	}
 	service, err := NewService(ctx, opts...)
