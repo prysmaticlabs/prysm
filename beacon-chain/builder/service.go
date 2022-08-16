@@ -3,6 +3,7 @@ package builder
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"time"
 
 	"github.com/pkg/errors"
@@ -56,7 +57,7 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 			return nil, err
 		}
 	}
-	if s.cfg.builderClient != nil {
+	if !reflect.ValueOf(s.cfg.builderClient).IsNil() {
 		s.c = s.cfg.builderClient
 
 		// Is the builder up?

@@ -13,9 +13,13 @@ type Option func(s *Service) error
 // FlagOptions for builder service flag configurations.
 func FlagOptions(c *cli.Context) ([]Option, error) {
 	endpoint := c.String(flags.MevRelayEndpoint.Name)
-	client, err := builder.NewClient(endpoint)
-	if err != nil {
-		return nil, err
+	var client *builder.Client
+	if endpoint != "" {
+		var err error
+		client, err = builder.NewClient(endpoint)
+		if err != nil {
+			return nil, err
+		}
 	}
 	opts := []Option{
 		WithBuilderClient(client),
