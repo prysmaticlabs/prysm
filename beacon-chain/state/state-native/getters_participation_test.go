@@ -3,6 +3,7 @@ package state_native
 import (
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -27,6 +28,7 @@ func TestState_UnrealizedCheckpointBalances(t *testing.T) {
 		PreviousEpochParticipation: make([]byte, params.BeaconConfig().MinGenesisActiveValidatorCount),
 		Balances:                   balances,
 	}
+	features.Init(&features.Flags{EnableNativeState: true})
 	state, err := InitializeFromProtoAltair(base)
 	require.NoError(t, err)
 
