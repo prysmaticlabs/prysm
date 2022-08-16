@@ -531,7 +531,7 @@ func TestComputeProposerIndex(t *testing.T) {
 			},
 			want: 2,
 		},
-		{ // Regression test for https://github.com/prysmaticlabs/prysm/v3/issues/4259.
+		{ // Regression test for https://github.com/prysmaticlabs/prysm/issues/4259.
 			name: "1_active_index",
 			args: args{
 				validators: []*ethpb.Validator{
