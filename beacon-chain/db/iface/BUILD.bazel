@@ -7,7 +7,7 @@ go_library(
         "interface.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/iface",
-    # Other packages must use github.com/prysmaticlabs/prysm/v3/beacon-chain/db.Database alias.
+    # Other packages must use github.com/prysmaticlabs/prysm/beacon-chain/db.Database alias.
     visibility = ["//visibility:public"],
     deps = [
         "//beacon-chain/db/filters:go_default_library",
