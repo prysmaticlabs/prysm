@@ -84,6 +84,7 @@ func TestComputeFieldRootsWithHasher_Phase0(t *testing.T) {
 }
 
 func TestComputeFieldRootsWithHasher_Altair(t *testing.T) {
+	features.Init(&features.Flags{EnableNativeState: true})
 	beaconState, err := util.NewBeaconStateAltair(util.FillRootsNaturalOptAltair)
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetGenesisTime(123))
@@ -151,9 +152,11 @@ func TestComputeFieldRootsWithHasher_Altair(t *testing.T) {
 		{0xd6, 0x4c, 0xb1, 0xac, 0x61, 0x7, 0x26, 0xbb, 0xd3, 0x27, 0x2a, 0xcd, 0xdd, 0x55, 0xf, 0x2b, 0x6a, 0xe8, 0x1, 0x31, 0x48, 0x66, 0x2f, 0x98, 0x7b, 0x6d, 0x27, 0x69, 0xd9, 0x40, 0xcc, 0x37},
 	}
 	assert.DeepEqual(t, expected, root)
+	features.Init(&features.Flags{EnableNativeState: false})
 }
 
 func TestComputeFieldRootsWithHasher_Bellatrix(t *testing.T) {
+	features.Init(&features.Flags{EnableNativeState: true})
 	beaconState, err := util.NewBeaconStateBellatrix(util.FillRootsNaturalOptBellatrix)
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetGenesisTime(123))
@@ -225,6 +228,7 @@ func TestComputeFieldRootsWithHasher_Bellatrix(t *testing.T) {
 		{0xbc, 0xbb, 0x39, 0x57, 0x61, 0x1d, 0x54, 0xd6, 0x1b, 0xfe, 0x7a, 0xbd, 0x29, 0x52, 0x57, 0xdd, 0x19, 0x1, 0x89, 0x22, 0x7d, 0xdf, 0x7b, 0x53, 0x9f, 0xb, 0x46, 0x5, 0x9f, 0x80, 0xcc, 0x8e},
 	}
 	assert.DeepEqual(t, expected, root)
+	features.Init(&features.Flags{EnableNativeState: false})
 }
 
 func genesisValidatorsRoot() []byte {
