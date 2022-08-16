@@ -73,6 +73,8 @@ var appFlags = []cli.Flag{
 	flags.TerminalBlockHashOverride,
 	flags.TerminalBlockHashActivationEpochOverride,
 	flags.MevRelayEndpoint,
+	flags.MaxBuilderEpochMissedSlots,
+	flags.MaxBuilderConsecutiveMissedSlots,
 	cmd.EnableBackupWebhookFlag,
 	cmd.BackupWebhookOutputDir,
 	cmd.MinimalConfigFlag,

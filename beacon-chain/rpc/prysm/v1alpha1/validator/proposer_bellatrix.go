@@ -317,16 +317,16 @@ func (vs *Server) circuitBreakBuilder(s types.Slot) (bool, error) {
 
 	// Circuit breaker is active if the missing consecutive slots greater than `MaxBuilderConsecutiveMissedSlots`.
 	highestReceivedSlot := vs.ForkFetcher.ForkChoicer().HighestReceivedBlockSlot()
-	fallbackSlots := params.BeaconConfig().MaxBuilderConsecutiveMissedSlots
+	maxConsecutiveSkipSlotsAllowed := params.BeaconConfig().MaxBuilderConsecutiveMissedSlots
 	diff, err := s.SafeSubSlot(highestReceivedSlot)
 	if err != nil {
 		return true, err
 	}
-	if diff > fallbackSlots {
+	if diff > maxConsecutiveSkipSlotsAllowed {
 		log.WithFields(logrus.Fields{
-			"currentSlot":         s,
-			"highestReceivedSlot": highestReceivedSlot,
-			"fallBackSkipSlots":   fallbackSlots,
+			"currentSlot":                    s,
+			"highestReceivedSlot":            highestReceivedSlot,
+			"maxConsecutiveSkipSlotsAllowed": maxConsecutiveSkipSlotsAllowed,
 		}).Warn("Builder circuit breaker activated due to missing consecutive slot")
 		return true, nil
 	}
@@ -341,15 +341,15 @@ func (vs *Server) circuitBreakBuilder(s types.Slot) (bool, error) {
 	if err != nil {
 		return true, err
 	}
-	fallbackSlotsLastEpoch := params.BeaconConfig().MaxBuilderEpochMissedSlots
+	maxEpochSkipSlotsAllowed := params.BeaconConfig().MaxBuilderEpochMissedSlots
 	diff, err = params.BeaconConfig().SlotsPerEpoch.SafeSub(receivedCount)
 	if err != nil {
 		return true, err
 	}
-	if diff > fallbackSlotsLastEpoch {
+	if diff > maxEpochSkipSlotsAllowed {
 		log.WithFields(logrus.Fields{
-			"totalMissed":                receivedCount,
-			"fallBackSkipSlotsLastEpoch": fallbackSlotsLastEpoch,
+			"totalMissed":              diff,
+			"maxEpochSkipSlotsAllowed": maxEpochSkipSlotsAllowed,
 		}).Warn("Builder circuit breaker activated due to missing enough slots last epoch")
 		return true, nil
 	}
