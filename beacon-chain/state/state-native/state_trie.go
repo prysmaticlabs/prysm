@@ -663,10 +663,7 @@ func (b *BeaconState) rootSelector(ctx context.Context, field nativetypes.FieldI
 		return b.recomputeFieldTrie(11, b.validators)
 	case nativetypes.Balances:
 		if b.rebuildTrie[field] {
-			maxBalCap := uint64(fieldparams.ValidatorRegistryLimit)
-			elemSize := uint64(8)
-			balLimit := (maxBalCap*elemSize + 31) / 32
-			err := b.resetFieldTrie(field, b.balances, balLimit)
+			err := b.resetFieldTrie(field, b.balances, stateutil.ValidatorLimitForBalancesChunks())
 			if err != nil {
 				return [32]byte{}, err
 			}
