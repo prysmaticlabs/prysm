@@ -28,6 +28,7 @@ func TestBeaconStateMerkleProofs_phase0_notsupported(t *testing.T) {
 		_, err := st.FinalizedRootProof(ctx)
 		require.ErrorContains(t, "not supported", err)
 	})
+	features.Init(&features.Flags{EnableNativeState: false})
 }
 
 func TestBeaconStateMerkleProofs_bellatrix(t *testing.T) {
@@ -98,4 +99,5 @@ func TestBeaconStateMerkleProofs_bellatrix(t *testing.T) {
 		valid = trie.VerifyMerkleProof(newRoot[:], finalizedRoot, gIndex, proof)
 		require.Equal(t, true, valid)
 	})
+	features.Init(&features.Flags{EnableNativeState: false})
 }

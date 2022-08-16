@@ -47,6 +47,7 @@ func TestComputeFieldRootsWithHasher_Phase0(t *testing.T) {
 	require.Equal(t, true, ok)
 	protoState, ok := nativeState.InnerStateUnsafe().(*ethpb.BeaconState)
 	require.Equal(t, true, ok)
+
 	initState, err := statenative.InitializeFromProtoPhase0(protoState)
 	require.NoError(t, err)
 	s, ok := initState.(*statenative.BeaconState)

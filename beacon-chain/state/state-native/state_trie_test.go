@@ -94,6 +94,7 @@ func TestInitializeFromProto_Altair(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 			}
+			features.Init(&features.Flags{EnableNativeState: false})
 		})
 	}
 }
@@ -131,6 +132,7 @@ func TestInitializeFromProto_Bellatrix(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 			}
+			features.Init(&features.Flags{EnableNativeState: false})
 		})
 	}
 }
@@ -170,6 +172,7 @@ func TestInitializeFromProtoUnsafe_Phase0(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 			}
+			features.Init(&features.Flags{EnableNativeState: false})
 		})
 	}
 }
@@ -286,6 +289,7 @@ func TestBeaconState_HashTreeRoot(t *testing.T) {
 				t.Errorf("Expected HTR to change, received %#x == old %#x", root, oldHTR)
 			}
 			oldHTR = root[:]
+			features.Init(&features.Flags{EnableNativeState: false})
 		})
 	}
 }
@@ -307,6 +311,7 @@ func BenchmarkBeaconState(b *testing.B) {
 		_, err := pbState.HashTreeRoot()
 		require.NoError(b, err)
 	})
+	features.Init(&features.Flags{EnableNativeState: false})
 }
 
 func TestBeaconState_HashTreeRoot_FieldTrie(t *testing.T) {
@@ -375,6 +380,7 @@ func TestBeaconState_HashTreeRoot_FieldTrie(t *testing.T) {
 				t.Errorf("Expected HTR to change, received %#x == old %#x", root, oldHTR)
 			}
 			oldHTR = root[:]
+			features.Init(&features.Flags{EnableNativeState: false})
 		})
 	}
 }
@@ -526,6 +532,7 @@ func TestBeaconState_ValidatorMutation_Altair(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, rt, rt2)
+	features.Init(&features.Flags{EnableNativeState: false})
 }
 
 func TestBeaconState_ValidatorMutation_Bellatrix(t *testing.T) {
@@ -594,4 +601,5 @@ func TestBeaconState_ValidatorMutation_Bellatrix(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, rt, rt2)
+	features.Init(&features.Flags{EnableNativeState: false})
 }

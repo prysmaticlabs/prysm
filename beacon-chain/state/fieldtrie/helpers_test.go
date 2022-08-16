@@ -370,4 +370,5 @@ func TestFieldTrie_NativeState_fieldConvertersNative(t *testing.T) {
 			}
 		})
 	}
+	features.Init(&features.Flags{EnableNativeState: false})
 }

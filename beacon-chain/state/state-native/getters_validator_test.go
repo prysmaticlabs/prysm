@@ -20,6 +20,7 @@ func TestBeaconState_ValidatorAtIndexReadOnly_HandlesNilSlice_Phase0(t *testing.
 			Validators: nil,
 		})
 	})
+	features.Init(&features.Flags{EnableNativeState: false})
 }
 
 func TestBeaconState_ValidatorAtIndexReadOnly_HandlesNilSlice_Altair(t *testing.T) {
@@ -29,6 +30,7 @@ func TestBeaconState_ValidatorAtIndexReadOnly_HandlesNilSlice_Altair(t *testing.
 			Validators: nil,
 		})
 	})
+	features.Init(&features.Flags{EnableNativeState: false})
 }
 
 func TestBeaconState_ValidatorAtIndexReadOnly_HandlesNilSlice_Bellatrix(t *testing.T) {
@@ -38,12 +40,14 @@ func TestBeaconState_ValidatorAtIndexReadOnly_HandlesNilSlice_Bellatrix(t *testi
 			Validators: nil,
 		})
 	})
+	features.Init(&features.Flags{EnableNativeState: false})
 }
 
 func TestValidatorIndexOutOfRangeError(t *testing.T) {
 	features.Init(&features.Flags{EnableNativeState: true})
 	err := statenative.NewValidatorIndexOutOfRangeError(1)
 	require.Equal(t, err.Error(), "index 1 out of range")
+	features.Init(&features.Flags{EnableNativeState: false})
 }
 
 func TestValidatorIndexes(t *testing.T) {
@@ -60,4 +64,5 @@ func TestValidatorIndexes(t *testing.T) {
 		require.NotEmpty(t, readOnlyBytes)
 		require.Equal(t, hexutil.Encode(readOnlyBytes[:]), hexutil.Encode(byteValue[:]))
 	})
+	features.Init(&features.Flags{EnableNativeState: false})
 }

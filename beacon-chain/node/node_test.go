@@ -57,6 +57,7 @@ func TestNodeClose_OK(t *testing.T) {
 	node.Close()
 
 	require.LogsContain(t, hook, "Stopping beacon node")
+	features.Init(&features.Flags{EnableNativeState: false})
 }
 
 func TestNodeStart_Ok(t *testing.T) {
@@ -126,6 +127,7 @@ func TestNodeStart_Ok_registerDeterminsticGenesisService(t *testing.T) {
 	node.Close()
 	require.LogsContain(t, hook, "Starting beacon node")
 	require.NoError(t, os.Remove("genesis_ssz.json"))
+	features.Init(&features.Flags{EnableNativeState: false})
 }
 
 // TestClearDB tests clearing the database

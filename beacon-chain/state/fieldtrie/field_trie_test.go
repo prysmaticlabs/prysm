@@ -27,6 +27,7 @@ func TestFieldTrie_NewTrie(t *testing.T) {
 	newRoot, err := trie.TrieRoot()
 	require.NoError(t, err)
 	assert.Equal(t, root, newRoot)
+	features.Init(&features.Flags{EnableNativeState: false})
 }
 
 func TestFieldTrie_NewTrie_NilElements(t *testing.T) {
@@ -67,6 +68,7 @@ func TestFieldTrie_RecomputeTrie(t *testing.T) {
 	root, err := trie.RecomputeTrie(changedIdx, newState.Validators())
 	require.NoError(t, err)
 	assert.Equal(t, expectedRoot, root)
+	features.Init(&features.Flags{EnableNativeState: false})
 }
 
 func TestFieldTrie_RecomputeTrie_CompressedArray(t *testing.T) {
@@ -85,6 +87,7 @@ func TestFieldTrie_RecomputeTrie_CompressedArray(t *testing.T) {
 
 	// not equal for some reason :(
 	assert.Equal(t, expectedRoot, root)
+	features.Init(&features.Flags{EnableNativeState: false})
 }
 
 func TestNewFieldTrie_UnknownType(t *testing.T) {
@@ -92,6 +95,7 @@ func TestNewFieldTrie_UnknownType(t *testing.T) {
 	newState, _ := util.DeterministicGenesisState(t, 32)
 	_, err := fieldtrie.NewFieldTrie(stateTypes.FieldIndex(12), 4, newState.Balances(), 32)
 	require.ErrorContains(t, "unrecognized data type", err)
+	features.Init(&features.Flags{EnableNativeState: false})
 }
 
 func TestFieldTrie_CopyTrieImmutable(t *testing.T) {
@@ -116,6 +120,7 @@ func TestFieldTrie_CopyTrieImmutable(t *testing.T) {
 	if root == newRoot {
 		t.Errorf("Wanted roots to be different, but they are the same: %#x", root)
 	}
+	features.Init(&features.Flags{EnableNativeState: false})
 }
 
 func TestFieldTrie_CopyAndTransferEmpty(t *testing.T) {
@@ -143,6 +148,7 @@ func TestFieldTrie_TransferTrie(t *testing.T) {
 	newRoot, err := newTrie.TrieRoot()
 	require.NoError(t, err)
 	require.DeepEqual(t, oldRoot, newRoot)
+	features.Init(&features.Flags{EnableNativeState: false})
 }
 
 func FuzzFieldTrie(f *testing.F) {
@@ -168,4 +174,5 @@ func FuzzFieldTrie(f *testing.F) {
 			return
 		}
 	})
+	features.Init(&features.Flags{EnableNativeState: false})
 }

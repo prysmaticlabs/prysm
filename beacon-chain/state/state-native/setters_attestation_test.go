@@ -23,4 +23,5 @@ func TestBeaconState_RotateAttestations(t *testing.T) {
 	require.Equal(t, true, ok)
 	require.Equal(t, 0, len(s.currentEpochAttestationsVal()))
 	require.Equal(t, types.Slot(456), s.previousEpochAttestationsVal()[0].Data.Slot)
+	features.Init(&features.Flags{EnableNativeState: false})
 }
