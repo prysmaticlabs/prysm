@@ -322,7 +322,7 @@ func TestStore_OnBlockBatch_DoublyLinkedTree(t *testing.T) {
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),
-		WithForkChoiceStore(protoarray.New()),
+		WithForkChoiceStore(doublylinkedtree.New()),
 	}
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
@@ -894,7 +894,7 @@ func TestAncestor_HandleSkipSlot(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
-	fcs := protoarray.New()
+	fcs := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),
@@ -985,7 +985,7 @@ func TestAncestor_CanUseDB(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
-	fcs := protoarray.New()
+	fcs := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),
@@ -1047,7 +1047,7 @@ func TestVerifyBlkDescendant(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	ctx := context.Background()
 
-	fcs := protoarray.New()
+	fcs := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),
@@ -1154,7 +1154,7 @@ func TestHandleEpochBoundary_UpdateFirstSlot(t *testing.T) {
 func TestOnBlock_CanFinalize_WithOnTick(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-	fcs := protoarray.New()
+	fcs := doublylinkedtree.New()
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 	opts := []Option{
@@ -1203,7 +1203,7 @@ func TestOnBlock_CanFinalize_WithOnTick(t *testing.T) {
 func TestOnBlock_CanFinalize(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-	fcs := protoarray.New()
+	fcs := doublylinkedtree.New()
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 	opts := []Option{
@@ -1251,7 +1251,7 @@ func TestOnBlock_CanFinalize(t *testing.T) {
 func TestOnBlock_NilBlock(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-	fcs := protoarray.New()
+	fcs := doublylinkedtree.New()
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 	opts := []Option{
@@ -1270,7 +1270,7 @@ func TestOnBlock_NilBlock(t *testing.T) {
 func TestOnBlock_InvalidSignature(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-	fcs := protoarray.New()
+	fcs := doublylinkedtree.New()
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 	opts := []Option{
@@ -1306,7 +1306,7 @@ func TestOnBlock_CallNewPayloadAndForkchoiceUpdated(t *testing.T) {
 
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-	fcs := protoarray.New()
+	fcs := doublylinkedtree.New()
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 	opts := []Option{
@@ -1521,7 +1521,7 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-	fcs := protoarray.New()
+	fcs := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),
@@ -1659,7 +1659,7 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 func TestService_insertSlashingsToForkChoiceStore(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-	fcs := protoarray.New()
+	fcs := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),
@@ -1710,7 +1710,7 @@ func TestService_insertSlashingsToForkChoiceStore(t *testing.T) {
 func TestOnBlock_ProcessBlocksParallel(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-	fcs := protoarray.New()
+	fcs := doublylinkedtree.New()
 	depositCache, err := depositcache.New()
 	require.NoError(t, err)
 	opts := []Option{
@@ -1754,6 +1754,10 @@ func TestOnBlock_ProcessBlocksParallel(t *testing.T) {
 
 	logHook := logTest.NewGlobal()
 	for i := 0; i < 10; i++ {
+		fc := &ethpb.Checkpoint{}
+		st, blkRoot, err := prepareForkchoiceState(ctx, 0, bytesutil.ToBytes32(wsb1.Block().ParentRoot()), [32]byte{}, [32]byte{}, fc, fc)
+		require.NoError(t, err)
+		require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, st, blkRoot))
 		var wg sync.WaitGroup
 		wg.Add(4)
 		go func() {
@@ -1778,7 +1782,7 @@ func TestOnBlock_ProcessBlocksParallel(t *testing.T) {
 		require.NoError(t, service.cfg.BeaconDB.DeleteBlock(ctx, r2))
 		require.NoError(t, service.cfg.BeaconDB.DeleteBlock(ctx, r3))
 		require.NoError(t, service.cfg.BeaconDB.DeleteBlock(ctx, r4))
-		service.cfg.ForkChoiceStore = protoarray.New()
+		service.cfg.ForkChoiceStore = doublylinkedtree.New()
 	}
 }
 
@@ -1786,7 +1790,7 @@ func Test_verifyBlkFinalizedSlot_invalidBlock(t *testing.T) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
 
-	fcs := protoarray.New()
+	fcs := doublylinkedtree.New()
 	opts := []Option{
 		WithDatabase(beaconDB),
 		WithStateGen(stategen.New(beaconDB)),
@@ -2996,17 +3000,16 @@ func TestStore_NoViableHead_Reboot_DoublyLinkedTree(t *testing.T) {
 
 	require.NoError(t, service.StartFromSavedState(genesisState))
 
-	// Forkchoice does not have a cached headroot now
-	require.Equal(t, [32]byte{}, service.ForkChoicer().CachedHeadRoot())
+	// Forkchoice has the genesisRoot loaded at startup
+	require.Equal(t, genesisRoot, service.ForkChoicer().CachedHeadRoot())
 	// Service's store has the finalized state as headRoot
 	headRoot, err := service.HeadRoot(ctx)
 	require.NoError(t, err)
 	require.Equal(t, genesisRoot, bytesutil.ToBytes32(headRoot))
-	// The node is not optimistic now until the first call to forkchoice
-	// Head()
+	// The node is optimistic now.
 	optimistic, err := service.IsOptimistic(ctx)
 	require.NoError(t, err)
-	require.Equal(t, false, optimistic)
+	require.Equal(t, true, optimistic)
 	require.Equal(t, false, service.ForkChoicer().AllTipsAreInvalid())
 
 	// Check that the node's justified checkpoint does not agree with the
@@ -3025,8 +3028,8 @@ func TestStore_NoViableHead_Reboot_DoublyLinkedTree(t *testing.T) {
 	root, err = b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, service.onBlock(ctx, wsb, root))
-	// Check that the head is still INVALID and the node is not optimistic
-	require.Equal(t, [32]byte{}, service.ForkChoicer().CachedHeadRoot())
+	// Check that the head is still INVALID and the node is optimistic
+	require.Equal(t, genesisRoot, service.ForkChoicer().CachedHeadRoot())
 	headRoot, err = service.HeadRoot(ctx)
 	require.NoError(t, err)
 	require.Equal(t, genesisRoot, bytesutil.ToBytes32(headRoot))
@@ -3053,8 +3056,8 @@ func TestStore_NoViableHead_Reboot_DoublyLinkedTree(t *testing.T) {
 		st, err = service.cfg.StateGen.StateByRoot(ctx, root)
 		require.NoError(t, err)
 	}
-	// Head should still be INVALID and the node is not optimistic
-	require.Equal(t, [32]byte{}, service.ForkChoicer().CachedHeadRoot())
+	// Head should still be INVALID and the node is optimistic
+	require.Equal(t, genesisRoot, service.ForkChoicer().CachedHeadRoot())
 	headRoot, err = service.HeadRoot(ctx)
 	require.NoError(t, err)
 	require.Equal(t, genesisRoot, bytesutil.ToBytes32(headRoot))
@@ -3222,17 +3225,15 @@ func TestStore_NoViableHead_Reboot_Protoarray(t *testing.T) {
 
 	require.NoError(t, service.StartFromSavedState(genesisState))
 
-	// Forkchoice does not have a cached headroot now
-	require.Equal(t, [32]byte{}, service.ForkChoicer().CachedHeadRoot())
+	require.Equal(t, genesisRoot, service.ForkChoicer().CachedHeadRoot())
 	// Service's store has the finalized state as headRoot
 	headRoot, err := service.HeadRoot(ctx)
 	require.NoError(t, err)
 	require.Equal(t, genesisRoot, bytesutil.ToBytes32(headRoot))
-	// The node is not optimistic now until the first call to forkchoice
-	// Head()
+	// The node is optimistic now
 	optimistic, err := service.IsOptimistic(ctx)
 	require.NoError(t, err)
-	require.Equal(t, false, optimistic)
+	require.Equal(t, true, optimistic)
 	require.Equal(t, false, service.ForkChoicer().AllTipsAreInvalid())
 
 	// Check that the node's justified checkpoint does not agree with the
@@ -3251,8 +3252,8 @@ func TestStore_NoViableHead_Reboot_Protoarray(t *testing.T) {
 	root, err = b.Block.HashTreeRoot()
 	require.NoError(t, err)
 	require.NoError(t, service.onBlock(ctx, wsb, root))
-	// Check that the head is still INVALID and the node is not optimistic
-	require.Equal(t, [32]byte{}, service.ForkChoicer().CachedHeadRoot())
+	// Check that the head is still INVALID and the node is optimistic
+	require.Equal(t, genesisRoot, service.ForkChoicer().CachedHeadRoot())
 	headRoot, err = service.HeadRoot(ctx)
 	require.NoError(t, err)
 	require.Equal(t, genesisRoot, bytesutil.ToBytes32(headRoot))
@@ -3278,8 +3279,8 @@ func TestStore_NoViableHead_Reboot_Protoarray(t *testing.T) {
 		st, err = service.cfg.StateGen.StateByRoot(ctx, root)
 		require.NoError(t, err)
 	}
-	// Head should still be INVALID and the node is not optimistic
-	require.Equal(t, [32]byte{}, service.ForkChoicer().CachedHeadRoot())
+	// Head should still be INVALID and the node is optimistic
+	require.Equal(t, genesisRoot, service.ForkChoicer().CachedHeadRoot())
 	headRoot, err = service.HeadRoot(ctx)
 	require.NoError(t, err)
 	require.Equal(t, genesisRoot, bytesutil.ToBytes32(headRoot))
