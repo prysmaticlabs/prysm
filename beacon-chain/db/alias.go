@@ -15,7 +15,7 @@ type NoHeadAccessDatabase = iface.NoHeadAccessDatabase
 // of truth around chain head information while this interface serves as persistent storage for the
 // head fetcher.
 //
-// See github.com/prysmaticlabs/prysm/v3/blockchain.HeadFetcher
+// See github.com/prysmaticlabs/prysm/blockchain.HeadFetcher
 type HeadAccessDatabase = iface.HeadAccessDatabase
 
 // Database defines the necessary methods for Prysm's Ethereum backend which may be implemented by any
