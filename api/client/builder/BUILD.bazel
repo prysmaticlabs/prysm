@@ -7,7 +7,7 @@ go_library(
         "errors.go",
         "types.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/api/client/builder",
+    importpath = "github.com/prysmaticlabs/prysm/v3/api/client/builder",
     visibility = ["//visibility:public"],
     deps = [
         "//consensus-types/primitives:go_default_library",

@@ -18,7 +18,7 @@ go_library(
         "slashing.go",
         "validator.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/testing/endtoend/evaluators",
+    importpath = "github.com/prysmaticlabs/prysm/v3/testing/endtoend/evaluators",
     visibility = ["//testing/endtoend:__subpackages__"],
     deps = [
         "//beacon-chain/core/altair:go_default_library",

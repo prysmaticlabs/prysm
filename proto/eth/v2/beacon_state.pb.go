@@ -11,10 +11,10 @@ import (
 	sync "sync"
 
 	github_com_prysmaticlabs_go_bitfield "github.com/prysmaticlabs/go-bitfield"
-	github_com_prysmaticlabs_prysm_consensus_types_primitives "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	v11 "github.com/prysmaticlabs/prysm/proto/engine/v1"
-	_ "github.com/prysmaticlabs/prysm/proto/eth/ext"
-	v1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
+	github_com_prysmaticlabs_prysm_consensus_types_primitives "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	v11 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+	_ "github.com/prysmaticlabs/prysm/v3/proto/eth/ext"
+	v1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
@@ -33,7 +33,7 @@ type BeaconStateV2 struct {
 
 	GenesisTime                 uint64                                                         `protobuf:"varint,1001,opt,name=genesis_time,json=genesisTime,proto3" json:"genesis_time,omitempty"`
 	GenesisValidatorsRoot       []byte                                                         `protobuf:"bytes,1002,opt,name=genesis_validators_root,json=genesisValidatorsRoot,proto3" json:"genesis_validators_root,omitempty" ssz-size:"32"`
-	Slot                        github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot `protobuf:"varint,1003,opt,name=slot,proto3" json:"slot,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"`
+	Slot                        github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot `protobuf:"varint,1003,opt,name=slot,proto3" json:"slot,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"`
 	Fork                        *v1.Fork                                                       `protobuf:"bytes,1004,opt,name=fork,proto3" json:"fork,omitempty"`
 	LatestBlockHeader           *v1.BeaconBlockHeader                                          `protobuf:"bytes,2001,opt,name=latest_block_header,json=latestBlockHeader,proto3" json:"latest_block_header,omitempty"`
 	BlockRoots                  [][]byte                                                       `protobuf:"bytes,2002,rep,name=block_roots,json=blockRoots,proto3" json:"block_roots,omitempty" ssz-size:"8192,32"`
@@ -264,7 +264,7 @@ type BeaconStateBellatrix struct {
 
 	GenesisTime                  uint64                                                         `protobuf:"varint,1001,opt,name=genesis_time,json=genesisTime,proto3" json:"genesis_time,omitempty"`
 	GenesisValidatorsRoot        []byte                                                         `protobuf:"bytes,1002,opt,name=genesis_validators_root,json=genesisValidatorsRoot,proto3" json:"genesis_validators_root,omitempty" ssz-size:"32"`
-	Slot                         github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot `protobuf:"varint,1003,opt,name=slot,proto3" json:"slot,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"`
+	Slot                         github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot `protobuf:"varint,1003,opt,name=slot,proto3" json:"slot,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"`
 	Fork                         *v1.Fork                                                       `protobuf:"bytes,1004,opt,name=fork,proto3" json:"fork,omitempty"`
 	LatestBlockHeader            *v1.BeaconBlockHeader                                          `protobuf:"bytes,2001,opt,name=latest_block_header,json=latestBlockHeader,proto3" json:"latest_block_header,omitempty"`
 	BlockRoots                   [][]byte                                                       `protobuf:"bytes,2002,rep,name=block_roots,json=blockRoots,proto3" json:"block_roots,omitempty" ssz-size:"8192,32"`
@@ -808,7 +808,7 @@ type ForkChoiceHead struct {
 	unknownFields protoimpl.UnknownFields
 
 	Root                []byte                                                         `protobuf:"bytes,1,opt,name=root,proto3" json:"root,omitempty" ssz-size:"32"`
-	Slot                github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot `protobuf:"varint,2,opt,name=slot,proto3" json:"slot,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"`
+	Slot                github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot `protobuf:"varint,2,opt,name=slot,proto3" json:"slot,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"`
 	ExecutionOptimistic bool                                                           `protobuf:"varint,3,opt,name=execution_optimistic,json=executionOptimistic,proto3" json:"execution_optimistic,omitempty"`
 }
 

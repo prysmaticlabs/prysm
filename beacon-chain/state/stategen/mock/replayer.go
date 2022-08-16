@@ -3,9 +3,9 @@ package mock
 import (
 	"context"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 )
 
 func NewMockReplayerBuilder(opt ...MockReplayerBuilderOption) *MockReplayerBuilder {

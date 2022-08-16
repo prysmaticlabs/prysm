@@ -14,7 +14,7 @@ go_library(
         "signature.go",
         "stub.go",  # keep
     ],
-    importpath = "github.com/prysmaticlabs/prysm/crypto/bls/blst",
+    importpath = "github.com/prysmaticlabs/prysm/v3/crypto/bls/blst",
     visibility = [
         "//crypto/bls:__pkg__",
     ],

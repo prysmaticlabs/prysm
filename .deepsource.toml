@@ -11,7 +11,7 @@ name = "go"
 enabled = true
 
 [analyzers.meta]
-import_paths = ["github.com/prysmaticlabs/prysm"]
+import_paths = ["github.com/prysmaticlabs/prysm/v3"]
 
 [[analyzers]]
 name = "test-coverage"

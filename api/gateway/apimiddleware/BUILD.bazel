@@ -10,7 +10,7 @@ go_library(
         "process_request.go",
         "structs.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/api/gateway/apimiddleware",
+    importpath = "github.com/prysmaticlabs/prysm/v3/api/gateway/apimiddleware",
     visibility = ["//visibility:public"],
     deps = [
         "//api/grpc:go_default_library",

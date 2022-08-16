@@ -3,9 +3,9 @@ package protoarray
 import (
 	"context"
 
-	"github.com/prysmaticlabs/prysm/config/params"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	pmath "github.com/prysmaticlabs/prysm/math"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	pmath "github.com/prysmaticlabs/prysm/v3/math"
 	"go.opencensus.io/trace"
 )
 

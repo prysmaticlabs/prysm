@@ -1,10 +1,11 @@
 package builder
 
 import (
-	"github.com/prysmaticlabs/prysm/api/client/builder"
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/v3/network"
+	"github.com/prysmaticlabs/prysm/v3/network/authorization"
 	"github.com/urfave/cli/v2"
 )
 
@@ -13,30 +14,22 @@ type Option func(s *Service) error
 // FlagOptions for builder service flag configurations.
 func FlagOptions(c *cli.Context) ([]Option, error) {
 	endpoint := c.String(flags.MevRelayEndpoint.Name)
-	var client *builder.Client
-	if endpoint != "" {
-		var err error
-		client, err = builder.NewClient(endpoint)
-		if err != nil {
-			return nil, err
-		}
-	}
 	opts := []Option{
-		WithBuilderClient(client),
+		WithBuilderEndpoints(endpoint),
 	}
 	return opts, nil
 }
 
-// WithBuilderClient sets the builder client for the beacon chain builder service.
-func WithBuilderClient(client builder.BuilderClient) Option {
+// WithBuilderEndpoints sets the endpoint for the beacon chain builder service.
+func WithBuilderEndpoints(endpoint string) Option {
 	return func(s *Service) error {
-		s.cfg.builderClient = client
+		s.cfg.builderEndpoint = covertEndPoint(endpoint)
 		return nil
 	}
 }
 
 // WithHeadFetcher gets the head info from chain service.
-func WithHeadFetcher(svc blockchain.HeadFetcher) Option {
+func WithHeadFetcher(svc *blockchain.Service) Option {
 	return func(s *Service) error {
 		s.cfg.headFetcher = svc
 		return nil
@@ -49,4 +42,13 @@ func WithDatabase(beaconDB db.HeadAccessDatabase) Option {
 		s.cfg.beaconDB = beaconDB
 		return nil
 	}
+}
+
+func covertEndPoint(ep string) network.Endpoint {
+	return network.Endpoint{
+		Url: ep,
+		Auth: network.AuthorizationData{ // Auth is not used for builder.
+			Method: authorization.None,
+			Value:  "",
+		}}
 }

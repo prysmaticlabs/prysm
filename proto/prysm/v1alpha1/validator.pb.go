@@ -12,8 +12,8 @@ import (
 	sync "sync"
 
 	empty "github.com/golang/protobuf/ptypes/empty"
-	github_com_prysmaticlabs_prysm_consensus_types_primitives "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	_ "github.com/prysmaticlabs/prysm/proto/eth/ext"
+	github_com_prysmaticlabs_prysm_consensus_types_primitives "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	_ "github.com/prysmaticlabs/prysm/v3/proto/eth/ext"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
@@ -149,7 +149,7 @@ type SyncSubcommitteeIndexRequest struct {
 	unknownFields protoimpl.UnknownFields
 
 	PublicKey []byte                                                         `protobuf:"bytes,1,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty" ssz-size:"48"`
-	Slot      github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot `protobuf:"varint,2,opt,name=slot,proto3" json:"slot,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"`
+	Slot      github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot `protobuf:"varint,2,opt,name=slot,proto3" json:"slot,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"`
 }
 
 func (x *SyncSubcommitteeIndexRequest) Reset() {
@@ -203,7 +203,7 @@ type SyncCommitteeContributionRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Slot      github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot `protobuf:"varint,1,opt,name=slot,proto3" json:"slot,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"`
+	Slot      github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot `protobuf:"varint,1,opt,name=slot,proto3" json:"slot,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"`
 	PublicKey []byte                                                         `protobuf:"bytes,2,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty" spec-name:"pubkey" ssz-size:"48"`
 	SubnetId  uint64                                                         `protobuf:"varint,3,opt,name=subnet_id,json=subnetId,proto3" json:"subnet_id,omitempty"`
 }
@@ -266,7 +266,7 @@ type SyncSubcommitteeIndexResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Indices []github_com_prysmaticlabs_prysm_consensus_types_primitives.CommitteeIndex `protobuf:"varint,1,rep,packed,name=indices,proto3" json:"indices,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.CommitteeIndex"`
+	Indices []github_com_prysmaticlabs_prysm_consensus_types_primitives.CommitteeIndex `protobuf:"varint,1,rep,packed,name=indices,proto3" json:"indices,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.CommitteeIndex"`
 }
 
 func (x *SyncSubcommitteeIndexResponse) Reset() {
@@ -407,7 +407,7 @@ type DomainRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Epoch  github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch `protobuf:"varint,1,opt,name=epoch,proto3" json:"epoch,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch"`
+	Epoch  github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch `protobuf:"varint,1,opt,name=epoch,proto3" json:"epoch,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"`
 	Domain []byte                                                          `protobuf:"bytes,2,opt,name=domain,proto3" json:"domain,omitempty"`
 }
 
@@ -768,7 +768,7 @@ type ValidatorIndexResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Index github_com_prysmaticlabs_prysm_consensus_types_primitives.ValidatorIndex `protobuf:"varint,1,opt,name=index,proto3" json:"index,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.ValidatorIndex"`
+	Index github_com_prysmaticlabs_prysm_consensus_types_primitives.ValidatorIndex `protobuf:"varint,1,opt,name=index,proto3" json:"index,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"`
 }
 
 func (x *ValidatorIndexResponse) Reset() {
@@ -864,8 +864,8 @@ type ValidatorStatusResponse struct {
 
 	Status                    ValidatorStatus                                                 `protobuf:"varint,1,opt,name=status,proto3,enum=ethereum.eth.v1alpha1.ValidatorStatus" json:"status,omitempty"`
 	Eth1DepositBlockNumber    uint64                                                          `protobuf:"varint,2,opt,name=eth1_deposit_block_number,json=eth1DepositBlockNumber,proto3" json:"eth1_deposit_block_number,omitempty"`
-	DepositInclusionSlot      github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot  `protobuf:"varint,3,opt,name=deposit_inclusion_slot,json=depositInclusionSlot,proto3" json:"deposit_inclusion_slot,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"`
-	ActivationEpoch           github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch `protobuf:"varint,4,opt,name=activation_epoch,json=activationEpoch,proto3" json:"activation_epoch,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch"`
+	DepositInclusionSlot      github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot  `protobuf:"varint,3,opt,name=deposit_inclusion_slot,json=depositInclusionSlot,proto3" json:"deposit_inclusion_slot,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"`
+	ActivationEpoch           github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch `protobuf:"varint,4,opt,name=activation_epoch,json=activationEpoch,proto3" json:"activation_epoch,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"`
 	PositionInActivationQueue uint64                                                          `protobuf:"varint,5,opt,name=position_in_activation_queue,json=positionInActivationQueue,proto3" json:"position_in_activation_queue,omitempty"`
 }
 
@@ -998,7 +998,7 @@ type MultipleValidatorStatusResponse struct {
 
 	PublicKeys [][]byte                                                                   `protobuf:"bytes,1,rep,name=public_keys,json=publicKeys,proto3" json:"public_keys,omitempty" ssz-size:"?,48"`
 	Statuses   []*ValidatorStatusResponse                                                 `protobuf:"bytes,2,rep,name=statuses,proto3" json:"statuses,omitempty"`
-	Indices    []github_com_prysmaticlabs_prysm_consensus_types_primitives.ValidatorIndex `protobuf:"varint,3,rep,packed,name=indices,proto3" json:"indices,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.ValidatorIndex"`
+	Indices    []github_com_prysmaticlabs_prysm_consensus_types_primitives.ValidatorIndex `protobuf:"varint,3,rep,packed,name=indices,proto3" json:"indices,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"`
 }
 
 func (x *MultipleValidatorStatusResponse) Reset() {
@@ -1059,7 +1059,7 @@ type DutiesRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Epoch      github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch `protobuf:"varint,1,opt,name=epoch,proto3" json:"epoch,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch"`
+	Epoch      github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch `protobuf:"varint,1,opt,name=epoch,proto3" json:"epoch,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"`
 	PublicKeys [][]byte                                                        `protobuf:"bytes,2,rep,name=public_keys,json=publicKeys,proto3" json:"public_keys,omitempty" ssz-size:"?,48"`
 }
 
@@ -1179,7 +1179,7 @@ type BlockRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Slot         github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot `protobuf:"varint,1,opt,name=slot,proto3" json:"slot,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"`
+	Slot         github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot `protobuf:"varint,1,opt,name=slot,proto3" json:"slot,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"`
 	RandaoReveal []byte                                                         `protobuf:"bytes,2,opt,name=randao_reveal,json=randaoReveal,proto3" json:"randao_reveal,omitempty" ssz-size:"48"`
 	Graffiti     []byte                                                         `protobuf:"bytes,3,opt,name=graffiti,proto3" json:"graffiti,omitempty" ssz-size:"32"`
 }
@@ -1336,8 +1336,8 @@ type AttestationDataRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Slot           github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot           `protobuf:"varint,1,opt,name=slot,proto3" json:"slot,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"`
-	CommitteeIndex github_com_prysmaticlabs_prysm_consensus_types_primitives.CommitteeIndex `protobuf:"varint,2,opt,name=committee_index,json=committeeIndex,proto3" json:"committee_index,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.CommitteeIndex"`
+	Slot           github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot           `protobuf:"varint,1,opt,name=slot,proto3" json:"slot,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"`
+	CommitteeIndex github_com_prysmaticlabs_prysm_consensus_types_primitives.CommitteeIndex `protobuf:"varint,2,opt,name=committee_index,json=committeeIndex,proto3" json:"committee_index,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.CommitteeIndex"`
 }
 
 func (x *AttestationDataRequest) Reset() {
@@ -1438,8 +1438,8 @@ type AggregateSelectionRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Slot           github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot           `protobuf:"varint,1,opt,name=slot,proto3" json:"slot,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"`
-	CommitteeIndex github_com_prysmaticlabs_prysm_consensus_types_primitives.CommitteeIndex `protobuf:"varint,2,opt,name=committee_index,json=committeeIndex,proto3" json:"committee_index,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.CommitteeIndex"`
+	Slot           github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot           `protobuf:"varint,1,opt,name=slot,proto3" json:"slot,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"`
+	CommitteeIndex github_com_prysmaticlabs_prysm_consensus_types_primitives.CommitteeIndex `protobuf:"varint,2,opt,name=committee_index,json=committeeIndex,proto3" json:"committee_index,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.CommitteeIndex"`
 	PublicKey      []byte                                                                   `protobuf:"bytes,3,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty" spec-name:"pubkey" ssz-size:"48"`
 	SlotSignature  []byte                                                                   `protobuf:"bytes,4,opt,name=slot_signature,json=slotSignature,proto3" json:"slot_signature,omitempty" ssz-size:"96"`
 }
@@ -1650,8 +1650,8 @@ type CommitteeSubnetsSubscribeRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Slots        []github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot           `protobuf:"varint,1,rep,packed,name=slots,proto3" json:"slots,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"`
-	CommitteeIds []github_com_prysmaticlabs_prysm_consensus_types_primitives.CommitteeIndex `protobuf:"varint,2,rep,packed,name=committee_ids,json=committeeIds,proto3" json:"committee_ids,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.CommitteeIndex"`
+	Slots        []github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot           `protobuf:"varint,1,rep,packed,name=slots,proto3" json:"slots,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"`
+	CommitteeIds []github_com_prysmaticlabs_prysm_consensus_types_primitives.CommitteeIndex `protobuf:"varint,2,rep,packed,name=committee_ids,json=committeeIds,proto3" json:"committee_ids,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.CommitteeIndex"`
 	IsAggregator []bool                                                                     `protobuf:"varint,3,rep,packed,name=is_aggregator,json=isAggregator,proto3" json:"is_aggregator,omitempty"`
 }
 
@@ -1717,10 +1717,10 @@ type Validator struct {
 	WithdrawalCredentials      []byte                                                          `protobuf:"bytes,2,opt,name=withdrawal_credentials,json=withdrawalCredentials,proto3" json:"withdrawal_credentials,omitempty" ssz-size:"32"`
 	EffectiveBalance           uint64                                                          `protobuf:"varint,3,opt,name=effective_balance,json=effectiveBalance,proto3" json:"effective_balance,omitempty"`
 	Slashed                    bool                                                            `protobuf:"varint,4,opt,name=slashed,proto3" json:"slashed,omitempty"`
-	ActivationEligibilityEpoch github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch `protobuf:"varint,5,opt,name=activation_eligibility_epoch,json=activationEligibilityEpoch,proto3" json:"activation_eligibility_epoch,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch"`
-	ActivationEpoch            github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch `protobuf:"varint,6,opt,name=activation_epoch,json=activationEpoch,proto3" json:"activation_epoch,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch"`
-	ExitEpoch                  github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch `protobuf:"varint,7,opt,name=exit_epoch,json=exitEpoch,proto3" json:"exit_epoch,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch"`
-	WithdrawableEpoch          github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch `protobuf:"varint,8,opt,name=withdrawable_epoch,json=withdrawableEpoch,proto3" json:"withdrawable_epoch,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch"`
+	ActivationEligibilityEpoch github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch `protobuf:"varint,5,opt,name=activation_eligibility_epoch,json=activationEligibilityEpoch,proto3" json:"activation_eligibility_epoch,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"`
+	ActivationEpoch            github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch `protobuf:"varint,6,opt,name=activation_epoch,json=activationEpoch,proto3" json:"activation_epoch,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"`
+	ExitEpoch                  github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch `protobuf:"varint,7,opt,name=exit_epoch,json=exitEpoch,proto3" json:"exit_epoch,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"`
+	WithdrawableEpoch          github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch `protobuf:"varint,8,opt,name=withdrawable_epoch,json=withdrawableEpoch,proto3" json:"withdrawable_epoch,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"`
 }
 
 func (x *Validator) Reset() {
@@ -1820,11 +1820,11 @@ type ValidatorCapella struct {
 	WithdrawalCredentials      []byte                                                          `protobuf:"bytes,2,opt,name=withdrawal_credentials,json=withdrawalCredentials,proto3" json:"withdrawal_credentials,omitempty" ssz-size:"32"`
 	EffectiveBalance           uint64                                                          `protobuf:"varint,3,opt,name=effective_balance,json=effectiveBalance,proto3" json:"effective_balance,omitempty"`
 	Slashed                    bool                                                            `protobuf:"varint,4,opt,name=slashed,proto3" json:"slashed,omitempty"`
-	ActivationEligibilityEpoch github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch `protobuf:"varint,5,opt,name=activation_eligibility_epoch,json=activationEligibilityEpoch,proto3" json:"activation_eligibility_epoch,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch"`
-	ActivationEpoch            github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch `protobuf:"varint,6,opt,name=activation_epoch,json=activationEpoch,proto3" json:"activation_epoch,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch"`
-	ExitEpoch                  github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch `protobuf:"varint,7,opt,name=exit_epoch,json=exitEpoch,proto3" json:"exit_epoch,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch"`
-	WithdrawableEpoch          github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch `protobuf:"varint,8,opt,name=withdrawable_epoch,json=withdrawableEpoch,proto3" json:"withdrawable_epoch,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch"`
-	FullyWithdrawnEpoch        github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch `protobuf:"varint,9,opt,name=fully_withdrawn_epoch,json=fullyWithdrawnEpoch,proto3" json:"fully_withdrawn_epoch,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch"`
+	ActivationEligibilityEpoch github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch `protobuf:"varint,5,opt,name=activation_eligibility_epoch,json=activationEligibilityEpoch,proto3" json:"activation_eligibility_epoch,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"`
+	ActivationEpoch            github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch `protobuf:"varint,6,opt,name=activation_epoch,json=activationEpoch,proto3" json:"activation_epoch,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"`
+	ExitEpoch                  github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch `protobuf:"varint,7,opt,name=exit_epoch,json=exitEpoch,proto3" json:"exit_epoch,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"`
+	WithdrawableEpoch          github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch `protobuf:"varint,8,opt,name=withdrawable_epoch,json=withdrawableEpoch,proto3" json:"withdrawable_epoch,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"`
+	FullyWithdrawnEpoch        github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch `protobuf:"varint,9,opt,name=fully_withdrawn_epoch,json=fullyWithdrawnEpoch,proto3" json:"fully_withdrawn_epoch,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"`
 }
 
 func (x *ValidatorCapella) Reset() {
@@ -2053,8 +2053,8 @@ type ValidatorInfo struct {
 	unknownFields protoimpl.UnknownFields
 
 	PublicKey           []byte                                                                   `protobuf:"bytes,1,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty"`
-	Index               github_com_prysmaticlabs_prysm_consensus_types_primitives.ValidatorIndex `protobuf:"varint,2,opt,name=index,proto3" json:"index,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.ValidatorIndex"`
-	Epoch               github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch          `protobuf:"varint,3,opt,name=epoch,proto3" json:"epoch,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch"`
+	Index               github_com_prysmaticlabs_prysm_consensus_types_primitives.ValidatorIndex `protobuf:"varint,2,opt,name=index,proto3" json:"index,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"`
+	Epoch               github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch          `protobuf:"varint,3,opt,name=epoch,proto3" json:"epoch,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"`
 	Status              ValidatorStatus                                                          `protobuf:"varint,4,opt,name=status,proto3,enum=ethereum.eth.v1alpha1.ValidatorStatus" json:"status,omitempty"`
 	TransitionTimestamp uint64                                                                   `protobuf:"varint,5,opt,name=transition_timestamp,json=transitionTimestamp,proto3" json:"transition_timestamp,omitempty"`
 	Balance             uint64                                                                   `protobuf:"varint,6,opt,name=balance,proto3" json:"balance,omitempty"`
@@ -2337,7 +2337,7 @@ type ValidatorActivationResponse_Status struct {
 
 	PublicKey []byte                                                                   `protobuf:"bytes,1,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty"`
 	Status    *ValidatorStatusResponse                                                 `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`
-	Index     github_com_prysmaticlabs_prysm_consensus_types_primitives.ValidatorIndex `protobuf:"varint,3,opt,name=index,proto3" json:"index,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.ValidatorIndex"`
+	Index     github_com_prysmaticlabs_prysm_consensus_types_primitives.ValidatorIndex `protobuf:"varint,3,opt,name=index,proto3" json:"index,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"`
 }
 
 func (x *ValidatorActivationResponse_Status) Reset() {
@@ -2398,13 +2398,13 @@ type DutiesResponse_Duty struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Committee       []github_com_prysmaticlabs_prysm_consensus_types_primitives.ValidatorIndex `protobuf:"varint,1,rep,packed,name=committee,proto3" json:"committee,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.ValidatorIndex"`
-	CommitteeIndex  github_com_prysmaticlabs_prysm_consensus_types_primitives.CommitteeIndex   `protobuf:"varint,2,opt,name=committee_index,json=committeeIndex,proto3" json:"committee_index,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.CommitteeIndex"`
-	AttesterSlot    github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot             `protobuf:"varint,3,opt,name=attester_slot,json=attesterSlot,proto3" json:"attester_slot,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"`
-	ProposerSlots   []github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot           `protobuf:"varint,4,rep,packed,name=proposer_slots,json=proposerSlots,proto3" json:"proposer_slots,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"`
+	Committee       []github_com_prysmaticlabs_prysm_consensus_types_primitives.ValidatorIndex `protobuf:"varint,1,rep,packed,name=committee,proto3" json:"committee,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"`
+	CommitteeIndex  github_com_prysmaticlabs_prysm_consensus_types_primitives.CommitteeIndex   `protobuf:"varint,2,opt,name=committee_index,json=committeeIndex,proto3" json:"committee_index,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.CommitteeIndex"`
+	AttesterSlot    github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot             `protobuf:"varint,3,opt,name=attester_slot,json=attesterSlot,proto3" json:"attester_slot,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"`
+	ProposerSlots   []github_com_prysmaticlabs_prysm_consensus_types_primitives.Slot           `protobuf:"varint,4,rep,packed,name=proposer_slots,json=proposerSlots,proto3" json:"proposer_slots,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"`
 	PublicKey       []byte                                                                     `protobuf:"bytes,5,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty" ssz-size:"48"`
 	Status          ValidatorStatus                                                            `protobuf:"varint,6,opt,name=status,proto3,enum=ethereum.eth.v1alpha1.ValidatorStatus" json:"status,omitempty"`
-	ValidatorIndex  github_com_prysmaticlabs_prysm_consensus_types_primitives.ValidatorIndex   `protobuf:"varint,7,opt,name=validator_index,json=validatorIndex,proto3" json:"validator_index,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.ValidatorIndex"`
+	ValidatorIndex  github_com_prysmaticlabs_prysm_consensus_types_primitives.ValidatorIndex   `protobuf:"varint,7,opt,name=validator_index,json=validatorIndex,proto3" json:"validator_index,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"`
 	IsSyncCommittee bool                                                                       `protobuf:"varint,8,opt,name=is_sync_committee,json=isSyncCommittee,proto3" json:"is_sync_committee,omitempty"`
 }
 
@@ -2502,7 +2502,7 @@ type DoppelGangerRequest_ValidatorRequest struct {
 	unknownFields protoimpl.UnknownFields
 
 	PublicKey  []byte                                                          `protobuf:"bytes,1,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty" spec-name:"pubkey" ssz-size:"48"`
-	Epoch      github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch `protobuf:"varint,3,opt,name=epoch,proto3" json:"epoch,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch"`
+	Epoch      github_com_prysmaticlabs_prysm_consensus_types_primitives.Epoch `protobuf:"varint,3,opt,name=epoch,proto3" json:"epoch,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"`
 	SignedRoot []byte                                                          `protobuf:"bytes,2,opt,name=signed_root,json=signedRoot,proto3" json:"signed_root,omitempty" ssz-size:"32"`
 }
 
@@ -2620,7 +2620,7 @@ type PrepareBeaconProposerRequest_FeeRecipientContainer struct {
 	unknownFields protoimpl.UnknownFields
 
 	FeeRecipient   []byte                                                                   `protobuf:"bytes,1,opt,name=fee_recipient,json=feeRecipient,proto3" json:"fee_recipient,omitempty" ssz-size:"20"`
-	ValidatorIndex github_com_prysmaticlabs_prysm_consensus_types_primitives.ValidatorIndex `protobuf:"varint,2,opt,name=validator_index,json=validatorIndex,proto3" json:"validator_index,omitempty" cast-type:"github.com/prysmaticlabs/prysm/consensus-types/primitives.ValidatorIndex"`
+	ValidatorIndex github_com_prysmaticlabs_prysm_consensus_types_primitives.ValidatorIndex `protobuf:"varint,2,opt,name=validator_index,json=validatorIndex,proto3" json:"validator_index,omitempty" cast-type:"github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"`
 }
 
 func (x *PrepareBeaconProposerRequest_FeeRecipientContainer) Reset() {

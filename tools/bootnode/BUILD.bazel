@@ -7,7 +7,7 @@ load("@io_bazel_rules_docker//contrib:push-all.bzl", "docker_push")
 go_library(
     name = "go_default_library",
     srcs = ["bootnode.go"],
-    importpath = "github.com/prysmaticlabs/prysm/tools/bootnode",
+    importpath = "github.com/prysmaticlabs/prysm/v3/tools/bootnode",
     visibility = ["//visibility:private"],
     deps = [
         "//async:go_default_library",
