@@ -124,6 +124,8 @@ var appHelpFlagGroups = []flagGroup{
 			flags.Eth1HeaderReqLimit,
 			flags.MinPeersPerSubnet,
 			flags.MevRelayEndpoint,
+			flags.MaxBuilderEpochMissedSlots,
+			flags.MaxBuilderConsecutiveMissedSlots,
 			checkpoint.BlockPath,
 			checkpoint.StatePath,
 			checkpoint.RemoteURL,
