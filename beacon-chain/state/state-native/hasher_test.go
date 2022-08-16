@@ -6,7 +6,6 @@ import (
 
 	"github.com/prysmaticlabs/go-bitfield"
 	statenative "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native"
-	"github.com/prysmaticlabs/prysm/config/features"
 	"github.com/prysmaticlabs/prysm/config/params"
 	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
@@ -18,7 +17,6 @@ import (
 )
 
 func TestComputeFieldRootsWithHasher_Phase0(t *testing.T) {
-	features.Init(&features.Flags{EnableNativeState: true})
 	beaconState, err := util.NewBeaconState(util.FillRootsNaturalOpt)
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetGenesisTime(123))
@@ -82,7 +80,6 @@ func TestComputeFieldRootsWithHasher_Phase0(t *testing.T) {
 }
 
 func TestComputeFieldRootsWithHasher_Altair(t *testing.T) {
-	features.Init(&features.Flags{EnableNativeState: true})
 	beaconState, err := util.NewBeaconStateAltair(util.FillRootsNaturalOptAltair)
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetGenesisTime(123))
@@ -153,7 +150,6 @@ func TestComputeFieldRootsWithHasher_Altair(t *testing.T) {
 }
 
 func TestComputeFieldRootsWithHasher_Bellatrix(t *testing.T) {
-	features.Init(&features.Flags{EnableNativeState: true})
 	beaconState, err := util.NewBeaconStateBellatrix(util.FillRootsNaturalOptBellatrix)
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetGenesisTime(123))
