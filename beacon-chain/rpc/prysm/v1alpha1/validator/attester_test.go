@@ -364,7 +364,7 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 	// There exists a rare scenario where the validator may request an attestation for a slot less
 	// than the head state's slot. The Ethereum consensus spec constraints require the block root the
 	// attestation is referencing be less than or equal to the attestation data slot.
-	// See: https://github.com/prysmaticlabs/prysm/v3/issues/5164
+	// See: https://github.com/prysmaticlabs/prysm/issues/5164
 	ctx := context.Background()
 	db := dbutil.SetupDB(t)
 
