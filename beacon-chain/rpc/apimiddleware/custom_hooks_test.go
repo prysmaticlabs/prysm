@@ -613,6 +613,7 @@ func TestSerializeV2Block(t *testing.T) {
 				},
 				Signature: "sig",
 			},
+			ExecutionOptimistic: true,
 		}
 		runDefault, j, errJson := serializeV2Block(response)
 		require.Equal(t, nil, errJson)
@@ -627,7 +628,8 @@ func TestSerializeV2Block(t *testing.T) {
 		assert.Equal(t, "1", beaconBlock.ProposerIndex)
 		assert.Equal(t, "root", beaconBlock.ParentRoot)
 		assert.Equal(t, "root", beaconBlock.StateRoot)
-		require.NotNil(t, beaconBlock.Body)
+		assert.NotNil(t, beaconBlock.Body)
+		assert.Equal(t, true, resp.ExecutionOptimistic)
 	})
 
 	t.Run("Altair", func(t *testing.T) {
@@ -643,6 +645,7 @@ func TestSerializeV2Block(t *testing.T) {
 				},
 				Signature: "sig",
 			},
+			ExecutionOptimistic: true,
 		}
 		runDefault, j, errJson := serializeV2Block(response)
 		require.Equal(t, nil, errJson)
@@ -657,7 +660,8 @@ func TestSerializeV2Block(t *testing.T) {
 		assert.Equal(t, "1", beaconBlock.ProposerIndex)
 		assert.Equal(t, "root", beaconBlock.ParentRoot)
 		assert.Equal(t, "root", beaconBlock.StateRoot)
-		require.NotNil(t, beaconBlock.Body)
+		assert.NotNil(t, beaconBlock.Body)
+		assert.Equal(t, true, resp.ExecutionOptimistic)
 	})
 
 	t.Run("Bellatrix", func(t *testing.T) {
@@ -673,6 +677,7 @@ func TestSerializeV2Block(t *testing.T) {
 				},
 				Signature: "sig",
 			},
+			ExecutionOptimistic: true,
 		}
 		runDefault, j, errJson := serializeV2Block(response)
 		require.Equal(t, nil, errJson)
@@ -687,7 +692,8 @@ func TestSerializeV2Block(t *testing.T) {
 		assert.Equal(t, "1", beaconBlock.ProposerIndex)
 		assert.Equal(t, "root", beaconBlock.ParentRoot)
 		assert.Equal(t, "root", beaconBlock.StateRoot)
-		require.NotNil(t, beaconBlock.Body)
+		assert.NotNil(t, beaconBlock.Body)
+		assert.Equal(t, true, resp.ExecutionOptimistic)
 	})
 
 	t.Run("incorrect response type", func(t *testing.T) {
