@@ -245,14 +245,15 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		err := gohashtree.Hash(buffer, buffer)
 		if err != nil {
 			log.Error("could not test if gohashtree is supported")
-		}
-		t := time.NewTimer(time.Millisecond * 100)
-		select {
-		case <-sigc:
-			log.Error("gohashtree is not supported in this CPU")
-		case <-t.C:
-			logEnabled(enableVecHTR)
-			cfg.EnableVectorizedHTR = true
+		} else {
+			t := time.NewTimer(time.Millisecond * 100)
+			select {
+			case <-sigc:
+				log.Error("gohashtree is not supported in this CPU")
+			case <-t.C:
+				logEnabled(enableVecHTR)
+				cfg.EnableVectorizedHTR = true
+			}
 		}
 	}
 	if ctx.Bool(enableForkChoiceDoublyLinkedTree.Name) {
