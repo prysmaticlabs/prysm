@@ -3,7 +3,7 @@
 package blst
 
 import (
-	"github.com/prysmaticlabs/prysm/crypto/bls/common"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls/common"
 )
 
 // This stub file exists until build issues can be resolved for libfuzz.

@@ -8,7 +8,7 @@ go_library(
         "mock_genesis_timefetcher.go",
         "mock_state_fetcher.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/rpc/testutil",
+    importpath = "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/testutil",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//beacon-chain/state:go_default_library",
