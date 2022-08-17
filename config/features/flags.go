@@ -54,10 +54,6 @@ var (
 		Name:  "use-check-point-cache",
 		Usage: "Enables check point info caching",
 	}
-	enableLargerGossipHistory = &cli.BoolFlag{
-		Name:  "enable-larger-gossip-history",
-		Usage: "Enables the node to store a larger amount of gossip messages in its cache.",
-	}
 	writeWalletPasswordOnWebOnboarding = &cli.BoolFlag{
 		Name: "write-wallet-password-on-web-onboarding",
 		Usage: "(Danger): Writes the wallet password to the wallet directory on completing Prysm web onboarding. " +
@@ -161,7 +157,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	SepoliaTestnet,
 	Mainnet,
 	disablePeerScorer,
-	enableLargerGossipHistory,
 	checkPtInfoCache,
 	disableBroadcastSlashingFlag,
 	enableSlasherFlag,
