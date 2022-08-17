@@ -5,7 +5,6 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
-	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
@@ -34,9 +33,9 @@ func TestCheckpointStateCache_StateByCheckpoint(t *testing.T) {
 	s, err = cache.StateByCheckpoint(cp1)
 	require.NoError(t, err)
 
-	pbState1, err := v1.ProtobufBeaconState(s.InnerStateUnsafe())
+	pbState1, err := state_native.ProtobufBeaconStatePhase0(s.InnerStateUnsafe())
 	require.NoError(t, err)
-	pbstate, err := v1.ProtobufBeaconState(st.InnerStateUnsafe())
+	pbstate, err := state_native.ProtobufBeaconStatePhase0(st.InnerStateUnsafe())
 	require.NoError(t, err)
 	if !proto.Equal(pbState1, pbstate) {
 		t.Error("incorrectly cached state")

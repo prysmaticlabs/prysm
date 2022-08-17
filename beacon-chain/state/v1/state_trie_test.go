@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
@@ -17,7 +18,7 @@ import (
 
 func TestInitializeFromProto(t *testing.T) {
 	testState, _ := util.DeterministicGenesisState(t, 64)
-	pbState, err := v1.ProtobufBeaconState(testState.InnerStateUnsafe())
+	pbState, err := state_native.ProtobufBeaconStatePhase0(testState.InnerStateUnsafe())
 	require.NoError(t, err)
 	type test struct {
 		name  string
@@ -60,7 +61,7 @@ func TestInitializeFromProto(t *testing.T) {
 
 func TestInitializeFromProtoUnsafe(t *testing.T) {
 	testState, _ := util.DeterministicGenesisState(t, 64)
-	pbState, err := v1.ProtobufBeaconState(testState.InnerStateUnsafe())
+	pbState, err := state_native.ProtobufBeaconStatePhase0(testState.InnerStateUnsafe())
 	require.NoError(t, err)
 	type test struct {
 		name  string
@@ -154,7 +155,7 @@ func TestBeaconState_HashTreeRoot(t *testing.T) {
 			if err == nil && tt.error != "" {
 				t.Errorf("Expected error, expected %v, recevied %v", tt.error, err)
 			}
-			pbState, err := v1.ProtobufBeaconState(testState.InnerStateUnsafe())
+			pbState, err := state_native.ProtobufBeaconStatePhase0(testState.InnerStateUnsafe())
 			require.NoError(t, err)
 			genericHTR, err := pbState.HashTreeRoot()
 			if err == nil && tt.error != "" {
@@ -172,7 +173,7 @@ func TestBeaconState_HashTreeRoot(t *testing.T) {
 
 func BenchmarkBeaconState(b *testing.B) {
 	testState, _ := util.DeterministicGenesisState(b, 16000)
-	pbState, err := v1.ProtobufBeaconState(testState.InnerStateUnsafe())
+	pbState, err := state_native.ProtobufBeaconStatePhase0(testState.InnerStateUnsafe())
 	require.NoError(b, err)
 
 	b.Run("Vectorized SHA256", func(b *testing.B) {
@@ -241,7 +242,7 @@ func TestBeaconState_HashTreeRoot_FieldTrie(t *testing.T) {
 			if err == nil && tt.error != "" {
 				t.Errorf("Expected error, expected %v, recevied %v", tt.error, err)
 			}
-			pbState, err := v1.ProtobufBeaconState(testState.InnerStateUnsafe())
+			pbState, err := state_native.ProtobufBeaconStatePhase0(testState.InnerStateUnsafe())
 			require.NoError(t, err)
 			genericHTR, err := pbState.HashTreeRoot()
 			if err == nil && tt.error != "" {
@@ -272,7 +273,7 @@ func TestBeaconState_AppendValidator_DoesntMutateCopy(t *testing.T) {
 
 func TestBeaconState_ValidatorMutation_Phase0(t *testing.T) {
 	testState, _ := util.DeterministicGenesisState(t, 400)
-	pbState, err := v1.ProtobufBeaconState(testState.InnerStateUnsafe())
+	pbState, err := state_native.ProtobufBeaconStatePhase0(testState.InnerStateUnsafe())
 	require.NoError(t, err)
 	testState, err = v1.InitializeFromProto(pbState)
 	require.NoError(t, err)
@@ -301,7 +302,7 @@ func TestBeaconState_ValidatorMutation_Phase0(t *testing.T) {
 
 	rt, err := testState.HashTreeRoot(context.Background())
 	require.NoError(t, err)
-	pbState, err = v1.ProtobufBeaconState(testState.InnerStateUnsafe())
+	pbState, err = state_native.ProtobufBeaconStatePhase0(testState.InnerStateUnsafe())
 	require.NoError(t, err)
 
 	copiedTestState, err := v1.InitializeFromProto(pbState)
@@ -325,7 +326,7 @@ func TestBeaconState_ValidatorMutation_Phase0(t *testing.T) {
 
 	rt, err = newState1.HashTreeRoot(context.Background())
 	require.NoError(t, err)
-	pbState, err = v1.ProtobufBeaconState(newState1.InnerStateUnsafe())
+	pbState, err = state_native.ProtobufBeaconStatePhase0(newState1.InnerStateUnsafe())
 	require.NoError(t, err)
 
 	copiedTestState, err = v1.InitializeFromProto(pbState)

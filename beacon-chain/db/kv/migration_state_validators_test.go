@@ -7,7 +7,7 @@ import (
 
 	"github.com/golang/snappy"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
-	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	v2 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v2"
 	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
@@ -93,8 +93,8 @@ func Test_migrateStateValidators(t *testing.T) {
 					assert.NoError(t, hashErr)
 					individualHashes = append(individualHashes, hash[:])
 				}
-				pbState, err := v1.ProtobufBeaconState(st.InnerStateUnsafe())
-				assert.NoError(t, err)
+				pbState, err := state_native.ProtobufBeaconStatePhase0(st.InnerStateUnsafe())
+				require.NoError(t, err)
 				validatorsFoundCount := 0
 				for _, val := range pbState.Validators {
 					hash, hashErr := val.HashTreeRoot()
@@ -152,8 +152,8 @@ func Test_migrateStateValidators(t *testing.T) {
 				}
 
 				// check if all the validators that were in the state, are stored properly in the validator bucket
-				pbState, err := v1.ProtobufBeaconState(rcvdState.InnerStateUnsafe())
-				assert.NoError(t, err)
+				pbState, err := state_native.ProtobufBeaconStatePhase0(rcvdState.InnerStateUnsafe())
+				require.NoError(t, err)
 				validatorsFoundCount := 0
 				for _, val := range pbState.Validators {
 					hash, hashErr := val.HashTreeRoot()

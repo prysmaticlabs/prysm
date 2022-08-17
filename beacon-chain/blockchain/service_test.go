@@ -26,7 +26,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
-	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
@@ -84,7 +83,7 @@ func setupBeaconChain(t *testing.T, beaconDB db.Database) *Service {
 		srv.Stop()
 	})
 	bState, _ := util.DeterministicGenesisState(t, 10)
-	pbState, err := v1.ProtobufBeaconState(bState.InnerStateUnsafe())
+	pbState, err := state_native.ProtobufBeaconStatePhase0(bState.InnerStateUnsafe())
 	require.NoError(t, err)
 	mockTrie, err := trie.NewTrie(0)
 	require.NoError(t, err)

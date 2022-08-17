@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/genesis"
 	statenative "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
-	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
 	v2 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v2"
 	v3 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v3"
 	"github.com/prysmaticlabs/prysm/v3/config/features"
@@ -221,13 +220,7 @@ func (s *Store) saveStatesEfficientInternal(ctx context.Context, tx *bolt.Tx, bl
 		// look at issue https://github.com/prysmaticlabs/prysm/issues/9262.
 		switch rawType := states[i].InnerStateUnsafe().(type) {
 		case *ethpb.BeaconState:
-			var pbState *ethpb.BeaconState
-			var err error
-			if features.Get().EnableNativeState {
-				pbState, err = statenative.ProtobufBeaconStatePhase0(rawType)
-			} else {
-				pbState, err = v1.ProtobufBeaconState(rawType)
-			}
+			pbState, err := statenative.ProtobufBeaconStatePhase0(rawType)
 			if err != nil {
 				return err
 			}
