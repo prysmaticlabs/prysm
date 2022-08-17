@@ -8,7 +8,6 @@ import (
 // GlobalFlags specifies all the global flags for the
 // beacon node.
 type GlobalFlags struct {
-	DisableDiscv5              bool
 	SubscribeToAllSubnets      bool
 	MinimumSyncPeers           int
 	MinimumPeersPerSubnet      int
@@ -39,7 +38,6 @@ func ConfigureGlobalFlags(ctx *cli.Context) {
 		log.Warn("Subscribing to All Attestation Subnets")
 		cfg.SubscribeToAllSubnets = true
 	}
-	cfg.DisableDiscv5 = ctx.Bool(DisableDiscv5.Name)
 	cfg.BlockBatchLimit = ctx.Int(BlockBatchLimit.Name)
 	cfg.BlockBatchLimitBurstFactor = ctx.Int(BlockBatchLimitBurstFactor.Name)
 	cfg.MinimumPeersPerSubnet = ctx.Int(MinPeersPerSubnet.Name)
