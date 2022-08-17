@@ -179,9 +179,12 @@ func readBucketStat(dbNameWithPath string, statsC chan<- *bucketStat) {
 
 	// get a list of all the existing buckets.
 	var buckets []string
+	var bucketsMut sync.Mutex
 	if viewErr1 := db.View(func(tx *bolt.Tx) error {
 		return tx.ForEach(func(name []byte, buc *bolt.Bucket) error {
+			bucketsMut.Lock()
 			buckets = append(buckets, string(name))
+			bucketsMut.Unlock()
 			return nil
 		})
 	}); viewErr1 != nil {
