@@ -111,7 +111,6 @@ var appHelpFlagGroups = []flagGroup{
 			flags.ExecutionJWTSecretFlag,
 			flags.SetGCPercent,
 			flags.SlotsPerArchivedPoint,
-			flags.DisableDiscv5,
 			flags.BlockBatchLimit,
 			flags.BlockBatchLimitBurstFactor,
 			flags.EnableDebugRPCEndpoints,

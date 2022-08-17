@@ -200,7 +200,7 @@ func (s *Service) Start() {
 		}
 	}
 
-	if !s.cfg.NoDiscovery && !s.cfg.DisableDiscv5 {
+	if !s.cfg.NoDiscovery {
 		ipAddr := ipAddr()
 		listener, err := s.startDiscoveryV5(
 			ipAddr,
