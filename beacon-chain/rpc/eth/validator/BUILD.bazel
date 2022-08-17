@@ -10,6 +10,7 @@ go_library(
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//beacon-chain/blockchain:go_default_library",
+        "//beacon-chain/builder:go_default_library",
         "//beacon-chain/cache:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/transition:go_default_library",
@@ -49,6 +50,7 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/blockchain/testing:go_default_library",
+        "//beacon-chain/builder/testing:go_default_library",
         "//beacon-chain/cache:go_default_library",
         "//beacon-chain/core/altair:go_default_library",
         "//beacon-chain/core/signing:go_default_library",
