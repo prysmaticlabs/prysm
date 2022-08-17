@@ -9,7 +9,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
-	v2 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v2"
 	v3 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v3"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
@@ -156,7 +155,7 @@ func unmarshalSignedPhase0Block(t *testing.T, raw []byte) interfaces.SignedBeaco
 func unmarshalAltairState(t *testing.T, raw []byte) state.BeaconState {
 	base := &ethpb.BeaconStateAltair{}
 	require.NoError(t, base.UnmarshalSSZ(raw))
-	st, err := v2.InitializeFromProto(base)
+	st, err := state_native.InitializeFromProtoAltair(base)
 	require.NoError(t, err)
 	return st
 }

@@ -7,7 +7,7 @@ import (
 	"github.com/golang/snappy"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/execution"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
-	v2 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v2"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	v3 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v3"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -35,7 +35,7 @@ func RunUpgradeToBellatrix(t *testing.T, config string) {
 			if err := preStateBase.UnmarshalSSZ(preStateSSZ); err != nil {
 				t.Fatalf("Failed to unmarshal: %v", err)
 			}
-			preState, err := v2.InitializeFromProto(preStateBase)
+			preState, err := state_native.InitializeFromProtoAltair(preStateBase)
 			require.NoError(t, err)
 			postState, err := execution.UpgradeToBellatrix(preState)
 			require.NoError(t, err)

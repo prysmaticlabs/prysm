@@ -8,7 +8,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/epoch/precompute"
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
-	v2 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v2"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
@@ -237,7 +236,7 @@ func TestUnrealizedCheckpoints(t *testing.T) {
 				base.JustificationBits.SetBitAt(2, true)
 			}
 
-			state, err := v2.InitializeFromProto(base)
+			state, err := state_native.InitializeFromProtoAltair(base)
 			require.NoError(t, err)
 
 			_, _, err = altair.InitializePrecomputeValidators(context.Background(), state)
@@ -252,7 +251,7 @@ func TestUnrealizedCheckpoints(t *testing.T) {
 }
 
 func Test_ComputeCheckpoints_CantUpdateToLower(t *testing.T) {
-	st, err := v2.InitializeFromProto(&ethpb.BeaconStateAltair{
+	st, err := state_native.InitializeFromProtoAltair(&ethpb.BeaconStateAltair{
 		Slot: params.BeaconConfig().SlotsPerEpoch * 2,
 		CurrentJustifiedCheckpoint: &ethpb.Checkpoint{
 			Epoch: 2,

@@ -6,7 +6,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
-	stateAltair "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v2"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/container/trie"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
@@ -29,7 +29,7 @@ func TestProcessDeposits_SameValidatorMultipleDepositsSameBlock(t *testing.T) {
 		},
 	}
 	balances := []uint64{0}
-	beaconState, err := stateAltair.InitializeFromProto(&ethpb.BeaconStateAltair{
+	beaconState, err := state_native.InitializeFromProtoAltair(&ethpb.BeaconStateAltair{
 		Validators: registry,
 		Balances:   balances,
 		Eth1Data:   eth1Data,
@@ -62,7 +62,7 @@ func TestProcessDeposits_MerkleBranchFailsVerification(t *testing.T) {
 	require.NoError(t, err, "Could not generate proof")
 
 	deposit.Proof = proof
-	beaconState, err := stateAltair.InitializeFromProto(&ethpb.BeaconStateAltair{
+	beaconState, err := state_native.InitializeFromProtoAltair(&ethpb.BeaconStateAltair{
 		Eth1Data: &ethpb.Eth1Data{
 			DepositRoot: []byte{0},
 			BlockHash:   []byte{1},
@@ -87,7 +87,7 @@ func TestProcessDeposits_AddsNewValidatorDeposit(t *testing.T) {
 		},
 	}
 	balances := []uint64{0}
-	beaconState, err := stateAltair.InitializeFromProto(&ethpb.BeaconStateAltair{
+	beaconState, err := state_native.InitializeFromProtoAltair(&ethpb.BeaconStateAltair{
 		Validators: registry,
 		Balances:   balances,
 		Eth1Data:   eth1Data,
@@ -145,7 +145,7 @@ func TestProcessDeposits_RepeatedDeposit_IncreasesValidatorBalance(t *testing.T)
 	balances := []uint64{0, 50}
 	root, err := depositTrie.HashTreeRoot()
 	require.NoError(t, err)
-	beaconState, err := stateAltair.InitializeFromProto(&ethpb.BeaconStateAltair{
+	beaconState, err := state_native.InitializeFromProtoAltair(&ethpb.BeaconStateAltair{
 		Validators: registry,
 		Balances:   balances,
 		Eth1Data: &ethpb.Eth1Data{
@@ -173,7 +173,7 @@ func TestProcessDeposit_AddsNewValidatorDeposit(t *testing.T) {
 		},
 	}
 	balances := []uint64{0}
-	beaconState, err := stateAltair.InitializeFromProto(&ethpb.BeaconStateAltair{
+	beaconState, err := state_native.InitializeFromProtoAltair(&ethpb.BeaconStateAltair{
 		Validators: registry,
 		Balances:   balances,
 		Eth1Data:   eth1Data,
@@ -216,7 +216,7 @@ func TestProcessDeposit_SkipsInvalidDeposit(t *testing.T) {
 		},
 	}
 	balances := []uint64{0}
-	beaconState, err := stateAltair.InitializeFromProto(&ethpb.BeaconStateAltair{
+	beaconState, err := state_native.InitializeFromProtoAltair(&ethpb.BeaconStateAltair{
 		Validators: registry,
 		Balances:   balances,
 		Eth1Data:   eth1Data,
