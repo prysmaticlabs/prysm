@@ -191,7 +191,7 @@ func readAuthTokenFile(r io.Reader) (secret []byte, token string, err error) {
 
 // Creates a JWT token string using the JWT key.
 func createTokenString(jwtKey []byte) (string, error) {
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{})
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{})
 	// Sign and get the complete encoded token as a string using the secret
 	tokenString, err := token.SignedString(jwtKey)
 	if err != nil {
