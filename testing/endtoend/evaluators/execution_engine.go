@@ -75,11 +75,11 @@ func optimisticSyncEnabled(conns ...*grpc.ClientConn) error {
 		}
 		headSlot := uint64(0)
 		switch hb := head.Data.Message.(type) {
-		case *v2.SignedBeaconBlockContainerV2_Phase0Block:
+		case *v2.SignedBeaconBlockContainer_Phase0Block:
 			headSlot = uint64(hb.Phase0Block.Slot)
-		case *v2.SignedBeaconBlockContainerV2_AltairBlock:
+		case *v2.SignedBeaconBlockContainer_AltairBlock:
 			headSlot = uint64(hb.AltairBlock.Slot)
-		case *v2.SignedBeaconBlockContainerV2_BellatrixBlock:
+		case *v2.SignedBeaconBlockContainer_BellatrixBlock:
 			headSlot = uint64(hb.BellatrixBlock.Slot)
 		default:
 			return errors.New("no valid block type retrieved")
