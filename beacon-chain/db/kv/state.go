@@ -501,7 +501,7 @@ func (s *Store) unmarshalState(_ context.Context, enc []byte, validatorEntries [
 		if ok {
 			protoState.Validators = validatorEntries
 		}
-		return v1.InitializeFromProtoUnsafe(protoState)
+		return statenative.InitializeFromProtoUnsafePhase0(protoState)
 	}
 }
 

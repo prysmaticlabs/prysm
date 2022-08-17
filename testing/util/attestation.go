@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
 	v2 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v2"
 	v3 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v3"
@@ -75,7 +76,7 @@ func GenerateAttestations(
 			if err != nil {
 				return nil, err
 			}
-			genState, err := v1.InitializeFromProtoUnsafe(pbState)
+			genState, err := state_native.InitializeFromProtoUnsafePhase0(pbState)
 			if err != nil {
 				return nil, err
 			}

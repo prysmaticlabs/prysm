@@ -144,7 +144,6 @@ go_test(
         "//beacon-chain/state/state-native:go_default_library",
         "//beacon-chain/state/stategen:go_default_library",
         "//beacon-chain/state/stategen/mock:go_default_library",
-        "//beacon-chain/state/v1:go_default_library",
         "//beacon-chain/state/v3:go_default_library",
         "//beacon-chain/sync/initial-sync/testing:go_default_library",
         "//config/fieldparams:go_default_library",
