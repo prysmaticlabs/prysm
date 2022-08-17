@@ -7,7 +7,10 @@ go_library(
         "status.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/peers",
-    visibility = ["//beacon-chain:__subpackages__"],
+    visibility = [
+        "//beacon-chain:__subpackages__",
+        "//cmd:__subpackages__",
+    ],
     deps = [
         "//beacon-chain/p2p/peers/peerdata:go_default_library",
         "//beacon-chain/p2p/peers/scorers:go_default_library",
