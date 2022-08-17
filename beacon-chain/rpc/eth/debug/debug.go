@@ -14,29 +14,6 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-// GetBeaconState returns the full beacon state for a given state ID.
-func (ds *Server) GetBeaconState(ctx context.Context, req *ethpbv1.StateRequest) (*ethpbv1.BeaconStateResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "debug.GetBeaconState")
-	defer span.End()
-
-	beaconSt, err := ds.StateFetcher.State(ctx, req.StateId)
-	if err != nil {
-		return nil, helpers.PrepareStateFetchGRPCError(err)
-	}
-
-	if beaconSt.Version() != version.Phase0 {
-		return nil, status.Error(codes.Internal, "State has incorrect type")
-	}
-	protoSt, err := migration.BeaconStateToProto(beaconSt)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not convert state to proto: %v", err)
-	}
-
-	return &ethpbv1.BeaconStateResponse{
-		Data: protoSt,
-	}, nil
-}
-
 // GetBeaconStateSSZ returns the SSZ-serialized version of the full beacon state object for given state ID.
 func (ds *Server) GetBeaconStateSSZ(ctx context.Context, req *ethpbv1.StateRequest) (*ethpbv2.SSZContainer, error) {
 	ctx, span := trace.StartSpan(ctx, "debug.GetBeaconStateSSZ")
@@ -138,25 +115,6 @@ func (ds *Server) GetBeaconStateSSZV2(ctx context.Context, req *ethpbv2.BeaconSt
 	}
 
 	return &ethpbv2.SSZContainer{Data: sszState, Version: ver}, nil
-}
-
-// ListForkChoiceHeads retrieves the leaves of the current fork choice tree.
-func (ds *Server) ListForkChoiceHeads(ctx context.Context, _ *emptypb.Empty) (*ethpbv1.ForkChoiceHeadsResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "debug.ListForkChoiceHeads")
-	defer span.End()
-
-	headRoots, headSlots := ds.HeadFetcher.ChainHeads()
-	resp := &ethpbv1.ForkChoiceHeadsResponse{
-		Data: make([]*ethpbv1.ForkChoiceHead, len(headRoots)),
-	}
-	for i := range headRoots {
-		resp.Data[i] = &ethpbv1.ForkChoiceHead{
-			Root: headRoots[i][:],
-			Slot: headSlots[i],
-		}
-	}
-
-	return resp, nil
 }
 
 // ListForkChoiceHeadsV2 retrieves the leaves of the current fork choice tree.
