@@ -8,7 +8,6 @@ go_library(
     visibility = ["//visibility:private"],
     deps = [
         "//beacon-chain/db:go_default_library",
-        "//beacon-chain/db/kv:go_default_library",
         "//io/file:go_default_library",
     ],
 )
