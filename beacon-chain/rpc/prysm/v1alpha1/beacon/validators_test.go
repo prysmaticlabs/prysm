@@ -1571,9 +1571,6 @@ func TestServer_GetValidatorParticipation_CurrentAndPrevEpoch(t *testing.T) {
 	require.NoError(t, err)
 
 	wanted := &ethpb.ValidatorParticipation{
-		GlobalParticipationRate:          float32(params.BeaconConfig().EffectiveBalanceIncrement) / float32(validatorCount*params.BeaconConfig().MaxEffectiveBalance),
-		VotedEther:                       params.BeaconConfig().EffectiveBalanceIncrement,
-		EligibleEther:                    validatorCount * params.BeaconConfig().MaxEffectiveBalance,
 		CurrentEpochActiveGwei:           validatorCount * params.BeaconConfig().MaxEffectiveBalance,
 		CurrentEpochAttestingGwei:        params.BeaconConfig().EffectiveBalanceIncrement,
 		CurrentEpochTargetAttestingGwei:  params.BeaconConfig().EffectiveBalanceIncrement,
@@ -1650,9 +1647,6 @@ func TestServer_GetValidatorParticipation_OrphanedUntilGenesis(t *testing.T) {
 	require.NoError(t, err)
 
 	wanted := &ethpb.ValidatorParticipation{
-		GlobalParticipationRate:          float32(params.BeaconConfig().EffectiveBalanceIncrement) / float32(validatorCount*params.BeaconConfig().MaxEffectiveBalance),
-		VotedEther:                       params.BeaconConfig().EffectiveBalanceIncrement,
-		EligibleEther:                    validatorCount * params.BeaconConfig().MaxEffectiveBalance,
 		CurrentEpochActiveGwei:           validatorCount * params.BeaconConfig().MaxEffectiveBalance,
 		CurrentEpochAttestingGwei:        params.BeaconConfig().EffectiveBalanceIncrement,
 		CurrentEpochTargetAttestingGwei:  params.BeaconConfig().EffectiveBalanceIncrement,
@@ -1743,9 +1737,6 @@ func runGetValidatorParticipationCurrentAndPrevEpoch(t *testing.T, genState stat
 	require.NoError(t, err)
 
 	wanted := &ethpb.ValidatorParticipation{
-		GlobalParticipationRate:          1,
-		VotedEther:                       validatorCount * params.BeaconConfig().MaxEffectiveBalance,
-		EligibleEther:                    validatorCount * params.BeaconConfig().MaxEffectiveBalance,
 		CurrentEpochActiveGwei:           validatorCount * params.BeaconConfig().MaxEffectiveBalance,
 		CurrentEpochAttestingGwei:        validatorCount * params.BeaconConfig().MaxEffectiveBalance,
 		CurrentEpochTargetAttestingGwei:  validatorCount * params.BeaconConfig().MaxEffectiveBalance,
@@ -1761,9 +1752,6 @@ func runGetValidatorParticipationCurrentAndPrevEpoch(t *testing.T, genState stat
 	require.NoError(t, err)
 
 	wanted = &ethpb.ValidatorParticipation{
-		GlobalParticipationRate:          1,
-		VotedEther:                       validatorCount * params.BeaconConfig().MaxEffectiveBalance,
-		EligibleEther:                    validatorCount * params.BeaconConfig().MaxEffectiveBalance,
 		CurrentEpochActiveGwei:           validatorCount * params.BeaconConfig().MaxEffectiveBalance,
 		CurrentEpochAttestingGwei:        params.BeaconConfig().EffectiveBalanceIncrement, // Empty because after one epoch, current participation rotates to previous
 		CurrentEpochTargetAttestingGwei:  params.BeaconConfig().EffectiveBalanceIncrement,
