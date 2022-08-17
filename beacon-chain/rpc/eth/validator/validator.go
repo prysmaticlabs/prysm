@@ -268,23 +268,6 @@ func (vs *Server) GetSyncCommitteeDuties(ctx context.Context, req *ethpbv2.SyncC
 	}, nil
 }
 
-// ProduceBlock requests the beacon node to produce a valid unsigned beacon block, which can then be signed by a proposer and submitted.
-func (vs *Server) ProduceBlock(ctx context.Context, req *ethpbv1.ProduceBlockRequest) (*ethpbv1.ProduceBlockResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "validator.ProduceBlock")
-	defer span.End()
-
-	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
-		// We simply return the error because it's already a gRPC error.
-		return nil, err
-	}
-
-	block, err := vs.v1BeaconBlock(ctx, req)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get block: %v", err)
-	}
-	return &ethpbv1.ProduceBlockResponse{Data: block}, nil
-}
-
 // ProduceBlockV2 requests the beacon node to produce a valid unsigned beacon block, which can then be signed by a proposer and submitted.
 func (vs *Server) ProduceBlockV2(ctx context.Context, req *ethpbv1.ProduceBlockRequest) (*ethpbv2.ProduceBlockResponseV2, error) {
 	ctx, span := trace.StartSpan(ctx, "validator.ProduceBlockV2")
