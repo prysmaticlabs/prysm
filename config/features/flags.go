@@ -55,11 +55,6 @@ var (
 		Usage: "(Danger): Writes the wallet password to the wallet directory on completing Prysm web onboarding. " +
 			"We recommend against this flag unless you are an advanced user.",
 	}
-	disableAttestingHistoryDBCache = &cli.BoolFlag{
-		Name: "disable-attesting-history-db-cache",
-		Usage: "(Danger): Disables the cache for attesting history in the validator DB, greatly increasing " +
-			"disk reads and writes as well as increasing time required for attestations to be produced",
-	}
 	dynamicKeyReloadDebounceInterval = &cli.DurationFlag{
 		Name: "dynamic-key-reload-debounce-interval",
 		Usage: "(Advanced): Specifies the time duration the validator waits to reload new keys if they have " +
@@ -127,7 +122,6 @@ var devModeFlags = []cli.Flag{}
 var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	writeWalletPasswordOnWebOnboarding,
 	enableExternalSlasherProtectionFlag,
-	disableAttestingHistoryDBCache,
 	PraterTestnet,
 	RopstenTestnet,
 	SepoliaTestnet,
