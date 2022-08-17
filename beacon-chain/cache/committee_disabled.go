@@ -6,7 +6,7 @@ package cache
 import (
 	"context"
 
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 )
 
 // FakeCommitteeCache is a struct with 1 queue for looking up shuffled indices list by seed.

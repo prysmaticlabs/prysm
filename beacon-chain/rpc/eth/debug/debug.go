@@ -3,11 +3,11 @@ package debug
 import (
 	"context"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers"
-	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
-	"github.com/prysmaticlabs/prysm/proto/migration"
-	"github.com/prysmaticlabs/prysm/runtime/version"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/helpers"
+	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
+	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
+	"github.com/prysmaticlabs/prysm/v3/proto/migration"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -56,7 +56,7 @@ func (ds *Server) GetBeaconStateSSZ(ctx context.Context, req *ethpbv1.StateReque
 }
 
 // GetBeaconStateV2 returns the full beacon state for a given state ID.
-func (ds *Server) GetBeaconStateV2(ctx context.Context, req *ethpbv2.StateRequestV2) (*ethpbv2.BeaconStateResponseV2, error) {
+func (ds *Server) GetBeaconStateV2(ctx context.Context, req *ethpbv2.BeaconStateRequestV2) (*ethpbv2.BeaconStateResponseV2, error) {
 	ctx, span := trace.StartSpan(ctx, "debug.GetBeaconStateV2")
 	defer span.End()
 
@@ -112,7 +112,7 @@ func (ds *Server) GetBeaconStateV2(ctx context.Context, req *ethpbv2.StateReques
 }
 
 // GetBeaconStateSSZV2 returns the SSZ-serialized version of the full beacon state object for given state ID.
-func (ds *Server) GetBeaconStateSSZV2(ctx context.Context, req *ethpbv2.StateRequestV2) (*ethpbv2.SSZContainer, error) {
+func (ds *Server) GetBeaconStateSSZV2(ctx context.Context, req *ethpbv2.BeaconStateRequestV2) (*ethpbv2.SSZContainer, error) {
 	ctx, span := trace.StartSpan(ctx, "debug.GetBeaconStateSSZV2")
 	defer span.End()
 

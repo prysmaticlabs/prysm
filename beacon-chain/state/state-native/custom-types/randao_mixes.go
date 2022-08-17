@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	fssz "github.com/prysmaticlabs/fastssz"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 )
 
 var _ fssz.HashRoot = (RandaoMixes)([fieldparams.RandaoMixesLength][32]byte{})

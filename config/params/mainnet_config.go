@@ -4,8 +4,8 @@ import (
 	"math"
 	"time"
 
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 )
 
 // MainnetConfig returns the configuration to be used in the main network.
@@ -253,8 +253,8 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	DefaultBuilderGasLimit:           uint64(30000000),
 
 	// Mevboost circuit breaker
-	MaxBuilderConsecutiveMissedSlots: 4,
-	MaxBuilderEpochMissedSlots:       6,
+	MaxBuilderConsecutiveMissedSlots: 3,
+	MaxBuilderEpochMissedSlots:       8,
 }
 
 // MainnetTestConfig provides a version of the mainnet config that has a different name

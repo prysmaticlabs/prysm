@@ -19,7 +19,7 @@ go_library(
         "validator_map_handler.go",
         "validator_root.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil",
+    importpath = "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil",
     visibility = [
         "//beacon-chain:__subpackages__",
         "//proto/migration:__subpackages__",

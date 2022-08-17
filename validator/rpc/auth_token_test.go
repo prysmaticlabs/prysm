@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
@@ -79,6 +79,8 @@ func TestServer_RefreshJWTSecretOnFileChange(t *testing.T) {
 	newSecret := srv.jwtSecret
 	require.Equal(t, true, len(newSecret) > 0)
 	require.Equal(t, true, !bytes.Equal(currentSecret, newSecret))
+	err = os.Remove(authTokenFileName)
+	require.NoError(t, err)
 }
 
 func Test_initializeAuthToken(t *testing.T) {

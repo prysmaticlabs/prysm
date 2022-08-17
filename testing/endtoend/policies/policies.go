@@ -1,6 +1,6 @@
 package policies
 
-import types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+import types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 
 // AfterNthEpoch runs for every epoch after the provided epoch.
 func AfterNthEpoch(afterEpoch types.Epoch) func(epoch types.Epoch) bool {

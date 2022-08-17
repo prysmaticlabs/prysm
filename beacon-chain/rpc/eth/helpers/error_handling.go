@@ -3,8 +3,8 @@ package helpers
 import (
 	"errors"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/statefetcher"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/statefetcher"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )

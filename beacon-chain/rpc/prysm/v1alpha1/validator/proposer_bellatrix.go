@@ -9,20 +9,20 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/interop"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
-	"github.com/prysmaticlabs/prysm/config/params"
-	consensusblocks "github.com/prysmaticlabs/prysm/consensus-types/blocks"
-	coreBlock "github.com/prysmaticlabs/prysm/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/runtime/version"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition/interop"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/kv"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	coreBlock "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
 )
 
@@ -317,16 +317,16 @@ func (vs *Server) circuitBreakBuilder(s types.Slot) (bool, error) {
 
 	// Circuit breaker is active if the missing consecutive slots greater than `MaxBuilderConsecutiveMissedSlots`.
 	highestReceivedSlot := vs.ForkFetcher.ForkChoicer().HighestReceivedBlockSlot()
-	fallbackSlots := params.BeaconConfig().MaxBuilderConsecutiveMissedSlots
+	maxConsecutiveSkipSlotsAllowed := params.BeaconConfig().MaxBuilderConsecutiveMissedSlots
 	diff, err := s.SafeSubSlot(highestReceivedSlot)
 	if err != nil {
 		return true, err
 	}
-	if diff > fallbackSlots {
+	if diff > maxConsecutiveSkipSlotsAllowed {
 		log.WithFields(logrus.Fields{
-			"currentSlot":         s,
-			"highestReceivedSlot": highestReceivedSlot,
-			"fallBackSkipSlots":   fallbackSlots,
+			"currentSlot":                    s,
+			"highestReceivedSlot":            highestReceivedSlot,
+			"maxConsecutiveSkipSlotsAllowed": maxConsecutiveSkipSlotsAllowed,
 		}).Warn("Builder circuit breaker activated due to missing consecutive slot")
 		return true, nil
 	}
@@ -341,15 +341,15 @@ func (vs *Server) circuitBreakBuilder(s types.Slot) (bool, error) {
 	if err != nil {
 		return true, err
 	}
-	fallbackSlotsLastEpoch := params.BeaconConfig().MaxBuilderEpochMissedSlots
+	maxEpochSkipSlotsAllowed := params.BeaconConfig().MaxBuilderEpochMissedSlots
 	diff, err = params.BeaconConfig().SlotsPerEpoch.SafeSub(receivedCount)
 	if err != nil {
 		return true, err
 	}
-	if diff > fallbackSlotsLastEpoch {
+	if diff > maxEpochSkipSlotsAllowed {
 		log.WithFields(logrus.Fields{
-			"totalMissed":                receivedCount,
-			"fallBackSkipSlotsLastEpoch": fallbackSlotsLastEpoch,
+			"totalMissed":              diff,
+			"maxEpochSkipSlotsAllowed": maxEpochSkipSlotsAllowed,
 		}).Warn("Builder circuit breaker activated due to missing enough slots last epoch")
 		return true, nil
 	}

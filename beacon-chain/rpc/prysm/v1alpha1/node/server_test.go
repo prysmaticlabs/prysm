@@ -2,25 +2,25 @@ package node
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"testing"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/p2p/enode"
-	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	mockP2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/testutil"
-	mockSync "github.com/prysmaticlabs/prysm/beacon-chain/sync/initial-sync/testing"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/runtime/version"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
+	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
+	dbutil "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
+	mockP2p "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/testutil"
+	mockSync "github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/initial-sync/testing"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -152,14 +152,12 @@ func TestNodeServer_ListPeers(t *testing.T) {
 
 func TestNodeServer_GetETH1ConnectionStatus(t *testing.T) {
 	server := grpc.NewServer()
-	eps := []string{"foo", "bar"}
-	errs := []error{fmt.Errorf("error 1"), fmt.Errorf("error 2"), nil}
-	errStrs := []string{"error 1", "error 2", ""}
+	ep := "foo"
+	err := errors.New("error1")
+	errStr := "error1"
 	mockFetcher := &testutil.MockExecutionChainInfoFetcher{
-		CurrEndpoint: eps[0],
-		CurrError:    errs[0],
-		Endpoints:    eps,
-		Errors:       errs,
+		CurrEndpoint: ep,
+		CurrError:    err,
 	}
 	ns := &Server{
 		POWChainInfoFetcher: mockFetcher,
@@ -169,8 +167,6 @@ func TestNodeServer_GetETH1ConnectionStatus(t *testing.T) {
 
 	res, err := ns.GetETH1ConnectionStatus(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
-	assert.Equal(t, eps[0], res.CurrentAddress)
-	assert.Equal(t, errStrs[0], res.CurrentConnectionError)
-	assert.DeepSSZEqual(t, eps, res.Addresses)
-	assert.DeepSSZEqual(t, errStrs, res.ConnectionErrors)
+	assert.Equal(t, ep, res.CurrentAddress)
+	assert.Equal(t, errStr, res.CurrentConnectionError)
 }

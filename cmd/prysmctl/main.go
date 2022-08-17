@@ -3,8 +3,8 @@ package main
 import (
 	"os"
 
-	"github.com/prysmaticlabs/prysm/cmd/prysmctl/checkpoint"
-	"github.com/prysmaticlabs/prysm/cmd/prysmctl/p2p"
+	"github.com/prysmaticlabs/prysm/v3/cmd/prysmctl/checkpoint"
+	"github.com/prysmaticlabs/prysm/v3/cmd/prysmctl/p2p"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )

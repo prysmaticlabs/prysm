@@ -11,7 +11,7 @@ go_library(
         "sszuint64.go",
         "validator.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/consensus-types/primitives",
+    importpath = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives",
     visibility = ["//visibility:public"],
     deps = [
         "//math:go_default_library",

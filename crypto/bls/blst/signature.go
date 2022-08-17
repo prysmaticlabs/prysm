@@ -8,10 +8,9 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/config/features"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/crypto/bls/common"
-	"github.com/prysmaticlabs/prysm/crypto/rand"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/crypto/bls/common"
+	"github.com/prysmaticlabs/prysm/v3/crypto/rand"
 	blst "github.com/supranational/blst/bindings/go"
 )
 
@@ -27,9 +26,6 @@ type Signature struct {
 
 // SignatureFromBytes creates a BLS signature from a LittleEndian byte slice.
 func SignatureFromBytes(sig []byte) (common.Signature, error) {
-	if features.Get().SkipBLSVerify {
-		return &Signature{}, nil
-	}
 	if len(sig) != fieldparams.BLSSignatureLength {
 		return nil, fmt.Errorf("signature must be %d bytes", fieldparams.BLSSignatureLength)
 	}
@@ -57,9 +53,6 @@ func AggregateCompressedSignatures(multiSigs [][]byte) (common.Signature, error)
 
 // MultipleSignaturesFromBytes creates a group of BLS signatures from a LittleEndian 2d-byte slice.
 func MultipleSignaturesFromBytes(multiSigs [][]byte) ([]common.Signature, error) {
-	if features.Get().SkipBLSVerify {
-		return []common.Signature{}, nil
-	}
 	if len(multiSigs) == 0 {
 		return nil, fmt.Errorf("0 signatures provided to the method")
 	}
@@ -98,9 +91,6 @@ func MultipleSignaturesFromBytes(multiSigs [][]byte) ([]common.Signature, error)
 // In the Ethereum proof of stake specification:
 // def Verify(PK: BLSPubkey, message: Bytes, signature: BLSSignature) -> bool
 func (s *Signature) Verify(pubKey common.PublicKey, msg []byte) bool {
-	if features.Get().SkipBLSVerify {
-		return true
-	}
 	// Signature and PKs are assumed to have been validated upon decompression!
 	return s.s.Verify(false, pubKey.(*PublicKey).p, false, msg, dst)
 }
@@ -123,9 +113,6 @@ func (s *Signature) Verify(pubKey common.PublicKey, msg []byte) bool {
 //
 // Deprecated: Use FastAggregateVerify or use this method in spectests only.
 func (s *Signature) AggregateVerify(pubKeys []common.PublicKey, msgs [][32]byte) bool {
-	if features.Get().SkipBLSVerify {
-		return true
-	}
 	size := len(pubKeys)
 	if size == 0 {
 		return false
@@ -154,9 +141,6 @@ func (s *Signature) AggregateVerify(pubKeys []common.PublicKey, msgs [][32]byte)
 // In the Ethereum proof of stake specification:
 // def FastAggregateVerify(PKs: Sequence[BLSPubkey], message: Bytes, signature: BLSSignature) -> bool
 func (s *Signature) FastAggregateVerify(pubKeys []common.PublicKey, msg [32]byte) bool {
-	if features.Get().SkipBLSVerify {
-		return true
-	}
 	if len(pubKeys) == 0 {
 		return false
 	}
@@ -179,9 +163,6 @@ func (s *Signature) FastAggregateVerify(pubKeys []common.PublicKey, msg [32]byte
 //        return True
 //    return bls.FastAggregateVerify(pubkeys, message, signature)
 func (s *Signature) Eth2FastAggregateVerify(pubKeys []common.PublicKey, msg [32]byte) bool {
-	if features.Get().SkipBLSVerify {
-		return true
-	}
 	if len(pubKeys) == 0 && bytes.Equal(s.Marshal(), common.InfiniteSignature[:]) {
 		return true
 	}
@@ -198,9 +179,6 @@ func NewAggregateSignature() common.Signature {
 func AggregateSignatures(sigs []common.Signature) common.Signature {
 	if len(sigs) == 0 {
 		return nil
-	}
-	if features.Get().SkipBLSVerify {
-		return sigs[0]
 	}
 
 	rawSigs := make([]*blstSignature, len(sigs))
@@ -222,9 +200,6 @@ func AggregateSignatures(sigs []common.Signature) common.Signature {
 // e(S*, G) = \prod_{i=1}^n \prod_{j=1}^{m_i} e(P'_{i,j}, M_{i,j})
 // Using this we can verify multiple signatures safely.
 func VerifyMultipleSignatures(sigs [][]byte, msgs [][32]byte, pubKeys []common.PublicKey) (bool, error) {
-	if features.Get().SkipBLSVerify {
-		return true, nil
-	}
 	if len(sigs) == 0 || len(pubKeys) == 0 {
 		return false, nil
 	}
@@ -264,10 +239,6 @@ func VerifyMultipleSignatures(sigs [][]byte, msgs [][32]byte, pubKeys []common.P
 
 // Marshal a signature into a LittleEndian byte slice.
 func (s *Signature) Marshal() []byte {
-	if features.Get().SkipBLSVerify {
-		return make([]byte, fieldparams.BLSSignatureLength)
-	}
-
 	return s.s.Compress()
 }
 

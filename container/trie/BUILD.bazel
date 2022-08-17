@@ -6,7 +6,7 @@ go_library(
         "sparse_merkle.go",
         "zerohashes.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/container/trie",
+    importpath = "github.com/prysmaticlabs/prysm/v3/container/trie",
     visibility = ["//visibility:public"],
     deps = [
         "//crypto/hash:go_default_library",

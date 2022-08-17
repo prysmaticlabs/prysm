@@ -6,10 +6,10 @@ import (
 	"testing"
 
 	fssz "github.com/prysmaticlabs/fastssz"
-	stateAltair "github.com/prysmaticlabs/prysm/beacon-chain/state/v2"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	common "github.com/prysmaticlabs/prysm/testing/spectest/shared/common/ssz_static"
+	stateAltair "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v2"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	common "github.com/prysmaticlabs/prysm/v3/testing/spectest/shared/common/ssz_static"
 )
 
 // RunSSZStaticTests executes "ssz_static" tests.

@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"github.com/pkg/errors"
-	. "github.com/prysmaticlabs/prysm/runtime/logging/logrus-prefixed-formatter"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	. "github.com/prysmaticlabs/prysm/v3/runtime/logging/logrus-prefixed-formatter"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/prysmaticlabs/prysm/tools/unencrypted-keys-gen/keygen"
+	"github.com/prysmaticlabs/prysm/v3/tools/unencrypted-keys-gen/keygen"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 )

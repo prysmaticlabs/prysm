@@ -5,7 +5,7 @@ package flags
 import (
 	"strings"
 
-	"github.com/prysmaticlabs/prysm/config/params"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/urfave/cli/v2"
 )
 
@@ -43,11 +43,6 @@ var (
 			"fail, which will prevent your validators from performing their duties. " +
 			"This is not required if using an IPC connection.",
 		Value: "",
-	}
-	// FallbackWeb3ProviderFlag provides a fallback endpoint to an ETH 1.0 RPC.
-	FallbackWeb3ProviderFlag = &cli.StringSliceFlag{
-		Name:  "fallback-web3provider",
-		Usage: "A mainchain web3 provider string http endpoint. This is our fallback web3 provider, this flag may be used multiple times.",
 	}
 	// DepositContractFlag defines a flag for the deposit contract address.
 	DepositContractFlag = &cli.StringFlag{

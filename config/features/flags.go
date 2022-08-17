@@ -50,10 +50,6 @@ var (
 		Name:  "disable-peer-scorer",
 		Usage: "Disables experimental P2P peer scorer",
 	}
-	checkPtInfoCache = &cli.BoolFlag{
-		Name:  "use-check-point-cache",
-		Usage: "Enables check point info caching",
-	}
 	enableLargerGossipHistory = &cli.BoolFlag{
 		Name:  "enable-larger-gossip-history",
 		Usage: "Enables the node to store a larger amount of gossip messages in its cache.",
@@ -110,13 +106,13 @@ var (
 		Name:  "experimental-enable-boundary-checks",
 		Usage: "Experimental enable of boundary checks, useful for debugging, may cause bad votes.",
 	}
-	enableVecHTR = &cli.BoolFlag{
-		Name:  "enable-vectorized-htr",
-		Usage: "Enables new go sha256 library which utilizes optimized routines for merkle trees",
+	disableVecHTR = &cli.BoolFlag{
+		Name:  "disable-vectorized-htr",
+		Usage: "Disables the new go sha256 library which utilizes optimized routines for merkle trees",
 	}
-	enableForkChoiceDoublyLinkedTree = &cli.BoolFlag{
-		Name:  "enable-forkchoice-doubly-linked-tree",
-		Usage: "Enables new forkchoice store structure that uses doubly linked trees",
+	disableForkChoiceDoublyLinkedTree = &cli.BoolFlag{
+		Name:  "disable-forkchoice-doubly-linked-tree",
+		Usage: "Disables the new forkchoice store structure that uses doubly linked trees",
 	}
 	disableGossipBatchAggregation = &cli.BoolFlag{
 		Name:  "disable-gossip-batch-aggregation",
@@ -129,10 +125,7 @@ var (
 )
 
 // devModeFlags holds list of flags that are set when development mode is on.
-var devModeFlags = []cli.Flag{
-	enableVecHTR,
-	enableForkChoiceDoublyLinkedTree,
-}
+var devModeFlags = []cli.Flag{}
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
 var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
@@ -165,14 +158,13 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	Mainnet,
 	disablePeerScorer,
 	enableLargerGossipHistory,
-	checkPtInfoCache,
 	disableBroadcastSlashingFlag,
 	enableSlasherFlag,
 	enableHistoricalSpaceRepresentation,
 	disableNativeState,
 	disablePullTips,
-	enableVecHTR,
-	enableForkChoiceDoublyLinkedTree,
+	disableVecHTR,
+	disableForkChoiceDoublyLinkedTree,
 	disableGossipBatchAggregation,
 	EnableOnlyBlindedBeaconBlocks,
 }...)

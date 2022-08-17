@@ -9,7 +9,7 @@ import "proto/engine/v1/execution_engine.proto";
 import "proto/eth/ext/options.proto";
 
 option csharp_namespace = "Ethereum.Eth.V1Alpha1";
-option go_package = "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1;eth";
+option go_package = "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1;eth";
 option java_multiple_files = true;
 option java_outer_classname = "BeaconStateProto";
 option java_package = "org.ethereum.eth.v1alpha1";
@@ -19,7 +19,7 @@ message BeaconState {
   // Versioning [1001-2000]
   uint64 genesis_time = 1001;
   bytes genesis_validators_root = 1002 [(ethereum.eth.ext.ssz_size) = "32"];
-  uint64 slot = 1003 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"];
+  uint64 slot = 1003 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"];
   Fork fork = 1004;
 
   // History [2001-3000]
@@ -61,7 +61,7 @@ message BeaconStateAltair {
   // Versioning [1001-2000]
   uint64 genesis_time = 1001;
   bytes genesis_validators_root = 1002 [(ethereum.eth.ext.ssz_size) = "32"];
-  uint64 slot = 1003 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"];
+  uint64 slot = 1003 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"];
   Fork fork = 1004;
 
   // History [2001-3000]
@@ -105,7 +105,7 @@ message BeaconStateAltair {
 message Fork {
   bytes previous_version = 1 [(ethereum.eth.ext.ssz_size) = "4"];
   bytes current_version = 2 [(ethereum.eth.ext.ssz_size) = "4"];
-  uint64 epoch = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Epoch"];
+  uint64 epoch = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Epoch"];
 }
 
 message PendingAttestation {
@@ -114,9 +114,9 @@ message PendingAttestation {
   bytes aggregation_bits = 1 [(ethereum.eth.ext.ssz_max) = "2048", (ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/go-bitfield.Bitlist"];
   AttestationData data = 2;
   // The difference of when attestation gets created and get included on chain.
-  uint64 inclusion_delay = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"];
+  uint64 inclusion_delay = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"];
   // The proposer who included the attestation in the block.
-  uint64 proposer_index = 4 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.ValidatorIndex"];
+  uint64 proposer_index = 4 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"];
 }
 
 message HistoricalBatch {
@@ -130,7 +130,7 @@ message HistoricalBatch {
 // and blocks.
 message StateSummary {
   // The slot of the state.
-  uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"];
+  uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"];
   // The block root of the state.
   bytes root = 2;
 }
@@ -183,7 +183,7 @@ message SyncCommittee {
 // SyncAggregatorSelectionData is used to sign over and then check whether the aggregator is selected within a subcommittee.
 message SyncAggregatorSelectionData {
   // Slot of this signing data.
-  uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"];
+  uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"];
   // Subcommittee index of this signing data.
   uint64 subcommittee_index = 2;
 }
@@ -192,7 +192,7 @@ message BeaconStateBellatrix {
   // Versioning [1001-2000]
   uint64 genesis_time = 1001;
   bytes genesis_validators_root = 1002 [(ethereum.eth.ext.ssz_size) = "32"];
-  uint64 slot = 1003 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"];
+  uint64 slot = 1003 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"];
   Fork fork = 1004;
 
   // History [2001-3000]
@@ -240,7 +240,7 @@ message BeaconStateCapella {
   // Versioning [1001-2000]
   uint64 genesis_time = 1001;
   bytes genesis_validators_root = 1002 [(ethereum.eth.ext.ssz_size) = "32"];
-  uint64 slot = 1003 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.Slot"];
+  uint64 slot = 1003 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"];
   Fork fork = 1004;
 
   // History [2001-3000]
@@ -286,7 +286,7 @@ message BeaconStateCapella {
   // Capella fields [11001-12000]
   repeated  ethereum.engine.v1.Withdrawal withdrawal_queue = 11001 [(ethereum.eth.ext.ssz_max) = "1099511627776"]; // [New in Capella]
   uint64 next_withdrawal_index = 11002; // [New in Capella]
-  uint64 next_partial_withdrawal_validator_index = 11003 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/consensus-types/primitives.ValidatorIndex"]; // [New in Capella]
+  uint64 next_partial_withdrawal_validator_index = 11003 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"]; // [New in Capella]
 }
 
 // PowBlock is a definition from Bellatrix fork choice spec to represent a block with total difficulty in the PoW chain.
