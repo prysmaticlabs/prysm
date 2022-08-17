@@ -198,7 +198,21 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 	set := bls.NewSet()
 	set.Join(selectionSigSet).Join(aggregatorSigSet).Join(attSigSet)
 
-	return s.validateWithBatchVerifier(ctx, "aggregate", set)
+	return wrapErr(signed, func() (pubsub.ValidationResult, error) {
+		return s.validateWithBatchVerifier(ctx, "aggregate", set)
+	})
+}
+
+func wrapErr(agg *ethpb.SignedAggregateAttestationAndProof, verFunc func() (pubsub.ValidationResult, error)) (pubsub.ValidationResult, error) {
+	valRes, err := verFunc()
+	if err != nil {
+		sszVal, sszErr := agg.MarshalSSZ()
+		if sszErr != nil {
+			return valRes, errors.Wrapf(err, "%v", sszErr)
+		}
+		return valRes, errors.Wrapf(err, "aggregate ssz %#x", sszVal)
+	}
+	return valRes, nil
 }
 
 func (s *Service) validateBlockInAttestation(ctx context.Context, satt *ethpb.SignedAggregateAttestationAndProof) bool {
