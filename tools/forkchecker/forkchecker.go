@@ -137,7 +137,7 @@ func logParticipation(endpt string, p *pb.ValidatorParticipation) {
 		logrus.Fields{
 			"VotedEther":        p.PreviousEpochAttestingGwei,
 			"TotalEther":        p.PreviousEpochActiveGwei,
-			"ParticipationRate": float64(p.PreviousEpochAttestingGwei / p.PreviousEpochActiveGwei),
+			"ParticipationRate": float64(p.PreviousEpochTargetAttestingGwei / p.PreviousEpochActiveGwei),
 		}).Info("Participation rate from beacon node ", endpt)
 }
 

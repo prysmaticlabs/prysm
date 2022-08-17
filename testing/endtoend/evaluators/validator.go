@@ -11,13 +11,12 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	ethtypes "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	ethpbservice "github.com/prysmaticlabs/prysm/v3/proto/eth/service"
-	"github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
+	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/helpers"
 	e2eparams "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/policies"
 	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
-
 	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -116,7 +115,7 @@ func validatorsParticipating(conns ...*grpc.ClientConn) error {
 		return errors.Wrap(err, "failed to get validator participation")
 	}
 
-	partRate := participation.Participation.GlobalParticipationRate
+	partRate := float32(participation.Participation.PreviousEpochTargetAttestingGwei) / float32(participation.Participation.PreviousEpochActiveGwei)
 	expected := float32(expectedParticipation)
 	if e2eparams.TestParams.LighthouseBeaconNodeCount != 0 {
 		expected = float32(expectedMulticlientParticipation)
@@ -128,7 +127,7 @@ func validatorsParticipating(conns ...*grpc.ClientConn) error {
 		expected = 0.95
 	}
 	if partRate < expected {
-		st, err := debugClient.GetBeaconStateV2(context.Background(), &eth.BeaconStateRequestV2{StateId: []byte("head")})
+		st, err := debugClient.GetBeaconStateV2(context.Background(), &ethpbv2.BeaconStateRequestV2{StateId: []byte("head")})
 		if err != nil {
 			return errors.Wrap(err, "failed to get beacon state")
 		}
@@ -136,14 +135,14 @@ func validatorsParticipating(conns ...*grpc.ClientConn) error {
 		var missTgtVals []uint64
 		var missHeadVals []uint64
 		switch obj := st.Data.State.(type) {
-		case *eth.BeaconStateContainer_Phase0State:
+		case *ethpbv2.BeaconStateContainer_Phase0State:
 		// Do Nothing
-		case *eth.BeaconStateContainer_AltairState:
+		case *ethpbv2.BeaconStateContainer_AltairState:
 			missSrcVals, missTgtVals, missHeadVals, err = findMissingValidators(obj.AltairState.PreviousEpochParticipation)
 			if err != nil {
 				return errors.Wrap(err, "failed to get missing validators")
 			}
-		case *eth.BeaconStateContainer_BellatrixState:
+		case *ethpbv2.BeaconStateContainer_BellatrixState:
 			missSrcVals, missTgtVals, missHeadVals, err = findMissingValidators(obj.BellatrixState.PreviousEpochParticipation)
 			if err != nil {
 				return errors.Wrap(err, "failed to get missing validators")
