@@ -44,9 +44,6 @@ func TestNodeClose_OK(t *testing.T) {
 	set.String("p2p-encoding", "ssz", "p2p encoding scheme")
 	set.Bool("demo-config", true, "demo configuration")
 	set.String("deposit-contract", "0x0000000000000000000000000000000000000000", "deposit contract address")
-	set.Bool(cmd.EnableBackupWebhookFlag.Name, true, "")
-	require.NoError(t, set.Set(cmd.EnableBackupWebhookFlag.Name, "true"))
-	set.String(cmd.BackupWebhookOutputDir.Name, "datadir", "")
 	cmd.ValidatorMonitorIndicesFlag.Value = &cli.IntSlice{}
 	cmd.ValidatorMonitorIndicesFlag.Value.SetInt(1)
 	ctx := cli.NewContext(&app, set, nil)
