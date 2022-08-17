@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/remote"
+	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/remote"
 )
 
 // WalletEdit changes a user's on-disk wallet configuration: remote gRPC

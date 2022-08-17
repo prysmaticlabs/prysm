@@ -3,9 +3,9 @@ package forkchoice
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/config/features"
-	"github.com/prysmaticlabs/prysm/runtime/version"
-	"github.com/prysmaticlabs/prysm/testing/spectest/shared/common/forkchoice"
+	"github.com/prysmaticlabs/prysm/v3/config/features"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	"github.com/prysmaticlabs/prysm/v3/testing/spectest/shared/common/forkchoice"
 )
 
 func TestMinimal_Altair_Forkchoice(t *testing.T) {
@@ -18,8 +18,8 @@ func TestMinimal_Altair_Forkchoice(t *testing.T) {
 
 func TestMinimal_Altair_Forkchoice_DoublyLinkTre(t *testing.T) {
 	resetCfg := features.InitWithReset(&features.Flags{
-		EnableForkChoiceDoublyLinkedTree: true,
-		DisablePullTips:                  true,
+		DisableForkchoiceDoublyLinkedTree: false,
+		DisablePullTips:                   true,
 	})
 	defer resetCfg()
 	forkchoice.Run(t, "minimal", version.Altair)

@@ -16,22 +16,21 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/async/event"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache/depositcache"
-	dbutil "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	mockExecution "github.com/prysmaticlabs/prysm/beacon-chain/execution/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/config/params"
-	contracts "github.com/prysmaticlabs/prysm/contracts/deposit"
-	"github.com/prysmaticlabs/prysm/contracts/deposit/mock"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/monitoring/clientstats"
-	"github.com/prysmaticlabs/prysm/network"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/async/event"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache/depositcache"
+	dbutil "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
+	mockExecution "github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	contracts "github.com/prysmaticlabs/prysm/v3/contracts/deposit"
+	"github.com/prysmaticlabs/prysm/v3/contracts/deposit/mock"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/monitoring/clientstats"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -143,7 +142,7 @@ func TestStart_OK(t *testing.T) {
 		server.Stop()
 	})
 	web3Service, err := NewService(context.Background(),
-		WithHttpEndpoints([]string{endpoint}),
+		WithHttpEndpoint(endpoint),
 		WithDepositContractAddress(testAcc.ContractAddr),
 		WithDatabase(beaconDB),
 	)
@@ -172,7 +171,7 @@ func TestStart_NoHttpEndpointDefinedFails_WithoutChainStarted(t *testing.T) {
 	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
 	_, err = NewService(context.Background(),
-		WithHttpEndpoints([]string{""}),
+		WithHttpEndpoint(""),
 		WithDepositContractAddress(testAcc.ContractAddr),
 		WithDatabase(beaconDB),
 	)
@@ -191,7 +190,7 @@ func TestStop_OK(t *testing.T) {
 		server.Stop()
 	})
 	web3Service, err := NewService(context.Background(),
-		WithHttpEndpoints([]string{endpoint}),
+		WithHttpEndpoint(endpoint),
 		WithDepositContractAddress(testAcc.ContractAddr),
 		WithDatabase(beaconDB),
 	)
@@ -221,7 +220,7 @@ func TestService_Eth1Synced(t *testing.T) {
 		server.Stop()
 	})
 	web3Service, err := NewService(context.Background(),
-		WithHttpEndpoints([]string{endpoint}),
+		WithHttpEndpoint(endpoint),
 		WithDepositContractAddress(testAcc.ContractAddr),
 		WithDatabase(beaconDB),
 	)
@@ -247,7 +246,7 @@ func TestFollowBlock_OK(t *testing.T) {
 		server.Stop()
 	})
 	web3Service, err := NewService(context.Background(),
-		WithHttpEndpoints([]string{endpoint}),
+		WithHttpEndpoint(endpoint),
 		WithDepositContractAddress(testAcc.ContractAddr),
 		WithDatabase(beaconDB),
 	)
@@ -325,7 +324,7 @@ func TestHandlePanic_OK(t *testing.T) {
 		server.Stop()
 	})
 	web3Service, err := NewService(context.Background(),
-		WithHttpEndpoints([]string{endpoint}),
+		WithHttpEndpoint(endpoint),
 		WithDatabase(beaconDB),
 	)
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
@@ -362,7 +361,7 @@ func TestLogTillGenesis_OK(t *testing.T) {
 		server.Stop()
 	})
 	web3Service, err := NewService(context.Background(),
-		WithHttpEndpoints([]string{endpoint}),
+		WithHttpEndpoint(endpoint),
 		WithDepositContractAddress(testAcc.ContractAddr),
 		WithDatabase(beaconDB),
 	)
@@ -501,7 +500,7 @@ func TestNewService_EarliestVotingBlock(t *testing.T) {
 		server.Stop()
 	})
 	web3Service, err := NewService(context.Background(),
-		WithHttpEndpoints([]string{endpoint}),
+		WithHttpEndpoint(endpoint),
 		WithDepositContractAddress(testAcc.ContractAddr),
 		WithDatabase(beaconDB),
 	)
@@ -557,14 +556,14 @@ func TestNewService_Eth1HeaderRequLimit(t *testing.T) {
 		server.Stop()
 	})
 	s1, err := NewService(context.Background(),
-		WithHttpEndpoints([]string{endpoint}),
+		WithHttpEndpoint(endpoint),
 		WithDepositContractAddress(testAcc.ContractAddr),
 		WithDatabase(beaconDB),
 	)
 	require.NoError(t, err, "unable to setup web3 ETH1.0 chain service")
 	assert.Equal(t, defaultEth1HeaderReqLimit, s1.cfg.eth1HeaderReqLimit, "default eth1 header request limit not set")
 	s2, err := NewService(context.Background(),
-		WithHttpEndpoints([]string{endpoint}),
+		WithHttpEndpoint(endpoint),
 		WithDepositContractAddress(testAcc.ContractAddr),
 		WithDatabase(beaconDB),
 		WithEth1HeaderRequestLimit(uint64(150)),
@@ -582,60 +581,6 @@ func (mbs *mockBSUpdater) Update(bs clientstats.BeaconNodeStats) {
 }
 
 var _ BeaconNodeStatsUpdater = &mockBSUpdater{}
-
-func TestServiceFallbackCorrectly(t *testing.T) {
-	testAcc, err := mock.Setup()
-	require.NoError(t, err, "Unable to set up simulated backend")
-	beaconDB := dbutil.SetupDB(t)
-
-	server, firstEndpoint, err := mockExecution.SetupRPCServer()
-	require.NoError(t, err)
-	t.Cleanup(func() {
-		server.Stop()
-	})
-	server2, secondEndpoint, err := mockExecution.SetupRPCServer()
-	require.NoError(t, err)
-	t.Cleanup(func() {
-		server2.Stop()
-	})
-	server3, thirdEndpoint, err := mockExecution.SetupRPCServer()
-	require.NoError(t, err)
-	t.Cleanup(func() {
-		server3.Stop()
-	})
-
-	mbs := &mockBSUpdater{}
-	s1, err := NewService(context.Background(),
-		WithHttpEndpoints([]string{firstEndpoint}),
-		WithDepositContractAddress(testAcc.ContractAddr),
-		WithDatabase(beaconDB),
-		WithBeaconNodeStatsUpdater(mbs),
-	)
-	require.NoError(t, err)
-	s1.cfg.beaconNodeStatsUpdater = mbs
-
-	assert.Equal(t, firstEndpoint, s1.cfg.currHttpEndpoint.Url, "Unexpected http endpoint")
-
-	// Stay at the first endpoint.
-	s1.fallbackToNextEndpoint()
-	assert.Equal(t, firstEndpoint, s1.cfg.currHttpEndpoint.Url, "Unexpected http endpoint")
-	assert.Equal(t, false, mbs.lastBS.SyncEth1FallbackConfigured, "SyncEth1FallbackConfigured in clientstats update should be false when only 1 endpoint is configured")
-
-	s1.cfg.httpEndpoints = append(s1.cfg.httpEndpoints, network.Endpoint{Url: secondEndpoint})
-
-	s1.fallbackToNextEndpoint()
-	assert.Equal(t, secondEndpoint, s1.cfg.currHttpEndpoint.Url, "Unexpected http endpoint")
-	assert.Equal(t, true, mbs.lastBS.SyncEth1FallbackConfigured, "SyncEth1FallbackConfigured in clientstats update should be true when > 1 endpoint is configured")
-
-	s1.cfg.httpEndpoints = append(s1.cfg.httpEndpoints, network.Endpoint{Url: thirdEndpoint})
-
-	s1.fallbackToNextEndpoint()
-	assert.Equal(t, thirdEndpoint, s1.cfg.currHttpEndpoint.Url, "Unexpected http endpoint")
-
-	// Rollover correctly back to the first endpoint
-	s1.fallbackToNextEndpoint()
-	assert.Equal(t, firstEndpoint, s1.cfg.currHttpEndpoint.Url, "Unexpected http endpoint")
-}
 
 func TestDedupEndpoints(t *testing.T) {
 	assert.DeepEqual(t, []string{"A"}, dedupEndpoints([]string{"A"}), "did not dedup correctly")
@@ -667,7 +612,7 @@ func TestService_EnsureConsistentPowchainData(t *testing.T) {
 		srv.Stop()
 	})
 	s1, err := NewService(context.Background(),
-		WithHttpEndpoints([]string{endpoint}),
+		WithHttpEndpoint(endpoint),
 		WithDatabase(beaconDB),
 		WithDepositCache(cache),
 	)
@@ -697,7 +642,7 @@ func TestService_InitializeCorrectly(t *testing.T) {
 		srv.Stop()
 	})
 	s1, err := NewService(context.Background(),
-		WithHttpEndpoints([]string{endpoint}),
+		WithHttpEndpoint(endpoint),
 		WithDatabase(beaconDB),
 		WithDepositCache(cache),
 	)
@@ -726,7 +671,7 @@ func TestService_EnsureValidPowchainData(t *testing.T) {
 		srv.Stop()
 	})
 	s1, err := NewService(context.Background(),
-		WithHttpEndpoints([]string{endpoint}),
+		WithHttpEndpoint(endpoint),
 		WithDatabase(beaconDB),
 		WithDepositCache(cache),
 	)
@@ -822,12 +767,7 @@ func TestETH1Endpoints(t *testing.T) {
 	t.Cleanup(func() {
 		server.Stop()
 	})
-	server, secondEndpoint, err := mockExecution.SetupRPCServer()
-	require.NoError(t, err)
-	t.Cleanup(func() {
-		server.Stop()
-	})
-	endpoints := []string{firstEndpoint, secondEndpoint}
+	endpoints := []string{firstEndpoint}
 
 	testAcc, err := mock.Setup()
 	require.NoError(t, err, "Unable to set up simulated backend")
@@ -835,7 +775,7 @@ func TestETH1Endpoints(t *testing.T) {
 
 	mbs := &mockBSUpdater{}
 	s1, err := NewService(context.Background(),
-		WithHttpEndpoints(endpoints),
+		WithHttpEndpoint(endpoints[0]),
 		WithDepositContractAddress(testAcc.ContractAddr),
 		WithDatabase(beaconDB),
 		WithBeaconNodeStatsUpdater(mbs),
@@ -844,10 +784,7 @@ func TestETH1Endpoints(t *testing.T) {
 	require.NoError(t, err)
 
 	// Check default endpoint is set to current.
-	assert.Equal(t, firstEndpoint, s1.CurrentETH1Endpoint(), "Unexpected http endpoint")
-
-	// Check endpoints are all present.
-	assert.DeepSSZEqual(t, endpoints, s1.ETH1Endpoints(), "Unexpected http endpoint slice")
+	assert.Equal(t, firstEndpoint, s1.ExecutionClientEndpoint(), "Unexpected http endpoint")
 }
 
 func TestService_CacheBlockHeaders(t *testing.T) {

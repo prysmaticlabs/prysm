@@ -12,21 +12,20 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
-	"github.com/prysmaticlabs/prysm/cmd/validator/flags"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	pb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	mock2 "github.com/prysmaticlabs/prysm/testing/mock"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/validator/accounts"
-	"github.com/prysmaticlabs/prysm/validator/accounts/iface"
-	mock "github.com/prysmaticlabs/prysm/validator/accounts/testing"
-	"github.com/prysmaticlabs/prysm/validator/accounts/wallet"
-	"github.com/prysmaticlabs/prysm/validator/client"
-	"github.com/prysmaticlabs/prysm/validator/keymanager"
-	"github.com/prysmaticlabs/prysm/validator/keymanager/derived"
-	constant "github.com/prysmaticlabs/prysm/validator/testing"
+	"github.com/prysmaticlabs/prysm/v3/cmd/validator/flags"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	mock2 "github.com/prysmaticlabs/prysm/v3/testing/mock"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/validator/accounts"
+	"github.com/prysmaticlabs/prysm/v3/validator/accounts/iface"
+	mock "github.com/prysmaticlabs/prysm/v3/validator/accounts/testing"
+	"github.com/prysmaticlabs/prysm/v3/validator/accounts/wallet"
+	"github.com/prysmaticlabs/prysm/v3/validator/client"
+	"github.com/prysmaticlabs/prysm/v3/validator/keymanager"
+	"github.com/prysmaticlabs/prysm/v3/validator/keymanager/derived"
+	constant "github.com/prysmaticlabs/prysm/v3/validator/testing"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -181,109 +180,6 @@ func TestServer_BackupAccounts(t *testing.T) {
 		assert.Equal(t, keystore.Pubkey, fmt.Sprintf("%x", pubKeys[i]))
 		require.NoError(t, keystoreFile.Close())
 	}
-}
-
-func TestServer_DeleteAccounts_FailedPreconditions_DerivedWallet(t *testing.T) {
-	ctx := context.Background()
-	localWalletDir := setupWalletDir(t)
-	defaultWalletPath = localWalletDir
-	// We attempt to create the wallet.
-	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
-		WalletCfg: &wallet.Config{
-			WalletDir:      defaultWalletPath,
-			KeymanagerKind: keymanager.Derived,
-			WalletPassword: strongPass,
-		},
-		SkipMnemonicConfirm: true,
-	})
-	require.NoError(t, err)
-	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
-	require.NoError(t, err)
-	vs, err := client.NewValidatorService(ctx, &client.Config{
-		Wallet: w,
-		Validator: &mock.MockValidator{
-			Km: km,
-		},
-	})
-	require.NoError(t, err)
-	s := &Server{
-		walletInitialized: true,
-		wallet:            w,
-		validatorService:  vs,
-	}
-	numAccounts := 5
-	dr, ok := km.(*derived.Keymanager)
-	require.Equal(t, true, ok)
-	err = dr.RecoverAccountsFromMnemonic(ctx, constant.TestMnemonic, "", numAccounts)
-	require.NoError(t, err)
-
-	_, err = s.DeleteAccounts(ctx, &pb.DeleteAccountsRequest{
-		PublicKeysToDelete: nil,
-	})
-	assert.ErrorContains(t, "No public keys specified to delete", err)
-	ikm, err := s.validatorService.Keymanager()
-	require.NoError(t, err)
-	keys, err := ikm.FetchValidatingPublicKeys(ctx)
-	require.NoError(t, err)
-	_, err = s.DeleteAccounts(ctx, &pb.DeleteAccountsRequest{
-		PublicKeysToDelete: bytesutil.FromBytes48Array(keys),
-	})
-	require.NoError(t, err)
-}
-
-func TestServer_DeleteAccounts_FailedPreconditions_NoWallet(t *testing.T) {
-	ctx := context.Background()
-	localWalletDir := setupWalletDir(t)
-	defaultWalletPath = localWalletDir
-	w, err := accounts.CreateWalletWithKeymanager(ctx, &accounts.CreateWalletConfig{
-		WalletCfg: &wallet.Config{
-			WalletDir:      defaultWalletPath,
-			KeymanagerKind: keymanager.Derived,
-			WalletPassword: strongPass,
-		},
-		SkipMnemonicConfirm: true,
-	})
-	require.NoError(t, err)
-	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
-	require.NoError(t, err)
-	vs, err := client.NewValidatorService(ctx, &client.Config{
-		Wallet: w,
-		Validator: &mock.MockValidator{
-			Km: km,
-		},
-	})
-	require.NoError(t, err)
-	s := &Server{
-		validatorService: vs,
-	}
-	_, err = s.DeleteAccounts(ctx, &pb.DeleteAccountsRequest{})
-	assert.ErrorContains(t, "No public keys specified to delete", err)
-	_, err = s.DeleteAccounts(ctx, &pb.DeleteAccountsRequest{
-		PublicKeysToDelete: make([][]byte, 1),
-	})
-	assert.ErrorContains(t, "No wallet found", err)
-}
-
-func TestServer_DeleteAccounts_OK_ImportedWallet(t *testing.T) {
-	s, pubKeys := createImportedWalletWithAccounts(t, 3)
-	ctx := context.Background()
-	ikm, err := s.validatorService.Keymanager()
-	require.NoError(t, err)
-	keys, err := ikm.FetchValidatingPublicKeys(ctx)
-	require.NoError(t, err)
-	require.Equal(t, len(pubKeys), len(keys))
-
-	// Next, we attempt to delete one of the keystores.
-	_, err = s.DeleteAccounts(ctx, &pb.DeleteAccountsRequest{
-		PublicKeysToDelete: pubKeys[:1], // Delete the 0th public key
-	})
-	require.NoError(t, err)
-	km, err := s.wallet.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
-	require.NoError(t, err)
-	// We expect one of the keys to have been deleted.
-	keys, err = km.FetchValidatingPublicKeys(ctx)
-	require.NoError(t, err)
-	assert.Equal(t, len(pubKeys)-1, len(keys))
 }
 
 func TestServer_VoluntaryExit(t *testing.T) {

@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/logrusorgru/aurora"
-	"github.com/prysmaticlabs/prysm/validator/accounts/petnames"
+	"github.com/prysmaticlabs/prysm/v3/validator/accounts/petnames"
 )
 
 // DisplayRemotePublicKeys prints remote public keys to stdout.

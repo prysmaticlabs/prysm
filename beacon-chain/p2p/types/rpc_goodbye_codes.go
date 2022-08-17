@@ -1,7 +1,7 @@
 package types
 
 import (
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 )
 
 // RPCGoodbyeCode represents goodbye code, used in sync package.

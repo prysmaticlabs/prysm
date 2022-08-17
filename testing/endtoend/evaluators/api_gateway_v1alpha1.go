@@ -9,10 +9,10 @@ import (
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
-	"github.com/prysmaticlabs/prysm/testing/endtoend/policies"
-	e2etypes "github.com/prysmaticlabs/prysm/testing/endtoend/types"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	e2e "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
+	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/policies"
+	e2etypes "github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
 	"google.golang.org/grpc"
 )
 

@@ -1,9 +1,9 @@
 package state_native
 
 import (
-	nativetypes "github.com/prysmaticlabs/prysm/beacon-chain/state/state-native/types"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stateutil"
-	"github.com/prysmaticlabs/prysm/runtime/version"
+	nativetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native/types"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stateutil"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 )
 
 // SetPreviousParticipationBits for the beacon state. Updates the entire

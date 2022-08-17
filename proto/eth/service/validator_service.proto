@@ -24,7 +24,7 @@ import "proto/eth/v2/ssz.proto";
 import "proto/eth/v2/validator.proto";
 
 option csharp_namespace = "Ethereum.Eth.Service";
-option go_package = "github.com/prysmaticlabs/prysm/proto/eth/service";
+option go_package = "github.com/prysmaticlabs/prysm/v3/proto/eth/service";
 option java_multiple_files = true;
 option java_outer_classname = "ValidatorServiceProto";
 option java_package = "org.ethereum.eth.service";
@@ -95,6 +95,7 @@ service BeaconValidator {
   // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Validator/produceBlock
   rpc ProduceBlock(v1.ProduceBlockRequest) returns (v1.ProduceBlockResponse) {
     option (google.api.http) = { get: "/internal/eth/v1/validator/blocks/{slot}" };
+    option deprecated = true;
   }
 
 

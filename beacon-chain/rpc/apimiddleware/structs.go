@@ -3,9 +3,9 @@ package apimiddleware
 import (
 	"strings"
 
-	"github.com/prysmaticlabs/prysm/api/gateway/apimiddleware"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers"
-	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
+	"github.com/prysmaticlabs/prysm/v3/api/gateway/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/helpers"
+	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
 )
 
 //----------------
