@@ -9,7 +9,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
-	stateAltair "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v2"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
@@ -123,7 +122,7 @@ func RunForkTransitionTest(t *testing.T, config string) {
 			postBeaconState := &ethpb.BeaconStateAltair{}
 			require.NoError(t, postBeaconState.UnmarshalSSZ(postBeaconStateSSZ), "Failed to unmarshal")
 
-			pbState, err := stateAltair.ProtobufBeaconState(beaconState.CloneInnerState())
+			pbState, err := state_native.ProtobufBeaconStateAltair(beaconState.CloneInnerState())
 			require.NoError(t, err)
 			if !proto.Equal(pbState, postBeaconState) {
 				t.Fatal("Post state does not match expected")

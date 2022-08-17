@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
-	stateAltair "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v2"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -70,7 +69,7 @@ func RunBlockOperationTest(
 		if err := postBeaconState.UnmarshalSSZ(postBeaconStateSSZ); err != nil {
 			t.Fatalf("Failed to unmarshal: %v", err)
 		}
-		pbState, err := stateAltair.ProtobufBeaconState(beaconState.InnerStateUnsafe())
+		pbState, err := state_native.ProtobufBeaconStateAltair(beaconState.InnerStateUnsafe())
 		require.NoError(t, err)
 		if !proto.Equal(pbState, postBeaconState) {
 			diff, _ := messagediff.PrettyDiff(beaconState.InnerStateUnsafe(), postBeaconState)

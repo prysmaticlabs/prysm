@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
-	v2 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v2"
 	v3 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v3"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
@@ -81,7 +80,7 @@ func GenerateAttestations(
 			}
 			headState = genState
 		case version.Altair:
-			pbState, err := v2.ProtobufBeaconState(bState.CloneInnerState())
+			pbState, err := state_native.ProtobufBeaconStateAltair(bState.CloneInnerState())
 			if err != nil {
 				return nil, err
 			}

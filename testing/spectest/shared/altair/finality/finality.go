@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
-	stateAltair "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v2"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
@@ -74,7 +73,7 @@ func RunFinalityTest(t *testing.T, config string) {
 			require.NoError(t, err, "Failed to decompress")
 			postBeaconState := &ethpb.BeaconStateAltair{}
 			require.NoError(t, postBeaconState.UnmarshalSSZ(postBeaconStateSSZ), "Failed to unmarshal")
-			pbState, err := stateAltair.ProtobufBeaconState(beaconState.InnerStateUnsafe())
+			pbState, err := state_native.ProtobufBeaconStateAltair(beaconState.InnerStateUnsafe())
 			require.NoError(t, err)
 			if !proto.Equal(pbState, postBeaconState) {
 				t.Fatal("Post state does not match expected")

@@ -8,7 +8,6 @@ import (
 	"github.com/golang/snappy"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
-	v2 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v2"
 	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	v1alpha1 "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
@@ -255,7 +254,7 @@ func Test_migrateAltairStateValidators(t *testing.T) {
 				}
 
 				// check if all the validators that were in the state, are stored properly in the validator bucket
-				pbState, err := v2.ProtobufBeaconState(rcvdState.InnerStateUnsafe())
+				pbState, err := state_native.ProtobufBeaconStateAltair(rcvdState.InnerStateUnsafe())
 				assert.NoError(t, err)
 				validatorsFoundCount := 0
 				for _, val := range pbState.Validators {

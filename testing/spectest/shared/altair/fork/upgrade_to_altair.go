@@ -9,7 +9,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
-	statealtair "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v2"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/testing/spectest/utils"
@@ -40,7 +39,7 @@ func RunUpgradeToAltair(t *testing.T, config string) {
 			require.NoError(t, err)
 			postState, err := altair.UpgradeToAltair(context.Background(), preState)
 			require.NoError(t, err)
-			postStateFromFunction, err := statealtair.ProtobufBeaconState(postState.InnerStateUnsafe())
+			postStateFromFunction, err := state_native.ProtobufBeaconStateAltair(postState.InnerStateUnsafe())
 			require.NoError(t, err)
 
 			postStateFile, err := util.BazelFileBytes(path.Join(folderPath, "post.ssz_snappy"))
