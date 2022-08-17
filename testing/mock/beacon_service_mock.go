@@ -278,26 +278,6 @@ func (mr *MockBeaconChainClientMockRecorder) ListBeaconCommittees(arg0, arg1 int
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListBeaconCommittees", reflect.TypeOf((*MockBeaconChainClient)(nil).ListBeaconCommittees), varargs...)
 }
 
-// ListBlocks mocks base method.
-func (m *MockBeaconChainClient) ListBlocks(arg0 context.Context, arg1 *eth.ListBlocksRequest, arg2 ...grpc.CallOption) (*eth.ListBlocksResponse, error) {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{arg0, arg1}
-	for _, a := range arg2 {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "ListBlocks", varargs...)
-	ret0, _ := ret[0].(*eth.ListBlocksResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListBlocks indicates an expected call of ListBlocks.
-func (mr *MockBeaconChainClientMockRecorder) ListBlocks(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListBlocks", reflect.TypeOf((*MockBeaconChainClient)(nil).ListBlocks), varargs...)
-}
-
 // ListIndexedAttestations mocks base method.
 func (m *MockBeaconChainClient) ListIndexedAttestations(arg0 context.Context, arg1 *eth.ListIndexedAttestationsRequest, arg2 ...grpc.CallOption) (*eth.ListIndexedAttestationsResponse, error) {
 	m.ctrl.T.Helper()

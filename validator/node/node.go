@@ -241,8 +241,7 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 	log.WithField("databasePath", dataDir).Info("Checking DB")
 
 	valDB, err := kv.NewKVStore(cliCtx.Context, dataDir, &kv.Config{
-		PubKeys:         nil,
-		InitialMMapSize: cliCtx.Int(cmd.BoltMMapInitialSizeFlag.Name),
+		PubKeys: nil,
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not initialize db")
@@ -318,8 +317,7 @@ func (c *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 	}
 	log.WithField("databasePath", dataDir).Info("Checking DB")
 	valDB, err := kv.NewKVStore(cliCtx.Context, dataDir, &kv.Config{
-		PubKeys:         nil,
-		InitialMMapSize: cliCtx.Int(cmd.BoltMMapInitialSizeFlag.Name),
+		PubKeys: nil,
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not initialize db")
@@ -470,7 +468,7 @@ func web3SignerConfig(cliCtx *cli.Context) (*remoteweb3signer.SetupConfig, error
 				pks = publicKeysSlice
 			}
 			if len(pks) > 0 {
-				pks = slice.Unique(pks)
+				pks = slice.Unique[string](pks)
 				var validatorKeys [][48]byte
 				for _, key := range pks {
 					decodedKey, decodeErr := hexutil.Decode(key)

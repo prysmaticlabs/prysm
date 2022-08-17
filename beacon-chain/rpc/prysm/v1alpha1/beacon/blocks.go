@@ -33,31 +33,6 @@ type blockContainer struct {
 	isCanonical bool
 }
 
-// ListBlocks retrieves blocks by root, slot, or epoch.
-//
-// The server may return multiple blocks in the case that a slot or epoch is
-// provided as the filter criteria. The server may return an empty list when
-// no blocks in their database match the filter criteria. This RPC should
-// not return NOT_FOUND. Only one filter criteria should be used.
-func (bs *Server) ListBlocks(
-	ctx context.Context, req *ethpb.ListBlocksRequest,
-) (*ethpb.ListBlocksResponse, error) {
-	ctrs, numBlks, nextPageToken, err := bs.listBlocks(ctx, req)
-	if err != nil {
-		return nil, err
-	}
-	blkContainers, err := convertToProto(ctrs)
-	if err != nil {
-		return nil, err
-	}
-
-	return &ethpb.ListBlocksResponse{
-		BlockContainers: blkContainers,
-		TotalSize:       int32(numBlks),
-		NextPageToken:   nextPageToken,
-	}, nil
-}
-
 // ListBeaconBlocks retrieves blocks by root, slot, or epoch.
 //
 // The server may return multiple blocks in the case that a slot or epoch is
@@ -270,23 +245,6 @@ func (bs *Server) listBlocksForGenesis(ctx context.Context, _ *ethpb.ListBlocksR
 		root:        root,
 		isCanonical: true,
 	}}, 1, strconv.Itoa(0), nil
-}
-
-func convertToProto(ctrs []blockContainer) ([]*ethpb.BeaconBlockContainer, error) {
-	protoCtrs := make([]*ethpb.BeaconBlockContainer, len(ctrs))
-	for i, c := range ctrs {
-		phBlk, err := c.blk.PbPhase0Block()
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get phase 0 block: %v", err)
-		}
-		copiedRoot := c.root
-		protoCtrs[i] = &ethpb.BeaconBlockContainer{
-			Block:     &ethpb.BeaconBlockContainer_Phase0Block{Phase0Block: phBlk},
-			BlockRoot: copiedRoot[:],
-			Canonical: c.isCanonical,
-		}
-	}
-	return protoCtrs, nil
 }
 
 // GetChainHead retrieves information about the head of the beacon chain from

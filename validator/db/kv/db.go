@@ -29,6 +29,8 @@ const (
 	// Time interval after which we flush attestation records to the database
 	// from a batch kept in memory for slashing protection.
 	attestationBatchWriteInterval = time.Millisecond * 100
+	// Specifies the initial mmap size of bolt.
+	mmapSize = 536870912
 )
 
 // ProtectionDbFileName Validator slashing protection db file name.
@@ -53,8 +55,7 @@ var blockedBuckets = [][]byte{
 
 // Config represents store's config object.
 type Config struct {
-	PubKeys         [][fieldparams.BLSPubkeyLength]byte
-	InitialMMapSize int
+	PubKeys [][fieldparams.BLSPubkeyLength]byte
 }
 
 // Store defines an implementation of the Prysm Database interface
@@ -120,7 +121,7 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 	datafile := filepath.Join(dirPath, ProtectionDbFileName)
 	boltDB, err := bolt.Open(datafile, params.BeaconIoConfig().ReadWritePermissions, &bolt.Options{
 		Timeout:         params.BeaconIoConfig().BoltTimeout,
-		InitialMmapSize: config.InitialMMapSize,
+		InitialMmapSize: mmapSize,
 	})
 	if err != nil {
 		if errors.Is(err, bolt.ErrTimeout) {

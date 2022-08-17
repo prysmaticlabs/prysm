@@ -25,7 +25,7 @@ type BeaconBlockProcessor func(block interfaces.SignedBeaconBlock) error
 
 // SendBeaconBlocksByRangeRequest sends BeaconBlocksByRange and returns fetched blocks, if any.
 func SendBeaconBlocksByRangeRequest(
-	ctx context.Context, chain blockchain.ChainInfoFetcher, p2pProvider p2p.P2P, pid peer.ID,
+	ctx context.Context, chain blockchain.ForkFetcher, p2pProvider p2p.SenderEncoder, pid peer.ID,
 	req *pb.BeaconBlocksByRangeRequest, blockProcessor BeaconBlockProcessor,
 ) ([]interfaces.SignedBeaconBlock, error) {
 	topic, err := p2p.TopicFromMessage(p2p.BeaconBlocksByRangeMessageName, slots.ToEpoch(chain.CurrentSlot()))

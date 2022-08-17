@@ -24,7 +24,7 @@ type deleteKeystoresRequestJson struct {
 }
 
 type statusJson struct {
-	Status  string `json:"status"`
+	Status  string `json:"status" enum:"true"`
 	Message string `json:"message"`
 }
 

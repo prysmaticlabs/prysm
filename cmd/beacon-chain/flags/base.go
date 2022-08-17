@@ -142,11 +142,6 @@ var (
 		Usage: "The slot durations of when an archived state gets saved in the beaconDB.",
 		Value: 2048,
 	}
-	// DisableDiscv5 disables running discv5.
-	DisableDiscv5 = &cli.BoolFlag{
-		Name:  "disable-discv5",
-		Usage: "Does not run the discoveryV5 dht.",
-	}
 	// BlockBatchLimit specifies the requested block batch size.
 	BlockBatchLimit = &cli.IntFlag{
 		Name:  "block-batch-limit",
