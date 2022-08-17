@@ -86,7 +86,7 @@ func GenerateAttestations(
 			if err != nil {
 				return nil, err
 			}
-			genState, err := v2.InitializeFromProtoUnsafe(pbState)
+			genState, err := state_native.InitializeFromProtoUnsafeAltair(pbState)
 			if err != nil {
 				return nil, err
 			}
