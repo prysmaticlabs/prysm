@@ -43,9 +43,7 @@ type Flags struct {
 	// Feature related flags.
 	RemoteSlasherProtection             bool // RemoteSlasherProtection utilizes a beacon node with --slasher mode for validator slashing protection.
 	WriteSSZStateTransitions            bool // WriteSSZStateTransitions to tmp directory.
-	SkipBLSVerify                       bool // Skips BLS verification across the runtime.
 	EnablePeerScorer                    bool // EnablePeerScorer enables experimental peer scoring in p2p.
-	EnableLargerGossipHistory           bool // EnableLargerGossipHistory increases the gossip history we store in our caches.
 	WriteWalletPasswordOnWebOnboarding  bool // WriteWalletPasswordOnWebOnboarding writes the password to disk after Prysm web signup.
 	DisableAttestingHistoryDBCache      bool // DisableAttestingHistoryDBCache for the validator client increases disk reads/writes.
 	EnableDoppelGanger                  bool // EnableDoppelGanger enables doppelganger protection on startup for the validator.
@@ -188,10 +186,6 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 	if ctx.Bool(disablePeerScorer.Name) {
 		logDisabled(disablePeerScorer)
 		cfg.EnablePeerScorer = false
-	}
-	if ctx.Bool(enableLargerGossipHistory.Name) {
-		logEnabled(enableLargerGossipHistory)
-		cfg.EnableLargerGossipHistory = true
 	}
 	if ctx.Bool(disableBroadcastSlashingFlag.Name) {
 		logDisabled(disableBroadcastSlashingFlag)

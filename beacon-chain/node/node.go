@@ -56,7 +56,6 @@ import (
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/container/slice"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v3/monitoring/backup"
 	"github.com/prysmaticlabs/prysm/v3/monitoring/prometheus"
 	"github.com/prysmaticlabs/prysm/v3/runtime"
 	"github.com/prysmaticlabs/prysm/v3/runtime/debug"
@@ -864,16 +863,6 @@ func (b *BeaconNode) registerPrometheusService(cliCtx *cli.Context) error {
 	var c *blockchain.Service
 	if err := b.services.FetchService(&c); err != nil {
 		panic(err)
-	}
-
-	if cliCtx.IsSet(cmd.EnableBackupWebhookFlag.Name) {
-		additionalHandlers = append(
-			additionalHandlers,
-			prometheus.Handler{
-				Path:    "/db/backup",
-				Handler: backup.BackupHandler(b.db, cliCtx.String(cmd.BackupWebhookOutputDir.Name)),
-			},
-		)
 	}
 
 	service := prometheus.NewService(

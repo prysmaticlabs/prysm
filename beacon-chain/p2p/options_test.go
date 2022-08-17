@@ -15,6 +15,7 @@ import (
 	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	ecdsaprysm "github.com/prysmaticlabs/prysm/v3/crypto/ecdsa"
+	"github.com/prysmaticlabs/prysm/v3/network"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
@@ -89,7 +90,7 @@ func TestDefaultMultiplexers(t *testing.T) {
 	var err error
 	svc.privKey, err = privKey(svc.cfg)
 	assert.NoError(t, err)
-	ipAddr := ipAddr()
+	ipAddr := network.IPAddr()
 	opts := svc.buildOptions(ipAddr, svc.privKey)
 	err = cfg.Apply(append(opts, libp2p.FallbackDefaults)...)
 	assert.NoError(t, err)

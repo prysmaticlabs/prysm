@@ -54,7 +54,6 @@ go_library(
         "//consensus-types/primitives:go_default_library",
         "//container/slice:go_default_library",
         "//encoding/bytesutil:go_default_library",
-        "//monitoring/backup:go_default_library",
         "//monitoring/prometheus:go_default_library",
         "//monitoring/tracing:go_default_library",
         "//runtime:go_default_library",
