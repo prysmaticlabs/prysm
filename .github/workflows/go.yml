@@ -18,12 +18,6 @@ jobs:
         id: gomodtidy
         uses: ./.github/actions/gomodtidy
 
-      - name: GoImports checker
-        id: goimports
-        uses: Jerome1337/goimports-action@v1.0.2
-        with:
-          goimports-path: ./
-
   gosec:
     name: Gosec scan
     runs-on: ubuntu-latest
