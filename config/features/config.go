@@ -190,9 +190,6 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logDisabled(disablePeerScorer)
 		cfg.EnablePeerScorer = false
 	}
-	if ctx.Bool(checkPtInfoCache.Name) {
-		log.Warn("Advance check point info cache is no longer supported and will soon be deleted")
-	}
 	if ctx.Bool(enableLargerGossipHistory.Name) {
 		logEnabled(enableLargerGossipHistory)
 		cfg.EnableLargerGossipHistory = true
