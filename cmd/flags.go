@@ -243,12 +243,6 @@ var (
 		Usage: "Target directory of the restored database",
 		Value: DefaultDataDir(),
 	}
-	// BoltMMapInitialSizeFlag specifies the initial size in bytes of boltdb's mmap syscall.
-	BoltMMapInitialSizeFlag = &cli.IntFlag{
-		Name:  "bolt-mmap-initial-size",
-		Usage: "Specifies the size in bytes of bolt db's mmap syscall allocation",
-		Value: 536870912, // 512 Mb as a default value.
-	}
 	// ApiTimeoutFlag specifies the timeout value for API requests in seconds. A timeout of zero means no timeout.
 	ApiTimeoutFlag = &cli.IntFlag{
 		Name:  "api-timeout",

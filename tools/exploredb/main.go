@@ -131,7 +131,7 @@ func printBucketContents(dbNameWithPath string, rowLimit uint64, bucketName stri
 
 	// create a new KV Store.
 	dbDirectory := filepath.Dir(dbNameWithPath)
-	db, openErr := kv.NewKVStore(context.Background(), dbDirectory, &kv.Config{})
+	db, openErr := kv.NewKVStore(context.Background(), dbDirectory)
 	if openErr != nil {
 		log.WithError(openErr).Fatal("could not open db")
 	}
@@ -379,13 +379,13 @@ func checkValidatorMigration(dbNameWithPath, destDbNameWithPath string) {
 
 	// create the source and destination KV stores.
 	sourceDbDirectory := filepath.Dir(dbNameWithPath)
-	sourceDB, openErr := kv.NewKVStore(context.Background(), sourceDbDirectory, &kv.Config{})
+	sourceDB, openErr := kv.NewKVStore(context.Background(), sourceDbDirectory)
 	if openErr != nil {
 		log.WithError(openErr).Fatal("could not open sourceDB")
 	}
 
 	destinationDbDirectory := filepath.Dir(destDbNameWithPath)
-	destDB, openErr := kv.NewKVStore(context.Background(), destinationDbDirectory, &kv.Config{})
+	destDB, openErr := kv.NewKVStore(context.Background(), destinationDbDirectory)
 	if openErr != nil {
 		// dirty hack alert: Ignore this prometheus error as we are opening two DB with same metric name
 		// if you want to avoid this then we should pass the metric name when opening the DB which touches
