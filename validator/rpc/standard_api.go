@@ -439,8 +439,8 @@ func (s *Server) SetGasLimit(ctx context.Context, req *ethpbservice.SetGasLimitR
 		pBuilderConfig = &bo
 		pBuilderConfig.GasLimit = req.GasLimit
 	} else {
-		// No default BuildConfig to copy from, just create one and set "GasLimit".
-		pBuilderConfig = &validatorServiceConfig.BuilderConfig{GasLimit: req.GasLimit}
+		// No default BuildConfig to copy from, just create one and set "GasLimit", but keep "Enabled" to "false".
+		pBuilderConfig = &validatorServiceConfig.BuilderConfig{Enabled: false, GasLimit: req.GasLimit}
 	}
 
 	pOption := validatorServiceConfig.DefaultProposerOption()
