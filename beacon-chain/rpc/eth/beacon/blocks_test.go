@@ -451,8 +451,8 @@ func TestServer_SubmitBlock_OK(t *testing.T) {
 		v1Block, err := migration.V1Alpha1ToV1SignedBlock(req)
 		require.NoError(t, err)
 		util.SaveBlock(t, ctx, beaconDB, req)
-		blockReq := &ethpbv2.SignedBeaconBlockContainerV2{
-			Message:   &ethpbv2.SignedBeaconBlockContainerV2_Phase0Block{Phase0Block: v1Block.Block},
+		blockReq := &ethpbv2.SignedBeaconBlockContainer{
+			Message:   &ethpbv2.SignedBeaconBlockContainer_Phase0Block{Phase0Block: v1Block.Block},
 			Signature: v1Block.Signature,
 		}
 		_, err = beaconChainServer.SubmitBlock(context.Background(), blockReq)
@@ -489,8 +489,8 @@ func TestServer_SubmitBlock_OK(t *testing.T) {
 		v2Block, err := migration.V1Alpha1BeaconBlockAltairToV2(req.Block)
 		require.NoError(t, err)
 		util.SaveBlock(t, ctx, beaconDB, req)
-		blockReq := &ethpbv2.SignedBeaconBlockContainerV2{
-			Message:   &ethpbv2.SignedBeaconBlockContainerV2_AltairBlock{AltairBlock: v2Block},
+		blockReq := &ethpbv2.SignedBeaconBlockContainer{
+			Message:   &ethpbv2.SignedBeaconBlockContainer_AltairBlock{AltairBlock: v2Block},
 			Signature: req.Signature,
 		}
 		_, err = beaconChainServer.SubmitBlock(context.Background(), blockReq)
@@ -527,8 +527,8 @@ func TestServer_SubmitBlock_OK(t *testing.T) {
 		v2Block, err := migration.V1Alpha1BeaconBlockBellatrixToV2(req.Block)
 		require.NoError(t, err)
 		util.SaveBlock(t, ctx, beaconDB, req)
-		blockReq := &ethpbv2.SignedBeaconBlockContainerV2{
-			Message:   &ethpbv2.SignedBeaconBlockContainerV2_BellatrixBlock{BellatrixBlock: v2Block},
+		blockReq := &ethpbv2.SignedBeaconBlockContainer{
+			Message:   &ethpbv2.SignedBeaconBlockContainer_BellatrixBlock{BellatrixBlock: v2Block},
 			Signature: req.Signature,
 		}
 		_, err = beaconChainServer.SubmitBlock(context.Background(), blockReq)
@@ -1166,7 +1166,7 @@ func TestServer_GetBlockV2(t *testing.T) {
 				v1Block, err := migration.V1Alpha1ToV1SignedBlock(tt.want)
 				require.NoError(t, err)
 
-				phase0Block, ok := blk.Data.Message.(*ethpbv2.SignedBeaconBlockContainerV2_Phase0Block)
+				phase0Block, ok := blk.Data.Message.(*ethpbv2.SignedBeaconBlockContainer_Phase0Block)
 				require.Equal(t, true, ok)
 				if !reflect.DeepEqual(phase0Block.Phase0Block, v1Block.Block) {
 					t.Error("Expected blocks to equal")
@@ -1297,7 +1297,7 @@ func TestServer_GetBlockV2(t *testing.T) {
 				v2Block, err := migration.V1Alpha1BeaconBlockAltairToV2(tt.want.Block)
 				require.NoError(t, err)
 
-				altairBlock, ok := blk.Data.Message.(*ethpbv2.SignedBeaconBlockContainerV2_AltairBlock)
+				altairBlock, ok := blk.Data.Message.(*ethpbv2.SignedBeaconBlockContainer_AltairBlock)
 				require.Equal(t, true, ok)
 				if !reflect.DeepEqual(altairBlock.AltairBlock, v2Block) {
 					t.Error("Expected blocks to equal")
@@ -1431,7 +1431,7 @@ func TestServer_GetBlockV2(t *testing.T) {
 				v2Block, err := migration.V1Alpha1BeaconBlockBellatrixToV2(tt.want.Block)
 				require.NoError(t, err)
 
-				b, ok := blk.Data.Message.(*ethpbv2.SignedBeaconBlockContainerV2_BellatrixBlock)
+				b, ok := blk.Data.Message.(*ethpbv2.SignedBeaconBlockContainer_BellatrixBlock)
 				require.Equal(t, true, ok)
 				if !reflect.DeepEqual(b.BellatrixBlock, v2Block) {
 					t.Error("Expected blocks to equal")
