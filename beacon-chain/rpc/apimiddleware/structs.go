@@ -773,6 +773,22 @@ type syncCommitteeContributionJson struct {
 	Signature         string `json:"signature" hex:"true"`
 }
 
+type validatorRegistrationJson struct {
+	FeeRecipient string `json:"fee_recipient" hex:"true"`
+	GasLimit     string `json:"gas_limit"`
+	Timestamp    string `json:"timestamp"`
+	Pubkey       string `json:"pubkey" hex:"true"`
+}
+
+type signedValidatorRegistrationJson struct {
+	Message   validatorRegistrationJson `json:"message"`
+	Signature string                    `json:"signature" hex:"true"`
+}
+
+type signedValidatorRegistrationsRequestJson struct {
+	Registrations []*signedValidatorRegistrationJson `json:"registrations"`
+}
+
 //----------------
 // SSZ
 // ---------------

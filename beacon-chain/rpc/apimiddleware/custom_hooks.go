@@ -41,6 +41,29 @@ func wrapFeeRecipientsArray(
 	return true, nil
 }
 
+// https://ethereum.github.io/beacon-APIs/#/Validator/registerValidator expects posting a top-level array.
+// We make it more proto-friendly by wrapping it in a struct.
+func wrapSignedValidatorRegistrationsArray(
+	endpoint *apimiddleware.Endpoint,
+	_ http.ResponseWriter,
+	req *http.Request,
+) (apimiddleware.RunDefault, apimiddleware.ErrorJson) {
+	if _, ok := endpoint.PostRequest.(*signedValidatorRegistrationsRequestJson); !ok {
+		return true, nil
+	}
+	registrations := make([]*signedValidatorRegistrationJson, 0)
+	if err := json.NewDecoder(req.Body).Decode(&registrations); err != nil {
+		return false, apimiddleware.InternalServerErrorWithMessage(err, "could not decode body")
+	}
+	j := &signedValidatorRegistrationsRequestJson{Registrations: registrations}
+	b, err := json.Marshal(j)
+	if err != nil {
+		return false, apimiddleware.InternalServerErrorWithMessage(err, "could not marshal wrapped body")
+	}
+	req.Body = io.NopCloser(bytes.NewReader(b))
+	return true, nil
+}
+
 // https://ethereum.github.io/beacon-apis/#/Beacon/submitPoolAttestations expects posting a top-level array.
 // We make it more proto-friendly by wrapping it in a struct with a 'data' field.
 func wrapAttestationsArray(
