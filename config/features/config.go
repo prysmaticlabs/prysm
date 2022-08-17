@@ -45,7 +45,6 @@ type Flags struct {
 	WriteSSZStateTransitions            bool // WriteSSZStateTransitions to tmp directory.
 	EnablePeerScorer                    bool // EnablePeerScorer enables experimental peer scoring in p2p.
 	WriteWalletPasswordOnWebOnboarding  bool // WriteWalletPasswordOnWebOnboarding writes the password to disk after Prysm web signup.
-	DisableAttestingHistoryDBCache      bool // DisableAttestingHistoryDBCache for the validator client increases disk reads/writes.
 	EnableDoppelGanger                  bool // EnableDoppelGanger enables doppelganger protection on startup for the validator.
 	EnableHistoricalSpaceRepresentation bool // EnableHistoricalSpaceRepresentation enables the saving of registry validators in separate buckets to save space
 	// Logging related toggles.
@@ -263,10 +262,6 @@ func ConfigureValidator(ctx *cli.Context) error {
 	if ctx.Bool(writeWalletPasswordOnWebOnboarding.Name) {
 		logEnabled(writeWalletPasswordOnWebOnboarding)
 		cfg.WriteWalletPasswordOnWebOnboarding = true
-	}
-	if ctx.Bool(disableAttestingHistoryDBCache.Name) {
-		logDisabled(disableAttestingHistoryDBCache)
-		cfg.DisableAttestingHistoryDBCache = true
 	}
 	if ctx.Bool(attestTimely.Name) {
 		logEnabled(attestTimely)
