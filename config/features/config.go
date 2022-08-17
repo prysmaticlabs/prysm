@@ -54,7 +54,6 @@ type Flags struct {
 	DisableGRPCConnectionLogs bool // Disables logging when a new grpc client has connected.
 
 	// Slasher toggles.
-	DisableLookback           bool // DisableLookback updates slasher to not use the lookback and update validator histories until epoch 0.
 	DisableBroadcastSlashings bool // DisableBroadcastSlashings disables p2p broadcasting of proposer and attester slashings.
 
 	// Bug fixes related flags.
@@ -189,9 +188,6 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 	if ctx.Bool(disablePeerScorer.Name) {
 		logDisabled(disablePeerScorer)
 		cfg.EnablePeerScorer = false
-	}
-	if ctx.Bool(checkPtInfoCache.Name) {
-		log.Warn("Advance check point info cache is no longer supported and will soon be deleted")
 	}
 	if ctx.Bool(enableLargerGossipHistory.Name) {
 		logEnabled(enableLargerGossipHistory)
