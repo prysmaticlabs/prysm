@@ -563,7 +563,7 @@ func TestStatusRPCRequest_FinalizedBlockExists(t *testing.T) {
 }
 
 func TestStatusRPCRequest_FinalizedBlockSkippedSlots(t *testing.T) {
-	db, err := kv.NewKVStore(context.Background(), t.TempDir(), &kv.Config{})
+	db, err := kv.NewKVStore(context.Background(), t.TempDir())
 	require.NoError(t, err)
 	bState, err := transition.GenesisBeaconState(context.Background(), nil, 0, &ethpb.Eth1Data{DepositRoot: make([]byte, 32), BlockHash: make([]byte, 32)})
 	require.NoError(t, err)
