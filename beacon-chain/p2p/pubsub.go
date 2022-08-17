@@ -10,7 +10,6 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	pbrpc "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
@@ -137,15 +136,6 @@ func pubsubGossipParam() pubsub.GossipSubParams {
 	gParams.HeartbeatInterval = gossipSubHeartbeatInterval
 	gParams.HistoryLength = gossipSubMcacheLen
 	gParams.HistoryGossip = gossipSubMcacheGossip
-
-	// Set a larger gossip history to ensure that slower
-	// messages have a longer time to be propagated. This
-	// comes with the tradeoff of larger memory usage and
-	// size of the seen message cache.
-	if features.Get().EnableLargerGossipHistory {
-		gParams.HistoryLength = 12
-		gParams.HistoryGossip = 5
-	}
 	return gParams
 }
 
