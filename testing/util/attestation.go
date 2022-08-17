@@ -96,7 +96,7 @@ func GenerateAttestations(
 			if err != nil {
 				return nil, err
 			}
-			genState, err := v3.InitializeFromProtoUnsafe(pbState)
+			genState, err := state_native.InitializeFromProtoUnsafeBellatrix(pbState)
 			if err != nil {
 				return nil, err
 			}
