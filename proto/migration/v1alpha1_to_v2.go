@@ -251,7 +251,7 @@ func V1Alpha1BeaconBlockBellatrixToV2Blinded(v1alpha1Block *ethpbalpha.BeaconBlo
 }
 
 // BeaconStateAltairToProto converts a state.BeaconState object to its protobuf equivalent.
-func BeaconStateAltairToProto(altairState state.BeaconState) (*ethpbv2.BeaconStateV2, error) {
+func BeaconStateAltairToProto(altairState state.BeaconState) (*ethpbv2.BeaconState, error) {
 	sourceFork := altairState.Fork()
 	sourceLatestBlockHeader := altairState.LatestBlockHeader()
 	sourceEth1Data := altairState.Eth1Data()
@@ -305,7 +305,7 @@ func BeaconStateAltairToProto(altairState state.BeaconState) (*ethpbv2.BeaconSta
 		return nil, errors.Wrap(err, "could not get next sync committee")
 	}
 
-	result := &ethpbv2.BeaconStateV2{
+	result := &ethpbv2.BeaconState{
 		GenesisTime:           altairState.GenesisTime(),
 		GenesisValidatorsRoot: bytesutil.SafeCopyBytes(altairState.GenesisValidatorsRoot()),
 		Slot:                  altairState.Slot(),

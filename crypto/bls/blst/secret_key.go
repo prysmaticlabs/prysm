@@ -6,7 +6,6 @@ import (
 	"crypto/subtle"
 	"fmt"
 
-	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls/common"
 	"github.com/prysmaticlabs/prysm/v3/crypto/rand"
@@ -73,9 +72,6 @@ func IsZero(sKey []byte) bool {
 // In Ethereum proof of stake specification:
 // def Sign(SK: int, message: Bytes) -> BLSSignature
 func (s *bls12SecretKey) Sign(msg []byte) common.Signature {
-	if features.Get().SkipBLSVerify {
-		return &Signature{}
-	}
 	signature := new(blstSignature).Sign(s.p, msg, dst)
 	return &Signature{s: signature}
 }
