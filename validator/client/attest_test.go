@@ -34,7 +34,7 @@ import (
 func TestRequestAttestation_ValidatorDutiesRequestFailure(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validator, _, validatorKey, finish := setup(t)
-	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{}}
+	validator.duties = &ethpb.DutiesResponse{CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{}}
 	defer finish()
 
 	pubKey := [fieldparams.BLSPubkeyLength]byte{}
@@ -50,7 +50,7 @@ func TestAttestToBlockHead_SubmitAttestation_EmptyCommittee(t *testing.T) {
 	defer finish()
 	pubKey := [fieldparams.BLSPubkeyLength]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
+	validator.duties = &ethpb.DutiesResponse{CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{
 		{
 			PublicKey:      validatorKey.PublicKey().Marshal(),
 			CommitteeIndex: 0,
@@ -66,7 +66,7 @@ func TestAttestToBlockHead_SubmitAttestation_RequestFailure(t *testing.T) {
 
 	validator, m, validatorKey, finish := setup(t)
 	defer finish()
-	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
+	validator.duties = &ethpb.DutiesResponse{CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{
 		{
 			PublicKey:      validatorKey.PublicKey().Marshal(),
 			CommitteeIndex: 5,
@@ -104,7 +104,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	committee := []types.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	pubKey := [fieldparams.BLSPubkeyLength]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
+	validator.duties = &ethpb.DutiesResponse{CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{
 		{
 			PublicKey:      validatorKey.PublicKey().Marshal(),
 			CommitteeIndex: 5,
@@ -177,7 +177,7 @@ func TestAttestToBlockHead_BlocksDoubleAtt(t *testing.T) {
 	committee := []types.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	pubKey := [fieldparams.BLSPubkeyLength]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
+	validator.duties = &ethpb.DutiesResponse{CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{
 		{
 			PublicKey:      validatorKey.PublicKey().Marshal(),
 			CommitteeIndex: 5,
@@ -229,7 +229,7 @@ func TestAttestToBlockHead_BlocksSurroundAtt(t *testing.T) {
 	committee := []types.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	pubKey := [fieldparams.BLSPubkeyLength]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
+	validator.duties = &ethpb.DutiesResponse{CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{
 		{
 			PublicKey:      validatorKey.PublicKey().Marshal(),
 			CommitteeIndex: 5,
@@ -281,7 +281,7 @@ func TestAttestToBlockHead_BlocksSurroundedAtt(t *testing.T) {
 	pubKey := [fieldparams.BLSPubkeyLength]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	committee := []types.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
-	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
+	validator.duties = &ethpb.DutiesResponse{CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{
 		{
 			PublicKey:      validatorKey.PublicKey().Marshal(),
 			CommitteeIndex: 5,
@@ -369,7 +369,7 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 	committee := []types.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	pubKey := [fieldparams.BLSPubkeyLength]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
+	validator.duties = &ethpb.DutiesResponse{CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{
 		{
 			PublicKey:      validatorKey.PublicKey().Marshal(),
 			CommitteeIndex: 5,
@@ -408,7 +408,7 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 	committee := []types.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	pubKey := [fieldparams.BLSPubkeyLength]byte{}
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
+	validator.duties = &ethpb.DutiesResponse{CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{
 		{
 			PublicKey:      validatorKey.PublicKey().Marshal(),
 			CommitteeIndex: 5,
