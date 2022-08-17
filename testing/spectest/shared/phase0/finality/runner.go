@@ -65,7 +65,7 @@ func RunFinalityTest(t *testing.T, config string) {
 				require.NoError(t, err)
 				processedState, err = transition.ExecuteStateTransition(context.Background(), beaconState, wsb)
 				require.NoError(t, err)
-				beaconState, ok = processedState.(*v1.BeaconState)
+				beaconState, ok = processedState.(*state_native.BeaconState)
 				require.Equal(t, true, ok)
 			}
 
