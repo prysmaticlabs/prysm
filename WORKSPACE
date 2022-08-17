@@ -215,7 +215,7 @@ filegroup(
     url = "https://github.com/eth-clients/slashing-protection-interchange-tests/archive/b8413ca42dc92308019d0d4db52c87e9e125c4e9.tar.gz",
 )
 
-consensus_spec_version = "v1.2.0-rc.1"
+consensus_spec_version = "v1.2.0-rc.2"
 
 bls_test_version = "v0.1.1"
 
@@ -231,7 +231,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "9c93f87378aaa6d6fe1c67b396eac2aacc9594af2a83f028cb99c95dea5b81df",
+    sha256 = "eff52923eebbed6e37a5282db5290abe67c68d6aa54302e3db2b0718c3edf867",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/general.tar.gz" % consensus_spec_version,
 )
 
@@ -247,7 +247,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "52f2c52415228cee8a4de5a09abff785f439a77dfef8f03e834e4e16857673c1",
+    sha256 = "6183d39d40ae659347e8bcfa435cbbe6de8c19ab327b61d47f906bb087bc7a67",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/minimal.tar.gz" % consensus_spec_version,
 )
 
@@ -263,7 +263,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "022dcc0d6de7dd27b337a0d1b945077eaf5ee47000700395a693fc25e12f96df",
+    sha256 = "894d16608d7d37a8f6206165e6c2b6ffcc45b13152b5f411e9283b005ca9793f",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/mainnet.tar.gz" % consensus_spec_version,
 )
 
@@ -278,7 +278,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "0a9c110305cbd6ebbe0d942f0f33e6ce22dd484ce4ceed277bf185a091941cde",
+    sha256 = "006674e5d7eee613f1155e154ab97f6b57589ec92e6e3e5f7affd2b53581e907",
     strip_prefix = "consensus-specs-" + consensus_spec_version[1:],
     url = "https://github.com/ethereum/consensus-specs/archive/refs/tags/%s.tar.gz" % consensus_spec_version,
 )
@@ -309,9 +309,9 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "126b615e3853e29b61f082f6c89c8bc1c38cd92fb84b0004396fc49e7acc8d9f",
-    strip_prefix = "eth2-networks-f3ccbe0cf5798d5cd23e4e6e7119aefa043c0935",
-    url = "https://github.com/eth-clients/eth2-networks/archive/f3ccbe0cf5798d5cd23e4e6e7119aefa043c0935.tar.gz",
+    sha256 = "82b01a48b143fe0f2fb7fb5f5dd385c1f934335a12d7954f08b1d45d77427b5e",
+    strip_prefix = "eth2-networks-674f7a1d01d9c18345456eab76e3871b3df2126b",
+    url = "https://github.com/eth-clients/eth2-networks/archive/674f7a1d01d9c18345456eab76e3871b3df2126b.tar.gz",
 )
 
 http_archive(
