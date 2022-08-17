@@ -121,7 +121,6 @@ var appFlags = []cli.Flag{
 	cmd.AcceptTosFlag,
 	cmd.RestoreSourceFileFlag,
 	cmd.RestoreTargetDirFlag,
-	cmd.BoltMMapInitialSizeFlag,
 	cmd.ValidatorMonitorIndicesFlag,
 	cmd.ApiTimeoutFlag,
 	checkpoint.BlockPath,
