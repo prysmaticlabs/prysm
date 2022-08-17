@@ -468,7 +468,7 @@ func web3SignerConfig(cliCtx *cli.Context) (*remoteweb3signer.SetupConfig, error
 				pks = publicKeysSlice
 			}
 			if len(pks) > 0 {
-				pks = slice.Unique(pks)
+				pks = slice.Unique[string](pks)
 				var validatorKeys [][48]byte
 				for _, key := range pks {
 					decodedKey, decodeErr := hexutil.Decode(key)
