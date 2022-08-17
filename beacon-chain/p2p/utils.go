@@ -19,7 +19,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/wrapper"
 	ecdsaprysm "github.com/prysmaticlabs/prysm/v3/crypto/ecdsa"
 	"github.com/prysmaticlabs/prysm/v3/io/file"
-	"github.com/prysmaticlabs/prysm/v3/network"
 	pb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/metadata"
 	"github.com/sirupsen/logrus"
@@ -127,15 +126,6 @@ func metaDataFromConfig(cfg *Config) (metadata.Metadata, error) {
 		return nil, err
 	}
 	return wrapper.WrappedMetadataV0(metaData), nil
-}
-
-// Retrieves an external ipv4 address and converts into a libp2p formatted value.
-func ipAddr() net.IP {
-	ip, err := network.ExternalIP()
-	if err != nil {
-		log.WithError(err).Fatal("Could not get IPv4 address")
-	}
-	return net.ParseIP(ip)
 }
 
 // Attempt to dial an address to verify its connectivity
