@@ -247,23 +247,6 @@ func (bs *Server) listBlocksForGenesis(ctx context.Context, _ *ethpb.ListBlocksR
 	}}, 1, strconv.Itoa(0), nil
 }
 
-func convertToProto(ctrs []blockContainer) ([]*ethpb.BeaconBlockContainer, error) {
-	protoCtrs := make([]*ethpb.BeaconBlockContainer, len(ctrs))
-	for i, c := range ctrs {
-		phBlk, err := c.blk.PbPhase0Block()
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get phase 0 block: %v", err)
-		}
-		copiedRoot := c.root
-		protoCtrs[i] = &ethpb.BeaconBlockContainer{
-			Block:     &ethpb.BeaconBlockContainer_Phase0Block{Phase0Block: phBlk},
-			BlockRoot: copiedRoot[:],
-			Canonical: c.isCanonical,
-		}
-	}
-	return protoCtrs, nil
-}
-
 // GetChainHead retrieves information about the head of the beacon chain from
 // the view of the beacon chain node.
 //
