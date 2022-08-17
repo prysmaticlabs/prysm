@@ -6,17 +6,17 @@ import (
 	"strconv"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/config/params"
-	ctypes "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	mathutil "github.com/prysmaticlabs/prysm/math"
-	"github.com/prysmaticlabs/prysm/proto/eth/service"
-	v2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/endtoend/helpers"
-	e2e "github.com/prysmaticlabs/prysm/testing/endtoend/params"
-	"github.com/prysmaticlabs/prysm/testing/endtoend/policies"
-	"github.com/prysmaticlabs/prysm/testing/endtoend/types"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	ctypes "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	mathutil "github.com/prysmaticlabs/prysm/v3/math"
+	"github.com/prysmaticlabs/prysm/v3/proto/eth/service"
+	v2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/helpers"
+	e2e "github.com/prysmaticlabs/prysm/v3/testing/endtoend/params"
+	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/policies"
+	"github.com/prysmaticlabs/prysm/v3/testing/endtoend/types"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -75,11 +75,11 @@ func optimisticSyncEnabled(conns ...*grpc.ClientConn) error {
 		}
 		headSlot := uint64(0)
 		switch hb := head.Data.Message.(type) {
-		case *v2.SignedBeaconBlockContainerV2_Phase0Block:
+		case *v2.SignedBeaconBlockContainer_Phase0Block:
 			headSlot = uint64(hb.Phase0Block.Slot)
-		case *v2.SignedBeaconBlockContainerV2_AltairBlock:
+		case *v2.SignedBeaconBlockContainer_AltairBlock:
 			headSlot = uint64(hb.AltairBlock.Slot)
-		case *v2.SignedBeaconBlockContainerV2_BellatrixBlock:
+		case *v2.SignedBeaconBlockContainer_BellatrixBlock:
 			headSlot = uint64(hb.BellatrixBlock.Slot)
 		default:
 			return errors.New("no valid block type retrieved")

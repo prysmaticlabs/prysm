@@ -13,14 +13,14 @@ import (
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/execution"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/beacon-chain/sync"
-	"github.com/prysmaticlabs/prysm/io/logs"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/runtime/version"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/execution"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/sync"
+	"github.com/prysmaticlabs/prysm/v3/io/logs"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -223,26 +223,15 @@ func (ns *Server) ListPeers(ctx context.Context, _ *empty.Empty) (*ethpb.Peers, 
 
 // GetETH1ConnectionStatus gets data about the ETH1 endpoints.
 func (ns *Server) GetETH1ConnectionStatus(_ context.Context, _ *empty.Empty) (*ethpb.ETH1ConnectionStatus, error) {
-	var errStrs []string
-	var currErrString string
-	errs := ns.POWChainInfoFetcher.ETH1ConnectionErrors()
-	// Extract string version of the errors.
-	for _, err := range errs {
-		if err == nil {
-			errStrs = append(errStrs, "")
-		} else {
-			errStrs = append(errStrs, err.Error())
-		}
-	}
-	curErr := ns.POWChainInfoFetcher.CurrentETH1ConnectionError()
-	if curErr != nil {
-		currErrString = curErr.Error()
+	var currErr string
+	err := ns.POWChainInfoFetcher.ExecutionClientConnectionErr()
+	if err != nil {
+		currErr = err.Error()
 	}
 	return &ethpb.ETH1ConnectionStatus{
-		CurrentAddress:         ns.POWChainInfoFetcher.CurrentETH1Endpoint(),
-		CurrentConnectionError: currErrString,
-		Addresses:              ns.POWChainInfoFetcher.ETH1Endpoints(),
-		ConnectionErrors:       errStrs,
+		CurrentAddress:         ns.POWChainInfoFetcher.ExecutionClientEndpoint(),
+		CurrentConnectionError: currErr,
+		Addresses:              []string{ns.POWChainInfoFetcher.ExecutionClientEndpoint()},
 	}, nil
 }
 

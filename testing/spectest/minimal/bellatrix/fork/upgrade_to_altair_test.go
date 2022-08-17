@@ -3,7 +3,7 @@ package fork
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/testing/spectest/shared/bellatrix/fork"
+	"github.com/prysmaticlabs/prysm/v3/testing/spectest/shared/bellatrix/fork"
 )
 
 func TestMinimal_Bellatrix_UpgradeToBellatrix(t *testing.T) {

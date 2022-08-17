@@ -4,10 +4,10 @@ import (
 	"context"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/config/params"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 func slicesEqual(a, b [][32]byte) bool {
@@ -500,7 +500,7 @@ func TestSetOptimisticToInvalid_ForkAtMerge(t *testing.T) {
 	roots, err := f.SetOptimisticToInvalid(ctx, [32]byte{'x'}, [32]byte{'d'}, [32]byte{})
 	require.NoError(t, err)
 	require.Equal(t, 4, len(roots))
-	require.Equal(t, true, slicesEqual(roots, [][32]byte{[32]byte{'b'}, [32]byte{'c'}, [32]byte{'d'}, [32]byte{'e'}}))
+	require.Equal(t, true, slicesEqual(roots, [][32]byte{{'b'}, {'c'}, {'d'}, {'e'}}))
 }
 
 // Pow       |      Pos

@@ -5,9 +5,9 @@ import (
 	"math"
 	"testing"
 
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	mathprysm "github.com/prysmaticlabs/prysm/math"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	mathprysm "github.com/prysmaticlabs/prysm/v3/math"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 func TestMaxEpoch(t *testing.T) {

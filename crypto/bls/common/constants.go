@@ -1,6 +1,6 @@
 package common
 
-import fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
+import fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 
 // ZeroSecretKey represents a zero secret key.
 var ZeroSecretKey = [32]byte{}

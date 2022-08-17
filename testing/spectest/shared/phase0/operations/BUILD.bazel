@@ -12,7 +12,7 @@ go_library(
         "proposer_slashing.go",
         "voluntary_exit.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/testing/spectest/shared/phase0/operations",
+    importpath = "github.com/prysmaticlabs/prysm/v3/testing/spectest/shared/phase0/operations",
     visibility = ["//testing/spectest:__subpackages__"],
     deps = [
         "//beacon-chain/core/blocks:go_default_library",

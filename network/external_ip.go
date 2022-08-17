@@ -6,6 +6,15 @@ import (
 	"sort"
 )
 
+// IPAddr gets the external ipv4 address and converts into a libp2p formatted value.
+func IPAddr() net.IP {
+	ip, err := ExternalIP()
+	if err != nil {
+		panic(err)
+	}
+	return net.ParseIP(ip)
+}
+
 // ExternalIPv4 returns the first IPv4 available.
 func ExternalIPv4() (string, error) {
 	ips, err := ipAddrs()

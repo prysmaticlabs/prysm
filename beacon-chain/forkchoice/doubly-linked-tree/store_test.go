@@ -3,12 +3,13 @@ package doublylinkedtree
 import (
 	"context"
 	"testing"
+	"time"
 
-	forkchoicetypes "github.com/prysmaticlabs/prysm/beacon-chain/forkchoice/types"
-	"github.com/prysmaticlabs/prysm/config/params"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice/types"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 func TestStore_PruneThreshold(t *testing.T) {
@@ -305,10 +306,10 @@ func TestStore_tips(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
 	expectedMap := map[[32]byte]types.Slot{
-		[32]byte{'f'}: 105,
-		[32]byte{'i'}: 106,
-		[32]byte{'l'}: 106,
-		[32]byte{'j'}: 102,
+		{'f'}: 105,
+		{'i'}: 106,
+		{'l'}: 106,
+		{'j'}: 102,
 	}
 	roots, slots := f.store.tips()
 	for i, r := range roots {
@@ -353,4 +354,137 @@ func TestStore_HasParent(t *testing.T) {
 	require.Equal(t, true, f.HasParent(indexToHash(2)))
 	require.Equal(t, true, f.HasParent(indexToHash(3)))
 	require.Equal(t, false, f.HasParent(indexToHash(4)))
+}
+
+func TestForkChoice_HighestReceivedBlockSlot(t *testing.T) {
+	f := setup(1, 1)
+	s := f.store
+	_, err := s.insert(context.Background(), 100, [32]byte{'A'}, [32]byte{}, params.BeaconConfig().ZeroHash, 1, 1)
+	require.NoError(t, err)
+	require.Equal(t, types.Slot(100), s.highestReceivedSlot)
+	require.Equal(t, types.Slot(100), f.HighestReceivedBlockSlot())
+	_, err = s.insert(context.Background(), 1000, [32]byte{'B'}, [32]byte{}, params.BeaconConfig().ZeroHash, 1, 1)
+	require.NoError(t, err)
+	require.Equal(t, types.Slot(1000), s.highestReceivedSlot)
+	require.Equal(t, types.Slot(1000), f.HighestReceivedBlockSlot())
+	_, err = s.insert(context.Background(), 500, [32]byte{'C'}, [32]byte{}, params.BeaconConfig().ZeroHash, 1, 1)
+	require.NoError(t, err)
+	require.Equal(t, types.Slot(1000), s.highestReceivedSlot)
+	require.Equal(t, types.Slot(1000), f.HighestReceivedBlockSlot())
+}
+
+func TestForkChoice_ReceivedBlocksLastEpoch(t *testing.T) {
+	f := setup(1, 1)
+	s := f.store
+	b := [32]byte{}
+
+	// Make sure it doesn't underflow
+	s.genesisTime = uint64(time.Now().Add(time.Duration(-1*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second).Unix())
+	_, err := s.insert(context.Background(), 1, [32]byte{'a'}, b, b, 1, 1)
+	require.NoError(t, err)
+	count, err := f.ReceivedBlocksLastEpoch()
+	require.NoError(t, err)
+	require.Equal(t, uint64(1), count)
+	require.Equal(t, types.Slot(1), f.HighestReceivedBlockSlot())
+
+	// 64
+	// Received block last epoch is 1
+	_, err = s.insert(context.Background(), 64, [32]byte{'A'}, b, b, 1, 1)
+	require.NoError(t, err)
+	s.genesisTime = uint64(time.Now().Add(time.Duration(-64*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second).Unix())
+	count, err = f.ReceivedBlocksLastEpoch()
+	require.NoError(t, err)
+	require.Equal(t, uint64(1), count)
+	require.Equal(t, types.Slot(64), f.HighestReceivedBlockSlot())
+
+	// 64 65
+	// Received block last epoch is 2
+	_, err = s.insert(context.Background(), 65, [32]byte{'B'}, b, b, 1, 1)
+	require.NoError(t, err)
+	s.genesisTime = uint64(time.Now().Add(time.Duration(-65*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second).Unix())
+	count, err = f.ReceivedBlocksLastEpoch()
+	require.NoError(t, err)
+	require.Equal(t, uint64(2), count)
+	require.Equal(t, types.Slot(65), f.HighestReceivedBlockSlot())
+
+	// 64 65 66
+	// Received block last epoch is 3
+	_, err = s.insert(context.Background(), 66, [32]byte{'C'}, b, b, 1, 1)
+	require.NoError(t, err)
+	s.genesisTime = uint64(time.Now().Add(time.Duration(-66*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second).Unix())
+	count, err = f.ReceivedBlocksLastEpoch()
+	require.NoError(t, err)
+	require.Equal(t, uint64(3), count)
+	require.Equal(t, types.Slot(66), f.HighestReceivedBlockSlot())
+
+	// 64 65 66
+	//       98
+	// Received block last epoch is 1
+	_, err = s.insert(context.Background(), 98, [32]byte{'D'}, b, b, 1, 1)
+	require.NoError(t, err)
+	s.genesisTime = uint64(time.Now().Add(time.Duration(-98*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second).Unix())
+	count, err = f.ReceivedBlocksLastEpoch()
+	require.NoError(t, err)
+	require.Equal(t, uint64(1), count)
+	require.Equal(t, types.Slot(98), f.HighestReceivedBlockSlot())
+
+	// 64 65 66
+	//       98
+	//              132
+	// Received block last epoch is 1
+	_, err = s.insert(context.Background(), 132, [32]byte{'E'}, b, b, 1, 1)
+	require.NoError(t, err)
+	s.genesisTime = uint64(time.Now().Add(time.Duration(-132*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second).Unix())
+	count, err = f.ReceivedBlocksLastEpoch()
+	require.NoError(t, err)
+	require.Equal(t, uint64(1), count)
+	require.Equal(t, types.Slot(132), f.HighestReceivedBlockSlot())
+
+	// 64 65 66
+	//       98
+	//              132
+	//       99
+	// Received block last epoch is still 1. 99 is outside the window
+	_, err = s.insert(context.Background(), 99, [32]byte{'F'}, b, b, 1, 1)
+	require.NoError(t, err)
+	s.genesisTime = uint64(time.Now().Add(time.Duration(-132*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second).Unix())
+	count, err = f.ReceivedBlocksLastEpoch()
+	require.NoError(t, err)
+	require.Equal(t, uint64(1), count)
+	require.Equal(t, types.Slot(132), f.HighestReceivedBlockSlot())
+
+	// 64 65 66
+	//       98
+	//              132
+	//       99 100
+	// Received block last epoch is still 1. 100 is at the same position as 132
+	_, err = s.insert(context.Background(), 100, [32]byte{'G'}, b, b, 1, 1)
+	require.NoError(t, err)
+	s.genesisTime = uint64(time.Now().Add(time.Duration(-132*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second).Unix())
+	count, err = f.ReceivedBlocksLastEpoch()
+	require.NoError(t, err)
+	require.Equal(t, uint64(1), count)
+	require.Equal(t, types.Slot(132), f.HighestReceivedBlockSlot())
+
+	// 64 65 66
+	//       98
+	//              132
+	//       99 100 101
+	// Received block last epoch is 2. 101 is within the window
+	_, err = s.insert(context.Background(), 101, [32]byte{'H'}, b, b, 1, 1)
+	require.NoError(t, err)
+	s.genesisTime = uint64(time.Now().Add(time.Duration(-132*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second).Unix())
+	count, err = f.ReceivedBlocksLastEpoch()
+	require.NoError(t, err)
+	require.Equal(t, uint64(2), count)
+	require.Equal(t, types.Slot(132), f.HighestReceivedBlockSlot())
+
+	s.genesisTime = uint64(time.Now().Add(time.Duration(-134*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second).Unix())
+	count, err = f.ReceivedBlocksLastEpoch()
+	require.NoError(t, err)
+	require.Equal(t, uint64(1), count)
+	s.genesisTime = uint64(time.Now().Add(time.Duration(-165*int64(params.BeaconConfig().SecondsPerSlot)) * time.Second).Unix())
+	count, err = f.ReceivedBlocksLastEpoch()
+	require.NoError(t, err)
+	require.Equal(t, uint64(0), count)
 }

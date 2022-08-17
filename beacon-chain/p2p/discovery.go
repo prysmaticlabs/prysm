@@ -14,11 +14,11 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/config/params"
-	ecdsaprysm "github.com/prysmaticlabs/prysm/crypto/ecdsa"
-	"github.com/prysmaticlabs/prysm/runtime/version"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	ecdsaprysm "github.com/prysmaticlabs/prysm/v3/crypto/ecdsa"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 )
 
 // Listener defines the discovery V5 network interface that is used
@@ -332,6 +332,31 @@ func (s *Service) isPeerAtLimit(inbound bool) bool {
 	return activePeers >= maxPeers || numOfConns >= maxPeers
 }
 
+// PeersFromStringAddrs convers peer raw ENRs into multiaddrs for p2p.
+func PeersFromStringAddrs(addrs []string) ([]ma.Multiaddr, error) {
+	var allAddrs []ma.Multiaddr
+	enodeString, multiAddrString := parseGenericAddrs(addrs)
+	for _, stringAddr := range multiAddrString {
+		addr, err := multiAddrFromString(stringAddr)
+		if err != nil {
+			return nil, errors.Wrapf(err, "Could not get multiaddr from string")
+		}
+		allAddrs = append(allAddrs, addr)
+	}
+	for _, stringAddr := range enodeString {
+		enodeAddr, err := enode.Parse(enode.ValidSchemes, stringAddr)
+		if err != nil {
+			return nil, errors.Wrapf(err, "Could not get enode from string")
+		}
+		addr, err := convertToSingleMultiAddr(enodeAddr)
+		if err != nil {
+			return nil, errors.Wrapf(err, "Could not get multiaddr")
+		}
+		allAddrs = append(allAddrs, addr)
+	}
+	return allAddrs, nil
+}
+
 func parseBootStrapAddrs(addrs []string) (discv5Nodes []string) {
 	discv5Nodes, _ = parseGenericAddrs(addrs)
 	if len(discv5Nodes) == 0 {
@@ -433,30 +458,6 @@ func convertToUdpMultiAddr(node *enode.Node) ([]ma.Multiaddr, error) {
 	}
 
 	return addresses, nil
-}
-
-func peersFromStringAddrs(addrs []string) ([]ma.Multiaddr, error) {
-	var allAddrs []ma.Multiaddr
-	enodeString, multiAddrString := parseGenericAddrs(addrs)
-	for _, stringAddr := range multiAddrString {
-		addr, err := multiAddrFromString(stringAddr)
-		if err != nil {
-			return nil, errors.Wrapf(err, "Could not get multiaddr from string")
-		}
-		allAddrs = append(allAddrs, addr)
-	}
-	for _, stringAddr := range enodeString {
-		enodeAddr, err := enode.Parse(enode.ValidSchemes, stringAddr)
-		if err != nil {
-			return nil, errors.Wrapf(err, "Could not get enode from string")
-		}
-		addr, err := convertToSingleMultiAddr(enodeAddr)
-		if err != nil {
-			return nil, errors.Wrapf(err, "Could not get multiaddr")
-		}
-		allAddrs = append(allAddrs, addr)
-	}
-	return allAddrs, nil
 }
 
 func multiAddrFromString(address string) (ma.Multiaddr, error) {

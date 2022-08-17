@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"time"
@@ -8,19 +9,20 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition/interop"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db/kv"
-	"github.com/prysmaticlabs/prysm/config/params"
-	consensusblocks "github.com/prysmaticlabs/prysm/consensus-types/blocks"
-	coreBlock "github.com/prysmaticlabs/prysm/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/runtime/version"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition/interop"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/kv"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	coreBlock "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
 )
 
@@ -57,7 +59,7 @@ func (vs *Server) getBellatrixBeaconBlock(ctx context.Context, req *ethpb.BlockR
 			"validatorIndex": altairBlk.ProposerIndex,
 		}).Errorf("Could not determine validator has registered. Default to local execution client: %v", err)
 	}
-	payload, err := vs.getExecutionPayload(ctx, req.Slot, altairBlk.ProposerIndex)
+	payload, err := vs.getExecutionPayload(ctx, req.Slot, altairBlk.ProposerIndex, bytesutil.ToBytes32(altairBlk.ParentRoot))
 	if err != nil {
 		return nil, err
 	}
@@ -118,6 +120,18 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot types.Sl
 	if err != nil {
 		return nil, err
 	}
+	if !bytes.Equal(bid.Message.Header.ParentHash, h.BlockHash()) {
+		return nil, fmt.Errorf("incorrect parent hash %#x != %#x", bid.Message.Header.ParentHash, h.BlockHash())
+	}
+
+	t, err := slots.ToTime(uint64(vs.TimeFetcher.GenesisTime().Unix()), slot)
+	if err != nil {
+		return nil, err
+	}
+	if bid.Message.Header.Timestamp != uint64(t.Unix()) {
+		return nil, fmt.Errorf("incorrect timestamp %d != %d", bid.Message.Header.Timestamp, uint64(t.Unix()))
+	}
+
 	if err := vs.validateBuilderSignature(bid); err != nil {
 		return nil, errors.Wrap(err, "could not validate builder signature")
 	}
@@ -180,7 +194,7 @@ func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.SignedBe
 	}
 
 	// No-op if the input block is not version blind and bellatrix.
-	if b.Version() != version.BellatrixBlind {
+	if b.Version() != version.Bellatrix || !b.IsBlinded() {
 		return b, nil
 	}
 	// No-op nothing if the builder has not been configured.
@@ -226,6 +240,20 @@ func (vs *Server) unblindBuilderBlock(ctx context.Context, b interfaces.SignedBe
 	if err != nil {
 		return nil, err
 	}
+	headerRoot, err := header.HashTreeRoot()
+	if err != nil {
+		return nil, err
+	}
+
+	payloadRoot, err := payload.HashTreeRoot()
+	if err != nil {
+		return nil, err
+	}
+	if headerRoot != payloadRoot {
+		return nil, fmt.Errorf("header and payload root do not match, consider disconnect from relay to avoid further issues, "+
+			"%#x != %#x", headerRoot, payloadRoot)
+	}
+
 	bb := &ethpb.SignedBeaconBlockBellatrix{
 		Block: &ethpb.BeaconBlockBellatrix{
 			Slot:          sb.Block.Slot,
@@ -281,6 +309,54 @@ func (vs *Server) readyForBuilder(ctx context.Context) (bool, error) {
 	return blocks.IsExecutionBlock(b.Block().Body())
 }
 
+// circuitBreakBuilder returns true if the builder is not allowed to be used due to circuit breaker conditions.
+func (vs *Server) circuitBreakBuilder(s types.Slot) (bool, error) {
+	if vs.ForkFetcher == nil || vs.ForkFetcher.ForkChoicer() == nil {
+		return true, errors.New("no fork choicer configured")
+	}
+
+	// Circuit breaker is active if the missing consecutive slots greater than `MaxBuilderConsecutiveMissedSlots`.
+	highestReceivedSlot := vs.ForkFetcher.ForkChoicer().HighestReceivedBlockSlot()
+	maxConsecutiveSkipSlotsAllowed := params.BeaconConfig().MaxBuilderConsecutiveMissedSlots
+	diff, err := s.SafeSubSlot(highestReceivedSlot)
+	if err != nil {
+		return true, err
+	}
+	if diff > maxConsecutiveSkipSlotsAllowed {
+		log.WithFields(logrus.Fields{
+			"currentSlot":                    s,
+			"highestReceivedSlot":            highestReceivedSlot,
+			"maxConsecutiveSkipSlotsAllowed": maxConsecutiveSkipSlotsAllowed,
+		}).Warn("Builder circuit breaker activated due to missing consecutive slot")
+		return true, nil
+	}
+
+	// Not much reason to check missed slots epoch rolling window if input slot is less than epoch.
+	if s < params.BeaconConfig().SlotsPerEpoch {
+		return false, nil
+	}
+
+	// Circuit breaker is active if the missing slots per epoch (rolling window) greater than `MaxBuilderEpochMissedSlots`.
+	receivedCount, err := vs.ForkFetcher.ForkChoicer().ReceivedBlocksLastEpoch()
+	if err != nil {
+		return true, err
+	}
+	maxEpochSkipSlotsAllowed := params.BeaconConfig().MaxBuilderEpochMissedSlots
+	diff, err = params.BeaconConfig().SlotsPerEpoch.SafeSub(receivedCount)
+	if err != nil {
+		return true, err
+	}
+	if diff > maxEpochSkipSlotsAllowed {
+		log.WithFields(logrus.Fields{
+			"totalMissed":              diff,
+			"maxEpochSkipSlotsAllowed": maxEpochSkipSlotsAllowed,
+		}).Warn("Builder circuit breaker activated due to missing enough slots last epoch")
+		return true, nil
+	}
+
+	return false, nil
+}
+
 // Get and build blind block from builder network. Returns a boolean status, built block and error.
 // If the status is false that means builder the header block is disallowed.
 // This routine is time limited by `blockBuilderTimeout`.
@@ -299,6 +375,15 @@ func (vs *Server) getAndBuildBlindBlock(ctx context.Context, b *ethpb.BeaconBloc
 	if !ready {
 		return false, nil, nil
 	}
+
+	circuitBreak, err := vs.circuitBreakBuilder(b.Slot)
+	if err != nil {
+		return false, nil, errors.Wrap(err, "could not determine if builder circuit breaker condition")
+	}
+	if circuitBreak {
+		return false, nil, nil
+	}
+
 	h, err := vs.getPayloadHeaderFromBuilder(ctx, b.Slot, b.ProposerIndex)
 	if err != nil {
 		return false, nil, errors.Wrap(err, "could not get payload header")

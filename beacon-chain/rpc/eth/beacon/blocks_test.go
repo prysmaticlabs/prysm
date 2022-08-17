@@ -2,28 +2,29 @@ package beacon
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"testing"
 
-	mock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	executionTest "github.com/prysmaticlabs/prysm/beacon-chain/execution/testing"
-	mockp2p "github.com/prysmaticlabs/prysm/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/encoding/ssz"
-	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
-	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
-	"github.com/prysmaticlabs/prysm/proto/migration"
-	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
+	mock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
+	dbTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
+	executionTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/execution/testing"
+	mockp2p "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
+	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
+	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
+	"github.com/prysmaticlabs/prysm/v3/proto/migration"
+	ethpbalpha "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -450,8 +451,8 @@ func TestServer_SubmitBlock_OK(t *testing.T) {
 		v1Block, err := migration.V1Alpha1ToV1SignedBlock(req)
 		require.NoError(t, err)
 		util.SaveBlock(t, ctx, beaconDB, req)
-		blockReq := &ethpbv2.SignedBeaconBlockContainerV2{
-			Message:   &ethpbv2.SignedBeaconBlockContainerV2_Phase0Block{Phase0Block: v1Block.Block},
+		blockReq := &ethpbv2.SignedBeaconBlockContainer{
+			Message:   &ethpbv2.SignedBeaconBlockContainer_Phase0Block{Phase0Block: v1Block.Block},
 			Signature: v1Block.Signature,
 		}
 		_, err = beaconChainServer.SubmitBlock(context.Background(), blockReq)
@@ -488,8 +489,8 @@ func TestServer_SubmitBlock_OK(t *testing.T) {
 		v2Block, err := migration.V1Alpha1BeaconBlockAltairToV2(req.Block)
 		require.NoError(t, err)
 		util.SaveBlock(t, ctx, beaconDB, req)
-		blockReq := &ethpbv2.SignedBeaconBlockContainerV2{
-			Message:   &ethpbv2.SignedBeaconBlockContainerV2_AltairBlock{AltairBlock: v2Block},
+		blockReq := &ethpbv2.SignedBeaconBlockContainer{
+			Message:   &ethpbv2.SignedBeaconBlockContainer_AltairBlock{AltairBlock: v2Block},
 			Signature: req.Signature,
 		}
 		_, err = beaconChainServer.SubmitBlock(context.Background(), blockReq)
@@ -526,8 +527,8 @@ func TestServer_SubmitBlock_OK(t *testing.T) {
 		v2Block, err := migration.V1Alpha1BeaconBlockBellatrixToV2(req.Block)
 		require.NoError(t, err)
 		util.SaveBlock(t, ctx, beaconDB, req)
-		blockReq := &ethpbv2.SignedBeaconBlockContainerV2{
-			Message:   &ethpbv2.SignedBeaconBlockContainerV2_BellatrixBlock{BellatrixBlock: v2Block},
+		blockReq := &ethpbv2.SignedBeaconBlockContainer{
+			Message:   &ethpbv2.SignedBeaconBlockContainer_BellatrixBlock{BellatrixBlock: v2Block},
 			Signature: req.Signature,
 		}
 		_, err = beaconChainServer.SubmitBlock(context.Background(), blockReq)
@@ -920,8 +921,14 @@ func TestServer_GetBlock(t *testing.T) {
 	beaconDB := dbTest.SetupDB(t)
 	ctx := context.Background()
 
-	_, blkContainers := fillDBTestBlocks(ctx, t, beaconDB)
+	genBlk, blkContainers := fillDBTestBlocks(ctx, t, beaconDB)
+	canonicalRoots := make(map[[32]byte]bool)
+
+	for _, bContr := range blkContainers {
+		canonicalRoots[bytesutil.ToBytes32(bContr.BlockRoot)] = true
+	}
 	headBlock := blkContainers[len(blkContainers)-1]
+	nextSlot := headBlock.GetPhase0Block().Block.Slot + 1
 
 	b2 := util.NewBeaconBlock()
 	b2.Block.Slot = 30
@@ -931,6 +938,11 @@ func TestServer_GetBlock(t *testing.T) {
 	b3.Block.Slot = 30
 	b3.Block.ParentRoot = bytesutil.PadTo([]byte{4}, 32)
 	util.SaveBlock(t, ctx, beaconDB, b3)
+	b4 := util.NewBeaconBlock()
+	b4.Block.Slot = nextSlot
+	b4.Block.ParentRoot = bytesutil.PadTo([]byte{8}, 32)
+	util.SaveBlock(t, ctx, beaconDB, b4)
+
 	wsb, err := blocks.NewSignedBeaconBlock(headBlock.Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block)
 	require.NoError(t, err)
 
@@ -941,10 +953,10 @@ func TestServer_GetBlock(t *testing.T) {
 			Block:               wsb,
 			Root:                headBlock.BlockRoot,
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
+			CanonicalRoots:      canonicalRoots,
 		},
 	}
 
-	genBlk, blkContainers := fillDBTestBlocks(ctx, t, beaconDB)
 	root, err := genBlk.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -968,6 +980,11 @@ func TestServer_GetBlock(t *testing.T) {
 			name:    "canonical",
 			blockID: []byte("30"),
 			want:    blkContainers[30].Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
+		},
+		{
+			name:    "non canonical",
+			blockID: []byte(fmt.Sprintf("%d", nextSlot)),
+			wantErr: true,
 		},
 		{
 			name:    "head",
@@ -1011,7 +1028,7 @@ func TestServer_GetBlock(t *testing.T) {
 				BlockId: tt.blockID,
 			})
 			if tt.wantErr {
-				require.NotEqual(t, err, nil)
+				require.NotEqual(t, err, nil, "no error has been returned")
 				return
 			}
 			require.NoError(t, err)
@@ -1031,8 +1048,14 @@ func TestServer_GetBlockV2(t *testing.T) {
 		beaconDB := dbTest.SetupDB(t)
 		ctx := context.Background()
 
-		_, blkContainers := fillDBTestBlocks(ctx, t, beaconDB)
+		genBlk, blkContainers := fillDBTestBlocks(ctx, t, beaconDB)
+		canonicalRoots := make(map[[32]byte]bool)
+
+		for _, bContr := range blkContainers {
+			canonicalRoots[bytesutil.ToBytes32(bContr.BlockRoot)] = true
+		}
 		headBlock := blkContainers[len(blkContainers)-1]
+		nextSlot := headBlock.GetPhase0Block().Block.Slot + 1
 
 		b2 := util.NewBeaconBlock()
 		b2.Block.Slot = 30
@@ -1042,6 +1065,10 @@ func TestServer_GetBlockV2(t *testing.T) {
 		b3.Block.Slot = 30
 		b3.Block.ParentRoot = bytesutil.PadTo([]byte{4}, 32)
 		util.SaveBlock(t, ctx, beaconDB, b3)
+		b4 := util.NewBeaconBlock()
+		b4.Block.Slot = nextSlot
+		b4.Block.ParentRoot = bytesutil.PadTo([]byte{8}, 32)
+		util.SaveBlock(t, ctx, beaconDB, b4)
 
 		wsb, err := blocks.NewSignedBeaconBlock(headBlock.Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block)
 		require.NoError(t, err)
@@ -1051,6 +1078,7 @@ func TestServer_GetBlockV2(t *testing.T) {
 			Block:               wsb,
 			Root:                headBlock.BlockRoot,
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
+			CanonicalRoots:      canonicalRoots,
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
@@ -1059,7 +1087,6 @@ func TestServer_GetBlockV2(t *testing.T) {
 			OptimisticModeFetcher: mockChainService,
 		}
 
-		genBlk, blkContainers := fillDBTestBlocks(ctx, t, beaconDB)
 		root, err := genBlk.Block.HashTreeRoot()
 		require.NoError(t, err)
 
@@ -1083,6 +1110,11 @@ func TestServer_GetBlockV2(t *testing.T) {
 				name:    "canonical",
 				blockID: []byte("30"),
 				want:    blkContainers[30].Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
+			},
+			{
+				name:    "non canonical",
+				blockID: []byte(fmt.Sprintf("%d", nextSlot)),
+				wantErr: true,
 			},
 			{
 				name:    "head",
@@ -1134,7 +1166,7 @@ func TestServer_GetBlockV2(t *testing.T) {
 				v1Block, err := migration.V1Alpha1ToV1SignedBlock(tt.want)
 				require.NoError(t, err)
 
-				phase0Block, ok := blk.Data.Message.(*ethpbv2.SignedBeaconBlockContainerV2_Phase0Block)
+				phase0Block, ok := blk.Data.Message.(*ethpbv2.SignedBeaconBlockContainer_Phase0Block)
 				require.Equal(t, true, ok)
 				if !reflect.DeepEqual(phase0Block.Phase0Block, v1Block.Block) {
 					t.Error("Expected blocks to equal")
@@ -1148,8 +1180,14 @@ func TestServer_GetBlockV2(t *testing.T) {
 		beaconDB := dbTest.SetupDB(t)
 		ctx := context.Background()
 
-		_, blkContainers := fillDBTestBlocksAltair(ctx, t, beaconDB)
+		genBlk, blkContainers := fillDBTestBlocksAltair(ctx, t, beaconDB)
+		canonicalRoots := make(map[[32]byte]bool)
+
+		for _, bContr := range blkContainers {
+			canonicalRoots[bytesutil.ToBytes32(bContr.BlockRoot)] = true
+		}
 		headBlock := blkContainers[len(blkContainers)-1]
+		nextSlot := headBlock.GetAltairBlock().Block.Slot + 1
 
 		b2 := util.NewBeaconBlockAltair()
 		b2.Block.Slot = 30
@@ -1159,6 +1197,10 @@ func TestServer_GetBlockV2(t *testing.T) {
 		b3.Block.Slot = 30
 		b3.Block.ParentRoot = bytesutil.PadTo([]byte{4}, 32)
 		util.SaveBlock(t, ctx, beaconDB, b3)
+		b4 := util.NewBeaconBlockAltair()
+		b4.Block.Slot = nextSlot
+		b4.Block.ParentRoot = bytesutil.PadTo([]byte{8}, 32)
+		util.SaveBlock(t, ctx, beaconDB, b4)
 
 		chainBlk, err := blocks.NewSignedBeaconBlock(headBlock.GetAltairBlock())
 		require.NoError(t, err)
@@ -1167,6 +1209,7 @@ func TestServer_GetBlockV2(t *testing.T) {
 			Block:               chainBlk,
 			Root:                headBlock.BlockRoot,
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
+			CanonicalRoots:      canonicalRoots,
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
@@ -1175,7 +1218,6 @@ func TestServer_GetBlockV2(t *testing.T) {
 			OptimisticModeFetcher: mockChainService,
 		}
 
-		genBlk, blkContainers := fillDBTestBlocksAltair(ctx, t, beaconDB)
 		root, err := genBlk.Block.HashTreeRoot()
 		require.NoError(t, err)
 
@@ -1199,6 +1241,11 @@ func TestServer_GetBlockV2(t *testing.T) {
 				name:    "canonical",
 				blockID: []byte("30"),
 				want:    blkContainers[30].GetAltairBlock(),
+			},
+			{
+				name:    "non canonical",
+				blockID: []byte(fmt.Sprintf("%d", nextSlot)),
+				wantErr: true,
 			},
 			{
 				name:    "head",
@@ -1250,7 +1297,7 @@ func TestServer_GetBlockV2(t *testing.T) {
 				v2Block, err := migration.V1Alpha1BeaconBlockAltairToV2(tt.want.Block)
 				require.NoError(t, err)
 
-				altairBlock, ok := blk.Data.Message.(*ethpbv2.SignedBeaconBlockContainerV2_AltairBlock)
+				altairBlock, ok := blk.Data.Message.(*ethpbv2.SignedBeaconBlockContainer_AltairBlock)
 				require.Equal(t, true, ok)
 				if !reflect.DeepEqual(altairBlock.AltairBlock, v2Block) {
 					t.Error("Expected blocks to equal")
@@ -1264,8 +1311,14 @@ func TestServer_GetBlockV2(t *testing.T) {
 		beaconDB := dbTest.SetupDB(t)
 		ctx := context.Background()
 
-		_, blkContainers := fillDBTestBlocksBellatrix(ctx, t, beaconDB)
+		genBlk, blkContainers := fillDBTestBlocksBellatrix(ctx, t, beaconDB)
+		canonicalRoots := make(map[[32]byte]bool)
+
+		for _, bContr := range blkContainers {
+			canonicalRoots[bytesutil.ToBytes32(bContr.BlockRoot)] = true
+		}
 		headBlock := blkContainers[len(blkContainers)-1]
+		nextSlot := headBlock.GetBellatrixBlock().Block.Slot + 1
 
 		b2 := util.NewBeaconBlockBellatrix()
 		b2.Block.Slot = 30
@@ -1275,6 +1328,10 @@ func TestServer_GetBlockV2(t *testing.T) {
 		b3.Block.Slot = 30
 		b3.Block.ParentRoot = bytesutil.PadTo([]byte{4}, 32)
 		util.SaveBlock(t, ctx, beaconDB, b3)
+		b4 := util.NewBeaconBlockBellatrix()
+		b4.Block.Slot = nextSlot
+		b4.Block.ParentRoot = bytesutil.PadTo([]byte{8}, 32)
+		util.SaveBlock(t, ctx, beaconDB, b4)
 
 		chainBlk, err := blocks.NewSignedBeaconBlock(headBlock.GetBellatrixBlock())
 		require.NoError(t, err)
@@ -1283,6 +1340,7 @@ func TestServer_GetBlockV2(t *testing.T) {
 			Block:               chainBlk,
 			Root:                headBlock.BlockRoot,
 			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
+			CanonicalRoots:      canonicalRoots,
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
@@ -1294,7 +1352,6 @@ func TestServer_GetBlockV2(t *testing.T) {
 			},
 		}
 
-		genBlk, blkContainers := fillDBTestBlocksBellatrix(ctx, t, beaconDB)
 		root, err := genBlk.Block.HashTreeRoot()
 		require.NoError(t, err)
 
@@ -1318,6 +1375,11 @@ func TestServer_GetBlockV2(t *testing.T) {
 				name:    "canonical",
 				blockID: []byte("30"),
 				want:    blkContainers[30].GetBellatrixBlock(),
+			},
+			{
+				name:    "non canonical",
+				blockID: []byte(fmt.Sprintf("%d", nextSlot)),
+				wantErr: true,
 			},
 			{
 				name:    "head",
@@ -1369,7 +1431,7 @@ func TestServer_GetBlockV2(t *testing.T) {
 				v2Block, err := migration.V1Alpha1BeaconBlockBellatrixToV2(tt.want.Block)
 				require.NoError(t, err)
 
-				b, ok := blk.Data.Message.(*ethpbv2.SignedBeaconBlockContainerV2_BellatrixBlock)
+				b, ok := blk.Data.Message.(*ethpbv2.SignedBeaconBlockContainer_BellatrixBlock)
 				require.Equal(t, true, ok)
 				if !reflect.DeepEqual(b.BellatrixBlock, v2Block) {
 					t.Error("Expected blocks to equal")

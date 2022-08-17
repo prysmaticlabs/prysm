@@ -8,14 +8,12 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/sync/backfill"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/sync/backfill"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 	"go.opencensus.io/trace"
 )
 
@@ -25,21 +23,17 @@ var defaultHotStateDBInterval types.Slot = 128
 // logic of maintaining both hot and cold states in DB.
 type StateManager interface {
 	Resume(ctx context.Context, fState state.BeaconState) (state.BeaconState, error)
+	DisableSaveHotStateToDB(ctx context.Context) error
+	EnableSaveHotStateToDB(_ context.Context)
+	HasState(ctx context.Context, blockRoot [32]byte) (bool, error)
+	DeleteStateFromCaches(ctx context.Context, blockRoot [32]byte) error
+	ForceCheckpoint(ctx context.Context, root []byte) error
+	SaveState(ctx context.Context, blockRoot [32]byte, st state.BeaconState) error
 	SaveFinalizedState(fSlot types.Slot, fRoot [32]byte, fState state.BeaconState)
 	MigrateToCold(ctx context.Context, fRoot [32]byte) error
-	ReplayBlocks(ctx context.Context, state state.BeaconState, signed []interfaces.SignedBeaconBlock, targetSlot types.Slot) (state.BeaconState, error)
-	LoadBlocks(ctx context.Context, startSlot, endSlot types.Slot, endBlockRoot [32]byte) ([]interfaces.SignedBeaconBlock, error)
-	HasState(ctx context.Context, blockRoot [32]byte) (bool, error)
-	HasStateInCache(ctx context.Context, blockRoot [32]byte) (bool, error)
 	StateByRoot(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error)
 	StateByRootIfCachedNoCopy(blockRoot [32]byte) state.BeaconState
 	StateByRootInitialSync(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error)
-	RecoverStateSummary(ctx context.Context, blockRoot [32]byte) (*ethpb.StateSummary, error)
-	SaveState(ctx context.Context, blockRoot [32]byte, st state.BeaconState) error
-	ForceCheckpoint(ctx context.Context, root []byte) error
-	EnableSaveHotStateToDB(_ context.Context)
-	DisableSaveHotStateToDB(ctx context.Context) error
-	DeleteStateFromCaches(ctx context.Context, blockRoot [32]byte) error
 }
 
 // State is a concrete implementation of StateManager.

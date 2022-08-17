@@ -4,11 +4,11 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
-	enginev1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
-	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/runtime/version"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	enginev1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 type fields struct {
@@ -144,9 +144,9 @@ func Test_SignedBeaconBlock_Proto(t *testing.T) {
 			Signature: f.b96,
 		}
 		block := &SignedBeaconBlock{
-			version: version.BellatrixBlind,
+			version: version.Bellatrix,
 			block: &BeaconBlock{
-				version:       version.BellatrixBlind,
+				version:       version.Bellatrix,
 				slot:          128,
 				proposerIndex: 128,
 				parentRoot:    f.b32,
@@ -261,7 +261,7 @@ func Test_BeaconBlock_Proto(t *testing.T) {
 			Body:          bodyPbBlindedBellatrix(),
 		}
 		block := &BeaconBlock{
-			version:       version.BellatrixBlind,
+			version:       version.Bellatrix,
 			slot:          128,
 			proposerIndex: 128,
 			parentRoot:    f.b32,
@@ -681,7 +681,8 @@ func bodyBellatrix() *BeaconBlockBody {
 func bodyBlindedBellatrix() *BeaconBlockBody {
 	f := getFields()
 	return &BeaconBlockBody{
-		version:      version.BellatrixBlind,
+		version:      version.Bellatrix,
+		isBlinded:    true,
 		randaoReveal: f.b96,
 		eth1Data: &eth.Eth1Data{
 			DepositRoot:  f.b32,

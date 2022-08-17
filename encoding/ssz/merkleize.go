@@ -1,8 +1,8 @@
 package ssz
 
 import (
-	"github.com/prysmaticlabs/prysm/container/trie"
-	"github.com/prysmaticlabs/prysm/crypto/hash/htr"
+	"github.com/prysmaticlabs/prysm/v3/container/trie"
+	"github.com/prysmaticlabs/prysm/v3/crypto/hash/htr"
 )
 
 // Merkleize.go is mostly a directly copy of the same filename from

@@ -14,13 +14,12 @@ go_library(
         "signature.go",
         "stub.go",  # keep
     ],
-    importpath = "github.com/prysmaticlabs/prysm/crypto/bls/blst",
+    importpath = "github.com/prysmaticlabs/prysm/v3/crypto/bls/blst",
     visibility = [
         "//crypto/bls:__pkg__",
     ],
     deps = [
         "//cache/lru:go_default_library",
-        "//config/features:go_default_library",
         "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",
         "//crypto/bls/common:go_default_library",

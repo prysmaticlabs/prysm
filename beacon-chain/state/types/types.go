@@ -2,7 +2,7 @@ package types
 
 import (
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/runtime/version"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
 )
 
 // FieldIndex represents the relevant field position in the
