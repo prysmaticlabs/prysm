@@ -9,7 +9,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
-	v2 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v2"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/crypto/bls"
@@ -49,7 +48,7 @@ func TestSyncCommitteeIndices_CanGet(t *testing.T) {
 		{
 			name: "nil inner state",
 			args: args{
-				state: &v2.BeaconState{},
+				state: &state_native.BeaconState{},
 			},
 			wantErr:   true,
 			errString: "nil inner state",
@@ -161,7 +160,7 @@ func TestSyncCommittee_CanGet(t *testing.T) {
 		{
 			name: "nil inner state",
 			args: args{
-				state: &v2.BeaconState{},
+				state: &state_native.BeaconState{},
 			},
 			wantErr:   true,
 			errString: "nil inner state",

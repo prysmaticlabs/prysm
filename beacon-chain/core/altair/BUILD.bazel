@@ -73,7 +73,6 @@ go_test(
         "//beacon-chain/p2p/types:go_default_library",
         "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/state-native:go_default_library",
-        "//beacon-chain/state/v2:go_default_library",
         "//beacon-chain/state/v3:go_default_library",
         "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",
