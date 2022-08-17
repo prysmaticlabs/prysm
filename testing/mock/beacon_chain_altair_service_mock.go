@@ -5,12 +5,7 @@
 package mock
 
 import (
-	context "context"
-	reflect "reflect"
-
 	gomock "github.com/golang/mock/gomock"
-	v1alpha1 "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
-	v2 "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
 // MockBeaconChainAltairServer is a mock of BeaconChainAltairServer interface
