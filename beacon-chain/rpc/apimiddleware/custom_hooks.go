@@ -399,18 +399,21 @@ func prepareValidatorAggregates(body []byte, responseContainer interface{}) (api
 }
 
 type phase0BlockResponseJson struct {
-	Version string                          `json:"version"`
-	Data    *signedBeaconBlockContainerJson `json:"data"`
+	Version             string                          `json:"version"`
+	Data                *signedBeaconBlockContainerJson `json:"data"`
+	ExecutionOptimistic bool                            `json:"execution_optimistic"`
 }
 
 type altairBlockResponseJson struct {
-	Version string                                `json:"version"`
-	Data    *signedBeaconBlockAltairContainerJson `json:"data"`
+	Version             string                                `json:"version"`
+	Data                *signedBeaconBlockAltairContainerJson `json:"data"`
+	ExecutionOptimistic bool                                  `json:"execution_optimistic"`
 }
 
 type bellatrixBlockResponseJson struct {
-	Version string                                   `json:"version"`
-	Data    *signedBeaconBlockBellatrixContainerJson `json:"data"`
+	Version             string                                   `json:"version"`
+	Data                *signedBeaconBlockBellatrixContainerJson `json:"data"`
+	ExecutionOptimistic bool                                     `json:"execution_optimistic"`
 }
 
 func serializeV2Block(response interface{}) (apimiddleware.RunDefault, []byte, apimiddleware.ErrorJson) {
@@ -428,6 +431,7 @@ func serializeV2Block(response interface{}) (apimiddleware.RunDefault, []byte, a
 				Message:   respContainer.Data.Phase0Block,
 				Signature: respContainer.Data.Signature,
 			},
+			ExecutionOptimistic: respContainer.ExecutionOptimistic,
 		}
 	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_ALTAIR.String())):
 		actualRespContainer = &altairBlockResponseJson{
@@ -436,6 +440,7 @@ func serializeV2Block(response interface{}) (apimiddleware.RunDefault, []byte, a
 				Message:   respContainer.Data.AltairBlock,
 				Signature: respContainer.Data.Signature,
 			},
+			ExecutionOptimistic: respContainer.ExecutionOptimistic,
 		}
 	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_BELLATRIX.String())):
 		actualRespContainer = &bellatrixBlockResponseJson{
@@ -444,6 +449,7 @@ func serializeV2Block(response interface{}) (apimiddleware.RunDefault, []byte, a
 				Message:   respContainer.Data.BellatrixBlock,
 				Signature: respContainer.Data.Signature,
 			},
+			ExecutionOptimistic: respContainer.ExecutionOptimistic,
 		}
 	default:
 		return false, nil, apimiddleware.InternalServerError(fmt.Errorf("unsupported block version '%s'", respContainer.Version))

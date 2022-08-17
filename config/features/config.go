@@ -20,9 +20,13 @@ The process for implementing new features using this package is as follows:
 package features
 
 import (
+	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 	"time"
 
+	"github.com/prysmaticlabs/gohashtree"
 	"github.com/prysmaticlabs/prysm/v3/cmd"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/sirupsen/logrus"
@@ -147,9 +151,6 @@ func configureTestnet(ctx *cli.Context) error {
 
 // Insert feature flags within the function to be enabled for Prater testnet.
 func applyPraterFeatureFlags(ctx *cli.Context) {
-	if err := ctx.Set(enableVecHTR.Names()[0], "true"); err != nil {
-		log.WithError(err).Debug("error enabling disable p flag")
-	}
 	if err := ctx.Set(EnableOnlyBlindedBeaconBlocks.Names()[0], "true"); err != nil {
 		log.WithError(err).Debug("error enabling only saving blinded beacon blocks flag")
 	}
@@ -157,16 +158,10 @@ func applyPraterFeatureFlags(ctx *cli.Context) {
 
 // Insert feature flags within the function to be enabled for Ropsten testnet.
 func applyRopstenFeatureFlags(ctx *cli.Context) {
-	if err := ctx.Set(enableVecHTR.Names()[0], "true"); err != nil {
-		log.WithError(err).Debug("error enabling vectorized HTR flag")
-	}
 }
 
 // Insert feature flags within the function to be enabled for Sepolia testnet.
 func applySepoliaFeatureFlags(ctx *cli.Context) {
-	if err := ctx.Set(enableVecHTR.Names()[0], "true"); err != nil {
-		log.WithError(err).Debug("error enabling vectorized HTR flag")
-	}
 }
 
 // ConfigureBeaconChain sets the global config based
@@ -224,9 +219,25 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logEnabled(disablePullTips)
 		cfg.DisablePullTips = true
 	}
-	if ctx.Bool(enableVecHTR.Name) {
-		logEnabled(enableVecHTR)
-		cfg.EnableVectorizedHTR = true
+	if ctx.Bool(disableVecHTR.Name) {
+		logEnabled(disableVecHTR)
+	} else {
+		sigc := make(chan os.Signal, 1)
+		signal.Notify(sigc, syscall.SIGILL)
+		defer signal.Stop(sigc)
+		buffer := make([][32]byte, 2)
+		err := gohashtree.Hash(buffer, buffer)
+		if err != nil {
+			log.Error("could not test if gohashtree is supported")
+		} else {
+			t := time.NewTimer(time.Millisecond * 100)
+			select {
+			case <-sigc:
+				log.Error("gohashtree is not supported in this CPU")
+			case <-t.C:
+				cfg.EnableVectorizedHTR = true
+			}
+		}
 	}
 	if ctx.Bool(disableForkChoiceDoublyLinkedTree.Name) {
 		logEnabled(disableForkChoiceDoublyLinkedTree)
