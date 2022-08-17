@@ -222,3 +222,24 @@ message PrepareBeaconProposerRequest {
     }
     repeated FeeRecipientContainer recipients = 1;
 }
+
+message SubmitValidatorRegistrationsRequest {
+    message ValidatorRegistration {
+        // The address of the fee recipient.
+        bytes fee_recipient = 1 [(ethereum.eth.ext.ssz_size) = "20"];
+        // gas_limit value in gwei
+        uint64 gas_limit = 2;
+        // timestamp in utc seconds from unix epoch
+        uint64 timestamp = 3;
+        // validator public key
+        bytes pubkey = 4 [(ethereum.eth.ext.ssz_size) = "48"];
+    }
+
+    message SignedValidatorRegistration {
+        ValidatorRegistration message = 1;
+        // signature of ValidatorRegistration
+        bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
+    }
+
+    repeated SignedValidatorRegistration registrations = 1;
+}
