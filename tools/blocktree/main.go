@@ -18,7 +18,6 @@ import (
 	"github.com/emicklei/dot"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/filters"
-	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db/kv"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
 )
@@ -39,7 +38,7 @@ type node struct {
 
 func main() {
 	flag.Parse()
-	database, err := db.NewDB(context.Background(), *datadir, &kv.Config{})
+	database, err := db.NewDB(context.Background(), *datadir)
 	if err != nil {
 		panic(err)
 	}
