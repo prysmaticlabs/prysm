@@ -3,9 +3,9 @@ package kv_test
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/operations/attestations/kv"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/operations/attestations/kv"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
 )
 
 func BenchmarkAttCaches(b *testing.B) {

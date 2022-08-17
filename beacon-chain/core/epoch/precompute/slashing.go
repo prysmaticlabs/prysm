@@ -1,13 +1,13 @@
 package precompute
 
 import (
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/config/params"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/math"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/math"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
 // ProcessSlashingsPrecompute processes the slashed validators during epoch processing.

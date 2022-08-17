@@ -6,7 +6,7 @@ go_library(
         "log.go",
         "service.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/deterministic-genesis",
+    importpath = "github.com/prysmaticlabs/prysm/v3/beacon-chain/deterministic-genesis",
     visibility = ["//beacon-chain:__subpackages__"],
     deps = [
         "//beacon-chain/cache/depositcache:go_default_library",

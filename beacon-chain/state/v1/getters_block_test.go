@@ -3,9 +3,9 @@ package v1
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	testtmpl "github.com/prysmaticlabs/prysm/beacon-chain/state/testing"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	testtmpl "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/testing"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
 func TestBeaconState_LatestBlockHeader(t *testing.T) {

@@ -9,18 +9,18 @@ import (
 
 	"github.com/paulbellamy/ratecounter"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/async/abool"
-	"github.com/prysmaticlabs/prysm/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/feed"
-	blockfeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/block"
-	statefeed "github.com/prysmaticlabs/prysm/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/cmd/beacon-chain/flags"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/runtime"
-	prysmTime "github.com/prysmaticlabs/prysm/time"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/async/abool"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed"
+	blockfeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/block"
+	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v3/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/runtime"
+	prysmTime "github.com/prysmaticlabs/prysm/v3/time"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"github.com/sirupsen/logrus"
 )
 
@@ -80,11 +80,6 @@ func (s *Service) Start() {
 	genesis := <-s.genesisChan
 	if genesis.IsZero() {
 		log.Debug("Exiting Initial Sync Service")
-		return
-	}
-	if flags.Get().DisableSync {
-		s.markSynced(genesis)
-		log.WithField("genesisTime", genesis).Info("Due to Sync Being Disabled, entering regular sync immediately.")
 		return
 	}
 	if genesis.After(prysmTime.Now()) {

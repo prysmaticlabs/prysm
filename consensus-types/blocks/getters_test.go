@@ -4,14 +4,14 @@ import (
 	"testing"
 
 	ssz "github.com/prysmaticlabs/fastssz"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	validatorpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/validator-client"
-	"github.com/prysmaticlabs/prysm/runtime/version"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	validatorpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/validator-client"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 func Test_BeaconBlockIsNil(t *testing.T) {

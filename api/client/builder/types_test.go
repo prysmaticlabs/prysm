@@ -4,16 +4,19 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math/big"
+	"net/http"
+	"net/url"
 	"os"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/protobuf/proto"
 	"github.com/prysmaticlabs/go-bitfield"
-	v1 "github.com/prysmaticlabs/prysm/proto/engine/v1"
-	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	v1 "github.com/prysmaticlabs/prysm/v3/proto/engine/v1"
+	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 func ezDecode(t *testing.T, s string) []byte {
@@ -734,4 +737,93 @@ func TestExecutionPayloadHeaderRoundtrip(t *testing.T) {
 	m, err := json.Marshal(hu)
 	require.NoError(t, err)
 	require.DeepEqual(t, string(expected[0:len(expected)-1]), string(m))
+}
+
+func TestErrorMessage_non200Err(t *testing.T) {
+	mockRequest := &http.Request{
+		URL: &url.URL{Path: "example.com"},
+	}
+	tests := []struct {
+		name        string
+		args        *http.Response
+		wantMessage string
+	}{
+		{
+			name: "204",
+			args: func() *http.Response {
+				message := ErrorMessage{
+					Code:    204,
+					Message: "No header is available",
+				}
+				r, err := json.Marshal(message)
+				require.NoError(t, err)
+				return &http.Response{
+					Request:    mockRequest,
+					StatusCode: 204,
+					Body:       io.NopCloser(bytes.NewReader(r)),
+				}
+			}(),
+			wantMessage: "No header is available",
+		},
+		{
+			name: "400",
+			args: func() *http.Response {
+				message := ErrorMessage{
+					Code:    400,
+					Message: "Unknown hash: missing parent hash",
+				}
+				r, err := json.Marshal(message)
+				require.NoError(t, err)
+				return &http.Response{
+					Request:    mockRequest,
+					StatusCode: 400,
+					Body:       io.NopCloser(bytes.NewReader(r)),
+				}
+			}(),
+			wantMessage: "Unknown hash: missing parent hash",
+		},
+		{
+			name: "500",
+			args: func() *http.Response {
+				message := ErrorMessage{
+					Code:    500,
+					Message: "Internal server error",
+				}
+				r, err := json.Marshal(message)
+				require.NoError(t, err)
+				return &http.Response{
+					Request:    mockRequest,
+					StatusCode: 500,
+					Body:       io.NopCloser(bytes.NewReader(r)),
+				}
+			}(),
+			wantMessage: "Internal server error",
+		},
+		{
+			name: "205",
+			args: func() *http.Response {
+				message := ErrorMessage{
+					Code:    205,
+					Message: "Reset Content",
+				}
+				r, err := json.Marshal(message)
+				require.NoError(t, err)
+				return &http.Response{
+					Request:    mockRequest,
+					StatusCode: 205,
+					Body:       io.NopCloser(bytes.NewReader(r)),
+				}
+			}(),
+			wantMessage: "did not receive 200 response from API",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := non200Err(tt.args)
+			if err != nil && tt.wantMessage != "" {
+				require.ErrorContains(t, tt.wantMessage, err)
+			}
+		})
+	}
+
 }

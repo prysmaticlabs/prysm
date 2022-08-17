@@ -7,9 +7,9 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
-	"github.com/prysmaticlabs/prysm/beacon-chain/p2p/encoder"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/network/forks"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/encoder"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/network/forks"
 )
 
 var _ pubsub.SubscriptionFilter = (*Service)(nil)

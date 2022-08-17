@@ -4,33 +4,18 @@ import (
 	"context"
 	"testing"
 
-	blockchainmock "github.com/prysmaticlabs/prysm/beacon-chain/blockchain/testing"
-	dbTest "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/rpc/testutil"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
+	blockchainmock "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
+	dbTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/testutil"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
+	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
-
-func TestGetBeaconState(t *testing.T) {
-	fakeState, err := util.NewBeaconState()
-	require.NoError(t, err)
-	server := &Server{
-		StateFetcher: &testutil.MockFetcher{
-			BeaconState: fakeState,
-		},
-	}
-	resp, err := server.GetBeaconState(context.Background(), &ethpbv1.StateRequest{
-		StateId: make([]byte, 0),
-	})
-	require.NoError(t, err)
-	assert.NotNil(t, resp)
-}
 
 func TestGetBeaconStateV2(t *testing.T) {
 	ctx := context.Background()
@@ -47,7 +32,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 			OptimisticModeFetcher: &blockchainmock.ChainService{},
 			BeaconDB:              db,
 		}
-		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.StateRequestV2{
+		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.BeaconStateRequestV2{
 			StateId: make([]byte, 0),
 		})
 		require.NoError(t, err)
@@ -64,7 +49,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 			OptimisticModeFetcher: &blockchainmock.ChainService{},
 			BeaconDB:              db,
 		}
-		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.StateRequestV2{
+		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.BeaconStateRequestV2{
 			StateId: make([]byte, 0),
 		})
 		require.NoError(t, err)
@@ -81,7 +66,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 			OptimisticModeFetcher: &blockchainmock.ChainService{},
 			BeaconDB:              db,
 		}
-		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.StateRequestV2{
+		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.BeaconStateRequestV2{
 			StateId: make([]byte, 0),
 		})
 		require.NoError(t, err)
@@ -106,7 +91,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 			OptimisticModeFetcher: &blockchainmock.ChainService{Optimistic: true},
 			BeaconDB:              db,
 		}
-		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.StateRequestV2{
+		resp, err := server.GetBeaconStateV2(context.Background(), &ethpbv2.BeaconStateRequestV2{
 			StateId: make([]byte, 0),
 		})
 		require.NoError(t, err)
@@ -147,7 +132,7 @@ func TestGetBeaconStateSSZV2(t *testing.T) {
 				BeaconState: fakeState,
 			},
 		}
-		resp, err := server.GetBeaconStateSSZV2(context.Background(), &ethpbv2.StateRequestV2{
+		resp, err := server.GetBeaconStateSSZV2(context.Background(), &ethpbv2.BeaconStateRequestV2{
 			StateId: make([]byte, 0),
 		})
 		require.NoError(t, err)
@@ -166,7 +151,7 @@ func TestGetBeaconStateSSZV2(t *testing.T) {
 				BeaconState: fakeState,
 			},
 		}
-		resp, err := server.GetBeaconStateSSZV2(context.Background(), &ethpbv2.StateRequestV2{
+		resp, err := server.GetBeaconStateSSZV2(context.Background(), &ethpbv2.BeaconStateRequestV2{
 			StateId: make([]byte, 0),
 		})
 		require.NoError(t, err)
@@ -185,7 +170,7 @@ func TestGetBeaconStateSSZV2(t *testing.T) {
 				BeaconState: fakeState,
 			},
 		}
-		resp, err := server.GetBeaconStateSSZV2(context.Background(), &ethpbv2.StateRequestV2{
+		resp, err := server.GetBeaconStateSSZV2(context.Background(), &ethpbv2.BeaconStateRequestV2{
 			StateId: make([]byte, 0),
 		})
 		require.NoError(t, err)
@@ -194,38 +179,6 @@ func TestGetBeaconStateSSZV2(t *testing.T) {
 		assert.DeepEqual(t, sszState, resp.Data)
 		assert.Equal(t, ethpbv2.Version_BELLATRIX, resp.Version)
 	})
-}
-
-func TestListForkChoiceHeads(t *testing.T) {
-	ctx := context.Background()
-
-	expectedSlotsAndRoots := []struct {
-		Slot types.Slot
-		Root [32]byte
-	}{{
-		Slot: 0,
-		Root: bytesutil.ToBytes32(bytesutil.PadTo([]byte("foo"), 32)),
-	}, {
-		Slot: 1,
-		Root: bytesutil.ToBytes32(bytesutil.PadTo([]byte("bar"), 32)),
-	}}
-
-	server := &Server{
-		HeadFetcher: &blockchainmock.ChainService{},
-	}
-	resp, err := server.ListForkChoiceHeads(ctx, &emptypb.Empty{})
-	require.NoError(t, err)
-	assert.Equal(t, 2, len(resp.Data))
-	for _, sr := range expectedSlotsAndRoots {
-		found := false
-		for _, h := range resp.Data {
-			if h.Slot == sr.Slot {
-				found = true
-				assert.DeepEqual(t, sr.Root[:], h.Root)
-			}
-		}
-		assert.Equal(t, true, found, "Expected head not found")
-	}
 }
 
 func TestListForkChoiceHeadsV2(t *testing.T) {

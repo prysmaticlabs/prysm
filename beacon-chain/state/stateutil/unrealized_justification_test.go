@@ -3,9 +3,9 @@ package stateutil
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/config/params"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 func TestState_UnrealizedCheckpointBalances(t *testing.T) {

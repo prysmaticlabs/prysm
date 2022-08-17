@@ -4,13 +4,13 @@ import (
 	"strconv"
 	"testing"
 
-	v1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	"github.com/prysmaticlabs/prysm/config/params"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	"github.com/prysmaticlabs/prysm/proto/migration"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
+	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
+	"github.com/prysmaticlabs/prysm/v3/proto/migration"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
 )
 
 func Test_ValidatorStatus(t *testing.T) {

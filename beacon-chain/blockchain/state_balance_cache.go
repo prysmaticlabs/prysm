@@ -5,10 +5,10 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/stategen"
 )
 
 type stateBalanceCache struct {

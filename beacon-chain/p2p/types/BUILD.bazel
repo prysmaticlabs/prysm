@@ -8,9 +8,10 @@ go_library(
         "rpc_goodbye_codes.go",
         "types.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/beacon-chain/p2p/types",
+    importpath = "github.com/prysmaticlabs/prysm/v3/beacon-chain/p2p/types",
     visibility = [
         "//beacon-chain:__subpackages__",
+        "//cmd:__subpackages__",
         "//slasher/rpc:__pkg__",
         "//testing/util:__pkg__",
         "//validator/client:__pkg__",

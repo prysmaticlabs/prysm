@@ -5,15 +5,15 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/altair"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/config/params"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1/attestation"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1/attestation"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 )
 
 func TestTranslateParticipation(t *testing.T) {

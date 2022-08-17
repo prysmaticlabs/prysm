@@ -4,10 +4,10 @@ import (
 	"encoding/binary"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/config/params"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/encoding/ssz"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/encoding/ssz"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
 // PendingAttRootWithHasher describes a method from which the hash tree root

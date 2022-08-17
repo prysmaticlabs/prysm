@@ -4,10 +4,10 @@ import (
 	"context"
 	"testing"
 
-	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
+	testDB "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 )
 
 func TestService_getBlock(t *testing.T) {
@@ -29,7 +29,7 @@ func TestService_getBlock(t *testing.T) {
 	// block in cache
 	b, err := blocks.NewSignedBeaconBlock(b1)
 	require.NoError(t, err)
-	s.saveInitSyncBlock(ctx, r1, b)
+	require.NoError(t, s.saveInitSyncBlock(ctx, r1, b))
 	got, err := s.getBlock(ctx, r1)
 	require.NoError(t, err)
 	require.DeepEqual(t, b, got)
@@ -59,7 +59,7 @@ func TestService_hasBlockInInitSyncOrDB(t *testing.T) {
 	// block in cache
 	b, err := blocks.NewSignedBeaconBlock(b1)
 	require.NoError(t, err)
-	s.saveInitSyncBlock(ctx, r1, b)
+	require.NoError(t, s.saveInitSyncBlock(ctx, r1, b))
 	require.Equal(t, true, s.hasBlockInInitSyncOrDB(ctx, r1))
 
 	// block in db

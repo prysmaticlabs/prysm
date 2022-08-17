@@ -1,4 +1,4 @@
-module github.com/prysmaticlabs/prysm
+module github.com/prysmaticlabs/prysm/v3
 
 go 1.18
 
@@ -251,7 +251,7 @@ require (
 	github.com/go-playground/validator/v10 v10.10.0
 	github.com/peterh/liner v1.2.0 // indirect
 	github.com/prometheus/tsdb v0.10.0 // indirect
-	github.com/prysmaticlabs/gohashtree v0.0.1-alpha.0.20220303211031-f753e083138c
+	github.com/prysmaticlabs/gohashtree v0.0.2-alpha
 	golang.org/x/sys v0.0.0-20220702020025-31831981b65f // indirect
 	google.golang.org/api v0.34.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
@@ -262,4 +262,4 @@ require (
 replace github.com/json-iterator/go => github.com/prestonvanloon/go v1.1.7-0.20190722034630-4f2e55fcf87b
 
 // See https://github.com/prysmaticlabs/grpc-gateway/issues/2
-replace github.com/grpc-ecosystem/grpc-gateway/v2 => github.com/prysmaticlabs/grpc-gateway/v2 v2.3.1-0.20220428175429-ee99f663f83d
+replace github.com/grpc-ecosystem/grpc-gateway/v2 => github.com/prysmaticlabs/grpc-gateway/v2 v2.3.1-0.20220721162526-0d1c40b5f064

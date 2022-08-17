@@ -12,21 +12,22 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/transition"
-	rpchelpers "github.com/prysmaticlabs/prysm/beacon-chain/rpc/eth/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	statev1 "github.com/prysmaticlabs/prysm/beacon-chain/state/v1"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/config/params"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpbv1 "github.com/prysmaticlabs/prysm/proto/eth/v1"
-	ethpbv2 "github.com/prysmaticlabs/prysm/proto/eth/v2"
-	"github.com/prysmaticlabs/prysm/proto/migration"
-	ethpbalpha "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/builder"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
+	rpchelpers "github.com/prysmaticlabs/prysm/v3/beacon-chain/rpc/eth/helpers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	statev1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpbv1 "github.com/prysmaticlabs/prysm/v3/proto/eth/v1"
+	ethpbv2 "github.com/prysmaticlabs/prysm/v3/proto/eth/v2"
+	"github.com/prysmaticlabs/prysm/v3/proto/migration"
+	ethpbalpha "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
@@ -265,23 +266,6 @@ func (vs *Server) GetSyncCommitteeDuties(ctx context.Context, req *ethpbv2.SyncC
 		Data:                duties,
 		ExecutionOptimistic: isOptimistic,
 	}, nil
-}
-
-// ProduceBlock requests the beacon node to produce a valid unsigned beacon block, which can then be signed by a proposer and submitted.
-func (vs *Server) ProduceBlock(ctx context.Context, req *ethpbv1.ProduceBlockRequest) (*ethpbv1.ProduceBlockResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "validator.ProduceBlock")
-	defer span.End()
-
-	if err := rpchelpers.ValidateSync(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
-		// We simply return the error because it's already a gRPC error.
-		return nil, err
-	}
-
-	block, err := vs.v1BeaconBlock(ctx, req)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get block: %v", err)
-	}
-	return &ethpbv1.ProduceBlockResponse{Data: block}, nil
 }
 
 // ProduceBlockV2 requests the beacon node to produce a valid unsigned beacon block, which can then be signed by a proposer and submitted.
@@ -577,6 +561,38 @@ func (vs *Server) PrepareBeaconProposer(
 		"validatorIndices": validatorIndices,
 	}).Info("Updated fee recipient addresses for validator indices")
 	return &emptypb.Empty{}, nil
+}
+
+// SubmitValidatorRegistration submits validator registrations.
+func (vs *Server) SubmitValidatorRegistration(ctx context.Context, reg *ethpbv1.SubmitValidatorRegistrationsRequest) (*empty.Empty, error) {
+	ctx, span := trace.StartSpan(ctx, "validator.SubmitValidatorRegistration")
+	defer span.End()
+
+	if vs.V1Alpha1Server.BlockBuilder == nil || !vs.V1Alpha1Server.BlockBuilder.Configured() {
+		return &empty.Empty{}, status.Errorf(codes.Internal, "Could not register block builder: %v", builder.ErrNoBuilder)
+	}
+	var registrations []*ethpbalpha.SignedValidatorRegistrationV1
+	for i, registration := range reg.Registrations {
+		message := reg.Registrations[i].Message
+		registrations = append(registrations, &ethpbalpha.SignedValidatorRegistrationV1{
+			Message: &ethpbalpha.ValidatorRegistrationV1{
+				FeeRecipient: message.FeeRecipient,
+				GasLimit:     message.GasLimit,
+				Timestamp:    message.Timestamp,
+				Pubkey:       message.Pubkey,
+			},
+			Signature: registration.Signature,
+		})
+	}
+	if len(registrations) == 0 {
+		return &empty.Empty{}, status.Errorf(codes.InvalidArgument, "Validator registration request is empty")
+	}
+
+	if err := vs.V1Alpha1Server.BlockBuilder.RegisterValidator(ctx, registrations); err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Could not register block builder: %v", err)
+	}
+
+	return &empty.Empty{}, nil
 }
 
 // ProduceAttestationData requests that the beacon node produces attestation data for

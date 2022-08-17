@@ -3,7 +3,7 @@ load("@prysm//tools/go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["proposer-settings.go"],
-    importpath = "github.com/prysmaticlabs/prysm/config/validator/service",
+    importpath = "github.com/prysmaticlabs/prysm/v3/config/validator/service",
     visibility = ["//visibility:public"],
     deps = [
         "//config/fieldparams:go_default_library",

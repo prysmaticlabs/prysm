@@ -4,19 +4,19 @@ import (
 	"context"
 	"errors"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/beacon-chain/state"
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/config/params"
-	types "github.com/prysmaticlabs/prysm/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/contracts/deposit"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/monitoring/tracing"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/runtime/version"
-	"github.com/prysmaticlabs/prysm/time/slots"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v3/contracts/deposit"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v3/monitoring/tracing"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	"github.com/prysmaticlabs/prysm/v3/time/slots"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -300,7 +300,7 @@ func (vs *Server) validatorStatus(
 	// Unknown status means the validator has not been put into the state yet.
 	case ethpb.ValidatorStatus_UNKNOWN_STATUS:
 		// If no connection to ETH1, the deposit block number or position in queue cannot be determined.
-		if !vs.Eth1InfoFetcher.IsConnectedToETH1() {
+		if !vs.Eth1InfoFetcher.ExecutionClientConnected() {
 			log.Warn("Not connected to ETH1. Cannot determine validator ETH1 deposit block number")
 			return resp, nonExistentIndex
 		}

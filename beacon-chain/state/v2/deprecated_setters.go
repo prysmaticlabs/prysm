@@ -2,8 +2,8 @@ package v2
 
 import (
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 )
 
 // AppendCurrentEpochAttestations is not supported for HF1 beacon state.

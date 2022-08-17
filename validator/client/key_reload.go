@@ -3,8 +3,9 @@ package client
 import (
 	"context"
 
-	fieldparams "github.com/prysmaticlabs/prysm/config/fieldparams"
-	eth "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
+	"github.com/pkg/errors"
+	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
+	eth "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"go.opencensus.io/trace"
 )
 
@@ -32,7 +33,11 @@ func (v *validator) HandleKeyReload(ctx context.Context, newKeys [][fieldparams.
 			index:     resp.Indices[i],
 		}
 	}
-	anyActive = v.checkAndLogValidatorStatus(statuses)
+	vals, err := v.beaconClient.ListValidators(ctx, &eth.ListValidatorsRequest{Active: true, PageSize: 0})
+	if err != nil {
+		return false, errors.Wrap(err, "could not get active validator count")
+	}
+	anyActive = v.checkAndLogValidatorStatus(statuses, uint64(vals.TotalSize))
 	if anyActive {
 		logActiveValidatorStatus(statuses)
 	}

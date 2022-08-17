@@ -4,18 +4,18 @@ import (
 	"context"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/beacon-chain/core/blocks"
-	"github.com/prysmaticlabs/prysm/beacon-chain/db"
-	testDB "github.com/prysmaticlabs/prysm/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/config/params"
-	consensusblocks "github.com/prysmaticlabs/prysm/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/encoding/bytesutil"
-	ethpb "github.com/prysmaticlabs/prysm/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/runtime/version"
-	"github.com/prysmaticlabs/prysm/testing/assert"
-	"github.com/prysmaticlabs/prysm/testing/require"
-	"github.com/prysmaticlabs/prysm/testing/util"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v3/beacon-chain/db"
+	testDB "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/v3/config/params"
+	consensusblocks "github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v3/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v3/encoding/bytesutil"
+	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v3/runtime/version"
+	"github.com/prysmaticlabs/prysm/v3/testing/assert"
+	"github.com/prysmaticlabs/prysm/v3/testing/require"
+	"github.com/prysmaticlabs/prysm/v3/testing/util"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -43,7 +43,7 @@ func TestReplayBlocks_AllSkipSlots(t *testing.T) {
 
 	service := New(beaconDB)
 	targetSlot := params.BeaconConfig().SlotsPerEpoch - 1
-	newState, err := service.ReplayBlocks(context.Background(), beaconState, []interfaces.SignedBeaconBlock{}, targetSlot)
+	newState, err := service.replayBlocks(context.Background(), beaconState, []interfaces.SignedBeaconBlock{}, targetSlot)
 	require.NoError(t, err)
 	assert.Equal(t, targetSlot, newState.Slot(), "Did not advance slots")
 }
@@ -72,7 +72,7 @@ func TestReplayBlocks_SameSlot(t *testing.T) {
 
 	service := New(beaconDB)
 	targetSlot := beaconState.Slot()
-	newState, err := service.ReplayBlocks(context.Background(), beaconState, []interfaces.SignedBeaconBlock{}, targetSlot)
+	newState, err := service.replayBlocks(context.Background(), beaconState, []interfaces.SignedBeaconBlock{}, targetSlot)
 	require.NoError(t, err)
 	assert.Equal(t, targetSlot, newState.Slot(), "Did not advance slots")
 }
@@ -106,7 +106,7 @@ func TestReplayBlocks_LowerSlotBlock(t *testing.T) {
 	b.Block.Slot = beaconState.Slot() - 1
 	wsb, err := consensusblocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
-	newState, err := service.ReplayBlocks(context.Background(), beaconState, []interfaces.SignedBeaconBlock{wsb}, targetSlot)
+	newState, err := service.replayBlocks(context.Background(), beaconState, []interfaces.SignedBeaconBlock{wsb}, targetSlot)
 	require.NoError(t, err)
 	assert.Equal(t, targetSlot, newState.Slot(), "Did not advance slots")
 }
@@ -132,7 +132,7 @@ func TestReplayBlocks_ThroughForkBoundary(t *testing.T) {
 
 	service := New(testDB.SetupDB(t))
 	targetSlot := params.BeaconConfig().SlotsPerEpoch
-	newState, err := service.ReplayBlocks(context.Background(), beaconState, []interfaces.SignedBeaconBlock{}, targetSlot)
+	newState, err := service.replayBlocks(context.Background(), beaconState, []interfaces.SignedBeaconBlock{}, targetSlot)
 	require.NoError(t, err)
 
 	// Verify state is version Altair.
@@ -162,7 +162,7 @@ func TestReplayBlocks_ThroughBellatrixForkBoundary(t *testing.T) {
 
 	service := New(testDB.SetupDB(t))
 	targetSlot := params.BeaconConfig().SlotsPerEpoch * 2
-	newState, err := service.ReplayBlocks(context.Background(), beaconState, []interfaces.SignedBeaconBlock{}, targetSlot)
+	newState, err := service.replayBlocks(context.Background(), beaconState, []interfaces.SignedBeaconBlock{}, targetSlot)
 	require.NoError(t, err)
 
 	// Verify state is version Altair.
@@ -179,7 +179,7 @@ func TestLoadBlocks_FirstBranch(t *testing.T) {
 	roots, savedBlocks, err := tree1(t, beaconDB, bytesutil.PadTo([]byte{'A'}, 32))
 	require.NoError(t, err)
 
-	filteredBlocks, err := s.LoadBlocks(ctx, 0, 8, roots[len(roots)-1])
+	filteredBlocks, err := s.loadBlocks(ctx, 0, 8, roots[len(roots)-1])
 	require.NoError(t, err)
 
 	wanted := []*ethpb.SignedBeaconBlock{
@@ -210,7 +210,7 @@ func TestLoadBlocks_SecondBranch(t *testing.T) {
 	roots, savedBlocks, err := tree1(t, beaconDB, bytesutil.PadTo([]byte{'A'}, 32))
 	require.NoError(t, err)
 
-	filteredBlocks, err := s.LoadBlocks(ctx, 0, 5, roots[5])
+	filteredBlocks, err := s.loadBlocks(ctx, 0, 5, roots[5])
 	require.NoError(t, err)
 
 	wanted := []*ethpb.SignedBeaconBlock{
@@ -239,7 +239,7 @@ func TestLoadBlocks_ThirdBranch(t *testing.T) {
 	roots, savedBlocks, err := tree1(t, beaconDB, bytesutil.PadTo([]byte{'A'}, 32))
 	require.NoError(t, err)
 
-	filteredBlocks, err := s.LoadBlocks(ctx, 0, 7, roots[7])
+	filteredBlocks, err := s.loadBlocks(ctx, 0, 7, roots[7])
 	require.NoError(t, err)
 
 	wanted := []*ethpb.SignedBeaconBlock{
@@ -270,7 +270,7 @@ func TestLoadBlocks_SameSlots(t *testing.T) {
 	roots, savedBlocks, err := tree2(t, beaconDB, bytesutil.PadTo([]byte{'A'}, 32))
 	require.NoError(t, err)
 
-	filteredBlocks, err := s.LoadBlocks(ctx, 0, 3, roots[6])
+	filteredBlocks, err := s.loadBlocks(ctx, 0, 3, roots[6])
 	require.NoError(t, err)
 
 	wanted := []*ethpb.SignedBeaconBlock{
@@ -299,7 +299,7 @@ func TestLoadBlocks_SameEndSlots(t *testing.T) {
 	roots, savedBlocks, err := tree3(t, beaconDB, bytesutil.PadTo([]byte{'A'}, 32))
 	require.NoError(t, err)
 
-	filteredBlocks, err := s.LoadBlocks(ctx, 0, 2, roots[2])
+	filteredBlocks, err := s.loadBlocks(ctx, 0, 2, roots[2])
 	require.NoError(t, err)
 
 	wanted := []*ethpb.SignedBeaconBlock{
@@ -327,7 +327,7 @@ func TestLoadBlocks_SameEndSlotsWith2blocks(t *testing.T) {
 	roots, savedBlocks, err := tree4(t, beaconDB, bytesutil.PadTo([]byte{'A'}, 32))
 	require.NoError(t, err)
 
-	filteredBlocks, err := s.LoadBlocks(ctx, 0, 2, roots[1])
+	filteredBlocks, err := s.loadBlocks(ctx, 0, 2, roots[1])
 	require.NoError(t, err)
 
 	wanted := []*ethpb.SignedBeaconBlock{
@@ -353,7 +353,7 @@ func TestLoadBlocks_BadStart(t *testing.T) {
 
 	roots, _, err := tree1(t, beaconDB, bytesutil.PadTo([]byte{'A'}, 32))
 	require.NoError(t, err)
-	_, err = s.LoadBlocks(ctx, 0, 5, roots[8])
+	_, err = s.loadBlocks(ctx, 0, 5, roots[8])
 	assert.ErrorContains(t, "end block roots don't match", err)
 }
 
