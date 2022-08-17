@@ -50,10 +50,6 @@ var (
 		Name:  "disable-peer-scorer",
 		Usage: "Disables experimental P2P peer scorer",
 	}
-	checkPtInfoCache = &cli.BoolFlag{
-		Name:  "use-check-point-cache",
-		Usage: "Enables check point info caching",
-	}
 	writeWalletPasswordOnWebOnboarding = &cli.BoolFlag{
 		Name: "write-wallet-password-on-web-onboarding",
 		Usage: "(Danger): Writes the wallet password to the wallet directory on completing Prysm web onboarding. " +
@@ -157,7 +153,6 @@ var BeaconChainFlags = append(deprecatedFlags, []cli.Flag{
 	SepoliaTestnet,
 	Mainnet,
 	disablePeerScorer,
-	checkPtInfoCache,
 	disableBroadcastSlashingFlag,
 	enableSlasherFlag,
 	enableHistoricalSpaceRepresentation,
