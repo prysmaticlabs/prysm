@@ -40,6 +40,7 @@ var (
 	yamlOutputFile   = flag.String("output-yaml", "", "Output filename of the YAML marshaling of the generated genesis state")
 	jsonOutputFile   = flag.String("output-json", "", "Output filename of the JSON marshaling of the generated genesis state")
 	configName       = flag.String("config-name", params.MinimalName, "ConfigName for the BeaconChainConfig that will be used for interop, inc GenesisForkVersion of generated genesis state")
+	configFile       = flag.String("chain-config-file", "", "Path to a chain config file for setting global params")
 )
 
 func main() {
@@ -56,12 +57,18 @@ func main() {
 			log.Fatalf("unable to set mainnet config active, err=%s", err.Error())
 		}
 	} else {
-		cfg, err := params.ByName(*configName)
-		if err != nil {
-			log.Fatalf("unable to find config using name %s, err=%s", *configName, err.Error())
-		}
-		if err := params.SetActive(cfg.Copy()); err != nil {
-			log.Fatalf("unable to set %s config active, err=%s", cfg.ConfigName, err.Error())
+		if *configFile != "" {
+			if err := params.LoadChainConfigFile(*configFile, nil); err != nil {
+				log.Fatal(err)
+			}
+		} else {
+			cfg, err := params.ByName(*configName)
+			if err != nil {
+				log.Fatalf("unable to find config using name %s, err=%s", *configName, err.Error())
+			}
+			if err := params.SetActive(cfg.Copy()); err != nil {
+				log.Fatalf("unable to set %s config active, err=%s", cfg.ConfigName, err.Error())
+			}
 		}
 	}
 	var genesisState *ethpb.BeaconState
