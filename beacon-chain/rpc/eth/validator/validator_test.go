@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prysmaticlabs/go-bitfield"
 	mockChain "github.com/prysmaticlabs/prysm/v3/beacon-chain/blockchain/testing"
+	builderTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/builder/testing"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/signing"
@@ -3714,6 +3715,67 @@ func TestPrepareBeaconProposer(t *testing.T) {
 			address, err := server.V1Alpha1Server.BeaconDB.FeeRecipientByValidatorID(ctx, 1)
 			require.NoError(t, err)
 			require.Equal(t, common.BytesToAddress(tt.args.request.Recipients[0].FeeRecipient), address)
+		})
+	}
+}
+
+func TestServer_SubmitValidatorRegistrations(t *testing.T) {
+	type args struct {
+		request *ethpbv1.SubmitValidatorRegistrationsRequest
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr string
+	}{
+		{
+			name: "Happy Path",
+			args: args{
+				request: &ethpbv1.SubmitValidatorRegistrationsRequest{
+					Registrations: []*ethpbv1.SubmitValidatorRegistrationsRequest_SignedValidatorRegistration{
+						{
+							Message: &ethpbv1.SubmitValidatorRegistrationsRequest_ValidatorRegistration{
+								FeeRecipient: make([]byte, fieldparams.BLSPubkeyLength),
+								GasLimit:     30000000,
+								Timestamp:    uint64(time.Now().Unix()),
+								Pubkey:       make([]byte, fieldparams.BLSPubkeyLength),
+							},
+							Signature: make([]byte, fieldparams.BLSSignatureLength),
+						},
+					},
+				},
+			},
+			wantErr: "",
+		},
+		{
+			name: "Empty Request",
+			args: args{
+				request: &ethpbv1.SubmitValidatorRegistrationsRequest{
+					Registrations: []*ethpbv1.SubmitValidatorRegistrationsRequest_SignedValidatorRegistration{},
+				},
+			},
+			wantErr: "Validator registration request is empty",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			db := dbutil.SetupDB(t)
+			ctx := context.Background()
+			v1Server := &v1alpha1validator.Server{
+				BlockBuilder: &builderTest.MockBuilderService{
+					HasConfigured: true,
+				},
+				BeaconDB: db,
+			}
+			server := &Server{
+				V1Alpha1Server: v1Server,
+			}
+			_, err := server.SubmitValidatorRegistration(ctx, tt.args.request)
+			if tt.wantErr != "" {
+				require.ErrorContains(t, tt.wantErr, err)
+				return
+			}
+			require.NoError(t, err)
 		})
 	}
 }

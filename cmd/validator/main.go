@@ -99,7 +99,6 @@ var appFlags = []cli.Flag{
 	cmd.ConfigFileFlag,
 	cmd.ChainConfigFileFlag,
 	cmd.GrpcMaxCallRecvMsgSizeFlag,
-	cmd.BoltMMapInitialSizeFlag,
 	cmd.ApiTimeoutFlag,
 	debug.PProfFlag,
 	debug.PProfAddrFlag,

@@ -183,6 +183,25 @@ service BeaconValidator {
     };
   }
 
+  // SubmitValidatorRegistration prepares the beacon node for engaging with external builders.
+  // The information will be sent by the beacon node to the builder network.
+  // It is expected that the validator client will send this information periodically to ensure the beacon node has correct and timely registration information to provide to builders.
+  // The validator client should not sign blinded beacon blocks that do not adhere to their latest fee recipient and gas limit preferences.
+  // Note that requests containing currently inactive or unknown validator pubkeys will be accepted, as they may become active at a later epoch.
+  //
+  // HTTP response usage:
+  //  - 200: Successful response
+  //  - 400: Invalid request syntax
+  //  - 500: Beacon node internal error
+  //
+  // Spec: https://ethereum.github.io/beacon-APIs/#/Validator/registerValidator
+  rpc SubmitValidatorRegistration (v1.SubmitValidatorRegistrationsRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/internal/eth/v1/validator/register_validator"
+      body: "*"
+    };
+  }
+
   // ProduceAttestationData requests that the beacon node produces attestation data for
   // the requested committee index and slot based on the nodes current head.
   //
