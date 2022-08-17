@@ -40,7 +40,7 @@ func RunSlotProcessingTests(t *testing.T, config string) {
 			file, err := util.BazelFileBytes(testsFolderPath, folder.Name(), "slots.yaml")
 			require.NoError(t, err)
 			fileStr := string(file)
-			slotsCount, err := strconv.Atoi(fileStr[:len(fileStr)-5])
+			slotsCount, err := strconv.ParseUint(fileStr[:len(fileStr)-5], 10, 64)
 			require.NoError(t, err)
 
 			postBeaconStateFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), "post.ssz_snappy")
@@ -49,7 +49,7 @@ func RunSlotProcessingTests(t *testing.T, config string) {
 			require.NoError(t, err, "Failed to decompress")
 			postBeaconState := &ethpb.BeaconState{}
 			require.NoError(t, postBeaconState.UnmarshalSSZ(postBeaconStateSSZ), "Failed to unmarshal")
-			postState, err := transition.ProcessSlots(context.Background(), beaconState, beaconState.Slot().Add(uint64(slotsCount)))
+			postState, err := transition.ProcessSlots(context.Background(), beaconState, beaconState.Slot().Add(slotsCount))
 			require.NoError(t, err)
 
 			pbState, err := v1.ProtobufBeaconState(postState.CloneInnerState())
