@@ -201,7 +201,6 @@ func (s *Service) Start() {
 		}
 	}
 
-
 	if !s.cfg.NoDiscovery {
 		ipAddr := prysmnetwork.IPAddr()
 		listener, err := s.startDiscoveryV5(
