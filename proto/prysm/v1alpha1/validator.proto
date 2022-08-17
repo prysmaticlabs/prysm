@@ -292,11 +292,6 @@ service BeaconNodeValidator {
         };
     }
 
-    
-    rpc SubmitValidatorRegistration(SignedValidatorRegistrationV1) returns (google.protobuf.Empty) {
-        option deprecated = true; // Use SubmitValidatorRegistrations
-    }
-
     rpc SubmitValidatorRegistrations(SignedValidatorRegistrationsV1) returns (google.protobuf.Empty) {
         option (google.api.http) = {
             post: "/eth/v1alpha1/validator/registration"
