@@ -10,6 +10,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/v3/beacon-chain/forkchoice",
     visibility = [
         "//beacon-chain:__subpackages__",
+        "//cmd:__subpackages__",
         "//testing/spectest:__subpackages__",
     ],
     deps = [
