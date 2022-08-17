@@ -131,7 +131,7 @@ func printBucketContents(dbNameWithPath string, rowLimit uint64, bucketName stri
 
 	// create a new KV Store.
 	dbDirectory := filepath.Dir(dbNameWithPath)
-	db, openErr := kv.NewKVStore(context.Background(), dbDirectory, &kv.Config{})
+	db, openErr := kv.NewKVStore(context.Background(), dbDirectory)
 	if openErr != nil {
 		log.WithError(openErr).Fatal("could not open db")
 	}
