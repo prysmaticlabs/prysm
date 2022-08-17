@@ -13,7 +13,6 @@ import (
 	statefeed "github.com/prysmaticlabs/prysm/v3/beacon-chain/core/feed/state"
 	dbTest "github.com/prysmaticlabs/prysm/v3/beacon-chain/db/testing"
 	v1 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v1"
-	"github.com/prysmaticlabs/prysm/v3/cmd"
 	"github.com/prysmaticlabs/prysm/v3/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
@@ -853,48 +852,4 @@ func runListBeaconBlocksPagination(t *testing.T, orphanedBlk interfaces.SignedBe
 			require.DeepSSZEqual(t, res, test.res)
 		})
 	}
-}
-
-func TestServer_ListBeaconBlocks_Errors(t *testing.T) {
-	db := dbTest.SetupDB(t)
-	ctx := context.Background()
-
-	bs := &Server{
-		BeaconDB: db,
-	}
-	exceedsMax := int32(cmd.Get().MaxRPCPageSize + 1)
-
-	wanted := fmt.Sprintf("Requested page size %d can not be greater than max size %d", exceedsMax, cmd.Get().MaxRPCPageSize)
-	req := &ethpb.ListBlocksRequest{PageToken: strconv.Itoa(0), PageSize: exceedsMax}
-	_, err := bs.ListBlocks(ctx, req)
-	assert.ErrorContains(t, wanted, err)
-
-	wanted = "Must specify a filter criteria for fetching"
-	req = &ethpb.ListBlocksRequest{}
-	_, err = bs.ListBeaconBlocks(ctx, req)
-	assert.ErrorContains(t, wanted, err)
-
-	req = &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Slot{Slot: 0}}
-	res, err := bs.ListBeaconBlocks(ctx, req)
-	require.NoError(t, err)
-	assert.Equal(t, 0, len(res.BlockContainers), "Wanted empty list")
-	assert.Equal(t, int32(0), res.TotalSize, "Wanted total size 0")
-
-	req = &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Slot{}}
-	res, err = bs.ListBeaconBlocks(ctx, req)
-	require.NoError(t, err)
-	assert.Equal(t, 0, len(res.BlockContainers), "Wanted empty list")
-	assert.Equal(t, int32(0), res.TotalSize, "Wanted total size 0")
-
-	req = &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Root{Root: []byte{'A'}}}
-	res, err = bs.ListBeaconBlocks(ctx, req)
-	require.NoError(t, err)
-	assert.Equal(t, 0, len(res.BlockContainers), "Wanted empty list")
-	assert.Equal(t, int32(0), res.TotalSize, "Wanted total size 0")
-
-	req = &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Root{Root: []byte{'A'}}}
-	res, err = bs.ListBeaconBlocks(ctx, req)
-	require.NoError(t, err)
-	assert.Equal(t, 0, len(res.BlockContainers), "Wanted empty list")
-	assert.Equal(t, int32(0), res.TotalSize, "Wanted total size 0")
 }
