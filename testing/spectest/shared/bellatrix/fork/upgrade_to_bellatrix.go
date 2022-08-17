@@ -8,7 +8,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/execution"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/helpers"
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
-	v3 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v3"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/require"
 	"github.com/prysmaticlabs/prysm/v3/testing/spectest/utils"
@@ -39,7 +38,7 @@ func RunUpgradeToBellatrix(t *testing.T, config string) {
 			require.NoError(t, err)
 			postState, err := execution.UpgradeToBellatrix(preState)
 			require.NoError(t, err)
-			postStateFromFunction, err := v3.ProtobufBeaconState(postState.InnerStateUnsafe())
+			postStateFromFunction, err := state_native.ProtobufBeaconStateBellatrix(postState.InnerStateUnsafe())
 			require.NoError(t, err)
 
 			postStateFile, err := util.BazelFileBytes(path.Join(folderPath, "post.ssz_snappy"))

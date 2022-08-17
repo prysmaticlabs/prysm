@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
 	v3 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v3"
 	ethpb "github.com/prysmaticlabs/prysm/v3/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v3/testing/assert"
@@ -13,7 +14,7 @@ import (
 
 func TestBeaconState_ValidatorMutation_Bellatrix(t *testing.T) {
 	testState, _ := util.DeterministicGenesisStateBellatrix(t, 400)
-	pbState, err := v3.ProtobufBeaconState(testState.InnerStateUnsafe())
+	pbState, err := state_native.ProtobufBeaconStateBellatrix(testState.InnerStateUnsafe())
 	require.NoError(t, err)
 	testState, err = v3.InitializeFromProto(pbState)
 	require.NoError(t, err)
@@ -42,7 +43,7 @@ func TestBeaconState_ValidatorMutation_Bellatrix(t *testing.T) {
 
 	rt, err := testState.HashTreeRoot(context.Background())
 	require.NoError(t, err)
-	pbState, err = v3.ProtobufBeaconState(testState.InnerStateUnsafe())
+	pbState, err = state_native.ProtobufBeaconStateBellatrix(testState.InnerStateUnsafe())
 	require.NoError(t, err)
 
 	copiedTestState, err := v3.InitializeFromProtoUnsafe(pbState)
@@ -66,7 +67,7 @@ func TestBeaconState_ValidatorMutation_Bellatrix(t *testing.T) {
 
 	rt, err = newState1.HashTreeRoot(context.Background())
 	require.NoError(t, err)
-	pbState, err = v3.ProtobufBeaconState(newState1.InnerStateUnsafe())
+	pbState, err = state_native.ProtobufBeaconStateBellatrix(newState1.InnerStateUnsafe())
 	require.NoError(t, err)
 
 	copiedTestState, err = v3.InitializeFromProto(pbState)

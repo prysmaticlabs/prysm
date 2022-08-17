@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
-	v3 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v3"
 	fieldparams "github.com/prysmaticlabs/prysm/v3/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	types "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives"
@@ -90,7 +89,7 @@ func GenerateAttestations(
 			}
 			headState = genState
 		case version.Bellatrix:
-			pbState, err := v3.ProtobufBeaconState(bState.CloneInnerState())
+			pbState, err := state_native.ProtobufBeaconStateBellatrix(bState.CloneInnerState())
 			if err != nil {
 				return nil, err
 			}

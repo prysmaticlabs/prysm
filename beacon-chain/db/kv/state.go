@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v3/beacon-chain/state/genesis"
 	statenative "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/state-native"
-	v3 "github.com/prysmaticlabs/prysm/v3/beacon-chain/state/v3"
 	"github.com/prysmaticlabs/prysm/v3/config/features"
 	"github.com/prysmaticlabs/prysm/v3/config/params"
 	"github.com/prysmaticlabs/prysm/v3/consensus-types/blocks"
@@ -262,13 +261,7 @@ func (s *Store) saveStatesEfficientInternal(ctx context.Context, tx *bolt.Tx, bl
 				return err
 			}
 		case *ethpb.BeaconStateBellatrix:
-			var pbState *ethpb.BeaconStateBellatrix
-			var err error
-			if features.Get().EnableNativeState {
-				pbState, err = statenative.ProtobufBeaconStateBellatrix(rawType)
-			} else {
-				pbState, err = v3.ProtobufBeaconState(rawType)
-			}
+			pbState, err := statenative.ProtobufBeaconStateBellatrix(rawType)
 			if err != nil {
 				return err
 			}
