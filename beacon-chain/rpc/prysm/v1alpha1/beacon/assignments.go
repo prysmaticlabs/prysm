@@ -116,13 +116,11 @@ func (bs *Server) ListValidatorAssignments(
 				index, requestedState.NumValidators())
 		}
 		comAssignment := committeeAssignments[index]
-		pubkey := requestedState.PubkeyAtIndex(index)
 		assign := &ethpb.ValidatorAssignments_CommitteeAssignment{
 			BeaconCommittees: comAssignment.Committee,
 			CommitteeIndex:   comAssignment.CommitteeIndex,
 			AttesterSlot:     comAssignment.AttesterSlot,
 			ProposerSlots:    proposerIndexToSlots[index],
-			PublicKey:        pubkey[:],
 			ValidatorIndex:   index,
 		}
 		res = append(res, assign)

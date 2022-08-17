@@ -720,21 +720,13 @@ message ValidatorQueue {
     // validator set.
     uint64 churn_limit = 1;
 
-    // Ordered list of 48 byte public keys awaiting activation. 0th index is the
-    // next key to be processed.
-    repeated bytes activation_public_keys = 2 [(ethereum.eth.ext.ssz_size) = "?,48", deprecated = true];
-
-    // Ordered list of public keys awaiting exit. 0th index is the next key to
-    // be processed.
-    repeated bytes exit_public_keys = 3 [(ethereum.eth.ext.ssz_size) = "?,48", deprecated = true];
-
     // Ordered list of validator indices awaiting activation. 0th item in the list is the
     // next validator index to be processed.
-    repeated uint64 activation_validator_indices = 4 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"];
+    repeated uint64 activation_validator_indices = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"];
 
     // Ordered list of validator indices awaiting exit. 0th item in the list is the
     // next validator index to be processed.
-    repeated uint64 exit_validator_indices = 5 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"];
+    repeated uint64 exit_validator_indices = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"];
 }
 
 message ListValidatorAssignmentsRequest {
@@ -779,11 +771,8 @@ message ValidatorAssignments {
         // duty as a proposer.
         repeated uint64 proposer_slots = 4 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.Slot"];
 
-        // 48 byte BLS public key.
-        bytes public_key = 5 [(ethereum.eth.ext.ssz_size) = "48", deprecated = true];
-
         // Validator index in the beacon state.
-        uint64 validator_index = 6 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"];
+        uint64 validator_index = 5 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v3/consensus-types/primitives.ValidatorIndex"];
     }
 
     // The epoch for which this set of validator assignments is valid.

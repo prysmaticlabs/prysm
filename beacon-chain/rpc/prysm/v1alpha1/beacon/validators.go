@@ -633,20 +633,8 @@ func (bs *Server) GetValidatorQueue(
 		}
 	}
 
-	// Get the public keys for the validators in the queues up to the allowed churn limits.
-	activationQueueKeys := make([][]byte, len(activationQ))
-	exitQueueKeys := make([][]byte, len(exitQueueIndices))
-	for i, idx := range activationQ {
-		activationQueueKeys[i] = vals[idx].PublicKey
-	}
-	for i, idx := range exitQueueIndices {
-		exitQueueKeys[i] = vals[idx].PublicKey
-	}
-
 	return &ethpb.ValidatorQueue{
 		ChurnLimit:                 churnLimit,
-		ActivationPublicKeys:       activationQueueKeys,
-		ExitPublicKeys:             exitQueueKeys,
 		ActivationValidatorIndices: activationQ,
 		ExitValidatorIndices:       exitQueueIndices,
 	}, nil

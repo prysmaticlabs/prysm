@@ -236,7 +236,6 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 	}
 
 	return &ethpb.DutiesResponse{
-		Duties:             validatorAssignments,
 		CurrentEpochDuties: validatorAssignments,
 		NextEpochDuties:    nextValidatorAssignments,
 	}, nil

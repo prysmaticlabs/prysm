@@ -1360,18 +1360,11 @@ func TestServer_GetValidatorQueue_PendingActivation(t *testing.T) {
 	}
 	res, err := bs.GetValidatorQueue(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
-	// We verify the keys are properly sorted by the validators' activation eligibility epoch.
-	wanted := [][]byte{
-		pubKey(1),
-		pubKey(2),
-		pubKey(3),
-	}
 	activeValidatorCount, err := helpers.ActiveValidatorCount(context.Background(), headState, coreTime.CurrentEpoch(headState))
 	require.NoError(t, err)
 	wantChurn, err := helpers.ValidatorChurnLimit(activeValidatorCount)
 	require.NoError(t, err)
 	assert.Equal(t, wantChurn, res.ChurnLimit)
-	assert.DeepEqual(t, wanted, res.ActivationPublicKeys)
 	wantedActiveIndices := []types.ValidatorIndex{2, 1, 0}
 	assert.DeepEqual(t, wantedActiveIndices, res.ActivationValidatorIndices)
 }
@@ -1405,15 +1398,11 @@ func TestServer_GetValidatorQueue_ExitedValidatorLeavesQueue(t *testing.T) {
 	// First we check if validator with index 1 is in the exit queue.
 	res, err := bs.GetValidatorQueue(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
-	wanted := [][]byte{
-		bytesutil.PadTo([]byte("2"), 48),
-	}
 	activeValidatorCount, err := helpers.ActiveValidatorCount(context.Background(), headState, coreTime.CurrentEpoch(headState))
 	require.NoError(t, err)
 	wantChurn, err := helpers.ValidatorChurnLimit(activeValidatorCount)
 	require.NoError(t, err)
 	assert.Equal(t, wantChurn, res.ChurnLimit)
-	assert.DeepEqual(t, wanted, res.ExitPublicKeys)
 	wantedExitIndices := []types.ValidatorIndex{1}
 	assert.DeepEqual(t, wantedExitIndices, res.ExitValidatorIndices)
 
@@ -1422,7 +1411,6 @@ func TestServer_GetValidatorQueue_ExitedValidatorLeavesQueue(t *testing.T) {
 	require.NoError(t, headState.SetSlot(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(validators[1].ExitEpoch+1))))
 	res, err = bs.GetValidatorQueue(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
-	assert.Equal(t, 0, len(res.ExitPublicKeys))
 }
 
 func TestServer_GetValidatorQueue_PendingExit(t *testing.T) {
@@ -1462,18 +1450,11 @@ func TestServer_GetValidatorQueue_PendingExit(t *testing.T) {
 	}
 	res, err := bs.GetValidatorQueue(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
-	// We verify the keys are properly sorted by the validators' withdrawable epoch.
-	wanted := [][]byte{
-		pubKey(1),
-		pubKey(2),
-		pubKey(3),
-	}
 	activeValidatorCount, err := helpers.ActiveValidatorCount(context.Background(), headState, coreTime.CurrentEpoch(headState))
 	require.NoError(t, err)
 	wantChurn, err := helpers.ValidatorChurnLimit(activeValidatorCount)
 	require.NoError(t, err)
 	assert.Equal(t, wantChurn, res.ChurnLimit)
-	assert.DeepEqual(t, wanted, res.ExitPublicKeys)
 }
 
 func TestServer_GetValidatorParticipation_CannotRequestFutureEpoch(t *testing.T) {

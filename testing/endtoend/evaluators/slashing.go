@@ -135,7 +135,7 @@ func insertDoubleAttestationIntoPool(conns ...*grpc.ClientConn) error {
 
 	var committeeIndex types.CommitteeIndex
 	var committee []types.ValidatorIndex
-	for _, duty := range duties.Duties {
+	for _, duty := range duties.CurrentEpochDuties {
 		if duty.AttesterSlot == chainHead.HeadSlot-1 {
 			committeeIndex = duty.CommitteeIndex
 			committee = duty.Committee

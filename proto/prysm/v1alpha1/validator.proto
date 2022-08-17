@@ -476,11 +476,9 @@ message DutiesRequest {
 }
 
 message DutiesResponse {
-    repeated Duty duties = 1 [deprecated = true];
+    repeated Duty current_epoch_duties = 1;
 
-    repeated Duty current_epoch_duties = 2;
-
-    repeated Duty next_epoch_duties = 3;
+    repeated Duty next_epoch_duties = 2;
 
     message Duty {
         // The committee a validator is assigned to.
