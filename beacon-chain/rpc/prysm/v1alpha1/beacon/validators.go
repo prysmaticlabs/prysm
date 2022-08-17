@@ -545,10 +545,6 @@ func (bs *Server) GetValidatorParticipation(
 		Epoch:     requestedEpoch,
 		Finalized: requestedEpoch <= cp.Epoch,
 		Participation: &ethpb.ValidatorParticipation{
-			// TODO(7130): Remove these three deprecated fields.
-			GlobalParticipationRate:          float32(b.PrevEpochTargetAttested) / float32(b.ActivePrevEpoch),
-			VotedEther:                       b.PrevEpochTargetAttested,
-			EligibleEther:                    b.ActivePrevEpoch,
 			CurrentEpochActiveGwei:           b.ActiveCurrentEpoch,
 			CurrentEpochAttestingGwei:        b.CurrentEpochAttested,
 			CurrentEpochTargetAttestingGwei:  b.CurrentEpochTargetAttested,
