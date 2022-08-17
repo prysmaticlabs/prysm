@@ -39,7 +39,7 @@ func Uint64FromString(str string) (uint64, error) {
 func EpochFromString(str string) (types.Epoch, error) {
 	e, err := strconv.ParseUint(str, 10, 64)
 	if err != nil {
-		return types.Epoch(e), err
+		return types.Epoch(0), err
 	}
 	return types.Epoch(e), nil
 }
@@ -48,7 +48,7 @@ func EpochFromString(str string) (types.Epoch, error) {
 func SlotFromString(str string) (types.Slot, error) {
 	s, err := strconv.ParseUint(str, 10, 64)
 	if err != nil {
-		return types.Slot(s), err
+		return types.Slot(0), err
 	}
 	return types.Slot(s), nil
 }
